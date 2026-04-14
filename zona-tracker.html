@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Zona Tracker"/>
+<meta name="theme-color" content="#0A0C10"/>
+<title>Zona Tracker — Benessere & Forma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior:none;background:#0A0C10;}
+body{color:#E8EAF0;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;}
+:root{
+  --bg:#0A0C10;--s1:#111318;--s2:#181C24;--s3:#1E2330;
+  --b1:#252D40;--b2:#2E3850;
+  --t1:#E8EAF0;--t2:#8892AA;--t3:#4A5570;
+  --acc:#4ECDC4;--acc2:#45B7AA;
+  --carb:#F7C948;--prot:#4ECDC4;--fat:#FF6B6B;
+  --ok:#4ECDC4;--warn:#F7C948;--err:#FF6B6B;
+  --r:10px;
+}
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:var(--s1);}
+::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px;}
+textarea,select,input{-webkit-appearance:none;font-family:'Syne',sans-serif;}
+button:active{opacity:.8;}
+button:disabled{cursor:not-allowed;opacity:.4;}
+.mono{font-family:'JetBrains Mono',monospace;}
+
+/* LAYOUT */
+#app{min-height:100vh;display:flex;flex-direction:column;}
+#header{background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:200;padding-top:env(safe-area-inset-top);}
+.h-inner{padding:16px 20px 0;}
+.h-brand{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;}
+.h-title{font-size:22px;font-weight:800;color:var(--t1);margin:2px 0 14px;letter-spacing:-.5px;}
+#nav{display:flex;border-top:1px solid var(--b1);}
+.nav-btn{flex:1;padding:11px 0;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);cursor:pointer;transition:all .2s;}
+.nav-btn.active{color:var(--acc);border-bottom-color:var(--acc);}
+#main{flex:1;overflow-y:auto;padding-bottom:calc(env(safe-area-inset-bottom)+40px);}
+.page{display:none;padding:20px;}
+.page.active{display:block;}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px;margin-bottom:14px;}
+.card-accent{border-color:var(--acc);background:linear-gradient(135deg,var(--s1) 0%,rgba(78,205,196,.04) 100%);}
+.lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;display:block;}
+
+/* FORMS */
+.inp{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:11px 13px;color:var(--t1);font-size:14px;font-family:'Syne',sans-serif;transition:border-color .2s;}
+.inp:focus{outline:none;border-color:var(--acc);}
+textarea.inp{resize:vertical;min-height:72px;line-height:1.5;}
+select.inp{cursor:pointer;}
+.inp-sm{padding:7px 11px;font-size:13px;}
+
+/* BUTTONS */
+.btn{padding:11px 18px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;transition:all .15s;}
+.btn-primary{background:var(--acc);color:#000;font-weight:700;}
+.btn-primary:hover{background:var(--acc2);}
+.btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--b1);}
+.btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+.btn-danger{background:transparent;color:var(--err);border:1px solid rgba(255,107,107,.3);}
+.btn-full{width:100%;}
+.btn-sm{padding:6px 12px;font-size:10px;}
+
+/* MACRO BARS */
+.mbar{margin-bottom:10px;}
+.mbar-head{display:flex;justify-content:space-between;margin-bottom:4px;}
+.mbar-label{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
+.mbar-val{font-size:11px;color:var(--t2);font-family:'JetBrains Mono',monospace;}
+.mbar-val.over{color:var(--err);}
+.mbar-track{height:5px;border-radius:3px;background:var(--s3);overflow:hidden;}
+.mbar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.16,1,.3,1);}
+
+/* DONUT */
+.donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.donut-info{flex:1;min-width:160px;}
+.legend{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
+.leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle;}
+.leg-lbl{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
+
+/* SUMMARY GRID */
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.sum-cell{background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;}
+.sum-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.sum-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
+
+/* MEAL CARD */
+.meal-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.meal-desc{font-size:13px;color:var(--t1);line-height:1.4;margin:0;}
+.meal-note{font-size:11px;color:var(--t3);font-style:italic;margin-top:3px;}
+.meal-macros{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap;}
+.meal-macro{font-size:11px;font-family:'JetBrains Mono',monospace;}
+.meal-del{background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0 2px;flex-shrink:0;transition:color .15s;}
+.meal-del:hover{color:var(--err);}
+
+/* SUPP PILL */
+.supp-pill{display:inline-flex;align-items:center;gap:6px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:4px 10px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t2);margin:3px;cursor:pointer;transition:all .15s;}
+.supp-pill.active{background:rgba(78,205,196,.12);border-color:var(--acc);color:var(--acc);}
+.supp-pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* SLOT TABS */
+.slot-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
+.slot-tab{padding:10px 4px;border-radius:8px;border:none;cursor:pointer;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase;text-align:center;transition:all .15s;background:var(--s2);color:var(--t3);}
+.slot-tab .slot-icon{font-size:18px;display:block;margin-bottom:3px;}
+.slot-tab.active{background:var(--acc);color:#000;font-weight:700;}
+
+/* SUPP TABLE */
+.supp-table{width:100%;border-collapse:collapse;}
+.supp-table th{font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding:6px 8px;text-align:left;border-bottom:1px solid var(--b1);}
+.supp-table td{padding:8px;border-bottom:1px solid var(--s2);font-size:12px;color:var(--t2);vertical-align:middle;}
+.supp-table tr:last-child td{border-bottom:none;}
+.supp-table tr:hover td{background:var(--s2);}
+.supp-table input,.supp-table select{background:transparent;border:none;color:var(--t1);font-size:12px;font-family:'JetBrains Mono',monospace;width:100%;padding:2px 4px;}
+.supp-table input:focus,.supp-table select:focus{outline:1px solid var(--acc);border-radius:3px;}
+.tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
+.tag-ok{background:rgba(78,205,196,.15);color:var(--acc);}
+.tag-warn{background:rgba(247,201,72,.15);color:var(--warn);}
+.tag-off{background:var(--s3);color:var(--t3);}
+
+/* HISTORY */
+.hist-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;}
+.hist-card:hover{border-color:var(--acc);}
+.hist-card.today{border-color:var(--acc);}
+
+/* REPORT */
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.report-cell{background:var(--s2);border-radius:8px;padding:14px;text-align:center;}
+.report-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.report-lbl{font-size:10px;color:var(--t3);margin-top:4px;}
+
+/* ADVICE BOX */
+.advice-box{background:var(--s2);border-radius:8px;padding:14px;border-left:3px solid var(--acc);margin-top:12px;}
+.advice-text{font-size:13px;line-height:1.75;color:var(--t1);white-space:pre-wrap;}
+
+/* PLAN */
+.timeline-row{display:flex;gap:12px;align-items:flex-start;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--b1);}
+.timeline-row:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0;}
+.timeline-time{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);min-width:44px;padding-top:1px;}
+.timeline-content{flex:1;}
+.timeline-main{font-size:13px;color:var(--t1);line-height:1.4;}
+.timeline-sub{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.prio-row{margin-bottom:14px;border-left:2px solid var(--b1);padding-left:14px;}
+.prio-title{font-size:13px;color:var(--t1);margin-bottom:4px;}
+.prio-text{font-size:12px;color:var(--t3);line-height:1.7;}
+
+/* FASTING */
+.fast-screen{text-align:center;padding:50px 20px;}
+.fast-icon{font-size:56px;margin-bottom:16px;}
+.fast-title{font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;}
+.fast-sub{font-size:13px;color:var(--t3);}
+
+/* DAY NAV */
+.day-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.day-info{text-align:center;}
+.day-date{font-size:14px;font-family:'JetBrains Mono',monospace;color:var(--t1);}
+.day-today{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+
+/* SUPP DETAIL TOGGLE */
+.supp-toggle-row{border-top:1px solid var(--b1);padding-top:10px;display:flex;justify-content:space-between;align-items:center;}
+.supp-detail{margin-top:10px;}
+.supp-detail-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--b1);}
+.supp-detail-row:last-child{border-bottom:none;}
+.supp-check{display:flex;align-items:center;gap:8px;}
+.check-box{width:16px;height:16px;border-radius:4px;border:2px solid var(--b1);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.check-box.on{background:var(--acc);border-color:var(--acc);}
+.check-mark{font-size:9px;color:#000;font-weight:900;}
+.supp-name-detail{font-size:12px;color:var(--t2);}
+.supp-name-detail.on{color:var(--t1);}
+.supp-cost-detail{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);white-space:nowrap;margin-left:10px;}
+.supp-cost-detail.on{color:var(--acc);}
+
+/* LOADING */
+.loading{display:inline-block;width:12px;height:12px;border:2px solid var(--b1);border-top-color:var(--acc);border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RESPONSIVE */
+@media(max-width:380px){
+  .slot-tabs{grid-template-columns:repeat(4,1fr);}
+  .h-title{font-size:18px;}
+  .report-grid{grid-template-columns:1fr 1fr;}
+}
+
+/* RANGE TABS */
+.range-tabs{display:flex;gap:6px;margin-bottom:16px;}
+.range-tab{flex:1;padding:8px;border-radius:6px;border:1px solid var(--b1);background:var(--s2);color:var(--t3);font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all .15s;}
+.range-tab.active{background:var(--acc);color:#000;border-color:var(--acc);font-weight:700;}
+
+/* MINI CHART */
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:60px;margin-top:12px;}
+.mini-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.mini-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s ease;}
+.mini-bar-lbl{font-size:8px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
+
+/* SUPP PAGE SLOT FILTER */
+.slot-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
+.slot-chip{padding:5px 12px;border-radius:20px;border:1px solid var(--b1);background:var(--s2);color:var(--t3);font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s;}
+.slot-chip.active{background:var(--acc);color:#000;border-color:var(--acc);}
+
+/* COST BANNER */
+.cost-banner{background:linear-gradient(135deg,var(--s2),var(--s3));border:1px solid var(--b1);border-radius:var(--r);padding:16px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.cost-main{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--acc);}
+.cost-period{font-size:11px;color:var(--t3);margin-top:2px;}
+.cost-breakdown{text-align:right;}
+.cost-per{font-size:12px;color:var(--t2);font-family:'JetBrains Mono',monospace;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div class="h-inner">
+      <div class="h-brand">Benessere &amp; Forma</div>
+      <h1 class="h-title">Zona Tracker</h1>
+    </div>
+    <nav id="nav">
+      <button class="nav-btn active" onclick="showPage('oggi')">🗓 Oggi</button>
+      <button class="nav-btn" onclick="showPage('integratori')">💊 Integr.</button>
+      <button class="nav-btn" onclick="showPage('storico')">📊 Storico</button>
+      <button class="nav-btn" onclick="showPage('piano')">📋 Piano</button>
+    </nav>
+  </div>
+  <div id="main">
+    <div id="page-oggi" class="page active"></div>
+    <div id="page-integratori" class="page"></div>
+    <div id="page-storico" class="page"></div>
+    <div id="page-piano" class="page"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const TARGET = {
+  kcal: 1900,
+  protein: Math.round((1900*.30)/4), // 143g
+  carbs:   Math.round((1900*.40)/4), // 190g
+  fat:     Math.round((1900*.30)/9), // 63g
+};
+
+const MEAL_SLOTS = [
+  {id:'colazione', label:'Colazione',  icon:'🌅', time:'08:30', desc:'Post-workout'},
+  {id:'pranzo',    label:'Pranzo',     icon:'☀️',  time:'12:30', desc:'Pasto principale'},
+  {id:'cena',      label:'Cena',       icon:'🌙',  time:'20:00', desc:'Pasto serale'},
+  {id:'snack',     label:'Snack',      icon:'🍎',  time:'–',     desc:'Extra / fuori pasto'},
+];
+
+const SUGGESTED = {
+  colazione:[
+    'Whey idrolizzata 30g + latte di avena 250ml + avena 50g + mirtilli 80g',
+    'Whey idrolizzata 30g + latte di soia 250ml + banana + burro di mandorle 15g',
+    'Whey idrolizzata 30g + latte di riso 250ml + chia 15g + frutti di bosco 100g',
+    'Whey idrolizzata 30g + latte vegetale 200ml + fiocchi avena 40g + kiwi',
+  ],
+  pranzo:[
+    'Salmone al forno 180g + quinoa 80g + spinaci saltati con limone',
+    'Sgombro in scatola + riso integrale 80g + rucola + pomodori',
+    'Lenticchie rosse 200g + farro 70g + broccoli + olio EVO',
+    'Tonno 150g + patata dolce 120g + insalata verde + limone',
+    'Ceci 200g + riso integrale 70g + peperone crudo + olio EVO',
+  ],
+  cena:[
+    'Branzino al vapore 180g + verdure grigliate abbondanti',
+    'Zuppa di ceci e rosmarino + cavolo nero saltato',
+    'Merluzzo 180g + finocchi e arancia + semi di girasole',
+    'Edamame 150g + vellutata di zucchine + semi di canapa',
+    'Salmone 160g + rucola, avocado e limone',
+  ],
+  snack:[
+    'Noci miste 30g + frutta di stagione',
+    '2-3 noci del Brasile + mirtilli 100g',
+    'Semi di zucca 20g + una mela',
+  ],
+};
+
+// Default supplements — all Nutrilite Amway
+const DEFAULT_SUPPS = [
+  {id:1,  name:'Mami Shake',              slot:'06:30', active:true,  kcal:80,  protein:10, carbs:10, fat:2, price:35,  doses:30,  note:'Pre-workout'},
+  {id:2,  name:'All Plant Protein',       slot:'06:30', active:true,  kcal:60,  protein:13, carbs:2,  fat:1, price:42,  doses:30,  note:'Pre-workout'},
+  {id:3,  name:'Balance Within Probiotics',slot:'06:30',active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:38,  doses:30,  note:'Pre-workout'},
+  {id:4,  name:'Fibre Powder',            slot:'06:30', active:true,  kcal:15,  protein:0,  carbs:4,  fat:0, price:28,  doses:30,  note:'Pre-workout'},
+  {id:5,  name:'Hydrolyzed Whey Protein', slot:'08:30', active:true,  kcal:110, protein:24, carbs:2,  fat:1, price:55,  doses:30,  note:'Post-workout'},
+  {id:6,  name:'Double X',               slot:'08:30', active:true,  kcal:10,  protein:0,  carbs:2,  fat:0, price:68,  doses:31,  note:'Multivitaminico'},
+  {id:7,  name:'Omega-3',                slot:'08:30', active:true,  kcal:15,  protein:0,  carbs:0,  fat:2, price:32,  doses:60,  note:'Antinfiammatorio'},
+  {id:8,  name:'Metabolismo Plus',        slot:'08:30', active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:30,  doses:30,  note:''},
+  {id:9,  name:'Coenzima Q10',           slot:'08:30', active:true,  kcal:5,   protein:0,  carbs:0,  fat:0, price:34,  doses:30,  note:''},
+  {id:10, name:'Glucosamina con Boswellia',slot:'08:30',active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:36,  doses:30,  note:'Articolazioni'},
+  {id:11, name:'Cardo Mariano',           slot:'08:30', active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:24,  doses:30,  note:'Fegato'},
+  {id:12, name:'Prostafit',              slot:'08:30', active:true,  kcal:5,   protein:0,  carbs:0,  fat:0, price:30,  doses:30,  note:''},
+  {id:13, name:'Vision Plus',            slot:'08:30', active:false, kcal:5,   protein:0,  carbs:1,  fat:0, price:28,  doses:30,  note:'Sospeso'},
+  {id:14, name:'Amino Advantage+',       slot:'11:00', active:true,  kcal:20,  protein:4,  carbs:2,  fat:0, price:32,  doses:30,  note:'Tarda mattina'},
+  {id:15, name:'Ginkgo Biloba',          slot:'13:30', active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:26,  doses:30,  note:'Post pranzo'},
+  {id:16, name:'Ferro e Acido Folico',   slot:'13:30', active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:22,  doses:30,  note:'+ Vitamina C'},
+  {id:17, name:'Vitamina B+',            slot:'13:30', active:false, kcal:5,   protein:0,  carbs:1,  fat:0, price:20,  doses:30,  note:'Sovrapposizione Double X'},
+  {id:18, name:'Vitamina C+',            slot:'13:30', active:true,  kcal:5,   protein:0,  carbs:1,  fat:0, price:24,  doses:60,  note:'Con ferro'},
+  {id:19, name:'Vitamina D',             slot:'13:30', active:true,  kcal:5,   protein:0,  carbs:0,  fat:0, price:20,  doses:60,  note:''},
+  {id:20, name:'XS High Protein Bar',    slot:'17:00', active:true,  kcal:200, protein:27, carbs:8,  fat:4, price:45,  doses:12,  note:'Pomeriggio'},
+  {id:21, name:'Amino Advantage+ (sera)',slot:'21:30', active:true,  kcal:20,  protein:4,  carbs:2,  fat:0, price:32,  doses:30,  note:'Sera'},
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════
+const KEYS = {db:'zt_db_v1', supps:'zt_supps_v1'};
+
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem(KEYS.db)) || {days:{}}; }
+  catch { return {days:{}}; }
+}
+function saveDB(d) { try { localStorage.setItem(KEYS.db, JSON.stringify(d)); } catch {} }
+
+function loadSupps() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEYS.supps));
+    return s && s.length ? s : JSON.parse(JSON.stringify(DEFAULT_SUPPS));
+  } catch { return JSON.parse(JSON.stringify(DEFAULT_SUPPS)); }
+}
+function saveSupps() { try { localStorage.setItem(KEYS.supps, JSON.stringify(state.supps)); } catch {} }
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  page: 'oggi',
+  activeDay: todayKey(),
+  db: loadDB(),
+  supps: loadSupps(),
+  logSlot: 'colazione',
+  logText: '',
+  logLoading: false,
+  logError: '',
+  advice: '',
+  advLoading: false,
+  nextSlot: 'pranzo',
+  showSuppDetail: false,
+  suppFilter: 'all',
+  reportRange: 7,
+  histDay: null,
+};
+
+function todayKey() { return new Date().toISOString().slice(0,10); }
+function fmtDate(k) { return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'}); }
+function fmtDateLong(k) { return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+
+function getDay(key) {
+  if (!state.db.days[key]) state.db.days[key] = {meals:[],fasting:false,suppsTaken:[]};
+  return state.db.days[key];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMPUTATIONS
+// ═══════════════════════════════════════════════════════════════
+function mealTotals(meals) {
+  return (meals||[]).reduce((a,m)=>({
+    kcal:a.kcal+(m.kcal||0), protein:a.protein+(m.protein||0),
+    carbs:a.carbs+(m.carbs||0), fat:a.fat+(m.fat||0)
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+}
+
+function suppTotalsForDay(suppsTaken) {
+  // suppsTaken = array of supp IDs taken today
+  const taken = state.supps.filter(s => (suppsTaken||[]).includes(s.id));
+  return taken.reduce((a,s)=>({
+    kcal:a.kcal+s.kcal, protein:a.protein+s.protein,
+    carbs:a.carbs+s.carbs, fat:a.fat+s.fat
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+}
+
+function activeSupps() { return state.supps.filter(s=>s.active); }
+
+function suppMonthlyCost(s) {
+  if (!s.price || !s.doses) return 0;
+  return (s.price / s.doses) * 30;
+}
+
+function totalMonthlyCost() {
+  return activeSupps().reduce((a,s)=>a+suppMonthlyCost(s), 0);
+}
+
+function periodCost(days, range) {
+  // Average daily cost * range days
+  const dailyCost = activeSupps().reduce((a,s)=>a+(s.price/s.doses),0);
+  return dailyCost * range;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI
+// ═══════════════════════════════════════════════════════════════
+async function estimateMacros(desc) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:300,
+      messages:[{role:'user', content:
+        `Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`
+      }]
+    })
+  });
+  const d = await r.json();
+  const txt = (d.content||[]).find(b=>b.type==='text')?.text||'{}';
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+}
+
+async function getRebalanceAdvice(consumed, nextMeal) {
+  const rem = {
+    kcal: Math.max(0, TARGET.kcal - consumed.kcal),
+    protein: Math.max(0, TARGET.protein - consumed.protein),
+    carbs: Math.max(0, TARGET.carbs - consumed.carbs),
+    fat: Math.max(0, TARGET.fat - consumed.fat),
+  };
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:250,
+      messages:[{role:'user', content:
+        `Sei un nutrizionista esperto in dieta a Zona (40-30-30).\n\nMacro ancora disponibili oggi:\n- Calorie: ${rem.kcal} kcal\n- Proteine: ${rem.protein}g\n- Carboidrati: ${rem.carbs}g\n- Grassi: ${rem.fat}g\n\nProssimo pasto: ${nextMeal}\n\nProfilo: pescetariano (pesce + possibile uova), no latticini, no carne. Obiettivo: riduzione grasso addominale, ferritina bassa.\n\n2-3 suggerimenti concreti. Italiano, diretto. Max 120 parole.`
+      }]
+    })
+  });
+  const d = await r.json();
+  return (d.content||[]).find(b=>b.type==='text')?.text||'';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function showPage(id) {
+  state.page = id;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-btn')[['oggi','integratori','storico','piano'].indexOf(id)].classList.add('active');
+  renderPage(id);
+}
+
+function renderPage(id) {
+  if (id==='oggi') renderOggi();
+  else if (id==='integratori') renderIntegratori();
+  else if (id==='storico') renderStorico();
+  else if (id==='piano') renderPiano();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════════════
+function macroBar(label, current, target, color, unit='g') {
+  const pct = Math.min(100, Math.round((current/target)*100));
+  const over = current > target;
+  return `
+    <div class="mbar">
+      <div class="mbar-head">
+        <span class="mbar-label">${label}</span>
+        <span class="mbar-val ${over?'over':''}">${current}${unit} / ${target}${unit}</span>
+      </div>
+      <div class="mbar-track">
+        <div class="mbar-fill" style="width:${pct}%;background:${over?'var(--err)':color};"></div>
+      </div>
+    </div>`;
+}
+
+function donutSVG(protein, carbs, fat, kcal) {
+  const total = protein+carbs+fat||1;
+  const r=42,cx=58,cy=58,sw=13,circ=2*Math.PI*r;
+  const cP=(carbs/total)*100, pP=(protein/total)*100, fP=(fat/total)*100;
+  function seg(pct,off,col) {
+    const dash=(pct/100)*circ;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}"
+      stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-(off*circ/100)}"
+      style="transition:stroke-dasharray .5s ease" transform="rotate(-90 ${cx} ${cy})"/>`;
+  }
+  return `<svg width="116" height="116" viewBox="0 0 116 116">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
+    ${seg(cP,0,'var(--carb)')}${seg(pP,cP,'var(--prot)')}${seg(fP,cP+pP,'var(--fat)')}
+    <text x="${cx}" y="${cy-3}" text-anchor="middle" fill="var(--t1)" font-size="16" font-weight="700" font-family="JetBrains Mono,monospace">${kcal}</text>
+    <text x="${cx}" y="${cy+12}" text-anchor="middle" fill="var(--t3)" font-size="9" font-family="JetBrains Mono,monospace">kcal</text>
+  </svg>`;
+}
+
+function mealCardHTML(m, dayKey, idx) {
+  return `<div class="meal-card">
+    <div style="flex:1;min-width:0;">
+      <p class="meal-desc">${esc(m.description)}</p>
+      ${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}
+      <div class="meal-macros">
+        <span class="meal-macro" style="color:var(--t2)"><b style="color:#fff">${m.kcal}</b> kcal</span>
+        <span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span>
+        <span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span>
+        <span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span>
+        ${m.time?`<span class="meal-macro" style="color:var(--t3)">${m.time}</span>`:''}
+      </div>
+    </div>
+    <button class="meal-del" onclick="deleteMeal('${dayKey}',${m.id})">×</button>
+  </div>`;
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// PAGE: OGGI
+// ═══════════════════════════════════════════════════════════════
+function renderOggi() {
+  const day = getDay(state.activeDay);
+  const meals = day.meals||[];
+  const suppsTaken = day.suppsTaken||[];
+  const mTot = mealTotals(meals);
+  const sTot = suppTotalsForDay(suppsTaken);
+  const cons = {
+    kcal:mTot.kcal+sTot.kcal, protein:mTot.protein+sTot.protein,
+    carbs:mTot.carbs+sTot.carbs, fat:mTot.fat+sTot.fat
+  };
+  const rem = Math.max(0, TARGET.kcal - cons.kcal);
+  const allDays = Object.keys(state.db.days).sort();
+  const idx = allDays.indexOf(state.activeDay);
+  const isToday = state.activeDay===todayKey();
+
+  // Group meals by slot
+  const bySlot = {};
+  MEAL_SLOTS.forEach(s=>{ bySlot[s.id]=meals.filter(m=>m.slot===s.id); });
+
+  // Active supps for today pills
+  const activeS = activeSupps();
+
+  let html = `
+    <!-- DAY NAV -->
+    <div class="day-nav">
+      <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹ Prec</button>
+      <div class="day-info">
+        <div class="day-date">${fmtDate(state.activeDay)}</div>
+        ${isToday?'<div class="day-today">● OGGI</div>':''}
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>Succ ›</button>
+    </div>
+
+    <!-- FASTING TOGGLE -->
+    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+      <button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">
+        ${day.fasting?'⚡ Digiuno attivo':'Segna digiuno'}
+      </button>
+    </div>`;
+
+  if (day.fasting) {
+    html += `<div class="fast-screen">
+      <div class="fast-icon">⚡</div>
+      <div class="fast-title">Giorno di recupero — Digiuno</div>
+      <div class="fast-sub">Acqua, tè, caffè senza zucchero.<br>Nessun pasto da registrare.</div>
+    </div>`;
+  } else {
+    // DASHBOARD
+    html += `<div class="card card-accent">
+      <div class="donut-wrap">
+        ${donutSVG(cons.protein, cons.carbs, cons.fat, cons.kcal)}
+        <div class="donut-info">
+          <div class="legend">
+            <span class="leg-lbl"><span class="leg-dot" style="background:var(--carb)"></span>Carbo</span>
+            <span class="leg-lbl"><span class="leg-dot" style="background:var(--prot)"></span>Prot</span>
+            <span class="leg-lbl"><span class="leg-dot" style="background:var(--fat)"></span>Grassi</span>
+          </div>
+          ${macroBar('Proteine', cons.protein, TARGET.protein, 'var(--prot)')}
+          ${macroBar('Carboidrati', cons.carbs, TARGET.carbs, 'var(--carb)')}
+          ${macroBar('Grassi', cons.fat, TARGET.fat, 'var(--fat)')}
+          ${macroBar('Calorie', cons.kcal, TARGET.kcal, 'var(--acc)', ' kcal')}
+        </div>
+      </div>
+      <div class="sum-grid" style="margin-top:14px;">
+        <div class="sum-cell">
+          <div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div>
+          <div class="sum-lbl">Da pasti</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div>
+          <div class="sum-lbl">Integratori</div>
+        </div>
+        <div class="sum-cell">
+          <div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div>
+          <div class="sum-lbl">Rimanenti</div>
+        </div>
+      </div>
+    </div>`;
+
+    // INTEGRATORI OGGI
+    html += `<div class="card">
+      <span class="lbl">💊 Integratori di oggi</span>
+      <div style="margin-bottom:10px;font-size:12px;color:var(--t3);">Tocca per segnare come assunti</div>
+      <div style="display:flex;flex-wrap:wrap;margin-bottom:10px;">
+        ${activeS.map(s=>`
+          <span class="supp-pill ${suppsTaken.includes(s.id)?'active':''}" onclick="toggleSuppTaken(${s.id})">
+            <span class="supp-pill-dot"></span>${esc(s.name)}<span style="font-size:9px;opacity:.7">${s.slot}</span>
+          </span>`).join('')}
+      </div>
+      ${sTot.kcal>0?`<div style="font-size:11px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:4px;">
+        Totale assunti: ${sTot.kcal} kcal · ${sTot.protein}g P · ${sTot.carbs}g C · ${sTot.fat}g G
+      </div>`:''}
+    </div>`;
+
+    // RIEQUILIBRIO
+    html += `<div class="card">
+      <span class="lbl">🎯 Riequilibrio pasto successivo</span>
+      <div style="margin-bottom:10px;">
+        <select class="inp inp-sm" onchange="state.nextSlot=this.value">
+          ${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${state.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="fetchAdvice()" id="btn-advice">
+        ${state.advLoading?'<span class="loading"></span>Analisi in corso...':'Analizza e suggerisci →'}
+      </button>
+      ${state.advice?`<div class="advice-box"><p class="advice-text">${esc(state.advice)}</p></div>`:''}
+    </div>`;
+
+    // LOG PASTO
+    html += `<div class="card">
+      <span class="lbl">+ Registra pasto</span>
+      <div class="slot-tabs">
+        ${MEAL_SLOTS.map(sl=>`
+          <button class="slot-tab ${state.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')">
+            <span class="slot-icon">${sl.icon}</span>${sl.label}
+          </button>`).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">
+        ${MEAL_SLOTS.find(s=>s.id===state.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===state.logSlot)?.desc}
+      </div>
+      <span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTI RAPIDI</span>
+      <div style="margin:6px 0 12px;display:flex;flex-direction:column;gap:4px;">
+        ${(SUGGESTED[state.logSlot]||[]).map((sg,i)=>`
+          <button onclick="setSuggestion(${i})" style="background:none;border:1px solid var(--b1);border-radius:6px;padding:8px 10px;color:var(--t3);font-size:12px;cursor:pointer;text-align:left;font-family:'Syne',sans-serif;line-height:1.4;transition:all .15s;"
+            onmouseover="this.style.borderColor='var(--acc)';this.style.color='var(--t1)'"
+            onmouseout="this.style.borderColor='var(--b1)';this.style.color='var(--t3)'">${sg}</button>`).join('')}
+      </div>
+      <textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;">${esc(state.logText)}</textarea>
+      ${state.logError?`<div style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${state.logError}</div>`:''}
+      <button class="btn btn-primary btn-full" style="margin-top:10px;${state.logLoading||!state.logText.trim()?'opacity:.5':''}"
+        onclick="logMeal()" ${state.logLoading?'disabled':''}>
+        ${state.logLoading?'<span class="loading"></span>Stima AI in corso...':'Stima &amp; Registra →'}
+      </button>
+    </div>`;
+
+    // LOGGED MEALS PER SLOT
+    MEAL_SLOTS.forEach(slot => {
+      const ms = bySlot[slot.id];
+      if (!ms.length) return;
+      const tot = mealTotals(ms);
+      html += `<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+          <div>
+            <span class="lbl">${slot.icon} ${slot.label}</span>
+            <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slot.time}</span>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);">${tot.kcal} kcal</div>
+            <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${tot.protein}g P · ${tot.carbs}g C · ${tot.fat}g G</div>
+          </div>
+        </div>
+        ${ms.map((m,i)=>mealCardHTML(m, state.activeDay, i)).join('')}
+      </div>`;
+    });
+  }
+
+  document.getElementById('page-oggi').innerHTML = html;
+
+  // Restore textarea value and bind input
+  const ta = document.getElementById('log-text');
+  if (ta) {
+    ta.value = state.logText;
+    ta.addEventListener('input', e => { state.logText = e.target.value; });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAGE: INTEGRATORI
+// ═══════════════════════════════════════════════════════════════
+function renderIntegratori() {
+  const supps = state.supps;
+  const slots = [...new Set(supps.map(s=>s.slot))].sort();
+  const filtered = state.suppFilter==='all' ? supps : supps.filter(s=>s.slot===state.suppFilter);
+  const monthly = totalMonthlyCost();
+  const activeCount = activeSupps().length;
+
+  let html = `
+    <!-- COST BANNER -->
+    <div class="cost-banner">
+      <div>
+        <div class="cost-main mono">€ ${monthly.toFixed(2)}</div>
+        <div class="cost-period">${activeCount} integratori attivi / mese stimato</div>
+      </div>
+      <div class="cost-breakdown">
+        <div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div>
+        <div class="cost-per" style="margin-top:2px;">€ ${(monthly*12).toFixed(0)}/anno</div>
+      </div>
+    </div>
+
+    <!-- SLOT FILTER -->
+    <div class="slot-filter">
+      <span class="slot-chip ${state.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>
+      ${slots.map(sl=>`<span class="slot-chip ${state.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span class="lbl" style="margin-bottom:0;">Anagrafica integratori</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="resetSupps()">Reset</button>
+        <button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button>
+      </div>
+    </div>`;
+
+  // Cards per slot
+  const bySlot = {};
+  filtered.forEach(s=>{ if(!bySlot[s.slot]) bySlot[s.slot]=[]; bySlot[s.slot].push(s); });
+  Object.keys(bySlot).sort().forEach(slot=>{
+    const slotSupps = bySlot[slot];
+    const slotActive = slotSupps.filter(s=>s.active);
+    const slotKcal = slotActive.reduce((a,s)=>a+s.kcal,0);
+    const slotProt = slotActive.reduce((a,s)=>a+s.protein,0);
+    const slotCost = slotActive.reduce((a,s)=>a+suppMonthlyCost(s),0);
+
+    html += `<div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="lbl" style="margin-bottom:0;">⏰ ${slot}</span>
+        <span style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotKcal}kcal · ${slotProt}gP · €${slotCost.toFixed(2)}/mese</span>
+      </div>
+      ${slotSupps.map(s=>`
+        <div style="background:var(--s2);border:1px solid ${s.active?'var(--b2)':'var(--b1)'};border-radius:8px;padding:12px;margin-bottom:8px;${!s.active?'opacity:.6':''}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+            <div style="flex:1;">
+              <input value="${esc(s.name)}" onchange="updateSupp(${s.id},'name',this.value)"
+                style="background:none;border:none;color:var(--t1);font-size:14px;font-family:'Syne',sans-serif;font-weight:600;width:100%;padding:0;"
+                oninput="updateSupp(${s.id},'name',this.value)"/>
+              <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center;">
+                <input value="${esc(s.slot)}" onchange="updateSupp(${s.id},'slot',this.value)"
+                  style="background:var(--s3);border:none;color:var(--acc);font-size:10px;font-family:'JetBrains Mono',monospace;border-radius:4px;padding:2px 6px;width:60px;"/>
+                <input value="${esc(s.note||'')}" placeholder="nota..." onchange="updateSupp(${s.id},'note',this.value)"
+                  style="background:none;border:none;color:var(--t3);font-size:11px;font-family:'Syne',sans-serif;flex:1;"/>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:8px;">
+              <div class="check-box ${s.active?'on':''}" onclick="toggleSuppActive(${s.id})">
+                ${s.active?'<span class="check-mark">✓</span>':''}
+              </div>
+              <button onclick="deleteSupp(${s.id})" style="background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;line-height:1;padding:0;">×</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr) 1fr 1fr;gap:6px;">
+            ${[
+              ['kcal','Kcal',s.kcal],
+              ['protein','Prot g',s.protein],
+              ['carbs','Carbo g',s.carbs],
+              ['fat','Grassi g',s.fat],
+              ['price','Prezzo €',s.price],
+              ['doses','Dosi/conf',s.doses],
+            ].map(([k,lbl,val])=>`
+              <div style="background:var(--s3);border-radius:6px;padding:6px;text-align:center;">
+                <div style="font-size:8px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:3px;">${lbl}</div>
+                <input type="number" value="${val}" onchange="updateSupp(${s.id},'${k}',+this.value)"
+                  style="background:none;border:none;color:var(--t1);font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:600;width:100%;text-align:center;padding:0;"/>
+              </div>`).join('')}
+          </div>
+          <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px;align-items:center;">
+            <span style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;">
+              Costo/dose: €${s.price&&s.doses?(s.price/s.doses).toFixed(2):'–'} · Mensile: €${suppMonthlyCost(s).toFixed(2)}
+            </span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  });
+
+  html += `<div style="height:20px;"></div>`;
+  document.getElementById('page-integratori').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAGE: STORICO
+// ═══════════════════════════════════════════════════════════════
+function renderStorico() {
+  const days = Object.keys(state.db.days).sort().reverse();
+  const today = todayKey();
+
+  // Report range
+  const rangeMap = {7:'7 giorni',14:'14 giorni',30:'30 giorni'};
+  const rangeDays = days.filter(d=>!state.db.days[d]?.fasting).slice(0,state.reportRange);
+
+  // Averages
+  let avgKcal=0, avgProt=0, avgCarbs=0, avgFat=0;
+  if (rangeDays.length) {
+    rangeDays.forEach(d=>{
+      const t=mealTotals(state.db.days[d]?.meals||[]);
+      avgKcal+=t.kcal; avgProt+=t.protein; avgCarbs+=t.carbs; avgFat+=t.fat;
+    });
+    avgKcal=Math.round(avgKcal/rangeDays.length);
+    avgProt=Math.round(avgProt/rangeDays.length);
+    avgCarbs=Math.round(avgCarbs/rangeDays.length);
+    avgFat=Math.round(avgFat/rangeDays.length);
+  }
+
+  const adherence = rangeDays.length ? Math.round(rangeDays.filter(d=>{
+    const t=mealTotals(state.db.days[d]?.meals||[]);
+    return t.kcal>0 && Math.abs(t.kcal-TARGET.kcal)<300;
+  }).length/rangeDays.length*100) : 0;
+
+  const estCost = periodCost(rangeDays, state.reportRange);
+
+  // Mini chart data (last 14 days with meals)
+  const chartDays = Object.keys(state.db.days).sort().slice(-14);
+  const maxKcal = Math.max(...chartDays.map(d=>mealTotals(state.db.days[d]?.meals||[]).kcal), TARGET.kcal);
+
+  let html = `
+    <!-- RANGE TABS -->
+    <div class="range-tabs">
+      ${[7,14,30].map(r=>`<button class="range-tab ${state.reportRange===r?'active':''}" onclick="setReportRange(${r})">${rangeMap[r]}</button>`).join('')}
+    </div>
+
+    <!-- REPORT CARD -->
+    ${rangeDays.length>0?`
+    <div class="card card-accent">
+      <span class="lbl">Report — ultimi ${state.reportRange} giorni (${rangeDays.length} con pasti)</span>
+      <div class="report-grid">
+        <div class="report-cell">
+          <div class="report-val mono" style="color:var(--acc)">${avgKcal}</div>
+          <div class="report-lbl">kcal media/giorno</div>
+        </div>
+        <div class="report-cell">
+          <div class="report-val mono" style="color:${adherence>=70?'var(--ok)':adherence>=40?'var(--warn)':'var(--err)'}">${adherence}%</div>
+          <div class="report-lbl">aderenza al piano</div>
+        </div>
+        <div class="report-cell">
+          <div class="report-val mono" style="color:var(--prot)">${avgProt}g</div>
+          <div class="report-lbl">proteine medie</div>
+        </div>
+        <div class="report-cell">
+          <div class="report-val mono" style="color:var(--carb)">${avgCarbs}g</div>
+          <div class="report-lbl">carbo medi</div>
+        </div>
+      </div>
+      <div style="background:var(--s2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">Costo integratori stimato periodo</div>
+          <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--warn);">€ ${estCost.toFixed(2)}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:var(--t3);">Mensile</div>
+          <div style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--t2);">€ ${totalMonthlyCost().toFixed(2)}</div>
+        </div>
+      </div>
+      ${chartDays.length>1?`
+        <div style="margin-top:14px;">
+          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">ANDAMENTO CALORIE</div>
+          <div class="mini-chart">
+            ${chartDays.map(d=>{
+              const k=mealTotals(state.db.days[d]?.meals||[]).kcal;
+              const h=Math.round((k/maxKcal)*100);
+              const col=state.db.days[d]?.fasting?'var(--b1)':k>TARGET.kcal?'var(--err)':k>0?'var(--acc)':'var(--s3)';
+              return `<div class="mini-bar-wrap">
+                <div class="mini-bar" style="height:${h}%;background:${col};"></div>
+                <div class="mini-bar-lbl">${new Date(d+'T12:00:00').getDate()}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`:''}
+    </div>`:'<div class="card"><p style="color:var(--t3);font-size:13px;">Nessun dato ancora. Inizia a registrare i pasti nella tab Oggi.</p></div>'}
+
+    <!-- HISTORY LIST -->
+    <span class="lbl">Tutti i giorni</span>
+    ${days.length===0?'<p style="color:var(--t3);font-size:13px;">Nessun dato ancora.</p>':''}
+    ${days.map(day=>{
+      const d=state.db.days[day];
+      const ms=d.meals||[];
+      const tot=mealTotals(ms);
+      const isT=day===today;
+      const stot=suppTotalsForDay(d.suppsTaken||[]);
+      return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting?0:8}px;">
+          <div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>
+          </div>
+          ${d.fasting
+            ?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>'
+            :`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`
+          }
+        </div>
+        ${!d.fasting&&ms.length>0?`
+          <div style="display:flex;gap:6px;">
+            ${[['P',tot.protein,TARGET.protein,'var(--prot)'],['C',tot.carbs,TARGET.carbs,'var(--carb)'],['G',tot.fat,TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`
+              <div style="flex:1;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                  <span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span>
+                  <span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span>
+                </div>
+                <div style="height:3px;border-radius:2px;background:var(--s3);">
+                  <div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div>
+                </div>
+              </div>`).join('')}
+          </div>`:''}
+      </div>`;
+    }).join('')}
+    <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="resetAll()">🗑 Elimina tutti i dati</button>
+    <div style="height:20px;"></div>`;
+
+  document.getElementById('page-storico').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAGE: PIANO
+// ═══════════════════════════════════════════════════════════════
+function renderPiano() {
+  const html = `
+    <div class="card card-accent">
+      <span class="lbl">Target 40·30·30 — 1.900 kcal/die</span>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">
+        ${[
+          ['Calorie',TARGET.kcal,'kcal','var(--acc)'],
+          ['Proteine 30%',TARGET.protein,'g','var(--prot)'],
+          ['Carboidrati 40%',TARGET.carbs,'g','var(--carb)'],
+          ['Grassi 30%',TARGET.fat,'g','var(--fat)'],
+        ].map(([l,v,u,c])=>`
+          <div style="text-align:center;background:var(--s2);border-radius:8px;padding:12px 8px;">
+            <div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div>
+          </div>`).join('')}
+      </div>
+      <div style="background:var(--s2);border-radius:8px;padding:12px;font-size:12px;color:var(--t3);line-height:1.7;">
+        <b style="color:var(--t1);">Carboidrati:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati mai.
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="lbl">Timeline giornaliera</span>
+      ${[
+        ['06:30','Shake Mami + All Plant Protein + Probiotici + Fibre Powder','Integratori pre-workout'],
+        ['08:30','🌅 Colazione: Whey + latte vegetale + avena o frutta','Post-workout — registra in app'],
+        ['08:30','Double X · Omega-3 · Metabolismo Plus · Q10 · Glucosamina · Cardo Mariano · Prostafit','Integratori colazione'],
+        ['11:00','Amino Advantage+','Integratore tarda mattina'],
+        ['12:30','☀️ Pranzo: proteina + carbo IG basso + verdura + limone','Pasto principale — registra in app'],
+        ['13:30','Ginkgo · Ferro e Acido Folico · Vitamina C+ · Vitamina D','Integratori post pranzo'],
+        ['17:00','XS High Protein Bar','Integratore pomeriggio'],
+        ['20:00','🌙 Cena: proteina + verdura abbondante, carbo minimi','Pasto serale — registra in app'],
+        ['21:30','Amino Advantage+','Integratore sera'],
+      ].map(([t,l,note])=>`
+        <div class="timeline-row">
+          <span class="timeline-time">${t}</span>
+          <div class="timeline-content">
+            <div class="timeline-main">${l}</div>
+            <div class="timeline-sub">${note}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card" style="border-color:rgba(78,205,196,.3);">
+      <span class="lbl">🌅 Colazione post-workout — opzioni</span>
+      ${[
+        'Whey 30g + latte avena 250ml + avena 50g + mirtilli 80g (~430 kcal)',
+        'Whey 30g + latte soia 250ml + banana + burro mandorle 15g (~420 kcal)',
+        'Whey 30g + latte riso 250ml + chia 15g + frutti di bosco 100g (~380 kcal)',
+      ].map(sg=>`<div style="background:var(--s2);border-radius:6px;padding:8px 10px;margin-bottom:6px;font-size:12px;color:var(--t3);border-left:2px solid var(--acc);">${sg}</div>`).join('')}
+    </div>
+
+    <div class="card">
+      <span class="lbl">Struttura pranzo vs cena</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        ${[
+          ['☀️ Pranzo',['Proteina 35%','Carbo complessi 30%','Verdura 30%','+ Vitamina C sempre']],
+          ['🌙 Cena',['Proteina 45–50%','Verdura 40%','Carbo 0–15%','No picchi insulinici']],
+        ].map(([title,items])=>`
+          <div style="background:var(--s2);border-radius:8px;padding:12px;">
+            <div style="font-size:12px;color:var(--t1);margin-bottom:8px;font-family:'JetBrains Mono',monospace;">${title}</div>
+            ${items.map(it=>`<div style="font-size:11px;color:var(--t3);margin-bottom:5px;padding-left:8px;border-left:2px solid var(--b1);line-height:1.3;">${it}</div>`).join('')}
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="lbl">Struttura settimanale</span>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+        ${[['Lun','Allenamento','var(--acc)'],['Mar','Allenamento','var(--acc)'],['Mer','Allenamento','var(--acc)'],['Gio','Digiuno','var(--err)']].map(([d,t,c])=>`
+          <div style="text-align:center;background:var(--s2);border-radius:8px;padding:10px 4px;border:1px solid ${c}22;">
+            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${c};margin-bottom:3px;">${d}</div>
+            <div style="font-size:10px;color:var(--t3);">${t}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="lbl">Priorità cliniche</span>
+      ${[
+        ['🔴','Ferritina bassa','Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi'],
+        ['🟠','Sistema immunitario','2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi'],
+        ['🟡','Infiammazione','Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani'],
+      ].map(([ic,l,t])=>`
+        <div class="prio-row">
+          <div class="prio-title">${ic} <b>${l}</b></div>
+          <div class="prio-text">${t}</div>
+        </div>`).join('')}
+    </div>
+
+    <div class="card" style="margin-bottom:30px;">
+      <span class="lbl">Regole fuori casa</span>
+      ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini (cross-contaminazione inclusa)','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">
+          <span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;">${i+1}.</span>
+          <span style="font-size:13px;color:var(--t3);line-height:1.5;">${r}</span>
+        </div>`).join('')}
+    </div>`;
+
+  document.getElementById('page-piano').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS — OGGI
+// ═══════════════════════════════════════════════════════════════
+function navDay(dir) {
+  const allDays = Object.keys(state.db.days).sort();
+  const idx = allDays.indexOf(state.activeDay);
+  const newIdx = idx + dir;
+  if (newIdx >= 0 && newIdx < allDays.length) {
+    state.activeDay = allDays[newIdx];
+    state.advice = '';
+    renderOggi();
+  }
+}
+
+function toggleFasting() {
+  const day = getDay(state.activeDay);
+  day.fasting = !day.fasting;
+  saveDB(state.db);
+  renderOggi();
+}
+
+function toggleSuppTaken(id) {
+  const day = getDay(state.activeDay);
+  if (!day.suppsTaken) day.suppsTaken = [];
+  const idx = day.suppsTaken.indexOf(id);
+  if (idx>=0) day.suppsTaken.splice(idx,1);
+  else day.suppsTaken.push(id);
+  saveDB(state.db);
+  renderOggi();
+}
+
+function setLogSlot(id) {
+  state.logSlot = id;
+  renderOggi();
+}
+
+function setSuggestion(i) {
+  state.logText = SUGGESTED[state.logSlot][i];
+  renderOggi();
+  setTimeout(()=>{ const ta=document.getElementById('log-text'); if(ta){ta.value=state.logText; ta.focus();} },10);
+}
+
+async function logMeal() {
+  const text = document.getElementById('log-text')?.value?.trim() || state.logText.trim();
+  if (!text) return;
+  state.logText = text;
+  state.logLoading = true;
+  state.logError = '';
+  renderOggi();
+  try {
+    const macros = await estimateMacros(text);
+    const day = getDay(state.activeDay);
+    day.meals = day.meals||[];
+    day.meals.push({
+      id: Date.now(), slot: state.logSlot, description: text, ...macros,
+      time: new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})
+    });
+    saveDB(state.db);
+    state.logText = '';
+    state.logError = '';
+  } catch(e) {
+    state.logError = 'Errore nella stima AI. Verifica la connessione internet.';
+  }
+  state.logLoading = false;
+  renderOggi();
+}
+
+function deleteMeal(dayKey, id) {
+  const day = state.db.days[dayKey];
+  if (!day) return;
+  day.meals = day.meals.filter(m=>m.id!=id);
+  saveDB(state.db);
+  renderOggi();
+}
+
+async function fetchAdvice() {
+  const day = getDay(state.activeDay);
+  const meals = day.meals||[];
+  const suppsTaken = day.suppsTaken||[];
+  const mTot = mealTotals(meals);
+  const sTot = suppTotalsForDay(suppsTaken);
+  const cons = {
+    kcal:mTot.kcal+sTot.kcal, protein:mTot.protein+sTot.protein,
+    carbs:mTot.carbs+sTot.carbs, fat:mTot.fat+sTot.fat
+  };
+  state.advLoading = true;
+  state.advice = '';
+  renderOggi();
+  try {
+    state.advice = await getRebalanceAdvice(cons, MEAL_SLOTS.find(s=>s.id===state.nextSlot)?.label||state.nextSlot);
+  } catch {
+    state.advice = 'Errore nel recupero suggerimenti. Verifica la connessione.';
+  }
+  state.advLoading = false;
+  renderOggi();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS — INTEGRATORI
+// ═══════════════════════════════════════════════════════════════
+function setSuppFilter(f) {
+  state.suppFilter = f;
+  renderIntegratori();
+}
+
+function toggleSuppActive(id) {
+  const s = state.supps.find(s=>s.id===id);
+  if (s) { s.active = !s.active; saveSupps(); renderIntegratori(); }
+}
+
+function updateSupp(id, key, val) {
+  const s = state.supps.find(s=>s.id===id);
+  if (s) { s[key] = val; saveSupps(); }
+  // Re-render cost only (lightweight)
+  const banner = document.querySelector('.cost-main');
+  if (banner) banner.textContent = '€ '+totalMonthlyCost().toFixed(2);
+}
+
+function addSupp() {
+  const newId = Math.max(...state.supps.map(s=>s.id))+1;
+  state.supps.push({id:newId,name:'Nuovo integratore',slot:'08:30',active:true,kcal:0,protein:0,carbs:0,fat:0,price:0,doses:30,note:''});
+  saveSupps();
+  renderIntegratori();
+}
+
+function deleteSupp(id) {
+  if (confirm('Eliminare questo integratore?')) {
+    state.supps = state.supps.filter(s=>s.id!==id);
+    saveSupps();
+    renderIntegratori();
+  }
+}
+
+function resetSupps() {
+  if (confirm('Ripristinare la lista integratori di default? I dati personalizzati andranno persi.')) {
+    state.supps = JSON.parse(JSON.stringify(DEFAULT_SUPPS));
+    saveSupps();
+    renderIntegratori();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS — STORICO
+// ═══════════════════════════════════════════════════════════════
+function setReportRange(r) {
+  state.reportRange = r;
+  renderStorico();
+}
+
+function goToDay(day) {
+  state.activeDay = day;
+  state.advice = '';
+  showPage('oggi');
+}
+
+function resetAll() {
+  if (confirm('Eliminare tutti i dati dei pasti? Questa azione non è reversibile.')) {
+    state.db = {days:{}};
+    saveDB(state.db);
+    renderStorico();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+// Ensure today exists
+getDay(todayKey());
+saveDB(state.db);
+renderOggi();
+</script>
+</body>
+</html>
