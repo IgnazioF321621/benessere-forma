@@ -658,12 +658,10 @@ async function saveOnboarding() {
 // WEIGHT
 // ═══════════════════════════════════════════════════════════
 async function saveWeightEntry(kg) {
-  const today = todayKey();
-  await supa.from('fasting_days').upsert({user_id:ST.user.id, date:today}, {onConflict:'user_id,date', ignoreDuplicates:true});
   // store weight in profile
   await supa.from('profiles').update({weight_kg:kg, updated_at:new Date().toISOString()}).eq('id', ST.user.id);
-  ST.profile.weight_kg = kg;
-  document.getElementById('h-weight').textContent = kg;
+if(ST.profile) ST.profile.weight_kg = kg;
+const el = document.getElementById('h-weight'); if(el) el.textContent = kg;
 }
 
 async function saveWeight() {
