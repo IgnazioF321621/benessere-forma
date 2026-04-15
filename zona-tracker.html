@@ -15,31 +15,17 @@
 html,body{height:100%;overscroll-behavior:none;}
 body{color:#1A1A1A;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;background:#F5F3EE;}
 :root{
-  --bg:#F5F3EE;
-  --s1:#FFFFFF;
-  --s2:#F0EDE6;
-  --s3:#E8E4DC;
-  --b1:#DDD9D0;
-  --b2:#C8C3B8;
-  --t1:#1A1A1A;
-  --t2:#555047;
-  --t3:#9A9388;
-  --acc:#2A7A6F;
-  --acc-lt:#E6F4F2;
-  --acc2:#235F56;
-  --carb:#C4880A;
-  --carb-lt:#FEF3DC;
-  --prot:#2A7A6F;
-  --prot-lt:#E6F4F2;
-  --fat:#B84C2A;
-  --fat-lt:#FCEEE9;
-  --ok:#2A7A6F;
-  --warn:#C4880A;
-  --err:#B84C2A;
-  --err-lt:#FCEEE9;
+  --bg:#F5F3EE;--s1:#FFFFFF;--s2:#F0EDE6;--s3:#E8E4DC;
+  --b1:#DDD9D0;--b2:#C8C3B8;
+  --t1:#1A1A1A;--t2:#555047;--t3:#9A9388;
+  --acc:#2A7A6F;--acc-lt:#E6F4F2;--acc2:#235F56;
+  --carb:#C4880A;--carb-lt:#FEF3DC;
+  --prot:#2A7A6F;--prot-lt:#E6F4F2;
+  --fat:#B84C2A;--fat-lt:#FCEEE9;
+  --ok:#2A7A6F;--warn:#C4880A;--err:#B84C2A;--err-lt:#FCEEE9;
   --r:10px;
-  --shadow:0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
-  --shadow-md:0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.05);
 }
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
@@ -48,8 +34,6 @@ textarea,select,input{-webkit-appearance:none;font-family:'Syne',sans-serif;}
 button:active{opacity:.85;transform:scale(.98);}
 button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .mono{font-family:'JetBrains Mono',monospace;}
-
-/* LAYOUT */
 #app{min-height:100vh;display:flex;flex-direction:column;}
 #header{background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:200;padding-top:env(safe-area-inset-top);box-shadow:var(--shadow);}
 .h-inner{padding:14px 20px 0;}
@@ -61,21 +45,14 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 #main{flex:1;padding-bottom:calc(env(safe-area-inset-bottom)+40px);}
 .page{display:none;padding:18px 16px;}
 .page.active{display:block;}
-
-/* CARDS */
 .card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:18px;margin-bottom:12px;box-shadow:var(--shadow);}
 .card-green{border-color:rgba(42,122,111,.25);background:linear-gradient(135deg,#fff 0%,var(--acc-lt) 100%);}
-.card-warn{border-color:rgba(196,136,10,.25);background:linear-gradient(135deg,#fff 0%,var(--carb-lt) 100%);}
 .lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;display:block;}
-
-/* FORMS */
 .inp{width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:11px 13px;color:var(--t1);font-size:14px;font-family:'Syne',sans-serif;transition:border-color .2s;}
 .inp:focus{outline:none;border-color:var(--acc);background:#fff;}
 textarea.inp{resize:vertical;min-height:76px;line-height:1.55;}
 select.inp{cursor:pointer;}
 .inp-sm{padding:7px 11px;font-size:13px;}
-
-/* BUTTONS */
 .btn{padding:11px 18px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;font-weight:500;transition:all .15s;box-shadow:var(--shadow);}
 .btn-primary{background:var(--acc);color:#fff;font-weight:700;}
 .btn-primary:hover{background:var(--acc2);}
@@ -84,8 +61,6 @@ select.inp{cursor:pointer;}
 .btn-danger{background:var(--err-lt);color:var(--err);border:1px solid rgba(184,76,42,.2);}
 .btn-full{width:100%;}
 .btn-sm{padding:6px 12px;font-size:10px;}
-
-/* MACRO BARS */
 .mbar{margin-bottom:10px;}
 .mbar-head{display:flex;justify-content:space-between;margin-bottom:4px;}
 .mbar-lbl{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
@@ -93,21 +68,15 @@ select.inp{cursor:pointer;}
 .mbar-val.over{color:var(--err);}
 .mbar-track{height:5px;border-radius:3px;background:var(--s3);overflow:hidden;}
 .mbar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.16,1,.3,1);}
-
-/* DONUT */
 .donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
 .donut-info{flex:1;min-width:160px;}
 .legend{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;}
 .leg-dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle;}
 .leg-lbl{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
-
-/* SUM GRID */
 .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .sum-cell{background:var(--s2);border-radius:8px;padding:10px 6px;text-align:center;border:1px solid var(--b1);}
 .sum-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .sum-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
-
-/* MEAL CARD */
 .meal-card{background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
 .meal-desc{font-size:13px;color:var(--t1);line-height:1.4;margin:0;}
 .meal-note{font-size:11px;color:var(--t3);font-style:italic;margin-top:3px;}
@@ -115,21 +84,15 @@ select.inp{cursor:pointer;}
 .meal-macro{font-size:11px;font-family:'JetBrains Mono',monospace;}
 .meal-del{background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0 2px;flex-shrink:0;transition:color .15s;}
 .meal-del:hover{color:var(--err);}
-
-/* SUPP PILLS */
 .supp-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
 .supp-pill{display:inline-flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:5px 11px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t2);cursor:pointer;transition:all .15s;}
 .supp-pill.taken{background:var(--acc-lt);border-color:var(--acc);color:var(--acc);font-weight:500;}
 .supp-pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
 .supp-group-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;width:100%;}
-
-/* SLOT TABS */
 .slot-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
 .slot-tab{padding:10px 4px;border-radius:8px;border:1px solid var(--b1);cursor:pointer;font-size:9px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;text-align:center;transition:all .15s;background:var(--s2);color:var(--t3);}
 .slot-tab .slot-icon{font-size:18px;display:block;margin-bottom:3px;}
 .slot-tab.active{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700;}
-
-/* SUPP TABLE */
 .supp-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);}
 .supp-card.inactive{opacity:.55;}
 .supp-name-inp{background:none;border:none;color:var(--t1);font-size:14px;font-family:'Syne',sans-serif;font-weight:600;width:100%;padding:0;}
@@ -146,86 +109,52 @@ select.inp{cursor:pointer;}
 .check-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--b1);background:var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
 .check-box.on{background:var(--acc);border-color:var(--acc);}
 .check-mark{font-size:10px;color:#fff;font-weight:900;line-height:1;}
-
-/* COST BANNER */
 .cost-banner{background:var(--acc);border-radius:var(--r);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;box-shadow:var(--shadow-md);}
 .cost-main{font-size:30px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#fff;}
 .cost-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;}
 .cost-right{text-align:right;}
 .cost-per{font-size:12px;color:rgba(255,255,255,.85);font-family:'JetBrains Mono',monospace;}
-
-/* SLOT FILTER */
 .slot-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
 .slot-chip{padding:5px 13px;border-radius:20px;border:1px solid var(--b1);background:var(--s1);color:var(--t3);font-size:10px;font-family:'JetBrains Mono',monospace;cursor:pointer;transition:all .15s;box-shadow:var(--shadow);}
 .slot-chip.active{background:var(--acc);color:#fff;border-color:var(--acc);}
-
-/* RANGE TABS */
 .range-tabs{display:flex;gap:6px;margin-bottom:16px;}
 .range-tab{flex:1;padding:9px;border-radius:8px;border:1px solid var(--b1);background:var(--s1);color:var(--t3);font-size:11px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all .15s;box-shadow:var(--shadow);}
 .range-tab.active{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700;}
-
-/* REPORT */
 .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
 .report-cell{background:var(--s2);border-radius:8px;padding:14px;text-align:center;border:1px solid var(--b1);}
 .report-val{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .report-lbl{font-size:10px;color:var(--t3);margin-top:4px;}
-
-/* MINI CHART */
 .mini-chart{display:flex;align-items:flex-end;gap:3px;height:64px;margin-top:12px;}
 .mini-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
 .mini-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s ease;}
 .mini-bar-lbl{font-size:8px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
-
-/* HIST CARD */
 .hist-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;margin-bottom:10px;cursor:pointer;transition:all .2s;box-shadow:var(--shadow);}
 .hist-card:hover{border-color:var(--acc);box-shadow:var(--shadow-md);}
 .hist-card.today{border-color:var(--acc);border-width:2px;}
-
-/* ADVICE */
 .advice-box{background:var(--acc-lt);border-radius:8px;padding:14px;border-left:3px solid var(--acc);margin-top:12px;}
 .advice-text{font-size:13px;line-height:1.75;color:var(--t1);white-space:pre-wrap;}
-
-/* TIMELINE */
 .timeline-row{display:flex;gap:12px;align-items:flex-start;padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--b1);}
 .timeline-row:last-child{border:none;padding:0;margin:0;}
 .timeline-time{font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);min-width:44px;padding-top:1px;}
 .timeline-main{font-size:13px;color:var(--t1);line-height:1.4;}
 .timeline-sub{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:2px;}
-
-/* DAY NAV */
 .day-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .day-date{font-size:15px;font-family:'JetBrains Mono',monospace;color:var(--t1);text-align:center;}
 .day-today{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-align:center;margin-top:1px;}
-
-/* FASTING */
 .fast-screen{text-align:center;padding:50px 20px;}
 .fast-icon{font-size:56px;margin-bottom:16px;}
-
-/* LOADING */
 .loading{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* SUGGESTION BUTTON */
 .sugg-btn{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:9px 11px;color:var(--t2);font-size:12px;cursor:pointer;text-align:left;font-family:'Syne',sans-serif;line-height:1.4;transition:all .15s;width:100%;display:block;margin-bottom:5px;}
 .sugg-btn:hover{border-color:var(--acc);color:var(--t1);background:#fff;}
-
-/* PRIO */
 .prio-row{margin-bottom:14px;padding-left:14px;border-left:3px solid var(--b1);}
 .prio-row.red{border-color:#B84C2A;}
 .prio-row.orange{border-color:#C4880A;}
 .prio-row.yellow{border-color:#8A9A2A;}
 .prio-title{font-size:13px;color:var(--t1);margin-bottom:4px;font-weight:600;}
 .prio-text{font-size:12px;color:var(--t2);line-height:1.7;}
-
-/* TAG */
 .tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
 .tag-ok{background:var(--acc-lt);color:var(--acc);}
-.tag-warn{background:var(--carb-lt);color:var(--carb);}
-.tag-off{background:var(--s3);color:var(--t3);}
-
-/* SHAKE GROUP */
-.shake-group{background:var(--acc-lt);border:1px solid rgba(42,122,111,.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;}
-.shake-title{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;margin-bottom:6px;letter-spacing:.5px;}
 </style>
 </head>
 <body>
@@ -243,26 +172,23 @@ select.inp{cursor:pointer;}
     </nav>
   </div>
   <div id="main">
-    <div id="page-oggi"        class="page active"></div>
+    <div id="page-oggi" class="page active"></div>
     <div id="page-integratori" class="page"></div>
-    <div id="page-storico"     class="page"></div>
-    <div id="page-piano"       class="page"></div>
+    <div id="page-storico" class="page"></div>
+    <div id="page-piano" class="page"></div>
   </div>
 </div>
-
 <script>
 // ═══════════════════════════════════════════════════════════
-// CONFIG
+// CONFIG — Cloudflare Worker URL (Groq proxy)
 // ═══════════════════════════════════════════════════════════
-// IMPORTANT: Replace with your Cloudflare Worker URL once deployed
-// Until then, the app uses a direct API call (works on GitHub Pages with proper CORS)
-const API_URL = 'https://api.anthropic.com/v1/messages';
+const WORKER_URL = 'https://zona-ai.ignaziof23.workers.dev';
 
 const TARGET = {
   kcal:1900,
-  protein:Math.round((1900*.30)/4), // 143g
-  carbs:  Math.round((1900*.40)/4), // 190g
-  fat:    Math.round((1900*.30)/9), // 63g
+  protein:Math.round((1900*.30)/4),
+  carbs:  Math.round((1900*.40)/4),
+  fat:    Math.round((1900*.30)/9),
 };
 
 const MEAL_SLOTS = [
@@ -300,43 +226,33 @@ const SUGGESTED = {
   ],
 };
 
-// ═══════════════════════════════════════════════════════════
-// SUPPLEMENTS — Mami Shake = All Plant Protein + Probiotici + Fibre
-// grouped under "Shake Mami" label at 06:30
-// ═══════════════════════════════════════════════════════════
 const DEFAULT_SUPPS = [
-  // ── Shake Mami (3 componenti) ──
-  {id:1, name:'All Plant Protein',        slot:'06:30',group:'Shake Mami',active:true, kcal:60,  protein:13,carbs:2, fat:1,price:42,doses:30, note:'Componente shake'},
-  {id:2, name:'Balance Within Probiotics',slot:'06:30',group:'Shake Mami',active:true, kcal:5,   protein:0, carbs:1, fat:0,price:38,doses:30, note:'Componente shake'},
-  {id:3, name:'Fibre Powder',             slot:'06:30',group:'Shake Mami',active:true, kcal:15,  protein:0, carbs:4, fat:0,price:28,doses:30, note:'Componente shake'},
-  // ── Colazione 08:30 ──
-  {id:4, name:'Hydrolyzed Whey Protein',  slot:'08:30',group:'',active:true, kcal:110,protein:24,carbs:2, fat:1,price:55,doses:30, note:'Post-workout'},
-  {id:5, name:'Double X',                 slot:'08:30',group:'',active:true, kcal:10, protein:0, carbs:2, fat:0,price:68,doses:31, note:'Multivitaminico'},
-  {id:6, name:'Omega-3',                  slot:'08:30',group:'',active:true, kcal:15, protein:0, carbs:0, fat:2,price:32,doses:60, note:'Antinfiammatorio'},
-  {id:7, name:'Metabolismo Plus',         slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:30,doses:30, note:''},
-  {id:8, name:'Coenzima Q10',             slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:34,doses:30, note:''},
-  {id:9, name:'Glucosamina con Boswellia',slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:36,doses:30, note:'Articolazioni'},
-  {id:10,name:'Cardo Mariano',            slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:24,doses:30, note:'Fegato'},
-  {id:11,name:'Prostafit',                slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:30,doses:30, note:''},
-  {id:12,name:'Vision Plus',              slot:'08:30',group:'',active:false,kcal:5,  protein:0, carbs:1, fat:0,price:28,doses:30, note:'Sospeso'},
-  // ── Tarda mattina ──
-  {id:13,name:'Amino Advantage+',         slot:'11:00',group:'',active:true, kcal:20, protein:4, carbs:2, fat:0,price:32,doses:30, note:'Tarda mattina'},
-  // ── Post pranzo ──
-  {id:14,name:'Ginkgo Biloba',            slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:26,doses:30, note:''},
-  {id:15,name:'Ferro e Acido Folico',     slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:22,doses:30, note:'+ Vitamina C'},
-  {id:16,name:'Vitamina B+',              slot:'13:30',group:'',active:false,kcal:5,  protein:0, carbs:1, fat:0,price:20,doses:30, note:'Sovrapposizione Double X'},
-  {id:17,name:'Vitamina C+',              slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:24,doses:60, note:'Con ferro'},
-  {id:18,name:'Vitamina D',               slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:20,doses:60, note:''},
-  // ── Pomeriggio ──
-  {id:19,name:'XS High Protein Bar',      slot:'17:00',group:'',active:true, kcal:200,protein:27,carbs:8, fat:4,price:45,doses:12, note:'Pomeriggio'},
-  // ── Sera ──
-  {id:20,name:'Amino Advantage+ (sera)',  slot:'21:30',group:'',active:true, kcal:20, protein:4, carbs:2, fat:0,price:32,doses:30, note:'Sera'},
+  {id:1, name:'All Plant Protein',        slot:'06:30',group:'Shake Mami',active:true, kcal:60,  protein:13,carbs:2, fat:1,price:42,doses:30,note:'Componente shake'},
+  {id:2, name:'Balance Within Probiotics',slot:'06:30',group:'Shake Mami',active:true, kcal:5,   protein:0, carbs:1, fat:0,price:38,doses:30,note:'Componente shake'},
+  {id:3, name:'Fibre Powder',             slot:'06:30',group:'Shake Mami',active:true, kcal:15,  protein:0, carbs:4, fat:0,price:28,doses:30,note:'Componente shake'},
+  {id:4, name:'Hydrolyzed Whey Protein',  slot:'08:30',group:'',active:true, kcal:110,protein:24,carbs:2, fat:1,price:55,doses:30,note:'Post-workout'},
+  {id:5, name:'Double X',                 slot:'08:30',group:'',active:true, kcal:10, protein:0, carbs:2, fat:0,price:68,doses:31,note:'Multivitaminico'},
+  {id:6, name:'Omega-3',                  slot:'08:30',group:'',active:true, kcal:15, protein:0, carbs:0, fat:2,price:32,doses:60,note:'Antinfiammatorio'},
+  {id:7, name:'Metabolismo Plus',         slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:30,doses:30,note:''},
+  {id:8, name:'Coenzima Q10',             slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:34,doses:30,note:''},
+  {id:9, name:'Glucosamina con Boswellia',slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:36,doses:30,note:'Articolazioni'},
+  {id:10,name:'Cardo Mariano',            slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:24,doses:30,note:'Fegato'},
+  {id:11,name:'Prostafit',                slot:'08:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:30,doses:30,note:''},
+  {id:12,name:'Vision Plus',              slot:'08:30',group:'',active:false,kcal:5,  protein:0, carbs:1, fat:0,price:28,doses:30,note:'Sospeso'},
+  {id:13,name:'Amino Advantage+',         slot:'11:00',group:'',active:true, kcal:20, protein:4, carbs:2, fat:0,price:32,doses:30,note:'Tarda mattina'},
+  {id:14,name:'Ginkgo Biloba',            slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:26,doses:30,note:''},
+  {id:15,name:'Ferro e Acido Folico',     slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:22,doses:30,note:'+ Vitamina C'},
+  {id:16,name:'Vitamina B+',              slot:'13:30',group:'',active:false,kcal:5,  protein:0, carbs:1, fat:0,price:20,doses:30,note:'Sovrapposizione Double X'},
+  {id:17,name:'Vitamina C+',              slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:1, fat:0,price:24,doses:60,note:'Con ferro'},
+  {id:18,name:'Vitamina D',               slot:'13:30',group:'',active:true, kcal:5,  protein:0, carbs:0, fat:0,price:20,doses:60,note:''},
+  {id:19,name:'XS High Protein Bar',      slot:'17:00',group:'',active:true, kcal:200,protein:27,carbs:8, fat:4,price:45,doses:12,note:'Pomeriggio'},
+  {id:20,name:'Amino Advantage+ (sera)',  slot:'21:30',group:'',active:true, kcal:20, protein:4, carbs:2, fat:0,price:32,doses:30,note:'Sera'},
 ];
 
 // ═══════════════════════════════════════════════════════════
 // STORAGE
 // ═══════════════════════════════════════════════════════════
-const SK = {db:'zt_db_v2',supps:'zt_supps_v2'};
+const SK={db:'zt_db_v3',supps:'zt_supps_v3'};
 function loadDB(){try{return JSON.parse(localStorage.getItem(SK.db))||{days:{}};}catch{return{days:{}};}}
 function saveDB(){try{localStorage.setItem(SK.db,JSON.stringify(ST.db));}catch{}}
 function loadSupps(){try{const s=JSON.parse(localStorage.getItem(SK.supps));return s&&s.length?s:J(DEFAULT_SUPPS);}catch{return J(DEFAULT_SUPPS);}}
@@ -346,12 +262,12 @@ function J(x){return JSON.parse(JSON.stringify(x));}
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
-const ST = {
-  page:'oggi', activeDay:todayKey(),
-  db:loadDB(), supps:loadSupps(),
-  logSlot:'colazione', logText:'',
-  logLoading:false, logError:'',
-  advice:'', advLoading:false,
+const ST={
+  page:'oggi',activeDay:todayKey(),
+  db:loadDB(),supps:loadSupps(),
+  logSlot:'colazione',logText:'',
+  logLoading:false,logError:'',
+  advice:'',advLoading:false,
   nextSlot:'pranzo',
   suppFilter:'all',
   reportRange:7,
@@ -359,7 +275,6 @@ const ST = {
 
 function todayKey(){return new Date().toISOString().slice(0,10);}
 function fmtDate(k){return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});}
-
 function getDay(key){
   if(!ST.db.days[key]) ST.db.days[key]={meals:[],fasting:false,suppsTaken:[]};
   if(!ST.db.days[key].suppsTaken) ST.db.days[key].suppsTaken=[];
@@ -370,15 +285,11 @@ function getDay(key){
 // COMPUTATIONS
 // ═══════════════════════════════════════════════════════════
 function mealTotals(meals){
-  return (meals||[]).reduce((a,m)=>({
-    kcal:a.kcal+(m.kcal||0),protein:a.protein+(m.protein||0),
-    carbs:a.carbs+(m.carbs||0),fat:a.fat+(m.fat||0)
-  }),{kcal:0,protein:0,carbs:0,fat:0});
+  return (meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.kcal||0),protein:a.protein+(m.protein||0),carbs:a.carbs+(m.carbs||0),fat:a.fat+(m.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});
 }
 function suppTotalsForIds(ids){
   return ST.supps.filter(s=>(ids||[]).includes(s.id))
-    .reduce((a,s)=>({kcal:a.kcal+s.kcal,protein:a.protein+s.protein,carbs:a.carbs+s.carbs,fat:a.fat+s.fat}),
-    {kcal:0,protein:0,carbs:0,fat:0});
+    .reduce((a,s)=>({kcal:a.kcal+s.kcal,protein:a.protein+s.protein,carbs:a.carbs+s.carbs,fat:a.fat+s.fat}),{kcal:0,protein:0,carbs:0,fat:0});
 }
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){return(s.price&&s.doses)?(s.price/s.doses)*30:0;}
@@ -386,49 +297,28 @@ function totalMonthlyCost(){return activeSupps().reduce((a,s)=>a+suppMonthlyCost
 function periodCost(range){return activeSupps().reduce((a,s)=>a+(s.price/s.doses),0)*range;}
 
 // ═══════════════════════════════════════════════════════════
-// AI — Cloudflare Worker proxy (deploy separately)
-// Worker code:
-//   export default { async fetch(req) {
-//     const body = await req.json();
-//     const r = await fetch('https://api.anthropic.com/v1/messages',{
-//       method:'POST',
-//       headers:{'Content-Type':'application/json','x-api-key':'YOUR_KEY','anthropic-version':'2023-06-01'},
-//       body:JSON.stringify(body)
-//     });
-//     const data = await r.json();
-//     return new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-//   }}
+// AI — via Cloudflare Worker (Groq)
 // ═══════════════════════════════════════════════════════════
-const WORKER_URL = 'https://zona-ai.ignazioforma.workers.dev'; // update after Worker deploy
-
-async function callAI(prompt) {
-  const payload = {
-    model:'claude-sonnet-4-20250514',max_tokens:300,
-    messages:[{role:'user',content:prompt}]
-  };
-  // Try Cloudflare Worker first, fallback to direct (works on GitHub Pages with anthropic CORS headers)
-  let url = WORKER_URL;
-  let headers = {'Content-Type':'application/json'};
-  try {
-    const r = await fetch(url,{method:'POST',headers,body:JSON.stringify(payload)});
-    if(!r.ok) throw new Error('worker fail');
-    const d = await r.json();
-    return (d.content||[]).find(b=>b.type==='text')?.text||'';
-  } catch {
-    // Direct call fallback
-    const r2 = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-    const d2 = await r2.json();
-    return (d2.content||[]).find(b=>b.type==='text')?.text||'';
-  }
+async function callAI(prompt, maxTokens=400) {
+  const response = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      messages: [{role: 'user', content: prompt}],
+      max_tokens: maxTokens,
+    })
+  });
+  if (!response.ok) throw new Error(`Worker error: ${response.status}`);
+  const data = await response.json();
+  return data.content?.[0]?.text || '';
 }
 
 async function estimateMacros(desc) {
-  const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
-  return JSON.parse(txt.replace(/\`\`\`json|\`\`\`/g,'').trim());
+  const txt = await callAI(
+    `Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`
+  );
+  const clean = txt.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
 }
 
 async function getAdvice(consumed, nextMeal) {
@@ -438,7 +328,10 @@ async function getAdvice(consumed, nextMeal) {
     carbs:Math.max(0,TARGET.carbs-consumed.carbs),
     fat:Math.max(0,TARGET.fat-consumed.fat),
   };
-  return await callAI(`Sei un nutrizionista esperto in dieta a Zona (40-30-30).\n\nMacro ancora disponibili oggi:\n- Calorie: ${rem.kcal} kcal\n- Proteine: ${rem.protein}g\n- Carboidrati: ${rem.carbs}g\n- Grassi: ${rem.fat}g\n\nProssimo pasto: ${nextMeal}\n\nProfilo: pescetariano (pesce + possibile uova), no latticini, no carne. Obiettivo: riduzione grasso addominale, ferritina bassa.\n\n2-3 suggerimenti concreti. Italiano, diretto. Max 120 parole.`);
+  return await callAI(
+    `Sei un nutrizionista esperto in dieta a Zona (40-30-30).\n\nMacro ancora disponibili oggi:\n- Calorie: ${rem.kcal} kcal\n- Proteine: ${rem.protein}g\n- Carboidrati: ${rem.carbs}g\n- Grassi: ${rem.fat}g\n\nProssimo pasto: ${nextMeal}\n\nProfilo: pescetariano (pesce + possibile uova), no latticini, no carne. Obiettivo: riduzione grasso addominale, ferritina bassa.\n\n2-3 suggerimenti concreti. Italiano, diretto. Max 120 parole.`,
+    250
+  );
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -467,48 +360,19 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 function macroBar(label,current,target,color,unit='g'){
   const pct=Math.min(100,Math.round((current/target)*100));
   const over=current>target;
-  return `<div class="mbar">
-    <div class="mbar-head">
-      <span class="mbar-lbl">${label}</span>
-      <span class="mbar-val ${over?'over':''}">${current}${unit} / ${target}${unit}</span>
-    </div>
-    <div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${over?'var(--err)':color};"></div></div>
-  </div>`;
+  return `<div class="mbar"><div class="mbar-head"><span class="mbar-lbl">${label}</span><span class="mbar-val ${over?'over':''}">${current}${unit} / ${target}${unit}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${over?'var(--err)':color};"></div></div></div>`;
 }
 
 function donutSVG(protein,carbs,fat,kcal){
   const total=protein+carbs+fat||1;
   const r=42,cx=58,cy=58,sw=13,circ=2*Math.PI*r;
   const cP=(carbs/total)*100,pP=(protein/total)*100,fP=(fat/total)*100;
-  function seg(pct,off,col){
-    const dash=(pct/100)*circ;
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}"
-      stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-(off*circ/100)}"
-      style="transition:stroke-dasharray .5s ease" transform="rotate(-90 ${cx} ${cy})"/>`;
-  }
-  return `<svg width="116" height="116" viewBox="0 0 116 116">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
-    ${seg(cP,0,'var(--carb)')}${seg(pP,cP,'var(--prot)')}${seg(fP,cP+pP,'var(--fat)')}
-    <text x="${cx}" y="${cy-3}" text-anchor="middle" fill="var(--t1)" font-size="16" font-weight="700" font-family="JetBrains Mono,monospace">${kcal}</text>
-    <text x="${cx}" y="${cy+12}" text-anchor="middle" fill="var(--t3)" font-size="9" font-family="JetBrains Mono,monospace">kcal</text>
-  </svg>`;
+  function seg(pct,off,col){const dash=(pct/100)*circ;return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-(off*circ/100)}" style="transition:stroke-dasharray .5s ease" transform="rotate(-90 ${cx} ${cy})"/>`;}
+  return `<svg width="116" height="116" viewBox="0 0 116 116"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>${seg(cP,0,'var(--carb)')}${seg(pP,cP,'var(--prot)')}${seg(fP,cP+pP,'var(--fat)')}<text x="${cx}" y="${cy-3}" text-anchor="middle" fill="var(--t1)" font-size="16" font-weight="700" font-family="JetBrains Mono,monospace">${kcal}</text><text x="${cx}" y="${cy+12}" text-anchor="middle" fill="var(--t3)" font-size="9" font-family="JetBrains Mono,monospace">kcal</text></svg>`;
 }
 
 function mealCardHTML(m){
-  return `<div class="meal-card">
-    <div style="flex:1;min-width:0;">
-      <p class="meal-desc">${esc(m.description)}</p>
-      ${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}
-      <div class="meal-macros">
-        <span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span>
-        <span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span>
-        <span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span>
-        <span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span>
-        ${m.time?`<span class="meal-macro" style="color:var(--t3)">${m.time}</span>`:''}
-      </div>
-    </div>
-    <button class="meal-del" onclick="deleteMeal('${ST.activeDay}',${m.id})">×</button>
-  </div>`;
+  return `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span>${m.time?`<span class="meal-macro" style="color:var(--t3)">${m.time}</span>`:''}</div></div><button class="meal-del" onclick="deleteMeal('${ST.activeDay}',${m.id})">×</button></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -525,149 +389,31 @@ function renderOggi(){
   const allDays=Object.keys(ST.db.days).sort();
   const idx=allDays.indexOf(ST.activeDay);
   const isToday=ST.activeDay===todayKey();
-  const bySlot={};
-  MEAL_SLOTS.forEach(s=>{bySlot[s.id]=meals.filter(m=>m.slot===s.id);});
-
-  // Group active supps by slot/group for display
+  const bySlot={};MEAL_SLOTS.forEach(s=>{bySlot[s.id]=meals.filter(m=>m.slot===s.id);});
   const actSupps=activeSupps();
   const shakeSupps=actSupps.filter(s=>s.group==='Shake Mami');
   const otherSupps=actSupps.filter(s=>s.group!=='Shake Mami');
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
 
-  let html=`
-    <div class="day-nav">
-      <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹</button>
-      <div>
-        <div class="day-date">${fmtDate(ST.activeDay)}</div>
-        ${isToday?'<div class="day-today">● OGGI</div>':''}
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-      <button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">
-        ${day.fasting?'⚡ Digiuno attivo':'Segna digiuno'}
-      </button>
-    </div>`;
+  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Segna digiuno'}</button></div>`;
 
   if(day.fasting){
-    html+=`<div class="fast-screen">
-      <div class="fast-icon">⚡</div>
-      <p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p>
-      <p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p>
-    </div>`;
+    html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
   } else {
-    // DASHBOARD
-    html+=`<div class="card card-green">
-      <div class="donut-wrap">
-        ${donutSVG(cons.protein,cons.carbs,cons.fat,cons.kcal)}
-        <div class="donut-info">
-          <div class="legend">
-            <span class="leg-lbl"><span class="leg-dot" style="background:var(--carb)"></span>Carbo</span>
-            <span class="leg-lbl"><span class="leg-dot" style="background:var(--prot)"></span>Prot</span>
-            <span class="leg-lbl"><span class="leg-dot" style="background:var(--fat)"></span>Grassi</span>
-          </div>
-          ${macroBar('Proteine',cons.protein,TARGET.protein,'var(--prot)')}
-          ${macroBar('Carboidrati',cons.carbs,TARGET.carbs,'var(--carb)')}
-          ${macroBar('Grassi',cons.fat,TARGET.fat,'var(--fat)')}
-          ${macroBar('Calorie',cons.kcal,TARGET.kcal,'var(--acc)',' kcal')}
-        </div>
-      </div>
-      <div class="sum-grid" style="margin-top:14px;">
-        <div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div><div class="sum-lbl">Da pasti</div></div>
-        <div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div>
-        <div class="sum-cell"><div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div><div class="sum-lbl">Rimanenti</div></div>
-      </div>
-    </div>`;
+    html+=`<div class="card card-green"><div class="donut-wrap">${donutSVG(cons.protein,cons.carbs,cons.fat,cons.kcal)}<div class="donut-info"><div class="legend"><span class="leg-lbl"><span class="leg-dot" style="background:var(--carb)"></span>Carbo</span><span class="leg-lbl"><span class="leg-dot" style="background:var(--prot)"></span>Prot</span><span class="leg-lbl"><span class="leg-dot" style="background:var(--fat)"></span>Grassi</span></div>${macroBar('Proteine',cons.protein,TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',cons.carbs,TARGET.carbs,'var(--carb)')}${macroBar('Grassi',cons.fat,TARGET.fat,'var(--fat)')}${macroBar('Calorie',cons.kcal,TARGET.kcal,'var(--acc)',' kcal')}</div></div>
+    <div class="sum-grid" style="margin-top:14px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div><div class="sum-lbl">Da pasti</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div><div class="sum-cell"><div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div><div class="sum-lbl">Rimanenti</div></div></div></div>`;
 
-    // INTEGRATORI OGGI
-    html+=`<div class="card">
-      <span class="lbl">💊 Integratori di oggi</span>
-      <p style="font-size:12px;color:var(--t3);margin-bottom:10px;">Tocca per segnare come assunti</p>
-      <div class="supp-pills">`;
+    html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span><p style="font-size:12px;color:var(--t3);margin-bottom:10px;">Tocca per segnare come assunti</p><div class="supp-pills">`;
+    if(shakeSupps.length){html+=`<div class="supp-group-label">⏰ 06:30 — Shake Mami</div>`;shakeSupps.forEach(s=>{const on=taken.includes(s.id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken(${s.id})"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});}
+    otherSlots.forEach(slot=>{const ss=otherSupps.filter(s=>s.slot===slot);html+=`<div class="supp-group-label">⏰ ${slot}</div>`;ss.forEach(s=>{const on=taken.includes(s.id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken(${s.id})"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});});
+    html+=`</div>${sTot.kcal>0?`<div style="font-size:11px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:6px;padding-top:10px;border-top:1px solid var(--b1);">Assunti: ${sTot.kcal} kcal · ${sTot.protein}g P · ${sTot.carbs}g C · ${sTot.fat}g G</div>`:''}</div>`;
 
-    // Shake Mami group
-    if(shakeSupps.length){
-      html+=`<div class="supp-group-label">⏰ 06:30 — Shake Mami</div>`;
-      shakeSupps.forEach(s=>{
-        const on=taken.includes(s.id);
-        html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken(${s.id})">
-          <span class="supp-pill-dot"></span>${esc(s.name)}
-        </span>`;
-      });
-    }
+    html+=`<div class="card"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
-    // Other slots
-    otherSlots.forEach(slot=>{
-      const slotSupps=otherSupps.filter(s=>s.slot===slot);
-      html+=`<div class="supp-group-label">⏰ ${slot}</div>`;
-      slotSupps.forEach(s=>{
-        const on=taken.includes(s.id);
-        html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken(${s.id})">
-          <span class="supp-pill-dot"></span>${esc(s.name)}
-        </span>`;
-      });
-    });
+    html+=`<div class="card"><span class="lbl">+ Registra pasto</span><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTI RAPIDI</span><div style="margin:6px 0 12px;">${(SUGGESTED[ST.logSlot]||[]).map((sg,i)=>`<button class="sugg-btn" onclick="setSuggestion(${i})">${sg}</button>`).join('')}</div><textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;${ST.logLoading||!ST.logText.trim()?'opacity:.5':''}" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
 
-    html+=`</div>`;
-    if(sTot.kcal>0){
-      html+=`<div style="font-size:11px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:6px;padding-top:10px;border-top:1px solid var(--b1);">
-        Assunti: ${sTot.kcal} kcal · ${sTot.protein}g P · ${sTot.carbs}g C · ${sTot.fat}g G
-      </div>`;
-    }
-    html+=`</div>`;
-
-    // RIEQUILIBRIO
-    html+=`<div class="card">
-      <span class="lbl">🎯 Riequilibrio pasto successivo</span>
-      <select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">
-        ${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}
-      </select>
-      <button class="btn btn-primary btn-full" onclick="fetchAdvice()" id="btn-adv">
-        ${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}
-      </button>
-      ${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}
-    </div>`;
-
-    // LOG
-    html+=`<div class="card">
-      <span class="lbl">+ Registra pasto</span>
-      <div class="slot-tabs">
-        ${MEAL_SLOTS.map(sl=>`
-          <button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')">
-            <span class="slot-icon">${sl.icon}</span>${sl.label}
-          </button>`).join('')}
-      </div>
-      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">
-        ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}
-      </div>
-      <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTI RAPIDI</span>
-      <div style="margin:6px 0 12px;">
-        ${(SUGGESTED[ST.logSlot]||[]).map((sg,i)=>`<button class="sugg-btn" onclick="setSuggestion(${i})">${sg}</button>`).join('')}
-      </div>
-      <textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>
-      ${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}
-      <button class="btn btn-primary btn-full" style="margin-top:10px;${ST.logLoading||!ST.logText.trim()?'opacity:.5':''}"
-        onclick="logMeal()" ${ST.logLoading?'disabled':''}>
-        ${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}
-      </button>
-    </div>`;
-
-    // LOGGED MEALS
-    MEAL_SLOTS.forEach(slot=>{
-      const ms=bySlot[slot.id];
-      if(!ms.length) return;
-      const tot=mealTotals(ms);
-      html+=`<div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-          <div><span class="lbl">${slot.icon} ${slot.label}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slot.time}</span></div>
-          <div style="text-align:right;">
-            <div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);font-weight:600;">${tot.kcal} kcal</div>
-            <div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${tot.protein}g P · ${tot.carbs}g C · ${tot.fat}g G</div>
-          </div>
-        </div>
-        ${ms.map(m=>mealCardHTML(m)).join('')}
-      </div>`;
-    });
+    MEAL_SLOTS.forEach(slot=>{const ms=bySlot[slot.id];if(!ms.length)return;const tot=mealTotals(ms);html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><span class="lbl">${slot.icon} ${slot.label}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slot.time}</span></div><div style="text-align:right;"><div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);font-weight:600;">${tot.kcal} kcal</div><div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${tot.protein}g P · ${tot.carbs}g C · ${tot.fat}g G</div></div></div>${ms.map(m=>mealCardHTML(m)).join('')}</div>`;});
   }
 
   document.getElementById('page-oggi').innerHTML=html;
@@ -684,31 +430,11 @@ function renderIntegratori(){
   const actCount=activeSupps().length;
   const slots=[...new Set(supps.map(s=>s.slot))].sort();
   const filtered=ST.suppFilter==='all'?supps:supps.filter(s=>s.slot===ST.suppFilter);
-  const bySlot={};
-  filtered.forEach(s=>{if(!bySlot[s.slot])bySlot[s.slot]=[];bySlot[s.slot].push(s);});
+  const bySlot={};filtered.forEach(s=>{if(!bySlot[s.slot])bySlot[s.slot]=[];bySlot[s.slot].push(s);});
 
-  let html=`
-    <div class="cost-banner">
-      <div>
-        <div class="cost-main">€ ${monthly.toFixed(2)}</div>
-        <div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div>
-      </div>
-      <div class="cost-right">
-        <div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div>
-        <div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div>
-      </div>
-    </div>
-    <div class="slot-filter">
-      <span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>
-      ${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="resetSupps()">Reset default</button>
-        <button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button>
-      </div>
-    </div>`;
+  let html=`<div class="cost-banner"><div><div class="cost-main">€ ${monthly.toFixed(2)}</div><div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div></div><div class="cost-right"><div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div><div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div></div></div>
+  <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;"><button class="btn btn-ghost btn-sm" onclick="resetSupps()">Reset</button><button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button></div></div>`;
 
   Object.keys(bySlot).sort().forEach(slot=>{
     const ss=bySlot[slot];
@@ -717,50 +443,14 @@ function renderIntegratori(){
     const slotKcal=slotActive.reduce((a,s)=>a+s.kcal,0);
     const slotProt=slotActive.reduce((a,s)=>a+s.protein,0);
     const slotCost=slotActive.reduce((a,s)=>a+suppMonthlyCost(s),0);
-
-    html+=`<div style="margin-bottom:6px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;">
-        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">
-          ⏰ ${slot}${isShake?' — Shake Mami':''}
-        </span>
-        <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotKcal}kcal · ${slotProt}gP · €${slotCost.toFixed(2)}/mese</span>
-      </div>`;
-
+    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotKcal}kcal · ${slotProt}gP · €${slotCost.toFixed(2)}/mese</span></div>`;
     ss.forEach(s=>{
-      html+=`<div class="supp-card ${s.active?'':'inactive'}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-          <div style="flex:1;">
-            <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp(${s.id},'name',this.value)"/>
-            <div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap;align-items:center;">
-              <input class="supp-slot-inp" value="${esc(s.slot)}" onchange="updateSupp(${s.id},'slot',this.value)"/>
-              ${s.group?`<span class="tag tag-ok">${esc(s.group)}</span>`:''}
-              <input class="supp-note-inp" value="${esc(s.note||'')}" placeholder="nota..." onchange="updateSupp(${s.id},'note',this.value)"/>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center;margin-left:10px;flex-shrink:0;">
-            <div class="check-box ${s.active?'on':''}" onclick="toggleSuppActive(${s.id})">
-              ${s.active?'<span class="check-mark">✓</span>':''}
-            </div>
-            <button onclick="deleteSupp(${s.id})" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0;transition:color .15s;" onmouseover="this.style.color='var(--err)'" onmouseout="this.style.color='var(--t3)'">×</button>
-          </div>
-        </div>
-        <div class="macro-grid">
-          ${[['kcal','Kcal'],['protein','Prot g'],['carbs','Carbo g'],['fat','Grassi g'],['price','Prezzo €'],['doses','Dosi/conf']].map(([k,lbl])=>`
-            <div class="macro-cell">
-              <div class="macro-cell-lbl">${lbl}</div>
-              <input type="number" class="macro-cell-inp" value="${s[k]||0}" onchange="updateSupp(${s.id},'${k}',+this.value)"/>
-            </div>`).join('')}
-        </div>
-        <div style="margin-top:8px;text-align:right;">
-          <span style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;">
-            €${s.price&&s.doses?(s.price/s.doses).toFixed(2):'–'}/dose · €${suppMonthlyCost(s).toFixed(2)}/mese
-          </span>
-        </div>
-      </div>`;
+      html+=`<div class="supp-card ${s.active?'':'inactive'}"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;"><div style="flex:1;"><input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp(${s.id},'name',this.value)"/><div style="display:flex;gap:8px;margin-top:5px;flex-wrap:wrap;align-items:center;"><input class="supp-slot-inp" value="${esc(s.slot)}" onchange="updateSupp(${s.id},'slot',this.value)"/>${s.group?`<span class="tag tag-ok">${esc(s.group)}</span>`:''}<input class="supp-note-inp" value="${esc(s.note||'')}" placeholder="nota..." onchange="updateSupp(${s.id},'note',this.value)"/></div></div><div style="display:flex;gap:8px;align-items:center;margin-left:10px;flex-shrink:0;"><div class="check-box ${s.active?'on':''}" onclick="toggleSuppActive(${s.id})">${s.active?'<span class="check-mark">✓</span>':''}</div><button onclick="deleteSupp(${s.id})" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0;" onmouseover="this.style.color='var(--err)'" onmouseout="this.style.color='var(--t3)'">×</button></div></div>
+      <div class="macro-grid">${[['kcal','Kcal'],['protein','Prot g'],['carbs','Carbo g'],['fat','Grassi g'],['price','Prezzo €'],['doses','Dosi/conf']].map(([k,lbl])=>`<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${s[k]||0}" onchange="updateSupp(${s.id},'${k}',+this.value)"/></div>`).join('')}</div>
+      <div style="margin-top:8px;text-align:right;"><span style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;">€${s.price&&s.doses?(s.price/s.doses).toFixed(2):'–'}/dose · €${suppMonthlyCost(s).toFixed(2)}/mese</span></div></div>`;
     });
     html+=`</div>`;
   });
-
   document.getElementById('page-integratori').innerHTML=html;
 }
 
@@ -771,100 +461,26 @@ function renderStorico(){
   const days=Object.keys(ST.db.days).sort().reverse();
   const today=todayKey();
   const rangeDays=days.filter(d=>!ST.db.days[d]?.fasting).slice(0,ST.reportRange);
-
   let avgKcal=0,avgProt=0,avgCarbs=0,avgFat=0;
-  if(rangeDays.length){
-    rangeDays.forEach(d=>{
-      const t=mealTotals(ST.db.days[d]?.meals||[]);
-      avgKcal+=t.kcal;avgProt+=t.protein;avgCarbs+=t.carbs;avgFat+=t.fat;
-    });
-    avgKcal=Math.round(avgKcal/rangeDays.length);
-    avgProt=Math.round(avgProt/rangeDays.length);
-    avgCarbs=Math.round(avgCarbs/rangeDays.length);
-    avgFat=Math.round(avgFat/rangeDays.length);
-  }
-  const adherence=rangeDays.length?Math.round(rangeDays.filter(d=>{
-    const t=mealTotals(ST.db.days[d]?.meals||[]);
-    return t.kcal>0&&Math.abs(t.kcal-TARGET.kcal)<300;
-  }).length/rangeDays.length*100):0;
+  if(rangeDays.length){rangeDays.forEach(d=>{const t=mealTotals(ST.db.days[d]?.meals||[]);avgKcal+=t.kcal;avgProt+=t.protein;avgCarbs+=t.carbs;avgFat+=t.fat;});avgKcal=Math.round(avgKcal/rangeDays.length);avgProt=Math.round(avgProt/rangeDays.length);avgCarbs=Math.round(avgCarbs/rangeDays.length);avgFat=Math.round(avgFat/rangeDays.length);}
+  const adherence=rangeDays.length?Math.round(rangeDays.filter(d=>{const t=mealTotals(ST.db.days[d]?.meals||[]);return t.kcal>0&&Math.abs(t.kcal-TARGET.kcal)<300;}).length/rangeDays.length*100):0;
   const estCost=periodCost(ST.reportRange);
   const chartDays=Object.keys(ST.db.days).sort().slice(-14);
   const maxKcal=Math.max(...chartDays.map(d=>mealTotals(ST.db.days[d]?.meals||[]).kcal),TARGET.kcal,1);
 
-  let html=`
-    <div class="range-tabs">
-      ${[7,14,30].map(r=>`<button class="range-tab ${ST.reportRange===r?'active':''}" onclick="setReportRange(${r})">${r} giorni</button>`).join('')}
-    </div>`;
+  let html=`<div class="range-tabs">${[7,14,30].map(r=>`<button class="range-tab ${ST.reportRange===r?'active':''}" onclick="setReportRange(${r})">${r} giorni</button>`).join('')}</div>`;
 
   if(rangeDays.length>0){
-    html+=`<div class="card card-green">
-      <span class="lbl">Report — ${ST.reportRange} giorni (${rangeDays.length} con pasti)</span>
-      <div class="report-grid">
-        <div class="report-cell"><div class="report-val" style="color:var(--acc)">${avgKcal}</div><div class="report-lbl">kcal media/giorno</div></div>
-        <div class="report-cell"><div class="report-val" style="color:${adherence>=70?'var(--ok)':adherence>=40?'var(--warn)':'var(--err)'}">${adherence}%</div><div class="report-lbl">aderenza piano</div></div>
-        <div class="report-cell"><div class="report-val" style="color:var(--prot)">${avgProt}g</div><div class="report-lbl">proteine medie</div></div>
-        <div class="report-cell"><div class="report-val" style="color:var(--carb)">${avgCarbs}g</div><div class="report-lbl">carbo medi</div></div>
-      </div>
-      <div style="background:var(--s2);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--b1);">
-        <div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">Costo integratori stimato (${ST.reportRange} gg)</div>
-          <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--warn);">€ ${estCost.toFixed(2)}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:11px;color:var(--t3);">Mensile stimato</div>
-          <div style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:600;">€ ${totalMonthlyCost().toFixed(2)}</div>
-        </div>
-      </div>
-      ${chartDays.length>1?`
-        <div style="margin-top:14px;">
-          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:6px;letter-spacing:1px;">ANDAMENTO CALORIE PASTI</div>
-          <div class="mini-chart">
-            ${chartDays.map(d=>{
-              const k=mealTotals(ST.db.days[d]?.meals||[]).kcal;
-              const h=Math.round((k/maxKcal)*55)+5;
-              const col=ST.db.days[d]?.fasting?'var(--b1)':k>TARGET.kcal?'var(--err)':k>0?'var(--acc)':'var(--s3)';
-              return `<div class="mini-bar-wrap">
-                <div class="mini-bar" style="height:${h}px;background:${col};"></div>
-                <div class="mini-bar-lbl">${new Date(d+'T12:00:00').getDate()}</div>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>`:''}
+    html+=`<div class="card card-green"><span class="lbl">Report — ${ST.reportRange} giorni (${rangeDays.length} con pasti)</span><div class="report-grid"><div class="report-cell"><div class="report-val" style="color:var(--acc)">${avgKcal}</div><div class="report-lbl">kcal media/giorno</div></div><div class="report-cell"><div class="report-val" style="color:${adherence>=70?'var(--ok)':adherence>=40?'var(--warn)':'var(--err)'}">${adherence}%</div><div class="report-lbl">aderenza piano</div></div><div class="report-cell"><div class="report-val" style="color:var(--prot)">${avgProt}g</div><div class="report-lbl">proteine medie</div></div><div class="report-cell"><div class="report-val" style="color:var(--carb)">${avgCarbs}g</div><div class="report-lbl">carbo medi</div></div></div>
+    <div style="background:var(--s2);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--b1);"><div><div style="font-size:11px;color:var(--t3);margin-bottom:4px;">Costo integratori stimato (${ST.reportRange} gg)</div><div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--warn);">€ ${estCost.toFixed(2)}</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--t3);">Mensile stimato</div><div style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:600;">€ ${totalMonthlyCost().toFixed(2)}</div></div></div>
+    ${chartDays.length>1?`<div style="margin-top:14px;"><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:6px;letter-spacing:1px;">ANDAMENTO CALORIE PASTI</div><div class="mini-chart">${chartDays.map(d=>{const k=mealTotals(ST.db.days[d]?.meals||[]).kcal;const h=Math.round((k/maxKcal)*55)+5;const col=ST.db.days[d]?.fasting?'var(--b1)':k>TARGET.kcal?'var(--err)':k>0?'var(--acc)':'var(--s3)';return `<div class="mini-bar-wrap"><div class="mini-bar" style="height:${h}px;background:${col};"></div><div class="mini-bar-lbl">${new Date(d+'T12:00:00').getDate()}</div></div>`;}).join('')}</div></div>`:''}
     </div>`;
   }
 
-  html+=`
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <span class="lbl" style="margin-bottom:0;">Tutti i giorni</span>
-      <button class="btn btn-danger btn-sm" onclick="resetAll()">🗑 Elimina dati</button>
-    </div>
-    ${days.length===0?'<div class="card"><p style="color:var(--t3);font-size:13px;">Nessun dato ancora. Inizia dalla tab Oggi.</p></div>':''}
-    ${days.map(day=>{
-      const d=ST.db.days[day];
-      const ms=d.meals||[];
-      const tot=mealTotals(ms);
-      const isT=day===today;
-      return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;">
-          <span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>
-          ${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>'
-            :`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}
-        </div>
-        ${!d.fasting&&ms.length?`
-          <div style="display:flex;gap:6px;">
-            ${[['P',tot.protein,TARGET.protein,'var(--prot)'],['C',tot.carbs,TARGET.carbs,'var(--carb)'],['G',tot.fat,TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`
-              <div style="flex:1;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
-                  <span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span>
-                  <span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span>
-                </div>
-                <div style="height:3px;border-radius:2px;background:var(--s3);">
-                  <div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div>
-                </div>
-              </div>`).join('')}
-          </div>`:''}
-      </div>`;
-    }).join('')}`;
+  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin-bottom:0;">Tutti i giorni</span><button class="btn btn-danger btn-sm" onclick="resetAll()">🗑 Elimina dati</button></div>
+  ${days.length===0?'<div class="card"><p style="color:var(--t3);font-size:13px;">Nessun dato ancora. Inizia dalla tab Oggi.</p></div>':''}
+  ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=mealTotals(ms);const isT=day===today;return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,TARGET.protein,'var(--prot)'],['C',tot.carbs,TARGET.carbs,'var(--carb)'],['G',tot.fat,TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
+  </div>`;}).join('')}`;
 
   document.getElementById('page-storico').innerHTML=html;
 }
@@ -874,109 +490,40 @@ function renderStorico(){
 // ═══════════════════════════════════════════════════════════
 function renderPiano(){
   document.getElementById('page-piano').innerHTML=`
-    <div class="card card-green">
-      <span class="lbl">Target 40·30·30 — 1.900 kcal/die</span>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">
-        ${[['Calorie',TARGET.kcal,'kcal','var(--acc)'],['Proteine 30%',TARGET.protein,'g','var(--prot)'],['Carboidrati 40%',TARGET.carbs,'g','var(--carb)'],['Grassi 30%',TARGET.fat,'g','var(--fat)']].map(([l,v,u,c])=>`
-          <div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;">
-            <div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div>
-            <div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div>
-          </div>`).join('')}
-      </div>
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;">
-        <b style="color:var(--t1);">Carbo:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati.
-      </div>
-    </div>
+  <div class="card card-green"><span class="lbl">Target 40·30·30 — 1.900 kcal/die</span>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',TARGET.kcal,'kcal','var(--acc)'],['Proteine 30%',TARGET.protein,'g','var(--prot)'],['Carboidrati 40%',TARGET.carbs,'g','var(--carb)'],['Grassi 30%',TARGET.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
+  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;"><b style="color:var(--t1);">Carbo:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati.</div></div>
 
-    <div class="card">
-      <span class="lbl">Timeline giornaliera</span>
-      ${[
-        ['06:30','Shake Mami: All Plant Protein + Probiotici + Fibre Powder','Pre-workout'],
-        ['08:30','🌅 Colazione: Whey + latte vegetale + avena/frutta','Post-workout — registra in app'],
-        ['08:30','Double X · Omega-3 · Metabolismo Plus · Q10 · Glucosamina · Cardo Mariano · Prostafit','Integratori colazione'],
-        ['11:00','Amino Advantage+','Tarda mattina'],
-        ['12:30','☀️ Pranzo: proteina + carbo IG basso + verdura + limone','Pasto principale — registra in app'],
-        ['13:30','Ginkgo · Ferro e Acido Folico · Vitamina C+ · Vitamina D','Post pranzo'],
-        ['17:00','XS High Protein Bar','Pomeriggio'],
-        ['20:00','🌙 Cena: proteina + verdura abbondante, carbo minimi','Pasto serale — registra in app'],
-        ['21:30','Amino Advantage+','Sera'],
-      ].map(([t,l,note])=>`
-        <div class="timeline-row">
-          <span class="timeline-time">${t}</span>
-          <div>
-            <div class="timeline-main">${l}</div>
-            <div class="timeline-sub">${note}</div>
-          </div>
-        </div>`).join('')}
-    </div>
+  <div class="card"><span class="lbl">Timeline giornaliera</span>
+  ${[['06:30','Shake Mami: All Plant Protein + Probiotici + Fibre Powder','Pre-workout'],['08:30','🌅 Colazione: Whey + latte vegetale + avena/frutta','Post-workout — registra in app'],['08:30','Double X · Omega-3 · Metabolismo Plus · Q10 · Glucosamina · Cardo Mariano · Prostafit','Integratori colazione'],['11:00','Amino Advantage+','Tarda mattina'],['12:30','☀️ Pranzo: proteina + carbo IG basso + verdura + limone','Pasto principale — registra in app'],['13:30','Ginkgo · Ferro e Acido Folico · Vitamina C+ · Vitamina D','Post pranzo'],['17:00','XS High Protein Bar','Pomeriggio'],['20:00','🌙 Cena: proteina + verdura abbondante, carbo minimi','Pasto serale — registra in app'],['21:30','Amino Advantage+','Sera']].map(([t,l,note])=>`<div class="timeline-row"><span class="timeline-time">${t}</span><div><div class="timeline-main">${l}</div><div class="timeline-sub">${note}</div></div></div>`).join('')}</div>
 
-    <div class="card" style="border-color:rgba(42,122,111,.3);background:var(--acc-lt);">
-      <span class="lbl">🌅 Colazione post-workout — opzioni</span>
-      ${['Whey 30g + latte avena 250ml + avena 50g + mirtilli 80g (~430 kcal)','Whey 30g + latte soia 250ml + banana + burro mandorle 15g (~420 kcal)','Whey 30g + latte riso 250ml + chia 15g + frutti di bosco 100g (~380 kcal)'].map(sg=>`
-        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;color:var(--t2);border-left:3px solid var(--acc);">${sg}</div>`).join('')}
-    </div>
+  <div class="card" style="border-color:rgba(42,122,111,.3);background:var(--acc-lt);"><span class="lbl">🌅 Colazione post-workout — opzioni</span>
+  ${['Whey 30g + latte avena 250ml + avena 50g + mirtilli 80g (~430 kcal)','Whey 30g + latte soia 250ml + banana + burro mandorle 15g (~420 kcal)','Whey 30g + latte riso 250ml + chia 15g + frutti di bosco 100g (~380 kcal)'].map(sg=>`<div style="background:var(--s1);border:1px solid var(--b1);border-radius:6px;padding:9px 12px;margin-bottom:6px;font-size:12px;color:var(--t2);border-left:3px solid var(--acc);">${sg}</div>`).join('')}</div>
 
-    <div class="card">
-      <span class="lbl">Struttura pranzo vs cena</span>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        ${[['☀️ Pranzo',['Proteina 35%','Carbo complessi 30%','Verdura 30%','+ Vitamina C sempre']],['🌙 Cena',['Proteina 45–50%','Verdura 40%','Carbo 0–15%','No picchi insulinici']]].map(([title,items])=>`
-          <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px;">
-            <div style="font-size:12px;color:var(--t1);margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-weight:600;">${title}</div>
-            ${items.map(it=>`<div style="font-size:11px;color:var(--t2);margin-bottom:5px;padding-left:8px;border-left:2px solid var(--b1);line-height:1.3;">${it}</div>`).join('')}
-          </div>`).join('')}
-      </div>
-    </div>
+  <div class="card"><span class="lbl">Struttura pranzo vs cena</span>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">${[['☀️ Pranzo',['Proteina 35%','Carbo complessi 30%','Verdura 30%','+ Vitamina C sempre']],['🌙 Cena',['Proteina 45–50%','Verdura 40%','Carbo 0–15%','No picchi insulinici']]].map(([title,items])=>`<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:12px;"><div style="font-size:12px;color:var(--t1);margin-bottom:8px;font-family:'JetBrains Mono',monospace;font-weight:600;">${title}</div>${items.map(it=>`<div style="font-size:11px;color:var(--t2);margin-bottom:5px;padding-left:8px;border-left:2px solid var(--b1);line-height:1.3;">${it}</div>`).join('')}</div>`).join('')}</div></div>
 
-    <div class="card">
-      <span class="lbl">Struttura settimanale</span>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-        ${[['Lun','Allenamento','var(--acc)'],['Mar','Allenamento','var(--acc)'],['Mer','Allenamento','var(--acc)'],['Gio','Digiuno','var(--err)']].map(([d,t,c])=>`
-          <div style="text-align:center;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 4px;">
-            <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${c};margin-bottom:3px;font-weight:600;">${d}</div>
-            <div style="font-size:10px;color:var(--t3);">${t}</div>
-          </div>`).join('')}
-      </div>
-    </div>
+  <div class="card"><span class="lbl">Struttura settimanale</span>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">${[['Lun','Allenamento','var(--acc)'],['Mar','Allenamento','var(--acc)'],['Mer','Allenamento','var(--acc)'],['Gio','Digiuno','var(--err)']].map(([d,t,c])=>`<div style="text-align:center;background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px 4px;"><div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${c};margin-bottom:3px;font-weight:600;">${d}</div><div style="font-size:10px;color:var(--t3);">${t}</div></div>`).join('')}</div></div>
 
-    <div class="card">
-      <span class="lbl">Priorità cliniche</span>
-      <div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>
-      <div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>
-      <div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div>
-    </div>
+  <div class="card"><span class="lbl">Priorità cliniche</span>
+  <div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>
+  <div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>
+  <div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div></div>
 
-    <div class="card" style="margin-bottom:30px;">
-      <span class="lbl">Regole fuori casa</span>
-      ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini (cross-contaminazione inclusa)','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`
-        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;">
-          <span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span>
-          <span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span>
-        </div>`).join('')}
-    </div>`;
+  <div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
+  ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini (cross-contaminazione inclusa)','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
 // ACTIONS
 // ═══════════════════════════════════════════════════════════
-function navDay(dir){
-  const all=Object.keys(ST.db.days).sort();
-  const idx=all.indexOf(ST.activeDay);
-  const ni=idx+dir;
-  if(ni>=0&&ni<all.length){ST.activeDay=all[ni];ST.advice='';renderOggi();}
-}
+function navDay(dir){const all=Object.keys(ST.db.days).sort();const idx=all.indexOf(ST.activeDay);const ni=idx+dir;if(ni>=0&&ni<all.length){ST.activeDay=all[ni];ST.advice='';renderOggi();}}
 function toggleFasting(){const d=getDay(ST.activeDay);d.fasting=!d.fasting;saveDB();renderOggi();}
-function toggleSuppTaken(id){
-  const d=getDay(ST.activeDay);
-  const i=d.suppsTaken.indexOf(id);
-  if(i>=0)d.suppsTaken.splice(i,1);else d.suppsTaken.push(id);
-  saveDB();renderOggi();
-}
+function toggleSuppTaken(id){const d=getDay(ST.activeDay);const i=d.suppsTaken.indexOf(id);if(i>=0)d.suppsTaken.splice(i,1);else d.suppsTaken.push(id);saveDB();renderOggi();}
 function setLogSlot(id){ST.logSlot=id;renderOggi();}
-function setSuggestion(i){
-  ST.logText=SUGGESTED[ST.logSlot][i];
-  renderOggi();
-  setTimeout(()=>{const ta=document.getElementById('log-text');if(ta){ta.value=ST.logText;ta.focus();}},10);
-}
+function setSuggestion(i){ST.logText=SUGGESTED[ST.logSlot][i];renderOggi();setTimeout(()=>{const ta=document.getElementById('log-text');if(ta){ta.value=ST.logText;ta.focus();}},10);}
+
 async function logMeal(){
   const ta=document.getElementById('log-text');
   const text=(ta?.value||ST.logText).trim();
@@ -985,16 +532,14 @@ async function logMeal(){
   try{
     const macros=await estimateMacros(text);
     const d=getDay(ST.activeDay);
-    d.meals.push({id:Date.now(),slot:ST.logSlot,description:text,...macros,
-      time:new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})});
+    d.meals.push({id:Date.now(),slot:ST.logSlot,description:text,...macros,time:new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})});
     saveDB();ST.logText='';ST.logError='';
-  }catch(e){ST.logError='Errore nella stima AI — '+e.message;}
+  }catch(e){ST.logError='Errore AI: '+e.message+'. Verifica la connessione.';}
   ST.logLoading=false;renderOggi();
 }
-function deleteMeal(dayKey,id){
-  const d=ST.db.days[dayKey];if(!d)return;
-  d.meals=d.meals.filter(m=>m.id!=id);saveDB();renderOggi();
-}
+
+function deleteMeal(dayKey,id){const d=ST.db.days[dayKey];if(!d)return;d.meals=d.meals.filter(m=>m.id!=id);saveDB();renderOggi();}
+
 async function fetchAdvice(){
   const d=getDay(ST.activeDay);
   const mTot=mealTotals(d.meals||[]);
@@ -1005,14 +550,11 @@ async function fetchAdvice(){
   catch(e){ST.advice='Errore AI: '+e.message;}
   ST.advLoading=false;renderOggi();
 }
+
 function setSuppFilter(f){ST.suppFilter=f;renderIntegratori();}
 function toggleSuppActive(id){const s=ST.supps.find(s=>s.id===id);if(s){s.active=!s.active;saveSupps();renderIntegratori();}}
 function updateSupp(id,key,val){const s=ST.supps.find(s=>s.id===id);if(s){s[key]=val;saveSupps();}}
-function addSupp(){
-  const newId=Math.max(...ST.supps.map(s=>s.id),0)+1;
-  ST.supps.push({id:newId,name:'Nuovo integratore',slot:'08:30',group:'',active:true,kcal:0,protein:0,carbs:0,fat:0,price:0,doses:30,note:''});
-  saveSupps();renderIntegratori();
-}
+function addSupp(){const newId=Math.max(...ST.supps.map(s=>s.id),0)+1;ST.supps.push({id:newId,name:'Nuovo integratore',slot:'08:30',group:'',active:true,kcal:0,protein:0,carbs:0,fat:0,price:0,doses:30,note:''});saveSupps();renderIntegratori();}
 function deleteSupp(id){if(confirm('Eliminare questo integratore?')){ST.supps=ST.supps.filter(s=>s.id!==id);saveSupps();renderIntegratori();}}
 function resetSupps(){if(confirm('Ripristinare la lista di default?')){ST.supps=J(DEFAULT_SUPPS);saveSupps();renderIntegratori();}}
 function setReportRange(r){ST.reportRange=r;renderStorico();}
