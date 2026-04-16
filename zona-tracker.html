@@ -260,14 +260,23 @@ select.inp{cursor:pointer;}
 .supp-grp-inp::placeholder{color:var(--b2);}
 
 /* ── CATALOG MODAL ── */
-.catalog-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1);}
+.catalog-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1);cursor:pointer;border-radius:6px;transition:background .1s;}
 .catalog-item:last-child{border:none;}
-.catalog-item input[type=checkbox]{width:17px;height:17px;accent-color:var(--acc);flex-shrink:0;cursor:pointer;}
+.catalog-item:not(.already):active{background:var(--s2);}
 .catalog-item-info{flex:1;}
 .catalog-item-name{font-size:13px;color:var(--t1);line-height:1.3;}
 .catalog-item-slot{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:2px;}
-.catalog-item.already{opacity:.4;pointer-events:none;}
+.catalog-item.already{opacity:.4;cursor:default;}
 .catalog-item.already .catalog-item-name::after{content:' · già presente';font-size:10px;color:var(--t3);}
+/* ── CATALOG STEP 2 ── */
+.catalog-s2-row{padding:12px 0;border-bottom:1px solid var(--b1);}
+.catalog-s2-row:last-child{border:none;padding-bottom:0;}
+.catalog-s2-name{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:7px;}
+.slot-tip{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:5px;line-height:1.4;}
+/* ── ADD SUPP MODAL ── */
+.add-field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+.add-field label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 </style>
 </head>
 <body>
@@ -403,17 +412,60 @@ select.inp{cursor:pointer;}
 <!-- CATALOG MODAL -->
 <div id="catalog-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeCatalogModal()">
   <div class="weight-modal-inner" style="max-width:480px;width:100%;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <span class="lbl" style="margin:0;">📦 Catalogo Nutrilite</span>
-      <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
+    <!-- Step 1: selezione prodotti -->
+    <div id="catalog-step1">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <span class="lbl" style="margin:0;">📦 Catalogo Nutrilite</span>
+        <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
+      </div>
+      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Tocca i prodotti per selezionarli. Quelli grigi sono già nel tuo profilo.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(true)">Seleziona tutti</button>
+        <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(false)">Deseleziona tutti</button>
+      </div>
+      <div id="catalog-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
+      <button class="btn btn-primary btn-full" onclick="goToCatalogStep2()">Avanti — imposta orari →</button>
     </div>
-    <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Seleziona i prodotti da aggiungere al tuo profilo</p>
-    <div style="display:flex;gap:8px;margin-bottom:10px;">
-      <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(true)">Seleziona tutti</button>
-      <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(false)">Deseleziona tutti</button>
+    <!-- Step 2: imposta orari -->
+    <div id="catalog-step2" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <button onclick="backToCatalogStep1()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);padding:0;line-height:1;">←</button>
+        <span class="lbl" style="margin:0;flex:1;">⏰ Imposta gli orari</span>
+        <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);padding:0;line-height:1;">×</button>
+      </div>
+      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Modifica l'orario di assunzione per ogni prodotto, poi conferma.</p>
+      <div id="catalog-slots" style="max-height:52vh;overflow-y:auto;margin-bottom:14px;"></div>
+      <button id="catalog-confirm-btn" class="btn btn-primary btn-full" onclick="importFromCatalog()">Conferma importazione →</button>
     </div>
-    <div id="catalog-list" style="max-height:52vh;overflow-y:auto;margin-bottom:14px;padding-right:4px;"></div>
-    <button id="catalog-import-btn" class="btn btn-primary btn-full" onclick="importFromCatalog()">Importa selezionati →</button>
+  </div>
+</div>
+
+<!-- ADD SUPP MODAL -->
+<div id="add-supp-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeAddSuppModal()">
+  <div class="weight-modal-inner" style="max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <span class="lbl" style="margin:0;">+ Nuovo integratore</span>
+      <button onclick="closeAddSuppModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
+    </div>
+    <div class="add-field">
+      <label>Nome</label>
+      <input id="as-name" class="inp" placeholder="Es. Vitamina C 1000mg"/>
+    </div>
+    <div class="add-grid">
+      <div class="add-field"><label>Orario</label><input id="as-slot" class="inp inp-sm" placeholder="08:00" value="08:00"/></div>
+      <div class="add-field"><label>Gruppo (opz.)</label><input id="as-grp" class="inp inp-sm" placeholder="Es. Shake Mami"/></div>
+    </div>
+    <div class="add-grid">
+      <div class="add-field"><label>Kcal</label><input id="as-kcal" class="inp inp-sm" type="number" value="0" min="0"/></div>
+      <div class="add-field"><label>Proteine g</label><input id="as-protein" class="inp inp-sm" type="number" value="0" min="0"/></div>
+      <div class="add-field"><label>Carbo g</label><input id="as-carbs" class="inp inp-sm" type="number" value="0" min="0"/></div>
+      <div class="add-field"><label>Grassi g</label><input id="as-fat" class="inp inp-sm" type="number" value="0" min="0"/></div>
+      <div class="add-field"><label>Prezzo €</label><input id="as-price" class="inp inp-sm" type="number" value="0" min="0" step="0.01"/></div>
+      <div class="add-field"><label>Dosi/conf</label><input id="as-doses" class="inp inp-sm" type="number" value="30" min="1"/></div>
+    </div>
+    <div class="add-field"><label>Nota</label><input id="as-note" class="inp" placeholder="Es. Post-workout"/></div>
+    <div id="as-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:8px;"></div>
+    <button id="as-save-btn" class="btn btn-primary btn-full" onclick="saveNewSupp()">Aggiungi integratore →</button>
   </div>
 </div>
 
@@ -472,6 +524,22 @@ const NUTRILITE_CATALOG = [
   {sort_order:25, name:'Ferro e Acido Folico',       slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:'+ Vitamina C'},
 ];
 
+const SLOT_TIPS = {
+  'All Plant Protein':         'Meglio con i pasti',
+  'Fibre Powder':              'Meglio con i pasti',
+  'Balance Within Probiotics': 'Meglio a stomaco vuoto o prima del pasto',
+  'Double X':                  'Con il pasto principale',
+  'Daily':                     'Con il pasto principale',
+  'Omega-3 Triple Strength':   'Con un pasto contenente grassi',
+  'Vitamina D':                'Mattina con un pasto grasso',
+  'Vitamina B Plus':           'Mattina per energia diurna',
+  'Vitamina C Plus':           'Mattina per energia diurna',
+  'Cal Mag D Plus':            'Sera per assorbimento ottimale',
+  'Sleep Easy':                '30 minuti prima di dormire',
+  'Metabolism Plus':           'Con il pasto',
+};
+const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
+
 // ═══════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════
@@ -496,6 +564,7 @@ const ST = {
   onbActivity: 'moderate',
   syncStatus: 'ok',
   catalog: [],
+  catalogSelected: [],
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1006,7 +1075,7 @@ function renderIntegratori(){
 
   let html=`<div class="cost-banner"><div><div class="cost-main">€ ${monthly.toFixed(2)}</div><div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div></div><div class="cost-right"><div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div><div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div></div></div>
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button></div></div>`;
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Aggiungi</button></div></div>`;
 
   Object.keys(bySlot).sort().forEach(slot=>{
     const ss=bySlot[slot];
@@ -1157,26 +1226,12 @@ function updateSupp(id,key,val){
   if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>dbUpdateSupp(id,{[key]:val}),800);}
 }
 
-async function addSupp(){
-  const data={sort_order:ST.supps.length+1,name:'Nuovo integratore',slot:'08:30',grp:'',active:true,kcal:0,protein:0,carbs:0,fat:0,price:0,doses:30,note:''};
-  const saved=await dbAddSupp(data);
-  if(saved) ST.supps.push({...saved,local_id:saved.id});
-  renderIntegratori();
-}
-
+// ── CATALOG MODAL ─────────────────────────────────────────
 function openCatalogModal() {
-  const existingNames = new Set(ST.supps.map(s => s.name));
-  const list = document.getElementById('catalog-list');
-  list.innerHTML = ST.catalog.map(item => {
-    const already = existingNames.has(item.name);
-    return `<label class="catalog-item ${already?'already':''}">
-      <input type="checkbox" value="${item.id}" ${already?'checked disabled':''}/>
-      <div class="catalog-item-info">
-        <div class="catalog-item-name">${esc(item.name)}</div>
-        <div class="catalog-item-slot">⏰ ${item.slot}${item.grp?' · '+item.grp:''} · ${item.kcal} kcal · ${item.protein}g P</div>
-      </div>
-    </label>`;
-  }).join('');
+  ST.catalogSelected = [];
+  document.getElementById('catalog-step1').style.display = 'block';
+  document.getElementById('catalog-step2').style.display = 'none';
+  renderCatalogList();
   document.getElementById('catalog-modal').style.display = 'flex';
 }
 
@@ -1184,38 +1239,130 @@ function closeCatalogModal() {
   document.getElementById('catalog-modal').style.display = 'none';
 }
 
+function renderCatalogList() {
+  const existingNames = new Set(ST.supps.map(s => s.name));
+  const sel = new Set(ST.catalogSelected);
+  document.getElementById('catalog-list').innerHTML = ST.catalog.map(item => {
+    const already = existingNames.has(item.name);
+    const on = sel.has(item.id);
+    return `<div class="catalog-item ${already?'already':''}" ${already?'':` onclick="toggleCatalogItem(${item.id})"`}>
+      <div class="check-box ${already||on?'on':''}">${already||on?'<span class="check-mark">✓</span>':''}</div>
+      <div class="catalog-item-info">
+        <div class="catalog-item-name">${esc(item.name)}</div>
+        <div class="catalog-item-slot">⏰ ${item.slot} · ${item.kcal} kcal · ${item.protein}g P</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCatalogItem(id) {
+  const i = ST.catalogSelected.indexOf(id);
+  if(i < 0) ST.catalogSelected.push(id);
+  else ST.catalogSelected.splice(i, 1);
+  renderCatalogList();
+}
+
 function selectAllCatalog(on) {
-  document.querySelectorAll('#catalog-list input[type=checkbox]:not([disabled])').forEach(cb => cb.checked = on);
+  const existingNames = new Set(ST.supps.map(s => s.name));
+  ST.catalogSelected = on
+    ? ST.catalog.filter(item => !existingNames.has(item.name)).map(item => item.id)
+    : [];
+  renderCatalogList();
+}
+
+function goToCatalogStep2() {
+  if(!ST.catalogSelected.length) { alert('Seleziona almeno un prodotto.'); return; }
+  const selected = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
+  document.getElementById('catalog-slots').innerHTML = selected.map(item => {
+    const tip = SLOT_TIPS[item.name] || DEFAULT_SLOT_TIP;
+    return `<div class="catalog-s2-row">
+      <div class="catalog-s2-name">${esc(item.name)}</div>
+      <input class="inp inp-sm" id="slot-${item.id}" value="${esc(item.slot)}" placeholder="08:00" style="width:110px;"/>
+      <div class="slot-tip">💡 ${tip}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('catalog-step1').style.display = 'none';
+  document.getElementById('catalog-step2').style.display = 'block';
+}
+
+function backToCatalogStep1() {
+  document.getElementById('catalog-step2').style.display = 'none';
+  document.getElementById('catalog-step1').style.display = 'block';
 }
 
 async function importFromCatalog() {
-  const checked = [...document.querySelectorAll('#catalog-list input[type=checkbox]:not([disabled]):checked')];
-  if(!checked.length) { alert('Seleziona almeno un prodotto.'); return; }
-  const selectedIds = new Set(checked.map(cb => parseInt(cb.value)));
-  const toInsert = ST.catalog
-    .filter(item => selectedIds.has(item.id))
-    .map((item, i) => ({
+  const selected = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
+  const toInsert = selected.map((item, i) => {
+    const slotEl = document.getElementById('slot-'+item.id);
+    return {
       sort_order: ST.supps.length + i + 1,
       user_id: ST.user.id,
       name: item.name,
-      slot: item.slot,
+      slot: slotEl ? (slotEl.value.trim() || item.slot) : item.slot,
       grp: item.grp,
       active: true,
-      kcal: item.kcal,
-      protein: item.protein,
-      carbs: item.carbs,
-      fat: item.fat,
-      price: item.price,
-      doses: item.doses,
-      note: item.note,
-    }));
-  const btn = document.getElementById('catalog-import-btn');
+      kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
+      price: item.price, doses: item.doses, note: item.note,
+    };
+  });
+  const btn = document.getElementById('catalog-confirm-btn');
   btn.disabled = true; btn.textContent = 'Importazione...';
   const {data, error} = await supa.from('supplements').insert(toInsert).select();
-  if(error) { alert('Errore: '+error.message); btn.disabled=false; btn.textContent='Importa selezionati →'; return; }
+  if(error) { alert('Errore: '+error.message); btn.disabled=false; btn.textContent='Conferma importazione →'; return; }
   (data||[]).forEach(s => ST.supps.push({...s, local_id:s.id}));
   closeCatalogModal();
   renderIntegratori();
+}
+
+// ── ADD SUPP MODAL ─────────────────────────────────────────
+function openAddSuppModal() {
+  document.getElementById('as-name').value = '';
+  document.getElementById('as-slot').value = '08:00';
+  document.getElementById('as-grp').value = '';
+  ['as-kcal','as-protein','as-carbs','as-fat','as-price'].forEach(id => document.getElementById(id).value = '0');
+  document.getElementById('as-doses').value = '30';
+  document.getElementById('as-note').value = '';
+  document.getElementById('as-err').style.display = 'none';
+  const btn = document.getElementById('as-save-btn');
+  btn.disabled = false; btn.textContent = 'Aggiungi integratore →';
+  document.getElementById('add-supp-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('as-name').focus(), 100);
+}
+
+function closeAddSuppModal() {
+  document.getElementById('add-supp-modal').style.display = 'none';
+}
+
+async function saveNewSupp() {
+  const name = document.getElementById('as-name').value.trim();
+  const errEl = document.getElementById('as-err');
+  if(!name) { errEl.style.display='block'; errEl.textContent='Il nome è obbligatorio.'; return; }
+  errEl.style.display = 'none';
+  const data = {
+    sort_order: ST.supps.length + 1,
+    name,
+    slot:    document.getElementById('as-slot').value.trim() || '08:00',
+    grp:     document.getElementById('as-grp').value.trim(),
+    active:  true,
+    kcal:    +document.getElementById('as-kcal').value || 0,
+    protein: +document.getElementById('as-protein').value || 0,
+    carbs:   +document.getElementById('as-carbs').value || 0,
+    fat:     +document.getElementById('as-fat').value || 0,
+    price:   +document.getElementById('as-price').value || 0,
+    doses:   +document.getElementById('as-doses').value || 30,
+    note:    document.getElementById('as-note').value.trim(),
+  };
+  const btn = document.getElementById('as-save-btn');
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
+  const saved = await dbAddSupp(data);
+  if(saved) {
+    ST.supps.push({...saved, local_id: saved.id});
+    closeAddSuppModal();
+    renderIntegratori();
+  } else {
+    errEl.style.display='block'; errEl.textContent='Errore durante il salvataggio.';
+    btn.disabled=false; btn.textContent='Aggiungi integratore →';
+  }
 }
 
 async function deleteSupp(id){
