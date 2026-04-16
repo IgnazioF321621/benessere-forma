@@ -561,7 +561,7 @@ function isPerfectDay(cons) {
 // COMPUTATIONS
 // ═══════════════════════════════════════════════════════════
 function mealTotals(meals){return (meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.kcal||0),protein:a.protein+(m.protein||0),carbs:a.carbs+(m.carbs||0),fat:a.fat+(m.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});}
-function suppTotalsForIds(ids){return ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>({kcal:a.kcal+s.kcal,protein:a.protein+s.protein,carbs:a.carbs+s.carbs,fat:a.fat+s.fat}),{kcal:0,protein:0,carbs:0,fat:0});}
+function suppTotalsForIds(ids){return ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>({kcal:a.kcal+(s.kcal||0),protein:a.protein+(s.protein||0),carbs:a.carbs+(s.carbs||0),fat:a.fat+(s.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){return(s.price&&s.doses)?(s.price/s.doses)*30:0;}
 function totalMonthlyCost(){return activeSupps().reduce((a,s)=>a+suppMonthlyCost(s),0);}
@@ -768,9 +768,9 @@ async function dbToggleFasting(date, on) {
   else   await supa.from('fasting_days').delete().eq('user_id', ST.user.id).eq('date', date);
 }
 
-async function dbToggleSuppTaken(date, suppName, taken) {
+async function dbToggleSuppTaken(date, suppName, taken, slot) {
   if(taken) {
-    await supa.from('supplements_log').upsert({user_id:ST.user.id, date, slot:'', supplement_name:suppName, taken:true}, {onConflict:'user_id,date,slot,supplement_name'});
+    await supa.from('supplements_log').upsert({user_id:ST.user.id, date, slot:slot||'', supplement_name:suppName, taken:true}, {onConflict:'user_id,date,slot,supplement_name'});
   } else {
     await supa.from('supplements_log').delete().eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
   }
@@ -1061,7 +1061,8 @@ async function toggleSuppTaken(localId, name){
   const taking = i<0;
   if(taking) d.suppsTaken.push(localId);
   else d.suppsTaken.splice(i,1);
-  await dbToggleSuppTaken(ST.activeDay, name, taking);
+  const supp=ST.supps.find(s=>s.local_id===localId);
+  await dbToggleSuppTaken(ST.activeDay, name, taking, supp?.slot||'');
   renderOggi();
 }
 
