@@ -412,27 +412,32 @@ const SUGGESTED = {
   snack:['Noci miste 30g + frutta di stagione','2-3 noci del Brasile + mirtilli 100g','Semi di zucca 20g + una mela'],
 };
 
-const DEFAULT_SUPPS = [
-  {sort_order:1, name:'All Plant Protein',         slot:'06:30',grp:'Shake Mami',active:true, kcal:60,  protein:13,carbs:2, fat:1, price:42,  doses:30,note:'Componente shake'},
-  {sort_order:2, name:'Balance Within Probiotics', slot:'06:30',grp:'Shake Mami',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:38,  doses:30,note:'Componente shake'},
-  {sort_order:3, name:'Fibre Powder',              slot:'06:30',grp:'Shake Mami',active:true, kcal:15,  protein:0, carbs:4, fat:0, price:28,  doses:30,note:'Componente shake'},
-  {sort_order:4, name:'Hydrolyzed Whey Protein',   slot:'08:30',grp:'',          active:true, kcal:110, protein:24,carbs:2, fat:1, price:55,  doses:30,note:'Post-workout'},
-  {sort_order:5, name:'Double X',                  slot:'08:30',grp:'',          active:true, kcal:10,  protein:0, carbs:2, fat:0, price:48,  doses:31,note:'Multivitaminico'},
-  {sort_order:6, name:'Omega-3',                   slot:'08:30',grp:'',          active:true, kcal:15,  protein:0, carbs:0, fat:2, price:32,  doses:60,note:'Antinfiammatorio'},
-  {sort_order:7, name:'Metabolismo Plus',          slot:'08:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:30,  doses:30,note:''},
-  {sort_order:8, name:'Coenzima Q10',              slot:'08:30',grp:'',          active:true, kcal:5,   protein:0, carbs:0, fat:0, price:34,  doses:30,note:''},
-  {sort_order:9, name:'Glucosamina con Boswellia', slot:'08:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:36,  doses:30,note:'Articolazioni'},
-  {sort_order:10,name:'Cardo Mariano',             slot:'08:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:24,  doses:30,note:'Fegato'},
-  {sort_order:11,name:'Prostafit',                 slot:'08:30',grp:'',          active:true, kcal:5,   protein:0, carbs:0, fat:0, price:30,  doses:30,note:''},
-  {sort_order:12,name:'Vision Plus',               slot:'08:30',grp:'',          active:false,kcal:5,   protein:0, carbs:1, fat:0, price:28,  doses:30,note:'Sospeso'},
-  {sort_order:13,name:'Amino Advantage+',          slot:'11:00',grp:'',          active:true, kcal:20,  protein:4, carbs:2, fat:0, price:32,  doses:30,note:'Tarda mattina'},
-  {sort_order:14,name:'Ginkgo Biloba',             slot:'13:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:26,  doses:30,note:''},
-  {sort_order:15,name:'Ferro e Acido Folico',      slot:'13:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:22,  doses:30,note:'+ Vitamina C'},
-  {sort_order:16,name:'Vitamina B+',               slot:'13:30',grp:'',          active:false,kcal:5,   protein:0, carbs:1, fat:0, price:20,  doses:30,note:'Sovrapposizione Double X'},
-  {sort_order:17,name:'Vitamina C+',               slot:'13:30',grp:'',          active:true, kcal:5,   protein:0, carbs:1, fat:0, price:24,  doses:60,note:'Con ferro'},
-  {sort_order:18,name:'Vitamina D',                slot:'13:30',grp:'',          active:true, kcal:5,   protein:0, carbs:0, fat:0, price:20,  doses:60,note:''},
-  {sort_order:19,name:'XS High Protein Bar',       slot:'17:00',grp:'',          active:true, kcal:200, protein:27,carbs:8, fat:4, price:45,  doses:12,note:'Pomeriggio'},
-  {sort_order:20,name:'Amino Advantage+ (sera)',   slot:'21:30',grp:'',          active:true, kcal:20,  protein:4, carbs:2, fat:0, price:32,  doses:30,note:'Sera'},
+const NUTRILITE_CATALOG = [
+  {sort_order:1,  name:'All Plant Protein',          slot:'08:00',grp:'',active:true, kcal:60,  protein:13,carbs:2, fat:1, price:0,doses:30,note:''},
+  {sort_order:2,  name:'Balance Within Probiotics',  slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:3,  name:'Fibre Powder',               slot:'08:00',grp:'',active:true, kcal:15,  protein:0, carbs:4, fat:0, price:0,doses:30,note:''},
+  {sort_order:4,  name:'Double X',                   slot:'08:00',grp:'',active:true, kcal:10,  protein:0, carbs:2, fat:0, price:0,doses:31,note:'Multivitaminico'},
+  {sort_order:5,  name:'Omega-3 Triple Strength',    slot:'08:00',grp:'',active:true, kcal:15,  protein:0, carbs:0, fat:2, price:0,doses:60,note:''},
+  {sort_order:6,  name:'Vitamina C Plus',            slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:60,note:''},
+  {sort_order:7,  name:'Vitamina D',                 slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:0, fat:0, price:0,doses:60,note:''},
+  {sort_order:8,  name:'Vitamina B Plus',            slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:9,  name:'Daily',                      slot:'08:00',grp:'',active:true, kcal:10,  protein:0, carbs:2, fat:0, price:0,doses:30,note:''},
+  {sort_order:10, name:'Zinc+Selenium',              slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:0, fat:0, price:0,doses:60,note:''},
+  {sort_order:11, name:'Metabolism Plus',            slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:12, name:'Cal Mag D Plus',             slot:'21:00',grp:'',active:true, kcal:10,  protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:13, name:'Sleep Easy',                 slot:'21:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:14, name:'Less Stress More Yes',       slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:15, name:'Be Focused',                 slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:16, name:'Immuno',                     slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:17, name:'Cardo Mariano',              slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:'Fegato'},
+  {sort_order:18, name:'Echinacea Forte',            slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:19, name:'Coenzima Q10',               slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:0, fat:0, price:0,doses:30,note:''},
+  {sort_order:20, name:'Vision Plus',                slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:21, name:'Lecitina E',                 slot:'13:00',grp:'',active:true, kcal:10,  protein:0, carbs:0, fat:1, price:0,doses:30,note:''},
+  {sort_order:22, name:'Beauty You Glow',            slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:23, name:"Can't Stop Won't Stop",      slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:24, name:'Biotina C Plus',             slot:'08:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:''},
+  {sort_order:25, name:'Ferro e Acido Folico',       slot:'13:00',grp:'',active:true, kcal:5,   protein:0, carbs:1, fat:0, price:0,doses:30,note:'+ Vitamina C'},
 ];
 
 // ═══════════════════════════════════════════════════════════
@@ -646,9 +651,6 @@ async function saveOnboarding() {
     updated_at: new Date().toISOString(),
   });
   if(error) { errEl.style.display='block'; errEl.textContent='Errore: '+error.message; document.getElementById('onb-btn').disabled=false; document.getElementById('onb-btn').textContent='Inizia a tracciare →'; return; }
-  // seed supplements
-  const suppsToInsert = DEFAULT_SUPPS.map(s => ({...s, user_id: ST.user.id}));
-  await supa.from('supplements').insert(suppsToInsert);
   // save weight entry
   await saveWeightEntry(weight);
   await loadAndStart();
@@ -965,7 +967,7 @@ function renderIntegratori(){
 
   let html=`<div class="cost-banner"><div><div class="cost-main">€ ${monthly.toFixed(2)}</div><div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div></div><div class="cost-right"><div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div><div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div></div></div>
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;"><button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button></div></div>`;
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.supps.length===0?`<button class="btn btn-ghost btn-sm" onclick="loadNutriliteCatalog()">📦 Carica catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="addSupp()">+ Aggiungi</button></div></div>`;
 
   Object.keys(bySlot).sort().forEach(slot=>{
     const ss=bySlot[slot];
@@ -1120,6 +1122,15 @@ async function addSupp(){
   const data={sort_order:ST.supps.length+1,name:'Nuovo integratore',slot:'08:30',grp:'',active:true,kcal:0,protein:0,carbs:0,fat:0,price:0,doses:30,note:''};
   const saved=await dbAddSupp(data);
   if(saved) ST.supps.push({...saved,local_id:saved.id});
+  renderIntegratori();
+}
+
+async function loadNutriliteCatalog(){
+  if(!confirm(`Caricare il catalogo Nutrilite (${NUTRILITE_CATALOG.length} prodotti)? Verranno aggiunti alla tua lista.`)) return;
+  const toInsert = NUTRILITE_CATALOG.map((s,i) => ({...s, sort_order: ST.supps.length+i+1, user_id: ST.user.id}));
+  const {data, error} = await supa.from('supplements').insert(toInsert).select();
+  if(error){ alert('Errore: '+error.message); return; }
+  (data||[]).forEach(s => ST.supps.push({...s, local_id:s.id}));
   renderIntegratori();
 }
 
