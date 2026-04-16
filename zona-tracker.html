@@ -260,14 +260,17 @@ select.inp{cursor:pointer;}
 .supp-grp-inp::placeholder{color:var(--b2);}
 
 /* ── CATALOG MODAL ── */
-.catalog-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1);cursor:pointer;border-radius:6px;transition:background .1s;}
+.catalog-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1);cursor:pointer;border-radius:4px;transition:background .1s;}
 .catalog-item:last-child{border:none;}
-.catalog-item:not(.already):active{background:var(--s2);}
+.catalog-item:active{background:var(--s2);}
 .catalog-item-info{flex:1;}
 .catalog-item-name{font-size:13px;color:var(--t1);line-height:1.3;}
 .catalog-item-slot{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:2px;}
-.catalog-item.already{opacity:.4;cursor:default;}
-.catalog-item.already .catalog-item-name::after{content:' · già presente';font-size:10px;color:var(--t3);}
+.check-box.remove{background:var(--err-lt);border-color:var(--err);}
+.catalog-item.to-remove .catalog-item-name{text-decoration:line-through;color:var(--t3);}
+.catalog-item.to-remove .catalog-item-slot{color:var(--err);}
+.catalog-s2-section-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin:12px 0 8px;}
+.catalog-s2-removals{background:var(--err-lt);border:1px solid rgba(184,76,42,.2);border-radius:8px;padding:10px 12px;margin-top:4px;}
 /* ── CATALOG STEP 2 ── */
 .catalog-s2-row{padding:12px 0;border-bottom:1px solid var(--b1);}
 .catalog-s2-row:last-child{border:none;padding-bottom:0;}
@@ -418,24 +421,23 @@ select.inp{cursor:pointer;}
         <span class="lbl" style="margin:0;">📦 Catalogo Nutrilite</span>
         <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
       </div>
-      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Tocca i prodotti per selezionarli. Quelli grigi sono già nel tuo profilo.</p>
+      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Tocca per aggiungere o rimuovere prodotti dal tuo profilo.</p>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
         <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(true)">Seleziona tutti</button>
         <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(false)">Deseleziona tutti</button>
       </div>
       <div id="catalog-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
-      <button class="btn btn-primary btn-full" onclick="goToCatalogStep2()">Avanti — imposta orari →</button>
+      <button class="btn btn-primary btn-full" onclick="goToCatalogStep2()">Avanti →</button>
     </div>
     <!-- Step 2: imposta orari -->
     <div id="catalog-step2" style="display:none;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
         <button onclick="backToCatalogStep1()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);padding:0;line-height:1;">←</button>
-        <span class="lbl" style="margin:0;flex:1;">⏰ Imposta gli orari</span>
+        <span class="lbl" style="margin:0;flex:1;">Riepilogo modifiche</span>
         <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);padding:0;line-height:1;">×</button>
       </div>
-      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Modifica l'orario di assunzione per ogni prodotto, poi conferma.</p>
-      <div id="catalog-slots" style="max-height:52vh;overflow-y:auto;margin-bottom:14px;"></div>
-      <button id="catalog-confirm-btn" class="btn btn-primary btn-full" onclick="importFromCatalog()">Conferma importazione →</button>
+      <div id="catalog-slots" style="max-height:54vh;overflow-y:auto;margin-bottom:14px;"></div>
+      <button id="catalog-confirm-btn" class="btn btn-primary btn-full" onclick="importFromCatalog()">Applica modifiche →</button>
     </div>
   </div>
 </div>
@@ -565,6 +567,7 @@ const ST = {
   syncStatus: 'ok',
   catalog: [],
   catalogSelected: [],
+  catalogToRemove: [],
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1229,6 +1232,7 @@ function updateSupp(id,key,val){
 // ── CATALOG MODAL ─────────────────────────────────────────
 function openCatalogModal() {
   ST.catalogSelected = [];
+  ST.catalogToRemove = [];
   document.getElementById('catalog-step1').style.display = 'block';
   document.getElementById('catalog-step2').style.display = 'none';
   renderCatalogList();
@@ -1238,17 +1242,35 @@ function openCatalogModal() {
 function closeCatalogModal() {
   document.getElementById('catalog-modal').style.display = 'none';
   const btn = document.getElementById('catalog-confirm-btn');
-  if(btn) { btn.disabled = false; btn.textContent = 'Conferma importazione →'; }
+  if(btn) { btn.disabled = false; btn.textContent = 'Applica modifiche →'; }
 }
 
 function renderCatalogList() {
   const existingNames = new Set(ST.supps.map(s => s.name));
-  const sel = new Set(ST.catalogSelected);
+  const selAdd = new Set(ST.catalogSelected);
+  const selRem = new Set(ST.catalogToRemove);
   document.getElementById('catalog-list').innerHTML = ST.catalog.map(item => {
-    const already = existingNames.has(item.name);
-    const on = sel.has(item.id);
-    return `<div class="catalog-item ${already?'already':''}" ${already?'':` onclick="toggleCatalogItem(${item.id})"`}>
-      <div class="check-box ${already||on?'on':''}">${already||on?'<span class="check-mark">✓</span>':''}</div>
+    const inProfile = existingNames.has(item.name);
+    const toAdd    = selAdd.has(item.id);
+    const toRemove = selRem.has(item.id);
+    let boxClass, boxContent, itemClass;
+    if(inProfile) {
+      if(toRemove) {
+        boxClass   = 'check-box remove';
+        boxContent = '<span class="check-mark" style="color:var(--err);">✕</span>';
+        itemClass  = 'catalog-item to-remove';
+      } else {
+        boxClass   = 'check-box on';
+        boxContent = '<span class="check-mark">✓</span>';
+        itemClass  = 'catalog-item';
+      }
+    } else {
+      boxClass   = toAdd ? 'check-box on' : 'check-box';
+      boxContent = toAdd ? '<span class="check-mark">✓</span>' : '';
+      itemClass  = 'catalog-item';
+    }
+    return `<div class="${itemClass}" onclick="toggleCatalogItem(${item.id})">
+      <div class="${boxClass}">${boxContent}</div>
       <div class="catalog-item-info">
         <div class="catalog-item-name">${esc(item.name)}</div>
         <div class="catalog-item-slot">⏰ ${item.slot} · ${item.kcal} kcal · ${item.protein}g P</div>
@@ -1258,33 +1280,59 @@ function renderCatalogList() {
 }
 
 function toggleCatalogItem(id) {
-  const i = ST.catalogSelected.indexOf(id);
-  if(i < 0) ST.catalogSelected.push(id);
-  else ST.catalogSelected.splice(i, 1);
+  const item = ST.catalog.find(c => c.id === id);
+  if(!item) return;
+  const inProfile = ST.supps.some(s => s.name === item.name);
+  if(inProfile) {
+    const i = ST.catalogToRemove.indexOf(id);
+    if(i < 0) ST.catalogToRemove.push(id);
+    else ST.catalogToRemove.splice(i, 1);
+  } else {
+    const i = ST.catalogSelected.indexOf(id);
+    if(i < 0) ST.catalogSelected.push(id);
+    else ST.catalogSelected.splice(i, 1);
+  }
   renderCatalogList();
 }
 
 function selectAllCatalog(on) {
   const existingNames = new Set(ST.supps.map(s => s.name));
-  ST.catalogSelected = on
-    ? ST.catalog.filter(item => !existingNames.has(item.name)).map(item => item.id)
-    : [];
+  if(on) {
+    ST.catalogSelected = ST.catalog.filter(item => !existingNames.has(item.name)).map(item => item.id);
+  } else {
+    ST.catalogSelected = [];
+    ST.catalogToRemove = [];
+  }
   renderCatalogList();
 }
 
 function goToCatalogStep2() {
-  if(!ST.catalogSelected.length) { alert('Seleziona almeno un prodotto.'); return; }
-  const selected = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
-  document.getElementById('catalog-slots').innerHTML = selected.map(item => {
-    const tip = SLOT_TIPS[item.name] || DEFAULT_SLOT_TIP;
-    return `<div class="catalog-s2-row">
-      <div class="catalog-s2-name">${esc(item.name)}</div>
-      <input class="inp inp-sm" id="slot-${item.id}" value="${esc(item.slot)}" placeholder="08:00" style="width:110px;"/>
-      <div class="slot-tip">💡 ${tip}</div>
-    </div>`;
-  }).join('');
+  const hasAdd = ST.catalogSelected.length > 0;
+  const hasRem = ST.catalogToRemove.length > 0;
+  if(!hasAdd && !hasRem) { alert('Tocca almeno un prodotto per aggiungerlo o rimuoverlo.'); return; }
+  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
+  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.id));
+  let html = '';
+  if(hasAdd) {
+    html += `<div class="catalog-s2-section-lbl" style="color:var(--acc);">Da aggiungere (${toAdd.length})</div>`;
+    html += toAdd.map(item => {
+      const tip = SLOT_TIPS[item.name] || DEFAULT_SLOT_TIP;
+      return `<div class="catalog-s2-row">
+        <div class="catalog-s2-name">${esc(item.name)}</div>
+        <input class="inp inp-sm" id="slot-${item.id}" value="${esc(item.slot)}" placeholder="08:00" style="width:110px;"/>
+        <div class="slot-tip">💡 ${tip}</div>
+      </div>`;
+    }).join('');
+  }
+  if(hasRem) {
+    html += `<div class="catalog-s2-section-lbl" style="color:var(--err);${hasAdd?'margin-top:16px;':''}">Da rimuovere (${toRemove.length})</div>
+      <div class="catalog-s2-removals">${toRemove.map(item =>
+        `<div style="font-size:13px;color:var(--err);padding:3px 0;">✕ ${esc(item.name)}</div>`
+      ).join('')}</div>`;
+  }
+  document.getElementById('catalog-slots').innerHTML = html;
   const btn = document.getElementById('catalog-confirm-btn');
-  btn.disabled = false; btn.textContent = 'Conferma importazione →';
+  btn.disabled = false; btn.textContent = 'Applica modifiche →';
   document.getElementById('catalog-step1').style.display = 'none';
   document.getElementById('catalog-step2').style.display = 'block';
 }
@@ -1295,25 +1343,48 @@ function backToCatalogStep1() {
 }
 
 async function importFromCatalog() {
-  const selected = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
-  const toInsert = selected.map((item, i) => {
-    const slotEl = document.getElementById('slot-'+item.id);
-    return {
-      sort_order: ST.supps.length + i + 1,
-      user_id: ST.user.id,
-      name: item.name,
-      slot: slotEl ? (slotEl.value.trim() || item.slot) : item.slot,
-      grp: item.grp,
-      active: true,
-      kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
-      price: item.price, doses: item.doses, note: item.note,
-    };
-  });
+  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
+  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.id));
+  // Conferma rimozioni
+  if(toRemove.length > 0) {
+    const names = toRemove.map(item => `• ${item.name}`).join('\n');
+    const msg = toRemove.length === 1
+      ? `Vuoi rimuovere "${toRemove[0].name}" dal tuo profilo?\nLo storico delle assunzioni verrà mantenuto.`
+      : `Vuoi rimuovere questi ${toRemove.length} prodotti dal tuo profilo?\n\n${names}\n\nLo storico delle assunzioni verrà mantenuto.`;
+    if(!confirm(msg)) return;
+  }
   const btn = document.getElementById('catalog-confirm-btn');
-  btn.disabled = true; btn.textContent = 'Importazione...';
-  const {data, error} = await supa.from('supplements').insert(toInsert).select();
-  if(error) { alert('Errore: '+error.message); btn.disabled=false; btn.textContent='Conferma importazione →'; return; }
-  (data||[]).forEach(s => ST.supps.push({...s, local_id:s.id}));
+  btn.disabled = true; btn.textContent = 'Applicazione...';
+  // Rimuovi
+  for(const item of toRemove) {
+    const supp = ST.supps.find(s => s.name === item.name);
+    if(supp) {
+      await dbDeleteSupp(supp.local_id);
+      ST.supps = ST.supps.filter(s => s.local_id !== supp.local_id);
+    }
+  }
+  // Aggiungi
+  if(toAdd.length > 0) {
+    const toInsert = toAdd.map((item, i) => {
+      const slotEl = document.getElementById('slot-'+item.id);
+      return {
+        sort_order: ST.supps.length + i + 1,
+        user_id: ST.user.id,
+        name: item.name,
+        slot: slotEl ? (slotEl.value.trim() || item.slot) : item.slot,
+        grp: item.grp, active: true,
+        kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
+        price: item.price, doses: item.doses, note: item.note,
+      };
+    });
+    const {data, error} = await supa.from('supplements').insert(toInsert).select();
+    if(error) {
+      alert('Errore durante l\'aggiunta: '+error.message);
+      btn.disabled=false; btn.textContent='Applica modifiche →';
+      return;
+    }
+    (data||[]).forEach(s => ST.supps.push({...s, local_id:s.id}));
+  }
   closeCatalogModal();
   renderIntegratori();
 }
