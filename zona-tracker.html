@@ -1237,6 +1237,8 @@ function openCatalogModal() {
 
 function closeCatalogModal() {
   document.getElementById('catalog-modal').style.display = 'none';
+  const btn = document.getElementById('catalog-confirm-btn');
+  if(btn) { btn.disabled = false; btn.textContent = 'Conferma importazione →'; }
 }
 
 function renderCatalogList() {
@@ -1281,6 +1283,8 @@ function goToCatalogStep2() {
       <div class="slot-tip">💡 ${tip}</div>
     </div>`;
   }).join('');
+  const btn = document.getElementById('catalog-confirm-btn');
+  btn.disabled = false; btn.textContent = 'Conferma importazione →';
   document.getElementById('catalog-step1').style.display = 'none';
   document.getElementById('catalog-step2').style.display = 'block';
 }
