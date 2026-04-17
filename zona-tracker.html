@@ -426,7 +426,8 @@ select.inp{cursor:pointer;}
         <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(true)">Seleziona tutti</button>
         <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(false)">Deseleziona tutti</button>
       </div>
-      <div id="catalog-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px;"></div>
+      <input id="catalog-search" class="inp" type="text" placeholder="Cerca integratore..." oninput="renderCatalogList()" style="margin-bottom:10px;"/>
+      <div id="catalog-list" style="max-height:44vh;overflow-y:auto;margin-bottom:14px;"></div>
       <button class="btn btn-primary btn-full" onclick="goToCatalogStep2()">Avanti →</button>
     </div>
     <!-- Step 2: imposta orari -->
@@ -1291,6 +1292,7 @@ function updateSupp(id,key,val){
 function openCatalogModal() {
   ST.catalogSelected = [];
   ST.catalogToRemove = [];
+  document.getElementById('catalog-search').value = '';
   document.getElementById('catalog-step1').style.display = 'block';
   document.getElementById('catalog-step2').style.display = 'none';
   renderCatalogList();
@@ -1307,7 +1309,13 @@ function renderCatalogList() {
   const existingNames = new Set(ST.supps.map(s => s.name));
   const selAdd = new Set(ST.catalogSelected);
   const selRem = new Set(ST.catalogToRemove);
-  document.getElementById('catalog-list').innerHTML = ST.catalog.map(item => {
+  const query = (document.getElementById('catalog-search')?.value || '').toLowerCase().trim();
+  const items = query ? ST.catalog.filter(item => item.nome.toLowerCase().includes(query)) : ST.catalog;
+  if (items.length === 0) {
+    document.getElementById('catalog-list').innerHTML = `<div style="text-align:center;color:var(--t3);font-size:13px;padding:20px 0;">Nessun risultato per "${esc(query)}"</div>`;
+    return;
+  }
+  document.getElementById('catalog-list').innerHTML = items.map(item => {
     const inProfile = existingNames.has(item.nome);
     const toAdd    = selAdd.has(item.codice);
     const toRemove = selRem.has(item.codice);
