@@ -1178,8 +1178,9 @@ function applyProfile(profile) {
 }
 
 // Profilo completo = onboarding già eseguito
+// Onboarding richiesto SOLO se profilo assente o nome (first_name) vuoto
 function profileIsComplete(profile) {
-  return !!(profile && profile.first_name);
+  return !!(profile && profile.first_name && profile.first_name.trim());
 }
 
 async function loadAndStart() {
@@ -1208,7 +1209,14 @@ async function loadAndStart() {
   await loadSupps();
   await loadAllDays();
   await loadCatalog();
-  const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+  const {data: profile, error: profileErr} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+  // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
+  if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
+    applyProfile(ST.profile);
+    showScreen('app');
+    renderOggi();
+    return;
+  }
   ST.profile = profile;
 
   if (profileIsComplete(profile)) {
