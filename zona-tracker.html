@@ -1488,23 +1488,45 @@ setTimeout(async () => {
   });
 }, 1800); // splash duration
 
-// Se la pagina torna visibile mentre il loading overlay è ancora attivo,
-// forza il completamento con i dati già in memoria per sbloccare l'app.
+// Background/foreground state cache per ripristino istantaneo
+const ZT_CACHE_KEY = 'zt_state_cache';
+
+// Campi di ST da salvare/ripristinare (esclude transient UI state)
+const ST_PERSIST_KEYS = ['user','profile','TARGET','activeDay','db','supps','reportRange','catalog'];
+
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (document.hidden) {
+    // Vai in background: salva lo stato corrente
+    try {
+      const snapshot = {};
+      ST_PERSIST_KEYS.forEach(k => { snapshot[k] = ST[k]; });
+      sessionStorage.setItem(ZT_CACHE_KEY, JSON.stringify(snapshot));
+    } catch(e) { /* sessionStorage non disponibile, ignora */ }
+    return;
+  }
+
+  // Torna in primo piano: controlla se l'app è bloccata sul loading
   const overlay = document.getElementById('loading-overlay');
   if (!overlay || overlay.classList.contains('hide')) return;
-  // App bloccata sul caricamento — usa lo stato già in memoria
-  if (ST.user) {
-    if (ST.profile) {
-      showScreen('app');
-      renderOggi();
-    } else {
-      showScreen('onboarding');
+
+  // Prova a ripristinare dal cache — nessuna chiamata di rete
+  try {
+    const raw = sessionStorage.getItem(ZT_CACHE_KEY);
+    if (raw) {
+      const snapshot = JSON.parse(raw);
+      ST_PERSIST_KEYS.forEach(k => { if (snapshot[k] !== undefined) ST[k] = snapshot[k]; });
+      if (ST.user) {
+        if (ST.profile) { showScreen('app'); renderOggi(); }
+        else             { showScreen('onboarding'); }
+      } else {
+        showScreen('auth');
+      }
+      return;
     }
-  } else {
-    showScreen('auth');
-  }
+  } catch(e) { /* JSON malformato o sessionStorage assente */ }
+
+  // Fallback: ricarica la pagina
+  window.location.reload();
 });
 </script>
 </body>
