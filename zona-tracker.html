@@ -850,7 +850,7 @@ async function loadSupps() {
 }
 
 async function loadCatalog() {
-  const {data} = await supa.from('nutrilite_catalog').select('*').order('sort_order');
+  const {data} = await supa.from('nutrilite_catalog').select('*').order('nome');
   ST.catalog = data || [];
 }
 
@@ -1250,9 +1250,9 @@ function renderCatalogList() {
   const selAdd = new Set(ST.catalogSelected);
   const selRem = new Set(ST.catalogToRemove);
   document.getElementById('catalog-list').innerHTML = ST.catalog.map(item => {
-    const inProfile = existingNames.has(item.name);
-    const toAdd    = selAdd.has(item.id);
-    const toRemove = selRem.has(item.id);
+    const inProfile = existingNames.has(item.nome);
+    const toAdd    = selAdd.has(item.codice);
+    const toRemove = selRem.has(item.codice);
     let boxClass, boxContent, itemClass;
     if(inProfile) {
       if(toRemove) {
@@ -1269,20 +1269,24 @@ function renderCatalogList() {
       boxContent = toAdd ? '<span class="check-mark">✓</span>' : '';
       itemClass  = 'catalog-item';
     }
-    return `<div class="${itemClass}" onclick="toggleCatalogItem(${item.id})">
+    const prezzo = item.prezzo_partner != null ? `€${parseFloat(item.prezzo_partner).toFixed(2)}/conf` : '';
+    const mensile = item.costo_mensile_partner != null ? `€${parseFloat(item.costo_mensile_partner).toFixed(2)}/mese` : '';
+    return `<div class="${itemClass}" onclick="toggleCatalogItem('${esc(item.codice)}')">
       <div class="${boxClass}">${boxContent}</div>
       <div class="catalog-item-info">
-        <div class="catalog-item-name">${esc(item.name)}</div>
-        <div class="catalog-item-slot">⏰ ${item.slot} · ${item.kcal} kcal · ${item.protein}g P</div>
+        <div class="catalog-item-name">${esc(item.nome)}</div>
+        <div class="catalog-item-slot" style="margin-top:2px;">${[item.linea, item.categoria].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="catalog-item-slot">${[item.confezione, item.dose_die ? 'Dose: '+item.dose_die : ''].filter(Boolean).map(esc).join(' · ')}</div>
+        <div class="catalog-item-slot" style="color:var(--acc);">${[prezzo, mensile].filter(Boolean).join(' · ')}</div>
       </div>
     </div>`;
   }).join('');
 }
 
 function toggleCatalogItem(id) {
-  const item = ST.catalog.find(c => c.id === id);
+  const item = ST.catalog.find(c => c.codice === id);
   if(!item) return;
-  const inProfile = ST.supps.some(s => s.name === item.name);
+  const inProfile = ST.supps.some(s => s.name === item.nome);
   if(inProfile) {
     const i = ST.catalogToRemove.indexOf(id);
     if(i < 0) ST.catalogToRemove.push(id);
@@ -1298,7 +1302,7 @@ function toggleCatalogItem(id) {
 function selectAllCatalog(on) {
   const existingNames = new Set(ST.supps.map(s => s.name));
   if(on) {
-    ST.catalogSelected = ST.catalog.filter(item => !existingNames.has(item.name)).map(item => item.id);
+    ST.catalogSelected = ST.catalog.filter(item => !existingNames.has(item.nome)).map(item => item.codice);
   } else {
     ST.catalogSelected = [];
     ST.catalogToRemove = [];
@@ -1310,16 +1314,16 @@ function goToCatalogStep2() {
   const hasAdd = ST.catalogSelected.length > 0;
   const hasRem = ST.catalogToRemove.length > 0;
   if(!hasAdd && !hasRem) { alert('Tocca almeno un prodotto per aggiungerlo o rimuoverlo.'); return; }
-  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
-  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.id));
+  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
+  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.codice));
   let html = '';
   if(hasAdd) {
     html += `<div class="catalog-s2-section-lbl" style="color:var(--acc);">Da aggiungere (${toAdd.length})</div>`;
     html += toAdd.map(item => {
-      const tip = SLOT_TIPS[item.name] || DEFAULT_SLOT_TIP;
+      const tip = SLOT_TIPS[item.nome] || DEFAULT_SLOT_TIP;
       return `<div class="catalog-s2-row">
-        <div class="catalog-s2-name">${esc(item.name)}</div>
-        <input class="inp inp-sm" id="slot-${item.id}" value="${esc(item.slot)}" placeholder="08:00" style="width:110px;"/>
+        <div class="catalog-s2-name">${esc(item.nome)}</div>
+        <input class="inp inp-sm" id="slot-${item.codice}" value="08:00" placeholder="08:00" style="width:110px;"/>
         <div class="slot-tip">💡 ${tip}</div>
       </div>`;
     }).join('');
@@ -1327,7 +1331,7 @@ function goToCatalogStep2() {
   if(hasRem) {
     html += `<div class="catalog-s2-section-lbl" style="color:var(--err);${hasAdd?'margin-top:16px;':''}">Da rimuovere (${toRemove.length})</div>
       <div class="catalog-s2-removals">${toRemove.map(item =>
-        `<div style="font-size:13px;color:var(--err);padding:3px 0;">✕ ${esc(item.name)}</div>`
+        `<div style="font-size:13px;color:var(--err);padding:3px 0;">✕ ${esc(item.nome)}</div>`
       ).join('')}</div>`;
   }
   document.getElementById('catalog-slots').innerHTML = html;
@@ -1343,13 +1347,13 @@ function backToCatalogStep1() {
 }
 
 async function importFromCatalog() {
-  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.id));
-  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.id));
+  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
+  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.codice));
   // Conferma rimozioni
   if(toRemove.length > 0) {
-    const names = toRemove.map(item => `• ${item.name}`).join('\n');
+    const names = toRemove.map(item => `• ${item.nome}`).join('\n');
     const msg = toRemove.length === 1
-      ? `Vuoi rimuovere "${toRemove[0].name}" dal tuo profilo?\nLo storico delle assunzioni verrà mantenuto.`
+      ? `Vuoi rimuovere "${toRemove[0].nome}" dal tuo profilo?\nLo storico delle assunzioni verrà mantenuto.`
       : `Vuoi rimuovere questi ${toRemove.length} prodotti dal tuo profilo?\n\n${names}\n\nLo storico delle assunzioni verrà mantenuto.`;
     if(!confirm(msg)) return;
   }
@@ -1357,7 +1361,7 @@ async function importFromCatalog() {
   btn.disabled = true; btn.textContent = 'Applicazione...';
   // Rimuovi
   for(const item of toRemove) {
-    const supp = ST.supps.find(s => s.name === item.name);
+    const supp = ST.supps.find(s => s.name === item.nome);
     if(supp) {
       await dbDeleteSupp(supp.local_id);
       ST.supps = ST.supps.filter(s => s.local_id !== supp.local_id);
@@ -1366,15 +1370,17 @@ async function importFromCatalog() {
   // Aggiungi
   if(toAdd.length > 0) {
     const toInsert = toAdd.map((item, i) => {
-      const slotEl = document.getElementById('slot-'+item.id);
+      const slotEl = document.getElementById('slot-'+item.codice);
       return {
         sort_order: ST.supps.length + i + 1,
         user_id: ST.user.id,
-        name: item.name,
-        slot: slotEl ? (slotEl.value.trim() || item.slot) : item.slot,
-        grp: item.grp, active: true,
-        kcal: item.kcal, protein: item.protein, carbs: item.carbs, fat: item.fat,
-        price: item.price, doses: item.doses, note: item.note,
+        name: item.nome,
+        slot: slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
+        grp: '', active: true,
+        kcal: 0, protein: 0, carbs: 0, fat: 0,
+        price: item.prezzo_partner || 0,
+        doses: item.dosi_conf || 0,
+        note: '',
       };
     });
     const {data, error} = await supa.from('supplements').insert(toInsert).select();
