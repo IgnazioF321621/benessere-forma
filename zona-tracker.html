@@ -433,13 +433,13 @@ select.inp{cursor:pointer;}
       <div class="onb-section" style="margin-top:20px;">
         <div class="onb-section-title">Giorno di recupero / digiuno</div>
         <div class="onb-pills">
-          <button class="onb-pill" onclick="setOnbPill('recovery','lun')" id="rec-lun">Lun</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','mar')" id="rec-mar">Mar</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','mer')" id="rec-mer">Mer</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','gio')" id="rec-gio">Gio</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','ven')" id="rec-ven">Ven</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','sab')" id="rec-sab">Sab</button>
-          <button class="onb-pill" onclick="setOnbPill('recovery','dom')" id="rec-dom">Dom</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('lun')" id="rec-lun">Lun</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('mar')" id="rec-mar">Mar</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('mer')" id="rec-mer">Mer</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('gio')" id="rec-gio">Gio</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('ven')" id="rec-ven">Ven</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('sab')" id="rec-sab">Sab</button>
+          <button class="onb-pill" onclick="toggleRecoveryDay('dom')" id="rec-dom">Dom</button>
         </div>
       </div>
     </div>
@@ -668,7 +668,7 @@ const ST = {
   onbDiet: 'onnivoro',
   onbIntolleranze: [],
   onbWorkout: 'misto',
-  onbRecoveryDay: '',
+  onbRecoveryDay: [],
   syncStatus: 'ok',
   catalog: [],
   catalogSelected: [],
@@ -803,6 +803,13 @@ function toggleIntolleranza(val) {
   if (i < 0) ST.onbIntolleranze.push(val);
   else ST.onbIntolleranze.splice(i, 1);
   document.getElementById('intol-'+val)?.classList.toggle('active', ST.onbIntolleranze.includes(val));
+}
+
+function toggleRecoveryDay(val) {
+  const i = ST.onbRecoveryDay.indexOf(val);
+  if (i < 0) ST.onbRecoveryDay.push(val);
+  else ST.onbRecoveryDay.splice(i, 1);
+  document.getElementById('rec-'+val)?.classList.toggle('active', ST.onbRecoveryDay.includes(val));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -957,7 +964,7 @@ async function saveOnboarding() {
     note_salute:        document.getElementById('onb-note-salute').value.trim() || null,
     tipo_allenamento:   ST.onbWorkout     || null,
     giorni_allenamento: parseInt(document.getElementById('onb-giorni-allenamento').value) || null,
-    giorno_recupero:    ST.onbRecoveryDay || null,
+    giorno_recupero:    ST.onbRecoveryDay.length ? ST.onbRecoveryDay : null,
     durata_sessione:    parseInt(document.getElementById('onb-durata-sessione').value)    || null,
     updated_at: new Date().toISOString(),
   });
