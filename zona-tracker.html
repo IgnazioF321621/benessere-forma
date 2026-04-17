@@ -674,7 +674,7 @@ function isPerfectDay(cons) {
 // ═══════════════════════════════════════════════════════════
 function mealTotals(meals){return (meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.kcal||0),protein:a.protein+(m.protein||0),carbs:a.carbs+(m.carbs||0),fat:a.fat+(m.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});}
 function suppTotalsForIds(ids){
-  return ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>{
+  const tot=ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>{
     const cat=ST.catalog.find(c=>c.nome===s.name);
     const kcal   =s.kcal    || cat?.kcal     || 0;
     const protein=s.protein || cat?.proteine || 0;
@@ -682,7 +682,9 @@ function suppTotalsForIds(ids){
     const fat    =s.fat     || cat?.grassi   || 0;
     return {kcal:a.kcal+kcal,protein:a.protein+protein,carbs:a.carbs+carbs,fat:a.fat+fat};
   },{kcal:0,protein:0,carbs:0,fat:0});
+  return {kcal:r2(tot.kcal),protein:r2(tot.protein),carbs:r2(tot.carbs),fat:r2(tot.fat)};
 }
+function r2(x){return Math.round(x*100)/100;}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){return(s.price&&s.doses)?(s.price/s.doses)*30:0;}
 function suppUnitFromConfezione(confezione, linea) {
