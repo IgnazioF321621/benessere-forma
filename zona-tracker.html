@@ -1167,10 +1167,25 @@ function renderIntegratori(){
     const ss=bySlot[slot];
     const isShake=ss.some(s=>s.grp==='Shake Mami');
     const slotActive=ss.filter(s=>s.active);
-    const slotKcal=slotActive.reduce((a,s)=>a+s.kcal,0);
-    const slotProt=slotActive.reduce((a,s)=>a+s.protein,0);
-    const slotCost=slotActive.reduce((a,s)=>a+suppMonthlyCost(s),0);
-    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotKcal}kcal · ${slotProt}gP · €${slotCost.toFixed(2)}/mese</span></div>`;
+    const slotTot=slotActive.reduce((a,s)=>{
+      const cat=ST.catalog.find(c=>c.nome===s.name);
+      return {
+        kcal:  a.kcal  +(s.kcal    ||cat?.kcal                ||0),
+        carbs: a.carbs +(s.carbs   ||cat?.carbo               ||0),
+        prot:  a.prot  +(s.protein ||cat?.proteine            ||0),
+        fat:   a.fat   +(s.fat     ||cat?.grassi              ||0),
+        cost:  a.cost  +(cat?.costo_dose_partner              ||0),
+      };
+    },{kcal:0,carbs:0,prot:0,fat:0,cost:0});
+    const sv=k=>r2(slotTot[k])||'—';
+    const slotSummary=[
+      sv('kcal')+'kcal',
+      sv('carbs')+'g carbo',
+      sv('prot')+'g prot',
+      sv('fat')+'g grassi',
+      (slotTot.cost?'€'+r2(slotTot.cost).toFixed(2):'€—')+'/sessione',
+    ].join(' · ');
+    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotSummary}</span></div>`;
     ss.forEach(s=>{
       const catItem = ST.catalog.find(c => c.nome === s.name);
       // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
