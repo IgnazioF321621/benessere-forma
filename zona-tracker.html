@@ -1515,9 +1515,10 @@ function renderPiano(){
     html += `<p style="color:var(--err);font-size:13px;margin-bottom:12px;">⚠️ ${esc(pianoError)}</p>
     <button class="btn btn-primary btn-sm" onclick="generatePianoAI(true)">Riprova →</button>`;
   } else if(!piano) {
-    const dietaLabel = p.dieta || 'non specificata';
-    const intolLabel = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'nessuna';
-    const obiettivoLabel = p.obiettivo || 'benessere generale';
+    const fmtLabel = s => (s||'').replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+    const dietaLabel = fmtLabel(p.dieta) || 'Non specificata';
+    const intolLabel = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.map(fmtLabel).join(', ') : 'Nessuna';
+    const obiettivoLabel = fmtLabel(p.obiettivo) || 'Benessere generale';
     html += `<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:14px;font-size:12px;color:var(--t2);line-height:1.8;">
       <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">IL TUO PROFILO</div>
       <div>🥗 Dieta: <b style="color:var(--t1);">${esc(dietaLabel)}</b></div>
@@ -1563,13 +1564,18 @@ function renderPiano(){
   }
   html += `</div>`;
 
-  // Card priorità cliniche
-  html += `<div class="card"><span class="lbl">Priorità cliniche</span>
-  <div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>
-  <div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>
-  <div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div></div>
+  // Card priorità cliniche — dinamica dal profilo utente
+  const fmtPrio = s => (s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+  const noteSalute = (p.note_salute||'').toLowerCase();
+  const intolArr = p.intolleranze || [];
+  let prioRows = '';
+  if(noteSalute.includes('ferrit')) prioRows += `<div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>`;
+  if(noteSalute.includes('immun')) prioRows += `<div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>`;
+  if(noteSalute.includes('infiamm')) prioRows += `<div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div>`;
+  if(intolArr.length) prioRows += `<div class="prio-row yellow"><div class="prio-title">⚠️ Intolleranze</div><div class="prio-text">Evitare: ${intolArr.map(fmtPrio).join(', ')}</div></div>`;
+  if(prioRows) html += `<div class="card"><span class="lbl">Priorità cliniche</span>${prioRows}</div>`;
 
-  <div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
+  html += `<div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
   document.getElementById('page-piano').innerHTML = html;
@@ -1597,10 +1603,10 @@ async function generatePianoAI(forza = false) {
   const obiettivo = p.obiettivo || 'perdita peso';
   const note = p.note_salute || 'ferritina bassa, sistema immunitario da potenziare';
 
-  const prompt = `Sei un nutrizionista esperto in dieta a Zona (40-30-30). Crea un piano alimentare settimanale personalizzato.\n\nPROFILO UTENTE:\n- Dieta: ${dieta}\n- Intolleranze/esclusioni: ${intolleranze}\n- Obiettivo: ${obiettivo}\n- Note salute: ${note}\n- Target giornaliero: ${t.kcal} kcal · ${t.protein}g proteine · ${t.carbs}g carboidrati · ${t.fat}g grassi\n- Rapporto macro: 40% carbo, 30% proteine, 30% grassi\n\nREGOLE:\n- Solo carbo a basso indice glicemico\n- Pesce come proteina principale (salmone, tonno, sgombro, merluzzo, branzino, orata, gamberi)\n- Legumi quotidianamente (ferro)\n- Zero latticini\n- Porzioni precise in grammi\n- Ogni giorno deve avere: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena\n\nRispondi SOLO con questo JSON valido, niente testo extra:\n{\n  "giorni": [\n    {\n      "giorno": "Lunedì",\n      "kcal_totali": 1850,\n      "colazione": {"piatto": "nome", "ingredienti": "ingredienti con grammi", "kcal": 400, "proteine": 30, "carboidrati": 45, "grassi": 12},\n      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": 550, "proteine": 45, "carboidrati": 55, "grassi": 18},\n      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": 500, "proteine": 40, "carboidrati": 45, "grassi": 15},\n      "note": "consiglio del giorno in italiano, max 1 frase"\n    }\n  ]\n}\nGenera tutti e 7 i giorni (Lunedì–Domenica) con varietà. I valori numerici devono essere interi senza unità di misura.`;
+  const prompt = `Sei un nutrizionista esperto in dieta a Zona (40-30-30). Crea un piano alimentare settimanale personalizzato.\n\nPROFILO UTENTE:\n- Dieta: ${dieta}\n- Intolleranze/esclusioni: ${intolleranze}\n- Obiettivo: ${obiettivo}\n- Note salute: ${note}\n- Target giornaliero: ${t.kcal} kcal · ${t.protein}g proteine · ${t.carbs}g carboidrati · ${t.fat}g grassi\n- Rapporto macro: 40% carbo, 30% proteine, 30% grassi\n\nREGOLE:\n- Solo carbo a basso indice glicemico\n- Pesce come proteina principale (salmone, tonno, sgombro, merluzzo, branzino, orata, gamberi)\n- Legumi quotidianamente (ferro)\n- Zero latticini\n- Porzioni precise in grammi\n- Ogni giorno deve avere: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena\n\nRispondi SOLO con questo JSON valido, niente testo extra:\n{\n  "giorni": [\n    {\n      "giorno": "Lunedì",\n      "kcal_totali": 1850,\n      "colazione": {"piatto": "nome", "ingredienti": "ingredienti con grammi", "kcal": 400, "proteine": 30, "carboidrati": 45, "grassi": 12},\n      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": 550, "proteine": 45, "carboidrati": 55, "grassi": 18},\n      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": 500, "proteine": 40, "carboidrati": 45, "grassi": 15},\n      "note": "consiglio del giorno in italiano, max 1 frase"\n    }\n  ]\n}\nGenera tutti e 7 i giorni (Lunedì–Domenica). Ingredienti: max 60 caratteri per campo. Valori numerici: interi senza unità. JSON deve essere completo e valido.`;
 
   try {
-    const raw = await callAI(prompt, 3000);
+    const raw = await callAI(prompt, 4000);
     const clean = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
     ST.pianoAI = { ...parsed, generato_il: new Date().toISOString() };
