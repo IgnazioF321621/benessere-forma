@@ -78,6 +78,12 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .onb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .onb-field{display:flex;flex-direction:column;gap:6px;}
 .onb-field label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;}
+.onb-progress-wrap{height:4px;background:rgba(255,255,255,.25);margin-top:18px;border-radius:2px;overflow:hidden;}
+.onb-progress-fill{height:100%;background:#fff;border-radius:2px;transition:width .35s ease;}
+.onb-pills{display:flex;flex-wrap:wrap;gap:8px;}
+.onb-pill{padding:8px 16px;border:1px solid var(--b1);border-radius:20px;background:var(--s2);color:var(--t2);font-size:13px;cursor:pointer;transition:all .15s;font-family:'Syne',sans-serif;white-space:nowrap;}
+.onb-pill.active{background:var(--acc);color:#fff;border-color:var(--acc);}
+.onb-nav{display:flex;gap:10px;margin-top:24px;}
 .sex-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .sex-btn{padding:10px;border:1px solid var(--b1);border-radius:8px;background:var(--s2);color:var(--t2);font-size:13px;cursor:pointer;text-align:center;transition:all .15s;}
 .sex-btn.active{background:var(--acc);color:#fff;border-color:var(--acc);}
@@ -313,45 +319,135 @@ select.inp{cursor:pointer;}
 <!-- ONBOARDING -->
 <div id="onboarding-screen">
   <div class="onb-header">
-    <div class="onb-step">Setup profilo — passo unico</div>
-    <div class="onb-title">Benvenuto! 👋</div>
-    <div class="onb-sub">Inserisci i tuoi dati per personalizzare i target calorie e macro.</div>
+    <div class="onb-step" id="onb-step-label">Step 1 di 5 — Dati personali</div>
+    <div class="onb-title">Benvenuto!</div>
+    <div class="onb-sub" id="onb-subtitle">Come ti chiami e quando sei nato?</div>
+    <div class="onb-progress-wrap"><div class="onb-progress-fill" id="onb-progress-fill" style="width:20%"></div></div>
   </div>
   <div class="onb-body">
-    <div class="onb-section">
-      <div class="onb-section-title">Dati personali</div>
-      <div class="onb-grid">
-        <div class="onb-field"><label>Nome</label><input id="onb-fname" class="inp inp-sm" placeholder="Es. Ignazio"/></div>
-        <div class="onb-field"><label>Cognome</label><input id="onb-lname" class="inp inp-sm" placeholder="Es. Frisina"/></div>
+
+    <!-- STEP 1: Dati personali -->
+    <div id="onb-s1">
+      <div class="onb-section">
+        <div class="onb-section-title">Dati personali</div>
+        <div class="onb-grid">
+          <div class="onb-field"><label>Nome</label><input id="onb-fname" class="inp inp-sm" placeholder="es. Pino"/></div>
+          <div class="onb-field"><label>Cognome</label><input id="onb-lname" class="inp inp-sm" placeholder="es. Manolo"/></div>
+        </div>
+        <div class="onb-field" style="margin-top:10px;"><label>Data di nascita</label><input id="onb-dob" class="inp inp-sm" type="date"/></div>
+        <div class="onb-field" style="margin-top:10px;"><label>Sesso</label>
+          <div class="sex-btns"><button class="sex-btn active" onclick="setSex('M')" id="sex-M">♂ M</button><button class="sex-btn" onclick="setSex('F')" id="sex-F">♀ F</button></div>
+        </div>
       </div>
     </div>
-    <div class="onb-section">
-      <div class="onb-section-title">Corpo & obiettivo</div>
-      <div class="onb-field" style="margin-bottom:10px;"><label>Sesso</label><div class="sex-btns"><button class="sex-btn" onclick="setSex('M')" id="sex-M">♂ Uomo</button><button class="sex-btn" onclick="setSex('F')" id="sex-F">♀ Donna</button></div></div>
-      <div class="onb-grid">
-        <div class="onb-field"><label>Età</label><input id="onb-age" class="inp inp-sm" type="number" placeholder="Es. 38" min="15" max="90"/></div>
-        <div class="onb-field"><label>Altezza (cm)</label><input id="onb-height" class="inp inp-sm" type="number" placeholder="Es. 178" min="140" max="220"/></div>
-        <div class="onb-field"><label>Peso attuale (kg)</label><input id="onb-weight" class="inp inp-sm" type="number" placeholder="Es. 82" min="40" max="200" step="0.1" oninput="updateTDEEPreview()"/></div>
-        <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="onb-goal-weight" class="inp inp-sm" type="number" placeholder="Es. 75" min="40" max="200" step="0.1"/></div>
+
+    <!-- STEP 2: Dati biometrici -->
+    <div id="onb-s2" style="display:none">
+      <div class="onb-section">
+        <div class="onb-section-title">Dati biometrici</div>
+        <div class="onb-grid">
+          <div class="onb-field"><label>Altezza (cm)</label><input id="onb-height" class="inp inp-sm" type="number" placeholder="es. 178" oninput="updateTDEEPreview()"/></div>
+          <div class="onb-field"><label>Peso attuale (kg)</label><input id="onb-weight" class="inp inp-sm" type="number" placeholder="es. 82.5" step="0.1" oninput="updateTDEEPreview()"/></div>
+          <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="onb-goal-weight" class="inp inp-sm" type="number" placeholder="es. 75" step="0.1" oninput="updateTDEEPreview()"/></div>
+        </div>
+        <div class="onb-field" style="margin-top:14px;"><label>Livello attività</label>
+          <div class="onb-pills" style="margin-top:8px;">
+            <button class="onb-pill" onclick="setActivity('sedentary')" id="act-sedentary">Sedentario</button>
+            <button class="onb-pill" onclick="setActivity('lightly_active')" id="act-lightly_active">Leggermente attivo</button>
+            <button class="onb-pill active" onclick="setActivity('moderate')" id="act-moderate">Moderatamente attivo</button>
+            <button class="onb-pill" onclick="setActivity('active')" id="act-active">Molto attivo</button>
+            <button class="onb-pill" onclick="setActivity('very_active')" id="act-very_active">Estremamente attivo</button>
+          </div>
+        </div>
+        <div id="tdee-preview" class="tdee-preview" style="display:none;margin-top:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div><div class="tdee-lbl">Target calorico stimato (Zona 40·30·30)</div><div class="tdee-main" id="tdee-kcal">—</div><div class="tdee-lbl" id="tdee-note">inserisci i dati sopra</div></div>
+            <div style="text-align:right;"><div style="font-size:10px;color:rgba(255,255,255,.6);font-family:'JetBrains Mono',monospace;">OBIETTIVO</div><div style="font-size:16px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;" id="tdee-goal-diff">—</div></div>
+          </div>
+          <div class="tdee-macros"><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-prot">—</div><div class="tdee-macro-lbl">Proteine g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-carbs">—</div><div class="tdee-macro-lbl">Carboidrati g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-fat">—</div><div class="tdee-macro-lbl">Grassi g</div></div></div>
+        </div>
       </div>
     </div>
-    <div class="onb-section">
-      <div class="onb-section-title">Livello attività</div>
-      <div class="activity-btns">
-        <button class="activity-btn" onclick="setActivity('sedentary')" id="act-sedentary">🪑<br/>Sedentario<br/><span style="font-size:9px;opacity:.7;">poco o nessun sport</span></button>
-        <button class="activity-btn active" onclick="setActivity('moderate')" id="act-moderate">🚶<br/>Moderato<br/><span style="font-size:9px;opacity:.7;">3-5 gg/settimana</span></button>
-        <button class="activity-btn" onclick="setActivity('active')" id="act-active">🏋️<br/>Attivo<br/><span style="font-size:9px;opacity:.7;">6-7 gg/settimana</span></button>
-        <button class="activity-btn" onclick="setActivity('very_active')" id="act-very_active">⚡<br/>Molto attivo<br/><span style="font-size:9px;opacity:.7;">2 sessioni/giorno</span></button>
+
+    <!-- STEP 3: Obiettivo e dieta -->
+    <div id="onb-s3" style="display:none">
+      <div class="onb-section">
+        <div class="onb-section-title">Obiettivo</div>
+        <div class="onb-pills">
+          <button class="onb-pill active" onclick="setOnbPill('objective','perdita_peso')" id="obj-perdita_peso">Perdita peso</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','mantenimento')" id="obj-mantenimento">Mantenimento</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','massa_muscolare')" id="obj-massa_muscolare">Massa muscolare</button>
+        </div>
+      </div>
+      <div class="onb-section" style="margin-top:20px;">
+        <div class="onb-section-title">Dieta</div>
+        <div class="onb-pills">
+          <button class="onb-pill active" onclick="setOnbPill('diet','onnivoro')" id="diet-onnivoro">Onnivoro</button>
+          <button class="onb-pill" onclick="setOnbPill('diet','pescetariano')" id="diet-pescetariano">Pescetariano</button>
+          <button class="onb-pill" onclick="setOnbPill('diet','vegetariano')" id="diet-vegetariano">Vegetariano</button>
+          <button class="onb-pill" onclick="setOnbPill('diet','vegano')" id="diet-vegano">Vegano</button>
+        </div>
       </div>
     </div>
-    <div id="tdee-preview" class="tdee-preview" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div><div class="tdee-lbl">Target calorico stimato (Zona 40·30·30)</div><div class="tdee-main" id="tdee-kcal">—</div><div class="tdee-lbl" id="tdee-note">inserisci i dati sopra</div></div>
-        <div style="text-align:right;"><div style="font-size:10px;color:rgba(255,255,255,.6);font-family:'JetBrains Mono',monospace;">OBIETTIVO</div><div style="font-size:16px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;" id="tdee-goal-diff">—</div></div>
+
+    <!-- STEP 4: Intolleranze -->
+    <div id="onb-s4" style="display:none">
+      <div class="onb-section">
+        <div class="onb-section-title">Intolleranze e allergie</div>
+        <div class="onb-pills">
+          <button class="onb-pill" onclick="toggleIntolleranza('lattosio')" id="intol-lattosio">Lattosio</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('glutine')" id="intol-glutine">Glutine</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('uova')" id="intol-uova">Uova</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('frutta_a_guscio')" id="intol-frutta_a_guscio">Frutta a guscio</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('soia')" id="intol-soia">Soia</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('pesce')" id="intol-pesce">Pesce</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('crostacei')" id="intol-crostacei">Crostacei</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('nichel')" id="intol-nichel">Nichel</button>
+          <button class="onb-pill" onclick="toggleIntolleranza('altro')" id="intol-altro">Altro</button>
+        </div>
       </div>
-      <div class="tdee-macros"><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-prot">—</div><div class="tdee-macro-lbl">Proteine g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-carbs">—</div><div class="tdee-macro-lbl">Carboidrati g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-fat">—</div><div class="tdee-macro-lbl">Grassi g</div></div></div>
+      <div class="onb-section" style="margin-top:20px;">
+        <div class="onb-section-title">Note aggiuntive</div>
+        <textarea id="onb-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, intolleranza nichel..." style="resize:none;"></textarea>
+      </div>
     </div>
-    <button class="btn btn-primary btn-full" style="margin-top:20px;" onclick="saveOnboarding()" id="onb-btn">Inizia a tracciare →</button>
+
+    <!-- STEP 5: Routine e allenamento -->
+    <div id="onb-s5" style="display:none">
+      <div class="onb-section">
+        <div class="onb-section-title">Tipo allenamento</div>
+        <div class="onb-pills">
+          <button class="onb-pill" onclick="setOnbPill('workout','forza')" id="wk-forza">Forza</button>
+          <button class="onb-pill" onclick="setOnbPill('workout','cardio')" id="wk-cardio">Cardio</button>
+          <button class="onb-pill active" onclick="setOnbPill('workout','misto')" id="wk-misto">Misto</button>
+          <button class="onb-pill" onclick="setOnbPill('workout','nessuno')" id="wk-nessuno">Nessuno</button>
+        </div>
+      </div>
+      <div class="onb-section" style="margin-top:20px;">
+        <div class="onb-grid">
+          <div class="onb-field"><label>Giorni/settimana</label><input id="onb-giorni-allenamento" class="inp inp-sm" type="number" min="0" max="7" placeholder="es. 4"/></div>
+          <div class="onb-field"><label>Durata sessione (min)</label><input id="onb-durata-sessione" class="inp inp-sm" type="number" min="0" placeholder="es. 60"/></div>
+        </div>
+      </div>
+      <div class="onb-section" style="margin-top:20px;">
+        <div class="onb-section-title">Giorno di recupero / digiuno</div>
+        <div class="onb-pills">
+          <button class="onb-pill" onclick="setOnbPill('recovery','lun')" id="rec-lun">Lun</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','mar')" id="rec-mar">Mar</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','mer')" id="rec-mer">Mer</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','gio')" id="rec-gio">Gio</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','ven')" id="rec-ven">Ven</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','sab')" id="rec-sab">Sab</button>
+          <button class="onb-pill" onclick="setOnbPill('recovery','dom')" id="rec-dom">Dom</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigazione -->
+    <div class="onb-nav">
+      <button class="btn btn-ghost btn-full" id="onb-back-btn" onclick="onbGoStep(ST.onbStep-1)" style="display:none">← Indietro</button>
+      <button class="btn btn-primary btn-full" id="onb-next-btn" onclick="onbNextOrSave()">Avanti →</button>
+    </div>
     <div id="onb-err" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
   </div>
 </div>
@@ -564,8 +660,14 @@ const ST = {
   advLoading: false,
   nextSlot: 'pranzo',
   reportRange: 7,
+  onbStep: 1,
   onbSex: 'M',
   onbActivity: 'moderate',
+  onbObjective: 'perdita_peso',
+  onbDiet: 'onnivoro',
+  onbIntolleranze: [],
+  onbWorkout: 'misto',
+  onbRecoveryDay: '',
   syncStatus: 'ok',
   catalog: [],
   catalogSelected: [],
@@ -584,7 +686,7 @@ function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false
 // ═══════════════════════════════════════════════════════════
 // TDEE CALCULATOR
 // ═══════════════════════════════════════════════════════════
-const ACTIVITY_MULT = {sedentary:1.2, moderate:1.55, active:1.725, very_active:1.9};
+const ACTIVITY_MULT = {sedentary:1.2, lightly_active:1.375, moderate:1.55, active:1.725, very_active:1.9};
 
 function calcTDEE(sex, age, height, weight, activity) {
   // Mifflin-St Jeor
@@ -603,11 +705,20 @@ function calcTDEE(sex, age, height, weight, activity) {
   };
 }
 
+function ageFromDob(dob) {
+  if (!dob) return null;
+  const today = new Date(), born = new Date(dob);
+  let age = today.getFullYear() - born.getFullYear();
+  if (today.getMonth() < born.getMonth() || (today.getMonth() === born.getMonth() && today.getDate() < born.getDate())) age--;
+  return age > 0 ? age : null;
+}
+
 function updateTDEEPreview() {
-  const age    = parseInt(document.getElementById('onb-age')?.value);
+  const dob    = document.getElementById('onb-dob')?.value;
   const height = parseFloat(document.getElementById('onb-height')?.value);
   const weight = parseFloat(document.getElementById('onb-weight')?.value);
   const goalW  = parseFloat(document.getElementById('onb-goal-weight')?.value);
+  const age    = ageFromDob(dob);
   const prev   = document.getElementById('tdee-preview');
   if(!age || !height || !weight) { if(prev) prev.style.display='none'; return; }
   const r = calcTDEE(ST.onbSex, age, height, weight, ST.onbActivity);
@@ -631,9 +742,66 @@ function setSex(s) {
 }
 function setActivity(a) {
   ST.onbActivity = a;
-  ['sedentary','moderate','active','very_active'].forEach(x =>
+  ['sedentary','lightly_active','moderate','active','very_active'].forEach(x =>
     document.getElementById('act-'+x)?.classList.toggle('active', x===a));
   updateTDEEPreview();
+}
+
+// ── ONBOARDING STEP NAV ────────────────────────────────────
+const ONB_META = [
+  ['Dati personali',     'Come ti chiami e quando sei nato?'],
+  ['Dati biometrici',    'Altezza, peso e attività per calcolare il tuo TDEE.'],
+  ['Obiettivo e dieta',  'Cosa vuoi raggiungere e come mangi?'],
+  ['Intolleranze',       'Ci sono alimenti che eviti o a cui sei sensibile?'],
+  ['Allenamento',        'Raccontaci la tua routine settimanale.'],
+];
+
+function onbGoStep(n) {
+  if (n < 1 || n > 5) return;
+  document.getElementById('onb-s' + ST.onbStep).style.display = 'none';
+  ST.onbStep = n;
+  document.getElementById('onb-s' + n).style.display = 'block';
+  const [label, sub] = ONB_META[n-1];
+  document.getElementById('onb-step-label').textContent = `Step ${n} di 5 — ${label}`;
+  document.getElementById('onb-subtitle').textContent = sub;
+  document.getElementById('onb-progress-fill').style.width = (n * 20) + '%';
+  document.getElementById('onb-back-btn').style.display = n > 1 ? 'block' : 'none';
+  document.getElementById('onb-next-btn').textContent = n === 5 ? 'Inizia a tracciare →' : 'Avanti →';
+  document.getElementById('onb-err').style.display = 'none';
+  document.getElementById('onboarding-screen').scrollTop = 0;
+}
+
+function onbNextOrSave() {
+  const errEl = document.getElementById('onb-err');
+  errEl.style.display = 'none';
+  if (ST.onbStep === 1) {
+    if (!document.getElementById('onb-fname').value.trim()) { errEl.style.display='block'; errEl.textContent='Inserisci il nome.'; return; }
+    if (!document.getElementById('onb-lname').value.trim()) { errEl.style.display='block'; errEl.textContent='Inserisci il cognome.'; return; }
+    if (!document.getElementById('onb-dob').value)          { errEl.style.display='block'; errEl.textContent='Inserisci la data di nascita.'; return; }
+  }
+  if (ST.onbStep === 2) {
+    if (!document.getElementById('onb-height').value)      { errEl.style.display='block'; errEl.textContent="Inserisci l'altezza."; return; }
+    if (!document.getElementById('onb-weight').value)      { errEl.style.display='block'; errEl.textContent='Inserisci il peso attuale.'; return; }
+    if (!document.getElementById('onb-goal-weight').value) { errEl.style.display='block'; errEl.textContent='Inserisci il peso obiettivo.'; return; }
+  }
+  if (ST.onbStep < 5) { onbGoStep(ST.onbStep + 1); }
+  else                { saveOnboarding(); }
+}
+
+function setOnbPill(category, value) {
+  const prefixMap = {objective:'obj', diet:'diet', workout:'wk', recovery:'rec'};
+  const stateMap  = {objective:'onbObjective', diet:'onbDiet', workout:'onbWorkout', recovery:'onbRecoveryDay'};
+  ST[stateMap[category]] = value;
+  const prefix = prefixMap[category];
+  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el =>
+    el.classList.toggle('active', el.id === prefix+'-'+value));
+}
+
+function toggleIntolleranza(val) {
+  const i = ST.onbIntolleranze.indexOf(val);
+  if (i < 0) ST.onbIntolleranze.push(val);
+  else ST.onbIntolleranze.splice(i, 1);
+  document.getElementById('intol-'+val)?.classList.toggle('active', ST.onbIntolleranze.includes(val));
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -755,23 +923,25 @@ function showAuthMsg(msg, type) {
 async function saveOnboarding() {
   const fname  = document.getElementById('onb-fname').value.trim();
   const lname  = document.getElementById('onb-lname').value.trim();
-  const age    = parseInt(document.getElementById('onb-age').value);
+  const dob    = document.getElementById('onb-dob').value;
   const height = parseFloat(document.getElementById('onb-height').value);
   const weight = parseFloat(document.getElementById('onb-weight').value);
   const goalW  = parseFloat(document.getElementById('onb-goal-weight').value);
+  const age    = ageFromDob(dob);
   const errEl  = document.getElementById('onb-err');
-  if(!fname || !lname || !age || !height || !weight || !goalW) {
-    errEl.style.display='block'; errEl.textContent='Compila tutti i campi.'; return;
+  if(!fname || !lname || !dob || !age || !height || !weight || !goalW) {
+    errEl.style.display='block'; errEl.textContent='Compila i campi obbligatori (step 1 e 2).'; return;
   }
   errEl.style.display='none';
   const r = calcTDEE(ST.onbSex, age, height, weight, ST.onbActivity);
-  document.getElementById('onb-btn').disabled = true;
-  document.getElementById('onb-btn').textContent = 'Salvataggio...';
+  const btn = document.getElementById('onb-next-btn');
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
   const {error} = await supa.from('profiles').upsert({
     id: ST.user.id,
     first_name: fname,
     last_name: lname,
     age, sex: ST.onbSex,
+    data_nascita: dob,
     height_cm: height,
     weight_kg: weight,
     goal_weight_kg: goalW,
@@ -780,10 +950,20 @@ async function saveOnboarding() {
     target_protein: r.protein,
     target_carbs: r.carbs,
     target_fat: r.fat,
+    obiettivo:          ST.onbObjective   || null,
+    dieta:              ST.onbDiet        || null,
+    intolleranze:       ST.onbIntolleranze.length ? ST.onbIntolleranze : null,
+    note_salute:        document.getElementById('onb-note-salute').value.trim() || null,
+    tipo_allenamento:   ST.onbWorkout     || null,
+    giorni_allenamento: parseInt(document.getElementById('onb-giorni-allenamento').value) || null,
+    giorno_recupero:    ST.onbRecoveryDay || null,
+    durata_sessione:    parseInt(document.getElementById('onb-durata-sessione').value)    || null,
     updated_at: new Date().toISOString(),
   });
-  if(error) { errEl.style.display='block'; errEl.textContent='Errore: '+error.message; document.getElementById('onb-btn').disabled=false; document.getElementById('onb-btn').textContent='Inizia a tracciare →'; return; }
-  // save weight entry
+  if(error) {
+    errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
+    btn.disabled=false; btn.textContent='Inizia a tracciare →'; return;
+  }
   await saveWeightEntry(weight);
   await loadAndStart();
 }
