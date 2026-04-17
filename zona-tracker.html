@@ -1147,6 +1147,25 @@ function renderIntegratori(){
     const slotCost=slotActive.reduce((a,s)=>a+suppMonthlyCost(s),0);
     html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotKcal}kcal · ${slotProt}gP · €${slotCost.toFixed(2)}/mese</span></div>`;
     ss.forEach(s=>{
+      const catItem = ST.catalog.find(c => c.nome === s.name);
+      // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
+      // altrimenti cerca nel catalogo come fallback
+      const macroVal = (suppKey, catKey) => {
+        const sv = s[suppKey]; if (sv) return sv;
+        const cv = catItem?.[catKey]; if (cv) return cv;
+        return null;
+      };
+      const macroCells = [
+        ['Kcal',    'kcal',    'kcal'],
+        ['Prot g',  'protein', 'proteine'],
+        ['Carbo g', 'carbs',   'carbo'],
+        ['Grassi g','fat',     'grassi'],
+        ['Dose/die','price',   null],
+        ['Dosi/conf','doses',  null],
+      ].map(([lbl, suppKey, catKey]) => {
+        const val = catKey ? macroVal(suppKey, catKey) : (s[suppKey] || null);
+        return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
+      }).join('');
       html+=`<div class="supp-card ${s.active?'':'inactive'}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
           <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp('${s.local_id}','name',this.value)" style="font-weight:700;font-size:14px;"/>
@@ -1160,7 +1179,7 @@ function renderIntegratori(){
           <input class="supp-grp-inp" value="${esc(s.grp||'')}" placeholder="gruppo..." onchange="updateSupp('${s.local_id}','grp',this.value)"/>
           <input class="supp-note-inp" value="${esc(s.note||'')}" placeholder="nota..." onchange="updateSupp('${s.local_id}','note',this.value)"/>
         </div>
-        <div class="macro-grid">${[['Kcal','kcal'],['Prot g','protein'],['Carbo g','carbs'],['Grassi g','fat'],['Dose/die','price'],['Dosi/conf','doses']].map(([lbl,k])=>`<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${s[k]||0}" onchange="updateSupp('${s.local_id}','${k}',+this.value)"/></div>`).join('')}</div>
+        <div class="macro-grid">${macroCells}</div>
         <div style="margin-top:6px;text-align:right;"><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${s.price&&s.doses?`€${(s.price/s.doses).toFixed(2)}/dose · `:''}€${suppMonthlyCost(s).toFixed(2)}/mese</span></div>
       </div>`;
     });
@@ -1457,7 +1476,10 @@ async function importFromCatalog() {
         name: item.nome,
         slot: slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
         grp: '', active: true,
-        kcal: 0, protein: 0, carbs: 0, fat: 0,
+        kcal: item.kcal || 0,
+        protein: item.proteine || 0,
+        carbs: item.carbo || 0,
+        fat: item.grassi || 0,
         price: item.prezzo_partner || 0,
         doses: item.dosi_conf || 0,
         note: '',
