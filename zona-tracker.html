@@ -1808,13 +1808,12 @@ function enterTestMode() {
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════
 setTimeout(async () => {
-  // Modalità test: azzera cache e stato, mostra login con pulsante test
+  // Modalità test: azzera cache, imposta utente fittizio, mostra onboarding direttamente
   if (new URLSearchParams(window.location.search).get('test') === '1') {
     localStorage.removeItem(ZT_CACHE_KEY);
+    ST.user    = { id: 'test-user-001', email: 'test@test.com' };
     ST.profile = null;
-    const btn = document.getElementById('test-mode-btn');
-    if (btn) btn.style.display = 'inline-block';
-    showScreen('auth');
+    showScreen('onboarding');
     return;
   }
   const {data:{session}} = await supa.auth.getSession();
