@@ -1156,41 +1156,51 @@ function applyProfile(profile) {
   }
 }
 
+// Profilo completo = onboarding già eseguito
+function profileIsComplete(profile) {
+  return !!(profile && profile.first_name);
+}
+
 async function loadAndStart() {
   const cache = loadCache();
 
   if (cache) {
-    // Cache hit: ripristina subito e mostra l'app senza loading overlay
+    // Cache hit: ripristina subito senza loading overlay
     if (cache.profile)  ST.profile  = cache.profile;
     if (cache.db)       ST.db       = cache.db;
     if (cache.supps)    ST.supps    = cache.supps;
     if (cache.catalog)  ST.catalog  = cache.catalog;
     if (cache.TARGET)   ST.TARGET   = cache.TARGET;
-    if (ST.profile) {
+    if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
       showScreen('app');
       renderOggi();
     } else {
       showScreen('onboarding');
     }
-    // Aggiorna silenziosamente in background
     refreshInBackground();
     return;
   }
 
-  // Prima apertura assoluta — nessun cache: loading normale
+  // Prima apertura — nessun cache: loading normale
   showScreen('loading');
   await loadSupps();
   await loadAllDays();
   await loadCatalog();
   const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   ST.profile = profile;
-  if (profile) {
+
+  if (profileIsComplete(profile)) {
     applyProfile(profile);
     showScreen('app');
     renderOggi();
     saveCache();
   } else {
+    // Onboarding non completato: crea riga profilo vuota se non esiste
+    if (!profile) {
+      await supa.from('profiles').upsert({ id: ST.user.id, updated_at: new Date().toISOString() });
+      ST.profile = { id: ST.user.id };
+    }
     showScreen('onboarding');
   }
 }
@@ -1201,7 +1211,10 @@ async function refreshInBackground() {
     await loadAllDays();
     await loadCatalog();
     const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
-    if (profile) { ST.profile = profile; applyProfile(profile); }
+    if (profile) {
+      ST.profile = profile;
+      if (profileIsComplete(profile)) applyProfile(profile);
+    }
     renderOggi();
     saveCache();
   } catch(e) { /* ignora errori in background */ }
