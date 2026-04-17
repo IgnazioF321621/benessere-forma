@@ -1134,7 +1134,7 @@ function renderIntegratori(){
 
   let html=`<div class="cost-banner"><div><div class="cost-main">€ ${monthly.toFixed(2)}</div><div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div></div><div class="cost-right"><div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div><div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div></div></div>
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Aggiungi</button></div></div>`;
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Altro integratore</button></div></div>`;
 
   Object.keys(bySlot).sort().forEach(slot=>{
     const ss=bySlot[slot];
