@@ -904,15 +904,24 @@ async function dbDeleteSupp(id) {
 // ═══════════════════════════════════════════════════════════
 // INIT & AUTH FLOW
 // ═══════════════════════════════════════════════════════════
+
+// Wraps a promise with a timeout — resolves null instead of hanging forever
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), ms))]);
+}
+
 async function loadAndStart() {
   showScreen('loading');
-  await loadSupps();
-  await loadAllDays();
-  await loadCatalog();
+  await withTimeout(loadSupps());
+  await withTimeout(loadAllDays());
+  await withTimeout(loadCatalog());
 
-  // load profile
-  const {data:profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
-  ST.profile = profile;
+  // load profile (keep existing ST.profile if fetch times out)
+  const profileResult = await withTimeout(
+    supa.from('profiles').select('*').eq('id', ST.user.id).single()
+  );
+  if (profileResult !== null) ST.profile = profileResult.data;
+  const profile = ST.profile;
   
   if(profile) {
     ST.TARGET = {
@@ -1478,6 +1487,25 @@ setTimeout(async () => {
     }
   });
 }, 1800); // splash duration
+
+// Se la pagina torna visibile mentre il loading overlay è ancora attivo,
+// forza il completamento con i dati già in memoria per sbloccare l'app.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  const overlay = document.getElementById('loading-overlay');
+  if (!overlay || overlay.classList.contains('hide')) return;
+  // App bloccata sul caricamento — usa lo stato già in memoria
+  if (ST.user) {
+    if (ST.profile) {
+      showScreen('app');
+      renderOggi();
+    } else {
+      showScreen('onboarding');
+    }
+  } else {
+    showScreen('auth');
+  }
+});
 </script>
 </body>
 </html>
