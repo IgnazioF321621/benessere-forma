@@ -313,6 +313,7 @@ select.inp{cursor:pointer;}
     <input id="auth-email" class="inp" type="email" placeholder="La tua email..." autocomplete="email"/>
     <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="sendMagicLink()" id="auth-btn">Invia Magic Link →</button>
     <div id="auth-msg" style="display:none;" class="auth-msg"></div>
+    <button id="test-mode-btn" onclick="enterTestMode()" style="display:none;margin-top:18px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding:0;">Modalità test</button>
   </div>
 </div>
 
@@ -1797,10 +1798,21 @@ async function deleteSupp(id){
 function setReportRange(r){ST.reportRange=r;renderStorico();}
 function goToDay(day){ST.activeDay=day;ST.advice='';showPage('oggi');}
 
+function enterTestMode() {
+  ST.user    = { id: 'test-user-001', email: 'test@local' };
+  ST.profile = { id: 'test-user-001' };
+  showScreen('onboarding');
+}
+
 // ═══════════════════════════════════════════════════════════
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════
 setTimeout(async () => {
+  // Mostra pulsante test solo con ?test=1
+  if (new URLSearchParams(window.location.search).get('test') === '1') {
+    const btn = document.getElementById('test-mode-btn');
+    if (btn) btn.style.display = 'inline-block';
+  }
   const {data:{session}} = await supa.auth.getSession();
   if(session?.user) {
     ST.user = session.user;
