@@ -905,52 +905,99 @@ async function dbDeleteSupp(id) {
 // INIT & AUTH FLOW
 // ═══════════════════════════════════════════════════════════
 
-// Wraps a promise with a timeout — resolves null instead of hanging forever
-function withTimeout(promise, ms = 8000) {
-  return Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), ms))]);
+// ── LOCAL CACHE (stale-while-revalidate) ──────────────────
+const ZT_CACHE_KEY = 'zt_cache';
+
+function saveCache() {
+  try {
+    localStorage.setItem(ZT_CACHE_KEY, JSON.stringify({
+      profile: ST.profile,
+      db:      ST.db,
+      supps:   ST.supps,
+      catalog: ST.catalog,
+      TARGET:  ST.TARGET,
+    }));
+  } catch(e) {}
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(ZT_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function applyProfile(profile) {
+  ST.TARGET = {
+    kcal:    profile.target_kcal    || 1900,
+    protein: profile.target_protein || 143,
+    carbs:   profile.target_carbs   || 190,
+    fat:     profile.target_fat     || 63,
+  };
+  document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
+  document.getElementById('h-weight').textContent = profile.weight_kg || '—';
+  if(profile.goal_weight_kg && profile.weight_kg) {
+    const diff = Math.abs(profile.weight_kg - profile.goal_weight_kg);
+    const dir  = profile.weight_kg > profile.goal_weight_kg ? '▼' : '▲';
+    document.getElementById('h-goal').textContent = `Obiettivo: ${profile.goal_weight_kg}kg · ${dir} ${diff.toFixed(1)}kg al target`;
+  }
+  const streak = calcStreak();
+  if(streak > 0) {
+    const el = document.getElementById('h-streak');
+    el.style.display = 'inline-flex';
+    el.textContent = '🔥 ' + streak;
+  }
 }
 
 async function loadAndStart() {
-  showScreen('loading');
-  await withTimeout(loadSupps());
-  await withTimeout(loadAllDays());
-  await withTimeout(loadCatalog());
+  const cache = loadCache();
 
-  // load profile (keep existing ST.profile if fetch times out)
-  const profileResult = await withTimeout(
-    supa.from('profiles').select('*').eq('id', ST.user.id).single()
-  );
-  if (profileResult !== null) ST.profile = profileResult.data;
-  const profile = ST.profile;
-  
-  if(profile) {
-    ST.TARGET = {
-      kcal:    profile.target_kcal    || 1900,
-      protein: profile.target_protein || 143,
-      carbs:   profile.target_carbs   || 190,
-      fat:     profile.target_fat     || 63,
-    };
-    // update header
-    document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
-    document.getElementById('h-weight').textContent = profile.weight_kg || '—';
-    // goal
-    if(profile.goal_weight_kg && profile.weight_kg) {
-      const diff = Math.abs(profile.weight_kg - profile.goal_weight_kg);
-      const dir  = profile.weight_kg > profile.goal_weight_kg ? '▼' : '▲';
-      document.getElementById('h-goal').textContent = `Obiettivo: ${profile.goal_weight_kg}kg · ${dir} ${diff.toFixed(1)}kg al target`;
+  if (cache) {
+    // Cache hit: ripristina subito e mostra l'app senza loading overlay
+    if (cache.profile)  ST.profile  = cache.profile;
+    if (cache.db)       ST.db       = cache.db;
+    if (cache.supps)    ST.supps    = cache.supps;
+    if (cache.catalog)  ST.catalog  = cache.catalog;
+    if (cache.TARGET)   ST.TARGET   = cache.TARGET;
+    if (ST.profile) {
+      applyProfile(ST.profile);
+      showScreen('app');
+      renderOggi();
+    } else {
+      showScreen('onboarding');
     }
-    // streak
-    const streak = calcStreak();
-    if(streak > 0) {
-      const el = document.getElementById('h-streak');
-      el.style.display = 'inline-flex';
-      el.textContent = '🔥 ' + streak;
-    }
+    // Aggiorna silenziosamente in background
+    refreshInBackground();
+    return;
+  }
+
+  // Prima apertura assoluta — nessun cache: loading normale
+  showScreen('loading');
+  await loadSupps();
+  await loadAllDays();
+  await loadCatalog();
+  const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+  ST.profile = profile;
+  if (profile) {
+    applyProfile(profile);
     showScreen('app');
     renderOggi();
+    saveCache();
   } else {
     showScreen('onboarding');
   }
+}
+
+async function refreshInBackground() {
+  try {
+    await loadSupps();
+    await loadAllDays();
+    await loadCatalog();
+    const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+    if (profile) { ST.profile = profile; applyProfile(profile); }
+    renderOggi();
+    saveCache();
+  } catch(e) { /* ignora errori in background */ }
 }
 
 function showScreen(name) {
@@ -1175,6 +1222,7 @@ async function toggleFasting(){
   d.fasting=!d.fasting;
   await dbToggleFasting(ST.activeDay, d.fasting);
   renderOggi();
+  saveCache();
 }
 
 async function toggleSuppTaken(localId, name){
@@ -1186,6 +1234,7 @@ async function toggleSuppTaken(localId, name){
   const supp=ST.supps.find(s=>s.local_id===localId);
   await dbToggleSuppTaken(ST.activeDay, name, taking, supp?.slot||'');
   renderOggi();
+  saveCache();
 }
 
 function setLogSlot(id){ST.logSlot=id;renderOggi();}
@@ -1204,7 +1253,7 @@ async function logMeal(){
     d.meals.push({...mealData, id:saved.id, local_id:saved.id});
     ST.logText='';ST.logError='';
   }catch(e){ST.logError='Errore: '+e.message;}
-  ST.logLoading=false;renderOggi();
+  ST.logLoading=false;renderOggi();saveCache();
 }
 
 async function deleteMeal(dayKey, mealId){
@@ -1212,7 +1261,7 @@ async function deleteMeal(dayKey, mealId){
   if(!d) return;
   d.meals=d.meals.filter(m=>m.id!==mealId && m.local_id!==mealId);
   await dbDeleteMeal(mealId);
-  renderOggi();
+  renderOggi();saveCache();
 }
 
 async function fetchAdvice(){
@@ -1230,12 +1279,12 @@ function setSuppFilter(f){ST.suppFilter=f;renderIntegratori();}
 
 async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
-  if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();}
+  if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();}
 }
 
 function updateSupp(id,key,val){
   const s=ST.supps.find(s=>s.local_id===id);
-  if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>dbUpdateSupp(id,{[key]:val}),800);}
+  if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>{dbUpdateSupp(id,{[key]:val});saveCache();},800);}
 }
 
 // ── CATALOG MODAL ─────────────────────────────────────────
@@ -1402,6 +1451,7 @@ async function importFromCatalog() {
   }
   closeCatalogModal();
   renderIntegratori();
+  saveCache();
 }
 
 // ── ADD SUPP MODAL ─────────────────────────────────────────
@@ -1449,6 +1499,7 @@ async function saveNewSupp() {
     ST.supps.push({...saved, local_id: saved.id});
     closeAddSuppModal();
     renderIntegratori();
+    saveCache();
   } else {
     errEl.style.display='block'; errEl.textContent='Errore durante il salvataggio.';
     btn.disabled=false; btn.textContent='Aggiungi integratore →';
@@ -1460,6 +1511,7 @@ async function deleteSupp(id){
     ST.supps=ST.supps.filter(s=>s.local_id!==id);
     await dbDeleteSupp(id);
     renderIntegratori();
+    saveCache();
   }
 }
 
@@ -1488,46 +1540,6 @@ setTimeout(async () => {
   });
 }, 1800); // splash duration
 
-// Background/foreground state cache per ripristino istantaneo
-const ZT_CACHE_KEY = 'zt_state_cache';
-
-// Campi di ST da salvare/ripristinare (esclude transient UI state)
-const ST_PERSIST_KEYS = ['user','profile','TARGET','activeDay','db','supps','reportRange','catalog'];
-
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    // Vai in background: salva lo stato corrente
-    try {
-      const snapshot = {};
-      ST_PERSIST_KEYS.forEach(k => { snapshot[k] = ST[k]; });
-      sessionStorage.setItem(ZT_CACHE_KEY, JSON.stringify(snapshot));
-    } catch(e) { /* sessionStorage non disponibile, ignora */ }
-    return;
-  }
-
-  // Torna in primo piano: controlla se l'app è bloccata sul loading
-  const overlay = document.getElementById('loading-overlay');
-  if (!overlay || overlay.classList.contains('hide')) return;
-
-  // Prova a ripristinare dal cache — nessuna chiamata di rete
-  try {
-    const raw = sessionStorage.getItem(ZT_CACHE_KEY);
-    if (raw) {
-      const snapshot = JSON.parse(raw);
-      ST_PERSIST_KEYS.forEach(k => { if (snapshot[k] !== undefined) ST[k] = snapshot[k]; });
-      if (ST.user) {
-        if (ST.profile) { showScreen('app'); renderOggi(); }
-        else             { showScreen('onboarding'); }
-      } else {
-        showScreen('auth');
-      }
-      return;
-    }
-  } catch(e) { /* JSON malformato o sessionStorage assente */ }
-
-  // Fallback: ricarica la pagina
-  window.location.reload();
-});
 </script>
 </body>
 </html>
