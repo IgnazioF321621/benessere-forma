@@ -944,7 +944,8 @@ async function saveOnboarding() {
   const r = calcTDEE(ST.onbSex, age, height, weight, ST.onbActivity);
   const btn = document.getElementById('onb-next-btn');
   btn.disabled = true; btn.textContent = 'Salvataggio...';
-  const {error} = await supa.from('profiles').upsert({
+
+  const profileData = {
     id: ST.user.id,
     first_name: fname,
     last_name: lname,
@@ -967,7 +968,19 @@ async function saveOnboarding() {
     giorno_recupero:    ST.onbRecoveryDay.length ? ST.onbRecoveryDay : null,
     durata_sessione:    parseInt(document.getElementById('onb-durata-sessione').value)    || null,
     updated_at: new Date().toISOString(),
-  });
+  };
+
+  if (ST.user.id === 'test-user-001') {
+    // Modalità test: salva solo in memoria, nessuna chiamata Supabase
+    ST.profile = profileData;
+    ST.TARGET = { kcal: r.target, protein: r.protein, carbs: r.carbs, fat: r.fat };
+    applyProfile(ST.profile);
+    showScreen('app');
+    renderOggi();
+    return;
+  }
+
+  const {error} = await supa.from('profiles').upsert(profileData);
   if(error) {
     errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
     btn.disabled=false; btn.textContent='Inizia a tracciare →'; return;
