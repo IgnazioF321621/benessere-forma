@@ -1489,21 +1489,128 @@ function renderStorico(){
 // ═══════════════════════════════════════════════════════════
 function renderPiano(){
   const t = ST.TARGET;
-  document.getElementById('page-piano').innerHTML=`
-  <div class="card card-green"><span class="lbl">Target 40·30·30 — personalizzato per te</span>
+  const p = ST.profile || {};
+  const piano = ST.pianoAI || null;
+  const pianoLoading = ST.pianoLoading || false;
+  const pianoError = ST.pianoError || '';
+
+  // Card macro target
+  let html = `<div class="card card-green"><span class="lbl">Target 40·30·30 — personalizzato per te</span>
   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',t.kcal,'kcal','var(--acc)'],['Proteine 30%',t.protein,'g','var(--prot)'],['Carboidrati 40%',t.carbs,'g','var(--carb)'],['Grassi 30%',t.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
-  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;"><b style="color:var(--t1);">Carbo:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati.</div></div>
+  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;"><b style="color:var(--t1);">Carbo:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati.</div></div>`;
 
-  <div class="card"><span class="lbl">Timeline giornaliera</span>
-  ${[['06:30','Shake Mami: All Plant Protein + Probiotici + Fibre Powder','Pre-workout'],['08:30','🌅 Colazione: Whey + latte vegetale + avena/frutta','Post-workout — registra in app'],['08:30','Double X · Omega-3 · Metabolismo Plus · Q10 · Glucosamina · Cardo Mariano · Prostafit','Integratori colazione'],['11:00','Amino Advantage+','Tarda mattina'],['12:30','☀️ Pranzo: proteina + carbo IG basso + verdura + limone','Pasto principale — registra in app'],['13:30','Ginkgo · Ferro e Acido Folico · Vitamina C+ · Vitamina D','Post pranzo'],['17:00','XS High Protein Bar','Pomeriggio'],['20:00','🌙 Cena: proteina + verdura abbondante, carbo minimi','Pasto serale — registra in app'],['21:30','Amino Advantage+','Sera']].map(([t,l,note])=>`<div class="timeline-row"><span class="timeline-time">${t}</span><div><div class="timeline-main">${l}</div><div class="timeline-sub">${note}</div></div></div>`).join('')}</div>
+  // Card piano AI
+  html += `<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span class="lbl" style="margin-bottom:0;">🤖 Piano Alimentare AI</span>
+      ${piano ? `<button class="btn btn-ghost btn-sm" onclick="generatePianoAI(true)" ${pianoLoading?'disabled':''}>↻ Rigenera</button>` : ''}
+    </div>`;
 
-  <div class="card"><span class="lbl">Priorità cliniche</span>
+  if(pianoLoading) {
+    html += `<div style="text-align:center;padding:30px 0;">
+      <span class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block;margin-bottom:12px;"></span>
+      <p style="font-size:13px;color:var(--t3);">L'AI sta costruendo il tuo piano personalizzato…<br><span style="font-size:11px;font-family:'JetBrains Mono',monospace;">Ci vogliono 10–20 secondi</span></p>
+    </div>`;
+  } else if(pianoError) {
+    html += `<p style="color:var(--err);font-size:13px;margin-bottom:12px;">⚠️ ${esc(pianoError)}</p>
+    <button class="btn btn-primary btn-sm" onclick="generatePianoAI(true)">Riprova →</button>`;
+  } else if(!piano) {
+    const dietaLabel = p.dieta || 'non specificata';
+    const intolLabel = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'nessuna';
+    const obiettivoLabel = p.obiettivo || 'benessere generale';
+    html += `<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:14px;font-size:12px;color:var(--t2);line-height:1.8;">
+      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">IL TUO PROFILO</div>
+      <div>🥗 Dieta: <b style="color:var(--t1);">${esc(dietaLabel)}</b></div>
+      <div>⚠️ Intolleranze: <b style="color:var(--t1);">${esc(intolLabel)}</b></div>
+      <div>🎯 Obiettivo: <b style="color:var(--t1);">${esc(obiettivoLabel)}</b></div>
+      <div>🔥 Target: <b style="color:var(--acc);">${t.kcal} kcal · ${t.protein}g P · ${t.carbs}g C · ${t.fat}g G</b></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="generatePianoAI(false)">✨ Genera Piano Settimanale →</button>`;
+  } else {
+    const generatoIl = piano.generato_il ? new Date(piano.generato_il).toLocaleDateString('it-IT',{day:'numeric',month:'long'}) : '';
+    html += `<div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Generato il ${generatoIl} · basato sul tuo profilo</div>`;
+    (piano.giorni || []).forEach((g, i) => {
+      const isOpen = ST.pianoOpenDay === i;
+      html += `<div style="border:1px solid var(--b1);border-radius:10px;margin-bottom:8px;overflow:hidden;">
+        <div onclick="ST.pianoOpenDay=${isOpen?-1:i};renderPiano();" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;background:${isOpen?'var(--acc-lt)':'var(--s1)'};">
+          <span style="font-weight:700;font-size:14px;color:${isOpen?'var(--acc)':'var(--t1)'};">` + esc(g.giorno) + `</span>
+          <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">` + (g.kcal_totali||'') + `kcal ${isOpen?'▲':'▼'}</span>
+        </div>`;
+      if(isOpen) {
+        html += `<div style="padding:12px 14px;background:var(--s1);border-top:1px solid var(--b1);">`;
+        const slotIcons = {colazione:'🌅',spuntino_mattina:'🍎',pranzo:'☀️',spuntino_pomeriggio:'🥜',cena:'🌙'};
+        const slotLabels = {colazione:'Colazione',spuntino_mattina:'Spuntino mattina',pranzo:'Pranzo',spuntino_pomeriggio:'Spuntino pomeriggio',cena:'Cena'};
+        ['colazione','spuntino_mattina','pranzo','spuntino_pomeriggio','cena'].forEach(slot => {
+          const pasto = g[slot];
+          if(!pasto) return;
+          html += `<div style="margin-bottom:12px;">
+            <div style="font-size:10px;letter-spacing:1px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-bottom:5px;">${slotIcons[slot]||''} ${slotLabels[slot]||slot}</div>
+            <div style="font-size:13px;color:var(--t1);font-weight:600;margin-bottom:3px;">${esc(pasto.piatto||'')}</div>
+            ${pasto.ingredienti ? `<div style="font-size:12px;color:var(--t2);margin-bottom:4px;">${esc(pasto.ingredienti)}</div>` : ''}
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              ${pasto.kcal ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${pasto.kcal}kcal</span>` : ''}
+              ${pasto.proteine ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${pasto.proteine}g P</span>` : ''}
+              ${pasto.carboidrati ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${pasto.carboidrati}g C</span>` : ''}
+              ${pasto.grassi ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${pasto.grassi}g G</span>` : ''}
+            </div>
+          </div>`;
+        });
+        if(g.note) html += `<div style="font-size:11px;color:var(--t3);border-top:1px solid var(--b1);padding-top:8px;margin-top:4px;line-height:1.6;">💡 ${esc(g.note)}</div>`;
+        html += `</div>`;
+      }
+      html += `</div>`;
+    });
+  }
+  html += `</div>`;
+
+  // Card priorità cliniche
+  html += `<div class="card"><span class="lbl">Priorità cliniche</span>
   <div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>
   <div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>
   <div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div></div>
 
   <div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
+
+  document.getElementById('page-piano').innerHTML = html;
+}
+
+// ── GENERA PIANO AI ────────────────────────────────────────
+async function generatePianoAI(forza = false) {
+  const cacheKey = 'zt_piano_' + (ST.user?.id || 'local');
+  if(!forza) {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if(cached) { ST.pianoAI = JSON.parse(cached); ST.pianoOpenDay = 0; renderPiano(); return; }
+    } catch(e) {}
+  }
+
+  ST.pianoLoading = true;
+  ST.pianoError = '';
+  ST.pianoAI = null;
+  renderPiano();
+
+  const p = ST.profile || {};
+  const t = ST.TARGET;
+  const dieta = p.dieta || 'pescetariana';
+  const intolleranze = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'latticini';
+  const obiettivo = p.obiettivo || 'perdita peso';
+  const note = p.note_salute || 'ferritina bassa, sistema immunitario da potenziare';
+
+  const prompt = `Sei un nutrizionista esperto in dieta a Zona (40-30-30). Crea un piano alimentare settimanale personalizzato.\n\nPROFILO UTENTE:\n- Dieta: ${dieta}\n- Intolleranze/esclusioni: ${intolleranze}\n- Obiettivo: ${obiettivo}\n- Note salute: ${note}\n- Target giornaliero: ${t.kcal} kcal · ${t.protein}g proteine · ${t.carbs}g carboidrati · ${t.fat}g grassi\n- Rapporto macro: 40% carbo, 30% proteine, 30% grassi\n\nREGOLE:\n- Solo carbo a basso indice glicemico\n- Pesce come proteina principale (salmone, tonno, sgombro, merluzzo, branzino, orata, gamberi)\n- Legumi quotidianamente (ferro)\n- Zero latticini\n- Porzioni precise in grammi\n- Ogni giorno deve avere: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena\n\nRispondi SOLO con questo JSON valido, niente testo extra:\n{\n  "giorni": [\n    {\n      "giorno": "Lunedì",\n      "kcal_totali": 1850,\n      "colazione": {"piatto": "nome", "ingredienti": "ingredienti con grammi", "kcal": 400, "proteine": 30, "carboidrati": 45, "grassi": 12},\n      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": 550, "proteine": 45, "carboidrati": 55, "grassi": 18},\n      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": 500, "proteine": 40, "carboidrati": 45, "grassi": 15},\n      "note": "consiglio del giorno in italiano, max 1 frase"\n    }\n  ]\n}\nGenera tutti e 7 i giorni (Lunedì–Domenica) con varietà. I valori numerici devono essere interi senza unità di misura.`;
+
+  try {
+    const raw = await callAI(prompt, 3000);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    ST.pianoAI = { ...parsed, generato_il: new Date().toISOString() };
+    ST.pianoOpenDay = 0;
+    try { localStorage.setItem(cacheKey, JSON.stringify(ST.pianoAI)); } catch(e) {}
+  } catch(e) {
+    ST.pianoError = 'Errore nella generazione: ' + e.message;
+  }
+  ST.pianoLoading = false;
+  renderPiano();
 }
 
 // ═══════════════════════════════════════════════════════════
