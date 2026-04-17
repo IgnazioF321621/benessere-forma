@@ -676,6 +676,20 @@ function mealTotals(meals){return (meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.kca
 function suppTotalsForIds(ids){return ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>({kcal:a.kcal+(s.kcal||0),protein:a.protein+(s.protein||0),carbs:a.carbs+(s.carbs||0),fat:a.fat+(s.fat||0)}),{kcal:0,protein:0,carbs:0,fat:0});}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){return(s.price&&s.doses)?(s.price/s.doses)*30:0;}
+function suppUnitFromConfezione(confezione, linea) {
+  if (!confezione) return 'unità';
+  const c = confezione.toLowerCase();
+  if (c.includes('stick')) return 'stick';
+  if (c.includes('compressa') || c.includes('compresse') || c.includes('cpr')) return 'cpr';
+  if (c.includes('capsula') || c.includes('capsule') || c.includes('cps')) return 'cps';
+  if (c.includes('bustina') || c.includes('bustine')) return 'bustine';
+  if (c.includes('barretta') || c.includes('barrette')) return 'barrette';
+  if (c.includes('tavoletta') || c.includes('tavolette')) return 'tavolette';
+  if (c.includes('lattina') || c.includes('lattine')) return 'lattine';
+  if (c.includes('porzione') || c.includes('porzioni')) return 'porzioni';
+  if ((c.includes('cucchiaio') || c.includes(' g')) && (linea||'').toLowerCase().includes('prote')) return 'cucchiai';
+  return 'unità';
+}
 function totalMonthlyCost(){return activeSupps().reduce((a,s)=>a+suppMonthlyCost(s),0);}
 function periodCost(range){return activeSupps().reduce((a,s)=>a+(s.price/s.doses),0)*range;}
 
@@ -1155,17 +1169,19 @@ function renderIntegratori(){
         const cv = catItem?.[catKey]; if (cv) return cv;
         return null;
       };
+      const doseUnit    = suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
+      const doseDisplay = catItem?.dose_die ? `${catItem.dose_die} ${doseUnit}` : '—';
       const macroCells = [
         ['Kcal',    'kcal',    'kcal'],
         ['Prot g',  'protein', 'proteine'],
         ['Carbo g', 'carbs',   'carbo'],
         ['Grassi g','fat',     'grassi'],
-        ['Dose/die','price',   null],
-        ['Dosi/conf','doses',  null],
       ].map(([lbl, suppKey, catKey]) => {
-        const val = catKey ? macroVal(suppKey, catKey) : (s[suppKey] || null);
+        const val = macroVal(suppKey, catKey);
         return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
-      }).join('');
+      }).join('')
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div class="macro-cell-inp" style="font-weight:600;font-size:12px;padding-top:3px;">${doseDisplay}</div></div>`
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
       html+=`<div class="supp-card ${s.active?'':'inactive'}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
           <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp('${s.local_id}','name',this.value)" style="font-weight:700;font-size:14px;"/>
