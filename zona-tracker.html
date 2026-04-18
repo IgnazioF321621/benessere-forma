@@ -1144,6 +1144,7 @@ function saveCache() {
       supps:   ST.supps,
       catalog: ST.catalog,
       TARGET:  ST.TARGET,
+      pianoAI: ST.pianoAI || null,
     }));
   } catch(e) {}
 }
@@ -1585,10 +1586,18 @@ function renderPiano(){
 async function generatePianoAI(forza = false) {
   const cacheKey = 'zt_piano_' + (ST.user?.id || 'local');
   if(!forza) {
+    // 1. Prova localStorage (istantaneo)
     try {
       const cached = localStorage.getItem(cacheKey);
       if(cached) { ST.pianoAI = JSON.parse(cached); ST.pianoOpenDay = 0; renderPiano(); return; }
     } catch(e) {}
+    // 2. Prova Supabase (cross-device)
+    if(ST.profile?.piano_ai) {
+      ST.pianoAI = ST.profile.piano_ai;
+      ST.pianoOpenDay = 0;
+      try { localStorage.setItem(cacheKey, JSON.stringify(ST.pianoAI)); } catch(e) {}
+      renderPiano(); return;
+    }
   }
 
   ST.pianoLoading = true;
@@ -1612,6 +1621,10 @@ async function generatePianoAI(forza = false) {
     ST.pianoAI = { ...parsed, generato_il: new Date().toISOString() };
     ST.pianoOpenDay = 0;
     try { localStorage.setItem(cacheKey, JSON.stringify(ST.pianoAI)); } catch(e) {}
+    // Salva su Supabase per sync cross-device
+    if(ST.user?.id && ST.user.id !== 'test-user-001') {
+      supa.from('profiles').update({piano_ai: ST.pianoAI, updated_at: new Date().toISOString()}).eq('id', ST.user.id).then(()=>{});
+    }
   } catch(e) {
     ST.pianoError = 'Errore nella generazione: ' + e.message;
   }
