@@ -942,10 +942,10 @@ function mealTotals(meals){return (meals||[]).reduce((a,m)=>({kcal:a.kcal+(m.kca
 function suppTotalsForIds(ids){
   const tot=ST.supps.filter(s=>(ids||[]).includes(s.local_id)).reduce((a,s)=>{
     const cat=ST.catalog.find(c=>c.nome===s.name);
-    const kcal   =s.kcal    || cat?.kcal     || 0;
-    const protein=s.protein || cat?.proteine || 0;
-    const carbs  =s.carbs   || cat?.carbo    || 0;
-    const fat    =s.fat     || cat?.grassi   || 0;
+    const kcal   =(s.kcal    != null && s.kcal    !== '') ? s.kcal    : (cat?.kcal     || 0);
+    const protein=(s.protein != null && s.protein !== '') ? s.protein : (cat?.proteine || 0);
+    const carbs  =(s.carbs   != null && s.carbs   !== '') ? s.carbs   : (cat?.carbo    || 0);
+    const fat    =(s.fat     != null && s.fat     !== '') ? s.fat     : (cat?.grassi   || 0);
     return {kcal:a.kcal+kcal,protein:a.protein+protein,carbs:a.carbs+carbs,fat:a.fat+fat};
   },{kcal:0,protein:0,carbs:0,fat:0});
   return {kcal:r2(tot.kcal),protein:r2(tot.protein),carbs:r2(tot.carbs),fat:r2(tot.fat)};
@@ -1503,14 +1503,14 @@ function renderIntegratori(){
     const isShake=ss.some(s=>s.grp==='Shake Mami');
     const slotActive=ss.filter(s=>s.active);
     const slotTot=slotActive.reduce((a,s)=>{
-      const cat=ST.catalog.find(c=>c.nome===s.name);
-      return {
-        kcal:  a.kcal  +(s.kcal    ||cat?.kcal                ||0),
-        carbs: a.carbs +(s.carbs   ||cat?.carbo               ||0),
-        prot:  a.prot  +(s.protein ||cat?.proteine            ||0),
-        fat:   a.fat   +(s.fat     ||cat?.grassi              ||0),
-        cost:  a.cost  +(cat?.costo_dose_partner              ||0),
-      };
+    const cat=ST.catalog.find(c=>c.nome===s.name);
+    return {
+    kcal:  a.kcal  +((s.kcal    != null && s.kcal    !== '') ? s.kcal    : (cat?.kcal                ||0)),
+    carbs: a.carbs +((s.carbs   != null && s.carbs   !== '') ? s.carbs   : (cat?.carbo               ||0)),
+    prot:  a.prot  +((s.protein != null && s.protein !== '') ? s.protein : (cat?.proteine            ||0)),
+    fat:   a.fat   +((s.fat     != null && s.fat     !== '') ? s.fat     : (cat?.grassi              ||0)),
+    cost:  a.cost  +(cat?.costo_dose_partner              ||0),
+    };
     },{kcal:0,carbs:0,prot:0,fat:0,cost:0});
     const sv=k=>r2(slotTot[k])||'—';
     const slotSummary=[
@@ -1526,8 +1526,8 @@ function renderIntegratori(){
       // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
       // altrimenti cerca nel catalogo come fallback
       const macroVal = (suppKey, catKey) => {
-        const sv = s[suppKey]; if (sv) return sv;
-        const cv = catItem?.[catKey]; if (cv) return cv;
+        const sv = s[suppKey]; if (sv != null && sv !== '') return sv;
+        const cv = catItem?.[catKey]; if (cv != null && cv !== '') return cv;
         return null;
       };
       const doseUnit    = suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
