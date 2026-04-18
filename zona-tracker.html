@@ -1971,6 +1971,24 @@ setTimeout(async () => {
     showScreen('onboarding');
     return;
   }
+  // Gestione Magic Link su iOS Safari: il token arriva nell'hash della URL
+  const hashParams = new URLSearchParams(window.location.hash.replace('#', '?').replace('#', '&'));
+  const accessToken  = hashParams.get('access_token');
+  const refreshToken = hashParams.get('refresh_token');
+  if(accessToken && refreshToken) {
+    // Pulisce l'hash dalla URL senza ricaricare la pagina
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    const {data, error} = await supa.auth.setSession({access_token: accessToken, refresh_token: refreshToken});
+    if(!error && data?.session?.user) {
+      ST.user = data.session.user;
+      await loadAndStart();
+      supa.auth.onAuthStateChange(async (event, session) => {
+        if(event==='SIGNED_OUT') showScreen('auth');
+      });
+      return;
+    }
+  }
+
   const {data:{session}} = await supa.auth.getSession();
   if(session?.user) {
     ST.user = session.user;
