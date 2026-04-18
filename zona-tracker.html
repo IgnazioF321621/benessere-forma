@@ -1446,7 +1446,7 @@ function renderOggi(){
 
     html+=`<div class="card"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
-    html+=`<div class="card"><span class="lbl">+ Registra pasto</span><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTI RAPIDI</span><div style="margin:6px 0 12px;">${(SUGGESTED[ST.logSlot]||[]).map((sg,i)=>`<button class="sugg-btn" onclick="setSuggestion(${i})">${sg}</button>`).join('')}</div><textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
+    html+=`<div class="card"><span class="lbl">+ Registra pasto</span><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
 
     MEAL_SLOTS.forEach(slot=>{const ms=bySlot[slot.id];if(!ms.length)return;const tot=mealTotals(ms);html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><div><span class="lbl">${slot.icon} ${slot.label}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slot.time}</span></div><div style="text-align:right;"><div style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);font-weight:600;">${tot.kcal} kcal</div><div style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${tot.protein}g P · ${tot.carbs}g C · ${tot.fat}g G</div></div></div>${ms.map(m=>mealCardHTML(m)).join('')}</div>`;});
   }
@@ -1753,6 +1753,65 @@ async function toggleSuppTaken(localId, name){
 }
 
 function setLogSlot(id){ST.logSlot=id;renderOggi();}
+function buildSuggestionBox() {
+  // Mappa slot app -> slot piano AI
+  const slotMap = {colazione:'colazione', pranzo:'pranzo', cena:'cena', snack:'spuntino_pomeriggio'};
+  const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
+
+  // Raccoglie tutti i suggerimenti disponibili: prima dal piano AI, poi dai default
+  const pianoSuggerimenti = [];
+  if(ST.pianoAI?.giorni?.length) {
+    ST.pianoAI.giorni.forEach(g => {
+      const pasto = g[pianoSlot];
+      if(pasto?.piatto) pianoSuggerimenti.push(pasto.piatto + (pasto.ingredienti ? ' — ' + pasto.ingredienti : ''));
+    });
+  }
+  const defaultSuggerimenti = SUGGESTED[ST.logSlot] || [];
+  const tutti = [...new Set([...pianoSuggerimenti, ...defaultSuggerimenti])];
+  if(!tutti.length) return '';
+
+  // Indice corrente (ciclico)
+  if(ST.suggIdx === undefined || ST.suggSlot !== ST.logSlot) {
+    ST.suggIdx = 0;
+    ST.suggSlot = ST.logSlot;
+  }
+  const idx = ST.suggIdx % tutti.length;
+  const sugg = tutti[idx];
+  const isPiano = idx < pianoSuggerimenti.length;
+  const badge = isPiano ? `<span style="font-size:9px;background:var(--acc-lt);color:var(--acc);font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;letter-spacing:.5px;">DAL PIANO</span>` : '';
+
+  return `<div style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTO ${idx+1}/${tutti.length}</span>
+      <div style="display:flex;gap:6px;align-items:center;">${badge}<button class="btn btn-ghost btn-sm" onclick="nextSuggestion()" style="padding:3px 10px;font-size:10px;">↻ Cambia</button></div>
+    </div>
+    <button class="sugg-btn" onclick="useSuggestion(${idx})" style="margin:0;font-size:13px;color:var(--t1);font-weight:500;">${esc(sugg)}</button>
+  </div>`;
+}
+
+function nextSuggestion() {
+  if(ST.suggIdx === undefined) ST.suggIdx = 0;
+  ST.suggIdx = (ST.suggIdx + 1);
+  renderOggi();
+  setTimeout(() => { const ta = document.getElementById('log-text'); if(ta) ta.focus(); }, 50);
+}
+
+function useSuggestion(idx) {
+  const slotMap = {colazione:'colazione', pranzo:'pranzo', cena:'cena', snack:'spuntino_pomeriggio'};
+  const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
+  const pianoSuggerimenti = [];
+  if(ST.pianoAI?.giorni?.length) {
+    ST.pianoAI.giorni.forEach(g => {
+      const pasto = g[pianoSlot];
+      if(pasto?.piatto) pianoSuggerimenti.push(pasto.piatto + (pasto.ingredienti ? ' — ' + pasto.ingredienti : ''));
+    });
+  }
+  const tutti = [...new Set([...pianoSuggerimenti, ...(SUGGESTED[ST.logSlot]||[])])];
+  ST.logText = tutti[idx] || '';
+  renderOggi();
+  setTimeout(() => { const ta = document.getElementById('log-text'); if(ta) { ta.value = ST.logText; ta.focus(); } }, 50);
+}
+
 function setSuggestion(i){ST.logText=SUGGESTED[ST.logSlot][i];renderOggi();setTimeout(()=>{const ta=document.getElementById('log-text');if(ta){ta.value=ST.logText;ta.focus();}},10);}
 
 async function logMeal(){
