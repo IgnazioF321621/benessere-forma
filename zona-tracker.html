@@ -1510,7 +1510,12 @@ function renderIntegratori(){
         return null;
       };
       const doseUnit    = suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
-      const doseDisplay = catItem?.dose_die ? `${catItem.dose_die} ${doseUnit}` : '—';
+      const doseVal = s.dose_die != null ? s.dose_die : (catItem?.dose_die || '');
+      const doseUnitLabel = (() => {
+        const n = (s.name||'').toLowerCase();
+        if(n.includes('protein') || n.includes('whey') || n.includes('plant') || n.includes('shake')) return 'gr';
+        return doseUnit;
+      })();
       const macroCells = [
         ['Kcal',    'kcal',    'kcal'],
         ['Prot g',  'protein', 'proteine'],
@@ -1520,11 +1525,18 @@ function renderIntegratori(){
         const val = macroVal(suppKey, catKey);
         return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
       }).join('')
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div class="macro-cell-inp" style="font-weight:600;font-size:12px;padding-top:3px;">${doseDisplay}</div></div>`
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:2px;align-items:center;"><input type="number" class="macro-cell-inp" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSupp('${s.local_id}','dose_die',+this.value)" style="flex:1;"/><span style="font-size:8px;color:var(--t3);white-space:nowrap;padding-left:1px;">${doseUnitLabel}</span></div></div>`
       + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
-      html+=`<div class="supp-card ${s.active?'':'inactive'}">
+      html+=`<div class="supp-card ${s.active?'':'inactive'}" draggable="true"
+        ondragstart="suppDragStart(event,'${s.local_id}')"
+        ondragover="suppDragOver(event)"
+        ondrop="suppDrop(event,'${s.local_id}')"
+        ondragend="suppDragEnd(event)">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-          <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp('${s.local_id}','name',this.value)" style="font-weight:700;font-size:14px;"/>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
+            <span style="color:var(--t3);font-size:18px;cursor:grab;flex-shrink:0;touch-action:none;">⠿</span>
+            <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp('${s.local_id}','name',this.value)" style="font-weight:700;font-size:14px;"/>
+          </div>
           <div style="display:flex;gap:7px;align-items:center;margin-left:10px;flex-shrink:0;">
             <div class="check-box ${s.active?'on':''}" onclick="toggleSuppActive('${s.local_id}')">${s.active?'<span class="check-mark">✓</span>':''}</div>
             <button onclick="deleteSupp('${s.local_id}')" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0;" onmouseover="this.style.color='var(--err)'" onmouseout="this.style.color='var(--t3)'">×</button>
@@ -1850,6 +1862,36 @@ async function fetchAdvice(){
 }
 
 function setSuppFilter(f){ST.suppFilter=f;renderIntegratori();}
+
+// ── DRAG & DROP INTEGRATORI ────────────────────────────────────────
+function suppDragStart(e, id) {
+  ST._dragSuppId = id;
+  e.currentTarget.style.opacity = '0.5';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function suppDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+function suppDrop(e, targetId) {
+  e.preventDefault();
+  if(!ST._dragSuppId || ST._dragSuppId === targetId) return;
+  const fromIdx = ST.supps.findIndex(s => s.local_id === ST._dragSuppId);
+  const toIdx   = ST.supps.findIndex(s => s.local_id === targetId);
+  if(fromIdx < 0 || toIdx < 0) return;
+  const [moved] = ST.supps.splice(fromIdx, 1);
+  ST.supps.splice(toIdx, 0, moved);
+  ST.supps.forEach((s, i) => {
+    s.sort_order = i + 1;
+    dbUpdateSupp(s.local_id, {sort_order: i + 1});
+  });
+  saveCache();
+  renderIntegratori();
+}
+function suppDragEnd(e) {
+  e.currentTarget.style.opacity = '1';
+  ST._dragSuppId = null;
+}
 
 async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
