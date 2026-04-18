@@ -1539,15 +1539,15 @@ function renderIntegratori(){
       })();
       const macroCells = [
         ['Kcal',    'kcal',    'kcal'],
-        ['Prot g',  'protein', 'proteine'],
         ['Carbo g', 'carbs',   'carbo'],
+        ['Prot g',  'protein', 'proteine'],
         ['Grassi g','fat',     'grassi'],
       ].map(([lbl, suppKey, catKey]) => {
         const val = macroVal(suppKey, catKey);
-        return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
+        return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" data-sid="${s.local_id}" data-key="${suppKey}" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
       }).join('')
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:2px;align-items:center;"><input type="number" class="macro-cell-inp" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSupp('${s.local_id}','dose_die',+this.value)" style="flex:1;"/><span style="font-size:8px;color:var(--t3);white-space:nowrap;padding-left:1px;">${doseUnitLabel}</span></div></div>`
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die<br><span style="font-size:9px;font-weight:600;color:var(--acc);">${doseUnitLabel||'unità'}</span></div><input type="number" class="macro-cell-inp" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)"/></div>`
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf<br><span style="font-size:9px;font-weight:600;color:var(--t3);">pezzi</span></div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
       html+=`<div class="supp-card ${s.active?'':'inactive'}" draggable="true"
         ondragstart="suppDragStart(event,'${s.local_id}')"
         ondragover="suppDragOver(event)"
@@ -1933,6 +1933,31 @@ async function toggleSuppActive(id){
 function updateSupp(id,key,val){
   const s=ST.supps.find(s=>s.local_id===id);
   if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>{dbUpdateSupp(id,{[key]:val});saveCache();},800);}
+}
+
+function updateSuppDose(id, newDose){
+  const s = ST.supps.find(s => s.local_id === id);
+  if(!s) return;
+  const oldDose = parseFloat(s.dose_die) || 1;
+  newDose = parseFloat(newDose) || 1;
+  if(oldDose > 0 && newDose !== oldDose){
+    const ratio = newDose / oldDose;
+    ['kcal','protein','carbs','fat'].forEach(k => {
+      const cur = parseFloat(s[k]);
+      if(cur){
+        const nv = Math.round(cur * ratio * 10) / 10;
+        s[k] = nv;
+        const inp = document.querySelector(`input[data-sid="${id}"][data-key="${k}"]`);
+        if(inp) inp.value = nv;
+      }
+    });
+  }
+  s.dose_die = newDose;
+  clearTimeout(s._saveTimer);
+  s._saveTimer = setTimeout(() => {
+    dbUpdateSupp(id, {dose_die: newDose, kcal: s.kcal, protein: s.protein, carbs: s.carbs, fat: s.fat});
+    saveCache();
+  }, 800);
 }
 
 // ── CATALOG MODAL ─────────────────────────────────────────
