@@ -473,7 +473,10 @@ select.inp{cursor:pointer;}
       </div>
       <div class="h-right">
         <button class="h-weight-btn" onclick="openWeightModal()">⚖️ <span id="h-weight">—</span> kg</button>
-        <button class="h-logout" onclick="logout()" title="Esci">⎋</button>
+        <div style="display:flex;gap:4px;">
+          <button class="h-logout" onclick="openSettingsModal()" title="Impostazioni" style="font-size:18px;">⚙️</button>
+          <button class="h-logout" onclick="logout()" title="Esci">⎋</button>
+        </div>
       </div>
     </div>
     <nav id="nav">
@@ -567,6 +570,93 @@ select.inp{cursor:pointer;}
     <div class="add-field"><label>Nota</label><input id="as-note" class="inp" placeholder="Es. Post-workout"/></div>
     <div id="as-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:8px;"></div>
     <button id="as-save-btn" class="btn btn-primary btn-full" onclick="saveNewSupp()">Aggiungi integratore →</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeSettingsModal()">
+  <div class="weight-modal-inner" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span style="font-size:16px;font-weight:800;color:var(--t1);">⚙️ Impostazioni profilo</span>
+      <button onclick="closeSettingsModal()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--t3);">×</button>
+    </div>
+
+    <!-- Sezione: Dati personali -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Dati personali</div>
+      <div class="onb-grid" style="margin-bottom:10px;">
+        <div class="onb-field"><label>Nome</label><input id="set-fname" class="inp inp-sm" placeholder="Nome"/></div>
+        <div class="onb-field"><label>Cognome</label><input id="set-lname" class="inp inp-sm" placeholder="Cognome"/></div>
+      </div>
+      <div class="onb-grid">
+        <div class="onb-field"><label>Peso attuale (kg)</label><input id="set-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 75"/></div>
+        <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="set-goal-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 70"/></div>
+      </div>
+    </div>
+
+    <!-- Sezione: Obiettivo & attività -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Obiettivo & attività</div>
+      <div class="onb-field" style="margin-bottom:10px;"><label>Obiettivo</label>
+        <select id="set-obiettivo" class="inp inp-sm">
+          <option value="perdita_peso">Perdita peso</option>
+          <option value="mantenimento">Mantenimento</option>
+          <option value="massa_muscolare">Massa muscolare</option>
+        </select>
+      </div>
+      <div class="onb-field"><label>Livello attività</label>
+        <select id="set-activity" class="inp inp-sm">
+          <option value="sedentary">Sedentario</option>
+          <option value="lightly_active">Leggermente attivo</option>
+          <option value="moderate">Moderatamente attivo</option>
+          <option value="active">Molto attivo</option>
+          <option value="very_active">Estremamente attivo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Sezione: Dieta & intolleranze -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Dieta & intolleranze</div>
+      <div class="onb-field" style="margin-bottom:12px;"><label>Tipo di dieta</label>
+        <select id="set-dieta" class="inp inp-sm">
+          <option value="onnivoro">Onnivoro</option>
+          <option value="pescetariano">Pescetariano</option>
+          <option value="vegetariano">Vegetariano</option>
+          <option value="vegano">Vegano</option>
+        </select>
+      </div>
+      <div class="onb-field"><label>Intolleranze</label>
+        <div class="onb-pills" style="margin-top:6px;" id="set-intol-pills">
+          <button class="onb-pill" onclick="toggleSetIntol('lattosio')" id="set-intol-lattosio">Lattosio</button>
+          <button class="onb-pill" onclick="toggleSetIntol('glutine')" id="set-intol-glutine">Glutine</button>
+          <button class="onb-pill" onclick="toggleSetIntol('uova')" id="set-intol-uova">Uova</button>
+          <button class="onb-pill" onclick="toggleSetIntol('frutta_a_guscio')" id="set-intol-frutta_a_guscio">Frutta a guscio</button>
+          <button class="onb-pill" onclick="toggleSetIntol('soia')" id="set-intol-soia">Soia</button>
+          <button class="onb-pill" onclick="toggleSetIntol('nichel')" id="set-intol-nichel">Nichel</button>
+          <button class="onb-pill" onclick="toggleSetIntol('pesce')" id="set-intol-pesce">Pesce</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sezione: Note salute -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Note salute & sintomi</div>
+      <textarea id="set-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, affaticamento cronico, sonnolenza post-prandiale..."></textarea>
+    </div>
+
+    <!-- Sezione: Esami del sangue -->
+    <div style="margin-bottom:24px;">
+      <div class="lbl">Esami del sangue recenti</div>
+      <p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;line-height:1.6;">Inserisci i valori degli ultimi esami. L'AI li userà per personalizzare piano alimentare e integratori.</p>
+      <div id="set-esami-list"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addEsameRow()" style="margin-top:8px;">+ Aggiungi valore</button>
+    </div>
+
+    <!-- Errore e salva -->
+    <div id="set-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:10px;"></div>
+    <button id="set-save-btn" class="btn btn-primary btn-full" onclick="saveSettings()">Salva impostazioni →</button>
+    <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:10px;color:var(--err);">Esci dall'account</button>
   </div>
 </div>
 
@@ -1957,6 +2047,165 @@ function enterTestMode() {
   ST.user    = { id: 'test-user-001', email: 'test@local' };
   ST.profile = { id: 'test-user-001' };
   showScreen('onboarding');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS MODAL
+// ═══════════════════════════════════════════════════════════
+let SET_INTOL = [];
+const ESAMI_DEFAULTS = [
+  {key:'ferritina', label:'Ferritina (μg/L)', ref:'12–150 F / 12–300 M'},
+  {key:'vitamina_d', label:'Vitamina D (ng/mL)', ref:'30–100'},
+  {key:'vitamina_b12', label:'Vitamina B12 (pg/mL)', ref:'200–900'},
+  {key:'colesterolo_tot', label:'Colesterolo totale (mg/dL)', ref:'< 200'},
+  {key:'hdl', label:'HDL (mg/dL)', ref:'> 40 M / > 50 F'},
+  {key:'ldl', label:'LDL (mg/dL)', ref:'< 130'},
+  {key:'trigliceridi', label:'Trigliceridi (mg/dL)', ref:'< 150'},
+  {key:'glicemia', label:'Glicemia a digiuno (mg/dL)', ref:'70–100'},
+  {key:'insulina', label:'Insulina a digiuno (μU/mL)', ref:'< 25'},
+  {key:'tsh', label:'TSH (mUI/L)', ref:'0.4–4.0'},
+  {key:'hs_crp', label:'PCR alta sensibilità (mg/L)', ref:'< 1'},
+  {key:'omocisteina', label:'Omocisteina (μmol/L)', ref:'< 15'},
+  {key:'zinco', label:'Zinco (μg/dL)', ref:'70–120'},
+  {key:'magnesio', label:'Magnesio (mg/dL)', ref:'1.7–2.2'},
+];
+
+function openSettingsModal() {
+  const p = ST.profile || {};
+  // Popola campi base
+  document.getElementById('set-fname').value = p.first_name || '';
+  document.getElementById('set-lname').value = p.last_name || '';
+  document.getElementById('set-weight').value = p.weight_kg || '';
+  document.getElementById('set-goal-weight').value = p.goal_weight_kg || '';
+  document.getElementById('set-obiettivo').value = p.obiettivo || 'perdita_peso';
+  document.getElementById('set-activity').value = p.activity_level || 'moderate';
+  document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
+  document.getElementById('set-note-salute').value = p.note_salute || '';
+  // Intolleranze
+  SET_INTOL = [...(p.intolleranze || [])];
+  ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
+    document.getElementById('set-intol-'+k)?.classList.toggle('active', SET_INTOL.includes(k));
+  });
+  // Esami del sangue
+  renderEsamiList(p.esami_sangue || {});
+  document.getElementById('set-err').style.display = 'none';
+  const btn = document.getElementById('set-save-btn');
+  btn.disabled = false; btn.textContent = 'Salva impostazioni →';
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+function toggleSetIntol(val) {
+  const i = SET_INTOL.indexOf(val);
+  if(i < 0) SET_INTOL.push(val); else SET_INTOL.splice(i, 1);
+  document.getElementById('set-intol-'+val)?.classList.toggle('active', SET_INTOL.includes(val));
+}
+
+function renderEsamiList(existing = {}) {
+  const container = document.getElementById('set-esami-list');
+  // Mostra quelli di default + eventuali custom
+  const allKeys = [...new Set([...ESAMI_DEFAULTS.map(e=>e.key), ...Object.keys(existing)])];
+  container.innerHTML = ESAMI_DEFAULTS.map(e => {
+    const val = existing[e.key] || '';
+    const data = existing[e.key+'_data'] || '';
+    return `<div style="display:grid;grid-template-columns:1fr 90px 100px;gap:6px;align-items:center;margin-bottom:8px;">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t1);">${esc(e.label)}</div>
+        <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">Rif: ${esc(e.ref)}</div>
+      </div>
+      <input class="inp inp-sm" id="esame-${e.key}" type="number" step="0.1" value="${val}" placeholder="valore"/>
+      <input class="inp inp-sm" id="esame-${e.key}-data" type="date" value="${data}" title="Data esame"/>
+    </div>`;
+  }).join('');
+}
+
+function addEsameRow() {
+  const nome = prompt('Nome del parametro (es. Zinco, PCR...):');
+  if(!nome || !nome.trim()) return;
+  const key = nome.trim().toLowerCase().replace(/\s+/g,'_');
+  const container = document.getElementById('set-esami-list');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 90px 100px;gap:6px;align-items:center;margin-bottom:8px;';
+  div.innerHTML = `<div style="font-size:12px;font-weight:600;color:var(--t1);">${esc(nome.trim())}</div>
+    <input class="inp inp-sm" id="esame-${key}" type="number" step="0.1" placeholder="valore"/>
+    <input class="inp inp-sm" id="esame-${key}-data" type="date" title="Data esame"/>`;
+  div.dataset.key = key;
+  div.dataset.label = nome.trim();
+  container.appendChild(div);
+}
+
+async function saveSettings() {
+  const errEl = document.getElementById('set-err');
+  const btn = document.getElementById('set-save-btn');
+  const fname = document.getElementById('set-fname').value.trim();
+  if(!fname) { errEl.style.display='block'; errEl.textContent='Il nome è obbligatorio.'; return; }
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
+
+  const weight = parseFloat(document.getElementById('set-weight').value) || ST.profile?.weight_kg;
+  const goalW  = parseFloat(document.getElementById('set-goal-weight').value) || ST.profile?.goal_weight_kg;
+  const activity = document.getElementById('set-activity').value;
+
+  // Ricalcola TDEE se peso o attività è cambiato
+  const p = ST.profile || {};
+  let targets = { kcal: ST.TARGET.kcal, protein: ST.TARGET.protein, carbs: ST.TARGET.carbs, fat: ST.TARGET.fat };
+  if(weight && (weight !== p.weight_kg || activity !== p.activity_level)) {
+    const age = p.age || ageFromDob(p.data_nascita);
+    const r = calcTDEE(p.sex || 'M', age || 35, p.height_cm || 175, weight, activity);
+    targets = { kcal: r.target, protein: r.protein, carbs: r.carbs, fat: r.fat };
+  }
+
+  // Raccoglie esami del sangue
+  const esami = {};
+  ESAMI_DEFAULTS.forEach(e => {
+    const v = document.getElementById('esame-'+e.key)?.value;
+    const d = document.getElementById('esame-'+e.key+'-data')?.value;
+    if(v) { esami[e.key] = parseFloat(v); esami[e.key+'_label'] = e.label; }
+    if(d) esami[e.key+'_data'] = d;
+  });
+  // Esami custom
+  document.querySelectorAll('#set-esami-list [data-key]').forEach(row => {
+    const key = row.dataset.key;
+    const v = document.getElementById('esame-'+key)?.value;
+    const d = document.getElementById('esame-'+key+'-data')?.value;
+    if(v) { esami[key] = parseFloat(v); esami[key+'_label'] = row.dataset.label; }
+    if(d) esami[key+'_data'] = d;
+  });
+
+  const updates = {
+    first_name:    fname,
+    last_name:     document.getElementById('set-lname').value.trim(),
+    weight_kg:     weight,
+    goal_weight_kg: goalW,
+    activity_level: activity,
+    obiettivo:     document.getElementById('set-obiettivo').value,
+    dieta:         document.getElementById('set-dieta').value,
+    intolleranze:  SET_INTOL.length ? SET_INTOL : null,
+    note_salute:   document.getElementById('set-note-salute').value.trim() || null,
+    esami_sangue:  Object.keys(esami).length ? esami : null,
+    target_kcal:   targets.kcal,
+    target_protein: targets.protein,
+    target_carbs:  targets.carbs,
+    target_fat:    targets.fat,
+    updated_at:    new Date().toISOString(),
+  };
+
+  const {error} = await supa.from('profiles').update(updates).eq('id', ST.user.id);
+  if(error) {
+    errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
+    btn.disabled=false; btn.textContent='Salva impostazioni →'; return;
+  }
+
+  // Aggiorna stato locale
+  Object.assign(ST.profile, updates);
+  ST.TARGET = targets;
+  applyProfile(ST.profile);
+  saveCache();
+  closeSettingsModal();
+  renderPage(ST.page);
 }
 
 // ═══════════════════════════════════════════════════════════
