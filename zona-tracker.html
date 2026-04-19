@@ -1301,9 +1301,10 @@ async function loadAndStart() {
     // Cache hit: ripristina subito senza loading overlay
     if (cache.profile)  ST.profile  = cache.profile;
     if (cache.db)       ST.db       = cache.db;
-    if (cache.supps)    ST.supps    = cache.supps;
-    if (cache.catalog)  ST.catalog  = cache.catalog;
     if (cache.TARGET)   ST.TARGET   = cache.TARGET;
+    // Catalogo e supplements: ricarica SEMPRE da Supabase per avere dati freschi
+    await loadCatalog();
+    await loadSupps();
     if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
       showScreen('app');
