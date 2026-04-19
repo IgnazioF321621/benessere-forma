@@ -1164,7 +1164,27 @@ async function loadAllDays() {
 
 async function loadSupps() {
   const {data} = await supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order');
-  ST.supps = (data||[]).map(s => ({...s, local_id: s.id}));
+  ST.supps = (data||[]).map(s => {
+    // Join per codice (preferito) o per nome come fallback
+    const cat = (ST.catalog||[]).find(c => 
+      (s.codice && c.codice === s.codice) || c.nome === s.name
+    );
+    return {
+      ...s,
+      local_id: s.id,
+      // nome sempre aggiornato dal catalogo se disponibile
+      name:    cat?.nome     ?? s.name,
+      // macro dal catalogo (fonte unica di verità)
+      kcal:    cat?.kcal     ?? 0,
+      protein: cat?.proteine ?? 0,
+      carbs:   cat?.carbo    ?? 0,
+      fat:     cat?.grassi   ?? 0,
+      // dosi e costi dal catalogo
+      doses:    cat?.dosi_conf      ?? s.doses    ?? 0,
+      dose_die: cat?.dose_die       ?? s.dose_die ?? 1,
+      price:    cat?.prezzo_partner ?? s.price    ?? 0,
+    };
+  });
 }
 
 async function loadCatalog() {
@@ -1297,9 +1317,9 @@ async function loadAndStart() {
 
   // Prima apertura — nessun cache: loading normale
   showScreen('loading');
+  await loadCatalog();   // ← catalogo prima, serve per arricchire supplements
   await loadSupps();
   await loadAllDays();
-  await loadCatalog();
   const {data: profile, error: profileErr} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
@@ -1327,9 +1347,9 @@ async function loadAndStart() {
 
 async function refreshInBackground() {
   try {
+    await loadCatalog();  // catalogo prima
     await loadSupps();
     await loadAllDays();
-    await loadCatalog();
     const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
     if (profile) {
       ST.profile = profile;
@@ -2112,15 +2132,10 @@ async function importFromCatalog() {
       return {
         sort_order: ST.supps.length + i + 1,
         user_id: ST.user.id,
-        name: item.nome,
-        slot: slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
+        name:   item.nome,
+        codice: item.codice,
+        slot:   slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
         grp: '', active: true,
-        kcal: item.kcal || 0,
-        protein: item.proteine || 0,
-        carbs: item.carbo || 0,
-        fat: item.grassi || 0,
-        price: item.prezzo_partner || 0,
-        doses: item.dosi_conf || 0,
         note: '',
       };
     });
