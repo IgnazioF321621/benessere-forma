@@ -745,6 +745,7 @@ const ST = {
   suppFilter: 'all',
   logSlot: 'colazione',
   logText: '',
+  logTime: '',
   logLoading: false,
   logError: '',
   advice: '',
@@ -1468,7 +1469,7 @@ function renderOggi(){
 
     html+=`<div class="card"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
-    html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><input type="time" id="log-time" value="${new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;"/></div><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
+    html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
 
     // Timeline cronologica unificata: pasti + integratori
     const tlEvents=[];
@@ -1879,7 +1880,7 @@ async function logMeal(){
     const saved = await dbAddMeal(mealData);
     const d=getDay(ST.activeDay);
     d.meals.push({...mealData, id:saved.id, local_id:saved.id});
-    ST.logText='';ST.logError='';
+    ST.logText='';ST.logError='';ST.logTime='';
   }catch(e){ST.logError='Errore: '+e.message;}
   ST.logLoading=false;renderOggi();saveCache();
 }
