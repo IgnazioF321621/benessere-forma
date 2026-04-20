@@ -2119,39 +2119,61 @@ async function importFromCatalog() {
   }
   const btn = document.getElementById('catalog-confirm-btn');
   btn.disabled = true; btn.textContent = 'Applicazione...';
-  // Rimuovi
-  for(const item of toRemove) {
-    const supp = ST.supps.find(s => s.name === item.nome);
-    if(supp) {
-      await dbDeleteSupp(supp.local_id);
-      ST.supps = ST.supps.filter(s => s.local_id !== supp.local_id);
+
+  try {
+    // Rimuovi
+    for(const item of toRemove) {
+      const supp = ST.supps.find(s => s.name === item.nome);
+      if(supp) {
+        await dbDeleteSupp(supp.local_id);
+        ST.supps = ST.supps.filter(s => s.local_id !== supp.local_id);
+      }
     }
-  }
-  // Aggiungi
-  if(toAdd.length > 0) {
-    const toInsert = toAdd.map((item, i) => {
-      const slotEl = document.getElementById('slot-'+item.codice);
-      return {
-        sort_order: ST.supps.length + i + 1,
-        user_id: ST.user.id,
-        name:   item.nome,
-        codice: item.codice,
-        slot:   slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
-        grp: '', active: true,
-        note: '',
+
+    // Aggiungi uno alla volta per isolare eventuali errori
+    for(let i = 0; i < toAdd.length; i++) {
+      const item = toAdd[i];
+      const slotEl = document.getElementById('slot-' + item.codice);
+      const record = {
+        sort_order: ST.supps.length + 1,
+        user_id:    ST.user.id,
+        name:       item.nome,
+        slot:       slotEl ? (slotEl.value.trim() || '08:00') : '08:00',
+        grp:        '',
+        active:     true,
+        note:       '',
       };
-    });
-    const {data, error} = await supa.from('supplements').insert(toInsert).select();
-    if(error) {
-      alert('Errore durante l\'aggiunta: '+error.message);
-      btn.disabled=false; btn.textContent='Applica modifiche →';
-      return;
+      // Aggiunge 'codice' solo se il campo è valorizzato
+      if(item.codice) record.codice = item.codice;
+
+      let { data, error } = await supa.from('supplements').insert(record).select().single();
+
+      // Se errore sulla colonna 'codice', riprova senza
+      if(error && error.message && error.message.toLowerCase().includes('codice')) {
+        const recordSenzaCodice = { ...record };
+        delete recordSenzaCodice.codice;
+        const retry = await supa.from('supplements').insert(recordSenzaCodice).select().single();
+        if(retry.error) throw new Error(retry.error.message);
+        data = retry.data;
+      } else if(error) {
+        throw new Error(error.message);
+      }
+
+      if(data) {
+        ST.supps.push({ ...data, local_id: data.id });
+      }
     }
-    (data||[]).forEach(s => ST.supps.push({...s, local_id:s.id}));
+
+    closeCatalogModal();
+    renderIntegratori();
+    saveCache();
+
+  } catch(err) {
+    console.error('importFromCatalog error:', err);
+    alert('Errore: ' + (err.message || 'Errore sconosciuto. Controlla la console.'));
+    btn.disabled = false;
+    btn.textContent = 'Applica modifiche →';
   }
-  closeCatalogModal();
-  renderIntegratori();
-  saveCache();
 }
 
 // ── ADD SUPP MODAL ─────────────────────────────────────────
