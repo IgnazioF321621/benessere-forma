@@ -2146,7 +2146,11 @@ async function importFromCatalog() {
       // Aggiunge 'codice' solo se il campo è valorizzato (forzato a stringa)
       if(item.codice) record.codice = String(item.codice);
 
-      let { data, error } = await supa.from('supplements').insert(record).select().single();
+      // Timeout di 10 secondi per evitare freeze silenzioso
+      let { data, error } = await Promise.race([
+        supa.from('supplements').insert(record).select().single(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout: Supabase non risponde. Riprova.')), 10000))
+      ]);
 
       // Se errore sulla colonna 'codice', riprova senza
       if(error && error.message && error.message.toLowerCase().includes('codice')) {
