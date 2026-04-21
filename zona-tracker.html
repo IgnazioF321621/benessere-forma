@@ -2143,8 +2143,8 @@ async function importFromCatalog() {
         active:     true,
         note:       '',
       };
-      // Aggiunge 'codice' solo se il campo è valorizzato
-      if(item.codice) record.codice = item.codice;
+      // Aggiunge 'codice' solo se il campo è valorizzato (forzato a stringa)
+      if(item.codice) record.codice = String(item.codice);
 
       let { data, error } = await supa.from('supplements').insert(record).select().single();
 
