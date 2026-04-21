@@ -1555,7 +1555,8 @@ function renderOggi(){
     html+=`<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">${progressRing(cons)}<div style="flex:1;min-width:160px;">${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}</div></div>
     <div class="sum-grid" style="margin-top:14px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div><div class="sum-lbl">Da pasti</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div><div class="sum-cell"><div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div><div class="sum-lbl">Rimanenti</div></div></div></div>`;
 
-    html+=`<div class="card"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
+    // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
+    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
     html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><div class="slot-tabs">${MEAL_SLOTS.map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="Descrivi cosa hai mangiato...\nEs: &quot;Salmone 180g al forno con quinoa 80g e spinaci&quot;"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
 
@@ -1570,17 +1571,23 @@ function renderOggi(){
 
     if(tlEvents.length){
       html+=`<div class="card"><span class="lbl">📅 Timeline di oggi</span>`;
-      tlEvents.forEach(ev=>{
+      tlEvents.forEach((ev, evIdx)=>{
         if(ev.type==='meal'){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:42px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding-top:4px;">${ev.time.slice(0,5)}<br><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
+          // Inserisce il box "Analizza" dopo l'ultimo pasto
+          const isLastMeal = tlEvents.slice(evIdx+1).every(e=>e.type!=='meal');
+          if(isLastMeal) html+=adviceBoxHTML;
         } else {
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:42px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding-top:4px;">⏰<br>${ev.time}</div><div style="flex:1;min-width:0;"><div class="supp-pills" style="margin:0;">`;
           ev.supps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
           html+=`</div></div></div>`;
         }
       });
+      // Se non ci sono pasti nella timeline, mostra il box in fondo
+      if(!tlEvents.some(e=>e.type==='meal')) html+=adviceBoxHTML;
       html+=`</div>`;
     } else {
+      html+=adviceBoxHTML;
       html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span><p style="font-size:12px;color:var(--t3);margin-bottom:10px;">Tocca per segnare come assunti</p><div class="supp-pills">`;
       if(shakeSupps.length){html+=`<div class="supp-group-label">⏰ 06:30 — Shake Mami</div>`;shakeSupps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});}
       otherSlots.forEach(slot=>{const ss=otherSupps.filter(s=>s.slot===slot);html+=`<div class="supp-group-label">⏰ ${slot}</div>`;ss.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});});
