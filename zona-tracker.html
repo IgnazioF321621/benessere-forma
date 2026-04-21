@@ -116,6 +116,40 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .nav-btn{flex:1;padding:11px 0;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);cursor:pointer;transition:all .2s;}
 .nav-btn.active{color:var(--acc);border-bottom-color:var(--acc);}
 #main{flex:1;padding-bottom:calc(env(safe-area-inset-bottom)+40px);}
+
+/* ── TAB BAR IN BASSO SU MOBILE ── */
+@media(max-width:768px){
+  #nav{
+    position:fixed;
+    bottom:0;left:0;right:0;
+    border-top:1px solid var(--b1);
+    border-bottom:none;
+    background:var(--s1);
+    z-index:300;
+    padding-bottom:env(safe-area-inset-bottom);
+    box-shadow:0 -2px 8px rgba(0,0,0,.07);
+  }
+  .nav-btn{
+    padding:10px 0 8px;
+    border-bottom:none;
+    border-top:2px solid transparent;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    font-size:9px;
+  }
+  .nav-btn.active{
+    border-bottom:none;
+    border-top-color:var(--acc);
+  }
+  #main{padding-bottom:calc(env(safe-area-inset-bottom)+70px);}
+  #header #nav{display:none;}
+  #bottom-nav{display:flex;}
+}
+@media(min-width:769px){
+  #bottom-nav{display:none;}
+}
 .page{display:none;padding:18px 16px;}
 .page.active{display:block;}
 
@@ -479,7 +513,7 @@ select.inp{cursor:pointer;}
         </div>
       </div>
     </div>
-    <nav id="nav">
+    <nav id="nav" class="top-nav">
       <button class="nav-btn active" onclick="showPage('oggi')">🗓 Oggi</button>
       <button class="nav-btn" onclick="showPage('integratori')">💊 Integratori</button>
       <button class="nav-btn" onclick="showPage('storico')">📊 Storico</button>
@@ -492,6 +526,13 @@ select.inp{cursor:pointer;}
     <div id="page-storico" class="page"></div>
     <div id="page-piano" class="page"></div>
   </div>
+  <!-- TAB BAR IN BASSO (solo mobile) -->
+  <nav id="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b1);z-index:300;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 8px rgba(0,0,0,.07);">
+    <button class="nav-btn active" onclick="showPage('oggi')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">🗓</span>Oggi</button>
+    <button class="nav-btn" onclick="showPage('integratori')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">💊</span>Integratori</button>
+    <button class="nav-btn" onclick="showPage('storico')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📊</span>Storico</button>
+    <button class="nav-btn" onclick="showPage('piano')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📋</span>Piano</button>
+  </nav>
 </div>
 
 <!-- WEIGHT MODAL -->
@@ -1371,8 +1412,26 @@ function showScreen(name) {
   if(name === 'auth')       { document.getElementById('auth-screen').classList.add('visible'); }
   else if(name === 'onboarding') { document.getElementById('onboarding-screen').classList.add('visible'); }
   else if(name === 'loading') { document.getElementById('loading-overlay').classList.remove('hide'); }
-  else if(name === 'app')   { document.getElementById('app').classList.add('visible'); }
+  else if(name === 'app')   {
+    document.getElementById('app').classList.add('visible');
+    updateNavVisibility();
+  }
 }
+
+function updateNavVisibility() {
+  const isMobile = window.innerWidth <= 768;
+  const topNav   = document.querySelector('.top-nav');
+  const bottomNav = document.getElementById('bottom-nav');
+  if(!topNav || !bottomNav) return;
+  if(isMobile) {
+    topNav.style.display = 'none';
+    bottomNav.style.display = 'flex';
+  } else {
+    topNav.style.display = 'flex';
+    bottomNav.style.display = 'none';
+  }
+}
+window.addEventListener('resize', updateNavVisibility);
 
 async function logout() {
   if(!confirm('Vuoi uscire?')) return;
@@ -1387,9 +1446,22 @@ async function logout() {
 function showPage(id){
   ST.page=id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.remove('active');
+    b.style.color='var(--t3)';
+    b.style.borderTopColor='transparent';
+    b.style.borderBottomColor='transparent';
+  });
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav-btn')[['oggi','integratori','storico','piano'].indexOf(id)].classList.add('active');
+  const idx=['oggi','integratori','storico','piano'].indexOf(id);
+  // Aggiorna entrambe le nav (top e bottom)
+  document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
+  const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
+  if(bottomBtns[idx]){
+    bottomBtns[idx].classList.add('active');
+    bottomBtns[idx].style.color='var(--acc)';
+    bottomBtns[idx].style.borderTopColor='var(--acc)';
+  }
   renderPage(id);
 }
 function renderPage(id){
