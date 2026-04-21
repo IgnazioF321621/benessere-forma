@@ -196,7 +196,7 @@ select.inp{cursor:pointer;}
 .supp-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
 .supp-pill{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid rgba(42,122,111,.25);border-radius:20px;padding:6px 13px;font-size:12px;font-family:'Manrope',sans-serif;color:var(--t2);cursor:pointer;transition:all .15s;font-weight:500;}
 .supp-pill.taken{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600;}
-.supp-pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.supp-pill-dot{display:none;}
 .supp-group-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;width:100%;}
 .slot-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;}
 .slot-tab{padding:14px 4px;border-radius:10px;border:1px solid var(--b1);cursor:pointer;font-size:9px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;text-align:center;transition:all .15s;background:var(--s2);color:var(--t3);}
@@ -716,10 +716,10 @@ const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // MEAL SLOTS & SUGGESTIONS
 // ═══════════════════════════════════════════════════════════
 const MEAL_SLOTS = [
-  {id:'colazione',label:'Colazione',icon:'🌅',time:'08:30',desc:'Post-workout'},
-  {id:'pranzo',   label:'Pranzo',   icon:'☀️', time:'12:30',desc:'Pasto principale'},
-  {id:'cena',     label:'Cena',     icon:'🌙', time:'20:00',desc:'Pasto serale'},
-  {id:'snack',    label:'Snack',    icon:'🍎', time:'–',    desc:'Extra'},
+  {id:'colazione',label:'Colazione',icon:'☕',time:'08:30',desc:'Post-workout'},
+  {id:'pranzo',   label:'Pranzo',   icon:'🥗', time:'12:30',desc:'Pasto principale'},
+  {id:'cena',     label:'Cena',     icon:'🫕', time:'20:00',desc:'Pasto serale'},
+  {id:'snack',    label:'Snack',    icon:'🥜', time:'–',    desc:'Extra'},
 ];
 const SUGGESTED = {
   colazione:['Whey idrolizzata 30g + latte di avena 250ml + avena 50g + mirtilli 80g','Whey idrolizzata 30g + latte di soia 250ml + banana + burro di mandorle 15g','Whey idrolizzata 30g + latte di riso 250ml + chia 15g + frutti di bosco 100g'],
