@@ -2160,7 +2160,20 @@ async function importFromCatalog() {
       }
 
       if(data) {
-        ST.supps.push({ ...data, local_id: data.id });
+        const cat = (ST.catalog||[]).find(c =>
+          (data.codice && c.codice === data.codice) || c.nome === data.name
+        );
+        ST.supps.push({
+          ...data,
+          local_id:  data.id,
+          kcal:      cat?.kcal                ?? 0,
+          protein:   cat?.proteine            ?? 0,
+          carbs:     cat?.carbo              ?? 0,
+          fat:       cat?.grassi             ?? 0,
+          doses:     cat?.dosi_conf          ?? data.doses ?? 0,
+          dose_die:  cat?.dose_die           ?? data.dose_die ?? 1,
+          price:     cat?.prezzo_partner     ?? data.price ?? 0,
+        });
       }
     }
 
