@@ -1281,6 +1281,16 @@ async function dbDeleteSupp(id) {
   await supa.from('supplements').delete().eq('id', id).eq('user_id', ST.user.id);
 }
 
+async function updateSuppSlotTime(oldTime, newTime, idsStr) {
+  if(!newTime || oldTime === newTime) return;
+  const ids = idsStr.split(',').filter(Boolean);
+  // Aggiorna stato locale
+  ST.supps.forEach(s => { if(ids.includes(String(s.local_id))) s.slot = newTime; });
+  // Aggiorna Supabase per tutti gli integratori coinvolti
+  await Promise.all(ids.map(id => dbUpdateSupp(id, {slot: newTime})));
+  renderOggi();
+}
+
 // ═══════════════════════════════════════════════════════════
 // INIT & AUTH FLOW
 // ═══════════════════════════════════════════════════════════
@@ -1536,8 +1546,7 @@ function renderOggi(){
   if(day.fasting){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
     // Grafici macro integratori assunti (sempre visibile)
-    html+=`<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">${progressRing(sTot)}<div style="flex:1;min-width:160px;">${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}</div></div>
-    <div class="sum-grid" style="margin-top:14px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integr. kcal</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--prot)">${sTot.protein}g</div><div class="sum-lbl">Proteine</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--carb)">${sTot.carbs}g</div><div class="sum-lbl">Carbo</div></div></div></div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--t3)">${ST.TARGET.kcal}</div><div class="sum-lbl">Target</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">0</div><div class="sum-lbl">Pasti</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div><div class="sum-cell"><div class="sum-val mono" style="color:${(ST.TARGET.kcal-sTot.kcal)<100?'var(--err)':(ST.TARGET.kcal-sTot.kcal)<300?'var(--warn)':'var(--t2)'};">${Math.max(0,ST.TARGET.kcal-sTot.kcal)}</div><div class="sum-lbl">Rimanenti</div></div></div>${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
     // Integratori visibili anche in digiuno
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
@@ -1552,8 +1561,7 @@ function renderOggi(){
       html+=`</div>`;
     }
   } else {
-    html+=`<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">${progressRing(cons)}<div style="flex:1;min-width:160px;">${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}</div></div>
-    <div class="sum-grid" style="margin-top:14px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div><div class="sum-lbl">Da pasti</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div><div class="sum-cell"><div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div><div class="sum-lbl">Rimanenti</div></div></div></div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--t3)">${ST.TARGET.kcal}</div><div class="sum-lbl">Target</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--t1)">${mTot.kcal}</div><div class="sum-lbl">Pasti</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integratori</div></div><div class="sum-cell"><div class="sum-val mono" style="color:${rem<100?'var(--err)':rem<300?'var(--warn)':'var(--t2)'}">${rem}</div><div class="sum-lbl">Rimanenti</div></div></div>${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
     const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
@@ -1578,7 +1586,8 @@ function renderOggi(){
           const isLastMeal = tlEvents.slice(evIdx+1).every(e=>e.type!=='meal');
           if(isLastMeal) html+=adviceBoxHTML;
         } else {
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:42px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding-top:4px;">${ev.time}<br><span style="font-size:14px;">💊</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-bottom:7px;font-weight:600;">INTEGRATORI · ${ev.time}</div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
+          const suppIds=ev.supps.map(s=>s.local_id).join(',');
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:36px;font-size:14px;color:var(--t3);padding-top:4px;">💊</div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
           ev.supps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
           html+=`</div></div></div></div>`;
         }
