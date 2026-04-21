@@ -1463,6 +1463,9 @@ function renderOggi(){
 
   if(day.fasting){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
+    // Grafici macro integratori assunti (sempre visibile)
+    html+=`<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">${progressRing(sTot)}<div style="flex:1;min-width:160px;">${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}</div></div>
+    <div class="sum-grid" style="margin-top:14px;"><div class="sum-cell"><div class="sum-val mono" style="color:var(--acc)">${sTot.kcal}</div><div class="sum-lbl">Integr. kcal</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--prot)">${sTot.protein}g</div><div class="sum-lbl">Proteine</div></div><div class="sum-cell"><div class="sum-val mono" style="color:var(--carb)">${sTot.carbs}g</div><div class="sum-lbl">Carbo</div></div></div></div>`;
     // Integratori visibili anche in digiuno
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
