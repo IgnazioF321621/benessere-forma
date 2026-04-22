@@ -164,22 +164,40 @@ async function handleCallback() {
   }
 
   if (session) {
-    showSuccess();
+    showSuccess(session.access_token, session.refresh_token);
   } else {
     showError('Nessun token trovato. Il link potrebbe essere scaduto o già usato. Torna all\'app e richiedi un nuovo Magic Link.');
   }
 }
 
-function showSuccess() {
+function showSuccess(at, rt) {
   document.getElementById('spinner').style.display = 'none';
   document.getElementById('success-icon').style.display = 'block';
   document.getElementById('title').textContent = 'Accesso completato! ✓';
-  document.getElementById('msg').textContent = 'Ora puoi tornare a Zona Tracker.\nSe hai la PWA installata, aprila dall\'icona sulla schermata home.';
 
+  // Costruisce URL con token per passarli alla zona-tracker (funziona su tutti i browser)
+  const appUrl = './zona-tracker.html#access_token=' + encodeURIComponent(at)
+                                  + '&refresh_token=' + encodeURIComponent(rt);
   const btn = document.getElementById('open-btn');
-  const hint = document.getElementById('hint');
+  btn.href = appUrl;
   btn.style.display = 'inline-block';
-  hint.style.display = 'block';
+
+  // Detect: siamo dentro una PWA standalone?
+  const isPWA = window.navigator.standalone === true
+             || window.matchMedia('(display-mode: standalone)').matches;
+
+  if (isPWA) {
+    // Siamo già nella PWA — redirect diretto
+    document.getElementById('msg').textContent = 'Reindirizzamento in corso…';
+    setTimeout(() => { window.location.replace(appUrl); }, 600);
+  } else {
+    // Siamo in Safari/Chrome — mostra istruzioni chiare
+    document.getElementById('msg').innerHTML =
+      'Tocca il pulsante per aprire l\'app.<br>' +
+      '<span style="font-size:12px;opacity:.7;">Se hai aggiunto Zona Tracker alla schermata home, ' +
+      'aprila dall\'icona dopo aver toccato il pulsante.</span>';
+    document.getElementById('hint').style.display = 'block';
+  }
 
   // Pulisci l'URL dai token per sicurezza
   history.replaceState(null, '', window.location.pathname);
