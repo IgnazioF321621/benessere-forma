@@ -5,6 +5,7 @@ App wellness single-file HTML, hostata su GitHub Pages.
 ## File principale
 
 `zona-tracker.html` — tutta l'app è in questo unico file (HTML + CSS + JS).
+`auth-callback.html` — pagina di callback per il login (usata come fallback per browser esterni).
 
 ## URL pubblico
 
@@ -18,14 +19,48 @@ https://github.com/IgnazioF321621/benessere-forma
 
 - HTML/CSS/JavaScript puro
 - Nessun framework, nessun build step
-- Un solo file da modificare: `zona-tracker.html`
+- File principali: `zona-tracker.html`, `auth-callback.html`
 
 ## Servizi esterni
 
 | Servizio | URL | Scopo |
 |---|---|---|
 | Cloudflare Worker | `zona-ai.ignaziof23.workers.dev` | Proxy verso Groq API (llama-3.3-70b-versatile) |
-| Supabase | `https://qxiyeiahpoiliwpqslpr.supabase.co` | Database |
+| Supabase | `https://qxiyeiahpoiliwpqslpr.supabase.co` | Database + Auth |
+
+## Autenticazione
+
+**Metodo attuale: OTP a 6 cifre via email** (da aprile 2026)
+
+Flusso:
+1. Utente inserisce email → `signInWithOtp({ email, options: { shouldCreateUser: true } })`
+2. Supabase invia email con codice a 6 cifre (NON un link)
+3. Utente inserisce il codice nella PWA → `verifyOtp({ email, token, type: 'email' })`
+4. Login completato direttamente nella PWA, senza uscire dall'app ✅
+
+**Perché OTP e non Magic Link:**
+- I Magic Link aprono il browser di sistema (Safari su iOS), che ha localStorage isolato dalla PWA
+- Su iOS non esiste modo di aprire una PWA installata tramite link esterno
+- L'OTP funziona su iOS PWA, Android PWA, Safari, Chrome, Arc — qualsiasi scenario
+
+**`auth-callback.html`** rimane nel repo come fallback (supporta sia flusso implicito con hash token che PKCE con `?code=`), ma non viene più usato nel flusso principale.
+
+**Redirect URLs autorizzati in Supabase** (Authentication → URL Configuration):
+- `https://ignaziof321621.github.io/benessere-forma/zona-tracker.html`
+- `https://ignaziof321621.github.io/benessere-forma/auth-callback.html`
+
+**Rate limit Supabase:** durante i test intensivi si può raggiungere il limite OTP. Aspettare 1 ora per il reset.
+
+## Bootstrap auth (`zona-tracker.html`)
+
+Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi casi in ordine:
+1. `?test=1` → modalità test locale
+2. Hash con `#access_token=...&refresh_token=...` → flusso implicito (da auth-callback.html)
+3. Query param `?code=...` → flusso PKCE
+4. `getSession()` → sessione esistente (cookie/localStorage)
+5. Nessuna sessione → mostra schermata auth
+6. `onAuthStateChange` → ascolta eventi SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED
+7. `visibilitychange` → polling sessione quando la PWA torna in foreground
 
 ## Schema Supabase
 
@@ -70,63 +105,65 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 
 ## Funzionalità implementate
 
+### Auth
+- OTP a 6 cifre via email (schermata a 2 step: email → codice)
+- Onboarding 5 step per nuovi utenti → calcolo TDEE automatico (Mifflin-St Jeor)
+- Modal impostazioni profilo con esami del sangue
+- Modal peso con ricalcolo TDEE
+
 ### Tab Oggi
 - Navigazione tra giorni passati/oggi
 - Ring progress calorie + barre macro (P/C/G)
-- Sezione integratori del giorno con toggle assunto/non assunto
-- Suggerimento AI per il pasto successivo (Cloudflare Worker → Groq)
-- Registrazione pasto con stima AI dei macro
+- Card 4 colonne: Target / Pasti / Integratori / Rimanenti
+- Timeline cronologica unificata pasti + integratori
+- Registrazione pasto con stima AI dei macro (slot: ☕🥗🫕🥜)
+- Suggerimento AI per il pasto successivo ("Analizza e suggerisci")
 - Badge "Giorno Perfetto" se tutti i macro sono centrati
 - Toggle digiuno giornaliero
+- Integratori visibili e spuntabili anche nei giorni di digiuno
 
 ### Tab Integratori
 - Lista integratori personali raggruppati per orario
-- Editing inline di tutti i campi (nome, slot, grp, nota, macro, prezzo, dosi)
-- Toggle attivo/inattivo, eliminazione
-- Bottone **+ Aggiungi** → modal form completo con tutti i campi
-- Bottone **Catalogo Nutrilite** → modal 2-step:
-  - Step 1: selezione prodotti (spunta verde = nel profilo, spunta rossa = da rimuovere)
-  - Step 2: riepilogo con orari editabili per i nuovi prodotti + elenco rimozioni
-  - Conferma rimozione con dialog nominativo
-  - "Seleziona tutti" aggiunge solo i prodotti non ancora presenti
-- Calcolo costo mensile/annuo integratori attivi
+- Editing inline di tutti i campi
+- Toggle attivo/inattivo, eliminazione, drag & drop
+- Modal "+ Aggiungi" con form completo
+- Modal "Catalogo Nutrilite" 2-step con slot editabili
+- Cost banner mensile/annuale
+- Slot filter chips
 
 ### Tab Storico
-- Report 7/14/30 giorni con medie macro e aderenza al piano
+- Report 7/14/30 giorni con medie macro e aderenza
 - Mini grafico andamento calorie
-- Elenco giorni con dettaglio macro
 
 ### Tab Piano
-- Target 40·30·30 personalizzato (calcolato con Mifflin-St Jeor + TDEE)
-- Timeline giornaliera integratori e pasti
-- Priorità cliniche (ferritina, sistema immunitario, infiammazione)
-- Regole fuori casa
-
-## Fix applicati in questa sessione
-
-- **`suppTotalsForIds`**: aggiunto `||0` come fallback su kcal/protein/carbs/fat per evitare NaN nel ring calorie
-- **`dbToggleSuppTaken`**: ora salva lo slot reale dell'integratore invece della stringa vuota `''`
-- **Bottone conferma catalogo**: reset di `disabled` in `closeCatalogModal()` e `goToCatalogStep2()` per evitare che rimanga bloccato dopo il primo uso
+- Target 40·30·30 personalizzato
+- Piano AI settimanale + suggerimento singolo con ↻ Rigenera
+- Priorità cliniche dinamiche (da esami del sangue)
 
 ## Deploy
 
-Per pubblicare le modifiche:
-
 ```bash
-git add zona-tracker.html
+cd ~/benessere-forma
+git add -A
 git commit -m "Descrizione della modifica"
-git push https://IgnazioF321621:TOKEN@github.com/IgnazioF321621/benessere-forma.git main
+git push origin main
 ```
 
-GitHub Pages si aggiorna automaticamente dopo il push (di solito in 1-2 minuti).
-
-> Il push richiede un Personal Access Token GitHub (scope `repo`). Non usare la password.
+GitHub Pages si aggiorna automaticamente dopo il push (1-2 minuti).
 
 ## Prossimi step
 
-- [ ] Testare tutto su dispositivo mobile (iOS Safari) — in particolare i modal, i touch event sui checkbox del catalogo e il layout
-- [ ] Implementare Supabase Auth per supporto multi-utente (attualmente l'app usa magic link ma è pensata per utente singolo)
-- [ ] Valutare aggiunta campo `supplement_id` (FK) in `supplements_log` al posto del match per nome, per evitare rottura dello storico quando si rinomina un integratore
+- [ ] Testare OTP su iPhone dopo reset rate limit (aspettare ~1 ora dai test del 22/04/2026)
+- [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
+- [ ] Modalità test `?test=1` — completare e verificare il flusso completo
+- [ ] Redesign restante — completare avvicinamento al mockup Claude Design
+- [ ] Distribuzione via Glide — esplorazione futura per altri utenti
+- [ ] Fix backfill macro integratori vecchi (query SQL su supplements con join nutrilite_catalog per codice)
+
+## Bug noti
+
+- Alcuni integratori vecchi in `supplements` mostrano macro a `—` perché inseriti prima del fix del join con `codice` — risolvibile con query SQL di backfill
+- La funzione `updateSuppSlotTime` è presente nel codice ma non ancora testata in produzione
 
 ## Note
 
@@ -134,3 +171,4 @@ GitHub Pages si aggiorna automaticamente dopo il push (di solito in 1-2 minuti).
 - L'unico file da toccare normalmente è `zona-tracker.html`.
 - Il branch di lavoro è `main`.
 - Il catalogo Nutrilite vive su Supabase (`nutrilite_catalog`) — per aggiungere prodotti basta inserire righe nella tabella, zero codice.
+- La regola d'oro è: un passo alla volta, Ignazio conferma con "ok/fatto" prima di procedere.
