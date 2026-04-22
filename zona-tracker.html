@@ -358,11 +358,11 @@ select.inp{cursor:pointer;}
     <div id="auth-step2" style="display:none;">
       <span class="lbl">Codice ricevuto via email</span>
       <p style="font-size:13px;color:var(--t3);margin-bottom:12px;line-height:1.5;"
-         id="auth-otp-hint">Inserisci il codice a 6 cifre inviato a <strong></strong></p>
+         id="auth-otp-hint">Inserisci il codice inviato a <strong></strong></p>
       <input id="auth-otp" class="inp" type="text" inputmode="numeric" pattern="[0-9]*"
-        placeholder="000000" maxlength="6" autocomplete="one-time-code"
+        placeholder="000000" maxlength="8" autocomplete="one-time-code"
         style="font-size:28px;font-family:'JetBrains Mono',monospace;letter-spacing:8px;text-align:center;"
-        oninput="if(this.value.length===6)verifyOTP()"
+        oninput="if(this.value.replace(/\D/g,'').length>=6)verifyOTP()"
         onkeydown="if(event.key==='Enter')verifyOTP()"/>
       <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="verifyOTP()" id="auth-otp-btn">
         Accedi →
@@ -1092,7 +1092,7 @@ async function sendOTP() {
 
 async function verifyOTP() {
   const token = document.getElementById('auth-otp').value.trim().replace(/\D/g, '');
-  if (token.length !== 6) { showAuthMsg('Inserisci il codice a 6 cifre.', 'err'); return; }
+  if (token.length < 6) { showAuthMsg('Inserisci il codice completo.', 'err'); return; }
   const btn = document.getElementById('auth-otp-btn');
   btn.disabled = true; btn.textContent = 'Verifica…';
   hideAuthMsg();
