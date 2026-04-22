@@ -1038,9 +1038,13 @@ async function sendMagicLink() {
   if(!email) { showAuthMsg('Inserisci la tua email.', 'err'); return; }
   document.getElementById('auth-btn').disabled = true;
   document.getElementById('auth-btn').textContent = 'Invio in corso...';
+  // emailRedirectTo punta a auth-callback.html (pagina intermedia).
+  // Necessario per iOS PWA: il Magic Link apre Safari; auth-callback.html
+  // legge i token e reindirizza alla PWA con i token nell'hash.
+  const callbackUrl = window.location.href.replace(/\/[^/]*$/, '') + '/auth-callback.html';
   const {error} = await supa.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.href }
+    options: { emailRedirectTo: callbackUrl }
   });
   if(error) {
     showAuthMsg('Errore: '+error.message, 'err');

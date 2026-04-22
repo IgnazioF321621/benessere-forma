@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Zona Tracker — Accesso</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#2A7A6F;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  padding:24px;
+  text-align:center;
+}
+.logo{
+  width:80px;height:80px;border-radius:22px;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Arial Black',sans-serif;
+  font-size:28px;font-weight:900;color:#fff;
+  margin-bottom:24px;
+}
+h1{font-size:22px;font-weight:800;margin-bottom:8px;}
+p{font-size:14px;color:rgba(255,255,255,.75);line-height:1.6;max-width:300px;}
+.spinner{
+  width:36px;height:36px;
+  border:3px solid rgba(255,255,255,.3);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  margin:24px auto 0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn{
+  margin-top:28px;
+  display:inline-block;
+  background:#fff;
+  color:#2A7A6F;
+  font-weight:700;
+  font-size:14px;
+  padding:13px 28px;
+  border-radius:10px;
+  text-decoration:none;
+  border:none;cursor:pointer;
+}
+.err-box{
+  background:rgba(0,0,0,.25);
+  border-radius:10px;
+  padding:14px 18px;
+  margin-top:20px;
+  font-size:12px;
+  color:rgba(255,255,255,.8);
+  max-width:320px;
+  display:none;
+}
+</style>
+</head>
+<body>
+
+<div class="logo">ZT</div>
+<h1 id="title">Accesso in corso…</h1>
+<p id="msg">Stiamo verificando il tuo Magic Link.<br>Verrai reindirizzato all'app tra un momento.</p>
+<div class="spinner" id="spinner"></div>
+<div class="err-box" id="err-box"></div>
+<a class="btn" id="open-btn" style="display:none;" href="./zona-tracker.html">Apri Zona Tracker →</a>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cuyDYC3WzaNGqGRs_J-JnQ_7kZ2B4to';
+const APP_URL      = './zona-tracker.html';
+
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function handleCallback() {
+  // Leggi i token dall'hash URL (formato Supabase Magic Link)
+  // es: #access_token=xxx&refresh_token=yyy&type=magiclink
+  const hash = window.location.hash.replace(/^#/, '');
+  const params = new URLSearchParams(hash);
+
+  const accessToken  = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+
+  if (!accessToken || !refreshToken) {
+    // Nessun token: prova getSession (potrebbe già esserci una sessione attiva)
+    const { data: { session } } = await supa.auth.getSession();
+    if (session) {
+      redirectToApp(session.access_token, session.refresh_token);
+    } else {
+      showError('Nessun token trovato. Il link potrebbe essere scaduto o già usato.');
+    }
+    return;
+  }
+
+  // Valida il token con Supabase
+  const { data, error } = await supa.auth.setSession({
+    access_token:  accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (error || !data?.session) {
+    showError('Link non valido o scaduto. Richiedi un nuovo Magic Link dall\'app.');
+    return;
+  }
+
+  // Sessione valida → redirect all'app con i token nell'hash
+  // zona-tracker.html legge già #access_token=...&refresh_token=... al bootstrap
+  redirectToApp(data.session.access_token, data.session.refresh_token);
+}
+
+function redirectToApp(accessToken, refreshToken) {
+  document.getElementById('title').textContent = 'Accesso riuscito! ✓';
+  document.getElementById('msg').textContent   = 'Reindirizzamento a Zona Tracker…';
+  document.getElementById('spinner').style.display = 'none';
+
+  const appUrl = APP_URL + '#access_token=' + encodeURIComponent(accessToken)
+                         + '&refresh_token=' + encodeURIComponent(refreshToken);
+
+  setTimeout(() => {
+    window.location.replace(appUrl);
+  }, 800);
+}
+
+function showError(msg) {
+  document.getElementById('title').textContent   = 'Ops!';
+  document.getElementById('msg').textContent     = 'Si è verificato un problema con il login.';
+  document.getElementById('spinner').style.display = 'none';
+  const box = document.getElementById('err-box');
+  box.style.display = 'block';
+  box.textContent   = msg;
+  document.getElementById('open-btn').style.display = 'inline-block';
+}
+
+handleCallback();
+</script>
+</body>
+</html>
