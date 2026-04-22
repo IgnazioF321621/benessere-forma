@@ -2534,7 +2534,7 @@ async function saveSettings() {
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════
 setTimeout(async () => {
-  // Modalità test: azzera cache, imposta utente fittizio, mostra onboarding direttamente
+  // Modalità test
   if (new URLSearchParams(window.location.search).get('test') === '1') {
     localStorage.removeItem(ZT_CACHE_KEY);
     ST.user    = { id: 'test-user-001', email: 'test@test.com' };
@@ -2542,40 +2542,76 @@ setTimeout(async () => {
     showScreen('onboarding');
     return;
   }
-  // Gestione Magic Link su iOS Safari: il token arriva nell'hash della URL
-  const hashParams = new URLSearchParams(window.location.hash.replace('#', '?').replace('#', '&'));
+
+  // ── Gestione token nell'hash (flusso implicito, da auth-callback.html) ──
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
   const accessToken  = hashParams.get('access_token');
   const refreshToken = hashParams.get('refresh_token');
-  if(accessToken && refreshToken) {
-    // Pulisce l'hash dalla URL senza ricaricare la pagina
+  if (accessToken && refreshToken) {
     history.replaceState(null, '', window.location.pathname + window.location.search);
     const {data, error} = await supa.auth.setSession({access_token: accessToken, refresh_token: refreshToken});
-    if(!error && data?.session?.user) {
+    if (!error && data?.session?.user) {
       ST.user = data.session.user;
       await loadAndStart();
       supa.auth.onAuthStateChange(async (event, session) => {
-        if(event==='SIGNED_OUT') showScreen('auth');
+        if (event === 'SIGNED_OUT') showScreen('auth');
       });
       return;
     }
   }
 
+  // ── Gestione code PKCE (flusso moderno, alcuni browser) ──
+  const urlCode = new URLSearchParams(window.location.search).get('code');
+  if (urlCode) {
+    history.replaceState(null, '', window.location.pathname);
+    const {data, error} = await supa.auth.exchangeCodeForSession(window.location.href);
+    if (!error && data?.session?.user) {
+      ST.user = data.session.user;
+      await loadAndStart();
+      supa.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_OUT') showScreen('auth');
+      });
+      return;
+    }
+  }
+
+  // ── Sessione esistente (cookie o localStorage) ──
   const {data:{session}} = await supa.auth.getSession();
-  if(session?.user) {
+  if (session?.user) {
     ST.user = session.user;
     await loadAndStart();
   } else {
     showScreen('auth');
   }
 
+  // ── Listener globale auth ──
   supa.auth.onAuthStateChange(async (event, session) => {
-    if(event==='SIGNED_IN' && session?.user) {
+    if (event === 'SIGNED_IN' && session?.user && !ST.user) {
       ST.user = session.user;
       await loadAndStart();
-    } else if(event==='SIGNED_OUT') {
+    } else if (event === 'SIGNED_OUT') {
+      ST.user = null;
       showScreen('auth');
+    } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+      ST.user = session.user;
     }
   });
+
+  // ── Polling sessione quando la PWA torna in foreground ──
+  // Necessario su iOS: Safari e PWA hanno storage separati ma i cookie
+  // di sessione Supabase sono condivisi. Quando l'utente torna alla PWA
+  // dopo aver cliccato il Magic Link in Safari, questo polling trova
+  // la sessione attiva e fa login automatico.
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && !ST.user) {
+      const {data:{session}} = await supa.auth.getSession();
+      if (session?.user) {
+        ST.user = session.user;
+        await loadAndStart();
+      }
+    }
+  });
+
 }, 1800); // splash duration
 
 </script>
