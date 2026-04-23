@@ -1590,14 +1590,13 @@ function progressRing(cons) {
   </div>`;
 }
 
-function miniRing(value, target, label, color, invert=false) {
+function miniRing(value, target, label, color) {
   const r=22, cx=26, cy=26, sw=5, circ=2*Math.PI*r;
-  let pct = target > 0 ? Math.min(100, Math.round((value/target)*100)) : 0;
-  if(invert) pct = Math.max(0, 100 - pct); // rimanenti: si svuota
+  const pct = target > 0 ? Math.min(100, Math.round((value/target)*100)) : 0;
   const dash = (pct/100)*circ;
-  const over = !invert && value > target;
-  const ringColor = over ? 'var(--err)' : invert && value < 0 ? 'var(--err)' : color;
-  const valColor = over ? 'var(--err)' : invert && value <= 0 ? 'var(--err)' : 'var(--t1)';
+  const over = value > target;
+  const ringColor = over ? 'var(--err)' : color;
+  const valColor = over ? 'var(--err)' : 'var(--t1)';
   return `<div class="sum-cell">
     <div style="position:relative;width:52px;height:52px;flex-shrink:0;">
       <svg width="52" height="52" viewBox="0 0 52 52" style="transform:rotate(-90deg)">
@@ -1612,6 +1611,31 @@ function miniRing(value, target, label, color, invert=false) {
       </div>
     </div>
     <div class="sum-lbl">${label}</div>
+  </div>`;
+}
+
+function targetRing(consumed, target) {
+  const r=26, cx=30, cy=30, sw=6, circ=2*Math.PI*r;
+  const pct = target > 0 ? Math.min(100, Math.round((consumed/target)*100)) : 0;
+  const dash = (pct/100)*circ;
+  const over = consumed > target;
+  const color = pct>=95 && pct<=105 ? 'var(--ok)' : over ? 'var(--err)' : pct>=70 ? 'var(--warn)' : 'var(--acc)';
+  const rem = Math.max(0, target - consumed);
+  const remColor = over ? 'var(--err)' : 'var(--t3)';
+  return `<div class="sum-cell" style="flex:1.3;">
+    <div style="position:relative;width:60px;height:60px;flex-shrink:0;">
+      <svg width="60" height="60" viewBox="0 0 60 60" style="transform:rotate(-90deg)">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
+          stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round"
+          style="transition:stroke-dasharray .6s ease"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;">
+        <span style="font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${color};line-height:1;">${consumed}</span>
+        <span style="font-size:6px;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1.4;">/ ${target}</span>
+      </div>
+    </div>
+    <div class="sum-lbl" style="font-size:9px;">kcal · rimangono <span style="color:${remColor};font-weight:700;">${rem}</span></div>
   </div>`;
 }
 
@@ -1652,7 +1676,7 @@ function renderOggi(){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
     // Grafici macro integratori assunti (sempre visibile)
     const remFasting = Math.max(0, ST.TARGET.kcal - sTot.kcal);
-    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">${miniRing(ST.TARGET.kcal,ST.TARGET.kcal,'Target','var(--t3)')}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--acc)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integr.','var(--acc2)')}${miniRing(remFasting,ST.TARGET.kcal,'Rimanenti','var(--acc)',true)}</div>${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(sTot.kcal,ST.TARGET.kcal)}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integr.','var(--acc2)')}</div>${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
     // Integratori visibili anche in digiuno
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
@@ -1667,7 +1691,7 @@ function renderOggi(){
       html+=`</div>`;
     }
   } else {
-    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px;">${miniRing(ST.TARGET.kcal,ST.TARGET.kcal,'Target','var(--t3)')}${miniRing(mTot.kcal,ST.TARGET.kcal,'Pasti','var(--acc)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integr.','var(--acc2)')}${miniRing(rem,ST.TARGET.kcal,'Rimanenti','var(--acc)',true)}</div>${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(cons.kcal,ST.TARGET.kcal)}${miniRing(mTot.kcal,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integr.','var(--acc2)')}</div>${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}</div>`;
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
     const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
