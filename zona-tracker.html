@@ -1606,8 +1606,9 @@ function miniRing(value, target, label, color, invert=false) {
           stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round"
           style="transition:stroke-dasharray .6s ease"/>
       </svg>
-      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-        <span style="font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${valColor};">${value}</span>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;">
+        <span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${valColor};line-height:1.1;">${value}</span>
+        <span style="font-size:7px;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1;">kcal</span>
       </div>
     </div>
     <div class="sum-lbl">${label}</div>
