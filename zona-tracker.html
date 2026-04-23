@@ -743,16 +743,18 @@ const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // MEAL SLOTS & SUGGESTIONS
 // ═══════════════════════════════════════════════════════════
 const MEAL_SLOTS = [
-  {id:'colazione',label:'Colazione',icon:'☕',time:'08:30',desc:'Post-workout'},
-  {id:'pranzo',   label:'Pranzo',   icon:'🥗', time:'12:30',desc:'Pasto principale'},
-  {id:'cena',     label:'Cena',     icon:'🫕', time:'20:00',desc:'Pasto serale'},
-  {id:'snack',    label:'Snack',    icon:'🥜', time:'–',    desc:'Extra'},
+  {id:'colazione',       label:'Colazione',        icon:'☕', time:'08:30',desc:'Post-workout'},
+  {id:'snack_mattina',   label:'Spuntino mattina',  icon:'🍎', time:'10:30',desc:'Spuntino'},
+  {id:'pranzo',          label:'Pranzo',            icon:'🥗', time:'12:30',desc:'Pasto principale'},
+  {id:'snack_pomeriggio',label:'Merenda',           icon:'🥜', time:'16:30',desc:'Spuntino'},
+  {id:'cena',            label:'Cena',              icon:'🫕', time:'20:00',desc:'Pasto serale'},
 ];
 const SUGGESTED = {
   colazione:['Whey idrolizzata 30g + latte di avena 250ml + avena 50g + mirtilli 80g','Whey idrolizzata 30g + latte di soia 250ml + banana + burro di mandorle 15g','Whey idrolizzata 30g + latte di riso 250ml + chia 15g + frutti di bosco 100g'],
   pranzo:['Salmone al forno 180g + quinoa 80g + spinaci saltati con limone','Sgombro in scatola + riso integrale 80g + rucola + pomodori','Lenticchie rosse 200g + farro 70g + broccoli + olio EVO','Tonno 150g + patata dolce 120g + insalata verde + limone'],
   cena:['Branzino al vapore 180g + verdure grigliate abbondanti','Zuppa di ceci e rosmarino + cavolo nero saltato','Merluzzo 180g + finocchi e arancia + semi di girasole'],
-  snack:['Noci miste 30g + frutta di stagione','2-3 noci del Brasile + mirtilli 100g','Semi di zucca 20g + una mela'],
+  snack_mattina:['Noci miste 30g + una mela','Yogurt di soia + frutti di bosco 80g','Mandorle 20g + banana piccola'],
+  snack_pomeriggio:['Noci miste 30g + frutta di stagione','2-3 noci del Brasile + mirtilli 100g','Semi di zucca 20g + una mela'],
 };
 
 const NUTRILITE_CATALOG = [
@@ -1866,9 +1868,9 @@ function renderPiano(){
         </div>`;
       if(isOpen) {
         html += `<div style="padding:12px 14px;background:var(--s1);border-top:1px solid var(--b1);">`;
-        const slotIcons = {colazione:'🌅',spuntino_mattina:'🍎',pranzo:'☀️',spuntino_pomeriggio:'🥜',cena:'🌙'};
-        const slotLabels = {colazione:'Colazione',spuntino_mattina:'Spuntino mattina',pranzo:'Pranzo',spuntino_pomeriggio:'Spuntino pomeriggio',cena:'Cena'};
-        ['colazione','spuntino_mattina','pranzo','spuntino_pomeriggio','cena'].forEach(slot => {
+        const slotIcons = {colazione:'🌅',snack_mattina:'🍎',pranzo:'☀️',snack_pomeriggio:'🥜',cena:'🌙',snack:'🥜'};
+        const slotLabels = {colazione:'Colazione',snack_mattina:'Spuntino mattina',pranzo:'Pranzo',snack_pomeriggio:'Merenda',cena:'Cena',snack:'Snack'};
+        ['colazione','snack_mattina','pranzo','snack_pomeriggio','cena'].forEach(slot => {
           const pasto = g[slot];
           if(!pasto) return;
           html += `<div style="margin-bottom:12px;">
@@ -1991,7 +1993,7 @@ async function toggleSuppTaken(localId, name){
 function setLogSlot(id){ST.logSlot=id;renderOggi();}
 function buildSuggestionBox() {
   // Mappa slot app -> slot piano AI
-  const slotMap = {colazione:'colazione', pranzo:'pranzo', cena:'cena', snack:'spuntino_pomeriggio'};
+  const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
   const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
 
   // Raccoglie tutti i suggerimenti disponibili: prima dal piano AI, poi dai default
@@ -2033,7 +2035,7 @@ function nextSuggestion() {
 }
 
 function useSuggestion(idx) {
-  const slotMap = {colazione:'colazione', pranzo:'pranzo', cena:'cena', snack:'spuntino_pomeriggio'};
+  const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
   const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
   const pianoSuggerimenti = [];
   if(ST.pianoAI?.giorni?.length) {
