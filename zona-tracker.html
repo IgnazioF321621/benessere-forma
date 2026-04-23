@@ -266,7 +266,9 @@ select.inp{cursor:pointer;}
 .tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
 .tag-ok{background:var(--acc-lt);color:var(--acc);}
 
-/* ── WEIGHT TRACKER ── */
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:#fff;font-size:13px;font-family:'JetBrains Mono',monospace;padding:10px 20px;border-radius:20px;opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .weight-modal{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:flex-end;justify-content:center;}
 .weight-modal-inner{background:var(--s1);border-radius:16px 16px 0 0;padding:24px 20px;padding-bottom:calc(24px + env(safe-area-inset-bottom));width:100%;max-width:480px;box-shadow:var(--shadow-md);}
 .weight-chart{display:flex;align-items:flex-end;gap:4px;height:80px;margin:14px 0;}
@@ -561,6 +563,9 @@ select.inp{cursor:pointer;}
     <button class="nav-btn" onclick="showPage('piano')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📋</span>Piano</button>
   </nav>
 </div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
 
 <!-- WEIGHT MODAL -->
 <div id="weight-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeWeightModal()">
@@ -2040,6 +2045,14 @@ async function toggleSuppTaken(localId, name){
   saveCache();
 }
 
+function showToast(msg, emoji='✅') {
+  const el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = emoji + ' ' + msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
 function setLogSlot(id){ST.logSlot=id;renderOggi();}
 function buildSuggestionBox() {
   // Mappa slot app -> slot piano AI
@@ -2114,6 +2127,7 @@ async function logMeal(){
     const d=getDay(ST.activeDay);
     d.meals.push({...mealData, id:saved.id, local_id:saved.id});
     ST.logText='';ST.logError='';ST.logTime='';
+    showToast('Pasto registrato');
   }catch(e){ST.logError='Errore: '+e.message;}
   ST.logLoading=false;renderOggi();saveCache();
 }
@@ -2182,7 +2196,7 @@ function suppDragEnd(e) {
 
 async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
-  if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();}
+  if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();showToast(s.active?'Integratore attivato':'Integratore disattivato', s.active?'✅':'⏸️');}
 }
 
 function updateSupp(id,key,val){
