@@ -1695,8 +1695,8 @@ function zonaBalance(cons) {
   const allOk = okP && okC && okF;
   const dot = ok => `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${ok?'var(--ok)':'var(--warn)'};margin-right:3px;vertical-align:middle;"></span>`;
   const legend = `<div style="margin-top:6px;font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">
-    <span style="margin-right:10px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:3px;vertical-align:middle;"></span>In range Zona</span>
-    <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:3px;vertical-align:middle;"></span>Fuori range (P±5%, C±5%, G±5%)</span>
+    <span style="margin-right:10px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:3px;vertical-align:middle;"></span>In Zona</span>
+    <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:3px;vertical-align:middle;"></span>Out Zona</span>
   </div>`;
   return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--b1);flex-wrap:wrap;">
     <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;">Zona 40·30·30</span>
