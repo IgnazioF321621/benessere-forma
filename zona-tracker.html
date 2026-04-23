@@ -266,6 +266,12 @@ select.inp{cursor:pointer;}
 .tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
 .tag-ok{background:var(--acc-lt);color:var(--acc);}
 
+/* ── EDIT MEAL MODAL ── */
+#edit-meal-modal .weight-modal-inner{max-width:480px;width:100%;}
+.edit-meal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+.edit-meal-field label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;}
+.edit-meal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
 /* ── TOAST ── */
 .toast{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:#fff;font-size:13px;font-family:'JetBrains Mono',monospace;padding:10px 20px;border-radius:20px;opacity:0;transition:opacity .25s ease,transform .25s ease;pointer-events:none;z-index:9000;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -562,6 +568,34 @@ select.inp{cursor:pointer;}
     <button class="nav-btn" onclick="showPage('storico')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📊</span>Storico</button>
     <button class="nav-btn" onclick="showPage('piano')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📋</span>Piano</button>
   </nav>
+</div>
+
+<!-- EDIT MEAL MODAL -->
+<div id="edit-meal-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeEditMealModal()">
+  <div class="weight-modal-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:15px;font-weight:800;color:var(--t1);">✏️ Modifica pasto</span>
+      <button onclick="closeEditMealModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
+    </div>
+    <div class="edit-meal-field">
+      <label>Descrizione</label>
+      <textarea id="em-desc" class="inp" rows="3" placeholder="Es. Salmone 180g al forno con quinoa 80g"></textarea>
+    </div>
+    <div class="edit-meal-grid">
+      <div class="edit-meal-field"><label>Kcal</label><input id="em-kcal" class="inp inp-sm" type="number" min="0"/></div>
+      <div class="edit-meal-field"><label>Proteine (g)</label><input id="em-protein" class="inp inp-sm" type="number" min="0" step="0.1"/></div>
+      <div class="edit-meal-field"><label>Carboidrati (g)</label><input id="em-carbs" class="inp inp-sm" type="number" min="0" step="0.1"/></div>
+      <div class="edit-meal-field"><label>Grassi (g)</label><input id="em-fat" class="inp inp-sm" type="number" min="0" step="0.1"/></div>
+    </div>
+    <div class="edit-meal-field">
+      <label>Note (opzionale)</label>
+      <input id="em-notes" class="inp inp-sm" placeholder="Es. valori approssimati"/>
+    </div>
+    <div id="em-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="em-save-btn" class="btn btn-primary btn-full" onclick="saveEditMeal()">Salva modifiche →</button>
+    </div>
+  </div>
 </div>
 
 <!-- TOAST -->
@@ -1646,7 +1680,7 @@ function targetRing(consumed, target) {
 
 function mealCardHTML(m){
   const mealId = m.id||m.local_id;
-  return `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span><input type="time" value="${m.time?m.time.slice(0,5):''}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:70px;padding:2px 0;" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/></div></div><button class="meal-del" onclick="deleteMeal('${ST.activeDay}','${mealId}')">×</button></div>`;
+  return `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span><input type="time" value="${m.time?m.time.slice(0,5):''}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:70px;padding:2px 0;" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/></div></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;"><button class="meal-del" style="font-size:16px;" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica pasto">✏️</button><button class="meal-del" onclick="deleteMeal('${ST.activeDay}','${mealId}')">&#x00D7;</button></div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2045,9 +2079,75 @@ async function toggleSuppTaken(localId, name){
   saveCache();
 }
 
+// ═══════════════════════════════════════════════════════════
+// EDIT MEAL MODAL
+// ═══════════════════════════════════════════════════════════
+let _editMealId = null;
+let _editMealDayKey = null;
+
+function openEditMealModal(dayKey, mealId) {
+  const day = ST.db.days[dayKey];
+  if(!day) return;
+  const m = day.meals.find(m => m.id === mealId || m.local_id === mealId);
+  if(!m) return;
+  _editMealId = mealId;
+  _editMealDayKey = dayKey;
+  document.getElementById('em-desc').value    = m.description || '';
+  document.getElementById('em-kcal').value    = m.kcal    || 0;
+  document.getElementById('em-protein').value = m.protein || 0;
+  document.getElementById('em-carbs').value   = m.carbs   || 0;
+  document.getElementById('em-fat').value     = m.fat     || 0;
+  document.getElementById('em-notes').value   = m.notes   || '';
+  document.getElementById('em-err').style.display = 'none';
+  const btn = document.getElementById('em-save-btn');
+  btn.disabled = false; btn.textContent = 'Salva modifiche →';
+  document.getElementById('edit-meal-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('em-desc').focus(), 100);
+}
+
+function closeEditMealModal() {
+  document.getElementById('edit-meal-modal').style.display = 'none';
+  _editMealId = null;
+  _editMealDayKey = null;
+}
+
+async function saveEditMeal() {
+  const desc = document.getElementById('em-desc').value.trim();
+  const errEl = document.getElementById('em-err');
+  if(!desc) { errEl.style.display='block'; errEl.textContent='La descrizione è obbligatoria.'; return; }
+  errEl.style.display = 'none';
+  const btn = document.getElementById('em-save-btn');
+  btn.disabled = true; btn.textContent = 'Salvataggio...';
+
+  const updates = {
+    description: desc,
+    kcal:    +document.getElementById('em-kcal').value    || 0,
+    protein: +document.getElementById('em-protein').value || 0,
+    carbs:   +document.getElementById('em-carbs').value   || 0,
+    fat:     +document.getElementById('em-fat').value     || 0,
+    notes:   document.getElementById('em-notes').value.trim() || null,
+  };
+
+  // Aggiorna stato locale
+  const day = ST.db.days[_editMealDayKey];
+  const m = day?.meals.find(m => m.id === _editMealId || m.local_id === _editMealId);
+  if(m) Object.assign(m, updates);
+
+  // Aggiorna Supabase
+  const {error} = await supa.from('meals').update(updates).eq('id', _editMealId).eq('user_id', ST.user.id);
+  if(error) {
+    errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
+    btn.disabled=false; btn.textContent='Salva modifiche →'; return;
+  }
+
+  closeEditMealModal();
+  saveCache();
+  renderOggi();
+  showToast('Pasto aggiornato', '✏️');
+}
+
 function showToast(msg, emoji='✅') {
   const el = document.getElementById('toast');
-  if(!el) return;
   el.textContent = emoji + ' ' + msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 2500);
