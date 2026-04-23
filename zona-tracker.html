@@ -1694,6 +1694,10 @@ function zonaBalance(cons) {
   const okF = pF >= 25 && pF <= 35;
   const allOk = okP && okC && okF;
   const dot = ok => `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${ok?'var(--ok)':'var(--warn)'};margin-right:3px;vertical-align:middle;"></span>`;
+  const legend = `<div style="margin-top:6px;font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">
+    <span style="margin-right:10px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:3px;vertical-align:middle;"></span>In range Zona</span>
+    <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:3px;vertical-align:middle;"></span>Fuori range (P±5%, C±5%, G±5%)</span>
+  </div>`;
   return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--b1);flex-wrap:wrap;">
     <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;">Zona 40·30·30</span>
     <div style="display:flex;gap:10px;">
@@ -1702,7 +1706,7 @@ function zonaBalance(cons) {
       <span style="font-size:11px;font-family:'JetBrains Mono',monospace;">${dot(okF)}<span style="color:var(--fat);">G ${pF}%</span></span>
     </div>
     <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${allOk?'var(--ok)':'var(--warn)'};font-weight:700;margin-left:auto;">${allOk?'✅ In Zona':'⚠️ Fuori Zona'}</span>
-  </div>`;
+  </div>${legend}`;
 }
 
 function mealCardHTML(m){
