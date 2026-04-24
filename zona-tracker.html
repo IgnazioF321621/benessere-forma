@@ -186,7 +186,12 @@ select.inp{cursor:pointer;}
 .sum-cell{background:var(--s2);border-radius:10px;padding:10px 4px;text-align:center;border:1px solid var(--b1);display:flex;flex-direction:column;align-items:center;gap:3px;}
 .sum-val{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;}
 .sum-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
-.meal-card{background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-left:3px solid var(--acc);}
+/* ── SWIPE TO DELETE ── */
+.swipe-wrap{position:relative;overflow:hidden;border-radius:10px;margin-bottom:8px;}
+.swipe-delete-btn{position:absolute;right:0;top:0;bottom:0;width:72px;background:var(--err);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:0 10px 10px 0;transition:opacity .15s;}
+.swipe-inner{transition:transform .25s cubic-bezier(.16,1,.3,1);will-change:transform;}
+.swipe-inner.swiped{transform:translateX(-72px);}
+.meal-card{background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-left:3px solid var(--acc);margin-bottom:0;}
 .meal-desc{font-size:14px;color:var(--t1);line-height:1.5;margin:0;font-weight:500;}
 .meal-note{font-size:11px;color:var(--t3);font-style:italic;margin-top:3px;}
 .meal-macros{display:flex;gap:8px;margin-top:5px;flex-wrap:wrap;}
@@ -1711,7 +1716,8 @@ function zonaBalance(cons) {
 
 function mealCardHTML(m){
   const mealId = m.id||m.local_id;
-  return `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span><input type="time" value="${m.time?m.time.slice(0,5):''}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:70px;padding:2px 0;" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/></div></div><div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;"><button class="meal-del" style="font-size:16px;" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica pasto">✏️</button><button class="meal-del" onclick="deleteMeal('${ST.activeDay}','${mealId}')">&#x00D7;</button></div></div>`;
+  const inner = `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span><input type="time" value="${m.time?m.time.slice(0,5):''}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:70px;padding:2px 0;" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/></div></div><button class="meal-del" style="font-size:16px;" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button></div>`;
+  return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="deleteMeal('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1783,20 +1789,21 @@ function renderOggi(){
     tlEvents.sort((a,b)=>a.time.localeCompare(b.time));
 
     if(tlEvents.length){
-      html+=`<div class="card"><span class="lbl">📅 Timeline di oggi</span>`;
+      const nPasti = tlEvents.filter(e=>e.type==='meal').length;
+      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span class="lbl" style="margin:0;">📅 Timeline di oggi</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;background:var(--acc-lt);border-radius:20px;padding:2px 10px;">${nPasti} pasto${nPasti!==1?'i':''}</span></div>`;
       tlEvents.forEach((ev, evIdx)=>{
+        const isLast = evIdx === tlEvents.length - 1;
+        const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;"></div>` : '';
         if(ev.type==='meal'){
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:42px;font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding-top:4px;">${ev.time.slice(0,5)}<br><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;"><div style="min-width:36px;font-size:14px;color:var(--t3);padding-top:4px;">🌿</div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
           ev.supps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
           html+=`</div></div></div></div>`;
         }
-        // Inserisce il box "Analizza" dopo l'ultimo evento in assoluto (pasto o integratori)
-        if(evIdx === tlEvents.length - 1) html+=adviceBoxHTML;
+        if(isLast) html+=adviceBoxHTML;
       });
-      // Se non ci sono pasti nella timeline, mostra il box in fondo
       if(!tlEvents.some(e=>e.type==='meal')) html+=adviceBoxHTML;
       html+=`</div>`;
     } else {
@@ -2180,6 +2187,40 @@ async function saveEditMeal() {
   saveCache();
   renderOggi();
   showToast('Pasto aggiornato', '✏️');
+}
+
+// ═══════════════════════════════════════════════════════════
+// SWIPE TO DELETE
+// ═══════════════════════════════════════════════════════════
+const _swipe = {};
+function swipeStart(e, id) {
+  const t = e.touches[0];
+  _swipe[id] = { x: t.clientX, y: t.clientY, active: true };
+}
+function swipeMove(e, id) {
+  if(!_swipe[id]?.active) return;
+  const dx = e.touches[0].clientX - _swipe[id].x;
+  const dy = Math.abs(e.touches[0].clientY - _swipe[id].y);
+  if(dy > 20) { _swipe[id].active = false; return; } // scroll verticale
+  if(dx < -10) e.preventDefault(); // blocca scroll orizzontale
+  const el = document.getElementById('si-'+id);
+  if(el) el.style.transform = `translateX(${Math.max(-72, Math.min(0, dx))}px)`;
+}
+function swipeEnd(e, id) {
+  if(!_swipe[id]) return;
+  const dx = e.changedTouches[0].clientX - _swipe[id].x;
+  const el = document.getElementById('si-'+id);
+  if(el) {
+    if(dx < -40) {
+      el.style.transition = 'transform .25s cubic-bezier(.16,1,.3,1)';
+      el.style.transform = 'translateX(-72px)';
+    } else {
+      el.style.transition = 'transform .25s cubic-bezier(.16,1,.3,1)';
+      el.style.transform = 'translateX(0)';
+    }
+    setTimeout(() => { if(el) el.style.transition = ''; }, 300);
+  }
+  delete _swipe[id];
 }
 
 function showToast(msg, emoji='✅') {
