@@ -7,9 +7,9 @@ with open('zona-tracker.html', 'r', encoding='utf-8') as f:
 
 errors = []
 
-# ── PATCH 1: 'g' → 'gr' nella lista opzioni tendina ─────────────────────────
+# ── PATCH 1: 'g' → 'gr' nella lista opzioni tendina + rimuovi cucchiai/porzioni + aggiungi misurino
 OLD1 = "const doseUnitOptions = ['unità','g','cpr','cps','stick','bustine','barrette','tavolette','cucchiai','porzioni'];"
-NEW1 = "const doseUnitOptions = ['unità','gr','cpr','cps','stick','bustine','barrette','tavolette','cucchiai','porzioni'];"
+NEW1 = "const doseUnitOptions = ['unità','gr','cpr','cps','stick','bustine','barrette','tavolette','misurino'];"
 if OLD1 not in c: errors.append("P1")
 else: c = c.replace(OLD1, NEW1, 1); print("P1 ok")
 
