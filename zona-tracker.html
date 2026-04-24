@@ -1881,7 +1881,7 @@ function renderIntegratori(){
       const doseUnitCurrent = s.dose_unit || doseUnitDefault;
       const doseVal = s.dose_die != null ? s.dose_die : (catItem?.dose_die || '');
       const doseMultiplier = s.dose_multiplier != null ? s.dose_multiplier : 1;
-      const doseUnitOptions = ['unità','gr','cpr','cps','stick','bustine','barrette','tavolette','misurino'];
+      const doseUnitOptions = ['unità','gr','cps','stick','barretta','misurino'];
       if(!doseUnitOptions.includes(doseUnitCurrent)) doseUnitOptions.unshift(doseUnitCurrent);
       const doseUnitSelect = `<select class="macro-cell-inp" style="font-size:11px;padding:2px 4px;" onchange="updateSupp('${s.local_id}','dose_unit',this.value)">${doseUnitOptions.map(u=>`<option value="${u}"${u===doseUnitCurrent?' selected':''}>${u}</option>`).join('')}</select>`;
       const macroCells = [
@@ -1893,7 +1893,7 @@ function renderIntegratori(){
         const val = macroVal(suppKey, catKey);
         return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" data-sid="${s.local_id}" data-key="${suppKey}" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
       }).join('')
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:3px;align-items:center;"><input type="number" class="macro-cell-inp" style="width:44px;" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)"/>${doseUnitSelect}</div></div>`
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:3px;align-items:center;"><input type="number" class="macro-cell-inp" style="width:44px;" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)"/>${doseUnitSelect}</div>${doseUnitCurrent==='misurino'&&catItem?.dose_die?`<div style="font-size:10px;color:var(--t3);margin-top:2px;">(≈ ${catItem.dose_die} gr)</div>`:''}</div>`
       + `<div class="macro-cell"><div class="macro-cell-lbl">Moltiplicatore<br><span style="font-size:9px;color:var(--t3);">(0.5 = mezza dose)</span></div><input type="number" class="macro-cell-inp" value="${doseMultiplier}" placeholder="1" step="0.25" min="0.25" max="4" onchange="updateSuppMultiplier('${s.local_id}',+this.value)"/></div>`
       + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
       html+=`<div class="supp-card ${s.active?'':'inactive'}" draggable="true"
