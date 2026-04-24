@@ -2430,7 +2430,7 @@ async function toggleSuppExpand(id) {
   renderIntegratori();
 }
 
-function toggleSuppActive(id){
+async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
   if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();showToast(s.active?'Integratore attivato':'Integratore disattivato', s.active?'✅':'⏸️');}
 }
