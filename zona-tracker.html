@@ -1941,7 +1941,7 @@ function renderIntegratori(){
               </div>
               ${macroPills?`<span style="color:var(--b2);">·</span>${macroPills}`:''}
               <span style="color:var(--b2);">·</span>
-              <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${suppMonthlyCost(s).toFixed(2)}/mese</span>
+              <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(suppMonthlyCost(s)/30).toFixed(2)}/oggi · €${(suppMonthlyCost(s)/30*7).toFixed(2)}/sett · €${suppMonthlyCost(s).toFixed(2)}/mese</span>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
