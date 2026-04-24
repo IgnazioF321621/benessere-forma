@@ -2423,6 +2423,7 @@ function updateSuppDose(id, newDose){
     });
   }
   s.dose_die = newDose;
+  if(s.dose_unit === 'misurino') renderIntegratori();
   clearTimeout(s._saveTimer);
   s._saveTimer = setTimeout(() => {
     dbUpdateSupp(id, {dose_die: newDose, kcal: s.kcal, protein: s.protein, carbs: s.carbs, fat: s.fat});
