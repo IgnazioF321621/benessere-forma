@@ -1865,7 +1865,7 @@ function renderIntegratori(){
     ].join(' · ');
     html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotSummary}</span></div>`;
     ss.forEach(s=>{
-      const catItem = ST.catalog.find(c => c.nome === s.name);
+      const catItem = ST.catalog.find(c => (s.codice && c.codice === s.codice) || c.nome === s.name);
       // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
       // altrimenti cerca nel catalogo come fallback
       const macroVal = (suppKey, catKey) => {
