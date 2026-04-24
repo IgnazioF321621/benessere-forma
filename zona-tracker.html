@@ -2401,7 +2401,8 @@ function updateSuppMultiplier(id, newMultiplier) {
 
 function updateSupp(id,key,val){
   const s=ST.supps.find(s=>s.local_id===id);
-  if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>{dbUpdateSupp(id,{[key]:val});saveCache();},800);}
+  if(s){s[key]=val;clearTimeout(s._saveTimer);s._saveTimer=setTimeout(()=>{dbUpdateSupp(id,{[key]:val});saveCache();},800);
+  if(key==='dose_unit') renderIntegratori();}
 }
 
 function updateSuppDose(id, newDose){
