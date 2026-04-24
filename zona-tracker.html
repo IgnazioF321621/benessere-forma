@@ -1881,7 +1881,7 @@ function renderIntegratori(){
       const doseUnitCurrent = s.dose_unit || doseUnitDefault;
       const doseVal = s.dose_die != null ? s.dose_die : (catItem?.dose_die || '');
       const doseMultiplier = s.dose_multiplier != null ? s.dose_multiplier : 1;
-      const doseUnitOptions = ['unità','gr','cpr','cps','stick','bustine','barrette','tavolette','cucchiai','porzioni'];
+      const doseUnitOptions = ['unità','gr','cpr','cps','stick','bustine','barrette','tavolette','misurino'];
       if(!doseUnitOptions.includes(doseUnitCurrent)) doseUnitOptions.unshift(doseUnitCurrent);
       const doseUnitSelect = `<select class="macro-cell-inp" style="font-size:11px;padding:2px 4px;" onchange="updateSupp('${s.local_id}','dose_unit',this.value)">${doseUnitOptions.map(u=>`<option value="${u}"${u===doseUnitCurrent?' selected':''}>${u}</option>`).join('')}</select>`;
       const macroCells = [
