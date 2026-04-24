@@ -1068,7 +1068,10 @@ function suppTotalsForIds(ids){
 }
 function r2(x){return Math.round(x*100)/100;}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
-function suppMonthlyCost(s){return(s.price&&s.doses)?(s.price/s.doses)*30:0;}
+function suppMonthlyCost(s){
+  const multiplier = s.dose_multiplier != null ? parseFloat(s.dose_multiplier) : 1;
+  return (s.price&&s.doses) ? (s.price/s.doses)*30*multiplier : 0;
+}
 function suppUnitFromConfezione(confezione, linea) {
   if (!confezione) return 'unità';
   const c = confezione.toLowerCase();
@@ -2374,6 +2377,18 @@ function suppDragEnd(e) {
 async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
   if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();showToast(s.active?'Integratore attivato':'Integratore disattivato', s.active?'✅':'⏸️');}
+}
+
+function updateSuppMultiplier(id, newMultiplier) {
+  const s = ST.supps.find(s => s.local_id === id);
+  if(!s) return;
+  newMultiplier = Math.max(0.25, Math.min(4, parseFloat(newMultiplier) || 1));
+  s.dose_multiplier = newMultiplier;
+  clearTimeout(s._saveTimer);
+  s._saveTimer = setTimeout(() => {
+    dbUpdateSupp(id, {dose_multiplier: newMultiplier});
+    saveCache();
+  }, 800);
 }
 
 function updateSupp(id,key,val){
