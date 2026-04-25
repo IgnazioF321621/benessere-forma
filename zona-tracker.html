@@ -292,11 +292,34 @@ select.inp{cursor:pointer;}
 .ring-lbl{font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;}
 
 /* ── BADGE "GIORNO PERFETTO" ── */
-.badge-perfetto{background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;box-shadow:0 4px 16px rgba(255,165,0,.3);animation:badgePop .4s cubic-bezier(.16,1,.3,1);}
-@keyframes badgePop{from{transform:scale(.8);opacity:0;}to{transform:scale(1);opacity:1;}}
-.badge-icon{font-size:32px;}
-.badge-text{font-size:13px;font-weight:700;color:#7A4000;}
-.badge-sub{font-size:11px;color:#A05000;margin-top:2px;}
+.badge-perfetto{background:linear-gradient(135deg,#FFD700 0%,#FFA500 100%);border-radius:16px;padding:22px 20px;position:relative;overflow:hidden;margin-bottom:12px;box-shadow:0 8px 24px rgba(255,165,0,.35),0 2px 6px rgba(255,165,0,.25);animation:badgePop .55s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes badgePop{0%{transform:scale(.6);opacity:0;}60%{transform:scale(1.05);opacity:1;}100%{transform:scale(1);}}
+@keyframes confetti{0%{transform:translateY(0) rotate(0);opacity:0;}10%{opacity:1;}100%{transform:translateY(-50px) rotate(360deg);opacity:0;}}
+.badge-confetti{position:absolute;top:0;width:6px;height:10px;border-radius:1px;animation:confetti 1.4s ease-out infinite;}
+.badge-perfetto-inner{display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;}
+.badge-icon{font-size:48px;line-height:1;margin-bottom:6px;}
+.badge-text{font-size:22px;font-weight:800;color:#7A4000;letter-spacing:-.4px;}
+.badge-sub{font-size:13px;color:#A05000;margin-top:4px;font-family:'JetBrains Mono',monospace;letter-spacing:.3px;}
+.badge-macro-row{display:flex;gap:10px;margin-top:14px;padding:8px 14px;background:rgba(255,255,255,.45);border-radius:20px;}
+.badge-macro-row span{font-family:'JetBrains Mono',monospace;font-size:12px;color:#7A4000;font-weight:700;}
+.badge-macro-row .sep{color:rgba(122,64,0,.4);}
+
+/* ── MEAL CARD V2 ── */
+.meal-card-v2{display:flex;gap:10px;background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:13px 13px 12px;box-shadow:var(--shadow);margin-bottom:0;}
+.meal-card-v2 .slot-bar{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;}
+.meal-card-v2 .meal-body{flex:1;min-width:0;}
+.meal-card-v2 .meal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.meal-card-v2 .meal-slot-lbl{display:flex;align-items:center;gap:5px;}
+.meal-card-v2 .meal-slot-lbl span{font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+.meal-card-v2 .meal-time-inp{font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;padding:0;text-align:right;}
+.meal-card-v2 .meal-desc-v2{font-size:15px;font-weight:600;color:var(--t1);line-height:1.4;margin:0 0 5px;}
+.meal-card-v2 .meal-note-v2{font-size:12px;font-style:italic;color:var(--t3);margin:0 0 10px;line-height:1.45;}
+.meal-card-v2 .macro-badges{display:flex;gap:5px;align-items:stretch;}
+.macro-badge{flex:1;border-radius:8px;padding:6px 7px;text-align:center;}
+.macro-badge .mb-lbl{font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;font-weight:600;line-height:1;}
+.macro-badge .mb-val{font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--t1);margin-top:2px;line-height:1.1;}
+.macro-badge .mb-val span{font-size:10px;color:var(--t3);font-weight:500;}
+.meal-card-v2 .meal-edit-btn{font-size:15px;padding:0;background:none;border:none;cursor:pointer;align-self:flex-start;flex-shrink:0;}
 
 /* ── SYNC STATUS ── */
 .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:4px;}
@@ -568,10 +591,10 @@ select.inp{cursor:pointer;}
   </div>
   <!-- TAB BAR IN BASSO (solo mobile) -->
   <nav id="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:1px solid var(--b1);z-index:300;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -2px 8px rgba(0,0,0,.07);">
-    <button class="nav-btn active" onclick="showPage('oggi')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">🗓</span>Oggi</button>
-    <button class="nav-btn" onclick="showPage('integratori')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">🌿</span>Integratori</button>
-    <button class="nav-btn" onclick="showPage('storico')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📊</span>Storico</button>
-    <button class="nav-btn" onclick="showPage('piano')" style="flex:1;padding:10px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><span style="font-size:20px;">📋</span>Piano</button>
+    <button class="nav-btn active" onclick="showPage('oggi')" style="flex:1;padding:8px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><div style="background:transparent;border-radius:14px;padding:5px 16px;transition:background .2s;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></div>Oggi</button>
+    <button class="nav-btn" onclick="showPage('integratori')" style="flex:1;padding:8px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><div style="background:transparent;border-radius:14px;padding:5px 16px;transition:background .2s;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 4.5a4.95 4.95 0 0 1 7 7l-7 7a4.95 4.95 0 0 1-7-7l7-7Z"/><path d="M7 7l10 10"/></svg></div>Integratori</button>
+    <button class="nav-btn" onclick="showPage('storico')" style="flex:1;padding:8px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><div style="background:transparent;border-radius:14px;padding:5px 16px;transition:background .2s;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8M9 21V4M15 21v-9M21 21V14"/></svg></div>Storico</button>
+    <button class="nav-btn" onclick="showPage('piano')" style="flex:1;padding:8px 0 6px;border:none;border-top:2px solid transparent;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;cursor:pointer;color:var(--t3);transition:all .2s;"><div style="background:transparent;border-radius:14px;padding:5px 16px;transition:background .2s;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>Piano</button>
   </nav>
 </div>
 
@@ -1599,10 +1622,12 @@ function showPage(id){
   // Aggiorna entrambe le nav (top e bottom)
   document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
   const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
+  bottomBtns.forEach(b=>{ const pill=b.querySelector('div'); if(pill) pill.style.background='transparent'; });
   if(bottomBtns[idx]){
     bottomBtns[idx].classList.add('active');
     bottomBtns[idx].style.color='var(--acc)';
     bottomBtns[idx].style.borderTopColor='var(--acc)';
+    const pill=bottomBtns[idx].querySelector('div'); if(pill) pill.style.background='var(--acc-lt)';
   }
   renderPage(id);
 }
@@ -1721,9 +1746,50 @@ function zonaBalance(cons) {
   </div>${legend}`;
 }
 
+const SLOT_STYLE = {
+  colazione:        { color:'var(--carb)', light:'var(--carb-lt)' },
+  snack_mattina:    { color:'var(--fat)',  light:'var(--fat-lt)'  },
+  pranzo:           { color:'var(--prot)', light:'var(--prot-lt)' },
+  snack_pomeriggio: { color:'var(--fat)',  light:'var(--fat-lt)'  },
+  cena:             { color:'var(--acc)',  light:'var(--acc-lt)'  },
+};
 function mealCardHTML(m){
   const mealId = m.id||m.local_id;
-  const inner = `<div class="meal-card"><div style="flex:1;min-width:0;"><p class="meal-desc">${esc(m.description)}</p>${m.notes?`<p class="meal-note">${esc(m.notes)}</p>`:''}<div class="meal-macros"><span class="meal-macro" style="color:var(--t2)"><b style="color:var(--t1)">${m.kcal}</b> kcal</span><span class="meal-macro" style="color:var(--carb)"><b>${m.carbs}g</b> C</span><span class="meal-macro" style="color:var(--prot)"><b>${m.protein}g</b> P</span><span class="meal-macro" style="color:var(--fat)"><b>${m.fat}g</b> G</span><input type="time" value="${m.time?m.time.slice(0,5):''}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:70px;padding:2px 0;" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/></div></div><button class="meal-del" style="font-size:16px;" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button></div>`;
+  const slotInfo = MEAL_SLOTS.find(s=>s.id===m.slot)||MEAL_SLOTS[0];
+  const ss = SLOT_STYLE[m.slot] || { color:'var(--acc)', light:'var(--acc-lt)' };
+  const inner = `<div class="meal-card-v2">
+    <div class="slot-bar" style="background:${ss.color};"></div>
+    <div class="meal-body">
+      <div class="meal-header">
+        <div class="meal-slot-lbl">
+          <span style="font-size:13px;">${slotInfo.icon}</span>
+          <span style="color:${ss.color};">${slotInfo.label}</span>
+        </div>
+        <input type="time" value="${m.time?m.time.slice(0,5):''}" class="meal-time-inp" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/>
+      </div>
+      <p class="meal-desc-v2">${esc(m.description)}</p>
+      ${m.notes?`<p class="meal-note-v2">${esc(m.notes)}</p>`:''}
+      <div class="macro-badges">
+        <div class="macro-badge" style="background:var(--s2);border:1px solid var(--b1);">
+          <div class="mb-lbl" style="color:var(--t3);">kcal</div>
+          <div class="mb-val">${m.kcal}</div>
+        </div>
+        <div class="macro-badge" style="background:var(--carb-lt);border:1px solid var(--carb)33;">
+          <div class="mb-lbl" style="color:var(--carb);">C</div>
+          <div class="mb-val">${m.carbs}<span>g</span></div>
+        </div>
+        <div class="macro-badge" style="background:var(--prot-lt);border:1px solid var(--prot)33;">
+          <div class="mb-lbl" style="color:var(--prot);">P</div>
+          <div class="mb-val">${m.protein}<span>g</span></div>
+        </div>
+        <div class="macro-badge" style="background:var(--fat-lt);border:1px solid var(--fat)33;">
+          <div class="mb-lbl" style="color:var(--fat);">G</div>
+          <div class="mb-val">${m.fat}<span>g</span></div>
+        </div>
+      </div>
+    </div>
+    <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button>
+  </div>`;
   return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="deleteMeal('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
 }
 
@@ -1752,7 +1818,13 @@ function renderOggi(){
   <div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Segna digiuno'}</button></div>`;
 
   if(perfect) {
-    html+=`<div class="badge-perfetto"><div class="badge-icon">🏆</div><div><div class="badge-text">Giorno Perfetto!</div><div class="badge-sub">Tutti i macro centrati — ottimo lavoro, ${ST.profile?.first_name||'campione'}!</div></div></div>`;
+    const tot=cons.protein+cons.carbs+cons.fat||1;
+    const pP=Math.round(cons.protein*4/(cons.protein*4+cons.carbs*4+cons.fat*9)*100);
+    const pC=Math.round(cons.carbs*4/(cons.protein*4+cons.carbs*4+cons.fat*9)*100);
+    const pG=100-pP-pC;
+    const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
+    const confettiHTML=[0,1,2,3,4,5,6,7].map(i=>`<div class="badge-confetti" style="left:${8+i*12}%;animation-delay:${(i*0.18).toFixed(2)}s;background:${confettiColors[i%4]};"></div>`).join('');
+    html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati 40·30·30</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
   }
 
   if(day.fasting){
@@ -2015,7 +2087,11 @@ function renderStorico(){
   if(rangeDays.length>0){
     html+=`<div class="card card-green"><span class="lbl">Report — ${ST.reportRange} giorni (${rangeDays.length} con pasti)</span><div class="report-grid"><div class="report-cell"><div class="report-val" style="color:var(--acc)">${avgKcal}</div><div class="report-lbl">kcal media/giorno</div></div><div class="report-cell"><div class="report-val" style="color:${adherence>=70?'var(--ok)':adherence>=40?'var(--warn)':'var(--err)'}">${adherence}%</div><div class="report-lbl">aderenza piano</div></div><div class="report-cell"><div class="report-val" style="color:var(--prot)">${avgProt}g</div><div class="report-lbl">proteine medie</div></div><div class="report-cell"><div class="report-val" style="color:var(--carb)">${avgCarbs}g</div><div class="report-lbl">carbo medi</div></div></div>
     <div style="background:var(--s2);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--b1);"><div><div style="font-size:11px;color:var(--t3);margin-bottom:4px;">Costo integratori stimato (${ST.reportRange} gg)</div><div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--warn);">€ ${estCost.toFixed(2)}</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--t3);">Mensile stimato</div><div style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:600;">€ ${totalMonthlyCost().toFixed(2)}</div></div></div>
-    ${chartDays.length>1?`<div style="margin-top:14px;"><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:6px;letter-spacing:1px;">ANDAMENTO CALORIE PASTI</div><div class="mini-chart">${chartDays.map(d=>{const k=mealTotals(ST.db.days[d]?.meals||[]).kcal;const h=Math.round((k/maxKcal)*55)+5;const col=ST.db.days[d]?.fasting?'var(--b1)':k>ST.TARGET.kcal?'var(--err)':k>0?'var(--acc)':'var(--s3)';return `<div class="mini-bar-wrap"><div class="mini-bar" style="height:${h}px;background:${col};"></div><div class="mini-bar-lbl">${new Date(d+'T12:00:00').getDate()}</div></div>`;}).join('')}</div></div>`:''}
+    ${chartDays.length>1?(()=>{
+      const H=100;
+      const targetY=Math.round((1-(ST.TARGET.kcal/maxKcal))*H);
+      return `<div style="margin-top:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">ANDAMENTO CALORIE</div><div style="display:flex;gap:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);"><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--acc);border-radius:1px;display:inline-block;"></span>in target</span><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--fat);border-radius:1px;display:inline-block;"></span>sopra</span></div></div><div style="position:relative;height:${H}px;margin-bottom:4px;"><div style="position:absolute;left:0;right:0;top:${targetY}px;border-top:1px dashed var(--t3);opacity:.6;"><span style="position:absolute;right:0;top:-12px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);background:var(--s1);padding:0 3px;">${ST.TARGET.kcal}</span></div><div style="display:flex;align-items:flex-end;gap:4px;height:${H}px;">${chartDays.map(d=>{const k=mealTotals(ST.db.days[d]?.meals||[]).kcal;const h=k>0?Math.max(4,Math.round((k/maxKcal)*H)):0;const fasting=ST.db.days[d]?.fasting;const col=fasting?'var(--b1)':k>ST.TARGET.kcal?'var(--fat)':k>0?'var(--acc)':'var(--s3)';const lbl=new Date(d+'T12:00:00').getDate();return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:${H}px;justify-content:flex-end;position:relative;" title="${k?k+' kcal':fasting?'digiuno':'—'}"><div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;background:${col};transition:opacity .15s;"></div></div>`;}).join('')}</div></div><div style="display:flex;gap:4px;">${chartDays.map(d=>`<div style="flex:1;text-align:center;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${new Date(d+'T12:00:00').getDate()}</div>`).join('')}</div></div>`;
+    })():''}
     </div>`;
   }
 
