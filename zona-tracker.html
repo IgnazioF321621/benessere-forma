@@ -1799,6 +1799,8 @@ function mealCardHTML(m){
 // ═══════════════════════════════════════════════════════════
 // PAGE: OGGI
 // ═══════════════════════════════════════════════════════════
+const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
+const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
 function renderOggi(){
   const day=getDay(ST.activeDay);
   const meals=day.meals||[];
@@ -1843,12 +1845,13 @@ function renderOggi(){
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
     if(actSupps.length){
-      html+=`<div class="card"><span class="lbl">🌿 Integratori di oggi</span><p style="font-size:12px;color:var(--t3);margin-bottom:10px;">Tocca per segnare come assunti</p>`;
+      html+=`<div class="card"><span class="lbl">🌿 Integratori di oggi</span>`;
       suppSlots.forEach(slot=>{
         const ss=actSupps.filter(s=>s.slot===slot);
-        html+=`<div class="supp-group-label">⏰ ${slot}</div><div class="supp-pills">`;
-        ss.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
-        html+=`</div>`;
+        const slotIdx=[...new Set(actSupps.map(x=>x.slot))].sort().indexOf(slot);
+        const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[slotIdx>=0?slotIdx%SLOT_PAL.length:0];
+        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>`;
+        ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
       });
       html+=`</div>`;
     }
@@ -1885,8 +1888,8 @@ function renderOggi(){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
-          ev.supps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div>`;
+          ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
           html+=`</div></div></div></div>`;
         }
         if(isLast) html+=adviceBoxHTML;
@@ -1895,10 +1898,16 @@ function renderOggi(){
       html+=`</div>`;
     } else {
       html+=adviceBoxHTML;
-      html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span><p style="font-size:12px;color:var(--t3);margin-bottom:10px;">Tocca per segnare come assunti</p><div class="supp-pills">`;
-      if(shakeSupps.length){html+=`<div class="supp-group-label">⏰ 06:30 — Shake Mami</div>`;shakeSupps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});}
-      otherSlots.forEach(slot=>{const ss=otherSupps.filter(s=>s.slot===slot);html+=`<div class="supp-group-label">⏰ ${slot}</div>`;ss.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});});
-      html+=`</div></div>`;
+      html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
+      if(shakeSupps.length){html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${SLOT_COLOR_MAP['06:30']};font-weight:600;margin:8px 0 4px;">⏰ 06:30</div>`;shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
+      otherSlots.forEach(slot=>{
+        const ss=otherSupps.filter(s=>s.slot===slot);
+        const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
+        const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
+        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>`;
+        ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+      });
+      html+=`</div>`;
     }
   }
 
@@ -1948,8 +1957,6 @@ function renderIntegratori(){
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Altro integratore</button></div></div>`;
 
-  const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
-  const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
   const slotKeys=Object.keys(bySlot).sort();
   slotKeys.forEach(slot=>{
     const ss=bySlot[slot];
@@ -2685,6 +2692,65 @@ function liveMultiplierUpdate(id, newMult) {
   if (costEl) { const mc=suppMonthlyCost(s); costEl.innerHTML=`€ <span style="font-weight:600;color:var(--t2);">${(mc/30).toFixed(2)}</span>/oggi · <span style="font-size:9px;">${(mc/30*7).toFixed(2)}/sett · ${mc.toFixed(2)}/mese</span>`; }
   _suppSlotUpdate(s.slot);
   _suppBannerUpdate();
+}
+
+// ── OGGI INLINE SUPP EDITING ──────────────────────────────
+function oggiSuppCardHTML(s, taken) {
+  const on = taken.includes(s.local_id);
+  const allSlots = [...new Set(ST.supps.filter(x=>x.active).map(x=>x.slot))].sort();
+  const slotIdx = allSlots.indexOf(s.slot);
+  const slotColor = SLOT_COLOR_MAP[s.slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
+  const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
+  const chips = [
+    `<span style="${cs}background:#e8e8e8;color:#333;">${s.kcal||0}kcal</span>`,
+    `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
+    `<span style="${cs}background:#fde8d0;color:#a0490a;">${s.carbs||0}g C</span>`,
+    `<span style="${cs}background:#fff3cd;color:#7a5500;">${s.fat||0}g G</span>`,
+  ].join('');
+  const slotOpts = allSlots.map(sl=>`<option value="${sl}"${sl===s.slot?' selected':''}>${sl}</option>`).join('');
+  const doseVal = s.dose_die != null ? parseFloat(s.dose_die)||1 : 1;
+  return `<div style="background:var(--s1);border:1px solid var(--b2);border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+      <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;border:2px solid ${slotColor};background:${on?slotColor:'transparent'};cursor:pointer;transition:background .15s;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"></span>
+      <span style="font-weight:600;font-size:0.88rem;color:${on?'var(--t3)':'var(--t1)'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${on?'text-decoration:line-through;':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">${esc(s.name)}</span>
+      <select style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--b2);border:1px solid var(--b3);border-radius:4px;padding:1px 3px;color:var(--t2);max-width:58px;" onchange="setSuppSlotOggi('${s.local_id}',this.value)" onclick="event.stopPropagation()">${slotOpts}</select>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <input type="number" value="${doseVal}" step="0.5" min="0.5" style="width:46px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:2px 4px;background:var(--s1);color:var(--t1);text-align:center;" oninput="liveDoseUpdateOggi('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
+      <span id="oggi-pills-${s.local_id}" style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">${chips}</span>
+      <button onclick="saveOggiSupp('${s.local_id}');event.stopPropagation();" style="margin-left:auto;font-size:11px;background:var(--acc);color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;font-weight:700;">✓</button>
+    </div>
+  </div>`;
+}
+
+function liveDoseUpdateOggi(id, val) {
+  liveDoseUpdate(id, val);
+  // aggiorna chips nella card oggi se la tab integratori non è aperta
+  const el = document.getElementById('oggi-pills-'+id);
+  if (el) {
+    const s = ST.supps.find(s=>s.local_id===id);
+    if (!s) return;
+    const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
+    el.innerHTML = [
+      `<span style="${cs}background:#e8e8e8;color:#333;">${s.kcal||0}kcal</span>`,
+      `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
+      `<span style="${cs}background:#fde8d0;color:#a0490a;">${s.carbs||0}g C</span>`,
+      `<span style="${cs}background:#fff3cd;color:#7a5500;">${s.fat||0}g G</span>`,
+    ].join('');
+  }
+}
+
+function setSuppSlotOggi(id, newSlot) {
+  const s = ST.supps.find(s=>s.local_id===id);
+  if (s) { s.slot = newSlot; renderOggi(); }
+}
+
+function saveOggiSupp(id) {
+  const s = ST.supps.find(s=>s.local_id===id);
+  if (!s) return;
+  dbUpdateSupp(id, {dose_die: s.dose_die, slot: s.slot});
+  saveCache();
+  showToast('Salvato','✓');
 }
 
 // ── CATALOG MODAL ─────────────────────────────────────────
