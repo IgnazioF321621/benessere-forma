@@ -1838,7 +1838,7 @@ function renderIntegratori(){
   const filtered=ST.suppFilter==='all'?supps:supps.filter(s=>s.slot===ST.suppFilter);
   const bySlot={};filtered.forEach(s=>{if(!bySlot[s.slot])bySlot[s.slot]=[];bySlot[s.slot].push(s);});
 
-  let html=`<div class="cost-banner"><div><div class="cost-main">€ ${monthly.toFixed(2)}</div><div class="cost-sub">${actCount} integratori attivi — costo mensile stimato</div></div><div class="cost-right"><div class="cost-per">€ ${(monthly/30).toFixed(2)}/giorno</div><div class="cost-per">€ ${(monthly*12).toFixed(0)}/anno</div></div></div>
+  let html=`<div style="display:flex;align-items:center;gap:10px;padding:10px 4px;margin-bottom:4px;flex-wrap:wrap;"><span style="font-size:16px;">💊</span><span style="font-size:13px;font-weight:700;color:var(--t1);">Integratori attivi</span><span style="font-size:12px;color:var(--t3);">${actCount} prodotti</span><span style="font-size:12px;color:var(--t3);">·</span><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);">€${monthly.toFixed(2)}/mese</span></div>
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Altro integratore</button></div></div>`;
 
@@ -1882,7 +1882,7 @@ function renderIntegratori(){
       const doseUnitCurrent = s.dose_unit || doseUnitDefault;
       const doseVal = s.dose_die != null ? s.dose_die : (catItem?.dose_die || '');
       const doseMultiplier = s.dose_multiplier != null ? s.dose_multiplier : 1;
-      const doseUnitOptions = ['unità','gr','cps','stick','barretta','misurino'];
+      const doseUnitOptions = ['cps','stick','barretta','misurino'];
       if(!doseUnitOptions.includes(doseUnitCurrent)) doseUnitOptions.unshift(doseUnitCurrent);
       const doseUnitSelect = `<select class="macro-cell-inp" style="font-size:11px;padding:2px 4px;" onchange="updateSupp('${s.local_id}','dose_unit',this.value)">${doseUnitOptions.map(u=>`<option value="${u}"${u===doseUnitCurrent?' selected':''}>${u}</option>`).join('')}</select>`;
       const macroCells = [
