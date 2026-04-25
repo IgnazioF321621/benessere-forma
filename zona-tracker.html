@@ -1846,11 +1846,12 @@ function renderOggi(){
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
     if(actSupps.length){
       html+=`<div class="card"><span class="lbl">🌿 Integratori di oggi</span>`;
-      suppSlots.forEach(slot=>{
+      suppSlots.forEach((slot,_si)=>{
         const ss=actSupps.filter(s=>s.slot===slot);
         const slotIdx=[...new Set(actSupps.map(x=>x.slot))].sort().indexOf(slot);
         const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[slotIdx>=0?slotIdx%SLOT_PAL.length:0];
-        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>`;
+        const hint=(_si===0&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>${hint}`;
         ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
       });
       html+=`</div>`;
@@ -1880,6 +1881,7 @@ function renderOggi(){
     if(tlEvents.length){
       const nPasti = tlEvents.filter(e=>e.type==='meal').length;
       html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span class="lbl" style="margin:0;">📅 Timeline di oggi</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;background:var(--acc-lt);border-radius:20px;padding:2px 10px;">${nPasti} ${nPasti===1?'pasto':'pasti'}</span></div>`;
+      let _firstSuppGroup=true;
       tlEvents.forEach((ev, evIdx)=>{
         const isLast = evIdx === tlEvents.length - 1;
         const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;opacity:0.3;"></div>` : '';
@@ -1888,7 +1890,9 @@ function renderOggi(){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div>`;
+          const hint=(_firstSuppGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+          _firstSuppGroup=false;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div>${hint}<div>`;
           ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
           html+=`</div></div></div></div>`;
         }
@@ -1899,12 +1903,20 @@ function renderOggi(){
     } else {
       html+=adviceBoxHTML;
       html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
-      if(shakeSupps.length){html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${SLOT_COLOR_MAP['06:30']};font-weight:600;margin:8px 0 4px;">⏰ 06:30</div>`;shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
+      let _emptyFirstGroup=true;
+      if(shakeSupps.length){
+        const hint=(_emptyFirstGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+        _emptyFirstGroup=false;
+        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${SLOT_COLOR_MAP['06:30']};font-weight:600;margin:8px 0 4px;">⏰ 06:30</div>${hint}`;
+        shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+      }
       otherSlots.forEach(slot=>{
         const ss=otherSupps.filter(s=>s.slot===slot);
         const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
         const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
-        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>`;
+        const hint=(_emptyFirstGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+        _emptyFirstGroup=false;
+        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>${hint}`;
         ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
       });
       html+=`</div>`;
@@ -2701,18 +2713,25 @@ function oggiSuppCardHTML(s, taken) {
   const slotIdx = allSlots.indexOf(s.slot);
   const slotColor = SLOT_COLOR_MAP[s.slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
   const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
+  // Fix 2: order kcal → C → P → G
   const chips = [
     `<span style="${cs}background:#e8e8e8;color:#333;">${s.kcal||0}kcal</span>`,
-    `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
     `<span style="${cs}background:#fde8d0;color:#a0490a;">${s.carbs||0}g C</span>`,
+    `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
     `<span style="${cs}background:#fff3cd;color:#7a5500;">${s.fat||0}g G</span>`,
   ].join('');
   const slotOpts = allSlots.map(sl=>`<option value="${sl}"${sl===s.slot?' selected':''}>${sl}</option>`).join('');
   const doseVal = s.dose_die != null ? parseFloat(s.dose_die)||1 : 1;
-  return `<div style="background:var(--s1);border:1px solid var(--b2);border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;">
+  // Fix 1: opacity+bg when taken, no strikethrough/color change on name
+  const cardStyle = on ? 'opacity:0.5;background:rgba(0,0,0,0.04);' : 'background:var(--s1);';
+  // Fix 4: dot → ✓ verde when taken
+  const dot = on
+    ? `<span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;background:#22a559;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:#fff;font-weight:700;line-height:1;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">✓</span>`
+    : `<span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;border:2px solid ${slotColor};background:transparent;cursor:pointer;transition:background .15s;display:inline-block;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"></span>`;
+  return `<div style="${cardStyle}border:1px solid var(--b2);border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;transition:opacity .2s,background .2s;">
     <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
-      <span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;border:2px solid ${slotColor};background:${on?slotColor:'transparent'};cursor:pointer;transition:background .15s;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"></span>
-      <span style="font-weight:600;font-size:0.88rem;color:${on?'var(--t3)':'var(--t1)'};flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${on?'text-decoration:line-through;':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">${esc(s.name)}</span>
+      ${dot}
+      <span style="font-weight:600;font-size:0.88rem;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">${esc(s.name)}</span>
       <select style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--b2);border:1px solid var(--b3);border-radius:4px;padding:1px 3px;color:var(--t2);max-width:58px;" onchange="setSuppSlotOggi('${s.local_id}',this.value)" onclick="event.stopPropagation()">${slotOpts}</select>
     </div>
     <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
@@ -2733,8 +2752,8 @@ function liveDoseUpdateOggi(id, val) {
     const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
     el.innerHTML = [
       `<span style="${cs}background:#e8e8e8;color:#333;">${s.kcal||0}kcal</span>`,
-      `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
       `<span style="${cs}background:#fde8d0;color:#a0490a;">${s.carbs||0}g C</span>`,
+      `<span style="${cs}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
       `<span style="${cs}background:#fff3cd;color:#7a5500;">${s.fat||0}g G</span>`,
     ].join('');
   }
