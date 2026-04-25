@@ -1070,7 +1070,8 @@ function r2(x){return Math.round(x*100)/100;}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){
   const multiplier = s.dose_multiplier != null ? parseFloat(s.dose_multiplier) : 1;
-  return (s.price&&s.doses) ? (s.price/s.doses)*30*multiplier : 0;
+  const doseDie    = s.dose_die        != null ? parseFloat(s.dose_die)        : 1;
+  return (s.price&&s.doses) ? (s.price/s.doses)*doseDie*multiplier*30 : 0;
 }
 function suppUnitFromConfezione(confezione, linea) {
   if (!confezione) return 'unità';
