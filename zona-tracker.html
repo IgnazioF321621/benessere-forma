@@ -144,7 +144,6 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
     border-top-color:var(--acc);
   }
   #main{padding-bottom:calc(env(safe-area-inset-bottom)+120px);}
-  .page{padding-bottom:calc(env(safe-area-inset-bottom)+120px);}
   #header #nav{display:none;}
   #bottom-nav{display:flex;}
 }
@@ -153,6 +152,9 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 }
 .page{display:none;padding:18px 16px;}
 .page.active{display:block;}
+@media(max-width:768px){
+  .page{padding-bottom:calc(env(safe-area-inset-bottom)+120px);}
+}
 
 /* ── CARDS & COMMON ── */
 .card{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
