@@ -1929,20 +1929,20 @@ function renderIntegratori(){
       <span style="font-size:12px;font-weight:700;color:var(--t2);letter-spacing:.5px;">RIEPILOGO GIORNALIERO — ${actCount} ATTIVI</span>
     </div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-      <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--acc);">${iMacroKcal} kcal</span>
+      <span id="banner-kcal" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--acc);">${iMacroKcal} kcal</span>
       <span style="color:var(--b2);">·</span>
-      <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${iMacroProt}g prot</span>
+      <span id="banner-prot" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${iMacroProt}g prot</span>
       <span style="color:var(--b2);">·</span>
-      <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${iMacroCarb}g carbo</span>
+      <span id="banner-carb" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${iMacroCarb}g carbo</span>
       <span style="color:var(--b2);">·</span>
-      <span style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${iMacroFat}g grassi</span>
+      <span id="banner-fat" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${iMacroFat}g grassi</span>
     </div>
     <div style="border-top:1px solid var(--b1);padding-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
-      <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30).toFixed(2)}/oggi</span>
+      <span id="banner-oggi" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30).toFixed(2)}/oggi</span>
       <span style="color:var(--b2);">·</span>
-      <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30*7).toFixed(2)}/sett</span>
+      <span id="banner-sett" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30*7).toFixed(2)}/sett</span>
       <span style="color:var(--b2);">·</span>
-      <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${monthly.toFixed(2)}/mese</span>
+      <span id="banner-mese" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${monthly.toFixed(2)}/mese</span>
     </div>
   </div>
   <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
@@ -1970,7 +1970,7 @@ function renderIntegratori(){
       sv('fat')+'g grassi',
       (slotTot.cost?'€'+r2(slotTot.cost).toFixed(2):'€—')+'/sessione',
     ].join(' · ');
-    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotSummary}</span></div>`;
+    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span id="slot-sum-${slot.replace(/[^a-z0-9]/gi,'_')}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotSummary}</span></div>`;
     ss.forEach(s=>{
       const catItem = ST.catalog.find(c => (s.codice && c.codice === s.codice) || c.nome === s.name || (c.nome||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim());
       // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
@@ -2001,7 +2001,7 @@ function renderIntegratori(){
         return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" data-sid="${s.local_id}" data-key="${suppKey}" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
       }).join('')
       + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:3px;align-items:center;"><input type="number" class="macro-cell-inp" style="width:44px;" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)"/>${doseUnitSelect}${(()=>{ if(doseUnitCurrent!=='misurino') return ''; const conf=catItem?.confezione||''; const mPeso=conf.match(/(\d+(?:[.,]\d+)?)\s*g/i); const mDosi=conf.match(/[≈~(]\s*(\d+)/); if(!mPeso) return ''; const grTot=parseFloat(mPeso[1]); const nDosi=mDosi?parseFloat(mDosi[1]):null; const grPerMisurino=nDosi&&nDosi>0?Math.round(grTot/nDosi*10)/10:grTot; const grTotale=Math.round(grPerMisurino*(parseFloat(doseVal)||1)*10)/10; return `<span style="font-size:10px;color:var(--t3);white-space:nowrap;">=\u00a0${grTotale}\u00a0gr</span>`; })()}</div></div>`
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Moltiplicatore<br><span style="font-size:9px;color:var(--t3);">(0.5 = mezza dose)</span></div><input type="number" class="macro-cell-inp" value="${doseMultiplier}" placeholder="1" step="0.25" min="0.25" max="4" onchange="updateSuppMultiplier('${s.local_id}',+this.value)"/></div>`
+      + `<div class="macro-cell"><div class="macro-cell-lbl">Moltiplicatore<br><span style="font-size:9px;color:var(--t3);">(0.5 = mezza dose)</span></div><input type="number" class="macro-cell-inp" value="${doseMultiplier}" placeholder="1" step="0.25" min="0.25" max="4" oninput="liveMultiplierUpdate('${s.local_id}',+this.value)" onchange="updateSuppMultiplier('${s.local_id}',+this.value)"/></div>`
       + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
       // ── Badge stock ──────────────────────────────────────────────────
       const dosePerDay = (parseFloat(s.dose_die)||1) * (parseFloat(s.dose_multiplier)||1);
@@ -2042,13 +2042,13 @@ function renderIntegratori(){
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
               <div style="display:flex;align-items:center;gap:3px;">
-                <input type="number" style="width:58px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:1px 4px;background:var(--s1);color:var(--t1);text-align:center;" value="${parseFloat(s.dose_die)||1}" step="0.5" min="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
+                <input type="number" style="width:58px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:1px 4px;background:var(--s1);color:var(--t1);text-align:center;" value="${parseFloat(s.dose_die)||1}" step="0.5" min="0.5" oninput="liveDoseUpdate('${s.local_id}',+this.value)" onchange="updateSuppDose('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
                 ${doseUnitSelect}
                 ${doseUnitCurrent==='misurino'&&catItem?.confezione?(()=>{const conf=catItem.confezione;const mP=conf.match(/(\d+(?:[.,]\d+)?)\s*g/i);const mD=conf.match(/[≈~(]\s*(\d+)/);if(!mP)return '';const gPM=mD?Math.round(parseFloat(mP[1])/parseFloat(mD[1])*10)/10:parseFloat(mP[1]);return `<span style="font-size:10px;color:var(--t3);">= ${Math.round(gPM*(parseFloat(s.dose_die)||1)*10)/10} gr</span>`;})():''}
               </div>
-              ${macroPills?`<span style="color:var(--b2);">·</span>${macroPills}`:''}
+              <span id="supp-pills-${s.local_id}">${macroPills?`<span style="color:var(--b2);">·</span>${macroPills}`:''}</span>
               <span style="color:var(--b2);">·</span>
-              <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(suppMonthlyCost(s)/30).toFixed(2)}/oggi · €${(suppMonthlyCost(s)/30*7).toFixed(2)}/sett · €${suppMonthlyCost(s).toFixed(2)}/mese</span>
+              <span id="supp-cost-${s.local_id}" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(suppMonthlyCost(s)/30).toFixed(2)}/oggi · €${(suppMonthlyCost(s)/30*7).toFixed(2)}/sett · €${suppMonthlyCost(s).toFixed(2)}/mese</span>
             </div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
@@ -2595,6 +2595,88 @@ function updateSuppDose(id, newDose){
     dbUpdateSupp(id, {dose_die: newDose, kcal: s.kcal, protein: s.protein, carbs: s.carbs, fat: s.fat});
     saveCache();
   }, 800);
+}
+
+function _suppBannerUpdate() {
+  const acts = ST.supps.filter(s => s.active);
+  const iKcal = acts.reduce((t,s)=>t+(parseFloat(s.kcal)||0),0).toFixed(0);
+  const iProt = acts.reduce((t,s)=>t+(parseFloat(s.protein)||0),0).toFixed(1);
+  const iCarb = acts.reduce((t,s)=>t+(parseFloat(s.carbs)||0),0).toFixed(1);
+  const iFat  = acts.reduce((t,s)=>t+(parseFloat(s.fat)||0),0).toFixed(1);
+  const monthly = totalMonthlyCost();
+  const se = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  se('banner-kcal', iKcal+' kcal');
+  se('banner-prot', iProt+'g prot');
+  se('banner-carb', iCarb+'g carbo');
+  se('banner-fat',  iFat+'g grassi');
+  se('banner-oggi', '€'+(monthly/30).toFixed(2)+'/oggi');
+  se('banner-sett', '€'+(monthly/30*7).toFixed(2)+'/sett');
+  se('banner-mese', '€'+monthly.toFixed(2)+'/mese');
+}
+
+function _suppSlotUpdate(slot) {
+  const slotKey = slot.replace(/[^a-z0-9]/gi,'_');
+  const el = document.getElementById('slot-sum-'+slotKey);
+  if (!el) return;
+  const slotSupps = ST.supps.filter(ss=>ss.slot===slot&&ss.active);
+  const tot = slotSupps.reduce((a,ss)=>{
+    const cat=ST.catalog.find(c=>c.nome===ss.name);
+    return {
+      kcal:  a.kcal  +((ss.kcal    !=null&&ss.kcal   !=='') ? parseFloat(ss.kcal)    : (parseFloat(cat?.kcal)     ||0)),
+      carbs: a.carbs +((ss.carbs   !=null&&ss.carbs  !=='') ? parseFloat(ss.carbs)   : (parseFloat(cat?.carbo)    ||0)),
+      prot:  a.prot  +((ss.protein !=null&&ss.protein!=='') ? parseFloat(ss.protein) : (parseFloat(cat?.proteine) ||0)),
+      fat:   a.fat   +((ss.fat     !=null&&ss.fat    !=='') ? parseFloat(ss.fat)     : (parseFloat(cat?.grassi)   ||0)),
+      cost:  a.cost  +(parseFloat(cat?.costo_dose_partner)||0),
+    };
+  },{kcal:0,carbs:0,prot:0,fat:0,cost:0});
+  const sv=k=>r2(tot[k])||'—';
+  el.textContent=[sv('kcal')+'kcal',sv('carbs')+'g carbo',sv('prot')+'g prot',sv('fat')+'g grassi',(tot.cost?'€'+r2(tot.cost).toFixed(2):'€—')+'/sessione'].join(' · ');
+}
+
+function liveDoseUpdate(id, newDose) {
+  const s = ST.supps.find(s=>s.local_id===id);
+  if (!s || !newDose || newDose <= 0) return;
+  const oldDose = parseFloat(s.dose_die) || 1;
+  newDose = parseFloat(newDose);
+  if (oldDose > 0 && newDose !== oldDose) {
+    const ratio = newDose / oldDose;
+    ['kcal','protein','carbs','fat'].forEach(k=>{
+      const cur = parseFloat(s[k]);
+      if (cur) {
+        const nv = Math.round(cur*ratio*10)/10;
+        s[k] = nv;
+        const inp = document.querySelector(`input[data-sid="${id}"][data-key="${k}"]`);
+        if (inp) inp.value = nv;
+      }
+    });
+  }
+  s.dose_die = newDose;
+  // aggiorna pills
+  const pillsEl = document.getElementById('supp-pills-'+id);
+  if (pillsEl) {
+    const pills = [
+      s.kcal    ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--acc);">${s.kcal}kcal</span>` : '',
+      s.protein ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${s.protein}g P</span>` : '',
+      s.carbs   ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${s.carbs}g C</span>` : '',
+      s.fat     ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${s.fat}g G</span>` : '',
+    ].filter(Boolean).join('<span style="color:var(--b2);margin:0 2px;">·</span>');
+    pillsEl.innerHTML = pills ? `<span style="color:var(--b2);">·</span>${pills}` : '';
+  }
+  // aggiorna costo riga
+  const costEl = document.getElementById('supp-cost-'+id);
+  if (costEl) { const mc=suppMonthlyCost(s); costEl.textContent=`€${(mc/30).toFixed(2)}/oggi · €${(mc/30*7).toFixed(2)}/sett · €${mc.toFixed(2)}/mese`; }
+  _suppSlotUpdate(s.slot);
+  _suppBannerUpdate();
+}
+
+function liveMultiplierUpdate(id, newMult) {
+  const s = ST.supps.find(s=>s.local_id===id);
+  if (!s) return;
+  s.dose_multiplier = Math.max(0.25, Math.min(4, parseFloat(newMult)||1));
+  const costEl = document.getElementById('supp-cost-'+id);
+  if (costEl) { const mc=suppMonthlyCost(s); costEl.textContent=`€${(mc/30).toFixed(2)}/oggi · €${(mc/30*7).toFixed(2)}/sett · €${mc.toFixed(2)}/mese`; }
+  _suppSlotUpdate(s.slot);
+  _suppBannerUpdate();
 }
 
 // ── CATALOG MODAL ─────────────────────────────────────────
