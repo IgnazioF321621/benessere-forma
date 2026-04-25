@@ -114,7 +114,7 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .h-logout{background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:2px;}
 #nav{display:flex;border-top:1px solid var(--b1);}
 .nav-btn{flex:1;padding:11px 0;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);cursor:pointer;transition:all .2s;}
-.nav-btn.active{color:var(--acc);border-bottom-color:var(--acc);}
+.nav-btn.active{color:var(--acc);border-bottom-color:var(--acc);background:var(--acc-lt);border-radius:8px;}
 #main{flex:1;padding-bottom:calc(env(safe-area-inset-bottom)+40px);}
 
 /* ── TAB BAR IN BASSO SU MOBILE ── */
@@ -185,7 +185,7 @@ select.inp{cursor:pointer;}
 .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
 .sum-cell{background:var(--s2);border-radius:10px;padding:10px 4px;text-align:center;border:1px solid var(--b1);display:flex;flex-direction:column;align-items:center;gap:3px;}
 .sum-val{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;}
-.sum-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
+.sum-lbl{font-size:12px;color:var(--t3);margin-top:2px;}
 /* ── SWIPE TO DELETE ── */
 .swipe-wrap{position:relative;overflow:hidden;border-radius:10px;margin-bottom:8px;}
 .swipe-delete-btn{position:absolute;right:0;top:0;bottom:0;width:72px;background:var(--err);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border-radius:0 10px 10px 0;transition:opacity .15s;}
@@ -255,7 +255,7 @@ select.inp{cursor:pointer;}
 .timeline-sub{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:2px;}
 .day-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .day-date{font-size:15px;font-family:'JetBrains Mono',monospace;color:var(--t1);text-align:center;}
-.day-today{font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-align:center;margin-top:1px;}
+.day-today{font-size:13px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-align:center;margin-top:1px;}
 .fast-screen{text-align:center;padding:50px 20px;}
 .fast-icon{font-size:56px;margin-bottom:16px;}
 .loading{display:inline-block;width:11px;height:11px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
@@ -1712,7 +1712,7 @@ function targetRing(consumed, target) {
         <span style="font-size:6px;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1.4;">/ ${target}</span>
       </div>
     </div>
-    <div class="sum-lbl" style="font-size:9px;">kcal · rimangono <span style="color:${remColor};font-weight:700;">${rem}</span></div>
+    <div class="sum-lbl" style="font-size:11px;">kcal · rimangono <span style="color:${remColor};font-weight:700;">${rem}</span></div>
   </div>`;
 }
 
@@ -1814,8 +1814,12 @@ function renderOggi(){
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
   const perfect = isToday && isPerfectDay(cons) && cons.kcal > 800;
 
+  const nowH = new Date();
+  const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
+  const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
+  const timebar = isToday ? `<div style="margin:-4px 0 14px;"><div style="height:5px;border-radius:3px;background:var(--s3);position:relative;overflow:visible;"><div style="height:100%;border-radius:3px;width:${dayPct}%;background:var(--acc);transition:width .5s ease;position:relative;"><span style="position:absolute;right:-1px;top:-10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;white-space:nowrap;">${nowLabel}</span></div></div></div>` : '';
   let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
-  <div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Segna digiuno'}</button></div>`;
+  ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button></div>`;
 
   if(perfect) {
     const tot=cons.protein+cons.carbs+cons.fat||1;
@@ -1831,7 +1835,7 @@ function renderOggi(){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
     // Grafici macro integratori assunti (sempre visibile)
     const remFasting = Math.max(0, ST.TARGET.kcal - sTot.kcal);
-    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(sTot.kcal,ST.TARGET.kcal)}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(sTot)}</div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(sTot.kcal,ST.TARGET.kcal)}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(sTot)}</div>`;
     // Integratori visibili anche in digiuno
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
@@ -1846,7 +1850,7 @@ function renderOggi(){
       html+=`</div>`;
     }
   } else {
-    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(cons.kcal,ST.TARGET.kcal)}${miniRing(mTot.kcal,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(cons)}</div>`;
+    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(cons.kcal,ST.TARGET.kcal)}${miniRing(mTot.kcal,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Carboidrati',cons.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',cons.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',cons.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(cons)}</div>`;
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
     const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
@@ -1869,15 +1873,16 @@ function renderOggi(){
 
     if(tlEvents.length){
       const nPasti = tlEvents.filter(e=>e.type==='meal').length;
-      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span class="lbl" style="margin:0;">📅 Timeline di oggi</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;background:var(--acc-lt);border-radius:20px;padding:2px 10px;">${nPasti} pasto${nPasti!==1?'i':''}</span></div>`;
+      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span class="lbl" style="margin:0;">📅 Timeline di oggi</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;background:var(--acc-lt);border-radius:20px;padding:2px 10px;">${nPasti} ${nPasti===1?'pasto':'pasti'}</span></div>`;
       tlEvents.forEach((ev, evIdx)=>{
         const isLast = evIdx === tlEvents.length - 1;
-        const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;"></div>` : '';
+        const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;opacity:0.3;"></div>` : '';
+        const itemSep = !isLast ? 'padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,0.06);' : '';
         if(ev.type==='meal'){
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div><div style="display:flex;flex-wrap:wrap;gap:5px;">`;
           ev.supps.forEach(s=>{const on=taken.includes(s.local_id);html+=`<span class="supp-pill ${on?'taken':''}" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"><span class="supp-pill-dot"></span>${esc(s.name)}</span>`;});
           html+=`</div></div></div></div>`;
         }
