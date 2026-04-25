@@ -1877,7 +1877,7 @@ function renderOggi(){
       tlEvents.forEach((ev, evIdx)=>{
         const isLast = evIdx === tlEvents.length - 1;
         const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;opacity:0.3;"></div>` : '';
-        const itemSep = !isLast ? 'padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,0.06);' : '';
+        const itemSep = !isLast ? 'padding-bottom:6px;' : '';
         if(ev.type==='meal'){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
