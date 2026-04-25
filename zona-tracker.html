@@ -1876,7 +1876,7 @@ function renderIntegratori(){
       };
       const doseUnitDefault = (() => {
         const n = (s.name||'').toLowerCase();
-        if(n.includes('protein') || n.includes('whey') || n.includes('plant') || n.includes('shake')) return 'gr';
+        if(n.includes('protein') || n.includes('whey') || n.includes('plant') || n.includes('shake')) return 'misurino';
         return suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
       })();
       const doseUnitCurrent = s.dose_unit || doseUnitDefault;
