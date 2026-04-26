@@ -1884,6 +1884,17 @@ function mealCardHTML(m){
           <div class="mb-val">${m.fat}<span>g</span></div>
         </div>
       </div>
+      ${(()=>{
+        const kC=( m.carbs||0)*4, kP=(m.protein||0)*4, kF=(m.fat||0)*9;
+        const tot=kC+kP+kF;
+        if(tot<10) return '';
+        const pC=kC/tot*100, pP=kP/tot*100, pF=kF/tot*100;
+        const inZona=(pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+        const bg=inZona?'#E6F4F2':'#FDECEA';
+        const col=inZona?'#2A7A6F':'#B84C2A';
+        const lbl=inZona?'In Zona':'Fuori Zona';
+        return `<div style="display:flex;justify-content:flex-end;margin-top:6px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;background:${bg};color:${col};border-radius:20px;padding:2px 9px;">${lbl}</span></div>`;
+      })()}
     </div>
     <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button>
   </div>`;
