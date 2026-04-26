@@ -274,6 +274,17 @@ select.inp{cursor:pointer;}
 .tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
 .tag-ok{background:var(--acc-lt);color:var(--acc);}
 
+/* ── SUPP SHEET ── */
+.ss-handle{width:36px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 18px;}
+.ss-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+.ss-mode-card{border:1.5px solid var(--b2);border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s;background:var(--s1);}
+.ss-mode-card.active{border-color:#2A7A6F;background:#E6F4F1;}
+.ss-mode-card .ss-mc-icon{font-size:24px;margin-bottom:6px;}
+.ss-mode-card .ss-mc-title{font-size:13px;font-weight:700;color:var(--t1);font-family:'JetBrains Mono',monospace;}
+.ss-mode-card .ss-mc-sub{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.ss-group-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--b2);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all .15s;background:var(--s1);}
+.ss-group-item.active{border-color:#2A7A6F;background:#E6F4F1;}
+.ss-group-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
 /* ── EDIT MEAL MODAL ── */
 #edit-meal-modal .weight-modal-inner{max-width:480px;width:100%;}
 .edit-meal-field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
@@ -629,6 +640,14 @@ select.inp{cursor:pointer;}
   </div>
 </div>
 
+<!-- SUPP SHEET -->
+<div id="supp-sheet" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeSuppSheet()">
+  <div class="weight-modal-inner" style="max-height:85vh;overflow-y:auto;padding-top:16px;">
+    <div class="ss-handle"></div>
+    <div id="supp-sheet-body"></div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
 
@@ -905,6 +924,7 @@ const ST = {
   catalog: [],
   catalogSelected: [],
   catalogToRemove: [],
+  suppSheet: { mode: null, selGroup: null, singleQuery: '', singleSelId: null, singleDose: 1, singleUnit: 'cps', singleTime: '' },
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1968,7 +1988,7 @@ function renderOggi(){
 
     // Form registra pasto — collassabile
     if(!ST.logOpen) {
-      html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button style="flex:1;padding:10px 12px;border-radius:8px;border:1.5px solid #2A7A6F;background:#fff;color:#2A7A6F;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">+ Registra integratori</button></div>`;
+      html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
     } else {
       html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/><button onclick="ST.logOpen=false;ST.logText='';ST.logError='';renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(2,1fr);max-width:66%;">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="${(()=>{const ph={colazione:'Es. Whey 30g + avena 50g + mirtilli 80g',snack_mattina:'Es. Noci 30g + una mela',pranzo:'Es. Salmone 180g al forno con quinoa 80g e spinaci',snack_pomeriggio:'Es. Mandorle 20g + yogurt di soia',cena:'Es. Branzino 180g al vapore con verdure grigliate'};return ph[ST.logSlot]||'Descrivi cosa hai mangiato...';})()}"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
     }
@@ -2440,8 +2460,182 @@ async function toggleSuppTaken(localId, name){
 }
 
 // ═══════════════════════════════════════════════════════════
+// SUPP SHEET
+// ══════════════════════════════���════════════════════════════
+function openSuppSheet() {
+  const ss = ST.suppSheet;
+  ss.mode = null; ss.selGroup = null; ss.singleQuery = ''; ss.singleSelId = null;
+  ss.singleDose = 1; ss.singleUnit = 'cps';
+  ss.singleTime = new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('supp-sheet').style.display = 'flex';
+  renderSuppSheet();
+}
+function closeSuppSheet() {
+  document.getElementById('supp-sheet').style.display = 'none';
+}
+function setSuppSheetMode(mode) {
+  ST.suppSheet.mode = mode;
+  ST.suppSheet.selGroup = null;
+  renderSuppSheet();
+}
+function setSuppSheetGroup(slot) {
+  ST.suppSheet.selGroup = ST.suppSheet.selGroup === slot ? null : slot;
+  renderSuppSheet();
+}
+function renderSuppSheet() {
+  const ss = ST.suppSheet;
+  const actSupps = activeSupps();
+  const day = getDay(ST.activeDay);
+  const taken = day.suppsTaken || [];
+
+  // Build groups same way as renderOggi
+  const shakeSupps = actSupps.filter(s => s.grp === 'Shake Mami');
+  const otherSupps = actSupps.filter(s => s.grp !== 'Shake Mami');
+  const otherSlots = [...new Set(otherSupps.map(s => s.slot))].sort();
+  const groups = [];
+  if (shakeSupps.length) groups.push({ slot: '06:30', supps: shakeSupps });
+  otherSlots.forEach(sl => groups.push({ slot: sl, supps: otherSupps.filter(s => s.slot === sl) }));
+
+  const allSlots = [...new Set(actSupps.map(x => x.slot))].sort();
+
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+    <div>
+      <div style="font-size:16px;font-weight:800;color:var(--t1);">🌿 Registra integratori</div>
+      <div style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px;">Come vuoi registrare?</div>
+    </div>
+    <button onclick="closeSuppSheet()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--t3);line-height:1;">×</button>
+  </div>
+  <div class="ss-mode-grid">
+    <div class="ss-mode-card${ss.mode==='gruppo'?' active':''}" onclick="setSuppSheetMode('gruppo')">
+      <div class="ss-mc-icon">🗂️</div>
+      <div class="ss-mc-title">Gruppo</div>
+      <div class="ss-mc-sub">Slot preconfigurato</div>
+    </div>
+    <div class="ss-mode-card${ss.mode==='singolo'?' active':''}" onclick="setSuppSheetMode('singolo')">
+      <div class="ss-mc-icon">💊</div>
+      <div class="ss-mc-title">Singolo</div>
+      <div class="ss-mc-sub">Fuori schema</div>
+    </div>
+  </div>`;
+
+  if (ss.mode === 'gruppo') {
+    html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Seleziona gruppo</div>`;
+    if (!groups.length) {
+      html += `<p style="font-size:13px;color:var(--t3);text-align:center;padding:20px 0;">Nessun integratore attivo.</p>`;
+    } else {
+      groups.forEach(g => {
+        const slotIdx = allSlots.indexOf(g.slot);
+        const slotColor = SLOT_COLOR_MAP[g.slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
+        const label = suppGroupLabel(g.supps);
+        const takenN = g.supps.filter(s => taken.includes(s.local_id)).length;
+        const active = ss.selGroup === g.slot;
+        html += `<div class="ss-group-item${active ? ' active' : ''}" onclick="setSuppSheetGroup('${g.slot}')">
+          <div class="ss-group-dot" style="background:${slotColor};"></div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;color:var(--t1);">${esc(label === 'INTEGRATORI' ? g.slot : label)}</div>
+            <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${g.slot} · ${g.supps.length} prodotti · ${takenN}/${g.supps.length} assunti</div>
+          </div>
+          ${active ? '<span style="color:#2A7A6F;font-size:18px;">✓</span>' : ''}
+        </div>`;
+      });
+    }
+    const canConfirm = ss.selGroup !== null;
+    html += `<button class="btn btn-primary btn-full" style="margin-top:14px;" ${canConfirm?'':'disabled'} onclick="confirmSuppGroup()">Conferma registrazione →</button>`;
+  }
+
+  if (ss.mode === 'singolo') {
+    const q = ss.singleQuery.toLowerCase();
+    const results = (ST.catalog || []).filter(c => !q || (c.nome||'').toLowerCase().includes(q)).slice(0, 8);
+    const selItem = ss.singleSelId != null ? (ST.catalog||[]).find(c => c.id === ss.singleSelId) : null;
+    html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Cerca prodotto</div>
+    <input class="inp inp-sm" id="ss-single-q" placeholder="Nome prodotto..." value="${esc(ss.singleQuery)}"
+      oninput="ST.suppSheet.singleQuery=this.value;renderSuppSheet()" style="margin-bottom:10px;"/>`;
+    if (results.length) {
+      html += `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--b2);border-radius:8px;margin-bottom:12px;">`;
+      results.forEach(c => {
+        const sel = ss.singleSelId === c.id;
+        html += `<div onclick="ST.suppSheet.singleSelId=${sel?'null':c.id};renderSuppSheet()" style="padding:8px 12px;cursor:pointer;background:${sel?'#E6F4F1':'transparent'};border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;color:var(--t1);">${esc(c.nome||'')}</span>
+          <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${c.kcal||0} kcal</span>
+        </div>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<p style="font-size:12px;color:var(--t3);margin-bottom:12px;">Nessun risultato.</p>`;
+    }
+    html += `<div style="display:flex;gap:8px;margin-bottom:12px;">
+      <div style="flex:1;"><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Dose</div>
+        <input class="inp inp-sm" type="number" min="0.5" step="0.5" value="${ss.singleDose}" oninput="ST.suppSheet.singleDose=+this.value" style="width:100%;"/></div>
+      <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Unità</div>
+        <select class="inp inp-sm" onchange="ST.suppSheet.singleUnit=this.value">${['cps','g','ml','bustina'].map(u=>`<option value="${u}"${u===ss.singleUnit?' selected':''}>${u}</option>`).join('')}</select></div>
+      <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Orario</div>
+        <input class="inp inp-sm" type="time" value="${ss.singleTime}" onchange="ST.suppSheet.singleTime=this.value" style="width:80px;"/></div>
+    </div>`;
+    const canConfirmSingle = ss.singleSelId != null;
+    html += `<button class="btn btn-primary btn-full" style="margin-top:2px;" ${canConfirmSingle?'':'disabled'} onclick="confirmSuppSingle()">Conferma registrazione →</button>`;
+  }
+
+  html += `<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="closeSuppSheet()">Annulla</button>`;
+  document.getElementById('supp-sheet-body').innerHTML = html;
+  if (ss.mode === 'singolo') {
+    const inp = document.getElementById('ss-single-q');
+    if (inp && document.activeElement !== inp) inp.focus();
+  }
+}
+
+async function confirmSuppGroup() {
+  const ss = ST.suppSheet;
+  if (!ss.selGroup) return;
+  const actSupps = activeSupps();
+  const shakeSupps = actSupps.filter(s => s.grp === 'Shake Mami');
+  const otherSupps = actSupps.filter(s => s.grp !== 'Shake Mami');
+  let groupSupps;
+  if (ss.selGroup === '06:30' && shakeSupps.length) groupSupps = shakeSupps;
+  else groupSupps = otherSupps.filter(s => s.slot === ss.selGroup);
+  const day = getDay(ST.activeDay);
+  const promises = [];
+  for (const s of groupSupps) {
+    if (!day.suppsTaken.includes(s.local_id)) {
+      day.suppsTaken.push(s.local_id);
+      promises.push(dbToggleSuppTaken(ST.activeDay, s.local_id, s.name, true, s.slot || ''));
+    }
+  }
+  await Promise.all(promises);
+  closeSuppSheet();
+  renderOggi();
+  saveCache();
+  showToast(`Gruppo registrato (${groupSupps.length} prodotti)`);
+}
+
+async function confirmSuppSingle() {
+  const ss = ST.suppSheet;
+  if (ss.singleSelId == null) return;
+  const catItem = (ST.catalog || []).find(c => c.id === ss.singleSelId);
+  if (!catItem) return;
+  const name = catItem.nome || '';
+  const slot = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
+  if (supp) {
+    const day = getDay(ST.activeDay);
+    if (!day.suppsTaken.includes(supp.local_id)) {
+      day.suppsTaken.push(supp.local_id);
+      await dbToggleSuppTaken(ST.activeDay, supp.local_id, supp.name, true, supp.slot || '');
+    }
+  } else {
+    await supa.from('supplements_log').upsert(
+      { user_id: ST.user.id, date: ST.activeDay, slot: slot, supplement_name: name },
+      { onConflict: 'user_id,date,slot,supplement_name' }
+    );
+  }
+  closeSuppSheet();
+  renderOggi();
+  saveCache();
+  showToast(`${name} registrato`);
+}
+
+// ════════════════════��════════════════════════════��═════════
 // EDIT MEAL MODAL
-// ═══════════════════════════════════════════════════════════
+// ═════════════════════════════���════════════════════════��════
 let _editMealId = null;
 let _editMealDayKey = null;
 
