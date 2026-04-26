@@ -1378,7 +1378,7 @@ async function loadSupps() {
       fat:     cat?.grassi   ?? 0,
       // dosi e costi dal catalogo
       doses:    cat?.dosi_conf      ?? s.doses    ?? 0,
-      dose_die: cat?.dose_die       ?? s.dose_die ?? 1,
+      dose_die: s.quantity ?? s.dose_die ?? cat?.dose_die ?? 1,
       price:    cat?.prezzo_partner ?? s.price    ?? 0,
       // unità e moltiplicatore dose (personalizzabili dall'utente)
       dose_unit:       s.dose_unit       ?? null,
@@ -2619,7 +2619,7 @@ function updateSuppDose(id, newDose){
   renderIntegratori();
   clearTimeout(s._saveTimer);
   s._saveTimer = setTimeout(() => {
-    dbUpdateSupp(id, {dose_die: newDose, kcal: s.kcal, protein: s.protein, carbs: s.carbs, fat: s.fat});
+    dbUpdateSupp(id, {quantity: newDose, kcal: s.kcal, protein: s.protein, carbs: s.carbs, fat: s.fat});
     saveCache();
   }, 800);
 }
@@ -2766,7 +2766,7 @@ function setSuppSlotOggi(id, newSlot) {
 function saveOggiSupp(id) {
   const s = ST.supps.find(s=>s.local_id===id);
   if (!s) return;
-  dbUpdateSupp(id, {dose_die: s.dose_die, slot: s.slot});
+  dbUpdateSupp(id, {quantity: s.dose_die, slot: s.slot});
   saveCache();
   showToast('Salvato','✓');
 }
