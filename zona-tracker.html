@@ -1957,24 +1957,23 @@ function renderOggi(){
   const shakeSupps=actSupps.filter(s=>s.grp==='Shake Mami');
   const otherSupps=actSupps.filter(s=>s.grp!=='Shake Mami');
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
-  const perfect = isToday && isPerfectDay(cons) && cons.kcal > 800;
-
   const nowH = new Date();
+  const nowHour = nowH.getHours();
+  const zonaOk = (()=>{
+    const tot2=cons.protein+cons.carbs+cons.fat;
+    if(tot2<5) return false;
+    const kP=cons.protein*4,kC=cons.carbs*4,kF=cons.fat*9;
+    const totK=kP+kC+kF||1;
+    const pP=kP/totK*100,pC=kC/totK*100,pF=kF/totK*100;
+    return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+  })();
+  const perfect = isToday && nowHour >= 21 && zonaOk && cons.kcal > 800;
+
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
   const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
   const timebar = isToday ? `<div style="margin:-4px 0 14px;opacity:0.5;"><div style="height:3px;border-radius:3px;background:var(--s3);position:relative;overflow:visible;"><div style="height:100%;border-radius:3px;width:${dayPct}%;background:var(--acc);transition:width .5s ease;position:relative;"><span style="position:absolute;right:-1px;top:-10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;white-space:nowrap;">${nowLabel}</span></div></div></div>` : '';
   let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
   ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button></div>`;
-
-  if(perfect) {
-    const tot=cons.protein+cons.carbs+cons.fat||1;
-    const pP=Math.round(cons.protein*4/(cons.protein*4+cons.carbs*4+cons.fat*9)*100);
-    const pC=Math.round(cons.carbs*4/(cons.protein*4+cons.carbs*4+cons.fat*9)*100);
-    const pG=100-pP-pC;
-    const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
-    const confettiHTML=[0,1,2,3,4,5,6,7].map(i=>`<div class="badge-confetti" style="left:${8+i*12}%;animation-delay:${(i*0.18).toFixed(2)}s;background:${confettiColors[i%4]};"></div>`).join('');
-    html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati 40·30·30</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
-  }
 
   if(day.fasting){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
@@ -2002,6 +2001,14 @@ function renderOggi(){
     }
   } else {
     html+=heroCard(cons);
+
+    if(perfect) {
+      const kP2=cons.protein*4,kC2=cons.carbs*4,kF2=cons.fat*9,totK2=kP2+kC2+kF2||1;
+      const pP=Math.round(kP2/totK2*100),pC=Math.round(kC2/totK2*100),pG=100-pP-pC;
+      const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
+      const confettiHTML=[0,1,2,3,4,5,6,7].map(i=>`<div class="badge-confetti" style="left:${8+i*12}%;animation-delay:${(i*0.18).toFixed(2)}s;background:${confettiColors[i%4]};"></div>`).join('');
+      html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati 40·30·30</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
+    }
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
     const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
