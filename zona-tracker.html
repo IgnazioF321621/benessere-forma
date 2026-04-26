@@ -1999,7 +1999,7 @@ function renderOggi(){
     const suppBySlot={};
     if(shakeSupps.length) suppBySlot['06:30']=shakeSupps;
     otherSlots.forEach(sl=>{suppBySlot[sl]=otherSupps.filter(s=>s.slot===sl);});
-    Object.entries(suppBySlot).forEach(([t,ss])=>{if(ss.length) tlEvents.push({type:'supp',time:t,supps:ss});});
+    Object.entries(suppBySlot).forEach(([t,ss])=>{if(ss.some(s=>taken.includes(s.local_id))) tlEvents.push({type:'supp',time:t,supps:ss});});
     tlEvents.sort((a,b)=>a.time.localeCompare(b.time));
 
     if(tlEvents.length){
@@ -2033,33 +2033,27 @@ function renderOggi(){
       html+=`</div>`;
     } else {
       html+=adviceBoxHTML;
-      html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
-      let _emptyFirstGroup=true;
-      if(shakeSupps.length){
-        const slot='06:30';const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[0];
-        const takenN=shakeSupps.filter(s=>taken.includes(s.local_id)).length;
-        const collapsed=isSuppGroupCollapsed(slot,takenN,shakeSupps.length);
-        html+=suppGroupHeaderHTML(slot,sc,takenN,shakeSupps.length,collapsed,suppGroupLabel(shakeSupps));
-        if(!collapsed){
-          if(_emptyFirstGroup&&taken.length===0) html+=`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`;
-          shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+      const takenShakeN=shakeSupps.filter(s=>taken.includes(s.local_id)).length;
+      const takenOtherSlots=otherSlots.filter(slot=>otherSupps.filter(s=>s.slot===slot).some(s=>taken.includes(s.local_id)));
+      if(takenShakeN>0||takenOtherSlots.length>0){
+        html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
+        if(takenShakeN>0){
+          const slot='06:30';const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[0];
+          const collapsed=isSuppGroupCollapsed(slot,takenShakeN,shakeSupps.length);
+          html+=suppGroupHeaderHTML(slot,sc,takenShakeN,shakeSupps.length,collapsed,suppGroupLabel(shakeSupps));
+          if(!collapsed){shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
         }
-        _emptyFirstGroup=false;
+        takenOtherSlots.forEach(slot=>{
+          const ss=otherSupps.filter(s=>s.slot===slot);
+          const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
+          const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
+          const takenN=ss.filter(s=>taken.includes(s.local_id)).length;
+          const collapsed=isSuppGroupCollapsed(slot,takenN,ss.length);
+          html+=suppGroupHeaderHTML(slot,sc,takenN,ss.length,collapsed,suppGroupLabel(ss));
+          if(!collapsed){ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
+        });
+        html+=`</div>`;
       }
-      otherSlots.forEach(slot=>{
-        const ss=otherSupps.filter(s=>s.slot===slot);
-        const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
-        const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
-        const takenN=ss.filter(s=>taken.includes(s.local_id)).length;
-        const collapsed=isSuppGroupCollapsed(slot,takenN,ss.length);
-        html+=suppGroupHeaderHTML(slot,sc,takenN,ss.length,collapsed,suppGroupLabel(ss));
-        if(!collapsed){
-          if(_emptyFirstGroup&&taken.length===0) html+=`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`;
-          ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
-        }
-        _emptyFirstGroup=false;
-      });
-      html+=`</div>`;
     }
   }
 
