@@ -1827,6 +1827,25 @@ function mealCardHTML(m){
 // ═══════════════════════════════════════════════════════════
 // PAGE: OGGI
 // ═══════════════════════════════════════════════════════════
+function isSuppGroupCollapsed(slot, takenN, total) {
+  const v = localStorage.getItem('fascia_collapsed_' + slot);
+  if (v === '1') return true;
+  if (v === '0') return false;
+  return takenN === total && total > 0; // auto-collassa se tutti assunti
+}
+function toggleSuppGroup(slot) {
+  const taken = (getDay(ST.activeDay).suppsTaken || []);
+  const ss = activeSupps().filter(s => s.slot === slot);
+  const collapsed = isSuppGroupCollapsed(slot, ss.filter(s=>taken.includes(s.local_id)).length, ss.length);
+  localStorage.setItem('fascia_collapsed_' + slot, collapsed ? '0' : '1');
+  renderOggi();
+}
+function suppGroupHeaderHTML(slot, sc, takenN, total, collapsed) {
+  const cc = (takenN===total&&total>0) ? '#1e7a4a' : 'var(--t3)';
+  const fw = (takenN===total&&total>0) ? 700 : 400;
+  const ch = collapsed ? '▶' : '▼';
+  return `<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 2px;margin:4px 0 2px;user-select:none;" onclick="toggleSuppGroup('${slot}')"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;">⏰ ${slot}</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${cc};font-weight:${fw};">${takenN}/${total} assunti</span><span style="font-size:10px;color:var(--t3);">${ch}</span></div></div>`;
+}
 const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
 const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
 function renderOggi(){
@@ -1878,9 +1897,13 @@ function renderOggi(){
         const ss=actSupps.filter(s=>s.slot===slot);
         const slotIdx=[...new Set(actSupps.map(x=>x.slot))].sort().indexOf(slot);
         const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[slotIdx>=0?slotIdx%SLOT_PAL.length:0];
-        const hint=(_si===0&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
-        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>${hint}`;
-        ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+        const takenN=ss.filter(s=>taken.includes(s.local_id)).length;
+        const collapsed=isSuppGroupCollapsed(slot,takenN,ss.length);
+        html+=suppGroupHeaderHTML(slot,sc,takenN,ss.length,collapsed);
+        if(!collapsed){
+          if(_si===0&&taken.length===0) html+=`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`;
+          ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+        }
       });
       html+=`</div>`;
     }
@@ -1918,11 +1941,17 @@ function renderOggi(){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
         } else {
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          const hint=(_firstSuppGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+          const tlTakenN=ev.supps.filter(s=>taken.includes(s.local_id)).length;
+          const tlTotal=ev.supps.length;
+          const tlCollapsed=isSuppGroupCollapsed(ev.time,tlTakenN,tlTotal);
+          const tlCC=(tlTakenN===tlTotal&&tlTotal>0)?'#1e7a4a':'var(--acc)';
+          const tlFW=(tlTakenN===tlTotal&&tlTotal>0)?700:400;
+          const tlCh=tlCollapsed?'▶':'▼';
+          const hint=(_firstSuppGroup&&taken.length===0&&!tlCollapsed)?`<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
           _firstSuppGroup=false;
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/></div>${hint}<div>`;
-          ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
-          html+=`</div></div></div></div>`;
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">INTEGRATORI</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} assunti</span><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
+          if(!tlCollapsed){ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});html+=`</div>`;}
+          html+=`</div></div></div>`;
         }
         if(isLast) html+=adviceBoxHTML;
       });
@@ -1933,19 +1962,28 @@ function renderOggi(){
       html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
       let _emptyFirstGroup=true;
       if(shakeSupps.length){
-        const hint=(_emptyFirstGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+        const slot='06:30';const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[0];
+        const takenN=shakeSupps.filter(s=>taken.includes(s.local_id)).length;
+        const collapsed=isSuppGroupCollapsed(slot,takenN,shakeSupps.length);
+        html+=suppGroupHeaderHTML(slot,sc,takenN,shakeSupps.length,collapsed);
+        if(!collapsed){
+          if(_emptyFirstGroup&&taken.length===0) html+=`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`;
+          shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+        }
         _emptyFirstGroup=false;
-        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${SLOT_COLOR_MAP['06:30']};font-weight:600;margin:8px 0 4px;">⏰ 06:30</div>${hint}`;
-        shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
       }
       otherSlots.forEach(slot=>{
         const ss=otherSupps.filter(s=>s.slot===slot);
         const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
         const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
-        const hint=(_emptyFirstGroup&&taken.length===0)?`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
+        const takenN=ss.filter(s=>taken.includes(s.local_id)).length;
+        const collapsed=isSuppGroupCollapsed(slot,takenN,ss.length);
+        html+=suppGroupHeaderHTML(slot,sc,takenN,ss.length,collapsed);
+        if(!collapsed){
+          if(_emptyFirstGroup&&taken.length===0) html+=`<p style="font-size:11px;color:var(--t3);margin:2px 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`;
+          ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
+        }
         _emptyFirstGroup=false;
-        html+=`<div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;margin:8px 0 4px;">⏰ ${slot}</div>${hint}`;
-        ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
       });
       html+=`</div>`;
     }
