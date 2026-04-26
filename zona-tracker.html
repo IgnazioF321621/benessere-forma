@@ -1339,7 +1339,7 @@ async function loadMeals(date) {
 async function loadAllDays() {
   const {data:meals} = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
   const {data:fasting} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
-  const {data:suppLog} = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
+  const {data:suppLog} = await supa.from('supplements_log').select('date,supplement_name,supplement_id,taken').eq('user_id', ST.user.id);
   
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
@@ -1351,8 +1351,11 @@ async function loadAllDays() {
     ST.db.days[f.date].fasting = true;
   });
   (suppLog||[]).forEach(s => {
+    if(s.taken === false) return; // taken:false = non assunto, non aggiungere alla lista
     if(!ST.db.days[s.date]) ST.db.days[s.date] = {meals:[],fasting:false,suppsTaken:[]};
-    const supp = ST.supps.find(x => x.name === s.supplement_name);
+    const supp = ST.supps.find(x =>
+      (s.supplement_id && x.local_id === s.supplement_id) || x.name === s.supplement_name
+    );
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
   });
@@ -1418,12 +1421,11 @@ async function dbToggleFasting(date, on) {
   else   await supa.from('fasting_days').delete().eq('user_id', ST.user.id).eq('date', date);
 }
 
-async function dbToggleSuppTaken(date, suppName, taken, slot) {
-  if(taken) {
-    await supa.from('supplements_log').upsert({user_id:ST.user.id, date, slot:slot||'', supplement_name:suppName, taken:true}, {onConflict:'user_id,date,slot,supplement_name'});
-  } else {
-    await supa.from('supplements_log').delete().eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
-  }
+async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
+  await supa.from('supplements_log').upsert(
+    {user_id: ST.user.id, supplement_id: suppId, supplement_name: suppName, date, slot: slot||'', taken},
+    {onConflict: 'user_id,supplement_id,date'}
+  );
 }
 
 async function dbUpdateSupp(id, changes) {
@@ -2314,7 +2316,7 @@ async function toggleSuppTaken(localId, name){
   if(taking) d.suppsTaken.push(localId);
   else d.suppsTaken.splice(i,1);
   const supp=ST.supps.find(s=>s.local_id===localId);
-  await dbToggleSuppTaken(ST.activeDay, name, taking, supp?.slot||'');
+  await dbToggleSuppTaken(ST.activeDay, localId, name, taking, supp?.slot||'');
   renderOggi();
   saveCache();
 }
