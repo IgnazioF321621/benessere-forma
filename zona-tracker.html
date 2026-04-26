@@ -2544,8 +2544,8 @@ function renderSuppSheet() {
     const results = (ST.catalog || []).filter(c => !q || (c.nome||'').toLowerCase().includes(q)).slice(0, 8);
     const selItem = ss.singleSelId != null ? (ST.catalog||[]).find(c => c.id === ss.singleSelId) : null;
     html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Cerca prodotto</div>
-    <input class="inp inp-sm" id="ss-single-q" placeholder="Nome prodotto..." value="${esc(ss.singleQuery)}"
-      oninput="ST.suppSheet.singleQuery=this.value;renderSuppSheet()" style="margin-bottom:10px;"/>`;
+    <input class="inp inp-sm" id="ss-single-q" dir="ltr" placeholder="Nome prodotto..." value="${esc(ss.singleQuery)}"
+      oninput="ST.suppSheet.singleQuery=this.value;renderSuppSheet()" style="margin-bottom:10px;direction:ltr;unicode-bidi:normal;"/>`;
     if (results.length) {
       html += `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--b2);border-radius:8px;margin-bottom:12px;">`;
       results.forEach(c => {
