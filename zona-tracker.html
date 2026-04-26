@@ -934,7 +934,7 @@ function todayKey(){return new Date().toISOString().slice(0,10);}
 function fmtDate(k){return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});}
 function J(x){return JSON.parse(JSON.stringify(x));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false,suppsTaken:[]};if(!ST.db.days[key].suppsTaken)ST.db.days[key].suppsTaken=[];return ST.db.days[key];}
+function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};if(!ST.db.days[key].suppsTaken)ST.db.days[key].suppsTaken=[];if(!ST.db.days[key].rawSuppLogs)ST.db.days[key].rawSuppLogs=[];return ST.db.days[key];}
 
 // ═══════════════════════════════════════════════════════════
 // TDEE CALCULATOR
@@ -1458,12 +1458,13 @@ async function loadTodaySuppLog() {
   const today = todayKey();
   const {data, error} = await supa
     .from('supplements_log')
-    .select('supplement_name')
+    .select('supplement_name, slot')
     .eq('user_id', ST.user.id)
     .eq('date', today);
-  if (error || !data) return; // su errore mantieni lo stato locale esistente
+  if (error || !data) return;
   const day = getDay(today);
   day.suppsTaken = [];
+  day.rawSuppLogs = data.map(s => ({name: s.supplement_name, time: s.slot || ''}));
   data.forEach(s => {
     const supp = ST.supps.find(x => x.name === s.supplement_name);
     if (supp && !day.suppsTaken.includes(supp.local_id))
@@ -2001,6 +2002,15 @@ function renderOggi(){
     if(shakeSupps.length) suppBySlot['06:30']=shakeSupps;
     otherSlots.forEach(sl=>{suppBySlot[sl]=otherSupps.filter(s=>s.slot===sl);});
     Object.entries(suppBySlot).forEach(([t,ss])=>{if(ss.some(s=>taken.includes(s.local_id))) tlEvents.push({type:'supp',time:t,supps:ss});});
+    // Voci singole: ogni record in rawSuppLogs che non è coperto dal gruppo di default del prodotto
+    (day.rawSuppLogs||[]).forEach(log=>{
+      const supp=ST.supps.find(s=>s.name===log.name);
+      const coveredByGroup=supp && log.time===(supp.slot||'');
+      if(!coveredByGroup){
+        const catItem=(ST.catalog||[]).find(c=>c.nome===log.name);
+        tlEvents.push({type:'supp_log',time:log.time||'00:00',log,supp,catItem});
+      }
+    });
     tlEvents.sort((a,b)=>a.time.localeCompare(b.time));
 
     if(tlEvents.length){
@@ -2028,6 +2038,13 @@ function renderOggi(){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} ${tlAssuntoLbl}</span><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
           if(!tlCollapsed){ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});html+=`</div>`;}
           html+=`</div></div></div>`;
+        } else if(ev.type==='supp_log'){
+          const src=ev.supp||ev.catItem;
+          const kcal=src?.kcal||0;
+          const prot=Math.round(ev.supp?.protein||ev.catItem?.proteine||0);
+          const logName=esc(ev.log.name);
+          const logTime=esc(ev.log.time);
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><div><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">+ EXTRA</span><div style="font-size:13px;font-weight:600;color:var(--t1);margin-top:2px;">${logName}</div>${kcal?`<div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px;">${kcal} kcal${prot?' · '+prot+'g P':''}</div>`:''}</div><button onclick="deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;padding:4px;" title="Rimuovi">×</button></div></div></div></div>`;
         }
         if(isLast) html+=adviceBoxHTML;
       });
@@ -2582,7 +2599,6 @@ function selectSingleProduct(id) {
     const catItem = (ST.catalog || []).find(c => c.id === id);
     if (catItem) {
       ss.singleUnit = singleUnitFromCatItem(catItem);
-      console.log('[suppSingle] Prodotto selezionato:', catItem.nome, '| unità rilevata:', ss.singleUnit, '| confezione:', catItem.confezione);
     }
   }
   updateSingleResults();
@@ -2623,6 +2639,19 @@ async function refreshTimeline() {
   saveCache();
 }
 
+async function deleteSuppLog(name, time) {
+  const { error } = await supa.from('supplements_log').delete()
+    .eq('user_id', ST.user.id)
+    .eq('date', ST.activeDay)
+    .eq('supplement_name', name)
+    .eq('slot', time);
+  if (error) { console.error('deleteSuppLog error:', error); return; }
+  const day = getDay(ST.activeDay);
+  day.rawSuppLogs = (day.rawSuppLogs||[]).filter(l=>!(l.name===name && l.time===time));
+  renderOggi();
+  saveCache();
+}
+
 async function confirmSuppGroup() {
   const ss = ST.suppSheet;
   if (!ss.selGroup) return;
@@ -2647,56 +2676,25 @@ async function confirmSuppGroup() {
 }
 
 async function confirmSuppSingle() {
-  console.log('[suppSingle] 1 — click Conferma. singleSelId:', ST.suppSheet.singleSelId);
   const ss = ST.suppSheet;
-  if (ss.singleSelId == null) { console.warn('[suppSingle] STOP: nessun prodotto selezionato'); return; }
+  if (ss.singleSelId == null) return;
   const catItem = (ST.catalog || []).find(c => c.id === ss.singleSelId);
-  if (!catItem) { console.warn('[suppSingle] STOP: catItem non trovato per id', ss.singleSelId); return; }
+  if (!catItem) return;
   const name = catItem.nome || '';
   const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-  console.log('[suppSingle] 2 — prodotto:', name, '| time:', time, '| activeDay:', ST.activeDay, '| user_id:', ST.user?.id);
 
-  // Assicura che il prodotto sia in ST.supps (attivo) così loadTodaySuppLog lo trova per nome
-  let supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
-  if (!supp) {
-    console.log('[suppSingle] 3a — prodotto non in ST.supps, creo voce temp');
-    supp = {
-      local_id: 'cat_' + catItem.id,
-      name,
-      kcal:    catItem.kcal     || 0,
-      protein: catItem.proteine || 0,
-      carbs:   catItem.carbo    || 0,
-      fat:     catItem.grassi   || 0,
-      slot:    time,
-      grp:     catItem.grp      || '',
-      active:  true,
-      dose_die: 1,
-      price:   0,
-      doses:   0,
-    };
-    ST.supps.push(supp);
-  } else {
-    console.log('[suppSingle] 3b — prodotto trovato in ST.supps. local_id:', supp.local_id, '| active:', supp.active, '| slot:', supp.slot);
-    if (!supp.active) supp.active = true;
-  }
-  console.log('[suppSingle] 4 — supp.local_id:', supp.local_id, '| day.suppsTaken prima:', [...(getDay(ST.activeDay).suppsTaken||[])]);
-
-  console.log('[suppSingle] 5 — chiamata Supabase upsert con:', { user_id: ST.user?.id, date: ST.activeDay, slot: time, supplement_name: name });
-  const { data: upsertData, error } = await supa.from('supplements_log').upsert(
+  const { error } = await supa.from('supplements_log').upsert(
     { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name },
     { onConflict: 'user_id,date,slot,supplement_name' }
   );
-  console.log('[suppSingle] 6 — risposta Supabase. error:', error, '| data:', upsertData);
   if (error) {
-    console.error('[suppSingle] STOP: errore salvataggio Supabase:', error);
+    console.error('[suppSingle] Errore Supabase:', error);
     showToast('Errore salvataggio — riprova');
     return;
   }
 
-  console.log('[suppSingle] 7 — chiudo sheet, chiamo refreshTimeline');
   closeSuppSheet();
   await refreshTimeline();
-  console.log('[suppSingle] 8 — refreshTimeline completato. day.suppsTaken dopo:', [...(getDay(ST.activeDay).suppsTaken||[])]);
   showToast(`${name} registrato`);
 }
 
