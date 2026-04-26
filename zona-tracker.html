@@ -2618,20 +2618,41 @@ async function confirmSuppSingle() {
   const catItem = (ST.catalog || []).find(c => c.id === ss.singleSelId);
   if (!catItem) return;
   const name = catItem.nome || '';
-  const slot = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-  const supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
-  if (supp) {
-    const day = getDay(ST.activeDay);
-    if (!day.suppsTaken.includes(supp.local_id)) {
-      day.suppsTaken.push(supp.local_id);
-      await dbToggleSuppTaken(ST.activeDay, supp.local_id, supp.name, true, supp.slot || '');
-    }
-  } else {
-    await supa.from('supplements_log').upsert(
-      { user_id: ST.user.id, date: ST.activeDay, slot: slot, supplement_name: name },
-      { onConflict: 'user_id,date,slot,supplement_name' }
-    );
+  const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const day = getDay(ST.activeDay);
+
+  let supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
+  if (!supp) {
+    // Prodotto dal catalogo non ancora nella lista personale: crea voce temporanea in memoria
+    // così la timeline può renderizzarla senza modificare il DB degli integratori utente
+    supp = {
+      local_id: 'cat_' + catItem.id,
+      name,
+      kcal:    catItem.kcal     || 0,
+      protein: catItem.proteine || 0,
+      carbs:   catItem.carbo    || 0,
+      fat:     catItem.grassi   || 0,
+      slot:    time,
+      grp:     catItem.grp      || '',
+      active:  true,
+      dose_die: 1,
+      price:   0,
+      doses:   0,
+    };
+    ST.supps.push(supp);
+  } else if (!supp.active) {
+    supp.active = true;
   }
+
+  if (!day.suppsTaken.includes(supp.local_id)) {
+    day.suppsTaken.push(supp.local_id);
+  }
+
+  await supa.from('supplements_log').upsert(
+    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name },
+    { onConflict: 'user_id,date,slot,supplement_name' }
+  );
+
   closeSuppSheet();
   renderOggi();
   saveCache();
