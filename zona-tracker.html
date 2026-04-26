@@ -1807,15 +1807,44 @@ function heroCard(cons) {
   const r = 77, cx = 85, cy = 85, sw = 10, circ = 2 * Math.PI * r;
   const dash = (displayPct / 100) * circ;
   const ringColor = pct >= 95 && pct <= 105 ? '#2D5016' : pct > 105 ? '#B84C2A' : '#C4880A';
+  const _tot = cons.protein + cons.carbs + cons.fat;
+  const _zona = _tot >= 5 ? (()=>{
+    const kP=cons.protein*4,kC=cons.carbs*4,kF=cons.fat*9,totK=kP+kC+kF||1;
+    const pP=Math.round(kP/totK*100),pC=Math.round(kC/totK*100),pF=Math.round(kF/totK*100);
+    return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+  })() : null;
   let motivMsg, motivColor;
-  if (pct === 0)        { motivMsg = 'Registra il primo pasto';                 motivColor = 'var(--t3)'; }
-  else if (pct <= 25)   { motivMsg = 'Inizia a caricare — hai ancora spazio';   motivColor = 'var(--t2)'; }
-  else if (pct <= 55)   { motivMsg = 'Buona partenza — continua così';           motivColor = 'var(--t2)'; }
-  else if (pct <= 80)   { motivMsg = 'A metà strada — ottimo ritmo';             motivColor = '#C4880A'; }
-  else if (pct <= 94)   { motivMsg = 'Quasi in zona — ultimo sprint';            motivColor = '#C4880A'; }
-  else if (pct <= 105)  { motivMsg = 'Sei in zona! Perfetto ✓';                 motivColor = '#2D5016'; }
-  else if (pct <= 120)  { motivMsg = 'Attenzione — stai superando il target';   motivColor = '#B84C2A'; }
-  else                  { motivMsg = 'Obiettivo superato';                       motivColor = '#B84C2A'; }
+  if (pct === 0) {
+    motivMsg = 'Registra il primo pasto'; motivColor = 'var(--t3)';
+  } else if (pct <= 25) {
+    if (_zona === true)  { motivMsg = 'Inizio in zona — tienici così';         motivColor = '#2A7A6F'; }
+    else if (_zona === false) { motivMsg = 'Parti squilibrato — aggiusta presto'; motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Inizia a caricare — hai ancora spazio'; motivColor = 'var(--t2)'; }
+  } else if (pct <= 55) {
+    if (_zona === true)  { motivMsg = 'Buon ritmo — macro centrati';           motivColor = '#2A7A6F'; }
+    else if (_zona === false) { motivMsg = 'Kcal nella norma, ribilancia i macro'; motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Buona partenza — continua così';        motivColor = 'var(--t2)'; }
+  } else if (pct <= 80) {
+    if (_zona === true)  { motivMsg = 'A metà strada in equilibrio ✓';        motivColor = '#2A7A6F'; }
+    else if (_zona === false) { motivMsg = 'A metà — aggiusta i macro';        motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'A metà strada — ottimo ritmo';          motivColor = '#C4880A'; }
+  } else if (pct <= 94) {
+    if (_zona === true)  { motivMsg = 'Quasi al target, tutto in zona';        motivColor = '#2A7A6F'; }
+    else if (_zona === false) { motivMsg = 'Quasi al target — ribilancia i macro'; motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Quasi in zona — ultimo sprint';         motivColor = '#C4880A'; }
+  } else if (pct <= 105) {
+    if (_zona === true)  { motivMsg = 'In Zona! Macro centrati ✓';            motivColor = '#2A7A6F'; }
+    else if (_zona === false) { motivMsg = 'Kcal ok, ma i macro sono sbilanciati'; motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Sei in zona! Perfetto ✓';              motivColor = '#2D5016'; }
+  } else if (pct <= 120) {
+    if (_zona === true)  { motivMsg = 'Leggermente oltre — macro ok comunque'; motivColor = '#C4880A'; }
+    else if (_zona === false) { motivMsg = 'Stai superando il target — fermati'; motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Attenzione — stai superando il target'; motivColor = '#B84C2A'; }
+  } else {
+    if (_zona === true)  { motivMsg = 'Troppo — anche se i macro reggono';    motivColor = '#B84C2A'; }
+    else if (_zona === false) { motivMsg = 'Fuori controllo — stop';           motivColor = '#B84C2A'; }
+    else                 { motivMsg = 'Obiettivo superato';                    motivColor = '#B84C2A'; }
+  }
   const macroData = [
     { label:'Carbo',  color:'#C4880A', bg:'#FEF3DC', value:cons.carbs,   target:ST.TARGET.carbs },
     { label:'Prot',   color:'#2D5016', bg:'#E6F0DC', value:cons.protein, target:ST.TARGET.protein },
