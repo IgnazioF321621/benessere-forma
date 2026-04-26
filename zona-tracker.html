@@ -1339,8 +1339,9 @@ async function loadMeals(date) {
 async function loadAllDays() {
   const {data:meals} = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
   const {data:fasting} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
-  const {data:suppLog} = await supa.from('supplements_log').select('date,supplement_name,supplement_id,taken').eq('user_id', ST.user.id);
-  
+  // Usa solo le colonne garantite dallo schema originale (date, supplement_name)
+  const {data:suppLog} = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
+
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
     if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[]};
@@ -1350,12 +1351,10 @@ async function loadAllDays() {
     if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[]};
     ST.db.days[f.date].fasting = true;
   });
+  // Presenza del record = assunto (schema originale: delete per rimuovere)
   (suppLog||[]).forEach(s => {
-    if(s.taken === false) return; // taken:false = non assunto, non aggiungere alla lista
     if(!ST.db.days[s.date]) ST.db.days[s.date] = {meals:[],fasting:false,suppsTaken:[]};
-    const supp = ST.supps.find(x =>
-      (s.supplement_id && x.local_id === s.supplement_id) || x.name === s.supplement_name
-    );
+    const supp = ST.supps.find(x => x.name === s.supplement_name);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
   });
@@ -1422,38 +1421,31 @@ async function dbToggleFasting(date, on) {
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
-  const {data: existing} = await supa
-    .from('supplements_log')
-    .select('id')
-    .eq('user_id', ST.user.id)
-    .eq('supplement_id', suppId)
-    .eq('date', date)
-    .maybeSingle();
-  if (existing) {
-    await supa.from('supplements_log').update({taken}).eq('id', existing.id);
+  if (taken) {
+    // Upsert con le colonne originali garantite dallo schema
+    await supa.from('supplements_log').upsert(
+      {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName},
+      {onConflict: 'user_id,date,slot,supplement_name'}
+    );
   } else {
-    await supa.from('supplements_log').insert({
-      user_id: ST.user.id, supplement_id: suppId, supplement_name: suppName,
-      date, slot: slot||'', taken,
-    });
+    // Delete = "non assunto" (schema originale: presenza record = assunto)
+    await supa.from('supplements_log').delete()
+      .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
   }
 }
 
 async function loadTodaySuppLog() {
   const today = todayKey();
-  const {data} = await supa
+  const {data, error} = await supa
     .from('supplements_log')
-    .select('supplement_id,supplement_name,taken')
+    .select('supplement_name')
     .eq('user_id', ST.user.id)
     .eq('date', today);
-  if (!data) return;
+  if (error || !data) return; // su errore mantieni lo stato locale esistente
   const day = getDay(today);
   day.suppsTaken = [];
   data.forEach(s => {
-    if (!s.taken) return;
-    const supp = ST.supps.find(x =>
-      (s.supplement_id && x.local_id === s.supplement_id) || x.name === s.supplement_name
-    );
+    const supp = ST.supps.find(x => x.name === s.supplement_name);
     if (supp && !day.suppsTaken.includes(supp.local_id))
       day.suppsTaken.push(supp.local_id);
   });
@@ -1595,6 +1587,8 @@ async function refreshInBackground() {
     await loadCatalog();  // catalogo prima
     await loadSupps();
     await loadAllDays();
+    // Sovrascrive suppsTaken di oggi con dati freschi PRIMA di renderare
+    await loadTodaySuppLog();
     const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
     if (profile) {
       ST.profile = profile;
