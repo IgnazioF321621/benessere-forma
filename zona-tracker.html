@@ -2023,7 +2023,7 @@ function renderOggi(){
         const itemSep = !isLast ? 'padding-bottom:6px;' : '';
         if(ev.type==='meal'){
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
-        } else {
+        } else if(ev.type==='supp'){
           const suppIds=ev.supps.map(s=>s.local_id).join(',');
           const tlTakenN=ev.supps.filter(s=>taken.includes(s.local_id)).length;
           const tlTotal=ev.supps.length;
