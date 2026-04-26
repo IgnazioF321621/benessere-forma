@@ -1422,10 +1422,41 @@ async function dbToggleFasting(date, on) {
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
-  await supa.from('supplements_log').upsert(
-    {user_id: ST.user.id, supplement_id: suppId, supplement_name: suppName, date, slot: slot||'', taken},
-    {onConflict: 'user_id,supplement_id,date'}
-  );
+  const {data: existing} = await supa
+    .from('supplements_log')
+    .select('id')
+    .eq('user_id', ST.user.id)
+    .eq('supplement_id', suppId)
+    .eq('date', date)
+    .maybeSingle();
+  if (existing) {
+    await supa.from('supplements_log').update({taken}).eq('id', existing.id);
+  } else {
+    await supa.from('supplements_log').insert({
+      user_id: ST.user.id, supplement_id: suppId, supplement_name: suppName,
+      date, slot: slot||'', taken,
+    });
+  }
+}
+
+async function loadTodaySuppLog() {
+  const today = todayKey();
+  const {data} = await supa
+    .from('supplements_log')
+    .select('supplement_id,supplement_name,taken')
+    .eq('user_id', ST.user.id)
+    .eq('date', today);
+  if (!data) return;
+  const day = getDay(today);
+  day.suppsTaken = [];
+  data.forEach(s => {
+    if (!s.taken) return;
+    const supp = ST.supps.find(x =>
+      (s.supplement_id && x.local_id === s.supplement_id) || x.name === s.supplement_name
+    );
+    if (supp && !day.suppsTaken.includes(supp.local_id))
+      day.suppsTaken.push(supp.local_id);
+  });
 }
 
 async function dbUpdateSupp(id, changes) {
@@ -1517,6 +1548,7 @@ async function loadAndStart() {
     // Catalogo e supplements: ricarica SEMPRE da Supabase per avere dati freschi
     await loadCatalog();
     await loadSupps();
+    await loadTodaySuppLog();
     if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
       showScreen('app');
