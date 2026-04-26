@@ -1464,7 +1464,10 @@ async function loadTodaySuppLog() {
   if (error || !data) return;
   const day = getDay(today);
   day.suppsTaken = [];
-  day.rawSuppLogs = data.map(s => ({name: s.supplement_name, time: s.slot || ''}));
+  day.rawSuppLogs = data.map(s => {
+    const supp = ST.supps.find(x => x.name === s.supplement_name);
+    return {name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
+  });
   data.forEach(s => {
     const supp = ST.supps.find(x => x.name === s.supplement_name);
     if (supp && !day.suppsTaken.includes(supp.local_id))
@@ -2041,19 +2044,8 @@ function renderOggi(){
         } else if(ev.type==='supp_log'){
           const logName=esc(ev.log.name);
           const logTime=esc(ev.log.time);
-          // Usa la stessa card dei gruppi; se il prodotto non è in ST.supps crea oggetto sintetico dal catalogo
-          const suppForCard = ev.supp || (ev.catItem ? {
-            local_id: '__extra__' + ev.catItem.id,
-            name: ev.log.name,
-            kcal: ev.catItem.kcal || 0,
-            protein: ev.catItem.proteine || 0,
-            carbs: ev.catItem.carbo || 0,
-            fat: ev.catItem.grassi || 0,
-            slot: ev.log.time,
-            dose_die: 1,
-          } : null);
-          const takenForCard = suppForCard && !taken.includes(suppForCard.local_id) ? [...taken, suppForCard.local_id] : taken;
-          const cardHtml = suppForCard ? oggiSuppCardHTML(suppForCard, takenForCard) : `<div style="font-size:13px;font-weight:600;color:var(--t1);">${logName}</div>`;
+          const logDose = ev.log.dose || parseFloat(ev.supp?.dose_die) || 1;
+          const cardHtml = extraSuppCardHTML(ev.supp, ev.catItem, ev.log.name, ev.log.time, logDose);
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">+ EXTRA</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div><div>${cardHtml}</div></div></div></div>`;
         }
         if(isLast) html+=adviceBoxHTML;
@@ -3096,6 +3088,65 @@ function liveMultiplierUpdate(id, newMult) {
 }
 
 // ── OGGI INLINE SUPP EDITING ──────────────────────────────
+function extraLogKey(name, time) {
+  return (name + '__' + time).replace(/[^a-zA-Z0-9]/g, '_');
+}
+
+function extraSuppCardHTML(supp, catItem, logName, logTime, logDose) {
+  const safeKey = extraLogKey(logName, logTime);
+  const baseDose = parseFloat(supp?.dose_die) || 1;
+  const mult = logDose / baseDose;
+  const kcal  = Math.round((supp?.kcal     || catItem?.kcal     || 0) * mult);
+  const prot  = Math.round((supp?.protein  || catItem?.proteine || 0) * mult);
+  const carbs = Math.round((supp?.carbs    || catItem?.carbo    || 0) * mult);
+  const fat   = Math.round((supp?.fat      || catItem?.grassi   || 0) * mult);
+  const slot  = supp?.slot || logTime;
+  const allSlots = [...new Set(ST.supps.filter(x=>x.active).map(x=>x.slot))].sort();
+  const slotIdx = allSlots.indexOf(slot);
+  const slotColor = SLOT_COLOR_MAP[slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
+  const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
+  const chips = [
+    `<span style="${cs}background:#e8e8e8;color:#333;">${kcal}kcal</span>`,
+    `<span style="${cs}background:#fde8d0;color:#a0490a;">${carbs}g C</span>`,
+    `<span style="${cs}background:#d4edda;color:#1a6b35;">${prot}g P</span>`,
+    `<span style="${cs}background:#fff3cd;color:#7a5500;">${fat}g G</span>`,
+  ].join('');
+  return `<div style="background:#edf7f1;border:1px solid #b6dfc8;border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+      <span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;background:#1e7a4a;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;line-height:1;">✓</span>
+      <span style="font-weight:600;font-size:0.88rem;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(logName)}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+      <input type="number" value="${logDose}" step="0.5" min="0.5" style="width:46px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:2px 4px;background:var(--s1);color:var(--t1);text-align:center;" oninput="updateExtraLogDose('${safeKey}',+this.value)" onclick="event.stopPropagation()"/>
+      <span id="extra-pills-${safeKey}" style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">${chips}</span>
+    </div>
+  </div>`;
+}
+
+function updateExtraLogDose(safeKey, newDose) {
+  if (!newDose || newDose <= 0) return;
+  const day = getDay(ST.activeDay);
+  const log = (day.rawSuppLogs || []).find(l => extraLogKey(l.name, l.time) === safeKey);
+  if (!log) return;
+  log.dose = newDose;
+  const supp = ST.supps.find(s => s.name === log.name);
+  const catItem = (ST.catalog || []).find(c => c.nome === log.name);
+  const baseDose = parseFloat(supp?.dose_die) || 1;
+  const mult = newDose / baseDose;
+  const kcal  = Math.round((supp?.kcal    || catItem?.kcal     || 0) * mult);
+  const prot  = Math.round((supp?.protein || catItem?.proteine || 0) * mult);
+  const carbs = Math.round((supp?.carbs   || catItem?.carbo    || 0) * mult);
+  const fat   = Math.round((supp?.fat     || catItem?.grassi   || 0) * mult);
+  const cs = "font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;";
+  const el = document.getElementById('extra-pills-' + safeKey);
+  if (el) el.innerHTML = [
+    `<span style="${cs}background:#e8e8e8;color:#333;">${kcal}kcal</span>`,
+    `<span style="${cs}background:#fde8d0;color:#a0490a;">${carbs}g C</span>`,
+    `<span style="${cs}background:#d4edda;color:#1a6b35;">${prot}g P</span>`,
+    `<span style="${cs}background:#fff3cd;color:#7a5500;">${fat}g G</span>`,
+  ].join('');
+}
+
 function oggiSuppCardHTML(s, taken) {
   const on = taken.includes(s.local_id);
   const allSlots = [...new Set(ST.supps.filter(x=>x.active).map(x=>x.slot))].sort();
