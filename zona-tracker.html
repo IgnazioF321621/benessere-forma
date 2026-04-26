@@ -2722,16 +2722,15 @@ function oggiSuppCardHTML(s, taken) {
   ].join('');
   const slotOpts = allSlots.map(sl=>`<option value="${sl}"${sl===s.slot?' selected':''}>${sl}</option>`).join('');
   const doseVal = s.dose_die != null ? parseFloat(s.dose_die)||1 : 1;
-  // Fix 1: opacity+bg when taken, no strikethrough/color change on name
-  const cardStyle = on ? 'opacity:0.5;background:rgba(0,0,0,0.04);' : 'background:var(--s1);';
-  // Fix 4: dot → ✓ verde when taken
-  const dot = on
-    ? `<span style="width:16px;height:16px;border-radius:50%;flex-shrink:0;background:#22a559;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:10px;color:#fff;font-weight:700;line-height:1;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">✓</span>`
-    : `<span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;border:2px solid ${slotColor};background:transparent;cursor:pointer;transition:background .15s;display:inline-block;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')"></span>`;
-  return `<div style="${cardStyle}border:1px solid var(--b2);border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;transition:opacity .2s,background .2s;">
+  const cardStyle = on ? 'opacity:0.5;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.08);' : 'background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.08);';
+  // badge orario: verde+✓ se assunto, grigio neutro se no
+  const badge = on
+    ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;background:#1e7a4a;color:#fff;border-radius:5px;padding:2px 6px;white-space:nowrap;cursor:pointer;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">✓ ${s.slot}</span>`
+    : `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;background:#e8e8e8;color:#555;border-radius:5px;padding:2px 6px;white-space:nowrap;cursor:pointer;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">${s.slot}</span>`;
+  return `<div style="${cardStyle}border:1px solid var(--b2);border-radius:8px;border-left:3px solid ${slotColor};padding:8px 10px;margin-bottom:4px;transition:opacity .2s;">
     <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
-      ${dot}
-      <span style="font-weight:600;font-size:0.88rem;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="toggleSuppTaken('${s.local_id}','${esc(s.name)}')">${esc(s.name)}</span>
+      <span style="font-weight:600;font-size:0.88rem;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</span>
+      ${badge}
       <select style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--b2);border:1px solid var(--b3);border-radius:4px;padding:1px 3px;color:var(--t2);max-width:58px;" onchange="setSuppSlotOggi('${s.local_id}',this.value)" onclick="event.stopPropagation()">${slotOpts}</select>
     </div>
     <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
