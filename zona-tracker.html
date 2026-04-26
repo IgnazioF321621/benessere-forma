@@ -2737,9 +2737,8 @@ function oggiSuppCardHTML(s, taken) {
       <select style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--b2);border:1px solid var(--b3);border-radius:4px;padding:1px 3px;color:var(--t2);max-width:58px;" onchange="setSuppSlotOggi('${s.local_id}',this.value)" onclick="event.stopPropagation()">${slotOpts}</select>
     </div>
     <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-      <input type="number" value="${doseVal}" step="0.5" min="0.5" style="width:46px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:2px 4px;background:var(--s1);color:var(--t1);text-align:center;" oninput="liveDoseUpdateOggi('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
+      <input type="number" value="${doseVal}" step="0.5" min="0.5" style="width:46px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:2px 4px;background:var(--s1);color:var(--t1);text-align:center;" oninput="liveDoseUpdateOggi('${s.local_id}',+this.value)" onchange="saveOggiSuppDose('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
       <span id="oggi-pills-${s.local_id}" style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">${chips}</span>
-      <button onclick="saveOggiSupp('${s.local_id}');event.stopPropagation();" style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--acc);color:#fff;border:none;border-radius:5px;padding:2px 8px;cursor:pointer;letter-spacing:.5px;">ok</button>
     </div>
   </div>`;
 }
@@ -2763,7 +2762,21 @@ function liveDoseUpdateOggi(id, val) {
 
 function setSuppSlotOggi(id, newSlot) {
   const s = ST.supps.find(s=>s.local_id===id);
-  if (s) { s.slot = newSlot; renderOggi(); }
+  if (!s) return;
+  s.slot = newSlot;
+  dbUpdateSupp(id, {slot: newSlot});
+  saveCache();
+  renderOggi();
+}
+
+function saveOggiSuppDose(id, newDose) {
+  const s = ST.supps.find(s=>s.local_id===id);
+  if (!s) return;
+  clearTimeout(s._oggiSaveTimer);
+  s._oggiSaveTimer = setTimeout(() => {
+    dbUpdateSupp(id, {quantity: s.dose_die});
+    saveCache();
+  }, 800);
 }
 
 function saveOggiSupp(id) {
