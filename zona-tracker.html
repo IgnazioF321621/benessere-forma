@@ -2590,6 +2590,14 @@ function updateSingleResults() {
   if (btn) btn.disabled = ss.singleSelId == null;
 }
 
+async function refreshTimeline() {
+  if (ST.activeDay === todayKey()) {
+    await loadTodaySuppLog();
+  }
+  renderOggi();
+  saveCache();
+}
+
 async function confirmSuppGroup() {
   const ss = ST.suppSheet;
   if (!ss.selGroup) return;
@@ -2609,8 +2617,7 @@ async function confirmSuppGroup() {
   }
   await Promise.all(promises);
   closeSuppSheet();
-  renderOggi();
-  saveCache();
+  await refreshTimeline();
   showToast(`Gruppo registrato (${groupSupps.length} prodotti)`);
 }
 
@@ -2621,12 +2628,10 @@ async function confirmSuppSingle() {
   if (!catItem) return;
   const name = catItem.nome || '';
   const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-  const day = getDay(ST.activeDay);
 
+  // Assicura che il prodotto sia in ST.supps (attivo) così loadTodaySuppLog lo trova per nome
   let supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
   if (!supp) {
-    // Prodotto dal catalogo non ancora nella lista personale: crea voce temporanea in memoria
-    // così la timeline può renderizzarla senza modificare il DB degli integratori utente
     supp = {
       local_id: 'cat_' + catItem.id,
       name,
@@ -2646,18 +2651,18 @@ async function confirmSuppSingle() {
     supp.active = true;
   }
 
-  if (!day.suppsTaken.includes(supp.local_id)) {
-    day.suppsTaken.push(supp.local_id);
-  }
-
-  await supa.from('supplements_log').upsert(
+  const { error } = await supa.from('supplements_log').upsert(
     { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name },
     { onConflict: 'user_id,date,slot,supplement_name' }
   );
+  if (error) {
+    console.error('[suppSingle] Errore salvataggio Supabase:', error);
+    showToast('Errore salvataggio — riprova');
+    return;
+  }
 
   closeSuppSheet();
-  renderOggi();
-  saveCache();
+  await refreshTimeline();
   showToast(`${name} registrato`);
 }
 
