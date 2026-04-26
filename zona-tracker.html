@@ -2550,7 +2550,7 @@ function renderSuppSheet() {
       <div style="flex:1;"><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Dose</div>
         <input class="inp inp-sm" type="number" min="0.5" step="0.5" value="${ss.singleDose}" oninput="ST.suppSheet.singleDose=+this.value" style="width:100%;"/></div>
       <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Unità</div>
-        <select class="inp inp-sm" onchange="ST.suppSheet.singleUnit=this.value">${['cps','g','ml','bustina'].map(u=>`<option value="${u}"${u===ss.singleUnit?' selected':''}>${u}</option>`).join('')}</select></div>
+        <select class="inp inp-sm" data-role="unit" onchange="ST.suppSheet.singleUnit=this.value">${['cps','g','ml','bustina','barretta'].map(u=>`<option value="${u}"${u===ss.singleUnit?' selected':''}>${u}</option>`).join('')}</select></div>
       <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Orario</div>
         <input class="inp inp-sm" type="time" value="${ss.singleTime}" onchange="ST.suppSheet.singleTime=this.value" style="width:80px;"/></div>
     </div>`;
@@ -2566,6 +2566,31 @@ function renderSuppSheet() {
   }
 }
 
+function singleUnitFromCatItem(catItem) {
+  const raw = suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
+  const norm = { bustine: 'bustina', barrette: 'barretta', cpr: 'cps', tavolette: 'barretta', tavoletta: 'barretta' };
+  const mapped = norm[raw] || raw;
+  const opts = ['cps', 'g', 'ml', 'bustina', 'barretta'];
+  return opts.includes(mapped) ? mapped : 'cps';
+}
+
+function selectSingleProduct(id) {
+  const ss = ST.suppSheet;
+  if (ss.singleSelId === id) { ss.singleSelId = null; }
+  else {
+    ss.singleSelId = id;
+    const catItem = (ST.catalog || []).find(c => c.id === id);
+    if (catItem) {
+      ss.singleUnit = singleUnitFromCatItem(catItem);
+      console.log('[suppSingle] Prodotto selezionato:', catItem.nome, '| unità rilevata:', ss.singleUnit, '| confezione:', catItem.confezione);
+    }
+  }
+  updateSingleResults();
+  // Aggiorna il select unità nel DOM senza re-render completo
+  const unitSel = document.querySelector('#supp-sheet-body select[data-role="unit"]');
+  if (unitSel) unitSel.value = ss.singleUnit;
+}
+
 function updateSingleResults() {
   const ss = ST.suppSheet;
   const q = (ss.singleQuery || '').toLowerCase();
@@ -2575,7 +2600,7 @@ function updateSingleResults() {
     html += `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--b2);border-radius:8px;margin-bottom:12px;">`;
     results.forEach(c => {
       const sel = ss.singleSelId === c.id;
-      html += `<div onclick="ST.suppSheet.singleSelId=${sel?'null':c.id};updateSingleResults()" style="padding:8px 12px;cursor:pointer;background:${sel?'#E6F4F1':'transparent'};border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center;">
+      html += `<div onclick="selectSingleProduct(${c.id})" style="padding:8px 12px;cursor:pointer;background:${sel?'#E6F4F1':'transparent'};border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center;">
         <span style="font-size:13px;color:var(--t1);">${esc(c.nome||'')}</span>
         <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${c.kcal||0} kcal</span>
       </div>`;
@@ -2622,16 +2647,19 @@ async function confirmSuppGroup() {
 }
 
 async function confirmSuppSingle() {
+  console.log('[suppSingle] 1 — click Conferma. singleSelId:', ST.suppSheet.singleSelId);
   const ss = ST.suppSheet;
-  if (ss.singleSelId == null) return;
+  if (ss.singleSelId == null) { console.warn('[suppSingle] STOP: nessun prodotto selezionato'); return; }
   const catItem = (ST.catalog || []).find(c => c.id === ss.singleSelId);
-  if (!catItem) return;
+  if (!catItem) { console.warn('[suppSingle] STOP: catItem non trovato per id', ss.singleSelId); return; }
   const name = catItem.nome || '';
   const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  console.log('[suppSingle] 2 — prodotto:', name, '| time:', time, '| activeDay:', ST.activeDay, '| user_id:', ST.user?.id);
 
   // Assicura che il prodotto sia in ST.supps (attivo) così loadTodaySuppLog lo trova per nome
   let supp = ST.supps.find(s => s.name === name || (s.codice && catItem.codice && s.codice === catItem.codice));
   if (!supp) {
+    console.log('[suppSingle] 3a — prodotto non in ST.supps, creo voce temp');
     supp = {
       local_id: 'cat_' + catItem.id,
       name,
@@ -2647,22 +2675,28 @@ async function confirmSuppSingle() {
       doses:   0,
     };
     ST.supps.push(supp);
-  } else if (!supp.active) {
-    supp.active = true;
+  } else {
+    console.log('[suppSingle] 3b — prodotto trovato in ST.supps. local_id:', supp.local_id, '| active:', supp.active, '| slot:', supp.slot);
+    if (!supp.active) supp.active = true;
   }
+  console.log('[suppSingle] 4 — supp.local_id:', supp.local_id, '| day.suppsTaken prima:', [...(getDay(ST.activeDay).suppsTaken||[])]);
 
-  const { error } = await supa.from('supplements_log').upsert(
+  console.log('[suppSingle] 5 — chiamata Supabase upsert con:', { user_id: ST.user?.id, date: ST.activeDay, slot: time, supplement_name: name });
+  const { data: upsertData, error } = await supa.from('supplements_log').upsert(
     { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name },
     { onConflict: 'user_id,date,slot,supplement_name' }
   );
+  console.log('[suppSingle] 6 — risposta Supabase. error:', error, '| data:', upsertData);
   if (error) {
-    console.error('[suppSingle] Errore salvataggio Supabase:', error);
+    console.error('[suppSingle] STOP: errore salvataggio Supabase:', error);
     showToast('Errore salvataggio — riprova');
     return;
   }
 
+  console.log('[suppSingle] 7 — chiudo sheet, chiamo refreshTimeline');
   closeSuppSheet();
   await refreshTimeline();
+  console.log('[suppSingle] 8 — refreshTimeline completato. day.suppsTaken dopo:', [...(getDay(ST.activeDay).suppsTaken||[])]);
   showToast(`${name} registrato`);
 }
 
