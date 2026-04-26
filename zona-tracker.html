@@ -1851,10 +1851,11 @@ function suppGroupLabel(supps) {
 }
 function suppGroupHeaderHTML(slot, sc, takenN, total, collapsed, label) {
   const lbl = label||'INTEGRATORI';
+  const displayLbl = lbl==='INTEGRATORI' ? lbl : `Gruppo "${lbl}"`;
   const cc = (takenN===total&&total>0) ? '#1e7a4a' : 'var(--t3)';
   const fw = (takenN===total&&total>0) ? 700 : 400;
   const ch = collapsed ? '▶' : '▼';
-  return `<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 2px;margin:4px 0 2px;user-select:none;" onclick="toggleSuppGroup('${slot}')"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;">${lbl} · ${slot}</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${cc};font-weight:${fw};">${takenN}/${total} assunti</span><span style="font-size:10px;color:var(--t3);">${ch}</span></div></div>`;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:6px 2px;margin:4px 0 2px;user-select:none;" onclick="toggleSuppGroup('${slot}')"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:${sc};font-weight:600;">${displayLbl} · ${slot}</span><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${cc};font-weight:${fw};">${takenN}/${total} assunti</span><span style="font-size:10px;color:var(--t3);">${ch}</span></div></div>`;
 }
 const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
 const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
@@ -1957,7 +1958,7 @@ function renderOggi(){
           const tlCC=(tlTakenN===tlTotal&&tlTotal>0)?'#1e7a4a':'var(--acc)';
           const tlFW=(tlTakenN===tlTotal&&tlTotal>0)?700:400;
           const tlCh=tlCollapsed?'▶':'▼';
-          const tlLbl=suppGroupLabel(ev.supps);
+          const tlLbl=(s=>s==='INTEGRATORI'?s:`Gruppo "${s}"`)(suppGroupLabel(ev.supps));
           const hint=(_firstSuppGroup&&taken.length===0&&!tlCollapsed)?`<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
           _firstSuppGroup=false;
           html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} assunti</span><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
