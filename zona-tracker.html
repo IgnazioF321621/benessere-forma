@@ -2520,26 +2520,28 @@ function renderSuppSheet() {
 
   if (ss.mode === 'gruppo') {
     html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Seleziona gruppo</div>`;
+    const pendingGroups = groups.filter(g => g.supps.filter(s => taken.includes(s.local_id)).length === 0);
     if (!groups.length) {
       html += `<p style="font-size:13px;color:var(--t3);text-align:center;padding:20px 0;">Nessun integratore attivo.</p>`;
+    } else if (!pendingGroups.length) {
+      html += `<p style="font-size:13px;color:var(--t3);text-align:center;padding:20px 0;">Tutti i gruppi di oggi sono già stati registrati.</p>`;
     } else {
-      groups.forEach(g => {
+      pendingGroups.forEach(g => {
         const slotIdx = allSlots.indexOf(g.slot);
         const slotColor = SLOT_COLOR_MAP[g.slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
         const label = suppGroupLabel(g.supps);
-        const takenN = g.supps.filter(s => taken.includes(s.local_id)).length;
         const active = ss.selGroup === g.slot;
         html += `<div class="ss-group-item${active ? ' active' : ''}" onclick="setSuppSheetGroup('${g.slot}')">
           <div class="ss-group-dot" style="background:${slotColor};"></div>
           <div style="flex:1;">
             <div style="font-size:13px;font-weight:700;color:var(--t1);">${esc(label === 'INTEGRATORI' ? g.slot : label)}</div>
-            <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${g.slot} · ${g.supps.length} prodotti · ${takenN}/${g.supps.length} assunti</div>
+            <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${g.slot} · ${g.supps.length} prodotti</div>
           </div>
           ${active ? '<span style="color:#2A7A6F;font-size:18px;">✓</span>' : ''}
         </div>`;
       });
     }
-    const canConfirm = ss.selGroup !== null;
+    const canConfirm = ss.selGroup !== null && pendingGroups.some(g => g.slot === ss.selGroup);
     html += `<button class="btn btn-primary btn-full" style="margin-top:14px;" ${canConfirm?'':'disabled'} onclick="confirmSuppGroup()">Conferma registrazione →</button>`;
   }
 
