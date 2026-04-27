@@ -113,12 +113,24 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 
 ### Tab Oggi
 - Navigazione tra giorni passati/oggi
-- Ring progress calorie + barre macro (P/C/G)
-- Card 4 colonne: Target / Pasti / Integratori / Rimanenti
-- Timeline cronologica unificata pasti + integratori
+- Hero ring SVG con calorie e percentuale — colore dinamico: teal `#2A7A6F` se macro In Zona, rosso `#B84C2A` se fuori, ambra se dati insufficienti
+- Label "In Zona / Fuori Zona" dentro il ring sotto la percentuale
+- Frasi motivazionali a due assi: fascia kcal% × stato zona macro (verde/rosso/neutro)
+- Barre macro (P/C/G) con pill percentuale
+- Zona row in fondo all'hero: C% · P% · G% vs 40·30·30 con badge
+- Timeline cronologica unificata pasti + integratori + voci EXTRA
+  - Evento `meal`: card pasto con badge "In Zona / Fuori Zona" per quel pasto
+  - Evento `supp`: gruppo integratori collassabile con orario editabile
+  - Evento `supp_log`: voce EXTRA (integratore preso fuori gruppo) con dose indipendente
 - Registrazione pasto con stima AI dei macro (slot: ☕🥗🫕🥜)
+- Registrazione integratori: flusso Gruppo (spunta da lista) + flusso Singolo (da catalogo, orario libero)
+- Più assunzioni dello stesso integratore in momenti diversi: ogni voce è indipendente nella timeline
 - Suggerimento AI per il pasto successivo ("Analizza e suggerisci")
-- Badge "Giorno Perfetto" se tutti i macro sono centrati
+- Badge "Giorno Perfetto" (gradiente oro, confetti, animazione pop):
+  - Appare sotto l'hero, sopra la timeline
+  - Oggi: solo se orario ≥ 21:00 E macro In Zona E kcal > 800
+  - Giorni passati: se il giorno ha qualificato (flag `day.giornoPerfetto` salvato in cache)
+  - Retroattivo: per giorni passati già qualificati il flag viene impostato al primo accesso
 - Toggle digiuno giornaliero
 - Integratori visibili e spuntabili anche nei giorni di digiuno
 
@@ -151,14 +163,31 @@ git push origin main
 
 GitHub Pages si aggiorna automaticamente dopo il push (1-2 minuti).
 
+## Architettura stato locale (localStorage)
+
+`ST.db.days[YYYY-MM-DD]` contiene per ogni giorno:
+- `meals[]` — pasti registrati
+- `suppsTaken[]` — local_id integratori spuntati (per gruppo)
+- `rawSuppLogs[]` — `{name, time, dose}` per ogni voce in supplements_log (ricaricato da Supabase)
+- `fasting` — boolean digiuno
+- `giornoPerfetto` — boolean, impostato quando badge guadagnato, persiste nei giorni passati
+
+`loadTodaySuppLog()` → ricarica supplements_log da Supabase e ricostruisce `rawSuppLogs` + `suppsTaken` per oggi.
+`refreshTimeline()` → `loadTodaySuppLog()` + `renderOggi()` + `saveCache()`.
+
+### Logica zona macro
+Soglie: Carbo 35–45% · Proteine 25–35% · Grassi 25–35% delle kcal totali.
+Usata in: hero ring color, zona label nel ring, frasi motivazionali, badge pasto, badge Giorno Perfetto.
+Sempre con `Math.round()` prima del confronto per coerenza tra tutti i punti.
+
 ## Prossimi step
 
-- [ ] Testare OTP su iPhone dopo reset rate limit (aspettare ~1 ora dai test del 22/04/2026)
 - [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
 - [ ] Modalità test `?test=1` — completare e verificare il flusso completo
 - [ ] Redesign restante — completare avvicinamento al mockup Claude Design
 - [ ] Distribuzione via Glide — esplorazione futura per altri utenti
 - [ ] Fix backfill macro integratori vecchi (query SQL su supplements con join nutrilite_catalog per codice)
+- [ ] Dose integratore EXTRA non persiste al reload (supplements_log non ha colonna `dose`) — aggiungere `dose numeric default 1` su Supabase
 
 ## Bug noti
 
