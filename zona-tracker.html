@@ -117,37 +117,14 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .nav-btn.active{color:var(--acc);border-bottom-color:var(--acc);background:var(--acc-lt);border-radius:8px;}
 #main{flex:1;padding-bottom:calc(env(safe-area-inset-bottom)+40px);}
 
-/* ── TAB BAR IN BASSO SU MOBILE ── */
+/* ── NAV VISIBILITÀ ── */
 @media(max-width:768px){
-  #nav{
-    position:fixed;
-    bottom:0;left:0;right:0;
-    border-top:1px solid var(--b1);
-    border-bottom:none;
-    background:var(--s1);
-    z-index:300;
-    padding-bottom:env(safe-area-inset-bottom);
-    box-shadow:0 -2px 8px rgba(0,0,0,.07);
-  }
-  .nav-btn{
-    padding:10px 0 8px;
-    border-bottom:none;
-    border-top:2px solid transparent;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:3px;
-    font-size:9px;
-  }
-  .nav-btn.active{
-    border-bottom:none;
-    border-top-color:var(--acc);
-  }
-  #main{padding-bottom:calc(env(safe-area-inset-bottom)+120px);}
-  #header #nav{display:none;}
+  #nav{display:none;}
   #bottom-nav{display:flex;}
+  #main{padding-bottom:calc(env(safe-area-inset-bottom)+120px);}
 }
 @media(min-width:769px){
+  #nav{display:flex;}
   #bottom-nav{display:none;}
 }
 .page{display:none;padding:18px 16px;}
