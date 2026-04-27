@@ -1687,8 +1687,9 @@ function showPage(id){
   document.querySelectorAll('#bottom-nav .nav-btn').forEach(b=>{ b.style.color=''; b.style.borderTopColor=''; });
   document.getElementById('page-'+id).classList.add('active');
   const idx=['oggi','integratori','storico','piano'].indexOf(id);
-  // Top nav active (inline style)
-  document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
+  // Top nav active (inline style overrides the reset)
+  const topBtn=document.querySelectorAll('#nav .nav-btn')[idx];
+  if(topBtn){ topBtn.classList.add('active'); topBtn.style.color='var(--acc)'; topBtn.style.borderBottomColor='var(--acc)'; }
   // Bottom nav active (CSS-driven via .active class)
   const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
