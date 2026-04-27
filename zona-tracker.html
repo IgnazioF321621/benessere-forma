@@ -1157,7 +1157,12 @@ async function callAI(prompt, maxTokens=400) {
 }
 async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
-  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  const r = JSON.parse(txt.replace(/```json|```/g,'').trim());
+  r.kcal    = Math.round(Number(r.kcal)    || 0);
+  r.protein = Math.round(Number(r.protein) || 0);
+  r.carbs   = Math.round(Number(r.carbs)   || 0);
+  r.fat     = Math.round(Number(r.fat)     || 0);
+  return r;
 }
 async function getAdvice(consumed, nextMeal) {
   const rem={kcal:Math.max(0,ST.TARGET.kcal-consumed.kcal),protein:Math.max(0,ST.TARGET.protein-consumed.protein),carbs:Math.max(0,ST.TARGET.carbs-consumed.carbs),fat:Math.max(0,ST.TARGET.fat-consumed.fat)};
@@ -1431,10 +1436,10 @@ async function dbAddMeal(meal) {
     time: meal.time,
     slot: meal.slot,
     description: meal.description,
-    kcal: meal.kcal,
-    protein: meal.protein,
-    carbs: meal.carbs,
-    fat: meal.fat,
+    kcal: Math.round(meal.kcal),
+    protein: Math.round(meal.protein),
+    carbs: Math.round(meal.carbs),
+    fat: Math.round(meal.fat),
     notes: meal.notes || null,
   }).select().single();
   if(error) throw error;
