@@ -1997,6 +1997,8 @@ function renderOggi(){
     return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
   })();
   const perfect = isToday && nowHour >= 21 && zonaOk && cons.kcal > 800;
+  if (perfect && !day.giornoPerfetto) { day.giornoPerfetto = true; saveCache(); }
+  const showPerfetto = perfect || !!day.giornoPerfetto;
 
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
   const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
@@ -2031,7 +2033,7 @@ function renderOggi(){
   } else {
     html+=heroCard(cons);
 
-    if(perfect) {
+    if(showPerfetto) {
       const kP2=cons.protein*4,kC2=cons.carbs*4,kF2=cons.fat*9,totK2=kP2+kC2+kF2||1;
       const pP=Math.round(kP2/totK2*100),pC=Math.round(kC2/totK2*100),pG=100-pP-pC;
       const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
