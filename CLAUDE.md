@@ -192,13 +192,70 @@ Sempre con `Math.round()` prima del confronto per coerenza tra tutti i punti.
 
 ## Prossimi step
 
-- [ ] **Bottom Nav con icone SVG** — 4 tab (Oggi / Integratori / Storico / Piano), design da documento Redesign 2026. Sostituisce la tab bar testuale attuale.
+- [x] **Bottom Nav con icone SVG** — 4 tab (Home / Nutrition / Training / Body) implementata con icone SVG outline/filled
+- [x] **Home dashboard** — ring calorie, macro bar, 3 tile modulo (renderHome() live)
+- [ ] **Sub-nav Nutrition** — tab interna Oggi/Integratori/Storico/Piano visibile quando Nutrition è attiva
+- [ ] **Modulo Training** — lista esercizi, log serie, blocco attivazione, progressione
 - [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
 - [ ] Modalità test `?test=1` — completare e verificare il flusso completo
 - [ ] Redesign restante — completare avvicinamento al mockup Claude Design
 - [ ] Distribuzione via Glide — esplorazione futura per altri utenti
 - [ ] Fix backfill macro integratori vecchi (query SQL su supplements con join nutrilite_catalog per codice)
 - [ ] Dose integratore EXTRA non persiste al reload (supplements_log non ha colonna `dose`) — aggiungere `dose numeric default 1` su Supabase
+
+## Modulo Training
+
+**Split:** Upper/Lower 4 giorni + 2 Active Recovery
+
+| Sessione | Tipo |
+|---|---|
+| Upper A | Forza |
+| Upper B | Ipertrofia |
+| Lower A | Forza |
+| Lower B | Ipertrofia |
+
+**Progressione:** Doppia progressione con RIR (RIR 2 forza · RIR 1 ipertrofia)
+
+**Periodizzazione:** 3 settimane carico + 1 settimana scarico
+
+**Blocco attivazione (5 min obbligatori a inizio sessione):**
+1. Respirazione diaframmatica 360° — 2 min
+2. Vacuum addominale — 2 min
+3. Cat-Cow + rotazione toracica — 1 min
+
+**Attrezzatura disponibile:**
+- Elastici a tubo 10/20/30/40/50 lbs (3 set completi)
+- Barra modulare 130 cm, barra corta, maniglie, cavigliera, attacchi porta
+- Sbarra trazioni, panca regolabile, fitball, tappetino
+
+**Protezioni:** lombari e ginocchia (background nuotatore/pallanuotista)
+
+**Obiettivo circonferenza vita:** da 89 cm a < 85 cm
+
+---
+
+## Navigazione — nuova struttura (aprile 2026)
+
+| Tab | ID pagina | Contenuto |
+|---|---|---|
+| 🏠 Home | `home` | Dashboard con ring calorie + 3 tile modulo |
+| 🌿 Nutrition | `oggi` | Ex tab Oggi/Integratori/Storico/Piano |
+| ⚡ Training | `training` | Modulo allenamento (in sviluppo) |
+| ◐ Body | `body` | Composizione corporea (in sviluppo) |
+
+**Implementazione:**
+- Bottom nav mobile a 4 voci con icone SVG outline/filled
+- Top nav desktop a 4 voci con emoji
+- `showPage(id)` gestisce la navigazione — array `['home','oggi','training','body']`
+- `renderHome()` implementata: ring kcal live da ST + 3 macro bar + 3 tile modulo
+- Tile Nutrition: dati live (kcal, C/P/G, stato zona). Tile Training/Body: placeholder statici
+- Al login l'app apre direttamente Home (non più Oggi)
+
+**Design system applicato:**
+- Font: Manrope (UI) + JetBrains Mono (numeri/label) — già importati
+- Token CSS aggiunti: `--r-sm/md/lg/pill`, `--font-sans`, `--font-mono`
+- Palette: evergreen `#2A7A6F` globale + tinte modulo (Nutrition `#3B6D11`, Training `#185FA5`, Body `#854F0B`)
+- Reference design: bundle Zona_Tracker_Design_System (home-d.jsx → variante D3 Manrope scelta)
 
 ## Bug noti
 
