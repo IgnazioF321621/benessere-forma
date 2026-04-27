@@ -1997,7 +1997,8 @@ function renderOggi(){
     return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
   })();
   const perfect = isToday && nowHour >= 21 && zonaOk && cons.kcal > 800;
-  if (perfect && !day.giornoPerfetto) { day.giornoPerfetto = true; saveCache(); }
+  const qualifies = zonaOk && cons.kcal > 800;
+  if ((perfect || (!isToday && qualifies)) && !day.giornoPerfetto) { day.giornoPerfetto = true; saveCache(); }
   const showPerfetto = perfect || !!day.giornoPerfetto;
 
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
