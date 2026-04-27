@@ -1702,7 +1702,156 @@ function showPage(id){
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
 }
-function renderHome(){}
+function renderHome(){
+  // ── Dati dal giorno corrente (stessa logica di renderOggi) ──
+  const today = todayKey();
+  const day   = getDay(today);
+  const meals = day.meals || [];
+  const taken = day.suppsTaken || [];
+  const mTot  = mealTotals(meals);
+  const sTot  = suppTotalsForIds(taken);
+  const cons  = {
+    kcal:    mTot.kcal    + sTot.kcal,
+    protein: mTot.protein + sTot.protein,
+    carbs:   mTot.carbs   + sTot.carbs,
+    fat:     mTot.fat     + sTot.fat
+  };
+  const target = ST.TARGET || {kcal:2000, protein:150, carbs:200, fat:67};
+
+  // ── Zona check (identica a renderOggi) ──
+  const macroSum = cons.protein + cons.carbs + cons.fat;
+  const hasData  = macroSum >= 5;
+  let zonaOk = false;
+  if (hasData) {
+    const kP=cons.protein*4, kC=cons.carbs*4, kF=cons.fat*9;
+    const totK = kP+kC+kF || 1;
+    const pP=Math.round(kP/totK*100), pC=Math.round(kC/totK*100), pF=Math.round(kF/totK*100);
+    zonaOk = (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+  }
+
+  // ── Ring SVG ──
+  const pctKcal = Math.min(100, Math.round((cons.kcal / target.kcal) * 100));
+  const R = 42, circ = 2 * Math.PI * R;
+  const dash = ((pctKcal / 100) * circ).toFixed(1);
+  const gap  = (circ - dash).toFixed(1);
+  const ringColor = hasData ? (zonaOk ? 'var(--acc)' : 'var(--fat)') : 'var(--warn)';
+
+  // ── Data italiana ──
+  const now = new Date();
+  const DAY_N = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const MON_N = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const dateStr = `${DAY_N[now.getDay()]} ${now.getDate()} ${MON_N[now.getMonth()]}`;
+
+  // ── Zona badge ──
+  const zonaLabel  = !hasData ? '— dati insufficienti' : (zonaOk ? '● In zona' : '○ Fuori zona');
+  const zonaColor  = !hasData ? 'var(--warn)' : (zonaOk ? 'var(--acc)' : 'var(--fat)');
+  const zonaBg     = !hasData ? 'rgba(196,136,10,.10)' : (zonaOk ? 'rgba(42,122,111,.12)' : 'rgba(184,76,42,.10)');
+  const zonaBorder = !hasData ? 'rgba(196,136,10,.25)' : (zonaOk ? 'rgba(42,122,111,.20)' : 'rgba(184,76,42,.20)');
+
+  // ── Helper: macro bar ──
+  function mBar(label, current, tgt, color) {
+    const pct = Math.min(100, Math.round((current / tgt) * 100));
+    return `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;align-items:baseline;">
+          <span style="font-size:11px;color:var(--t2);font-family:var(--font-sans);font-weight:500;">${label}</span>
+          <span style="font-size:11px;color:var(--t1);font-family:var(--font-mono);font-weight:500;">${Math.round(current)}/${tgt}g</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:var(--s3);overflow:hidden;">
+          <div style="height:100%;border-radius:2px;width:${pct}%;background:${color};"></div>
+        </div>
+      </div>`;
+  }
+  const macroBars =
+    mBar('Carboidrati', cons.carbs,   target.carbs,   'var(--carb)') +
+    mBar('Proteine',    cons.protein,  target.protein, 'var(--acc)')  +
+    mBar('Grassi',      cons.fat,      target.fat,     'var(--fat)');
+
+  // ── Helper: tile wrapper ──
+  function tile(ink, body, right, onclick) {
+    const click = onclick ? `onclick="${onclick}"` : '';
+    return `
+      <div ${click} style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;bottom:0;left:0;width:3px;background:${ink};"></div>
+        <div style="flex:1;min-width:0;padding-left:8px;">${body}</div>
+        ${right}
+      </div>`;
+  }
+
+  // ── Helper: tile header ──
+  function tHead(title, sub, ink) {
+    return `
+      <div style="font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.3px;font-family:var(--font-sans);">${title}</div>
+      <div style="font-size:11px;color:${ink};font-family:var(--font-mono);margin-top:2px;">${sub}</div>`;
+  }
+
+  // ── Nutrition tile (dati live) ──
+  const nutrSub  = meals.length ? `${meals.length} pasti · ${zonaOk ? 'tutto in zona' : 'verifica macro'}` : 'Nessun pasto registrato';
+  const badgeOk  = zonaOk && hasData;
+  const nutrBody = `
+    ${tHead('Nutrition', nutrSub, '#3B6D11')}
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px;white-space:nowrap;">
+      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${Math.round(cons.kcal)}</span>
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">/ ${target.kcal} kcal</span>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:7px;">
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--carb);"><b>C</b> <span style="color:var(--t2);">${Math.round(cons.carbs)}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);"><b>P</b> <span style="color:var(--t2);">${Math.round(cons.protein)}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--fat);"><b>G</b> <span style="color:var(--t2);">${Math.round(cons.fat)}g</span></span>
+    </div>`;
+  const nutrRight = `
+    <div style="flex-shrink:0;text-align:center;padding:8px 10px;border-radius:var(--r);min-width:64px;background:${badgeOk?'var(--acc-lt)':'var(--err-lt)'};border:1px solid ${badgeOk?'rgba(42,122,111,.25)':'rgba(184,76,42,.25)'};">
+      <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);font-weight:700;color:${badgeOk?'var(--acc)':'var(--fat)'};">${badgeOk?'● Zona':'○ Off'}</div>
+      <div style="font-size:11px;font-family:var(--font-mono);color:var(--t1);font-weight:700;margin-top:3px;white-space:nowrap;">40·30·30</div>
+    </div>`;
+
+  // ── Training tile (placeholder statico) ──
+  const trainBody = `
+    ${tHead('Training', 'Forza · 5 esercizi · 45 min', '#185FA5')}
+    <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);white-space:nowrap;">Upper A</div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">Da iniziare · RIR 2</div>`;
+  const trainRight = `
+    <div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
+
+  // ── Body tile (placeholder statico) ──
+  const bodyBody = `
+    ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
+    <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;white-space:nowrap;">
+      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">72.6</span>
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">kg</span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);margin-left:4px;font-weight:700;">↓ 0.3</span>
+    </div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">BF 14.4% · Vita 89 cm</div>`;
+  const bodyRight = `<span style="color:var(--t3);font-size:20px;flex-shrink:0;">›</span>`;
+
+  // ── Inject ──
+  document.getElementById('page-home').innerHTML = `
+    <div style="background:linear-gradient(135deg,#fff 0%,var(--acc-lt) 100%);border:1px solid rgba(42,122,111,.25);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span style="font-size:11px;color:var(--t2);font-family:var(--font-mono);">${dateStr} · Oggi</span>
+        <span style="font-size:11px;color:${zonaColor};font-family:var(--font-mono);font-weight:700;background:${zonaBg};border-radius:var(--r-pill);padding:3px 9px;border:1px solid ${zonaBorder};">${zonaLabel}</span>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;">
+        <div style="position:relative;width:100px;height:100px;flex-shrink:0;">
+          <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+            <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--s3)" stroke-width="7"/>
+            <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ringColor}" stroke-width="7" stroke-dasharray="${dash} ${gap}" stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${Math.round(cons.kcal)}</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;line-height:1;">kcal</div>
+            <div style="font-size:10px;color:${ringColor};font-family:var(--font-mono);font-weight:700;line-height:1;margin-top:1px;">${pctKcal}%</div>
+          </div>
+        </div>
+        <div style="flex:1;min-width:0;">${macroBars}</div>
+      </div>
+    </div>
+    <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:2px;">Moduli · oggi</div>
+    ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
+    ${tile('#185FA5', trainBody, trainRight, '')}
+    ${tile('#854F0B', bodyBody,  bodyRight,  '')}
+  `;
+}
 
 function renderPage(id){
   if(id==='home') renderHome();
