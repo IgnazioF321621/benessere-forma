@@ -584,7 +584,8 @@ select.inp{cursor:pointer;}
     </nav>
   </div>
   <div id="main">
-    <div id="page-oggi" class="page active"></div>
+    <div id="page-home" class="page active"><p>Home placeholder</p></div>
+    <div id="page-oggi" class="page"></div>
     <div id="page-integratori" class="page"></div>
     <div id="page-storico" class="page"></div>
     <div id="page-piano" class="page"></div>
@@ -1157,12 +1158,7 @@ async function callAI(prompt, maxTokens=400) {
 }
 async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
-  const r = JSON.parse(txt.replace(/```json|```/g,'').trim());
-  r.kcal    = Math.round(Number(r.kcal)    || 0);
-  r.protein = Math.round(Number(r.protein) || 0);
-  r.carbs   = Math.round(Number(r.carbs)   || 0);
-  r.fat     = Math.round(Number(r.fat)     || 0);
-  return r;
+  return JSON.parse(txt.replace(/```json|```/g,'').trim());
 }
 async function getAdvice(consumed, nextMeal) {
   const rem={kcal:Math.max(0,ST.TARGET.kcal-consumed.kcal),protein:Math.max(0,ST.TARGET.protein-consumed.protein),carbs:Math.max(0,ST.TARGET.carbs-consumed.carbs),fat:Math.max(0,ST.TARGET.fat-consumed.fat)};
@@ -1299,6 +1295,7 @@ async function saveOnboarding() {
     applyProfile(ST.profile);
     showScreen('app');
     renderOggi();
+    showPage('home');
     return;
   }
 
@@ -1436,10 +1433,10 @@ async function dbAddMeal(meal) {
     time: meal.time,
     slot: meal.slot,
     description: meal.description,
-    kcal: Math.round(meal.kcal),
-    protein: Math.round(meal.protein),
-    carbs: Math.round(meal.carbs),
-    fat: Math.round(meal.fat),
+    kcal: meal.kcal,
+    protein: meal.protein,
+    carbs: meal.carbs,
+    fat: meal.fat,
     notes: meal.notes || null,
   }).select().single();
   if(error) throw error;
@@ -1584,6 +1581,7 @@ async function loadAndStart() {
       applyProfile(ST.profile);
       showScreen('app');
       renderOggi();
+      showPage('home');
     } else {
       showScreen('onboarding');
     }
@@ -1602,6 +1600,7 @@ async function loadAndStart() {
     applyProfile(ST.profile);
     showScreen('app');
     renderOggi();
+    showPage('home');
     return;
   }
   ST.profile = profile;
@@ -1610,6 +1609,7 @@ async function loadAndStart() {
     applyProfile(profile);
     showScreen('app');
     renderOggi();
+    showPage('home');
     saveCache();
   } else {
     // Onboarding non completato: crea riga profilo vuota se non esiste
@@ -1691,7 +1691,7 @@ function showPage(id){
   // Reset bottom nav inline styles so CSS takes over
   document.querySelectorAll('#bottom-nav .nav-btn').forEach(b=>{ b.style.color=''; b.style.borderTopColor=''; });
   document.getElementById('page-'+id).classList.add('active');
-  const idx=['oggi','integratori','storico','piano'].indexOf(id);
+  const idx=['home','oggi','integratori','storico','piano'].indexOf(id);
   // Top nav active (inline style overrides the reset)
   const topBtn=document.querySelectorAll('#nav .nav-btn')[idx];
   if(topBtn){ topBtn.classList.add('active'); topBtn.style.color='var(--acc)'; topBtn.style.borderBottomColor='var(--acc)'; }
@@ -1700,8 +1700,11 @@ function showPage(id){
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
 }
+function renderHome(){}
+
 function renderPage(id){
-  if(id==='oggi') renderOggi();
+  if(id==='home') renderHome();
+  else if(id==='oggi') renderOggi();
   else if(id==='integratori') renderIntegratori();
   else if(id==='storico') renderStorico();
   else if(id==='piano') renderPiano();
