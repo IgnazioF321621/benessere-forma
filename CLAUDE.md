@@ -103,6 +103,16 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 - `supplements_log` — tracciamento assunzioni giornaliere per data e nome integratore
 - `fasting_days` — giorni di digiuno per user_id
 
+## Cosa abbiamo fatto (cronologia sessioni)
+
+### Aprile 2026 — Tab Oggi completa
+- **Hero ring colore zona**: il ring SVG cambia colore in base ai macro cumulativi del giorno — verde `#2A7A6F` se tutti e tre i macro sono In Zona (C 35–45% · P 25–35% · G 25–35%), rosso `#B84C2A` se almeno uno è fuori, ambra `#C4880A` se dati insufficienti. Scritta "In Zona" / "Fuori Zona" dentro il ring sotto la percentuale kcal.
+- **Frase motivante dinamica**: a due assi (fascia kcal% × stato zona). Ogni fascia ha una variante verde (In Zona) e una rossa (Fuori Zona), con colore del testo coerente. Se i macro sono insufficienti, frase neutra.
+- **Badge zona su singola meal card**: ogni card pasto mostra un pill "In Zona" / "Fuori Zona" basato sui macro di quel pasto (sfondo #E6F4F2/#FDECEA).
+- **Badge Giorno Perfetto**: gradiente oro `#FFD700→#FFA500`, trofeo 🏆 48px, titolo 22px bold, macro pill, 8 coriandoli CSS in loop, animazione pop 550ms. Trigger: orario ≥ 21:00 + macro cumulativi In Zona + kcal > 800. Persiste nei giorni passati tramite flag `day.giornoPerfetto` in cache locale (retroattivo: si imposta al primo accesso se il giorno qualifica).
+- **Timeline multi-entry integratori**: ogni assunzione in `supplements_log` è una voce indipendente nella timeline (`rawSuppLogs`). Un integratore preso più volte al giorno compare più volte. Dose per voce EXTRA indipendente dal gruppo.
+- **Flusso Singolo integratori**: registra da catalogo a orario libero, compare in timeline come `+ EXTRA`.
+
 ## Funzionalità implementate
 
 ### Auth
@@ -182,6 +192,7 @@ Sempre con `Math.round()` prima del confronto per coerenza tra tutti i punti.
 
 ## Prossimi step
 
+- [ ] **Bottom Nav con icone SVG** — 4 tab (Oggi / Integratori / Storico / Piano), design da documento Redesign 2026. Sostituisce la tab bar testuale attuale.
 - [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
 - [ ] Modalità test `?test=1` — completare e verificare il flusso completo
 - [ ] Redesign restante — completare avvicinamento al mockup Claude Design
