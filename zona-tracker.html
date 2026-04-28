@@ -200,12 +200,6 @@ select.inp{cursor:pointer;}
 .slot-tab.active{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:700;}
 .supp-card{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);}
 .supp-card.inactive{opacity:.55;}
-
-/* ── NUTRITION SUB-NAV ── */
-.nutrition-subnav{display:flex;gap:8px;padding:12px 16px 4px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg,#F5F3EE);z-index:10;}
-.nutrition-subnav::-webkit-scrollbar{display:none;}
-.nsn-pill{flex-shrink:0;padding:6px 16px;border-radius:999px;font-family:var(--font-sans,'Manrope',sans-serif);font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--s2);color:var(--t2);transition:background .15s,color .15s;}
-.nsn-pill.active{background:var(--acc);color:#fff;}
 .supp-name-inp{background:none;border:none;color:var(--t1);font-size:14px;font-family:'Syne',sans-serif;font-weight:600;width:100%;padding:0;}
 .supp-name-inp:focus{outline:none;}
 .supp-slot-inp{background:var(--acc-lt);border:none;color:var(--acc);font-size:10px;font-family:'JetBrains Mono',monospace;border-radius:4px;padding:2px 7px;width:58px;}
@@ -1701,9 +1695,7 @@ function showPage(id){
   // Reset bottom nav inline styles so CSS takes over
   document.querySelectorAll('#bottom-nav .nav-btn').forEach(b=>{ b.style.color=''; b.style.borderTopColor=''; });
   document.getElementById('page-'+id).classList.add('active');
-  // integratori/storico/piano sono sub-pagine di Nutrition → usa 'oggi' come riferimento nav
-  const navId=['integratori','storico','piano'].includes(id)?'oggi':id;
-  const idx=['home','oggi','training','body'].indexOf(navId);
+  const idx=['home','oggi','training','body'].indexOf(id);
   // Top nav active (inline style overrides the reset)
   const topBtn=document.querySelectorAll('#nav .nav-btn')[idx];
   if(topBtn){ topBtn.classList.add('active'); topBtn.style.color='var(--acc)'; topBtn.style.borderBottomColor='var(--acc)'; }
@@ -1863,7 +1855,26 @@ function renderHome(){
   `;
 }
 
-function renderTraining(){}
+function renderTraining(){
+  const subnav = ST.trainTab || 'sessione';
+  const tabs = [
+    { id:'sessione',    label:'Sessione' },
+    { id:'piano',       label:'Piano' },
+    { id:'progressione',label:'Progressione' },
+  ];
+  const navHTML = `<nav class="nutrition-subnav">
+    ${tabs.map(t => `<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';renderTraining();">${t.label}</button>`).join('')}
+  </nav>`;
+  let body = '';
+  if(subnav === 'sessione'){
+    body = `<div style="padding:16px;"><p style="color:var(--t3);font-size:13px;font-family:var(--font-mono);">Sessione — in arrivo</p></div>`;
+  } else if(subnav === 'piano'){
+    body = `<div style="padding:16px;"><p style="color:var(--t3);font-size:13px;font-family:var(--font-mono);">Piano settimanale — in arrivo</p></div>`;
+  } else {
+    body = `<div style="padding:16px;"><p style="color:var(--t3);font-size:13px;font-family:var(--font-mono);">Progressione — in arrivo</p></div>`;
+  }
+  document.getElementById('page-training').innerHTML = navHTML + body;
+}
 function renderBody(){}
 
 function renderPage(id){
@@ -2315,7 +2326,7 @@ function renderOggi(){
   }
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-oggi').innerHTML='<nav class="nutrition-subnav"><button class="nsn-pill active" onclick="showPage(\'oggi\')">Oggi</button><button class="nsn-pill" onclick="showPage(\'integratori\')">Integratori</button><button class="nsn-pill" onclick="showPage(\'storico\')">Storico</button><button class="nsn-pill" onclick="showPage(\'piano\')">Piano</button></nav>'+html;
+  document.getElementById('page-oggi').innerHTML=html;
   const ta=document.getElementById('log-text');
   if(ta){ta.value=ST.logText;ta.addEventListener('input',e=>{ST.logText=e.target.value;});}
 }
@@ -2493,7 +2504,7 @@ function renderIntegratori(){
     html+=`</div>`;
   });
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-integratori').innerHTML='<nav class="nutrition-subnav"><button class="nsn-pill" onclick="showPage(\'oggi\')">Oggi</button><button class="nsn-pill active" onclick="showPage(\'integratori\')">Integratori</button><button class="nsn-pill" onclick="showPage(\'storico\')">Storico</button><button class="nsn-pill" onclick="showPage(\'piano\')">Piano</button></nav>'+html;
+  document.getElementById('page-integratori').innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2529,7 +2540,7 @@ function renderStorico(){
   </div>`;}).join('')}`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-storico').innerHTML='<nav class="nutrition-subnav"><button class="nsn-pill" onclick="showPage(\'oggi\')">Oggi</button><button class="nsn-pill" onclick="showPage(\'integratori\')">Integratori</button><button class="nsn-pill active" onclick="showPage(\'storico\')">Storico</button><button class="nsn-pill" onclick="showPage(\'piano\')">Piano</button></nav>'+html;
+  document.getElementById('page-storico').innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2627,7 +2638,7 @@ function renderPiano(){
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-piano').innerHTML='<nav class="nutrition-subnav"><button class="nsn-pill" onclick="showPage(\'oggi\')">Oggi</button><button class="nsn-pill" onclick="showPage(\'integratori\')">Integratori</button><button class="nsn-pill" onclick="showPage(\'storico\')">Storico</button><button class="nsn-pill active" onclick="showPage(\'piano\')">Piano</button></nav>'+html;
+  document.getElementById('page-piano').innerHTML = html;
 }
 
 // ── GENERA PIANO AI ────────────────────────────────────────
