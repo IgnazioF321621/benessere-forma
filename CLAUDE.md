@@ -194,8 +194,8 @@ Sempre con `Math.round()` prima del confronto per coerenza tra tutti i punti.
 
 - [x] **Bottom Nav con icone SVG** — 4 tab (Home / Nutrition / Training / Body) implementata con icone SVG outline/filled
 - [x] **Home dashboard** — ring calorie, macro bar, 3 tile modulo (renderHome() live)
-- [ ] **Sub-nav Nutrition** — tab interna Oggi/Integratori/Storico/Piano visibile quando Nutrition è attiva
-- [ ] **Modulo Training** — lista esercizi, log serie, blocco attivazione, progressione
+- [x] **Sub-nav Nutrition** — pill row Oggi/Integratori/Storico/Piano, sticky in cima, bottom nav resta su Nutrition
+- [ ] **Modulo Training** — prossimo da implementare (lista esercizi, log serie, blocco attivazione, progressione)
 - [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
 - [ ] Modalità test `?test=1` — completare e verificare il flusso completo
 - [ ] Redesign restante — completare avvicinamento al mockup Claude Design
