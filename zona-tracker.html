@@ -2417,11 +2417,11 @@ async function saveBodyLog(){
 }
 
 function renderBody(){
+  if(ST.bodyTab === 'composizione') ST.bodyTab = 'misure';
   const tab = ST.bodyTab || 'misure';
   const tabs = [
-    { id:'misure',       label:'Misure' },
-    { id:'tendenza',     label:'Tendenza' },
-    { id:'composizione', label:'Composizione' },
+    { id:'misure',   label:'Misure' },
+    { id:'tendenza', label:'Tendenza' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
     ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
@@ -2516,6 +2516,41 @@ function renderBody(){
         ${waistProgressHTML}
         ${!wProgressHTML && !waistProgressHTML ? `<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Imposta obiettivo peso nel profilo per vedere il progresso.</div>` : ''}
       </div>
+
+      ${(() => {
+        const cw        = logs[0]?.weight_kg ?? ST.profile?.weight_kg;
+        const ch        = ST.profile?.height_cm;
+        const cbf       = logs[0]?.bf_pct;
+        const cvisceral = logs[0]?.visceral_fat;
+        const cbodyAge  = logs[0]?.body_age;
+        const cbmi      = (cw && ch) ? (cw / ((ch/100)**2)).toFixed(1) : null;
+        const cbmiCat   = cbmi ? (cbmi < 18.5 ? 'Sottopeso' : cbmi < 25 ? 'Normopeso' : cbmi < 30 ? 'Sovrappeso' : 'Obeso') : '';
+        const cbmiCol   = cbmi ? (cbmi < 18.5 ? '#185FA5' : cbmi < 25 ? '#2A7A6F' : cbmi < 30 ? '#854F0B' : '#B84C2A') : '#854F0B';
+        const cfatMass  = (cw && cbf) ? (cw * cbf / 100).toFixed(1) : null;
+        const cleanMass = (cw && cbf) ? (cw * (1 - cbf/100)).toFixed(1) : null;
+        if(!cbmi && !cbf && !cvisceral && !cbodyAge) return '';
+        const cstat = (label, value, unit, color='var(--t1)', sub='') => `
+          <div style="background:var(--s2);border-radius:var(--r);padding:10px 12px;">
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">${label}</div>
+            <div style="display:flex;align-items:baseline;gap:2px;">
+              <span style="font-size:18px;font-weight:700;font-family:var(--font-mono);color:${color};line-height:1;">${value ?? '—'}</span>
+              ${value != null ? `<span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);">${unit}</span>` : ''}
+            </div>
+            ${sub ? `<div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;">${sub}</div>` : ''}
+          </div>`;
+        return `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Composizione</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            ${cstat('BMI', cbmi, '', cbmiCol, cbmiCat)}
+            ${cstat('Body fat', cbf, '%')}
+            ${cstat('Massa magra', cleanMass, 'kg')}
+            ${cstat('Massa grassa', cfatMass, 'kg')}
+            ${cvisceral != null ? cstat('Grasso viscerale', cvisceral, '') : ''}
+            ${cbodyAge  != null ? cstat('Body age', cbodyAge, 'anni') : ''}
+          </div>
+        </div>`;
+      })()}
 
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
         <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Log misure — ${fmtDate(today)}</div>
@@ -2664,46 +2699,6 @@ function renderBody(){
       `;
     }
 
-  } else { // composizione
-    const latest   = logs[0] || {};
-    const w        = latest.weight_kg ?? ST.profile?.weight_kg;
-    const h        = ST.profile?.height_cm;
-    const bf       = latest.bf_pct;
-    const muscle   = latest.muscle_kg;
-    const visceral = latest.visceral_fat;
-    const bodyAge  = latest.body_age;
-
-    const bmi    = (w && h) ? (w / ((h/100)**2)).toFixed(1) : null;
-    const bmiCat = bmi ? (bmi < 18.5 ? 'Sottopeso' : bmi < 25 ? 'Normopeso' : bmi < 30 ? 'Sovrappeso' : 'Obeso') : '';
-    const bmiCol = bmi ? (bmi < 18.5 ? '#185FA5' : bmi < 25 ? '#2A7A6F' : bmi < 30 ? '#854F0B' : '#B84C2A') : '#854F0B';
-    const fatMass  = (w && bf) ? (w * bf / 100).toFixed(1) : null;
-    const leanMass = (w && bf) ? (w * (1 - bf/100)).toFixed(1) : null;
-
-    const stat = (label, value, unit, color='var(--t1)', sub='') => `
-      <div style="background:var(--s2);border-radius:var(--r);padding:12px 14px;">
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${label}</div>
-        <div style="display:flex;align-items:baseline;gap:3px;">
-          <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${color};line-height:1;">${value ?? '—'}</span>
-          ${value != null ? `<span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">${unit}</span>` : ''}
-        </div>
-        ${sub ? `<div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${sub}</div>` : ''}
-      </div>`;
-
-    body = `
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
-        <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">Composizione corporea</div>
-        <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-bottom:14px;">${latest.date ? 'Ultimo log: '+fmtDate(latest.date) : 'Nessun log ancora'}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          ${stat('BMI', bmi, '', bmiCol, bmiCat)}
-          ${stat('Body fat', bf, '%')}
-          ${stat('Massa magra', leanMass, 'kg')}
-          ${stat('Massa grassa', fatMass, 'kg')}
-          ${stat('Grasso viscerale', visceral, '')}
-          ${stat('Body age', bodyAge, 'anni')}
-        </div>
-      </div>
-      ${!bmi && !bf ? `<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-mono);line-height:1.8;">Aggiungi peso + BF% nelle Misure<br>per vedere la composizione calcolata.</div>` : ''}
-    `;
   }
 
   document.getElementById('page-body').innerHTML = navHTML + body;
