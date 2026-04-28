@@ -2405,7 +2405,22 @@ async function saveBodyLog(){
   ST.bodySaving = true;
   renderBody();
 
-  const { error } = await supa.from('body_logs').upsert(payload, { onConflict: 'user_id,date' });
+  // Controlla se esiste già un record per oggi
+  const { data: existing } = await supa.from('body_logs')
+    .select('id')
+    .eq('user_id', ST.user.id)
+    .eq('date', today)
+    .maybeSingle();
+
+  let error;
+  if(existing?.id){
+    const { error: updateErr } = await supa.from('body_logs').update(payload).eq('id', existing.id);
+    error = updateErr;
+  } else {
+    const { error: insertErr } = await supa.from('body_logs').insert(payload);
+    error = insertErr;
+  }
+
   ST.bodySaving = false;
   if(error){ alert('Errore: '+error.message); renderBody(); return; }
 
