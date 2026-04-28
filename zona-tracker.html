@@ -817,6 +817,16 @@ select.inp{cursor:pointer;}
       <textarea id="set-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, affaticamento cronico, sonnolenza post-prandiale..."></textarea>
     </div>
 
+    <!-- Sezione: Training -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Training</div>
+      <div class="onb-field">
+        <label>Data inizio programma</label>
+        <input id="set-train-start" class="inp inp-sm" type="date" placeholder="YYYY-MM-DD"/>
+        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Usata per calcolare la settimana corrente nel ciclo 4 settimane (3 carico + 1 scarico).</div>
+      </div>
+    </div>
+
     <!-- Sezione: Esami del sangue -->
     <div style="margin-bottom:24px;">
       <div class="lbl">Esami del sangue recenti</div>
@@ -4652,6 +4662,7 @@ function openSettingsModal() {
   document.getElementById('set-activity').value = p.activity_level || 'moderate';
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
+  document.getElementById('set-train-start').value = p.train_start_date || '';
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -4757,6 +4768,7 @@ async function saveSettings() {
     intolleranze:  SET_INTOL.length ? SET_INTOL : null,
     note_salute:   document.getElementById('set-note-salute').value.trim() || null,
     esami_sangue:  Object.keys(esami).length ? esami : null,
+    train_start_date: document.getElementById('set-train-start').value || null,
     target_kcal:   targets.kcal,
     target_protein: targets.protein,
     target_carbs:  targets.carbs,
