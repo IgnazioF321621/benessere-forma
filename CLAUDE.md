@@ -38,16 +38,7 @@ Flusso:
 3. Utente inserisce il codice nella PWA → `verifyOtp({ email, token, type: 'email' })`
 4. Login completato direttamente nella PWA, senza uscire dall'app ✅
 
-**Perché OTP e non Magic Link:**
-- I Magic Link aprono il browser di sistema (Safari su iOS), che ha localStorage isolato dalla PWA
-- Su iOS non esiste modo di aprire una PWA installata tramite link esterno
-- L'OTP funziona su iOS PWA, Android PWA, Safari, Chrome, Arc — qualsiasi scenario
-
-**`auth-callback.html`** rimane nel repo come fallback (supporta sia flusso implicito con hash token che PKCE con `?code=`), ma non viene più usato nel flusso principale.
-
-**Redirect URLs autorizzati in Supabase** (Authentication → URL Configuration):
-- `https://ignaziof321621.github.io/benessere-forma/zona-tracker.html`
-- `https://ignaziof321621.github.io/benessere-forma/auth-callback.html`
+**`auth-callback.html`** rimane nel repo come fallback, ma non viene più usato nel flusso principale.
 
 **Rate limit Supabase:** durante i test intensivi si può raggiungere il limite OTP. Aspettare 1 ora per il reset.
 
@@ -55,9 +46,9 @@ Flusso:
 
 Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi casi in ordine:
 1. `?test=1` → modalità test locale
-2. Hash con `#access_token=...&refresh_token=...` → flusso implicito (da auth-callback.html)
+2. Hash con `#access_token=...&refresh_token=...` → flusso implicito
 3. Query param `?code=...` → flusso PKCE
-4. `getSession()` → sessione esistente (cookie/localStorage)
+4. `getSession()` → sessione esistente
 5. Nessuna sessione → mostra schermata auth
 6. `onAuthStateChange` → ascolta eventi SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED
 7. `visibilitychange` → polling sessione quando la PWA torna in foreground
@@ -67,205 +58,267 @@ Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi 
 ### Tabella `meals`
 | Colonna | Tipo | Note |
 |---|---|---|
-| `id` | `uuid` DEFAULT gen_random_uuid() PK | |
-| `user_id` | `uuid` NOT NULL | FK → auth.users, ON DELETE CASCADE |
-| `date` | `date` NOT NULL | formato YYYY-MM-DD |
-| `time` | `text` | orario HH:MM |
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → auth.users |
+| `date` | `date` NOT NULL | YYYY-MM-DD |
+| `time` | `text` | HH:MM |
 | `slot` | `text` | colazione / pranzo / cena / snack |
-| `description` | `text` NOT NULL | testo libero del pasto |
-| `kcal` | `integer` | stimato dall'AI |
-| `protein` | `integer` | grammi |
-| `carbs` | `integer` | grammi |
-| `fat` | `integer` | grammi |
-| `notes` | `text` | nota breve AI, nullable |
-| `created_at` | `timestamptz` DEFAULT now() | |
+| `description` | `text` NOT NULL | |
+| `kcal` | `integer` | stimato AI |
+| `protein / carbs / fat` | `integer` | grammi |
+| `notes` | `text` | nullable |
 
 RLS abilitata — policy: `auth.uid() = user_id`.
 
 ### Tabella `nutrilite_catalog`
-| Colonna | Tipo |
-|---|---|
-| `id` | `serial` PK |
-| `sort_order` | `integer` |
-| `name` | `text` |
-| `slot` | `text` |
-| `grp` | `text` |
-| `kcal / protein / carbs / fat` | `integer` |
-| `price` | `numeric(8,2)` |
-| `doses` | `integer` |
-| `note` | `text` |
+25 prodotti Nutrilite pre-inseriti. RLS SELECT pubblica. Nessun `user_id`.
 
-25 prodotti Nutrilite pre-inseriti. RLS abilitata — policy SELECT pubblica (`USING (true)`), nessun `user_id`.
+### Tabella `profiles`
+Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
 
-### Altre tabelle
-- `profiles` — dati utente e target macro (target_kcal, target_protein, target_carbs, target_fat, weight_kg, goal_weight_kg, ecc.)
-- `supplements` — integratori per user_id (editabili inline)
-- `supplements_log` — tracciamento assunzioni giornaliere per data e nome integratore
-- `fasting_days` — giorni di digiuno per user_id
+### Tabella `supplements`
+Integratori per user_id, editabili inline.
 
-## Cosa abbiamo fatto (cronologia sessioni)
+### Tabella `supplements_log`
+Tracciamento assunzioni giornaliere per data e nome integratore.
 
-### Aprile 2026 — Tab Oggi completa
-- **Hero ring colore zona**: il ring SVG cambia colore in base ai macro cumulativi del giorno — verde `#2A7A6F` se tutti e tre i macro sono In Zona (C 35–45% · P 25–35% · G 25–35%), rosso `#B84C2A` se almeno uno è fuori, ambra `#C4880A` se dati insufficienti. Scritta "In Zona" / "Fuori Zona" dentro il ring sotto la percentuale kcal.
-- **Frase motivante dinamica**: a due assi (fascia kcal% × stato zona). Ogni fascia ha una variante verde (In Zona) e una rossa (Fuori Zona), con colore del testo coerente. Se i macro sono insufficienti, frase neutra.
-- **Badge zona su singola meal card**: ogni card pasto mostra un pill "In Zona" / "Fuori Zona" basato sui macro di quel pasto (sfondo #E6F4F2/#FDECEA).
-- **Badge Giorno Perfetto**: gradiente oro `#FFD700→#FFA500`, trofeo 🏆 48px, titolo 22px bold, macro pill, 8 coriandoli CSS in loop, animazione pop 550ms. Trigger: orario ≥ 21:00 + macro cumulativi In Zona + kcal > 800. Persiste nei giorni passati tramite flag `day.giornoPerfetto` in cache locale (retroattivo: si imposta al primo accesso se il giorno qualifica).
-- **Timeline multi-entry integratori**: ogni assunzione in `supplements_log` è una voce indipendente nella timeline (`rawSuppLogs`). Un integratore preso più volte al giorno compare più volte. Dose per voce EXTRA indipendente dal gruppo.
-- **Flusso Singolo integratori**: registra da catalogo a orario libero, compare in timeline come `+ EXTRA`.
+### Tabella `fasting_days`
+Giorni di digiuno per user_id.
+
+### Tabella `training_logs` (aprile 2026)
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → auth.users |
+| `date` | `date` NOT NULL | |
+| `session_id` | `text` | upperA / upperB / lowerA / lowerB / recovery |
+| `exercise_name` | `text` | |
+| `set_number` | `integer` | |
+| `reps` | `integer` | |
+| `resistance` | `text` | es. "elastico 20lbs" |
+| `rir_actual` | `integer` | |
+| `notes` | `text` | |
+
+RLS abilitata — policy: `auth.uid() = user_id`.
+
+### Tabella `body_logs` (aprile 2026)
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → auth.users |
+| `date` | `date` NOT NULL | |
+| `weight_kg` | `numeric(5,2)` | |
+| `waist_cm` | `numeric(5,1)` | girovita — obiettivo 89→85 cm |
+| `bf_pct` | `numeric(4,1)` | body fat % |
+| `muscle_kg` | `numeric(5,2)` | da bilancia smart |
+| `visceral_fat` | `numeric(4,1)` | da bilancia smart |
+| `hip_cm` | `numeric(5,1)` | fianchi |
+| `chest_cm` | `numeric(5,1)` | petto |
+| `bicep_cm` | `numeric(4,1)` | bicipite |
+| `body_age` | `integer` | età corporea da bilancia smart |
+| `notes` | `text` | |
+
+RLS abilitata — policy: `auth.uid() = user_id`.
+
+## Navigazione — struttura attuale (aprile 2026)
+
+| Tab | ID pagina | Contenuto |
+|---|---|---|
+| 🏠 Home | `home` | Dashboard: ring kcal + 3 tile modulo live |
+| 🌿 Nutrition | `oggi` | Sub-nav: Oggi / Integratori / Storico / Piano |
+| ⚡ Training | `training` | Sub-nav: Sessione / Piano / Progressione |
+| ◐ Body | `body` | Sub-nav: Misure / Tendenza / Composizione |
+
+**Implementazione:**
+- Bottom nav mobile 4 voci (SVG outline/filled)
+- Top nav desktop 4 voci (emoji)
+- `showPage(id)` — navigazione centrale
+- `renderPage(id)` — dispatch alle render functions
+- Al login l'app apre direttamente Home
 
 ## Funzionalità implementate
 
 ### Auth
-- OTP a 6 cifre via email (schermata a 2 step: email → codice)
+- OTP a 6 cifre via email (schermata 2 step: email → codice)
 - Onboarding 5 step per nuovi utenti → calcolo TDEE automatico (Mifflin-St Jeor)
 - Modal impostazioni profilo con esami del sangue
 - Modal peso con ricalcolo TDEE
 
-### Tab Oggi
-- Navigazione tra giorni passati/oggi
-- Hero ring SVG con calorie e percentuale — colore dinamico: teal `#2A7A6F` se macro In Zona, rosso `#B84C2A` se fuori, ambra se dati insufficienti
-- Label "In Zona / Fuori Zona" dentro il ring sotto la percentuale
-- Frasi motivazionali a due assi: fascia kcal% × stato zona macro (verde/rosso/neutro)
-- Barre macro (P/C/G) con pill percentuale
-- Zona row in fondo all'hero: C% · P% · G% vs 40·30·30 con badge
-- Timeline cronologica unificata pasti + integratori + voci EXTRA
-  - Evento `meal`: card pasto con badge "In Zona / Fuori Zona" per quel pasto
-  - Evento `supp`: gruppo integratori collassabile con orario editabile
-  - Evento `supp_log`: voce EXTRA (integratore preso fuori gruppo) con dose indipendente
-- Registrazione pasto con stima AI dei macro (slot: ☕🥗🫕🥜)
-- Registrazione integratori: flusso Gruppo (spunta da lista) + flusso Singolo (da catalogo, orario libero)
-- Più assunzioni dello stesso integratore in momenti diversi: ogni voce è indipendente nella timeline
-- Suggerimento AI per il pasto successivo ("Analizza e suggerisci")
-- Badge "Giorno Perfetto" (gradiente oro, confetti, animazione pop):
-  - Appare sotto l'hero, sopra la timeline
-  - Oggi: solo se orario ≥ 21:00 E macro In Zona E kcal > 800
-  - Giorni passati: se il giorno ha qualificato (flag `day.giornoPerfetto` salvato in cache)
-  - Retroattivo: per giorni passati già qualificati il flag viene impostato al primo accesso
-- Toggle digiuno giornaliero
-- Integratori visibili e spuntabili anche nei giorni di digiuno
+### Home
+- Ring calorie SVG con colore zona
+- Barre macro (P/C/G)
+- 3 tile modulo live:
+  - **Nutrition**: kcal, macro, stato zona — cliccabile → Oggi
+  - **Training**: prossima sessione / ultima completata, badge ✓ FATTO o Inizia→ con streak ⚡ — cliccabile → Training
+  - **Body**: peso live, trend, vita cm — cliccabile → Body
 
-### Tab Integratori
-- Lista integratori personali raggruppati per orario
-- Editing inline di tutti i campi
-- Toggle attivo/inattivo, eliminazione, drag & drop
-- Modal "+ Aggiungi" con form completo
-- Modal "Catalogo Nutrilite" 2-step con slot editabili
-- Cost banner mensile/annuale
-- Slot filter chips
+### Nutrition (sub-nav: Oggi / Integratori / Storico / Piano)
+- **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto
+- **Integratori**: lista raggruppata per orario, editing inline, catalogo Nutrilite
+- **Storico**: report 7/14/30 giorni, grafico calorie
+- **Piano**: target 40·30·30, piano AI, priorità cliniche
 
-### Tab Storico
-- Report 7/14/30 giorni con medie macro e aderenza
-- Mini grafico andamento calorie
+### Training (sub-nav: Sessione / Piano / Progressione)
+- **Sessione**:
+  - Lista sessioni: Upper A/B (Forza/Ipertrofia), Lower A/B, Active Recovery
+  - Dettaglio sessione: blocco attivazione 5 min + esercizi
+  - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
+  - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
+- **Piano**:
+  - Split settimanale Lun-Dom con giorno corrente evidenziato
+  - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1) con settimana corrente (se `train_start_date` impostata)
+  - Progressione doppia: 3 step + esempio pratico
+- **Progressione**:
+  - Chips esercizi scrollabili (17 esercizi unici)
+  - Storico log per esercizio raggruppato per data — caricato da Supabase
 
-### Tab Piano
-- Target 40·30·30 personalizzato
-- Piano AI settimanale + suggerimento singolo con ↻ Rigenera
-- Priorità cliniche dinamiche (da esami del sangue)
+### Body (sub-nav: Misure / Tendenza / Composizione) — IN SVILUPPO
+- **Misure**:
+  - Hero peso attuale + trend vs misura precedente
+  - Barra progress obiettivo peso
+  - Barra progress vita (89→85 cm)
+  - Form log: Peso / Vita / BF% (base) + campi avanzati da aggiungere
+- **Tendenza**: grafico barre peso + waist — in sviluppo
+- **Composizione**: BMI calcolato, BF%, massa magra — in sviluppo
+
+## Architettura stato (ST object)
+
+```js
+const ST = {
+  user, profile, TARGET, page, activeDay, db, supps,
+  // Nutrition
+  logSlot, logText, logTime, logLoading, logError, logOpen,
+  advice, advLoading, nextSlot, reportRange,
+  // Onboarding
+  onbStep, onbSex, onbActivity, onbObjective, onbDiet, onbIntolleranze, onbWorkout, onbRecoveryDay,
+  // Integratori
+  syncStatus, catalog, catalogSelected, catalogToRemove, suppSheet, suppFilter,
+  // Training
+  trainTab,         // 'sessione' | 'piano' | 'progressione'
+  trainSession,     // null | 'upperA' | 'upperB' | 'lowerA' | 'lowerB' | 'recovery'
+  trainLogOpen,     // null | {sessionId, exName, setNum}
+  trainLoggedSets,  // {key: {reps, resistance, rir}} — reset al reload
+  trainProgEx,      // esercizio selezionato in Progressione
+  trainProgLogs,    // [] | null (loading)
+  trainHomeData,    // {lastDate, lastSession, nextSession, streak, doneToday}
+  trainSaving,      // boolean
+  // Body
+  bodyTab,          // 'misure' | 'tendenza' | 'composizione'
+  bodyLogs,         // [] | null (loading)
+  bodySaving,       // boolean
+}
+```
+
+## Funzioni chiave
+
+| Funzione | Scopo |
+|---|---|
+| `showPage(id)` | Navigazione + trigger load data |
+| `renderPage(id)` | Dispatch render functions |
+| `renderHome()` | Home dashboard |
+| `loadTrainingHomeData()` | Fetch last session + streak per tile Home |
+| `renderTraining()` | Training con 3 tab |
+| `loadTrainingLogs(exName)` | Fetch storico esercizio per Progressione |
+| `saveTrainingSet()` | Insert su training_logs |
+| `renderBody()` | Body con 3 tab |
+| `loadBodyLogs()` | Fetch body_logs da Supabase |
+| `saveBodyLog()` | Upsert body_logs + aggiorna profiles.weight_kg |
+
+## Modulo Training — specifiche
+
+**Split:** Upper/Lower 4 giorni + 2 Active Recovery
+
+| Sessione | Tipo | RIR |
+|---|---|---|
+| Upper A | Forza | 2 |
+| Upper B | Ipertrofia | 1 |
+| Lower A | Forza | 2 |
+| Lower B | Ipertrofia | 1 |
+
+**Progressione doppia:** aumenta reps fino al limite → aumenta carico → riparte dal minimo
+
+**Periodizzazione:** 3 settimane carico + 1 settimana scarico
+
+**Blocco attivazione (5 min obbligatori):**
+1. Respirazione diaframmatica 360° — 2 min
+2. Vacuum addominale — 2 min
+3. Cat-Cow + rotazione toracica — 1 min
+
+**Attrezzatura:** elastici tubo 10/20/30/40/50 lbs, barra modulare, sbarra trazioni, panca, fitball, tappetino
+
+**Protezioni:** lombari e ginocchia
+
+## Modulo Body — specifiche
+
+**Obiettivo circonferenza vita:** 89 cm → < 85 cm
+
+**Fonti dati:**
+- Bilancia smart Fitdays: peso, BF%, massa muscolare, grasso viscerale, body age
+- Metro: vita, fianchi, petto, bicipite
+
+**Campi `body_logs`:** weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip_cm, chest_cm, bicep_cm, body_age
+
+**Form log — 2 sezioni:**
+- Base (sempre visibile): Peso / Vita
+- Avanzate (collapsible): BF% / Massa muscolare / Grasso viscerale / Fianchi / Petto / Bicipite / Body age
+
+## Design system
+
+- **Font:** Manrope (UI) + JetBrains Mono (numeri/label)
+- **Token CSS:** `--r-sm/md/lg/pill`, `--font-sans`, `--font-mono`
+- **Palette:**
+  - Evergreen: `#2A7A6F` (accent globale, Zona OK)
+  - Nutrition: `#3B6D11`
+  - Training: `#185FA5`
+  - Body: `#854F0B`
+  - Fuori Zona: `#B84C2A`
+- **Sub-nav:** `.nutrition-subnav` + `.nsn-pill` — riusato per tutti i moduli
+- **Tile Home:** helper `tile(ink, body, right, onclick)` + `tHead(title, sub, ink)`
 
 ## Deploy
 
 ```bash
 cd ~/benessere-forma
-git add -A
-git commit -m "Descrizione della modifica"
+git add zona-tracker.html
+git commit -m "Descrizione"
 git push origin main
 ```
 
-GitHub Pages si aggiorna automaticamente dopo il push (1-2 minuti).
+GitHub Pages si aggiorna automaticamente (1-2 minuti).
 
-## Architettura stato locale (localStorage)
+## Worktree
 
-`ST.db.days[YYYY-MM-DD]` contiene per ogni giorno:
-- `meals[]` — pasti registrati
-- `suppsTaken[]` — local_id integratori spuntati (per gruppo)
-- `rawSuppLogs[]` — `{name, time, dose}` per ogni voce in supplements_log (ricaricato da Supabase)
-- `fasting` — boolean digiuno
-- `giornoPerfetto` — boolean, impostato quando badge guadagnato, persiste nei giorni passati
+Le modifiche vanno fatte nel worktree:
+`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2/zona-tracker.html`
 
-`loadTodaySuppLog()` → ricarica supplements_log da Supabase e ricostruisce `rawSuppLogs` + `suppsTaken` per oggi.
-`refreshTimeline()` → `loadTodaySuppLog()` + `renderOggi()` + `saveCache()`.
-
-### Logica zona macro
-Soglie: Carbo 35–45% · Proteine 25–35% · Grassi 25–35% delle kcal totali.
-Usata in: hero ring color, zona label nel ring, frasi motivazionali, badge pasto, badge Giorno Perfetto.
-Sempre con `Math.round()` prima del confronto per coerenza tra tutti i punti.
+Poi copiare nel repo principale prima del commit:
+```bash
+cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2/zona-tracker.html ~/benessere-forma/zona-tracker.html
+```
 
 ## Prossimi step
 
-- [x] **Bottom Nav con icone SVG** — 4 tab (Home / Nutrition / Training / Body) implementata con icone SVG outline/filled
-- [x] **Home dashboard** — ring calorie, macro bar, 3 tile modulo (renderHome() live)
-- [x] **Sub-nav Nutrition** — pill row Oggi/Integratori/Storico/Piano, sticky in cima, bottom nav resta su Nutrition
-- [ ] **Modulo Training** — prossimo da implementare (lista esercizi, log serie, blocco attivazione, progressione)
-- [ ] Pannello admin — vista separata per gestire utenti, catalogo, statistiche
-- [ ] Modalità test `?test=1` — completare e verificare il flusso completo
-- [ ] Redesign restante — completare avvicinamento al mockup Claude Design
-- [ ] Distribuzione via Glide — esplorazione futura per altri utenti
-- [ ] Fix backfill macro integratori vecchi (query SQL su supplements con join nutrilite_catalog per codice)
-- [ ] Dose integratore EXTRA non persiste al reload (supplements_log non ha colonna `dose`) — aggiungere `dose numeric default 1` su Supabase
-
-## Modulo Training
-
-**Split:** Upper/Lower 4 giorni + 2 Active Recovery
-
-| Sessione | Tipo |
-|---|---|
-| Upper A | Forza |
-| Upper B | Ipertrofia |
-| Lower A | Forza |
-| Lower B | Ipertrofia |
-
-**Progressione:** Doppia progressione con RIR (RIR 2 forza · RIR 1 ipertrofia)
-
-**Periodizzazione:** 3 settimane carico + 1 settimana scarico
-
-**Blocco attivazione (5 min obbligatori a inizio sessione):**
-1. Respirazione diaframmatica 360° — 2 min
-2. Vacuum addominale — 2 min
-3. Cat-Cow + rotazione toracica — 1 min
-
-**Attrezzatura disponibile:**
-- Elastici a tubo 10/20/30/40/50 lbs (3 set completi)
-- Barra modulare 130 cm, barra corta, maniglie, cavigliera, attacchi porta
-- Sbarra trazioni, panca regolabile, fitball, tappetino
-
-**Protezioni:** lombari e ginocchia (background nuotatore/pallanuotista)
-
-**Obiettivo circonferenza vita:** da 89 cm a < 85 cm
-
----
-
-## Navigazione — nuova struttura (aprile 2026)
-
-| Tab | ID pagina | Contenuto |
-|---|---|---|
-| 🏠 Home | `home` | Dashboard con ring calorie + 3 tile modulo |
-| 🌿 Nutrition | `oggi` | Ex tab Oggi/Integratori/Storico/Piano |
-| ⚡ Training | `training` | Modulo allenamento (in sviluppo) |
-| ◐ Body | `body` | Composizione corporea (in sviluppo) |
-
-**Implementazione:**
-- Bottom nav mobile a 4 voci con icone SVG outline/filled
-- Top nav desktop a 4 voci con emoji
-- `showPage(id)` gestisce la navigazione — array `['home','oggi','training','body']`
-- `renderHome()` implementata: ring kcal live da ST + 3 macro bar + 3 tile modulo
-- Tile Nutrition: dati live (kcal, C/P/G, stato zona). Tile Training/Body: placeholder statici
-- Al login l'app apre direttamente Home (non più Oggi)
-
-**Design system applicato:**
-- Font: Manrope (UI) + JetBrains Mono (numeri/label) — già importati
-- Token CSS aggiunti: `--r-sm/md/lg/pill`, `--font-sans`, `--font-mono`
-- Palette: evergreen `#2A7A6F` globale + tinte modulo (Nutrition `#3B6D11`, Training `#185FA5`, Body `#854F0B`)
-- Reference design: bundle Zona_Tracker_Design_System (home-d.jsx → variante D3 Manrope scelta)
+- [x] Bottom Nav con icone SVG (4 tab)
+- [x] Home dashboard (ring + macro + 3 tile)
+- [x] Sub-nav Nutrition (Oggi/Integratori/Storico/Piano)
+- [x] Modulo Training — Sessione (lista + dettaglio + log serie)
+- [x] Modulo Training — Piano (split settimanale + ciclo 4 settimane)
+- [x] Modulo Training — Progressione (storico per esercizio)
+- [x] Home tile Training live (next session + streak)
+- [ ] **Modulo Body — completare** (form avanzato con tutti i campi, tendenza, composizione)
+- [ ] Home tile Body live (dopo Body completo)
+- [ ] `train_start_date` in profiles per ciclo periodizzazione
+- [ ] Pannello admin
+- [ ] Fix backfill macro integratori vecchi
 
 ## Bug noti
 
-- Alcuni integratori vecchi in `supplements` mostrano macro a `—` perché inseriti prima del fix del join con `codice` — risolvibile con query SQL di backfill
-- La funzione `updateSuppSlotTime` è presente nel codice ma non ancora testata in produzione
+- `trainLoggedSets` si azzera al reload (in-memory only) — i badge serie spariscono dopo refresh
+- `updateSuppSlotTime` presente ma non testata in produzione
+- Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
 
 ## Note
 
-- Non serve compilare niente, non serve installare niente.
-- L'unico file da toccare normalmente è `zona-tracker.html`.
-- Il branch di lavoro è `main`.
-- Il catalogo Nutrilite vive su Supabase (`nutrilite_catalog`) — per aggiungere prodotti basta inserire righe nella tabella, zero codice.
-- La regola d'oro è: un passo alla volta, Ignazio conferma con "ok/fatto" prima di procedere.
+- L'unico file da toccare normalmente è `zona-tracker.html`
+- Il client Supabase si chiama `supa` (non `supabase`)
+- La regola d'oro: un passo alla volta, Ignazio conferma con "ok/fatto" prima di procedere
