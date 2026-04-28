@@ -126,14 +126,16 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 |---|---|---|
 | 🏠 Home | `home` | Dashboard: ring kcal + 3 tile modulo live |
 | 🌿 Nutrition | `oggi` | Sub-nav: Oggi / Integratori / Storico / Piano |
-| ⚡ Training | `training` | Sub-nav: Sessione / Piano / Progressione |
-| ◐ Body | `body` | Sub-nav: Misure / Tendenza / Composizione |
+| ⚡ Training | `training` | Sub-nav: Sessione / Piano / Progressione — **visibile solo se `train_start_date` impostata** |
+| ◐ Body | `body` | Sub-nav: Misure / Tendenza |
 
 **Implementazione:**
 - Bottom nav mobile 4 voci (SVG outline/filled)
 - Top nav desktop 4 voci (emoji)
-- `showPage(id)` — navigazione centrale
+- `showPage(id)` — navigazione centrale (redirect a Home se Training non abilitato)
 - `renderPage(id)` — dispatch alle render functions
+- `hasTraining()` — gate: `!!ST.profile.train_start_date`
+- `updateTrainingNav()` — mostra/nasconde tab Training in top e bottom nav
 - Al login l'app apre direttamente Home
 
 ## Funzionalità implementate
@@ -147,9 +149,9 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 ### Home
 - Ring calorie SVG con colore zona
 - Barre macro (P/C/G)
-- 3 tile modulo live:
+- Tile modulo live (Training visibile solo se `train_start_date` impostata):
   - **Nutrition**: kcal, macro, stato zona — cliccabile → Oggi
-  - **Training**: prossima sessione / ultima completata, badge ✓ FATTO o Inizia→ con streak ⚡ — cliccabile → Training
+  - **Training**: prossima sessione / ultima completata / "Inizia [data]" se start futura — badge ✓ FATTO o Inizia→ con streak ⚡ — cliccabile → Training
   - **Body**: peso live, trend, vita cm — cliccabile → Body
 
 ### Nutrition (sub-nav: Oggi / Integratori / Storico / Piano)
@@ -172,14 +174,17 @@ RLS abilitata — policy: `auth.uid() = user_id`.
   - Chips esercizi scrollabili (17 esercizi unici)
   - Storico log per esercizio raggruppato per data — caricato da Supabase
 
-### Body (sub-nav: Misure / Tendenza / Composizione) — IN SVILUPPO
+### Body (sub-nav: Misure / Tendenza)
 - **Misure**:
   - Hero peso attuale + trend vs misura precedente
-  - Barra progress obiettivo peso
-  - Barra progress vita (89→85 cm)
-  - Form log: Peso / Vita / BF% (base) + campi avanzati da aggiungere
-- **Tendenza**: grafico barre peso + waist — in sviluppo
-- **Composizione**: BMI calcolato, BF%, massa magra — in sviluppo
+  - Barra progress obiettivo peso (oldest log → goal)
+  - Barra progress vita (89 → 85 cm)
+  - Griglia composizione inline (BMI, BF%, massa magra/grassa, grasso viscerale, body age) — visibile solo se dati presenti
+  - Form log base: Peso / Vita
+  - Form log avanzato (collapsible): BF% / Massa muscolare / Grasso viscerale / Body age / Fianchi / Petto / Bicipite / Note
+  - Salvataggio: insert/update manuale (no upsert — constraint UNIQUE non presente)
+  - Lista ultimi 8 log
+- **Tendenza**: grafici barre peso + vita ultimi 30 log (vita verde se ≤ 85 cm)
 
 ## Architettura stato (ST object)
 
@@ -200,12 +205,13 @@ const ST = {
   trainLoggedSets,  // {key: {reps, resistance, rir}} — reset al reload
   trainProgEx,      // esercizio selezionato in Progressione
   trainProgLogs,    // [] | null (loading)
-  trainHomeData,    // {lastDate, lastSession, nextSession, streak, doneToday}
+  trainHomeData,    // {lastDate, lastSession, nextSession, streak, doneToday, notStarted?, startDate?}
   trainSaving,      // boolean
   // Body
-  bodyTab,          // 'misure' | 'tendenza' | 'composizione'
+  bodyTab,          // 'misure' | 'tendenza'
   bodyLogs,         // [] | null (loading)
   bodySaving,       // boolean
+  bodyAdvOpen,      // boolean — sezione avanzata form aperta
 }
 ```
 
@@ -213,16 +219,18 @@ const ST = {
 
 | Funzione | Scopo |
 |---|---|
-| `showPage(id)` | Navigazione + trigger load data |
+| `showPage(id)` | Navigazione + trigger load data (guard Training se no `train_start_date`) |
 | `renderPage(id)` | Dispatch render functions |
+| `hasTraining()` | Gate Training: `!!ST.profile.train_start_date` |
+| `updateTrainingNav()` | Mostra/nasconde tab Training in top + bottom nav |
 | `renderHome()` | Home dashboard |
-| `loadTrainingHomeData()` | Fetch last session + streak per tile Home |
+| `loadTrainingHomeData()` | Fetch last session + streak per tile Home (rispetta start futura) |
 | `renderTraining()` | Training con 3 tab |
 | `loadTrainingLogs(exName)` | Fetch storico esercizio per Progressione |
 | `saveTrainingSet()` | Insert su training_logs |
-| `renderBody()` | Body con 3 tab |
-| `loadBodyLogs()` | Fetch body_logs da Supabase |
-| `saveBodyLog()` | Upsert body_logs + aggiorna profiles.weight_kg |
+| `renderBody()` | Body con 2 tab (Misure / Tendenza) |
+| `loadBodyLogs()` | Fetch body_logs da Supabase (aggiorna Home o Body in base a ST.page) |
+| `saveBodyLog()` | Insert/update body_logs + aggiorna profiles.weight_kg |
 
 ## Modulo Training — specifiche
 
@@ -289,11 +297,11 @@ GitHub Pages si aggiorna automaticamente (1-2 minuti).
 ## Worktree
 
 Le modifiche vanno fatte nel worktree:
-`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2/zona-tracker.html`
+`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/stupefied-curran-9841e4/zona-tracker.html`
 
 Poi copiare nel repo principale prima del commit:
 ```bash
-cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2/zona-tracker.html ~/benessere-forma/zona-tracker.html
+cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/stupefied-curran-9841e4/zona-tracker.html ~/benessere-forma/zona-tracker.html
 ```
 
 ## Prossimi step
@@ -305,10 +313,11 @@ cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2
 - [x] Modulo Training — Piano (split settimanale + ciclo 4 settimane)
 - [x] Modulo Training — Progressione (storico per esercizio)
 - [x] Home tile Training live (next session + streak)
-- [ ] **Modulo Body — completare** (form avanzato con tutti i campi, tendenza, composizione)
-- [ ] Home tile Body live (dopo Body completo)
-- [ ] `train_start_date` in profiles per ciclo periodizzazione
-- [ ] Pannello admin
+- [x] Modulo Body — Misure (form base + avanzati collapsibili, progress bars, griglia composizione)
+- [x] Modulo Body — Tendenza (grafici barre peso + vita)
+- [x] Home tile Body live
+- [x] `train_start_date` in profilo → ciclo 4 settimane live + gate visibilità Training
+- [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
 ## Bug noti
@@ -316,6 +325,7 @@ cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/adoring-bhabha-8965c2
 - `trainLoggedSets` si azzera al reload (in-memory only) — i badge serie spariscono dopo refresh
 - `updateSuppSlotTime` presente ma non testata in produzione
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
+- `body_logs` non ha constraint UNIQUE(user_id, date) su Supabase — il salvataggio usa insert/update manuale
 
 ## Note
 
