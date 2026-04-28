@@ -940,6 +940,12 @@ const ST = {
   catalogSelected: [],
   catalogToRemove: [],
   suppSheet: { mode: null, selGroup: null, singleQuery: '', singleSelId: null, singleDose: 1, singleUnit: 'cps', singleTime: '' },
+  trainTab: null,
+  trainSession: null,
+  trainLogOpen: null,
+  trainLoggedSets: {},
+  trainProgEx: null,
+  trainProgLogs: [],
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1912,6 +1918,57 @@ const TRAINING_SESSIONS = {
   },
 };
 
+async function loadTrainingLogs(exName){
+  ST.trainProgEx = exName;
+  ST.trainProgLogs = null; // null = loading
+  renderTraining();
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.trainProgLogs=[]; renderTraining(); return; }
+  const { data } = await supa
+    .from('training_logs')
+    .select('*')
+    .eq('user_id', ST.user.id)
+    .eq('exercise_name', exName)
+    .order('date', {ascending:false})
+    .order('set_number', {ascending:true})
+    .limit(200);
+  ST.trainProgLogs = data || [];
+  renderTraining();
+}
+
+async function saveTrainingSet(){
+  const form = ST.trainLogOpen;
+  if(!form) return;
+  const repsEl = document.getElementById('tl-reps');
+  const resistEl = document.getElementById('tl-resist');
+  const rirEl = document.getElementById('tl-rir');
+  const reps = parseInt(repsEl?.value)||0;
+  const resistance = resistEl?.value?.trim()||'';
+  const rir = (rirEl?.value !== '' && rirEl?.value != null) ? parseInt(rirEl.value) : null;
+  if(!reps){ repsEl?.focus(); return; }
+  ST.trainSaving = true;
+  renderTraining();
+  let insertError = null;
+  try {
+    const { error } = await supa.from('training_logs').insert({
+      user_id: ST.user.id,
+      date: todayKey(),
+      session_id: form.sessionId,
+      exercise_name: form.exName,
+      set_number: form.setNum,
+      reps,
+      resistance: resistance||null,
+      rir_actual: rir,
+    });
+    insertError = error;
+  } catch(e){ insertError = {message: e.message}; }
+  ST.trainSaving = false;
+  if(insertError){ alert('Errore: '+insertError.message); renderTraining(); return; }
+  const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
+  ST.trainLoggedSets[key] = {reps, resistance, rir};
+  ST.trainLogOpen = null;
+  renderTraining();
+}
+
 function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
   const tabs = [
@@ -1944,14 +2001,72 @@ function renderTraining(){
           <div style="font-size:12px;font-family:var(--font-mono);color:#185FA5;font-weight:700;">${a.duration}</div>
         </div>`).join('');
 
-      const exerciseCards = s.exercises.map(e=>`
-        <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-            <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
-            <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps}</div>
-          </div>
-          <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);">${e.eq}</div>
-        </div>`).join('');
+      const today = todayKey();
+      const exerciseCards = s.exercises.map(e=>{
+        const safeName = e.name.replace(/'/g,"\\'");
+        const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
+        const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
+        const nextSet = loggedKeys.length + 1;
+        const allDone = nextSet > e.sets;
+        const badges = loggedKeys.map(k=>{
+          const d = ST.trainLoggedSets[k];
+          const sn = k.split('_')[2];
+          return `<span style="background:#E8F0FA;color:#185FA5;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance:''}</span>`;
+        }).join('');
+        const logForm = isOpen ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
+            <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <div style="flex:1;">
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">REPS</label>
+                <input id="tl-reps" type="number" min="1" max="30" placeholder="0"
+                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid #185FA5;font-size:16px;font-family:var(--font-mono);font-weight:700;color:var(--t1);background:var(--bg);text-align:center;box-sizing:border-box;">
+              </div>
+              <div style="flex:2;">
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RESISTENZA</label>
+                <input id="tl-resist" type="text" placeholder="es. elastico 20lbs"
+                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--s2);font-size:13px;font-family:var(--font-sans);color:var(--t1);background:var(--bg);box-sizing:border-box;">
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
+                <select id="tl-rir"
+                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--s2);font-size:13px;font-family:var(--font-mono);color:var(--t1);background:var(--bg);">
+                  <option value="">—</option>
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
+                style="flex:1;padding:10px;background:${ST.trainSaving?'#93b4d4':'#185FA5'};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:${ST.trainSaving?'default':'pointer'};">
+                ${ST.trainSaving?'...':'Salva S'+nextSet}
+              </button>
+              <button onclick="ST.trainLogOpen=null;renderTraining();"
+                style="padding:10px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">✕</button>
+            </div>
+          </div>` : '';
+        return `
+          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+              <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps}</div>
+                ${allDone
+                  ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
+                  : !isOpen
+                    ? `<button onclick="ST.trainLogOpen={sessionId:'${sel}',exName:'${safeName}',setNum:${nextSet}};renderTraining();"
+                        style="background:#E8F0FA;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);">+S${nextSet}</button>`
+                    : ''}
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);${badges?'margin-bottom:8px;':''}">${e.eq}</div>
+            ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">${badges}</div>` : ''}
+            ${logForm}
+          </div>`;
+      }).join('');
 
       body = `
         <div style="padding:16px;">
@@ -2096,7 +2211,64 @@ function renderTraining(){
 
       </div>`;
   } else {
-    body = `<div style="padding:16px;"><p style="color:var(--t3);font-size:13px;font-family:var(--font-mono);">Progressione — in arrivo</p></div>`;
+    // ── Progressione tab ────────────────────────────────────
+    const allEx = [...new Set(
+      Object.values(TRAINING_SESSIONS)
+        .filter(s=>s.id!=='recovery')
+        .flatMap(s=>s.exercises.map(e=>e.name))
+    )];
+    const selEx = ST.trainProgEx;
+    const exChips = allEx.map(name=>`
+      <button onclick="loadTrainingLogs('${name.replace(/'/g,"\\'")}');"
+        style="flex-shrink:0;padding:6px 14px;border-radius:999px;font-family:var(--font-mono);font-size:12px;font-weight:700;border:1.5px solid ${selEx===name?'#185FA5':'var(--s2)'};background:${selEx===name?'#185FA5':'var(--s1,#fff)'};color:${selEx===name?'#fff':'var(--t2)'};cursor:pointer;white-space:nowrap;">
+        ${name}
+      </button>`).join('');
+
+    let logsHTML = '';
+    if(!selEx){
+      logsHTML = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-sans);">Seleziona un esercizio per vedere la progressione</div>`;
+    } else if(ST.trainProgLogs === null){
+      logsHTML = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+    } else if(ST.trainProgLogs.length === 0){
+      logsHTML = `
+        <div style="padding:32px 16px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:8px;">📋</div>
+          <div style="font-size:14px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Nessun log ancora</div>
+          <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere la progressione qui</div>
+        </div>`;
+    } else {
+      // Raggruppa per data
+      const byDate = ST.trainProgLogs.reduce((acc,log)=>{
+        (acc[log.date]=acc[log.date]||[]).push(log); return acc;
+      }, {});
+      logsHTML = Object.keys(byDate).map(date=>{
+        const logs = byDate[date];
+        const sName = TRAINING_SESSIONS[logs[0].session_id]?.name || logs[0].session_id;
+        const rows = logs.map(l=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--s2);">
+            <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} reps</span>
+            ${l.resistance?`<span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${l.resistance}</span>`:''}
+            ${l.rir_actual!=null?`<span style="margin-left:auto;font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
+          </div>`).join('');
+        return `
+          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${fmtDate(date)}</div>
+              <span style="background:#E8F0FA;color:#185FA5;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">${sName}</span>
+            </div>
+            ${rows.replace(/border-bottom:1px solid var\(--s2\);" >(?=[^<]*<\/div>\s*$)/,'border-bottom:none;">')}
+          </div>`;
+      }).join('');
+    }
+
+    body = `
+      <div style="padding:16px;">
+        <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:16px;padding-bottom:4px;">
+          ${exChips}
+        </div>
+        ${logsHTML}
+      </div>`;
   }
 
   document.getElementById('page-training').innerHTML = navHTML + body;
