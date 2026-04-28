@@ -1582,6 +1582,21 @@ function applyProfile(profile) {
     el.style.display = 'inline-flex';
     el.textContent = '🔥 ' + streak;
   }
+  updateTrainingNav();
+}
+
+function hasTraining() {
+  return !!(ST.profile && ST.profile.train_start_date);
+}
+
+function updateTrainingNav() {
+  const show = hasTraining();
+  // Top nav desktop
+  const topBtns = document.querySelectorAll('#nav .nav-btn');
+  topBtns.forEach(b => { if(b.textContent.includes('Training')) b.style.display = show ? '' : 'none'; });
+  // Bottom nav mobile
+  const bottomBtns = document.querySelectorAll('#bottom-nav .nav-btn');
+  bottomBtns.forEach(b => { if(b.querySelector('.bn-label')?.textContent === 'Training') b.style.display = show ? '' : 'none'; });
 }
 
 // Profilo completo = onboarding già eseguito
@@ -1704,6 +1719,7 @@ async function logout() {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════
 function showPage(id){
+  if(id==='training' && !hasTraining()){ id='home'; }
   ST.page=id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // Reset top nav (inline style driven)
@@ -1967,7 +1983,7 @@ function renderHome(){
     </div>
     <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:2px;">Moduli · oggi</div>
     ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
-    ${tile('#185FA5', trainBody, trainRight, "showPage('training')")}
+    ${hasTraining() ? tile('#185FA5', trainBody, trainRight, "showPage('training')") : ''}
     ${tile('#854F0B', bodyBody,  bodyRight,  "showPage('body')")}
   `;
 }
