@@ -947,6 +947,10 @@ const ST = {
   trainProgEx: null,
   trainProgLogs: [],
   trainHomeData: null,
+  bodyTab: null,
+  bodyLogs: null,
+  bodySaving: false,
+  bodyAdvOpen: false,
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -1710,7 +1714,8 @@ function showPage(id){
   const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
-  if(id==='home') loadTrainingHomeData();
+  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); }
+  if(id==='body') loadBodyLogs();
 }
 async function loadTrainingHomeData(){
   if(!ST.user || ST.user.id==='test-user-001') return;
@@ -1882,16 +1887,38 @@ function renderHome(){
     trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
   }
 
-  // ── Body tile (placeholder statico) ──
-  const bodyBody = `
-    ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
-    <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;white-space:nowrap;">
-      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">72.6</span>
-      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">kg</span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);margin-left:4px;font-weight:700;">↓ 0.3</span>
-    </div>
-    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">BF 14.4% · Vita 89 cm</div>`;
-  const bodyRight = `<span style="color:var(--t3);font-size:20px;flex-shrink:0;">›</span>`;
+  // ── Body tile (dati live) ──
+  let bodyBody, bodyRight;
+  if(ST.bodyLogs === null){
+    bodyBody = `
+      ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
+      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">—</div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;"> </div>`;
+  } else {
+    const bLast  = ST.bodyLogs[0] || {};
+    const bPrev  = ST.bodyLogs[1] || {};
+    const bW     = bLast.weight_kg ?? ST.profile?.weight_kg ?? null;
+    const bWPrev = bPrev.weight_kg ?? null;
+    let bTrend = '';
+    if(bW && bWPrev){
+      const diff = (bW - bWPrev).toFixed(1);
+      const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+      bTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
+    }
+    const bSub = [
+      bLast.bf_pct  ? `BF ${bLast.bf_pct}%`   : null,
+      bLast.waist_cm ? `Vita ${bLast.waist_cm} cm` : null,
+    ].filter(Boolean).join(' · ') || 'Nessun dato';
+    bodyBody = `
+      ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
+      <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;white-space:nowrap;">
+        <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${bW ?? '—'}</span>
+        ${bW ? `<span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
+        ${bTrend}
+      </div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">${bSub}</div>`;
+  }
+  bodyRight = `<span style="color:var(--t3);font-size:20px;flex-shrink:0;">›</span>`;
 
   // ── Inject ──
   document.getElementById('page-home').innerHTML = `
@@ -1918,7 +1945,7 @@ function renderHome(){
     <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:2px;">Moduli · oggi</div>
     ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
     ${tile('#185FA5', trainBody, trainRight, "showPage('training')")}
-    ${tile('#854F0B', bodyBody,  bodyRight,  '')}
+    ${tile('#854F0B', bodyBody,  bodyRight,  "showPage('body')")}
   `;
 }
 
@@ -2335,7 +2362,352 @@ function renderTraining(){
 
   document.getElementById('page-training').innerHTML = navHTML + body;
 }
-function renderBody(){}
+async function loadBodyLogs(){
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  if(ST.page==='body'){ ST.bodyLogs=null; renderBody(); }
+  const { data } = await supa
+    .from('body_logs')
+    .select('*')
+    .eq('user_id', ST.user.id)
+    .order('date', {ascending:false})
+    .limit(90);
+  ST.bodyLogs = data || [];
+  if(ST.page==='body') renderBody();
+  else if(ST.page==='home') renderHome();
+}
+
+async function saveBodyLog(){
+  if(!ST.user) return;
+  const today = todayKey();
+  const weight   = parseFloat(document.getElementById('bl-weight')?.value);
+  const waist    = parseFloat(document.getElementById('bl-waist')?.value);
+  const bf       = parseFloat(document.getElementById('bl-bf')?.value);
+  const muscle   = parseFloat(document.getElementById('bl-muscle')?.value);
+  const visceral = parseFloat(document.getElementById('bl-visceral')?.value);
+  const hip      = parseFloat(document.getElementById('bl-hip')?.value);
+  const chest    = parseFloat(document.getElementById('bl-chest')?.value);
+  const bicep    = parseFloat(document.getElementById('bl-bicep')?.value);
+  const bodyAge  = parseInt(document.getElementById('bl-bodyage')?.value);
+  const notes    = document.getElementById('bl-notes')?.value?.trim();
+
+  const payload = { user_id: ST.user.id, date: today };
+  if(!isNaN(weight))   payload.weight_kg    = weight;
+  if(!isNaN(waist))    payload.waist_cm     = waist;
+  if(!isNaN(bf))       payload.bf_pct       = bf;
+  if(!isNaN(muscle))   payload.muscle_kg    = muscle;
+  if(!isNaN(visceral)) payload.visceral_fat = visceral;
+  if(!isNaN(hip))      payload.hip_cm       = hip;
+  if(!isNaN(chest))    payload.chest_cm     = chest;
+  if(!isNaN(bicep))    payload.bicep_cm     = bicep;
+  if(!isNaN(bodyAge))  payload.body_age     = bodyAge;
+  if(notes)            payload.notes        = notes;
+
+  ST.bodySaving = true;
+  renderBody();
+
+  const { error } = await supa.from('body_logs').upsert(payload, { onConflict: 'user_id,date' });
+  ST.bodySaving = false;
+  if(error){ alert('Errore: '+error.message); renderBody(); return; }
+
+  if(!isNaN(weight)){
+    await supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id);
+    if(ST.profile) ST.profile.weight_kg = weight;
+  }
+  await loadBodyLogs();
+}
+
+function renderBody(){
+  const tab = ST.bodyTab || 'misure';
+  const tabs = [
+    { id:'misure',       label:'Misure' },
+    { id:'tendenza',     label:'Tendenza' },
+    { id:'composizione', label:'Composizione' },
+  ];
+  const navHTML = `<nav class="nutrition-subnav">
+    ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
+  </nav>`;
+
+  const logs = ST.bodyLogs;
+  let body = '';
+
+  if(logs === null){
+    body = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+    document.getElementById('page-body').innerHTML = navHTML + body;
+    return;
+  }
+
+  const today    = todayKey();
+  const todayLog = logs.find(l => l.date === today) || {};
+  const prevLogs = logs.filter(l => l.date < today);
+  const prev     = prevLogs[0] || {};
+
+  if(tab === 'misure'){
+    const w      = todayLog.weight_kg  ?? prev.weight_kg  ?? ST.profile?.weight_kg ?? null;
+    const wPrev  = prev.weight_kg ?? null;
+    const goalW  = ST.profile?.goal_weight_kg ?? null;
+    const waist  = todayLog.waist_cm   ?? prev.waist_cm   ?? null;
+    const waistP = prev.waist_cm ?? null;
+
+    let wTrend = '';
+    if(w && wPrev){
+      const diff = (w - wPrev).toFixed(1);
+      const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+      wTrend = `<span style="font-size:12px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:6px;">${diff > 0 ? '+' : ''}${diff}</span>`;
+    }
+
+    let wProgressHTML = '';
+    if(w && goalW){
+      const oldest = logs.length ? logs[logs.length-1] : null;
+      const startW = oldest?.weight_kg ?? w;
+      const total  = Math.abs(startW - goalW);
+      const done   = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+      const dir    = goalW < w ? '▼' : '▲';
+      wProgressHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Obiettivo ${dir} ${goalW} kg</span>
+            <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:#854F0B;">${Math.abs(w - goalW).toFixed(1)} kg al target</span>
+          </div>
+          <div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
+            <div style="height:100%;width:${done}%;background:#854F0B;border-radius:var(--r-pill);"></div>
+          </div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato</div>
+        </div>`;
+    }
+
+    let waistProgressHTML = '';
+    if(waist){
+      const waistGoal  = 85;
+      const waistStart = 89;
+      const total      = waistStart - waistGoal;
+      const done       = total > 0 ? Math.max(0, Math.min(100, Math.round((waistStart - waist) / total * 100))) : 0;
+      let waistTrend = '';
+      if(waistP){
+        const diff = (waist - waistP).toFixed(1);
+        const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+        waistTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
+      }
+      waistProgressHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Vita — obiettivo &lt; ${waistGoal} cm</span>
+            <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:#854F0B;">${waist} cm${waistTrend}</span>
+          </div>
+          <div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
+            <div style="height:100%;width:${done}%;background:${waist<=waistGoal?'#2A7A6F':'#854F0B'};border-radius:var(--r-pill);"></div>
+          </div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato (89 → 85 cm)</div>
+        </div>`;
+    }
+
+    const fv  = (val, def='') => val != null ? val : def;
+    const adv = ST.bodyAdvOpen;
+
+    body = `
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:12px;">
+          <span style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${w ?? '—'}</span>
+          ${w ? `<span style="font-size:13px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
+          ${wTrend}
+          <span style="flex:1;"></span>
+          <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${prev.date ? fmtDate(prev.date) : ''}</span>
+        </div>
+        ${wProgressHTML}
+        ${waistProgressHTML}
+        ${!wProgressHTML && !waistProgressHTML ? `<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Imposta obiettivo peso nel profilo per vedere il progresso.</div>` : ''}
+      </div>
+
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+        <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Log misure — ${fmtDate(today)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Peso (kg)</label>
+            <input id="bl-weight" type="number" step="0.1" min="40" max="200" value="${fv(todayLog.weight_kg)}" placeholder="es. 72.5"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Vita (cm)</label>
+            <input id="bl-waist" type="number" step="0.1" min="50" max="200" value="${fv(todayLog.waist_cm)}" placeholder="es. 89"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+        </div>
+
+        <button onclick="ST.bodyAdvOpen=!ST.bodyAdvOpen;renderBody();"
+          style="font-size:11px;color:#854F0B;background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-mono);font-weight:700;margin-bottom:${adv?'10px':'0'};">
+          ${adv ? '▲ Nascondi avanzate' : '▼ Campi avanzati (bilancia smart + metro)'}
+        </button>
+
+        ${adv ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">BF%</label>
+            <input id="bl-bf" type="number" step="0.1" min="3" max="60" value="${fv(todayLog.bf_pct)}" placeholder="es. 14.4"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Massa muscolare (kg)</label>
+            <input id="bl-muscle" type="number" step="0.1" min="20" max="100" value="${fv(todayLog.muscle_kg)}" placeholder="es. 58.2"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Grasso viscerale</label>
+            <input id="bl-visceral" type="number" step="0.5" min="1" max="30" value="${fv(todayLog.visceral_fat)}" placeholder="es. 9"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Body age</label>
+            <input id="bl-bodyage" type="number" step="1" min="18" max="99" value="${fv(todayLog.body_age)}" placeholder="es. 42"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Fianchi (cm)</label>
+            <input id="bl-hip" type="number" step="0.5" min="50" max="200" value="${fv(todayLog.hip_cm)}" placeholder="es. 98"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Petto (cm)</label>
+            <input id="bl-chest" type="number" step="0.5" min="50" max="200" value="${fv(todayLog.chest_cm)}" placeholder="es. 94"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Bicipite (cm)</label>
+            <input id="bl-bicep" type="number" step="0.5" min="20" max="60" value="${fv(todayLog.bicep_cm)}" placeholder="es. 34"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Note</label>
+            <input id="bl-notes" type="text" value="${esc(todayLog.notes||'')}" placeholder="opzionale"
+              style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:13px;font-family:var(--font-sans);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
+          </div>
+        </div>` : `
+        <div style="display:none;">
+          <input id="bl-bf" type="hidden" value="${fv(todayLog.bf_pct)}">
+          <input id="bl-muscle" type="hidden" value="${fv(todayLog.muscle_kg)}">
+          <input id="bl-visceral" type="hidden" value="${fv(todayLog.visceral_fat)}">
+          <input id="bl-hip" type="hidden" value="${fv(todayLog.hip_cm)}">
+          <input id="bl-chest" type="hidden" value="${fv(todayLog.chest_cm)}">
+          <input id="bl-bicep" type="hidden" value="${fv(todayLog.bicep_cm)}">
+          <input id="bl-bodyage" type="hidden" value="${fv(todayLog.body_age)}">
+          <input id="bl-notes" type="hidden" value="${esc(todayLog.notes||'')}">
+        </div>`}
+
+        <button onclick="saveBodyLog();" ${ST.bodySaving?'disabled':''}
+          style="width:100%;padding:12px;margin-top:10px;background:#854F0B;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:${ST.bodySaving?'default':'pointer'};${ST.bodySaving?'opacity:.6;':''}">
+          ${ST.bodySaving ? 'Salvataggio...' : 'Salva misure'}
+        </button>
+      </div>
+
+      ${logs.length > 0 ? `
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Ultimi log</div>
+        ${logs.slice(0,8).map(l => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);">
+            <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">${fmtDate(l.date)}</div>
+            <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;">
+              ${l.weight_kg ? `<span>${l.weight_kg} kg</span>` : ''}
+              ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
+              ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
+            </div>
+          </div>`).join('')}
+      </div>` : ''}
+    `;
+
+  } else if(tab === 'tendenza'){
+    if(logs.length === 0){
+      body = `<div style="padding:60px 20px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);line-height:1.8;">Nessun dato ancora.<br>Inizia a loggare le misure.</div>`;
+    } else {
+      const last30  = logs.slice(0,30).reverse();
+      const weights = last30.filter(l => l.weight_kg != null);
+      const waists  = last30.filter(l => l.waist_cm  != null);
+
+      const bars = (items, key, unit, col, goalLine) => {
+        if(!items.length) return '';
+        const vals  = items.map(l => l[key]);
+        const maxV  = Math.max(...vals);
+        const minV  = Math.min(...vals);
+        const range = maxV - minV || 1;
+        return items.map(l => {
+          const h   = Math.max(6, Math.round(((l[key] - minV) / range) * 60) + 10);
+          const c   = (goalLine && l[key] <= goalLine) ? '#2A7A6F' : col;
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0;">
+            <div style="font-size:8px;font-family:var(--font-mono);color:var(--t3);white-space:nowrap;">${l[key]}</div>
+            <div style="width:100%;max-width:20px;height:${h}px;background:${c};border-radius:2px 2px 0 0;"></div>
+            <div style="font-size:8px;font-family:var(--font-mono);color:var(--t3);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;">${l.date.slice(5)}</div>
+          </div>`;
+        }).join('');
+      };
+
+      body = `
+        ${weights.length ? `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Peso</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${Math.min(...weights.map(l=>l.weight_kg))} – ${Math.max(...weights.map(l=>l.weight_kg))} kg</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:2px;height:84px;overflow-x:auto;">
+            ${bars(weights,'weight_kg','kg','#854F0B',null)}
+          </div>
+        </div>` : ''}
+
+        ${waists.length ? `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Vita</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${Math.min(...waists.map(l=>l.waist_cm))} – ${Math.max(...waists.map(l=>l.waist_cm))} cm · target &lt; 85</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:2px;height:84px;overflow-x:auto;">
+            ${bars(waists,'waist_cm','cm','#854F0B',85)}
+          </div>
+        </div>` : ''}
+
+        ${!weights.length && !waists.length ? `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessun dato peso/vita nei log.</div>` : ''}
+      `;
+    }
+
+  } else { // composizione
+    const latest   = logs[0] || {};
+    const w        = latest.weight_kg ?? ST.profile?.weight_kg;
+    const h        = ST.profile?.height_cm;
+    const bf       = latest.bf_pct;
+    const muscle   = latest.muscle_kg;
+    const visceral = latest.visceral_fat;
+    const bodyAge  = latest.body_age;
+
+    const bmi    = (w && h) ? (w / ((h/100)**2)).toFixed(1) : null;
+    const bmiCat = bmi ? (bmi < 18.5 ? 'Sottopeso' : bmi < 25 ? 'Normopeso' : bmi < 30 ? 'Sovrappeso' : 'Obeso') : '';
+    const bmiCol = bmi ? (bmi < 18.5 ? '#185FA5' : bmi < 25 ? '#2A7A6F' : bmi < 30 ? '#854F0B' : '#B84C2A') : '#854F0B';
+    const fatMass  = (w && bf) ? (w * bf / 100).toFixed(1) : null;
+    const leanMass = (w && bf) ? (w * (1 - bf/100)).toFixed(1) : null;
+
+    const stat = (label, value, unit, color='var(--t1)', sub='') => `
+      <div style="background:var(--s2);border-radius:var(--r);padding:12px 14px;">
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">${label}</div>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${color};line-height:1;">${value ?? '—'}</span>
+          ${value != null ? `<span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">${unit}</span>` : ''}
+        </div>
+        ${sub ? `<div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${sub}</div>` : ''}
+      </div>`;
+
+    body = `
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+        <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">Composizione corporea</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-bottom:14px;">${latest.date ? 'Ultimo log: '+fmtDate(latest.date) : 'Nessun log ancora'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          ${stat('BMI', bmi, '', bmiCol, bmiCat)}
+          ${stat('Body fat', bf, '%')}
+          ${stat('Massa magra', leanMass, 'kg')}
+          ${stat('Massa grassa', fatMass, 'kg')}
+          ${stat('Grasso viscerale', visceral, '')}
+          ${stat('Body age', bodyAge, 'anni')}
+        </div>
+      </div>
+      ${!bmi && !bf ? `<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-mono);line-height:1.8;">Aggiungi peso + BF% nelle Misure<br>per vedere la composizione calcolata.</div>` : ''}
+    `;
+  }
+
+  document.getElementById('page-body').innerHTML = navHTML + body;
+}
 
 function renderPage(id){
   if(id==='home') renderHome();
