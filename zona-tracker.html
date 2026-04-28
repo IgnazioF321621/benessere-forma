@@ -4768,7 +4768,6 @@ async function saveSettings() {
     intolleranze:  SET_INTOL.length ? SET_INTOL : null,
     note_salute:   document.getElementById('set-note-salute').value.trim() || null,
     esami_sangue:  Object.keys(esami).length ? esami : null,
-    train_start_date: document.getElementById('set-train-start').value || null,
     target_kcal:   targets.kcal,
     target_protein: targets.protein,
     target_carbs:  targets.carbs,
@@ -4781,6 +4780,11 @@ async function saveSettings() {
     errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
     btn.disabled=false; btn.textContent='Salva impostazioni →'; return;
   }
+
+  // Salva train_start_date separatamente (colonna potrebbe non esistere ancora)
+  const trainStartVal = document.getElementById('set-train-start').value || null;
+  const { error: tsErr } = await supa.from('profiles').update({ train_start_date: trainStartVal }).eq('id', ST.user.id);
+  if(!tsErr && ST.profile) ST.profile.train_start_date = trainStartVal;
 
   // Aggiorna stato locale
   Object.assign(ST.profile, updates);
