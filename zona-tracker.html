@@ -1729,6 +1729,12 @@ function showPage(id){
 }
 async function loadTrainingHomeData(){
   if(!ST.user || ST.user.id==='test-user-001') return;
+  // Se il programma non è ancora iniziato, mostra stato "in attesa"
+  const startDate = ST.profile?.train_start_date;
+  if(startDate && startDate > todayKey()){
+    ST.trainHomeData = { lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, notStarted:true, startDate };
+    renderHome(); return;
+  }
   const { data } = await supa
     .from('training_logs')
     .select('date, session_id')
@@ -1870,7 +1876,14 @@ function renderHome(){
   // ── Training tile (dati live) ──
   let trainBody, trainRight;
   const hd = ST.trainHomeData;
-  if(hd){
+  if(hd && hd.notStarted){
+    const startFmt = fmtDate(hd.startDate);
+    trainBody = `
+      ${tHead('Training', 'Programma non ancora iniziato', '#185FA5')}
+      <div style="font-size:16px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Inizia ${startFmt}</div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">Upper A · prima sessione</div>`;
+    trainRight = `<div style="flex-shrink:0;background:var(--s2);color:var(--t3);border-radius:var(--r);padding:10px 12px;font-size:13px;font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:center;min-width:56px;border:1px solid var(--b1);">⏳</div>`;
+  } else if(hd){
     const showSess = hd.doneToday ? hd.lastSession : hd.nextSession;
     const sessObj  = TRAINING_SESSIONS[showSess] || TRAINING_SESSIONS.upperA;
     const statusTxt = hd.doneToday
