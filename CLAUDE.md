@@ -296,13 +296,54 @@ GitHub Pages si aggiorna automaticamente (1-2 minuti).
 
 ## Worktree
 
-Le modifiche vanno fatte nel worktree:
-`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/stupefied-curran-9841e4/zona-tracker.html`
+Il worktree attivo è:
+`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/affectionate-bouman-962255/zona-tracker.html`
 
-Poi copiare nel repo principale prima del commit:
+Copiare nel repo principale prima del commit:
 ```bash
-cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/stupefied-curran-9841e4/zona-tracker.html ~/benessere-forma/zona-tracker.html
+cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/affectionate-bouman-962255/zona-tracker.html ~/benessere-forma/zona-tracker.html
 ```
+
+## Funzioni chiave aggiuntive (aprile 2026)
+
+| Funzione | Scopo |
+|---|---|
+| `prefsKey()` | Chiave localStorage `zt_prefs_<userId>` per prefs locali |
+| `saveLocalPrefs()` | Salva obiettivo/dieta/intolleranze in localStorage |
+| `applyLocalPrefs()` | Ripristina prefs locali dopo ogni applyProfile, ricalcola ST.TARGET |
+| `calcAdaptedTargets(obArr, kcal)` | Calcola macro adattivi per obiettivo — usa `OBJ_ADAPT` globale |
+| `updatePianoTargetCard()` | Aggiorna card target in Piano al toggle obiettivo (live) |
+| `renderPiano()` | Renderizza Piano inclusa card target inline |
+| `nutriSubNav(active)` | Sub-nav Nutrition riusabile su tutte e 4 le pagine |
+
+## Macro adattivi per obiettivo (`OBJ_ADAPT`, riga ~3614)
+
+```js
+const OBJ_ADAPT = {
+  dimagrimento:      { pct:[38,32,30], label:'Dimagrimento', ... },
+  ricomposizione:    { pct:[38,34,28], label:'Ricomposizione', ... },
+  ipertrofia:        { pct:[40,35,25], label:'Ipertrofia', ... },
+  forza_performance: { pct:[42,33,25], label:'Forza & Performance', ... },
+  longevita:         { pct:[40,30,30], label:'Longevità', ... },
+  mantenimento:      { pct:[40,30,30], label:'Mantenimento', ... },
+};
+// pct = [%carbo, %prot, %fat]
+```
+
+## Preferenze Piano — architettura (aprile 2026)
+
+- `obiettivo`, `dieta`, `intolleranze` salvati in `localStorage` (`zt_prefs_<userId>`), NON su Supabase
+- Le colonne `obiettivo`, `dieta`, `intolleranze` potrebbero NON esistere nella tabella `profiles` su Supabase
+- `savePianoPrefs()` salva prima in localStorage, poi aggiorna su Supabase solo `target_protein/carbs/fat`
+- `applyLocalPrefs()` viene chiamata da `applyProfile()` — sovrascrive il profilo con le prefs locali
+- `togglePianoObiettivo()` e `togglePianoIntol()` chiamano `saveLocalPrefs()` immediatamente
+
+## Service Worker (`sw.js`)
+
+- Network-first per `zona-tracker.html` (sempre fetch fresco dal server)
+- Cache-first per CDN esterni (Supabase JS, jsdelivr)
+- Registrato in fondo a `zona-tracker.html`, controlla aggiornamenti ogni 3 min
+- Auto-reload della pagina quando trova una nuova versione del SW
 
 ## Prossimi step
 
@@ -317,11 +358,41 @@ cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/stupefied-curran-9841
 - [x] Modulo Body — Tendenza (grafici barre peso + vita)
 - [x] Home tile Body live
 - [x] `train_start_date` in profilo → ciclo 4 settimane live + gate visibilità Training
+- [x] Piano → Preferenze alimentari (obiettivo, dieta, intolleranze)
+- [x] Piano → Macro adattivi per obiettivo (OBJ_ADAPT, calcAdaptedTargets)
+- [x] Service Worker PWA per aggiornamenti automatici
+- [ ] **BUG APERTO**: card target Piano mostra sempre "MANTENIMENTO 40·30·30" anche se Ipertrofia è selezionato — vedere sezione Bug noti
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
 ## Bug noti
 
+### 🔴 PRIORITÀ ALTA: Card target Piano sempre "MANTENIMENTO 40·30·30"
+**Sintomo:** Tab Piano — card con calorie/macro mostra sempre Mantenimento 40·30·30 anche quando Ipertrofia (o altro) è selezionato e verde. Vale anche per "vs 40·30·30" in Oggi.
+
+**Tentativi fatti (tutti falliti):**
+1. Card generata inline in `renderPiano()` con `pianoObiettivi` già calcolato → ancora Mantenimento
+2. `applyLocalPrefs()` in `applyProfile()` per sovrascrivere con prefs locali → ancora Mantenimento
+3. Hard refresh su Arc, eliminazione + re-aggiunta PWA su iPhone → stesso risultato
+4. Meta no-cache tags → ignorati dai browser moderni
+5. Service Worker network-first → installato ma il comportamento non cambia
+
+**Cause escluse:**
+- Non è cache del browser/CDN (2.5+ ore, hard refresh, app eliminata e riaggiunta)
+- Non è sintassi JS errata (validato con `new Function()`)
+- Non è Temporal Dead Zone (OBJ_ADAPT e renderPiano sono entrambi top-level)
+
+**Ipotesi non ancora verificata:**
+- Il browser sta effettivamente caricando il codice NUOVO? → serve verifica con `console.log` o indicatore versione visibile nella UI
+- C'è un errore JS runtime che interrompe `calcAdaptedTargets` o il blocco inline → serve DevTools console aperta durante il rendering
+- `pianoObiettivi` è effettivamente `['ipertrofia']` quando la card viene renderizzata? → da verificare con debug
+
+**Da fare nella prossima sessione:**
+1. Aggiungere un indicatore versione visibile (es. footer con commit hash) per confermare che il nuovo codice gira
+2. Aggiungere `console.log('renderPiano pianoObiettivi=', pianoObiettivi)` prima del blocco card
+3. Chiedere all'utente di aprire DevTools su Arc e riportare l'output della console
+
+### Altri bug noti
 - `trainLoggedSets` si azzera al reload (in-memory only) — i badge serie spariscono dopo refresh
 - `updateSuppSlotTime` presente ma non testata in produzione
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
