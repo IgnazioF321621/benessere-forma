@@ -3449,6 +3449,20 @@ function nutriSubNav(active){
 function renderPiano(){
   const t = ST.TARGET;
   const p = ST.profile || {};
+
+  // Restore piano da cache se non ancora in memoria
+  if(!ST.pianoAI && !ST.pianoLoading) {
+    try {
+      const cached = localStorage.getItem('zt_piano_' + (ST.user?.id || 'local'));
+      if(cached) { ST.pianoAI = JSON.parse(cached); ST.pianoOpenDay = 0; }
+    } catch(e) {}
+    if(!ST.pianoAI && p.piano_ai) {
+      ST.pianoAI = p.piano_ai;
+      ST.pianoOpenDay = 0;
+      try { localStorage.setItem('zt_piano_' + (ST.user?.id || 'local'), JSON.stringify(ST.pianoAI)); } catch(e) {}
+    }
+  }
+
   const piano = ST.pianoAI || null;
   const pianoLoading = ST.pianoLoading || false;
   const pianoError = ST.pianoError || '';
