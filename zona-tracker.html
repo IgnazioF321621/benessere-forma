@@ -3454,40 +3454,39 @@ function renderPiano(){
   const pianoError = ST.pianoError || '';
 
   // Card preferenze alimentari (editabile)
-  const intolKeys = ['lattosio','glutine','uova','frutta_a_guscio'];
-  const intolLabels = {lattosio:'Lattosio',glutine:'Glutine',uova:'Uova',frutta_a_guscio:'Frutta a guscio'};
+  const OBJ_KEYS = ['perdita_peso','riduzione_grasso_addominale','ricomposizione','mantenimento','massa_muscolare','energia','salute_cardiovascolare','controllo_glicemia','riduzione_infiammazione','recupero_sportivo'];
+  const OBJ_LABELS = {perdita_peso:'Perdita peso',riduzione_grasso_addominale:'Grasso addominale',ricomposizione:'Ricomposizione corporea',mantenimento:'Mantenimento',massa_muscolare:'Massa muscolare',energia:'Più energia',salute_cardiovascolare:'Cuore & circolazione',controllo_glicemia:'Controllo glicemia',riduzione_infiammazione:'Riduzione infiammazione',recupero_sportivo:'Recupero sportivo'};
+  const INTOL_KEYS = ['lattosio','latticini','glutine','uova','frutta_a_guscio','arachidi','soia','pesce','crostacei','sesamo','nichel','istamina','fruttosio','lievito'];
+  const INTOL_LABELS = {lattosio:'Lattosio',latticini:'Latticini',glutine:'Glutine',uova:'Uova',frutta_a_guscio:'Frutta a guscio',arachidi:'Arachidi',soia:'Soia',pesce:'Pesce',crostacei:'Crostacei',sesamo:'Sesamo',nichel:'Nichel',istamina:'Istamina',fruttosio:'Fruttosio',lievito:'Lievito'};
+  const pianoObiettivi = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
   const pianoIntol = p.intolleranze || [];
   let html = `<div class="card" style="margin-bottom:12px;">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
     <span class="lbl" style="margin:0;">🥗 Preferenze alimentari</span>
     <button id="piano-prefs-btn" class="btn btn-primary btn-sm" onclick="savePianoPrefs()">Salva →</button>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-    <div>
-      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:5px;">OBIETTIVO</div>
-      <select id="piano-obiettivo" class="inp inp-sm" style="width:100%;">
-        <option value="perdita_peso" ${(p.obiettivo||'')==='perdita_peso'?'selected':''}>Perdita peso</option>
-        <option value="mantenimento" ${(p.obiettivo||'')==='mantenimento'?'selected':''}>Mantenimento</option>
-        <option value="massa_muscolare" ${(p.obiettivo||'')==='massa_muscolare'?'selected':''}>Massa muscolare</option>
-      </select>
+  <div style="margin-bottom:14px;">
+    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:8px;">OBIETTIVO <span style="color:var(--t3);font-weight:400;">(seleziona uno o più)</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${OBJ_KEYS.map(k=>`<button id="po-${k}" class="nsn-pill${pianoObiettivi.includes(k)?' active':''}" onclick="togglePianoObiettivo('${k}')">${OBJ_LABELS[k]}</button>`).join('')}
     </div>
-    <div>
-      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:5px;">TIPO DI DIETA</div>
-      <select id="piano-dieta" class="inp inp-sm" style="width:100%;">
-        <option value="onnivoro" ${(p.dieta||'')==='onnivoro'?'selected':''}>Onnivoro</option>
-        <option value="pescetariano" ${(p.dieta||'')==='pescetariano'?'selected':''}>Pescetariano</option>
-        <option value="vegetariano" ${(p.dieta||'')==='vegetariano'?'selected':''}>Vegetariano</option>
-        <option value="vegano" ${(p.dieta||'')==='vegano'?'selected':''}>Vegano</option>
-      </select>
-    </div>
+  </div>
+  <div style="margin-bottom:14px;">
+    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:5px;">TIPO DI DIETA</div>
+    <select id="piano-dieta" class="inp inp-sm" style="width:100%;">
+      <option value="onnivoro" ${(p.dieta||'')==='onnivoro'?'selected':''}>Onnivoro</option>
+      <option value="pescetariano" ${(p.dieta||'')==='pescetariano'?'selected':''}>Pescetariano</option>
+      <option value="vegetariano" ${(p.dieta||'')==='vegetariano'?'selected':''}>Vegetariano</option>
+      <option value="vegano" ${(p.dieta||'')==='vegano'?'selected':''}>Vegano</option>
+    </select>
   </div>
   <div>
-    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:7px;">INTOLLERANZE</div>
+    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:8px;">INTOLLERANZE / ALLERGIE</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;">
-      ${intolKeys.map(k=>`<button id="pi-${k}" class="nsn-pill${pianoIntol.includes(k)?' active':''}" onclick="togglePianoIntol('${k}')">${intolLabels[k]}</button>`).join('')}
+      ${INTOL_KEYS.map(k=>`<button id="pi-${k}" class="nsn-pill${pianoIntol.includes(k)?' active':''}" onclick="togglePianoIntol('${k}')">${INTOL_LABELS[k]}</button>`).join('')}
     </div>
   </div>
-  <div id="piano-prefs-msg" style="font-size:11px;color:var(--acc);font-family:var(--font-mono);margin-top:8px;display:none;">Salvato ✓ — rigenera il piano per applicare</div>
+  <div id="piano-prefs-msg" style="font-size:11px;color:var(--acc);font-family:var(--font-mono);margin-top:10px;display:none;">Salvato ✓ — rigenera il piano per applicare le nuove preferenze</div>
   </div>`;
 
   // Card macro target
@@ -3579,6 +3578,14 @@ function renderPiano(){
 }
 
 // ── PREFERENZE PIANO ───────────────────────────────────────
+function togglePianoObiettivo(val) {
+  const arr = ST.profile.obiettivo ? ST.profile.obiettivo.split(',').filter(Boolean) : [];
+  const i = arr.indexOf(val);
+  if(i < 0) arr.push(val); else arr.splice(i, 1);
+  ST.profile.obiettivo = arr.join(',');
+  document.getElementById('po-'+val)?.classList.toggle('active', arr.includes(val));
+}
+
 function togglePianoIntol(val) {
   const arr = ST.profile.intolleranze ? [...ST.profile.intolleranze] : [];
   const i = arr.indexOf(val);
@@ -3591,9 +3598,9 @@ async function savePianoPrefs() {
   const btn = document.getElementById('piano-prefs-btn');
   const msg = document.getElementById('piano-prefs-msg');
   if(btn) { btn.disabled = true; btn.textContent = 'Salvataggio...'; }
-  const obiettivo = document.getElementById('piano-obiettivo')?.value;
   const dieta = document.getElementById('piano-dieta')?.value;
-  const intolleranze = (ST.profile.intolleranze || []);
+  const obiettivo = ST.profile.obiettivo || '';
+  const intolleranze = ST.profile.intolleranze || [];
   const updates = {
     obiettivo,
     dieta,
@@ -3634,7 +3641,9 @@ async function generatePianoAI(forza = false) {
   const t = ST.TARGET;
   const dieta = p.dieta || 'pescetariana';
   const intolleranze = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'latticini';
-  const obiettivo = p.obiettivo || 'perdita peso';
+  const obiettiviArr = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
+  const OBJ_LBL = {perdita_peso:'perdita peso',riduzione_grasso_addominale:'riduzione grasso addominale',ricomposizione:'ricomposizione corporea',mantenimento:'mantenimento peso',massa_muscolare:'aumento massa muscolare',energia:'miglioramento energia',salute_cardiovascolare:'salute cardiovascolare',controllo_glicemia:'controllo glicemia',riduzione_infiammazione:'riduzione infiammazione',recupero_sportivo:'recupero sportivo'};
+  const obiettivo = obiettiviArr.length ? obiettiviArr.map(o=>OBJ_LBL[o]||o).join(', ') : 'benessere generale';
   const note = p.note_salute || 'ferritina bassa, sistema immunitario da potenziare';
 
   const prompt = `Sei un nutrizionista esperto in dieta a Zona (40-30-30). Crea un piano alimentare settimanale personalizzato.\n\nPROFILO UTENTE:\n- Dieta: ${dieta}\n- Intolleranze/esclusioni: ${intolleranze}\n- Obiettivo: ${obiettivo}\n- Note salute: ${note}\n- Target giornaliero: ${t.kcal} kcal · ${t.protein}g proteine · ${t.carbs}g carboidrati · ${t.fat}g grassi\n- Rapporto macro: 40% carbo, 30% proteine, 30% grassi\n\nREGOLE:\n- Solo carbo a basso indice glicemico\n- Pesce come proteina principale (salmone, tonno, sgombro, merluzzo, branzino, orata, gamberi)\n- Legumi quotidianamente (ferro)\n- Zero latticini\n- Porzioni precise in grammi\n- Ogni giorno deve avere: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena\n\nRispondi SOLO con questo JSON valido, niente testo extra:\n{\n  "giorni": [\n    {\n      "giorno": "Lunedì",\n      "kcal_totali": 1850,\n      "colazione": {"piatto": "nome", "ingredienti": "ingredienti con grammi", "kcal": 400, "proteine": 30, "carboidrati": 45, "grassi": 12},\n      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": 550, "proteine": 45, "carboidrati": 55, "grassi": 18},\n      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": 500, "proteine": 40, "carboidrati": 45, "grassi": 15},\n      "note": "consiglio del giorno in italiano, max 1 frase"\n    }\n  ]\n}\nGenera tutti e 7 i giorni (Lunedì–Domenica). Ingredienti: max 60 caratteri per campo. Valori numerici: interi senza unità. JSON deve essere completo e valido.`;
