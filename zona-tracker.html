@@ -484,9 +484,12 @@ select.inp{cursor:pointer;}
       <div class="onb-section">
         <div class="onb-section-title">Obiettivo</div>
         <div class="onb-pills">
-          <button class="onb-pill active" onclick="setOnbPill('objective','perdita_peso')" id="obj-perdita_peso">Perdita peso</button>
+          <button class="onb-pill active" onclick="setOnbPill('objective','dimagrimento')" id="obj-dimagrimento">Dimagrimento</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','ricomposizione')" id="obj-ricomposizione">Ricomposizione</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','ipertrofia')" id="obj-ipertrofia">Ipertrofia</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','forza_performance')" id="obj-forza_performance">Forza & Performance</button>
+          <button class="onb-pill" onclick="setOnbPill('objective','longevita')" id="obj-longevita">Longevità</button>
           <button class="onb-pill" onclick="setOnbPill('objective','mantenimento')" id="obj-mantenimento">Mantenimento</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','massa_muscolare')" id="obj-massa_muscolare">Massa muscolare</button>
         </div>
       </div>
       <div class="onb-section" style="margin-top:20px;">
@@ -779,12 +782,17 @@ select.inp{cursor:pointer;}
     <!-- Sezione: Obiettivo & attività -->
     <div style="margin-bottom:20px;">
       <div class="lbl">Obiettivo & attività</div>
-      <div class="onb-field" style="margin-bottom:10px;"><label>Obiettivo</label>
-        <select id="set-obiettivo" class="inp inp-sm">
-          <option value="perdita_peso">Perdita peso</option>
-          <option value="mantenimento">Mantenimento</option>
-          <option value="massa_muscolare">Massa muscolare</option>
-        </select>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;display:block;margin-bottom:8px;">OBIETTIVO</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="set-obiettivo-grid">
+          <button type="button" class="set-obj-pill" data-val="dimagrimento" onclick="selectSetObiettivo('dimagrimento')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Dimagrimento</button>
+          <button type="button" class="set-obj-pill" data-val="ricomposizione" onclick="selectSetObiettivo('ricomposizione')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Ricomposizione</button>
+          <button type="button" class="set-obj-pill" data-val="ipertrofia" onclick="selectSetObiettivo('ipertrofia')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Ipertrofia</button>
+          <button type="button" class="set-obj-pill" data-val="forza_performance" onclick="selectSetObiettivo('forza_performance')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Forza & Performance</button>
+          <button type="button" class="set-obj-pill" data-val="longevita" onclick="selectSetObiettivo('longevita')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Longevità</button>
+          <button type="button" class="set-obj-pill" data-val="mantenimento" onclick="selectSetObiettivo('mantenimento')" style="padding:8px 6px;border-radius:8px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t2);font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;line-height:1.3;">Mantenimento</button>
+        </div>
+        <input type="hidden" id="set-obiettivo" value="dimagrimento"/>
       </div>
       <div class="onb-field"><label>Livello attività</label>
         <select id="set-activity" class="inp inp-sm">
@@ -950,7 +958,7 @@ const ST = {
   onbStep: 1,
   onbSex: 'M',
   onbActivity: 'moderate',
-  onbObjective: 'perdita_peso',
+  onbObjective: 'dimagrimento',
   onbDiet: 'onnivoro',
   onbIntolleranze: [],
   onbWorkout: 'misto',
@@ -1576,6 +1584,12 @@ function loadCache() {
 
 function prefsKey() { return `zt_prefs_${ST.user?.id || 'local'}`; }
 
+const OBJ_MIGRATE = { perdita_peso: 'dimagrimento', massa_muscolare: 'ipertrofia' };
+function migrateObiettivo(str) {
+  if (!str) return str;
+  return str.split(',').map(v => OBJ_MIGRATE[v.trim()] || v.trim()).filter(Boolean).join(',');
+}
+
 function saveLocalPrefs() {
   try {
     localStorage.setItem(prefsKey(), JSON.stringify({
@@ -1591,7 +1605,7 @@ function applyLocalPrefs() {
     const raw = localStorage.getItem(prefsKey());
     if (!raw) return;
     const prefs = JSON.parse(raw);
-    if (prefs.obiettivo)    ST.profile.obiettivo    = prefs.obiettivo;
+    if (prefs.obiettivo)    ST.profile.obiettivo    = migrateObiettivo(prefs.obiettivo);
     if (prefs.dieta)        ST.profile.dieta        = prefs.dieta;
     if (prefs.intolleranze) ST.profile.intolleranze = prefs.intolleranze;
     // Ricalcola TARGET con il vero obiettivo locale
@@ -1607,6 +1621,7 @@ function applyLocalPrefs() {
 }
 
 function applyProfile(profile) {
+  if (profile.obiettivo) profile.obiettivo = migrateObiettivo(profile.obiettivo);
   const baseKcal = profile.target_kcal || 1900;
   const obiettiviArr = profile.obiettivo ? profile.obiettivo.split(',').filter(Boolean) : [];
   const adapted = calcAdaptedTargets(obiettiviArr, baseKcal);
@@ -3552,7 +3567,6 @@ function renderPiano(){
   </div>`;
 
   // Card macro target — renderizzata inline con pianoObiettivi già calcolato
-  console.log('DEBUG renderPiano | pianoObiettivi=', pianoObiettivi, '| ST.profile.obiettivo=', ST.profile?.obiettivo, '| ST.user?.id=', ST.user?.id);
   {
     const _a = calcAdaptedTargets(pianoObiettivi, t.kcal);
     const [_pC, _pP, _pF] = OBJ_ADAPT[pianoObiettivi[0] || 'mantenimento']?.pct || [40,30,30];
@@ -3641,7 +3655,6 @@ function renderPiano(){
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  html+=`<div style="text-align:center;font-size:10px;color:var(--t3);font-family:var(--font-mono);padding-bottom:8px;">build 2026-04-29a</div>`;
   document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html;
 }
 
@@ -4980,6 +4993,16 @@ const ESAMI_DEFAULTS = [
   {key:'magnesio', label:'Magnesio (mg/dL)', ref:'1.7–2.2'},
 ];
 
+function selectSetObiettivo(val) {
+  document.getElementById('set-obiettivo').value = val;
+  document.querySelectorAll('.set-obj-pill').forEach(btn => {
+    const on = btn.dataset.val === val;
+    btn.style.background   = on ? 'var(--acc)' : 'var(--s1)';
+    btn.style.borderColor  = on ? 'var(--acc)' : 'var(--b2)';
+    btn.style.color        = on ? '#fff'        : 'var(--t2)';
+  });
+}
+
 function openSettingsModal() {
   const p = ST.profile || {};
   // Popola campi base
@@ -4987,7 +5010,7 @@ function openSettingsModal() {
   document.getElementById('set-lname').value = p.last_name || '';
   document.getElementById('set-weight').value = p.weight_kg || '';
   document.getElementById('set-goal-weight').value = p.goal_weight_kg || '';
-  document.getElementById('set-obiettivo').value = p.obiettivo || 'perdita_peso';
+  selectSetObiettivo(migrateObiettivo(p.obiettivo || '').split(',')[0] || 'dimagrimento');
   document.getElementById('set-activity').value = p.activity_level || 'moderate';
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
