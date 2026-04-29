@@ -262,6 +262,13 @@ select.inp{cursor:pointer;}
 .tag{display:inline-block;font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;}
 .tag-ok{background:var(--acc-lt);color:var(--acc);}
 
+/* ── NUTRITION / MODULE SUB-NAV ── */
+.nutrition-subnav{display:flex;gap:4px;padding:14px 16px 10px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg,#F5F3EF);z-index:10;border-bottom:1px solid var(--b1);}
+.nutrition-subnav::-webkit-scrollbar{display:none;}
+.nsn-pill{flex-shrink:0;padding:7px 18px;border-radius:999px;border:1.5px solid var(--b2);background:var(--s1);color:var(--t3);font-size:12px;font-family:var(--font-sans);font-weight:600;letter-spacing:.2px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow);}
+.nsn-pill:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-lt);}
+.nsn-pill.active{background:var(--acc);color:#fff;border-color:var(--acc);box-shadow:0 2px 8px rgba(42,122,111,.25);}
+
 /* ── SUPP SHEET ── */
 .ss-handle{width:36px;height:4px;background:var(--b2);border-radius:2px;margin:0 auto 18px;}
 .ss-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
