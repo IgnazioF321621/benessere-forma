@@ -1412,10 +1412,13 @@ async function loadMeals(date) {
 }
 
 async function loadAllDays() {
-  const {data:meals} = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
-  const {data:fasting} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
+  const {data:meals,   error:mealsErr}   = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
+  const {data:fasting, error:fastingErr} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
   // Usa solo le colonne garantite dallo schema originale (date, supplement_name)
-  const {data:suppLog} = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
+  const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
+
+  // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
+  if (mealsErr || meals === null) return;
 
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
