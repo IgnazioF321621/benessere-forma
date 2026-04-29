@@ -5156,6 +5156,25 @@ setTimeout(async () => {
 
 }, 1800); // splash duration
 
+// ── SERVICE WORKER (network-first, auto-update) ─────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/benessere-forma/sw.js', { scope: '/benessere-forma/' })
+    .then(reg => {
+      // Quando il browser scarica un nuovo SW, ricarica la pagina automaticamente
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        });
+      });
+      // Controlla aggiornamenti ogni 3 minuti (invece di aspettare la prossima navigazione)
+      setInterval(() => reg.update(), 3 * 60 * 1000);
+    })
+    .catch(() => {});
+}
+
 </script>
 </body>
 </html>
