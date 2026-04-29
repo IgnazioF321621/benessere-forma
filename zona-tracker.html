@@ -3676,48 +3676,64 @@ async function generatePianoAI(forza = false) {
   const obiettivo = obiettiviArr.length ? obiettiviArr.map(o=>OBJ_LBL[o]||o).join(', ') : 'benessere generale';
   const note = p.note_salute || '';
 
-  // Distribuisce le kcal giornaliere proporzionalmente tra i 5 pasti
   const kc = t.kcal;
-  const ex = {
-    col:  Math.round(kc * 0.20),
-    smA:  Math.round(kc * 0.10),
-    pra:  Math.round(kc * 0.35),
-    smP:  Math.round(kc * 0.10),
-    cen:  Math.round(kc * 0.25),
+
+  // Adatta macro ratio e linee guida in base all'obiettivo (base sempre Zona 40-30-30)
+  const OBJ_ADAPT = {
+    dimagrimento:       { pct:[38,32,30], note:'Privilegia proteine ad alto valore biologico per preservare la massa magra. Carboidrati concentrati a colazione e pranzo, cena leggera. Deficit calorico già incluso nel target.' },
+    ricomposizione:     { pct:[38,34,28], note:'Proteine elevate per favorire sintesi muscolare e ossidazione dei grassi. Distribuisci i carbo intorno all\'attività fisica.' },
+    ipertrofia:         { pct:[40,35,25], note:'Aumenta le proteine per massimizzare la sintesi proteica. Carbo complessi prima e dopo il workout. Pasti frequenti e abbondanti.' },
+    forza_performance:  { pct:[42,33,25], note:'Carbo leggermente superiori per alimentare la performance e il recupero muscolare. Spuntino pre-workout ricco di carbo a basso IG.' },
+    longevita:          { pct:[40,30,30], note:'Privilegia alimenti anti-infiammatori (pesce grasso, verdure colorate, frutti rossi, olio EVO, noci). Varietà massima e alimenti non processati.' },
+    mantenimento:       { pct:[40,30,30], note:'Zona classica. Distribuzione equilibrata, rotazione delle fonti proteiche e dei carboidrati durante la settimana.' },
   };
-  // Macro proporzionali per pasto (approssimate)
+  // Prende il primo obiettivo selezionato come guida principale, fallback mantenimento
+  const firstObj = obiettiviArr[0] || 'mantenimento';
+  const adapt = OBJ_ADAPT[firstObj] || OBJ_ADAPT.mantenimento;
+  const [pCarbo, pProt, pFat] = adapt.pct;
+  // Ricalcola macro assoluti con il ratio adattivo
+  const aProtein = Math.round(kc * pProt / 100 / 4);
+  const aCarbs   = Math.round(kc * pCarbo / 100 / 4);
+  const aFat     = Math.round(kc * pFat / 100 / 9);
+
+  // Distribuzione calorica tra i 5 pasti
+  const ex = { col: Math.round(kc*0.20), smA: Math.round(kc*0.10), pra: Math.round(kc*0.35), smP: Math.round(kc*0.10), cen: Math.round(kc*0.25) };
   const mp = slot => ({
-    prot: Math.round(t.protein * (ex[slot]/kc)),
-    carb: Math.round(t.carbs   * (ex[slot]/kc)),
-    fat:  Math.round(t.fat     * (ex[slot]/kc)),
+    prot: Math.round(aProtein * (ex[slot]/kc)),
+    carb: Math.round(aCarbs   * (ex[slot]/kc)),
+    fat:  Math.round(aFat     * (ex[slot]/kc)),
   });
 
-  // Regole dinamiche in base al profilo
-  const rDieta = dieta === 'vegano' ? '- Solo proteine vegetali (tofu, tempeh, legumi, seitan, edamame)'
-    : dieta === 'vegetariano' ? '- Proteine da uova, legumi, latticini se tollerati, tofu'
-    : dieta === 'pescetariano' ? '- Proteine da pesce (salmone, tonno, merluzzo, branzino, gamberi) e legumi'
-    : '- Proteine da carne magra, pesce, uova, legumi — varia ogni giorno';
-  const rIntol = (p.intolleranze && p.intolleranze.length)
-    ? `- Escludi assolutamente: ${p.intolleranze.join(', ')}` : '';
-  const rNote = note ? `- Salute: ${note}` : '';
+  // Regole proteina in base alla dieta
+  const rDieta = dieta === 'vegano'        ? '- Solo proteine vegetali (tofu, tempeh, legumi, seitan, edamame, lenticchie)'
+    : dieta === 'vegetariano' ? '- Proteine da uova, legumi, latticini se tollerati, tofu, Greek yogurt'
+    : dieta === 'pescetariano' ? '- Proteine principalmente da pesce (salmone, tonno, merluzzo, branzino, gamberi, sgombro) e legumi'
+    : '- Proteine da carne magra, pesce, uova, legumi — ruota le fonti ogni giorno';
+  const rIntol = (p.intolleranze && p.intolleranze.length) ? `- Escludi tassativamente: ${p.intolleranze.join(', ')}` : '';
+  const rNote = note ? `- Note salute: ${note}` : '';
 
-  const prompt = `Sei un nutrizionista esperto. Crea un piano alimentare settimanale PERSONALIZZATO seguendo la dieta a Zona (40% carbo, 30% proteine, 30% grassi).
+  const prompt = `Sei un nutrizionista esperto in dieta a Zona. Crea un piano alimentare settimanale personalizzato.
 
-PROFILO UTENTE:
-- Obiettivo: ${obiettivo}
+BASE: Dieta a Zona (equilibrio macro C/P/G), adattata all'obiettivo specifico.
+OBIETTIVO: ${obiettivo}
+ADATTAMENTO: ${adapt.note}
+
+PROFILO:
 - Dieta: ${dieta}
-- Target giornaliero OBBLIGATORIO: ${kc} kcal totali · ${t.protein}g proteine · ${t.carbs}g carbo · ${t.fat}g grassi
+- Macro target adattati: ${pCarbo}% carbo · ${pProt}% proteine · ${pFat}% grassi
+- Calorie giornaliere OBBLIGATORIE: ${kc} kcal · ${aProtein}g P · ${aCarbs}g C · ${aFat}g G
 ${rIntol}
 ${rNote}
 
-REGOLE RIGIDE:
+REGOLE:
 ${rDieta}
-- Solo carboidrati a basso indice glicemico (riso integrale, quinoa, avena, patata dolce, legumi, frutta)
-- Porzioni espresse in grammi
-- 5 pasti al giorno: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena
-- La somma delle kcal dei 5 pasti DEVE essere uguale a ${kc} kcal (±50 kcal di tolleranza)
+- Solo carboidrati a basso indice glicemico (riso integrale, quinoa, avena, patata dolce, legumi, frutta intera)
+- Porzioni in grammi, alimenti reali, no prodotti industriali
+- 5 pasti: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena
+- Somma kcal dei 5 pasti = ${kc} kcal (±50 kcal tolleranza)
+- Piatti diversi ogni giorno della settimana
 
-DISTRIBUZIONE CALORICA RICHIESTA PER OGNI GIORNO:
+DISTRIBUZIONE PER PASTO:
 - Colazione: ~${ex.col} kcal (${mp('col').prot}g P · ${mp('col').carb}g C · ${mp('col').fat}g G)
 - Spuntino mattina: ~${ex.smA} kcal (${mp('smA').prot}g P · ${mp('smA').carb}g C · ${mp('smA').fat}g G)
 - Pranzo: ~${ex.pra} kcal (${mp('pra').prot}g P · ${mp('pra').carb}g C · ${mp('pra').fat}g G)
