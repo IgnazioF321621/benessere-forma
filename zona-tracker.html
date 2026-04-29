@@ -3454,8 +3454,8 @@ function renderPiano(){
   const pianoError = ST.pianoError || '';
 
   // Card preferenze alimentari (editabile)
-  const OBJ_KEYS = ['perdita_peso','riduzione_grasso_addominale','ricomposizione','mantenimento','massa_muscolare','ipertrofia','energia','salute_cardiovascolare','recupero_sportivo'];
-  const OBJ_LABELS = {perdita_peso:'Perdita peso',riduzione_grasso_addominale:'Grasso addominale',ricomposizione:'Ricomposizione',mantenimento:'Mantenimento',massa_muscolare:'Massa muscolare',ipertrofia:'Ipertrofia',energia:'Più energia',salute_cardiovascolare:'Cuore & circolazione',recupero_sportivo:'Recupero sportivo'};
+  const OBJ_KEYS = ['dimagrimento','ricomposizione','ipertrofia','forza_performance','longevita','mantenimento'];
+  const OBJ_LABELS = {dimagrimento:'Dimagrimento',ricomposizione:'Ricomposizione corporea',ipertrofia:'Ipertrofia',forza_performance:'Forza & Performance',longevita:'Longevità',mantenimento:'Mantenimento'};
   const INTOL_KEYS = ['lattosio','latticini','glutine','uova','frutta_a_guscio','arachidi','soia','pesce','crostacei','sesamo','nichel','istamina','fruttosio','lievito'];
   const INTOL_LABELS = {lattosio:'Lattosio',latticini:'Latticini',glutine:'Glutine',uova:'Uova',frutta_a_guscio:'Frutta a guscio',arachidi:'Arachidi',soia:'Soia',pesce:'Pesce',crostacei:'Crostacei',sesamo:'Sesamo',nichel:'Nichel',istamina:'Istamina',fruttosio:'Fruttosio',lievito:'Lievito'};
   const pianoObiettivi = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
@@ -3658,7 +3658,7 @@ async function generatePianoAI(forza = false) {
   const dieta = p.dieta || 'pescetariana';
   const intolleranze = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'latticini';
   const obiettiviArr = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
-  const OBJ_LBL = {perdita_peso:'perdita peso',riduzione_grasso_addominale:'riduzione grasso addominale',ricomposizione:'ricomposizione corporea',mantenimento:'mantenimento peso',massa_muscolare:'aumento massa muscolare',ipertrofia:'ipertrofia muscolare',energia:'miglioramento energia',salute_cardiovascolare:'salute cardiovascolare',recupero_sportivo:'recupero sportivo'};
+  const OBJ_LBL = {dimagrimento:'dimagrimento',ricomposizione:'ricomposizione corporea',ipertrofia:'ipertrofia',forza_performance:'forza e performance',longevita:'longevità',mantenimento:'mantenimento'};
   const obiettivo = obiettiviArr.length ? obiettiviArr.map(o=>OBJ_LBL[o]||o).join(', ') : 'benessere generale';
   const note = p.note_salute || 'ferritina bassa, sistema immunitario da potenziare';
 
