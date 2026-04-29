@@ -1572,11 +1572,17 @@ function loadCache() {
 }
 
 function applyProfile(profile) {
+  const baseKcal = profile.target_kcal || 1900;
+  const obiettiviArr = profile.obiettivo ? profile.obiettivo.split(',').filter(Boolean) : [];
+  const adapted = calcAdaptedTargets(obiettiviArr, baseKcal);
   ST.TARGET = {
-    kcal:    profile.target_kcal    || 1900,
-    protein: profile.target_protein || 143,
-    carbs:   profile.target_carbs   || 190,
-    fat:     profile.target_fat     || 63,
+    kcal:    baseKcal,
+    protein: adapted.protein,
+    carbs:   adapted.carbs,
+    fat:     adapted.fat,
+    pProt:   adapted.pProt,
+    pCarbo:  adapted.pCarbo,
+    pFat:    adapted.pFat,
   };
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
   document.getElementById('h-weight').textContent = profile.weight_kg || '—';
@@ -1895,7 +1901,7 @@ function renderHome(){
   const nutrRight = `
     <div style="flex-shrink:0;text-align:center;padding:8px 10px;border-radius:var(--r);min-width:64px;background:${badgeOk?'var(--acc-lt)':'var(--err-lt)'};border:1px solid ${badgeOk?'rgba(42,122,111,.25)':'rgba(184,76,42,.25)'};">
       <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);font-weight:700;color:${badgeOk?'var(--acc)':'var(--fat)'};">${badgeOk?'● Zona':'○ Off'}</div>
-      <div style="font-size:11px;font-family:var(--font-mono);color:var(--t1);font-weight:700;margin-top:3px;white-space:nowrap;">40·30·30</div>
+      <div style="font-size:11px;font-family:var(--font-mono);color:var(--t1);font-weight:700;margin-top:3px;white-space:nowrap;">${ST.TARGET.pCarbo||40}·${ST.TARGET.pProt||30}·${ST.TARGET.pFat||30}</div>
     </div>`;
 
   // ── Training tile (dati live) ──
@@ -2954,7 +2960,8 @@ function heroCard(cons) {
     zonaState = allOk;
     const bColor = allOk ? '#2D5016' : '#C4880A';
     const bBg    = allOk ? '#E6F0DC' : '#FEF3DC';
-    zonaRowHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);"><div style="display:flex;gap:10px;font-size:11px;font-family:'JetBrains Mono',monospace;"><span style="color:#C4880A;">C ${pC}%</span><span style="color:#2D5016;">P ${pP}%</span><span style="color:#B84C2A;">G ${pF}%</span><span style="color:var(--t3);">vs 40·30·30</span></div><span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${bColor};background:${bBg};border:1px solid ${bColor}44;border-radius:20px;padding:2px 10px;">${allOk?'In Zona':'Fuori Zona'}</span></div>`;
+    const tPC = ST.TARGET.pCarbo || 40, tPP = ST.TARGET.pProt || 30, tPF = ST.TARGET.pFat || 30;
+    zonaRowHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);"><div style="display:flex;gap:10px;font-size:11px;font-family:'JetBrains Mono',monospace;"><span style="color:#C4880A;">C ${pC}%</span><span style="color:#2D5016;">P ${pP}%</span><span style="color:#B84C2A;">G ${pF}%</span><span style="color:var(--t3);">vs ${tPC}·${tPP}·${tPF}</span></div><span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${bColor};background:${bBg};border:1px solid ${bColor}44;border-radius:20px;padding:2px 10px;">${allOk?'In Zona':'Fuori Zona'}</span></div>`;
   }
   const finalRingColor = zonaState !== null ? (zonaState ? '#2A7A6F' : '#B84C2A') : ringColor;
   const zonaLabelHTML = zonaState !== null ? `<span style="font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${finalRingColor};letter-spacing:.5px;margin-top:1px;">${zonaState ? 'In Zona' : 'Fuori Zona'}</span>` : '';
@@ -3126,7 +3133,8 @@ function renderOggi(){
       const pP=Math.round(kP2/totK2*100),pC=Math.round(kC2/totK2*100),pG=100-pP-pC;
       const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
       const confettiHTML=[0,1,2,3,4,5,6,7].map(i=>`<div class="badge-confetti" style="left:${8+i*12}%;animation-delay:${(i*0.18).toFixed(2)}s;background:${confettiColors[i%4]};"></div>`).join('');
-      html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati 40·30·30</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
+      const perfRatio = `${ST.TARGET.pCarbo||40}·${ST.TARGET.pProt||30}·${ST.TARGET.pFat||30}`;
+      html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati ${perfRatio}</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
     }
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
