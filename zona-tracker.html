@@ -3660,9 +3660,72 @@ async function generatePianoAI(forza = false) {
   const obiettiviArr = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
   const OBJ_LBL = {dimagrimento:'dimagrimento',ricomposizione:'ricomposizione corporea',ipertrofia:'ipertrofia',forza_performance:'forza e performance',longevita:'longevità',mantenimento:'mantenimento'};
   const obiettivo = obiettiviArr.length ? obiettiviArr.map(o=>OBJ_LBL[o]||o).join(', ') : 'benessere generale';
-  const note = p.note_salute || 'ferritina bassa, sistema immunitario da potenziare';
+  const note = p.note_salute || '';
 
-  const prompt = `Sei un nutrizionista esperto in dieta a Zona (40-30-30). Crea un piano alimentare settimanale personalizzato.\n\nPROFILO UTENTE:\n- Dieta: ${dieta}\n- Intolleranze/esclusioni: ${intolleranze}\n- Obiettivo: ${obiettivo}\n- Note salute: ${note}\n- Target giornaliero: ${t.kcal} kcal · ${t.protein}g proteine · ${t.carbs}g carboidrati · ${t.fat}g grassi\n- Rapporto macro: 40% carbo, 30% proteine, 30% grassi\n\nREGOLE:\n- Solo carbo a basso indice glicemico\n- Pesce come proteina principale (salmone, tonno, sgombro, merluzzo, branzino, orata, gamberi)\n- Legumi quotidianamente (ferro)\n- Zero latticini\n- Porzioni precise in grammi\n- Ogni giorno deve avere: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena\n\nRispondi SOLO con questo JSON valido, niente testo extra:\n{\n  "giorni": [\n    {\n      "giorno": "Lunedì",\n      "kcal_totali": 1850,\n      "colazione": {"piatto": "nome", "ingredienti": "ingredienti con grammi", "kcal": 400, "proteine": 30, "carboidrati": 45, "grassi": 12},\n      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": 550, "proteine": 45, "carboidrati": 55, "grassi": 18},\n      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": 150, "proteine": 10, "carboidrati": 15, "grassi": 5},\n      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": 500, "proteine": 40, "carboidrati": 45, "grassi": 15},\n      "note": "consiglio del giorno in italiano, max 1 frase"\n    }\n  ]\n}\nGenera tutti e 7 i giorni (Lunedì–Domenica). Ingredienti: max 60 caratteri per campo. Valori numerici: interi senza unità. JSON deve essere completo e valido.`;
+  // Distribuisce le kcal giornaliere proporzionalmente tra i 5 pasti
+  const kc = t.kcal;
+  const ex = {
+    col:  Math.round(kc * 0.20),
+    smA:  Math.round(kc * 0.10),
+    pra:  Math.round(kc * 0.35),
+    smP:  Math.round(kc * 0.10),
+    cen:  Math.round(kc * 0.25),
+  };
+  // Macro proporzionali per pasto (approssimate)
+  const mp = slot => ({
+    prot: Math.round(t.protein * (ex[slot]/kc)),
+    carb: Math.round(t.carbs   * (ex[slot]/kc)),
+    fat:  Math.round(t.fat     * (ex[slot]/kc)),
+  });
+
+  // Regole dinamiche in base al profilo
+  const rDieta = dieta === 'vegano' ? '- Solo proteine vegetali (tofu, tempeh, legumi, seitan, edamame)'
+    : dieta === 'vegetariano' ? '- Proteine da uova, legumi, latticini se tollerati, tofu'
+    : dieta === 'pescetariano' ? '- Proteine da pesce (salmone, tonno, merluzzo, branzino, gamberi) e legumi'
+    : '- Proteine da carne magra, pesce, uova, legumi — varia ogni giorno';
+  const rIntol = (p.intolleranze && p.intolleranze.length)
+    ? `- Escludi assolutamente: ${p.intolleranze.join(', ')}` : '';
+  const rNote = note ? `- Salute: ${note}` : '';
+
+  const prompt = `Sei un nutrizionista esperto. Crea un piano alimentare settimanale PERSONALIZZATO seguendo la dieta a Zona (40% carbo, 30% proteine, 30% grassi).
+
+PROFILO UTENTE:
+- Obiettivo: ${obiettivo}
+- Dieta: ${dieta}
+- Target giornaliero OBBLIGATORIO: ${kc} kcal totali · ${t.protein}g proteine · ${t.carbs}g carbo · ${t.fat}g grassi
+${rIntol}
+${rNote}
+
+REGOLE RIGIDE:
+${rDieta}
+- Solo carboidrati a basso indice glicemico (riso integrale, quinoa, avena, patata dolce, legumi, frutta)
+- Porzioni espresse in grammi
+- 5 pasti al giorno: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena
+- La somma delle kcal dei 5 pasti DEVE essere uguale a ${kc} kcal (±50 kcal di tolleranza)
+
+DISTRIBUZIONE CALORICA RICHIESTA PER OGNI GIORNO:
+- Colazione: ~${ex.col} kcal (${mp('col').prot}g P · ${mp('col').carb}g C · ${mp('col').fat}g G)
+- Spuntino mattina: ~${ex.smA} kcal (${mp('smA').prot}g P · ${mp('smA').carb}g C · ${mp('smA').fat}g G)
+- Pranzo: ~${ex.pra} kcal (${mp('pra').prot}g P · ${mp('pra').carb}g C · ${mp('pra').fat}g G)
+- Spuntino pomeriggio: ~${ex.smP} kcal (${mp('smP').prot}g P · ${mp('smP').carb}g C · ${mp('smP').fat}g G)
+- Cena: ~${ex.cen} kcal (${mp('cen').prot}g P · ${mp('cen').carb}g C · ${mp('cen').fat}g G)
+
+Rispondi SOLO con JSON valido, zero testo extra:
+{
+  "giorni": [
+    {
+      "giorno": "Lunedì",
+      "kcal_totali": ${kc},
+      "colazione": {"piatto": "nome piatto", "ingredienti": "ingredienti con grammi", "kcal": ${ex.col}, "proteine": ${mp('col').prot}, "carboidrati": ${mp('col').carb}, "grassi": ${mp('col').fat}},
+      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.smA}, "proteine": ${mp('smA').prot}, "carboidrati": ${mp('smA').carb}, "grassi": ${mp('smA').fat}},
+      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.pra}, "proteine": ${mp('pra').prot}, "carboidrati": ${mp('pra').carb}, "grassi": ${mp('pra').fat}},
+      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.smP}, "proteine": ${mp('smP').prot}, "carboidrati": ${mp('smP').carb}, "grassi": ${mp('smP').fat}},
+      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.cen}, "proteine": ${mp('cen').prot}, "carboidrati": ${mp('cen').carb}, "grassi": ${mp('cen').fat}},
+      "note": "consiglio breve in italiano"
+    }
+  ]
+}
+Genera tutti e 7 i giorni (Lunedì–Domenica) con piatti diversi ogni giorno. Ingredienti: max 80 caratteri. Valori numerici: interi senza unità. JSON completo e valido.`;
 
   try {
     const raw = await callAI(prompt, 4000);
