@@ -1574,6 +1574,38 @@ function loadCache() {
   } catch(e) { return null; }
 }
 
+function prefsKey() { return `zt_prefs_${ST.user?.id || 'local'}`; }
+
+function saveLocalPrefs() {
+  try {
+    localStorage.setItem(prefsKey(), JSON.stringify({
+      obiettivo:   ST.profile.obiettivo   || '',
+      dieta:       ST.profile.dieta       || '',
+      intolleranze: ST.profile.intolleranze || [],
+    }));
+  } catch(e) {}
+}
+
+function applyLocalPrefs() {
+  try {
+    const raw = localStorage.getItem(prefsKey());
+    if (!raw) return;
+    const prefs = JSON.parse(raw);
+    if (prefs.obiettivo)    ST.profile.obiettivo    = prefs.obiettivo;
+    if (prefs.dieta)        ST.profile.dieta        = prefs.dieta;
+    if (prefs.intolleranze) ST.profile.intolleranze = prefs.intolleranze;
+    // Ricalcola TARGET con il vero obiettivo locale
+    const obArr = (prefs.obiettivo || '').split(',').filter(Boolean);
+    const a = calcAdaptedTargets(obArr, ST.TARGET.kcal);
+    ST.TARGET.protein = a.protein;
+    ST.TARGET.carbs   = a.carbs;
+    ST.TARGET.fat     = a.fat;
+    ST.TARGET.pProt   = a.pProt;
+    ST.TARGET.pCarbo  = a.pCarbo;
+    ST.TARGET.pFat    = a.pFat;
+  } catch(e) {}
+}
+
 function applyProfile(profile) {
   const baseKcal = profile.target_kcal || 1900;
   const obiettiviArr = profile.obiettivo ? profile.obiettivo.split(',').filter(Boolean) : [];
@@ -1587,6 +1619,7 @@ function applyProfile(profile) {
     pCarbo:  adapted.pCarbo,
     pFat:    adapted.pFat,
   };
+  applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
   document.getElementById('h-weight').textContent = profile.weight_kg || '—';
   if(profile.goal_weight_kg && profile.weight_kg) {
@@ -3653,6 +3686,7 @@ function togglePianoObiettivo(val) {
   const i = arr.indexOf(val);
   if(i < 0) arr.push(val); else arr.splice(i, 1);
   ST.profile.obiettivo = arr.join(',');
+  saveLocalPrefs();
   const btn = document.getElementById('po-'+val);
   if(btn) {
     const on = arr.includes(val);
@@ -3668,6 +3702,7 @@ function togglePianoIntol(val) {
   const i = arr.indexOf(val);
   if(i < 0) arr.push(val); else arr.splice(i, 1);
   ST.profile.intolleranze = arr;
+  saveLocalPrefs();
   const btn = document.getElementById('pi-'+val);
   if(btn) {
     const on = arr.includes(val);
@@ -3695,11 +3730,21 @@ async function savePianoPrefs() {
     target_fat:     adapted.fat,
     updated_at: new Date().toISOString(),
   };
-  const { error } = await supa.from('profiles').update(updates).eq('id', ST.user.id);
-  if(btn) { btn.disabled = false; btn.textContent = 'Salva →'; }
-  if(error) { alert('Errore: ' + error.message); return; }
+  // Salva sempre in localStorage (indipendente dal DB)
+  saveLocalPrefs();
   ST.profile = { ...ST.profile, ...updates };
-  ST.TARGET = { ...ST.TARGET, protein: adapted.protein, carbs: adapted.carbs, fat: adapted.fat };
+  ST.TARGET = { ...ST.TARGET, protein: adapted.protein, carbs: adapted.carbs, fat: adapted.fat,
+    pProt: adapted.pProt, pCarbo: adapted.pCarbo, pFat: adapted.pFat };
+
+  // Tenta salvataggio su Supabase (best-effort)
+  const { error } = await supa.from('profiles').update({
+    target_protein: adapted.protein,
+    target_carbs:   adapted.carbs,
+    target_fat:     adapted.fat,
+    updated_at:     new Date().toISOString(),
+  }).eq('id', ST.user.id);
+  if(btn) { btn.disabled = false; btn.textContent = 'Salva →'; }
+  if(error) { console.warn('Supabase profiles update:', error.message); }
   if(msg) { msg.style.display = 'block'; setTimeout(() => { if(msg) msg.style.display = 'none'; }, 3000); }
   renderPage(ST.page);
 }
