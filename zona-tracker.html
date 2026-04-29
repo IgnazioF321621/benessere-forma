@@ -1501,16 +1501,13 @@ async function dbToggleFasting(date, on) {
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
+  // Delete prima (idempotente — funziona senza UNIQUE constraint)
+  await supa.from('supplements_log').delete()
+    .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
   if (taken) {
-    // Upsert con le colonne originali garantite dallo schema
-    await supa.from('supplements_log').upsert(
-      {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName},
-      {onConflict: 'user_id,date,slot,supplement_name'}
+    await supa.from('supplements_log').insert(
+      {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName}
     );
-  } else {
-    // Delete = "non assunto" (schema originale: presenza record = assunto)
-    await supa.from('supplements_log').delete()
-      .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
   }
 }
 
@@ -4129,9 +4126,11 @@ async function confirmSuppSingle() {
   const name = catItem.nome || '';
   const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 
-  const { error } = await supa.from('supplements_log').upsert(
-    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name },
-    { onConflict: 'user_id,date,slot,supplement_name' }
+  // Delete prima per evitare duplicati (nessuna UNIQUE constraint richiesta)
+  await supa.from('supplements_log').delete()
+    .eq('user_id', ST.user.id).eq('date', ST.activeDay).eq('supplement_name', name);
+  const { error } = await supa.from('supplements_log').insert(
+    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name }
   );
   if (error) {
     console.error('[suppSingle] Errore Supabase:', error);
