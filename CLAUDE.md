@@ -81,6 +81,7 @@ Integratori per user_id, editabili inline.
 
 ### Tabella `supplements_log`
 Tracciamento assunzioni giornaliere per data e nome integratore.
+UNIQUE constraint su `(user_id, date, supplement_name)` — aggiunto aprile 2026 dopo cleanup duplicati.
 
 ### Tabella `fasting_days`
 Giorni di digiuno per user_id.
@@ -142,8 +143,8 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 
 ### Auth
 - OTP a 6 cifre via email (schermata 2 step: email → codice)
-- Onboarding 5 step per nuovi utenti → calcolo TDEE automatico (Mifflin-St Jeor)
-- Modal impostazioni profilo con esami del sangue
+- Onboarding 5 step per nuovi utenti → calcolo TDEE automatico (Mifflin-St Jeor); step obiettivo con **6 pill** (chiavi `OBJ_ADAPT`)
+- Modal impostazioni profilo con esami del sangue; selezione obiettivo tramite **griglia 6 pill** (non più `<select>`)
 - Modal peso con ricalcolo TDEE
 
 ### Home
@@ -155,7 +156,7 @@ RLS abilitata — policy: `auth.uid() = user_id`.
   - **Body**: peso live, trend, vita cm — cliccabile → Body
 
 ### Nutrition (sub-nav: Oggi / Integratori / Storico / Piano)
-- **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto
+- **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto; ogni pasto ha pulsante ✏️ modifica e 🗑️ elimina
 - **Integratori**: lista raggruppata per orario, editing inline, catalogo Nutrilite
 - **Storico**: report 7/14/30 giorni, grafico calorie
 - **Piano**: target 40·30·30, piano AI, priorità cliniche
@@ -231,6 +232,9 @@ const ST = {
 | `renderBody()` | Body con 2 tab (Misure / Tendenza) |
 | `loadBodyLogs()` | Fetch body_logs da Supabase (aggiorna Home o Body in base a ST.page) |
 | `saveBodyLog()` | Insert/update body_logs + aggiorna profiles.weight_kg |
+| `migrateObiettivo(str)` | Migra vecchi valori obiettivo (`perdita_peso`→`dimagrimento`, `massa_muscolare`→`ipertrofia`) — chiamata in `applyProfile()` e `applyLocalPrefs()` |
+| `selectSetObiettivo(val)` | Evidenzia pill obiettivo nella griglia del modal impostazioni |
+| `dbToggleSuppTaken(date, suppId, suppName, taken, slot)` | Delete+insert su `supplements_log` (NON upsert — usare questo pattern) |
 
 ## Modulo Training — specifiche
 
@@ -297,11 +301,11 @@ GitHub Pages si aggiorna automaticamente (1-2 minuti).
 ## Worktree
 
 Il worktree attivo è:
-`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/affectionate-bouman-962255/zona-tracker.html`
+`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/optimistic-ellis-36865b/zona-tracker.html`
 
 Copiare nel repo principale prima del commit:
 ```bash
-cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/affectionate-bouman-962255/zona-tracker.html ~/benessere-forma/zona-tracker.html
+cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/optimistic-ellis-36865b/zona-tracker.html ~/benessere-forma/zona-tracker.html
 ```
 
 ## Funzioni chiave aggiuntive (aprile 2026)
@@ -315,6 +319,15 @@ cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/affectionate-bouman-9
 | `updatePianoTargetCard()` | Aggiorna card target in Piano al toggle obiettivo (live) |
 | `renderPiano()` | Renderizza Piano inclusa card target inline |
 | `nutriSubNav(active)` | Sub-nav Nutrition riusabile su tutte e 4 le pagine |
+
+## Vocabolario obiettivi — fonte unica (`OBJ_ADAPT`)
+
+Le 6 chiavi valide sono: `dimagrimento`, `ricomposizione`, `ipertrofia`, `forza_performance`, `longevita`, `mantenimento`.
+
+**`OBJ_MIGRATE`** mappa i vecchi valori ai nuovi: `{ perdita_peso: 'dimagrimento', massa_muscolare: 'ipertrofia' }`.
+`migrateObiettivo()` viene chiamata all'ingresso di ogni path che legge `profile.obiettivo` (da Supabase o localStorage).
+
+Tutti i punti di input (onboarding step 3, modal impostazioni, Piano → toggle pill) usano le stesse 6 chiavi.
 
 ## Macro adattivi per obiettivo (`OBJ_ADAPT`, riga ~3614)
 
@@ -335,8 +348,9 @@ const OBJ_ADAPT = {
 - `obiettivo`, `dieta`, `intolleranze` salvati in `localStorage` (`zt_prefs_<userId>`), NON su Supabase
 - Le colonne `obiettivo`, `dieta`, `intolleranze` potrebbero NON esistere nella tabella `profiles` su Supabase
 - `savePianoPrefs()` salva prima in localStorage, poi aggiorna su Supabase solo `target_protein/carbs/fat`
-- `applyLocalPrefs()` viene chiamata da `applyProfile()` — sovrascrive il profilo con le prefs locali
+- `applyLocalPrefs()` viene chiamata da `applyProfile()` — sovrascrive il profilo con le prefs locali; applica `migrateObiettivo()` in lettura
 - `togglePianoObiettivo()` e `togglePianoIntol()` chiamano `saveLocalPrefs()` immediatamente
+- Il vocabolario obiettivo è **unificato** — tutte le schermate usano le stesse 6 chiavi `OBJ_ADAPT` (vedi sezione sopra)
 
 ## Service Worker (`sw.js`)
 
@@ -361,38 +375,16 @@ const OBJ_ADAPT = {
 - [x] Piano → Preferenze alimentari (obiettivo, dieta, intolleranze)
 - [x] Piano → Macro adattivi per obiettivo (OBJ_ADAPT, calcAdaptedTargets)
 - [x] Service Worker PWA per aggiornamenti automatici
-- [ ] **BUG APERTO**: card target Piano mostra sempre "MANTENIMENTO 40·30·30" anche se Ipertrofia è selezionato — vedere sezione Bug noti
+- [x] Vocabolario obiettivi unificato (6 chiavi OBJ_ADAPT, migrazione automatica da vecchi valori)
+- [x] Card target Piano mostra obiettivo corretto (fix: `migrateObiettivo` + vocabolario unificato)
+- [x] Timeline oggi: pasti e integratori compaiono correttamente dopo reload
+- [x] Pulsante 🗑️ elimina pasto visibile nella timeline
+- [x] `supplements_log` UNIQUE constraint + pattern delete+insert (no più duplicati)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
 ## Bug noti
 
-### 🔴 PRIORITÀ ALTA: Card target Piano sempre "MANTENIMENTO 40·30·30"
-**Sintomo:** Tab Piano — card con calorie/macro mostra sempre Mantenimento 40·30·30 anche quando Ipertrofia (o altro) è selezionato e verde. Vale anche per "vs 40·30·30" in Oggi.
-
-**Tentativi fatti (tutti falliti):**
-1. Card generata inline in `renderPiano()` con `pianoObiettivi` già calcolato → ancora Mantenimento
-2. `applyLocalPrefs()` in `applyProfile()` per sovrascrivere con prefs locali → ancora Mantenimento
-3. Hard refresh su Arc, eliminazione + re-aggiunta PWA su iPhone → stesso risultato
-4. Meta no-cache tags → ignorati dai browser moderni
-5. Service Worker network-first → installato ma il comportamento non cambia
-
-**Cause escluse:**
-- Non è cache del browser/CDN (2.5+ ore, hard refresh, app eliminata e riaggiunta)
-- Non è sintassi JS errata (validato con `new Function()`)
-- Non è Temporal Dead Zone (OBJ_ADAPT e renderPiano sono entrambi top-level)
-
-**Ipotesi non ancora verificata:**
-- Il browser sta effettivamente caricando il codice NUOVO? → serve verifica con `console.log` o indicatore versione visibile nella UI
-- C'è un errore JS runtime che interrompe `calcAdaptedTargets` o il blocco inline → serve DevTools console aperta durante il rendering
-- `pianoObiettivi` è effettivamente `['ipertrofia']` quando la card viene renderizzata? → da verificare con debug
-
-**Da fare nella prossima sessione:**
-1. Aggiungere un indicatore versione visibile (es. footer con commit hash) per confermare che il nuovo codice gira
-2. Aggiungere `console.log('renderPiano pianoObiettivi=', pianoObiettivi)` prima del blocco card
-3. Chiedere all'utente di aprire DevTools su Arc e riportare l'output della console
-
-### Altri bug noti
 - `trainLoggedSets` si azzera al reload (in-memory only) — i badge serie spariscono dopo refresh
 - `updateSuppSlotTime` presente ma non testata in produzione
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
