@@ -1420,24 +1420,11 @@ async function loadAllDays() {
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   if (mealsErr || meals === null) return;
 
-  // Salva i pasti locali di oggi che potrebbero non essere ancora in Supabase
-  const today = todayKey();
-  const localTodayMeals = (ST.db.days?.[today]?.meals || []).filter(m => m.local_id);
-
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
     if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[]};
     ST.db.days[m.date].meals.push({...m, local_id: m.id});
   });
-
-  // Reintegra pasti locali di oggi non ancora in Supabase
-  if (localTodayMeals.length) {
-    const todayDay = getDay(today);
-    localTodayMeals.forEach(lm => {
-      if (!todayDay.meals.find(m => m.id === lm.id || m.local_id === lm.local_id))
-        todayDay.meals.push(lm);
-    });
-  }
   (fasting||[]).forEach(f => {
     if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[]};
     ST.db.days[f.date].fasting = true;
@@ -3086,7 +3073,10 @@ function mealCardHTML(m){
         return `<div style="display:flex;justify-content:flex-end;margin-top:6px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;background:${bg};color:${col};border-radius:20px;padding:2px 9px;">${lbl}</span></div>`;
       })()}
     </div>
-    <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button>
+      <button class="meal-edit-btn" onclick="if(confirm('Eliminare questo pasto?'))deleteMeal('${ST.activeDay}','${mealId}')" title="Elimina" style="opacity:0.5;">🗑️</button>
+    </div>
   </div>`;
   return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="deleteMeal('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
 }
