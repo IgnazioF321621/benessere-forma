@@ -1420,11 +1420,24 @@ async function loadAllDays() {
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   if (mealsErr || meals === null) return;
 
+  // Salva i pasti locali di oggi che potrebbero non essere ancora in Supabase
+  const today = todayKey();
+  const localTodayMeals = (ST.db.days?.[today]?.meals || []).filter(m => m.local_id);
+
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
     if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[]};
     ST.db.days[m.date].meals.push({...m, local_id: m.id});
   });
+
+  // Reintegra pasti locali di oggi non ancora in Supabase
+  if (localTodayMeals.length) {
+    const todayDay = getDay(today);
+    localTodayMeals.forEach(lm => {
+      if (!todayDay.meals.find(m => m.id === lm.id || m.local_id === lm.local_id))
+        todayDay.meals.push(lm);
+    });
+  }
   (fasting||[]).forEach(f => {
     if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[]};
     ST.db.days[f.date].fasting = true;
@@ -1505,9 +1518,10 @@ async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
   await supa.from('supplements_log').delete()
     .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
   if (taken) {
-    await supa.from('supplements_log').insert(
+    const {error} = await supa.from('supplements_log').insert(
       {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName}
     );
+    if (error) throw error;
   }
 }
 
@@ -4112,7 +4126,12 @@ async function confirmSuppGroup() {
       promises.push(dbToggleSuppTaken(ST.activeDay, s.local_id, s.name, true, s.slot || ''));
     }
   }
-  await Promise.all(promises);
+  try {
+    await Promise.all(promises);
+  } catch(e) {
+    showToast('Errore Supabase: ' + (e?.message || e));
+    return;
+  }
   closeSuppSheet();
   await refreshTimeline();
   showToast(`Gruppo registrato (${groupSupps.length} prodotti)`);
