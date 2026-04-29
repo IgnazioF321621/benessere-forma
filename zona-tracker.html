@@ -3507,14 +3507,8 @@ function renderPiano(){
   <div id="piano-prefs-msg" style="font-size:11px;color:var(--acc);font-family:var(--font-mono);margin-top:10px;display:none;">Salvato ✓ — rigenera il piano per applicare</div>
   </div>`;
 
-  // Card macro target — adattiva all'obiettivo selezionato
-  const adapted = calcAdaptedTargets(pianoObiettivi, t.kcal);
-  const [pC, pP, pF] = OBJ_ADAPT[pianoObiettivi[0] || 'mantenimento']?.pct || [40,30,30];
-  const adaptLabel = adapted.label || 'Zona';
-  const adaptNote  = adapted.note  || '';
-  html += `<div class="card card-green"><span class="lbl">${esc(adaptLabel)} — ${pC}·${pP}·${pF}</span>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',adapted.kcal,'kcal','var(--acc)'],['Proteine '+pP+'%',adapted.protein,'g','var(--prot)'],['Carboidrati '+pC+'%',adapted.carbs,'g','var(--carb)'],['Grassi '+pF+'%',adapted.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
-  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;">${esc(adaptNote)}</div></div>`;
+  // Card macro target — adattiva all'obiettivo selezionato (aggiornata live via updatePianoTargetCard)
+  html += `<div id="piano-target-card"></div>`;
 
   // Card piano AI
   html += `<div class="card">
@@ -3597,6 +3591,7 @@ function renderPiano(){
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html;
+  updatePianoTargetCard();
 }
 
 // ── MACRO ADATTIVI PER OBIETTIVO ───────────────────────────
@@ -3625,6 +3620,18 @@ function calcAdaptedTargets(obiettiviArr, kcal) {
 }
 
 // ── PREFERENZE PIANO ───────────────────────────────────────
+function updatePianoTargetCard() {
+  const el = document.getElementById('piano-target-card');
+  if(!el) return;
+  const obiettiviArr = ST.profile.obiettivo ? ST.profile.obiettivo.split(',').filter(Boolean) : [];
+  const t = ST.TARGET;
+  const adapted = calcAdaptedTargets(obiettiviArr, t.kcal);
+  const [pC, pP, pF] = OBJ_ADAPT[obiettiviArr[0] || 'mantenimento']?.pct || [40,30,30];
+  el.innerHTML = `<div class="card card-green"><span class="lbl">${esc(adapted.label||'Zona')} — ${pC}·${pP}·${pF}</span>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',adapted.kcal,'kcal','var(--acc)'],['Proteine '+pP+'%',adapted.protein,'g','var(--prot)'],['Carboidrati '+pC+'%',adapted.carbs,'g','var(--carb)'],['Grassi '+pF+'%',adapted.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
+  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;">${esc(adapted.note||'')}</div></div>`;
+}
+
 function togglePianoObiettivo(val) {
   const arr = ST.profile.obiettivo ? ST.profile.obiettivo.split(',').filter(Boolean) : [];
   const i = arr.indexOf(val);
@@ -3637,6 +3644,7 @@ function togglePianoObiettivo(val) {
     btn.style.borderColor = on ? 'var(--acc)' : 'var(--b2)';
     btn.style.color = on ? '#fff' : 'var(--t2)';
   }
+  updatePianoTargetCard();
 }
 
 function togglePianoIntol(val) {
