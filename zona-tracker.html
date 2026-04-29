@@ -3552,6 +3552,7 @@ function renderPiano(){
   </div>`;
 
   // Card macro target — renderizzata inline con pianoObiettivi già calcolato
+  console.log('DEBUG renderPiano | pianoObiettivi=', pianoObiettivi, '| ST.profile.obiettivo=', ST.profile?.obiettivo, '| ST.user?.id=', ST.user?.id);
   {
     const _a = calcAdaptedTargets(pianoObiettivi, t.kcal);
     const [_pC, _pP, _pF] = OBJ_ADAPT[pianoObiettivi[0] || 'mantenimento']?.pct || [40,30,30];
@@ -3640,6 +3641,7 @@ function renderPiano(){
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
+  html+=`<div style="text-align:center;font-size:10px;color:var(--t3);font-family:var(--font-mono);padding-bottom:8px;">build 2026-04-29a</div>`;
   document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html;
 }
 
