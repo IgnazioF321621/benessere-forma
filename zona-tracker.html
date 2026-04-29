@@ -3212,7 +3212,7 @@ function renderOggi(){
   }
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-oggi').innerHTML=html;
+  document.getElementById('page-oggi').innerHTML=nutriSubNav('oggi')+html;
   const ta=document.getElementById('log-text');
   if(ta){ta.value=ST.logText;ta.addEventListener('input',e=>{ST.logText=e.target.value;});}
 }
@@ -3390,7 +3390,7 @@ function renderIntegratori(){
     html+=`</div>`;
   });
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-integratori').innerHTML=html;
+  document.getElementById('page-integratori').innerHTML=nutriSubNav('integratori')+html;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3426,10 +3426,17 @@ function renderStorico(){
   </div>`;}).join('')}`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-storico').innerHTML=html;
+  document.getElementById('page-storico').innerHTML=nutriSubNav('storico')+html;
 }
 
 // ═══════════════════════════════════════════════════════════
+function nutriSubNav(active){
+  return `<nav class="nutrition-subnav">${['oggi','integratori','storico','piano'].map((id,_,arr)=>{
+    const labels={oggi:'Oggi',integratori:'Integratori',storico:'Storico',piano:'Piano'};
+    return `<button class="nsn-pill${active===id?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
+  }).join('')}</nav>`;
+}
+
 // PAGE: PIANO
 // ═══════════════════════════════════════════════════════════
 function renderPiano(){
@@ -3561,7 +3568,7 @@ function renderPiano(){
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-piano').innerHTML = html;
+  document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html;
 }
 
 // ── PREFERENZE PIANO ───────────────────────────────────────
