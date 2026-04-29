@@ -953,7 +953,7 @@ const ST = {
   trainTab: null,
   trainSession: null,
   trainLogOpen: null,
-  trainLoggedSets: {},
+  trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
   trainHomeData: null,
@@ -2092,6 +2092,7 @@ async function saveTrainingSet(){
   if(insertError){ alert('Errore: '+insertError.message); renderTraining(); return; }
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir};
+  try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   ST.trainLogOpen = null;
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
