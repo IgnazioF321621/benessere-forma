@@ -3093,8 +3093,8 @@ function renderOggi(){
     // Integratori visibili anche in digiuno
     const actSupps=activeSupps();
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
+    html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">🌿 Integratori di oggi</span><button class="btn btn-ghost btn-sm" onclick="showPage('integratori')">Gestisci →</button></div>`;
     if(actSupps.length){
-      html+=`<div class="card"><span class="lbl">🌿 Integratori di oggi</span>`;
       suppSlots.forEach((slot,_si)=>{
         const ss=actSupps.filter(s=>s.slot===slot);
         const slotIdx=[...new Set(actSupps.map(x=>x.slot))].sort().indexOf(slot);
@@ -3107,8 +3107,10 @@ function renderOggi(){
           ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});
         }
       });
-      html+=`</div>`;
+    } else {
+      html+=`<p style="font-size:13px;color:var(--t3);text-align:center;padding:10px 0;">Nessun integratore attivo.<br><button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="showPage('integratori')">+ Configura integratori</button></p>`;
     }
+    html+=`</div>`;
   } else {
     html+=heroCard(cons);
 
@@ -3125,7 +3127,7 @@ function renderOggi(){
 
     // Form registra pasto — collassabile
     if(!ST.logOpen) {
-      html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
+      html+=`<div style="display:flex;gap:8px;margin-bottom:6px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div><div style="text-align:right;margin-bottom:10px;"><button style="background:none;border:none;font-size:12px;color:var(--t3);cursor:pointer;font-family:var(--font-mono);padding:2px 0;" onclick="showPage('integratori')">⚙️ Gestisci lista integratori →</button></div>`;
     } else {
       html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/><button onclick="ST.logOpen=false;ST.logText='';ST.logError='';renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(2,1fr);max-width:66%;">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="${(()=>{const ph={colazione:'Es. Whey 30g + avena 50g + mirtilli 80g',snack_mattina:'Es. Noci 30g + una mela',pranzo:'Es. Salmone 180g al forno con quinoa 80g e spinaci',snack_pomeriggio:'Es. Mandorle 20g + yogurt di soia',cena:'Es. Branzino 180g al vapore con verdure grigliate'};return ph[ST.logSlot]||'Descrivi cosa hai mangiato...';})()}"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
     }
@@ -3188,7 +3190,7 @@ function renderOggi(){
       const takenShakeN=shakeSupps.filter(s=>taken.includes(s.local_id)).length;
       const takenOtherSlots=otherSlots.filter(slot=>otherSupps.filter(s=>s.slot===slot).some(s=>taken.includes(s.local_id)));
       if(takenShakeN>0||takenOtherSlots.length>0){
-        html+=`<div class="card"><span class="lbl">💊 Integratori di oggi</span>`;
+        html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">💊 Integratori di oggi</span><button class="btn btn-ghost btn-sm" onclick="showPage('integratori')">Gestisci →</button></div>`;
         if(takenShakeN>0){
           const slot='06:30';const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[0];
           const collapsed=isSuppGroupCollapsed(slot,takenShakeN,shakeSupps.length);
@@ -3437,8 +3439,45 @@ function renderPiano(){
   const pianoLoading = ST.pianoLoading || false;
   const pianoError = ST.pianoError || '';
 
+  // Card preferenze alimentari (editabile)
+  const intolKeys = ['lattosio','glutine','uova','frutta_a_guscio'];
+  const intolLabels = {lattosio:'Lattosio',glutine:'Glutine',uova:'Uova',frutta_a_guscio:'Frutta a guscio'};
+  const pianoIntol = p.intolleranze || [];
+  let html = `<div class="card" style="margin-bottom:12px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <span class="lbl" style="margin:0;">🥗 Preferenze alimentari</span>
+    <button id="piano-prefs-btn" class="btn btn-primary btn-sm" onclick="savePianoPrefs()">Salva →</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+    <div>
+      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:5px;">OBIETTIVO</div>
+      <select id="piano-obiettivo" class="inp inp-sm" style="width:100%;">
+        <option value="perdita_peso" ${(p.obiettivo||'')==='perdita_peso'?'selected':''}>Perdita peso</option>
+        <option value="mantenimento" ${(p.obiettivo||'')==='mantenimento'?'selected':''}>Mantenimento</option>
+        <option value="massa_muscolare" ${(p.obiettivo||'')==='massa_muscolare'?'selected':''}>Massa muscolare</option>
+      </select>
+    </div>
+    <div>
+      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:5px;">TIPO DI DIETA</div>
+      <select id="piano-dieta" class="inp inp-sm" style="width:100%;">
+        <option value="onnivoro" ${(p.dieta||'')==='onnivoro'?'selected':''}>Onnivoro</option>
+        <option value="pescetariano" ${(p.dieta||'')==='pescetariano'?'selected':''}>Pescetariano</option>
+        <option value="vegetariano" ${(p.dieta||'')==='vegetariano'?'selected':''}>Vegetariano</option>
+        <option value="vegano" ${(p.dieta||'')==='vegano'?'selected':''}>Vegano</option>
+      </select>
+    </div>
+  </div>
+  <div>
+    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:7px;">INTOLLERANZE</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${intolKeys.map(k=>`<button id="pi-${k}" class="nsn-pill${pianoIntol.includes(k)?' active':''}" onclick="togglePianoIntol('${k}')">${intolLabels[k]}</button>`).join('')}
+    </div>
+  </div>
+  <div id="piano-prefs-msg" style="font-size:11px;color:var(--acc);font-family:var(--font-mono);margin-top:8px;display:none;">Salvato ✓ — rigenera il piano per applicare</div>
+  </div>`;
+
   // Card macro target
-  let html = `<div class="card card-green"><span class="lbl">Target 40·30·30 — personalizzato per te</span>
+  html += `<div class="card card-green"><span class="lbl">Target 40·30·30 — personalizzato per te</span>
   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',t.kcal,'kcal','var(--acc)'],['Proteine 30%',t.protein,'g','var(--prot)'],['Carboidrati 40%',t.carbs,'g','var(--carb)'],['Grassi 30%',t.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
   <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;"><b style="color:var(--t1);">Carbo:</b> sempre a basso IG — riso integrale, quinoa, avena, patata dolce, legumi, frutta intera. No raffinati.</div></div>`;
 
@@ -3523,6 +3562,35 @@ function renderPiano(){
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-piano').innerHTML = html;
+}
+
+// ── PREFERENZE PIANO ───────────────────────────────────────
+function togglePianoIntol(val) {
+  const arr = ST.profile.intolleranze ? [...ST.profile.intolleranze] : [];
+  const i = arr.indexOf(val);
+  if(i < 0) arr.push(val); else arr.splice(i, 1);
+  ST.profile.intolleranze = arr;
+  document.getElementById('pi-'+val)?.classList.toggle('active', arr.includes(val));
+}
+
+async function savePianoPrefs() {
+  const btn = document.getElementById('piano-prefs-btn');
+  const msg = document.getElementById('piano-prefs-msg');
+  if(btn) { btn.disabled = true; btn.textContent = 'Salvataggio...'; }
+  const obiettivo = document.getElementById('piano-obiettivo')?.value;
+  const dieta = document.getElementById('piano-dieta')?.value;
+  const intolleranze = (ST.profile.intolleranze || []);
+  const updates = {
+    obiettivo,
+    dieta,
+    intolleranze: intolleranze.length ? intolleranze : null,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supa.from('profiles').update(updates).eq('id', ST.user.id);
+  if(btn) { btn.disabled = false; btn.textContent = 'Salva →'; }
+  if(error) { alert('Errore: ' + error.message); return; }
+  ST.profile = { ...ST.profile, ...updates };
+  if(msg) { msg.style.display = 'block'; setTimeout(() => { if(msg) msg.style.display = 'none'; }, 3000); }
 }
 
 // ── GENERA PIANO AI ────────────────────────────────────────
