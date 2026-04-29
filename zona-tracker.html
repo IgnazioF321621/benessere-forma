@@ -1417,10 +1417,6 @@ async function loadAllDays() {
   // Usa solo le colonne garantite dallo schema originale (date, supplement_name)
   const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
 
-  console.log('[loadAllDays] user:', ST.user?.id);
-  console.log('[loadAllDays] meals:', meals?.length, '| err:', mealsErr?.message);
-  console.log('[loadAllDays] suppLog:', suppLog?.length, '| err:', suppErr?.message);
-
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   if (mealsErr || meals === null) return;
 
