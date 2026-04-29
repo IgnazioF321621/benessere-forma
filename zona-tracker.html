@@ -1422,19 +1422,21 @@ async function loadSupps() {
   const {data} = await supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order');
   ST.supps = (data||[]).map(s => {
     // Join per codice (preferito) o per nome come fallback
-    const cat = (ST.catalog||[]).find(c => 
-      (s.codice && c.codice === s.codice) || c.nome === s.name
+    const cat = (ST.catalog||[]).find(c =>
+      (s.codice && c.codice === s.codice) ||
+      c.nome === s.name ||
+      (c.nome||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim()
     );
     return {
       ...s,
       local_id: s.id,
       // nome sempre aggiornato dal catalogo se disponibile
       name:    cat?.nome     ?? s.name,
-      // macro dal catalogo (fonte unica di verità)
-      kcal:    cat?.kcal     ?? 0,
-      protein: cat?.proteine ?? 0,
-      carbs:   cat?.carbo    ?? 0,
-      fat:     cat?.grassi   ?? 0,
+      // macro dal catalogo; null se non matchato (così macroVal nel render può usare catItem)
+      kcal:    cat?.kcal     ?? null,
+      protein: cat?.proteine ?? null,
+      carbs:   cat?.carbo    ?? null,
+      fat:     cat?.grassi   ?? null,
       // dosi e costi dal catalogo
       doses:    cat?.dosi_conf      ?? s.doses    ?? 0,
       dose_die: s.quantity ?? s.dose_die ?? cat?.dose_die ?? 1,
