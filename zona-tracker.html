@@ -1414,27 +1414,28 @@ async function loadMeals(date) {
 async function loadAllDays() {
   const {data:meals,   error:mealsErr}   = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
   const {data:fasting, error:fastingErr} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
-  // Usa solo le colonne garantite dallo schema originale (date, supplement_name)
-  const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name').eq('user_id', ST.user.id);
+  const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name,slot').eq('user_id', ST.user.id);
 
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   if (mealsErr || meals === null) return;
 
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
-    if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[]};
+    if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
     ST.db.days[m.date].meals.push({...m, local_id: m.id});
   });
   (fasting||[]).forEach(f => {
-    if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[]};
+    if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
     ST.db.days[f.date].fasting = true;
   });
-  // Presenza del record = assunto (schema originale: delete per rimuovere)
+  // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti)
   (suppLog||[]).forEach(s => {
-    if(!ST.db.days[s.date]) ST.db.days[s.date] = {meals:[],fasting:false,suppsTaken:[]};
+    if(!ST.db.days[s.date]) ST.db.days[s.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
+    if(!ST.db.days[s.date].rawSuppLogs) ST.db.days[s.date].rawSuppLogs = [];
     const supp = ST.supps.find(x => x.name === s.supplement_name);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
+    ST.db.days[s.date].rawSuppLogs.push({name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
   });
   getDay(todayKey());
 }
@@ -1701,6 +1702,7 @@ async function loadAndStart() {
   await loadCatalog();   // ← catalogo prima, serve per arricchire supplements
   await loadSupps();
   await loadAllDays();
+  await loadTodaySuppLog();
   const {data: profile, error: profileErr} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
