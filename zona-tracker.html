@@ -4308,6 +4308,8 @@ async function openExerciseAI(exName, sessionType, note) {
   try {
     const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
 
+IMPORTANTE: L'attrezzatura usata sono elastici a tubo con moschettoni, comprensivi di maniglie singole, corda a doppia impugnatura, barra modulare (~130 cm) e barra corta. NON sono bande piatte. Nelle spiegazioni usa sempre "elastico a tubo" e descrivi l'impugnatura corretta (maniglie o barra).
+
 Rispondi in italiano con queste sezioni:
 **Esecuzione** (3-4 punti chiave)
 **Errori comuni** (2-3 da evitare)
