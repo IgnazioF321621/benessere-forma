@@ -2170,14 +2170,13 @@ async function saveTrainingSet(){
 
 function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
-  console.log('renderTraining subnav=', subnav, 'ST.trainTab=', ST.trainTab);
   const tabs = [
     { id:'sessione',    label:'Sessione' },
     { id:'piano',       label:'Piano' },
     { id:'progressione',label:'Progressione' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
-    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';ST.trainSession=null;renderTraining();${t.id==='piano'?'window.scrollTo(0,0);':''}">${t.label}</button>`).join('')}
+    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';ST.trainSession=null;renderTraining();">${t.label}</button>`).join('')}
   </nav>`;
 
   let body = '';
@@ -2327,7 +2326,6 @@ function renderTraining(){
     }
 
   } else if(subnav === 'piano'){
-    body = '<p style="color:red;font-size:24px;padding:20px;">PIANO OK</p>';
     // ── Piano tab ───────────────────────────────────────────
     const WEEK_SPLIT = [
       { day:'Lun', session:'upperA',  label:'Up A',  color:'#185FA5', bg:'#E8F0FA' },
@@ -2356,8 +2354,10 @@ function renderTraining(){
     const startDate = ST.profile && ST.profile.train_start_date ? new Date(ST.profile.train_start_date) : null;
     if(startDate){
       const diffDays = Math.floor((new Date()-startDate)/86400000);
-      const currentWeek = (Math.floor(diffDays/7)%4);
-      CYCLE_WEEKS[currentWeek].active = true;
+      if(diffDays >= 0){
+        const currentWeek = Math.floor(diffDays/7) % 4;
+        CYCLE_WEEKS[currentWeek].active = true;
+      }
     }
     const cycleCards = CYCLE_WEEKS.map(w=>`
       <div style="flex:1;border-radius:var(--r-md,12px);padding:12px 8px;text-align:center;
@@ -2473,7 +2473,6 @@ function renderTraining(){
   }
 
   document.getElementById('page-training').innerHTML = navHTML + body;
-  window.scrollTo(0, 0);
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
