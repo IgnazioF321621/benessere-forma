@@ -2257,7 +2257,10 @@ function renderTraining(){
         return `
           <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-              <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
+                <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">🧠</button>
+              </div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
                 ${allDone
@@ -4283,6 +4286,43 @@ function swipeEnd(e, id) {
     setTimeout(() => { if(el) el.style.transition = ''; }, 300);
   }
   delete _swipe[id];
+}
+
+async function openExerciseAI(exName, sessionType, note) {
+  const overlay = document.createElement('div');
+  overlay.className = 'info-modal-overlay';
+  overlay.id = 'exercise-ai-overlay';
+  const render = (content) => {
+    overlay.innerHTML = `<div class="info-modal" style="max-width:480px;max-height:75vh;overflow-y:auto;" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 style="margin:0;font-size:16px;">${exName}</h3>
+        <button class="info-modal-close" onclick="document.getElementById('exercise-ai-overlay').remove()" style="width:auto;padding:4px 12px;font-size:13px;">✕</button>
+      </div>
+      ${content}
+    </div>`;
+  };
+  render(`<div style="text-align:center;padding:24px 0;color:var(--t3);font-family:var(--font-sans);">🧠 Carico scheda esercizio…</div>`);
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+
+  try {
+    const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
+
+Rispondi in italiano con queste sezioni:
+**Esecuzione** (3-4 punti chiave)
+**Errori comuni** (2-3 da evitare)
+**Adattamenti** (specifici per lombari/ginocchia)
+**Sensazione corretta** (una frase)
+
+Sii conciso e pratico.`;
+    const text = await callAI(prompt, 600);
+    const html = text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    render(`<div style="font-size:14px;line-height:1.7;color:var(--t2);font-family:var(--font-sans);">${html}</div>`);
+  } catch(e) {
+    render(`<div style="font-size:14px;color:#B84C2A;font-family:var(--font-sans);">Errore di connessione.</div>`);
+  }
 }
 
 function showInfoModal(key) {
