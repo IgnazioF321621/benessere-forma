@@ -2170,6 +2170,7 @@ async function saveTrainingSet(){
 
 function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
+  console.log('renderTraining subnav=', subnav, 'ST.trainTab=', ST.trainTab);
   const tabs = [
     { id:'sessione',    label:'Sessione' },
     { id:'piano',       label:'Piano' },
