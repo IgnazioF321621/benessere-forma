@@ -2471,7 +2471,7 @@ function renderTraining(){
   }
 
   document.getElementById('page-training').innerHTML = navHTML + body;
-  setTimeout(() => window.scrollTo(0, 0), 50);
+  window.scrollTo(0, 0);
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
