@@ -2176,7 +2176,7 @@ function renderTraining(){
     { id:'progressione',label:'Progressione' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
-    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';ST.trainSession=null;renderTraining();">${t.label}</button>`).join('')}
+    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';ST.trainSession=null;renderTraining();${t.id==='piano'?'window.scrollTo(0,0);':''}">${t.label}</button>`).join('')}
   </nav>`;
 
   let body = '';
