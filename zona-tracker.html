@@ -370,6 +370,13 @@ select.inp{cursor:pointer;}
 .add-field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
 .add-field label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;}
 .add-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+/* ── INFO ICON + MODAL ── */
+.info-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--acc,#2A7A6F);color:#fff;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;vertical-align:middle;flex-shrink:0;}
+.info-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;}
+.info-modal{background:var(--srf,#fff);border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.info-modal h3{font-family:var(--font-sans,'Manrope',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
+.info-modal p{font-family:var(--font-sans,'Manrope',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
+.info-modal-close{width:100%;padding:10px;border-radius:999px;border:none;background:var(--acc,#2A7A6F);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -2189,7 +2196,7 @@ function renderTraining(){
       const isRecovery = s.rir === null;
       const typeBadge = isRecovery
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
-        : `<span style="background:#E8F0FA;color:#185FA5;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>`;
+        : `<span style="background:#E8F0FA;color:#185FA5;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
       const activationItems = ACTIVATION_BLOCK.map(a=>`
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s2);">
@@ -2252,7 +2259,7 @@ function renderTraining(){
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps}</div>
+                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
                 ${allDone
                   ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
                   : !isOpen
@@ -2381,12 +2388,12 @@ function renderTraining(){
         </div>
 
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">CICLO 4 SETTIMANE${startDate?'':' <span style="font-weight:400;text-transform:none;font-size:11px;">(imposta data inizio in profilo)</span>'}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">CICLO 4 SETTIMANE${startDate?'':' <span style="font-weight:400;text-transform:none;font-size:11px;">(imposta data inizio in profilo)</span>'} <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
           <div style="display:flex;gap:8px;">${cycleCards}</div>
         </div>
 
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">PROGRESSIONE DOPPIA</div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">PROGRESSIONE DOPPIA <span class="info-icon" onclick="showInfoModal('progressione')">i</span></div>
           <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Come funziona</div>
             <div style="display:flex;flex-direction:column;gap:8px;">
@@ -4275,6 +4282,46 @@ function swipeEnd(e, id) {
     setTimeout(() => { if(el) el.style.transition = ''; }, 300);
   }
   delete _swipe[id];
+}
+
+function showInfoModal(key) {
+  const INFO = {
+    rir: {
+      title: 'RIR — Reps In Reserve',
+      text: 'Le ripetizioni che ti restano prima del cedimento tecnico. RIR 2 = potresti fare ancora 2 rep. RIR 1 = quasi al limite. Non si va mai a cedimento (RIR 0) per proteggere tendini e articolazioni.'
+    },
+    serie: {
+      title: 'Serie × Ripetizioni',
+      text: 'Es: 4×4–6 = 4 serie da 4 a 6 ripetizioni. Parti dal minimo del range (4 rep), settimane successive accumuli fino al massimo (6 rep), poi aumenti il carico e riparte dal minimo.'
+    },
+    recupero: {
+      title: 'Recupero tra le serie',
+      text: 'Sessioni Forza (A): 2–3 minuti — necessario per recuperare il sistema nervoso. Sessioni Ipertrofia (B): 60–90 secondi — il recupero incompleto aumenta il segnale ipertrofico.'
+    },
+    dup: {
+      title: 'DUP — Daily Undulating Periodization',
+      text: 'Alternare sessioni di Forza (rep basse, RIR 2) e Ipertrofia (rep alte, RIR 1) nella stessa settimana. Varia il tipo di stress neuromuscolare, riduce il rischio di overuse ed è il metodo più efficace per sviluppare forza e massa simultaneamente.'
+    },
+    scarico: {
+      title: 'Settimana di Scarico',
+      text: 'Ogni 4ª settimana: stessi esercizi, volume ridotto del 40–50%. Non è riposo — è recupero attivo. I tendini si adattano più lentamente dei muscoli e hanno bisogno di scaricare. La supercompensazione avviene durante lo scarico, non durante il carico.'
+    },
+    progressione: {
+      title: 'Doppia Progressione',
+      text: 'Step 1: accumula rep nel range (es. da 4 a 6) mantenendo il RIR prescritto. Step 2: quando raggiungi il tetto del range, aumenta la combinazione elastici e torna al minimo. Ciclo continuo senza plateau.'
+    }
+  };
+  const item = INFO[key];
+  if(!item) return;
+  const el = document.createElement('div');
+  el.className = 'info-modal-overlay';
+  el.innerHTML = `<div class="info-modal">
+    <h3>${item.title}</h3>
+    <p>${item.text}</p>
+    <button class="info-modal-close" onclick="this.closest('.info-modal-overlay').remove()">Chiudi</button>
+  </div>`;
+  el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  document.body.appendChild(el);
 }
 
 function showToast(msg, emoji='✅') {
