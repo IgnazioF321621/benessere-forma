@@ -2075,49 +2075,49 @@ const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
     exercises:[
-      { name:'Trazioni',                    sets:4, reps:'4–6',  eq:'Sbarra trazioni' },
-      { name:'Row con elastico',            sets:4, reps:'4–6',  eq:'Elastico + attacco porta' },
-      { name:'Shoulder press con elastico', sets:4, reps:'4–6',  eq:'Elastico' },
-      { name:'Curl bicipiti',               sets:3, reps:'6–8',  eq:'Elastico' },
-      { name:'Push down tricipiti',         sets:3, reps:'6–8',  eq:'Elastico' },
+      { name:'Trazioni alla sbarra',           sets:4, reps:'4–6',       eq:'Sbarra trazioni',          note:'Eccentrica 3 sec. Assistenza con elastico se necessario' },
+      { name:'Chest press orizzontale',        sets:4, reps:'4–6',       eq:'Elastico + attacco porta', note:"Banda ancorata dietro all'altezza petto" },
+      { name:'Shoulder press verticale',       sets:3, reps:'4–6',       eq:'Elastico',                 note:'Banda sotto i piedi. Core e gluteo contratti' },
+      { name:'Row orizzontale',                sets:4, reps:'4–6',       eq:'Elastico + barra',         note:'Banda ancorata davanti, scapole insieme' },
+      { name:'Face pull',                      sets:3, reps:'6–8',       eq:'Elastico + attacco porta', note:'Fondamentale per salute spalla. Mai saltare' },
     ]
   },
   upperB:{
     id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1,
     exercises:[
-      { name:'Trazioni',                    sets:3, reps:'8–12',  eq:'Sbarra trazioni' },
-      { name:'Row con elastico',            sets:3, reps:'10–12', eq:'Elastico + attacco porta' },
-      { name:'Press orizzontale',           sets:3, reps:'10–15', eq:'Elastico + panca' },
-      { name:'Fly orizzontale',             sets:3, reps:'12–15', eq:'Elastico' },
-      { name:'Curl martello',               sets:3, reps:'10–12', eq:'Elastico' },
-      { name:'Estensioni tricipiti',        sets:3, reps:'12–15', eq:'Elastico' },
+      { name:'Australian pull-up',             sets:4, reps:'8–12',      eq:'Sbarra trazioni',          note:'TUT alto — eccentrica 3 sec' },
+      { name:'Chest press inclinata',          sets:3, reps:'8–12',      eq:'Elastico + panca',         note:'Panca 30–45°, banda ancorata bassa' },
+      { name:'Lateral raise',                  sets:3, reps:'12–15',     eq:'Elastico',                 note:'Eccentrica 3 sec. Costruisce larghezza spalle' },
+      { name:'Row inclinato con barra corta',  sets:4, reps:'8–12',      eq:'Elastico + barra corta',   note:'Busto 45°, tira verso ombelico' },
+      { name:'Curl bicipiti',                  sets:3, reps:'12–15',     eq:'Elastico',                 note:'Pausa isometrica 1 sec in cima' },
+      { name:'Tricipiti overhead',             sets:3, reps:'12–15',     eq:'Elastico',                 note:'Capo lungo — banda ancorata bassa' },
     ]
   },
   lowerA:{
     id:'lowerA', name:'Lower A', type:'Forza', rir:2,
     exercises:[
-      { name:'Squat con elastico',          sets:4, reps:'4–6',  eq:'Elastico' },
-      { name:'Romanian Deadlift',           sets:4, reps:'4–6',  eq:'Barra modulare' },
-      { name:'Hip Thrust',                  sets:4, reps:'6–8',  eq:'Elastico + panca' },
-      { name:'Calf Raise',                  sets:3, reps:'8–10', eq:'Corpo libero / barra' },
+      { name:'Bulgarian split squat',          sets:4, reps:'4–6',       eq:'Elastico + panca',         note:'Tallone anteriore leggermente rialzato. Eccentrica 3 sec' },
+      { name:'Romanian deadlift',              sets:4, reps:'4–6',       eq:'Elastico + barra',         note:'Schiena SEMPRE neutra. Mai flessa. Senti i femorali' },
+      { name:'Hip thrust',                     sets:4, reps:'4–6',       eq:'Elastico + panca',         note:'Pausa isometrica 2 sec in cima. Miglior esercizio glutei' },
+      { name:'Glute bridge isometrico',        sets:3, reps:'20–30 sec', eq:'Elastico + cavigliera',    note:'Rinforza vasto mediale — protegge ginocchia' },
     ]
   },
   lowerB:{
     id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1,
     exercises:[
-      { name:'Squat bulgaro',               sets:3, reps:'10–12', eq:'Elastico + panca' },
-      { name:'Leg Curl con elastico',       sets:3, reps:'10–12', eq:'Elastico + cavigliera' },
-      { name:'Leg Extension con elastico',  sets:3, reps:'12–15', eq:'Elastico + cavigliera' },
-      { name:'Affondi laterali',            sets:3, reps:'12',    eq:'Corpo libero' },
-      { name:'Calf Raise',                  sets:3, reps:'15',    eq:'Corpo libero' },
+      { name:'Squat talloni rialzati',         sets:4, reps:'8–12',      eq:'Elastico',                 note:'Talloni su spessore. Scendi parallelo o oltre' },
+      { name:'Single leg Romanian deadlift',   sets:3, reps:'8–12',      eq:'Elastico',                 note:'Allena stabilizzatori — prevenzione infortuni' },
+      { name:'Hip thrust TUT alto',            sets:4, reps:'12–15',     eq:'Elastico + panca',         note:'Eccentrica 4 sec. Massimo segnale ipertrofico glutei' },
+      { name:'Leg curl con fitball',           sets:3, reps:'12–15',     eq:'Fitball',                  note:'Femorali senza stress sul ginocchio' },
+      { name:'Calf raise',                     sets:3, reps:'15–20',     eq:'Elastico',                 note:'Pausa isometrica in cima' },
     ]
   },
   recovery:{
     id:'recovery', name:'Active Recovery', type:'Recupero', rir:null,
     exercises:[
-      { name:'Camminata',                        sets:1, reps:'30 min', eq:'Outdoor' },
-      { name:'Respirazione diaframmatica',       sets:1, reps:'5 min',  eq:'Tappetino' },
-      { name:'Stretching mobilità',              sets:1, reps:'15 min', eq:'Tappetino + fitball' },
+      { name:'Mobilità articolare',            sets:1, reps:'10 min',    eq:'Tappetino',                note:'Anche, spalle, colonna toracica, caviglie' },
+      { name:'Stretching',                     sets:1, reps:'10 min',    eq:'Tappetino',                note:'Femorali, psoas, pettorale, dorsale — 45–60 sec per posizione' },
+      { name:'Vacuum + respirazione diaframmatica', sets:1, reps:'5–10 min', eq:'Tappetino',            note:'Idealmente a digiuno' },
     ]
   },
 };
@@ -2268,7 +2268,8 @@ function renderTraining(){
                     : ''}
               </div>
             </div>
-            <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);${badges?'margin-bottom:8px;':''}">${e.eq}</div>
+            <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);margin-bottom:${e.note?'4px':(badges?'8px':'0')}">${e.eq}</div>
+            ${e.note ? `<div style="font-size:11px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;font-style:italic;${badges?'margin-bottom:8px;':''}">💡 ${e.note}</div>` : (badges ? '' : '')}
             ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">${badges}</div>` : ''}
             ${logForm}
           </div>`;
