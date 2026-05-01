@@ -156,7 +156,7 @@ RLS abilitata — policy: `auth.uid() = user_id`.
   - **Body**: peso live, trend, vita cm — cliccabile → Body
 
 ### Nutrition (sub-nav: Oggi / Integratori / Storico / Piano)
-- **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto; ogni pasto ha pulsante ✏️ modifica e 🗑️ elimina
+- **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto; ogni pasto ha pulsante ✏️ modifica e 🗑️ elimina (solo desktop — su mobile solo swipe); ogni gruppo integratori ha pulsante × per eliminare il gruppo intero
 - **Integratori**: lista raggruppata per orario, editing inline, catalogo Nutrilite
 - **Storico**: report 7/14/30 giorni, grafico calorie
 - **Piano**: target 40·30·30, piano AI, priorità cliniche
@@ -164,15 +164,18 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 ### Training (sub-nav: Sessione / Piano / Progressione)
 - **Sessione**:
   - Lista sessioni: Upper A/B (Forza/Ipertrofia), Lower A/B, Active Recovery
-  - Dettaglio sessione: blocco attivazione 5 min + esercizi
+  - Dettaglio sessione: blocco attivazione 5 min + esercizi con campo `note` in corsivo
+  - Pulsante **▶** su ogni esercizio → apre modal scheda AI (`openExerciseAI`)
   - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
   - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
+  - Info icon ⓘ su badge RIR (→ `showInfoModal('rir')`) e su serie (→ `showInfoModal('serie')`)
 - **Piano**:
-  - Split settimanale Lun-Dom con giorno corrente evidenziato
+  - Split settimanale con giorni numerici G1–G7
   - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1) con settimana corrente (se `train_start_date` impostata)
   - Progressione doppia: 3 step + esempio pratico
+  - Info icon ⓘ su "CICLO 4 SETTIMANE" e "PROGRESSIONE DOPPIA"
 - **Progressione**:
-  - Chips esercizi scrollabili (17 esercizi unici)
+  - Chips esercizi scrollabili
   - Storico log per esercizio raggruppato per data — caricato da Supabase
 
 ### Body (sub-nav: Misure / Tendenza)
@@ -208,6 +211,7 @@ const ST = {
   trainProgLogs,    // [] | null (loading)
   trainHomeData,    // {lastDate, lastSession, nextSession, streak, doneToday, notStarted?, startDate?}
   trainSaving,      // boolean
+  exerciseAIOpen,   // null | {exName, loading?, wgerImages, wgerVideos, muscleImg, svgContent, content}
   // Body
   bodyTab,          // 'misure' | 'tendenza'
   bodyLogs,         // [] | null (loading)
@@ -226,19 +230,22 @@ const ST = {
 | `updateTrainingNav()` | Mostra/nasconde tab Training in top + bottom nav |
 | `renderHome()` | Home dashboard |
 | `loadTrainingHomeData()` | Fetch last session + streak per tile Home (rispetta start futura) |
-| `renderTraining()` | Training con 3 tab |
+| `renderTraining()` | Training con 3 tab — gestisce anche modal `exerciseAIOpen` |
 | `loadTrainingLogs(exName)` | Fetch storico esercizio per Progressione |
 | `saveTrainingSet()` | Insert su training_logs |
+| `openExerciseAI(exName, sessionType, note, svgContent)` | Apre modal scheda esercizio AI — usa `EXERCISE_MEDIA` + `callAI()` |
+| `showInfoModal(key)` | Mini modal per termini tecnici (rir, serie, recupero, dup, scarico, progressione) |
 | `renderBody()` | Body con 2 tab (Misure / Tendenza) |
 | `loadBodyLogs()` | Fetch body_logs da Supabase (aggiorna Home o Body in base a ST.page) |
 | `saveBodyLog()` | Insert/update body_logs + aggiorna profiles.weight_kg |
 | `migrateObiettivo(str)` | Migra vecchi valori obiettivo (`perdita_peso`→`dimagrimento`, `massa_muscolare`→`ipertrofia`) — chiamata in `applyProfile()` e `applyLocalPrefs()` |
 | `selectSetObiettivo(val)` | Evidenzia pill obiettivo nella griglia del modal impostazioni |
 | `dbToggleSuppTaken(date, suppId, suppName, taken, slot)` | Delete+insert su `supplements_log` (NON upsert — usare questo pattern) |
+| `deleteSuppGroup(slot)` | Elimina tutti gli integratori presi di un gruppo dalla timeline |
 
 ## Modulo Training — specifiche
 
-**Split:** Upper/Lower 4 giorni + 2 Active Recovery
+**Split:** Upper/Lower 4 giorni + 2 Active Recovery — giorni numerici G1–G7
 
 | Sessione | Tipo | RIR |
 |---|---|---|
@@ -256,9 +263,55 @@ const ST = {
 2. Vacuum addominale — 2 min
 3. Cat-Cow + rotazione toracica — 1 min
 
-**Attrezzatura:** elastici tubo 10/20/30/40/50 lbs, barra modulare, sbarra trazioni, panca, fitball, tappetino
+**Attrezzatura:** elastici a tubo con moschettoni (maniglie singole, corda doppia, barra modulare ~130 cm, barra corta), sbarra trazioni, panca, fitball, tappetino
 
 **Protezioni:** lombari e ginocchia
+
+### TRAINING_SESSIONS — esercizi aggiornati (maggio 2026)
+
+Ogni esercizio ha: `{ name, sets, reps, eq, note }`. Il campo `note` viene mostrato in corsivo nella card esercizio.
+
+| Sessione | Esercizi |
+|---|---|
+| Upper A (Forza) | Trazioni alla sbarra, Chest press orizzontale, Shoulder press verticale, Row orizzontale, Face pull |
+| Upper B (Ipertrofia) | Inverted row con elastico, Chest press inclinata, Lateral raise, Row inclinato con barra corta, Curl bicipiti, Tricipiti overhead |
+| Lower A (Forza) | Bulgarian split squat, Romanian deadlift, Hip thrust, Glute bridge isometrico |
+| Lower B (Ipertrofia) | Squat talloni rialzati, Single leg Romanian deadlift, Hip thrust TUT alto, Leg curl con fitball, Calf raise |
+| Recovery | Mobilità articolare, Stretching, Vacuum + respirazione diaframmatica |
+
+### EXERCISE_MEDIA — media per esercizi
+
+Oggetto globale definito prima di `TRAINING_SESSIONS`. Struttura per esercizio:
+```js
+{
+  wger: [...],      // URL immagini Wger
+  videos: [...],    // URL video Wger (.MOV)
+  muscleImg: '...'  // percorso locale assets/muscles/<nome>.jpg
+}
+```
+Esercizi con media configurati: Trazioni alla sbarra, Chest press orizzontale, Chest press inclinata, Shoulder press verticale, Row orizzontale, Face pull (video + muscleImg).
+
+**Asset locali muscoli:** `assets/muscles/` — aggiungere PNG/JPG manualmente e committare separatamente.
+
+### Scheda esercizio AI — `openExerciseAI`
+
+- Pulsante **▶** accanto al nome di ogni esercizio nel dettaglio sessione
+- Apre modal con loading state immediato (`ST.exerciseAIOpen = { exName, loading: true }`)
+- Legge media da `EXERCISE_MEDIA[exName]` (nessuna chiamata dinamica a Wger API)
+- Chiama `callAI(prompt, 600)` con prompt personalizzato per: 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi), ginocchia (valgismo dinamico), elastici a tubo
+- Modal mostra in ordine: video (se presenti), immagini (scroll orizzontale), mappa muscolare, testo AI formattato
+- Il modal è parte di `page-training` innerHTML — gestito tramite `ST.exerciseAIOpen`
+
+### Info icon (ⓘ) — `showInfoModal`
+
+Classe CSS `.info-icon` (cerchio verde 16px). Termini supportati: `rir`, `serie`, `recupero`, `dup`, `scarico`, `progressione`.
+Posizionati in:
+- Tab Piano: accanto a "CICLO 4 SETTIMANE" (scarico) e "PROGRESSIONE DOPPIA" (progressione)
+- Tab Sessione: nel badge header sessione (RIR) e nel badge serie esercizio (serie)
+
+### Fix Piano tab (maggio 2026)
+
+`CYCLE_WEEKS[currentWeek].active = true` crashava se `train_start_date` è nel futuro (`diffDays < 0` → `% 4` → indice negativo). Fix: il blocco esegue solo se `diffDays >= 0`.
 
 ## Modulo Body — specifiche
 
@@ -286,6 +339,8 @@ const ST = {
   - Fuori Zona: `#B84C2A`
 - **Sub-nav:** `.nutrition-subnav` + `.nsn-pill` — riusato per tutti i moduli
 - **Tile Home:** helper `tile(ink, body, right, onclick)` + `tHead(title, sub, ink)`
+- **Info icon:** `.info-icon` (cerchio 16px verde accent, testo bianco) — usato per termini tecnici Training
+- **Modal info:** `.info-modal-overlay` + `.info-modal` + `.info-modal-close` — usato sia da `showInfoModal` che da `openExerciseAI`
 
 ## Deploy
 
@@ -298,17 +353,7 @@ git push origin main
 
 GitHub Pages si aggiorna automaticamente (1-2 minuti).
 
-## Worktree
-
-Il worktree attivo è:
-`/Users/ignaziofiorito/benessere-forma/.claude/worktrees/optimistic-ellis-36865b/zona-tracker.html`
-
-Copiare nel repo principale prima del commit:
-```bash
-cp /Users/ignaziofiorito/benessere-forma/.claude/worktrees/optimistic-ellis-36865b/zona-tracker.html ~/benessere-forma/zona-tracker.html
-```
-
-## Funzioni chiave aggiuntive (aprile 2026)
+## Funzioni chiave aggiuntive (aprile–maggio 2026)
 
 | Funzione | Scopo |
 |---|---|
@@ -378,8 +423,17 @@ const OBJ_ADAPT = {
 - [x] Vocabolario obiettivi unificato (6 chiavi OBJ_ADAPT, migrazione automatica da vecchi valori)
 - [x] Card target Piano mostra obiettivo corretto (fix: `migrateObiettivo` + vocabolario unificato)
 - [x] Timeline oggi: pasti e integratori compaiono correttamente dopo reload
-- [x] Pulsante 🗑️ elimina pasto visibile nella timeline
+- [x] Pulsante 🗑️ elimina pasto solo su desktop (mobile usa swipe)
+- [x] Pulsante × elimina gruppo integratori in timeline
 - [x] `supplements_log` UNIQUE constraint + pattern delete+insert (no più duplicati)
+- [x] Info icon ⓘ con mini modal per RIR, Serie, Scarico, Progressione (Training)
+- [x] `TRAINING_SESSIONS` aggiornato con nuovi esercizi + campo `note`
+- [x] Split Piano giorni numerici G1–G7
+- [x] Fix crash tab Piano quando `train_start_date` è nel futuro
+- [x] Scheda esercizio AI con modal (video Wger, immagini, mappa muscolare, testo AI)
+- [x] `EXERCISE_MEDIA` — media statici per Upper A + Face pull
+- [ ] Completare `EXERCISE_MEDIA` per Upper B, Lower A, Lower B, Recovery
+- [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
