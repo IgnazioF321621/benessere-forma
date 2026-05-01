@@ -2370,21 +2370,21 @@ function renderTraining(){
 
   } else if(subnav === 'piano'){
     // ── Piano tab ───────────────────────────────────────────
-    const WEEK_SPLIT = [
-      { day:'Lun', session:'upperA',  label:'Up A',  color:'#185FA5', bg:'#E8F0FA' },
-      { day:'Mar', session:'lowerA',  label:'Low A', color:'#185FA5', bg:'#E8F0FA' },
-      { day:'Mer', session:'recovery',label:'AR',    color:'#2A7A6F', bg:'#E6F4F2' },
-      { day:'Gio', session:'upperB',  label:'Up B',  color:'#185FA5', bg:'#E8F0FA' },
-      { day:'Ven', session:'lowerB',  label:'Low B', color:'#185FA5', bg:'#E8F0FA' },
-      { day:'Sab', session:'recovery',label:'AR',    color:'#2A7A6F', bg:'#E6F4F2' },
-      { day:'Dom', session:null,      label:'—',     color:'#9CA3AF', bg:'#F3F4F6' },
+    const DAY_SPLIT = [
+      { day:'G1', session:'upperA',  label:'Upper A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G2', session:'lowerA',  label:'Lower A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G3', session:'recovery',label:'Riposo',   desc:'Attivo',        color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G6', session:'recovery',label:'Riposo',   desc:'Attivo',        color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G7', session:null,      label:'Rest',     desc:'Recupero',      color:'#9CA3AF', bg:'#F3F4F6' },
     ];
-    const todayIdx = (new Date().getDay()+6)%7; // 0=Lun
-    const splitCells = WEEK_SPLIT.map((d,i)=>`
+    const splitCells = DAY_SPLIT.map((d,i)=>`
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:${i===todayIdx?'#185FA5':'var(--t3)'};">${d.day.toUpperCase()}</div>
-        <div style="padding:5px 0;width:100%;text-align:center;border-radius:8px;background:${i===todayIdx?d.bg:'transparent'};border:${i===todayIdx?'1.5px solid '+d.color:'1.5px solid transparent'};">
-          <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${d.color};">${d.label}</span>
+        <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.04em;">${d.day}</div>
+        <div style="padding:6px 2px;width:100%;text-align:center;border-radius:8px;background:${d.bg};border:1.5px solid ${d.color}22;">
+          <span style="font-size:10px;font-weight:800;font-family:var(--font-mono);color:${d.color};display:block;line-height:1.2;">${d.label}</span>
+          <span style="font-size:9px;font-family:var(--font-mono);color:${d.color};opacity:.7;">${d.desc}</span>
         </div>
       </div>`).join('');
 
@@ -2417,7 +2417,7 @@ function renderTraining(){
       <div style="padding:16px;display:flex;flex-direction:column;gap:20px;">
 
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">SPLIT SETTIMANALE</div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">SPLIT — 7 GIORNI</div>
           <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="display:flex;gap:4px;">${splitCells}</div>
           </div>
