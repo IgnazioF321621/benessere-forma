@@ -979,6 +979,7 @@ const ST = {
   trainTab: null,
   trainSession: null,
   trainLogOpen: null,
+  trainCountdown: null,
   trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
@@ -2112,11 +2113,11 @@ const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
     exercises:[
-      { name:'Trazioni alla sbarra',           sets:4, reps:'4–6',       eq:'Sbarra trazioni',          note:'Eccentrica 3 sec. Assistenza con elastico se necessario' },
-      { name:'Chest press orizzontale',        sets:4, reps:'4–6',       eq:'Elastico + attacco porta', note:"Banda ancorata dietro all'altezza petto" },
-      { name:'Shoulder press verticale',       sets:3, reps:'4–6',       eq:'Elastico',                 note:'Banda sotto i piedi. Core e gluteo contratti' },
-      { name:'Row orizzontale',                sets:4, reps:'4–6',       eq:'Elastico + barra',         note:'Banda ancorata davanti, scapole insieme' },
-      { name:'Face pull',                      sets:3, reps:'6–8',       eq:'Elastico + attacco porta', note:'Fondamentale per salute spalla. Mai saltare' },
+      { name:'Trazioni alla sbarra',           sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Sbarra trazioni',             note:'Eccentrica 3 sec. Assistenza con elastico se necessario' },
+      { name:'Chest press orizzontale',        sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + maniglie singole', note:"Elastico ancorato dietro all'altezza petto" },
+      { name:'Shoulder press verticale',       sets:3, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + maniglie singole', note:'Elastico sotto i piedi. Core e gluteo contratti' },
+      { name:'Row orizzontale',                sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + barra modulare',  note:'Elastico ancorato davanti, scapole insieme' },
+      { name:'Face pull',                      sets:3, reps:'6–8', rest:90,  restText:'90 sec',  eq:'Elastico + corda doppia',    note:'Fondamentale per salute spalla. Mai saltare' },
     ]
   },
   upperB:{
@@ -2176,6 +2177,44 @@ async function loadTrainingLogs(exName){
   renderTraining();
 }
 
+function playBeep(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(1.0, ctx.currentTime);
+    osc.type = 'sine';
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.8);
+    osc.onended = () => ctx.close();
+  } catch(e){}
+}
+
+function startTrainingCountdown(seconds){
+  if(ST._countdownInterval) clearInterval(ST._countdownInterval);
+  ST.trainCountdown = { seconds, total: seconds, done: false };
+  ST._countdownInterval = setInterval(()=>{
+    if(!ST.trainCountdown){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; return; }
+    ST.trainCountdown.seconds--;
+    if(ST.trainCountdown.seconds <= 0){
+      clearInterval(ST._countdownInterval);
+      ST._countdownInterval = null;
+      playBeep();
+      ST.trainCountdown = { seconds: 0, total: ST.trainCountdown.total, done: true };
+    }
+    renderTraining();
+  }, 1000);
+}
+
+function skipCountdown(){
+  if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+  ST.trainCountdown = null;
+  renderTraining();
+}
+
 async function saveTrainingSet(){
   const form = ST.trainLogOpen;
   if(!form) return;
@@ -2207,7 +2246,11 @@ async function saveTrainingSet(){
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
+  const sessExercises = TRAINING_SESSIONS[form.sessionId]?.exercises || [];
+  const exData = sessExercises.find(ex => ex.name === form.exName);
+  const restSec = exData?.rest || 120;
   ST.trainLogOpen = null;
+  startTrainingCountdown(restSec);
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -2299,7 +2342,7 @@ function renderTraining(){
                 <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}','')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">▶</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
+                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span>${e.restText ? ` <span style="font-size:10px;color:var(--t3);font-weight:500;font-family:var(--font-mono);">↺ ${e.restText}</span>` : ''}</div>
                 ${allDone
                   ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
                   : !isOpen
@@ -2560,7 +2603,26 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML;
+  let countdownHTML = '';
+  if(ST.trainCountdown){
+    const cd = ST.trainCountdown;
+    countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;" onclick="if(${cd.done})skipCountdown()">
+      <div class="info-modal" style="max-width:280px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
+        ${cd.done ? `
+          <div style="font-size:48px;line-height:1;margin-bottom:12px;">✅</div>
+          <div style="font-size:22px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);margin-bottom:20px;">Pronto!</div>
+          <button onclick="skipCountdown()" style="padding:10px 28px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK</button>
+        ` : `
+          <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recupero</div>
+          <div style="font-size:72px;font-weight:700;font-family:var(--font-mono);color:#185FA5;line-height:1;">${cd.seconds}</div>
+          <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);margin-bottom:20px;">secondi</div>
+          <button onclick="skipCountdown()" style="padding:8px 22px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ›</button>
+        `}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML + countdownHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
