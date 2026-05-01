@@ -2099,9 +2099,7 @@ const EXERCISE_MEDIA = {
       'https://wger.de/media/exercise-video/222/245a824b-cd39-45f2-b251-2c0b7efead0d.MOV',
       'https://wger.de/media/exercise-video/222/eea93fcc-6a3c-4783-8f70-0234c791a001.MOV'
     ],
-    muscles: [
-      'https://wger.de/static/images/muscles/main/muscle-9.b491050a7108.svg'
-    ]
+    muscleImg: 'assets/muscles/face-pull.jpg'
   },
 };
 
@@ -2542,11 +2540,9 @@ function renderTraining(){
             </div>
           </div>` : ''}
 
-          ${ai.wgerMuscles?.length ? `<div style="margin-bottom:16px;">
+          ${ai.muscleImg ? `<div style="margin-bottom:16px;">
             <div style="font-size:11px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-mono);font-weight:700;">Muscoli coinvolti</div>
-            <div style="display:flex;gap:8px;">
-              ${ai.wgerMuscles.map(url => `<img src="${url}" style="height:120px;flex-shrink:0;" onerror="this.parentElement.style.display='none'"/>`).join('')}
-            </div>
+            <img src="${ai.muscleImg}" style="width:100%;border-radius:8px;"/>
           </div>` : ''}
 
           <div style="font-size:11px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-mono);font-weight:700;">Scheda tecnica AI</div>
@@ -4368,7 +4364,7 @@ async function openExerciseAI(exName, sessionType, note, svgContent) {
   const media = EXERCISE_MEDIA[exName] || {};
   const wgerImages = media.wger || [];
   const wgerVideos = media.videos || [];
-  const wgerMuscles = media.muscles || [];
+  const muscleImg = media.muscleImg || null;
 
   const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
 
@@ -4387,7 +4383,7 @@ Sii conciso e pratico.`;
     const content = text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
-    ST.exerciseAIOpen = { exName, wgerImages, wgerVideos, wgerMuscles, svgContent: svgContent || '', content };
+    ST.exerciseAIOpen = { exName, wgerImages, wgerVideos, muscleImg, svgContent: svgContent || '', content };
   } catch(e) {
     ST.exerciseAIOpen = { exName, wgerImages, wgerVideos, wgerMuscles, svgContent: svgContent || '', content: 'Errore di connessione.' };
   }
