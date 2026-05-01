@@ -2071,6 +2071,36 @@ const ACTIVATION_BLOCK = [
   { name:'Vacuum addominale',               duration:'2 min' },
   { name:'Cat-Cow + rotazione toracica',    duration:'1 min' },
 ];
+const EXERCISE_MEDIA = {
+  'Trazioni alla sbarra': {
+    wger: ['https://wger.de/media/exercise-images/475/b0554016-16fd-4dbe-be47-a2a17d16ae0e.jpg']
+  },
+  'Chest press orizzontale': {
+    wger: [
+      'https://wger.de/media/exercise-images/192/Bench-press-1.png',
+      'https://wger.de/media/exercise-images/192/Bench-press-2.png'
+    ]
+  },
+  'Shoulder press verticale': {
+    wger: ['https://wger.de/media/exercise-images/478/70a2d72c-a822-45f3-8de2-54ea85951b84.jpg']
+  },
+  'Row orizzontale': {
+    wger: ['https://wger.de/media/exercise-images/1117/e74255c0-67a0-4309-b78d-2d79e6ff8c11.png']
+  },
+  'Face pull': {
+    wger: [
+      'https://wger.de/media/exercise-images/822/74affc0d-03b6-4f33-b5f4-a822a2615f68.png',
+      'https://wger.de/media/exercise-images/822/6a770e5d-cd62-4754-a18c-eebe2103d7c5.png'
+    ]
+  },
+  'Chest press inclinata': {
+    wger: [
+      'https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png',
+      'https://wger.de/media/exercise-images/97/Dumbbell-bench-press-2.png'
+    ]
+  },
+};
+
 const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
@@ -2493,9 +2523,11 @@ function renderTraining(){
           <button class="info-modal-close" onclick="ST.exerciseAIOpen=null;renderTraining()" style="width:auto;padding:4px 14px;font-size:13px;">✕</button>
         </div>
         ${ai.loading ? `<div style="text-align:center;padding:32px 0;color:var(--t3);font-family:var(--font-sans);">🧠 Carico scheda esercizio…</div>` : `
-          ${ai.wgerImageUrl ? `<div style="margin-bottom:14px;">
+          ${ai.wgerImages?.length ? `<div style="margin-bottom:14px;">
             <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:6px;">MOVIMENTO DI RIFERIMENTO</div>
-            <img src="${ai.wgerImageUrl}" style="width:100%;border-radius:8px;background:#f5f5f5;" onerror="this.parentElement.style.display='none'"/>
+            <div style="display:flex;gap:8px;overflow-x:auto;">
+              ${ai.wgerImages.map(url => `<img src="${url}" style="height:140px;border-radius:8px;background:#f5f5f5;flex-shrink:0;" onerror="this.parentElement.style.display='none'"/>`).join('')}
+            </div>
           </div>` : ''}
           ${ai.svgContent ? `<div style="margin-bottom:14px;">
             <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:6px;">CON ELASTICI A TUBO</div>
@@ -4317,20 +4349,8 @@ async function openExerciseAI(exName, sessionType, note, svgContent) {
   ST.exerciseAIOpen = { exName, loading: true };
   renderTraining();
 
-  let wgerImageUrl = null;
-  try {
-    const searchTerm = exName.toLowerCase()
-      .replace(/con elastico|con barra corta|con fitball|con barra|talloni rialzati|tut alto|isometrico/gi, '')
-      .trim();
-    const wgerSearch = await fetch(`https://wger.de/api/v2/exercise/search/?term=${encodeURIComponent(searchTerm)}&language=english&format=json`);
-    const wgerData = await wgerSearch.json();
-    const firstResult = wgerData.suggestions?.[0];
-    if(firstResult?.data?.base_id) {
-      const imgRes = await fetch(`https://wger.de/api/v2/exerciseimage/?exercise_base=${firstResult.data.base_id}&format=json`);
-      const imgData = await imgRes.json();
-      if(imgData.results?.[0]?.image) wgerImageUrl = imgData.results[0].image;
-    }
-  } catch(e) {}
+  const media = EXERCISE_MEDIA[exName] || {};
+  const wgerImages = media.wger || [];
 
   const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
 
@@ -4349,9 +4369,9 @@ Sii conciso e pratico.`;
     const content = text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
-    ST.exerciseAIOpen = { exName, wgerImageUrl, svgContent: svgContent || '', content };
+    ST.exerciseAIOpen = { exName, wgerImages, svgContent: svgContent || '', content };
   } catch(e) {
-    ST.exerciseAIOpen = { exName, wgerImageUrl, svgContent: svgContent || '', content: 'Errore di connessione.' };
+    ST.exerciseAIOpen = { exName, wgerImages, svgContent: svgContent || '', content: 'Errore di connessione.' };
   }
   renderTraining();
 }
