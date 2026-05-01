@@ -984,6 +984,9 @@ const ST = {
   trainProgEx: null,
   trainProgLogs: [],
   trainHomeData: null,
+  trainCalMonth: null,
+  trainWorkouts: undefined,
+  trainSessionStart: null,
   bodyTab: null,
   bodyLogs: null,
   bodySaving: false,
@@ -2170,6 +2173,73 @@ function restSecToText(sec){
   return (sec % 60 === 0) ? (sec/60)+' min' : sec+' sec';
 }
 
+function renderCalendar(workouts, year, month){
+  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recovery:'AR' };
+  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recovery:'#2A7A6F' };
+  const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+  const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+
+  const wMap = {};
+  (workouts||[]).forEach(w => { wMap[w.date] = w; });
+
+  const today = todayKey();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let startDow = new Date(year, month-1, 1).getDay(); // 0=Dom
+  startDow = startDow === 0 ? 6 : startDow - 1; // Mon=0
+
+  const completedSessions = (workouts||[]).filter(w => w.completed);
+  const sessCounts = {};
+  completedSessions.forEach(w => { sessCounts[w.session_type] = (sessCounts[w.session_type]||0)+1; });
+  const topSess = Object.keys(sessCounts).sort((a,b)=>sessCounts[b]-sessCounts[a])[0];
+
+  // Streak: giorni consecutivi con workout, andando indietro da oggi
+  let streak = 0;
+  const cur = new Date(today);
+  while(true){
+    const dk = cur.toISOString().slice(0,10);
+    if(wMap[dk]?.completed){ streak++; cur.setDate(cur.getDate()-1); } else break;
+  }
+
+  let cells = '';
+  for(let i=0;i<startDow;i++) cells += '<div></div>';
+  for(let day=1; day<=daysInMonth; day++){
+    const ds = year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const w = wMap[ds];
+    const isToday = ds === today;
+    const bg = w ? SESS_COLOR[w.session_type]||'#185FA5' : (isToday ? 'var(--s2)' : 'transparent');
+    const tc = w ? '#fff' : (isToday ? 'var(--t1)' : 'var(--t3)');
+    const brd = (!w && isToday) ? '1.5px solid #185FA5' : '1px solid transparent';
+    const lbl = w ? (SESS_LABEL[w.session_type]||w.session_type)+(w.completed?'✓':'') : '';
+    cells += '<div style="min-height:38px;border-radius:6px;background:'+bg+';border:'+brd+';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">'
+      + '<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:'+tc+';">'+day+'</span>'
+      + (lbl ? '<span style="font-size:7px;font-weight:700;font-family:var(--font-mono);color:'+tc+';line-height:1;">'+lbl+'</span>' : '')
+      + '</div>';
+  }
+
+  const prev = month===1 ? {year:year-1,month:12} : {year,month:month-1};
+  const next = month===12 ? {year:year+1,month:1} : {year,month:month+1};
+  const topLabel = topSess ? (SESS_LABEL[topSess]||topSess)+' ('+sessCounts[topSess]+'×)' : '—';
+
+  return '<div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:16px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+    + '<button onclick="ST.trainCalMonth={year:'+prev.year+',month:'+prev.month+'};loadWorkouts('+prev.year+','+prev.month+');" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:var(--t2);">←</button>'
+    + '<div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">'+MONTH_NAMES[month-1]+' '+year+'</div>'
+    + '<button onclick="ST.trainCalMonth={year:'+next.year+',month:'+next.month+'};loadWorkouts('+next.year+','+next.month+');" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 8px;color:var(--t2);">→</button>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">'
+    + DAY_NAMES.map(d=>'<div style="text-align:center;font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);padding:2px 0;">'+d+'</div>').join('')
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">'
+    + cells
+    + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+completedSessions.length+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Sessioni</div></div>'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+streak+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Streak</div></div>'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+topLabel+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Freq.</div></div>'
+    + '</div>'
+    + '</div>';
+}
+
 async function loadTrainingLogs(exName){
   ST.trainProgEx = exName;
   ST.trainProgLogs = null; // null = loading
@@ -2225,6 +2295,53 @@ function skipCountdown(){
   renderTraining();
 }
 
+async function loadWorkouts(year, month){
+  ST.trainWorkouts = null; // loading
+  renderTraining();
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.trainWorkouts=[]; renderTraining(); return; }
+  const y = String(year), m = String(month).padStart(2,'0');
+  const firstDay = y+'-'+m+'-01';
+  const lastDay = new Date(year, month, 0).toISOString().slice(0,10);
+  const { data } = await supa.from('workouts')
+    .select('*')
+    .eq('user_id', ST.user.id)
+    .gte('date', firstDay)
+    .lte('date', lastDay)
+    .order('date');
+  ST.trainWorkouts = data || [];
+  renderTraining();
+}
+
+async function saveWorkoutRecord(sessionId){
+  if(!ST.user || ST.user.id==='test-user-001') return;
+  const durationMin = ST.trainSessionStart
+    ? Math.max(1, Math.round((Date.now() - ST.trainSessionStart) / 60000))
+    : null;
+  const { error } = await supa.from('workouts').insert({
+    user_id: ST.user.id,
+    date: todayKey(),
+    session_type: sessionId,
+    completed: true,
+    duration_min: durationMin,
+  });
+  if(error) console.warn('saveWorkoutRecord:', error.message);
+  ST.trainSessionStart = null;
+  // Ricarica calendario se siamo nel mese corrente
+  const cal = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
+  const todayY = new Date().getFullYear(), todayM = new Date().getMonth()+1;
+  if(cal.year === todayY && cal.month === todayM){
+    ST.trainWorkouts = undefined; // forza reload al prossimo accesso Progressione
+  }
+}
+
+async function completeSession(sessionId){
+  await saveWorkoutRecord(sessionId);
+  showToast('Sessione completata! 💪');
+  loadTrainingHomeData();
+  ST.trainSession = null;
+  renderTraining();
+}
+
 async function saveTrainingSet(){
   const form = ST.trainLogOpen;
   if(!form) return;
@@ -2253,6 +2370,9 @@ async function saveTrainingSet(){
   } catch(e){ insertError = {message: e.message}; }
   ST.trainSaving = false;
   if(insertError){ alert('Errore: '+insertError.message); renderTraining(); return; }
+  // Traccia inizio sessione sulla prima serie
+  const prevKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(form.sessionId+'_')&&k.endsWith('_'+todayKey()));
+  if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
@@ -2402,6 +2522,11 @@ function renderTraining(){
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
+          ${Object.keys(ST.trainLoggedSets).some(k=>k.startsWith(sel+'_')&&k.endsWith('_'+today)) ? `
+          <button onclick="completeSession('${sel}');"
+            style="width:100%;margin-top:8px;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
+            ✓ Completa sessione
+          </button>` : ''}
         </div>`;
 
     } else {
@@ -2526,6 +2651,23 @@ function renderTraining(){
       </div>`;
   } else {
     // ── Progressione tab ────────────────────────────────────
+
+    // Auto-load calendario se non ancora caricato
+    if(ST.trainWorkouts === undefined){
+      const calNow = new Date();
+      const calM = ST.trainCalMonth || { year: calNow.getFullYear(), month: calNow.getMonth()+1 };
+      loadWorkouts(calM.year, calM.month);
+      // loadWorkouts setta trainWorkouts=null e ri-renderizza
+    }
+
+    const calM = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
+    let calHTML = '';
+    if(ST.trainWorkouts === null){
+      calHTML = '<div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:32px 16px;margin-bottom:16px;text-align:center;color:var(--t3);font-family:var(--font-mono);font-size:13px;">Caricamento calendario…</div>';
+    } else {
+      calHTML = renderCalendar(ST.trainWorkouts, calM.year, calM.month);
+    }
+
     const allEx = [...new Set(
       Object.values(TRAINING_SESSIONS)
         .filter(s=>s.id!=='recovery')
@@ -2540,18 +2682,17 @@ function renderTraining(){
 
     let logsHTML = '';
     if(!selEx){
-      logsHTML = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-sans);">Seleziona un esercizio per vedere la progressione</div>`;
+      logsHTML = `<div style="padding:24px 0 8px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-sans);">Seleziona un esercizio per vedere la progressione</div>`;
     } else if(ST.trainProgLogs === null){
-      logsHTML = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+      logsHTML = `<div style="padding:24px 0;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
     } else if(ST.trainProgLogs.length === 0){
       logsHTML = `
-        <div style="padding:32px 16px;text-align:center;">
+        <div style="padding:24px 0;text-align:center;">
           <div style="font-size:28px;margin-bottom:8px;">📋</div>
           <div style="font-size:14px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Nessun log ancora</div>
           <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere la progressione qui</div>
         </div>`;
     } else {
-      // Raggruppa per data
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
@@ -2578,6 +2719,8 @@ function renderTraining(){
 
     body = `
       <div style="padding:16px;">
+        ${calHTML}
+        <div style="font-size:11px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">PROGRESSIONE ESERCIZI</div>
         <div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-bottom:16px;padding-bottom:4px;">
           ${exChips}
         </div>
