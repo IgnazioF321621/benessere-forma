@@ -987,6 +987,7 @@ const ST = {
   trainCalMonth: null,
   trainWorkouts: undefined,
   trainSessionStart: null,
+  trainCalDeleteConfirm: null,
   bodyTab: null,
   bodyLogs: null,
   bodySaving: false,
@@ -2210,7 +2211,9 @@ function renderCalendar(workouts, year, month){
     const tc = w ? '#fff' : (isToday ? 'var(--t1)' : 'var(--t3)');
     const brd = (!w && isToday) ? '1.5px solid #185FA5' : '1px solid transparent';
     const lbl = w ? (SESS_LABEL[w.session_type]||w.session_type)+(w.completed?'✓':'') : '';
-    cells += '<div style="min-height:38px;border-radius:6px;background:'+bg+';border:'+brd+';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">'
+    const clickAttr = w ? ' onclick="ST.trainCalDeleteConfirm={id:\''+w.id+'\',date:\''+ds+'\'};renderTraining();" title="Tocca per eliminare"' : '';
+    const cursor = w ? 'cursor:pointer;' : '';
+    cells += '<div'+clickAttr+' style="min-height:38px;border-radius:6px;background:'+bg+';border:'+brd+';'+cursor+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">'
       + '<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:'+tc+';">'+day+'</span>'
       + (lbl ? '<span style="font-size:7px;font-weight:700;font-family:var(--font-mono);color:'+tc+';line-height:1;">'+lbl+'</span>' : '')
       + '</div>';
@@ -2340,6 +2343,15 @@ async function completeSession(sessionId){
   loadTrainingHomeData();
   ST.trainSession = null;
   renderTraining();
+}
+
+async function deleteWorkout(id, date){
+  ST.trainCalDeleteConfirm = null;
+  if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
+  const { error } = await supa.from('workouts').delete().eq('id', id).eq('user_id', ST.user.id);
+  if(error){ showToast('Errore eliminazione: '+error.message); } else { showToast('Workout eliminato'); }
+  const calM = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
+  loadWorkouts(calM.year, calM.month);
 }
 
 async function saveTrainingSet(){
@@ -2484,7 +2496,7 @@ function renderTraining(){
                 <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}','')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">▶</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span> <span style="font-size:10px;color:var(--t3);font-weight:500;font-family:var(--font-mono);">↺ ${restTxt}</span></div>
+                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
                 ${allDone
                   ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
                   : !isOpen
@@ -2493,6 +2505,7 @@ function renderTraining(){
                     : ''}
               </div>
             </div>
+            <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-bottom:3px;">Recupero: ${restTxt}</div>
             <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);margin-bottom:${e.note?'4px':(badges?'8px':'0')}">${e.eq}</div>
             ${e.note ? `<div style="font-size:11px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;font-style:italic;${badges?'margin-bottom:8px;':''}">💡 ${e.note}</div>` : (badges ? '' : '')}
             ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">${badges}</div>` : ''}
@@ -2806,7 +2819,22 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML + countdownHTML;
+  let deleteConfirmHTML = '';
+  if(ST.trainCalDeleteConfirm){
+    const dc = ST.trainCalDeleteConfirm;
+    deleteConfirmHTML = `<div class="info-modal-overlay" onclick="ST.trainCalDeleteConfirm=null;renderTraining()">
+      <div class="info-modal" style="max-width:280px;text-align:center;" onclick="event.stopPropagation()">
+        <div style="font-size:16px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Elimina workout</div>
+        <div style="font-size:14px;color:var(--t2);font-family:var(--font-sans);margin-bottom:20px;">Eliminare il workout del ${fmtDate(dc.date)}?</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="ST.trainCalDeleteConfirm=null;renderTraining();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+          <button onclick="deleteWorkout('${dc.id}','${dc.date}');" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML + countdownHTML + deleteConfirmHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
