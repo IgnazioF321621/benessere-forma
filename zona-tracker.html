@@ -2259,7 +2259,7 @@ function renderTraining(){
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
                 <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
-                <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">🧠</button>
+                <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}','')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">🧠</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
                 <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
@@ -2483,7 +2483,32 @@ function renderTraining(){
       </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body;
+  let modalHTML = '';
+  if(ST.exerciseAIOpen) {
+    const ai = ST.exerciseAIOpen;
+    modalHTML = `<div class="info-modal-overlay" onclick="ST.exerciseAIOpen=null;renderTraining()">
+      <div class="info-modal" style="max-width:540px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 style="margin:0;font-size:16px;">${ai.exName}</h3>
+          <button class="info-modal-close" onclick="ST.exerciseAIOpen=null;renderTraining()" style="width:auto;padding:4px 14px;font-size:13px;">✕</button>
+        </div>
+        ${ai.loading ? `<div style="text-align:center;padding:32px 0;color:var(--t3);font-family:var(--font-sans);">🧠 Carico scheda esercizio…</div>` : `
+          ${ai.wgerImageUrl ? `<div style="margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:6px;">MOVIMENTO DI RIFERIMENTO</div>
+            <img src="${ai.wgerImageUrl}" style="width:100%;border-radius:8px;background:#f5f5f5;" onerror="this.parentElement.style.display='none'"/>
+          </div>` : ''}
+          ${ai.svgContent ? `<div style="margin-bottom:14px;">
+            <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:6px;">CON ELASTICI A TUBO</div>
+            <div style="background:var(--s2);border-radius:8px;padding:8px;">${ai.svgContent}</div>
+          </div>` : ''}
+          <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:8px;">SCHEDA TECNICA AI</div>
+          <div style="font-size:14px;line-height:1.7;color:var(--t2);font-family:var(--font-sans);">${ai.content}</div>
+        `}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
@@ -4288,27 +4313,28 @@ function swipeEnd(e, id) {
   delete _swipe[id];
 }
 
-async function openExerciseAI(exName, sessionType, note) {
-  const overlay = document.createElement('div');
-  overlay.className = 'info-modal-overlay';
-  overlay.id = 'exercise-ai-overlay';
-  const render = (content) => {
-    overlay.innerHTML = `<div class="info-modal" style="max-width:480px;max-height:75vh;overflow-y:auto;" onclick="event.stopPropagation()">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <h3 style="margin:0;font-size:16px;">${exName}</h3>
-        <button class="info-modal-close" onclick="document.getElementById('exercise-ai-overlay').remove()" style="width:auto;padding:4px 12px;font-size:13px;">✕</button>
-      </div>
-      ${content}
-    </div>`;
-  };
-  render(`<div style="text-align:center;padding:24px 0;color:var(--t3);font-family:var(--font-sans);">🧠 Carico scheda esercizio…</div>`);
-  overlay.addEventListener('click', () => overlay.remove());
-  document.body.appendChild(overlay);
+async function openExerciseAI(exName, sessionType, note, svgContent) {
+  ST.exerciseAIOpen = { exName, loading: true };
+  renderTraining();
 
+  let wgerImageUrl = null;
   try {
-    const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
+    const searchTerm = exName.toLowerCase()
+      .replace(/con elastico|con barra corta|con fitball|con barra|talloni rialzati|tut alto|isometrico/gi, '')
+      .trim();
+    const wgerSearch = await fetch(`https://wger.de/api/v2/exercise/search/?term=${encodeURIComponent(searchTerm)}&language=english&format=json`);
+    const wgerData = await wgerSearch.json();
+    const firstResult = wgerData.suggestions?.[0];
+    if(firstResult?.data?.base_id) {
+      const imgRes = await fetch(`https://wger.de/api/v2/exerciseimage/?exercise_base=${firstResult.data.base_id}&format=json`);
+      const imgData = await imgRes.json();
+      if(imgData.results?.[0]?.image) wgerImageUrl = imgData.results[0].image;
+    }
+  } catch(e) {}
 
-IMPORTANTE: L'attrezzatura usata sono elastici a tubo con moschettoni, comprensivi di maniglie singole, corda a doppia impugnatura, barra modulare (~130 cm) e barra corta. NON sono bande piatte. Nelle spiegazioni usa sempre "elastico a tubo" e descrivi l'impugnatura corretta (maniglie o barra).
+  const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
+
+IMPORTANTE: L'attrezzatura usata sono elastici a tubo con moschettoni, comprensivi di maniglie singole, corda doppia, barra modulare (~130 cm) e barra corta. NON sono bande piatte. Nelle spiegazioni usa sempre "elastico a tubo" e descrivi l'impugnatura corretta (maniglie o barra).
 
 Rispondi in italiano con queste sezioni:
 **Esecuzione** (3-4 punti chiave)
@@ -4317,14 +4343,17 @@ Rispondi in italiano con queste sezioni:
 **Sensazione corretta** (una frase)
 
 Sii conciso e pratico.`;
+
+  try {
     const text = await callAI(prompt, 600);
-    const html = text
+    const content = text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
-    render(`<div style="font-size:14px;line-height:1.7;color:var(--t2);font-family:var(--font-sans);">${html}</div>`);
+    ST.exerciseAIOpen = { exName, wgerImageUrl, svgContent: svgContent || '', content };
   } catch(e) {
-    render(`<div style="font-size:14px;color:#B84C2A;font-family:var(--font-sans);">Errore di connessione.</div>`);
+    ST.exerciseAIOpen = { exName, wgerImageUrl, svgContent: svgContent || '', content: 'Errore di connessione.' };
   }
+  renderTraining();
 }
 
 function showInfoModal(key) {
