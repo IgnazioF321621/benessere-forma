@@ -2113,52 +2113,62 @@ const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
     exercises:[
-      { name:'Trazioni alla sbarra',           sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Sbarra trazioni',             note:'Eccentrica 3 sec. Assistenza con elastico se necessario' },
-      { name:'Chest press orizzontale',        sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + maniglie singole', note:"Elastico ancorato dietro all'altezza petto" },
-      { name:'Shoulder press verticale',       sets:3, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + maniglie singole', note:'Elastico sotto i piedi. Core e gluteo contratti' },
-      { name:'Row orizzontale',                sets:4, reps:'4–6', rest:180, restText:'2–3 min', eq:'Elastico + barra modulare',  note:'Elastico ancorato davanti, scapole insieme' },
-      { name:'Face pull',                      sets:3, reps:'6–8', rest:90,  restText:'90 sec',  eq:'Elastico + corda doppia',    note:'Fondamentale per salute spalla. Mai saltare' },
+      { name:'Trazioni alla sbarra',           sets:4, reps:'4–6',       eq:'Sbarra trazioni',             note:'Eccentrica 3 sec. Assistenza con elastico se necessario' },
+      { name:'Chest press orizzontale',        sets:4, reps:'4–6',       eq:'Elastico + maniglie singole', note:"Elastico ancorato dietro all'altezza petto" },
+      { name:'Shoulder press verticale',       sets:3, reps:'4–6',       eq:'Elastico + maniglie singole', note:'Elastico sotto i piedi. Core e gluteo contratti' },
+      { name:'Row orizzontale',                sets:4, reps:'4–6',       eq:'Elastico + barra modulare',   note:'Elastico ancorato davanti, scapole insieme' },
+      { name:'Face pull',                      sets:3, reps:'6–8',       iso:true, eq:'Elastico + corda doppia', note:'Fondamentale per salute spalla. Mai saltare' },
     ]
   },
   upperB:{
     id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1,
     exercises:[
-      { name:'Inverted row con elastico',       sets:4, reps:'8–12',      eq:'Elastico + attacco porta', note:'Corpo inclinato indietro — eccentrica 3 sec' },
-      { name:'Chest press inclinata',          sets:3, reps:'8–12',      eq:'Elastico + panca',         note:'Panca 30–45°, banda ancorata bassa' },
-      { name:'Lateral raise',                  sets:3, reps:'12–15',     eq:'Elastico',                 note:'Eccentrica 3 sec. Costruisce larghezza spalle' },
-      { name:'Row inclinato con barra corta',  sets:4, reps:'8–12',      eq:'Elastico + barra corta',   note:'Busto 45°, tira verso ombelico' },
-      { name:'Curl bicipiti',                  sets:3, reps:'12–15',     eq:'Elastico',                 note:'Pausa isometrica 1 sec in cima' },
-      { name:'Tricipiti overhead',             sets:3, reps:'12–15',     eq:'Elastico',                 note:'Capo lungo — banda ancorata bassa' },
+      { name:'Inverted row con elastico',       sets:4, reps:'8–12',     eq:'Elastico + attacco porta',    note:'Corpo inclinato indietro — eccentrica 3 sec' },
+      { name:'Chest press inclinata',           sets:3, reps:'8–12',     eq:'Elastico + panca',            note:'Panca 30–45°, elastico ancorato in basso' },
+      { name:'Lateral raise',                   sets:3, reps:'12–15',    iso:true, eq:'Elastico',          note:'Eccentrica 3 sec. Costruisce larghezza spalle' },
+      { name:'Row inclinato con barra corta',   sets:4, reps:'8–12',     eq:'Elastico + barra corta',      note:'Busto 45°, tira verso ombelico' },
+      { name:'Curl bicipiti',                   sets:3, reps:'12–15',    iso:true, eq:'Elastico',          note:'Pausa isometrica 1 sec in cima' },
+      { name:'Tricipiti overhead',              sets:3, reps:'12–15',    iso:true, eq:'Elastico',          note:'Capo lungo — elastico ancorato in basso' },
     ]
   },
   lowerA:{
     id:'lowerA', name:'Lower A', type:'Forza', rir:2,
     exercises:[
-      { name:'Bulgarian split squat',          sets:4, reps:'4–6',       eq:'Elastico + panca',         note:'Tallone anteriore leggermente rialzato. Eccentrica 3 sec' },
-      { name:'Romanian deadlift',              sets:4, reps:'4–6',       eq:'Elastico + barra',         note:'Schiena SEMPRE neutra. Mai flessa. Senti i femorali' },
-      { name:'Hip thrust',                     sets:4, reps:'4–6',       eq:'Elastico + panca',         note:'Pausa isometrica 2 sec in cima. Miglior esercizio glutei' },
-      { name:'Glute bridge isometrico',        sets:3, reps:'20–30 sec', eq:'Elastico + cavigliera',    note:'Rinforza vasto mediale — protegge ginocchia' },
+      { name:'Bulgarian split squat',          sets:4, reps:'4–6',       eq:'Elastico + panca',            note:'Tallone anteriore leggermente rialzato. Eccentrica 3 sec' },
+      { name:'Romanian deadlift',              sets:4, reps:'4–6',       eq:'Elastico + barra',            note:'Schiena SEMPRE neutra. Mai flessa. Senti i femorali' },
+      { name:'Hip thrust',                     sets:4, reps:'4–6',       eq:'Elastico + panca',            note:'Pausa isometrica 2 sec in cima. Miglior esercizio glutei' },
+      { name:'Glute bridge isometrico',        sets:3, reps:'20–30 sec', iso:true, eq:'Elastico + cavigliera', note:'Rinforza vasto mediale — protegge ginocchia' },
     ]
   },
   lowerB:{
     id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1,
     exercises:[
-      { name:'Squat talloni rialzati',         sets:4, reps:'8–12',      eq:'Elastico',                 note:'Talloni su spessore. Scendi parallelo o oltre' },
-      { name:'Single leg Romanian deadlift',   sets:3, reps:'8–12',      eq:'Elastico',                 note:'Allena stabilizzatori — prevenzione infortuni' },
-      { name:'Hip thrust TUT alto',            sets:4, reps:'12–15',     eq:'Elastico + panca',         note:'Eccentrica 4 sec. Massimo segnale ipertrofico glutei' },
-      { name:'Leg curl con fitball',           sets:3, reps:'12–15',     eq:'Fitball',                  note:'Femorali senza stress sul ginocchio' },
-      { name:'Calf raise',                     sets:3, reps:'15–20',     eq:'Elastico',                 note:'Pausa isometrica in cima' },
+      { name:'Squat talloni rialzati',         sets:4, reps:'8–12',      eq:'Elastico',                    note:'Talloni su spessore. Scendi parallelo o oltre' },
+      { name:'Single leg Romanian deadlift',   sets:3, reps:'8–12',      eq:'Elastico',                    note:'Allena stabilizzatori — prevenzione infortuni' },
+      { name:'Hip thrust TUT alto',            sets:4, reps:'12–15',     eq:'Elastico + panca',            note:'Eccentrica 4 sec. Massimo segnale ipertrofico glutei' },
+      { name:'Leg curl con fitball',           sets:3, reps:'12–15',     iso:true, eq:'Fitball',           note:'Femorali senza stress sul ginocchio' },
+      { name:'Calf raise',                     sets:3, reps:'15–20',     iso:true, eq:'Elastico',          note:'Pausa isometrica in cima' },
     ]
   },
   recovery:{
     id:'recovery', name:'Active Recovery', type:'Recupero', rir:null,
     exercises:[
-      { name:'Mobilità articolare',            sets:1, reps:'10 min',    eq:'Tappetino',                note:'Anche, spalle, colonna toracica, caviglie' },
-      { name:'Stretching',                     sets:1, reps:'10 min',    eq:'Tappetino',                note:'Femorali, psoas, pettorale, dorsale — 45–60 sec per posizione' },
-      { name:'Vacuum + respirazione diaframmatica', sets:1, reps:'5–10 min', eq:'Tappetino',            note:'Idealmente a digiuno' },
+      { name:'Mobilità articolare',            sets:1, reps:'10 min',    eq:'Tappetino',                   note:'Anche, spalle, colonna toracica, caviglie' },
+      { name:'Stretching',                     sets:1, reps:'10 min',    eq:'Tappetino',                   note:'Femorali, psoas, pettorale, dorsale — 45–60 sec per posizione' },
+      { name:'Vacuum + respirazione diaframmatica', sets:1, reps:'5–10 min', eq:'Tappetino',               note:'Idealmente a digiuno' },
     ]
   },
 };
+
+function getRestSec(sessionId, ex){
+  const sess = TRAINING_SESSIONS[sessionId];
+  const isForza = sess?.type === 'Forza';
+  const isIso = !!ex?.iso;
+  return isForza ? (isIso ? 90 : 120) : (isIso ? 60 : 90);
+}
+function restSecToText(sec){
+  return (sec % 60 === 0) ? (sec/60)+' min' : sec+' sec';
+}
 
 async function loadTrainingLogs(exName){
   ST.trainProgEx = exName;
@@ -2193,9 +2203,9 @@ function playBeep(){
   } catch(e){}
 }
 
-function startTrainingCountdown(seconds){
+function startTrainingCountdown(seconds, activeTip, nextExNote){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
-  ST.trainCountdown = { seconds, total: seconds, done: false };
+  ST.trainCountdown = { seconds, total: seconds, done: false, activeTip: activeTip||'', nextExNote: nextExNote||null };
   ST._countdownInterval = setInterval(()=>{
     if(!ST.trainCountdown){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; return; }
     ST.trainCountdown.seconds--;
@@ -2203,7 +2213,7 @@ function startTrainingCountdown(seconds){
       clearInterval(ST._countdownInterval);
       ST._countdownInterval = null;
       playBeep();
-      ST.trainCountdown = { seconds: 0, total: ST.trainCountdown.total, done: true };
+      ST.trainCountdown = { ...ST.trainCountdown, seconds: 0, done: true };
     }
     renderTraining();
   }, 1000);
@@ -2247,10 +2257,20 @@ async function saveTrainingSet(){
   ST.trainLoggedSets[key] = {reps, resistance, rir};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   const sessExercises = TRAINING_SESSIONS[form.sessionId]?.exercises || [];
-  const exData = sessExercises.find(ex => ex.name === form.exName);
-  const restSec = exData?.rest || 120;
+  const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
+  const exData = currentIdx >= 0 ? sessExercises[currentIdx] : null;
+  const nextEx = (currentIdx >= 0 && currentIdx < sessExercises.length - 1) ? sessExercises[currentIdx + 1] : null;
+  const nextExNote = nextEx ? `${nextEx.name}: ${nextEx.note}` : null;
+  const restSec = getRestSec(form.sessionId, exData);
+  const ACTIVE_TIPS = [
+    '🫁 Fai 5 respirazioni diaframmatiche profonde — espandi le costole lateralmente',
+    '💨 Vacuum addominale — espira tutto, contrai l\'ombelico verso la colonna, tieni 10 sec',
+    '🔄 Cat-Cow lento — 5 ripetizioni, sblocca la cerniera toraco-lombare',
+    '🦵 Mobilità anche — cerchi lenti, 5 per lato',
+  ];
+  const activeTip = ACTIVE_TIPS[Math.floor(Math.random() * ACTIVE_TIPS.length)];
   ST.trainLogOpen = null;
-  startTrainingCountdown(restSec);
+  startTrainingCountdown(restSec, activeTip, nextExNote);
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -2290,6 +2310,8 @@ function renderTraining(){
       const today = todayKey();
       const exerciseCards = s.exercises.map(e=>{
         const safeName = e.name.replace(/'/g,"\\'");
+        const restSec = getRestSec(sel, e);
+        const restTxt = restSecToText(restSec);
         const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
         const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
         const nextSet = loggedKeys.length + 1;
@@ -2342,7 +2364,7 @@ function renderTraining(){
                 <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}','')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;" title="Scheda AI">▶</button>
               </div>
               <div style="display:flex;align-items:center;gap:8px;">
-                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span>${e.restText ? ` <span style="font-size:10px;color:var(--t3);font-weight:500;font-family:var(--font-mono);">↺ ${e.restText}</span>` : ''}</div>
+                <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span> <span style="font-size:10px;color:var(--t3);font-weight:500;font-family:var(--font-mono);">↺ ${restTxt}</span></div>
                 ${allDone
                   ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
                   : !isOpen
@@ -2606,18 +2628,37 @@ function renderTraining(){
   let countdownHTML = '';
   if(ST.trainCountdown){
     const cd = ST.trainCountdown;
-    countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;" onclick="if(${cd.done})skipCountdown()">
-      <div class="info-modal" style="max-width:280px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
-        ${cd.done ? `
-          <div style="font-size:48px;line-height:1;margin-bottom:12px;">✅</div>
-          <div style="font-size:22px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);margin-bottom:20px;">Pronto!</div>
-          <button onclick="skipCountdown()" style="padding:10px 28px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK</button>
-        ` : `
-          <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recupero</div>
-          <div style="font-size:72px;font-weight:700;font-family:var(--font-mono);color:#185FA5;line-height:1;">${cd.seconds}</div>
-          <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);margin-bottom:20px;">secondi</div>
-          <button onclick="skipCountdown()" style="padding:8px 22px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ›</button>
-        `}
+    let cdBody = '';
+    if(cd.done){
+      cdBody = `<div style="font-size:52px;line-height:1;margin-bottom:12px;">💪</div>
+        <div style="font-size:26px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);letter-spacing:.02em;margin-bottom:24px;">PRONTO!</div>
+        <button onclick="skipCountdown()" style="padding:10px 28px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>`;
+    } else {
+      const phase = cd.seconds > (cd.total - 30) ? 1 : (cd.seconds <= 10 ? 3 : 2);
+      if(phase === 1){
+        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;">Recupero attivo</div>
+          <div style="font-size:14px;line-height:1.65;color:var(--t1);font-family:var(--font-sans);margin-bottom:18px;">${cd.activeTip}</div>
+          <div style="font-size:34px;font-weight:700;font-family:var(--font-mono);color:#185FA5;margin-bottom:16px;">${cd.seconds}</div>
+          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
+      } else if(phase === 2){
+        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Prossimo esercizio</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);margin-bottom:18px;">${cd.nextExNote || 'Ottimo lavoro — ultima serie completata!'}</div>
+          <div style="font-size:34px;font-weight:700;font-family:var(--font-mono);color:#185FA5;margin-bottom:16px;">${cd.seconds}</div>
+          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
+      } else {
+        const pct = cd.seconds / 10;
+        const r = Math.round(42 + (184-42)*(1-pct));
+        const g = Math.round(122 + (76-122)*(1-pct));
+        const b = Math.round(111 + (42-111)*(1-pct));
+        const numColor = 'rgb('+r+','+g+','+b+')';
+        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Quasi pronto…</div>
+          <div style="font-size:80px;font-weight:700;font-family:var(--font-mono);color:${numColor};line-height:1;margin-bottom:16px;">${cd.seconds}</div>
+          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
+      }
+    }
+    countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;">
+      <div class="info-modal" style="max-width:300px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
+        ${cdBody}
       </div>
     </div>`;
   }
