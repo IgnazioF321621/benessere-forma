@@ -851,6 +851,14 @@ select.inp{cursor:pointer;}
         <input id="set-train-start" class="inp inp-sm" type="date" placeholder="YYYY-MM-DD"/>
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Usata per calcolare la settimana corrente nel ciclo 4 settimane (3 carico + 1 scarico).</div>
       </div>
+      <div class="onb-field" style="margin-top:10px;">
+        <label>Unità di misura peso/carico</label>
+        <select id="set-unit" class="inp inp-sm">
+          <option value="kg">kg</option>
+          <option value="lbs">lbs</option>
+        </select>
+        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Etichetta visualizzata sul carico nel log serie. Le scale degli elastici restano in lbs.</div>
+      </div>
     </div>
 
     <!-- Sezione: Esami del sangue -->
@@ -998,7 +1006,13 @@ const ST = {
   bodyLogs: null,
   bodySaving: false,
   bodyAdvOpen: false,
+  audioBlocked: false,
+  trainLogResist: 30,
+  editLogKey: null,
+  editLogDraft: null,
 };
+
+const RESIST_VALUES = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
 // ═══════════════════════════════════════════════════════════
 // UTILS
@@ -1617,6 +1631,7 @@ function saveLocalPrefs() {
       obiettivo:   ST.profile.obiettivo   || '',
       dieta:       ST.profile.dieta       || '',
       intolleranze: ST.profile.intolleranze || [],
+      unit:        ST.profile.unit        || 'kg',
     }));
   } catch(e) {}
 }
@@ -1629,6 +1644,7 @@ function applyLocalPrefs() {
     if (prefs.obiettivo)    ST.profile.obiettivo    = migrateObiettivo(prefs.obiettivo);
     if (prefs.dieta)        ST.profile.dieta        = prefs.dieta;
     if (prefs.intolleranze) ST.profile.intolleranze = prefs.intolleranze;
+    if (prefs.unit)         ST.profile.unit         = prefs.unit;
     // Ricalcola TARGET con il vero obiettivo locale
     const obArr = (prefs.obiettivo || '').split(',').filter(Boolean);
     const a = calcAdaptedTargets(obArr, ST.TARGET.kcal);
@@ -1808,6 +1824,7 @@ async function logout() {
 // ═══════════════════════════════════════════════════════════
 function showPage(id){
   if(id==='training' && !hasTraining()){ id='home'; }
+  if(id !== 'training' && typeof releaseWakeLock === 'function'){ releaseWakeLock(); }
   ST.page=id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // Reset top nav (inline style driven)
@@ -2364,10 +2381,9 @@ async function saveTrainingSet(){
   const form = ST.trainLogOpen;
   if(!form) return;
   const repsEl = document.getElementById('tl-reps');
-  const resistEl = document.getElementById('tl-resist');
   const rirEl = document.getElementById('tl-rir');
   const reps = parseInt(repsEl?.value)||0;
-  const resistance = resistEl?.value?.trim()||'';
+  const resistance = (ST.trainLogResist != null) ? String(ST.trainLogResist) : '';
   const rir = (rirEl?.value !== '' && rirEl?.value != null) ? parseInt(rirEl.value) : null;
   if(!reps){ repsEl?.focus(); return; }
   ST.trainSaving = true;
@@ -2421,7 +2437,7 @@ function renderTraining(){
     { id:'progressione',label:'Progressione' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
-    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';ST.trainSession=null;renderTraining();">${t.label}</button>`).join('')}
+    ${tabs.map(t=>`<button class="nsn-pill${subnav===t.id?' active':''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}
   </nav>`;
 
   let body = '';
@@ -2468,7 +2484,7 @@ function renderTraining(){
           <div style="flex:1;min-width:0;">
             <div style="${nameStyle}">${a.name}</div>
           </div>
-          <div ${timeOnclick} title="${(!running && !checked)?'Tap per modificare':''}" style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:${timeColor};${timeDeco}${timeCursor}min-width:46px;text-align:right;">${timeTxt}</div>
+          <div id="act-timer-${i}" ${timeOnclick} title="${(!running && !checked)?'Tap per modificare':''}" style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:${timeColor};${timeDeco}${timeCursor}min-width:46px;text-align:right;">${timeTxt}</div>
           ${playBtn}
           ${resetBtn}
         </div>`;
@@ -2484,24 +2500,36 @@ function renderTraining(){
         const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
         const nextSet = loggedKeys.length + 1;
         const allDone = nextSet > e.sets;
+        const unitLbl = (ST.profile && ST.profile.unit) || 'kg';
         const badges = loggedKeys.map(k=>{
           const d = ST.trainLoggedSets[k];
           const sn = k.split('_')[2];
-          return `<span style="background:#E8F0FA;color:#185FA5;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance:''}</span>`;
+          if(ST.editLogKey === k){
+            const dr = ST.editLogDraft || {};
+            return `<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F0FA;border:1.5px solid #185FA5;padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
+              <span style="font-size:10px;color:#185FA5;font-weight:700;">S${sn}</span>
+              <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
+              <span style="font-size:10px;color:var(--t3);">r</span>
+              <input id="el-resist" type="number" min="0" max="999" value="${dr.resistance||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="width:46px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
+              <span style="font-size:9px;color:var(--t3);">${unitLbl}</span>
+              <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:#2A7A6F;color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
+              <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
+            </span>`;
+          }
+          return `<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F0FA;color:#185FA5;padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance+(/^\d+$/.test(String(d.resistance))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:#185FA5;font-size:11px;line-height:1;">✏️</button></span>`;
+        }).join('');
+        const resistPills = RESIST_VALUES.map(v=>{
+          const sel = ST.trainLogResist === v;
+          return `<button data-v="${v}" class="resist-pill" onclick="event.stopPropagation();selectResist(${v});" style="scroll-snap-align:center;flex-shrink:0;padding:8px 12px;border-radius:10px;border:1.5px solid ${sel?'#185FA5':'var(--s2)'};background:${sel?'#E8F0FA':'var(--bg)'};color:${sel?'#185FA5':'var(--t2)'};font-family:var(--font-mono);font-weight:700;font-size:14px;cursor:pointer;min-width:48px;">${v}</button>`;
         }).join('');
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
-            <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">REPS</label>
                 <input id="tl-reps" type="number" min="1" max="30" placeholder="0"
                   style="width:100%;padding:8px;border-radius:8px;border:1.5px solid #185FA5;font-size:16px;font-family:var(--font-mono);font-weight:700;color:var(--t1);background:var(--bg);text-align:center;box-sizing:border-box;">
-              </div>
-              <div style="flex:2;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RESISTENZA</label>
-                <input id="tl-resist" type="text" placeholder="es. elastico 20lbs"
-                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--s2);font-size:13px;font-family:var(--font-sans);color:var(--t1);background:var(--bg);box-sizing:border-box;">
               </div>
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
@@ -2514,6 +2542,11 @@ function renderTraining(){
                   <option value="3">3</option>
                 </select>
               </div>
+            </div>
+            <div style="margin-bottom:6px;">
+              <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
+              <div id="tl-resist-picker" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:6px;padding:2px 0 6px;-webkit-overflow-scrolling:touch;">${resistPills}</div>
+              <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:2px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
             </div>
             <div style="display:flex;gap:8px;">
               <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
@@ -2532,7 +2565,7 @@ function renderTraining(){
               ${allDone
                 ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);flex-shrink:0;white-space:nowrap;">✓ DONE</span>`
                 : !isOpen
-                  ? `<button onclick="ST.trainLogOpen={sessionId:'${sel}',exName:'${safeName}',setNum:${nextSet}};renderTraining();"
+                  ? `<button onclick="openLogModal('${sel}','${safeName}',${nextSet});"
                       style="background:#E8F0FA;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);flex-shrink:0;white-space:nowrap;">+S${nextSet}</button>`
                   : ''}
             </div>
@@ -2557,13 +2590,17 @@ function renderTraining(){
           </div>`;
       }).join('');
 
+      const audioBanner = ST.audioBlocked
+        ? `<div onclick="dismissAudioBanner();" style="background:#FFF7E6;border:1px solid #F0B85A;color:#7A5500;padding:8px 12px;border-radius:8px;font-size:12px;font-family:var(--font-sans);font-weight:600;margin-bottom:12px;cursor:pointer;text-align:center;">🔔 Tocca per attivare l'audio</div>`
+        : '';
       body = `
         <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));">
-          <button onclick="ST.trainSession=null;ST.trainActivation=[false,false,false];resetAllActivationTimers();renderTraining();"
+          <button onclick="closeTrainingSession();"
             style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
             Sessioni
           </button>
+          ${audioBanner}
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
             <div style="font-size:22px;font-weight:800;color:var(--t1);font-family:var(--font-sans);">${s.name}</div>
             ${typeBadge}
@@ -2593,7 +2630,7 @@ function renderTraining(){
       const sessionCards = mainSessions.map(sid=>{
         const s = TRAINING_SESSIONS[sid];
         return `
-          <button onclick="ST.trainSession='${sid}';renderTraining();"
+          <button onclick="openTrainingSession('${sid}');"
             style="background:var(--s1,#fff);border:none;border-radius:var(--r-md,12px);padding:16px;text-align:left;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.07);transition:transform .1s;active:scale(.98);">
             <div style="font-size:17px;font-weight:800;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">${s.name}</div>
             <div style="font-size:12px;font-weight:600;color:#185FA5;font-family:var(--font-mono);">${s.type.toUpperCase()}</div>
@@ -2602,7 +2639,7 @@ function renderTraining(){
       }).join('');
 
       const recoveryCard = `
-        <button onclick="ST.trainSession='recovery';renderTraining();"
+        <button onclick="openTrainingSession('recovery');"
           style="grid-column:1/-1;background:var(--s1,#fff);border:none;border-radius:var(--r-md,12px);padding:16px;text-align:left;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">Active Recovery</div>
@@ -4730,37 +4767,196 @@ function _ensureActivationTimers(){
   }
 }
 
-function _playActivationBeep(){
+// ── Audio context condiviso (sblocco iOS) ─────────────────
+let _audioCtx = null;
+function _ensureAudioCtx(){
+  if(_audioCtx) return _audioCtx;
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
-    if(!Ctx) return;
-    const ctx = new Ctx();
-    const beepDur = 0.3;
-    const gapDur = 0.15;
-    const count = 5;
-    const fire = (i)=>{
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 880;
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t0 = ctx.currentTime;
-        gain.gain.setValueAtTime(1.0, t0);
-        gain.gain.setValueAtTime(1.0, t0 + beepDur - 0.02);
-        gain.gain.linearRampToValueAtTime(0.0001, t0 + beepDur);
-        osc.start(t0);
-        osc.stop(t0 + beepDur + 0.01);
-      } catch(e){}
-      if(i < count - 1){
-        setTimeout(()=>fire(i+1), (beepDur + gapDur) * 1000);
-      } else {
-        setTimeout(()=>{ try{ctx.close();}catch(e){} }, (beepDur + 0.2) * 1000);
-      }
+    if(!Ctx) return null;
+    _audioCtx = new Ctx();
+  } catch(e){ _audioCtx = null; }
+  return _audioCtx;
+}
+function _unlockAudio(){
+  const ctx = _ensureAudioCtx();
+  if(!ctx) return Promise.resolve(false);
+  const wasBlocked = ST.audioBlocked;
+  if(ctx.state === 'suspended'){
+    return ctx.resume().then(()=>{
+      const blocked = ctx.state !== 'running';
+      ST.audioBlocked = blocked;
+      if(wasBlocked !== blocked && ST.page==='training') renderTraining();
+      return !blocked;
+    }).catch(()=>{
+      ST.audioBlocked = true;
+      if(!wasBlocked && ST.page==='training') renderTraining();
+      return false;
+    });
+  }
+  if(wasBlocked){ ST.audioBlocked = false; if(ST.page==='training') renderTraining(); }
+  return Promise.resolve(true);
+}
+function dismissAudioBanner(){ _unlockAudio(); }
+
+function _playActivationBeep(){
+  try {
+    if(navigator.vibrate){
+      try { navigator.vibrate([200,100,200,100,200,100,200,100,200]); } catch(e){}
+    }
+    const ctx = _ensureAudioCtx();
+    if(!ctx) return;
+    const doFire = ()=>{
+      const beepDur = 0.3;
+      const gapDur = 0.15;
+      const count = 5;
+      const fire = (i)=>{
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = 880;
+          osc.type = 'sine';
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          const t0 = ctx.currentTime;
+          gain.gain.setValueAtTime(1.0, t0);
+          gain.gain.setValueAtTime(1.0, t0 + beepDur - 0.02);
+          gain.gain.linearRampToValueAtTime(0.0001, t0 + beepDur);
+          osc.start(t0);
+          osc.stop(t0 + beepDur + 0.01);
+        } catch(e){}
+        if(i < count - 1){
+          setTimeout(()=>fire(i+1), (beepDur + gapDur) * 1000);
+        }
+      };
+      fire(0);
     };
-    fire(0);
+    if(ctx.state === 'suspended'){
+      ctx.resume().then(()=>{
+        ST.audioBlocked = ctx.state !== 'running';
+        if(ST.page==='training') renderTraining();
+        if(!ST.audioBlocked) doFire();
+      }).catch(()=>{ ST.audioBlocked = true; if(ST.page==='training') renderTraining(); });
+    } else {
+      doFire();
+    }
   } catch(e){}
+}
+
+// ── WakeLock — schermo sempre acceso durante sessione ─────
+let _wakeLock = null;
+async function requestWakeLock(){
+  try {
+    if('wakeLock' in navigator){
+      _wakeLock = await navigator.wakeLock.request('screen');
+      _wakeLock.addEventListener('release', ()=>{ _wakeLock = null; });
+    }
+  } catch(e){}
+}
+async function releaseWakeLock(){
+  try {
+    if(_wakeLock){ await _wakeLock.release(); _wakeLock = null; }
+  } catch(e){}
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && ST.trainSession && _wakeLock === null){
+    requestWakeLock();
+  }
+});
+
+// ── Helpers apertura/chiusura sessione Training ────────────
+function openTrainingSession(sid){
+  ST.trainSession = sid;
+  _unlockAudio();
+  requestWakeLock();
+  renderTraining();
+}
+function closeTrainingSession(){
+  ST.trainSession = null;
+  ST.trainActivation = [false,false,false];
+  ST.trainLogOpen = null;
+  ST.editLogKey = null;
+  ST.editLogDraft = null;
+  resetAllActivationTimers();
+  releaseWakeLock();
+  renderTraining();
+}
+
+// ── Apertura modal log serie ───────────────────────────────
+function openLogModal(sessionId, exName, setNum){
+  const today = todayKey();
+  const prevKeys = Object.keys(ST.trainLoggedSets)
+    .filter(k=>k.startsWith(`${sessionId}_${exName}_`)&&k.endsWith(`_${today}`))
+    .sort();
+  const lastKey = prevKeys.pop();
+  const lastResist = lastKey ? ST.trainLoggedSets[lastKey]?.resistance : null;
+  let initial = parseInt(lastResist);
+  if(isNaN(initial) || !RESIST_VALUES.includes(initial)) initial = 30;
+  ST.trainLogResist = initial;
+  ST.trainLogOpen = { sessionId, exName, setNum };
+  _unlockAudio();
+  renderTraining();
+  setTimeout(()=>{
+    const picker = document.getElementById('tl-resist-picker');
+    if(picker){
+      const sel = picker.querySelector('.resist-pill[data-v="'+initial+'"]');
+      if(sel) sel.scrollIntoView({block:'nearest', inline:'center', behavior:'auto'});
+    }
+    document.getElementById('tl-reps')?.focus();
+  }, 50);
+}
+function selectResist(v){
+  ST.trainLogResist = v;
+  document.querySelectorAll('#tl-resist-picker .resist-pill').forEach(b=>{
+    const sel = parseInt(b.dataset.v) === v;
+    b.style.borderColor = sel?'#185FA5':'var(--s2)';
+    b.style.background  = sel?'#E8F0FA':'var(--bg)';
+    b.style.color       = sel?'#185FA5':'var(--t2)';
+  });
+}
+
+// ── Edit serie già loggata ────────────────────────────────
+function editLog(k){
+  const d = ST.trainLoggedSets[k];
+  if(!d) return;
+  ST.editLogKey = k;
+  ST.editLogDraft = { reps: d.reps||'', resistance: d.resistance||'' };
+  renderTraining();
+  setTimeout(()=>document.getElementById('el-reps')?.focus(), 50);
+}
+function cancelEditLog(){
+  ST.editLogKey = null;
+  ST.editLogDraft = null;
+  renderTraining();
+}
+async function confirmEditLog(k){
+  const repsEl = document.getElementById('el-reps');
+  const resistEl = document.getElementById('el-resist');
+  const reps = parseInt(repsEl?.value) || 0;
+  const resistance = (resistEl?.value || '').toString().trim();
+  if(!reps){ repsEl?.focus(); return; }
+  const prev = ST.trainLoggedSets[k] || {};
+  ST.trainLoggedSets[k] = { ...prev, reps, resistance };
+  try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
+  // [sessionId, exName, setNum, date]
+  const parts = k.split('_');
+  const date = parts[parts.length-1];
+  const setNum = parseInt(parts[parts.length-2]);
+  const sessionId = parts[0];
+  const exName = parts.slice(1, parts.length-2).join('_');
+  if(ST.user && ST.user.id !== 'test-user-001'){
+    try {
+      await supa.from('training_logs').update({ reps, resistance: resistance||null })
+        .eq('user_id', ST.user.id)
+        .eq('date', date)
+        .eq('session_id', sessionId)
+        .eq('exercise_name', exName)
+        .eq('set_number', setNum);
+    } catch(e){}
+  }
+  ST.editLogKey = null;
+  ST.editLogDraft = null;
+  renderTraining();
 }
 
 function startActivationTimer(idx){
@@ -4781,8 +4977,11 @@ function startActivationTimer(idx){
       if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
       ST.trainActivation[idx] = true;
       _playActivationBeep();
+      if(ST.page==='training') renderTraining();
+    } else if(ST.page==='training'){
+      const el = document.getElementById('act-timer-'+idx);
+      if(el) el.textContent = _fmtMMSS(tt.remaining);
     }
-    if(ST.page==='training') renderTraining();
   }, 1000);
   renderTraining();
 }
@@ -5671,6 +5870,8 @@ function openSettingsModal() {
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
+  const unitSel = document.getElementById('set-unit');
+  if(unitSel) unitSel.value = p.unit || 'kg';
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -5794,8 +5995,13 @@ async function saveSettings() {
   const { error: tsErr } = await supa.from('profiles').update({ train_start_date: trainStartVal }).eq('id', ST.user.id);
   if(!tsErr && ST.profile) ST.profile.train_start_date = trainStartVal;
 
+  // Unità peso/carico — salvata solo in localStorage prefs
+  const unitVal = document.getElementById('set-unit')?.value || 'kg';
+  if(ST.profile) ST.profile.unit = unitVal;
+
   // Aggiorna stato locale
   Object.assign(ST.profile, updates);
+  saveLocalPrefs();
   ST.TARGET = targets;
   applyProfile(ST.profile);
   saveCache();
