@@ -2542,7 +2542,13 @@ async function saveTrainingSet(){
       resistance: resistance ? parseInt(resistance)||null : null,
       unit: unitVal,
       rir_actual: rir,
-    }).then(()=>{}, ()=>{});
+    }).select('id').single().then((res)=>{
+      const setId = res?.data?.id;
+      if(setId && ST.trainLoggedSets[key]){
+        ST.trainLoggedSets[key].setId = setId;
+        try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
+      }
+    }, ()=>{});
   } catch(e){}
   const sessExercises = TRAINING_SESSIONS[form.sessionId]?.exercises || [];
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
@@ -4970,7 +4976,7 @@ function dismissAudioBanner(){ _unlockAudio(); }
 function _playActivationBeep(){
   try {
     if(navigator.vibrate){
-      try { navigator.vibrate([200,100,200,100,200,100,200,100,200]); } catch(e){}
+      try { navigator.vibrate([300,100,300,100,300,100,300,100,300]); } catch(e){}
     }
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
@@ -5030,7 +5036,27 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && ST.trainSession && _wakeLock === null){
     requestWakeLock();
   }
+  // Resume AudioContext quando torna in foreground (iOS lo sospende in background)
+  if(document.visibilityState === 'visible' && _audioCtx){
+    _unlockAudio();
+  }
 });
+
+// Sblocco audio one-shot al primo gesto utente (iOS richiede gesture per AudioContext)
+let _audioGestureUnlocked = false;
+function _onFirstGesture(){
+  if(_audioGestureUnlocked) return;
+  _audioGestureUnlocked = true;
+  _unlockAudio();
+  document.removeEventListener('touchstart', _onFirstGesture, true);
+  document.removeEventListener('touchend', _onFirstGesture, true);
+  document.removeEventListener('mousedown', _onFirstGesture, true);
+  document.removeEventListener('keydown', _onFirstGesture, true);
+}
+document.addEventListener('touchstart', _onFirstGesture, true);
+document.addEventListener('touchend', _onFirstGesture, true);
+document.addEventListener('mousedown', _onFirstGesture, true);
+document.addEventListener('keydown', _onFirstGesture, true);
 
 // ── Helpers apertura/chiusura sessione Training ────────────
 function openTrainingSession(sid){
@@ -5113,6 +5139,24 @@ async function confirmEditLog(k){
   const sessionId = parts[0];
   const exName = parts.slice(1, parts.length-2).join('_');
   if(ST.user && ST.user.id !== 'test-user-001'){
+    const resistInt = resistance ? (parseInt(resistance) || null) : null;
+    // 1. UPDATE workout_sets (sorgente di verità per la nuova UI) — by id se disponibile, altrimenti composite
+    try {
+      const setId = prev.setId;
+      if(setId){
+        await supa.from('workout_sets').update({ reps, resistance: resistInt })
+          .eq('id', setId)
+          .eq('user_id', ST.user.id);
+      } else {
+        await supa.from('workout_sets').update({ reps, resistance: resistInt })
+          .eq('user_id', ST.user.id)
+          .eq('date', date)
+          .eq('session_type', sessionId)
+          .eq('exercise_name', exName)
+          .eq('set_number', setNum);
+      }
+    } catch(e){}
+    // 2. UPDATE training_logs (compat — usata da Progressione e altri viewer)
     try {
       await supa.from('training_logs').update({ reps, resistance: resistance||null })
         .eq('user_id', ST.user.id)
