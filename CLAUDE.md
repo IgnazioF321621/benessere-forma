@@ -437,6 +437,90 @@ const OBJ_ADAPT = {
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
+## Cosa abbiamo fatto
+
+### 2 maggio 2026 — Modulo Training: AI, persistenza, esperienza in-sessione
+
+**Mappe muscolari SVG (Upper A integrate)**
+- `EXERCISE_MEDIA[exName].muscleMapSVG` — SVG inline (anteriore + posteriore) renderizzato nel modal scheda esercizio AI
+- Esercizi coperti: Trazioni alla sbarra, Chest press orizzontale, Chest press inclinata, Shoulder press verticale, Row orizzontale, Face pull
+- Da completare: Upper B, Lower A, Lower B, Recovery
+
+**Tabelle Supabase create**
+- `workouts` — record di sessione completata: `id`, `user_id`, `date`, `session_type`, `completed`, `duration_min`. Usata da calendario Progressione + Home tile + cards Sessioni
+- `workout_sets` — log per serie singola con dati strutturati: `id`, `user_id`, `workout_id` (nullable), `date`, `session_type`, `exercise_name`, `set_number`, `reps`, `resistance` (int), `unit` (kg/lbs), `rir_actual`. Sorgente di verità per la nuova UI; `training_logs` resta come storico parallelo (compat Progressione)
+- RLS su entrambe: `auth.uid() = user_id`
+
+**Countdown recupero trifase (Blocco Attivazione)**
+- 3 voci: Respirazione 360° (120s) · Vacuum (120s) · Cat-Cow (60s)
+- Per ogni voce: checkbox tappabile + display `MM:SS` + ▶/⏸/✕ + tap su tempo durante pausa per modificare via `prompt()`
+- Auto-check al raggiungere 0 + 5 beep AudioContext (880Hz × 0.3s × gain 1.0 × gap 150ms) + vibrazione `[300×5,100×4]`
+- Reset countdown se l'utente toglie il check su una voce completata
+- Update DOM mirato (no full re-render ogni secondo) per non interferire con input form aperti
+- Titolo "Blocco Attivazione" diventa verde + ✓ quando tutte e 3 spuntate
+- State `ST.trainActivation[3]` + `ST.trainActivationTimers[3]` (in-memory, reset a back button)
+
+**WakeLock — schermo sempre acceso durante sessione**
+- `requestWakeLock()` su `openTrainingSession()` · `releaseWakeLock()` su back, cambio tab, `showPage` non-training
+- `visibilitychange` listener riacquisisce il lock al rientro foreground se sessione attiva
+- `try/catch` silenzioso se l'API non è supportata (Safari iOS pre-16.4 ignora)
+
+**Suggerimento progressione AI (Cloudflare Worker)**
+- `suggestProgressionAI()` chiama `callAI(prompt, 80)` dopo ogni `saveTrainingSet`
+- Prompt include: esercizio, serie corrente, reps/resistenza/RIR effettivi, range target, RIR target, storico ultime 3 sessioni distinte (escluso oggi) da `training_logs`
+- Risposta salvata in `ST.aiSuggestions[${sessionId}_${exName}]` e mostrata sotto i badges nella card esercizio: testo `🤖 …` italic teal `#2A7A6F` 11px
+- Fail silenzioso
+
+**Calendario mensile Progressione**
+- `renderCalendar(workouts, year, month)` — griglia mese con celle colorate per `session_type` + sigle UA/UB/LA/LB/AR
+- Footer: counter Sessioni + Streak + sessione più frequente
+- Navigazione mese precedente/successivo via `loadWorkouts(y, m)`
+- Tap cella con workout → conferma eliminazione (`ST.trainCalDeleteConfirm`)
+
+**Giorno completato visibile**
+- Auto-trigger `saveWorkoutRecord(sessionId)` dentro `saveTrainingSet()` quando tutti gli esercizi della sessione sono al 100%
+- `saveWorkoutRecord` reso idempotente — query preventiva su `(user_id, date, session_type)` per evitare duplicati
+- Anti-duplica anche via `ST.trainCompletedToday[sessionId]`
+- Toast `🎉 Sessione completata!` + ricarica `loadTrainingHomeData` + `loadSessionLastCompletion`
+- **Cards Sessioni**: ogni card ora mostra overline `GIORNO N` (1=upperA, 2=lowerA, 3=upperB, 4=lowerB) + pill `✓ {data}` in alto a destra se completata (verde se oggi, grigia altrimenti)
+- **Home tile Training** riscritta: query diretta su `workouts ORDER BY date DESC LIMIT 1` come sorgente di verità unica desktop/mobile. 4 stati discreti: `notStarted` ("Inizia il programma — Giorno 1: Upper A") · `doneToday` ("Giorno X completato ✓ · Prossimo: Giorno Y — …") · `inProgress` ("Sessione in corso — Riprendi →") · default ("Giorno Y · {tipo}" con last date + streak). Eliminato il check `train_start_date > today` che bloccava la tile su mobile
+
+**Scala elastici numerica (resistance picker)**
+- Sostituito input testuale con scroll picker orizzontale `RESIST_VALUES = [10..250]` step 10
+- `scroll-snap-type:x mandatory` + `selectResist(v)` aggiorna DOM in place (no re-render → preserva scroll/focus)
+- Auto-scroll alla selezione iniziale all'apertura modal
+- Helper text fisso: "lbs indicativi · scarto ±15% per gli elastici a tubo"
+- Default = ultimo valore loggato per quell'esercizio nella stessa giornata, fallback 30
+- Salvato come integer in `workout_sets.resistance` (e come stringa in `training_logs.resistance` per compat)
+
+**Unità kg/lbs**
+- `<select>` kg/lbs nella sezione Training del modal Impostazioni
+- Salvata in `localStorage` prefs (`zt_prefs_<userId>.unit`), NON su Supabase (evita problemi schema)
+- Default `kg`. Etichetta visualizzata nel picker carico (`CARICO (kg)` / `CARICO (lbs)`) e accanto ai valori delle serie loggate
+- Saved with workout_sets row as `unit` field
+
+**Edit serie loggata inline**
+- Pulsante ✏️ su ogni badge serie loggata → riga diventa editabile (input numerici reps + resist + ✓ + ✕)
+- `confirmEditLog`: `UPDATE workout_sets WHERE id = setId AND user_id = …` (id catturato all'insert via `.select('id').single()` e salvato in `ST.trainLoggedSets[key].setId` + persistito in localStorage). Fallback su composite key `(user_id, date, session_type, exercise_name, set_number)` per record antecedenti questa modifica
+- Update parallelo anche su `training_logs` (compat Progressione)
+- Inputs bound via `oninput` a `ST.editLogDraft` per resistere a re-render dei timer attivazione
+- Progress `X/Y serie` ricalcolato auto
+
+**Audio iOS fix**
+- `_audioCtx` singleton globale lazy (no più creazione ad ogni beep)
+- `_unlockAudio()` chiama `ctx.resume()` dentro user gesture; aggiorna `ST.audioBlocked`
+- Listener globale one-shot su `touchstart`/`touchend`/`mousedown`/`keydown` (capture phase) → sblocca al primissimo gesto, poi si auto-rimuove (critico per iOS Safari che richiede gesture per `AudioContext.resume()`)
+- `visibilitychange` chiama `_unlockAudio()` al rientro foreground (iOS sospende il context in background)
+- Vibrazione `navigator.vibrate([300,100,300,100,300,100,300,100,300])` come fallback fisico parallelo al beep
+- Banner non invasivo "🔔 Tocca per attivare l'audio" in cima al detail sessione se `ST.audioBlocked=true` dopo tentativo di resume fallito; tap dismiss chiama `_unlockAudio()`
+
+**Layout & UX card esercizio**
+- Riscritta a 5 righe `flex-wrap:nowrap` per evitare wrap mobile (titolo era andato a capo): R1 titolo + +S/✓DONE · R2 ▶ + sets×reps + RIR pill + ℹ + spacer + X/Y serie · R3 Recupero a destra · R4 attrezzo · R5 nota
+- Border-left 3px verde `#2A7A6F` quando `allDone`
+- Colore "Recupero: X" dinamico per durata: ≥120s grigio · 90s `#2A7A6F` · 60s `#185FA5`
+- Pill `RIR N` accanto a sets×reps (sfondo `#E8F0FA`, testo `#185FA5`, font-mono 10px)
+- Padding-bottom `calc(96px + env(safe-area-inset-bottom))` sul wrapper sessione per non finire sotto la bottom nav iPhone
+
 ## Bug noti
 
 - `trainLoggedSets` si azzera al reload (in-memory only) — i badge serie spariscono dopo refresh
