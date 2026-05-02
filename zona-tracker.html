@@ -1857,58 +1857,75 @@ function showPage(id){
   if(id==='training') loadSessionLastCompletion();
 }
 async function loadTrainingHomeData(){
-  if(!ST.user || ST.user.id==='test-user-001') return;
-  // Se il programma non è ancora iniziato, mostra stato "in attesa"
-  const startDate = ST.profile?.train_start_date;
-  if(startDate && startDate > todayKey()){
-    ST.trainHomeData = { lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, notStarted:true, startDate };
+  if(!ST.user || ST.user.id==='test-user-001'){
+    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', mainLastSession:null, streak:0, doneToday:false, inProgress:false };
     renderHome(); return;
   }
-  const { data } = await supa
-    .from('training_logs')
-    .select('date, session_id')
-    .eq('user_id', ST.user.id)
-    .order('date', {ascending:false})
-    .limit(300);
-  if(!data || data.length===0){
-    ST.trainHomeData = { lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false };
-    renderHome(); return;
-  }
-  // Raggruppa per data
-  const dateMap = {};
-  data.forEach(r=>{ (dateMap[r.date]=dateMap[r.date]||new Set()).add(r.session_id); });
-  const dates = Object.keys(dateMap).sort((a,b)=>b.localeCompare(a));
-  const lastDate = dates[0];
-  const mainLast = [...dateMap[lastDate]].filter(s=>s!=='recovery');
-  const lastSession = mainLast[0] || [...dateMap[lastDate]][0];
-  // Prossima sessione nel ciclo
-  const cycle = ['upperA','lowerA','upperB','lowerB'];
-  const lastIdx = cycle.indexOf(lastSession);
-  const nextSession = lastIdx>=0 ? cycle[(lastIdx+1)%4] : 'upperA';
-  // Streak: giorni consecutivi con almeno un log (1 giorno di gap tollerato)
   const today = todayKey();
-  let streak=0, check=new Date(today);
-  for(let i=0;i<60;i++){
-    const k=check.toISOString().slice(0,10);
-    if(dateMap[k]){ streak++; check.setDate(check.getDate()-1); }
-    else if(i===0){ break; } // nessun log oggi → streak da ieri
-    else { break; }
-  }
-  // doneToday = sessione realmente completata (workouts.completed=true) per oggi
-  let doneToday = false;
-  let completedSession = lastSession;
   try {
-    const { data: wToday } = await supa.from('workouts')
-      .select('session_type')
+    // Ultimo workout (qualsiasi stato) — fonte di verità coerente desktop/mobile
+    const { data: lastArr, error: lastErr } = await supa.from('workouts')
+      .select('date, session_type, completed')
       .eq('user_id', ST.user.id)
-      .eq('date', today)
-      .eq('completed', true);
-    const completedTypes = (wToday||[]).map(w=>w.session_type);
-    const mainCompleted = completedTypes.find(t => t!=='recovery');
-    if(mainCompleted){ doneToday = true; completedSession = mainCompleted; }
-  } catch(e){}
-  ST.trainHomeData = { lastDate, lastSession: completedSession, nextSession, streak, doneToday };
-  renderHome();
+      .order('date', {ascending:false})
+      .limit(1);
+    if(lastErr) throw lastErr;
+    const lastWorkout = (lastArr && lastArr[0]) || null;
+
+    if(!lastWorkout){
+      ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, mainLastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+      renderHome(); return;
+    }
+
+    // Per il calcolo "Prossimo Giorno", usa l'ultima sessione MAIN (escludi recovery)
+    let mainLastSession = lastWorkout.session_type;
+    if(mainLastSession === 'recovery'){
+      const { data: lastMainArr } = await supa.from('workouts')
+        .select('session_type')
+        .eq('user_id', ST.user.id)
+        .neq('session_type', 'recovery')
+        .order('date', {ascending:false})
+        .limit(1);
+      mainLastSession = lastMainArr?.[0]?.session_type || null;
+    }
+    const lastIdx = mainLastSession ? SESSION_CYCLE.indexOf(mainLastSession) : -1;
+    const nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx+1) % SESSION_CYCLE.length] : 'upperA';
+
+    // Streak — giorni consecutivi con workout completato (a partire da oggi)
+    const { data: completedArr } = await supa.from('workouts')
+      .select('date')
+      .eq('user_id', ST.user.id)
+      .eq('completed', true)
+      .order('date', {ascending:false})
+      .limit(60);
+    const completedDates = new Set((completedArr||[]).map(w=>w.date));
+    let streak=0, check=new Date(today);
+    for(let i=0;i<60;i++){
+      const k=check.toISOString().slice(0,10);
+      if(completedDates.has(k)){ streak++; check.setDate(check.getDate()-1); }
+      else if(i===0) break;
+      else break;
+    }
+
+    const doneToday   = lastWorkout.date === today && lastWorkout.completed === true;
+    const inProgress  = lastWorkout.date === today && lastWorkout.completed === false;
+
+    ST.trainHomeData = {
+      notStarted: false,
+      lastDate: lastWorkout.date,
+      lastSession: lastWorkout.session_type,
+      mainLastSession,
+      nextSession,
+      streak,
+      doneToday,
+      inProgress,
+    };
+    renderHome();
+  } catch(e){
+    console.warn('loadTrainingHomeData:', e.message);
+    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, mainLastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+    renderHome();
+  }
 }
 
 function renderHome(){
@@ -2015,45 +2032,55 @@ function renderHome(){
     </div>`;
 
   // ── Training tile (dati live) ──
+  // Logica unificata desktop/mobile basata sull'ultimo workout in tabella `workouts`.
   let trainBody, trainRight;
   const hd = ST.trainHomeData;
-  if(hd && hd.notStarted){
-    const startFmt = fmtDate(hd.startDate);
-    trainBody = `
-      ${tHead('Training', 'Programma non ancora iniziato', '#185FA5')}
-      <div style="font-size:16px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Inizia ${startFmt}</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">Upper A · prima sessione</div>`;
-    trainRight = `<div style="flex-shrink:0;background:var(--s2);color:var(--t3);border-radius:var(--r);padding:10px 12px;font-size:13px;font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:center;min-width:56px;border:1px solid var(--b1);">⏳</div>`;
-  } else if(hd){
-    const showSess = hd.doneToday ? hd.lastSession : hd.nextSession;
-    const sessObj  = TRAINING_SESSIONS[showSess] || TRAINING_SESSIONS.upperA;
-    const dayN     = SESSION_DAY_NUM[showSess];
-    const lastIdx  = SESSION_CYCLE.indexOf(hd.lastSession);
-    const nextSess = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx+1) % SESSION_CYCLE.length] : 'upperA';
-    const nextSessObj = TRAINING_SESSIONS[nextSess] || TRAINING_SESSIONS.upperA;
-    const nextDayN = SESSION_DAY_NUM[nextSess];
-    const statusTxt = hd.doneToday
-      ? `Giorno ${dayN} completato ✓ · Prossimo: Giorno ${nextDayN} — ${nextSessObj.name}`
-      : hd.lastDate ? `Ultima: ${fmtDate(hd.lastDate)}` : 'Prima sessione';
-    const subTxt = hd.doneToday
-      ? `${sessObj.type} · completata`
-      : `Giorno ${dayN||'?'} · ${sessObj.type} · ${sessObj.exercises.length} esercizi`;
-    trainBody = `
-      ${tHead('Training', subTxt, '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${sessObj.name}</div>
-      <div style="font-size:10px;color:${hd.doneToday?'#2A7A6F':'var(--t3)'};font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${statusTxt}${(!hd.doneToday && sessObj.rir)?' · RIR '+sessObj.rir:''}</div>`;
-    if(hd.doneToday){
-      trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 12px;font-size:13px;font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:center;min-width:56px;border:1px solid rgba(42,122,111,.2);">✓<br><span style="font-size:9px;letter-spacing:1px;">FATTO</span></div>`;
-    } else {
-      const stk = hd.streak>0 ? `<div style="font-size:9px;letter-spacing:1px;font-family:var(--font-mono);font-weight:700;margin-top:3px;">⚡ ${hd.streak}</div>` : '';
-      trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →${stk}</div>`;
-    }
-  } else {
+  if(!hd){
+    // Loading
     trainBody = `
       ${tHead('Training', 'Caricamento...', '#185FA5')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">—</div>
       <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;"> </div>`;
     trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
+  } else if(hd.notStarted){
+    // Nessun workout in DB → "Inizia il programma — Giorno 1: Upper A"
+    const firstSess = TRAINING_SESSIONS.upperA;
+    trainBody = `
+      ${tHead('Training', 'Inizia il programma', '#185FA5')}
+      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno 1 — ${firstSess.name}</div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">${firstSess.type} · ${firstSess.exercises.length} esercizi · RIR ${firstSess.rir}</div>`;
+    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
+  } else if(hd.doneToday){
+    // Sessione completata oggi → "Giorno X completato ✓ · Prossimo: Giorno Y — Lower A"
+    const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
+    const dayN          = SESSION_DAY_NUM[hd.mainLastSession || hd.lastSession] || '?';
+    const nextSessObj   = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+    const nextDayN      = SESSION_DAY_NUM[hd.nextSession] || '?';
+    trainBody = `
+      ${tHead('Training', `${completedSess.type} · completata`, '#185FA5')}
+      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${completedSess.name}</div>
+      <div style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Giorno ${dayN} completato ✓ · Prossimo: Giorno ${nextDayN} — ${nextSessObj.name}</div>`;
+    trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 12px;font-size:13px;font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:center;min-width:56px;border:1px solid rgba(42,122,111,.2);">✓<br><span style="font-size:9px;letter-spacing:1px;">FATTO</span></div>`;
+  } else if(hd.inProgress){
+    // Workout aperto oggi non ancora completato → "Sessione in corso"
+    const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
+    const dayN    = SESSION_DAY_NUM[hd.lastSession] || '?';
+    trainBody = `
+      ${tHead('Training', 'Sessione in corso', '#185FA5')}
+      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno ${dayN} — ${sessObj.name}</div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${sessObj.type} · ${sessObj.exercises.length} esercizi · in corso</div>`;
+    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Riprendi →</div>`;
+  } else {
+    // Workout precedenti completati ma non oggi → mostra prossimo
+    const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+    const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
+    const lastDateTxt = hd.lastDate ? `Ultima: ${fmtDate(hd.lastDate)}` : '';
+    const stk = hd.streak>0 ? `<div style="font-size:9px;letter-spacing:1px;font-family:var(--font-mono);font-weight:700;margin-top:3px;">⚡ ${hd.streak}</div>` : '';
+    trainBody = `
+      ${tHead('Training', `Giorno ${nextDayN} · ${nextSessObj.type}`, '#185FA5')}
+      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
+      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${lastDateTxt}${nextSessObj.rir!=null?' · RIR '+nextSessObj.rir:''}</div>`;
+    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →${stk}</div>`;
   }
 
   // ── Body tile (dati live) ──
