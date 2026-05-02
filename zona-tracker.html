@@ -2497,7 +2497,7 @@ function renderTraining(){
               </div>
               <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
+                  <div style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;">${e.sets}×${e.reps}${s.rir!=null?` <span style="background:#E8F0FA;color:#185FA5;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;font-family:var(--font-mono);margin-left:2px;">RIR ${s.rir}</span>`:''} <span class="info-icon" onclick="showInfoModal('serie')">i</span></div>
                   ${allDone
                     ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);">✓ DONE</span>`
                     : !isOpen
