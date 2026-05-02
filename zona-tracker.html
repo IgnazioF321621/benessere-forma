@@ -2504,7 +2504,7 @@ function renderTraining(){
             </div>
           </div>` : '';
         return `
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);${allDone?'border-left:3px solid #2A7A6F;':''}padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
               <div style="display:flex;align-items:center;gap:6px;">
                 <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${e.name}</div>
@@ -2520,6 +2520,7 @@ function renderTraining(){
                           style="background:#E8F0FA;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);">+S${nextSet}</button>`
                       : ''}
                 </div>
+                <div style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${allDone?'#2A7A6F':'var(--t3)'};">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</div>
                 <div style="font-size:11px;color:${restSec>=120?'var(--t3)':restSec===90?'#2A7A6F':restSec===60?'#185FA5':'var(--t3)'};font-family:var(--font-mono);">Recupero: ${restTxt}</div>
               </div>
             </div>
