@@ -980,6 +980,7 @@ const ST = {
   trainSession: null,
   trainLogOpen: null,
   trainCountdown: null,
+  trainActivation: [false, false, false],
   trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
@@ -2430,14 +2431,28 @@ function renderTraining(){
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
         : `<span style="background:#E8F0FA;color:#185FA5;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
-      const activationItems = ACTIVATION_BLOCK.map(a=>`
+      if(!Array.isArray(ST.trainActivation) || ST.trainActivation.length!==3) ST.trainActivation = [false,false,false];
+      const activationItems = ACTIVATION_BLOCK.map((a,i)=>{
+        const checked = !!ST.trainActivation[i];
+        const box = checked
+          ? `<div onclick="event.stopPropagation();toggleActivation(${i});" style="width:18px;height:18px;border-radius:5px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+          : `<div onclick="event.stopPropagation();toggleActivation(${i});" style="width:18px;height:18px;border-radius:5px;background:transparent;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;"></div>`;
+        const nameStyle = checked
+          ? 'font-size:13px;font-weight:600;color:var(--t3);font-family:var(--font-sans);text-decoration:line-through;'
+          : 'font-size:13px;font-weight:600;color:var(--t1);font-family:var(--font-sans);';
+        const durStyle = checked
+          ? 'font-size:12px;font-family:var(--font-mono);color:var(--t3);font-weight:700;text-decoration:line-through;'
+          : 'font-size:12px;font-family:var(--font-mono);color:#185FA5;font-weight:700;';
+        return `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s2);">
-          <div style="width:8px;height:8px;border-radius:50%;background:#185FA5;flex-shrink:0;"></div>
+          ${box}
           <div style="flex:1;">
-            <div style="font-size:13px;font-weight:600;color:var(--t1);font-family:var(--font-sans);">${a.name}</div>
+            <div style="${nameStyle}">${a.name}</div>
           </div>
-          <div style="font-size:12px;font-family:var(--font-mono);color:#185FA5;font-weight:700;">${a.duration}</div>
-        </div>`).join('');
+          <div style="${durStyle}">${a.duration}</div>
+        </div>`;
+      }).join('');
+      const activationAllDone = ST.trainActivation.every(v=>v===true);
 
       const today = todayKey();
       const exerciseCards = s.exercises.map(e=>{
@@ -2517,7 +2532,7 @@ function renderTraining(){
 
       body = `
         <div style="padding:16px;">
-          <button onclick="ST.trainSession=null;renderTraining();"
+          <button onclick="ST.trainSession=null;ST.trainActivation=[false,false,false];renderTraining();"
             style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
             Sessioni
@@ -2529,8 +2544,9 @@ function renderTraining(){
 
           <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <span style="font-size:13px;font-weight:700;color:#185FA5;font-family:var(--font-sans);">Blocco Attivazione — 5 min</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${activationAllDone?'#2A7A6F':'#185FA5'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span style="font-size:13px;font-weight:700;color:${activationAllDone?'#2A7A6F':'#185FA5'};font-family:var(--font-sans);">Blocco Attivazione — 5 min</span>
+              ${activationAllDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
             </div>
             ${activationItems.replace(/border-bottom:1px solid var\(--s2\);" >(?=\s*<\/div>\s*$)/,'border-bottom:none;">')}
           </div>
@@ -4672,6 +4688,12 @@ Sii conciso e pratico.`;
   } catch(e) {
     ST.exerciseAIOpen = { exName, wgerImages, wgerVideos, muscleImg, muscleMapSVG, svgContent: svgContent || '', content: 'Errore di connessione.' };
   }
+  renderTraining();
+}
+
+function toggleActivation(idx) {
+  if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
+  ST.trainActivation[idx] = !ST.trainActivation[idx];
   renderTraining();
 }
 
