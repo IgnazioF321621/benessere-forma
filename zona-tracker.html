@@ -2505,7 +2505,7 @@ function renderTraining(){
                           style="background:#E8F0FA;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);">+S${nextSet}</button>`
                       : ''}
                 </div>
-                <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Recupero: ${restTxt}</div>
+                <div style="font-size:11px;color:${restSec>=120?'var(--t3)':restSec===90?'#2A7A6F':restSec===60?'#185FA5':'var(--t3)'};font-family:var(--font-mono);">Recupero: ${restTxt}</div>
               </div>
             </div>
             <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);margin-bottom:${e.note?'4px':(badges?'8px':'0')}">${e.eq}</div>
