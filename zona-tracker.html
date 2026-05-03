@@ -2509,24 +2509,74 @@ async function loadSessionLastCompletion(){
 async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance, rir, exData, sess}){
   try {
     if(!ST.user || ST.user.id==='test-user-001') return;
+    if(!sess || !exData) return;
+    // Skip per Active Recovery (no progressione di carico)
+    if(sess.type === 'Recupero') return;
+    // Parsing range reps: accetta "X-Y" o "X-Y per lato". Skip per "20-30 sec", "10 min", ecc.
+    const repsRange = String(exData.reps || '');
+    const repsMatch = repsRange.match(/^(\d+)-(\d+)(?:\s+per lato)?$/);
+    if(!repsMatch) return; // formato non standard, skippa
+    const repsMin = parseInt(repsMatch[1], 10);
+    const repsMax = parseInt(repsMatch[2], 10);
+    const targetRIR = (sess.rir != null) ? sess.rir : 2;
+    const sessionType = sess.type; // 'Forza' | 'Ipertrofia'
+    const sessionLabel = `${sess.name} — ${sess.type}`; // es. "Upper A — Forza"
+
+    // Storico ultime 3 sessioni distinte (escluso oggi)
     const { data: history } = await supa.from('training_logs')
       .select('date, set_number, reps, resistance, rir_actual')
       .eq('user_id', ST.user.id)
       .eq('exercise_name', exName)
       .order('date', {ascending:false})
       .limit(30);
-    // Raggruppa per data, prendi ultime 3 distinte (escludi oggi)
     const byDate = {};
     (history||[]).forEach(r=>{ if(r.date===todayKey()) return; (byDate[r.date]=byDate[r.date]||[]).push(r); });
     const lastDates = Object.keys(byDate).sort().reverse().slice(0,3);
-    const histStr = lastDates.length
+    const historyText = lastDates.length
       ? lastDates.map(d=>`${d}: ${byDate[d].sort((a,b)=>a.set_number-b.set_number).map(r=>`S${r.set_number} ${r.reps}r·${r.resistance||'?'}lbs·RIR${r.rir_actual??'?'}`).join(' / ')}`).join(' | ')
-      : 'nessuna sessione precedente';
-    const repsRange = String(exData?.reps || '?');
-    const rirTarget = sess?.rir != null ? sess.rir : '?';
-    const unit = (ST.profile && ST.profile.unit) || 'kg';
-    const prompt = `Sei un personal trainer esperto. L'utente ha appena completato: esercizio ${exName}, serie ${setNum}, ${reps} rep, resistenza ${resistance} lbs, RIR effettivo ${rir==null?'non riportato':rir}. Range target: ${repsRange} rep, RIR target: ${rirTarget}. Storico ultime 3 sessioni dello stesso esercizio: ${histStr}. Suggerisci in una riga sola la progressione per la prossima serie o la prossima sessione. Sii diretto e specifico (es. "Prossima serie: prova 8 rep · stessa resistenza" oppure "Prossima sessione: aumenta a 40 lbs"). Italiano, max 110 caratteri, niente markdown, niente preamboli.`;
-    const text = await callAI(prompt, 80);
+      : '';
+
+    // Resistance può essere null/0 (corpo libero) o stringa numerica
+    const resistInt = (resistance == null || resistance === '') ? 0 : (parseInt(resistance, 10) || 0);
+    const resistDisplay = resistInt === 0 ? '0 (corpo libero)' : `${resistInt}`;
+    const rirActual = (rir == null) ? 'non riportato' : rir;
+    // Floor a 0 per il "-10 lbs" suggerito (non scendere sotto corpo libero)
+    const resistMinusTen = Math.max(0, resistInt - 10);
+    const resistPlusTen = Math.min(250, resistInt + 10);
+
+    const prompt = `Sei un coach di forza e ipertrofia. Ignazio ha 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allenamento con elastici a tubo.
+
+ESERCIZIO: ${exName}
+TIPO SESSIONE: ${sessionType} (${sessionLabel})
+RANGE REPS PRESCRITTO: ${repsMin}-${repsMax}
+RIR TARGET: ${targetRIR}
+
+SERIE APPENA COMPLETATA (#${setNum}):
+- Reps eseguite: ${reps}
+- Resistenza: ${resistDisplay} lbs
+- RIR effettivo: ${rirActual}
+
+STORICO ULTIME 3 SESSIONI (esclusa oggi):
+${historyText || 'Nessuno storico disponibile'}
+
+VINCOLI RIGOROSI per il tuo suggerimento sulla prossima serie:
+
+1. RESISTENZE DISPONIBILI: SOLO multipli di 10 lbs (0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250). Combinazioni di elastici giallo (10), verde (20), rosso (30), blu (40), nero (50). MAI suggerire 12, 14, 25, 35, ecc. 0 lbs = corpo libero.
+
+2. REPS: SEMPRE entro il range ${repsMin}-${repsMax}. MAI suggerire reps fuori da questo range.
+
+3. LOGICA DOPPIA PROGRESSIONE:
+   - Se reps raggiunte = ${repsMax} (tetto) E RIR effettivo >= ${targetRIR}: suggerisci RESISTENZA +10 lbs (= ${resistPlusTen} lbs), ripartendo da ${repsMin} reps.
+   - Se reps dentro il range [${repsMin}-${repsMax}] E RIR effettivo = ${targetRIR}: suggerisci STESSA resistenza (${resistInt} lbs), prova reps + 1 (mai oltre ${repsMax}).
+   - Se RIR effettivo > ${targetRIR} (troppo facile): suggerisci STESSA resistenza (${resistInt} lbs), alza reps verso ${repsMax}.
+   - Se RIR effettivo = 0 (cedimento): suggerisci RESISTENZA -10 lbs (= ${resistMinusTen} lbs)${resistInt === 0 ? ' — ATTENZIONE: già a corpo libero, suggerisci esercizio assistito o variante più facile' : ''}.
+   - Se reps eseguite < ${repsMin} (sotto range): suggerisci STESSA resistenza (${resistInt} lbs), focus arrivare a ${repsMin}.
+
+FORMATO RISPOSTA: 1 frase breve max 25 parole. Esempi: "Prossima: ${Math.min(repsMax, (typeof reps === 'number' ? reps : repsMin) + 1)} reps a ${resistInt} lbs, mantieni RIR ${targetRIR}." oppure "Tetto raggiunto: prossima ${repsMin} reps a ${resistPlusTen} lbs."
+
+NIENTE preamboli, niente spiegazioni lunghe, solo il consiglio operativo. Italiano.`;
+
+    const text = await callAI(prompt, 100);
     const clean = (text||'').trim().replace(/^["'`]|["'`]$/g,'').replace(/\n+/g,' ').slice(0, 220);
     if(!clean) return;
     ST.aiSuggestions[`${sessionId}_${exName}`] = clean;
