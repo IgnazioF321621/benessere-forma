@@ -446,6 +446,21 @@ const OBJ_ADAPT = {
 
 ## Cosa abbiamo fatto
 
+### 3 maggio 2026 — Countdown recupero timestamp-based (continua in background)
+
+**Problema risolto**: il countdown del recupero tra serie (modal fullscreen "Recupero attivo / Prossimo esercizio / Quasi pronto…") usava un contatore decrementale `seconds--` ad ogni tick di `setInterval(1000ms)`. Quando l'utente cambiava app, lockava il telefono o il browser metteva in pausa il tab, il timer si "congelava" e il beep finale non partiva mai correttamente.
+
+**Soluzione (rifattorizzazione interna, opzione B)**: la UX del modal resta identica (3 fasi, tip recupero, next ex note, numeri giganti, bottone Salta). Cambia solo il motore interno:
+
+- `ST.trainCountdown` esteso con `endTime: Date.now() + duration*1000` (sorgente di verità) + `beeped: false` (anti-doppio-beep)
+- Tick a 250ms (era 1000ms): ricalcola `remaining = Math.max(0, Math.ceil((endTime - Date.now())/1000))`. UI fluida e preciso al rientro foreground anche a metà secondo
+- Re-render `renderTraining()` solo quando il valore intero del secondo cambia (evita 4 render/sec)
+- `tickCountdown()` estratto come funzione standalone — chiamato sia dall'interval sia da `visibilitychange` quando si torna foreground
+- `playBeep()` (singolo a 880Hz × 0.8s, troppo invadente) sostituito da `playRestEndBeep()`: 2 beep brevi a 660Hz × 0.2s gap 350ms gain 0.6 + vibrazione `[200,100,200]`. Idempotente: anche se torni in app dopo lo scadere, il beep parte una sola volta (`cd.beeped` flag)
+- `getRestSec(sessionId, ex)` (regole hardcoded per tipo+iso) invariata
+- Cleanup automatico in `closeTrainingSession()` e `showPage(id !== 'training')` per evitare timer orfani
+- `playBeep()` definizione mantenuta per uso futuro (non più chiamata da nessuno)
+
 ### 3 maggio 2026 — Picker reps + resistenza nativi + fix bug unità kg/lbs
 
 **Picker reps + resistenza nativi**

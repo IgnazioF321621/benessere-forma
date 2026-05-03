@@ -1850,6 +1850,12 @@ async function logout() {
 function showPage(id){
   if(id==='training' && !hasTraining()){ id='home'; }
   if(id !== 'training' && typeof releaseWakeLock === 'function'){ releaseWakeLock(); }
+  // Stop countdown recupero quando si esce dalla pagina Training
+  if(id !== 'training' && ST._countdownInterval){
+    clearInterval(ST._countdownInterval);
+    ST._countdownInterval = null;
+    ST.trainCountdown = null;
+  }
   ST.page=id;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // Reset top nav (inline style driven)
@@ -2409,36 +2415,78 @@ async function loadTrainingLogs(exName){
   renderTraining();
 }
 
-function playBeep(){
+// Beep fine recupero — più discreto del fine-attivazione
+// 2 beep brevi 660Hz gain 0.6 con gap 350ms + vibrazione [200,100,200]
+function playRestEndBeep(){
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(1.0, ctx.currentTime);
-    osc.type = 'sine';
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.8);
-    osc.onended = () => ctx.close();
+    if(navigator.vibrate){
+      try { navigator.vibrate([200,100,200]); } catch(e){}
+    }
+    const ctx = _ensureAudioCtx();
+    if(!ctx) return;
+    const fire = ()=>{
+      for(let i = 0; i < 2; i++){
+        setTimeout(()=>{
+          try {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.frequency.value = 660;
+            osc.type = 'sine';
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            const t0 = ctx.currentTime;
+            gain.gain.setValueAtTime(0.6, t0);
+            gain.gain.setValueAtTime(0.6, t0 + 0.18);
+            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.2);
+            osc.start(t0);
+            osc.stop(t0 + 0.21);
+          } catch(e){}
+        }, i * 350);
+      }
+    };
+    if(ctx.state === 'suspended'){
+      ctx.resume().then(fire).catch(()=>{});
+    } else {
+      fire();
+    }
   } catch(e){}
 }
 
+// Countdown recupero timestamp-based — continua in background, ricalcola al rientro
 function startTrainingCountdown(seconds, activeTip, nextExNote){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
-  ST.trainCountdown = { seconds, total: seconds, done: false, activeTip: activeTip||'', nextExNote: nextExNote||null };
-  ST._countdownInterval = setInterval(()=>{
-    if(!ST.trainCountdown){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; return; }
-    ST.trainCountdown.seconds--;
-    if(ST.trainCountdown.seconds <= 0){
-      clearInterval(ST._countdownInterval);
-      ST._countdownInterval = null;
-      playBeep();
-      ST.trainCountdown = { ...ST.trainCountdown, seconds: 0, done: true };
-    }
+  const endTime = Date.now() + seconds * 1000;
+  ST.trainCountdown = {
+    seconds,                  // intero corrente per il display (in secondi)
+    total: seconds,           // durata iniziale, per fasi UI
+    done: false,
+    beeped: false,            // anti-doppio-beep al rientro foreground
+    endTime,                  // ms timestamp di scadenza — sorgente di verità
+    activeTip: activeTip || '',
+    nextExNote: nextExNote || null,
+  };
+  ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, render solo quando il secondo cambia
+}
+
+// Tick: ricalcola remaining da endTime, beep+render solo se serve
+function tickCountdown(){
+  const cd = ST.trainCountdown;
+  if(!cd){
+    if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+    return;
+  }
+  const remaining = Math.max(0, Math.ceil((cd.endTime - Date.now()) / 1000));
+  // Beep idempotente alla scadenza (anche se l'utente torna in app dopo lo scadere)
+  if(remaining <= 0 && !cd.beeped){
+    cd.beeped = true;
+    playRestEndBeep();
+  }
+  // Re-render solo se il valore intero del secondo è cambiato (evita 4 render/sec)
+  if(remaining !== cd.seconds){
+    cd.seconds = remaining;
+    if(remaining <= 0) cd.done = true;
     renderTraining();
-  }, 1000);
+  }
 }
 
 function skipCountdown(){
@@ -5154,6 +5202,10 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && _audioCtx){
     _unlockAudio();
   }
+  // Countdown recupero: forza tick al rientro per ricalcolare remaining e beepare se scaduto in background
+  if(document.visibilityState === 'visible' && ST.trainCountdown){
+    tickCountdown();
+  }
 });
 
 // Sblocco audio one-shot al primo gesto utente (iOS richiede gesture per AudioContext)
@@ -5186,6 +5238,9 @@ function closeTrainingSession(){
   ST.editLogKey = null;
   ST.editLogDraft = null;
   resetAllActivationTimers();
+  // Stop countdown recupero se attivo (no timer orfano in background)
+  if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+  ST.trainCountdown = null;
   releaseWakeLock();
   renderTraining();
 }
