@@ -378,6 +378,43 @@ select.inp{cursor:pointer;}
 .info-modal p{font-family:var(--font-sans,'Manrope',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
 .info-modal-close{width:100%;padding:10px;border-radius:999px;border:none;background:var(--acc,#2A7A6F);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 
+/* ── MODAL SCHEDA ESERCIZIO sezioni structured (3 maggio 2026) ── */
+.ex-media-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;align-items:center;}
+.ex-media-grid.single{grid-template-columns:1fr;}
+.ex-media-img{width:100%;height:240px;object-fit:contain;background:#f8f8f8;border-radius:8px;display:block;}
+.modal-section{margin-bottom:16px;}
+.modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;margin:0 0 8px 0;font-family:var(--font-mono);}
+.modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
+.modal-list{margin:0;padding-left:20px;}
+.modal-list li{margin-bottom:4px;}
+.modal-params{background:#f5f5f5;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;text-align:center;margin-bottom:16px;color:#185FA5;font-weight:700;}
+.modal-alert{background:#FFF4E5;border-left:3px solid #B84C2A;padding:10px 12px;border-radius:6px;font-size:13px;color:#7A3A1A;margin-bottom:16px;line-height:1.45;font-family:var(--font-sans);}
+.modal-ai-section{background:#F0F7F5;padding:12px;border-radius:8px;margin-bottom:12px;}
+.modal-ai-section h4{color:#2A7A6F;}
+.modal-ai-section .ai-loading{font-size:13px;color:var(--t3);font-style:italic;font-family:var(--font-sans);}
+.modal-footer{font-size:10px;color:#888;text-align:center;margin-top:8px;padding-top:12px;border-top:1px solid #f0f0f0;font-family:var(--font-sans);}
+
+/* ── EXERCISE CARD nuovo layout (3 maggio 2026) ── */
+.exercise-card{background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.exercise-card.done{border-left:3px solid #2A7A6F;}
+.ex-header{cursor:pointer;padding:2px 0 8px;border-bottom:1px solid var(--s2,#eee);margin-bottom:8px;-webkit-tap-highlight-color:rgba(0,0,0,.04);}
+.ex-title-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.ex-title{font-size:15px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin:0;flex:1;line-height:1.25;}
+.ex-info-icon{color:#2A7A6F;font-size:14px;opacity:0.65;flex-shrink:0;}
+.ex-meta-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--font-mono);font-size:11px;color:#185FA5;}
+.ex-params{font-weight:700;}
+.ex-rir-pill{background:#E8F0FA;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;}
+.ex-rest{color:var(--t3);font-size:10px;}
+.ex-info{margin-bottom:8px;}
+.ex-equipment{font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.3;}
+.ex-muscles{font-size:11px;color:var(--t3);font-style:italic;font-family:var(--font-sans);line-height:1.3;margin-top:2px;}
+.ex-suggestion{font-size:11px;color:#2A7A6F;font-family:var(--font-sans);font-weight:500;margin-top:4px;line-height:1.3;}
+.ex-action-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;}
+.ex-progress{font-size:11px;font-family:var(--font-mono);font-weight:700;color:var(--t3);}
+.ex-progress.done{color:#2A7A6F;}
+.ex-add-set-btn{background:#E8F0FA;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);}
+.ex-done-badge{background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);display:inline-block;}
+
 /* ── PICKER SELECT (REPS / CARICO / RIR nel modal log serie) ── */
 /* font-size:16px obbligatorio per evitare auto-zoom iOS Safari su tap */
 .picker-select{
@@ -1031,6 +1068,7 @@ const ST = {
   aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
+  lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -2271,50 +2309,407 @@ const EXERCISE_MEDIA = {
 const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
+    label:'Upper A — Forza', rest:'2-3 min',
     exercises:[
-      { name:'Trazioni alla sbarra',                 sets:4, reps:'4-6',       eq:'Sbarra fissa da porta',                 note:"Presa pronata larghezza spalle. Eccentrica 3 sec. Elastico sotto i piedi se serve assistenza. Muscoli: dorsale, bicipiti, trapezio, romboidi." },
-      { name:'Chest press in piedi con elastico',    sets:4, reps:'4-6',       eq:'Elastico + 2 maniglie singole',         note:"Elastico ancorato dietro all'altezza del petto. Spinta orizzontale in avanti, busto leggermente inclinato. Muscoli: pettorale, deltoide anteriore, tricipiti." },
-      { name:'Shoulder press in piedi con elastico', sets:3, reps:'4-6',       eq:'Elastico + 2 maniglie singole',         note:"Bilaterale. Elastico sotto entrambi i piedi, una maniglia per mano. Spinta verticale dalle spalle in alto. Core e gluteo contratti. Muscoli: deltoidi, tricipiti, trapezio." },
-      { name:'Row in piedi con elastico',            sets:4, reps:'4-6',       eq:'Elastico + barra lunga',                note:"Elastico ancorato davanti all'altezza del petto. Busto leggermente inclinato, tirata orizzontale verso il petto, scapole insieme. Muscoli: dorsale, romboidi, trapezio medio, bicipiti." },
-      { name:'Face pull con elastico',               sets:3, reps:'6-8',       iso:true, eq:'Elastico + corda doppia',     note:"Elastico ancorato sopra al viso. Tira la corda verso il viso, gomiti alti e larghi. Salute spalla — non saltare. Muscoli: deltoide posteriore, trapezio, rotatori cuffia." },
+      {
+        name:'Trazioni alla sbarra', sets:4, reps:'4-6',
+        eq:'Sbarra fissa da porta',
+        setup:"Presa pronata, larghezza poco più delle spalle. Elastico sotto i piedi se serve assistenza.",
+        execution:[
+          "Sospensione passiva attiva: spalle basse, scapole compatte",
+          "Tirata fino al mento sopra la sbarra",
+          "Eccentrica controllata 3 sec"
+        ],
+        commonErrors:[
+          "Dondolare il corpo per slancio",
+          "Spalle che salgono verso le orecchie",
+          "Range incompleto (mento non sopra la sbarra)"
+        ],
+        muscles:['dorsale','bicipiti','trapezio','romboidi']
+      },
+      {
+        name:'Chest press in piedi con elastico', sets:4, reps:'4-6',
+        eq:'Elastico + 2 maniglie singole',
+        setup:"Elastico ancorato dietro all'altezza del petto. In piedi, busto leggermente inclinato avanti, una maniglia per mano.",
+        execution:[
+          "Spinta orizzontale in avanti delle braccia",
+          "Estensione completa senza bloccare i gomiti",
+          "Discesa controllata verso il petto"
+        ],
+        commonErrors:[
+          "Inarcamento eccessivo della schiena",
+          "Spalle che si elevano durante la spinta",
+          "Movimento troppo veloce in eccentrica"
+        ],
+        muscles:['pettorale','deltoide anteriore','tricipiti']
+      },
+      {
+        name:'Shoulder press in piedi con elastico', sets:3, reps:'4-6',
+        eq:'Elastico + 2 maniglie singole',
+        setup:"Bilaterale. Elastico sotto entrambi i piedi, una maniglia per mano all'altezza delle spalle.",
+        execution:[
+          "Spinta verticale verso l'alto fino a braccia distese",
+          "Mantieni core e gluteo contratti",
+          "Discesa controllata fino alle spalle"
+        ],
+        commonErrors:[
+          "Iperestensione lombare durante la spinta",
+          "Gomiti che vanno dietro alla linea del corpo",
+          "Spinta asimmetrica tra i due lati"
+        ],
+        muscles:['deltoidi','tricipiti','trapezio'],
+        alert:"⚠️ Lombari: core e gluteo SEMPRE contratti per evitare iperestensione (iperlordosi)."
+      },
+      {
+        name:'Row in piedi con elastico', sets:4, reps:'4-6',
+        eq:'Elastico + barra lunga',
+        setup:"Elastico ancorato davanti all'altezza del petto. In piedi, busto leggermente inclinato avanti, presa larga sulla barra.",
+        execution:[
+          "Tirata orizzontale della barra verso il petto",
+          "Scapole insieme in fase di tirata",
+          "Discesa controllata mantenendo tensione"
+        ],
+        commonErrors:[
+          "Schiena curva durante la tirata",
+          "Gomiti che si aprono troppo lateralmente",
+          "Uso esagerato della inerzia del busto"
+        ],
+        muscles:['dorsale','romboidi','trapezio medio','bicipiti']
+      },
+      {
+        name:'Face pull con elastico', sets:3, reps:'6-8', iso:true,
+        eq:'Elastico + corda doppia',
+        setup:"Elastico ancorato sopra all'altezza del viso. In piedi, presa neutra alle estremità della corda.",
+        execution:[
+          "Tirata della corda verso il viso",
+          "Gomiti alti e larghi, palmi che ruotano verso l'alto",
+          "Pausa breve in massima retrazione"
+        ],
+        commonErrors:[
+          "Gomiti bassi (perdi la rotazione esterna)",
+          "Tirata verso il petto invece che il viso",
+          "Movimento veloce senza retrazione vera"
+        ],
+        muscles:['deltoide posteriore','trapezio','rotatori cuffia']
+      },
     ]
   },
   upperB:{
     id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1,
+    label:'Upper B — Ipertrofia', rest:'60-90 sec',
     exercises:[
-      { name:'Inverted row con elastico',            sets:4, reps:'8-12',      eq:'Elastico + 2 maniglie o corda doppia',  note:"Elastico ancorato basso. Busto inclinato 45°, tirata orizzontale verso l'addome simulando inverted row. Eccentrica 3 sec. Muscoli: dorsale, romboidi, trapezio medio, bicipiti." },
-      { name:'Chest press inclinata su panca',       sets:3, reps:'8-12',      eq:'Panca 30-45° + elastico + 2 maniglie',  note:"Sdraiato su panca inclinata, elastico ancorato basso. Spinta in alto e in avanti. Muscoli: pettorale alto, deltoide anteriore, tricipiti." },
-      { name:'Lateral raise con elastico',           sets:3, reps:'12-15',     iso:true, eq:'Elastico + 2 maniglie singole', note:"In piedi sopra l'elastico, una maniglia per mano lungo i fianchi. Sollevamento laterale fino all'altezza spalle, eccentrica 3 sec. Muscoli: deltoide laterale, sovraspinato." },
-      { name:'Row inclinato in piedi busto 45°',     sets:4, reps:'8-12',      eq:'Elastico + barra corta',                note:"Elastico ancorato basso. Busto inclinato 45°, tirata della barra verso l'ombelico (non verso il petto). Muscoli: dorsale, romboidi, trapezio, deltoide posteriore, bicipiti." },
-      { name:'Curl bicipiti con elastico',           sets:3, reps:'12-15',     iso:true, eq:'Elastico + 2 maniglie singole', note:"In piedi sopra l'elastico, palmi avanti, gomiti fissi ai fianchi. Pausa isometrica 1 sec in cima. Muscoli: bicipite brachiale, brachiale, brachioradiale." },
-      { name:'Tricipiti overhead con elastico',      sets:3, reps:'12-15',     iso:true, eq:'Elastico + corda doppia o maniglia singola', note:"Elastico ancorato basso, braccia distese sopra la testa. Flessione dei gomiti dietro la testa, poi estensione. Muscoli: tricipite (focus capo lungo)." },
+      {
+        name:'Inverted row con elastico', sets:4, reps:'8-12',
+        eq:'Elastico + 2 maniglie o corda doppia',
+        setup:"Elastico ancorato basso. Busto inclinato 45°, presa neutra o pronata alle maniglie.",
+        execution:[
+          "Tirata orizzontale verso l'addome",
+          "Scapole insieme, petto in fuori",
+          "Eccentrica controllata 3 sec"
+        ],
+        commonErrors:[
+          "Schiena curva o spalle in protrazione",
+          "Movimento generato dalle braccia invece che dal dorso",
+          "Range parziale (gomiti non vanno dietro al busto)"
+        ],
+        muscles:['dorsale','romboidi','trapezio medio','bicipiti']
+      },
+      {
+        name:'Chest press inclinata su panca', sets:3, reps:'8-12',
+        eq:'Panca 30-45° + elastico + 2 maniglie',
+        setup:"Sdraiato su panca inclinata 30-45°. Elastico ancorato basso, una maniglia per mano all'altezza del petto.",
+        execution:[
+          "Spinta in alto e leggermente in avanti",
+          "Estensione senza bloccare i gomiti",
+          "Discesa controllata verso il petto alto"
+        ],
+        commonErrors:[
+          "Inarcamento lombare eccessivo",
+          "Gomiti completamente bloccati in estensione",
+          "Range incompleto in eccentrica"
+        ],
+        muscles:['pettorale alto','deltoide anteriore','tricipiti']
+      },
+      {
+        name:'Lateral raise con elastico', sets:3, reps:'12-15', iso:true,
+        eq:'Elastico + 2 maniglie singole',
+        setup:"In piedi sopra l'elastico, una maniglia per mano lungo i fianchi, gomiti leggermente flessi.",
+        execution:[
+          "Sollevamento laterale fino all'altezza spalle",
+          "Palmi rivolti verso il basso",
+          "Eccentrica controllata 3 sec"
+        ],
+        commonErrors:[
+          "Slancio del busto per aiutare il sollevamento",
+          "Gomiti completamente distesi (stress su articolazione)",
+          "Sollevamento oltre l'altezza spalle (impingement)"
+        ],
+        muscles:['deltoide laterale','sovraspinato']
+      },
+      {
+        name:'Row inclinato in piedi busto 45°', sets:4, reps:'8-12',
+        eq:'Elastico + barra corta',
+        setup:"Elastico ancorato basso. Busto inclinato 45°, schiena neutra, ginocchia leggermente flesse.",
+        execution:[
+          "Tirata della barra verso l'ombelico (non verso il petto)",
+          "Gomiti vicini al busto",
+          "Eccentrica controllata mantenendo l'inclinazione"
+        ],
+        commonErrors:[
+          "Schiena curva durante la tirata",
+          "Tirata verso il petto invece che ombelico",
+          "Risalita del busto durante la tirata"
+        ],
+        muscles:['dorsale','romboidi','trapezio','deltoide posteriore','bicipiti'],
+        alert:"⚠️ Lombari: schiena rigorosamente neutra, mai flessa (iperlordosi)."
+      },
+      {
+        name:'Curl bicipiti con elastico', sets:3, reps:'12-15', iso:true,
+        eq:'Elastico + 2 maniglie singole',
+        setup:"In piedi sopra l'elastico, palmi avanti (presa supinata), gomiti fissi ai fianchi.",
+        execution:[
+          "Flessione bilaterale degli avambracci verso le spalle",
+          "Pausa isometrica 1 sec in cima",
+          "Discesa controllata fino a estensione completa"
+        ],
+        commonErrors:[
+          "Gomiti che si spostano in avanti durante il curl",
+          "Slancio del busto per completare il movimento",
+          "Range incompleto (eccentrica corta)"
+        ],
+        muscles:['bicipite brachiale','brachiale','brachioradiale']
+      },
+      {
+        name:'Tricipiti overhead con elastico', sets:3, reps:'12-15', iso:true,
+        eq:'Elastico + corda doppia o maniglia singola',
+        setup:"Elastico ancorato basso. Braccia distese sopra la testa, gomiti vicini alle orecchie.",
+        execution:[
+          "Flessione dei gomiti dietro la testa",
+          "Estensione completa verso l'alto",
+          "Mantieni gomiti fermi (solo l'avambraccio si muove)"
+        ],
+        commonErrors:[
+          "Gomiti che si aprono lateralmente",
+          "Iperestensione lombare per compensare",
+          "Range incompleto (avambraccio non scende abbastanza)"
+        ],
+        muscles:['tricipite (focus capo lungo)']
+      },
     ]
   },
   lowerA:{
     id:'lowerA', name:'Lower A', type:'Forza', rir:2,
+    label:'Lower A — Forza', rest:'2-3 min',
     exercises:[
-      { name:'Bulgarian split squat con elastico',   sets:4, reps:'4-6 per lato', eq:'Panca + elastico + 2 maniglie',      note:"Piede posteriore sulla panca, tallone anteriore rialzato. Elastico sotto piede anteriore, una maniglia per mano. Eccentrica 3 sec. Ginocchio in linea col piede. Muscoli: quadricipite, gluteo, femorali." },
-      { name:'Romanian deadlift con elastico',       sets:4, reps:'4-6',       eq:'Elastico + barra lunga',                note:"Elastico sotto entrambi i piedi. Hip hinge: glutei indietro, schiena SEMPRE neutra, ginocchia morbide. Senti i femorali. Muscoli: femorali, gluteo, erettori spinali." },
-      { name:'Hip thrust con elastico',              sets:4, reps:'4-6',       eq:'Panca + elastico + 2 maniglie',         note:"Spalle sulla panca, elastico sopra le anche tenuto lateralmente. Spinta verticale, pausa isometrica 2 sec in cima. Muscoli: gluteo massimo, femorali, gluteo medio." },
-      { name:'Glute bridge isometrico con cavigliera', sets:3, reps:'20-30 sec', iso:true, eq:'Elastico + cavigliera',     note:"Supino, ginocchia flesse. Cavigliera tira verso l'interno, tu resisti verso l'esterno mantenendo bridge isometrico. Protegge ginocchia. Muscoli: gluteo massimo, gluteo medio, vasto mediale." },
+      {
+        name:'Bulgarian split squat con elastico', sets:4, reps:'4-6 per lato',
+        eq:'Panca + elastico + 2 maniglie',
+        setup:"Piede posteriore sulla panca, tallone anteriore rialzato 3-5 cm. Elastico sotto piede anteriore, una maniglia per mano.",
+        execution:[
+          "Discesa controllata 3 sec",
+          "Ginocchio anteriore in linea col secondo dito del piede",
+          "Risalita spingendo dal tallone anteriore"
+        ],
+        commonErrors:[
+          "Ginocchio che collassa verso l'interno (valgo)",
+          "Tallone anteriore che si solleva",
+          "Inclinazione eccessiva del busto in avanti"
+        ],
+        muscles:['quadricipite','gluteo','femorali'],
+        alert:"⚠️ Ginocchia: tallone rialzato non negoziabile. Ginocchio in linea col piede (valgismo dinamico)."
+      },
+      {
+        name:'Romanian deadlift con elastico', sets:4, reps:'4-6',
+        eq:'Elastico + barra lunga',
+        setup:"Elastico sotto entrambi i piedi (larghezza spalle). Barra impugnata davanti alle cosce con presa pronata.",
+        execution:[
+          "Hip hinge: glutei indietro, ginocchia morbide",
+          "Discesa fino a sentire stiramento femorali (~tibia)",
+          "Risalita estendendo le anche"
+        ],
+        commonErrors:[
+          "Schiena flessa durante la discesa",
+          "Ginocchia che si flettono troppo (squat)",
+          "Movimento generato dalle braccia invece che dalle anche"
+        ],
+        muscles:['femorali','gluteo','erettori spinali'],
+        alert:"⚠️ Lombari: schiena SEMPRE neutra, mai flessa (iperlordosi). Movimento dalle anche, non dalla colonna."
+      },
+      {
+        name:'Hip thrust con elastico', sets:4, reps:'4-6',
+        eq:'Panca + elastico + 2 maniglie',
+        setup:"Spalle appoggiate sulla panca, piedi a terra larghezza spalle. Elastico sopra le anche tenuto lateralmente.",
+        execution:[
+          "Spinta verticale delle anche verso l'alto",
+          "Linea retta spalle-anche-ginocchia in cima",
+          "Pausa isometrica 2 sec con massima contrazione glutea"
+        ],
+        commonErrors:[
+          "Iperestensione lombare in cima",
+          "Ginocchia che si aprono o chiudono",
+          "Mento che si stacca dal petto"
+        ],
+        muscles:['gluteo massimo','femorali','gluteo medio']
+      },
+      {
+        name:'Glute bridge isometrico con cavigliera', sets:3, reps:'20-30 sec', iso:true,
+        eq:'Elastico + cavigliera',
+        setup:"Supino, ginocchia flesse, piedi a terra. Cavigliera al ginocchio, elastico ancorato lateralmente.",
+        execution:[
+          "Sollevamento del bacino fino a linea retta spalle-ginocchia",
+          "Mantieni la posizione isometrica per 20-30 sec",
+          "Resisti alla trazione della cavigliera verso l'interno"
+        ],
+        commonErrors:[
+          "Ginocchio che cede verso l'interno",
+          "Bacino che si abbassa durante la tenuta",
+          "Iperestensione lombare invece di estensione anca"
+        ],
+        muscles:['gluteo massimo','gluteo medio','vasto mediale'],
+        alert:"⚠️ Ginocchia: rinforza vasto mediale e gluteo medio (protezione valgismo dinamico)."
+      },
     ]
   },
   lowerB:{
     id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1,
+    label:'Lower B — Ipertrofia', rest:'60-90 sec',
     exercises:[
-      { name:'Squat con elastico e talloni rialzati',    sets:4, reps:'8-12',      eq:'Elastico + 2 maniglie o barra lunga', note:"Talloni su spessore 3-5 cm. Elastico sotto i piedi, maniglie all'altezza spalle. Discesa parallelo o oltre, busto eretto. Muscoli: quadricipite, gluteo, femorali." },
-      { name:'Single leg Romanian deadlift con elastico', sets:3, reps:'8-12 per lato', eq:'Elastico + 1 maniglia singola', note:"Elastico sotto piede d'appoggio, maniglia in mano opposta. Hip hinge unilaterale, gamba libera dietro in linea col busto. Muscoli: femorali, gluteo, gluteo medio, core." },
-      { name:'Hip thrust con elastico TUT alto',     sets:4, reps:'12-15',     eq:'Panca + elastico + 2 maniglie',         note:"Identico hip thrust forza ma eccentrica 4 sec (discesa lentissima). Massimo segnale ipertrofico. Muscoli: gluteo massimo, femorali, gluteo medio." },
-      { name:'Leg curl con elastico sulla fitball',  sets:3, reps:'12-15',     iso:true, eq:'Fitball + cavigliera (opz.)', note:"Supino, talloni sulla fitball, bacino sollevato. Trascina la palla verso i glutei flettendo le ginocchia. Muscoli: femorali, gluteo, polpaccio." },
-      { name:'Calf raise con elastico',              sets:3, reps:'15-20',     iso:true, eq:'Elastico + 2 maniglie singole', note:"In piedi sopra l'elastico (avampiede), maniglie ai fianchi. Sollevamento sulle punte, pausa isometrica 1 sec in cima. Muscoli: gastrocnemio, soleo." },
+      {
+        name:'Squat con elastico e talloni rialzati', sets:4, reps:'8-12',
+        eq:'Elastico + 2 maniglie o barra lunga',
+        setup:"Talloni su spessore 3-5 cm. Elastico sotto i piedi, maniglie all'altezza spalle (front squat).",
+        execution:[
+          "Discesa fino a parallelo o leggermente oltre",
+          "Busto eretto, ginocchia in linea coi piedi",
+          "Risalita esplosiva ma controllata"
+        ],
+        commonErrors:[
+          "Ginocchia che collassano verso l'interno",
+          "Talloni che si sollevano (anche con rialzo)",
+          "Discesa parziale (mezzo squat)"
+        ],
+        muscles:['quadricipite','gluteo','femorali'],
+        alert:"⚠️ Ginocchia + lombari: talloni rialzati riducono stress su entrambi. Non saltare il rialzo."
+      },
+      {
+        name:'Single leg Romanian deadlift con elastico', sets:3, reps:'8-12 per lato',
+        eq:'Elastico + 1 maniglia singola',
+        setup:"Elastico sotto piede d'appoggio. Maniglia in mano opposta alla gamba d'appoggio.",
+        execution:[
+          "Hip hinge unilaterale, gamba libera dietro in linea col busto",
+          "Schiena neutra, ginocchio d'appoggio leggermente flesso",
+          "Risalita estendendo l'anca"
+        ],
+        commonErrors:[
+          "Rotazione del bacino (anca libera che si apre)",
+          "Schiena flessa per compensare equilibrio",
+          "Ginocchio d'appoggio che si flette troppo"
+        ],
+        muscles:['femorali','gluteo','gluteo medio','core'],
+        alert:"⚠️ Lombari: meglio toccare col piede posteriore che inarcare la schiena."
+      },
+      {
+        name:'Hip thrust con elastico TUT alto', sets:4, reps:'12-15',
+        eq:'Panca + elastico + 2 maniglie',
+        setup:"Identico al hip thrust forza ma focus su tempo sotto tensione.",
+        execution:[
+          "Spinta verticale controllata delle anche",
+          "Eccentrica 4 sec (discesa lentissima)",
+          "Pausa breve in cima, no rebound dal basso"
+        ],
+        commonErrors:[
+          "Eccentrica troppo veloce (perdi lo stimolo TUT)",
+          "Iperestensione lombare in cima",
+          "Range incompleto in basso (non scendi fino a sfiorare il pavimento)"
+        ],
+        muscles:['gluteo massimo','femorali','gluteo medio']
+      },
+      {
+        name:'Leg curl con elastico sulla fitball', sets:3, reps:'12-15', iso:true,
+        eq:'Fitball + cavigliera (opz.)',
+        setup:"Supino, talloni sulla fitball, bacino sollevato. Linea retta spalle-anche-ginocchia.",
+        execution:[
+          "Trascina la palla verso i glutei flettendo le ginocchia",
+          "Mantieni il bacino alto durante tutto il movimento",
+          "Eccentrica 3 sec riallontanando la palla"
+        ],
+        commonErrors:[
+          "Bacino che si abbassa durante il movimento",
+          "Movimento veloce e a scatti",
+          "Range incompleto (talloni non arrivano vicino ai glutei)"
+        ],
+        muscles:['femorali','gluteo','polpaccio']
+      },
+      {
+        name:'Calf raise con elastico', sets:3, reps:'15-20', iso:true,
+        eq:'Elastico + 2 maniglie singole',
+        setup:"In piedi sopra l'elastico (avampiede), maniglie ai fianchi. Opzionale: avampiede su spessore per range maggiore.",
+        execution:[
+          "Sollevamento sulle punte estendendo le caviglie",
+          "Pausa isometrica 1 sec in cima",
+          "Discesa controllata fino al massimo allungamento"
+        ],
+        commonErrors:[
+          "Range incompleto (mezza estensione)",
+          "Movimento a scatti senza pausa in cima",
+          "Inclinazione del corpo in avanti per slancio"
+        ],
+        muscles:['gastrocnemio','soleo']
+      },
     ]
   },
   recovery:{
     id:'recovery', name:'Active Recovery', type:'Recupero', rir:null,
+    label:'Active Recovery', rest:null,
     exercises:[
-      { name:'Mobilità articolare',                  sets:1, reps:'10 min',    eq:'Tappetino',                             note:"Anche, spalle, colonna toracica, caviglie. Movimenti circolari controllati." },
-      { name:'Stretching',                           sets:1, reps:'10 min',    eq:'Tappetino',                             note:"Femorali, psoas, pettorale, dorsale. Tenuta 45-60 sec per posizione." },
-      { name:'Vacuum + respirazione diaframmatica',  sets:1, reps:'5-10 min',  eq:'Tappetino',                             note:"Vacuum addominale + respirazione 360°. Riduce circonferenza vita. Da fare ogni giorno a digiuno." },
+      {
+        name:'Mobilità articolare', sets:1, reps:'10 min',
+        eq:'Tappetino',
+        setup:"Sequenza dinamica focalizzata su anche, spalle, colonna toracica, caviglie.",
+        execution:[
+          "Movimenti circolari controllati per ogni articolazione",
+          "Range progressivamente più ampio",
+          "Respirazione fluida durante tutto"
+        ],
+        commonErrors:[
+          "Movimenti troppo veloci o a scatti",
+          "Trattenere il respiro",
+          "Forzare il range in fasi di rigidità"
+        ],
+        muscles:['articolazioni e tessuti connettivi']
+      },
+      {
+        name:'Stretching', sets:1, reps:'10 min',
+        eq:'Tappetino',
+        setup:"Sequenza statica focalizzata su catene posteriori e flessori dell'anca.",
+        execution:[
+          "Femorali, psoas, pettorale, dorsale",
+          "Tenuta 45-60 sec per posizione",
+          "Respirazione lenta e profonda"
+        ],
+        commonErrors:[
+          "Rimbalzare nello stretch",
+          "Trattenere il respiro",
+          "Forzare oltre il punto di tensione (no dolore)"
+        ],
+        muscles:['catene muscolari principali']
+      },
+      {
+        name:'Vacuum + respirazione diaframmatica', sets:1, reps:'5-10 min',
+        eq:'Tappetino',
+        setup:"A digiuno mattutino preferibilmente. Posizione supina o quadrupedica.",
+        execution:[
+          "Respirazione diaframmatica 360° per 2 min",
+          "Vacuum addominale: espira tutto e risucchia ombelico verso colonna",
+          "Tieni 10-15 sec, ripeti 5-10 volte"
+        ],
+        commonErrors:[
+          "Vacuum tenuto trattenendo aria nei polmoni",
+          "Spalle che salgono durante respirazione",
+          "Praticare a stomaco pieno"
+        ],
+        muscles:['trasverso addominale','diaframma']
+      },
     ]
   },
 };
@@ -2327,6 +2722,53 @@ function getRestSec(sessionId, ex){
 }
 function restSecToText(sec){
   return (sec % 60 === 0) ? (sec/60)+' min' : sec+' sec';
+}
+
+// ── Lookup esercizio (sync) ─────────────────────────────────
+function findExercise(exName, sessionId){
+  const sess = TRAINING_SESSIONS[sessionId];
+  if(!sess || !sess.exercises) return null;
+  return sess.exercises.find(e => e.name === exName) || null;
+}
+
+// ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
+async function loadLastLoggedSets(sessionId){
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.lastLoggedSets = {}; return; }
+  const sess = TRAINING_SESSIONS[sessionId];
+  if(!sess) return;
+  try {
+    const exNames = sess.exercises.map(e => e.name);
+    const { data } = await supa.from('workout_sets')
+      .select('exercise_name, reps, resistance, rir_actual, date, set_number')
+      .eq('user_id', ST.user.id)
+      .eq('session_type', sessionId)
+      .in('exercise_name', exNames)
+      .order('date', { ascending: false })
+      .order('set_number', { ascending: false });
+    const map = {};
+    (data || []).forEach(row => {
+      if(!map[row.exercise_name]) map[row.exercise_name] = row;
+    });
+    ST.lastLoggedSets = map;
+    if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
+  } catch(e){}
+}
+
+// ── Suggerimento progressione (sync, legge dalla cache) ──────
+function getProgressionSuggestion(exName, sessionId){
+  const last = ST.lastLoggedSets[exName];
+  const ex = findExercise(exName, sessionId);
+  if(!ex) return '';
+  if(!last){
+    // Prima volta: suggerisci minimo del range
+    const m = String(ex.reps || '').match(/^(\d+)/);
+    const repsMin = m ? parseInt(m[1], 10) : 8;
+    return `💡 Inizia con ${repsMin} reps a 10 lbs`;
+  }
+  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
+  const resistTxt = (last.resistance != null) ? `${last.resistance} ${unitLbl}` : 'corpo libero';
+  const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
+  return `💡 Ultima volta: ${last.reps}r · ${resistTxt}${rirTxt}`;
 }
 
 function renderCalendar(workouts, year, month){
@@ -2898,35 +3340,39 @@ function renderTraining(){
                 style="padding:10px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">✕</button>
             </div>
           </div>` : '';
+        const restLabel = s.rest || restTxt;
+        const suggestion = getProgressionSuggestion(e.name, sel);
+        const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
         return `
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);${allDone?'border-left:3px solid #2A7A6F;':''}padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-            <!-- Riga 1: titolo + +S1/DONE -->
-            <div style="display:flex;flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:4px;">
-              <div style="flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--t1);font-family:var(--font-sans);line-height:1.25;">${e.name}</div>
+          <div class="exercise-card${allDone?' done':''}">
+            <!-- HEADER cliccabile (apre modal scheda esercizio) -->
+            <div class="ex-header" onclick="openExerciseAI('${safeName}','${sel}','','')">
+              <div class="ex-title-row">
+                <h3 class="ex-title">${e.name}</h3>
+                <span class="ex-info-icon">ⓘ</span>
+              </div>
+              <div class="ex-meta-row">
+                <span class="ex-params">${e.sets}×${e.reps}</span>
+                ${s.rir!=null?`<span class="ex-rir-pill">RIR ${s.rir}</span>`:''}
+                <span class="ex-rest">Recupero: ${restLabel}</span>
+              </div>
+            </div>
+            <!-- INFO: attrezzatura + muscoli + suggerimento progressione -->
+            <div class="ex-info">
+              <div class="ex-equipment">${e.eq}</div>
+              ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
+              ${suggestion?`<div class="ex-suggestion">${suggestion}</div>`:''}
+            </div>
+            <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
+            <div class="ex-action-row">
+              <span class="ex-progress${allDone?' done':''}">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</span>
               ${allDone
-                ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);flex-shrink:0;white-space:nowrap;">✓ DONE</span>`
+                ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
-                  ? `<button onclick="openLogModal('${sel}','${safeName}',${nextSet});"
-                      style="background:#E8F0FA;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);flex-shrink:0;white-space:nowrap;">+S${nextSet}</button>`
+                  ? `<button class="ex-add-set-btn" onclick="openLogModal('${sel}','${safeName}',${nextSet});">+S${nextSet}</button>`
                   : ''}
             </div>
-            <!-- Riga 2: ▶ + sets×reps + RIR + ℹ ... X/Y serie -->
-            <div style="display:flex;flex-wrap:nowrap;align-items:center;gap:6px;margin-bottom:2px;">
-              <button onclick="event.stopPropagation();openExerciseAI('${e.name.replace(/'/g,"\\'")}','${s.type}','${(e.note||'').replace(/'/g,"\\'")}','')" style="background:none;border:none;cursor:pointer;padding:0;line-height:1;font-size:15px;flex-shrink:0;" title="Scheda AI">▶</button>
-              <span style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:#185FA5;flex-shrink:0;line-height:1.2;">${e.sets}×${e.reps}</span>
-              ${s.rir!=null?`<span style="background:#E8F0FA;color:#185FA5;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;font-family:var(--font-mono);flex-shrink:0;white-space:nowrap;">RIR ${s.rir}</span>`:''}
-              <span class="info-icon" onclick="showInfoModal('serie')" style="flex-shrink:0;">i</span>
-              <span style="flex:1;min-width:0;"></span>
-              <span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${allDone?'#2A7A6F':'var(--t3)'};flex-shrink:0;white-space:nowrap;line-height:1.2;">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</span>
-            </div>
-            <!-- Riga 3: Recupero a destra -->
-            <div style="display:flex;flex-wrap:nowrap;justify-content:flex-end;margin-bottom:4px;">
-              <span style="font-size:11px;color:${restSec>=120?'var(--t3)':restSec===90?'#2A7A6F':restSec===60?'#185FA5':'var(--t3)'};font-family:var(--font-mono);white-space:nowrap;line-height:1.2;">Recupero: ${restTxt}</span>
-            </div>
-            <!-- Riga 4: attrezzo -->
-            <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.3;${e.note?'margin-bottom:2px;':(badges?'margin-bottom:6px;':'')}">${e.eq}</div>
-            ${e.note ? `<div style="font-size:11px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;font-style:italic;${badges?'margin-bottom:6px;':''}">💡 ${e.note}</div>` : (badges ? '' : '')}
-            ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;">${badges}</div>` : ''}
+            ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">${badges}</div>` : ''}
             ${ST.aiSuggestions[`${sel}_${e.name}`] ? `<div style="margin-top:6px;font-size:11px;color:#2A7A6F;font-family:var(--font-sans);font-style:italic;line-height:1.4;display:flex;align-items:flex-start;gap:4px;"><span style="flex-shrink:0;">🤖</span><span>${ST.aiSuggestions[`${sel}_${e.name}`]}</span></div>` : ''}
             ${logForm}
           </div>`;
@@ -3176,27 +3622,59 @@ function renderTraining(){
   let modalHTML = '';
   if(ST.exerciseAIOpen) {
     const ai = ST.exerciseAIOpen;
+    const hasOnlyOneMedia = !!ai.muscleImg && !ai.executionImg;
+    const restLabel = ai.sessionRest || (ai.sessionRir != null ? 'recupero standard' : '');
+    const paramsLine = [
+      (ai.sets && ai.reps) ? `${ai.sets}×${ai.reps}` : '',
+      (ai.sessionRir != null) ? `RIR ${ai.sessionRir}` : '',
+      restLabel ? `Recupero ${restLabel}` : '',
+    ].filter(Boolean).join(' · ');
+    const executionList = (ai.execution && ai.execution.length)
+      ? `<ol class="modal-list">${ai.execution.map(s=>`<li>${s}</li>`).join('')}</ol>` : '';
+    const errorsList = (ai.commonErrors && ai.commonErrors.length)
+      ? `<ul class="modal-list">${ai.commonErrors.map(s=>`<li>${s}</li>`).join('')}</ul>` : '';
     modalHTML = `<div class="info-modal-overlay" onclick="ST.exerciseAIOpen=null;renderTraining()">
-      <div class="info-modal" style="max-width:540px;max-height:85vh;overflow-y:auto;" onclick="event.stopPropagation()">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <strong style="font-size:16px;">${ai.exName}</strong>
-          <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:20px;cursor:pointer;">✕</button>
+      <div class="info-modal" style="max-width:560px;max-height:88vh;overflow-y:auto;padding:20px;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:8px;">
+          <div>
+            <strong style="font-size:17px;display:block;line-height:1.25;">${ai.exName}</strong>
+            ${ai.sessionLabel ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${ai.sessionLabel}</div>` : ''}
+          </div>
+          <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
-        ${ai.loading ? `<div style="text-align:center;padding:32px 0;color:var(--t3);font-family:var(--font-sans);">Carico scheda esercizio…</div>` : `
 
-          ${ai.muscleImg || ai.executionImg ? `<div style="margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-mono);font-weight:700;">Muscoli & esecuzione</div>
-            <div class="ex-media-grid" style="display:grid;grid-template-columns:${ai.executionImg ? '1fr 1fr' : '1fr'};gap:8px;">
-              ${ai.muscleImg ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" style="width:100%;border-radius:8px;background:#f5f5f5;" onerror="this.style.display='none'"/>` : ''}
-              ${ai.executionImg ? `<img src="${ai.executionImg}" alt="Esecuzione" style="width:100%;border-radius:8px;background:#f5f5f5;" onerror="this.style.display='none'"/>` : ''}
-            </div>
-          </div>` : ''}
+        ${(ai.muscleImg || ai.executionImg) ? `<div class="ex-media-grid${hasOnlyOneMedia?' single':''}">
+          ${ai.muscleImg ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
+          ${ai.executionImg ? `<img src="${ai.executionImg}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
+        </div>` : ''}
 
-          <div style="font-size:11px;color:var(--t3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-mono);font-weight:700;">Scheda tecnica AI</div>
-          <div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${ai.content}</div>
+        ${ai.setup ? `<div class="modal-section">
+          <h4>Setup</h4>
+          <p>${ai.setup}</p>
+        </div>` : ''}
 
-          <div style="font-size:10px;color:#888;text-align:center;margin-top:12px;font-family:var(--font-sans);">Mappe muscolari da Wger.de — CC BY-SA 4.0</div>
-        `}
+        ${executionList ? `<div class="modal-section">
+          <h4>Esecuzione</h4>
+          ${executionList}
+        </div>` : ''}
+
+        ${errorsList ? `<div class="modal-section">
+          <h4>Errori comuni da evitare</h4>
+          ${errorsList}
+        </div>` : ''}
+
+        ${paramsLine ? `<div class="modal-params">${paramsLine}</div>` : ''}
+
+        ${ai.alert ? `<div class="modal-alert">${ai.alert}</div>` : ''}
+
+        <div class="modal-section modal-ai-section">
+          <h4>🤖 AI Coach</h4>
+          ${ai.loading
+            ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
+            : `<div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${ai.content || 'Nessun consiglio aggiuntivo disponibile.'}</div>`}
+        </div>
+
+        <div class="modal-footer">Mappe muscolari da Wger.de — CC BY-SA 4.0</div>
       </div>
     </div>`;
   }
@@ -5059,34 +5537,58 @@ function swipeEnd(e, id) {
   delete _swipe[id];
 }
 
-async function openExerciseAI(exName, sessionType, note, svgContent) {
-  ST.exerciseAIOpen = { exName, loading: true };
+// openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach
+// Firma: (exName, sessionId). I dati statici (setup, execution, commonErrors, muscles, alert)
+// vengono letti da TRAINING_SESSIONS; il testo AI è un cue avanzato aggiuntivo.
+async function openExerciseAI(exName, sessionId) {
+  const sess = TRAINING_SESSIONS[sessionId];
+  const ex = findExercise(exName, sessionId);
+  const media = EXERCISE_MEDIA[exName] || {};
+  // Stato base (loading): mostra subito tutti i campi statici, AI in caricamento
+  const baseAi = {
+    exName,
+    sessionId,
+    sessionLabel: sess?.label || sess?.name || '',
+    sessionType: sess?.type || '',
+    sessionRir: sess?.rir,
+    sessionRest: sess?.rest || null,
+    sets: ex?.sets,
+    reps: ex?.reps,
+    eq: ex?.eq || '',
+    setup: ex?.setup || '',
+    execution: ex?.execution || [],
+    commonErrors: ex?.commonErrors || [],
+    muscles: ex?.muscles || [],
+    alert: ex?.alert || null,
+    muscleImg: media.muscleImg || null,
+    executionImg: media.executionImg || null,
+    content: '',
+    loading: true,
+  };
+  ST.exerciseAIOpen = baseAi;
   renderTraining();
 
-  const media = EXERCISE_MEDIA[exName] || {};
-  const muscleImg = media.muscleImg || null;
-  const executionImg = media.executionImg || null;
+  // Prompt AI semplificato: cue avanzato, NO ripetizione info statiche
+  const prompt = `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
 
-  const prompt = `Sei un personal trainer esperto. Spiega l'esercizio "${exName}" per un atleta di 55 anni, ex nuotatore e pallanuotista, con limitazioni a lombari (iperlordosi) e ginocchia (valgismo dinamico). Sessione: ${sessionType}. Note tecniche: ${note || 'nessuna'}.
+Esercizio corrente: ${exName} (sessione ${baseAi.sessionLabel}, ${baseAi.sessionType}).
 
-IMPORTANTE: L'attrezzatura usata sono elastici a tubo con moschettoni, comprensivi di maniglie singole, corda doppia, barra modulare (~130 cm) e barra corta. NON sono bande piatte. Nelle spiegazioni usa sempre "elastico a tubo" e descrivi l'impugnatura corretta (maniglie o barra).
+Genera SOLO un consiglio operativo aggiuntivo (max 3 frasi) che NON ripeta info già presenti come setup, esecuzione, errori comuni o muscoli target. Concentrati su:
+- Cue tecnico avanzato specifico
+- Gestione fatica nelle ultime serie
+- Variazione respiratoria utile per questo esercizio
 
-Rispondi in italiano con queste sezioni:
-**Esecuzione** (3-4 punti chiave)
-**Errori comuni** (2-3 da evitare)
-**Adattamenti** (specifici per lombari/ginocchia)
-**Sensazione corretta** (una frase)
-
-Sii conciso e pratico.`;
+NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. Solo prosa diretta. Italiano.`;
 
   try {
-    const text = await callAI(prompt, 600);
-    const content = text
+    const text = await callAI(prompt, 200);
+    const content = (text || '').trim()
+      .replace(/^["'`]|["'`]$/g, '')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
-    ST.exerciseAIOpen = { exName, muscleImg, executionImg, svgContent: svgContent || '', content };
+    ST.exerciseAIOpen = { ...baseAi, content, loading: false };
   } catch(e) {
-    ST.exerciseAIOpen = { exName, muscleImg, executionImg, svgContent: svgContent || '', content: 'Errore di connessione.' };
+    ST.exerciseAIOpen = { ...baseAi, content: 'Errore di connessione AI Coach.', loading: false };
   }
   renderTraining();
 }
@@ -5227,9 +5729,11 @@ document.addEventListener('keydown', _onFirstGesture, true);
 // ── Helpers apertura/chiusura sessione Training ────────────
 function openTrainingSession(sid){
   ST.trainSession = sid;
+  ST.lastLoggedSets = {}; // reset cache mentre carica (suggestion mostra "prima volta")
   _unlockAudio();
   requestWakeLock();
   renderTraining();
+  loadLastLoggedSets(sid); // popola cache + ricarica render quando pronto
 }
 function closeTrainingSession(){
   ST.trainSession = null;

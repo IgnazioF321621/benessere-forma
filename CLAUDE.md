@@ -446,6 +446,37 @@ const OBJ_ADAPT = {
 
 ## Cosa abbiamo fatto
 
+### 3 maggio 2026 — Riorganizzazione card + modal Training (data-driven sections)
+
+**`TRAINING_SESSIONS` esteso con campi structured**:
+- A livello session: aggiunti `label` ('Upper A — Forza') e `rest` ('2-3 min'/'60-90 sec'/null)
+- A livello esercizio: aggiunti `setup` (string), `execution[]` (3-4 step), `commonErrors[]` (3 errori), `muscles[]` (lista muscoli target), `alert?` (warning protezione lombari/ginocchia, presente su 7 esercizi)
+- Rimosso `note` (sostituito da setup+execution+commonErrors)
+- **Mantenuti** per back-compat: `id`, `name`, `type` (capitalized 'Forza'/'Ipertrofia'/'Recupero'), `rir`, `iso:true` su esercizi isolation
+
+**Card esercizio semplificata**:
+- HEADER cliccabile (`onclick="openExerciseAI"`) con titolo + ⓘ + meta-row (sets×reps · RIR · Recupero)
+- INFO sezione: `eq` + `muscles.join(' · ')` + suggerimento progressione
+- ACTION ROW: progress `X/Y serie` + bottone `+S{n}` o badge `✓ DONE`
+- Eliminati dalla card: bottone ▶ separato, ⓘ separato come pulsante, riga lunga 💡 con `note`
+- Helper sync `getProgressionSuggestion(exName, sessionId)` mostra `💡 Ultima volta: 5r · 30 lbs · RIR 2` da cache `ST.lastLoggedSets[exName]`
+- Helper async `loadLastLoggedSets(sessionId)` chiamata da `openTrainingSession`: query `workout_sets` ordinata DESC, deduplicata per `exercise_name`, popola cache + re-render
+- Helper sync `findExercise(exName, sessionId)` lookup in TRAINING_SESSIONS
+
+**Modal scheda esercizio ristrutturato**:
+- Firma `openExerciseAI(exName, sessionId)` — letti tutti i campi structured da TRAINING_SESSIONS
+- Sezioni distinte: Header (esercizio + label sessione) → Media (griglia 1-2 colonne, **altezza fissa 240px + object-fit:contain** — fix bug dimensioni disuguali) → Setup → Esecuzione (`<ol>` lista numerata) → Errori comuni (`<ul>`) → Parametri (`X×Y · RIR N · Recupero ...`) → Alert protezione (condizionale, solo se `ex.alert`) → AI Coach (background teal `#F0F7F5`) → Footer Wger
+- Eliminato dal modal: ripetizione del nome esercizio nel testo AI, sezione "Adattamenti personali" come blocco fisso, lista muscoli come testo (la mappa visiva li mostra)
+
+**AI Coach prompt semplificato**:
+- Genera SOLO un consiglio aggiuntivo (max 3 frasi): cue tecnico avanzato + gestione fatica + variazione respiratoria
+- NON ripete setup/execution/errori (già nelle sezioni statiche del modal)
+- Stato `ai.loading` → mostra "Genero un cue avanzato per te…" durante chiamata AI
+
+**Nuove classi CSS**: `.exercise-card` (+ `.done`), `.ex-header`, `.ex-title-row`, `.ex-title`, `.ex-info-icon`, `.ex-meta-row`, `.ex-params`, `.ex-rir-pill`, `.ex-rest`, `.ex-info`, `.ex-equipment`, `.ex-muscles`, `.ex-suggestion`, `.ex-action-row`, `.ex-progress`, `.ex-add-set-btn`, `.ex-done-badge`, `.ex-media-grid` (+ `.single`), `.ex-media-img`, `.modal-section`, `.modal-list`, `.modal-params`, `.modal-alert`, `.modal-ai-section`, `.ai-loading`, `.modal-footer`
+
+**Stato ST esteso**: `lastLoggedSets: {}` (cache) + `exerciseAIOpen` ora include `sessionLabel`, `sessionType`, `sessionRir`, `sessionRest`, `sets`, `reps`, `eq`, `setup`, `execution[]`, `commonErrors[]`, `muscles[]`, `alert`, `muscleImg`, `executionImg`, `content`, `loading`
+
 ### 3 maggio 2026 — Countdown recupero timestamp-based (continua in background)
 
 **Problema risolto**: il countdown del recupero tra serie (modal fullscreen "Recupero attivo / Prossimo esercizio / Quasi pronto…") usava un contatore decrementale `seconds--` ad ogni tick di `setInterval(1000ms)`. Quando l'utente cambiava app, lockava il telefono o il browser metteva in pausa il tab, il timer si "congelava" e il beep finale non partiva mai correttamente.
