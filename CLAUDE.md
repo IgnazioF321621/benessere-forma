@@ -267,11 +267,57 @@ const ST = {
 
 **Protezioni:** lombari e ginocchia
 
-### TRAINING_SESSIONS — esercizi aggiornati (3 maggio 2026)
+### TRAINING_SESSIONS — schema attuale (3 maggio 2026, post-Step3)
 
-Ogni esercizio ha: `{ name, sets, reps, eq, note }` (+ opzionale `iso:true` per esercizi isolation/isometrici, usato da `getRestSec` per calcolare il recupero). Il campo `note` viene mostrato in corsivo nella card esercizio — note ora dense (~25 parole) con setup attrezzo + esecuzione + muscoli target.
+**Struttura sessione (top-level)**:
+```js
+{
+  id: 'upperA',                 // === chiave esterna del map (back-compat)
+  name: 'Upper A',              // titolo breve (calendar/Home tile/Sessioni cards)
+  type: 'Forza',                // 'Forza' | 'Ipertrofia' | 'Recupero' (capitalized — usato da getRestSec)
+  rir: 2,                       // RIR target sessione (null per recovery)
+  label: 'Upper A — Forza',     // titolo esteso (nuovo, usato dal modal scheda esercizio)
+  rest: '2-3 min',              // testo recupero (nuovo, usato da card e modal; null per recovery)
+  exercises: [ ... ]
+}
+```
 
-Convenzioni nomi: tutti gli esercizi con elastico riportano "con elastico" nel nome (es. "Chest press in piedi con elastico"). Nessuna ridondanza tipo "banda elastica".
+**Struttura esercizio**:
+```js
+{
+  name: 'Trazioni alla sbarra',
+  sets: 4,
+  reps: '4-6',                  // '4-6' | '8-12' | '4-6 per lato' | '20-30 sec' | '10 min'
+  eq: 'Sbarra fissa da porta',  // attrezzatura sintetica
+  iso: true,                    // OPZIONALE: esercizi isolation/isometrici, usato da getRestSec
+  setup: 'Presa pronata...',    // 1 frase: posizione iniziale + attrezzatura
+  execution: [                  // 3-4 step movimento
+    'Sospensione passiva...',
+    'Tirata fino al mento...',
+    'Eccentrica controllata 3 sec'
+  ],
+  commonErrors: [               // 3 errori tipici da evitare
+    'Dondolare il corpo per slancio',
+    'Spalle che salgono...',
+    'Range incompleto...'
+  ],
+  muscles: ['dorsale','bicipiti','trapezio','romboidi'],
+  alert: '⚠️ Lombari: ...'      // OPZIONALE: warning protezione (7 esercizi)
+}
+```
+
+**Convenzioni nomi**: tutti gli esercizi con elastico riportano "con elastico" nel nome (es. "Chest press in piedi con elastico"). Niente "banda elastica", niente ridondanze tipo "orizzontale/verticale".
+
+**Esercizi con `alert` (protezione lombari/ginocchia)** — 7 totali:
+- Shoulder press in piedi con elastico (lombari iperestensione)
+- Row inclinato in piedi busto 45° (lombari schiena flessa)
+- Bulgarian split squat con elastico (ginocchia valgismo + tallone)
+- Romanian deadlift con elastico (lombari schiena neutra)
+- Glute bridge isometrico con cavigliera (ginocchia rinforzo vasto mediale)
+- Squat con elastico e talloni rialzati (ginocchia + lombari)
+- Single leg Romanian deadlift con elastico (lombari equilibrio)
+
+**Esercizi con `iso:true`** — 7 totali (recupero più breve via `getRestSec`): Face pull, Lateral raise, Curl bicipiti, Tricipiti overhead, Glute bridge isometrico, Leg curl con fitball, Calf raise.
 
 | Sessione | Esercizi |
 |---|---|
@@ -280,6 +326,8 @@ Convenzioni nomi: tutti gli esercizi con elastico riportano "con elastico" nel n
 | Lower A (Forza) | Bulgarian split squat con elastico, Romanian deadlift con elastico, Hip thrust con elastico, Glute bridge isometrico con cavigliera |
 | Lower B (Ipertrofia) | Squat con elastico e talloni rialzati, Single leg Romanian deadlift con elastico, Hip thrust con elastico TUT alto, Leg curl con elastico sulla fitball, Calf raise con elastico |
 | Recovery | Mobilità articolare, Stretching, Vacuum + respirazione diaframmatica |
+
+**Totale: 20 esercizi training (5+6+4+5) + 3 recovery = 23**
 
 ### EXERCISE_MEDIA — media per esercizi (3 maggio 2026)
 
@@ -290,7 +338,7 @@ Oggetto globale definito prima di `TRAINING_SESSIONS`. Struttura per esercizio:
   executionImg:'...'  // path locale a assets/exercises/<nome>-esecuzione.png, oppure null
 }
 ```
-Tutti i 19 esercizi sono mappati. `executionImg: null` per esercizi senza foto esecuzione disponibile su Wger; il modal in quel caso mostra solo la mappa muscolare a tutta larghezza.
+Tutti i 20 esercizi training sono mappati (i 3 esercizi di Active Recovery non hanno media). `executionImg: null` per esercizi senza foto esecuzione disponibile su Wger; il modal in quel caso mostra la sola mappa muscolare a tutta larghezza (griglia `1fr` invece di `1fr 1fr`).
 
 **Asset locali esercizi:** `assets/exercises/` — PNG di Wger (Wger.de, CC BY-SA 4.0). Versionati nel repo.
 
@@ -299,14 +347,40 @@ Tutti i 19 esercizi sono mappati. `executionImg: null` per esercizi senza foto e
 - `Chest press in piedi con elastico.muscleImg` riusa `chest-press-orizzontale-muscoli.png` come fallback (file `chest-press-in-piedi-muscoli.png` da generare)
 - `Hip thrust con elastico TUT alto` riusa il `muscleImg` di `Hip thrust con elastico` (stesso muscolo)
 
-### Scheda esercizio AI — `openExerciseAI`
+### Scheda esercizio AI — `openExerciseAI(exName, sessionId)` (3 maggio 2026)
 
-- Pulsante **▶** accanto al nome di ogni esercizio nel dettaglio sessione
-- Apre modal con loading state immediato (`ST.exerciseAIOpen = { exName, loading: true }`)
-- Legge media da `EXERCISE_MEDIA[exName]` (nessuna chiamata dinamica a Wger API)
-- Chiama `callAI(prompt, 600)` con prompt personalizzato per: 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi), ginocchia (valgismo dinamico), elastici a tubo
-- Modal mostra in ordine: griglia 2 colonne `muscleImg | executionImg` (collassa a 1 colonna se `executionImg=null`), testo AI formattato, footer con attribuzione "Mappe muscolari da Wger.de — CC BY-SA 4.0"
-- Il modal è parte di `page-training` innerHTML — gestito tramite `ST.exerciseAIOpen`. Stato: `{ exName, muscleImg, executionImg, svgContent, content }`
+**Trigger**: l'intero **header della card esercizio** (titolo + meta-row) è cliccabile (`onclick="openExerciseAI(...)"`). Niente più pulsante ▶ separato.
+
+**Flusso**:
+1. Apertura sincrona: legge `TRAINING_SESSIONS[sessionId]` + `findExercise(exName, sessionId)` + `EXERCISE_MEDIA[exName]`. Setta `ST.exerciseAIOpen` con TUTTI i dati statici visibili immediatamente + `loading:true` per l'AI Coach
+2. `renderTraining()` mostra subito il modal con sezioni statiche complete (Setup, Esecuzione, Errori, Parametri, Alert)
+3. In parallelo: `callAI(prompt, 200)` con prompt **semplificato** che chiede SOLO un cue avanzato (max 3 frasi: cue tecnico + gestione fatica + variazione respiratoria). NON ripete setup/execution/errori/muscoli (già nelle sezioni statiche)
+4. Risposta AI → setta `content`, `loading:false`, re-render
+
+**Sezioni del modal (in ordine)**:
+1. **Header**: nome esercizio + label sessione (es. "Upper A — Forza") + ✕
+2. **Media**: griglia `1fr 1fr` con `muscleImg` + `executionImg`. Collassa a `1fr` se `executionImg=null`. Immagini con **`height:240px` fissa + `object-fit:contain`** (fix bug dimensioni disuguali)
+3. **Setup**: 1 paragrafo (`<p>`) con la posizione iniziale e attrezzatura
+4. **Esecuzione**: lista numerata `<ol>` con 3-4 step
+5. **Errori comuni**: lista bullet `<ul>` con 3 errori da evitare
+6. **Parametri**: pill compatta `${sets}×${reps} · RIR N · Recupero ...`
+7. **Alert protezione** (condizionale): box giallo/arancio con `⚠️` solo se `ex.alert` è presente (7 esercizi)
+8. **AI Coach** (background teal `#F0F7F5`): mostra "Genero un cue avanzato per te…" durante loading, poi il testo AI
+9. **Footer**: "Mappe muscolari da Wger.de — CC BY-SA 4.0"
+
+**Stato `ST.exerciseAIOpen`**:
+```js
+{
+  exName, sessionId,
+  sessionLabel, sessionType, sessionRir, sessionRest,  // dati sessione
+  sets, reps, eq,                                       // parametri esercizio
+  setup, execution[], commonErrors[], muscles[], alert, // contenuti structured
+  muscleImg, executionImg,                              // media Wger
+  content, loading                                      // AI Coach
+}
+```
+
+Il modal è parte di `page-training` innerHTML, montato/smontato tramite `ST.exerciseAIOpen`. Classi CSS dedicate: `.modal-section`, `.modal-list`, `.modal-params`, `.modal-alert`, `.modal-ai-section`, `.ex-media-grid`, `.ex-media-img`.
 
 ### Info icon (ⓘ) — `showInfoModal`
 
@@ -506,6 +580,29 @@ const OBJ_ADAPT = {
 - La card mostrava sempre `CARICO (kg)` perché il fallback era `|| 'kg'` (5 punti del codice). Cambiato fallback a `|| 'lbs'` (default sensato: gli elastici sono in lbs, anche se l'utente non imposta nulla)
 - File modificato: `saveLocalPrefs`, `saveTrainingSet` (insert workout_sets), rendering modal log (label CARICO), `openSettingsModal`, `saveSettings`
 - L'etichetta `CARICO (...)` ora rispecchia correttamente la preferenza locale
+
+### 3 maggio 2026 — AI prompt progressione con vincoli rigorosi
+
+**Problema**: `suggestProgressionAI()` (suggerimento AI mostrato sotto i badges nelle card esercizio dopo `saveTrainingSet`) generava consigli incoerenti — resistenze inventate (12 lbs, 25 lbs), reps fuori range, logica di progressione confusa.
+
+**Soluzione**: prompt riscritto con vincoli espliciti per garantire output operativi rispettosi del programma:
+
+- **Resistenze SOLO multipli di 10 lbs** (0..250): elenco completo nel prompt + note sulle combinazioni elastici (giallo 10, verde 20, rosso 30, blu 40, nero 50). 0 = corpo libero
+- **Reps SEMPRE entro range esercizio** (`repsMin`-`repsMax` parsati da `exercise.reps`): mai oltre il tetto/sotto il pavimento
+- **Logica doppia progressione esplicitata** in 5 regole condizionali:
+  - Se reps = `repsMax` E RIR effettivo ≥ target → +10 lbs, riparti da `repsMin`
+  - Se reps in range E RIR = target → stessa resistenza, +1 rep
+  - Se RIR > target (troppo facile) → stessa resistenza, alza reps verso `repsMax`
+  - Se RIR = 0 (cedimento) → -10 lbs (warn aggiuntivo se già a 0 lbs)
+  - Se reps < `repsMin` (sotto range) → stessa resistenza, focus arrivare a `repsMin`
+- **Floor 0 / Ceiling 250 lbs** (`Math.max(0, ...)` / `Math.min(250, ...)`)
+
+**Skip espliciti** (guard all'inizio della funzione):
+- `sess.type === 'Recupero'` → skippa Mobilità, Stretching, Vacuum
+- Reps non standard (`/^(\d+)-(\d+)(?:\s+per lato)?$/` non matcha) → skippa esercizi temporali (`20-30 sec`, `10 min`, `5-10 min`)
+- Regex permissiva accetta `"4-6 per lato"` (Bulgarian, Single leg RDL)
+
+**Test scenari verificati**: tetto raggiunto, dentro range, troppo facile, cedimento, sotto range — tutti producono il branch corretto del prompt.
 
 ### 3 maggio 2026 — Aggiornamento esercizi Training (nomi, note, immagini Wger)
 
