@@ -446,6 +446,21 @@ const OBJ_ADAPT = {
 
 ## Cosa abbiamo fatto
 
+### 3 maggio 2026 — Picker reps + resistenza nativi + fix bug unità kg/lbs
+
+**Picker reps + resistenza nativi**
+- Sostituiti input testuale REPS e scroll picker resistenza con `<select>` HTML nativi
+- REPS: range 0-30 step 1, placeholder `—` come default
+- Resistenza: range 0-250 step 10, default = ultimo valore loggato per l'esercizio nello stesso giorno, fallback `—` se prima volta. `0` = corpo libero (nuovo, prima era escluso)
+- Su iOS Safari diventano wheel picker iOS-style nativi (nessun JS custom)
+- Stile uniforme con picker RIR esistente via classe CSS `.picker-select` con `font-size:16px` (mandatory per evitare auto-zoom iOS Safari su tap)
+- Codice rimosso: scroll picker orizzontale (`.resist-pill`, `tl-resist-picker`, `selectResist()`, `scroll-snap-type:x mandatory`, auto-scroll all'apertura)
+
+**Fix bug etichetta unità `CARICO (kg|lbs)`**
+- La card mostrava sempre `CARICO (kg)` perché il fallback era `|| 'kg'` (5 punti del codice). Cambiato fallback a `|| 'lbs'` (default sensato: gli elastici sono in lbs, anche se l'utente non imposta nulla)
+- File modificato: `saveLocalPrefs`, `saveTrainingSet` (insert workout_sets), rendering modal log (label CARICO), `openSettingsModal`, `saveSettings`
+- L'etichetta `CARICO (...)` ora rispecchia correttamente la preferenza locale
+
 ### 3 maggio 2026 — Aggiornamento esercizi Training (nomi, note, immagini Wger)
 
 **TRAINING_SESSIONS riscritto** con tutti i 19 esercizi training rinominati per chiarezza ("con elastico" esplicito, niente "banda", niente ridondanze tipo "orizzontale/verticale"). Note esercizio ora dense (~25 parole): setup attrezzo concreto + indicazioni esecuzione + lista muscoli target. Reps "per lato" specificato per esercizi unilaterali (Bulgarian, Single leg RDL).
@@ -515,12 +530,12 @@ const OBJ_ADAPT = {
 - **Home tile Training** riscritta: query diretta su `workouts ORDER BY date DESC LIMIT 1` come sorgente di verità unica desktop/mobile. 4 stati discreti: `notStarted` ("Inizia il programma — Giorno 1: Upper A") · `doneToday` ("Giorno X completato ✓ · Prossimo: Giorno Y — …") · `inProgress` ("Sessione in corso — Riprendi →") · default ("Giorno Y · {tipo}" con last date + streak). Eliminato il check `train_start_date > today` che bloccava la tile su mobile
 
 **Scala elastici numerica (resistance picker)**
-- Sostituito input testuale con scroll picker orizzontale `RESIST_VALUES = [10..250]` step 10
-- `scroll-snap-type:x mandatory` + `selectResist(v)` aggiorna DOM in place (no re-render → preserva scroll/focus)
-- Auto-scroll alla selezione iniziale all'apertura modal
+- *Aggiornato 3 maggio 2026:* sostituito scroll picker orizzontale con `<select>` HTML nativo (su iOS Safari diventa wheel picker iOS-style automaticamente)
+- `RESIST_VALUES = [0,10,20,30..250]` step 10 (incluso 0 = corpo libero)
 - Helper text fisso: "lbs indicativi · scarto ±15% per gli elastici a tubo"
-- Default = ultimo valore loggato per quell'esercizio nella stessa giornata, fallback 30
+- Default = ultimo valore loggato per quell'esercizio nella stessa giornata, fallback `null` (placeholder `—`) se prima volta
 - Salvato come integer in `workout_sets.resistance` (e come stringa in `training_logs.resistance` per compat)
+- Stile uniforme con REPS e RIR via classe CSS `.picker-select` (font-size:16px obbligatorio per evitare auto-zoom iOS)
 
 **Unità kg/lbs**
 - `<select>` kg/lbs nella sezione Training del modal Impostazioni

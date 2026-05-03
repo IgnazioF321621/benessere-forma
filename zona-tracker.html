@@ -377,6 +377,24 @@ select.inp{cursor:pointer;}
 .info-modal h3{font-family:var(--font-sans,'Manrope',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
 .info-modal p{font-family:var(--font-sans,'Manrope',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
 .info-modal-close{width:100%;padding:10px;border-radius:999px;border:none;background:var(--acc,#2A7A6F);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
+
+/* ── PICKER SELECT (REPS / CARICO / RIR nel modal log serie) ── */
+/* font-size:16px obbligatorio per evitare auto-zoom iOS Safari su tap */
+.picker-select{
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  font-size:16px;
+  font-family:var(--font-mono);
+  font-weight:700;
+  color:var(--t1);
+  background:var(--bg);
+  appearance:none;
+  -webkit-appearance:none;
+  text-align:center;
+  text-align-last:center;
+  box-sizing:border-box;
+}
 </style>
 </head>
 <body>
@@ -1007,7 +1025,7 @@ const ST = {
   bodySaving: false,
   bodyAdvOpen: false,
   audioBlocked: false,
-  trainLogResist: 30,
+  trainLogResist: null,
   editLogKey: null,
   editLogDraft: null,
   aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
@@ -1019,7 +1037,7 @@ const ST = {
 const SESSION_DAY_NUM = { upperA: 1, lowerA: 2, upperB: 3, lowerB: 4 };
 const SESSION_CYCLE = ['upperA','lowerA','upperB','lowerB'];
 
-const RESIST_VALUES = [10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
+const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
 // ═══════════════════════════════════════════════════════════
 // UTILS
@@ -1638,7 +1656,7 @@ function saveLocalPrefs() {
       obiettivo:   ST.profile.obiettivo   || '',
       dieta:       ST.profile.dieta       || '',
       intolleranze: ST.profile.intolleranze || [],
-      unit:        ST.profile.unit        || 'kg',
+      unit:        ST.profile.unit        || 'lbs',
     }));
   } catch(e) {}
 }
@@ -2635,7 +2653,7 @@ async function saveTrainingSet(){
   ST.trainLoggedSets[key] = {reps, resistance, rir};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   // Insert in workout_sets (in parallelo, fail silenzioso se la tabella manca)
-  const unitVal = (ST.profile && ST.profile.unit) || 'kg';
+  const unitVal = (ST.profile && ST.profile.unit) || 'lbs';
   try {
     supa.from('workout_sets').insert({
       user_id: ST.user.id,
@@ -2771,7 +2789,7 @@ function renderTraining(){
         const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
         const nextSet = loggedKeys.length + 1;
         const allDone = nextSet > e.sets;
-        const unitLbl = (ST.profile && ST.profile.unit) || 'kg';
+        const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
         const badges = loggedKeys.map(k=>{
           const d = ST.trainLoggedSets[k];
           const sn = k.split('_')[2];
@@ -2789,23 +2807,23 @@ function renderTraining(){
           }
           return `<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F0FA;color:#185FA5;padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance+(/^\d+$/.test(String(d.resistance))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:#185FA5;font-size:11px;line-height:1;">✏️</button></span>`;
         }).join('');
-        const resistPills = RESIST_VALUES.map(v=>{
-          const sel = ST.trainLogResist === v;
-          return `<button data-v="${v}" class="resist-pill" onclick="event.stopPropagation();selectResist(${v});" style="scroll-snap-align:center;flex-shrink:0;padding:8px 12px;border-radius:10px;border:1.5px solid ${sel?'#185FA5':'var(--s2)'};background:${sel?'#E8F0FA':'var(--bg)'};color:${sel?'#185FA5':'var(--t2)'};font-family:var(--font-mono);font-weight:700;font-size:14px;cursor:pointer;min-width:48px;">${v}</button>`;
-        }).join('');
+        const resistOptions = RESIST_VALUES.map(v =>
+          `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
+        ).join('');
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
             <div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">REPS</label>
-                <input id="tl-reps" type="number" min="1" max="30" placeholder="0"
-                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid #185FA5;font-size:16px;font-family:var(--font-mono);font-weight:700;color:var(--t1);background:var(--bg);text-align:center;box-sizing:border-box;">
+                <select id="tl-reps" class="picker-select" style="border:1.5px solid #185FA5;">
+                  <option value="" disabled selected>—</option>
+                  ${Array.from({length:31}, (_,i)=>`<option value="${i}">${i}</option>`).join('')}
+                </select>
               </div>
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                <select id="tl-rir"
-                  style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--s2);font-size:13px;font-family:var(--font-mono);color:var(--t1);background:var(--bg);">
+                <select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);">
                   <option value="">—</option>
                   <option value="0">0</option>
                   <option value="1">1</option>
@@ -2816,8 +2834,12 @@ function renderTraining(){
             </div>
             <div style="margin-bottom:6px;">
               <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
-              <div id="tl-resist-picker" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:6px;padding:2px 0 6px;-webkit-overflow-scrolling:touch;">${resistPills}</div>
-              <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:2px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
+              <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);"
+                style="border:1.5px solid var(--s2);">
+                <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
+                ${resistOptions}
+              </select>
+              <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:4px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
             </div>
             <div style="display:flex;gap:8px;">
               <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
@@ -5176,29 +5198,17 @@ function openLogModal(sessionId, exName, setNum){
     .sort();
   const lastKey = prevKeys.pop();
   const lastResist = lastKey ? ST.trainLoggedSets[lastKey]?.resistance : null;
+  // Default = ultimo valore loggato per questo esercizio oggi.
+  // Se prima volta o valore fuori RESIST_VALUES → null (placeholder "—").
   let initial = parseInt(lastResist);
-  if(isNaN(initial) || !RESIST_VALUES.includes(initial)) initial = 30;
+  if(isNaN(initial) || !RESIST_VALUES.includes(initial)) initial = null;
   ST.trainLogResist = initial;
   ST.trainLogOpen = { sessionId, exName, setNum };
   _unlockAudio();
   renderTraining();
   setTimeout(()=>{
-    const picker = document.getElementById('tl-resist-picker');
-    if(picker){
-      const sel = picker.querySelector('.resist-pill[data-v="'+initial+'"]');
-      if(sel) sel.scrollIntoView({block:'nearest', inline:'center', behavior:'auto'});
-    }
     document.getElementById('tl-reps')?.focus();
   }, 50);
-}
-function selectResist(v){
-  ST.trainLogResist = v;
-  document.querySelectorAll('#tl-resist-picker .resist-pill').forEach(b=>{
-    const sel = parseInt(b.dataset.v) === v;
-    b.style.borderColor = sel?'#185FA5':'var(--s2)';
-    b.style.background  = sel?'#E8F0FA':'var(--bg)';
-    b.style.color       = sel?'#185FA5':'var(--t2)';
-  });
 }
 
 // ── Edit serie già loggata ────────────────────────────────
@@ -6175,7 +6185,7 @@ function openSettingsModal() {
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
   const unitSel = document.getElementById('set-unit');
-  if(unitSel) unitSel.value = p.unit || 'kg';
+  if(unitSel) unitSel.value = p.unit || 'lbs';
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -6300,7 +6310,7 @@ async function saveSettings() {
   if(!tsErr && ST.profile) ST.profile.train_start_date = trainStartVal;
 
   // Unità peso/carico — salvata solo in localStorage prefs
-  const unitVal = document.getElementById('set-unit')?.value || 'kg';
+  const unitVal = document.getElementById('set-unit')?.value || 'lbs';
   if(ST.profile) ST.profile.unit = unitVal;
 
   // Aggiorna stato locale
