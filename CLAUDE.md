@@ -267,31 +267,37 @@ const ST = {
 
 **Protezioni:** lombari e ginocchia
 
-### TRAINING_SESSIONS — esercizi aggiornati (maggio 2026)
+### TRAINING_SESSIONS — esercizi aggiornati (3 maggio 2026)
 
-Ogni esercizio ha: `{ name, sets, reps, eq, note }`. Il campo `note` viene mostrato in corsivo nella card esercizio.
+Ogni esercizio ha: `{ name, sets, reps, eq, note }` (+ opzionale `iso:true` per esercizi isolation/isometrici, usato da `getRestSec` per calcolare il recupero). Il campo `note` viene mostrato in corsivo nella card esercizio — note ora dense (~25 parole) con setup attrezzo + esecuzione + muscoli target.
+
+Convenzioni nomi: tutti gli esercizi con elastico riportano "con elastico" nel nome (es. "Chest press in piedi con elastico"). Nessuna ridondanza tipo "banda elastica".
 
 | Sessione | Esercizi |
 |---|---|
-| Upper A (Forza) | Trazioni alla sbarra, Chest press orizzontale, Shoulder press verticale, Row orizzontale, Face pull |
-| Upper B (Ipertrofia) | Inverted row con elastico, Chest press inclinata, Lateral raise, Row inclinato con barra corta, Curl bicipiti, Tricipiti overhead |
-| Lower A (Forza) | Bulgarian split squat, Romanian deadlift, Hip thrust, Glute bridge isometrico |
-| Lower B (Ipertrofia) | Squat talloni rialzati, Single leg Romanian deadlift, Hip thrust TUT alto, Leg curl con fitball, Calf raise |
+| Upper A (Forza) | Trazioni alla sbarra, Chest press in piedi con elastico, Shoulder press in piedi con elastico, Row in piedi con elastico, Face pull con elastico |
+| Upper B (Ipertrofia) | Inverted row con elastico, Chest press inclinata su panca, Lateral raise con elastico, Row inclinato in piedi busto 45°, Curl bicipiti con elastico, Tricipiti overhead con elastico |
+| Lower A (Forza) | Bulgarian split squat con elastico, Romanian deadlift con elastico, Hip thrust con elastico, Glute bridge isometrico con cavigliera |
+| Lower B (Ipertrofia) | Squat con elastico e talloni rialzati, Single leg Romanian deadlift con elastico, Hip thrust con elastico TUT alto, Leg curl con elastico sulla fitball, Calf raise con elastico |
 | Recovery | Mobilità articolare, Stretching, Vacuum + respirazione diaframmatica |
 
-### EXERCISE_MEDIA — media per esercizi
+### EXERCISE_MEDIA — media per esercizi (3 maggio 2026)
 
 Oggetto globale definito prima di `TRAINING_SESSIONS`. Struttura per esercizio:
 ```js
 {
-  wger: [...],      // URL immagini Wger
-  videos: [...],    // URL video Wger (.MOV)
-  muscleImg: '...'  // percorso locale assets/muscles/<nome>.jpg
+  muscleImg:   '...', // path locale a assets/exercises/<nome>-muscoli.png (mappa muscolare Wger)
+  executionImg:'...'  // path locale a assets/exercises/<nome>-esecuzione.png, oppure null
 }
 ```
-Esercizi con media configurati: Trazioni alla sbarra, Chest press orizzontale, Chest press inclinata, Shoulder press verticale, Row orizzontale, Face pull (video + muscleImg).
+Tutti i 19 esercizi sono mappati. `executionImg: null` per esercizi senza foto esecuzione disponibile su Wger; il modal in quel caso mostra solo la mappa muscolare a tutta larghezza.
 
-**Asset locali muscoli:** `assets/muscles/` — aggiungere PNG/JPG manualmente e committare separatamente.
+**Asset locali esercizi:** `assets/exercises/` — PNG di Wger (Wger.de, CC BY-SA 4.0). Versionati nel repo.
+
+**Note temporanee** (TODO per ripuliture future):
+- Alcuni `executionImg` puntano a varianti `*-esecuzione-1.png` (esistono `-1` e `-2` da combinare in un'unica immagine senza suffisso)
+- `Chest press in piedi con elastico.muscleImg` riusa `chest-press-orizzontale-muscoli.png` come fallback (file `chest-press-in-piedi-muscoli.png` da generare)
+- `Hip thrust con elastico TUT alto` riusa il `muscleImg` di `Hip thrust con elastico` (stesso muscolo)
 
 ### Scheda esercizio AI — `openExerciseAI`
 
@@ -299,8 +305,8 @@ Esercizi con media configurati: Trazioni alla sbarra, Chest press orizzontale, C
 - Apre modal con loading state immediato (`ST.exerciseAIOpen = { exName, loading: true }`)
 - Legge media da `EXERCISE_MEDIA[exName]` (nessuna chiamata dinamica a Wger API)
 - Chiama `callAI(prompt, 600)` con prompt personalizzato per: 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi), ginocchia (valgismo dinamico), elastici a tubo
-- Modal mostra in ordine: video (se presenti), immagini (scroll orizzontale), mappa muscolare, testo AI formattato
-- Il modal è parte di `page-training` innerHTML — gestito tramite `ST.exerciseAIOpen`
+- Modal mostra in ordine: griglia 2 colonne `muscleImg | executionImg` (collassa a 1 colonna se `executionImg=null`), testo AI formattato, footer con attribuzione "Mappe muscolari da Wger.de — CC BY-SA 4.0"
+- Il modal è parte di `page-training` innerHTML — gestito tramite `ST.exerciseAIOpen`. Stato: `{ exName, muscleImg, executionImg, svgContent, content }`
 
 ### Info icon (ⓘ) — `showInfoModal`
 
@@ -432,12 +438,35 @@ const OBJ_ADAPT = {
 - [x] Fix crash tab Piano quando `train_start_date` è nel futuro
 - [x] Scheda esercizio AI con modal (video Wger, immagini, mappa muscolare, testo AI)
 - [x] `EXERCISE_MEDIA` — media statici per Upper A + Face pull
-- [ ] Completare `EXERCISE_MEDIA` per Upper B, Lower A, Lower B, Recovery
-- [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente
+- [x] Completare `EXERCISE_MEDIA` per Upper B, Lower A, Lower B (3 maggio 2026): tutti i 19 esercizi training mappati con `muscleImg`+`executionImg` PNG Wger locali in `assets/exercises/`
+- [x] Nomi esercizi normalizzati ("con elastico" esplicito, no ridondanze) + note dense con muscoli target (3 maggio 2026)
+- [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
 ## Cosa abbiamo fatto
+
+### 3 maggio 2026 — Aggiornamento esercizi Training (nomi, note, immagini Wger)
+
+**TRAINING_SESSIONS riscritto** con tutti i 19 esercizi training rinominati per chiarezza ("con elastico" esplicito, niente "banda", niente ridondanze tipo "orizzontale/verticale"). Note esercizio ora dense (~25 parole): setup attrezzo concreto + indicazioni esecuzione + lista muscoli target. Reps "per lato" specificato per esercizi unilaterali (Bulgarian, Single leg RDL).
+
+**EXERCISE_MEDIA passato da SVG inline custom (`muscleMapSVG` 7-15KB cad.) a immagini PNG Wger locali**:
+- Struttura nuova: `{ muscleImg, executionImg }` — entrambi path a `assets/exercises/*.png`
+- Tutti i 19 esercizi mappati. `executionImg: null` per esercizi senza foto Wger disponibile (Inverted row, Romanian deadlift, Hip thrust, Glute bridge, Single leg RDL, Hip thrust TUT, Bulgarian, Row in piedi, Face pull, Chest press in piedi)
+- ~44 KB di SVG inline rimossi → ~3.7 KB di references → file più snello
+- Asset PNG Wger.de versionati in `assets/exercises/` (CC BY-SA 4.0)
+
+**Modal `openExerciseAI` semplificato**:
+- Rimosso rendering `muscleMapSVG`/`wgerImages`/`wgerVideos` (stato `ST.exerciseAIOpen` solo `{ exName, muscleImg, executionImg, content }`)
+- Nuovo layout: griglia `1fr 1fr` con muscoli a sinistra + esecuzione a destra; collassa a `1fr` se `executionImg=null`
+- Footer attribuzione "Mappe muscolari da Wger.de — CC BY-SA 4.0"
+
+**Compat storico Supabase**: i record esistenti su `training_logs.exercise_name`/`workout_sets.exercise_name` con vecchi nomi sono stati rimappati manualmente via SQL (no alias dict nel codice).
+
+**Note tecniche residue**:
+- 4 file con suffisso `*-esecuzione-1.png`/`-2.png` — usati `-1` come placeholder, da unire poi in un singolo file senza suffisso
+- `chest-press-in-piedi-muscoli.png` non disponibile → fallback a `chest-press-orizzontale-muscoli.png` (stessi muscoli target)
+
 
 ### 2 maggio 2026 — Modulo Training: AI, persistenza, esperienza in-sessione
 
