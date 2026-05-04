@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04 · 15:51';
+const APP_VERSION = '2026.05.04 · 16:54';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1054,6 +1054,8 @@ const ST = {
   trainSession: null,
   trainLogOpen: null,
   trainCountdown: null,
+  trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
+  trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — countdown per esercizio recupero
   trainActivation: [false, false, false],
   trainActivationTimers: [
     { remaining:120, total:120, running:false },
@@ -1084,9 +1086,9 @@ const ST = {
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
-// Ciclo settimanale completo: G1 upperA · G2 lowerA · G3 recovery · G4 upperB · G5 lowerB · G6 recovery · G7 rest
-const SESSION_DAY_NUM = { upperA: 1, lowerA: 2, recovery: 3, upperB: 4, lowerB: 5, rest: 7 };
-const SESSION_CYCLE = ['upperA','lowerA','recovery','upperB','lowerB','recovery','rest'];
+// Ciclo settimanale completo: G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 recoveryLower · G7 rest
+const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6, rest:7 };
+const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower','rest'];
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
@@ -1936,7 +1938,7 @@ function showPage(id){
 }
 async function loadTrainingHomeData(){
   if(!ST.user || ST.user.id==='test-user-001'){
-    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', mainLastSession:null, streak:0, doneToday:false, inProgress:false };
+    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
     renderHome(); return;
   }
   const today = todayKey();
@@ -1951,35 +1953,13 @@ async function loadTrainingHomeData(){
     const lastWorkout = (lastArr && lastArr[0]) || null;
 
     if(!lastWorkout){
-      ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, mainLastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+      ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
       renderHome(); return;
     }
 
-    // recoveryDayNum: distingue G3 (dopo lowerA) vs G6 (dopo lowerB)
-    // Necessario perché SESSION_CYCLE ha 'recovery' due volte e indexOf restituisce sempre la prima.
-    let recoveryDayNum = null;
-    if (lastWorkout.session_type === 'recovery') {
-      const { data: prevArr } = await supa.from('workouts')
-        .select('session_type')
-        .eq('user_id', ST.user.id)
-        .neq('session_type', 'recovery')
-        .lt('date', lastWorkout.date)
-        .order('date', {ascending:false})
-        .limit(1);
-      const prev = prevArr?.[0]?.session_type;
-      if (prev === 'lowerA') recoveryDayNum = 3;
-      else if (prev === 'lowerB') recoveryDayNum = 6;
-      else recoveryDayNum = 3;
-    }
-
-    // nextSession: cicla su SESSION_CYCLE (7 voci); disambigua recovery via recoveryDayNum
-    let nextSession;
-    if (lastWorkout.session_type === 'recovery') {
-      nextSession = recoveryDayNum === 6 ? 'rest' : 'upperB';
-    } else {
-      const lastIdx = SESSION_CYCLE.indexOf(lastWorkout.session_type);
-      nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx + 1) % SESSION_CYCLE.length] : 'upperA';
-    }
+    // nextSession: cicla su SESSION_CYCLE (7 voci, ogni id è univoco)
+    const lastIdx = SESSION_CYCLE.indexOf(lastWorkout.session_type);
+    const nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx + 1) % SESSION_CYCLE.length] : 'upperA';
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
     const { data: completedArr } = await supa.from('workouts')
@@ -2004,8 +1984,6 @@ async function loadTrainingHomeData(){
       notStarted: false,
       lastDate: lastWorkout.date,
       lastSession: lastWorkout.session_type,
-      mainLastSession: null, // legacy, non più usato (vedi recoveryDayNum)
-      recoveryDayNum,        // 3 o 6 quando lastSession === 'recovery'
       nextSession,
       streak,
       doneToday,
@@ -2014,7 +1992,7 @@ async function loadTrainingHomeData(){
     renderHome();
   } catch(e){
     console.warn('loadTrainingHomeData:', e.message);
-    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, mainLastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
     renderHome();
   }
 }
@@ -2149,20 +2127,9 @@ function renderHome(){
   } else if(hd.doneToday){
     // Sessione completata oggi → "Giorno X completato ✓ · Prossimo: Giorno Y — …"
     const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    // Day number della sessione completata oggi
-    const dayN = hd.lastSession === 'recovery'
-      ? (hd.recoveryDayNum || 3)
-      : (SESSION_DAY_NUM[hd.lastSession] || '?');
+    const dayN = SESSION_DAY_NUM[hd.lastSession] || '?';
     const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    // Day number del prossimo (gestisce 'recovery' che è ambiguo: dopo lowerA→G3, dopo lowerB→G6)
-    let nextDayN;
-    if (hd.nextSession === 'recovery') {
-      if (hd.lastSession === 'lowerA') nextDayN = 3;
-      else if (hd.lastSession === 'lowerB') nextDayN = 6;
-      else nextDayN = 3;
-    } else {
-      nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
-    }
+    const nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
     trainBody = `
       ${tHead('Training', `${completedSess.type} · completata`, '#185FA5')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${completedSess.name}</div>
@@ -2171,9 +2138,7 @@ function renderHome(){
   } else if(hd.inProgress){
     // Workout aperto oggi non ancora completato → "Sessione in corso"
     const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    const dayN = hd.lastSession === 'recovery'
-      ? (hd.recoveryDayNum || 3)
-      : (SESSION_DAY_NUM[hd.lastSession] || '?');
+    const dayN = SESSION_DAY_NUM[hd.lastSession] || '?';
     trainBody = `
       ${tHead('Training', 'Sessione in corso', '#185FA5')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno ${dayN} — ${sessObj.name}</div>
@@ -2182,24 +2147,17 @@ function renderHome(){
   } else {
     // Workout precedenti completati ma non oggi → mostra prossimo
     const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    // Day number del prossimo (gestisce 'recovery' G3 vs G6)
-    let nextDayN;
-    if (hd.nextSession === 'recovery') {
-      if (hd.lastSession === 'lowerA') nextDayN = 3;
-      else if (hd.lastSession === 'lowerB') nextDayN = 6;
-      else nextDayN = 3;
-    } else {
-      nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
-    }
+    const nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
     const lastDateTxt = hd.lastDate ? `Ultima: ${fmtDate(hd.lastDate)}` : '';
     const stk = hd.streak>0 ? `<div style="font-size:9px;letter-spacing:1px;font-family:var(--font-mono);font-weight:700;margin-top:3px;">⚡ ${hd.streak}</div>` : '';
 
-    if (hd.nextSession === 'recovery') {
+    const isRecoveryNext = hd.nextSession === 'recoveryUpper' || hd.nextSession === 'recoveryLower';
+    if (isRecoveryNext) {
       // Tile recupero attivo (verde)
       trainBody = `
         ${tHead('Training', `Giorno ${nextDayN} · Recupero`, '#2A7A6F')}
-        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Recupero attivo</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Mobilità · Stretching · Vacuum${lastDateTxt?' · '+lastDateTxt:''}</div>`;
+        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Mobilità · Stretching${lastDateTxt?' · '+lastDateTxt:''}</div>`;
       trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;border:1px solid rgba(42,122,111,.25);">Inizia →${stk}</div>`;
     } else if (hd.nextSession === 'rest') {
       // Tile riposo totale (grigio) con CTA "Segna fatto"
@@ -2732,58 +2690,112 @@ const TRAINING_SESSIONS = {
       },
     ]
   },
-  recovery:{
-    id:'recovery', name:'Active Recovery', type:'Recupero', rir:null,
-    label:'Active Recovery', rest:null,
+  recoveryUpper:{
+    id:'recoveryUpper', name:'Recupero Upper', type:'Recupero', rir:null,
+    label:'Recupero Upper — G3', rest:null,
     exercises:[
       {
-        name:'Mobilità articolare', sets:1, reps:'10 min',
+        name:'Mobilità spalle e colonna toracica', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Sequenza dinamica focalizzata su anche, spalle, colonna toracica, caviglie.",
+        setup:"Sequenza dinamica focalizzata su spalle, scapole e colonna toracica per recuperare dopo Upper A.",
         execution:[
-          "Movimenti circolari controllati per ogni articolazione",
-          "Range progressivamente più ampio",
-          "Respirazione fluida durante tutto"
+          "Circonduzioni spalle ampie (avanti e dietro)",
+          "Apertura toracica supina con braccia a candeliere",
+          "Cat-cow con focus rotazione toracica"
         ],
         commonErrors:[
           "Movimenti troppo veloci o a scatti",
           "Trattenere il respiro",
           "Forzare il range in fasi di rigidità"
         ],
-        muscles:['articolazioni e tessuti connettivi']
+        muscles:['spalle','scapole','colonna toracica','trapezio']
       },
       {
-        name:'Stretching', sets:1, reps:'10 min',
+        name:'Stretching dorsali e pettorali', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Sequenza statica focalizzata su catene posteriori e flessori dell'anca.",
+        setup:"Allungamento statico catena anteriore alta e dorsali, già lavorati in Upper A.",
         execution:[
-          "Femorali, psoas, pettorale, dorsale",
-          "Tenuta 45-60 sec per posizione",
-          "Respirazione lenta e profonda"
+          "Stretching dorsale al muro (mani in alto, anche indietro)",
+          "Stretching pettorale su angolo o porta",
+          "Tenuta 45-60 sec per posizione"
         ],
         commonErrors:[
           "Rimbalzare nello stretch",
           "Trattenere il respiro",
-          "Forzare oltre il punto di tensione (no dolore)"
+          "Forzare oltre il punto di tensione"
         ],
-        muscles:['catene muscolari principali']
+        muscles:['gran dorsale','pettorale','deltoidi anteriori']
       },
       {
-        name:'Vacuum + respirazione diaframmatica', sets:1, reps:'5-10 min',
+        name:'Stretching glutei e lombari', sets:1, reps:'6 min',
         eq:'Tappetino',
-        setup:"A digiuno mattutino preferibilmente. Posizione supina o quadrupedica.",
+        setup:"Decompressione bassa schiena e glutei dopo Lower A (Bulgarian, RDL, hip thrust).",
         execution:[
-          "Respirazione diaframmatica 360° per 2 min",
-          "Vacuum addominale: espira tutto e risucchia ombelico verso colonna",
-          "Tieni 10-15 sec, ripeti 5-10 volte"
+          "Pigeon pose o figura 4 supino",
+          "Knee-to-chest singola e doppia",
+          "Tenuta 45-60 sec per lato"
         ],
         commonErrors:[
-          "Vacuum tenuto trattenendo aria nei polmoni",
-          "Spalle che salgono durante respirazione",
-          "Praticare a stomaco pieno"
+          "Forzare la rotazione esterna",
+          "Sollevare la spalla opposta dal pavimento",
+          "Trattenere il respiro"
         ],
-        muscles:['trasverso addominale','diaframma']
+        muscles:['glutei','piriforme','quadrato dei lombi']
+      }
+    ]
+  },
+  recoveryLower:{
+    id:'recoveryLower', name:'Recupero Lower', type:'Recupero', rir:null,
+    label:'Recupero Lower — G6', rest:null,
+    exercises:[
+      {
+        name:'Mobilità anche e caviglie', sets:1, reps:'7 min',
+        eq:'Tappetino',
+        setup:"Sequenza dinamica per anche e caviglie, lavorate intensamente in Lower B (squat, single leg RDL, calf raise).",
+        execution:[
+          "Hip CARs (Controlled Articular Rotations)",
+          "Affondi profondi con rotazione",
+          "Mobilizzazione caviglia in dorsiflessione (knee-to-wall)"
+        ],
+        commonErrors:[
+          "Range troppo limitato o troppo forzato",
+          "Tallone che si stacca durante affondo",
+          "Compensi con la bassa schiena"
+        ],
+        muscles:['anche','caviglie','adduttori','tibiali']
       },
+      {
+        name:'Stretching quadricipiti e flessori anca', sets:1, reps:'7 min',
+        eq:'Tappetino',
+        setup:"Allungamento statico catena anteriore coscia, accorciata da squat e Bulgarian.",
+        execution:[
+          "Affondo basso con stiramento psoas (couch stretch)",
+          "Quad stretch in piedi o supino laterale",
+          "Tenuta 45-60 sec per lato"
+        ],
+        commonErrors:[
+          "Iperestendere la lombare per compensare",
+          "Bacino non in retroversione durante couch stretch",
+          "Trattenere il respiro"
+        ],
+        muscles:['quadricipite','psoas','retto femorale']
+      },
+      {
+        name:'Stretching femorali e polpacci', sets:1, reps:'6 min',
+        eq:'Tappetino',
+        setup:"Allungamento catena posteriore gamba, accorciata da RDL, leg curl, calf raise.",
+        execution:[
+          "Stretching femorali da seduto o supino",
+          "Stretching polpaccio al muro (gamba dritta + piegata)",
+          "Tenuta 45-60 sec per posizione"
+        ],
+        commonErrors:[
+          "Curvare la schiena per arrivare ai piedi",
+          "Tallone che si solleva nello stretching polpaccio",
+          "Forzare oltre il dolore"
+        ],
+        muscles:['femorali','gastrocnemio','soleo']
+      }
     ]
   },
   rest:{
@@ -2851,8 +2863,8 @@ function getProgressionSuggestion(exName, sessionId){
 }
 
 function renderCalendar(workouts, year, month){
-  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recovery:'AR', rest:'R' };
-  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recovery:'#2A7A6F', rest:'#9CA3AF' };
+  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recoveryUpper:'AR↑', recoveryLower:'AR↓', rest:'R' };
+  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recoveryUpper:'#2A7A6F', recoveryLower:'#2A7A6F', rest:'#9CA3AF' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
@@ -3373,6 +3385,66 @@ function renderTraining(){
       const today = todayKey();
       const exerciseCards = s.exercises.map(e=>{
         const safeName = e.name.replace(/'/g,"\\'");
+        const isRecoveryEx = s.type === 'Recupero';
+
+        // Branch RECOVERY: timer + checkbox, no form serie/RIR/carico
+        if(isRecoveryEx){
+          if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+          if(!ST.trainRecoveryTimers) ST.trainRecoveryTimers = {};
+          const minutes = parseInt((String(e.reps).match(/(\d+)/) || [0,5])[1], 10) || 5;
+          const totalSec = minutes * 60;
+          if(!ST.trainRecoveryTimers[e.name]){
+            ST.trainRecoveryTimers[e.name] = { remaining: totalSec, total: totalSec, running: false };
+          }
+          const t = ST.trainRecoveryTimers[e.name];
+          const checked = !!ST.trainRecoveryDone[e.name];
+          const mm = String(Math.floor(t.remaining/60)).padStart(2,'0');
+          const ss = String(t.remaining%60).padStart(2,'0');
+          const timerLabel = `${mm}:${ss}`;
+          const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
+          const checkBox = checked
+            ? `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}');" style="width:22px;height:22px;border-radius:6px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+            : `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}');" style="width:22px;height:22px;border-radius:6px;background:transparent;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;"></div>`;
+          let timerBtn;
+          if(checked){
+            timerBtn = '';
+          } else if(t.running){
+            timerBtn = `<button onclick="event.stopPropagation();pauseRecoveryTimer('${safeName}');" title="Pausa" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">⏸</button>`;
+          } else if(t.remaining > 0 && t.remaining < t.total){
+            // Timer in pausa con tempo rimanente: play + reset
+            timerBtn = `<button onclick="event.stopPropagation();resumeRecoveryTimer('${safeName}');" title="Riprendi" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">▶</button><button onclick="event.stopPropagation();resetRecoveryTimer('${safeName}');" title="Reset" style="background:transparent;border:none;width:26px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:14px;font-weight:700;">↻</button>`;
+          } else {
+            // Fresh (remaining===total) o scaduto (remaining===0): solo play
+            timerBtn = `<button onclick="event.stopPropagation();startRecoveryTimer('${safeName}');" title="Avvia" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">▶</button>`;
+          }
+          const timerColor = checked ? 'var(--t3)' : (t.running ? '#185FA5' : '#2A7A6F');
+          const timerDeco = checked ? 'text-decoration:line-through;' : '';
+          return `
+            <div class="exercise-card${checked?' done':''}">
+              <div class="ex-header" onclick="openExerciseAI('${safeName}','${sel}','','')">
+                <div class="ex-title-row">
+                  <h3 class="ex-title">${e.name}</h3>
+                  <span class="ex-info-icon">ⓘ</span>
+                </div>
+                <div class="ex-meta-row">
+                  <span class="ex-params">${e.reps}</span>
+                  <span class="ex-rest">Recupero attivo</span>
+                </div>
+              </div>
+              <div class="ex-info">
+                <div class="ex-equipment">${e.eq}</div>
+                ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
+              </div>
+              <div class="ex-action-row" style="gap:10px;align-items:center;">
+                ${checkBox}
+                <span style="flex:1;font-size:13px;font-weight:600;color:${checked?'var(--t3)':'var(--t1)'};font-family:var(--font-sans);${checked?'text-decoration:line-through;':''}">Fatto</span>
+                <span style="font-size:15px;font-family:var(--font-mono);font-weight:700;color:${timerColor};${timerDeco}min-width:54px;text-align:right;">${timerLabel}</span>
+                ${timerBtn}
+              </div>
+            </div>`;
+        }
+
+        // Branch NON-RECOVERY: logica esistente
         const restSec = getRestSec(sel, e);
         const restTxt = restSecToText(restSec);
         const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
@@ -3534,22 +3606,36 @@ function renderTraining(){
           </button>`;
       }).join('');
 
-      const recoveryCard = `
-        <button onclick="openTrainingSession('recovery');"
-          style="grid-column:1/-1;background:var(--s1,#fff);border:none;border-radius:var(--r-md,12px);padding:16px;text-align:left;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;">
-          <div>
-            <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">Active Recovery</div>
-            <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Mobilità · Respirazione · Stretching</div>
-          </div>
-          <svg width="18" height="18" fill="none" stroke="#2A7A6F" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-        </button>`;
+      const recoveryCards = [
+        { id:'recoveryUpper', name:'Recupero Upper', day:'G3', desc:'Mobilità + stretch · Upper' },
+        { id:'recoveryLower', name:'Recupero Lower', day:'G6', desc:'Mobilità + stretch · Lower' },
+      ].map(rc => {
+        const lastDate = ST.sessionLastCompletion?.[rc.id];
+        const isToday = lastDate === todayKey();
+        const checkBadge = lastDate
+          ? `<div style="display:flex;align-items:center;gap:4px;background:${isToday?'#E6F4F2':'var(--s2)'};color:${isToday?'#2A7A6F':'var(--t3)'};padding:3px 7px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">✓ ${fmtDate(lastDate)}</div>`
+          : '';
+        return `
+          <button onclick="openTrainingSession('${rc.id}');"
+            style="grid-column:1/-1;background:var(--s1,#fff);border:none;border-radius:var(--r-md,12px);padding:14px 16px;text-align:left;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:2px;">${rc.day} · RECUPERO</div>
+              <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">${rc.name}</div>
+              <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${rc.desc}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              ${checkBadge}
+              <svg width="18" height="18" fill="none" stroke="#2A7A6F" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </button>`;
+      }).join('');
 
       body = `
         <div style="padding:16px;">
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">SELEZIONA SESSIONE</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             ${sessionCards}
-            ${recoveryCard}
+            ${recoveryCards}
           </div>
         </div>`;
     }
@@ -3559,10 +3645,10 @@ function renderTraining(){
     const DAY_SPLIT = [
       { day:'G1', session:'upperA',  label:'Upper A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
       { day:'G2', session:'lowerA',  label:'Lower A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
-      { day:'G3', session:'recovery',label:'Riposo',   desc:'Attivo',        color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G3', session:'recoveryUpper',label:'Rec Upper', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
       { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
       { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
-      { day:'G6', session:'recovery',label:'Riposo',   desc:'Attivo',        color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G6', session:'recoveryLower',label:'Rec Lower', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
       { day:'G7', session:null,      label:'Rest',     desc:'Recupero',      color:'#9CA3AF', bg:'#F3F4F6' },
     ];
     const splitCells = DAY_SPLIT.map((d,i)=>`
@@ -3661,7 +3747,7 @@ function renderTraining(){
 
     const allEx = [...new Set(
       Object.values(TRAINING_SESSIONS)
-        .filter(s=>s.id!=='recovery' && s.id!=='rest')
+        .filter(s=>s.id!=='recoveryUpper' && s.id!=='recoveryLower' && s.id!=='rest')
         .flatMap(s=>s.exercises.map(e=>e.name))
     )];
     const selEx = ST.trainProgEx;
@@ -5838,6 +5924,12 @@ function closeTrainingSession(){
   ST.editLogKey = null;
   ST.editLogDraft = null;
   resetAllActivationTimers();
+  // Stop + reset timer recovery (no orfani in background)
+  if(ST.trainRecoveryTimers){
+    Object.values(ST.trainRecoveryTimers).forEach(t => { if(t._iv){ clearInterval(t._iv); t._iv = null; } });
+  }
+  ST.trainRecoveryTimers = {};
+  ST.trainRecoveryDone = {};
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
@@ -5969,6 +6061,75 @@ function resetActivationTimer(idx){
   const t = ST.trainActivationTimers[idx];
   if(t){ t.running = false; t.remaining = t.total; }
   renderTraining();
+}
+
+// ── Recovery timers (sessioni recoveryUpper/recoveryLower) ──
+function startRecoveryTimer(exName){
+  if(!ST.trainRecoveryTimers || !ST.trainRecoveryTimers[exName]) return;
+  const t = ST.trainRecoveryTimers[exName];
+  if(t.running || t.remaining <= 0) return;
+  t.running = true;
+  t._iv = setInterval(()=>{
+    const tt = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
+    if(!tt) return;
+    tt.remaining = Math.max(0, tt.remaining - 1);
+    if(tt.remaining <= 0){
+      tt.running = false;
+      clearInterval(tt._iv); tt._iv = null;
+      if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+      ST.trainRecoveryDone[exName] = true;
+      try { _unlockAudio && _unlockAudio(); } catch(e){}
+      try { navigator.vibrate && navigator.vibrate([300,100,300,100,300]); } catch(e){}
+      checkRecoverySessionDone();
+    }
+    renderTraining();
+  }, 1000);
+  renderTraining();
+}
+function pauseRecoveryTimer(exName){
+  const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
+  if(!t) return;
+  t.running = false;
+  if(t._iv){ clearInterval(t._iv); t._iv = null; }
+  renderTraining();
+}
+function resumeRecoveryTimer(exName){ startRecoveryTimer(exName); }
+function resetRecoveryTimer(exName){
+  const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
+  if(!t) return;
+  if(t._iv){ clearInterval(t._iv); t._iv = null; }
+  t.remaining = t.total;
+  t.running = false;
+  if(ST.trainRecoveryDone) ST.trainRecoveryDone[exName] = false;
+  renderTraining();
+}
+function toggleRecoveryDone(exName){
+  if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+  ST.trainRecoveryDone[exName] = !ST.trainRecoveryDone[exName];
+  if(ST.trainRecoveryDone[exName]){
+    // Se l'utente spunta manualmente, ferma il timer in corso
+    const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
+    if(t && t._iv){ clearInterval(t._iv); t._iv = null; t.running = false; }
+    checkRecoverySessionDone();
+  }
+  renderTraining();
+}
+async function checkRecoverySessionDone(){
+  const sel = ST.trainSession;
+  if(!sel) return;
+  const sess = TRAINING_SESSIONS[sel];
+  if(!sess || sess.type !== 'Recupero') return;
+  const allDone = sess.exercises.every(ex => !!(ST.trainRecoveryDone && ST.trainRecoveryDone[ex.name]));
+  if(!allDone) return;
+  if(ST.trainCompletedToday && ST.trainCompletedToday[sel]) return;
+  ST.trainCompletedToday = ST.trainCompletedToday || {};
+  ST.trainCompletedToday[sel] = true; // anti-duplica immediato
+  const wid = await saveWorkoutRecord(sel);
+  if(wid){
+    showToast('🎉 Recupero completato!');
+    loadTrainingHomeData();
+    loadSessionLastCompletion();
+  }
 }
 
 function editActivationTimer(idx){
