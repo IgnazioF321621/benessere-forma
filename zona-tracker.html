@@ -1007,7 +1007,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04 · 08:27';
+const APP_VERSION = '2026.05.04 · 10:17';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1999,6 +1999,10 @@ async function loadTrainingHomeData(){
   }
 }
 
+function versionFooter(){
+  return `<div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--t3);font-family:var(--font-mono);">v${APP_VERSION}</div>`;
+}
+
 function renderHome(){
   // ── Dati dal giorno corrente (stessa logica di renderOggi) ──
   const today = todayKey();
@@ -2213,7 +2217,7 @@ function renderHome(){
     ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
     ${hasTraining() ? tile('#185FA5', trainBody, trainRight, "showPage('training')") : ''}
     ${tile('#854F0B', bodyBody,  bodyRight,  "showPage('body')")}
-    <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--t3);font-family:var(--font-mono);">v${APP_VERSION}</div>
+    ${versionFooter()}
   `;
 }
 
@@ -3742,7 +3746,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + modalHTML + countdownHTML + deleteConfirmHTML;
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + deleteConfirmHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
@@ -4098,7 +4102,7 @@ function renderBody(){
 
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + body;
+  document.getElementById('page-body').innerHTML = navHTML + body + versionFooter();
 }
 
 function renderPage(id){
@@ -4557,7 +4561,7 @@ function renderOggi(){
   }
 
   html+='<div style="height:130px;flex-shrink:0;"></div>';
-  document.getElementById('page-oggi').innerHTML=nutriSubNav('oggi')+html;
+  document.getElementById('page-oggi').innerHTML=nutriSubNav('oggi')+html+versionFooter();
   const ta=document.getElementById('log-text');
   if(ta){ta.value=ST.logText;ta.addEventListener('input',e=>{ST.logText=e.target.value;});}
 }
