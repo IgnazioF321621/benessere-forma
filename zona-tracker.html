@@ -135,7 +135,7 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .page{display:none;padding:18px 16px;}
 .page.active{display:block;}
 @media(max-width:768px){
-  .page{padding-bottom:calc(env(safe-area-inset-bottom)+140px);}
+  .page,#page-home,#page-oggi,#page-integratori,#page-storico,#page-piano,#page-training,#page-body{padding-bottom:calc(env(safe-area-inset-bottom)+180px);}
 }
 /* ── BOTTOM NAV SVG ── */
 #bottom-nav .nav-btn{flex:1;padding:6px 0 4px;border:none;border-top:none;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;cursor:pointer;color:var(--t3);transition:color .2s;}
@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04 · 11:30';
+const APP_VERSION = '2026.05.04 · 14:53';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4566,7 +4566,6 @@ function renderOggi(){
     }
   }
 
-  html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-oggi').innerHTML=nutriSubNav('oggi')+html+versionFooter();
   const ta=document.getElementById('log-text');
   if(ta){ta.value=ST.logText;ta.addEventListener('input',e=>{ST.logText=e.target.value;});}
@@ -4744,7 +4743,6 @@ function renderIntegratori(){
     });
     html+=`</div>`;
   });
-  html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-integratori').innerHTML=nutriSubNav('integratori')+html;
 }
 
@@ -4780,7 +4778,6 @@ function renderStorico(){
   ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=mealTotals(ms);const isT=day===today;return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
   </div>`;}).join('')}`;
 
-  html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-storico').innerHTML=nutriSubNav('storico')+html;
 }
 
@@ -4943,7 +4940,6 @@ function renderPiano(){
   html += `<div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
   ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
 
-  html+='<div style="height:130px;flex-shrink:0;"></div>';
   document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html;
 }
 
