@@ -1069,6 +1069,7 @@ const ST = {
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
+  lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -1791,6 +1792,7 @@ async function loadAndStart() {
     } else {
       showScreen('onboarding');
     }
+    ST.lastRefreshAt = Date.now(); // anti-race con visibility-refresh durante il fetch in-flight
     refreshInBackground();
     return;
   }
@@ -1818,6 +1820,7 @@ async function loadAndStart() {
     renderOggi();
     showPage('home');
     saveCache();
+    ST.lastRefreshAt = Date.now();
   } else {
     // Onboarding non completato: crea riga profilo vuota se non esiste
     if (!profile) {
@@ -1840,9 +1843,10 @@ async function refreshInBackground() {
       ST.profile = profile;
       if (profileIsComplete(profile)) applyProfile(profile);
     }
-    renderOggi();
+    renderPage(ST.page);
     saveCache();
-  } catch(e) { /* ignora errori in background */ }
+    ST.lastRefreshAt = Date.now();
+  } catch(e) { console.warn('[refresh-bg] error:', e); }
 }
 
 function showScreen(name) {
@@ -6949,18 +6953,32 @@ setTimeout(async () => {
     }
   });
 
-  // ── Polling sessione quando la PWA torna in foreground ──
-  // Necessario su iOS: Safari e PWA hanno storage separati ma i cookie
-  // di sessione Supabase sono condivisi. Quando l'utente torna alla PWA
-  // dopo aver cliccato il Magic Link in Safari, questo polling trova
-  // la sessione attiva e fa login automatico.
+  // ── Polling sessione + re-fetch dati quando la PWA torna in foreground ──
+  // (a) Login: necessario su iOS — Safari e PWA hanno storage separati
+  //     ma i cookie di sessione Supabase sono condivisi. Quando l'utente
+  //     torna alla PWA dopo aver cliccato il Magic Link in Safari,
+  //     questo polling trova la sessione attiva e fa login automatico.
+  // (b) Re-fetch dati: se l'utente è già loggato e sono passati >30s
+  //     dall'ultimo refresh, rilancia refreshInBackground per sincronizzare
+  //     modifiche fatte da altri device. Throttle evita refresh continui
+  //     se l'utente switcha tab velocemente.
   document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && !ST.user) {
+    if (document.visibilityState !== 'visible') return;
+    // (a) Finalizza login se non ancora autenticato
+    if (!ST.user) {
       const {data:{session}} = await supa.auth.getSession();
       if (session?.user) {
         ST.user = session.user;
         await loadAndStart();
       }
+      return;
+    }
+    // (b) Re-fetch silenzioso con throttle 30s
+    if (Date.now() - (ST.lastRefreshAt || 0) < 30000) return;
+    try {
+      await refreshInBackground();
+    } catch(e) {
+      console.warn('[refresh-on-visible] error:', e);
     }
   });
 
