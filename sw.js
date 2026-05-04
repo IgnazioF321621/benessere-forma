@@ -1,7 +1,8 @@
 // Zona Tracker — Service Worker
-// Strategia: network-first per il documento HTML, cache-first per assets esterni
+// Strategia: network-first per il documento HTML, cache-first SOLO per la libreria JS su jsdelivr.
+// Le chiamate REST a *.supabase.co non vengono intercettate (default browser, sempre network).
 
-const CACHE = 'zt-v1';
+const CACHE = 'zt-v2';
 const HTML_URL = '/benessere-forma/zona-tracker.html';
 
 self.addEventListener('install', event => {
@@ -34,8 +35,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Supabase JS e altri CDN → cache-first (cambiano raramente)
-  if (url.hostname.includes('cdn.jsdelivr.net') || url.hostname.includes('supabase')) {
+  // Libreria Supabase JS via CDN → cache-first (URL versionata, cambia raramente).
+  // ATTENZIONE: non includere 'supabase' nell'hostname check, altrimenti
+  // verrebbero cacheate anche le chiamate REST a *.supabase.co (DB) → bug cross-device.
+  if (url.hostname.includes('cdn.jsdelivr.net')) {
     event.respondWith(
       caches.match(event.request).then(cached =>
         cached || fetch(event.request).then(res => {
