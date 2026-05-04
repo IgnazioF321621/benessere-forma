@@ -1005,10 +1005,9 @@ const SLOT_TIPS = {
 const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 
 // ═══════════════════════════════════════════════════════════
-// VERSION
+// VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04.1';
-console.log('[zona-tracker] version:', APP_VERSION);
+const APP_VERSION = '2026.05.04 · 08:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2214,6 +2213,7 @@ function renderHome(){
     ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
     ${hasTraining() ? tile('#185FA5', trainBody, trainRight, "showPage('training')") : ''}
     ${tile('#854F0B', bodyBody,  bodyRight,  "showPage('body')")}
+    <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--t3);font-family:var(--font-mono);">v${APP_VERSION}</div>
   `;
 }
 
