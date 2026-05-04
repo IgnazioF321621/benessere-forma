@@ -51,7 +51,7 @@ Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi 
 4. `getSession()` → sessione esistente
 5. Nessuna sessione → mostra schermata auth
 6. `onAuthStateChange` → ascolta eventi SIGNED_IN / SIGNED_OUT / TOKEN_REFRESHED
-7. `visibilitychange` → polling sessione quando la PWA torna in foreground
+7. `visibilitychange` → polling sessione quando la PWA torna in foreground + **re-fetch dati cross-device** se utente loggato e throttle 30s superato (vedi `ST.lastRefreshAt` e `refreshInBackground`)
 
 ## Schema Supabase
 
@@ -479,10 +479,26 @@ const OBJ_ADAPT = {
 
 ## Service Worker (`sw.js`)
 
-- Network-first per `zona-tracker.html` (sempre fetch fresco dal server)
-- Cache-first per CDN esterni (Supabase JS, jsdelivr)
+- **Network-first** per `zona-tracker.html` (sempre fetch fresco dal server)
+- **Cache-first SOLO per `cdn.jsdelivr.net`** (libreria Supabase JS versionata, OK cacheare)
+- **Le chiamate REST a `*.supabase.co` NON vengono intercettate** → default browser, sempre network
 - Registrato in fondo a `zona-tracker.html`, controlla aggiornamenti ogni 3 min
 - Auto-reload della pagina quando trova una nuova versione del SW
+- Cache name corrente: `zt-v2` (4 maggio 2026 — bumpata da `zt-v1` per pulire risposte stantie)
+
+⚠️ **ANTI-PATTERN — NON aggiungere mai `'supabase'` nel branch cache-first del SW.** Lo abbiamo fatto in passato e ha causato un bug serio di sync cross-device: ogni device cacheava le risposte REST dell'API Supabase ai propri URL, quindi un dispositivo vedeva solo i record creati localmente, mai quelli inseriti da altri device dello stesso utente. Il check hostname deve restare **solo** `cdn.jsdelivr.net`.
+
+## Versioning automatico (`APP_VERSION`)
+
+Sistema di stamp automatico della versione attiva, utile per debug cross-device.
+
+- **Costante:** `const APP_VERSION = '__APP_VERSION__';` definita in cima al file `zona-tracker.html` (vicino allo stato `ST`).
+- **Hook Git:** `.git/hooks/pre-commit` (eseguibile, condiviso fra worktree via `$GIT_COMMON_DIR/hooks/`).
+  - Genera la stringa formato `YYYY.MM.DD · HH:mm` da `date`
+  - Sostituisce con `sed` qualunque valore corrente di `APP_VERSION` (placeholder `__APP_VERSION__` o versione precedente) → re-stage del file
+  - **Skippa** se `zona-tracker.html` non è fra i file in stage del commit (commit di soli `sw.js`, ecc. non bumpano la versione)
+- **Visualizzazione:** helper `versionFooter()` (in `zona-tracker.html`) restituisce `<div>v${APP_VERSION}</div>` + spacer invisibile da 120px. Chiamato in fondo a tutte e 4 le tab principali (Home, Nutrition/Oggi + sub-tab, Training, Body) come ultimo elemento del flusso scrollabile.
+- **Workflow:** in working tree il valore è sempre `__APP_VERSION__` o quello dell'ultimo commit. Solo l'hook al commit successivo lo aggiorna.
 
 ## Prossimi step
 
@@ -519,6 +535,43 @@ const OBJ_ADAPT = {
 - [ ] Fix backfill macro integratori vecchi
 
 ## Cosa abbiamo fatto
+
+### 4 maggio 2026 — Sync cross-device + versioning automatico + UI debug
+
+**Auth: OTP a 6 cifre** (configurato in Supabase Dashboard, non in codice — era 8 prima)
+
+**Re-fetch dati su return-to-foreground (cross-device sync)**
+- Esteso il listener `visibilitychange` esistente: se utente già loggato, rilancia `refreshInBackground()` con throttle 30s (`ST.lastRefreshAt`)
+- `ST.lastRefreshAt` (timestamp ms) impostata in: `loadAndStart` cache-hit (prima della call async, anti-race), cache-miss success, fine `refreshInBackground`
+- `refreshInBackground` ora chiama `renderPage(ST.page)` invece di `renderOggi()` — re-render della pagina corrente, non sempre Oggi
+- Catch loggato come `[refresh-bg] error:` (non più silenzioso) per diagnosi futura
+- Listener split in due rami: (a) login finalization se `!ST.user`, (b) re-fetch silenzioso con prefisso `[refresh-on-visible] error:` su catch
+
+**Service Worker fix critico (BUG STORICO)**
+- Il SW intercettava le chiamate REST a `*.supabase.co` cacheandole → un device vedeva solo i pasti che aveva creato lui, mai quelli inseriti da altri device dello stesso utente
+- Fix: rimosso `'supabase'` dal check hostname del branch cache-first; resta **solo** `cdn.jsdelivr.net` (libreria JS versionata)
+- `CACHE` bumpata da `'zt-v1'` → `'zt-v2'` per forzare cleanup delle risposte cached stantie nell'`activate` handler
+- Vedi sezione "Service Worker (`sw.js`)" + "Note → Debug cross-device"
+
+**Versioning automatico via Git pre-commit hook**
+- `APP_VERSION = '__APP_VERSION__'` come placeholder in `zona-tracker.html`
+- `.git/hooks/pre-commit` (in `$GIT_COMMON_DIR/hooks/`, condiviso fra worktree) inietta `YYYY.MM.DD · HH:mm` al commit, solo se zona-tracker.html è in stage
+- Vedi sezione "Versioning automatico (`APP_VERSION`)"
+
+**Versione visibile in tutte le tab**
+- Helper `versionFooter()` in `zona-tracker.html`: ritorna `<div>v${APP_VERSION}</div>` + spacer invisibile (`aria-hidden`, `pointer-events:none`) da 120px per garantire raggiungibilità via scroll su mobile (era cut-off su Oggi/Body/Home Android)
+- Chiamato in fondo a `renderHome`, `renderOggi`, `renderTraining`, `renderBody`, `renderIntegratori`, `renderStorico`, `renderPiano`
+
+**Padding-bottom mobile pagine**
+- Bumpato da 120 → 140 → 180px in `@media(max-width:768px)` su `.page` (più gli IDs `#page-home, #page-oggi, ...` espliciti per specificità difensiva)
+- Rimossi i 4 spacer hardcoded da 130px alla fine di renderOggi/Integratori/Storico/Piano (legacy, sostituiti dal padding generico + spacer di `versionFooter`)
+
+**Email utente in Impostazioni profilo**
+- Card "ACCOUNT" in cima al modal `settings-modal`: mostra `ST.user.email` (selezionabile, copiabile via `user-select:text`)
+- Popolata in `openSettingsModal()` con fallback `'—'` se `ST.user` o `ST.user.email` mancante
+- Nessun bottone di logout — solo display per debug cross-device
+
+**`ST` esteso**: `lastRefreshAt: 0` (timestamp ms ultimo re-fetch riuscito).
 
 ### 3 maggio 2026 — Riorganizzazione card + modal Training (data-driven sections)
 
@@ -720,3 +773,9 @@ const OBJ_ADAPT = {
 - L'unico file da toccare normalmente è `zona-tracker.html`
 - Il client Supabase si chiama `supa` (non `supabase`)
 - La regola d'oro: un passo alla volta, Ignazio conferma con "ok/fatto" prima di procedere
+
+### Debug cross-device
+
+- **Versione attiva:** ogni device mostra in fondo a ogni tab principale `v${APP_VERSION}` nel formato `vYYYY.MM.DD · HH:mm`. Confronta i numeri sui device per capire chi ha la build vecchia.
+- **Account loggato senza fare logout:** apri Impostazioni profilo (icona ⚙️ in alto a destra) — la prima card mostra l'email attiva (`ST.user.email`). Evita di consumare OTP per "vedere chi è loggato".
+- **Web Inspector iPhone:** collegabile via cavo a Safari Mac (Sviluppo → nome iPhone → pagina). Utile per query diagnostiche dirette a Supabase quando i dati visualizzati non corrispondono al DB. Esempio: `await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', '2026-05-04')` per controllare la realtà del DB confrontandola con `ST.db.days[...].meals`.
