@@ -829,6 +829,12 @@ select.inp{cursor:pointer;}
       <button onclick="closeSettingsModal()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--t3);">×</button>
     </div>
 
+    <!-- Account utente loggato -->
+    <div style="margin-bottom:20px;padding:12px 14px;background:var(--s2);border-radius:8px;">
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:4px;">ACCOUNT</div>
+      <div id="set-email" style="font-size:14px;color:var(--t1);font-family:var(--font-sans);user-select:text;-webkit-user-select:text;word-break:break-all;">—</div>
+    </div>
+
     <!-- Sezione: Dati personali -->
     <div style="margin-bottom:20px;">
       <div class="lbl">Dati personali</div>
@@ -1007,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04 · 10:17';
+const APP_VERSION = '2026.05.04 · 11:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6747,6 +6753,9 @@ function selectSetObiettivo(val) {
 
 function openSettingsModal() {
   const p = ST.profile || {};
+  // Email utente loggato (read-only, per debug cross-device)
+  const emailEl = document.getElementById('set-email');
+  if(emailEl) emailEl.textContent = (ST.user && ST.user.email) || '—';
   // Popola campi base
   document.getElementById('set-fname').value = p.first_name || '';
   document.getElementById('set-lname').value = p.last_name || '';
