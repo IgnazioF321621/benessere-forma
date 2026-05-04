@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.04 · 15:15';
+const APP_VERSION = '2026.05.04 · 15:51';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1084,8 +1084,9 @@ const ST = {
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
-const SESSION_DAY_NUM = { upperA: 1, lowerA: 2, upperB: 3, lowerB: 4 };
-const SESSION_CYCLE = ['upperA','lowerA','upperB','lowerB'];
+// Ciclo settimanale completo: G1 upperA · G2 lowerA · G3 recovery · G4 upperB · G5 lowerB · G6 recovery · G7 rest
+const SESSION_DAY_NUM = { upperA: 1, lowerA: 2, recovery: 3, upperB: 4, lowerB: 5, rest: 7 };
+const SESSION_CYCLE = ['upperA','lowerA','recovery','upperB','lowerB','recovery','rest'];
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
@@ -1954,19 +1955,31 @@ async function loadTrainingHomeData(){
       renderHome(); return;
     }
 
-    // Per il calcolo "Prossimo Giorno", usa l'ultima sessione MAIN (escludi recovery)
-    let mainLastSession = lastWorkout.session_type;
-    if(mainLastSession === 'recovery'){
-      const { data: lastMainArr } = await supa.from('workouts')
+    // recoveryDayNum: distingue G3 (dopo lowerA) vs G6 (dopo lowerB)
+    // Necessario perché SESSION_CYCLE ha 'recovery' due volte e indexOf restituisce sempre la prima.
+    let recoveryDayNum = null;
+    if (lastWorkout.session_type === 'recovery') {
+      const { data: prevArr } = await supa.from('workouts')
         .select('session_type')
         .eq('user_id', ST.user.id)
         .neq('session_type', 'recovery')
+        .lt('date', lastWorkout.date)
         .order('date', {ascending:false})
         .limit(1);
-      mainLastSession = lastMainArr?.[0]?.session_type || null;
+      const prev = prevArr?.[0]?.session_type;
+      if (prev === 'lowerA') recoveryDayNum = 3;
+      else if (prev === 'lowerB') recoveryDayNum = 6;
+      else recoveryDayNum = 3;
     }
-    const lastIdx = mainLastSession ? SESSION_CYCLE.indexOf(mainLastSession) : -1;
-    const nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx+1) % SESSION_CYCLE.length] : 'upperA';
+
+    // nextSession: cicla su SESSION_CYCLE (7 voci); disambigua recovery via recoveryDayNum
+    let nextSession;
+    if (lastWorkout.session_type === 'recovery') {
+      nextSession = recoveryDayNum === 6 ? 'rest' : 'upperB';
+    } else {
+      const lastIdx = SESSION_CYCLE.indexOf(lastWorkout.session_type);
+      nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx + 1) % SESSION_CYCLE.length] : 'upperA';
+    }
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
     const { data: completedArr } = await supa.from('workouts')
@@ -1991,7 +2004,8 @@ async function loadTrainingHomeData(){
       notStarted: false,
       lastDate: lastWorkout.date,
       lastSession: lastWorkout.session_type,
-      mainLastSession,
+      mainLastSession: null, // legacy, non più usato (vedi recoveryDayNum)
+      recoveryDayNum,        // 3 o 6 quando lastSession === 'recovery'
       nextSession,
       streak,
       doneToday,
@@ -2133,11 +2147,22 @@ function renderHome(){
       <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">${firstSess.type} · ${firstSess.exercises.length} esercizi · RIR ${firstSess.rir}</div>`;
     trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
   } else if(hd.doneToday){
-    // Sessione completata oggi → "Giorno X completato ✓ · Prossimo: Giorno Y — Lower A"
+    // Sessione completata oggi → "Giorno X completato ✓ · Prossimo: Giorno Y — …"
     const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    const dayN          = SESSION_DAY_NUM[hd.mainLastSession || hd.lastSession] || '?';
-    const nextSessObj   = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    const nextDayN      = SESSION_DAY_NUM[hd.nextSession] || '?';
+    // Day number della sessione completata oggi
+    const dayN = hd.lastSession === 'recovery'
+      ? (hd.recoveryDayNum || 3)
+      : (SESSION_DAY_NUM[hd.lastSession] || '?');
+    const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+    // Day number del prossimo (gestisce 'recovery' che è ambiguo: dopo lowerA→G3, dopo lowerB→G6)
+    let nextDayN;
+    if (hd.nextSession === 'recovery') {
+      if (hd.lastSession === 'lowerA') nextDayN = 3;
+      else if (hd.lastSession === 'lowerB') nextDayN = 6;
+      else nextDayN = 3;
+    } else {
+      nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
+    }
     trainBody = `
       ${tHead('Training', `${completedSess.type} · completata`, '#185FA5')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${completedSess.name}</div>
@@ -2146,7 +2171,9 @@ function renderHome(){
   } else if(hd.inProgress){
     // Workout aperto oggi non ancora completato → "Sessione in corso"
     const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    const dayN    = SESSION_DAY_NUM[hd.lastSession] || '?';
+    const dayN = hd.lastSession === 'recovery'
+      ? (hd.recoveryDayNum || 3)
+      : (SESSION_DAY_NUM[hd.lastSession] || '?');
     trainBody = `
       ${tHead('Training', 'Sessione in corso', '#185FA5')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno ${dayN} — ${sessObj.name}</div>
@@ -2155,14 +2182,40 @@ function renderHome(){
   } else {
     // Workout precedenti completati ma non oggi → mostra prossimo
     const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
+    // Day number del prossimo (gestisce 'recovery' G3 vs G6)
+    let nextDayN;
+    if (hd.nextSession === 'recovery') {
+      if (hd.lastSession === 'lowerA') nextDayN = 3;
+      else if (hd.lastSession === 'lowerB') nextDayN = 6;
+      else nextDayN = 3;
+    } else {
+      nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
+    }
     const lastDateTxt = hd.lastDate ? `Ultima: ${fmtDate(hd.lastDate)}` : '';
     const stk = hd.streak>0 ? `<div style="font-size:9px;letter-spacing:1px;font-family:var(--font-mono);font-weight:700;margin-top:3px;">⚡ ${hd.streak}</div>` : '';
-    trainBody = `
-      ${tHead('Training', `Giorno ${nextDayN} · ${nextSessObj.type}`, '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${lastDateTxt}${nextSessObj.rir!=null?' · RIR '+nextSessObj.rir:''}</div>`;
-    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →${stk}</div>`;
+
+    if (hd.nextSession === 'recovery') {
+      // Tile recupero attivo (verde)
+      trainBody = `
+        ${tHead('Training', `Giorno ${nextDayN} · Recupero`, '#2A7A6F')}
+        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Recupero attivo</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Mobilità · Stretching · Vacuum${lastDateTxt?' · '+lastDateTxt:''}</div>`;
+      trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;border:1px solid rgba(42,122,111,.25);">Inizia →${stk}</div>`;
+    } else if (hd.nextSession === 'rest') {
+      // Tile riposo totale (grigio) con CTA "Segna fatto"
+      trainBody = `
+        ${tHead('Training', `Giorno ${nextDayN} · Riposo`, '#9CA3AF')}
+        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Riposo totale</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Nessun allenamento programmato${lastDateTxt?' · '+lastDateTxt:''}</div>`;
+      trainRight = `<button onclick="event.stopPropagation();markRestDone();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;cursor:pointer;">Segna fatto${stk}</button>`;
+    } else {
+      // Tile main (Upper/Lower) — comportamento standard
+      trainBody = `
+        ${tHead('Training', `Giorno ${nextDayN} · ${nextSessObj.type}`, '#185FA5')}
+        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${lastDateTxt}${nextSessObj.rir!=null?' · RIR '+nextSessObj.rir:''}</div>`;
+      trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →${stk}</div>`;
+    }
   }
 
   // ── Body tile (dati live) ──
@@ -2733,6 +2786,11 @@ const TRAINING_SESSIONS = {
       },
     ]
   },
+  rest:{
+    id:'rest', name:'Riposo totale', type:'Riposo', rir:null,
+    label:'Riposo totale', rest:null,
+    exercises:[]
+  },
 };
 
 function getRestSec(sessionId, ex){
@@ -2793,8 +2851,8 @@ function getProgressionSuggestion(exName, sessionId){
 }
 
 function renderCalendar(workouts, year, month){
-  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recovery:'AR' };
-  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recovery:'#2A7A6F' };
+  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recovery:'AR', rest:'R' };
+  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recovery:'#2A7A6F', rest:'#9CA3AF' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
@@ -2973,6 +3031,27 @@ async function loadWorkouts(year, month){
     .order('date');
   ST.trainWorkouts = data || [];
   renderTraining();
+}
+
+// Segna manualmente il giorno di riposo totale (G7) come fatto.
+// Idempotente: se esiste già un record 'rest' per oggi non duplica.
+async function markRestDone(){
+  if(!ST.user || ST.user.id==='test-user-001') return;
+  const today = todayKey();
+  try {
+    const { data: existing } = await supa.from('workouts')
+      .select('id').eq('user_id', ST.user.id).eq('date', today).eq('session_type', 'rest').maybeSingle();
+    if(existing){ showToast('Riposo già segnato per oggi'); return; }
+    const { error } = await supa.from('workouts').insert({
+      user_id: ST.user.id, date: today, session_type: 'rest', completed: true, duration_min: 0
+    });
+    if(error) throw error;
+    showToast('🌙 Riposo segnato');
+    loadTrainingHomeData();
+  } catch(e){
+    console.warn('markRestDone:', e.message);
+    showToast('Errore: ' + e.message);
+  }
 }
 
 async function saveWorkoutRecord(sessionId){
@@ -3582,7 +3661,7 @@ function renderTraining(){
 
     const allEx = [...new Set(
       Object.values(TRAINING_SESSIONS)
-        .filter(s=>s.id!=='recovery')
+        .filter(s=>s.id!=='recovery' && s.id!=='rest')
         .flatMap(s=>s.exercises.map(e=>e.name))
     )];
     const selEx = ST.trainProgEx;
