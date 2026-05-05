@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 06:40';
+const APP_VERSION = '2026.05.05 · 07:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2829,20 +2829,28 @@ async function loadLastLoggedSets(sessionId){
   if(!sess) return;
   try {
     const exNames = sess.exercises.map(e => e.name);
-    const { data } = await supa.from('workout_sets')
+    const today = todayKey();
+    // Legge da training_logs (storico autorevole — workout_sets è incompleto su sessioni vecchie).
+    // Esclude le serie loggate oggi così il suggerimento mostra sempre l'ULTIMA SESSIONE PRECEDENTE,
+    // non quella in corso.
+    const { data } = await supa.from('training_logs')
       .select('exercise_name, reps, resistance, rir_actual, date, set_number')
       .eq('user_id', ST.user.id)
-      .eq('session_type', sessionId)
+      .eq('session_id', sessionId)
       .in('exercise_name', exNames)
+      .lt('date', today)
       .order('date', { ascending: false })
       .order('set_number', { ascending: false });
+    // Per ogni esercizio prendi la prima riga (= data più recente, set_number più alto)
     const map = {};
     (data || []).forEach(row => {
       if(!map[row.exercise_name]) map[row.exercise_name] = row;
     });
     ST.lastLoggedSets = map;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
-  } catch(e){}
+  } catch(e){
+    console.warn('loadLastLoggedSets error:', e?.message);
+  }
 }
 
 // ── Suggerimento progressione (sync, legge dalla cache) ──────
@@ -2857,7 +2865,12 @@ function getProgressionSuggestion(exName, sessionId){
     return `💡 Inizia con ${repsMin} reps a 10 lbs`;
   }
   const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-  const resistTxt = (last.resistance != null) ? `${last.resistance} ${unitLbl}` : 'corpo libero';
+  let resistTxt = 'corpo libero';
+  if(last.resistance != null && String(last.resistance).trim() !== ''){
+    const r = String(last.resistance).trim();
+    // Se contiene già unità di misura testuale (es. "Banda viola", "30 lbs"), lascialo com'è
+    resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
+  }
   const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
   return `💡 Ultima volta: ${last.reps}r · ${resistTxt}${rirTxt}`;
 }
