@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 15:43';
+const APP_VERSION = '2026.05.05 · 15:47';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3813,17 +3813,16 @@ function renderTraining(){
     // - Solo muscleImg: griglia single-col
     let mediaHtml = '';
     if(execIsArray){
-      const FRAME_LABELS = ['Posizione iniziale','Posizione finale','Variante'];
+      const FRAME_LABELS = ['1. Posizione iniziale','2. Posizione finale','3. Variante'];
+      const cells = exec.map((src,i)=>`
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;text-align:center;">${FRAME_LABELS[i] || ('Frame '+(i+1))}</div>
+          <img src="${src}" alt="Esecuzione frame ${i+1}" class="ex-media-img" onerror="this.style.display='none'"/>
+        </div>
+      `).join('');
       mediaHtml = `
         ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" style="margin-bottom:12px;" onerror="this.style.display='none'"/>` : ''}
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-          ${exec.map((src,i)=>`
-            <div>
-              <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">${i+1}. ${FRAME_LABELS[i] || ('Frame '+(i+1))}</div>
-              <img src="${src}" alt="Esecuzione frame ${i+1}" class="ex-media-img" onerror="this.style.display='none'"/>
-            </div>
-          `).join('')}
-        </div>`;
+        <div style="display:flex;flex-direction:row;gap:8px;margin-bottom:16px;">${cells}</div>`;
     } else if(hasMuscle || execIsString){
       const onlyOne = hasMuscle !== !!execIsString; // true se solo uno dei due è presente
       mediaHtml = `<div class="ex-media-grid${onlyOne?' single':''}">
