@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 07:27';
+const APP_VERSION = '2026.05.05 · 15:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2277,20 +2277,19 @@ const EXERCISE_MEDIA = {
   },
   'Chest press inclinata su panca': {
     muscleImg: 'assets/exercises/chest-press-inclinata-muscoli.png',
-    // TEMP: usato variant -1.png (esistono -1 e -2; combineremo manualmente in chest-press-inclinata-esecuzione.png)
-    executionImg: 'assets/exercises/chest-press-inclinata-esecuzione-1.png'
+    executionImg: ['assets/exercises/chest-press-inclinata-esecuzione-1.png','assets/exercises/chest-press-inclinata-esecuzione-2.png']
   },
   'Lateral raise con elastico': {
     muscleImg: 'assets/exercises/lateral-raise-muscoli.png',
-    executionImg: 'assets/exercises/lateral-raise-esecuzione-1.png'  // TEMP: variant -1
+    executionImg: ['assets/exercises/lateral-raise-esecuzione-1.png','assets/exercises/lateral-raise-esecuzione-2.png']
   },
   'Row inclinato in piedi busto 45°': {
     muscleImg: 'assets/exercises/row-inclinato-muscoli.png',
-    executionImg: 'assets/exercises/row-inclinato-esecuzione-1.png'  // TEMP: variant -1
+    executionImg: ['assets/exercises/row-inclinato-esecuzione-1.png','assets/exercises/row-inclinato-esecuzione-2.png']
   },
   'Curl bicipiti con elastico': {
     muscleImg: 'assets/exercises/curl-bicipiti-muscoli.png',
-    executionImg: 'assets/exercises/curl-bicipiti-esecuzione-1.png'  // TEMP: variant -1
+    executionImg: ['assets/exercises/curl-bicipiti-esecuzione-1.png','assets/exercises/curl-bicipiti-esecuzione-2.png']
   },
   'Tricipiti overhead con elastico': {
     muscleImg: 'assets/exercises/tricipiti-overhead-muscoli.png',
@@ -3803,7 +3802,35 @@ function renderTraining(){
   let modalHTML = '';
   if(ST.exerciseAIOpen) {
     const ai = ST.exerciseAIOpen;
-    const hasOnlyOneMedia = !!ai.muscleImg && !ai.executionImg;
+    // executionImg può essere: null/'' | string (1 frame) | array (N frame)
+    const exec = ai.executionImg;
+    const execIsArray = Array.isArray(exec) && exec.length > 0;
+    const execIsString = typeof exec === 'string' && exec;
+    const hasMuscle = !!ai.muscleImg;
+    // Per il render:
+    // - Multi-frame: muscleImg full-width sopra, poi execution stacked con etichette numerate
+    // - Singolo: griglia 2-col (muscleImg | executionImg) come prima
+    // - Solo muscleImg: griglia single-col
+    let mediaHtml = '';
+    if(execIsArray){
+      const FRAME_LABELS = ['Posizione iniziale','Posizione finale','Variante'];
+      mediaHtml = `
+        ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" style="margin-bottom:12px;" onerror="this.style.display='none'"/>` : ''}
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+          ${exec.map((src,i)=>`
+            <div>
+              <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">${i+1}. ${FRAME_LABELS[i] || ('Frame '+(i+1))}</div>
+              <img src="${src}" alt="Esecuzione frame ${i+1}" class="ex-media-img" onerror="this.style.display='none'"/>
+            </div>
+          `).join('')}
+        </div>`;
+    } else if(hasMuscle || execIsString){
+      const onlyOne = hasMuscle !== !!execIsString; // true se solo uno dei due è presente
+      mediaHtml = `<div class="ex-media-grid${onlyOne?' single':''}">
+        ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
+        ${execIsString ? `<img src="${exec}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
+      </div>`;
+    }
     const restLabel = ai.sessionRest || (ai.sessionRir != null ? 'recupero standard' : '');
     const paramsLine = [
       (ai.sets && ai.reps) ? `${ai.sets}×${ai.reps}` : '',
@@ -3824,10 +3851,7 @@ function renderTraining(){
           <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
 
-        ${(ai.muscleImg || ai.executionImg) ? `<div class="ex-media-grid${hasOnlyOneMedia?' single':''}">
-          ${ai.muscleImg ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
-          ${ai.executionImg ? `<img src="${ai.executionImg}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
-        </div>` : ''}
+        ${mediaHtml}
 
         ${ai.setup ? `<div class="modal-section">
           <h4>Setup</h4>
