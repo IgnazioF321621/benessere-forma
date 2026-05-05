@@ -958,6 +958,24 @@ const MEAL_SLOTS = [
   {id:'snack_pomeriggio',label:'Merenda',           icon:'🥜', time:'16:30',desc:'Spuntino'},
   {id:'cena',            label:'Cena',              icon:'🫕', time:'20:00',desc:'Pasto serale'},
 ];
+// ── Preselezione intelligente prossimo pasto ────────────────
+// Logica: trova il primo MEAL_SLOTS non ancora loggato OGGI il cui orario è >= ora corrente.
+// Slot passati e non loggati vengono SALTATI (finestra persa). Se nessuno disponibile → domani mattina.
+function computeNextSlot(){
+  const day = getDay(todayKey());
+  const meals = (day && day.meals) ? day.meals : [];
+  const loggedSlots = new Set(meals.map(m => m.slot).filter(Boolean));
+  const now = new Date();
+  const nowHHMM = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  for(const slot of MEAL_SLOTS){
+    if(loggedSlots.has(slot.id)) continue;       // già loggato → skip
+    if(String(slot.time) < nowHHMM) continue;     // finestra persa → skip
+    return { slotId: slot.id, isTomorrow: false, allDone: false };
+  }
+  // Tutti gli slot sono loggati o passati → pianifica domani mattina
+  return { slotId: 'colazione', isTomorrow: true, allDone: true };
+}
+
 const SUGGESTED = {
   colazione:['Whey idrolizzata 30g + latte di avena 250ml + avena 50g + mirtilli 80g','Whey idrolizzata 30g + latte di soia 250ml + banana + burro di mandorle 15g','Whey idrolizzata 30g + latte di riso 250ml + chia 15g + frutti di bosco 100g'],
   pranzo:['Salmone al forno 180g + quinoa 80g + spinaci saltati con limone','Sgombro in scatola + riso integrale 80g + rucola + pomodori','Lenticchie rosse 200g + farro 70g + broccoli + olio EVO','Tonno 150g + patata dolce 120g + insalata verde + limone'],
@@ -1013,7 +1031,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 22:00';
+const APP_VERSION = '2026.05.05 · 22:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1314,7 +1332,7 @@ async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
   return JSON.parse(txt.replace(/```json|```/g,'').trim());
 }
-async function getAdvice(consumed, nextMeal) {
+async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   const rem = {
     kcal:    Math.max(0, ST.TARGET.kcal    - consumed.kcal),
     protein: Math.max(0, ST.TARGET.protein - consumed.protein),
@@ -1392,14 +1410,24 @@ async function getAdvice(consumed, nextMeal) {
 - Carboidrati: ${rem.carbs}g
 - Grassi: ${rem.fat}g`;
 
+  const prossimoPastoLine = isTomorrow
+    ? `PROSSIMO PASTO: ${nextMeal} (PIANIFICAZIONE PER DOMANI MATTINA — l'utente ha completato tutti i pasti di oggi)`
+    : `PROSSIMO PASTO: ${nextMeal}`;
+
+  const istruzioniBase = 'Fornisci 2-3 suggerimenti CONCRETI e VARI rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C).';
+  const notaTomorrow = isTomorrow
+    ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
+    : '';
+  const istruzioniLine = `${istruzioniBase}${notaTomorrow} Italiano, diretto. Max 120 parole.`;
+
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
     'Sei un nutrizionista esperto in dieta a Zona (40-30-30).',
     [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
     macroBlock,
     consumedBlock,
-    `PROSSIMO PASTO: ${nextMeal}`,
-    'Fornisci 2-3 suggerimenti CONCRETI e VARI rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Italiano, diretto. Max 120 parole.',
+    prossimoPastoLine,
+    istruzioniLine,
   ].filter(Boolean);
 
   return await callAI(sections.join('\n\n'), 250);
@@ -4721,6 +4749,12 @@ function suppGroupHeaderHTML(slot, sc, takenN, total, collapsed, label) {
 const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
 const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
 function renderOggi(){
+  // Preselezione intelligente del prossimo pasto (rispetta override manuale)
+  if(!ST.nextSlotUserOverride){
+    const next = computeNextSlot();
+    ST.nextSlot = next.slotId;
+    ST.nextSlotIsTomorrow = next.isTomorrow;
+  }
   const day=getDay(ST.activeDay);
   const meals=day.meals||[];
   const taken=day.suppsTaken||[];
@@ -4796,7 +4830,10 @@ function renderOggi(){
     }
 
     // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
-    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':'Analizza e suggerisci →'}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
+    const adviceBtnLbl = (ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride)
+      ? 'Pianifica colazione di domani →'
+      : 'Analizza e suggerisci →';
+    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value;ST.nextSlotUserOverride=true;renderOggi();">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':adviceBtnLbl}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
     // Form registra pasto — collassabile
     if(!ST.logOpen) {
@@ -6491,8 +6528,11 @@ async function fetchAdvice(){
   const mTot=mealTotals(d.meals||[]);
   const sTot=suppTotalsForIds(d.suppsTaken||[]);
   const cons={kcal:mTot.kcal+sTot.kcal,protein:mTot.protein+sTot.protein,carbs:mTot.carbs+sTot.carbs,fat:mTot.fat+sTot.fat};
+  // isTomorrow=true SOLO se il sistema ha calcolato "domani" E l'utente non ha override-ato la select
+  const isTomorrow = !!ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride;
+  const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
   ST.advLoading=true;ST.advice='';renderOggi();
-  try{ST.advice=await getAdvice(cons,MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label||ST.nextSlot);}
+  try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
   catch(e){ST.advice='Errore AI: '+e.message;}
   ST.advLoading=false;renderOggi();
 }
