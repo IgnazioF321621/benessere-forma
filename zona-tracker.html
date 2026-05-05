@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 16:15';
+const APP_VERSION = '2026.05.05 · 22:00';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1315,8 +1315,94 @@ async function estimateMacros(desc) {
   return JSON.parse(txt.replace(/```json|```/g,'').trim());
 }
 async function getAdvice(consumed, nextMeal) {
-  const rem={kcal:Math.max(0,ST.TARGET.kcal-consumed.kcal),protein:Math.max(0,ST.TARGET.protein-consumed.protein),carbs:Math.max(0,ST.TARGET.carbs-consumed.carbs),fat:Math.max(0,ST.TARGET.fat-consumed.fat)};
-  return await callAI(`Sei un nutrizionista esperto in dieta a Zona (40-30-30).\n\nMacro ancora disponibili oggi:\n- Calorie: ${rem.kcal} kcal\n- Proteine: ${rem.protein}g\n- Carboidrati: ${rem.carbs}g\n- Grassi: ${rem.fat}g\n\nProssimo pasto: ${nextMeal}\n\nProfilo: pescetariano (pesce + possibile uova), no latticini. Obiettivo: riduzione grasso addominale, ferritina bassa.\n\n2-3 suggerimenti concreti. Italiano, diretto. Max 120 parole.`, 250);
+  const rem = {
+    kcal:    Math.max(0, ST.TARGET.kcal    - consumed.kcal),
+    protein: Math.max(0, ST.TARGET.protein - consumed.protein),
+    carbs:   Math.max(0, ST.TARGET.carbs   - consumed.carbs),
+    fat:     Math.max(0, ST.TARGET.fat     - consumed.fat),
+  };
+  const p = ST.profile || {};
+
+  // Mappature leggibili
+  const OBIETTIVO_LBL = {
+    perdita_peso: 'Perdita peso',
+    dimagrimento: 'Perdita peso',
+    ricomposizione: 'Ricomposizione corporea',
+    ipertrofia: 'Ipertrofia / massa muscolare',
+    massa_muscolare: 'Ipertrofia / massa muscolare',
+    forza_performance: 'Forza & performance',
+    longevita: 'Longevità',
+    mantenimento: 'Mantenimento',
+  };
+  const ACTIVITY_LBL = {
+    sedentary: 'Sedentario',
+    light: 'Leggera',
+    lightly_active: 'Leggera',
+    moderate: 'Moderata',
+    active: 'Attiva',
+    very_active: 'Molto attiva',
+  };
+  const SEX_LBL = { M: 'uomo', F: 'donna' };
+
+  // Costruzione blocco UTENTE (solo campi presenti)
+  const userBits = [];
+  if (p.first_name) userBits.push(p.first_name);
+  if (p.sex && SEX_LBL[p.sex]) userBits.push(SEX_LBL[p.sex]);
+  if (p.age) userBits.push(`${p.age} anni`);
+  if (p.weight_kg) userBits.push(`${p.weight_kg}kg`);
+  const userLine = userBits.length ? `UTENTE: ${userBits.join(', ')}` : '';
+
+  const dietaLine = p.dieta ? `DIETA: ${p.dieta}` : '';
+
+  const intolList = Array.isArray(p.intolleranze) ? p.intolleranze.filter(Boolean) : [];
+  const intolLine = intolList.length ? `INTOLLERANZE: ${intolList.join(', ')}` : '';
+
+  // obiettivo: può essere stringa singola o lista comma-separata; prendi tutti i match
+  const obKeys = (p.obiettivo || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const obLabels = obKeys.map(k => OBIETTIVO_LBL[k]).filter(Boolean);
+  const obiettivoLine = obLabels.length ? `OBIETTIVO: ${obLabels.join(', ')}` : '';
+
+  const actKey = (p.activity_level || '').toLowerCase();
+  const attivitaLine = ACTIVITY_LBL[actKey] ? `ATTIVITÀ: ${ACTIVITY_LBL[actKey]}` : '';
+
+  const noteLine = (p.note_salute && String(p.note_salute).trim())
+    ? `NOTE SALUTE: ${String(p.note_salute).trim()}`
+    : '';
+
+  // Pasti già consumati oggi (max 3 più recenti, ordinati per ora se presente)
+  let consumedBlock = '';
+  try {
+    const day = getDay(todayKey());
+    const meals = (day && day.meals) ? day.meals.slice() : [];
+    meals.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+    const recent = meals.slice(-3);
+    if (recent.length) {
+      const lines = recent.map(m => {
+        const slot = m.slot || m.time || 'pasto';
+        const desc = (m.description || '').toString().trim();
+        return desc ? `- ${slot}: ${desc}` : `- ${slot}`;
+      }).join('\n');
+      consumedBlock = `PASTI GIÀ CONSUMATI OGGI:\n${lines}`;
+    }
+  } catch (e) { /* fallback silenzioso */ }
+
+  const macroBlock = `MACRO RIMANENTI OGGI:
+- Calorie: ${rem.kcal} kcal
+- Proteine: ${rem.protein}g
+- Carboidrati: ${rem.carbs}g
+- Grassi: ${rem.fat}g`;
+
+  // Compose prompt: header + sezioni non vuote separate da blank line
+  const sections = [
+    'Sei un nutrizionista esperto in dieta a Zona (40-30-30).',
+    [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
+    macroBlock,
+    consumedBlock,
+    `PROSSIMO PASTO: ${nextMeal}`,
+    'Fornisci 2-3 suggerimenti CONCRETI e VARI rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Italiano, diretto. Max 120 parole.',
+  ].filter(Boolean);
+
+  return await callAI(sections.join('\n\n'), 250);
 }
 
 // ═══════════════════════════════════════════════════════════
