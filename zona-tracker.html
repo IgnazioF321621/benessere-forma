@@ -1013,7 +1013,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 15:47';
+const APP_VERSION = '2026.05.05 · 16:15';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1817,6 +1817,7 @@ async function loadAndStart() {
   await loadSupps();
   await loadAllDays();
   await loadTodaySuppLog();
+  await hydrateTrainingSetsFromCloud();
   const {data: profile, error: profileErr} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
@@ -1852,6 +1853,8 @@ async function refreshInBackground() {
     await loadAllDays();
     // Sovrascrive suppsTaken di oggi con dati freschi PRIMA di renderare
     await loadTodaySuppLog();
+    // Cross-device sync: rinfresca le serie training di oggi dal cloud
+    await hydrateTrainingSetsFromCloud();
     const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
     if (profile) {
       ST.profile = profile;
@@ -2819,6 +2822,51 @@ function findExercise(exName, sessionId){
   const sess = TRAINING_SESSIONS[sessionId];
   if(!sess || !sess.exercises) return null;
   return sess.exercises.find(e => e.name === exName) || null;
+}
+
+// ── Hydration cross-device delle serie loggate OGGI ─────────
+// Ricarica ST.trainLoggedSets da training_logs (Supabase) per evitare che le serie
+// loggate da un altro device non compaiano localmente finché non si rilogga manualmente.
+// Cloud è autoritativo (ultima versione vince in caso di conflitto).
+async function hydrateTrainingSetsFromCloud(){
+  if(!ST.user || ST.user.id==='test-user-001') return;
+  const today = todayKey();
+  try {
+    const { data, error } = await supa.from('training_logs')
+      .select('session_id, exercise_name, set_number, reps, resistance, rir_actual')
+      .eq('user_id', ST.user.id)
+      .eq('date', today);
+    if(error) { console.warn('hydrateTrainingSets:', error.message); return; }
+    if(!data) return;
+    // Costruisci mappa cloud nello stesso formato di trainLoggedSets
+    const cloudMap = {};
+    data.forEach(row => {
+      const key = `${row.session_id}_${row.exercise_name}_${row.set_number}_${today}`;
+      cloudMap[key] = {
+        reps: row.reps,
+        resistance: row.resistance != null ? String(row.resistance) : '',
+        rir: row.rir_actual,
+      };
+    });
+    // Merge: cloud vince in caso di conflitto (più recente, fonte autoritativa)
+    ST.trainLoggedSets = { ...ST.trainLoggedSets, ...cloudMap };
+    // Hydrate workout_sets.id per consentire edit/delete by-id su righe arrivate da altri device
+    try {
+      const { data: wsData } = await supa.from('workout_sets')
+        .select('id, exercise_name, set_number, session_type')
+        .eq('user_id', ST.user.id)
+        .eq('date', today);
+      (wsData || []).forEach(ws => {
+        const k = `${ws.session_type}_${ws.exercise_name}_${ws.set_number}_${today}`;
+        if(ST.trainLoggedSets[k]) ST.trainLoggedSets[k].setId = ws.id;
+      });
+    } catch(e){}
+    // Persist su localStorage del device corrente (consistenza offline)
+    try { localStorage.setItem('zt_train_sets_'+today, JSON.stringify(ST.trainLoggedSets)); } catch(e){}
+    if(ST.page === 'training') renderTraining();
+  } catch(e){
+    console.warn('hydrateTrainingSets exception:', e?.message);
+  }
 }
 
 // ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
@@ -5933,6 +5981,8 @@ function openTrainingSession(sid){
   _unlockAudio();
   requestWakeLock();
   renderTraining();
+  // Hydrate cross-device prima di calcolare suggerimento "ultima volta"
+  hydrateTrainingSetsFromCloud();
   loadLastLoggedSets(sid); // popola cache + ricarica render quando pronto
 }
 function closeTrainingSession(){
