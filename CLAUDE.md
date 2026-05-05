@@ -28,6 +28,33 @@ https://github.com/IgnazioF321621/benessere-forma
 | Cloudflare Worker | `zona-ai.ignaziof23.workers.dev` | Proxy verso Groq API (llama-3.3-70b-versatile) |
 | Supabase | `https://qxiyeiahpoiliwpqslpr.supabase.co` | Database + Auth |
 
+### Free tier limits dei servizi usati (verificati maggio 2026)
+
+**Supabase Free Plan**
+- Database: 500 MB
+- File storage: 1 GB
+- Bandwidth (egress): 5 GB/mese
+- Utenti attivi: 50.000/mese
+- Edge Functions: 500.000 invocations/mese
+- Max progetti free: 2 per organizzazione
+- Pause dopo 7 giorni inattività (si sveglia al primo accesso)
+- Uso commerciale consentito sul free tier
+- Upgrade a Pro: $25/mese (8 GB DB, 100K MAU, 100 GB storage, no pause, backup 7 giorni)
+
+**Cloudflare Workers Free Plan**
+- 100.000 requests/giorno
+- 10ms CPU/request
+- KV storage incluso
+- Workers AI: 10.000 Neurons/giorno (~5.000-10.000 generazioni immagini con Stable Diffusion)
+- Forever free, no scadenza, uso commerciale OK
+
+**Groq Free Tier**
+- `llama-3.3-70b-versatile` (modello attualmente usato): 30 RPM / 6.000 TPM / 1.000 RPD
+- `llama-3.1-8b-instant`: 14.400 RPD (10x più permissivo)
+- Solo text generation, no image generation
+- Reset al midnight UTC
+- Per image generation usare Cloudflare Workers AI
+
 ## Autenticazione
 
 **Metodo attuale: OTP a 6 cifre via email** (da aprile 2026)
@@ -534,7 +561,62 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 
+### Possibili evoluzioni future modulo Training
+
+- Immagini esecuzione per i 9 esercizi senza foto: valutare AI generation via Cloudflare Workers AI (free tier 10.000 Neurons/giorno) + cache su Supabase Storage
+- Hip thrust TUT alto e Single leg RDL: nessun match dataset esterni, restano `EXERCISE_MEDIA` fallback
+- Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
+
 ## Cosa abbiamo fatto
+
+### 5 maggio 2026 — Sessione modulo Training
+
+**Recovery split G3/G6 + ciclo a 7 voci**
+- `SESSION_CYCLE` diventa: `['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower','rest']`
+- Due sessioni recovery distinte: `recoveryUpper` (G3, recupera Upper A + Lower A) e `recoveryLower` (G6, recupera Upper B + Lower B). Ognuna con 3 esercizi mirati ai gruppi muscolari precedenti
+- Nuova `session_type` `'rest'` (G7) con bottone "Segna fatto" sulla tile Home
+- Card recovery senza form serie/RIR/carico: solo timer countdown + checkbox "Fatto" (pattern blocco attivazione). Funzioni: `startRecoveryTimer`, `pauseRecoveryTimer`, `resumeRecoveryTimer`, `resetRecoveryTimer`, `toggleRecoveryDone`, `checkRecoverySessionDone`
+- Nuova funzione `markRestDone()` per segnare il giorno di rest come fatto
+- Tile Home mostra sempre il prossimo step nel ciclo basandosi sull'ultimo workout loggato (qualsiasi tipo), indipendentemente da quanti giorni di calendario sono passati. Rispetta salti e ripartenze
+- `ST.trainRecoveryDone` e `ST.trainRecoveryTimers` nuovi stati in-memory
+- `SESS_LABEL`/`SESS_COLOR` aggiornati con `recoveryUpper:'AR↑'`, `recoveryLower:'AR↓'`, `rest:'R'`
+- Filtro Progressione esclude `recoveryUpper`, `recoveryLower`, `rest`
+
+**Pagina Sessioni layout 2x3**
+- Lista sessioni come griglia 2 colonne: G1+G4 / G2+G5 / G3+G6 (recovery sotto i Lower)
+- Stesso stile/dimensioni per tutte e 6 le card
+- Badge `✓ data` sulle card delle sessioni completate
+
+**Backfill SQL nomi esercizi**
+- Eseguito UPDATE su `training_logs` per allineare i nomi degli esercizi vecchi a quelli nuovi del codice:
+  - `'Trazioni'` → `'Trazioni alla sbarra'`
+  - `'Chest press orizzontale'` → `'Chest press in piedi con elastico'`
+  - `'Shoulder press verticale'` → `'Shoulder press in piedi con elastico'`
+  - `'Row orizzontale'` → `'Row in piedi con elastico'`
+  - `'Face pull'` → `'Face pull con elastico'`
+
+**Suggerimento progressione "Ultima volta" da training_logs**
+- `loadLastLoggedSets` riscritta per leggere da `training_logs` invece che `workout_sets` (più affidabile, storico autoritativo)
+- Filtra `date < today` per non incrociare con la sessione in corso
+- `getProgressionSuggestion`: gestione robusta del campo `resistance` (TEXT libero, può contenere "Banda viola", "150 lbs", "30") evitando doppio "lbs lbs"
+
+**Modal `openExerciseAI`: immagini esecuzione affiancate**
+- `EXERCISE_MEDIA.executionImg` ora supporta `string | array | null`
+- Per i 4 esercizi con 2 frame esecuzione (Chest press inclinata, Lateral raise, Row inclinato, Curl bicipiti) le immagini `-1` e `-2` sono mostrate affiancate in 2 colonne con etichette `1. POSIZIONE INIZIALE` / `2. POSIZIONE FINALE`
+- Layout flex con gap 8px, etichette 10px centrate, mobile-friendly. Funziona anche con 3 frame (futuro)
+
+**Fix sync cross-device serie loggate**
+- Bug risolto: `ST.trainLoggedSets` veniva inizializzato solo da `localStorage`, quindi serie loggate su un device non comparivano sugli altri (anche se erano in `training_logs` su Supabase)
+- Nuova funzione `hydrateTrainingSetsFromCloud()`: all'init utente (o all'apertura sessione) interroga `training_logs` per oggi e mergia con localStorage. Cloud autoritativo se conflitto
+- Recupera anche `workout_sets.id` per ri-popolare `setId` (utile per edit/delete by-id su righe da altri device)
+- Punti di chiamata: `refreshInBackground` (init cache-hit + visibility-refresh), `loadAndStart` cache-miss path, `openTrainingSession` (live)
+
+**Note sul dataset esercizi (free-exercise-db)**
+- Esplorato `yuhonas/free-exercise-db` (873 esercizi, public domain, 2 foto statiche per esercizio)
+- Verdict: qualità grafica anni 2000, niente angolazioni laterali, niente varianti elastico → scartato
+- Esplorato anche ExerciseDB.dev (AGPL-3.0, conflitto licenza), Kaggle ExerciseDB ($300+, troppo caro), YMove ($19-299/mese, abbonamento)
+- Decisione: rimandato il task "immagini esecuzione per i 9 esercizi senza foto wger" a quando troveremo fonte di qualità accettabile
+- Possibile direzione futura: AI image generation on-demand via Cloudflare Workers AI (free tier 10.000 generazioni/giorno) + cache su Supabase Storage
 
 ### 4 maggio 2026 — Sync cross-device + versioning automatico + UI debug
 
