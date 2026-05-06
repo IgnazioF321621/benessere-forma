@@ -470,7 +470,43 @@ select.inp{cursor:pointer;}
 .modal-ai-section{background:#F0F7F5;padding:12px;border-radius:8px;margin-bottom:12px;}
 .modal-ai-section h4{color:#2A7A6F;}
 .modal-ai-section .ai-loading{font-size:13px;color:var(--t3);font-style:italic;font-family:var(--font-sans);}
-.modal-footer{font-size:10px;color:#888;text-align:center;margin-top:8px;padding-top:12px;border-top:1px solid #f0f0f0;font-family:var(--font-sans);}
+/* ── Settings modal — sezione Crediti collassabile (6 maggio 2026) ── */
+.settings-credits{
+  margin-bottom:20px;
+  border:1px solid var(--b2);
+  border-radius:8px;
+  overflow:hidden;
+}
+.settings-credits-toggle{
+  width:100%;padding:12px 14px;
+  background:var(--s1);border:none;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;color:var(--t2);font-family:var(--font-sans);font-weight:600;
+  cursor:pointer;text-align:left;
+}
+.settings-credits-toggle .chevron{
+  font-size:11px;color:var(--t3);
+  transition:transform .2s ease;
+  display:inline-block;
+}
+.settings-credits.expanded .settings-credits-toggle .chevron{
+  transform:rotate(90deg);
+}
+.settings-credits-content{
+  display:none;
+  padding:12px 14px;
+  background:#fff;
+  border-top:1px solid var(--b2);
+}
+.settings-credits.expanded .settings-credits-content{display:block;}
+.settings-credits-content ul{
+  list-style:none;padding:0;margin:0;
+  font-size:12px;line-height:1.8;color:var(--t3);font-family:var(--font-sans);
+}
+.settings-credits-content a{
+  color:var(--acc);text-decoration:none;
+}
+.settings-credits-content a:hover{text-decoration:underline;}
 
 /* ── EXERCISE CARD nuovo layout (3 maggio 2026) ── */
 .exercise-card{background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
@@ -1008,6 +1044,22 @@ select.inp{cursor:pointer;}
       <button class="btn btn-ghost btn-sm" onclick="addEsameRow()" style="margin-top:8px;">+ Aggiungi valore</button>
     </div>
 
+    <!-- Sezione: Crediti & attribuzioni (collassabile) -->
+    <div class="settings-credits">
+      <button type="button" class="settings-credits-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+        <span>Crediti & attribuzioni</span>
+        <span class="chevron">▸</span>
+      </button>
+      <div class="settings-credits-content">
+        <ul>
+          <li>Animazioni esecuzione: <a href="https://exercisedb.dev" target="_blank" rel="noopener">ExerciseDB</a> (open source)</li>
+          <li>Mappe muscolari: <a href="https://wger.de" target="_blank" rel="noopener">Wger.de</a> — Licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></li>
+          <li>Modello AI: Llama 3.3 70B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
+          <li>Database: <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></li>
+        </ul>
+      </div>
+    </div>
+
     <!-- Errore e salva -->
     <div id="set-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:10px;"></div>
     <button id="set-save-btn" class="btn btn-primary btn-full" onclick="saveSettings()">Salva impostazioni →</button>
@@ -1109,7 +1161,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.06 · 22:30';
+const APP_VERSION = '2026.05.06 · 23:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4244,8 +4296,6 @@ function renderTraining(){
             ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
             : `<div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${ai.content || 'Nessun consiglio aggiuntivo disponibile.'}</div>`}
         </div>
-
-        <div class="modal-footer">Mappe muscolari da Wger.de — CC BY-SA 4.0</div>
       </div>
     </div>`;
   }

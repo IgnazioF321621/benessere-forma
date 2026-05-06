@@ -642,6 +642,7 @@ GIF dal Worker prioritaria su Wger PNG (`executionImg`), fallback automatico se 
 - Layout colonna destra (priorità): GIF Worker > skeleton (loading) > Wger PNG single > Wger PNG array multi-frame > vuoto
 - Wger fallback array 2-frame mantiene il layout esistente con `1. POSIZIONE INIZIALE` / `2. POSIZIONE FINALE`
 - Cache hit fra modal: aprire scheda esercizio una volta → cue cached → al recupero successivo nessuna chiamata AI
+- **Footer "Mappe muscolari da Wger.de — CC BY-SA 4.0" rimosso** dal modal (e regola CSS `.modal-footer` cancellata). Attribuzioni spostate nella sezione Crediti del modal Impostazioni profilo.
 
 **4. Modal recupero (rewrite completo)**
 
@@ -695,6 +696,20 @@ Rimossi: `activeTip`, `nextExNote` (legacy).
   - CSS: `.ex-media-skeleton`, `.ex-surrogate-banner`, `.rest-modal-overlay`, `.rest-modal-container`, `.rest-modal-sticky`, `.rest-cd-num`, `.rest-cd-skip`, `.rest-modal-body`, `.rest-ex-name`
 - `scripts/`: tooling matching + esperimenti image-gen
 - `.gitignore`: aggiunti `.env.local`, `scripts/test-output/`, `.DS_Store`
+
+**5. Settings modal — sezione Crediti & attribuzioni**
+
+Sezione collassabile aggiunta in fondo al modal Impostazioni profilo (sopra il bottone "Salva impostazioni"), che raccoglie le attribuzioni licenze prima sparse nei modal di esercizio.
+
+- HTML statico (il `settings-modal` non è renderizzato dinamicamente): toggle inline via `onclick="this.parentElement.classList.toggle('expanded')"` — niente nuovo `ST` state da gestire
+- 4 voci con link esterni (`target="_blank" rel="noopener"`):
+  - Animazioni esecuzione: ExerciseDB
+  - Mappe muscolari: Wger.de + Licenza CC BY-SA 4.0
+  - Modello AI: Llama 3.3 70B via Groq · Cloudflare Workers
+  - Database: Supabase
+- Chevron `▸` ruota di 90° (CSS `transform: rotate(90deg)` su `.expanded .chevron`)
+- Default state: collassata. Ad ogni apertura del modal Impostazioni riparte da collassata (state DOM, non persisted)
+- Classi CSS dedicate: `.settings-credits`, `.settings-credits-toggle`, `.settings-credits-content`
 
 **Roadmap restante esercizi (15/20 da cachare)**: Upper B (6), Lower A (4), Lower B (5). Stesso flusso esercizio-per-esercizio con review manuale dei candidati ExerciseDB.
 
