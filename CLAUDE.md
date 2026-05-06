@@ -569,6 +569,52 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 6 maggio 2026 — Nutrition: AI consigli pasti dinamica
+
+**1. `getAdvice(consumed, nextMeal, isTomorrow=false)` — prompt AI personalizzato**
+- Sostituito prompt hardcoded con builder dinamico che legge da `ST.profile`
+- Include: nome, sesso, età, peso, dieta, intolleranze, obiettivo (multi-valore supportato), `activity_level`, `note_salute`
+- Mappature italiane leggibili per `obiettivo` (perdita_peso/dimagrimento/ricomposizione/ipertrofia/massa_muscolare/forza_performance/longevita/mantenimento) e `activity_level` (sedentary/light/lightly_active/moderate/active/very_active)
+- Sesso M/F → "uomo"/"donna"
+- Ogni blocco del prompt è opzionale: se il campo è null/vuoto, la riga viene omessa
+- Aggiunto blocco "PASTI GIÀ CONSUMATI OGGI" (ultimi 3, ordinati per ora) per evitare ripetizioni nei suggerimenti
+- Note salute (es. "ferritina bassa") vengono passate all'AI con istruzione specifica di considerare nutrienti utili (ferro + vitamina C)
+
+**2. Preselezione intelligente "Prossimo pasto" — nuova funzione `computeNextSlot()`**
+- Calcola lo slot più vicino nel tempo non ancora loggato oggi
+- Regola: slot già loggati o passati senza essere loggati vengono SALTATI
+- Se tutti gli slot sono loggati o passati → ritorna `{slotId:'colazione', isTomorrow:true, allDone:true}` per pianificare il giorno dopo
+- Init in cima a `renderOggi()`: se `!ST.nextSlotUserOverride`, aggiorna `ST.nextSlot` e `ST.nextSlotIsTomorrow`
+- `onchange` della select setta `ST.nextSlotUserOverride=true` (override manuale rispettato)
+- Bottone label dinamica: "Pianifica colazione di domani →" se `isTomorrow && !override`, altrimenti "Analizza e suggerisci →"
+- `getAdvice` riceve flag `isTomorrow`: se true, aggiunge nota "PIANIFICAZIONE PER DOMANI MATTINA" al prompt + suggerimento sul riposo notturno
+
+**3. DB cleanup**
+- Rimosso profilo Ignazio duplicato (id `9b560bab-636a-4dd6-824e-1b534980f5d3`) da Supabase con DELETE cascade su `meals`, `supplements_log`, `fasting_days`, `profiles`
+
+**File toccati**
+- `zona-tracker.html`: `getAdvice` (1317-1410), `computeNextSlot` (961-984 nuova), `renderOggi` init (4751-4757), `adviceBoxHTML` (4833-4836), `fetchAdvice` (6528-6537)
+
+**Commit**
+- `b37bfaa` — Nutrition: prompt AI consigli pasti dinamico basato su profilo onboarding
+- `0a174f7` — Nutrition: preselezione intelligente prossimo pasto + modalità domani
+
+**Test confermati**
+- Profilo Ignazio (pescetariano, ferritina bassa, intolleranza lattosio): consigli con ferro+vit C, niente latticini, dieta rispettata
+- Preselezione automatica "Colazione 08:30" alle 06:27 di un nuovo giorno
+- Da testare cross-profilo con Ginevra (onnivora) e Isabella (pescetariana variante)
+
+**Roadmap aggiornata**
+- ✅ Punto 1: Piano alimentare AI settimanale
+- ✅ Punto 2: Integratori visibili in digiuno
+- ✅ Punto 3: MCP filesystem
+- ✅ Punto 4: Modal impostazioni profilo + esami sangue
+- ✅ NUOVO: AI consigli pasti dinamica + preselezione prossimo pasto intelligente
+- 🔜 Prossimo: Integratori Nutrilite personalizzati in base a obiettivo + esami sangue
+
+**Edge case noti (non bloccanti)**
+- Se l'utente fa override manuale della select scegliendo "Colazione" dopo aver loggato tutto, il bottone torna "Analizza e suggerisci →" invece di "Pianifica colazione di domani →" e il prompt AI non riceve flag `isTomorrow`. Comportamento accettabile per ora.
+
 ### 5 maggio 2026 — Sessione modulo Training
 
 **Recovery split G3/G6 + ciclo a 7 voci**
