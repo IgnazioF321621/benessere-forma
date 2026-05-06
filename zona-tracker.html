@@ -382,6 +382,84 @@ select.inp{cursor:pointer;}
 .ex-media-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;align-items:center;}
 .ex-media-grid.single{grid-template-columns:1fr;}
 .ex-media-img{width:100%;height:240px;object-fit:contain;background:#f8f8f8;border-radius:8px;display:block;}
+.ex-media-skeleton{
+  background:linear-gradient(90deg,#f0f0f0 0%,#f8f8f8 50%,#f0f0f0 100%);
+  background-size:200% 100%;
+  animation:exMediaSkel 1.4s ease-in-out infinite;
+}
+@keyframes exMediaSkel{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.ex-surrogate-banner{
+  display:flex;align-items:flex-start;gap:8px;
+  background:#FFF8E0;border:1px solid #F5E2A3;color:#8A6500;
+  padding:8px 12px;font-size:12px;line-height:1.4;
+  border-radius:8px;margin:0 0 16px 0;
+}
+.ex-surrogate-banner .icon{font-size:14px;line-height:1.2;flex-shrink:0;}
+/* ── REST MODAL — sticky countdown + scrollable body (6 maggio 2026) ── */
+.rest-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:1001;
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:0;
+}
+.rest-modal-container{
+  background:#fff;
+  width:100%;max-width:560px;
+  max-height:100vh;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+@media(min-width:600px){
+  .rest-modal-container{
+    border-radius:16px;
+    max-height:90vh;
+    margin-top:5vh;
+    box-shadow:0 12px 40px rgba(0,0,0,0.18);
+  }
+}
+.rest-modal-sticky{
+  position:sticky;top:0;
+  background:#fff;
+  border-bottom:1px solid #eee;
+  padding:12px 16px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:12px;
+  z-index:2;
+  box-shadow:0 2px 4px rgba(0,0,0,0.04);
+}
+.rest-cd-num{
+  font-size:36px;font-weight:700;
+  font-family:var(--font-mono);
+  line-height:1;
+  font-variant-numeric:tabular-nums;
+  min-width:60px;
+  grid-column:2;
+  justify-self:center;
+  text-align:center;
+}
+.rest-cd-skip{
+  padding:8px 16px;background:var(--s2);color:var(--t2);
+  border:none;border-radius:8px;
+  font-size:13px;font-weight:600;font-family:var(--font-sans);
+  cursor:pointer;
+  grid-column:3;
+  justify-self:end;
+}
+.rest-modal-body{
+  flex:1;overflow-y:auto;
+  padding:20px;
+  -webkit-overflow-scrolling:touch;
+}
+.rest-ex-name{
+  font-size:18px;font-weight:700;
+  color:var(--t1);
+  font-family:var(--font-sans);
+  margin:0 0 16px 0;
+  line-height:1.25;
+}
 .modal-section{margin-bottom:16px;}
 .modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;margin:0 0 8px 0;font-family:var(--font-mono);}
 .modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
@@ -1031,7 +1109,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.05 · 22:24';
+const APP_VERSION = '2026.05.06 · 22:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1097,6 +1175,7 @@ const ST = {
   editLogKey: null,
   editLogDraft: null,
   aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
+  aiCue: {},                        // { `${sessionId}_${exName}`: 'cue AI Coach' } - persistente in sessione
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
@@ -1327,6 +1406,36 @@ async function callAI(prompt, maxTokens=400) {
   if(!r.ok) throw new Error(`Worker error: ${r.status}`);
   const d = await r.json();
   return d.content?.[0]?.text || '';
+}
+// fetchExerciseMedia — query Worker per cache/lookup GIF esecuzione esercizio.
+// Ritorna {status, cached_url?, is_surrogate?, surrogate_note?, ...} oppure
+// {status:'error'} se network/HTTP fallisce. Mai throw — sempre fallback safe.
+async function fetchExerciseMedia(exName) {
+  try {
+    const url = `${WORKER_URL}/exercise-media?name=${encodeURIComponent(exName)}`;
+    const r = await fetch(url);
+    if (!r.ok) return { status: 'error' };
+    return await r.json();
+  } catch(e) {
+    return { status: 'error', error: e.message };
+  }
+}
+// buildCoachPrompt — prompt riusabile per cue AI Coach (modal scheda + modal recupero).
+// Mantiene il prompt unificato: cosi il cue cached e' coerente fra i due modal.
+function buildCoachPrompt(exName, sessionId) {
+  const sess = TRAINING_SESSIONS[sessionId] || {};
+  const sessionLabel = sess.label || sess.name || '';
+  const sessionType = sess.type || '';
+  return `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
+
+Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
+
+Genera SOLO un consiglio operativo aggiuntivo (max 3 frasi) che NON ripeta info già presenti come setup, esecuzione, errori comuni o muscoli target. Concentrati su:
+- Cue tecnico avanzato specifico
+- Gestione fatica nelle ultime serie
+- Variazione respiratoria utile per questo esercizio
+
+NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. Solo prosa diretta. Italiano.`;
 }
 async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
@@ -3122,33 +3231,64 @@ async function loadTrainingLogs(exName){
   renderTraining();
 }
 
-// Beep fine recupero — più discreto del fine-attivazione
-// 2 beep brevi 660Hz gain 0.6 con gap 350ms + vibrazione [200,100,200]
-function playRestEndBeep(){
+// Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1.
+// Tono basso/dolce: sine 600Hz, 80ms, gain 0.35.
+function playPrepBeep(){
+  try {
+    const ctx = _ensureAudioCtx();
+    if(!ctx) return;
+    const fire = ()=>{
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 600;
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const t0 = ctx.currentTime;
+        gain.gain.setValueAtTime(0.35, t0);
+        gain.gain.setValueAtTime(0.35, t0 + 0.06);
+        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.08);
+        osc.start(t0);
+        osc.stop(t0 + 0.09);
+      } catch(e){}
+    };
+    if(ctx.state === 'suspended'){
+      ctx.resume().then(fire).catch(()=>{});
+    } else {
+      fire();
+    }
+  } catch(e){}
+}
+
+// Triplo beep finale — al raggiungimento di 0.
+// Tono alto/forte: sine 880Hz, 3 burst da 100ms, gap 150ms (cycle 250ms), gain 0.7
+// + vibrazione [200,100,200,100,200].
+function playFinalTripleBeep(){
   try {
     if(navigator.vibrate){
-      try { navigator.vibrate([200,100,200]); } catch(e){}
+      try { navigator.vibrate([200,100,200,100,200]); } catch(e){}
     }
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
     const fire = ()=>{
-      for(let i = 0; i < 2; i++){
+      for(let i = 0; i < 3; i++){
         setTimeout(()=>{
           try {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.frequency.value = 660;
+            osc.frequency.value = 880;
             osc.type = 'sine';
             osc.connect(gain);
             gain.connect(ctx.destination);
             const t0 = ctx.currentTime;
-            gain.gain.setValueAtTime(0.6, t0);
-            gain.gain.setValueAtTime(0.6, t0 + 0.18);
-            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.2);
+            gain.gain.setValueAtTime(0.7, t0);
+            gain.gain.setValueAtTime(0.7, t0 + 0.08);
+            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.1);
             osc.start(t0);
-            osc.stop(t0 + 0.21);
+            osc.stop(t0 + 0.11);
           } catch(e){}
-        }, i * 350);
+        }, i * 250); // 100ms tone + 150ms gap
       }
     };
     if(ctx.state === 'suspended'){
@@ -3160,19 +3300,45 @@ function playRestEndBeep(){
 }
 
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
-function startTrainingCountdown(seconds, activeTip, nextExNote){
+function startTrainingCountdown(seconds, exName, sessionId){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
   const endTime = Date.now() + seconds * 1000;
   ST.trainCountdown = {
     seconds,                  // intero corrente per il display (in secondi)
-    total: seconds,           // durata iniziale, per fasi UI
+    total: seconds,           // durata iniziale (legacy, per back-compat)
     done: false,
     beeped: false,            // anti-doppio-beep al rientro foreground
+    prepBeeped: {},           // { 5:true, 4:true, ... } anti-doppio prep beep
     endTime,                  // ms timestamp di scadenza — sorgente di verità
-    activeTip: activeTip || '',
-    nextExNote: nextExNote || null,
+    exName,                   // esercizio current per render Esecuzione/Errori/Alert
+    sessionId,                // sessione corrente (per buildCoachPrompt)
   };
-  ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, render solo quando il secondo cambia
+  ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
+  ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
+}
+
+// Garantisce che ST.aiCue[`${sessionId}_${exName}`] sia popolato. Se gia presente: no-op.
+// Race-safe rispetto a openExerciseAI: entrambi possono scrivere stessa chiave senza danno
+// (callAI puo essere chiamato 2x in casi rari, costo trivial).
+async function ensureRestCue(exName, sessionId) {
+  if (!exName || !sessionId) return;
+  const key = `${sessionId}_${exName}`;
+  if (ST.aiCue[key]) return;
+  const prompt = buildCoachPrompt(exName, sessionId);
+  try {
+    const text = await callAI(prompt, 200);
+    const content = (text || '').trim()
+      .replace(/^["'`]|["'`]$/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>');
+    ST.aiCue[key] = content || '<em style="color:var(--t3);">(nessun cue disponibile)</em>';
+  } catch(e) {
+    ST.aiCue[key] = '<em style="color:#B84C2A;">Errore di connessione AI Coach.</em>';
+  }
+  // Re-render solo se l'utente e' ancora sul modal di recupero per QUESTO esercizio
+  if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
+    renderTraining();
+  }
 }
 
 // Tick: ricalcola remaining da endTime, beep+render solo se serve
@@ -3183,16 +3349,47 @@ function tickCountdown(){
     return;
   }
   const remaining = Math.max(0, Math.ceil((cd.endTime - Date.now()) / 1000));
-  // Beep idempotente alla scadenza (anche se l'utente torna in app dopo lo scadere)
+  // Triplo beep finale alla scadenza (idempotente: anche se utente torna in app dopo)
   if(remaining <= 0 && !cd.beeped){
     cd.beeped = true;
-    playRestEndBeep();
+    playFinalTripleBeep();
   }
   // Re-render solo se il valore intero del secondo è cambiato (evita 4 render/sec)
   if(remaining !== cd.seconds){
+    // Anti-salto: se siamo rientrati da background con un salto >1 secondo,
+    // marca i prep beep saltati come gia' suonati SENZA emetterli (no burst sgradevole).
+    if(remaining < cd.seconds - 1){
+      for(let s = Math.min(5, cd.seconds - 1); s > remaining; s--){
+        cd.prepBeeped[s] = true;
+      }
+    }
+    // Prep beep normale: 1 tic alla transizione in 5,4,3,2,1 (idempotente via cd.prepBeeped)
+    if(remaining >= 1 && remaining <= 5 && !cd.prepBeeped[remaining]){
+      cd.prepBeeped[remaining] = true;
+      playPrepBeep();
+    }
     cd.seconds = remaining;
     if(remaining <= 0) cd.done = true;
-    renderTraining();
+    if (cd.done) {
+      renderTraining(); // full re-render per done state (PRONTO!)
+    } else {
+      // Update surgical: aggiorna solo il numero countdown (preserva scroll utente)
+      const numEl = document.querySelector('.rest-cd-num');
+      if (numEl) {
+        numEl.textContent = String(remaining);
+        if (remaining <= 10) {
+          const pct = remaining / 10;
+          const r = Math.round(42 + (184-42)*(1-pct));
+          const g = Math.round(122 + (76-122)*(1-pct));
+          const b = Math.round(111 + (42-111)*(1-pct));
+          numEl.style.color = 'rgb('+r+','+g+','+b+')';
+        } else {
+          numEl.style.color = '#185FA5';
+        }
+      } else {
+        renderTraining(); // fallback se DOM non ready
+      }
+    }
   }
 }
 
@@ -3454,18 +3651,9 @@ async function saveTrainingSet(){
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
   const exData = currentIdx >= 0 ? sessExercises[currentIdx] : null;
   const sessObj = TRAINING_SESSIONS[form.sessionId];
-  const nextEx = (currentIdx >= 0 && currentIdx < sessExercises.length - 1) ? sessExercises[currentIdx + 1] : null;
-  const nextExNote = nextEx ? `${nextEx.name}: ${nextEx.note}` : null;
   const restSec = getRestSec(form.sessionId, exData);
-  const ACTIVE_TIPS = [
-    '🫁 Fai 5 respirazioni diaframmatiche profonde — espandi le costole lateralmente',
-    '💨 Vacuum addominale — espira tutto, contrai l\'ombelico verso la colonna, tieni 10 sec',
-    '🔄 Cat-Cow lento — 5 ripetizioni, sblocca la cerniera toraco-lombare',
-    '🦵 Mobilità anche — cerchi lenti, 5 per lato',
-  ];
-  const activeTip = ACTIVE_TIPS[Math.floor(Math.random() * ACTIVE_TIPS.length)];
   ST.trainLogOpen = null;
-  startTrainingCountdown(restSec, activeTip, nextExNote);
+  startTrainingCountdown(restSec, form.exName, form.sessionId);
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
   // Suggerimento progressione AI (fail silenzioso)
@@ -3964,19 +4152,30 @@ function renderTraining(){
   let modalHTML = '';
   if(ST.exerciseAIOpen) {
     const ai = ST.exerciseAIOpen;
-    // executionImg può essere: null/'' | string (1 frame) | array (N frame)
-    const exec = ai.executionImg;
-    const execIsArray = Array.isArray(exec) && exec.length > 0;
-    const execIsString = typeof exec === 'string' && exec;
+    // ── Sorgente esecuzione (priorità): GIF Worker > skeleton (loading) > Wger PNG fallback ──
+    const gifSrc = (ai.executionStatus === 'cached' && ai.executionGif) ? ai.executionGif : null;
+    const execLoading = ai.executionLoading === true;
+    // Wger fallback solo se NON abbiamo GIF dal worker
+    const fallbackExec = gifSrc ? null : ai.executionImg;
+    const fallbackIsArray = Array.isArray(fallbackExec) && fallbackExec.length > 0;
+    const fallbackIsString = typeof fallbackExec === 'string' && fallbackExec;
     const hasMuscle = !!ai.muscleImg;
-    // Per il render:
-    // - Multi-frame: muscleImg full-width sopra, poi execution stacked con etichette numerate
-    // - Singolo: griglia 2-col (muscleImg | executionImg) come prima
-    // - Solo muscleImg: griglia single-col
+
+    // Cella destra (priorità: GIF > skeleton > PNG single > nulla).
+    // Il fallback array multi-frame Wger usa un layout dedicato sotto.
+    let rightCellHtml = '';
+    if (gifSrc) {
+      rightCellHtml = `<img src="${gifSrc}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>`;
+    } else if (execLoading) {
+      rightCellHtml = `<div class="ex-media-img ex-media-skeleton" aria-label="Caricamento esecuzione"></div>`;
+    } else if (fallbackIsString) {
+      rightCellHtml = `<img src="${fallbackExec}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>`;
+    }
+
     let mediaHtml = '';
-    if(execIsArray){
+    if (!gifSrc && !execLoading && fallbackIsArray) {
       const FRAME_LABELS = ['1. Posizione iniziale','2. Posizione finale','3. Variante'];
-      const cells = exec.map((src,i)=>`
+      const cells = fallbackExec.map((src,i)=>`
         <div style="flex:1;min-width:0;">
           <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;text-align:center;">${FRAME_LABELS[i] || ('Frame '+(i+1))}</div>
           <img src="${src}" alt="Esecuzione frame ${i+1}" class="ex-media-img" onerror="this.style.display='none'"/>
@@ -3985,13 +4184,18 @@ function renderTraining(){
       mediaHtml = `
         ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" style="margin-bottom:12px;" onerror="this.style.display='none'"/>` : ''}
         <div style="display:flex;flex-direction:row;gap:8px;margin-bottom:16px;">${cells}</div>`;
-    } else if(hasMuscle || execIsString){
-      const onlyOne = hasMuscle !== !!execIsString; // true se solo uno dei due è presente
+    } else if (hasMuscle || rightCellHtml) {
+      const onlyOne = !hasMuscle || !rightCellHtml; // true se solo una delle due celle
       mediaHtml = `<div class="ex-media-grid${onlyOne?' single':''}">
         ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
-        ${execIsString ? `<img src="${exec}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
+        ${rightCellHtml}
       </div>`;
     }
+
+    // Banner surrogato — solo quando la GIF Worker e' in pagina E e' marcata surrogata
+    const surrogateBanner = (gifSrc && ai.executionSurrogate && ai.executionSurrogateNote)
+      ? `<div class="ex-surrogate-banner"><span class="icon">ⓘ</span><span>${ai.executionSurrogateNote}</span></div>`
+      : '';
     const restLabel = ai.sessionRest || (ai.sessionRir != null ? 'recupero standard' : '');
     const paramsLine = [
       (ai.sets && ai.reps) ? `${ai.sets}×${ai.reps}` : '',
@@ -4013,6 +4217,7 @@ function renderTraining(){
         </div>
 
         ${mediaHtml}
+        ${surrogateBanner}
 
         ${ai.setup ? `<div class="modal-section">
           <h4>Setup</h4>
@@ -4048,39 +4253,69 @@ function renderTraining(){
   let countdownHTML = '';
   if(ST.trainCountdown){
     const cd = ST.trainCountdown;
-    let cdBody = '';
     if(cd.done){
-      cdBody = `<div style="font-size:52px;line-height:1;margin-bottom:12px;">💪</div>
-        <div style="font-size:26px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);letter-spacing:.02em;margin-bottom:24px;">PRONTO!</div>
-        <button onclick="skipCountdown()" style="padding:10px 28px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>`;
+      // PRONTO! state — invariato
+      countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;">
+        <div class="info-modal" style="max-width:300px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
+          <div style="font-size:52px;line-height:1;margin-bottom:12px;">💪</div>
+          <div style="font-size:26px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);letter-spacing:.02em;margin-bottom:24px;">PRONTO!</div>
+          <button onclick="skipCountdown()" style="padding:10px 28px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>
+        </div>
+      </div>`;
     } else {
-      const phase = cd.seconds > (cd.total - 30) ? 1 : (cd.seconds <= 10 ? 3 : 2);
-      if(phase === 1){
-        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px;">Recupero attivo</div>
-          <div style="font-size:14px;line-height:1.65;color:var(--t1);font-family:var(--font-sans);margin-bottom:18px;">${cd.activeTip}</div>
-          <div style="font-size:34px;font-weight:700;font-family:var(--font-mono);color:#185FA5;margin-bottom:16px;">${cd.seconds}</div>
-          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
-      } else if(phase === 2){
-        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Prossimo esercizio</div>
-          <div style="font-size:13px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);margin-bottom:18px;">${cd.nextExNote || 'Ottimo lavoro — ultima serie completata!'}</div>
-          <div style="font-size:34px;font-weight:700;font-family:var(--font-mono);color:#185FA5;margin-bottom:16px;">${cd.seconds}</div>
-          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
-      } else {
+      // Sticky bar countdown + sezioni Esecuzione/Errori/Alert/AI Coach
+      const ex = findExercise(cd.exName, cd.sessionId);
+      const cueKey = `${cd.sessionId}_${cd.exName}`;
+      const cueContent = ST.aiCue[cueKey];
+      const cueLoading = !cueContent;
+
+      // Color shift ultimi 10 sec
+      let numColor = '#185FA5';
+      if (cd.seconds <= 10) {
         const pct = cd.seconds / 10;
         const r = Math.round(42 + (184-42)*(1-pct));
         const g = Math.round(122 + (76-122)*(1-pct));
         const b = Math.round(111 + (42-111)*(1-pct));
-        const numColor = 'rgb('+r+','+g+','+b+')';
-        cdBody = `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Quasi pronto…</div>
-          <div style="font-size:80px;font-weight:700;font-family:var(--font-mono);color:${numColor};line-height:1;margin-bottom:16px;">${cd.seconds}</div>
-          <button onclick="skipCountdown()" style="padding:7px 18px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Salta ⏭</button>`;
+        numColor = 'rgb('+r+','+g+','+b+')';
       }
+
+      const executionList = (ex?.execution && ex.execution.length)
+        ? `<ol class="modal-list">${ex.execution.map(s=>`<li>${s}</li>`).join('')}</ol>` : '';
+      const errorsList = (ex?.commonErrors && ex.commonErrors.length)
+        ? `<ul class="modal-list">${ex.commonErrors.map(s=>`<li>${s}</li>`).join('')}</ul>` : '';
+
+      countdownHTML = `<div class="rest-modal-overlay">
+        <div class="rest-modal-container">
+          <div class="rest-modal-sticky">
+            <div class="rest-cd-num" style="color:${numColor};">${cd.seconds}</div>
+            <button class="rest-cd-skip" onclick="skipCountdown()">Salta ⏭</button>
+          </div>
+          <div class="rest-modal-body">
+            <h2 class="rest-ex-name">${cd.exName}</h2>
+
+            ${executionList ? `<div class="modal-section">
+              <h4>Esecuzione</h4>
+              ${executionList}
+            </div>` : ''}
+
+            ${errorsList ? `<div class="modal-section">
+              <h4>Errori comuni da evitare</h4>
+              ${errorsList}
+            </div>` : ''}
+
+            ${ex?.alert ? `<div class="modal-alert">${ex.alert}</div>` : ''}
+
+            <div class="modal-section modal-ai-section">
+              <h4>🤖 AI Coach</h4>
+              ${cueLoading
+                ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
+                : `<div style="font-size:14px;line-height:1.6;color:var(--t1);font-family:var(--font-sans);">${cueContent}</div>`
+              }
+            </div>
+          </div>
+        </div>
+      </div>`;
     }
-    countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;">
-      <div class="info-modal" style="max-width:300px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
-        ${cdBody}
-      </div>
-    </div>`;
   }
 
   let deleteConfirmHTML = '';
@@ -5915,7 +6150,7 @@ async function openExerciseAI(exName, sessionId) {
   const sess = TRAINING_SESSIONS[sessionId];
   const ex = findExercise(exName, sessionId);
   const media = EXERCISE_MEDIA[exName] || {};
-  // Stato base (loading): mostra subito tutti i campi statici, AI in caricamento
+  // Stato base (loading): mostra subito tutti i campi statici, AI + media in caricamento
   const baseAi = {
     exName,
     sessionId,
@@ -5932,34 +6167,58 @@ async function openExerciseAI(exName, sessionId) {
     muscles: ex?.muscles || [],
     alert: ex?.alert || null,
     muscleImg: media.muscleImg || null,
-    executionImg: media.executionImg || null,
+    executionImg: media.executionImg || null,  // fallback Wger PNG
+    // ── GIF esecuzione da Worker (fetch parallelo) ──
+    executionGif: null,
+    executionLoading: true,
+    executionStatus: null,        // 'cached' | 'missing' | 'error' | 'not_searched_yet'
+    executionSurrogate: false,
+    executionSurrogateNote: null,
     content: '',
     loading: true,
   };
   ST.exerciseAIOpen = baseAi;
   renderTraining();
 
-  // Prompt AI semplificato: cue avanzato, NO ripetizione info statiche
-  const prompt = `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
+  // ── Fetch media in parallelo: la GIF arriva indipendentemente dall'AI ──
+  fetchExerciseMedia(exName).then(mediaResp => {
+    // user ha chiuso modal o ha aperto un altro esercizio nel frattempo
+    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
+    ST.exerciseAIOpen = {
+      ...ST.exerciseAIOpen,
+      executionGif: mediaResp.cached_url || null,
+      executionLoading: false,
+      executionStatus: mediaResp.status || 'error',
+      executionSurrogate: !!mediaResp.is_surrogate,
+      executionSurrogateNote: mediaResp.surrogate_note || null,
+    };
+    renderTraining();
+  });
 
-Esercizio corrente: ${exName} (sessione ${baseAi.sessionLabel}, ${baseAi.sessionType}).
+  const cacheKey = `${sessionId}_${exName}`;
 
-Genera SOLO un consiglio operativo aggiuntivo (max 3 frasi) che NON ripeta info già presenti come setup, esecuzione, errori comuni o muscoli target. Concentrati su:
-- Cue tecnico avanzato specifico
-- Gestione fatica nelle ultime serie
-- Variazione respiratoria utile per questo esercizio
+  // Fast-path: cue gia in cache (es. da rest modal precedente o riapertura)
+  if (ST.aiCue[cacheKey]) {
+    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: ST.aiCue[cacheKey], loading: false };
+    renderTraining();
+    return;
+  }
 
-NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. Solo prosa diretta. Italiano.`;
+  const prompt = buildCoachPrompt(exName, sessionId);
 
   try {
     const text = await callAI(prompt, 200);
+    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
     const content = (text || '').trim()
       .replace(/^["'`]|["'`]$/g, '')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
-    ST.exerciseAIOpen = { ...baseAi, content, loading: false };
+    ST.aiCue[cacheKey] = content;  // cache per riuso (rest modal, riapertura)
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content, loading: false };
   } catch(e) {
-    ST.exerciseAIOpen = { ...baseAi, content: 'Errore di connessione AI Coach.', loading: false };
+    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Errore di connessione AI Coach.', loading: false };
   }
   renderTraining();
 }

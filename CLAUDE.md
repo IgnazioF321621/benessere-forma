@@ -569,6 +569,135 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 6 maggio 2026 — Sistema exercise-media (cache GIF) + modal recupero ridisegnato
+
+**1. Sistema exercise-media (cache GIF esercizi)**
+
+Architettura nuova end-to-end per servire GIF animate degli esercizi tramite Worker Cloudflare + Supabase Storage:
+
+- **Endpoint Worker**: `GET https://zona-ai.ignaziof23.workers.dev/exercise-media?name=<nome italiano>`
+- **Tabella Supabase `exercise_media`** (PK `exercise_name_it`):
+
+  | Colonna | Tipo | Note |
+  |---|---|---|
+  | `exercise_name_it` | text PK | nome italiano usato come chiave |
+  | `exercisedb_id` | text | ID esercizio in catalogo ExerciseDB |
+  | `cached_url` | text | URL pubblico Supabase Storage |
+  | `status` | text | `pending`/`cached`/`missing`/`manual` (default `pending`) |
+  | `is_surrogate` | boolean | true se la GIF mostra equipment/posizione diversi dal programma |
+  | `surrogate_note` | text | nota mostrata in banner giallo nel modal |
+  | `source` | text | `exercisedb` (default), `manual`, etc. |
+  | `last_updated` | timestamptz | aggiornato automaticamente al PATCH |
+
+- **Bucket Supabase Storage `exercise-media`** (public). File salvati come `{exercisedb_id}.gif` (NON con slug italiano) → la stessa GIF è riusabile fra nomi italiani diversi che mappano allo stesso esercizio EDB.
+- **Costante `MATCH_DATA`** bundlata nel Worker (`worker/src/index.js`): mappa `nome italiano → { edbId, edbName, gifUrl, equipments, targetMuscles, isSurrogate, surrogateNote }`. Source of truth per le approvazioni manuali — solo gli esercizi presenti qui vengono cachati.
+
+**Logica del Worker `/exercise-media`** (in ordine):
+1. **Lookup MATCH_DATA**: se nome non presente → `{status:'missing'}` SENZA scrittura DB (no insert speculativo, evita stickiness se in futuro aggiungiamo il match)
+2. **Cache check DB**: fast-path solo se `status='cached'` E `exercisedb_id` allineato al match corrente. Altrimenti riprocessa (overwrite)
+3. **Metadata-sync**: nel fast-path, se `is_surrogate` o `surrogate_note` in DB differiscono da MATCH_DATA → PATCH solo quei campi + `last_updated` (no re-download GIF). Risposta include `meta_synced: true/false`
+4. **HEAD check Storage**: se `{edbId}.gif` esiste già su bucket → skip download/upload (riuso file)
+5. **Cold path**: download da `https://static.exercisedb.dev/media/{edbId}.gif` → upload a `exercise-media/{edbId}.gif` con `x-upsert:true` → upsert riga DB con `status='cached'`
+
+**Auto-recovery**: estendere MATCH_DATA con un nuovo esercizio (deploy Worker) → al primo trigger viene processato e cachato. Cambiare `surrogateNote` o `isSurrogate` → metadata-sync propaga al prossimo trigger. **Nessun cleanup manuale necessario**.
+
+**Repo Worker**: `~/benessere-forma/worker/`
+- `wrangler.toml`: `name="zona-ai"`, `account_id`, `compatibility_date="2024-09-01"`, `main="src/index.js"`. Niente secrets in chiaro.
+- `src/index.js`: routing `POST /` → proxy Groq esistente (invariato), `GET /exercise-media` → nuova logica
+- `.dev.vars` (gitignored): `API_KEY` (Groq) + `SUPABASE_SERVICE_ROLE_KEY`
+- `.gitignore`: `.dev.vars`, `node_modules/`, `.wrangler/`
+- `setup-supabase-secret.sh`: script una-tantum per impostare il secret Cloudflare via `wrangler secret put` con input silenzioso (`read -rs`, no echo, no shell history)
+
+**Secrets Cloudflare** (visibili via `npx wrangler secret list`, valori mai esposti):
+- `API_KEY` (Groq, già presente)
+- `SUPABASE_SERVICE_ROLE_KEY` (nuovo, aggiunto via script)
+
+**2. 5 esercizi cachati Day 1 Upper A** (sessione completa)
+
+Selezionati esercizio-per-esercizio con review manuale dei candidati ExerciseDB:
+
+| Nome italiano | exerciseId | edbName | is_surrogate | surrogate_note |
+|---|---|---|---|---|
+| Trazioni alla sbarra | `lBDjFxJ` | pull-up | false | — |
+| Chest press in piedi con elastico | `4x5Okof` | resistance band seated chest press | true | "Movimento simile, qui mostrato seduto. Eseguilo in piedi." |
+| Shoulder press in piedi con elastico | `peAeMR3` | band shoulder press | true | "Eseguilo con entrambi i piedi sull'elastico per maggiore tensione e stabilita." |
+| Row in piedi con elastico | `4f8RXP8` | cable standing row (v-bar) | true | "Esegui con barra lunga e presa larga pronata (la GIF mostra presa stretta a V)." |
+| Face pull con elastico | `ZfyAGhK` | cable standing rear delt row (with rope) | false | — (cavi vs elastico = differenza ovvia, niente banner) |
+
+**Tooling per il matching futuro** (`scripts/`):
+- `fetch-exercisedb.mjs`: scarica catalogo completo ExerciseDB (1500 esercizi, paginazione `?after=<cursor>`, delay 500ms anti-rate-limit)
+- `exercisedb-catalog.json`: snapshot del catalogo (1.4 MB)
+- `match-exercises.py`: matching keyword-based dei 20 esercizi del programma
+- `match-results.json`: risultati top-5 per esercizio
+- `test-image-gen-v[1-4].mjs`: esperimenti AI image generation (Cloudflare Workers AI / Flux / SDXL) — esplorati e poi accantonati a favore di ExerciseDB per la qualità/coerenza visiva
+
+**3. Integrazione modal scheda esercizio (`openExerciseAI`)**
+
+GIF dal Worker prioritaria su Wger PNG (`executionImg`), fallback automatico se Worker non risponde.
+
+- Nuovi campi in `ST.exerciseAIOpen`: `executionGif`, `executionLoading`, `executionStatus` (`'cached'`/`'missing'`/`'error'`/`'not_searched_yet'`), `executionSurrogate`, `executionSurrogateNote`
+- Helper `fetchExerciseMedia(exName)` chiama Worker, mai throw, sempre `{status:'error'}` se network fail
+- Skeleton animato `.ex-media-skeleton` durante caricamento (gradient grigio + animazione)
+- Banner surrogato giallo `.ex-surrogate-banner` con icona ⓘ inserito DOPO la grid e PRIMA del Setup, **solo se `gifSrc` presente E `executionSurrogate=true`**
+- Layout colonna destra (priorità): GIF Worker > skeleton (loading) > Wger PNG single > Wger PNG array multi-frame > vuoto
+- Wger fallback array 2-frame mantiene il layout esistente con `1. POSIZIONE INIZIALE` / `2. POSIZIONE FINALE`
+- Cache hit fra modal: aprire scheda esercizio una volta → cue cached → al recupero successivo nessuna chiamata AI
+
+**4. Modal recupero (rewrite completo)**
+
+Eliminata vecchia UI con tip random ("Vacuum addominale espira tutto…", Cat-Cow, ecc.) e fasi testuali (Recupero attivo / Prossimo esercizio / Quasi pronto). Nuovo design:
+
+- **Modal full-screen** con sticky bar in alto (`position:sticky; top:0`) sempre visibile durante scroll
+- **Sticky bar layout**: CSS Grid `1fr auto 1fr` → numero countdown **centrato orizzontalmente**, bottone "Salta ⏭" allineato a destra
+- **Sezioni body** (scrollable, in ordine):
+  - Nome esercizio (h2, no sessionLabel)
+  - Esecuzione (lista numerata `<ol>` da `TRAINING_SESSIONS[sessionId].exercises[i].execution`)
+  - Errori comuni da evitare (lista bullet `<ul>`)
+  - Alert protezione (condizionale, solo se `ex.alert` presente)
+  - 🤖 AI Coach (con loading state se cue non ancora cached)
+- **Done state "PRONTO!"** identico al precedente (icona 💪 + bottone OK)
+- **Color shift** ultimi 10 sec mantenuto sul numero della sticky bar (da blu a rosso)
+
+**Cache AI Coach cue persistente** — nuovo `ST.aiCue: { [`${sessionId}_${exName}`]: cueText }`:
+- Helper `buildCoachPrompt(exName, sessionId)` riusabile fra `openExerciseAI` e `ensureRestCue` (prompt unificato per coerenza fra modal)
+- Helper `ensureRestCue(exName, sessionId)` chiamato da `startTrainingCountdown`: genera cue in background se cache miss, scrive in `ST.aiCue`, re-rendera solo se utente è ancora sul modal di recupero per QUESTO esercizio (guard `ST.trainCountdown.exName === exName`)
+- `openExerciseAI` ora controlla cache hit prima della chiamata AI, scrive cache dopo successo. Race-safe: 2 chiamate concorrenti producono al massimo 2 invocazioni callAI (costo trivial) ma stesso contenuto finale
+
+**`startTrainingCountdown` nuova firma**: `(restSec, exName, sessionId)` — rimossi parametri `activeTip` e `nextExNote`, rimosso array `ACTIVE_TIPS`.
+
+**Tick surgical** (`tickCountdown`): durante countdown attivo (non `done`), aggiornamento DOM diretto del solo numero (`document.querySelector('.rest-cd-num').textContent`) invece di full re-render. **Preserva la posizione di scroll** del body durante i 60-180 secondi di recupero. Full re-render solo per il done state (PRONTO!).
+
+**Audio rinnovato**:
+- `playPrepBeep()`: tono basso/dolce (sine 600Hz, 80ms, gain 0.35) — 1 "tic" preparatorio per ognuno dei secondi 5,4,3,2,1
+- `playFinalTripleBeep()`: tono alto/forte (sine 880Hz, 3 burst da 100ms con gap 150ms, gain 0.7) + vibrazione `[200,100,200,100,200]` — al raggiungimento di 0
+- `playRestEndBeep()` rimosso (sostituito da `playFinalTripleBeep`)
+- **Anti-doppio-beep**: `cd.beeped` per il triplo finale, `cd.prepBeeped: {5:true, 4:true, ...}` per i prep
+- **Anti-salto background** (rientro foreground con jump > 1 sec): se `remaining < cd.seconds - 1`, marca tutti i `prepBeeped[]` saltati come `true` SENZA suonare → no burst sgradevole. Solo il beep del secondo corrente (se in 1-5 e non già beeped) viene suonato
+
+**Stato `ST.trainCountdown` aggiornato**:
+```js
+{
+  seconds, total, done, beeped, prepBeeped: {},
+  endTime,
+  exName,        // esercizio current per Esecuzione/Errori/Alert
+  sessionId,     // per buildCoachPrompt
+}
+```
+Rimossi: `activeTip`, `nextExNote` (legacy).
+
+**File toccati**
+- `worker/src/index.js`: nuovo handler `/exercise-media` + costante MATCH_DATA + helper Supabase (select/upsert/PATCH/storage upload + HEAD check)
+- `worker/wrangler.toml`, `worker/.gitignore`, `worker/.dev.vars`, `worker/setup-supabase-secret.sh`
+- `zona-tracker.html`:
+  - State: `aiCue: {}`, modifiche a `trainCountdown`
+  - Helper: `fetchExerciseMedia`, `buildCoachPrompt`, `ensureRestCue`, `playPrepBeep`, `playFinalTripleBeep`
+  - Refactor: `startTrainingCountdown`, `tickCountdown`, `openExerciseAI`, `saveTrainingSet`, render countdown modal
+  - CSS: `.ex-media-skeleton`, `.ex-surrogate-banner`, `.rest-modal-overlay`, `.rest-modal-container`, `.rest-modal-sticky`, `.rest-cd-num`, `.rest-cd-skip`, `.rest-modal-body`, `.rest-ex-name`
+- `scripts/`: tooling matching + esperimenti image-gen
+- `.gitignore`: aggiunti `.env.local`, `scripts/test-output/`, `.DS_Store`
+
+**Roadmap restante esercizi (15/20 da cachare)**: Upper B (6), Lower A (4), Lower B (5). Stesso flusso esercizio-per-esercizio con review manuale dei candidati ExerciseDB.
+
 ### 6 maggio 2026 — Nutrition: AI consigli pasti dinamica
 
 **1. `getAdvice(consumed, nextMeal, isTomorrow=false)` — prompt AI personalizzato**

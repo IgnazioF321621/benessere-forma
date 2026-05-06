@@ -1,0 +1,8 @@
+name = "zona-ai"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+account_id = "95468c4be8585e8879ec6bbd69137d5f"
+
+# Secrets gestite via `wrangler secret put` (NON in questo file):
+# - API_KEY                    (Groq, già presente nel Worker deployato)
+# - SUPABASE_SERVICE_ROLE_KEY  (da aggiungere prima del deploy)

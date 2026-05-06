@@ -1,0 +1,667 @@
+[
+  {
+    "id": 1,
+    "it": "Trazioni alla sbarra",
+    "keywords": [
+      "pull-up",
+      "pull up"
+    ],
+    "matches": [
+      {
+        "name": "inverse leg curl (on pull-up cable machine)",
+        "id": "0rHfvy9",
+        "gifUrl": "https://static.exercisedb.dev/media/0rHfvy9.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "hamstrings"
+        ]
+      },
+      {
+        "name": "pull up (neutral grip)",
+        "id": "0V2YQjW",
+        "gifUrl": "https://static.exercisedb.dev/media/0V2YQjW.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "lats"
+        ]
+      },
+      {
+        "name": "biceps narrow pull-ups",
+        "id": "50BETrz",
+        "gifUrl": "https://static.exercisedb.dev/media/50BETrz.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "biceps"
+        ]
+      },
+      {
+        "name": "assisted pull-up inclined",
+        "id": "5ipN0iE",
+        "gifUrl": "https://static.exercisedb.dev/media/5ipN0iE.gif",
+        "equipments": [
+          "leverage machine"
+        ],
+        "targetMuscles": [
+          "lats"
+        ]
+      },
+      {
+        "name": "archer pull up",
+        "id": "72BC5Za",
+        "gifUrl": "https://static.exercisedb.dev/media/72BC5Za.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "lats"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "it": "Chest press in piedi con elastico",
+    "keywords": [
+      "band chest press",
+      "resistance band chest"
+    ],
+    "matches": []
+  },
+  {
+    "id": 3,
+    "it": "Shoulder press in piedi con elastico",
+    "keywords": [
+      "band shoulder press",
+      "band overhead press"
+    ],
+    "matches": [
+      {
+        "name": "band shoulder press",
+        "id": "peAeMR3",
+        "gifUrl": "https://static.exercisedb.dev/media/peAeMR3.gif",
+        "equipments": [
+          "band"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "it": "Row in piedi con elastico",
+    "keywords": [
+      "band row",
+      "resistance band row"
+    ],
+    "matches": []
+  },
+  {
+    "id": 5,
+    "it": "Face pull con elastico",
+    "keywords": [
+      "band face pull",
+      "face pull"
+    ],
+    "matches": []
+  },
+  {
+    "id": 6,
+    "it": "Inverted row con elastico",
+    "keywords": [
+      "inverted row",
+      "band inverted row"
+    ],
+    "matches": [
+      {
+        "name": "extended style inverted row",
+        "id": "1YUWDNZ",
+        "gifUrl": "https://static.exercisedb.dev/media/1YUWDNZ.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "inverted row",
+        "id": "bZGHsAZ",
+        "gifUrl": "https://static.exercisedb.dev/media/bZGHsAZ.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "inverted row with straps",
+        "id": "jdiExfW",
+        "gifUrl": "https://static.exercisedb.dev/media/jdiExfW.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "inverted row on bench",
+        "id": "Mxa7Cr8",
+        "gifUrl": "https://static.exercisedb.dev/media/Mxa7Cr8.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "inverted row v. 2",
+        "id": "uX3sUBz",
+        "gifUrl": "https://static.exercisedb.dev/media/uX3sUBz.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "it": "Chest press inclinata su panca",
+    "keywords": [
+      "incline bench press",
+      "incline dumbbell press"
+    ],
+    "matches": [
+      {
+        "name": "barbell incline bench press",
+        "id": "3TZduzM",
+        "gifUrl": "https://static.exercisedb.dev/media/3TZduzM.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "pectorals"
+        ]
+      },
+      {
+        "name": "smith incline bench press",
+        "id": "5v7KYld",
+        "gifUrl": "https://static.exercisedb.dev/media/5v7KYld.gif",
+        "equipments": [
+          "smith machine"
+        ],
+        "targetMuscles": [
+          "pectorals"
+        ]
+      },
+      {
+        "name": "dumbbell palms in incline bench press",
+        "id": "8eqjhOl",
+        "gifUrl": "https://static.exercisedb.dev/media/8eqjhOl.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "triceps"
+        ]
+      },
+      {
+        "name": "barbell incline bench press seated",
+        "id": "9Z23cLE",
+        "gifUrl": "https://static.exercisedb.dev/media/9Z23cLE.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "pectorals"
+        ]
+      },
+      {
+        "name": "upright smith incline bench press",
+        "id": "afv0ZAS",
+        "gifUrl": "https://static.exercisedb.dev/media/afv0ZAS.gif",
+        "equipments": [
+          "smith machine"
+        ],
+        "targetMuscles": [
+          "pectorals"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "it": "Lateral raise con elastico",
+    "keywords": [
+      "band lateral raise",
+      "lateral raise"
+    ],
+    "matches": [
+      {
+        "name": "dumbbell lying rear lateral raise",
+        "id": "53Ttlck",
+        "gifUrl": "https://static.exercisedb.dev/media/53Ttlck.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      },
+      {
+        "name": "dumbbell full can lateral raise",
+        "id": "AQ0mC4Y",
+        "gifUrl": "https://static.exercisedb.dev/media/AQ0mC4Y.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      },
+      {
+        "name": "dumbbell incline one arm lateral raise",
+        "id": "aTNKZiC",
+        "gifUrl": "https://static.exercisedb.dev/media/aTNKZiC.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      },
+      {
+        "name": "lever lateral raise",
+        "id": "dRTfGZT",
+        "gifUrl": "https://static.exercisedb.dev/media/dRTfGZT.gif",
+        "equipments": [
+          "leverage machine"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      },
+      {
+        "name": "dumbbell lateral raise",
+        "id": "DsgkuIt",
+        "gifUrl": "https://static.exercisedb.dev/media/DsgkuIt.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "delts"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "it": "Row inclinato in piedi busto 45 gradi",
+    "keywords": [
+      "bent over row",
+      "bent-over row"
+    ],
+    "matches": [
+      {
+        "name": "smith bent over row with declined",
+        "id": "5lE7XRz",
+        "gifUrl": "https://static.exercisedb.dev/media/5lE7XRz.gif",
+        "equipments": [
+          "smith machine"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "smith reverse grip bent over row",
+        "id": "aaxA3cm",
+        "gifUrl": "https://static.exercisedb.dev/media/aaxA3cm.gif",
+        "equipments": [
+          "smith machine"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "dumbbell bent over row",
+        "id": "BJ0Hz5L",
+        "gifUrl": "https://static.exercisedb.dev/media/BJ0Hz5L.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "dumbbell one arm bent-over row",
+        "id": "C0MA9bC",
+        "gifUrl": "https://static.exercisedb.dev/media/C0MA9bC.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      },
+      {
+        "name": "cable one arm bent over row",
+        "id": "EIsE3u8",
+        "gifUrl": "https://static.exercisedb.dev/media/EIsE3u8.gif",
+        "equipments": [
+          "cable"
+        ],
+        "targetMuscles": [
+          "upper back"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "it": "Curl bicipiti con elastico",
+    "keywords": [
+      "band curl",
+      "biceps curl band"
+    ],
+    "matches": []
+  },
+  {
+    "id": 11,
+    "it": "Tricipiti overhead con elastico",
+    "keywords": [
+      "band overhead extension",
+      "triceps overhead band"
+    ],
+    "matches": []
+  },
+  {
+    "id": 12,
+    "it": "Bulgarian split squat con elastico",
+    "keywords": [
+      "bulgarian split squat",
+      "rear foot elevated split squat"
+    ],
+    "matches": []
+  },
+  {
+    "id": 13,
+    "it": "Romanian deadlift con elastico",
+    "keywords": [
+      "romanian deadlift",
+      "band rdl"
+    ],
+    "matches": [
+      {
+        "name": "traditional barbell romanian deadlift",
+        "id": "o6LqKKP",
+        "gifUrl": "https://static.exercisedb.dev/media/o6LqKKP.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "dumbbell romanian deadlift",
+        "id": "rR0LJzx",
+        "gifUrl": "https://static.exercisedb.dev/media/rR0LJzx.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "barbell romanian deadlift",
+        "id": "wQ2c4XD",
+        "gifUrl": "https://static.exercisedb.dev/media/wQ2c4XD.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "it": "Hip thrust con elastico",
+    "keywords": [
+      "hip thrust",
+      "band hip thrust"
+    ],
+    "matches": [
+      {
+        "name": "resistance band hip thrusts on knees (female)",
+        "id": "Pjbc0Kt",
+        "gifUrl": "https://static.exercisedb.dev/media/Pjbc0Kt.gif",
+        "equipments": [
+          "resistance band"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "it": "Glute bridge isometrico con cavigliera",
+    "keywords": [
+      "glute bridge",
+      "ankle weight glute bridge"
+    ],
+    "matches": [
+      {
+        "name": "glute bridge two legs on bench (male)",
+        "id": "aWedzZX",
+        "gifUrl": "https://static.exercisedb.dev/media/aWedzZX.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "glute bridge march",
+        "id": "GibBPPg",
+        "gifUrl": "https://static.exercisedb.dev/media/GibBPPg.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "barbell glute bridge two legs on bench (male)",
+        "id": "qg2PGl6",
+        "gifUrl": "https://static.exercisedb.dev/media/qg2PGl6.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "barbell glute bridge",
+        "id": "qKBpF7I",
+        "gifUrl": "https://static.exercisedb.dev/media/qKBpF7I.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "low glute bridge on floor",
+        "id": "u0cNiij",
+        "gifUrl": "https://static.exercisedb.dev/media/u0cNiij.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "it": "Squat con elastico e talloni rialzati",
+    "keywords": [
+      "heels elevated squat",
+      "band squat"
+    ],
+    "matches": [
+      {
+        "name": "band squat",
+        "id": "TUZLh71",
+        "gifUrl": "https://static.exercisedb.dev/media/TUZLh71.gif",
+        "equipments": [
+          "band"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      },
+      {
+        "name": "band squat row",
+        "id": "w1NOByi",
+        "gifUrl": "https://static.exercisedb.dev/media/w1NOByi.gif",
+        "equipments": [
+          "band"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "it": "Single leg Romanian deadlift con elastico",
+    "keywords": [
+      "single leg romanian deadlift",
+      "single leg rdl"
+    ],
+    "matches": []
+  },
+  {
+    "id": 18,
+    "it": "Hip thrust con elastico TUT alto",
+    "keywords": [
+      "hip thrust",
+      "band hip thrust"
+    ],
+    "matches": [
+      {
+        "name": "resistance band hip thrusts on knees (female)",
+        "id": "Pjbc0Kt",
+        "gifUrl": "https://static.exercisedb.dev/media/Pjbc0Kt.gif",
+        "equipments": [
+          "resistance band"
+        ],
+        "targetMuscles": [
+          "glutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "it": "Leg curl con elastico sulla fitball",
+    "keywords": [
+      "stability ball leg curl",
+      "swiss ball leg curl"
+    ],
+    "matches": []
+  },
+  {
+    "id": 20,
+    "it": "Calf raise con elastico",
+    "keywords": [
+      "calf raise",
+      "band calf raise"
+    ],
+    "matches": [
+      {
+        "name": "one leg floor calf raise",
+        "id": "0jp9Rlz",
+        "gifUrl": "https://static.exercisedb.dev/media/0jp9Rlz.gif",
+        "equipments": [
+          "body weight"
+        ],
+        "targetMuscles": [
+          "calves"
+        ]
+      },
+      {
+        "name": "smith seated one leg calf raise",
+        "id": "0S75mYG",
+        "gifUrl": "https://static.exercisedb.dev/media/0S75mYG.gif",
+        "equipments": [
+          "smith machine"
+        ],
+        "targetMuscles": [
+          "calves"
+        ]
+      },
+      {
+        "name": "dumbbell single leg calf raise",
+        "id": "1kB3Wmk",
+        "gifUrl": "https://static.exercisedb.dev/media/1kB3Wmk.gif",
+        "equipments": [
+          "dumbbell"
+        ],
+        "targetMuscles": [
+          "calves"
+        ]
+      },
+      {
+        "name": "barbell floor calf raise",
+        "id": "2IHEa2T",
+        "gifUrl": "https://static.exercisedb.dev/media/2IHEa2T.gif",
+        "equipments": [
+          "barbell"
+        ],
+        "targetMuscles": [
+          "calves"
+        ]
+      },
+      {
+        "name": "hack calf raise",
+        "id": "2ORFMoR",
+        "gifUrl": "https://static.exercisedb.dev/media/2ORFMoR.gif",
+        "equipments": [
+          "sled machine"
+        ],
+        "targetMuscles": [
+          "calves"
+        ]
+      }
+    ]
+  }
+]

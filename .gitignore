@@ -1,1 +1,4 @@
 .claude/worktrees/
+.env.local
+scripts/test-output/
+.DS_Store
