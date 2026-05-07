@@ -569,6 +569,35 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 7 maggio 2026 — Cache GIF programma core completata (20/20)
+
+Sistema exercise-media chiuso al 100% sul programma core. Tutti i 20 esercizi delle 4 sessioni principali (Upper A/B, Lower A/B) hanno una GIF cachata su Supabase Storage via Worker `zona-ai`. I 3 esercizi di Active Recovery (Mobilità, Stretching, Vacuum) restano senza media — pattern documentato.
+
+**Architettura conferma**: 1 GIF per `exerciseId` ExerciseDB, riusabile fra più nomi italiani che mappano allo stesso esercizio (es. "Hip thrust con elastico" Day 2 Lower A + "Hip thrust con elastico TUT alto" Day 4 Lower B → entrambi puntano a `qKBpF7I.gif`).
+
+**Stato Storage**: 19 file unici, ~1.54 MB su 1 GB free tier. 21 entry MATCH_DATA (20 core + 1 variante TUT).
+
+**Pattern surrogati**: la maggioranza degli esercizi del programma usa elastici, ExerciseDB ne ha pochi → quasi tutti `isSurrogate: true` con `surrogateNote` in italiano che descrive solo le differenze rispetto alla GIF (equipment, setup, lateralità). Note brevi e concrete, niente preamboli.
+
+**Commit di riferimento**:
+- `8b0e963` Day 1 Upper A (5 esercizi)
+- `9e98ad8` Day 2 Lower A (4 esercizi)
+- `dca5847` Day 3 Upper B (6 esercizi)
+- `9a975fa` Day 4 Lower B (5 esercizi) — chiusura programma core
+
+### Sessione futura — Audit testi e parametri esercizi training
+
+Da fare in blocco unico sui 20 esercizi di TRAINING_SESSIONS:
+
+- **`setup` da string → string[]**: aggiornare il renderer del modal esercizio per gestire array (oggi è stringa singola)
+- **Range temporali iso → tempo fisso**: esercizi `iso:true` con reps tipo "20-30 sec" o "12-15" da riconvertire a valore singolo
+- **RIR su `iso:true` → null + nascondere badge**: esercizi isometrici non hanno RIR, va rimosso dalla card
+- **Rest fisso unificato via `getRestSec()`**: 180s forza, 90s ipertrofia, 60s iso, 30s tra lati esercizi unilaterali
+- **`surrogateNote` solo differenze vs GIF**: già fatto su tutti i 20 esercizi cachati il 7 maggio 2026
+- **Bug `getProgressionSuggestion` ~riga 3185**: genera "N reps a 10 lbs" su esercizi temporali — la logica doppia progressione non va applicata a esercizi `iso:true` o con reps non-numeriche
+
+NON applicare in singoli commit incrementali — pianificare in sessione dedicata con review esercizio per esercizio.
+
 ### 7 maggio 2026 — Day 3 Upper B: cache GIF (sessione 2)
 
 **Cache exercise-media (Day 3 Upper B completo)**
