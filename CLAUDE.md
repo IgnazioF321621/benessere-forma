@@ -569,6 +569,33 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 7 maggio 2026 — Day 3 Upper B: cache GIF (sessione 2)
+
+**Cache exercise-media (Day 3 Upper B completo)**
+
+11/20 esercizi cachati. 6 nuovi su Upper B:
+- `Inverted row con elastico` → `Nu7jqFE` (resistance band seated straight back row, surrogate). Note: tu in piedi col busto inclinato 45°, non seduto.
+- `Chest press inclinata su panca` → `Vh0GsK4` (cable incline chest press, surrogate). Note: tu sdraiato su panca inclinata 30-45° con elastico ancorato basso.
+- `Lateral raise con elastico` → `DsgkuIt` (dumbbell lateral raise, surrogate). Note: elastico sotto i piedi al posto dei manubri.
+- `Row inclinato in piedi busto 45°` → `eZyBC3j` (barbell bent over row, surrogate). Note: barra modulare con elastico al posto del bilanciere.
+- `Curl bicipiti con elastico` → `XFc3vpY` (resistance band seated biceps curl, surrogate). Note: tu in piedi sopra l'elastico al posto che seduto.
+- `Tricipiti overhead con elastico` → `2IxROQ1` (cable overhead triceps extension with rope, **NON-surrogate**). GIF già perfettamente rappresentativa, nessuna nota.
+
+Storage Supabase ora a 15 file (~1.18 MB su 1 GB free tier).
+
+**Decisione "non-surrogate" su Tricipiti overhead**
+
+Primo esercizio del programma marcato `isSurrogate:false` con `surrogateNote:null`. La GIF cavi+corda doppia replica esattamente il setup elastico+corda (entrambi tirati dal basso, due maniglie indipendenti, traiettoria overhead bilaterale). Banner surrogato nel modal correttamente nascosto dalla condizione esistente `gifSrc && executionSurrogate && executionSurrogateNote` ([zona-tracker.html:4248](zona-tracker.html:4248)). Pattern riutilizzabile per esercizi futuri con match perfetto.
+
+**Refinement schema `surrogateNote`**
+
+Da Day 3 in poi le note seguono il principio "solo differenze rispetto alla GIF": una frase secca con cosa cambia (attrezzo o postura), niente ripetizione di setup/execution che sono già nelle sezioni statiche del modal. Le note dei 4 esercizi Day 2 Lower A erano già nel formato corretto, quindi nessuna retrofix necessaria.
+
+**Roadmap residua sistema exercise-media**
+
+- Day 4 Lower B: 5 esercizi da cachare (`Squat con elastico e talloni rialzati`, `Single leg Romanian deadlift con elastico`, `Hip thrust con elastico TUT alto`, `Leg curl con elastico sulla fitball`, `Calf raise con elastico`)
+- Audit testi e parametri esercizi (vedi nota in sessione Day 2 Lower A: `getProgressionSuggestion` parser regex su `reps`, range tempo isometrico → tempo fisso, RIR su `iso:true` → null)
+
 ### 7 maggio 2026 — Day 2 Lower A: cache GIF + audit testo Glute bridge
 
 **Cache exercise-media (Day 2 Lower A completo)**
