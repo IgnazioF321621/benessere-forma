@@ -569,6 +569,44 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 7 maggio 2026 — Day 2 Lower A: cache GIF + audit testo Glute bridge
+
+**Cache exercise-media (Day 2 Lower A completo)**
+
+9/20 esercizi cachati. 4 nuovi su Lower A, tutti surrogati ExerciseDB:
+
+| Nome italiano | exerciseId | edbName | surrogate_note |
+|---|---|---|---|
+| Bulgarian split squat con elastico | `y8bYM8w` | band single leg split squat | "Aggiungi tallone posteriore sulla panca e tallone anteriore rialzato 3-5 cm per la versione bulgara." |
+| Romanian deadlift con elastico | `kuMiR2T` | band stiff leg deadlift | "Tu impugna la barra modulare davanti alle cosce, presa pronata." |
+| Hip thrust con elastico | `qKBpF7I` | barbell glute bridge | "Spalle sulla panca, elastico sopra le anche." |
+| Glute bridge isometrico con cavigliera | `u0cNiij` | low glute bridge on floor | "Tenuta isometrica 30 sec con cavigliera al ginocchio ed elastico ancorato dal lato opposto. Una gamba per volta." |
+
+Storage Supabase ora a 9 file (~668 KB su 1 GB free tier). Tutti `is_surrogate=true` (catalogo ExerciseDB non ha match canonici "bulgarian", "romanian deadlift" + band, o "hip thrust" non-on-knees).
+
+Nota tecnica: durante la ricerca ho rilevato che `o6LqKKP` ("traditional barbell romanian deadlift", precedente top match per Romanian deadlift dal vecchio `match-results.json`) ora ritorna HTTP 404 sull'host `static.exercisedb.dev`. Sistema HEAD-check pre-download del Worker ha gestito correttamente il caso. Lezione: i match in `scripts/match-results.json` (snapshot 6 maggio 2026) possono diventare stali — sempre validare con HEAD HTTP prima di aggiungere a MATCH_DATA.
+
+**Modifica testo Glute bridge isometrico (lowerA)**
+
+- `reps`: `'20-30 sec'` → `'30 sec per lato'` (tempo fisso, esecuzione unilaterale)
+- `setup` riscritto: chiarito "schiena a terra" (vs "spalle sulla panca" del Hip thrust) e l'ancoraggio elastico "a un punto laterale dal lato opposto" che genera la trazione anti-valgo
+- `execution`: 3 step ora coprono il pattern unilaterale completo (sollevamento bacino + tenuta isometrica 30 sec + switch lato)
+- `sets:3`, `iso:true`, `eq`, `commonErrors`, `muscles`, `alert` invariati
+
+Audit parser `.reps` per nuova stringa "30 sec per lato":
+- `suggestProgressionAI` regex `/^(\d+)-(\d+)(?:\s+per lato)?$/` non matcha → guard `return` ✓ (skip silenzioso, già succedeva con "20-30 sec")
+- Branch recovery a riga 3808 gated da `s.type === 'Recupero'`, non riguarda lowerA ✓
+- Render literale `${e.reps}` (righe 3844, 3941) → "3×30 sec per lato" leggibile ✓
+
+**Bug pre-esistente identificato (non risolto)**
+
+`getProgressionSuggestion` ([zona-tracker.html:3185](zona-tracker.html:3185)) usa `match(/^(\d+)/)` che estrae il primo numero da `reps` e suggerisce `"💡 Inizia con N reps a 10 lbs"`. Per esercizi isometrici (`reps='30 sec per lato'`, `'20-30 sec'`, ecc.) genera output nonsense ("30 reps"). Stesso comportamento esisteva con la stringa precedente "20-30 sec" → **non è regressione di questa modifica**, è bug pre-esistente.
+
+Da fixare in sessione futura "audit testi e parametri esercizi" insieme a:
+- Range tempo isometrico → tempo fisso (Mobilità, Stretching, Vacuum, Respirazione, Cat-Cow)
+- RIR su esercizi `iso:true` → null + nascondere badge
+- Recupero `'2-3 min'` → tempo fisso da `getRestSec()` unificato
+
 ### 6 maggio 2026 — Sistema exercise-media (cache GIF) + modal recupero ridisegnato
 
 **1. Sistema exercise-media (cache GIF esercizi)**

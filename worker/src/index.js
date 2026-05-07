@@ -62,6 +62,42 @@ const MATCH_DATA = {
     isSurrogate: true,
     surrogateNote: "Eseguilo con entrambi i piedi sull'elastico per maggiore tensione e stabilita.",
   },
+  'Bulgarian split squat con elastico': {
+    edbId: 'y8bYM8w',
+    edbName: 'band single leg split squat',
+    gifUrl: 'https://static.exercisedb.dev/media/y8bYM8w.gif',
+    equipments: ['band'],
+    targetMuscles: ['quads'],
+    isSurrogate: true,
+    surrogateNote: 'Aggiungi tallone posteriore sulla panca e tallone anteriore rialzato 3-5 cm per la versione bulgara.',
+  },
+  'Romanian deadlift con elastico': {
+    edbId: 'kuMiR2T',
+    edbName: 'band stiff leg deadlift',
+    gifUrl: 'https://static.exercisedb.dev/media/kuMiR2T.gif',
+    equipments: ['band'],
+    targetMuscles: ['glutes'],
+    isSurrogate: true,
+    surrogateNote: 'Tu impugna la barra modulare davanti alle cosce, presa pronata.',
+  },
+  'Hip thrust con elastico': {
+    edbId: 'qKBpF7I',
+    edbName: 'barbell glute bridge',
+    gifUrl: 'https://static.exercisedb.dev/media/qKBpF7I.gif',
+    equipments: ['barbell'],
+    targetMuscles: ['glutes'],
+    isSurrogate: true,
+    surrogateNote: 'Spalle sulla panca, elastico sopra le anche.',
+  },
+  'Glute bridge isometrico con cavigliera': {
+    edbId: 'u0cNiij',
+    edbName: 'low glute bridge on floor',
+    gifUrl: 'https://static.exercisedb.dev/media/u0cNiij.gif',
+    equipments: ['body weight'],
+    targetMuscles: ['glutes'],
+    isSurrogate: true,
+    surrogateNote: "Tenuta isometrica 30 sec con cavigliera al ginocchio ed elastico ancorato dal lato opposto. Una gamba per volta.",
+  },
 };
 
 function jsonResponse(obj, status = 200) {
