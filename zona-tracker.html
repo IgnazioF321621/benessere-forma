@@ -1172,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 16:27';
+const APP_VERSION = '2026.05.08 · 18:08';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2225,7 +2225,7 @@ function showPage(id){
   renderPage(id);
   if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); }
   if(id==='body') loadBodyLogs();
-  if(id==='training') loadSessionLastCompletion();
+  if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); }
 }
 async function loadTrainingHomeData(){
   if(!ST.user || ST.user.id==='test-user-001'){
@@ -2625,7 +2625,7 @@ const EXERCISE_MEDIA = {
 const TRAINING_SESSIONS = {
   upperA:{
     id:'upperA', name:'Upper A', type:'Forza', rir:2,
-    label:'Upper A — Forza', rest:'2-3 min',
+    label:'Upper A — Forza', rest:'2 min',
     exercises:[
       {
         name:'Trazioni alla sbarra', sets:4, reps:'4-6',
@@ -2729,7 +2729,7 @@ const TRAINING_SESSIONS = {
   },
   upperB:{
     id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1,
-    label:'Upper B — Ipertrofia', rest:'60-90 sec',
+    label:'Upper B — Ipertrofia', rest:'75 sec',
     exercises:[
       {
         name:'Inverted row con elastico', sets:4, reps:'8-12',
@@ -2856,7 +2856,7 @@ const TRAINING_SESSIONS = {
   },
   lowerA:{
     id:'lowerA', name:'Lower A', type:'Forza', rir:2,
-    label:'Lower A — Forza', rest:'2-3 min',
+    label:'Lower A — Forza', rest:'2 min',
     exercises:[
       {
         name:'Bulgarian split squat con elastico', sets:4, reps:'4-6 per lato',
@@ -2944,7 +2944,7 @@ const TRAINING_SESSIONS = {
   },
   lowerB:{
     id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1,
-    label:'Lower B — Ipertrofia', rest:'60-90 sec',
+    label:'Lower B — Ipertrofia', rest:'75 sec',
     exercises:[
       {
         name:'Squat con elastico e talloni rialzati', sets:4, reps:'8-12',
@@ -3173,11 +3173,16 @@ const TRAINING_SESSIONS = {
   },
 };
 
+// Recupero tra serie (sec) calibrato per allenamento con elastici a RIR controllato.
+// Forza compound: 120s — sufficiente per elastici a RIR 2 (no powerlifting puro)
+// Ipertrofia compound: 75s — target classico ipertrofia 60-90s
+// Iso/accessori (entrambi i tipi sessione): 60s — recupero corto, no SNC pesante
 function getRestSec(sessionId, ex){
   const sess = TRAINING_SESSIONS[sessionId];
   const isForza = sess?.type === 'Forza';
   const isIso = !!ex?.iso;
-  return isForza ? (isIso ? 90 : 120) : (isIso ? 60 : 90);
+  if(isIso) return 60;
+  return isForza ? 120 : 75;
 }
 function restSecToText(sec){
   return (sec % 60 === 0) ? (sec/60)+' min' : sec+' sec';
@@ -3706,6 +3711,7 @@ async function saveWorkoutRecord(sessionId){
   if(cal.year === todayY && cal.month === todayM){
     ST.trainWorkouts = undefined; // forza reload al prossimo accesso Progressione
   }
+  loadTrainingAllCompleted();
   return data?.id || null;
 }
 
@@ -3729,6 +3735,24 @@ async function loadSessionLastCompletion(){
     Object.keys(map).forEach(st=>{ if(map[st] === today) ST.trainCompletedToday[st] = true; });
     if(ST.page === 'training') renderTraining();
   } catch(e){}
+}
+
+// Carica TUTTI i workout completati validi (escluso rest e rest_injury) per conteggio settimana ciclo.
+async function loadTrainingAllCompleted(){
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.trainAllCompleted = []; return; }
+  try {
+    const { data, error } = await supa.from('workouts')
+      .select('id, session_type, date')
+      .eq('user_id', ST.user.id)
+      .eq('completed', true)
+      .not('session_type', 'in', '(rest,rest_injury)')
+      .order('date', {ascending:true});
+    if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
+    ST.trainAllCompleted = data || [];
+    if(ST.page === 'training') renderTraining();
+  } catch(e){
+    ST.trainAllCompleted = [];
+  }
 }
 
 async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance, rir, exData, sess}){
@@ -3827,6 +3851,7 @@ async function deleteWorkout(id, date){
   if(error){ showToast('Errore eliminazione: '+error.message); } else { showToast('Workout eliminato'); }
   const calM = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
   loadWorkouts(calM.year, calM.month);
+  loadTrainingAllCompleted();
 }
 
 async function saveTrainingSet(){
@@ -3923,7 +3948,7 @@ function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
   const tabs = [
     { id:'sessione',    label:'Sessione' },
-    { id:'piano',       label:'Piano' },
+    { id:'piano',       label:'Programma' },
     { id:'progressione',label:'Progressione' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
@@ -4044,8 +4069,6 @@ function renderTraining(){
         }
 
         // Branch NON-RECOVERY: logica esistente
-        const restSec = getRestSec(sel, e);
-        const restTxt = restSecToText(restSec);
         const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
         const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
         const nextSet = loggedKeys.length + 1;
@@ -4124,7 +4147,7 @@ function renderTraining(){
                 style="padding:10px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">✕</button>
             </div>
           </div>` : '';
-        const restLabel = s.rest || restTxt;
+        const restLabel = restSecToText(getRestSec(sel, e));
         const suggestion = getProgressionSuggestion(e.name, sel);
         const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
         return `
@@ -4259,13 +4282,16 @@ function renderTraining(){
       { n:3, type:'CARICO',  rir:'RIR 1 / 0', active:false },
       { n:4, type:'SCARICO', rir:'RIR 3+',     active:false },
     ];
-    const startDate = ST.profile && ST.profile.train_start_date ? new Date(ST.profile.train_start_date) : null;
-    if(startDate){
-      const diffDays = Math.floor((new Date()-startDate)/86400000);
-      if(diffDays >= 0){
-        const currentWeek = Math.floor(diffDays/7) % 4;
-        CYCLE_WEEKS[currentWeek].active = true;
-      }
+    // Settimana corrente = floor(workout completati validi / 6) % 4
+    // Esclude rest/rest_injury (riposi non contano per progressione carico/scarico)
+    // Mostra SETT 1 di default se non ci sono ancora workout
+    const validWorkoutsCount = (ST.trainAllCompleted || []).length;
+    if(validWorkoutsCount > 0){
+      const currentWeek = Math.floor(validWorkoutsCount / 6) % 4;
+      CYCLE_WEEKS[currentWeek].active = true;
+    } else {
+      // Nessun workout ancora: evidenzia SETT 1 come "in attesa di iniziare"
+      CYCLE_WEEKS[0].active = true;
     }
     const cycleCards = CYCLE_WEEKS.map(w=>`
       <div style="flex:1;border-radius:var(--r-md,12px);padding:12px 8px;text-align:center;
