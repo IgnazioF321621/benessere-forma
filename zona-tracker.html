@@ -460,6 +460,17 @@ select.inp{cursor:pointer;}
   margin:0 0 16px 0;
   line-height:1.25;
 }
+.rest-suggestion{
+  background:#E6F4F2;
+  color:#1F5C53;
+  padding:10px 14px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:700;
+  font-family:var(--font-sans);
+  margin:0 0 16px 0;
+  line-height:1.4;
+}
 .modal-section{margin-bottom:16px;}
 .modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;margin:0 0 8px 0;font-family:var(--font-mono);}
 .modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
@@ -1161,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 07:36';
+const APP_VERSION = '2026.05.08 · 10:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3398,12 +3409,12 @@ function playPrepBeep(){
 }
 
 // Triplo beep finale — al raggiungimento di 0.
-// Tono alto/forte: sine 880Hz, 3 burst da 100ms, gap 150ms (cycle 250ms), gain 0.7
-// + vibrazione [200,100,200,100,200].
+// Tono alto/forte: sine 880Hz, 3 burst da 220ms, gap 200ms (cycle 420ms), gain 0.9
+// + vibrazione [220,120,220,120,220].
 function playFinalTripleBeep(){
   try {
     if(navigator.vibrate){
-      try { navigator.vibrate([200,100,200,100,200]); } catch(e){}
+      try { navigator.vibrate([220,120,220,120,220]); } catch(e){}
     }
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
@@ -3418,13 +3429,13 @@ function playFinalTripleBeep(){
             osc.connect(gain);
             gain.connect(ctx.destination);
             const t0 = ctx.currentTime;
-            gain.gain.setValueAtTime(0.7, t0);
-            gain.gain.setValueAtTime(0.7, t0 + 0.08);
-            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.1);
+            gain.gain.setValueAtTime(0.9, t0);
+            gain.gain.setValueAtTime(0.9, t0 + 0.20);
+            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.22);
             osc.start(t0);
-            osc.stop(t0 + 0.11);
+            osc.stop(t0 + 0.23);
           } catch(e){}
-        }, i * 250); // 100ms tone + 150ms gap
+        }, i * 420); // 220ms tone + 200ms gap
       }
     };
     if(ctx.state === 'suspended'){
@@ -3489,6 +3500,13 @@ function tickCountdown(){
   if(remaining <= 0 && !cd.beeped){
     cd.beeped = true;
     playFinalTripleBeep();
+    // Auto-close dopo 1s: chiude modal "PRONTO!" e scrolla all'esercizio attivo
+    setTimeout(()=>{
+      if(ST.trainCountdown && ST.trainCountdown.beeped){
+        skipCountdown();
+        scrollToActiveExercise();
+      }
+    }, 1000);
   }
   // Re-render solo se il valore intero del secondo è cambiato (evita 4 render/sec)
   if(remaining !== cd.seconds){
@@ -3533,6 +3551,30 @@ function skipCountdown(){
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
   renderTraining();
+  scrollToActiveExercise();
+}
+
+// Scrolla al centro la card del primo esercizio non completato della sessione corrente
+function scrollToActiveExercise(){
+  try {
+    const sel = ST.trainSession;
+    if(!sel) return;
+    const sess = TRAINING_SESSIONS[sel];
+    if(!sess || !sess.exercises) return;
+    const today = todayKey();
+    const activeEx = sess.exercises.find(ex => {
+      const keys = Object.keys(ST.trainLoggedSets || {}).filter(k =>
+        k.startsWith(`${sel}_${ex.name}_`) && k.endsWith(`_${today}`)
+      );
+      return keys.length < ex.sets;
+    });
+    if(!activeEx) return;
+    const safeId = 'excard-' + activeEx.name.replace(/[^a-zA-Z0-9]/g,'_');
+    setTimeout(()=>{
+      const el = document.getElementById(safeId);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 120);
+  } catch(e){}
 }
 
 async function loadWorkouts(year, month){
@@ -4014,7 +4056,7 @@ function renderTraining(){
         const suggestion = getProgressionSuggestion(e.name, sel);
         const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
         return `
-          <div class="exercise-card${allDone?' done':''}">
+          <div class="exercise-card${allDone?' done':''}" id="excard-${e.name.replace(/[^a-zA-Z0-9]/g,'_')}">
             <!-- HEADER cliccabile (apre modal scheda esercizio) -->
             <div class="ex-header" onclick="openExerciseAI('${safeName}','${sel}','','')">
               <div class="ex-title-row">
@@ -4426,6 +4468,10 @@ function renderTraining(){
           </div>
           <div class="rest-modal-body">
             <h2 class="rest-ex-name">${cd.exName}</h2>
+            ${(()=>{
+              const sugg = (typeof getProgressionSuggestion === 'function') ? getProgressionSuggestion(cd.exName, cd.sessionId) : '';
+              return sugg ? `<div class="rest-suggestion">${sugg}</div>` : '';
+            })()}
 
             ${executionList ? `<div class="modal-section">
               <h4>Esecuzione</h4>
