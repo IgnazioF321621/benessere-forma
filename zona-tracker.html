@@ -1161,7 +1161,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.07 · 10:32';
+const APP_VERSION = '2026.05.08 · 07:36';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2623,7 +2623,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Trazioni alla sbarra', sets:4, reps:'4-6',
         eq:'Sbarra fissa da porta',
-        setup:"Presa pronata, larghezza poco più delle spalle. Elastico sotto i piedi se serve assistenza.",
+        setup:[
+          "Presa pronata, larghezza poco più delle spalle",
+          "Elastico sotto i piedi se serve assistenza"
+        ],
         execution:[
           "Sospensione passiva attiva: spalle basse, scapole compatte",
           "Tirata fino al mento sopra la sbarra",
@@ -2639,7 +2642,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Chest press in piedi con elastico', sets:4, reps:'4-6',
         eq:'Elastico + 2 maniglie singole',
-        setup:"Elastico ancorato dietro all'altezza del petto. In piedi, busto leggermente inclinato avanti, una maniglia per mano.",
+        setup:[
+          "Elastico ancorato dietro all'altezza del petto",
+          "In piedi, busto leggermente inclinato avanti",
+          "Una maniglia per mano"
+        ],
         execution:[
           "Spinta orizzontale in avanti delle braccia",
           "Estensione completa senza bloccare i gomiti",
@@ -2655,7 +2662,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Shoulder press in piedi con elastico', sets:3, reps:'4-6',
         eq:'Elastico + 2 maniglie singole',
-        setup:"Bilaterale. Elastico sotto entrambi i piedi, una maniglia per mano all'altezza delle spalle.",
+        setup:[
+          "Bilaterale, elastico sotto entrambi i piedi",
+          "Una maniglia per mano all'altezza delle spalle"
+        ],
         execution:[
           "Spinta verticale verso l'alto fino a braccia distese",
           "Mantieni core e gluteo contratti",
@@ -2672,7 +2682,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Row in piedi con elastico', sets:4, reps:'4-6',
         eq:'Elastico + barra lunga',
-        setup:"Elastico ancorato davanti all'altezza del petto. In piedi, busto leggermente inclinato avanti, presa larga sulla barra.",
+        setup:[
+          "Elastico ancorato davanti all'altezza del petto",
+          "In piedi, busto leggermente inclinato avanti",
+          "Presa larga sulla barra"
+        ],
         execution:[
           "Tirata orizzontale della barra verso il petto",
           "Scapole insieme in fase di tirata",
@@ -2688,7 +2702,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Face pull con elastico', sets:3, reps:'6-8', iso:true,
         eq:'Elastico + corda doppia',
-        setup:"Elastico ancorato sopra all'altezza del viso. In piedi, presa neutra alle estremità della corda.",
+        setup:[
+          "Elastico ancorato sopra all'altezza del viso",
+          "In piedi, presa neutra alle estremità della corda"
+        ],
         execution:[
           "Tirata della corda verso il viso",
           "Gomiti alti e larghi, palmi che ruotano verso l'alto",
@@ -2710,7 +2727,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Inverted row con elastico', sets:4, reps:'8-12',
         eq:'Elastico + 2 maniglie o corda doppia',
-        setup:"Elastico ancorato basso. Busto inclinato 45°, presa neutra o pronata alle maniglie.",
+        setup:[
+          "Elastico ancorato basso",
+          "Busto inclinato 45°",
+          "Presa neutra o pronata alle maniglie"
+        ],
         execution:[
           "Tirata orizzontale verso l'addome",
           "Scapole insieme, petto in fuori",
@@ -2726,7 +2747,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Chest press inclinata su panca', sets:3, reps:'8-12',
         eq:'Panca 30-45° + elastico + 2 maniglie',
-        setup:"Sdraiato su panca inclinata 30-45°. Elastico ancorato basso, una maniglia per mano all'altezza del petto.",
+        setup:[
+          "Sdraiato su panca inclinata 30-45°",
+          "Elastico ancorato basso",
+          "Una maniglia per mano all'altezza del petto"
+        ],
         execution:[
           "Spinta in alto e leggermente in avanti",
           "Estensione senza bloccare i gomiti",
@@ -2742,7 +2767,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Lateral raise con elastico', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + 2 maniglie singole',
-        setup:"In piedi sopra l'elastico, una maniglia per mano lungo i fianchi, gomiti leggermente flessi.",
+        setup:[
+          "In piedi sopra l'elastico",
+          "Una maniglia per mano lungo i fianchi",
+          "Gomiti leggermente flessi"
+        ],
         execution:[
           "Sollevamento laterale fino all'altezza spalle",
           "Palmi rivolti verso il basso",
@@ -2758,7 +2787,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Row inclinato in piedi busto 45°', sets:4, reps:'8-12',
         eq:'Elastico + barra corta',
-        setup:"Elastico ancorato basso. Busto inclinato 45°, schiena neutra, ginocchia leggermente flesse.",
+        setup:[
+          "Elastico ancorato basso",
+          "Busto inclinato 45°, schiena neutra",
+          "Ginocchia leggermente flesse"
+        ],
         execution:[
           "Tirata della barra verso l'ombelico (non verso il petto)",
           "Gomiti vicini al busto",
@@ -2775,7 +2808,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Curl bicipiti con elastico', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + 2 maniglie singole',
-        setup:"In piedi sopra l'elastico, palmi avanti (presa supinata), gomiti fissi ai fianchi.",
+        setup:[
+          "In piedi sopra l'elastico",
+          "Palmi avanti (presa supinata)",
+          "Gomiti fissi ai fianchi"
+        ],
         execution:[
           "Flessione bilaterale degli avambracci verso le spalle",
           "Pausa isometrica 1 sec in cima",
@@ -2791,7 +2828,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Tricipiti overhead con elastico', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + corda doppia o maniglia singola',
-        setup:"Elastico ancorato basso. Braccia distese sopra la testa, gomiti vicini alle orecchie.",
+        setup:[
+          "Elastico ancorato basso",
+          "Braccia distese sopra la testa",
+          "Gomiti vicini alle orecchie"
+        ],
         execution:[
           "Flessione dei gomiti dietro la testa",
           "Estensione completa verso l'alto",
@@ -2813,7 +2854,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Bulgarian split squat con elastico', sets:4, reps:'4-6 per lato',
         eq:'Panca + elastico + 2 maniglie',
-        setup:"Piede posteriore sulla panca, tallone anteriore rialzato 3-5 cm. Elastico sotto piede anteriore, una maniglia per mano.",
+        setup:[
+          "Piede posteriore sulla panca",
+          "Tallone anteriore rialzato 3-5 cm",
+          "Elastico sotto piede anteriore, una maniglia per mano"
+        ],
         execution:[
           "Discesa controllata 3 sec",
           "Ginocchio anteriore in linea col secondo dito del piede",
@@ -2830,7 +2875,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Romanian deadlift con elastico', sets:4, reps:'4-6',
         eq:'Elastico + barra lunga',
-        setup:"Elastico sotto entrambi i piedi (larghezza spalle). Barra impugnata davanti alle cosce con presa pronata.",
+        setup:[
+          "Elastico sotto entrambi i piedi (larghezza spalle)",
+          "Barra impugnata davanti alle cosce con presa pronata"
+        ],
         execution:[
           "Hip hinge: glutei indietro, ginocchia morbide",
           "Discesa fino a sentire stiramento femorali (~tibia)",
@@ -2847,7 +2895,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Hip thrust con elastico', sets:4, reps:'4-6',
         eq:'Panca + elastico + 2 maniglie',
-        setup:"Spalle appoggiate sulla panca, piedi a terra larghezza spalle. Elastico sopra le anche tenuto lateralmente.",
+        setup:[
+          "Spalle appoggiate sulla panca",
+          "Piedi a terra larghezza spalle",
+          "Elastico sopra le anche tenuto lateralmente"
+        ],
         execution:[
           "Spinta verticale delle anche verso l'alto",
           "Linea retta spalle-anche-ginocchia in cima",
@@ -2863,7 +2915,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Glute bridge isometrico con cavigliera', sets:3, reps:'30 sec per lato', iso:true,
         eq:'Elastico + cavigliera',
-        setup:"Supino con schiena a terra, ginocchia flesse, piedi a terra. Cavigliera al ginocchio della gamba che lavora, elastico ancorato a un punto laterale dal lato opposto.",
+        setup:[
+          "Supino, ginocchia flesse, piedi a terra",
+          "Cavigliera al ginocchio",
+          "Elastico ancorato lateralmente"
+        ],
         execution:[
           "Sollevamento del bacino fino a linea retta spalle-ginocchia",
           "Mantieni la posizione isometrica per 30 sec resistendo alla trazione verso l'interno",
@@ -2886,7 +2942,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Squat con elastico e talloni rialzati', sets:4, reps:'8-12',
         eq:'Elastico + 2 maniglie o barra lunga',
-        setup:"Talloni su spessore 3-5 cm. Elastico sotto i piedi, maniglie all'altezza spalle (front squat).",
+        setup:[
+          "Talloni su spessore 3-5 cm",
+          "Elastico sotto i piedi",
+          "Maniglie all'altezza spalle (front squat)"
+        ],
         execution:[
           "Discesa fino a parallelo o leggermente oltre",
           "Busto eretto, ginocchia in linea coi piedi",
@@ -2903,7 +2963,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Single leg Romanian deadlift con elastico', sets:3, reps:'8-12 per lato',
         eq:'Elastico + 1 maniglia singola',
-        setup:"Elastico sotto piede d'appoggio. Maniglia in mano opposta alla gamba d'appoggio.",
+        setup:[
+          "Elastico sotto piede d'appoggio",
+          "Maniglia in mano opposta alla gamba d'appoggio"
+        ],
         execution:[
           "Hip hinge unilaterale, gamba libera dietro in linea col busto",
           "Schiena neutra, ginocchio d'appoggio leggermente flesso",
@@ -2920,7 +2983,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Hip thrust con elastico TUT alto', sets:4, reps:'12-15',
         eq:'Panca + elastico + 2 maniglie',
-        setup:"Identico al hip thrust forza ma focus su tempo sotto tensione.",
+        setup:[
+          "Identico al hip thrust forza ma focus su tempo sotto tensione"
+        ],
         execution:[
           "Spinta verticale controllata delle anche",
           "Eccentrica 4 sec (discesa lentissima)",
@@ -2936,7 +3001,10 @@ const TRAINING_SESSIONS = {
       {
         name:'Leg curl con elastico sulla fitball', sets:3, reps:'12-15', iso:true,
         eq:'Fitball + cavigliera (opz.)',
-        setup:"Supino, talloni sulla fitball, bacino sollevato. Linea retta spalle-anche-ginocchia.",
+        setup:[
+          "Supino, talloni sulla fitball, bacino sollevato",
+          "Linea retta spalle-anche-ginocchia"
+        ],
         execution:[
           "Trascina la palla verso i glutei flettendo le ginocchia",
           "Mantieni il bacino alto durante tutto il movimento",
@@ -2952,7 +3020,11 @@ const TRAINING_SESSIONS = {
       {
         name:'Calf raise con elastico', sets:3, reps:'15-20', iso:true,
         eq:'Elastico + 2 maniglie singole',
-        setup:"In piedi sopra l'elastico (avampiede), maniglie ai fianchi. Opzionale: avampiede su spessore per range maggiore.",
+        setup:[
+          "In piedi sopra l'elastico (avampiede)",
+          "Maniglie ai fianchi",
+          "Opzionale: avampiede su spessore per range maggiore"
+        ],
         execution:[
           "Sollevamento sulle punte estendendo le caviglie",
           "Pausa isometrica 1 sec in cima",
@@ -2974,7 +3046,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Mobilità spalle e colonna toracica', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Sequenza dinamica focalizzata su spalle, scapole e colonna toracica per recuperare dopo Upper A.",
+        setup:[
+          "Sequenza dinamica focalizzata su spalle, scapole e colonna toracica per recuperare dopo Upper A."
+        ],
         execution:[
           "Circonduzioni spalle ampie (avanti e dietro)",
           "Apertura toracica supina con braccia a candeliere",
@@ -2990,7 +3064,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Stretching dorsali e pettorali', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Allungamento statico catena anteriore alta e dorsali, già lavorati in Upper A.",
+        setup:[
+          "Allungamento statico catena anteriore alta e dorsali, già lavorati in Upper A."
+        ],
         execution:[
           "Stretching dorsale al muro (mani in alto, anche indietro)",
           "Stretching pettorale su angolo o porta",
@@ -3006,7 +3082,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Stretching glutei e lombari', sets:1, reps:'6 min',
         eq:'Tappetino',
-        setup:"Decompressione bassa schiena e glutei dopo Lower A (Bulgarian, RDL, hip thrust).",
+        setup:[
+          "Decompressione bassa schiena e glutei dopo Lower A (Bulgarian, RDL, hip thrust)."
+        ],
         execution:[
           "Pigeon pose o figura 4 supino",
           "Knee-to-chest singola e doppia",
@@ -3028,7 +3106,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Mobilità anche e caviglie', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Sequenza dinamica per anche e caviglie, lavorate intensamente in Lower B (squat, single leg RDL, calf raise).",
+        setup:[
+          "Sequenza dinamica per anche e caviglie, lavorate intensamente in Lower B (squat, single leg RDL, calf raise)."
+        ],
         execution:[
           "Hip CARs (Controlled Articular Rotations)",
           "Affondi profondi con rotazione",
@@ -3044,7 +3124,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Stretching quadricipiti e flessori anca', sets:1, reps:'7 min',
         eq:'Tappetino',
-        setup:"Allungamento statico catena anteriore coscia, accorciata da squat e Bulgarian.",
+        setup:[
+          "Allungamento statico catena anteriore coscia, accorciata da squat e Bulgarian."
+        ],
         execution:[
           "Affondo basso con stiramento psoas (couch stretch)",
           "Quad stretch in piedi o supino laterale",
@@ -3060,7 +3142,9 @@ const TRAINING_SESSIONS = {
       {
         name:'Stretching femorali e polpacci', sets:1, reps:'6 min',
         eq:'Tappetino',
-        setup:"Allungamento catena posteriore gamba, accorciata da RDL, leg curl, calf raise.",
+        setup:[
+          "Allungamento catena posteriore gamba, accorciata da RDL, leg curl, calf raise."
+        ],
         execution:[
           "Stretching femorali da seduto o supino",
           "Stretching polpaccio al muro (gamba dritta + piegata)",
@@ -4271,9 +4355,9 @@ function renderTraining(){
         ${mediaHtml}
         ${surrogateBanner}
 
-        ${ai.setup ? `<div class="modal-section">
+        ${(ai.setup && ai.setup.length) ? `<div class="modal-section">
           <h4>Setup</h4>
-          <p>${ai.setup}</p>
+          <ul class="modal-list">${ai.setup.map(s=>`<li>${s}</li>`).join('')}</ul>
         </div>` : ''}
 
         ${executionList ? `<div class="modal-section">
