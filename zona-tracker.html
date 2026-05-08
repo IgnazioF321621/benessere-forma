@@ -1172,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 18:08';
+const APP_VERSION = '2026.05.08 · 18:21';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1241,6 +1241,7 @@ const ST = {
   aiCue: {},                        // { `${sessionId}_${exName}`: 'cue AI Coach' } - persistente in sessione
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
+  trainAllCompleted: [],            // tutti i workout completati validi (esclusi rest/rest_injury) — usato per calcolo settimana ciclo
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
 };
@@ -3745,7 +3746,8 @@ async function loadTrainingAllCompleted(){
       .select('id, session_type, date')
       .eq('user_id', ST.user.id)
       .eq('completed', true)
-      .not('session_type', 'in', '(rest,rest_injury)')
+      .neq('session_type', 'rest')
+      .neq('session_type', 'rest_injury')
       .order('date', {ascending:true});
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
@@ -4315,7 +4317,7 @@ function renderTraining(){
         </div>
 
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">CICLO 4 SETTIMANE${startDate?'':' <span style="font-weight:400;text-transform:none;font-size:11px;">(imposta data inizio in profilo)</span>'} <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">CICLO 4 SETTIMANE <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
           <div style="display:flex;gap:8px;">${cycleCards}</div>
         </div>
 
