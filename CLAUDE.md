@@ -196,11 +196,12 @@ RLS abilitata — policy: `auth.uid() = user_id`.
   - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
   - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
   - Info icon ⓘ su badge RIR (→ `showInfoModal('rir')`) e su serie (→ `showInfoModal('serie')`)
-- **Piano**:
-  - Split settimanale con giorni numerici G1–G7
-  - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1) con settimana corrente (se `train_start_date` impostata)
+- **Programma** (label tab rinominato 8 maggio 2026, id `piano` per back-compat):
+  - Split settimanale con giorni numerici G1–G6 (rotazione 6 giorni, dopo G6 → G1)
+  - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1). Settimana corrente calcolata su workout completati (1 settimana = 6 workout veri, riposi esclusi)
   - Progressione doppia: 3 step + esempio pratico
   - Info icon ⓘ su "CICLO 4 SETTIMANE" e "PROGRESSIONE DOPPIA"
+  - Riposo extra opzionale: 2 card separate (🌙 scelto / 🩹 infortunio con prompt zona corpo)
 - **Progressione**:
   - Chips esercizi scrollabili
   - Storico log per esercizio raggruppato per data — caricato da Supabase
@@ -272,7 +273,11 @@ const ST = {
 
 ## Modulo Training — specifiche
 
-**Split:** Upper/Lower 4 giorni + 2 Active Recovery — giorni numerici G1–G7
+**Split:** Upper/Lower 4 giorni + 2 Active Recovery — giorni numerici G1–G6 (rotazione 6 giorni, dopo G6 → G1)
+
+**Riposo extra** (NON in rotazione, NON conta nel calcolo settimana ciclo):
+- Riposo scelto (`rest`): giorno volontario, button grigio (`markRestChosen`)
+- Riposo infortunio (`rest_injury`): stop forzato, button arancione, prompt zona corpo, salvato in `workouts.note` (`markRestInjury`)
 
 | Sessione | Tipo | RIR |
 |---|---|---|
@@ -314,7 +319,7 @@ const ST = {
 {
   name: 'Trazioni alla sbarra',
   sets: 4,
-  reps: '4-6',                  // '4-6' | '8-12' | '4-6 per lato' | '20-30 sec' | '10 min'
+  reps: '4-6',                  // '4-6' | '8-12' | '4-6 per lato' | '20-30 sec' | '20-30 sec per lato' | '10 min'
   eq: 'Sbarra fissa da porta',  // attrezzatura sintetica
   iso: true,                    // OPZIONALE: esercizi isolation/isometrici, usato da getRestSec
   setup: 'Presa pronata...',    // 1 frase: posizione iniziale + attrezzatura
@@ -471,6 +476,12 @@ GitHub Pages si aggiorna automaticamente (1-2 minuti).
 | `updatePianoTargetCard()` | Aggiorna card target in Piano al toggle obiettivo (live) |
 | `renderPiano()` | Renderizza Piano inclusa card target inline |
 | `nutriSubNav(active)` | Sub-nav Nutrition riusabile su tutte e 4 le pagine |
+| `parseRepsRange(repsStr)` | Parser unificato campo reps: ritorna `{kind:'reps'\|'seconds', min, max, perLato, unit}` o null (8 mag 2026) |
+| `loadTrainingAllCompleted()` | Carica tutti workout completati validi (esclude riposi) per calcolo settimana ciclo (8 mag 2026) |
+| `markRestChosen()` | Segna giorno come riposo volontario (`workouts.session_type='rest'`) (8 mag 2026) |
+| `markRestInjury()` | Segna riposo per infortunio + nota zona corpo (`workouts.session_type='rest_injury'`, `note=...`) (8 mag 2026) |
+| `scrollToActiveExercise()` | Scrolla card primo esercizio non completato al centro (8 mag 2026) |
+| `restSecToText(sec)` | Format recupero in stringa: 60→'1 min', 75→'75 sec', 120→'2 min' |
 
 ## Vocabolario obiettivi — fonte unica (`OBJ_ADAPT`)
 
@@ -557,9 +568,13 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] `EXERCISE_MEDIA` — media statici per Upper A + Face pull
 - [x] Completare `EXERCISE_MEDIA` per Upper B, Lower A, Lower B (3 maggio 2026): tutti i 19 esercizi training mappati con `muscleImg`+`executionImg` PNG Wger locali in `assets/exercises/`
 - [x] Nomi esercizi normalizzati ("con elastico" esplicito, no ridondanze) + note dense con muscoli target (3 maggio 2026)
+- [x] Audit training completo: setup array, rest fisso, riposi extra, rotazione 6 giorni (8 maggio 2026)
+- [x] Modal log esercizi temporali con DURATA + auto-progressione su secondi (8 maggio 2026)
+- [x] Tab Piano rinominata Programma + calcolo settimana basato su workout completati (8 maggio 2026)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
+- [ ] GIF/video esecuzione esercizi nel modal scheda (collapsibile, click per aprire)
 
 ### Possibili evoluzioni future modulo Training
 
@@ -568,6 +583,67 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 8 maggio 2026 — Audit training completo + rotazione 6 giorni + riposi extra
+
+**Audit setup esercizi (Step 1)**:
+- Tutti i 26 `setup` (20 core + 6 recovery) convertiti da string a `string[]` per leggibilità
+- Renderer modal aggiornato per gestire array → `<ul class="modal-list">`
+- Glute bridge isometrico: reps da `'30 sec per lato'` a `'20-30 sec per lato'` (range temporale)
+
+**Audio countdown + auto-close modal recupero (Step 2)**:
+- `playFinalTripleBeep` rinforzato: 3 beep a 880Hz, gain 0.9, durata 220ms, gap 200ms (cycle 420ms)
+- `playPrepBeep` invariato (5,4,3,2,1 a 600Hz)
+- Auto-close modal "PRONTO!" 1s dopo `playFinalTripleBeep` (chiusura via `skipCountdown`)
+- Suggerimento progressione `getProgressionSuggestion` mostrato nel modal recupero sotto `<h2 class="rest-ex-name">`, classe CSS `.rest-suggestion` (sfondo verde tenue #E6F4F2)
+- `scrollToActiveExercise()` nuova funzione: dopo skipCountdown, scrolla la card del primo esercizio non completato al centro tramite `scrollIntoView({block:'center'})`. Card hanno `id="excard-${name_safe}"`
+
+**Rotazione 6 giorni + riposo extra (Step 3+4)**:
+- `SESSION_CYCLE` da 7 a 6 voci: `'rest'` rimosso dalla rotazione automatica
+- `SESSION_DAY_NUM` ha 6 chiavi (G7 eliminato)
+- Tab Piano: titolo `SPLIT — 6 GIORNI`, card G7 rimossa
+- Nuovo box "Riposo extra opzionale" in fondo al Piano con 2 card separate:
+  - 🌙 **Riposo scelto** (`markRestChosen`, session_type `rest`, button #9CA3AF)
+  - 🩹 **Riposo per infortunio** (`markRestInjury`, session_type `rest_injury`, button #B84C2A, prompt zona corpo)
+- `loadTrainingHomeData` e `loadSessionLastCompletion` ignorano `rest`/`rest_injury` nella rotazione (`.not('session_type','in','(rest,rest_injury)')`)
+- DB: aggiunta colonna `note TEXT NULL` a tabella `workouts` per zona corpo infortunio (migration `ALTER TABLE workouts ADD COLUMN IF NOT EXISTS note TEXT NULL`)
+
+**Calendario Progressione (Step 3)**:
+- Sigle aggiornate: `UA`→`UP A`, `UB`→`UP B`, `LA`→`LO A`, `LB`→`LO B`, `recoveryUpper`→`REC↑`, `recoveryLower`→`REC↓`, `rest`→`REST`, nuovo `rest_injury`→`STOP`
+- `SESS_COLOR` con `rest_injury:'#B84C2A'` (arancione)
+- Tooltip celle infortunio mostrano la nota appuntata
+
+**Progressione temporale + fix bug AI (Step 5)**:
+- Nuova funzione `parseRepsRange(repsStr)` parser unificato: ritorna `{kind, min, max, perLato, unit}` per `'4-6'`/`'4-6 per lato'`/`'20-30 sec'`/`'20-30 sec per lato'`/`'30 sec'`. Skip su `'10 min'`/`'5-10 min'`
+- `suggestProgressionAI`: branch dinamico per esercizi temporali con `unitLbl` ('reps'|'sec') e `stepUnit` (1|5). Non più "+1 rep su esercizi temporali"
+- 5 regole prompt e esempi formato risposta usano unità dinamica
+
+**Modal log esercizi temporali (Step 6)**:
+- Per esercizi `iso:true` con reps temporali (parseRepsRange.kind==='seconds'):
+  - Etichetta REPS → `DURATA (sec)`
+  - Picker valori solo nel range esercizio con step 5 (es. Glute bridge: 20, 25, 30)
+  - Blocco RIR nascosto (no senso per isometrici)
+  - Card esercizio non mostra pill RIR (`(s.rir!=null && !isTimed)`)
+- `paramsLine` "${sets}×${reps} · RIR · Recupero" rimossa dal modal scheda esercizio (`openExerciseAI`) — solo card sessione la mostra
+- `saveTrainingSet` gestisce `rirEl=null` (DOM element non esiste su esercizi temporali)
+
+**Rest fisso calibrato (Step 7)**:
+- `getRestSec` ricalibrata per allenamento elastici a RIR 2:
+  - Forza compound: 120s (no powerlifting puro)
+  - Ipertrofia compound: 75s (target 60-90s)
+  - Iso/accessori (entrambe sessioni): 60s
+- Campi `rest` testuali in TRAINING_SESSIONS aggiornati: Forza `'2 min'`, Ipertrofia `'75 sec'`
+- Card esercizio mostra recupero per ESERCIZIO specifico via `restSecToText(getRestSec(sel,e))` invece che a livello sessione
+
+**Tab Piano → Programma (Step 8)**:
+- Label tab rinominata `'Piano'` → `'Programma'` (id `piano` invariato per back-compat)
+- Calcolo settimana ciclo basato su workout completati invece di giorni di calendario:
+  - `validWorkoutsCount = ST.trainAllCompleted.length`
+  - `currentWeek = Math.floor(N / 6) % 4`
+  - 1 settimana = 6 workout veri completati. Riposi non contano.
+- Nuova funzione `loadTrainingAllCompleted` carica workout completati esclusi `rest`/`rest_injury`. Chiamata da `showPage('training')`, refresh dopo `saveWorkoutRecord` e `deleteWorkout`
+- `ST.trainAllCompleted` inizializzato a `[]` nello stato globale ST
+- Bug fix: rimosso reference orfano a `startDate` nel template literal "CICLO 4 SETTIMANE" (vecchio calcolo basato su `train_start_date` rimosso ma reference dimenticato → ReferenceError che bloccava render della tab)
 
 ### 7 maggio 2026 — Cache GIF programma core completata (20/20)
 
