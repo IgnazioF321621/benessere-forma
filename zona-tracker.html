@@ -1172,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 11:23';
+const APP_VERSION = '2026.05.08 · 12:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1247,7 +1247,8 @@ const ST = {
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
 // Ciclo 6 giorni: G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 recoveryLower (poi torna a G1)
-// 'rest' resta supportato come giorno extra opzionale (markRestDone), ma NON è in rotazione automatica.
+// 'rest' (riposo scelto) e 'rest_injury' (riposo per infortunio) restano supportati come giorni extra
+// opzionali (markRestChosen / markRestInjury), ma NON sono in rotazione automatica.
 const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6 };
 const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
 
@@ -2233,10 +2234,11 @@ async function loadTrainingHomeData(){
   }
   const today = todayKey();
   try {
-    // Ultimo workout (qualsiasi stato) — fonte di verità coerente desktop/mobile
+    // Ultimo workout effettivo (esclude riposi, scelti o per infortunio) — fonte di verità per rotazione
     const { data: lastArr, error: lastErr } = await supa.from('workouts')
       .select('date, session_type, completed')
       .eq('user_id', ST.user.id)
+      .not('session_type', 'in', '(rest,rest_injury)')
       .order('date', {ascending:false})
       .limit(1);
     if(lastErr) throw lastErr;
@@ -3287,8 +3289,8 @@ function getProgressionSuggestion(exName, sessionId){
 }
 
 function renderCalendar(workouts, year, month){
-  const SESS_LABEL = { upperA:'UP A', upperB:'UP B', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REC' };
-  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recoveryUpper:'#2A7A6F', recoveryLower:'#2A7A6F', rest:'#9CA3AF' };
+  const SESS_LABEL = { upperA:'UP A', upperB:'UP B', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REST', rest_injury:'STOP' };
+  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recoveryUpper:'#2A7A6F', recoveryLower:'#2A7A6F', rest:'#9CA3AF', rest_injury:'#B84C2A' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
@@ -3323,7 +3325,9 @@ function renderCalendar(workouts, year, month){
     const tc = w ? '#fff' : (isToday ? 'var(--t1)' : 'var(--t3)');
     const brd = (!w && isToday) ? '1.5px solid #185FA5' : '1px solid transparent';
     const lbl = w ? (SESS_LABEL[w.session_type]||w.session_type)+(w.completed?'✓':'') : '';
-    const clickAttr = w ? ' onclick="ST.trainCalDeleteConfirm={id:\''+w.id+'\',date:\''+ds+'\'};renderTraining();" title="Tocca per eliminare"' : '';
+    const tooltipNote = w?.session_type === 'rest_injury' && w?.note ? ' — '+String(w.note).replace(/"/g,'&quot;') : '';
+    const tooltipLbl = w ? (SESS_LABEL[w.session_type]||w.session_type) + tooltipNote : '';
+    const clickAttr = w ? ' onclick="ST.trainCalDeleteConfirm={id:\''+w.id+'\',date:\''+ds+'\'};renderTraining();" title="'+tooltipLbl+' — Tocca per eliminare"' : '';
     const cursor = w ? 'cursor:pointer;' : '';
     cells += '<div'+clickAttr+' style="min-height:38px;border-radius:6px;background:'+bg+';border:'+brd+';'+cursor+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">'
       + '<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:'+tc+';">'+day+'</span>'
@@ -3588,9 +3592,9 @@ async function loadWorkouts(year, month){
   renderTraining();
 }
 
-// Segna manualmente il giorno di riposo totale (G7) come fatto.
-// Idempotente: se esiste già un record 'rest' per oggi non duplica.
-async function markRestDone(){
+// Riposo SCELTO (volontario): marca giorno come "rest" in workouts.
+// Idempotente per session_type.
+async function markRestChosen(){
   if(!ST.user || ST.user.id==='test-user-001') return;
   const today = todayKey();
   try {
@@ -3603,8 +3607,34 @@ async function markRestDone(){
     if(error) throw error;
     showToast('🌙 Riposo segnato');
     loadTrainingHomeData();
+    // Forza refresh calendario al prossimo accesso Progressione
+    ST.trainWorkouts = undefined;
   } catch(e){
-    console.warn('markRestDone:', e.message);
+    console.warn('markRestChosen:', e.message);
+    showToast('Errore: ' + e.message);
+  }
+}
+
+// Riposo PER INFORTUNIO: marca giorno come "rest_injury" + nota su zona del corpo.
+async function markRestInjury(){
+  if(!ST.user || ST.user.id==='test-user-001') return;
+  const today = todayKey();
+  const note = prompt('Zona del corpo coinvolta (opzionale, es. "ginocchio dx", "lombare"):');
+  if(note === null) return; // utente ha annullato
+  try {
+    const { data: existing } = await supa.from('workouts')
+      .select('id').eq('user_id', ST.user.id).eq('date', today).eq('session_type', 'rest_injury').maybeSingle();
+    if(existing){ showToast('Riposo per infortunio già segnato per oggi'); return; }
+    const { error } = await supa.from('workouts').insert({
+      user_id: ST.user.id, date: today, session_type: 'rest_injury', completed: true, duration_min: 0,
+      note: note.trim() || null
+    });
+    if(error) throw error;
+    showToast('🩹 Riposo per infortunio segnato');
+    loadTrainingHomeData();
+    ST.trainWorkouts = undefined;
+  } catch(e){
+    console.warn('markRestInjury:', e.message);
     showToast('Errore: ' + e.message);
   }
 }
@@ -3656,6 +3686,7 @@ async function loadSessionLastCompletion(){
       .select('session_type, date')
       .eq('user_id', ST.user.id)
       .eq('completed', true)
+      .not('session_type', 'in', '(rest,rest_injury)')
       .order('date', {ascending:false})
       .limit(80);
     const map = {};
@@ -4242,12 +4273,21 @@ function renderTraining(){
 
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">RIPOSO EXTRA</div>
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Giorno di riposo opzionale</div>
-              <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Marca un giorno di riposo totale quando ne senti il bisogno. Non blocca la rotazione.</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">🌙 Riposo scelto</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Giorno di riposo volontario. Non blocca la rotazione.</div>
+              </div>
+              <button onclick="markRestChosen();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
-            <button onclick="markRestDone();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
+            <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">🩹 Riposo per infortunio</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Stop forzato. Permette di appuntare la zona del corpo.</div>
+              </div>
+              <button onclick="markRestInjury();" style="flex-shrink:0;background:#B84C2A;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
+            </div>
           </div>
         </div>
 
