@@ -1172,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 12:45';
+const APP_VERSION = '2026.05.08 · 15:40';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2920,7 +2920,7 @@ const TRAINING_SESSIONS = {
         muscles:['gluteo massimo','femorali','gluteo medio']
       },
       {
-        name:'Glute bridge isometrico con cavigliera', sets:3, reps:'30 sec per lato', iso:true,
+        name:'Glute bridge isometrico con cavigliera', sets:3, reps:'20-30 sec per lato', iso:true,
         eq:'Elastico + cavigliera',
         setup:[
           "Supino, ginocchia flesse, piedi a terra",
@@ -2929,7 +2929,7 @@ const TRAINING_SESSIONS = {
         ],
         execution:[
           "Sollevamento del bacino fino a linea retta spalle-ginocchia",
-          "Mantieni la posizione isometrica per 30 sec resistendo alla trazione verso l'interno",
+          "Mantieni la posizione isometrica per 20-30 sec resistendo alla trazione verso l'interno",
           "Scendi, sposta cavigliera ed elastico sulla gamba opposta, ripeti"
         ],
         commonErrors:[
@@ -3264,6 +3264,37 @@ async function loadLastLoggedSets(sessionId){
   } catch(e){
     console.warn('loadLastLoggedSets error:', e?.message);
   }
+}
+
+// Parser unificato per il campo `reps` di un esercizio.
+// Restituisce { kind, min, max, perLato, unit } oppure null se formato non gestito.
+//   kind: 'reps' | 'seconds' | null
+//   min, max: numeri
+//   perLato: bool (true se "per lato")
+//   unit: 'reps' | 'sec'
+//
+// Formati supportati:
+//   "4-6"             → reps  4-6
+//   "4-6 per lato"    → reps  4-6 per lato
+//   "20-30 sec"       → sec   20-30
+//   "20-30 sec per lato" → sec 20-30 per lato
+//   "30 sec"          → sec   30-30 (singolo, no progressione)
+//   "10 min", "5-10 min" → null (non gestito)
+function parseRepsRange(repsStr){
+  if(!repsStr) return null;
+  const s = String(repsStr).trim();
+  // Skip esplicito su minuti
+  if(/\bmin\b/i.test(s)) return null;
+  // Range secondi: "20-30 sec" o "20-30 sec per lato"
+  let m = s.match(/^(\d+)-(\d+)\s*sec(?:\s+per lato)?$/i);
+  if(m) return { kind:'seconds', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'sec' };
+  // Singolo secondi: "30 sec" → no progressione (min=max)
+  m = s.match(/^(\d+)\s*sec(?:\s+per lato)?$/i);
+  if(m){ const n = parseInt(m[1],10); return { kind:'seconds', min:n, max:n, perLato:/per lato/i.test(s), unit:'sec' }; }
+  // Range reps: "4-6" o "4-6 per lato"
+  m = s.match(/^(\d+)-(\d+)(?:\s+per lato)?$/);
+  if(m) return { kind:'reps', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'reps' };
+  return null;
 }
 
 // ── Suggerimento progressione (sync, legge dalla cache) ──────
@@ -3706,12 +3737,15 @@ async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance
     if(!sess || !exData) return;
     // Skip per Active Recovery (no progressione di carico)
     if(sess.type === 'Recupero') return;
-    // Parsing range reps: accetta "X-Y" o "X-Y per lato". Skip per "20-30 sec", "10 min", ecc.
-    const repsRange = String(exData.reps || '');
-    const repsMatch = repsRange.match(/^(\d+)-(\d+)(?:\s+per lato)?$/);
-    if(!repsMatch) return; // formato non standard, skippa
-    const repsMin = parseInt(repsMatch[1], 10);
-    const repsMax = parseInt(repsMatch[2], 10);
+    // Parsing range reps: usa parseRepsRange (gestisce reps, secondi, per lato)
+    const parsed = parseRepsRange(exData.reps);
+    if(!parsed) return; // formato non gestito (es. "10 min"), skippa
+    if(parsed.min === parsed.max) return; // singolo valore, no progressione possibile
+    const repsMin = parsed.min;
+    const repsMax = parsed.max;
+    const isTimed = parsed.kind === 'seconds';
+    const unitLbl = isTimed ? 'sec' : 'reps';
+    const stepUnit = isTimed ? 5 : 1; // step progressione: +5 sec o +1 rep
     const targetRIR = (sess.rir != null) ? sess.rir : 2;
     const sessionType = sess.type; // 'Forza' | 'Ipertrofia'
     const sessionLabel = `${sess.name} — ${sess.type}`; // es. "Upper A — Forza"
@@ -3742,11 +3776,11 @@ async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance
 
 ESERCIZIO: ${exName}
 TIPO SESSIONE: ${sessionType} (${sessionLabel})
-RANGE REPS PRESCRITTO: ${repsMin}-${repsMax}
+RANGE ${isTimed ? 'TEMPO' : 'REPS'} PRESCRITTO: ${repsMin}-${repsMax} ${unitLbl}${parsed.perLato?' per lato':''}
 RIR TARGET: ${targetRIR}
 
 SERIE APPENA COMPLETATA (#${setNum}):
-- Reps eseguite: ${reps}
+- ${isTimed ? 'Tempo tenuta' : 'Reps eseguite'}: ${reps} ${unitLbl}
 - Resistenza: ${resistDisplay} lbs
 - RIR effettivo: ${rirActual}
 
@@ -3757,16 +3791,16 @@ VINCOLI RIGOROSI per il tuo suggerimento sulla prossima serie:
 
 1. RESISTENZE DISPONIBILI: SOLO multipli di 10 lbs (0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250). Combinazioni di elastici giallo (10), verde (20), rosso (30), blu (40), nero (50). MAI suggerire 12, 14, 25, 35, ecc. 0 lbs = corpo libero.
 
-2. REPS: SEMPRE entro il range ${repsMin}-${repsMax}. MAI suggerire reps fuori da questo range.
+2. ${isTimed ? 'TEMPO' : 'REPS'}: SEMPRE entro il range ${repsMin}-${repsMax} ${unitLbl}. MAI suggerire ${unitLbl} fuori da questo range.
 
-3. LOGICA DOPPIA PROGRESSIONE:
-   - Se reps raggiunte = ${repsMax} (tetto) E RIR effettivo >= ${targetRIR}: suggerisci RESISTENZA +10 lbs (= ${resistPlusTen} lbs), ripartendo da ${repsMin} reps.
-   - Se reps dentro il range [${repsMin}-${repsMax}] E RIR effettivo = ${targetRIR}: suggerisci STESSA resistenza (${resistInt} lbs), prova reps + 1 (mai oltre ${repsMax}).
-   - Se RIR effettivo > ${targetRIR} (troppo facile): suggerisci STESSA resistenza (${resistInt} lbs), alza reps verso ${repsMax}.
+3. LOGICA DOPPIA PROGRESSIONE (unità: ${unitLbl}, step: ${stepUnit}${unitLbl === 'sec' ? ' sec' : ' rep'}):
+   - Se ${unitLbl} raggiunte = ${repsMax} (tetto) E RIR effettivo >= ${targetRIR}: suggerisci RESISTENZA +10 lbs (= ${resistPlusTen} lbs), ripartendo da ${repsMin} ${unitLbl}.
+   - Se ${unitLbl} dentro il range [${repsMin}-${repsMax}] E RIR effettivo = ${targetRIR}: suggerisci STESSA resistenza (${resistInt} lbs), prova ${unitLbl} + ${stepUnit} (mai oltre ${repsMax}).
+   - Se RIR effettivo > ${targetRIR} (troppo facile): suggerisci STESSA resistenza (${resistInt} lbs), alza ${unitLbl} verso ${repsMax}.
    - Se RIR effettivo = 0 (cedimento): suggerisci RESISTENZA -10 lbs (= ${resistMinusTen} lbs)${resistInt === 0 ? ' — ATTENZIONE: già a corpo libero, suggerisci esercizio assistito o variante più facile' : ''}.
-   - Se reps eseguite < ${repsMin} (sotto range): suggerisci STESSA resistenza (${resistInt} lbs), focus arrivare a ${repsMin}.
+   - Se ${unitLbl} eseguite < ${repsMin} (sotto range): suggerisci STESSA resistenza (${resistInt} lbs), focus arrivare a ${repsMin}.
 
-FORMATO RISPOSTA: 1 frase breve max 25 parole. Esempi: "Prossima: ${Math.min(repsMax, (typeof reps === 'number' ? reps : repsMin) + 1)} reps a ${resistInt} lbs, mantieni RIR ${targetRIR}." oppure "Tetto raggiunto: prossima ${repsMin} reps a ${resistPlusTen} lbs."
+FORMATO RISPOSTA: 1 frase breve max 25 parole. Esempi: "Prossima: ${Math.min(repsMax, (typeof reps === 'number' ? reps : repsMin) + stepUnit)} ${unitLbl} a ${resistInt} lbs, mantieni RIR ${targetRIR}." oppure "Tetto raggiunto: prossima ${repsMin} ${unitLbl} a ${resistPlusTen} lbs."
 
 NIENTE preamboli, niente spiegazioni lunghe, solo il consiglio operativo. Italiano.`;
 
@@ -3802,7 +3836,7 @@ async function saveTrainingSet(){
   const rirEl = document.getElementById('tl-rir');
   const reps = parseInt(repsEl?.value)||0;
   const resistance = (ST.trainLogResist != null) ? String(ST.trainLogResist) : '';
-  const rir = (rirEl?.value !== '' && rirEl?.value != null) ? parseInt(rirEl.value) : null;
+  const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
   ST.trainSaving = true;
   renderTraining();
@@ -4037,18 +4071,31 @@ function renderTraining(){
         const resistOptions = RESIST_VALUES.map(v =>
           `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
         ).join('');
+        // Esercizi temporali (iso + reps in secondi): label "DURATA", picker 5-90 step 5, RIR nascosto
+        const parsedReps = parseRepsRange(e.reps);
+        const isTimed = parsedReps && parsedReps.kind === 'seconds';
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
             <div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">REPS</label>
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimed ? 'DURATA (sec)' : 'REPS'}</label>
                 <select id="tl-reps" class="picker-select" style="border:1.5px solid #185FA5;">
                   <option value="" disabled selected>—</option>
-                  ${Array.from({length:31}, (_,i)=>`<option value="${i}">${i}</option>`).join('')}
+                  ${(()=>{
+                    if(isTimed){
+                      // Range temporale: 5-90 sec, step 5
+                      let opts = '';
+                      for(let s=5; s<=90; s+=5) opts += `<option value="${s}">${s}</option>`;
+                      return opts;
+                    } else {
+                      // Range reps: 0-30, step 1
+                      return Array.from({length:31}, (_,i)=>`<option value="${i}">${i}</option>`).join('');
+                    }
+                  })()}
                 </select>
               </div>
-              <div style="flex:1;">
+              ${!isTimed ? `<div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
                 <select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);">
                   <option value="">—</option>
@@ -4057,7 +4104,7 @@ function renderTraining(){
                   <option value="2">2</option>
                   <option value="3">3</option>
                 </select>
-              </div>
+              </div>` : ''}
             </div>
             <div style="margin-bottom:6px;">
               <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
