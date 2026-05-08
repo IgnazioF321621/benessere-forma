@@ -1172,7 +1172,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 10:45';
+const APP_VERSION = '2026.05.08 · 11:23';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1246,9 +1246,10 @@ const ST = {
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
-// Ciclo settimanale completo: G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 recoveryLower · G7 rest
-const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6, rest:7 };
-const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower','rest'];
+// Ciclo 6 giorni: G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 recoveryLower (poi torna a G1)
+// 'rest' resta supportato come giorno extra opzionale (markRestDone), ma NON è in rotazione automatica.
+const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6 };
+const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
@@ -2448,13 +2449,6 @@ function renderHome(){
         <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
         <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Mobilità · Stretching${lastDateTxt?' · '+lastDateTxt:''}</div>`;
       trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;border:1px solid rgba(42,122,111,.25);">Inizia →${stk}</div>`;
-    } else if (hd.nextSession === 'rest') {
-      // Tile riposo totale (grigio) con CTA "Segna fatto"
-      trainBody = `
-        ${tHead('Training', `Giorno ${nextDayN} · Riposo`, '#9CA3AF')}
-        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Riposo totale</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Nessun allenamento programmato${lastDateTxt?' · '+lastDateTxt:''}</div>`;
-      trainRight = `<button onclick="event.stopPropagation();markRestDone();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;cursor:pointer;">Segna fatto${stk}</button>`;
     } else {
       // Tile main (Upper/Lower) — comportamento standard
       trainBody = `
@@ -3293,7 +3287,7 @@ function getProgressionSuggestion(exName, sessionId){
 }
 
 function renderCalendar(workouts, year, month){
-  const SESS_LABEL = { upperA:'UA', upperB:'UB', lowerA:'LA', lowerB:'LB', recoveryUpper:'AR↑', recoveryLower:'AR↓', rest:'R' };
+  const SESS_LABEL = { upperA:'UP A', upperB:'UP B', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REC' };
   const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recoveryUpper:'#2A7A6F', recoveryLower:'#2A7A6F', rest:'#9CA3AF' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
@@ -4171,7 +4165,6 @@ function renderTraining(){
       { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
       { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
       { day:'G6', session:'recoveryLower',label:'Rec Lower', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
-      { day:'G7', session:null,      label:'Rest',     desc:'Recupero',      color:'#9CA3AF', bg:'#F3F4F6' },
     ];
     const splitCells = DAY_SPLIT.map((d,i)=>`
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
@@ -4211,7 +4204,7 @@ function renderTraining(){
       <div style="padding:16px;display:flex;flex-direction:column;gap:20px;">
 
         <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">SPLIT — 7 GIORNI</div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">SPLIT — 6 GIORNI</div>
           <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
             <div style="display:flex;gap:4px;">${splitCells}</div>
           </div>
@@ -4244,6 +4237,17 @@ function renderTraining(){
               <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:4px;">ESEMPIO — Trazioni (4×4–6)</div>
               <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">4×4 → 4×5 → 4×6 → +elastico → 4×4 ↺</div>
             </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">RIPOSO EXTRA</div>
+          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Giorno di riposo opzionale</div>
+              <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Marca un giorno di riposo totale quando ne senti il bisogno. Non blocca la rotazione.</div>
+            </div>
+            <button onclick="markRestDone();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
           </div>
         </div>
 
