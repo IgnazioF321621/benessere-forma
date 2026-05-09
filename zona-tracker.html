@@ -1201,7 +1201,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.09 · 07:02';
+const APP_VERSION = '2026.05.09 · 10:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1253,11 +1253,16 @@ const ST = {
   trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
+  trainProgMetric: 'peso',          // 'peso' (default) | 'reps' | 'volume' | 'tempo' (solo iso temporali)
   trainHomeData: null,
   trainCalMonth: null,
   trainWorkouts: undefined,
   trainSessionStart: null,
-  trainCalDeleteConfirm: null,
+  trainDayDetail: null,             // { date, exName? } — modal dettaglio giorno (exName: filtro singolo esercizio se da chart)
+  trainDayLogs: null,               // [] | null=loading — logs caricati per il modal
+  trainEditLogRow: null,            // { id, reps, resistance, rir } — edit inline serie nel modal
+  trainDeleteSetConfirm: null,      // { id, label } — conferma elimina serie singola
+  trainDeleteWorkoutConfirm: null,  // { id, date } — conferma elimina workout intero (da modal day-detail)
   bodyTab: null,
   bodyLogs: null,
   bodySaving: false,
@@ -3394,7 +3399,7 @@ function renderCalendar(workouts, year, month){
     const lbl = w ? (SESS_LABEL[w.session_type]||w.session_type)+(w.completed?'✓':'') : '';
     const tooltipNote = w?.session_type === 'rest_injury' && w?.note ? ' — '+String(w.note).replace(/"/g,'&quot;') : '';
     const tooltipLbl = w ? (SESS_LABEL[w.session_type]||w.session_type) + tooltipNote : '';
-    const clickAttr = w ? ' onclick="ST.trainCalDeleteConfirm={id:\''+w.id+'\',date:\''+ds+'\'};renderTraining();" title="'+tooltipLbl+' — Tocca per eliminare"' : '';
+    const clickAttr = w ? ' onclick="openDayDetail(\''+ds+'\');" title="'+tooltipLbl+' — Tocca per dettaglio"' : '';
     const cursor = w ? 'cursor:pointer;' : '';
     cells += '<div'+clickAttr+' style="min-height:38px;border-radius:6px;background:'+bg+';border:'+brd+';'+cursor+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">'
       + '<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:'+tc+';">'+day+'</span>'
@@ -3429,8 +3434,11 @@ function renderCalendar(workouts, year, month){
 async function loadTrainingLogs(exName){
   ST.trainProgEx = exName;
   ST.trainProgLogs = null; // null = loading
+  // Default metrica: 'tempo' per esercizi iso temporali, 'peso' altrimenti
+  ST.trainProgMetric = isTimedExerciseByName(exName) ? 'peso' : 'peso';
   renderTraining();
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainProgLogs=[]; renderTraining(); return; }
+  // TODO: paginare quando avremo 1+ anno di dati. Limit 200 = ~33 sessioni con 6 set. OK per ora.
   const { data } = await supa
     .from('training_logs')
     .select('*')
@@ -3441,6 +3449,200 @@ async function loadTrainingLogs(exName){
     .limit(200);
   ST.trainProgLogs = data || [];
   renderTraining();
+}
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS PROGRESSIONE
+// ─────────────────────────────────────────────────────────────
+
+// Cerca un esercizio per nome in tutte le TRAINING_SESSIONS, ritorna {ex, sess} o null
+function findExInAllSessions(exName){
+  for(const s of Object.values(TRAINING_SESSIONS)){
+    if(!s.exercises) continue;
+    const ex = s.exercises.find(e => e.name === exName);
+    if(ex) return { ex, sess: s };
+  }
+  return null;
+}
+
+// True se l'esercizio è isometrico con reps in formato temporale (es. '20-30 sec per lato')
+function isTimedExerciseByName(exName){
+  const found = findExInAllSessions(exName);
+  if(!found || !found.ex.iso) return false;
+  const p = parseRepsRange(found.ex.reps);
+  return !!(p && p.kind === 'seconds');
+}
+
+// "Best set of day": peso desc → reps/tempo desc come tiebreaker.
+// Input: array di training_logs per UN giorno + UN esercizio.
+function bestSetOfDay(logs){
+  if(!logs || !logs.length) return null;
+  return logs.reduce((best, l) => {
+    const lW = parseInt(l.resistance) || 0;
+    const bW = parseInt(best.resistance) || 0;
+    if(lW > bW) return l;
+    if(lW < bW) return best;
+    return ((l.reps||0) > (best.reps||0)) ? l : best;
+  });
+}
+
+// Formatta data in "D/M" (es. "8/5" per 2026-05-08) per asse X grafico
+function shortDate(dateStr){
+  if(!dateStr) return '';
+  const [, m, d] = dateStr.split('-');
+  return `${parseInt(d,10)}/${parseInt(m,10)}`;
+}
+
+// Formatta data in "Gio 8 mag" per header modal
+function formatDayHeader(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr+'T00:00:00');
+  const days = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODAL DAY-DETAIL: load + open + close
+// ─────────────────────────────────────────────────────────────
+
+// Apre modal dettaglio giorno (da calendar click o chart click).
+// Se exName presente: filtra logs solo a quell'esercizio.
+async function openDayDetail(date, exName){
+  ST.trainDayDetail = { date, exName: exName || null };
+  ST.trainDayLogs = null; // loading
+  ST.trainEditLogRow = null;
+  ST.trainDeleteSetConfirm = null;
+  ST.trainDeleteWorkoutConfirm = null;
+  renderTraining();
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.trainDayLogs = []; renderTraining(); return; }
+  let q = supa.from('training_logs').select('*').eq('user_id', ST.user.id).eq('date', date);
+  if(exName) q = q.eq('exercise_name', exName);
+  const { data } = await q.order('exercise_name').order('set_number', {ascending:true});
+  ST.trainDayLogs = data || [];
+  renderTraining();
+}
+
+// Convenience: apre day-detail filtrato su un esercizio (chiamato da chart click)
+function openDayExerciseDetail(date, exName){ openDayDetail(date, exName); }
+
+function closeDayDetail(){
+  ST.trainDayDetail = null;
+  ST.trainDayLogs = null;
+  ST.trainEditLogRow = null;
+  ST.trainDeleteSetConfirm = null;
+  ST.trainDeleteWorkoutConfirm = null;
+  renderTraining();
+}
+
+// ─────────────────────────────────────────────────────────────
+// EDIT/DELETE SERIE SINGOLA (dal modal day-detail)
+// ─────────────────────────────────────────────────────────────
+
+function editLogRow(id){
+  const log = (ST.trainDayLogs || []).find(l => l.id === id);
+  if(!log) return;
+  ST.trainEditLogRow = {
+    id,
+    reps: log.reps != null ? String(log.reps) : '',
+    resistance: log.resistance || '',
+    rir: log.rir_actual != null ? String(log.rir_actual) : '',
+  };
+  renderTraining();
+  setTimeout(()=>document.getElementById('elr-reps')?.focus(), 50);
+}
+
+function cancelEditLogRow(){
+  ST.trainEditLogRow = null;
+  renderTraining();
+}
+
+async function confirmEditLogRow(){
+  const e = ST.trainEditLogRow;
+  if(!e) return;
+  const repsEl = document.getElementById('elr-reps');
+  const resistEl = document.getElementById('elr-resist');
+  const rirEl = document.getElementById('elr-rir');
+  const reps = parseInt(repsEl?.value) || 0;
+  const resistance = (resistEl?.value || '').toString().trim();
+  const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
+  if(!reps){ repsEl?.focus(); return; }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
+  const resistInt = resistance ? (parseInt(resistance) || null) : null;
+  // Trova log originale per la composite key fallback su workout_sets
+  const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
+  // 1. UPDATE training_logs by id (sorgente per Progressione)
+  try {
+    await supa.from('training_logs').update({ reps, resistance: resistance||null, rir_actual: rir })
+      .eq('id', e.id).eq('user_id', ST.user.id);
+  } catch(err){ showToast('Errore aggiornamento: '+err.message); }
+  // 2. UPDATE workout_sets by composite key (training_logs.id ≠ workout_sets.id)
+  if(orig){
+    try {
+      await supa.from('workout_sets').update({ reps, resistance: resistInt, rir_actual: rir })
+        .eq('user_id', ST.user.id).eq('date', orig.date).eq('session_type', orig.session_id)
+        .eq('exercise_name', orig.exercise_name).eq('set_number', orig.set_number);
+    } catch(err){}
+  }
+  ST.trainEditLogRow = null;
+  // Re-fetch logs del modal e progressione
+  if(ST.trainDayDetail){
+    await openDayDetail(ST.trainDayDetail.date, ST.trainDayDetail.exName);
+  }
+  if(ST.trainProgEx) await loadTrainingLogs(ST.trainProgEx);
+  showToast('Serie aggiornata');
+}
+
+function confirmDeleteSet(id, label){
+  ST.trainDeleteSetConfirm = { id, label };
+  renderTraining();
+}
+
+async function deleteSetConfirmed(){
+  const c = ST.trainDeleteSetConfirm;
+  if(!c) return;
+  ST.trainDeleteSetConfirm = null;
+  if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
+  const orig = (ST.trainDayLogs || []).find(l => l.id === c.id);
+  // 1. DELETE training_logs by id
+  try {
+    await supa.from('training_logs').delete().eq('id', c.id).eq('user_id', ST.user.id);
+  } catch(err){ showToast('Errore eliminazione: '+err.message); return; }
+  // 2. DELETE workout_sets by composite key
+  if(orig){
+    try {
+      await supa.from('workout_sets').delete()
+        .eq('user_id', ST.user.id).eq('date', orig.date).eq('session_type', orig.session_id)
+        .eq('exercise_name', orig.exercise_name).eq('set_number', orig.set_number);
+    } catch(err){}
+  }
+  showToast('Serie eliminata');
+  // Re-fetch
+  if(ST.trainDayDetail){
+    await openDayDetail(ST.trainDayDetail.date, ST.trainDayDetail.exName);
+  }
+  if(ST.trainProgEx) await loadTrainingLogs(ST.trainProgEx);
+}
+
+// Conferma elimina workout intero (chiamata dal bottone in fondo al modal day-detail)
+function confirmDeleteWorkoutFromDetail(){
+  const dd = ST.trainDayDetail;
+  if(!dd) return;
+  // Trova workout di quel giorno (dal calendario in memoria)
+  const w = (ST.trainWorkouts || []).find(x => x.date === dd.date);
+  if(!w){ showToast('Workout non trovato in calendario'); return; }
+  ST.trainDeleteWorkoutConfirm = { id: w.id, date: dd.date };
+  renderTraining();
+}
+
+async function deleteWorkoutConfirmed(){
+  const c = ST.trainDeleteWorkoutConfirm;
+  if(!c) return;
+  ST.trainDeleteWorkoutConfirm = null;
+  // Riusa la deleteWorkout esistente, poi chiudi modal
+  await deleteWorkout(c.id, c.date);
+  closeDayDetail();
+  if(ST.trainProgEx) loadTrainingLogs(ST.trainProgEx);
 }
 
 // Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1.
@@ -3907,7 +4109,6 @@ async function completeSession(sessionId){
 }
 
 async function deleteWorkout(id, date){
-  ST.trainCalDeleteConfirm = null;
   if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
   const { error } = await supa.from('workouts').delete().eq('id', id).eq('user_id', ST.user.id);
   if(error){ showToast('Errore eliminazione: '+error.message); } else { showToast('Workout eliminato'); }
@@ -4467,32 +4668,138 @@ function renderTraining(){
       logsHTML = `
         <div style="padding:24px 0;text-align:center;">
           <div style="font-size:28px;margin-bottom:8px;">📋</div>
-          <div style="font-size:14px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Nessun log ancora</div>
-          <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere la progressione qui</div>
+          <div style="font-size:14px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Nessuna sessione registrata</div>
+          <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere il grafico qui</div>
         </div>`;
     } else {
+      // Raggruppa per giorno e calcola "best set" per ogni giorno
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
-      logsHTML = Object.keys(byDate).map(date=>{
-        const logs = byDate[date];
-        const sName = TRAINING_SESSIONS[logs[0].session_id]?.name || logs[0].session_id;
-        const rows = logs.map(l=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--s2);">
-            <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} reps</span>
-            ${l.resistance?`<span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${l.resistance}</span>`:''}
-            ${l.rir_actual!=null?`<span style="margin-left:auto;font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
-          </div>`).join('');
-        return `
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-              <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${fmtDate(date)}</div>
-              <span style="background:#E8F0FA;color:#185FA5;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">${sName}</span>
-            </div>
-            ${rows.replace(/border-bottom:1px solid var\(--s2\);" >(?=[^<]*<\/div>\s*$)/,'border-bottom:none;">')}
-          </div>`;
+      const dates = Object.keys(byDate).sort(); // cronologico ASC per il grafico
+      const isTimed = isTimedExerciseByName(selEx);
+      const points = dates.map(date => {
+        const best = bestSetOfDay(byDate[date]);
+        const reps = best?.reps || 0;
+        const resist = parseInt(best?.resistance) || 0;
+        const volume = reps * resist;
+        return { date, reps, resist, volume, dateShort: shortDate(date) };
+      });
+
+      // Toggle metrica: peso (default), reps/tempo (alt), volume (solo non-iso)
+      const metric = ST.trainProgMetric || 'peso';
+      // Sanitize: se isTimed e metric === 'volume' o 'reps', forza 'peso'
+      const validMetrics = isTimed ? ['peso','tempo'] : ['peso','reps','volume'];
+      const safeMetric = validMetrics.includes(metric) ? metric : 'peso';
+      // Map metrica → campo + label
+      const metricMap = {
+        peso:   { field: 'resist', label: 'Peso',   unit: 'lbs' },
+        reps:   { field: 'reps',   label: 'Reps',   unit: 'reps' },
+        tempo:  { field: 'reps',   label: 'Tempo',  unit: 'sec' }, // su esercizi temporali, reps = secondi
+        volume: { field: 'volume', label: 'Volume', unit: 'reps×lbs' },
+      };
+      const mInfo = metricMap[safeMetric];
+
+      // Stats card: best peso/reps assoluti + ultimo
+      const allBests = points.map(p => bestSetOfDay(byDate[p.date]));
+      const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
+      const bestRepsOrTempo = points.reduce((m,p) => p.reps > m ? p.reps : m, 0);
+      const last = points[points.length-1];
+      const lastVal = last ? last[mInfo.field] : 0;
+
+      // Render chart SVG
+      const chartHTML = (() => {
+        if(points.length === 0){
+          return `<div style="padding:32px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessuna sessione</div>`;
+        }
+        const W = 320, H = 180;
+        const padL = 28, padR = 12, padT = 22, padB = 28;
+        const chartW = W - padL - padR;
+        const chartH = H - padT - padB;
+        const values = points.map(p => p[mInfo.field] || 0);
+        const maxV = Math.max(...values, 1);
+        // 4 tick Y
+        const ticks = [maxV, Math.round(maxV*2/3), Math.round(maxV/3), 0];
+        const tickLines = ticks.map(t => {
+          const y = padT + chartH - (t/maxV)*chartH;
+          return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#E5E7EB" stroke-width="0.5"/>
+            <text x="${padL-4}" y="${y+3}" text-anchor="end" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${t}</text>`;
+        }).join('');
+
+        if(points.length <= 8){
+          // BARRE verticali
+          const slot = chartW / points.length;
+          const barW = slot * 0.55;
+          const bars = points.map((p,i) => {
+            const v = p[mInfo.field] || 0;
+            const h = (v/maxV) * chartH;
+            const x = padL + i*slot + (slot-barW)/2;
+            const y = padT + chartH - h;
+            return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(2,h)}" fill="#185FA5" rx="2" style="cursor:pointer" onclick="openDayExerciseDetail('${p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
+              ${v>0?`<text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="#185FA5" font-weight="700" font-family="JetBrains Mono, monospace">${v}</text>`:''}
+              <text x="${x+barW/2}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${p.dateShort}</text>`;
+          }).join('');
+          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}${bars}</svg>`;
+        } else {
+          // LINEA + DOTS cliccabili
+          const stepX = chartW / (points.length-1);
+          const pts = points.map((p,i) => {
+            const v = p[mInfo.field] || 0;
+            const x = padL + i*stepX;
+            const y = padT + chartH - (v/maxV)*chartH;
+            return { x, y, p, v };
+          });
+          const polyline = pts.map(d => `${d.x},${d.y}`).join(' ');
+          const labelEvery = Math.ceil(points.length / 6);
+          const dots = pts.map((d,i) => {
+            const showLabel = (i % labelEvery) === 0 || i === pts.length-1;
+            return `<circle cx="${d.x}" cy="${d.y}" r="3.5" fill="#185FA5"/>
+              <rect x="${d.x-12}" y="${d.y-12}" width="24" height="24" fill="transparent" style="cursor:pointer" onclick="openDayExerciseDetail('${d.p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
+              ${showLabel?`<text x="${d.x}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${d.p.dateShort}</text>`:''}`;
+          }).join('');
+          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}<polyline points="${polyline}" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+        }
+      })();
+
+      // Toggle chip metrica
+      const chipDef = isTimed
+        ? [['peso','Peso'],['tempo','Tempo']]
+        : [['peso','Peso'],['reps','Reps'],['volume','Volume']];
+      const chipHTML = chipDef.map(([m,lbl]) => {
+        const active = safeMetric === m;
+        return `<button onclick="ST.trainProgMetric='${m}';renderTraining();" style="flex:1;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1.5px solid ${active?'#185FA5':'var(--s2)'};background:${active?'#185FA5':'var(--s1,#fff)'};color:${active?'#fff':'var(--t2)'};cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">${lbl}</button>`;
       }).join('');
+
+      // Stat cards (best peso, best reps/tempo, ultimo)
+      const repsOrTempoLbl = isTimed ? 'Best tempo' : 'Best reps';
+      const repsOrTempoUnit = isTimed ? 'sec' : '';
+      const statsHTML = `
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Best peso</div>
+            <div style="font-size:15px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${bestPeso || '—'}${bestPeso?' lbs':''}</div>
+          </div>
+          <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">${repsOrTempoLbl}</div>
+            <div style="font-size:15px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${bestRepsOrTempo || '—'}${bestRepsOrTempo&&repsOrTempoUnit?' '+repsOrTempoUnit:''}</div>
+          </div>
+          <div style="flex:1.2;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Ultimo</div>
+            <div style="font-size:13px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${last ? lastVal+' '+mInfo.unit : '—'}</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);margin-top:1px;">${last ? shortDate(last.date) : ''}</div>
+          </div>
+        </div>`;
+
+      logsHTML = `
+        <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 12px;margin-top:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
+            ${chipHTML}
+          </div>
+          <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${mInfo.label.toUpperCase()} (${mInfo.unit})</div>
+          ${chartHTML}
+          ${statsHTML}
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:10px;line-height:1.4;">Tocca un punto per vedere il dettaglio del giorno</div>
+        </div>`;
     }
 
     body = `
@@ -4683,22 +4990,108 @@ function renderTraining(){
     }
   }
 
-  let deleteConfirmHTML = '';
-  if(ST.trainCalDeleteConfirm){
-    const dc = ST.trainCalDeleteConfirm;
-    deleteConfirmHTML = `<div class="info-modal-overlay" onclick="ST.trainCalDeleteConfirm=null;renderTraining()">
-      <div class="info-modal" style="max-width:280px;text-align:center;" onclick="event.stopPropagation()">
-        <div style="font-size:16px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Elimina workout</div>
-        <div style="font-size:14px;color:var(--t2);font-family:var(--font-sans);margin-bottom:20px;">Eliminare il workout del ${fmtDate(dc.date)}?</div>
+  // Modal Dettaglio Giorno (apertura da calendario o chart)
+  let dayDetailHTML = '';
+  if(ST.trainDayDetail){
+    const dd = ST.trainDayDetail;
+    const w = (ST.trainWorkouts || []).find(x => x.date === dd.date);
+    const sessName = w ? (TRAINING_SESSIONS[w.session_type]?.name || w.session_type) : '';
+    const headerStr = formatDayHeader(dd.date) + (sessName ? ' · ' + sessName : '');
+    let dayBody = '';
+    if(ST.trainDayLogs === null){
+      dayBody = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento…</div>`;
+    } else if(ST.trainDayLogs.length === 0){
+      dayBody = `<div style="padding:32px 16px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-sans);">Nessuna serie registrata${dd.exName?' per questo esercizio':''} in questo giorno.</div>`;
+    } else {
+      // Raggruppa per esercizio
+      const byEx = ST.trainDayLogs.reduce((acc,l)=>{
+        (acc[l.exercise_name]=acc[l.exercise_name]||[]).push(l); return acc;
+      }, {});
+      const editId = ST.trainEditLogRow?.id || null;
+      const editD = ST.trainEditLogRow;
+      dayBody = Object.keys(byEx).map(exName => {
+        const logs = byEx[exName];
+        const isTimed = isTimedExerciseByName(exName);
+        const repsLbl = isTimed ? 'sec' : 'r';
+        const rows = logs.map(l => {
+          if(l.id === editId){
+            // Edit inline
+            return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
+              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid #185FA5;border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
+              <input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">
+              <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
+              <button onclick="confirmEditLogRow();" style="background:#2A7A6F;color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
+              <button onclick="cancelEditLogRow();" style="background:#fff;color:var(--t3);border:1.5px solid var(--s2);border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;">✕</button>
+            </div>`;
+          }
+          const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${l.resistance?' · '+l.resistance+' lbs':''}`;
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
+            <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} ${repsLbl}</span>
+            ${l.resistance?`<span style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${l.resistance} lbs</span>`:''}
+            ${l.rir_actual!=null?`<span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
+            <button onclick="editLogRow('${l.id}');" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Modifica">✏️</button>
+            <button onclick="confirmDeleteSet('${l.id}','${lblShort.replace(/'/g,"\\'")}');" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Elimina serie">🗑️</button>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:18px;">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">${exName}</div>
+          ${rows}
+        </div>`;
+      }).join('');
+    }
+    // Bottone "Elimina intero workout" solo se workout esiste in calendario
+    const deleteWorkoutBtn = w ? `
+      <button onclick="confirmDeleteWorkoutFromDetail();" style="width:100%;margin-top:12px;padding:10px;background:#fff;color:#B84C2A;border:1.5px solid #B84C2A;border-radius:8px;font-size:12px;font-weight:700;font-family:var(--font-mono);cursor:pointer;text-transform:uppercase;letter-spacing:.06em;">🗑️ Elimina intero workout</button>` : '';
+    dayDetailHTML = `<div class="info-modal-overlay" style="z-index:1100;" onclick="closeDayDetail()">
+      <div class="info-modal" style="max-width:480px;width:calc(100% - 24px);max-height:88vh;overflow-y:auto;padding:18px 18px 16px;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:8px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${headerStr}</div>
+            ${dd.exName?`<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">Filtro: ${dd.exName}</div>`:''}
+          </div>
+          <button onclick="closeDayDetail()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
+        </div>
+        ${dayBody}
+        ${deleteWorkoutBtn}
+      </div>
+    </div>`;
+  }
+
+  // Mini-modal conferma elimina serie (sopra day-detail, z-index più alto)
+  let deleteSetConfirmHTML = '';
+  if(ST.trainDeleteSetConfirm){
+    const c = ST.trainDeleteSetConfirm;
+    deleteSetConfirmHTML = `<div class="info-modal-overlay" style="z-index:1200;" onclick="ST.trainDeleteSetConfirm=null;renderTraining()">
+      <div class="info-modal" style="max-width:300px;text-align:center;" onclick="event.stopPropagation()">
+        <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Elimina serie</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-mono);margin-bottom:18px;">${c.label}</div>
         <div style="display:flex;gap:8px;">
-          <button onclick="ST.trainCalDeleteConfirm=null;renderTraining();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
-          <button onclick="deleteWorkout('${dc.id}','${dc.date}');" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
+          <button onclick="ST.trainDeleteSetConfirm=null;renderTraining();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+          <button onclick="deleteSetConfirmed();" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
         </div>
       </div>
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + deleteConfirmHTML;
+  // Mini-modal conferma elimina workout intero (sopra day-detail, z-index più alto)
+  let deleteWorkoutConfirmHTML = '';
+  if(ST.trainDeleteWorkoutConfirm){
+    const dc = ST.trainDeleteWorkoutConfirm;
+    deleteWorkoutConfirmHTML = `<div class="info-modal-overlay" style="z-index:1200;" onclick="ST.trainDeleteWorkoutConfirm=null;renderTraining()">
+      <div class="info-modal" style="max-width:300px;text-align:center;" onclick="event.stopPropagation()">
+        <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Elimina workout</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);margin-bottom:18px;">Eliminare l'intero workout del ${fmtDate(dc.date)}? Tutte le serie verranno cancellate.</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="ST.trainDeleteWorkoutConfirm=null;renderTraining();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+          <button onclick="deleteWorkoutConfirmed();" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
