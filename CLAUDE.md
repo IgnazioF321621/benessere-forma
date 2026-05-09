@@ -196,15 +196,22 @@ RLS abilitata — policy: `auth.uid() = user_id`.
   - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
   - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
   - Info icon ⓘ su badge RIR (→ `showInfoModal('rir')`) e su serie (→ `showInfoModal('serie')`)
+  - Modal recupero (dopo log serie): countdown + suggerimento progressione + esecuzione/errori/coach + **toggle "▶ Mostra esecuzione"** opzionale (GIF Worker, 9 maggio 2026)
 - **Programma** (label tab rinominato 8 maggio 2026, id `piano` per back-compat):
   - Split settimanale con giorni numerici G1–G6 (rotazione 6 giorni, dopo G6 → G1)
   - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1). Settimana corrente calcolata su workout completati (1 settimana = 6 workout veri, riposi esclusi)
   - Progressione doppia: 3 step + esempio pratico
   - Info icon ⓘ su "CICLO 4 SETTIMANE" e "PROGRESSIONE DOPPIA"
   - Riposo extra opzionale: 2 card separate (🌙 scelto / 🩹 infortunio con prompt zona corpo)
-- **Progressione**:
-  - Chips esercizi scrollabili
-  - Storico log per esercizio raggruppato per data — caricato da Supabase
+- **Progressione** (rifatta 9 maggio 2026):
+  - Calendario mensile in cima (sigle workout, stats sessioni/streak/freq)
+  - Tap su giorno calendario → modal **Dettaglio giorno** (lista esercizi + serie con matita/cestino + bottone "Elimina intero workout")
+  - **Dropdown selezione esercizio** full-width (sostituisce vecchia chip-row): bottone trigger + pannello con search bar + 2 tab (Per programma / Per esercizio) + lista alfabetica
+  - Default selection: primo esercizio alfabetico tra quelli loggati (auto al caricamento tab)
+  - **Grafico SVG vanilla** per esercizio selezionato: barre se ≤8 sessioni, linea+dots se >8. Tap su punto → modal Dettaglio giorno filtrato
+  - 3 chip toggle metrica sopra grafico: **Peso** (default) / Reps / Volume (Tempo invece di Reps/Volume per esercizi `iso:true` temporali)
+  - 3 stat card sotto grafico: Best peso, Best reps/tempo, Ultimo (data + valore metrica)
+  - Edit/delete singola serie da modal Dettaglio giorno → refresh automatico grafico
 
 ### Body (sub-nav: Misure / Tendenza)
 - **Misure**:
@@ -482,6 +489,19 @@ GitHub Pages si aggiorna automaticamente (1-2 minuti).
 | `markRestInjury()` | Segna riposo per infortunio + nota zona corpo (`workouts.session_type='rest_injury'`, `note=...`) (8 mag 2026) |
 | `scrollToActiveExercise()` | Scrolla card primo esercizio non completato al centro (8 mag 2026) |
 | `restSecToText(sec)` | Format recupero in stringa: 60→'1 min', 75→'75 sec', 120→'2 min' |
+| `ensureRestGif(exName)` | Pre-fetch silenzioso GIF esecuzione per modal recupero (toggle on-demand, cache `ST.exerciseGifCache`) (9 mag 2026) |
+| `toggleRestGif()` | Apre/chiude blocco GIF esecuzione nel modal recupero (9 mag 2026) |
+| `findExInAllSessions(exName)` | Cerca esercizio per nome in tutte le `TRAINING_SESSIONS`, ritorna `{ex, sess}` o null (9 mag 2026) |
+| `isTimedExerciseByName(exName)` | True se esercizio è `iso:true` con reps in formato secondi (9 mag 2026) |
+| `bestSetOfDay(logs)` | Per array di training_logs di un giorno+esercizio: ritorna serie migliore (peso desc → reps desc tiebreaker) (9 mag 2026) |
+| `shortDate(dateStr)` / `formatDayHeader(dateStr)` | Format date per chart asse X ("8/5") e modal header ("Gio 8 mag") (9 mag 2026) |
+| `openDayDetail(date, exName?)` | Apre modal dettaglio giorno (calendar click). Se exName: filtra logs solo a quell'esercizio (chart click). (9 mag 2026) |
+| `editLogRow(id)` / `confirmEditLogRow()` / `cancelEditLogRow()` | Edit inline serie (reps + resistance + RIR) nel modal day-detail. Update simultaneo `training_logs` + `workout_sets` (9 mag 2026) |
+| `confirmDeleteSet(id, label)` / `deleteSetConfirmed()` | Conferma + delete singola serie da entrambe le tabelle (9 mag 2026) |
+| `confirmDeleteWorkoutFromDetail()` / `deleteWorkoutConfirmed()` | Conferma + delete workout intero dal modal day-detail (sostituisce vecchio `trainCalDeleteConfirm`) (9 mag 2026) |
+| `loadAllExerciseNames()` | Lazy load distinct `exercise_name` da training_logs (cache `ST.allExerciseNamesCache`). Auto-default selezione primo alfabetico (9 mag 2026) |
+| `invalidateAllExerciseNamesCache()` | Invalida cache lista esercizi (chiamata da `saveTrainingSet`/`deleteSetConfirmed`/`deleteWorkoutConfirmed`) (9 mag 2026) |
+| `toggleProgDropdown()` / `closeProgDropdown()` / `setProgDropdownTab(tab)` / `setProgDropdownSearch(val)` / `selectProgEx(name)` | UX dropdown selezione esercizio Progressione (9 mag 2026) |
 
 ## Vocabolario obiettivi — fonte unica (`OBJ_ADAPT`)
 
@@ -571,10 +591,15 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] Audit training completo: setup array, rest fisso, riposi extra, rotazione 6 giorni (8 maggio 2026)
 - [x] Modal log esercizi temporali con DURATA + auto-progressione su secondi (8 maggio 2026)
 - [x] Tab Piano rinominata Programma + calcolo settimana basato su workout completati (8 maggio 2026)
+- [x] GIF esecuzione opzionale nel modal recupero (toggle on-demand, cache globale) (9 maggio 2026)
+- [x] Tab Progressione: grafico SVG (barre/linea) + 3 metriche (Peso/Reps/Volume o Peso/Tempo per iso) (9 maggio 2026)
+- [x] Modal Dettaglio giorno con edit/delete singola serie + edit/delete workout (9 maggio 2026)
+- [x] Dropdown selezione esercizio (search + tab Per programma/Per esercizio) sostituisce chip-row (9 maggio 2026)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 - [ ] GIF/video esecuzione esercizi nel modal scheda (collapsibile, click per aprire)
+- [ ] **FASE 2 Programmi multipli archiviati** (predisposto in dropdown Progressione 9 maggio 2026): tabella `programs` Supabase, colonna `program_id` su workouts, UI chiusura programma, popolare sezione "PROGRAMMI PASSATI" del dropdown con lista collassabile, filtro grafico per periodo programma. Vedi commento HTML inline nel codice (cerca "TODO FASE 2 — gestione programmi multipli")
 
 ### Possibili evoluzioni future modulo Training
 
@@ -583,6 +608,65 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 9 maggio 2026 — Modulo Training: GIF recupero, grafico Progressione, dropdown esercizi
+
+**GIF esecuzione opzionale nel modal recupero**:
+- Aggiunto toggle "▶ Mostra esecuzione" / "▼ Nascondi esecuzione" sopra il blocco Esecuzione nel modal recupero
+- Default chiuso. Tap espande la GIF (max-height 320px, object-fit contain)
+- Nuova cache globale `ST.exerciseGifCache: { [exName]: { url, status } }` (persistente nella sessione)
+- Pre-fetch silenzioso via `ensureRestGif(exName)` chiamata in `startTrainingCountdown` (no-op se cache già popolata)
+- Bottone NON appare se `status !== 'cached'` o GIF mancante (es. esercizi Active Recovery)
+- Stile coerente evergreen: `.rest-gif-toggle` background `#E6F4F2` color `#1F5C53`
+- Riusa `fetchExerciseMedia(exName)` esistente — stessa sorgente del modal info, no duplicazione
+- Stato `cd.gifOpen: false` aggiunto in `ST.trainCountdown`. Funzione `toggleRestGif()`
+
+**Tab Progressione — grafico al posto delle card sessione**:
+- Stack lunghissimo di card "data + S1/S2/S3..." rimosso, sostituito da grafico SVG vanilla
+- Logica chart: ≤8 punti = barre verticali, >8 punti = linea + dots cliccabili. Width 100%, viewBox 320×180, mobile-first
+- 3 chip toggle metrica sopra il grafico:
+  - Esercizi normali: **Peso** (default) / Reps / Volume
+  - Esercizi `iso:true` temporali: **Peso** (default) / Tempo (no Volume)
+- Asse Y dinamico: lbs / reps / sec / reps×lbs
+- 3 stat card sotto: Best peso assoluto, Best reps/tempo, Ultimo (data + valore metrica)
+- Helper `bestSetOfDay(logs)`: peso desc → reps desc come tiebreaker. Stesse 3 metriche derivano dalla stessa serie vincente
+- Stato `ST.trainProgMetric: 'peso'` (default)
+- Tap su barra/dot → apre modal day-detail filtrato sull'esercizio (vedi sotto)
+- Edge cases: 0 sessioni → "Nessuna sessione registrata", 1 sessione → 1 barra (no errore)
+
+**Modal "Dettaglio giorno" (sostituisce delete-confirm immediato del calendario)**:
+- Tap su giorno calendario → modal dettaglio (NO più conferma elimina diretta)
+- Header: data formattata "Gio 8 mag" + nome sessione (es. "Upper A")
+- Lista esercizi raggruppati per nome, ognuno con righe S1/S2/S3 (reps + resistance + RIR)
+- Per ogni serie: matita ✏️ (edit inline) + cestino 🗑️ (delete con conferma)
+- Edit inline: 3 input (reps + resistance + RIR) + ✓/✕. Update simultaneo su `training_logs` + `workout_sets`
+- Bottone "🗑️ Elimina intero workout" in fondo (rosso `#B84C2A`, conferma sopra)
+- Nuovi state: `trainDayDetail`, `trainDayLogs`, `trainEditLogRow`, `trainDeleteSetConfirm`, `trainDeleteWorkoutConfirm`
+- Rimosso vecchio state `trainCalDeleteConfirm` (sostituito dal flusso modal)
+- Z-index modali: day-detail 1100, conferme 1200 (sopra)
+- Apertura da chart click: stesso modal con filtro `exName` (mostra solo serie di quell'esercizio)
+- Refresh automatico dopo edit/delete: re-fetch logs modal + `loadTrainingLogs(exName)` + `loadTrainingAllCompleted` per stats calendario
+
+**Dropdown selezione esercizio (sostituisce chip-row orizzontale)**:
+- Bottone trigger full-width: `ESERCIZIO: [nome] ▾` con border `#185FA5` quando aperto
+- Pannello aperto: search bar (`font-size:16px` no auto-zoom iOS) + 2 mini-pill tab + lista scrollabile max-height 60vh
+- Tab "Per programma" (default): gerarchico per sessione (Upper A/B, Lower A/B, Recovery Upper/Lower) con esercizi della scheda corrente. Header "PROGRAMMA ATTUALE" + placeholder "PROGRAMMI PASSATI" (preparato FASE 2)
+- Tab "Per esercizio": lista alfabetica IT (`localeCompare('it')`) di TUTTI gli esercizi mai loggati dall'utente (distinct da `training_logs.exercise_name`). Mostra anche nomi esercizi vecchi non più nel programma attuale
+- Search filtra in tempo reale entrambe le tab. Restore focus + caret a fine via `setTimeout`
+- Default selection automatica: primo esercizio alfabetico tra quelli loggati (no più stato vuoto all'apertura tab)
+- Esercizio selezionato: background `#E8F0FA` + border-left 3px `#185FA5` + ✓ a destra. Touch area min 44px
+- Click outside / ESC / tap su trigger aperto → chiude (overlay invisibile fixed inset:0 z-index 240, pannello z-index 250)
+- Nuovi state: `trainProgDropdownOpen`, `trainProgDropdownTab`, `trainProgDropdownSearch`, `allExerciseNamesCache` (lazy load + cache)
+- Cache invalidata da `saveTrainingSet`, `deleteSetConfirmed`, `deleteWorkoutConfirmed` (lista può cambiare). Edit non invalida (non cambia il nome)
+- ESC handler globale registrato una volta sola (riga ~7280)
+
+**FASE 2 documentata in commento HTML inline** (nella sezione "Programmi passati" del dropdown):
+- Tabella Supabase `programs`: id, user_id, nome, data_inizio, data_fine (nullable), struttura sessioni JSON, created_at
+- Colonna `program_id` su tabella `workouts`
+- UI per chiudere programma attuale e iniziarne uno nuovo (modulo Body o pannello admin)
+- Lista programmi archiviati collassabili nel dropdown
+- Filtro grafico per periodo programma quando esercizio selezionato da programma archiviato
+- Invalidare cache anche dopo chiusura/cambio programma
 
 ### 8 maggio 2026 — Audit training completo + rotazione 6 giorni + riposi extra
 
