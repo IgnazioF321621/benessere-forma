@@ -471,6 +471,35 @@ select.inp{cursor:pointer;}
   margin:0 0 16px 0;
   line-height:1.4;
 }
+.rest-gif-block{margin:0 0 16px 0;}
+.rest-gif-toggle{
+  width:100%;
+  padding:10px 14px;
+  background:#E6F4F2;
+  color:#1F5C53;
+  border:none;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:700;
+  font-family:var(--font-sans);
+  cursor:pointer;
+  text-align:left;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:background .15s;
+}
+.rest-gif-toggle:hover{background:#D4ECE7;}
+.rest-gif-arrow{font-size:11px;width:12px;display:inline-block;}
+.rest-gif-img{
+  width:100%;
+  max-height:320px;
+  object-fit:contain;
+  margin-top:10px;
+  border-radius:8px;
+  background:#F5F5F5;
+  display:block;
+}
 .modal-section{margin-bottom:16px;}
 .modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;margin:0 0 8px 0;font-family:var(--font-mono);}
 .modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
@@ -1172,7 +1201,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.08 · 18:21';
+const APP_VERSION = '2026.05.09 · 07:02';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1242,6 +1271,7 @@ const ST = {
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
   trainAllCompleted: [],            // tutti i workout completati validi (esclusi rest/rest_injury) — usato per calcolo settimana ciclo
+  exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
 };
@@ -3494,9 +3524,11 @@ function startTrainingCountdown(seconds, exName, sessionId){
     endTime,                  // ms timestamp di scadenza — sorgente di verità
     exName,                   // esercizio current per render Esecuzione/Errori/Alert
     sessionId,                // sessione corrente (per buildCoachPrompt)
+    gifOpen: false,           // toggle GIF esecuzione nel modal recupero (default chiuso)
   };
   ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
   ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
+  ensureRestGif(exName);             // pre-fetch URL GIF in background (no-op se gia in cache)
 }
 
 // Garantisce che ST.aiCue[`${sessionId}_${exName}`] sia popolato. Se gia presente: no-op.
@@ -3521,6 +3553,34 @@ async function ensureRestCue(exName, sessionId) {
   if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
     renderTraining();
   }
+}
+
+// Pre-fetch silenzioso GIF esecuzione: popola ST.exerciseGifCache[exName] con {url, status}.
+// Chiamata da startTrainingCountdown. No-op se gia' fetched (anche status='missing'/'error').
+// Re-render del modal recupero solo se l'utente e' ancora sull'esercizio quando arriva la risposta.
+async function ensureRestGif(exName) {
+  if (!exName) return;
+  if (ST.exerciseGifCache[exName]) return; // gia' fetched
+  ST.exerciseGifCache[exName] = { url: null, status: 'loading' };
+  try {
+    const m = await fetchExerciseMedia(exName);
+    ST.exerciseGifCache[exName] = {
+      url: m.cached_url || null,
+      status: m.status || 'missing'
+    };
+  } catch(e) {
+    ST.exerciseGifCache[exName] = { url: null, status: 'error' };
+  }
+  if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
+    renderTraining();
+  }
+}
+
+// Toggle visibilita' GIF nel modal recupero (default chiuso, persistente nel countdown corrente).
+function toggleRestGif() {
+  if (!ST.trainCountdown) return;
+  ST.trainCountdown.gifOpen = !ST.trainCountdown.gifOpen;
+  renderTraining();
 }
 
 // Tick: ricalcola remaining da endTime, beep+render solo se serve
@@ -4582,6 +4642,20 @@ function renderTraining(){
             ${(()=>{
               const sugg = (typeof getProgressionSuggestion === 'function') ? getProgressionSuggestion(cd.exName, cd.sessionId) : '';
               return sugg ? `<div class="rest-suggestion">${sugg}</div>` : '';
+            })()}
+            ${(()=>{
+              const gifEntry = ST.exerciseGifCache[cd.exName];
+              const hasGif = gifEntry && gifEntry.status === 'cached' && gifEntry.url;
+              if(!hasGif) return '';
+              const arrow = cd.gifOpen ? '▼' : '▶';
+              const label = cd.gifOpen ? 'Nascondi esecuzione' : 'Mostra esecuzione';
+              return `<div class="rest-gif-block">
+                <button class="rest-gif-toggle" onclick="toggleRestGif()">
+                  <span class="rest-gif-arrow">${arrow}</span>
+                  <span>${label}</span>
+                </button>
+                ${cd.gifOpen ? `<img src="${gifEntry.url}" alt="Esecuzione ${cd.exName}" class="rest-gif-img">` : ''}
+              </div>`;
             })()}
 
             ${executionList ? `<div class="modal-section">
