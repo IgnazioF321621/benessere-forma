@@ -667,6 +667,159 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Onboarding attuale (5 step, vedi `ST.onbStep`) **sarà sostituito** dai 7 step M1 + M2 separato.
 - Sezione "Design system" più sopra in questo file riflette lo stato del codice corrente, NON le decisioni del 10 maggio. Aggiornare quando il refactor parte.
 
+### 10 maggio 2026 (pomeriggio) — Design Session: Onboarding Momento 2 (M2 · check fisico)
+
+**Lavoro svolto in chat dedicata Claude Design "Zona Tracker"** (mockup visivi non in repo, consultabili nel progetto Claude Design). Continuazione della design session del mattino: stessa giornata, stesso sistema design.
+
+**Stato**: 9 schermate su 11 disegnate. Implementazione su `zona-tracker.html` rimandata: si chiude prima il design completo di M2, poi si porta a Claude Code in un'unica feature compatta.
+
+#### Convenzioni globali stabilite oggi (valide su tutta l'app)
+
+- **"coach"** sostituisce **"AI"** in tutta la UI (copy, label, microcopy, frasi di sistema). Da applicare anche al codice esistente in fase di refactor.
+- **Validità esami del sangue**: 1 mese (30 giorni). Esami più vecchi → bridge informativo, M2 si chiude senza compilazione esami.
+- **Storage foto check fisico**: Supabase Storage bucket privato + accesso via signed URL temporanei.
+
+#### Flusso M2 — 11 schermate (ordine canonico)
+
+L'utente arriva da step 7 di M1 cliccando "Inizia il check fisico →" (oppure "Salta per ora" rimanda M2).
+
+1. **Foto · Istruzioni** (✅ disegnata)
+   Header `CHECK FISICO · FOTO` · titolo "4 foto del corpo" · sottotitolo "Le foto restano private." · mantra italics "Più sei preciso ora, più il tuo coach lavora bene." · 3 regole su hairline:
+   - **Abbigliamento**: Intimo o costume.
+   - **Luce**: Naturale, frontale (finestra davanti). Niente flash, niente luci dall'alto.
+   - **Postura**: Corpo intero, piedi inclusi. Braccia leggermente staccate dal busto. Sfondo neutro. Telefono ad altezza vita.
+
+   Nota privacy: "Foto private, visibili solo a te, usate per i checkpoint con il tuo coach." · CTA "Iniziamo →"
+
+2. **Foto · Posa frontale** (✅ disegnata)
+   Titolo "Posa frontale" · sottotitolo "Davanti, in posizione naturale." · dropzone tratteggiata evergreen con due righe centrate:
+   - Riga 1 mono uppercase evergreen: `IN PIEDI · FRONTE ALLA FOTOCAMERA · BRACCIA STACCATE · PIEDI PARALLELI · SGUARDO IN AVANTI`
+   - Riga 2 mono uppercase grigio: `TAP PER CARICARE LA FOTO`
+   - CTA "Scegli foto"
+   - **Nessuna silhouette dentro la dropzone** (scartata dopo iterazioni: manichino stilizzato sembrava robot, anatomico realistico scivolava nel medico/strano)
+
+3. **Foto · Posa lato destro** (✅ disegnata)
+   Titolo "Posa lato destro" · sottotitolo "Lato destro verso la fotocamera." · dropzone: `DI LATO · LATO DESTRO VERSO LA FOTOCAMERA · BRACCIA RILASSATE · PIEDI UNITI · SGUARDO IN AVANTI`
+
+4. **Foto · Posa lato sinistro** (✅ disegnata)
+   Speculare a 3: `DI LATO · LATO SINISTRO VERSO LA FOTOCAMERA · BRACCIA RILASSATE · PIEDI UNITI · SGUARDO IN AVANTI`
+
+5. **Foto · Posa retro** (✅ disegnata)
+   Titolo "Posa retro" · sottotitolo "Spalle verso la fotocamera." · dropzone: `DI SPALLE · RETRO VERSO LA FOTOCAMERA · BRACCIA STACCATE · PIEDI PARALLELI · SGUARDO IN AVANTI`
+
+6. **Foto · Conferma (griglia + vista grande)** (✅ disegnate entrambe)
+   - **6a Griglia 2×2**: titolo "Foto pronte" · sottotitolo "Rivedi e conferma per andare avanti." · 4 miniature in griglia 2×2 con label sotto ognuna (FRONTALE / LATO DX / LATO SX / RETRO) · hint "Tocca una foto per rivederla o rifarla." · CTA "Conferma e continua →"
+   - **6b Vista grande**: full-screen modal · X di chiusura in alto a sinistra · label posa centrale uppercase mono · foto grande (placeholder bone scuro nel mockup) · 2 CTA affiancate full-width: **Rifai** (outline evergreen) / **Tieni** (pieno evergreen)
+
+7. **Misure · Peso e altezza** (✅ disegnata)
+   Header `CHECK FISICO · MISURE` · **switch unità in alto a destra** `KG·CM / LB·IN` (auto-detect dalla lingua del telefono al primo caricamento, le altre 2 schermate Misure ereditano la scelta). Solo qui c'è lo switch.
+
+   Titolo "Peso e altezza" · sottotitolo "Servono al coach per partire." · mantra italics "Più sono precise, meglio funziona tutto il resto." · 2 campi:
+   - **PESO** (placeholder `74,5 KG`) — tip: "Al mattino, a digiuno, dopo il bagno."
+   - **ALTEZZA** (placeholder `178 CM`) — tip: "Scalzo, schiena dritta contro un muro."
+
+   CTA "Continua →"
+
+8. **Misure · Circonferenze** (✅ disegnata)
+   9 campi in ordine di importanza, con asterisco evergreen sui obbligatori:
+   - **Obbligatori (3, asterisco)**: VITA `*` · PETTO `*` · FIANCHI `*`
+   - **Opzionali (6)**: SPALLE · COLLO · BICIPITE · POLSO · COSCIA · POLPACCIO
+
+   Titolo "Circonferenze" · sottotitolo "Metro morbido, aderente ma non stretto." · nota "*I campi con asterisco sono obbligatori. Gli altri puoi saltarli."
+
+   Pattern campo: label mono + asterisco se obbligatorio + icona ⓘ piccola **senza cerchio** (cliccabile, apre illustrazione del punto di misurazione — illustrazioni da produrre in fase implementativa) + valore Syne grande + unità mono attenuata + tip Syne 14px sotto.
+
+   Tip per campo:
+   - VITA: "Punto più stretto, sopra l'ombelico."
+   - PETTO: "Sotto le ascelle, alla parte più sporgente."
+   - FIANCHI: "Punto più largo dei glutei."
+   - SPALLE: "Parte più larga, da deltoide a deltoide."
+   - COLLO: "Sotto il pomo d'Adamo, rilassato."
+   - BICIPITE: "Braccio rilassato, nel punto più ampio."
+   - POLSO: "Subito sopra l'osso, mano rilassata."
+   - COSCIA: "Parte più alta, sotto la piega del gluteo."
+   - POLPACCIO: "Parte più larga, a metà polpaccio."
+
+   CTA sticky "Continua →" con sfumatura morbida bone→trasparente sopra (40-60px) + padding scroll bottom (~80-100px) per evitare che la CTA copra l'ultimo campo.
+
+9. **Misure · Composizione bilancia** (✅ disegnata)
+   Tutti i 5 campi opzionali (richiedono bilancia bioimpedenziometrica). Nessun asterisco.
+
+   Titolo "Composizione" · sottotitolo "Se hai una bilancia bioimpedenziometrica." · nota "Tutti i campi sono opzionali. Puoi saltare se non hai questi dati." · mantra italics in fondo: "Anche un dato in più aiuta il coach a leggerti meglio."
+
+   Campi:
+   - GRASSO CORPOREO (`%`) — "Percentuale di massa grassa."
+   - MASSA MUSCOLARE (`KG`) — "Peso totale dei muscoli."
+   - GRASSO VISCERALE (no unità, indice 1-30) — "Indice 1-30. Sotto 10 è ottimale."
+   - ETÀ METABOLICA (`ANNI`) — "Età stimata dal tuo metabolismo."
+   - ACQUA (`%`) — "Percentuale di acqua corporea."
+
+   CTA doppia in basso (sticky, sfumatura come step 8): **Salta** (outline evergreen, sinistra) · **Continua →** (pieno evergreen, destra).
+
+10. **Esami · Gate Sì/No** (❌ DA DISEGNARE — settimana prossima)
+    Domanda "Hai fatto esami del sangue nell'ultimo mese?" · 2 risposte (layout in valutazione: card affiancate / pulsanti impilati / pillole conversazionali).
+    - Sì → schermata 10b (compilazione)
+    - No → schermata 10c (bridge)
+
+11. **Esami · Compilazione (ramo Sì)** (❌ DA DISEGNARE — settimana prossima)
+    Tutti i campi singolarmente skippabili (l'utente potrebbe non avere tutti i parametri). Due gruppi:
+    - **Gruppo "Da esame base / AVIS" (8 parametri)**: emoglobina, ferritina, glicemia, colesterolo totale, HDL, trigliceridi, creatinina, ALT
+    - **Gruppo "Se li hai anche" (3 parametri opzionali)**: vitamina D, B12, TSH
+
+    **Schermata 10c — Bridge ramo No** (❌ DA DISEGNARE): "Nessun problema. Per ora andiamo avanti — ti ricorderemo di farli al prossimo checkpoint." → fine M2.
+
+12. **Esito M2** (❌ DA DISEGNARE — schermata di chiusura check fisico, ponte verso home/coach)
+
+#### Decisioni di design consolidate (valide per tutto M2)
+
+- **Pattern campi numerici**: tastiera numerica nativa, label mono uppercase sopra, valore Syne grande, unità mono attenuata a destra, tip Syne 14px sinistra sotto. Nessuna card, separazione tra campi via spacing + hairline sottile.
+- **Switch unità (KG·CM / LB·IN)**: solo nella schermata 7 (peso+altezza), le altre 2 Misure ereditano. Default: auto-detect dalla lingua del telefono.
+- **Asterisco obbligatori**: evergreen `#2A7A6F`, accanto al label, con nota chiarificatrice in alto sulla schermata.
+- **Icona ⓘ**: piccola, senza cerchio, grigio attenuato. Aprirà runtime un'illustrazione del punto di misurazione (illustrazioni da produrre in implementazione).
+- **CTA sticky in fondo**: sempre con sfumatura morbida bone→trasparente sopra (40-60px) + padding scroll (~80-100px) per evitare che la CTA copra l'ultimo campo.
+- **Niente progress bar in M2**: contesto diverso da M1, niente conteggi numerici delle schermate.
+- **Stile copy**: tu, max 1 riga di domanda, niente esclamativi, niente emoji, mantra italics 14px (`--t3`) come negli step M1.
+- **Tinta modulo**: M2 non ha tinta dedicata propria; usa il sistema globale (bone + evergreen). La tinta viola scuro `#5E4A7A` è riservata al checkpoint AI ricorrente del modulo Body.
+
+#### Foto — gestione tecnica
+
+- **Upload**: `<input type="file" accept="image/*">` nativo. iOS/Android aprono picker che mostra opzioni Fotocamera / Galleria. **Nessuna fotocamera in-app custom** — scarta complessità getUserMedia, timer, retry per zero valore aggiunto.
+- **Conferma**: tap su miniatura nella griglia 6a → modal vista grande 6b → "Rifai" (riapre picker per quella posa) o "Tieni" (chiude modal).
+- **Storage**: Supabase Storage bucket privato + accesso via signed URL a scadenza.
+- **Le 4 foto sono tutte obbligatorie**, nessuna saltabile, ognuna rifacibile prima di "Conferma e continua →".
+
+#### Set finale misure (decisione utente, ridotto rispetto al briefing iniziale)
+
+- **Antropometriche obbligatorie (5)**: peso, altezza, vita, petto, fianchi
+- **Antropometriche opzionali (6)**: spalle, collo, bicipite, polso, coscia, polpaccio
+- **Composizione bilancia opzionali (5)**: BF%, massa muscolare kg, grasso viscerale (indice 1-30), età metabolica, acqua %
+
+#### Set finale esami ematici
+
+- **Base "Da AVIS / esame del sangue base" (8)**: emoglobina, ferritina, glicemia, colesterolo totale, HDL, trigliceridi, creatinina, ALT
+- **Opzionali "Se li hai anche" (3)**: vitamina D, B12, TSH
+- Tutti singolarmente skippabili.
+
+Razionale: i parametri del gruppo base sono coperti da una donazione AVIS gratuita e sufficienti a impattare le raccomandazioni nutrizione/training. Vitamina D, B12, TSH richiedono richiesta separata al medico ma sono molto utili per integrazione e metabolismo.
+
+#### Decisioni rimaste in sospeso (da chiudere settimana prossima)
+
+- Layout schermata gate esami Sì/No (3 opzioni in valutazione: card affiancate / pulsanti impilati / pillole conversazionali)
+- Copy esatto della domanda gate
+- Layout schermata compilazione esami (ramo Sì): pattern campi, gerarchia visiva tra gruppo base e opzionali
+- Layout bridge ramo No
+- Layout esito M2 finale (chiusura del check fisico)
+- Schema tabelle Supabase per `body_check_photos`, `body_measurements`, `blood_tests` — da definire prima dell'implementazione
+
+#### Implicazioni per il codice (nessuna modifica ancora applicata)
+
+- Schermate M2 da implementare ex novo in `zona-tracker.html` quando il design sarà completo (11/11 schermate)
+- Supabase Storage bucket privato `body-check-photos` da creare con RLS appropriata
+- Tabelle nuove o estensione di `body_logs` esistente per accogliere il nuovo set di misure (decisione di schema in sospeso)
+- Tabella nuova `blood_tests` per i parametri ematici con timestamp validità
+- Migrazione "AI" → "coach" in tutto il codice esistente (UI strings) da pianificare come task separato di refactor copy
+- Lo switch unità KG·CM / LB·IN richiede preference utente persistente (su `profiles` o su `localStorage` come l'attuale `unit` Training)
+
 ### 9 maggio 2026 — Modulo Training: GIF recupero, grafico Progressione, dropdown esercizi
 
 **GIF esecuzione opzionale nel modal recupero**:
