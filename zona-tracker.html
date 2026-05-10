@@ -1201,7 +1201,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.09 · 10:51';
+const APP_VERSION = '2026.05.10 · 22:38';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3344,20 +3344,50 @@ function parseRepsRange(repsStr){
 
 // ── Suggerimento progressione (sync, legge dalla cache) ──────
 function getProgressionSuggestion(exName, sessionId){
-  const last = ST.lastLoggedSets[exName];
   const ex = findExercise(exName, sessionId);
   if(!ex) return '';
+  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
+
+  // 1. Cerca serie più recente di OGGI per questo esercizio nella sessione corrente
+  const today = todayKey();
+  const prefix = `${sessionId}_${exName}_`;
+  const suffix = `_${today}`;
+  let bestSetNum = 0;
+  let bestKey = null;
+  Object.keys(ST.trainLoggedSets || {}).forEach(k => {
+    if(k.startsWith(prefix) && k.endsWith(suffix)){
+      // formato: sessionId_exName_setNum_YYYY-MM-DD
+      const middle = k.slice(prefix.length, k.length - suffix.length);
+      const setNum = parseInt(middle, 10);
+      if(!isNaN(setNum) && setNum > bestSetNum){
+        bestSetNum = setNum;
+        bestKey = k;
+      }
+    }
+  });
+
+  if(bestKey){
+    const s = ST.trainLoggedSets[bestKey];
+    let resistTxt = 'corpo libero';
+    if(s.resistance != null && String(s.resistance).trim() !== ''){
+      const r = String(s.resistance).trim();
+      resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
+    }
+    const rirVal = (s.rir != null) ? s.rir : s.rir_actual;
+    const rirTxt = (rirVal != null) ? ` · RIR ${rirVal}` : '';
+    return `🎯 Serie ${bestSetNum}: ${s.reps}r · ${resistTxt}${rirTxt}`;
+  }
+
+  // 2. Fallback: ultimo allenamento
+  const last = ST.lastLoggedSets[exName];
   if(!last){
-    // Prima volta: suggerisci minimo del range
     const m = String(ex.reps || '').match(/^(\d+)/);
     const repsMin = m ? parseInt(m[1], 10) : 8;
     return `💡 Inizia con ${repsMin} reps a 10 lbs`;
   }
-  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
   let resistTxt = 'corpo libero';
   if(last.resistance != null && String(last.resistance).trim() !== ''){
     const r = String(last.resistance).trim();
-    // Se contiene già unità di misura testuale (es. "Banda viola", "30 lbs"), lascialo com'è
     resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
   }
   const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
