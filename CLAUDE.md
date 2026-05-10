@@ -609,6 +609,64 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 10 maggio 2026 — Design Session: visione AI, sistema design, onboarding M1, home post-onboarding
+
+**Lavoro svolto in chat dedicata Claude Design "Zona Tracker"** (mockup visivi non in repo, consultabili nel progetto Claude Design). Niente codice scritto in zona-tracker.html — è una sessione di design product/UX che definisce le fondamenta visive e di flusso per le prossime implementazioni.
+
+**Architettura visione AI confermata**
+- App = assistente personalizzato. AI al centro, 3 momenti: Onboarding → Vita quotidiana → Checkpoint periodico
+- Onboarding a 2 momenti: M1 base 7 step (~3 min, conversazionale) + M2 check fisico (~5-7 min, form-style)
+- AI elabora dati → genera 2 piani collegati: nutrizione (Zone, supplementi Nutrilite dal catalogo) + allenamento
+- Modulo Body = punto di entrata e checkpoint del percorso AI, tinta viola scuro `#5E4A7A`
+
+**Sistema design confermato (sostituisce le scelte precedenti)**
+- Font: **Syne** (sans/display) + **JetBrains Mono** (numeri/label) — NON Manrope
+- Sfondo bone caldo `#F5F3EE`
+- Accent evergreen `#2A7A6F`
+- Macro food-coded: carb amber `#BA7517`, prot evergreen, fat terracotta `#B84C2A`
+- Tinte moduli (nuova palette UI): Nutrition ambra `#FAC775`, Training azzurro `#B5D4F4`, Body viola `#AFA9EC`
+
+**Auth — migrazione confermata**
+- Magic Link → OTP via email (più affidabile su iOS Safari)
+
+**ONBOARDING M1 — 9 schermate progettate (iOS+Android)**
+1. **Welcome screen** — "Nutrizione, allenamento e progressi. Tutto in un percorso." + CTA "Crea il tuo percorso →"
+2. **Auth Step 1** — schermata fluida 2 stati: email → codice OTP, pillola email persistente
+3. **Step 2a** — "Iniziamo da te" — nome+cognome affiancati + frase sistema "Ogni percorso comincia da chi sei oggi."
+4. **Step 2b** — "Parlaci di te" — anagrafica (età, sesso M/F/Altro, altezza) + peso (attuale, obiettivo) + frase "I numeri dicono dove sei e chi potrai diventare."
+5. **Step 3** — "Definiamo l'obiettivo" — 6 card 2x3, multi-select max 2, nessun check, frase "Definire la meta è già metà del cammino."
+6. **Step 4** — "Il tuo livello" — scrollabile, 5 card attività + 4 card esperienza, sticky CTA, frase "Sapere da dove parti rende il viaggio più chiaro."
+7. **Step 5** — "Come mangi" — 5 card stile alimentare + 16 pillole intolleranze raggruppate in 3 sotto-gruppi (Allergie/Esclusioni/Sensibilità) + Altro con campo libero, frase "Quello che escludi conta quanto quello che scegli."
+8. **Step 6** — "Cosa devo sapere" — 12 pillole limitazioni in 3 sotto-gruppi (Schiena/Articolazioni/Condizioni) + Altro, frase "Niente di importante si costruisce ignorando i segnali."
+9. **Step 7** — "Ci siamo, Ignazio." — esito caldo, lista FOTO/MISURE/ESAMI, frase "Ecco il tuo primo vero passo.", bottoni "Inizia il check fisico →" + "Salta per ora"
+
+**Pattern di design ricorrenti dell'onboarding**
+- Tono variabile per step + 6 regole di coerenza (tu, max 1 riga domanda, niente esclamativi, niente emoji, riassicurazioni piccole sotto, nome solo step 2a + 7)
+- Frasi di sistema in italics 14px `--t3` ad ogni step (mantra Zona Tracker, scritte da noi, da rinnovare nel tempo via dizionario centralizzato)
+- Progress bar 7 segmenti che cresce step per step
+- Stile conversazionale per tutto M1
+- Allineamento sinistra
+- iOS + Android sempre coerenti
+
+**HOME post-onboarding — 1 schermata progettata**
+
+4 zone:
+- **Zona 1**: saluto "Buongiorno, Ignazio" + data mono uppercase
+- **Zona 2**: 3 card moduli asimmetriche (Nutrition alta con anello kcal+macro, Training compatta senza orario "Sessione Upper" + settimana, Body compatta "78,4 kg ↓ −0,6" + checkpoint)
+- **Zona 3**: pannello "PROSSIMA AZIONE" dinamico ("È ora del workout/pranzo/integratori..." linguaggio utente non tecnico) con titolo + descrizione + mini-box "DOPO L'ALLENAMENTO" + bottone "Inizia il workout →"
+- **Zona 4**: tab bar pill 4 elementi (Home/Nutr/Train/Body) + avatar profilo IF in alto a destra
+
+**Logica "PROSSIMA AZIONE"**
+- Cambia in base allo stato logico (non orari hardcoded)
+- L'AI legge: profilo orari utente + stato in tempo reale (cosa già fatto oggi) → decide cosa mostrare
+- Linguaggio utente: workout, colazione, pranzo, cena, snack, integratori (NO "attivazione", NO "sessione DUP")
+- 3 stati progettati come riferimento: mattina pre-workout / pomeriggio integratori / sera riepilogo
+
+**Implicazioni per il codice (nessuna modifica ancora applicata)**
+- Sistema design attuale (Manrope + palette verde-blu-marrone moduli) è **legacy** rispetto a quanto deciso il 10 maggio. Da migrare in fase di implementazione.
+- Onboarding attuale (5 step, vedi `ST.onbStep`) **sarà sostituito** dai 7 step M1 + M2 separato.
+- Sezione "Design system" più sopra in questo file riflette lo stato del codice corrente, NON le decisioni del 10 maggio. Aggiornare quando il refactor parte.
+
 ### 9 maggio 2026 — Modulo Training: GIF recupero, grafico Progressione, dropdown esercizi
 
 **GIF esecuzione opzionale nel modal recupero**:
