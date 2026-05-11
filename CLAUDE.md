@@ -112,6 +112,7 @@ Schermata 1 — Home dashboard:
 
 Schermata 2 — Dettaglio utente:
 - Profilo: dieta, obiettivo, sesso, età, altezza, peso, peso obiettivo, attività, inizio training, intolleranze (tags), note salute, ultimo accesso (in italiano: "2 ore fa" / "ieri" / "3 giorni fa")
+- Card Calorie oggi nel dettaglio utente (consumate vs `target_kcal` con barra progresso)
 - Bar chart pasti ultimi 7 giorni (etichette Lun/Mar/... con giorno corrente evidenziato)
 - Ultimi 10 pasti: ora · slot · descrizione · kcal
 - Ultimi 10 integratori: ora · slot · nome

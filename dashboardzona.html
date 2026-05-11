@@ -744,6 +744,47 @@ function renderUserDetail(){
     </div>
   `;
 
+  // Calorie oggi — consumate vs target
+  const todayStr = todayISO();
+  const kcalToday = (d.meals7d || [])
+    .filter(m => m.date === todayStr)
+    .reduce((sum, m) => sum + (Number(m.kcal) || 0), 0);
+  const rawTarget = Number(p.target_kcal);
+  const noTarget = !rawTarget || rawTarget <= 0;
+  const targetKcal = noTarget ? 1900 : rawTarget;
+  const fmtKcal = n => Number(n).toLocaleString('it-IT');
+  let calorieSection;
+  if(noTarget){
+    calorieSection = `
+      <h2>Calorie oggi</h2>
+      <div class="card">
+        <div style="font-size:24px;font-weight:600;">${fmtKcal(kcalToday)} kcal oggi</div>
+        <div class="meta" style="margin-top:6px;">Target non impostato</div>
+      </div>
+    `;
+  } else {
+    const diff = kcalToday - targetKcal;
+    let diffText;
+    if(diff === 0) diffText = 'In linea con il target';
+    else if(diff < 0) diffText = `−${fmtKcal(Math.abs(diff))} kcal rispetto al target`;
+    else diffText = `+${fmtKcal(diff)} kcal rispetto al target`;
+    const pct = Math.round((kcalToday / targetKcal) * 100);
+    const over = pct > 100;
+    const fillWidth = over ? 100 : Math.max(0, pct);
+    const fillColor = over ? 'var(--amber)' : 'var(--ink)';
+    calorieSection = `
+      <h2>Calorie oggi</h2>
+      <div class="card">
+        <div style="font-size:24px;font-weight:600;">${fmtKcal(kcalToday)} / ${fmtKcal(targetKcal)} kcal</div>
+        <div class="meta" style="margin-top:6px;">${esc(diffText)}</div>
+        <div style="margin-top:12px;background:var(--line);border-radius:4px;height:10px;overflow:hidden;">
+          <div style="background:${fillColor};height:100%;width:${fillWidth}%;border-radius:4px;"></div>
+        </div>
+        <div class="meta" style="text-align:right;margin-top:4px;">${pct}%</div>
+      </div>
+    `;
+  }
+
   // Pasti ultimi 7 giorni — bar chart
   const days = [];
   for(let i=6; i>=0; i--) days.push(dateNDaysAgo(i));
@@ -812,6 +853,7 @@ function renderUserDetail(){
     ${top}
     <h1 style="margin-bottom:16px;">${esc(userDisplayName(p))}</h1>
     ${profileSection}
+    ${calorieSection}
     ${daysSection}
     ${mealsSection}
     ${suppsSection}
