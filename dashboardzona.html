@@ -112,7 +112,7 @@
   .item:first-child { border-top: 0; }
   .item .time { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .item .desc { font-size: 14px; }
-  .item .slot { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; }
+  .item .slot { font-size: 11px; color: var(--ink-soft); }
   .item .kcal { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   /* Auth */
@@ -233,7 +233,7 @@ function parseDateTime(row){
 function timeAgo(ts){
   if(!ts) return 'mai';
   const diff = Date.now() - ts;
-  if(diff < 0) return 'in futuro';
+  if(diff < 0) return 'appena ora';
   const sec = Math.floor(diff/1000);
   if(sec < 60) return 'pochi secondi fa';
   const min = Math.floor(sec/60);
@@ -281,6 +281,13 @@ function formatHM(row){
 function dayLabel(dateStr){
   const days = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
   return days[new Date(dateStr + 'T12:00:00').getDay()];
+}
+
+function formatSlot(slot){
+  if(slot == null) return '';
+  const s = String(slot).replace(/_/g, ' ').toLowerCase().trim();
+  if(!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -771,7 +778,7 @@ function renderUserDetail(){
         <div class="item">
           <div class="time">${esc(formatHM(m))}</div>
           <div>
-            <div class="slot">${esc((m.slot || '').toUpperCase())}</div>
+            <div class="slot">${esc(formatSlot(m.slot))}</div>
             <div class="desc ellipsis">${esc(m.description || '—')}</div>
           </div>
           <div class="kcal">${m.kcal != null ? esc(m.kcal) + ' kcal' : ''}</div>
@@ -789,7 +796,7 @@ function renderUserDetail(){
         <div class="item">
           <div class="time">${esc(formatHM(s))}</div>
           <div>
-            <div class="slot">${esc((s.slot || '').toUpperCase())}</div>
+            <div class="slot">${esc(formatSlot(s.slot))}</div>
             <div class="desc ellipsis">${esc(s.supplement_name || '—')}</div>
           </div>
           <div class="kcal">${esc(s.date || '')}</div>
