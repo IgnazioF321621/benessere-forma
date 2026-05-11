@@ -442,7 +442,7 @@ async function openUserDetail(userId){
   render();
   try {
     const since = startOf7DaysWindow();
-    const profile = ADM.users.find(u => u.user_id === userId) || null;
+    const profile = ADM.users.find(u => u.id === userId) || null;
     const [meals7Res, last10MealsRes, last10SuppsRes] = await Promise.all([
       supa.from('meals').select('id, date, time, slot, description, kcal, created_at')
         .eq('user_id', userId).gte('date', since),
@@ -596,21 +596,21 @@ function renderDashboard(){
   ADM.mealsToday.forEach(m => { mealsCountByUserToday[m.user_id] = (mealsCountByUserToday[m.user_id]||0) + 1; });
 
   const sortedUsers = [...ADM.users].sort((a,b) => {
-    const la = ADM.lastActivity[a.user_id] || 0;
-    const lb = ADM.lastActivity[b.user_id] || 0;
+    const la = ADM.lastActivity[a.id] || 0;
+    const lb = ADM.lastActivity[b.id] || 0;
     return lb - la;
   });
   const testersHtml = sortedUsers.length === 0
     ? '<div class="empty">Nessun utente trovato. Verifica le policy RLS Supabase.</div>'
     : sortedUsers.map(u => {
-        const last = ADM.lastActivity[u.user_id] || 0;
+        const last = ADM.lastActivity[u.id] || 0;
         const dot = statusDot(last);
-        const meals = mealsCountByUserToday[u.user_id] || 0;
+        const meals = mealsCountByUserToday[u.id] || 0;
         const mealsLbl = meals === 0 ? 'nessun pasto oggi'
                        : (meals === 1 ? '1 pasto oggi' : meals + ' pasti oggi');
         const lastLbl = last ? 'ultimo accesso ' + timeAgo(last) : 'mai attivo';
         return `
-          <div class="row clickable" onclick="openUserDetail('${esc(u.user_id)}')">
+          <div class="row clickable" onclick="openUserDetail('${esc(u.id)}')">
             <span class="dot ${dot}"></span>
             <div class="grow">
               <div class="name">${esc(userDisplayName(u))}</div>

@@ -129,6 +129,8 @@ Schermata 2 — Dettaglio utente:
 - Email check `user.email !== ADMIN_EMAIL` → unauthorized screen + logout. Hardcoded `ADMIN_EMAIL = 'ignazio.f@me.com'`.
 - Anon key Supabase identica a `zona-tracker.html` (chiave pubblica, sicura da esporre — la sicurezza dipende dalle policy RLS).
 
+**Schema `profiles`**: PK = `id` (coincide con `auth.users.id`), non `user_id`. Altre tabelle dati (`meals`, `supplements_log`, `workouts`, `body_logs`, `training_logs`, `supplements`, `fasting_days`) usano FK `user_id`.
+
 **⚠️ RLS Supabase — policy admin necessarie**
 
 Le policy attuali (`auth.uid() = user_id` su tutte le tabelle) permettono a Ignazio di vedere solo i propri dati. Per leggere i dati di Ginevra e Isabella servono policy aggiuntive admin. Da eseguire in Supabase SQL Editor:
