@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>Zona Tracker — Admin</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-soft: #666666;
+    --line: #E5E5E5;
+    --line-strong: #CCCCCC;
+    --green: #16A34A;
+    --amber: #D97706;
+    --red: #DC2626;
+    --hover: #F5F5F5;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-text-size-adjust: 100%;
+  }
+  .app {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+  h2 { font-size: 16px; margin: 24px 0 8px; font-weight: 600; }
+  .sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 16px; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+  }
+  .topbar .who { font-size: 12px; color: var(--ink-soft); }
+  .btn {
+    appearance: none; border: 1px solid var(--line-strong); background: #fff; color: var(--ink);
+    border-radius: 8px; padding: 10px 14px; font: inherit; cursor: pointer;
+    min-height: 44px;
+  }
+  .btn:active { background: var(--hover); }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.small { padding: 6px 10px; min-height: 32px; font-size: 13px; }
+  .btn.ghost { border-color: transparent; padding-left: 0; padding-right: 0; }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fff;
+  }
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 0; border-top: 1px solid var(--line);
+    min-height: 44px;
+  }
+  .row:first-child { border-top: 0; }
+  .row.clickable { cursor: pointer; }
+  .row.clickable:active { background: var(--hover); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.green { background: var(--green); }
+  .dot.amber { background: var(--amber); }
+  .dot.gray  { background: #BFBFBF; }
+  .grow { flex: 1; min-width: 0; }
+  .arrow { color: var(--ink-soft); font-size: 18px; line-height: 1; }
+  .name { font-weight: 600; }
+  .meta { color: var(--ink-soft); font-size: 13px; }
+  .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Stat tiles */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat {
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    text-align: center;
+  }
+  .stat .n { font-size: 22px; font-weight: 600; line-height: 1.1; }
+  .stat .l { font-size: 11px; color: var(--ink-soft); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* Bar charts */
+  .bars { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 60px; gap: 10px; align-items: center; }
+  .bar-row .lbl { font-size: 13px; }
+  .bar-row .val { font-size: 12px; color: var(--ink-soft); text-align: right; }
+  .bar-track { background: var(--line); border-radius: 4px; height: 10px; overflow: hidden; }
+  .bar-fill { background: var(--ink); height: 100%; border-radius: 4px; }
+
+  /* Days chart (7 giorni) */
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px; }
+  .day-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .day-bar { width: 100%; min-height: 4px; background: var(--ink); border-radius: 3px 3px 0 0; }
+  .day-bar.empty { background: var(--line); }
+  .day-lbl { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; }
+  .day-num { font-size: 11px; font-weight: 600; }
+  .day-col.today .day-lbl { color: var(--ink); font-weight: 600; }
+  .day-track { width: 100%; height: 60px; display: flex; align-items: flex-end; }
+
+  /* Lista pasti / integratori */
+  .item {
+    display: grid; grid-template-columns: 50px 1fr auto; gap: 10px;
+    padding: 10px 0; border-top: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .item:first-child { border-top: 0; }
+  .item .time { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .item .desc { font-size: 14px; }
+  .item .slot { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; }
+  .item .kcal { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* Auth */
+  .auth-wrap { max-width: 360px; margin: 60px auto 0; padding: 0 16px; }
+  .auth-wrap h1 { margin-bottom: 16px; }
+  .field { display: block; margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field input {
+    width: 100%; padding: 12px; border: 1px solid var(--line-strong); border-radius: 8px;
+    font: inherit; font-size: 16px; /* anti-zoom iOS */
+    -webkit-appearance: none;
+  }
+  .field input:focus { outline: 2px solid var(--ink); outline-offset: -2px; }
+  .auth-msg { margin: 8px 0; font-size: 13px; }
+  .auth-msg.err { color: var(--red); }
+  .auth-msg.ok  { color: var(--green); }
+  .auth-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .auth-actions .btn { flex: 1; }
+
+  /* Loading */
+  .loading {
+    padding: 40px 16px; text-align: center; color: var(--ink-soft); font-size: 14px;
+  }
+
+  /* Tags */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tag {
+    border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 3px 10px; font-size: 12px; color: var(--ink-soft);
+  }
+
+  /* Definition list (profile) */
+  .dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 14px; }
+  .dl dt { color: var(--ink-soft); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; align-self: center; }
+  .dl dd { margin: 0; }
+
+  /* Empty state */
+  .empty { color: var(--ink-soft); font-size: 13px; padding: 12px 0; }
+
+  /* Footer */
+  .footer { color: var(--ink-soft); font-size: 11px; margin-top: 32px; text-align: center; }
+
+  @media (min-width: 720px) {
+    .stats { gap: 12px; }
+    .stat .n { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cuyDYC3WzaNGqGRs_J-JnQ_7kZ2B4to';
+const ADMIN_EMAIL  = 'ignazio.f@me.com';
+
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+const ADM = {
+  screen: 'loading', // loading | auth-email | auth-otp | unauthorized | dashboard | user-detail
+  user: null,
+  email: '',
+  authMsg: null, // {text, type}
+  busy: false,
+
+  // Dashboard data
+  users: [],          // [{user_id, name, dieta, obiettivo, ...}]
+  mealsToday: [],     // meals con date = today
+  suppsToday: [],     // supplements_log con date = today
+  meals7d: [],        // tutti i pasti ultimi 7 giorni
+  trainings7d: [],    // workouts ultimi 7 giorni
+  bodyLogs7d: [],     // body_logs ultimi 7 giorni
+  loadedAt: 0,
+
+  // Per-user last activity ts (computed)
+  lastActivity: {},
+
+  // User detail
+  selectedUserId: null,
+  detail: null,       // {profile, meals7d, last10Meals, last10Supps}
+  detailLoading: false,
+};
+
+// ═══════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'
+  }[c]));
+}
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function dateNDaysAgo(n){
+  const d = new Date(); d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0,10);
+}
+function startOf7DaysWindow(){ return dateNDaysAgo(6); } // include oggi → 7 giorni
+
+function parseDateTime(row){
+  // Prova created_at (timestamptz), poi date+time, poi date
+  if(row.created_at) return new Date(row.created_at).getTime();
+  if(row.date && row.time){
+    const [h,m] = String(row.time).split(':');
+    const d = new Date(row.date + 'T' + (h||'00').padStart(2,'0') + ':' + (m||'00').padStart(2,'0') + ':00');
+    return d.getTime();
+  }
+  if(row.date) return new Date(row.date + 'T12:00:00').getTime();
+  return 0;
+}
+
+function timeAgo(ts){
+  if(!ts) return 'mai';
+  const diff = Date.now() - ts;
+  if(diff < 0) return 'in futuro';
+  const sec = Math.floor(diff/1000);
+  if(sec < 60) return 'pochi secondi fa';
+  const min = Math.floor(sec/60);
+  if(min < 60) return min === 1 ? '1 minuto fa' : min + ' minuti fa';
+  const hr = Math.floor(min/60);
+  if(hr < 24) return hr === 1 ? '1 ora fa' : hr + ' ore fa';
+  const d = Math.floor(hr/24);
+  if(d === 1) return 'ieri';
+  if(d < 7) return d + ' giorni fa';
+  if(d < 30) {
+    const w = Math.floor(d/7);
+    return w === 1 ? '1 settimana fa' : w + ' settimane fa';
+  }
+  const mo = Math.floor(d/30);
+  return mo === 1 ? '1 mese fa' : mo + ' mesi fa';
+}
+
+function statusDot(lastTs){
+  if(!lastTs) return 'gray';
+  const diff = Date.now() - lastTs;
+  if(diff < 2 * 3600 * 1000) return 'green';
+  const today0 = new Date(); today0.setHours(0,0,0,0);
+  if(lastTs >= today0.getTime()) return 'amber';
+  return 'gray';
+}
+
+function userDisplayName(p){
+  if(!p) return 'Utente sconosciuto';
+  const name = p.name || p.full_name || p.first_name;
+  if(name) return String(name).trim();
+  if(p.email) return p.email;
+  if(p.user_id) return 'Utente ' + String(p.user_id).slice(0,8);
+  return 'Utente';
+}
+
+function formatHM(row){
+  if(row.time) return String(row.time).slice(0,5);
+  if(row.created_at){
+    const d = new Date(row.created_at);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  return '—';
+}
+
+function dayLabel(dateStr){
+  const days = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  return days[new Date(dateStr + 'T12:00:00').getDay()];
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+async function bootstrap(){
+  try {
+    const {data:{session}} = await supa.auth.getSession();
+    if(session && session.user){
+      onSignedIn(session.user);
+      return;
+    }
+  } catch(e){ console.warn('[auth] getSession error:', e); }
+  ADM.screen = 'auth-email';
+  render();
+
+  supa.auth.onAuthStateChange((event, session) => {
+    if(event === 'SIGNED_IN' && session && session.user && !ADM.user){
+      onSignedIn(session.user);
+    } else if(event === 'SIGNED_OUT'){
+      ADM.user = null;
+      ADM.screen = 'auth-email';
+      render();
+    }
+  });
+}
+
+function onSignedIn(user){
+  ADM.user = user;
+  if((user.email || '').toLowerCase() !== ADMIN_EMAIL){
+    ADM.screen = 'unauthorized';
+    render();
+    return;
+  }
+  ADM.screen = 'dashboard';
+  render();
+  loadDashboard();
+}
+
+async function sendOtp(){
+  if(ADM.busy) return;
+  const email = (ADM.email || '').trim();
+  if(!email){
+    ADM.authMsg = {text:'Inserisci la tua email.', type:'err'};
+    render(); return;
+  }
+  ADM.busy = true; ADM.authMsg = null; render();
+  const {error} = await supa.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false }
+  });
+  ADM.busy = false;
+  if(error){
+    ADM.authMsg = {text: 'Errore: ' + error.message, type:'err'};
+  } else {
+    ADM.screen = 'auth-otp';
+    ADM.authMsg = {text: 'Codice inviato a ' + email, type:'ok'};
+  }
+  render();
+}
+
+async function verifyOtpAdmin(){
+  if(ADM.busy) return;
+  const tokenEl = document.getElementById('adm-otp');
+  const token = (tokenEl ? tokenEl.value : '').trim().replace(/\D/g, '');
+  if(token.length < 6){
+    ADM.authMsg = {text:'Inserisci il codice completo.', type:'err'};
+    render(); return;
+  }
+  ADM.busy = true; ADM.authMsg = null; render();
+  const {data, error} = await supa.auth.verifyOtp({
+    email: ADM.email,
+    token,
+    type: 'email'
+  });
+  ADM.busy = false;
+  if(error){
+    ADM.authMsg = {text:'Codice non valido o scaduto. Riprova.', type:'err'};
+    render(); return;
+  }
+  if(data && data.session && data.session.user){
+    onSignedIn(data.session.user);
+  }
+}
+
+async function signOut(){
+  await supa.auth.signOut();
+  ADM.user = null;
+  ADM.email = '';
+  ADM.screen = 'auth-email';
+  ADM.authMsg = null;
+  render();
+}
+
+function onEmailInput(e){ ADM.email = e.target.value; }
+function onBackToEmail(){ ADM.screen = 'auth-email'; ADM.authMsg = null; render(); }
+
+// ═══════════════════════════════════════════════════════════
+// DATA LOAD — DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function loadDashboard(){
+  ADM.loadedAt = 0; // forza render "Carico..."
+  render();
+  try {
+    const today = todayISO();
+    const since = startOf7DaysWindow();
+
+    const [profilesRes, mealsTodayRes, suppsTodayRes, meals7Res, workouts7Res, body7Res] = await Promise.all([
+      supa.from('profiles').select('*'),
+      supa.from('meals').select('user_id, id, date').eq('date', today),
+      supa.from('supplements_log').select('user_id, id, date').eq('date', today),
+      supa.from('meals').select('user_id, id, date, time, slot, description, kcal, created_at').gte('date', since),
+      // workouts può non esistere → catch errore lato Promise.allSettled? No, Promise.all fallisce tutto. Uso try/catch separato.
+      supa.from('workouts').select('user_id, date, session_type, created_at').gte('date', since).then(r=>r).catch(e=>({error:e, data:null})),
+      supa.from('body_logs').select('user_id, date, weight_kg, created_at').gte('date', since).then(r=>r).catch(e=>({error:e, data:null})),
+    ]);
+
+    if(profilesRes.error){
+      showLoadError(profilesRes.error);
+      return;
+    }
+    ADM.users = profilesRes.data || [];
+    ADM.mealsToday = (mealsTodayRes.data) || [];
+    ADM.suppsToday = (suppsTodayRes.data) || [];
+    ADM.meals7d = (meals7Res.data) || [];
+    ADM.trainings7d = (workouts7Res && workouts7Res.data) || [];
+    ADM.bodyLogs7d = (body7Res && body7Res.data) || [];
+
+    // Calcola last activity per ogni utente (max created_at o date+time tra meals/supps/workouts/body)
+    const lastByUser = {};
+    function bump(uid, ts){ if(!uid || !ts) return; if(!lastByUser[uid] || ts > lastByUser[uid]) lastByUser[uid] = ts; }
+    ADM.meals7d.forEach(r => bump(r.user_id, parseDateTime(r)));
+    ADM.mealsToday.forEach(r => bump(r.user_id, parseDateTime(r)));
+    (ADM.suppsToday).forEach(r => bump(r.user_id, parseDateTime(r)));
+    ADM.trainings7d.forEach(r => bump(r.user_id, parseDateTime(r)));
+    ADM.bodyLogs7d.forEach(r => bump(r.user_id, parseDateTime(r)));
+    ADM.lastActivity = lastByUser;
+    ADM.loadedAt = Date.now();
+    render();
+  } catch(e){
+    showLoadError(e);
+  }
+}
+
+function showLoadError(err){
+  ADM.loadedAt = -1;
+  ADM.loadError = (err && err.message) ? err.message : String(err);
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA LOAD — USER DETAIL
+// ═══════════════════════════════════════════════════════════
+async function openUserDetail(userId){
+  ADM.selectedUserId = userId;
+  ADM.screen = 'user-detail';
+  ADM.detail = null;
+  ADM.detailLoading = true;
+  render();
+  try {
+    const since = startOf7DaysWindow();
+    const profile = ADM.users.find(u => u.user_id === userId) || null;
+    const [meals7Res, last10MealsRes, last10SuppsRes] = await Promise.all([
+      supa.from('meals').select('id, date, time, slot, description, kcal, created_at')
+        .eq('user_id', userId).gte('date', since),
+      supa.from('meals').select('id, date, time, slot, description, kcal, created_at')
+        .eq('user_id', userId).order('date', {ascending:false}).order('time', {ascending:false, nullsFirst:false}).limit(10),
+      supa.from('supplements_log').select('id, date, supplement_name, slot, created_at')
+        .eq('user_id', userId).order('date', {ascending:false}).order('created_at', {ascending:false, nullsFirst:false}).limit(10),
+    ]);
+    ADM.detail = {
+      profile,
+      meals7d: meals7Res.data || [],
+      last10Meals: last10MealsRes.data || [],
+      last10Supps: last10SuppsRes.data || [],
+      error: meals7Res.error || last10MealsRes.error || last10SuppsRes.error || null,
+    };
+  } catch(e){
+    ADM.detail = {profile: null, meals7d:[], last10Meals:[], last10Supps:[], error: e};
+  }
+  ADM.detailLoading = false;
+  render();
+}
+
+function backToDashboard(){
+  ADM.screen = 'dashboard';
+  ADM.selectedUserId = null;
+  ADM.detail = null;
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════
+function render(){
+  const root = document.getElementById('app');
+  switch(ADM.screen){
+    case 'loading':       root.innerHTML = renderLoading(); break;
+    case 'auth-email':    root.innerHTML = renderAuthEmail(); break;
+    case 'auth-otp':      root.innerHTML = renderAuthOtp(); break;
+    case 'unauthorized':  root.innerHTML = renderUnauthorized(); break;
+    case 'dashboard':     root.innerHTML = renderDashboard(); break;
+    case 'user-detail':   root.innerHTML = renderUserDetail(); break;
+    default:              root.innerHTML = '<div class="loading">Stato sconosciuto.</div>';
+  }
+}
+
+function renderLoading(){
+  return '<div class="loading">Carico…</div>';
+}
+
+function renderAuthEmail(){
+  const msg = ADM.authMsg ? `<div class="auth-msg ${ADM.authMsg.type}">${esc(ADM.authMsg.text)}</div>` : '';
+  return `
+    <div class="auth-wrap">
+      <h1>Admin · Zona Tracker</h1>
+      <p class="sub">Accesso riservato.</p>
+      <div class="field">
+        <label for="adm-email">Email</label>
+        <input id="adm-email" type="email" autocomplete="email" inputmode="email"
+               value="${esc(ADM.email)}" oninput="onEmailInput(event)"
+               placeholder="email@esempio.it">
+      </div>
+      ${msg}
+      <div class="auth-actions">
+        <button class="btn primary" onclick="sendOtp()" ${ADM.busy?'disabled':''}>
+          ${ADM.busy ? 'Invio…' : 'Invia codice'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderAuthOtp(){
+  const msg = ADM.authMsg ? `<div class="auth-msg ${ADM.authMsg.type}">${esc(ADM.authMsg.text)}</div>` : '';
+  return `
+    <div class="auth-wrap">
+      <h1>Inserisci il codice</h1>
+      <p class="sub">Codice a 6 cifre inviato a ${esc(ADM.email)}</p>
+      <div class="field">
+        <label for="adm-otp">Codice</label>
+        <input id="adm-otp" type="text" inputmode="numeric" autocomplete="one-time-code"
+               maxlength="6" placeholder="123456" autofocus>
+      </div>
+      ${msg}
+      <div class="auth-actions">
+        <button class="btn" onclick="onBackToEmail()" ${ADM.busy?'disabled':''}>Indietro</button>
+        <button class="btn primary" onclick="verifyOtpAdmin()" ${ADM.busy?'disabled':''}>
+          ${ADM.busy ? 'Verifico…' : 'Accedi'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderUnauthorized(){
+  return `
+    <div class="auth-wrap">
+      <h1>Accesso non autorizzato</h1>
+      <p class="sub">Questa email non ha i permessi per accedere al pannello admin.</p>
+      <div class="auth-actions">
+        <button class="btn primary" onclick="signOut()">Esci</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTopbar(extra){
+  const email = (ADM.user && ADM.user.email) || '';
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Admin · Zona Tracker</h1>
+        <div class="who">${esc(email)}</div>
+      </div>
+      <div>${extra || ''}<button class="btn small" onclick="signOut()">Esci</button></div>
+    </div>
+  `;
+}
+
+function renderDashboard(){
+  if(!ADM.loadedAt){
+    return renderTopbar('') + '<div class="loading">Carico i dati…</div>';
+  }
+  if(ADM.loadedAt < 0){
+    return renderTopbar('') + `
+      <div class="card">
+        <h2>Errore di connessione</h2>
+        <p class="meta">${esc(ADM.loadError || 'Errore sconosciuto')}</p>
+        <button class="btn" onclick="loadDashboard()">Riprova</button>
+        <p class="meta" style="margin-top:12px;">
+          Se l'errore riguarda i permessi RLS, configura le policy admin in Supabase (vedi report nel commit / CLAUDE.md).
+        </p>
+      </div>
+    `;
+  }
+
+  // --- Sezione 1: Oggi ---
+  const usersWithActivityToday = new Set();
+  ADM.mealsToday.forEach(m => usersWithActivityToday.add(m.user_id));
+  ADM.suppsToday.forEach(s => usersWithActivityToday.add(s.user_id));
+  const todaySection = `
+    <h2>Oggi</h2>
+    <div class="stats">
+      <div class="stat"><div class="n">${usersWithActivityToday.size}</div><div class="l">Utenti attivi</div></div>
+      <div class="stat"><div class="n">${ADM.mealsToday.length}</div><div class="l">Pasti</div></div>
+      <div class="stat"><div class="n">${ADM.suppsToday.length}</div><div class="l">Integratori</div></div>
+    </div>
+  `;
+
+  // --- Sezione 2: Tester ---
+  const mealsCountByUserToday = {};
+  ADM.mealsToday.forEach(m => { mealsCountByUserToday[m.user_id] = (mealsCountByUserToday[m.user_id]||0) + 1; });
+
+  const sortedUsers = [...ADM.users].sort((a,b) => {
+    const la = ADM.lastActivity[a.user_id] || 0;
+    const lb = ADM.lastActivity[b.user_id] || 0;
+    return lb - la;
+  });
+  const testersHtml = sortedUsers.length === 0
+    ? '<div class="empty">Nessun utente trovato. Verifica le policy RLS Supabase.</div>'
+    : sortedUsers.map(u => {
+        const last = ADM.lastActivity[u.user_id] || 0;
+        const dot = statusDot(last);
+        const meals = mealsCountByUserToday[u.user_id] || 0;
+        const mealsLbl = meals === 0 ? 'nessun pasto oggi'
+                       : (meals === 1 ? '1 pasto oggi' : meals + ' pasti oggi');
+        const lastLbl = last ? 'ultimo accesso ' + timeAgo(last) : 'mai attivo';
+        return `
+          <div class="row clickable" onclick="openUserDetail('${esc(u.user_id)}')">
+            <span class="dot ${dot}"></span>
+            <div class="grow">
+              <div class="name">${esc(userDisplayName(u))}</div>
+              <div class="meta">${esc(mealsLbl)} · ${esc(lastLbl)}</div>
+            </div>
+            <span class="arrow">›</span>
+          </div>
+        `;
+      }).join('');
+  const testersSection = `
+    <h2>Tester</h2>
+    <div class="card">${testersHtml}</div>
+  `;
+
+  // --- Sezione 3: Uso moduli ultimi 7 giorni ---
+  // Per ciascun modulo: % giorni distinti negli ultimi 7 in cui qualcuno ha loggato.
+  const days = [];
+  for(let i=6; i>=0; i--) days.push(dateNDaysAgo(i));
+  function pctDaysWithRecords(rows){
+    const distinctDays = new Set(rows.map(r => r.date).filter(Boolean));
+    return Math.round((distinctDays.size / 7) * 100);
+  }
+  const pctNutrition = pctDaysWithRecords(ADM.meals7d);
+  const pctTraining  = pctDaysWithRecords(ADM.trainings7d);
+  const pctBody      = pctDaysWithRecords(ADM.bodyLogs7d);
+
+  function barRow(lbl, pct, fallback){
+    if(fallback) {
+      return `
+        <div class="bar-row">
+          <div class="lbl">${esc(lbl)}</div>
+          <div class="bar-track"></div>
+          <div class="val">${esc(fallback)}</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="bar-row">
+        <div class="lbl">${esc(lbl)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;"></div></div>
+        <div class="val">${pct}%</div>
+      </div>
+    `;
+  }
+  const modulesSection = `
+    <h2>Uso moduli (ultimi 7 giorni)</h2>
+    <div class="card">
+      <div class="bars">
+        ${barRow('Nutrition', pctNutrition)}
+        ${ADM.trainings7d.length === 0 && pctTraining === 0
+            ? barRow('Training', 0, 'nessun dato')
+            : barRow('Training', pctTraining)}
+        ${ADM.bodyLogs7d.length === 0 && pctBody === 0
+            ? barRow('Body', 0, 'nessun dato')
+            : barRow('Body', pctBody)}
+      </div>
+      <p class="meta" style="margin-top:12px;">Percentuale di giorni con almeno 1 log nel periodo.</p>
+    </div>
+  `;
+
+  return `
+    ${renderTopbar('<button class="btn small" onclick="loadDashboard()" style="margin-right:6px;">Aggiorna</button>')}
+    ${todaySection}
+    ${testersSection}
+    ${modulesSection}
+    <div class="footer">Dati aggiornati alle ${new Date(ADM.loadedAt).toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})}</div>
+  `;
+}
+
+function renderUserDetail(){
+  const top = `
+    <div class="topbar">
+      <button class="btn ghost" onclick="backToDashboard()">‹ Torna</button>
+      <button class="btn small" onclick="signOut()">Esci</button>
+    </div>
+  `;
+  if(ADM.detailLoading || !ADM.detail){
+    return top + '<div class="loading">Carico…</div>';
+  }
+  const d = ADM.detail;
+  if(d.error){
+    return top + `
+      <div class="card">
+        <h2>Errore</h2>
+        <p class="meta">${esc((d.error && d.error.message) || String(d.error))}</p>
+      </div>
+    `;
+  }
+  const p = d.profile || {};
+  const lastTs = ADM.lastActivity[ADM.selectedUserId] || 0;
+
+  // Profilo
+  const intolList = Array.isArray(p.intolleranze) ? p.intolleranze
+                  : (typeof p.intolleranze === 'string' && p.intolleranze ? p.intolleranze.split(',').map(s=>s.trim()).filter(Boolean) : []);
+  const intolHtml = intolList.length
+    ? `<div class="tags">${intolList.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>`
+    : `<div class="meta">Nessuna</div>`;
+
+  function row(k,v){ return (v == null || v === '') ? '' : `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`; }
+  const profileSection = `
+    <h2>Profilo</h2>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px;">${esc(userDisplayName(p))}</div>
+      <dl class="dl">
+        ${row('Dieta', p.dieta)}
+        ${row('Obiettivo', Array.isArray(p.obiettivo) ? p.obiettivo.join(', ') : p.obiettivo)}
+        ${row('Sesso', p.sex)}
+        ${row('Età', p.age)}
+        ${row('Altezza', p.height_cm ? p.height_cm + ' cm' : '')}
+        ${row('Peso', p.weight_kg ? p.weight_kg + ' kg' : '')}
+        ${row('Peso obiettivo', p.goal_weight_kg ? p.goal_weight_kg + ' kg' : '')}
+        ${row('Attività', p.activity_level)}
+        ${row('Inizio training', p.train_start_date)}
+      </dl>
+      <div style="margin-top:12px;">
+        <div class="meta">Intolleranze</div>
+        ${intolHtml}
+      </div>
+      ${p.note_salute ? `<div style="margin-top:12px;"><div class="meta">Note salute</div><div>${esc(p.note_salute)}</div></div>` : ''}
+      <div style="margin-top:12px;">
+        <div class="meta">Ultimo accesso</div>
+        <div>${esc(lastTs ? timeAgo(lastTs) : 'Nessuna attività registrata')}</div>
+      </div>
+    </div>
+  `;
+
+  // Pasti ultimi 7 giorni — bar chart
+  const days = [];
+  for(let i=6; i>=0; i--) days.push(dateNDaysAgo(i));
+  const countsByDay = {};
+  days.forEach(d2 => countsByDay[d2] = 0);
+  (d.meals7d || []).forEach(m => { if(countsByDay[m.date] != null) countsByDay[m.date] += 1; });
+  const maxCount = Math.max(1, ...Object.values(countsByDay));
+  const today = todayISO();
+  const daysSection = `
+    <h2>Pasti ultimi 7 giorni</h2>
+    <div class="card">
+      <div class="days">
+        ${days.map(dt => {
+          const c = countsByDay[dt] || 0;
+          const h = c === 0 ? 4 : Math.round((c / maxCount) * 56) + 4;
+          const isToday = (dt === today);
+          return `
+            <div class="day-col ${isToday ? 'today' : ''}">
+              <div class="day-track"><div class="day-bar ${c===0?'empty':''}" style="height:${h}px;"></div></div>
+              <div class="day-num">${c}</div>
+              <div class="day-lbl">${esc(dayLabel(dt))}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  // Ultimi 10 pasti
+  const mealsHtml = (d.last10Meals && d.last10Meals.length)
+    ? d.last10Meals.map(m => `
+        <div class="item">
+          <div class="time">${esc(formatHM(m))}</div>
+          <div>
+            <div class="slot">${esc((m.slot || '').toUpperCase())}</div>
+            <div class="desc ellipsis">${esc(m.description || '—')}</div>
+          </div>
+          <div class="kcal">${m.kcal != null ? esc(m.kcal) + ' kcal' : ''}</div>
+        </div>
+      `).join('')
+    : '<div class="empty">Nessun pasto registrato.</div>';
+  const mealsSection = `
+    <h2>Ultimi 10 pasti</h2>
+    <div class="card">${mealsHtml}</div>
+  `;
+
+  // Ultimi 10 integratori
+  const suppsHtml = (d.last10Supps && d.last10Supps.length)
+    ? d.last10Supps.map(s => `
+        <div class="item">
+          <div class="time">${esc(formatHM(s))}</div>
+          <div>
+            <div class="slot">${esc((s.slot || '').toUpperCase())}</div>
+            <div class="desc ellipsis">${esc(s.supplement_name || '—')}</div>
+          </div>
+          <div class="kcal">${esc(s.date || '')}</div>
+        </div>
+      `).join('')
+    : '<div class="empty">Nessun integratore registrato.</div>';
+  const suppsSection = `
+    <h2>Ultimi 10 integratori</h2>
+    <div class="card">${suppsHtml}</div>
+  `;
+
+  return `
+    ${top}
+    <h1 style="margin-bottom:16px;">${esc(userDisplayName(p))}</h1>
+    ${profileSection}
+    ${daysSection}
+    ${mealsSection}
+    ${suppsSection}
+  `;
+}
+
+// Mount
+window.addEventListener('DOMContentLoaded', () => {
+  document.body.insertAdjacentHTML('beforeend', '<div class="app" id="app"></div>');
+  bootstrap();
+});
+</script>
+</body>
+</html>
