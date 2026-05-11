@@ -1201,7 +1201,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.11 · 16:44';
+const APP_VERSION = '2026.05.11 · 16:56';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2434,7 +2434,6 @@ function renderHome(){
 
   // ── Nutrition tile (dati live, logica residua) ──
   const nutrSub  = meals.length ? `${meals.length} pasti · ${zonaOk ? 'tutto in zona' : 'verifica macro'}` : 'Nessun pasto registrato';
-  const badgeOk  = zonaOk && hasData;
   const remC_tile = macroRimasti(cons.carbs,   target.carbs);
   const remP_tile = macroRimasti(cons.protein, target.protein);
   const remF_tile = macroRimasti(cons.fat,     target.fat);
@@ -2454,10 +2453,14 @@ function renderHome(){
       <span style="font-size:11px;font-family:var(--font-mono);color:var(--fat);"><b>G</b> <span style="color:${overF_tile?OVER_COLOR:'var(--t2)'};">${overF_tile?'+':''}${fmtNum(Math.abs(remF_tile))}g</span></span>
       <span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">rimasti</span>
     </div>`;
+  // Pill stato Zona — 3 stati: nessun dato → "—" ambra; in zona → "ZONA" verde; fuori zona → "FUORI ZONA" ambra
+  const tileZonaTxt    = !hasData ? '—' : (zonaOk ? 'ZONA' : 'FUORI ZONA');
+  const tileZonaColor  = !hasData ? 'var(--warn)' : (zonaOk ? 'var(--acc)' : 'var(--fat)');
+  const tileZonaBg     = !hasData ? 'rgba(196,136,10,.10)' : (zonaOk ? 'var(--acc-lt)' : 'var(--err-lt)');
+  const tileZonaBorder = !hasData ? 'rgba(196,136,10,.25)' : (zonaOk ? 'rgba(42,122,111,.25)' : 'rgba(184,76,42,.25)');
   const nutrRight = `
-    <div style="flex-shrink:0;text-align:center;padding:8px 10px;border-radius:var(--r);min-width:64px;background:${badgeOk?'var(--acc-lt)':'var(--err-lt)'};border:1px solid ${badgeOk?'rgba(42,122,111,.25)':'rgba(184,76,42,.25)'};">
-      <div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);font-weight:700;color:${badgeOk?'var(--acc)':'var(--fat)'};">${badgeOk?'● Zona':'○ Off'}</div>
-      <div style="font-size:11px;font-family:var(--font-mono);color:var(--t1);font-weight:700;margin-top:3px;white-space:nowrap;">${ST.TARGET.pCarbo||40}·${ST.TARGET.pProt||30}·${ST.TARGET.pFat||30}</div>
+    <div style="flex-shrink:0;text-align:center;padding:10px 12px;border-radius:var(--r);min-width:64px;background:${tileZonaBg};border:1px solid ${tileZonaBorder};display:flex;align-items:center;justify-content:center;">
+      <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);font-weight:700;color:${tileZonaColor};white-space:nowrap;">${tileZonaTxt}</div>
     </div>`;
 
   // ── Training tile (dati live) ──
@@ -5866,13 +5869,13 @@ function heroCard(cons) {
     zonaRowHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);"><div style="display:flex;gap:10px;font-size:11px;font-family:'JetBrains Mono',monospace;"><span style="color:#C4880A;">C ${pC}%</span><span style="color:#2D5016;">P ${pP}%</span><span style="color:#B84C2A;">G ${pF}%</span><span style="color:var(--t3);">vs ${tPC}·${tPP}·${tPF}</span></div><span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${bColor};background:${bBg};border:1px solid ${bColor}44;border-radius:20px;padding:2px 10px;">${allOk?'In Zona':'Fuori Zona'}</span></div>`;
   }
   const finalRingColor = zonaState !== null ? (zonaState ? '#2A7A6F' : '#B84C2A') : ringColor;
-  const zonaLabelHTML = zonaState !== null ? `<span style="font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${finalRingColor};letter-spacing:.5px;margin-top:1px;">${zonaState ? 'In Zona' : 'Fuori Zona'}</span>` : '';
+  // Pill Zona/Fuori Zona rimossa dal centro anello (dedup con zonaRowHTML sotto le 3 macro card)
   const heroNumColor = overKcalHero ? OVER_COLOR : finalRingColor;
   const heroBigNum = `${overKcalHero?'+':''}${fmtNum(Math.abs(remKcalHero))}`;
   const heroSubLbl = overKcalHero
     ? 'kcal oltre'
     : (remKcalHero===0 && cons.kcal>0 ? 'target raggiunto' : 'kcal rimaste');
-  return `<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;"><div style="position:relative;width:170px;height:170px;flex-shrink:0;"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${finalRingColor}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${heroNumColor};line-height:1;">${heroBigNum}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${heroSubLbl}</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${fmtNum(cons.kcal)} / ${fmtNum(ST.TARGET.kcal)}</span>${zonaLabelHTML}</div></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;"><p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${motivColor};font-weight:600;line-height:1.4;margin:0;">${motivMsg}</p><p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:0;">Target: ${fmtNum(ST.TARGET.kcal)} · Consumate: ${fmtNum(cons.kcal)}</p></div></div><div style="display:flex;gap:8px;margin-bottom:4px;">${pillsHTML}</div>${zonaRowHTML}</div>`;
+  return `<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;"><div style="position:relative;width:170px;height:170px;flex-shrink:0;"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${finalRingColor}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${heroNumColor};line-height:1;">${heroBigNum}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${heroSubLbl}</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${fmtNum(cons.kcal)} / ${fmtNum(ST.TARGET.kcal)}</span></div></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;"><p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${motivColor};font-weight:600;line-height:1.4;margin:0;">${motivMsg}</p><p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:0;">Target: ${fmtNum(ST.TARGET.kcal)} · Consumate: ${fmtNum(cons.kcal)}</p></div></div><div style="display:flex;gap:8px;margin-bottom:4px;">${pillsHTML}</div>${zonaRowHTML}</div>`;
 }
 
 const SLOT_STYLE = {

@@ -291,6 +291,8 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 - **Storico**: report 7/14/30 giorni, grafico calorie
 - **Piano**: target 40·30·30, piano AI, priorità cliniche
 - **Visualizzazione kcal/macro: logica residua** (kcal e macro rimasti invece di accumulativi). Applicata a 3 zone: anello+barre macro nella Home card riepilogo, tile Nutrition nei moduli Home, hero card Nutrition/Oggi. Anello si svuota anziché riempirsi. Stato "oltre target" usa colore ambra `#B45309`. Stato "target esatto" mostra "target raggiunto". Helper globali: `fmtNum`, `kcalRimaste`, `macroRimasti`, `isOverTarget`, costante `OVER_COLOR`. Piano/Storico/Integratori restano accumulativi.
+- **Barre macro**: visualizzazione residua coerente con anello kcal (parte 100% piena, si svuota man mano che si consuma).
+- **Pill Zona**: una sola pill per macro-area visiva. Home card → pill in alto a destra. Home tile Nutrition → pill laterale "ZONA"/"FUORI ZONA"/"—" (rimosso vecchio "OFF 40·30·30"). Hero card Nutrition/Oggi → pill in basso nella riga `zonaRowHTML` sotto le 3 cards macro (rimossa duplicazione dal centro anello). Timeline pasti → pill per pasto invariata.
 
 ### Training (sub-nav: Sessione / Piano / Progressione)
 - **Sessione**:
