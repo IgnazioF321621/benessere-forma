@@ -32,8 +32,8 @@ https://github.com/IgnazioF321621/benessere-forma
 ## Tester attivi
 
 - **Ignazio** (utente principale + dev) — iPhone + Android
-- **Ginevra** — tester reale, device da confermare
-- **Isabella** — variante pescetariana, da confermare se tester reale o solo profilo di test, device da confermare
+- **Ginevra** — iPhone e/o iPad
+- **Isabella** — Android + iPad (variante pescetariana)
 
 ## Servizi esterni
 
