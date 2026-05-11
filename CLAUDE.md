@@ -21,6 +21,20 @@ https://github.com/IgnazioF321621/benessere-forma
 - Nessun framework, nessun build step
 - File principali: `zona-tracker.html`, `auth-callback.html`
 
+## Priorità correnti
+
+1. Testing iPhone + Android con 3 tester attivi
+2. Admin panel (monitoraggio uso tester)
+3. Test mode `?test=1`
+4. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
+5. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
+
+## Tester attivi
+
+- **Ignazio** (utente principale + dev) — iPhone + Android
+- **Ginevra** — tester reale, device da confermare
+- **Isabella** — variante pescetariana, da confermare se tester reale o solo profilo di test, device da confermare
+
 ## Servizi esterni
 
 | Servizio | URL | Scopo |
@@ -57,7 +71,11 @@ https://github.com/IgnazioF321621/benessere-forma
 
 ## Autenticazione
 
-**Metodo attuale: OTP a 6 cifre via email** (da aprile 2026)
+**Metodo attuale: OTP a 6 cifre via email** ✅ migrazione completata aprile 2026
+
+Migrazione Magic Link → OTP completata aprile 2026:
+- Commit principale `1bada62` — `feat: login OTP a 6 cifre — addio Magic Link, funziona in PWA su iOS/Android/tutti`
+- Fix successivo `364dd83` — `fix: OTP accetta 6-8 cifre, rimuove limite rigido a 6`
 
 Flusso:
 1. Utente inserisce email → `signInWithOtp({ email, options: { shouldCreateUser: true } })`
@@ -65,7 +83,11 @@ Flusso:
 3. Utente inserisce il codice nella PWA → `verifyOtp({ email, token, type: 'email' })`
 4. Login completato direttamente nella PWA, senza uscire dall'app ✅
 
-**`auth-callback.html`** rimane nel repo come fallback, ma non viene più usato nel flusso principale.
+**Residui Magic Link non ancora puliti** (rete di sicurezza fino a validazione tester — vedi task in "Prossimi step"):
+- Fallback `verifyOtp({type:'magiclink'})` in `verifyOTP()` a [zona-tracker.html:1693](zona-tracker.html:1693) — non attivato in pratica
+- Branch bootstrap hash `#access_token` ([zona-tracker.html:8569](zona-tracker.html:8569)) e PKCE `?code=` ([zona-tracker.html:8587](zona-tracker.html:8587)) — usati solo da callback browser esterno
+- `auth-callback.html` — rimane nel repo come fallback storico
+- Commento obsoleto a [zona-tracker.html:8626](zona-tracker.html:8626) ("Magic Link in Safari")
 
 **Rate limit Supabase:** durante i test intensivi si può raggiungere il limite OTP. Aspettare 1 ora per il reset.
 
@@ -595,11 +617,13 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] Tab Progressione: grafico SVG (barre/linea) + 3 metriche (Peso/Reps/Volume o Peso/Tempo per iso) (9 maggio 2026)
 - [x] Modal Dettaglio giorno con edit/delete singola serie + edit/delete workout (9 maggio 2026)
 - [x] Dropdown selezione esercizio (search + tab Per programma/Per esercizio) sostituisce chip-row (9 maggio 2026)
+- [x] Migrazione Magic Link → OTP a 6 cifre via email (aprile 2026, commit `1bada62` + fix `364dd83`)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
 - [ ] GIF/video esecuzione esercizi nel modal scheda (collapsibile, click per aprire)
 - [ ] **FASE 2 Programmi multipli archiviati** (predisposto in dropdown Progressione 9 maggio 2026): tabella `programs` Supabase, colonna `program_id` su workouts, UI chiusura programma, popolare sezione "PROGRAMMI PASSATI" del dropdown con lista collassabile, filtro grafico per periodo programma. Vedi commento HTML inline nel codice (cerca "TODO FASE 2 — gestione programmi multipli")
+- [ ] Pulizia residui Magic Link (post-validazione tester): rimuovere fallback `verifyOtp({type:'magiclink'})` a [zona-tracker.html:1693](zona-tracker.html:1693), branch bootstrap hash + PKCE [zona-tracker.html:8569-8599](zona-tracker.html:8569), commento obsoleto a riga 8626, file `auth-callback.html`
 
 ### Possibili evoluzioni future modulo Training
 
