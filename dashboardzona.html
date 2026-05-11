@@ -766,8 +766,8 @@ function renderUserDetail(){
 
   // Macro: includi solo quelli con target > 0
   const macroDefs = [
-    { label: 'Proteine',    consumed: proteinToday, target: Number(p.target_protein) || 0 },
     { label: 'Carboidrati', consumed: carbsToday,   target: Number(p.target_carbs)   || 0 },
+    { label: 'Proteine',    consumed: proteinToday, target: Number(p.target_protein) || 0 },
     { label: 'Grassi',      consumed: fatToday,     target: Number(p.target_fat)     || 0 },
   ].filter(m => m.target > 0);
 
