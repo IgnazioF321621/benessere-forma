@@ -451,7 +451,7 @@ async function openUserDetail(userId){
     const since = startOf7DaysWindow();
     const profile = ADM.users.find(u => u.id === userId) || null;
     const [meals7Res, last10MealsRes, last10SuppsRes] = await Promise.all([
-      supa.from('meals').select('id, date, time, slot, description, kcal, created_at')
+      supa.from('meals').select('id, date, time, slot, description, kcal, protein, carbs, fat, created_at')
         .eq('user_id', userId).gte('date', since),
       supa.from('meals').select('id, date, time, slot, description, kcal, created_at')
         .eq('user_id', userId).order('date', {ascending:false}).order('time', {ascending:false, nullsFirst:false}).limit(10),
@@ -744,30 +744,71 @@ function renderUserDetail(){
     </div>
   `;
 
-  // Calorie oggi — consumate vs target
+  // Calorie oggi — consumate vs target + macro
   const todayStr = todayISO();
-  const kcalToday = (d.meals7d || [])
-    .filter(m => m.date === todayStr)
-    .reduce((sum, m) => sum + (Number(m.kcal) || 0), 0);
+  const todayMeals = (d.meals7d || []).filter(m => m.date === todayStr);
+  const sumOf = key => todayMeals.reduce((s, m) => s + (Number(m[key]) || 0), 0);
+  const kcalToday    = sumOf('kcal');
+  const proteinToday = sumOf('protein');
+  const carbsToday   = sumOf('carbs');
+  const fatToday     = sumOf('fat');
+
   const rawTarget = Number(p.target_kcal);
   const noTarget = !rawTarget || rawTarget <= 0;
   const targetKcal = noTarget ? 1900 : rawTarget;
-  const fmtKcal = n => Number(n).toLocaleString('it-IT');
+
+  // Formattatore deterministico locale (separatore migliaia italiano, indipendente da ICU del browser)
+  const fmtInt = n => {
+    const v = Math.round(Number(n) || 0);
+    const sign = v < 0 ? '-' : '';
+    return sign + String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  // Macro: includi solo quelli con target > 0
+  const macroDefs = [
+    { label: 'Proteine',    consumed: proteinToday, target: Number(p.target_protein) || 0 },
+    { label: 'Carboidrati', consumed: carbsToday,   target: Number(p.target_carbs)   || 0 },
+    { label: 'Grassi',      consumed: fatToday,     target: Number(p.target_fat)     || 0 },
+  ].filter(m => m.target > 0);
+
+  const macrosHtml = macroDefs.length === 0 ? '' : `
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;">
+      ${macroDefs.map(m => {
+        const pctM = Math.round((m.consumed / m.target) * 100);
+        const overM = pctM > 100;
+        const wM = overM ? 100 : Math.max(0, pctM);
+        const colorM = overM ? 'var(--amber)' : 'var(--ink)';
+        return `
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:14px;">
+              <span style="color:var(--ink-soft);">${esc(m.label)}</span>
+              <span style="font-variant-numeric:tabular-nums;">${fmtInt(m.consumed)}g / ${fmtInt(m.target)}g</span>
+            </div>
+            <div style="margin-top:4px;background:var(--line);border-radius:2px;height:4px;overflow:hidden;">
+              <div style="background:${colorM};height:100%;width:${wM}%;border-radius:2px;"></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+
   let calorieSection;
   if(noTarget){
     calorieSection = `
       <h2>Calorie oggi</h2>
       <div class="card">
-        <div style="font-size:24px;font-weight:600;">${fmtKcal(kcalToday)} kcal oggi</div>
+        <div style="font-size:24px;font-weight:600;">${fmtInt(kcalToday)} kcal oggi</div>
         <div class="meta" style="margin-top:6px;">Target non impostato</div>
+        ${macrosHtml}
       </div>
     `;
   } else {
     const diff = kcalToday - targetKcal;
     let diffText;
     if(diff === 0) diffText = 'In linea con il target';
-    else if(diff < 0) diffText = `−${fmtKcal(Math.abs(diff))} kcal rispetto al target`;
-    else diffText = `+${fmtKcal(diff)} kcal rispetto al target`;
+    else if(diff < 0) diffText = `−${fmtInt(Math.abs(diff))} kcal rispetto al target`;
+    else diffText = `+${fmtInt(diff)} kcal rispetto al target`;
     const pct = Math.round((kcalToday / targetKcal) * 100);
     const over = pct > 100;
     const fillWidth = over ? 100 : Math.max(0, pct);
@@ -775,12 +816,13 @@ function renderUserDetail(){
     calorieSection = `
       <h2>Calorie oggi</h2>
       <div class="card">
-        <div style="font-size:24px;font-weight:600;">${fmtKcal(kcalToday)} / ${fmtKcal(targetKcal)} kcal</div>
+        <div style="font-size:24px;font-weight:600;">${fmtInt(kcalToday)} / ${fmtInt(targetKcal)} kcal</div>
         <div class="meta" style="margin-top:6px;">${esc(diffText)}</div>
         <div style="margin-top:12px;background:var(--line);border-radius:4px;height:10px;overflow:hidden;">
           <div style="background:${fillColor};height:100%;width:${fillWidth}%;border-radius:4px;"></div>
         </div>
         <div class="meta" style="text-align:right;margin-top:4px;">${pct}%</div>
+        ${macrosHtml}
       </div>
     `;
   }
