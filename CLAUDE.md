@@ -19,12 +19,12 @@ https://github.com/IgnazioF321621/benessere-forma
 
 - HTML/CSS/JavaScript puro
 - Nessun framework, nessun build step
-- File principali: `zona-tracker.html`, `auth-callback.html`
+- File principali: `zona-tracker.html`, `auth-callback.html`, `dashboardzona.html` (admin)
 
 ## Priorità correnti
 
 1. Testing iPhone + Android con 3 tester attivi
-2. Admin panel (monitoraggio uso tester)
+2. ✅ Admin panel (monitoraggio uso tester) — `dashboardzona.html`, vedi sezione "Admin panel"
 3. Test mode `?test=1`
 4. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 5. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -90,6 +90,84 @@ Flusso:
 - Commento obsoleto a [zona-tracker.html:8626](zona-tracker.html:8626) ("Magic Link in Safari")
 
 **Rate limit Supabase:** durante i test intensivi si può raggiungere il limite OTP. Aspettare 1 ora per il reset.
+
+## Admin panel (`dashboardzona.html`)
+
+File separato per il monitoraggio in tempo reale dei tester. Solo lettura — nessuna modifica/cancellazione dati Supabase.
+
+**URL pubblico:** https://ignaziof321621.github.io/benessere-forma/dashboardzona.html
+
+**Accesso**
+- Auth Supabase OTP a 6 cifre (riusa stesso flusso e stesso client di `zona-tracker.html`)
+- Email gate: solo `ignazio.f@me.com` può procedere oltre il login. Altre email → schermata "Accesso non autorizzato" + logout.
+- `signInWithOtp` chiamato con `shouldCreateUser: false` (l'admin non crea utenti).
+
+**Funzioni implementate**
+
+Schermata 1 — Home dashboard:
+- "Oggi": stat tiles con N° utenti attivi oggi, N° pasti totali oggi, N° integratori totali oggi
+- "Tester": lista cliccabile di tutti gli utenti in `profiles`, ordinata per ultimo accesso (più recente in cima). Pallino verde (≤2h), ambra (oggi non recente), grigio (inattivo). Riepilogo "X pasti oggi · ultimo accesso Y fa".
+- "Uso moduli (ultimi 7 giorni)": bar chart CSS pure con % giorni distinti con almeno 1 log nel periodo. Modulo Training letto da `workouts`. Modulo Body letto da `body_logs`. Fallback "nessun dato" se la tabella è vuota o non accessibile.
+- Bottone "Aggiorna" + timestamp ultima sincronizzazione.
+
+Schermata 2 — Dettaglio utente:
+- Profilo: dieta, obiettivo, sesso, età, altezza, peso, peso obiettivo, attività, inizio training, intolleranze (tags), note salute, ultimo accesso (in italiano: "2 ore fa" / "ieri" / "3 giorni fa")
+- Bar chart pasti ultimi 7 giorni (etichette Lun/Mar/... con giorno corrente evidenziato)
+- Ultimi 10 pasti: ora · slot · descrizione · kcal
+- Ultimi 10 integratori: ora · slot · nome
+- "← Torna" per tornare alla home.
+
+**Stack tecnico admin**
+- HTML/CSS/JS vanilla single-file, niente framework, niente build step
+- Stesso Supabase client JS (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`)
+- Font system-ui (no Syne/JetBrains — stile pragmatico admin)
+- Palette neutra: sfondo bianco `#FFFFFF`, ink `#1A1A1A`, ink-soft `#666666`, line `#E5E5E5`, verde attivo `#16A34A`, ambra `#D97706`, rosso `#DC2626`
+- Mobile-first responsive (max-width 920px desktop). Touch target ≥44px.
+
+**Sicurezza**
+- Nessuna `.insert()`, `.update()`, `.delete()` su tabelle dati nel codice admin (solo `.signOut()` su auth)
+- Email check `user.email !== ADMIN_EMAIL` → unauthorized screen + logout. Hardcoded `ADMIN_EMAIL = 'ignazio.f@me.com'`.
+- Anon key Supabase identica a `zona-tracker.html` (chiave pubblica, sicura da esporre — la sicurezza dipende dalle policy RLS).
+
+**⚠️ RLS Supabase — policy admin necessarie**
+
+Le policy attuali (`auth.uid() = user_id` su tutte le tabelle) permettono a Ignazio di vedere solo i propri dati. Per leggere i dati di Ginevra e Isabella servono policy aggiuntive admin. Da eseguire in Supabase SQL Editor:
+
+```sql
+-- profiles
+CREATE POLICY "admin_read_all_profiles"
+ON public.profiles FOR SELECT TO authenticated
+USING ((auth.jwt() ->> 'email') = 'ignazio.f@me.com');
+
+-- meals
+CREATE POLICY "admin_read_all_meals"
+ON public.meals FOR SELECT TO authenticated
+USING ((auth.jwt() ->> 'email') = 'ignazio.f@me.com');
+
+-- supplements_log
+CREATE POLICY "admin_read_all_supplements_log"
+ON public.supplements_log FOR SELECT TO authenticated
+USING ((auth.jwt() ->> 'email') = 'ignazio.f@me.com');
+
+-- workouts
+CREATE POLICY "admin_read_all_workouts"
+ON public.workouts FOR SELECT TO authenticated
+USING ((auth.jwt() ->> 'email') = 'ignazio.f@me.com');
+
+-- body_logs
+CREATE POLICY "admin_read_all_body_logs"
+ON public.body_logs FOR SELECT TO authenticated
+USING ((auth.jwt() ->> 'email') = 'ignazio.f@me.com');
+```
+
+Finché queste policy non sono in Supabase, l'admin vede solo i dati di Ignazio (le altre row sono filtrate via RLS). La schermata mostrerà un solo tester e i contatori "oggi" risulteranno bassi.
+
+**Cosa NON è implementato** (volutamente fuori scope di questa fase):
+- Tracking dell'effettivo "login" utente (Supabase non espone `last_sign_in_at` via client SDK con anon key) — `ultimo accesso` è approssimato dal max timestamp tra `meals` / `supplements_log` / `workouts` / `body_logs`.
+- Lettura email tester diversi da Ignazio — l'email è in `auth.users`, non accessibile via anon key. Il nome utente è derivato da `profiles.name` / `full_name` / `first_name` se presente, altrimenti `Utente <uuid-corto>`.
+- Cross-tab refresh automatico, notifiche push admin
+- Export dati / report CSV
+- Filtri per range temporale custom (fisso a oggi + ultimi 7 giorni)
 
 ## Bootstrap auth (`zona-tracker.html`)
 
