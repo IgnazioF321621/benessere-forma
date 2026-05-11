@@ -290,6 +290,7 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 - **Integratori**: lista raggruppata per orario, editing inline, catalogo Nutrilite
 - **Storico**: report 7/14/30 giorni, grafico calorie
 - **Piano**: target 40·30·30, piano AI, priorità cliniche
+- **Visualizzazione kcal/macro: logica residua** (kcal e macro rimasti invece di accumulativi). Applicata a 3 zone: anello+barre macro nella Home card riepilogo, tile Nutrition nei moduli Home, hero card Nutrition/Oggi. Anello si svuota anziché riempirsi. Stato "oltre target" usa colore ambra `#B45309`. Stato "target esatto" mostra "target raggiunto". Helper globali: `fmtNum`, `kcalRimaste`, `macroRimasti`, `isOverTarget`, costante `OVER_COLOR`. Piano/Storico/Integratori restano accumulativi.
 
 ### Training (sub-nav: Sessione / Piano / Progressione)
 - **Sessione**:
@@ -699,6 +700,7 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] Modal Dettaglio giorno con edit/delete singola serie + edit/delete workout (9 maggio 2026)
 - [x] Dropdown selezione esercizio (search + tab Per programma/Per esercizio) sostituisce chip-row (9 maggio 2026)
 - [x] Migrazione Magic Link → OTP a 6 cifre via email (aprile 2026, commit `1bada62` + fix `364dd83`)
+- [x] Logica residua kcal/macro (zona-tracker.html, home + Oggi) (11 maggio 2026)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi

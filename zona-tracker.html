@@ -1201,7 +1201,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.10 · 22:38';
+const APP_VERSION = '2026.05.11 · 16:44';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1301,6 +1301,12 @@ function todayKey(){return new Date().toISOString().slice(0,10);}
 function fmtDate(k){return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});}
 function J(x){return JSON.parse(JSON.stringify(x));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Logica residua kcal/macro — formatter deterministico (separatore migliaia italiano, indipendente da ICU browser)
+function fmtNum(n){const v=Math.round(Number(n)||0);const sign=v<0?'-':'';return sign+String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function kcalRimaste(consumate,target){return Math.round((Number(target)||0)-(Number(consumate)||0));}
+function macroRimasti(consumati,target){return Math.round((Number(target)||0)-(Number(consumati)||0));}
+function isOverTarget(consumati,target){return (Number(consumati)||0)>(Number(target)||0);}
+const OVER_COLOR='#B45309'; // ambra scuro per stato "oltre target" — leggibile, non allarmante
 function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};if(!ST.db.days[key].suppsTaken)ST.db.days[key].suppsTaken=[];if(!ST.db.days[key].rawSuppLogs)ST.db.days[key].rawSuppLogs=[];return ST.db.days[key];}
 
 // ═══════════════════════════════════════════════════════════
@@ -2361,12 +2367,15 @@ function renderHome(){
     zonaOk = (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
   }
 
-  // ── Ring SVG ──
-  const pctKcal = Math.min(100, Math.round((cons.kcal / target.kcal) * 100));
+  // ── Ring SVG (logica residua: anello si svuota) ──
+  const remKcal   = kcalRimaste(cons.kcal, target.kcal);
+  const overKcal  = isOverTarget(cons.kcal, target.kcal);
+  const remPctKcal = overKcal ? 0 : Math.max(0, Math.min(100, Math.round((remKcal / target.kcal) * 100)));
   const R = 42, circ = 2 * Math.PI * R;
-  const dash = ((pctKcal / 100) * circ).toFixed(1);
+  const dash = ((remPctKcal / 100) * circ).toFixed(1);
   const gap  = (circ - dash).toFixed(1);
   const ringColor = hasData ? (zonaOk ? 'var(--acc)' : 'var(--fat)') : 'var(--warn)';
+  const remColor = overKcal ? OVER_COLOR : 'var(--t1)';
 
   // ── Data italiana ──
   const now = new Date();
@@ -2380,17 +2389,23 @@ function renderHome(){
   const zonaBg     = !hasData ? 'rgba(196,136,10,.10)' : (zonaOk ? 'rgba(42,122,111,.12)' : 'rgba(184,76,42,.10)');
   const zonaBorder = !hasData ? 'rgba(196,136,10,.25)' : (zonaOk ? 'rgba(42,122,111,.20)' : 'rgba(184,76,42,.20)');
 
-  // ── Helper: macro bar ──
+  // ── Helper: macro bar (logica residua: barra rappresenta % rimanente, si svuota) ──
   function mBar(label, current, tgt, color) {
-    const pct = Math.min(100, Math.round((current / tgt) * 100));
+    if(!tgt || tgt <= 0) return ''; // salta macro senza target
+    const rem = macroRimasti(current, tgt);
+    const over = isOverTarget(current, tgt);
+    const remPct = over ? 0 : Math.max(0, Math.min(100, Math.round((rem / tgt) * 100)));
+    const valText = over ? `+${fmtNum(Math.abs(rem))}g oltre` : `${fmtNum(rem)}g rimasti`;
+    const valColor = over ? OVER_COLOR : 'var(--t1)';
+    const fillColor = over ? OVER_COLOR : color;
     return `
       <div style="margin-bottom:8px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:3px;align-items:baseline;">
           <span style="font-size:11px;color:var(--t2);font-family:var(--font-sans);font-weight:500;">${label}</span>
-          <span style="font-size:11px;color:var(--t1);font-family:var(--font-mono);font-weight:500;">${Math.round(current)}/${tgt}g</span>
+          <span style="font-size:11px;color:${valColor};font-family:var(--font-mono);font-weight:500;">${valText}</span>
         </div>
         <div style="height:4px;border-radius:2px;background:var(--s3);overflow:hidden;">
-          <div style="height:100%;border-radius:2px;width:${pct}%;background:${color};"></div>
+          <div style="height:100%;border-radius:2px;width:${remPct}%;background:${fillColor};"></div>
         </div>
       </div>`;
   }
@@ -2417,19 +2432,27 @@ function renderHome(){
       <div style="font-size:11px;color:${ink};font-family:var(--font-mono);margin-top:2px;">${sub}</div>`;
   }
 
-  // ── Nutrition tile (dati live) ──
+  // ── Nutrition tile (dati live, logica residua) ──
   const nutrSub  = meals.length ? `${meals.length} pasti · ${zonaOk ? 'tutto in zona' : 'verifica macro'}` : 'Nessun pasto registrato';
   const badgeOk  = zonaOk && hasData;
+  const remC_tile = macroRimasti(cons.carbs,   target.carbs);
+  const remP_tile = macroRimasti(cons.protein, target.protein);
+  const remF_tile = macroRimasti(cons.fat,     target.fat);
+  const overC_tile = isOverTarget(cons.carbs,   target.carbs);
+  const overP_tile = isOverTarget(cons.protein, target.protein);
+  const overF_tile = isOverTarget(cons.fat,     target.fat);
   const nutrBody = `
     ${tHead('Nutrition', nutrSub, '#3B6D11')}
     <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px;white-space:nowrap;">
-      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${Math.round(cons.kcal)}</span>
-      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">/ ${target.kcal} kcal</span>
+      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${overKcal?OVER_COLOR:'var(--t1)'};line-height:1;">${overKcal?'+':''}${fmtNum(Math.abs(remKcal))}</span>
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">${overKcal ? 'kcal oltre' : (remKcal===0 && cons.kcal>0 ? 'target raggiunto' : 'kcal rimaste')}</span>
     </div>
+    <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);margin-top:3px;">${fmtNum(cons.kcal)} / ${fmtNum(target.kcal)} consumate</div>
     <div style="display:flex;gap:10px;margin-top:7px;">
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--carb);"><b>C</b> <span style="color:var(--t2);">${Math.round(cons.carbs)}g</span></span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);"><b>P</b> <span style="color:var(--t2);">${Math.round(cons.protein)}g</span></span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--fat);"><b>G</b> <span style="color:var(--t2);">${Math.round(cons.fat)}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--carb);"><b>C</b> <span style="color:${overC_tile?OVER_COLOR:'var(--t2)'};">${overC_tile?'+':''}${fmtNum(Math.abs(remC_tile))}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);"><b>P</b> <span style="color:${overP_tile?OVER_COLOR:'var(--t2)'};">${overP_tile?'+':''}${fmtNum(Math.abs(remP_tile))}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--fat);"><b>G</b> <span style="color:${overF_tile?OVER_COLOR:'var(--t2)'};">${overF_tile?'+':''}${fmtNum(Math.abs(remF_tile))}g</span></span>
+      <span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">rimasti</span>
     </div>`;
   const nutrRight = `
     <div style="flex-shrink:0;text-align:center;padding:8px 10px;border-radius:var(--r);min-width:64px;background:${badgeOk?'var(--acc-lt)':'var(--err-lt)'};border:1px solid ${badgeOk?'rgba(42,122,111,.25)':'rgba(184,76,42,.25)'};">
@@ -2548,9 +2571,9 @@ function renderHome(){
             <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ringColor}" stroke-width="7" stroke-dasharray="${dash} ${gap}" stroke-linecap="round"/>
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
-            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${Math.round(cons.kcal)}</div>
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;line-height:1;">kcal</div>
-            <div style="font-size:10px;color:${ringColor};font-family:var(--font-mono);font-weight:700;line-height:1;margin-top:1px;">${pctKcal}%</div>
+            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${remColor};line-height:1;">${overKcal?'+':''}${fmtNum(Math.abs(remKcal))}</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;line-height:1;">${overKcal ? 'oltre' : (remKcal===0 && cons.kcal>0 ? 'target raggiunto' : 'rimaste')}</div>
+            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);line-height:1;margin-top:1px;">${fmtNum(cons.kcal)} / ${fmtNum(target.kcal)}</div>
           </div>
         </div>
         <div style="flex:1;min-width:0;">${macroBars}</div>
@@ -5763,9 +5786,14 @@ function zonaBalance(cons) {
 
 function heroCard(cons) {
   const pct = ST.TARGET.kcal > 0 ? Math.round((cons.kcal / ST.TARGET.kcal) * 100) : 0;
-  const displayPct = Math.min(100, pct);
+  // Logica residua kcal: anello si svuota (parte 100%, scende verso 0)
+  const remKcalHero = kcalRimaste(cons.kcal, ST.TARGET.kcal);
+  const overKcalHero = isOverTarget(cons.kcal, ST.TARGET.kcal);
+  const remPctKcalHero = (overKcalHero || !ST.TARGET.kcal)
+    ? 0
+    : Math.max(0, Math.min(100, Math.round((remKcalHero / ST.TARGET.kcal) * 100)));
   const r = 77, cx = 85, cy = 85, sw = 10, circ = 2 * Math.PI * r;
-  const dash = (displayPct / 100) * circ;
+  const dash = (remPctKcalHero / 100) * circ;
   const ringColor = pct >= 95 && pct <= 105 ? '#2D5016' : pct > 105 ? '#B84C2A' : '#C4880A';
   const _tot = cons.protein + cons.carbs + cons.fat;
   const _zona = _tot >= 5 ? (()=>{
@@ -5811,10 +5839,15 @@ function heroCard(cons) {
     { label:'Grassi', color:'#B84C2A', bg:'#FAEDE8', value:cons.fat,     target:ST.TARGET.fat },
   ];
   const pillsHTML = macroData.map(m => {
-    const mPct = m.target > 0 ? Math.min(100, Math.round((m.value / m.target) * 100)) : 0;
-    const over = m.value > m.target;
-    const fill = over ? '#B84C2A' : m.color;
-    return `<div style="flex:1;background:${m.bg};border:1px solid ${m.color}33;border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;">${m.label}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${over?'#B84C2A':'var(--t1)'};">${Math.round(m.value)}g</span><span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${mPct}%</span><div style="width:100%;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${mPct}%;background:${fill};border-radius:2px;transition:width .4s ease;"></div></div></div>`;
+    if(!m.target || m.target <= 0) return ''; // salta macro senza target
+    const remVal = macroRimasti(m.value, m.target);
+    const over = isOverTarget(m.value, m.target);
+    const remPctM = over ? 0 : Math.max(0, Math.min(100, Math.round((remVal / m.target) * 100)));
+    const numColor = over ? OVER_COLOR : 'var(--t1)';
+    const fill = over ? OVER_COLOR : m.color;
+    const valText = over ? `+${fmtNum(Math.abs(remVal))}g` : `${fmtNum(remVal)}g`;
+    const subText = over ? 'oltre target' : 'rimasti';
+    return `<div style="flex:1;background:${m.bg};border:1px solid ${m.color}33;border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;">${m.label}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${numColor};">${valText}</span><span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${subText}</span><div style="width:100%;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${remPctM}%;background:${fill};border-radius:2px;transition:width .4s ease;"></div></div></div>`;
   }).join('');
   const tot = cons.protein + cons.carbs + cons.fat;
   let zonaState = null;
@@ -5834,7 +5867,12 @@ function heroCard(cons) {
   }
   const finalRingColor = zonaState !== null ? (zonaState ? '#2A7A6F' : '#B84C2A') : ringColor;
   const zonaLabelHTML = zonaState !== null ? `<span style="font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${finalRingColor};letter-spacing:.5px;margin-top:1px;">${zonaState ? 'In Zona' : 'Fuori Zona'}</span>` : '';
-  return `<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;"><div style="position:relative;width:170px;height:170px;flex-shrink:0;"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${finalRingColor}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${finalRingColor};line-height:1;">${cons.kcal}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">/ ${ST.TARGET.kcal} kcal</span><span style="font-size:14px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${finalRingColor};">${pct}%</span>${zonaLabelHTML}</div></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;"><p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${motivColor};font-weight:600;line-height:1.4;margin:0;">${motivMsg}</p><p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:0;">Target: ${ST.TARGET.kcal} kcal</p></div></div><div style="display:flex;gap:8px;margin-bottom:4px;">${pillsHTML}</div>${zonaRowHTML}</div>`;
+  const heroNumColor = overKcalHero ? OVER_COLOR : finalRingColor;
+  const heroBigNum = `${overKcalHero?'+':''}${fmtNum(Math.abs(remKcalHero))}`;
+  const heroSubLbl = overKcalHero
+    ? 'kcal oltre'
+    : (remKcalHero===0 && cons.kcal>0 ? 'target raggiunto' : 'kcal rimaste');
+  return `<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;"><div style="position:relative;width:170px;height:170px;flex-shrink:0;"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${finalRingColor}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${heroNumColor};line-height:1;">${heroBigNum}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${heroSubLbl}</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${fmtNum(cons.kcal)} / ${fmtNum(ST.TARGET.kcal)}</span>${zonaLabelHTML}</div></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;"><p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${motivColor};font-weight:600;line-height:1.4;margin:0;">${motivMsg}</p><p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:0;">Target: ${fmtNum(ST.TARGET.kcal)} · Consumate: ${fmtNum(cons.kcal)}</p></div></div><div style="display:flex;gap:8px;margin-bottom:4px;">${pillsHTML}</div>${zonaRowHTML}</div>`;
 }
 
 const SLOT_STYLE = {
