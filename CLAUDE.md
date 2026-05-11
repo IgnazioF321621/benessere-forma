@@ -23,8 +23,8 @@ https://github.com/IgnazioF321621/benessere-forma
 
 ## Priorità correnti
 
-1. Testing iPhone + Android con 3 tester attivi
-2. ✅ Admin panel (monitoraggio uso tester) — `dashboardzona.html`, vedi sezione "Admin panel"
+1. ~~Admin panel~~ ✅ completato 11 mag 2026 — `dashboardzona.html`, vedi sezione "Admin panel"
+2. Testing iPhone + Android con 3 tester → **IN CORSO** (messaggi WhatsApp inviati 11 mag 2026)
 3. Test mode `?test=1`
 4. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 5. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -34,6 +34,17 @@ https://github.com/IgnazioF321621/benessere-forma
 - **Ignazio** (utente principale + dev) — iPhone + Android
 - **Ginevra** — iPhone e/o iPad
 - **Isabella** — Android + iPad (variante pescetariana)
+
+Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione con richiesta di costanza nei log e feedback strutturato per 2 settimane.
+
+## Stato attuale
+
+11 mag 2026: introdotti admin panel (`dashboardzona.html`) e logica residua kcal/macro nel modulo Nutrition. App pronta per testing con 3 tester (Ignazio + Ginevra + Isabella). Prossimi step in attesa di feedback tester.
+
+## Idee emerse fuori roadmap
+
+- **Food input multi-modale** (foto piatto AI + barcode + OCR etichetta) — roadmap visiva completa già discussa, da implementare dopo testing tester.
+- **Logica residua kcal/macro** — ✅ implementata 11 mag 2026 (commit `5c93494` + `a4b4152`).
 
 ## Servizi esterni
 
@@ -717,6 +728,55 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 11 maggio 2026 — Admin panel + logica residua kcal/macro + tester attivati
+
+Sessione operativa di sviluppo: admin panel completato dal vivo, refactor visuale Nutrition (kcal/macro) verso modello mentale "rimanente" (stile MyFitnessPal/Lifesum), tester reattivati via WhatsApp con richiesta di costanza per 2 settimane.
+
+**Admin panel — `dashboardzona.html` creato (commit `7735370`)**
+- File single-page HTML/CSS/JS vanilla separato da `zona-tracker.html`, hostato su GitHub Pages
+- URL: https://ignaziof321621.github.io/benessere-forma/dashboardzona.html
+- Auth OTP a 6 cifre identica a zona-tracker
+- Email gate: solo `ignazio.f@me.com`
+- 2 schermate: Home dashboard (Oggi + Tester + Uso moduli 7gg) + Dettaglio utente
+- Solo `.select()` su Supabase (nessuna mutation)
+- Stile pragmatico: system-ui, palette bianco/nero/grigio, mobile-first, touch target 44px
+- Documentate in CLAUDE.md le 5 policy RLS Supabase necessarie (`admin_read_all_<tabella>` per `profiles`, `meals`, `supplements_log`, `workouts`, `body_logs`) — da eseguire manualmente in SQL Editor
+
+**Fix bug match utenti `profiles.id` vs `user_id` (commit `bf9fe4d`)**
+- Bug: i contatori "Oggi" funzionavano ma la lista tester mostrava sempre "nessun pasto oggi · mai attivo"
+- Causa: la tabella `profiles` ha PK `id` (= `auth.users.id`), NON `user_id`. Le altre tabelle dati (`meals`, `supplements_log`, `workouts`, `body_logs`, ecc.) usano FK `user_id`. Il codice admin usava `u.user_id` per estrarre l'UUID da una row di `profiles` → sempre `undefined`
+- Fix: sostituito `u.user_id` → `u.id` in 5 punti (sort, lookup lastActivity, lookup meals count, onclick openUserDetail, find profile in detail view). Query `.eq('user_id', userId)` sulle altre tabelle invariate (lì la colonna si chiama davvero così)
+- Aggiunta nota schema in sezione "Admin panel" CLAUDE.md
+
+**Fix cosmetici: timestamp futuro + slot capitalizzati (commit `91be039`)**
+- `timeAgo()`: diff negativa → "appena ora" invece di "in futuro" (gestisce skew clock)
+- Nuova funzione `formatSlot(slot)`: `SNACK_POMERIGGIO` → `Snack pomeriggio` (underscore→spazio, capitalize first letter). Applicata a meals e supplements nelle liste "Ultimi 10". Rimosso `text-transform:uppercase` dal CSS `.item .slot`
+
+**Card "Calorie oggi" nel dettaglio utente (commit `88d33d2` + `1618347` + `c683fe7`)**
+- Nuova sezione tra "Profilo" e "Pasti ultimi 7 giorni"
+- Riga 1 grande: "1.240 / 1.600 kcal" (consumate / target). Riga 2 grigia: "−360 kcal rispetto al target" / "+240 kcal" / "In linea con il target"
+- Barra progresso orizzontale: si riempie fino alla % consumata, sopra 100% diventa ambra `#D97706` e si limita visivamente al 100% di larghezza
+- Macro target sotto la barra kcal: Carboidrati / Proteine / Grassi (ordine C-P-G coerente con resto app) — solo macro con target > 0
+- Formattatore numeri manuale via regex (separatore migliaia italiano deterministico, indipendente da ICU del browser): `1240 → 1.240`, `360 → 360` (sotto 1000 senza separatore)
+- Fallback `target_kcal || 1900` come fa zona-tracker. Se target_kcal mancante: mostra solo "X kcal oggi" + "Target non impostato" (no barra)
+- Verificato che zona-tracker.html usa colonne `protein`, `carbs`, `fat` su tabella `meals` (non `protein_g` o altre varianti)
+
+**Logica residua kcal e macro su Home + Nutrition Oggi (commit `5c93494` + `a4b4152`)**
+- Modello mentale: "ti restano 1.441 kcal" invece di "hai consumato 885 di 2.326" (ispirato MyFitnessPal/Lifesum/Yazio)
+- 3 zone modificate in zona-tracker.html:
+  1. **Home card riepilogo**: ring SVG si svuota (parte 100%, scende). Centro: numero grande = rimaste, sotto "rimaste"/"oltre"/"target raggiunto", terza riga "X / Y" grigio. Barre macro orizzontali (`mBar`) anch'esse residue: barra al 100% all'inizio, si svuota man mano. Testo per macro: "150g rimasti" / "+12g oltre"
+  2. **Home tile Nutrition (MODULI · OGGI)**: numero grande = kcal rimaste. Riga "885 / 2.326 consumate" piccola grigia. Riga macro "C Xg P Xg G Xg rimasti" (con + se over, ambra). Pill laterale ridisegnata: "ZONA" verde / "FUORI ZONA" ambra / "—" giallo se no data (rimosso "OFF 40·30·30")
+  3. **Nutrition Oggi heroCard**: stesso pattern del Home ma a dimensioni maggiori (170×170 ring). Numero grande 28px, sub "kcal rimaste". Riga laterale: "Target: 2.326 · Consumate: 885". Pillole macro CARBO/PROT/GRASSI: numero grande = grammi rimasti + label "rimasti" / "oltre target". Mini-barre interne residue. `motivMsg` AI mantenuto invariato come da vincolo
+- Helper globali aggiunti: `fmtNum`, `kcalRimaste`, `macroRimasti`, `isOverTarget` + costante `OVER_COLOR = #B45309` (ambra scuro per stato "oltre target")
+- Edge case: target raggiunto esatto → sub label "target raggiunto"; nessun pasto → barra/anello 100% pieni; over target → numero "+X" ambra, anello/barre vuote
+- Dedup pill "Zona/Fuori Zona": rimossa duplicazione dal centro anello heroCard (era anche nella riga `zonaRowHTML` sotto le 3 macro card). Mantenute le pill in alto Home, pill sotto heroCard, e pill per pasto nella timeline
+- Piano/Storico/Integratori restano in logica accumulativa per ora (fuori scope del refactor)
+
+**Note operative**
+- Tester WhatsApp riattivazione: messaggio inviato 11 mag 2026 a Ginevra e Isabella con richiesta di log costante + feedback strutturato per 2 settimane
+- App live versione `APP_VERSION` corrispondente a ultimo commit
+- Nessuna modifica a schema Supabase, AI prompts, Worker, schema dati esistente
 
 ### 10 maggio 2026 — Design Session: visione AI, sistema design, onboarding M1, home post-onboarding
 
