@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 15:01';
+const APP_VERSION = '2026.05.12 · 15:58';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5852,7 +5852,7 @@ function heroCard(cons) {
     const fill = over ? OVER_COLOR : m.color;
     const valText = over ? `+${fmtNum(Math.abs(remVal))}g` : `${fmtNum(remVal)}g`;
     const subText = over ? 'oltre target' : 'rimasti';
-    return `<div style="flex:1;background:${m.bg};border:1px solid ${m.color}33;border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;">${m.label}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${numColor};">${valText}</span><span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${subText}</span><div style="width:100%;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${remPctM}%;background:${fill};border-radius:2px;transition:width .4s ease;"></div></div></div>`;
+    return `<div style="flex:1;background:${m.bg};border:1px solid ${m.color}33;border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;">${m.label}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${numColor};">${valText}</span><span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${subText}</span><div style="width:100%;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${remPctM}%;background:${fill};border-radius:2px;transition:width .4s ease;margin-left:auto;"></div></div></div>`;
   }).join('');
   const tot = cons.protein + cons.carbs + cons.fat;
   let zonaState = null;

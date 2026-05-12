@@ -735,6 +735,11 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Nutrition Oggi: completamento inversione barre macro
+
+- Estesa modifica `margin-left:auto` anche alla tile Carbo/Prot/Grassi del modulo Nutrition → Oggi (`zona-tracker.html` riga ~5855)
+- Coerenza visiva con Home: tutte le barre macro ora si svuotano da sinistra a destra
+
 ### 12 maggio 2026 — Nutrition: inversione direzione svuotamento barre macro
 
 - Barre Carbo/Prot/Grassi sotto anello kcal: parte colorata ora ancorata al lato destro
