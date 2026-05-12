@@ -735,6 +735,13 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Nutrition: inversione direzione svuotamento barre macro
+
+- Barre Carbo/Prot/Grassi sotto anello kcal: parte colorata ora ancorata al lato destro
+- Visivamente: il consumo "mangia" la barra da sinistra verso destra
+- Modifica chirurgica: aggiunto `margin-left:auto` al div fill di `mBar()` ([zona-tracker.html:2410](zona-tracker.html:2410))
+- Caso "oltre target" (`remPct=0`) e "rimasto = 100%" indistinguibili dal comportamento precedente
+
 ### 12 maggio 2026 — Nutrition: slot Extra fuori pasto
 
 - Aggiunto slot `extra` (🍽️) a `MEAL_SLOTS`, sempre selezionabile dal form "+ Registra pasto"
