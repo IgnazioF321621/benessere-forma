@@ -735,6 +735,15 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Nutrition: modello ibrido (visivo si riempie, testo "rimasti")
+
+- Anello kcal Home + Hero: tornano a riempirsi al crescere del consumo (uso di `consPctKcal` / `consPctKcalHero` derivato da `cons.kcal / target.kcal`)
+- Barre macro Home + tile Oggi: tornano a riempirsi da sinistra (uso di `consPct` / `consPctM` derivato da `current / target`)
+- Oltre target: anello/barra restano al 100% e diventano `OVER_COLOR` (regola A). `ringColor` di Home ora forza `OVER_COLOR` quando `overKcal=true`; `ringColor` di Hero forza `#B84C2A` quando `overKcalHero=true`
+- Testi invariati ("rimasti", "+Xg oltre")
+- Modello mentale: forma = consumato, numero = rimanente — coerenza con Apple Fitness + budget
+- Rimossa `margin-left:auto` aggiunta nei commit `52dfeb0` / `ace4574`; aggiunta `transition:width .6s ease` sulla barra Home `mBar()`
+
 ### 12 maggio 2026 — Nutrition Oggi: completamento inversione barre macro
 
 - Estesa modifica `margin-left:auto` anche alla tile Carbo/Prot/Grassi del modulo Nutrition → Oggi (`zona-tracker.html` riga ~5855)
