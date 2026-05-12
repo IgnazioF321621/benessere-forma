@@ -735,6 +735,16 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — muscleImg sugli esercizi recovery G3/G6 (riuso PNG esistenti)
+
+- **Renderer modal AI `openExerciseAI`** ([zona-tracker.html:8071](zona-tracker.html:8071)): lettura prioritaria da `ex.muscleImg` (esplicito su esercizi recovery). Se `null` esplicito → no fallback a `EXERCISE_MEDIA[exName]`. Se `undefined` (esercizi forza Upper/Lower legacy) → fallback al vecchio percorso `EXERCISE_MEDIA[exName].muscleImg`. Retrocompat al 100% sui 20 esercizi forza esistenti.
+- **G3 `recoveryUpper.exercises` (23)**: aggiunto campo `muscleImg` a tutti. 14 con immagine (riuso PNG da `assets/exercises/`: `shoulder-press-in-piedi`, `trazioni-sbarra`, `chest-press-orizzontale`, `row-inclinato`, `hip-thrust`, `bulgarian-split-squat`, `squat-talloni-rialzati`, `calf-raise`), 9 con `null` esplicito (Rotazione toracica seduto dx/sx, Circonduzioni caviglie dx/sx, Cat-Cow, World's greatest stretch dx/sx, Down dog→up dog).
+- **G6 `recoveryLower.exercises` (28)**: aggiunto campo `muscleImg` a tutti. 19 con immagine (riuso `trazioni-sbarra`, `face-pull`, `chest-press-orizzontale`, `curl-bicipiti`, `hip-thrust`, `bulgarian-split-squat`, `squat-talloni-rialzati`, `romanian-deadlift`, `calf-raise`), 9 con `null` (collo dx/sx, Cobra pose, Knee-to-chest doppia, Savasana).
+- **Totale**: **33 esercizi recovery con mappa muscolare visibile** + 18 con `null` esplicito (no immagine quando non c'è match anatomico ragionevole).
+- **Nessun nuovo PNG aggiunto**: solo riuso degli 11 path già esistenti in `EXERCISE_MEDIA`.
+- **`<img onerror="this.style.display='none'"/>`** già presente nel renderer (safety net per path errati). `hasMuscle = !!ai.muscleImg` condiziona il render dell'img.
+- **Nessun task GIF/movimento** in questo round — solo `muscleImg`. GIF rimandate a task separato.
+
 ### 12 maggio 2026 — Blocco Attivazione 5 min con countdown ibrido + cleanup G3/G6
 
 - **Rimossi** primi 2 esercizi (Respirazione diaframmatica + Vacuum addominale) dal Blocco 1 di entrambi G3 (`recoveryUpper.exercises` 25 → 23) e G6 (`recoveryLower.exercises` 28 → 26). Questi 2 esercizi sono già coperti dal Blocco Attivazione standard sopra (Respirazione 360° 120s + Vacuum 120s + Cat-Cow 60s).
