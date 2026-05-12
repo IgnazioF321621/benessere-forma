@@ -735,6 +735,19 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Blocco Attivazione 5 min con countdown ibrido + cleanup G3/G6
+
+- **Rimossi** primi 2 esercizi (Respirazione diaframmatica + Vacuum addominale) dal Blocco 1 di entrambi G3 (`recoveryUpper.exercises` 25 → 23) e G6 (`recoveryLower.exercises` 28 → 26). Questi 2 esercizi sono già coperti dal Blocco Attivazione standard sopra (Respirazione 360° 120s + Vacuum 120s + Cat-Cow 60s).
+- **Blocco Attivazione trasformato in flow countdown autonomo** identico al recovery: hero card con 3 stati (non avviato / in corso / completato) + lista 3 esercizi raggruppati. Si applica a TUTTE le 6 sessioni (upperA/upperB/lowerA/lowerB/recoveryUpper/recoveryLower).
+- **Rimossi** dalla lista esercizi attivazione: tempo `MM:SS` per riga + bottone ▶ piccolo per riga. Mantengono solo checkbox + nome + durata in formato `60s/120s`. Il countdown grande è ora nella hero card.
+- **Nuovo state** `ST.trainActivationFlow = {active, currentIdx, remaining, running, _iv}` parallelo a `trainRecoveryFlow`.
+- **`ST.trainActivation`** (array booleani done per indice) riusato come done state — niente nuovo `trainActivationDone`. Bypass collisioni nomi tra attivazione e recovery.
+- **Nuove funzioni globali**: `activationFlowStart/Pause/Resume/Skip/Back/End` + interne `_activationFlowTick`, `_activationFlowAdvance` (triple beep + vibration + auto-next), `_activationFlowClearInterval`, `_activationFlowCurrentExercise`. `checkActivationSessionDone()` mostra toast "Attivazione completata ✓" (no save workout — l'attivazione è preparatoria).
+- **Mutual exclusion** via disable visivo: bottone "▶ Start" attivazione grigio + `cursor:not-allowed` + nota "Recupero in corso" se `trainRecoveryFlow.running`; specularmente bottone "▶ Start" recovery grigio + nota "Attivazione in corso" se `trainActivationFlow.running`. `activationFlowStart/Resume` e `recoveryFlowStart/Resume` controllano lo stato dell'altro flow e early-return se attivo.
+- **Helper `_renderActivationSection()`** dedicato (analogo a `_renderRecoverySection`): produce wrapper card + hero + lista. Sostituisce il vecchio renderer inline di ~35 righe in `renderTraining`. Tinta blu (`#185FA5` + `#E8F0FA`) per distinguersi dal verde recupero (`#2A7A6F` + `#E6F4F2`).
+- **Cleanup in `closeTrainingSession()`**: ferma anche `trainActivationFlow._iv` e azzera lo state.
+- **Funzioni legacy timer per-esercizio attivazione DORMANTI**: `startActivationTimer`, `pauseActivationTimer`, `resetActivationTimer`, `editActivationTimer` (e `_ensureActivationTimers`, `_fmtMMSS`, `resetAllActivationTimers`) restano nel codice ma non più chiamate dalla UI. `toggleActivation(idx)` ancora usata per check manuale opzionale. Da rimuovere in housekeeping futuro insieme a `ST.trainActivationTimers` array.
+
 ### 12 maggio 2026 — Recovery G3/G6 ristrutturate: micro-esercizi + countdown ibrido
 
 - **G3 `recoveryUpper`** ora "Recupero Mobilità — G3": 25 micro-esercizi in 5 blocchi (Attivazione · Spalle e colonna toracica · Anche · Caviglie e polpacci · Integrazione globale), totale ~20 min. Focus mobilità articolare dinamica full body.

@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 21:43';
+const APP_VERSION = '2026.05.12 · 22:09';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1247,6 +1247,7 @@ const ST = {
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
   trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
   trainRecoveryFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance G3/G6
+  trainActivationFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance blocco attivazione 5 min
   trainActivation: [false, false, false],
   trainActivationTimers: [
     { remaining:120, total:120, running:false },
@@ -3275,16 +3276,7 @@ const TRAINING_SESSIONS = {
     id:'recoveryUpper', name:'Recupero Mobilità', type:'Recupero', rir:null,
     label:'Recupero Mobilità — G3', rest:null,
     exercises:[
-      // Blocco 1 — Attivazione (2 min)
-      { name:'Respirazione diaframmatica', duration_sec:60, block:'Attivazione',
-        muscles:['diaframma'],
-        execution:['Sdraiato supino o seduto comodo','Mano sulla pancia: inspira gonfiando per 4 sec','Espira lento per 6 sec lasciando scendere'],
-        commonErrors:['Respirare di petto invece che di pancia','Trattenere il respiro tra inspiro ed espiro','Tempi troppo veloci'] },
-      { name:'Vacuum addominale', duration_sec:60, block:'Attivazione',
-        muscles:['trasverso addominale'],
-        execution:['Espira completamente svuotando i polmoni','Risucchia l\'ombelico verso la colonna','Mantieni 10-15 sec poi rilascia'],
-        commonErrors:['Trattenere il respiro durante la tenuta','Inarcare la lombare','Spingere fuori invece di tirare dentro'] },
-      // Blocco 2 — Spalle e colonna toracica (6 min)
+      // Blocco 1 — Spalle e colonna toracica (6 min) [il warmup di respirazione+vacuum è coperto dal Blocco Attivazione standard sopra]
       { name:'Circonduzioni spalle avanti', duration_sec:30, block:'Spalle e colonna toracica',
         muscles:['deltoidi','trapezio'],
         execution:['In piedi, braccia rilassate lungo il busto','Ruota le spalle in avanti con movimento ampio','Mantieni ritmo controllato'],
@@ -3386,16 +3378,7 @@ const TRAINING_SESSIONS = {
     id:'recoveryLower', name:'Recupero Stretching', type:'Recupero', rir:null,
     label:'Recupero Stretching — G6', rest:null,
     exercises:[
-      // Blocco 1 — Attivazione (2 min)
-      { name:'Respirazione diaframmatica', duration_sec:60, block:'Attivazione',
-        muscles:['diaframma'],
-        execution:['Sdraiato supino o seduto comodo','Mano sulla pancia: inspira gonfiando per 4 sec','Espira lento per 6 sec lasciando scendere'],
-        commonErrors:['Respirare di petto invece che di pancia','Trattenere il respiro tra inspiro ed espiro','Tempi troppo veloci'] },
-      { name:'Vacuum addominale', duration_sec:60, block:'Attivazione',
-        muscles:['trasverso addominale'],
-        execution:['Espira completamente svuotando i polmoni','Risucchia l\'ombelico verso la colonna','Mantieni 10-15 sec poi rilascia'],
-        commonErrors:['Trattenere il respiro durante la tenuta','Inarcare la lombare','Spingere fuori invece di tirare dentro'] },
-      // Blocco 2 — Catena posteriore alta (4 min)
+      // Blocco 1 — Catena posteriore alta (4 min) [warmup respirazione+vacuum coperto dal Blocco Attivazione standard]
       { name:'Stretching dorsale al muro', duration_sec:60, block:'Catena posteriore alta',
         muscles:['gran dorsale','tricipiti'],
         execution:['Braccia tese verso l\'alto contro il muro','Spingi le anche indietro mantenendo le braccia in linea','Senti lo stiramento del dorso'],
@@ -4615,6 +4598,109 @@ async function saveTrainingSet(){
   }
 }
 
+// ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
+function _renderActivationSection(){
+  if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  if(!Array.isArray(ST.trainActivation) || ST.trainActivation.length !== ACTIVATION_BLOCK.length) ST.trainActivation = ACTIVATION_BLOCK.map(()=>false);
+  const flow = ST.trainActivationFlow;
+  const exs = ACTIVATION_BLOCK;
+  const totalSecAll = exs.reduce((a,e)=>a+(e.seconds||0),0);
+  const totMin = Math.round(totalSecAll/60);
+  const doneCount = ST.trainActivation.filter(v=>v===true).length;
+  const allDone = doneCount === exs.length;
+  // Mutual exclusion: bottone start disabled se recovery flow running
+  const recoveryRunning = !!(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running);
+
+  // ── Hero card (3 stati) ──
+  let heroHtml;
+  if(flow.active && flow.currentIdx < exs.length){
+    const cur = exs[flow.currentIdx];
+    const mm = String(Math.floor(flow.remaining/60)).padStart(2,'0');
+    const ss = String(flow.remaining%60).padStart(2,'0');
+    const dur = cur.seconds || 60;
+    const pct = dur ? Math.round((dur - flow.remaining)/dur*100) : 0;
+    const playPauseBtn = flow.running
+      ? `<button onclick="activationFlowPause()" title="Pausa" style="background:#185FA5;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
+      : `<button onclick="activationFlowResume()" title="Riprendi" style="background:#185FA5;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
+    heroHtml = `
+      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:10px;color:#185FA5;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">Attivazione</span>
+        </div>
+        <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${cur.name}</div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:#185FA5;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button onclick="activationFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #185FA5;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#185FA5;font-size:18px;font-weight:700;">⏪</button>
+            ${playPauseBtn}
+            <button onclick="activationFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid #185FA5;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#185FA5;font-size:18px;font-weight:700;">⏩</button>
+          </div>
+        </div>
+        <div style="height:6px;background:rgba(24,95,165,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${pct}%;background:#185FA5;transition:width .35s linear;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
+          <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
+          <button onclick="activationFlowEnd()" title="Termina" style="background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">termina</button>
+        </div>
+      </div>`;
+  } else if(flow.active && flow.currentIdx >= exs.length){
+    heroHtml = `
+      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
+        <div style="font-size:36px;margin-bottom:8px;">✓</div>
+        <div style="font-size:18px;font-weight:700;color:#185FA5;font-family:var(--font-sans);margin-bottom:4px;">Attivazione completata</div>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${exs.length}/${exs.length} esercizi</div>
+      </div>`;
+  } else {
+    // Stato iniziale
+    const startBtnDisabled = recoveryRunning;
+    const startBtnStyle = startBtnDisabled
+      ? 'background:#CCC;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:var(--font-sans);opacity:.6;'
+      : 'background:#185FA5;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
+    const startBtnAction = startBtnDisabled ? '' : 'onclick="activationFlowStart()"';
+    heroHtml = `
+      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;color:#185FA5;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
+        <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">Blocco Attivazione</div>
+        ${allDone
+          ? `<div style="font-size:14px;color:#185FA5;font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
+          : `<button ${startBtnAction} ${startBtnDisabled?'disabled':''} style="${startBtnStyle}">▶ Start attivazione</button>${startBtnDisabled?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Recupero in corso</div>':''}`}
+      </div>`;
+  }
+
+  // ── Lista esercizi attivazione ──
+  const itemsHtml = exs.map((a, idx) => {
+    const isDone = !!ST.trainActivation[idx];
+    const isCurrent = flow.active && flow.currentIdx === idx;
+    const bg = isCurrent ? '#FFF7E0' : (isDone ? '#F0F6FA' : 'var(--s1)');
+    const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
+    const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
+    const checkBox = isDone
+      ? `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:#185FA5;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+      : `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;"></div>`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+        ${checkBox}
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;${nameStyle}">${a.name}</div>
+        </div>
+        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${a.seconds}s</div>
+      </div>`;
+  }).join('');
+
+  // ── Wrapper card ──
+  return `
+    <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${allDone?'#2A7A6F':'#185FA5'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span style="font-size:13px;font-weight:700;color:${allDone?'#2A7A6F':'#185FA5'};font-family:var(--font-sans);">Blocco Attivazione — ${totMin} min</span>
+        ${allDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
+      </div>
+      ${heroHtml}
+      ${itemsHtml}
+    </div>`;
+}
+
 // ── Renderer dedicato per le sessioni di recupero G3/G6 (countdown ibrido auto-advance) ──
 function _renderRecoverySection(s, sel){
   if(!ST.trainRecoveryFlow) ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -4671,13 +4757,19 @@ function _renderRecoverySection(s, sel){
   } else {
     // Stato iniziale: non avviato
     const allManuallyDone = doneCount === exs.length && exs.length > 0;
+    // Mutual exclusion: disabled se activation flow running
+    const activationRunning = !!(ST.trainActivationFlow && ST.trainActivationFlow.running);
+    const startBtnStyle = activationRunning
+      ? 'background:#CCC;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:var(--font-sans);opacity:.6;'
+      : 'background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
+    const startBtnAction = activationRunning ? '' : 'onclick="recoveryFlowStart()"';
     heroHtml = `
       <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
         <div style="font-size:11px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
         <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">${s.label || s.name}</div>
         ${allManuallyDone
           ? `<div style="font-size:14px;color:#2A7A6F;font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
-          : `<button onclick="recoveryFlowStart()" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);">▶ Start sessione</button>`}
+          : `<button ${startBtnAction} ${activationRunning?'disabled':''} style="${startBtnStyle}">▶ Start sessione</button>${activationRunning?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Attivazione in corso</div>':''}`}
       </div>`;
   }
 
@@ -4752,44 +4844,8 @@ function renderTraining(){
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
         : `<span style="background:#E8F0FA;color:#185FA5;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
-      if(!Array.isArray(ST.trainActivation) || ST.trainActivation.length!==3) ST.trainActivation = [false,false,false];
-      _ensureActivationTimers();
-      const activationItems = ACTIVATION_BLOCK.map((a,i)=>{
-        const checked = !!ST.trainActivation[i];
-        const timer = ST.trainActivationTimers[i];
-        const running = !!timer.running;
-        const atStart = timer.remaining === timer.total && !running;
-        const box = checked
-          ? `<div onclick="event.stopPropagation();toggleActivation(${i});" style="width:18px;height:18px;border-radius:5px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-          : `<div onclick="event.stopPropagation();toggleActivation(${i});" style="width:18px;height:18px;border-radius:5px;background:transparent;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;"></div>`;
-        const nameStyle = checked
-          ? 'font-size:13px;font-weight:600;color:var(--t3);font-family:var(--font-sans);text-decoration:line-through;'
-          : 'font-size:13px;font-weight:600;color:var(--t1);font-family:var(--font-sans);';
-        const timeColor = checked ? 'var(--t3)' : (running ? '#185FA5' : (atStart ? '#185FA5' : '#2A7A6F'));
-        const timeDeco = checked ? 'text-decoration:line-through;' : '';
-        const timeCursor = (!running && !checked) ? 'cursor:pointer;' : 'cursor:default;';
-        const timeOnclick = (!running && !checked) ? `onclick="event.stopPropagation();editActivationTimer(${i});"` : '';
-        const timeTxt = _fmtMMSS(timer.remaining);
-        const playBtn = checked
-          ? ''
-          : (running
-              ? `<button onclick="event.stopPropagation();pauseActivationTimer(${i});" title="Pausa" style="background:#E8F0FA;border:none;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#185FA5;font-size:12px;font-weight:700;">⏸</button>`
-              : `<button onclick="event.stopPropagation();startActivationTimer(${i});" title="Avvia" style="background:#E8F0FA;border:none;border-radius:6px;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#185FA5;font-size:12px;font-weight:700;">▶</button>`);
-        const resetBtn = (!checked && !atStart)
-          ? `<button onclick="event.stopPropagation();resetActivationTimer(${i});" title="Reset" style="background:transparent;border:none;width:22px;height:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:13px;font-weight:700;">✕</button>`
-          : '';
-        return `
-        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--s2);">
-          ${box}
-          <div style="flex:1;min-width:0;">
-            <div style="${nameStyle}">${a.name}</div>
-          </div>
-          <div id="act-timer-${i}" ${timeOnclick} title="${(!running && !checked)?'Tap per modificare':''}" style="font-size:13px;font-family:var(--font-mono);font-weight:700;color:${timeColor};${timeDeco}${timeCursor}min-width:46px;text-align:right;">${timeTxt}</div>
-          ${playBtn}
-          ${resetBtn}
-        </div>`;
-      }).join('');
-      const activationAllDone = ST.trainActivation.every(v=>v===true);
+      // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
+      const activationSection = _renderActivationSection();
 
       const today = todayKey();
       const isRecoverySession = s.type === 'Recupero';
@@ -4929,14 +4985,7 @@ function renderTraining(){
             ${typeBadge}
           </div>
 
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${activationAllDone?'#2A7A6F':'#185FA5'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <span style="font-size:13px;font-weight:700;color:${activationAllDone?'#2A7A6F':'#185FA5'};font-family:var(--font-sans);">Blocco Attivazione — 5 min</span>
-              ${activationAllDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
-            </div>
-            ${activationItems.replace(/border-bottom:1px solid var\(--s2\);" >(?=\s*<\/div>\s*$)/,'border-bottom:none;">')}
-          </div>
+          ${activationSection}
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
@@ -8261,6 +8310,11 @@ function closeTrainingSession(){
     clearInterval(ST.trainRecoveryFlow._iv);
   }
   ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  // Stop activation flow countdown ibrido se attivo
+  if(ST.trainActivationFlow && ST.trainActivationFlow._iv){
+    clearInterval(ST.trainActivationFlow._iv);
+  }
+  ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
@@ -8394,6 +8448,110 @@ function resetActivationTimer(idx){
   renderTraining();
 }
 
+// ── Activation FLOW (countdown ibrido blocco attivazione 5 min, auto-advance) ──
+function _activationFlowClearInterval(){
+  if(ST.trainActivationFlow && ST.trainActivationFlow._iv){
+    clearInterval(ST.trainActivationFlow._iv);
+    ST.trainActivationFlow._iv = null;
+  }
+}
+function _activationFlowCurrentExercise(){
+  const idx = ST.trainActivationFlow.currentIdx;
+  return ACTIVATION_BLOCK[idx] || null;
+}
+function _activationFlowAdvance(){
+  const cur = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
+  if(cur){
+    if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
+    ST.trainActivation[ST.trainActivationFlow.currentIdx] = true;
+    try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
+    try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+  }
+  ST.trainActivationFlow.currentIdx++;
+  if(ST.trainActivationFlow.currentIdx >= ACTIVATION_BLOCK.length){
+    // Fine attivazione
+    _activationFlowClearInterval();
+    ST.trainActivationFlow.active = false;
+    ST.trainActivationFlow.running = false;
+    ST.trainActivationFlow.remaining = 0;
+    checkActivationSessionDone();
+    renderTraining();
+    return;
+  }
+  const next = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
+  ST.trainActivationFlow.remaining = next.seconds || 60;
+  renderTraining();
+}
+function _activationFlowTick(){
+  if(!ST.trainActivationFlow.running) return;
+  ST.trainActivationFlow.remaining = Math.max(0, ST.trainActivationFlow.remaining - 1);
+  if(ST.trainActivationFlow.remaining <= 0){
+    _activationFlowAdvance();
+  } else {
+    renderTraining();
+  }
+}
+function activationFlowStart(){
+  // Mutual exclusion: non avviare se recovery flow è running
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(!ACTIVATION_BLOCK.length) return;
+  try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  _activationFlowClearInterval();
+  ST.trainActivationFlow.active = true;
+  ST.trainActivationFlow.currentIdx = 0;
+  ST.trainActivationFlow.remaining = ACTIVATION_BLOCK[0].seconds || 60;
+  ST.trainActivationFlow.running = true;
+  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 1000);
+  renderTraining();
+}
+function activationFlowPause(){
+  if(!ST.trainActivationFlow.running) return;
+  ST.trainActivationFlow.running = false;
+  _activationFlowClearInterval();
+  renderTraining();
+}
+function activationFlowResume(){
+  if(ST.trainActivationFlow.running) return;
+  if(!ST.trainActivationFlow.active) return;
+  // Mutual exclusion: non riprendere se recovery flow è running
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  ST.trainActivationFlow.running = true;
+  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 1000);
+  renderTraining();
+}
+function activationFlowSkip(){
+  if(!ST.trainActivationFlow.active) return;
+  _activationFlowAdvance();
+}
+function activationFlowBack(){
+  if(!ST.trainActivationFlow.active) return;
+  if(ST.trainActivationFlow.currentIdx <= 0){
+    if(ACTIVATION_BLOCK[0]) ST.trainActivationFlow.remaining = ACTIVATION_BLOCK[0].seconds || 60;
+    renderTraining();
+    return;
+  }
+  ST.trainActivationFlow.currentIdx--;
+  const prev = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
+  ST.trainActivationFlow.remaining = prev.seconds || 60;
+  renderTraining();
+}
+function activationFlowEnd(){
+  _activationFlowClearInterval();
+  ST.trainActivationFlow.active = false;
+  ST.trainActivationFlow.running = false;
+  ST.trainActivationFlow.currentIdx = 0;
+  ST.trainActivationFlow.remaining = 0;
+  renderTraining();
+}
+function checkActivationSessionDone(){
+  if(!Array.isArray(ST.trainActivation)) return;
+  const allDone = ST.trainActivation.every(v => v === true);
+  if(allDone){
+    showToast('Attivazione completata', '✓');
+  }
+}
+
 // ── Recovery FLOW (countdown ibrido G3/G6, auto-advance) ──
 function _recoveryFlowClearInterval(){
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow._iv){
@@ -8445,6 +8603,8 @@ function _recoveryFlowTick(){
   }
 }
 function recoveryFlowStart(){
+  // Mutual exclusion: non avviare se activation flow è running
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
   const sess = TRAINING_SESSIONS[ST.trainSession];
   if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
@@ -8465,6 +8625,8 @@ function recoveryFlowPause(){
 function recoveryFlowResume(){
   if(ST.trainRecoveryFlow.running) return;
   if(!ST.trainRecoveryFlow.active) return;
+  // Mutual exclusion: non riprendere se activation flow è running
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   ST.trainRecoveryFlow.running = true;
   ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
