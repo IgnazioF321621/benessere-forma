@@ -578,16 +578,22 @@ Posizionati in:
 - **Info icon:** `.info-icon` (cerchio 16px verde accent, testo bianco) — usato per termini tecnici Training
 - **Modal info:** `.info-modal-overlay` + `.info-modal` + `.info-modal-close` — usato sia da `showInfoModal` che da `openExerciseAI`
 
-## Deploy
+## Workflow git (aggiornato 12 maggio 2026)
 
-```bash
-cd ~/benessere-forma
-git add zona-tracker.html
-git commit -m "Descrizione"
-git push origin main
-```
+Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
 
-GitHub Pages si aggiorna automaticamente (1-2 minuti).
+**Regola d'oro**: per OGNI modifica, Claude Code DEVE fornire un resoconto strutturato con questi 6 punti:
+
+1. **File modificati**: percorso completo (worktree incluso) di ogni file toccato
+2. **Cosa è cambiato**: sintesi puntuale delle modifiche (1 bullet per modifica)
+3. **Commit hash + branch**: hash breve (es. `a64d743`) e nome branch
+4. **Stato push**: confermare push avvenuto su `origin/main` (sì/no, eventuali errori)
+5. **Tempo stimato propagazione**: GitHub Pages tipicamente ~1-3 min dopo push
+6. **Versione/tag del rilascio**: incremento versione o tag (es. `v1.4.2` o data ISO)
+
+**Niente operazioni git silenziose.** Se Claude Code esegue git push senza resoconto, è una violazione del workflow.
+
+**Worktree management**: indicare sempre quale worktree è attivo. Se ne viene creato uno nuovo, dichiararlo all'inizio della sessione.
 
 ## Funzioni chiave aggiuntive (aprile–maggio 2026)
 
