@@ -735,6 +735,22 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Fase 4 Smart Ingredient: edit pasto + orario inline
+
+- Tap matita ✏️ in timeline apre lo stesso form Smart Ingredient pre-compilato con gli items esistenti (collassati di default come post-Analizza)
+- Salvataggio in modalità edit: `UPDATE meals` + `DELETE meal_items WHERE meal_id=...` + `INSERT meal_items` (pattern robusto, evita delta complicati)
+- Pasti vecchi monolitici (1 item da migrazione Fase 1) o pasti orfani senza items: editabili come 1 ingrediente preriempito dalla descrizione, "promossi" a strutturati al salvataggio
+- Banner header dinamico: "✏️ Modifica pasto" con colore `var(--acc)` in modalità edit, "+ Registra pasto" con `var(--t2)` in modalità nuovo
+- Bottone "← Annulla modifica" visibile solo in modalità edit → richiama `smartResetForm()` che azzera anche `editingMealId/Slot/Time/Description`
+- `event.stopPropagation()` sul bottone matita per evitare che il tap espanda il pasto contemporaneamente
+- Orario cliccabile direttamente nell'header collassato della card timeline (`<input type="time">` dentro la meta-riga `19:34 · 2 ingredienti`)
+- Rimosso input orario duplicato dal corpo espanso (meno UI rumorosa)
+- Nuovo state: `ST.smartForm.editingMealId/Slot/Time/Description` (null in modalità nuovo)
+- Handler `window.smartOpenEdit(date, mealId)` pre-fetcha items da Supabase se non presenti in cache locale, scrolla automaticamente al form via `id="registra-pasto-form"`
+- `setLogSlot()` e close-button reset includono ora anche i 4 nuovi campi edit per pulizia stato
+- **Roadmap Smart Ingredient chiusa: Fasi 1-2-3-4 tutte completate** 🎉
+- Funzioni legacy dormienti (non chiamate da UI, lasciate per housekeeping futuro): `openEditMealModal` ([zona-tracker.html:7685](zona-tracker.html:7685)), `saveEditMeal`, `closeEditMealModal`, modal HTML `#edit-meal-modal` ([zona-tracker.html:861](zona-tracker.html:861)), `logMeal` ([zona-tracker.html:8396](zona-tracker.html:8396)), `estimateMacrosLegacy`
+
 ### 12 maggio 2026 — Fase 3 Smart Ingredient: timeline con doppio collasso
 
 - `loadMeals(date)` ([zona-tracker.html:1938](zona-tracker.html:1938)): carica meal_items in una seconda query keyed su `meal_ids`, aggrega per `meal_id`, ritorna `{...meal, items: [...]}`

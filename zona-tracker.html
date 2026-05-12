@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 19:57';
+const APP_VERSION = '2026.05.12 · 20:15';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1285,8 +1285,11 @@ const ST = {
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
-  // FASE 2 Smart Ingredient form: { items, freeText, notes, analyzing }
-  smartForm: { items: [], freeText: '', notes: '', analyzing: false },
+  // FASE 2 Smart Ingredient form: { items, freeText, notes, analyzing } + FASE 4 campi edit
+  smartForm: {
+    items: [], freeText: '', notes: '', analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '',
+  },
   // FASE 3 Timeline doppio collasso (id meal/item → bool expanded), default vuoto = tutto collassato
   mealExpanded: {},
   itemExpanded: {},
@@ -6036,7 +6039,10 @@ function mealCardHTML(m){
         <span style="font-size:14px;flex-shrink:0;">${slotInfo.icon}</span>
         <div style="min-width:0;flex:1;">
           <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${ss.color};">${slotInfo.label}</div>
-          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${m.time?m.time.slice(0,5):''} · ${itemCountLbl}</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:4px;" onclick="event.stopPropagation()">
+            <input type="time" value="${m.time?m.time.slice(0,5):''}" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" onclick="event.stopPropagation()" title="Modifica orario" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;padding:0;" />
+            <span>· ${itemCountLbl}</span>
+          </div>
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
@@ -6044,7 +6050,7 @@ function mealCardHTML(m){
         <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">kcal</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
-        <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
+        <button class="meal-edit-btn" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
         <button class="meal-edit-btn meal-delete-btn" onclick="if(confirm('Eliminare questo pasto?'))deleteMeal('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
       </div>
     </div>`;
@@ -6103,9 +6109,6 @@ function mealCardHTML(m){
           <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);font-weight:700;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">Ingredienti</div>
           ${itemsListHtml}
         </div>` : ''}
-      <div style="margin-top:10px;">
-        <input type="time" value="${m.time?m.time.slice(0,5):''}" class="meal-time-inp" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario" style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:80px;padding:0;"/>
-      </div>
     </div>` : '';
 
   const inner = `<div class="meal-card-v2" style="display:block;padding:0;">
@@ -6162,7 +6165,10 @@ const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8f
 // FASE 2 — SMART INGREDIENT FORM (registrazione pasto a righe)
 // ═══════════════════════════════════════════════════════════
 function _initSmartForm() {
-  if (!ST.smartForm) ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+  if (!ST.smartForm) ST.smartForm = {
+    items: [], freeText: '', notes: '', analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '',
+  };
 }
 let _smartTempId = 1;
 function _newItemId() { return 'tmp_' + (_smartTempId++); }
@@ -6297,8 +6303,73 @@ window.smartRecalcRow = async function(tempId) {
 };
 
 window.smartResetForm = function() {
-  ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+  ST.smartForm = {
+    items: [], freeText: '', notes: '', analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '',
+  };
   renderOggi();
+};
+
+// FASE 4 Edit pasto via Smart Ingredient
+window.smartOpenEdit = async function(date, mealId) {
+  const day = ST.db && ST.db.days && ST.db.days[date];
+  if (!day) { alert('Giorno non trovato'); return; }
+  const meal = (day.meals || []).find(m => (m.id === mealId) || (m.local_id === mealId));
+  if (!meal) { alert('Pasto non trovato'); return; }
+
+  // Pre-carica gli items se non già in memoria
+  let items = meal.items || [];
+  if (items.length === 0) {
+    const {data: dbItems} = await supa.from('meal_items')
+      .select('*')
+      .eq('meal_id', mealId)
+      .eq('user_id', ST.user.id)
+      .order('sort_order', {ascending: true});
+    items = dbItems || [];
+  }
+
+  // Pasto monolitico legacy: crea 1 item dalla descrizione
+  if (items.length === 0) {
+    items = [{
+      id: 'legacy_' + mealId,
+      name: meal.description || 'Pasto',
+      quantity: 0, unit: 'g',
+      kcal: meal.kcal || 0, protein: meal.protein || 0, carbs: meal.carbs || 0, fat: meal.fat || 0,
+      source: 'manual', sort_order: 0,
+    }];
+  }
+
+  ST.smartForm = {
+    items: items.map((it, idx) => ({
+      tempId: _newItemId(),
+      _existingId: it.id,
+      name: it.name || '',
+      quantity: Number(it.quantity) || 0,
+      unit: it.unit || 'g',
+      kcal: Number(it.kcal) || 0,
+      protein: Number(it.protein) || 0,
+      carbs: Number(it.carbs) || 0,
+      fat: Number(it.fat) || 0,
+      expanded: false, calculating: false,
+      sortOrder: idx, source: it.source || 'manual',
+    })),
+    freeText: '',
+    notes: meal.notes || '',
+    analyzing: false,
+    editingMealId: mealId,
+    editingSlot: meal.slot,
+    editingTime: meal.time || null,
+    editingDescription: meal.description || '',
+  };
+
+  ST.logSlot = meal.slot;
+  ST.logOpen = true;
+  renderOggi();
+
+  setTimeout(() => {
+    const formEl = document.getElementById('registra-pasto-form');
+    if (formEl && formEl.scrollIntoView) formEl.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 100);
 };
 
 // FASE 3 Timeline doppio collasso
@@ -6317,57 +6388,116 @@ window.toggleMealItem = function(itemId) {
 window.smartSavePasto = async function() {
   _initSmartForm();
   if (!_smartHasContent()) { alert('Aggiungi almeno un ingrediente'); return; }
-  if (!ST.logSlot) { alert('Seleziona uno slot pasto'); return; }
+  const isEdit = !!ST.smartForm.editingMealId;
+  const slot = isEdit ? (ST.smartForm.editingSlot || ST.logSlot) : ST.logSlot;
+  if (!slot) { alert('Seleziona uno slot pasto'); return; }
   const items = ST.smartForm.items.filter(i => i.name && i.name.trim());
   const tot = _smartTotals();
   const summary = _smartSummaryDesc();
-  const timeInp = document.getElementById('log-time');
-  const hhmm = (timeInp && timeInp.value) || (new Date()).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const time = (() => {
+    const inputEl = document.getElementById('log-time');
+    if (inputEl && inputEl.value) return inputEl.value;
+    if (isEdit && ST.smartForm.editingTime) return ST.smartForm.editingTime;
+    const now = new Date();
+    return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  })();
+
   try {
-    const {data: meal, error: mealErr} = await supa.from('meals').insert({
-      user_id: ST.user.id,
-      date: ST.activeDay,
-      time: hhmm,
-      slot: ST.logSlot,
-      description: summary,
-      kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
-      protein: Math.max(0, Math.round(tot.protein * 10) / 10),
-      carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
-      fat: Math.max(0, Math.round(tot.fat * 10) / 10),
-      notes: ST.smartForm.notes || null,
-    }).select().single();
-    if (mealErr) throw mealErr;
-    const itemsPayload = items.map((it, idx) => ({
-      meal_id: meal.id,
-      user_id: ST.user.id,
-      name: it.name.trim(),
-      quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
-      unit: it.unit || 'g',
-      kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
-      protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
-      carbs: Math.max(0, Math.round((Number(it.carbs)||0) * 10) / 10),
-      fat: Math.max(0, Math.round((Number(it.fat)||0) * 10) / 10),
-      source: it.source || 'manual',
-      sort_order: idx,
-    }));
-    const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
-    if (itemsErr) {
-      // Rollback: cancella il meal orfano
-      await supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id);
-      throw itemsErr;
+    if (isEdit) {
+      // ── MODALITÀ EDIT ──
+      const mealId = ST.smartForm.editingMealId;
+      const {error: updErr} = await supa.from('meals').update({
+        time, slot,
+        description: summary,
+        kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
+        protein: Math.max(0, Math.round(tot.protein * 10) / 10),
+        carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
+        fat: Math.max(0, Math.round(tot.fat * 10) / 10),
+        notes: ST.smartForm.notes || null,
+      }).eq('id', mealId).eq('user_id', ST.user.id);
+      if (updErr) throw updErr;
+      const {error: delErr} = await supa.from('meal_items')
+        .delete().eq('meal_id', mealId).eq('user_id', ST.user.id);
+      if (delErr) throw delErr;
+      const itemsPayload = items.map((it, idx) => ({
+        meal_id: mealId,
+        user_id: ST.user.id,
+        name: it.name.trim(),
+        quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
+        unit: it.unit || 'g',
+        kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
+        protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
+        carbs: Math.max(0, Math.round((Number(it.carbs)||0) * 10) / 10),
+        fat: Math.max(0, Math.round((Number(it.fat)||0) * 10) / 10),
+        source: it.source || 'manual',
+        sort_order: idx,
+      }));
+      const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
+      if (itemsErr) throw itemsErr;
+      // Aggiorna stato locale
+      const day = ST.db.days[ST.activeDay];
+      if (day) {
+        const idx = (day.meals || []).findIndex(m => m.id === mealId || m.local_id === mealId);
+        if (idx >= 0) {
+          day.meals[idx] = {
+            ...day.meals[idx],
+            time, slot,
+            description: summary,
+            kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
+            protein: Math.max(0, Math.round(tot.protein * 10) / 10),
+            carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
+            fat: Math.max(0, Math.round(tot.fat * 10) / 10),
+            notes: ST.smartForm.notes || null,
+            items: savedItems || [],
+          };
+        }
+      }
+      showToast('Pasto aggiornato', '✏️');
+    } else {
+      // ── MODALITÀ NUOVO PASTO ──
+      const {data: meal, error: mealErr} = await supa.from('meals').insert({
+        user_id: ST.user.id,
+        date: ST.activeDay,
+        time, slot,
+        description: summary,
+        kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
+        protein: Math.max(0, Math.round(tot.protein * 10) / 10),
+        carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
+        fat: Math.max(0, Math.round(tot.fat * 10) / 10),
+        notes: ST.smartForm.notes || null,
+      }).select().single();
+      if (mealErr) throw mealErr;
+      const itemsPayload = items.map((it, idx) => ({
+        meal_id: meal.id,
+        user_id: ST.user.id,
+        name: it.name.trim(),
+        quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
+        unit: it.unit || 'g',
+        kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
+        protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
+        carbs: Math.max(0, Math.round((Number(it.carbs)||0) * 10) / 10),
+        fat: Math.max(0, Math.round((Number(it.fat)||0) * 10) / 10),
+        source: it.source || 'manual',
+        sort_order: idx,
+      }));
+      const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
+      if (itemsErr) {
+        // Rollback meal orfano
+        await supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id);
+        throw itemsErr;
+      }
+      const d = getDay(ST.activeDay);
+      d.meals.push({
+        id: meal.id, local_id: meal.id,
+        slot, description: summary, time,
+        kcal: meal.kcal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
+        notes: meal.notes,
+        items: savedItems || [],
+      });
+      showToast('Pasto registrato');
     }
-    // In-memory push (stesso pattern di logMeal) + items con id reali per timeline Fase 3
-    const d = getDay(ST.activeDay);
-    d.meals.push({
-      id: meal.id, local_id: meal.id,
-      slot: ST.logSlot, description: summary, time: hhmm,
-      kcal: meal.kcal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
-      notes: meal.notes,
-      items: savedItems || [],
-    });
-    ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+    ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false, editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
     ST.logOpen = false;
-    showToast('Pasto registrato');
     renderOggi();
     saveCache();
   } catch (e) {
@@ -6463,11 +6593,15 @@ function renderRegistraPasto() {
       <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
     </div>` : '';
 
+  const isEditing = !!ST.smartForm.editingMealId;
+
   return `
-    <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;">
+    <div id="registra-pasto-form" data-smart-form-root="1" style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <span style="font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">+ Registra pasto · ${slotLabel}</span>
+        <span style="font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:${isEditing?'var(--acc)':'var(--t2)'};">${isEditing?'✏️ Modifica pasto':'+ Registra pasto'} · ${slotLabel}</span>
       </div>
+
+      ${isEditing ? `<button onclick="smartResetForm()" style="background:transparent;border:0.5px solid var(--s3);border-radius:6px;padding:6px 12px;font-size:11px;color:var(--t2);cursor:pointer;margin-bottom:10px;">← Annulla modifica</button>` : ''}
 
       <div style="font-size:11px;color:var(--t3);margin-bottom:6px;">Cosa hai mangiato?</div>
       <input type="text" id="smart-freetext" value="${esc(ST.smartForm.freeText||'')}" placeholder='Es. &quot;Pasta al tonno con olio&quot;' oninput="smartFreeTextChange(this.value)" style="width:100%;padding:10px;border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;margin-bottom:8px;box-sizing:border-box;" />
@@ -6574,7 +6708,7 @@ function renderOggi(){
       html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
     } else {
       // FASE 2 Smart Ingredient form: chrome esterno (slot tabs + time + close) + smart form
-      html+=`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
+      html+=`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
     }
 
     // Timeline cronologica unificata: pasti + integratori
@@ -8197,7 +8331,7 @@ function showToast(msg, emoji='✅') {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-function setLogSlot(id){ST.logSlot=id;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false};renderOggi();}
+function setLogSlot(id){ST.logSlot=id;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();}
 function buildSuggestionBox() {
   // Mappa slot app -> slot piano AI
   const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
