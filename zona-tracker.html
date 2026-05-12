@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 20:46';
+const APP_VERSION = '2026.05.12 · 21:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1245,7 +1245,8 @@ const ST = {
   trainLogOpen: null,
   trainCountdown: null,
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
-  trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — countdown per esercizio recupero
+  trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
+  trainRecoveryFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance G3/G6
   trainActivation: [false, false, false],
   trainActivationTimers: [
     { remaining:120, total:120, running:false },
@@ -3271,123 +3272,239 @@ const TRAINING_SESSIONS = {
     ]
   },
   recoveryUpper:{
-    id:'recoveryUpper', name:'Recupero Upper', type:'Recupero', rir:null,
-    label:'Recupero Upper — G3', rest:null,
+    id:'recoveryUpper', name:'Recupero Mobilità', type:'Recupero', rir:null,
+    label:'Recupero Mobilità — G3', rest:null,
     exercises:[
-      {
-        name:'Mobilità spalle e colonna toracica', sets:1, reps:'7 min',
-        eq:'Tappetino',
-        setup:[
-          "Sequenza dinamica focalizzata su spalle, scapole e colonna toracica per recuperare dopo Upper A."
-        ],
-        execution:[
-          "Circonduzioni spalle ampie (avanti e dietro)",
-          "Apertura toracica supina con braccia a candeliere",
-          "Cat-cow con focus rotazione toracica"
-        ],
-        commonErrors:[
-          "Movimenti troppo veloci o a scatti",
-          "Trattenere il respiro",
-          "Forzare il range in fasi di rigidità"
-        ],
-        muscles:['spalle','scapole','colonna toracica','trapezio']
-      },
-      {
-        name:'Stretching dorsali e pettorali', sets:1, reps:'7 min',
-        eq:'Tappetino',
-        setup:[
-          "Allungamento statico catena anteriore alta e dorsali, già lavorati in Upper A."
-        ],
-        execution:[
-          "Stretching dorsale al muro (mani in alto, anche indietro)",
-          "Stretching pettorale su angolo o porta",
-          "Tenuta 45-60 sec per posizione"
-        ],
-        commonErrors:[
-          "Rimbalzare nello stretch",
-          "Trattenere il respiro",
-          "Forzare oltre il punto di tensione"
-        ],
-        muscles:['gran dorsale','pettorale','deltoidi anteriori']
-      },
-      {
-        name:'Stretching glutei e lombari', sets:1, reps:'6 min',
-        eq:'Tappetino',
-        setup:[
-          "Decompressione bassa schiena e glutei dopo Lower A (Bulgarian, RDL, hip thrust)."
-        ],
-        execution:[
-          "Pigeon pose o figura 4 supino",
-          "Knee-to-chest singola e doppia",
-          "Tenuta 45-60 sec per lato"
-        ],
-        commonErrors:[
-          "Forzare la rotazione esterna",
-          "Sollevare la spalla opposta dal pavimento",
-          "Trattenere il respiro"
-        ],
-        muscles:['glutei','piriforme','quadrato dei lombi']
-      }
+      // Blocco 1 — Attivazione (2 min)
+      { name:'Respirazione diaframmatica', duration_sec:60, block:'Attivazione',
+        muscles:['diaframma'],
+        execution:['Sdraiato supino o seduto comodo','Mano sulla pancia: inspira gonfiando per 4 sec','Espira lento per 6 sec lasciando scendere'],
+        commonErrors:['Respirare di petto invece che di pancia','Trattenere il respiro tra inspiro ed espiro','Tempi troppo veloci'] },
+      { name:'Vacuum addominale', duration_sec:60, block:'Attivazione',
+        muscles:['trasverso addominale'],
+        execution:['Espira completamente svuotando i polmoni','Risucchia l\'ombelico verso la colonna','Mantieni 10-15 sec poi rilascia'],
+        commonErrors:['Trattenere il respiro durante la tenuta','Inarcare la lombare','Spingere fuori invece di tirare dentro'] },
+      // Blocco 2 — Spalle e colonna toracica (6 min)
+      { name:'Circonduzioni spalle avanti', duration_sec:30, block:'Spalle e colonna toracica',
+        muscles:['deltoidi','trapezio'],
+        execution:['In piedi, braccia rilassate lungo il busto','Ruota le spalle in avanti con movimento ampio','Mantieni ritmo controllato'],
+        commonErrors:['Movimenti a scatti','Coinvolgere il collo','Range incompleto'] },
+      { name:'Circonduzioni spalle indietro', duration_sec:30, block:'Spalle e colonna toracica',
+        muscles:['deltoidi','trapezio'],
+        execution:['Stesso movimento in senso opposto','Spingi le scapole indietro e in basso','Apri il petto durante la fase posteriore'],
+        commonErrors:['Iperestendere la lombare','Movimenti troppo rapidi','Spalle che salgono verso le orecchie'] },
+      { name:'Scapular pull-ups a vuoto', duration_sec:45, block:'Spalle e colonna toracica',
+        muscles:['scapole','romboidi','trapezio medio'],
+        execution:['In piedi, braccia alzate sopra la testa','Tira le scapole giù e indietro come per le trazioni','Tieni 2 sec poi rilascia'],
+        commonErrors:['Piegare i gomiti','Spalle che salgono','Compensare con la lombare'] },
+      { name:'Apertura toracica supina (candeliere)', duration_sec:60, block:'Spalle e colonna toracica',
+        muscles:['petto','deltoidi anteriori','colonna toracica'],
+        execution:['Sdraiato supino, braccia a 90° a candeliere','Lascia cadere le braccia verso il pavimento','Respira nel petto aperto'],
+        commonErrors:['Forzare le braccia oltre il range','Iperestendere la lombare','Trattenere il respiro'] },
+      { name:'Thread the needle dx', duration_sec:45, block:'Spalle e colonna toracica', side:'dx',
+        muscles:['colonna toracica','scapole','romboidi'],
+        execution:['In quadrupedia','Infila il braccio destro sotto al sinistro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
+        commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
+      { name:'Thread the needle sx', duration_sec:45, block:'Spalle e colonna toracica', side:'sx',
+        muscles:['colonna toracica','scapole','romboidi'],
+        execution:['In quadrupedia','Infila il braccio sinistro sotto al destro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
+        commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
+      { name:'Rotazione toracica seduto dx', duration_sec:30, block:'Spalle e colonna toracica', side:'dx',
+        muscles:['colonna toracica','obliqui'],
+        execution:['Seduto a gambe incrociate','Mano sinistra sul ginocchio destro, destra dietro la schiena','Ruota dolcemente verso destra'],
+        commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
+      { name:'Rotazione toracica seduto sx', duration_sec:30, block:'Spalle e colonna toracica', side:'sx',
+        muscles:['colonna toracica','obliqui'],
+        execution:['Seduto a gambe incrociate','Mano destra sul ginocchio sinistro, sinistra dietro la schiena','Ruota dolcemente verso sinistra'],
+        commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
+      // Blocco 3 — Anche (5 min)
+      { name:'Hip CARs dx', duration_sec:45, block:'Anche', side:'dx',
+        muscles:['anche','glutei','flessori'],
+        execution:['In quadrupedia o appoggio','Solleva ginocchio destro lateralmente','Disegna cerchi ampi e controllati'],
+        commonErrors:['Velocità eccessiva','Compensare con il bacino','Range parziale'] },
+      { name:'Hip CARs sx', duration_sec:45, block:'Anche', side:'sx',
+        muscles:['anche','glutei','flessori'],
+        execution:['In quadrupedia o appoggio','Solleva ginocchio sinistro lateralmente','Disegna cerchi ampi e controllati'],
+        commonErrors:['Velocità eccessiva','Compensare con il bacino','Range parziale'] },
+      { name:'90/90 hip switch', duration_sec:60, block:'Anche',
+        muscles:['anche','glutei','adduttori'],
+        execution:['Seduto con gambe in 90/90 (una avanti, una di lato)','Alterna ruotando entrambe le ginocchia lato per lato','Mantieni il busto eretto'],
+        commonErrors:['Curvare la schiena','Ginocchia che si sollevano','Velocità troppo elevata'] },
+      { name:'Affondo basso con rotazione dx', duration_sec:45, block:'Anche', side:'dx',
+        muscles:['flessori','glutei','colonna toracica'],
+        execution:['Affondo profondo gamba destra avanti','Mano sinistra a terra interna al piede','Ruota braccio destro verso il cielo aprendo il petto'],
+        commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
+      { name:'Affondo basso con rotazione sx', duration_sec:45, block:'Anche', side:'sx',
+        muscles:['flessori','glutei','colonna toracica'],
+        execution:['Affondo profondo gamba sinistra avanti','Mano destra a terra interna al piede','Ruota braccio sinistro verso il cielo aprendo il petto'],
+        commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
+      { name:'Cossack squat alternati', duration_sec:60, block:'Anche',
+        muscles:['adduttori','glutei','quadricipiti'],
+        execution:['Gambe larghe, mani in preghiera davanti','Piega una gamba spingendo i glutei indietro, l\'altra dritta','Alterna lato per lato'],
+        commonErrors:['Tallone che si solleva sul lato piegato','Schiena curva','Velocità eccessiva'] },
+      // Blocco 4 — Caviglie e polpacci (3 min)
+      { name:'Knee-to-wall dx', duration_sec:30, block:'Caviglie e polpacci', side:'dx',
+        muscles:['caviglie','soleo'],
+        execution:['Davanti al muro, piede destro avanti','Spingi il ginocchio verso il muro mantenendo il tallone a terra','Mantieni 2-3 sec e ripeti'],
+        commonErrors:['Tallone che si solleva','Ginocchio che cade in dentro','Compensare con il bacino'] },
+      { name:'Knee-to-wall sx', duration_sec:30, block:'Caviglie e polpacci', side:'sx',
+        muscles:['caviglie','soleo'],
+        execution:['Davanti al muro, piede sinistro avanti','Spingi il ginocchio verso il muro mantenendo il tallone a terra','Mantieni 2-3 sec e ripeti'],
+        commonErrors:['Tallone che si solleva','Ginocchio che cade in dentro','Compensare con il bacino'] },
+      { name:'Circonduzioni caviglie dx', duration_sec:30, block:'Caviglie e polpacci', side:'dx',
+        muscles:['caviglie'],
+        execution:['Seduto o in piedi','Solleva il piede destro','Disegna cerchi ampi in entrambi i sensi'],
+        commonErrors:['Movimenti troppo veloci','Range parziale','Coinvolgere il ginocchio'] },
+      { name:'Circonduzioni caviglie sx', duration_sec:30, block:'Caviglie e polpacci', side:'sx',
+        muscles:['caviglie'],
+        execution:['Seduto o in piedi','Solleva il piede sinistro','Disegna cerchi ampi in entrambi i sensi'],
+        commonErrors:['Movimenti troppo veloci','Range parziale','Coinvolgere il ginocchio'] },
+      { name:'Calf pump dinamico', duration_sec:60, block:'Caviglie e polpacci',
+        muscles:['polpacci','soleo','gastrocnemio'],
+        execution:['In piedi a piedi paralleli','Sollevati sulle punte, scendi sui talloni','Ritmo costante e controllato'],
+        commonErrors:['Movimento troppo rapido','Range parziale','Sbilanciamento del busto'] },
+      // Blocco 5 — Integrazione globale (4 min)
+      { name:'Cat-Cow', duration_sec:60, block:'Integrazione globale',
+        muscles:['colonna vertebrale','addominali'],
+        execution:['In quadrupedia','Inspira incurvando la schiena verso il basso (cow)','Espira inarcando verso l\'alto (cat)'],
+        commonErrors:['Movimenti a scatti','Range parziale','Tempo di respiro non sincronizzato'] },
+      { name:'World\'s greatest stretch dx', duration_sec:60, block:'Integrazione globale', side:'dx',
+        muscles:['flessori','colonna toracica','femorali'],
+        execution:['Affondo gamba destra avanti, mani a terra ai lati del piede','Mano sinistra a terra, ruota braccio destro al cielo','Distendi la gamba destra per stiramento femorali'],
+        commonErrors:['Movimento troppo veloce','Schiena curva durante l\'estensione','Trattenere il respiro'] },
+      { name:'World\'s greatest stretch sx', duration_sec:60, block:'Integrazione globale', side:'sx',
+        muscles:['flessori','colonna toracica','femorali'],
+        execution:['Affondo gamba sinistra avanti, mani a terra ai lati del piede','Mano destra a terra, ruota braccio sinistro al cielo','Distendi la gamba sinistra per stiramento femorali'],
+        commonErrors:['Movimento troppo veloce','Schiena curva durante l\'estensione','Trattenere il respiro'] },
+      { name:'Down dog → up dog flow', duration_sec:60, block:'Integrazione globale',
+        muscles:['spalle','femorali','colonna'],
+        execution:['Da posizione down dog (V capovolta)','Avanza verso up dog spingendo le spalle in fuori','Alterna fluidamente respirando'],
+        commonErrors:['Spalle che salgono','Lombare iperestesa in up dog','Tallone troppo lontano dal pavimento in down dog'] }
     ]
   },
   recoveryLower:{
-    id:'recoveryLower', name:'Recupero Lower', type:'Recupero', rir:null,
-    label:'Recupero Lower — G6', rest:null,
+    id:'recoveryLower', name:'Recupero Stretching', type:'Recupero', rir:null,
+    label:'Recupero Stretching — G6', rest:null,
     exercises:[
-      {
-        name:'Mobilità anche e caviglie', sets:1, reps:'7 min',
-        eq:'Tappetino',
-        setup:[
-          "Sequenza dinamica per anche e caviglie, lavorate intensamente in Lower B (squat, single leg RDL, calf raise)."
-        ],
-        execution:[
-          "Hip CARs (Controlled Articular Rotations)",
-          "Affondi profondi con rotazione",
-          "Mobilizzazione caviglia in dorsiflessione (knee-to-wall)"
-        ],
-        commonErrors:[
-          "Range troppo limitato o troppo forzato",
-          "Tallone che si stacca durante affondo",
-          "Compensi con la bassa schiena"
-        ],
-        muscles:['anche','caviglie','adduttori','tibiali']
-      },
-      {
-        name:'Stretching quadricipiti e flessori anca', sets:1, reps:'7 min',
-        eq:'Tappetino',
-        setup:[
-          "Allungamento statico catena anteriore coscia, accorciata da squat e Bulgarian."
-        ],
-        execution:[
-          "Affondo basso con stiramento psoas (couch stretch)",
-          "Quad stretch in piedi o supino laterale",
-          "Tenuta 45-60 sec per lato"
-        ],
-        commonErrors:[
-          "Iperestendere la lombare per compensare",
-          "Bacino non in retroversione durante couch stretch",
-          "Trattenere il respiro"
-        ],
-        muscles:['quadricipite','psoas','retto femorale']
-      },
-      {
-        name:'Stretching femorali e polpacci', sets:1, reps:'6 min',
-        eq:'Tappetino',
-        setup:[
-          "Allungamento catena posteriore gamba, accorciata da RDL, leg curl, calf raise."
-        ],
-        execution:[
-          "Stretching femorali da seduto o supino",
-          "Stretching polpaccio al muro (gamba dritta + piegata)",
-          "Tenuta 45-60 sec per posizione"
-        ],
-        commonErrors:[
-          "Curvare la schiena per arrivare ai piedi",
-          "Tallone che si solleva nello stretching polpaccio",
-          "Forzare oltre il dolore"
-        ],
-        muscles:['femorali','gastrocnemio','soleo']
-      }
+      // Blocco 1 — Attivazione (2 min)
+      { name:'Respirazione diaframmatica', duration_sec:60, block:'Attivazione',
+        muscles:['diaframma'],
+        execution:['Sdraiato supino o seduto comodo','Mano sulla pancia: inspira gonfiando per 4 sec','Espira lento per 6 sec lasciando scendere'],
+        commonErrors:['Respirare di petto invece che di pancia','Trattenere il respiro tra inspiro ed espiro','Tempi troppo veloci'] },
+      { name:'Vacuum addominale', duration_sec:60, block:'Attivazione',
+        muscles:['trasverso addominale'],
+        execution:['Espira completamente svuotando i polmoni','Risucchia l\'ombelico verso la colonna','Mantieni 10-15 sec poi rilascia'],
+        commonErrors:['Trattenere il respiro durante la tenuta','Inarcare la lombare','Spingere fuori invece di tirare dentro'] },
+      // Blocco 2 — Catena posteriore alta (4 min)
+      { name:'Stretching dorsale al muro', duration_sec:60, block:'Catena posteriore alta',
+        muscles:['gran dorsale','tricipiti'],
+        execution:['Braccia tese verso l\'alto contro il muro','Spingi le anche indietro mantenendo le braccia in linea','Senti lo stiramento del dorso'],
+        commonErrors:['Inarcare la lombare','Spalle che salgono','Trattenere il respiro'] },
+      { name:'Stretching collo lato dx', duration_sec:30, block:'Catena posteriore alta', side:'dx',
+        muscles:['trapezio superiore','scaleni'],
+        execution:['Seduto o in piedi, schiena dritta','Inclina la testa verso la spalla destra','Mano destra può accompagnare leggermente sopra l\'orecchio sinistro'],
+        commonErrors:['Spalle che salgono','Forzare con troppa pressione','Ruotare anziché inclinare'] },
+      { name:'Stretching collo lato sx', duration_sec:30, block:'Catena posteriore alta', side:'sx',
+        muscles:['trapezio superiore','scaleni'],
+        execution:['Seduto o in piedi, schiena dritta','Inclina la testa verso la spalla sinistra','Mano sinistra può accompagnare leggermente sopra l\'orecchio destro'],
+        commonErrors:['Spalle che salgono','Forzare con troppa pressione','Ruotare anziché inclinare'] },
+      { name:'Stretching trapezio superiore dx', duration_sec:30, block:'Catena posteriore alta', side:'dx',
+        muscles:['trapezio superiore'],
+        execution:['Mano destra dietro la schiena','Inclina la testa verso sinistra','Mano sinistra sopra l\'orecchio destro accompagna il movimento'],
+        commonErrors:['Spalla che si solleva','Forzare in rotazione','Trattenere il respiro'] },
+      { name:'Stretching trapezio superiore sx', duration_sec:30, block:'Catena posteriore alta', side:'sx',
+        muscles:['trapezio superiore'],
+        execution:['Mano sinistra dietro la schiena','Inclina la testa verso destra','Mano destra sopra l\'orecchio sinistro accompagna il movimento'],
+        commonErrors:['Spalla che si solleva','Forzare in rotazione','Trattenere il respiro'] },
+      { name:'Child\'s pose con braccia estese', duration_sec:60, block:'Catena posteriore alta',
+        muscles:['gran dorsale','colonna','glutei'],
+        execution:['Ginocchia larghe, glutei sui talloni','Allunga le braccia in avanti, fronte a terra','Respira nel petto aperto'],
+        commonErrors:['Tallone che si stacca','Spalle che salgono','Schiena curva eccessivamente'] },
+      // Blocco 3 — Catena anteriore alta (3 min)
+      { name:'Stretching pettorale su angolo dx', duration_sec:45, block:'Catena anteriore alta', side:'dx',
+        muscles:['pettorale','deltoide anteriore'],
+        execution:['Avambraccio destro contro stipite o angolo','Gomito a 90°, ruota il busto verso sinistra','Senti lo stiramento sul petto'],
+        commonErrors:['Forzare oltre il punto di tensione','Spalla che si solleva','Trattenere il respiro'] },
+      { name:'Stretching pettorale su angolo sx', duration_sec:45, block:'Catena anteriore alta', side:'sx',
+        muscles:['pettorale','deltoide anteriore'],
+        execution:['Avambraccio sinistro contro stipite o angolo','Gomito a 90°, ruota il busto verso destra','Senti lo stiramento sul petto'],
+        commonErrors:['Forzare oltre il punto di tensione','Spalla che si solleva','Trattenere il respiro'] },
+      { name:'Stretching bicipite al muro dx', duration_sec:30, block:'Catena anteriore alta', side:'dx',
+        muscles:['bicipite','avambraccio'],
+        execution:['Braccio destro teso all\'indietro, palmo sul muro','Ruota lentamente il busto a sinistra','Senti tensione sul bicipite'],
+        commonErrors:['Spalla anteriorizzata','Forzare in rotazione','Bloccare il respiro'] },
+      { name:'Stretching bicipite al muro sx', duration_sec:30, block:'Catena anteriore alta', side:'sx',
+        muscles:['bicipite','avambraccio'],
+        execution:['Braccio sinistro teso all\'indietro, palmo sul muro','Ruota lentamente il busto a destra','Senti tensione sul bicipite'],
+        commonErrors:['Spalla anteriorizzata','Forzare in rotazione','Bloccare il respiro'] },
+      { name:'Cobra pose', duration_sec:30, block:'Catena anteriore alta',
+        muscles:['addominali','flessori','petto'],
+        execution:['Prono, mani sotto le spalle','Spingi il petto verso l\'alto attivando la schiena','Pelvi ben appoggiata a terra'],
+        commonErrors:['Spingere solo con le braccia','Iperestendere il collo','Pelvi che si solleva'] },
+      // Blocco 4 — Glutei e lombari (4 min)
+      { name:'Pigeon pose dx', duration_sec:60, block:'Glutei e lombari', side:'dx',
+        muscles:['glutei','piriforme'],
+        execution:['Da quadrupedia, porta il ginocchio destro in avanti angolato','Gamba sinistra distesa indietro','Adagia il busto in avanti respirando'],
+        commonErrors:['Bacino sbilanciato','Forzare la rotazione','Spalle che salgono'] },
+      { name:'Pigeon pose sx', duration_sec:60, block:'Glutei e lombari', side:'sx',
+        muscles:['glutei','piriforme'],
+        execution:['Da quadrupedia, porta il ginocchio sinistro in avanti angolato','Gamba destra distesa indietro','Adagia il busto in avanti respirando'],
+        commonErrors:['Bacino sbilanciato','Forzare la rotazione','Spalle che salgono'] },
+      { name:'Figura 4 supino dx', duration_sec:45, block:'Glutei e lombari', side:'dx',
+        muscles:['glutei','piriforme'],
+        execution:['Supino, ginocchia piegate','Caviglia destra sul ginocchio sinistro','Tira la coscia sinistra verso di te'],
+        commonErrors:['Sollevare la spalla destra dal pavimento','Curvare la schiena','Trattenere il respiro'] },
+      { name:'Figura 4 supino sx', duration_sec:45, block:'Glutei e lombari', side:'sx',
+        muscles:['glutei','piriforme'],
+        execution:['Supino, ginocchia piegate','Caviglia sinistra sul ginocchio destro','Tira la coscia destra verso di te'],
+        commonErrors:['Sollevare la spalla sinistra dal pavimento','Curvare la schiena','Trattenere il respiro'] },
+      { name:'Knee-to-chest doppia', duration_sec:30, block:'Glutei e lombari',
+        muscles:['lombari','glutei'],
+        execution:['Supino, abbraccia entrambe le ginocchia al petto','Lascia che la lombare si appiattisca','Respira lentamente'],
+        commonErrors:['Sollevare la testa','Forzare oltre comfort','Spalle che si bloccano'] },
+      // Blocco 5 — Catena anteriore gamba (3 min)
+      { name:'Couch stretch dx', duration_sec:60, block:'Catena anteriore gamba', side:'dx',
+        muscles:['quadricipiti','psoas'],
+        execution:['Ginocchio destro a terra contro un muro o divano','Piede destro contro la parete, gamba sinistra in affondo','Bacino in retroversione, busto eretto'],
+        commonErrors:['Iperestendere la lombare','Bacino non in retroversione','Tallone anteriore che si solleva'] },
+      { name:'Couch stretch sx', duration_sec:60, block:'Catena anteriore gamba', side:'sx',
+        muscles:['quadricipiti','psoas'],
+        execution:['Ginocchio sinistro a terra contro un muro o divano','Piede sinistro contro la parete, gamba destra in affondo','Bacino in retroversione, busto eretto'],
+        commonErrors:['Iperestendere la lombare','Bacino non in retroversione','Tallone anteriore che si solleva'] },
+      { name:'Quad stretch in piedi dx', duration_sec:30, block:'Catena anteriore gamba', side:'dx',
+        muscles:['quadricipiti'],
+        execution:['In piedi, afferra caviglia destra dietro','Tira il tallone verso il gluteo','Mantieni le ginocchia vicine'],
+        commonErrors:['Inarcare la lombare','Ginocchio che si apre in fuori','Sbilanciare il busto'] },
+      { name:'Quad stretch in piedi sx', duration_sec:30, block:'Catena anteriore gamba', side:'sx',
+        muscles:['quadricipiti'],
+        execution:['In piedi, afferra caviglia sinistra dietro','Tira il tallone verso il gluteo','Mantieni le ginocchia vicine'],
+        commonErrors:['Inarcare la lombare','Ginocchio che si apre in fuori','Sbilanciare il busto'] },
+      // Blocco 6 — Catena posteriore gamba (3 min)
+      { name:'Stretching femorali seduto', duration_sec:60, block:'Catena posteriore gamba',
+        muscles:['femorali'],
+        execution:['Seduto, gambe distese davanti','Inclina il busto in avanti dall\'anca','Allunga le mani verso le punte mantenendo schiena dritta'],
+        commonErrors:['Curvare la schiena','Forzare le mani sui piedi','Trattenere il respiro'] },
+      { name:'Stretching polpaccio gamba dritta dx', duration_sec:30, block:'Catena posteriore gamba', side:'dx',
+        muscles:['gastrocnemio'],
+        execution:['Affondo gamba destra dietro, ginocchio dritto','Tallone a terra, busto eretto','Spingi anche in avanti per aumentare lo stretch'],
+        commonErrors:['Tallone che si solleva','Ginocchio piegato','Compensare con la lombare'] },
+      { name:'Stretching polpaccio gamba dritta sx', duration_sec:30, block:'Catena posteriore gamba', side:'sx',
+        muscles:['gastrocnemio'],
+        execution:['Affondo gamba sinistra dietro, ginocchio dritto','Tallone a terra, busto eretto','Spingi anche in avanti per aumentare lo stretch'],
+        commonErrors:['Tallone che si solleva','Ginocchio piegato','Compensare con la lombare'] },
+      { name:'Stretching polpaccio gamba piegata dx', duration_sec:30, block:'Catena posteriore gamba', side:'dx',
+        muscles:['soleo'],
+        execution:['Affondo gamba destra dietro, ginocchio leggermente piegato','Tallone a terra','Senti lo stretch più in basso, sul soleo'],
+        commonErrors:['Tallone che si solleva','Ginocchio troppo piegato','Curvare la schiena'] },
+      { name:'Stretching polpaccio gamba piegata sx', duration_sec:30, block:'Catena posteriore gamba', side:'sx',
+        muscles:['soleo'],
+        execution:['Affondo gamba sinistra dietro, ginocchio leggermente piegato','Tallone a terra','Senti lo stretch più in basso, sul soleo'],
+        commonErrors:['Tallone che si solleva','Ginocchio troppo piegato','Curvare la schiena'] },
+      // Blocco 7 — Chiusura (1 min)
+      { name:'Savasana con respirazione profonda', duration_sec:60, block:'Chiusura',
+        muscles:['tutto il corpo'],
+        execution:['Supino, braccia ai lati, palmi rivolti verso l\'alto','Respira profondamente nel diaframma','Rilassa ogni parte del corpo, dalle dita dei piedi alla testa'],
+        commonErrors:['Tensioni residue alle spalle o mascella','Mente troppo attiva','Tempo troppo breve per rilassarsi'] }
     ]
   },
   rest:{
@@ -4498,6 +4615,120 @@ async function saveTrainingSet(){
   }
 }
 
+// ── Renderer dedicato per le sessioni di recupero G3/G6 (countdown ibrido auto-advance) ──
+function _renderRecoverySection(s, sel){
+  if(!ST.trainRecoveryFlow) ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+  const flow = ST.trainRecoveryFlow;
+  const exs = s.exercises || [];
+  const totalSecAll = exs.reduce((a,e)=>a+(e.duration_sec||0),0);
+  const totMin = Math.round(totalSecAll/60);
+  const doneCount = exs.filter(e => ST.trainRecoveryDone[e.name]).length;
+
+  // ── Hero card (3 stati: not started / running / completed) ──
+  let heroHtml;
+  if(flow.active && flow.currentIdx < exs.length){
+    const cur = exs[flow.currentIdx];
+    const mm = String(Math.floor(flow.remaining/60)).padStart(2,'0');
+    const ss = String(flow.remaining%60).padStart(2,'0');
+    const dur = cur.duration_sec || 30;
+    const pct = dur ? Math.round((dur - flow.remaining)/dur*100) : 0;
+    const sideBadge = cur.side ? `<span style="font-size:10px;font-weight:700;color:#fff;background:#2A7A6F;border-radius:4px;padding:2px 7px;font-family:var(--font-mono);margin-left:8px;">${cur.side.toUpperCase()}</span>` : '';
+    const playPauseBtn = flow.running
+      ? `<button onclick="recoveryFlowPause()" title="Pausa" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
+      : `<button onclick="recoveryFlowResume()" title="Riprendi" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
+    heroHtml = `
+      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">${cur.block||''}</span>
+          ${sideBadge}
+        </div>
+        <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${cur.name}</div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:#2A7A6F;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏪</button>
+            ${playPauseBtn}
+            <button onclick="recoveryFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏩</button>
+          </div>
+        </div>
+        <div style="height:6px;background:rgba(42,122,111,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${pct}%;background:#2A7A6F;transition:width .35s linear;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
+          <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
+          <button onclick="recoveryFlowEnd()" title="Termina sessione" style="background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">termina</button>
+        </div>
+      </div>`;
+  } else if(flow.active && flow.currentIdx >= exs.length){
+    // Sessione completata via flow
+    heroHtml = `
+      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
+        <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+        <div style="font-size:18px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);margin-bottom:4px;">Sessione completata</div>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${exs.length}/${exs.length} esercizi</div>
+      </div>`;
+  } else {
+    // Stato iniziale: non avviato
+    const allManuallyDone = doneCount === exs.length && exs.length > 0;
+    heroHtml = `
+      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
+        <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">${s.label || s.name}</div>
+        ${allManuallyDone
+          ? `<div style="font-size:14px;color:#2A7A6F;font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
+          : `<button onclick="recoveryFlowStart()" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);">▶ Start sessione</button>`}
+      </div>`;
+  }
+
+  // ── Lista raggruppata per block, con highlight su corrente ──
+  const blocks = [];
+  const blockIdxMap = {};
+  exs.forEach((e, idx) => {
+    const bk = e.block || 'Altri';
+    if(blockIdxMap[bk] === undefined){
+      blockIdxMap[bk] = blocks.length;
+      blocks.push({name: bk, items: []});
+    }
+    blocks[blockIdxMap[bk]].items.push({e, idx});
+  });
+
+  const listHtml = blocks.map(b => {
+    const blockTotalSec = b.items.reduce((a,it)=>a+(it.e.duration_sec||0),0);
+    const blockMin = Math.round(blockTotalSec/60*10)/10;
+    const itemsHtml = b.items.map(({e, idx}) => {
+      const isDone = !!ST.trainRecoveryDone[e.name];
+      const isCurrent = flow.active && flow.currentIdx === idx;
+      const safeName = e.name.replace(/'/g,"\\'");
+      const bg = isCurrent ? '#FFF7E0' : (isDone ? '#F1F8F4' : 'var(--s1)');
+      const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
+      const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
+      const sideBadge = e.side ? `<span style="font-size:9px;color:var(--t3);font-family:var(--font-mono);background:var(--s2);border-radius:4px;padding:1px 5px;margin-left:6px;">${e.side.toUpperCase()}</span>` : '';
+      const checkBox = isDone
+        ? `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+        : `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;"></div>`;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+          ${checkBox}
+          <div style="flex:1;min-width:0;cursor:pointer;" onclick="openExerciseAI('${safeName}','${sel}','','')">
+            <div style="font-size:13px;${nameStyle}">${e.name}${sideBadge}</div>
+          </div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${e.duration_sec}s</div>
+        </div>`;
+    }).join('');
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <span style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;">${b.name}</span>
+          <span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">${blockMin} min</span>
+        </div>
+        ${itemsHtml}
+      </div>`;
+  }).join('');
+
+  return heroHtml + listHtml;
+}
+
 function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
   const tabs = [
@@ -4561,66 +4792,9 @@ function renderTraining(){
       const activationAllDone = ST.trainActivation.every(v=>v===true);
 
       const today = todayKey();
-      const exerciseCards = s.exercises.map(e=>{
+      const isRecoverySession = s.type === 'Recupero';
+      const exerciseCards = isRecoverySession ? _renderRecoverySection(s, sel) : s.exercises.map(e=>{
         const safeName = e.name.replace(/'/g,"\\'");
-        const isRecoveryEx = s.type === 'Recupero';
-
-        // Branch RECOVERY: timer + checkbox, no form serie/RIR/carico
-        if(isRecoveryEx){
-          if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
-          if(!ST.trainRecoveryTimers) ST.trainRecoveryTimers = {};
-          const minutes = parseInt((String(e.reps).match(/(\d+)/) || [0,5])[1], 10) || 5;
-          const totalSec = minutes * 60;
-          if(!ST.trainRecoveryTimers[e.name]){
-            ST.trainRecoveryTimers[e.name] = { remaining: totalSec, total: totalSec, running: false };
-          }
-          const t = ST.trainRecoveryTimers[e.name];
-          const checked = !!ST.trainRecoveryDone[e.name];
-          const mm = String(Math.floor(t.remaining/60)).padStart(2,'0');
-          const ss = String(t.remaining%60).padStart(2,'0');
-          const timerLabel = `${mm}:${ss}`;
-          const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
-          const checkBox = checked
-            ? `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}');" style="width:22px;height:22px;border-radius:6px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-            : `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}');" style="width:22px;height:22px;border-radius:6px;background:transparent;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;"></div>`;
-          let timerBtn;
-          if(checked){
-            timerBtn = '';
-          } else if(t.running){
-            timerBtn = `<button onclick="event.stopPropagation();pauseRecoveryTimer('${safeName}');" title="Pausa" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">⏸</button>`;
-          } else if(t.remaining > 0 && t.remaining < t.total){
-            // Timer in pausa con tempo rimanente: play + reset
-            timerBtn = `<button onclick="event.stopPropagation();resumeRecoveryTimer('${safeName}');" title="Riprendi" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">▶</button><button onclick="event.stopPropagation();resetRecoveryTimer('${safeName}');" title="Reset" style="background:transparent;border:none;width:26px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:14px;font-weight:700;">↻</button>`;
-          } else {
-            // Fresh (remaining===total) o scaduto (remaining===0): solo play
-            timerBtn = `<button onclick="event.stopPropagation();startRecoveryTimer('${safeName}');" title="Avvia" style="background:#E6F4F2;border:none;border-radius:6px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#2A7A6F;font-size:14px;font-weight:700;">▶</button>`;
-          }
-          const timerColor = checked ? 'var(--t3)' : (t.running ? '#185FA5' : '#2A7A6F');
-          const timerDeco = checked ? 'text-decoration:line-through;' : '';
-          return `
-            <div class="exercise-card${checked?' done':''}">
-              <div class="ex-header" onclick="openExerciseAI('${safeName}','${sel}','','')">
-                <div class="ex-title-row">
-                  <h3 class="ex-title">${e.name}</h3>
-                  <span class="ex-info-icon">ⓘ</span>
-                </div>
-                <div class="ex-meta-row">
-                  <span class="ex-params">${e.reps}</span>
-                  <span class="ex-rest">Recupero attivo</span>
-                </div>
-              </div>
-              <div class="ex-info">
-                <div class="ex-equipment">${e.eq}</div>
-                ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
-              </div>
-              <div class="ex-action-row" style="gap:10px;align-items:center;">
-                ${checkBox}
-                <span style="flex:1;font-size:13px;font-weight:600;color:${checked?'var(--t3)':'var(--t1)'};font-family:var(--font-sans);${checked?'text-decoration:line-through;':''}">Fatto</span>
-                <span style="font-size:15px;font-family:var(--font-mono);font-weight:700;color:${timerColor};${timerDeco}min-width:54px;text-align:right;">${timerLabel}</span>
-                ${timerBtn}
-              </div>
-            </div>`;
-        }
 
         // Branch NON-RECOVERY: logica esistente
         const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
@@ -8082,6 +8256,11 @@ function closeTrainingSession(){
   }
   ST.trainRecoveryTimers = {};
   ST.trainRecoveryDone = {};
+  // Stop recovery flow countdown ibrido se attivo
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow._iv){
+    clearInterval(ST.trainRecoveryFlow._iv);
+  }
+  ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
@@ -8215,7 +8394,114 @@ function resetActivationTimer(idx){
   renderTraining();
 }
 
-// ── Recovery timers (sessioni recoveryUpper/recoveryLower) ──
+// ── Recovery FLOW (countdown ibrido G3/G6, auto-advance) ──
+function _recoveryFlowClearInterval(){
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow._iv){
+    clearInterval(ST.trainRecoveryFlow._iv);
+    ST.trainRecoveryFlow._iv = null;
+  }
+}
+function _recoveryFlowCurrentExercise(){
+  const sel = ST.trainSession;
+  if(!sel) return null;
+  const sess = TRAINING_SESSIONS[sel];
+  if(!sess || sess.type !== 'Recupero') return null;
+  const idx = ST.trainRecoveryFlow.currentIdx;
+  return sess.exercises[idx] || null;
+}
+function _recoveryFlowAdvance(){
+  // Marca corrente come done e avanza. Se ultimo, completa sessione.
+  const sess = TRAINING_SESSIONS[ST.trainSession];
+  if(!sess) return;
+  const cur = sess.exercises[ST.trainRecoveryFlow.currentIdx];
+  if(cur){
+    if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+    ST.trainRecoveryDone[cur.name] = true;
+    try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
+    try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+  }
+  ST.trainRecoveryFlow.currentIdx++;
+  if(ST.trainRecoveryFlow.currentIdx >= sess.exercises.length){
+    // Fine sessione
+    _recoveryFlowClearInterval();
+    ST.trainRecoveryFlow.active = false;
+    ST.trainRecoveryFlow.running = false;
+    ST.trainRecoveryFlow.remaining = 0;
+    checkRecoverySessionDone();
+    renderTraining();
+    return;
+  }
+  const next = sess.exercises[ST.trainRecoveryFlow.currentIdx];
+  ST.trainRecoveryFlow.remaining = next.duration_sec || 30;
+  renderTraining();
+}
+function _recoveryFlowTick(){
+  if(!ST.trainRecoveryFlow.running) return;
+  ST.trainRecoveryFlow.remaining = Math.max(0, ST.trainRecoveryFlow.remaining - 1);
+  if(ST.trainRecoveryFlow.remaining <= 0){
+    _recoveryFlowAdvance();
+  } else {
+    renderTraining();
+  }
+}
+function recoveryFlowStart(){
+  const sess = TRAINING_SESSIONS[ST.trainSession];
+  if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
+  try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  _recoveryFlowClearInterval();
+  ST.trainRecoveryFlow.active = true;
+  ST.trainRecoveryFlow.currentIdx = 0;
+  ST.trainRecoveryFlow.remaining = sess.exercises[0].duration_sec || 30;
+  ST.trainRecoveryFlow.running = true;
+  ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
+  renderTraining();
+}
+function recoveryFlowPause(){
+  if(!ST.trainRecoveryFlow.running) return;
+  ST.trainRecoveryFlow.running = false;
+  _recoveryFlowClearInterval();
+  renderTraining();
+}
+function recoveryFlowResume(){
+  if(ST.trainRecoveryFlow.running) return;
+  if(!ST.trainRecoveryFlow.active) return;
+  try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  ST.trainRecoveryFlow.running = true;
+  ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
+  renderTraining();
+}
+function recoveryFlowSkip(){
+  if(!ST.trainRecoveryFlow.active) return;
+  _recoveryFlowAdvance();
+}
+function recoveryFlowBack(){
+  if(!ST.trainRecoveryFlow.active) return;
+  if(ST.trainRecoveryFlow.currentIdx <= 0){
+    // Già al primo: solo reset countdown
+    const sess = TRAINING_SESSIONS[ST.trainSession];
+    if(sess && sess.exercises[0]) ST.trainRecoveryFlow.remaining = sess.exercises[0].duration_sec || 30;
+    renderTraining();
+    return;
+  }
+  const sess = TRAINING_SESSIONS[ST.trainSession];
+  if(!sess) return;
+  ST.trainRecoveryFlow.currentIdx--;
+  const prev = sess.exercises[ST.trainRecoveryFlow.currentIdx];
+  ST.trainRecoveryFlow.remaining = prev.duration_sec || 30;
+  // NOTA: non un-marca da trainRecoveryDone (volutamente)
+  renderTraining();
+}
+function recoveryFlowEnd(){
+  // Chiusura manuale (non marca come completata)
+  _recoveryFlowClearInterval();
+  ST.trainRecoveryFlow.active = false;
+  ST.trainRecoveryFlow.running = false;
+  ST.trainRecoveryFlow.currentIdx = 0;
+  ST.trainRecoveryFlow.remaining = 0;
+  renderTraining();
+}
+
+// ── Recovery timers (sessioni recoveryUpper/recoveryLower) ── LEGACY DORMANT (sostituiti da recoveryFlow*)
 function startRecoveryTimer(exName){
   if(!ST.trainRecoveryTimers || !ST.trainRecoveryTimers[exName]) return;
   const t = ST.trainRecoveryTimers[exName];

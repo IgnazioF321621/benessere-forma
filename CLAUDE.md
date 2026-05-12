@@ -735,6 +735,19 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Recovery G3/G6 ristrutturate: micro-esercizi + countdown ibrido
+
+- **G3 `recoveryUpper`** ora "Recupero Mobilità — G3": 25 micro-esercizi in 5 blocchi (Attivazione · Spalle e colonna toracica · Anche · Caviglie e polpacci · Integrazione globale), totale ~20 min. Focus mobilità articolare dinamica full body.
+- **G6 `recoveryLower`** ora "Recupero Stretching — G6": 28 micro-esercizi in 7 blocchi (Attivazione · Catena posteriore alta · Catena anteriore alta · Glutei e lombari · Catena anteriore gamba · Catena posteriore gamba · Chiusura), totale ~20 min. Focus allungamento statico full body.
+- **Schema dati nuovo per esercizio recovery**: `{name, duration_sec, block, side?, muscles[], execution[], commonErrors[]}` — sostituisce il vecchio schema con `reps:'N min'` parsato via regex. Nomi univoci con suffisso `dx`/`sx` per le chiavi `trainRecoveryDone`.
+- **UX countdown ibrido** (nuova): hero card con bottone "▶ Start sessione" + lista raggruppata per blocco. All'avvio: hero focalizzata con countdown grande (MM:SS), nome esercizio + side badge, controlli **⏪ Indietro** · **⏸/▶ Pausa/Riprendi** · **⏩ Skip**, barra progresso lineare. Al termine countdown → vibrazione + triple-beep + auto-advance al prossimo esercizio. All'ultimo esercizio: schermata 🎉 "Sessione completata" + salvataggio workout via `checkRecoverySessionDone`.
+- **Stato nuovo `ST.trainRecoveryFlow`** = `{active, currentIdx, remaining, running, _iv}`. Default `active:false`. `closeTrainingSession()` ferma `_iv` e azzera lo state.
+- **Nuove funzioni globali**: `recoveryFlowStart/Pause/Resume/Skip/Back/End` + interni `_recoveryFlowTick`, `_recoveryFlowAdvance`, `_recoveryFlowClearInterval`, `_recoveryFlowCurrentExercise`.
+- **Render via helper dedicato** `_renderRecoverySection(s, sel)`: branching `s.type === 'Recupero'` prima del `s.exercises.map(...)` esistente. La logica non-recovery resta identica e intatta.
+- **Funzioni legacy timer per-esercizio dormienti** (NON rimosse): `startRecoveryTimer / pauseRecoveryTimer / resumeRecoveryTimer / resetRecoveryTimer` non più chiamate dalla UI nuova. `toggleRecoveryDone` resta in uso per check manuale opzionale nella lista. State `ST.trainRecoveryTimers` resta inizializzato come `{}` ma non popolato.
+- **Compatibilità preservata**: ID `recoveryUpper`/`recoveryLower` invariati, `type:'Recupero'`, `rir:null`, `rest:null`, `SESSION_CYCLE`, `SESSION_DAY_NUM`, `SESS_LABEL`/`SESS_COLOR` invariati. `checkRecoverySessionDone` lavora identico (itera `sess.exercises` e legge `trainRecoveryDone[ex.name]`). Modal scheda AI (`openExerciseAI`) continua a funzionare leggendo `execution/commonErrors/muscles`.
+- **Attivazione 5 min iniziale** (Cat-Cow, diaframmatica, vacuum) preservata per OGNI sessione, inclusi recovery. Nei nuovi G3/G6 i primi due esercizi del Blocco "Attivazione" includono Respirazione diaframmatica 60s + Vacuum addominale 60s come ripetizione voluta (richiesta utente esplicita).
+
 ### 12 maggio 2026 — Fix integratori extra: kcal nel totale + card collassabile
 
 - **Bug 1 (critico)**: extra integratori (es. `High Protein Energy Bar Cocco`, 203 kcal) loggati ma kcal/macro non sommati al totale giornaliero. Cause: `suppTotalsForIds()` somma solo gli integratori in `ST.supps` via `suppsTaken`, ignora i `rawSuppLogs` di catalogo non-standard. Effetto: anello kcal Home + barre macro Home + anello Nutrition Hero + grafico ANDAMENTO CALORIE mostravano "kcal fantasma" mancanti.
