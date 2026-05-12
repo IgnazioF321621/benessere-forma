@@ -735,6 +735,14 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Fix bug critico: errore integer su pasti piccoli
+
+- Bug: salvataggio pasti con singolo frutto/snack falliva con `invalid input syntax for type integer: "4.2"`
+- Causa: AI ritorna macro decimali (es. kiwi → fat 4.2g), Supabase columns `meals.kcal/protein/carbs/fat` sono `integer`
+- Fix lato app (parte 1): `Math.round()` in 3 punti — `estimateMacros` ([zona-tracker.html:1553](zona-tracker.html:1553)), `dbAddMeal` ([zona-tracker.html:1925](zona-tracker.html:1925)), `saveEditMeal` ([zona-tracker.html:7082](zona-tracker.html:7082))
+- Difesa in profondità: ogni valore macro arrotondato + cast `Number()` + fallback `|| 0` + `Math.max(0, ...)`
+- Parte 2 (da fare lato DB): ALTER COLUMN su Supabase per passare a `numeric(6,1)` e recuperare precisione decimale
+
 ### 12 maggio 2026 — Nutrition: modello ibrido (visivo si riempie, testo "rimasti")
 
 - Anello kcal Home + Hero: tornano a riempirsi al crescere del consumo (uso di `consPctKcal` / `consPctKcalHero` derivato da `cons.kcal / target.kcal`)

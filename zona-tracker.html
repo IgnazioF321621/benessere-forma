@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 16:42';
+const APP_VERSION = '2026.05.12 · 17:50';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1552,7 +1552,16 @@ NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. 
 }
 async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
-  return JSON.parse(txt.replace(/```json|```/g,'').trim());
+  const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+  // Sanifica: i numeri devono essere integer per Supabase (colonne integer).
+  // Math.round gestisce decimali AI ed eventuali NaN/undefined → 0.
+  return {
+    kcal:    Math.max(0, Math.round(Number(parsed.kcal)    || 0)),
+    protein: Math.max(0, Math.round(Number(parsed.protein) || 0)),
+    carbs:   Math.max(0, Math.round(Number(parsed.carbs)   || 0)),
+    fat:     Math.max(0, Math.round(Number(parsed.fat)     || 0)),
+    notes:   parsed.notes || '',
+  };
 }
 async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   const rem = {
@@ -1923,16 +1932,23 @@ async function loadCatalog() {
 }
 
 async function dbAddMeal(meal) {
+  // Difesa in profondità: arrotonda a integer prima dell'insert (colonne Supabase integer).
+  const sanit = {
+    kcal:    Math.max(0, Math.round(Number(meal.kcal)    || 0)),
+    protein: Math.max(0, Math.round(Number(meal.protein) || 0)),
+    carbs:   Math.max(0, Math.round(Number(meal.carbs)   || 0)),
+    fat:     Math.max(0, Math.round(Number(meal.fat)     || 0)),
+  };
   const {data, error} = await supa.from('meals').insert({
     user_id: ST.user.id,
     date: ST.activeDay,
     time: meal.time,
     slot: meal.slot,
     description: meal.description,
-    kcal: meal.kcal,
-    protein: meal.protein,
-    carbs: meal.carbs,
-    fat: meal.fat,
+    kcal: sanit.kcal,
+    protein: sanit.protein,
+    carbs: sanit.carbs,
+    fat: sanit.fat,
     notes: meal.notes || null,
   }).select().single();
   if(error) throw error;
@@ -7087,6 +7103,12 @@ async function saveEditMeal() {
     fat:     +document.getElementById('em-fat').value     || 0,
     notes:   document.getElementById('em-notes').value.trim() || null,
   };
+
+  // Sanifica macro a integer prima dell'update (colonne Supabase integer).
+  if (updates.kcal    !== undefined) updates.kcal    = Math.max(0, Math.round(Number(updates.kcal)    || 0));
+  if (updates.protein !== undefined) updates.protein = Math.max(0, Math.round(Number(updates.protein) || 0));
+  if (updates.carbs   !== undefined) updates.carbs   = Math.max(0, Math.round(Number(updates.carbs)   || 0));
+  if (updates.fat     !== undefined) updates.fat     = Math.max(0, Math.round(Number(updates.fat)     || 0));
 
   // Aggiorna stato locale
   const day = ST.db.days[_editMealDayKey];
