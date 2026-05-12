@@ -1127,6 +1127,7 @@ const MEAL_SLOTS = [
   {id:'pranzo',          label:'Pranzo',            icon:'🥗', time:'12:30',desc:'Pasto principale'},
   {id:'snack_pomeriggio',label:'Merenda',           icon:'🥜', time:'16:30',desc:'Spuntino'},
   {id:'cena',            label:'Cena',              icon:'🫕', time:'20:00',desc:'Pasto serale'},
+  {id:'extra',           label:'Extra',             icon:'🍽️', time:'',     desc:'Fuori pasto / aggiuntivo'},
 ];
 // ── Preselezione intelligente prossimo pasto ────────────────
 // Logica: trova il primo MEAL_SLOTS non ancora loggato OGGI il cui orario è >= ora corrente.
@@ -1138,7 +1139,8 @@ function computeNextSlot(){
   const now = new Date();
   const nowHHMM = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   for(const slot of MEAL_SLOTS){
-    if(loggedSlots.has(slot.id)) continue;       // già loggato → skip
+    if(slot.id === 'extra') continue;             // extra escluso dalla logica del suggerimento AI
+    if(loggedSlots.has(slot.id)) continue;        // già loggato → skip
     if(String(slot.time) < nowHHMM) continue;     // finestra persa → skip
     return { slotId: slot.id, isTomorrow: false, allDone: false };
   }
@@ -1201,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.11 · 16:56';
+const APP_VERSION = '2026.05.12 · 10:47';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5884,6 +5886,7 @@ const SLOT_STYLE = {
   pranzo:           { color:'var(--prot)', light:'var(--prot-lt)' },
   snack_pomeriggio: { color:'var(--fat)',  light:'var(--fat-lt)'  },
   cena:             { color:'var(--acc)',  light:'var(--acc-lt)'  },
+  extra:            { color:'var(--t3)',   light:'var(--s2)'      },
 };
 function mealCardHTML(m){
   const mealId = m.id||m.local_id;
@@ -6066,7 +6069,7 @@ function renderOggi(){
     if(!ST.logOpen) {
       html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
     } else {
-      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/><button onclick="ST.logOpen=false;ST.logText='';ST.logError='';renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(2,1fr);max-width:66%;">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="${(()=>{const ph={colazione:'Es. Whey 30g + avena 50g + mirtilli 80g',snack_mattina:'Es. Noci 30g + una mela',pranzo:'Es. Salmone 180g al forno con quinoa 80g e spinaci',snack_pomeriggio:'Es. Mandorle 20g + yogurt di soia',cena:'Es. Branzino 180g al vapore con verdure grigliate'};return ph[ST.logSlot]||'Descrivi cosa hai mangiato...';})()}"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
+      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/><button onclick="ST.logOpen=false;ST.logText='';ST.logError='';renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="${(()=>{const ph={colazione:'Es. Whey 30g + avena 50g + mirtilli 80g',snack_mattina:'Es. Noci 30g + una mela',pranzo:'Es. Salmone 180g al forno con quinoa 80g e spinaci',snack_pomeriggio:'Es. Mandorle 20g + yogurt di soia',cena:'Es. Branzino 180g al vapore con verdure grigliate',extra:'Es. Frutta secca, quadratino di cioccolato fondente, tisana con miele...'};return ph[ST.logSlot]||'Descrivi cosa hai mangiato...';})()}"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
     }
 
     // Timeline cronologica unificata: pasti + integratori

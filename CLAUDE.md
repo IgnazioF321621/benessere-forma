@@ -729,6 +729,17 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Nutrition: slot Extra fuori pasto
+
+- Aggiunto slot `extra` (🍽️) a `MEAL_SLOTS`, sempre selezionabile dal form "+ Registra pasto"
+- `computeNextSlot()` esclude `extra` dalla logica di preselezione/suggerimento AI prossimo pasto
+- Multipli `extra`/giorno consentiti (nessun dedup per slot)
+- Stile neutro grigio in `SLOT_STYLE` (`color:var(--t3)`, `light:var(--s2)`)
+- Seconda riga `slot-tabs` del form passa da 2 a 3 colonne (snack_pomeriggio · cena · extra) per ospitare la nuova pill
+- Placeholder textarea dedicato per slot `extra` ("Es. Frutta secca, quadratino di cioccolato fondente, tisana con miele...")
+- La select del riquadro "🎯 Riequilibrio pasto successivo" elenca anche `extra` (orario vuoto, non blocca nulla)
+- Risolve: impossibilità di registrare pasti aggiuntivi quando timeline completa (es. secondo snack, spuntino notturno, dolce dopo cena)
+
 ### 11 maggio 2026 — Admin panel + logica residua kcal/macro + tester attivati
 
 Sessione operativa di sviluppo: admin panel completato dal vivo, refactor visuale Nutrition (kcal/macro) verso modello mentale "rimanente" (stile MyFitnessPal/Lifesum), tester reattivati via WhatsApp con richiesta di costanza per 2 settimane.
