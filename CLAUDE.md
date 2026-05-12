@@ -735,6 +735,19 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Fase 2 Smart Ingredient: form di registrazione a righe
+
+- Nuovo form sostituisce la textarea: strada veloce ("✨ Analizza" testo libero) + strada manuale ("+ Manuale" → riga vuota espansa)
+- Righe ingrediente collassabili: default collassate dopo Analizza (mostrano nome · qty · kcal), espanse se aggiunte manualmente (3 input + select unità + bottone "✨ Stima AI" + chip C/P/G)
+- 1 chiamata AI per Analizza (`estimateMealItems` ritorna `{items:[{name,quantity,unit,kcal,protein,carbs,fat}], notes}`), N chiamate AI per Manuale (`estimateSingleItem` per riga on-demand)
+- Salvataggio (`smartSavePasto`): 1 INSERT `meals` (con totali aggregati) + N INSERT `meal_items` (rollback DELETE su meal orfano se itemsErr)
+- Conserva chrome esterno: slot tabs (con reset smartForm su cambio slot), time picker, close button
+- `setLogSlot()` ora azzera `ST.smartForm` per evitare contaminazione cross-slot
+- `estimateMacros()` retrocompat: wrapper che chiama internamente `estimateMealItems` e ritorna totali + `items` per uso da chiamanti legacy (`logMeal` originale non toccato)
+- Timeline pasti e edit pasto: **invariati in Fase 2** (saranno Fase 3 e 4 — pasti vecchi monolitici restano leggibili/modificabili con vecchio form)
+- Stato nuovo: `ST.smartForm = { items:[], freeText:'', notes:'', analyzing:false }` ([zona-tracker.html:1289](zona-tracker.html:1289))
+- Pattern in-memory: dopo INSERT, `getDay(ST.activeDay).meals.push({...})` come fa `logMeal()` storico
+
 ### 12 maggio 2026 — Nutrition: precisione decimale recuperata
 
 - Migrazione Supabase completata: `meals.kcal/protein/carbs/fat` ora `numeric(6,1)` / `numeric(5,1)` invece di `integer`

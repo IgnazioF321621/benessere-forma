@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 18:06';
+const APP_VERSION = '2026.05.12 · 19:20';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1285,6 +1285,8 @@ const ST = {
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
+  // FASE 2 Smart Ingredient form: { items, freeText, notes, analyzing }
+  smartForm: { items: [], freeText: '', notes: '', analyzing: false },
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -1550,17 +1552,88 @@ Genera SOLO un consiglio operativo aggiuntivo (max 3 frasi) che NON ripeta info 
 
 NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. Solo prosa diretta. Italiano.`;
 }
-async function estimateMacros(desc) {
+// LEGACY: mantenuta per compatibilità (chiamate non ancora migrate al pattern items)
+async function estimateMacrosLegacy(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
   const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
-  // Sanifica: arrotonda a 1 decimale per Supabase numeric(5-6,1).
-  // Cast Number gestisce stringhe AI, fallback 0 per NaN/undefined, max(0,...) impedisce negativi.
   return {
     kcal:    Math.max(0, Math.round((Number(parsed.kcal)    || 0) * 10) / 10),
     protein: Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10),
     carbs:   Math.max(0, Math.round((Number(parsed.carbs)   || 0) * 10) / 10),
     fat:     Math.max(0, Math.round((Number(parsed.fat)     || 0) * 10) / 10),
     notes:   parsed.notes || '',
+  };
+}
+
+// FASE 2: spezza un pasto in ingredienti distinti
+async function estimateMealItems(desc) {
+  const prompt = `Sei un nutrizionista esperto. Analizza questo pasto e spezzalo in ingredienti distinti, ognuno con peso stimato e macronutrienti.
+
+Pasto: "${desc}"
+
+Regole:
+- Identifica ogni alimento o preparazione distinta come ingrediente separato
+- Per ogni ingrediente stima un peso ragionevole (porzione adulto attivo) se non specificato
+- Le unità ammesse sono: "g" (grammi), "ml" (millilitri), "pz" (pezzi/unità). Per liquidi usa ml. Per frutti interi o uova usa pz (es. 1 mela = 1 pz). Tutto il resto in g.
+- I macronutrienti sono espressi in grammi (eccetto kcal in kilocalorie)
+- Usa porzioni standard adulto attivo se non specificate
+
+Rispondi SOLO con JSON valido, niente testo extra:
+{
+  "items": [
+    {"name":"string","quantity":number,"unit":"g|ml|pz","kcal":number,"protein":number,"carbs":number,"fat":number}
+  ],
+  "notes":"nota breve in italiano (max 60 caratteri)"
+}`;
+  const txt = await callAI(prompt);
+  const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+  const items = (Array.isArray(parsed.items) ? parsed.items : []).map(it => ({
+    name: String(it.name || '').trim() || 'Ingrediente',
+    quantity: Math.max(0, Math.round((Number(it.quantity) || 0) * 10) / 10),
+    unit: ['g','ml','pz'].includes(it.unit) ? it.unit : 'g',
+    kcal: Math.max(0, Math.round((Number(it.kcal) || 0) * 10) / 10),
+    protein: Math.max(0, Math.round((Number(it.protein) || 0) * 10) / 10),
+    carbs: Math.max(0, Math.round((Number(it.carbs) || 0) * 10) / 10),
+    fat: Math.max(0, Math.round((Number(it.fat) || 0) * 10) / 10),
+  })).filter(it => it.name);
+  return { items, notes: String(parsed.notes || '').slice(0, 60) };
+}
+
+// FASE 2: stima macro per UN SINGOLO ingrediente (modalità manuale / ricalcolo riga)
+async function estimateSingleItem(name, quantity, unit) {
+  const unitLbl = unit === 'g' ? 'grammi' : (unit === 'ml' ? 'millilitri' : 'pezzi');
+  const prompt = `Sei un nutrizionista esperto. Stima i macronutrienti per questo singolo alimento.
+
+Alimento: "${name}"
+Quantità: ${quantity} ${unitLbl}
+
+Rispondi SOLO con JSON valido, niente testo extra:
+{"kcal":number,"protein":number,"carbs":number,"fat":number}
+
+I valori devono essere riferiti alla quantità totale indicata (non a 100g). Adulto attivo.`;
+  const txt = await callAI(prompt);
+  const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
+  return {
+    kcal: Math.max(0, Math.round((Number(parsed.kcal) || 0) * 10) / 10),
+    protein: Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10),
+    carbs: Math.max(0, Math.round((Number(parsed.carbs) || 0) * 10) / 10),
+    fat: Math.max(0, Math.round((Number(parsed.fat) || 0) * 10) / 10),
+  };
+}
+
+// Wrapper retrocompat: chiamato dal vecchio logMeal() finché non lo dismettiamo (Fase 4)
+async function estimateMacros(desc) {
+  const split = await estimateMealItems(desc);
+  const tot = split.items.reduce((a,i)=>({
+    kcal: a.kcal + i.kcal, protein: a.protein + i.protein, carbs: a.carbs + i.carbs, fat: a.fat + i.fat
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+  return {
+    kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
+    protein: Math.max(0, Math.round(tot.protein * 10) / 10),
+    carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
+    fat: Math.max(0, Math.round(tot.fat * 10) / 10),
+    notes: split.notes,
+    items: split.items,
   };
 }
 async function getAdvice(consumed, nextMeal, isTomorrow = false) {
@@ -5996,6 +6069,317 @@ function suppGroupHeaderHTML(slot, sc, takenN, total, collapsed, label) {
 }
 const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
 const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
+
+// ═══════════════════════════════════════════════════════════
+// FASE 2 — SMART INGREDIENT FORM (registrazione pasto a righe)
+// ═══════════════════════════════════════════════════════════
+function _initSmartForm() {
+  if (!ST.smartForm) ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+}
+let _smartTempId = 1;
+function _newItemId() { return 'tmp_' + (_smartTempId++); }
+
+function _smartTotals() {
+  _initSmartForm();
+  return ST.smartForm.items.reduce((a,i)=>({
+    kcal:    Math.round((a.kcal    + (Number(i.kcal)    ||0)) * 10) / 10,
+    protein: Math.round((a.protein + (Number(i.protein) ||0)) * 10) / 10,
+    carbs:   Math.round((a.carbs   + (Number(i.carbs)   ||0)) * 10) / 10,
+    fat:     Math.round((a.fat     + (Number(i.fat)     ||0)) * 10) / 10,
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+}
+
+function _smartHasContent() {
+  _initSmartForm();
+  return ST.smartForm.items.some(i => i.name && i.name.trim());
+}
+
+function _smartSummaryDesc() {
+  _initSmartForm();
+  return ST.smartForm.items
+    .filter(i => i.name && i.name.trim())
+    .map(i => i.name.trim())
+    .join(' · ');
+}
+
+window.smartFreeTextChange = function(val) {
+  _initSmartForm();
+  ST.smartForm.freeText = val;
+};
+
+window.smartAnalyze = async function() {
+  _initSmartForm();
+  const txt = (ST.smartForm.freeText || '').trim();
+  if (!txt) { alert('Scrivi qualcosa prima di analizzare'); return; }
+  if (ST.smartForm.analyzing) return;
+  ST.smartForm.analyzing = true;
+  renderOggi();
+  try {
+    const split = await estimateMealItems(txt);
+    if (!split.items || split.items.length === 0) {
+      alert('Non sono riuscito a identificare ingredienti. Prova a riformulare o usa "Manuale".');
+      return;
+    }
+    ST.smartForm.items = split.items.map((it, idx) => ({
+      tempId: _newItemId(),
+      name: it.name, quantity: it.quantity, unit: it.unit,
+      kcal: it.kcal, protein: it.protein, carbs: it.carbs, fat: it.fat,
+      expanded: false, calculating: false, sortOrder: idx, source: 'ai_split',
+    }));
+    ST.smartForm.notes = split.notes || '';
+    ST.smartForm.freeText = '';
+  } catch (e) {
+    console.error('Analyze error:', e);
+    alert('Errore nell\'analisi AI: ' + (e.message || 'riprova'));
+  } finally {
+    ST.smartForm.analyzing = false;
+    renderOggi();
+  }
+};
+
+window.smartAddEmptyRow = function() {
+  _initSmartForm();
+  ST.smartForm.items.push({
+    tempId: _newItemId(),
+    name: '', quantity: 0, unit: 'g',
+    kcal: 0, protein: 0, carbs: 0, fat: 0,
+    expanded: true, calculating: false,
+    sortOrder: ST.smartForm.items.length, source: 'manual',
+  });
+  renderOggi();
+};
+
+window.smartRemoveRow = function(tempId) {
+  _initSmartForm();
+  ST.smartForm.items = ST.smartForm.items.filter(i => i.tempId !== tempId);
+  renderOggi();
+};
+
+window.smartToggleRow = function(tempId) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (it) it.expanded = !it.expanded;
+  renderOggi();
+};
+
+window.smartToggleAll = function() {
+  _initSmartForm();
+  const anyExpanded = ST.smartForm.items.some(i => i.expanded);
+  ST.smartForm.items.forEach(i => i.expanded = !anyExpanded);
+  renderOggi();
+};
+
+window.smartUpdateField = function(tempId, field, value) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  if (field === 'quantity') value = Math.max(0, parseFloat(value) || 0);
+  if (field === 'unit' && !['g','ml','pz'].includes(value)) value = 'g';
+  it[field] = value;
+  // No renderOggi su ogni keystroke per non perdere il focus dell'input
+};
+
+window.smartRecalcRow = async function(tempId) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  // Pull latest values dai campi (potrebbero non aver chiamato change ancora)
+  const nameEl = document.querySelector(`[data-row-name="${tempId}"]`);
+  const qtyEl = document.querySelector(`[data-row-qty="${tempId}"]`);
+  const unitEl = document.querySelector(`[data-row-unit="${tempId}"]`);
+  if (nameEl) it.name = nameEl.value;
+  if (qtyEl) it.quantity = Math.max(0, parseFloat(qtyEl.value) || 0);
+  if (unitEl) it.unit = ['g','ml','pz'].includes(unitEl.value) ? unitEl.value : 'g';
+  if (!it.name || !it.name.trim() || !it.quantity || it.quantity <= 0) {
+    alert('Compila prima nome e quantità');
+    return;
+  }
+  it.calculating = true;
+  renderOggi();
+  try {
+    const m = await estimateSingleItem(it.name.trim(), it.quantity, it.unit);
+    it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
+  } catch (e) {
+    console.error('Single item estimate error:', e);
+    alert('Errore stima ingrediente: ' + (e.message || 'riprova'));
+  } finally {
+    it.calculating = false;
+    renderOggi();
+  }
+};
+
+window.smartResetForm = function() {
+  ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+  renderOggi();
+};
+
+window.smartSavePasto = async function() {
+  _initSmartForm();
+  if (!_smartHasContent()) { alert('Aggiungi almeno un ingrediente'); return; }
+  if (!ST.logSlot) { alert('Seleziona uno slot pasto'); return; }
+  const items = ST.smartForm.items.filter(i => i.name && i.name.trim());
+  const tot = _smartTotals();
+  const summary = _smartSummaryDesc();
+  const timeInp = document.getElementById('log-time');
+  const hhmm = (timeInp && timeInp.value) || (new Date()).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  try {
+    const {data: meal, error: mealErr} = await supa.from('meals').insert({
+      user_id: ST.user.id,
+      date: ST.activeDay,
+      time: hhmm,
+      slot: ST.logSlot,
+      description: summary,
+      kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
+      protein: Math.max(0, Math.round(tot.protein * 10) / 10),
+      carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
+      fat: Math.max(0, Math.round(tot.fat * 10) / 10),
+      notes: ST.smartForm.notes || null,
+    }).select().single();
+    if (mealErr) throw mealErr;
+    const itemsPayload = items.map((it, idx) => ({
+      meal_id: meal.id,
+      user_id: ST.user.id,
+      name: it.name.trim(),
+      quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
+      unit: it.unit || 'g',
+      kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
+      protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
+      carbs: Math.max(0, Math.round((Number(it.carbs)||0) * 10) / 10),
+      fat: Math.max(0, Math.round((Number(it.fat)||0) * 10) / 10),
+      source: it.source || 'manual',
+      sort_order: idx,
+    }));
+    const {error: itemsErr} = await supa.from('meal_items').insert(itemsPayload);
+    if (itemsErr) {
+      // Rollback: cancella il meal orfano
+      await supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id);
+      throw itemsErr;
+    }
+    // In-memory push (stesso pattern di logMeal)
+    const d = getDay(ST.activeDay);
+    d.meals.push({
+      id: meal.id, local_id: meal.id,
+      slot: ST.logSlot, description: summary, time: hhmm,
+      kcal: meal.kcal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
+      notes: meal.notes,
+    });
+    ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
+    ST.logOpen = false;
+    showToast('Pasto registrato');
+    renderOggi();
+    saveCache();
+  } catch (e) {
+    console.error('Save meal error:', e);
+    alert('Errore salvataggio pasto: ' + (e.message || 'riprova'));
+  }
+};
+
+// Renderer del form Smart Ingredient — funzione pura, ritorna HTML.
+// I handler `smart*` chiamano renderOggi() per aggiornare il DOM.
+function renderRegistraPasto() {
+  _initSmartForm();
+  const slot = ST.logSlot;
+  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
+  const slotLabel = slotInfo ? `${slotInfo.icon} ${slotInfo.label}` : 'Seleziona slot';
+  const analyzing = ST.smartForm.analyzing;
+  const items = ST.smartForm.items;
+  const tot = _smartTotals();
+  const hasItems = items.length > 0;
+  const anyExpanded = items.some(i => i.expanded);
+
+  const rowsHtml = items.map(it => {
+    const calcd = it.name && it.quantity > 0 && (it.kcal > 0 || it.calculating);
+    const expanded = it.expanded;
+    const arrowStyle = expanded ? 'transform:rotate(90deg);display:inline-block;' : '';
+    const headerName = it.name || '(nuovo ingrediente)';
+    const headerKcal = it.calculating ? '...' : (calcd ? `${it.kcal} kcal` : 'da compilare');
+    const headerKcalColor = calcd ? 'var(--t2)' : 'var(--t3)';
+    const qtyDisplay = (it.quantity && it.unit) ? `<span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);flex-shrink:0;margin-left:6px;">${it.quantity}${it.unit}</span>` : '';
+
+    const expandedBlock = expanded ? `
+      <div style="margin-top:10px;padding-top:10px;border-top:0.5px dashed var(--s3);">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input data-row-name="${it.tempId}" value="${esc(it.name||'')}" placeholder="Alimento" onchange="smartUpdateField('${it.tempId}','name',this.value)" style="flex:2;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;min-width:0;" />
+          <input data-row-qty="${it.tempId}" type="number" step="0.1" value="${it.quantity || ''}" placeholder="Qtà" onchange="smartUpdateField('${it.tempId}','quantity',this.value)" style="width:64px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;text-align:right;" />
+          <select data-row-unit="${it.tempId}" onchange="smartUpdateField('${it.tempId}','unit',this.value)" style="width:52px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:12px;">
+            <option value="g" ${it.unit==='g'?'selected':''}>g</option>
+            <option value="ml" ${it.unit==='ml'?'selected':''}>ml</option>
+            <option value="pz" ${it.unit==='pz'?'selected':''}>pz</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima AI'}</button>
+          ${calcd && !it.calculating ? `<div style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;">
+            <span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
+            <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
+            <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>
+          </div>` : ''}
+        </div>
+      </div>` : '';
+
+    return `
+      <div style="background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:6px;">
+        <div onclick="smartToggleRow('${it.tempId}')" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <span style="color:var(--t3);font-size:10px;${arrowStyle}">▶</span>
+            <span style="font-size:13px;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(headerName)}</span>
+            ${qtyDisplay}
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+            <span style="font-size:11px;font-family:var(--font-mono);color:${headerKcalColor};">${headerKcal}</span>
+            <button onclick="event.stopPropagation();smartRemoveRow('${it.tempId}')" style="width:22px;height:22px;padding:0;background:transparent;border:none;cursor:pointer;color:var(--t3);font-size:16px;">×</button>
+          </div>
+        </div>
+        ${expandedBlock}
+      </div>`;
+  }).join('');
+
+  const showTotals = hasItems && items.some(i => i.kcal > 0);
+  const totalsCard = showTotals ? `
+    <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Totale pasto</span>
+        <span style="font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--t1);">${tot.kcal} kcal</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
+        <div style="background:var(--carb-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#854F0B;text-transform:uppercase;font-weight:700;">Carbo</div><div style="font-size:14px;font-family:var(--font-mono);color:#854F0B;">${tot.carbs}g</div></div>
+        <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
+        <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
+      </div>
+      <button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>
+    </div>` : '';
+
+  const toggleAllBtn = items.length > 1 ? `<button onclick="smartToggleAll()" style="background:transparent;border:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;">${anyExpanded?'Collassa tutti':'Espandi tutti'}</button>` : '';
+
+  const itemsCard = hasItems ? `
+    <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Ingredienti (${items.length})</span>
+        ${toggleAllBtn}
+      </div>
+      ${rowsHtml}
+      <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
+    </div>` : '';
+
+  return `
+    <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">+ Registra pasto · ${slotLabel}</span>
+      </div>
+
+      <div style="font-size:11px;color:var(--t3);margin-bottom:6px;">Cosa hai mangiato?</div>
+      <input type="text" id="smart-freetext" value="${esc(ST.smartForm.freeText||'')}" placeholder='Es. &quot;Pasta al tonno con olio&quot;' oninput="smartFreeTextChange(this.value)" style="width:100%;padding:10px;border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;margin-bottom:8px;box-sizing:border-box;" />
+
+      <div style="display:flex;gap:8px;">
+        <button onclick="smartAnalyze()" ${analyzing?'disabled':''} style="flex:1;padding:10px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:13px;font-weight:500;cursor:pointer;">${analyzing?'Analizzo...':'✨ Analizza'}</button>
+        <button onclick="smartAddEmptyRow()" style="flex:1;padding:10px;background:transparent;color:var(--t1);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:13px;cursor:pointer;">+ Manuale</button>
+      </div>
+    </div>
+    ${itemsCard}
+    ${totalsCard}
+  `;
+}
+
 function renderOggi(){
   // Preselezione intelligente del prossimo pasto (rispetta override manuale)
   if(!ST.nextSlotUserOverride){
@@ -6087,7 +6471,8 @@ function renderOggi(){
     if(!ST.logOpen) {
       html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
     } else {
-      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">+ Registra pasto</span><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b3);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/><button onclick="ST.logOpen=false;ST.logText='';ST.logError='';renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${buildSuggestionBox()}<textarea id="log-text" class="inp" placeholder="${(()=>{const ph={colazione:'Es. Whey 30g + avena 50g + mirtilli 80g',snack_mattina:'Es. Noci 30g + una mela',pranzo:'Es. Salmone 180g al forno con quinoa 80g e spinaci',snack_pomeriggio:'Es. Mandorle 20g + yogurt di soia',cena:'Es. Branzino 180g al vapore con verdure grigliate',extra:'Es. Frutta secca, quadratino di cioccolato fondente, tisana con miele...'};return ph[ST.logSlot]||'Descrivi cosa hai mangiato...';})()}"></textarea>${ST.logError?`<p style="color:var(--err);font-size:12px;margin-top:6px;font-family:'JetBrains Mono',monospace;">${ST.logError}</p>`:''}<button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="logMeal()" ${ST.logLoading?'disabled':''}>${ST.logLoading?'<span class="loading"></span>Stima AI...':'Stima &amp; Registra →'}</button></div>`;
+      // FASE 2 Smart Ingredient form: chrome esterno (slot tabs + time + close) + smart form
+      html+=`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
     }
 
     // Timeline cronologica unificata: pasti + integratori
@@ -7710,7 +8095,7 @@ function showToast(msg, emoji='✅') {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-function setLogSlot(id){ST.logSlot=id;renderOggi();}
+function setLogSlot(id){ST.logSlot=id;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false};renderOggi();}
 function buildSuggestionBox() {
   // Mappa slot app -> slot piano AI
   const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
