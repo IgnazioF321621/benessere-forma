@@ -735,6 +735,20 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Fase 3 Smart Ingredient: timeline con doppio collasso
+
+- `loadMeals(date)` ([zona-tracker.html:1938](zona-tracker.html:1938)): carica meal_items in una seconda query keyed su `meal_ids`, aggrega per `meal_id`, ritorna `{...meal, items: [...]}`
+- `loadAllDays()` ([zona-tracker.html:1950](zona-tracker.html:1950)): query unica su `meal_items` con `.eq('user_id', ST.user.id)`, items aggregati per `meal_id`, attaccati ai pasti durante il push in `ST.db.days[m.date].meals`
+- `mealCardHTML(m)` riscritta: card a 2 livelli di collasso. Livello 1 collassato di default → header compatto `▶ icona · slot · ora · N ingredient · TOT kcal · ✏️ 🗑️`. Tap → si espande con descrizione + note + tile macro + lista ingredienti
+- Livello 2 ingredienti collassati di default → riga `▶ nome · qty unit · kcal`. Tap → chip C/P/G colorate
+- Pasti vecchi monolitici (180 pre-Fase 1, con 1 meal_item creato dalla migrazione): trattati identicamente, label "1 ingrediente". Edge case `items.length===0`: label "pasto monolitico" (fallback per pasti orfani)
+- Stato collasso non persistito tra reload (`ST.mealExpanded={}` e `ST.itemExpanded={}` iniziano vuoti): scelta voluta, default pulito
+- Handlers globali `window.toggleMealCard(mealId)` e `window.toggleMealItem(itemId)` re-render via `renderOggi()`
+- `smartSavePasto` aggiornato: chiamata `insert(...).select()` su `meal_items` per ricevere i row con id reali → meal pushato in-memory ha già `items: savedItems` per render Fase 3 senza re-fetch
+- `saveCache()` serializza naturalmente `m.items` come parte di `ST.db` → su reload da cache, gli items sono già disponibili offline
+- Edit pasto (matita): ancora vecchio modal (Fase 4)
+- Cestino, swipe-to-delete, time-edit inline (riposizionato sotto card espansa): preservati
+
 ### 12 maggio 2026 — Fase 2 Smart Ingredient: form di registrazione a righe
 
 - Nuovo form sostituisce la textarea: strada veloce ("✨ Analizza" testo libero) + strada manuale ("+ Manuale" → riga vuota espansa)

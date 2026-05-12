@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 19:20';
+const APP_VERSION = '2026.05.12 · 19:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1287,6 +1287,9 @@ const ST = {
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
   // FASE 2 Smart Ingredient form: { items, freeText, notes, analyzing }
   smartForm: { items: [], freeText: '', notes: '', analyzing: false },
+  // FASE 3 Timeline doppio collasso (id meal/item → bool expanded), default vuoto = tutto collassato
+  mealExpanded: {},
+  itemExpanded: {},
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -1936,12 +1939,34 @@ async function renderWeightChart() {
 // SUPABASE DATA LAYER
 // ═══════════════════════════════════════════════════════════
 async function loadMeals(date) {
-  const {data} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
-  return data || [];
+  const {data: meals} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
+  if (!meals || meals.length === 0) return [];
+  const mealIds = meals.map(m => m.id);
+  const {data: items} = await supa.from('meal_items')
+    .select('*')
+    .in('meal_id', mealIds)
+    .eq('user_id', ST.user.id)
+    .order('sort_order', {ascending: true});
+  const itemsByMeal = {};
+  (items || []).forEach(it => {
+    if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
+    itemsByMeal[it.meal_id].push(it);
+  });
+  return meals.map(m => ({...m, items: itemsByMeal[m.id] || []}));
 }
 
 async function loadAllDays() {
   const {data:meals,   error:mealsErr}   = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
+  // FASE 3: carica TUTTI i meal_items dell'utente in una sola query
+  const {data: allItems} = await supa.from('meal_items')
+    .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order')
+    .eq('user_id', ST.user.id)
+    .order('sort_order', {ascending: true});
+  const itemsByMeal = {};
+  (allItems || []).forEach(it => {
+    if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
+    itemsByMeal[it.meal_id].push(it);
+  });
   const {data:fasting, error:fastingErr} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
   const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name,slot').eq('user_id', ST.user.id);
 
@@ -1951,7 +1976,7 @@ async function loadAllDays() {
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
     if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
-    ST.db.days[m.date].meals.push({...m, local_id: m.id});
+    ST.db.days[m.date].meals.push({...m, local_id: m.id, items: itemsByMeal[m.id] || []});
   });
   (fasting||[]).forEach(f => {
     if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
@@ -5983,19 +6008,78 @@ function mealCardHTML(m){
   const mealId = m.id||m.local_id;
   const slotInfo = MEAL_SLOTS.find(s=>s.id===m.slot)||MEAL_SLOTS[0];
   const ss = SLOT_STYLE[m.slot] || { color:'var(--acc)', light:'var(--acc-lt)' };
-  const inner = `<div class="meal-card-v2">
-    <div class="slot-bar" style="background:${ss.color};"></div>
-    <div class="meal-body">
-      <div class="meal-header">
-        <div class="meal-slot-lbl">
-          <span style="font-size:13px;">${slotInfo.icon}</span>
-          <span style="color:${ss.color};">${slotInfo.label}</span>
+  const items = m.items || [];
+  const isExpanded = !!(ST.mealExpanded && ST.mealExpanded[mealId]);
+  const arrowRot = isExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
+
+  // Calcolo "In Zona / Fuori Zona"
+  const kC=( m.carbs||0)*4, kP=(m.protein||0)*4, kF=(m.fat||0)*9;
+  const totK=kC+kP+kF;
+  let zonaBadge = '';
+  if(totK>=10){
+    const pC=kC/totK*100, pP=kP/totK*100, pF=kF/totK*100;
+    const inZona=(pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+    const bg=inZona?'#E6F4F2':'#FDECEA';
+    const col=inZona?'#2A7A6F':'#B84C2A';
+    const lbl=inZona?'In Zona':'Fuori Zona';
+    zonaBadge = `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;background:${bg};color:${col};border-radius:20px;padding:2px 9px;">${lbl}</span>`;
+  }
+
+  // Header collassato (sempre visibile)
+  const itemCount = items.length;
+  const itemCountLbl = itemCount === 0 ? 'pasto monolitico' : (itemCount === 1 ? '1 ingrediente' : `${itemCount} ingredienti`);
+
+  const headerCollapsed = `
+    <div onclick="toggleMealCard('${mealId}')" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;padding:12px 13px;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+        <span style="color:var(--t3);font-size:10px;flex-shrink:0;${arrowRot}">▶</span>
+        <span style="font-size:14px;flex-shrink:0;">${slotInfo.icon}</span>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${ss.color};">${slotInfo.label}</div>
+          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${m.time?m.time.slice(0,5):''} · ${itemCountLbl}</div>
         </div>
-        <input type="time" value="${m.time?m.time.slice(0,5):''}" class="meal-time-inp" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario"/>
       </div>
-      <p class="meal-desc-v2">${esc(m.description)}</p>
-      ${m.notes?`<p class="meal-note-v2">${esc(m.notes)}</p>`:''}
-      <div class="macro-badges">
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--t1);line-height:1;">${m.kcal}</div>
+        <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">kcal</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
+        <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
+        <button class="meal-edit-btn meal-delete-btn" onclick="if(confirm('Eliminare questo pasto?'))deleteMeal('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
+      </div>
+    </div>`;
+
+  // Lista ingredienti (visibile solo se pasto espanso)
+  const itemsListHtml = items.map(it => {
+    const isItemExpanded = !!(ST.itemExpanded && ST.itemExpanded[it.id]);
+    const itemArrow = isItemExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
+    const macroChips = isItemExpanded ? `
+      <div style="margin-top:6px;padding-top:6px;border-top:0.5px dashed var(--s3);display:flex;gap:4px;font-size:10px;font-family:'JetBrains Mono',monospace;flex-wrap:wrap;">
+        <span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
+        <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
+        <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>
+      </div>` : '';
+    const qtyDisplay = (it.quantity && it.unit) ? `<span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;flex-shrink:0;">${it.quantity}${it.unit}</span>` : '';
+    return `
+      <div style="background:var(--s2);border-radius:6px;padding:8px 10px;margin-bottom:4px;">
+        <div onclick="toggleMealItem('${it.id}')" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+            <span style="color:var(--t3);font-size:9px;flex-shrink:0;${itemArrow}">▶</span>
+            <span style="font-size:13px;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.name)}</span>
+            ${qtyDisplay}
+          </div>
+          <span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t2);flex-shrink:0;">${it.kcal} kcal</span>
+        </div>
+        ${macroChips}
+      </div>`;
+  }).join('');
+
+  // Corpo espanso
+  const bodyExpanded = isExpanded ? `
+    <div style="padding:0 13px 13px;border-top:0.5px solid var(--s3);margin-top:0;">
+      ${m.description?`<p style="font-size:14px;color:var(--t1);line-height:1.4;margin:10px 0 6px;font-weight:500;">${esc(m.description)}</p>`:''}
+      ${m.notes?`<p style="font-size:12px;font-style:italic;color:var(--t3);margin:0 0 10px;line-height:1.45;">${esc(m.notes)}</p>`:''}
+      <div class="macro-badges" style="margin-top:10px;">
         <div class="macro-badge" style="background:var(--s2);border:1px solid var(--b1);">
           <div class="mb-lbl" style="color:var(--t3);">kcal</div>
           <div class="mb-val">${m.kcal}</div>
@@ -6013,23 +6097,27 @@ function mealCardHTML(m){
           <div class="mb-val">${m.fat}<span>g</span></div>
         </div>
       </div>
-      ${(()=>{
-        const kC=( m.carbs||0)*4, kP=(m.protein||0)*4, kF=(m.fat||0)*9;
-        const tot=kC+kP+kF;
-        if(tot<10) return '';
-        const pC=kC/tot*100, pP=kP/tot*100, pF=kF/tot*100;
-        const inZona=(pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
-        const bg=inZona?'#E6F4F2':'#FDECEA';
-        const col=inZona?'#2A7A6F':'#B84C2A';
-        const lbl=inZona?'In Zona':'Fuori Zona';
-        return `<div style="display:flex;justify-content:flex-end;margin-top:6px;"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;background:${bg};color:${col};border-radius:20px;padding:2px 9px;">${lbl}</span></div>`;
-      })()}
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <button class="meal-edit-btn" onclick="openEditMealModal('${ST.activeDay}','${mealId}')" title="Modifica">✏️</button>
-      <button class="meal-edit-btn meal-delete-btn" onclick="if(confirm('Eliminare questo pasto?'))deleteMeal('${ST.activeDay}','${mealId}')" title="Elimina" style="opacity:0.5;">🗑️</button>
+      ${zonaBadge?`<div style="display:flex;justify-content:flex-end;margin-top:6px;">${zonaBadge}</div>`:''}
+      ${items.length > 0 ? `
+        <div style="margin-top:14px;">
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);font-weight:700;margin-bottom:8px;font-family:'JetBrains Mono',monospace;">Ingredienti</div>
+          ${itemsListHtml}
+        </div>` : ''}
+      <div style="margin-top:10px;">
+        <input type="time" value="${m.time?m.time.slice(0,5):''}" class="meal-time-inp" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" title="Modifica orario" style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:80px;padding:0;"/>
+      </div>
+    </div>` : '';
+
+  const inner = `<div class="meal-card-v2" style="display:block;padding:0;">
+    <div style="display:flex;">
+      <div class="slot-bar" style="background:${ss.color};width:3px;align-self:stretch;flex-shrink:0;border-radius:2px 0 0 2px;"></div>
+      <div style="flex:1;min-width:0;">
+        ${headerCollapsed}
+        ${bodyExpanded}
+      </div>
     </div>
   </div>`;
+
   return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="deleteMeal('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
 }
 
@@ -6213,6 +6301,19 @@ window.smartResetForm = function() {
   renderOggi();
 };
 
+// FASE 3 Timeline doppio collasso
+window.toggleMealCard = function(mealId) {
+  if (!ST.mealExpanded) ST.mealExpanded = {};
+  ST.mealExpanded[mealId] = !ST.mealExpanded[mealId];
+  renderOggi();
+};
+
+window.toggleMealItem = function(itemId) {
+  if (!ST.itemExpanded) ST.itemExpanded = {};
+  ST.itemExpanded[itemId] = !ST.itemExpanded[itemId];
+  renderOggi();
+};
+
 window.smartSavePasto = async function() {
   _initSmartForm();
   if (!_smartHasContent()) { alert('Aggiungi almeno un ingrediente'); return; }
@@ -6249,19 +6350,20 @@ window.smartSavePasto = async function() {
       source: it.source || 'manual',
       sort_order: idx,
     }));
-    const {error: itemsErr} = await supa.from('meal_items').insert(itemsPayload);
+    const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
     if (itemsErr) {
       // Rollback: cancella il meal orfano
       await supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id);
       throw itemsErr;
     }
-    // In-memory push (stesso pattern di logMeal)
+    // In-memory push (stesso pattern di logMeal) + items con id reali per timeline Fase 3
     const d = getDay(ST.activeDay);
     d.meals.push({
       id: meal.id, local_id: meal.id,
       slot: ST.logSlot, description: summary, time: hhmm,
       kcal: meal.kcal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat,
       notes: meal.notes,
+      items: savedItems || [],
     });
     ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false };
     ST.logOpen = false;
