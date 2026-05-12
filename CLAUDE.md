@@ -735,6 +735,14 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Nutrition: precisione decimale recuperata
+
+- Migrazione Supabase completata: `meals.kcal/protein/carbs/fat` ora `numeric(6,1)` / `numeric(5,1)` invece di `integer`
+- Lato app: arrotondamento allentato da intero a 1 cifra decimale nei 3 punti del commit `a0bbec0` — `estimateMacros` ([zona-tracker.html:1558](zona-tracker.html:1558)), `dbAddMeal` ([zona-tracker.html:1930](zona-tracker.html:1930)), `saveEditMeal` ([zona-tracker.html:7095](zona-tracker.html:7095))
+- Pattern: `Math.round((Number(x) || 0) * 10) / 10` — preserve cast `Number()`, fallback `|| 0`, `Math.max(0, ...)`
+- Esempio: kiwi → 42.3 kcal / 0.8 protein invece di 42 / 1
+- Da verificare in produzione: rendering UI con decimali (vedi note sotto sui side-effect grafici)
+
 ### 12 maggio 2026 — Fix bug critico: errore integer su pasti piccoli
 
 - Bug: salvataggio pasti con singolo frutto/snack falliva con `invalid input syntax for type integer: "4.2"`

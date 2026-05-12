@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 17:50';
+const APP_VERSION = '2026.05.12 · 18:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1553,13 +1553,13 @@ NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. 
 async function estimateMacros(desc) {
   const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
   const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
-  // Sanifica: i numeri devono essere integer per Supabase (colonne integer).
-  // Math.round gestisce decimali AI ed eventuali NaN/undefined → 0.
+  // Sanifica: arrotonda a 1 decimale per Supabase numeric(5-6,1).
+  // Cast Number gestisce stringhe AI, fallback 0 per NaN/undefined, max(0,...) impedisce negativi.
   return {
-    kcal:    Math.max(0, Math.round(Number(parsed.kcal)    || 0)),
-    protein: Math.max(0, Math.round(Number(parsed.protein) || 0)),
-    carbs:   Math.max(0, Math.round(Number(parsed.carbs)   || 0)),
-    fat:     Math.max(0, Math.round(Number(parsed.fat)     || 0)),
+    kcal:    Math.max(0, Math.round((Number(parsed.kcal)    || 0) * 10) / 10),
+    protein: Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10),
+    carbs:   Math.max(0, Math.round((Number(parsed.carbs)   || 0) * 10) / 10),
+    fat:     Math.max(0, Math.round((Number(parsed.fat)     || 0) * 10) / 10),
     notes:   parsed.notes || '',
   };
 }
@@ -1932,12 +1932,12 @@ async function loadCatalog() {
 }
 
 async function dbAddMeal(meal) {
-  // Difesa in profondità: arrotonda a integer prima dell'insert (colonne Supabase integer).
+  // Difesa in profondità: arrotonda a 1 decimale prima dell'insert (colonne Supabase numeric).
   const sanit = {
-    kcal:    Math.max(0, Math.round(Number(meal.kcal)    || 0)),
-    protein: Math.max(0, Math.round(Number(meal.protein) || 0)),
-    carbs:   Math.max(0, Math.round(Number(meal.carbs)   || 0)),
-    fat:     Math.max(0, Math.round(Number(meal.fat)     || 0)),
+    kcal:    Math.max(0, Math.round((Number(meal.kcal)    || 0) * 10) / 10),
+    protein: Math.max(0, Math.round((Number(meal.protein) || 0) * 10) / 10),
+    carbs:   Math.max(0, Math.round((Number(meal.carbs)   || 0) * 10) / 10),
+    fat:     Math.max(0, Math.round((Number(meal.fat)     || 0) * 10) / 10),
   };
   const {data, error} = await supa.from('meals').insert({
     user_id: ST.user.id,
@@ -7104,11 +7104,11 @@ async function saveEditMeal() {
     notes:   document.getElementById('em-notes').value.trim() || null,
   };
 
-  // Sanifica macro a integer prima dell'update (colonne Supabase integer).
-  if (updates.kcal    !== undefined) updates.kcal    = Math.max(0, Math.round(Number(updates.kcal)    || 0));
-  if (updates.protein !== undefined) updates.protein = Math.max(0, Math.round(Number(updates.protein) || 0));
-  if (updates.carbs   !== undefined) updates.carbs   = Math.max(0, Math.round(Number(updates.carbs)   || 0));
-  if (updates.fat     !== undefined) updates.fat     = Math.max(0, Math.round(Number(updates.fat)     || 0));
+  // Sanifica macro a 1 decimale prima dell'update (colonne Supabase numeric).
+  if (updates.kcal    !== undefined) updates.kcal    = Math.max(0, Math.round((Number(updates.kcal)    || 0) * 10) / 10);
+  if (updates.protein !== undefined) updates.protein = Math.max(0, Math.round((Number(updates.protein) || 0) * 10) / 10);
+  if (updates.carbs   !== undefined) updates.carbs   = Math.max(0, Math.round((Number(updates.carbs)   || 0) * 10) / 10);
+  if (updates.fat     !== undefined) updates.fat     = Math.max(0, Math.round((Number(updates.fat)     || 0) * 10) / 10);
 
   // Aggiorna stato locale
   const day = ST.db.days[_editMealDayKey];
