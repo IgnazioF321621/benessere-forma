@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 20:15';
+const APP_VERSION = '2026.05.12 · 20:46';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1293,6 +1293,8 @@ const ST = {
   // FASE 3 Timeline doppio collasso (id meal/item → bool expanded), default vuoto = tutto collassato
   mealExpanded: {},
   itemExpanded: {},
+  // FASE 5 Card EXTRA integratori collassabile, default vuoto = tutte collassate
+  extraSuppExpanded: {},
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -1496,6 +1498,48 @@ function suppTotalsForIds(ids){
   return {kcal:r2(tot.kcal),protein:r2(tot.protein),carbs:r2(tot.carbs),fat:r2(tot.fat)};
 }
 function r2(x){return Math.round(x*100)/100;}
+
+// Somma kcal/macro degli "extra" integratori loggati nel giorno (non standard).
+// Un "extra" = entry in rawSuppLogs il cui nome NON corrisponde a un integratore in ST.supps
+// (gli standard sono già contati da suppTotalsForIds tramite suppsTaken).
+// Coerenza con extraSuppCardHTML: mult = log.dose / baseDose, dove baseDose = supp.dose_die.
+function extraSuppsTotals(day) {
+  if (!day || !Array.isArray(day.rawSuppLogs)) return {kcal:0,protein:0,carbs:0,fat:0};
+  const standardNames = new Set((ST.supps || []).map(s => s.name));
+  const tot = day.rawSuppLogs.reduce((a, log) => {
+    if (standardNames.has(log.name)) return a; // standard, già contato
+    const cat = (ST.catalog || []).find(c => c.nome === log.name);
+    const supp = (ST.supps || []).find(s => s.name === log.name);
+    const kcal    = Number(supp?.kcal    ?? cat?.kcal     ?? 0);
+    const protein = Number(supp?.protein ?? cat?.proteine ?? 0);
+    const carbs   = Number(supp?.carbs   ?? cat?.carbo    ?? 0);
+    const fat     = Number(supp?.fat     ?? cat?.grassi   ?? 0);
+    const baseDose = parseFloat(supp?.dose_die) || 1;
+    const logDose = Number(log.dose ?? 1) || 1;
+    const mult = logDose / baseDose;
+    return {
+      kcal:    a.kcal    + kcal    * mult,
+      protein: a.protein + protein * mult,
+      carbs:   a.carbs   + carbs   * mult,
+      fat:     a.fat     + fat     * mult,
+    };
+  }, {kcal:0,protein:0,carbs:0,fat:0});
+  return {kcal:r2(tot.kcal), protein:r2(tot.protein), carbs:r2(tot.carbs), fat:r2(tot.fat)};
+}
+
+// Helper unico: totali completi del giorno (pasti + standard supps + extra supps).
+function dayTotals(day) {
+  if (!day) return {kcal:0,protein:0,carbs:0,fat:0};
+  const m = mealTotals(day.meals || []);
+  const s = suppTotalsForIds(day.suppsTaken || []);
+  const x = extraSuppsTotals(day);
+  return {
+    kcal:    r2(m.kcal    + s.kcal    + x.kcal),
+    protein: r2(m.protein + s.protein + x.protein),
+    carbs:   r2(m.carbs   + s.carbs   + x.carbs),
+    fat:     r2(m.fat     + s.fat     + x.fat),
+  };
+}
 function activeSupps(){return ST.supps.filter(s=>s.active);}
 function suppMonthlyCost(s){
   const multiplier = s.dose_multiplier != null ? parseFloat(s.dose_multiplier) : 1;
@@ -2465,14 +2509,8 @@ function renderHome(){
   const day   = getDay(today);
   const meals = day.meals || [];
   const taken = day.suppsTaken || [];
-  const mTot  = mealTotals(meals);
-  const sTot  = suppTotalsForIds(taken);
-  const cons  = {
-    kcal:    mTot.kcal    + sTot.kcal,
-    protein: mTot.protein + sTot.protein,
-    carbs:   mTot.carbs   + sTot.carbs,
-    fat:     mTot.fat     + sTot.fat
-  };
+  // Include pasti + integratori standard + integratori extra (rawSuppLogs non standard)
+  const cons  = dayTotals(day);
   const target = ST.TARGET || {kcal:2000, protein:150, carbs:200, fat:67};
 
   // ── Zona check (identica a renderOggi) ──
@@ -6385,6 +6423,13 @@ window.toggleMealItem = function(itemId) {
   renderOggi();
 };
 
+// FASE 5 Card EXTRA integratori collassabile
+window.toggleExtraSupp = function(extraKey) {
+  if (!ST.extraSuppExpanded) ST.extraSuppExpanded = {};
+  ST.extraSuppExpanded[extraKey] = !ST.extraSuppExpanded[extraKey];
+  renderOggi();
+};
+
 window.smartSavePasto = async function() {
   _initSmartForm();
   if (!_smartHasContent()) { alert('Aggiungi almeno un ingrediente'); return; }
@@ -6626,9 +6671,8 @@ function renderOggi(){
   const day=getDay(ST.activeDay);
   const meals=day.meals||[];
   const taken=day.suppsTaken||[];
-  const mTot=mealTotals(meals);
-  const sTot=suppTotalsForIds(taken);
-  const cons={kcal:mTot.kcal+sTot.kcal,protein:mTot.protein+sTot.protein,carbs:mTot.carbs+sTot.carbs,fat:mTot.fat+sTot.fat};
+  // Include pasti + integratori standard + integratori extra
+  const cons=dayTotals(day);
   const rem=Math.max(0,ST.TARGET.kcal-cons.kcal);
   const allDays=Object.keys(ST.db.days).sort();
   const idx=allDays.indexOf(ST.activeDay);
@@ -6759,7 +6803,18 @@ function renderOggi(){
           const logTime=esc(ev.log.time);
           const logDose = ev.log.dose || parseFloat(ev.supp?.dose_die) || 1;
           const cardHtml = extraSuppCardHTML(ev.supp, ev.catItem, ev.log.name, ev.log.time, logDose);
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">+ EXTRA</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div><div>${cardHtml}</div></div></div></div>`;
+          // Stato collasso EXTRA card (default: collassato)
+          if (!ST.extraSuppExpanded) ST.extraSuppExpanded = {};
+          const extraKey = (ev.log.name + '|' + ev.log.time).replace(/[^a-zA-Z0-9|]/g,'_');
+          const isExtraExpanded = !!ST.extraSuppExpanded[extraKey];
+          const arrowExtra = isExtraExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
+          // Kcal totale extra (per header collassato)
+          const extraCat = ev.catItem || (ST.catalog||[]).find(c => c.nome === ev.log.name);
+          const extraSupp = ev.supp || (ST.supps||[]).find(s => s.name === ev.log.name);
+          const extraBase = parseFloat(extraSupp?.dose_die) || 1;
+          const extraMult = Number(logDose) / extraBase || 0;
+          const extraKcalTot = Math.round((Number(extraSupp?.kcal ?? extraCat?.kcal ?? 0)) * extraMult);
+          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div></div></div>`;
         }
         if(isLast) html+=adviceBoxHTML;
       });
@@ -6978,11 +7033,11 @@ function renderStorico(){
   const today=todayKey();
   const rangeDays=days.filter(d=>!ST.db.days[d]?.fasting).slice(0,ST.reportRange);
   let avgKcal=0,avgProt=0,avgCarbs=0,avgFat=0;
-  if(rangeDays.length){rangeDays.forEach(d=>{const t=mealTotals(ST.db.days[d]?.meals||[]);avgKcal+=t.kcal;avgProt+=t.protein;avgCarbs+=t.carbs;avgFat+=t.fat;});avgKcal=Math.round(avgKcal/rangeDays.length);avgProt=Math.round(avgProt/rangeDays.length);avgCarbs=Math.round(avgCarbs/rangeDays.length);avgFat=Math.round(avgFat/rangeDays.length);}
-  const adherence=rangeDays.length?Math.round(rangeDays.filter(d=>{const t=mealTotals(ST.db.days[d]?.meals||[]);return t.kcal>0&&Math.abs(t.kcal-ST.TARGET.kcal)<300;}).length/rangeDays.length*100):0;
+  if(rangeDays.length){rangeDays.forEach(d=>{const t=dayTotals(ST.db.days[d]);avgKcal+=t.kcal;avgProt+=t.protein;avgCarbs+=t.carbs;avgFat+=t.fat;});avgKcal=Math.round(avgKcal/rangeDays.length);avgProt=Math.round(avgProt/rangeDays.length);avgCarbs=Math.round(avgCarbs/rangeDays.length);avgFat=Math.round(avgFat/rangeDays.length);}
+  const adherence=rangeDays.length?Math.round(rangeDays.filter(d=>{const t=dayTotals(ST.db.days[d]);return t.kcal>0&&Math.abs(t.kcal-ST.TARGET.kcal)<300;}).length/rangeDays.length*100):0;
   const estCost=periodCost(ST.reportRange);
   const chartDays=Object.keys(ST.db.days).sort().slice(-14);
-  const maxKcal=Math.max(...chartDays.map(d=>mealTotals(ST.db.days[d]?.meals||[]).kcal),ST.TARGET.kcal,1);
+  const maxKcal=Math.max(...chartDays.map(d=>dayTotals(ST.db.days[d]).kcal),ST.TARGET.kcal,1);
 
   let html=`<div class="range-tabs">${[7,14,30].map(r=>`<button class="range-tab ${ST.reportRange===r?'active':''}" onclick="setReportRange(${r})">${r} giorni</button>`).join('')}</div>`;
 
@@ -6992,14 +7047,14 @@ function renderStorico(){
     ${chartDays.length>1?(()=>{
       const H=100;
       const targetY=Math.round((1-(ST.TARGET.kcal/maxKcal))*H);
-      return `<div style="margin-top:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">ANDAMENTO CALORIE</div><div style="display:flex;gap:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);"><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--acc);border-radius:1px;display:inline-block;"></span>in target</span><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--fat);border-radius:1px;display:inline-block;"></span>sopra</span></div></div><div style="position:relative;height:${H}px;margin-bottom:4px;"><div style="position:absolute;left:0;right:0;top:${targetY}px;border-top:1px dashed var(--t3);opacity:.6;"><span style="position:absolute;right:0;top:-12px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);background:var(--s1);padding:0 3px;">${ST.TARGET.kcal}</span></div><div style="display:flex;align-items:flex-end;gap:4px;height:${H}px;">${chartDays.map(d=>{const k=mealTotals(ST.db.days[d]?.meals||[]).kcal;const h=k>0?Math.max(4,Math.round((k/maxKcal)*H)):0;const fasting=ST.db.days[d]?.fasting;const col=fasting?'var(--b1)':k>ST.TARGET.kcal?'var(--fat)':k>0?'var(--acc)':'var(--s3)';const lbl=new Date(d+'T12:00:00').getDate();return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:${H}px;justify-content:flex-end;position:relative;" title="${k?k+' kcal':fasting?'digiuno':'—'}"><div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;background:${col};transition:opacity .15s;"></div></div>`;}).join('')}</div></div><div style="display:flex;gap:4px;">${chartDays.map(d=>`<div style="flex:1;text-align:center;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${new Date(d+'T12:00:00').getDate()}</div>`).join('')}</div></div>`;
+      return `<div style="margin-top:14px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">ANDAMENTO CALORIE</div><div style="display:flex;gap:10px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);"><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--acc);border-radius:1px;display:inline-block;"></span>in target</span><span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;background:var(--fat);border-radius:1px;display:inline-block;"></span>sopra</span></div></div><div style="position:relative;height:${H}px;margin-bottom:4px;"><div style="position:absolute;left:0;right:0;top:${targetY}px;border-top:1px dashed var(--t3);opacity:.6;"><span style="position:absolute;right:0;top:-12px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);background:var(--s1);padding:0 3px;">${ST.TARGET.kcal}</span></div><div style="display:flex;align-items:flex-end;gap:4px;height:${H}px;">${chartDays.map(d=>{const k=dayTotals(ST.db.days[d]).kcal;const h=k>0?Math.max(4,Math.round((k/maxKcal)*H)):0;const fasting=ST.db.days[d]?.fasting;const col=fasting?'var(--b1)':k>ST.TARGET.kcal?'var(--fat)':k>0?'var(--acc)':'var(--s3)';const lbl=new Date(d+'T12:00:00').getDate();return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;height:${H}px;justify-content:flex-end;position:relative;" title="${k?k+' kcal':fasting?'digiuno':'—'}"><div style="width:100%;border-radius:3px 3px 0 0;height:${h}px;background:${col};transition:opacity .15s;"></div></div>`;}).join('')}</div></div><div style="display:flex;gap:4px;">${chartDays.map(d=>`<div style="flex:1;text-align:center;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${new Date(d+'T12:00:00').getDate()}</div>`).join('')}</div></div>`;
     })():''}
     </div>`;
   }
 
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin-bottom:0;">Tutti i giorni</span></div>
   ${days.length===0?'<div class="card"><p style="color:var(--t3);font-size:13px;">Nessun dato ancora. Inizia dalla tab Oggi.</p></div>':''}
-  ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=mealTotals(ms);const isT=day===today;return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
+  ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=dayTotals(d);const isT=day===today;return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
   </div>`;}).join('')}`;
 
   document.getElementById('page-storico').innerHTML=nutriSubNav('storico')+html+versionFooter();
@@ -8431,9 +8486,8 @@ async function deleteMeal(dayKey, mealId){
 
 async function fetchAdvice(){
   const d=getDay(ST.activeDay);
-  const mTot=mealTotals(d.meals||[]);
-  const sTot=suppTotalsForIds(d.suppsTaken||[]);
-  const cons={kcal:mTot.kcal+sTot.kcal,protein:mTot.protein+sTot.protein,carbs:mTot.carbs+sTot.carbs,fat:mTot.fat+sTot.fat};
+  // Include pasti + integratori standard + integratori extra
+  const cons=dayTotals(d);
   // isTomorrow=true SOLO se il sistema ha calcolato "domani" E l'utente non ha override-ato la select
   const isTomorrow = !!ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride;
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;

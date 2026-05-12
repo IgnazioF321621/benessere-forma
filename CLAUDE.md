@@ -735,6 +735,20 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 12 maggio 2026 — Fix integratori extra: kcal nel totale + card collassabile
+
+- **Bug 1 (critico)**: extra integratori (es. `High Protein Energy Bar Cocco`, 203 kcal) loggati ma kcal/macro non sommati al totale giornaliero. Cause: `suppTotalsForIds()` somma solo gli integratori in `ST.supps` via `suppsTaken`, ignora i `rawSuppLogs` di catalogo non-standard. Effetto: anello kcal Home + barre macro Home + anello Nutrition Hero + grafico ANDAMENTO CALORIE mostravano "kcal fantasma" mancanti.
+- **Fix**: nuovo helper `extraSuppsTotals(day)` ([zona-tracker.html:1500](zona-tracker.html:1500)) che somma kcal/macro dei `rawSuppLogs` con nome NON in `ST.supps`. Math coerente con `extraSuppCardHTML`: `mult = log.dose / supp.dose_die`. Filtro `standardNames.has(log.name)` evita doppi conteggi.
+- **Helper unico `dayTotals(day)`** ([zona-tracker.html:1528](zona-tracker.html:1528)) introdotto come somma completa (pasti + standard + extra). Adottato in 5 punti che prima usavano combinazioni manuali:
+  - Home `renderHome()` `cons`
+  - Nutrition Oggi `renderOggi()` `cons`
+  - `fetchAdvice()` `cons` (prompt AI suggerimenti)
+  - Storico `renderStorico()`: avgKcal/Prot/Carbs/Fat, adherence rate, maxKcal grafico, barre giornaliere chart ANDAMENTO CALORIE
+  - Storico card per giorno (col kcal totale + barre macro per pasti)
+- **Card EXTRA in timeline collassabile** ([zona-tracker.html:6763-6779](zona-tracker.html:6763)) come gruppi MAMI/PRANZO/SNACK: freccia ▶/▼, etichetta da "+ EXTRA" a "Integratori extra", kcal totale visibile nell'header collassato (es. `203 kcal`), tap su × non triggera toggle (event.stopPropagation), tap su header espande la card dettagliata con dose editabile e chip macro
+- **Stato nuovo** `ST.extraSuppExpanded` ([zona-tracker.html:1293](zona-tracker.html:1293)): chiave per riga `(name|time)` sanitizzata, default vuoto = tutte collassate, no persistenza tra reload
+- **Handler** `window.toggleExtraSupp(extraKey)` parallelo a `toggleMealCard` / `toggleMealItem`
+
 ### 12 maggio 2026 — Fase 4 Smart Ingredient: edit pasto + orario inline
 
 - Tap matita ✏️ in timeline apre lo stesso form Smart Ingredient pre-compilato con gli items esistenti (collassati di default come post-Analizza)
