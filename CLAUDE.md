@@ -720,6 +720,10 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] Dropdown selezione esercizio (search + tab Per programma/Per esercizio) sostituisce chip-row (9 maggio 2026)
 - [x] Migrazione Magic Link → OTP a 6 cifre via email (aprile 2026, commit `1bada62` + fix `364dd83`)
 - [x] Logica residua kcal/macro (zona-tracker.html, home + Oggi) (11 maggio 2026)
+- [x] Recovery G3/G6 ristrutturate in micro-esercizi + countdown ibrido (12 maggio 2026)
+- [x] Blocco Attivazione 5 min con countdown autonomo per tutte le 6 sessioni (12 maggio 2026)
+- [x] muscleImg sugli esercizi recovery (33 esercizi con immagine, 18 con null esplicito) (12 maggio 2026)
+- [x] Recovery G3/G6 — auto-collapse blocchi + micro-pause 5s/10s + stop blocco tra blocchi diversi (13 maggio 2026, commit `29eaac6`)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
@@ -734,6 +738,48 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 13 maggio 2026 — Recovery G3/G6: auto-collapse blocchi + micro-pause + stop blocco (UX post-uso reale)
+
+Tre funzionalità basate su sessione reale del flow recupero. Commit `29eaac6`, versione `2026.05.13 · 15:10`. Solo flow recupero (recoveryUpper/recoveryLower) — flow attivazione 5 min, schema dati esercizi, `muscleImg`, modal AI: INTOCCATI.
+
+- **Auto-collapse blocchi completati**: quando tutti gli esercizi di un blocco sono in `trainRecoveryDone`, dopo 2s il blocco si chiude automaticamente mostrando solo header compatto `▶ Nome ✓ — X.X min` (chevron + colore verde + tempo totale). Reset a `recoveryFlowStart` (nuova sessione = tutti espansi). Tap su header sempre cliccabile per toggle manuale (chevron `▶` chiuso / `▼` aperto). Stato `ST.trainRecoveryCollapsed: {blockName: true|false}` — `false` esplicito (intenzionalmente aperto) impedisce all'auto-collapse di richiudere quel blocco al prossimo tick.
+- **Micro-pause smart tra esercizi (stesso blocco)** con logica detection su nome base:
+  - `_stripSide(name)` rimuove suffisso ` dx`/` sx` case-insensitive
+  - Se nomi base uguali (es. `Hip CARs dx` → `Hip CARs sx`) → pausa **5s**
+  - Se nomi base diversi (es. `Hip CARs sx` → `90/90 hip switch`) → pausa **10s**
+  - Hero card cambia palette: sfondo `#FFF7E0` + bordo `#D97706` (ambra), label mono `PROSSIMO ESERCIZIO TRA…`, countdown grande in ambra, nome prossimo esercizio sotto
+  - Bottoni Skip/Back/Pause **disabilitati** (grigi `#DDD`, `cursor:not-allowed`, opacity .6) — la pausa non è interrompibile
+  - Transizione automatica al countdown vero dell'esercizio al raggiungimento di 0
+- **Stop automatico tra blocchi diversi**: il flow si mette in pausa autonomamente. Hero card mostra anteprima del prossimo blocco: label `PROSSIMO BLOCCO`, nome blocco grande, durata totale (`~N min`), lista compatta esercizi (nome + durata) scrollabile (max-height 280px). Solo 2 bottoni: ⏪ Indietro (torna a ultimo esercizio del blocco precedente, NO resume — `running=false`) + ▶ Riprendi (esistente `recoveryFlowResume`, no bottone dedicato). NO Skip durante stop blocco — forza l'utente a confermare il passaggio.
+
+**Stato nuovo** in `ST.trainRecoveryFlow`:
+```js
+microPause: { active, remaining, total, nextExName }  // pausa 5s/10s tra esercizi stesso blocco
+blockStop:  { active, nextBlockName, nextExStartIdx } // stop automatico tra blocchi diversi
+```
++ `ST.trainRecoveryCollapsed: {blockName: true|false}` separato.
+
+**Helper nuovi**: `_stripSide(name)`, `_allExercisesDoneInBlock(blockName, exs)`, `toggleRecoveryBlockCollapsed(blockName)`.
+
+**Logica `_recoveryFlowAdvance` riscritta con priorità**:
+1. Marca esercizio corrente come done (logica esistente)
+2. Verifica se blocco corrente è completato → `setTimeout 2s` per auto-collapse (controlla `collapsed[name] !== false` per rispettare override manuale)
+3. Se prossimo non esiste → fine sessione (logica esistente)
+4. Se prossimo è in blocco diverso → attiva `blockStop`, ferma interval, NO avanzamento countdown
+5. Se prossimo è in stesso blocco → attiva `microPause`, avanza `currentIdx` subito ma countdown è bloccato sul `microPause.remaining`
+
+**Logica `_recoveryFlowTick`**: 2 branch — A) decrementa `microPause.remaining`, transizione automatica al countdown esercizio quando arriva a 0 / B) decrementa `flow.remaining` esercizio (esistente).
+
+**Controlli sui pulsanti**:
+- `recoveryFlowPause`: no-op durante microPause
+- `recoveryFlowSkip`: no-op durante microPause e durante blockStop
+- `recoveryFlowBack`: no-op durante microPause; durante blockStop torna a esercizio precedente con `running=false` (no auto-resume)
+- `recoveryFlowResume`: se `blockStop.active`, resetta blockStop + setta `remaining` dal primo del nuovo blocco, poi riavvia interval
+
+**Mutual exclusion** con flow attivazione invariata (la check su `trainActivationFlow.running` resta).
+
+`closeTrainingSession()` resetta anche i nuovi sotto-stati (`microPause`, `blockStop`, `trainRecoveryCollapsed`).
 
 ### 12 maggio 2026 — muscleImg sugli esercizi recovery G3/G6 (riuso PNG esistenti)
 
