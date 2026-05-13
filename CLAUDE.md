@@ -741,6 +741,17 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 13 maggio 2026 (sera) — UX refinements M2 schermate misure (s6/s7)
+
+4 micro-fix UX da test reale, su schermate misure di M2. Nessuna modifica DB, nessun JS toccato (eccetto 1 riga show/hide nello switch).
+
+- **Switch unità più visibile (s6)**: spostato lo switch KG·CM / LB·IN dal body s6 dentro l'**header verde di M2** (`onb-header`), con micro-label "Unità di misura" sopra. Show/hide dinamico in `m2GoStep`: visibile solo quando `stepId === 's6'`, nascosto sugli altri step. Aumentate dimensioni bottoni (padding `6px 12px` → `10px 20px`, font-size `11px` → `13px`). Variante CSS dedicata `.m2-unit-switch-onheader` con contrasto adattato a sfondo verde: container `rgba(255,255,255,.15)` + border `.25`, non-attivo testo `rgba(255,255,255,.8)`, attivo background `#fff` + color `var(--acc)` (inverte i ruoli per massimo contrasto).
+- **Disclaimer bilateralità (s7)**: inserito `<p class="m2-bilat-tip">` dopo `.m2-divider`, prima del gruppo opzionali. Testo: "Per bicipite, polso, coscia e polpaccio: scegli un lato (destro o sinistro) e usa sempre lo stesso nelle misurazioni successive — così i dati sono confrontabili nel tempo." Stile italic 14px var(--t3) + micro-treatment "advice box" (`padding:10px 12px; background:var(--s1); border-left:3px solid var(--acc); border-radius:6px;`) per emergere senza essere invadente.
+- **Spiegazione subito sotto label (s6/s7/s8)**: riposizionamento via **solo CSS con `order`**, zero edit HTML su 16 campi. Regole nuove `.onb-field .m2-meas-tip{order:1;margin-top:2px;margin-bottom:0;}` + `.onb-field .m2-meas-row{order:2;}`. L'ordine DOM resta `label → row → tip` ma il render visivo diventa `label → tip → row`. Coinvolge automaticamente s6 (2 campi), s7 (9 campi), s8 (5 campi) — quest'ultimo allineato per consistenza come anticipato nel piano.
+- **Asterisco accorpato (s6/s7/s10)**: rimosso lo spazio HTML tra il nome del campo e `<span class="m2-required-asterisk">` su 6 punti (peso, altezza, vita, petto, fianchi, data esame). Il gap residuo viene solo dal `margin-left:2px` dello span — visivamente "PESO*" invece di "PESO &nbsp;*". Mantenuto colore evergreen `var(--acc)` e `font-weight:700`.
+
+CLAUDE.md sezione M2 della voce di stamane resta intatta — questa è solo una passata di rifinitura UI.
+
 ### 13 maggio 2026 (pomeriggio) — Fix bug M2 da test reale (rename colonne DB + dropzone CSS)
 
 Test M2 su iPhone con account reale ha trovato 2 bug bloccanti. Fix mirati, nessuna feature nuova.
