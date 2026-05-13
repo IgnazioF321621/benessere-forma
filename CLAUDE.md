@@ -741,6 +741,32 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 13 maggio 2026 (pomeriggio) — Fix bug M2 da test reale (rename colonne DB + dropzone CSS)
+
+Test M2 su iPhone con account reale ha trovato 2 bug bloccanti. Fix mirati, nessuna feature nuova.
+
+**Bug A — Salvataggio `body_measurements` fallisce** con `Could not find the 'bf_pct' column ... in the schema cache`. Causa: 7 nomi di colonne nel codice JS non corrispondevano allo schema Supabase reale. Rename completo:
+
+| Tabella | Codice vecchio | Schema DB |
+|---|---|---|
+| `body_measurements` | `hip_cm` | `hips_cm` |
+| `body_measurements` | `bicep_cm` | `biceps_cm` |
+| `body_measurements` | `bf_pct` | `body_fat_pct` |
+| `body_measurements` | `muscle_kg` | `muscle_mass_kg` |
+| `body_measurements` | `body_age` | `metabolic_age` |
+| `body_measurements` | `water_pct` | `body_water_pct` |
+| `blood_tests` | `cholesterol` | `cholesterol_tot` |
+
+Verifica esaustiva delle altre tabelle M2 (`body_check_photos`, `body_checks`): tutti i nomi nel codice già coerenti con lo schema, nessun rename necessario.
+
+**NB**: la tabella `body_logs` (modulo Body esistente, separata da M2) **continua a usare i nomi vecchi** `bf_pct`/`muscle_kg`/`body_age`/`hip_cm`/`bicep_cm` — schema diverso, non toccato. Il fix ha riguardato solo le funzioni M2 (`m2ContinueS7`, `m2ContinueS8`, `m2SaveMeasurementsAndSkipS8`, `m2SaveBloodTests`).
+
+**Bug B — Schermate foto vuote (s1-s4) con dropzone collassata a L + titoli duplicati**:
+- **Causa duplicazione**: il corpo di ogni step foto aveva `.onb-section-title` + `<p>` sottotitolo che ripetevano i contenuti già renderizzati dall'header dinamico `m2-title`/`m2-subtitle` (settati da `m2GoStep` via mappa `M2_HEADERS`). Rimossi dai 4 step.
+- **Causa dropzone collassata**: la classe `.m2-photo-dropzone` era applicata a un `<label>` (default `display:inline`), quindi `padding` e `text-align:center` non bastavano e i `<div>` figli si disponevano in inline. Fix CSS: aggiunti `display:block; width:100%; box-sizing:border-box;` — ora il box occupa l'intera larghezza e i figli stanno in stack verticale centrato.
+
+**Pulizia `m2Complete()`** (opzionale dalla brief): aggiunto reset di `ST.m2` dopo UPDATE riuscito su `body_checks` (status=completed). Resettati: `checkId`, `step`, `photos`, `photoUrls` (con `URL.revokeObjectURL` per evitare memory leak), `photosUploaded`, `reviewingPose`, `measurements`, `bloodTests`, `hasRecentBloodTests`, `retakeFromModal`. **Non** toccato `unitSystem` — resta preferenza utente per check fisici futuri.
+
 ### 13 maggio 2026 — M2 Check Fisico (versione funzionale)
 
 Prima implementazione end-to-end del modulo M2 (check fisico) come da design session del 10 maggio. **Versione FUNZIONALE**: riusa pattern visivo dell'onboarding M1 esistente (classi `.onb-*`, font Manrope/legacy, palette evergreen accent). Il design refinement (font Syne, palette bone-caldo `#F5F3EE`, tipografia M2) arriverà in pass successivo via Claude Design.

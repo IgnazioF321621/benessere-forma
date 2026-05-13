@@ -108,7 +108,7 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 #m2-screen.visible{display:block;}
 .m2-step{display:none;}
 .m2-step.active{display:block;}
-.m2-photo-dropzone{border:2px dashed var(--acc);border-radius:12px;padding:32px 16px;text-align:center;background:var(--s1);cursor:pointer;transition:background .15s;}
+.m2-photo-dropzone{display:block;width:100%;box-sizing:border-box;border:2px dashed var(--acc);border-radius:12px;padding:32px 16px;text-align:center;background:var(--s1);cursor:pointer;transition:background .15s;}
 .m2-photo-dropzone:hover{background:var(--s2);}
 .m2-photo-dropzone input[type="file"]{display:none;}
 .m2-photo-instr{font-size:11px;letter-spacing:1px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-transform:uppercase;line-height:1.6;margin-bottom:12px;}
@@ -872,8 +872,6 @@ select.inp{cursor:pointer;}
     <!-- STEP 1: Posa frontale -->
     <div id="m2-s1" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Posa frontale</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Davanti, in posizione naturale.</p>
         <label for="m2-file-front" class="m2-photo-dropzone" id="m2-drop-front">
           <input type="file" id="m2-file-front" accept="image/*" onchange="m2HandlePhotoSelect('front', event)"/>
           <div class="m2-photo-instr">In piedi · fronte alla fotocamera · braccia staccate · piedi paralleli · sguardo in avanti</div>
@@ -894,8 +892,6 @@ select.inp{cursor:pointer;}
     <!-- STEP 2: Posa lato destro -->
     <div id="m2-s2" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Posa lato destro</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Lato destro verso la fotocamera.</p>
         <label for="m2-file-right" class="m2-photo-dropzone" id="m2-drop-right">
           <input type="file" id="m2-file-right" accept="image/*" onchange="m2HandlePhotoSelect('right', event)"/>
           <div class="m2-photo-instr">Di lato · lato destro verso la fotocamera · braccia rilassate · piedi uniti · sguardo in avanti</div>
@@ -916,8 +912,6 @@ select.inp{cursor:pointer;}
     <!-- STEP 3: Posa lato sinistro -->
     <div id="m2-s3" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Posa lato sinistro</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Lato sinistro verso la fotocamera.</p>
         <label for="m2-file-left" class="m2-photo-dropzone" id="m2-drop-left">
           <input type="file" id="m2-file-left" accept="image/*" onchange="m2HandlePhotoSelect('left', event)"/>
           <div class="m2-photo-instr">Di lato · lato sinistro verso la fotocamera · braccia rilassate · piedi uniti · sguardo in avanti</div>
@@ -938,8 +932,6 @@ select.inp{cursor:pointer;}
     <!-- STEP 4: Posa retro -->
     <div id="m2-s4" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Posa retro</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Spalle verso la fotocamera.</p>
         <label for="m2-file-back" class="m2-photo-dropzone" id="m2-drop-back">
           <input type="file" id="m2-file-back" accept="image/*" onchange="m2HandlePhotoSelect('back', event)"/>
           <div class="m2-photo-instr">Di spalle · retro verso la fotocamera · braccia staccate · piedi paralleli · sguardo in avanti</div>
@@ -1701,7 +1693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.13 · 16:41';
+const APP_VERSION = '2026.05.13 · 18:02';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2814,10 +2806,10 @@ function m2ContinueS7() {
   const toCm = (v) => (v == null) ? null : (ST.m2.unitSystem === 'metric' ? v : m2InToCm(v));
   ST.m2.measurements.waist_cm     = toCm(vita);
   ST.m2.measurements.chest_cm     = toCm(petto);
-  ST.m2.measurements.hip_cm       = toCm(fianchi);
+  ST.m2.measurements.hips_cm      = toCm(fianchi);
   ST.m2.measurements.shoulders_cm = toCm(get('m2-spalle'));
   ST.m2.measurements.neck_cm      = toCm(get('m2-collo'));
-  ST.m2.measurements.bicep_cm     = toCm(get('m2-bicipite'));
+  ST.m2.measurements.biceps_cm    = toCm(get('m2-bicipite'));
   ST.m2.measurements.wrist_cm     = toCm(get('m2-polso'));
   ST.m2.measurements.thigh_cm     = toCm(get('m2-coscia'));
   ST.m2.measurements.calf_cm      = toCm(get('m2-polpaccio'));
@@ -2828,18 +2820,18 @@ function m2ContinueS7() {
 async function m2ContinueS8() {
   const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
   const muscleRaw = get('m2-muscle');
-  ST.m2.measurements.bf_pct        = get('m2-bf');
-  ST.m2.measurements.muscle_kg     = (muscleRaw == null) ? null : (ST.m2.unitSystem === 'metric' ? muscleRaw : m2LbToKg(muscleRaw));
-  ST.m2.measurements.visceral_fat  = get('m2-visceral');
-  ST.m2.measurements.body_age      = get('m2-bodyage');
-  ST.m2.measurements.water_pct     = get('m2-water');
+  ST.m2.measurements.body_fat_pct    = get('m2-bf');
+  ST.m2.measurements.muscle_mass_kg  = (muscleRaw == null) ? null : (ST.m2.unitSystem === 'metric' ? muscleRaw : m2LbToKg(muscleRaw));
+  ST.m2.measurements.visceral_fat    = get('m2-visceral');
+  ST.m2.measurements.metabolic_age   = get('m2-bodyage');
+  ST.m2.measurements.body_water_pct  = get('m2-water');
   await m2SaveMeasurements();
   m2GoStep('s9');
 }
 
 // Salta s8 (composizione opzionale): non popolare i 5 campi composizione, salva e prosegui
 async function m2SaveMeasurementsAndSkipS8() {
-  ['bf_pct','muscle_kg','visceral_fat','body_age','water_pct'].forEach(k => { ST.m2.measurements[k] = null; });
+  ['body_fat_pct','muscle_mass_kg','visceral_fat','metabolic_age','body_water_pct'].forEach(k => { ST.m2.measurements[k] = null; });
   await m2SaveMeasurements();
   m2GoStep('s9');
 }
@@ -2886,11 +2878,11 @@ async function m2SaveBloodTests() {
   const payload = {
     user_id: ST.user.id,
     test_date: date,
-    hemoglobin:    get('m2-bl-hemo'),
-    ferritin:      get('m2-bl-ferr'),
-    glucose:       get('m2-bl-gluc'),
-    cholesterol:   get('m2-bl-chol'),
-    hdl:           get('m2-bl-hdl'),
+    hemoglobin:      get('m2-bl-hemo'),
+    ferritin:        get('m2-bl-ferr'),
+    glucose:         get('m2-bl-gluc'),
+    cholesterol_tot: get('m2-bl-chol'),
+    hdl:             get('m2-bl-hdl'),
     triglycerides: get('m2-bl-trig'),
     creatinine:    get('m2-bl-crea'),
     alt:           get('m2-bl-alt'),
@@ -2932,6 +2924,20 @@ async function m2Complete() {
       }).eq('id', ST.m2.checkId);
       if(error) throw error;
     }
+    // Reset ST.m2 per evitare residui in cache (NON tocco unitSystem: resta preferenza utente)
+    ['front','right','left','back'].forEach(p => {
+      if(ST.m2.photoUrls[p]){ try { URL.revokeObjectURL(ST.m2.photoUrls[p]); } catch(e){} }
+    });
+    ST.m2.checkId = null;
+    ST.m2.step = 'intro';
+    ST.m2.photos = { front:null, right:null, left:null, back:null };
+    ST.m2.photoUrls = { front:null, right:null, left:null, back:null };
+    ST.m2.photosUploaded = { front:false, right:false, left:false, back:false };
+    ST.m2.reviewingPose = null;
+    ST.m2.measurements = {};
+    ST.m2.bloodTests = {};
+    ST.m2.hasRecentBloodTests = null;
+    ST.m2.retakeFromModal = false;
     // Vai a home
     showScreen('app');
     renderOggi(); showPage('home');
