@@ -1203,7 +1203,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.12 · 22:34';
+const APP_VERSION = '2026.05.13 · 15:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1246,7 +1246,12 @@ const ST = {
   trainCountdown: null,
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
   trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
-  trainRecoveryFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance G3/G6
+  trainRecoveryCollapsed: {}, // { blockName: true } — blocchi collassati (auto al completamento o toggle manuale)
+  trainRecoveryFlow: {       // countdown ibrido auto-advance G3/G6
+    active:false, currentIdx:0, remaining:0, running:false, _iv:null,
+    microPause: { active:false, remaining:0, total:0, nextExName:'' }, // pausa 5s/10s tra esercizi stesso blocco
+    blockStop:  { active:false, nextBlockName:'', nextExStartIdx:0 }   // stop automatico tra blocchi diversi
+  },
   trainActivationFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance blocco attivazione 5 min
   trainActivation: [false, false, false],
   trainActivationTimers: [
@@ -4752,17 +4757,83 @@ function _renderActivationSection(){
 
 // ── Renderer dedicato per le sessioni di recupero G3/G6 (countdown ibrido auto-advance) ──
 function _renderRecoverySection(s, sel){
-  if(!ST.trainRecoveryFlow) ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  if(!ST.trainRecoveryFlow) ST.trainRecoveryFlow = {
+    active:false, currentIdx:0, remaining:0, running:false, _iv:null,
+    microPause: { active:false, remaining:0, total:0, nextExName:'' },
+    blockStop:  { active:false, nextBlockName:'', nextExStartIdx:0 }
+  };
+  if(!ST.trainRecoveryFlow.microPause) ST.trainRecoveryFlow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
+  if(!ST.trainRecoveryFlow.blockStop)  ST.trainRecoveryFlow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
   if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
+  if(!ST.trainRecoveryCollapsed) ST.trainRecoveryCollapsed = {};
   const flow = ST.trainRecoveryFlow;
   const exs = s.exercises || [];
   const totalSecAll = exs.reduce((a,e)=>a+(e.duration_sec||0),0);
   const totMin = Math.round(totalSecAll/60);
   const doneCount = exs.filter(e => ST.trainRecoveryDone[e.name]).length;
 
-  // ── Hero card (3 stati: not started / running / completed) ──
+  // ── Hero card (5 stati: not started / running / microPause / blockStop / completed) ──
   let heroHtml;
-  if(flow.active && flow.currentIdx < exs.length){
+
+  // RAMO 1: STOP BLOCCO — anteprima prossimo blocco
+  if(flow.active && flow.blockStop && flow.blockStop.active){
+    const nextBlockName = flow.blockStop.nextBlockName;
+    const blockExs = exs.filter(e => (e.block||'Altri') === nextBlockName);
+    const blockSec = blockExs.reduce((a,e)=>a+(e.duration_sec||0),0);
+    const blockMin = Math.round(blockSec/60*10)/10;
+    const listItems = blockExs.map(e => {
+      const sideTag = e.side ? `<span style="font-size:9px;color:var(--t3);font-family:var(--font-mono);margin-left:4px;">${e.side.toUpperCase()}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(255,255,255,.5);border-radius:6px;margin-bottom:4px;">
+        <span style="font-size:12px;color:var(--t1);">${e.name}${sideTag}</span>
+        <span style="font-size:11px;font-family:var(--font-mono);color:var(--t2);font-weight:700;">${e.duration_sec}s</span>
+      </div>`;
+    }).join('');
+    heroHtml = `
+      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Prossimo blocco</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;gap:8px;">
+          <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;">${nextBlockName}</div>
+          <div style="font-size:12px;font-family:var(--font-mono);color:var(--t2);font-weight:700;flex-shrink:0;">~${blockMin} min</div>
+        </div>
+        <div style="margin-bottom:14px;max-height:280px;overflow-y:auto;">${listItems}</div>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:8px;">
+          <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏪</button>
+          <button onclick="recoveryFlowResume()" title="Riprendi" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:0 22px;height:52px;cursor:pointer;font-size:15px;font-weight:700;font-family:var(--font-sans);">▶ Riprendi</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
+          <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
+          <button onclick="recoveryFlowEnd()" title="Termina sessione" style="background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">termina</button>
+        </div>
+      </div>`;
+  }
+  // RAMO 2: MICRO-PAUSA — countdown 5s/10s prima del prossimo esercizio (palette ambra)
+  else if(flow.active && flow.microPause && flow.microPause.active){
+    const mp = flow.microPause;
+    const dur = mp.total || 1;
+    const pct = Math.round((dur - mp.remaining)/dur*100);
+    heroHtml = `
+      <div style="background:#FFF7E0;border:2px solid #D97706;border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:10px;color:#B45309;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Prossimo esercizio tra…</div>
+        <div style="font-size:18px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${mp.nextExName||''}</div>
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:#B45309;line-height:1;flex-shrink:0;">${mp.remaining}</div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            <button disabled title="Disabilitato durante la pausa" style="background:transparent;border:1.5px solid #DDD;border-radius:10px;width:44px;height:52px;cursor:not-allowed;color:#BBB;font-size:18px;font-weight:700;opacity:.6;">⏪</button>
+            <button disabled title="Disabilitato durante la pausa" style="background:#DDD;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:not-allowed;font-size:20px;font-weight:700;opacity:.6;">⏸</button>
+            <button disabled title="Disabilitato durante la pausa" style="background:transparent;border:1.5px solid #DDD;border-radius:10px;width:44px;height:52px;cursor:not-allowed;color:#BBB;font-size:18px;font-weight:700;opacity:.6;">⏩</button>
+          </div>
+        </div>
+        <div style="height:6px;background:rgba(217,119,6,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${pct}%;background:#D97706;transition:width .35s linear;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
+          <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
+          <span style="color:var(--t3);">pausa</span>
+        </div>
+      </div>`;
+  }
+  // RAMO 3: RUNNING ESERCIZIO normale (logica esistente)
+  else if(flow.active && flow.currentIdx < exs.length){
     const cur = exs[flow.currentIdx];
     const mm = String(Math.floor(flow.remaining/60)).padStart(2,'0');
     const ss = String(flow.remaining%60).padStart(2,'0');
@@ -4837,6 +4908,27 @@ function _renderRecoverySection(s, sel){
   const listHtml = blocks.map(b => {
     const blockTotalSec = b.items.reduce((a,it)=>a+(it.e.duration_sec||0),0);
     const blockMin = Math.round(blockTotalSec/60*10)/10;
+    const blockComplete = b.items.every(it => !!ST.trainRecoveryDone[it.e.name]);
+    const isCollapsed = !!ST.trainRecoveryCollapsed[b.name];
+    const safeBlockName = b.name.replace(/'/g,"\\'");
+    const chevron = isCollapsed ? '▶' : '▼';
+    const checkMark = blockComplete ? `<span style="color:#2A7A6F;font-weight:700;margin-left:6px;">✓</span>` : '';
+    const headerColor = blockComplete ? '#2A7A6F' : 'var(--t3)';
+
+    // Header sempre cliccabile (toggle)
+    const headerHtml = `
+      <div onclick="toggleRecoveryBlockCollapsed('${safeBlockName}')" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;cursor:pointer;user-select:none;padding:4px 0;">
+        <span style="font-size:10px;font-weight:700;color:${headerColor};font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:9px;color:${headerColor};display:inline-block;width:10px;">${chevron}</span>
+          ${b.name}${checkMark}
+        </span>
+        <span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">${blockMin} min</span>
+      </div>`;
+
+    if(isCollapsed){
+      return `<div style="margin-bottom:14px;">${headerHtml}</div>`;
+    }
+
     const itemsHtml = b.items.map(({e, idx}) => {
       const isDone = !!ST.trainRecoveryDone[e.name];
       const isCurrent = flow.active && flow.currentIdx === idx;
@@ -4859,10 +4951,7 @@ function _renderRecoverySection(s, sel){
     }).join('');
     return `
       <div style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <span style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;">${b.name}</span>
-          <span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">${blockMin} min</span>
-        </div>
+        ${headerHtml}
         ${itemsHtml}
       </div>`;
   }).join('');
@@ -8359,11 +8448,16 @@ function closeTrainingSession(){
   }
   ST.trainRecoveryTimers = {};
   ST.trainRecoveryDone = {};
+  ST.trainRecoveryCollapsed = {};
   // Stop recovery flow countdown ibrido se attivo
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow._iv){
     clearInterval(ST.trainRecoveryFlow._iv);
   }
-  ST.trainRecoveryFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  ST.trainRecoveryFlow = {
+    active:false, currentIdx:0, remaining:0, running:false, _iv:null,
+    microPause: { active:false, remaining:0, total:0, nextExName:'' },
+    blockStop:  { active:false, nextBlockName:'', nextExStartIdx:0 }
+  };
   // Stop activation flow countdown ibrido se attivo
   if(ST.trainActivationFlow && ST.trainActivationFlow._iv){
     clearInterval(ST.trainActivationFlow._iv);
@@ -8621,36 +8715,98 @@ function _recoveryFlowCurrentExercise(){
   const idx = ST.trainRecoveryFlow.currentIdx;
   return sess.exercises[idx] || null;
 }
+function _stripSide(name){
+  return String(name||'').replace(/\s+(dx|sx)\s*$/i, '').trim();
+}
+function _allExercisesDoneInBlock(blockName, exs){
+  if(!ST.trainRecoveryDone) return false;
+  const inBlock = exs.filter(e => (e.block||'Altri') === blockName);
+  if(!inBlock.length) return false;
+  return inBlock.every(e => !!ST.trainRecoveryDone[e.name]);
+}
 function _recoveryFlowAdvance(){
-  // Marca corrente come done e avanza. Se ultimo, completa sessione.
+  // Marca corrente come done. Poi decide: fine sessione / stop blocco / micro-pausa / esercizio successivo.
   const sess = TRAINING_SESSIONS[ST.trainSession];
   if(!sess) return;
-  const cur = sess.exercises[ST.trainRecoveryFlow.currentIdx];
+  const flow = ST.trainRecoveryFlow;
+  const cur = sess.exercises[flow.currentIdx];
   if(cur){
     if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
     ST.trainRecoveryDone[cur.name] = true;
     try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
     try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
   }
-  ST.trainRecoveryFlow.currentIdx++;
-  if(ST.trainRecoveryFlow.currentIdx >= sess.exercises.length){
-    // Fine sessione
+
+  // 1) Auto-collapse blocco se completato (delay 2s per permettere all'utente di vedere il check finale)
+  const curBlockName = cur && (cur.block || 'Altri');
+  if(curBlockName && _allExercisesDoneInBlock(curBlockName, sess.exercises)){
+    setTimeout(()=>{
+      if(!ST.trainRecoveryCollapsed) ST.trainRecoveryCollapsed = {};
+      // Collassa solo se l'utente non ha già toccato manualmente lo stato (resta chiuso)
+      if(ST.trainRecoveryCollapsed[curBlockName] !== false){
+        ST.trainRecoveryCollapsed[curBlockName] = true;
+        renderTraining();
+      }
+    }, 2000);
+  }
+
+  const nextIdx = flow.currentIdx + 1;
+
+  // 2) Fine sessione
+  if(nextIdx >= sess.exercises.length){
     _recoveryFlowClearInterval();
-    ST.trainRecoveryFlow.active = false;
-    ST.trainRecoveryFlow.running = false;
-    ST.trainRecoveryFlow.remaining = 0;
+    flow.active = false;
+    flow.running = false;
+    flow.remaining = 0;
+    flow.currentIdx = nextIdx;
+    flow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
+    flow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
     checkRecoverySessionDone();
     renderTraining();
     return;
   }
-  const next = sess.exercises[ST.trainRecoveryFlow.currentIdx];
-  ST.trainRecoveryFlow.remaining = next.duration_sec || 30;
+
+  const next = sess.exercises[nextIdx];
+  const nextBlock = next.block || 'Altri';
+
+  // 3) Blocco diverso → stop automatico (anteprima prossimo blocco)
+  if(nextBlock !== curBlockName){
+    _recoveryFlowClearInterval();
+    flow.currentIdx = nextIdx;
+    flow.remaining = next.duration_sec || 30;
+    flow.running = false;
+    flow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
+    flow.blockStop  = { active:true, nextBlockName:nextBlock, nextExStartIdx:nextIdx };
+    renderTraining();
+    return;
+  }
+
+  // 4) Stesso blocco → micro-pausa 5s (stesso esercizio, cambio lato) o 10s (esercizio diverso)
+  const sameBase = _stripSide(cur && cur.name) === _stripSide(next.name);
+  const pauseSec = sameBase ? 5 : 10;
+  flow.currentIdx = nextIdx;
+  flow.remaining = next.duration_sec || 30;
+  flow.microPause = { active:true, remaining:pauseSec, total:pauseSec, nextExName: next.name };
+  // running resta true → l'interval continua a ticchettare ma su microPause.remaining
   renderTraining();
 }
 function _recoveryFlowTick(){
-  if(!ST.trainRecoveryFlow.running) return;
-  ST.trainRecoveryFlow.remaining = Math.max(0, ST.trainRecoveryFlow.remaining - 1);
-  if(ST.trainRecoveryFlow.remaining <= 0){
+  const flow = ST.trainRecoveryFlow;
+  if(!flow.running) return;
+  // Branch A — micro-pausa attiva: decrementa pausa, poi parte esercizio
+  if(flow.microPause && flow.microPause.active){
+    flow.microPause.remaining = Math.max(0, flow.microPause.remaining - 1);
+    if(flow.microPause.remaining <= 0){
+      flow.microPause.active = false;
+      flow.microPause.nextExName = '';
+      try{ navigator.vibrate && navigator.vibrate([100]); }catch(e){}
+    }
+    renderTraining();
+    return;
+  }
+  // Branch B — countdown esercizio normale
+  flow.remaining = Math.max(0, flow.remaining - 1);
+  if(flow.remaining <= 0){
     _recoveryFlowAdvance();
   } else {
     renderTraining();
@@ -8663,47 +8819,81 @@ function recoveryFlowStart(){
   if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   _recoveryFlowClearInterval();
+  // Reset stato collapsed (nuova sessione = tutti i blocchi espansi)
+  ST.trainRecoveryCollapsed = {};
   ST.trainRecoveryFlow.active = true;
   ST.trainRecoveryFlow.currentIdx = 0;
   ST.trainRecoveryFlow.remaining = sess.exercises[0].duration_sec || 30;
   ST.trainRecoveryFlow.running = true;
+  ST.trainRecoveryFlow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
+  ST.trainRecoveryFlow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
   ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
   renderTraining();
 }
 function recoveryFlowPause(){
+  // Non interrompibile durante micro-pausa
+  if(ST.trainRecoveryFlow.microPause && ST.trainRecoveryFlow.microPause.active) return;
   if(!ST.trainRecoveryFlow.running) return;
   ST.trainRecoveryFlow.running = false;
   _recoveryFlowClearInterval();
   renderTraining();
 }
 function recoveryFlowResume(){
-  if(ST.trainRecoveryFlow.running) return;
-  if(!ST.trainRecoveryFlow.active) return;
+  const flow = ST.trainRecoveryFlow;
+  if(flow.running) return;
+  if(!flow.active) return;
   // Mutual exclusion: non riprendere se activation flow è running
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
-  ST.trainRecoveryFlow.running = true;
-  ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
+  // Branch blockStop: riparte dal primo esercizio del nuovo blocco (currentIdx già avanzato in _recoveryFlowAdvance)
+  if(flow.blockStop && flow.blockStop.active){
+    const sess = TRAINING_SESSIONS[ST.trainSession];
+    const cur = sess && sess.exercises[flow.currentIdx];
+    if(cur) flow.remaining = cur.duration_sec || 30;
+    flow.blockStop = { active:false, nextBlockName:'', nextExStartIdx:0 };
+  }
+  flow.running = true;
+  flow._iv = setInterval(_recoveryFlowTick, 1000);
   renderTraining();
 }
 function recoveryFlowSkip(){
+  // Skip disabilitato durante micro-pausa e durante stop blocco
   if(!ST.trainRecoveryFlow.active) return;
+  if(ST.trainRecoveryFlow.microPause && ST.trainRecoveryFlow.microPause.active) return;
+  if(ST.trainRecoveryFlow.blockStop && ST.trainRecoveryFlow.blockStop.active) return;
   _recoveryFlowAdvance();
 }
 function recoveryFlowBack(){
-  if(!ST.trainRecoveryFlow.active) return;
-  if(ST.trainRecoveryFlow.currentIdx <= 0){
-    // Già al primo: solo reset countdown
-    const sess = TRAINING_SESSIONS[ST.trainSession];
-    if(sess && sess.exercises[0]) ST.trainRecoveryFlow.remaining = sess.exercises[0].duration_sec || 30;
+  const flow = ST.trainRecoveryFlow;
+  if(!flow.active) return;
+  // Disabilitato durante micro-pausa
+  if(flow.microPause && flow.microPause.active) return;
+
+  const sess = TRAINING_SESSIONS[ST.trainSession];
+  if(!sess) return;
+
+  // Branch blockStop: torna all'esercizio precedente (ultimo del blocco precedente), NO resume
+  if(flow.blockStop && flow.blockStop.active){
+    if(flow.currentIdx > 0){
+      flow.currentIdx--;
+      const prev = sess.exercises[flow.currentIdx];
+      flow.remaining = prev.duration_sec || 30;
+    }
+    flow.blockStop = { active:false, nextBlockName:'', nextExStartIdx:0 };
+    flow.running = false;
     renderTraining();
     return;
   }
-  const sess = TRAINING_SESSIONS[ST.trainSession];
-  if(!sess) return;
-  ST.trainRecoveryFlow.currentIdx--;
-  const prev = sess.exercises[ST.trainRecoveryFlow.currentIdx];
-  ST.trainRecoveryFlow.remaining = prev.duration_sec || 30;
+
+  if(flow.currentIdx <= 0){
+    // Già al primo: solo reset countdown
+    if(sess.exercises[0]) flow.remaining = sess.exercises[0].duration_sec || 30;
+    renderTraining();
+    return;
+  }
+  flow.currentIdx--;
+  const prev = sess.exercises[flow.currentIdx];
+  flow.remaining = prev.duration_sec || 30;
   // NOTA: non un-marca da trainRecoveryDone (volutamente)
   renderTraining();
 }
@@ -8714,6 +8904,14 @@ function recoveryFlowEnd(){
   ST.trainRecoveryFlow.running = false;
   ST.trainRecoveryFlow.currentIdx = 0;
   ST.trainRecoveryFlow.remaining = 0;
+  ST.trainRecoveryFlow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
+  ST.trainRecoveryFlow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
+  renderTraining();
+}
+function toggleRecoveryBlockCollapsed(blockName){
+  if(!ST.trainRecoveryCollapsed) ST.trainRecoveryCollapsed = {};
+  // Toggle esplicito: usa false (non delete) per "intenzionalmente aperto" — evita che l'auto-collapse riparta
+  ST.trainRecoveryCollapsed[blockName] = !ST.trainRecoveryCollapsed[blockName];
   renderTraining();
 }
 
