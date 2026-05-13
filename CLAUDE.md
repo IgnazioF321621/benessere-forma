@@ -28,6 +28,7 @@ https://github.com/IgnazioF321621/benessere-forma
 3. Test mode `?test=1`
 4. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 5. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
+6. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
 
 ## Tester attivi
 
@@ -724,6 +725,7 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - [x] Blocco Attivazione 5 min con countdown autonomo per tutte le 6 sessioni (12 maggio 2026)
 - [x] muscleImg sugli esercizi recovery (33 esercizi con immagine, 18 con null esplicito) (12 maggio 2026)
 - [x] Recovery G3/G6 — auto-collapse blocchi + micro-pause 5s/10s + stop blocco tra blocchi diversi (13 maggio 2026, commit `29eaac6`)
+- [x] M2 Check Fisico — versione funzionale (intro/foto/misure/esami/esito), entry post-M1 + resume cross-device + skip persistente (13 maggio 2026)
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
@@ -738,6 +740,115 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 13 maggio 2026 — M2 Check Fisico (versione funzionale)
+
+Prima implementazione end-to-end del modulo M2 (check fisico) come da design session del 10 maggio. **Versione FUNZIONALE**: riusa pattern visivo dell'onboarding M1 esistente (classi `.onb-*`, font Manrope/legacy, palette evergreen accent). Il design refinement (font Syne, palette bone-caldo `#F5F3EE`, tipografia M2) arriverà in pass successivo via Claude Design.
+
+**SQL prerequisito** (eseguito dall'utente prima del commit): aggiunta colonna `ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS m2_skipped boolean DEFAULT false;` + backfill `UPDATE SET m2_skipped=false WHERE NULL`.
+
+**4 tabelle Supabase** (già create con SQL fornito stamattina, RLS attive):
+- `body_checks` (evento padre): `id` (uuid PK), `user_id`, `check_type`, `status` (`in_progress`|`completed`), `created_at`, `completed_at`
+- `body_check_photos` (4 foto/check): `check_id` FK + `user_id` + `pose` (`front`|`right`|`left`|`back`) + `storage_path`. UNIQUE su `(check_id, pose)`
+- `body_measurements` (1 riga/check): `check_id` UNIQUE + `user_id` + `unit_system` (`metric`|`imperial`) + colonne metriche (`weight_kg`, `height_cm`, `waist_cm`, `chest_cm`, `hip_cm`, `shoulders_cm`, `neck_cm`, `bicep_cm`, `wrist_cm`, `thigh_cm`, `calf_cm`, `bf_pct`, `muscle_kg`, `visceral_fat`, `body_age`, `water_pct`)
+- `blood_tests` (storico indipendente, multi-row per user): `user_id`, `test_date`, parametri (`hemoglobin`, `ferritin`, `glucose`, `cholesterol`, `hdl`, `triglycerides`, `creatinine`, `alt`, `vitamin_d`, `vitamin_b12`, `tsh`)
+
+**Bucket Supabase Storage**: `body-check-photos` (privato). Pattern path: `{user_id}/{check_id}/{pose}.jpg`. Upload con `upsert: true` per rifare foto.
+
+**13 schermate state-machine** in singolo `<div id="m2-screen">` (riuso `showScreen('m2')` come 5° opzione del manager + classi `.m2-step.active` per show/hide):
+- `intro` — entry point con 2 CTA "Inizia il check fisico →" / "Salta per ora"
+- `resume` — prompt se `body_checks` `in_progress` trovato (cross-device)
+- `s0` — istruzioni foto (abbigliamento/luce/postura)
+- `s1`/`s2`/`s3`/`s4` — pose frontale/dx/sx/retro con dropzone tratteggiata + preview + retake
+- `s5` — conferma griglia 2×2 + modal review full-screen
+- `s6` — peso/altezza con switch unità KG·CM / LB·IN (solo qui, le altre 2 ereditano)
+- `s7` — circonferenze (3 obbligatori VITA/PETTO/FIANCHI + 6 opzionali)
+- `s8` — composizione bilancia (5 campi opzionali) — bottone "Salta" o "Continua →"
+- `s9` — gate sì/no esami
+- `s10` — compilazione esami (ramo Sì, 8 base + 3 opzionali, tutti singolarmente skippabili)
+- `s11` — bridge (ramo No)
+- `s12` — esito con riepilogo `✓ 4 foto · ✓ Misure registrate · Esami da fare/registrati`
+
+**Stato runtime `ST.m2`** ([zona-tracker.html:1306](zona-tracker.html:1306)):
+```js
+{
+  step: 'intro',                  // step corrente
+  checkId: null,                   // uuid body_checks.id in corso
+  unitSystem: 'metric',            // auto-detect: navigator.language.startsWith('en-us') → imperial, altrimenti metric
+  photos: { front, right, left, back },        // File objects pre-upload
+  photoUrls: {...},                // object URLs locali per preview (URL.createObjectURL)
+  photosUploaded: {...},           // bool per posa
+  reviewingPose: null,             // pose nel modal full-screen
+  measurements: {},                // tutti i campi in metrico (DB sempre metrico)
+  bloodTests: {},                  // parametri ematici compilati
+  hasRecentBloodTests: null,       // true/false dal gate
+  retakeFromModal: false,          // flag: se true post-upload torna a s5 invece di proseguire in cascata
+  saving: false, error: null,
+}
+```
+
+**Funzioni nuove** (zona-tracker.html, sezione "M2 CHECK FISICO"):
+- `m2DetectUnit()` — auto-detect imperial/metric da `navigator.language`
+- `m2LbToKg`, `m2KgToLb`, `m2InToCm`, `m2CmToIn` — conversioni unità (DB sempre metrico)
+- `m2GoStep(stepId)` — cambio schermata + aggiorna header label dinamico + scroll top
+- `m2EntryIntro()` — entry point: cerca `body_checks` in_progress → routa a resume o intro
+- `m2Skip()` — UPDATE `profiles.m2_skipped=true`, va all'app
+- `m2Start()` — INSERT `body_checks` (`status='in_progress'`, `check_type='initial'`), cattura `checkId`
+- `m2ResumeContinue()` — heuristica step ripartenza in base a dati già salvati (foto/misure/esami)
+- `m2ResumeDiscard()` — cleanup storage + cancellazione FK chain (body_check_photos + body_measurements + body_checks)
+- `m2HandlePhotoSelect(pose, event)` — File object in memoria, preview locale via `URL.createObjectURL`, abilita CTA
+- `m2RetakePhoto(pose)` — ripristina dropzone, revoca object URL, disabilita CTA
+- `m2ContinuePhoto(pose, nextStep)` — upload Storage (path `{user_id}/{checkId}/{pose}.jpg`) + upsert `body_check_photos` con `onConflict:'check_id,pose'`
+- `m2OpenPhotoReview`, `m2ModalKeep`, `m2ModalRetake` — modal full-screen review griglia s5
+- `m2SetUnit(unit)` — switch KG·CM / LB·IN, aggiorna tutti i label dinamici
+- `m2ContinueS6` — validazione peso/altezza con range realistici (30-250kg/66-550lb, 100-230cm/39-90in), conserva in `ST.m2.measurements` in metrico
+- `m2ContinueS7` — validazione 3 obbligatori + 6 opzionali → metrico
+- `m2ContinueS8` / `m2SaveMeasurementsAndSkipS8` — composizione opzionale, salva tutto in `body_measurements` con upsert su `check_id`
+- `m2SaveMeasurements()` — upsert su `body_measurements` con `onConflict:'check_id'`
+- `m2SetBloodGate(hasRecent)` — routa s10/s11, default test_date=oggi
+- `m2SaveBloodTests()` — INSERT `blood_tests` (parametri vuoti = NULL)
+- `m2Complete()` — UPDATE `body_checks` SET `status='completed', completed_at=now()`, popola summary, va all'app
+- `m2ShouldShowEntry(profile)` — helper entry point: ritorna true se M1 completo + `m2_skipped !== true` + nessun `body_checks` completato esistente
+- `loadAndStart_thenM2Entry()` — variante di `loadAndStart` chiamata dopo `saveOnboarding()` che instrada a `m2EntryIntro` invece di app
+
+**Entry points hook**:
+1. **`saveOnboarding()`** ([zona-tracker.html:2449](zona-tracker.html:2449)): al posto di `loadAndStart()` chiama `loadAndStart_thenM2Entry()`. In test mode (`test-user-001`) salta M2 e va dritto all'app.
+2. **`loadAndStart()`** ([zona-tracker.html:3293](zona-tracker.html:3293)): nei 3 rami (cache-hit, errore-rete-con-cache-parziale, cache-miss) dopo `profileIsComplete(profile)`, controlla `m2ShouldShowEntry(profile)` → se true chiama `m2EntryIntro()` invece di `showScreen('app')`. Per utenti esistenti che hanno completato M1 ma non hanno mai fatto M2 (caso tester Ginevra/Isabella post-rollout).
+
+**Casi edge gestiti**:
+- **Resume cross-device**: `m2EntryIntro()` cerca `body_checks` `in_progress` su Supabase → mostra prompt resume con 2 CTA. "Riprendi →" usa heuristica `m2ResumeContinue` che legge foto/misure/esami già salvati e posiziona allo step coerente. "Ricomincia" elimina tutto (storage + 3 tabelle FK).
+- **Foto rifatta dopo upload**: `upsert: true` su Storage sovrascrive il file. `body_check_photos` ha unique constraint su `(check_id, pose)` → upsert con `onConflict:'check_id,pose'`.
+- **Conversione unità**: tutti gli input vengono convertiti a metrico prima di salvare. `unit_system` in `body_measurements` registra solo la preferenza utente per UI futura.
+- **Validazione**: range realistici su s6 e obbligatori su s7 (3 campi). Tutti gli altri singolarmente skippabili.
+
+**Test mode `?test=1`**: M2 SEMPRE skippato per `test-user-001`. Sia in `saveOnboarding` che in `m2ShouldShowEntry`. Quando vorrai testare M2, usa account reale.
+
+**CSS nuove classi** (riuso pattern `.onb-*`, tutte prefissate `.m2-*`):
+- `.m2-photo-dropzone` (box tratteggiato upload con instructions mono uppercase)
+- `.m2-photo-thumb`, `.m2-photo-grid`, `.m2-photo-cell` (griglia conferma)
+- `.m2-modal-photo-overlay` (modal full-screen review)
+- `.m2-unit-switch` + `.m2-unit-btn` (toggle KG/LB)
+- `.m2-meas-row` (label + input + unità inline)
+- `.m2-meas-tip` (tip in corsivo sotto campo)
+- `.m2-required-asterisk` (asterisco evergreen per obbligatori)
+- `.m2-gate-btn` (bottoni grandi Sì/No s9)
+- `.m2-divider` (separatore tra gruppi obbligatori/opzionali)
+
+**Cosa NON è stato fatto** (volutamente fuori scope):
+- Refactor M1 esistente (5 step legacy)
+- Tinta viola Body — riservata ai checkpoint Body futuri
+- Progress bar in M2 (decisione design 10 maggio: nessun conteggio numerico delle schermate)
+- Illustrazioni dei punti di misurazione su s7 (icone ⓘ rimandate al design pass)
+- Schermata 6b "vista grande" come componente full-screen separato — riusato modal generico `.m2-modal-photo-overlay` per review griglia s5
+- Sezione "Crediti & attribuzioni" per M2 (non rilevante, no asset esterni)
+- Lettura/visualizzazione dei check fisici passati nell'app (storico/timeline check)
+- Notifica reminder esami sangue (TODO post-rollout)
+
+**Roadmap aggiornata**:
+- ✅ M2 Check Fisico (versione funzionale) — 13 maggio 2026
+- 🔜 Design refinement M2 via Claude Design (font Syne, palette bone-caldo, illustrazioni ⓘ, gerarchia visiva rifinita)
+- 🔜 Modulo Body — visualizzazione storico check fisici (timeline con foto + diff misure)
+- 🔜 Reminder esami sangue (3-6 mesi dopo)
 
 ### 13 maggio 2026 — Recovery G3/G6: auto-collapse blocchi + micro-pause + stop blocco (UX post-uso reale)
 

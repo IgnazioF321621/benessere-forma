@@ -103,6 +103,39 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .tdee-macro-val{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace;color:#fff;}
 .tdee-macro-lbl{font-size:9px;color:rgba(255,255,255,.7);margin-top:2px;}
 
+/* ── M2 CHECK FISICO (versione funzionale, riusa pattern .onb-*) ── */
+#m2-screen{display:none;min-height:100vh;background:var(--bg);overflow-y:auto;padding-bottom:40px;}
+#m2-screen.visible{display:block;}
+.m2-step{display:none;}
+.m2-step.active{display:block;}
+.m2-photo-dropzone{border:2px dashed var(--acc);border-radius:12px;padding:32px 16px;text-align:center;background:var(--s1);cursor:pointer;transition:background .15s;}
+.m2-photo-dropzone:hover{background:var(--s2);}
+.m2-photo-dropzone input[type="file"]{display:none;}
+.m2-photo-instr{font-size:11px;letter-spacing:1px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-transform:uppercase;line-height:1.6;margin-bottom:12px;}
+.m2-photo-cta{font-size:11px;letter-spacing:1px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+.m2-photo-thumb{width:100%;max-width:280px;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--s2);}
+.m2-photo-thumb img{width:100%;height:auto;display:block;}
+.m2-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.m2-photo-cell{cursor:pointer;background:var(--s1);border-radius:10px;overflow:hidden;border:1px solid var(--b1);}
+.m2-photo-cell img{width:100%;height:140px;object-fit:cover;display:block;background:var(--s2);}
+.m2-photo-cell-lbl{padding:8px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--t2);text-align:center;}
+.m2-unit-switch{display:inline-flex;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:2px;font-family:'JetBrains Mono',monospace;font-size:11px;}
+.m2-unit-btn{padding:6px 12px;border:none;background:transparent;color:var(--t2);cursor:pointer;border-radius:18px;letter-spacing:1px;}
+.m2-unit-btn.active{background:var(--acc);color:#fff;}
+.m2-gate-btn{display:block;width:100%;padding:18px;border:1px solid var(--b1);border-radius:12px;background:var(--s1);color:var(--t1);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;font-family:'Syne',sans-serif;}
+.m2-gate-btn:hover{background:var(--s2);border-color:var(--acc);}
+.m2-modal-photo-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.m2-modal-photo-overlay img{max-width:100%;max-height:70vh;border-radius:8px;}
+.m2-modal-photo-lbl{color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
+.m2-modal-photo-btns{display:flex;gap:10px;margin-top:18px;width:100%;max-width:360px;}
+.m2-meas-row{display:grid;grid-template-columns:1fr 80px;gap:10px;align-items:end;margin-bottom:14px;}
+.m2-meas-tip{font-size:11px;color:var(--t3);margin-top:4px;font-style:italic;line-height:1.4;}
+.m2-meas-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);text-align:center;padding:10px 0;letter-spacing:1px;}
+.m2-required-asterisk{color:var(--acc);margin-left:2px;font-weight:700;}
+.m2-divider{height:1px;background:var(--b1);margin:24px 0;}
+.m2-photo-rule{font-size:12px;color:var(--t2);margin:8px 0;line-height:1.5;}
+.m2-photo-rule strong{color:var(--t1);font-weight:700;}
+
 /* ── APP ── */
 #app{min-height:100vh;display:flex;flex-direction:column;display:none;}
 #app.visible{display:flex;}
@@ -782,6 +815,471 @@ select.inp{cursor:pointer;}
   </div>
 </div>
 
+<!-- M2 CHECK FISICO -->
+<div id="m2-screen">
+  <div class="onb-header">
+    <div class="onb-step" id="m2-step-label">CHECK FISICO</div>
+    <div class="onb-title" id="m2-title">Il tuo check fisico</div>
+    <div class="onb-sub" id="m2-subtitle">Le foto e le misure restano private.</div>
+  </div>
+  <div class="onb-body">
+
+    <!-- INTRO: Entry point M2 -->
+    <div id="m2-intro" class="m2-step active">
+      <div class="onb-section">
+        <p style="font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:12px;">
+          Aiuta il coach a leggerti meglio fin dall'inizio: 4 foto del corpo, qualche misura e (se le hai) gli esami del sangue recenti.
+        </p>
+        <p style="font-size:13px;color:var(--t3);line-height:1.6;margin-bottom:18px;">
+          ~5-7 minuti. Puoi sempre saltare e farlo dopo.
+        </p>
+      </div>
+      <div class="onb-nav" style="flex-direction:column;gap:10px;">
+        <button class="btn btn-primary btn-full" onclick="m2Start()">Inizia il check fisico →</button>
+        <button class="btn btn-ghost btn-full" onclick="m2Skip()">Salta per ora</button>
+      </div>
+      <div id="m2-intro-err" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- RESUME: prompt se body_checks in_progress trovato -->
+    <div id="m2-resume" class="m2-step">
+      <div class="onb-section">
+        <p style="font-size:14px;color:var(--t2);line-height:1.6;margin-bottom:18px;">
+          Hai un check fisico in corso. Vuoi riprenderlo da dove l'avevi lasciato o ricominciare da zero?
+        </p>
+      </div>
+      <div class="onb-nav" style="flex-direction:column;gap:10px;">
+        <button class="btn btn-primary btn-full" onclick="m2ResumeContinue()">Riprendi →</button>
+        <button class="btn btn-ghost btn-full" onclick="m2ResumeDiscard()">Ricomincia da capo</button>
+      </div>
+    </div>
+
+    <!-- STEP 0: Istruzioni foto -->
+    <div id="m2-s0" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">4 foto del corpo</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:16px;">Le foto restano private, visibili solo a te.</p>
+        <p class="m2-photo-rule"><strong>Abbigliamento:</strong> intimo o costume.</p>
+        <p class="m2-photo-rule"><strong>Luce:</strong> naturale, frontale (finestra davanti). Niente flash, niente luci dall'alto.</p>
+        <p class="m2-photo-rule"><strong>Postura:</strong> corpo intero, piedi inclusi. Braccia leggermente staccate dal busto. Sfondo neutro. Telefono ad altezza vita.</p>
+        <p style="font-size:11px;color:var(--t3);margin-top:14px;line-height:1.5;font-style:italic;">Le foto sono usate solo per i checkpoint con il tuo coach. Mai condivise.</p>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-primary btn-full" onclick="m2GoStep('s1')">Iniziamo →</button>
+      </div>
+    </div>
+
+    <!-- STEP 1: Posa frontale -->
+    <div id="m2-s1" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Posa frontale</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Davanti, in posizione naturale.</p>
+        <label for="m2-file-front" class="m2-photo-dropzone" id="m2-drop-front">
+          <input type="file" id="m2-file-front" accept="image/*" onchange="m2HandlePhotoSelect('front', event)"/>
+          <div class="m2-photo-instr">In piedi · fronte alla fotocamera · braccia staccate · piedi paralleli · sguardo in avanti</div>
+          <div class="m2-photo-cta">Tap per caricare la foto</div>
+        </label>
+        <div id="m2-preview-front" style="display:none;margin-top:14px;">
+          <div class="m2-photo-thumb"><img id="m2-img-front" alt="Frontale"/></div>
+          <div style="text-align:center;margin-top:8px;"><button class="btn btn-ghost" onclick="m2RetakePhoto('front')">Rifai</button></div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s0')">← Indietro</button>
+        <button class="btn btn-primary btn-full" id="m2-next-s1" onclick="m2ContinuePhoto('front','s2')" disabled>Continua →</button>
+      </div>
+      <div id="m2-err-s1" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 2: Posa lato destro -->
+    <div id="m2-s2" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Posa lato destro</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Lato destro verso la fotocamera.</p>
+        <label for="m2-file-right" class="m2-photo-dropzone" id="m2-drop-right">
+          <input type="file" id="m2-file-right" accept="image/*" onchange="m2HandlePhotoSelect('right', event)"/>
+          <div class="m2-photo-instr">Di lato · lato destro verso la fotocamera · braccia rilassate · piedi uniti · sguardo in avanti</div>
+          <div class="m2-photo-cta">Tap per caricare la foto</div>
+        </label>
+        <div id="m2-preview-right" style="display:none;margin-top:14px;">
+          <div class="m2-photo-thumb"><img id="m2-img-right" alt="Lato destro"/></div>
+          <div style="text-align:center;margin-top:8px;"><button class="btn btn-ghost" onclick="m2RetakePhoto('right')">Rifai</button></div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s1')">← Indietro</button>
+        <button class="btn btn-primary btn-full" id="m2-next-s2" onclick="m2ContinuePhoto('right','s3')" disabled>Continua →</button>
+      </div>
+      <div id="m2-err-s2" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 3: Posa lato sinistro -->
+    <div id="m2-s3" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Posa lato sinistro</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Lato sinistro verso la fotocamera.</p>
+        <label for="m2-file-left" class="m2-photo-dropzone" id="m2-drop-left">
+          <input type="file" id="m2-file-left" accept="image/*" onchange="m2HandlePhotoSelect('left', event)"/>
+          <div class="m2-photo-instr">Di lato · lato sinistro verso la fotocamera · braccia rilassate · piedi uniti · sguardo in avanti</div>
+          <div class="m2-photo-cta">Tap per caricare la foto</div>
+        </label>
+        <div id="m2-preview-left" style="display:none;margin-top:14px;">
+          <div class="m2-photo-thumb"><img id="m2-img-left" alt="Lato sinistro"/></div>
+          <div style="text-align:center;margin-top:8px;"><button class="btn btn-ghost" onclick="m2RetakePhoto('left')">Rifai</button></div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s2')">← Indietro</button>
+        <button class="btn btn-primary btn-full" id="m2-next-s3" onclick="m2ContinuePhoto('left','s4')" disabled>Continua →</button>
+      </div>
+      <div id="m2-err-s3" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 4: Posa retro -->
+    <div id="m2-s4" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Posa retro</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Spalle verso la fotocamera.</p>
+        <label for="m2-file-back" class="m2-photo-dropzone" id="m2-drop-back">
+          <input type="file" id="m2-file-back" accept="image/*" onchange="m2HandlePhotoSelect('back', event)"/>
+          <div class="m2-photo-instr">Di spalle · retro verso la fotocamera · braccia staccate · piedi paralleli · sguardo in avanti</div>
+          <div class="m2-photo-cta">Tap per caricare la foto</div>
+        </label>
+        <div id="m2-preview-back" style="display:none;margin-top:14px;">
+          <div class="m2-photo-thumb"><img id="m2-img-back" alt="Retro"/></div>
+          <div style="text-align:center;margin-top:8px;"><button class="btn btn-ghost" onclick="m2RetakePhoto('back')">Rifai</button></div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s3')">← Indietro</button>
+        <button class="btn btn-primary btn-full" id="m2-next-s4" onclick="m2ContinuePhoto('back','s5')" disabled>Continua →</button>
+      </div>
+      <div id="m2-err-s4" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 5: Conferma foto (griglia 2×2) -->
+    <div id="m2-s5" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Foto pronte</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:16px;">Rivedi e conferma per andare avanti.</p>
+        <div class="m2-photo-grid">
+          <div class="m2-photo-cell" onclick="m2OpenPhotoReview('front')"><img id="m2-grid-front" alt="Frontale"/><div class="m2-photo-cell-lbl">Frontale</div></div>
+          <div class="m2-photo-cell" onclick="m2OpenPhotoReview('right')"><img id="m2-grid-right" alt="Lato destro"/><div class="m2-photo-cell-lbl">Lato dx</div></div>
+          <div class="m2-photo-cell" onclick="m2OpenPhotoReview('left')"><img id="m2-grid-left" alt="Lato sinistro"/><div class="m2-photo-cell-lbl">Lato sx</div></div>
+          <div class="m2-photo-cell" onclick="m2OpenPhotoReview('back')"><img id="m2-grid-back" alt="Retro"/><div class="m2-photo-cell-lbl">Retro</div></div>
+        </div>
+        <p style="font-size:11px;color:var(--t3);margin-top:12px;font-style:italic;">Tocca una foto per rivederla o rifarla.</p>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s4')">← Indietro</button>
+        <button class="btn btn-primary btn-full" onclick="m2GoStep('s6')">Conferma e continua →</button>
+      </div>
+    </div>
+
+    <!-- STEP 6: Peso e altezza -->
+    <div id="m2-s6" class="m2-step">
+      <div class="onb-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <div class="onb-section-title" style="margin-bottom:0;">Peso e altezza</div>
+          <div class="m2-unit-switch">
+            <button class="m2-unit-btn" id="m2-unit-metric"  onclick="m2SetUnit('metric')">KG·CM</button>
+            <button class="m2-unit-btn" id="m2-unit-imperial" onclick="m2SetUnit('imperial')">LB·IN</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:18px;">Servono al coach per partire.</p>
+
+        <div class="onb-field" style="margin-bottom:18px;">
+          <label>Peso <span class="m2-required-asterisk">*</span></label>
+          <div class="m2-meas-row">
+            <input id="m2-peso" class="inp inp-sm" type="number" step="0.1" placeholder="es. 74.5" oninput="m2OnMeasInput()"/>
+            <div class="m2-meas-unit" id="m2-peso-unit">KG</div>
+          </div>
+          <div class="m2-meas-tip">Al mattino, a digiuno, dopo il bagno.</div>
+        </div>
+
+        <div class="onb-field">
+          <label>Altezza <span class="m2-required-asterisk">*</span></label>
+          <div class="m2-meas-row">
+            <input id="m2-altezza" class="inp inp-sm" type="number" step="0.1" placeholder="es. 178" oninput="m2OnMeasInput()"/>
+            <div class="m2-meas-unit" id="m2-altezza-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Scalzo, schiena dritta contro un muro.</div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s5')">← Indietro</button>
+        <button class="btn btn-primary btn-full" onclick="m2ContinueS6()">Continua →</button>
+      </div>
+      <div id="m2-err-s6" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 7: Circonferenze -->
+    <div id="m2-s7" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Circonferenze</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Metro morbido, aderente ma non stretto.</p>
+        <p style="font-size:11px;color:var(--t3);margin-bottom:18px;font-style:italic;">*I campi con asterisco sono obbligatori. Gli altri puoi saltarli.</p>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Vita <span class="m2-required-asterisk">*</span></label>
+          <div class="m2-meas-row">
+            <input id="m2-vita" class="inp inp-sm" type="number" step="0.1" placeholder="es. 89" oninput="m2OnMeasInput()"/>
+            <div class="m2-meas-unit" id="m2-vita-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Punto più stretto, sopra l'ombelico.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Petto <span class="m2-required-asterisk">*</span></label>
+          <div class="m2-meas-row">
+            <input id="m2-petto" class="inp inp-sm" type="number" step="0.1" placeholder="es. 102" oninput="m2OnMeasInput()"/>
+            <div class="m2-meas-unit" id="m2-petto-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Sotto le ascelle, alla parte più sporgente.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Fianchi <span class="m2-required-asterisk">*</span></label>
+          <div class="m2-meas-row">
+            <input id="m2-fianchi" class="inp inp-sm" type="number" step="0.1" placeholder="es. 98" oninput="m2OnMeasInput()"/>
+            <div class="m2-meas-unit" id="m2-fianchi-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Punto più largo dei glutei.</div>
+        </div>
+
+        <div class="m2-divider"></div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Spalle</label>
+          <div class="m2-meas-row">
+            <input id="m2-spalle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-spalle-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Parte più larga, da deltoide a deltoide.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Collo</label>
+          <div class="m2-meas-row">
+            <input id="m2-collo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-collo-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Sotto il pomo d'Adamo, rilassato.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Bicipite</label>
+          <div class="m2-meas-row">
+            <input id="m2-bicipite" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-bicipite-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Braccio rilassato, nel punto più ampio.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Polso</label>
+          <div class="m2-meas-row">
+            <input id="m2-polso" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-polso-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Subito sopra l'osso, mano rilassata.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Coscia</label>
+          <div class="m2-meas-row">
+            <input id="m2-coscia" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-coscia-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Parte più alta, sotto la piega del gluteo.</div>
+        </div>
+
+        <div class="onb-field">
+          <label>Polpaccio</label>
+          <div class="m2-meas-row">
+            <input id="m2-polpaccio" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-polpaccio-unit">CM</div>
+          </div>
+          <div class="m2-meas-tip">Parte più larga, a metà polpaccio.</div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s6')">← Indietro</button>
+        <button class="btn btn-primary btn-full" onclick="m2ContinueS7()">Continua →</button>
+      </div>
+      <div id="m2-err-s7" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 8: Composizione bilancia (5 campi tutti opzionali) -->
+    <div id="m2-s8" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Composizione</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Se hai una bilancia bioimpedenziometrica.</p>
+        <p style="font-size:11px;color:var(--t3);margin-bottom:18px;font-style:italic;">Tutti i campi sono opzionali. Puoi saltare se non hai questi dati.</p>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Grasso corporeo</label>
+          <div class="m2-meas-row">
+            <input id="m2-bf" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit">%</div>
+          </div>
+          <div class="m2-meas-tip">Percentuale di massa grassa.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Massa muscolare</label>
+          <div class="m2-meas-row">
+            <input id="m2-muscle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit" id="m2-muscle-unit">KG</div>
+          </div>
+          <div class="m2-meas-tip">Peso totale dei muscoli.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Grasso viscerale</label>
+          <div class="m2-meas-row">
+            <input id="m2-visceral" class="inp inp-sm" type="number" step="0.1" placeholder="1-30"/>
+            <div class="m2-meas-unit">IDX</div>
+          </div>
+          <div class="m2-meas-tip">Indice 1-30. Sotto 10 è ottimale.</div>
+        </div>
+
+        <div class="onb-field" style="margin-bottom:14px;">
+          <label>Età metabolica</label>
+          <div class="m2-meas-row">
+            <input id="m2-bodyage" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/>
+            <div class="m2-meas-unit">ANNI</div>
+          </div>
+          <div class="m2-meas-tip">Età stimata dal tuo metabolismo.</div>
+        </div>
+
+        <div class="onb-field">
+          <label>Acqua</label>
+          <div class="m2-meas-row">
+            <input id="m2-water" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
+            <div class="m2-meas-unit">%</div>
+          </div>
+          <div class="m2-meas-tip">Percentuale di acqua corporea.</div>
+        </div>
+
+        <p style="font-size:11px;color:var(--t3);margin-top:18px;font-style:italic;line-height:1.5;">Anche un dato in più aiuta il coach a leggerti meglio.</p>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2SaveMeasurementsAndSkipS8()">Salta</button>
+        <button class="btn btn-primary btn-full" onclick="m2ContinueS8()">Continua →</button>
+      </div>
+      <div id="m2-err-s8" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 9: Gate esami sì/no -->
+    <div id="m2-s9" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Esami del sangue</div>
+        <p style="font-size:15px;color:var(--t1);margin-top:8px;margin-bottom:18px;line-height:1.5;font-weight:600;">Hai fatto esami del sangue nell'ultimo mese?</p>
+        <button class="m2-gate-btn" onclick="m2SetBloodGate(true)">Sì, li ho</button>
+        <button class="m2-gate-btn" onclick="m2SetBloodGate(false)">No, non ancora</button>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s8')">← Indietro</button>
+      </div>
+    </div>
+
+    <!-- STEP 10: Compilazione esami (ramo Sì) -->
+    <div id="m2-s10" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Parametri ematici</div>
+        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Tutti i campi sono singolarmente skippabili (lascia vuoto per saltare).</p>
+
+        <div class="onb-field" style="margin-bottom:18px;">
+          <label>Data esame <span class="m2-required-asterisk">*</span></label>
+          <input id="m2-test-date" class="inp inp-sm" type="date"/>
+        </div>
+
+        <p style="font-size:11px;color:var(--acc);letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Da esame base / AVIS</p>
+
+        <div class="onb-field" style="margin-bottom:14px;"><label>Emoglobina</label>
+          <div class="m2-meas-row"><input id="m2-bl-hemo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">G/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Ferritina</label>
+          <div class="m2-meas-row"><input id="m2-bl-ferr" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Glicemia</label>
+          <div class="m2-meas-row"><input id="m2-bl-gluc" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Colesterolo totale</label>
+          <div class="m2-meas-row"><input id="m2-bl-chol" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>HDL</label>
+          <div class="m2-meas-row"><input id="m2-bl-hdl" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Trigliceridi</label>
+          <div class="m2-meas-row"><input id="m2-bl-trig" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Creatinina</label>
+          <div class="m2-meas-row"><input id="m2-bl-crea" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>ALT</label>
+          <div class="m2-meas-row"><input id="m2-bl-alt" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">U/L</div></div>
+        </div>
+
+        <div class="m2-divider"></div>
+        <p style="font-size:11px;color:var(--acc);letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Se li hai anche</p>
+
+        <div class="onb-field" style="margin-bottom:14px;"><label>Vitamina D</label>
+          <div class="m2-meas-row"><input id="m2-bl-vitd" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
+        </div>
+        <div class="onb-field" style="margin-bottom:14px;"><label>Vitamina B12</label>
+          <div class="m2-meas-row"><input id="m2-bl-b12" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">PG/ML</div></div>
+        </div>
+        <div class="onb-field"><label>TSH</label>
+          <div class="m2-meas-row"><input id="m2-bl-tsh" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">μUI/ML</div></div>
+        </div>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s9')">← Indietro</button>
+        <button class="btn btn-primary btn-full" onclick="m2SaveBloodTests()">Salva e continua →</button>
+      </div>
+      <div id="m2-err-s10" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+    <!-- STEP 11: Bridge (ramo No) -->
+    <div id="m2-s11" class="m2-step">
+      <div class="onb-section">
+        <p style="font-size:15px;color:var(--t1);line-height:1.6;margin-bottom:14px;">Nessun problema.</p>
+        <p style="font-size:14px;color:var(--t2);line-height:1.6;">Per ora andiamo avanti — ti ricorderemo di farli al prossimo checkpoint.</p>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s9')">← Indietro</button>
+        <button class="btn btn-primary btn-full" onclick="m2GoStep('s12')">Continua →</button>
+      </div>
+    </div>
+
+    <!-- STEP 12: Esito -->
+    <div id="m2-s12" class="m2-step">
+      <div class="onb-section">
+        <div class="onb-section-title">Check fisico completato</div>
+        <p style="font-size:15px;color:var(--t1);line-height:1.6;margin:14px 0 18px;">Ecco la base da cui partire.</p>
+        <p id="m2-summary" style="font-size:13px;color:var(--t2);font-family:'JetBrains Mono',monospace;line-height:1.8;letter-spacing:.5px;"></p>
+      </div>
+      <div class="onb-nav">
+        <button class="btn btn-primary btn-full" onclick="m2Complete()">Entra in Zona Tracker →</button>
+      </div>
+      <div id="m2-err-s12" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- M2 modal full-screen review foto -->
+<div id="m2-photo-modal" class="m2-modal-photo-overlay" style="display:none;">
+  <div class="m2-modal-photo-lbl" id="m2-modal-photo-lbl"></div>
+  <img id="m2-modal-photo-img" alt=""/>
+  <div class="m2-modal-photo-btns">
+    <button class="btn btn-ghost btn-full" onclick="m2ModalRetake()">Rifai</button>
+    <button class="btn btn-primary btn-full" onclick="m2ModalKeep()">Tieni</button>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div id="loading-overlay" class="loading-overlay">
   <svg width="50" height="50" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
@@ -1203,7 +1701,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.13 · 15:10';
+const APP_VERSION = '2026.05.13 · 16:41';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1302,6 +1800,22 @@ const ST = {
   itemExpanded: {},
   // FASE 5 Card EXTRA integratori collassabile, default vuoto = tutte collassate
   extraSuppExpanded: {},
+  // M2 Check fisico (versione funzionale, design legacy M1 — refinement pass futuro)
+  m2: {
+    step: 'intro',                                              // 'intro'|'s0'|'s1'..'s4'|'s5'|'s6'..'s8'|'s9'|'s10'|'s11'|'s12'
+    checkId: null,                                              // uuid body_checks.id in corso
+    unitSystem: 'metric',                                        // 'metric'|'imperial' (auto-detect su init)
+    photos: { front:null, right:null, left:null, back:null },    // File objects pre-upload
+    photoUrls: { front:null, right:null, left:null, back:null }, // object URLs locali per preview
+    photosUploaded: { front:false, right:false, left:false, back:false },
+    reviewingPose: null,                                         // pose attualmente nel modal full-screen
+    measurements: {},                                            // tutti i campi misure (chiavi: peso_kg, altezza_cm, vita_cm, ...)
+    bloodTests: {},                                              // tutti i parametri ematici (chiavi: emoglobina, ferritina, ...)
+    hasRecentBloodTests: null,                                   // true/false dal gate
+    retakeFromModal: false,                                       // se true, dopo upload torna a s5 invece del prossimo step
+    saving: false,
+    error: null,
+  },
 };
 
 // Mappa sessione → numero Giorno (cycle Upper/Lower)
@@ -1934,7 +2448,496 @@ async function saveOnboarding() {
     btn.disabled=false; btn.textContent='Inizia a tracciare →'; return;
   }
   await saveWeightEntry(weight);
-  await loadAndStart();
+  // M2 entry: ricarica profilo + dati cloud, poi mostra intro check fisico
+  // (test-mode salta M2 e va direttamente all'app)
+  if (ST.user.id === 'test-user-001') { await loadAndStart(); return; }
+  await loadAndStart_thenM2Entry();
+}
+
+// Carica dati come loadAndStart ma alla fine, invece di mostrare app,
+// mostra intro M2 (entry point dopo M1)
+async function loadAndStart_thenM2Entry() {
+  // Riusa logica loadAndStart fino a profileIsComplete=true, poi divergiamo
+  await loadCatalog();
+  await loadSupps();
+  await loadAllDays();
+  await loadTodaySuppLog();
+  await hydrateTrainingSetsFromCloud();
+  const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+  if(profile) ST.profile = profile;
+  if(ST.profile) applyProfile(ST.profile);
+  saveCache();
+  m2EntryIntro();
+}
+
+// ═══════════════════════════════════════════════════════════
+// M2 CHECK FISICO — versione funzionale (design legacy M1)
+// ═══════════════════════════════════════════════════════════
+
+// Auto-detect unità: imperial solo per US English, metric per tutti gli altri
+function m2DetectUnit() {
+  try {
+    const lang = (navigator.language || 'it').toLowerCase();
+    ST.m2.unitSystem = lang.startsWith('en-us') ? 'imperial' : 'metric';
+  } catch(e) { ST.m2.unitSystem = 'metric'; }
+}
+
+// Conversioni unità (DB sempre in metrico)
+function m2LbToKg(v)  { return v / 2.2046; }
+function m2KgToLb(v)  { return v * 2.2046; }
+function m2InToCm(v)  { return v * 2.54; }
+function m2CmToIn(v)  { return v / 2.54; }
+
+// Mostra una step screen, nasconde le altre, scrolla top
+function m2GoStep(stepId) {
+  ST.m2.step = stepId;
+  const screen = document.getElementById('m2-screen');
+  if(!screen) return;
+  screen.querySelectorAll('.m2-step').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById('m2-' + stepId);
+  if(target) target.classList.add('active');
+  screen.scrollTop = 0;
+  // Aggiorna header label dinamicamente
+  const lbl = document.getElementById('m2-step-label');
+  const sub = document.getElementById('m2-subtitle');
+  const title = document.getElementById('m2-title');
+  const M2_HEADERS = {
+    intro:   { label:'CHECK FISICO', title:'Il tuo check fisico',   sub:'Le foto e le misure restano private.' },
+    resume:  { label:'CHECK FISICO', title:'Check in corso',         sub:'Hai un check fisico già avviato.' },
+    s0:      { label:'CHECK FISICO · FOTO',    title:'4 foto del corpo',  sub:'Le foto restano private.' },
+    s1:      { label:'CHECK FISICO · FOTO 1/4', title:'Posa frontale',     sub:'Davanti, in posizione naturale.' },
+    s2:      { label:'CHECK FISICO · FOTO 2/4', title:'Posa lato destro',  sub:'Lato destro verso la fotocamera.' },
+    s3:      { label:'CHECK FISICO · FOTO 3/4', title:'Posa lato sinistro', sub:'Lato sinistro verso la fotocamera.' },
+    s4:      { label:'CHECK FISICO · FOTO 4/4', title:'Posa retro',        sub:'Spalle verso la fotocamera.' },
+    s5:      { label:'CHECK FISICO · FOTO',     title:'Conferma foto',     sub:'Rivedi e conferma per andare avanti.' },
+    s6:      { label:'CHECK FISICO · MISURE',   title:'Peso e altezza',    sub:'Servono al coach per partire.' },
+    s7:      { label:'CHECK FISICO · MISURE',   title:'Circonferenze',     sub:'Metro morbido, aderente ma non stretto.' },
+    s8:      { label:'CHECK FISICO · MISURE',   title:'Composizione',      sub:'Dati dalla bilancia, se ce l\'hai.' },
+    s9:      { label:'CHECK FISICO · ESAMI',    title:'Esami del sangue',  sub:'Una domanda veloce.' },
+    s10:     { label:'CHECK FISICO · ESAMI',    title:'Parametri ematici', sub:'Compila quello che hai sotto mano.' },
+    s11:     { label:'CHECK FISICO · ESAMI',    title:'Va bene così',      sub:'Andiamo avanti.' },
+    s12:     { label:'CHECK FISICO',            title:'Tutto pronto',      sub:'Hai completato il check fisico.' },
+  };
+  const h = M2_HEADERS[stepId] || M2_HEADERS.intro;
+  if(lbl) lbl.textContent = h.label;
+  if(title) title.textContent = h.title;
+  if(sub) sub.textContent = h.sub;
+}
+
+// Entry intro: mostra schermata M2 con scelta Inizia/Salta. Controlla anche resume.
+async function m2EntryIntro() {
+  m2DetectUnit();
+  // Verifica se c'è un check in corso (resume cross-device)
+  try {
+    const {data: inProgress} = await supa.from('body_checks')
+      .select('id, created_at')
+      .eq('user_id', ST.user.id)
+      .eq('status', 'in_progress')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if(inProgress && inProgress.id){
+      ST.m2.checkId = inProgress.id;
+      showScreen('m2');
+      m2GoStep('resume');
+      return;
+    }
+  } catch(e) { console.warn('[m2] resume check error:', e); }
+  showScreen('m2');
+  m2GoStep('intro');
+}
+
+// Skip: marca m2_skipped=true su profile, vai a app
+async function m2Skip() {
+  const errEl = document.getElementById('m2-intro-err');
+  if(errEl) errEl.style.display='none';
+  try {
+    const { error } = await supa.from('profiles').update({ m2_skipped: true, updated_at: new Date().toISOString() }).eq('id', ST.user.id);
+    if(error) throw error;
+    if(ST.profile) ST.profile.m2_skipped = true;
+    saveCache();
+    showScreen('app');
+    renderOggi(); showPage('home');
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore: '+e.message; }
+  }
+}
+
+// Start: crea riga body_checks (status in_progress) e cattura checkId
+async function m2Start() {
+  const errEl = document.getElementById('m2-intro-err');
+  if(errEl) errEl.style.display='none';
+  try {
+    const { data, error } = await supa.from('body_checks').insert({
+      user_id: ST.user.id,
+      check_type: 'initial',
+      status: 'in_progress',
+    }).select().single();
+    if(error) throw error;
+    ST.m2.checkId = data.id;
+    m2GoStep('s0');
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore: '+e.message; }
+  }
+}
+
+// Resume: continua il check in corso (caricando state)
+async function m2ResumeContinue() {
+  // Determina step di ripartenza in base a cosa è già stato salvato
+  try {
+    // Foto presenti?
+    const { data: photos } = await supa.from('body_check_photos').select('pose').eq('check_id', ST.m2.checkId);
+    const posesDone = new Set((photos||[]).map(p => p.pose));
+    ['front','right','left','back'].forEach(p => { ST.m2.photosUploaded[p] = posesDone.has(p); });
+    // Misure presenti?
+    const { data: meas } = await supa.from('body_measurements').select('*').eq('check_id', ST.m2.checkId).maybeSingle();
+    const hasMeas = !!(meas && meas.weight_kg);
+    if(meas && meas.unit_system) ST.m2.unitSystem = meas.unit_system;
+    // Esami presenti?
+    const { data: blood } = await supa.from('blood_tests').select('id').eq('user_id', ST.user.id).order('test_date', { ascending: false }).limit(1);
+    const hasBlood = !!(blood && blood.length);
+
+    // Heuristica step di ripartenza
+    if(!posesDone.has('front')) { m2GoStep('s1'); return; }
+    if(!posesDone.has('right')) { m2GoStep('s2'); return; }
+    if(!posesDone.has('left'))  { m2GoStep('s3'); return; }
+    if(!posesDone.has('back'))  { m2GoStep('s4'); return; }
+    if(!hasMeas)                 { m2GoStep('s6'); return; }
+    if(!hasBlood && ST.m2.hasRecentBloodTests === null) { m2GoStep('s9'); return; }
+    m2GoStep('s12');
+  } catch(e) {
+    console.warn('[m2] resume continue error:', e);
+    m2GoStep('s0');
+  }
+}
+
+// Discard: cancella check in_progress e ricomincia
+async function m2ResumeDiscard() {
+  try {
+    if(ST.m2.checkId){
+      // Cleanup foto storage (best-effort)
+      try {
+        const { data: photos } = await supa.from('body_check_photos').select('storage_path').eq('check_id', ST.m2.checkId);
+        if(photos && photos.length){
+          await supa.storage.from('body-check-photos').remove(photos.map(p => p.storage_path));
+        }
+      } catch(e) { console.warn('[m2] photo cleanup:', e); }
+      // Cleanup rows (in ordine FK)
+      await supa.from('body_check_photos').delete().eq('check_id', ST.m2.checkId);
+      await supa.from('body_measurements').delete().eq('check_id', ST.m2.checkId);
+      await supa.from('body_checks').delete().eq('id', ST.m2.checkId);
+    }
+  } catch(e) { console.warn('[m2] discard error:', e); }
+  // Reset state locale e ricomincia
+  ST.m2.checkId = null;
+  ST.m2.photos = { front:null, right:null, left:null, back:null };
+  ST.m2.photoUrls = { front:null, right:null, left:null, back:null };
+  ST.m2.photosUploaded = { front:false, right:false, left:false, back:false };
+  ST.m2.measurements = {};
+  ST.m2.bloodTests = {};
+  ST.m2.hasRecentBloodTests = null;
+  m2GoStep('intro');
+}
+
+// Selezione foto: tiene File in memoria, mostra preview locale, abilita CTA
+function m2HandlePhotoSelect(pose, event) {
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  ST.m2.photos[pose] = file;
+  // Revoca eventuali object URL precedenti per evitare leak
+  if(ST.m2.photoUrls[pose]) { try { URL.revokeObjectURL(ST.m2.photoUrls[pose]); } catch(e){} }
+  const url = URL.createObjectURL(file);
+  ST.m2.photoUrls[pose] = url;
+  // Mostra preview, nascondi dropzone
+  const drop = document.getElementById('m2-drop-' + pose);
+  const prev = document.getElementById('m2-preview-' + pose);
+  const img  = document.getElementById('m2-img-' + pose);
+  if(drop) drop.style.display = 'none';
+  if(prev) prev.style.display = 'block';
+  if(img)  img.src = url;
+  // Abilita CTA
+  const stepNum = { front:1, right:2, left:3, back:4 }[pose];
+  const btn = document.getElementById('m2-next-s' + stepNum);
+  if(btn) btn.disabled = false;
+}
+
+// Rifai: ripristina dropzone, reset preview
+function m2RetakePhoto(pose) {
+  ST.m2.photos[pose] = null;
+  if(ST.m2.photoUrls[pose]) { try { URL.revokeObjectURL(ST.m2.photoUrls[pose]); } catch(e){} }
+  ST.m2.photoUrls[pose] = null;
+  ST.m2.photosUploaded[pose] = false;
+  const drop = document.getElementById('m2-drop-' + pose);
+  const prev = document.getElementById('m2-preview-' + pose);
+  const fileInput = document.getElementById('m2-file-' + pose);
+  if(fileInput) fileInput.value = '';
+  if(drop) drop.style.display = 'block';
+  if(prev) prev.style.display = 'none';
+  const stepNum = { front:1, right:2, left:3, back:4 }[pose];
+  const btn = document.getElementById('m2-next-s' + stepNum);
+  if(btn) btn.disabled = true;
+}
+
+// Continua su step foto: carica file su Storage + upsert riga DB, poi navigate
+async function m2ContinuePhoto(pose, nextStep) {
+  const errId = 'm2-err-' + { front:'s1', right:'s2', left:'s3', back:'s4' }[pose];
+  const errEl = document.getElementById(errId);
+  if(errEl) errEl.style.display = 'none';
+  const file = ST.m2.photos[pose];
+  if(!file) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Seleziona prima una foto.'; }
+    return;
+  }
+  if(!ST.m2.checkId) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Sessione di check non valida. Riprova.'; }
+    return;
+  }
+  const stepNum = { front:1, right:2, left:3, back:4 }[pose];
+  const btn = document.getElementById('m2-next-s' + stepNum);
+  if(btn){ btn.disabled = true; btn.textContent = 'Caricamento...'; }
+  try {
+    const path = ST.user.id + '/' + ST.m2.checkId + '/' + pose + '.jpg';
+    const { error: upErr } = await supa.storage.from('body-check-photos').upload(path, file, {
+      cacheControl: '3600', upsert: true, contentType: file.type || 'image/jpeg',
+    });
+    if(upErr) throw upErr;
+    // Upsert riga body_check_photos (unique check_id+pose)
+    const { error: dbErr } = await supa.from('body_check_photos').upsert({
+      check_id: ST.m2.checkId,
+      user_id: ST.user.id,
+      pose: pose,
+      storage_path: path,
+    }, { onConflict: 'check_id,pose' });
+    if(dbErr) throw dbErr;
+    ST.m2.photosUploaded[pose] = true;
+    // Retake dal modal s5: torna diretto a s5 invece di proseguire in cascata
+    const goTo = ST.m2.retakeFromModal ? 's5' : nextStep;
+    ST.m2.retakeFromModal = false;
+    m2GoStep(goTo);
+    if(goTo === 's5') m2PopulateGridThumbs();
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore caricamento: '+e.message; }
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Continua →'; }
+  }
+}
+
+// Popola le 4 thumbnail nella griglia conferma (s5) usando object URL locali
+function m2PopulateGridThumbs() {
+  ['front','right','left','back'].forEach(pose => {
+    const img = document.getElementById('m2-grid-' + pose);
+    if(img && ST.m2.photoUrls[pose]) img.src = ST.m2.photoUrls[pose];
+  });
+}
+
+// Apri modal full-screen review foto
+function m2OpenPhotoReview(pose) {
+  ST.m2.reviewingPose = pose;
+  const overlay = document.getElementById('m2-photo-modal');
+  const lbl = document.getElementById('m2-modal-photo-lbl');
+  const img = document.getElementById('m2-modal-photo-img');
+  const POSE_LABEL = { front:'Frontale', right:'Lato destro', left:'Lato sinistro', back:'Retro' };
+  if(lbl) lbl.textContent = POSE_LABEL[pose] || '';
+  if(img && ST.m2.photoUrls[pose]) img.src = ST.m2.photoUrls[pose];
+  if(overlay) overlay.style.display = 'flex';
+}
+function m2ModalKeep() {
+  const overlay = document.getElementById('m2-photo-modal');
+  if(overlay) overlay.style.display = 'none';
+  ST.m2.reviewingPose = null;
+}
+function m2ModalRetake() {
+  const pose = ST.m2.reviewingPose;
+  if(!pose) return m2ModalKeep();
+  // Chiudi modal, torna allo step della posa, ripristina dropzone. Flag per tornare diretto a s5.
+  m2ModalKeep();
+  m2RetakePhoto(pose);
+  ST.m2.retakeFromModal = true;
+  const stepMap = { front:'s1', right:'s2', left:'s3', back:'s4' };
+  m2GoStep(stepMap[pose]);
+}
+
+// Switch unità (solo su s6)
+function m2SetUnit(unit) {
+  ST.m2.unitSystem = unit;
+  const m = document.getElementById('m2-unit-metric');
+  const i = document.getElementById('m2-unit-imperial');
+  if(m) m.classList.toggle('active', unit === 'metric');
+  if(i) i.classList.toggle('active', unit === 'imperial');
+  // Aggiorna tutti i label unità su s6/s7/s8 in base al sistema
+  const wU = unit === 'metric' ? 'KG' : 'LB';
+  const lU = unit === 'metric' ? 'CM' : 'IN';
+  ['peso','muscle'].forEach(k => { const el = document.getElementById('m2-'+k+'-unit'); if(el) el.textContent = wU; });
+  ['altezza','vita','petto','fianchi','spalle','collo','bicipite','polso','coscia','polpaccio'].forEach(k => {
+    const el = document.getElementById('m2-'+k+'-unit'); if(el) el.textContent = lU;
+  });
+}
+
+// Validazione live input misure (placeholder per estensioni future, no-op per ora)
+function m2OnMeasInput() { /* noop */ }
+
+// Continua s6: validazione peso/altezza, conserva valori in ST.m2.measurements (in metrico)
+function m2ContinueS6() {
+  const errEl = document.getElementById('m2-err-s6');
+  if(errEl) errEl.style.display = 'none';
+  const pesoRaw = parseFloat(document.getElementById('m2-peso').value);
+  const altRaw  = parseFloat(document.getElementById('m2-altezza').value);
+  if(!pesoRaw || !altRaw) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Compila peso e altezza.'; } return;
+  }
+  // Range realistici
+  if(ST.m2.unitSystem === 'metric'){
+    if(pesoRaw < 30 || pesoRaw > 250){ errEl.style.display='block'; errEl.textContent='Peso fuori range (30-250 kg).'; return; }
+    if(altRaw  < 100 || altRaw > 230){ errEl.style.display='block'; errEl.textContent='Altezza fuori range (100-230 cm).'; return; }
+    ST.m2.measurements.weight_kg = pesoRaw;
+    ST.m2.measurements.height_cm = altRaw;
+  } else {
+    if(pesoRaw < 66 || pesoRaw > 550){ errEl.style.display='block'; errEl.textContent='Peso fuori range (66-550 lb).'; return; }
+    if(altRaw  < 39 || altRaw  > 90){ errEl.style.display='block'; errEl.textContent='Altezza fuori range (39-90 in).'; return; }
+    ST.m2.measurements.weight_kg = m2LbToKg(pesoRaw);
+    ST.m2.measurements.height_cm = m2InToCm(altRaw);
+  }
+  m2GoStep('s7');
+}
+
+// Continua s7: 3 obbligatori (vita/petto/fianchi) + 6 opzionali, conservati in metrico
+function m2ContinueS7() {
+  const errEl = document.getElementById('m2-err-s7');
+  if(errEl) errEl.style.display = 'none';
+  const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+  const vita    = get('m2-vita');
+  const petto   = get('m2-petto');
+  const fianchi = get('m2-fianchi');
+  if(!vita || !petto || !fianchi){
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Compila vita, petto e fianchi (obbligatori).'; } return;
+  }
+  const toCm = (v) => (v == null) ? null : (ST.m2.unitSystem === 'metric' ? v : m2InToCm(v));
+  ST.m2.measurements.waist_cm     = toCm(vita);
+  ST.m2.measurements.chest_cm     = toCm(petto);
+  ST.m2.measurements.hip_cm       = toCm(fianchi);
+  ST.m2.measurements.shoulders_cm = toCm(get('m2-spalle'));
+  ST.m2.measurements.neck_cm      = toCm(get('m2-collo'));
+  ST.m2.measurements.bicep_cm     = toCm(get('m2-bicipite'));
+  ST.m2.measurements.wrist_cm     = toCm(get('m2-polso'));
+  ST.m2.measurements.thigh_cm     = toCm(get('m2-coscia'));
+  ST.m2.measurements.calf_cm      = toCm(get('m2-polpaccio'));
+  m2GoStep('s8');
+}
+
+// Composizione bilancia: tutti opzionali. Salva l'intera riga body_measurements e prosegui
+async function m2ContinueS8() {
+  const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+  const muscleRaw = get('m2-muscle');
+  ST.m2.measurements.bf_pct        = get('m2-bf');
+  ST.m2.measurements.muscle_kg     = (muscleRaw == null) ? null : (ST.m2.unitSystem === 'metric' ? muscleRaw : m2LbToKg(muscleRaw));
+  ST.m2.measurements.visceral_fat  = get('m2-visceral');
+  ST.m2.measurements.body_age      = get('m2-bodyage');
+  ST.m2.measurements.water_pct     = get('m2-water');
+  await m2SaveMeasurements();
+  m2GoStep('s9');
+}
+
+// Salta s8 (composizione opzionale): non popolare i 5 campi composizione, salva e prosegui
+async function m2SaveMeasurementsAndSkipS8() {
+  ['bf_pct','muscle_kg','visceral_fat','body_age','water_pct'].forEach(k => { ST.m2.measurements[k] = null; });
+  await m2SaveMeasurements();
+  m2GoStep('s9');
+}
+
+// Insert (o upsert per resume) riga body_measurements (1 riga per check)
+async function m2SaveMeasurements() {
+  const errEl = document.getElementById('m2-err-s8');
+  if(errEl) errEl.style.display = 'none';
+  try {
+    const payload = {
+      check_id: ST.m2.checkId,
+      user_id: ST.user.id,
+      unit_system: ST.m2.unitSystem,
+      ...ST.m2.measurements,
+    };
+    const { error } = await supa.from('body_measurements').upsert(payload, { onConflict: 'check_id' });
+    if(error) throw error;
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore salvataggio misure: '+e.message; }
+    throw e;
+  }
+}
+
+// Gate esami sì/no
+function m2SetBloodGate(hasRecent) {
+  ST.m2.hasRecentBloodTests = hasRecent;
+  m2GoStep(hasRecent ? 's10' : 's11');
+  // Default data esame = oggi
+  if(hasRecent){
+    const el = document.getElementById('m2-test-date');
+    if(el && !el.value) el.value = new Date().toISOString().slice(0,10);
+  }
+}
+
+// Salva esami sangue
+async function m2SaveBloodTests() {
+  const errEl = document.getElementById('m2-err-s10');
+  if(errEl) errEl.style.display = 'none';
+  const date = document.getElementById('m2-test-date').value;
+  if(!date){
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Inserisci la data dell\'esame.'; } return;
+  }
+  const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+  const payload = {
+    user_id: ST.user.id,
+    test_date: date,
+    hemoglobin:    get('m2-bl-hemo'),
+    ferritin:      get('m2-bl-ferr'),
+    glucose:       get('m2-bl-gluc'),
+    cholesterol:   get('m2-bl-chol'),
+    hdl:           get('m2-bl-hdl'),
+    triglycerides: get('m2-bl-trig'),
+    creatinine:    get('m2-bl-crea'),
+    alt:           get('m2-bl-alt'),
+    vitamin_d:     get('m2-bl-vitd'),
+    vitamin_b12:   get('m2-bl-b12'),
+    tsh:           get('m2-bl-tsh'),
+  };
+  ST.m2.bloodTests = payload;
+  try {
+    const { error } = await supa.from('blood_tests').insert(payload);
+    if(error) throw error;
+    m2GoStep('s12');
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore salvataggio esami: '+e.message; }
+  }
+}
+
+// Esito: marca body_checks completato, mostra summary, va all'app
+async function m2Complete() {
+  // Popola summary
+  const allPhotos = ['front','right','left','back'].every(p => ST.m2.photosUploaded[p]);
+  const hasMeas = !!(ST.m2.measurements && ST.m2.measurements.weight_kg);
+  const examsLabel = ST.m2.hasRecentBloodTests === true ? 'registrati' : 'da fare';
+  const sumEl = document.getElementById('m2-summary');
+  if(sumEl){
+    const parts = [];
+    parts.push((allPhotos ? '✓' : '·') + ' 4 foto caricate');
+    parts.push((hasMeas   ? '✓' : '·') + ' Misure registrate');
+    parts.push('· Esami ' + examsLabel);
+    sumEl.textContent = parts.join('  ·  ');
+  }
+  const errEl = document.getElementById('m2-err-s12');
+  if(errEl) errEl.style.display = 'none';
+  try {
+    if(ST.m2.checkId){
+      const { error } = await supa.from('body_checks').update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      }).eq('id', ST.m2.checkId);
+      if(error) throw error;
+    }
+    // Vai a home
+    showScreen('app');
+    renderOggi(); showPage('home');
+  } catch(e) {
+    if(errEl){ errEl.style.display='block'; errEl.textContent='Errore chiusura check: '+e.message; }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2290,6 +3293,29 @@ function profileIsComplete(profile) {
   return !!(profile && profile.first_name && profile.first_name.trim());
 }
 
+// M1 completo + M2 non skippato + nessun body_check completed → ritorna true
+// In test mode skippa sempre M2.
+async function m2ShouldShowEntry(profile) {
+  if(!profile) return false;
+  if(ST.user && ST.user.id === 'test-user-001') return false;
+  if(profile.m2_skipped === true) return false;
+  try {
+    const { data, error } = await supa.from('body_checks')
+      .select('id, status')
+      .eq('user_id', ST.user.id)
+      .or('status.eq.completed,status.eq.in_progress')
+      .limit(1)
+      .maybeSingle();
+    if(error){ console.warn('[m2] entry check error:', error); return false; }
+    if(data && data.status === 'completed') return false;
+    // Anche se in_progress, mostriamo M2 entry (sarà m2EntryIntro() a routare a resume)
+    return true;
+  } catch(e) {
+    console.warn('[m2] entry check exception:', e);
+    return false;
+  }
+}
+
 async function loadAndStart() {
   const cache = loadCache();
 
@@ -2304,9 +3330,14 @@ async function loadAndStart() {
     await loadTodaySuppLog();
     if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
-      showScreen('app');
-      renderOggi();
-      showPage('home');
+      // M2 entry per utenti esistenti senza check completato
+      if(await m2ShouldShowEntry(ST.profile)) {
+        await m2EntryIntro();
+      } else {
+        showScreen('app');
+        renderOggi();
+        showPage('home');
+      }
     } else {
       showScreen('onboarding');
     }
@@ -2326,6 +3357,7 @@ async function loadAndStart() {
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
     applyProfile(ST.profile);
+    if(await m2ShouldShowEntry(ST.profile)) { await m2EntryIntro(); return; }
     showScreen('app');
     renderOggi();
     showPage('home');
@@ -2335,6 +3367,12 @@ async function loadAndStart() {
 
   if (profileIsComplete(profile)) {
     applyProfile(profile);
+    if(await m2ShouldShowEntry(profile)) {
+      saveCache();
+      ST.lastRefreshAt = Date.now();
+      await m2EntryIntro();
+      return;
+    }
     showScreen('app');
     renderOggi();
     showPage('home');
@@ -2374,10 +3412,12 @@ function showScreen(name) {
   document.getElementById('splash').classList.add('hide');
   document.getElementById('auth-screen').classList.remove('visible');
   document.getElementById('onboarding-screen').classList.remove('visible');
+  document.getElementById('m2-screen').classList.remove('visible');
   document.getElementById('loading-overlay').classList.add('hide');
   document.getElementById('app').classList.remove('visible');
   if(name === 'auth')       { document.getElementById('auth-screen').classList.add('visible'); }
   else if(name === 'onboarding') { document.getElementById('onboarding-screen').classList.add('visible'); }
+  else if(name === 'm2')    { document.getElementById('m2-screen').classList.add('visible'); }
   else if(name === 'loading') { document.getElementById('loading-overlay').classList.remove('hide'); }
   else if(name === 'app')   {
     document.getElementById('app').classList.add('visible');
