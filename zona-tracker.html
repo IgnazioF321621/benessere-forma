@@ -1706,7 +1706,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.13 · 18:57';
+const APP_VERSION = '2026.05.14 · 10:52';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1781,6 +1781,7 @@ const ST = {
   trainDeleteWorkoutConfirm: null,  // { id, date } — conferma elimina workout intero (da modal day-detail)
   bodyTab: null,
   bodyLogs: null,
+  bodyMeasurements: null,  // record da body_measurements (check fisici M2) — letti insieme a bodyLogs
   bodySaving: false,
   bodyAdvOpen: false,
   audioBlocked: false,
@@ -3756,16 +3757,17 @@ function renderHome(){
 
   // ── Body tile (dati live) ──
   let bodyBody, bodyRight;
-  if(ST.bodyLogs === null){
+  if(ST.bodyLogs === null || ST.bodyMeasurements === null){
     bodyBody = `
       ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
       <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">—</div>
       <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;"> </div>`;
   } else {
-    const bLast  = ST.bodyLogs[0] || {};
-    const bPrev  = ST.bodyLogs[1] || {};
-    const bW     = bLast.weight_kg ?? ST.profile?.weight_kg ?? null;
-    const bWPrev = bPrev.weight_kg ?? null;
+    const bData     = getLatestBodyData();
+    const bTimeline = getUnifiedBodyTimeline();
+    const bWeights  = bTimeline.filter(r => r.weight_kg != null);
+    const bW        = bData.weight_kg ?? ST.profile?.weight_kg ?? null;
+    const bWPrev    = bWeights.length > 1 ? bWeights[1].weight_kg : null;
     let bTrend = '';
     if(bW && bWPrev){
       const diff = (bW - bWPrev).toFixed(1);
@@ -3773,8 +3775,8 @@ function renderHome(){
       bTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
     }
     const bSub = [
-      bLast.bf_pct  ? `BF ${bLast.bf_pct}%`   : null,
-      bLast.waist_cm ? `Vita ${bLast.waist_cm} cm` : null,
+      bData.bf_pct   ? `BF ${bData.bf_pct}%`        : null,
+      bData.waist_cm ? `Vita ${bData.waist_cm} cm`  : null,
     ].filter(Boolean).join(' · ') || 'Nessun dato';
     bodyBody = `
       ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
@@ -6894,17 +6896,104 @@ function renderTraining(){
   document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
 }
 async function loadBodyLogs(){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
-  if(ST.page==='body'){ ST.bodyLogs=null; renderBody(); }
-  const { data } = await supa
-    .from('body_logs')
-    .select('*')
-    .eq('user_id', ST.user.id)
-    .order('date', {ascending:false})
-    .limit(90);
-  ST.bodyLogs = data || [];
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; renderBody(); }
+  // Carica in parallelo body_logs (log peso veloci) + body_measurements (check fisici M2)
+  const [logsRes, measRes] = await Promise.all([
+    supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
+    supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
+  ]);
+  ST.bodyLogs = logsRes.data || [];
+  ST.bodyMeasurements = measRes.data || [];
   if(ST.page==='body') renderBody();
   else if(ST.page==='home') renderHome();
+}
+
+// ── Lettura unificata Body: body_logs (legacy) + body_measurements (M2) ──
+// Mapping body_logs → body_measurements: hip_cm→hips_cm, bicep_cm→biceps_cm,
+// bf_pct→body_fat_pct, muscle_kg→muscle_mass_kg, body_age→metabolic_age.
+// Per ogni metrica prende il valore non-null col timestamp più recente,
+// indipendentemente dalla tabella di origine.
+function getLatestBodyData(){
+  const logs = ST.bodyLogs || [];
+  const meas = ST.bodyMeasurements || [];
+  // pickMetric: scorre tutti i record di entrambe le tabelle, ritorna il valore
+  // non-null col timestamp più recente. logKey/measKey possono essere null se
+  // la metrica esiste solo in una tabella.
+  function pickMetric(logKey, measKey){
+    let best = null; // { value, time }
+    if(logKey){
+      for(const l of logs){
+        const v = l[logKey];
+        if(v != null){
+          const t = new Date(l.date).getTime();
+          if(!best || t > best.time) best = { value:v, time:t };
+        }
+      }
+    }
+    if(measKey){
+      for(const m of meas){
+        const v = m[measKey];
+        if(v != null){
+          const t = new Date(m.created_at).getTime();
+          if(!best || t > best.time) best = { value:v, time:t };
+        }
+      }
+    }
+    return best ? best.value : null;
+  }
+  let height_cm = pickMetric(null, 'height_cm');
+  if(height_cm == null) height_cm = ST.profile?.height_cm ?? null;
+  return {
+    weight_kg:    pickMetric('weight_kg', 'weight_kg'),
+    waist_cm:     pickMetric('waist_cm', 'waist_cm'),
+    hip_cm:       pickMetric('hip_cm', 'hips_cm'),
+    chest_cm:     pickMetric('chest_cm', 'chest_cm'),
+    bicep_cm:     pickMetric('bicep_cm', 'biceps_cm'),
+    bf_pct:       pickMetric('bf_pct', 'body_fat_pct'),
+    muscle_kg:    pickMetric('muscle_kg', 'muscle_mass_kg'),
+    body_age:     pickMetric('body_age', 'metabolic_age'),
+    visceral_fat: pickMetric('visceral_fat', 'visceral_fat'),
+    height_cm,
+    _hasMeas:     meas.length > 0,
+  };
+}
+
+// Timeline unificata: body_logs + body_measurements normalizzati in un unico
+// array ordinato per data DESC. source: 'log' | 'check'. Usata da "Ultimi log"
+// e dai grafici Tendenza.
+function getUnifiedBodyTimeline(){
+  const logs = ST.bodyLogs || [];
+  const meas = ST.bodyMeasurements || [];
+  const out = [];
+  for(const l of logs){
+    out.push({
+      date: l.date,
+      _ts: new Date(l.date).getTime(),
+      source: 'log',
+      weight_kg:    l.weight_kg ?? null,
+      waist_cm:     l.waist_cm ?? null,
+      bf_pct:       l.bf_pct ?? null,
+      visceral_fat: l.visceral_fat ?? null,
+      body_age:     l.body_age ?? null,
+    });
+  }
+  for(const m of meas){
+    // created_at è timestamptz: la data per la UI è la parte YYYY-MM-DD
+    const dateStr = (m.created_at || '').slice(0,10);
+    out.push({
+      date: dateStr,
+      _ts: new Date(m.created_at).getTime(),
+      source: 'check',
+      weight_kg:    m.weight_kg ?? null,
+      waist_cm:     m.waist_cm ?? null,
+      bf_pct:       m.body_fat_pct ?? null,
+      visceral_fat: m.visceral_fat ?? null,
+      body_age:     m.metabolic_age ?? null,
+    });
+  }
+  out.sort((a,b) => b._ts - a._ts);
+  return out;
 }
 
 async function saveBodyLog(){
@@ -6973,26 +7062,30 @@ function renderBody(){
     ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
   </nav>`;
 
-  const logs = ST.bodyLogs;
   let body = '';
 
-  if(logs === null){
+  if(ST.bodyLogs === null || ST.bodyMeasurements === null){
     body = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
     document.getElementById('page-body').innerHTML = navHTML + body;
     return;
   }
 
   const today    = todayKey();
+  const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il form "Log misure"
   const todayLog = logs.find(l => l.date === today) || {};
-  const prevLogs = logs.filter(l => l.date < today);
-  const prev     = prevLogs[0] || {};
+  // Dati unificati body_logs + body_measurements
+  const uData     = getLatestBodyData();
+  const uTimeline = getUnifiedBodyTimeline();
 
   if(tab === 'misure'){
-    const w      = todayLog.weight_kg  ?? prev.weight_kg  ?? ST.profile?.weight_kg ?? null;
-    const wPrev  = prev.weight_kg ?? null;
+    const uWeights = uTimeline.filter(r => r.weight_kg != null);
+    const uWaists  = uTimeline.filter(r => r.waist_cm != null);
+    const w      = uData.weight_kg ?? ST.profile?.weight_kg ?? null;
+    const wPrev  = uWeights.length > 1 ? uWeights[1].weight_kg : null;
+    const wDate  = uWeights.length ? uWeights[0].date : null;
     const goalW  = ST.profile?.goal_weight_kg ?? null;
-    const waist  = todayLog.waist_cm   ?? prev.waist_cm   ?? null;
-    const waistP = prev.waist_cm ?? null;
+    const waist  = uData.waist_cm ?? null;
+    const waistP = uWaists.length > 1 ? uWaists[1].waist_cm : null;
 
     let wTrend = '';
     if(w && wPrev){
@@ -7003,8 +7096,7 @@ function renderBody(){
 
     let wProgressHTML = '';
     if(w && goalW){
-      const oldest = logs.length ? logs[logs.length-1] : null;
-      const startW = oldest?.weight_kg ?? w;
+      const startW = uWeights.length ? uWeights[uWeights.length-1].weight_kg : w;
       const total  = Math.abs(startW - goalW);
       const done   = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
       const dir    = goalW < w ? '▼' : '▲';
@@ -7056,7 +7148,7 @@ function renderBody(){
           ${w ? `<span style="font-size:13px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
           ${wTrend}
           <span style="flex:1;"></span>
-          <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${prev.date ? fmtDate(prev.date) : ''}</span>
+          <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${wDate ? fmtDate(wDate) : ''}</span>
         </div>
         ${wProgressHTML}
         ${waistProgressHTML}
@@ -7064,11 +7156,11 @@ function renderBody(){
       </div>
 
       ${(() => {
-        const cw        = logs[0]?.weight_kg ?? ST.profile?.weight_kg;
-        const ch        = ST.profile?.height_cm;
-        const cbf       = logs[0]?.bf_pct;
-        const cvisceral = logs[0]?.visceral_fat;
-        const cbodyAge  = logs[0]?.body_age;
+        const cw        = uData.weight_kg ?? ST.profile?.weight_kg;
+        const ch        = uData.height_cm ?? ST.profile?.height_cm;
+        const cbf       = uData.bf_pct;
+        const cvisceral = uData.visceral_fat;
+        const cbodyAge  = uData.body_age;
         const cbmi      = (cw && ch) ? (cw / ((ch/100)**2)).toFixed(1) : null;
         const cbmiCat   = cbmi ? (cbmi < 18.5 ? 'Sottopeso' : cbmi < 25 ? 'Normopeso' : cbmi < 30 ? 'Sovrappeso' : 'Obeso') : '';
         const cbmiCol   = cbmi ? (cbmi < 18.5 ? '#185FA5' : cbmi < 25 ? '#2A7A6F' : cbmi < 30 ? '#854F0B' : '#B84C2A') : '#854F0B';
@@ -7178,12 +7270,15 @@ function renderBody(){
         </button>
       </div>
 
-      ${logs.length > 0 ? `
+      ${uTimeline.length > 0 ? `
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
         <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Ultimi log</div>
-        ${logs.slice(0,8).map(l => `
+        ${uTimeline.slice(0,8).map(l => `
           <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);">
-            <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">${fmtDate(l.date)}</div>
+            <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);display:flex;align-items:center;gap:6px;">
+              ${fmtDate(l.date)}
+              ${l.source === 'check' ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
+            </div>
             <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;">
               ${l.weight_kg ? `<span>${l.weight_kg} kg</span>` : ''}
               ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
@@ -7194,10 +7289,10 @@ function renderBody(){
     `;
 
   } else if(tab === 'tendenza'){
-    if(logs.length === 0){
+    if(uTimeline.length === 0){
       body = `<div style="padding:60px 20px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);line-height:1.8;">Nessun dato ancora.<br>Inizia a loggare le misure.</div>`;
     } else {
-      const last30  = logs.slice(0,30).reverse();
+      const last30  = uTimeline.slice(0,30).reverse();
       const weights = last30.filter(l => l.weight_kg != null);
       const waists  = last30.filter(l => l.waist_cm  != null);
 

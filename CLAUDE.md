@@ -741,6 +741,33 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 14 maggio 2026 — Modulo Body legge da body_logs + body_measurements (lettura unificata M2)
+
+**Decisione strategica (Opzione A)**: le due tabelle coesistono. `body_logs` resta per i log peso veloci quotidiani (form "Log misure" del modulo Body — invariato). `body_measurements` accoglie i check fisici completi (M2 e futuri checkpoint). Il modulo Body ora **legge da entrambe** e mostra sempre il dato più recente per ogni metrica. Solo lettura — nessuna modifica DB, nessuna modifica al salvataggio.
+
+**Problema**: M2 salvava correttamente su `body_measurements` ma il modulo Body leggeva solo da `body_logs`, quindi ignorava i dati del check fisico (schermata Body "vuota" sulla composizione).
+
+**Modifiche** (tutte in `zona-tracker.html`):
+- **State**: aggiunto `ST.bodyMeasurements` (parallelo a `ST.bodyLogs`).
+- **`loadBodyLogs()`**: ora carica in parallelo (`Promise.all`) `body_logs` + `body_measurements` (ORDER BY `created_at` DESC, limit 90). Test mode → entrambi `[]`.
+- **`getLatestBodyData()`** (nuovo helper): per ogni metrica scorre **tutti** i record di entrambe le tabelle e ritorna il valore non-null col timestamp più recente (`body_logs.date` vs `body_measurements.created_at`). Ritorna oggetto unificato `{weight_kg, waist_cm, hip_cm, chest_cm, bicep_cm, bf_pct, muscle_kg, body_age, visceral_fat, height_cm, _hasMeas}`.
+- **`getUnifiedBodyTimeline()`** (nuovo helper): array normalizzato di record `{date, _ts, source:'log'|'check', weight_kg, waist_cm, bf_pct, visceral_fat, body_age}` ordinato per timestamp DESC. Usato da "Ultimi log" e dai grafici Tendenza.
+- **Mapping campi** `body_logs` → `body_measurements`: `hip_cm`→`hips_cm`, `bicep_cm`→`biceps_cm`, `bf_pct`→`body_fat_pct`, `muscle_kg`→`muscle_mass_kg`, `body_age`→`metabolic_age`, `visceral_fat`→`visceral_fat` (identico), `weight_kg`/`waist_cm`/`chest_cm` identici. `height_cm`: solo da `body_measurements`, fallback `ST.profile.height_cm`.
+
+**Punti di render aggiornati**:
+- **Home tile Body**: peso + sub (BF/Vita) da `getLatestBodyData()`; trend dai 2 pesi più recenti della timeline unificata.
+- **renderBody card peso/target**: `w`/`waist` da `getLatestBodyData()`; trend, progress, data mostrata derivati dalla timeline unificata (`uWeights`/`uWaists`).
+- **renderBody card Composizione**: `cw, ch, cbf, cvisceral, cbodyAge` da `getLatestBodyData()`. BMI / massa magra / massa grassa restano **calcolate** (`cw/(ch/100)²`, `cw*cbf/100`, `cw*(1-cbf/100)`) ma sui valori unificati. `ch` ora usa `height_cm` da `body_measurements` con fallback profilo.
+- **renderBody "Ultimi log"**: da `getUnifiedBodyTimeline().slice(0,8)`, righe da `body_measurements` marcate con tag `✓ CHECK` (mono uppercase, bordo evergreen).
+- **renderBody tab Tendenza**: grafici peso/vita usano `getUnifiedBodyTimeline().slice(0,30)` — i check M2 appaiono come punti delle serie.
+- **null-check render**: `if(ST.bodyLogs===null || ST.bodyMeasurements===null)` → loading.
+
+**Cosa NON è stato toccato**: form "Log misure" + `saveBodyLog()` continuano a scrivere su `body_logs`. Pre-popolazione del form resta da `todayLog` (body_logs di oggi) — un log veloce non deve trovare preimpostati valori del check M2. Estetica/layout invariati.
+
+**Edge case**: `body_logs.date` è solo data (no orario, → midnight UTC), `body_measurements.created_at` ha orario. Nello stesso giorno il check "vince" sul log veloce nel confronto timestamp. Imprecisione minore e accettabile (log veloci e check raramente lo stesso giorno).
+
+**Verifica attesa** (account Ignazio, check M2 del 13 mag): BODY FAT 14.2% · MASSA GRASSA ~10.2 kg · MASSA MAGRA ~61.6 kg · GRASSO VISCERALE 7 · BODY AGE 53 · BMI ~24.3 (peso ~71.8 kg / altezza 172 cm).
+
 ### 13 maggio 2026 (sera) — UX refinements M2 schermate misure (s6/s7)
 
 4 micro-fix UX da test reale, su schermate misure di M2. Nessuna modifica DB, nessun JS toccato (eccetto 1 riga show/hide nello switch).
