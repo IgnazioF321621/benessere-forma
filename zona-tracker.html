@@ -113,7 +113,7 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .m2-step.active{display:block;}
 
 /* ── M2 — header bone + tipografia Syne (override scoped a #m2-screen, le .onb-* globali restano intatte) ── */
-#m2-screen .onb-header{background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 24px 4px;position:relative;}
+#m2-screen .onb-header{background:var(--bg);padding:calc(40px + env(safe-area-inset-top)) 24px 4px;position:relative;}
 #m2-screen .onb-step{color:var(--acc);font-size:11px;font-weight:500;letter-spacing:.15em;margin-bottom:16px;}
 #m2-screen .onb-title{font-size:38px;font-weight:800;color:var(--t1);line-height:1.05;letter-spacing:-.02em;}
 #m2-screen .onb-sub{font-size:16px;font-weight:400;color:var(--t2);margin-top:10px;line-height:1.4;}
@@ -186,7 +186,12 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .m2-meas-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);text-align:right;padding:0;letter-spacing:.06em;white-space:nowrap;}
 .m2-meas-tip{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);font-style:normal;margin-top:8px;line-height:1.45;}
 .m2-required-asterisk{color:var(--acc);font-weight:700;}
-.m2-info-icon{display:inline-block;color:var(--t3);margin-left:5px;vertical-align:-2px;}
+.m2-info-icon{display:inline-block;background:none;border:none;padding:0;margin-left:5px;color:var(--t3);cursor:pointer;vertical-align:-2px;line-height:0;}
+.m2-info-icon:active{opacity:.6;}
+.m2-info-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.m2-info-modal-field{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);padding-top:3px;}
+.m2-info-modal-x{background:none;border:none;color:var(--t3);font-size:20px;line-height:1;cursor:pointer;padding:0 2px;font-family:'Syne',sans-serif;}
+.info-modal p.m2-info-modal-tip{font-family:'Syne',sans-serif;font-size:15px;line-height:1.5;color:var(--t1);margin:0;}
 
 /* ── M2 — divider / hint / tip ── */
 .m2-divider{height:1px;background:var(--b1);margin:6px 0 24px;}
@@ -1065,21 +1070,19 @@ select.inp{cursor:pointer;}
         <p class="m2-mantra">Più sono precise, meglio funziona tutto il resto.</p>
 
         <div class="onb-field">
-          <label>Peso<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Peso<span class="m2-required-asterisk">*</span><button class="m2-info-icon" type="button" aria-label="Info sul campo Peso" data-field="Peso" data-tip="Al mattino, a digiuno, dopo il bagno." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-peso" class="inp inp-sm" type="number" step="0.1" placeholder="74,5" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-peso-unit">KG</div>
           </div>
-          <div class="m2-meas-tip">Al mattino, a digiuno, dopo il bagno.</div>
         </div>
 
         <div class="onb-field">
-          <label>Altezza<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Altezza<span class="m2-required-asterisk">*</span><button class="m2-info-icon" type="button" aria-label="Info sul campo Altezza" data-field="Altezza" data-tip="Scalzo, schiena dritta contro un muro." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-altezza" class="inp inp-sm" type="number" step="0.1" placeholder="178" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-altezza-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Scalzo, schiena dritta contro un muro.</div>
         </div>
       </div>
       <div class="m2-cta-sticky">
@@ -1095,30 +1098,27 @@ select.inp{cursor:pointer;}
         <p class="m2-asterisk-hint">* I campi con asterisco sono obbligatori. Gli altri puoi saltarli.</p>
 
         <div class="onb-field">
-          <label>Vita<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Vita<span class="m2-required-asterisk">*</span><button class="m2-info-icon" type="button" aria-label="Info sul campo Vita" data-field="Vita" data-tip="Punto più stretto, sopra l'ombelico." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-vita" class="inp inp-sm" type="number" step="0.1" placeholder="89" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-vita-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Punto più stretto, sopra l'ombelico.</div>
         </div>
 
         <div class="onb-field">
-          <label>Petto<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Petto<span class="m2-required-asterisk">*</span><button class="m2-info-icon" type="button" aria-label="Info sul campo Petto" data-field="Petto" data-tip="Sotto le ascelle, alla parte più sporgente." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-petto" class="inp inp-sm" type="number" step="0.1" placeholder="102" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-petto-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Sotto le ascelle, alla parte più sporgente.</div>
         </div>
 
         <div class="onb-field">
-          <label>Fianchi<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Fianchi<span class="m2-required-asterisk">*</span><button class="m2-info-icon" type="button" aria-label="Info sul campo Fianchi" data-field="Fianchi" data-tip="Punto più largo dei glutei." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-fianchi" class="inp inp-sm" type="number" step="0.1" placeholder="98" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-fianchi-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Punto più largo dei glutei.</div>
         </div>
 
         <div class="m2-divider"></div>
@@ -1126,57 +1126,51 @@ select.inp{cursor:pointer;}
         <p class="m2-bilat-tip">Per bicipite, polso, coscia e polpaccio: scegli un lato (destro o sinistro) e usa sempre lo stesso nelle misurazioni successive — così i dati sono confrontabili nel tempo.</p>
 
         <div class="onb-field">
-          <label>Spalle<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Spalle<button class="m2-info-icon" type="button" aria-label="Info sul campo Spalle" data-field="Spalle" data-tip="Parte più larga, da deltoide a deltoide." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-spalle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-spalle-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Parte più larga, da deltoide a deltoide.</div>
         </div>
 
         <div class="onb-field">
-          <label>Collo<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Collo<button class="m2-info-icon" type="button" aria-label="Info sul campo Collo" data-field="Collo" data-tip="Sotto il pomo d'Adamo, rilassato." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-collo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-collo-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Sotto il pomo d'Adamo, rilassato.</div>
         </div>
 
         <div class="onb-field">
-          <label>Bicipite<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Bicipite<button class="m2-info-icon" type="button" aria-label="Info sul campo Bicipite" data-field="Bicipite" data-tip="Braccio rilassato, nel punto più ampio." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-bicipite" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-bicipite-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Braccio rilassato, nel punto più ampio.</div>
         </div>
 
         <div class="onb-field">
-          <label>Polso<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Polso<button class="m2-info-icon" type="button" aria-label="Info sul campo Polso" data-field="Polso" data-tip="Subito sopra l'osso, mano rilassata." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-polso" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-polso-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Subito sopra l'osso, mano rilassata.</div>
         </div>
 
         <div class="onb-field">
-          <label>Coscia<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Coscia<button class="m2-info-icon" type="button" aria-label="Info sul campo Coscia" data-field="Coscia" data-tip="Parte più alta, sotto la piega del gluteo." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-coscia" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-coscia-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Parte più alta, sotto la piega del gluteo.</div>
         </div>
 
         <div class="onb-field">
-          <label>Polpaccio<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Polpaccio<button class="m2-info-icon" type="button" aria-label="Info sul campo Polpaccio" data-field="Polpaccio" data-tip="Parte più larga, a metà polpaccio." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-polpaccio" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-polpaccio-unit">CM</div>
           </div>
-          <div class="m2-meas-tip">Parte più larga, a metà polpaccio.</div>
         </div>
       </div>
       <div class="m2-cta-sticky">
@@ -1192,48 +1186,43 @@ select.inp{cursor:pointer;}
         <p class="m2-asterisk-hint">Tutti i campi sono opzionali. Puoi saltare se non hai questi dati.</p>
 
         <div class="onb-field">
-          <label>Grasso corporeo<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Grasso corporeo<button class="m2-info-icon" type="button" aria-label="Info sul campo Grasso corporeo" data-field="Grasso corporeo" data-tip="Percentuale di massa grassa." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-bf" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit">%</div>
           </div>
-          <div class="m2-meas-tip">Percentuale di massa grassa.</div>
         </div>
 
         <div class="onb-field">
-          <label>Massa muscolare<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Massa muscolare<button class="m2-info-icon" type="button" aria-label="Info sul campo Massa muscolare" data-field="Massa muscolare" data-tip="Peso totale dei muscoli." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-muscle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-muscle-unit">KG</div>
           </div>
-          <div class="m2-meas-tip">Peso totale dei muscoli.</div>
         </div>
 
         <div class="onb-field">
-          <label>Grasso viscerale<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Grasso viscerale<button class="m2-info-icon" type="button" aria-label="Info sul campo Grasso viscerale" data-field="Grasso viscerale" data-tip="Indice 1-30. Sotto 10 è ottimale." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-visceral" class="inp inp-sm" type="number" step="0.1" placeholder="1-30"/>
             <div class="m2-meas-unit">IDX</div>
           </div>
-          <div class="m2-meas-tip">Indice 1-30. Sotto 10 è ottimale.</div>
         </div>
 
         <div class="onb-field">
-          <label>Età metabolica<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Età metabolica<button class="m2-info-icon" type="button" aria-label="Info sul campo Età metabolica" data-field="Età metabolica" data-tip="Età stimata dal tuo metabolismo." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-bodyage" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/>
             <div class="m2-meas-unit">ANNI</div>
           </div>
-          <div class="m2-meas-tip">Età stimata dal tuo metabolismo.</div>
         </div>
 
         <div class="onb-field">
-          <label>Acqua<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+          <label>Acqua<button class="m2-info-icon" type="button" aria-label="Info sul campo Acqua" data-field="Acqua" data-tip="Percentuale di acqua corporea." onclick="m2OpenInfo(this)"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button></label>
           <div class="m2-meas-row">
             <input id="m2-water" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit">%</div>
           </div>
-          <div class="m2-meas-tip">Percentuale di acqua corporea.</div>
         </div>
 
         <p class="m2-mantra" style="margin:24px 0 0;">Anche un dato in più aiuta il coach a leggerti meglio.</p>
@@ -1269,28 +1258,28 @@ select.inp{cursor:pointer;}
 
         <div class="m2-divider-section"><div class="m2-eyebrow">Esame base</div></div>
 
-        <div class="onb-field"><label>Emoglobina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Emoglobina</label>
           <div class="m2-meas-row"><input id="m2-bl-hemo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">G/DL</div></div>
         </div>
-        <div class="onb-field"><label>Ferritina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Ferritina</label>
           <div class="m2-meas-row"><input id="m2-bl-ferr" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
         </div>
-        <div class="onb-field"><label>Glicemia<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Glicemia</label>
           <div class="m2-meas-row"><input id="m2-bl-gluc" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field"><label>Colesterolo totale<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Colesterolo totale</label>
           <div class="m2-meas-row"><input id="m2-bl-chol" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field"><label>HDL<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>HDL</label>
           <div class="m2-meas-row"><input id="m2-bl-hdl" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field"><label>Trigliceridi<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Trigliceridi</label>
           <div class="m2-meas-row"><input id="m2-bl-trig" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field"><label>Creatinina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Creatinina</label>
           <div class="m2-meas-row"><input id="m2-bl-crea" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field"><label>ALT<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>ALT</label>
           <div class="m2-meas-row"><input id="m2-bl-alt" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">U/L</div></div>
         </div>
 
@@ -1299,13 +1288,13 @@ select.inp{cursor:pointer;}
           <div class="m2-divider-section-desc">Vitamine e tiroide.</div>
         </div>
 
-        <div class="onb-field"><label>Vitamina D<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Vitamina D</label>
           <div class="m2-meas-row"><input id="m2-bl-vitd" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
         </div>
-        <div class="onb-field"><label>Vitamina B12<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>Vitamina B12</label>
           <div class="m2-meas-row"><input id="m2-bl-b12" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">PG/ML</div></div>
         </div>
-        <div class="onb-field"><label>TSH<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
+        <div class="onb-field"><label>TSH</label>
           <div class="m2-meas-row"><input id="m2-bl-tsh" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">μUI/ML</div></div>
         </div>
 
@@ -1790,7 +1779,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 20:33';
+const APP_VERSION = '2026.05.14 · 21:01';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10805,6 +10794,28 @@ function showInfoModal(key) {
     <button class="info-modal-close" onclick="this.closest('.info-modal-overlay').remove()">Chiudi</button>
   </div>`;
   el.addEventListener('click', e => { if(e.target === el) el.remove(); });
+  document.body.appendChild(el);
+}
+
+// m2OpenInfo — apre un info-modal con il tip del campo M2 (chiamato dalle icone ⓘ).
+// Legge data-field / data-tip dal button. Riusa il pattern .info-modal-overlay/.info-modal.
+function m2OpenInfo(btn) {
+  const field = (btn && btn.getAttribute('data-field')) || '';
+  const tip = (btn && btn.getAttribute('data-tip')) || '';
+  const el = document.createElement('div');
+  el.className = 'info-modal-overlay';
+  el.innerHTML = `<div class="info-modal" onclick="event.stopPropagation()">
+    <div class="m2-info-modal-head">
+      <span class="m2-info-modal-field">${field}</span>
+      <button class="m2-info-modal-x" type="button" aria-label="Chiudi">✕</button>
+    </div>
+    <p class="m2-info-modal-tip">${tip}</p>
+  </div>`;
+  const close = () => { el.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if(e.key === 'Escape') close(); };
+  el.addEventListener('click', e => { if(e.target === el) close(); });
+  el.querySelector('.m2-info-modal-x').addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
   document.body.appendChild(el);
 }
 
