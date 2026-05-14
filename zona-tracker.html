@@ -146,6 +146,20 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .m2-photo-rule{font-size:12px;color:var(--t2);margin:8px 0;line-height:1.5;}
 .m2-photo-rule strong{color:var(--t1);font-weight:700;}
 
+/* ── TAB TENDENZA BODY ── */
+.trend-range-switch{display:flex;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:3px;gap:2px;margin-bottom:14px;}
+.trend-range-btn{flex:1;padding:7px 4px;border:none;background:transparent;color:var(--t3);cursor:pointer;border-radius:16px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.5px;font-weight:600;transition:all .15s;}
+.trend-range-btn.active{background:var(--acc);color:#fff;}
+.trend-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);}
+.trend-metric-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px;}
+@media(min-width:720px){.trend-metric-grid{grid-template-columns:1fr 1fr;}}
+.trend-metric-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:14px;box-shadow:var(--shadow);}
+.trend-metric-name{font-size:10px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:6px;}
+.trend-metric-val{font-size:clamp(28px,6vw,38px);font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--t1);line-height:1;}
+.trend-metric-unit{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--t3);margin-left:3px;}
+.trend-metric-delta{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:5px;}
+.trend-metric-note{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:5px;font-style:italic;}
+
 /* ── APP ── */
 #app{min-height:100vh;display:flex;flex-direction:column;display:none;}
 #app.visible{display:flex;}
@@ -1718,7 +1732,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 11:46';
+const APP_VERSION = '2026.05.14 · 14:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1794,8 +1808,10 @@ const ST = {
   bodyTab: null,
   bodyLogs: null,
   bodyMeasurements: null,  // record da body_measurements (check fisici M2) — letti insieme a bodyLogs
+  bodyChecks: null,        // record da body_checks (id + status) — per filtrare i check completed in Tendenza
   bodyDeleteConfirm: null, // { kind:'log'|'check', id, checkId, date } — conferma elimina log Body
   bodyCheckDetail: null,   // dati del check fisico aperto nell'overlay dettaglio
+  bodyTrendRange: '30d',   // intervallo selettore tab Tendenza: '7d'|'30d'|'90d'|'all'
   bodySaving: false,
   bodyAdvOpen: false,
   audioBlocked: false,
@@ -6911,15 +6927,17 @@ function renderTraining(){
   document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
 }
 async function loadBodyLogs(){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
-  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; renderBody(); }
-  // Carica in parallelo body_logs (log peso veloci) + body_measurements (check fisici M2)
-  const [logsRes, measRes] = await Promise.all([
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; renderBody(); }
+  // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
+  const [logsRes, measRes, checksRes] = await Promise.all([
     supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
     supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
+    supa.from('body_checks').select('id, status').eq('user_id', ST.user.id),
   ]);
   ST.bodyLogs = logsRes.data || [];
   ST.bodyMeasurements = measRes.data || [];
+  ST.bodyChecks = checksRes.data || [];
   updateHeaderWeight();
   if(ST.page==='body') renderBody();
   else if(ST.page==='home') renderHome();
@@ -7001,6 +7019,8 @@ function getUnifiedBodyTimeline(){
       id: l.id,                 // body_logs.id — per delete
       weight_kg:    l.weight_kg ?? null,
       waist_cm:     l.waist_cm ?? null,
+      hip_cm:       l.hip_cm ?? null,
+      chest_cm:     l.chest_cm ?? null,
       bf_pct:       l.bf_pct ?? null,
       visceral_fat: l.visceral_fat ?? null,
       body_age:     l.body_age ?? null,
@@ -7017,6 +7037,8 @@ function getUnifiedBodyTimeline(){
       check_id: m.check_id,     // body_checks.id — per delete cascade
       weight_kg:    m.weight_kg ?? null,
       waist_cm:     m.waist_cm ?? null,
+      hip_cm:       m.hips_cm ?? null,
+      chest_cm:     m.chest_cm ?? null,
       bf_pct:       m.body_fat_pct ?? null,
       visceral_fat: m.visceral_fat ?? null,
       body_age:     m.metabolic_age ?? null,
@@ -7313,6 +7335,244 @@ function renderBodyCheckDetail(){
   host.scrollTop = 0;
 }
 
+// ── Tab Tendenza Body ──────────────────────────────────────
+function bodyTrendRangeDays(range){
+  return range === '7d' ? 7 : range === '90d' ? 90 : range === 'all' ? Infinity : 30;
+}
+function filterTimelineByRange(tl, range){
+  const days = bodyTrendRangeDays(range);
+  if(days === Infinity) return tl.slice();
+  const cutoff = Date.now() - days * 86400000;
+  return tl.filter(r => r._ts >= cutoff);
+}
+// Sparkline SVG inline: values in ordine cronologico ASC. ViewBox 100×40.
+function sparklineSVG(values, color){
+  const n = values.length;
+  if(n < 2) return '';
+  const min = Math.min(...values), max = Math.max(...values);
+  const span = (max - min) || 1;
+  const pts = values.map((v,i) => {
+    const x = (i/(n-1))*100;
+    const y = 40 - ((v-min)/span)*36 - 2;
+    return x.toFixed(2)+','+y.toFixed(2);
+  });
+  const area = `M${pts[0]} L${pts.slice(1).join(' L')} L100,40 L0,40 Z`;
+  return `<svg viewBox="0 0 100 40" preserveAspectRatio="none" style="width:100%;height:44px;display:block;margin-top:8px;">
+    <path d="${area}" fill="${color}" fill-opacity="0.12"/>
+    <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+  </svg>`;
+}
+// Formatta un valore metrica: 1 decimale, rimuove .0
+function fmtMetric(v){
+  if(v == null || isNaN(v)) return '—';
+  const r = Math.round(v * 10) / 10;
+  return (r % 1 === 0) ? String(r) : r.toFixed(1);
+}
+// Data compatta "13 mag" da YYYY-MM-DD o ISO
+function trendShortDate(s){
+  const MON = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const d = new Date((s||'').length === 10 ? s+'T12:00:00' : s);
+  if(isNaN(d)) return '';
+  return d.getDate() + ' ' + MON[d.getMonth()];
+}
+
+function renderBodyTrend(){
+  const timeline = getUnifiedBodyTimeline();   // DESC
+  const uData    = getLatestBodyData();
+  const range    = ST.bodyTrendRange || '30d';
+  const rangeLbl = { '7d':'7g', '30d':'30g', '90d':'90g', 'all':'sempre' }[range];
+
+  // ── Stato vuoto generale ──
+  if(timeline.length === 0){
+    return `<div style="padding:60px 20px;text-align:center;">
+      <div style="color:var(--t3);font-size:13px;font-family:var(--font-mono);line-height:1.8;margin-bottom:16px;">Nessun dato ancora.<br>Inizia a tracciare per vedere il tuo andamento qui.</div>
+      <button onclick="ST.bodyTab='misure';renderBody();" style="padding:10px 20px;background:#854F0B;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Vai a Misure →</button>
+    </div>`;
+  }
+
+  // ── Sezione A — selettore intervallo ──
+  const rangeOpts = [['7d','7g'],['30d','30g'],['90d','90g'],['all','Tutto']];
+  const switchHTML = `<div class="trend-range-switch">${rangeOpts.map(([v,l]) =>
+    `<button class="trend-range-btn${range===v?' active':''}" onclick="ST.bodyTrendRange='${v}';renderBody();">${l}</button>`).join('')}</div>`;
+
+  // timeline filtrata per le card metriche, in ordine cronologico ASC
+  const filtered = filterTimelineByRange(timeline, range).slice().sort((a,b) => a._ts - b._ts);
+  const isGainObj = ['ipertrofia','forza_performance'].includes(ST.profile?.obiettivo);
+
+  // ══ SEZIONE 1 — Progresso vs obiettivo ══
+  let sec1 = '';
+  {
+    const w     = uData.weight_kg ?? ST.profile?.weight_kg ?? null;
+    const goalW = ST.profile?.goal_weight_kg ?? null;
+    if(timeline.length <= 1){
+      sec1 = `<div class="trend-card">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:6px;">Progresso</div>
+        <div style="font-size:13px;color:var(--t3);font-family:var(--font-mono);">Inizia a tracciare per vedere il tuo progresso.</div>
+      </div>`;
+    } else {
+      // hero stat
+      let heroLine = `<span style="font-size:clamp(24px,5.5vw,32px);font-weight:700;font-family:var(--font-mono);color:var(--t1);">${fmtMetric(w)}<span style="font-size:14px;color:var(--t3);"> kg</span></span>`;
+      let targetLine = '';
+      if(goalW != null && w != null){
+        const dToTarget = w - goalW;
+        const absD = Math.abs(dToTarget).toFixed(1);
+        targetLine = `<div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);margin-top:4px;">→ ${goalW} kg · ${dToTarget>0?'−':dToTarget<0?'+':''}${absD} kg al target</div>`;
+      }
+      // barra progresso
+      let barHTML = '';
+      if(w != null && goalW != null){
+        const wPts = timeline.filter(r => r.weight_kg != null);
+        const startW = wPts.length ? wPts[wPts.length-1].weight_kg : w;
+        const total = Math.abs(startW - goalW);
+        const done  = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+        barHTML = `<div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;margin-top:10px;">
+          <div style="height:100%;width:${done}%;background:#854F0B;border-radius:var(--r-pill);"></div>
+        </div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato</div>`;
+      }
+      // statistica complementare nell'intervallo
+      let complHTML = '';
+      const fw = filtered.filter(r => r.weight_kg != null);
+      if(fw.length >= 2){
+        const firstW = fw[0].weight_kg, lastW = fw[fw.length-1].weight_kg;
+        const diff = lastW - firstW;
+        const nDays = Math.max(1, Math.round((fw[fw.length-1]._ts - fw[0]._ts) / 86400000));
+        let txt;
+        if(Math.abs(diff) < 0.05){
+          txt = `Stabile a ${fmtMetric(lastW)} kg negli ultimi ${nDays} giorni`;
+        } else if(isGainObj){
+          txt = diff > 0
+            ? `Hai guadagnato ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`
+            : `Hai perso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`;
+        } else {
+          txt = diff < 0
+            ? `Hai perso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`
+            : `Hai preso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`;
+        }
+        complHTML = `<div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);margin-top:12px;padding-top:10px;border-top:1px solid var(--s2);">${txt}</div>`;
+      }
+      sec1 = `<div class="trend-card">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Progresso verso l'obiettivo</div>
+        ${heroLine}${targetLine}${barHTML}${complHTML}
+      </div>`;
+    }
+  }
+
+  // ══ SEZIONE 2 — Evoluzione del corpo ══
+  let sec2 = '';
+  {
+    const H = uData.height_cm ?? ST.profile?.height_cm ?? null;
+    const metricDefs = [
+      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, goodDown: !isGainObj },
+      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  goodDown: true },
+      { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    goodDown: true },
+      { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, goodDown: false },
+      { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   goodDown: true },
+      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    goodDown: true },
+      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  goodDown: true },
+      { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, goodDown: true },
+      { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, goodDown: true },
+    ];
+    const cards = metricDefs.map(def => {
+      const vals = filtered.map(def.get).filter(v => v != null && !isNaN(v));
+      if(vals.length === 0) return '';
+      const curr = vals[vals.length-1];
+      if(vals.length === 1){
+        return `<div class="trend-metric-card">
+          <div class="trend-metric-name">${def.name}</div>
+          <div><span class="trend-metric-val">${fmtMetric(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
+          <div class="trend-metric-note">Aggiungi nuovi log per vedere l'andamento</div>
+        </div>`;
+      }
+      const init = vals[0];
+      const delta = curr - init;
+      let deltaCol = 'var(--t3)';
+      if(Math.abs(delta) >= 0.05){
+        const good = def.goodDown ? (delta < 0) : (delta > 0);
+        deltaCol = good ? '#2A7A6F' : '#B84C2A';
+      }
+      const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+      const deltaTxt = Math.abs(delta) < 0.05
+        ? `Invariato negli ultimi ${rangeLbl}`
+        : `${sign}${fmtMetric(Math.abs(delta))} ${def.unit} negli ultimi ${rangeLbl}`;
+      return `<div class="trend-metric-card">
+        <div class="trend-metric-name">${def.name}</div>
+        <div><span class="trend-metric-val">${fmtMetric(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
+        <div class="trend-metric-delta" style="color:${deltaCol};">${deltaTxt}</div>
+        ${sparklineSVG(vals, def.col)}
+      </div>`;
+    }).filter(Boolean).join('');
+    if(cards){
+      sec2 = `<div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin:4px 0 10px;">Evoluzione del corpo</div>
+        <div class="trend-metric-grid">${cards}</div>`;
+    }
+  }
+
+  // ══ SEZIONE 3 — Confronto check fisici M2 ══
+  let sec3 = '';
+  {
+    const completedIds = new Set((ST.bodyChecks || []).filter(c => c.status === 'completed').map(c => c.id));
+    // check completed con misure, ordinati cronologicamente ASC
+    const checks = (ST.bodyMeasurements || [])
+      .filter(m => completedIds.has(m.check_id))
+      .slice()
+      .sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+    if(checks.length >= 2){
+      // selezione coppia: nel range se ≠ 'all' e ce ne sono ≥2, altrimenti primo/ultimo assoluti
+      let pair = [checks[0], checks[checks.length-1]];
+      if(range !== 'all'){
+        const cutoff = Date.now() - bodyTrendRangeDays(range) * 86400000;
+        const inRange = checks.filter(c => new Date(c.created_at).getTime() >= cutoff);
+        if(inRange.length >= 2) pair = [inRange[0], inRange[inRange.length-1]];
+      }
+      const [first, last] = pair;
+      const days = Math.max(1, Math.round((new Date(last.created_at) - new Date(first.created_at)) / 86400000));
+      // metriche confrontabili: nome, valore-getter dalla riga body_measurements
+      const lean = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(1-m.body_fat_pct/100) : null;
+      const fat  = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(m.body_fat_pct/100) : null;
+      const cmpDefs = [
+        { name:'Peso',            unit:'kg', get: m => m.weight_kg,      goodDown: !isGainObj },
+        { name:'Vita',            unit:'cm', get: m => m.waist_cm,       goodDown: true },
+        { name:'Fianchi',         unit:'cm', get: m => m.hips_cm,        goodDown: true },
+        { name:'Petto',           unit:'cm', get: m => m.chest_cm,       goodDown: true },
+        { name:'BF%',             unit:'%',  get: m => m.body_fat_pct,   goodDown: true },
+        { name:'Massa magra',     unit:'kg', get: lean,                  goodDown: false },
+        { name:'Massa grassa',    unit:'kg', get: fat,                   goodDown: true },
+        { name:'Grasso viscerale',unit:'',   get: m => m.visceral_fat,   goodDown: true },
+      ];
+      const rows = cmpDefs.map(def => {
+        const a = def.get(first), b = def.get(last);
+        if(a == null || b == null) return '';
+        const delta = b - a;
+        let col = 'var(--t3)';
+        if(Math.abs(delta) >= 0.05){
+          const good = def.goodDown ? (delta < 0) : (delta > 0);
+          col = good ? '#2A7A6F' : '#B84C2A';
+        }
+        const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+        const deltaTxt = Math.abs(delta) < 0.05 ? '±0' : `${sign}${fmtMetric(Math.abs(delta))} ${def.unit}`;
+        return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--s2);">
+          <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${def.name}</span>
+          <span style="font-size:12px;font-family:var(--font-mono);"><span style="font-weight:700;color:${col};">${deltaTxt}</span><span style="color:var(--t3);font-size:10px;margin-left:6px;">(${fmtMetric(b)} ${def.unit})</span></span>
+        </div>`;
+      }).filter(Boolean).join('');
+      sec3 = `<div class="trend-card">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:2px;">Tra il primo e l'ultimo check</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:10px;">dal ${trendShortDate(first.created_at)} al ${trendShortDate(last.created_at)} · ${days} giorni</div>
+        ${rows || `<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Nessuna metrica confrontabile tra i due check.</div>`}
+      </div>`;
+    } else if(checks.length === 1){
+      sec3 = `<div class="trend-card" style="text-align:center;">
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:12px;">Fai un nuovo check fisico per vedere come stai cambiando.</div>
+        <button onclick="m2EntryIntro();" style="padding:10px 20px;background:#2A7A6F;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
+      </div>`;
+    }
+    // checks.length === 0 → sec3 resta '' (card non mostrata)
+  }
+
+  return switchHTML + sec1 + sec2 + sec3;
+}
+
 function renderBody(){
   if(ST.bodyTab === 'composizione') ST.bodyTab = 'misure';
   const tab = ST.bodyTab || 'misure';
@@ -7557,57 +7817,7 @@ function renderBody(){
     `;
 
   } else if(tab === 'tendenza'){
-    if(uTimeline.length === 0){
-      body = `<div style="padding:60px 20px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);line-height:1.8;">Nessun dato ancora.<br>Inizia a loggare le misure.</div>`;
-    } else {
-      const last30  = uTimeline.slice(0,30).reverse();
-      const weights = last30.filter(l => l.weight_kg != null);
-      const waists  = last30.filter(l => l.waist_cm  != null);
-
-      const bars = (items, key, unit, col, goalLine) => {
-        if(!items.length) return '';
-        const vals  = items.map(l => l[key]);
-        const maxV  = Math.max(...vals);
-        const minV  = Math.min(...vals);
-        const range = maxV - minV || 1;
-        return items.map(l => {
-          const h   = Math.max(6, Math.round(((l[key] - minV) / range) * 60) + 10);
-          const c   = (goalLine && l[key] <= goalLine) ? '#2A7A6F' : col;
-          return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:0;">
-            <div style="font-size:8px;font-family:var(--font-mono);color:var(--t3);white-space:nowrap;">${l[key]}</div>
-            <div style="width:100%;max-width:20px;height:${h}px;background:${c};border-radius:2px 2px 0 0;"></div>
-            <div style="font-size:8px;font-family:var(--font-mono);color:var(--t3);writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;">${l.date.slice(5)}</div>
-          </div>`;
-        }).join('');
-      };
-
-      body = `
-        ${weights.length ? `
-        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Peso</span>
-            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${Math.min(...weights.map(l=>l.weight_kg))} – ${Math.max(...weights.map(l=>l.weight_kg))} kg</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;gap:2px;height:84px;overflow-x:auto;">
-            ${bars(weights,'weight_kg','kg','#854F0B',null)}
-          </div>
-        </div>` : ''}
-
-        ${waists.length ? `
-        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Vita</span>
-            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${Math.min(...waists.map(l=>l.waist_cm))} – ${Math.max(...waists.map(l=>l.waist_cm))} cm · target &lt; 85</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;gap:2px;height:84px;overflow-x:auto;">
-            ${bars(waists,'waist_cm','cm','#854F0B',85)}
-          </div>
-        </div>` : ''}
-
-        ${!weights.length && !waists.length ? `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessun dato peso/vita nei log.</div>` : ''}
-      `;
-    }
-
+    body = renderBodyTrend();
   }
 
   // Mini-modal conferma elimina log Body (pattern info-modal, come Training)

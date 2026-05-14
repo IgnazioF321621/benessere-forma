@@ -741,6 +741,34 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 14 maggio 2026 — Refactor tab Tendenza Body (versione funzionale intelligente)
+
+La tab Tendenza era solo 2 grafici a barre (peso/vita). Sostituita con una pagina informativa a 3 sezioni + selettore intervallo. Versione funzionale (struttura + calcoli + UI ordinata); l'estetica fine sarà rifinita da Claude Design. Solo `zona-tracker.html`, nessuna tabella DB.
+
+**Architettura**: nuova funzione `renderBodyTrend()` che ritorna una stringa HTML; in `renderBody()` il branch `tab==='tendenza'` ora fa `body = renderBodyTrend()` (sostituito ~55 righe di codice barre). Il selettore intervallo fa `ST.bodyTrendRange='Xd';renderBody()` → `innerHTML` sincrono, **nessun flicker/reload** (stesso pattern di tutta l'app).
+
+**State nuovi**: `ST.bodyTrendRange` (`'7d'|'30d'|'90d'|'all'`, default `'30d'`), `ST.bodyChecks` (record `body_checks` id+status).
+
+**`loadBodyLogs()`**: aggiunta una terza query al `Promise.all` esistente — `body_checks` (`id, status`) → `ST.bodyChecks`. Serve per filtrare i check `completed` nella Sezione 3.
+
+**`getUnifiedBodyTimeline()`**: esteso (additivo) con `hip_cm` e `chest_cm` (mapping `body_logs.hip_cm/chest_cm` ↔ `body_measurements.hips_cm/chest_cm`) — necessari per le card Fianchi/Petto.
+
+**Helper nuovi**: `bodyTrendRangeDays(range)`, `filterTimelineByRange(tl, range)` (filtra `_ts >= Date.now() - days·86400000`), `sparklineSVG(values, color)` (SVG inline viewBox 100×40, `<path>` area + `<polyline>` linea, `vector-effect:non-scaling-stroke`), `fmtMetric(v)` (1 decimale, rimuove `.0`), `trendShortDate(s)` ("13 mag").
+
+**Sezione A — Selettore intervallo**: switch 4 opzioni `7g · 30g · 90g · Tutto` (classe `.trend-range-switch`). Filtra solo la Sezione 2; Sezione 1 e 3 hanno logiche proprie.
+
+**Sezione 1 — Progresso vs obiettivo** (`.trend-card`): hero stat peso attuale (`getLatestBodyData()`) → obiettivo + delta al target; barra progresso (start = peso più vecchio della timeline intera); statistica complementare "Hai perso/preso/guadagnato X kg in N giorni" calcolata su primo→ultimo punto peso *nell'intervallo* (N = diff date effettiva). Copy adattato a `ST.profile.obiettivo`: `ipertrofia`/`forza_performance` → "guadagnato"; altrimenti → "perso/preso"; |Δ|<0.05 → "Stabile". Edge: timeline ≤1 punto → "Inizia a tracciare…".
+
+**Sezione 2 — Evoluzione del corpo** (griglia `.trend-metric-grid`, 1 col mobile / 2 col ≥720px): 9 card metriche — Peso, Vita, BF%, Massa magra (calc `peso×(1−BF/100)`), Massa grassa (calc `peso×BF/100`), Fianchi, Petto, Grasso viscerale, BMI (calc `peso/(h/100)²`, h da `getLatestBodyData().height_cm`). Metriche derivate calcolate **per-punto**. Card mostrata solo se ≥1 punto nell'intervallo: ≥2 punti → valore + delta colorato + sparkline; 1 punto → valore + nota "Aggiungi nuovi log…"; 0 punti → card assente. Colore delta: `goodDown` per metrica (diminuzione=verde), eccetto Massa magra (aumento=verde sempre) e Peso che inverte se obiettivo ipertrofia/forza.
+
+**Sezione 3 — Confronto check fisici M2** (`.trend-card`): usa `ST.bodyMeasurements` filtrati per `check_id ∈ body_checks.status='completed'` (decisione: confronto solo tra check completati, gli `in_progress` sono potenzialmente incompleti). ≥2 check → "Tra il primo e l'ultimo check" + date + delta su peso/vita/fianchi/petto/BF%/massa magra/grassa/viscerale (solo metriche presenti in entrambi). Coppia: se range≠'all' usa primo/ultimo check *nel range* (≥2), altrimenti fallback ai 2 assoluti. 1 check → messaggio + CTA "Nuovo check fisico →" che chiama `m2EntryIntro()`. 0 check → card non renderizzata.
+
+**Stato vuoto generale**: 0 log + 0 check → blocco unico "Nessun dato ancora…" + CTA "Vai a Misure →".
+
+**Edge case gestiti**: intervallo troppo stretto → card metrica assente; BF in un solo punto → massa magra/grassa non calcolabili su quel punto (filtrate); altezza NULL → card BMI nascosta; cambio intervallo → re-render sincrono immediato.
+
+**Non toccato**: tab Misure, M2, struttura `loadBodyLogs()` (solo estesa con 1 query al Promise.all), pillolino header.
+
 ### 14 maggio 2026 — Popup "Aggiorna peso" unificato + schermata dettaglio check fisico
 
 Due rifiniture sul modulo Body. Solo `zona-tracker.html`, nessuna nuova tabella DB.
