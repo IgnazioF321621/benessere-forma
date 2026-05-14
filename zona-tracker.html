@@ -1285,6 +1285,18 @@ select.inp{cursor:pointer;}
   </div>
 </div>
 
+<!-- DETTAGLIO CHECK FISICO (overlay full-screen) -->
+<div id="body-check-detail" style="display:none;position:fixed;inset:0;z-index:1500;background:var(--bg);overflow-y:auto;"></div>
+
+<!-- Modal foto full-screen del dettaglio check -->
+<div id="bcd-photo-modal" class="m2-modal-photo-overlay" style="display:none;" onclick="if(event.target===this)closeBodyCheckPhoto()">
+  <div class="m2-modal-photo-lbl" id="bcd-photo-modal-lbl"></div>
+  <img id="bcd-photo-modal-img" alt=""/>
+  <div class="m2-modal-photo-btns">
+    <button class="btn btn-primary btn-full" onclick="closeBodyCheckPhoto()">Chiudi</button>
+  </div>
+</div>
+
 <!-- LOADING -->
 <div id="loading-overlay" class="loading-overlay">
   <svg width="50" height="50" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
@@ -1706,7 +1718,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 11:26';
+const APP_VERSION = '2026.05.14 · 11:46';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1783,6 +1795,7 @@ const ST = {
   bodyLogs: null,
   bodyMeasurements: null,  // record da body_measurements (check fisici M2) — letti insieme a bodyLogs
   bodyDeleteConfirm: null, // { kind:'log'|'check', id, checkId, date } — conferma elimina log Body
+  bodyCheckDetail: null,   // dati del check fisico aperto nell'overlay dettaglio
   bodySaving: false,
   bodyAdvOpen: false,
   audioBlocked: false,
@@ -2990,7 +3003,8 @@ async function saveWeight() {
 }
 
 function openWeightModal() {
-  document.getElementById('weight-inp').value = ST.profile?.weight_kg || '';
+  const latestW = getLatestBodyData().weight_kg ?? ST.profile?.weight_kg ?? '';
+  document.getElementById('weight-inp').value = latestW;
   document.getElementById('weight-modal').style.display = 'flex';
   renderWeightChart();
 }
@@ -3000,7 +3014,7 @@ async function renderWeightChart() {
   // simple: show goal vs current
   const wrap = document.getElementById('weight-chart-wrap');
   const goal = ST.profile?.goal_weight_kg;
-  const curr = ST.profile?.weight_kg;
+  const curr = getLatestBodyData().weight_kg ?? ST.profile?.weight_kg;
   if(!goal || !curr) { wrap.style.display='none'; return; }
   wrap.style.display='block';
   const diff = curr - goal;
@@ -7105,6 +7119,200 @@ async function deleteBodyLogConfirmed(){
   }
 }
 
+// ── Dettaglio check fisico M2 (overlay full-screen) ──
+async function openBodyCheckDetail(checkId){
+  if(!checkId || !ST.user) return;
+  showToast('Carico il check…');
+  try {
+    // Misure/composizione: già in memoria da loadBodyLogs()
+    const meas = (ST.bodyMeasurements || []).find(m => m.check_id === checkId) || null;
+    // Stato + timestamp del check
+    const { data: check } = await supa.from('body_checks')
+      .select('id, status, created_at, notes').eq('id', checkId).maybeSingle();
+    const createdAt = check?.created_at || meas?.created_at || null;
+    // Foto: signed URL temporanei (1h)
+    const { data: photoRows } = await supa.from('body_check_photos')
+      .select('pose, storage_path').eq('check_id', checkId);
+    const photos = { front:null, right:null, left:null, back:null };
+    for(const p of (photoRows || [])){
+      if(!p.storage_path) continue;
+      try {
+        const { data: signed } = await supa.storage.from('body-check-photos')
+          .createSignedUrl(p.storage_path, 3600);
+        if(signed?.signedUrl && photos.hasOwnProperty(p.pose)) photos[p.pose] = signed.signedUrl;
+      } catch(e){ console.warn('[bcd] signed url error:', p.pose, e); }
+    }
+    // Esami del sangue collegati: range ±30 giorni dalla data del check
+    let blood = null;
+    if(createdAt){
+      const cd = new Date(createdAt);
+      const from = new Date(cd); from.setDate(from.getDate() - 30);
+      const to   = new Date(cd); to.setDate(to.getDate() + 30);
+      const { data: bloods } = await supa.from('blood_tests')
+        .select('*').eq('user_id', ST.user.id)
+        .gte('test_date', from.toISOString().slice(0,10))
+        .lte('test_date', to.toISOString().slice(0,10))
+        .order('test_date', { ascending:false }).limit(1);
+      blood = (bloods && bloods[0]) || null;
+    }
+    ST.bodyCheckDetail = { checkId, status: check?.status || 'completed', createdAt, notes: check?.notes || null, meas, photos, blood };
+    renderBodyCheckDetail();
+  } catch(e){
+    console.error('[bcd] open error:', e);
+    showToast('Errore apertura check: ' + e.message);
+  }
+}
+
+function closeBodyCheckDetail(){
+  ST.bodyCheckDetail = null;
+  document.getElementById('body-check-detail').style.display = 'none';
+}
+
+function openBodyCheckPhoto(url, label){
+  if(!url) return;
+  document.getElementById('bcd-photo-modal-img').src = url;
+  document.getElementById('bcd-photo-modal-lbl').textContent = label || '';
+  document.getElementById('bcd-photo-modal').style.display = 'flex';
+}
+function closeBodyCheckPhoto(){
+  document.getElementById('bcd-photo-modal').style.display = 'none';
+  document.getElementById('bcd-photo-modal-img').src = '';
+}
+
+function renderBodyCheckDetail(){
+  const d = ST.bodyCheckDetail;
+  const host = document.getElementById('body-check-detail');
+  if(!d){ host.style.display = 'none'; return; }
+  const m = d.meas || {};
+  const imperial = m.unit_system === 'imperial';
+  // Conversione per visualizzazione (DB sempre metrico)
+  const toW = (kg) => kg == null ? null : (imperial ? (kg * 2.2046).toFixed(1) : kg);
+  const toL = (cm) => cm == null ? null : (imperial ? (cm / 2.54).toFixed(1) : cm);
+  const uW = imperial ? 'lb' : 'kg';
+  const uL = imperial ? 'in' : 'cm';
+
+  // Header data + ora
+  let dateLabel = '—';
+  if(d.createdAt){
+    const dt = new Date(d.createdAt);
+    dateLabel = dt.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})
+      + ' · ' + dt.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  }
+  const incompleteBadge = d.status !== 'completed'
+    ? `<div style="display:inline-block;font-size:10px;font-family:var(--font-mono);color:#B84C2A;border:1px solid #B84C2A;border-radius:4px;padding:2px 6px;margin-top:6px;text-transform:uppercase;letter-spacing:.5px;">Check fisico incompleto</div>`
+    : '';
+
+  // Foto griglia 2×2
+  const POSE_LBL = { front:'Frontale', right:'Lato dx', left:'Lato sx', back:'Retro' };
+  const photoCell = (pose) => {
+    const url = d.photos?.[pose] || null;
+    const lbl = POSE_LBL[pose];
+    const inner = url
+      ? `<img src="${url}" alt="${lbl}" onclick="openBodyCheckPhoto('${url}','${lbl}')" onerror="this.parentElement.innerHTML='<div style=\\'height:140px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t3);font-size:11px;font-family:var(--font-mono);\\'>Foto non disponibile</div>'" style="width:100%;height:140px;object-fit:cover;display:block;cursor:pointer;background:var(--s2);">`
+      : `<div style="height:140px;display:flex;align-items:center;justify-content:center;background:var(--s2);color:var(--t3);font-size:11px;font-family:var(--font-mono);">Foto non disponibile</div>`;
+    return `<div style="border:1px solid var(--b1);border-radius:10px;overflow:hidden;">
+      ${inner}
+      <div style="padding:6px 8px;font-size:10px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;color:var(--t2);text-align:center;">${lbl}</div>
+    </div>`;
+  };
+
+  // Riga misura helper
+  const measRow = (label, val, unit) => val == null ? '' : `
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--s2);">
+      <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${label}</span>
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t1);font-weight:700;">${val} ${unit}</span>
+    </div>`;
+
+  const measHTML = [
+    measRow('Peso', toW(m.weight_kg), uW),
+    measRow('Altezza', toL(m.height_cm), uL),
+    measRow('Vita', toL(m.waist_cm), uL),
+    measRow('Petto', toL(m.chest_cm), uL),
+    measRow('Fianchi', toL(m.hips_cm), uL),
+    measRow('Spalle', toL(m.shoulders_cm), uL),
+    measRow('Collo', toL(m.neck_cm), uL),
+    measRow('Bicipite', toL(m.biceps_cm), uL),
+    measRow('Polso', toL(m.wrist_cm), uL),
+    measRow('Coscia', toL(m.thigh_cm), uL),
+    measRow('Polpaccio', toL(m.calf_cm), uL),
+  ].join('');
+
+  // Composizione: solo campi non-null
+  const compRows = [
+    measRow('Grasso corporeo', m.body_fat_pct, '%'),
+    measRow('Massa muscolare', m.muscle_mass_kg, 'kg'),
+    measRow('Grasso viscerale', m.visceral_fat, ''),
+    measRow('Età metabolica', m.metabolic_age, 'anni'),
+    measRow('Acqua corporea', m.body_water_pct, '%'),
+  ].join('');
+  const hasComp = !!(m.body_fat_pct != null || m.muscle_mass_kg != null || m.visceral_fat != null || m.metabolic_age != null || m.body_water_pct != null);
+
+  // Esami del sangue collegati
+  let bloodHTML = '';
+  if(d.blood){
+    const b = d.blood;
+    const bRow = (label, val, unit) => val == null ? '' : `
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--s2);">
+        <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${label}</span>
+        <span style="font-size:12px;font-family:var(--font-mono);color:var(--t1);font-weight:700;">${val} ${unit}</span>
+      </div>`;
+    const bRows = [
+      bRow('Emoglobina', b.hemoglobin, 'g/dL'),
+      bRow('Ferritina', b.ferritin, 'ng/mL'),
+      bRow('Glicemia', b.glucose, 'mg/dL'),
+      bRow('Colesterolo tot.', b.cholesterol_tot, 'mg/dL'),
+      bRow('HDL', b.hdl, 'mg/dL'),
+      bRow('Trigliceridi', b.triglycerides, 'mg/dL'),
+      bRow('Creatinina', b.creatinine, 'mg/dL'),
+      bRow('ALT', b.alt, 'U/L'),
+      bRow('Vitamina D', b.vitamin_d, 'ng/mL'),
+      bRow('Vitamina B12', b.vitamin_b12, 'pg/mL'),
+      bRow('TSH', b.tsh, 'µUI/mL'),
+    ].join('');
+    if(bRows.trim()){
+      const bDate = b.test_date ? fmtDate(b.test_date) : '';
+      bloodHTML = `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Esami del sangue</div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:10px;">${bDate}</div>
+          ${bRows}
+        </div>`;
+    }
+  }
+
+  host.innerHTML = `
+    <div style="max-width:560px;margin:0 auto;padding:0 0 60px;">
+      <div style="position:sticky;top:0;background:var(--bg);padding:16px 16px 12px;padding-top:calc(16px + env(safe-area-inset-top));border-bottom:1px solid var(--b1);z-index:2;">
+        <button onclick="closeBodyCheckDetail()" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--acc);font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:8px;">← Indietro</button>
+        <div style="font-size:20px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Check fisico</div>
+        <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;">${dateLabel}</div>
+        ${incompleteBadge}
+      </div>
+      <div style="padding:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Foto</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+          ${photoCell('front')}${photoCell('right')}${photoCell('left')}${photoCell('back')}
+        </div>
+
+        ${measHTML.trim() ? `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:6px;">Misure</div>
+          ${measHTML}
+        </div>` : ''}
+
+        ${hasComp ? `
+        <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+          <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:6px;">Composizione</div>
+          ${compRows}
+        </div>` : ''}
+
+        ${bloodHTML}
+      </div>
+    </div>`;
+  host.style.display = 'block';
+  host.scrollTop = 0;
+}
+
 function renderBody(){
   if(ST.bodyTab === 'composizione') ST.bodyTab = 'misure';
   const tab = ST.bodyTab || 'misure';
@@ -7327,19 +7535,24 @@ function renderBody(){
       ${uTimeline.length > 0 ? `
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
         <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Ultimi log</div>
-        ${uTimeline.slice(0,8).map(l => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);">
+        ${uTimeline.slice(0,8).map(l => {
+          const isCheck = l.source === 'check';
+          const rowOpen = isCheck ? ` onclick="openBodyCheckDetail('${l.check_id}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);cursor:pointer;"` : ` style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);"`;
+          return `
+          <div${rowOpen}>
             <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);display:flex;align-items:center;gap:6px;">
               ${fmtDate(l.date)}
-              ${l.source === 'check' ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
+              ${isCheck ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
             </div>
             <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;align-items:center;">
               ${l.weight_kg ? `<span>${l.weight_kg} kg</span>` : ''}
               ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
               ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
-              <button onclick="confirmDeleteBodyLog('${l.source === 'check' ? 'check' : 'log'}','${l.id}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
+              ${isCheck ? `<span style="color:var(--t3);font-size:13px;">→</span>` : ''}
+              <button onclick="event.stopPropagation();confirmDeleteBodyLog('${isCheck ? 'check' : 'log'}','${l.id}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>` : ''}
     `;
 

@@ -741,6 +741,23 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 14 maggio 2026 — Popup "Aggiorna peso" unificato + schermata dettaglio check fisico
+
+Due rifiniture sul modulo Body. Solo `zona-tracker.html`, nessuna nuova tabella DB.
+
+**Fix 1 — Popup "Aggiorna peso"**: il popup `#weight-modal` (apertura dal pillolino header) leggeva ancora `ST.profile.weight_kg` (incoerente: mostrava 71.8 invece di 71.55). Due punti aggiornati a `getLatestBodyData().weight_kg ?? ST.profile?.weight_kg`: `openWeightModal()` (precompila `#weight-inp`) e `renderWeightChart()` (`curr` per riga "Attuale: Xkg" + barra progresso).
+
+**Fix 2 — Schermata dettaglio check fisico M2**: le righe `✓ CHECK` della lista "Ultimi log" sono ora cliccabili → aprono un dettaglio dedicato. I log veloci da `body_logs` restano non cliccabili (già mostrati per intero nella riga).
+- **Architettura**: overlay full-screen `<div id="body-check-detail">` (`position:fixed;inset:0;z-index:1500`), NON una nuova entry di `showScreen()`. Motivo: zero contaminazione del routing, "← Indietro" chiude solo l'overlay e Body resta sotto già renderizzato.
+- **State**: `ST.bodyCheckDetail` — oggetto `{checkId, status, createdAt, notes, meas, photos, blood}`.
+- **`openBodyCheckDetail(checkId)`** (async): misure/composizione prese da `ST.bodyMeasurements` (già in memoria, no query); query `body_checks` per `status`/`created_at`; query `body_check_photos` + `createSignedUrl(path, 3600)` per le 4 foto (bucket privato → signed URL temporanei 1h); query `blood_tests` range ±30 giorni dalla `created_at` del check (LIMIT 1, più recente).
+- **`renderBodyCheckDetail()`**: header (← Indietro + "Check fisico" + data "mer 13 mag · 16:12") → griglia foto 2×2 → Misure → Composizione → Esami del sangue. Sezioni Composizione/Esami nascoste se nessun campo popolato.
+- **`openBodyCheckPhoto()` / `closeBodyCheckPhoto()`**: modal foto full-screen dedicato `#bcd-photo-modal` (riusa la classe `.m2-modal-photo-overlay` di M2).
+- **Trigger**: riga check ha `onclick="openBodyCheckDetail(check_id)"` + `cursor:pointer`; il bottone `×` ha `event.stopPropagation()` per non aprire il dettaglio; freccia `→` discreta prima del `×` sulle righe check per segnalare la cliccabilità.
+- **Conversione unità**: se `unit_system==='imperial'`, misure convertite da metrico per la visualizzazione (`kg×2.2046`, `cm÷2.54`) — formule copiate inline, non chiamate da `m2*` (disaccoppiamento moduli).
+- **Foto mancanti/non caricate**: `<img onerror>` → placeholder grigio "Foto non disponibile" + label posa, griglia non si rompe.
+- **Edge**: `status≠completed` → badge "Check fisico incompleto" nell'header, resto renderizzato coi dati disponibili.
+
 ### 14 maggio 2026 — Micro-fix: pillolino peso header unificato + eliminazione log Body
 
 Due rifiniture post lettura-unificata Body. Solo `zona-tracker.html`, nessuna modifica DB.
