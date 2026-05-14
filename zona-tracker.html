@@ -1732,7 +1732,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 14:43';
+const APP_VERSION = '2026.05.14 · 15:21';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7368,6 +7368,12 @@ function fmtMetric(v){
   const r = Math.round(v * 10) / 10;
   return (r % 1 === 0) ? String(r) : r.toFixed(1);
 }
+// Formatta una misura di precisione (peso/vita/fianchi/petto): 2 decimali,
+// zeri finali rimossi — coerente col pillolino header e la tab Misure.
+function fmtMeasure(v){
+  if(v == null || isNaN(v)) return '—';
+  return Number(v).toFixed(2).replace(/\.?0+$/, '');
+}
 // Data compatta "13 mag" da YYYY-MM-DD o ISO
 function trendShortDate(s){
   const MON = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
@@ -7375,12 +7381,18 @@ function trendShortDate(s){
   if(isNaN(d)) return '';
   return d.getDate() + ' ' + MON[d.getMonth()];
 }
+// Suffisso copy per il delta delle card metriche: "negli ultimi N giorni"
+// oppure "dal {data primo punto}" quando l'intervallo è "Tutto".
+function trendRangeSuffix(range, firstDateStr){
+  if(range === 'all') return 'dal ' + trendShortDate(firstDateStr);
+  const days = range === '7d' ? 7 : range === '90d' ? 90 : 30;
+  return `negli ultimi ${days} giorni`;
+}
 
 function renderBodyTrend(){
   const timeline = getUnifiedBodyTimeline();   // DESC
   const uData    = getLatestBodyData();
   const range    = ST.bodyTrendRange || '30d';
-  const rangeLbl = { '7d':'7g', '30d':'30g', '90d':'90g', 'all':'sempre' }[range];
 
   // ── Stato vuoto generale ──
   if(timeline.length === 0){
@@ -7411,11 +7423,11 @@ function renderBodyTrend(){
       </div>`;
     } else {
       // hero stat
-      let heroLine = `<span style="font-size:clamp(24px,5.5vw,32px);font-weight:700;font-family:var(--font-mono);color:var(--t1);">${fmtMetric(w)}<span style="font-size:14px;color:var(--t3);"> kg</span></span>`;
+      let heroLine = `<span style="font-size:clamp(24px,5.5vw,32px);font-weight:700;font-family:var(--font-mono);color:var(--t1);">${fmtMeasure(w)}<span style="font-size:14px;color:var(--t3);"> kg</span></span>`;
       let targetLine = '';
       if(goalW != null && w != null){
         const dToTarget = w - goalW;
-        const absD = Math.abs(dToTarget).toFixed(1);
+        const absD = fmtMeasure(Math.abs(dToTarget));
         targetLine = `<div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);margin-top:4px;">→ ${goalW} kg · ${dToTarget>0?'−':dToTarget<0?'+':''}${absD} kg al target</div>`;
       }
       // barra progresso
@@ -7439,15 +7451,15 @@ function renderBodyTrend(){
         const nDays = Math.max(1, Math.round((fw[fw.length-1]._ts - fw[0]._ts) / 86400000));
         let txt;
         if(Math.abs(diff) < 0.05){
-          txt = `Stabile a ${fmtMetric(lastW)} kg negli ultimi ${nDays} giorni`;
+          txt = `Stabile a ${fmtMeasure(lastW)} kg negli ultimi ${nDays} giorni`;
         } else if(isGainObj){
           txt = diff > 0
-            ? `Hai guadagnato ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`
-            : `Hai perso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`;
+            ? `Hai guadagnato ${fmtMeasure(Math.abs(diff))} kg in ${nDays} giorni`
+            : `Hai perso ${fmtMeasure(Math.abs(diff))} kg in ${nDays} giorni`;
         } else {
           txt = diff < 0
-            ? `Hai perso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`
-            : `Hai preso ${fmtMetric(Math.abs(diff))} kg in ${nDays} giorni`;
+            ? `Hai perso ${fmtMeasure(Math.abs(diff))} kg in ${nDays} giorni`
+            : `Hai preso ${fmtMeasure(Math.abs(diff))} kg in ${nDays} giorni`;
         }
         complHTML = `<div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);margin-top:12px;padding-top:10px;border-top:1px solid var(--s2);">${txt}</div>`;
       }
@@ -7463,24 +7475,26 @@ function renderBodyTrend(){
   {
     const H = uData.height_cm ?? ST.profile?.height_cm ?? null;
     const metricDefs = [
-      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, goodDown: !isGainObj },
-      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  goodDown: true },
+      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, goodDown: !isGainObj, precise: true },
+      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  goodDown: true, precise: true },
       { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    goodDown: true },
       { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, goodDown: false },
       { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   goodDown: true },
-      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    goodDown: true },
-      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  goodDown: true },
+      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    goodDown: true, precise: true },
+      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  goodDown: true, precise: true },
       { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, goodDown: true },
       { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, goodDown: true },
     ];
     const cards = metricDefs.map(def => {
-      const vals = filtered.map(def.get).filter(v => v != null && !isNaN(v));
+      const fmt = def.precise ? fmtMeasure : fmtMetric;
+      const pts  = filtered.filter(r => { const v = def.get(r); return v != null && !isNaN(v); });
+      const vals = pts.map(def.get);
       if(vals.length === 0) return '';
       const curr = vals[vals.length-1];
       if(vals.length === 1){
         return `<div class="trend-metric-card">
           <div class="trend-metric-name">${def.name}</div>
-          <div><span class="trend-metric-val">${fmtMetric(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
+          <div><span class="trend-metric-val">${fmt(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
           <div class="trend-metric-note">Aggiungi nuovi log per vedere l'andamento</div>
         </div>`;
       }
@@ -7492,12 +7506,13 @@ function renderBodyTrend(){
         deltaCol = good ? '#2A7A6F' : '#B84C2A';
       }
       const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
+      const suffix = trendRangeSuffix(range, pts[0].date);
       const deltaTxt = Math.abs(delta) < 0.05
-        ? `Invariato negli ultimi ${rangeLbl}`
-        : `${sign}${fmtMetric(Math.abs(delta))} ${def.unit} negli ultimi ${rangeLbl}`;
+        ? `Invariato ${suffix}`
+        : `${sign}${fmt(Math.abs(delta))} ${def.unit} ${suffix}`;
       return `<div class="trend-metric-card">
         <div class="trend-metric-name">${def.name}</div>
-        <div><span class="trend-metric-val">${fmtMetric(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
+        <div><span class="trend-metric-val">${fmt(curr)}</span><span class="trend-metric-unit">${def.unit}</span></div>
         <div class="trend-metric-delta" style="color:${deltaCol};">${deltaTxt}</div>
         ${sparklineSVG(vals, def.col)}
       </div>`;

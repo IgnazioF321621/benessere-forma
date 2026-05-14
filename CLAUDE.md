@@ -741,6 +741,14 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 14 maggio 2026 — Mini-fix Tendenza: copy intervallo + precisione peso
+
+Due rifiniture sulla tab Tendenza appena rilasciata. Solo `zona-tracker.html`, modifica minima.
+
+**Fix 1 — Copy "negli ultimi {range}"**: con intervallo "Tutto" le card mostravano "negli ultimi **sempre**" (grammaticalmente errato). Nuovo helper `trendRangeSuffix(range, firstDateStr)`: `7d/30d/90d` → "negli ultimi N giorni"; `all` → "dal {data primo punto}" via `trendShortDate()`. Nella Sezione 2 il loop metriche ora costruisce `pts = filtered.filter(...)` (oltre a `vals = pts.map(...)`) per avere `pts[0].date` = primo punto **di quella metrica** (ogni metrica può iniziare in date diverse, es. BF% parte quando arriva la bilancia). Rimossa la costante `rangeLbl`. Copy "Invariato" adattato (`Invariato ${suffix}`). Card a 1 punto non coinvolte (nessun delta). Sezione 1 già usava `nDays` numerico reale, non toccata.
+
+**Fix 2 — Precisione peso (2 decimali)**: la hero Tendenza mostrava `71.6` mentre pillolino header e tab Misure mostrano `71.55`. Nuovo helper `fmtMeasure(v)` = `Number(v).toFixed(2).replace(/\.?0+$/, '')` (2 decimali, zeri finali rimossi: `71.55→71.55`, `71.50→71.5`, `72→72`). Applicato a: Sezione 1 hero (peso attuale, delta al target, stat complementare "Hai perso/guadagnato/Stabile X kg"); Sezione 2 card metriche **Peso/Vita/Fianchi/Petto** (flag `precise:true` in `metricDefs` → `def.precise ? fmtMeasure : fmtMetric` su valore corrente + delta + card-1-punto). BF%, massa magra/grassa, BMI, grasso viscerale restano su `fmtMetric` (1 decimale). **Sezione 3** (confronto check) lasciata volutamente su `fmtMetric`: i delta tra check a 1 decimale sono coerenti con la precisione reale degli strumenti (bilancia ±0.1 kg, metro ±0.5 cm) — il centesimo sarebbe pseudo-precisione.
+
 ### 14 maggio 2026 — Refactor tab Tendenza Body (versione funzionale intelligente)
 
 La tab Tendenza era solo 2 grafici a barre (peso/vita). Sostituita con una pagina informativa a 3 sezioni + selettore intervallo. Versione funzionale (struttura + calcoli + UI ordinata); l'estetica fine sarà rifinita da Claude Design. Solo `zona-tracker.html`, nessuna tabella DB.
