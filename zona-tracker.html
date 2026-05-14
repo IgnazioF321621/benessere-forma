@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#F5F3EE"/>
 <title>Zona Tracker — Benessere & Forma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 
 <!-- PWA Icons inline SVG as base64 -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232A7A6F'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial Black,sans-serif' font-weight='900' font-size='46' fill='white'%3EZT%3C/text%3E%3C/svg%3E"/>
@@ -21,7 +21,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;overscroll-behavior:none;}
-body{color:#1A1A1A;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antialiased;background:#F5F3EE;}
+body{color:#1A1A1A;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;background:#F5F3EE;}
 :root{
   --bg:#F5F3EE;--s1:#FFFFFF;--s2:#F0EDE6;--s3:#E8E4DC;
   --b1:#DDD9D0;--b2:#C8C3B8;
@@ -33,14 +33,17 @@ body{color:#1A1A1A;font-family:'Manrope',sans-serif;-webkit-font-smoothing:antia
   --ok:#2A7A6F;--warn:#C4880A;--err:#B84C2A;--err-lt:#FCEEE9;
   --r:10px;
   --r-sm:6px;--r-md:12px;--r-lg:16px;--r-pill:20px;
-  --font-sans:'Manrope',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --font-sans:'Syne',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --mod-nutrition:#FAC775;
+  --mod-training:#B5D4F4;
+  --mod-body:#AFA9EC;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
   --shadow-md:0 4px 12px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.05);
 }
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px;}
-textarea,select,input{-webkit-appearance:none;font-family:'Manrope',sans-serif;}
+textarea,select,input{-webkit-appearance:none;font-family:'Syne',sans-serif;}
 button:active{opacity:.85;transform:scale(.98);}
 button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .mono{font-family:'JetBrains Mono',monospace;}
@@ -251,7 +254,7 @@ select.inp{cursor:pointer;}
 .meal-del{background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0 2px;flex-shrink:0;transition:color .15s;}
 .meal-del:hover{color:var(--err);}
 .supp-pills{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
-.supp-pill{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid rgba(42,122,111,.25);border-radius:20px;padding:6px 13px;font-size:12px;font-family:'Manrope',sans-serif;color:var(--t2);cursor:pointer;transition:all .15s;font-weight:500;}
+.supp-pill{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid rgba(42,122,111,.25);border-radius:20px;padding:6px 13px;font-size:12px;font-family:'Syne',sans-serif;color:var(--t2);cursor:pointer;transition:all .15s;font-weight:500;}
 .supp-pill.taken{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600;}
 .supp-pill-dot{display:none;}
 .supp-group-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin:8px 0 4px;width:100%;}
@@ -431,8 +434,8 @@ select.inp{cursor:pointer;}
 .info-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--acc,#2A7A6F);color:#fff;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px;vertical-align:middle;flex-shrink:0;}
 .info-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;}
 .info-modal{background:var(--srf,#fff);border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);}
-.info-modal h3{font-family:var(--font-sans,'Manrope',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
-.info-modal p{font-family:var(--font-sans,'Manrope',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
+.info-modal h3{font-family:var(--font-sans,'Syne',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
+.info-modal p{font-family:var(--font-sans,'Syne',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
 .info-modal-close{width:100%;padding:10px;border-radius:999px;border:none;background:var(--acc,#2A7A6F);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 
 /* ── MODAL SCHEDA ESERCIZIO sezioni structured (3 maggio 2026) ── */
@@ -1608,7 +1611,7 @@ select.inp{cursor:pointer;}
     <!-- Sezione: Esami del sangue -->
     <div style="margin-bottom:24px;">
       <div class="lbl">Esami del sangue recenti</div>
-      <p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;line-height:1.6;">Inserisci i valori degli ultimi esami. L'AI li userà per personalizzare piano alimentare e integratori.</p>
+      <p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;line-height:1.6;">Inserisci i valori degli ultimi esami. Il coach li userà per personalizzare piano alimentare e integratori.</p>
       <div id="set-esami-list"></div>
       <button class="btn btn-ghost btn-sm" onclick="addEsameRow()" style="margin-top:8px;">+ Aggiungi valore</button>
     </div>
@@ -1623,7 +1626,7 @@ select.inp{cursor:pointer;}
         <ul>
           <li>Animazioni esecuzione: <a href="https://exercisedb.dev" target="_blank" rel="noopener">ExerciseDB</a> (open source)</li>
           <li>Mappe muscolari: <a href="https://wger.de" target="_blank" rel="noopener">Wger.de</a> — Licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></li>
-          <li>Modello AI: Llama 3.3 70B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
+          <li>Modello coach: Llama 3.3 70B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
           <li>Database: <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></li>
         </ul>
       </div>
@@ -1732,7 +1735,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 15:21';
+const APP_VERSION = '2026.05.14 · 17:35';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5288,7 +5291,7 @@ async function ensureRestCue(exName, sessionId) {
       .replace(/\n/g, '<br>');
     ST.aiCue[key] = content || '<em style="color:var(--t3);">(nessun cue disponibile)</em>';
   } catch(e) {
-    ST.aiCue[key] = '<em style="color:#B84C2A;">Errore di connessione AI Coach.</em>';
+    ST.aiCue[key] = '<em style="color:#B84C2A;">Errore di connessione coach.</em>';
   }
   // Re-render solo se l'utente e' ancora sul modal di recupero per QUESTO esercizio
   if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
@@ -6728,7 +6731,7 @@ function renderTraining(){
         ${ai.alert ? `<div class="modal-alert">${ai.alert}</div>` : ''}
 
         <div class="modal-section modal-ai-section">
-          <h4>🤖 AI Coach</h4>
+          <h4>🤖 Coach</h4>
           ${ai.loading
             ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
             : `<div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${ai.content || 'Nessun consiglio aggiuntivo disponibile.'}</div>`}
@@ -6811,7 +6814,7 @@ function renderTraining(){
             ${ex?.alert ? `<div class="modal-alert">${ex.alert}</div>` : ''}
 
             <div class="modal-section modal-ai-section">
-              <h4>🤖 AI Coach</h4>
+              <h4>🤖 Coach</h4>
               ${cueLoading
                 ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
                 : `<div style="font-size:14px;line-height:1.6;color:var(--t1);font-family:var(--font-sans);">${cueContent}</div>`
@@ -8294,7 +8297,7 @@ window.smartAnalyze = async function() {
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    alert('Errore nell\'analisi AI: ' + (e.message || 'riprova'));
+    alert('Errore nell\'analisi coach: ' + (e.message || 'riprova'));
   } finally {
     ST.smartForm.analyzing = false;
     renderOggi();
@@ -8617,7 +8620,7 @@ function renderRegistraPasto() {
           </select>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima AI'}</button>
+          <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima coach'}</button>
           ${calcd && !it.calculating ? `<div style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;">
             <span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
             <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
@@ -8777,7 +8780,7 @@ function renderOggi(){
     const adviceBtnLbl = (ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride)
       ? 'Pianifica colazione di domani →'
       : 'Analizza e suggerisci →';
-    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value;ST.nextSlotUserOverride=true;renderOggi();">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi AI...':adviceBtnLbl}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
+    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value;ST.nextSlotUserOverride=true;renderOggi();">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi coach...':adviceBtnLbl}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
 
     // Form registra pasto — collassabile
     if(!ST.logOpen) {
@@ -9175,14 +9178,14 @@ function renderPiano(){
   // Card piano AI
   html += `<div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <span class="lbl" style="margin-bottom:0;">🤖 Piano Alimentare AI</span>
+      <span class="lbl" style="margin-bottom:0;">🤖 Piano Alimentare coach</span>
       ${piano ? `<button class="btn btn-ghost btn-sm" onclick="generatePianoAI(true)" ${pianoLoading?'disabled':''}>↻ Rigenera</button>` : ''}
     </div>`;
 
   if(pianoLoading) {
     html += `<div style="text-align:center;padding:30px 0;">
       <span class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block;margin-bottom:12px;"></span>
-      <p style="font-size:13px;color:var(--t3);">L'AI sta costruendo il tuo piano personalizzato…<br><span style="font-size:11px;font-family:'JetBrains Mono',monospace;">Ci vogliono 10–20 secondi</span></p>
+      <p style="font-size:13px;color:var(--t3);">Il coach sta costruendo il tuo piano personalizzato…<br><span style="font-size:11px;font-family:'JetBrains Mono',monospace;">Ci vogliono 10–20 secondi</span></p>
     </div>`;
   } else if(pianoError) {
     html += `<p style="color:var(--err);font-size:13px;margin-bottom:12px;">⚠️ ${esc(pianoError)}</p>
@@ -9950,7 +9953,7 @@ async function openExerciseAI(exName, sessionId) {
     ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content, loading: false };
   } catch(e) {
     if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Errore di connessione AI Coach.', loading: false };
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Errore di connessione coach.', loading: false };
   }
   renderTraining();
 }
@@ -10864,7 +10867,7 @@ async function fetchAdvice(){
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
   ST.advLoading=true;ST.advice='';renderOggi();
   try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
-  catch(e){ST.advice='Errore AI: '+e.message;}
+  catch(e){ST.advice='Errore coach: '+e.message;}
   ST.advLoading=false;renderOggi();
 }
 
@@ -11229,7 +11232,7 @@ function renderCatalogList() {
     const prezzo = item.prezzo_partner != null ? `€${parseFloat(item.prezzo_partner).toFixed(2)}/conf` : '';
     const mensile = item.costo_mensile_partner != null ? `€${parseFloat(item.costo_mensile_partner).toFixed(2)}/mese` : '';
     const removeBtn = instanceCount > 0 && !toAdd
-      ? `<button onclick="event.stopPropagation();toggleCatalogRemove('${esc(item.codice)}')" style="background:none;border:1px solid var(--err);border-radius:5px;color:var(--err);font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0;font-family:'Manrope',sans-serif;">${toRemove ? '↩ annulla' : '✕ rimuovi'}</button>`
+      ? `<button onclick="event.stopPropagation();toggleCatalogRemove('${esc(item.codice)}')" style="background:none;border:1px solid var(--err);border-radius:5px;color:var(--err);font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0;font-family:'Syne',sans-serif;">${toRemove ? '↩ annulla' : '✕ rimuovi'}</button>`
       : '';
     return `<div class="${itemClass}" onclick="toggleCatalogItem('${esc(item.codice)}')">
       <div class="${boxClass}">${boxContent}</div>
