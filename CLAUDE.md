@@ -741,6 +741,25 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
 
 ## Cosa abbiamo fatto
 
+### 14 maggio 2026 — Micro-fix: pillolino peso header unificato + eliminazione log Body
+
+Due rifiniture post lettura-unificata Body. Solo `zona-tracker.html`, nessuna modifica DB.
+
+**Fix 1 — Pillolino peso header**: il pillolino `#h-weight` in alto a destra mostrava ancora il vecchio `profile.weight_kg` (incoerente con tile Home e modulo Body, che dopo il fix unificato usano `getLatestBodyData()`). Nuova funzione `updateHeaderWeight()`: legge `getLatestBodyData().weight_kg` con fallback `ST.profile.weight_kg` (se Body non ancora caricato `getLatestBodyData` ritorna null e scatta il fallback). Chiamata in 2 punti: `applyProfile()` (sostituisce il vecchio set diretto) e in fondo a `loadBodyLogs()` — quest'ultimo copre **automaticamente** tutti gli scenari di refresh: salvataggio log peso (`saveBodyLog` chiama `loadBodyLogs`), completamento M2 (`m2Complete` → `showPage('home')` → `loadBodyLogs`), eliminazione log.
+
+**Fix 2 — Eliminazione log Body**: bottone `×` discreto su ogni riga di "Ultimi log" (colore `var(--t3)`, azione secondaria). Elimina sia `body_logs` (log veloci) che `body_measurements` (check M2).
+- **State**: `ST.bodyDeleteConfirm = { kind:'log'|'check', id, checkId, date }`.
+- **`getUnifiedBodyTimeline()`**: aggiunti `id` (record id) a tutti i record + `check_id` ai record `source:'check'` — necessari per il delete.
+- **`confirmDeleteBodyLog(kind, id, checkId, date)`**: setta lo state, re-render.
+- **`deleteBodyLogConfirmed()`**:
+  - `kind:'log'` → `DELETE FROM body_logs WHERE id`.
+  - `kind:'check'` (cascade) → **prima** `SELECT storage_path FROM body_check_photos WHERE check_id` + `supa.storage.from('body-check-photos').remove(paths)`, **poi** `DELETE FROM body_checks WHERE id=check_id` (lo `ON DELETE CASCADE` dello schema rimuove automaticamente `body_check_photos` + `body_measurements`). Ordine critico: lo storage va svuotato prima di perdere i `storage_path` con il DELETE DB.
+  - Storage remove è **best-effort**: se fallisce, `console.warn` e prosegue col DELETE DB. Errore DB invece → `showToast` errore e stop.
+  - Dopo successo: `loadBodyLogs()` (ricarica + re-render + `updateHeaderWeight` + tile Home) + `showToast('Log eliminato'/'Check fisico eliminato')`.
+- **Modal conferma**: riusa il pattern `info-modal-overlay` + `info-modal` già usato per `trainDeleteSetConfirm`. Testi differenziati log vs check, chiusura con *"L'operazione è definitiva."*, bottoni Annulla (grigio) / Elimina (rosso `#B84C2A`).
+
+**Edge case**: cancellando l'unico check M2, la composizione torna ai valori `body_logs` (comportamento naturale di `getLatestBodyData`, nessuna gestione speciale). Test mode → liste vuote, delete mai raggiunto.
+
 ### 14 maggio 2026 — Modulo Body legge da body_logs + body_measurements (lettura unificata M2)
 
 **Decisione strategica (Opzione A)**: le due tabelle coesistono. `body_logs` resta per i log peso veloci quotidiani (form "Log misure" del modulo Body — invariato). `body_measurements` accoglie i check fisici completi (M2 e futuri checkpoint). Il modulo Body ora **legge da entrambe** e mostra sempre il dato più recente per ogni metrica. Solo lettura — nessuna modifica DB, nessuna modifica al salvataggio.

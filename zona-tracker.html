@@ -1706,7 +1706,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 10:52';
+const APP_VERSION = '2026.05.14 · 11:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1782,6 +1782,7 @@ const ST = {
   bodyTab: null,
   bodyLogs: null,
   bodyMeasurements: null,  // record da body_measurements (check fisici M2) — letti insieme a bodyLogs
+  bodyDeleteConfirm: null, // { kind:'log'|'check', id, checkId, date } — conferma elimina log Body
   bodySaving: false,
   bodyAdvOpen: false,
   audioBlocked: false,
@@ -3281,7 +3282,7 @@ function applyProfile(profile) {
   };
   applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
-  document.getElementById('h-weight').textContent = profile.weight_kg || '—';
+  updateHeaderWeight();
   if(profile.goal_weight_kg && profile.weight_kg) {
     const diff = Math.abs(profile.weight_kg - profile.goal_weight_kg);
     const dir  = profile.weight_kg > profile.goal_weight_kg ? '▼' : '▲';
@@ -6905,8 +6906,20 @@ async function loadBodyLogs(){
   ]);
   ST.bodyLogs = logsRes.data || [];
   ST.bodyMeasurements = measRes.data || [];
+  updateHeaderWeight();
   if(ST.page==='body') renderBody();
   else if(ST.page==='home') renderHome();
+}
+
+// Aggiorna il pillolino peso nell'header usando i dati unificati
+// (body_logs + body_measurements). Fallback su profilo se Body non caricato.
+function updateHeaderWeight(){
+  const el = document.getElementById('h-weight');
+  if(!el) return;
+  let w = null;
+  try { w = getLatestBodyData().weight_kg; } catch(e){ w = null; }
+  if(w == null) w = ST.profile?.weight_kg ?? null;
+  el.textContent = w != null ? w : '—';
 }
 
 // ── Lettura unificata Body: body_logs (legacy) + body_measurements (M2) ──
@@ -6971,6 +6984,7 @@ function getUnifiedBodyTimeline(){
       date: l.date,
       _ts: new Date(l.date).getTime(),
       source: 'log',
+      id: l.id,                 // body_logs.id — per delete
       weight_kg:    l.weight_kg ?? null,
       waist_cm:     l.waist_cm ?? null,
       bf_pct:       l.bf_pct ?? null,
@@ -6985,6 +6999,8 @@ function getUnifiedBodyTimeline(){
       date: dateStr,
       _ts: new Date(m.created_at).getTime(),
       source: 'check',
+      id: m.id,                 // body_measurements.id
+      check_id: m.check_id,     // body_checks.id — per delete cascade
       weight_kg:    m.weight_kg ?? null,
       waist_cm:     m.waist_cm ?? null,
       bf_pct:       m.body_fat_pct ?? null,
@@ -7049,6 +7065,44 @@ async function saveBodyLog(){
     if(ST.profile) ST.profile.weight_kg = weight;
   }
   await loadBodyLogs();
+}
+
+// ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
+function confirmDeleteBodyLog(kind, id, checkId, date){
+  ST.bodyDeleteConfirm = { kind, id, checkId: checkId || null, date };
+  renderBody();
+}
+
+async function deleteBodyLogConfirmed(){
+  const c = ST.bodyDeleteConfirm;
+  if(!c){ return; }
+  ST.bodyDeleteConfirm = null;
+  try {
+    if(c.kind === 'log'){
+      const { error } = await supa.from('body_logs').delete().eq('id', c.id);
+      if(error) throw error;
+    } else {
+      // Check M2: prima cancella le foto da Storage, poi la riga body_checks
+      // (ON DELETE CASCADE rimuove body_check_photos + body_measurements).
+      try {
+        const { data: photos } = await supa.from('body_check_photos')
+          .select('storage_path').eq('check_id', c.checkId);
+        const paths = (photos || []).map(p => p.storage_path).filter(Boolean);
+        if(paths.length){
+          const { error: stErr } = await supa.storage.from('body-check-photos').remove(paths);
+          if(stErr) console.warn('[body-delete] storage remove (best-effort):', stErr);
+        }
+      } catch(stEx){ console.warn('[body-delete] storage remove exception (best-effort):', stEx); }
+      const { error } = await supa.from('body_checks').delete().eq('id', c.checkId);
+      if(error) throw error;
+    }
+    await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
+    showToast(c.kind === 'log' ? 'Log eliminato' : 'Check fisico eliminato');
+  } catch(e){
+    console.error('[body-delete] error:', e);
+    showToast('Errore eliminazione: ' + e.message);
+    renderBody();
+  }
 }
 
 function renderBody(){
@@ -7279,10 +7333,11 @@ function renderBody(){
               ${fmtDate(l.date)}
               ${l.source === 'check' ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
             </div>
-            <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;">
+            <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;align-items:center;">
               ${l.weight_kg ? `<span>${l.weight_kg} kg</span>` : ''}
               ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
               ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
+              <button onclick="confirmDeleteBodyLog('${l.source === 'check' ? 'check' : 'log'}','${l.id}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
             </div>
           </div>`).join('')}
       </div>` : ''}
@@ -7342,7 +7397,28 @@ function renderBody(){
 
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + body + versionFooter();
+  // Mini-modal conferma elimina log Body (pattern info-modal, come Training)
+  let bodyDeleteConfirmHTML = '';
+  if(ST.bodyDeleteConfirm){
+    const c = ST.bodyDeleteConfirm;
+    const isCheck = c.kind === 'check';
+    const title = isCheck ? 'Elimina check fisico' : 'Elimina log peso';
+    const msg = isCheck
+      ? `Eliminare il check fisico del ${fmtDate(c.date)}? Verranno rimossi: peso, misure, composizione e le 4 foto associate. L'operazione è definitiva.`
+      : `Eliminare il log peso del ${fmtDate(c.date)}? L'operazione è definitiva.`;
+    bodyDeleteConfirmHTML = `<div class="info-modal-overlay" style="z-index:1200;" onclick="ST.bodyDeleteConfirm=null;renderBody()">
+      <div class="info-modal" style="max-width:320px;text-align:center;" onclick="event.stopPropagation()">
+        <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">${title}</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:18px;">${msg}</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="ST.bodyDeleteConfirm=null;renderBody();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+          <button onclick="deleteBodyLogConfirmed();" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-body').innerHTML = navHTML + body + versionFooter() + bodyDeleteConfirmHTML;
 }
 
 function renderPage(id){
