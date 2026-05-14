@@ -107,47 +107,97 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .tdee-macro-lbl{font-size:9px;color:rgba(255,255,255,.7);margin-top:2px;}
 
 /* ── M2 CHECK FISICO (versione funzionale, riusa pattern .onb-*) ── */
-#m2-screen{display:none;min-height:100vh;background:var(--bg);overflow-y:auto;padding-bottom:40px;}
+#m2-screen{display:none;min-height:100vh;background:var(--bg);overflow-y:auto;padding-bottom:0;}
 #m2-screen.visible{display:block;}
 .m2-step{display:none;}
 .m2-step.active{display:block;}
-.m2-photo-dropzone{display:block;width:100%;box-sizing:border-box;border:2px dashed var(--acc);border-radius:12px;padding:32px 16px;text-align:center;background:var(--s1);cursor:pointer;transition:background .15s;}
+
+/* ── M2 — header bone + tipografia Syne (override scoped a #m2-screen, le .onb-* globali restano intatte) ── */
+#m2-screen .onb-header{background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 24px 4px;position:relative;}
+#m2-screen .onb-step{color:var(--acc);font-size:11px;font-weight:500;letter-spacing:.15em;margin-bottom:16px;}
+#m2-screen .onb-title{font-size:38px;font-weight:800;color:var(--t1);line-height:1.05;letter-spacing:-.02em;}
+#m2-screen .onb-sub{font-size:16px;font-weight:400;color:var(--t2);margin-top:10px;line-height:1.4;}
+#m2-screen .onb-body{padding:22px 24px 0;}
+#m2-screen .onb-section{margin-bottom:0;}
+#m2-screen .onb-nav{margin-top:26px;padding-bottom:calc(24px + env(safe-area-inset-bottom));}
+#m2-screen .btn{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;text-transform:none;letter-spacing:0;padding:15px 18px;border-radius:12px;}
+#m2-screen .btn-ghost{background:var(--bg);color:var(--acc);border:1px solid var(--acc);}
+#m2-screen .btn-ghost:hover{background:var(--acc-lt);}
+
+/* ── M2 — frase di sistema (mantra italics) ── */
+.m2-mantra{font-family:'Syne',sans-serif;font-style:italic;font-weight:400;font-size:14px;color:var(--t3);line-height:1.5;margin:0 0 24px;}
+
+/* ── M2 — eyebrow mono interna (blocchi regola foto, sezioni esami) ── */
+.m2-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--acc);margin-bottom:6px;}
+
+/* ── M2 — blocchi regola foto (s0) ── */
+.m2-rule-block{padding:16px 0;border-top:1px solid var(--b1);}
+.m2-rule-block:first-of-type{border-top:none;padding-top:2px;}
+.m2-rule-text{font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.55;}
+.m2-footnote{font-size:12px;color:var(--t3);line-height:1.5;margin-top:22px;}
+
+/* ── M2 — dropzone foto ── */
+.m2-photo-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;box-sizing:border-box;border:1.5px dashed var(--acc);border-radius:14px;padding:32px 22px;min-height:380px;text-align:center;background:var(--s1);cursor:pointer;transition:background .15s;}
 .m2-photo-dropzone:hover{background:var(--s2);}
 .m2-photo-dropzone input[type="file"]{display:none;}
-.m2-photo-instr{font-size:11px;letter-spacing:1px;color:var(--acc);font-family:'JetBrains Mono',monospace;text-transform:uppercase;line-height:1.6;margin-bottom:12px;}
-.m2-photo-cta{font-size:11px;letter-spacing:1px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
-.m2-photo-thumb{width:100%;max-width:280px;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--s2);}
+.m2-photo-instr{font-size:12px;letter-spacing:.12em;color:var(--acc);font-family:'JetBrains Mono',monospace;text-transform:uppercase;line-height:1.8;margin-bottom:18px;font-weight:500;}
+.m2-photo-cta{font-size:11px;letter-spacing:.12em;color:var(--t3);font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+.m2-photo-thumb{width:100%;max-width:300px;margin:0 auto;border-radius:14px;overflow:hidden;background:var(--s2);}
 .m2-photo-thumb img{width:100%;height:auto;display:block;}
+
+/* ── M2 — griglia conferma 2×2 (s5) ── */
 .m2-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.m2-photo-cell{cursor:pointer;background:var(--s1);border-radius:10px;overflow:hidden;border:1px solid var(--b1);}
-.m2-photo-cell img{width:100%;height:140px;object-fit:cover;display:block;background:var(--s2);}
-.m2-photo-cell-lbl{padding:8px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--t2);text-align:center;}
-.m2-unit-switch{display:inline-flex;background:var(--s2);border:1px solid var(--b1);border-radius:22px;padding:4px;font-family:'JetBrains Mono',monospace;font-size:13px;}
-.m2-unit-btn{padding:10px 20px;border:none;background:transparent;color:var(--t3);cursor:pointer;border-radius:18px;letter-spacing:1px;font-weight:600;transition:all .15s;}
+.m2-photo-cell{cursor:pointer;background:var(--s1);border-radius:12px;overflow:hidden;border:1px solid var(--b1);}
+.m2-photo-cell img{width:100%;height:150px;object-fit:cover;display:block;background:var(--s2);}
+.m2-photo-cell-lbl{padding:9px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);text-align:center;}
+
+/* ── M2 — switch unità (header bone) ── */
+.m2-unit-block-header{text-align:right;margin-bottom:16px;}
+.m2-unit-label-header{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:5px;}
+.m2-unit-switch{display:inline-flex;background:var(--s2);border:1px solid var(--b1);border-radius:22px;padding:3px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+.m2-unit-btn{padding:8px 16px;border:none;background:transparent;color:var(--t3);cursor:pointer;border-radius:18px;letter-spacing:.06em;font-weight:600;transition:all .15s;}
 .m2-unit-btn.active{background:var(--acc);color:#fff;}
-/* Variante su sfondo verde (header M2 step s6) */
-.m2-unit-block-header{margin-top:18px;}
-.m2-unit-label-header{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.7);font-family:'JetBrains Mono',monospace;margin-bottom:8px;}
-.m2-unit-switch-onheader{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);}
-.m2-unit-switch-onheader .m2-unit-btn{color:rgba(255,255,255,.8);background:transparent;}
-.m2-unit-switch-onheader .m2-unit-btn.active{background:#fff;color:var(--acc);}
-.m2-gate-btn{display:block;width:100%;padding:18px;border:1px solid var(--b1);border-radius:12px;background:var(--s1);color:var(--t1);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;transition:all .15s;font-family:'Syne',sans-serif;}
-.m2-gate-btn:hover{background:var(--s2);border-color:var(--acc);}
-.m2-modal-photo-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
-.m2-modal-photo-overlay img{max-width:100%;max-height:70vh;border-radius:8px;}
-.m2-modal-photo-lbl{color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;}
-.m2-modal-photo-btns{display:flex;gap:10px;margin-top:18px;width:100%;max-width:360px;}
-.m2-meas-row{display:grid;grid-template-columns:1fr 80px;gap:10px;align-items:end;margin-bottom:14px;}
-.m2-meas-tip{font-size:11px;color:var(--t3);margin-top:4px;font-style:italic;line-height:1.4;}
-/* Riposiziona la tip SOPRA l'input (s6/s7/s8) tramite flex order, senza toccare l'HTML */
-.onb-field .m2-meas-tip{order:1;margin-top:2px;margin-bottom:0;}
-.onb-field .m2-meas-row{order:2;}
-.m2-meas-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);text-align:center;padding:10px 0;letter-spacing:1px;}
-.m2-required-asterisk{color:var(--acc);margin-left:2px;font-weight:700;}
-.m2-divider{height:1px;background:var(--b1);margin:24px 0;}
-.m2-bilat-tip{font-size:14px;color:var(--t3);font-style:italic;line-height:1.5;margin:12px 0 18px;padding:10px 12px;background:var(--s1);border-left:3px solid var(--acc);border-radius:6px;}
-.m2-photo-rule{font-size:12px;color:var(--t2);margin:8px 0;line-height:1.5;}
-.m2-photo-rule strong{color:var(--t1);font-weight:700;}
+.m2-unit-switch-onheader{background:var(--s2);border:1px solid var(--b1);}
+.m2-unit-switch-onheader .m2-unit-btn{color:var(--t3);background:transparent;}
+.m2-unit-switch-onheader .m2-unit-btn.active{background:var(--acc);color:#fff;}
+
+/* ── M2 — gate pillole grandi (s9) ── */
+.m2-gate-btn{display:block;width:100%;padding:20px;border:1.5px solid var(--acc);border-radius:30px;background:var(--bg);color:var(--acc);font-size:16px;font-weight:600;cursor:pointer;margin-bottom:12px;transition:all .15s;font-family:'Syne',sans-serif;text-align:center;}
+.m2-gate-btn:hover{background:var(--acc-lt);}
+
+/* ── M2 — modal review foto (6b) ── */
+.m2-modal-photo-overlay{position:fixed;inset:0;background:rgba(26,26,26,.96);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.m2-modal-photo-overlay img{max-width:100%;max-height:62vh;border-radius:10px;}
+.m2-modal-photo-header{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;padding:calc(14px + env(safe-area-inset-top)) 14px 14px;}
+.m2-modal-photo-close{background:none;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;padding:2px 10px;font-family:'Syne',sans-serif;}
+.m2-modal-photo-lbl{flex:1;text-align:center;margin-right:44px;color:rgba(255,255,255,.9);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;}
+.m2-modal-photo-btns{display:flex;gap:10px;margin-top:22px;width:100%;max-width:360px;}
+.m2-modal-photo-btns .btn{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;text-transform:none;letter-spacing:0;padding:15px 18px;border-radius:12px;}
+.m2-modal-photo-btns .btn-ghost{background:transparent;color:#fff;border:1px solid var(--acc);}
+.m2-modal-photo-btns .btn-ghost:hover{background:rgba(42,122,111,.2);}
+
+/* ── M2 — pattern campo numerico ── */
+#m2-screen .onb-field{gap:0;margin-bottom:26px;}
+#m2-screen .onb-field label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:8px;}
+.m2-meas-row{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:10px;border-bottom:1px solid var(--b1);padding-bottom:8px;margin-bottom:0;}
+#m2-screen .m2-meas-row input{border:none;background:transparent;padding:0;font-family:'Syne',sans-serif;font-size:32px;font-weight:600;color:var(--t1);width:100%;}
+#m2-screen .m2-meas-row input:focus{outline:none;background:transparent;border:none;}
+#m2-screen .m2-meas-row input::placeholder{color:var(--b2);font-weight:400;}
+.m2-meas-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);text-align:right;padding:0;letter-spacing:.06em;white-space:nowrap;}
+.m2-meas-tip{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);font-style:normal;margin-top:8px;line-height:1.45;}
+.m2-required-asterisk{color:var(--acc);font-weight:700;}
+.m2-info-icon{display:inline-block;color:var(--t3);margin-left:5px;vertical-align:-2px;}
+
+/* ── M2 — divider / hint / tip ── */
+.m2-divider{height:1px;background:var(--b1);margin:6px 0 24px;}
+.m2-divider-section{margin:8px 0 22px;}
+.m2-divider-section-desc{font-size:12px;color:var(--t3);line-height:1.4;}
+.m2-asterisk-hint{font-size:13px;color:var(--t3);line-height:1.45;margin-bottom:24px;}
+.m2-bilat-tip{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);font-style:italic;line-height:1.5;margin:2px 0 24px;padding:12px 14px;background:var(--s1);border-left:3px solid var(--acc);border-radius:6px;}
+
+/* ── M2 — CTA sticky con sfumatura bone ── */
+.m2-cta-sticky{position:sticky;bottom:0;margin-top:26px;padding:14px 0 calc(18px + env(safe-area-inset-bottom));background:var(--bg);display:flex;gap:10px;}
+.m2-cta-sticky::before{content:'';position:absolute;top:-40px;left:0;right:0;height:40px;background:linear-gradient(to bottom,transparent,var(--bg));pointer-events:none;}
 
 /* ── TAB TENDENZA BODY ── */
 .trend-range-switch{display:flex;background:var(--s2);border:1px solid var(--b1);border-radius:20px;padding:3px;gap:2px;margin-bottom:14px;}
@@ -845,9 +895,6 @@ select.inp{cursor:pointer;}
 <!-- M2 CHECK FISICO -->
 <div id="m2-screen">
   <div class="onb-header">
-    <div class="onb-step" id="m2-step-label">CHECK FISICO</div>
-    <div class="onb-title" id="m2-title">Il tuo check fisico</div>
-    <div class="onb-sub" id="m2-subtitle">Le foto e le misure restano private.</div>
     <!-- Switch unità: visibile solo su step s6, toggled in m2GoStep -->
     <div class="m2-unit-block-header" id="m2-unit-header" style="display:none;">
       <div class="m2-unit-label-header">Unità di misura</div>
@@ -856,6 +903,9 @@ select.inp{cursor:pointer;}
         <button class="m2-unit-btn" id="m2-unit-imperial" onclick="m2SetUnit('imperial')">LB·IN</button>
       </div>
     </div>
+    <div class="onb-step" id="m2-step-label">CHECK FISICO</div>
+    <div class="onb-title" id="m2-title">Il tuo check fisico</div>
+    <div class="onb-sub" id="m2-subtitle">Le foto e le misure restano private.</div>
   </div>
   <div class="onb-body">
 
@@ -892,12 +942,20 @@ select.inp{cursor:pointer;}
     <!-- STEP 0: Istruzioni foto -->
     <div id="m2-s0" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">4 foto del corpo</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:16px;">Le foto restano private, visibili solo a te.</p>
-        <p class="m2-photo-rule"><strong>Abbigliamento:</strong> intimo o costume.</p>
-        <p class="m2-photo-rule"><strong>Luce:</strong> naturale, frontale (finestra davanti). Niente flash, niente luci dall'alto.</p>
-        <p class="m2-photo-rule"><strong>Postura:</strong> corpo intero, piedi inclusi. Braccia leggermente staccate dal busto. Sfondo neutro. Telefono ad altezza vita.</p>
-        <p style="font-size:11px;color:var(--t3);margin-top:14px;line-height:1.5;font-style:italic;">Le foto sono usate solo per i checkpoint con il tuo coach. Mai condivise.</p>
+        <p class="m2-mantra">Più sei preciso ora, più il tuo coach lavora bene.</p>
+        <div class="m2-rule-block">
+          <div class="m2-eyebrow">Abbigliamento</div>
+          <div class="m2-rule-text">Intimo o costume.</div>
+        </div>
+        <div class="m2-rule-block">
+          <div class="m2-eyebrow">Luce</div>
+          <div class="m2-rule-text">Naturale, frontale (finestra davanti).<br>Niente flash, niente luci dall'alto.</div>
+        </div>
+        <div class="m2-rule-block">
+          <div class="m2-eyebrow">Postura</div>
+          <div class="m2-rule-text">Corpo intero, piedi inclusi.<br>Braccia leggermente staccate dal busto.<br>Sfondo neutro. Telefono ad altezza vita.</div>
+        </div>
+        <p class="m2-footnote">Foto private, visibili solo a te, usate per i checkpoint con il tuo coach.</p>
       </div>
       <div class="onb-nav">
         <button class="btn btn-primary btn-full" onclick="m2GoStep('s1')">Iniziamo →</button>
@@ -987,15 +1045,13 @@ select.inp{cursor:pointer;}
     <!-- STEP 5: Conferma foto (griglia 2×2) -->
     <div id="m2-s5" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Foto pronte</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:16px;">Rivedi e conferma per andare avanti.</p>
         <div class="m2-photo-grid">
           <div class="m2-photo-cell" onclick="m2OpenPhotoReview('front')"><img id="m2-grid-front" alt="Frontale"/><div class="m2-photo-cell-lbl">Frontale</div></div>
           <div class="m2-photo-cell" onclick="m2OpenPhotoReview('right')"><img id="m2-grid-right" alt="Lato destro"/><div class="m2-photo-cell-lbl">Lato dx</div></div>
           <div class="m2-photo-cell" onclick="m2OpenPhotoReview('left')"><img id="m2-grid-left" alt="Lato sinistro"/><div class="m2-photo-cell-lbl">Lato sx</div></div>
           <div class="m2-photo-cell" onclick="m2OpenPhotoReview('back')"><img id="m2-grid-back" alt="Retro"/><div class="m2-photo-cell-lbl">Retro</div></div>
         </div>
-        <p style="font-size:11px;color:var(--t3);margin-top:12px;font-style:italic;">Tocca una foto per rivederla o rifarla.</p>
+        <p class="m2-meas-tip" style="text-align:center;margin-top:14px;">Tocca una foto per rivederla o rifarla.</p>
       </div>
       <div class="onb-nav">
         <button class="btn btn-ghost btn-full" onclick="m2GoStep('s4')">← Indietro</button>
@@ -1006,29 +1062,29 @@ select.inp{cursor:pointer;}
     <!-- STEP 6: Peso e altezza -->
     <div id="m2-s6" class="m2-step">
       <div class="onb-section">
-        <p style="font-size:13px;color:var(--t3);margin-bottom:18px;">Servono al coach per partire.</p>
+        <p class="m2-mantra">Più sono precise, meglio funziona tutto il resto.</p>
 
-        <div class="onb-field" style="margin-bottom:18px;">
-          <label>Peso<span class="m2-required-asterisk">*</span></label>
+        <div class="onb-field">
+          <label>Peso<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
-            <input id="m2-peso" class="inp inp-sm" type="number" step="0.1" placeholder="es. 74.5" oninput="m2OnMeasInput()"/>
+            <input id="m2-peso" class="inp inp-sm" type="number" step="0.1" placeholder="74,5" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-peso-unit">KG</div>
           </div>
           <div class="m2-meas-tip">Al mattino, a digiuno, dopo il bagno.</div>
         </div>
 
         <div class="onb-field">
-          <label>Altezza<span class="m2-required-asterisk">*</span></label>
+          <label>Altezza<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
-            <input id="m2-altezza" class="inp inp-sm" type="number" step="0.1" placeholder="es. 178" oninput="m2OnMeasInput()"/>
+            <input id="m2-altezza" class="inp inp-sm" type="number" step="0.1" placeholder="178" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-altezza-unit">CM</div>
           </div>
           <div class="m2-meas-tip">Scalzo, schiena dritta contro un muro.</div>
         </div>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s5')">← Indietro</button>
-        <button class="btn btn-primary btn-full" onclick="m2ContinueS6()">Continua →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-ghost" style="flex:2;" onclick="m2GoStep('s5')">← Indietro</button>
+        <button class="btn btn-primary" style="flex:3;" onclick="m2ContinueS6()">Continua →</button>
       </div>
       <div id="m2-err-s6" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
     </div>
@@ -1036,32 +1092,30 @@ select.inp{cursor:pointer;}
     <!-- STEP 7: Circonferenze -->
     <div id="m2-s7" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Circonferenze</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Metro morbido, aderente ma non stretto.</p>
-        <p style="font-size:11px;color:var(--t3);margin-bottom:18px;font-style:italic;">*I campi con asterisco sono obbligatori. Gli altri puoi saltarli.</p>
+        <p class="m2-asterisk-hint">* I campi con asterisco sono obbligatori. Gli altri puoi saltarli.</p>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Vita<span class="m2-required-asterisk">*</span></label>
+        <div class="onb-field">
+          <label>Vita<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
-            <input id="m2-vita" class="inp inp-sm" type="number" step="0.1" placeholder="es. 89" oninput="m2OnMeasInput()"/>
+            <input id="m2-vita" class="inp inp-sm" type="number" step="0.1" placeholder="89" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-vita-unit">CM</div>
           </div>
           <div class="m2-meas-tip">Punto più stretto, sopra l'ombelico.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Petto<span class="m2-required-asterisk">*</span></label>
+        <div class="onb-field">
+          <label>Petto<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
-            <input id="m2-petto" class="inp inp-sm" type="number" step="0.1" placeholder="es. 102" oninput="m2OnMeasInput()"/>
+            <input id="m2-petto" class="inp inp-sm" type="number" step="0.1" placeholder="102" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-petto-unit">CM</div>
           </div>
           <div class="m2-meas-tip">Sotto le ascelle, alla parte più sporgente.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Fianchi<span class="m2-required-asterisk">*</span></label>
+        <div class="onb-field">
+          <label>Fianchi<span class="m2-required-asterisk">*</span><span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
-            <input id="m2-fianchi" class="inp inp-sm" type="number" step="0.1" placeholder="es. 98" oninput="m2OnMeasInput()"/>
+            <input id="m2-fianchi" class="inp inp-sm" type="number" step="0.1" placeholder="98" oninput="m2OnMeasInput()"/>
             <div class="m2-meas-unit" id="m2-fianchi-unit">CM</div>
           </div>
           <div class="m2-meas-tip">Punto più largo dei glutei.</div>
@@ -1071,8 +1125,8 @@ select.inp{cursor:pointer;}
 
         <p class="m2-bilat-tip">Per bicipite, polso, coscia e polpaccio: scegli un lato (destro o sinistro) e usa sempre lo stesso nelle misurazioni successive — così i dati sono confrontabili nel tempo.</p>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Spalle</label>
+        <div class="onb-field">
+          <label>Spalle<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-spalle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-spalle-unit">CM</div>
@@ -1080,8 +1134,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Parte più larga, da deltoide a deltoide.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Collo</label>
+        <div class="onb-field">
+          <label>Collo<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-collo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-collo-unit">CM</div>
@@ -1089,8 +1143,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Sotto il pomo d'Adamo, rilassato.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Bicipite</label>
+        <div class="onb-field">
+          <label>Bicipite<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-bicipite" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-bicipite-unit">CM</div>
@@ -1098,8 +1152,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Braccio rilassato, nel punto più ampio.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Polso</label>
+        <div class="onb-field">
+          <label>Polso<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-polso" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-polso-unit">CM</div>
@@ -1107,8 +1161,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Subito sopra l'osso, mano rilassata.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Coscia</label>
+        <div class="onb-field">
+          <label>Coscia<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-coscia" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-coscia-unit">CM</div>
@@ -1117,7 +1171,7 @@ select.inp{cursor:pointer;}
         </div>
 
         <div class="onb-field">
-          <label>Polpaccio</label>
+          <label>Polpaccio<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-polpaccio" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-polpaccio-unit">CM</div>
@@ -1125,9 +1179,9 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Parte più larga, a metà polpaccio.</div>
         </div>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s6')">← Indietro</button>
-        <button class="btn btn-primary btn-full" onclick="m2ContinueS7()">Continua →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-ghost" style="flex:2;" onclick="m2GoStep('s6')">← Indietro</button>
+        <button class="btn btn-primary" style="flex:3;" onclick="m2ContinueS7()">Continua →</button>
       </div>
       <div id="m2-err-s7" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
     </div>
@@ -1135,12 +1189,10 @@ select.inp{cursor:pointer;}
     <!-- STEP 8: Composizione bilancia (5 campi tutti opzionali) -->
     <div id="m2-s8" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Composizione</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Se hai una bilancia bioimpedenziometrica.</p>
-        <p style="font-size:11px;color:var(--t3);margin-bottom:18px;font-style:italic;">Tutti i campi sono opzionali. Puoi saltare se non hai questi dati.</p>
+        <p class="m2-asterisk-hint">Tutti i campi sono opzionali. Puoi saltare se non hai questi dati.</p>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Grasso corporeo</label>
+        <div class="onb-field">
+          <label>Grasso corporeo<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-bf" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit">%</div>
@@ -1148,8 +1200,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Percentuale di massa grassa.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Massa muscolare</label>
+        <div class="onb-field">
+          <label>Massa muscolare<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-muscle" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit" id="m2-muscle-unit">KG</div>
@@ -1157,8 +1209,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Peso totale dei muscoli.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Grasso viscerale</label>
+        <div class="onb-field">
+          <label>Grasso viscerale<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-visceral" class="inp inp-sm" type="number" step="0.1" placeholder="1-30"/>
             <div class="m2-meas-unit">IDX</div>
@@ -1166,8 +1218,8 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Indice 1-30. Sotto 10 è ottimale.</div>
         </div>
 
-        <div class="onb-field" style="margin-bottom:14px;">
-          <label>Età metabolica</label>
+        <div class="onb-field">
+          <label>Età metabolica<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-bodyage" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/>
             <div class="m2-meas-unit">ANNI</div>
@@ -1176,7 +1228,7 @@ select.inp{cursor:pointer;}
         </div>
 
         <div class="onb-field">
-          <label>Acqua</label>
+          <label>Acqua<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row">
             <input id="m2-water" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/>
             <div class="m2-meas-unit">%</div>
@@ -1184,11 +1236,11 @@ select.inp{cursor:pointer;}
           <div class="m2-meas-tip">Percentuale di acqua corporea.</div>
         </div>
 
-        <p style="font-size:11px;color:var(--t3);margin-top:18px;font-style:italic;line-height:1.5;">Anche un dato in più aiuta il coach a leggerti meglio.</p>
+        <p class="m2-mantra" style="margin:24px 0 0;">Anche un dato in più aiuta il coach a leggerti meglio.</p>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-ghost btn-full" onclick="m2SaveMeasurementsAndSkipS8()">Salta</button>
-        <button class="btn btn-primary btn-full" onclick="m2ContinueS8()">Continua →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-ghost" style="flex:2;" onclick="m2SaveMeasurementsAndSkipS8()">Salta</button>
+        <button class="btn btn-primary" style="flex:3;" onclick="m2ContinueS8()">Continua →</button>
       </div>
       <div id="m2-err-s8" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
     </div>
@@ -1196,10 +1248,9 @@ select.inp{cursor:pointer;}
     <!-- STEP 9: Gate esami sì/no -->
     <div id="m2-s9" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Esami del sangue</div>
-        <p style="font-size:15px;color:var(--t1);margin-top:8px;margin-bottom:18px;line-height:1.5;font-weight:600;">Hai fatto esami del sangue nell'ultimo mese?</p>
+        <p class="m2-mantra">Servono al coach per affinare le scelte. Se non li hai, va bene così.</p>
         <button class="m2-gate-btn" onclick="m2SetBloodGate(true)">Sì, li ho</button>
-        <button class="m2-gate-btn" onclick="m2SetBloodGate(false)">No, non ancora</button>
+        <button class="m2-gate-btn" onclick="m2SetBloodGate(false)">No, li farò dopo</button>
       </div>
       <div class="onb-nav">
         <button class="btn btn-ghost btn-full" onclick="m2GoStep('s8')">← Indietro</button>
@@ -1209,57 +1260,60 @@ select.inp{cursor:pointer;}
     <!-- STEP 10: Compilazione esami (ramo Sì) -->
     <div id="m2-s10" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Parametri ematici</div>
-        <p style="font-size:13px;color:var(--t3);margin-bottom:14px;">Tutti i campi sono singolarmente skippabili (lascia vuoto per saltare).</p>
+        <p class="m2-asterisk-hint">Inserisci solo quelli che hai. Gli altri puoi saltarli.</p>
 
-        <div class="onb-field" style="margin-bottom:18px;">
+        <div class="onb-field">
           <label>Data esame<span class="m2-required-asterisk">*</span></label>
           <input id="m2-test-date" class="inp inp-sm" type="date"/>
         </div>
 
-        <p style="font-size:11px;color:var(--acc);letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Da esame base / AVIS</p>
+        <div class="m2-divider-section"><div class="m2-eyebrow">Esame base</div></div>
 
-        <div class="onb-field" style="margin-bottom:14px;"><label>Emoglobina</label>
+        <div class="onb-field"><label>Emoglobina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-hemo" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">G/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Ferritina</label>
+        <div class="onb-field"><label>Ferritina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-ferr" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Glicemia</label>
+        <div class="onb-field"><label>Glicemia<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-gluc" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Colesterolo totale</label>
+        <div class="onb-field"><label>Colesterolo totale<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-chol" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>HDL</label>
+        <div class="onb-field"><label>HDL<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-hdl" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Trigliceridi</label>
+        <div class="onb-field"><label>Trigliceridi<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-trig" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Creatinina</label>
+        <div class="onb-field"><label>Creatinina<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-crea" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">MG/DL</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>ALT</label>
+        <div class="onb-field"><label>ALT<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-alt" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">U/L</div></div>
         </div>
 
-        <div class="m2-divider"></div>
-        <p style="font-size:11px;color:var(--acc);letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Se li hai anche</p>
+        <div class="m2-divider-section">
+          <div class="m2-eyebrow">Valori extra</div>
+          <div class="m2-divider-section-desc">Vitamine e tiroide.</div>
+        </div>
 
-        <div class="onb-field" style="margin-bottom:14px;"><label>Vitamina D</label>
+        <div class="onb-field"><label>Vitamina D<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-vitd" class="inp inp-sm" type="number" step="0.1" placeholder="opzionale"/><div class="m2-meas-unit">NG/ML</div></div>
         </div>
-        <div class="onb-field" style="margin-bottom:14px;"><label>Vitamina B12</label>
+        <div class="onb-field"><label>Vitamina B12<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-b12" class="inp inp-sm" type="number" step="1" placeholder="opzionale"/><div class="m2-meas-unit">PG/ML</div></div>
         </div>
-        <div class="onb-field"><label>TSH</label>
+        <div class="onb-field"><label>TSH<span class="m2-info-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M7 6V10M7 4V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span></label>
           <div class="m2-meas-row"><input id="m2-bl-tsh" class="inp inp-sm" type="number" step="0.01" placeholder="opzionale"/><div class="m2-meas-unit">μUI/ML</div></div>
         </div>
+
+        <p class="m2-mantra" style="margin:24px 0 0;">Ogni numero che condividi affina la lettura del coach.</p>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s9')">← Indietro</button>
-        <button class="btn btn-primary btn-full" onclick="m2SaveBloodTests()">Salva e continua →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-ghost" style="flex:2;" onclick="m2GoStep('s9')">← Indietro</button>
+        <button class="btn btn-primary" style="flex:3;" onclick="m2SaveBloodTests()">Salva e continua →</button>
       </div>
       <div id="m2-err-s10" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
     </div>
@@ -1267,24 +1321,22 @@ select.inp{cursor:pointer;}
     <!-- STEP 11: Bridge (ramo No) -->
     <div id="m2-s11" class="m2-step">
       <div class="onb-section">
-        <p style="font-size:15px;color:var(--t1);line-height:1.6;margin-bottom:14px;">Nessun problema.</p>
-        <p style="font-size:14px;color:var(--t2);line-height:1.6;">Per ora andiamo avanti — ti ricorderemo di farli al prossimo checkpoint.</p>
+        <p class="m2-mantra">Il coach può iniziare lo stesso. Gli esami aiuteranno a perfezionare il piano.</p>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-ghost btn-full" onclick="m2GoStep('s9')">← Indietro</button>
-        <button class="btn btn-primary btn-full" onclick="m2GoStep('s12')">Continua →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-ghost" style="flex:2;" onclick="m2GoStep('s9')">← Indietro</button>
+        <button class="btn btn-primary" style="flex:3;" onclick="m2GoStep('s12')">Continua →</button>
       </div>
     </div>
 
     <!-- STEP 12: Esito -->
     <div id="m2-s12" class="m2-step">
       <div class="onb-section">
-        <div class="onb-section-title">Check fisico completato</div>
-        <p style="font-size:15px;color:var(--t1);line-height:1.6;margin:14px 0 18px;">Ecco la base da cui partire.</p>
+        <p class="m2-mantra">Da qui in poi, tutto quello che fai costruisce il tuo percorso.</p>
         <p id="m2-summary" style="font-size:13px;color:var(--t2);font-family:'JetBrains Mono',monospace;line-height:1.8;letter-spacing:.5px;"></p>
       </div>
-      <div class="onb-nav">
-        <button class="btn btn-primary btn-full" onclick="m2Complete()">Entra in Zona Tracker →</button>
+      <div class="m2-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m2Complete()">Vai alla home →</button>
       </div>
       <div id="m2-err-s12" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
     </div>
@@ -1294,7 +1346,10 @@ select.inp{cursor:pointer;}
 
 <!-- M2 modal full-screen review foto -->
 <div id="m2-photo-modal" class="m2-modal-photo-overlay" style="display:none;">
-  <div class="m2-modal-photo-lbl" id="m2-modal-photo-lbl"></div>
+  <div class="m2-modal-photo-header">
+    <button class="m2-modal-photo-close" onclick="m2ModalKeep()" aria-label="Chiudi">✕</button>
+    <div class="m2-modal-photo-lbl" id="m2-modal-photo-lbl"></div>
+  </div>
   <img id="m2-modal-photo-img" alt=""/>
   <div class="m2-modal-photo-btns">
     <button class="btn btn-ghost btn-full" onclick="m2ModalRetake()">Rifai</button>
@@ -1735,7 +1790,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 17:35';
+const APP_VERSION = '2026.05.14 · 20:33';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2548,14 +2603,14 @@ function m2GoStep(stepId) {
     s2:      { label:'CHECK FISICO · FOTO 2/4', title:'Posa lato destro',  sub:'Lato destro verso la fotocamera.' },
     s3:      { label:'CHECK FISICO · FOTO 3/4', title:'Posa lato sinistro', sub:'Lato sinistro verso la fotocamera.' },
     s4:      { label:'CHECK FISICO · FOTO 4/4', title:'Posa retro',        sub:'Spalle verso la fotocamera.' },
-    s5:      { label:'CHECK FISICO · FOTO',     title:'Conferma foto',     sub:'Rivedi e conferma per andare avanti.' },
+    s5:      { label:'CHECK FISICO · FOTO',     title:'Foto pronte',       sub:'Rivedi e conferma per andare avanti.' },
     s6:      { label:'CHECK FISICO · MISURE',   title:'Peso e altezza',    sub:'Servono al coach per partire.' },
     s7:      { label:'CHECK FISICO · MISURE',   title:'Circonferenze',     sub:'Metro morbido, aderente ma non stretto.' },
-    s8:      { label:'CHECK FISICO · MISURE',   title:'Composizione',      sub:'Dati dalla bilancia, se ce l\'hai.' },
-    s9:      { label:'CHECK FISICO · ESAMI',    title:'Esami del sangue',  sub:'Una domanda veloce.' },
-    s10:     { label:'CHECK FISICO · ESAMI',    title:'Parametri ematici', sub:'Compila quello che hai sotto mano.' },
-    s11:     { label:'CHECK FISICO · ESAMI',    title:'Va bene così',      sub:'Andiamo avanti.' },
-    s12:     { label:'CHECK FISICO',            title:'Tutto pronto',      sub:'Hai completato il check fisico.' },
+    s8:      { label:'CHECK FISICO · MISURE',   title:'Composizione',      sub:'Se hai una bilancia bioimpedenziometrica.' },
+    s9:      { label:'CHECK FISICO · ESAMI',    title:'Esami del sangue',  sub:'Ne hai fatti nell\'ultimo mese?' },
+    s10:     { label:'CHECK FISICO · ESAMI',    title:'I tuoi valori',     sub:'Inserisci solo quelli che hai. Gli altri puoi saltarli.' },
+    s11:     { label:'CHECK FISICO · ESAMI',    title:'Va bene così',      sub:'Ti ricordo di farli prima del prossimo checkpoint.' },
+    s12:     { label:'CHECK FISICO · COMPLETATO', title:'Check completato', sub:'Il coach sta preparando il tuo piano.' },
   };
   const h = M2_HEADERS[stepId] || M2_HEADERS.intro;
   if(lbl) lbl.textContent = h.label;
