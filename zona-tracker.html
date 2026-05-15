@@ -701,6 +701,139 @@ select.inp{cursor:pointer;}
   text-align-last:center;
   box-sizing:border-box;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   M1 ONBOARDING — nuovo (welcome + auth + 7 step)
+   Override scoped #auth-screen / #onboarding-screen, mantiene
+   intatta la base .onb-* (riusata da M2).
+   ══════════════════════════════════════════════════════════════ */
+
+/* Auth screen full-bone (override del centro-card legacy) */
+#auth-screen.visible{display:block;background:var(--bg);}
+#auth-screen{padding:0;align-items:initial;justify-content:initial;}
+#auth-screen .auth-card{background:transparent;border:0;border-radius:0;padding:0;max-width:none;width:100%;box-shadow:none;min-height:100vh;display:flex;flex-direction:column;}
+
+.m1-state{display:none;flex:1;flex-direction:column;}
+.m1-state.active{display:flex;}
+
+/* Welcome ----------------------------------------------------- */
+.m1-welcome{padding:calc(24px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));}
+.m1-welcome-logo{display:flex;align-items:center;gap:12px;margin-top:18vh;}
+.m1-welcome-logo svg{flex-shrink:0;}
+.m1-welcome-logo-text{display:flex;flex-direction:column;line-height:1.1;}
+.m1-welcome-logo-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);}
+.m1-welcome-logo-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);margin-top:3px;}
+.m1-welcome-title{font-family:'Syne',sans-serif;font-weight:800;font-size:30px;line-height:1.05;letter-spacing:-.02em;color:var(--t1);margin-top:32px;}
+.m1-welcome-title-accent{color:var(--acc);}
+.m1-welcome-sub{font-family:'Syne',sans-serif;font-size:15px;color:var(--t3);line-height:1.5;margin-top:14px;}
+.m1-welcome-cta-block{margin-top:auto;display:flex;flex-direction:column;gap:14px;}
+.m1-welcome-link{font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);text-align:center;}
+.m1-welcome-link b{color:var(--acc);text-decoration:underline;font-weight:600;cursor:pointer;}
+
+/* Auth screens (email + OTP) --------------------------------- */
+.m1-auth-screen{padding:calc(20px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));}
+.m1-back-btn{background:none;border:none;color:var(--t2);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;align-self:flex-start;font-family:'Syne',sans-serif;margin-bottom:10px;}
+.m1-auth-logo-mini{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:36px;}
+.m1-auth-logo-mini-text{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);}
+.m1-auth-title{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;line-height:1.1;letter-spacing:-.02em;color:var(--t1);}
+.m1-auth-sub{font-family:'Syne',sans-serif;font-size:15px;color:var(--t2);line-height:1.5;margin-top:10px;margin-bottom:26px;}
+.m1-auth-input{width:100%;padding:14px 16px;border-radius:12px;background:var(--s2);border:1px solid var(--b1);font-family:'Syne',sans-serif;font-size:16px;color:var(--t1);box-sizing:border-box;}
+.m1-auth-input:focus{outline:none;border-color:var(--acc);background:#fff;}
+.m1-auth-cta{margin-top:18px;}
+.m1-auth-email-pill{display:inline-flex;align-items:center;gap:8px;background:var(--acc-lt);color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 12px;border-radius:999px;margin-bottom:14px;}
+.m1-auth-email-pill button{background:none;border:none;color:var(--acc);font-size:14px;line-height:1;cursor:pointer;padding:0;font-family:'Syne',sans-serif;}
+.m1-otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:6px 0 6px;}
+.m1-otp-cell{aspect-ratio:9/10;border-radius:10px;background:var(--s2);border:1px solid var(--b1);font-family:'Syne',sans-serif;font-size:24px;font-weight:600;text-align:center;color:var(--t1);padding:0;}
+.m1-otp-cell:focus{outline:none;border-color:var(--acc);background:#fff;}
+.m1-otp-resend{margin-top:14px;text-align:center;font-family:'Syne',sans-serif;font-size:14px;color:var(--t3);}
+.m1-otp-resend b{color:var(--acc);cursor:pointer;text-decoration:underline;font-weight:600;}
+
+/* Onboarding container (override legacy header verde) -------- */
+#onboarding-screen{background:var(--bg);}
+#onboarding-screen .onb-header{background:var(--bg);padding:calc(20px + env(safe-area-inset-top)) 24px 6px;}
+#onboarding-screen .onb-step{color:var(--acc);font-size:11px;font-weight:500;letter-spacing:.15em;text-transform:uppercase;margin-bottom:0;}
+#onboarding-screen .onb-title{font-size:30px;font-weight:800;color:var(--t1);line-height:1.08;letter-spacing:-.02em;}
+#onboarding-screen .onb-sub{font-size:15px;font-weight:400;color:var(--t2);margin-top:10px;line-height:1.45;}
+#onboarding-screen .onb-body{padding:18px 24px 0;}
+#onboarding-screen .onb-section{margin-bottom:0;}
+#onboarding-screen .onb-section-title{display:none;}
+#onboarding-screen .btn{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;text-transform:none;letter-spacing:0;padding:15px 18px;border-radius:12px;}
+#onboarding-screen .btn-ghost{background:var(--bg);color:var(--acc);border:1px solid var(--acc);}
+#onboarding-screen .btn-ghost:hover{background:var(--acc-lt);}
+
+/* Progress bar ------------------------------------------------ */
+.m1-progress-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px;}
+.m1-progress-bar{display:flex;gap:5px;flex:1;}
+.m1-progress-segment{flex:1;height:4px;border-radius:2px;background:var(--b1);transition:background .25s;}
+.m1-progress-segment.done{background:var(--acc);}
+.m1-progress-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);white-space:nowrap;}
+
+/* Step body — pattern condivisi M1 --------------------------- */
+.m1-step{display:none;}
+.m1-step.active{display:block;}
+.m1-mantra{font-family:'Syne',sans-serif;font-style:italic;font-weight:400;font-size:14px;color:var(--t3);line-height:1.5;margin:24px 0 0;}
+.m1-eyebrow-section{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:20px 0 12px;}
+.m1-eyebrow-section:first-child{margin-top:8px;}
+.m1-eyebrow-subsection{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin:18px 0 8px;}
+.m1-helper{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);line-height:1.45;margin-bottom:14px;}
+
+.m1-field{display:flex;flex-direction:column;margin-bottom:14px;}
+.m1-field-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:8px;}
+.m1-field-row{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--b1);}
+.m1-field-row input{border:none;background:transparent;padding:0;font-family:'Syne',sans-serif;font-size:24px;font-weight:600;color:var(--t1);width:100%;}
+.m1-field-row input:focus{outline:none;}
+.m1-field-row input::placeholder{color:var(--b2);font-weight:400;}
+.m1-field-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);letter-spacing:.06em;}
+.m1-field-text{width:100%;padding:12px 14px;border-radius:12px;background:var(--s2);border:1px solid var(--b1);font-family:'Syne',sans-serif;font-size:16px;color:var(--t1);box-sizing:border-box;}
+.m1-field-text:focus{outline:none;border-color:var(--acc);background:#fff;}
+.m1-field-textarea{width:100%;padding:12px 14px;border-radius:12px;background:var(--s2);border:1px solid var(--b1);font-family:'Syne',sans-serif;font-size:15px;color:var(--t1);box-sizing:border-box;resize:none;min-height:80px;margin-top:8px;}
+.m1-field-textarea:focus{outline:none;border-color:var(--acc);background:#fff;}
+
+.m1-row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* Sex pillole grandi --------------------------------------- */
+.m1-sex-row{display:flex;gap:8px;margin-bottom:8px;}
+.m1-sex-pill{flex:1;padding:13px 0;border-radius:999px;border:1.5px solid var(--acc);background:var(--bg);color:var(--acc);font-family:'Syne',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;}
+.m1-sex-pill.active{background:var(--acc);color:#fff;}
+
+/* Goal grid 2×3 --------------------------------------------- */
+.m1-goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+.m1-card-goal{background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:14px;cursor:pointer;transition:all .15s;text-align:left;}
+.m1-card-goal:hover{border-color:var(--acc);}
+.m1-card-goal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--t1);line-height:1.2;margin-bottom:4px;}
+.m1-card-goal-desc{font-family:'Syne',sans-serif;font-size:12px;color:var(--t3);line-height:1.4;}
+.m1-card-goal.selected{background:var(--acc);border-color:var(--acc);}
+.m1-card-goal.selected .m1-card-goal-title,.m1-card-goal.selected .m1-card-goal-desc{color:#fff;}
+.m1-card-goal.disabled{opacity:.4;pointer-events:none;}
+.m1-goal-counter{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-top:12px;text-align:center;}
+
+/* Level / activity cards (stack verticale) ------------------ */
+.m1-card-level{display:block;width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .15s;text-align:left;margin-bottom:8px;font-family:'Syne',sans-serif;}
+.m1-card-level:hover{border-color:var(--acc);}
+.m1-card-level-title{font-size:15px;font-weight:700;color:var(--t1);line-height:1.2;margin-bottom:4px;}
+.m1-card-level-desc{font-size:12px;color:var(--t3);line-height:1.4;}
+.m1-card-level.selected{background:var(--acc);border-color:var(--acc);}
+.m1-card-level.selected .m1-card-level-title,.m1-card-level.selected .m1-card-level-desc{color:#fff;}
+
+/* Pillole toggle (intolleranze, limitazioni) --------------- */
+.m1-pill-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+.m1-pill-toggle{padding:9px 16px;border-radius:999px;border:1.5px solid var(--acc);background:var(--bg);color:var(--acc);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.m1-pill-toggle.selected{background:var(--acc);color:#fff;}
+
+/* Summary rows Step 7 -------------------------------------- */
+.m1-summary-row{padding:14px 0;border-top:1px solid var(--b1);}
+.m1-summary-row:first-of-type{border-top:none;padding-top:2px;}
+.m1-summary-row-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:5px;}
+.m1-summary-row-text{font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.45;}
+
+/* CTA sticky bone ------------------------------------------ */
+.m1-cta-sticky{position:sticky;bottom:0;margin-top:26px;padding:14px 0 calc(20px + env(safe-area-inset-bottom));background:var(--bg);display:flex;gap:10px;flex-direction:column;}
+.m1-cta-sticky::before{content:'';position:absolute;top:-40px;left:0;right:0;height:40px;background:linear-gradient(to bottom,transparent,var(--bg));pointer-events:none;}
+.m1-cta-link{font-family:'Syne',sans-serif;font-size:14px;color:var(--acc);text-align:center;text-decoration:underline;cursor:pointer;font-weight:600;padding:6px 0;}
+
+/* Errore inline -------------------------------------------- */
+.m1-err{color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;}
+.m1-err.show{display:block;}
 </style>
 </head>
 <body>
@@ -716,184 +849,380 @@ select.inp{cursor:pointer;}
   <div class="splash-loader"><div class="splash-loader-bar"></div></div>
 </div>
 
-<!-- AUTH -->
+<!-- AUTH + WELCOME (M1 nuovo) -->
 <div id="auth-screen">
   <div class="auth-card">
-    <div class="auth-logo">
-      <svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
-      <div><div class="auth-title">Zona Tracker</div><div class="auth-sub">Benessere &amp; Forma</div></div>
+
+    <!-- WELCOME -->
+    <div id="m1-welcome" class="m1-state active m1-welcome">
+      <div class="m1-welcome-logo">
+        <svg width="44" height="44" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+        <div class="m1-welcome-logo-text">
+          <span class="m1-welcome-logo-name">Zona Tracker</span>
+          <span class="m1-welcome-logo-sub">Benessere &amp; Forma</span>
+        </div>
+      </div>
+      <h1 class="m1-welcome-title">Nutrizione, allenamento e progressi.<br><span class="m1-welcome-title-accent">Tutto in un percorso.</span></h1>
+      <p class="m1-welcome-sub">Il metodo che si adatta a te, non viceversa.</p>
+      <div class="m1-welcome-cta-block">
+        <button class="btn btn-primary btn-full" onclick="m1ShowAuth('email')">Crea il tuo percorso →</button>
+        <p class="m1-welcome-link">Hai già un account? <b onclick="m1ShowAuth('email')">Accedi</b></p>
+        <button id="test-mode-btn" onclick="enterTestMode()" style="display:none;margin-top:6px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding:0;">Modalità test</button>
+      </div>
     </div>
 
-    <!-- Step 1: inserisci email -->
-    <div id="auth-step1">
-      <span class="lbl">Accedi con codice OTP</span>
-      <input id="auth-email" class="inp" type="email" placeholder="La tua email..." autocomplete="email"
+    <!-- AUTH — Email -->
+    <div id="auth-step1" class="m1-state m1-auth-screen" style="display:none;">
+      <button class="m1-back-btn" onclick="m1ShowAuth('welcome')" aria-label="Indietro">←</button>
+      <div class="m1-auth-logo-mini">
+        <svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+        <span class="m1-auth-logo-mini-text">Zona Tracker · Benessere &amp; Forma</span>
+      </div>
+      <h1 class="m1-auth-title">La tua email</h1>
+      <p class="m1-auth-sub">Ti invieremo un codice a 6 cifre per accedere.</p>
+      <input id="auth-email" class="m1-auth-input" type="email" placeholder="tu@esempio.com" autocomplete="email"
         onkeydown="if(event.key==='Enter')sendOTP()"/>
-      <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="sendOTP()" id="auth-btn">
-        Invia codice →
-      </button>
+      <button class="btn btn-primary btn-full m1-auth-cta" onclick="sendOTP()" id="auth-btn">Invia codice →</button>
     </div>
 
-    <!-- Step 2: inserisci codice -->
-    <div id="auth-step2" style="display:none;">
-      <span class="lbl">Codice ricevuto via email</span>
-      <p style="font-size:13px;color:var(--t3);margin-bottom:12px;line-height:1.5;"
-         id="auth-otp-hint">Inserisci il codice inviato a <strong></strong></p>
-      <input id="auth-otp" class="inp" type="text" inputmode="numeric" pattern="[0-9]*"
-        placeholder="000000" maxlength="8" autocomplete="one-time-code"
-        style="font-size:28px;font-family:'JetBrains Mono',monospace;letter-spacing:8px;text-align:center;"
-        oninput="if(this.value.replace(/\D/g,'').length>=6)verifyOTP()"
-        onkeydown="if(event.key==='Enter')verifyOTP()"/>
-      <button class="btn btn-primary btn-full" style="margin-top:10px;" onclick="verifyOTP()" id="auth-otp-btn">
-        Accedi →
-      </button>
-      <button onclick="backToEmail()" style="display:block;margin-top:12px;background:none;border:none;
-        cursor:pointer;font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;width:100%;text-align:center;">
-        ← Cambia email
-      </button>
+    <!-- AUTH — OTP -->
+    <div id="auth-step2" class="m1-state m1-auth-screen" style="display:none;">
+      <button class="m1-back-btn" onclick="backToEmail()" aria-label="Indietro">←</button>
+      <div class="m1-auth-logo-mini">
+        <svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+        <span class="m1-auth-logo-mini-text">Zona Tracker · Benessere &amp; Forma</span>
+      </div>
+      <div class="m1-auth-email-pill"><span id="m1-otp-email">—</span><button type="button" onclick="backToEmail()" aria-label="Cambia email">✕</button></div>
+      <p id="auth-otp-hint" class="m1-auth-sub" style="margin-top:0;">Controlla la tua casella email e inserisci il codice.</p>
+      <div class="m1-otp-grid" id="m1-otp-grid">
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="0" oninput="m1OtpInput(0,event)" onkeydown="m1OtpKey(0,event)" onpaste="m1OtpPaste(event)" autocomplete="one-time-code"/>
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="1" oninput="m1OtpInput(1,event)" onkeydown="m1OtpKey(1,event)" onpaste="m1OtpPaste(event)"/>
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="2" oninput="m1OtpInput(2,event)" onkeydown="m1OtpKey(2,event)" onpaste="m1OtpPaste(event)"/>
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="3" oninput="m1OtpInput(3,event)" onkeydown="m1OtpKey(3,event)" onpaste="m1OtpPaste(event)"/>
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="4" oninput="m1OtpInput(4,event)" onkeydown="m1OtpKey(4,event)" onpaste="m1OtpPaste(event)"/>
+        <input class="m1-otp-cell" type="tel" inputmode="numeric" maxlength="1" data-idx="5" oninput="m1OtpInput(5,event)" onkeydown="m1OtpKey(5,event)" onpaste="m1OtpPaste(event)"/>
+      </div>
+      <!-- Hidden input richiesto da verifyOTP() -->
+      <input id="auth-otp" type="hidden"/>
+      <button class="btn btn-primary btn-full m1-auth-cta" onclick="verifyOTP()" id="auth-otp-btn">Verifica e accedi →</button>
+      <p class="m1-otp-resend" id="m1-otp-resend"></p>
     </div>
 
-    <div id="auth-msg" style="display:none;" class="auth-msg"></div>
-    <button id="test-mode-btn" onclick="enterTestMode()" style="display:none;margin-top:18px;background:none;border:none;cursor:pointer;font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;padding:0;">Modalità test</button>
+    <!-- Messaggio errore/successo condiviso fra step auth -->
+    <div id="auth-msg" style="display:none;margin:14px 24px;" class="auth-msg"></div>
+
   </div>
 </div>
 
-<!-- ONBOARDING -->
+<!-- ONBOARDING M1 (7 step) -->
 <div id="onboarding-screen">
   <div class="onb-header">
-    <div class="onb-step" id="onb-step-label">Step 1 di 5 — Dati personali</div>
-    <div class="onb-title">Benvenuto!</div>
-    <div class="onb-sub" id="onb-subtitle">Come ti chiami e quando sei nato?</div>
-    <div class="onb-progress-wrap"><div class="onb-progress-fill" id="onb-progress-fill" style="width:20%"></div></div>
+    <button class="m1-back-btn" id="m1-back-btn" onclick="m1Back()" aria-label="Indietro" style="display:none;">←</button>
+    <div class="m1-progress-row">
+      <div class="m1-progress-bar">
+        <span class="m1-progress-segment done" data-seg="1"></span>
+        <span class="m1-progress-segment" data-seg="2"></span>
+        <span class="m1-progress-segment" data-seg="3"></span>
+        <span class="m1-progress-segment" data-seg="4"></span>
+        <span class="m1-progress-segment" data-seg="5"></span>
+        <span class="m1-progress-segment" data-seg="6"></span>
+        <span class="m1-progress-segment" data-seg="7"></span>
+      </div>
+      <span class="m1-progress-label" id="m1-progress-label">Passo 1 di 7</span>
+    </div>
+    <div class="onb-title" id="m1-title">Iniziamo da te</div>
+    <div class="onb-sub" id="m1-subtitle">Useremo il tuo nome per parlarti durante il percorso.</div>
   </div>
   <div class="onb-body">
 
-    <!-- STEP 1: Dati personali -->
-    <div id="onb-s1">
+    <!-- STEP 1 — Iniziamo da te -->
+    <div id="m1-s1" class="m1-step active">
       <div class="onb-section">
-        <div class="onb-section-title">Dati personali</div>
-        <div class="onb-grid">
-          <div class="onb-field"><label>Nome</label><input id="onb-fname" class="inp inp-sm" placeholder="es. Pino"/></div>
-          <div class="onb-field"><label>Cognome</label><input id="onb-lname" class="inp inp-sm" placeholder="es. Manolo"/></div>
-        </div>
-        <div class="onb-field" style="margin-top:10px;"><label>Data di nascita</label><input id="onb-dob" class="inp inp-sm" type="date"/></div>
-        <div class="onb-field" style="margin-top:10px;"><label>Sesso</label>
-          <div class="sex-btns"><button class="sex-btn active" onclick="setSex('M')" id="sex-M">♂ M</button><button class="sex-btn" onclick="setSex('F')" id="sex-F">♀ F</button></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- STEP 2: Dati biometrici -->
-    <div id="onb-s2" style="display:none">
-      <div class="onb-section">
-        <div class="onb-section-title">Dati biometrici</div>
-        <div class="onb-grid">
-          <div class="onb-field"><label>Altezza (cm)</label><input id="onb-height" class="inp inp-sm" type="number" placeholder="es. 178" oninput="updateTDEEPreview()"/></div>
-          <div class="onb-field"><label>Peso attuale (kg)</label><input id="onb-weight" class="inp inp-sm" type="number" placeholder="es. 82.5" step="0.1" oninput="updateTDEEPreview()"/></div>
-          <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="onb-goal-weight" class="inp inp-sm" type="number" placeholder="es. 75" step="0.1" oninput="updateTDEEPreview()"/></div>
-        </div>
-        <div class="onb-field" style="margin-top:14px;"><label>Livello attività</label>
-          <div class="onb-pills" style="margin-top:8px;">
-            <button class="onb-pill" onclick="setActivity('sedentary')" id="act-sedentary">Sedentario</button>
-            <button class="onb-pill" onclick="setActivity('lightly_active')" id="act-lightly_active">Leggermente attivo</button>
-            <button class="onb-pill active" onclick="setActivity('moderate')" id="act-moderate">Moderatamente attivo</button>
-            <button class="onb-pill" onclick="setActivity('active')" id="act-active">Molto attivo</button>
-            <button class="onb-pill" onclick="setActivity('very_active')" id="act-very_active">Estremamente attivo</button>
+        <div class="m1-row-2">
+          <div class="m1-field">
+            <span class="m1-field-label">Nome</span>
+            <input id="m1-nome" class="m1-field-text" type="text" autocomplete="given-name" placeholder="Es. Ignazio" oninput="ST.m1Data.nome=this.value;"/>
+          </div>
+          <div class="m1-field">
+            <span class="m1-field-label">Cognome</span>
+            <input id="m1-cognome" class="m1-field-text" type="text" autocomplete="family-name" placeholder="Es. Fiorito" oninput="ST.m1Data.cognome=this.value;"/>
           </div>
         </div>
-        <div id="tdee-preview" class="tdee-preview" style="display:none;margin-top:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div><div class="tdee-lbl">Target calorico stimato (Zona 40·30·30)</div><div class="tdee-main" id="tdee-kcal">—</div><div class="tdee-lbl" id="tdee-note">inserisci i dati sopra</div></div>
-            <div style="text-align:right;"><div style="font-size:10px;color:rgba(255,255,255,.6);font-family:'JetBrains Mono',monospace;">OBIETTIVO</div><div style="font-size:16px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;" id="tdee-goal-diff">—</div></div>
+        <p class="m1-mantra">Ogni percorso comincia da chi sei oggi.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s1')">Continua →</button>
+      </div>
+      <div id="m1-err-s1" class="m1-err"></div>
+    </div>
+
+    <!-- STEP 2 — Parlaci di te -->
+    <div id="m1-s2" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-eyebrow-section">Anagrafica</div>
+        <div class="m1-field">
+          <span class="m1-field-label">Età</span>
+          <div class="m1-field-row">
+            <input id="m1-eta" type="number" inputmode="numeric" min="14" max="120" placeholder="35" oninput="ST.m1Data.eta=parseInt(this.value)||null;"/>
+            <span class="m1-field-unit">ANNI</span>
           </div>
-          <div class="tdee-macros"><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-prot">—</div><div class="tdee-macro-lbl">Proteine g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-carbs">—</div><div class="tdee-macro-lbl">Carboidrati g</div></div><div class="tdee-macro"><div class="tdee-macro-val" id="tdee-fat">—</div><div class="tdee-macro-lbl">Grassi g</div></div></div>
         </div>
+        <div class="m1-field">
+          <span class="m1-field-label">Sesso</span>
+          <div class="m1-sex-row">
+            <button type="button" class="m1-sex-pill" id="m1-sex-M" onclick="m1SetSesso('M')">M</button>
+            <button type="button" class="m1-sex-pill" id="m1-sex-F" onclick="m1SetSesso('F')">F</button>
+            <button type="button" class="m1-sex-pill" id="m1-sex-O" onclick="m1SetSesso('O')">Altro</button>
+          </div>
+        </div>
+        <div class="m1-field">
+          <span class="m1-field-label">Altezza</span>
+          <div class="m1-field-row">
+            <input id="m1-altezza" type="number" inputmode="decimal" step="0.1" placeholder="178" oninput="ST.m1Data.altezza=parseFloat(this.value)||null;"/>
+            <span class="m1-field-unit">CM</span>
+          </div>
+        </div>
+
+        <div class="m1-eyebrow-section">Peso</div>
+        <div class="m1-row-2">
+          <div class="m1-field">
+            <span class="m1-field-label">Attuale</span>
+            <div class="m1-field-row">
+              <input id="m1-peso-att" type="number" inputmode="decimal" step="0.1" placeholder="74,5" oninput="ST.m1Data.peso_attuale=parseFloat(this.value)||null;"/>
+              <span class="m1-field-unit">KG</span>
+            </div>
+          </div>
+          <div class="m1-field">
+            <span class="m1-field-label">Obiettivo</span>
+            <div class="m1-field-row">
+              <input id="m1-peso-goal" type="number" inputmode="decimal" step="0.1" placeholder="70" oninput="ST.m1Data.peso_obiettivo=parseFloat(this.value)||null;"/>
+              <span class="m1-field-unit">KG</span>
+            </div>
+          </div>
+        </div>
+        <p class="m1-mantra">I numeri dicono dove sei e chi potrai diventare.</p>
       </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s2')">Continua →</button>
+      </div>
+      <div id="m1-err-s2" class="m1-err"></div>
     </div>
 
-    <!-- STEP 3: Obiettivo e dieta -->
-    <div id="onb-s3" style="display:none">
+    <!-- STEP 3 — Definiamo l'obiettivo -->
+    <div id="m1-s3" class="m1-step">
       <div class="onb-section">
-        <div class="onb-section-title">Obiettivo</div>
-        <div class="onb-pills">
-          <button class="onb-pill active" onclick="setOnbPill('objective','dimagrimento')" id="obj-dimagrimento">Dimagrimento</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','ricomposizione')" id="obj-ricomposizione">Ricomposizione</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','ipertrofia')" id="obj-ipertrofia">Ipertrofia</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','forza_performance')" id="obj-forza_performance">Forza & Performance</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','longevita')" id="obj-longevita">Longevità</button>
-          <button class="onb-pill" onclick="setOnbPill('objective','mantenimento')" id="obj-mantenimento">Mantenimento</button>
+        <div class="m1-goal-grid" id="m1-goal-grid">
+          <button type="button" class="m1-card-goal" data-goal="dimagrimento" onclick="m1ToggleObiettivo('dimagrimento')">
+            <div class="m1-card-goal-title">Dimagrimento</div>
+            <div class="m1-card-goal-desc">Ridurre la massa grassa</div>
+          </button>
+          <button type="button" class="m1-card-goal" data-goal="ricomposizione" onclick="m1ToggleObiettivo('ricomposizione')">
+            <div class="m1-card-goal-title">Ricomposizione</div>
+            <div class="m1-card-goal-desc">Perdere grasso, mantenere muscolo</div>
+          </button>
+          <button type="button" class="m1-card-goal" data-goal="ipertrofia" onclick="m1ToggleObiettivo('ipertrofia')">
+            <div class="m1-card-goal-title">Ipertrofia</div>
+            <div class="m1-card-goal-desc">Aumentare la massa muscolare</div>
+          </button>
+          <button type="button" class="m1-card-goal" data-goal="forza_performance" onclick="m1ToggleObiettivo('forza_performance')">
+            <div class="m1-card-goal-title">Forza & Performance</div>
+            <div class="m1-card-goal-desc">Migliorare prestazioni atletiche</div>
+          </button>
+          <button type="button" class="m1-card-goal" data-goal="longevita" onclick="m1ToggleObiettivo('longevita')">
+            <div class="m1-card-goal-title">Longevità</div>
+            <div class="m1-card-goal-desc">Salute a lungo termine</div>
+          </button>
+          <button type="button" class="m1-card-goal" data-goal="mantenimento" onclick="m1ToggleObiettivo('mantenimento')">
+            <div class="m1-card-goal-title">Mantenimento</div>
+            <div class="m1-card-goal-desc">Stabilizzare i risultati</div>
+          </button>
         </div>
+        <div class="m1-goal-counter" id="m1-goal-counter">0 di 2 selezionati</div>
+        <p class="m1-mantra">Definire la meta è già metà del cammino.</p>
       </div>
-      <div class="onb-section" style="margin-top:20px;">
-        <div class="onb-section-title">Dieta</div>
-        <div class="onb-pills">
-          <button class="onb-pill active" onclick="setOnbPill('diet','onnivoro')" id="diet-onnivoro">Onnivoro</button>
-          <button class="onb-pill" onclick="setOnbPill('diet','pescetariano')" id="diet-pescetariano">Pescetariano</button>
-          <button class="onb-pill" onclick="setOnbPill('diet','vegetariano')" id="diet-vegetariano">Vegetariano</button>
-          <button class="onb-pill" onclick="setOnbPill('diet','vegano')" id="diet-vegano">Vegano</button>
-        </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s3')">Continua →</button>
       </div>
+      <div id="m1-err-s3" class="m1-err"></div>
     </div>
 
-    <!-- STEP 4: Intolleranze -->
-    <div id="onb-s4" style="display:none">
+    <!-- STEP 4 — Il tuo livello -->
+    <div id="m1-s4" class="m1-step">
       <div class="onb-section">
-        <div class="onb-section-title">Intolleranze e allergie</div>
-        <div class="onb-pills">
-          <button class="onb-pill" onclick="toggleIntolleranza('lattosio')" id="intol-lattosio">Lattosio</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('glutine')" id="intol-glutine">Glutine</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('uova')" id="intol-uova">Uova</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('frutta_a_guscio')" id="intol-frutta_a_guscio">Frutta a guscio</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('soia')" id="intol-soia">Soia</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('pesce')" id="intol-pesce">Pesce</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('crostacei')" id="intol-crostacei">Crostacei</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('nichel')" id="intol-nichel">Nichel</button>
-          <button class="onb-pill" onclick="toggleIntolleranza('altro')" id="intol-altro">Altro</button>
-        </div>
+        <div class="m1-eyebrow-section">Attività quotidiana</div>
+        <button type="button" class="m1-card-level" data-act="sedentary" onclick="m1SetAttivita('sedentary')">
+          <div class="m1-card-level-title">Sedentario</div>
+          <div class="m1-card-level-desc">Lavoro da scrivania, poco movimento</div>
+        </button>
+        <button type="button" class="m1-card-level" data-act="lightly_active" onclick="m1SetAttivita('lightly_active')">
+          <div class="m1-card-level-title">Leggero</div>
+          <div class="m1-card-level-desc">Camminate occasionali, 1-2 attività a settimana</div>
+        </button>
+        <button type="button" class="m1-card-level" data-act="moderate" onclick="m1SetAttivita('moderate')">
+          <div class="m1-card-level-title">Moderato</div>
+          <div class="m1-card-level-desc">Attività regolare, 3-4 volte a settimana</div>
+        </button>
+        <button type="button" class="m1-card-level" data-act="active" onclick="m1SetAttivita('active')">
+          <div class="m1-card-level-title">Attivo</div>
+          <div class="m1-card-level-desc">Allenamento intenso, 5-6 volte a settimana</div>
+        </button>
+        <button type="button" class="m1-card-level" data-act="very_active" onclick="m1SetAttivita('very_active')">
+          <div class="m1-card-level-title">Molto attivo</div>
+          <div class="m1-card-level-desc">Atleta o lavoro fisico quotidiano</div>
+        </button>
+
+        <div class="m1-eyebrow-section">Esperienza con l'allenamento</div>
+        <button type="button" class="m1-card-level" data-esp="mai" onclick="m1SetEsperienza('mai')">
+          <div class="m1-card-level-title">Mai allenato</div>
+          <div class="m1-card-level-desc">È la prima volta che inizio un percorso</div>
+        </button>
+        <button type="button" class="m1-card-level" data-esp="base" onclick="m1SetEsperienza('base')">
+          <div class="m1-card-level-title">Base</div>
+          <div class="m1-card-level-desc">Ho fatto sport saltuariamente</div>
+        </button>
+        <button type="button" class="m1-card-level" data-esp="intermedio" onclick="m1SetEsperienza('intermedio')">
+          <div class="m1-card-level-title">Intermedio</div>
+          <div class="m1-card-level-desc">Ho una routine consolidata</div>
+        </button>
+        <button type="button" class="m1-card-level" data-esp="avanzato" onclick="m1SetEsperienza('avanzato')">
+          <div class="m1-card-level-title">Avanzato</div>
+          <div class="m1-card-level-desc">Anni di esperienza, conosco i protocolli</div>
+        </button>
+        <p class="m1-mantra">Sapere da dove parti rende il viaggio più chiaro.</p>
       </div>
-      <div class="onb-section" style="margin-top:20px;">
-        <div class="onb-section-title">Note aggiuntive</div>
-        <textarea id="onb-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, intolleranza nichel..." style="resize:none;"></textarea>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s4')">Continua →</button>
       </div>
+      <div id="m1-err-s4" class="m1-err"></div>
     </div>
 
-    <!-- STEP 5: Routine e allenamento -->
-    <div id="onb-s5" style="display:none">
+    <!-- STEP 5 — Come mangi -->
+    <div id="m1-s5" class="m1-step">
       <div class="onb-section">
-        <div class="onb-section-title">Tipo allenamento</div>
-        <div class="onb-pills">
-          <button class="onb-pill" onclick="setOnbPill('workout','forza')" id="wk-forza">Forza</button>
-          <button class="onb-pill" onclick="setOnbPill('workout','cardio')" id="wk-cardio">Cardio</button>
-          <button class="onb-pill active" onclick="setOnbPill('workout','misto')" id="wk-misto">Misto</button>
-          <button class="onb-pill" onclick="setOnbPill('workout','nessuno')" id="wk-nessuno">Nessuno</button>
+        <div class="m1-eyebrow-section">Stile alimentare</div>
+        <button type="button" class="m1-card-level" data-diet="onnivoro" onclick="m1SetStile('onnivoro')">
+          <div class="m1-card-level-title">Onnivoro</div>
+          <div class="m1-card-level-desc">Mangio di tutto</div>
+        </button>
+        <button type="button" class="m1-card-level" data-diet="pescetariano" onclick="m1SetStile('pescetariano')">
+          <div class="m1-card-level-title">Pescetariano</div>
+          <div class="m1-card-level-desc">Pesce sì, carne no</div>
+        </button>
+        <button type="button" class="m1-card-level" data-diet="vegetariano" onclick="m1SetStile('vegetariano')">
+          <div class="m1-card-level-title">Vegetariano</div>
+          <div class="m1-card-level-desc">Niente carne né pesce</div>
+        </button>
+        <button type="button" class="m1-card-level" data-diet="vegano" onclick="m1SetStile('vegano')">
+          <div class="m1-card-level-title">Vegano</div>
+          <div class="m1-card-level-desc">Solo alimenti vegetali</div>
+        </button>
+        <button type="button" class="m1-card-level" data-diet="altro" onclick="m1SetStile('altro')">
+          <div class="m1-card-level-title">Altro</div>
+          <div class="m1-card-level-desc">Specificherò più avanti</div>
+        </button>
+
+        <div class="m1-eyebrow-section">Intolleranze e esclusioni</div>
+        <p class="m1-helper">Seleziona quelle che ti riguardano. Se non hai intolleranze, prosegui.</p>
+
+        <div class="m1-eyebrow-subsection">Allergie e intolleranze</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-intol="lattosio" onclick="m1TogglePill('intolleranze','lattosio')">Lattosio</button>
+          <button type="button" class="m1-pill-toggle" data-intol="glutine" onclick="m1TogglePill('intolleranze','glutine')">Glutine</button>
+          <button type="button" class="m1-pill-toggle" data-intol="uova" onclick="m1TogglePill('intolleranze','uova')">Uova</button>
+          <button type="button" class="m1-pill-toggle" data-intol="frutta_a_guscio" onclick="m1TogglePill('intolleranze','frutta_a_guscio')">Frutta a guscio</button>
+          <button type="button" class="m1-pill-toggle" data-intol="arachidi" onclick="m1TogglePill('intolleranze','arachidi')">Arachidi</button>
+          <button type="button" class="m1-pill-toggle" data-intol="soia" onclick="m1TogglePill('intolleranze','soia')">Soia</button>
+          <button type="button" class="m1-pill-toggle" data-intol="crostacei" onclick="m1TogglePill('intolleranze','crostacei')">Crostacei</button>
+          <button type="button" class="m1-pill-toggle" data-intol="molluschi" onclick="m1TogglePill('intolleranze','molluschi')">Molluschi</button>
+          <button type="button" class="m1-pill-toggle" data-intol="pesce" onclick="m1TogglePill('intolleranze','pesce')">Pesce</button>
+          <button type="button" class="m1-pill-toggle" data-intol="sesamo" onclick="m1TogglePill('intolleranze','sesamo')">Sesamo</button>
         </div>
-      </div>
-      <div class="onb-section" style="margin-top:20px;">
-        <div class="onb-grid">
-          <div class="onb-field"><label>Giorni/settimana</label><input id="onb-giorni-allenamento" class="inp inp-sm" type="number" min="0" max="7" placeholder="es. 4"/></div>
-          <div class="onb-field"><label>Durata sessione (min)</label><input id="onb-durata-sessione" class="inp inp-sm" type="number" min="0" placeholder="es. 60"/></div>
+
+        <div class="m1-eyebrow-subsection">Esclusioni dietetiche</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-intol="carne_rossa" onclick="m1TogglePill('intolleranze','carne_rossa')">Carne rossa</button>
+          <button type="button" class="m1-pill-toggle" data-intol="carne_bianca" onclick="m1TogglePill('intolleranze','carne_bianca')">Carne bianca</button>
+          <button type="button" class="m1-pill-toggle" data-intol="maiale" onclick="m1TogglePill('intolleranze','maiale')">Maiale</button>
+          <button type="button" class="m1-pill-toggle" data-intol="alcol" onclick="m1TogglePill('intolleranze','alcol')">Alcol</button>
         </div>
-      </div>
-      <div class="onb-section" style="margin-top:20px;">
-        <div class="onb-section-title">Giorno di recupero / digiuno</div>
-        <div class="onb-pills">
-          <button class="onb-pill" onclick="toggleRecoveryDay('lun')" id="rec-lun">Lun</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('mar')" id="rec-mar">Mar</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('mer')" id="rec-mer">Mer</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('gio')" id="rec-gio">Gio</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('ven')" id="rec-ven">Ven</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('sab')" id="rec-sab">Sab</button>
-          <button class="onb-pill" onclick="toggleRecoveryDay('dom')" id="rec-dom">Dom</button>
+
+        <div class="m1-eyebrow-subsection">Sensibilità</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-intol="nichel" onclick="m1TogglePill('intolleranze','nichel')">Nichel</button>
+          <button type="button" class="m1-pill-toggle" data-intol="solfiti" onclick="m1TogglePill('intolleranze','solfiti')">Solfiti</button>
+          <button type="button" class="m1-pill-toggle" data-intol="altro" id="m1-intol-altro-btn" onclick="m1ToggleAltro('intol')">Altro</button>
         </div>
+        <textarea id="m1-altre-intol" class="m1-field-textarea" placeholder="Specifica altre intolleranze o esclusioni…" style="display:none;" oninput="ST.m1Data.altre_intolleranze=this.value;"></textarea>
       </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s5')">Continua →</button>
+      </div>
+      <div id="m1-err-s5" class="m1-err"></div>
     </div>
 
-    <!-- Navigazione -->
-    <div class="onb-nav">
-      <button class="btn btn-ghost btn-full" id="onb-back-btn" onclick="onbGoStep(ST.onbStep-1)" style="display:none">← Indietro</button>
-      <button class="btn btn-primary btn-full" id="onb-next-btn" onclick="onbNextOrSave()">Avanti →</button>
+    <!-- STEP 6 — Cosa devo sapere -->
+    <div id="m1-s6" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-eyebrow-section">Aree e condizioni</div>
+        <p class="m1-helper">Seleziona quelle che ti riguardano. Se non hai limitazioni, prosegui.</p>
+
+        <div class="m1-eyebrow-subsection">Schiena, collo e spalle</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-lim="lombare" onclick="m1TogglePill('limitazioni','lombare')">Schiena lombare</button>
+          <button type="button" class="m1-pill-toggle" data-lim="cervicale" onclick="m1TogglePill('limitazioni','cervicale')">Schiena cervicale</button>
+          <button type="button" class="m1-pill-toggle" data-lim="spalle" onclick="m1TogglePill('limitazioni','spalle')">Spalle</button>
+        </div>
+
+        <div class="m1-eyebrow-subsection">Articolazioni</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-lim="gomiti" onclick="m1TogglePill('limitazioni','gomiti')">Gomiti</button>
+          <button type="button" class="m1-pill-toggle" data-lim="polsi" onclick="m1TogglePill('limitazioni','polsi')">Polsi</button>
+          <button type="button" class="m1-pill-toggle" data-lim="anche" onclick="m1TogglePill('limitazioni','anche')">Anche</button>
+          <button type="button" class="m1-pill-toggle" data-lim="ginocchia" onclick="m1TogglePill('limitazioni','ginocchia')">Ginocchia</button>
+          <button type="button" class="m1-pill-toggle" data-lim="caviglie" onclick="m1TogglePill('limitazioni','caviglie')">Caviglie</button>
+        </div>
+
+        <div class="m1-eyebrow-subsection">Condizioni e altro</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-lim="ernie" onclick="m1TogglePill('limitazioni','ernie')">Ernie addominali</button>
+          <button type="button" class="m1-pill-toggle" data-lim="cardiovascolari" onclick="m1TogglePill('limitazioni','cardiovascolari')">Patologie cardiovascolari</button>
+          <button type="button" class="m1-pill-toggle" data-lim="ipertensione" onclick="m1TogglePill('limitazioni','ipertensione')">Ipertensione</button>
+          <button type="button" class="m1-pill-toggle" data-lim="altro" id="m1-lim-altro-btn" onclick="m1ToggleAltro('lim')">Altro</button>
+        </div>
+        <textarea id="m1-altre-lim" class="m1-field-textarea" placeholder="Specifica altre condizioni…" style="display:none;" oninput="ST.m1Data.altre_limitazioni=this.value;"></textarea>
+
+        <p class="m1-mantra">Niente di importante si costruisce ignorando i segnali.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s6')">Continua →</button>
+      </div>
+      <div id="m1-err-s6" class="m1-err"></div>
     </div>
-    <div id="onb-err" style="color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;"></div>
+
+    <!-- STEP 7 — Ci siamo, {nome} -->
+    <div id="m1-s7" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-summary-row">
+          <div class="m1-summary-row-label">Foto</div>
+          <div class="m1-summary-row-text">4 foto del corpo: front, retro, lato dx, lato sx.</div>
+        </div>
+        <div class="m1-summary-row">
+          <div class="m1-summary-row-label">Misure</div>
+          <div class="m1-summary-row-text">Peso preciso e circonferenze principali.</div>
+        </div>
+        <div class="m1-summary-row">
+          <div class="m1-summary-row-label">Esami</div>
+          <div class="m1-summary-row-text">Valori recenti, se li hai. Si possono aggiungere anche dopo.</div>
+        </div>
+        <p class="m1-mantra">Ecco il tuo primo vero passo.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" id="m1-final-cta" onclick="saveOnboarding()">Inizia il check fisico →</button>
+        <span class="m1-cta-link" onclick="m1FinalSkip()">Salta per ora</span>
+      </div>
+      <div id="m1-err-s7" class="m1-err"></div>
+    </div>
+
   </div>
 </div>
 
@@ -1779,7 +2108,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.14 · 21:01';
+const APP_VERSION = '2026.05.15 · 07:05';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1803,14 +2132,21 @@ const ST = {
   advLoading: false,
   nextSlot: 'pranzo',
   reportRange: 7,
-  onbStep: 1,
-  onbSex: 'M',
-  onbActivity: 'moderate',
-  onbObjective: 'dimagrimento',
-  onbDiet: 'onnivoro',
-  onbIntolleranze: [],
-  onbWorkout: 'misto',
-  onbRecoveryDay: [],
+  // Nuovo M1 onboarding (9 schermate: welcome + auth-email + auth-otp + 7 step)
+  m1AuthState: 'welcome',   // 'welcome' | 'email' | 'otp'
+  m1Step: 's1',             // 's1'..'s7' (dentro #onboarding-screen)
+  m1OtpCells: ['','','','','',''],
+  m1OtpResendIn: 0,         // secondi residui prima del resend abilitato
+  m1Data: {
+    nome:'', cognome:'',
+    eta:null, sesso:null, altezza:null,
+    peso_attuale:null, peso_obiettivo:null,
+    obiettivi:[],
+    attivita:null, esperienza:null,
+    stile_alimentare:null,
+    intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
+    limitazioni:[], altre_limitazioni:'', altro_lim_open:false,
+  },
   syncStatus: 'ok',
   catalog: [],
   catalogSelected: [],
@@ -1955,103 +2291,280 @@ function ageFromDob(dob) {
   return age > 0 ? age : null;
 }
 
-function updateTDEEPreview() {
-  const dob    = document.getElementById('onb-dob')?.value;
-  const height = parseFloat(document.getElementById('onb-height')?.value);
-  const weight = parseFloat(document.getElementById('onb-weight')?.value);
-  const goalW  = parseFloat(document.getElementById('onb-goal-weight')?.value);
-  const age    = ageFromDob(dob);
-  const prev   = document.getElementById('tdee-preview');
-  if(!age || !height || !weight) { if(prev) prev.style.display='none'; return; }
-  const r = calcTDEE(ST.onbSex, age, height, weight, ST.onbActivity);
-  if(prev) prev.style.display='block';
-  document.getElementById('tdee-kcal').textContent = r.target + ' kcal';
-  document.getElementById('tdee-prot').textContent = r.protein + 'g';
-  document.getElementById('tdee-carbs').textContent = r.carbs + 'g';
-  document.getElementById('tdee-fat').textContent = r.fat + 'g';
-  if(goalW && weight) {
-    const diff = Math.abs(weight - goalW);
-    const dir  = weight > goalW ? '▼' : '▲';
-    document.getElementById('tdee-goal-diff').textContent = `${dir} ${diff.toFixed(1)} kg`;
-    document.getElementById('tdee-note').textContent = `TDEE: ${r.tdee} kcal · deficit 300 kcal`;
+// ═══════════════════════════════════════════════════════════
+// M1 ONBOARDING — nuovo (welcome + auth + 7 step)
+// ═══════════════════════════════════════════════════════════
+
+// ── AUTH state machine (dentro #auth-screen) ──────────────
+function m1ShowAuth(state) {
+  ST.m1AuthState = state;
+  const w = document.getElementById('m1-welcome');
+  const e = document.getElementById('auth-step1');
+  const o = document.getElementById('auth-step2');
+  if(w) w.style.display = (state === 'welcome') ? 'flex' : 'none';
+  if(e) e.style.display = (state === 'email')   ? 'flex' : 'none';
+  if(o) o.style.display = (state === 'otp')     ? 'flex' : 'none';
+  hideAuthMsg();
+  if(state === 'email') setTimeout(() => document.getElementById('auth-email')?.focus(), 100);
+  if(state === 'otp') {
+    // reset OTP cells + start resend timer
+    ST.m1OtpCells = ['','','','','',''];
+    document.querySelectorAll('#m1-otp-grid .m1-otp-cell').forEach(el => { el.value = ''; });
+    document.getElementById('auth-otp').value = '';
+    const emailPill = document.getElementById('m1-otp-email');
+    if(emailPill) emailPill.textContent = _otpEmail;
+    m1StartResendTimer();
+    setTimeout(() => document.querySelector('#m1-otp-grid .m1-otp-cell')?.focus(), 100);
   }
 }
 
-function setSex(s) {
-  ST.onbSex = s;
-  ['M','F'].forEach(x => document.getElementById('sex-'+x)?.classList.toggle('active', x===s));
-  updateTDEEPreview();
+// ── OTP cells (6 caselle) ──────────────────────────────────
+function m1OtpInput(idx, e) {
+  let v = (e.target.value || '').replace(/\D/g, '');
+  if(v.length > 1) v = v.slice(0, 1);  // 1 carattere per cella (paste gestito altrove)
+  e.target.value = v;
+  ST.m1OtpCells[idx] = v;
+  // sync hidden input
+  document.getElementById('auth-otp').value = ST.m1OtpCells.join('');
+  // auto-advance focus
+  if(v && idx < 5) {
+    const cells = document.querySelectorAll('#m1-otp-grid .m1-otp-cell');
+    cells[idx + 1]?.focus();
+  }
+  // 6 cifre complete → verifica auto
+  if(ST.m1OtpCells.join('').length === 6) verifyOTP();
 }
-function setActivity(a) {
-  ST.onbActivity = a;
-  ['sedentary','lightly_active','moderate','active','very_active'].forEach(x =>
-    document.getElementById('act-'+x)?.classList.toggle('active', x===a));
-  updateTDEEPreview();
+function m1OtpKey(idx, e) {
+  if(e.key === 'Backspace' && !e.target.value && idx > 0) {
+    const cells = document.querySelectorAll('#m1-otp-grid .m1-otp-cell');
+    cells[idx - 1]?.focus();
+  }
+}
+function m1OtpPaste(e) {
+  e.preventDefault();
+  const txt = (e.clipboardData || window.clipboardData).getData('text') || '';
+  const digits = txt.replace(/\D/g, '').slice(0, 6);
+  if(!digits) return;
+  const cells = document.querySelectorAll('#m1-otp-grid .m1-otp-cell');
+  for(let i = 0; i < 6; i++) {
+    const d = digits[i] || '';
+    ST.m1OtpCells[i] = d;
+    if(cells[i]) cells[i].value = d;
+  }
+  document.getElementById('auth-otp').value = ST.m1OtpCells.join('');
+  cells[Math.min(digits.length, 5)]?.focus();
+  if(digits.length === 6) verifyOTP();
 }
 
-// ── ONBOARDING STEP NAV ────────────────────────────────────
-const ONB_META = [
-  ['Dati personali',     'Come ti chiami e quando sei nato?'],
-  ['Dati biometrici',    'Altezza, peso e attività per calcolare il tuo TDEE.'],
-  ['Obiettivo e dieta',  'Cosa vuoi raggiungere e come mangi?'],
-  ['Intolleranze',       'Ci sono alimenti che eviti o a cui sei sensibile?'],
-  ['Allenamento',        'Raccontaci la tua routine settimanale.'],
-];
+let _m1ResendInterval = null;
+function m1StartResendTimer() {
+  ST.m1OtpResendIn = 30;
+  m1UpdateResendText();
+  if(_m1ResendInterval) clearInterval(_m1ResendInterval);
+  _m1ResendInterval = setInterval(() => {
+    ST.m1OtpResendIn--;
+    if(ST.m1OtpResendIn <= 0) {
+      clearInterval(_m1ResendInterval); _m1ResendInterval = null;
+    }
+    m1UpdateResendText();
+  }, 1000);
+}
+function m1UpdateResendText() {
+  const el = document.getElementById('m1-otp-resend');
+  if(!el) return;
+  if(ST.m1OtpResendIn > 0) {
+    el.innerHTML = `Non l'hai ricevuto? Rinvia tra <b style="cursor:default;text-decoration:none;">${ST.m1OtpResendIn}s</b>`;
+  } else {
+    el.innerHTML = `Non l'hai ricevuto? <b onclick="m1Resend()">Rinvia il codice</b>`;
+  }
+}
+async function m1Resend() {
+  if(ST.m1OtpResendIn > 0) return;
+  const {error} = await supa.auth.signInWithOtp({ email: _otpEmail, options: { shouldCreateUser: true } });
+  if(error) { showAuthMsg('Errore reinvio: ' + error.message, 'err'); return; }
+  m1StartResendTimer();
+}
 
-function onbGoStep(n) {
-  if (n < 1 || n > 5) return;
-  document.getElementById('onb-s' + ST.onbStep).style.display = 'none';
-  ST.onbStep = n;
-  document.getElementById('onb-s' + n).style.display = 'block';
-  const [label, sub] = ONB_META[n-1];
-  document.getElementById('onb-step-label').textContent = `Step ${n} di 5 — ${label}`;
-  document.getElementById('onb-subtitle').textContent = sub;
-  document.getElementById('onb-progress-fill').style.width = (n * 20) + '%';
-  document.getElementById('onb-back-btn').style.display = n > 1 ? 'block' : 'none';
-  document.getElementById('onb-next-btn').textContent = n === 5 ? 'Inizia a tracciare →' : 'Avanti →';
-  document.getElementById('onb-err').style.display = 'none';
+// ── M1 step navigation ────────────────────────────────────
+const M1_HEADERS = {
+  s1: { title:'Iniziamo da te',          sub:'Useremo il tuo nome per parlarti durante il percorso.' },
+  s2: { title:'Parlaci di te',           sub:'Servono per calcolare il tuo fabbisogno e personalizzare il piano.' },
+  s3: { title:"Definiamo l'obiettivo",   sub:'Scegli fino a 2 obiettivi. Possono essere combinati.' },
+  s4: { title:'Il tuo livello',          sub:'Per calibrare il piano alle tue capacità reali.' },
+  s5: { title:'Come mangi',              sub:'Per costruire un piano che rispetti il tuo stile alimentare.' },
+  s6: { title:'Cosa devo sapere',        sub:'Aree del corpo o condizioni che richiedono attenzione. Ci servono per adattare il piano allenamento.' },
+  s7: { title:'',                        sub:'I tuoi dati base sono salvati. Manca un ultimo passo per attivare il tuo piano personale.' },
+};
+
+function m1GoStep(stepId) {
+  if(!M1_HEADERS[stepId]) return;
+  ST.m1Step = stepId;
+  // toggle visibility steps
+  document.querySelectorAll('#onboarding-screen .m1-step').forEach(el => el.classList.remove('active'));
+  document.getElementById('m1-' + stepId)?.classList.add('active');
+  // header
+  const n = parseInt(stepId.slice(1), 10);
+  let title = M1_HEADERS[stepId].title;
+  if(stepId === 's7') {
+    const nome = (ST.m1Data.nome || '').trim() || 'amico';
+    title = `Ci siamo, ${nome}.`;
+  }
+  const titleEl = document.getElementById('m1-title');
+  const subEl   = document.getElementById('m1-subtitle');
+  const lblEl   = document.getElementById('m1-progress-label');
+  if(titleEl) titleEl.textContent = title;
+  if(subEl)   subEl.textContent   = M1_HEADERS[stepId].sub;
+  if(lblEl)   lblEl.textContent   = `Passo ${n} di 7`;
+  // progress segments
+  document.querySelectorAll('#onboarding-screen .m1-progress-segment').forEach(seg => {
+    const k = parseInt(seg.getAttribute('data-seg'), 10);
+    seg.classList.toggle('done', k <= n);
+  });
+  // back button: visible da s2 in poi
+  const back = document.getElementById('m1-back-btn');
+  if(back) back.style.display = n > 1 ? 'block' : 'none';
+  // err reset + scroll top
+  const errEl = document.getElementById('m1-err-' + stepId);
+  if(errEl) errEl.classList.remove('show');
   document.getElementById('onboarding-screen').scrollTop = 0;
 }
 
-function onbNextOrSave() {
-  const errEl = document.getElementById('onb-err');
-  errEl.style.display = 'none';
-  if (ST.onbStep === 1) {
-    if (!document.getElementById('onb-fname').value.trim()) { errEl.style.display='block'; errEl.textContent='Inserisci il nome.'; return; }
-    if (!document.getElementById('onb-lname').value.trim()) { errEl.style.display='block'; errEl.textContent='Inserisci il cognome.'; return; }
-    if (!document.getElementById('onb-dob').value)          { errEl.style.display='block'; errEl.textContent='Inserisci la data di nascita.'; return; }
+function m1Back() {
+  const n = parseInt(ST.m1Step.slice(1), 10);
+  if(n <= 1) return;
+  m1GoStep('s' + (n - 1));
+}
+
+function m1NextFrom(stepId) {
+  const errEl = document.getElementById('m1-err-' + stepId);
+  const showErr = (msg) => { if(errEl){ errEl.textContent = msg; errEl.classList.add('show'); } };
+  if(errEl) errEl.classList.remove('show');
+  const d = ST.m1Data;
+  if(stepId === 's1') {
+    if(!d.nome || !d.nome.trim())    return showErr('Inserisci il nome.');
+    if(!d.cognome || !d.cognome.trim()) return showErr('Inserisci il cognome.');
+  } else if(stepId === 's2') {
+    if(!d.eta || d.eta < 14 || d.eta > 120) return showErr("Inserisci un'età valida.");
+    if(!d.sesso) return showErr('Scegli un sesso.');
+    if(!d.altezza || d.altezza < 100 || d.altezza > 230) return showErr("Inserisci un'altezza valida (cm).");
+    if(!d.peso_attuale || d.peso_attuale < 30 || d.peso_attuale > 300) return showErr('Inserisci il peso attuale (kg).');
+    if(!d.peso_obiettivo || d.peso_obiettivo < 30 || d.peso_obiettivo > 300) return showErr('Inserisci il peso obiettivo (kg).');
+  } else if(stepId === 's3') {
+    if(!d.obiettivi || d.obiettivi.length === 0) return showErr('Scegli almeno un obiettivo.');
+  } else if(stepId === 's4') {
+    if(!d.attivita)    return showErr('Scegli il tuo livello di attività.');
+    if(!d.esperienza)  return showErr("Scegli il tuo livello di esperienza con l'allenamento.");
+  } else if(stepId === 's5') {
+    if(!d.stile_alimentare) return showErr('Scegli il tuo stile alimentare.');
   }
-  if (ST.onbStep === 2) {
-    if (!document.getElementById('onb-height').value)      { errEl.style.display='block'; errEl.textContent="Inserisci l'altezza."; return; }
-    if (!document.getElementById('onb-weight').value)      { errEl.style.display='block'; errEl.textContent='Inserisci il peso attuale.'; return; }
-    if (!document.getElementById('onb-goal-weight').value) { errEl.style.display='block'; errEl.textContent='Inserisci il peso obiettivo.'; return; }
+  // s6 e s7: no required fields. s7 callback è saveOnboarding diretto.
+  const n = parseInt(stepId.slice(1), 10);
+  m1GoStep('s' + (n + 1));
+}
+
+// ── Toggles / setters per step content ─────────────────────
+function m1SetSesso(s) {
+  ST.m1Data.sesso = s;
+  ['M','F','O'].forEach(x =>
+    document.getElementById('m1-sex-' + x)?.classList.toggle('active', x === s));
+}
+function m1ToggleObiettivo(key) {
+  const arr = ST.m1Data.obiettivi;
+  const i = arr.indexOf(key);
+  if(i >= 0) arr.splice(i, 1);
+  else if(arr.length < 2) arr.push(key);
+  // apply classes
+  document.querySelectorAll('#m1-goal-grid .m1-card-goal').forEach(el => {
+    const k = el.getAttribute('data-goal');
+    const selected = arr.includes(k);
+    el.classList.toggle('selected', selected);
+    el.classList.toggle('disabled', !selected && arr.length >= 2);
+  });
+  const ct = document.getElementById('m1-goal-counter');
+  if(ct) ct.textContent = `${arr.length} di 2 selezionati`;
+}
+function m1SetAttivita(a) {
+  ST.m1Data.attivita = a;
+  document.querySelectorAll('#m1-s4 [data-act]').forEach(el =>
+    el.classList.toggle('selected', el.getAttribute('data-act') === a));
+}
+function m1SetEsperienza(e) {
+  ST.m1Data.esperienza = e;
+  document.querySelectorAll('#m1-s4 [data-esp]').forEach(el =>
+    el.classList.toggle('selected', el.getAttribute('data-esp') === e));
+}
+function m1SetStile(s) {
+  ST.m1Data.stile_alimentare = s;
+  document.querySelectorAll('#m1-s5 [data-diet]').forEach(el =>
+    el.classList.toggle('selected', el.getAttribute('data-diet') === s));
+}
+function m1TogglePill(group, val) {
+  const arr = ST.m1Data[group];
+  const i = arr.indexOf(val);
+  if(i >= 0) arr.splice(i, 1);
+  else arr.push(val);
+  const attr = group === 'intolleranze' ? 'data-intol' : 'data-lim';
+  document.querySelectorAll(`[${attr}="${val}"]`).forEach(el =>
+    el.classList.toggle('selected', arr.includes(val)));
+  // gestione speciale "altro"
+  if(val === 'altro') m1ToggleAltro(group === 'intolleranze' ? 'intol' : 'lim');
+}
+function m1ToggleAltro(which) {
+  const isIntol = (which === 'intol');
+  const arrKey = isIntol ? 'intolleranze' : 'limitazioni';
+  const open = ST.m1Data[arrKey].includes('altro');
+  const txtEl = document.getElementById(isIntol ? 'm1-altre-intol' : 'm1-altre-lim');
+  const btnEl = document.getElementById(isIntol ? 'm1-intol-altro-btn' : 'm1-lim-altro-btn');
+  if(txtEl) txtEl.style.display = open ? 'block' : 'none';
+  if(btnEl) btnEl.classList.toggle('selected', open);
+  if(!open) {
+    const fld = isIntol ? 'altre_intolleranze' : 'altre_limitazioni';
+    ST.m1Data[fld] = '';
+    if(txtEl) txtEl.value = '';
   }
-  if (ST.onbStep < 5) { onbGoStep(ST.onbStep + 1); }
-  else                { saveOnboarding(); }
 }
 
-function setOnbPill(category, value) {
-  const prefixMap = {objective:'obj', diet:'diet', workout:'wk', recovery:'rec'};
-  const stateMap  = {objective:'onbObjective', diet:'onbDiet', workout:'onbWorkout', recovery:'onbRecoveryDay'};
-  ST[stateMap[category]] = value;
-  const prefix = prefixMap[category];
-  document.querySelectorAll(`[id^="${prefix}-"]`).forEach(el =>
-    el.classList.toggle('active', el.id === prefix+'-'+value));
+// Ripristina selezioni visive da ST.m1Data (usato all'entrata onboarding)
+function m1ApplySelections() {
+  // inputs valori
+  const setVal = (id, val) => { const el = document.getElementById(id); if(el && val != null) el.value = val; };
+  const d = ST.m1Data;
+  setVal('m1-nome', d.nome);
+  setVal('m1-cognome', d.cognome);
+  setVal('m1-eta', d.eta);
+  setVal('m1-altezza', d.altezza);
+  setVal('m1-peso-att', d.peso_attuale);
+  setVal('m1-peso-goal', d.peso_obiettivo);
+  setVal('m1-altre-intol', d.altre_intolleranze);
+  setVal('m1-altre-lim', d.altre_limitazioni);
+  // sesso
+  if(d.sesso) m1SetSesso(d.sesso);
+  // obiettivi
+  (d.obiettivi || []).slice(0,0); // no-op placeholder
+  document.querySelectorAll('#m1-goal-grid .m1-card-goal').forEach(el => {
+    const k = el.getAttribute('data-goal');
+    const sel = (d.obiettivi || []).includes(k);
+    el.classList.toggle('selected', sel);
+    el.classList.toggle('disabled', !sel && (d.obiettivi || []).length >= 2);
+  });
+  const ct = document.getElementById('m1-goal-counter');
+  if(ct) ct.textContent = `${(d.obiettivi || []).length} di 2 selezionati`;
+  // attivita/esperienza/stile
+  if(d.attivita)   m1SetAttivita(d.attivita);
+  if(d.esperienza) m1SetEsperienza(d.esperienza);
+  if(d.stile_alimentare) m1SetStile(d.stile_alimentare);
+  // pillole intolleranze/limitazioni
+  (d.intolleranze || []).forEach(v => document.querySelectorAll(`[data-intol="${v}"]`).forEach(el => el.classList.add('selected')));
+  (d.limitazioni  || []).forEach(v => document.querySelectorAll(`[data-lim="${v}"]`).forEach(el => el.classList.add('selected')));
+  // textarea visibility
+  const intolAltroOpen = (d.intolleranze || []).includes('altro');
+  const limAltroOpen   = (d.limitazioni  || []).includes('altro');
+  const tx1 = document.getElementById('m1-altre-intol'); if(tx1) tx1.style.display = intolAltroOpen ? 'block' : 'none';
+  const tx2 = document.getElementById('m1-altre-lim');   if(tx2) tx2.style.display = limAltroOpen   ? 'block' : 'none';
 }
 
-function toggleIntolleranza(val) {
-  const i = ST.onbIntolleranze.indexOf(val);
-  if (i < 0) ST.onbIntolleranze.push(val);
-  else ST.onbIntolleranze.splice(i, 1);
-  document.getElementById('intol-'+val)?.classList.toggle('active', ST.onbIntolleranze.includes(val));
-}
-
-function toggleRecoveryDay(val) {
-  const i = ST.onbRecoveryDay.indexOf(val);
-  if (i < 0) ST.onbRecoveryDay.push(val);
-  else ST.onbRecoveryDay.splice(i, 1);
-  document.getElementById('rec-'+val)?.classList.toggle('active', ST.onbRecoveryDay.includes(val));
-}
+// "Salta per ora" su step 7 — salva profilo + segna M2 skip
+function m1FinalSkip() { return saveOnboarding({ skipM2: true }); }
 
 // ═══════════════════════════════════════════════════════════
 // STREAK
@@ -2414,14 +2927,10 @@ async function sendOTP() {
     return;
   }
 
-  // Passa allo step 2
+  // Passa allo step 2 (OTP) usando lo state-machine M1
   _otpEmail = email;
-  document.getElementById('auth-step1').style.display = 'none';
-  document.getElementById('auth-step2').style.display = 'block';
-  const hint = document.getElementById('auth-otp-hint');
-  hint.innerHTML = 'Inserisci il codice a 6 cifre inviato a <strong>' + esc(email) + '</strong>';
-  hideAuthMsg();
-  setTimeout(() => document.getElementById('auth-otp')?.focus(), 100);
+  btn.disabled = false; btn.textContent = 'Invia codice →';
+  m1ShowAuth('otp');
 }
 
 async function verifyOTP() {
@@ -2440,9 +2949,12 @@ async function verifyOTP() {
 
   if (error) {
     showAuthMsg('Codice non valido o scaduto. Riprova.', 'err');
-    btn.disabled = false; btn.textContent = 'Accedi →';
+    btn.disabled = false; btn.textContent = 'Verifica e accedi →';
+    // reset caselle OTP
+    ST.m1OtpCells = ['','','','','',''];
+    document.querySelectorAll('#m1-otp-grid .m1-otp-cell').forEach(el => { el.value = ''; });
     document.getElementById('auth-otp').value = '';
-    document.getElementById('auth-otp').focus();
+    document.querySelector('#m1-otp-grid .m1-otp-cell')?.focus();
     return;
   }
 
@@ -2451,12 +2963,13 @@ async function verifyOTP() {
 }
 
 function backToEmail() {
-  document.getElementById('auth-step2').style.display = 'none';
-  document.getElementById('auth-step1').style.display = 'block';
   document.getElementById('auth-otp').value = '';
+  ST.m1OtpCells = ['','','','','',''];
   const btn = document.getElementById('auth-btn');
-  btn.disabled = false; btn.textContent = 'Invia codice →';
-  hideAuthMsg();
+  if(btn) { btn.disabled = false; btn.textContent = 'Invia codice →'; }
+  const otpBtn = document.getElementById('auth-otp-btn');
+  if(otpBtn) { otpBtn.disabled = false; otpBtn.textContent = 'Verifica e accedi →'; }
+  m1ShowAuth('email');
 }
 
 function showAuthMsg(msg, type) {
@@ -2472,50 +2985,65 @@ function hideAuthMsg() {
 // ═══════════════════════════════════════════════════════════
 // ONBOARDING
 // ═══════════════════════════════════════════════════════════
-async function saveOnboarding() {
-  const fname  = document.getElementById('onb-fname').value.trim();
-  const lname  = document.getElementById('onb-lname').value.trim();
-  const dob    = document.getElementById('onb-dob').value;
-  const height = parseFloat(document.getElementById('onb-height').value);
-  const weight = parseFloat(document.getElementById('onb-weight').value);
-  const goalW  = parseFloat(document.getElementById('onb-goal-weight').value);
-  const age    = ageFromDob(dob);
-  const errEl  = document.getElementById('onb-err');
-  if(!fname || !lname || !dob || !age || !height || !weight || !goalW) {
-    errEl.style.display='block'; errEl.textContent='Compila i campi obbligatori (step 1 e 2).'; return;
+async function saveOnboarding(opts) {
+  opts = opts || {};
+  const d = ST.m1Data;
+  const errEl = document.getElementById('m1-err-s7');
+  const showErr = (msg) => { if(errEl){ errEl.textContent = msg; errEl.classList.add('show'); } };
+  if(errEl) errEl.classList.remove('show');
+
+  // Validazione minima (i passi precedenti hanno già validato; ridondanza difensiva)
+  if(!d.nome || !d.nome.trim())      return showErr('Inserisci il nome.');
+  if(!d.cognome || !d.cognome.trim()) return showErr('Inserisci il cognome.');
+  if(!d.eta || !d.altezza || !d.peso_attuale || !d.peso_obiettivo) {
+    return showErr('Mancano alcuni dati biometrici. Torna indietro.');
   }
-  errEl.style.display='none';
-  const r = calcTDEE(ST.onbSex, age, height, weight, ST.onbActivity);
-  const btn = document.getElementById('onb-next-btn');
-  btn.disabled = true; btn.textContent = 'Salvataggio...';
+  // Mifflin-St Jeor: 'Altro' usa la branch female (più conservativa)
+  const sexForTDEE = d.sesso === 'M' ? 'M' : 'F';
+  const sexForDB   = d.sesso || 'M';
+  const activity   = d.attivita || 'moderate';
+  const r = calcTDEE(sexForTDEE, d.eta, d.altezza, d.peso_attuale, activity);
+
+  const ctaBtn = document.getElementById('m1-final-cta');
+  if(ctaBtn) { ctaBtn.disabled = true; ctaBtn.textContent = 'Salvataggio…'; }
+
+  // note_salute: aggrega esperienza + limitazioni + altre intolleranze + altre limitazioni
+  // (campi senza colonna dedicata su profiles; documentati nel report Fase C).
+  const noteParts = [];
+  if(d.esperienza)                        noteParts.push(`Esperienza: ${d.esperienza}`);
+  if(d.limitazioni && d.limitazioni.length) noteParts.push(`Limitazioni: ${d.limitazioni.filter(x=>x!=='altro').join(', ')}`);
+  if(d.altre_limitazioni && d.altre_limitazioni.trim()) noteParts.push(`Altre condizioni: ${d.altre_limitazioni.trim()}`);
+  if(d.altre_intolleranze && d.altre_intolleranze.trim()) noteParts.push(`Altre intolleranze: ${d.altre_intolleranze.trim()}`);
+  const noteSalute = noteParts.length ? noteParts.join(' · ') : null;
+
+  // intolleranze: filtra "altro" (è solo trigger di textarea)
+  const intolList = (d.intolleranze || []).filter(x => x !== 'altro');
+
+  // obiettivi: CSV string (i reader esistenti lo splittano già — calcAdaptedTargets, applyProfile)
+  const obiettivoCSV = (d.obiettivi && d.obiettivi.length) ? d.obiettivi.join(',') : null;
 
   const profileData = {
     id: ST.user.id,
-    first_name: fname,
-    last_name: lname,
-    age, sex: ST.onbSex,
-    data_nascita: dob,
-    height_cm: height,
-    weight_kg: weight,
-    goal_weight_kg: goalW,
-    activity_level: ST.onbActivity,
-    target_kcal: r.target,
+    first_name: d.nome.trim(),
+    last_name:  d.cognome.trim(),
+    age:        d.eta,
+    sex:        sexForDB,
+    height_cm:  d.altezza,
+    weight_kg:  d.peso_attuale,
+    goal_weight_kg: d.peso_obiettivo,
+    activity_level: activity,
+    target_kcal:    r.target,
     target_protein: r.protein,
-    target_carbs: r.carbs,
-    target_fat: r.fat,
-    obiettivo:          ST.onbObjective   || null,
-    dieta:              ST.onbDiet        || null,
-    intolleranze:       ST.onbIntolleranze.length ? ST.onbIntolleranze : null,
-    note_salute:        document.getElementById('onb-note-salute').value.trim() || null,
-    tipo_allenamento:   ST.onbWorkout     || null,
-    giorni_allenamento: parseInt(document.getElementById('onb-giorni-allenamento').value) || null,
-    giorno_recupero:    ST.onbRecoveryDay.length ? ST.onbRecoveryDay : null,
-    durata_sessione:    parseInt(document.getElementById('onb-durata-sessione').value)    || null,
-    updated_at: new Date().toISOString(),
+    target_carbs:   r.carbs,
+    target_fat:     r.fat,
+    obiettivo:    obiettivoCSV,
+    dieta:        d.stile_alimentare || null,
+    intolleranze: intolList.length ? intolList : null,
+    note_salute:  noteSalute,
+    updated_at:   new Date().toISOString(),
   };
 
   if (ST.user.id === 'test-user-001') {
-    // Modalità test: salva solo in memoria, nessuna chiamata Supabase
     ST.profile = profileData;
     ST.TARGET = { kcal: r.target, protein: r.protein, carbs: r.carbs, fat: r.fat };
     applyProfile(ST.profile);
@@ -2527,13 +3055,17 @@ async function saveOnboarding() {
 
   const {error} = await supa.from('profiles').upsert(profileData);
   if(error) {
-    errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
-    btn.disabled=false; btn.textContent='Inizia a tracciare →'; return;
+    showErr('Errore: ' + error.message);
+    if(ctaBtn) { ctaBtn.disabled = false; ctaBtn.textContent = 'Inizia il check fisico →'; }
+    return;
   }
-  await saveWeightEntry(weight);
-  // M2 entry: ricarica profilo + dati cloud, poi mostra intro check fisico
-  // (test-mode salta M2 e va direttamente all'app)
-  if (ST.user.id === 'test-user-001') { await loadAndStart(); return; }
+  await saveWeightEntry(d.peso_attuale);
+
+  if(opts.skipM2) {
+    // "Salta per ora" su Step 7: marca m2_skipped=true e vai all'app
+    await m2Skip();
+    return;
+  }
   await loadAndStart_thenM2Entry();
 }
 
@@ -3516,8 +4048,17 @@ function showScreen(name) {
   document.getElementById('m2-screen').classList.remove('visible');
   document.getElementById('loading-overlay').classList.add('hide');
   document.getElementById('app').classList.remove('visible');
-  if(name === 'auth')       { document.getElementById('auth-screen').classList.add('visible'); }
-  else if(name === 'onboarding') { document.getElementById('onboarding-screen').classList.add('visible'); }
+  if(name === 'auth')       {
+    document.getElementById('auth-screen').classList.add('visible');
+    // Default: mostra welcome (l'utente arriva qui da bootstrap o logout)
+    m1ShowAuth('welcome');
+  }
+  else if(name === 'onboarding') {
+    document.getElementById('onboarding-screen').classList.add('visible');
+    // Avvia M1 da step 1 e ripristina eventuali selezioni
+    m1GoStep('s1');
+    m1ApplySelections();
+  }
   else if(name === 'm2')    { document.getElementById('m2-screen').classList.add('visible'); }
   else if(name === 'loading') { document.getElementById('loading-overlay').classList.remove('hide'); }
   else if(name === 'app')   {
