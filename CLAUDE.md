@@ -45,11 +45,13 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 ## Stato deploy attuale (15 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
   - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone (donut size, SETTIMANA N/4, top padding, prima versione getPostWorkoutHint, body delta v1)
   - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI (coerenza Home/Nutrition) + fasce chip post-workout corrette
-- **File principale**: `zona-tracker.html` (~12500 righe)
+  - `b5da150` — docs: aggiornamento CLAUDE.md al 15 maggio 2026 (post Fasi A/B/C/D)
+  - `5a64cab` — feat(nutrition): restyling tab OGGI design system v3 + timeline mista pasti pianificati
+- **File principale**: `zona-tracker.html` (~12900 righe)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.15 · HH:MM` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
@@ -834,6 +836,52 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 15 maggio 2026 — Nutrition Oggi restyling design system v3 + timeline mista pasti pianificati
+
+Restyling completo della tab OGGI del modulo Nutrition (commit `5a64cab`) per allinearla al design system definitivo M1/M2/Home V2 (Syne + JetBrains Mono, palette bone+evergreen, tinta Nutrition `#FAC775`). Plus una funzionalità nuova: la timeline ora mostra anche i pasti pianificati dal piano coach come righe cliccabili dashed che pre-compilano il form di registrazione.
+
+**Restyling visivo** (classi nuove prefisso `.oggi-v3-*`):
+- **Banda modulo** `#FAC775` 3px (`.oggi-v3-accent`) in cima alla pagina, bleed full-width.
+- **Header v3**: eyebrow data mono caps (es. "VEN 15 MAG · OGGI") + titolone Syne 800 30px "Nutrition" + bollino avatar evergreen 42px con iniziali (`first_name+last_name`) → `openSettingsModal()`.
+- **Sub-nav pillole** (`.oggi-v3-pill`): OGGI attiva fondo `#FAC775` testo dark, INTEGRATORI/STORICO/PIANO inattive dashed outline grigio. Sostituisce `.nsn-pill` su tab OGGI (le altre 3 tab usano ancora `nutriSubNav()` legacy).
+- **heroCard riscritta** ([zona-tracker.html:8806](zona-tracker.html:8806)): donut centrale **200×200** (era 170×170), SVG con viewBox 200×200, r=85, stroke-width 10, track `#E8E4DC`. Numero centrale Syne 800 **54px adattivo** (`.medium 46px` per 4 cifre, `.small 38px` per 5+ — gestisce `1.420` e `−1.800` senza overflow). Label sotto `KCAL RIMASTE` / `KCAL OLTRE` / `TARGET RAGGIUNTO` mono caps. Riga sotto donut `{X} consumate · su {Y} obiettivo` mono.
+- **Pillola Status Zona separata** (`.oggi-v3-zona-pill`) sotto donut con 3 stati:
+  - `NELLA ZONA` evergreen (tutti 3 macro nella fascia target ±5%)
+  - `QUASI ZONA` ambra (tutti nella fascia ±10% ma non ±5%)
+  - `FUORI ZONA` terracotta
+  - `DATI INSUFFICIENTI` neutro (`tot < 5`)
+  Mostra le 3 percentuali correnti vs target (es. `38 · 28 · 34 / 40·30·30`).
+- **3 macro card orizzontali** (`.oggi-v3-macro-card`): CARB ambra `#C4880A`, PROT evergreen, FAT terracotta `#B84C2A`. Numero Syne 28px (rimasti), riga `rimasti · {X}/{Y}g` mono 9px, barra residua sotto. Stato over: prefisso `+`, colore `OVER_COLOR`.
+- **Stato kcal in negativo**: numero `−180` prefisso (U+2212 minus), donut stroke `#B84C2A`, label "KCAL OLTRE". Decisione: NO `+180 oltre` come modulo legacy — il numero rappresenta kcal residue che sono andate sotto zero.
+- **Coppia CTA** (`.oggi-v3-cta-row`): `+ Registra pasto` primario pieno evergreen, `+ Registra integratori` secondario outline 1.5px evergreen. Entrambi `h:48px`, `radius:12px`, font Syne 600. Wrapper con `id="registra-pasto-form"` per scroll target.
+- **Card coach** (`.oggi-v3-coach-card`): tinta sand `#FDF7E8` + border-left 2px `#FAC775`. Eyebrow `COACH · RIEQUILIBRIO` (sinistra) + `PROSSIMO PASTO` (destra). Titolo Syne 18px (es. "Merenda · 16:30"). Testo Syne se `ST.advice` presente. CTA inline `ANALIZZA & SUGGERISCI →` mono caps evergreen (no più bottone pieno). **Stato silente**: se `zonaOk=true` E `cons.kcal > 40% target` E nessun advice → versione compatta `✓ Tutto in linea col piano`.
+
+**Funzionalità nuova — Timeline mista pasti pianificati**:
+- **Helper `getTodayPianoMeals()`** ([zona-tracker.html:8762](zona-tracker.html:8762)): mappa `ST.activeDay` (YYYY-MM-DD) → giorno italiano del piano coach (`ST.pianoAI.giorni[i].giorno`) con matching case+diacritici-insensitive (`normalize('NFD')` + strip U+0300–U+036F). Ritorna l'oggetto giorno o `null`.
+- **Helper `openLogFromPlanned(idx)`** ([zona-tracker.html:8784](zona-tracker.html:8784)): pre-compila il form Smart Ingredient con slot, orario e `freeText` (= ingredienti del piano), apre il form (`ST.logOpen = true`) e scrolla a `#registra-pasto-form` con `scrollIntoView({block:'start', behavior:'smooth'})`. Indicizzato via `ST._plannedRows` per evitare HTML injection in onclick.
+- **Build timeline** in `renderOggi()`: per ogni `MEAL_SLOT` principale (`colazione`/`snack_mattina`/`pranzo`/`snack_pomeriggio`/`cena`):
+  - se ci sono pasti registrati di quello slot → riga registrata (UI esistente migrata a `.oggi-v3-meal-row`)
+  - se NON registrato ma piano coach ha pasto previsto per quello slot → riga **pianificata** dashed (`.oggi-v3-planned-row`, `1.5px dashed var(--b1)`) con badge `PIANIFICATO · DAL COACH` e CTA `REGISTRA ›` evergreen. Tap sull'intera riga → `openLogFromPlanned(idx)`.
+  - se non c'è né registrato né pianificato → slot skippato
+- Pasti `extra` (slot fuori griglia) sempre visibili se registrati.
+- Supps (gruppi standard e log extra) preservati con renderer esistenti, leggermente armonizzati su border/padding.
+- Indicatore in alto a destra: `{nReg} / {nTot}` (pasti registrati su totale visibili incluso pianificati).
+
+**Logica preservata** (vincoli rispettati):
+- `dayTotals`, `consumedTotals`, `kcalRimaste`, `macroRimasti`, `isOverTarget`, `OVER_COLOR` — invariati
+- Form Smart Ingredient: `renderRegistraPasto()`, `smartAnalyze()`, `smartAddEmptyRow()`, `logMeal()`, `setLogSlot()`, `smartUpdateField()`, ecc. — invariati
+- Ramo `day.fasting` (digiuno), badge Giorno Perfetto, day-nav, detox button — invariati
+- AI advice flow (`fetchAdvice()` + `ST.advice` + `ST.nextSlot` + `computeNextSlot()`) — invariato, solo riposizionato nel coach card v3
+- Sub-nav navigation `showPage('integratori')`, ecc. — invariato
+- Schema DB (`meals`, `meal_items`, `supplements_log`, `pianoAI`) — invariato
+
+**Edge case noti**:
+- Se `ST.pianoAI` è null (utente non ha mai generato il piano) → timeline mostra solo pasti registrati + supps + extra, nessuna riga pianificata. Comportamento atteso, no errori.
+- Mappatura giorno: il piano usa nomi italiani (`Lunedì`/`Martedì`/...). Il match tollera `Lunedì`/`lunedi`/`LUNEDÌ`. Se il giorno corrente non è presente nel piano (es. piano parziale o piano per altri giorni) → nessuna riga pianificata.
+- Form open con id duplicato risolto: il wrapper esterno non ha `id="registra-pasto-form"` quando il form interno (che lo ha già da `renderRegistraPasto()`) è in render. La CTA pair (form chiuso) ha l'id sul wrapper.
+
+**Sezione "Design system" legacy in CLAUDE.md ora si applica solo ai sub-tab non ancora migrati** (Integratori, Storico, Piano). La tab OGGI usa interamente le classi `.oggi-v3-*` + le decisioni di design correnti del 15 maggio.
 
 ### 14 maggio 2026 — Mini-fix Tendenza: copy intervallo + precisione peso
 
