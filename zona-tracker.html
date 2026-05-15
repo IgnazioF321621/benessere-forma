@@ -742,9 +742,9 @@ select.inp{cursor:pointer;}
 .m1-auth-cta{margin-top:18px;}
 .m1-auth-email-pill{display:inline-flex;align-items:center;gap:8px;background:var(--acc-lt);color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;padding:7px 12px;border-radius:999px;margin-bottom:14px;}
 .m1-auth-email-pill button{background:none;border:none;color:var(--acc);font-size:14px;line-height:1;cursor:pointer;padding:0;font-family:'Syne',sans-serif;}
-.m1-otp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:6px 0 6px;}
-.m1-otp-cell{aspect-ratio:9/10;border-radius:10px;background:var(--s2);border:1px solid var(--b1);font-family:'Syne',sans-serif;font-size:24px;font-weight:600;text-align:center;color:var(--t1);padding:0;}
-.m1-otp-cell:focus{outline:none;border-color:var(--acc);background:#fff;}
+.m1-otp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:6px auto;max-width:340px;width:100%;}
+.m1-otp-cell{width:100%;min-width:0;aspect-ratio:9/10;border-radius:10px;background:var(--bg);border:1.5px solid var(--b1);font-family:'Syne',sans-serif;font-size:24px;font-weight:700;text-align:center;color:var(--t1);padding:0;box-sizing:border-box;caret-color:var(--acc);}
+.m1-otp-cell:focus{outline:none;border-color:var(--acc);background:#fff;box-shadow:0 0 0 2px rgba(42,122,111,.18);}
 .m1-otp-resend{margin-top:14px;text-align:center;font-family:'Syne',sans-serif;font-size:14px;color:var(--t3);}
 .m1-otp-resend b{color:var(--acc);cursor:pointer;text-decoration:underline;font-weight:600;}
 
@@ -2108,7 +2108,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 07:05';
+const APP_VERSION = '2026.05.15 · 07:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
