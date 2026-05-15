@@ -2108,7 +2108,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 12:09';
+const APP_VERSION = '2026.05.15 · 12:21';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12336,8 +12336,29 @@ setTimeout(async () => {
   // ── Sessione esistente (cookie o localStorage) ──
   const {data:{session}} = await supa.auth.getSession();
   if (session?.user) {
-    ST.user = session.user;
-    await loadAndStart();
+    // Validazione server-side: il token in localStorage potrebbe puntare a
+    // un utente cancellato dalla dashboard ("token zombie"). getUser() fa
+    // un roundtrip al server e ritorna 401/403 in quel caso.
+    // Errori non-auth (network, 5xx) → mantieni la sessione cached.
+    let zombie = false;
+    try {
+      const {data: ud, error: ue} = await supa.auth.getUser();
+      if (ue) {
+        const st = ue.status || 0;
+        if (st === 401 || st === 403) zombie = true;
+      } else if (!ud?.user) {
+        zombie = true;
+      }
+    } catch(e) { /* network/exception: tieni la sessione */ }
+    if (zombie) {
+      try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
+      try { await supa.auth.signOut(); } catch(e) {}
+      ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];
+      showScreen('auth');
+    } else {
+      ST.user = session.user;
+      await loadAndStart();
+    }
   } else {
     showScreen('auth');
   }
