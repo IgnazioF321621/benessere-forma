@@ -904,7 +904,7 @@ select.inp{cursor:pointer;}
 .oggi-v3-zona-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
 .oggi-v3-zona-stats{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);letter-spacing:.02em;}
 .oggi-v3-macro-row{display:flex;gap:10px;}
-.oggi-v3-macro-card{flex:1;background:var(--s1);border:0.5px solid #DDD9D0;border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(20,15,5,.025);min-width:0;}
+.oggi-v3-macro-card{flex:1;background:var(--s1);border:1px solid #DDD9D0;border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(20,15,5,.04);min-width:0;}
 .oggi-v3-macro-head{display:flex;align-items:center;gap:6px;}
 .oggi-v3-macro-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .oggi-v3-macro-name{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
@@ -2217,7 +2217,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 19:26';
+const APP_VERSION = '2026.05.15 · 20:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8767,18 +8767,36 @@ function zonaBalance(cons) {
 // Mappa la data attiva (ST.activeDay = YYYY-MM-DD) al giorno corrispondente del
 // piano AI settimanale (g.giorno = "lunedì"/"martedì"/...). Diacritici tolleranti.
 function getTodayPianoMeals(){
-  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length) return null;
+  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length){
+    if(ST.pianoAI) console.log('[piano-debug] ST.pianoAI esiste ma .giorni mancante o vuoto:', ST.pianoAI);
+    return null;
+  }
   const d = new Date((ST.activeDay || todayKey()) + 'T12:00:00');
-  const IT_DAYS = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
-  const target = IT_DAYS[d.getDay()];
+  // Forma piena + abbreviata: il piano AI può usare 'Lunedì', 'Lun', 'lunedi', 'LUNEDÌ', ecc.
+  const IT_FULL = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  const IT_SHORT = ['dom','lun','mar','mer','gio','ven','sab'];
+  const targetFull  = IT_FULL[d.getDay()];
+  const targetShort = IT_SHORT[d.getDay()];
+  // Normalizza: lowercase + strip diacritici (U+0300–U+036F) + trim.
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-  const t = norm(target);
-  return ST.pianoAI.giorni.find(g => {
+  const tFull  = norm(targetFull);
+  const tShort = norm(targetShort);
+  const found = ST.pianoAI.giorni.find(g => {
     const n = norm(g.giorno);
-    return n === t || n.startsWith(t);
+    return n === tFull || n === tShort || n.startsWith(tFull) || n.startsWith(tShort);
   }) || null;
+  // Debug temporaneo (rimuovere dopo verifica): stampa cosa cerca e cosa trova
+  console.log('[piano-debug]', {
+    activeDay: ST.activeDay,
+    weekdayIdx: d.getDay(),
+    targetFull, targetShort, tFull, tShort,
+    pianoGiorniRaw: ST.pianoAI.giorni.map(g => g.giorno),
+    pianoGiorniNorm: ST.pianoAI.giorni.map(g => norm(g.giorno)),
+    matchedSlots: found ? Object.keys(found).filter(k => k !== 'giorno' && k !== 'kcal_totali' && k !== 'note') : null,
+    matchedGiorno: found ? found.giorno : null,
+  });
+  return found;
 }
-// (norm() usa il range U+0300–U+036F per togliere i diacritici combinanti — supporta "Lunedì"/"lunedi"/"lunedì")
 
 // Apre il form "Registra pasto" pre-compilato dal piano del coach.
 // Indicizzato: la riga "REGISTRA ›" passa l'indice in ST._plannedRows, popolato a render.
@@ -9703,23 +9721,21 @@ function renderOggi(){
         </div>
         <div class="oggi-v3-timeline-sub">PIANIFICATI · REGISTRATI</div>`;
 
+      // Helper wrapper timeline connector (riusa pattern pre-5a64cab — dot + time + emoji column).
+      const wrapTL = (timeStr, emoji, dotColor, contentHTML, isLast) => {
+        const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;opacity:0.3;"></div>` : '';
+        const itemSep = !isLast ? 'padding-bottom:6px;' : '';
+        return `<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${timeStr}</div><span style="font-size:12px;">${emoji}</span></div><div style="flex:1;min-width:0;">${contentHTML}</div></div>`;
+      };
+
       let _firstSuppGroup = true;
-      tlEvents.forEach(ev => {
+      tlEvents.forEach((ev, evIdx) => {
+        const isLast = evIdx === tlEvents.length - 1;
         if(ev.type === 'meal'){
-          const m = ev.meal;
-          const descRaw = m.description || ev.slot.label;
-          const desc = String(descRaw).length > 48 ? String(descRaw).slice(0,48) + '…' : String(descRaw);
-          const kcal = m.kcal != null ? fmtNum(m.kcal) : '—';
-          html += `<div class="oggi-v3-meal-row">
-            <span class="oggi-v3-meal-time">${ev.time.slice(0,5)}</span>
-            <span class="oggi-v3-meal-icon">${ev.slot.icon}</span>
-            <div class="oggi-v3-meal-body">
-              <div class="oggi-v3-meal-name">${esc(ev.slot.label)}</div>
-              <div class="oggi-v3-meal-meta">${esc(desc)}</div>
-            </div>
-            <div class="oggi-v3-meal-kcal">${kcal}<span class="oggi-v3-meal-kcal-unit">kcal</span></div>
-            <div class="oggi-v3-meal-check" title="Registrato">✓</div>
-          </div>`;
+          // Usa mealCardHTML (Smart Ingredient Fase 3): card collassabile con
+          // ingredienti espandibili, edit ✏️, delete 🗑️, swipe-to-delete su mobile.
+          // Wrappata nel timeline connector pre-5a64cab (dot + ora + emoji slot).
+          html += wrapTL(ev.time.slice(0,5), ev.slot.icon, 'var(--acc)', mealCardHTML(ev.meal), isLast);
         } else if(ev.type === 'planned'){
           const p = ev.planned;
           const kcal = p.kcal != null ? fmtNum(p.kcal) : '—';
@@ -9746,9 +9762,11 @@ function renderOggi(){
           const tlAssuntoLbl = tlTakenN === 1 ? 'assunto' : 'assunti';
           const hint = (_firstSuppGroup && taken.length === 0 && !tlCollapsed) ? `<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>` : '';
           _firstSuppGroup = false;
-          html += `<div style="margin-bottom:10px;"><div style="background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} ${tlAssuntoLbl}</span><button onclick="event.stopPropagation();deleteSuppGroup('${ev.time}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi gruppo">×</button><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
-          if(!tlCollapsed){ ev.supps.forEach(s => { html += oggiSuppCardHTML(s, taken); }); html += `</div>`; }
-          html += `</div></div>`;
+          // Card supps group (header collassabile + lista oggiSuppCardHTML quando espansa) — logica intatta.
+          let suppCardHTML = `<div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} ${tlAssuntoLbl}</span><button onclick="event.stopPropagation();deleteSuppGroup('${ev.time}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi gruppo">×</button><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
+          if(!tlCollapsed){ ev.supps.forEach(s => { suppCardHTML += oggiSuppCardHTML(s, taken); }); suppCardHTML += `</div>`; }
+          suppCardHTML += `</div>`;
+          html += wrapTL(ev.time.slice(0,5), '🌿', 'var(--acc2)', suppCardHTML, isLast);
         } else if(ev.type === 'supp_log'){
           // Extra integratore singolo (logica esistente preservata)
           const logName = esc(ev.log.name);
@@ -9764,7 +9782,9 @@ function renderOggi(){
           const extraBase = parseFloat(extraSupp?.dose_die) || 1;
           const extraMult = Number(logDose) / extraBase || 0;
           const extraKcalTot = Math.round((Number(extraSupp?.kcal ?? extraCat?.kcal ?? 0)) * extraMult);
-          html += `<div style="margin-bottom:10px;"><div style="background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div></div>`;
+          // Card extra (toggleExtraSupp + extraSuppCardHTML logica esistente intatta)
+          const extraCardHTML = `<div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div>`;
+          html += wrapTL(ev.time.slice(0,5), '🌿', 'var(--acc2)', extraCardHTML, isLast);
         }
       });
 
