@@ -837,8 +837,8 @@ select.inp{cursor:pointer;}
 
 /* ── HOME V2 — Fase D Giro 1 ───────────────────────────────── */
 #header.home-v2-hide{display:none;}
-.home-v2-wrap{padding:env(safe-area-inset-top) 0 0;display:flex;flex-direction:column;gap:14px;}
-.home-v2-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:4px 0 6px;}
+.home-v2-wrap{padding:calc(env(safe-area-inset-top) + 16px) 0 0;display:flex;flex-direction:column;gap:14px;}
+.home-v2-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px 0 10px;}
 .home-v2-header-text{flex:1;min-width:0;}
 .home-v2-date{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--acc);margin-bottom:8px;}
 .home-v2-greeting{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--t1);letter-spacing:-0.8px;line-height:1.08;}
@@ -849,11 +849,12 @@ select.inp{cursor:pointer;}
 .home-v2-card-arrow{flex-shrink:0;color:var(--t3);font-size:22px;line-height:1;font-family:'Syne',sans-serif;align-self:center;}
 .home-v2-card-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:10px;padding-left:18px;}
 .home-v2-nutr{display:flex;align-items:center;gap:18px;width:100%;}
-.home-v2-donut{position:relative;width:84px;height:84px;flex-shrink:0;}
+.home-v2-donut{position:relative;width:104px;height:104px;flex-shrink:0;}
 .home-v2-donut-svg{width:100%;height:100%;transform:rotate(-90deg);}
-.home-v2-donut-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:3px;}
-.home-v2-donut-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--t1);}
-.home-v2-donut-sub{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--t3);letter-spacing:.06em;text-align:center;}
+.home-v2-donut-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:4px;padding:0 8px;box-sizing:border-box;}
+.home-v2-donut-num{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--t1);line-height:1;}
+.home-v2-donut-num.small{font-size:20px;}
+.home-v2-donut-sub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--t3);letter-spacing:.04em;text-align:center;white-space:nowrap;}
 .home-v2-macro-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
 .home-v2-macro-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
 .home-v2-macro-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;}
@@ -2147,7 +2148,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 14:48';
+const APP_VERSION = '2026.05.15 · 15:28';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4174,7 +4175,7 @@ function showPage(id){
   const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
-  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); }
+  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); }
   if(id==='body') loadBodyLogs();
   if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); }
 }
@@ -4268,6 +4269,18 @@ function getNextCheckpointInfo(){
   return { hasCheck: true, daysUntil, overdue: daysUntil < 0, loading: false };
 }
 
+// Suggerimento "DOPO L'ALLENAMENTO" contestuale all'orario del rendering.
+// Fascia oraria → pasto di rifornimento successivo coerente coi MEAL_SLOTS.
+function getPostWorkoutHint(){
+  const h = new Date().getHours();
+  if(h >= 5  && h < 10) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "colazione zona" };
+  if(h >= 10 && h < 12) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "spuntino + colazione zona" };
+  if(h >= 12 && h < 16) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "pranzo zona" };
+  if(h >= 16 && h < 19) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "merenda + proteine" };
+  if(h >= 19 && h < 22) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena zona" };
+  return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena leggera" };
+}
+
 // Logica semplice "PROSSIMA AZIONE" — 4 regole in ordine di priorità (Giro 1).
 // Niente AI, niente chiamate di rete. Sostituita da una logica più ricca in Giro 2.
 function getProssimaAzioneSimple(){
@@ -4292,7 +4305,7 @@ function getProssimaAzioneSimple(){
       return {
         titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
         dettaglio: `Sessione ${sess.name} a digiuno. Si parte con 5 minuti di preparazione.`,
-        nextHint: { eyebrow: "DOPO L'ALLENAMENTO", chip: "colazione zona" },
+        nextHint: getPostWorkoutHint(),
       };
     }
   }
@@ -4361,7 +4374,7 @@ function renderHomeV2(){
                       stroke-dasharray="${dashLen} ${C.toFixed(1)}" stroke-linecap="round"/>
             </svg>
             <div class="home-v2-donut-inner">
-              <span class="home-v2-donut-num">${fmtNum(kcalCons)}</span>
+              <span class="home-v2-donut-num${kcalCons >= 1000 ? ' small' : ''}">${fmtNum(kcalCons)}</span>
               <span class="home-v2-donut-sub">/ ${fmtNum(kcalTarget)} KCAL</span>
             </div>
           </div>
@@ -4385,28 +4398,34 @@ function renderHomeV2(){
     </div>`;
 
   // ── Card Training (riusa ST.trainHomeData già popolato da loadTrainingHomeData) ──
+  // Settimana del programma: ciclo 4 settimane (CARICO×3 + SCARICO×1) che si ripete.
+  // Nessun "totale assoluto" definito — si mostra la posizione nel ciclo corrente (N / 4).
+  // Richiede ST.trainAllCompleted (caricato in showPage('home')).
   let trainingCard = '';
   if(hasTraining()){
     const hd = ST.trainHomeData;
+    const validWorkouts = (ST.trainAllCompleted || []).length;
+    const cycleWeek = validWorkouts > 0 ? (Math.floor(validWorkouts / 6) % 4) + 1 : 1;
+    const weekStr = `SETTIMANA ${cycleWeek} / 4`;
     let sessName, weekEyebrow;
     if(!hd || hd.notStarted){
       const firstSess = TRAINING_SESSIONS.upperA;
       sessName = `Sessione ${firstSess.name}`;
-      weekEyebrow = 'INIZIA IL PROGRAMMA';
+      weekEyebrow = `INIZIA IL PROGRAMMA · ${weekStr}`;
     } else if(hd.doneToday){
       const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
       const nextSessObj   = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
       sessName = `Sessione ${completedSess.name}`;
-      weekEyebrow = `COMPLETATA · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
+      weekEyebrow = `COMPLETATA · ${weekStr} · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
     } else if(hd.inProgress){
       const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
       sessName = `Sessione ${sessObj.name}`;
-      weekEyebrow = 'SESSIONE IN CORSO';
+      weekEyebrow = `SESSIONE IN CORSO · ${weekStr}`;
     } else {
       const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
       const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
       sessName    = `Sessione ${nextSessObj.name}`;
-      weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()}`;
+      weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()} · ${weekStr}`;
     }
     trainingCard = `
       <div class="home-v2-card" onclick="showPage('training')">
@@ -4442,15 +4461,29 @@ function renderHomeV2(){
     const wPrev   = weights.length > 1 ? weights[1].weight_kg : null;
     let deltaHTML = '';
     if(w != null && wPrev != null){
-      const diff   = (w - wPrev);
-      const absD   = Math.abs(diff);
-      const obj    = String(profile.obiettivo || '').toLowerCase();
-      const wantsGain = obj.includes('ipertrofia') || obj.includes('forza');
-      const goodDown  = !wantsGain;
-      const isGood = absD < 0.05 ? null : (diff < 0 ? goodDown : !goodDown);
-      const color  = absD < 0.05 ? 'var(--t3)' : (isGood ? '#2A7A6F' : '#B84C2A');
-      const arrow  = absD < 0.05 ? '' : (diff > 0 ? '↑' : '↓');
-      const sign   = diff > 0 ? '+' : '';
+      const diff = (w - wPrev);
+      const absD = Math.abs(diff);
+      // Colore delta in base alla direzione obiettivo (goal_weight_kg vs weight_kg).
+      // - goal < attuale - 1 → vuole dimagrire → ↓ = verde, ↑ = rosso
+      // - goal > attuale + 1 → vuole ingrassare → ↑ = verde, ↓ = rosso
+      // - |goal - attuale| <= 1 → mantenimento → qualsiasi delta = grigio neutro
+      const goal = Number(profile.goal_weight_kg);
+      const curr = Number(w);
+      let color;
+      if(absD < 0.05){
+        color = 'var(--t3)';
+      } else if(!isFinite(goal) || !isFinite(curr) || Math.abs(goal - curr) <= 1){
+        // Mantenimento o obiettivo non impostato → neutro
+        color = 'var(--t3)';
+      } else if(goal < curr){
+        // Vuole dimagrire
+        color = diff < 0 ? '#2A7A6F' : '#B84C2A';
+      } else {
+        // Vuole ingrassare
+        color = diff > 0 ? '#2A7A6F' : '#B84C2A';
+      }
+      const arrow = absD < 0.05 ? '' : (diff > 0 ? '↑' : '↓');
+      const sign  = diff > 0 ? '+' : '';
       deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow ? arrow + ' ' : ''}${sign}${diff.toFixed(1)}</span>`;
     }
     const cp = getNextCheckpointInfo();
@@ -6216,6 +6249,7 @@ async function loadTrainingAllCompleted(){
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
     if(ST.page === 'training') renderTraining();
+    else if(ST.page === 'home') renderHome();
   } catch(e){
     ST.trainAllCompleted = [];
   }
