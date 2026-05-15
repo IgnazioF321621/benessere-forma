@@ -2108,7 +2108,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 07:43';
+const APP_VERSION = '2026.05.15 · 12:09';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3950,7 +3950,17 @@ async function m2ShouldShowEntry(profile) {
 }
 
 async function loadAndStart() {
-  const cache = loadCache();
+  let cache = loadCache();
+
+  // Sanity-check: la cache localStorage è una chiave globale (zt_cache), non
+  // per utente. Se appartiene a un altro user (sessioni precedenti sullo
+  // stesso device), scartala — altrimenti un nuovo utente vede il profilo
+  // del precedente e saltiamo M1 finendo dritti in M2/app.
+  if (cache && cache.profile && cache.profile.id && ST.user && cache.profile.id !== ST.user.id) {
+    cache = null;
+    try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
+    ST.profile = null; ST.db = {days:{}}; ST.TARGET = {kcal:1900, protein:143, carbs:190, fat:63};
+  }
 
   if (cache) {
     // Cache hit: ripristina subito senza loading overlay
@@ -4085,6 +4095,7 @@ window.addEventListener('resize', updateNavVisibility);
 async function logout() {
   if(!confirm('Vuoi uscire?')) return;
   await supa.auth.signOut();
+  try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
   ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];
   showScreen('auth');
 }
@@ -12337,7 +12348,8 @@ setTimeout(async () => {
       ST.user = session.user;
       await loadAndStart();
     } else if (event === 'SIGNED_OUT') {
-      ST.user = null;
+      try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
+      ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];
       showScreen('auth');
     } else if (event === 'TOKEN_REFRESHED' && session?.user) {
       ST.user = session.user;
