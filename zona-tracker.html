@@ -2148,7 +2148,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 15:28';
+const APP_VERSION = '2026.05.15 · 15:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4275,10 +4275,11 @@ function getPostWorkoutHint(){
   const h = new Date().getHours();
   if(h >= 5  && h < 10) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "colazione zona" };
   if(h >= 10 && h < 12) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "spuntino + colazione zona" };
-  if(h >= 12 && h < 16) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "pranzo zona" };
-  if(h >= 16 && h < 19) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "merenda + proteine" };
-  if(h >= 19 && h < 22) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena zona" };
-  return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena leggera" };
+  if(h >= 12 && h < 14) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "pranzo zona" };
+  if(h >= 14 && h < 18) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "merenda + proteine" };
+  if(h >= 18 && h < 21) return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena zona" };
+  // 21-5: tarda sera / notte
+  return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena leggera + proteine" };
 }
 
 // Logica semplice "PROSSIMA AZIONE" — 4 regole in ordine di priorità (Giro 1).
@@ -4353,14 +4354,33 @@ function renderHomeV2(){
   const MONTHS_FULL = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
   const dateStr = `${DAYS_FULL[now.getDay()]} ${now.getDate()} ${MONTHS_FULL[now.getMonth()]}`;
 
-  // ── Card Nutrition: donut kcal (riempie col consumo) + 3 macro consumati ──
+  // ── Card Nutrition: donut + 3 macro — modello ibrido coerente col modulo Nutrition.
+  //    Anello: si RIEMPIE col consumo (% consumata). Numeri: mostrano i RIMASTI.
+  //    Riusa kcalRimaste()/macroRimasti()/isOverTarget()/OVER_COLOR — niente duplicazione.
   const kcalCons   = Math.max(0, Number(cons.kcal) || 0);
   const kcalTarget = Math.max(1, Number(target.kcal) || 1);
   const overKcal   = isOverTarget(kcalCons, kcalTarget);
-  const kcalPct    = Math.min(100, Math.round((kcalCons / kcalTarget) * 100));
+  const kcalPct    = overKcal ? 100 : Math.min(100, Math.round((kcalCons / kcalTarget) * 100));
   const C          = 2 * Math.PI * 34;                 // ~213.6
   const dashLen    = ((kcalPct / 100) * C).toFixed(1);
   const ringStroke = overKcal ? OVER_COLOR : 'var(--acc)';
+  const remKcal    = kcalRimaste(kcalCons, kcalTarget);
+  const kcalDisp   = `${overKcal ? '+' : ''}${fmtNum(Math.abs(remKcal))}`;
+  const kcalLbl    = overKcal ? 'oltre' : (remKcal === 0 && kcalCons > 0 ? 'target ✓' : 'rimaste');
+  const kcalNumCol = overKcal ? OVER_COLOR : 'var(--t1)';
+  // Helper macro: ritorna { value, color } pronti per il render (rimasti, con +N se oltre).
+  function macroDisp(curr, tgt){
+    if(!tgt || tgt <= 0) return { value: '—', color: 'var(--t3)' };
+    const over = isOverTarget(curr, tgt);
+    const rem  = macroRimasti(curr, tgt);
+    return {
+      value: `${over ? '+' : ''}${fmtNum(Math.abs(rem))}`,
+      color: over ? OVER_COLOR : 'var(--t1)',
+    };
+  }
+  const mC = macroDisp(cons.carbs,   target.carbs);
+  const mP = macroDisp(cons.protein, target.protein);
+  const mF = macroDisp(cons.fat,     target.fat);
   const nutritionCard = `
     <div class="home-v2-card" onclick="showPage('oggi')">
       <span class="home-v2-card-dot" style="background:var(--mod-nutrition);"></span>
@@ -4374,22 +4394,22 @@ function renderHomeV2(){
                       stroke-dasharray="${dashLen} ${C.toFixed(1)}" stroke-linecap="round"/>
             </svg>
             <div class="home-v2-donut-inner">
-              <span class="home-v2-donut-num${kcalCons >= 1000 ? ' small' : ''}">${fmtNum(kcalCons)}</span>
-              <span class="home-v2-donut-sub">/ ${fmtNum(kcalTarget)} KCAL</span>
+              <span class="home-v2-donut-num${Math.abs(remKcal) >= 1000 ? ' small' : ''}" style="color:${kcalNumCol};">${kcalDisp}</span>
+              <span class="home-v2-donut-sub">${kcalLbl}</span>
             </div>
           </div>
           <div class="home-v2-macro-list">
             <div class="home-v2-macro-row">
               <span class="home-v2-macro-label" style="color:var(--carb);">CARB</span>
-              <span><span class="home-v2-macro-value">${fmtNum(cons.carbs)}</span><span class="home-v2-macro-unit">g</span></span>
+              <span><span class="home-v2-macro-value" style="color:${mC.color};">${mC.value}</span><span class="home-v2-macro-unit">g</span></span>
             </div>
             <div class="home-v2-macro-row">
               <span class="home-v2-macro-label" style="color:var(--acc);">PROT</span>
-              <span><span class="home-v2-macro-value">${fmtNum(cons.protein)}</span><span class="home-v2-macro-unit">g</span></span>
+              <span><span class="home-v2-macro-value" style="color:${mP.color};">${mP.value}</span><span class="home-v2-macro-unit">g</span></span>
             </div>
             <div class="home-v2-macro-row">
               <span class="home-v2-macro-label" style="color:var(--fat);">FAT</span>
-              <span><span class="home-v2-macro-value">${fmtNum(cons.fat)}</span><span class="home-v2-macro-unit">g</span></span>
+              <span><span class="home-v2-macro-value" style="color:${mF.color};">${mF.value}</span><span class="home-v2-macro-unit">g</span></span>
             </div>
           </div>
         </div>
