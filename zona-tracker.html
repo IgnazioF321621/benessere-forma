@@ -834,6 +834,45 @@ select.inp{cursor:pointer;}
 /* Errore inline -------------------------------------------- */
 .m1-err{color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;}
 .m1-err.show{display:block;}
+
+/* ── HOME V2 — Fase D Giro 1 ───────────────────────────────── */
+#header.home-v2-hide{display:none;}
+.home-v2-wrap{padding:env(safe-area-inset-top) 0 0;display:flex;flex-direction:column;gap:14px;}
+.home-v2-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:4px 0 6px;}
+.home-v2-header-text{flex:1;min-width:0;}
+.home-v2-date{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--acc);margin-bottom:8px;}
+.home-v2-greeting{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--t1);letter-spacing:-0.8px;line-height:1.08;}
+.home-v2-avatar{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--acc);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.05em;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
+.home-v2-card{position:relative;background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:16px 14px 16px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s ease;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.home-v2-card:active{transform:scale(.99);}
+.home-v2-card-dot{position:absolute;top:16px;left:14px;width:10px;height:10px;border-radius:50%;}
+.home-v2-card-arrow{flex-shrink:0;color:var(--t3);font-size:22px;line-height:1;font-family:'Syne',sans-serif;align-self:center;}
+.home-v2-card-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);margin-bottom:10px;padding-left:18px;}
+.home-v2-nutr{display:flex;align-items:center;gap:18px;width:100%;}
+.home-v2-donut{position:relative;width:84px;height:84px;flex-shrink:0;}
+.home-v2-donut-svg{width:100%;height:100%;transform:rotate(-90deg);}
+.home-v2-donut-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:3px;}
+.home-v2-donut-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--t1);}
+.home-v2-donut-sub{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--t3);letter-spacing:.06em;text-align:center;}
+.home-v2-macro-list{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;}
+.home-v2-macro-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+.home-v2-macro-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;}
+.home-v2-macro-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--t1);}
+.home-v2-macro-unit{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);margin-left:3px;}
+.home-v2-body-flex,.home-v2-train-flex{flex:1;min-width:0;}
+.home-v2-body-line{display:flex;align-items:baseline;gap:5px;flex-wrap:wrap;}
+.home-v2-body-weight{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--t1);line-height:1;}
+.home-v2-body-unit{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);}
+.home-v2-body-delta{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-left:4px;}
+.home-v2-body-sub,.home-v2-train-sub{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.12em;color:var(--t3);text-transform:uppercase;margin-top:6px;}
+.home-v2-train-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);}
+.home-v2-action{background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-top:2px;}
+.home-v2-action-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:10px;}
+.home-v2-action-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);line-height:1.25;}
+.home-v2-action-detail{font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.45;margin-top:6px;}
+.home-v2-action-next{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
+.home-v2-action-next-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);}
+.home-v2-action-next-chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);background:var(--acc-lt);border:1px solid rgba(42,122,111,.22);border-radius:999px;padding:5px 11px;}
 </style>
 </head>
 <body>
@@ -2108,7 +2147,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 12:21';
+const APP_VERSION = '2026.05.15 · 14:48';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4113,6 +4152,9 @@ function showPage(id){
     ST.trainCountdown = null;
   }
   ST.page=id;
+  // Home V2: nasconde l'header globale solo sulla home (la home ha il proprio saluto)
+  const hdr = document.getElementById('header');
+  if(hdr) hdr.classList.toggle('home-v2-hide', id === 'home');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   // Reset top nav (inline style driven)
   document.querySelectorAll('.nav-btn').forEach(b=>{
@@ -4203,249 +4245,271 @@ function versionFooter(){
 <div aria-hidden="true" style="height:120px;flex-shrink:0;pointer-events:none;"></div>`;
 }
 
-function renderHome(){
-  // ── Dati dal giorno corrente (stessa logica di renderOggi) ──
+// Home V2 (Fase D Giro 1) — sostituisce la home legacy.
+// Alias mantenuto per i 7 chiamanti storici (loadTrainingHomeData, loadBodyLogs, ecc.).
+function renderHome(){ renderHomeV2(); }
+
+// Calcola il "prossimo checkpoint" Body partendo dall'ultimo check fisico completato.
+// Frequenza checkpoint: 28 giorni (decisione "ogni 4 settimane"). Sorgente: timeline unificata
+// filtrata per source='check' (solo body_measurements, che esistono solo per check_id completati).
+function getNextCheckpointInfo(){
+  if(ST.bodyMeasurements === null || ST.bodyMeasurements === undefined){
+    return { hasCheck: false, daysUntil: null, overdue: false, loading: true };
+  }
+  const tl = (typeof getUnifiedBodyTimeline === 'function') ? getUnifiedBodyTimeline() : [];
+  const checks = tl.filter(r => r.source === 'check' && r._ts);
+  if(checks.length === 0){
+    return { hasCheck: false, daysUntil: null, overdue: false, loading: false };
+  }
+  checks.sort((a,b) => b._ts - a._ts);
+  const lastTs = checks[0]._ts;
+  const nextTs = lastTs + 28 * 24 * 60 * 60 * 1000;
+  const daysUntil = Math.ceil((nextTs - Date.now()) / (24 * 60 * 60 * 1000));
+  return { hasCheck: true, daysUntil, overdue: daysUntil < 0, loading: false };
+}
+
+// Logica semplice "PROSSIMA AZIONE" — 4 regole in ordine di priorità (Giro 1).
+// Niente AI, niente chiamate di rete. Sostituita da una logica più ricca in Giro 2.
+function getProssimaAzioneSimple(){
+  // 1. Body checkpoint scaduto (solo se almeno un check è stato fatto e sono passati > 28 giorni).
+  //    "Nessun check ancora" non scatta qui — il primo check è parte di M2 nell'onboarding.
+  const cp = getNextCheckpointInfo();
+  if(cp.hasCheck && cp.overdue){
+    return {
+      titolo: "È ora del check fisico",
+      dettaglio: "Aggiorna foto, misure ed esami. Ci aiuta a calibrare il piano.",
+      nextHint: null,
+    };
+  }
+
+  // 2. Workout previsto oggi e non ancora completato (esclude recovery e rest).
+  const hd = ST.trainHomeData;
+  if(hasTraining() && hd && !hd.doneToday){
+    const sid = hd.inProgress ? hd.lastSession : hd.nextSession;
+    const isRecovery = sid === 'recoveryUpper' || sid === 'recoveryLower' || sid === 'rest';
+    if(!isRecovery){
+      const sess = TRAINING_SESSIONS[sid] || TRAINING_SESSIONS.upperA;
+      return {
+        titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
+        dettaglio: `Sessione ${sess.name} a digiuno. Si parte con 5 minuti di preparazione.`,
+        nextHint: { eyebrow: "DOPO L'ALLENAMENTO", chip: "colazione zona" },
+      };
+    }
+  }
+
+  // 3. Pasti registrati oggi < 3 e ora >= 12:00 → ricorda il pranzo.
+  const day = getDay(todayKey());
+  const mealsCount = (day.meals || []).length;
+  if(mealsCount < 3 && new Date().getHours() >= 12){
+    return {
+      titolo: "Hai mangiato a pranzo?",
+      dettaglio: "Registra il pasto per tenere traccia dei macro.",
+      nextHint: null,
+    };
+  }
+
+  // 4. Default fallback.
+  return {
+    titolo: "Buona giornata",
+    dettaglio: "Apri un modulo per iniziare.",
+    nextHint: null,
+  };
+}
+
+function renderHomeV2(){
+  // ── Dati nutrition (riusa dayTotals + ST.TARGET già esistenti) ──
   const today = todayKey();
   const day   = getDay(today);
-  const meals = day.meals || [];
-  const taken = day.suppsTaken || [];
-  // Include pasti + integratori standard + integratori extra (rawSuppLogs non standard)
   const cons  = dayTotals(day);
   const target = ST.TARGET || {kcal:2000, protein:150, carbs:200, fat:67};
 
-  // ── Zona check (identica a renderOggi) ──
-  const macroSum = cons.protein + cons.carbs + cons.fat;
-  const hasData  = macroSum >= 5;
-  let zonaOk = false;
-  if (hasData) {
-    const kP=cons.protein*4, kC=cons.carbs*4, kF=cons.fat*9;
-    const totK = kP+kC+kF || 1;
-    const pP=Math.round(kP/totK*100), pC=Math.round(kC/totK*100), pF=Math.round(kF/totK*100);
-    zonaOk = (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
-  }
-
-  // ── Ring SVG (modello ibrido: anello si RIEMPIE col consumo, testo mostra "rimaste") ──
-  const remKcal   = kcalRimaste(cons.kcal, target.kcal);
-  const overKcal  = isOverTarget(cons.kcal, target.kcal);
-  const consPctKcal = overKcal ? 100 : (target.kcal > 0 ? Math.max(0, Math.min(100, Math.round((cons.kcal / target.kcal) * 100))) : 0);
-  const R = 42, circ = 2 * Math.PI * R;
-  const dash = ((consPctKcal / 100) * circ).toFixed(1);
-  const gap  = (circ - dash).toFixed(1);
-  const ringColor = overKcal ? OVER_COLOR : (hasData ? (zonaOk ? 'var(--acc)' : 'var(--fat)') : 'var(--warn)');
-  const remColor = overKcal ? OVER_COLOR : 'var(--t1)';
-
-  // ── Data italiana ──
+  // ── Saluto + data ──
+  const profile = ST.profile || {};
+  const firstName = String(profile.first_name || '').trim();
+  const lastName  = String(profile.last_name  || '').trim();
+  const initials  = ((firstName.charAt(0) + lastName.charAt(0)).toUpperCase()) || (firstName.charAt(0) || '?').toUpperCase();
   const now = new Date();
-  const DAY_N = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  const MON_N = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
-  const dateStr = `${DAY_N[now.getDay()]} ${now.getDate()} ${MON_N[now.getMonth()]}`;
+  const h = now.getHours();
+  let salutoBase;
+  if(h < 5) salutoBase = 'Notte';
+  else if(h < 12) salutoBase = 'Buongiorno';
+  else if(h < 18) salutoBase = 'Buon pomeriggio';
+  else salutoBase = 'Buonasera';
+  const greeting = firstName ? `${salutoBase}, ${firstName}.` : `${salutoBase}.`;
+  const DAYS_FULL   = ['DOMENICA','LUNEDÌ','MARTEDÌ','MERCOLEDÌ','GIOVEDÌ','VENERDÌ','SABATO'];
+  const MONTHS_FULL = ['GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE'];
+  const dateStr = `${DAYS_FULL[now.getDay()]} ${now.getDate()} ${MONTHS_FULL[now.getMonth()]}`;
 
-  // ── Zona badge ──
-  const zonaLabel  = !hasData ? '— dati insufficienti' : (zonaOk ? '● In zona' : '○ Fuori zona');
-  const zonaColor  = !hasData ? 'var(--warn)' : (zonaOk ? 'var(--acc)' : 'var(--fat)');
-  const zonaBg     = !hasData ? 'rgba(196,136,10,.10)' : (zonaOk ? 'rgba(42,122,111,.12)' : 'rgba(184,76,42,.10)');
-  const zonaBorder = !hasData ? 'rgba(196,136,10,.25)' : (zonaOk ? 'rgba(42,122,111,.20)' : 'rgba(184,76,42,.20)');
-
-  // ── Helper: macro bar (modello ibrido: visivo si RIEMPIE col consumo, testo mostra "rimasti") ──
-  function mBar(label, current, tgt, color) {
-    if(!tgt || tgt <= 0) return ''; // salta macro senza target
-    const rem = macroRimasti(current, tgt);
-    const over = isOverTarget(current, tgt);
-    // Visivo: barra si RIEMPIE (% consumato). Oltre target: 100% pieno color OVER.
-    const consPct = over ? 100 : Math.max(0, Math.min(100, Math.round((current / tgt) * 100)));
-    const valText = over ? `+${fmtNum(Math.abs(rem))}g oltre` : `${fmtNum(rem)}g rimasti`;
-    const valColor = over ? OVER_COLOR : 'var(--t1)';
-    const fillColor = over ? OVER_COLOR : color;
-    return `
-      <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;align-items:baseline;">
-          <span style="font-size:11px;color:var(--t2);font-family:var(--font-sans);font-weight:500;">${label}</span>
-          <span style="font-size:11px;color:${valColor};font-family:var(--font-mono);font-weight:500;">${valText}</span>
+  // ── Card Nutrition: donut kcal (riempie col consumo) + 3 macro consumati ──
+  const kcalCons   = Math.max(0, Number(cons.kcal) || 0);
+  const kcalTarget = Math.max(1, Number(target.kcal) || 1);
+  const overKcal   = isOverTarget(kcalCons, kcalTarget);
+  const kcalPct    = Math.min(100, Math.round((kcalCons / kcalTarget) * 100));
+  const C          = 2 * Math.PI * 34;                 // ~213.6
+  const dashLen    = ((kcalPct / 100) * C).toFixed(1);
+  const ringStroke = overKcal ? OVER_COLOR : 'var(--acc)';
+  const nutritionCard = `
+    <div class="home-v2-card" onclick="showPage('oggi')">
+      <span class="home-v2-card-dot" style="background:var(--mod-nutrition);"></span>
+      <div style="flex:1;min-width:0;">
+        <div class="home-v2-card-title">Nutrition</div>
+        <div class="home-v2-nutr">
+          <div class="home-v2-donut">
+            <svg class="home-v2-donut-svg" viewBox="0 0 80 80">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="var(--s3)" stroke-width="6"/>
+              <circle cx="40" cy="40" r="34" fill="none" stroke="${ringStroke}" stroke-width="6"
+                      stroke-dasharray="${dashLen} ${C.toFixed(1)}" stroke-linecap="round"/>
+            </svg>
+            <div class="home-v2-donut-inner">
+              <span class="home-v2-donut-num">${fmtNum(kcalCons)}</span>
+              <span class="home-v2-donut-sub">/ ${fmtNum(kcalTarget)} KCAL</span>
+            </div>
+          </div>
+          <div class="home-v2-macro-list">
+            <div class="home-v2-macro-row">
+              <span class="home-v2-macro-label" style="color:var(--carb);">CARB</span>
+              <span><span class="home-v2-macro-value">${fmtNum(cons.carbs)}</span><span class="home-v2-macro-unit">g</span></span>
+            </div>
+            <div class="home-v2-macro-row">
+              <span class="home-v2-macro-label" style="color:var(--acc);">PROT</span>
+              <span><span class="home-v2-macro-value">${fmtNum(cons.protein)}</span><span class="home-v2-macro-unit">g</span></span>
+            </div>
+            <div class="home-v2-macro-row">
+              <span class="home-v2-macro-label" style="color:var(--fat);">FAT</span>
+              <span><span class="home-v2-macro-value">${fmtNum(cons.fat)}</span><span class="home-v2-macro-unit">g</span></span>
+            </div>
+          </div>
         </div>
-        <div style="height:4px;border-radius:2px;background:var(--s3);overflow:hidden;">
-          <div style="height:100%;border-radius:2px;width:${consPct}%;background:${fillColor};transition:width .6s ease;"></div>
-        </div>
-      </div>`;
-  }
-  const macroBars =
-    mBar('Carboidrati', cons.carbs,   target.carbs,   'var(--carb)') +
-    mBar('Proteine',    cons.protein,  target.protein, 'var(--acc)')  +
-    mBar('Grassi',      cons.fat,      target.fat,     'var(--fat)');
-
-  // ── Helper: tile wrapper ──
-  function tile(ink, body, right, onclick) {
-    const click = onclick ? `onclick="${onclick}"` : '';
-    return `
-      <div ${click} style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-md);padding:14px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);position:relative;overflow:hidden;">
-        <div style="position:absolute;top:0;bottom:0;left:0;width:3px;background:${ink};"></div>
-        <div style="flex:1;min-width:0;padding-left:8px;">${body}</div>
-        ${right}
-      </div>`;
-  }
-
-  // ── Helper: tile header ──
-  function tHead(title, sub, ink) {
-    return `
-      <div style="font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.3px;font-family:var(--font-sans);">${title}</div>
-      <div style="font-size:11px;color:${ink};font-family:var(--font-mono);margin-top:2px;">${sub}</div>`;
-  }
-
-  // ── Nutrition tile (dati live, logica residua) ──
-  const nutrSub  = meals.length ? `${meals.length} pasti · ${zonaOk ? 'tutto in zona' : 'verifica macro'}` : 'Nessun pasto registrato';
-  const remC_tile = macroRimasti(cons.carbs,   target.carbs);
-  const remP_tile = macroRimasti(cons.protein, target.protein);
-  const remF_tile = macroRimasti(cons.fat,     target.fat);
-  const overC_tile = isOverTarget(cons.carbs,   target.carbs);
-  const overP_tile = isOverTarget(cons.protein, target.protein);
-  const overF_tile = isOverTarget(cons.fat,     target.fat);
-  const nutrBody = `
-    ${tHead('Nutrition', nutrSub, '#3B6D11')}
-    <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px;white-space:nowrap;">
-      <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:${overKcal?OVER_COLOR:'var(--t1)'};line-height:1;">${overKcal?'+':''}${fmtNum(Math.abs(remKcal))}</span>
-      <span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">${overKcal ? 'kcal oltre' : (remKcal===0 && cons.kcal>0 ? 'target raggiunto' : 'kcal rimaste')}</span>
-    </div>
-    <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);margin-top:3px;">${fmtNum(cons.kcal)} / ${fmtNum(target.kcal)} consumate</div>
-    <div style="display:flex;gap:10px;margin-top:7px;">
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--carb);"><b>C</b> <span style="color:${overC_tile?OVER_COLOR:'var(--t2)'};">${overC_tile?'+':''}${fmtNum(Math.abs(remC_tile))}g</span></span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--acc);"><b>P</b> <span style="color:${overP_tile?OVER_COLOR:'var(--t2)'};">${overP_tile?'+':''}${fmtNum(Math.abs(remP_tile))}g</span></span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--fat);"><b>G</b> <span style="color:${overF_tile?OVER_COLOR:'var(--t2)'};">${overF_tile?'+':''}${fmtNum(Math.abs(remF_tile))}g</span></span>
-      <span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">rimasti</span>
-    </div>`;
-  // Pill stato Zona — 3 stati: nessun dato → "—" ambra; in zona → "ZONA" verde; fuori zona → "FUORI ZONA" ambra
-  const tileZonaTxt    = !hasData ? '—' : (zonaOk ? 'ZONA' : 'FUORI ZONA');
-  const tileZonaColor  = !hasData ? 'var(--warn)' : (zonaOk ? 'var(--acc)' : 'var(--fat)');
-  const tileZonaBg     = !hasData ? 'rgba(196,136,10,.10)' : (zonaOk ? 'var(--acc-lt)' : 'var(--err-lt)');
-  const tileZonaBorder = !hasData ? 'rgba(196,136,10,.25)' : (zonaOk ? 'rgba(42,122,111,.25)' : 'rgba(184,76,42,.25)');
-  const nutrRight = `
-    <div style="flex-shrink:0;text-align:center;padding:10px 12px;border-radius:var(--r);min-width:64px;background:${tileZonaBg};border:1px solid ${tileZonaBorder};display:flex;align-items:center;justify-content:center;">
-      <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;font-family:var(--font-mono);font-weight:700;color:${tileZonaColor};white-space:nowrap;">${tileZonaTxt}</div>
-    </div>`;
-
-  // ── Training tile (dati live) ──
-  // Logica unificata desktop/mobile basata sull'ultimo workout in tabella `workouts`.
-  let trainBody, trainRight;
-  const hd = ST.trainHomeData;
-  if(!hd){
-    // Loading
-    trainBody = `
-      ${tHead('Training', 'Caricamento...', '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">—</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;"> </div>`;
-    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
-  } else if(hd.notStarted){
-    // Nessun workout in DB → "Inizia il programma — Giorno 1: Upper A"
-    const firstSess = TRAINING_SESSIONS.upperA;
-    trainBody = `
-      ${tHead('Training', 'Inizia il programma', '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno 1 — ${firstSess.name}</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">${firstSess.type} · ${firstSess.exercises.length} esercizi · RIR ${firstSess.rir}</div>`;
-    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →</div>`;
-  } else if(hd.doneToday){
-    // Sessione completata oggi → "Giorno X completato ✓ · Prossimo: Giorno Y — …"
-    const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    const dayN = SESSION_DAY_NUM[hd.lastSession] || '?';
-    const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    const nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
-    trainBody = `
-      ${tHead('Training', `${completedSess.type} · completata`, '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${completedSess.name}</div>
-      <div style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Giorno ${dayN} completato ✓ · Prossimo: Giorno ${nextDayN} — ${nextSessObj.name}</div>`;
-    trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 12px;font-size:13px;font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:center;min-width:56px;border:1px solid rgba(42,122,111,.2);">✓<br><span style="font-size:9px;letter-spacing:1px;">FATTO</span></div>`;
-  } else if(hd.inProgress){
-    // Workout aperto oggi non ancora completato → "Sessione in corso"
-    const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-    const dayN = SESSION_DAY_NUM[hd.lastSession] || '?';
-    trainBody = `
-      ${tHead('Training', 'Sessione in corso', '#185FA5')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">Giorno ${dayN} — ${sessObj.name}</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${sessObj.type} · ${sessObj.exercises.length} esercizi · in corso</div>`;
-    trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Riprendi →</div>`;
-  } else {
-    // Workout precedenti completati ma non oggi → mostra prossimo
-    const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
-    const nextDayN = SESSION_DAY_NUM[hd.nextSession] || '?';
-    const lastDateTxt = hd.lastDate ? `Ultima: ${fmtDate(hd.lastDate)}` : '';
-    const stk = hd.streak>0 ? `<div style="font-size:9px;letter-spacing:1px;font-family:var(--font-mono);font-weight:700;margin-top:3px;">⚡ ${hd.streak}</div>` : '';
-
-    const isRecoveryNext = hd.nextSession === 'recoveryUpper' || hd.nextSession === 'recoveryLower';
-    if (isRecoveryNext) {
-      // Tile recupero attivo (verde)
-      trainBody = `
-        ${tHead('Training', `Giorno ${nextDayN} · Recupero`, '#2A7A6F')}
-        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">Mobilità · Stretching${lastDateTxt?' · '+lastDateTxt:''}</div>`;
-      trainRight = `<div style="flex-shrink:0;background:#E6F4F2;color:#2A7A6F;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;border:1px solid rgba(42,122,111,.25);">Inizia →${stk}</div>`;
-    } else {
-      // Tile main (Upper/Lower) — comportamento standard
-      trainBody = `
-        ${tHead('Training', `Giorno ${nextDayN} · ${nextSessObj.type}`, '#185FA5')}
-        <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">${nextSessObj.name}</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;line-height:1.4;">${lastDateTxt}${nextSessObj.rir!=null?' · RIR '+nextSessObj.rir:''}</div>`;
-      trainRight = `<div style="flex-shrink:0;background:#185FA5;color:#fff;border-radius:var(--r);padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;white-space:nowrap;text-align:center;min-width:64px;">Inizia →${stk}</div>`;
-    }
-  }
-
-  // ── Body tile (dati live) ──
-  let bodyBody, bodyRight;
-  if(ST.bodyLogs === null || ST.bodyMeasurements === null){
-    bodyBody = `
-      ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
-      <div style="font-size:19px;font-weight:700;color:var(--t1);margin-top:8px;letter-spacing:-.3px;font-family:var(--font-sans);">—</div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;"> </div>`;
-  } else {
-    const bData     = getLatestBodyData();
-    const bTimeline = getUnifiedBodyTimeline();
-    const bWeights  = bTimeline.filter(r => r.weight_kg != null);
-    const bW        = bData.weight_kg ?? ST.profile?.weight_kg ?? null;
-    const bWPrev    = bWeights.length > 1 ? bWeights[1].weight_kg : null;
-    let bTrend = '';
-    if(bW && bWPrev){
-      const diff = (bW - bWPrev).toFixed(1);
-      const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
-      bTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
-    }
-    const bSub = [
-      bData.bf_pct   ? `BF ${bData.bf_pct}%`        : null,
-      bData.waist_cm ? `Vita ${bData.waist_cm} cm`  : null,
-    ].filter(Boolean).join(' · ') || 'Nessun dato';
-    bodyBody = `
-      ${tHead('Body', 'Peso · Composizione · Vita', '#854F0B')}
-      <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;white-space:nowrap;">
-        <span style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${bW ?? '—'}</span>
-        ${bW ? `<span style="font-size:12px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
-        ${bTrend}
       </div>
-      <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;">${bSub}</div>`;
+      <span class="home-v2-card-arrow">›</span>
+    </div>`;
+
+  // ── Card Training (riusa ST.trainHomeData già popolato da loadTrainingHomeData) ──
+  let trainingCard = '';
+  if(hasTraining()){
+    const hd = ST.trainHomeData;
+    let sessName, weekEyebrow;
+    if(!hd || hd.notStarted){
+      const firstSess = TRAINING_SESSIONS.upperA;
+      sessName = `Sessione ${firstSess.name}`;
+      weekEyebrow = 'INIZIA IL PROGRAMMA';
+    } else if(hd.doneToday){
+      const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
+      const nextSessObj   = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+      sessName = `Sessione ${completedSess.name}`;
+      weekEyebrow = `COMPLETATA · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
+    } else if(hd.inProgress){
+      const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
+      sessName = `Sessione ${sessObj.name}`;
+      weekEyebrow = 'SESSIONE IN CORSO';
+    } else {
+      const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+      const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
+      sessName    = `Sessione ${nextSessObj.name}`;
+      weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()}`;
+    }
+    trainingCard = `
+      <div class="home-v2-card" onclick="showPage('training')">
+        <span class="home-v2-card-dot" style="background:var(--mod-training);"></span>
+        <div class="home-v2-train-flex">
+          <div class="home-v2-card-title">Training</div>
+          <div class="home-v2-train-name">${esc(sessName)}</div>
+          <div class="home-v2-train-sub">${esc(weekEyebrow)}</div>
+        </div>
+        <span class="home-v2-card-arrow">›</span>
+      </div>`;
   }
-  bodyRight = `<span style="color:var(--t3);font-size:20px;flex-shrink:0;">›</span>`;
+
+  // ── Card Body (riusa getLatestBodyData + getUnifiedBodyTimeline) ──
+  let bodyCard;
+  const loadingBody = ST.bodyLogs === null || ST.bodyMeasurements === null;
+  if(loadingBody){
+    bodyCard = `
+      <div class="home-v2-card" onclick="showPage('body')">
+        <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
+        <div class="home-v2-body-flex">
+          <div class="home-v2-card-title">Body</div>
+          <div class="home-v2-body-line"><span class="home-v2-body-weight">—</span></div>
+          <div class="home-v2-body-sub">CARICAMENTO…</div>
+        </div>
+        <span class="home-v2-card-arrow">›</span>
+      </div>`;
+  } else {
+    const bData   = getLatestBodyData();
+    const tl      = getUnifiedBodyTimeline();
+    const weights = tl.filter(r => r.weight_kg != null);
+    const w       = bData.weight_kg ?? profile.weight_kg ?? null;
+    const wPrev   = weights.length > 1 ? weights[1].weight_kg : null;
+    let deltaHTML = '';
+    if(w != null && wPrev != null){
+      const diff   = (w - wPrev);
+      const absD   = Math.abs(diff);
+      const obj    = String(profile.obiettivo || '').toLowerCase();
+      const wantsGain = obj.includes('ipertrofia') || obj.includes('forza');
+      const goodDown  = !wantsGain;
+      const isGood = absD < 0.05 ? null : (diff < 0 ? goodDown : !goodDown);
+      const color  = absD < 0.05 ? 'var(--t3)' : (isGood ? '#2A7A6F' : '#B84C2A');
+      const arrow  = absD < 0.05 ? '' : (diff > 0 ? '↑' : '↓');
+      const sign   = diff > 0 ? '+' : '';
+      deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow ? arrow + ' ' : ''}${sign}${diff.toFixed(1)}</span>`;
+    }
+    const cp = getNextCheckpointInfo();
+    let cpLabel;
+    if(!cp.hasCheck) cpLabel = 'PRIMO CHECKPOINT DA FARE';
+    else if(cp.overdue) cpLabel = 'CHECKPOINT IN RITARDO';
+    else if(cp.daysUntil === 0) cpLabel = 'CHECKPOINT OGGI';
+    else cpLabel = `CHECKPOINT TRA ${cp.daysUntil} GIORN${cp.daysUntil === 1 ? 'O' : 'I'}`;
+    bodyCard = `
+      <div class="home-v2-card" onclick="showPage('body')">
+        <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
+        <div class="home-v2-body-flex">
+          <div class="home-v2-card-title">Body</div>
+          <div class="home-v2-body-line">
+            <span class="home-v2-body-weight">${w != null ? w : '—'}</span>
+            ${w != null ? '<span class="home-v2-body-unit">kg</span>' : ''}
+            ${deltaHTML}
+          </div>
+          <div class="home-v2-body-sub">${cpLabel}</div>
+        </div>
+        <span class="home-v2-card-arrow">›</span>
+      </div>`;
+  }
+
+  // ── Pannello PROSSIMA AZIONE ──
+  const azione  = getProssimaAzioneSimple();
+  const oraStr  = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const nextHintHTML = azione.nextHint ? `
+        <div class="home-v2-action-next">
+          <span class="home-v2-action-next-eb">${esc(azione.nextHint.eyebrow)}</span>
+          <span class="home-v2-action-next-chip">${esc(azione.nextHint.chip)}</span>
+        </div>` : '';
+  const actionPanel = `
+    <div class="home-v2-action">
+      <div class="home-v2-action-head">
+        <span>PROSSIMA AZIONE</span>
+        <span>${oraStr}</span>
+      </div>
+      <div class="home-v2-action-title">${esc(azione.titolo)}</div>
+      <div class="home-v2-action-detail">${esc(azione.dettaglio)}</div>
+      ${nextHintHTML}
+    </div>`;
 
   // ── Inject ──
   document.getElementById('page-home').innerHTML = `
-    <div style="background:linear-gradient(135deg,#fff 0%,var(--acc-lt) 100%);border:1px solid rgba(42,122,111,.25);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-        <span style="font-size:11px;color:var(--t2);font-family:var(--font-mono);">${dateStr} · Oggi</span>
-        <span style="font-size:11px;color:${zonaColor};font-family:var(--font-mono);font-weight:700;background:${zonaBg};border-radius:var(--r-pill);padding:3px 9px;border:1px solid ${zonaBorder};">${zonaLabel}</span>
-      </div>
-      <div style="display:flex;gap:16px;align-items:center;">
-        <div style="position:relative;width:100px;height:100px;flex-shrink:0;">
-          <svg width="100" height="100" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
-            <circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--s3)" stroke-width="7"/>
-            <circle cx="50" cy="50" r="${R}" fill="none" stroke="${ringColor}" stroke-width="7" stroke-dasharray="${dash} ${gap}" stroke-linecap="round"/>
-          </svg>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
-            <div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:${remColor};line-height:1;">${overKcal?'+':''}${fmtNum(Math.abs(remKcal))}</div>
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;line-height:1;">${overKcal ? 'oltre' : (remKcal===0 && cons.kcal>0 ? 'target raggiunto' : 'rimaste')}</div>
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);line-height:1;margin-top:1px;">${fmtNum(cons.kcal)} / ${fmtNum(target.kcal)}</div>
-          </div>
+    <div class="home-v2-wrap">
+      <div class="home-v2-header">
+        <div class="home-v2-header-text">
+          <div class="home-v2-date">${dateStr}</div>
+          <div class="home-v2-greeting">${esc(greeting)}</div>
         </div>
-        <div style="flex:1;min-width:0;">${macroBars}</div>
+        <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
       </div>
+      ${nutritionCard}
+      ${trainingCard}
+      ${bodyCard}
+      ${actionPanel}
+      ${versionFooter()}
     </div>
-    <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;margin-top:2px;">Moduli · oggi</div>
-    ${tile('#3B6D11', nutrBody,  nutrRight,  "showPage('oggi')")}
-    ${hasTraining() ? tile('#185FA5', trainBody, trainRight, "showPage('training')") : ''}
-    ${tile('#854F0B', bodyBody,  bodyRight,  "showPage('body')")}
-    ${versionFooter()}
   `;
 }
 
