@@ -42,6 +42,31 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 
 11 mag 2026: introdotti admin panel (`dashboardzona.html`) e logica residua kcal/macro nel modulo Nutrition. App pronta per testing con 3 tester (Ignazio + Ginevra + Isabella). Prossimi step in attesa di feedback tester.
 
+## Stato deploy attuale (15 maggio 2026)
+
+- **Branch**: `main` di `IgnazioF321621/benessere-forma`
+- **Ultimi commit rilevanti** (catena Fase D):
+  - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
+  - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone (donut size, SETTIMANA N/4, top padding, prima versione getPostWorkoutHint, body delta v1)
+  - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI (coerenza Home/Nutrition) + fasce chip post-workout corrette
+- **File principale**: `zona-tracker.html` (~12500 righe)
+- **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
+- **Versione visibile in app**: `v2026.05.15 · HH:MM` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+
+## Stato design refinement (14-15 maggio 2026)
+
+Quattro fasi di refinement coordinate da Claude Design, eseguite da Claude Code. Stato:
+
+- **Fase A** ✅ (commit `cfd3689`): stack visivo definitivo — font Syne (sans display) + JetBrains Mono (numeri/label), tinte moduli `--mod-nutrition` `--mod-training` `--mod-body`, sostituzione "AI" → "coach" nei testi visibili UI.
+- **Fase B** ✅ (commit `97f3d1f`): refinement visivo 13 schermate M2 — pattern campo numerico Syne+mono, pillole gate Sì/No, modal Rifai/Tieni, mantra italics, CTA sticky con sfumatura morbida bone→trasparente.
+- **Fase B fix** ✅ (commit `1a204f3`): 16 tip spostati DENTRO info-modal ⓘ (schermate s6/s7/s8), switch unità KG·CM / LB·IN non più tagliato dal notch (spostato nell'header verde con label "Unità di misura").
+- **Fase C** ✅ (commit `49f2a24`): M1 nuovo 9 schermate (welcome + auth OTP + 7 step). Vecchio M1 5-step legacy cancellato (~97 righe). `saveOnboarding()` riscritta per leggere da `ST.m1Data`, OTP riusato (logica Supabase invariata, solo UI rinnovata).
+- **Fix OTP grid + routing post-OTP** ✅ (commit `82dd4dc` + `ac3ad96`): caselle OTP a 6 quadratini affiancati senza overflow; cache `ZT_CACHE_KEY` resa per-utente (era globale, causava skip M1 per utenti nuovi su device già loggati in precedenza).
+- **Fix token zombie** ✅ (commit `3d9c10f`): bootstrap valida server-side la sessione con `getUser()`. Utenti cancellati dalla dashboard Supabase vengono sloggati automaticamente all'apertura app invece di restare sospesi con sessione locale fantasma.
+- **Fase D Giro 1** ✅ (commit `b2ad26f`): Home V2 nuova — saluto orario-dipendente con avatar bollino IF, 3 card moduli (Nutrition donut + Training + Body), pannello PROSSIMA AZIONE con 4 regole base statiche, tab bar bottom. Home legacy rimossa (~245 righe codice morto). Global `#header` nascosto su home via `.home-v2-hide`.
+- **Fase D Giro 1 — 5 rifiniture** ✅ (commit `39872f8`): donut 84→104px + adaptive font, "SETTIMANA N/4" su card Training (cycle 4-settimane CARICO×3+SCARICO×1), body delta color v1 (da obiettivo string), top padding +30px, prima versione `getPostWorkoutHint()` (fasce 5-22).
+- **Fase D Giro 1 — fix donut/chip** ✅ (commit `71aa1be`): donut Home V2 ora mostra kcal/macro RIMASTE (riusa `kcalRimaste()`/`macroRimasti()`/`isOverTarget()`/`OVER_COLOR` del modulo Nutrition — modello ibrido coerente). Fasce orarie chip post-workout ristrette: 5-10 colazione, 10-12 spuntino+colazione, 12-14 pranzo, 14-18 merenda+proteine, 18-21 cena, 21-5 cena leggera+proteine.
+
 ## Idee emerse fuori roadmap
 
 - **Food input multi-modale** (foto piatto AI + barcode + OCR etichetta) — roadmap visiva completa già discussa, da implementare dopo testing tester.
@@ -262,6 +287,33 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 | `notes` | `text` | |
 
 RLS abilitata — policy: `auth.uid() = user_id`.
+
+## Database — campi M1 mappati (15 maggio 2026)
+
+Mappatura dei campi raccolti dall'onboarding M1 (9 schermate, 7 step di dati) verso lo schema `profiles`:
+
+| Campo M1 (`ST.m1Data`) | Colonna `profiles` | Note |
+|---|---|---|
+| `nome` | `first_name` | text |
+| `cognome` | `last_name` | text |
+| `eta` | `age` | int |
+| `sesso` (M/F/Altro) | `sex` | char(1): 'M'/'F'/'O' |
+| `altezza` | `height_cm` | int |
+| `peso_attuale` | `weight_kg` | numeric(5,2) |
+| `peso_obiettivo` | `goal_weight_kg` | numeric(5,2) |
+| `obiettivi[]` (multi-select max 2) | `obiettivo` | CSV string (split client-side, vedi `OBJ_ADAPT` keys) |
+| `attivita` | `activity_level` | text |
+| `stile_alimentare` | `dieta` | text |
+| `intolleranze[]` | `intolleranze` | array text |
+
+### TODO colonne dedicate (oggi aggregati in `note_salute`)
+
+I seguenti campi M1 sono raccolti ma attualmente serializzati come testo libero dentro `profiles.note_salute` perché le colonne dedicate non esistono ancora nello schema. Da promuovere a colonne proprie quando serviranno operazioni filtrate (es. coach personalizzato per limitazione articolare):
+
+- `esperienza_allenamento` (M1 step 4) — principiante / intermedio / avanzato / ritorno-allenamento
+- `limitazioni[]` (M1 step 6) — array multi-select (schiena/articolazioni/condizioni)
+- `altre_intolleranze` (M1 step 5) — campo libero "Altro"
+- `altre_limitazioni` (M1 step 6) — campo libero "Altro"
 
 ## Navigazione — struttura attuale (aprile 2026)
 
@@ -579,6 +631,33 @@ Posizionati in:
 - **Info icon:** `.info-icon` (cerchio 16px verde accent, testo bianco) — usato per termini tecnici Training
 - **Modal info:** `.info-modal-overlay` + `.info-modal` + `.info-modal-close` — usato sia da `showInfoModal` che da `openExerciseAI`
 
+## Decisioni di design correnti (15 maggio 2026)
+
+Sintesi delle decisioni di design consolidate dopo Fase A/B/C/D. Queste **sostituiscono** scelte precedenti documentate nella sezione "Design system" (legacy Manrope + palette moduli verde/blu/marrone) per le schermate nuove: M1, M2, Home V2. I moduli interni (Nutrition/Training/Body sub-tab) mantengono ancora elementi grafici legacy — sono da migrare progressivamente (vedi TODO sezione successiva).
+
+- **Stack visivo definitivo**: Syne (sans display) + JetBrains Mono (numeri/label). **Niente Manrope** sulle schermate nuove.
+- **Palette**:
+  - Background: bone `#F5F3EE`
+  - Accent globale: evergreen `#2A7A6F`
+  - Tinte modulo (variabili CSS in cima a `zona-tracker.html`): Nutrition `--mod-nutrition:#FAC775` (ambra), Training `--mod-training:#B5D4F4` (azzurro), Body `--mod-body:#AFA9EC` (viola)
+  - Over-target: `OVER_COLOR='#B45309'` (ambra scuro, leggibile non allarmante)
+- **Logica donut Nutrition** (sia Home V2 che modulo Nutrition): modello ibrido **"forma = consumato, numero = rimanente"** — anello si riempie col consumo, numeri al centro mostrano kcal RIMASTE. Macro pill mostrano grammi rimasti, prefisso `+N` ambra se oltre target. Riusa helper `kcalRimaste()`, `macroRimasti()`, `isOverTarget()`, `OVER_COLOR` — niente duplicazione di logica.
+- **Saluto Home V2 orario-dipendente** (`renderHomeV2()`):
+  - 0-5: "Notte"
+  - 5-12: "Buongiorno"
+  - 12-18: "Buon pomeriggio"
+  - 18-24: "Buonasera"
+- **Chip "DOPO L'ALLENAMENTO" fasce orarie** (`getPostWorkoutHint()`):
+  - 5-10: colazione zona
+  - 10-12: spuntino + colazione zona
+  - 12-14: pranzo zona
+  - 14-18: merenda + proteine
+  - 18-21: cena zona
+  - 21-5: cena leggera + proteine
+- **Avatar Home V2**: bollino circolare 42px con iniziali (`first_name[0]+last_name[0]`), evergreen pieno, onclick → `openSettingsModal()`. Rimpiazza l'header globale (nascosto su home via `#header.home-v2-hide`).
+- **"coach" sostituisce "AI"** in tutti i copy visibili UI (decisione 10 maggio, applicata in Fase A).
+- **Tinta viola modulo Body** (`#AFA9EC`) usata in Home V2 come accent della card Body. Per i checkpoint Body futuri (M2 ricorrente) la tinta forte `#5E4A7A` resta riservata.
+
 ## Workflow git (aggiornato 12 maggio 2026)
 
 Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
@@ -681,6 +760,21 @@ Sistema di stamp automatico della versione attiva, utile per debug cross-device.
   - **Skippa** se `zona-tracker.html` non è fra i file in stage del commit (commit di soli `sw.js`, ecc. non bumpano la versione)
 - **Visualizzazione:** helper `versionFooter()` (in `zona-tracker.html`) restituisce `<div>v${APP_VERSION}</div>` + spacer invisibile da 120px. Chiamato in fondo a tutte e 4 le tab principali (Home, Nutrition/Oggi + sub-tab, Training, Body) come ultimo elemento del flusso scrollabile.
 - **Workflow:** in working tree il valore è sempre `__APP_VERSION__` o quello dell'ultimo commit. Solo l'hook al commit successivo lo aggiorna.
+
+## TODO post-fasi-design (15 maggio 2026)
+
+Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per priorità — l'ordine di esecuzione verrà deciso dopo la riprogettazione modulo Nutrition + Home definitiva su Claude Design.
+
+1. **Pulsante "Nuovo check fisico" sempre visibile** nel modulo Body. M2 è un evento **ricorrente ogni 4 settimane**, non una tantum (vedi `getNextCheckpointInfo()` su Home V2 che calcola scadenza). Il modulo Body oggi non ha un CTA dedicato per riavviare M2.
+2. **Reminder automatico fine-scheda allenamento** → notifica/banner "È ora del check fisico" quando il countdown 28 giorni scade. Trigger da decidere (visita Home, fine workout, lazy).
+3. **UI storico esami del sangue** nel modulo Body — oggi `blood_tests` ha lo schema ma nessuna visualizzazione lato app. Lista + grafico per parametro nel tempo (emoglobina, ferritina, ecc.).
+4. **Modulo Nutrition rifatto** con stile Syne/Mono allineato a M1/M2/Home V2 (decisione presa il 15 mag, lavoro su Claude Design in corso). Oggi i sub-tab Oggi/Integratori/Storico/Piano hanno ancora elementi grafici legacy (palette verde/blu/marrone, font system).
+5. **Obiettivo utente visibile nella Home V2** (es. eyebrow "RICOMPOSIZIONE" sotto saluto) — design da finalizzare su Claude Design. Dato disponibile in `ST.profile.obiettivo` (CSV).
+6. **Colore delta peso Body contestuale all'obiettivo** — già implementato in Home V2 al commit `39872f8`/`71aa1be` usando `goal_weight_kg` vs `weight_kg`. Da estendere coerentemente al modulo Body interno (oggi mostra solo verde/grigio statico).
+7. **Respiro sopra saluto Home V2** — già applicato in `39872f8` (top padding +30px). Verificare se basta o serve altro tuning su Claude Design.
+8. **Colonne DB dedicate** per `esperienza_allenamento`, `limitazioni[]`, `altre_intolleranze`, `altre_limitazioni` — oggi tutto serializzato in `profiles.note_salute`. Da promuovere a colonne quando servirà filtering/query (vedi sezione "Database — campi M1 mappati").
+9. **Logica AI per PROSSIMA AZIONE dinamica** (Fase D Giro 2) — sostituirà `getProssimaAzioneSimple()` (4 regole statiche) con prompt contestuale che legge profilo + stato giornaliero + storico recente. Sorgente AI: Cloudflare Worker Groq esistente.
+10. **Coerenza grafica retroattiva** sui moduli interni Nutrition/Training/Body — oggi solo M1/M2/Home V2 hanno il nuovo stack Syne+JetBrains Mono. I sub-tab interni dei moduli sono ancora su sistema legacy (vedi sezione "Design system" rispetto a "Decisioni di design correnti").
 
 ## Prossimi step
 
