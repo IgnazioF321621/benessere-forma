@@ -874,6 +874,75 @@ select.inp{cursor:pointer;}
 .home-v2-action-next{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
 .home-v2-action-next-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);}
 .home-v2-action-next-chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);background:var(--acc-lt);border:1px solid rgba(42,122,111,.22);border-radius:999px;padding:5px 11px;}
+
+/* ── OGGI V3 — Restyling Nutrition tab (15 maggio 2026) ───── */
+.oggi-v3-accent{height:3px;background:var(--mod-nutrition);margin:-18px -16px 14px;border-radius:0 0 2px 2px;}
+.oggi-v3-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px;}
+.oggi-v3-header-text .oggi-v3-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--acc);margin-bottom:6px;}
+.oggi-v3-header-text .oggi-v3-title{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--t1);letter-spacing:-0.6px;line-height:1.05;}
+.oggi-v3-avatar{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:var(--acc);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.05em;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
+.oggi-v3-subnav{display:flex;gap:8px;padding:2px 0 14px;overflow-x:auto;scrollbar-width:none;}
+.oggi-v3-subnav::-webkit-scrollbar{display:none;}
+.oggi-v3-pill{flex-shrink:0;padding:9px 18px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:all .12s ease;background:transparent;color:var(--t3);border:1.5px dashed var(--b1);}
+.oggi-v3-pill.active{background:var(--mod-nutrition);color:#3A2C12;border:1.5px solid var(--mod-nutrition);box-shadow:0 1px 2px rgba(20,15,5,.05);}
+.oggi-v3-hero-card{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,15,5,.025);}
+.oggi-v3-donut-row{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px;}
+.oggi-v3-donut-wrap{position:relative;width:200px;height:200px;}
+.oggi-v3-donut-svg{width:100%;height:100%;transform:rotate(-90deg);}
+.oggi-v3-donut-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:6px;padding:0 16px;box-sizing:border-box;}
+.oggi-v3-donut-num{font-family:'Syne',sans-serif;font-size:54px;font-weight:800;color:var(--t1);line-height:1;letter-spacing:-1.5px;}
+.oggi-v3-donut-num.medium{font-size:46px;}
+.oggi-v3-donut-num.small{font-size:38px;}
+.oggi-v3-donut-num.over{color:#B84C2A;}
+.oggi-v3-donut-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;}
+.oggi-v3-donut-summary{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--t3);text-align:center;}
+.oggi-v3-zona-pill{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:12px;margin-bottom:14px;}
+.oggi-v3-zona-pill.in{background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.2);}
+.oggi-v3-zona-pill.near{background:#FEF3DC;border:0.5px solid rgba(196,136,10,.22);}
+.oggi-v3-zona-pill.out{background:#FCEEE9;border:0.5px solid rgba(184,76,42,.22);}
+.oggi-v3-zona-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.oggi-v3-zona-label{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
+.oggi-v3-zona-stats{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);letter-spacing:.02em;}
+.oggi-v3-macro-row{display:flex;gap:10px;}
+.oggi-v3-macro-card{flex:1;background:var(--s1);border:0.5px solid #DDD9D0;border-radius:12px;padding:14px 10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 2px rgba(20,15,5,.025);min-width:0;}
+.oggi-v3-macro-head{display:flex;align-items:center;gap:6px;}
+.oggi-v3-macro-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.oggi-v3-macro-name{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;}
+.oggi-v3-macro-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;letter-spacing:-0.5px;color:var(--t1);}
+.oggi-v3-macro-value-unit{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--t3);margin-left:2px;}
+.oggi-v3-macro-sub{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--t3);}
+.oggi-v3-macro-bar{height:3px;background:var(--s3);border-radius:2px;overflow:hidden;margin-top:2px;}
+.oggi-v3-macro-bar-fill{height:100%;border-radius:2px;transition:width .4s ease;}
+.oggi-v3-cta-row{display:flex;gap:12px;margin:14px 0;}
+.oggi-v3-cta{flex:1;height:48px;border-radius:12px;font-family:'Syne',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;letter-spacing:.01em;transition:transform .1s ease;border:none;}
+.oggi-v3-cta:active{transform:scale(.99);}
+.oggi-v3-cta-primary{background:var(--acc);color:var(--bg);}
+.oggi-v3-cta-secondary{background:transparent;color:var(--acc);border:1.5px solid var(--acc);}
+.oggi-v3-timeline-card{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;padding:18px 16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,15,5,.025);}
+.oggi-v3-timeline-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
+.oggi-v3-timeline-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--t1);letter-spacing:-0.4px;}
+.oggi-v3-timeline-eb{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.12em;color:var(--t3);}
+.oggi-v3-timeline-sub{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-bottom:14px;}
+.oggi-v3-meal-row{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:10px;border:0.5px solid #DDD9D0;border-radius:10px;background:var(--bg);}
+.oggi-v3-meal-time{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--t3);min-width:42px;}
+.oggi-v3-meal-icon{font-size:18px;flex-shrink:0;}
+.oggi-v3-meal-body{flex:1;min-width:0;}
+.oggi-v3-meal-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--t1);line-height:1.2;}
+.oggi-v3-meal-meta{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.12em;color:var(--t3);text-transform:uppercase;margin-top:3px;}
+.oggi-v3-meal-kcal{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--t1);font-weight:600;text-align:right;line-height:1.1;}
+.oggi-v3-meal-kcal-unit{display:block;font-size:9px;color:var(--t3);font-weight:500;margin-top:2px;letter-spacing:.06em;}
+.oggi-v3-meal-check{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--acc-lt);color:var(--acc);font-size:13px;display:flex;align-items:center;justify-content:center;}
+.oggi-v3-planned-row{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:10px;border:1.5px dashed var(--b1);border-radius:10px;background:transparent;cursor:pointer;transition:background .12s ease;}
+.oggi-v3-planned-row:active{background:var(--s2);}
+.oggi-v3-planned-cta{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);flex-shrink:0;}
+.oggi-v3-coach-card{background:#FDF7E8;border:0.5px solid #E8D9A8;border-left:2px solid var(--mod-nutrition);border-radius:12px;padding:16px 16px 14px;margin-top:6px;}
+.oggi-v3-coach-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;}
+.oggi-v3-coach-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;color:#8B6B1E;text-transform:uppercase;}
+.oggi-v3-coach-eb-right{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;}
+.oggi-v3-coach-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);line-height:1.25;}
+.oggi-v3-coach-text{font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.5;margin-top:8px;}
+.oggi-v3-coach-cta{display:block;margin-top:14px;padding:0;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--acc);text-transform:uppercase;cursor:pointer;background:none;border:none;text-align:left;}
+.oggi-v3-coach-silent{display:flex;align-items:center;gap:8px;font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);margin-top:6px;}
 </style>
 </head>
 <body>
@@ -2148,7 +2217,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 15:43';
+const APP_VERSION = '2026.05.15 · 19:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8694,96 +8763,169 @@ function zonaBalance(cons) {
   </div>${legend}`;
 }
 
+// ── OGGI V3 helpers ─────────────────────────────────────────
+// Mappa la data attiva (ST.activeDay = YYYY-MM-DD) al giorno corrispondente del
+// piano AI settimanale (g.giorno = "lunedì"/"martedì"/...). Diacritici tolleranti.
+function getTodayPianoMeals(){
+  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length) return null;
+  const d = new Date((ST.activeDay || todayKey()) + 'T12:00:00');
+  const IT_DAYS = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  const target = IT_DAYS[d.getDay()];
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+  const t = norm(target);
+  return ST.pianoAI.giorni.find(g => {
+    const n = norm(g.giorno);
+    return n === t || n.startsWith(t);
+  }) || null;
+}
+// (norm() usa il range U+0300–U+036F per togliere i diacritici combinanti — supporta "Lunedì"/"lunedi"/"lunedì")
+
+// Apre il form "Registra pasto" pre-compilato dal piano del coach.
+// Indicizzato: la riga "REGISTRA ›" passa l'indice in ST._plannedRows, popolato a render.
+window.openLogFromPlanned = function(idx){
+  const p = (ST._plannedRows || [])[idx];
+  if(!p) return;
+  ST.logOpen = true;
+  ST.logSlot = p.slot;
+  ST.logTime = p.time;
+  ST.smartForm = {
+    items: [],
+    freeText: p.descrizione || '',
+    notes: '',
+    analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '',
+  };
+  renderOggi();
+  // Scroll smooth verso il form (in cima alla pagina dopo header)
+  setTimeout(() => {
+    const el = document.getElementById('registra-pasto-form');
+    if(el) el.scrollIntoView({block:'start', behavior:'smooth'});
+  }, 80);
+};
+
+// OGGI V3 hero (15 maggio 2026): donut grande Syne + status zona pill separato + 3 macro card.
+// Logica residua kcal/macro PRESERVATA (kcalRimaste/macroRimasti/isOverTarget/OVER_COLOR).
+// Stato kcal in negativo: numero "−180" prefisso, rosso terracotta #B84C2A.
 function heroCard(cons) {
-  const pct = ST.TARGET.kcal > 0 ? Math.round((cons.kcal / ST.TARGET.kcal) * 100) : 0;
-  // Modello ibrido: anello Hero si RIEMPIE col consumo, testo mostra "rimaste"
-  const remKcalHero = kcalRimaste(cons.kcal, ST.TARGET.kcal);
-  const overKcalHero = isOverTarget(cons.kcal, ST.TARGET.kcal);
-  const consPctKcalHero = overKcalHero
-    ? 100
-    : (ST.TARGET.kcal > 0 ? Math.max(0, Math.min(100, Math.round((cons.kcal / ST.TARGET.kcal) * 100))) : 0);
-  const r = 77, cx = 85, cy = 85, sw = 10, circ = 2 * Math.PI * r;
-  const dash = (consPctKcalHero / 100) * circ;
-  const ringColor = overKcalHero ? '#B84C2A' : (pct >= 95 && pct <= 105 ? '#2D5016' : pct > 105 ? '#B84C2A' : '#C4880A');
-  const _tot = cons.protein + cons.carbs + cons.fat;
-  const _zona = _tot >= 5 ? (()=>{
-    const kP=cons.protein*4,kC=cons.carbs*4,kF=cons.fat*9,totK=kP+kC+kF||1;
-    const pP=Math.round(kP/totK*100),pC=Math.round(kC/totK*100),pF=Math.round(kF/totK*100);
-    return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
-  })() : null;
-  let motivMsg, motivColor;
-  if (pct === 0) {
-    motivMsg = 'Registra il primo pasto'; motivColor = 'var(--t3)';
-  } else if (pct <= 25) {
-    if (_zona === true)  { motivMsg = 'Inizio in zona — tienici così';         motivColor = '#2A7A6F'; }
-    else if (_zona === false) { motivMsg = 'Parti squilibrato — aggiusta presto'; motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Inizia a caricare — hai ancora spazio'; motivColor = 'var(--t2)'; }
-  } else if (pct <= 55) {
-    if (_zona === true)  { motivMsg = 'Buon ritmo — macro centrati';           motivColor = '#2A7A6F'; }
-    else if (_zona === false) { motivMsg = 'Kcal nella norma, ribilancia i macro'; motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Buona partenza — continua così';        motivColor = 'var(--t2)'; }
-  } else if (pct <= 80) {
-    if (_zona === true)  { motivMsg = 'A metà strada in equilibrio ✓';        motivColor = '#2A7A6F'; }
-    else if (_zona === false) { motivMsg = 'A metà — aggiusta i macro';        motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'A metà strada — ottimo ritmo';          motivColor = '#C4880A'; }
-  } else if (pct <= 94) {
-    if (_zona === true)  { motivMsg = 'Quasi al target, tutto in zona';        motivColor = '#2A7A6F'; }
-    else if (_zona === false) { motivMsg = 'Quasi al target — ribilancia i macro'; motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Quasi in zona — ultimo sprint';         motivColor = '#C4880A'; }
-  } else if (pct <= 105) {
-    if (_zona === true)  { motivMsg = 'In Zona! Macro centrati ✓';            motivColor = '#2A7A6F'; }
-    else if (_zona === false) { motivMsg = 'Kcal ok, ma i macro sono sbilanciati'; motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Sei in zona! Perfetto ✓';              motivColor = '#2D5016'; }
-  } else if (pct <= 120) {
-    if (_zona === true)  { motivMsg = 'Leggermente oltre — macro ok comunque'; motivColor = '#C4880A'; }
-    else if (_zona === false) { motivMsg = 'Stai superando il target — fermati'; motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Attenzione — stai superando il target'; motivColor = '#B84C2A'; }
-  } else {
-    if (_zona === true)  { motivMsg = 'Troppo — anche se i macro reggono';    motivColor = '#B84C2A'; }
-    else if (_zona === false) { motivMsg = 'Fuori controllo — stop';           motivColor = '#B84C2A'; }
-    else                 { motivMsg = 'Obiettivo superato';                    motivColor = '#B84C2A'; }
-  }
-  const macroData = [
-    { label:'Carbo',  color:'#C4880A', bg:'#FEF3DC', value:cons.carbs,   target:ST.TARGET.carbs },
-    { label:'Prot',   color:'#2D5016', bg:'#E6F0DC', value:cons.protein, target:ST.TARGET.protein },
-    { label:'Grassi', color:'#B84C2A', bg:'#FAEDE8', value:cons.fat,     target:ST.TARGET.fat },
-  ];
-  const pillsHTML = macroData.map(m => {
-    if(!m.target || m.target <= 0) return ''; // salta macro senza target
-    const remVal = macroRimasti(m.value, m.target);
-    const over = isOverTarget(m.value, m.target);
-    // Visivo: barra si RIEMPIE (% consumato). Oltre target: 100% pieno color OVER.
-    const consPctM = over ? 100 : (m.target > 0 ? Math.max(0, Math.min(100, Math.round((m.value / m.target) * 100))) : 0);
-    const numColor = over ? OVER_COLOR : 'var(--t1)';
-    const fill = over ? OVER_COLOR : m.color;
-    const valText = over ? `+${fmtNum(Math.abs(remVal))}g` : `${fmtNum(remVal)}g`;
-    const subText = over ? 'oltre target' : 'rimasti';
-    return `<div style="flex:1;background:${m.bg};border:1px solid ${m.color}33;border-radius:12px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;color:${m.color};font-weight:700;">${m.label}</span><span style="font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${numColor};">${valText}</span><span style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${subText}</span><div style="width:100%;height:4px;background:var(--s3);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${consPctM}%;background:${fill};border-radius:2px;transition:width .4s ease;"></div></div></div>`;
-  }).join('');
+  const target = ST.TARGET || {kcal:2000, protein:150, carbs:200, fat:67};
+  // ── Calcoli kcal residue ──────────────────────────────────
+  const remKcal  = kcalRimaste(cons.kcal, target.kcal);
+  const overKcal = isOverTarget(cons.kcal, target.kcal);
+  const consPct  = overKcal ? 100 : (target.kcal > 0 ? Math.max(0, Math.min(100, Math.round((cons.kcal / target.kcal) * 100))) : 0);
+
+  // ── Zona check (3 stati: in / quasi / fuori — fascia ±5% / ±10%) ──
   const tot = cons.protein + cons.carbs + cons.fat;
-  let zonaState = null;
-  let zonaRowHTML = '';
+  let pC = 0, pP = 0, pF = 0, zonaState = 'unset';
   if (tot >= 5) {
-    const kcalP = cons.protein * 4, kcalC = cons.carbs * 4, kcalF = cons.fat * 9;
-    const totK = kcalP + kcalC + kcalF || 1;
-    const pP = Math.round(kcalP / totK * 100);
-    const pC = Math.round(kcalC / totK * 100);
-    const pF = Math.round(kcalF / totK * 100);
-    const allOk = (pP >= 25 && pP <= 35) && (pC >= 35 && pC <= 45) && (pF >= 25 && pF <= 35);
-    zonaState = allOk;
-    const bColor = allOk ? '#2D5016' : '#C4880A';
-    const bBg    = allOk ? '#E6F0DC' : '#FEF3DC';
-    const tPC = ST.TARGET.pCarbo || 40, tPP = ST.TARGET.pProt || 30, tPF = ST.TARGET.pFat || 30;
-    zonaRowHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);"><div style="display:flex;gap:10px;font-size:11px;font-family:'JetBrains Mono',monospace;"><span style="color:#C4880A;">C ${pC}%</span><span style="color:#2D5016;">P ${pP}%</span><span style="color:#B84C2A;">G ${pF}%</span><span style="color:var(--t3);">vs ${tPC}·${tPP}·${tPF}</span></div><span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${bColor};background:${bBg};border:1px solid ${bColor}44;border-radius:20px;padding:2px 10px;">${allOk?'In Zona':'Fuori Zona'}</span></div>`;
+    const kP = cons.protein * 4, kC = cons.carbs * 4, kFat = cons.fat * 9;
+    const totK = kP + kC + kFat || 1;
+    pP = Math.round(kP / totK * 100);
+    pC = Math.round(kC / totK * 100);
+    pF = Math.round(kFat / totK * 100);
+    const inZ   = (pC >= 35 && pC <= 45) && (pP >= 25 && pP <= 35) && (pF >= 25 && pF <= 35);
+    const nearZ = (pC >= 30 && pC <= 50) && (pP >= 20 && pP <= 40) && (pF >= 20 && pF <= 40);
+    zonaState = inZ ? 'in' : (nearZ ? 'near' : 'out');
   }
-  const finalRingColor = zonaState !== null ? (zonaState ? '#2A7A6F' : '#B84C2A') : ringColor;
-  // Pill Zona/Fuori Zona rimossa dal centro anello (dedup con zonaRowHTML sotto le 3 macro card)
-  const heroNumColor = overKcalHero ? OVER_COLOR : finalRingColor;
-  const heroBigNum = `${overKcalHero?'+':''}${fmtNum(Math.abs(remKcalHero))}`;
-  const heroSubLbl = overKcalHero
-    ? 'kcal oltre'
-    : (remKcalHero===0 && cons.kcal>0 ? 'target raggiunto' : 'kcal rimaste');
-  return `<div class="card card-green"><div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;"><div style="position:relative;width:170px;height:170px;flex-shrink:0;"><svg width="170" height="170" viewBox="0 0 170 170" style="transform:rotate(-90deg)"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${finalRingColor}" stroke-width="${sw}" stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/></svg><div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;"><span style="font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${heroNumColor};line-height:1;">${heroBigNum}</span><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${heroSubLbl}</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${fmtNum(cons.kcal)} / ${fmtNum(ST.TARGET.kcal)}</span></div></div><div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:6px;"><p style="font-size:13px;font-family:'JetBrains Mono',monospace;color:${motivColor};font-weight:600;line-height:1.4;margin:0;">${motivMsg}</p><p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:0;">Target: ${fmtNum(ST.TARGET.kcal)} · Consumate: ${fmtNum(cons.kcal)}</p></div></div><div style="display:flex;gap:8px;margin-bottom:4px;">${pillsHTML}</div>${zonaRowHTML}</div>`;
+
+  // ── Ring color: over → terracotta; in zona → evergreen; quasi → ambra; fuori → terracotta ──
+  const ringColor = overKcal ? '#B84C2A'
+    : (zonaState === 'in'   ? 'var(--acc)'
+    : (zonaState === 'near' ? '#C4880A'
+    : (zonaState === 'out'  ? '#B84C2A'
+    :                          'var(--carb)')));
+
+  // ── Anello SVG ────────────────────────────────────────────
+  const r = 85, cx = 100, cy = 100, sw = 10;
+  const circ = 2 * Math.PI * r;
+  const dash = (consPct / 100) * circ;
+
+  // ── Numero centrale donut: "−180" se over, valore positivo altrimenti ──
+  const heroBigNum = overKcal
+    ? `−${fmtNum(Math.abs(remKcal))}`
+    : fmtNum(remKcal);
+  const heroNumLen = String(heroBigNum).length;
+  const heroNumCls = heroNumLen >= 5 ? 'small' : (heroNumLen === 4 ? 'medium' : '');
+  const heroOverCls = overKcal ? 'over' : '';
+  const heroLabel   = overKcal ? 'KCAL OLTRE'
+    : (remKcal === 0 && cons.kcal > 0 ? 'TARGET RAGGIUNTO' : 'KCAL RIMASTE');
+  const heroSummary = `${fmtNum(Math.max(0, cons.kcal))} consumate · su ${fmtNum(target.kcal)} obiettivo`;
+
+  // ── Status Zona pill ──────────────────────────────────────
+  const tPC = target.pCarbo || 40, tPP = target.pProt || 30, tPF = target.pFat || 30;
+  let zonaPill;
+  if (zonaState === 'unset') {
+    zonaPill = `
+      <div class="oggi-v3-zona-pill" style="background:var(--s2);border:0.5px solid var(--b1);">
+        <span class="oggi-v3-zona-dot" style="background:var(--t3);"></span>
+        <span class="oggi-v3-zona-label" style="color:var(--t3);">DATI INSUFFICIENTI</span>
+        <span class="oggi-v3-zona-stats">target ${tPC}·${tPP}·${tPF}</span>
+      </div>`;
+  } else {
+    const lbl    = zonaState === 'in' ? 'NELLA ZONA' : (zonaState === 'near' ? 'QUASI ZONA' : 'FUORI ZONA');
+    const dotCol = zonaState === 'in' ? 'var(--acc)' : (zonaState === 'near' ? '#C4880A' : '#B84C2A');
+    zonaPill = `
+      <div class="oggi-v3-zona-pill ${zonaState}">
+        <span class="oggi-v3-zona-dot" style="background:${dotCol};"></span>
+        <span class="oggi-v3-zona-label" style="color:${dotCol};">${lbl}</span>
+        <span class="oggi-v3-zona-stats">${pC} · ${pP} · ${pF} <span style="opacity:.55;">/ ${tPC}·${tPP}·${tPF}</span></span>
+      </div>`;
+  }
+
+  // ── 3 Macro card orizzontali (CARB ambra / PROT evergreen / FAT terracotta) ──
+  const macros = [
+    { name:'CARB', color:'#C4880A',    value:cons.carbs,   target:target.carbs   },
+    { name:'PROT', color:'var(--acc)', value:cons.protein, target:target.protein },
+    { name:'FAT',  color:'#B84C2A',    value:cons.fat,     target:target.fat     },
+  ];
+  const macroRow = `
+    <div class="oggi-v3-macro-row">
+      ${macros.map(m => {
+        if(!m.target || m.target <= 0){
+          return `<div class="oggi-v3-macro-card">
+            <div class="oggi-v3-macro-head"><span class="oggi-v3-macro-dot" style="background:${m.color};"></span><span class="oggi-v3-macro-name" style="color:${m.color};">${m.name}</span></div>
+            <div><span class="oggi-v3-macro-value">—</span><span class="oggi-v3-macro-value-unit">g</span></div>
+            <div class="oggi-v3-macro-sub">target non impostato</div>
+          </div>`;
+        }
+        const rem  = macroRimasti(m.value, m.target);
+        const over = isOverTarget(m.value, m.target);
+        const consPctM = over ? 100 : Math.max(0, Math.min(100, Math.round((m.value / m.target) * 100)));
+        const valStr  = over ? `+${fmtNum(Math.abs(rem))}` : fmtNum(rem);
+        const valCol  = over ? OVER_COLOR : 'var(--t1)';
+        const fillCol = over ? OVER_COLOR : m.color;
+        const subStr  = over
+          ? `oltre · +${fmtNum(Math.abs(rem))}/${fmtNum(m.target)}g`
+          : `rimasti · ${fmtNum(Math.max(0, m.value))}/${fmtNum(m.target)}g`;
+        return `<div class="oggi-v3-macro-card">
+          <div class="oggi-v3-macro-head"><span class="oggi-v3-macro-dot" style="background:${m.color};"></span><span class="oggi-v3-macro-name" style="color:${m.color};">${m.name}</span></div>
+          <div><span class="oggi-v3-macro-value" style="color:${valCol};">${valStr}</span><span class="oggi-v3-macro-value-unit">g</span></div>
+          <div class="oggi-v3-macro-sub">${subStr}</div>
+          <div class="oggi-v3-macro-bar"><div class="oggi-v3-macro-bar-fill" style="width:${consPctM}%;background:${fillCol};"></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Render ────────────────────────────────────────────────
+  return `
+    <div class="oggi-v3-hero-card">
+      <div class="oggi-v3-donut-row">
+        <div class="oggi-v3-donut-wrap">
+          <svg class="oggi-v3-donut-svg" viewBox="0 0 200 200">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#E8E4DC" stroke-width="${sw}"/>
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ringColor}" stroke-width="${sw}"
+                    stroke-dasharray="${dash.toFixed(1)} ${(circ - dash).toFixed(1)}" stroke-linecap="round"
+                    style="transition:stroke-dasharray .6s ease"/>
+          </svg>
+          <div class="oggi-v3-donut-inner">
+            <span class="oggi-v3-donut-num ${heroNumCls} ${heroOverCls}">${heroBigNum}</span>
+            <span class="oggi-v3-donut-label">${heroLabel}</span>
+          </div>
+        </div>
+        <div class="oggi-v3-donut-summary">${heroSummary}</div>
+      </div>
+      ${zonaPill}
+      ${macroRow}
+    </div>`;
 }
 
 const SLOT_STYLE = {
@@ -9479,8 +9621,10 @@ function renderOggi(){
     }
     html+=`</div>`;
   } else {
-    html+=heroCard(cons);
+    // ── OGGI V3 (15 maggio 2026): hero nuovo + CTA pair + timeline mista + coach card ──
+    html += heroCard(cons);
 
+    // Badge Giorno Perfetto (invariato)
     if(showPerfetto) {
       const kP2=cons.protein*4,kC2=cons.carbs*4,kF2=cons.fat*9,totK2=kP2+kC2+kF2||1;
       const pP=Math.round(kP2/totK2*100),pC=Math.round(kC2/totK2*100),pG=100-pP-pC;
@@ -9490,113 +9634,238 @@ function renderOggi(){
       html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati ${perfRatio}</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
     }
 
-    // Il box "Analizza e suggerisci" viene inserito nella timeline dopo l'ultimo pasto
-    const adviceBtnLbl = (ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride)
-      ? 'Pianifica colazione di domani →'
-      : 'Analizza e suggerisci →';
-    const adviceBoxHTML=`<div class="card" style="margin-top:8px;"><span class="lbl">🎯 Riequilibrio pasto successivo</span><select class="inp inp-sm" style="margin-bottom:10px;" onchange="ST.nextSlot=this.value;ST.nextSlotUserOverride=true;renderOggi();">${MEAL_SLOTS.map(s=>`<option value="${s.id}" ${ST.nextSlot===s.id?'selected':''}>${s.icon} ${s.label} — ${s.time}</option>`).join('')}</select><button class="btn btn-primary btn-full" onclick="fetchAdvice()">${ST.advLoading?'<span class="loading"></span>Analisi coach...':adviceBtnLbl}</button>${ST.advice?`<div class="advice-box"><p class="advice-text">${esc(ST.advice)}</p></div>`:''}</div>`;
-
-    // Form registra pasto — collassabile
+    // ── CTA pair v3 oppure form attivo (mutualmente esclusivi). Wrapper id per scroll target. ──
     if(!ST.logOpen) {
-      html+=`<div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn btn-primary" style="flex:1;" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button><button class="btn" style="flex:1;background:#fff;border:1.5px solid #2A7A6F;color:#2A7A6F;" onclick="openSuppSheet()">+ Registra integratori</button></div>`;
+      html += `<div id="registra-pasto-form" class="oggi-v3-cta-row">
+        <button class="oggi-v3-cta oggi-v3-cta-primary" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button>
+        <button class="oggi-v3-cta oggi-v3-cta-secondary" onclick="openSuppSheet()">+ Registra integratori</button>
+      </div>`;
     } else {
-      // FASE 2 Smart Ingredient form: chrome esterno (slot tabs + time + close) + smart form
-      html+=`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
+      // Form Smart Ingredient — chrome esterno (slot tabs + time + close) + smart form (logica invariata)
+      html += `<div style="margin:14px 0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
     }
 
-    // Timeline cronologica unificata: pasti + integratori
-    const tlEvents=[];
-    meals.forEach(m=>{const slot=MEAL_SLOTS.find(s=>s.id===m.slot)||MEAL_SLOTS[0];tlEvents.push({type:'meal',time:m.time||slot.time||'00:00',slot,meal:m});});
-    const suppBySlot={};
-    if(shakeSupps.length) suppBySlot['06:30']=shakeSupps;
-    otherSlots.forEach(sl=>{suppBySlot[sl]=otherSupps.filter(s=>s.slot===sl);});
-    Object.entries(suppBySlot).forEach(([t,ss])=>{if(ss.some(s=>taken.includes(s.local_id))) tlEvents.push({type:'supp',time:t,supps:ss});});
-    // Voci singole: ogni record in rawSuppLogs che non è coperto dal gruppo di default del prodotto
-    (day.rawSuppLogs||[]).forEach(log=>{
-      const supp=ST.supps.find(s=>s.name===log.name);
-      const coveredByGroup=supp && log.time===(supp.slot||'');
-      if(!coveredByGroup){
-        const catItem=(ST.catalog||[]).find(c=>c.nome===log.name);
-        tlEvents.push({type:'supp_log',time:log.time||'00:00',log,supp,catItem});
+    // ── TIMELINE MISTA: pasti registrati + pianificati dal piano coach ──
+    const pianoToday = getTodayPianoMeals();
+    ST._plannedRows = []; // popolato durante il render — indici letti da openLogFromPlanned(idx)
+    const TIMELINE_SLOTS = ['colazione','snack_mattina','pranzo','snack_pomeriggio','cena'];
+    const tlMealEvents = [];
+
+    TIMELINE_SLOTS.forEach(slotId => {
+      const slotInfo = MEAL_SLOTS.find(s => s.id === slotId) || MEAL_SLOTS[0];
+      const registered = meals.filter(m => m.slot === slotId);
+      if(registered.length){
+        registered.forEach(m => {
+          tlMealEvents.push({ type:'meal', slot:slotInfo, time:(m.time || slotInfo.time || '00:00'), meal:m });
+        });
+      } else if(pianoToday && pianoToday[slotId]){
+        const p = pianoToday[slotId];
+        const idx = ST._plannedRows.length;
+        ST._plannedRows.push({ slot:slotId, time:slotInfo.time, descrizione:(p.ingredienti || p.piatto || '') });
+        tlMealEvents.push({ type:'planned', slot:slotInfo, time:slotInfo.time, planned:p, idx });
       }
     });
-    tlEvents.sort((a,b)=>a.time.localeCompare(b.time));
+
+    // Pasti EXTRA (slot 'extra') — sempre visibili se registrati (non in TIMELINE_SLOTS)
+    meals.filter(m => m.slot === 'extra').forEach(m => {
+      const slotInfo = MEAL_SLOTS.find(s => s.id === 'extra') || MEAL_SLOTS[0];
+      tlMealEvents.push({ type:'meal', slot:slotInfo, time:(m.time || '00:00'), meal:m });
+    });
+
+    // Supps (gruppi e singole) — logica esistente preservata
+    const suppBySlot = {};
+    if(shakeSupps.length) suppBySlot['06:30'] = shakeSupps;
+    otherSlots.forEach(sl => { suppBySlot[sl] = otherSupps.filter(s => s.slot === sl); });
+    const tlSuppEvents = [];
+    Object.entries(suppBySlot).forEach(([t, ss]) => {
+      if(ss.some(s => taken.includes(s.local_id))) tlSuppEvents.push({ type:'supp', time:t, supps:ss });
+    });
+    (day.rawSuppLogs || []).forEach(log => {
+      const supp = ST.supps.find(s => s.name === log.name);
+      const coveredByGroup = supp && log.time === (supp.slot || '');
+      if(!coveredByGroup){
+        const catItem = (ST.catalog || []).find(c => c.nome === log.name);
+        tlSuppEvents.push({ type:'supp_log', time:(log.time || '00:00'), log, supp, catItem });
+      }
+    });
+
+    const tlEvents = [...tlMealEvents, ...tlSuppEvents].sort((a, b) => a.time.localeCompare(b.time));
 
     if(tlEvents.length){
-      const nPasti = tlEvents.filter(e=>e.type==='meal').length;
-      html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;"><span class="lbl" style="margin:0;">📅 Timeline di oggi</span><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;background:var(--acc-lt);border-radius:20px;padding:2px 10px;">${nPasti} ${nPasti===1?'pasto':'pasti'}</span></div>`;
-      let _firstSuppGroup=true;
-      tlEvents.forEach((ev, evIdx)=>{
-        const isLast = evIdx === tlEvents.length - 1;
-        const connector = !isLast ? `<div style="position:absolute;left:17px;top:32px;bottom:-12px;width:2px;background:var(--b1);border-radius:1px;opacity:0.3;"></div>` : '';
-        const itemSep = !isLast ? 'padding-bottom:6px;' : '';
-        if(ev.type==='meal'){
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:11px;">${ev.slot.icon}</span></div><div style="flex:1;min-width:0;">${mealCardHTML(ev.meal)}</div></div>`;
-        } else if(ev.type==='supp'){
-          const suppIds=ev.supps.map(s=>s.local_id).join(',');
-          const tlTakenN=ev.supps.filter(s=>taken.includes(s.local_id)).length;
-          const tlTotal=ev.supps.length;
-          const tlCollapsed=isSuppGroupCollapsed(ev.time,tlTakenN,tlTotal);
-          const tlCC=(tlTakenN===tlTotal&&tlTotal>0)?'#1e7a4a':'var(--acc)';
-          const tlFW=(tlTakenN===tlTotal&&tlTotal>0)?700:400;
-          const tlCh=tlCollapsed?'▶':'▼';
-          const tlLbl=(s=>s==='INTEGRATORI'?'+ EXTRA':`Gruppo "${s}"`)(suppGroupLabel(ev.supps));
+      const nReg     = tlEvents.filter(e => e.type === 'meal').length;
+      const nPlanned = tlEvents.filter(e => e.type === 'planned').length;
+      const nTotMeals = nReg + nPlanned;
+
+      html += `<div class="oggi-v3-timeline-card">
+        <div class="oggi-v3-timeline-head">
+          <span class="oggi-v3-timeline-title">Timeline di oggi</span>
+          <span class="oggi-v3-timeline-eb">${nReg} / ${nTotMeals}</span>
+        </div>
+        <div class="oggi-v3-timeline-sub">PIANIFICATI · REGISTRATI</div>`;
+
+      let _firstSuppGroup = true;
+      tlEvents.forEach(ev => {
+        if(ev.type === 'meal'){
+          const m = ev.meal;
+          const descRaw = m.description || ev.slot.label;
+          const desc = String(descRaw).length > 48 ? String(descRaw).slice(0,48) + '…' : String(descRaw);
+          const kcal = m.kcal != null ? fmtNum(m.kcal) : '—';
+          html += `<div class="oggi-v3-meal-row">
+            <span class="oggi-v3-meal-time">${ev.time.slice(0,5)}</span>
+            <span class="oggi-v3-meal-icon">${ev.slot.icon}</span>
+            <div class="oggi-v3-meal-body">
+              <div class="oggi-v3-meal-name">${esc(ev.slot.label)}</div>
+              <div class="oggi-v3-meal-meta">${esc(desc)}</div>
+            </div>
+            <div class="oggi-v3-meal-kcal">${kcal}<span class="oggi-v3-meal-kcal-unit">kcal</span></div>
+            <div class="oggi-v3-meal-check" title="Registrato">✓</div>
+          </div>`;
+        } else if(ev.type === 'planned'){
+          const p = ev.planned;
+          const kcal = p.kcal != null ? fmtNum(p.kcal) : '—';
+          html += `<div class="oggi-v3-planned-row" onclick="openLogFromPlanned(${ev.idx})">
+            <span class="oggi-v3-meal-time">${ev.time.slice(0,5)}</span>
+            <span class="oggi-v3-meal-icon">${ev.slot.icon}</span>
+            <div class="oggi-v3-meal-body">
+              <div class="oggi-v3-meal-name">${esc(p.piatto || ev.slot.label)}</div>
+              <div class="oggi-v3-meal-meta">PIANIFICATO · DAL COACH</div>
+            </div>
+            <div class="oggi-v3-meal-kcal">${kcal}<span class="oggi-v3-meal-kcal-unit">kcal</span></div>
+            <div class="oggi-v3-planned-cta">REGISTRA ›</div>
+          </div>`;
+        } else if(ev.type === 'supp'){
+          // Logica esistente preservata (gruppo integratori)
+          const suppIds = ev.supps.map(s => s.local_id).join(',');
+          const tlTakenN = ev.supps.filter(s => taken.includes(s.local_id)).length;
+          const tlTotal = ev.supps.length;
+          const tlCollapsed = isSuppGroupCollapsed(ev.time, tlTakenN, tlTotal);
+          const tlCC = (tlTakenN === tlTotal && tlTotal > 0) ? '#1e7a4a' : 'var(--acc)';
+          const tlFW = (tlTakenN === tlTotal && tlTotal > 0) ? 700 : 400;
+          const tlCh = tlCollapsed ? '▶' : '▼';
+          const tlLbl = (s => s === 'INTEGRATORI' ? '+ EXTRA' : `Gruppo "${s}"`)(suppGroupLabel(ev.supps));
           const tlAssuntoLbl = tlTakenN === 1 ? 'assunto' : 'assunti';
-          const hint=(_firstSuppGroup&&taken.length===0&&!tlCollapsed)?`<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>`:'';
-          _firstSuppGroup=false;
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} ${tlAssuntoLbl}</span><button onclick="event.stopPropagation();deleteSuppGroup('${ev.time}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi gruppo">×</button><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
-          if(!tlCollapsed){ev.supps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});html+=`</div>`;}
-          html+=`</div></div></div>`;
-        } else if(ev.type==='supp_log'){
-          const logName=esc(ev.log.name);
-          const logTime=esc(ev.log.time);
+          const hint = (_firstSuppGroup && taken.length === 0 && !tlCollapsed) ? `<p style="font-size:11px;color:var(--t3);margin:0 0 8px;font-family:'JetBrains Mono',monospace;font-style:italic;">Tocca ✓ per segnare come assunto</p>` : '';
+          _firstSuppGroup = false;
+          html += `<div style="margin-bottom:10px;"><div style="background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:${tlCollapsed?0:7}px;cursor:pointer;user-select:none;" onclick="toggleSuppGroup('${ev.time}')"><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">${tlLbl}</span><input type="time" value="${ev.time}" style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc);background:transparent;border:none;border-bottom:1px solid rgba(42,122,111,.4);padding:1px 4px;width:72px;outline:none;" onclick="event.stopPropagation()" onchange="updateSuppSlotTime('${ev.time}',this.value,'${suppIds}')"/><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:${tlCC};font-weight:${tlFW};">${tlTakenN}/${tlTotal} ${tlAssuntoLbl}</span><button onclick="event.stopPropagation();deleteSuppGroup('${ev.time}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi gruppo">×</button><span style="font-size:10px;color:var(--t3);">${tlCh}</span></div>${tlCollapsed?'':`${hint}<div>`}`;
+          if(!tlCollapsed){ ev.supps.forEach(s => { html += oggiSuppCardHTML(s, taken); }); html += `</div>`; }
+          html += `</div></div>`;
+        } else if(ev.type === 'supp_log'){
+          // Extra integratore singolo (logica esistente preservata)
+          const logName = esc(ev.log.name);
+          const logTime = esc(ev.log.time);
           const logDose = ev.log.dose || parseFloat(ev.supp?.dose_die) || 1;
           const cardHtml = extraSuppCardHTML(ev.supp, ev.catItem, ev.log.name, ev.log.time, logDose);
-          // Stato collasso EXTRA card (default: collassato)
-          if (!ST.extraSuppExpanded) ST.extraSuppExpanded = {};
-          const extraKey = (ev.log.name + '|' + ev.log.time).replace(/[^a-zA-Z0-9|]/g,'_');
+          if(!ST.extraSuppExpanded) ST.extraSuppExpanded = {};
+          const extraKey = (ev.log.name + '|' + ev.log.time).replace(/[^a-zA-Z0-9|]/g, '_');
           const isExtraExpanded = !!ST.extraSuppExpanded[extraKey];
           const arrowExtra = isExtraExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
-          // Kcal totale extra (per header collassato)
-          const extraCat = ev.catItem || (ST.catalog||[]).find(c => c.nome === ev.log.name);
-          const extraSupp = ev.supp || (ST.supps||[]).find(s => s.name === ev.log.name);
+          const extraCat = ev.catItem || (ST.catalog || []).find(c => c.nome === ev.log.name);
+          const extraSupp = ev.supp || (ST.supps || []).find(s => s.name === ev.log.name);
           const extraBase = parseFloat(extraSupp?.dose_die) || 1;
           const extraMult = Number(logDose) / extraBase || 0;
           const extraKcalTot = Math.round((Number(extraSupp?.kcal ?? extraCat?.kcal ?? 0)) * extraMult);
-          html+=`<div style="display:flex;gap:10px;margin-bottom:12px;align-items:flex-start;position:relative;${itemSep}">${connector}<div style="min-width:36px;display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--acc2);flex-shrink:0;"></div><div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;text-align:center;line-height:1.2;">${ev.time.slice(0,5)}</div><span style="font-size:12px;">🌿</span></div><div style="flex:1;min-width:0;"><div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div></div></div>`;
+          html += `<div style="margin-bottom:10px;"><div style="background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div></div>`;
         }
-        if(isLast) html+=adviceBoxHTML;
       });
-      html+=`</div>`;
+
+      html += `</div>`;
     } else {
-      html+=adviceBoxHTML;
-      const takenShakeN=shakeSupps.filter(s=>taken.includes(s.local_id)).length;
-      const takenOtherSlots=otherSlots.filter(slot=>otherSupps.filter(s=>s.slot===slot).some(s=>taken.includes(s.local_id)));
-      if(takenShakeN>0||takenOtherSlots.length>0){
-        html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">💊 Integratori di oggi</span><button class="btn btn-ghost btn-sm" onclick="showPage('integratori')">Gestisci →</button></div>`;
-        if(takenShakeN>0){
-          const slot='06:30';const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[0];
-          const collapsed=isSuppGroupCollapsed(slot,takenShakeN,shakeSupps.length);
-          html+=suppGroupHeaderHTML(slot,sc,takenShakeN,shakeSupps.length,collapsed,suppGroupLabel(shakeSupps));
-          if(!collapsed){shakeSupps.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
+      // Nessun pasto registrato né pianificato → placeholder
+      html += `<div class="oggi-v3-timeline-card" style="text-align:center;padding:24px 16px;">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;color:var(--t2);margin-bottom:4px;">Nessun pasto oggi</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--t3);text-transform:uppercase;">Registra il primo pasto per iniziare</div>
+      </div>`;
+    }
+
+    // ── COACH CARD (Riequilibrio) — sempre dopo la timeline ──
+    // Stato silente: zona OK + > 40% target kcal consumate (giornata in linea, nessun riequilibrio urgente)
+    const silentMode = (zonaOk === true) && (cons.kcal > (ST.TARGET.kcal * 0.4));
+    const nextSlotInfo = MEAL_SLOTS.find(s => s.id === ST.nextSlot);
+    const nextLabel = nextSlotInfo
+      ? `${nextSlotInfo.label}${nextSlotInfo.time ? ' · ' + nextSlotInfo.time : ''}`
+      : 'Prossimo pasto';
+    const adviceCtaLbl = (ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride)
+      ? `Pianifica colazione di domani →`
+      : `Analizza & suggerisci →`;
+
+    if(silentMode && !ST.advice){
+      html += `<div class="oggi-v3-coach-card">
+        <div class="oggi-v3-coach-head">
+          <span class="oggi-v3-coach-eb">COACH · RIEQUILIBRIO</span>
+          <span class="oggi-v3-coach-eb-right">PROSSIMO PASTO</span>
+        </div>
+        <div class="oggi-v3-coach-silent">
+          <span style="color:var(--acc);font-weight:700;">✓</span>
+          <span>Tutto in linea col piano</span>
+        </div>
+      </div>`;
+    } else {
+      html += `<div class="oggi-v3-coach-card">
+        <div class="oggi-v3-coach-head">
+          <span class="oggi-v3-coach-eb">COACH · RIEQUILIBRIO</span>
+          <span class="oggi-v3-coach-eb-right">PROSSIMO PASTO</span>
+        </div>
+        <div class="oggi-v3-coach-title">${esc(nextLabel)}</div>
+        ${ST.advice ? `<div class="oggi-v3-coach-text">${esc(ST.advice)}</div>` : ''}
+        <button class="oggi-v3-coach-cta" onclick="fetchAdvice()">${ST.advLoading ? '⏳ Analisi coach…' : adviceCtaLbl}</button>
+      </div>`;
+    }
+
+    // ── Card integratori bottom (solo se nessun pasto nella timeline ma supps presi) ──
+    if(!tlEvents.length){
+      const takenShakeN = shakeSupps.filter(s => taken.includes(s.local_id)).length;
+      const takenOtherSlots = otherSlots.filter(slot => otherSupps.filter(s => s.slot === slot).some(s => taken.includes(s.local_id)));
+      if(takenShakeN > 0 || takenOtherSlots.length > 0){
+        html += `<div class="card" style="margin-top:14px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">💊 Integratori di oggi</span><button class="btn btn-ghost btn-sm" onclick="showPage('integratori')">Gestisci →</button></div>`;
+        if(takenShakeN > 0){
+          const slot = '06:30';
+          const sc = SLOT_COLOR_MAP[slot] || SLOT_PAL[0];
+          const collapsed = isSuppGroupCollapsed(slot, takenShakeN, shakeSupps.length);
+          html += suppGroupHeaderHTML(slot, sc, takenShakeN, shakeSupps.length, collapsed, suppGroupLabel(shakeSupps));
+          if(!collapsed){ shakeSupps.forEach(s => { html += oggiSuppCardHTML(s, taken); }); }
         }
-        takenOtherSlots.forEach(slot=>{
-          const ss=otherSupps.filter(s=>s.slot===slot);
-          const allActive=[...new Set(activeSupps().map(x=>x.slot))].sort();
-          const sc=SLOT_COLOR_MAP[slot]||SLOT_PAL[allActive.indexOf(slot)%SLOT_PAL.length];
-          const takenN=ss.filter(s=>taken.includes(s.local_id)).length;
-          const collapsed=isSuppGroupCollapsed(slot,takenN,ss.length);
-          html+=suppGroupHeaderHTML(slot,sc,takenN,ss.length,collapsed,suppGroupLabel(ss));
-          if(!collapsed){ss.forEach(s=>{html+=oggiSuppCardHTML(s,taken);});}
+        takenOtherSlots.forEach(slot => {
+          const ss = otherSupps.filter(s => s.slot === slot);
+          const allActive = [...new Set(activeSupps().map(x => x.slot))].sort();
+          const sc = SLOT_COLOR_MAP[slot] || SLOT_PAL[allActive.indexOf(slot) % SLOT_PAL.length];
+          const takenN = ss.filter(s => taken.includes(s.local_id)).length;
+          const collapsed = isSuppGroupCollapsed(slot, takenN, ss.length);
+          html += suppGroupHeaderHTML(slot, sc, takenN, ss.length, collapsed, suppGroupLabel(ss));
+          if(!collapsed){ ss.forEach(s => { html += oggiSuppCardHTML(s, taken); }); }
         });
-        html+=`</div>`;
+        html += `</div>`;
       }
     }
   }
 
-  document.getElementById('page-oggi').innerHTML=nutriSubNav('oggi')+html+versionFooter();
-  const ta=document.getElementById('log-text');
-  if(ta){ta.value=ST.logText;ta.addEventListener('input',e=>{ST.logText=e.target.value;});}
+  // ── V3 header: accent bar + date eyebrow + "Nutrition" title + IF avatar + sub-nav pill ──
+  const profile  = ST.profile || {};
+  const fname    = String(profile.first_name || '').trim();
+  const lname    = String(profile.last_name  || '').trim();
+  const initials = ((fname.charAt(0) + lname.charAt(0)).toUpperCase()) || (fname.charAt(0) || '?').toUpperCase();
+  const now2 = new Date();
+  const DAY_S  = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+  const MON_S  = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const dateEb = `${DAY_S[now2.getDay()]} ${now2.getDate()} ${MON_S[now2.getMonth()]} · OGGI`;
+  const v3Header = `
+    <div class="oggi-v3-accent"></div>
+    <div class="oggi-v3-header">
+      <div class="oggi-v3-header-text">
+        <div class="oggi-v3-eyebrow">${dateEb}</div>
+        <div class="oggi-v3-title">Nutrition</div>
+      </div>
+      <button class="oggi-v3-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
+    </div>
+    <div class="oggi-v3-subnav">
+      ${['oggi','integratori','storico','piano'].map(id => {
+        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', storico:'STORICO', piano:'PIANO' };
+        return `<button class="oggi-v3-pill${id==='oggi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
+      }).join('')}
+    </div>`;
+
+  document.getElementById('page-oggi').innerHTML = v3Header + html + versionFooter();
+  const ta = document.getElementById('log-text');
+  if(ta){ ta.value = ST.logText; ta.addEventListener('input', e => { ST.logText = e.target.value; }); }
 }
 
 // ═══════════════════════════════════════════════════════════
