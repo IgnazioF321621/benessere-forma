@@ -31,10 +31,12 @@ https://github.com/IgnazioF321621/benessere-forma
 6. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
 7. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
 
-**Da rifinire** (post-blocco 2 Integratori):
-- Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items
-- Picker emoji e time nativi (oggi `prompt()`)
-- Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`
+**Da rifinire** (post-Integratori v3 sera 16 mag):
+- ~~Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items~~ ✅ fixato (commit `73d141b`)
+- ~~Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`~~ ✅ fatto (commit `0724a63`)
+- **Step 2 modulo Integratori**: ridisegno flusso extra come eventi `supplements_log` invece di righe persistenti in `supplements`. Risolve i "gruppi fantasma" 08:00 nel bottom sheet "+ Registra integratori" tab Oggi e gli extra fantasma in timeline
+- Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom)
+- Refresh tab Storico + Piano (legacy → design system v3)
 
 ## Tester attivi
 
@@ -68,9 +70,13 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
   - `7dc35c9` — feat(integratori): refresh v3 Blocco 1 — Tab Integratori + Editor Pacchetto + migrazione DB
   - `1c2a295` — fix(integratori): loadPackages filtra esplicitamente per user_id (RLS leak admin policy)
   - `fa75562` — feat(catalogo): refresh v3 Blocco 2 — modal Catalogo Nutrilite hi-fi
-- **File principale**: `zona-tracker.html` (~13300 righe dopo i 2 blocchi Integratori v3)
+  - `b9ecd32` — docs: CLAUDE.md — chiusura Modulo Integratori v3 (primo round documentale)
+  - `73d141b` — fix(integratori): bottone ELIMINA visibile anche su pacchetto vuoto persistito in DB (regola corretta: visibile se `e.packageId` esiste, non basata su items.length)
+  - `0724a63` — chore(integratori): cleanup legacy code Blocco 1+2 post-refresh v3 (−366 righe nette, 14 simboli rimossi)
+  - `c28ef45` — fix(integratori): elimina pacchetto ora cancella anche i supplements orfani (no più gruppi fantasma in bottom sheet + timeline tab Oggi)
+- **File principale**: `zona-tracker.html` (~13800 righe dopo cleanup legacy + fix eliminazione)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.16 · 20:31` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.16 · 21:56` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
 ### Stato moduli Nutrition (16 maggio 2026, post-Integratori v3)
 - **Tab Oggi**: ✅ production-ready (design system v3 + tipografia v2)
@@ -721,6 +727,13 @@ Sintesi delle decisioni di design consolidate dopo Fase A/B/C/D. Queste **sostit
 - **Avatar Home V2**: bollino circolare 42px con iniziali (`first_name[0]+last_name[0]`), evergreen pieno, onclick → `openSettingsModal()`. Rimpiazza l'header globale (nascosto su home via `#header.home-v2-hide`).
 - **"coach" sostituisce "AI"** in tutti i copy visibili UI (decisione 10 maggio, applicata in Fase A).
 - **Tinta viola modulo Body** (`#AFA9EC`) usata in Home V2 come accent della card Body. Per i checkpoint Body futuri (M2 ricorrente) la tinta forte `#5E4A7A` resta riservata.
+- **Pacchetti vs Extra — architettura confermata 16 mag 2026 sera**:
+  - **Pacchetti** = configurazioni persistenti dell'utente, vivono in `supplement_packages` + `supplement_package_items`. Definiscono "il mio set di integratori delle 08:45" con dose/molt/scorta editabili
+  - **Extra** = registrazioni mordi-e-fuggi, eventi una tantum. **DEVONO** vivere in `supplements_log` con flag, NO persistenza in `supplements`. Oggi sono ancora implementati come `supplements` con `slot` valorizzato (architettura legacy, vedi bug noto → Step 2 da fare)
+  - **Pacchetti e extra sono mondi separati e indipendenti**: eliminare un pacchetto NON tocca gli extra, registrare un extra NON modifica pacchetti
+  - Stesso integratore può essere preso sia dentro un pacchetto sia come extra al volo, senza che le due cose si influenzino
+  - L'utente può registrare un extra anche più volte nella stessa giornata
+  - **Stato implementazione 16 mag**: pacchetti ✅ production-ready, extra 🟡 ancora architettura legacy (Step 2 in roadmap)
 
 ## Modulo Integratori v3 (16 maggio 2026)
 
@@ -766,9 +779,28 @@ Modale fullscreen `#package-editor-overlay`. Sostituisce `openAddSuppModal` lega
     - **Vista espansa** pannello inset cream `#FAF8F2`: 4 macro chips colorate read-only, stepper `−/+` per **DOSE** + select unità (cps/stick/barretta/misurino), **MOLT.** step 0.25 (helper italic "0.5 = mezza dose · 2 = doppia"), **SCORTA** + auto-calcolo `"= N giorni rimasti"`, riga **COSTO** Mono caps `"€ X.XX/oggi · YY.YY/mese"` read-only, bottone `× RIMUOVI DAL PACCHETTO` Mono caps rosso `#C44434` centrato
   - **Pattern accordion**: solo uno espanso alla volta, altri collassano sempre (anche se fuori viewport). Animazione: chevron rotate 0→180deg 200ms, max-height 0→600px + opacity, cubic-bezier(.16,1,.3,1) 240ms
 - **CTA `+ AGGIUNGI PRODOTTO · NUTRILITE`** outline evergreen → `pkgEditorAddProduct()` (apre catalogo con `addToPackage` mode)
-- **CTA `ELIMINA PACCHETTO`** Mono caps rosso `#C44434` centrato — solo in EDIT mode con prodotti (vedi bug noto). Conferma via modal → CASCADE delete su FK
+- **CTA `ELIMINA PACCHETTO`** Mono caps rosso `#C44434` centrato — visibile se `ST.packageEditor.packageId` esiste (pacchetto già persistito in DB), **indipendentemente dal numero di items**. Regola corretta introdotta col commit `73d141b` (16 mag sera). La regola precedente legata a `items.length > 0` impediva eliminazione di pacchetti vuoti già persistiti (es. dopo migrazione legacy o creazione vuota — caso "Prova").
 - **Empty state CREATE**: emoji 📦 grande + `"PACCHETTO VUOTO"` Mono caps + helper Syne 13px + CTA `+ Aggiungi prodotto` promossa a fill evergreen
 - **Undo toast 4s** pattern Mail iOS per rimozione singolo prodotto: `pkgEditorRemoveItem()` setta `ST._pkgRemoveTimer` 4s, durante la finestra mostra toast `.pkg-undo-toast` scuro con bottone "Annulla" giallo. Allo scadere → DELETE `supplement_package_items.id`
+
+#### Eliminazione pacchetto — comportamento corretto (commit `c28ef45`)
+
+La funzione `pkgEditorDoDelete()` cancella in cascata sia il pacchetto sia i supplements linkati:
+
+1. Raccoglie `suppIds` da `ST.packageEditor.items.map(it => it.supplement_id)`
+2. **Bulk DELETE** su `supplements` filtrato per `user_id` (RLS-safe): `supa.from('supplements').delete().in('id', suppIds).eq('user_id', ST.user.id)`
+3. **DELETE** su `supplement_packages` (FK CASCADE rimuove automaticamente `supplement_package_items`)
+4. Sync in-memory immediato: filtro `ST.supps` via `Set(suppIds)` + filtro `ST.packages`
+5. Re-fetch authoritative: `loadSupps() + loadPackages()` per coerenza cross-device + ricalcolo totali Home tile / `suppMonthlyCost`
+6. `saveCache()` + `closePackageEditor()` + toast con count: `"Pacchetto eliminato (N integratori)"` se N>0, altrimenti `"Pacchetto eliminato"`
+
+**Error handling separato**: se la prima DELETE su supplements fallisce → toast warning `⚠️` + early return, non procede con la delete del pacchetto (evita stati inconsistenti DB).
+
+**Cosa NON tocca**:
+- `supplements_log`: referenzia `supplement_name` (text), no FK su `supplements.id`. Lo storico assunzioni passate del pacchetto eliminato resta in DB come dati storici. Coerente con la regola "lo storico delle assunzioni viene mantenuto".
+- Gli extra: invariati. Sono `supplements` non in nessun pacchetto, fuori dal blast radius dell'eliminazione.
+
+**Differenza vs "× Rimuovi dal pacchetto"** (singolo item): quello mantiene il supplement nella libreria e lo trasforma in extra (rimuove solo il link `supplement_package_items`). "Elimina pacchetto" invece cancella tutto in cascata. Comportamento intenzionale per i 2 flussi.
 
 ### Extra editor — `openExtraEditor(supplementId)`
 
@@ -865,24 +897,26 @@ Decisione "A" del brief: nessuna colonna DB nuova, mappa client-side.
 }
 ```
 
-### Deprecazioni legacy non cancellate (post-Integratori v3)
+### Cleanup legacy Integratori v3 — completato (commit `0724a63`)
 
-Marcate ma non rimosse — da pulire in giro di housekeeping futuro dopo verifica produzione stabile.
+Cleanup completo del codice legacy modulo Integratori v3 eseguito il **16 mag 2026 sera**. **14 simboli rimossi**, **366 righe nette eliminate**.
 
-**Marker `// [LEGACY-INTEGRATORI-V3]`** (Blocco 1):
-- `renderIntegratoriLegacy` — vecchio render preservato come riferimento, mai chiamato
-- `updateSuppSlotTime` — bulk slot update vecchio
-- `setSuppFilter` — filtro slot vecchio
-- `suppDragStart` / `suppDragOver` / `suppDrop` / `suppDragEnd` — drag&drop vecchio
-- `toggleSuppExpand` — expand row vecchio
-- `openAddSuppModal` / `closeAddSuppModal` / `saveNewSupp` — modal custom legacy
-- HTML `<div id="add-supp-modal">` orfano nel body
-- ST.suppFilter, ST.suppExpanded, ST.suppSheet
+Lista item effettivamente rimossi:
+- Funzioni Blocco 1: `renderIntegratoriLegacy`, `setSuppFilter`, `suppDragStart` / `suppDragOver` / `suppDrop` / `suppDragEnd`, `toggleSuppExpand`, `openAddSuppModal` / `closeAddSuppModal` / `saveNewSupp`
+- HTML: `<div id="add-supp-modal">` orfano nel body
+- Campi ST: `suppFilter`, `suppExpanded` (mai dichiarato in init, accessi lazy)
+- Funzioni Blocco 2: `toggleCatalogRemove`, `selectAllCatalog`
+- Campo ST: `catalogToRemove`
+- Branch `hasRem` ("Da rimuovere") completo in `goToCatalogStep2()` + blocco delete in `importFromCatalog()` (~30 righe)
 
-**Marker `// [LEGACY-CATALOGO-V3-BLOCCO2]`** (Blocco 2):
-- `toggleCatalogRemove` — design v3 puramente additivo, no flusso "rimuovi"
-- `selectAllCatalog` — nessun bottone Seleziona/Deseleziona tutti nel v3
-- Branch `hasRem` ("Da rimuovere") in `goToCatalogStep2()` — dead code path (`ST.catalogToRemove` resta sempre `[]`)
+**Conseguenza Opzione A**: `importFromCatalog()` è ora **puramente additivo**. Niente più capacità di rimuovere supplements via catalogo. Le eliminazioni vivono solo in:
+- Editor Pacchetto → `× Rimuovi dal pacchetto` (rimuove link `supplement_package_items`, supplement diventa extra)
+- Editor Pacchetto → `Elimina pacchetto` (cancella pacchetto + tutti i suoi supplements in cascata, vedi sopra)
+- Extra Editor → `Elimina dalla libreria` (cancella il singolo supplement extra)
+
+**Falsi positivi nei marker legacy** (salvati grazie all'audit pre-rimozione, NON rimossi):
+- `updateSuppSlotTime` — è viva, chiamata da `renderOggi()` timeline tab Oggi v3 (input `type="time"` dell'header gruppo integratori per bulk update dello slot). Il marker `// [LEGACY-INTEGRATORI-V3]` che le era stato apposto al Blocco 1 era errato. Sostituito con commento descrittivo del suo uso.
+- `ST.suppSheet` — è vivo, è lo state del bottom sheet `+ Registra integratori` tab Oggi v3 (`openSuppSheet` / `closeSuppSheet` + render del body con ~14 occorrenze attive). La precedente documentazione che lo classificava legacy era errata.
 
 ## Workflow git (aggiornato 12 maggio 2026)
 
@@ -1060,6 +1094,67 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 16 maggio 2026 sera (post 20:31) — Refinement Integratori v3 + cleanup legacy ✅
+
+Tre commit incrementali di rifinitura/pulizia dopo la chiusura del primo round documentale (`b9ecd32`). Tutti su `zona-tracker.html`, nessuna modifica DB. **APP_VERSION finale**: `v2026.05.16 · 21:56`.
+
+**Fix A — Bottone ELIMINA pacchetto vuoto persistito** (commit `73d141b`, `v2026.05.16 · 21:14`)
+
+Bug: il bottone `ELIMINA PACCHETTO` era condizionato a `if(!isCreate)` E annidato dentro l'else di `itemsCount === 0`, quindi non compariva per pacchetti già persistiti in DB ma svuotati di tutti i prodotti (es. pacchetto "Prova" residuo da test 16 mag, o pacchetti migrati senza item). Workaround forzato via SQL diretto.
+
+Fix:
+- CTA estratta dall'else branch di `itemsCount === 0`, posizionata dopo l'intero if/else
+- Condizione cambiata da `!isCreate` a `e.packageId` — la presenza dell'id DB è la source-of-truth, non il mode CREATE/EDIT o il numero items
+- L'empty state "PACCHETTO VUOTO" della lista prodotti resta invariato (cosa diversa: lista vuota vs pacchetto eliminabile)
+- Commento esplicativo lasciato inline nel codice
+
+**Cleanup legacy Blocco 1+2** (commit `0724a63`, `v2026.05.16 · 21:33`)
+
+Pulizia metodica del codice marcato legacy dai commit del Blocco 1 + Blocco 2, dopo verifica produzione stabile. Stop su dipendenze inaspettate confermato dall'utente prima di procedere. **−366 righe nette**, **14 simboli rimossi**.
+
+Rimossi (Blocco 1):
+- `renderIntegratoriLegacy` (~177 righe del vecchio render)
+- `setSuppFilter`, `suppDragStart` / `suppDragOver` / `suppDrop` / `suppDragEnd`, `toggleSuppExpand`
+- `openAddSuppModal` / `closeAddSuppModal` / `saveNewSupp`
+- HTML `<div id="add-supp-modal">` (~29 righe)
+- Campi ST: `suppFilter`, `suppExpanded`
+- Tutti i marker commento `// [LEGACY-INTEGRATORI-V3]`
+
+Rimossi (Blocco 2):
+- `toggleCatalogRemove`, `selectAllCatalog`
+- Campo ST: `catalogToRemove`
+- Guard `if(ST.catalogToRemove.includes(id)) return;` in `toggleCatalogItem`
+- Reset in `openCatalogModal`
+- Branch `hasRem` completo in `goToCatalogStep2` (~20 righe: check + filter toRemove + sezione "Da rimuovere" rendering)
+- Blocco delete in `importFromCatalog` (~10 righe: confirm alert + loop `dbDeleteSupp`)
+- Tutti i marker commento `// [LEGACY-CATALOGO-V3-BLOCCO2]`
+
+**Conseguenza Opzione A**: `importFromCatalog()` è ora puramente additivo. Le eliminazioni di supplements vivono SOLO in Editor Pacchetto (`× Rimuovi dal pacchetto`) e Extra Editor (`Elimina dalla libreria`). Coerente con design v3 approvato dai mockup Claude Design.
+
+**Falsi positivi salvati dall'audit pre-rimozione** (marker errati apposti al Blocco 1, NON cancellati):
+- `updateSuppSlotTime` — è viva, chiamata da `renderOggi()` timeline tab Oggi v3 (input `type="time"` dell'header gruppo integratori per bulk update slot). Marker rimosso, sostituito con commento descrittivo.
+- `ST.suppSheet` — è vivo, è lo state del bottom sheet `+ Registra integratori` tab Oggi v3 (`openSuppSheet` / `closeSuppSheet` + render del body con ~14 occorrenze attive).
+
+**Bug fix eliminazione pacchetto in cascata** (commit `c28ef45`, `v2026.05.16 · 21:56`)
+
+Bug rilevato post-deploy `v21:33`: eliminando un pacchetto via `ELIMINA PACCHETTO`, la riga `supplement_packages` veniva cancellata (CASCADE rimuoveva `supplement_package_items`), ma i record `supplements` linkati restavano in DB con `slot` valorizzato. Conseguenza: integratori fantasma raggruppati per slot nel bottom sheet `+ Registra integratori` della tab Oggi + extra fantasma in timeline.
+
+Decisione architetturale confermata dall'utente: pacchetti e extra sono mondi separati e indipendenti. **Eliminare un pacchetto cancella anche TUTTI i suoi integratori dalla libreria**. Gli extra (futuro `supplements_log` events in Step 2) restano completamente intoccati.
+
+Fix `pkgEditorDoDelete()`:
+- Raccoglie `suppIds` da `ST.packageEditor.items.map(it => it.supplement_id).filter(Boolean)`
+- Bulk DELETE: `supa.from('supplements').delete().in('id', suppIds).eq('user_id', ST.user.id)` con error handling esplicito + toast warning + early return se fallisce (evita stati inconsistenti)
+- Procede con DELETE `supplement_packages` (CASCADE rimuove `supplement_package_items` via FK)
+- Error handling separato sulla seconda delete
+- Sync in-memory: filtro `ST.supps` via `Set(suppIds)` + filtro `ST.packages`
+- Re-fetch `loadSupps() + loadPackages()` per coerenza cross-device + ricalcolo totali (`suppMonthlyCost`, tile Home Nutrition)
+- `saveCache()` prima della chiusura editor
+- Toast con conteggio: `"Pacchetto eliminato (N integratori)"` se N>0, altrimenti `"Pacchetto eliminato"`
+
+Cosa NON tocca:
+- `supplements_log` (referenzia `supplement_name` text, no FK su `supplements.id` — lo storico assunzioni resta intatto)
+- Gli extra (supplements non in nessun pacchetto, fuori dal blast radius)
 
 ### 16 maggio 2026 — Modulo Integratori v3: refresh hi-fi in 2 blocchi (production-ready) ✅
 
@@ -2688,8 +2783,8 @@ Sezione collassabile aggiunta in fondo al modal Impostazioni profilo (sopra il b
 - `updateSuppSlotTime` presente ma non testata in produzione
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
 - `body_logs` non ha constraint UNIQUE(user_id, date) su Supabase — il salvataggio usa insert/update manuale
-- **Editor Pacchetto in CREATE mode con 0 prodotti**: il bottone `ELIMINA PACCHETTO` è condizionato a `if(!isCreate)`. Se l'utente crea un pacchetto in CREATE → aggiunge il primo prodotto (a quel punto la transizione a EDIT avviene + il pacchetto è in DB) → rimuove TUTTI i prodotti, resta un pacchetto in DB ma il bottone ELIMINA non compare perché `items.length === 0` triggera l'empty state senza il pulsante delete. Workaround: eliminare via SQL diretto (`DELETE FROM supplement_packages WHERE id = '...'`). Fix da fare: mostrare ELIMINA PACCHETTO ovunque ci sia un `e.packageId` in stato `edit`, indipendentemente dal numero di items. Stesso bug per il pacchetto "Prova" residuo da test 16 mag.
 - **Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo** — UX scadente su mobile (il prompt iOS richiede tap doppio, no clipboard suggestion per emoji). Da sostituire con: `<input type="time">` nascosto + emoji-grid custom o sheet picker. Documentato come decisione in autonomia al Blocco 1.
+- **Flusso "Registra extra" (bottom sheet `+ Registra integratori` tab Oggi → "Singolo · Fuori schema") usa ancora architettura legacy**: crea righe persistenti in `supplements` con `slot` valorizzato invece di registrare eventi una tantum in `supplements_log`. Conseguenza: gli extra appaiono come "gruppi fantasma" nel bottom sheet stesso (raggruppati per slot) e come righe extra in timeline tab Oggi. Da ridisegnare in **Step 2 modulo Integratori** separato — extra = eventi mordi-e-fuggi in `supplements_log`, niente persistenza in `supplements`.
 
 ## Note
 
