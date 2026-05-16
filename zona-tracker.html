@@ -2327,7 +2327,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 19:03';
+const APP_VERSION = '2026.05.16 · 19:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3949,10 +3949,16 @@ async function loadCatalog() {
 // Carica supplement_packages + supplement_package_items in parallelo.
 // Join client-side con ST.supps per arricchire ogni item con il supplement completo.
 // Richiede ST.supps già caricato (loadSupps()).
+// FILTRO ESPLICITO user_id: la policy admin_read_all_* permette all'email admin
+// (ignazio.f@me.com) di vedere TUTTE le righe via RLS — il client deve SEMPRE
+// filtrare per user_id corrente per evitare di renderizzare pacchetti di altri tester.
 async function loadPackages() {
+  ST.packages = []; // reset per evitare accumulo su re-fetch
+  if(!ST.user || !ST.user.id) return;
+  const uid = ST.user.id;
   const [pkRes, itRes] = await Promise.all([
-    supa.from('supplement_packages').select('*').order('sort_order'),
-    supa.from('supplement_package_items').select('*').order('sort_order'),
+    supa.from('supplement_packages').select('*').eq('user_id', uid).order('sort_order'),
+    supa.from('supplement_package_items').select('*').eq('user_id', uid).order('sort_order'),
   ]);
   const packs = pkRes.data || [];
   const items = itRes.data || [];
