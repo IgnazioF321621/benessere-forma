@@ -2217,7 +2217,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 10:30';
+const APP_VERSION = '2026.05.16 · 10:49';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8796,6 +8796,14 @@ function getTodayPianoMeals(){
   }) || null;
 }
 
+// Apre il form "Registra pasto" da CTA primario — resetta ST.logTime all'ora attuale
+// (no memoria sessione: l'apertura precedente non deve influenzare la nuova).
+window.openMealLogForm = function(){
+  ST.logTime = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+  ST.logOpen = true;
+  renderOggi();
+};
+
 // Apre il form "Registra pasto" pre-compilato dal piano del coach.
 // Indicizzato: la riga "REGISTRA ›" passa l'indice in ST._plannedRows, popolato a render.
 window.openLogFromPlanned = function(idx){
@@ -9653,7 +9661,7 @@ function renderOggi(){
     // ── CTA pair v3 oppure form attivo (mutualmente esclusivi). Wrapper id per scroll target. ──
     if(!ST.logOpen) {
       html += `<div id="registra-pasto-form" class="oggi-v3-cta-row">
-        <button class="oggi-v3-cta oggi-v3-cta-primary" onclick="ST.logOpen=true;renderOggi();">+ Registra pasto</button>
+        <button class="oggi-v3-cta oggi-v3-cta-primary" onclick="openMealLogForm()">+ Registra pasto</button>
         <button class="oggi-v3-cta oggi-v3-cta-secondary" onclick="openSuppSheet()">+ Registra integratori</button>
       </div>`;
     } else {
@@ -11783,7 +11791,20 @@ function showToast(msg, emoji='✅') {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-function setLogSlot(id){ST.logSlot=id;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();}
+function setLogSlot(id){
+  ST.logSlot = id;
+  // Aggiorna ST.logTime all'orario standard dello slot scelto (es. Cena → "20:00").
+  // Nota: openLogFromPlanned() NON chiama setLogSlot — setta ST.logSlot/ST.logTime
+  // direttamente con il valore pianificato, quindi qui non c'è rischio di sovrascriverlo.
+  const slotDef = MEAL_SLOTS.find(s => s.id === id);
+  if (slotDef && slotDef.time) {
+    ST.logTime = slotDef.time;
+    const timeInput = document.getElementById('log-time');
+    if (timeInput) timeInput.value = slotDef.time;
+  }
+  ST.smartForm = { items:[], freeText:'', notes:'', analyzing:false, editingMealId:null, editingSlot:null, editingTime:null, editingDescription:'' };
+  renderOggi();
+}
 function buildSuggestionBox() {
   // Mappa slot app -> slot piano AI
   const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
