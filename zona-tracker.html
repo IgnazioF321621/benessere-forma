@@ -1050,6 +1050,69 @@ select.inp{cursor:pointer;}
 .pkg-undo-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#262626;color:#F5F3EE;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:14px;font-family:'Syne',sans-serif;font-size:13px;z-index:2000;box-shadow:0 6px 20px rgba(0,0,0,.2);min-width:280px;max-width:90vw;}
 .pkg-undo-toast button{background:none;border:none;color:#FAC775;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:4px 8px;line-height:1.3;}
 
+/* ── CATALOGO NUTRILITE V3 — Blocco 2 (16 mag 2026) ── */
+/* Override del weight-modal-inner SOLO per #catalog-modal: fullscreen flush */
+#catalog-modal{align-items:stretch;background:#F5F3EE;}
+#catalog-modal > .weight-modal-inner{max-width:100%;width:100%;border-radius:0;padding:0;background:#F5F3EE;box-shadow:none;max-height:none;display:flex;flex-direction:column;height:100vh;height:100dvh;}
+.catalog-v3-shell{display:flex;flex-direction:column;height:100%;min-height:0;background:#F5F3EE;}
+.catalog-v3-accent{height:3px;background:var(--mod-nutrition);flex-shrink:0;}
+.catalog-v3-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#F5F3EE;flex-shrink:0;border-bottom:0.5px solid transparent;}
+.catalog-v3-back{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--t2);padding:6px 2px;}
+.catalog-v3-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);line-height:1.3;flex:1;text-align:center;}
+.catalog-v3-counter{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.13em;line-height:1.3;text-transform:uppercase;color:#9A9388;flex-shrink:0;min-width:80px;text-align:right;}
+.catalog-v3-counter.active{color:var(--acc);}
+.catalog-v3-search-wrap{position:relative;padding:0 16px;margin-top:6px;margin-bottom:10px;flex-shrink:0;}
+.catalog-v3-search-icon{position:absolute;left:28px;top:50%;transform:translateY(-50%);font-size:14px;color:#9A9388;pointer-events:none;line-height:1;}
+.catalog-v3-search-bar{width:100%;background:#ECE9E0;border:none;border-radius:10px;padding:10px 36px 10px 36px;font-family:'Syne',sans-serif;font-size:16px;color:var(--t1);outline:none;line-height:1.4;-webkit-appearance:none;}
+.catalog-v3-search-bar::placeholder{color:#9A9388;font-weight:500;}
+.catalog-v3-search-bar:focus{background:#E5E1D6;}
+.catalog-v3-search-clear{position:absolute;right:24px;top:50%;transform:translateY(-50%);background:none;border:none;color:#6B6557;font-size:18px;cursor:pointer;padding:4px 6px;line-height:1;display:none;}
+.catalog-v3-search-clear.visible{display:block;}
+.catalog-v3-pills-wrap{position:relative;flex-shrink:0;margin-bottom:6px;}
+.catalog-v3-pills{display:flex;gap:6px;padding:4px 16px 8px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}
+.catalog-v3-pills::-webkit-scrollbar{display:none;}
+.catalog-v3-pill{flex-shrink:0;padding:8px 14px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;line-height:1.2;text-transform:uppercase;cursor:pointer;transition:all .12s ease;background:transparent;color:#6B6557;border:0.75px solid #C8C3B8;white-space:nowrap;}
+.catalog-v3-pill.active{background:var(--mod-nutrition);color:#3A2D10;border:0.75px solid var(--mod-nutrition);}
+.catalog-v3-pill-fade{position:absolute;right:0;top:4px;bottom:8px;width:24px;background:linear-gradient(90deg,transparent 0%,#F5F3EE 100%);pointer-events:none;}
+.catalog-v3-eyebrow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 8px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.16em;line-height:1.5;text-transform:uppercase;color:#9A9388;flex-shrink:0;}
+.catalog-v3-eyebrow-left{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.catalog-v3-eyebrow-right{flex-shrink:0;}
+.catalog-v3-eyebrow-link{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.16em;color:var(--acc);background:none;border:none;cursor:pointer;text-transform:uppercase;padding:2px 0;margin-left:8px;}
+.catalog-v3-list{flex:1;overflow-y:auto;padding:0 16px 16px;-webkit-overflow-scrolling:touch;min-height:0;}
+.catalog-v3-card{display:flex;align-items:center;gap:12px;padding:12px;background:#FFFFFF;border:0.5px solid #DDD9D0;border-radius:12px;box-shadow:0 1px 2px rgba(20,15,5,.025);margin-bottom:8px;cursor:pointer;transition:transform .1s ease,opacity .15s ease;}
+.catalog-v3-card:active{transform:scale(.98);}
+.catalog-v3-card-disabled{opacity:.55;cursor:default;pointer-events:none;}
+.catalog-v3-thumb{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;line-height:1;position:relative;overflow:hidden;}
+.catalog-v3-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 60%);pointer-events:none;}
+.catalog-v3-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.catalog-v3-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;color:#1A1814;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;}
+.catalog-v3-line-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.12em;line-height:1.3;text-transform:uppercase;padding:2px 5px;border-radius:4px;vertical-align:middle;flex-shrink:0;}
+.catalog-v3-line-tag-bodykey{background:var(--acc-lt);color:var(--acc);}
+.catalog-v3-line-tag-xs{background:#FCEEE9;color:#7A2E10;}
+.catalog-v3-meta{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.14em;line-height:1.3;text-transform:uppercase;color:#6B6557;}
+.catalog-v3-macro{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.04em;line-height:1.3;display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.catalog-v3-macro-kcal{color:#6B6557;font-weight:600;}
+.catalog-v3-macro-c{color:#A0490A;font-weight:600;}
+.catalog-v3-macro-p{color:#1A6B35;font-weight:600;}
+.catalog-v3-macro-g{color:#7A5500;font-weight:600;}
+.catalog-v3-macro-sep{color:#C8C3B8;}
+.catalog-v3-cost{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;line-height:1.3;color:#9A9388;font-weight:500;}
+.catalog-v3-in-package-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.14em;line-height:1.3;text-transform:uppercase;color:var(--acc);margin-top:2px;}
+.catalog-v3-check{width:26px;height:26px;border-radius:50%;border:1.5px solid #C8C3B8;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s cubic-bezier(.16,1,.3,1);color:transparent;font-size:14px;font-weight:700;}
+.catalog-v3-check.on{background:var(--acc);border-color:var(--acc);color:#fff;animation:catalogCheckPop .2s cubic-bezier(.16,1,.3,1);}
+@keyframes catalogCheckPop{0%{transform:scale(.7);}100%{transform:scale(1);}}
+.catalog-v3-cta-bar{position:relative;padding:16px;flex-shrink:0;background:#F5F3EE;}
+.catalog-v3-cta-bar::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:32px;background:linear-gradient(180deg,rgba(245,243,238,0) 0%,rgba(245,243,238,1) 60%);pointer-events:none;}
+.catalog-v3-cta-btn{width:100%;background:var(--acc);color:#fff;border:none;border-radius:12px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.16em;line-height:1.2;text-transform:uppercase;cursor:pointer;transition:opacity .2s ease,transform .1s ease;display:flex;align-items:center;justify-content:center;gap:8px;}
+.catalog-v3-cta-btn:active{transform:scale(.99);}
+.catalog-v3-cta-btn.disabled{opacity:.45;cursor:not-allowed;}
+.catalog-v3-cta-btn-count{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;letter-spacing:.02em;}
+.catalog-v3-empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px 40px;color:var(--t3);gap:8px;}
+.catalog-v3-empty-emoji{font-size:56px;line-height:1;margin-bottom:6px;opacity:.6;}
+.catalog-v3-empty-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);line-height:1.3;}
+.catalog-v3-empty-text{font-family:'Syne',sans-serif;font-size:13px;color:#6B6557;line-height:1.5;max-width:280px;}
+.catalog-v3-empty-link{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);background:none;border:none;cursor:pointer;padding:4px 0;}
+
 </style>
 </head>
 <body>
@@ -2041,24 +2104,11 @@ select.inp{cursor:pointer;}
 
 <!-- CATALOG MODAL -->
 <div id="catalog-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeCatalogModal()">
-  <div class="weight-modal-inner" style="max-width:480px;width:100%;">
-    <!-- Step 1: selezione prodotti -->
-    <div id="catalog-step1">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-        <span class="lbl" style="margin:0;">📦 Catalogo Nutrilite</span>
-        <button onclick="closeCatalogModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
-      </div>
-      <p style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Tocca per aggiungere o rimuovere prodotti dal tuo profilo.</p>
-      <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(true)">Seleziona tutti</button>
-        <button class="btn btn-ghost btn-sm" onclick="selectAllCatalog(false)">Deseleziona tutti</button>
-      </div>
-      <input id="catalog-search" class="inp" type="text" placeholder="Cerca integratore..." oninput="renderCatalogList()" style="margin-bottom:10px;"/>
-      <div id="catalog-list" style="max-height:44vh;overflow-y:auto;margin-bottom:14px;"></div>
-      <button class="btn btn-primary btn-full" onclick="goToCatalogStep2()">Avanti →</button>
-    </div>
-    <!-- Step 2: imposta orari -->
-    <div id="catalog-step2" style="display:none;">
+  <div class="weight-modal-inner">
+    <!-- Step 1: nuovo render v3 (host innerHTML iniettato da renderCatalogList) -->
+    <div id="catalog-step1" style="display:flex;flex-direction:column;height:100%;min-height:0;"></div>
+    <!-- Step 2: imposta orari (UI legacy preservata, già patched in Blocco 1 per pre-fill orario) -->
+    <div id="catalog-step2" style="display:none;padding:20px;flex-direction:column;overflow-y:auto;">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
         <button onclick="backToCatalogStep1()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);padding:0;line-height:1;">←</button>
         <span class="lbl" style="margin:0;flex:1;">Riepilogo modifiche</span>
@@ -2327,7 +2377,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 19:19';
+const APP_VERSION = '2026.05.16 · 20:31';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2445,6 +2495,8 @@ const ST = {
   pkgRemoveItemConfirm: null,    // { itemId, supplementId, name } — toast undo rimozione item da pacchetto
   pkgDeleteConfirm: false,       // true → modal conferma eliminazione pacchetto
   pkgExitConfirm: false,         // true → modal conferma uscita con modifiche non salvate
+  // BLOCCO 2 Catalogo v3 (16 mag 2026)
+  catalogCategoryFilter: 'TUTTI',  // pillola categoria attiva nel catalogo
   // M2 Check fisico (versione funzionale, design legacy M1 — refinement pass futuro)
   m2: {
     step: 'intro',                                              // 'intro'|'s0'|'s1'..'s4'|'s5'|'s6'..'s8'|'s9'|'s10'|'s11'|'s12'
@@ -9274,6 +9326,56 @@ function suppGroupHeaderHTML(slot, sc, takenN, total, collapsed, label) {
 const SLOT_COLOR_MAP={'06:30':'#7cb87c','08:45':'#e8935a','11:00':'#f0bc5e','13:00':'#5ab8b8','15:30':'#9b7ec8','22:15':'#5a7eb8'};
 const SLOT_PAL=['#7cb87c','#e8935a','#f0bc5e','#5ab8b8','#9b7ec8','#5a7eb8','#8fa8c8','#a8c87c'];
 
+// ── Integratori v3 Blocco 2 (16 mag 2026) — mappa tinte + emoji catalogo ──
+// Hardcoded JS (decisione "A" del brief): niente colonne DB nuove.
+const CATEGORY_TINT_MAP = {
+  ambra:      { bg: '#FEF3DC', emoji: '💊' },  // base/cuore
+  terracotta: { bg: '#FCEEE9', emoji: '⚡' },  // sport/composizione
+  rosa:       { bg: '#FCE9EE', emoji: '🌸' },  // pelle/donna
+  verde:      { bg: '#E6F4E6', emoji: '🌿' },  // energia/peso
+  beige:      { bg: '#F0EDE6', emoji: '🌱' },  // erbe/fegato (fallback)
+};
+const CATEGORY_TO_TINT = {
+  'Integratori base':       'ambra',
+  'Erbe / Cuore':           'ambra',
+  'Aminoacidi / Sport':     'terracotta',
+  'Composizione corporea':  'terracotta',
+  'Sostituto pasto':        'terracotta',
+  'Ossa / Muscoli':         'terracotta',
+  'Controllo peso':         'verde',
+  'Energia':                'verde',
+  'Concentrazione':         'verde',
+  'Pelle / Collagene':      'rosa',
+  'Pelle / Benessere':      'rosa',
+  'Supporto Lei / Pelle':   'rosa',
+  'Erbe / Fegato':          'beige',
+  'Erbe / Fitonutrienti':   'beige',
+  'Protezione cellule':     'beige',
+  // Categorie non mappate → fallback 'beige'
+};
+const CATEGORY_EMOJI_OVERRIDE = {
+  'Sostituto pasto':        '🥤',
+  'Aminoacidi / Sport':     '💪',
+  'Ossa / Muscoli':         '🦴',
+  'Erbe / Cuore':           '❤️',
+  'Erbe / Fegato':          '🍃',
+  'Pelle / Collagene':      '✨',
+  'Pelle / Benessere':      '🌸',
+  'Supporto Lei / Pelle':   '💗',
+  'Controllo peso':         '⚖️',
+  'Energia':                '⚡',
+  'Concentrazione':         '🧠',
+  'Protezione cellule':     '🛡️',
+  'Erbe / Fitonutrienti':   '🌿',
+  'Integratori base':       '💊',
+};
+function getCatalogTint(item) {
+  const tintKey = CATEGORY_TO_TINT[item && item.categoria] || 'beige';
+  const tint = CATEGORY_TINT_MAP[tintKey];
+  const emoji = (CATEGORY_EMOJI_OVERRIDE[item && item.categoria]) || tint.emoji;
+  return { bg: tint.bg, emoji };
+}
+
 // ═══════════════════════════════════════════════════════════
 // FASE 2 — SMART INGREDIENT FORM (registrazione pasto a righe)
 // ═══════════════════════════════════════════════════════════
@@ -12532,19 +12634,28 @@ function saveOggiSupp(id) {
   showToast('Salvato','✓');
 }
 
-// ── CATALOG MODAL ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// CATALOG MODAL v3 — Blocco 2 (16 mag 2026)
+// Sostituisce il vecchio render lineare con UI hi-fi:
+// shell fullscreen, search bar, pillole categoria, card prodotto v3,
+// stato "GIÀ NEL PACCHETTO", CTA sticky bottom.
+// ═══════════════════════════════════════════════════════════
+
 function openCatalogModal() {
   ST.catalogSelected = [];
   ST.catalogToRemove = [];
-  document.getElementById('catalog-search').value = '';
-  document.getElementById('catalog-step1').style.display = 'block';
+  ST.catalogCategoryFilter = 'TUTTI';
+  document.getElementById('catalog-step1').style.display = 'flex';
   document.getElementById('catalog-step2').style.display = 'none';
-  renderCatalogList();
+  renderCatalogShell();  // rendering una sola volta della shell (header+search+pills+containers)
+  renderCatalogList();   // contenuto dinamico (counter+eyebrow+list+CTA)
   document.getElementById('catalog-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 
 function closeCatalogModal() {
   document.getElementById('catalog-modal').style.display = 'none';
+  document.body.style.overflow = '';
   const btn = document.getElementById('catalog-confirm-btn');
   if(btn) { btn.disabled = false; btn.textContent = 'Applica modifiche →'; }
   // Integratori v3: se eravamo in mode "addToPackage" e l'utente chiude senza importare,
@@ -12553,59 +12664,233 @@ function closeCatalogModal() {
     document.getElementById('package-editor-overlay').classList.add('visible');
   }
   ST.catalogContext = null;
+  ST.catalogCategoryFilter = 'TUTTI';
 }
 
+// ── Render v3 catalogo: SHELL statica (header + search input persistente + pills container + content host) ──
+// Chiamata una sola volta da openCatalogModal. La search input NON viene mai ri-creata
+// per evitare loss-of-focus / flicker tastiera su iOS durante typing.
+function renderCatalogShell() {
+  const host = document.getElementById('catalog-step1');
+  if(!host) return;
+  const totalCatalog = (ST.catalog || []).length;
+  host.innerHTML = `<div class="catalog-v3-shell">
+    <div class="catalog-v3-accent"></div>
+    <div class="catalog-v3-header">
+      <button class="catalog-v3-back" onclick="closeCatalogModal()">‹ Indietro</button>
+      <div class="catalog-v3-title">Catalogo Nutrilite</div>
+      <div id="catalog-counter" class="catalog-v3-counter">0 SELEZIONATI</div>
+    </div>
+    <div class="catalog-v3-search-wrap">
+      <span class="catalog-v3-search-icon">🔍</span>
+      <input id="catalog-search" class="catalog-v3-search-bar" type="text" placeholder="Cerca prodotto…" oninput="onCatalogSearchInput(this.value)" autocomplete="off"/>
+      <button id="catalog-search-clear" class="catalog-v3-search-clear" onclick="clearCatalogSearch()" aria-label="Pulisci ricerca">×</button>
+    </div>
+    <div class="catalog-v3-pills-wrap">
+      <div id="catalog-pills" class="catalog-v3-pills"></div>
+      <div class="catalog-v3-pill-fade"></div>
+    </div>
+    <div id="catalog-eyebrow" class="catalog-v3-eyebrow"></div>
+    <div id="catalog-list" class="catalog-v3-list"></div>
+    <div class="catalog-v3-cta-bar">
+      <button id="catalog-cta-btn" class="catalog-v3-cta-btn disabled" disabled onclick="goToCatalogStep2()">Seleziona prodotti</button>
+    </div>
+  </div>`;
+}
+
+// ── Handler input search: aggiorna solo content (no full re-render shell) ──
+function onCatalogSearchInput(value) {
+  // No state storage; il valore vive nell'input. renderCatalogList lo legge.
+  renderCatalogList();
+}
+
+// ── Render contenuto dinamico: pills, counter, eyebrow, list, CTA, clear-btn visibility ──
 function renderCatalogList() {
-  const selAdd = new Set(ST.catalogSelected);
-  const selRem = new Set(ST.catalogToRemove);
-  const query = (document.getElementById('catalog-search')?.value || '').toLowerCase().trim();
-  const items = query ? ST.catalog.filter(item => item.nome.toLowerCase().includes(query)) : ST.catalog;
-  if (items.length === 0) {
-    document.getElementById('catalog-list').innerHTML = `<div style="text-align:center;color:var(--t3);font-size:13px;padding:20px 0;">Nessun risultato per "${esc(query)}"</div>`;
-    return;
+  const searchInput = document.getElementById('catalog-search');
+  if(!searchInput) return; // shell non ancora montata (chiamata fuori contesto)
+  const query = (searchInput.value || '').toLowerCase().trim();
+  const categoryFilter = ST.catalogCategoryFilter || 'TUTTI';
+
+  // Toggle visibility clear-btn
+  const clearBtn = document.getElementById('catalog-search-clear');
+  if(clearBtn) clearBtn.classList.toggle('visible', query.length > 0);
+
+  // Categorie reali ordinate per numero di prodotti decrescente
+  const catCounts = {};
+  (ST.catalog || []).forEach(c => {
+    if(!c.categoria) return;
+    catCounts[c.categoria] = (catCounts[c.categoria] || 0) + 1;
+  });
+  const orderedCategories = Object.keys(catCounts).sort((a,b) => catCounts[b] - catCounts[a]);
+
+  // Lista filtrata (categoria AND ricerca AND ordinato per nome)
+  let items = (ST.catalog || []).slice();
+  if(categoryFilter !== 'TUTTI') items = items.filter(c => c.categoria === categoryFilter);
+  if(query) items = items.filter(c => (c.nome || '').toLowerCase().includes(query));
+  items.sort((a,b) => (a.nome || '').localeCompare(b.nome || '', 'it'));
+
+  // Stato selezione + alreadyInPackage
+  const selAdd = new Set(ST.catalogSelected || []);
+  const ctx = ST.catalogContext;
+  const alreadyInPackage = new Set((ctx && ctx.alreadyInPackage) || []);
+  const selectedCount = selAdd.size;
+
+  // ── Counter ──
+  const counterEl = document.getElementById('catalog-counter');
+  if(counterEl) {
+    counterEl.className = selectedCount > 0 ? 'catalog-v3-counter active' : 'catalog-v3-counter';
+    counterEl.textContent = selectedCount === 0 ? '0 SELEZIONATI'
+                          : selectedCount === 1 ? '1 SELEZIONATO'
+                          : `${selectedCount} SELEZIONATI`;
   }
-  document.getElementById('catalog-list').innerHTML = items.map(item => {
-    const instances = ST.supps.filter(s => (item.codice && s.codice === item.codice) || s.name === item.nome);
-    const instanceCount = instances.length;
-    const toAdd    = selAdd.has(item.codice);
-    const toRemove = selRem.has(item.codice);
-    let boxClass, boxContent, itemClass, instanceBadge = '';
-    if(instanceCount > 0) {
-      instanceBadge = `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--acc-lt);color:var(--acc);border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">×${instanceCount}</span>`;
-    }
-    if(toRemove) {
-      boxClass   = 'check-box remove';
-      boxContent = '<span class="check-mark" style="color:var(--err);">✕</span>';
-      itemClass  = 'catalog-item to-remove';
-    } else if(toAdd) {
-      boxClass   = 'check-box on';
-      boxContent = '<span class="check-mark">✓</span>';
-      itemClass  = 'catalog-item';
+
+  // ── Pills ──
+  const pillsEl = document.getElementById('catalog-pills');
+  if(pillsEl) {
+    const savedScroll = pillsEl.scrollLeft;
+    const totalCatalog = (ST.catalog || []).length;
+    let pillsHTML = `<button class="catalog-v3-pill${categoryFilter==='TUTTI'?' active':''}" onclick="setCatalogCategory('TUTTI')">Tutti ${totalCatalog}</button>`;
+    orderedCategories.forEach(cat => {
+      const active = categoryFilter === cat;
+      pillsHTML += `<button class="catalog-v3-pill${active?' active':''}" onclick="setCatalogCategory('${esc(cat)}')">${esc(cat)} ${catCounts[cat]}</button>`;
+    });
+    pillsEl.innerHTML = pillsHTML;
+    pillsEl.scrollLeft = savedScroll; // preserva scroll orizzontale durante filter change
+  }
+
+  // ── Eyebrow ──
+  const eyebrowEl = document.getElementById('catalog-eyebrow');
+  if(eyebrowEl) {
+    const resultsLbl = items.length === 1 ? '1 RISULTATO' : `${items.length} RISULTATI`;
+    const hasQuery = query.length > 0;
+    const hasFilters = (categoryFilter !== 'TUTTI') || hasQuery;
+    let eyebrowLeft;
+    if(categoryFilter !== 'TUTTI' && hasQuery) {
+      eyebrowLeft = `${esc(categoryFilter)} · "${esc(query)}"`;
+    } else if(categoryFilter !== 'TUTTI') {
+      eyebrowLeft = `${esc(categoryFilter)} · ORDINATO PER NOME`;
+    } else if(hasQuery) {
+      eyebrowLeft = `"${esc(query)}" · ORDINATO PER NOME`;
     } else {
-      boxClass   = 'check-box';
-      boxContent = '';
-      itemClass  = 'catalog-item';
+      eyebrowLeft = 'TUTTI · ORDINATO PER NOME';
     }
-    const prezzo = item.prezzo_partner != null ? `€${parseFloat(item.prezzo_partner).toFixed(2)}/conf` : '';
-    const mensile = item.costo_mensile_partner != null ? `€${parseFloat(item.costo_mensile_partner).toFixed(2)}/mese` : '';
-    const removeBtn = instanceCount > 0 && !toAdd
-      ? `<button onclick="event.stopPropagation();toggleCatalogRemove('${esc(item.codice)}')" style="background:none;border:1px solid var(--err);border-radius:5px;color:var(--err);font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0;font-family:'Syne',sans-serif;">${toRemove ? '↩ annulla' : '✕ rimuovi'}</button>`
-      : '';
-    return `<div class="${itemClass}" onclick="toggleCatalogItem('${esc(item.codice)}')">
-      <div class="${boxClass}">${boxContent}</div>
-      <div class="catalog-item-info" style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
-          <span class="catalog-item-name">${esc(item.nome)}</span>${instanceBadge}
-        </div>
-        <div class="catalog-item-slot" style="margin-top:2px;">${[item.linea, item.categoria].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="catalog-item-slot">${[item.confezione, item.dose_die ? 'Dose: '+item.dose_die : ''].filter(Boolean).map(esc).join(' · ')}</div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:3px;gap:8px;flex-wrap:wrap;">
-          <div class="catalog-item-slot" style="color:var(--acc);">${[prezzo, mensile].filter(Boolean).join(' · ')}</div>
-          ${removeBtn}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+    const azzeraLink = hasFilters ? `<button class="catalog-v3-eyebrow-link" onclick="resetCatalogFilters()">Azzera ›</button>` : '';
+    eyebrowEl.innerHTML = `<span class="catalog-v3-eyebrow-left">${eyebrowLeft}</span>
+      <span class="catalog-v3-eyebrow-right">${resultsLbl}${azzeraLink}</span>`;
+  }
+
+  // ── List ──
+  const listEl = document.getElementById('catalog-list');
+  if(listEl) {
+    const hasQuery2 = query.length > 0;
+    const hasFilters2 = (categoryFilter !== 'TUTTI') || hasQuery2;
+    if((ST.catalog || []).length === 0) {
+      listEl.innerHTML = `<div class="catalog-v3-empty-state">
+        <div class="catalog-v3-empty-emoji">📦</div>
+        <div class="catalog-v3-empty-title">Catalogo non disponibile</div>
+        <div class="catalog-v3-empty-text">Non sono riuscito a caricare i prodotti. Verifica la connessione.</div>
+        <button class="catalog-v3-empty-link" onclick="loadCatalog().then(()=>{renderCatalogShell();renderCatalogList();})">Riprova ›</button>
+      </div>`;
+    } else if(items.length === 0) {
+      listEl.innerHTML = `<div class="catalog-v3-empty-state">
+        <div class="catalog-v3-empty-emoji">🔍</div>
+        <div class="catalog-v3-empty-title">Nessun prodotto</div>
+        <div class="catalog-v3-empty-text">Prova a togliere il filtro categoria o a modificare la ricerca.</div>
+        ${hasFilters2?`<button class="catalog-v3-empty-link" onclick="resetCatalogFilters()">Azzera filtri ›</button>`:''}
+      </div>`;
+    } else {
+      listEl.innerHTML = items.map(item => _renderCatalogCardV3(item, selAdd, alreadyInPackage)).join('');
+    }
+  }
+
+  // ── CTA ──
+  const ctaBtn = document.getElementById('catalog-cta-btn');
+  if(ctaBtn) {
+    const ctaDisabled = selectedCount === 0;
+    ctaBtn.className = ctaDisabled ? 'catalog-v3-cta-btn disabled' : 'catalog-v3-cta-btn';
+    ctaBtn.disabled = ctaDisabled;
+    ctaBtn.innerHTML = ctaDisabled
+      ? 'Seleziona prodotti'
+      : selectedCount === 1
+        ? `Aggiungi <span class="catalog-v3-cta-btn-count">1</span> prodotto`
+        : `Aggiungi <span class="catalog-v3-cta-btn-count">${selectedCount}</span> prodotti`;
+  }
+}
+
+// ── Renderer card singolo prodotto v3 ──
+function _renderCatalogCardV3(item, selAdd, alreadyInPackage) {
+  const codice = item.codice || '';
+  const isSelected = selAdd.has(codice);
+  const inPackage = codice && alreadyInPackage.has(codice);
+
+  const tint = getCatalogTint(item);
+
+  // Tag linea (solo Bodykey / XS Sports)
+  let lineTag = '';
+  const lineaLower = (item.linea || '').toLowerCase();
+  if(lineaLower === 'bodykey')   lineTag = `<span class="catalog-v3-line-tag catalog-v3-line-tag-bodykey">Bodykey</span>`;
+  else if(lineaLower === 'xs sports' || lineaLower === 'xs') lineTag = `<span class="catalog-v3-line-tag catalog-v3-line-tag-xs">XS Sports</span>`;
+
+  // Riga 2: categoria · porzione (dose_die + dose_unit)
+  const cat = item.categoria || '';
+  const dose = (item.dose_die != null && item.dose_die !== '') ? `${item.dose_die} ${item.dose_unit || 'cps'}` : '';
+  const metaLine = [cat.toUpperCase(), dose.toUpperCase()].filter(Boolean).join(' · ');
+
+  // Riga 3: macro — kcal sempre, C/P/G tutte o nessuna (decisione Blocco 1)
+  const kcal = parseFloat(item.kcal) || 0;
+  const c = parseFloat(item.carbo) || 0;
+  const p = parseFloat(item.proteine) || 0;
+  const g = parseFloat(item.grassi) || 0;
+  const showMacros = (c + p + g) > 0;
+  let macroHTML = `<span class="catalog-v3-macro-kcal">${Math.round(kcal)} KCAL</span>`;
+  if(showMacros) {
+    macroHTML += `<span class="catalog-v3-macro-sep">·</span>
+      <span class="catalog-v3-macro-c">${c}g C</span>
+      <span class="catalog-v3-macro-sep">·</span>
+      <span class="catalog-v3-macro-p">${p}g P</span>
+      <span class="catalog-v3-macro-sep">·</span>
+      <span class="catalog-v3-macro-g">${g}g G</span>`;
+  }
+
+  // Riga 4: costo
+  const costoDose = parseFloat(item.costo_dose_partner);
+  const costoTxt = !isNaN(costoDose) && costoDose > 0
+    ? `€ ${costoDose.toFixed(2)}/dose`
+    : '';
+
+  const cardClass = `catalog-v3-card${inPackage ? ' catalog-v3-card-disabled' : ''}`;
+  const onclick = inPackage ? '' : `onclick="toggleCatalogItem('${esc(codice)}')"`;
+  const inPackageTag = inPackage ? `<div class="catalog-v3-in-package-tag">Nel pacchetto</div>` : '';
+  const checkClass = `catalog-v3-check${isSelected ? ' on' : ''}`;
+
+  return `<div class="${cardClass}" ${onclick}>
+    <div class="catalog-v3-thumb" style="background:${tint.bg};">${tint.emoji}</div>
+    <div class="catalog-v3-info">
+      <div class="catalog-v3-name">${esc(item.nome)}${lineTag}</div>
+      ${metaLine ? `<div class="catalog-v3-meta">${metaLine}</div>` : ''}
+      <div class="catalog-v3-macro">${macroHTML}</div>
+      ${costoTxt ? `<div class="catalog-v3-cost">${costoTxt}</div>` : ''}
+      ${inPackageTag}
+    </div>
+    <div class="${checkClass}">${isSelected ? '✓' : ''}</div>
+  </div>`;
+}
+
+// ── Helper filtri catalogo v3 ──
+function setCatalogCategory(cat) {
+  ST.catalogCategoryFilter = cat || 'TUTTI';
+  renderCatalogList();
+}
+function resetCatalogFilters() {
+  ST.catalogCategoryFilter = 'TUTTI';
+  const s = document.getElementById('catalog-search');
+  if(s) s.value = '';
+  renderCatalogList();
+}
+function clearCatalogSearch() {
+  const s = document.getElementById('catalog-search');
+  if(s) { s.value = ''; s.focus(); }
+  renderCatalogList();
 }
 
 function toggleCatalogItem(id) {
@@ -12616,6 +12901,10 @@ function toggleCatalogItem(id) {
   renderCatalogList();
 }
 
+// [LEGACY-CATALOGO-V3-BLOCCO2] rimuovere dopo verifica — il design v3 è puramente
+// additivo (no flusso "rimuovi" dal catalogo). Funzione preservata: ST.catalogToRemove
+// resta sempre [] nel nuovo flusso, il branch "Da rimuovere" in goToCatalogStep2
+// è dead code path. Da rimuovere insieme alla sezione "Da rimuovere" di step2.
 function toggleCatalogRemove(id) {
   const i = ST.catalogToRemove.indexOf(id);
   if(i < 0) ST.catalogToRemove.push(id);
@@ -12625,6 +12914,8 @@ function toggleCatalogRemove(id) {
   renderCatalogList();
 }
 
+// [LEGACY-CATALOGO-V3-BLOCCO2] rimuovere dopo verifica — la UI v3 non ha bottoni
+// "Seleziona tutti / Deseleziona tutti". Funzione preservata per safety.
 function selectAllCatalog(on) {
   const existingNames = new Set(ST.supps.map(s => s.name));
   if(on) {
@@ -12685,7 +12976,7 @@ function goToCatalogStep2() {
 
 function backToCatalogStep1() {
   document.getElementById('catalog-step2').style.display = 'none';
-  document.getElementById('catalog-step1').style.display = 'block';
+  document.getElementById('catalog-step1').style.display = 'flex'; // v3: step1 è flex column fullscreen
 }
 
 async function importFromCatalog() {
@@ -13379,7 +13670,19 @@ async function pkgEditorAddProduct() {
     const newId = await _pkgEditorPersistNewPackage();
     if(!newId) return;
   }
-  ST.catalogContext = { mode: 'addToPackage', packageId: e.packageId, time: e.time };
+  // Blocco 2: alreadyInPackage = codici prodotto già linkati al pacchetto.
+  // Il catalogo li mostra grayed-out con tag "NEL PACCHETTO".
+  const alreadyInPackage = (e.items || [])
+    .map(it => it.supplement && it.supplement.codice)
+    .filter(Boolean);
+  ST.catalogContext = {
+    mode: 'addToPackage',
+    packageId:   e.packageId,
+    packageName: e.name,
+    packageTime: e.time,
+    time:        e.time, // back-compat con goToCatalogStep2 (slot pre-fill)
+    alreadyInPackage,
+  };
   // Nascondi temporaneamente l'overlay editor (resta in ST per riapertura post-import)
   document.getElementById('package-editor-overlay').classList.remove('visible');
   openCatalogModal();
