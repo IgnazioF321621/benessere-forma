@@ -2217,7 +2217,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.15 · 20:30';
+const APP_VERSION = '2026.05.16 · 10:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3986,6 +3986,18 @@ function applyLocalPrefs() {
 
 function applyProfile(profile) {
   if (profile.obiettivo) profile.obiettivo = migrateObiettivo(profile.obiettivo);
+  // Carica piano_ai da profile in ST.pianoAI (eager load — disponibile anche per la timeline OGGI
+  // senza dover aprire prima il tab Piano). Cache localStorage tenuta come fallback offline.
+  if (profile.piano_ai && !ST.pianoAI) {
+    ST.pianoAI = profile.piano_ai;
+    try { localStorage.setItem('zt_piano_' + (ST.user?.id || 'local'), JSON.stringify(ST.pianoAI)); } catch(e) {}
+  } else if (!profile.piano_ai && !ST.pianoAI) {
+    // Fallback: prova a leggere dalla cache locale (offline / refresh prima del fetch)
+    try {
+      const cached = localStorage.getItem('zt_piano_' + (ST.user?.id || 'local'));
+      if (cached) ST.pianoAI = JSON.parse(cached);
+    } catch(e) {}
+  }
   const baseKcal = profile.target_kcal || 1900;
   const obiettiviArr = profile.obiettivo ? profile.obiettivo.split(',').filter(Boolean) : [];
   const adapted = calcAdaptedTargets(obiettiviArr, baseKcal);
@@ -8767,35 +8779,21 @@ function zonaBalance(cons) {
 // Mappa la data attiva (ST.activeDay = YYYY-MM-DD) al giorno corrispondente del
 // piano AI settimanale (g.giorno = "lunedì"/"martedì"/...). Diacritici tolleranti.
 function getTodayPianoMeals(){
-  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length){
-    if(ST.pianoAI) console.log('[piano-debug] ST.pianoAI esiste ma .giorni mancante o vuoto:', ST.pianoAI);
-    return null;
-  }
+  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length) return null;
   const d = new Date((ST.activeDay || todayKey()) + 'T12:00:00');
   // Forma piena + abbreviata: il piano AI può usare 'Lunedì', 'Lun', 'lunedi', 'LUNEDÌ', ecc.
   const IT_FULL = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
   const IT_SHORT = ['dom','lun','mar','mer','gio','ven','sab'];
-  const targetFull  = IT_FULL[d.getDay()];
-  const targetShort = IT_SHORT[d.getDay()];
+  const tFull  = IT_FULL[d.getDay()];
+  const tShort = IT_SHORT[d.getDay()];
   // Normalizza: lowercase + strip diacritici (U+0300–U+036F) + trim.
   const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-  const tFull  = norm(targetFull);
-  const tShort = norm(targetShort);
-  const found = ST.pianoAI.giorni.find(g => {
+  const nFull  = norm(tFull);
+  const nShort = norm(tShort);
+  return ST.pianoAI.giorni.find(g => {
     const n = norm(g.giorno);
-    return n === tFull || n === tShort || n.startsWith(tFull) || n.startsWith(tShort);
+    return n === nFull || n === nShort || n.startsWith(nFull) || n.startsWith(nShort);
   }) || null;
-  // Debug temporaneo (rimuovere dopo verifica): stampa cosa cerca e cosa trova
-  console.log('[piano-debug]', {
-    activeDay: ST.activeDay,
-    weekdayIdx: d.getDay(),
-    targetFull, targetShort, tFull, tShort,
-    pianoGiorniRaw: ST.pianoAI.giorni.map(g => g.giorno),
-    pianoGiorniNorm: ST.pianoAI.giorni.map(g => norm(g.giorno)),
-    matchedSlots: found ? Object.keys(found).filter(k => k !== 'giorno' && k !== 'kcal_totali' && k !== 'note') : null,
-    matchedGiorno: found ? found.giorno : null,
-  });
-  return found;
 }
 
 // Apre il form "Registra pasto" pre-compilato dal piano del coach.
