@@ -2377,7 +2377,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 20:31';
+const APP_VERSION = '2026.05.16 · 20:56';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13331,9 +13331,15 @@ function renderPackageEditor() {
       <span class="int-v3-cta-label">+ Aggiungi prodotto</span>
       <span class="int-v3-cta-tag">Nutrilite</span>
     </button>`;
-    if(!isCreate) {
-      body += `<button class="pkg-editor-delete" onclick="pkgEditorConfirmDelete()">Elimina pacchetto</button>`;
-    }
+  }
+
+  // ELIMINA PACCHETTO — visibile se il pacchetto è già persistito in DB,
+  // indipendentemente dal numero di items. Fix bug: prima era nell'else di
+  // itemsCount === 0 + gated su !isCreate, quindi un pacchetto persistito ma
+  // svuotato non poteva essere eliminato dall'app (workaround: SQL diretto).
+  // Regola corretta: la presenza di e.packageId è la source-of-truth.
+  if(e.packageId) {
+    body += `<button class="pkg-editor-delete" onclick="pkgEditorConfirmDelete()">Elimina pacchetto</button>`;
   }
 
   body += `</div>`; // .pkg-editor-body
