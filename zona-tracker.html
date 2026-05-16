@@ -2120,35 +2120,6 @@ select.inp{cursor:pointer;}
   </div>
 </div>
 
-<!-- ADD SUPP MODAL -->
-<div id="add-supp-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeAddSuppModal()">
-  <div class="weight-modal-inner" style="max-width:480px;width:100%;max-height:90vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <span class="lbl" style="margin:0;">+ Nuovo integratore</span>
-      <button onclick="closeAddSuppModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
-    </div>
-    <div class="add-field">
-      <label>Nome</label>
-      <input id="as-name" class="inp" placeholder="Es. Vitamina C 1000mg"/>
-    </div>
-    <div class="add-grid">
-      <div class="add-field"><label>Orario</label><input id="as-slot" class="inp inp-sm" placeholder="08:00" value="08:00"/></div>
-      <div class="add-field"><label>Gruppo (opz.)</label><input id="as-grp" class="inp inp-sm" placeholder="Es. Shake Mami"/></div>
-    </div>
-    <div class="add-grid">
-      <div class="add-field"><label>Kcal</label><input id="as-kcal" class="inp inp-sm" type="number" value="0" min="0"/></div>
-      <div class="add-field"><label>Proteine g</label><input id="as-protein" class="inp inp-sm" type="number" value="0" min="0"/></div>
-      <div class="add-field"><label>Carbo g</label><input id="as-carbs" class="inp inp-sm" type="number" value="0" min="0"/></div>
-      <div class="add-field"><label>Grassi g</label><input id="as-fat" class="inp inp-sm" type="number" value="0" min="0"/></div>
-      <div class="add-field"><label>Prezzo €</label><input id="as-price" class="inp inp-sm" type="number" value="0" min="0" step="0.01"/></div>
-      <div class="add-field"><label>Dosi/conf</label><input id="as-doses" class="inp inp-sm" type="number" value="30" min="1"/></div>
-    </div>
-    <div class="add-field"><label>Nota</label><input id="as-note" class="inp" placeholder="Es. Post-workout"/></div>
-    <div id="as-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:8px;"></div>
-    <button id="as-save-btn" class="btn btn-primary btn-full" onclick="saveNewSupp()">Aggiungi integratore →</button>
-  </div>
-</div>
-
 <!-- SETTINGS MODAL -->
 <div id="settings-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeSettingsModal()">
   <div class="weight-modal-inner" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;">
@@ -2377,7 +2348,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 20:56';
+const APP_VERSION = '2026.05.16 · 21:33';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2390,7 +2361,6 @@ const ST = {
   activeDay: todayKey(),
   db: {days:{}},
   supps: [],
-  suppFilter: 'all',
   logSlot: 'colazione',
   logText: '',
   logTime: '',
@@ -2419,7 +2389,6 @@ const ST = {
   syncStatus: 'ok',
   catalog: [],
   catalogSelected: [],
-  catalogToRemove: [],
   suppSheet: { mode: null, selGroup: null, singleQuery: '', singleSelId: null, singleDose: 1, singleUnit: 'cps', singleTime: '' },
   trainTab: null,
   trainSession: null,
@@ -4115,7 +4084,8 @@ async function dbDeleteSupp(id) {
   await supa.from('supplements').delete().eq('id', id).eq('user_id', ST.user.id);
 }
 
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — non più chiamata dalla UI v3
+// Bulk update orario gruppo integratori — chiamata da renderOggi() timeline
+// quando l'utente cambia l'orario dell'header di un gruppo (input type="time").
 async function updateSuppSlotTime(oldTime, newTime, idsStr) {
   if(!newTime || oldTime === newTime) return;
   const ids = idsStr.split(',').filter(Boolean);
@@ -10157,183 +10127,6 @@ function renderOggi(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// PAGE: INTEGRATORI
-// ═══════════════════════════════════════════════════════════
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — vecchio render conservato come riferimento
-// Lasciato come dead-code dentro renderIntegratoriLegacy per safety; mai chiamato.
-function renderIntegratoriLegacy(){
-  const supps=ST.supps;
-  const monthly=totalMonthlyCost();
-  const actCount=activeSupps().length;
-  const slots=[...new Set(supps.map(s=>s.slot))].sort();
-  const filtered=ST.suppFilter==='all'?supps:supps.filter(s=>s.slot===ST.suppFilter);
-  const bySlot={};filtered.forEach(s=>{if(!bySlot[s.slot])bySlot[s.slot]=[];bySlot[s.slot].push(s);});
-
-  const iMacroKcal = ST.supps.filter(s=>s.active).reduce((t,s)=>t+(parseFloat(s.kcal)||0),0).toFixed(0);
-  const iMacroProt = ST.supps.filter(s=>s.active).reduce((t,s)=>t+(parseFloat(s.protein)||0),0).toFixed(1);
-  const iMacroCarb = ST.supps.filter(s=>s.active).reduce((t,s)=>t+(parseFloat(s.carbs)||0),0).toFixed(1);
-  const iMacroFat  = ST.supps.filter(s=>s.active).reduce((t,s)=>t+(parseFloat(s.fat)||0),0).toFixed(1);
-  let html=`<div class="card" style="margin-bottom:12px;padding:14px 16px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-      <span style="font-size:15px;">💊</span>
-      <span style="font-size:12px;font-weight:700;color:var(--t2);letter-spacing:.5px;">RIEPILOGO GIORNALIERO — ${actCount} ATTIVI</span>
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-      <span id="banner-kcal" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--acc);">${iMacroKcal} kcal</span>
-      <span style="color:var(--b2);">·</span>
-      <span id="banner-prot" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${iMacroProt}g prot</span>
-      <span style="color:var(--b2);">·</span>
-      <span id="banner-carb" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${iMacroCarb}g carbo</span>
-      <span style="color:var(--b2);">·</span>
-      <span id="banner-fat" style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${iMacroFat}g grassi</span>
-    </div>
-    <div style="border-top:1px solid var(--b1);padding-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
-      <span id="banner-oggi" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30).toFixed(2)}/oggi</span>
-      <span style="color:var(--b2);">·</span>
-      <span id="banner-sett" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${(monthly/30*7).toFixed(2)}/sett</span>
-      <span style="color:var(--b2);">·</span>
-      <span id="banner-mese" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€${monthly.toFixed(2)}/mese</span>
-    </div>
-  </div>
-  <div class="slot-filter"><span class="slot-chip ${ST.suppFilter==='all'?'active':''}" onclick="setSuppFilter('all')">Tutti</span>${slots.map(sl=>`<span class="slot-chip ${ST.suppFilter===sl?'active':''}" onclick="setSuppFilter('${sl}')">${sl}</span>`).join('')}</div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><span class="lbl" style="margin-bottom:0;">Anagrafica prodotti</span><div style="display:flex;gap:6px;">${ST.catalog.length>0?`<button class="btn btn-ghost btn-sm" onclick="openCatalogModal()">📦 Catalogo Nutrilite</button>`:''}<button class="btn btn-primary btn-sm" onclick="openAddSuppModal()">+ Altro integratore</button></div></div>`;
-
-  const slotKeys=Object.keys(bySlot).sort();
-  slotKeys.forEach(slot=>{
-    const ss=bySlot[slot];
-    const isShake=ss.some(s=>s.grp==='Shake Mami');
-    const slotColor=SLOT_COLOR_MAP[slot]||SLOT_PAL[slotKeys.indexOf(slot)%SLOT_PAL.length];
-    const slotActive=ss.filter(s=>s.active);
-    const slotTot=slotActive.reduce((a,s)=>{
-    const cat=ST.catalog.find(c=>c.nome===s.name);
-    return {
-    kcal:  a.kcal  +((s.kcal    != null && s.kcal    !== '') ? s.kcal    : (cat?.kcal                ||0)),
-    carbs: a.carbs +((s.carbs   != null && s.carbs   !== '') ? s.carbs   : (cat?.carbo               ||0)),
-    prot:  a.prot  +((s.protein != null && s.protein !== '') ? s.protein : (cat?.proteine            ||0)),
-    fat:   a.fat   +((s.fat     != null && s.fat     !== '') ? s.fat     : (cat?.grassi              ||0)),
-    cost:  a.cost  +(cat?.costo_dose_partner              ||0),
-    };
-    },{kcal:0,carbs:0,prot:0,fat:0,cost:0});
-    const sv=k=>r2(slotTot[k])||'—';
-    const slotSummary=[
-      sv('kcal')+'kcal',
-      sv('carbs')+'g carbo',
-      sv('prot')+'g prot',
-      sv('fat')+'g grassi',
-      (slotTot.cost?'€'+r2(slotTot.cost).toFixed(2):'€—')+'/sessione',
-    ].join(' · ');
-    html+=`<div style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:6px 2px;margin-bottom:4px;"><span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:600;">⏰ ${slot}${isShake?' — Shake Mami':''}</span><span id="slot-sum-${slot.replace(/[^a-z0-9]/gi,'_')}" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${slotSummary}</span></div>`;
-    ss.forEach(s=>{
-      const catItem = ST.catalog.find(c => (s.codice && c.codice === s.codice) || c.nome === s.name || (c.nome||'').toLowerCase().trim() === (s.name||'').toLowerCase().trim());
-      // Per kcal/protein/carbs/fat: usa il valore del supplemento se presente,
-      // altrimenti cerca nel catalogo come fallback
-      const macroVal = (suppKey, catKey) => {
-        const sv = s[suppKey]; if (sv != null && sv !== '') return sv;
-        const cv = catItem?.[catKey]; if (cv != null && cv !== '') return cv;
-        return null;
-      };
-      const doseUnitDefault = (() => {
-        const n = (s.name||'').toLowerCase();
-        if(n.includes('protein') || n.includes('whey') || n.includes('plant') || n.includes('shake')) return 'misurino';
-        return suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
-      })();
-      const doseUnitCurrent = s.dose_unit || doseUnitDefault;
-      const doseVal = s.dose_die != null ? s.dose_die : (catItem?.dose_die || '');
-      const doseMultiplier = s.dose_multiplier != null ? s.dose_multiplier : 1;
-      const doseUnitOptions = ['cps','stick','barretta','misurino'];
-      if(!doseUnitOptions.includes(doseUnitCurrent)) doseUnitOptions.unshift(doseUnitCurrent);
-      const doseUnitSelect = `<select class="macro-cell-inp" style="font-size:11px;padding:2px 4px;" onchange="updateSupp('${s.local_id}','dose_unit',this.value)">${doseUnitOptions.map(u=>`<option value="${u}"${u===doseUnitCurrent?' selected':''}>${u}</option>`).join('')}</select>`;
-      const macroCells = [
-        ['Kcal',    'kcal',    'kcal'],
-        ['Carbo g', 'carbs',   'carbo'],
-        ['Prot g',  'protein', 'proteine'],
-        ['Grassi g','fat',     'grassi'],
-      ].map(([lbl, suppKey, catKey]) => {
-        const val = macroVal(suppKey, catKey);
-        return `<div class="macro-cell"><div class="macro-cell-lbl">${lbl}</div><input type="number" class="macro-cell-inp" data-sid="${s.local_id}" data-key="${suppKey}" value="${val||''}" placeholder="—" onchange="updateSupp('${s.local_id}','${suppKey}',+this.value)"/></div>`;
-      }).join('')
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dose/die</div><div style="display:flex;gap:3px;align-items:center;"><input type="number" class="macro-cell-inp" style="width:44px;" value="${doseVal}" placeholder="—" step="0.5" onchange="updateSuppDose('${s.local_id}',+this.value)"/>${doseUnitSelect}${(()=>{ if(doseUnitCurrent!=='misurino') return ''; const conf=catItem?.confezione||''; const mPeso=conf.match(/(\d+(?:[.,]\d+)?)\s*g/i); const mDosi=conf.match(/[≈~(]\s*(\d+)/); if(!mPeso) return ''; const grTot=parseFloat(mPeso[1]); const nDosi=mDosi?parseFloat(mDosi[1]):null; const grPerMisurino=nDosi&&nDosi>0?Math.round(grTot/nDosi*10)/10:grTot; const grTotale=Math.round(grPerMisurino*(parseFloat(doseVal)||1)*10)/10; return `<span style="font-size:10px;color:var(--t3);white-space:nowrap;">=\u00a0${grTotale}\u00a0gr</span>`; })()}</div></div>`
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Moltiplicatore<br><span style="font-size:9px;color:var(--t3);">(0.5 = mezza dose)</span></div><input type="number" class="macro-cell-inp" value="${doseMultiplier}" placeholder="1" step="0.25" min="0.25" max="4" oninput="liveMultiplierUpdate('${s.local_id}',+this.value)" onchange="updateSuppMultiplier('${s.local_id}',+this.value)"/></div>`
-      + `<div class="macro-cell"><div class="macro-cell-lbl">Dosi/conf</div><input type="number" class="macro-cell-inp" value="${s.doses||''}" placeholder="—" onchange="updateSupp('${s.local_id}','doses',+this.value)"/></div>`;
-      // ── Badge stock ──────────────────────────────────────────────────
-      const dosePerDay = (parseFloat(s.dose_die)||1) * (parseFloat(s.dose_multiplier)||1);
-      const totalDoses = parseFloat(s.doses) || 0;
-      const daysLeft   = totalDoses > 0 && dosePerDay > 0 ? Math.floor(totalDoses / dosePerDay) : null;
-      const stockBadge = (() => {
-        if(daysLeft === null) return '';
-        if(daysLeft <= 7)  return `<span style="font-size:10px;font-weight:700;background:#FFE5E5;color:var(--err);border-radius:4px;padding:1px 6px;">⚠ ${daysLeft}gg</span>`;
-        if(daysLeft <= 20) return `<span style="font-size:10px;font-weight:700;background:#FFF3CD;color:#B07D00;border-radius:4px;padding:1px 6px;">~ ${daysLeft}gg</span>`;
-        return `<span style="font-size:10px;font-weight:700;background:#E6F9F0;color:#1A7F4B;border-radius:4px;padding:1px 6px;">✓ ${daysLeft}gg</span>`;
-      })();
-
-      // ── Macro pillole ────────────────────────────────────────────────────
-      const chipStyle = 'font-size:9px;font-family:\'JetBrains Mono\',monospace;font-weight:600;border-radius:4px;padding:2px 5px;white-space:nowrap;';
-      const macroPills = [
-        `<span style="${chipStyle}background:#e8e8e8;color:#333;">${s.kcal||0}kcal</span>`,
-        `<span style="${chipStyle}background:#d4edda;color:#1a6b35;">${s.protein||0}g P</span>`,
-        `<span style="${chipStyle}background:#fde8d0;color:#a0490a;">${s.carbs||0}g C</span>`,
-        `<span style="${chipStyle}background:#fff3cd;color:#7a5500;">${s.fat||0}g G</span>`,
-      ].join(' ');
-
-      const isExpanded = (ST.suppExpanded||new Set()).has(s.local_id);
-      const doseLabel  = `${parseFloat(s.dose_die)||1} ${doseUnitCurrent}${doseUnitCurrent==='misurino'&&catItem?.confezione?(()=>{const conf=catItem.confezione;const mP=conf.match(/(\d+(?:[.,]\d+)?)\s*g/i);const mD=conf.match(/[≈~(]\s*(\d+)/);if(!mP)return '';const gPM=mD?Math.round(parseFloat(mP[1])/parseFloat(mD[1])*10)/10:parseFloat(mP[1]);return ' = '+(Math.round(gPM*(parseFloat(s.dose_die)||1)*10)/10)+' gr';})():''}`;
-
-      html+=`<div class="supp-card ${s.active?'':'inactive'}" draggable="true" style="border-left:4px solid ${slotColor};"
-        ondragstart="suppDragStart(event,'${s.local_id}')"
-        ondragover="suppDragOver(event)"
-        ondrop="suppDrop(event,'${s.local_id}')"
-        ondragend="suppDragEnd(event)">
-
-        <!-- VISTA COMPATTA -->
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="color:var(--t3);font-size:18px;cursor:grab;flex-shrink:0;touch-action:none;">⠿</span>
-          <div style="flex:1;min-width:0;">
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
-              <span style="font-weight:600;font-size:0.95rem;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</span>
-              ${s.grp?`<span style="font-size:10px;background:var(--s3);color:var(--t2);border-radius:4px;padding:1px 6px;">${esc(s.grp)}</span>`:''}
-              ${stockBadge}
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
-                <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
-                  <input type="number" style="width:58px;font-size:11px;font-family:'JetBrains Mono',monospace;border:1px solid var(--b2);border-radius:4px;padding:1px 4px;background:var(--s1);color:var(--t1);text-align:center;" value="${parseFloat(s.dose_die)||1}" step="0.5" min="0.5" oninput="liveDoseUpdate('${s.local_id}',+this.value)" onchange="updateSuppDose('${s.local_id}',+this.value)" onclick="event.stopPropagation()"/>
-                  ${doseUnitSelect}
-                  ${doseUnitCurrent==='misurino'&&catItem?.confezione?(()=>{const conf=catItem.confezione;const mP=conf.match(/(\d+(?:[.,]\d+)?)\s*g/i);const mD=conf.match(/[≈~(]\s*(\d+)/);if(!mP)return '';const gPM=mD?Math.round(parseFloat(mP[1])/parseFloat(mD[1])*10)/10:parseFloat(mP[1]);return `<span style="font-size:10px;color:var(--t3);white-space:nowrap;">= ${Math.round(gPM*(parseFloat(s.dose_die)||1)*10)/10} gr</span>`;})():''}
-                </div>
-                <span id="supp-pills-${s.local_id}" style="display:flex;gap:3px;flex-wrap:wrap;align-items:center;">${macroPills}</span>
-              </div>
-              <div>
-                <span id="supp-cost-${s.local_id}" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">€ <span style="font-weight:600;color:var(--t2);">${(suppMonthlyCost(s)/30).toFixed(2)}</span>/oggi · <span style="font-size:9px;">${(suppMonthlyCost(s)/30*7).toFixed(2)}/sett · ${suppMonthlyCost(s).toFixed(2)}/mese</span></span>
-              </div>
-            </div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            <button onclick="event.stopPropagation();toggleSuppExpand('${s.local_id}')" style="background:none;border:1px solid var(--b2);border-radius:6px;cursor:pointer;color:var(--t3);font-size:13px;padding:3px 7px;line-height:1;" title="Modifica">${isExpanded?'▲':'✏️'}</button>
-            <div class="check-box ${s.active?'on':''}" onclick="toggleSuppActive('${s.local_id}')">${s.active?'<span class="check-mark">✓</span>':''}</div>
-            <button onclick="deleteSupp('${s.local_id}')" style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:20px;line-height:1;padding:0;" onmouseover="this.style.color='var(--err)'" onmouseout="this.style.color='var(--t3)'">×</button>
-          </div>
-        </div>
-
-        <!-- VISTA ESPANSA -->
-        ${isExpanded?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--b1);">
-          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
-            <input class="supp-name-inp" value="${esc(s.name)}" onchange="updateSupp('${s.local_id}','name',this.value)" style="font-weight:700;font-size:13px;flex:1;min-width:120px;"/>
-            <input class="supp-slot-inp" value="${esc(s.slot)}" onchange="updateSupp('${s.local_id}','slot',this.value)"/>
-            <input class="supp-grp-inp" value="${esc(s.grp||'')}" placeholder="gruppo..." onchange="updateSupp('${s.local_id}','grp',this.value)"/>
-            <input class="supp-note-inp" value="${esc(s.note||'')}" placeholder="nota..." onchange="updateSupp('${s.local_id}','note',this.value)"/>
-          </div>
-          <div class="macro-grid">${macroCells}</div>
-          <div style="margin-top:6px;text-align:right;"><span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${s.price&&s.doses?`€${(s.price/s.doses).toFixed(2)}/dose · `:''}€${suppMonthlyCost(s).toFixed(2)}/mese</span></div>
-        </div>`:''}
-
-      </div>`;
-    });
-    html+=`</div>`;
-  });
-  document.getElementById('page-integratori').innerHTML=nutriSubNav('integratori')+html+versionFooter();
-}
-
-// ═══════════════════════════════════════════════════════════
 // PAGE: INTEGRATORI v3 (16 mag 2026) — pacchetti + extra
 // ═══════════════════════════════════════════════════════════
 // Helper — calcola scorta giorni rimasti per un supplement
@@ -12313,48 +12106,6 @@ async function fetchAdvice(){
   ST.advLoading=false;renderOggi();
 }
 
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — filtro slot del vecchio render
-function setSuppFilter(f){ST.suppFilter=f;renderIntegratori();}
-
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — drag&drop del vecchio render
-// ── DRAG & DROP INTEGRATORI ────────────────────────────────────────
-function suppDragStart(e, id) {
-  ST._dragSuppId = id;
-  e.currentTarget.style.opacity = '0.5';
-  e.dataTransfer.effectAllowed = 'move';
-}
-function suppDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-}
-function suppDrop(e, targetId) {
-  e.preventDefault();
-  if(!ST._dragSuppId || ST._dragSuppId === targetId) return;
-  const fromIdx = ST.supps.findIndex(s => s.local_id === ST._dragSuppId);
-  const toIdx   = ST.supps.findIndex(s => s.local_id === targetId);
-  if(fromIdx < 0 || toIdx < 0) return;
-  const [moved] = ST.supps.splice(fromIdx, 1);
-  ST.supps.splice(toIdx, 0, moved);
-  ST.supps.forEach((s, i) => {
-    s.sort_order = i + 1;
-    dbUpdateSupp(s.local_id, {sort_order: i + 1});
-  });
-  saveCache();
-  renderIntegratori();
-}
-function suppDragEnd(e) {
-  e.currentTarget.style.opacity = '1';
-  ST._dragSuppId = null;
-}
-
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — expand-row del vecchio render
-async function toggleSuppExpand(id) {
-  if(!ST.suppExpanded) ST.suppExpanded = new Set();
-  if(ST.suppExpanded.has(id)) ST.suppExpanded.delete(id);
-  else ST.suppExpanded.add(id);
-  renderIntegratori();
-}
-
 async function toggleSuppActive(id){
   const s=ST.supps.find(s=>s.local_id===id);
   if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();showToast(s.active?'Integratore attivato':'Integratore disattivato', s.active?'✅':'⏸️');}
@@ -12643,7 +12394,6 @@ function saveOggiSupp(id) {
 
 function openCatalogModal() {
   ST.catalogSelected = [];
-  ST.catalogToRemove = [];
   ST.catalogCategoryFilter = 'TUTTI';
   document.getElementById('catalog-step1').style.display = 'flex';
   document.getElementById('catalog-step2').style.display = 'none';
@@ -12894,79 +12644,36 @@ function clearCatalogSearch() {
 }
 
 function toggleCatalogItem(id) {
-  if(ST.catalogToRemove.includes(id)) return;
   const i = ST.catalogSelected.indexOf(id);
   if(i < 0) ST.catalogSelected.push(id);
   else ST.catalogSelected.splice(i, 1);
   renderCatalogList();
 }
 
-// [LEGACY-CATALOGO-V3-BLOCCO2] rimuovere dopo verifica — il design v3 è puramente
-// additivo (no flusso "rimuovi" dal catalogo). Funzione preservata: ST.catalogToRemove
-// resta sempre [] nel nuovo flusso, il branch "Da rimuovere" in goToCatalogStep2
-// è dead code path. Da rimuovere insieme alla sezione "Da rimuovere" di step2.
-function toggleCatalogRemove(id) {
-  const i = ST.catalogToRemove.indexOf(id);
-  if(i < 0) ST.catalogToRemove.push(id);
-  else ST.catalogToRemove.splice(i, 1);
-  const j = ST.catalogSelected.indexOf(id);
-  if(j >= 0) ST.catalogSelected.splice(j, 1);
-  renderCatalogList();
-}
-
-// [LEGACY-CATALOGO-V3-BLOCCO2] rimuovere dopo verifica — la UI v3 non ha bottoni
-// "Seleziona tutti / Deseleziona tutti". Funzione preservata per safety.
-function selectAllCatalog(on) {
-  const existingNames = new Set(ST.supps.map(s => s.name));
-  if(on) {
-    ST.catalogSelected = ST.catalog.filter(item => !existingNames.has(item.nome)).map(item => item.codice);
-  } else {
-    ST.catalogSelected = [];
-    ST.catalogToRemove = [];
-  }
-  renderCatalogList();
-}
-
 function goToCatalogStep2() {
-  const hasAdd = ST.catalogSelected.length > 0;
-  const hasRem = ST.catalogToRemove.length > 0;
-  if(!hasAdd && !hasRem) { alert('Tocca almeno un prodotto per aggiungerlo o rimuoverlo.'); return; }
-  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
-  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.codice));
+  if(ST.catalogSelected.length === 0) { alert('Tocca almeno un prodotto per aggiungerlo.'); return; }
+  const toAdd = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
   // Integratori v3: se siamo in "addToPackage" pre-fill slot con l'orario del pacchetto
   const ctx = ST.catalogContext;
   const defaultSlot = (ctx && ctx.mode === 'addToPackage' && ctx.time) ? ctx.time : '08:00';
-  let html = '';
-  if(hasAdd) {
-    html += `<div class="catalog-s2-section-lbl" style="color:var(--acc);">Da aggiungere (${toAdd.length})</div>`;
-    html += toAdd.map(item => {
-      const tip = SLOT_TIPS[item.nome] || DEFAULT_SLOT_TIP;
-      const existingSlots = ST.supps
-        .filter(s => (item.codice && s.codice === item.codice) || s.name === item.nome)
-        .map(s => s.slot);
-      const instanceNote = existingSlots.length > 0
-        ? `<div style="font-size:10px;color:var(--t3);margin-top:2px;">Già presente: ${existingSlots.join(', ')}</div>`
-        : '';
-      return `<div class="catalog-s2-row">
-        <div style="flex:1;min-width:0;">
-          <div class="catalog-s2-name">${esc(item.nome)}</div>
-          ${instanceNote}
-        </div>
-        <input class="inp inp-sm" id="slot-${item.codice}" value="${esc(defaultSlot)}" placeholder="08:00" style="width:110px;"/>
-        <div class="slot-tip">💡 ${tip}</div>
-      </div>`;
-    }).join('');
-  }
-  if(hasRem) {
-    html += `<div class="catalog-s2-section-lbl" style="color:var(--err);${hasAdd?'margin-top:16px;':''}">Da rimuovere (${toRemove.length})</div>`;
-    html += toRemove.map(item => {
-      const instances = ST.supps.filter(s => (item.codice && s.codice === item.codice) || s.name === item.nome);
-      const instanceNote = instances.length > 1
-        ? ` <span style="font-size:10px;color:var(--t3);">(tutte le ${instances.length} istanze: ${instances.map(s=>s.slot).join(', ')})</span>`
-        : instances.length === 1 ? ` <span style="font-size:10px;color:var(--t3);">(${instances[0].slot})</span>` : '';
-      return `<div style="font-size:13px;color:var(--err);padding:3px 0;">✕ ${esc(item.nome)}${instanceNote}</div>`;
-    }).join('');
-  }
+  let html = `<div class="catalog-s2-section-lbl" style="color:var(--acc);">Da aggiungere (${toAdd.length})</div>`;
+  html += toAdd.map(item => {
+    const tip = SLOT_TIPS[item.nome] || DEFAULT_SLOT_TIP;
+    const existingSlots = ST.supps
+      .filter(s => (item.codice && s.codice === item.codice) || s.name === item.nome)
+      .map(s => s.slot);
+    const instanceNote = existingSlots.length > 0
+      ? `<div style="font-size:10px;color:var(--t3);margin-top:2px;">Già presente: ${existingSlots.join(', ')}</div>`
+      : '';
+    return `<div class="catalog-s2-row">
+      <div style="flex:1;min-width:0;">
+        <div class="catalog-s2-name">${esc(item.nome)}</div>
+        ${instanceNote}
+      </div>
+      <input class="inp inp-sm" id="slot-${item.codice}" value="${esc(defaultSlot)}" placeholder="08:00" style="width:110px;"/>
+      <div class="slot-tip">💡 ${tip}</div>
+    </div>`;
+  }).join('');
   document.getElementById('catalog-slots').innerHTML = html;
   const btn = document.getElementById('catalog-confirm-btn');
   btn.disabled = false; btn.textContent = 'Applica modifiche →';
@@ -12981,29 +12688,11 @@ function backToCatalogStep1() {
 
 async function importFromCatalog() {
   const ctx = ST.catalogContext;  // Integratori v3: contesto opzionale (addToPackage|addExtra)
-  const toAdd    = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
-  const toRemove = ST.catalog.filter(item => ST.catalogToRemove.includes(item.codice));
-  // Conferma rimozioni
-  if(toRemove.length > 0) {
-    const names = toRemove.map(item => `• ${item.nome}`).join('\n');
-    const msg = toRemove.length === 1
-      ? `Vuoi rimuovere "${toRemove[0].nome}" dal tuo profilo?\nLo storico delle assunzioni verrà mantenuto.`
-      : `Vuoi rimuovere questi ${toRemove.length} prodotti dal tuo profilo?\n\n${names}\n\nLo storico delle assunzioni verrà mantenuto.`;
-    if(!confirm(msg)) return;
-  }
+  const toAdd = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
   const btn = document.getElementById('catalog-confirm-btn');
   btn.disabled = true; btn.textContent = 'Applicazione...';
 
   try {
-    // Rimuovi TUTTE le istanze del prodotto (supporto multi-slot)
-    for(const item of toRemove) {
-      const instances = ST.supps.filter(s => (item.codice && s.codice === item.codice) || s.name === item.nome);
-      for(const supp of instances) {
-        await dbDeleteSupp(supp.local_id);
-      }
-      ST.supps = ST.supps.filter(s => !instances.some(i => i.local_id === s.local_id));
-    }
-
     // Aggiungi uno alla volta per isolare eventuali errori
     for(let i = 0; i < toAdd.length; i++) {
       const item = toAdd[i];
@@ -13728,61 +13417,6 @@ async function pkgEditorDoDeleteExtra(supplementId) {
 // ═══════════════════════════════════════════════════════════
 // END PACKAGE EDITOR
 // ═══════════════════════════════════════════════════════════
-
-// [LEGACY-INTEGRATORI-V3] rimuovere dopo verifica blocco 2 — modal vecchio "Aggiungi integratore custom".
-// La UI v3 usa solo il catalogo Nutrilite via openCatalogModal. Le funzioni openAddSuppModal /
-// closeAddSuppModal / saveNewSupp non sono più chiamate da nessuna CTA visibile.
-// ── ADD SUPP MODAL ─────────────────────────────────────────
-function openAddSuppModal() {
-  document.getElementById('as-name').value = '';
-  document.getElementById('as-slot').value = '08:00';
-  document.getElementById('as-grp').value = '';
-  ['as-kcal','as-protein','as-carbs','as-fat','as-price'].forEach(id => document.getElementById(id).value = '0');
-  document.getElementById('as-doses').value = '30';
-  document.getElementById('as-note').value = '';
-  document.getElementById('as-err').style.display = 'none';
-  const btn = document.getElementById('as-save-btn');
-  btn.disabled = false; btn.textContent = 'Aggiungi integratore →';
-  document.getElementById('add-supp-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('as-name').focus(), 100);
-}
-
-function closeAddSuppModal() {
-  document.getElementById('add-supp-modal').style.display = 'none';
-}
-
-async function saveNewSupp() {
-  const name = document.getElementById('as-name').value.trim();
-  const errEl = document.getElementById('as-err');
-  if(!name) { errEl.style.display='block'; errEl.textContent='Il nome è obbligatorio.'; return; }
-  errEl.style.display = 'none';
-  const data = {
-    sort_order: ST.supps.length + 1,
-    name,
-    slot:    document.getElementById('as-slot').value.trim() || '08:00',
-    grp:     document.getElementById('as-grp').value.trim(),
-    active:  true,
-    kcal:    +document.getElementById('as-kcal').value || 0,
-    protein: +document.getElementById('as-protein').value || 0,
-    carbs:   +document.getElementById('as-carbs').value || 0,
-    fat:     +document.getElementById('as-fat').value || 0,
-    price:   +document.getElementById('as-price').value || 0,
-    doses:   +document.getElementById('as-doses').value || 30,
-    note:    document.getElementById('as-note').value.trim(),
-  };
-  const btn = document.getElementById('as-save-btn');
-  btn.disabled = true; btn.textContent = 'Salvataggio...';
-  const saved = await dbAddSupp(data);
-  if(saved) {
-    ST.supps.push({...saved, local_id: saved.id});
-    closeAddSuppModal();
-    renderIntegratori();
-    saveCache();
-  } else {
-    errEl.style.display='block'; errEl.textContent='Errore durante il salvataggio.';
-    btn.disabled=false; btn.textContent='Aggiungi integratore →';
-  }
-}
 
 async function deleteSupp(id){
   if(confirm('Eliminare questo integratore?')){
