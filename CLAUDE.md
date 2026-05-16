@@ -42,18 +42,28 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 
 11 mag 2026: introdotti admin panel (`dashboardzona.html`) e logica residua kcal/macro nel modulo Nutrition. App pronta per testing con 3 tester (Ignazio + Ginevra + Isabella). Prossimi step in attesa di feedback tester.
 
-## Stato deploy attuale (15 maggio 2026)
+## Stato deploy attuale (16 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
   - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone (donut size, SETTIMANA N/4, top padding, prima versione getPostWorkoutHint, body delta v1)
   - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI (coerenza Home/Nutrition) + fasce chip post-workout corrette
   - `b5da150` — docs: aggiornamento CLAUDE.md al 15 maggio 2026 (post Fasi A/B/C/D)
   - `5a64cab` — feat(nutrition): restyling tab OGGI design system v3 + timeline mista pasti pianificati
+  - `9718438` — docs: CLAUDE.md — log Nutrition Oggi restyling design system v3 (15 mag 2026)
+  - `df20032` — fix(nutrition): tab OGGI v3 — ripristino mealCardHTML + supp/extra connector + debug getTodayPianoMeals
+  - `12c1e5b` — fix(nutrition): eager load piano_ai in applyProfile → timeline pianificati ora visibile
+  - `0e2ed37` — fix(nutrition): orario form pasto resettato all'apertura + sync con slot scelto
 - **File principale**: `zona-tracker.html` (~12900 righe)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.15 · HH:MM` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.16 · 10:49` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+
+### Stato moduli Nutrition (16 maggio 2026)
+- **Tab Oggi**: ✅ production-ready (design system v3)
+- **Tab Integratori**: 🟡 grafica legacy — prossima da ridisegnare (gestore pacchetti orari + extra + catalogo Nutrilite)
+- **Tab Storico**: 🟡 grafica legacy
+- **Tab Piano**: 🟡 grafica legacy
 
 ## Stato design refinement (14-15 maggio 2026)
 
@@ -836,6 +846,50 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 16 maggio 2026 — Tab OGGI Nutrition production-ready ✅
+
+Chiusura completa del restyling tab Oggi modulo Nutrition con design system v3 (Syne + JetBrains Mono, palette bone/evergreen, tinta Nutrition `#FAC775`).
+
+**Funzionalità deployate:**
+- Header v3 con accent bar `#FAC775` + eyebrow data + titolo Syne + avatar IF + sub-nav pillole (OGGI / INTEGRATORI / STORICO / PIANO)
+- Donut hero "kcal rimaste" 200×200 con numero centrale Syne 800 adattivo (3/4/5 cifre), stato negativo rosso terracotta con minus U+2212
+- Pillola Status Zona separata sotto donut (NELLA / QUASI / FUORI / DATI INSUFFICIENTI)
+- 3 card macro orizzontali CARB/PROT/FAT con dot semantici (ambra/evergreen/terracotta), barre "rimaste", bordo 1px hairline
+- CTA pair: Registra pasto (primary evergreen) / Registra integratori (outline)
+- Timeline mista pasti pianificati + registrati:
+  - Pasti registrati: card piene con freccia ▶/▼ espandibile, ingredienti dettagliati (Smart Ingredient), matita ✏️ edit, cestino 🗑️ delete, swipe mobile
+  - Pasti pianificati: righe dashed con eyebrow "PIANIFICATO · DAL COACH", CTA "REGISTRA ›" → apre form Smart Ingredient pre-compilato dal piano AI
+  - Gruppi integratori MAMI/COLAZIONE/PRANZO/ecc espandibili
+- Card Coach Riequilibrio (sand + border-left ambra) con suggerimento AI, stato silente "Tutto in linea" se in target
+
+**Bug fix risolti durante la sessione:**
+- Commit `5a64cab` — restyling tab Oggi v3 (donut + macro + CTA + timeline iniziale)
+- Commit `df20032` — ripristino `mealCardHTML` espandibile + `oggiSuppCardHTML` + `extraSuppCardHTML` (erano state perse nel restyling) + connector timeline + debug `getTodayPianoMeals`
+- Commit `12c1e5b` — eager load `piano_ai` da Supabase in `applyProfile()` (era caricato solo in `renderPiano` lazy → tab Oggi non vedeva i pianificati)
+- Commit `0e2ed37` — orario form registrazione: ora attuale all'apertura CTA, orario pianificato se da riga timeline, orario standard slot se cambio slot manualmente (no più memoria sessione)
+
+**Workflow di sessione:**
+- Wireframe panoramico 4 tab (Claude Design giro 1) → dubbi aperti risolti via chat
+- Wireframe v2 (Claude Design giro 2) con modifiche strutturali: piano dentro Oggi · Integratori = gestore pacchetti · Storico solo timeline 7gg · textarea coach in Piano
+- Hi-fi tab Oggi (Claude Design) → approvazione → prompt Claude Code → 4 iterazioni di fix → production-ready
+- Strategia: una tab alla volta in produzione, test su browser desktop con DevTools per debug rapido
+
+**Vincoli rispettati (non toccati):**
+- `mealCardHTML`, `extraSuppCardHTML`, `oggiSuppCardHTML` e i rispettivi stati expansion
+- Flusso Smart Ingredient (`renderRegistraPasto`, `smartAnalyze`, `smartAddEmptyRow`, `logMeal`)
+- `dayTotals`, `kcalRimaste`, `macroRimasti`, `isOverTarget`, `OVER_COLOR`
+- Schema DB Supabase, ramo digiuno, badge Giorno Perfetto, day-nav, detox
+
+**APP_VERSION finale tab Oggi**: `v2026.05.16 · 10:49`
+
+**Stato moduli Nutrition:**
+- Tab Oggi: ✅ production-ready
+- Tab Integratori: 🟡 grafica legacy, prossima da ridisegnare
+- Tab Storico: 🟡 grafica legacy
+- Tab Piano: 🟡 grafica legacy
+
+**Prossimo step**: ridisegno tab Integratori (gestore pacchetti orari + integratori extra + catalogo Nutrilite 25 prodotti). La registrazione dell'assunzione resta in tab Oggi.
 
 ### 15 maggio 2026 — Nutrition Oggi restyling design system v3 + timeline mista pasti pianificati
 
