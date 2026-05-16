@@ -2348,7 +2348,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 21:33';
+const APP_VERSION = '2026.05.16 · 21:56';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13347,12 +13347,49 @@ function pkgEditorCancelDelete() {
 async function pkgEditorDoDelete() {
   const e = ST.packageEditor;
   if(!e || !e.packageId) return;
-  // CASCADE delete: supplement_package_items rows si cancellano via FK
-  await supa.from('supplement_packages').delete().eq('id', e.packageId).eq('user_id', ST.user.id);
-  ST.packages = ST.packages.filter(p => p.id !== e.packageId);
+  // Decisione architetturale 16 mag 2026: pacchetti e extra sono mondi separati e
+  // indipendenti. Eliminare un pacchetto cancella anche TUTTI i suoi integratori
+  // dalla libreria (supplements), non li trasforma in extra fantasma.
+  // Ordine: prima cancello i supplements del pacchetto (bulk DELETE), poi il
+  // pacchetto stesso (CASCADE su supplement_package_items via FK).
+  const suppIds = (e.items || []).map(it => it.supplement_id).filter(Boolean);
+  if(suppIds.length > 0) {
+    const {error: delSuppErr} = await supa.from('supplements')
+      .delete()
+      .in('id', suppIds)
+      .eq('user_id', ST.user.id);
+    if(delSuppErr) {
+      console.error('pkgEditorDoDelete supplements:', delSuppErr);
+      showToast('Errore eliminazione integratori del pacchetto','⚠️');
+      return;
+    }
+  }
+  // Ora elimina il pacchetto (CASCADE pulisce supplement_package_items)
+  const {error: delPkgErr} = await supa.from('supplement_packages')
+    .delete()
+    .eq('id', e.packageId)
+    .eq('user_id', ST.user.id);
+  if(delPkgErr) {
+    console.error('pkgEditorDoDelete package:', delPkgErr);
+    showToast('Errore eliminazione pacchetto','⚠️');
+    return;
+  }
+  // Sync in-memory: rimuovi supplements eliminati + pacchetto
+  if(suppIds.length > 0) {
+    const setIds = new Set(suppIds);
+    ST.supps = (ST.supps || []).filter(s => !setIds.has(s.local_id));
+  }
+  ST.packages = (ST.packages || []).filter(p => p.id !== e.packageId);
+  // Re-fetch authoritative dal DB per garantire coerenza cross-device + macro
+  // aggregate aggiornate (suppMonthlyCost, tile Home Nutrition, ecc.)
+  try { await loadSupps(); await loadPackages(); } catch(_) {}
   ST.pkgDeleteConfirm = false;
+  saveCache();
   closePackageEditor();
-  showToast('Pacchetto eliminato','🗑️');
+  const msg = suppIds.length > 0
+    ? `Pacchetto eliminato (${suppIds.length} integrator${suppIds.length===1?'e':'i'})`
+    : 'Pacchetto eliminato';
+  showToast(msg, '🗑️');
 }
 
 // ── Apri catalogo Nutrilite in modalità "Aggiungi a pacchetto" ──
