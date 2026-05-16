@@ -26,9 +26,15 @@ https://github.com/IgnazioF321621/benessere-forma
 1. ~~Admin panel~~ ✅ completato 11 mag 2026 — `dashboardzona.html`, vedi sezione "Admin panel"
 2. Testing iPhone + Android con 3 tester → **IN CORSO** (messaggi WhatsApp inviati 11 mag 2026)
 3. Test mode `?test=1`
-4. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
-5. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
-6. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
+4. ~~Modulo Integratori refresh v3~~ ✅ completato 16 mag 2026 — pacchetti + extra + catalogo Nutrilite hi-fi (vedi sezione "Modulo Integratori v3")
+5. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
+6. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
+7. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
+
+**Da rifinire** (post-blocco 2 Integratori):
+- Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items
+- Picker emoji e time nativi (oggi `prompt()`)
+- Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`
 
 ## Tester attivi
 
@@ -45,7 +51,7 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 ## Stato deploy attuale (16 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico + Integratori v3):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
   - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone
   - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI + fasce chip post-workout corrette
@@ -59,13 +65,16 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
   - `0e3079e` — style(typo): tipografia più ariosa su mobile — line-height + letter-spacing + margin globali
   - `4728022` — style(typo): titoli Syne 800 più ariosi + numeri tabular-nums allineati
   - `7119c2a` — style(typo): numeri grandi ora JetBrains Mono (allineamento perfetto)
-- **File principale**: `zona-tracker.html` (~12900 righe)
+  - `7dc35c9` — feat(integratori): refresh v3 Blocco 1 — Tab Integratori + Editor Pacchetto + migrazione DB
+  - `1c2a295` — fix(integratori): loadPackages filtra esplicitamente per user_id (RLS leak admin policy)
+  - `fa75562` — feat(catalogo): refresh v3 Blocco 2 — modal Catalogo Nutrilite hi-fi
+- **File principale**: `zona-tracker.html` (~13300 righe dopo i 2 blocchi Integratori v3)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.16 · 14:46` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.16 · 20:31` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (16 maggio 2026, post-tipografia)
+### Stato moduli Nutrition (16 maggio 2026, post-Integratori v3)
 - **Tab Oggi**: ✅ production-ready (design system v3 + tipografia v2)
-- **Tab Integratori**: 🟡 grafica legacy — prossima da ridisegnare (gestore pacchetti orari + extra + catalogo Nutrilite)
+- **Tab Integratori**: ✅ production-ready (design system v3 + nuova architettura pacchetti) — completato 16 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Storico**: 🟡 grafica legacy
 - **Tab Piano**: 🟡 grafica legacy
 
@@ -260,7 +269,7 @@ Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi 
 RLS abilitata — policy: `auth.uid() = user_id`.
 
 ### Tabella `nutrilite_catalog`
-25 prodotti Nutrilite pre-inseriti. RLS SELECT pubblica. Nessun `user_id`.
+64 prodotti reali pre-inseriti (Nutrilite + Bodykey + XS Sports), aggiornati una tantum via sync Google Sheet. RLS SELECT pubblica. Nessun `user_id`. Colonne usate dal catalogo v3: `codice` (PK logica), `nome`, `linea` (Nutrilite/Bodykey/XS Sports), `categoria` (16+ valori reali — vedi `CATEGORY_TO_TINT`), `confezione`, `dose_die`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `prezzo_partner`, `costo_mensile_partner`, `costo_dose_partner`.
 
 ### Tabella `profiles`
 Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
@@ -271,6 +280,39 @@ Integratori per user_id, editabili inline.
 ### Tabella `supplements_log`
 Tracciamento assunzioni giornaliere per data e nome integratore.
 UNIQUE constraint su `(user_id, date, supplement_name)` — aggiunto aprile 2026 dopo cleanup duplicati.
+
+### Tabella `supplement_packages` (16 maggio 2026)
+Pacchetti orari di integratori dell'utente (es. "Mattina" alle 08:45). Architettura nuova introdotta col refresh Integratori v3.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | `gen_random_uuid()` default |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE |
+| `name` | `text` NOT NULL | es. "Mattina", "Pre-workout" |
+| `emoji` | `text` NOT NULL | default `'📦'`, es. "☕", "⚡", "🌙" |
+| `time` | `text` NOT NULL | formato `HH:MM`, es. `"08:45"` |
+| `sort_order` | `integer` NOT NULL | default 0 |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Indici: `(user_id)`, `(user_id, sort_order)`. RLS abilitata con 4 policy `own_*` (auth.uid() = user_id) per SELECT/INSERT/UPDATE/DELETE + policy admin `admin_read_all_packages` (FOR SELECT, email check `ignazio.f@me.com`).
+
+### Tabella `supplement_package_items` (16 maggio 2026)
+Join table: quali integratori appartengono a quale pacchetto.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `package_id` | `uuid` NOT NULL | FK → `supplement_packages.id` ON DELETE CASCADE |
+| `supplement_id` | `uuid` NOT NULL | FK → `supplements.id` ON DELETE CASCADE |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE (denormalizzato per RLS performance) |
+| `sort_order` | `integer` NOT NULL | default 0 |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Constraint: `UNIQUE (package_id, supplement_id)` — un prodotto non può essere duplicato nello stesso pacchetto. Indici: `(package_id)`, `(supplement_id)`, `(user_id)`. RLS uguale a `supplement_packages`: 4 policy `own_*` + `admin_read_all_package_items`.
+
+**Migrazione one-shot** eseguita il 16 maggio 2026 (script SQL DO block con guard `packages_count > 0`): per ogni `(user_id, slot)` distinto in `supplements`, crea un pacchetto `"Pacchetto {slot}"` con emoji default e collega gli items via `supplement_package_items`. Risultato: **11 pacchetti / 28 items** totali fra i tester (account Ignazio: 6 pacchetti 06:30/08:45/11:00/14:30/17:00/22:15 con 3/8/1/4/1/2 prodotti).
+
+**Integratori "extra"**: NON serve tabella nuova. Gli extra sono `supplements` che NON hanno una riga in `supplement_package_items`. Filtrati client-side da `_extraSupps()` in `renderIntegratori()`.
 
 ### Tabella `fasting_days`
 Giorni di digiuno per user_id.
@@ -680,6 +722,168 @@ Sintesi delle decisioni di design consolidate dopo Fase A/B/C/D. Queste **sostit
 - **"coach" sostituisce "AI"** in tutti i copy visibili UI (decisione 10 maggio, applicata in Fase A).
 - **Tinta viola modulo Body** (`#AFA9EC`) usata in Home V2 come accent della card Body. Per i checkpoint Body futuri (M2 ricorrente) la tinta forte `#5E4A7A` resta riservata.
 
+## Modulo Integratori v3 (16 maggio 2026)
+
+Refresh hi-fi del modulo Integratori (Nutrition) coordinato da Claude Design ed eseguito da Claude Code in 2 blocchi sequenziali. Sostituisce la grafica legacy (lista raggruppata per slot + editing inline + bottoni custom) con un'architettura a **pacchetti** e un nuovo modal catalogo Nutrilite design-driven. Commit `7dc35c9` + `1c2a295` (fix RLS) + `fa75562`.
+
+### Architettura dati nuova
+
+- **2 nuove tabelle Supabase** (vedi sezione "Schema Supabase"): `supplement_packages` (id, user_id, name, emoji, time, sort_order, created_at) e `supplement_package_items` (id, package_id CASCADE, supplement_id CASCADE, user_id, sort_order, created_at + UNIQUE su `(package_id, supplement_id)`).
+- **Indici**: `(user_id)` + `(user_id, sort_order)` sui pacchetti; `(package_id)` + `(supplement_id)` + `(user_id)` sugli items.
+- **RLS**: 4 policy `own_*` per SELECT/INSERT/UPDATE/DELETE (auth.uid() = user_id) + 1 policy `admin_read_all_*` per SELECT con email check `ignazio.f@me.com` (necessaria per la dashboard admin futura).
+- **Migrazione one-shot** eseguita 16 mag: 11 pacchetti / 28 items totali fra i tester. Account Ignazio: 6 pacchetti 06:30/08:45/11:00/14:30/17:00/22:15 con 3/8/1/4/1/2 prodotti.
+- **Integratori "extra"**: NO nuova tabella. Sono `supplements` che NON hanno una riga in `supplement_package_items`. Filtrati client-side da `_extraSupps()`.
+- **Connessione tab Oggi ↔ pacchetti**: `supplements_log` invariato (la registrazione assunzioni continua a vivere in Oggi). La timeline Oggi può raggruppare per pacchetto via lookup `supplement_id → supplement_package_items.package_id`.
+
+### Tab Integratori principale — `renderIntegratori()` v3
+
+Header v3 con accent bar `#FAC775` 3px + eyebrow data Mono caps + titolo Syne 800 30px "Nutrition" + avatar IF + sub-nav pillole (OGGI/INTEGRATORI/STORICO/PIANO `.oggi-v3-pill`). Sotto eyebrow di scope: `"GESTORE PACCHETTI E EXTRA · LA REGISTRAZIONE VIVE IN OGGI"`.
+
+**Sezione "I miei pacchetti"**:
+- Titolo Syne 700 18px + counter destra "N GRUPPI"
+- Lista card pacchetto (~72px altezza): tile emoji 40×40 fondo `#F0EDE6` sinistra, nome Syne 600, riga sotto Mono caps `"N PRODOTTI · HH:MM"`, chevron `›` grigio destra. Stock warn `⚠ SCORTA BASSA` terracotta accanto al count se uno qualsiasi degli items ha `daysLeft ≤ 7`.
+- Tap intera card → `openPackageEditor(packageId)`
+- CTA primary `+ Nuovo pacchetto` fill evergreen + tag `NUTRILITE` Mono caps a destra → `openPackageEditor(null)` (CREATE mode)
+
+**Sezione "Integratori extra"**:
+- Titolo + counter "N ATTIVI"
+- Righe compatte (~44px): box orario Mono caps sinistra con divisore verticale hairline, nome Syne 500, icona `···` destra
+- Tap → `openExtraEditor(supplementId)`
+- CTA secondary `+ Singolo integratore` outline evergreen + tag `NUTRILITE` → `openCatalogForExtra()` (apre catalogo con `ST.catalogContext.mode = 'addExtra'`)
+
+### Editor Pacchetto — `openPackageEditor(packageId | null)` fullscreen
+
+Modale fullscreen `#package-editor-overlay`. Sostituisce `openAddSuppModal` legacy.
+
+- **Header banda `#FAC775`** + `‹ INDIETRO` Mono caps sinistra + titolo Syne `"Modifica pacchetto"` (EDIT) o `"Nuovo pacchetto"` (CREATE) centro + `SALVA` Mono caps evergreen destra (disabled in CREATE se nome vuoto o 0 prodotti)
+- **Card meta unica** con 3 righe separate da hairline:
+  - **ORARIO**: valore Mono 700 28px (es. `"08:45"`) + nome pacchetto Mono caps grigio sulla destra + bottone `MODIFICA ›` Mono caps evergreen — tap → `pkgEditorEditTime()` (oggi `prompt()` nativo)
+  - **EMOJI**: tile 56×56 fondo `#F0EDE6` con emoji corrente → tap `pkgEditorEditEmoji()` (oggi `prompt()`)
+  - **NOME**: input Syne 500 18px con underline dashed (segnala editabile) — debounce save 800ms in EDIT mode
+- **Sezione "Prodotti nel pacchetto"** con eyebrow `"TRASCINA PER RIORDINARE · N PRODOTTI"`
+  - Card prodotto in 2 stati:
+    - **Vista collassata**: drag handle `⠿` + nome Syne 500 + riga Mono caps `"{dose} {unit} · {kcal} KCAL · {C}G C · {P}G P · {G}G G"` (regola macro: kcal sempre, C/P/G tutti o nessuno) + badge stock condizionale + chevron `▾`
+    - **Vista espansa** pannello inset cream `#FAF8F2`: 4 macro chips colorate read-only, stepper `−/+` per **DOSE** + select unità (cps/stick/barretta/misurino), **MOLT.** step 0.25 (helper italic "0.5 = mezza dose · 2 = doppia"), **SCORTA** + auto-calcolo `"= N giorni rimasti"`, riga **COSTO** Mono caps `"€ X.XX/oggi · YY.YY/mese"` read-only, bottone `× RIMUOVI DAL PACCHETTO` Mono caps rosso `#C44434` centrato
+  - **Pattern accordion**: solo uno espanso alla volta, altri collassano sempre (anche se fuori viewport). Animazione: chevron rotate 0→180deg 200ms, max-height 0→600px + opacity, cubic-bezier(.16,1,.3,1) 240ms
+- **CTA `+ AGGIUNGI PRODOTTO · NUTRILITE`** outline evergreen → `pkgEditorAddProduct()` (apre catalogo con `addToPackage` mode)
+- **CTA `ELIMINA PACCHETTO`** Mono caps rosso `#C44434` centrato — solo in EDIT mode con prodotti (vedi bug noto). Conferma via modal → CASCADE delete su FK
+- **Empty state CREATE**: emoji 📦 grande + `"PACCHETTO VUOTO"` Mono caps + helper Syne 13px + CTA `+ Aggiungi prodotto` promossa a fill evergreen
+- **Undo toast 4s** pattern Mail iOS per rimozione singolo prodotto: `pkgEditorRemoveItem()` setta `ST._pkgRemoveTimer` 4s, durante la finestra mostra toast `.pkg-undo-toast` scuro con bottone "Annulla" giallo. Allo scadere → DELETE `supplement_package_items.id`
+
+### Extra editor — `openExtraEditor(supplementId)`
+
+Riusa lo stesso overlay con `ST.packageEditor.mode = 'extra'`. Vista semplificata:
+- Header banda + titolo `"Integratore extra"` + `Chiudi` destra
+- Card meta: orario editabile + nome read-only (dal catalogo)
+- Item card sempre espanso (no toggle): stesso stepper dose/molt/scorta + macro chips + costo
+- CTA finale `ELIMINA DALLA LIBRERIA` rosso → modal conferma → `dbDeleteSupp(supplementId)` definitivo
+
+### Modal Catalogo Nutrilite v3 — `openCatalogModal` + `renderCatalogList` riscritte
+
+Modal fullscreen `100dvh` (override `weight-modal-inner` scoped a `#catalog-modal`). Sostituisce l'UI legacy lineare.
+
+**Architettura split shell/content** (decisione critica per UX):
+- `renderCatalogShell()` chiamata 1 volta da `openCatalogModal` — monta header + search input + pills container + eyebrow + list + CTA come scheletro statico
+- `renderCatalogList()` su ogni filter change — aggiorna solo `#catalog-counter`, `#catalog-pills`, `#catalog-eyebrow`, `#catalog-list`, `#catalog-cta-btn`. **NON ricostruisce il search input** → focus preservato durante typing, no flicker tastiera iOS
+- Handler `onCatalogSearchInput(value)` su `oninput` → solo `renderCatalogList()`
+
+**UI**:
+- **Shell fullscreen** bone `#F5F3EE` + accent bar `#FAC775` 3px
+- **Header**: `‹ INDIETRO` Mono caps sinistra + titolo Syne 700 16px `"Catalogo Nutrilite"` centro + contatore `"N SELEZIONATI"` Mono 700 destra (grigio `#9A9388` quando N=0, evergreen quando N≥1)
+- **Barra ricerca** `#ECE9E0` con icona 🔍 sinistra + clear button `×` destra (visibile solo con query). Font-size **16px** anti-zoom iOS Safari
+- **Pillole categoria** scroll orizzontale: prima `"TUTTI 64"` poi una per categoria reale (es. `"INTEGRATORI BASE 8"`), ordinate per count desc, counter inline. Attiva fill `#FAC775` testo dark, inattiva outline 0.75px `#C8C3B8`. Fade hint a destra `linear-gradient(90deg, transparent → #F5F3EE)` largo 24px
+- **Eyebrow** Mono caps sopra lista: `"{FILTRO} · ORDINATO PER NOME · N RISULTATI"` + link `AZZERA ›` evergreen quando filtri attivi (categoria != TUTTI OR query != '')
+- **Card prodotto** (~104px):
+  - **Thumb 56×56** sinistra: background tinted per categoria (vedi `CATEGORY_TINT_MAP`) + emoji semantico centrato + texture diagonale white 40%→0 via `::after` (gradevole, non AI-slop)
+  - **Info centrale**: nome Syne 600 + tag linea inline (solo `BODYKEY` mint o `XS SPORTS` terracotta, non per Nutrilite default), riga categoria + porzione Mono caps (`"CATEGORIA · 1 CPS"`), riga macro Mono (regola: kcal sempre anche se 0, C/P/G tutti o nessuno, ordine `kcal → C → P → G`, colori chip semantici), riga costo `"€ X.XX/dose"` Mono color `#9A9388`
+  - **Check destra** 26×26: vuoto bordo `#C8C3B8` / on fill evergreen + ✓ bianco. Animazione keyframe `catalogCheckPop` scale 0.7→1, cubic-bezier(.16,1,.3,1) 200ms
+- **Stato "NEL PACCHETTO"** (legge `ST.catalogContext.alreadyInPackage`): card opacity 0.55 + tag `Nel pacchetto` Mono caps evergreen sotto la riga costo + `pointer-events:none` (no tap accidentale)
+- **CTA bottom sticky** con fade gradient bone→trasparente sopra:
+  - Stato 0 selezionati: opacity 0.45, disabled, label `Seleziona prodotti`
+  - Stato ≥1: fill evergreen abilitato, label `Aggiungi {N} prodotti` con numero in Mono 700 inline più grosso. Singolare/plurale gestito
+- **Empty state** "Nessun prodotto" con 🔍 grande + link `Azzera filtri ›` (se ci sono filtri attivi)
+- **Empty state** "Catalogo non disponibile" con 📦 + `Riprova ›` (richiama `loadCatalog()`)
+
+### Mappa colori categoria — `CATEGORY_TINT_MAP` (hardcoded JS)
+
+Decisione "A" del brief: nessuna colonna DB nuova, mappa client-side.
+
+- **5 macro-tinte**: `ambra #FEF3DC` (integratori base/cuore), `terracotta #FCEEE9` (sport/composizione/ossa), `rosa #FCE9EE` (pelle/donna), `verde #E6F4E6` (energia/peso/concentrazione), `beige #F0EDE6` (erbe/fegato/protezione — fallback)
+- `CATEGORY_TO_TINT`: 15 mapping categoria reale → tinta (categorie non presenti → fallback `beige`)
+- `CATEGORY_EMOJI_OVERRIDE`: emoji semantico per categoria (es. `Sostituto pasto → 🥤`, `Ossa / Muscoli → 🦴`, `Concentrazione → 🧠`). Le categorie senza override usano l'emoji default del macro-gruppo
+- Helper `getCatalogTint(item)` ritorna `{bg, emoji}` con fallback beige + emoji 🌱
+
+### Tab Oggi: patch badge ESAURITO
+
+`oggiSuppCardHTML(s, taken)` patchato (commit `7dc35c9`):
+- Se `_suppDaysLeft(s) === 0` → badge `ESAURITO` terracotta `#B84C2A` accanto al nome
+- Se `_suppDaysLeft(s) <= 7` → badge `⚠ Ngg` terracotta (esistente, conservato)
+- **NO auto-disable**: l'integratore esaurito resta visibile in timeline come segnale per riordinare
+- **Regola dominio**: la label è sufficiente, l'utente vede mancare la registrazione e capisce
+
+### Decisioni design Nutrition v3 (consolidate dai mockup Claude Design)
+
+- **Ordine macro globale**: kcal → carbo → proteine → grassi (corretto da P/C/G legacy errato — applicato retroattivamente ovunque nel modulo)
+- **Tipografia**: Syne 800/700/600/500 (identità, titoli, prosa) + JetBrains Mono 400/500/700 (TUTTI i numeri, label caps, eyebrow tecnici)
+- **Tinta modulo Nutrition**: `#FAC775` SOLO su accent bar header e pillola tab attiva, MAI come fondo card
+- **Pacchetti come entità**: l'utente costruisce libreria personalizzata (nome + emoji + orario + lista prodotti). Sostituisce il vecchio raggruppamento implicito per `slot`
+- **Extra come supplements senza package_id**: singoli con orario, fuori pacchetto. UI ridotta, edit semplice
+- **Catalogo Nutrilite 64 prodotti reali** (Nutrilite + Bodykey + XS Sports), aggiornato una tantum via Google Sheet sync
+- **Selezione multipla nel catalogo, applicazione in blocco** → 1 sola transizione step2 → import in transazione
+- **"Già nel pacchetto"**: prodotti già linkati al pacchetto sorgente mostrati ma non riselezionabili (evita duplicati involontari). Costraint DB `UNIQUE (package_id, supplement_id)` è la rete di sicurezza
+
+### Stato funzioni chiave Integratori v3
+
+| Funzione | Scopo |
+|---|---|
+| `loadPackages()` | Carica `supplement_packages` + `supplement_package_items` con `.eq('user_id', uid)` esplicito (fix `1c2a295` RLS leak admin). Reset `ST.packages = []` su ogni chiamata. Join client-side con `ST.supps` |
+| `renderIntegratori()` v3 | Tab principale: pacchetti + extra + CTA. Helper `_suppDaysLeft`, `_suppIdsInAnyPackage`, `_extraSupps` |
+| `openPackageEditor(id)` / `openExtraEditor(id)` | Apre overlay fullscreen `#package-editor-overlay` in mode `create`/`edit`/`extra` |
+| `renderPackageEditor()` / `_renderPkgItemCard()` / `_renderExtraEditor()` | Render dinamico dell'overlay basato su `ST.packageEditor` |
+| `savePackageEditor()` / `_pkgEditorPersistNewPackage()` / `_pkgEditorFlushMetaPending()` | Persistenza: CREATE insert pacchetto, EDIT debounce-save su meta |
+| `pkgItemSet/Adjust(supplementId, field, delta)` | Stepper dose/mult/doses → riusa `updateSupp*` legacy con re-render forzato editor |
+| `pkgEditorRemoveItem()` / `pkgEditorUndoRemove()` | Pattern undo toast 4s, commit DB allo scadere |
+| `pkgEditorAddProduct()` | Apre catalogo con `ST.catalogContext = { mode:'addToPackage', packageId, time, alreadyInPackage }`. In CREATE mode persiste prima il pacchetto vuoto, poi apre catalogo |
+| `openCatalogModal()` / `renderCatalogShell()` / `renderCatalogList()` | Modal catalogo v3: shell statica + content dinamico (search input persistente) |
+| `_renderCatalogCardV3()` / `getCatalogTint()` | Render card + helper tinta+emoji |
+| `setCatalogCategory(cat)` / `resetCatalogFilters()` / `clearCatalogSearch()` / `onCatalogSearchInput(v)` | Helper filtri catalogo |
+| `importFromCatalog()` | Post-insert links nuovi supplements al pacchetto via `supplement_package_items` INSERT (se `ctx.mode === 'addToPackage'`). Già patched al Blocco 1 per pre-fill slot in step2 |
+
+### Stato ST esteso per Integratori v3
+
+```js
+{
+  // Blocco 1
+  packages: [],                  // [{id, name, emoji, time, sort_order, items:[{id, supplement_id, sort_order, supplement:{...}}]}]
+  packageEditor: null,           // { mode:'create'|'edit'|'extra', packageId, supplementId?, name, emoji, time, items, expandedItem, dirty, saving }
+  catalogContext: null,          // { mode:'addToPackage'|'addExtra', packageId?, packageName?, packageTime?, time?, alreadyInPackage?:[codice...] }
+  pkgRemoveItemConfirm: null,    // { supplementId, itemId, name } — toast undo
+  pkgDeleteConfirm: false,       // modal conferma elimina pacchetto/extra
+  pkgExitConfirm: false,         // riservato per modifiche non salvate
+  // Blocco 2
+  catalogCategoryFilter: 'TUTTI', // pill categoria attiva nel modal catalogo
+}
+```
+
+### Deprecazioni legacy non cancellate (post-Integratori v3)
+
+Marcate ma non rimosse — da pulire in giro di housekeeping futuro dopo verifica produzione stabile.
+
+**Marker `// [LEGACY-INTEGRATORI-V3]`** (Blocco 1):
+- `renderIntegratoriLegacy` — vecchio render preservato come riferimento, mai chiamato
+- `updateSuppSlotTime` — bulk slot update vecchio
+- `setSuppFilter` — filtro slot vecchio
+- `suppDragStart` / `suppDragOver` / `suppDrop` / `suppDragEnd` — drag&drop vecchio
+- `toggleSuppExpand` — expand row vecchio
+- `openAddSuppModal` / `closeAddSuppModal` / `saveNewSupp` — modal custom legacy
+- HTML `<div id="add-supp-modal">` orfano nel body
+- ST.suppFilter, ST.suppExpanded, ST.suppSheet
+
+**Marker `// [LEGACY-CATALOGO-V3-BLOCCO2]`** (Blocco 2):
+- `toggleCatalogRemove` — design v3 puramente additivo, no flusso "rimuovi"
+- `selectAllCatalog` — nessun bottone Seleziona/Deseleziona tutti nel v3
+- Branch `hasRem` ("Da rimuovere") in `goToCatalogStep2()` — dead code path (`ST.catalogToRemove` resta sempre `[]`)
+
 ## Workflow git (aggiornato 12 maggio 2026)
 
 Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
@@ -856,6 +1060,108 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 16 maggio 2026 — Modulo Integratori v3: refresh hi-fi in 2 blocchi (production-ready) ✅
+
+Refresh completo del modulo Integratori (Nutrition) coordinato da Claude Design ed eseguito da Claude Code in 2 blocchi sequenziali. Sostituisce la grafica legacy (lista raggruppata per slot + editing inline + bottoni custom) con un'architettura a **pacchetti** + un nuovo modal catalogo Nutrilite design-driven. La tab passa da 🟡 grafica legacy a ✅ production-ready.
+
+**Blocco 1 — Tab Integratori + Editor Pacchetto + migrazione DB** (commit `7dc35c9`)
+
+Database (eseguito su Supabase pre-commit via SQL manuale):
+- Nuove tabelle `supplement_packages` + `supplement_package_items` con RLS + admin policy (vedi sezione "Schema Supabase")
+- Migrazione one-shot DO block: 11 pacchetti / 28 items creati raggruppando supplements per slot. Account Ignazio: 6 pacchetti 06:30/08:45/11:00/14:30/17:00/22:15 con 3/8/1/4/1/2 prodotti
+
+Frontend:
+- Nuovo `renderIntegratori()` v3 (design system Syne+JetBrains Mono, bone+ambra Nutrition) con sezione "I miei pacchetti" (card 72px con tile emoji + chevron + stock warn) e sezione "Integratori extra" (righe 44px con orario + nome + ···)
+- CTA `+ Nuovo pacchetto` / `+ Singolo integratore` con tag NUTRILITE
+- `openPackageEditor` fullscreen overlay `#package-editor-overlay`:
+  - Meta card 3 righe (orario big mono + emoji tile 56px + nome dashed underline)
+  - Lista item con vista collassata/espansa (pattern accordion: solo uno espanso alla volta)
+  - Macro chips read-only (kcal sempre, C/P/G solo se ≥1 > 0)
+  - `× Rimuovi dal pacchetto` con toast undo 4s (Mail iOS pattern)
+  - `Elimina pacchetto` con modal conferma (CASCADE su FK)
+  - CREATE mode: persiste pacchetto solo dopo primo `+ Aggiungi prodotto`
+  - EDIT mode: edits live (name/emoji/time debounce-save, item fields via existing helpers)
+- Editor extra (stesso overlay, `mode='extra'`): item card singolo sempre espanso, edit orario + elimina dalla libreria
+- Integrazione catalogo: `ST.catalogContext = { mode:'addToPackage'|'addExtra', ... }`
+  - `goToCatalogStep2` pre-fill slot inputs con `package.time` se `addToPackage`
+  - `importFromCatalog` post-insert linka via `supplement_package_items.insert`
+  - `closeCatalogModal` ripristina overlay editor se chiuso senza importare
+
+Helpers nuovi: `loadPackages`, `_suppDaysLeft`, `_extraSupps`, `_suppIdsInAnyPackage`, `_renderPkgItemCard`, `_renderExtraEditor`, `openPackageEditor`, `closePackageEditor`, `savePackageEditor`, `renderPackageEditor`, `pkgEditorChangeName/Flush/EditTime/EditEmoji`, `pkgEditorToggleItem`, `pkgItemSet/Adjust`, `pkgEditorRemoveItem/UndoRemove`, `pkgEditorConfirmDelete/CancelDelete/DoDelete`, `pkgEditorAddProduct`, `openCatalogForExtra`, `openExtraEditor`, `pkgEditorEditExtraTime`, `pkgEditorConfirmDeleteExtra/Do`.
+
+CSS nuovo (block "INTEGRATORI V3" dopo `.oggi-v3-*`):
+- `.int-v3-*` (scope-note, section, pkg-card, cta, extra-row, empty-section)
+- `.pkg-editor-*` (overlay, accent, header, body, meta-card/row, emoji-tile, name-inp)
+- `.pkg-item-*` (card, row, drag, body, meta, chev, stock-badge, expand, chips, field, stepper, unit-sel, mult-helper, days-left, cost, remove)
+- `.pkg-undo-toast` (Mail iOS undo pattern)
+
+Tab Oggi patch: `oggiSuppCardHTML` mostra badge `ESAURITO` terracotta accanto al nome se `_suppDaysLeft === 0`. Conserva badge `⚠ Ngg` per scorta ≤ 7. **NO auto-disable**: l'integratore esaurito resta visibile come segnale per riordinare.
+
+ST esteso: `packages [], packageEditor null, catalogContext null, pkgRemoveItemConfirm null, pkgDeleteConfirm false, pkgExitConfirm false`.
+
+**Blocco 1 hot-fix — RLS leak admin** (commit `1c2a295`)
+
+Bug post-deploy `v2026.05.16 · 19:03`: la policy `admin_read_all_packages` (necessaria per `dashboardzona.html`) permetteva all'email `ignazio.f@me.com` di leggere tutte le righe di `supplement_packages`/`supplement_package_items` via RLS. Il client `loadPackages()` non filtrava per `user_id` e mostrava all'admin i pacchetti di tutti i tester (11 pacchetti misti invece dei 6 dell'account Ignazio).
+
+Fix: `ST.packages = []` reset, early return se `ST.user.id` mancante, `.eq('user_id', uid)` esplicito su entrambe le SELECT. Altre operazioni già safe: INSERT (payload user_id esplicito), UPDATE/DELETE (RLS `own_*` policy auto-filtra per `auth.uid()`).
+
+**Blocco 2 — Modal Catalogo Nutrilite hi-fi** (commit `fa75562`)
+
+Riscrittura completa di `openCatalogModal()` + `renderCatalogList()`. HTML `<div id="catalog-modal">` resta come container, contenuto interno step1 completamente sostituito.
+
+UI catalogo v3:
+- Shell fullscreen `100dvh` bone con accent bar `#FAC775`, header con back button Mono caps + titolo Syne + contatore `N SELEZIONATI` (grigio→evergreen quando N≥1)
+- Search bar `#ECE9E0` con icona 🔍 + clear `×`, font-size 16px (anti-zoom iOS)
+- Pillole categoria scroll orizzontale: `TUTTI 64` + 1 per categoria reale ordinate per count desc, attiva fill `#FAC775`, inattiva outline 0.75px `#C8C3B8`. Fade gradient destro per "ce ne sono altre". Scroll orizzontale preservato su filter change (savedScroll)
+- Eyebrow Mono caps "{FILTRO} · ORDINATO PER NOME · N RISULTATI [· AZZERA ›]"
+- Card prodotto ~104px: thumb 56×56 tinted (`CATEGORY_TINT_MAP`) + emoji semantico (`CATEGORY_EMOJI_OVERRIDE`), nome Syne 600 con tag linea inline (BODYKEY mint / XS SPORTS terracotta), meta caps (categoria · porzione), macro Mono (regola: kcal sempre, C/P/G tutti o nessuno, ordine kcal→C→P→G), costo €/dose, check 26×26 con pop animation
+- Stato "NEL PACCHETTO" per card già linkate al pacchetto sorgente (opacity .55 + tag evergreen + `pointer-events:none`) — legge `ST.catalogContext.alreadyInPackage`
+- CTA sticky bottom evergreen full-width: "Seleziona prodotti" disabled → "Aggiungi {N} prodotti" abilitato (singolare/plurale, numero in Mono 700 inline)
+- Empty states: nessun match (link "Azzera filtri") + catalogo vuoto (link "Riprova")
+
+**Architettura render split** per UX search input persistente — decisione critica:
+- `renderCatalogShell()` chiamata 1 volta da `openCatalogModal` — monta header/search/pills container/eyebrow/list/CTA come scheletro statico
+- `renderCatalogList()` su ogni filter change — aggiorna solo counter/pills/eyebrow/list/CTA. **NON ricostruisce il search input**. Critico su iOS: il pattern legacy (innerHTML totale a ogni keypress) causava loss-of-focus e flicker della tastiera
+- `onCatalogSearchInput(value)` handler oninput → solo trigger `renderCatalogList`
+
+Costanti hardcoded (decisione "A" del brief — niente DB nuove):
+- `CATEGORY_TINT_MAP`: 5 macro-tinte (ambra/terracotta/rosa/verde/beige)
+- `CATEGORY_TO_TINT`: 15 mapping categoria reale → tinta (default beige)
+- `CATEGORY_EMOJI_OVERRIDE`: emoji semantico per categoria (default da tinta)
+- `getCatalogTint(item)`: helper unified `{bg, emoji}`
+
+Estensione `ST.catalogContext` (Blocco 1 → Blocco 2):
+- `pkgEditorAddProduct` setta `alreadyInPackage = e.items.map(it => it.supplement.codice)`. `renderCatalogList` legge il set e applica `.catalog-v3-card-disabled` + tag "NEL PACCHETTO"
+- `packageName`, `packageTime` aggiunti al context (back-compat con `goToCatalogStep2` per pre-fill slot)
+- ST nuovo: `catalogCategoryFilter: 'TUTTI'` — pill attiva
+
+Marcate legacy `// [LEGACY-CATALOGO-V3-BLOCCO2]`:
+- `toggleCatalogRemove`: design v3 puramente additivo
+- `selectAllCatalog`: nessun bottone Seleziona/Deseleziona tutti
+- Branch "Da rimuovere" in `goToCatalogStep2`: dead code path
+
+CSS nuovo (block "CATALOGO NUTRILITE V3" dopo `.pkg-*`):
+- Override `#catalog-modal > .weight-modal-inner` per fullscreen flush, height `100dvh`
+- `.catalog-v3-shell/-accent/-header/-back/-title/-counter` (statico/dinamico)
+- `.catalog-v3-search-wrap/-search-icon/-search-bar/-search-clear`
+- `.catalog-v3-pills-wrap/-pills/-pill[.active]/-pill-fade`
+- `.catalog-v3-eyebrow/-eyebrow-left/-right/-link`
+- `.catalog-v3-list/-card[.disabled]/-thumb` (texture diagonale via `::after`)
+- `.catalog-v3-info/-name/-line-tag[-bodykey|-xs]/-meta/-macro[-kcal|-c|-p|-g|-sep]`
+- `.catalog-v3-cost/-in-package-tag/-check[.on]` (keyframes `catalogCheckPop`)
+- `.catalog-v3-cta-bar` (fade gradient sopra) `/-cta-btn[.disabled]/-btn-count`
+- `.catalog-v3-empty-state/-emoji/-title/-text/-link`
+
+**APP_VERSION finale Integratori v3**: `v2026.05.16 · 20:31`
+
+**Stato moduli Nutrition aggiornato**:
+- Tab Oggi: ✅ production-ready (design + tipografia)
+- Tab Integratori: ✅ production-ready (design + nuova architettura pacchetti)
+- Tab Storico: 🟡 grafica legacy
+- Tab Piano: 🟡 grafica legacy
+
+**Prossimi step Nutrition**: ridisegno tab Storico (timeline 7gg pulita) + ridisegno tab Piano (textarea coach + macro). Mockup hi-fi su Claude Design in chat dedicate.
 
 ### 16 maggio 2026 — Giro tipografico globale: più respiro + numeri perfettamente allineati ✅
 
@@ -2382,6 +2688,8 @@ Sezione collassabile aggiunta in fondo al modal Impostazioni profilo (sopra il b
 - `updateSuppSlotTime` presente ma non testata in produzione
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
 - `body_logs` non ha constraint UNIQUE(user_id, date) su Supabase — il salvataggio usa insert/update manuale
+- **Editor Pacchetto in CREATE mode con 0 prodotti**: il bottone `ELIMINA PACCHETTO` è condizionato a `if(!isCreate)`. Se l'utente crea un pacchetto in CREATE → aggiunge il primo prodotto (a quel punto la transizione a EDIT avviene + il pacchetto è in DB) → rimuove TUTTI i prodotti, resta un pacchetto in DB ma il bottone ELIMINA non compare perché `items.length === 0` triggera l'empty state senza il pulsante delete. Workaround: eliminare via SQL diretto (`DELETE FROM supplement_packages WHERE id = '...'`). Fix da fare: mostrare ELIMINA PACCHETTO ovunque ci sia un `e.packageId` in stato `edit`, indipendentemente dal numero di items. Stesso bug per il pacchetto "Prova" residuo da test 16 mag.
+- **Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo** — UX scadente su mobile (il prompt iOS richiede tap doppio, no clipboard suggestion per emoji). Da sostituire con: `<input type="time">` nascosto + emoji-grid custom o sheet picker. Documentato come decisione in autonomia al Blocco 1.
 
 ## Note
 
