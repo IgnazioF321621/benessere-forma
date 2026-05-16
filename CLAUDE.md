@@ -45,25 +45,35 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 ## Stato deploy attuale (16 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
-  - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone (donut size, SETTIMANA N/4, top padding, prima versione getPostWorkoutHint, body delta v1)
-  - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI (coerenza Home/Nutrition) + fasce chip post-workout corrette
+  - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone
+  - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI + fasce chip post-workout corrette
   - `b5da150` — docs: aggiornamento CLAUDE.md al 15 maggio 2026 (post Fasi A/B/C/D)
   - `5a64cab` — feat(nutrition): restyling tab OGGI design system v3 + timeline mista pasti pianificati
-  - `9718438` — docs: CLAUDE.md — log Nutrition Oggi restyling design system v3 (15 mag 2026)
+  - `9718438` — docs: CLAUDE.md — log Nutrition Oggi restyling design system v3
   - `df20032` — fix(nutrition): tab OGGI v3 — ripristino mealCardHTML + supp/extra connector + debug getTodayPianoMeals
   - `12c1e5b` — fix(nutrition): eager load piano_ai in applyProfile → timeline pianificati ora visibile
   - `0e2ed37` — fix(nutrition): orario form pasto resettato all'apertura + sync con slot scelto
+  - `3b9833a` — docs: CLAUDE.md — chiusura tab OGGI Nutrition production-ready
+  - `0e3079e` — style(typo): tipografia più ariosa su mobile — line-height + letter-spacing + margin globali
+  - `4728022` — style(typo): titoli Syne 800 più ariosi + numeri tabular-nums allineati
+  - `7119c2a` — style(typo): numeri grandi ora JetBrains Mono (allineamento perfetto)
 - **File principale**: `zona-tracker.html` (~12900 righe)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.16 · 10:49` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.16 · 14:46` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (16 maggio 2026)
-- **Tab Oggi**: ✅ production-ready (design system v3)
+### Stato moduli Nutrition (16 maggio 2026, post-tipografia)
+- **Tab Oggi**: ✅ production-ready (design system v3 + tipografia v2)
 - **Tab Integratori**: 🟡 grafica legacy — prossima da ridisegnare (gestore pacchetti orari + extra + catalogo Nutrilite)
 - **Tab Storico**: 🟡 grafica legacy
 - **Tab Piano**: 🟡 grafica legacy
+
+### Sistema visivo numeri (post-7119c2a)
+- **Titoli + body text**: Syne (display, identità visiva)
+- **Numeri grandi** (donut kcal, macro card, peso): **JetBrains Mono 700** (era Syne 800) → cifre tabular nativi, baseline allineata
+- **Numeri piccoli + label caps + dettagli**: JetBrains Mono (invariati)
+- Vantaggio: tutti i numeri appartengono alla stessa famiglia visiva, coerenza dashboard totale
 
 ## Stato design refinement (14-15 maggio 2026)
 
@@ -846,6 +856,69 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 16 maggio 2026 — Giro tipografico globale: più respiro + numeri perfettamente allineati ✅
+
+Dopo il deploy della tab OGGI production-ready, feedback unanime dei tester (Ignazio + altri): "il font ci sta ma è troppo schiacciato in altezza, sembra tutto attaccato, su smartphone si legge male." Tre interventi consecutivi sui token CSS scoped (mai globali, M1/M2 protetti dai loro scope espliciti).
+
+**Commit `0e3079e` — Tipografia v1: respiro verticale e orizzontale**
+- `body` line-height: default → 1.5
+- Saluto Home V2 + titolo Nutrition (Syne 800 30px): 1.08-1.15 → 1.15
+- Sezioni medie (`oggi-v3-timeline-title` 22px): nuovo 1.25
+- Body Syne 500 paragrafi/descrizioni: 1.3 → 1.5
+- Label Mono caps: 1 → 1.3-1.4
+- Letter-spacing Mono caps 9-10px: 0.12-0.14em → 0.25em (~2.5px)
+- Letter-spacing Mono caps 11px: 0.18em (~2px)
+- Margin-bottom tra card principali: 14 → 20px
+- Padding card coach/action: 16 → 18px
+- Font-size `.oggi-v3-macro-sub` ("rimasti · 82/221g"): 9px → 11px (impatto leggibilità maggiore)
+- Font-size `.oggi-v3-donut-summary`: 11px → 12px
+
+**Commit `4728022` — Tipografia v2: titoli grandi più ariosi + numeri tabular-nums**
+- Bump line-height titoli Syne 800 ≥22px da 1.15 → 1.25 (descender di "g", "p", "y" finalmente respirano)
+- Aggiunto `font-variant-numeric: tabular-nums` su 5 classi Syne con numeri + 3 classi Mono per safety
+- Training session card title: line-height inline 1.25 + mb 4→6px
+- Risultato: titoli "pomeriggio, Ignazio." / "Nutrition" / "Recupero Mobilità" leggibili senza schiacciamento
+
+**Commit `7119c2a` — Numeri grandi convertiti a JetBrains Mono**
+- Diagnosi: `tabular-nums` su Syne non basta. Syne è display font, non ha glyph tabular nativi.
+- Sostituzione font da Syne a JetBrains Mono SOLO sui numeri grandi:
+  - `.home-v2-donut-num` (donut Home "1.509")
+  - `.home-v2-macro-value` (macro Home "139/148/45")
+  - `.home-v2-body-weight` (peso "71.55")
+  - `.oggi-v3-donut-num` (donut Oggi "1.509")
+  - `.oggi-v3-macro-value` (macro Oggi "139/148/45")
+- Bump compensativo font-size +7-10% (Mono renderizza più stretto di Syne)
+- Font-weight 800 → 700 (Mono 700 è già molto bold, mantiene impatto)
+- Letter-spacing convertito da px negativi (-1.5px, -0.5px) a em conservativi (-0.02em a -0.04em)
+- Risultato: tutti i numeri grandi ora con larghezza e baseline identiche, separatore mille stabile
+
+**Cosa resta Syne** (decisione design):
+- Tutti i titoli (saluto Home, "Nutrition", "Timeline di oggi", card Training "Upper A", "Recupero Mobilità", ecc.)
+- Body text e descrizioni (paragrafi coach, descrizioni pasto)
+
+**Cosa resta JetBrains Mono** (era già così):
+- Label caps eyebrow (es. "COACH · RIEQUILIBRIO", "PIANIFICATO · DAL COACH", "CARB/PROT/FAT")
+- Numeri piccoli timeline (kcal pasti)
+- Riepiloghi numerici Zona Stats
+- Dettagli "consumate · su X obiettivo"
+
+**Stato sistema visivo (16 maggio 2026 v2)**:
+- Carattere display Syne per titoli e prosa = identità visiva
+- Carattere monospaced JetBrains Mono per TUTTI i numeri + label tecnici = leggibilità dashboard
+- Vantaggio: coerenza visiva totale. Tutti i numeri (grandi e piccoli) appartengono alla stessa famiglia visiva.
+
+**APP_VERSION finale giro tipografico**: `v2026.05.16 · 14:46`
+
+**Vincoli rispettati**: nessun cambio di font-size titoli, font-weight nominali, colori, schema DB, flusso registrazione pasto. M1/M2 non toccati grazie agli scope CSS espliciti (`#m2-screen`, `#onboarding-screen`).
+
+**Stato moduli Nutrition aggiornato**:
+- Tab Oggi: ✅ production-ready (design + tipografia)
+- Tab Integratori: 🟡 grafica legacy, prossima da ridisegnare
+- Tab Storico: 🟡 grafica legacy
+- Tab Piano: 🟡 grafica legacy
+
+**Prossimo step**: ridisegno tab Integratori (gestore pacchetti orari + integratori extra + catalogo Nutrilite 25 prodotti). Mockup hi-fi su Claude Design in nuova chat dedicata.
 
 ### 16 maggio 2026 — Tab OGGI Nutrition production-ready ✅
 
