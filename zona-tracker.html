@@ -250,7 +250,7 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 .page{display:none;padding:18px 16px;}
 .page.active{display:block;}
 @media(max-width:768px){
-  .page,#page-home,#page-oggi,#page-integratori,#page-storico,#page-piano,#page-training,#page-body{padding-bottom:calc(env(safe-area-inset-bottom)+180px);}
+  .page,#page-home,#page-oggi,#page-integratori,#page-analisi,#page-storico,#page-piano,#page-training,#page-body{padding-bottom:calc(env(safe-area-inset-bottom)+180px);}
 }
 /* ── BOTTOM NAV SVG ── */
 #bottom-nav .nav-btn{flex:1;padding:6px 0 4px;border:none;border-top:none;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;cursor:pointer;color:var(--t3);transition:color .2s;}
@@ -1196,8 +1196,169 @@ select.inp{cursor:pointer;}
 .oggi-v3-event-extra{cursor:pointer;}
 .oggi-v3-event-extra:active{transform:scale(.99);}
 
-/* ── Tag EXTRA in tab Storico (Step 2 minimal patch) ── */
+/* ── Tag EXTRA in tab Storico (Step 2 minimal patch) — legacy, rimosso quando renderStoricoLegacy verrà cancellato ── */
 .storico-extra-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--acc-lt);color:var(--acc);margin-left:6px;vertical-align:middle;}
+
+/* ═══════════════════════════════════════════════════════════
+   ANALISI V3 (18 mag 2026) — tab Storico → Analisi refresh
+   Design system: Syne/JetBrains Mono · bone #F5F3EE · accent evergreen · tinta Nutrition ambra
+   ═══════════════════════════════════════════════════════════ */
+/* Switch finestra temporale sticky */
+.analisi-v3-window-bar{display:flex;gap:8px;padding:6px 0 14px;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;background:var(--bg);z-index:10;}
+.analisi-v3-window-bar::-webkit-scrollbar{display:none;}
+.analisi-v3-window-pill{flex-shrink:0;padding:8px 16px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.14em;line-height:1.2;text-transform:uppercase;cursor:pointer;transition:all .12s ease;background:transparent;color:var(--t3);border:1.5px dashed var(--b1);}
+.analisi-v3-window-pill.active{background:var(--acc);color:#fff;border:1.5px solid var(--acc);box-shadow:0 1px 3px rgba(42,122,111,.18);}
+
+/* Header navigazione date */
+.analisi-v3-nav-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding:4px 0;}
+.analisi-v3-nav-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.22em;line-height:1.3;color:var(--t3);text-transform:uppercase;margin-bottom:3px;}
+.analisi-v3-nav-range{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-.3px;line-height:1.2;}
+.analisi-v3-nav-btn{flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--b1);background:transparent;color:var(--t2);font-family:'Syne',sans-serif;font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s;}
+.analisi-v3-nav-btn:hover:not(:disabled){background:var(--s2);}
+.analisi-v3-nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+/* Stat card row */
+.analisi-v3-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.analisi-v3-stat-card{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:12px;padding:14px 12px;text-align:left;}
+.analisi-v3-stat-eb{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.2em;line-height:1.3;color:var(--t3);text-transform:uppercase;margin-bottom:8px;}
+.analisi-v3-stat-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--t1);letter-spacing:-.02em;line-height:1.1;margin-bottom:4px;}
+.analisi-v3-stat-val.small{font-size:20px;}
+.analisi-v3-stat-sub{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;line-height:1.3;color:var(--t3);}
+.analisi-v3-stat-sub.up{color:var(--acc);}
+.analisi-v3-stat-sub.down{color:#C44434;}
+
+/* Confronto settimana vs settimana */
+.analisi-v3-vs-prev{background:var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:18px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.12em;line-height:1.4;color:var(--t2);text-transform:uppercase;}
+.analisi-v3-vs-prev .sep{color:#C8C3B8;margin:0 5px;}
+.analisi-v3-vs-prev .up{color:var(--acc);font-weight:700;}
+.analisi-v3-vs-prev .down{color:#C44434;font-weight:700;}
+
+/* Nota dati parziali */
+.analisi-v3-parz{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;margin:-8px 0 14px;text-align:center;padding:6px 10px;background:var(--s2);border-radius:6px;border:0.5px dashed var(--b1);}
+
+/* Sezione contenitore (chart, heatmap, macros) */
+.analisi-v3-section{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;padding:16px 14px 14px;margin-bottom:18px;}
+.analisi-v3-section-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+.analisi-v3-section-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.2em;line-height:1.3;color:var(--t3);text-transform:uppercase;}
+.analisi-v3-section-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--t1);letter-spacing:.04em;}
+.analisi-v3-section-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.3px;line-height:1.3;margin-bottom:12px;}
+
+/* Area chart container */
+.analisi-v3-chart-wrap{position:relative;width:100%;}
+.analisi-v3-chart-svg{display:block;width:100%;height:auto;cursor:default;}
+.analisi-v3-chart-svg .chart-dot{cursor:pointer;}
+.analisi-v3-chart-svg .chart-tap{cursor:pointer;}
+.analisi-v3-chart-legend{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.14em;color:var(--t3);text-transform:uppercase;}
+.analisi-v3-chart-legend .leg-item{display:inline-flex;align-items:center;gap:5px;}
+.analisi-v3-chart-legend .leg-dot{width:8px;height:8px;border-radius:50%;background:var(--acc);}
+.analisi-v3-chart-legend .leg-dot.extra{background:#C44434;}
+.analisi-v3-chart-legend .leg-line{width:14px;height:2px;background:repeating-linear-gradient(90deg,var(--t3),var(--t3) 3px,transparent 3px,transparent 6px);}
+
+/* Heatmap status zona */
+.analisi-v3-heatmap{display:flex;flex-direction:column;gap:14px;}
+.analisi-v3-heatmap-mini-head{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.22em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;}
+.analisi-v3-heatmap-grid{display:grid;gap:4px;}
+.analisi-v3-heatmap-grid.w-week{grid-template-columns:repeat(7,1fr);}
+.analisi-v3-heatmap-grid.w-month{grid-template-columns:repeat(7,1fr);}
+.analisi-v3-heatmap-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:#fff;cursor:pointer;transition:transform .1s ease,opacity .1s ease;line-height:1;}
+.analisi-v3-heatmap-cell.no-data{background:#DDD9D0;color:var(--t3);cursor:default;}
+.analisi-v3-heatmap-cell.in-zone{background:#2A7A6F;}
+.analisi-v3-heatmap-cell.almost-zone{background:#FAC775;color:#3A2C12;}
+.analisi-v3-heatmap-cell.out-of-zone{background:#C44434;}
+.analisi-v3-heatmap-cell.empty{background:transparent;cursor:default;pointer-events:none;}
+.analisi-v3-heatmap-cell:active:not(.no-data):not(.empty){transform:scale(.92);}
+.analisi-v3-heatmap-cell.today{outline:2px solid var(--acc);outline-offset:1px;}
+.analisi-v3-heatmap-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.12em;color:var(--t3);text-transform:uppercase;}
+.analisi-v3-heatmap-legend .leg-item{display:inline-flex;align-items:center;gap:5px;}
+.analisi-v3-heatmap-legend .leg-dot{width:9px;height:9px;border-radius:3px;}
+.analisi-v3-heatmap-legend .iz{background:#2A7A6F;}
+.analisi-v3-heatmap-legend .az{background:#FAC775;}
+.analisi-v3-heatmap-legend .oz{background:#C44434;}
+.analisi-v3-heatmap-legend .nd{background:#DDD9D0;}
+
+/* Macro distribution */
+.analisi-v3-macro-list{display:flex;flex-direction:column;gap:14px;margin-top:4px;}
+.analisi-v3-macro-bar-block{display:flex;flex-direction:column;gap:6px;}
+.analisi-v3-macro-bar-head{display:flex;justify-content:space-between;align-items:baseline;}
+.analisi-v3-macro-bar-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+.analisi-v3-macro-bar-label.c{color:#A0490A;}
+.analisi-v3-macro-bar-label.p{color:#1A6B35;}
+.analisi-v3-macro-bar-label.g{color:#7A5500;}
+.analisi-v3-macro-bar-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--t1);letter-spacing:-.01em;}
+.analisi-v3-macro-bar-sub{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.1em;color:var(--t3);text-transform:uppercase;}
+.analisi-v3-macro-bar-track{position:relative;height:10px;background:var(--s3);border-radius:6px;overflow:visible;}
+.analisi-v3-macro-bar-fill{height:100%;border-radius:6px;transition:width .4s ease;}
+.analisi-v3-macro-bar-fill.c{background:#FAC775;}
+.analisi-v3-macro-bar-fill.p{background:#2A7A6F;}
+.analisi-v3-macro-bar-fill.g{background:#B84C2A;}
+.analisi-v3-macro-bar-tick{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px dashed var(--t1);opacity:.65;}
+
+/* Empty state Analisi */
+.analisi-v3-empty{text-align:center;padding:36px 18px;}
+.analisi-v3-empty-emoji{font-size:42px;margin-bottom:10px;line-height:1;}
+.analisi-v3-empty-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--t2);margin-bottom:6px;}
+.analisi-v3-empty-text{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;line-height:1.5;color:var(--t3);text-transform:uppercase;}
+
+/* Cross-fade content su cambio finestra */
+@keyframes analisiContentIn{from{opacity:0;transform:translateY(2px);}to{opacity:1;transform:translateY(0);}}
+.analisi-v3-content{animation:analisiContentIn 180ms cubic-bezier(.16,1,.3,1);}
+
+/* ═══════════════════════════════════════════════════════════
+   DAY DETAIL OVERLAY (drilldown da chart/heatmap)
+   ═══════════════════════════════════════════════════════════ */
+@keyframes daydetailSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes daydetailSlideDown{from{transform:translateY(0);}to{transform:translateY(100%);}}
+.daydetail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1500;display:flex;align-items:stretch;justify-content:center;}
+.daydetail-screen{background:var(--bg);width:100%;height:100%;max-width:520px;overflow-y:auto;animation:daydetailSlideUp 240ms cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;-webkit-overflow-scrolling:touch;}
+.daydetail-screen.dismissing{animation:daydetailSlideDown 200ms ease forwards;}
+.daydetail-accent{height:3px;background:var(--mod-nutrition);flex-shrink:0;}
+.daydetail-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:14px 16px 12px;flex-shrink:0;border-bottom:0.5px solid #DDD9D0;}
+.daydetail-back{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.16em;color:var(--acc);background:none;border:none;cursor:pointer;justify-self:start;text-transform:uppercase;padding:6px 2px;}
+.daydetail-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.3px;text-align:center;}
+.daydetail-kebab{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--t2);background:none;border:none;cursor:pointer;justify-self:end;padding:6px 8px;line-height:1;}
+.daydetail-kebab:disabled,.daydetail-kebab.hidden{opacity:0;pointer-events:none;}
+.daydetail-body{flex:1;padding:18px 16px 36px;display:flex;flex-direction:column;gap:14px;}
+.daydetail-summary-card{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;padding:16px 14px;}
+.daydetail-summary-zona{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;}
+.daydetail-summary-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;}
+.daydetail-summary-pill .dot{width:7px;height:7px;border-radius:50%;}
+.daydetail-summary-pill.in-zone{background:var(--acc-lt);color:var(--acc);}
+.daydetail-summary-pill.in-zone .dot{background:var(--acc);}
+.daydetail-summary-pill.almost-zone{background:#FFF3DC;color:#A0490A;}
+.daydetail-summary-pill.almost-zone .dot{background:#FAC775;}
+.daydetail-summary-pill.out-of-zone{background:#FCEEE9;color:#C44434;}
+.daydetail-summary-pill.out-of-zone .dot{background:#C44434;}
+.daydetail-summary-pill.no-data{background:var(--s2);color:var(--t3);}
+.daydetail-summary-pill.no-data .dot{background:var(--t3);}
+.daydetail-summary-target{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;}
+.daydetail-summary-kcal{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-top:0.5px solid var(--b1);border-bottom:0.5px solid var(--b1);margin-bottom:12px;}
+.daydetail-summary-kcal-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--t1);letter-spacing:-.02em;}
+.daydetail-summary-kcal-target{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);letter-spacing:.06em;}
+.daydetail-summary-delta{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;}
+.daydetail-summary-delta.over{color:#C44434;}
+.daydetail-summary-delta.under{color:var(--acc);}
+.daydetail-summary-delta.ok{color:var(--t2);}
+.daydetail-timeline-card{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;padding:14px;}
+.daydetail-timeline-eb{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;}
+.daydetail-timeline-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);letter-spacing:-.3px;margin-bottom:12px;}
+.daydetail-evt{display:flex;gap:11px;padding:10px;background:var(--bg);border:0.5px solid #DDD9D0;border-radius:10px;margin-bottom:8px;align-items:center;}
+.daydetail-evt-time{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t2);min-width:38px;letter-spacing:.04em;}
+.daydetail-evt-icon{font-size:18px;line-height:1;flex-shrink:0;}
+.daydetail-evt-body{flex:1;min-width:0;}
+.daydetail-evt-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--t1);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.daydetail-evt-meta{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.06em;color:var(--t3);margin-top:3px;}
+.daydetail-evt-kcal{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--t2);flex-shrink:0;}
+.daydetail-evt-tag{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;padding:2px 5px;border-radius:4px;flex-shrink:0;margin-left:4px;}
+.daydetail-evt-tag.extra{background:var(--acc-lt);color:var(--acc);}
+.daydetail-evt-tag.pkg{background:#F0EDE6;color:#6B6557;}
+.daydetail-evt-empty{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;color:var(--t3);text-transform:uppercase;text-align:center;padding:24px 0;}
+
+/* Menu kebab compatto */
+.daydetail-menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:1600;display:flex;align-items:flex-start;justify-content:flex-end;padding:60px 18px 0;}
+.daydetail-menu{background:var(--s1);border:0.5px solid #DDD9D0;border-radius:12px;padding:6px;min-width:200px;box-shadow:0 10px 32px rgba(20,15,5,.2);}
+.daydetail-menu-item{display:block;width:100%;text-align:left;padding:10px 12px;background:none;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:13.5px;color:var(--t1);border-radius:8px;}
+.daydetail-menu-item:hover{background:var(--s2);}
+.daydetail-menu-helper{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;padding:6px 12px 4px;line-height:1.4;}
 
 </style>
 </head>
@@ -2089,7 +2250,7 @@ select.inp{cursor:pointer;}
     <div id="page-home" class="page active"><p>Home placeholder</p></div>
     <div id="page-oggi" class="page"></div>
     <div id="page-integratori" class="page"></div>
-    <div id="page-storico" class="page"></div>
+    <div id="page-analisi" class="page"></div>
     <div id="page-piano" class="page"></div>
     <div id="page-training" class="page"></div>
     <div id="page-body" class="page"></div>
@@ -2437,7 +2598,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.18 · 15:06';
+const APP_VERSION = '2026.05.18 · 17:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2552,6 +2713,9 @@ const ST = {
   extras: [],              // [{id, date, slot, name, codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at}] della data attiva
   confirmExtra: null,      // schermata Conferma Extra fullscreen: { items:[{codice,name,categoria,linea,dose,dose_unit,slot,kcal,carbo,proteine,grassi,costo,confezione}], removeUndo:{codice:{timer,item}}, submitting }
   pkgExtraDeleteConfirm: null, // { logId, name } — modal conferma elimina extra dalla timeline
+  // ANALISI V3 (18 mag 2026) — refresh tab Storico → Analisi
+  analisi: { window: 'SETTIMANA', dateOffset: 0 }, // window: SETTIMANA|MESE|3MESI|6MESI; offset: 0=corrente, -1=prec
+  dayDetailScreen: null,   // { date:'YYYY-MM-DD', menuOpen:bool } — overlay drilldown dettaglio giorno
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -4583,6 +4747,7 @@ async function logout() {
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════
 function showPage(id){
+  if(id === 'storico') id = 'analisi'; // [LEGACY-STORICO-V3] alias retrocompat
   if(id==='training' && !hasTraining()){ id='home'; }
   if(id !== 'training' && typeof releaseWakeLock === 'function'){ releaseWakeLock(); }
   // Stop countdown recupero quando si esce dalla pagina Training
@@ -9019,7 +9184,8 @@ function renderPage(id){
   if(id==='home') renderHome();
   else if(id==='oggi') renderOggi();
   else if(id==='integratori') renderIntegratori();
-  else if(id==='storico') renderStorico();
+  else if(id==='analisi') renderAnalisi();
+  else if(id==='storico') renderAnalisi(); // [LEGACY-STORICO-V3] alias retrocompat: vecchi link 'storico' → Analisi
   else if(id==='piano') renderPiano();
   else if(id==='training') renderTraining();
   else if(id==='body') renderBody();
@@ -10319,8 +10485,8 @@ function renderOggi(){
       <button class="oggi-v3-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
     </div>
     <div class="oggi-v3-subnav">
-      ${['oggi','integratori','storico','piano'].map(id => {
-        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', storico:'STORICO', piano:'PIANO' };
+      ${['oggi','integratori','analisi','piano'].map(id => {
+        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', analisi:'ANALISI', piano:'PIANO' };
         return `<button class="oggi-v3-pill${id==='oggi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
       }).join('')}
     </div>`;
@@ -10391,8 +10557,8 @@ function renderIntegratori(){
       <button class="oggi-v3-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
     </div>
     <div class="oggi-v3-subnav">
-      ${['oggi','integratori','storico','piano'].map(id => {
-        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', storico:'STORICO', piano:'PIANO' };
+      ${['oggi','integratori','analisi','piano'].map(id => {
+        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', analisi:'ANALISI', piano:'PIANO' };
         return `<button class="oggi-v3-pill${id==='integratori'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
       }).join('')}
     </div>
@@ -10483,9 +10649,807 @@ function renderIntegratori(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// PAGE: STORICO
+// PAGE: ANALISI v3 (18 maggio 2026) — refresh tab Storico → Analisi
+// Dashboard analitica: switch finestra (SETTIMANA/MESE/3M/6M) + chart kcal +
+// heatmap status zona + macro distribution + drilldown dettaglio giorno
+// Dati: solo ST.db.days (cache locale). Refresh A: ridisegno totale a ogni interazione.
+// Target macro %: dinamici da ST.TARGET.pCarbo/pProt/pFat (fallback 40/30/30).
 // ═══════════════════════════════════════════════════════════
-function renderStorico(){
+const ANALISI_DAY_S = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+const ANALISI_MON_S = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+const ANALISI_MON_FULL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+// ── HELPER: range della finestra corrente (offset 0=corrente, -1=precedente) ──
+function _analisiGetWindowRange(window, offset) {
+  offset = offset || 0;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  let start, end;
+  if(window === 'SETTIMANA') {
+    const dow = today.getDay(); // 0=DOM, 1=LUN
+    const daysFromMonday = dow === 0 ? 6 : dow - 1;
+    start = new Date(today); start.setDate(today.getDate() - daysFromMonday + offset * 7);
+    end = new Date(start); end.setDate(start.getDate() + 6);
+  } else if(window === 'MESE') {
+    start = new Date(today.getFullYear(), today.getMonth() + offset, 1, 12);
+    end = new Date(today.getFullYear(), today.getMonth() + offset + 1, 0, 12);
+  } else if(window === '3MESI') {
+    start = new Date(today.getFullYear(), today.getMonth() - 2 + offset * 3, 1, 12);
+    end = new Date(today.getFullYear(), today.getMonth() + 1 + offset * 3, 0, 12);
+  } else { // 6MESI
+    start = new Date(today.getFullYear(), today.getMonth() - 5 + offset * 6, 1, 12);
+    end = new Date(today.getFullYear(), today.getMonth() + 1 + offset * 6, 0, 12);
+  }
+  return { start, end };
+}
+
+// ── HELPER: label intestazione finestra (eyebrow + range data) ──
+function _analisiGetWindowLabel(window, offset, start, end) {
+  offset = offset || 0;
+  if(window === 'SETTIMANA') {
+    let eb = 'QUESTA SETTIMANA';
+    if(offset === -1) eb = 'SETTIMANA SCORSA';
+    else if(offset < -1) eb = `${Math.abs(offset)} SETTIMANE FA`;
+    const range = `${start.getDate()} ${ANALISI_MON_S[start.getMonth()]} — ${end.getDate()} ${ANALISI_MON_S[end.getMonth()]} ${end.getFullYear()}`;
+    return { eb, range };
+  }
+  if(window === 'MESE') {
+    const eb = `${ANALISI_MON_FULL[start.getMonth()].toUpperCase()} ${start.getFullYear()}`;
+    return { eb, range: '' };
+  }
+  if(window === '3MESI') {
+    const eb = `${ANALISI_MON_S[start.getMonth()]} — ${ANALISI_MON_S[end.getMonth()]} ${end.getFullYear()}`;
+    return { eb, range: '' };
+  }
+  // 6MESI
+  const eb = `${ANALISI_MON_S[start.getMonth()]} — ${ANALISI_MON_S[end.getMonth()]} ${end.getFullYear()}`;
+  return { eb, range: '' };
+}
+
+// ── HELPER: status zona per chiave giorno ──
+// Tolleranza: ±2% in zona, ±5% quasi zona. Target dinamici dal profilo.
+function _zoneStatusForDayKey(key) {
+  const dayData = ST.db.days && ST.db.days[key];
+  if(!dayData || dayData.fasting) return 'noData';
+  const cons = dayTotals(dayData);
+  const tot = cons.protein + cons.carbs + cons.fat;
+  if(tot < 5 || cons.kcal < 50) return 'noData';
+  const tPC = ST.TARGET.pCarbo || 40;
+  const tPP = ST.TARGET.pProt  || 30;
+  const tPF = ST.TARGET.pFat   || 30;
+  const kP = cons.protein * 4, kC = cons.carbs * 4, kF = cons.fat * 9;
+  const totK = kP + kC + kF || 1;
+  const pP = Math.round(kP / totK * 100);
+  const pC = Math.round(kC / totK * 100);
+  const pF = Math.round(kF / totK * 100);
+  const inZ   = Math.abs(pC - tPC) <= 2 && Math.abs(pP - tPP) <= 2 && Math.abs(pF - tPF) <= 2;
+  const nearZ = Math.abs(pC - tPC) <= 5 && Math.abs(pP - tPP) <= 5 && Math.abs(pF - tPF) <= 5;
+  return inZ ? 'inZone' : (nearZ ? 'almostZone' : 'outOfZone');
+}
+
+// ── HELPER: itera giorni del range, ritorna array di {date, key, dayData, totals, status, mealsN, extrasN} ──
+function _analisiCollectDays(start, end) {
+  const result = [];
+  const d = new Date(start);
+  d.setHours(12, 0, 0, 0);
+  while(d <= end) {
+    const key = d.toISOString().slice(0, 10);
+    const dayData = ST.db.days && ST.db.days[key] ? ST.db.days[key] : null;
+    const totals = dayData ? dayTotals(dayData) : {kcal:0, protein:0, carbs:0, fat:0};
+    const status = _zoneStatusForDayKey(key);
+    const mealsN = dayData?.meals?.length || 0;
+    const extrasN = (key === ST.activeDay) ? ((ST.extras || []).length) : 0;
+    result.push({ date: new Date(d), key, dayData, totals, status, mealsN, extrasN });
+    d.setDate(d.getDate() + 1);
+  }
+  return result;
+}
+
+// ── HELPER: aggregati per range ──
+function _analisiAggregate(days) {
+  const withData = days.filter(d => d.totals.kcal > 0);
+  const avg = (arr, key) => arr.length ? Math.round(arr.reduce((a, d) => a + d.totals[key], 0) / arr.length) : 0;
+  const avgKcal = avg(withData, 'kcal');
+  const avgProt = avg(withData, 'protein');
+  const avgCarb = avg(withData, 'carbs');
+  const avgFat  = avg(withData, 'fat');
+  const inZoneN = days.filter(d => d.status === 'inZone').length;
+  const totalMeals = withData.reduce((a, d) => a + (d.mealsN || 0), 0);
+  const avgMeals = withData.length ? (totalMeals / withData.length) : 0;
+  // Macro % calcolate sulla media giornaliera
+  let avgPC = 0, avgPP = 0, avgPF = 0;
+  if(withData.length) {
+    const totalKcalFromMacro = avgCarb * 4 + avgProt * 4 + avgFat * 9 || 1;
+    avgPC = Math.round((avgCarb * 4 / totalKcalFromMacro) * 100);
+    avgPP = Math.round((avgProt * 4 / totalKcalFromMacro) * 100);
+    avgPF = Math.round((avgFat  * 9 / totalKcalFromMacro) * 100);
+  }
+  return {
+    avgKcal, avgProt, avgCarb, avgFat,
+    inZoneN, totalDays: days.length, withDataN: withData.length,
+    totalMeals, avgMeals,
+    avgPC, avgPP, avgPF,
+  };
+}
+
+// ── SVG COMPONENT: area chart kcal giornaliere vs target ──
+// data: array di {key, totals.kcal, hasExtras, isToday}
+function _analisiRenderAreaChart(daysData, targetKcal, windowKind) {
+  const W = 340, H = 160;
+  const padL = 32, padR = 16, padT = 14, padB = 30;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const n = daysData.length;
+  if(n === 0) return '<svg viewBox="0 0 340 160" class="analisi-v3-chart-svg"></svg>';
+
+  // Max Y: max tra kcal max e target con margine 10%
+  const maxKcal = Math.max(...daysData.map(d => d.kcal || 0), targetKcal || 0, 1);
+  const yMax = Math.ceil(maxKcal * 1.1 / 500) * 500 || 500;
+
+  // X positions
+  const xFor = (i) => padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
+  const yFor = (v) => padT + innerH - (v / yMax) * innerH;
+  const yTarget = yFor(targetKcal || 0);
+
+  // Linea + area path (skip giorni senza dati per area chart connessa: usiamo NaN per break-up)
+  const pointsWithData = daysData.map((d, i) => ({ i, x: xFor(i), y: yFor(d.kcal || 0), hasData: (d.kcal || 0) > 0, isToday: d.isToday, hasExtras: d.hasExtras, key: d.key }));
+
+  // Area path: connessa tra punti con dati
+  let areaPath = '';
+  let linePath = '';
+  let firstWithData = null, lastWithData = null;
+  pointsWithData.forEach((p, idx) => {
+    if(p.hasData) {
+      if(firstWithData === null) {
+        firstWithData = p;
+        linePath = `M ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      } else {
+        linePath += ` L ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      }
+      lastWithData = p;
+    }
+  });
+  if(firstWithData && lastWithData) {
+    const baseY = padT + innerH;
+    areaPath = `M ${firstWithData.x.toFixed(1)},${baseY.toFixed(1)} L ${firstWithData.x.toFixed(1)},${firstWithData.y.toFixed(1)} ` +
+      pointsWithData.filter(p => p.hasData).map(p => `L ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ') +
+      ` L ${lastWithData.x.toFixed(1)},${baseY.toFixed(1)} Z`;
+  }
+
+  // Asse Y: 3 tick (0, mid, max)
+  const yTicks = [0, Math.round(yMax / 2), yMax];
+  const yAxisHTML = yTicks.map(t => {
+    const y = yFor(t);
+    return `<text x="${padL - 6}" y="${y.toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="8" fill="#8E8779" text-anchor="end" dominant-baseline="central">${t >= 1000 ? (t/1000)+'k' : t}</text>`;
+  }).join('');
+
+  // Asse X: label giorni o mese a seconda della finestra
+  let xLabels = '';
+  if(windowKind === 'SETTIMANA') {
+    const DAYL = ['L','M','M','G','V','S','D'];
+    daysData.forEach((d, i) => {
+      const dateObj = new Date(d.key + 'T12:00:00');
+      const dow = dateObj.getDay();
+      const lbl = DAYL[dow === 0 ? 6 : dow - 1];
+      const x = xFor(i);
+      xLabels += `<text x="${x.toFixed(1)}" y="${(H - 12).toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="9" fill="#8E8779" text-anchor="middle">${lbl}</text>`;
+      xLabels += `<text x="${x.toFixed(1)}" y="${(H - 2).toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="8" fill="#C8C3B8" text-anchor="middle">${dateObj.getDate()}</text>`;
+    });
+  } else if(windowKind === 'MESE') {
+    // Ogni ~5 giorni
+    const step = Math.max(1, Math.ceil(n / 6));
+    for(let i = 0; i < n; i += step) {
+      const dateObj = new Date(daysData[i].key + 'T12:00:00');
+      const x = xFor(i);
+      xLabels += `<text x="${x.toFixed(1)}" y="${(H - 6).toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#8E8779" text-anchor="middle">${dateObj.getDate()}</text>`;
+    }
+  } else {
+    // 3M/6M: mostra label mese sui primi giorni di ciascun mese
+    let lastMonth = -1;
+    daysData.forEach((d, i) => {
+      const dateObj = new Date(d.key + 'T12:00:00');
+      const month = dateObj.getMonth();
+      if(month !== lastMonth) {
+        const x = xFor(i);
+        xLabels += `<text x="${x.toFixed(1)}" y="${(H - 6).toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="600" fill="#8E8779" text-anchor="middle">${ANALISI_MON_S[month]}</text>`;
+        lastMonth = month;
+      }
+    });
+  }
+
+  // Linea target tratteggiata
+  const targetLine = targetKcal > 0 ? `
+    <line x1="${padL}" y1="${yTarget.toFixed(1)}" x2="${(W - padR).toFixed(1)}" y2="${yTarget.toFixed(1)}" stroke="#8E8779" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>
+    <text x="${(W - padR - 2).toFixed(1)}" y="${(yTarget - 4).toFixed(1)}" font-family="JetBrains Mono,monospace" font-size="8" fill="#8E8779" text-anchor="end">TGT ${targetKcal}</text>` : '';
+
+  // Dots cliccabili (solo punti con dati)
+  let dots = '';
+  pointsWithData.forEach(p => {
+    if(!p.hasData && !p.isToday) return;
+    // Asta verticale extras (dot terracotta sotto)
+    if(p.hasExtras && p.hasData) {
+      dots += `<circle cx="${p.x.toFixed(1)}" cy="${(yFor(0) + 4).toFixed(1)}" r="2.5" fill="#C44434" opacity="0.65"/>`;
+    }
+    if(p.isToday && !p.hasData) {
+      // Oggi senza dati: dot vuoto + dashed
+      dots += `<circle class="chart-dot" cx="${p.x.toFixed(1)}" cy="${yFor(0).toFixed(1)}" r="5" fill="#FFFFFF" stroke="${'#2A7A6F'}" stroke-width="1.5" stroke-dasharray="2 2" onclick="openDayDetailScreen('${p.key}')"/>`;
+    } else if(p.isToday && p.hasData) {
+      dots += `<circle class="chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#FFFFFF" stroke="${'#2A7A6F'}" stroke-width="2.5" stroke-dasharray="2 2" onclick="openDayDetailScreen('${p.key}')"/>`;
+    } else if(p.hasData) {
+      dots += `<circle class="chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4" fill="#2A7A6F" stroke="#FFFFFF" stroke-width="1.5" onclick="openDayDetailScreen('${p.key}')"/>`;
+    }
+  });
+
+  // Tap zones invisibili (più grandi per touch) — solo dove ci sono dati
+  let tapZones = '';
+  pointsWithData.forEach(p => {
+    if(!p.hasData && !p.isToday) return;
+    const cx = p.x.toFixed(1);
+    const cy = (p.y || yFor(0)).toFixed(1);
+    tapZones += `<circle class="chart-tap" cx="${cx}" cy="${cy}" r="14" fill="transparent" onclick="openDayDetailScreen('${p.key}')"/>`;
+  });
+
+  return `<svg viewBox="0 0 ${W} ${H}" class="analisi-v3-chart-svg" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="analisiAreaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2A7A6F" stop-opacity="0.32"/>
+        <stop offset="100%" stop-color="#2A7A6F" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${yAxisHTML}
+    ${targetLine}
+    ${areaPath ? `<path d="${areaPath}" fill="url(#analisiAreaGrad)"/>` : ''}
+    ${linePath ? `<path d="${linePath}" fill="none" stroke="#2A7A6F" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+    ${dots}
+    ${tapZones}
+    ${xLabels}
+  </svg>`;
+}
+
+// ── SVG COMPONENT: heatmap status zona ──
+// daysData: array { key, status, date, isToday }
+// kind: 'week' (7 in riga) | 'month' (griglia 7×N) | 'multi-month' (1 griglia per mese)
+function _analisiRenderHeatmap(daysData, kind) {
+  if(daysData.length === 0) {
+    return '<div class="analisi-v3-empty-text">Nessun dato</div>';
+  }
+  const cellHTML = (d, showLabel) => {
+    const cls = d.status === 'inZone' ? 'in-zone'
+      : d.status === 'almostZone' ? 'almost-zone'
+      : d.status === 'outOfZone'  ? 'out-of-zone'
+      : 'no-data';
+    const todayCls = d.isToday ? ' today' : '';
+    const dn = new Date(d.key + 'T12:00:00').getDate();
+    const click = (d.status === 'noData' && !d.dayData) ? '' : `onclick="openDayDetailScreen('${d.key}')"`;
+    return `<div class="analisi-v3-heatmap-cell ${cls}${todayCls}" ${click}>${showLabel ? dn : ''}</div>`;
+  };
+
+  if(kind === 'week') {
+    return `<div class="analisi-v3-heatmap-grid w-week">${daysData.map(d => cellHTML(d, true)).join('')}</div>`;
+  }
+
+  if(kind === 'month') {
+    // Padding celle vuote all'inizio per allineare con dom della settimana
+    if(daysData.length === 0) return '';
+    const firstDate = new Date(daysData[0].key + 'T12:00:00');
+    const firstDow = firstDate.getDay();
+    const padN = firstDow === 0 ? 6 : firstDow - 1; // lun-dom layout
+    let cells = '';
+    for(let i = 0; i < padN; i++) cells += '<div class="analisi-v3-heatmap-cell empty"></div>';
+    cells += daysData.map(d => cellHTML(d, true)).join('');
+    return `<div class="analisi-v3-heatmap-grid w-month">${cells}</div>`;
+  }
+
+  // multi-month: raggruppa per mese, una mini-griglia ciascuno
+  const byMonth = {};
+  daysData.forEach(d => {
+    const dt = new Date(d.key + 'T12:00:00');
+    const monthKey = dt.getFullYear() + '-' + String(dt.getMonth()).padStart(2, '0');
+    if(!byMonth[monthKey]) byMonth[monthKey] = { label: `${ANALISI_MON_FULL[dt.getMonth()]} ${dt.getFullYear()}`, days: [] };
+    byMonth[monthKey].days.push(d);
+  });
+  return Object.values(byMonth).map(({label, days}) => {
+    const firstDate = new Date(days[0].key + 'T12:00:00');
+    const firstDow = firstDate.getDay();
+    const padN = firstDow === 0 ? 6 : firstDow - 1;
+    let cells = '';
+    for(let i = 0; i < padN; i++) cells += '<div class="analisi-v3-heatmap-cell empty"></div>';
+    cells += days.map(d => cellHTML(d, true)).join('');
+    return `<div>
+      <div class="analisi-v3-heatmap-mini-head">${label.toUpperCase()}</div>
+      <div class="analisi-v3-heatmap-grid w-month">${cells}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── COMPONENT: macro distribution bars (carbo/prot/fat) ──
+function _analisiRenderMacroBars(agg, target) {
+  const tPC = (target && target.pCarbo) || 40;
+  const tPP = (target && target.pProt)  || 30;
+  const tPF = (target && target.pFat)   || 30;
+  const macros = [
+    { name: 'CARBO',    grams: agg.avgCarb, pct: agg.avgPC, target: tPC, cls: 'c' },
+    { name: 'PROTEINE', grams: agg.avgProt, pct: agg.avgPP, target: tPP, cls: 'p' },
+    { name: 'GRASSI',   grams: agg.avgFat,  pct: agg.avgPF, target: tPF, cls: 'g' },
+  ];
+  return `<div class="analisi-v3-macro-list">
+    ${macros.map(m => {
+      const fillW = Math.min(100, Math.max(0, m.pct));
+      const tickLeft = Math.min(100, Math.max(0, m.target));
+      return `<div class="analisi-v3-macro-bar-block">
+        <div class="analisi-v3-macro-bar-head">
+          <span class="analisi-v3-macro-bar-label ${m.cls}">${m.name}</span>
+          <span class="analisi-v3-macro-bar-val">${m.grams}g</span>
+        </div>
+        <div class="analisi-v3-macro-bar-sub">${m.pct}% · TGT ${m.target}%</div>
+        <div class="analisi-v3-macro-bar-track">
+          <div class="analisi-v3-macro-bar-fill ${m.cls}" style="width:${fillW}%;"></div>
+          <div class="analisi-v3-macro-bar-tick" style="left:${tickLeft}%;"></div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── RENDER: shell + window switch (chiamata 1 volta da showPage) ──
+function renderAnalisiShell() {
+  if(!ST.analisi) ST.analisi = { window: 'SETTIMANA', dateOffset: 0 };
+  const profile  = ST.profile || {};
+  const fname    = String(profile.first_name || '').trim();
+  const lname    = String(profile.last_name  || '').trim();
+  const initials = ((fname.charAt(0) + lname.charAt(0)).toUpperCase()) || (fname.charAt(0) || '?').toUpperCase();
+  const now2 = new Date();
+  const dateEb = `${ANALISI_DAY_S[now2.getDay()]} ${now2.getDate()} ${ANALISI_MON_S[now2.getMonth()]} · ANALISI`;
+  const v3Header = `
+    <div class="oggi-v3-accent"></div>
+    <div class="oggi-v3-header">
+      <div class="oggi-v3-header-text">
+        <div class="oggi-v3-eyebrow">${dateEb}</div>
+        <div class="oggi-v3-title">Nutrition</div>
+      </div>
+      <button class="oggi-v3-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
+    </div>
+    <div class="oggi-v3-subnav">
+      ${['oggi','integratori','analisi','piano'].map(id => {
+        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', analisi:'ANALISI', piano:'PIANO' };
+        return `<button class="oggi-v3-pill${id==='analisi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
+      }).join('')}
+    </div>`;
+
+  const windows = ['SETTIMANA','MESE','3MESI','6MESI'];
+  const winLabels = { 'SETTIMANA':'Settimana', 'MESE':'Mese', '3MESI':'3 mesi', '6MESI':'6 mesi' };
+  const winBar = `<div class="analisi-v3-window-bar">${windows.map(w =>
+    `<button class="analisi-v3-window-pill${ST.analisi.window===w?' active':''}" onclick="setAnalisiWindow('${w}')">${winLabels[w].toUpperCase()}</button>`
+  ).join('')}</div>`;
+
+  document.getElementById('page-analisi').innerHTML = v3Header + winBar + `<div id="analisi-content"></div>` + versionFooter();
+}
+
+// ── RENDER: contenuto dinamico (cambia su switch finestra e nav date) ──
+function renderAnalisiContent() {
+  if(!ST.analisi) ST.analisi = { window: 'SETTIMANA', dateOffset: 0 };
+  const window = ST.analisi.window;
+  const offset = ST.analisi.dateOffset || 0;
+  const { start, end } = _analisiGetWindowRange(window, offset);
+  const days = _analisiCollectDays(start, end);
+  const agg = _analisiAggregate(days);
+  const todayKey_ = todayKey();
+
+  // Marca giorni con isToday + hasExtras + kcal (per chart)
+  const chartData = days.map(d => ({
+    key: d.key,
+    kcal: d.totals.kcal,
+    hasExtras: d.extrasN > 0,
+    isToday: d.key === todayKey_,
+  }));
+  const heatmapData = days.map(d => ({
+    key: d.key,
+    status: d.status,
+    dayData: d.dayData,
+    isToday: d.key === todayKey_,
+  }));
+
+  // Eyebrow + range nav
+  const lbl = _analisiGetWindowLabel(window, offset, start, end);
+  const canNext = offset < 0; // non si naviga nel futuro
+  const navHead = `<div class="analisi-v3-nav-head">
+    <button class="analisi-v3-nav-btn" onclick="setAnalisiDateOffset(${offset - 1})">‹</button>
+    <div style="text-align:center;flex:1;">
+      <div class="analisi-v3-nav-eb">${lbl.eb}</div>
+      ${lbl.range ? `<div class="analisi-v3-nav-range">${lbl.range}</div>` : ''}
+    </div>
+    <button class="analisi-v3-nav-btn" onclick="setAnalisiDateOffset(${offset + 1})" ${canNext ? '' : 'disabled'}>›</button>
+  </div>`;
+
+  // Nota dati parziali (mostriamo sempre con info N/totale)
+  const isWeekCurrent = (window === 'SETTIMANA' && offset === 0);
+  const expectedDays = isWeekCurrent ? (() => {
+    // Per settimana corrente, conta solo i giorni passati o oggi
+    return days.filter(d => d.key <= todayKey_).length;
+  })() : days.length;
+  const showParzNote = agg.withDataN < expectedDays;
+  const parzNote = showParzNote
+    ? `<div class="analisi-v3-parz">DATI PARZIALI · ${agg.withDataN}/${days.length} GIORNI</div>`
+    : '';
+
+  // Stat cards
+  // Confronto con vista precedente (solo SETTIMANA)
+  let kcalDelta = null, zoneDelta = null;
+  if(window === 'SETTIMANA') {
+    const prev = _analisiGetWindowRange(window, offset - 1);
+    const prevDays = _analisiCollectDays(prev.start, prev.end);
+    const prevAgg = _analisiAggregate(prevDays);
+    kcalDelta = agg.avgKcal - prevAgg.avgKcal;
+    zoneDelta = agg.inZoneN - prevAgg.inZoneN;
+  }
+  const fmtDelta = (d, unit) => {
+    if(d === null || d === 0) return '';
+    const sign = d > 0 ? '↑' : '↓';
+    const cls = d > 0 ? 'up' : 'down';
+    return `<div class="analisi-v3-stat-sub ${cls}">${sign} ${Math.abs(d)} ${unit}</div>`;
+  };
+  const adherencePct = days.length ? Math.round((agg.inZoneN / days.length) * 100) : 0;
+  const statCards = `<div class="analisi-v3-stat-row">
+    <div class="analisi-v3-stat-card">
+      <div class="analisi-v3-stat-eb">MEDIA KCAL/DIE</div>
+      <div class="analisi-v3-stat-val${agg.avgKcal >= 10000 ? ' small' : ''}">${fmtNum(agg.avgKcal)}</div>
+      ${window === 'SETTIMANA' ? fmtDelta(kcalDelta, 'VS PREC.') : `<div class="analisi-v3-stat-sub">${agg.withDataN > 0 ? 'KCAL/GIORNO' : 'NESSUN DATO'}</div>`}
+    </div>
+    <div class="analisi-v3-stat-card">
+      <div class="analisi-v3-stat-eb">GIORNI IN ZONA</div>
+      <div class="analisi-v3-stat-val">${agg.inZoneN}<span style="font-size:14px;color:var(--t3);font-weight:500;">/${days.length}</span></div>
+      ${window === 'SETTIMANA' ? fmtDelta(zoneDelta, 'VS PREC.') : `<div class="analisi-v3-stat-sub">${adherencePct}% ADERENZA</div>`}
+    </div>
+    <div class="analisi-v3-stat-card">
+      <div class="analisi-v3-stat-eb">PASTI MEDIA/DIE</div>
+      <div class="analisi-v3-stat-val">${agg.avgMeals.toFixed(1)}</div>
+      <div class="analisi-v3-stat-sub">${agg.totalMeals} TOTALI</div>
+    </div>
+  </div>`;
+
+  // Confronto settimana vs settimana (compatto, solo per SETTIMANA)
+  let vsPrev = '';
+  if(window === 'SETTIMANA' && (kcalDelta !== null || zoneDelta !== null)) {
+    const prevRange = _analisiGetWindowRange(window, offset - 1);
+    const prevLbl = `${prevRange.start.getDate()}-${prevRange.end.getDate()} ${ANALISI_MON_S[prevRange.start.getMonth()]}`;
+    const zonePart = zoneDelta > 0 ? `<span class="up">↑ ${zoneDelta} GIORN${zoneDelta === 1 ? 'O' : 'I'} IN ZONA</span>`
+      : zoneDelta < 0 ? `<span class="down">↓ ${Math.abs(zoneDelta)} GIORN${Math.abs(zoneDelta) === 1 ? 'O' : 'I'} IN ZONA</span>`
+      : `STESSI GIORNI IN ZONA`;
+    const kcalPart = kcalDelta > 0 ? `<span class="up">+${kcalDelta} KCAL MEDIA</span>`
+      : kcalDelta < 0 ? `<span class="down">${kcalDelta} KCAL MEDIA</span>`
+      : `KCAL INVARIATE`;
+    vsPrev = `<div class="analisi-v3-vs-prev">VS SETT. SCORSA · ${prevLbl} <span class="sep">·</span> ${zonePart} <span class="sep">·</span> ${kcalPart}</div>`;
+  }
+
+  // Chart kcal
+  const targetKcal = ST.TARGET.kcal || 2000;
+  const chartHTML = `<section class="analisi-v3-section">
+    <div class="analisi-v3-section-head">
+      <span class="analisi-v3-section-eb">ANDAMENTO KCAL · VS TARGET ${targetKcal}</span>
+    </div>
+    <h3 class="analisi-v3-section-title">Calorie giornaliere</h3>
+    <div class="analisi-v3-chart-wrap">${_analisiRenderAreaChart(chartData, targetKcal, window)}</div>
+    <div class="analisi-v3-chart-legend">
+      <span class="leg-item"><span class="leg-dot"></span>KCAL REALI</span>
+      <span class="leg-item"><span class="leg-dot extra"></span>EXTRA REGISTRATO</span>
+      <span class="leg-item"><span class="leg-line"></span>TARGET</span>
+    </div>
+  </section>`;
+
+  // Heatmap
+  const tPC = ST.TARGET.pCarbo || 40;
+  const tPP = ST.TARGET.pProt  || 30;
+  const tPF = ST.TARGET.pFat   || 30;
+  const heatmapKind = window === 'SETTIMANA' ? 'week'
+    : window === 'MESE'      ? 'month'
+    : 'multi-month';
+  const heatmapHTML = `<section class="analisi-v3-section">
+    <div class="analisi-v3-section-head">
+      <span class="analisi-v3-section-eb">STATUS ZONA · GIORNO PER GIORNO</span>
+      <span class="analisi-v3-section-count">${agg.inZoneN}/${days.length}</span>
+    </div>
+    <h3 class="analisi-v3-section-title">Aderenza ${tPC}/${tPP}/${tPF}</h3>
+    <div class="analisi-v3-heatmap">${_analisiRenderHeatmap(heatmapData, heatmapKind)}</div>
+    <div class="analisi-v3-heatmap-legend">
+      <span class="leg-item"><span class="leg-dot iz"></span>IN ZONA</span>
+      <span class="leg-item"><span class="leg-dot az"></span>QUASI</span>
+      <span class="leg-item"><span class="leg-dot oz"></span>FUORI</span>
+      <span class="leg-item"><span class="leg-dot nd"></span>NO DATI</span>
+    </div>
+  </section>`;
+
+  // Macro distribution
+  const macroHTML = `<section class="analisi-v3-section">
+    <div class="analisi-v3-section-head">
+      <span class="analisi-v3-section-eb">MACRO DISTRIBUTION</span>
+    </div>
+    <h3 class="analisi-v3-section-title">Media giornaliera</h3>
+    ${_analisiRenderMacroBars(agg, ST.TARGET)}
+  </section>`;
+
+  // Empty state generale (zero giorni con dati)
+  let content;
+  if(agg.withDataN === 0) {
+    content = `<div class="analisi-v3-empty">
+      <div class="analisi-v3-empty-emoji">📊</div>
+      <div class="analisi-v3-empty-title">Nessun dato in questa finestra</div>
+      <div class="analisi-v3-empty-text">REGISTRA PASTI IN OGGI PER VEDERE LE TENDENZE</div>
+    </div>`;
+  } else {
+    content = statCards + vsPrev + chartHTML + heatmapHTML + macroHTML;
+  }
+
+  const wrap = `<div class="analisi-v3-content">${navHead}${parzNote}${content}</div>`;
+  const target = document.getElementById('analisi-content');
+  if(target) target.innerHTML = wrap;
+}
+
+// ── RENDER entry point ──
+function renderAnalisi() {
+  renderAnalisiShell();
+  renderAnalisiContent();
+}
+
+// ── Handler: cambia finestra (SETTIMANA / MESE / 3MESI / 6MESI) ──
+function setAnalisiWindow(window) {
+  if(!ST.analisi) ST.analisi = { window: 'SETTIMANA', dateOffset: 0 };
+  if(ST.analisi.window === window) return;
+  ST.analisi.window = window;
+  ST.analisi.dateOffset = 0; // reset offset al cambio finestra
+  renderAnalisi(); // ridisegna shell + content (la shell aggiorna la pill attiva)
+}
+
+// ── Handler: cambia offset date (‹ / ›) ──
+function setAnalisiDateOffset(offset) {
+  if(!ST.analisi) ST.analisi = { window: 'SETTIMANA', dateOffset: 0 };
+  if(offset > 0) return; // mai nel futuro
+  ST.analisi.dateOffset = offset;
+  renderAnalisiContent();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DAY DETAIL OVERLAY — drilldown chart/heatmap → dettaglio giorno
+// ═══════════════════════════════════════════════════════════
+function openDayDetailScreen(dateStr) {
+  ST.dayDetailScreen = { date: dateStr, menuOpen: false };
+  renderDayDetailScreen();
+}
+
+function closeDayDetailScreen() {
+  const el = document.getElementById('daydetail-overlay');
+  if(el) {
+    const screen = el.querySelector('.daydetail-screen');
+    if(screen) screen.classList.add('dismissing');
+    setTimeout(() => {
+      ST.dayDetailScreen = null;
+      const ex = document.getElementById('daydetail-overlay');
+      if(ex) ex.remove();
+    }, 200);
+  } else {
+    ST.dayDetailScreen = null;
+  }
+}
+
+function dayDetailToggleMenu() {
+  if(!ST.dayDetailScreen) return;
+  ST.dayDetailScreen.menuOpen = !ST.dayDetailScreen.menuOpen;
+  renderDayDetailScreen();
+}
+
+function dayDetailModifyTap() {
+  if(!ST.dayDetailScreen) return;
+  const date = ST.dayDetailScreen.date;
+  // Naviga tab Oggi a quella data
+  closeDayDetailScreen();
+  setTimeout(() => goToDay(date), 220);
+}
+
+function renderDayDetailScreen() {
+  if(!ST.dayDetailScreen) return;
+  const date = ST.dayDetailScreen.date;
+  const dayData = ST.db.days && ST.db.days[date] ? ST.db.days[date] : null;
+  const totals = dayData ? dayTotals(dayData) : {kcal:0, protein:0, carbs:0, fat:0};
+  const status = _zoneStatusForDayKey(date);
+
+  // Verifica se il giorno è nella settimana corrente (per visibilità kebab)
+  const todayKey_ = todayKey();
+  const { start: weekStart, end: weekEnd } = _analisiGetWindowRange('SETTIMANA', 0);
+  const dt = new Date(date + 'T12:00:00');
+  const isInCurrentWeek = dt >= weekStart && dt <= weekEnd;
+
+  // Title data formatted
+  const dateObj = new Date(date + 'T12:00:00');
+  const dowL = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][dateObj.getDay()];
+  const monL = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][dateObj.getMonth()];
+  const titleStr = `${dowL} ${dateObj.getDate()} ${monL} ${dateObj.getFullYear()}`;
+
+  // Status pill
+  const tPC = ST.TARGET.pCarbo || 40;
+  const tPP = ST.TARGET.pProt  || 30;
+  const tPF = ST.TARGET.pFat   || 30;
+  const statusLabel = status === 'inZone' ? 'NELLA ZONA'
+    : status === 'almostZone' ? 'QUASI ZONA'
+    : status === 'outOfZone'  ? 'FUORI ZONA'
+    : 'NESSUN DATO';
+  const statusClass = status === 'inZone' ? 'in-zone'
+    : status === 'almostZone' ? 'almost-zone'
+    : status === 'outOfZone'  ? 'out-of-zone'
+    : 'no-data';
+  const statusPill = `<span class="daydetail-summary-pill ${statusClass}"><span class="dot"></span>${statusLabel}</span>`;
+  const targetStr = `<span class="daydetail-summary-target">${tPC} · ${tPP} · ${tPF} ±2%</span>`;
+
+  // Kcal summary
+  const targetKcal = ST.TARGET.kcal || 2000;
+  const kcalDelta = totals.kcal - targetKcal;
+  const deltaCls = Math.abs(kcalDelta) < 50 ? 'ok' : (kcalDelta > 0 ? 'over' : 'under');
+  const deltaSign = kcalDelta > 0 ? '+' : '';
+  const deltaLbl = Math.abs(kcalDelta) < 50 ? 'IN LINEA' : (kcalDelta > 0 ? `${deltaSign}${kcalDelta} OLTRE TARGET` : `${kcalDelta} VS TARGET`);
+
+  const kcalRow = `<div class="daydetail-summary-kcal">
+    <div>
+      <div class="daydetail-summary-kcal-val">${fmtNum(totals.kcal)} <span style="font-size:12px;color:var(--t3);font-weight:500;letter-spacing:.08em;">KCAL</span></div>
+      <div class="daydetail-summary-kcal-target">su ${fmtNum(targetKcal)} obiettivo</div>
+    </div>
+    <div class="daydetail-summary-delta ${deltaCls}">${deltaLbl}</div>
+  </div>`;
+
+  // Macro bars
+  const macroAgg = {
+    avgCarb: totals.carbs,
+    avgProt: totals.protein,
+    avgFat:  totals.fat,
+    avgPC: 0, avgPP: 0, avgPF: 0,
+  };
+  if((totals.carbs + totals.protein + totals.fat) > 0) {
+    const totKcal = totals.carbs * 4 + totals.protein * 4 + totals.fat * 9 || 1;
+    macroAgg.avgPC = Math.round((totals.carbs * 4 / totKcal) * 100);
+    macroAgg.avgPP = Math.round((totals.protein * 4 / totKcal) * 100);
+    macroAgg.avgPF = Math.round((totals.fat * 9 / totKcal) * 100);
+  }
+  const macroBars = _analisiRenderMacroBars(macroAgg, ST.TARGET);
+
+  // Timeline read-only del giorno
+  const meals = (dayData && dayData.meals) || [];
+  const taken = (dayData && dayData.suppsTaken) || [];
+  const rawLogs = (dayData && dayData.rawSuppLogs) || [];
+  // Extras V3 (solo se data === activeDay, altrimenti non disponibili in cache)
+  const extras = (date === ST.activeDay) ? (ST.extras || []) : [];
+
+  // Costruisci eventi cronologici
+  const events = [];
+  meals.forEach(m => {
+    const slotInfo = MEAL_SLOTS.find(s => s.id === m.slot) || MEAL_SLOTS[0];
+    events.push({
+      type: 'meal',
+      time: (m.time || slotInfo.time || '00:00'),
+      icon: slotInfo.icon,
+      name: m.description || slotInfo.label,
+      kcal: m.kcal || 0,
+      slot: slotInfo,
+    });
+  });
+  // Supplements taken (gruppi)
+  if(taken.length > 0 && ST.supps) {
+    const groups = {};
+    ST.supps.forEach(s => {
+      if(taken.includes(s.local_id)) {
+        const slot = s.slot || '08:00';
+        if(!groups[slot]) groups[slot] = { time: slot, items: [] };
+        groups[slot].items.push(s);
+      }
+    });
+    Object.values(groups).forEach(g => {
+      const names = g.items.map(s => s.name).join(' · ');
+      const totKcal = Math.round(g.items.reduce((a, s) => a + (Number(s.kcal) || 0) * (Number(s.dose_multiplier) || 1), 0));
+      events.push({
+        type: 'pkg',
+        time: g.time,
+        icon: '🌿',
+        name: `${g.items.length} integratori`,
+        meta: names,
+        kcal: totKcal,
+        tag: 'PACCHETTO',
+      });
+    });
+  }
+  // Raw supp logs (extra integratori legacy)
+  rawLogs.forEach(log => {
+    const supp = (ST.supps || []).find(s => s.name === log.name);
+    const coveredByGroup = supp && log.time === (supp.slot || '');
+    if(!coveredByGroup) {
+      events.push({
+        type: 'supp_log',
+        time: log.time || '00:00',
+        icon: '🌿',
+        name: log.name,
+        kcal: 0,
+        tag: 'EXTRA',
+      });
+    }
+  });
+  // Extras V3
+  extras.forEach(x => {
+    events.push({
+      type: 'extra',
+      time: x.slot || '00:00',
+      icon: '🌿',
+      name: x.name,
+      meta: `${x.dose} ${(x.dose_unit || 'cps').toUpperCase()}`,
+      kcal: Math.round(x.kcal || 0),
+      tag: 'EXTRA',
+    });
+  });
+
+  // Sort by time
+  events.sort((a, b) => String(a.time).localeCompare(String(b.time)));
+
+  const tlBody = events.length > 0
+    ? events.map(ev => `
+        <div class="daydetail-evt">
+          <span class="daydetail-evt-time">${ev.time.slice(0,5)}</span>
+          <span class="daydetail-evt-icon">${ev.icon}</span>
+          <div class="daydetail-evt-body">
+            <div class="daydetail-evt-name">${esc(ev.name)}</div>
+            ${ev.meta ? `<div class="daydetail-evt-meta">${esc(ev.meta)}</div>` : ''}
+          </div>
+          <span class="daydetail-evt-kcal">${ev.kcal > 0 ? ev.kcal + ' kcal' : ''}</span>
+          ${ev.tag ? `<span class="daydetail-evt-tag ${ev.tag === 'EXTRA' ? 'extra' : 'pkg'}">${ev.tag}</span>` : ''}
+        </div>`).join('')
+    : `<div class="daydetail-evt-empty">Nessun evento registrato</div>`;
+
+  // Menu kebab (solo settimana corrente)
+  const kebabBtn = isInCurrentWeek
+    ? `<button class="daydetail-kebab" onclick="dayDetailToggleMenu()" title="Modifica giorno">···</button>`
+    : `<span class="daydetail-kebab hidden">·</span>`;
+  const menuHTML = (ST.dayDetailScreen.menuOpen && isInCurrentWeek)
+    ? `<div class="daydetail-menu-overlay" onclick="if(event.target===this)dayDetailToggleMenu()">
+         <div class="daydetail-menu">
+           <button class="daydetail-menu-item" onclick="dayDetailModifyTap()">Modifica giorno</button>
+           <div class="daydetail-menu-helper">SOLO PER GIORNI DELLA SETT. CORRENTE</div>
+         </div>
+       </div>`
+    : '';
+
+  const overlayHTML = `<div id="daydetail-overlay" class="daydetail-overlay" onclick="if(event.target===this)closeDayDetailScreen()">
+    <div class="daydetail-screen">
+      <div class="daydetail-accent"></div>
+      <div class="daydetail-header">
+        <button class="daydetail-back" onclick="closeDayDetailScreen()">‹ INDIETRO</button>
+        <div class="daydetail-title">${titleStr}</div>
+        ${kebabBtn}
+      </div>
+      <div class="daydetail-body">
+        <section class="daydetail-summary-card">
+          <div class="daydetail-summary-zona">${statusPill}${targetStr}</div>
+          ${kcalRow}
+          ${macroBars}
+        </section>
+        <section class="daydetail-timeline-card">
+          <div class="daydetail-timeline-eb">TIMELINE GIORNATA · READ-ONLY · ${events.length} EVENT${events.length === 1 ? 'O' : 'I'}</div>
+          <h3 class="daydetail-timeline-title">Cosa hai registrato</h3>
+          ${tlBody}
+        </section>
+      </div>
+    </div>
+    ${menuHTML}
+  </div>`;
+
+  // Inserisci/aggiorna l'overlay
+  const existing = document.getElementById('daydetail-overlay');
+  if(existing) {
+    existing.outerHTML = overlayHTML;
+  } else {
+    document.body.insertAdjacentHTML('beforeend', overlayHTML);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE: STORICO (LEGACY) — sostituito da Analisi v3 (18 mag 2026)
+// ═══════════════════════════════════════════════════════════
+// [LEGACY-STORICO-V3] non più chiamata da showPage/renderPage.
+// Funzione preservata fino a verifica produzione Analisi v3, poi rimuovere
+// insieme a `setReportRange`, ST.reportRange, classe .storico-extra-tag.
+function renderStoricoLegacy(){
   const days=Object.keys(ST.db.days).sort().reverse();
   const today=todayKey();
   const rangeDays=days.filter(d=>!ST.db.days[d]?.fasting).slice(0,ST.reportRange);
@@ -10522,13 +11486,19 @@ function renderStorico(){
   return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}${extraTag}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
   </div>`;}).join('')}`;
 
-  document.getElementById('page-storico').innerHTML=nutriSubNav('storico')+html+versionFooter();
+  // [LEGACY-STORICO-V3] target DOM page-storico non esiste più (sostituito da page-analisi).
+  // Funzione preservata per safety ma non chiamata da showPage. Nessun effetto runtime.
+  const el = document.getElementById('page-storico') || document.getElementById('page-analisi');
+  if(el) el.innerHTML = nutriSubNav('storico') + html + versionFooter();
 }
 
 // ═══════════════════════════════════════════════════════════
 function nutriSubNav(active){
-  return `<nav class="nutrition-subnav">${['oggi','integratori','storico','piano'].map((id,_,arr)=>{
-    const labels={oggi:'Oggi',integratori:'Integratori',storico:'Storico',piano:'Piano'};
+  // 18 mag 2026: Storico → Analisi (refresh tab → dashboard analitica).
+  // Accetta sia 'storico' che 'analisi' come active per retrocompat (alias gestiti da showPage).
+  if(active === 'storico') active = 'analisi';
+  return `<nav class="nutrition-subnav">${['oggi','integratori','analisi','piano'].map((id,_,arr)=>{
+    const labels={oggi:'Oggi',integratori:'Integratori',analisi:'Analisi',piano:'Piano'};
     return `<button class="nsn-pill${active===id?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
   }).join('')}</nav>`;
 }
@@ -14054,7 +15024,7 @@ async function deleteSupp(id){
   }
 }
 
-function setReportRange(r){ST.reportRange=r;renderStorico();}
+function setReportRange(r){ST.reportRange=r; if(typeof renderStoricoLegacy === 'function') renderStoricoLegacy(); } // [LEGACY-STORICO-V3] no-op pratico: renderStoricoLegacy non chiamato dal routing
 function goToDay(day){ST.activeDay=day;ST.advice='';showPage('oggi');}
 
 function enterTestMode() {
