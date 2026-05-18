@@ -31,12 +31,13 @@ https://github.com/IgnazioF321621/benessere-forma
 6. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
 7. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
 
-**Da rifinire** (post-Integratori v3 sera 16 mag):
+**Da rifinire** (post-Integratori v3 + Step 2):
 - ~~Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items~~ ✅ fixato (commit `73d141b`)
 - ~~Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`~~ ✅ fatto (commit `0724a63`)
-- **Step 2 modulo Integratori**: ridisegno flusso extra come eventi `supplements_log` invece di righe persistenti in `supplements`. Risolve i "gruppi fantasma" 08:00 nel bottom sheet "+ Registra integratori" tab Oggi e gli extra fantasma in timeline
+- ~~Step 2 modulo Integratori: ridisegno flusso extra come eventi `supplements_log`~~ ✅ completato 18 mag 2026 (commit `306defe` — vedi sotto-sezione "Flusso Registra Extra")
 - Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom)
 - Refresh tab Storico + Piano (legacy → design system v3)
+- Pulizia funzioni "Singolo" legacy dormienti (`setSuppSheetMode('singolo')` + render legacy + relative funzioni di salvataggio extra legacy) — non più chiamate da nessuna CTA dopo Step 2 ma presenti nel codice. Da rimuovere in cleanup separato.
 
 ## Tester attivi
 
@@ -50,10 +51,10 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 
 11 mag 2026: introdotti admin panel (`dashboardzona.html`) e logica residua kcal/macro nel modulo Nutrition. App pronta per testing con 3 tester (Ignazio + Ginevra + Isabella). Prossimi step in attesa di feedback tester.
 
-## Stato deploy attuale (16 maggio 2026)
+## Stato deploy attuale (18 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico + Integratori v3):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico + Integratori v3 + Step 2 extras):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
   - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone
   - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI + fasce chip post-workout corrette
@@ -74,9 +75,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
   - `73d141b` — fix(integratori): bottone ELIMINA visibile anche su pacchetto vuoto persistito in DB (regola corretta: visibile se `e.packageId` esiste, non basata su items.length)
   - `0724a63` — chore(integratori): cleanup legacy code Blocco 1+2 post-refresh v3 (−366 righe nette, 14 simboli rimossi)
   - `c28ef45` — fix(integratori): elimina pacchetto ora cancella anche i supplements orfani (no più gruppi fantasma in bottom sheet + timeline tab Oggi)
-- **File principale**: `zona-tracker.html` (~13800 righe dopo cleanup legacy + fix eliminazione)
+  - `de93daf` — docs: CLAUDE.md — refinement Integratori v3 sera 16 mag (secondo round documentale)
+  - `306defe` — feat(integratori): Step 2 — extras come supplements_log events (no più persistenza in supplements, "Conferma Extra" fullscreen + timeline ridisegno tab Oggi + tag EXTRA mint)
+- **File principale**: `zona-tracker.html` (~14400 righe dopo Step 2 extras)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.16 · 21:56` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.18 · 15:06` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
 ### Stato moduli Nutrition (16 maggio 2026, post-Integratori v3)
 - **Tab Oggi**: ✅ production-ready (design system v3 + tipografia v2)
@@ -727,13 +730,13 @@ Sintesi delle decisioni di design consolidate dopo Fase A/B/C/D. Queste **sostit
 - **Avatar Home V2**: bollino circolare 42px con iniziali (`first_name[0]+last_name[0]`), evergreen pieno, onclick → `openSettingsModal()`. Rimpiazza l'header globale (nascosto su home via `#header.home-v2-hide`).
 - **"coach" sostituisce "AI"** in tutti i copy visibili UI (decisione 10 maggio, applicata in Fase A).
 - **Tinta viola modulo Body** (`#AFA9EC`) usata in Home V2 come accent della card Body. Per i checkpoint Body futuri (M2 ricorrente) la tinta forte `#5E4A7A` resta riservata.
-- **Pacchetti vs Extra — architettura confermata 16 mag 2026 sera**:
+- **Pacchetti vs Extra — architettura confermata 16 mag 2026 sera, completata 18 mag 2026**:
   - **Pacchetti** = configurazioni persistenti dell'utente, vivono in `supplement_packages` + `supplement_package_items`. Definiscono "il mio set di integratori delle 08:45" con dose/molt/scorta editabili
-  - **Extra** = registrazioni mordi-e-fuggi, eventi una tantum. **DEVONO** vivere in `supplements_log` con flag, NO persistenza in `supplements`. Oggi sono ancora implementati come `supplements` con `slot` valorizzato (architettura legacy, vedi bug noto → Step 2 da fare)
+  - **Extra** = registrazioni mordi-e-fuggi, eventi una tantum. Vivono in `supplements_log` con flag `is_extra=true` (Step 2 completato 18 mag — commit `306defe`). Snapshot completo nome/dose/macro/costo immutabile nella riga log
   - **Pacchetti e extra sono mondi separati e indipendenti**: eliminare un pacchetto NON tocca gli extra, registrare un extra NON modifica pacchetti
   - Stesso integratore può essere preso sia dentro un pacchetto sia come extra al volo, senza che le due cose si influenzino
   - L'utente può registrare un extra anche più volte nella stessa giornata
-  - **Stato implementazione 16 mag**: pacchetti ✅ production-ready, extra 🟡 ancora architettura legacy (Step 2 in roadmap)
+  - **Stato implementazione 18 mag**: pacchetti ✅ production-ready, extras ✅ production-ready (eventi `supplements_log` con `is_extra=true` + Conferma Extra fullscreen + timeline tab Oggi ridisegnata + tag EXTRA mint)
 
 ## Modulo Integratori v3 (16 maggio 2026)
 
@@ -859,10 +862,81 @@ Decisione "A" del brief: nessuna colonna DB nuova, mappa client-side.
 - **Tipografia**: Syne 800/700/600/500 (identità, titoli, prosa) + JetBrains Mono 400/500/700 (TUTTI i numeri, label caps, eyebrow tecnici)
 - **Tinta modulo Nutrition**: `#FAC775` SOLO su accent bar header e pillola tab attiva, MAI come fondo card
 - **Pacchetti come entità**: l'utente costruisce libreria personalizzata (nome + emoji + orario + lista prodotti). Sostituisce il vecchio raggruppamento implicito per `slot`
-- **Extra come supplements senza package_id**: singoli con orario, fuori pacchetto. UI ridotta, edit semplice
+- **Extra come eventi `supplements_log`** (rivisto Step 2, 18 mag 2026): righe con `is_extra=true` + snapshot completo macro/dose/costo. NIENTE persistenza in `supplements` (vedi sotto-sezione "Flusso Registra Extra")
 - **Catalogo Nutrilite 64 prodotti reali** (Nutrilite + Bodykey + XS Sports), aggiornato una tantum via Google Sheet sync
 - **Selezione multipla nel catalogo, applicazione in blocco** → 1 sola transizione step2 → import in transazione
 - **"Già nel pacchetto"**: prodotti già linkati al pacchetto sorgente mostrati ma non riselezionabili (evita duplicati involontari). Costraint DB `UNIQUE (package_id, supplement_id)` è la rete di sicurezza
+
+### Flusso "Registra Extra" — Step 2 completato (18 maggio 2026, commit `306defe`)
+
+Ridisegno architetturale del flusso "Registra Extra" del modulo Integratori. Risolve il bug "gruppi fantasma 08:00 nel bottom sheet" e "extra fantasma in timeline" causato dall'architettura legacy che persisteva gli extras come `supplements` con `slot` valorizzato.
+
+**Architettura extras (mordi-e-fuggi)**:
+- Gli extras vivono SOLO in `supplements_log` come righe con `is_extra=true`
+- NESSUNA persistenza in `supplements` (regola architettonica fondamentale)
+- Pacchetti e extras sono mondi indipendenti: pacchetto eliminato NON tocca extras, registrare extra NON modifica pacchetti, stesso integratore in pacchetto + come extra al volo non hanno collisione
+- Snapshot immutabile salvato nella riga log (`supplement_name`, `supplement_codice`, `dose`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `costo`) — storico onesto anche se il catalogo Nutrilite cambia in futuro
+- Le macro dell'extra vengono scalate per ratio `dose / dose_die catalogo` (es. registro 2 cps di "Daily 1 cps = 4 kcal" → salva 8 kcal nella riga)
+- DB extension eseguita 18 mag: 9 colonne nuove su `supplements_log` (`is_extra`, `supplement_codice`, `dose`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `costo`) + 2 indici (`idx_supplements_log_extra` parziale su `is_extra=true`, `idx_supplements_log_date_extra` per timeline) + cleanup orfani `DELETE FROM supplements WHERE id NOT IN supplement_package_items`
+
+**Schermata Conferma Extra fullscreen** (`#confirm-extra-screen` overlay z-index 1700):
+- Entry: bottom sheet "+ Registra integratori" tab Oggi → tap card "Singolo · Fuori schema" → `openCatalogForRegisterExtra()` → catalogo Nutrilite in modalità `registerExtra` → seleziona N prodotti → tap "Aggiungi N prodotti" → `openConfirmExtraScreen(codici)` slide-up
+- Header: `‹ INDIETRO` Mono caps sinistra + `"Registra extra"` Syne centro + `REGISTRA` Mono caps evergreen destra (disabled se 0 prodotti o dose=0 o orario invalido)
+- Banda accent `#FAC775` 3px persistente in cima (continuità modulo Nutrition catalogo → conferma)
+- Eyebrow mint `"EVENTO MORDI-E-FUGGI · NESSUNA CONFIG. SALVATA"` (claim ontologico mint pill)
+- Titolone Syne 800 24px `"Conferma dose & orario"` + sottotitolo Syne 13px `"Stai registrando N prodotti fuori dai pacchetti."`
+- Counter Mono caps `"N PRODOTTI SELEZIONATI"`
+- Card per ogni prodotto (~~104px):
+  - Thumb 48×48 tinted via `getCatalogTint(item)` (riusa `CATEGORY_TINT_MAP` del catalogo) + texture diagonale `::after`
+  - Nome Syne 600 15px + meta caps `"{CATEGORIA} · {dose default} {unit}"`
+  - Riga DOSE: stepper `−/+` (28+28px) con input numerico al centro + select unità (cps/stick/barretta/misurino, esteso se diverso)
+  - Riga ORARIO: valore Mono 700 24px + button `MODIFICA ›` Mono caps evergreen → `prompt()` HH:MM
+  - Bottone `× RIMUOVI DA QUESTA REGISTRAZIONE` Mono caps rosso `#C44434` in fondo card
+- **Pattern Mail iOS undo 4s** su rimozione card: card sparisce, strip nero `"Rimosso · {nome} · ANNULLA"` 36px sostituisce per 4s, poi commit definitivo. Tap ANNULLA entro 4s → card ripristinata
+- **Default smart**: dose = `dose_die` del catalogo, orario = ora corrente al momento apertura schermata
+- **Empty state**: se l'utente rimuove TUTTI i prodotti → blocco centrato 📦 + `"Nessun prodotto da registrare"` + helper + CTA `"‹ Torna al catalogo"` (sostituisce sticky CTA bottom). Header REGISTRA disabled
+- **Back con conferma**: se l'utente ha modificato dose/orario rispetto al default OR ha rimosso card → `confirm("Annullare la registrazione?")`. Se nessuna modifica → back silent. Riapre catalog modal con selezione preservata in `ST.catalogSelected`
+- **CTA sticky bottom** evergreen full-width: `"REGISTRA N EXTRA"` invariabile (anche al singolare resta `"1 EXTRA"` come unità Mono caps, decisione design per ridurre rumore visivo)
+- **Submit**: per ogni item insert in `supplements_log` con macro/costo scalati per ratio dose (snapshot immutabile). Reset `ST.catalogSelected` + `ST.catalogContext` (consumati) + close schermata + reload `ST.extras` + re-render tab Oggi + toast undo Mail iOS 4s `"N EXTRA REGISTRATI · ANNULLA"` (id `#cextra-undo-toast`)
+- **Toast undo post-submit**: tap ANNULLA entro 4s → DELETE cascade su tutti gli ID inseriti + reload + re-render + toast secondario `"Registrazione annullata ↩️"`
+
+**Timeline tab Oggi ridisegnata** (`renderOggi`, case `extra` nuovo):
+- Eyebrow timeline: `"PIANIFICATI · REGISTRATI"` → `"PASTI · PACCHETTI · EXTRA · IN ORDINE CRONOLOGICO"`
+- `tlExtraEvents` da `ST.extras.filter(x => x.date === ST.activeDay)` mergiati con `tlMealEvents` + `tlSuppEvents`, sort cronologico per slot
+- Card extra (`.oggi-v3-event` + `.oggi-v3-event-extra`):
+  - Thumb 36×36 tinted via `getCatalogTint({categoria})` (lookup catalogo via `supplement_codice` o `supplement_name`)
+  - Nome Syne 600 14px + meta Mono 10px `"{kcal} KCAL · {dose} {UNIT}"` + macro inline `kcal → C → P → G` (regola dominio "tutte o nessuna" se ≥1 > 0)
+  - Tag `EXTRA` Mono caps 9.5px tracking 1.4 mint `#E6F4F2` + evergreen `#2A7A6F`
+- Niente check ✓ (l'evento È la registrazione, no "pianificato vs registrato")
+- Niente × o ▼ visibili → tap su card → modal conferma `"Eliminare la registrazione extra?"` (info-modal-overlay z-index 1600) → `doDeleteExtraFromTimeline()` → DELETE riga + reload + toast `"Extra eliminato 🗑️"`
+- Macro extras conteggiate in `dayTotals` via `_extrasV3Totals(day)` (limitato a `ST.activeDay` perché `ST.extras` è caricato solo per la data attiva; storico passato resta sul pattern legacy)
+
+**Tab Storico — minimal patch** (decisione esplicita design):
+- Tag `EXTRA ×N` Mono caps 8.5px tracking 1.4 mint+evergreen accanto alla data della card giorno attivo (today) se `ST.extras.length > 0` per quella data
+- Drilldown via tap sulla card → `goToDay(date)` → tab Oggi mostra i singoli extras con tag
+- **Niente restyle tab Storico** — resta layout legacy. Refresh completo Storico v3 in giro futuro dedicato
+
+**Animazioni transizione catalogo → conferma extra**:
+- Slide-up nuovo overlay 280ms `cubic-bezier(.16,1,.3,1)` via `@keyframes cextraSlideUp`
+- Card prodotto entrano in stagger 40ms per le prime 3 visibili (`animation-delay`) — `@keyframes cextraCardIn` 240ms
+- Banda `#FAC775` persistente in cima (continuità visiva catalog → conferma)
+- Back ‹ INDIETRO: slide-down 220ms `@keyframes cextraSlideDown` via classe `.dismissing`
+- Selezione catalogo preservata su back (catalog modal ritrova `ST.catalogSelected` intatto)
+- CTA REGISTRA `:active` scale .98 100ms
+
+**6 decisioni design chiuse con Claude Design**:
+1. Orario default per-prodotto = ora corrente apertura (non un orario unico per tutta la selezione)
+2. Tag `EXTRA` posizionato a destra timeline (gerarchia visiva: nome+meta a sinistra, tag a destra)
+3. CTA `"REGISTRA N EXTRA"` Mono caps invariabile anche al singolare (riduce rumore visivo plurale/singolare)
+4. Niente cross-reference pacchetto/extra (no indicatori "è anche nel pacchetto X")
+5. Undo Mail iOS sulla rimozione card in Conferma (no conferma destruttiva immediata)
+6. Macro `kcal·C·P·G` wrappabili su schermo stretto (no overflow forzato)
+
+**4 decisioni architetturali chiuse**:
+1. Schema `supplements_log` esteso (no nuova tabella)
+2. Snapshot completo immutabile (no JOIN runtime su `nutrilite_catalog`)
+3. Cleanup totale fantasmi via SQL `DELETE` (no migrazione retroattiva nello storico)
+4. Tab Storico solo minimal patch (no restyle in questo giro)
 
 ### Stato funzioni chiave Integratori v3
 
@@ -1095,6 +1169,70 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 
 ## Cosa abbiamo fatto
 
+### 18 maggio 2026 — Step 2 modulo Integratori: flusso "Registra Extra" ridisegnato come eventi mordi-e-fuggi ✅
+
+Sostituzione architetturale completa del flusso "Registra Extra". Stato precedente (deploy `v2026.05.16 · 21:56`): gli extras vivevano come righe persistenti in `supplements` con `slot` valorizzato → bug "gruppi fantasma" 08:00 nel bottom sheet `+ Registra integratori` e in timeline tab Oggi. Stato nuovo: gli extras sono EVENTI MORDI-E-FUGGI in `supplements_log` con flag `is_extra=true`, niente persistenza in `supplements`. **APP_VERSION**: `v2026.05.18 · 15:06`. **Commit**: `306defe`.
+
+Pacchetti e extras sono ora mondi separati e indipendenti (decisione architetturale confermata 16 mag sera, implementata 18 mag).
+
+**SQL Migrazione** (eseguito su Supabase prima del codice):
+- `supplements_log` esteso con 9 colonne: `is_extra boolean default false`, `supplement_codice text`, `dose numeric`, `dose_unit text`, `kcal numeric default 0`, `carbo`, `proteine`, `grassi`, `costo`
+- 2 indici: `idx_supplements_log_extra` su `(user_id, is_extra)` parziale `WHERE is_extra=true`, `idx_supplements_log_date_extra` su `(user_id, date, is_extra)` per query timeline
+- Cleanup totale fantasmi: `DELETE FROM supplements WHERE id NOT IN (SELECT supplement_id FROM supplement_package_items)` — globale per tutti gli utenti, sicuro perché i pacchetti reali sopravvivono e lo storico assunzioni in `supplements_log` referenzia `supplement_name` (text) non `supplements.id`
+- Snapshot fields immutabili: macro/dose/costo salvati nella riga `supplements_log` al momento dell'insert (no JOIN runtime su `nutrilite_catalog`, storico onesto anche se il catalogo cambia in futuro)
+
+**Schermata Conferma Extra fullscreen** (nuova):
+- Entry: bottom sheet `+ Registra integratori` tab Oggi → tap card `Singolo · Fuori schema` → `openCatalogForRegisterExtra()` apre catalogo in modalità `registerExtra` → seleziona N prodotti → CTA `Aggiungi N prodotti` → `openConfirmExtraScreen(codici)` slide-up
+- Header banda `#FAC775`: `‹ INDIETRO` + `"Registra extra"` + `REGISTRA` disabled se 0 prodotti
+- Eyebrow mint `"EVENTO MORDI-E-FUGGI · NESSUNA CONFIG. SALVATA"` (claim ontologico)
+- Titolo Syne 800 24px `"Conferma dose & orario"` + sub Syne 13px + counter Mono caps `"N PRODOTTI SELEZIONATI"`
+- Card per prodotto: thumb 48×48 tinted via `getCatalogTint`, nome Syne 600, meta caps `"CATEGORIA · dose default"`, stepper DOSE `−/+` + select unità (cps/stick/barretta/misurino), ORARIO Mono 700 24px + `MODIFICA ›` chip, bottone `× RIMUOVI` rosso `#C44434` in fondo card
+- Default smart: dose = `dose_die` del catalogo, orario = ora corrente al momento apertura
+- Pattern Mail iOS undo 4s per rimozione card: card sparisce, strip nero `"Rimosso · ANNULLA"` 36px per 4s, poi commit definitivo
+- Empty state: emoji 📦 + `"Nessun prodotto da registrare"` + CTA `"‹ Torna al catalogo"`
+- Back con conferma se dirty (dose/orario modificati o card rimosse), silent se pulito. Selezione catalogo preservata
+- CTA sticky bottom evergreen `"REGISTRA N EXTRA"` invariabile (decisione design — riduce rumore plurale/singolare)
+- Submit: insert N righe in `supplements_log` con macro/costo scalati per ratio `dose / dose_die catalogo` (snapshot immutabile). Reset catalog selection + close screens + reload `ST.extras` + re-render tab Oggi
+- Toast undo Mail iOS 4s post-submit (`#cextra-undo-toast` z-index 2100): `"N EXTRA REGISTRATI · ANNULLA"` → tap entro 4s → DELETE cascade su tutti gli ID inseriti
+
+**Timeline tab Oggi ridisegnata** (case `extra` in `renderOggi`):
+- Eyebrow: `"PIANIFICATI · REGISTRATI"` → `"PASTI · PACCHETTI · EXTRA · IN ORDINE CRONOLOGICO"`
+- `tlExtraEvents` da `ST.extras.filter(x => x.date === ST.activeDay)` mergiati con pasti + pacchetti, sort cronologico per slot
+- Card extra `.oggi-v3-event`: thumb 36×36 tinted via `getCatalogTint` (lookup catalogo via `supplement_codice` o `supplement_name`), nome Syne 600 14px, meta Mono 10px `"{kcal} KCAL · {dose} {UNIT}"` + macro inline `kcal → C → P → G` ("tutte o nessuna" se ≥1 > 0), tag `EXTRA` Mono caps 9.5px mint `#E6F4F2` evergreen `#2A7A6F`
+- Niente check ✓ (l'evento È la registrazione)
+- Tap card → modal conferma elimina (info-modal-overlay z-index 1600) → DELETE riga `supplements_log`
+- Macro extras conteggiate in `dayTotals` via `_extrasV3Totals(day)` (limitato a `ST.activeDay`)
+
+**Tab Storico minimal patch** (decisione esplicita design):
+- Tag `EXTRA ×N` Mono caps 8.5px tracking 1.4 mint+evergreen accanto alla data della card giorno attivo (today) se `ST.extras.length > 0`
+- Niente restyle tab Storico — refresh completo Storico v3 in giro futuro
+
+**Animazioni transizione catalogo → conferma extra**:
+- Slide-up overlay 280ms `cubic-bezier(.16,1,.3,1)` via `@keyframes cextraSlideUp`
+- Card prodotto stagger 40ms `animation-delay` × `@keyframes cextraCardIn` 240ms (prime 3 visibili)
+- Banda `#FAC775` persistente continuità modulo Nutrition (catalog → conferma)
+- Back: slide-down 220ms `@keyframes cextraSlideDown` via `.dismissing` class
+- CTA REGISTRA `:active` scale .98 100ms
+
+**Pattern undo Mail iOS in 3 punti**:
+1. Rimozione card singola in Conferma Extra (4s)
+2. Registrazione post-submit (4s toast bottom)
+3. Eliminazione extra dalla timeline (modal conferma esplicito, non undo timer)
+
+**Decisioni in autonomia**:
+- Schema colonne `date`/`slot` (NON `log_date`/`log_time` come SQL del brief) — adattato Step 1 prima di mostrare SQL
+- `_extrasV3Totals` limitato a `ST.activeDay` (storico passato non carica `ST.extras` per ogni giorno, futuro estendibile)
+- Tag Storico solo su card giorno attivo (layout legacy aggrega, no point di drop per righe individuali)
+- Funzioni legacy "Singolo" (`setSuppSheetMode('singolo')` + render legacy + search/save) restano dormienti — non più chiamate, da pulire in cleanup separato
+
+**Numeri finali**:
+- +590 righe nette
+- 22 funzioni nuove (`loadExtras`, `dbInsertExtraLog`, `dbDeleteExtraLog`, `openConfirmExtraScreen`, `closeConfirmExtraScreen`, `cextraBack`, `_cextraIsDirty`, `renderConfirmExtraScreen`, `_renderCextraCard`, `confirmExtraScreenSet`, `confirmExtraScreenAdjust`, `confirmExtraScreenEditTime`, `confirmExtraScreenRemove`, `confirmExtraScreenUndoRemove`, `confirmExtraScreenSubmit`, `_cextraShowUndoToast`, `_cextraDismissUndoToast`, `cextraUndoToastClick`, `confirmDeleteExtraFromTimeline`, `cancelDeleteExtraFromTimeline`, `doDeleteExtraFromTimeline`, `openCatalogForRegisterExtra`, `_extrasV3Totals`)
+- Modifiche a 6 funzioni esistenti (`dayTotals`, `goToCatalogStep2`, `renderOggi`, `renderStorico`, `openSuppSheet` HTML card "Singolo", `loadAndStart`+`refreshInBackground` bootstrap hooks)
+- Nuovo blocco CSS "CONFERMA EXTRA V3" + classi `.cextra-*`, `.oggi-v3-event*`, `.storico-extra-tag`
+
+**Modulo Integratori v3 ora completo in tutte le sue parti** (Blocco 1 pacchetti + Blocco 2 catalogo + Step 2 extras). Tab Integratori + flusso Conferma Extra + timeline tab Oggi tutti production-ready su design system v3 (Syne + JetBrains Mono + bone `#F5F3EE` + accent `#FAC775`).
+
 ### 16 maggio 2026 sera (post 20:31) — Refinement Integratori v3 + cleanup legacy ✅
 
 Tre commit incrementali di rifinitura/pulizia dopo la chiusura del primo round documentale (`b9ecd32`). Tutti su `zona-tracker.html`, nessuna modifica DB. **APP_VERSION finale**: `v2026.05.16 · 21:56`.
@@ -1140,7 +1278,7 @@ Rimossi (Blocco 2):
 
 Bug rilevato post-deploy `v21:33`: eliminando un pacchetto via `ELIMINA PACCHETTO`, la riga `supplement_packages` veniva cancellata (CASCADE rimuoveva `supplement_package_items`), ma i record `supplements` linkati restavano in DB con `slot` valorizzato. Conseguenza: integratori fantasma raggruppati per slot nel bottom sheet `+ Registra integratori` della tab Oggi + extra fantasma in timeline.
 
-Decisione architetturale confermata dall'utente: pacchetti e extra sono mondi separati e indipendenti. **Eliminare un pacchetto cancella anche TUTTI i suoi integratori dalla libreria**. Gli extra (futuro `supplements_log` events in Step 2) restano completamente intoccati.
+Decisione architetturale confermata dall'utente: pacchetti e extra sono mondi separati e indipendenti. **Eliminare un pacchetto cancella anche TUTTI i suoi integratori dalla libreria**. Gli extras (ora `supplements_log` events con `is_extra=true`, Step 2 completato 18 mag) restano completamente intoccati — non vivono in `supplements`.
 
 Fix `pkgEditorDoDelete()`:
 - Raccoglie `suppIds` da `ST.packageEditor.items.map(it => it.supplement_id).filter(Boolean)`
@@ -2784,7 +2922,6 @@ Sezione collassabile aggiunta in fondo al modal Impostazioni profilo (sopra il b
 - Alcuni integratori vecchi mostrano macro `—` (backfill SQL pendente)
 - `body_logs` non ha constraint UNIQUE(user_id, date) su Supabase — il salvataggio usa insert/update manuale
 - **Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo** — UX scadente su mobile (il prompt iOS richiede tap doppio, no clipboard suggestion per emoji). Da sostituire con: `<input type="time">` nascosto + emoji-grid custom o sheet picker. Documentato come decisione in autonomia al Blocco 1.
-- **Flusso "Registra extra" (bottom sheet `+ Registra integratori` tab Oggi → "Singolo · Fuori schema") usa ancora architettura legacy**: crea righe persistenti in `supplements` con `slot` valorizzato invece di registrare eventi una tantum in `supplements_log`. Conseguenza: gli extra appaiono come "gruppi fantasma" nel bottom sheet stesso (raggruppati per slot) e come righe extra in timeline tab Oggi. Da ridisegnare in **Step 2 modulo Integratori** separato — extra = eventi mordi-e-fuggi in `supplements_log`, niente persistenza in `supplements`.
 
 ## Note
 
