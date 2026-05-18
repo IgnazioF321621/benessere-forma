@@ -1113,6 +1113,92 @@ select.inp{cursor:pointer;}
 .catalog-v3-empty-text{font-family:'Syne',sans-serif;font-size:13px;color:#6B6557;line-height:1.5;max-width:280px;}
 .catalog-v3-empty-link{margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);background:none;border:none;cursor:pointer;padding:4px 0;}
 
+/* ── CONFERMA EXTRA V3 — Step 2 modulo Integratori (18 mag 2026) ── */
+.cextra-overlay{position:fixed;inset:0;background:#F5F3EE;z-index:1700;overflow-y:auto;display:none;flex-direction:column;}
+.cextra-overlay.visible{display:flex;animation:cextraSlideUp .28s cubic-bezier(.16,1,.3,1);}
+@keyframes cextraSlideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.cextra-overlay.dismissing{animation:cextraSlideDown .22s cubic-bezier(.7,0,.84,0) forwards;}
+@keyframes cextraSlideDown{from{transform:translateY(0);opacity:1;}to{transform:translateY(-40px);opacity:0;}}
+.cextra-accent{height:3px;background:var(--mod-nutrition);flex-shrink:0;}
+.cextra-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#F5F3EE;flex-shrink:0;position:sticky;top:0;z-index:2;}
+.cextra-back,.cextra-submit{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;background:none;border:none;cursor:pointer;padding:8px 4px;color:var(--t2);}
+.cextra-submit{color:var(--acc);}
+.cextra-submit:disabled{opacity:.4;cursor:not-allowed;}
+.cextra-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);line-height:1.3;flex:1;text-align:center;}
+.cextra-body{padding:8px 16px 100px;flex:1;}
+
+.cextra-eyebrow-mint{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.22em;line-height:1.4;text-transform:uppercase;color:var(--acc);background:var(--acc-lt);padding:5px 10px;border-radius:6px;margin-bottom:14px;}
+.cextra-intro-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;color:var(--t1);letter-spacing:-0.3px;line-height:1.25;margin-bottom:6px;}
+.cextra-intro-sub{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);line-height:1.5;margin-bottom:14px;}
+.cextra-count{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.2em;line-height:1.4;text-transform:uppercase;color:var(--t3);margin-bottom:14px;}
+
+.cextra-card{display:flex;flex-direction:column;gap:0;padding:14px;background:var(--s1);border:0.5px solid #DDD9D0;border-radius:14px;box-shadow:0 1px 2px rgba(20,15,5,.04);margin-bottom:10px;}
+.cextra-card.entering{animation:cextraCardIn .24s cubic-bezier(.16,1,.3,1);}
+@keyframes cextraCardIn{from{transform:translateY(8px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.cextra-card-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.cextra-thumb{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;line-height:1;position:relative;overflow:hidden;}
+.cextra-thumb::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,0) 60%);pointer-events:none;}
+.cextra-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;color:#1A1814;line-height:1.25;}
+.cextra-meta{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.14em;line-height:1.3;text-transform:uppercase;color:#6B6557;margin-top:4px;}
+.cextra-field{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #E8E4DC;}
+.cextra-field-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;line-height:1.4;color:var(--t3);text-transform:uppercase;min-width:60px;}
+.cextra-time-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:var(--t1);font-variant-numeric:tabular-nums;flex:1;}
+.cextra-time-edit{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;color:var(--acc);background:none;border:none;cursor:pointer;padding:4px 6px;}
+.cextra-stepper{display:inline-flex;align-items:center;gap:0;border:1px solid var(--b2);border-radius:6px;overflow:hidden;background:var(--bg);}
+.cextra-stepper button{width:28px;height:28px;background:transparent;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--t2);line-height:1;}
+.cextra-stepper button:active{background:var(--s2);}
+.cextra-stepper input{width:48px;height:28px;border:none;border-left:1px solid var(--b2);border-right:1px solid var(--b2);text-align:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--t1);background:var(--bg);font-variant-numeric:tabular-nums;outline:none;}
+.cextra-unit-sel{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);background:var(--bg);border:1px solid var(--b2);border-radius:6px;padding:4px 6px;height:28px;}
+.cextra-remove{display:block;width:100%;margin-top:10px;padding:10px 0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.22em;line-height:1.4;color:#C44434;text-transform:uppercase;background:none;border:none;border-top:1px solid #E8E4DC;cursor:pointer;}
+
+.cextra-removed-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;height:36px;padding:0 14px;background:#262626;color:#F5F3EE;border-radius:10px;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;animation:cextraStripIn .18s ease;}
+@keyframes cextraStripIn{from{opacity:0;transform:scale(.98);}to{opacity:1;transform:scale(1);}}
+.cextra-removed-strip span:first-child{color:#C8C3B8;}
+.cextra-removed-strip button{background:none;border:none;color:#FAC775;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:6px 10px;}
+
+.cextra-sticky-cta{position:sticky;bottom:0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));margin:0 -16px -100px;background:linear-gradient(180deg,rgba(245,243,238,0) 0%,rgba(245,243,238,1) 35%);}
+.cextra-cta{width:100%;background:var(--acc);color:#fff;border:none;border-radius:14px;padding:16px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.18em;line-height:1.2;text-transform:uppercase;cursor:pointer;transition:transform .1s ease,opacity .2s ease;display:flex;align-items:center;justify-content:center;gap:8px;}
+.cextra-cta:active{transform:scale(.98);}
+.cextra-cta-count{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;letter-spacing:.02em;}
+.cextra-cta.disabled{opacity:.45;cursor:not-allowed;}
+
+.cextra-empty{padding:60px 24px 40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.cextra-empty-emoji{font-size:56px;line-height:1;margin-bottom:6px;opacity:.6;}
+.cextra-empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);line-height:1.3;}
+.cextra-empty-text{font-family:'Syne',sans-serif;font-size:13px;color:#6B6557;line-height:1.5;max-width:280px;}
+.cextra-empty-link{margin-top:14px;padding:14px 22px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--acc);background:transparent;border:1.5px solid var(--acc);border-radius:12px;cursor:pointer;}
+
+/* ── Toast undo Mail iOS post-submit Conferma Extra ── */
+.cextra-undo-toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);background:#262626;color:#F5F3EE;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:16px;font-family:'Syne',sans-serif;font-size:13px;z-index:2100;box-shadow:0 8px 24px rgba(0,0,0,.25);min-width:280px;max-width:90vw;animation:cextraStripIn .2s ease;}
+.cextra-undo-toast b{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;letter-spacing:.04em;}
+.cextra-undo-toast button{background:none;border:none;color:#FAC775;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;cursor:pointer;padding:6px 10px;}
+
+/* ── Timeline tab Oggi v3.1 — Step 2 modulo Integratori ── */
+.oggi-v3-timeline-mixed{display:flex;gap:14px;align-items:stretch;}
+.oggi-v3-rail{flex-shrink:0;width:56px;display:flex;flex-direction:column;padding-top:6px;position:relative;}
+.oggi-v3-rail::before{content:'';position:absolute;left:50%;top:14px;bottom:14px;width:1px;background:#E8E4DC;transform:translateX(-0.5px);}
+.oggi-v3-rail-tick{position:relative;padding:6px 0;text-align:center;flex-shrink:0;}
+.oggi-v3-rail-tick-time{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--t3);background:#F5F3EE;padding:4px 4px;line-height:1.2;font-variant-numeric:tabular-nums;position:relative;z-index:1;display:inline-block;}
+.oggi-v3-events{flex:1;min-width:0;display:flex;flex-direction:column;gap:0;}
+.oggi-v3-event{display:flex;align-items:center;gap:11px;padding:11px 13px;background:var(--s1);border:0.5px solid #DDD9D0;border-radius:12px;box-shadow:0 1px 2px rgba(20,15,5,.025);margin-bottom:8px;min-height:60px;}
+.oggi-v3-event-thumb{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;line-height:1;}
+.oggi-v3-event-body{flex:1;min-width:0;}
+.oggi-v3-event-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--t1);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.oggi-v3-event-meta{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.07em;line-height:1.4;color:var(--t3);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.oggi-v3-event-meta .sep{color:#C8C3B8;}
+.oggi-v3-event-meta .c{color:#A0490A;font-weight:600;}
+.oggi-v3-event-meta .p{color:#1A6B35;font-weight:600;}
+.oggi-v3-event-meta .g{color:#7A5500;font-weight:600;}
+.oggi-v3-event-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;padding:2px 6px;border-radius:4px;flex-shrink:0;}
+.oggi-v3-event-tag.extra{background:var(--acc-lt);color:var(--acc);}
+.oggi-v3-event-tag.pkg{background:#F0EDE6;color:#6B6557;}
+.oggi-v3-event-check{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--acc-lt);color:var(--acc);font-size:12px;display:flex;align-items:center;justify-content:center;line-height:1;}
+.oggi-v3-event-extra{cursor:pointer;}
+.oggi-v3-event-extra:active{transform:scale(.99);}
+
+/* ── Tag EXTRA in tab Storico (Step 2 minimal patch) ── */
+.storico-extra-tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--acc-lt);color:var(--acc);margin-left:6px;vertical-align:middle;}
+
 </style>
 </head>
 <body>
@@ -2083,6 +2169,9 @@ select.inp{cursor:pointer;}
 <!-- PACKAGE EDITOR — fullscreen overlay (Integratori v3, 16 mag 2026) -->
 <div id="package-editor-overlay" class="pkg-editor-overlay"></div>
 
+<!-- CONFERMA EXTRA — fullscreen overlay (Step 2 modulo Integratori, 18 mag 2026) -->
+<div id="confirm-extra-screen" class="cextra-overlay"></div>
+
 <!-- WEIGHT MODAL -->
 <div id="weight-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeWeightModal()">
   <div class="weight-modal-inner">
@@ -2348,7 +2437,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.16 · 21:56';
+const APP_VERSION = '2026.05.18 · 15:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2459,6 +2548,11 @@ const ST = {
   extraSuppExpanded: {},
   // BLOCCO 1 Integratori v3 (16 mag 2026) — pacchetti via supplement_packages
   packages: [],            // [{id, name, emoji, time, sort_order, items:[{id, supplement_id, sort_order, supplement:{...}}]}]
+  // Integratori Step 2 (18 mag 2026) — extras come supplements_log events
+  extras: [],              // [{id, date, slot, name, codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at}] della data attiva
+  confirmExtra: null,      // schermata Conferma Extra fullscreen: { items:[{codice,name,categoria,linea,dose,dose_unit,slot,kcal,carbo,proteine,grassi,costo,confezione}], removeUndo:{codice:{timer,item}}, submitting }
+  pkgExtraDeleteConfirm: null, // { logId, name } — modal conferma elimina extra dalla timeline
+  extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
   pkgRemoveItemConfirm: null,    // { itemId, supplementId, name } — toast undo rimozione item da pacchetto
@@ -2892,16 +2986,31 @@ function extraSuppsTotals(day) {
 }
 
 // Helper unico: totali completi del giorno (pasti + standard supps + extra supps).
+// Step 2 Integratori (18 mag 2026): totali extras dalla nuova architettura supplements_log.
+// ST.extras è caricato solo per ST.activeDay. Se day === ST.db.days[ST.activeDay], sommo gli ST.extras.
+function _extrasV3Totals(day) {
+  const todayDay = ST.db && ST.db.days && ST.db.days[ST.activeDay];
+  if(day !== todayDay) return {kcal:0,protein:0,carbs:0,fat:0};
+  const tot = (ST.extras || []).reduce((a, x) => ({
+    kcal:    a.kcal    + (Number(x.kcal)     || 0),
+    protein: a.protein + (Number(x.proteine) || 0),
+    carbs:   a.carbs   + (Number(x.carbo)    || 0),
+    fat:     a.fat     + (Number(x.grassi)   || 0),
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+  return {kcal:r2(tot.kcal), protein:r2(tot.protein), carbs:r2(tot.carbs), fat:r2(tot.fat)};
+}
+
 function dayTotals(day) {
   if (!day) return {kcal:0,protein:0,carbs:0,fat:0};
   const m = mealTotals(day.meals || []);
   const s = suppTotalsForIds(day.suppsTaken || []);
   const x = extraSuppsTotals(day);
+  const e = _extrasV3Totals(day);
   return {
-    kcal:    r2(m.kcal    + s.kcal    + x.kcal),
-    protein: r2(m.protein + s.protein + x.protein),
-    carbs:   r2(m.carbs   + s.carbs   + x.carbs),
-    fat:     r2(m.fat     + s.fat     + x.fat),
+    kcal:    r2(m.kcal    + s.kcal    + x.kcal    + e.kcal),
+    protein: r2(m.protein + s.protein + x.protein + e.protein),
+    carbs:   r2(m.carbs   + s.carbs   + x.carbs   + e.carbs),
+    fat:     r2(m.fat     + s.fat     + x.fat     + e.fat),
   };
 }
 function activeSupps(){return ST.supps.filter(s=>s.active);}
@@ -4005,6 +4114,70 @@ async function loadPackages() {
   }));
 }
 
+// ── EXTRAS (Integratori Step 2, 18 mag 2026) ────────────────────────
+// Carica le righe supplements_log della data attiva con is_extra=true.
+// Snapshot completo (kcal/macro/costo) immutabile, indipendente dal catalogo.
+async function loadExtras(targetDate) {
+  ST.extras = [];
+  if(!ST.user || !ST.user.id) return;
+  const d = targetDate || todayKey();
+  const {data, error} = await supa
+    .from('supplements_log')
+    .select('id, date, slot, supplement_name, supplement_codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at')
+    .eq('user_id', ST.user.id)
+    .eq('date', d)
+    .eq('is_extra', true)
+    .order('slot', { ascending: true })
+    .order('created_at', { ascending: true });
+  if(error) { console.warn('loadExtras error:', error); return; }
+  ST.extras = (data || []).map(r => ({
+    id:        r.id,
+    date:      r.date,
+    slot:      r.slot || '',
+    name:      r.supplement_name || '',
+    codice:    r.supplement_codice || null,
+    dose:      r.dose != null ? parseFloat(r.dose) : 1,
+    dose_unit: r.dose_unit || 'cps',
+    kcal:      parseFloat(r.kcal)     || 0,
+    carbo:     parseFloat(r.carbo)    || 0,
+    proteine:  parseFloat(r.proteine) || 0,
+    grassi:    parseFloat(r.grassi)   || 0,
+    costo:     parseFloat(r.costo)    || 0,
+    created_at: r.created_at,
+  }));
+}
+
+// Helper insert singolo extra in supplements_log
+async function dbInsertExtraLog(extra) {
+  if(!ST.user || !ST.user.id) throw new Error('no user');
+  const row = {
+    user_id:           ST.user.id,
+    date:              extra.date || todayKey(),
+    slot:              extra.slot || '',
+    supplement_name:   extra.name || '',
+    supplement_codice: extra.codice || null,
+    is_extra:          true,
+    dose:              extra.dose != null ? Math.round(extra.dose * 100) / 100 : null,
+    dose_unit:         extra.dose_unit || null,
+    kcal:              Math.max(0, Math.round((Number(extra.kcal)     || 0) * 10) / 10),
+    carbo:             Math.max(0, Math.round((Number(extra.carbo)    || 0) * 10) / 10),
+    proteine:          Math.max(0, Math.round((Number(extra.proteine) || 0) * 10) / 10),
+    grassi:            Math.max(0, Math.round((Number(extra.grassi)   || 0) * 10) / 10),
+    costo:             Math.max(0, Math.round((Number(extra.costo)    || 0) * 100) / 100),
+  };
+  const {data, error} = await supa.from('supplements_log').insert(row).select().single();
+  if(error) throw error;
+  return data;
+}
+
+// Helper delete singolo extra log
+async function dbDeleteExtraLog(logId) {
+  if(!ST.user || !ST.user.id || !logId) return;
+  const {error} = await supa.from('supplements_log').delete()
+    .eq('id', logId).eq('user_id', ST.user.id).eq('is_extra', true);
+  if(error) throw error;
+}
+
 async function dbAddMeal(meal) {
   // Difesa in profondità: arrotonda a 1 decimale prima dell'insert (colonne Supabase numeric).
   const sanit = {
@@ -4271,6 +4444,7 @@ async function loadAndStart() {
     await loadCatalog();
     await loadSupps();
     await loadPackages();
+    await loadExtras();
     await loadTodaySuppLog();
     if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
@@ -4295,6 +4469,7 @@ async function loadAndStart() {
   await loadCatalog();   // ← catalogo prima, serve per arricchire supplements
   await loadSupps();
   await loadPackages();
+  await loadExtras();
   await loadAllDays();
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
@@ -4338,6 +4513,7 @@ async function refreshInBackground() {
     await loadCatalog();  // catalogo prima
     await loadSupps();
     await loadPackages();
+    await loadExtras();
     await loadAllDays();
     // Sovrascrive suppsTaken di oggi con dati freschi PRIMA di renderare
     await loadTodaySuppLog();
@@ -9945,7 +10121,12 @@ function renderOggi(){
       }
     });
 
-    const tlEvents = [...tlMealEvents, ...tlSuppEvents].sort((a, b) => a.time.localeCompare(b.time));
+    // Integratori Step 2 (18 mag 2026): aggiungi extras come eventi cronologici
+    const tlExtraEvents = (ST.extras || [])
+      .filter(x => x.date === ST.activeDay)
+      .map(x => ({ type:'extra', time:(x.slot || '00:00'), extra:x }));
+
+    const tlEvents = [...tlMealEvents, ...tlSuppEvents, ...tlExtraEvents].sort((a, b) => a.time.localeCompare(b.time));
 
     if(tlEvents.length){
       const nReg     = tlEvents.filter(e => e.type === 'meal').length;
@@ -9957,7 +10138,7 @@ function renderOggi(){
           <span class="oggi-v3-timeline-title">Timeline di oggi</span>
           <span class="oggi-v3-timeline-eb">${nReg} / ${nTotMeals}</span>
         </div>
-        <div class="oggi-v3-timeline-sub">PIANIFICATI · REGISTRATI</div>`;
+        <div class="oggi-v3-timeline-sub">PASTI · PACCHETTI · EXTRA · IN ORDINE CRONOLOGICO</div>`;
 
       // Helper wrapper timeline connector (riusa pattern pre-5a64cab — dot + time + emoji column).
       const wrapTL = (timeStr, emoji, dotColor, contentHTML, isLast) => {
@@ -10023,6 +10204,29 @@ function renderOggi(){
           // Card extra (toggleExtraSupp + extraSuppCardHTML logica esistente intatta)
           const extraCardHTML = `<div style="background:var(--acc-lt);border:1px solid rgba(42,122,111,.15);border-radius:10px;border-left:3px solid var(--acc);padding:10px 12px;"><div onclick="toggleExtraSupp('${extraKey}')" style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;${isExtraExpanded?'margin-bottom:7px;':''}"><span style="color:var(--t3);font-size:9px;${arrowExtra}">▶</span><span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-family:'JetBrains Mono',monospace;font-weight:600;">Integratori extra</span><span style="margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t2);font-weight:500;">${extraKcalTot} kcal</span><span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:#1e7a4a;font-weight:700;">1 assunto</span><button onclick="event.stopPropagation();deleteSuppLog('${logName}','${logTime}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--t3);line-height:1;padding:2px 4px;" title="Rimuovi">×</button></div>${isExtraExpanded?`<div>${cardHtml}</div>`:''}</div>`;
           html += wrapTL(ev.time.slice(0,5), '🌿', 'var(--acc2)', extraCardHTML, isLast);
+        } else if(ev.type === 'extra'){
+          // Integratori Step 2 (18 mag 2026): card extra dal nuovo flusso supplements_log
+          const x = ev.extra;
+          const cat = (ST.catalog || []).find(c => c.codice === x.codice || c.nome === x.name);
+          const tint = getCatalogTint({ categoria: cat?.categoria || '' });
+          const kcalInt = Math.round(x.kcal || 0);
+          const hasMacro = (x.carbo + x.proteine + x.grassi) > 0;
+          const macroMeta = hasMacro
+            ? `<span class="sep">·</span><span class="c">${x.carbo}g C</span><span class="sep">·</span><span class="p">${x.proteine}g P</span><span class="sep">·</span><span class="g">${x.grassi}g G</span>`
+            : '';
+          const safeName = esc(x.name);
+          const extraCardV2 = `<div class="oggi-v3-event oggi-v3-event-extra" onclick="confirmDeleteExtraFromTimeline('${esc(x.id)}','${safeName}')">
+            <div class="oggi-v3-event-thumb" style="background:${tint.bg};">${tint.emoji}</div>
+            <div class="oggi-v3-event-body">
+              <div class="oggi-v3-event-name">${safeName}</div>
+              <div class="oggi-v3-event-meta">
+                <span>${kcalInt} KCAL · ${x.dose} ${esc((x.dose_unit||'cps').toUpperCase())}</span>
+                ${macroMeta}
+              </div>
+            </div>
+            <span class="oggi-v3-event-tag extra">EXTRA</span>
+          </div>`;
+          html += wrapTL(ev.time.slice(0,5), tint.emoji, 'var(--acc)', extraCardV2, isLast);
         }
       });
 
@@ -10120,6 +10324,24 @@ function renderOggi(){
         return `<button class="oggi-v3-pill${id==='oggi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
       }).join('')}
     </div>`;
+
+  // Integratori Step 2 (18 mag 2026): modal conferma elimina extra (tap su card extra timeline)
+  if(ST.pkgExtraDeleteConfirm) {
+    const c = ST.pkgExtraDeleteConfirm;
+    html += `<div class="info-modal-overlay" style="z-index:1600;" onclick="if(event.target===this)cancelDeleteExtraFromTimeline()">
+      <div class="info-modal">
+        <h3 style="margin:0 0 10px;font-family:'Syne',sans-serif;font-size:17px;color:var(--t1);">Eliminare la registrazione extra?</h3>
+        <p style="font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.5;margin:0 0 18px;">
+          ${esc(c.name)} verrà rimosso dal diario di oggi.<br><br>
+          <span style="font-size:12px;color:var(--t3);">L'operazione è definitiva.</span>
+        </p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="cancelDeleteExtraFromTimeline()">Annulla</button>
+          <button class="btn" style="flex:1;background:#C44434;color:#fff;border:none;" onclick="doDeleteExtraFromTimeline()">Elimina</button>
+        </div>
+      </div>
+    </div>`;
+  }
 
   document.getElementById('page-oggi').innerHTML = v3Header + html + versionFooter();
   const ta = document.getElementById('log-text');
@@ -10289,7 +10511,15 @@ function renderStorico(){
 
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin-bottom:0;">Tutti i giorni</span></div>
   ${days.length===0?'<div class="card"><p style="color:var(--t3);font-size:13px;">Nessun dato ancora. Inizia dalla tab Oggi.</p></div>':''}
-  ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=dayTotals(d);const isT=day===today;return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
+  ${days.map(day=>{const d=ST.db.days[day];const ms=d.meals||[];const tot=dayTotals(d);const isT=day===today;
+  // Step 2 Integratori (18 mag 2026): tag EXTRA mint+evergreen sul giorno attivo se ci sono extras.
+  // Storico legacy aggrega solo per giorno (no righe individuali); il tag indica che il giorno
+  // contiene almeno 1 evento extra registrato. Drilldown via tap → tab Oggi mostra i singoli.
+  const extrasOnDay = isT ? (ST.extras || []).filter(x => x.date === day).length : 0;
+  const extraTag = extrasOnDay > 0
+    ? `<span class="storico-extra-tag">EXTRA ×${extrasOnDay}</span>`
+    : '';
+  return `<div class="hist-card ${isT?'today':''}" onclick="goToDay('${day}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${d.fasting||!ms.length?0:8}px;"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:${isT?'var(--acc)':'var(--t1)'};">${fmtDate(day)}${isT?' · oggi':''}${extraTag}</span>${d.fasting?'<span style="font-size:11px;color:var(--err);font-family:\'JetBrains Mono\',monospace;">⚡ digiuno</span>':`<span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:${tot.kcal>ST.TARGET.kcal?'var(--err)':'var(--t3)'};">${tot.kcal} kcal · ${ms.length} pasti</span>`}</div>${!d.fasting&&ms.length?`<div style="display:flex;gap:6px;">${[['P',tot.protein,ST.TARGET.protein,'var(--prot)'],['C',tot.carbs,ST.TARGET.carbs,'var(--carb)'],['G',tot.fat,ST.TARGET.fat,'var(--fat)']].map(([l,v,t,c])=>`<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:2px;"><span style="font-size:9px;color:${c};font-family:'JetBrains Mono',monospace;">${l}</span><span style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${v}g</span></div><div style="height:3px;border-radius:2px;background:var(--s3);"><div style="height:100%;border-radius:2px;width:${Math.min(100,(v/t)*100)}%;background:${c};"></div></div></div>`).join('')}</div>`:''}
   </div>`;}).join('')}`;
 
   document.getElementById('page-storico').innerHTML=nutriSubNav('storico')+html+versionFooter();
@@ -10766,7 +10996,7 @@ function renderSuppSheet() {
       <div class="ss-mc-title">Gruppo</div>
       <div class="ss-mc-sub">Slot preconfigurato</div>
     </div>
-    <div class="ss-mode-card${ss.mode==='singolo'?' active':''}" onclick="setSuppSheetMode('singolo')">
+    <div class="ss-mode-card" onclick="openCatalogForRegisterExtra()">
       <div class="ss-mc-icon">💊</div>
       <div class="ss-mc-title">Singolo</div>
       <div class="ss-mc-sub">Fuori schema</div>
@@ -12652,6 +12882,16 @@ function toggleCatalogItem(id) {
 
 function goToCatalogStep2() {
   if(ST.catalogSelected.length === 0) { alert('Tocca almeno un prodotto per aggiungerlo.'); return; }
+  // Integratori Step 2 (18 mag 2026): mode "registerExtra" salta lo step2 legacy
+  // e va dritto alla schermata "Conferma Extra" fullscreen (extras = eventi
+  // mordi-e-fuggi in supplements_log, niente persistenza in supplements).
+  if(ST.catalogContext && ST.catalogContext.mode === 'registerExtra') {
+    const codici = [...ST.catalogSelected];
+    // Nascondi catalog modal (la selezione resta in ST.catalogSelected, ripristinata su back)
+    document.getElementById('catalog-modal').style.display = 'none';
+    openConfirmExtraScreen(codici);
+    return;
+  }
   const toAdd = ST.catalog.filter(item => ST.catalogSelected.includes(item.codice));
   // Integratori v3: se siamo in "addToPackage" pre-fill slot con l'orario del pacchetto
   const ctx = ST.catalogContext;
@@ -13426,6 +13666,15 @@ function openCatalogForExtra() {
   openCatalogModal();
 }
 
+// ── Apri catalogo in modalità "Registra extra" (Step 2 Integratori, 18 mag 2026) ──
+// Chiamato dalla card "Singolo · Fuori schema" del bottom sheet "+ Registra integratori"
+// in tab Oggi. La selezione catalogo va poi in openConfirmExtraScreen → supplements_log.
+function openCatalogForRegisterExtra() {
+  closeSuppSheet();
+  ST.catalogContext = { mode: 'registerExtra', alreadyInPackage: [] };
+  openCatalogModal();
+}
+
 // ── EXTRA EDITOR: edit orario di un extra ──
 function pkgEditorEditExtraTime(supplementId) {
   const s = (ST.supps||[]).find(x => x.local_id === supplementId);
@@ -13453,6 +13702,347 @@ async function pkgEditorDoDeleteExtra(supplementId) {
 
 // ═══════════════════════════════════════════════════════════
 // END PACKAGE EDITOR
+// ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// CONFERMA EXTRA — Step 2 modulo Integratori (18 mag 2026)
+// Schermata fullscreen che conferma dose + orario per N prodotti
+// selezionati dal catalogo in modalità registerExtra, poi INSERT
+// in supplements_log con is_extra=true (snapshot completo).
+// ═══════════════════════════════════════════════════════════
+
+function openConfirmExtraScreen(codici) {
+  if(!codici || codici.length === 0) { showToast('Nessun prodotto selezionato','⚠️'); return; }
+  const now = new Date();
+  const slotNow = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const items = codici.map(code => {
+    const cat = (ST.catalog || []).find(c => c.codice === code);
+    if(!cat) return null;
+    return {
+      codice:     cat.codice,
+      name:       cat.nome,
+      categoria:  cat.categoria || '',
+      linea:      cat.linea || '',
+      confezione: cat.confezione || '',
+      dose:       cat.dose_die != null ? parseFloat(cat.dose_die) : 1,
+      dose_unit:  cat.dose_unit || 'cps',
+      slot:       slotNow,
+      // snapshot macro/costo dal catalogo per dose unitaria (scala alla dose scelta in submit)
+      kcal_base:     parseFloat(cat.kcal)     || 0,
+      carbo_base:    parseFloat(cat.carbo)    || 0,
+      proteine_base: parseFloat(cat.proteine) || 0,
+      grassi_base:   parseFloat(cat.grassi)   || 0,
+      costo_base:    parseFloat(cat.costo_dose_partner) || 0,
+      defaultDose:   cat.dose_die != null ? parseFloat(cat.dose_die) : 1,
+      defaultSlot:   slotNow,
+    };
+  }).filter(Boolean);
+  if(items.length === 0) { showToast('Prodotti non trovati nel catalogo','⚠️'); return; }
+  ST.confirmExtra = { items, removeUndo: {}, submitting: false };
+  renderConfirmExtraScreen();
+  document.getElementById('confirm-extra-screen').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirmExtraScreen() {
+  // Cleanup undo timers se attivi
+  if(ST.confirmExtra) {
+    Object.values(ST.confirmExtra.removeUndo || {}).forEach(u => { if(u.timer) clearTimeout(u.timer); });
+  }
+  const root = document.getElementById('confirm-extra-screen');
+  root.classList.add('dismissing');
+  setTimeout(() => {
+    root.classList.remove('visible');
+    root.classList.remove('dismissing');
+    root.innerHTML = '';
+    document.body.style.overflow = '';
+    ST.confirmExtra = null;
+  }, 220);
+}
+
+// Verifica se l'utente ha toccato qualcosa rispetto ai default
+function _cextraIsDirty() {
+  const e = ST.confirmExtra;
+  if(!e) return false;
+  return e.items.some(it => it.dose !== it.defaultDose || it.slot !== it.defaultSlot);
+}
+
+// Back button: conferma se dirty, altrimenti silent close
+function cextraBack() {
+  if(!ST.confirmExtra) return;
+  // Se l'utente ha rimosso prodotti o modificato campi → conferma
+  const hasRemoved = Object.keys(ST.confirmExtra.removeUndo || {}).length > 0;
+  if(_cextraIsDirty() || hasRemoved) {
+    if(!confirm('Annullare la registrazione? Le modifiche andranno perse.')) return;
+  }
+  closeConfirmExtraScreen();
+  // Riapri il catalogo modal (la selezione catalogSelected è preservata in ST)
+  document.getElementById('catalog-modal').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function renderConfirmExtraScreen() {
+  const e = ST.confirmExtra;
+  const root = document.getElementById('confirm-extra-screen');
+  if(!e || !root) return;
+  const activeItems = e.items;
+  const n = activeItems.length;
+  const canSubmit = n > 0 && activeItems.every(it => it.dose > 0 && /^\d{1,2}:\d{2}$/.test(it.slot));
+  const countLabel = n === 1 ? '1 PRODOTTO SELEZIONATO' : `${n} PRODOTTI SELEZIONATI`;
+  const ctaLabel = n === 0 ? 'Nessun prodotto'
+                  : n === 1 ? `Registra <span class="cextra-cta-count">1</span> extra`
+                  : `Registra <span class="cextra-cta-count">${n}</span> extra`;
+
+  let body = `<div class="cextra-accent"></div>
+    <div class="cextra-header">
+      <button class="cextra-back" onclick="cextraBack()">‹ Indietro</button>
+      <div class="cextra-title">Registra extra</div>
+      <button class="cextra-submit" onclick="confirmExtraScreenSubmit()" ${canSubmit?'':'disabled'}>Registra</button>
+    </div>
+    <div class="cextra-body">
+      <div class="cextra-eyebrow-mint">EVENTO MORDI-E-FUGGI · NESSUNA CONFIG. SALVATA</div>
+      <h2 class="cextra-intro-title">Conferma dose &amp; orario</h2>
+      <p class="cextra-intro-sub">${n === 0 ? 'Hai rimosso tutti i prodotti dalla selezione.' : `Stai registrando ${n === 1 ? '1 prodotto' : `${n} prodotti`} fuori dai pacchetti. Conferma per salvarli nel diario di oggi.`}</p>
+      ${n > 0 ? `<div class="cextra-count">${countLabel}</div>` : ''}`;
+
+  if(n === 0) {
+    body += `<div class="cextra-empty">
+      <div class="cextra-empty-emoji">📦</div>
+      <div class="cextra-empty-title">Nessun prodotto da registrare</div>
+      <div class="cextra-empty-text">Hai rimosso tutti i prodotti. Torna al catalogo per riselezionare.</div>
+      <button class="cextra-empty-link" onclick="cextraBack()">‹ Torna al catalogo</button>
+    </div>`;
+  } else {
+    // Stripes "rimosso · annulla" prima delle card attive (eventuali pendenti undo)
+    Object.entries(e.removeUndo || {}).forEach(([code, u]) => {
+      body += `<div class="cextra-removed-strip">
+        <span>Rimosso · ${esc(u.item.name)}</span>
+        <button onclick="confirmExtraScreenUndoRemove('${esc(code)}')">Annulla</button>
+      </div>`;
+    });
+    activeItems.forEach((it, idx) => {
+      body += _renderCextraCard(it, idx);
+    });
+    body += `<div class="cextra-sticky-cta">
+      <button class="cextra-cta${canSubmit?'':' disabled'}" ${canSubmit?'':'disabled'} onclick="confirmExtraScreenSubmit()">${ctaLabel}</button>
+    </div>`;
+  }
+
+  body += `</div>`; // .cextra-body
+  root.innerHTML = body;
+}
+
+function _renderCextraCard(it, idx) {
+  const tint = getCatalogTint({ categoria: it.categoria });
+  const stagger = idx < 3 ? ` style="animation-delay:${idx * 40}ms;"` : '';
+  const cls = idx < 3 ? 'cextra-card entering' : 'cextra-card';
+  const code = esc(it.codice);
+  const portion = `${it.defaultDose} ${esc(it.dose_unit || 'cps')}`;
+  const subRow = `${esc((it.categoria || '').toUpperCase())} · ${portion.toUpperCase()}`;
+  return `<div class="${cls}"${stagger}>
+    <div class="cextra-card-head">
+      <div class="cextra-thumb" style="background:${tint.bg};">${tint.emoji}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="cextra-name">${esc(it.name)}</div>
+        <div class="cextra-meta">${subRow}</div>
+      </div>
+    </div>
+    <div class="cextra-field">
+      <div class="cextra-field-label">DOSE</div>
+      <div class="cextra-stepper">
+        <button onclick="confirmExtraScreenAdjust('${code}','dose',-0.5)">−</button>
+        <input type="number" step="0.5" min="0.5" value="${it.dose}" oninput="confirmExtraScreenSet('dose','${code}',+this.value)"/>
+        <button onclick="confirmExtraScreenAdjust('${code}','dose',0.5)">+</button>
+      </div>
+      <select class="cextra-unit-sel" onchange="confirmExtraScreenSet('dose_unit','${code}',this.value)">
+        ${['cps','stick','barretta','misurino'].concat(it.dose_unit && !['cps','stick','barretta','misurino'].includes(it.dose_unit) ? [it.dose_unit] : []).map(u => `<option value="${u}"${u===it.dose_unit?' selected':''}>${u}</option>`).join('')}
+      </select>
+    </div>
+    <div class="cextra-field">
+      <div class="cextra-field-label">ORARIO</div>
+      <span class="cextra-time-val">${esc(it.slot || '--:--')}</span>
+      <button class="cextra-time-edit" onclick="confirmExtraScreenEditTime('${code}')">Modifica ›</button>
+    </div>
+    <button class="cextra-remove" onclick="confirmExtraScreenRemove('${code}')">× Rimuovi da questa registrazione</button>
+  </div>`;
+}
+
+function confirmExtraScreenSet(field, codice, value) {
+  const e = ST.confirmExtra;
+  if(!e) return;
+  const it = e.items.find(x => x.codice === codice);
+  if(!it) return;
+  if(field === 'dose') {
+    it.dose = Math.max(0.5, parseFloat(value) || 0.5);
+  } else if(field === 'dose_unit') {
+    it.dose_unit = value;
+  } else if(field === 'slot') {
+    if(/^\d{1,2}:\d{2}$/.test(value)) it.slot = value;
+  }
+  renderConfirmExtraScreen();
+}
+function confirmExtraScreenAdjust(codice, field, delta) {
+  const e = ST.confirmExtra;
+  if(!e) return;
+  const it = e.items.find(x => x.codice === codice);
+  if(!it) return;
+  if(field === 'dose') {
+    it.dose = Math.max(0.5, +(it.dose + delta).toFixed(2));
+  }
+  renderConfirmExtraScreen();
+}
+function confirmExtraScreenEditTime(codice) {
+  const e = ST.confirmExtra;
+  if(!e) return;
+  const it = e.items.find(x => x.codice === codice);
+  if(!it) return;
+  const v = prompt('Orario (HH:MM)', it.slot || '08:00');
+  if(!v) return;
+  if(!/^\d{1,2}:\d{2}$/.test(v)) { showToast('Formato HH:MM','⚠️'); return; }
+  it.slot = v;
+  renderConfirmExtraScreen();
+}
+
+// Pattern Mail iOS: rimuove card visivamente, mostra stripe undo 4s, poi commit definitivo
+function confirmExtraScreenRemove(codice) {
+  const e = ST.confirmExtra;
+  if(!e) return;
+  const idx = e.items.findIndex(x => x.codice === codice);
+  if(idx < 0) return;
+  const [removed] = e.items.splice(idx, 1);
+  // Salva per eventuale undo
+  if(!e.removeUndo) e.removeUndo = {};
+  // Cancella timer precedente se esiste (re-remove di un undo pendente — edge case improbabile)
+  if(e.removeUndo[codice] && e.removeUndo[codice].timer) clearTimeout(e.removeUndo[codice].timer);
+  e.removeUndo[codice] = {
+    item: removed,
+    timer: setTimeout(() => {
+      if(ST.confirmExtra && ST.confirmExtra.removeUndo && ST.confirmExtra.removeUndo[codice]) {
+        delete ST.confirmExtra.removeUndo[codice];
+        renderConfirmExtraScreen();
+      }
+    }, 4000),
+  };
+  renderConfirmExtraScreen();
+}
+function confirmExtraScreenUndoRemove(codice) {
+  const e = ST.confirmExtra;
+  if(!e || !e.removeUndo || !e.removeUndo[codice]) return;
+  const u = e.removeUndo[codice];
+  if(u.timer) clearTimeout(u.timer);
+  e.items.push(u.item);
+  delete e.removeUndo[codice];
+  renderConfirmExtraScreen();
+}
+
+// Submit: insert N righe in supplements_log + toast undo Mail iOS 4s
+async function confirmExtraScreenSubmit() {
+  const e = ST.confirmExtra;
+  if(!e || e.submitting) return;
+  if(e.items.length === 0) return;
+  e.submitting = true;
+  const today = todayKey();
+  const insertedIds = [];
+  try {
+    for(const it of e.items) {
+      // Scala macro/costo proporzionalmente alla dose scelta (snapshot immutabile)
+      const ratio = (it.defaultDose && it.defaultDose > 0) ? (it.dose / it.defaultDose) : 1;
+      const row = {
+        date:      today,
+        slot:      it.slot,
+        name:      it.name,
+        codice:    it.codice,
+        dose:      it.dose,
+        dose_unit: it.dose_unit,
+        kcal:      it.kcal_base     * ratio,
+        carbo:     it.carbo_base    * ratio,
+        proteine:  it.proteine_base * ratio,
+        grassi:    it.grassi_base   * ratio,
+        costo:     it.costo_base    * ratio,
+      };
+      const inserted = await dbInsertExtraLog(row);
+      if(inserted && inserted.id) insertedIds.push(inserted.id);
+    }
+  } catch(err) {
+    console.error('confirmExtraScreenSubmit:', err);
+    showToast('Errore registrazione extra','⚠️');
+    e.submitting = false;
+    return;
+  }
+  const count = insertedIds.length;
+  // Cleanup catalog selection (è stata "consumata")
+  ST.catalogSelected = [];
+  ST.catalogContext = null;
+  // Refresh ST.extras + chiudi schermata + re-render tab Oggi
+  await loadExtras();
+  closeConfirmExtraScreen();
+  // Chiudi anche il catalog modal (era nascosto dietro)
+  document.getElementById('catalog-modal').style.display = 'none';
+  // Re-render tab Oggi se siamo lì
+  if(ST.page === 'oggi') renderOggi();
+  // Toast undo Mail iOS 4s
+  _cextraShowUndoToast(insertedIds, count);
+}
+
+// Toast undo Mail iOS post-submit
+function _cextraShowUndoToast(ids, count) {
+  // Cleanup toast precedente se esiste
+  if(ST.extraUndoToast && ST.extraUndoToast.timer) clearTimeout(ST.extraUndoToast.timer);
+  const existing = document.getElementById('cextra-undo-toast');
+  if(existing) existing.remove();
+  ST.extraUndoToast = {
+    ids: [...ids],
+    timer: setTimeout(() => {
+      _cextraDismissUndoToast();
+    }, 4000),
+  };
+  const lbl = count === 1 ? '1 extra registrato' : `${count} extra registrati`;
+  const el = document.createElement('div');
+  el.id = 'cextra-undo-toast';
+  el.className = 'cextra-undo-toast';
+  el.innerHTML = `<b>${esc(lbl).toUpperCase()}</b><button onclick="cextraUndoToastClick()">Annulla</button>`;
+  document.body.appendChild(el);
+}
+function _cextraDismissUndoToast() {
+  const el = document.getElementById('cextra-undo-toast');
+  if(el) el.remove();
+  ST.extraUndoToast = null;
+}
+async function cextraUndoToastClick() {
+  if(!ST.extraUndoToast) return;
+  const ids = ST.extraUndoToast.ids || [];
+  if(ST.extraUndoToast.timer) clearTimeout(ST.extraUndoToast.timer);
+  _cextraDismissUndoToast();
+  // DELETE in cascata
+  for(const id of ids) {
+    try { await dbDeleteExtraLog(id); } catch(e) { console.warn('undo delete:', e); }
+  }
+  await loadExtras();
+  if(ST.page === 'oggi') renderOggi();
+  showToast('Registrazione annullata','↩️');
+}
+
+// Modal conferma elimina extra dalla timeline tab Oggi (tap su card extra)
+function confirmDeleteExtraFromTimeline(logId, name) {
+  ST.pkgExtraDeleteConfirm = { logId, name: name || 'Extra' };
+  renderOggi();
+}
+function cancelDeleteExtraFromTimeline() {
+  ST.pkgExtraDeleteConfirm = null;
+  renderOggi();
+}
+async function doDeleteExtraFromTimeline() {
+  const c = ST.pkgExtraDeleteConfirm;
+  if(!c) return;
+  try { await dbDeleteExtraLog(c.logId); } catch(e) { console.warn('delete extra:', e); }
+  ST.pkgExtraDeleteConfirm = null;
+  await loadExtras();
+  if(ST.page === 'oggi') renderOggi();
+  showToast('Extra eliminato','🗑️');
+}
+
+// ═══════════════════════════════════════════════════════════
+// END CONFERMA EXTRA
 // ═══════════════════════════════════════════════════════════
 
 async function deleteSupp(id){
