@@ -35,9 +35,11 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items~~ ✅ fixato (commit `73d141b`)
 - ~~Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`~~ ✅ fatto (commit `0724a63`)
 - ~~Step 2 modulo Integratori: ridisegno flusso extra come eventi `supplements_log`~~ ✅ completato 18 mag 2026 (commit `306defe` — vedi sotto-sezione "Flusso Registra Extra")
+- ~~Refresh tab Storico (legacy → design system v3)~~ ✅ completato 18 mag 2026 pomeriggio (commit `09a2775`) — rinominata **Analisi**, cambio di paradigma da lista cronologica a dashboard analitica di tendenze. Vedi sezione "Tab Analisi v3".
 - Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom)
-- Refresh tab Storico + Piano (legacy → design system v3)
+- Refresh tab Piano (legacy → design system v3) — ULTIMA tab Nutrition ancora legacy
 - Pulizia funzioni "Singolo" legacy dormienti (`setSuppSheetMode('singolo')` + render legacy + relative funzioni di salvataggio extra legacy) — non più chiamate da nessuna CTA dopo Step 2 ma presenti nel codice. Da rimuovere in cleanup separato.
+- Pulizia legacy Analisi v3: `renderStoricoLegacy`, `setReportRange` (no-op), CSS `.storico-extra-tag`, DOM alias `'storico'` nel routing — rimuovere dopo verifica produzione stabile.
 
 ## Tester attivi
 
@@ -54,7 +56,7 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 ## Stato deploy attuale (18 maggio 2026)
 
 - **Branch**: `main` di `IgnazioF321621/benessere-forma`
-- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico + Integratori v3 + Step 2 extras):
+- **Ultimi commit rilevanti** (catena Fase D + Nutrition v3 + tab OGGI production-ready + giro tipografico + Integratori v3 + Step 2 extras + Analisi v3):
   - `b2ad26f` — feat(home): Home V2 (Fase D Giro 1) — 4 zone grafica + dati esistenti
   - `39872f8` — fix(home): Home V2 — 5 rifiniture post-test iPhone
   - `71aa1be` — fix(home): donut Nutrition mostra kcal/macro RIMASTI + fasce chip post-workout corrette
@@ -77,15 +79,16 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
   - `c28ef45` — fix(integratori): elimina pacchetto ora cancella anche i supplements orfani (no più gruppi fantasma in bottom sheet + timeline tab Oggi)
   - `de93daf` — docs: CLAUDE.md — refinement Integratori v3 sera 16 mag (secondo round documentale)
   - `306defe` — feat(integratori): Step 2 — extras come supplements_log events (no più persistenza in supplements, "Conferma Extra" fullscreen + timeline ridisegno tab Oggi + tag EXTRA mint)
-- **File principale**: `zona-tracker.html` (~14400 righe dopo Step 2 extras)
+  - `09a2775` — feat(nutrition): refresh tab Storico → Analisi v3 (dashboard analitica tendenze nutrizionali — switch finestra SETTIMANA/MESE/3M/6M + 3 stat card + chart kcal SVG + heatmap status zona + macro distribution + drilldown dettaglio giorno)
+- **File principale**: `zona-tracker.html` (~15360 righe dopo Analisi v3)
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
-- **Versione visibile in app**: `v2026.05.18 · 15:06` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
+- **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (16 maggio 2026, post-Integratori v3)
-- **Tab Oggi**: ✅ production-ready (design system v3 + tipografia v2)
-- **Tab Integratori**: ✅ production-ready (design system v3 + nuova architettura pacchetti) — completato 16 mag 2026 (vedi sezione "Modulo Integratori v3")
-- **Tab Storico**: 🟡 grafica legacy
-- **Tab Piano**: 🟡 grafica legacy
+### Stato moduli Nutrition (18 maggio 2026, post-Analisi v3)
+- **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
+- **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
+- **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`). Rinominata + cambio di paradigma da lista cronologica a dashboard analitica (vedi sezione "Tab Analisi v3").
+- **Tab Piano**: 🟡 grafica legacy — ULTIMA tab Nutrition ancora da migrare
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -393,7 +396,7 @@ I seguenti campi M1 sono raccolti ma attualmente serializzati come testo libero 
 | Tab | ID pagina | Contenuto |
 |---|---|---|
 | 🏠 Home | `home` | Dashboard: ring kcal + 3 tile modulo live |
-| 🌿 Nutrition | `oggi` | Sub-nav: Oggi / Integratori / Storico / Piano |
+| 🌿 Nutrition | `oggi` | Sub-nav: Oggi / Integratori / Analisi / Piano (rinominata da Storico → Analisi il 18 mag 2026) |
 | ⚡ Training | `training` | Sub-nav: Sessione / Piano / Progressione — **visibile solo se `train_start_date` impostata** |
 | ◐ Body | `body` | Sub-nav: Misure / Tendenza |
 
@@ -422,10 +425,10 @@ I seguenti campi M1 sono raccolti ma attualmente serializzati come testo libero 
   - **Training**: prossima sessione / ultima completata / "Inizia [data]" se start futura — badge ✓ FATTO o Inizia→ con streak ⚡ — cliccabile → Training
   - **Body**: peso live, trend, vita cm — cliccabile → Body
 
-### Nutrition (sub-nav: Oggi / Integratori / Storico / Piano)
+### Nutrition (sub-nav: Oggi / Integratori / Analisi / Piano)
 - **Oggi**: hero ring, macro bars, timeline pasti+integratori, log pasto AI, badge zona, badge Giorno Perfetto; ogni pasto ha pulsante ✏️ modifica e 🗑️ elimina (solo desktop — su mobile solo swipe); ogni gruppo integratori ha pulsante × per eliminare il gruppo intero
-- **Integratori**: lista raggruppata per orario, editing inline, catalogo Nutrilite
-- **Storico**: report 7/14/30 giorni, grafico calorie
+- **Integratori**: pacchetti orari personalizzati + integratori extra come eventi `supplements_log`, catalogo Nutrilite hi-fi (v3, vedi sezione "Modulo Integratori v3")
+- **Analisi** (ex Storico): dashboard analitica tendenze — switch finestra SETTIMANA/MESE/3M/6M, 3 stat card, chart kcal SVG area, heatmap status zona, macro distribution, drilldown Dettaglio Giorno (v3, vedi sezione "Tab Analisi v3")
 - **Piano**: target 40·30·30, piano AI, priorità cliniche
 - **Visualizzazione kcal/macro: logica residua** (kcal e macro rimasti invece di accumulativi). Applicata a 3 zone: anello+barre macro nella Home card riepilogo, tile Nutrition nei moduli Home, hero card Nutrition/Oggi. Anello si svuota anziché riempirsi. Stato "oltre target" usa colore ambra `#B45309`. Stato "target esatto" mostra "target raggiunto". Helper globali: `fmtNum`, `kcalRimaste`, `macroRimasti`, `isOverTarget`, costante `OVER_COLOR`. Piano/Storico/Integratori restano accumulativi.
 - **Barre macro**: visualizzazione residua coerente con anello kcal (parte 100% piena, si svuota man mano che si consuma).
@@ -737,6 +740,14 @@ Sintesi delle decisioni di design consolidate dopo Fase A/B/C/D. Queste **sostit
   - Stesso integratore può essere preso sia dentro un pacchetto sia come extra al volo, senza che le due cose si influenzino
   - L'utente può registrare un extra anche più volte nella stessa giornata
   - **Stato implementazione 18 mag**: pacchetti ✅ production-ready, extras ✅ production-ready (eventi `supplements_log` con `is_extra=true` + Conferma Extra fullscreen + timeline tab Oggi ridisegnata + tag EXTRA mint)
+- **Target macro personalizzati — leggere SEMPRE dinamicamente dal profilo (18 mag 2026)**:
+  - I target macro percentuali NON sono hardcoded `40/30/30` Zone classica
+  - Ogni utente ha piano personalizzato calcolato dal proprio profilo (obiettivo + TDEE + macro adattivi via `OBJ_ADAPT` / `calcAdaptedTargets`)
+  - Esempio Ignazio: `38/34/28` (ricomposizione/forza+performance)
+  - Esposto su `ST.TARGET.pCarbo` / `ST.TARGET.pProt` / `ST.TARGET.pFat` (oltre ai valori in grammi `carbs/protein/fat`)
+  - **Regola applicativa**: in Analisi, Dettaglio Giorno, heroCard tab Oggi v3, status zona pill — SEMPRE leggere da `ST.TARGET.p*` con fallback `40/30/30`
+  - Soglia "in zona": ±2% target dinamici (severa, per dashboard analitica); "quasi zona": ±5% (più permissivo, hero card tab Oggi v3)
+  - Nessun tag "PIANO BASE" mostrato in UI: il fallback opera silenzioso se i campi sono assenti
 
 ## Modulo Integratori v3 (16 maggio 2026)
 
@@ -992,6 +1003,179 @@ Lista item effettivamente rimossi:
 - `updateSuppSlotTime` — è viva, chiamata da `renderOggi()` timeline tab Oggi v3 (input `type="time"` dell'header gruppo integratori per bulk update dello slot). Il marker `// [LEGACY-INTEGRATORI-V3]` che le era stato apposto al Blocco 1 era errato. Sostituito con commento descrittivo del suo uso.
 - `ST.suppSheet` — è vivo, è lo state del bottom sheet `+ Registra integratori` tab Oggi v3 (`openSuppSheet` / `closeSuppSheet` + render del body con ~14 occorrenze attive). La precedente documentazione che lo classificava legacy era errata.
 
+## Tab Analisi v3 (18 maggio 2026)
+
+Refresh totale della 3ª tab Nutrition. Coordinato da Claude Design (mockup hi-fi: Vista Settimana, Vista 6 Mesi, Dettaglio Giorno drilldown) ed eseguito da Claude Code in catena unica. Commit `09a2775`. APP_VERSION `v2026.05.18 · 17:04`.
+
+### Cambio di nome e paradigma
+
+- **Rinominata da "Storico" a "Analisi"** — sub-nav Nutrition ora: OGGI · INTEGRATORI · **ANALISI** · PIANO
+- DOM element `#page-storico` → `#page-analisi`; alias retrocompat in `showPage` / `renderPage` / `nutriSubNav` per cache PWA stale o link salvati
+- **Da "lista cronologica passiva" a "dashboard analitica di tendenze nutrizionali"**
+- Obiettivo: capire pattern temporali, medie, distribuzione macro, aderenza zona nel tempo
+- Il dettaglio giornaliero NON è più nella lista principale: vive nel drilldown overlay (tap su grafico/heatmap → timeline read-only)
+
+### Struttura tab Analisi
+
+**Header v3** (riusa pattern Oggi/Integratori v3):
+- Accent bar `#FAC775` 3px + eyebrow data Mono caps "VEN 18 MAG · ANALISI" + titolo Syne 800 30px "Nutrition" + avatar IF
+- Sub-nav pillole `oggi-v3-pill` con ANALISI attiva fill `#FAC775`
+
+**Switch finestra temporale (sticky top sotto sub-nav)**:
+- 4 pillole Mono caps tracking 1.4: `SETTIMANA · MESE · 3 MESI · 6 MESI`
+- Attiva fill evergreen `#2A7A6F` + testo bianco
+- Default: SETTIMANA corrente (lun-dom italiana)
+- Cambio finestra: cross-fade 180ms `cubic-bezier(.16,1,.3,1)` sul content sotto
+- **ANNO scartato** in chiusura design: troppo lungo per caso uso reale (l'utente non guarda quasi mai dati così aggregati per gestire la zona settimanale)
+
+**Header navigazione date**:
+- Eyebrow Mono caps dinamico: "QUESTA SETTIMANA" / "SETTIMANA SCORSA" / "MAGGIO 2026" / "MAR — MAG 2026" ecc.
+- Range data sotto (Syne 700 18px) — solo per SETTIMANA, omesso per finestre lunghe
+- Nav minimal `‹ ›` (cerchio 32px outline) — chevron destro disabilitato se vista corrente (offset = 0)
+- Slide del contenuto in cambio offset (no animazione esplicita, sfrutta il re-render)
+
+**3 stat card numeriche**:
+- Card 1: **MEDIA KCAL/DIE** (es. "2222") + sotto "↑ 85 VS PREC." solo in SETTIMANA, oppure "KCAL/GIORNO" fisso su finestre lunghe
+- Card 2: **GIORNI IN ZONA** (es. "5/7") + sotto delta giorni in zona (SETTIMANA) o "% ADERENZA" (finestre lunghe)
+- Card 3: **PASTI MEDIA/DIE** (es. "3.4") + sub "22 TOTALI"
+- Stile: Mono 700 24px numero + Mono caps 9px eyebrow + Mono 500 9.5px sub
+- I confronti "vs prec." compaiono SOLO su SETTIMANA (sono troppo rari su finestre lunghe per essere informativi)
+
+**Confronto settimana vs settimana** (riga compatta, SOLO vista SETTIMANA):
+- Box Mono caps con sfondo `--s2`: "VS SETT. SCORSA · 11-17 MAG · ↑ 1 GIORNO IN ZONA · +85 KCAL MEDIA"
+- Frecce ↑↓ colorate evergreen (positive) / terracotta (negative)
+- Scompare su MESE / 3M / 6M
+
+**Chart kcal giornaliere SVG custom** (`_analisiRenderAreaChart`):
+- viewBox `340×160`, area gradient evergreen (`stop-opacity 0.32 → 0`), linea reale stroke `#2A7A6F` 2px round
+- Linea target tratteggiata orizzontale (dashed `3 3` opacity 0.55) — target dinamico dal profilo, label "TGT 2326" allineato a destra
+- Dot bianchi (`r=4`, fill bianco + stroke evergreen 1.5px) sui giorni con dati, cliccabili → `openDayDetailScreen(key)`
+- **Dot vuoto + dashed su "oggi"** se nessun dato registrato (asciuga la settimana corrente in progress)
+- **Asta verticale sotto** + dot terracotta `#C44434` sui giorni con extras registrati (segnale visivo non invasivo)
+- Tap zone `r=14` invisibili più ampie per touch mobile
+- Asse X: SETTIMANA mostra L/M/M/G/V/S/D + numero giorno; MESE mostra date a step ~6; 3M/6M mostra label MAG/APR/MAR/... sui primi giorni di ciascun mese
+- Asse Y minimal: 3 tick (0, mid, max) con suffisso "k" sopra 1000
+- yMax dinamico: `ceil(max(kcal, target) * 1.1 / 500) * 500`
+
+**Heatmap status zona giorno-per-giorno** (`_analisiRenderHeatmap`):
+- 4 colori cella: verde `#2A7A6F` (in zona ±2% target dinamici) · ambra `#FAC775` (quasi ±5%) · terracotta `#C44434` (fuori) · grigio `#DDD9D0` (no dati)
+- Numero giorno Mono caps inside cella (bianco su sfondi colorati, t3 su grigio)
+- Tap su cella → `openDayDetailScreen(key)` (skip cell empty/no-data senza dayData)
+- Cella "oggi" con outline 2px evergreen
+- Layout per finestra:
+  - **SETTIMANA**: 7 celle in riga (`.w-week`), aspect-ratio 1, gap 4px
+  - **MESE**: griglia 7×~5 con padding celle vuote inizio per allineare al lunedì (`.w-month`)
+  - **3 MESI**: 3 mini-griglie mensili impilate verticalmente, ognuna con header mese in Mono caps
+  - **6 MESI**: 6 mini-griglie mensili impilate verticalmente (scelta design: meglio leggibili impilate che affiancate su mobile)
+- Header sezione mostra titolo "Aderenza 38/34/28" con i target dinamici reali del profilo
+- Legenda 4 dot 9×9px Mono caps sotto
+
+**Macro distribution chart** (`_analisiRenderMacroBars`):
+- 3 barre orizzontali CARBO (ambra) / PROTEINE (evergreen) / GRASSI (terracotta)
+- Per barra: label Mono caps + valore Mono 18px grammi + sub Mono caps "38% · TGT 38%" (% reale media vs target dinamico)
+- Track barre 10px height + radius 6, fill % real
+- **Tick verticale tratteggiato** 2px `#t1` sul valore target (rivela visivamente quanto sei lontano dalla soglia obiettivo)
+
+### Drilldown "Dettaglio Giorno" (overlay slide-up fullscreen)
+
+Tap su punto chart o cella heatmap → slide-up 240ms `cubic-bezier(.16,1,.3,1)` di un overlay fullscreen.
+
+**Shell**:
+- Background scrim `rgba(0,0,0,.4)` + screen bianco con accent bar `#FAC775` 3px
+- Header: `‹ INDIETRO` Mono caps sinistra (chiude overlay con slide-down 200ms) + data Syne 700 (es. "Mer 15 mag 2026") centro + kebab `···` destra
+- **Kebab visibile SOLO per giorni della settimana corrente** (editing è limitato a sett. attuale per principio "non riscrivere il passato")
+- Tap kebab → menu compatto `daydetail-menu` con voce "Modifica giorno" + helper Mono caps "SOLO PER GIORNI DELLA SETT. CORRENTE"
+- Tap "Modifica giorno" → `goToDay(date)` (chiude overlay + naviga tab Oggi a quella data)
+
+**Sezione riepilogo "Com'è andata"**:
+- Status zona pill colorato (NELLA ZONA / QUASI ZONA / FUORI ZONA / NESSUN DATO) + target dinamico inline (es. "38 · 34 · 28 ±2%")
+- Riga kcal totali grandi (Mono 24px) + "su X obiettivo" piccolo grigio + delta colorato a destra (IN LINEA / +X OLTRE TARGET / -X VS TARGET)
+- 3 barre macro orizzontali coerenti con tab Analisi principale (riusa `_analisiRenderMacroBars`)
+
+**Sezione timeline "Cosa hai registrato"** (read-only):
+- Eyebrow Mono caps "TIMELINE GIORNATA · READ-ONLY · N EVENTI"
+- Eventi ordinati cronologici: pasti + pacchetti integratori + extras (snapshot dal pattern timeline tab Oggi v3, ma SENZA check/×/espansione)
+- Card evento: ora Mono + icona slot + nome Syne 600 + meta Mono caps + kcal + tag PACCHETTO/EXTRA opzionale
+- NO interazioni dirette sulle card (la modifica è centralizzata via kebab header)
+- Empty state "Nessun evento registrato" se 0 eventi quel giorno
+
+**Limitazione cache locale documentata**:
+- `ST.extras` è popolato solo per `ST.activeDay`
+- Drilldown su date passate ≠ activeDay mostra 0 extras V3 nella timeline (i pasti e supps standard restano visibili perché in `ST.db.days[key]`)
+- Edge case accettabile per dashboard storica — il "vero" editing si fa via "Modifica giorno" che ricarica il giorno come activeDay
+
+### Architettura tecnica
+
+**Dati**:
+- Tutti calcolati client-side da `ST.db.days` cache locale già esistente
+- **Nessuna query Supabase nuova** (decisione architetturale "B" chiusa in design)
+- `ST.extras` (V3) limitato a activeDay come prima
+- Refresh strategy "A" (chiusa in design): **ridisegno totale dei grafici a ogni interazione**, no cache complessa, no invalidazione granulare
+
+**Grafici SVG custom**:
+- Strategia "B" (chiusa in design): SVG scritto a mano (no Chart.js, no Recharts, no ApexCharts)
+- Vantaggi: zero dipendenze nuove, layout 100% controllato, bundle size invariato, animazioni native CSS
+- 3 componenti riusabili: `_analisiRenderAreaChart` · `_analisiRenderHeatmap` · `_analisiRenderMacroBars`
+
+**Empty state onesto**:
+- Decisione "A" (chiusa in design): mostrare sempre tutto anche con dati parziali
+- Nota Mono caps "DATI PARZIALI · N/X GIORNI" sopra le stat card se i giorni con dati < giorni della finestra (per settimana corrente: < giorni passati di questa settimana)
+- Stato totalmente vuoto: empty state centrato 📊 + "Nessun dato in questa finestra"
+
+**Target macro percentuali — fix critico in chiusura**:
+- Letti DINAMICAMENTE da `ST.TARGET.pCarbo` / `ST.TARGET.pProt` / `ST.TARGET.pFat`
+- Esempio Ignazio: `38/34/28` (calcolato da `calcAdaptedTargets` per obiettivo ricomposizione/forza+performance)
+- Fallback `40/30/30` (Zone classica) se i campi mancano
+- Tolleranza status zona: ±2% in zona, ±5% quasi zona (più stretta della heroCard tab Oggi v3 ±5/±10 per coerenza "dashboard è più severa")
+
+### 4 dubbi residui chiusi in design
+
+1. **Heatmap 6 MESI**: scelta layout mini-griglie mensili impilate verticalmente (NON affiancate). Più leggibile su mobile, scroll naturale.
+2. **Dati parziali**: nota onesta "DATI PARZIALI · N/X GIORNI" sempre visibile quando applicabile (non nasconde la realtà al utente).
+3. **Target kcal nel chart**: linea tratteggiata orizzontale con marker label "TGT 2326" allineato a destra. Sempre visibile.
+4. **Kebab "Modifica"**: visibile SOLO per giorni della settimana corrente. Per giorni passati il drilldown è puramente read-only (principio "non riscrivere il passato senza intenzione").
+
+### 5 cambi finali (chiusura design + implementazione)
+
+1. **Switch finestra**: SETTIMANA/MESE/3M/**6 MESI** (sostituito ANNO che era nel mockup originale — troppo lungo per il caso uso reale)
+2. **Target macro %**: letti dinamicamente da profilo (Ignazio 38/34/28), NON più hardcoded 40/30/30
+3. **Confronto "vs prec."**: SOLO in SETTIMANA. Su finestre lunghe i confronti sono rari e poco utili
+4. **Heatmap 3M/6M**: griglie mensili impilate verticalmente, no affiancate (mobile-first)
+5. **Tolleranza status zona Analisi**: ±2% in zona / ±5% quasi (più severa della tab Oggi v3 ±5/±10 — appropriato per dashboard analitica)
+
+### Stato funzioni chiave Analisi v3
+
+| Funzione | Scopo |
+|---|---|
+| `_analisiGetWindowRange(window, offset)` | Calcola `{start, end}` Date oggetti della finestra (`SETTIMANA`/`MESE`/`3MESI`/`6MESI`) all'offset specifico (0=corrente, -1=prec) |
+| `_analisiGetWindowLabel(window, offset, start, end)` | Genera `{eb, range}` per header navigazione (es. "QUESTA SETTIMANA" + "11 — 17 MAG 2026") |
+| `_zoneStatusForDayKey(key)` | Status zona giornaliero `inZone`/`almostZone`/`outOfZone`/`noData` con tolleranza ±2/±5% sui target dinamici |
+| `_analisiCollectDays(start, end)` | Itera tutti i giorni del range, ritorna array `{date, key, dayData, totals, status, mealsN, extrasN}` |
+| `_analisiAggregate(days)` | Aggregati: medie kcal/macro, giorni in zona, pasti totali/media, distribuzione macro % |
+| `_analisiRenderAreaChart(daysData, targetKcal, windowKind)` | SVG path area gradient + linea + dot cliccabili + asta extras + asse X/Y minimal |
+| `_analisiRenderHeatmap(daysData, kind)` | Celle status zona (`week`/`month`/`multi-month` layouts) |
+| `_analisiRenderMacroBars(agg, target)` | 3 barre orizzontali C/P/G + tick tratteggiato sul target |
+| `renderAnalisi()` | Entry point: orchestrazione shell + content |
+| `renderAnalisiShell()` | Header v3 statico + switch finestra (1 chiamata per session tab) |
+| `renderAnalisiContent()` | Content dinamico (cambia su switch finestra e nav date) — re-render totale |
+| `setAnalisiWindow(window)` | Handler pillola switch (reset offset = 0 al cambio finestra) |
+| `setAnalisiDateOffset(offset)` | Handler nav "‹ ›" date (clamp offset ≤ 0, mai nel futuro) |
+| `openDayDetailScreen(dateStr)` | Apre overlay drilldown fullscreen slide-up |
+| `renderDayDetailScreen()` | Render dell'overlay (riepilogo + timeline read-only) |
+| `closeDayDetailScreen()` | Slide-down + cleanup `ST.dayDetailScreen` |
+| `dayDetailToggleMenu()` | Toggle menu kebab "Modifica giorno" (visibile solo settimana corrente) |
+| `dayDetailModifyTap()` | Chiude overlay + `goToDay(date)` → naviga tab Oggi per editing |
+
+**Totale: 18 funzioni nuove** + State esteso (`ST.analisi`, `ST.dayDetailScreen`) + DOM `#page-analisi` + ~150 righe CSS `.analisi-v3-*` / `.daydetail-*`.
+
+### Funzioni marcate legacy `[LEGACY-STORICO-V3]`
+
+- `renderStorico` → rinominata `renderStoricoLegacy`, non più chiamata dal routing
+- `setReportRange` — no-op pratico (guard `typeof === 'function'`)
+- CSS `.storico-extra-tag` — commento legacy nell'header del blocco
+- Alias `'storico'` in `showPage` / `renderPage` / `nutriSubNav` — retrocompat cache PWA stale, costo runtime zero
+- Rimuovere tutti questi item in cleanup separato dopo verifica produzione stabile (vedi "Da rifinire")
+
 ## Workflow git (aggiornato 12 maggio 2026)
 
 Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
@@ -1168,6 +1352,31 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 18 maggio 2026 pomeriggio — Refresh tab Storico → Analisi v3 (dashboard analitica) ✅
+
+Refresh totale della 3ª tab Nutrition con cambio di paradigma e cambio di nome. Mockup hi-fi chiuso con Claude Design (3 schermate: Vista Settimana, Vista 6 Mesi, Dettaglio Giorno drilldown). Implementazione completa in catena con Claude Code. Deploy live `v2026.05.18 · 17:04`. Commit `09a2775`.
+
+- **Cambio di paradigma**: da lista cronologica passiva ("Storico") a dashboard analitica di tendenze nutrizionali ("Analisi"). Il dettaglio giornaliero ora vive nel drilldown overlay invece di occupare la pagina principale.
+- **Cambio di nome**: Storico → Analisi (sub-nav Nutrition: OGGI · INTEGRATORI · ANALISI · PIANO). DOM `#page-storico` → `#page-analisi`, alias retrocompat in routing per cache PWA stale.
+- **Switch finestra temporale 4 pillole sticky**: SETTIMANA · MESE · 3 MESI · 6 MESI (ANNO scartato in chiusura design come troppo lungo per il caso uso reale).
+- **3 stat card grandi**: media kcal/die, giorni in zona, pasti media/die. Confronto "vs prec." SOLO in SETTIMANA (su finestre lunghe è poco informativo).
+- **3 grafici SVG custom scritti a mano** (decisione "B" chiusa in design: no librerie esterne tipo Chart.js/Recharts):
+  - Chart kcal: area gradient evergreen + linea reale + linea target tratteggiata + dot cliccabili + dot vuoto+dashed su "oggi" + asta terracotta su giorni con extras
+  - Heatmap status zona: verde/ambra/terracotta/grigio. Layout SETTIMANA 7 in riga, MESE 7×5 calendario, 3M/6M mini-griglie mensili impilate verticalmente (NON affiancate — più leggibili su mobile)
+  - Macro bars: 3 barre orizzontali C/P/G con valori grammi + percentuali reale vs target + tick tratteggiato sul target
+- **Target macro percentuali letti DINAMICAMENTE dal profilo utente** (fix critico in chiusura): es. Ignazio 38/34/28, non più hardcoded 40/30/30. Fallback 40/30/30 Zone classica se profilo manca. Tolleranza "in zona" ±2% (severa per dashboard), "quasi zona" ±5%.
+- **Drilldown "Dettaglio Giorno"** overlay slide-up 240ms `cubic-bezier(.16,1,.3,1)`: header banda `#FAC775` + back + titolo data + kebab `···` SOLO per giorni settimana corrente. Sezioni: riepilogo status zona + kcal + delta target + macro bars; timeline read-only riusando pattern tab Oggi v3 senza interazioni. Tap "Modifica giorno" da kebab → `goToDay(date)` (naviga tab Oggi per editing).
+- **Dati**: tutti calcolati client-side da `ST.db.days` cache locale (decisione "B" chiusa in design — nessuna query Supabase nuova).
+- **Refresh strategy**: ridisegno totale dei grafici a ogni interazione (decisione "A" chiusa in design — no cache complessa, no invalidazione granulare).
+- **Empty state onesto**: nota "DATI PARZIALI · N/X GIORNI" sopra le stat card quando giorni con dati < giorni della finestra (decisione "A" chiusa in design — mostra sempre tutto, non nasconde la realtà).
+- **4 dubbi residui chiusi in design**: heatmap 6 MESI mini-griglie impilate verticalmente, dati parziali con nota onesta, linea target con marker "TGT 2326", kebab modifica visibile solo settimana corrente.
+- **5 cambi finali rispetto al mockup iniziale**: 6 MESI invece di ANNO; target dinamici invece hardcoded; "vs prec." solo in SETTIMANA; heatmap 3M/6M impilate verticali; tolleranza zona ±2/±5 (più stretta di tab Oggi v3 per appropriatezza dashboard).
+- **18 funzioni nuove**: `_analisiGetWindowRange`, `_analisiGetWindowLabel`, `_zoneStatusForDayKey`, `_analisiCollectDays`, `_analisiAggregate`, `_analisiRenderAreaChart`, `_analisiRenderHeatmap`, `_analisiRenderMacroBars`, `renderAnalisi`, `renderAnalisiShell`, `renderAnalisiContent`, `setAnalisiWindow`, `setAnalisiDateOffset`, `openDayDetailScreen`, `renderDayDetailScreen`, `closeDayDetailScreen`, `dayDetailToggleMenu`, `dayDetailModifyTap`.
+- **Funzioni marcate legacy `[LEGACY-STORICO-V3]`** (preservate fino a verifica produzione, rimuovere in cleanup separato): `renderStorico` → `renderStoricoLegacy`, `setReportRange` no-op, CSS `.storico-extra-tag`, alias `'storico'` in routing.
+- **State esteso**: `ST.analisi = { window:'SETTIMANA', dateOffset:0 }`, `ST.dayDetailScreen = null`.
+- **+985 righe nette** (zona-tracker.html da 14.392 → 15.362 righe).
+- **Testato su iPhone**: switch finestra, nav date, drilldown giorni passati read-only (kebab nascosto), drilldown giorno settimana corrente con kebab "Modifica" funzionante. Tutto produzione-ready.
 
 ### 18 maggio 2026 — Step 2 modulo Integratori: flusso "Registra Extra" ridisegnato come eventi mordi-e-fuggi ✅
 
