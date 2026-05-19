@@ -27,19 +27,24 @@ https://github.com/IgnazioF321621/benessere-forma
 2. Testing iPhone + Android con 3 tester → **IN CORSO** (messaggi WhatsApp inviati 11 mag 2026)
 3. Test mode `?test=1`
 4. ~~Modulo Integratori refresh v3~~ ✅ completato 16 mag 2026 — pacchetti + extra + catalogo Nutrilite hi-fi (vedi sezione "Modulo Integratori v3")
-5. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
-6. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
-7. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
+5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design), implementazione in 9 sessioni sequenziali (Step A→I, vedi sezione "Tab Piano v4"). PROSSIMA: **Sessione 1 — Step A** (fondazione dati Supabase: tabelle `weekly_plans`, `weekly_plan_meals`, `weekly_plan_acceptance`, `ai_memory`, `weight_logs` + update `profiles`)
+6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
+7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
+8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
+9. ~~M2 Check Fisico — versione funzionale~~ ✅ completato 13 mag 2026 — design refinement via Claude Design in arrivo
 
-**Da rifinire** (post-Integratori v3 + Step 2):
+**Da rifinire** (post-Analisi v3 + design Piano v4):
 - ~~Fix bottone ELIMINA pacchetto non visibile quando il pacchetto esiste in DB ma ha 0 items~~ ✅ fixato (commit `73d141b`)
 - ~~Pulizia legacy marcata `// [LEGACY-INTEGRATORI-V3]` e `// [LEGACY-CATALOGO-V3-BLOCCO2]`~~ ✅ fatto (commit `0724a63`)
 - ~~Step 2 modulo Integratori: ridisegno flusso extra come eventi `supplements_log`~~ ✅ completato 18 mag 2026 (commit `306defe` — vedi sotto-sezione "Flusso Registra Extra")
 - ~~Refresh tab Storico (legacy → design system v3)~~ ✅ completato 18 mag 2026 pomeriggio (commit `09a2775`) — rinominata **Analisi**, cambio di paradigma da lista cronologica a dashboard analitica di tendenze. Vedi sezione "Tab Analisi v3".
-- Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom)
-- Refresh tab Piano (legacy → design system v3) — ULTIMA tab Nutrition ancora legacy
+- ~~Refresh tab Piano (legacy → design system v3)~~ ✅ design v4 chiuso 19 mag 2026 — implementazione roadmap 9 sessioni (Step A→I). Vedi sezione "Tab Piano v4".
+- **Refresh onboarding M1 dedicato** — aggiungere step preferenze coach: giorno+ora generazione piano settimanale (preset VEN/SAB/DOM + custom, default DOM 20:00), modalità tracking peso (giorno/3gg/settimana/libero, default flessibile + reminder 14gg). PROSSIMO step separato dopo Tab Piano v4 v1.
+- Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom) — rimandato
 - Pulizia funzioni "Singolo" legacy dormienti (`setSuppSheetMode('singolo')` + render legacy + relative funzioni di salvataggio extra legacy) — non più chiamate da nessuna CTA dopo Step 2 ma presenti nel codice. Da rimuovere in cleanup separato.
 - Pulizia legacy Analisi v3: `renderStoricoLegacy`, `setReportRange` (no-op), CSS `.storico-extra-tag`, DOM alias `'storico'` nel routing — rimuovere dopo verifica produzione stabile.
+- Pulizia legacy Piano v3 → v4: `renderPiano` versione legacy quando v4 sarà production-ready (Sessione 9 — Step I)
+- Notifiche push iOS PWA — TRATTENUTE per V2 dopo Tab Piano v4 stabile (Opzione 3 scelta in chiusura design: welcome overlay domenicale sufficiente per V1)
 
 ## Tester attivi
 
@@ -84,11 +89,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (18 maggio 2026, post-Analisi v3)
+### Stato moduli Nutrition (19 maggio 2026, post-design Piano v4)
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`). Rinominata + cambio di paradigma da lista cronologica a dashboard analitica (vedi sezione "Tab Analisi v3").
-- **Tab Piano**: 🟡 grafica legacy — ULTIMA tab Nutrition ancora da migrare
+- **Tab Piano**: 🔵 design v4 Coach Attivo chiuso 19 mag 2026 (2 round Claude Design + 12 decisioni). In attesa implementazione (roadmap 9 sessioni Step A→I, vedi sezione "Tab Piano v4"). Codice attuale `renderPiano` resta legacy fino a Sessione 9.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1176,6 +1181,151 @@ Tap su punto chart o cella heatmap → slide-up 240ms `cubic-bezier(.16,1,.3,1)`
 - Alias `'storico'` in `showPage` / `renderPage` / `nutriSubNav` — retrocompat cache PWA stale, costo runtime zero
 - Rimuovere tutti questi item in cleanup separato dopo verifica produzione stabile (vedi "Da rifinire")
 
+## Tab Piano v4 — Visione + Roadmap (19 maggio 2026)
+
+Design completo del refresh tab Piano chiuso il **19 maggio 2026** in 2 round Claude Design (Round 1: 3 mockup base + 6 decisioni residue chiuse; Round 2: estensione con architettura check fisici a 2 livelli + 6 nuovi dubbi chiusi). 12 decisioni di design chiuse totali. Decisione di implementazione presa da Ignazio: **Opzione 3** (tutto tranne notifiche push iOS).
+
+### Cambio di paradigma
+
+- **Da pagina "consultazione setup statica"** (legacy: target 40·30·30, piano AI textarea, priorità cliniche) **→ "coach attivo settimanale evolutivo"**
+- **Filosofia**: "AI propone, utente decide" — niente automazione cieca, trasparenza ("PERCHÉ TI PROPONGO QUESTO"), no gamification ansiogena
+- **Livello 4 — Coach Evoluto con equilibrio**: il coach impara dalle scelte settimanali dell'utente (accettazioni, sostituzioni, skip) e propone aggiustamenti progressivi senza forzare nessuna automazione
+
+### Ritmo settimanale
+
+- **Piano statico per settimana (lun-dom)**: una volta generato, il piano resta fisso fino al refresh successivo
+- **AI gira UNA volta a settimana** per generare il prossimo piano basandosi su:
+  - Settimana conclusa (pasti registrati, sostituzioni, skip)
+  - Memoria progressiva (preferenze e contesti accumulati nel tempo)
+  - Trend peso settimanale (per piccole correzioni nutrition)
+  - Check M2 completo (ogni 4 settimane: peso + circonferenze + foto + esami → guida adattamento sostanziale piano nutrition + training mesociclo successivo)
+- **Utente sceglie giorno+ora di generazione piano** — preset `VEN/SAB/DOM` + `PERSONALIZZATO` (combobox custom). Default in onboarding M1 esteso: `DOM 20:00`
+
+### Architettura "check fisici a 2 livelli"
+
+**Livello 1 — Peso flessibile on-demand**:
+- Utente sceglie modalità di pesata in onboarding: `OGNI GIORNO` / `OGNI 3 GIORNI` / `OGNI SETTIMANA` / `LIBERO` (default `LIBERO`)
+- Pesata via modal bottom sheet (stepper +/−0.1kg + tap numero per keyboard iOS)
+- Trend peso entra in `weight_logs` Supabase, accessibile a AI per piccole correzioni settimanali
+- **Reminder gentile banner** in tab Oggi se ≥14 giorni senza pesata (anti-nag: silenzio progressivo `dismiss → 48h pausa → 7gg pausa → 28gg pausa` se ripetutamente dismissed)
+- Card peso in tab Piano: numero attuale + sparkline 30 giorni + CTA "Pesati ora"
+- D1 (settimana 1 onboarding): card visibile con sparkline vuota + messaggio invito "Inizia a pesarti per vedere il trend" (no nascondere)
+
+**Livello 2 — M2 check completo ogni 4 settimane (mesociclo)**:
+- Già esistente (vedi sezione M2 Check Fisico — versione funzionale 13 maggio 2026)
+- Peso + circonferenze + foto + blood work
+- Guida adattamento **sostanziale** piano nutrition + piano training mesociclo successivo (target_kcal, macro adattati, eventuale cambio obiettivo)
+- Trigger differenziato dal Livello 1: il peso flessibile aggiusta in continuo (correzioni piccole), il check M2 ridefinisce i target periodicamente
+
+### 5 schermate hi-fi chiuse
+
+1. **Tab Piano vista principale** (sostituisce `renderPiano` legacy):
+   - Header settimana corrente (es. "Settimana del 19 mag 2026") + nav `‹ ›` per scorrere settimane future/passate
+   - Card stato "ATTIVO · 5/7 GIORNI SEGUITI" con barra 7 segmenti (verde per giorni in zona, ambra per quasi, terracotta per fuori/skip)
+   - 7 card giorno (lun-dom) con chip pasti emoji (colazione/spuntino/pranzo/merenda/cena), tap → overlay Dettaglio Giorno
+   - Sezione **Memoria AI** scheda paper-cream `#F8F4EB`: top 4-5 preferenze più salde apprese dall'AI (es. "Preferisce pesce 3x/settimana", "Evita burro e formaggi stagionati", "Venerdì sera fuori pasto"), CTA "VEDI TUTTE ›" → lista completa
+   - Card **peso flessibile**: numero attuale + sparkline 30gg + CTA "Pesati ora"
+   - Profile compatto in fondo (obiettivo + target_kcal + macro % + modalità tracking peso)
+
+2. **Dettaglio Giorno overlay** (slide-up, pattern da `daydetail-overlay` Analisi v3):
+   - Pasti proposti dall'AI con macro complete + ingredienti
+   - Box italic **"PERCHÉ TI PROPONGO QUESTO"** sotto ogni pasto: spiegazione AI in 1-2 frasi (es. "Hai dichiarato di preferire il pesce e ieri non hai raggiunto le proteine target")
+   - 3 azioni per pasto: **ACCETTA** (scrive in `meals` di tab Oggi) / **SOSTITUISCI** (placeholder V1) / **SALTO** (marca acceptance + segnala AI per non riproporre)
+
+3. **Welcome overlay domenicale** (sostituisce notifica push — Opzione 3):
+   - Trigger: prima apertura dell'app nel giorno+ora scelti dall'utente (default DOM 20:00) E piano per settimana successiva pronto in DB
+   - Overlay fullscreen con "Piano della prossima settimana pronto"
+   - Diff card "Adattamento proposto" se l'AI ha modificato target (es. "Calorie ridotte da 2326 → 2200 kcal in base al trend peso +0.4kg/settimana")
+   - CTA: "Vedi piano →" / "Più tardi"
+
+4. **Modal "Pesati ora"** (bottom sheet):
+   - Stepper Mono 32px `−` numero `+` (step 0.1kg)
+   - Tap sul numero → apre keyboard iOS native (input type=number)
+   - Default = ultimo peso registrato (se esiste in `weight_logs`)
+   - CTA "Conferma" → insert `weight_logs` + toast + refresh card peso in Piano + refresh sparkline
+
+5. **Banner reminder pesata** (solo tab Oggi):
+   - Visibile in tab Oggi se ≥14 giorni senza pesata
+   - Posizionato sopra timeline pasti (non in Piano per evitare invadenza)
+   - Banner dismissable + anti-nag rule (silenzio progressivo 48h → 7gg → 28gg dopo dismiss ripetuti)
+   - Copy: "Sono passati X giorni dall'ultima pesata. Vuoi aggiornare il trend?"
+   - CTA "Pesati ora" (apre modal) / "Più tardi" (dismiss con timer anti-nag)
+
+### 12 decisioni chiuse (Round 1 + Round 2)
+
+1. **Giorno generazione piano**: switch con 3 preset `VEN/SAB/DOM` + `PERSONALIZZATO` (combobox custom). Default DOM 20:00. Preferenza salvata in `profiles`
+2. **Contatore "X/7 giorni seguiti"**: conta accettati + sostituzioni che restano in zona macro (premia aderenza nutrizionale, non obbedienza letterale al pasto proposto)
+3. **Memoria AI**: top 4-5 preferenze più salde mostrate in evidenza + CTA "VEDI TUTTE ›" per lista completa (no esposizione totale ansiogena)
+4. **Bottone RIGENERA**: solo giorni futuri non ancora arrivati; il passato resta fisso come riferimento storico (no rewriting della storia)
+5. **Settimana 1 onboarding**: piano AI generato subito al termine M1 con dati profilo + tag "Costruito su M1, si raffinerà con l'uso" (no attesa fine settimana per primo piano)
+6. **Card peso D1**: visibile con sparkline vuota + messaggio invito (no nascondere — meglio rendere visibile la possibilità che nasconderla)
+7. **Modal peso**: stepper +/−0.1kg + tap numero per keyboard iOS (combinazione, no XOR)
+8. **Trend chart sparkline**: statico in V1, no interattività (no tap su punto → drilldown)
+9. **Banner reminder pesata**: solo tab Oggi (non in Piano — anti-invadenza, il Piano deve essere uno spazio "calmo")
+10. **Adattamento AI nutrition**: inserito in welcome overlay domenicale come diff card (concentra il messaggio nel momento "settimanale" invece di sparpagliarlo)
+11. **Onboarding M1 estensione 2 nuove preferenze**: TRATTENUTO per sessione dedicata futura. Per ora default DOM 20:00 + flessibile 14gg, modificabili dal modal impostazioni profilo
+12. **Notifiche push iOS PWA**: NON in V1 (Opzione 3 scelta). Welcome overlay domenicale è sufficiente per concentrare il messaggio del coach al primo apertura nel giorno scelto. Push iOS rimandata a V2 post-stabilizzazione Tab Piano v4
+
+### Roadmap implementazione (9 sessioni Step A→I)
+
+Decisione utente Ignazio: **Opzione 3** (tutto tranne notifiche push iOS). Implementazione sequenziale con deploy in produzione tra ogni step per validazione progressiva con tester.
+
+- **Sessione 1 — Step A**: **Fondazione dati Supabase**
+  - Tabelle nuove: `weekly_plans`, `weekly_plan_meals`, `weekly_plan_acceptance`, `ai_memory`, `weight_logs`
+  - Update `profiles` con 2 nuovi campi: `plan_generation_day` (text 'fri'|'sat'|'sun'|'custom'), `plan_generation_time` (text HH:MM), `weight_tracking_mode` (text 'daily'|'every3'|'weekly'|'flexible')
+  - Migrazioni DDL + RLS policies (4 policy `own_*` per ogni tabella + eventuale admin policy)
+
+- **Sessione 2 — Step B**: **UI Tab Piano vista principale v4**
+  - Refresh `renderPiano` legacy → `renderPianoV4` design system v3
+  - Card stato "ATTIVO · X/7 GIORNI SEGUITI" + barra 7 segmenti
+  - 7 card giorno con chip pasti emoji
+  - Sezione Memoria AI (paper-cream `#F8F4EB`, top 4-5 preferenze + CTA "VEDI TUTTE ›")
+  - Card peso flessibile (numero + sparkline + CTA)
+  - Profile compatto in fondo
+  - Navigazione settimane `‹ ›`
+
+- **Sessione 3 — Step C**: **Overlay Dettaglio Giorno**
+  - Riusa pattern `daydetail-overlay` di Analisi v3 (slide-up 240ms)
+  - Card pasti proposti + box italic "PERCHÉ TI PROPONGO QUESTO"
+  - Logica ACCETTA → scrive in `meals` di tab Oggi via `dbAddMeal()`
+  - Logica SALTO → marca riga in `weekly_plan_acceptance` con `status='skipped'` + segnala AI per non riproporre
+  - SOSTITUISCI: placeholder V1 (CTA visibile ma azione "Coming soon")
+
+- **Sessione 4 — Step D**: **Modal peso + banner reminder**
+  - Bottom sheet stepper +/−0.1kg + keyboard iOS
+  - Logica `weight_logs.insert()` + toast conferma + refresh card peso in Piano
+  - Banner anti-nag in tab Oggi (≥14gg senza pesata, silenzio progressivo 48h/7gg/28gg via timestamp `weight_reminder_dismissed_at` in localStorage)
+
+- **Sessione 5 — Step E ridotto**: **Welcome overlay domenicale (senza push)**
+  - Overlay automatico al primo apertura app nel giorno+ora scelti (check `lastWelcomeShown` in localStorage per evitare re-show stesso giorno)
+  - Diff card "Adattamento proposto" se AI ha modificato target nel piano nuovo
+  - **NIENTE notifiche push iOS** (Opzione 3 — taglio strategico per evitare complessità PWA push su iOS Safari)
+
+- **Sessione 6 — Step F**: **Logica AI generazione piano**
+  - Cloudflare Worker schedulato (cron per ogni utente nel giorno+ora scelto)
+  - Prompt engineering Groq `llama-3.3-70b-versatile`
+  - Input: profilo + obiettivo + intolleranze + priorità cliniche + memoria AI + pasti settimana precedente + trend peso
+  - Output: JSON strutturato 7 giorni × 3-4 pasti con spiegazioni AI per ogni proposta
+  - Salvataggio Supabase `weekly_plans` + `weekly_plan_meals` + error handling con fallback (se Worker fallisce, mantieni piano corrente + log errore)
+
+- **Sessione 7 — Step G**: **Logica adattamento + memoria AI**
+  - Worker legge `weight_logs` settimanali, calcola trend peso (slope linear regression su 14gg), propone adattamento target_kcal
+  - Aggiorna `ai_memory` con preferenze apprese dalle azioni utente (es. "preferisce pesce" se 3+ sostituzioni con pesce, "evita burro" se SALTO ripetuto su pasti con burro, "venerdì fuori" se SALTO ricorrente venerdì sera)
+  - Logica "AI propone, utente decide": no automatismi sui target — l'utente conferma manualmente via diff card nel welcome overlay
+
+- **Sessione 8 — Step H**: **Integrazione bidirezionale tab Oggi**
+  - Registra pasto in Oggi → sistema verifica se il pasto è pianificato per quel giorno+slot
+  - Match → marca `weekly_plan_acceptance.status='accepted'` automaticamente
+  - No match in zona macro → marca `status='substituted'` (conta nel "X/7 giorni seguiti")
+  - No match fuori zona → marca `status='off_plan'` (NON conta nel contatore)
+  - Contatore "5/7 giorni seguiti" real-time in card stato
+
+- **Sessione 9 — Step I**: **Update CLAUDE.md + cleanup legacy**
+  - Marca `renderPiano` (versione legacy) → `renderPianoLegacy`
+  - Aggiorna routing `showPage`/`renderPage` per puntare a `renderPianoV4`
+  - Documentazione finale completa Tab Piano v4 production-ready
+  - Roadmap successive (V2): notifiche push iOS, SOSTITUISCI funzionante con catalogo pasti AI, food input multi-modale integrato
+
 ## Workflow git (aggiornato 12 maggio 2026)
 
 Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
@@ -1352,6 +1502,37 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 19 maggio 2026 — Design completo Tab Piano v4 Coach Attivo (2 round Claude Design) ✅
+
+Sessione di design completa per il refresh dell'ultima tab Nutrition ancora legacy. **Nessun codice scritto oggi** — sessione interamente di design + decisioni architetturali. Implementazione pianificata in 9 sessioni sequenziali a partire dal prossimo task (Sessione 1 — Step A: fondazione dati Supabase).
+
+- **Cambio di paradigma**: da pagina "consultazione setup statica" (legacy: target 40·30·30, piano AI textarea, priorità cliniche) → **coach attivo settimanale evolutivo**. Il piano gira UNA volta a settimana, l'AI propone, l'utente decide. Memoria progressiva delle preferenze, trend peso flessibile per piccole correzioni, check M2 ogni 4 settimane per adattamenti sostanziali.
+- **5 schermate hi-fi chiuse** con Claude Design:
+  1. Tab Piano vista principale (header settimana + card stato X/7 + 7 card giorno + Memoria AI scheda paper-cream + card peso + profile compatto)
+  2. Dettaglio Giorno overlay (pasti proposti + box italic "PERCHÉ TI PROPONGO QUESTO" + 3 azioni ACCETTA/SOSTITUISCI/SALTO)
+  3. Welcome overlay domenicale (sostituisce notifica push iOS — diff card "Adattamento proposto")
+  4. Modal "Pesati ora" (bottom sheet stepper +/−0.1kg + tap numero per keyboard iOS)
+  5. Banner reminder pesata (solo tab Oggi, ≥14gg, anti-nag 48h/7gg/28gg)
+- **12 decisioni di design chiuse** (Round 1: 6 + Round 2: 6):
+  1. Giorno generazione piano: switch VEN/SAB/DOM + PERSONALIZZATO (default DOM 20:00)
+  2. Contatore "X/7 giorni seguiti": premia aderenza nutrizionale (zona macro), non obbedienza letterale
+  3. Memoria AI: top 4-5 preferenze più salde + CTA "VEDI TUTTE ›" per lista completa
+  4. Bottone RIGENERA: solo giorni futuri, passato fisso come riferimento storico
+  5. Settimana 1 onboarding: piano AI subito al termine M1 + tag "Costruito su M1, si raffinerà"
+  6. Card peso D1: visibile con sparkline vuota + messaggio invito (no nascondere)
+  7. Modal peso: stepper +/−0.1kg + tap numero per keyboard iOS (combinazione)
+  8. Trend chart sparkline: statico in V1, no interattività
+  9. Banner reminder pesata: solo tab Oggi (anti-invadenza, Piano resta "calmo")
+  10. Adattamento AI nutrition: inserito in welcome overlay domenicale come diff card
+  11. Onboarding M1 estensione 2 nuove preferenze: TRATTENUTO per sessione dedicata futura
+  12. Notifiche push iOS PWA: NON in V1 (Opzione 3 scelta, welcome overlay domenicale sufficiente)
+- **Architettura "check fisici a 2 livelli"** introdotta:
+  - **Livello 1 — Peso flessibile on-demand**: utente sceglie modalità (giorno/3gg/settimana/libero), trend peso entra in `weight_logs` Supabase, AI legge trend per piccole correzioni settimanali, reminder gentile banner se ≥14gg senza pesata
+  - **Livello 2 — M2 check completo ogni 4 settimane (mesociclo)**: già esistente, guida adattamento sostanziale piano nutrition + training mesociclo successivo
+- **Decisione implementazione**: **Opzione 3** scelta da Ignazio = tutto tranne notifiche push iOS. Welcome overlay domenicale al primo apertura app nel giorno scelto sostituisce la notifica push (taglio strategico per evitare complessità PWA push su iOS Safari).
+- **Roadmap 9 sessioni sequenziali pianificate** (Step A→I): deploy in produzione tra ogni sessione per validazione progressiva con tester. Vedi sezione "Tab Piano v4 — Visione + Roadmap" per dettaglio completo.
+- **Onboarding M1 estensione 2 nuove preferenze** (giorno+ora generazione piano + modalità tracking peso): TRATTENUTO per sessione dedicata futura DOPO Tab Piano v4 v1. Per ora default DOM 20:00 + tracking flessibile 14gg, modificabili dal modal impostazioni profilo.
 
 ### 18 maggio 2026 pomeriggio — Refresh tab Storico → Analisi v3 (dashboard analitica) ✅
 
