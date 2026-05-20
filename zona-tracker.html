@@ -1489,6 +1489,20 @@ select.inp{cursor:pointer;}
 .pianov4-meal-reasoning-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;}
 .pianov4-meal-reasoning-text{font-family:'Syne',sans-serif;font-style:italic;font-size:13.5px;line-height:1.55;color:var(--t2);}
 
+/* ─── PIANO V4 Step C.4 — Bottoni azione + stato accettato ─── */
+.pianov4-meal-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(0,0,0,.06);}
+.pianov4-meal-btn{flex:1;padding:11px 8px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border:1px solid transparent;transition:background 120ms ease,transform 80ms ease;-webkit-tap-highlight-color:transparent;}
+.pianov4-meal-btn:not(:disabled):active{transform:scale(0.97);}
+.pianov4-meal-btn-accept{background:var(--acc);color:#fff;}
+.pianov4-meal-btn-accept:active{background:#226158;}
+.pianov4-meal-btn-accepted{background:rgba(42,122,111,0.12);color:var(--acc);border-color:rgba(42,122,111,0.25);cursor:not-allowed;opacity:1;}
+.pianov4-meal-btn-ghost{background:transparent;color:var(--t3);border-color:var(--b1);cursor:not-allowed;opacity:.5;}
+
+/* Card accettata: bordo evergreen sottile + badge top-right + extra padding-top header per evitare sovrapposizione */
+.pianov4-meal-card-accepted{border-color:rgba(42,122,111,0.3);position:relative;}
+.pianov4-meal-card-accepted .pianov4-meal-header{padding-top:10px;}
+.pianov4-meal-accepted-badge{position:absolute;top:12px;right:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--acc);background:rgba(42,122,111,0.12);padding:4px 8px;border-radius:6px;z-index:1;}
+
 </style>
 </head>
 <body>
@@ -2727,7 +2741,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 20:24';
+const APP_VERSION = '2026.05.20 · 20:40';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11726,6 +11740,88 @@ function closePianoV4DayOverlay() {
 }
 
 // Render overlay: re-render safe (rimuove esistente se presente, ricrea)
+// ─── Step C.4 (20 mag 2026): persistenza ACCETTA pasti demo via localStorage ───
+// Decisione product: niente tabella weekly_plan_acceptance per ora (quella in Step F
+// con dati AI reali). Key univoca per userId+weekOffset+dayOfWeek+demoMealId permette
+// accettare stesso demo in giorni diversi senza sovrapposizioni.
+function _pianoV4GetAcceptanceKey(weekOffset, dayOfWeek, demoMealId) {
+  const userId = (ST.user && ST.user.id) || (ST.profile && ST.profile.id) || 'anon';
+  return `zona_pianov4_demo_accept_${userId}_w${weekOffset}_d${dayOfWeek}_${demoMealId}`;
+}
+function _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, demoMealId) {
+  try {
+    return localStorage.getItem(_pianoV4GetAcceptanceKey(weekOffset, dayOfWeek, demoMealId)) === '1';
+  } catch (e) { return false; }
+}
+function _pianoV4MarkDemoAccepted(weekOffset, dayOfWeek, demoMealId) {
+  try {
+    localStorage.setItem(_pianoV4GetAcceptanceKey(weekOffset, dayOfWeek, demoMealId), '1');
+  } catch (e) { /* localStorage piena/disabled — fallisce silente, demo state perso ma DB scritto */ }
+}
+
+// Calcola data ISO YYYY-MM-DD del giorno target dal weekOffset+dayOfWeek (1-7 ISO).
+// Riusa getPianoV4WeekStart. Pattern coerente con todayKey() (UTC-slice da Date locale 12:00 → no shift DST).
+function _pianoV4CalculateDate(weekOffset, dayOfWeek) {
+  const weekStart = getPianoV4WeekStart(weekOffset || 0);
+  const target = new Date(weekStart);
+  target.setDate(weekStart.getDate() + (dayOfWeek - 1));
+  target.setHours(12, 0, 0, 0); // mezzogiorno locale → toISOString slice safe da DST
+  return target.toISOString().slice(0, 10);
+}
+
+// Handler ACCETTA: scrive pasto in meals (tab Oggi) + marca accepted localStorage + toast + re-render.
+// Limitazione: dbAddMeal usa ST.activeDay hardcoded, NON accetta date custom → ACCETTA permesso
+// SOLO se targetDate === todayKey(). Pasti di giorni passati/futuri bloccati con toast esplicativo.
+// In Step F (AI reale + tabella weekly_plan_acceptance) si potrà rivisitare la limitazione.
+async function acceptPianoV4DemoMeal(demoMealId) {
+  if (!ST.pianoV4DayOverlay) return;
+  const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
+  const weekOffset = ST.pianoV4DayOverlay.weekOffset;
+
+  // Guard: già accettato (no double-tap)
+  if (_pianoV4IsDemoAccepted(weekOffset, dayOfWeek, demoMealId)) {
+    showToast('Già accettato', '✅');
+    return;
+  }
+
+  // Guard: solo pasti di oggi (limitazione firma dbAddMeal — vedi commento sopra)
+  const targetDate = _pianoV4CalculateDate(weekOffset, dayOfWeek);
+  if (targetDate !== todayKey()) {
+    showToast('Puoi accettare solo i pasti di oggi', 'ℹ️');
+    return;
+  }
+
+  // Recupera pasto demo
+  const meals = _pianoV4GetDemoMeals(dayOfWeek);
+  const meal = meals.find(function(m) { return m.id === demoMealId; });
+  if (!meal) return;
+
+  // Payload coerente con dbAddMeal firma esistente
+  const mealData = {
+    slot: meal.slot,
+    description: meal.name + ' · ' + meal.ingredients.join(', '),
+    kcal: meal.kcal,
+    protein: meal.protein,
+    carbs: meal.carbs,
+    fat: meal.fat,
+    time: meal.time,
+  };
+
+  try {
+    const saved = await dbAddMeal(mealData);
+    // Pattern dei call site esistenti: push in memoria + saveCache per visibilità immediata tab Oggi
+    const d = getDay(ST.activeDay);
+    d.meals.push(Object.assign({}, mealData, { id: saved.id, local_id: saved.id }));
+    if (typeof saveCache === 'function') saveCache();
+    _pianoV4MarkDemoAccepted(weekOffset, dayOfWeek, demoMealId);
+    showToast('Pasto accettato!', '✅');
+    renderPianoV4DayOverlay(); // re-render overlay per aggiornare card → ACCETTATO
+  } catch (err) {
+    console.error('[piano-v4] Errore ACCETTA demo:', err);
+    showToast('Errore, riprova', '⚠️');
+  }
+}
+
 // Demo data Step C.3 (20 mag 2026, decisione product): 5 pasti dimostrativi
 // sempre visibili per ogni giorno, per tutti i tester. In Step F sostituiti
 // dalla query Supabase weekly_plan_meals (logica: se rows>0 → reali, altrimenti
@@ -11782,13 +11878,25 @@ function renderPianoV4DemoBanner() {
 }
 
 // Lista 5 card pasto con macro + ingredienti + box "PERCHÉ TI PROPONGO QUESTO".
-// In C.3 niente bottoni ACCETTA/SOSTITUISCI/SALTO (arrivano C.4-C.5-C.6).
+// Step C.4: aggiunti bottoni azione (ACCETTA attivo + SOSTITUISCI/SALTO ghost disabled).
+// Card "accettata" (localStorage flag true): bordo evergreen + badge ✓ ACCETTATO + bottone disabled.
 function renderPianoV4MealsList(meals) {
+  if (!ST.pianoV4DayOverlay) return '';
+  const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
+  const weekOffset = ST.pianoV4DayOverlay.weekOffset;
+
   const cards = meals.map(function(m) {
+    const isAccepted = _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, m.id);
     const ingredientsHTML = m.ingredients.map(function(i) {
       return `<li>${esc(i)}</li>`;
     }).join('');
-    return `<div class="pianov4-meal-card" data-meal-id="${esc(m.id)}">
+    const cardCls = 'pianov4-meal-card' + (isAccepted ? ' pianov4-meal-card-accepted' : '');
+    const acceptedBadge = isAccepted ? `<div class="pianov4-meal-accepted-badge">✓ ACCETTATO</div>` : '';
+    const acceptBtn = isAccepted
+      ? `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`
+      : `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
+    return `<div class="${cardCls}" data-meal-id="${esc(m.id)}">
+      ${acceptedBadge}
       <div class="pianov4-meal-header">
         <div class="pianov4-meal-slot">${esc(m.slot.toUpperCase())} · ${esc(m.time)}</div>
         <div class="pianov4-meal-name">${esc(m.name)}</div>
@@ -11807,6 +11915,11 @@ function renderPianoV4MealsList(meals) {
       <div class="pianov4-meal-reasoning">
         <div class="pianov4-meal-reasoning-label">PERCHÉ TI PROPONGO QUESTO</div>
         <div class="pianov4-meal-reasoning-text">${esc(m.reasoning)}</div>
+      </div>
+      <div class="pianov4-meal-actions">
+        ${acceptBtn}
+        <button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Disponibile presto">SOSTITUISCI</button>
+        <button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Disponibile presto">SALTO</button>
       </div>
     </div>`;
   }).join('');
