@@ -1421,6 +1421,17 @@ select.inp{cursor:pointer;}
 .pianov4-weight-cta:disabled{opacity:0.4;cursor:not-allowed;border-style:dashed;border-width:1px;color:var(--t3);border-color:var(--b1);background:transparent;}
 .pianov4-weight-cta:not(:disabled):active{background:var(--acc-lt);}
 
+/* ── Profile compatto (Step B.4) — chiude la vista principale Tab Piano v4 ── */
+.pianov4-profile-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:14px 16px 16px;margin:0 16px 14px;}
+.pianov4-profile-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
+.pianov4-profile-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;color:var(--t1);text-transform:uppercase;line-height:1.3;}
+.pianov4-profile-edit{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;cursor:pointer;line-height:1.3;}
+.pianov4-profile-edit:active{opacity:0.6;}
+.pianov4-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;}
+.pianov4-profile-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.pianov4-profile-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.22em;color:var(--t3);text-transform:uppercase;line-height:1.3;}
+.pianov4-profile-value{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--t1);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 </style>
 </head>
 <body>
@@ -2659,7 +2670,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 15:37';
+const APP_VERSION = '2026.05.20 · 15:53';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11650,9 +11661,17 @@ function renderPianoV4() {
       <button class="pianov4-week-arrow" onclick="ST.pianoV4WeekOffset++; renderPianoV4();" title="Settimana successiva">›</button>
     </div>`;
 
-  // ── Card stato settimana (D1: hardcoded vuoto in B.2, no fetch) ──
-  // I segmenti restano tutti grigi (classe base). Le classi .filled/.partial/.missed
-  // sono definite nel CSS pronte per uso futuro (Step B.3+ quando arriva la logica AI).
+  // ── Card stato settimana (B.4: hint contestuale a settimana navigata) ──
+  // Counter 0/7 e badge ATTIVO attenuato ancora hardcoded (D1). Solo l'hint diventa
+  // contestuale: corrente / passata / futura. Logica reale arriva in Step C/D/F.
+  let statusHint = '';
+  if (offset === 0) {
+    statusHint = 'Il tuo primo piano arriverà domenica sera.';
+  } else if (offset < 0) {
+    statusHint = 'Settimana archiviata · nessun piano registrato.';
+  } else {
+    statusHint = 'Piano in arrivo · sarà generato domenica sera.';
+  }
   const statusCard = `
     <div class="pianov4-status-card">
       <div class="pianov4-status-row">
@@ -11663,7 +11682,7 @@ function renderPianoV4() {
       <div class="pianov4-status-bar">
         ${Array(7).fill('<span class="pianov4-status-seg"></span>').join('')}
       </div>
-      <p class="pianov4-status-hint">Il tuo primo piano arriverà domenica sera.</p>
+      <p class="pianov4-status-hint">${statusHint}</p>
     </div>`;
 
   // ── 7 card giorno (B.2: stato vuoto, non cliccabili — tap arriva in Step C) ──
@@ -11731,7 +11750,73 @@ function renderPianoV4() {
       <button class="pianov4-weight-cta" disabled>+ PESATI ORA</button>
     </div>`;
 
-  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + memoryCard + weightCard + versionFooter();
+  // ── Profile compatto in fondo (B.4: chiude la vista principale Tab Piano v4) ──
+  // Grid 2×2 con obiettivo + target kcal + macro % + tracking peso.
+  // CTA "MODIFICA ›" apre openSettingsModal esistente (no funzione nuova).
+  // Guard difensivi: se obiettivo/TARGET mancanti → '—'.
+  const objKey = (profile && profile.obiettivo) ? String(profile.obiettivo) : '';
+  // Obiettivo è CSV (vedi calcAdaptedTargets); prendiamo il primo valore per il display compatto
+  const objFirst = objKey ? objKey.split(',')[0].trim() : '';
+  const objMap = {
+    'ricomposizione': 'Ricomposizione',
+    'dimagrimento': 'Dimagrimento',
+    'mantenimento': 'Mantenimento',
+    'ipertrofia': 'Ipertrofia',
+    'forza_performance': 'Forza & Performance',
+    'longevita': 'Longevità',
+    'massa': 'Massa muscolare',
+    'benessere_generale': 'Benessere',
+  };
+  const objLabel = objMap[objFirst] || (objFirst ? objFirst.replace(/_/g,' ').replace(/\b\w/g, function(c){return c.toUpperCase();}) : '—');
+
+  const tgt = ST.TARGET || {kcal:0, protein:0, carbs:0, fat:0};
+  const kcalLabel = (tgt.kcal && tgt.kcal > 0) ? fmtNum(tgt.kcal) + ' kcal' : '—';
+
+  // Macro %: prefer ST.TARGET.pCarbo/pProt/pFat (dinamici da profilo), altrimenti calcola da grammi
+  let pctC, pctP, pctF;
+  if (tgt.pCarbo != null && tgt.pProt != null && tgt.pFat != null) {
+    pctC = tgt.pCarbo; pctP = tgt.pProt; pctF = tgt.pFat;
+  } else {
+    const cK = (tgt.carbs || 0) * 4, pK = (tgt.protein || 0) * 4, fK = (tgt.fat || 0) * 9;
+    const sumK = cK + pK + fK;
+    if (sumK > 0) {
+      pctC = Math.round(cK / sumK * 100);
+      pctP = Math.round(pK / sumK * 100);
+      pctF = Math.round(fK / sumK * 100);
+    } else { pctC = pctP = pctF = null; }
+  }
+  const macroLabel = (pctC == null) ? '—' : `${pctC}·${pctP}·${pctF}`;
+
+  const trackMap = { daily: 'Ogni giorno', every3: 'Ogni 3 giorni', weekly: 'Ogni settimana', flexible: 'Libero' };
+  const trackLabel = trackMap[trackingMode] || 'Libero';
+
+  const profileCard = `
+    <div class="pianov4-profile-card">
+      <div class="pianov4-profile-head">
+        <span class="pianov4-profile-eyebrow">IMPOSTAZIONI · PIANO</span>
+        <span class="pianov4-profile-edit" onclick="openSettingsModal()">MODIFICA ›</span>
+      </div>
+      <div class="pianov4-profile-grid">
+        <div class="pianov4-profile-cell">
+          <span class="pianov4-profile-label">OBIETTIVO</span>
+          <span class="pianov4-profile-value">${esc(objLabel)}</span>
+        </div>
+        <div class="pianov4-profile-cell">
+          <span class="pianov4-profile-label">TARGET</span>
+          <span class="pianov4-profile-value">${kcalLabel}</span>
+        </div>
+        <div class="pianov4-profile-cell">
+          <span class="pianov4-profile-label">MACRO</span>
+          <span class="pianov4-profile-value">${macroLabel}</span>
+        </div>
+        <div class="pianov4-profile-cell">
+          <span class="pianov4-profile-label">PESO</span>
+          <span class="pianov4-profile-value">${esc(trackLabel)}</span>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
 }
 
 // PAGE: PIANO (LEGACY) — sostituito da renderPianoV4 dietro feature flag
