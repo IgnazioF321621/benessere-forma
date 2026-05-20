@@ -1452,9 +1452,8 @@ select.inp{cursor:pointer;}
 .pianov4-day-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--t1);line-height:1.25;padding-right:48px;letter-spacing:-0.2px;}
 .pianov4-day-body{flex:1;padding:24px 20px 40px;display:flex;flex-direction:column;}
 /* Empty state (Step C.2) — pattern parallelo a .analisi-v3-empty di Analisi v3 */
-.pianov4-day-empty{text-align:center;padding:60px 24px 36px;}
-.pianov4-day-empty-emoji{font-size:42px;margin-bottom:14px;line-height:1;}
-.pianov4-day-empty-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--t2);margin-bottom:8px;}
+.pianov4-day-empty{text-align:center;padding:80px 24px 36px;}
+.pianov4-day-empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--t2);margin-bottom:10px;}
 .pianov4-day-empty-text{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.1em;line-height:1.5;color:var(--t3);text-transform:uppercase;}
 
 </style>
@@ -2695,7 +2694,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 17:54';
+const APP_VERSION = '2026.05.20 · 19:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11709,7 +11708,6 @@ function renderPianoV4DayOverlay() {
       </div>
       <div class="pianov4-day-body">
         <div class="pianov4-day-empty">
-          <div class="pianov4-day-empty-emoji">📅</div>
           <div class="pianov4-day-empty-title">Nessun pasto pianificato</div>
           <div class="pianov4-day-empty-text">IL PRIMO PIANO ARRIVERÀ DOMENICA SERA</div>
         </div>
