@@ -1387,8 +1387,10 @@ select.inp{cursor:pointer;}
 
 /* ── 7 card giorno (Step B.2: stato vuoto, non cliccabili) ── */
 .pianov4-days{display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:14px;}
-.pianov4-day-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;}
+.pianov4-day-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;cursor:pointer;transition:background .12s ease;}
+.pianov4-day-card:active{background:var(--s2);}
 .pianov4-day-card-empty{background:transparent;border:1.5px dashed var(--b1);min-height:64px;}
+.pianov4-day-card-empty:active{background:var(--s2);}
 .pianov4-day-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
 .pianov4-day-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--t1);text-transform:uppercase;line-height:1.2;}
 .pianov4-day-date{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--t3);}
@@ -1432,6 +1434,24 @@ select.inp{cursor:pointer;}
 .pianov4-profile-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.22em;color:var(--t3);text-transform:uppercase;line-height:1.3;}
 .pianov4-profile-value{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--t1);line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pianov4-profile-value--mono{font-family:'JetBrains Mono',monospace;font-weight:500;font-variant-numeric:tabular-nums;}
+
+/* ═══════════════════════════════════════════════════════════
+   PIANO V4 Step C.1 — Overlay Dettaglio Giorno (slide-up 240ms)
+   Pattern parallelo a .daydetail-* di Analisi v3 (intatto). Tap card giorno → open.
+   ═══════════════════════════════════════════════════════════ */
+@keyframes pianov4DaySlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes pianov4DaySlideDown{from{transform:translateY(0);}to{transform:translateY(100%);}}
+.pianov4-day-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1500;display:flex;align-items:stretch;justify-content:center;}
+.pianov4-day-screen{background:var(--bg);width:100%;height:100%;max-width:520px;overflow-y:auto;animation:pianov4DaySlideUp 240ms cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column;-webkit-overflow-scrolling:touch;}
+.pianov4-day-screen.dismissing{animation:pianov4DaySlideDown 200ms ease forwards;}
+.pianov4-day-header{position:relative;flex-shrink:0;padding:18px 20px 16px;border-bottom:0.5px solid var(--b1);}
+.pianov4-day-accent-bar{position:absolute;top:0;left:0;right:0;height:4px;background:var(--mod-nutrition);}
+.pianov4-day-close{position:absolute;top:8px;right:8px;width:44px;height:44px;background:none;border:none;cursor:pointer;font-size:26px;font-weight:300;color:var(--t2);line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.pianov4-day-close:active{color:var(--t1);}
+.pianov4-day-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;line-height:1.3;margin-bottom:6px;padding-right:48px;}
+.pianov4-day-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--t1);line-height:1.25;padding-right:48px;letter-spacing:-0.2px;}
+.pianov4-day-body{flex:1;padding:24px 20px 40px;display:flex;flex-direction:column;}
+.pianov4-day-c1-placeholder{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.15em;color:var(--t3);text-transform:uppercase;text-align:center;padding:80px 0;line-height:1.4;}
 
 </style>
 </head>
@@ -2671,7 +2691,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 16:01';
+const APP_VERSION = '2026.05.20 · 17:39';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2792,6 +2812,8 @@ const ST = {
   // PIANO V4 Coach Attivo (Step B.1, 20 mag 2026) — feature flag + nav settimana
   pianoV4Enabled: true,    // toggle rollback istantaneo a renderPiano legacy (modificabile da console)
   pianoV4WeekOffset: 0,    // 0=settimana corrente, -1=passata, +1=futura (offset in settimane)
+  // PIANO V4 Step C.1 (20 mag 2026) — overlay Dettaglio Giorno
+  pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -11624,6 +11646,75 @@ function getPianoV4Days(weekStart) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Step C.1 (20 mag 2026) — Overlay Dettaglio Giorno
+// Scaffolding apertura/chiusura. Contenuto pasti arriva in C.3.
+// Pattern slide-up 240ms parallelo a daydetail-overlay di Analisi v3 (intatto).
+// ═══════════════════════════════════════════════════════════
+
+// Helper: formatta header data overlay (es. "LUN 25 MAG 2026")
+// weekOffset = offset in settimane dalla corrente; dayOfWeek = 1-7 ISO (lun=1, dom=7)
+function _pianoV4FormatDayHeader(weekOffset, dayOfWeek) {
+  const DAY_S = ['LUN','MAR','MER','GIO','VEN','SAB','DOM']; // index 0..6 = ISO 1..7
+  const MON_S = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const weekStart = getPianoV4WeekStart(weekOffset || 0);
+  const d = new Date(weekStart);
+  d.setDate(weekStart.getDate() + (dayOfWeek - 1));
+  return `${DAY_S[dayOfWeek - 1]} ${d.getDate()} ${MON_S[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// Apertura overlay: snapshot weekOffset corrente per non perdere navigazione
+function openPianoV4DayOverlay(dayOfWeek) {
+  if (!ST.pianoV4Enabled) return; // feature flag safety
+  ST.pianoV4DayOverlay = {
+    dayOfWeek: dayOfWeek,
+    weekOffset: ST.pianoV4WeekOffset || 0,
+  };
+  renderPianoV4DayOverlay();
+}
+
+// Chiusura overlay con slide-down 200ms + cleanup state + remove dal DOM
+function closePianoV4DayOverlay() {
+  const el = document.getElementById('pianov4-day-overlay');
+  if (el) {
+    const screen = el.querySelector('.pianov4-day-screen');
+    if (screen) screen.classList.add('dismissing');
+    setTimeout(function() {
+      ST.pianoV4DayOverlay = null;
+      const ex = document.getElementById('pianov4-day-overlay');
+      if (ex) ex.remove();
+    }, 200);
+  } else {
+    ST.pianoV4DayOverlay = null;
+  }
+}
+
+// Render overlay: re-render safe (rimuove esistente se presente, ricrea)
+function renderPianoV4DayOverlay() {
+  if (!ST.pianoV4DayOverlay) return; // defensive cleanup
+  const s = ST.pianoV4DayOverlay;
+  const titleStr = _pianoV4FormatDayHeader(s.weekOffset, s.dayOfWeek);
+
+  const overlayHTML = `<div id="pianov4-day-overlay" class="pianov4-day-overlay" onclick="if(event.target===this)closePianoV4DayOverlay()">
+    <div class="pianov4-day-screen" onclick="event.stopPropagation()">
+      <div class="pianov4-day-header">
+        <div class="pianov4-day-accent-bar"></div>
+        <button class="pianov4-day-close" onclick="closePianoV4DayOverlay()" aria-label="Chiudi">×</button>
+        <div class="pianov4-day-eyebrow">DETTAGLIO GIORNO</div>
+        <div class="pianov4-day-title">${esc(titleStr)}</div>
+      </div>
+      <div class="pianov4-day-body">
+        <div class="pianov4-day-c1-placeholder">CONTENUTO IN ARRIVO</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Re-render safe: rimuovi esistente prima di ricreare
+  const existing = document.getElementById('pianov4-day-overlay');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', overlayHTML);
+}
+
 function renderPianoV4() {
   // ── Header V3 (riusa pattern renderOggi/renderIntegratori/renderAnalisi) ──
   const profile  = ST.profile || {};
@@ -11686,13 +11777,14 @@ function renderPianoV4() {
       <p class="pianov4-status-hint">${statusHint}</p>
     </div>`;
 
-  // ── 7 card giorno (B.2: stato vuoto, non cliccabili — tap arriva in Step C) ──
+  // ── 7 card giorno (Step C.1: tap → openPianoV4DayOverlay con dayOfWeek 1-7 ISO) ──
   const days = getPianoV4Days(weekStart);
   const daysHTML = `
     <div class="pianov4-days">
-      ${days.map(function(d) {
+      ${days.map(function(d, i) {
+        const dow = i + 1; // 1=LUN, 7=DOM (ISO, coerente con weekly_plan_meals.day_of_week CHECK)
         const todayBadge = d.isToday ? `<span class="pianov4-day-today">OGGI</span>` : '';
-        return `<div class="pianov4-day-card pianov4-day-card-empty">
+        return `<div class="pianov4-day-card pianov4-day-card-empty" onclick="openPianoV4DayOverlay(${dow})">
           <div class="pianov4-day-head">
             <span class="pianov4-day-name">${d.name}</span>
             ${todayBadge}
