@@ -1370,6 +1370,31 @@ select.inp{cursor:pointer;}
 .pianov4-week-arrow:active{color:var(--acc);}
 .pianov4-week-label{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--t1);text-transform:uppercase;}
 
+/* ── Card stato settimana (Step B.2) ── */
+.pianov4-status-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px 16px 14px;margin:4px 16px 14px;}
+.pianov4-status-row{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;}
+.pianov4-status-badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;padding:4px 9px;border-radius:6px;text-transform:uppercase;line-height:1;}
+.pianov4-status-badge-empty{background:var(--s2);color:var(--t3);border:1px solid var(--b1);}
+.pianov4-status-count{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;}
+.pianov4-status-count-total{font-size:14px;font-weight:500;color:var(--t3);}
+.pianov4-status-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;margin-left:auto;}
+.pianov4-status-bar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px;}
+.pianov4-status-seg{height:6px;border-radius:3px;background:var(--b1);}
+.pianov4-status-seg.filled{background:var(--acc);}
+.pianov4-status-seg.partial{background:#FAC775;}
+.pianov4-status-seg.missed{background:#B84C2A;}
+.pianov4-status-hint{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.4;margin:0;}
+
+/* ── 7 card giorno (Step B.2: stato vuoto, non cliccabili) ── */
+.pianov4-days{display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:14px;}
+.pianov4-day-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;}
+.pianov4-day-card-empty{background:transparent;border:1.5px dashed var(--b1);}
+.pianov4-day-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
+.pianov4-day-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--t1);text-transform:uppercase;line-height:1.2;}
+.pianov4-day-date{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--t3);}
+.pianov4-day-today{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:4px;margin-left:auto;text-transform:uppercase;}
+.pianov4-day-empty-text{font-family:'Syne',sans-serif;font-size:12px;font-style:italic;color:var(--t3);margin:0;line-height:1.4;}
+
 </style>
 </head>
 <body>
@@ -2608,7 +2633,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 14:49';
+const APP_VERSION = '2026.05.20 · 15:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11542,6 +11567,25 @@ function formatPianoV4WeekLabel(date) {
   return `Settimana del ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+// Helper: ritorna array di 7 giorni {name, dateLabel, isToday} a partire dal lunedì
+// della settimana visualizzata. Nomi italiani in caps, data formato "DD mmm".
+function getPianoV4Days(weekStart) {
+  const dayNames = ['LUNEDÌ','MARTEDÌ','MERCOLEDÌ','GIOVEDÌ','VENERDÌ','SABATO','DOMENICA'];
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayTs = today.getTime();
+  return dayNames.map(function(name, i) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    d.setHours(0,0,0,0);
+    return {
+      name: name,
+      dateLabel: d.getDate() + ' ' + months[d.getMonth()],
+      isToday: d.getTime() === todayTs,
+    };
+  });
+}
+
 function renderPianoV4() {
   // ── Header V3 (riusa pattern renderOggi/renderIntegratori/renderAnalisi) ──
   const profile  = ST.profile || {};
@@ -11580,7 +11624,40 @@ function renderPianoV4() {
       <button class="pianov4-week-arrow" onclick="ST.pianoV4WeekOffset++; renderPianoV4();" title="Settimana successiva">›</button>
     </div>`;
 
-  document.getElementById('page-piano').innerHTML = v3Header + weekNav + versionFooter();
+  // ── Card stato settimana (D1: hardcoded vuoto in B.2, no fetch) ──
+  // I segmenti restano tutti grigi (classe base). Le classi .filled/.partial/.missed
+  // sono definite nel CSS pronte per uso futuro (Step B.3+ quando arriva la logica AI).
+  const statusCard = `
+    <div class="pianov4-status-card">
+      <div class="pianov4-status-row">
+        <span class="pianov4-status-badge pianov4-status-badge-empty">ATTIVO</span>
+        <span class="pianov4-status-count">0<span class="pianov4-status-count-total">/7</span></span>
+        <span class="pianov4-status-label">GIORNI SEGUITI</span>
+      </div>
+      <div class="pianov4-status-bar">
+        ${Array(7).fill('<span class="pianov4-status-seg"></span>').join('')}
+      </div>
+      <p class="pianov4-status-hint">Il tuo primo piano arriverà domenica sera.</p>
+    </div>`;
+
+  // ── 7 card giorno (B.2: stato vuoto, non cliccabili — tap arriva in Step C) ──
+  const days = getPianoV4Days(weekStart);
+  const daysHTML = `
+    <div class="pianov4-days">
+      ${days.map(function(d) {
+        const todayBadge = d.isToday ? `<span class="pianov4-day-today">OGGI</span>` : '';
+        return `<div class="pianov4-day-card pianov4-day-card-empty">
+          <div class="pianov4-day-head">
+            <span class="pianov4-day-name">${d.name}</span>
+            <span class="pianov4-day-date">${d.dateLabel}</span>
+            ${todayBadge}
+          </div>
+          <p class="pianov4-day-empty-text">Nessun pasto pianificato</p>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + versionFooter();
 }
 
 // PAGE: PIANO (LEGACY) — sostituito da renderPianoV4 dietro feature flag
