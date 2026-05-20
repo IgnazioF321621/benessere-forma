@@ -27,7 +27,7 @@ https://github.com/IgnazioF321621/benessere-forma
 2. Testing iPhone + Android con 3 tester → **IN CORSO** (messaggi WhatsApp inviati 11 mag 2026)
 3. Test mode `?test=1`
 4. ~~Modulo Integratori refresh v3~~ ✅ completato 16 mag 2026 — pacchetti + extra + catalogo Nutrilite hi-fi (vedi sezione "Modulo Integratori v3")
-5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design), implementazione in 9 sessioni sequenziali (Step A→I, vedi sezione "Tab Piano v4"). PROSSIMA: **Sessione 1 — Step A** (fondazione dati Supabase: tabelle `weekly_plans`, `weekly_plan_meals`, `weekly_plan_acceptance`, `ai_memory`, `weight_logs` + update `profiles`)
+5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design), implementazione in 9 sessioni sequenziali (Step A→I, vedi sezione "Tab Piano v4"). ✅ **Sessione 1 — Step A completata 20 mag 2026** (fondazione dati Supabase: 5 tabelle nuove + update `profiles` con 3 campi coach, vedi sezione "Schema Supabase" e changelog 20 mag). PROSSIMA: **Sessione 2 — Step B** (UI Tab Piano vista principale v4, refresh `renderPiano` legacy → `renderPianoV4`).
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -291,6 +291,13 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 ### Tabella `profiles`
 Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
 
+**Campi coach Tab Piano v4** (aggiunti 20 maggio 2026):
+- `plan_generation_day` text NOT NULL default `'sun'` — CHECK `fri/sat/sun/custom` — quando il Worker AI genera il piano settimanale
+- `plan_generation_time` text NOT NULL default `'20:00'` — formato HH:MM (validato lato client)
+- `weight_tracking_mode` text NOT NULL default `'flexible'` — CHECK `daily/every3/weekly/flexible` — preferenza pesate Livello 1
+
+Default applicati automaticamente a tutte le righe esistenti via ALTER ADD COLUMN NOT NULL DEFAULT. UI per modificarli verrà aggiunta nel modal Impostazioni profilo nella sessione "Refresh onboarding M1" (post Tab Piano v4 V1, vedi priorità #6).
+
 ### Tabella `supplements`
 Integratori per user_id, editabili inline.
 
@@ -368,6 +375,92 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 | `notes` | `text` | |
 
 RLS abilitata — policy: `auth.uid() = user_id`.
+
+### Tabella `weight_logs` (20 maggio 2026)
+Pesate flessibili quotidiane — Livello 1 dell'architettura "check fisici a 2 livelli" Tab Piano v4. Separata da `body_logs` (che resta per check M2 mesociclo: peso + circonferenze + foto).
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | `gen_random_uuid()` default |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE |
+| `date` | `date` NOT NULL | |
+| `weight_kg` | `numeric(5,2)` NOT NULL | |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Constraint: `UNIQUE (user_id, date)` — una pesata/giorno, la seconda sovrascrive via upsert (la pesata "vera" è quella mattutina). Indice: `(user_id, date DESC)` per sparkline 30gg. RLS abilitata con 4 policy `own_*` + `admin_read_all_weight_logs` (email check `ignazio.f@me.com`).
+
+### Tabella `ai_memory` (20 maggio 2026)
+Preferenze, evitamenti, contesti e pattern appresi dall'AI dalle azioni utente (ACCETTA/SOSTITUISCI/SALTO sui pasti del piano settimanale). Il Worker AI in Step G aggiornerà progressivamente confidence e evidence_count.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE |
+| `category` | `text` NOT NULL | CHECK: `preference` / `avoidance` / `context` / `pattern` |
+| `content` | `text` NOT NULL | es. "Preferisce pesce 3x/settimana" |
+| `confidence` | `numeric(3,2)` NOT NULL | default 0.50, CHECK 0.00-1.00 |
+| `evidence_count` | `integer` NOT NULL | default 1 |
+| `last_observed` | `date` NOT NULL | default `CURRENT_DATE` (per soft-expire >90gg) |
+| `active` | `boolean` NOT NULL | default `true` (soft delete) |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Indice: `(user_id, active, confidence DESC)` ottimizzato per query "top 5 preferenze attive" della sezione Memoria AI in tab Piano. RLS: 4 own + 1 admin.
+
+### Tabella `weekly_plans` (20 maggio 2026)
+Contenitore del piano settimanale generato dall'AI. Una riga = una settimana per un utente. I pasti veri sono in `weekly_plan_meals` (figlia).
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE |
+| `week_start` | `date` NOT NULL | lunedì ISO della settimana |
+| `target_kcal` | `integer` | snapshot al momento generazione (nullable per edge case onboarding) |
+| `target_protein` | `integer` | snapshot |
+| `target_carbs` | `integer` | snapshot |
+| `target_fat` | `integer` | snapshot |
+| `ai_reasoning` | `text` | spiegazione generale piano (mostrata nel welcome overlay come "Adattamento proposto") |
+| `status` | `text` NOT NULL | default `'draft'`, CHECK `draft/active/archived` |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Constraint: `UNIQUE (user_id, week_start)` — un solo piano per settimana per utente. Flusso status: `draft` (appena generato dall'AI) → `active` (utente ha visto welcome overlay e cliccato "Vedi piano") → `archived` (settimana passata). Indice: `(user_id, week_start DESC)`. RLS: 4 own + 1 admin.
+
+### Tabella `weekly_plan_meals` (20 maggio 2026)
+I pasti veri proposti dall'AI. Una riga = un pasto per un giorno e uno slot specifici. Figlia di `weekly_plans`.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `plan_id` | `uuid` NOT NULL | FK → `weekly_plans.id` ON DELETE CASCADE |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE (denormalizzato per RLS performance) |
+| `day_of_week` | `integer` NOT NULL | CHECK BETWEEN 1 AND 7 (1=lun, 7=dom, ISO) |
+| `slot` | `text` NOT NULL | CHECK `colazione/spuntino/pranzo/merenda/cena` |
+| `description` | `text` NOT NULL | testo pasto proposto AI |
+| `kcal` | `integer` | nullable (edge case AI fallisce calcolo macro) |
+| `protein` | `integer` | grammi, nullable |
+| `carbs` | `integer` | grammi, nullable |
+| `fat` | `integer` | grammi, nullable |
+| `ai_explanation` | `text` | "PERCHÉ TI PROPONGO QUESTO" mostrato nel Dettaglio Giorno overlay |
+| `sort_order` | `integer` NOT NULL | default 0 |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Indici: `(plan_id, day_of_week, sort_order)` per render Dettaglio Giorno + `(user_id)` per RLS performance. RLS: 4 own + 1 admin.
+
+### Tabella `weekly_plan_acceptance` (20 maggio 2026)
+Tracking delle azioni utente sui pasti del piano (ACCETTA / SOSTITUISCI / SALTO / off-plan rilevato). Una riga = una azione su un pasto. Alimenta il contatore "X/7 giorni seguiti" e la memoria AI.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `plan_meal_id` | `uuid` NOT NULL | FK → `weekly_plan_meals.id` ON DELETE CASCADE |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE |
+| `status` | `text` NOT NULL | CHECK `accepted/substituted/skipped/off_plan` |
+| `actual_meal_id` | `uuid` | FK → `meals(id)` **ON DELETE SET NULL** (relazione laterale, no cascade — preserva storico se utente elimina pasto in tab Oggi) |
+| `notes` | `text` | debug / contesto AI (es. "macro entro ±10%", "skip esplicito") |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+Constraint: `UNIQUE (plan_meal_id)` — una sola azione per pasto del piano (UPDATE se l'utente cambia idea). Indice: `(user_id, created_at DESC)` per contatore real-time + lettura settimana passata da AI. RLS: 4 own + 1 admin.
+
+Logica contatore "X/7 giorni seguiti": COUNT(*) WHERE plan_id = ? AND status IN ('accepted','substituted') — premia aderenza nutrizionale, non obbedienza letterale.
 
 ## Database — campi M1 mappati (15 maggio 2026)
 
@@ -1502,6 +1595,40 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 20 maggio 2026 — Sessione 1 / Step A: Fondazione dati Supabase Tab Piano v4 ✅
+
+Prima sessione di implementazione del Tab Piano v4 dopo la chiusura design 19 mag. Sessione interamente lato Supabase (zero modifiche a `zona-tracker.html`), eseguita manualmente da Ignazio nello SQL Editor in 7 blocchi sequenziali con verifica visiva post-ogni-blocco e smoke test finale.
+
+**5 nuove tabelle create**:
+- `weight_logs` — pesate flessibili Livello 1, UNIQUE (user_id, date), upsert mattutino, alimenta sparkline 30gg
+- `ai_memory` — memoria AI con confidence/evidence_count/last_observed/active per soft-expire preferenze stale >90gg, CHECK su category
+- `weekly_plans` — contenitore piano settimanale, snapshot target nutrizionali, status draft→active→archived
+- `weekly_plan_meals` — pasti veri proposti dall'AI, day_of_week 1-7 ISO, CHECK su slot allineato tab Oggi, user_id denormalizzato per RLS perf
+- `weekly_plan_acceptance` — tracking azioni utente, status 4 valori, actual_meal_id ON DELETE SET NULL (relazione laterale preserva storico), notes per debug AI
+
+**Update `profiles`**: 3 colonne NOT NULL DEFAULT auto-applicate a tutti i tester esistenti:
+- `plan_generation_day` default `'sun'`
+- `plan_generation_time` default `'20:00'`
+- `weight_tracking_mode` default `'flexible'`
+
+**Asset totali Step A**: 5 tabelle nuove · 6 indici · 25 policy RLS (4 `own_*` + 1 `admin_read_all_*` per ognuna) · 6 CHECK constraint · 3 colonne aggiunte a `profiles`.
+
+**Decisioni architetturali documentate**:
+1. `weight_logs` separata da `body_logs` — pesate frequenti vs check M2 mesociclo (un evento ≠ una tabella, query sparkline più pulite, dati senza rumore)
+2. `ai_memory` schema completo (non minimale) — decisioni DB-side ordinabili senza chiamare AI a ogni open di Piano tab, last_observed per soft-expire
+3. `weekly_plan_acceptance` status unico 4 valori (non 2 campi user_action+outcome separati) — query contatore semplici, principio "non risolvere problemi non ancora esistenti"
+4. `actual_meal_id` ON DELETE SET NULL invece di CASCADE — relazione laterale non figlio-padre stretta, preserva storico contatore settimana se utente elimina pasto in tab Oggi
+5. `NOT NULL DEFAULT` ovunque possibile su profiles — invariant difesi al livello più basso (DB) anziché spalmati nel codice JS
+6. CHECK constraint su tutti i set finiti di valori — guard rail contro typo Worker AI (es. "Pranzo" vs "pranzo", "snack" inventato)
+
+**Verifica finale eseguita** via `step-a-07-verify.sql` (smoke test riusabile in futuro):
+- ✅ 5 tabelle presenti in `information_schema.tables`
+- ✅ `rowsecurity = true` su tutte e 5 in `pg_tables`
+- ✅ 5 policy per tabella in `pg_policies` (25 totali)
+- ✅ 3 nuovi campi `profiles` con default applicati
+
+**Prossima sessione — Step B**: UI Tab Piano vista principale v4 (refresh `renderPiano` legacy → `renderPianoV4` design system v3, card stato "X/7 giorni seguiti", 7 card giorno, sezione Memoria AI, card peso flessibile con sparkline, navigazione settimane).
 
 ### 19 maggio 2026 — Design completo Tab Piano v4 Coach Attivo (2 round Claude Design) ✅
 
