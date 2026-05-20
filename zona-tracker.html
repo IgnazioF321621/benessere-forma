@@ -2667,6 +2667,17 @@ const MEAL_SLOTS = [
   {id:'cena',            label:'Cena',              icon:'🫕', time:'20:00',desc:'Pasto serale'},
   {id:'extra',           label:'Extra',             icon:'🍽️', time:'',     desc:'Fuori pasto / aggiuntivo'},
 ];
+// Mappatura slot demo/piano-AI (Step A schema weekly_plan_meals CHECK 'colazione/spuntino/pranzo/merenda/cena')
+// → slot legacy meals/UI ('colazione/snack_mattina/pranzo/snack_pomeriggio/cena').
+// Esposta globalmente per riuso futuro Step F (writer piano AI → meals).
+// Usato da: acceptPianoV4DemoMeal (C.4.2)
+const SLOT_MAP_DEMO_TO_LEGACY = {
+  colazione: 'colazione',
+  spuntino:  'snack_mattina',
+  pranzo:    'pranzo',
+  merenda:   'snack_pomeriggio',
+  cena:      'cena',
+};
 // ── Preselezione intelligente prossimo pasto ────────────────
 // Logica: trova il primo MEAL_SLOTS non ancora loggato OGGI il cui orario è >= ora corrente.
 // Slot passati e non loggati vengono SALTATI (finestra persa). Se nessuno disponibile → domani mattina.
@@ -2741,7 +2752,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 20:40';
+const APP_VERSION = '2026.05.20 · 21:47';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11796,9 +11807,14 @@ async function acceptPianoV4DemoMeal(demoMealId) {
   const meal = meals.find(function(m) { return m.id === demoMealId; });
   if (!meal) return;
 
-  // Payload coerente con dbAddMeal firma esistente
+  // C.4.2: traduci slot demo (es. 'spuntino') → slot legacy meals/UI (es. 'snack_mattina')
+  // per evitare invisibilità in render timeline tab Oggi (vedi diagnosi C.4.1).
+  // Fallback a meal.slot se la mappa non lo conosce (futura safety, no slot esotici per ora).
+  const legacySlot = SLOT_MAP_DEMO_TO_LEGACY[meal.slot] || meal.slot;
+
+  // Payload coerente con dbAddMeal firma esistente (slot tradotto)
   const mealData = {
-    slot: meal.slot,
+    slot: legacySlot,
     description: meal.name + ' · ' + meal.ingredients.join(', '),
     kcal: meal.kcal,
     protein: meal.protein,
