@@ -1360,6 +1360,16 @@ select.inp{cursor:pointer;}
 .daydetail-menu-item:hover{background:var(--s2);}
 .daydetail-menu-helper{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;padding:6px 12px 4px;line-height:1.4;}
 
+/* ═══════════════════════════════════════════════════════════
+   PIANO V4 — Coach Attivo (Step B.1, 20 mag 2026)
+   Scaffolding: nav settimane. Le sezioni stato/giorni/memoria/peso
+   arriveranno negli Step B.2+.
+   ═══════════════════════════════════════════════════════════ */
+.pianov4-week-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 14px;margin-bottom:4px;}
+.pianov4-week-arrow{background:none;border:none;font-size:22px;color:var(--t2);cursor:pointer;padding:8px 12px;line-height:1;font-family:'Syne',sans-serif;font-weight:400;}
+.pianov4-week-arrow:active{color:var(--acc);}
+.pianov4-week-label{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--t1);text-transform:uppercase;}
+
 </style>
 </head>
 <body>
@@ -2598,7 +2608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.18 · 17:04';
+const APP_VERSION = '2026.05.20 · 14:49';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2716,6 +2726,9 @@ const ST = {
   // ANALISI V3 (18 mag 2026) — refresh tab Storico → Analisi
   analisi: { window: 'SETTIMANA', dateOffset: 0 }, // window: SETTIMANA|MESE|3MESI|6MESI; offset: 0=corrente, -1=prec
   dayDetailScreen: null,   // { date:'YYYY-MM-DD', menuOpen:bool } — overlay drilldown dettaglio giorno
+  // PIANO V4 Coach Attivo (Step B.1, 20 mag 2026) — feature flag + nav settimana
+  pianoV4Enabled: true,    // toggle rollback istantaneo a renderPiano legacy (modificabile da console)
+  pianoV4WeekOffset: 0,    // 0=settimana corrente, -1=passata, +1=futura (offset in settimane)
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -9186,7 +9199,7 @@ function renderPage(id){
   else if(id==='integratori') renderIntegratori();
   else if(id==='analisi') renderAnalisi();
   else if(id==='storico') renderAnalisi(); // [LEGACY-STORICO-V3] alias retrocompat: vecchi link 'storico' → Analisi
-  else if(id==='piano') renderPiano();
+  else if(id==='piano') { if(ST.pianoV4Enabled) renderPianoV4(); else renderPiano(); }
   else if(id==='training') renderTraining();
   else if(id==='body') renderBody();
 }
@@ -11503,7 +11516,74 @@ function nutriSubNav(active){
   }).join('')}</nav>`;
 }
 
-// PAGE: PIANO
+// ═══════════════════════════════════════════════════════════
+// PAGE: PIANO V4 — Coach Attivo (Step B.1, 20 maggio 2026)
+// Scaffolding minimo: header v3 + sub-nav pillole + nav settimane.
+// Niente dati reali, niente fetch Supabase. Feature flag ST.pianoV4Enabled
+// permette rollback istantaneo da console a renderPiano legacy.
+// Roadmap completa: vedi CLAUDE.md sezione "Tab Piano v4".
+// ═══════════════════════════════════════════════════════════
+
+// Helper: ritorna Date del lunedì della settimana corrente + offset (in settimane)
+function getPianoV4WeekStart(offset) {
+  offset = offset || 0;
+  const now = new Date();
+  const day = now.getDay();                // 0=DOM, 1=LUN, ..., 6=SAB
+  const diff = (day === 0) ? -6 : (1 - day); // distanza al lunedì (ISO)
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff + (offset * 7));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Helper: label settimana in italiano (es. "Settimana del 19 mag 2026")
+function formatPianoV4WeekLabel(date) {
+  const months = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+  return `Settimana del ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function renderPianoV4() {
+  // ── Header V3 (riusa pattern renderOggi/renderIntegratori/renderAnalisi) ──
+  const profile  = ST.profile || {};
+  const fname    = String(profile.first_name || '').trim();
+  const lname    = String(profile.last_name  || '').trim();
+  const initials = ((fname.charAt(0) + lname.charAt(0)).toUpperCase()) || (fname.charAt(0) || '?').toUpperCase();
+  const now2 = new Date();
+  const DAY_S = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+  const MON_S = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const dateEb = `${DAY_S[now2.getDay()]} ${now2.getDate()} ${MON_S[now2.getMonth()]} · PIANO`;
+
+  const v3Header = `
+    <div class="oggi-v3-accent"></div>
+    <div class="oggi-v3-header">
+      <div class="oggi-v3-header-text">
+        <div class="oggi-v3-eyebrow">${dateEb}</div>
+        <div class="oggi-v3-title">Nutrition</div>
+      </div>
+      <button class="oggi-v3-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
+    </div>
+    <div class="oggi-v3-subnav">
+      ${['oggi','integratori','analisi','piano'].map(id => {
+        const labels = { oggi:'OGGI', integratori:'INTEGRATORI', analisi:'ANALISI', piano:'PIANO' };
+        return `<button class="oggi-v3-pill${id==='piano'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
+      }).join('')}
+    </div>`;
+
+  // ── Nav settimane ──
+  const offset = ST.pianoV4WeekOffset || 0;
+  const weekStart = getPianoV4WeekStart(offset);
+  const weekLabel = formatPianoV4WeekLabel(weekStart);
+  const weekNav = `
+    <div class="pianov4-week-nav">
+      <button class="pianov4-week-arrow" onclick="ST.pianoV4WeekOffset--; renderPianoV4();" title="Settimana precedente">‹</button>
+      <div class="pianov4-week-label">${weekLabel}</div>
+      <button class="pianov4-week-arrow" onclick="ST.pianoV4WeekOffset++; renderPianoV4();" title="Settimana successiva">›</button>
+    </div>`;
+
+  document.getElementById('page-piano').innerHTML = v3Header + weekNav + versionFooter();
+}
+
+// PAGE: PIANO (LEGACY) — sostituito da renderPianoV4 dietro feature flag
 // ═══════════════════════════════════════════════════════════
 function renderPiano(){
   const t = ST.TARGET;
