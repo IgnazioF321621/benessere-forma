@@ -27,7 +27,12 @@ https://github.com/IgnazioF321621/benessere-forma
 2. Testing iPhone + Android con 3 tester → **IN CORSO** (messaggi WhatsApp inviati 11 mag 2026)
 3. Test mode `?test=1`
 4. ~~Modulo Integratori refresh v3~~ ✅ completato 16 mag 2026 — pacchetti + extra + catalogo Nutrilite hi-fi (vedi sezione "Modulo Integratori v3")
-5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design), implementazione in 9 sessioni sequenziali (Step A→I, vedi sezione "Tab Piano v4"). ✅ **Sessione 1 — Step A completata 20 mag 2026** (fondazione dati Supabase: 5 tabelle nuove + update `profiles` con 3 campi coach, vedi sezione "Schema Supabase" e changelog 20 mag). PROSSIMA: **Sessione 2 — Step B** (UI Tab Piano vista principale v4, refresh `renderPiano` legacy → `renderPianoV4`).
+5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design + 12 decisioni). Implementazione roadmap 9 sessioni:
+   - Sessione 1 — Step A: Fondazione dati Supabase ✅ (20 mag, commit `d08ee4d`)
+   - Sessione 2 — Step B: UI vista principale ✅ (20 mag, catena 7 commit `272e375`→`2984704`, APP_VERSION finale `v2026.05.20 · 16:01`)
+   - **Sessione 3 — Step C**: Overlay Dettaglio Giorno (PROSSIMA) — tap card giorno → slide-up con pasti proposti AI + box italic "PERCHÉ TI PROPONGO QUESTO" + 3 azioni ACCETTA/SOSTITUISCI/SALTO
+   - Sessioni 4-9: vedi sezione "Tab Piano v4" per dettaglio
+   - Pausa per validazione tester tra Step B e Step C
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -43,7 +48,8 @@ https://github.com/IgnazioF321621/benessere-forma
 - Picker emoji e time nativi (sostituire `prompt()` con `<input type="time">` nascosto + emoji-grid custom) — rimandato
 - Pulizia funzioni "Singolo" legacy dormienti (`setSuppSheetMode('singolo')` + render legacy + relative funzioni di salvataggio extra legacy) — non più chiamate da nessuna CTA dopo Step 2 ma presenti nel codice. Da rimuovere in cleanup separato.
 - Pulizia legacy Analisi v3: `renderStoricoLegacy`, `setReportRange` (no-op), CSS `.storico-extra-tag`, DOM alias `'storico'` nel routing — rimuovere dopo verifica produzione stabile.
-- Pulizia legacy Piano v3 → v4: `renderPiano` versione legacy quando v4 sarà production-ready (Sessione 9 — Step I)
+- Pulizia legacy Piano v3 → v4 (Step I / Sessione 9): rinominare `renderPiano` → `renderPianoLegacy` insieme a routing `renderPage('piano')` che punta direttamente a `renderPianoV4` (no più branching su feature flag)
+- Cleanup feature flag `ST.pianoV4Enabled` dopo validazione finale tester (insieme a Step I)
 - Notifiche push iOS PWA — TRATTENUTE per V2 dopo Tab Piano v4 stabile (Opzione 3 scelta in chiusura design: welcome overlay domenicale sufficiente per V1)
 
 ## Tester attivi
@@ -89,11 +95,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (19 maggio 2026, post-design Piano v4)
+### Stato moduli Nutrition (20 maggio 2026, post-Sessione 2 / Step B Tab Piano v4)
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`). Rinominata + cambio di paradigma da lista cronologica a dashboard analitica (vedi sezione "Tab Analisi v3").
-- **Tab Piano**: 🔵 design v4 Coach Attivo chiuso 19 mag 2026 (2 round Claude Design + 12 decisioni). In attesa implementazione (roadmap 9 sessioni Step A→I, vedi sezione "Tab Piano v4"). Codice attuale `renderPiano` resta legacy fino a Sessione 9.
+- **Tab Piano**: 🟡 vista principale v4 scaffolding completo (Sessione 2 / Step B chiusa 20 mag 2026 — catena 7 commit `272e375`→`2984704`). Interazioni in arrivo Sessioni 3+ (Step C overlay Dettaglio Giorno, Step D modal peso, Step E welcome overlay domenicale, Step F-H logica AI + adattamento + integrazione tab Oggi, Step I cleanup). Feature flag `ST.pianoV4Enabled` attivo: rollback istantaneo a `renderPiano` legacy possibile da console (`ST.pianoV4Enabled = false; renderPage('piano')`). Codice legacy `renderPiano` resta invariato fino a Sessione 9. Vedi sezione "Tab Piano v4" per dettaglio implementazione.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1363,21 +1369,21 @@ Design completo del refresh tab Piano chiuso il **19 maggio 2026** in 2 round Cl
 
 Decisione utente Ignazio: **Opzione 3** (tutto tranne notifiche push iOS). Implementazione sequenziale con deploy in produzione tra ogni step per validazione progressiva con tester.
 
-- **Sessione 1 — Step A**: **Fondazione dati Supabase**
+- **Sessione 1 — Step A** ✅ (20 mag 2026, commit `d08ee4d`): **Fondazione dati Supabase**
   - Tabelle nuove: `weekly_plans`, `weekly_plan_meals`, `weekly_plan_acceptance`, `ai_memory`, `weight_logs`
   - Update `profiles` con 2 nuovi campi: `plan_generation_day` (text 'fri'|'sat'|'sun'|'custom'), `plan_generation_time` (text HH:MM), `weight_tracking_mode` (text 'daily'|'every3'|'weekly'|'flexible')
   - Migrazioni DDL + RLS policies (4 policy `own_*` per ogni tabella + eventuale admin policy)
 
-- **Sessione 2 — Step B**: **UI Tab Piano vista principale v4**
-  - Refresh `renderPiano` legacy → `renderPianoV4` design system v3
-  - Card stato "ATTIVO · X/7 GIORNI SEGUITI" + barra 7 segmenti
-  - 7 card giorno con chip pasti emoji
-  - Sezione Memoria AI (paper-cream `#F8F4EB`, top 4-5 preferenze + CTA "VEDI TUTTE ›")
-  - Card peso flessibile (numero + sparkline + CTA)
-  - Profile compatto in fondo
-  - Navigazione settimane `‹ ›`
+- **Sessione 2 — Step B** ✅ (20 mag 2026, catena 7 commit `272e375`→`2984704`, APP_VERSION finale `v2026.05.20 · 16:01`): **UI Tab Piano vista principale v4 — scaffolding completo**
+  - Feature flag `ST.pianoV4Enabled: true` (rollback istantaneo da console a `renderPiano` legacy)
+  - Nuova funzione `renderPianoV4()` parallela a `renderPiano` legacy (rinomina rimandata a Step I)
+  - Helper utility: `getPianoV4WeekStart(offset)`, `formatPianoV4WeekLabel(date)`, `getPianoV4Days(weekStart)`
+  - 6 blocchi visivi: accent bar + header v3, nav settimane `‹ ›`, card stato sand `#FDF7E8` (hint contestuali), 7 card giorno dashed con badge OGGI, card Memoria AI bone + bordo top giallino `var(--mod-nutrition)`, card peso `getLatestBodyData()` + sparkline placeholder + CTA disabled tratteggiato grigio, profile compatto grid 2×2 con CTA `MODIFICA ›` → `openSettingsModal()`
+  - Tutto in stato D1 (settimana 1 onboarding): nessuna fetch Supabase, contatore `0/7`, sparkline placeholder
+  - Regola tipografica v2 applicata: numeri JetBrains Mono (TARGET kcal, MACRO %, peso 32px), testi Syne (OBIETTIVO, PESO modalità, hint contestuali). Pattern modifier `.pianov4-profile-value--mono` riusabile
+  - Pausa per validazione tester prima di Sessione 3
 
-- **Sessione 3 — Step C**: **Overlay Dettaglio Giorno**
+- **Sessione 3 — Step C** (PROSSIMA): **Overlay Dettaglio Giorno**
   - Riusa pattern `daydetail-overlay` di Analisi v3 (slide-up 240ms)
   - Card pasti proposti + box italic "PERCHÉ TI PROPONGO QUESTO"
   - Logica ACCETTA → scrive in `meals` di tab Oggi via `dbAddMeal()`
@@ -1596,7 +1602,73 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 
 ## Cosa abbiamo fatto
 
-### 20 maggio 2026 — Sessione 1 / Step A: Fondazione dati Supabase Tab Piano v4 ✅
+### 20 maggio 2026 pomeriggio — Sessione 2 / Step B: UI Tab Piano v4 vista principale ✅
+
+Chiusura completa della 2ª sessione roadmap Tab Piano v4 in **7 commit sequenziali** sullo stesso branch worktree (`claude/loving-tu-e5fe3e`), ognuno con push diretto a `origin/main` + sync repo Mac + smoke test telefono. Workflow design+code in catena con iterazione visiva immediata sul feedback Ignazio.
+
+**Catena commit Sessione 2 / Step B**:
+- `272e375` — B.1 scaffolding (feature flag + routing + header v3 + nav settimane + helper data) · APP_VERSION `v2026.05.20 · 14:49`
+- `d03c0fa` — B.2 card stato `ATTIVO 0/7` + barra 7 segmenti + 7 card giorno dashed + badge OGGI · `v2026.05.20 · 15:06`
+- `f160a1b` — B.2.1 polish (card stato sand `#FDF7E8` + badge OGGI sinistra ingrandito + min-height card giorno 64px) · `v2026.05.20 · 15:16`
+- `649502f` — B.3 card Memoria AI paper-cream + card peso sparkline placeholder + CTA disabled · `v2026.05.20 · 15:26`
+- `24b300f` — B.3.1 source peso unificata `getLatestBodyData()` + disabled tratteggiato grigio + Memoria AI bone + bordo top giallino `var(--mod-nutrition)` · `v2026.05.20 · 15:37`
+- `bcd3d42` — B.4 profile compatto grid 2×2 + hint contestuali card stato (corrente/passata/futura) · `v2026.05.20 · 15:53`
+- `2984704` — B.4.1 fix tipografico classe modifier `.pianov4-profile-value--mono` su TARGET e MACRO · `v2026.05.20 · 16:01`
+
+**Architettura introdotta**:
+- **Feature flag `ST.pianoV4Enabled: true`** per rollback istantaneo da console: `ST.pianoV4Enabled = false; renderPage('piano')` → torna la vecchia tab Piano legacy intatta. Pattern di safety net per validazione tester progressiva
+- **Routing branching** `renderPage('piano')`: `if(ST.pianoV4Enabled) renderPianoV4() else renderPiano()`. `renderPiano` legacy resta invariata e funzionante — rename a `renderPianoLegacy` rimandata a Step I (Sessione 9)
+- **Nuova funzione `renderPianoV4()`** (~250 righe HTML+CSS+logica) parallela a `renderPiano` legacy. State sessione: `ST.pianoV4WeekOffset: 0` (in-memory, non persistito tra reload)
+- **3 helper utility nuovi**: `getPianoV4WeekStart(offset)` (Date lunedì ISO + offset settimane), `formatPianoV4WeekLabel(date)` ("Settimana del DD mmm YYYY"), `getPianoV4Days(weekStart)` (array 7 oggetti `{name, dateLabel, isToday}`)
+
+**6 blocchi visivi della vista principale** (top→bottom):
+1. **Accent bar `#FAC775` + header v3** (eyebrow data Mono caps + Syne 800 "Nutrition" + avatar IF) + **sub-nav pillole** con PIANO attiva (riusa classi `.oggi-v3-*` esistenti, coerenza con Oggi/Integratori/Analisi)
+2. **Nav settimane `‹ ›`** con label `Settimana del DD mmm YYYY` in formato italiano, frecce cliccabili che modificano `ST.pianoV4WeekOffset` (positivo futuro, negativo passato, nessun limite di range in B.x)
+3. **Card stato** sand `#FDF7E8` (riuso "spazio coach" da `.oggi-v3-coach-card` Oggi) con badge `ATTIVO` attenuato (grigio chiaro con bordo, no bugia visiva "verde pieno" con piano vuoto), contatore `0/7`, barra 7 segmenti grigi (classi `.filled`/`.partial`/`.missed` predisposte per Step F futuro), **hint contestuale 3 stati**: offset 0 → "Il tuo primo piano arriverà domenica sera.", offset <0 → "Settimana archiviata · nessun piano registrato.", offset >0 → "Piano in arrivo · sarà generato domenica sera."
+4. **7 card giorno dashed** `LUNEDÌ→DOMENICA` con data sotto formato "DD mmm" + **badge OGGI** evergreen `#2A7A6F` a sinistra del nome (font 10px tabular-nums, padding 3/7px) solo se il giorno corrente è incluso nella settimana visualizzata. Non cliccabili in B.x (tap arriva Step C). `min-height: 64px` per respiro
+5. **Card Memoria AI** bone con `border-top: 2px var(--mod-nutrition)` (filo conduttore visivo che lega accent bar in cima e Memoria AI in fondo), eyebrow warm gold `#8B6B1E` (riuso colore `.oggi-v3-coach-eb`), CTA `VEDI TUTTE ›` placeholder grigio cursor:default, messaggio italic invitante "Il coach inizierà a memorizzare..." (empty state non sembra rotto, comunica comportamento atteso)
+6. **Card peso flessibile** `PESO · FLESSIBILE` + modalità tracking inline (mappa `daily/every3/weekly/flexible` → `OGNI GIORNO/3 GIORNI/SETTIMANA/LIBERO`), numero JetBrains Mono 32px tabular da `getLatestBodyData()` con fallback `ST.profile.weight_kg` (stessa source dell'header globale → coerenza source-of-truth verificata su screenshot), `.toFixed(1)` (header `.XX`, card hero v4 `.X`), sparkline SVG `viewBox="0 0 120 40"` con linea tratteggiata grigia placeholder + testo "Inizia a pesarti per vedere il trend", CTA `+ PESATI ORA` outline tratteggiato grigio chiaramente disabilitato (bordo dashed `var(--b1)` + color `var(--t3)` + opacity 0.4 — pattern più chiaro di solo opacity su iOS Safari)
+7. **Profile compatto** grid 2×2 con eyebrow `IMPOSTAZIONI · PIANO` + CTA `MODIFICA ›` evergreen che apre `openSettingsModal()` **esistente** (no nuovo modal), 4 celle: OBIETTIVO (mapping leggibile primo valore CSV `profile.obiettivo` — es. "Ricomposizione"), TARGET (`fmtNum(ST.TARGET.kcal) + ' kcal'`), MACRO % (preferisce `ST.TARGET.pCarbo/pProt/pFat` dinamici, fallback calcolo grammi 4/4/9), PESO modalità (riuso mappa card peso B.3). Overflow ellipsis su value per gestire stringhe lunghe
+
+**Stato D1 (settimana 1 onboarding, no dati reali)**:
+- Nessun fetch Supabase su `weekly_plans` / `ai_memory` / `weight_logs` (tabelle Step A esistono ma vuote — sarebbe spreco network)
+- Contatore `0/7` hardcoded, badge `ATTIVO` attenuato, sparkline placeholder, CTA peso disabled
+- Logica reale arriva in Step C (interazioni), D (modal peso), F (Worker AI piano generation), G (memoria + adattamento), H (integrazione bidirezionale Oggi)
+
+**Regola tipografica v2 rispettata**:
+- Numeri in **JetBrains Mono**: contatore stato `0/7`, peso card 32px, TARGET `2.326 kcal`, MACRO `38·34·28` (mod fix B.4.1 con classe modifier `.pianov4-profile-value--mono`)
+- Testi in **Syne**: titolo "Nutrition", OBIETTIVO "Ricomposizione", PESO "Libero", hint contestuali, empty state Memoria AI
+- Pattern modifier `--mono` riusabile per futuri valori numerici
+
+**Workflow di sessione (lezione operativa)**:
+- 7 commit progressivi con deploy istantaneo + smoke test telefono dopo ognuno + iterazione sul feedback visivo Ignazio
+- Card Memoria AI ridisegnata 3 volte: paper-cream `#F8F4EB` (B.3) → confusione visiva con card stato sand → bone + bordo top giallino (B.3.1 fix definitivo)
+- Card peso ricontrollata su screenshot iPhone (B.3.1): mostrava `71.8` mentre header globale `71.55` → unificata source via `getLatestBodyData()`
+- Disabled state: opacity 0.45 (B.3) → percepito "ancora attivo" su iOS Safari → pattern tratteggiato grigio (B.3.1)
+- Hint card stato: messaggio fisso "primo piano domenica sera" (B.2) → fuorviante navigando settimane future → branching contestuale 3 stati (B.4)
+- Tipografia 4 celle profile: tutte Syne (B.4) → numeri non allineati con resto app → classe modifier `--mono` su TARGET/MACRO (B.4.1)
+
+**Decisioni di design emerse durante la sessione** (oltre alle 12 Round 1+2 design):
+- Sand `#FDF7E8` card stato = riuso "colore spazio coach" `.oggi-v3-coach-card` per coerenza visiva
+- Paper-cream `#F8F4EB` Memoria AI scartato per confusione → bone + accent giallino top
+- Badge OGGI: sinistra + 10px (vs 9px iniziale) + padding 3/7px per scansione veloce
+- Disabled state pattern: tratteggiato grigio (`var(--b1)` dashed + color `var(--t3)`) invece di opacity attenuata — più chiaro su iOS Safari
+- Hint contestuale settimana: 3 stati per `ST.pianoV4WeekOffset` (0/<0/>0)
+- Source-of-truth peso: SEMPRE `getLatestBodyData()` come header globale (no `ST.profile.weight_kg` diretto — disallineato in caso di pesate body più recenti)
+- Filo conduttore visivo `var(--mod-nutrition)` `#FAC775`: accent bar header + bordo top Memoria AI
+
+**Vincoli rispettati**:
+- Schema Supabase invariato (no modifiche post Step A)
+- `renderPiano` legacy intatta e funzionante (rollback console testato)
+- Tab Oggi/Integratori/Analisi nessuna regressione visiva
+- `getLatestBodyData()`, `openSettingsModal()`, `fmtNum()`, `esc()` riusate esistenti
+- Nessuna fetch Supabase aggiunta (stato D1 hardcoded come da design)
+
+**APP_VERSION finale Sessione 2 / Step B**: `v2026.05.20 · 16:01`
+
+**Prossima sessione — Step C**: Overlay Dettaglio Giorno (slide-up 240ms `cubic-bezier(.16,1,.3,1)` riusando pattern `daydetail-overlay` di Analisi v3). Tap su card giorno → overlay fullscreen con pasti proposti AI per quel giorno + box italic "PERCHÉ TI PROPONGO QUESTO" sotto ogni pasto + 3 azioni ACCETTA (scrive in `meals` tab Oggi via `dbAddMeal`) / SOSTITUISCI (placeholder V1) / SALTO (marca `weekly_plan_acceptance.status='skipped'`). Pausa per validazione tester prima di iniziare.
+
+### 20 maggio 2026 mattina — Sessione 1 / Step A: Fondazione dati Supabase Tab Piano v4 ✅
 
 Prima sessione di implementazione del Tab Piano v4 dopo la chiusura design 19 mag. Sessione interamente lato Supabase (zero modifiche a `zona-tracker.html`), eseguita manualmente da Ignazio nello SQL Editor in 7 blocchi sequenziali con verifica visiva post-ogni-blocco e smoke test finale.
 
