@@ -1371,7 +1371,7 @@ select.inp{cursor:pointer;}
 .pianov4-week-label{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--t1);text-transform:uppercase;}
 
 /* ── Card stato settimana (Step B.2) ── */
-.pianov4-status-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px 16px 14px;margin:4px 16px 14px;}
+.pianov4-status-card{background:#FDF7E8;border:0.5px solid #E8D9A8;border-radius:12px;padding:16px 16px 14px;margin:4px 16px 14px;}
 .pianov4-status-row{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;}
 .pianov4-status-badge{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;padding:4px 9px;border-radius:6px;text-transform:uppercase;line-height:1;}
 .pianov4-status-badge-empty{background:var(--s2);color:var(--t3);border:1px solid var(--b1);}
@@ -1388,11 +1388,11 @@ select.inp{cursor:pointer;}
 /* ── 7 card giorno (Step B.2: stato vuoto, non cliccabili) ── */
 .pianov4-days{display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:14px;}
 .pianov4-day-card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:14px;}
-.pianov4-day-card-empty{background:transparent;border:1.5px dashed var(--b1);}
+.pianov4-day-card-empty{background:transparent;border:1.5px dashed var(--b1);min-height:64px;}
 .pianov4-day-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;}
 .pianov4-day-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--t1);text-transform:uppercase;line-height:1.2;}
 .pianov4-day-date{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--t3);}
-.pianov4-day-today{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:4px;margin-left:auto;text-transform:uppercase;}
+.pianov4-day-today{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--acc);background:var(--acc-lt);padding:3px 7px;border-radius:4px;text-transform:uppercase;}
 .pianov4-day-empty-text{font-family:'Syne',sans-serif;font-size:12px;font-style:italic;color:var(--t3);margin:0;line-height:1.4;}
 
 </style>
@@ -2633,7 +2633,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 15:06';
+const APP_VERSION = '2026.05.20 · 15:16';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11649,8 +11649,8 @@ function renderPianoV4() {
         return `<div class="pianov4-day-card pianov4-day-card-empty">
           <div class="pianov4-day-head">
             <span class="pianov4-day-name">${d.name}</span>
-            <span class="pianov4-day-date">${d.dateLabel}</span>
             ${todayBadge}
+            <span class="pianov4-day-date">${d.dateLabel}</span>
           </div>
           <p class="pianov4-day-empty-text">Nessun pasto pianificato</p>
         </div>`;
