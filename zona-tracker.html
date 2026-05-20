@@ -1456,6 +1456,39 @@ select.inp{cursor:pointer;}
 .pianov4-day-empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--t2);margin-bottom:10px;}
 .pianov4-day-empty-text{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.1em;line-height:1.5;color:var(--t3);text-transform:uppercase;}
 
+/* ─── PIANO V4 Step C.3 — Banner demo + Card pasto (5 pasti dimostrativi) ─── */
+/* Banner sand+giallino "ESEMPIO DIMOSTRATIVO" */
+.pianov4-demo-banner{margin:16px 20px 4px;padding:14px 16px;background:#FDF7E8;border-left:3px solid var(--mod-nutrition);border-radius:8px;}
+.pianov4-demo-banner-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;}
+.pianov4-demo-banner-text{font-family:'Syne',sans-serif;font-size:13px;line-height:1.5;color:var(--t2);}
+
+/* Container lista pasti */
+.pianov4-meals-list{padding:8px 20px 40px;display:flex;flex-direction:column;gap:16px;}
+
+/* Card pasto singola */
+.pianov4-meal-card{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:18px 16px;}
+
+/* Header pasto (slot + nome) */
+.pianov4-meal-header{margin-bottom:12px;}
+.pianov4-meal-slot{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;}
+.pianov4-meal-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:600;color:var(--t1);line-height:1.3;}
+
+/* Riga macro Mono */
+.pianov4-meal-macros{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:500;letter-spacing:.04em;color:var(--t2);margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(0,0,0,.06);}
+.pianov4-meal-kcal{font-weight:700;color:var(--t1);}
+.pianov4-meal-macro-sep{margin:0 6px;color:var(--t3);opacity:.5;}
+
+/* Ingredienti */
+.pianov4-meal-ingredients-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t3);margin-bottom:8px;}
+.pianov4-meal-ingredients{list-style:none;padding:0;margin:0 0 16px 0;font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.7;}
+.pianov4-meal-ingredients li{padding-left:14px;position:relative;}
+.pianov4-meal-ingredients li::before{content:'·';position:absolute;left:4px;top:-2px;color:var(--mod-nutrition);font-weight:700;font-size:18px;}
+
+/* Box PERCHÉ TI PROPONGO QUESTO (sand+giallino coerente banner) */
+.pianov4-meal-reasoning{background:#FDF7E8;border-left:3px solid var(--mod-nutrition);border-radius:8px;padding:12px 14px;}
+.pianov4-meal-reasoning-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;}
+.pianov4-meal-reasoning-text{font-family:'Syne',sans-serif;font-style:italic;font-size:13.5px;line-height:1.55;color:var(--t2);}
+
 </style>
 </head>
 <body>
@@ -2694,7 +2727,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 19:10';
+const APP_VERSION = '2026.05.20 · 20:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11693,10 +11726,102 @@ function closePianoV4DayOverlay() {
 }
 
 // Render overlay: re-render safe (rimuove esistente se presente, ricrea)
+// Demo data Step C.3 (20 mag 2026, decisione product): 5 pasti dimostrativi
+// sempre visibili per ogni giorno, per tutti i tester. In Step F sostituiti
+// dalla query Supabase weekly_plan_meals (logica: se rows>0 → reali, altrimenti
+// → questi demo come fallback). Naming "Demo" non "Mock" perché permanenti.
+function _pianoV4GetDemoMeals(dayOfWeek) {
+  // dayOfWeek 1-7 ISO: in C.3 ignorato (stessi 5 pasti per ogni giorno).
+  // In Step F differenziati per giorno reale.
+  return [
+    {
+      id: 'demo-1', slot: 'colazione', time: '08:00',
+      name: 'Porridge proteico',
+      kcal: 450, carbs: 45, protein: 30, fat: 15,
+      ingredients: ['Fiocchi avena 60g','Proteine vegetali vaniglia 25g','Frutti di bosco misti 100g','Mandorle 15g'],
+      reasoning: 'Inizio energetico bilanciato 40-30-30 con proteine vegetali pescatariane e fibre per saziarti fino a metà mattina.'
+    },
+    {
+      id: 'demo-2', slot: 'spuntino', time: '10:30',
+      name: 'Yogurt soia + noci',
+      kcal: 200, carbs: 18, protein: 12, fat: 10,
+      ingredients: ['Yogurt soia bianco 150g','Noci 15g','Miele 5g'],
+      reasoning: 'Spuntino dairy-free con proteine vegetali e grassi buoni delle noci per mantenere lucida la mattinata di lavoro.'
+    },
+    {
+      id: 'demo-3', slot: 'pranzo', time: '13:00',
+      name: 'Salmone griglia + quinoa',
+      kcal: 580, carbs: 55, protein: 38, fat: 22,
+      ingredients: ['Filetto salmone 150g','Quinoa 70g (peso secco)','Verdure miste grigliate 200g','Olio EVO 10g'],
+      reasoning: 'Pranzo bilanciato con omega-3 del salmone (cuore + recupero) e quinoa come carboidrato complesso a basso indice glicemico. Coerente col profilo pescatariano.'
+    },
+    {
+      id: 'demo-4', slot: 'merenda', time: '17:00',
+      name: 'XS High Protein Energy Bar Cocco',
+      kcal: 195, carbs: 19, protein: 15, fat: 7,
+      ingredients: ['XS High Protein Energy Bar gusto Cocco 50g (1 barretta)'],
+      reasoning: 'Pomeriggio pieno di impegni? La barretta XS Cocco offre 15g di proteine in formato 40-30-30 perfetto per la ricomposizione, senza dover cucinare. Mantiene stabili i livelli di energia fino a cena.'
+    },
+    {
+      id: 'demo-5', slot: 'cena', time: '20:00',
+      name: 'Frittata 2 uova + verdure',
+      kcal: 480, carbs: 30, protein: 32, fat: 24,
+      ingredients: ['Uova 2 (medie)','Spinaci freschi 150g','Pomodorini 100g','Pane integrale 40g','Olio EVO 8g'],
+      reasoning: 'Cena leggera ma sostanziosa che testa la reintroduzione uova nel regime. Spinaci ricchi di ferro vegetale, pane integrale per coprire i carboidrati serali senza appesantire.'
+    }
+  ];
+}
+
+// Banner "ESEMPIO DIMOSTRATIVO" sempre visibile in C.3. In Step F sarà
+// condizionale (solo se query weekly_plan_meals ritorna 0 righe).
+function renderPianoV4DemoBanner() {
+  return `<div class="pianov4-demo-banner">
+    <div class="pianov4-demo-banner-label">ESEMPIO DIMOSTRATIVO</div>
+    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio per mostrarti come funzionerà il piano AI. Il tuo piano personalizzato arriverà domenica sera.</div>
+  </div>`;
+}
+
+// Lista 5 card pasto con macro + ingredienti + box "PERCHÉ TI PROPONGO QUESTO".
+// In C.3 niente bottoni ACCETTA/SOSTITUISCI/SALTO (arrivano C.4-C.5-C.6).
+function renderPianoV4MealsList(meals) {
+  const cards = meals.map(function(m) {
+    const ingredientsHTML = m.ingredients.map(function(i) {
+      return `<li>${esc(i)}</li>`;
+    }).join('');
+    return `<div class="pianov4-meal-card" data-meal-id="${esc(m.id)}">
+      <div class="pianov4-meal-header">
+        <div class="pianov4-meal-slot">${esc(m.slot.toUpperCase())} · ${esc(m.time)}</div>
+        <div class="pianov4-meal-name">${esc(m.name)}</div>
+      </div>
+      <div class="pianov4-meal-macros">
+        <span class="pianov4-meal-kcal">${m.kcal} KCAL</span>
+        <span class="pianov4-meal-macro-sep">·</span>
+        <span>${m.carbs}g C</span>
+        <span class="pianov4-meal-macro-sep">·</span>
+        <span>${m.protein}g P</span>
+        <span class="pianov4-meal-macro-sep">·</span>
+        <span>${m.fat}g G</span>
+      </div>
+      <div class="pianov4-meal-ingredients-label">INGREDIENTI</div>
+      <ul class="pianov4-meal-ingredients">${ingredientsHTML}</ul>
+      <div class="pianov4-meal-reasoning">
+        <div class="pianov4-meal-reasoning-label">PERCHÉ TI PROPONGO QUESTO</div>
+        <div class="pianov4-meal-reasoning-text">${esc(m.reasoning)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="pianov4-meals-list">${cards}</div>`;
+}
+
 function renderPianoV4DayOverlay() {
   if (!ST.pianoV4DayOverlay) return; // defensive cleanup
   const s = ST.pianoV4DayOverlay;
   const titleStr = _pianoV4FormatDayHeader(s.weekOffset, s.dayOfWeek);
+
+  // Step F TODO: qui andrà query Supabase weekly_plan_meals.
+  // Se rows.length > 0 → usa quelle; altrimenti fallback _pianoV4GetDemoMeals.
+  // In C.3 sempre demo (decisione product 20 mag 2026).
+  const meals = _pianoV4GetDemoMeals(s.dayOfWeek);
 
   const overlayHTML = `<div id="pianov4-day-overlay" class="pianov4-day-overlay" onclick="if(event.target===this)closePianoV4DayOverlay()">
     <div class="pianov4-day-screen" onclick="event.stopPropagation()">
@@ -11706,12 +11831,8 @@ function renderPianoV4DayOverlay() {
         <div class="pianov4-day-eyebrow">DETTAGLIO GIORNO</div>
         <div class="pianov4-day-title">${esc(titleStr)}</div>
       </div>
-      <div class="pianov4-day-body">
-        <div class="pianov4-day-empty">
-          <div class="pianov4-day-empty-title">Nessun pasto pianificato</div>
-          <div class="pianov4-day-empty-text">IL PRIMO PIANO ARRIVERÀ DOMENICA SERA</div>
-        </div>
-      </div>
+      ${renderPianoV4DemoBanner()}
+      ${renderPianoV4MealsList(meals)}
     </div>
   </div>`;
 
