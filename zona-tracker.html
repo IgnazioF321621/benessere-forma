@@ -1395,6 +1395,32 @@ select.inp{cursor:pointer;}
 .pianov4-day-today{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--acc);background:var(--acc-lt);padding:3px 7px;border-radius:4px;text-transform:uppercase;}
 .pianov4-day-empty-text{font-family:'Syne',sans-serif;font-size:12px;font-style:italic;color:var(--t3);margin:0;line-height:1.4;}
 
+/* ── Memoria AI (Step B.3) — paper-cream coerente con decisione design 19 mag 2026 ── */
+.pianov4-memory-card{background:#F8F4EB;border:0.5px solid #E5DDC8;border-radius:12px;padding:16px;margin:4px 16px 14px;}
+.pianov4-memory-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:10px;}
+.pianov4-memory-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;color:#8B6B1E;text-transform:uppercase;line-height:1.3;}
+.pianov4-memory-see-all{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;cursor:default;line-height:1.3;}
+.pianov4-memory-empty{font-family:'Syne',sans-serif;font-size:13px;font-style:italic;color:var(--t2);line-height:1.5;margin:0;}
+.pianov4-memory-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
+.pianov4-memory-list li{font-family:'Syne',sans-serif;font-size:13px;color:var(--t1);line-height:1.5;padding-left:16px;position:relative;}
+.pianov4-memory-list li::before{content:"·";position:absolute;left:4px;top:0;font-weight:700;color:var(--mod-nutrition);}
+
+/* ── Card peso flessibile (Step B.3) — sparkline placeholder in B.3, attiva in Step D ── */
+.pianov4-weight-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;margin:0 16px 14px;}
+.pianov4-weight-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
+.pianov4-weight-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;color:var(--t1);text-transform:uppercase;line-height:1.3;}
+.pianov4-weight-mode{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:.2em;color:var(--t3);text-transform:uppercase;line-height:1.3;}
+.pianov4-weight-body{display:flex;align-items:center;gap:16px;margin-bottom:14px;}
+.pianov4-weight-num-wrap{display:flex;align-items:baseline;gap:4px;flex-shrink:0;}
+.pianov4-weight-num{font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;}
+.pianov4-weight-unit{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--t3);}
+.pianov4-weight-spark{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.pianov4-spark-svg{width:100%;height:36px;display:block;}
+.pianov4-weight-spark-empty{font-family:'Syne',sans-serif;font-size:11px;font-style:italic;color:var(--t3);margin:0;line-height:1.3;}
+.pianov4-weight-cta{width:100%;padding:12px;background:transparent;border:1.5px solid var(--acc);color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;border-radius:10px;cursor:pointer;transition:opacity .15s ease;}
+.pianov4-weight-cta:disabled{opacity:0.45;cursor:not-allowed;}
+.pianov4-weight-cta:not(:disabled):active{background:var(--acc-lt);}
+
 </style>
 </head>
 <body>
@@ -2633,7 +2659,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 15:16';
+const APP_VERSION = '2026.05.20 · 15:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11657,7 +11683,50 @@ function renderPianoV4() {
       }).join('')}
     </div>`;
 
-  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + versionFooter();
+  // ── Memoria AI (B.3: stato vuoto/D1, no fetch da ai_memory) ──
+  // Lista preferenze arriverà in Step G (Worker AI). Empty state invitante,
+  // non sembra "rotto" — comunica comportamento atteso.
+  const memoryCard = `
+    <div class="pianov4-memory-card">
+      <div class="pianov4-memory-head">
+        <span class="pianov4-memory-eyebrow">MEMORIA · COACH</span>
+        <span class="pianov4-memory-see-all">VEDI TUTTE ›</span>
+      </div>
+      <p class="pianov4-memory-empty">
+        Il coach inizierà a memorizzare le tue preferenze man mano che registri pasti e fai sostituzioni.
+      </p>
+    </div>`;
+
+  // ── Card peso flessibile (B.3: numero da profile, sparkline placeholder, CTA disabled) ──
+  // Peso: leggi da ST.profile.weight_kg con fallback "—.—" (no fetch da weight_logs vuota).
+  // Modalità: mappa weight_tracking_mode con fallback 'flexible'/'LIBERO'.
+  const profileWeight = (profile && profile.weight_kg != null) ? Number(profile.weight_kg) : null;
+  const weightStr = (profileWeight != null && !isNaN(profileWeight)) ? profileWeight.toFixed(1) : '—.—';
+  const trackingMode = (profile && profile.weight_tracking_mode) || 'flexible';
+  const MODE_LABELS = { daily: 'OGNI GIORNO', every3: 'OGNI 3 GIORNI', weekly: 'OGNI SETTIMANA', flexible: 'LIBERO' };
+  const modeLabel = MODE_LABELS[trackingMode] || 'LIBERO';
+  const weightCard = `
+    <div class="pianov4-weight-card">
+      <div class="pianov4-weight-head">
+        <span class="pianov4-weight-eyebrow">PESO · FLESSIBILE</span>
+        <span class="pianov4-weight-mode">${modeLabel}</span>
+      </div>
+      <div class="pianov4-weight-body">
+        <div class="pianov4-weight-num-wrap">
+          <span class="pianov4-weight-num">${weightStr}</span>
+          <span class="pianov4-weight-unit">kg</span>
+        </div>
+        <div class="pianov4-weight-spark">
+          <svg viewBox="0 0 120 40" preserveAspectRatio="none" class="pianov4-spark-svg">
+            <line x1="0" y1="20" x2="120" y2="20" stroke="var(--b1)" stroke-width="1" stroke-dasharray="3,3"/>
+          </svg>
+          <p class="pianov4-weight-spark-empty">Inizia a pesarti per vedere il trend</p>
+        </div>
+      </div>
+      <button class="pianov4-weight-cta" disabled>+ PESATI ORA</button>
+    </div>`;
+
+  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + memoryCard + weightCard + versionFooter();
 }
 
 // PAGE: PIANO (LEGACY) — sostituito da renderPianoV4 dietro feature flag
