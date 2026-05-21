@@ -29,10 +29,10 @@ https://github.com/IgnazioF321621/benessere-forma
 4. ~~Modulo Integratori refresh v3~~ ✅ completato 16 mag 2026 — pacchetti + extra + catalogo Nutrilite hi-fi (vedi sezione "Modulo Integratori v3")
 5. **Tab Piano v4 Coach Attivo** → design chiuso 19 mag 2026 (2 round Claude Design + 12 decisioni). Implementazione roadmap 9 sessioni:
    - Sessione 1 — Step A: Fondazione dati Supabase ✅ (20 mag, commit `d08ee4d`)
-   - Sessione 2 — Step B: UI vista principale ✅ (20 mag, catena 7 commit `272e375`→`2984704`, APP_VERSION finale `v2026.05.20 · 16:01`)
-   - **Sessione 3 — Step C**: Overlay Dettaglio Giorno (PROSSIMA) — tap card giorno → slide-up con pasti proposti AI + box italic "PERCHÉ TI PROPONGO QUESTO" + 3 azioni ACCETTA/SOSTITUISCI/SALTO
+   - Sessione 2 — Step B: UI vista principale ✅ (20 mag, catena 7 commit `272e375`→`2984704`)
+   - Sessione 3 — Step C: Overlay Dettaglio Giorno ✅ (20-21 mag, catena 8 commit `5384085`→`2f041f7`, APP_VERSION finale `v2026.05.21 · 11:15`). Overlay completo: scaffolding + empty state + 5 demo always-on + banner ESEMPIO DIMOSTRATIVO + totalizzatore range ±10% + 3 azioni ACCETTA/SOSTITUISCI/SALTO funzionanti + persistenza localStorage namespace `zona_pianov4_*`
+   - **PROSSIMA**: Investigazione integratori macro nel conteggio giornaliero (prioritario, possibile blocker tester) + comunicato implementazioni 3 tester + Sessione 4/Step D (modal peso + banner reminder)
    - Sessioni 4-9: vedi sezione "Tab Piano v4" per dettaglio
-   - Pausa per validazione tester tra Step B e Step C
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -51,6 +51,22 @@ https://github.com/IgnazioF321621/benessere-forma
 - Pulizia legacy Piano v3 → v4 (Step I / Sessione 9): rinominare `renderPiano` → `renderPianoLegacy` insieme a routing `renderPage('piano')` che punta direttamente a `renderPianoV4` (no più branching su feature flag)
 - Cleanup feature flag `ST.pianoV4Enabled` dopo validazione finale tester (insieme a Step I)
 - Notifiche push iOS PWA — TRATTENUTE per V2 dopo Tab Piano v4 stabile (Opzione 3 scelta in chiusura design: welcome overlay domenicale sufficiente per V1)
+
+**TODO post Step C (21 mag 2026, prossima sessione)**:
+- **PRIORITÀ ALTA — Investigazione integratori macro nel conteggio giornaliero**: oggi un integratore Nutrilite/XS registrato in tab Integratori contribuisce ai macro/kcal di tab Oggi? Ipotesi: NO (`supplements_log` separata da `meals`, `dayTotals()` legge solo meals). Impatto: shake XS, barrette XS con macro reali (es. XS Whey 25g, 100kcal) NON appaiono nel conteggio. Da diagnostica: schema `supplements_log` + `nutrilite_catalog` (campi kcal/macro esistono?), logica `dayTotals()`, UI tab Oggi (mostra contributo integratori?). Decisione: se fix piccolo (1 sessione) → fixiamo prima Step D. Se cantiere grosso → mini-roadmap dedicato.
+- **PRIORITÀ ALTA — Comunicato implementazioni per tester**: preparare testo chiaro per chat collettiva 3 tester (Ginevra, Isabella, Pesce). Spiegare cosa è cambiato (Tab Piano v4 con overlay + 5 demo + azioni), cosa testare, cosa ignorare (pasti demo non sono piano AI vero — banner ESEMPIO DIMOSTRATIVO).
+- **Step D — Modal peso + banner reminder**: secondo roadmap. Da chiudere insieme a E entro settimana 22-28 mag se possibile.
+
+**TODO Step F (quando arriverà)**:
+- **Estendere `dbAddMeal(meal, date)` per supportare data custom** (oggi hardcoda `date: ST.activeDay`): bloccare ACCETTA su giorni non-oggi era workaround C.4. In Step F tester potranno programmare pasti per giorni futuri dal piano AI. Helper proposto: `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`
+- **Riuso `SLOT_MAP_DEMO_TO_LEGACY`**: writer AI da `weekly_plan_meals` → `meals` dovrà tradurre slot allo stesso modo del flusso demo (Step C.4.2)
+- **Persistenza azioni demo → real**: migrare da localStorage a `weekly_plan_acceptance.status` Supabase quando piano AI generato. localStorage resta come fallback per pasti demo (utenti senza piano AI ancora generato)
+- **Banner ESEMPIO DIMOSTRATIVO condizionale**: oggi sempre visibile in overlay. In Step F mostrato SOLO se `weekly_plan_meals` per quel giorno è vuoto
+- **Card "0/7 GIORNI SEGUITI" dinamica**: oggi statica hardcoded. In Step F deve incrementare per ogni giorno dove ≥3 pasti del piano AI sono stati accettati. Decisione product 20 mag: i demo accettati NON contano per il contatore
+
+**TODO Post Step I (sessione dedicata futura)**:
+- **Icon system Zona Tracker custom**: sostituire emoji classiche (📅 📊 🥗 ⚡ 💧 ecc.) con set proprietario. Direzione: mix lettering Syne ingrandito (nav moduli) + SVG monocromatici geometrici (micro-azioni UI). Sessione design dedicata + 2-3 sessioni implementazione progressiva. Già rilevato in C.2.1 (emoji 📅 rimossa dall'empty state overlay)
+- **Refactor namespace slot legacy**: valutare unificazione `snack_mattina/snack_pomeriggio` → `spuntino/merenda` o viceversa. 30+ punti del codice da toccare. Non urgente, fix scoped C.4.2 sufficiente per ora
 
 ## Tester attivi
 
@@ -95,11 +111,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (20 maggio 2026, post-Sessione 2 / Step B Tab Piano v4)
+### Stato moduli Nutrition (21 maggio 2026, post-Sessione 3 / Step C Tab Piano v4)
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
-- **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`). Rinominata + cambio di paradigma da lista cronologica a dashboard analitica (vedi sezione "Tab Analisi v3").
-- **Tab Piano**: 🟡 vista principale v4 scaffolding completo (Sessione 2 / Step B chiusa 20 mag 2026 — catena 7 commit `272e375`→`2984704`). Interazioni in arrivo Sessioni 3+ (Step C overlay Dettaglio Giorno, Step D modal peso, Step E welcome overlay domenicale, Step F-H logica AI + adattamento + integrazione tab Oggi, Step I cleanup). Feature flag `ST.pianoV4Enabled` attivo: rollback istantaneo a `renderPiano` legacy possibile da console (`ST.pianoV4Enabled = false; renderPage('piano')`). Codice legacy `renderPiano` resta invariato fino a Sessione 9. Vedi sezione "Tab Piano v4" per dettaglio implementazione.
+- **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
+- **Tab Piano v4**: 🟡 vista principale + overlay Dettaglio Giorno production-ready scaffolding (Sessioni 1-2-3 chiuse, Step A+B+C completi). Step D-E-F-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: Step D modal peso + banner reminder, E welcome overlay domenicale, F Worker AI cron + weekly_plans, G memoria AI + adattamento, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: investigazione integratori macro (possibile blocker tester) + comunicato 3 tester + Step D.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1383,14 +1399,22 @@ Decisione utente Ignazio: **Opzione 3** (tutto tranne notifiche push iOS). Imple
   - Regola tipografica v2 applicata: numeri JetBrains Mono (TARGET kcal, MACRO %, peso 32px), testi Syne (OBIETTIVO, PESO modalità, hint contestuali). Pattern modifier `.pianov4-profile-value--mono` riusabile
   - Pausa per validazione tester prima di Sessione 3
 
-- **Sessione 3 — Step C** (PROSSIMA): **Overlay Dettaglio Giorno**
-  - Riusa pattern `daydetail-overlay` di Analisi v3 (slide-up 240ms)
-  - Card pasti proposti + box italic "PERCHÉ TI PROPONGO QUESTO"
-  - Logica ACCETTA → scrive in `meals` di tab Oggi via `dbAddMeal()`
-  - Logica SALTO → marca riga in `weekly_plan_acceptance` con `status='skipped'` + segnala AI per non riproporre
-  - SOSTITUISCI: placeholder V1 (CTA visibile ma azione "Coming soon")
+- **Sessione 3 — Step C** ✅ (20-21 mag 2026, catena 8 commit `5384085`→`2f041f7`, APP_VERSION finale `v2026.05.21 · 11:15`): **Overlay Dettaglio Giorno completo**
+  - Slide-up 240ms `cubic-bezier(.16,1,.3,1)` famiglia `.pianov4-day-*` parallela a `.daydetail-*` di Analisi v3 intatta
+  - 5 pasti demo always-on per tutti i tester (no flag mock, decisione product 20 mag)
+  - Banner "ESEMPIO DIMOSTRATIVO" sand+giallino chiarisce tester che sono dimostrativi
+  - Totalizzatore giorno con feedback range ±10% vs `ST.TARGET.kcal` (3 stati: in-range evergreen / under ambra / over ambra) + counter "· N saltato/i"
+  - Card pasto con header + macro + ingredienti + box italic "PERCHÉ TI PROPONGO QUESTO" (tono consulenza commerciale Nutrilite/XS educata)
+  - 3 azioni ACCETTA + SOSTITUISCI + SALTO funzionanti con persistenza localStorage namespace `zona_pianov4_demo_*`
+  - SOSTITUISCI apre bottom sheet con 3 alternative dimostrative per slot (15 totali) + reset to original
+  - SALTO toggle reversibile via "↺ ANNULLA" + card barrata opacity 0.65 + escluso da totalizzatore
+  - Precedenza badge: accepted > skipped > substituted (pasto accettato non sostituibile né saltabile)
+  - Costante globale `SLOT_MAP_DEMO_TO_LEGACY` riusabile in Step F per writer AI piano → meals
+  - Fix ortografico `pescatariano → pescetariano` ovunque
+  - Safe-area iPhone notch su header overlay
+  - 8 sotto-step: C.1 scaffolding · C.2 empty state + safe-area · C.2.1 rimossa emoji 📅 (icon system custom rimandato post-I) · C.3 5 demo + banner · C.4 ACCETTA + dbAddMeal · C.4.1 diagnostica bug slot · C.4.2 fix `SLOT_MAP_DEMO_TO_LEGACY` + SQL cleanup · C.5 SOSTITUISCI + totalizzatore + fix ortografico · C.6 SALTO Opzione A card barrata
 
-- **Sessione 4 — Step D**: **Modal peso + banner reminder**
+- **Sessione 4 — Step D** (PROSSIMA, dopo investigazione integratori macro + comunicato tester): **Modal peso + banner reminder**
   - Bottom sheet stepper +/−0.1kg + keyboard iOS
   - Logica `weight_logs.insert()` + toast conferma + refresh card peso in Piano
   - Banner anti-nag in tab Oggi (≥14gg senza pesata, silenzio progressivo 48h/7gg/28gg via timestamp `weight_reminder_dismissed_at` in localStorage)
@@ -1601,6 +1625,103 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 21 maggio 2026 — Sessione 3 / Step C: Overlay Dettaglio Giorno completo ✅
+
+Chiusura completa della 3ª sessione roadmap Tab Piano v4 in **8 commit sequenziali** sullo stesso branch worktree `claude/loving-tu-e5fe3e` (catena `5384085`→`2f041f7`), distribuita su 20-21 mag con deploy progressivi + smoke test tester. Workflow design+code in catena con iterazione visiva immediata + 1 diagnostica intermedia (C.4.1, no commit).
+
+**Catena 8 sotto-step**:
+
+| Sub-step | Commit | APP_VERSION | Sintesi |
+|---|---|---|---|
+| C.1 | `5384085` | `v2026.05.20 · 17:39` | Scaffolding overlay slide-up 240ms (riusa pattern `daydetail-overlay` Analisi v3, prefix `.pianov4-day-*` parallelo) + tap card giorno → apertura + close × + backdrop dismiss + helper `_pianoV4FormatDayHeader/CalculateDate` |
+| C.2 | `ef91e3d` | `v2026.05.20 · 17:54` | Empty state strutturato (emoji 📅 + titolo Syne 600 + sottotitolo Mono caps 10.5px) + fix safe-area iPhone notch (`padding-top: max(20px, env(safe-area-inset-top))`) |
+| C.2.1 | `dcd9a42` | `v2026.05.20 · 19:10` | Rimozione emoji 📅 (rendering Apple troppo "icona realistica colorata", stonava col design minimal Syne+Mono). Decisione: icon system Zona Tracker custom rimandato a sessione dedicata post-I (lettering Syne ingrandito + SVG monocromatici geometrici) |
+| C.3 | `dd9ad07` | `v2026.05.20 · 20:24` | 5 pasti demo always-on visibili a tutti i tester (no flag mock, decisione product) + banner "ESEMPIO DIMOSTRATIVO" sand+giallino + card pasto con macro + ingredienti + box italic "PERCHÉ TI PROPONGO QUESTO" + tono consulenza commerciale Nutrilite/XS educata |
+| C.4 | `9d862c9` | `v2026.05.20 · 20:40` | Bottone ACCETTA funzionante via `dbAddMeal()` + persistenza localStorage `zona_pianov4_demo_accept_*` + badge "✓ ACCETTATO" + bordo evergreen + bottone disabled post-azione. Guard "solo oggi" perché `dbAddMeal` hardcoda `date:ST.activeDay` |
+| C.4.1 | (no commit) | — | **Diagnostica bug**: pasto accettato contribuiva ai totali ma non appariva in timeline tab Oggi. Causa identificata: mismatch slot demo (`spuntino`/`merenda`) vs slot legacy `meals` (`snack_mattina`/`snack_pomeriggio`) — render timeline filtra solo per slot legacy. Schema `meals` permissivo (no CHECK) → INSERT riesce ma visibilità rotta |
+| C.4.2 | `8efbfac` | `v2026.05.20 · 21:47` | Fix via costante globale `SLOT_MAP_DEMO_TO_LEGACY` (riusabile in Step F per writer AI→meals) + script SQL `cleanup-c42.sql` per recover pasti test scritti male (eseguito da Ignazio manualmente in Supabase, residui=0) |
+| C.5 | `430df2a` | `v2026.05.21 · 10:55` | Bottone SOSTITUISCI funzionante + bottom sheet 240ms con 3 alternative dimostrative per slot (15 totali tramite `_pianoV4GetAlternatives`) + totalizzatore giorno in cima overlay con feedback range ±10% (3 stati in-range/under/over) + fix ortografico `pescatariano → pescetariano` (10 occorrenze) |
+| C.6 | `2f041f7` | `v2026.05.21 · 11:15` | Bottone SALTO funzionante (toggle reversibile via "↺ ANNULLA") + card barrata opacity 0.65 + badge "✕ SALTATO" + escluso da calcolo totalizzatore + counter "· N saltato/i" in eyebrow + precedenza badge accepted > skipped > substituted |
+
+**APP_VERSION finale Step C**: `v2026.05.21 · 11:15`
+
+#### Decisioni di design Step C
+
+1. **Pasti demo always-on (no flag mock)**: tutti i tester (Ignazio, Ginevra, Isabella, Pesce) vedono i 5 pasti demo dal login, senza setup. Banner chiarisce sono esempi dimostrativi. Motivazione: tester capiscono immediatamente cosa aspettarsi dal piano AI Step F.
+2. **Box "PERCHÉ TI PROPONGO QUESTO"** come strumento di consulenza commerciale educata: spiega all'utente perché un prodotto Nutrilite/XS ha senso per LUI in QUEL momento, non in astratto. Principio: proposta sempre genuinamente utile, mai promozionale a forza.
+3. **3 alternative dimostrative per slot (15 totali) generiche, NON personalizzate**. La personalizzazione vera arriva in Step F con AI che legge `ST.profile` (intolleranze, obiettivo, preferenze).
+4. **Totalizzatore giorno con feedback range ±10%**: utente vede in tempo reale se le sostituzioni lo portano dentro/fuori target (es. 1905 KCAL / 2326 target → SOTTO TARGET arancio). Macro split ignorato per ora (solo confronto kcal totali).
+5. **Salto reversibile**: card saltata mostra "↺ ANNULLA" al posto di SALTO → tap riattiva slot. Persistenza localStorage.
+6. **Precedenza badge**: ACCEPTED > SKIPPED > SUBSTITUTED. Un pasto accettato non può essere sostituito né saltato (è già in DB tab Oggi, sostituirlo creerebbe duplicato).
+7. **Card stato "0/7 GIORNI SEGUITI" NON SI TOCCA**: resta a 0 finché AI vera non genera piano in Step F. I pasti demo non contano come "piano seguito".
+8. **"pescetariano" (forma corretta etimologica italiana)** ovunque nei reasoning. Era "pescatariano" (anglicismo) nei mock C.3.
+9. **Icon system custom rimandato a sessione dedicata post-I**: emoji classiche (📅 ecc.) non funzionano col design minimal Syne+Mono. Da rifare con SVG monocromatici geometrici + lettering tipografico Syne ingrandito.
+10. **`dbAddMeal()` accetta solo data corrente** (`ST.activeDay` hardcoded): pasti demo accettabili solo per il giorno corrente. Tap ACCETTA su giorno futuro/passato → toast informativo. **TODO Step F**: helper `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`.
+11. **Bottom sheet alternative vs modal full-screen**: pattern iOS standard con max-height 85vh e handle bar visibile, sale dal basso 240ms cubic-bezier `.16,1,.3,1`. Coerente con overlay principale ma più piccolo per non bloccare contesto.
+12. **Opzione A SALTO** (card visibile barrata vs nascondere): card resta visibile con line-through + opacity 0.65 + badge. Motivazione: utente continua a vedere cosa avrebbe dovuto mangiare, no confusione "il pasto è sparito".
+
+#### Nuove costanti globali introdotte Step C
+
+```javascript
+// Mappatura slot demo (Step A schema weekly_plan_meals CHECK) → slot legacy UI meals
+const SLOT_MAP_DEMO_TO_LEGACY = {
+  colazione: 'colazione',
+  spuntino:  'snack_mattina',
+  pranzo:    'pranzo',
+  merenda:   'snack_pomeriggio',
+  cena:      'cena',
+};
+// Esposta globalmente per riuso Step F (writer AI piano → meals)
+```
+
+#### Nuove funzioni globali Piano V4 Step C
+
+| Funzione | Scopo |
+|---|---|
+| `_pianoV4GetDemoMeals(dayOfWeek)` | 5 pasti demo hardcoded (uguali per ogni giorno in C.3, differenziati in Step F) |
+| `_pianoV4GetAlternatives(originalSlot)` | 3 alternative dimostrative per slot (15 totali) |
+| `_pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek)` | Ritorna pasto effettivo (originale o alternativa scelta) |
+| `_pianoV4CalculateDate(weekOffset, dayOfWeek)` | ISO YYYY-MM-DD DST-safe (`setHours(12)` + `toISOString().slice(0,10)`) |
+| `_pianoV4FormatDayHeader(weekOffset, dayOfWeek)` | "LUN 18 MAG 2026" caps Mono + numero + mese + anno |
+| `renderPianoV4DayOverlay()` | Render overlay completo (header + banner + totalizer + meals list) |
+| `renderPianoV4DemoBanner()` | Banner "ESEMPIO DIMOSTRATIVO" sand+giallino |
+| `renderPianoV4DayTotals(meals)` | Totalizzatore giorno con feedback range ±10% + counter saltati |
+| `renderPianoV4MealsList(meals)` | 5 card pasto con badge condizionali + bottoni stato-aware |
+| `openPianoV4DayOverlay(dayOfWeek)` | Apertura overlay con snapshot weekOffset |
+| `closePianoV4DayOverlay()` | Dismissing 200ms + cleanup state + DOM remove |
+| `acceptPianoV4DemoMeal(mealId)` | ACCETTA: dbAddMeal + cache + localStorage + re-render. Cerca in demo originali poi in alternative |
+| `openPianoV4SubstituteSheet(slot)` | Apertura bottom sheet alternative |
+| `closePianoV4SubstituteSheet()` | Dismissing bottom sheet |
+| `renderPianoV4SubstituteSheet()` | Render bottom sheet con 3 alternative + reset button |
+| `applyPianoV4Substitution(altId)` | Apply: localStorage + toast + re-render (sentinel `'__reset__'` per torna-originale) |
+| `togglePianoV4SkipMeal(originalSlot)` | Toggle salto con guard accettato |
+| `_pianoV4IsDemoAccepted(...)` / `_pianoV4MarkDemoAccepted(...)` | Read/write localStorage stato accettazione |
+| `_pianoV4GetActiveSubstitution(...)` / `_pianoV4SetActiveSubstitution(...)` | Read/write sostituzione attiva (null = removeItem) |
+| `_pianoV4IsSlotSkipped(...)` / `_pianoV4SetSlotSkipped(...)` | Read/write stato salto (false = removeItem) |
+
+#### Schema namespace localStorage Piano V4
+
+```
+zona_pianov4_demo_accept_{userId}_w{N}_d{N}_{demoMealId}  // '1' se accettato
+zona_pianov4_demo_subst_{userId}_w{N}_d{N}_{slot}         // altId scelto
+zona_pianov4_demo_skip_{userId}_w{N}_d{N}_{slot}          // '1' se saltato
+```
+
+Scope: per `userId + weekOffset + dayOfWeek + slot/mealId`. Indipendente tra giorni e settimane. Persistenza locale solo per pasti demo; in Step F migra a `weekly_plan_acceptance.status` Supabase quando AI vera genera piano.
+
+#### Stato persistenza azioni demo
+
+- **ACCETTA**: scrittura `meals` Supabase (slot tradotto via `SLOT_MAP_DEMO_TO_LEGACY`) + cache locale `getDay().meals.push` + `saveCache()` + flag localStorage `accept`
+- **SOSTITUISCI**: solo flag localStorage `subst` (altId per slot)
+- **SALTO**: solo flag localStorage `skip` (boolean per slot)
+- **Step F TODO**: migrazione a `weekly_plan_acceptance.status` Supabase quando AI vera genera piani reali
+
+#### Bug fix conoscitivi Step C
+
+- **C.4.1 / C.4.2** (root cause documentato): schema `meals` Supabase NON ha CHECK constraint su `slot`, quindi accetta qualsiasi stringa. `weekly_plan_meals` (Step A) ha invece CHECK rigoroso. **In Step F la mappatura slot demo→legacy va applicata ovunque si scriva su `meals` partendo da dati `weekly_plan_meals`**.
+- **C.5**: target kcal letto da `ST.TARGET?.kcal` con fallback 2326. Macro split ignorato (solo confronto kcal). **Step F potrà aggiungere feedback range anche su macro singoli** (es. carbo sotto target).
+- **C.6**: `togglePianoV4SkipMeal` ha guard pasto accettato. **Step F TODO**: valutare se salto deve avere reasoning utente ("perché lo salti?") per allenare l'AI a non riproporre.
 
 ### 20 maggio 2026 pomeriggio — Sessione 2 / Step B: UI Tab Piano v4 vista principale ✅
 
