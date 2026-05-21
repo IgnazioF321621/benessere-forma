@@ -1551,6 +1551,38 @@ select.inp{cursor:pointer;}
 .pianov4-subst-card-macros{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--t2);margin-bottom:8px;}
 .pianov4-subst-card-reasoning{font-family:'Syne',sans-serif;font-style:italic;font-size:13px;line-height:1.5;color:var(--t2);}
 
+/* ─── PIANO V4 Step C.6 — Card saltata + badge + bottoni skip ─── */
+/* Card saltata: bordo + bg attenuati + opacity ridotta + testi barrati grigi */
+.pianov4-meal-card-skipped{border-color:rgba(0,0,0,.06);background:rgba(0,0,0,.02);opacity:0.65;position:relative;}
+.pianov4-meal-card-skipped .pianov4-meal-header{padding-top:10px;}
+.pianov4-meal-card-skipped .pianov4-meal-name,
+.pianov4-meal-card-skipped .pianov4-meal-slot,
+.pianov4-meal-card-skipped .pianov4-meal-macros,
+.pianov4-meal-card-skipped .pianov4-meal-ingredients li,
+.pianov4-meal-card-skipped .pianov4-meal-ingredients-label,
+.pianov4-meal-card-skipped .pianov4-meal-reasoning-text,
+.pianov4-meal-card-skipped .pianov4-meal-reasoning-label{text-decoration:line-through;text-decoration-color:rgba(0,0,0,.3);text-decoration-thickness:1px;color:var(--t3) !important;}
+.pianov4-meal-card-skipped .pianov4-meal-reasoning{background:rgba(0,0,0,.02);border-left-color:rgba(0,0,0,.15);}
+.pianov4-meal-card-skipped .pianov4-meal-ingredients li::before{color:var(--t3);opacity:0.5;}
+/* I bottoni della card saltata NON devono ereditare line-through */
+.pianov4-meal-card-skipped .pianov4-meal-btn,
+.pianov4-meal-card-skipped .pianov4-meal-btn span,
+.pianov4-meal-card-skipped .pianov4-meal-skipped-badge{text-decoration:none !important;}
+
+/* Badge ✕ SALTATO top-right (toni marroncini neutri, distinto da accepted evergreen e substituted giallino) */
+.pianov4-meal-skipped-badge{position:absolute;top:12px;right:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;color:#8B6F6F;background:rgba(139,111,111,0.12);padding:4px 8px;border-radius:6px;z-index:1;}
+
+/* Bottone SALTO normale (attivo, outline neutro come secondary ma color t2) */
+.pianov4-meal-btn-skip{background:transparent;color:var(--t2);border-color:var(--b1);}
+.pianov4-meal-btn-skip:active{background:var(--s2);}
+
+/* Bottone "↺ ANNULLA" (su card saltata) — toni marroncini coerenti col badge */
+.pianov4-meal-btn-skip-active{background:rgba(139,111,111,0.12);color:#8B6F6F;border-color:rgba(139,111,111,0.28);}
+.pianov4-meal-btn-skip-active:active{background:rgba(139,111,111,0.2);}
+
+/* Skipped note nel totalizzatore (suffisso "· N saltati" dopo eyebrow) */
+.pianov4-day-totals-skip-note{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--t3);font-weight:500;margin-left:4px;text-transform:none;letter-spacing:0;}
+
 </style>
 </head>
 <body>
@@ -2800,7 +2832,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.21 · 10:55';
+const APP_VERSION = '2026.05.21 · 11:15';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11921,6 +11953,50 @@ function _pianoV4SetActiveSubstitution(weekOffset, dayOfWeek, slot, altId) {
   } catch (e) {}
 }
 
+// ─── Step C.6 (21 mag 2026): storage helper SALTO + action toggle ───
+// Scoped per userId+weekOffset+dayOfWeek+originalSlot (no demoMealId: il salto è
+// dello slot del giorno, non del pasto specifico — se sostituisco e poi salto,
+// è lo slot pranzo che salta indipendentemente dall'alternativa scelta).
+function _pianoV4GetSkippedKey(weekOffset, dayOfWeek, originalSlot) {
+  const userId = (ST.user && ST.user.id) || (ST.profile && ST.profile.id) || 'anon';
+  return `zona_pianov4_demo_skip_${userId}_w${weekOffset}_d${dayOfWeek}_${originalSlot}`;
+}
+function _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, originalSlot) {
+  try {
+    return localStorage.getItem(_pianoV4GetSkippedKey(weekOffset, dayOfWeek, originalSlot)) === '1';
+  } catch (e) { return false; }
+}
+function _pianoV4SetSlotSkipped(weekOffset, dayOfWeek, originalSlot, isSkipped) {
+  try {
+    const key = _pianoV4GetSkippedKey(weekOffset, dayOfWeek, originalSlot);
+    if (isSkipped) localStorage.setItem(key, '1');
+    else localStorage.removeItem(key);
+  } catch (e) {}
+}
+
+// Toggle salto: tap su SALTO marca skipped, tap su "↺ ANNULLA" rimuove flag.
+// Guard: pasto già accettato (in DB tab Oggi) non può essere saltato.
+function togglePianoV4SkipMeal(originalSlot) {
+  if (!ST.pianoV4DayOverlay) return;
+  const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
+  const weekOffset = ST.pianoV4DayOverlay.weekOffset;
+
+  // Guard: pasto già accettato (in tab Oggi) non saltabile
+  const originalMeals = _pianoV4GetDemoMeals(dayOfWeek);
+  const original = originalMeals.find(function(o) { return o.slot === originalSlot; });
+  if (!original) return;
+  const currentMeal = _pianoV4GetMealForCard(original, weekOffset, dayOfWeek);
+  if (_pianoV4IsDemoAccepted(weekOffset, dayOfWeek, currentMeal.id)) {
+    showToast('Pasto già accettato, non puoi saltarlo', 'ℹ️');
+    return;
+  }
+
+  const wasSkipped = _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, originalSlot);
+  _pianoV4SetSlotSkipped(weekOffset, dayOfWeek, originalSlot, !wasSkipped);
+  showToast(wasSkipped ? 'Salto annullato' : 'Pasto saltato', wasSkipped ? '↺' : '✕');
+  renderPianoV4DayOverlay(); // re-render: card cambia stato + totalizzatore aggiorna
+}
+
 // Restituisce il pasto effettivamente da mostrare nella card: se sostituzione
 // attiva → alternativa scelta (con slot+time preservati dall'originale).
 // Altrimenti → pasto originale invariato.
@@ -12176,7 +12252,13 @@ function renderPianoV4DayTotals(originalMeals) {
   const weekOffset = ST.pianoV4DayOverlay.weekOffset;
 
   let totals = { kcal: 0, carbs: 0, protein: 0, fat: 0 };
+  let skippedCount = 0;
   originalMeals.forEach(function(orig) {
+    // Step C.6: pasti saltati esclusi dal totalizzatore (kcal/macro non contate)
+    if (_pianoV4IsSlotSkipped(weekOffset, dayOfWeek, orig.slot)) {
+      skippedCount++;
+      return;
+    }
     const m = _pianoV4GetMealForCard(orig, weekOffset, dayOfWeek);
     totals.kcal += (m.kcal || 0);
     totals.carbs += (m.carbs || 0);
@@ -12192,10 +12274,13 @@ function renderPianoV4DayTotals(originalMeals) {
   const status = inRange ? 'in-range' : (totals.kcal < kcalLow ? 'under' : 'over');
   const icon = inRange ? '✓' : (status === 'under' ? '↓' : '↑');
   const label = inRange ? 'IN RANGE' : (status === 'under' ? 'SOTTO TARGET' : 'SOPRA TARGET');
+  const skippedNote = skippedCount > 0
+    ? `<span class="pianov4-day-totals-skip-note">· ${skippedCount} saltat${skippedCount === 1 ? 'o' : 'i'}</span>`
+    : '';
 
   return `<div class="pianov4-day-totals pianov4-day-totals-${status}">
     <div class="pianov4-day-totals-header">
-      <span class="pianov4-day-totals-eyebrow">TOTALE GIORNO (CON SOSTITUZIONI)</span>
+      <span class="pianov4-day-totals-eyebrow">TOTALE GIORNO (CON SOSTITUZIONI)${skippedNote}</span>
       <span class="pianov4-day-totals-status">${icon} ${label}</span>
     </div>
     <div class="pianov4-day-totals-row">
@@ -12231,28 +12316,56 @@ function renderPianoV4MealsList(originalMeals) {
     const m = _pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek);
     const isAccepted = _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, m.id);
     const isSubstituted = _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, originalMeal.slot) !== null;
+    // C.6: stato saltato per slot (no demoMealId, è dello slot del giorno)
+    const isSkipped = _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, originalMeal.slot);
 
     const ingredientsHTML = m.ingredients.map(function(i) {
       return `<li>${esc(i)}</li>`;
     }).join('');
 
+    // Classi card: combinazione stati (accepted ha precedenza visiva su substituted;
+    // skipped è ortogonale ma sovrascrive badge substituted nel render badge)
     const cardCls = 'pianov4-meal-card'
       + (isAccepted ? ' pianov4-meal-card-accepted' : '')
-      + (isSubstituted && !isAccepted ? ' pianov4-meal-card-substituted' : '');
+      + (isSkipped ? ' pianov4-meal-card-skipped' : '')
+      + (isSubstituted && !isAccepted && !isSkipped ? ' pianov4-meal-card-substituted' : '');
 
-    // Badge precedenza: accettato sovrascrive sostituito (utente ha confermato la scelta finale)
-    const topBadge = isAccepted
-      ? `<div class="pianov4-meal-accepted-badge">✓ ACCETTATO</div>`
-      : (isSubstituted ? `<div class="pianov4-meal-substituted-badge">⇄ SOSTITUITO</div>` : '');
+    // Badge precedenza: accepted > skipped > substituted (un pasto accettato non può
+    // essere saltato; un saltato ha priorità su sostituito perché più "definitivo")
+    let topBadge = '';
+    if (isAccepted) topBadge = `<div class="pianov4-meal-accepted-badge">✓ ACCETTATO</div>`;
+    else if (isSkipped) topBadge = `<div class="pianov4-meal-skipped-badge">✕ SALTATO</div>`;
+    else if (isSubstituted) topBadge = `<div class="pianov4-meal-substituted-badge">⇄ SOSTITUITO</div>`;
 
-    const acceptBtn = isAccepted
-      ? `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`
-      : `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
+    // ACCETTA: verde solid se libero, disabled se accepted, ghost se skipped
+    let acceptBtn;
+    if (isAccepted) {
+      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`;
+    } else if (isSkipped) {
+      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">ACCETTA</button>`;
+    } else {
+      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
+    }
 
-    // SOSTITUISCI: attivo se non-accettato (l'accettato è in tab Oggi, sostituirlo creerebbe duplicato)
-    const substBtn = isAccepted
-      ? `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SOSTITUISCI</button>`
-      : `<button class="pianov4-meal-btn pianov4-meal-btn-secondary" onclick="openPianoV4SubstituteSheet('${esc(originalMeal.slot)}')">SOSTITUISCI</button>`;
+    // SOSTITUISCI: attivo se libero, ghost se accepted o skipped
+    let substBtn;
+    if (isAccepted) {
+      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SOSTITUISCI</button>`;
+    } else if (isSkipped) {
+      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">SOSTITUISCI</button>`;
+    } else {
+      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-secondary" onclick="openPianoV4SubstituteSheet('${esc(originalMeal.slot)}')">SOSTITUISCI</button>`;
+    }
+
+    // SALTO: attivo se libero, ↺ ANNULLA se skipped, ghost se accepted (definitivo)
+    let skipBtn;
+    if (isAccepted) {
+      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SALTO</button>`;
+    } else if (isSkipped) {
+      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip-active" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">↺ ANNULLA</button>`;
+    } else {
+      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">SALTO</button>`;
+    }
 
     return `<div class="${cardCls}" data-meal-id="${esc(m.id)}">
       ${topBadge}
@@ -12278,7 +12391,7 @@ function renderPianoV4MealsList(originalMeals) {
       <div class="pianov4-meal-actions">
         ${acceptBtn}
         ${substBtn}
-        <button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Disponibile presto">SALTO</button>
+        ${skipBtn}
       </div>
     </div>`;
   }).join('');
