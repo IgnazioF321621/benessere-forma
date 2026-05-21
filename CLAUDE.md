@@ -53,16 +53,55 @@ https://github.com/IgnazioF321621/benessere-forma
 - Notifiche push iOS PWA — TRATTENUTE per V2 dopo Tab Piano v4 stabile (Opzione 3 scelta in chiusura design: welcome overlay domenicale sufficiente per V1)
 
 **TODO post Step C (21 mag 2026, prossima sessione)**:
-- **PRIORITÀ ALTA — Investigazione integratori macro nel conteggio giornaliero**: oggi un integratore Nutrilite/XS registrato in tab Integratori contribuisce ai macro/kcal di tab Oggi? Ipotesi: NO (`supplements_log` separata da `meals`, `dayTotals()` legge solo meals). Impatto: shake XS, barrette XS con macro reali (es. XS Whey 25g, 100kcal) NON appaiono nel conteggio. Da diagnostica: schema `supplements_log` + `nutrilite_catalog` (campi kcal/macro esistono?), logica `dayTotals()`, UI tab Oggi (mostra contributo integratori?). Decisione: se fix piccolo (1 sessione) → fixiamo prima Step D. Se cantiere grosso → mini-roadmap dedicato.
+- **~~Investigazione integratori macro nel conteggio giornaliero~~** ✅ chiusa 21 mag 2026 (report `DIAGNOSTICA_INTEGRATORI_REPORT.md`). Esiti:
+  - **R1 Doppio conteggio** — CONFERMATO. Esempio reale: demo Piano V4 `demo-4` = "XS High Protein Energy Bar Cocco" stesso prodotto del catalogo Nutrilite. ACCETTA pasto + registra extra = +195 kcal contati 2 volte. `dayTotals()` somma `meals + supps + extras + extrasV3` senza dedup cross-source. **Design fix deciso → vedi sezione "Design R1 dedup integratori" sotto.** Implementazione in Step F.
+  - **R2 Catalogo incompleto** — SMENTITO via SQL su `nutrilite_catalog`. Tutti i prodotti con macro reali (XS Whey, XS Protein Bar, bodykey barrette/frappé, All Plant Protein, Hydrolyzed Whey, Electrolyte) hanno kcal/proteine/carbo/grassi popolati. Power Drink hanno macro 0 correttamente (bevande quasi acaloriche).
+  - **R3 AI cieca su integratori** — CONFERMATO. `getAdvice` riceve totali kcal corretti via `dayTotals()` ma elenca al modello solo `meals` come contesto qualitativo, mai gli integratori → consigli su quadro parziale. `generaPianoAI` (piano settimanale Step F) non menziona affatto integratori abituali. **Fix R3a `getAdvice` integrato in Step D (~30 min). Fix R3b `generaPianoAI` integrato in Step F.**
 - **PRIORITÀ ALTA — Comunicato implementazioni per tester**: preparare testo chiaro per chat collettiva 3 tester (Ginevra, Isabella, Pesce). Spiegare cosa è cambiato (Tab Piano v4 con overlay + 5 demo + azioni), cosa testare, cosa ignorare (pasti demo non sono piano AI vero — banner ESEMPIO DIMOSTRATIVO).
-- **Step D — Modal peso + banner reminder**: secondo roadmap. Da chiudere insieme a E entro settimana 22-28 mag se possibile.
+- **Step D — Modal peso + banner reminder + R3a fix `getAdvice`**: oltre alla roadmap originale Step D, integrare fix R3a (~30 min): aggiungere al prompt `getAdvice` la lista integratori consumati oggi (da `ST.extras` + `suppsTaken`) con macro effettive, così che i consigli AI considerino l'apporto reale. Da chiudere insieme a E entro settimana 22-28 mag se possibile.
 
 **TODO Step F (quando arriverà)**:
+- **R1 dedup integratori — implementazione**: nuovo campo `supplements_log.is_second_consumption`, modal blocco preventivo Momento 2 al submit extras, tag visivo `2° CONSUMO` in timeline Oggi/Analisi. Specifica completa in sezione "Design R1 dedup integratori".
+- **R3b fix `generaPianoAI`**: includere nel prompt AI piano settimanale gli integratori abituali dell'utente (lista da `ST.supps` attivi) con macro reali, così che il piano possa essere bilanciato considerando l'apporto base degli integratori.
 - **Estendere `dbAddMeal(meal, date)` per supportare data custom** (oggi hardcoda `date: ST.activeDay`): bloccare ACCETTA su giorni non-oggi era workaround C.4. In Step F tester potranno programmare pasti per giorni futuri dal piano AI. Helper proposto: `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`
 - **Riuso `SLOT_MAP_DEMO_TO_LEGACY`**: writer AI da `weekly_plan_meals` → `meals` dovrà tradurre slot allo stesso modo del flusso demo (Step C.4.2)
 - **Persistenza azioni demo → real**: migrare da localStorage a `weekly_plan_acceptance.status` Supabase quando piano AI generato. localStorage resta come fallback per pasti demo (utenti senza piano AI ancora generato)
 - **Banner ESEMPIO DIMOSTRATIVO condizionale**: oggi sempre visibile in overlay. In Step F mostrato SOLO se `weekly_plan_meals` per quel giorno è vuoto
 - **Card "0/7 GIORNI SEGUITI" dinamica**: oggi statica hardcoded. In Step F deve incrementare per ogni giorno dove ≥3 pasti del piano AI sono stati accettati. Decisione product 20 mag: i demo accettati NON contano per il contatore
+
+## Design R1 dedup integratori (21 mag 2026)
+
+**Strategia scelta**: A — Blocco preventivo con conferma utente.
+Motivo: utente non-tecnico + tester non-tecnici. Strategia B (dedup nascosta) non spiegabile se utente nota anomalia. Strategia C (separare piano AI da integratori) sacrifica business model Nutrilite.
+
+**Momento del blocco**: 2 — solo quando l'utente registra come extra un prodotto già presente come pasto nello stesso giorno.
+Motivo: intercetta solo quando il problema esiste davvero. Just-in-time UX evita avvisi inutili al Momento 1 (accettazione pasto). Avviso più convincente perché concreto e datato.
+
+**UI**: modal centrale (coerente con pattern conferme app), background grigio, riquadro bianco.
+
+**Testo modal**:
+> Titolo: "Già nel piano di oggi"
+> Corpo: "Hai accettato '<NOME_PRODOTTO>' come <SLOT> delle <ORARIO>.
+>         Stai per registrarla anche come extra (+<KCAL> kcal verrebbero contate due volte)."
+> Bottoni: [È un secondo consumo, conferma] [Annulla]
+
+**Comportamento conferma**: Opzione 2 — somma + tag visivo.
+- Registra extra in `supplements_log` come da flusso normale
+- Marker visivo `2° CONSUMO` accanto al nome nella card timeline tab Oggi (e in Storico/Analisi quando si visualizza il giorno)
+- Style tag: Mono caps ~9.5px tracking, palette evergreen `#2A7A6F` su mint `#E6F4F2` (coerente tag EXTRA)
+
+**Trigger tecnico** (per implementazione Step F):
+- Al submit "REGISTRA N EXTRA" in tab Integratori, per ogni catalog item selezionato:
+  - Query meals del giorno attivo (`ST.activeDay`)
+  - Match per `LOWER(TRIM(meal.name)) === LOWER(TRIM(catalog.nome))`
+  - Se match → mostra modal prima di insert su `supplements_log`
+  - Se utente conferma → insert con flag `is_second_consumption=true` (nuovo campo da aggiungere a `supplements_log`)
+  - Se utente annulla → skip insert per quel solo item, gli altri della batch procedono normalmente
+
+**DB change richiesto Step F**:
+```sql
+ALTER TABLE supplements_log ADD COLUMN is_second_consumption BOOLEAN DEFAULT FALSE;
+```
 
 **TODO Post Step I (sessione dedicata futura)**:
 - **Icon system Zona Tracker custom**: sostituire emoji classiche (📅 📊 🥗 ⚡ 💧 ecc.) con set proprietario. Direzione: mix lettering Syne ingrandito (nav moduli) + SVG monocromatici geometrici (micro-azioni UI). Sessione design dedicata + 2-3 sessioni implementazione progressiva. Già rilevato in C.2.1 (emoji 📅 rimossa dall'empty state overlay)
