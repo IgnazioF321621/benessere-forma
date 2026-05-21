@@ -1503,6 +1503,54 @@ select.inp{cursor:pointer;}
 .pianov4-meal-card-accepted .pianov4-meal-header{padding-top:10px;}
 .pianov4-meal-accepted-badge{position:absolute;top:12px;right:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--acc);background:rgba(42,122,111,0.12);padding:4px 8px;border-radius:6px;z-index:1;}
 
+/* ─── PIANO V4 Step C.5 — Totalizzatore giorno + SOSTITUISCI attivo + bottom sheet ─── */
+/* Totalizzatore giorno (sopra lista pasti, sotto banner demo) */
+.pianov4-day-totals{margin:8px 20px 0;padding:14px 16px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;transition:border-color .15s ease,background .15s ease;}
+.pianov4-day-totals-in-range{border-color:rgba(42,122,111,0.35);background:rgba(42,122,111,0.04);}
+.pianov4-day-totals-under{border-color:rgba(217,119,6,0.35);background:rgba(217,119,6,0.04);}
+.pianov4-day-totals-over{border-color:rgba(217,119,6,0.35);background:rgba(217,119,6,0.04);}
+.pianov4-day-totals-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px;}
+.pianov4-day-totals-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
+.pianov4-day-totals-status{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.1em;flex-shrink:0;}
+.pianov4-day-totals-in-range .pianov4-day-totals-status{color:#2A7A6F;}
+.pianov4-day-totals-under .pianov4-day-totals-status,
+.pianov4-day-totals-over .pianov4-day-totals-status{color:#D97706;}
+.pianov4-day-totals-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+.pianov4-day-totals-kcal{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;}
+.pianov4-day-totals-target{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);}
+.pianov4-day-totals-macros{font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:.04em;color:var(--t2);}
+
+/* Bottone SOSTITUISCI attivo (secondary) — outline neutro, no fill verde come ACCETTA */
+.pianov4-meal-btn-secondary{background:transparent;color:var(--t1);border-color:var(--b1);}
+.pianov4-meal-btn-secondary:active{background:var(--s2);}
+
+/* Card sostituita (non accettata): bordo giallino + badge ⇄ SOSTITUITO top-right */
+.pianov4-meal-card-substituted{border-color:rgba(250,199,117,0.55);position:relative;}
+.pianov4-meal-card-substituted .pianov4-meal-header{padding-top:10px;}
+.pianov4-meal-substituted-badge{position:absolute;top:12px;right:14px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:.12em;color:#8B6F2A;background:rgba(250,199,117,0.22);padding:4px 8px;border-radius:6px;z-index:1;}
+
+/* Bottom sheet selettore alternative (slide-up dal basso, z-index 1600 sopra overlay 1500) */
+@keyframes pianov4SubstSlideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+@keyframes pianov4SubstSlideDown{from{transform:translateY(0);}to{transform:translateY(100%);}}
+.pianov4-subst-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1600;display:flex;align-items:flex-end;justify-content:center;}
+.pianov4-subst-screen{background:var(--bg);width:100%;max-width:520px;max-height:85vh;overflow-y:auto;border-radius:20px 20px 0 0;animation:pianov4SubstSlideUp 240ms cubic-bezier(.16,1,.3,1);padding-bottom:env(safe-area-inset-bottom);-webkit-overflow-scrolling:touch;}
+.pianov4-subst-screen.dismissing{animation:pianov4SubstSlideDown 200ms ease forwards;}
+.pianov4-subst-handle{width:44px;height:5px;background:rgba(0,0,0,.15);border-radius:3px;margin:10px auto 0;}
+.pianov4-subst-header{padding:16px 20px 12px;position:relative;border-bottom:1px solid rgba(0,0,0,.06);}
+.pianov4-subst-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.15em;color:var(--t3);margin-bottom:6px;text-transform:uppercase;}
+.pianov4-subst-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--t1);padding-right:48px;}
+.pianov4-subst-close{position:absolute;top:14px;right:16px;width:36px;height:36px;border-radius:50%;background:transparent;border:none;font-size:22px;color:var(--t2);cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.pianov4-subst-close:active{color:var(--t1);}
+.pianov4-subst-list{padding:16px 20px 24px;display:flex;flex-direction:column;gap:12px;}
+.pianov4-subst-reset{padding:12px 14px;border-radius:10px;background:transparent;border:1px dashed var(--b1);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--t2);text-transform:uppercase;cursor:pointer;text-align:center;}
+.pianov4-subst-reset:active{background:var(--s2);}
+.pianov4-subst-card{padding:14px 16px;border-radius:12px;background:var(--s1);border:1px solid var(--b1);cursor:pointer;transition:transform 80ms ease,border-color 120ms ease,background 120ms ease;}
+.pianov4-subst-card:active{transform:scale(0.98);}
+.pianov4-subst-card-selected{border-color:var(--mod-nutrition);background:#FDF7E8;}
+.pianov4-subst-card-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;color:var(--t1);margin-bottom:6px;line-height:1.3;}
+.pianov4-subst-card-macros{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--t2);margin-bottom:8px;}
+.pianov4-subst-card-reasoning{font-family:'Syne',sans-serif;font-style:italic;font-size:13px;line-height:1.5;color:var(--t2);}
+
 </style>
 </head>
 <body>
@@ -2752,7 +2800,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.20 · 21:47';
+const APP_VERSION = '2026.05.21 · 10:55';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2875,6 +2923,8 @@ const ST = {
   pianoV4WeekOffset: 0,    // 0=settimana corrente, -1=passata, +1=futura (offset in settimane)
   // PIANO V4 Step C.1 (20 mag 2026) — overlay Dettaglio Giorno
   pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
+  // PIANO V4 Step C.5 (21 mag 2026) — bottom sheet selettore alternative SOSTITUISCI
+  pianoV4SubstSheet: null, // { slot, weekOffset, dayOfWeek } | null — snapshot al tap SOSTITUISCI
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -11784,13 +11834,13 @@ function _pianoV4CalculateDate(weekOffset, dayOfWeek) {
 // Limitazione: dbAddMeal usa ST.activeDay hardcoded, NON accetta date custom → ACCETTA permesso
 // SOLO se targetDate === todayKey(). Pasti di giorni passati/futuri bloccati con toast esplicativo.
 // In Step F (AI reale + tabella weekly_plan_acceptance) si potrà rivisitare la limitazione.
-async function acceptPianoV4DemoMeal(demoMealId) {
+async function acceptPianoV4DemoMeal(mealId) {
   if (!ST.pianoV4DayOverlay) return;
   const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
   const weekOffset = ST.pianoV4DayOverlay.weekOffset;
 
   // Guard: già accettato (no double-tap)
-  if (_pianoV4IsDemoAccepted(weekOffset, dayOfWeek, demoMealId)) {
+  if (_pianoV4IsDemoAccepted(weekOffset, dayOfWeek, mealId)) {
     showToast('Già accettato', '✅');
     return;
   }
@@ -11802,17 +11852,31 @@ async function acceptPianoV4DemoMeal(demoMealId) {
     return;
   }
 
-  // Recupera pasto demo
-  const meals = _pianoV4GetDemoMeals(dayOfWeek);
-  const meal = meals.find(function(m) { return m.id === demoMealId; });
+  // C.5: mealId può essere un originale (demo-N) OR un'alternativa (alt-XXX-N).
+  // Cerca prima nei pasti originali, poi nelle alternative di ogni slot.
+  const originalMeals = _pianoV4GetDemoMeals(dayOfWeek);
+  let meal = originalMeals.find(function(m) { return m.id === mealId; });
+  let originalSlot = meal ? meal.slot : null;
+  let timeForMeal = meal ? meal.time : null;
+  if (!meal) {
+    for (let i = 0; i < originalMeals.length; i++) {
+      const orig = originalMeals[i];
+      const alts = _pianoV4GetAlternatives(orig.slot);
+      const found = alts.find(function(a) { return a.id === mealId; });
+      if (found) {
+        meal = found;
+        originalSlot = orig.slot;      // slot semantico dell'originale (per mappa legacy)
+        timeForMeal = orig.time;       // time dell'originale (l'alt non ha time)
+        break;
+      }
+    }
+  }
   if (!meal) return;
 
   // C.4.2: traduci slot demo (es. 'spuntino') → slot legacy meals/UI (es. 'snack_mattina')
-  // per evitare invisibilità in render timeline tab Oggi (vedi diagnosi C.4.1).
-  // Fallback a meal.slot se la mappa non lo conosce (futura safety, no slot esotici per ora).
-  const legacySlot = SLOT_MAP_DEMO_TO_LEGACY[meal.slot] || meal.slot;
+  const legacySlot = SLOT_MAP_DEMO_TO_LEGACY[originalSlot] || originalSlot;
 
-  // Payload coerente con dbAddMeal firma esistente (slot tradotto)
+  // Payload coerente con dbAddMeal firma esistente
   const mealData = {
     slot: legacySlot,
     description: meal.name + ' · ' + meal.ingredients.join(', '),
@@ -11820,22 +11884,53 @@ async function acceptPianoV4DemoMeal(demoMealId) {
     protein: meal.protein,
     carbs: meal.carbs,
     fat: meal.fat,
-    time: meal.time,
+    time: timeForMeal,
   };
 
   try {
     const saved = await dbAddMeal(mealData);
-    // Pattern dei call site esistenti: push in memoria + saveCache per visibilità immediata tab Oggi
     const d = getDay(ST.activeDay);
     d.meals.push(Object.assign({}, mealData, { id: saved.id, local_id: saved.id }));
     if (typeof saveCache === 'function') saveCache();
-    _pianoV4MarkDemoAccepted(weekOffset, dayOfWeek, demoMealId);
+    _pianoV4MarkDemoAccepted(weekOffset, dayOfWeek, mealId);
     showToast('Pasto accettato!', '✅');
-    renderPianoV4DayOverlay(); // re-render overlay per aggiornare card → ACCETTATO
+    renderPianoV4DayOverlay();
   } catch (err) {
     console.error('[piano-v4] Errore ACCETTA demo:', err);
     showToast('Errore, riprova', '⚠️');
   }
+}
+
+// ─── Step C.5 (21 mag 2026): storage helper sostituzione ───
+// Per ogni weekOffset + dayOfWeek + slot, traccia quale alternativa è attiva.
+// null = nessuna sostituzione (pasto originale). Key separata da accettazione.
+function _pianoV4GetSubstitutionKey(weekOffset, dayOfWeek, slot) {
+  const userId = (ST.user && ST.user.id) || (ST.profile && ST.profile.id) || 'anon';
+  return `zona_pianov4_demo_subst_${userId}_w${weekOffset}_d${dayOfWeek}_${slot}`;
+}
+function _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, slot) {
+  try {
+    return localStorage.getItem(_pianoV4GetSubstitutionKey(weekOffset, dayOfWeek, slot));
+  } catch (e) { return null; }
+}
+function _pianoV4SetActiveSubstitution(weekOffset, dayOfWeek, slot, altId) {
+  try {
+    const key = _pianoV4GetSubstitutionKey(weekOffset, dayOfWeek, slot);
+    if (altId === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, altId);
+  } catch (e) {}
+}
+
+// Restituisce il pasto effettivamente da mostrare nella card: se sostituzione
+// attiva → alternativa scelta (con slot+time preservati dall'originale).
+// Altrimenti → pasto originale invariato.
+function _pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek) {
+  const altId = _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, originalMeal.slot);
+  if (!altId) return originalMeal;
+  const alternatives = _pianoV4GetAlternatives(originalMeal.slot);
+  const chosen = alternatives.find(function(a) { return a.id === altId; });
+  if (!chosen) return originalMeal;
+  return Object.assign({}, chosen, { slot: originalMeal.slot, time: originalMeal.time });
 }
 
 // Demo data Step C.3 (20 mag 2026, decisione product): 5 pasti dimostrativi
@@ -11851,7 +11946,7 @@ function _pianoV4GetDemoMeals(dayOfWeek) {
       name: 'Porridge proteico',
       kcal: 450, carbs: 45, protein: 30, fat: 15,
       ingredients: ['Fiocchi avena 60g','Proteine vegetali vaniglia 25g','Frutti di bosco misti 100g','Mandorle 15g'],
-      reasoning: 'Inizio energetico bilanciato 40-30-30 con proteine vegetali pescatariane e fibre per saziarti fino a metà mattina.'
+      reasoning: 'Inizio energetico bilanciato 40-30-30 con proteine vegetali pescetariane e fibre per saziarti fino a metà mattina.'
     },
     {
       id: 'demo-2', slot: 'spuntino', time: '10:30',
@@ -11865,7 +11960,7 @@ function _pianoV4GetDemoMeals(dayOfWeek) {
       name: 'Salmone griglia + quinoa',
       kcal: 580, carbs: 55, protein: 38, fat: 22,
       ingredients: ['Filetto salmone 150g','Quinoa 70g (peso secco)','Verdure miste grigliate 200g','Olio EVO 10g'],
-      reasoning: 'Pranzo bilanciato con omega-3 del salmone (cuore + recupero) e quinoa come carboidrato complesso a basso indice glicemico. Coerente col profilo pescatariano.'
+      reasoning: 'Pranzo bilanciato con omega-3 del salmone (cuore + recupero) e quinoa come carboidrato complesso a basso indice glicemico. Coerente col profilo pescetariano.'
     },
     {
       id: 'demo-4', slot: 'merenda', time: '17:00',
@@ -11884,6 +11979,235 @@ function _pianoV4GetDemoMeals(dayOfWeek) {
   ];
 }
 
+// Step C.5 (21 mag 2026): alternative dimostrative per ogni slot (3 × 5 = 15).
+// Generiche non personalizzate sul profilo utente (la personalizzazione vera
+// arriva in Step F con AI). Macro vicine all'originale ma non identiche, così
+// totalizzatore giorno si muove visibilmente al cambio. Naming "Pasto test alt N"
+// per chiarezza dimostrativa.
+function _pianoV4GetAlternatives(originalSlot) {
+  const alts = {
+    colazione: [
+      {
+        id: 'alt-cola-1', name: 'Pasto test alt 1 - Toast avocado + uova',
+        kcal: 420, carbs: 38, protein: 22, fat: 20,
+        ingredients: ['Pane integrale 60g','Avocado 80g','2 uova in camicia','Pomodorini 100g'],
+        reasoning: 'Alternativa proteica con grassi buoni dell\'avocado. Esempio dimostrativo che mostra come l\'AI potrà bilanciare diversamente la colazione mantenendo il target calorico vicino.'
+      },
+      {
+        id: 'alt-cola-2', name: 'Pasto test alt 2 - Smoothie bowl di soia',
+        kcal: 480, carbs: 58, protein: 24, fat: 14,
+        ingredients: ['Latte di soia 200ml','Banana 1 (media)','Frutti di bosco 80g','Semi di chia 10g','Mandorle a scaglie 15g'],
+        reasoning: 'Alternativa più ricca di carboidrati a basso indice glicemico. Esempio di come l\'AI potrà variare la fonte proteica restando dairy-free.'
+      },
+      {
+        id: 'alt-cola-3', name: 'Pasto test alt 3 - Pancake proteici di avena',
+        kcal: 460, carbs: 50, protein: 28, fat: 12,
+        ingredients: ['Farina d\'avena 50g','Proteine vegetali vaniglia 20g','Albumi 100g','Frutti di bosco 80g','Sciroppo d\'acero 10g'],
+        reasoning: 'Alternativa proteica più alta. Esempio di sostituzione utile in giorni con allenamento intenso al mattino.'
+      }
+    ],
+    spuntino: [
+      {
+        id: 'alt-spun-1', name: 'Pasto test alt 1 - Frutta secca + mela',
+        kcal: 210, carbs: 22, protein: 6, fat: 12,
+        ingredients: ['Mandorle, nocciole, anacardi misti 25g','Mela 1 (media)'],
+        reasoning: 'Alternativa più semplice e portatile. Esempio di sostituzione per giorni fuori casa.'
+      },
+      {
+        id: 'alt-spun-2', name: 'Pasto test alt 2 - Shake proteico XS',
+        kcal: 180, carbs: 6, protein: 25, fat: 4,
+        ingredients: ['XS Hydrolyzed Whey Protein 1 misurino (40g)','Acqua 250ml'],
+        reasoning: 'Alternativa ad alto contenuto proteico, ideale post-allenamento. Esempio di integrazione XS in giornate ad alta intensità.'
+      },
+      {
+        id: 'alt-spun-3', name: 'Pasto test alt 3 - Hummus + verdure crude',
+        kcal: 220, carbs: 24, protein: 9, fat: 10,
+        ingredients: ['Hummus di ceci 60g','Carote crude 100g','Sedano 50g'],
+        reasoning: 'Alternativa fibrosa e saziante. Esempio di sostituzione vegetariana piena.'
+      }
+    ],
+    pranzo: [
+      {
+        id: 'alt-pran-1', name: 'Pasto test alt 1 - Tonno fresco + farro',
+        kcal: 560, carbs: 58, protein: 36, fat: 18,
+        ingredients: ['Tonno fresco 150g','Farro perlato 70g (peso secco)','Verdure miste 200g','Olio EVO 8g'],
+        reasoning: 'Alternativa pescetariana con farro al posto della quinoa. Esempio di rotazione cereali integrali settimanale.'
+      },
+      {
+        id: 'alt-pran-2', name: 'Pasto test alt 2 - Lenticchie + uova + pane',
+        kcal: 600, carbs: 65, protein: 35, fat: 16,
+        ingredients: ['Lenticchie cotte 200g','2 uova sode','Pane integrale 50g','Insalata mista 100g','Olio EVO 8g'],
+        reasoning: 'Alternativa vegetariana con proteine combinate (legumi + uova). Esempio di pranzo a basso impatto ambientale.'
+      },
+      {
+        id: 'alt-pran-3', name: 'Pasto test alt 3 - Branzino + patate + asparagi',
+        kcal: 540, carbs: 48, protein: 40, fat: 16,
+        ingredients: ['Branzino al cartoccio 180g','Patate al forno 200g','Asparagi 150g','Olio EVO 8g'],
+        reasoning: 'Alternativa più proteica. Esempio di pranzo per giorni con allenamento di forza.'
+      }
+    ],
+    merenda: [
+      {
+        id: 'alt-mere-1', name: 'Pasto test alt 1 - XS High Protein Bar Cioccolato',
+        kcal: 195, carbs: 19, protein: 15, fat: 7,
+        ingredients: ['XS High Protein Energy Bar gusto Cioccolato Fondente 50g (1 barretta)'],
+        reasoning: 'Stesso prodotto XS in gusto diverso, identica formula 40-30-30. Esempio di rotazione gusti per evitare monotonia.'
+      },
+      {
+        id: 'alt-mere-2', name: 'Pasto test alt 2 - Nutrilite All Plant Protein',
+        kcal: 170, carbs: 8, protein: 22, fat: 5,
+        ingredients: ['Nutrilite All Plant Protein 1 misurino (15g)','Acqua 250ml','1 piccolo frutto (mela o pera)'],
+        reasoning: 'Alternativa Nutrilite ad alto contenuto proteico vegetale. Esempio di integrazione per chi cerca proteine plant-based.'
+      },
+      {
+        id: 'alt-mere-3', name: 'Pasto test alt 3 - Ricotta di soia + mandorle',
+        kcal: 220, carbs: 14, protein: 16, fat: 12,
+        ingredients: ['Ricotta di soia 100g','Mandorle 15g','Cannella in polvere q.b.'],
+        reasoning: 'Alternativa dairy-free fatta in casa. Esempio di merenda non-prodotto industriale.'
+      }
+    ],
+    cena: [
+      {
+        id: 'alt-cena-1', name: 'Pasto test alt 1 - Salmone + insalata + patate dolci',
+        kcal: 510, carbs: 38, protein: 34, fat: 22,
+        ingredients: ['Salmone al forno 150g','Insalata mista 150g','Patate dolci al forno 200g','Olio EVO 8g'],
+        reasoning: 'Alternativa pescetariana con omega-3 e carboidrati a basso indice glicemico. Esempio di cena con recupero post-allenamento.'
+      },
+      {
+        id: 'alt-cena-2', name: 'Pasto test alt 2 - Tofu saltato + riso integrale',
+        kcal: 460, carbs: 52, protein: 25, fat: 16,
+        ingredients: ['Tofu naturale 150g','Riso integrale 60g (peso secco)','Verdure miste saltate 200g','Olio EVO 8g','Salsa di soia 5ml'],
+        reasoning: 'Alternativa interamente vegetariana. Esempio di cena leggera senza proteine animali.'
+      },
+      {
+        id: 'alt-cena-3', name: 'Pasto test alt 3 - Polpo + fagiolini + pane',
+        kcal: 490, carbs: 36, protein: 38, fat: 18,
+        ingredients: ['Polpo lesso 180g','Fagiolini al vapore 200g','Pane integrale 50g','Olio EVO 10g'],
+        reasoning: 'Alternativa pescetariana più proteica. Esempio di cena per giorni con maggior fabbisogno proteico.'
+      }
+    ]
+  };
+  return alts[originalSlot] || [];
+}
+
+// Step C.5: bottom sheet selettore alternative SOSTITUISCI
+function openPianoV4SubstituteSheet(slot) {
+  if (!ST.pianoV4DayOverlay) return;
+  const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
+  const weekOffset = ST.pianoV4DayOverlay.weekOffset;
+  ST.pianoV4SubstSheet = { slot: slot, weekOffset: weekOffset, dayOfWeek: dayOfWeek };
+  renderPianoV4SubstituteSheet();
+}
+
+function closePianoV4SubstituteSheet() {
+  const el = document.getElementById('pianov4-subst-sheet');
+  if (el) {
+    const screen = el.querySelector('.pianov4-subst-screen');
+    if (screen) screen.classList.add('dismissing');
+    setTimeout(function() {
+      ST.pianoV4SubstSheet = null;
+      const ex = document.getElementById('pianov4-subst-sheet');
+      if (ex) ex.remove();
+    }, 200);
+  } else {
+    ST.pianoV4SubstSheet = null;
+  }
+}
+
+function applyPianoV4Substitution(altId) {
+  if (!ST.pianoV4SubstSheet) return;
+  const slot = ST.pianoV4SubstSheet.slot;
+  const weekOffset = ST.pianoV4SubstSheet.weekOffset;
+  const dayOfWeek = ST.pianoV4SubstSheet.dayOfWeek;
+  // altId === '__reset__' sentinel → torna al pasto originale (rimuove dal localStorage)
+  const toSave = (altId === '__reset__') ? null : altId;
+  _pianoV4SetActiveSubstitution(weekOffset, dayOfWeek, slot, toSave);
+  showToast(toSave ? 'Pasto sostituito' : 'Tornato all\'originale', '⇄');
+  closePianoV4SubstituteSheet();
+  renderPianoV4DayOverlay(); // re-render overlay → card e totalizzatore aggiornati
+}
+
+function renderPianoV4SubstituteSheet() {
+  if (!ST.pianoV4SubstSheet) return;
+  const slot = ST.pianoV4SubstSheet.slot;
+  const weekOffset = ST.pianoV4SubstSheet.weekOffset;
+  const dayOfWeek = ST.pianoV4SubstSheet.dayOfWeek;
+  const currentAltId = _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, slot);
+  const alternatives = _pianoV4GetAlternatives(slot);
+
+  const resetBtnHTML = currentAltId
+    ? `<button class="pianov4-subst-reset" onclick="applyPianoV4Substitution('__reset__')">↺ Torna al pasto originale</button>`
+    : '';
+  const altsHTML = alternatives.map(function(a) {
+    const sel = (currentAltId === a.id) ? ' pianov4-subst-card-selected' : '';
+    return `<div class="pianov4-subst-card${sel}" onclick="applyPianoV4Substitution('${esc(a.id)}')">
+      <div class="pianov4-subst-card-name">${esc(a.name)}</div>
+      <div class="pianov4-subst-card-macros">${a.kcal} KCAL · ${a.carbs}g C · ${a.protein}g P · ${a.fat}g G</div>
+      <div class="pianov4-subst-card-reasoning">${esc(a.reasoning)}</div>
+    </div>`;
+  }).join('');
+
+  const html = `<div id="pianov4-subst-sheet" class="pianov4-subst-overlay" onclick="if(event.target===this)closePianoV4SubstituteSheet()">
+    <div class="pianov4-subst-screen">
+      <div class="pianov4-subst-handle"></div>
+      <div class="pianov4-subst-header">
+        <div class="pianov4-subst-eyebrow">SOSTITUISCI ${esc(slot.toUpperCase())}</div>
+        <div class="pianov4-subst-title">Scegli un'alternativa</div>
+        <button class="pianov4-subst-close" onclick="closePianoV4SubstituteSheet()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="pianov4-subst-list">
+        ${resetBtnHTML}
+        ${altsHTML}
+      </div>
+    </div>
+  </div>`;
+
+  const existing = document.getElementById('pianov4-subst-sheet');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// Step C.5: totalizzatore giorno in cima all'overlay con feedback range vs target.
+// Somma kcal/macro dei 5 pasti effettivi (con sostituzioni applicate).
+// Tolleranza ±10% vs ST.TARGET.kcal per stato "in range" / "sotto" / "sopra".
+function renderPianoV4DayTotals(originalMeals) {
+  if (!ST.pianoV4DayOverlay) return '';
+  const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
+  const weekOffset = ST.pianoV4DayOverlay.weekOffset;
+
+  let totals = { kcal: 0, carbs: 0, protein: 0, fat: 0 };
+  originalMeals.forEach(function(orig) {
+    const m = _pianoV4GetMealForCard(orig, weekOffset, dayOfWeek);
+    totals.kcal += (m.kcal || 0);
+    totals.carbs += (m.carbs || 0);
+    totals.protein += (m.protein || 0);
+    totals.fat += (m.fat || 0);
+  });
+
+  const target = (ST.TARGET && ST.TARGET.kcal) ? ST.TARGET.kcal : 2326;
+  const tolerance = 0.10;
+  const kcalLow = target * (1 - tolerance);
+  const kcalHigh = target * (1 + tolerance);
+  const inRange = totals.kcal >= kcalLow && totals.kcal <= kcalHigh;
+  const status = inRange ? 'in-range' : (totals.kcal < kcalLow ? 'under' : 'over');
+  const icon = inRange ? '✓' : (status === 'under' ? '↓' : '↑');
+  const label = inRange ? 'IN RANGE' : (status === 'under' ? 'SOTTO TARGET' : 'SOPRA TARGET');
+
+  return `<div class="pianov4-day-totals pianov4-day-totals-${status}">
+    <div class="pianov4-day-totals-header">
+      <span class="pianov4-day-totals-eyebrow">TOTALE GIORNO (CON SOSTITUZIONI)</span>
+      <span class="pianov4-day-totals-status">${icon} ${label}</span>
+    </div>
+    <div class="pianov4-day-totals-row">
+      <span class="pianov4-day-totals-kcal">${totals.kcal} KCAL</span>
+      <span class="pianov4-day-totals-target">/ ${fmtNum(target)} target</span>
+    </div>
+    <div class="pianov4-day-totals-macros">
+      ${totals.carbs}g C · ${totals.protein}g P · ${totals.fat}g G
+    </div>
+  </div>`;
+}
+
 // Banner "ESEMPIO DIMOSTRATIVO" sempre visibile in C.3. In Step F sarà
 // condizionale (solo se query weekly_plan_meals ritorna 0 righe).
 function renderPianoV4DemoBanner() {
@@ -11895,26 +12219,45 @@ function renderPianoV4DemoBanner() {
 
 // Lista 5 card pasto con macro + ingredienti + box "PERCHÉ TI PROPONGO QUESTO".
 // Step C.4: aggiunti bottoni azione (ACCETTA attivo + SOSTITUISCI/SALTO ghost disabled).
-// Card "accettata" (localStorage flag true): bordo evergreen + badge ✓ ACCETTATO + bottone disabled.
-function renderPianoV4MealsList(meals) {
+// Step C.5: SOSTITUISCI attivo (secondary) + card mostra pasto effettivo (originale o
+// alternativa scelta) + badge ⇄ SOSTITUITO. ACCETTA disattiva SOSTITUISCI (no duplicati).
+function renderPianoV4MealsList(originalMeals) {
   if (!ST.pianoV4DayOverlay) return '';
   const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
   const weekOffset = ST.pianoV4DayOverlay.weekOffset;
 
-  const cards = meals.map(function(m) {
+  const cards = originalMeals.map(function(originalMeal) {
+    // C.5: pasto effettivo (originale o alternativa scelta tramite SOSTITUISCI)
+    const m = _pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek);
     const isAccepted = _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, m.id);
+    const isSubstituted = _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, originalMeal.slot) !== null;
+
     const ingredientsHTML = m.ingredients.map(function(i) {
       return `<li>${esc(i)}</li>`;
     }).join('');
-    const cardCls = 'pianov4-meal-card' + (isAccepted ? ' pianov4-meal-card-accepted' : '');
-    const acceptedBadge = isAccepted ? `<div class="pianov4-meal-accepted-badge">✓ ACCETTATO</div>` : '';
+
+    const cardCls = 'pianov4-meal-card'
+      + (isAccepted ? ' pianov4-meal-card-accepted' : '')
+      + (isSubstituted && !isAccepted ? ' pianov4-meal-card-substituted' : '');
+
+    // Badge precedenza: accettato sovrascrive sostituito (utente ha confermato la scelta finale)
+    const topBadge = isAccepted
+      ? `<div class="pianov4-meal-accepted-badge">✓ ACCETTATO</div>`
+      : (isSubstituted ? `<div class="pianov4-meal-substituted-badge">⇄ SOSTITUITO</div>` : '');
+
     const acceptBtn = isAccepted
       ? `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`
       : `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
+
+    // SOSTITUISCI: attivo se non-accettato (l'accettato è in tab Oggi, sostituirlo creerebbe duplicato)
+    const substBtn = isAccepted
+      ? `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SOSTITUISCI</button>`
+      : `<button class="pianov4-meal-btn pianov4-meal-btn-secondary" onclick="openPianoV4SubstituteSheet('${esc(originalMeal.slot)}')">SOSTITUISCI</button>`;
+
     return `<div class="${cardCls}" data-meal-id="${esc(m.id)}">
-      ${acceptedBadge}
+      ${topBadge}
       <div class="pianov4-meal-header">
-        <div class="pianov4-meal-slot">${esc(m.slot.toUpperCase())} · ${esc(m.time)}</div>
+        <div class="pianov4-meal-slot">${esc(originalMeal.slot.toUpperCase())} · ${esc(originalMeal.time)}</div>
         <div class="pianov4-meal-name">${esc(m.name)}</div>
       </div>
       <div class="pianov4-meal-macros">
@@ -11934,7 +12277,7 @@ function renderPianoV4MealsList(meals) {
       </div>
       <div class="pianov4-meal-actions">
         ${acceptBtn}
-        <button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Disponibile presto">SOSTITUISCI</button>
+        ${substBtn}
         <button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Disponibile presto">SALTO</button>
       </div>
     </div>`;
@@ -11961,6 +12304,7 @@ function renderPianoV4DayOverlay() {
         <div class="pianov4-day-title">${esc(titleStr)}</div>
       </div>
       ${renderPianoV4DemoBanner()}
+      ${renderPianoV4DayTotals(meals)}
       ${renderPianoV4MealsList(meals)}
     </div>
   </div>`;
