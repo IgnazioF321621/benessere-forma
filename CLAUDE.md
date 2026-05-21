@@ -103,6 +103,49 @@ Motivo: intercetta solo quando il problema esiste davvero. Just-in-time UX evita
 ALTER TABLE supplements_log ADD COLUMN is_second_consumption BOOLEAN DEFAULT FALSE;
 ```
 
+### Chiusura dubbi design (21 mag 2026 sera)
+
+Dopo mockup hi-fi Claude Design (3 frame: modal + card singola + timeline contestuale) chiusi i 3 dubbi residui:
+
+**1. "+203 kcal" nel body modal** → chip Mono (riquadrato, monospaziato).
+Motivo: il numero è il fulcro della decisione utente. Trattarlo come "oggetto visivo tracciato" lo fa fermare a leggerlo invece di scivolare via nel flow della frase. Pattern coerente con i numeri inline delle card timeline.
+
+**2. Tag "2° CONSUMO" anche in tab Analisi** → SÌ, mostrato.
+Motivo: la coerenza vince sul risparmio di pixel. Quando l'utente guarda lo storico mesi dopo e vede 2 barrette XS in un giorno, deve capire subito che è stato un secondo consumo intenzionale, non un errore. Versione `sm` 8.5px in card compatte Analisi.
+
+**3. Modal sempre, niente opt-out "non chiedermelo più"** → confermato modal sempre.
+Motivo: ship the simple version first. Non sappiamo ancora con telemetria se il caso "atleta che ne mangia 2 al giorno" è reale. Se i dati post-Step F mostreranno conferme ripetute sullo stesso prodotto, allora valuteremo opt-out scoped. Per ora regola unica e prevedibile.
+
+### Specifiche visive finali (per implementazione Step F)
+
+**Modal**:
+- Centrato, scrim warm-black `rgba(20,15,5,0.46)`
+- Riquadro bone bordi 16px radius, banda evergreen `#2A7A6F` 3px in cima
+- Thumb prodotto 36×36 + eyebrow Mono caps "GIÀ NEL PIANO DI OGGI · SPUNTINO · 16:00" sopra titolo
+- Titolo Syne 700 22px "Già nel piano di oggi"
+- Body Syne 400 14px con highlight: nome prodotto bold + chip Mono `+203 kcal`
+- CTA primario evergreen fill "È un secondo consumo, conferma"
+- CTA secondario ghost Mono caps "ANNULLA"
+- Shadow `--shadow-md` + offset 18px 50px
+
+**Tag "2° CONSUMO"**:
+- Variante outline: mint fill `#E6F4F2` + bordo evergreen `#2A7A6F` 1px
+- Mono caps 9.5px tracking 1.4 (`sm` 8.5px in Analisi)
+- Pattern "2°" separato da "CONSUMO" con piccolo gap
+- Stack verticale a destra della card: EXTRA sopra, 2° CONSUMO sotto
+- Estensibile a "3° CONSUMO", "4° CONSUMO" senza nuova UI
+
+**Timeline tab Oggi**:
+- Footer pillola mint "N consumi tracciati di <prodotto> oggi · entrambi contati: <somma> kcal" sotto la timeline quando ci sono eventi `is_second_consumption=true` nel giorno
+- Ordine puro cronologico, niente raggruppamenti per duplicati
+- Eyebrow timeline invariato
+
+**Coerenza design system**:
+- Zero nuovi token cromatici (solo evergreen + mint esistenti)
+- Tipografia Syne 700/800 + Mono caps 9.5px tracking 1.4 (stessa scala EXTRA/BODYKEY/PACCHETTO)
+- Radii: tag 4px, card 10px, modal 16px
+- Hairline `#DDD9D0` 0.5px
+
 **TODO Post Step I (sessione dedicata futura)**:
 - **Icon system Zona Tracker custom**: sostituire emoji classiche (📅 📊 🥗 ⚡ 💧 ecc.) con set proprietario. Direzione: mix lettering Syne ingrandito (nav moduli) + SVG monocromatici geometrici (micro-azioni UI). Sessione design dedicata + 2-3 sessioni implementazione progressiva. Già rilevato in C.2.1 (emoji 📅 rimossa dall'empty state overlay)
 - **Refactor namespace slot legacy**: valutare unificazione `snack_mattina/snack_pomeriggio` → `spuntino/merenda` o viceversa. 30+ punti del codice da toccare. Non urgente, fix scoped C.4.2 sufficiente per ora
