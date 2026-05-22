@@ -31,8 +31,9 @@ https://github.com/IgnazioF321621/benessere-forma
    - Sessione 1 — Step A: Fondazione dati Supabase ✅ (20 mag, commit `d08ee4d`)
    - Sessione 2 — Step B: UI vista principale ✅ (20 mag, catena 7 commit `272e375`→`2984704`)
    - Sessione 3 — Step C: Overlay Dettaglio Giorno ✅ (20-21 mag, catena 8 commit `5384085`→`2f041f7`, APP_VERSION finale `v2026.05.21 · 11:15`). Overlay completo: scaffolding + empty state + 5 demo always-on + banner ESEMPIO DIMOSTRATIVO + totalizzatore range ±10% + 3 azioni ACCETTA/SOSTITUISCI/SALTO funzionanti + persistenza localStorage namespace `zona_pianov4_*`
-   - **PROSSIMA**: Investigazione integratori macro nel conteggio giornaliero (prioritario, possibile blocker tester) + comunicato implementazioni 3 tester + Sessione 4/Step D (modal peso + banner reminder)
-   - Sessioni 4-9: vedi sezione "Tab Piano v4" per dettaglio
+   - Sessione 4 — Step D: Modal peso + Fix triplo render barretta + Banner reminder + loadExtras robusto + R3a getAdvice ✅ (22 mag, catena 4 commit `5280f9b`→`c32f141`→`1be5048`→`b4259f5`, APP_VERSION finale `v2026.05.22 · 15:26`). R3a chiuso (AI prompt vede integratori); R3b resta in Step F; R1 dedup resta in Step F (design già completo).
+   - **PROSSIMA**: Sessione 5 / Step E — Welcome overlay domenicale (senza notifiche push iOS, Opzione 3 scelta)
+   - Sessioni 5-9: vedi sezione "Tab Piano v4" per dettaglio
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -58,7 +59,7 @@ https://github.com/IgnazioF321621/benessere-forma
   - **R2 Catalogo incompleto** — SMENTITO via SQL su `nutrilite_catalog`. Tutti i prodotti con macro reali (XS Whey, XS Protein Bar, bodykey barrette/frappé, All Plant Protein, Hydrolyzed Whey, Electrolyte) hanno kcal/proteine/carbo/grassi popolati. Power Drink hanno macro 0 correttamente (bevande quasi acaloriche).
   - **R3 AI cieca su integratori** — CONFERMATO. `getAdvice` riceve totali kcal corretti via `dayTotals()` ma elenca al modello solo `meals` come contesto qualitativo, mai gli integratori → consigli su quadro parziale. `generaPianoAI` (piano settimanale Step F) non menziona affatto integratori abituali. **Fix R3a `getAdvice` integrato in Step D (~30 min). Fix R3b `generaPianoAI` integrato in Step F.**
 - **PRIORITÀ ALTA — Comunicato implementazioni per tester**: preparare testo chiaro per chat collettiva 3 tester (Ginevra, Isabella, Pesce). Spiegare cosa è cambiato (Tab Piano v4 con overlay + 5 demo + azioni), cosa testare, cosa ignorare (pasti demo non sono piano AI vero — banner ESEMPIO DIMOSTRATIVO).
-- **Step D — Modal peso + banner reminder + R3a fix `getAdvice`**: oltre alla roadmap originale Step D, integrare fix R3a (~30 min): aggiungere al prompt `getAdvice` la lista integratori consumati oggi (da `ST.extras` + `suppsTaken`) con macro effettive, così che i consigli AI considerino l'apporto reale. Da chiudere insieme a E entro settimana 22-28 mag se possibile.
+- ~~**Step D — Modal peso + banner reminder + R3a fix `getAdvice`**~~ ✅ chiuso 22 mag 2026 (Sessione 4, catena 4 commit `5280f9b`→`b4259f5`). Vedi entry log dettagliata in "Cosa abbiamo fatto".
 
 **TODO Step F (quando arriverà)**:
 - **R1 dedup integratori — implementazione**: nuovo campo `supplements_log.is_second_consumption`, modal blocco preventivo Momento 2 al submit extras, tag visivo `2° CONSUMO` in timeline Oggi/Analisi. Specifica completa in sezione "Design R1 dedup integratori".
@@ -197,7 +198,7 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
-- **Tab Piano v4**: 🟡 vista principale + overlay Dettaglio Giorno production-ready scaffolding (Sessioni 1-2-3 chiuse, Step A+B+C completi). Step D-E-F-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: Step D modal peso + banner reminder, E welcome overlay domenicale, F Worker AI cron + weekly_plans, G memoria AI + adattamento, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: investigazione integratori macro (possibile blocker tester) + comunicato 3 tester + Step D.
+- **Tab Piano v4**: 🟡 Step A+B+C+D ✅ chiusi (modal pesata + banner reminder + selettore frequenza + loadExtras robusto + R3a getAdvice). Step E-F-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: E welcome overlay domenicale, F Worker AI cron + weekly_plans + R1 dedup + R3b piano AI, G memoria AI + adattamento, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: Step E (welcome overlay domenicale, Opzione 3 = senza push iOS).
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1586,6 +1587,61 @@ Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
 
 **Worktree management**: indicare sempre quale worktree è attivo. Se ne viene creato uno nuovo, dichiararlo all'inizio della sessione.
 
+## Lezioni di metodo (per sessioni future)
+
+Cinque principi distillati da incidenti reali — leggere PRIMA di affrontare anomalie o feature che leggono/scrivono dati persistenti.
+
+### 1. Il DB è la fonte di verità, non il codice né questo file
+
+Sessione 4 (22 mag 2026, fix triplo render barretta): la diagnostica via codice produsse "3 row DB distinte da 3 gesti utente". L'utente eseguì una SELECT reale e il DB rivelò **1 sola riga** in `supplements_log` — bug di RENDERING, non di scrittura. Quel SELECT cambiò radicalmente la natura del fix.
+
+Stesso pattern: CLAUDE.md ha portato fuori strada 2 volte in una giornata (schema `supplements_log` documentato come "+9 colonne applicate il 18 mag" → smentito dall'utente con `SELECT column_name FROM information_schema.columns`; previsione "dose fallback farà X" → smentita dal comportamento reale post-migration).
+
+**Regola operativa**: davanti a un'anomalia o a una decisione che dipende dallo schema/dato, **PRIMA contare/ispezionare le righe reali nel DB**, POI guardare il codice. Mai assumere lo schema dal codice o dalla documentazione.
+
+### 2. SQL Editor Supabase: `auth.uid()` non funziona, serve UUID esplicito
+
+Il SQL Editor gira come ruolo admin (non come utente app), quindi `auth.uid()` ritorna NULL e tutti i WHERE basati su quello sono no-op. Per ispezionare dati utente serve filtrare con UUID hardcoded.
+
+UUID di riferimento:
+- **Ignazio** (utente principale + dev): `bb6fa499-1364-4d8d-8ce6-774c8e392306`
+
+Per scoprire lo schema reale di una tabella (più affidabile di indovinare nomi colonna):
+```sql
+SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'supplements_log';
+-- oppure più rapido:
+SELECT * FROM supplements_log LIMIT 1;
+```
+
+### 3. Prompt AI = scatola opaca, verificare la fonte dati PRIMA di costruirvi sopra
+
+Step D.3 R3a (22 mag pomeriggio): la lezione del fix barretta fece scattare un audit obbligatorio prima di scrivere il prompt: "qual è la struttura ST che alimenta il blocco INTEGRATORI ASSUNTI? Produce contenuto reale o vuoto?".
+
+Risultato dell'audit: `ST.extras = []` perché `loadExtras` falliva silenziosamente. Senza l'audit, il fix R3a sarebbe stato "implementato" ma sempre silente in pratica — peggior caso: lavoro che sembra fatto ma non sblocca nulla.
+
+**Regola operativa**: prima di costruire una feature AI o un blocco di prompt, FERMATI e produci un esempio CONCRETO del contenuto che verrà passato al modello per la giornata corrente dell'utente. Se è vuoto, capisci PERCHÉ è vuoto, non riempire con dati finti.
+
+### 4. Snapshot con fallback (pattern per dati storici)
+
+Step D.3 `loadExtras` introdusse il pattern definitivo per i dati storici tipo "registrazione utente che dipende da catalogo esterno":
+
+- **Snapshot al momento della registrazione** salvato sulla riga DB (`kcal, carbo, proteine, grassi, dose, dose_unit, supplement_codice, costo`) → fonte di verità
+- **Catalogo come RETE DI SICUREZZA**, mai fonte primaria → lookup runtime solo se snapshot è NULL (es. righe pre-migration)
+- **Marker `_fromFallback: true`** sulle righe ricostruite via catalog → utile per UI diagnostiche future
+
+Se invece il catalogo fosse fonte primaria, ogni modifica al catalogo riscriverebbe retroattivamente lo storico — comportamento sbagliato per "log immutabile di cosa l'utente ha consumato il giorno X". Snapshot+fallback preserva l'onestà storica.
+
+### 5. Verifica pre-commit obbligatoria quando il fix cambia ciò che l'utente VEDE
+
+Mattino 22 mag: fix `c32f141` (filtro `is_extra` in `loadTodaySuppLog`) fu committato con previsione "barretta sparirà dalla timeline finché non risolviamo lo schema". L'utente la previde, la accettò, ma serve disciplina perché senza la nota esplicita avrebbe potuto sembrare regressione.
+
+Pomeriggio 22 mag: fix `b4259f5` (loadExtras + R3a) — STEP 3 ("verifica no-duplicato") fu OBBLIGATORIO pre-commit. Confermato che la barretta apparisse 1 sola volta e contasse 1 sola volta. Senza quella verifica avremmo potuto riaprire il triplo render appena chiuso al mattino.
+
+**Regola operativa**:
+- Quando un fix tocca rendering/totali → produrre un riepilogo "cosa cambia visibilmente per l'utente" PRIMA del commit, non dopo
+- Quando 2 fix toccano lo stesso terreno (es. fix barretta mattino + loadExtras pomeriggio) → verificare esplicitamente l'interazione tra i due
+- Quando un fix introduce nuova sorgente dati o nuovo path di lettura → tracciare l'effetto su tutti i path che leggono la stessa struttura
+
 ## Funzioni chiave aggiuntive (aprile–maggio 2026)
 
 | Funzione | Scopo |
@@ -1762,7 +1818,7 @@ Catena di 3 commit per chiudere Step D nel modulo Nutrition.
 - Pattern bottom-sheet riusa keyframes `pianov4SubstSlideUp/Down`. Banner stile coerente (bone bg + evergreen left-border 3px). z-index 1660 (sopra modal peso 1650)
 - Tester immediato: console `localStorage.removeItem('zt_weight_reminder_dismiss_count')` + setta modalità a `daily` + simula pesata di ieri per vedere banner subito
 
-**Step D.3 — Migration colonne supplements_log + loadExtras robusto + Fix R3a getAdvice** (commit `<prossimo>`, APP_VERSION da bumpare)
+**Step D.3 — Migration colonne supplements_log + loadExtras robusto + Fix R3a getAdvice** (commit `b4259f5`, APP_VERSION `v2026.05.22 · 15:26`)
 
 **Migration DB** (eseguita manualmente da Ignazio nel SQL Editor Supabase pomeriggio 22 mag):
 ```sql
