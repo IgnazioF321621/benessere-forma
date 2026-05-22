@@ -1551,6 +1551,36 @@ select.inp{cursor:pointer;}
 .pianov4-subst-card-macros{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.04em;color:var(--t2);margin-bottom:8px;}
 .pianov4-subst-card-reasoning{font-family:'Syne',sans-serif;font-style:italic;font-size:13px;line-height:1.5;color:var(--t2);}
 
+/* ─── PIANO V4 Step D.1 (22 mag 2026) — Modal "Pesati ora" ─── */
+/* Bottom sheet con stepper +/- 0.1 kg + tap su numero per keyboard iOS.    */
+/* Riusa keyframes pianov4SubstSlideUp/Down già definiti sopra.             */
+.pianov4-weighin-overlay{position:fixed;inset:0;background:rgba(20,15,5,0.46);z-index:1650;display:flex;align-items:flex-end;justify-content:center;}
+.pianov4-weighin-screen{background:var(--bg);width:100%;max-width:520px;border-radius:16px 16px 0 0;animation:pianov4SubstSlideUp 240ms cubic-bezier(.16,1,.3,1);padding-bottom:env(safe-area-inset-bottom);position:relative;overflow:hidden;}
+.pianov4-weighin-screen.dismissing{animation:pianov4SubstSlideDown 200ms ease forwards;}
+.pianov4-weighin-band{position:absolute;top:0;left:0;right:0;height:3px;background:var(--acc);z-index:1;}
+.pianov4-weighin-handle{width:44px;height:5px;background:rgba(0,0,0,.15);border-radius:3px;margin:14px auto 0;}
+.pianov4-weighin-header{padding:14px 20px 6px;position:relative;text-align:left;}
+.pianov4-weighin-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;line-height:1.3;}
+.pianov4-weighin-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--t1);line-height:1.2;padding-right:48px;}
+.pianov4-weighin-close{position:absolute;top:10px;right:14px;width:36px;height:36px;border-radius:50%;background:transparent;border:none;font-size:22px;color:var(--t2);cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.pianov4-weighin-close:active{color:var(--t1);}
+.pianov4-weighin-body{padding:20px 20px 6px;}
+.pianov4-weighin-stepper-wrap{display:flex;align-items:center;justify-content:center;gap:18px;}
+.pianov4-weighin-step-btn{width:52px;height:52px;border-radius:50%;background:transparent;border:1.5px solid var(--acc);color:var(--acc);font-family:'Syne',sans-serif;font-size:26px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;flex-shrink:0;transition:background .12s ease;-webkit-tap-highlight-color:transparent;}
+.pianov4-weighin-step-btn:active{background:var(--acc-lt);}
+.pianov4-weighin-value-wrap{position:relative;display:flex;align-items:baseline;justify-content:center;gap:6px;padding:8px 14px;border-radius:10px;cursor:text;min-width:150px;}
+.pianov4-weighin-value-wrap:active{background:var(--s2);}
+.pianov4-weighin-value{font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-0.02em;}
+.pianov4-weighin-unit{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:500;color:var(--t3);}
+.pianov4-weighin-hidden-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;background:transparent;font-size:16px;text-align:center;color:transparent;caret-color:transparent;cursor:text;-webkit-appearance:none;padding:0;margin:0;outline:none;}
+.pianov4-weighin-hidden-input::-webkit-outer-spin-button,
+.pianov4-weighin-hidden-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.pianov4-weighin-hint{font-family:'Syne',sans-serif;font-size:12px;color:var(--t3);text-align:center;margin:16px 0 0;font-style:italic;}
+.pianov4-weighin-cta-wrap{padding:16px 20px 20px;}
+.pianov4-weighin-cta{width:100%;padding:14px;background:var(--acc);color:#fff;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s ease;letter-spacing:.01em;-webkit-tap-highlight-color:transparent;}
+.pianov4-weighin-cta:active{opacity:.85;}
+.pianov4-weighin-cta:disabled{opacity:.5;cursor:not-allowed;}
+
 /* ─── PIANO V4 Step C.6 — Card saltata + badge + bottoni skip ─── */
 /* Card saltata: bordo + bg attenuati + opacity ridotta + testi barrati grigi */
 .pianov4-meal-card-skipped{border-color:rgba(0,0,0,.06);background:rgba(0,0,0,.02);opacity:0.65;position:relative;}
@@ -2832,7 +2862,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.21 · 11:15';
+const APP_VERSION = '2026.05.22 · 10:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2957,6 +2987,9 @@ const ST = {
   pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
   // PIANO V4 Step C.5 (21 mag 2026) — bottom sheet selettore alternative SOSTITUISCI
   pianoV4SubstSheet: null, // { slot, weekOffset, dayOfWeek } | null — snapshot al tap SOSTITUISCI
+  // PIANO V4 Step D.1 (22 mag 2026) — Modal "Pesati ora" + cache weight_logs
+  weighInSheet: null,      // { value:number(kg, 0.1 precision), saving:bool } | null
+  weightLogs: null,        // null=non caricato, []=vuoto, [{date,weight_kg}...] sorted DESC by date
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -12167,6 +12200,173 @@ function _pianoV4GetAlternatives(originalSlot) {
 }
 
 // Step C.5: bottom sheet selettore alternative SOSTITUISCI
+// ─── STEP D.1 (22 mag 2026): Modal pesata "Pesati ora" ───
+// Bottom sheet con stepper +/-0.1kg + tap su numero → keyboard iOS (input nascosto).
+// Default: ultimo weight_logs.weight_kg → fallback getLatestBodyData().weight_kg
+//          → fallback ST.profile.weight_kg → fallback finale 70.0
+// Conferma: upsert su weight_logs (UNIQUE user_id,date) + toast + refresh card peso.
+// NON tocca body_logs / body_measurements (separate per modulo Body e check M2).
+
+async function loadWeightLogs() {
+  if(!ST.user || !ST.user.id || ST.user.id === 'test-user-001') { ST.weightLogs = []; return; }
+  const {data, error} = await supa.from('weight_logs')
+    .select('date, weight_kg')
+    .eq('user_id', ST.user.id)
+    .order('date', { ascending: false })
+    .limit(60);
+  if(error) { console.warn('loadWeightLogs error:', error); ST.weightLogs = []; return; }
+  ST.weightLogs = data || [];
+}
+
+function _weighInDefaultValue() {
+  // Priorità: ultimo weight_logs → getLatestBodyData → profilo → 70.0
+  const wl = ST.weightLogs || [];
+  if(wl.length > 0 && wl[0].weight_kg != null) {
+    const n = Number(wl[0].weight_kg);
+    if(!isNaN(n)) return n;
+  }
+  try {
+    const lb = (typeof getLatestBodyData === 'function') ? getLatestBodyData() : null;
+    if(lb && lb.weight_kg != null) {
+      const n = Number(lb.weight_kg);
+      if(!isNaN(n)) return n;
+    }
+  } catch(e) {}
+  const pw = ST.profile && ST.profile.weight_kg;
+  if(pw != null) {
+    const n = Number(pw);
+    if(!isNaN(n)) return n;
+  }
+  return 70.0;
+}
+
+async function openWeighInSheet() {
+  if(!ST.user || !ST.user.id) { showToast('Accedi prima di pesarti', '⚠️'); return; }
+  // Carica weight_logs (cache locale) se non già caricato — serve sia per default che per refresh card.
+  if(ST.weightLogs === null || ST.weightLogs === undefined) {
+    await loadWeightLogs();
+  }
+  const def = _weighInDefaultValue();
+  ST.weighInSheet = {
+    value: Math.round(def * 10) / 10,
+    saving: false,
+  };
+  renderWeighInSheet();
+}
+
+function closeWeighInSheet() {
+  const el = document.getElementById('pianov4-weighin-sheet');
+  if(el) {
+    const screen = el.querySelector('.pianov4-weighin-screen');
+    if(screen) screen.classList.add('dismissing');
+    setTimeout(function() {
+      ST.weighInSheet = null;
+      const ex = document.getElementById('pianov4-weighin-sheet');
+      if(ex) ex.remove();
+    }, 200);
+  } else {
+    ST.weighInSheet = null;
+  }
+}
+
+// Stepper +/- 0.1 kg con DOM update mirato (no full re-render → preserva focus input)
+function weighInAdjust(delta) {
+  if(!ST.weighInSheet) return;
+  let v = Number(ST.weighInSheet.value) + delta;
+  if(isNaN(v)) v = 70.0;
+  v = Math.max(20, Math.min(300, Math.round(v * 10) / 10));
+  ST.weighInSheet.value = v;
+  const vStr = v.toFixed(1);
+  const numEl = document.getElementById('weighin-value-display');
+  if(numEl) numEl.textContent = vStr;
+  const inpEl = document.getElementById('weighin-hidden-input');
+  if(inpEl) inpEl.value = vStr;
+}
+
+// Sync stepper col valore digitato dalla keyboard iOS (input nascosto)
+function weighInOnInput(rawVal) {
+  if(!ST.weighInSheet) return;
+  let v = parseFloat(String(rawVal).replace(',', '.'));
+  if(isNaN(v)) return;
+  v = Math.max(20, Math.min(300, Math.round(v * 10) / 10));
+  ST.weighInSheet.value = v;
+  const numEl = document.getElementById('weighin-value-display');
+  if(numEl) numEl.textContent = v.toFixed(1);
+}
+
+// Tap sul wrap numero → apre keyboard iOS sull'input nascosto
+function weighInFocusInput() {
+  const inp = document.getElementById('weighin-hidden-input');
+  if(inp) { inp.focus(); try { inp.select(); } catch(e){} }
+}
+
+async function confirmWeighIn() {
+  if(!ST.weighInSheet || ST.weighInSheet.saving) return;
+  const v = Math.max(20, Math.min(300, Math.round(Number(ST.weighInSheet.value) * 10) / 10));
+  if(isNaN(v)) { showToast('Inserisci un peso valido', '⚠️'); return; }
+  ST.weighInSheet.saving = true;
+  // Riflette stato saving anche sul bottone (disabilitato durante upsert)
+  const ctaBtn = document.querySelector('.pianov4-weighin-cta');
+  if(ctaBtn) { ctaBtn.disabled = true; ctaBtn.textContent = 'Salvataggio…'; }
+
+  const today = todayKey();
+  const row = { user_id: ST.user.id, date: today, weight_kg: v };
+  const { error } = await supa.from('weight_logs').upsert(row, { onConflict: 'user_id,date' });
+
+  if(error) {
+    console.error('confirmWeighIn upsert error:', error);
+    showToast('Errore: ' + (error.message || 'riprova'), '⚠️');
+    ST.weighInSheet.saving = false;
+    if(ctaBtn) { ctaBtn.disabled = false; ctaBtn.textContent = 'Conferma'; }
+    return;
+  }
+  // Refresh cache locale → la prossima apertura card peso/sheet usa il nuovo valore
+  await loadWeightLogs();
+  closeWeighInSheet();
+  showToast('Pesata salvata · ' + v.toFixed(1) + ' kg', '⚖️');
+  if(ST.page === 'piano') renderPianoV4();
+}
+
+function renderWeighInSheet() {
+  if(!ST.weighInSheet) return;
+  const v = Number(ST.weighInSheet.value);
+  const vStr = (isNaN(v) ? 70.0 : v).toFixed(1);
+  const html = `<div id="pianov4-weighin-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)closeWeighInSheet()">
+    <div class="pianov4-weighin-screen">
+      <div class="pianov4-weighin-band"></div>
+      <div class="pianov4-weighin-handle"></div>
+      <div class="pianov4-weighin-header">
+        <div class="pianov4-weighin-eyebrow">PESATA DI OGGI</div>
+        <div class="pianov4-weighin-title">Pesati ora</div>
+        <button class="pianov4-weighin-close" onclick="closeWeighInSheet()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="pianov4-weighin-body">
+        <div class="pianov4-weighin-stepper-wrap">
+          <button class="pianov4-weighin-step-btn" onclick="weighInAdjust(-0.1)" aria-label="Riduci di 0.1 kg">−</button>
+          <div class="pianov4-weighin-value-wrap" onclick="weighInFocusInput()">
+            <span class="pianov4-weighin-value" id="weighin-value-display">${vStr}</span>
+            <span class="pianov4-weighin-unit">kg</span>
+            <input id="weighin-hidden-input"
+                   class="pianov4-weighin-hidden-input"
+                   type="number" inputmode="decimal" step="0.1" min="20" max="300"
+                   value="${vStr}"
+                   oninput="weighInOnInput(this.value)"
+                   aria-label="Inserisci peso in kg" />
+          </div>
+          <button class="pianov4-weighin-step-btn" onclick="weighInAdjust(0.1)" aria-label="Aumenta di 0.1 kg">+</button>
+        </div>
+        <p class="pianov4-weighin-hint">Tocca il numero per scrivere con la tastiera</p>
+      </div>
+      <div class="pianov4-weighin-cta-wrap">
+        <button class="pianov4-weighin-cta" onclick="confirmWeighIn()">Conferma</button>
+      </div>
+    </div>
+  </div>`;
+  const existing = document.getElementById('pianov4-weighin-sheet');
+  if(existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
 function openPianoV4SubstituteSheet(slot) {
   if (!ST.pianoV4DayOverlay) return;
   const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
@@ -12522,14 +12722,22 @@ function renderPianoV4() {
       </p>
     </div>`;
 
-  // ── Card peso flessibile (B.3.1: source unificata via getLatestBodyData) ──
-  // Allineato all'header globale: legge ultima pesata da body_logs/body_measurements con
-  // fallback ST.profile.weight_kg. Arrotondamento a 1 decimale (header usa .XX, card hero .X).
-  // Guard typeof per evitare errore se renderPianoV4 chiamata prima del bootstrap body.
-  const latestBody = (typeof getLatestBodyData === 'function') ? getLatestBodyData() : {};
-  const weightRaw = (latestBody && latestBody.weight_kg != null)
-    ? latestBody.weight_kg
-    : ((profile && profile.weight_kg != null) ? profile.weight_kg : null);
+  // ── Card peso flessibile (Step D.1: weight_logs prima sorgente, poi fallback Body) ──
+  // Step D.1 (22 mag): la card legge ORA come prima fonte ST.weightLogs (Livello 1
+  // pesate flessibili Piano V4). Se non ancora caricato → fire-and-forget load + refresh.
+  // Fallback: getLatestBodyData (body_logs+body_measurements) → profile.weight_kg.
+  if(ST.weightLogs === null && ST.user && ST.user.id && ST.user.id !== 'test-user-001') {
+    // Carica in background — al ritorno, se siamo ancora su Piano, re-render.
+    loadWeightLogs().then(function() { if(ST.page === 'piano') renderPianoV4(); });
+  }
+  let weightRaw = null;
+  const wl0 = (ST.weightLogs && ST.weightLogs.length > 0) ? ST.weightLogs[0] : null;
+  if(wl0 && wl0.weight_kg != null) weightRaw = wl0.weight_kg;
+  if(weightRaw == null) {
+    const latestBody = (typeof getLatestBodyData === 'function') ? getLatestBodyData() : {};
+    if(latestBody && latestBody.weight_kg != null) weightRaw = latestBody.weight_kg;
+  }
+  if(weightRaw == null && profile && profile.weight_kg != null) weightRaw = profile.weight_kg;
   const weightNum = (weightRaw != null) ? Number(weightRaw) : null;
   const weightStr = (weightNum != null && !isNaN(weightNum)) ? weightNum.toFixed(1) : '—.—';
   const trackingMode = (profile && profile.weight_tracking_mode) || 'flexible';
@@ -12553,7 +12761,7 @@ function renderPianoV4() {
           <p class="pianov4-weight-spark-empty">Inizia a pesarti per vedere il trend</p>
         </div>
       </div>
-      <button class="pianov4-weight-cta" disabled>+ PESATI ORA</button>
+      <button class="pianov4-weight-cta" onclick="openWeighInSheet()">+ PESATI ORA</button>
     </div>`;
 
   // ── Profile compatto in fondo (B.4: chiude la vista principale Tab Piano v4) ──
