@@ -409,7 +409,7 @@ Default applicati automaticamente a tutte le righe esistenti via ALTER ADD COLUM
 Integratori per user_id, editabili inline.
 
 ### Tabella `supplements_log`
-**Schema reale verificato su Supabase 22 mag 2026** (sostituisce documentazione precedente, in particolare smentisce le "9 colonne estese Step 2" descritte nella sezione "Flusso Registra Extra Step 2" — quella migration NON è stata applicata in produzione):
+**Schema reale aggiornato 22 mag 2026 pomeriggio (migration 8 colonne applicata da Ignazio)**:
 
 | Colonna | Tipo | Note |
 |---|---|---|
@@ -417,20 +417,35 @@ Integratori per user_id, editabili inline.
 | `user_id` | `uuid` NOT NULL | FK → auth.users |
 | `date` | `date` NOT NULL | YYYY-MM-DD |
 | `slot` | `text` | HH:MM dello slot di assunzione |
-| `supplement_name` | `text` NOT NULL | **nome integratore — colonna autoritativa.** Niente `codice`, niente `supplement_codice` |
-| `taken` | `boolean` | true=assunto, false=registrato ma non spuntato (verificare default DB) |
-| `is_extra` | `boolean` | true=registrato come EXTRA da modulo Integratori; false=integratore standard di pacchetto |
+| `supplement_name` | `text` NOT NULL | **nome integratore — colonna autoritativa** |
+| `taken` | `boolean` | true=assunto, false=registrato ma non spuntato |
+| `is_extra` | `boolean` | true=registrato come EXTRA; false=integratore standard di pacchetto |
+| `supplement_codice` | `text` | codice prodotto catalogo (es. `XS-PROT-BAR-CHOCO`) — popolato solo per extras dal modulo Integratori |
+| `dose` | `numeric` | quantità (es. 0.5 = mezza barretta). NULL su righe pre-migration |
+| `dose_unit` | `text` | es. `cps`, `barretta`, `stick`. NULL su righe pre-migration |
+| `kcal` | `numeric` | snapshot kcal totali (dose ×). NULL su righe pre-migration → fallback runtime via `nutrilite_catalog` |
+| `carbo` / `proteine` / `grassi` | `numeric` | snapshot macro totali in grammi. NULL su righe pre-migration → fallback runtime |
+| `costo` | `numeric` | snapshot costo dose (€). NULL su righe pre-migration |
 | `created_at` | `timestamptz` | default `now()` |
 
 UNIQUE constraint su `(user_id, date, supplement_name)` — aggiunto aprile 2026 dopo cleanup duplicati.
 
-**Colonne NON presenti** (smentite da query SELECT verificate): nessuna `dose`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `costo`, `supplement_codice`, `is_second_consumption`. Le macro per gli extras vengono derivate runtime via lookup su `nutrilite_catalog` (per `codice`/`nome`) o su `supplements` (per `name`), NON salvate per riga. Lo snapshot immutabile descritto nella sezione Step 2 (18 mag 2026) NON è attivo in produzione.
+**Storia migration**: la documentazione 18 mag (Step 2 Integratori) descriveva queste 8 colonne come applicate, ma la SQL non era stata eseguita fino al 22 mag pomeriggio. Quindi:
+- Righe pre-22 mag: hanno solo le prime 7 colonne valorizzate. `supplement_codice/dose/dose_unit/kcal/carbo/proteine/grassi/costo` = NULL.
+- Righe post-22 mag: snapshot completo immutabile salvato al momento dell'insert da `dbInsertExtraLog`.
 
-**Conseguenza pratica per UI**: il rendering della timeline Oggi deve usare 2 path distinti senza sovrapposizioni:
-- righe con `is_extra=true` → letto SOLO da `loadExtras` → renderizzato come case `'extra'` (card mint compatta tag EXTRA)
-- righe con `is_extra=false` → letto SOLO da `loadTodaySuppLog` → renderizzato come case `'supp'` (gruppo standard) o `'supp_log'` (legacy fuori gruppo)
+**Strategia macro extras — snapshot con fallback** (Step D.3, 22 mag pomeriggio):
+- Fonte di verità: snapshot DB per riga (`kcal/carbo/proteine/grassi`)
+- Fallback runtime SOLO quando snapshot NULL: lookup `ST.catalog` (per `supplement_codice` → per `supplement_name` esatto → per nome normalizzato lowercase trim) e calcolo `cat.X × (dose / cat.dose_die)` con `dose` default 1 se NULL.
+- `_fromFallback: true` aggiunto come marker su `ST.extras[i]` quando tutti gli snapshot erano NULL — utile per UI diagnostiche future ma non visualizzato per ora.
+- Il catalogo è RETE DI SICUREZZA, mai fonte primaria → evita riscrittura retroattiva dello storico se il catalogo Nutrilite cambia in futuro.
+- Nessuno script di migrazione dati: le righe pre-22 mag si auto-riparano a schermo via fallback.
 
-Fix applicato il 22 mag 2026 (vedi entry "22 mag 2026 — Fix triplo conteggio integratori" in sezione "Cosa abbiamo fatto"): `loadTodaySuppLog` ora aggiunge `.eq('is_extra', false)`.
+**Conseguenza pratica per UI**: il rendering della timeline Oggi usa 2 path distinti senza sovrapposizioni:
+- righe con `is_extra=true` → letto SOLO da `loadExtras` (con fallback macro) → renderizzato come case `'extra'` (card mint compatta tag EXTRA)
+- righe con `is_extra=false` → letto SOLO da `loadTodaySuppLog` (filtro `.eq('is_extra', false)`) → renderizzato come case `'supp'` (gruppo standard) o `'supp_log'` (legacy fuori gruppo)
+
+Fix `loadTodaySuppLog` applicato 22 mag mattina (commit `c32f141`). Fallback macro `loadExtras` applicato 22 mag pomeriggio (Step D.3).
 
 ### Tabella `supplement_packages` (16 maggio 2026)
 Pacchetti orari di integratori dell'utente (es. "Mattina" alle 08:45). Architettura nuova introdotta col refresh Integratori v3.
@@ -1730,6 +1745,64 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 22 maggio 2026 pomeriggio — Step D.2 banner reminder + Step D.3 loadExtras robusto + R3a getAdvice ✅
+
+Catena di 3 commit per chiudere Step D nel modulo Nutrition.
+
+**Step D.2 — Banner reminder pesata + selettore frequenza** (commit `1be5048`, APP_VERSION `v2026.05.22 · 15:01`)
+- Banner reminder in tab Oggi (sopra timeline) basato su soglia frequenza (daily=1, every3=3, weekly=7, flexible=14 giorni) vs giorni dall'ultima pesata
+- Copy variabile: "Sono passati X giorni dall'ultima pesata" / "Non hai ancora registrato una pesata"
+- 2 CTA: "Pesati ora" → `openWeighInSheet()` (D.1) · "Più tardi" → dismiss anti-nag
+- Silenzio progressivo via localStorage: 48h → 7gg → 28gg (chiavi `zt_weight_reminder_dismiss_count` + `zt_weight_reminder_dismissed_at`)
+- Reset count al successivo upsert pesata (`confirmWeighIn` chiama `_weightReminderResetDismiss`)
+- Banner SOLO tab Oggi, mai tab Piano
+- Selettore frequenza standalone (componente riusabile per onboarding M1 futuro): `openWeightFreqSheet / renderWeightFreqSheet / closeWeightFreqSheet / selectWeightFreq` — bottom sheet 4 opzioni, optimistic update su `profiles.weight_tracking_mode` + rollback su errore
+- Link discreto "Promemoria: <label> ›" sotto bottone Conferma del modal peso D.1
+- Pattern bottom-sheet riusa keyframes `pianov4SubstSlideUp/Down`. Banner stile coerente (bone bg + evergreen left-border 3px). z-index 1660 (sopra modal peso 1650)
+- Tester immediato: console `localStorage.removeItem('zt_weight_reminder_dismiss_count')` + setta modalità a `daily` + simula pesata di ieri per vedere banner subito
+
+**Step D.3 — Migration colonne supplements_log + loadExtras robusto + Fix R3a getAdvice** (commit `<prossimo>`, APP_VERSION da bumpare)
+
+**Migration DB** (eseguita manualmente da Ignazio nel SQL Editor Supabase pomeriggio 22 mag):
+```sql
+ALTER TABLE supplements_log
+  ADD COLUMN supplement_codice text,
+  ADD COLUMN dose numeric,
+  ADD COLUMN dose_unit text,
+  ADD COLUMN kcal numeric,
+  ADD COLUMN carbo numeric,
+  ADD COLUMN proteine numeric,
+  ADD COLUMN grassi numeric,
+  ADD COLUMN costo numeric;
+```
+Righe extras pre-migration: hanno tutte le 8 nuove colonne a NULL.
+Righe extras post-migration: snapshot completo immutabile salvato da `dbInsertExtraLog`.
+
+**`loadExtras` robusto** ([riga 4600](zona-tracker.html:4600)):
+- SELECT 16 colonne ora funziona nativamente (no più error 400)
+- Aggiunto fallback macro runtime: SE snapshot NULL → lookup `ST.catalog` (per `supplement_codice` → `supplement_name` esatto → nome normalizzato lowercase trim) → calcolo `cat.X × (dose / cat.dose_die)`. Default `dose=1` se NULL (perché perso col refresh pre-migration). Default `costo=catalog.costo_dose_partner × mult`
+- Marker `_fromFallback: true` su righe ricostruite via catalog (utile per UI diagnostiche future)
+- Catalogo come RETE DI SICUREZZA, mai fonte primaria → storico onesto se il catalogo cambia
+
+**`dbInsertExtraLog` confermato OK**: salva già snapshot completo (kcal/carbo/proteine/grassi/dose/dose_unit/supplement_codice/costo) calcolato da `confirmExtraScreenSubmit` con ratio dose. Nessuna modifica necessaria.
+
+**Verifica no-duplicato pre-commit (CRITICA)**: la barretta `is_extra=true` di oggi appare 1 SOLA volta in timeline (case `'extra'` mint card), conta 1 SOLA volta in `dayTotals` (via `_extrasV3Totals`). Il filtro `loadTodaySuppLog .eq('is_extra', false)` del commit `c32f141` mattutino chiude il path duplicato. Nessuna regressione.
+
+**Fix R3a `getAdvice`** ([riga 3642](zona-tracker.html:3642)):
+- Nuovo blocco opzionale `INTEGRATORI ASSUNTI OGGI (già contati nei macro rimanenti)` nel prompt
+- Fonte: stesse 3 strutture di `dayTotals` per coerenza qualitativo↔numerico: `ST.extras` (con fallback) + `day.suppsTaken` (mirror `suppTotalsForIds`) + `day.rawSuppLogs` filtrati nomi NON in ST.supps (mirror `extraSuppsTotals`)
+- Formato riga: `- <nome>: <kcal> kcal · <P>g P · <C>g C · <G>g G`
+- Blocco omesso se 0 integratori assunti
+- Istruzione AI estesa: "Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell'apporto: non raccomandare proteine extra se già coperte."
+- Token budget alzato da 250 → 300 per coprire la sezione extra senza tagliare i suggerimenti
+- `generaPianoAI` (R3b) NON toccato → Step F
+
+**Cosa cambia visivamente per Ignazio dopo deploy D.3**:
+1. Barretta XS High Protein Energy Bar Cioccolato — invisibile dopo `c32f141` mattutino — torna a comparire in tab Oggi come card mint compact tag EXTRA, slot 10:00
+2. Macro mostrate via fallback runtime su catalog: ~203 kcal · 22g C · 15g P · 7g G (dose=1 default — il "0.5" originale è stato perso col refresh ben prima della migration; impossibile da recuperare)
+3. Totali kcal/macro giornalieri aumentano di ~203 kcal (Home + Nutrition card hero)
+4. Premendo "Analizza & suggerisci" dal coach: il prompt AI ora include riga `- High Protein Energy Bar Cioccolato: 203 kcal · 15g P · 22g C · 7g G` e l'istruzione di non raccomandare proteine extra inutilmente
 
 ### 22 maggio 2026 — Step D.1 modal pesata + Fix triplo conteggio integratori ✅
 

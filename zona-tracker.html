@@ -2902,7 +2902,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 15:01';
+const APP_VERSION = '2026.05.22 · 15:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3711,6 +3711,59 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     }
   } catch (e) { /* fallback silenzioso */ }
 
+  // ── STEP D.3 R3a (22 mag 2026): blocco INTEGRATORI ASSUNTI OGGI ──
+  // Fonte: stesse 3 strutture che dayTotals somma → coerenza quadro qualitativo vs totali numerici.
+  //   1. ST.extras (extras Step 2, is_extra=true, già con fallback macro da catalog)
+  //   2. day.suppsTaken (pacchetti standard "presi" via ✓, is_extra=false)
+  //   3. day.rawSuppLogs filtrati per nomi NON in ST.supps (rari log standalone)
+  // Blocco opzionale: omesso se nessun integratore assunto oggi.
+  let supplementsBlock = '';
+  try {
+    const day = getDay(todayKey());
+    const lines = [];
+    // 1) ST.extras (snapshot DB con fallback catalog applicato in loadExtras)
+    (ST.extras || []).forEach(x => {
+      if(x.date && x.date !== todayKey()) return; // safety
+      const name = (x.name || '').trim() || 'Integratore';
+      const kcal = Math.round(Number(x.kcal) || 0);
+      const p = Math.round(Number(x.proteine) || 0);
+      const c = Math.round(Number(x.carbo) || 0);
+      const f = Math.round(Number(x.grassi) || 0);
+      lines.push(`- ${name}: ${kcal} kcal · ${p}g P · ${c}g C · ${f}g G`);
+    });
+    // 2) day.suppsTaken (mirror suppTotalsForIds)
+    const taken = (day && day.suppsTaken) ? day.suppsTaken : [];
+    taken.forEach(id => {
+      const s = (ST.supps || []).find(ss => ss.local_id === id);
+      if(!s) return;
+      const cat = (ST.catalog || []).find(c => c.nome === s.name);
+      const kcal = Math.round(Number(s.kcal ?? cat?.kcal ?? 0));
+      const p = Math.round(Number(s.protein ?? cat?.proteine ?? 0));
+      const c = Math.round(Number(s.carbs ?? cat?.carbo ?? 0));
+      const f = Math.round(Number(s.fat ?? cat?.grassi ?? 0));
+      lines.push(`- ${s.name}: ${kcal} kcal · ${p}g P · ${c}g C · ${f}g G`);
+    });
+    // 3) rawSuppLogs di nomi NON in ST.supps (mirror extraSuppsTotals)
+    const standardNames = new Set((ST.supps || []).map(ss => ss.name));
+    const raw = (day && day.rawSuppLogs) ? day.rawSuppLogs : [];
+    raw.forEach(log => {
+      if(standardNames.has(log.name)) return;
+      const cat = (ST.catalog || []).find(c => c.nome === log.name);
+      const supp = (ST.supps || []).find(ss => ss.name === log.name);
+      const baseDose = parseFloat(supp?.dose_die) || 1;
+      const logDose = Number(log.dose ?? 1) || 1;
+      const mult = logDose / baseDose;
+      const kcal = Math.round((Number(supp?.kcal ?? cat?.kcal ?? 0)) * mult);
+      const p = Math.round((Number(supp?.protein ?? cat?.proteine ?? 0)) * mult);
+      const c = Math.round((Number(supp?.carbs ?? cat?.carbo ?? 0)) * mult);
+      const f = Math.round((Number(supp?.fat ?? cat?.grassi ?? 0)) * mult);
+      lines.push(`- ${log.name}: ${kcal} kcal · ${p}g P · ${c}g C · ${f}g G`);
+    });
+    if(lines.length) {
+      supplementsBlock = `INTEGRATORI ASSUNTI OGGI (già contati nei macro rimanenti):\n${lines.join('\n')}`;
+    }
+  } catch (e) { /* fallback silenzioso */ }
+
   const macroBlock = `MACRO RIMANENTI OGGI:
 - Calorie: ${rem.kcal} kcal
 - Proteine: ${rem.protein}g
@@ -3721,7 +3774,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     ? `PROSSIMO PASTO: ${nextMeal} (PIANIFICAZIONE PER DOMANI MATTINA — l'utente ha completato tutti i pasti di oggi)`
     : `PROSSIMO PASTO: ${nextMeal}`;
 
-  const istruzioniBase = 'Fornisci 2-3 suggerimenti CONCRETI e VARI rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C).';
+  const istruzioniBase = 'Fornisci 2-3 suggerimenti CONCRETI e VARI rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C).';
   const notaTomorrow = isTomorrow
     ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
     : '';
@@ -3733,11 +3786,12 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
     macroBlock,
     consumedBlock,
+    supplementsBlock,
     prossimoPastoLine,
     istruzioniLine,
   ].filter(Boolean);
 
-  return await callAI(sections.join('\n\n'), 250);
+  return await callAI(sections.join('\n\n'), 300);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4594,9 +4648,12 @@ async function loadPackages() {
   }));
 }
 
-// ── EXTRAS (Integratori Step 2, 18 mag 2026) ────────────────────────
+// ── EXTRAS (Integratori Step 2, 18 mag 2026; fallback macro Step D.3 22 mag 2026) ──
 // Carica le righe supplements_log della data attiva con is_extra=true.
-// Snapshot completo (kcal/macro/costo) immutabile, indipendente dal catalogo.
+// Snapshot completo (kcal/macro/costo) come fonte di verità. Per righe vecchie
+// pre-migration con campi macro NULL → fallback DERIVATO da ST.catalog × dose
+// (rete di sicurezza, mai riscrive la riga DB → storico onesto se catalog cambia).
+// Default dose quando NULL: 1 (coerente col codice precedente, semplice e trasparente).
 async function loadExtras(targetDate) {
   ST.extras = [];
   if(!ST.user || !ST.user.id) return;
@@ -4610,21 +4667,46 @@ async function loadExtras(targetDate) {
     .order('slot', { ascending: true })
     .order('created_at', { ascending: true });
   if(error) { console.warn('loadExtras error:', error); return; }
-  ST.extras = (data || []).map(r => ({
-    id:        r.id,
-    date:      r.date,
-    slot:      r.slot || '',
-    name:      r.supplement_name || '',
-    codice:    r.supplement_codice || null,
-    dose:      r.dose != null ? parseFloat(r.dose) : 1,
-    dose_unit: r.dose_unit || 'cps',
-    kcal:      parseFloat(r.kcal)     || 0,
-    carbo:     parseFloat(r.carbo)    || 0,
-    proteine:  parseFloat(r.proteine) || 0,
-    grassi:    parseFloat(r.grassi)   || 0,
-    costo:     parseFloat(r.costo)    || 0,
-    created_at: r.created_at,
-  }));
+  const catalog = ST.catalog || [];
+  ST.extras = (data || []).map(r => {
+    const dose = r.dose != null ? parseFloat(r.dose) : 1;
+    // Snapshot raw — null se la colonna DB è NULL (rilevante per riga pre-migration)
+    const snapKcal  = r.kcal     != null ? (parseFloat(r.kcal)     || 0) : null;
+    const snapCarbo = r.carbo    != null ? (parseFloat(r.carbo)    || 0) : null;
+    const snapProt  = r.proteine != null ? (parseFloat(r.proteine) || 0) : null;
+    const snapGras  = r.grassi   != null ? (parseFloat(r.grassi)   || 0) : null;
+    const snapCosto = r.costo    != null ? (parseFloat(r.costo)    || 0) : null;
+    // Fallback runtime: cerca nel catalogo (per codice → per nome esatto → per nome normalizzato)
+    let cat = null;
+    if(r.supplement_codice) cat = catalog.find(c => c.codice === r.supplement_codice);
+    if(!cat && r.supplement_name) {
+      cat = catalog.find(c => c.nome === r.supplement_name)
+         || catalog.find(c => (c.nome||'').toLowerCase().trim() === (r.supplement_name||'').toLowerCase().trim());
+    }
+    const catDose = cat && cat.dose_die != null ? (parseFloat(cat.dose_die) || 1) : 1;
+    const mult = dose / catDose; // se dose=1 e catDose=1 → mult=1 (1 dose intera)
+    const fallbackKcal  = cat ? Math.round(((parseFloat(cat.kcal)     || 0) * mult) * 10) / 10 : 0;
+    const fallbackCarbo = cat ? Math.round(((parseFloat(cat.carbo)    || 0) * mult) * 10) / 10 : 0;
+    const fallbackProt  = cat ? Math.round(((parseFloat(cat.proteine) || 0) * mult) * 10) / 10 : 0;
+    const fallbackGras  = cat ? Math.round(((parseFloat(cat.grassi)   || 0) * mult) * 10) / 10 : 0;
+    const fallbackCosto = cat ? Math.round(((parseFloat(cat.costo_dose_partner) || 0) * mult) * 100) / 100 : 0;
+    return {
+      id:        r.id,
+      date:      r.date,
+      slot:      r.slot || '',
+      name:      r.supplement_name || '',
+      codice:    r.supplement_codice || (cat ? cat.codice : null),
+      dose:      dose,
+      dose_unit: r.dose_unit || (cat ? cat.dose_unit : 'cps') || 'cps',
+      kcal:      snapKcal  != null ? snapKcal  : fallbackKcal,
+      carbo:     snapCarbo != null ? snapCarbo : fallbackCarbo,
+      proteine:  snapProt  != null ? snapProt  : fallbackProt,
+      grassi:    snapGras  != null ? snapGras  : fallbackGras,
+      costo:     snapCosto != null ? snapCosto : fallbackCosto,
+      _fromFallback: snapKcal == null && snapCarbo == null && snapProt == null && snapGras == null,
+      created_at: r.created_at,
+    };
+  });
 }
 
 // Helper insert singolo extra in supplements_log
