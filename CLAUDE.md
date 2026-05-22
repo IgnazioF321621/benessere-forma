@@ -52,6 +52,7 @@ https://github.com/IgnazioF321621/benessere-forma
 - Pulizia legacy Piano v3 → v4 (Step I / Sessione 9): rinominare `renderPiano` → `renderPianoLegacy` insieme a routing `renderPage('piano')` che punta direttamente a `renderPianoV4` (no più branching su feature flag)
 - Cleanup feature flag `ST.pianoV4Enabled` dopo validazione finale tester (insieme a Step I)
 - Notifiche push iOS PWA — TRATTENUTE per V2 dopo Tab Piano v4 stabile (Opzione 3 scelta in chiusura design: welcome overlay domenicale sufficiente per V1)
+- **Debito tecnico — ordine macro incoerente** (rilevato 22 mag, Step E): l'app usa due ordini diversi per i macro. Tab Oggi (`renderToday`/`renderOggi`, riga ~10605): Carbo→Proteine→Grassi (corretto, logica Zona 40-30-30). Tab Piano card obiettivi (`renderPiano` ~13251 e `updatePianoTargetCard` ~13371): Proteine→Carbo→Grassi (invertito). Da uniformare a Carbo→Proteine→Grassi su tutte le schermate. Non urgente — fuori da Step E. Welcome overlay (Step E) nasce già con l'ordine corretto.
 
 **TODO post Step C (21 mag 2026, prossima sessione)**:
 - **~~Investigazione integratori macro nel conteggio giornaliero~~** ✅ chiusa 21 mag 2026 (report `DIAGNOSTICA_INTEGRATORI_REPORT.md`). Esiti:

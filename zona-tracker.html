@@ -1653,6 +1653,98 @@ select.inp{cursor:pointer;}
 /* Skipped note nel totalizzatore (suffisso "· N saltati" dopo eyebrow) */
 .pianov4-day-totals-skip-note{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--t3);font-weight:500;margin-left:4px;text-transform:none;letter-spacing:0;}
 
+/* ═══════════════════════════════════════════════════════════
+   PIANO V4 Step E.1 (22 mag 2026) — Welcome overlay domenicale
+   Cartello FULLSCREEN bone pieno (non scrim semitrasparente).
+   Annuncia piano nutrizionale settimana successiva generato dal coach.
+   Parte 1: solo UI + lettura dati. Trigger reale arriva in Parte 2.
+   ═══════════════════════════════════════════════════════════ */
+@keyframes pianov4WelcomeFadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes pianov4WelcomeFadeOut{from{opacity:1;}to{opacity:0;}}
+.pianov4-welcome-overlay{position:fixed;inset:0;background:var(--bg);z-index:1700;overflow-y:auto;-webkit-overflow-scrolling:touch;animation:pianov4WelcomeFadeIn 220ms cubic-bezier(.16,1,.3,1);}
+.pianov4-welcome-overlay.dismissing{animation:pianov4WelcomeFadeOut 180ms ease forwards;}
+.pianov4-welcome-scroll{min-height:100%;display:flex;flex-direction:column;padding:max(28px,env(safe-area-inset-top)) 20px max(28px,env(safe-area-inset-bottom));max-width:540px;margin:0 auto;box-sizing:border-box;}
+
+/* Header */
+.pianov4-welcome-header{margin-bottom:22px;}
+.pianov4-welcome-chip-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.pianov4-welcome-chip{width:34px;height:34px;border-radius:9px;background:var(--acc);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.08em;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;}
+.pianov4-welcome-chip-text{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;line-height:1.3;}
+.pianov4-welcome-week-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.2em;color:var(--t1);text-transform:uppercase;margin-bottom:14px;line-height:1.3;}
+.pianov4-welcome-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--t1);line-height:1.22;letter-spacing:-0.4px;}
+
+/* Card centrale */
+.pianov4-welcome-card{background:var(--s1);border:1px solid var(--b1);border-radius:16px;padding:22px 20px 20px;position:relative;overflow:hidden;margin-bottom:18px;box-shadow:0 1px 3px rgba(20,15,5,.04);}
+.pianov4-welcome-card-band{position:absolute;top:0;left:0;right:0;height:3px;background:var(--acc);}
+.pianov4-welcome-card-eyebrow-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:18px;}
+.pianov4-welcome-card-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.22em;color:var(--t1);text-transform:uppercase;line-height:1.3;}
+.pianov4-welcome-card-count{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:500;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;line-height:1.3;}
+
+/* Variante A — adattamento proposto */
+.pianov4-welcome-kcal-row{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+.pianov4-welcome-kcal-old{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;color:var(--t3);text-decoration:line-through;text-decoration-thickness:1px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.pianov4-welcome-kcal-arrow{font-family:'Syne',sans-serif;font-size:22px;font-weight:600;color:var(--acc);line-height:1;}
+.pianov4-welcome-kcal-new{font-family:'JetBrains Mono',monospace;font-size:38px;font-weight:700;color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+.pianov4-welcome-kcal-unit{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--t2);letter-spacing:.04em;line-height:1;}
+.pianov4-welcome-kcal-pill-row{margin-bottom:20px;}
+.pianov4-welcome-delta-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1;}
+.pianov4-welcome-delta-pill.down{background:var(--acc-lt);color:var(--acc);}
+.pianov4-welcome-delta-pill.up{background:#FCEEE9;color:var(--fat);}
+.pianov4-welcome-delta-pill.same{background:var(--s2);color:var(--t2);}
+
+/* Macro row (Carbo → Prot → Grassi — ordine canonico Zona) */
+.pianov4-welcome-macros{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding-top:14px;border-top:1px solid var(--b1);}
+.pianov4-welcome-macro{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.pianov4-welcome-macro-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;line-height:1.3;}
+.pianov4-welcome-macro-label.c{color:var(--carb);}
+.pianov4-welcome-macro-label.p{color:var(--prot);}
+.pianov4-welcome-macro-label.g{color:var(--fat);}
+.pianov4-welcome-macro-row{display:flex;align-items:baseline;gap:5px;line-height:1;flex-wrap:wrap;}
+.pianov4-welcome-macro-old{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--t3);text-decoration:line-through;text-decoration-thickness:1px;font-variant-numeric:tabular-nums;}
+.pianov4-welcome-macro-arrow{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:var(--t2);}
+.pianov4-welcome-macro-new{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.pianov4-welcome-macro-new.c{color:var(--carb);}
+.pianov4-welcome-macro-new.p{color:var(--prot);}
+.pianov4-welcome-macro-new.g{color:var(--fat);}
+.pianov4-welcome-macro-unit{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--t3);}
+.pianov4-welcome-macro-pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1.2;align-self:flex-start;}
+.pianov4-welcome-macro-pill.down{background:var(--acc-lt);color:var(--acc);}
+.pianov4-welcome-macro-pill.up{background:#FCEEE9;color:var(--fat);}
+.pianov4-welcome-macro-pill.same{background:var(--s2);color:var(--t2);}
+
+/* Variante B — obiettivi invariati */
+.pianov4-welcome-unchanged-row{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.pianov4-welcome-check-box{width:44px;height:44px;border-radius:50%;background:var(--acc-lt);color:var(--acc);font-family:'Syne',sans-serif;font-size:22px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;}
+.pianov4-welcome-unchanged-body{flex:1;min-width:0;}
+.pianov4-welcome-unchanged-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:600;color:var(--t1);line-height:1.3;margin-bottom:4px;}
+.pianov4-welcome-unchanged-sub{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.4;}
+.pianov4-welcome-target-tile{background:var(--s2);border-radius:12px;padding:16px 16px 14px;}
+.pianov4-welcome-target-kcal{display:flex;align-items:baseline;gap:8px;margin-bottom:14px;line-height:1;}
+.pianov4-welcome-target-kcal-val{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:var(--t1);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+.pianov4-welcome-target-kcal-unit{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:var(--t2);letter-spacing:.06em;}
+.pianov4-welcome-target-macros{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.pianov4-welcome-target-macro{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.2;}
+.pianov4-welcome-target-macro-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.pianov4-welcome-target-macro-val.c{color:var(--carb);}
+.pianov4-welcome-target-macro-val.p{color:var(--prot);}
+.pianov4-welcome-target-macro-val.g{color:var(--fat);}
+.pianov4-welcome-target-macro-lbl{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);}
+
+/* Voce del coach */
+.pianov4-welcome-voice{background:var(--acc-lt);border-radius:14px;padding:16px 16px 18px;margin-bottom:24px;display:flex;gap:12px;align-items:flex-start;}
+.pianov4-welcome-voice-icon{width:34px;height:34px;border-radius:8px;background:var(--acc);color:#fff;font-family:'Syne',sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1;}
+.pianov4-welcome-voice-body{flex:1;min-width:0;}
+.pianov4-welcome-voice-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:var(--acc);text-transform:uppercase;margin-bottom:8px;line-height:1.3;}
+.pianov4-welcome-voice-text{font-family:'Syne',sans-serif;font-style:italic;font-size:13.5px;line-height:1.55;color:var(--t2);}
+
+/* Pulsanti */
+.pianov4-welcome-actions{margin-top:auto;display:flex;flex-direction:column;gap:6px;}
+.pianov4-welcome-cta-primary{width:100%;padding:0 18px;height:52px;background:var(--acc);color:#fff;border:none;border-radius:14px;font-family:'Syne',sans-serif;font-size:16px;font-weight:600;cursor:pointer;letter-spacing:.01em;-webkit-tap-highlight-color:transparent;transition:opacity .15s ease;}
+.pianov4-welcome-cta-primary:active{opacity:.88;}
+.pianov4-welcome-cta-primary:disabled{opacity:.5;cursor:not-allowed;}
+.pianov4-welcome-cta-secondary{width:100%;padding:14px 18px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:14px;font-weight:500;color:var(--t3);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .12s ease;}
+.pianov4-welcome-cta-secondary:active{color:var(--t2);}
+
 </style>
 </head>
 <body>
@@ -2902,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 15:26';
+const APP_VERSION = '2026.05.22 · 17:17';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3027,6 +3119,8 @@ const ST = {
   pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
   // PIANO V4 Step C.5 (21 mag 2026) — bottom sheet selettore alternative SOSTITUISCI
   pianoV4SubstSheet: null, // { slot, weekOffset, dayOfWeek } | null — snapshot al tap SOSTITUISCI
+  // PIANO V4 Step E.1 (22 mag 2026) — Welcome overlay domenicale (parte 1: UI + dati)
+  pianoV4WelcomeOverlay: null, // { draft, diff, submitting, mode } | null — snapshot al fetch draft
   // PIANO V4 Step D.1 (22 mag 2026) — Modal "Pesati ora" + cache weight_logs
   weighInSheet: null,      // { value:number(kg, 0.1 precision), saving:bool } | null
   weightLogs: null,        // null=non caricato, []=vuoto, [{date,weight_kg}...] sorted DESC by date
@@ -5025,6 +5119,7 @@ async function loadAndStart() {
         showScreen('app');
         renderOggi();
         showPage('home');
+        _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
       }
     } else {
       showScreen('onboarding');
@@ -5051,6 +5146,7 @@ async function loadAndStart() {
     showScreen('app');
     renderOggi();
     showPage('home');
+    _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
     return;
   }
   ST.profile = profile;
@@ -5066,6 +5162,7 @@ async function loadAndStart() {
     showScreen('app');
     renderOggi();
     showPage('home');
+    _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
     saveCache();
     ST.lastRefreshAt = Date.now();
   } else {
@@ -12003,6 +12100,337 @@ function closePianoV4DayOverlay() {
   } else {
     ST.pianoV4DayOverlay = null;
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Step E.1 (22 maggio 2026) — Welcome overlay domenicale
+// Cartello fullscreen che annuncia il piano nutrizionale della settimana
+// successiva, generato dal coach AI. PARTE 1: solo UI + lettura dati reali
+// + forzatura di collaudo. PARTE 2 (sessione successiva): trigger automatico
+// in base a plan_generation_day/time + recupero giorno-dopo + anti-nag.
+// ═══════════════════════════════════════════════════════════
+function _pianoV4WelcomeFormatHeaderDate(d) {
+  // "DOM 25 MAG · 20:14"
+  const DAY_S = ['DOM','LUN','MAR','MER','GIO','VEN','SAB'];
+  const MON_S = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `${DAY_S[d.getDay()]} ${d.getDate()} ${MON_S[d.getMonth()]} · ${hh}:${mm}`;
+}
+function _pianoV4WelcomeFormatWeekRange(weekStartIso) {
+  // weekStartIso = "YYYY-MM-DD" (lunedì). Output: "SETTIMANA 26 MAG – 1 GIU"
+  // Parse manuale per evitare shift fuso orario su new Date('YYYY-MM-DD')
+  const parts = weekStartIso.split('-');
+  const y = parseInt(parts[0],10);
+  const m = parseInt(parts[1],10) - 1;
+  const d = parseInt(parts[2],10);
+  const start = new Date(y, m, d, 12, 0, 0);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 12, 0, 0);
+  const MON_S = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+  const sM = MON_S[start.getMonth()];
+  const eM = MON_S[end.getMonth()];
+  if (sM === eM) {
+    return `SETTIMANA ${start.getDate()} – ${end.getDate()} ${eM}`;
+  }
+  return `SETTIMANA ${start.getDate()} ${sM} – ${end.getDate()} ${eM}`;
+}
+
+// Fetch della draft più recente dell'utente loggato. Ritorna null se non esiste.
+async function _pianoV4LoadDraftPlan() {
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return null;
+  try {
+    const { data, error } = await supa
+      .from('weekly_plans')
+      .select('id, week_start, target_kcal, target_protein, target_carbs, target_fat, ai_reasoning, status')
+      .eq('user_id', ST.user.id)
+      .eq('status', 'draft')
+      .order('week_start', { ascending: false })
+      .limit(1);
+    if (error) {
+      console.warn('[welcome] fetch draft error:', error);
+      return null;
+    }
+    return (data && data.length) ? data[0] : null;
+  } catch (e) {
+    console.warn('[welcome] fetch draft exception:', e);
+    return null;
+  }
+}
+
+// Confronto target draft vs ST.TARGET. Ritorna {anyDiff, kcal, protein, carbs, fat}
+// dove ogni macro ha {oldVal, newVal, delta, dir: 'up'|'down'|'same'}.
+function _pianoV4WelcomeComputeDiff(draft) {
+  const cur = ST.TARGET || { kcal:1900, protein:143, carbs:190, fat:63 };
+  function diff(oldV, newV) {
+    const o = Math.round(Number(oldV) || 0);
+    const n = Math.round(Number(newV) || 0);
+    const d = n - o;
+    return {
+      oldVal: o,
+      newVal: n,
+      delta: d,
+      absDelta: Math.abs(d),
+      dir: d === 0 ? 'same' : (d > 0 ? 'up' : 'down'),
+    };
+  }
+  const r = {
+    kcal:    diff(cur.kcal,    draft.target_kcal),
+    protein: diff(cur.protein, draft.target_protein),
+    carbs:   diff(cur.carbs,   draft.target_carbs),
+    fat:     diff(cur.fat,     draft.target_fat),
+  };
+  r.anyDiff = (r.kcal.dir !== 'same' || r.protein.dir !== 'same' || r.carbs.dir !== 'same' || r.fat.dir !== 'same');
+  return r;
+}
+
+// Apre l'overlay (lettura draft + render). Modalità:
+//   - mode === 'force-test': stampa diagnosi nel report di collaudo
+function openPianoV4WelcomeOverlay(mode) {
+  (async function() {
+    const draft = await _pianoV4LoadDraftPlan();
+    if (!draft) {
+      if (mode === 'force-test') {
+        showToast('Nessun piano draft per questo utente', 'ℹ️');
+      }
+      return; // silent return se nessuna draft (regola Parte 1)
+    }
+    ST.pianoV4WelcomeOverlay = {
+      draft: draft,
+      diff: _pianoV4WelcomeComputeDiff(draft),
+      submitting: false,
+      mode: mode || null,
+    };
+    renderPianoV4WelcomeOverlay();
+  })();
+}
+
+function closePianoV4WelcomeOverlay() {
+  const el = document.getElementById('pianov4-welcome-overlay');
+  if (el) {
+    el.classList.add('dismissing');
+    setTimeout(function() {
+      ST.pianoV4WelcomeOverlay = null;
+      const ex = document.getElementById('pianov4-welcome-overlay');
+      if (ex) ex.remove();
+    }, 180);
+  } else {
+    ST.pianoV4WelcomeOverlay = null;
+  }
+}
+
+// CTA primaria "Vedi piano →": UPDATE weekly_plans.status draft→active, chiude
+// overlay, naviga a tab Piano.
+async function pianoV4WelcomeConfirmAndOpen() {
+  if (!ST.pianoV4WelcomeOverlay || ST.pianoV4WelcomeOverlay.submitting) return;
+  const draft = ST.pianoV4WelcomeOverlay.draft;
+  ST.pianoV4WelcomeOverlay.submitting = true;
+  // Disabilita CTA mentre lavora
+  const btn = document.getElementById('pianov4-welcome-cta-primary');
+  if (btn) btn.disabled = true;
+
+  try {
+    const { error } = await supa
+      .from('weekly_plans')
+      .update({ status: 'active' })
+      .eq('id', draft.id)
+      .eq('user_id', ST.user.id);
+    if (error) {
+      console.warn('[welcome] activate error:', error);
+      showToast('Errore: ' + (error.message || 'impossibile attivare il piano'), '⚠️');
+      ST.pianoV4WelcomeOverlay.submitting = false;
+      if (btn) btn.disabled = false;
+      return;
+    }
+  } catch (e) {
+    console.warn('[welcome] activate exception:', e);
+    showToast('Errore di rete', '⚠️');
+    ST.pianoV4WelcomeOverlay.submitting = false;
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  closePianoV4WelcomeOverlay();
+  // Vai a tab Piano (showPage gestisce sia 'piano' che il branch v4 via ST.pianoV4Enabled)
+  showPage('piano');
+}
+
+// CTA secondaria "Più tardi": chiude e basta. Status resta 'draft'. Nessuna mutation DB.
+function pianoV4WelcomeLater() {
+  closePianoV4WelcomeOverlay();
+}
+
+// Render dell'overlay. Re-render safe (rimuove DOM esistente se presente).
+function renderPianoV4WelcomeOverlay() {
+  const st = ST.pianoV4WelcomeOverlay;
+  if (!st || !st.draft) return;
+  const { draft, diff } = st;
+
+  // Rimuovi esistente per re-render pulito
+  const ex = document.getElementById('pianov4-welcome-overlay');
+  if (ex) ex.remove();
+
+  // Header
+  const now = new Date();
+  const headerDate = _pianoV4WelcomeFormatHeaderDate(now);
+  const weekLabel = _pianoV4WelcomeFormatWeekRange(draft.week_start);
+
+  // Voce coach (testo da DB; fallback se mancante)
+  const voiceRaw = (draft.ai_reasoning || '').trim();
+  const voiceText = voiceRaw || (diff.anyDiff
+    ? 'Adattamento basato sul tuo trend recente.'
+    : 'I tuoi obiettivi attuali stanno funzionando: continua così.');
+
+  // Costruisci card centrale in base alla variante
+  let cardHTML;
+  if (diff.anyDiff) {
+    cardHTML = _pianoV4WelcomeRenderVariantA(diff);
+  } else {
+    cardHTML = _pianoV4WelcomeRenderVariantB(diff);
+  }
+
+  // Compone overlay
+  const html = `<div id="pianov4-welcome-overlay" class="pianov4-welcome-overlay" role="dialog" aria-modal="true" aria-label="Welcome overlay piano settimanale">
+    <div class="pianov4-welcome-scroll">
+      <div class="pianov4-welcome-header">
+        <div class="pianov4-welcome-chip-row">
+          <div class="pianov4-welcome-chip">ZT</div>
+          <div class="pianov4-welcome-chip-text">COACH · ${esc(headerDate)}</div>
+        </div>
+        <div class="pianov4-welcome-week-label">${esc(weekLabel)}</div>
+        <h1 class="pianov4-welcome-title">Il piano della prossima settimana è pronto</h1>
+      </div>
+
+      ${cardHTML}
+
+      <div class="pianov4-welcome-voice">
+        <div class="pianov4-welcome-voice-icon">✦</div>
+        <div class="pianov4-welcome-voice-body">
+          <div class="pianov4-welcome-voice-label">Voce del coach</div>
+          <div class="pianov4-welcome-voice-text">${esc(voiceText)}</div>
+        </div>
+      </div>
+
+      <div class="pianov4-welcome-actions">
+        <button id="pianov4-welcome-cta-primary" class="pianov4-welcome-cta-primary" onclick="pianoV4WelcomeConfirmAndOpen()">Vedi piano →</button>
+        <button class="pianov4-welcome-cta-secondary" onclick="pianoV4WelcomeLater()">Più tardi</button>
+      </div>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// VARIANTE A — almeno un target differisce
+function _pianoV4WelcomeRenderVariantA(diff) {
+  // Pill delta kcal
+  function fmtDeltaPillKcal(d) {
+    if (d.dir === 'same') return `<span class="pianov4-welcome-delta-pill same">= INVARIATO</span>`;
+    const arrow = d.dir === 'down' ? '↓' : '↑';
+    const sign  = d.dir === 'down' ? '−' : '+';
+    return `<span class="pianov4-welcome-delta-pill ${d.dir}">${arrow} ${sign}${d.absDelta} KCAL</span>`;
+  }
+  // Macro pill
+  function fmtDeltaPillG(d) {
+    if (d.dir === 'same') return `<span class="pianov4-welcome-macro-pill same">= INVARIATO</span>`;
+    const arrow = d.dir === 'down' ? '↓' : '↑';
+    const sign  = d.dir === 'down' ? '−' : '+';
+    return `<span class="pianov4-welcome-macro-pill ${d.dir}">${arrow} ${sign}${d.absDelta} G</span>`;
+  }
+  // Macro row builder (kind = 'c' | 'p' | 'g'; label = etichetta uppercase)
+  function macroBlock(kind, label, d) {
+    return `<div class="pianov4-welcome-macro">
+      <div class="pianov4-welcome-macro-label ${kind}">${label}</div>
+      <div class="pianov4-welcome-macro-row">
+        <span class="pianov4-welcome-macro-old">${d.oldVal}</span>
+        <span class="pianov4-welcome-macro-arrow">→</span>
+        <span class="pianov4-welcome-macro-new ${kind}">${d.newVal}</span>
+        <span class="pianov4-welcome-macro-unit">g</span>
+      </div>
+      ${fmtDeltaPillG(d)}
+    </div>`;
+  }
+
+  return `<div class="pianov4-welcome-card">
+    <div class="pianov4-welcome-card-band"></div>
+    <div class="pianov4-welcome-card-eyebrow-row">
+      <div class="pianov4-welcome-card-eyebrow">ADATTAMENTO PROPOSTO</div>
+      <div class="pianov4-welcome-card-count">4 VALORI</div>
+    </div>
+
+    <div class="pianov4-welcome-kcal-row">
+      <span class="pianov4-welcome-kcal-old">${diff.kcal.oldVal}</span>
+      <span class="pianov4-welcome-kcal-arrow">→</span>
+      <span class="pianov4-welcome-kcal-new">${diff.kcal.newVal}</span>
+      <span class="pianov4-welcome-kcal-unit">KCAL</span>
+    </div>
+    <div class="pianov4-welcome-kcal-pill-row">${fmtDeltaPillKcal(diff.kcal)}</div>
+
+    <div class="pianov4-welcome-macros">
+      ${macroBlock('c', 'CARBOIDRATI', diff.carbs)}
+      ${macroBlock('p', 'PROTEINE',    diff.protein)}
+      ${macroBlock('g', 'GRASSI',      diff.fat)}
+    </div>
+  </div>`;
+}
+
+// VARIANTE B — tutti i target invariati
+function _pianoV4WelcomeRenderVariantB(diff) {
+  return `<div class="pianov4-welcome-card">
+    <div class="pianov4-welcome-card-band"></div>
+    <div class="pianov4-welcome-card-eyebrow-row">
+      <div class="pianov4-welcome-card-eyebrow">OBIETTIVI INVARIATI</div>
+      <div class="pianov4-welcome-card-count">NESSUNA MODIFICA</div>
+    </div>
+
+    <div class="pianov4-welcome-unchanged-row">
+      <div class="pianov4-welcome-check-box">✓</div>
+      <div class="pianov4-welcome-unchanged-body">
+        <div class="pianov4-welcome-unchanged-title">Gli obiettivi restano invariati</div>
+        <div class="pianov4-welcome-unchanged-sub">Stessi target della scorsa settimana.</div>
+      </div>
+    </div>
+
+    <div class="pianov4-welcome-target-tile">
+      <div class="pianov4-welcome-target-kcal">
+        <span class="pianov4-welcome-target-kcal-val">${diff.kcal.newVal}</span>
+        <span class="pianov4-welcome-target-kcal-unit">KCAL</span>
+      </div>
+      <div class="pianov4-welcome-target-macros">
+        <div class="pianov4-welcome-target-macro">
+          <span class="pianov4-welcome-target-macro-val c">${diff.carbs.newVal}<span class="pianov4-welcome-target-macro-lbl" style="margin-left:3px;">G</span></span>
+          <span class="pianov4-welcome-target-macro-lbl">CARBOIDRATI</span>
+        </div>
+        <div class="pianov4-welcome-target-macro">
+          <span class="pianov4-welcome-target-macro-val p">${diff.protein.newVal}<span class="pianov4-welcome-target-macro-lbl" style="margin-left:3px;">G</span></span>
+          <span class="pianov4-welcome-target-macro-lbl">PROTEINE</span>
+        </div>
+        <div class="pianov4-welcome-target-macro">
+          <span class="pianov4-welcome-target-macro-val g">${diff.fat.newVal}<span class="pianov4-welcome-target-macro-lbl" style="margin-left:3px;">G</span></span>
+          <span class="pianov4-welcome-target-macro-lbl">GRASSI</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Forzatura collaudo: globale + parametro URL ?welcome=1.
+// Da chiamare DOPO il completamento del login (loadAndStart) per essere sicuri che
+// ST.user e ST.TARGET siano popolati. Vedi bootstrap in fondo al file.
+window.ztTestWelcome = function() {
+  openPianoV4WelcomeOverlay('force-test');
+};
+
+// Verifica parametro URL ?welcome=1 e, se presente, forza l'apertura dell'overlay
+// dopo aver dato un attimo al render dell'app di stabilizzarsi. Chiamata dai 3 rami
+// di loadAndStart che entrano nell'app (cache-hit, errore-rete-con-cache, cache-miss).
+function _pianoV4MaybeForceWelcomeFromUrl() {
+  try {
+    const flag = new URLSearchParams(window.location.search).get('welcome');
+    if (flag === '1') {
+      // Piccolo delay per essere sicuri che ST.TARGET sia applicato e DOM home renderizzato
+      setTimeout(function() { openPianoV4WelcomeOverlay('force-test'); }, 250);
+    }
+  } catch (e) { /* silent */ }
 }
 
 // Render overlay: re-render safe (rimuove esistente se presente, ricrea)
