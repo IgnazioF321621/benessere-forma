@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 17:17';
+const APP_VERSION = '2026.05.22 · 19:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5120,6 +5120,7 @@ async function loadAndStart() {
         renderOggi();
         showPage('home');
         _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+        _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
       }
     } else {
       showScreen('onboarding');
@@ -5147,6 +5148,7 @@ async function loadAndStart() {
     renderOggi();
     showPage('home');
     _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+    _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
     return;
   }
   ST.profile = profile;
@@ -5163,6 +5165,7 @@ async function loadAndStart() {
     renderOggi();
     showPage('home');
     _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+    _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
     saveCache();
     ST.lastRefreshAt = Date.now();
   } else {
@@ -12223,6 +12226,7 @@ function closePianoV4WelcomeOverlay() {
 async function pianoV4WelcomeConfirmAndOpen() {
   if (!ST.pianoV4WelcomeOverlay || ST.pianoV4WelcomeOverlay.submitting) return;
   const draft = ST.pianoV4WelcomeOverlay.draft;
+  const mode  = ST.pianoV4WelcomeOverlay.mode;
   ST.pianoV4WelcomeOverlay.submitting = true;
   // Disabilita CTA mentre lavora
   const btn = document.getElementById('pianov4-welcome-cta-primary');
@@ -12249,13 +12253,29 @@ async function pianoV4WelcomeConfirmAndOpen() {
     return;
   }
 
+  // E.2: scrivi il flag "visto" SOLO se l'overlay era stato aperto via trigger
+  // automatico. Per le forzature di collaudo (?welcome=1 / ztTestWelcome) il
+  // flag NON viene scritto — il bypass deve restare totale e non sporcare lo
+  // stato di produzione (riapri subito ?welcome=1 e l'overlay torna identico).
+  if (mode === 'auto' && draft && draft.week_start) {
+    _pianoV4WelcomeAckSet(draft.week_start);
+  }
+
   closePianoV4WelcomeOverlay();
   // Vai a tab Piano (showPage gestisce sia 'piano' che il branch v4 via ST.pianoV4Enabled)
   showPage('piano');
 }
 
 // CTA secondaria "Più tardi": chiude e basta. Status resta 'draft'. Nessuna mutation DB.
+// E.2: scrive il flag "visto" solo se l'overlay era stato aperto via trigger automatico.
 function pianoV4WelcomeLater() {
+  if (ST.pianoV4WelcomeOverlay) {
+    const mode  = ST.pianoV4WelcomeOverlay.mode;
+    const draft = ST.pianoV4WelcomeOverlay.draft;
+    if (mode === 'auto' && draft && draft.week_start) {
+      _pianoV4WelcomeAckSet(draft.week_start);
+    }
+  }
   closePianoV4WelcomeOverlay();
 }
 
@@ -12432,6 +12452,178 @@ function _pianoV4MaybeForceWelcomeFromUrl() {
     }
   } catch (e) { /* silent */ }
 }
+
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Step E.2 (22 mag 2026) — Trigger automatico welcome overlay
+//
+// Regola concordata: l'overlay si apre da solo SE E SOLO SE tutte vere:
+//   1) Esiste una draft in weekly_plans per l'utente (status='draft')
+//   2) GIORNO: oggi === plan_generation_day del profilo, OPPURE (giorno-piano + 1) % 7
+//      (recupero "giorno dopo" — se l'utente non ha aperto l'app nel giorno-piano)
+//   3) ORA: orario attuale device >= plan_generation_time (HH:MM)
+//   4) FLAG: localStorage 'zt_welcome_ack_<week_start>' NON presente
+//
+// Il flag viene scritto SOLO quando l'utente preme un pulsante CTA (vedi
+// pianoV4WelcomeConfirmAndOpen / pianoV4WelcomeLater), e SOLO se l'overlay
+// era stato aperto via trigger automatico (mode='auto'). La forzatura
+// ?welcome=1 / ztTestWelcome() bypassa questa logica completamente:
+// non legge il flag (per aprire) e non lo scrive (per chiudere), così
+// il collaudo non sporca lo stato di produzione.
+//
+// IMPORTANTE: questa logica è invisibile — un bug si manifesta come
+// "overlay non appare" o "appare quando non dovrebbe". Per renderla
+// diagnosticabile esistono ?welcomeDebug=1 (console.log) e
+// window.ztWelcomeWhy() (oggetto con esito di ogni condizione).
+// ═══════════════════════════════════════════════════════════
+
+// Mapping abbreviazioni inglesi 3-lettere → JS getDay() (0=Dom, 6=Sab).
+// CHECK constraint DB consente: fri/sat/sun/custom. 'custom' è previsto per
+// quando l'utente potrà scegliere un giorno qualsiasi (refresh onboarding M1
+// futuro, non in Step E). Per ora se valore non in {fri,sat,sun} → fallback
+// a 'sun' (default DB). Estendiamo la mappa coi 7 giorni così quando arriverà
+// l'UI custom non serviranno modifiche.
+const _PLAN_DAY_MAP = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6 };
+
+// Helper: chiave localStorage del flag "visto" per QUESTA draft.
+// Scope per-settimana (week_start). Indipendente da userId perché il device
+// è inteso come "1 utente Zona Tracker per device" (PWA personale).
+function _pianoV4GetWelcomeAckKey(weekStart) {
+  return 'zt_welcome_ack_' + weekStart;
+}
+function _pianoV4WelcomeAckIsSet(weekStart) {
+  try { return localStorage.getItem(_pianoV4GetWelcomeAckKey(weekStart)) === '1'; }
+  catch (e) { return false; }
+}
+function _pianoV4WelcomeAckSet(weekStart) {
+  try { localStorage.setItem(_pianoV4GetWelcomeAckKey(weekStart), '1'); }
+  catch (e) { /* localStorage piena/disabled — flag perso, ri-apparirà al prossimo trigger */ }
+}
+
+// Helper diagnostica: ritorna un oggetto con l'esito di ogni condizione.
+// Usato da window.ztWelcomeWhy() e dai console.log se ?welcomeDebug=1.
+// NB: questa funzione è async perché interroga il DB per la draft.
+async function _pianoV4ComputeAutoWelcomeStatus() {
+  const out = {
+    when: new Date().toISOString(),
+    user_id: (ST.user && ST.user.id) || null,
+    draftFound: false,
+    draft: null,
+    profilePlanDay: null,
+    profilePlanTime: null,
+    todayDow: null,
+    todayDowName: null,
+    planDow: null,
+    nextDayDow: null,
+    dayMatch: false,
+    nowHHMM: null,
+    timeOk: false,
+    ackKey: null,
+    ackIsSet: false,
+    decision: null,    // 'open' | 'skip-no-draft' | 'skip-day' | 'skip-time' | 'skip-ack' | 'skip-no-profile' | 'skip-no-user'
+  };
+
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') {
+    out.decision = 'skip-no-user';
+    return out;
+  }
+  if (!ST.profile) {
+    out.decision = 'skip-no-profile';
+    return out;
+  }
+
+  const planDayRaw = ST.profile.plan_generation_day || 'sun';
+  const planTime   = ST.profile.plan_generation_time || '20:00';
+  out.profilePlanDay = planDayRaw;
+  out.profilePlanTime = planTime;
+
+  // 1) Fetch draft (riusa stessa fetch della Parte 1)
+  const draft = await _pianoV4LoadDraftPlan();
+  if (!draft) {
+    out.decision = 'skip-no-draft';
+    return out;
+  }
+  out.draftFound = true;
+  out.draft = { id: draft.id, week_start: draft.week_start, target_kcal: draft.target_kcal };
+
+  // 2) Giorno
+  const now = new Date();
+  const DAY_NAMES = ['sun','mon','tue','wed','thu','fri','sat'];
+  out.todayDow = now.getDay();
+  out.todayDowName = DAY_NAMES[out.todayDow];
+  // 'custom' o valore inatteso → fallback 'sun' (DB default)
+  let planKey = (planDayRaw || '').toLowerCase();
+  if (!(planKey in _PLAN_DAY_MAP)) planKey = 'sun';
+  out.planDow = _PLAN_DAY_MAP[planKey];
+  out.nextDayDow = (out.planDow + 1) % 7;
+  out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
+
+  // 3) Ora — confronto come stringa HH:MM padded (es. '08:05' < '20:00')
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  out.nowHHMM = hh + ':' + mm;
+  // Normalizza planTime in caso il DB salvi 'H:MM' o 'HH:M' (paranoia)
+  const tParts = (planTime || '20:00').split(':');
+  const tH = String(parseInt(tParts[0] || '20', 10) || 20).padStart(2,'0');
+  const tM = String(parseInt(tParts[1] || '0',  10) || 0 ).padStart(2,'0');
+  const planTimeNorm = tH + ':' + tM;
+  out.profilePlanTime = planTimeNorm;
+  out.timeOk = out.nowHHMM >= planTimeNorm;
+
+  // 4) Flag
+  out.ackKey = _pianoV4GetWelcomeAckKey(draft.week_start);
+  out.ackIsSet = _pianoV4WelcomeAckIsSet(draft.week_start);
+
+  if (!out.dayMatch)   { out.decision = 'skip-day';  return out; }
+  if (!out.timeOk)     { out.decision = 'skip-time'; return out; }
+  if (out.ackIsSet)    { out.decision = 'skip-ack';  return out; }
+  out.decision = 'open';
+  return out;
+}
+
+// Entry-point trigger automatico. Chiamato dai 3 rami di loadAndStart DOPO
+// _pianoV4MaybeForceWelcomeFromUrl. Se la forzatura ha già aperto l'overlay,
+// questa funzione NON ri-apre (verifica esistenza DOM dell'overlay).
+async function _pianoV4MaybeAutoWelcome() {
+  try {
+    // Se la forzatura ha già aperto l'overlay, non ri-aprire (no doppio render)
+    if (document.getElementById('pianov4-welcome-overlay')) return;
+
+    const status = await _pianoV4ComputeAutoWelcomeStatus();
+
+    // Diagnostica leggera dietro ?welcomeDebug=1
+    let debug = false;
+    try { debug = new URLSearchParams(window.location.search).get('welcomeDebug') === '1'; } catch (e) {}
+    if (debug) {
+      console.log('[welcome-auto] status:', status);
+    }
+
+    if (status.decision === 'open') {
+      // Apre via trigger automatico — flag verrà scritto solo al click CTA
+      openPianoV4WelcomeOverlay('auto');
+    }
+  } catch (e) {
+    console.warn('[welcome-auto] exception:', e);
+  }
+}
+
+// Diagnostica esposta: window.ztWelcomeWhy() ritorna l'esito completo del check.
+// Da console: `await ztWelcomeWhy()` per vedere ogni condizione.
+window.ztWelcomeWhy = async function() {
+  const s = await _pianoV4ComputeAutoWelcomeStatus();
+  console.table([{
+    decision: s.decision,
+    draft: s.draftFound,
+    today: s.todayDowName + ' (' + s.todayDow + ')',
+    planDay: s.profilePlanDay + ' → dow ' + s.planDow + ' (+1=' + s.nextDayDow + ')',
+    dayMatch: s.dayMatch,
+    now: s.nowHHMM,
+    soglia: s.profilePlanTime,
+    timeOk: s.timeOk,
+    ackKey: s.ackKey,
+    ackIsSet: s.ackIsSet,
+  }]);
+  return s;
+};
 
 // Render overlay: re-render safe (rimuove esistente se presente, ricrea)
 // ─── Step C.4 (20 mag 2026): persistenza ACCETTA pasti demo via localStorage ───
