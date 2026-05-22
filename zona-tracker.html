@@ -1580,6 +1580,46 @@ select.inp{cursor:pointer;}
 .pianov4-weighin-cta{width:100%;padding:14px;background:var(--acc);color:#fff;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:16px;font-weight:600;cursor:pointer;transition:opacity .15s ease;letter-spacing:.01em;-webkit-tap-highlight-color:transparent;}
 .pianov4-weighin-cta:active{opacity:.85;}
 .pianov4-weighin-cta:disabled{opacity:.5;cursor:not-allowed;}
+/* Link "Promemoria: <label> ›" sotto CTA Conferma del modal peso D.1 (Step D.2) */
+.pianov4-weighin-freq-link{display:block;margin:12px 0 0;background:none;border:none;padding:8px;cursor:pointer;text-align:center;width:100%;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);transition:color .12s ease;-webkit-tap-highlight-color:transparent;}
+.pianov4-weighin-freq-link:active{color:var(--acc);}
+
+/* ─── STEP D.2 (22 mag 2026) — Banner reminder pesata in tab Oggi ─── */
+.weight-reminder-banner{display:flex;align-items:center;gap:12px;background:var(--acc-lt);border:0.5px solid rgba(42,122,111,.25);border-left:3px solid var(--acc);border-radius:10px;padding:12px 14px;margin:14px 0 10px;box-shadow:0 1px 2px rgba(20,15,5,.025);}
+.weight-reminder-icon{font-size:18px;flex-shrink:0;line-height:1;}
+.weight-reminder-body{flex:1;min-width:0;}
+.weight-reminder-text{font-family:'Syne',sans-serif;font-size:13px;line-height:1.4;color:var(--t1);margin:0;}
+.weight-reminder-actions{display:flex;gap:8px;flex-shrink:0;align-items:center;}
+.weight-reminder-cta{padding:7px 12px;background:var(--acc);color:#fff;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .12s ease;}
+.weight-reminder-cta:active{opacity:.85;}
+.weight-reminder-dismiss{padding:7px 8px;background:none;border:none;color:var(--t3);font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.weight-reminder-dismiss:active{color:var(--t1);}
+@media(max-width:380px){
+  .weight-reminder-banner{flex-wrap:wrap;}
+  .weight-reminder-actions{width:100%;justify-content:flex-end;}
+}
+
+/* ─── STEP D.2 — Bottom sheet selettore frequenza pesate (componente riusabile) ─── */
+.weight-freq-overlay{position:fixed;inset:0;background:rgba(20,15,5,0.46);z-index:1660;display:flex;align-items:flex-end;justify-content:center;}
+.weight-freq-screen{background:var(--bg);width:100%;max-width:520px;border-radius:16px 16px 0 0;animation:pianov4SubstSlideUp 240ms cubic-bezier(.16,1,.3,1);padding-bottom:env(safe-area-inset-bottom);position:relative;overflow:hidden;}
+.weight-freq-screen.dismissing{animation:pianov4SubstSlideDown 200ms ease forwards;}
+.weight-freq-band{position:absolute;top:0;left:0;right:0;height:3px;background:var(--acc);z-index:1;}
+.weight-freq-handle{width:44px;height:5px;background:rgba(0,0,0,.15);border-radius:3px;margin:14px auto 0;}
+.weight-freq-header{padding:14px 20px 6px;position:relative;text-align:left;}
+.weight-freq-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;color:var(--t3);text-transform:uppercase;margin-bottom:6px;line-height:1.3;}
+.weight-freq-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:var(--t1);line-height:1.2;padding-right:48px;}
+.weight-freq-close{position:absolute;top:10px;right:14px;width:36px;height:36px;border-radius:50%;background:transparent;border:none;font-size:22px;color:var(--t2);cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;}
+.weight-freq-close:active{color:var(--t1);}
+.weight-freq-hint{font-family:'Syne',sans-serif;font-size:12px;color:var(--t3);margin:0 20px 12px;line-height:1.4;}
+.weight-freq-list{display:flex;flex-direction:column;gap:8px;padding:6px 16px 22px;}
+.weight-freq-opt{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--s1);border:1px solid var(--b1);border-radius:10px;cursor:pointer;transition:background .12s ease,border-color .12s ease;-webkit-tap-highlight-color:transparent;}
+.weight-freq-opt:active{background:var(--s2);}
+.weight-freq-opt-active{border-color:var(--acc);background:var(--acc-lt);}
+.weight-freq-opt-body{flex:1;min-width:0;}
+.weight-freq-opt-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;color:var(--t1);line-height:1.2;margin-bottom:3px;}
+.weight-freq-opt-desc{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.08em;color:var(--t3);text-transform:uppercase;}
+.weight-freq-opt-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--b2);background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;line-height:1;}
+.weight-freq-opt-active .weight-freq-opt-check{background:var(--acc);border-color:var(--acc);}
 
 /* ─── PIANO V4 Step C.6 — Card saltata + badge + bottoni skip ─── */
 /* Card saltata: bordo + bg attenuati + opacity ridotta + testi barrati grigi */
@@ -2862,7 +2902,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 11:25';
+const APP_VERSION = '2026.05.22 · 15:01';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -2990,6 +3030,8 @@ const ST = {
   // PIANO V4 Step D.1 (22 mag 2026) — Modal "Pesati ora" + cache weight_logs
   weighInSheet: null,      // { value:number(kg, 0.1 precision), saving:bool } | null
   weightLogs: null,        // null=non caricato, []=vuoto, [{date,weight_kg}...] sorted DESC by date
+  // STEP D.2 (22 mag 2026) — selettore frequenza pesate (componente riusabile)
+  weightFreqSheet: null,   // { open:bool } | null — bottom sheet 4 opzioni daily/every3/weekly/flexible
   extraUndoToast: null,    // { ids:[...], expiresAt, timer } — toast Mail iOS post-submit Conferma Extra
   packageEditor: null,     // { mode:'create'|'edit', packageId, name, emoji, time, items, expandedItem, dirty, saving }
   catalogContext: null,    // { mode:'addToPackage'|'addExtra', packageId?, time? } — modalità apertura openCatalogModal
@@ -10525,6 +10567,14 @@ function renderOggi(){
       html += `<div style="margin:14px 0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;"><div style="display:flex;align-items:center;gap:8px;"><input type="time" id="log-time" value="${ST.logTime||new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}" style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t1);background:var(--b2);border:1px solid var(--b1);border-radius:6px;padding:4px 6px;width:90px;" onchange="ST.logTime=this.value"/></div><button onclick="ST.logOpen=false;ST.smartForm={items:[],freeText:'',notes:'',analyzing:false,editingMealId:null,editingSlot:null,editingTime:null,editingDescription:''};renderOggi();" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--t3);line-height:1;">×</button></div><div class="slot-tabs">${MEAL_SLOTS.slice(0,3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div class="slot-tabs" style="grid-template-columns:repeat(3,1fr);">${MEAL_SLOTS.slice(3).map(sl=>`<button class="slot-tab ${ST.logSlot===sl.id?'active':''}" onclick="setLogSlot('${sl.id}')"><span class="slot-icon">${sl.icon}</span>${sl.label}</button>`).join('')}</div><div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin:8px 0 10px;">${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.time} · ${MEAL_SLOTS.find(s=>s.id===ST.logSlot)?.desc}</div>${renderRegistraPasto()}</div>`;
     }
 
+    // ── STEP D.2 (22 mag 2026): banner reminder pesata ──
+    // Lazy-load ST.weightLogs se non ancora caricato (utente apre Oggi senza
+    // essere passato da Piano V4). Al ritorno re-render per aggiornare il banner.
+    if(ST.weightLogs === null && ST.user && ST.user.id && ST.user.id !== 'test-user-001' && typeof loadWeightLogs === 'function') {
+      loadWeightLogs().then(function() { if(ST.page === 'oggi') renderOggi(); });
+    }
+    html += renderWeightReminderBannerOggi();
+
     // ── TIMELINE MISTA: pasti registrati + pianificati dal piano coach ──
     const pianoToday = getTodayPianoMeals();
     ST._plannedRows = []; // popolato durante il render — indici letti da openLogFromPlanned(idx)
@@ -12330,9 +12380,13 @@ async function confirmWeighIn() {
   }
   // Refresh cache locale → la prossima apertura card peso/sheet usa il nuovo valore
   await loadWeightLogs();
+  // Step D.2: reset anti-nag dismiss counter — utente si è pesato, prossimo ciclo
+  // riparte da 0 (al primo dismiss futuro silenzio 48h, non 7gg/28gg).
+  if(typeof _weightReminderResetDismiss === 'function') _weightReminderResetDismiss();
   closeWeighInSheet();
   showToast('Pesata salvata · ' + v.toFixed(1) + ' kg', '⚖️');
   if(ST.page === 'piano') renderPianoV4();
+  else if(ST.page === 'oggi') renderOggi(); // re-render banner reminder (deve sparire)
 }
 
 function renderWeighInSheet() {
@@ -12367,10 +12421,213 @@ function renderWeighInSheet() {
       </div>
       <div class="pianov4-weighin-cta-wrap">
         <button class="pianov4-weighin-cta" onclick="confirmWeighIn()">Conferma</button>
+        <button class="pianov4-weighin-freq-link" onclick="openWeightFreqSheet()">Promemoria: ${esc(WEIGHT_FREQ_LABELS[_weightReminderGetMode()].short)} ›</button>
       </div>
     </div>
   </div>`;
   const existing = document.getElementById('pianov4-weighin-sheet');
+  if(existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ─── STEP D.2 (22 mag 2026): banner reminder pesata + selettore frequenza ───
+// Logica anti-nag + helper soglia + componente bottom-sheet riusabile per
+// modalità di tracking peso (verrà richiamato anche dall'onboarding M1 in
+// futuro). Letti/scritti localStorage keys:
+//   zt_weight_reminder_dismissed_at  (timestamp ms ultimo dismiss)
+//   zt_weight_reminder_dismiss_count (numero dismiss consecutivi → silenzio crescente)
+// Mappa soglia (giorni) per profile.weight_tracking_mode:
+//   daily=1 · every3=3 · weekly=7 · flexible=14 (default)
+// Mappa silenzio anti-nag (ms) per dismiss_count:
+//   1 → 48h · 2 → 7gg · 3+ → 28gg
+
+const WEIGHT_FREQ_THRESHOLDS = { daily:1, every3:3, weekly:7, flexible:14 };
+const WEIGHT_FREQ_LABELS = {
+  daily:    { name:'Ogni giorno',   desc:'Reminder se passa 1 giorno',  short:'ogni giorno' },
+  every3:   { name:'Ogni 3 giorni', desc:'Reminder se passano 3 giorni',short:'ogni 3 giorni' },
+  weekly:   { name:'Ogni settimana',desc:'Reminder dopo 7 giorni',      short:'ogni settimana' },
+  flexible: { name:'Libero',        desc:'Reminder dopo 14 giorni',     short:'libero' },
+};
+const WEIGHT_REMINDER_DISMISS_MS = [
+  48 * 3600 * 1000,        // 1° dismiss → 48h
+  7  * 24 * 3600 * 1000,   // 2° dismiss → 7gg
+  28 * 24 * 3600 * 1000,   // 3°+ dismiss → 28gg
+];
+
+function _weightReminderGetMode() {
+  const m = (ST.profile && ST.profile.weight_tracking_mode) || 'flexible';
+  return WEIGHT_FREQ_THRESHOLDS[m] != null ? m : 'flexible';
+}
+
+function _weightReminderDaysSinceLast() {
+  // Conta giorni di differenza tra oggi e l'ultima riga weight_logs (ST.weightLogs[0]).
+  // Se null/vuoto → null (= "mai pesato" → soglia considerata sempre superata)
+  const wl = ST.weightLogs;
+  if(!wl || wl.length === 0) return null;
+  const lastDateStr = wl[0].date; // YYYY-MM-DD
+  if(!lastDateStr) return null;
+  const last = new Date(lastDateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const diffMs = today.getTime() - last.getTime();
+  if(diffMs < 0) return 0; // log futuro per qualche motivo → 0
+  return Math.floor(diffMs / (24 * 3600 * 1000));
+}
+
+function _weightReminderInSilencePeriod() {
+  try {
+    const ts = parseInt(localStorage.getItem('zt_weight_reminder_dismissed_at') || '0', 10);
+    const count = parseInt(localStorage.getItem('zt_weight_reminder_dismiss_count') || '0', 10);
+    if(!ts || count <= 0) return false;
+    const idx = Math.min(count - 1, WEIGHT_REMINDER_DISMISS_MS.length - 1);
+    const silenceMs = WEIGHT_REMINDER_DISMISS_MS[idx];
+    return (Date.now() - ts) < silenceMs;
+  } catch(e) { return false; }
+}
+
+function _weightReminderShouldShow() {
+  // Render banner SE:
+  //  - modalità tracking definita (anche flexible è valida)
+  //  - giorni dall'ultima pesata ≥ soglia modalità (o null = mai pesato)
+  //  - NON siamo nella finestra di silenzio post-dismiss
+  if(_weightReminderInSilencePeriod()) return false;
+  const mode = _weightReminderGetMode();
+  const threshold = WEIGHT_FREQ_THRESHOLDS[mode];
+  const days = _weightReminderDaysSinceLast();
+  if(days === null) return true; // mai pesato → mostra
+  return days >= threshold;
+}
+
+function dismissWeightReminder() {
+  try {
+    const prev = parseInt(localStorage.getItem('zt_weight_reminder_dismiss_count') || '0', 10);
+    localStorage.setItem('zt_weight_reminder_dismiss_count', String(prev + 1));
+    localStorage.setItem('zt_weight_reminder_dismissed_at', String(Date.now()));
+  } catch(e) {}
+  // Re-render tab Oggi per nascondere il banner
+  if(ST.page === 'oggi') renderOggi();
+}
+
+function _weightReminderResetDismiss() {
+  // Chiamato post-conferma pesata (confirmWeighIn) → silenzio azzerato,
+  // prossimo ciclo riparte da count=0 (48h al primo dismiss futuro).
+  try {
+    localStorage.removeItem('zt_weight_reminder_dismiss_count');
+    localStorage.removeItem('zt_weight_reminder_dismissed_at');
+  } catch(e) {}
+}
+
+function renderWeightReminderBannerOggi() {
+  // Helper render banner reminder pesata. Inserito in renderOggi prima della
+  // timeline pasti. Mai chiamato fuori da renderOggi (banner SOLO tab Oggi).
+  if(!_weightReminderShouldShow()) return '';
+  const days = _weightReminderDaysSinceLast();
+  let text;
+  if(days === null) {
+    text = 'Non hai ancora registrato una pesata. Vuoi farlo ora per iniziare il trend?';
+  } else {
+    const giorni = days === 1 ? 'giorno' : 'giorni';
+    text = `Sono passati ${days} ${giorni} dall'ultima pesata. Vuoi aggiornare il trend?`;
+  }
+  return `<div class="weight-reminder-banner" role="status" aria-live="polite">
+    <span class="weight-reminder-icon" aria-hidden="true">⚖️</span>
+    <div class="weight-reminder-body">
+      <p class="weight-reminder-text">${esc(text)}</p>
+    </div>
+    <div class="weight-reminder-actions">
+      <button class="weight-reminder-cta" onclick="openWeighInSheet()">Pesati ora</button>
+      <button class="weight-reminder-dismiss" onclick="dismissWeightReminder()">Più tardi</button>
+    </div>
+  </div>`;
+}
+
+// ── Selettore frequenza (componente riusabile) ──
+// openWeightFreqSheet → bottom sheet 4 opzioni. selectWeightFreq aggiorna
+// profiles.weight_tracking_mode su Supabase e re-renderizza la pagina corrente.
+// Pensato per essere richiamato anche dall'onboarding M1 in futuro (non
+// agganciato ora — fuori scope Step D.2).
+
+function openWeightFreqSheet() {
+  ST.weightFreqSheet = { open: true };
+  renderWeightFreqSheet();
+}
+
+function closeWeightFreqSheet() {
+  const el = document.getElementById('weight-freq-sheet');
+  if(el) {
+    const screen = el.querySelector('.weight-freq-screen');
+    if(screen) screen.classList.add('dismissing');
+    setTimeout(function() {
+      ST.weightFreqSheet = null;
+      const ex = document.getElementById('weight-freq-sheet');
+      if(ex) ex.remove();
+    }, 200);
+  } else {
+    ST.weightFreqSheet = null;
+  }
+}
+
+async function selectWeightFreq(mode) {
+  if(!WEIGHT_FREQ_THRESHOLDS[mode]) return;
+  // Optimistic update locale → re-render immediato + chiusura sheet.
+  // Upsert su Supabase in background; rollback con toast errore se fallisce.
+  const prev = (ST.profile && ST.profile.weight_tracking_mode) || 'flexible';
+  if(!ST.profile) ST.profile = {};
+  ST.profile.weight_tracking_mode = mode;
+  closeWeightFreqSheet();
+  // Se il modal peso è aperto, ri-renderizzalo per aggiornare il link "Promemoria: <label>"
+  if(ST.weighInSheet) renderWeighInSheet();
+  // Refresh pagina corrente (banner Oggi può cambiare visibilità in base alla soglia)
+  if(ST.page === 'oggi') renderOggi();
+  else if(ST.page === 'piano') renderPianoV4();
+  // Persistenza
+  if(ST.user && ST.user.id && ST.user.id !== 'test-user-001') {
+    const { error } = await supa.from('profiles')
+      .update({ weight_tracking_mode: mode })
+      .eq('id', ST.user.id);
+    if(error) {
+      console.error('selectWeightFreq update error:', error);
+      // Rollback locale + re-render
+      ST.profile.weight_tracking_mode = prev;
+      if(ST.page === 'oggi') renderOggi();
+      else if(ST.page === 'piano') renderPianoV4();
+      showToast('Errore salvataggio: riprova', '⚠️');
+      return;
+    }
+  }
+  const lbl = WEIGHT_FREQ_LABELS[mode]?.short || mode;
+  showToast('Promemoria: ' + lbl, '✅');
+}
+
+function renderWeightFreqSheet() {
+  if(!ST.weightFreqSheet) return;
+  const currentMode = _weightReminderGetMode();
+  const optsHTML = ['daily','every3','weekly','flexible'].map(function(m) {
+    const isActive = m === currentMode;
+    const info = WEIGHT_FREQ_LABELS[m];
+    return `<button class="weight-freq-opt${isActive ? ' weight-freq-opt-active' : ''}"
+        onclick="selectWeightFreq('${m}')" aria-pressed="${isActive}">
+      <div class="weight-freq-opt-body">
+        <div class="weight-freq-opt-name">${info.name}</div>
+        <div class="weight-freq-opt-desc">${info.desc}</div>
+      </div>
+      <span class="weight-freq-opt-check">${isActive ? '✓' : ''}</span>
+    </button>`;
+  }).join('');
+  const html = `<div id="weight-freq-sheet" class="weight-freq-overlay" onclick="if(event.target===this)closeWeightFreqSheet()">
+    <div class="weight-freq-screen">
+      <div class="weight-freq-band"></div>
+      <div class="weight-freq-handle"></div>
+      <div class="weight-freq-header">
+        <div class="weight-freq-eyebrow">PROMEMORIA PESATA</div>
+        <div class="weight-freq-title">Ogni quanto pesarti?</div>
+        <button class="weight-freq-close" onclick="closeWeightFreqSheet()" aria-label="Chiudi">×</button>
+      </div>
+      <p class="weight-freq-hint">Decidi tu il ritmo. Ti ricorderemo di registrarti solo quando passa il tempo che scegli.</p>
+      <div class="weight-freq-list">${optsHTML}</div>
+    </div>
+  </div>`;
+  const existing = document.getElementById('weight-freq-sheet');
   if(existing) existing.remove();
   document.body.insertAdjacentHTML('beforeend', html);
 }
