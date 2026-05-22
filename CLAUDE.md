@@ -375,17 +375,20 @@ Il bootstrap (in fondo al file, dentro `setTimeout(..., 1800)`) gestisce questi 
 ## Schema Supabase
 
 ### Tabella `meals`
+**Schema reale verificato su Supabase 22 mag 2026** (sostituisce documentazione precedente):
+
 | Colonna | Tipo | Note |
 |---|---|---|
 | `id` | `uuid` PK | |
 | `user_id` | `uuid` NOT NULL | FK → auth.users |
 | `date` | `date` NOT NULL | YYYY-MM-DD |
 | `time` | `text` | HH:MM |
-| `slot` | `text` | colazione / pranzo / cena / snack |
-| `description` | `text` NOT NULL | |
-| `kcal` | `integer` | stimato AI |
-| `protein / carbs / fat` | `integer` | grammi |
+| `slot` | `text` | `colazione / snack_mattina / pranzo / snack_pomeriggio / cena / extra` |
+| `description` | `text` NOT NULL | **nome cibo / descrizione pasto — colonna autoritativa per il nome.** NON esistono `name` o `food_name` |
+| `kcal` | `numeric(6,1)` | totale pasto (decimali OK dopo migrazione mag 2026) |
+| `protein / carbs / fat` | `numeric(5,1)` | grammi totali pasto |
 | `notes` | `text` | nullable |
+| `created_at` | `timestamptz` | default `now()` |
 
 RLS abilitata — policy: `auth.uid() = user_id`.
 
@@ -406,8 +409,28 @@ Default applicati automaticamente a tutte le righe esistenti via ALTER ADD COLUM
 Integratori per user_id, editabili inline.
 
 ### Tabella `supplements_log`
-Tracciamento assunzioni giornaliere per data e nome integratore.
+**Schema reale verificato su Supabase 22 mag 2026** (sostituisce documentazione precedente, in particolare smentisce le "9 colonne estese Step 2" descritte nella sezione "Flusso Registra Extra Step 2" — quella migration NON è stata applicata in produzione):
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → auth.users |
+| `date` | `date` NOT NULL | YYYY-MM-DD |
+| `slot` | `text` | HH:MM dello slot di assunzione |
+| `supplement_name` | `text` NOT NULL | **nome integratore — colonna autoritativa.** Niente `codice`, niente `supplement_codice` |
+| `taken` | `boolean` | true=assunto, false=registrato ma non spuntato (verificare default DB) |
+| `is_extra` | `boolean` | true=registrato come EXTRA da modulo Integratori; false=integratore standard di pacchetto |
+| `created_at` | `timestamptz` | default `now()` |
+
 UNIQUE constraint su `(user_id, date, supplement_name)` — aggiunto aprile 2026 dopo cleanup duplicati.
+
+**Colonne NON presenti** (smentite da query SELECT verificate): nessuna `dose`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `costo`, `supplement_codice`, `is_second_consumption`. Le macro per gli extras vengono derivate runtime via lookup su `nutrilite_catalog` (per `codice`/`nome`) o su `supplements` (per `name`), NON salvate per riga. Lo snapshot immutabile descritto nella sezione Step 2 (18 mag 2026) NON è attivo in produzione.
+
+**Conseguenza pratica per UI**: il rendering della timeline Oggi deve usare 2 path distinti senza sovrapposizioni:
+- righe con `is_extra=true` → letto SOLO da `loadExtras` → renderizzato come case `'extra'` (card mint compatta tag EXTRA)
+- righe con `is_extra=false` → letto SOLO da `loadTodaySuppLog` → renderizzato come case `'supp'` (gruppo standard) o `'supp_log'` (legacy fuori gruppo)
+
+Fix applicato il 22 mag 2026 (vedi entry "22 mag 2026 — Fix triplo conteggio integratori" in sezione "Cosa abbiamo fatto"): `loadTodaySuppLog` ora aggiunge `.eq('is_extra', false)`.
 
 ### Tabella `supplement_packages` (16 maggio 2026)
 Pacchetti orari di integratori dell'utente (es. "Mattina" alle 08:45). Architettura nuova introdotta col refresh Integratori v3.
@@ -1707,6 +1730,28 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 22 maggio 2026 — Step D.1 modal pesata + Fix triplo conteggio integratori ✅
+
+Due interventi nello stesso ciclo:
+
+**1. Step D.1 — Modal "Pesati ora"** (commit `5280f9b`, APP_VERSION `v2026.05.22 · 10:19`)
+- Bottom sheet slide-up collegato al CTA card peso Piano V4 (prima era disabled tratteggiato)
+- Stepper `−/+` 0.1 kg + tap su numero → keyboard iOS via `<input type="number">` invisibile sopra il display (combinazione, non XOR)
+- Default value smart: `ST.weightLogs[0]` → `getLatestBodyData()` → `profile.weight_kg` → 70.0
+- Conferma → upsert su `weight_logs` (`onConflict: 'user_id,date'`) + toast `⚖️ Pesata salvata · XX.X kg` + refresh card peso
+- Card peso Piano V4 ora legge prima da `ST.weightLogs` (cache locale), fallback `getLatestBodyData`. Cache caricata lazy al primo render Piano + refresh dopo ogni pesata.
+- Riusa keyframes `pianov4SubstSlideUp/Down` esistenti; scrim warm-black `rgba(20,15,5,0.46)`; banda evergreen 3px + radius 16px alto; CTA evergreen fill "Conferma".
+- NON tocca `body_logs`/`body_measurements` (separati per modulo Body e check M2).
+
+**2. Fix triplo conteggio integratori** (in coda allo stesso commit del 22 mag — vedi nuova entry post-deploy)
+Diagnosi DB su utente Ignazio: 1 sola riga `supplements_log` (slot 10:00, is_extra=true, taken=false) appare 3 volte in UI ("INTEGRATORI EXTRA · 10:00 · 203 kcal" + "0.5 barretta · 102 kcal · EXTRA" espansa + "GRUPPO SNACK · 17:00 · 203 kcal"). Causa: `loadTodaySuppLog` ([riga 4664](zona-tracker.html:4664)) leggeva tutte le righe `supplements_log` del giorno **senza filtrare `is_extra`** → le righe Step 2 (is_extra=true, già gestite via `loadExtras` → `ST.extras`) finivano anche in `day.rawSuppLogs` + `day.suppsTaken` → doppio render (`case 'supp_log'` + `case 'supp'` gruppo) + collisione con eventuali pacchetti standard che includono lo stesso nome.
+
+**Fix mirato**: aggiunto `.eq('is_extra', false)` alla query di `loadTodaySuppLog`. Le righe extras vivono ora **esclusivamente** in `ST.extras` (canale dedicato) e sono renderizzate dal solo case `'extra'`. Le righe standard (`is_extra=false`) continuano a vivere in `rawSuppLogs`/`suppsTaken` e a essere renderizzate da `'supp'` (gruppo) o `'supp_log'` (legacy fuori gruppo).
+
+**Schemi DB CLAUDE.md corretti**: aggiornate sezioni `meals` e `supplements_log` con schemi reali verificati via SQL Editor. La `meals.description` è la colonna autoritativa per il nome (NON `name`/`food_name`). `supplements_log` ha SOLO 8 colonne (`id, user_id, date, slot, supplement_name, taken, is_extra, created_at`) — le "9 colonne estese Step 2" descritte nella sezione "Flusso Registra Extra Step 2" (18 mag 2026) **NON sono state applicate in produzione**. Lo snapshot immutabile macro/dose/costo non esiste in DB → le macro extras vengono derivate runtime via lookup `nutrilite_catalog`/`supplements`. Diagnostica completa in [`DIAGNOSTICA_TRIPLO_CONTEGGIO_REPORT.md`](DIAGNOSTICA_TRIPLO_CONTEGGIO_REPORT.md).
+
+**Conseguenza UX per utente Ignazio dopo deploy**: la barretta "High Protein Energy Bar Cioccolato" (registrata come extra slot 10:00) **diventa invisibile** in tab Oggi finché lo schema `supplements_log` non viene esteso con le colonne macro/dose o finché `loadExtras` non viene reso robusto al lookup catalog (fix collaterale opzionale, vedi TODO post-D.1). Comportamento atteso e accettabile: meglio "0 render" che "3 render dello stesso evento". L'utente può sempre registrare la barretta tramite il pacchetto SNACK 17:00 (case `'supp'` standard) che continua a funzionare.
 
 ### 21 maggio 2026 — Sessione 3 / Step C: Overlay Dettaglio Giorno completo ✅
 

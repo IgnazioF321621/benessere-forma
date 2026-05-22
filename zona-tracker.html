@@ -2862,7 +2862,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 10:19';
+const APP_VERSION = '2026.05.22 · 11:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4662,12 +4662,20 @@ async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
 }
 
 async function loadTodaySuppLog() {
+  // Fix 22 mag 2026: filtra is_extra=false per evitare doppio path di lettura.
+  // Le righe is_extra=true vivono nel canale dedicato ST.extras (loadExtras) e
+  // sono renderizzate da case 'extra' della timeline. Senza questo filtro le stesse
+  // righe finivano ANCHE in day.rawSuppLogs e day.suppsTaken → render doppio
+  // (case 'supp_log' + case 'supp' gruppo se il nome match un ST.supps con
+  // qualsiasi slot di config). Causa principale del triplo conteggio visivo
+  // diagnosticato il 22 mag (vedi DIAGNOSTICA_TRIPLO_CONTEGGIO_REPORT.md).
   const today = todayKey();
   const {data, error} = await supa
     .from('supplements_log')
     .select('supplement_name, slot')
     .eq('user_id', ST.user.id)
-    .eq('date', today);
+    .eq('date', today)
+    .eq('is_extra', false);
   if (error || !data) return;
   const day = getDay(today);
   day.suppsTaken = [];
