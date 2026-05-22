@@ -32,8 +32,9 @@ https://github.com/IgnazioF321621/benessere-forma
    - Sessione 2 — Step B: UI vista principale ✅ (20 mag, catena 7 commit `272e375`→`2984704`)
    - Sessione 3 — Step C: Overlay Dettaglio Giorno ✅ (20-21 mag, catena 8 commit `5384085`→`2f041f7`, APP_VERSION finale `v2026.05.21 · 11:15`). Overlay completo: scaffolding + empty state + 5 demo always-on + banner ESEMPIO DIMOSTRATIVO + totalizzatore range ±10% + 3 azioni ACCETTA/SOSTITUISCI/SALTO funzionanti + persistenza localStorage namespace `zona_pianov4_*`
    - Sessione 4 — Step D: Modal peso + Fix triplo render barretta + Banner reminder + loadExtras robusto + R3a getAdvice ✅ (22 mag, catena 4 commit `5280f9b`→`c32f141`→`1be5048`→`b4259f5`, APP_VERSION finale `v2026.05.22 · 15:26`). R3a chiuso (AI prompt vede integratori); R3b resta in Step F; R1 dedup resta in Step F (design già completo).
-   - **PROSSIMA**: Sessione 5 / Step E — Welcome overlay domenicale (senza notifiche push iOS, Opzione 3 scelta)
-   - Sessioni 5-9: vedi sezione "Tab Piano v4" per dettaglio
+   - Sessione 5 — Step E: Welcome overlay domenicale ✅ (22 mag, 2 commit `c23deeb` UI + `f8e3064` trigger automatico, APP_VERSION finale `v2026.05.22 · 19:27`). Overlay fullscreen 2 varianti A/B che annuncia draft `weekly_plans`; trigger automatico giorno+ora+flag; bypass collaudo `?welcome=1`/`ztTestWelcome()`; diagnostica `?welcomeDebug=1`/`ztWelcomeWhy()`. **STEP E CHIUSO ✅** — collaudato dal vivo, anti-nag verificato.
+   - **PROSSIMA**: Sessione 6 / Step F — Worker AI cron + generazione piano settimanale (genera le righe draft che il welcome overlay Step E già sa leggere). Vincolo temporale: modulo Nutrition (E+F) entro 28 mag 2026.
+   - Sessioni 6-9: vedi sezione "Tab Piano v4" per dettaglio
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -63,6 +64,7 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Step D — Modal peso + banner reminder + R3a fix `getAdvice`**~~ ✅ chiuso 22 mag 2026 (Sessione 4, catena 4 commit `5280f9b`→`b4259f5`). Vedi entry log dettagliata in "Cosa abbiamo fatto".
 
 **TODO Step F (quando arriverà)**:
+- **Nodo logico aperto — recupero "giorno dopo" vs lunedì (welcome overlay Step E)**: con `profiles.plan_generation_day` ammesso solo `'fri'/'sat'/'sun'` (vedi vincolo DB sotto), il "giorno dopo" calcolato da Step E può cadere di **lunedì** — che è anche `week_start` della nuova settimana di piano (settimana ISO = lun-dom). Va chiarito in Step F l'incrocio tra "recupero del welcome della settimana che sta per iniziare" e "passaggio alla settimana nuova". Esempi pratici: piano=ven → "giorno dopo" = sab; piano=sab → "giorno dopo" = dom; piano=dom → "giorno dopo" = lun (collisione con `week_start`+1). Decisione rinviata a quando il piano prende vita coi pasti veri. **Inoltre**: il TEST del recupero giorno-dopo non è stato eseguito dal vivo durante Step E (con `plan_generation_day='thu'` il DB rifiuta l'UPDATE per il CHECK). Da verificare nel collaudo Step F un sabato (piano=ven) o una domenica (piano=sab).
 - **R1 dedup integratori — implementazione**: nuovo campo `supplements_log.is_second_consumption`, modal blocco preventivo Momento 2 al submit extras, tag visivo `2° CONSUMO` in timeline Oggi/Analisi. Specifica completa in sezione "Design R1 dedup integratori".
 - **R3b fix `generaPianoAI`**: includere nel prompt AI piano settimanale gli integratori abituali dell'utente (lista da `ST.supps` attivi) con macro reali, così che il piano possa essere bilanciato considerando l'apporto base degli integratori.
 - **Estendere `dbAddMeal(meal, date)` per supportare data custom** (oggi hardcoda `date: ST.activeDay`): bloccare ACCETTA su giorni non-oggi era workaround C.4. In Step F tester potranno programmare pasti per giorni futuri dal piano AI. Helper proposto: `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`
@@ -195,11 +197,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (21 maggio 2026, post-Sessione 3 / Step C Tab Piano v4)
+### Stato moduli Nutrition (22 maggio 2026 sera, post-Sessione 5 / Step E Tab Piano v4)
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
-- **Tab Piano v4**: 🟡 Step A+B+C+D ✅ chiusi (modal pesata + banner reminder + selettore frequenza + loadExtras robusto + R3a getAdvice). Step E-F-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: E welcome overlay domenicale, F Worker AI cron + weekly_plans + R1 dedup + R3b piano AI, G memoria AI + adattamento, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: Step E (welcome overlay domenicale, Opzione 3 = senza push iOS).
+- **Tab Piano v4**: 🟡 Step A+B+C+D+**E** ✅ chiusi. Step F-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: ~~E welcome overlay domenicale~~ ✅, F Worker AI cron + scrittura weekly_plans + R1 dedup + R3b piano AI, G memoria AI + adattamento, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: Step F (Worker AI che genera le righe draft che Step E già sa leggere). Vincolo temporale: modulo Nutrition (E+F) entro 28 mag 2026.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -401,11 +403,13 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
 
 **Campi coach Tab Piano v4** (aggiunti 20 maggio 2026):
-- `plan_generation_day` text NOT NULL default `'sun'` — CHECK `fri/sat/sun/custom` — quando il Worker AI genera il piano settimanale
+- `plan_generation_day` text NOT NULL default `'sun'` — **CHECK constraint `profiles_plan_day_check` ammette SOLO `'fri'/'sat'/'sun'`** (verificato 22 mag durante collaudo Step E: `UPDATE … SET plan_generation_day='thu'` viene rifiutato dal DB). Quando il Worker AI genera il piano settimanale. **Nota design vs DB**: la documentazione design 19 mag prevedeva un quarto valore `'custom'` per scelta libera del giorno, ma il CHECK in produzione **NON lo include** — quando arriverà l'onboarding M1 esteso (priorità #6) il vincolo dovrà essere esteso prima di esporre l'UI.
 - `plan_generation_time` text NOT NULL default `'20:00'` — formato HH:MM (validato lato client)
 - `weight_tracking_mode` text NOT NULL default `'flexible'` — CHECK `daily/every3/weekly/flexible` — preferenza pesate Livello 1
 
 Default applicati automaticamente a tutte le righe esistenti via ALTER ADD COLUMN NOT NULL DEFAULT. UI per modificarli verrà aggiunta nel modal Impostazioni profilo nella sessione "Refresh onboarding M1" (post Tab Piano v4 V1, vedi priorità #6).
+
+**Lettura dal codice**: `plan_generation_day` e `plan_generation_time` vengono letti per la prima volta da Step E (welcome overlay) — funzione `_pianoV4ComputeAutoWelcomeStatus` in `_pianoV4MaybeAutoWelcome`. Mappa `_PLAN_DAY_MAP` traduce abbreviazioni 3 lettere → `Date.getDay()` (0=dom..6=sab). Valori non in `{fri,sat,sun}` (es. eventuale `'custom'` futuro o seed inatteso) → fallback `'sun'` con commento esplicativo nel codice.
 
 ### Tabella `supplements`
 Integratori per user_id, editabili inline.
@@ -567,6 +571,8 @@ Contenitore del piano settimanale generato dall'AI. Una riga = una settimana per
 | `created_at` | `timestamptz` NOT NULL | default `now()` |
 
 Constraint: `UNIQUE (user_id, week_start)` — un solo piano per settimana per utente. Flusso status: `draft` (appena generato dall'AI) → `active` (utente ha visto welcome overlay e cliccato "Vedi piano") → `archived` (settimana passata). Indice: `(user_id, week_start DESC)`. RLS: 4 own + 1 admin.
+
+**⚠️ Dati di test preservati (22 mag 2026)**: esiste una riga `draft` per Ignazio (user_id `bb6fa499-1364-4d8d-8ce6-774c8e392306`), `week_start='2026-05-25'`, target `2200/187/209/68` kcal/P/C/F, `ai_reasoning` popolato con testo coach reale. È il banco di prova del welcome overlay Step E **e il modello-contratto per Step F** (il Worker AI dovrà generare righe identiche per struttura). **NON cancellare** finché Step F non è chiuso. Per ri-testare il welcome overlay dopo aver premuto "Vedi piano →" (che porta status='active'): `UPDATE weekly_plans SET status='draft' WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25';`.
 
 ### Tabella `weekly_plan_meals` (20 maggio 2026)
 I pasti veri proposti dall'AI. Una riga = un pasto per un giorno e uno slot specifici. Figlia di `weekly_plans`.
@@ -1802,6 +1808,67 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 22 maggio 2026 sera — Sessione 5 / Step E: Welcome overlay domenicale ✅ STEP E CHIUSO
+
+Chiusura completa dello Step E del Tab Piano v4 in 2 commit incrementali sullo stesso branch `main`, con deploy + smoke test dal vivo + collaudo positivo. Sessione doppia (UI prima, trigger automatico dopo) per validare prima la cosmetica e poi la logica invisibile.
+
+**PARTE 1 — UI overlay fullscreen + lettura dati reali** (commit `c23deeb`, APP_VERSION `v2026.05.22 · 17:17`)
+- Nuovo overlay fullscreen bone pieno (NON scrim semitrasparente — cartello a tutto schermo) che annuncia il piano nutrizionale della settimana successiva. Render via `openPianoV4WelcomeOverlay(mode)` / `renderPianoV4WelcomeOverlay()` / `closePianoV4WelcomeOverlay()`.
+- Lettura DB: `_pianoV4LoadDraftPlan()` interroga `weekly_plans` WHERE `user_id=ST.user.id` AND `status='draft'` ORDER BY `week_start DESC` LIMIT 1. Se nessuna draft → return silenzioso (overlay non si apre, nessun errore visibile).
+- Confronto target draft vs `ST.TARGET` via `_pianoV4WelcomeComputeDiff(draft)` che ritorna `{kcal,protein,carbs,fat,anyDiff}` con `dir: 'up'|'down'|'same'` per ogni macro.
+- **2 varianti card centrale** scelte automaticamente in base ad `anyDiff`:
+  - **VARIANTE A "ADATTAMENTO PROPOSTO"** (almeno un target differisce): KCAL dominante con vecchio striked + freccia + nuovo Mono 700 38px + pill delta evergreen `↓ −N KCAL` (terracotta se up). Poi 3 macro in riga **nell'ordine canonico Carbo→Prot→Grassi** (logica Zona 40-30-30) colorati con `var(--carb)/--prot/--fat`, ognuno con vecchio striked + freccia + nuovo + pill delta.
+  - **VARIANTE B "OBIETTIVI INVARIATI"** (tutti uguali): check evergreen + titolo "Gli obiettivi restano invariati" + tile compatto coi 4 target attuali nello stesso ordine.
+- Voce del coach: tile mint `var(--acc-lt)` con icona ✦ + label Mono caps "VOCE DEL COACH" + testo `draft.ai_reasoning` in italic Syne 13.5.
+- 2 CTA in fondo:
+  - **"Vedi piano →"** evergreen fill 52px: `pianoV4WelcomeConfirmAndOpen()` → UPDATE `weekly_plans SET status='active' WHERE id=draft.id AND user_id=ST.user.id` → `showPage('piano')` → `renderPianoV4()`. Disabilita CTA durante submit, gestisce errori con toast.
+  - **"Più tardi"** testo grigio centrato: `pianoV4WelcomeLater()` → chiude e basta. **NESSUNA mutation DB** (status resta `'draft'`).
+- **Forzatura collaudo** (essenziale per testing senza aspettare il trigger reale):
+  - `window.ztTestWelcome()` da console
+  - `?welcome=1` in URL → `_pianoV4MaybeForceWelcomeFromUrl()` apre overlay con `mode='force-test'` 250ms dopo `showPage('home')` nei 3 rami di `loadAndStart`
+- State nuovo: `ST.pianoV4WelcomeOverlay = { draft, diff, submitting, mode } | null`.
+- Design system: solo token esistenti — `var(--bg)` bone, `var(--acc)` evergreen, `var(--acc-lt)` mint, `var(--carb)/--prot/--fat` per macro. Syne 700/600 titoli, JetBrains Mono 700/500 numeri + label caps tracking .18-.25em.
+
+**PARTE 2 — Trigger automatico (giorno + ora + flag)** (commit `f8e3064`, APP_VERSION `v2026.05.22 · 19:27`)
+- Regola del trigger concordata con utente, implementata in `_pianoV4MaybeAutoWelcome()` (entry-point) + `_pianoV4ComputeAutoWelcomeStatus()` (computazione). L'overlay si apre AUTOMATICAMENTE se e solo se TUTTE vere:
+  1. Esiste una draft in `weekly_plans` (stessa fetch della Parte 1)
+  2. **GIORNO**: oggi (`Date.getDay()`) === `plan_generation_day` del profilo, OPPURE è `(planDow + 1) % 7` (recupero "giorno dopo" se l'utente non ha aperto l'app nel giorno-piano)
+  3. **ORA**: orario device (HH:MM) >= `plan_generation_time` del profilo
+  4. **FLAG**: localStorage `'zt_welcome_ack_<week_start>'` NON presente
+- Costante `_PLAN_DAY_MAP` mappa abbreviazioni 3 lettere → `Date.getDay()` (sun=0..sat=6). Estesa coi 7 giorni anche se CHECK DB ammette solo `fri/sat/sun` (vedi nota tecnica sotto).
+- **Prima volta che `plan_generation_day` e `plan_generation_time` vengono letti dal codice** (grep restituiva zero prima di questa sessione). Letti direttamente da `ST.profile.plan_generation_day` / `ST.profile.plan_generation_time` (riga grezza da Supabase).
+- **Scrittura del flag "visto"** (`_pianoV4WelcomeAckSet(weekStart)`):
+  - Avviene SOLO al click di un CTA (Vedi piano OR Più tardi)
+  - **E SOLO se `mode === 'auto'`** — le forzature collaudo (`mode='force-test'`) NON scrivono il flag → bypass totale, non sporca lo stato di produzione
+  - Se l'utente vede l'overlay e chiude l'app senza premere → flag NON scritto → riapparirà al prossimo trigger valido (volere esplicito: "premuto = visto")
+- Guard anti-doppio-render: `_pianoV4MaybeAutoWelcome` controlla `document.getElementById('pianov4-welcome-overlay')` prima di aprire. Se la forzatura ha già montato l'overlay, l'auto NON ri-apre.
+- **Diagnostica** (la logica è invisibile, un bug si manifesta come "overlay non appare" o "appare quando non dovrebbe"):
+  - `?welcomeDebug=1` → console.log `[welcome-auto] status: {…}` con esito di ogni condizione
+  - `window.ztWelcomeWhy()` esposto: chiamabile da console come `await ztWelcomeWhy()` → console.table + return dell'oggetto stato con campo `decision ∈ {open, skip-no-user, skip-no-profile, skip-no-draft, skip-day, skip-time, skip-ack}`
+- Aggancio bootstrap: `_pianoV4MaybeAutoWelcome()` chiamata nei 3 rami di `loadAndStart` (cache-hit, errore-rete-con-cache, cache-miss) subito dopo `_pianoV4MaybeForceWelcomeFromUrl`.
+
+**Collaudo dal vivo** (Ignazio + DB Supabase, esito positivo)
+- Variante A con dati reali: KCAL `2326 → 2200` (pill `↓ −126 KCAL`) + macro Carbo `221→209 ↓−12G` + Prot `198→187 ↓−11G` + Grassi `72→68 ↓−4G` + voce coach reale dal DB.
+- Forzatura `?welcome=1`: overlay si apre subito, "Più tardi" NON tocca il DB, "Vedi piano →" porta status a `active` e naviga al tab Piano.
+- Trigger automatico: con `plan_generation_day` impostato manualmente al giorno corrente + `plan_generation_time` ad un orario già passato + flag azzerato → overlay appare da solo all'avvio app.
+- Anti-nag: dopo click su CTA in modalità `auto`, flag scritto → riapertura app stesso giorno NON riapre l'overlay (decision = `skip-ack`).
+- Forzatura `?welcome=1` continua a funzionare ANCHE col flag presente (bypass totale).
+
+**Lezione 1 — Vincolo DB scoperto durante il collaudo**
+La tabella `profiles` ha un CHECK constraint `profiles_plan_day_check` che ammette per `plan_generation_day` SOLO i valori `'fri','sat','sun'`. Qualsiasi altro giorno (es. `'thu'`) viene rifiutato dal DB con errore. La documentazione design 19 mag prevedeva un quarto valore `'custom'` (per scelta libera del giorno via UI futura) ma il vincolo in produzione **non lo include**. Conseguenze:
+1. I test del trigger vanno fatti solo con `fri/sat/sun`.
+2. L'onboarding M1 esteso (priorità #6) dovrà offrire solo questi 3 giorni come scelta, OPPURE estendere il vincolo DB prima di esporre l'UI.
+3. Il TEST del recupero "giorno dopo" NON è stato eseguito (con `plan_generation_day='thu'` il DB rifiuta) — da verificare dal vivo un sabato (piano=ven) o una domenica (piano=sab).
+
+**Lezione 2 — Nodo logico aperto: "giorno dopo" vs lunedì**
+Con giorni-piano ammessi solo `ven/sab/dom`, il "giorno dopo" calcolato dal recupero può cadere di **lunedì** — che è anche `week_start` della settimana ISO. Va chiarito in Step F l'incrocio tra "recupero del welcome della settimana che sta per iniziare" e "passaggio alla settimana nuova". Esempi: piano=ven → giorno-dopo=sab (ok, stessa settimana); piano=sab → giorno-dopo=dom (ok, stessa settimana); piano=dom → giorno-dopo=lun (collisione con `week_start+1`). Decisione rinviata a Step F quando il piano prende vita coi pasti veri.
+
+**Dati di test preservati**: la riga draft di `weekly_plans` (user Ignazio, week_start `2026-05-25`, target `2200/187/209/68`, ai_reasoning popolato) **non va cancellata** — è il banco di prova del welcome overlay e il modello-contratto per Step F (vedi sezione `weekly_plans` aggiornata).
+
+**File toccati**: solo `zona-tracker.html` (+621 righe nette su 2 commit). Niente nuove dipendenze, niente modifiche schema DB, niente Worker AI ancora coinvolto.
+
+**Prossimo step**: Step F — generazione AI del piano settimanale (Cloudflare Worker su cron schedulato per `plan_generation_day` + `plan_generation_time`, prompt Groq `llama-3.3-70b-versatile`, scrittura multi-tabella `weekly_plans` + `weekly_plan_meals`). È il "postino" che scriverà le righe draft che Step E già sa leggere e annunciare. Vincolo temporale: modulo Nutrition (E+F) entro 28 mag 2026.
 
 ### 22 maggio 2026 pomeriggio — Step D.2 banner reminder + Step D.3 loadExtras robusto + R3a getAdvice ✅
 
