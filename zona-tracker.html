@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.23 · 14:51';
+const APP_VERSION = '2026.05.23 · 15:08';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12678,6 +12678,16 @@ function _pianoV4MondayToIso(monday) {
   return safe.toISOString().slice(0, 10);
 }
 
+// Helper: 'YYYY-MM-DD' → 'DD/MM/YYYY' (formato italiano per i toast del postino).
+// SOLO per i testi mostrati all'utente — il valore salvato in DB resta ISO.
+// Robusto a input malformati: se manca il pattern atteso ritorna l'input invariato.
+function _pianoV4IsoToItDate(iso) {
+  if (!iso || typeof iso !== 'string') return iso || '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  return m[3] + '/' + m[2] + '/' + m[1];
+}
+
 // Helper: lunedì della settimana che STA per iniziare.
 // Di domenica (giorno-piano tipico): getPianoV4WeekStart(1) = lunedì successivo.
 // Recupero "giorno dopo" (es. lunedì stesso): getPianoV4WeekStart(0) = lunedì di oggi.
@@ -12847,14 +12857,15 @@ async function _pianoV4MaybePostino(opts) {
       // Per le forzature di collaudo, se l'utente ha lanciato ztTestGenera() e
       // il guard è scattato, mostriamo un toast esplicativo (non in produzione).
       if (opts.toastOnSkip) {
+        const wsIt = _pianoV4IsoToItDate(status.weekStart || '');
         const msg = {
           'skip-no-user':    'Postino: nessun utente loggato',
           'skip-no-profile': 'Postino: profilo non caricato',
           'skip-day':        'Postino: oggi non è il giorno-piano',
-          'skip-existing':   'Postino: piano già esistente per la settimana ' + (status.weekStart || ''),
+          'skip-existing':   'Postino: piano già esistente per la settimana ' + wsIt,
           'skip-no-targets': 'Postino: obiettivi profilo mancanti o a 0',
         }[status.decision] || ('Postino: skip (' + status.decision + ')');
-        showToast(msg, 'ℹ️');
+        showToast(msg, 'ℹ️', 5500);
       }
       return status;
     }
@@ -12888,24 +12899,24 @@ async function _pianoV4MaybePostino(opts) {
         status.existingFound = true;
         status.existingStatus = 'race-conflict';
         if (debug) console.log('[postino] race-conflict: draft creata da un altro device per', status.weekStart);
-        if (opts.toastOnSkip) showToast('Postino: piano già creato (race) per ' + status.weekStart, 'ℹ️');
+        if (opts.toastOnSkip) showToast('Postino: piano già creato (race) per ' + _pianoV4IsoToItDate(status.weekStart), 'ℹ️', 5500);
         return status;
       }
       // Altro errore DB: log e ritorna status come "errore"
       console.warn('[postino] INSERT error:', error);
       status.decision = 'error-insert';
       status.error = error.message || String(error);
-      if (opts.toastOnSkip) showToast('Postino: errore INSERT (' + status.error + ')', '⚠️');
+      if (opts.toastOnSkip) showToast('Postino: errore INSERT (' + status.error + ')', '⚠️', 5500);
       return status;
     }
 
     if (debug) console.log('[postino] draft creata:', data);
     status.createdDraft = data;
-    if (opts.toastOnSkip) showToast('Postino: draft creata per ' + status.weekStart + ' 📬', '✅');
+    if (opts.toastOnSkip) showToast('Postino: draft creata per ' + _pianoV4IsoToItDate(status.weekStart) + ' 📬', '✅', 5500);
     return status;
   } catch (e) {
     console.warn('[postino] exception:', e);
-    if (opts.toastOnSkip) showToast('Postino: exception (' + (e.message || e) + ')', '⚠️');
+    if (opts.toastOnSkip) showToast('Postino: exception (' + (e.message || e) + ')', '⚠️', 5500);
     return { decision: 'error-exception', error: (e && e.message) || String(e) };
   }
 }
@@ -15794,11 +15805,15 @@ function m2OpenInfo(btn) {
   document.body.appendChild(el);
 }
 
-function showToast(msg, emoji='✅') {
+function showToast(msg, emoji='✅', duration) {
   const el = document.getElementById('toast');
   el.textContent = emoji + ' ' + msg;
   el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
+  // Default 2500ms (comportamento pre-esistente, retro-compatibile).
+  // Toast del postino F.1 usano ~5500ms per essere leggibili. Nessun altro
+  // toast dell'app deve passare il terzo parametro: lascia il default.
+  const ms = (typeof duration === 'number' && duration > 0) ? duration : 2500;
+  setTimeout(() => el.classList.remove('show'), ms);
 }
 
 function setLogSlot(id){
