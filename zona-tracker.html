@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.23 · 20:50';
+const APP_VERSION = '2026.05.23 · 21:32';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13011,6 +13011,14 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "9. description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali con nomi corretti e riconoscibili (es. \"Pasta integrale al pesto di basilico con pomodorini e fiocchi di mandorle\").",
     "10. explanation: 1 frase breve sul perché funziona per il profilo (max 15 parole, opzionale).",
     "",
+    "VARIETÀ DI STRUTTURA (oltre alla varietà di ingredienti):",
+    "Non basta cambiare l'ingrediente: varia anche la STRUTTURA/forma dei piatti lungo la settimana. Una settimana intera con lo stesso stampo \"carboidrato + pesce\" a pranzo e \"pesce + contorno\" a cena è MONOTONA, anche se gli ingredienti cambiano. Attingi a questa tavolozza, alternando (NON usarle tutte ogni giorno):",
+    "A) PIATTI UNICI COMPLETI accanto ai classici \"primo + secondo\": zuppe ricche e sostanziose (es. zuppa di legumi e verdure, zuppa di pesce, minestrone arricchito), insalatone complete con base proteica, bowl unici con cereale+proteina+verdura insieme.",
+    "B) METODI DI COTTURA DEL PESCE VARIATI: forno, padella, al cartoccio, al vapore, in umido o in zuppa, marinato e cotto, alla griglia. NON usare sempre lo stesso metodo (\"al forno\"/\"in padella\") giorno dopo giorno — distribuisci i metodi sulla settimana. VIETATO: pesce CRUDO o in TARTARE (escluso per scelta, non adatto a tutti).",
+    "C) SCHEMA PRANZO/CENA VARIABILE: non sempre \"carboidrati a pranzo + pesce/proteina a cena\". Ogni tanto inverti o rompi lo schema: pranzo più leggero seguito da cena più ricca, oppure cena di sole verdure e legumi, oppure pranzo proteico senza cereali. La distribuzione kcal del giorno resta sui bersagli, ma la forma cambia.",
+    "D) PROTEINE PROTAGONISTE VARIE: non solo pesce. Alterna pasti dove la PROTEINA PRINCIPALE è legumi (lenticchie, ceci, fagioli — sotto forma di zuppa, polpette, hummus, dahl, vellutate) o uova (frittata, uova al forno con verdure, shakshuka), sempre nel rispetto della DISPENSA AMMESSA e delle intolleranze.",
+    "Regola di chiusura sulla struttura: NESSUNA settimana deve seguire un'unica formula ripetuta. La varietà deve riguardare SIA gli ingredienti SIA la struttura del piatto.",
+    "",
     "FORMATO RISPOSTA (RIGIDO):",
     "Rispondi SOLO con JSON valido, nessun preambolo, nessun testo extra, nessun blocco ```. Schema:",
     "{\"meals\":[{\"day\":1,\"slot\":\"pranzo\",\"description\":\"...\",\"kcal\":N,\"protein\":N,\"carbs\":N,\"fat\":N,\"explanation\":\"...\"}, ...]}",
@@ -13020,7 +13028,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "- 14 oggetti totali: 1 pranzo + 1 cena per ognuno dei 7 giorni",
     "- kcal/protein/carbs/fat: numeri interi",
     "",
-    "Prima di rispondere, ricontrolla mentalmente: ogni piatto ha SOLO ingredienti dalla DISPENSA AMMESSA, nessuna invenzione, nessun mascheramento, nessuna ripetizione, intolleranze rispettate. Poi inizia subito col JSON.",
+    "Prima di rispondere, ricontrolla mentalmente: ogni piatto ha SOLO ingredienti dalla DISPENSA AMMESSA, nessuna invenzione, nessun mascheramento, nessuna ripetizione, intolleranze rispettate, varietà di STRUTTURA (non tutti pranzi \"carbo+proteina\" e tutte cene \"pesce+contorno\"), metodi di cottura del pesce alternati (no pesce crudo/tartare). Poi inizia subito col JSON.",
   ].join("\n");
 }
 
