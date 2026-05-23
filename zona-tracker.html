@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.23 · 20:27';
+const APP_VERSION = '2026.05.23 · 20:50';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12878,6 +12878,88 @@ function _pianoV4F2aTargets(targets) {
 // Helper: costruisce il prompt AI per generare i 14 pasti.
 // Legge dieta/intolleranze/obiettivo da ST.profile (nomi colonna reali, IT/EN misti).
 // Lingua italiana, una sola chiamata, JSON strict.
+// Helper interno F.2a — costruisce la "dispensa" (whitelist categorie ingredienti)
+// in base al regime alimentare dell'utente, sottraendo le intolleranze.
+// Per categorie, NON esempi di piatti pronti — vogliamo guidare il coach senza
+// schiacciare la varietà tra utenti. Ritorna un blocco di righe pronte per il prompt.
+function _pianoV4F2aBuildPantry(dieta, intolleranze) {
+  const dietaKey = (dieta || '').toLowerCase().trim();
+  const intolList = (intolleranze || []).map(function(x) { return String(x).toLowerCase().trim(); });
+
+  // Detect categorie da escludere via intolleranze (string match permissivo)
+  function hasIntol(needles) {
+    return intolList.some(function(it) {
+      return needles.some(function(n) { return it.indexOf(n) >= 0; });
+    });
+  }
+  const noLatticini = hasIntol(['lattosio','latticini','latte','formaggi','formaggio','yogurt','burro','panna']);
+  const noGlutine   = hasIntol(['glutine','gluten','celiac']);
+  const noUova      = hasIntol(['uova','uovo','egg']);
+  const noFrutSecca = hasIntol(['frutta secca','noci','mandorle','arachidi','arachide']);
+  const noSoia      = hasIntol(['soia']);
+
+  const lines = [];
+
+  // Stesura della dispensa per regime
+  if (dietaKey.indexOf('vegano') >= 0 || dietaKey.indexOf('vegan') >= 0) {
+    lines.push("Regime VEGANO — solo ingredienti vegetali. VIETATO: ogni tipo di carne, pesce, molluschi, crostacei, uova, latticini, miele, derivati animali.");
+    lines.push("AMMESSI per categoria:");
+    lines.push("- Proteine vegetali: legumi (ceci, lenticchie, fagioli, piselli, fave, lupini, soia, edamame), " + (noSoia ? "" : "tofu, tempeh, seitan, ") + "hummus.");
+    lines.push("- Cereali e derivati: " + (noGlutine ? "riso, mais, grano saraceno, miglio, quinoa, amaranto, polenta (tutti naturalmente senza glutine)" : "pasta, riso, pane, farro, orzo, quinoa, avena, polenta, couscous, bulgur") + ".");
+    lines.push("- Verdura: tutta (di stagione, fresca o surgelata).");
+    lines.push("- Frutta: tutta.");
+    if (!noFrutSecca) lines.push("- Frutta secca e semi: mandorle, noci, nocciole, pistacchi, pinoli, semi di lino/chia/sesamo/girasole/zucca.");
+    lines.push("- Grassi: olio extravergine di oliva, olive, avocado, " + (noFrutSecca ? "" : "creme di frutta secca, ") + "olio di lino.");
+  } else if (dietaKey.indexOf('vegetarian') >= 0) {
+    lines.push("Regime VEGETARIANO — niente carne né pesce. VIETATO: manzo, vitello, pollo, tacchino, maiale, agnello, coniglio, salumi, insaccati, pesce, molluschi, crostacei.");
+    lines.push("AMMESSI per categoria:");
+    if (!noUova) lines.push("- Uova (intere, albumi).");
+    if (!noLatticini) lines.push("- Latticini: latte, yogurt, ricotta, mozzarella, parmigiano, formaggi freschi/stagionati (con moderazione sui grassi).");
+    lines.push("- Proteine vegetali: legumi (ceci, lenticchie, fagioli, piselli, fave, lupini, soia, edamame), " + (noSoia ? "" : "tofu, tempeh, seitan, ") + "hummus.");
+    lines.push("- Cereali e derivati: " + (noGlutine ? "riso, mais, grano saraceno, miglio, quinoa, amaranto, polenta" : "pasta, riso, pane integrale, farro, orzo, quinoa, avena, polenta, couscous, bulgur") + ".");
+    lines.push("- Verdura: tutta.");
+    lines.push("- Frutta: tutta.");
+    if (!noFrutSecca) lines.push("- Frutta secca e semi: mandorle, noci, nocciole, pistacchi, pinoli, semi di lino/chia/sesamo.");
+    lines.push("- Grassi: olio extravergine di oliva, avocado, olive.");
+  } else if (dietaKey.indexOf('pescetarian') >= 0 || dietaKey.indexOf('pescatarian') >= 0) {
+    lines.push("Regime PESCETARIANO — sì pesce, molluschi, crostacei, uova; NIENTE carne di alcun tipo. VIETATO: manzo, vitello, pollo, tacchino, maiale, agnello, coniglio, salumi, prosciutto, bresaola, salame, wurstel, insaccati di qualsiasi origine.");
+    lines.push("AMMESSI per categoria:");
+    lines.push("- Pesce: salmone, tonno, merluzzo, branzino, orata, sgombro, sardine, alici, trota, pesce spada, nasello, platessa, sogliola.");
+    lines.push("- Molluschi e crostacei: cozze, vongole, calamari, seppie, polpo, gamberi, scampi, granchio, aragosta.");
+    if (!noUova) lines.push("- Uova (intere, albumi).");
+    if (!noLatticini) lines.push("- Latticini: latte, yogurt, ricotta, mozzarella, parmigiano, formaggi freschi/stagionati.");
+    lines.push("- Proteine vegetali: legumi (ceci, lenticchie, fagioli, piselli, fave, lupini, soia, edamame), " + (noSoia ? "" : "tofu, tempeh, ") + "hummus.");
+    lines.push("- Cereali e derivati: " + (noGlutine ? "riso, mais, grano saraceno, miglio, quinoa, amaranto, polenta" : "pasta, riso (integrale/basmati/arborio), pane integrale, farro, orzo, quinoa, avena, polenta, couscous, bulgur") + ".");
+    lines.push("- Verdura: tutta.");
+    lines.push("- Frutta: tutta.");
+    if (!noFrutSecca) lines.push("- Frutta secca e semi: mandorle, noci, nocciole, pistacchi, pinoli, semi di lino/chia/sesamo.");
+    lines.push("- Grassi: olio extravergine di oliva, avocado, olive.");
+  } else {
+    // Onnivoro (o valore non riconosciuto → trattalo come onnivoro prudente)
+    lines.push("Regime ONNIVORO — tutto ammesso, salvo le intolleranze indicate sopra.");
+    lines.push("AMMESSI per categoria:");
+    lines.push("- Carne magra: pollo, tacchino, vitello, manzo magro, lonza di maiale, coniglio.");
+    lines.push("- Pesce: salmone, tonno, merluzzo, branzino, orata, sgombro, sardine, alici, trota, pesce spada.");
+    lines.push("- Molluschi e crostacei: cozze, vongole, calamari, seppie, polpo, gamberi.");
+    if (!noUova) lines.push("- Uova (intere, albumi).");
+    if (!noLatticini) lines.push("- Latticini: latte, yogurt, ricotta, mozzarella, parmigiano, formaggi freschi/stagionati.");
+    lines.push("- Proteine vegetali: legumi (ceci, lenticchie, fagioli, piselli), " + (noSoia ? "" : "tofu, tempeh, ") + "hummus.");
+    lines.push("- Cereali e derivati: " + (noGlutine ? "riso, mais, grano saraceno, miglio, quinoa, amaranto, polenta" : "pasta, riso, pane integrale, farro, orzo, quinoa, avena, polenta, couscous, bulgur") + ".");
+    lines.push("- Verdura: tutta.");
+    lines.push("- Frutta: tutta.");
+    if (!noFrutSecca) lines.push("- Frutta secca e semi: mandorle, noci, nocciole, pistacchi, pinoli, semi di lino/chia.");
+    lines.push("- Grassi: olio extravergine di oliva, avocado, olive.");
+  }
+
+  // Riepilogo intolleranze (ridondanza voluta — il coach deve vederle 2 volte)
+  if (intolList.length > 0) {
+    lines.push("");
+    lines.push("INTOLLERANZE/ESCLUSIONI dell'utente: " + intolList.join(", ") + ". Queste hanno PRECEDENZA ASSOLUTA: rimuovi dalla dispensa ogni ingrediente corrispondente, in nessun pasto deve comparire neanche di traverso (es. lattosio/latticini → niente latte, formaggio, yogurt, ricotta, burro, panna, mascarpone, mozzarella, parmigiano).");
+  }
+
+  return lines.join("\n");
+}
+
 function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   const dieta = (profile.dieta || '').toString().trim();
   const intolleranzeRaw = profile.intolleranze;
@@ -12903,6 +12985,8 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "- Bersaglio CENA (~25% del giorno): "   + perMeal.dinner.kcal + " kcal · " + perMeal.dinner.protein + "g P · " + perMeal.dinner.carbs + "g C · " + perMeal.dinner.fat + "g G",
   ];
 
+  const pantry = _pianoV4F2aBuildPantry(dieta, intolleranze);
+
   return [
     "Sei il coach nutrizionale di Zona Tracker. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
     "",
@@ -12912,14 +12996,20 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "BERSAGLI NUTRIZIONALI:",
     targetLines.join("\n"),
     "",
-    "REGOLE FERREE (NON NEGOZIABILI):",
-    "- Rispetta SEMPRE il regime alimentare. Se 'pescetariano' → mai carne (sì pesce, uova, vegetale). Se 'vegetariano' → mai carne né pesce. Se 'vegano' → solo vegetale.",
-    "- Rispetta SEMPRE le intolleranze/esclusioni: NESSUN ingrediente di quella lista in NESSUN pasto.",
-    "- 7 pranzi diversi tra loro, 7 cene diverse tra loro. Niente ripetizioni.",
-    "- Cucina italiana, piatti realistici e semplici da preparare a casa.",
-    "- Le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
-    "- description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali (es. \"Pasta al pesto di basilico con pomodorini e fiocchi di mandorle\").",
-    "- explanation: 1 frase breve sul perché funziona per il profilo (max 15 parole, opzionale).",
+    "DISPENSA AMMESSA (whitelist per categorie — tutto ciò che NON è qui dentro è VIETATO):",
+    pantry,
+    "",
+    "REGOLE FERREE (NON NEGOZIABILI, in ordine di priorità):",
+    "1. DIVIETO DI INVENZIONE. Usa SOLO ingredienti reali, esistenti in natura, con il loro nome corretto e riconoscibile in italiano. È VIETATO inventare nomi di ingredienti, usare nomi ambigui, accostare termini per costruire ingredienti che non esistono.",
+    "2. DIVIETO DI MASCHERAMENTO. È VIETATO \"camuffare\" un ingrediente vietato con un nome che sembra ammesso. ESEMPIO NEGATIVO ESPLICITO: \"pollo di mare\" NON ESISTE — il pollo è carne, non c'è alcun pesce chiamato così; un piatto del genere è una violazione gravissima del regime alimentare ed è inaccettabile. Lo stesso vale per qualunque altro accostamento simile.",
+    "3. PRUDENZA. Se per rispettare i vincoli un piatto risulta difficile, scegli un piatto PIÙ SEMPLICE con ingredienti sicuramente presenti nella DISPENSA AMMESSA sopra. MAI inventare per forzare la consegna.",
+    "4. DUBBIO = NO. Se hai il minimo dubbio che un ingrediente sia ammesso → NON usarlo. Pesca dalla DISPENSA AMMESSA.",
+    "5. INTOLLERANZE: precedenza assoluta. Nessun ingrediente delle intolleranze/esclusioni può comparire, nemmeno in tracce o come condimento.",
+    "6. VARIETÀ PIENA SUI 7 GIORNI. Tutti e 14 i pasti devono essere DIVERSI tra loro nel piatto principale. NESSUNA ripetizione identica tra giorni diversi. Sono ammesse variazioni sullo stesso ingrediente base (es. salmone al forno vs salmone in padella vs salmone marinato), ma non lo stesso identico piatto due volte. ATTENZIONE PARTICOLARE AL GIORNO 7: spesso si tende a ripetere piatti dei giorni precedenti — non farlo, il giorno 7 deve avere pranzo e cena unici come tutti gli altri.",
+    "7. CUCINA ITALIANA, piatti realistici e semplici da preparare a casa.",
+    "8. BERSAGLI MACRO: le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
+    "9. description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali con nomi corretti e riconoscibili (es. \"Pasta integrale al pesto di basilico con pomodorini e fiocchi di mandorle\").",
+    "10. explanation: 1 frase breve sul perché funziona per il profilo (max 15 parole, opzionale).",
     "",
     "FORMATO RISPOSTA (RIGIDO):",
     "Rispondi SOLO con JSON valido, nessun preambolo, nessun testo extra, nessun blocco ```. Schema:",
@@ -12930,7 +13020,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "- 14 oggetti totali: 1 pranzo + 1 cena per ognuno dei 7 giorni",
     "- kcal/protein/carbs/fat: numeri interi",
     "",
-    "Inizia subito col JSON.",
+    "Prima di rispondere, ricontrolla mentalmente: ogni piatto ha SOLO ingredienti dalla DISPENSA AMMESSA, nessuna invenzione, nessun mascheramento, nessuna ripetizione, intolleranze rispettate. Poi inizia subito col JSON.",
   ].join("\n");
 }
 
