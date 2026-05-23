@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.22 · 19:27';
+const APP_VERSION = '2026.05.23 · 14:51';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5119,8 +5119,14 @@ async function loadAndStart() {
         showScreen('app');
         renderOggi();
         showPage('home');
-        _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
-        _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
+        // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
+        // Sequenza: postino (await) → welcome force URL → welcome auto.
+        (async () => {
+          await _pianoV4MaybePostino({}); // auto, no force
+          _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
+          _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+          _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+        })();
       }
     } else {
       showScreen('onboarding');
@@ -5147,8 +5153,13 @@ async function loadAndStart() {
     showScreen('app');
     renderOggi();
     showPage('home');
-    _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
-    _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
+    // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
+    (async () => {
+      await _pianoV4MaybePostino({}); // auto, no force
+      _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
+      _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+      _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+    })();
     return;
   }
   ST.profile = profile;
@@ -5164,8 +5175,13 @@ async function loadAndStart() {
     showScreen('app');
     renderOggi();
     showPage('home');
-    _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
-    _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+ora+flag)
+    // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
+    (async () => {
+      await _pianoV4MaybePostino({}); // auto, no force
+      _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
+      _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
+      _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+    })();
     saveCache();
     ST.lastRefreshAt = Date.now();
   } else {
@@ -12557,7 +12573,11 @@ async function _pianoV4ComputeAutoWelcomeStatus() {
   out.nextDayDow = (out.planDow + 1) % 7;
   out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
 
-  // 3) Ora — confronto come stringa HH:MM padded (es. '08:05' < '20:00')
+  // 3) Ora — diagnostica lasciata viva (nowHHMM + planTimeNorm letti dal profilo),
+  // ma il GUARD è NEUTRALIZZATO in F.1: il welcome overlay deve aprirsi in base
+  // a giorno + draft + flag, senza aspettare un'orario soglia. plan_generation_time
+  // resta come campo dormiente per le future notifiche push (V2).
+  // Decisione presa il 23 mag 2026 in chiusura Step F.1.
   const hh = String(now.getHours()).padStart(2,'0');
   const mm = String(now.getMinutes()).padStart(2,'0');
   out.nowHHMM = hh + ':' + mm;
@@ -12567,7 +12587,7 @@ async function _pianoV4ComputeAutoWelcomeStatus() {
   const tM = String(parseInt(tParts[1] || '0',  10) || 0 ).padStart(2,'0');
   const planTimeNorm = tH + ':' + tM;
   out.profilePlanTime = planTimeNorm;
-  out.timeOk = out.nowHHMM >= planTimeNorm;
+  out.timeOk = true; // F.1: neutralizzato (vedi commento sopra). NB: il decision 'skip-time' non scatta più.
 
   // 4) Flag
   out.ackKey = _pianoV4GetWelcomeAckKey(draft.week_start);
@@ -12621,6 +12641,308 @@ window.ztWelcomeWhy = async function() {
     timeOk: s.timeOk,
     ackKey: s.ackKey,
     ackIsSet: s.ackIsSet,
+  }]);
+  return s;
+};
+
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Step F.1 (23 mag 2026) — POSTINO: generazione draft weekly_plans
+//
+// Il "postino" gira alla prima apertura dell'app DI DOMENICA (no controllo orario)
+// e crea la riga-madre del piano settimanale in `weekly_plans` con status='draft'.
+// È il pezzo che CREA la draft che il welcome overlay (Step E) già sa leggere e
+// annunciare.
+//
+// F.1 = SOLO riga-madre (obiettivi). Niente weekly_plan_meals (quelli sono F.2).
+//
+// Trigger reale: oggi.getDay() === plan_generation_day del profilo OPPURE
+// (planDow + 1) % 7 (recupero "giorno dopo"). Coerente con welcome overlay E.2.
+//
+// Anti-doppione: SELECT su weekly_plans per (user_id, week_start). Se esiste già
+// una riga di QUALUNQUE status → STOP. Il constraint UNIQUE (user_id, week_start)
+// è la rete di sicurezza al livello DB.
+//
+// AI: callAI() genera ai_reasoning (voce del coach, variante "OBIETTIVI INVARIATI"
+// in F.1 perché copiamo dal profilo senza modificare). Fallback fisso se AI fallisce
+// — il postino non deve mai fallire per colpa dell'AI.
+//
+// Diagnostica: ?generaDebug=1 (console.log) e window.ztGeneraWhy() (oggetto con
+// esito di ogni guard). Forzature collaudo: ?genera=1 e window.ztTestGenera().
+// ═══════════════════════════════════════════════════════════
+
+// Helper: converte un Date al lunedì → 'YYYY-MM-DD' senza shift DST.
+// Riusa il pattern di _pianoV4CalculateDate (mezzogiorno locale → toISOString slice).
+function _pianoV4MondayToIso(monday) {
+  const safe = new Date(monday);
+  safe.setHours(12, 0, 0, 0);
+  return safe.toISOString().slice(0, 10);
+}
+
+// Helper: lunedì della settimana che STA per iniziare.
+// Di domenica (giorno-piano tipico): getPianoV4WeekStart(1) = lunedì successivo.
+// Recupero "giorno dopo" (es. lunedì stesso): getPianoV4WeekStart(0) = lunedì di oggi.
+// Logica: se oggi è già lunedì → settimana corrente; altrimenti → settimana prossima.
+function _pianoV4NextWeekStartIso() {
+  const now = new Date();
+  const dow = now.getDay(); // 0=DOM, 1=LUN, ..., 6=SAB
+  const offset = (dow === 1) ? 0 : 1; // lunedì → corrente, qualsiasi altro → prossima
+  return _pianoV4MondayToIso(getPianoV4WeekStart(offset));
+}
+
+// Diagnostica/computazione guard. Ritorna { decision, ...details }.
+// Usato da window.ztGeneraWhy(), da console.log se ?generaDebug=1, e
+// internamente da _pianoV4MaybePostino come single source of truth.
+//
+// decision ∈ {
+//   'create',         // tutti i guard ok → procedi con AI + INSERT
+//   'skip-no-user',
+//   'skip-no-profile',
+//   'skip-day',       // oggi != planDow e != planDow+1
+//   'skip-no-targets',// target_kcal/protein/carbs/fat null o 0
+//   'skip-existing',  // già una riga per (user_id, week_start)
+// }
+async function _pianoV4ComputePostinoStatus(opts) {
+  opts = opts || {};
+  const force = !!opts.force; // ?genera=1 bypassa solo il guard "giorno"
+  const out = {
+    when: new Date().toISOString(),
+    force: force,
+    user_id: (ST.user && ST.user.id) || null,
+    profilePlanDay: null,
+    todayDow: null,
+    todayDowName: null,
+    planDow: null,
+    nextDayDow: null,
+    dayMatch: false,
+    weekStart: null,
+    existingFound: false,
+    existingStatus: null,
+    targets: null,
+    targetsValid: false,
+    decision: null,
+  };
+
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') {
+    out.decision = 'skip-no-user';
+    return out;
+  }
+  if (!ST.profile) {
+    out.decision = 'skip-no-profile';
+    return out;
+  }
+
+  // 1) Giorno (saltato se force=true)
+  const planDayRaw = ST.profile.plan_generation_day || 'sun';
+  out.profilePlanDay = planDayRaw;
+  const now = new Date();
+  const DAY_NAMES = ['sun','mon','tue','wed','thu','fri','sat'];
+  out.todayDow = now.getDay();
+  out.todayDowName = DAY_NAMES[out.todayDow];
+  let planKey = (planDayRaw || '').toLowerCase();
+  if (!(planKey in _PLAN_DAY_MAP)) planKey = 'sun';
+  out.planDow = _PLAN_DAY_MAP[planKey];
+  out.nextDayDow = (out.planDow + 1) % 7;
+  out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
+
+  if (!force && !out.dayMatch) {
+    out.decision = 'skip-day';
+    return out;
+  }
+
+  // 2) week_start
+  out.weekStart = _pianoV4NextWeekStartIso();
+
+  // 3) Anti-doppione (CRITICO, vale ANCHE in modalità force)
+  try {
+    const { data, error } = await supa
+      .from('weekly_plans')
+      .select('id, status, week_start')
+      .eq('user_id', ST.user.id)
+      .eq('week_start', out.weekStart)
+      .limit(1);
+    if (error) {
+      console.warn('[postino] anti-doppione query error:', error);
+      // In caso di errore di rete: per sicurezza NON creiamo (meglio non creare
+      // che creare un doppione). Trattalo come "esistente sconosciuto".
+      out.existingFound = true;
+      out.existingStatus = 'unknown';
+      out.decision = 'skip-existing';
+      return out;
+    }
+    if (data && data.length > 0) {
+      out.existingFound = true;
+      out.existingStatus = data[0].status;
+      out.decision = 'skip-existing';
+      return out;
+    }
+  } catch (e) {
+    console.warn('[postino] anti-doppione exception:', e);
+    out.existingFound = true;
+    out.existingStatus = 'unknown';
+    out.decision = 'skip-existing';
+    return out;
+  }
+
+  // 4) Target dal profilo
+  const p = ST.profile;
+  const tk = Number(p.target_kcal)    || 0;
+  const tp = Number(p.target_protein) || 0;
+  const tc = Number(p.target_carbs)   || 0;
+  const tf = Number(p.target_fat)     || 0;
+  out.targets = { kcal: tk, protein: tp, carbs: tc, fat: tf };
+  out.targetsValid = (tk > 0 && tp > 0 && tc > 0 && tf > 0);
+  if (!out.targetsValid) {
+    out.decision = 'skip-no-targets';
+    return out;
+  }
+
+  out.decision = 'create';
+  return out;
+}
+
+// Fallback fisso usato se callAI() fallisce o ritorna stringa vuota.
+// Tono coerente con la voce del coach (variante OBIETTIVI INVARIATI).
+const _PIANOV4_POSTINO_FALLBACK_REASONING =
+  "Questa settimana confermiamo la rotta: gli obiettivi restano gli stessi della settimana scorsa. " +
+  "Hai messo basi solide — ora si tratta di mantenerle con costanza, un pasto alla volta.";
+
+// Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
+async function _pianoV4GenerateReasoning(targets) {
+  const prompt =
+    "Sei il coach nutrizionale di Zona Tracker. Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
+    "Gli obiettivi NON cambiano rispetto alla settimana scorsa: kcal " + targets.kcal +
+    ", proteine " + targets.protein + "g, carboidrati " + targets.carbs + "g, grassi " + targets.fat + "g.\n\n" +
+    "Scrivi 2-3 frasi in italiano, prima persona plurale (\"questa settimana confermiamo...\"), tono caldo " +
+    "e incoraggiante, prosa diretta. NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno, " +
+    "NIENTE nome proprio (l'app non dà un nome al coach). Concentra il messaggio sull'idea che gli obiettivi " +
+    "restano fermi perché stanno funzionando, e che ora conta la costanza.";
+  try {
+    const txt = await callAI(prompt, 200);
+    const clean = (txt || '').trim();
+    if (!clean) return _PIANOV4_POSTINO_FALLBACK_REASONING;
+    return clean;
+  } catch (e) {
+    console.warn('[postino] callAI error, using fallback:', e);
+    return _PIANOV4_POSTINO_FALLBACK_REASONING;
+  }
+}
+
+// Entry-point del postino. Chiamato dai 3 rami di loadAndStart PRIMA delle chiamate
+// welcome overlay. Garantisce: se va a buon fine, la draft esiste quando l'overlay
+// la cerca subito dopo.
+//
+// opts.force = true → bypassa solo il guard "giorno" (?genera=1 / ztTestGenera).
+// L'anti-doppione resta attivo anche in force (intenzionale).
+async function _pianoV4MaybePostino(opts) {
+  opts = opts || {};
+  try {
+    const status = await _pianoV4ComputePostinoStatus(opts);
+
+    // Diagnostica leggera dietro ?generaDebug=1
+    let debug = false;
+    try { debug = new URLSearchParams(window.location.search).get('generaDebug') === '1'; } catch (e) {}
+    if (debug) console.log('[postino] status:', status);
+
+    if (status.decision !== 'create') {
+      // Per le forzature di collaudo, se l'utente ha lanciato ztTestGenera() e
+      // il guard è scattato, mostriamo un toast esplicativo (non in produzione).
+      if (opts.toastOnSkip) {
+        const msg = {
+          'skip-no-user':    'Postino: nessun utente loggato',
+          'skip-no-profile': 'Postino: profilo non caricato',
+          'skip-day':        'Postino: oggi non è il giorno-piano',
+          'skip-existing':   'Postino: piano già esistente per la settimana ' + (status.weekStart || ''),
+          'skip-no-targets': 'Postino: obiettivi profilo mancanti o a 0',
+        }[status.decision] || ('Postino: skip (' + status.decision + ')');
+        showToast(msg, 'ℹ️');
+      }
+      return status;
+    }
+
+    // OK, procediamo con creazione draft
+    const reasoning = await _pianoV4GenerateReasoning(status.targets);
+
+    const payload = {
+      user_id: ST.user.id,
+      week_start: status.weekStart,
+      target_kcal: status.targets.kcal,
+      target_protein: status.targets.protein,
+      target_carbs: status.targets.carbs,
+      target_fat: status.targets.fat,
+      ai_reasoning: reasoning,
+      status: 'draft',
+    };
+
+    const { data, error } = await supa
+      .from('weekly_plans')
+      .insert(payload)
+      .select('id, week_start, status')
+      .single();
+
+    if (error) {
+      // Gestione conflict UNIQUE (race condition con un altro device): non crashare.
+      // Codice 23505 = unique_violation in Postgres.
+      const isConflict = error.code === '23505' || /duplicate key|unique/i.test(error.message || '');
+      if (isConflict) {
+        status.decision = 'skip-existing';
+        status.existingFound = true;
+        status.existingStatus = 'race-conflict';
+        if (debug) console.log('[postino] race-conflict: draft creata da un altro device per', status.weekStart);
+        if (opts.toastOnSkip) showToast('Postino: piano già creato (race) per ' + status.weekStart, 'ℹ️');
+        return status;
+      }
+      // Altro errore DB: log e ritorna status come "errore"
+      console.warn('[postino] INSERT error:', error);
+      status.decision = 'error-insert';
+      status.error = error.message || String(error);
+      if (opts.toastOnSkip) showToast('Postino: errore INSERT (' + status.error + ')', '⚠️');
+      return status;
+    }
+
+    if (debug) console.log('[postino] draft creata:', data);
+    status.createdDraft = data;
+    if (opts.toastOnSkip) showToast('Postino: draft creata per ' + status.weekStart + ' 📬', '✅');
+    return status;
+  } catch (e) {
+    console.warn('[postino] exception:', e);
+    if (opts.toastOnSkip) showToast('Postino: exception (' + (e.message || e) + ')', '⚠️');
+    return { decision: 'error-exception', error: (e && e.message) || String(e) };
+  }
+}
+
+// Verifica parametro URL ?genera=1 e, se presente, forza l'esecuzione del postino
+// bypassando il guard "giorno". Chiamato dai 3 rami di loadAndStart.
+// Diversamente da ?welcome=1, NON bypassa l'anti-doppione (per evitare violazioni
+// del constraint UNIQUE; se vuoi ricreare la draft, prima UPDATE status o DELETE).
+function _pianoV4MaybeForcePostinoFromUrl() {
+  try {
+    const flag = new URLSearchParams(window.location.search).get('genera');
+    if (flag === '1') {
+      // Piccolo delay per allinearsi col ritmo del welcome overlay e ridurre
+      // race con applyProfile/ST.user/ST.TARGET.
+      setTimeout(function() { _pianoV4MaybePostino({ force: true, toastOnSkip: true }); }, 200);
+    }
+  } catch (e) { /* silent */ }
+}
+
+// Forzatura console: window.ztTestGenera()
+window.ztTestGenera = function() {
+  return _pianoV4MaybePostino({ force: true, toastOnSkip: true });
+};
+
+// Diagnostica esposta: window.ztGeneraWhy() — esito di ogni guard senza
+// effetti collaterali sul DB (non crea nulla, solo SELECT anti-doppione).
+window.ztGeneraWhy = async function() {
+  const s = await _pianoV4ComputePostinoStatus({ force: false });
+  console.table([{
+    decision: s.decision,
+    today: s.todayDowName + ' (' + s.todayDow + ')',
+    planDay: s.profilePlanDay + ' → dow ' + s.planDow + ' (+1=' + s.nextDayDow + ')',
+    dayMatch: s.dayMatch,
+    weekStart: s.weekStart,
+    existing: s.existingFound + (s.existingStatus ? ' (' + s.existingStatus + ')' : ''),
+    targets: s.targets ? (s.targets.kcal + '/' + s.targets.protein + '/' + s.targets.carbs + '/' + s.targets.fat) : null,
+    targetsValid: s.targetsValid,
   }]);
   return s;
 };
