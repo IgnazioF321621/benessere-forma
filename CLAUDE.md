@@ -33,9 +33,10 @@ https://github.com/IgnazioF321621/benessere-forma
    - Sessione 3 — Step C: Overlay Dettaglio Giorno ✅ (20-21 mag, catena 8 commit `5384085`→`2f041f7`, APP_VERSION finale `v2026.05.21 · 11:15`). Overlay completo: scaffolding + empty state + 5 demo always-on + banner ESEMPIO DIMOSTRATIVO + totalizzatore range ±10% + 3 azioni ACCETTA/SOSTITUISCI/SALTO funzionanti + persistenza localStorage namespace `zona_pianov4_*`
    - Sessione 4 — Step D: Modal peso + Fix triplo render barretta + Banner reminder + loadExtras robusto + R3a getAdvice ✅ (22 mag, catena 4 commit `5280f9b`→`c32f141`→`1be5048`→`b4259f5`, APP_VERSION finale `v2026.05.22 · 15:26`). R3a chiuso (AI prompt vede integratori); R3b resta in Step F; R1 dedup resta in Step F (design già completo).
    - Sessione 5 — Step E: Welcome overlay domenicale ✅ (22 mag, 2 commit `c23deeb` UI + `f8e3064` trigger automatico, APP_VERSION finale `v2026.05.22 · 19:27`). Overlay fullscreen 2 varianti A/B che annuncia draft `weekly_plans`; trigger automatico giorno+ora+flag; bypass collaudo `?welcome=1`/`ztTestWelcome()`; diagnostica `?welcomeDebug=1`/`ztWelcomeWhy()`. **STEP E CHIUSO ✅** — collaudato dal vivo, anti-nag verificato.
-   - Sessione 6 — Step **F.1**: Postino generazione draft `weekly_plans` ✅ (23 mag, 2 commit `0fbbe86` postino + `74c51c5` ritocchi toast, APP_VERSION finale `2026.05.23 · 15:08`). Postino all'apertura app di domenica, "Modo 1 obiettivi invariati" (copia target da profilo), AI scrive `ai_reasoning` con fallback robusto, anti-doppione su `(user_id, week_start)`. Welcome overlay neutralizzato sul check orario (coerenza "domenica senza orario"). Forzature collaudo `?genera=1`/`ztTestGenera()`/`ztGeneraWhy()`. Toast data IT + 5500ms durata.
-   - **PROSSIMA**: Sessione 7 / Step **F.2** — Generazione pasti figli `weekly_plan_meals` via AI (prompt con profilo pescetariano + no latticini + integratori Nutrilite, scrittura multi-riga 7 giorni × 3-4 pasti, fix R3b `generaPianoAI`). Senza vincolo temporale rigido — F.1 chiuso in tempo, l'urgenza è rientrata.
-   - Sessioni 7-9: vedi sezione "Tab Piano v4" per dettaglio
+   - Sessione 6 — Step **F.1**: Postino generazione draft `weekly_plans` ✅ (23 mag, 2 commit `0fbbe86` postino + `74c51c5` ritocchi toast, APP_VERSION `2026.05.23 · 15:08`). Postino all'apertura app di domenica, "Modo 1 obiettivi invariati" (copia target da profilo), AI scrive `ai_reasoning` con fallback robusto, anti-doppione su `(user_id, week_start)`. Welcome overlay neutralizzato sul check orario (coerenza "domenica senza orario"). Forzature collaudo `?genera=1`/`ztTestGenera()`/`ztGeneraWhy()`.
+   - Sessione 7 — Step **F.2a**: Generazione pasti pranzo+cena (14 pasti = 7+7) ✅ (23 mag sera, 4 commit `4bc94eb` scheletro → `76cb793` regole anti-invenzione + dispensa → `8ae2dda` varietà struttura → `e966956` toast voce coach, APP_VERSION finale `2026.05.23 · 21:56`). Ripartizione standard: colazione 25% / merenda 15% / pranzo 35% / cena 25% (F.2a copre solo 60% = pranzo+cena). Una sola `callAI(prompt, 2000)`, JSON rigido, parser/validator robusto. Opzione A: riga-madre creata sempre, pasti add-on. Prompt irrobustito iterativamente dal vivo (3 giri): no invenzione ingredienti, DISPENSA per dieta+intolleranze, varietà ingredienti+struttura+cotture+proteine protagoniste. Toast in voce del coach (no termini tecnici utente).
+   - **PROSSIMA**: Sessione 8 / Step **F.2b** — Colazione + merenda. Tendenzialmente colazione standardizzata per utente (in onboarding chiedere dolce/salato + tipo bevanda: latte avena/soia/ecc.), merenda spesso = barretta energetica (~fisso). Filosofia target futura: ricettario di pasti già approvati che il coach pesca + apprendimento dallo storico + (F.2d) correzione squilibri via cibo o integratore Nutrilite. Costruzione strada facendo.
+   - Sessioni 8-10: vedi sezione "Tab Piano v4" per dettaglio
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
 8. Food input multi-modale — Fase 2 foto AI + Fase 3 OCR etichetta
@@ -64,16 +65,36 @@ https://github.com/IgnazioF321621/benessere-forma
 - **PRIORITÀ ALTA — Comunicato implementazioni per tester**: preparare testo chiaro per chat collettiva 3 tester (Ginevra, Isabella, Pesce). Spiegare cosa è cambiato (Tab Piano v4 con overlay + 5 demo + azioni), cosa testare, cosa ignorare (pasti demo non sono piano AI vero — banner ESEMPIO DIMOSTRATIVO).
 - ~~**Step D — Modal peso + banner reminder + R3a fix `getAdvice`**~~ ✅ chiuso 22 mag 2026 (Sessione 4, catena 4 commit `5280f9b`→`b4259f5`). Vedi entry log dettagliata in "Cosa abbiamo fatto".
 
-**TODO Step F.2 (quando arriverà)**:
-- **Generazione pasti figli `weekly_plan_meals` via AI**: questo È Step F.2. Il postino F.1 ha già creato la riga-madre `weekly_plans` con i 4 target. F.2 popola le righe figlie: 7 giorni × 3-4 pasti = ~21-28 righe per draft. Prompt AI con profilo (pescetariano, intolleranze, obiettivi) + integratori abituali (vedi R3b sotto) + slot validi del CHECK constraint (`colazione/spuntino/pranzo/merenda/cena`). Riusare `SLOT_MAP_DEMO_TO_LEGACY` se serve tradurre per scrittura su `meals` in fase di accettazione.
-- **Nodo logico aperto — recupero "giorno dopo" vs lunedì (welcome overlay Step E + postino F.1)**: con `profiles.plan_generation_day='sun'`, il "giorno dopo" calcolato dal recupero è **lunedì** — che è anche `week_start` della nuova settimana di piano (settimana ISO = lun-dom). F.1 ha già implementato la logica corretta (`_pianoV4NextWeekStartIso()`: se oggi è lunedì → settimana corrente; altrimenti → settimana prossima), ma la **collisione semantica resta aperta** lato welcome overlay: il "recupero welcome di domenica" se cade di lunedì annuncia la settimana che è iniziata QUEL giorno (lun→dom). Da chiarire in F.2 quando il piano avrà i pasti veri. **TEST del recupero giorno-dopo dal vivo NON ancora eseguito** — F.1 ha cambiato il day-check del welcome (`timeOk` forzato a true) ma il recupero `(planDow+1)%7` non è stato testato; va verificato un lunedì con `plan_generation_day='sun'`.
+**TODO Step F.2b (PROSSIMA sessione) — colazione + merenda**:
+- **Generazione pasti figli per colazione + merenda** (= il restante 40% calorico riservato): 7 colazioni (25%) + 7 merende (15%) per draft. Slot `'colazione'` e `'merenda'` (CHECK constraint ammette anche `'spuntino'` se servisse — verificare convenzione finale).
+- **Colazione tendenzialmente standardizzata per utente**: in onboarding (refresh M1 futuro) chiedere preferenza dolce/salato + tipo bevanda (latte vaccino/avena/soia/mandorla/cocco/nessuno). Il coach genera comunque 7 colazioni diverse ma rispetta lo stile preferito.
+- **Merenda spesso = barretta energetica**: per molti utenti (es. Nutrilite) la merenda è un elemento quasi fisso (barretta proteica + frutto, o simile). Il coach può proporre alternanza barretta/snack veri ma rispettando le abitudini.
+- **Riuso architettura F.2a**: stesso pattern `_pianoV4F2aBuildPrompt` + parser/validator + INSERT batch. La DISPENSA AMMESSA è già pronta per categorie cereali/frutta/latticini (se ammessi) ecc. Probabile estensione del prompt esistente o seconda chiamata `callAI` dedicata (decisione di design quando si arriva a F.2b).
+
+**TODO Step F.2c/d (TBD, fase apprendimento + ricettario)** — visione di Ignazio per dopo F.2b:
+- **Ricettario "pasti già approvati"**: oggi non esiste; si costruisce strada facendo dai pasti accettati/sostituiti+restano-in-zona dello storico utente. Il coach pesca da lì invece di inventare ex novo ogni settimana.
+- **Apprendimento dallo storico**: il coach legge i pasti realmente registrati nelle settimane passate, le sostituzioni preferite, gli skip ricorrenti → adatta le proposte future.
+- **(F.2d) Correzione squilibri**: quando il piano genera squilibri (es. proteine basse, omega-3 insufficienti, ferro non coperto) il coach suggerisce CIBO specifico **o integratore Nutrilite** dell'utente per coprire il gap. Richiede sia il ricettario sia la lettura `ST.supps` attivi (fix R3b).
+
+**Nodi ancora aperti (ereditati)**:
+- **Nodo logico aperto — recupero "giorno dopo" vs lunedì (welcome overlay Step E + postino F.1)**: con `profiles.plan_generation_day='sun'`, il "giorno dopo" calcolato dal recupero è **lunedì** — che è anche `week_start` della nuova settimana di piano (settimana ISO = lun-dom). F.1 ha già implementato la logica corretta (`_pianoV4NextWeekStartIso()`: se oggi è lunedì → settimana corrente; altrimenti → settimana prossima), ma la **collisione semantica resta aperta** lato welcome overlay: il "recupero welcome di domenica" se cade di lunedì annuncia la settimana che è iniziata QUEL giorno (lun→dom). **TEST del recupero giorno-dopo dal vivo NON ancora eseguito** — F.1 ha cambiato il day-check del welcome (`timeOk` forzato a true) ma il recupero `(planDow+1)%7` non è stato testato; va verificato un lunedì con `plan_generation_day='sun'`.
 - **R1 dedup integratori — implementazione**: nuovo campo `supplements_log.is_second_consumption`, modal blocco preventivo Momento 2 al submit extras, tag visivo `2° CONSUMO` in timeline Oggi/Analisi. Specifica completa in sezione "Design R1 dedup integratori".
-- **R3b fix `generaPianoAI` (ora prompt F.2)**: includere nel prompt AI piano settimanale gli integratori abituali dell'utente (lista da `ST.supps` attivi) con macro reali, così che il piano possa essere bilanciato considerando l'apporto base degli integratori. Critico per Ignazio (Nutrilite ~600 kcal/die distribuite).
-- **Estendere `dbAddMeal(meal, date)` per supportare data custom** (oggi hardcoda `date: ST.activeDay`): bloccare ACCETTA su giorni non-oggi era workaround C.4. In F.2 tester potranno programmare pasti per giorni futuri dal piano AI. Helper proposto: `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`
-- **Riuso `SLOT_MAP_DEMO_TO_LEGACY`**: writer AI da `weekly_plan_meals` → `meals` dovrà tradurre slot allo stesso modo del flusso demo (Step C.4.2)
-- **Persistenza azioni demo → real**: migrare da localStorage a `weekly_plan_acceptance.status` Supabase quando piano AI generato. localStorage resta come fallback per pasti demo (utenti senza piano AI ancora generato)
-- **Banner ESEMPIO DIMOSTRATIVO condizionale**: oggi sempre visibile in overlay. In F.2 mostrato SOLO se `weekly_plan_meals` per quel giorno è vuoto
-- **Card "0/7 GIORNI SEGUITI" dinamica**: oggi statica hardcoded. In F.2 deve incrementare per ogni giorno dove ≥3 pasti del piano AI sono stati accettati. Decisione product 20 mag: i demo accettati NON contano per il contatore
+- **R3b fix prompt piano AI** (rilevante per F.2c/d): includere nel prompt AI piano settimanale gli integratori abituali dell'utente (lista da `ST.supps` attivi) con macro reali, così che il piano possa essere bilanciato considerando l'apporto base degli integratori. Critico per Ignazio (Nutrilite ~600 kcal/die distribuite).
+- **Estendere `dbAddMeal(meal, date)` per supportare data custom** (oggi hardcoda `date: ST.activeDay`): bloccare ACCETTA su giorni non-oggi era workaround C.4. Quando l'utente potrà programmare pasti per giorni futuri dal piano AI servirà un helper `dbAddMealForDate(meal, date)` o override temporaneo `ST.activeDay`.
+- **Riuso `SLOT_MAP_DEMO_TO_LEGACY`**: writer da `weekly_plan_meals` → `meals` dovrà tradurre slot allo stesso modo del flusso demo (Step C.4.2). NB: i pasti F.2a usano slot `'pranzo'`/`'cena'` che NON richiedono mappatura (uguali tra `weekly_plan_meals` CHECK e `meals` legacy); il problema riguarda solo `spuntino → snack_mattina` e `merenda → snack_pomeriggio` (= F.2b territory).
+- **Persistenza azioni demo → real**: migrare da localStorage a `weekly_plan_acceptance.status` Supabase quando piano AI generato. localStorage resta come fallback per pasti demo (utenti senza piano AI ancora generato).
+- **Banner ESEMPIO DIMOSTRATIVO condizionale**: oggi sempre visibile in overlay. Mostrato SOLO se `weekly_plan_meals` per quel giorno è vuoto (= il giorno non ha ancora pasti veri generati dal coach).
+- **Card "0/7 GIORNI SEGUITI" dinamica**: oggi statica hardcoded. Deve incrementare per ogni giorno dove ≥3 pasti del piano AI sono stati accettati. Decisione product 20 mag: i demo accettati NON contano per il contatore.
+
+## Note e scoperte da registrare (23 mag 2026 sera)
+
+Annotazioni emerse durante Step F.2a, da portare avanti nelle sessioni future. NON dimenticare.
+
+- **Vincolo "un solo obiettivo alla volta" (fix onboarding, accanto a refresh M1)**: scoperto dal profilo reale di Ornella (obiettivo combinato `ipertrofia+dimagrire` → target nutrizionali assurdi, 1060 kcal). Due obiettivi opposti insieme sono internamente contraddittori. **L'obiettivo deve essere SINGOLO** e cambiabile nel tempo: l'utente può scegliere prima dimagrimento, poi (raggiunto un peso) passare a ricomposizione, poi a ipertrofia. Cambio obiettivo → tutta l'app si riadegua: nuovi `target_*`, nuovi piani settimanali, eventualmente nuovo piano allenamento. Il coach LEGGE l'obiettivo, non lo decide. Da imporre nell'onboarding M1 esteso (priorità #6) come selezione esclusiva (radio o pill singola, NON multi-select).
+- **Guard-rail sicurezza calorie minime (PRIMA del rilascio fuori dai 4 tester)**: l'app tocca salute → responsabilità. Soglia minima kcal sotto cui il coach NON genera ma avvisa l'utente: *"valori molto bassi, verifica con un professionista prima di seguire questo piano"*. Soglie indicative da decidere con un nutrizionista (es. < 1200 kcal donne / < 1500 kcal uomini → blocco). Da implementare PRIMA di aprire l'app a utenti che non siano tester selezionati.
+- **Nomi colonna `profiles` MISTI IT/EN — non rinominare**: la tabella `profiles` ha colonne inglesi storiche (`first_name`, `target_kcal/protein/carbs/fat`, `weight_kg`, `height_cm`, `goal_weight_kg`, `sex`, `age`, `activity_level`, ecc.) + colonne italiane aggiunte dopo (`dieta`, `intolleranze` ARRAY, `note_salute`, `obiettivo`, `tipo_allenamento`, `plan_generation_day/time`, ecc.). Rischio rinomina: alto (decine di punti del codice + RLS policy + cache locale). Beneficio: nullo (l'utente non li vede). **Strategia: conviverci + documentare**. Anche `piano_ai` (jsonb) è una colonna DORMIENTE in `profiles` — vecchia idea pre-Tab Piano v4. NON confondere con la tabella `weekly_plan_meals`: sono cose completamente diverse. `piano_ai` non viene letto/scritto dal flusso attuale.
+- **Idea futura — nome proprio al coach**: dare un nome al coach AI per identità e riconoscibilità (oggi è genericamente "il coach"). La voce del coach è già l'interlocutore UNICO di tutte le comunicazioni utente (spiegazioni piano, annuncio pasti, futuri avvisi allenamento, integratori, check fisici) → personalità coerente. Decisione di branding rimandata; per ora "il coach" funziona bene.
+- **Roadmap — Notifiche push (blocco dedicato dopo modulo Nutrition)**: avvisi a app chiusa (PWA push iOS/Android), sistema unico riusabile per: nuovo piano settimanale pronto, promemoria pasti se preferenza utente, promemoria integratori pacchetto, promemoria allenamento (post modulo Training). Onboarding M1 esteso includerà scelta ora avviso. Strategicamente trattenuto per V2 dopo che tutto il modulo Nutrition + parte di Training sono stabili. Welcome overlay domenicale (Step E) resta sufficiente per V1.
 
 ## Design R1 dedup integratori (21 mag 2026)
 
@@ -199,11 +220,11 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (23 maggio 2026, post-Sessione 6 / Step F.1 Tab Piano v4)
+### Stato moduli Nutrition (23 maggio 2026 sera, post-Sessione 7 / Step F.2a Tab Piano v4)
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
-- **Tab Piano v4**: 🟡 Step A+B+C+D+E+**F.1** ✅ chiusi. Step F.2-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: ~~F.1 postino draft weekly_plans~~ ✅, F.2 generazione pasti figli `weekly_plan_meals` via AI + R1 dedup + R3b `generaPianoAI`, G memoria AI + adattamento target, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: Step F.2 (l'AI scrive i pasti dei 7 giorni nella draft che il postino F.1 ha già creato). Senza vincolo temporale rigido — F.1 chiuso il 23 mag, modulo Nutrition E+F.1 entrambi consegnati prima della scadenza originale del 24 mag.
+- **Tab Piano v4**: 🟡 Step A+B+C+D+E+F.1+**F.2a** ✅ chiusi. Step F.2b-G-H-I da fare. Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: ~~F.1 postino draft weekly_plans~~ ✅, ~~F.2a pasti pranzo+cena 14/sett via AI~~ ✅, F.2b colazione+merenda, F.2c/d adattamento+squilibri (TBD), G memoria AI + adattamento target, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: Step F.2b (colazione + merenda). Senza vincolo temporale rigido — F.1 + F.2a consegnati il 23 mag, modulo Nutrition E+F entrambi in produzione prima della scadenza originale del 24 mag.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -574,7 +595,7 @@ Contenitore del piano settimanale generato dall'AI. Una riga = una settimana per
 
 Constraint: `UNIQUE (user_id, week_start)` — un solo piano per settimana per utente. Flusso status: `draft` (appena generato dall'AI) → `active` (utente ha visto welcome overlay e cliccato "Vedi piano") → `archived` (settimana passata). Indice: `(user_id, week_start DESC)`. RLS: 4 own + 1 admin.
 
-**⚠️ Dati di test preservati (post Step F.1, 23 mag 2026)**: esiste una riga `draft` per Ignazio (user_id `bb6fa499-1364-4d8d-8ce6-774c8e392306`), `week_start='2026-05-25'`, target `2200/187/209/68` kcal/P/C/F, `ai_reasoning` popolato con testo coach reale. È il banco di prova del welcome overlay Step E **e il modello-contratto per Step F.2** (il prompt AI F.2 dovrà generare righe figlie `weekly_plan_meals` collegate a una riga-madre come questa). **NON cancellare** finché Step F.2 non è chiuso. Per ri-testare il welcome overlay dopo aver premuto "Vedi piano →" (che porta status='active'): `UPDATE weekly_plans SET status='draft' WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25';`. Nota collaudo F.1: durante la sessione del 23 mag la riga è stata temporaneamente spostata a `week_start='2026-06-01'` per testare l'INSERT del postino (poi creata draft `25/05/2026` reale, poi DELETE della draft creata + restore del banco di prova alla `2026-05-25` originale). DB pulito a fine sessione.
+**⚠️ Dati di test preservati (post Step F.2a, 23 mag 2026 sera)**: esiste una riga `draft` per Ignazio (user_id `bb6fa499-1364-4d8d-8ce6-774c8e392306`), `week_start='2026-05-25'`, target `2200/187/209/68` kcal/P/C/F, `ai_reasoning` popolato con testo coach reale. È il banco di prova del welcome overlay Step E **e il modello-contratto per Step F.2b** (il prompt F.2b dovrà generare colazioni+merende figlie `weekly_plan_meals` collegate a una riga-madre come questa, completando il piano). **NON cancellare** finché Step F.2b non è chiuso. Per ri-testare il welcome overlay dopo aver premuto "Vedi piano →" (che porta status='active'): `UPDATE weekly_plans SET status='draft' WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25';`. Note collaudo storico F.1+F.2a: durante le sessioni del 23 mag la riga è stata più volte temporaneamente spostata a `week_start='2026-06-01'` per testare l'INSERT del postino/pasti, e i pasti F.2a generati nelle settimane libere sono stati poi rimossi via DELETE per ripristinare lo stato. DB pulito a fine sessione 23 mag sera.
 
 ### Tabella `weekly_plan_meals` (20 maggio 2026)
 I pasti veri proposti dall'AI. Una riga = un pasto per un giorno e uno slot specifici. Figlia di `weekly_plans`.
@@ -1564,27 +1585,40 @@ Decisione utente Ignazio: **Opzione 3** (tutto tranne notifiche push iOS). Imple
   - Toast del postino con data IT `DD/MM/YYYY` (helper `_pianoV4IsoToItDate`) + durata 5500ms (`showToast` esteso con terzo parametro retro-compatibile, solo i 5 toast del postino lo usano).
   - Commit: `0fbbe86` (postino) + `74c51c5` (ritocchi toast). APP_VERSION `2026.05.23 · 15:08`.
 
-- **Sessione 7 — Step F.2 (PROSSIMA)**: **Generazione pasti figli `weekly_plan_meals` via AI**
-  - Il postino F.1 ha creato la riga-madre; F.2 popola le righe figlie 7 giorni × 3-4 pasti = ~21-28 righe per draft.
-  - Prompt Groq `llama-3.3-70b-versatile` con: profilo (pescetariano, intolleranze lattosio, obiettivo ricomposizione), priorità cliniche, integratori abituali (fix R3b `generaPianoAI`), CHECK constraint slot validi (`colazione/spuntino/pranzo/merenda/cena`).
-  - Output: JSON strutturato 7 giorni × pasti con `description`, `kcal`, `protein`, `carbs`, `fat`, `ai_explanation` ("PERCHÉ TI PROPONGO QUESTO").
-  - Salvataggio multi-riga in `weekly_plan_meals` collegate via `plan_id` alla riga-madre del postino + error handling (se AI fallisce → draft resta senza pasti, l'utente vede empty state + retry manuale).
-  - Banner "ESEMPIO DIMOSTRATIVO" diventa condizionale (mostrato solo se `weekly_plan_meals` per quel giorno è vuoto).
-  - Riuso `SLOT_MAP_DEMO_TO_LEGACY` per writer AI piano → tab Oggi.
+- **Sessione 7 — Step F.2a ✅ (23 mag 2026 sera)**: **Generazione pasti pranzo + cena via AI** (14 pasti = 7 pranzi + 7 cene)
+  - Subito dopo il postino F.1 (riga-madre `weekly_plans`), genera anche i pasti figli `weekly_plan_meals`. SOLO pranzo + cena in F.2a; colazione + merenda = F.2b separato.
+  - Ripartizione calorica standard tutti gli utenti: Colazione 25% / Merenda 15% / **Pranzo 35%** / **Cena 25%**. Bersagli per pasto calcolati a runtime dai `target_*` del profilo (`_pianoV4F2aTargets`).
+  - **Una sola chiamata** `callAI(prompt, 2000)` per tutti 14 pasti, JSON rigido, parser/validator robusto (`_pianoV4F2aParseAndValidate`): 14 pasti, copertura completa 1..7 × {pranzo,cena}, campi obbligatori (`day`, `slot`, `description`). MAI throw.
+  - **Opzione A**: riga-madre F.1 creata SEMPRE, indipendentemente dall'esito pasti. Se F.2a fallisce → draft resta senza pasti, welcome overlay annuncia comunque, no rollback.
+  - Funzioni nuove: `_pianoV4F2aTargets`, `_pianoV4F2aBuildPantry`, `_pianoV4F2aBuildPrompt`, `_pianoV4F2aParseAndValidate`, `_pianoV4GenerateAndInsertMeals`. Hook in `_pianoV4MaybePostino` DOPO INSERT riga-madre. Anti-doppione doppio (skip-existing di F.1 + guard `plan_id` pre-INSERT).
+  - Convenzioni DB: `day_of_week` 1=LUN..7=DOM ISO; `slot` ∈ {'pranzo','cena'} (CHECK ammette colazione/spuntino/pranzo/merenda/cena); `sort_order` pranzo=1/cena=2.
+  - **Prompt irrobustito in 3 giri di collaudo dal vivo** (lezione chiave: il coach AI va affinato iterativamente):
+    1. Giro 1 (`4bc94eb`): funziona meccanicamente ma INVENTA ("Pollo di mare" per pescetariano) e ripete giorno 7.
+    2. Giro 2 (`76cb793`): 10 regole ferree + DISPENSA AMMESSA (`_pianoV4F2aBuildPantry` whitelist categorie ingredienti per dieta+intolleranze) + divieto invenzione + divieto mascheramento (esempio negativo esplicito "pollo di mare") + varietà ingredienti + attenzione giorno 7. Risolto: ingredienti veri, no latticini, 7 giorni diversi.
+    3. Giro 3 (`8ae2dda`): VARIETÀ DI STRUTTURA — tavolozza A piatti unici/zuppe, B cotture pesce variate NO crudo/tartare, C schema pranzo/cena variabile, D proteine protagoniste legumi/uova. Risolto: niente più monotonia "carbo+pesce / pesce+contorno".
+  - **Toast voce coach** (`e966956`): rimossi termini interni "Postino"/"draft"/"INSERT" dai messaggi visibili. Testi finali: "Il coach ha generato il tuo piano per la settimana del DD/MM/YYYY" (5500ms) + "Il coach ha preparato pranzi e cene della settimana" (7500ms). Termini tecnici restano solo in console.log.
+  - Collaudo dal vivo positivo su profilo Ignazio (2326 kcal pescetariano + no lattosio): 14 pasti, pranzi ~800-830 / cene ~570-600 kcal, ingredienti reali, intolleranze rispettate, varietà piena ingredienti+struttura.
+  - Catena commit: `4bc94eb` + `76cb793` + `8ae2dda` + `e966956`. APP_VERSION finale `2026.05.23 · 21:56`.
 
-- **Sessione 8 — Step G**: **Logica adattamento + memoria AI**
+- **Sessione 8 — Step F.2b (PROSSIMA)**: **Colazione + merenda** (= il restante 40% calorico riservato)
+  - 7 colazioni (25%) + 7 merende (15%) per draft. Slot `'colazione'` e `'merenda'` (CHECK constraint).
+  - Colazione tendenzialmente standardizzata per utente: in onboarding (refresh M1 futuro) chiedere preferenza dolce/salato + tipo bevanda (latte vaccino/avena/soia/mandorla/cocco/nessuno).
+  - Merenda spesso = barretta energetica (~fisso, soprattutto per utenti Nutrilite). Coach può proporre alternanza barretta/snack veri.
+  - Riuso architettura F.2a: stesso pattern `_pianoV4F2aBuildPrompt` + parser/validator + INSERT batch + DISPENSA. Probabile estensione del prompt o seconda `callAI` dedicata (decisione design in F.2b).
+
+- **Sessione 9 — Step G**: **Logica adattamento + memoria AI**
   - Worker (o postino esteso, da decidere in G) legge `weight_logs` settimanali, calcola trend peso (slope linear regression su 14gg), propone adattamento target_kcal (Modo 2)
   - Aggiorna `ai_memory` con preferenze apprese dalle azioni utente (es. "preferisce pesce" se 3+ sostituzioni con pesce, "evita burro" se SALTO ripetuto su pasti con burro, "venerdì fuori" se SALTO ricorrente venerdì sera)
   - Logica "AI propone, utente decide": no automatismi sui target — l'utente conferma manualmente via diff card nel welcome overlay
 
-- **Sessione 9 — Step H**: **Integrazione bidirezionale tab Oggi**
+- **Sessione 10 — Step H**: **Integrazione bidirezionale tab Oggi**
   - Registra pasto in Oggi → sistema verifica se il pasto è pianificato per quel giorno+slot
   - Match → marca `weekly_plan_acceptance.status='accepted'` automaticamente
   - No match in zona macro → marca `status='substituted'` (conta nel "X/7 giorni seguiti")
   - No match fuori zona → marca `status='off_plan'` (NON conta nel contatore)
   - Contatore "5/7 giorni seguiti" real-time in card stato
 
-- **Sessione 10 — Step I**: **Update CLAUDE.md + cleanup legacy**
+- **Sessione 11 — Step I**: **Update CLAUDE.md + cleanup legacy**
   - Marca `renderPiano` (versione legacy) → `renderPianoLegacy`
   - Aggiorna routing `showPage`/`renderPage` per puntare a `renderPianoV4`
   - Documentazione finale completa Tab Piano v4 production-ready
@@ -1821,6 +1855,78 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 23 maggio 2026 (sera) — Sessione 7 / Step F.2a: Generazione pasti pranzo+cena ✅ STEP F.2a CHIUSO
+
+Subito dopo il postino F.1 (riga-madre `weekly_plans` con i 4 target), il postino genera ora anche i **pasti figli** in `weekly_plan_meals` — SOLO **pranzo + cena** per 7 giorni (14 pasti). Colazione e merenda restano fuori da F.2a (= sessione F.2b separata). Catena 4 commit: scheletro + 3 giri di irrobustimento prompt dal vivo + ritocchi toast voce coach. APP_VERSION finale `2026.05.23 · 21:56`.
+
+**Ripartizione calorica standard per TUTTI gli utenti** (decisa, non personalizzata per ora):
+- Colazione 25% · Merenda/barretta 15% · **Pranzo 35%** · **Cena 25%**
+- F.2a genera pranzo + cena (= 60% del totale); il 40% restante (colazione+merenda) è "spazio riservato" alle fasi future. Il coach NON deve usarlo.
+- I bersagli per pasto sono calcolati a runtime dai `target_kcal/protein/carbs/fat` del profilo dell'utente: helper `_pianoV4F2aTargets(targets)`. Proporzioni uguali per tutti, numeri diversi per ciascuno. Esempio Ignazio (2326/198/221/72): pranzo bersaglio 814/69/77/25, cena 582/50/55/18. Sono indicativi (oscillazioni ragionevoli ammesse).
+
+**Come funziona la generazione**
+- **Una sola chiamata** `callAI(prompt, 2000)` al Worker Groq per tutti i 14 pasti. Il coach legge dal profilo `first_name/age/sex/dieta/intolleranze (ARRAY)/obiettivo` + i bersagli.
+- **JSON rigido** in risposta. Schema:
+  ```
+  {"meals":[{"day":1-7,"slot":"pranzo|cena","description":"...","kcal":N,"protein":N,"carbs":N,"fat":N,"explanation":"..."}, ...]}
+  ```
+- **Parser + validatore robusto** `_pianoV4F2aParseAndValidate(text)`: strip backtick → try/catch `JSON.parse` → verifica array `meals` presente, 14 oggetti, copertura completa `1..7 × {pranzo,cena}` senza duplicati, campi obbligatori (`day` intero 1-7, `slot` ∈ {pranzo,cena}, `description` non vuoto). MAI throw — sempre `{ok:true,meals}` o `{ok:false,reason}`. Se l'AI risponde malformata/incompleta → NON scrive pasti, ritorna `reason` leggibile per diagnostica.
+
+**Opzione A — decisione presa**
+- La riga-madre F.1 viene creata SEMPRE, indipendentemente dall'esito dei pasti.
+- I pasti sono un add-on: se generazione/validazione/INSERT fallisce → la riga-madre resta senza pasti (il welcome overlay la annuncia comunque), nessun rollback.
+- L'INSERT dei 14 pasti è batch, DOPO la creazione della riga-madre. Se l'INSERT pasti fallisce a metà → log + toast informativo, app prosegue.
+
+**Funzioni nuove** (tutte in `zona-tracker.html`, blocco `// PIANO V4 Step F.2a`):
+- `_pianoV4F2aTargets(targets)` — calcola bersagli pranzo (35%) + cena (25%) dai target del profilo
+- `_pianoV4F2aBuildPantry(dieta, intolleranze)` — costruisce la "DISPENSA AMMESSA" (whitelist categorie ingredienti) per il profilo. Detection regime: pescetariano/vegetariano/vegano/onnivoro (string match permissivo). Sottrae intolleranze: `noLatticini`, `noGlutine`, `noUova`, `noFrutSecca`, `noSoia`.
+- `_pianoV4F2aBuildPrompt(profile, targets, perMeal)` — assembla il prompt italiano con profilo + bersagli + dispensa + 10 regole ferree + tavolozza varietà struttura + formato JSON rigido + self-check finale
+- `_pianoV4F2aParseAndValidate(text)` — parser + validatore robusto (vedi sopra)
+- `_pianoV4GenerateAndInsertMeals(planId, profile, targets, opts)` — orchestratore: guard anti-doppione `plan_id` → `callAI(prompt, 2000)` → validazione → INSERT batch in `weekly_plan_meals`. MAI throw.
+
+**Hook integrazione**: dentro `_pianoV4MaybePostino` subito dopo l'INSERT riuscito della riga-madre F.1. I pasti vengono generati SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (il branch skip-existing/race-conflict di F.1 ritorna prima di arrivare al blocco F.2a). Guard pre-INSERT su `plan_id` come paranoia anti-race.
+
+**Convenzioni DB rispettate**
+- `day_of_week` `1=LUN..7=DOM ISO` (coerente con riga 13998 e CHECK constraint)
+- `slot` ∈ `{'pranzo','cena'}` (CHECK constraint ammette `colazione/spuntino/pranzo/merenda/cena`)
+- `sort_order`: pranzo=1, cena=2
+
+**Prompt irrobustito in 3 giri di collaudo dal vivo** — lezione chiave: il coach AI va affinato iterativamente guardando i dati reali, non con una sola passata "perfetta" a tavolino.
+
+- **Giro 1** (commit `4bc94eb`, scheletro F.2a): funziona meccanicamente — 14 pasti, conti corretti, JSON valido — ma il coach INVENTA quando in difficoltà ("Pollo di mare" per un pescetariano: nome inventato per mascherare il pollo, che è carne) e RIPETE identici i piatti del giorno 7.
+- **Giro 2** (commit `76cb793`, irrobustimento contenuto): aggiunte **10 regole ferree** numerate per priorità + nuovo helper `_pianoV4F2aBuildPantry` che genera la "DISPENSA AMMESSA" per il regime alimentare dell'utente (whitelist categorie, sottrae intolleranze). Regole chiave: (1) DIVIETO INVENZIONE — solo ingredienti reali con nome corretto italiano. (2) DIVIETO MASCHERAMENTO — esempio negativo esplicito "pollo di mare NON ESISTE, il pollo è carne". (3) PRUDENZA — se difficile, scegli piatto più semplice dalla dispensa. (4) DUBBIO=NO — nel dubbio non usare. (5) INTOLLERANZE precedenza assoluta. (6) VARIETÀ INGREDIENTI con attenzione esplicita al giorno 7. (7-10) cucina italiana, bersagli macro, description, explanation. + self-check finale prima del JSON. Risolto: ingredienti veri, no latticini, 7 giorni con ingredienti diversi.
+- **Giro 3** (commit `8ae2dda`, varietà di struttura): secondo difetto sottile — ingredienti diversi ma stessa STRUTTURA ripetuta tutta la settimana ("carbo+pesce" a pranzo, "pesce+contorno" a cena, sempre "al forno"/"in padella"). Aggiunta sezione **VARIETÀ DI STRUTTURA** con tavolozza 4 punti:
+  - **A) Piatti unici completi** (zuppe ricche, insalatone, bowl) accanto ai "primo+secondo"
+  - **B) Metodi cottura pesce variati** (forno, padella, cartoccio, vapore, umido/zuppa, marinato, griglia). **VIETATO pesce CRUDO o TARTARE** (escluso per scelta).
+  - **C) Schema pranzo/cena variabile** — invertire o rompere lo stampo "carbo a pranzo + pesce a cena"
+  - **D) Proteine protagoniste varie** — legumi (zuppa/polpette/hummus/dahl/vellutate) e uova (frittata, shakshuka) protagonisti di alcuni pasti, non solo pesce
+  - Self-check finale esteso per includere varietà di struttura. Risolto: niente più formula unica ripetuta.
+
+**Toast = voce del coach** (commit `e966956`, ritocchi finali UX): rimossi termini interni "Postino"/"draft"/"INSERT" da tutti i 7 toast user-facing del postino. Linguaggio umano e comprensibile. Testi finali:
+- Creazione piano OK → **"Il coach ha generato il tuo piano per la settimana del DD/MM/YYYY 📋"** (5500ms)
+- Pasti generati OK → **"Il coach ha preparato pranzi e cene della settimana 🍽️"** (7500ms — più lungo, è la notizia principale)
+- Piano già esistente → **"Hai già un piano del coach per questa settimana"** (5500ms)
+- Pasti NON generati → **"Piano pronto, ma il coach non è riuscito a preparare i pasti — riprova"** (7500ms)
+- Errori DB / exception → frasi umane generiche ("Qualcosa è andato storto..."), niente più stringhe di errore tecnico visibili
+- Termini tecnici restano SOLO in `console.log [postino]` / `[postino-meals]` per diagnostica DevTools
+- `showToast(msg, emoji, duration)` invariato: SOLO i 7 toast del postino passano `duration` esplicita (5500/7500); tutti gli altri toast dell'app restano sul default storico 2500ms.
+
+**Collaudo dal vivo positivo** su profilo Ignazio (pescetariano, no lattosio/latticini, ricomposizione, 2326 kcal): 14 pasti, pranzi ~800-830 / cene ~570-600 kcal, ingredienti reali, intolleranze rispettate, varietà piena di ingredienti E struttura. DB pulito a fine sessione: solo la draft di test originale `2026-05-25` con target `2200/187/209/68` resta come banco prova.
+
+**Catena commit Step F.2a**:
+- `4bc94eb` — feat(piano-v4): Step F.2a — generazione 14 pasti (pranzo+cena × 7gg)
+- `76cb793` — fix(piano-v4): Step F.2a — irrobustimento prompt coach (no invenzione + varietà ingredienti)
+- `8ae2dda` — fix(piano-v4): Step F.2a — varietà di STRUTTURA dei pasti nel prompt
+- `e966956` — fix(piano-v4): toast postino in voce del coach (no termini tecnici utente)
+- Branch `main`. APP_VERSION finale `2026.05.23 · 21:56`.
+
+**Nodi aperti per F.2b e oltre** (vedi sezione "Note/scoperte" e "TODO Step F.2b" sotto):
+- Step F.2b = colazione + merenda (sessione separata). Tendenzialmente colazione standardizzata per utente, merenda spesso = barretta energetica.
+- Filosofia target futura: ricettario "pasti già approvati" che il coach pesca; apprendimento dallo storico; (F.2d) il coach corregge squilibri suggerendo cibo o integratore Nutrilite. Costruzione strada facendo.
+- Vincolo "un solo obiettivo alla volta" da imporre nell'onboarding (vedi Note/scoperte).
+- Guard-rail sicurezza kcal minime prima del rilascio pubblico (vedi Note/scoperte).
+- Test recupero "giorno dopo" del welcome overlay ancora da eseguire dal vivo (vedi TODO Step F.2b).
 
 ### 23 maggio 2026 — Sessione 6 / Step F.1: Postino generazione draft `weekly_plans` ✅ STEP F.1 CHIUSO
 
