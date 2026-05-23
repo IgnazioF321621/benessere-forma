@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.23 · 15:08';
+const APP_VERSION = '2026.05.23 · 20:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12837,6 +12837,232 @@ async function _pianoV4GenerateReasoning(targets) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Step F.2a (23 mag 2026) — Generazione pasti figli pranzo+cena
+//
+// Subito DOPO la creazione della riga-madre `weekly_plans` (F.1), il postino
+// genera 14 pasti figli in `weekly_plan_meals`: 7 pranzi + 7 cene per la
+// settimana. Colazione e merenda NON generati in F.2a — quel 40% calorico
+// resta "spazio riservato" per le fasi future.
+//
+// Ripartizione calorica standard (TUTTI gli utenti):
+//   Colazione 25% · Merenda 15% · Pranzo 35% · Cena 25%
+// F.2a usa solo i bersagli 35% (pranzo) e 25% (cena), calcolati a runtime
+// dal target_kcal/protein/carbs/fat del profilo. Sono indicativi.
+//
+// Opzione A: la riga-madre resta sempre. Se generazione/validazione/INSERT
+// pasti fallisce → la riga-madre resta SENZA pasti, l'app sopravvive,
+// nessun rollback. Log + toast informativo, prosegui.
+// ═══════════════════════════════════════════════════════════
+
+// Helper: calcola bersagli per pranzo/cena dato il target giornaliero.
+// pranzo = 35%, cena = 25%. Tutti i macro proporzionalmente.
+function _pianoV4F2aTargets(targets) {
+  function pct(v, p) { return Math.round((Number(v) || 0) * p); }
+  return {
+    lunch: {
+      kcal:    pct(targets.kcal,    0.35),
+      protein: pct(targets.protein, 0.35),
+      carbs:   pct(targets.carbs,   0.35),
+      fat:     pct(targets.fat,     0.35),
+    },
+    dinner: {
+      kcal:    pct(targets.kcal,    0.25),
+      protein: pct(targets.protein, 0.25),
+      carbs:   pct(targets.carbs,   0.25),
+      fat:     pct(targets.fat,     0.25),
+    },
+  };
+}
+
+// Helper: costruisce il prompt AI per generare i 14 pasti.
+// Legge dieta/intolleranze/obiettivo da ST.profile (nomi colonna reali, IT/EN misti).
+// Lingua italiana, una sola chiamata, JSON strict.
+function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
+  const dieta = (profile.dieta || '').toString().trim();
+  const intolleranzeRaw = profile.intolleranze;
+  const intolleranze = Array.isArray(intolleranzeRaw)
+    ? intolleranzeRaw.filter(Boolean)
+    : (intolleranzeRaw ? [String(intolleranzeRaw)] : []);
+  const obiettivo = (profile.obiettivo || '').toString().trim();
+  const firstName = (profile.first_name || '').toString().trim();
+  const age = profile.age ? Number(profile.age) : null;
+  const sex = (profile.sex || '').toString().trim();
+
+  const profileLines = [];
+  if (firstName) profileLines.push("- Nome: " + firstName);
+  if (age)       profileLines.push("- Età: " + age + " anni");
+  if (sex)       profileLines.push("- Sesso: " + sex);
+  if (dieta)     profileLines.push("- Regime alimentare: " + dieta);
+  if (intolleranze.length) profileLines.push("- Intolleranze/esclusioni (DA EVITARE SEMPRE): " + intolleranze.join(", "));
+  if (obiettivo) profileLines.push("- Obiettivo: " + obiettivo);
+
+  const targetLines = [
+    "- Target giornaliero: " + targets.kcal + " kcal · " + targets.protein + "g proteine · " + targets.carbs + "g carboidrati · " + targets.fat + "g grassi",
+    "- Bersaglio PRANZO (~35% del giorno): " + perMeal.lunch.kcal + " kcal · " + perMeal.lunch.protein + "g P · " + perMeal.lunch.carbs + "g C · " + perMeal.lunch.fat + "g G",
+    "- Bersaglio CENA (~25% del giorno): "   + perMeal.dinner.kcal + " kcal · " + perMeal.dinner.protein + "g P · " + perMeal.dinner.carbs + "g C · " + perMeal.dinner.fat + "g G",
+  ];
+
+  return [
+    "Sei il coach nutrizionale di Zona Tracker. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    "",
+    "PROFILO UTENTE:",
+    profileLines.join("\n"),
+    "",
+    "BERSAGLI NUTRIZIONALI:",
+    targetLines.join("\n"),
+    "",
+    "REGOLE FERREE (NON NEGOZIABILI):",
+    "- Rispetta SEMPRE il regime alimentare. Se 'pescetariano' → mai carne (sì pesce, uova, vegetale). Se 'vegetariano' → mai carne né pesce. Se 'vegano' → solo vegetale.",
+    "- Rispetta SEMPRE le intolleranze/esclusioni: NESSUN ingrediente di quella lista in NESSUN pasto.",
+    "- 7 pranzi diversi tra loro, 7 cene diverse tra loro. Niente ripetizioni.",
+    "- Cucina italiana, piatti realistici e semplici da preparare a casa.",
+    "- Le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
+    "- description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali (es. \"Pasta al pesto di basilico con pomodorini e fiocchi di mandorle\").",
+    "- explanation: 1 frase breve sul perché funziona per il profilo (max 15 parole, opzionale).",
+    "",
+    "FORMATO RISPOSTA (RIGIDO):",
+    "Rispondi SOLO con JSON valido, nessun preambolo, nessun testo extra, nessun blocco ```. Schema:",
+    "{\"meals\":[{\"day\":1,\"slot\":\"pranzo\",\"description\":\"...\",\"kcal\":N,\"protein\":N,\"carbs\":N,\"fat\":N,\"explanation\":\"...\"}, ...]}",
+    "",
+    "- day: 1=lunedì .. 7=domenica (ISO)",
+    "- slot: \"pranzo\" oppure \"cena\" (esattamente queste due stringhe)",
+    "- 14 oggetti totali: 1 pranzo + 1 cena per ognuno dei 7 giorni",
+    "- kcal/protein/carbs/fat: numeri interi",
+    "",
+    "Inizia subito col JSON.",
+  ].join("\n");
+}
+
+// Helper: parse + validazione robusta della risposta AI.
+// Ritorna { ok:true, meals:[...] } oppure { ok:false, reason:'...' }.
+// MAI throw — sempre risposta strutturata.
+function _pianoV4F2aParseAndValidate(text) {
+  if (!text || typeof text !== 'string') return { ok: false, reason: 'empty-response' };
+  const cleaned = text.replace(/```json|```/g, '').trim();
+  let parsed;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (e) {
+    return { ok: false, reason: 'invalid-json', raw: cleaned.slice(0, 200) };
+  }
+  if (!parsed || !Array.isArray(parsed.meals)) {
+    return { ok: false, reason: 'missing-meals-array' };
+  }
+  if (parsed.meals.length < 14) {
+    return { ok: false, reason: 'too-few-meals', count: parsed.meals.length };
+  }
+  // Prendiamo i primi 14 nel caso ne ritorni di più (paranoia)
+  const meals = parsed.meals.slice(0, 14);
+  const validSlots = { pranzo: true, cena: true };
+  const seen = {}; // chiave "day-slot" → bool, per garantire 7+7 e niente duplicati
+  for (let i = 0; i < meals.length; i++) {
+    const m = meals[i];
+    if (!m || typeof m !== 'object') return { ok: false, reason: 'meal-not-object', idx: i };
+    const day = Number(m.day);
+    if (!Number.isInteger(day) || day < 1 || day > 7) return { ok: false, reason: 'bad-day', idx: i, day: m.day };
+    const slot = String(m.slot || '').toLowerCase();
+    if (!validSlots[slot]) return { ok: false, reason: 'bad-slot', idx: i, slot: m.slot };
+    if (!m.description || typeof m.description !== 'string' || !m.description.trim()) {
+      return { ok: false, reason: 'missing-description', idx: i };
+    }
+    const key = day + '-' + slot;
+    if (seen[key]) return { ok: false, reason: 'duplicate-day-slot', idx: i, key: key };
+    seen[key] = true;
+  }
+  // Verifica copertura completa: tutti i 14 slot (7 giorni × 2 slot) devono esserci
+  for (let d = 1; d <= 7; d++) {
+    if (!seen[d + '-pranzo']) return { ok: false, reason: 'missing-lunch', day: d };
+    if (!seen[d + '-cena'])   return { ok: false, reason: 'missing-dinner', day: d };
+  }
+  return { ok: true, meals: meals };
+}
+
+// Funzione principale F.2a: genera i 14 pasti via AI, valida, fa INSERT batch.
+// Ritorna { ok, reason?, inserted? } — MAI throw.
+// planId = id della riga-madre weekly_plans appena creata.
+// Anti-doppione: prima di inserire verifica che non esistano già pasti per quel plan_id.
+async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
+  opts = opts || {};
+  const debug = !!opts.debug;
+  try {
+    // Guard anti-doppione: nessun pasto per questo plan_id deve già esistere.
+    // (in teoria impossibile perché plan_id è appena stato creato, ma in caso di
+    // race/race-conflict ricoperto da F.1 questo guard chiude il cerchio).
+    const existing = await supa
+      .from('weekly_plan_meals')
+      .select('id')
+      .eq('plan_id', planId)
+      .limit(1);
+    if (existing.error) {
+      console.warn('[postino-meals] guard query error:', existing.error);
+      return { ok: false, reason: 'guard-query-error', error: existing.error.message };
+    }
+    if (existing.data && existing.data.length > 0) {
+      if (debug) console.log('[postino-meals] skip: pasti già esistenti per plan_id', planId);
+      return { ok: false, reason: 'skip-existing-meals' };
+    }
+
+    // Bersagli pranzo/cena
+    const perMeal = _pianoV4F2aTargets(targets);
+    if (debug) console.log('[postino-meals] perMeal targets:', perMeal);
+
+    // Prompt + chiamata AI
+    const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal);
+    if (debug) console.log('[postino-meals] prompt:', prompt);
+    let text = '';
+    try {
+      text = await callAI(prompt, 2000);
+    } catch (e) {
+      console.warn('[postino-meals] callAI error:', e);
+      return { ok: false, reason: 'ai-call-failed', error: (e && e.message) || String(e) };
+    }
+    if (debug) console.log('[postino-meals] AI raw response:', text);
+
+    // Validazione
+    const v = _pianoV4F2aParseAndValidate(text);
+    if (!v.ok) {
+      console.warn('[postino-meals] validation failed:', v);
+      return { ok: false, reason: 'validation-failed', detail: v };
+    }
+    if (debug) console.log('[postino-meals] validation OK, 14 meals ready for INSERT');
+
+    // Mappa meals validati → payload per INSERT batch
+    // sort_order: pranzo=1, cena=2 (ordine cronologico nel giorno).
+    const rows = v.meals.map(function(m) {
+      const slot = String(m.slot).toLowerCase();
+      return {
+        plan_id:        planId,
+        user_id:        ST.user.id,
+        day_of_week:    Number(m.day),
+        slot:           slot,
+        description:    String(m.description).trim(),
+        kcal:           (m.kcal != null) ? Math.round(Number(m.kcal) || 0) : null,
+        protein:        (m.protein != null) ? Math.round(Number(m.protein) || 0) : null,
+        carbs:          (m.carbs != null) ? Math.round(Number(m.carbs) || 0) : null,
+        fat:            (m.fat != null) ? Math.round(Number(m.fat) || 0) : null,
+        ai_explanation: (m.explanation && String(m.explanation).trim()) || null,
+        sort_order:     (slot === 'pranzo') ? 1 : 2,
+      };
+    });
+
+    const ins = await supa
+      .from('weekly_plan_meals')
+      .insert(rows)
+      .select('id');
+    if (ins.error) {
+      console.warn('[postino-meals] INSERT batch error:', ins.error);
+      return { ok: false, reason: 'insert-failed', error: ins.error.message };
+    }
+    const insertedCount = (ins.data && ins.data.length) || 0;
+    if (debug) console.log('[postino-meals] INSERT batch OK:', insertedCount, 'pasti');
+    return { ok: true, inserted: insertedCount };
+  } catch (e) {
+    console.warn('[postino-meals] exception:', e);
+    return { ok: false, reason: 'exception', error: (e && e.message) || String(e) };
+  }
+}
+
 // Entry-point del postino. Chiamato dai 3 rami di loadAndStart PRIMA delle chiamate
 // welcome overlay. Garantisce: se va a buon fine, la draft esiste quando l'overlay
 // la cerca subito dopo.
@@ -12913,6 +13139,24 @@ async function _pianoV4MaybePostino(opts) {
     if (debug) console.log('[postino] draft creata:', data);
     status.createdDraft = data;
     if (opts.toastOnSkip) showToast('Postino: draft creata per ' + _pianoV4IsoToItDate(status.weekStart) + ' 📬', '✅', 5500);
+
+    // ── F.2a: generazione pasti figli pranzo+cena (Opzione A: no rollback su errore) ──
+    // SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (siamo arrivati
+    // qui solo se l'INSERT è riuscito). Anti-doppione di F.1 garantisce che il branch
+    // skip-existing/race-conflict NON arrivi a questo punto.
+    const planId = (data && data.id) || null;
+    if (planId) {
+      const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
+      status.mealsResult = mealsResult;
+      if (debug) console.log('[postino-meals] result:', mealsResult);
+      if (mealsResult.ok) {
+        if (opts.toastOnSkip) showToast('Postino: ' + mealsResult.inserted + ' pasti generati (pranzo+cena × 7gg) 🍽️', '✅', 5500);
+      } else {
+        // Opzione A: la riga-madre resta. Solo log + toast informativo, no rollback.
+        if (opts.toastOnSkip) showToast('Postino: draft creata MA pasti non generati (' + mealsResult.reason + ')', '⚠️', 5500);
+      }
+    }
+
     return status;
   } catch (e) {
     console.warn('[postino] exception:', e);
