@@ -2994,7 +2994,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.23 · 21:32';
+const APP_VERSION = '2026.05.23 · 21:56';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13179,16 +13179,16 @@ async function _pianoV4MaybePostino(opts) {
 
     if (status.decision !== 'create') {
       // Per le forzature di collaudo, se l'utente ha lanciato ztTestGenera() e
-      // il guard è scattato, mostriamo un toast esplicativo (non in produzione).
+      // il guard è scattato, mostriamo un toast esplicativo (voce del coach).
+      // NB: testi visibili → linguaggio umano, NESSUN termine tecnico interno.
       if (opts.toastOnSkip) {
-        const wsIt = _pianoV4IsoToItDate(status.weekStart || '');
         const msg = {
-          'skip-no-user':    'Postino: nessun utente loggato',
-          'skip-no-profile': 'Postino: profilo non caricato',
-          'skip-day':        'Postino: oggi non è il giorno-piano',
-          'skip-existing':   'Postino: piano già esistente per la settimana ' + wsIt,
-          'skip-no-targets': 'Postino: obiettivi profilo mancanti o a 0',
-        }[status.decision] || ('Postino: skip (' + status.decision + ')');
+          'skip-no-user':    'Devi accedere prima per ricevere un piano',
+          'skip-no-profile': 'Il coach non riesce a leggere il tuo profilo — riprova',
+          'skip-day':        'Il coach genera i piani nel giorno che hai scelto',
+          'skip-existing':   'Hai già un piano del coach per questa settimana',
+          'skip-no-targets': 'Il coach ha bisogno dei tuoi obiettivi per generare un piano',
+        }[status.decision] || 'Qualcosa è andato storto — riprova';
         showToast(msg, 'ℹ️', 5500);
       }
       return status;
@@ -13223,42 +13223,44 @@ async function _pianoV4MaybePostino(opts) {
         status.existingFound = true;
         status.existingStatus = 'race-conflict';
         if (debug) console.log('[postino] race-conflict: draft creata da un altro device per', status.weekStart);
-        if (opts.toastOnSkip) showToast('Postino: piano già creato (race) per ' + _pianoV4IsoToItDate(status.weekStart), 'ℹ️', 5500);
+        if (opts.toastOnSkip) showToast('Hai già un piano del coach per questa settimana', 'ℹ️', 5500);
         return status;
       }
       // Altro errore DB: log e ritorna status come "errore"
       console.warn('[postino] INSERT error:', error);
       status.decision = 'error-insert';
       status.error = error.message || String(error);
-      if (opts.toastOnSkip) showToast('Postino: errore INSERT (' + status.error + ')', '⚠️', 5500);
+      if (opts.toastOnSkip) showToast('Qualcosa è andato storto nel salvataggio — riprova', '⚠️', 5500);
       return status;
     }
 
     if (debug) console.log('[postino] draft creata:', data);
     status.createdDraft = data;
-    if (opts.toastOnSkip) showToast('Postino: draft creata per ' + _pianoV4IsoToItDate(status.weekStart) + ' 📬', '✅', 5500);
+    if (opts.toastOnSkip) showToast('Il coach ha generato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
 
     // ── F.2a: generazione pasti figli pranzo+cena (Opzione A: no rollback su errore) ──
     // SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (siamo arrivati
     // qui solo se l'INSERT è riuscito). Anti-doppione di F.1 garantisce che il branch
     // skip-existing/race-conflict NON arrivi a questo punto.
+    // NB: toast pasti durano 7500ms (più lungo) — è l'ultimo della sequenza, porta la
+    // notizia principale, deve essere leggibile senza accavallarsi col precedente.
     const planId = (data && data.id) || null;
     if (planId) {
       const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
       status.mealsResult = mealsResult;
       if (debug) console.log('[postino-meals] result:', mealsResult);
       if (mealsResult.ok) {
-        if (opts.toastOnSkip) showToast('Postino: ' + mealsResult.inserted + ' pasti generati (pranzo+cena × 7gg) 🍽️', '✅', 5500);
+        if (opts.toastOnSkip) showToast('Il coach ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
       } else {
         // Opzione A: la riga-madre resta. Solo log + toast informativo, no rollback.
-        if (opts.toastOnSkip) showToast('Postino: draft creata MA pasti non generati (' + mealsResult.reason + ')', '⚠️', 5500);
+        if (opts.toastOnSkip) showToast('Piano pronto, ma il coach non è riuscito a preparare i pasti — riprova', '⚠️', 7500);
       }
     }
 
     return status;
   } catch (e) {
     console.warn('[postino] exception:', e);
-    if (opts.toastOnSkip) showToast('Postino: exception (' + (e.message || e) + ')', '⚠️', 5500);
+    if (opts.toastOnSkip) showToast('Qualcosa è andato storto — riprova', '⚠️', 5500);
     return { decision: 'error-exception', error: (e && e.message) || String(e) };
   }
 }
