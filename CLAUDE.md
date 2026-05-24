@@ -36,7 +36,8 @@ https://github.com/IgnazioF321621/benessere-forma
    - Sessione 6 — Step **F.1**: Postino generazione draft `weekly_plans` ✅ (23 mag, 2 commit `0fbbe86` postino + `74c51c5` ritocchi toast, APP_VERSION `2026.05.23 · 15:08`). Postino all'apertura app di domenica, "Modo 1 obiettivi invariati" (copia target da profilo), AI scrive `ai_reasoning` con fallback robusto, anti-doppione su `(user_id, week_start)`. Welcome overlay neutralizzato sul check orario (coerenza "domenica senza orario"). Forzature collaudo `?genera=1`/`ztTestGenera()`/`ztGeneraWhy()`.
    - Sessione 7 — Step **F.2a**: Generazione pasti pranzo+cena (14 pasti = 7+7) ✅ (23 mag sera, 4 commit `4bc94eb` scheletro → `76cb793` regole anti-invenzione + dispensa → `8ae2dda` varietà struttura → `e966956` toast voce coach, APP_VERSION finale `2026.05.23 · 21:56`). Ripartizione standard: colazione 25% / merenda 15% / pranzo 35% / cena 25% (F.2a copre solo 60% = pranzo+cena). Una sola `callAI(prompt, 2000)`, JSON rigido, parser/validator robusto. Opzione A: riga-madre creata sempre, pasti add-on. Prompt irrobustito iterativamente dal vivo (3 giri): no invenzione ingredienti, DISPENSA per dieta+intolleranze, varietà ingredienti+struttura+cotture+proteine protagoniste. Toast in voce del coach (no termini tecnici utente).
    - Sessione 8 / Step **F.2b** — Colazione + merenda. **STAND BY (non eliminato)** — decisione 23 mag sera: colazione e merenda sono lasciate alla gestione libera dell'utente; il coach genera SOLO pranzo + cena (F.2a). La ripartizione 25/15/35/25 protegge comunque il 40% (colazione+merenda) → l'utente ha lo spazio per gestirli a mano senza sforare la giornata. **F.2a è di fatto il punto d'arrivo della parte automatica del modulo Nutrition per questa fase.** F.2b potrà essere riattivato in futuro se l'utente sceglierà esplicitamente "voglio che il coach pensi anche a colazione e merenda" (vedi idea onboarding in sezione "Note e scoperte").
-   - **PROSSIMA sessione**: SCELTA APERTA. Ignazio sceglierà a inizio prossima sessione tra: (a) eventuale F.2c/d (ricettario + apprendimento storico + correzione squilibri via cibo/integratore Nutrilite — visione futura, non imminente); (b) fix/guard-rail già annotati (vincolo "un solo obiettivo", soglia minima kcal); (c) altri blocchi roadmap (notifiche push, test iPhone tester attivi, admin panel, ecc.).
+   - Sessione 8 (24 mag 2026): Sicurezza + chiusura modulo Nutrition ✅. **3 fix di sicurezza/coerenza chiusi**: A1 onboarding obiettivo SINGOLO (`2d07127`+`e69992a`), B guard-rail calorie minime con avviso modale (`9c16d4e`), A2 cambio obiettivo unificato in Impostazioni (`49a53bd`). APP_VERSION `2026.05.24 · 16:35`. Modulo Nutrition CHIUSO per questa fase.
+   - **PROSSIMO grande filone**: **Modulo TRAINING**. La prossima sessione si sposta dal Nutrition al Training. Il punto di partenza preciso dentro Training lo sceglierà Ignazio a inizio prossima sessione. Restano paralleli (non ancora schedulati): notifiche push, test iPhone tester attivi, admin panel, eventuale F.2c/d Nutrition (visione futura), rifiniture Nutrition residue (vedi sezione changelog 24 mag).
    - Sessioni 8-10: vedi sezione "Tab Piano v4" per dettaglio
 6. **Refresh onboarding M1 dedicato** — DOPO Tab Piano v4. Aggiungere 2 nuove preferenze: giorno+ora generazione piano settimanale, modalità tracking peso (giorno/3gg/settimana/libero)
 7. Food input multi-modale — Fase 0 refactor + Fase 1 barcode
@@ -227,11 +228,26 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato moduli Nutrition (23 maggio 2026 sera, post-Sessione 7 / Step F.2a Tab Piano v4)
+### Stato modulo Nutrition (24 maggio 2026, post-Sessione 8 Sicurezza) — ✅ CHIUSO per questa fase
+
+Il modulo Nutrition è **chiuso per questa fase**. Riprendibile in futuro su singole rifiniture residue (vedi sotto), ma il grosso del lavoro è in produzione e funzionante.
+
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
-- **Tab Piano v4**: 🟡 Step A+B+C+D+E+F.1+**F.2a** ✅ chiusi. Step G-H-I da fare. **Step F.2b in STAND BY** (decisione 23 mag sera: colazione+merenda lasciate alla gestione libera dell'utente — vedi sezione "TODO Step F.2b — STAND BY"). Feature flag `ST.pianoV4Enabled` attivo per rollback console. Roadmap: ~~F.1 postino draft weekly_plans~~ ✅, ~~F.2a pasti pranzo+cena 14/sett via AI~~ ✅, ⏸ F.2b colazione+merenda (stand by), F.2c/d adattamento+squilibri (TBD, visione futura), G memoria AI + adattamento target, H integrazione bidirezionale Oggi, I cleanup legacy. **PROSSIMA sessione**: scelta aperta — Ignazio deciderà a inizio prossima sessione tra F.2c/d, fix/guard-rail (un solo obiettivo, soglia minima kcal), o altri blocchi roadmap (notifiche push, test iPhone, admin). F.1 + F.2a consegnati il 23 mag, modulo Nutrition E+F (parte automatica) consegnati prima della scadenza originale del 24 mag. **F.2a è il punto d'arrivo della parte automatica del modulo Nutrition per questa fase.**
+- **Tab Piano v4**: ✅ Step A+B+C+D+E+F.1+**F.2a** chiusi. ⏸ F.2b colazione+merenda in STAND BY (decisione 23 mag sera: colazione+merenda lasciate alla gestione libera dell'utente). Step G/H/I non più previsti come priorità imminenti — possibili filoni futuri ma non schedulati. Feature flag `ST.pianoV4Enabled` resta attivo per rollback console.
+- **Sicurezza & coerenza obiettivo** (24 mag 2026, Sessione 8): ✅ A1 onboarding obiettivo SINGOLO + ✅ A2 cambio unificato in Impostazioni + ✅ B guard-rail calorie minime con avviso modale. Vedi entry changelog 24 maggio sopra.
+
+**Rifiniture Nutrition rimaste — NON bloccanti**, riprendibili quando si vuole:
+- Disclaimer "consulta un esperto" ricorrente (oltre al guard-rail sotto-soglia, promemoria gentile periodico anche con numeri normali — dove/quando = design a sé).
+- Validare soglie calorie 1200/1500 con un nutrizionista prima del rilascio pubblico.
+- Debito ordine macro card Piano legacy (Proteine→Carbo→Grassi vs Carbo→Proteine→Grassi).
+- Test recupero "giorno dopo" welcome overlay dal vivo (nodo aperto Step E + F.1).
+- F.2b colazione + merenda (in stand by, riattivabile da onboarding M1 esteso).
+- Collaudo dal vivo Fix B (replica profilo Ornella).
+- Cleanup `togglePianoObiettivo` no-op deprecata.
+
+**PROSSIMO grande filone**: **Modulo Training** (la prossima sessione si sposta dal Nutrition al Training). Punto di partenza preciso da scegliere a inizio sessione.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1861,6 +1877,80 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
 ## Cosa abbiamo fatto
+
+### 24 maggio 2026 — Sessione 8: Sicurezza + chiusura modulo Nutrition ✅
+
+Tre fix di sicurezza/coerenza chiusi in una sola sessione (5 commit totali). Con questi, il modulo Nutrition è considerato **CHIUSO per questa fase**: piano settimanale automatico + obiettivo coerente ovunque + guard-rail salute attivo. APP_VERSION finale `2026.05.24 · 16:35`.
+
+#### Fix A1 — Onboarding obiettivo SINGOLO ✅ (commit `2d07127` + `e69992a`)
+
+- **Onboarding M1 step 3**: scelta obiettivo passata da "fino a 2" a **esattamente 1** (radio-like). `m1ToggleObiettivo` riscritta (replace, non push), contatore "X di 2 selezionati" rimosso completamente (DOM + JS + CSS), validazione s3 cambiata da `length === 0` a `length !== 1` ("Scegli il tuo obiettivo." al singolare), `m1ApplySelections` aggiornata (niente più logica `.disabled`/contatore). L'array `obiettivi` resta per minimo impatto ma con invariante `length ≤ 1`; il salvataggio `join(',')` produce sempre stringa singola — mai più CSV.
+- **Toast informativo** alla selezione (durata 5000ms, anti-fastidio con no-op su ritap stesso obiettivo): *"Obiettivo impostato. Il coach userà questo per costruire i tuoi pasti e i tuoi piani 📋"*.
+- **Sottotitolo step 3 corretto** (commit rifinitura `e69992a`): da *"Scegli fino a 2 obiettivi. Possono essere combinati."* a *"Scegli il tuo obiettivo. Potrai cambiarlo più avanti."* (la seconda frase rassicura sull'irreversibilità — coerente con Fix A2 sotto).
+- **Causa radice**: caso reale Ornella (`obiettivo='ipertrofia,ricomposizione'` → target nutrizionali assurdi 1060 kcal). Due obiettivi opposti insieme = internamente contraddittori. `calcAdaptedTargets` già usava solo il primo, ignorando il secondo silenziosamente. Dati esistenti già sistemati a mano (solo Ornella aveva il doppio obiettivo).
+- **Convenzione toast generale** documentata inline: la durata va proporzionata alla lunghezza del testo (toast lunghi/importanti 5000ms+, toast brevi default 2500ms). Da seguire nei prossimi interventi; nessun cambio globale al default.
+
+#### Fix B — Guard-rail calorie minime ✅ (commit `9c16d4e`)
+
+- **Costanti soglia** (zona-tracker.html ~riga 3193, vicino ad `ACTIVITY_MULT`/`calcTDEE`): `KCAL_MIN_F = 1200` (donne), `KCAL_MIN_M = 1500` (uomini). Sesso 'Altro'/'O'/null → usa la soglia più PRUDENTE (1200). Commento esplicito: **valori indicativi DA VALIDARE con un nutrizionista prima del rilascio pubblico**. Punto unico di modifica.
+- **3 helper nuovi**:
+  - `_kcalMinForSex(sex)` → ritorna 1500 per 'M', 1200 per tutto il resto.
+  - `showLowKcalWarning(targetKcal, sex)` → crea e appende il modal d'avviso al DOM. Idempotente.
+  - `checkLowKcalAndWarn(targetKcal, sex)` → invocato post-calcolo nei 3 punti; mostra il modal se `kcal > 0 && kcal < soglia`.
+- **Pattern UI scelto**: `info-modal-overlay` + `info-modal` (stesso pattern di `showInfoModal`, `trainDeleteSetConfirm`, ecc.). Modal centrale con scrim, NON un toast. Bottone "Ho capito" che rimuove l'elemento. Testo:
+  > **⚠️ Valori molto bassi**
+  > I valori calcolati sono molto bassi (**X kcal**, sotto la soglia di sicurezza di Y kcal).
+  > Ti consigliamo di **confrontarti con un medico o un nutrizionista** prima di seguire un piano basato su questi numeri. L'app continuerà a funzionare normalmente.
+- **Hook nei 3 punti di calcolo target** (post-`calcTDEE`):
+  1. `saveOnboarding` (~riga 4109): onboarding finale nuovo iscritto, DOPO upsert profilo PRIMA di m2Skip/loadAndStart_thenM2Entry.
+  2. `saveWeight` (~riga 4651): modal "Aggiorna peso" pillolino header, DOPO closeWeightModal + renderPage.
+  3. `saveSettings` (~riga 18270): modal Impostazioni profilo, DOPO closeSettingsModal + renderPage.
+- **NON blocca**: l'avviso informa e raccomanda, il profilo viene salvato comunque, l'onboarding prosegue, l'app funziona normalmente. Solo informazione visibile, non muro. Eventuale blocco lato coach/postino è un fix separato (non in scope).
+- **Logica calcolo invariata**: `calcTDEE`, `calcAdaptedTargets`, `OBJ_ADAPT`, `ACTIVITY_MULT`, formula Mifflin-St Jeor → tutto invariato. Solo controllo post-calcolo aggiunto.
+- **Test smoke Node** (8 scenari, tutti OK): Ornella 1060/F scatta, borderline 1199/F scatta, 1200/F NON scatta (= soglia, off-by-one corretto), 1500/M NON scatta, 2326/M (Ignazio) NON scatta, sesso 'O'/null usa soglia 1200 prudente, kcal=0/null non scatta (dato mancante ≠ avviso).
+- **Collaudo**: aspetto modal verificato via console (`showLowKcalWarning(945,'F')`); scatto automatico nei 3 punti dal vivo **ancora da verificare sul campo** (replica caso Ornella).
+
+#### Fix A2 — Cambio obiettivo unificato nelle Impostazioni ✅ (commit `49a53bd`)
+
+- **L'obiettivo si gestisce ora in UN SOLO posto: le Impostazioni profilo** (scelta singola, `selectSetObiettivo` era già radio-like dalla v.1 — nessuna modifica al pattern di selezione, solo all'orchestrazione del salvataggio).
+- **`saveSettings` refattorata** in due funzioni per supportare conferma asincrona:
+  - `saveSettings()` wrapper — legge `oldObiettivo` (con `migrateObiettivo + split(',')[0]` per gestire residui CSV legacy) e `newObiettivo` dal form. Calcola `isGoalChange = (oldObiettivo && newObiettivo && oldObiettivo !== newObiettivo)`. Se cambia → mostra modal conferma; altrimenti chiama `_saveSettingsExecute(false)` diretto.
+  - `_saveSettingsExecute(goalChanged)` — esecuzione vera (preserva 1:1 ricalcolo TDEE/macro + update DB + applyProfile + saveCache + closeSettingsModal + renderPage + guard-rail Fix B). Se `goalChanged=true` → toast annuncio post-save (5000ms).
+- **Nuova `_saveSettingsShowGoalChangeConfirm(oldKey, newKey)`** — modal di conferma pattern `info-modal-overlay` (z-index 1000, sopra al `weight-modal` z-index 500 del Settings sottostante). Testo:
+  > **Cambiare obiettivo?**
+  > Vuoi cambiare obiettivo da «X» a «Y»?
+  > Il coach userà il nuovo obiettivo per i **prossimi piani settimanali**. I piani già generati restano invariati.
+  > [Annulla] [Sì, cambia]
+  - "Annulla" → ripristina pill su oldKey (`selectSetObiettivo`) + chiude modal conferma. Modal Settings sotto resta aperto, bottone Salva ancora abilitato.
+  - "Sì, cambia" → chiude modal conferma + chiama `_saveSettingsExecute(true)`.
+- **Toast annuncio post-cambio confermato** (5000ms): *"🎯 Obiettivo aggiornato. Da ora il coach userà «Y» per costruire i tuoi prossimi piani."*
+- **Tab Piano**: rimossa la possibilità di cambiare obiettivo. La griglia 6 pill cliccabili in `renderPiano` è stata sostituita da un blocco read-only (label dell'obiettivo corrente + CTA Mono caps **"GESTISCI NELLE IMPOSTAZIONI →"** che chiama `openSettingsModal()`). Eyebrow "(uno o più)" rimosso.
+- **`togglePianoObiettivo` resa no-op deprecata** (toast informativo + apertura Impostazioni). Mantenuta per safety contro DOM in cache PWA stale che potrebbe ancora avere `onclick="togglePianoObiettivo(...)"`. Da rimuovere in cleanup successivo.
+- **`togglePianoIntol`** (dieta/intolleranze tab Piano) **NON toccato** — fuori scope del fix.
+- **Piani esistenti NON rigenerati** (Opzione 1): `weekly_plans` + `weekly_plan_meals` restano intatti. Il nuovo obiettivo vale dalla prossima generazione del coach (postino F.1/F.2a domenica successiva).
+- **Guard-rail Fix B preservato** in `_saveSettingsExecute` (il `checkLowKcalAndWarn` continua a scattare se il ricalcolo post-cambio porta sotto soglia).
+- **`obiettivo` salvato SEMPRE come valore singolo** (mai CSV). Dati legacy normalizzati in lettura tramite `migrateObiettivo(...).split(',')[0]`. Schema DB invariato.
+- **Logica `isGoalChange` verificata su 6 scenari** (test Node): prima scelta (old vuoto) → no conferma; stesso obiettivo → no conferma; cambio normale → conferma; CSV legacy "ipertrofia,ricomposizione" → conferma (legge primo); CSV legacy + new = primo del CSV → no conferma; new vuoto → no conferma.
+- **Collaudo dal vivo positivo**: conferma appare correttamente al cambio reale, "Annulla" ripristina pill + lascia modal Settings aperto, "Sì, cambia" salva con toast annuncio, tab Piano mostra solo lettura con richiamo Impostazioni funzionante.
+
+#### Stato modulo Nutrition al 24 mag 2026 sera
+
+Il modulo Nutrition è **CHIUSO per questa fase**. Riassunto di cosa c'è e funziona:
+- ✅ Piano settimanale automatico: postino F.1 (riga-madre `weekly_plans` con obiettivi) + coach genera pranzo+cena 7×2 = 14 pasti (F.2a).
+- ✅ Colazione/merenda gestite liberamente dall'utente (F.2b in stand by — riattivabile da onboarding futuro).
+- ✅ Tema obiettivo completo e coerente (A1+A2): scelta singola in onboarding, gestione in un posto solo (Impostazioni), conferma sul cambio, tab Piano read-only.
+- ✅ Guard-rail calorie (Fix B): avviso modale sotto-soglia in 3 punti di calcolo.
+- ✅ Tab Oggi, Integratori, Analisi: production-ready v3.
+
+#### Rifiniture Nutrition rimaste (NON bloccanti, da riprendere quando si vuole)
+
+- **Disclaimer "consulta un esperto" ricorrente** (idea Ignazio): oltre al guard-rail sotto-soglia, mostrare ogni tanto (anche con numeri normali) un promemoria gentile di confrontarsi con un professionista. Dove/quando mostrarlo = scelta di design a sé.
+- **Validare soglie calorie 1200/1500 con un nutrizionista** prima del rilascio fuori dai 4 tester (compito esterno di Ignazio; costanti `KCAL_MIN_F`/`KCAL_MIN_M` già pronte da modificare in un solo punto).
+- **Debito ordine macro card Piano legacy** (`renderPiano` ~13251 e `updatePianoTargetCard` ~13371): ordine Proteine→Carbo→Grassi invece di Carbo→Proteine→Grassi (Zona). Cosmetico, da uniformare nel redesign Nutrition.
+- **Test recupero "giorno dopo" welcome overlay**: ancora mai eseguito dal vivo (nodo aperto da Step E + F.1).
+- **F.2b colazione + merenda**: in stand by. Riattivabile se in onboarding M1 esteso l'utente sceglierà "voglio che il coach pensi anche a colazione/merenda".
+- **Collaudo Fix B dal campo**: verificare scatto automatico nei 3 punti di calcolo (onboarding + saveWeight + saveSettings) replicando profilo tipo Ornella (donna 64 anni sedentaria dimagrimento).
+- **Cleanup `togglePianoObiettivo`**: la funzione è ora orfana no-op deprecata. Rimuovere quando si avrà certezza che nessun DOM in cache PWA la chiami più.
 
 ### 23 maggio 2026 (sera) — Sessione 7 / Step F.2a: Generazione pasti pranzo+cena ✅ STEP F.2a CHIUSO
 
