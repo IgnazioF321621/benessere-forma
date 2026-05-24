@@ -2993,7 +2993,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.24 · 15:20';
+const APP_VERSION = '2026.05.24 · 15:38';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3303,7 +3303,7 @@ async function m1Resend() {
 const M1_HEADERS = {
   s1: { title:'Iniziamo da te',          sub:'Useremo il tuo nome per parlarti durante il percorso.' },
   s2: { title:'Parlaci di te',           sub:'Servono per calcolare il tuo fabbisogno e personalizzare il piano.' },
-  s3: { title:"Definiamo l'obiettivo",   sub:'Scegli fino a 2 obiettivi. Possono essere combinati.' },
+  s3: { title:"Definiamo l'obiettivo",   sub:'Scegli il tuo obiettivo. Potrai cambiarlo più avanti.' },
   s4: { title:'Il tuo livello',          sub:'Per calibrare il piano alle tue capacità reali.' },
   s5: { title:'Come mangi',              sub:'Per costruire un piano che rispetti il tuo stile alimentare.' },
   s6: { title:'Cosa devo sapere',        sub:'Aree del corpo o condizioni che richiedono attenzione. Ci servono per adattare il piano allenamento.' },
@@ -3399,9 +3399,12 @@ function m1ToggleObiettivo(key) {
     el.classList.toggle('selected', k === key);
     el.classList.remove('disabled');
   });
-  // Toast informativo leggero (durata default 2500ms). Mostrato solo a selezione NUOVA
-  // (no-op qui sopra evita martellamento su ritocco stesso obiettivo).
-  showToast('Obiettivo impostato. Il coach userà questo per costruire i tuoi pasti e i tuoi piani', '📋');
+  // Toast informativo (durata 5000ms — il testo è lungo, serve tempo per leggerlo
+  // con calma). Mostrato solo a selezione NUOVA (no-op qui sopra evita martellamento
+  // su ritocco stesso obiettivo). Convenzione generale (24 mag 2026): la durata
+  // toast va proporzionata alla lunghezza del testo — toast lunghi/importanti
+  // 5000ms+; toast brevi restano sul default.
+  showToast('Obiettivo impostato. Il coach userà questo per costruire i tuoi pasti e i tuoi piani', '📋', 5000);
 }
 function m1SetAttivita(a) {
   ST.m1Data.attivita = a;
