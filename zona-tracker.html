@@ -2993,7 +2993,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.24 · 15:38';
+const APP_VERSION = '2026.05.24 · 16:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3179,6 +3179,59 @@ function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false
 // TDEE CALCULATOR
 // ═══════════════════════════════════════════════════════════
 const ACTIVITY_MULT = {sedentary:1.2, lightly_active:1.375, moderate:1.55, active:1.725, very_active:1.9};
+
+// ── Fix B (24 mag 2026) — Guard-rail calorie minime ─────────────────────────
+// Soglie sotto cui i target calorici calcolati sono considerati troppo bassi
+// per essere sani: l'app mostra un avviso che invita a confrontarsi con un
+// professionista (medico/nutrizionista) prima di seguire il piano.
+//
+// ⚠️ VALORI INDICATIVI — DA VALIDARE con un nutrizionista prima del rilascio
+// pubblico. Modificabili da qui in un unico punto.
+//
+// Sesso 'Altro' o non specificato → usa la soglia più PRUDENTE (KCAL_MIN_F)
+// per non lasciare scoperto nessun caso limite.
+const KCAL_MIN_F = 1200; // donne
+const KCAL_MIN_M = 1500; // uomini
+
+// Ritorna la soglia kcal minima coerente col sesso del profilo.
+// 'M' → 1500. 'F' o qualsiasi altro valore ('O'/'Altro'/null/undefined) → 1200 (prudente).
+function _kcalMinForSex(sex) {
+  return (sex === 'M') ? KCAL_MIN_M : KCAL_MIN_F;
+}
+
+// Mostra un modal d'avviso (NON toast) quando target_kcal è sotto soglia.
+// Pattern: info-modal-overlay (stesso usato da showInfoModal), per coerenza UX
+// con gli altri messaggi importanti dell'app. Non blocca, non chiede conferma:
+// informa e raccomanda. L'utente chiude e prosegue normalmente.
+// Idempotente: se un avviso è già a schermo, NON ne aggiunge un secondo.
+function showLowKcalWarning(targetKcal, sex) {
+  if (document.querySelector('.info-modal-overlay[data-warning="low-kcal"]')) return;
+  const kcal = Math.round(Number(targetKcal) || 0);
+  const soglia = _kcalMinForSex(sex);
+  const el = document.createElement('div');
+  el.className = 'info-modal-overlay';
+  el.setAttribute('data-warning', 'low-kcal');
+  el.innerHTML = `<div class="info-modal">
+    <h3>⚠️ Valori molto bassi</h3>
+    <p>I valori calcolati sono molto bassi (<strong>${kcal} kcal</strong>, sotto la soglia di sicurezza di ${soglia} kcal).</p>
+    <p>Ti consigliamo di <strong>confrontarti con un medico o un nutrizionista</strong> prima di seguire un piano basato su questi numeri. L'app continuerà a funzionare normalmente.</p>
+    <button class="info-modal-close" onclick="this.closest('.info-modal-overlay').remove()">Ho capito</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+// Controllo soglia: chiamato DOPO il calcolo target nei 3 punti dell'app
+// (onboarding finale, modal Aggiorna peso, modal Impostazioni profilo).
+// Se sotto soglia → mostra l'avviso. Non altera il valore calcolato.
+function checkLowKcalAndWarn(targetKcal, sex) {
+  const soglia = _kcalMinForSex(sex);
+  const kcal = Number(targetKcal) || 0;
+  if (kcal > 0 && kcal < soglia) {
+    showLowKcalWarning(kcal, sex);
+    return true;
+  }
+  return false;
+}
 
 function calcTDEE(sex, age, height, weight, activity) {
   // Mifflin-St Jeor
@@ -4050,6 +4103,11 @@ async function saveOnboarding(opts) {
   }
   await saveWeightEntry(d.peso_attuale);
 
+  // Fix B (24 mag 2026): guard-rail calorie minime. Mostra avviso modale
+  // se target_kcal calcolato è sotto la soglia di sicurezza (per sesso).
+  // Avviso informativo, NON blocca l'avanzamento (utente chiude e prosegue).
+  checkLowKcalAndWarn(r.target, sexForDB);
+
   if(opts.skipM2) {
     // "Salta per ora" su Step 7: marca m2_skipped=true e vai all'app
     await m2Skip();
@@ -4576,14 +4634,21 @@ async function saveWeight() {
   if(!v || v<30 || v>300) return;
   await saveWeightEntry(v);
   // recalculate targets
+  let recalcTarget = null;
+  let recalcSex = null;
   if(ST.profile) {
     const r = calcTDEE(ST.profile.sex||'M', ST.profile.age||35, ST.profile.height_cm||175, v, ST.profile.activity_level||'moderate');
     await supa.from('profiles').update({target_kcal:r.target, target_protein:r.protein, target_carbs:r.carbs, target_fat:r.fat, updated_at:new Date().toISOString()}).eq('id', ST.user.id);
     ST.TARGET = {kcal:r.target, protein:r.protein, carbs:r.carbs, fat:r.fat};
     ST.profile.weight_kg = v;
+    recalcTarget = r.target;
+    recalcSex = ST.profile.sex || 'M';
   }
   closeWeightModal();
   renderPage(ST.page);
+  // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo peso.
+  // Mostrato DOPO renderPage per non interferire con il render della pagina.
+  if(recalcTarget != null) checkLowKcalAndWarn(recalcTarget, recalcSex);
 }
 
 function openWeightModal() {
@@ -18199,6 +18264,10 @@ async function saveSettings() {
   saveCache();
   closeSettingsModal();
   renderPage(ST.page);
+  // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo da impostazioni.
+  // Mostrato DOPO closeSettingsModal + renderPage per essere visibile senza
+  // sovrapporsi al modal impostazioni che si sta chiudendo.
+  checkLowKcalAndWarn(targets.kcal, ST.profile?.sex);
 }
 
 // ═══════════════════════════════════════════════════════════
