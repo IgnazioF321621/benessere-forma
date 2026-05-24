@@ -1876,6 +1876,77 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - Hip thrust TUT alto e Single leg RDL: nessun match dataset esterni, restano `EXERCISE_MEDIA` fallback
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
 
+## MODULO TRAINING — REGOLE DEL COACH & DECISIONI
+*Fonte: sessione design 24 maggio 2026. Diviso in: Parte 1 = regole che il coach AI userà per generare i programmi; Parte 2 = decisioni di prodotto.*
+
+### PARTE 1 — REGOLE DEL COACH
+
+**Filosofia di fondo**
+Il coach ragiona come il miglior coach del mondo: massima personalizzazione dentro confini non negoziabili. Continuità nella progressione, varietà nello stimolo. Eredita dal blocco precedente per far crescere; varia gli esercizi senza improvvisare. Tutto basato sulla letteratura, mai su sensazioni.
+
+**A) Cosa deve coprire**
+1. Ogni programma copre tutto il corpo: 6 pattern + core, sempre tutti presenti.
+2. Pattern: spinta orizzontale · spinta verticale · tirata orizzontale · tirata verticale · dominante di ginocchio · dominante d'anca · core. + rifiniture (bicipiti, tricipiti, spalle laterali, polpacci).
+3. Equilibrio spinta/tirata: tirata >= spinta.
+4. Dominante d'anca irrinunciabile (protegge lombari e ginocchia).
+5. Core a due anime: stabilità (protettiva, sempre) + impatto (intenso e breve).
+6. Copertura completa e bilanciata sempre garantita: la varietà non salta mai un pattern.
+
+**B) Come sceglie gli esercizi**
+7. Libreria universale e ampia: il coach conosce molti esercizi; gli esempi discussi sono indicativi, non liste chiuse.
+8. Ogni esercizio = pattern + movimento, adattabile a più attrezzature (stesso esercizio in versione elastico/manubri/bilanciere/corpo libero).
+9. Filtra sempre per attrezzatura dichiarata + protezioni dell'utente. Niente esercizi controindicati.
+
+**C) Progressione e varietà**
+10. Ogni nuovo blocco eredita i dati del precedente (carichi, reps, RIR, andamento).
+11. Varia gli esercizi mantenendo i pattern: cambia l'esercizio, non lo schema motorio.
+12. Progressione = non solo "più carico": anche meno aiuto (es. elastico più leggero), più reps, più tempo sotto sforzo.
+13. Mai improvvisare: sceglie dentro la cornice.
+
+**D) Struttura e tempo**
+14. Periodizzazione: ciclo 4 settimane (3 carico + 1 scarico), DUP (Forza/Ipertrofia), RIR controllato.
+15. Ogni blocco dura 4 settimane; a fine blocco si chiude e (se possibile) parte un programma nuovo.
+16. Sessione max 45 min (recuperi inclusi). Il tempo decide quanti esercizi entrano.
+17. Finisher metabolico: solo se obiettivo dimagrimento/ricomposizione -> +5/10 min (tetto 50 min), a intervalli (Tabata 20/10 o 30/30), basso impatto articolare, rispetto protezioni.
+
+**E) Obiettivi e dosaggio**
+18. Sei obiettivi singoli (da onboarding): dimagrimento · ricomposizione · ipertrofia · forza & performance · longevità · mantenimento.
+19. Dosaggio per obiettivo: forza (carichi alti, reps basse, rec. lunghi) · ipertrofia (volume alto, reps medie) · ricomposizione (stimolo + densità, finisher moderato) · dimagrimento (densità alta, rec. brevi, finisher, preservando muscolo) · longevità (moderato, sostenibile, mobilità/core/articolazioni) · mantenimento (dose minima efficace).
+20. Confini universali: RIR controllato sempre (mai cedimento); il volume parte prudente e cresce nei blocchi.
+
+**F) Relazione e tono**
+21. Alert protezione = promemoria di tecnica, non divieti. Il coach incoraggia la crescita; l'utente esperto autoregola.
+22. Tutto funziona in automatico da onboarding, senza chat. Le regole valgono per ogni utente.
+
+### PARTE 2 — DECISIONI DI PRODOTTO
+
+**Chiusura blocco (fine 4 settimane)**
+- A fine blocco il coach PROPONE il check fisico M2 (non impone).
+- Check fatto -> coach legge dati aggiornati -> genera programma nuovo (ereditarietà + variazione).
+- Check saltato -> coach NON genera -> ripropone il programma esistente per un altro blocco; riproporrà il check alla chiusura successiva. Il check è la chiave che sblocca il progresso, non un ostacolo.
+- Il coach legge due fonti: progressi fisici/estetici (check M2: foto, circonferenze -> se l'obiettivo funziona / correzione rotta) + progressi di forza (training_logs: carichi, reps, RIR -> come progredire).
+- Stato attuale: il check M2 ESISTE ed è completo (foto, circonferenze, dati corporei, tabella body_checks), ma oggi è agganciato al LOGIN (m2EntryIntro chiamata all'avvio), non alla fine blocco. Da RI-AGGANCIARE alla chiusura blocco. Manca anche il riconoscimento del momento "blocco finito" (oggi il contatore settimana riparte muto: formula (workout/6)%4+1).
+
+**Programma = prescrizione, non documento editabile**
+- Fase 1: il coach genera, l'utente segue. Niente modifica libera dei singoli esercizi (impegno/rischio alti, sporca lo storico della progressione).
+- Fase 2 (futuro): modificabilità GUIDATA — l'utente comunica circostanze ("sono fuori sede", "poco tempo questa settimana", "non riesco a fare X") e il coach RI-DECIDE rispettando regole. Adattamento temporaneo e circoscritto (di norma 1 settimana); non altera la progressione del blocco. Richiede la "voce" del coach nel training.
+
+**Buco onboarding da colmare (prima della generazione)**
+- Presenti: obiettivo (6, combaciano), livello/esperienza, limitazioni fisiche (lista ricca: lombare, cervicale, spalle, gomiti, polsi, anche, ginocchia, caviglie, ernie, cardiovascolari, ipertensione, altro).
+- MANCANO: attrezzatura disponibile e giorni/tempo allenamento a settimana. Entrambi indispensabili al coach Training. Da aggiungere riusando pattern pillole/card esistente (m1-pill-toggle / m1-card-level).
+
+**Catena di generazione del programma (la "fabbrica" del coach)**
+1. Leggi chi è (profilo/onboarding) -> 2. Leggi dove è arrivato (forza + check) -> 3. Decidi dosaggio (obiettivo) -> 4. Componi struttura (pattern sulle sessioni, equilibrio, tempo) -> 5. Scegli esercizi (kit + protezioni, varia + eredita) -> 6. Applica periodizzazione (4 sett., DUP, RIR) -> 7. Verifica e consegna.
+
+**Metodo di lavoro (questa fase)**
+- Prima tutte le idee, poi la grafica (Claude Design disegna il modulo Training intero, coerente, in un colpo solo).
+- Le decisioni si consolidano nel CLAUDE.md (non file separato), in due parti (regole coach / decisioni prodotto).
+
+**Punti ancora aperti (prossimi passi, non bloccanti)**
+- Verificare/riusare suggestProgressionAI esistente quando si costruirà la generazione.
+- Raffinare "quando" il finisher serve oltre dimagrimento/ricomposizione (es. longevità -> lavoro cardio dolce).
+- Idea: invito al check che si rafforza ad ogni blocco saltato.
+
 ## Cosa abbiamo fatto
 
 ### 24 maggio 2026 — Sessione 8: Sicurezza + chiusura modulo Nutrition ✅
