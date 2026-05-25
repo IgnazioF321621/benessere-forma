@@ -3006,7 +3006,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 16:53';
+const APP_VERSION = '2026.05.25 · 17:20';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -9915,24 +9915,60 @@ function zonaBalance(cons) {
 }
 
 // ── OGGI V3 helpers ─────────────────────────────────────────
-// Mappa la data attiva (ST.activeDay = YYYY-MM-DD) al giorno corrispondente del
-// piano AI settimanale (g.giorno = "lunedì"/"martedì"/...). Diacritici tolleranti.
+// Pasto pianificato del coach per ST.activeDay. Source-of-truth: weekly_plan_meals
+// (stessa cache ST.pianoV4RealPlanCache usata dal tab Piano — single source of truth).
+// Riscritto 25 mag sera: prima leggeva da ST.pianoAI (= profiles.piano_ai dormiente),
+// che divergeva dal piano vero del coach mostrato nel tab Piano.
+// I pasti veri esistono SOLO per slot 'pranzo' e 'cena' (colazione+merenda gestite
+// dall'utente, F.2a v2 non li genera). Quindi solo questi 2 slot possono apparire
+// come "PIANIFICATO · DAL COACH" nella timeline tab Oggi. Gli altri slot vengono
+// saltati silenziosamente — coerente col disclaimer del tab Piano.
+// Ritorna oggetto { pranzo?:{piatto,ingredienti,kcal}, cena?:{...} } oppure null.
 function getTodayPianoMeals(){
-  if(!ST.pianoAI || !Array.isArray(ST.pianoAI.giorni) || !ST.pianoAI.giorni.length) return null;
-  const d = new Date((ST.activeDay || todayKey()) + 'T12:00:00');
-  // Forma piena + abbreviata: il piano AI può usare 'Lunedì', 'Lun', 'lunedi', 'LUNEDÌ', ecc.
-  const IT_FULL = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
-  const IT_SHORT = ['dom','lun','mar','mer','gio','ven','sab'];
-  const tFull  = IT_FULL[d.getDay()];
-  const tShort = IT_SHORT[d.getDay()];
-  // Normalizza: lowercase + strip diacritici (U+0300–U+036F) + trim.
-  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-  const nFull  = norm(tFull);
-  const nShort = norm(tShort);
-  return ST.pianoAI.giorni.find(g => {
-    const n = norm(g.giorno);
-    return n === nFull || n === nShort || n.startsWith(nFull) || n.startsWith(nShort);
-  }) || null;
+  if(!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return null;
+  const activeDayStr = ST.activeDay || todayKey();
+  // dayOfWeek ISO (1=LUN..7=DOM) da ST.activeDay
+  const d = new Date(activeDayStr + 'T12:00:00');
+  const jsDow = d.getDay();              // 0=DOM..6=SAB
+  const dowIso = ((jsDow + 6) % 7) + 1;  // 1=LUN..7=DOM
+  // week_start ISO della settimana che CONTIENE activeDayStr (non quella di oggi reale —
+  // l'utente può navigare giorni con day-nav, e vogliamo il piano della SUA settimana).
+  const weekIso = _pianoV4WeekStartIsoForDate(activeDayStr);
+  // Trigger fire-and-forget se cache miss (al ritorno reRenderIfVisible re-renderizza Oggi)
+  if (!_pianoV4GetCachedPlanWeek(weekIso) && typeof _pianoV4LoadRealPlanForWeek === 'function') {
+    _pianoV4LoadRealPlanForWeek(weekIso);
+  }
+  const entry = _pianoV4GetCachedPlanWeek(weekIso);
+  if (!entry || entry.state !== 'loaded' || !entry.plan) return null;
+  const meals = (entry.mealsByDay && entry.mealsByDay[dowIso]) || [];
+  if (!meals.length) return null;
+  const result = {};
+  meals.forEach(function(m) {
+    if (m.slot !== 'pranzo' && m.slot !== 'cena') return;
+    const ingr = (Array.isArray(m.ingredients) && m.ingredients.length)
+      ? m.ingredients.join(', ')
+      : '';
+    result[m.slot] = {
+      piatto:      m.name || '',
+      ingredienti: ingr,
+      kcal:        (m.kcal != null) ? m.kcal : null,
+    };
+  });
+  return Object.keys(result).length > 0 ? result : null;
+}
+
+// Helper: 'YYYY-MM-DD' → ISO del lunedì della settimana che contiene quella data.
+// Usato da getTodayPianoMeals quando ST.activeDay ≠ oggi (day-nav).
+// Pattern coerente con _pianoV4MondayToIso (mezzogiorno locale → toISOString slice).
+function _pianoV4WeekStartIsoForDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return _pianoV4WeekStartIsoForOffset(0);
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d.getTime())) return _pianoV4WeekStartIsoForOffset(0);
+  const day = d.getDay();                  // 0=DOM..6=SAB
+  const diff = (day === 0) ? -6 : (1 - day); // distanza al lunedì ISO
+  d.setDate(d.getDate() + diff);
+  d.setHours(12, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
 }
 
 // Apre il form "Registra pasto" da CTA primario — resetta ST.logTime all'ora attuale
@@ -14289,6 +14325,11 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
   function reRenderIfVisible() {
     if (ST.page === 'piano') {
       try { renderPianoV4(); } catch (e) { /* defensive */ }
+    }
+    if (ST.page === 'oggi') {
+      // 25 mag sera: tab Oggi consuma weekly_plan_meals via getTodayPianoMeals
+      // per la riga "PIANIFICATO · DAL COACH". Al ritorno cache, re-render.
+      try { renderOggi(); } catch (e) { /* defensive */ }
     }
     if (ST.pianoV4DayOverlay) {
       try { renderPianoV4DayOverlay(); } catch (e) { /* defensive */ }

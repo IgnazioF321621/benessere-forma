@@ -2039,6 +2039,31 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 25 maggio 2026 (post-chiusura) — Tab Oggi allineato al piano vero del coach ✅
+
+Rifinitura mirata sul tab Oggi. La riga "PIANIFICATO · DAL COACH" della timeline mostrava un pasto **diverso** da quello del tab Piano per lo stesso giorno (esempio: tab Piano → CENA "Zuppa di lenticchie 580 kcal", tab Oggi → "Branzino 582 kcal"). Due fonti, due verità — finché non venivano allineate.
+
+**Causa**: `getTodayPianoMeals()` ([zona-tracker.html:9917](zona-tracker.html:9917)) leggeva da `ST.pianoAI` (= `profiles.piano_ai`, colonna dormiente e datata, **non aggiornata** da F.2a v2 — i pasti veri del coach vivono in `weekly_plan_meals`). Il tab Piano era già stato collegato a `weekly_plan_meals` (Passo 2, `85c0554`), il tab Oggi era rimasto sul vecchio binario.
+
+**Fix**: `getTodayPianoMeals()` riscritta per leggere dalla **stessa cache** `ST.pianoV4RealPlanCache` del tab Piano (single source of truth). Settimana derivata da `ST.activeDay` (rispetta day-nav: se l'utente naviga a un giorno passato/futuro, il pasto mostrato è quello della SUA settimana, non quella di oggi). `day_of_week` ISO calcolato come `((js + 6) % 7) + 1`. Restituisce solo `pranzo` e `cena` (gli unici slot generati da F.2a v2 — colazione/spuntino/merenda non vengono mai mostrati come "pianificati dal coach", coerentemente col disclaimer del tab Piano).
+
+Nuovo helper `_pianoV4WeekStartIsoForDate(dateStr)`: ritorna l'ISO del lunedì della settimana che contiene una data arbitraria (necessario perché `ST.activeDay` non è sempre = oggi reale).
+
+`reRenderIfVisible()` nel loader del passo 2 esteso: ora re-renderizza anche `renderOggi()` quando `ST.page === 'oggi'`, così appena la cache si popola async il tab Oggi aggiorna la riga pianificata senza interventi manuali.
+
+**Caso "nessun piano vero"**: `getTodayPianoMeals()` ritorna `null` → la timeline tab Oggi non mostra alcuna riga "PIANIFICATO · DAL COACH" inventata. Coerente con la decisione product: niente demo nel tab Oggi se il coach non ha generato.
+
+**Mapping campo per campo** (compatibilità col consumatore esistente in `renderOggi`):
+- `pianoToday[slot].piatto` ← `realMeal.name` (= `description` DB)
+- `pianoToday[slot].ingredienti` ← `realMeal.ingredients.join(', ')` (stringa pronta per pre-fill `freeText` del form Smart Ingredient se l'utente tappa "REGISTRA ›")
+- `pianoToday[slot].kcal` ← `realMeal.kcal`
+
+**Cleanup**: `ST.pianoAI` (= `profiles.piano_ai`) resta usata SOLO dal tab Piano legacy (`renderPiano` legacy + `generaPianoAI`), non più dal tab Oggi. La colonna `piano_ai` resta dormiente come documentato — non vengono fatte letture nuove da quella fonte.
+
+**Vincoli rispettati**: tab Piano intatto (commit `85c0554`/`a7e87aa`/`04a2048`), generazione F.2a v2 intatta, pasti registrati / gruppi integratori / donut kcal / card macro tab Oggi intatti. Solo la riga "pianificato dal coach" cambia fonte. Schema DB invariato.
+
+**Collaudo**: profilo Ignazio, lunedì 25 mag 2026, piano vero `a5dd98d2-…` con cena "Zuppa di lenticchie con crostini di pane integrale" (580 kcal). Tab Oggi → timeline → ora mostra "Zuppa di lenticchie..." invece di "Branzino", stesso pasto del tab Piano → dettaglio LUNEDÌ → CENA. Tap su REGISTRA ›: il form Smart Ingredient si pre-compila con la lista ingredienti reali (`Lenticchie 80g (peso secco), Crostini di pane integrale 40g, Olio EVO 8g, ...`) pronti per l'analisi AI o l'edit.
+
 ### 25 maggio 2026 (chiusura giornata) — Nutrition completo end-to-end ✅
 
 Riassunto della giornata di pomeriggio/sera (entry singole dettagliate sotto, qui solo il quadro consolidato).
