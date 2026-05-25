@@ -630,7 +630,9 @@ I pasti veri proposti dall'AI. Una riga = un pasto per un giorno e uno slot spec
 | `user_id` | `uuid` NOT NULL | FK → `auth.users` ON DELETE CASCADE (denormalizzato per RLS performance) |
 | `day_of_week` | `integer` NOT NULL | CHECK BETWEEN 1 AND 7 (1=lun, 7=dom, ISO) |
 | `slot` | `text` NOT NULL | CHECK `colazione/spuntino/pranzo/merenda/cena` |
-| `description` | `text` NOT NULL | testo pasto proposto AI |
+| `description` | `text` NOT NULL | testo pasto proposto AI (1 frase del piatto) |
+| `ingredients` | `jsonb` | **F.2a v2 (25 mag 2026)**. Array di stringhe (3-5 voci), formato `'NomeIngrediente NUMEROg'` (es. `["Filetto salmone 150g","Quinoa 70g (peso secco)","Olio EVO 10g"]`). Nullable per retrocompat sulle righe pre-25 mag |
+| `meal_time` | `text` | **F.2a v2 (25 mag 2026)**. Orario indicativo `'HH:MM'`: `'13:00'` pranzi / `'20:00'` cene. Default applicato dal validatore lato app se l'AI lo omette. Nullable per retrocompat |
 | `kcal` | `integer` | nullable (edge case AI fallisce calcolo macro) |
 | `protein` | `integer` | grammi, nullable |
 | `carbs` | `integer` | grammi, nullable |
@@ -640,6 +642,8 @@ I pasti veri proposti dall'AI. Una riga = un pasto per un giorno e uno slot spec
 | `created_at` | `timestamptz` NOT NULL | default `now()` |
 
 Indici: `(plan_id, day_of_week, sort_order)` per render Dettaglio Giorno + `(user_id)` per RLS performance. RLS: 4 own + 1 admin.
+
+**Migration F.2a v2 (25 mag 2026)** — eseguita manualmente in SQL Editor prima del deploy codice: `ALTER TABLE public.weekly_plan_meals ADD COLUMN IF NOT EXISTS ingredients jsonb, ADD COLUMN IF NOT EXISTS meal_time text;` Le righe pre-migration mantengono `NULL` su entrambe (retrocompat). Il renderer Tab Piano (passo 2 separato, non in questa fase) leggerà `ingredients`/`meal_time` quando presenti; sui NULL userà i dati hardcoded delle card demo come fallback.
 
 ### Tabella `weekly_plan_acceptance` (20 maggio 2026)
 Tracking delle azioni utente sui pasti del piano (ACCETTA / SOSTITUISCI / SALTO / off-plan rilevato). Una riga = una azione su un pasto. Alimenta il contatore "X/7 giorni seguiti" e la memoria AI.
@@ -2019,6 +2023,69 @@ un interruttore a monte.
 - Effetto a cascata dell'interruttore su home/moduli (oltre al nascondere il tile Training).
 
 ## Cosa abbiamo fatto
+
+### 25 maggio 2026 (pomeriggio) — F.2a v2: pasti completi con ingredienti + dosi + orario ✅
+
+Estensione di F.2a (Step 7 del Tab Piano v4) per portare ogni pasto generato dal coach al livello di dettaglio delle card demo: lista ingredienti con dosi precise in grammi + orario indicativo. NON tocca la generazione (dispensa, 10 regole esistenti, varietà di struttura, ripartizione 35/25, Opzione A, anti-doppione, hook in `_pianoV4MaybePostino`) né il rendering Tab Piano (passo 2 separato).
+
+**Migration DB** (eseguita manualmente in SQL Editor prima del deploy codice):
+```sql
+ALTER TABLE public.weekly_plan_meals
+  ADD COLUMN IF NOT EXISTS ingredients jsonb,
+  ADD COLUMN IF NOT EXISTS meal_time text;
+```
+Le righe pre-migration mantengono NULL su entrambe (retrocompat). Niente CHECK constraint nuovo — la validazione vive lato app nel validatore JSON.
+
+**Estensione `_pianoV4F2aBuildPrompt`** ([zona-tracker.html:13033](zona-tracker.html:13033)) — aggiunte 2 regole in coda alle 10 esistenti, senza riscriverle:
+- **Regola 11 INGREDIENTI CON DOSI PRECISE**: ogni pasto include `ingredients` array di 3-5 voci formato `'NomeIngrediente NUMEROg'`. Dosi realistiche (multipli di 5/10g), coerenti coi macro dichiarati. Riferimenti di coerenza nel prompt (es. 150g salmone ≈ 30g proteine + 15g grassi + ~270 kcal; 70g quinoa secca ≈ 53g carboidrati + ~250 kcal) per dare al modello ancore numeriche. `(peso secco)` / `(peso a crudo)` su cereali e legumi dove ha senso. Vincoli 1-5 (DISPENSA, intolleranze, anti-invenzione, anti-mascheramento) ribaditi come validi anche dentro la lista ingredients.
+- **Regola 12 ORARIO PASTO**: ogni pasto include `time` fissa `'13:00'` per i pranzi / `'20:00'` per le cene. Sempre questi due valori.
+
+**Schema JSON risposta esteso**:
+```json
+{"meals":[{"day":1,"slot":"pranzo","time":"13:00","description":"...","ingredients":["...","..."],"kcal":N,"protein":N,"carbs":N,"fat":N,"explanation":"..."}, ...]}
+```
+
+**Self-check finale del prompt esteso** per includere il controllo "ogni pasto ha 3-5 ingredienti con dosi in grammi e i macro tornano coi totali dichiarati, e 'time' = '13:00' pranzi / '20:00' cene".
+
+**`_pianoV4F2aParseAndValidate` esteso** ([zona-tracker.html:13108](zona-tracker.html:13108)): dopo la verifica `description` per ogni pasto:
+- Validazione `ingredients`: deve essere array. Filtraggio voci non-stringa o vuote, normalizzazione `.trim()` in-place. Se voci valide < 2 → `{ok:false, reason:'too-few-ingredients', idx, count}`. Se non-array → `{ok:false, reason:'missing-ingredients', idx}`.
+- Normalizzazione `time`: se mancante o non valido (non-stringa, vuoto, solo spazi) → default per slot (`'13:00'` pranzo, `'20:00'` cena). Altrimenti `.trim()`. MAI fallisce la validazione su `time` mancante — è un campo "best-effort" col default a copertura.
+
+**`_pianoV4GenerateAndInsertMeals` esteso** ([zona-tracker.html:13153](zona-tracker.html:13153)): payload INSERT batch ora include 2 colonne nuove dopo `description`:
+- `ingredients: m.ingredients` (jsonb, già validato/normalizzato dal validator)
+- `meal_time: m.time` (text HH:MM, default applicato dal validator se l'AI lo omette)
+
+Resto del payload identico (plan_id, user_id, day_of_week, slot, kcal, protein, carbs, fat, ai_explanation, sort_order). Nessuna rottura di compat: l'INSERT continua a funzionare anche se queste 2 colonne sono NULL nel DB (sono nullable per design).
+
+**Vincoli rispettati**:
+- Dispensa `_pianoV4F2aBuildPantry`: intatta
+- 10 regole ferree esistenti: intatte (regole 11 e 12 aggiunte in coda)
+- Varietà di struttura: intatta
+- Ripartizione 35/25: intatta (i bersagli pasto restano calcolati su pranzo 35% + cena 25%)
+- Opzione A: intatta (riga-madre F.1 creata SEMPRE; F.2a può ancora fallire senza rollback)
+- Anti-doppione (guard `plan_id` pre-INSERT): intatto
+- Hook in `_pianoV4MaybePostino`: intatto
+- Tab Piano / `renderPianoV4DayOverlay`: NON toccato (le card demo continuano a leggere da array hardcoded; quando il piano AI verrà disponibile, il rendering reale è un passo separato)
+- Nessuna dipendenza nuova
+- Nessuna chiamata AI aggiuntiva: resta una sola `callAI(prompt, 2000)` per tutti i 14 pasti
+
+**Collaudo**:
+1. Liberare la settimana di prova in DB:
+   ```sql
+   DELETE FROM weekly_plan_meals WHERE plan_id IN (SELECT id FROM weekly_plans WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25');
+   DELETE FROM weekly_plans WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25';
+   ```
+2. Aprire l'app con `?genera=1` (forza il postino bypassando il guard giorno, mantenendo l'anti-doppione)
+3. Verificare in `weekly_plan_meals`:
+   ```sql
+   SELECT day_of_week, slot, meal_time, description, ingredients, kcal, protein, carbs, fat
+   FROM weekly_plan_meals
+   WHERE plan_id=(SELECT id FROM weekly_plans WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25')
+   ORDER BY day_of_week, sort_order;
+   ```
+   Ogni riga deve avere: `meal_time` = `'13:00'` o `'20:00'`, `ingredients` array di 3-5 stringhe con dosi in grammi, e somme macro degli ingredienti coerenti coi totali kcal/protein/carbs/fat della riga.
+
+**Conseguenza per Tab Piano**: il rendering attuale (`renderPianoV4MealsList` che usa `_pianoV4GetDemoMeals` con array hardcoded) non viene toccato in questa sessione. Quando il rendering Tab Piano sarà migrato a leggere da `weekly_plan_meals` reali (passo 2 separato), troverà `ingredients` e `meal_time` già popolati per le settimane generate da oggi in avanti. Sulle righe pre-25 mag (NULL) il render dovrà ricadere su un fallback (es. derivare ingredients da `description` con disclaimer, o nascondere la sezione INGREDIENTI). Decisione di rendering rinviata al passo dedicato.
 
 ### 25 maggio 2026 — Design onboarding M1: blocco Training + interruttore (solo decisioni)
 Sessione chat di sole decisioni di prodotto (no codice). Definito come l'onboarding raccoglierà
