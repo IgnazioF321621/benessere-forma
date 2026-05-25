@@ -3006,7 +3006,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 15:57';
+const APP_VERSION = '2026.05.25 · 16:32';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -14228,13 +14228,27 @@ function renderPianoV4SubstituteSheet() {
 
 // Helper: ritorna 'YYYY-MM-DD' del lunedì della settimana selezionata via offset.
 function _pianoV4WeekStartIsoForOffset(offset) {
-  return _pianoV4MondayToIso(getPianoV4WeekStart(offset || 0));
+  const monday = getPianoV4WeekStart(offset || 0);
+  const iso = _pianoV4MondayToIso(monday);
+  console.log('[piano-diag] _pianoV4WeekStartIsoForOffset', { offset: offset || 0, monday: monday.toString(), iso: iso });
+  return iso;
 }
 
 // Helper: ritorna l'entry cache per la settimana, o undefined se mai caricata.
 function _pianoV4GetCachedPlanWeek(weekStartIso) {
   if (!ST.pianoV4RealPlanCache) ST.pianoV4RealPlanCache = {};
-  return ST.pianoV4RealPlanCache[weekStartIso];
+  const entry = ST.pianoV4RealPlanCache[weekStartIso];
+  console.log('[piano-diag] _pianoV4GetCachedPlanWeek READ', {
+    key: weekStartIso,
+    found: !!entry,
+    state: entry && entry.state,
+    hasPlan: !!(entry && entry.plan),
+    planId: entry && entry.plan && entry.plan.id,
+    planStatus: entry && entry.plan && entry.plan.status,
+    mealsByDayCounts: entry && entry.mealsByDay ? Object.keys(entry.mealsByDay).reduce(function(acc,k){acc[k]=entry.mealsByDay[k].length;return acc;},{}) : null,
+    allCacheKeys: Object.keys(ST.pianoV4RealPlanCache),
+  });
+  return entry;
 }
 
 // Mapper: trasforma una riga weekly_plan_meals nel formato della card UI
@@ -14270,9 +14284,24 @@ function _pianoV4MapRealMealToCard(row) {
 // Fire-and-forget — non blocca il render. Re-render automatico al completamento
 // se l'utente è ancora sul tab Piano o ha l'overlay dettaglio giorno aperto.
 async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
-  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return;
+  console.log('[piano-diag] _pianoV4LoadRealPlanForWeek START', {
+    weekStartIso: weekStartIso,
+    userId: ST.user && ST.user.id,
+    userEmail: ST.user && ST.user.email,
+    cacheBeforeKeys: Object.keys(ST.pianoV4RealPlanCache || {}),
+  });
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') {
+    console.log('[piano-diag] loader EARLY EXIT — no valid user', { user: ST.user });
+    return;
+  }
   if (!ST.pianoV4RealPlanCache) ST.pianoV4RealPlanCache = {};
   const existing = ST.pianoV4RealPlanCache[weekStartIso];
+  console.log('[piano-diag] loader cache existing', {
+    key: weekStartIso,
+    existing: existing,
+    existingState: existing && existing.state,
+    existingHasPlan: !!(existing && existing.plan),
+  });
   if (existing) {
     // Bugfix 25 mag (notte): le entries POSITIVE (state='loaded' + plan trovato)
     // sono cache stabili — niente refetch. Le entries 'loading' evitano race fra
@@ -14280,8 +14309,15 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
     // sono "verità durevoli": il piano potrebbe essere stato creato dal postino
     // o sincronizzato da un altro device dopo la prima fetch fallita a vuoto.
     // Le ri-tentiamo sempre al prossimo trigger.
-    if (existing.state === 'loading') return;
-    if (existing.state === 'loaded' && existing.plan) return;
+    if (existing.state === 'loading') {
+      console.log('[piano-diag] loader SKIP — already loading');
+      return;
+    }
+    if (existing.state === 'loaded' && existing.plan) {
+      console.log('[piano-diag] loader SKIP — already loaded positively');
+      return;
+    }
+    console.log('[piano-diag] loader RETRY — existing is loaded-negative, refetching');
     // existing.state === 'loaded' && existing.plan === null → fall-through e ricarica
   }
   ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loading' };
@@ -14296,24 +14332,36 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
   }
 
   try {
+    console.log('[piano-diag] SELECT weekly_plans ABOUT TO RUN', {
+      user_id: ST.user.id,
+      week_start: weekStartIso,
+    });
     const planRes = await supa
       .from('weekly_plans')
       .select('id, week_start, status, target_kcal, target_protein, target_carbs, target_fat, ai_reasoning')
       .eq('user_id', ST.user.id)
       .eq('week_start', weekStartIso)
       .limit(1);
+    console.log('[piano-diag] SELECT weekly_plans RESULT', {
+      error: planRes.error,
+      rowCount: planRes.data ? planRes.data.length : 0,
+      rows: planRes.data,
+    });
     if (planRes.error) {
       console.warn('[piano-v4 passo2] fetch weekly_plans error:', planRes.error);
       ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
+      console.log('[piano-diag] cache WRITE negative (plan select error)', { key: weekStartIso });
       reRenderIfVisible();
       return;
     }
     const plan = (planRes.data && planRes.data.length > 0) ? planRes.data[0] : null;
     if (!plan) {
       ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
+      console.log('[piano-diag] cache WRITE negative (0 rows)', { key: weekStartIso });
       reRenderIfVisible();
       return;
     }
+    console.log('[piano-diag] plan FOUND', { id: plan.id, week_start: plan.week_start, status: plan.status });
     // Plan esiste — carica i suoi pasti
     const mealsRes = await supa
       .from('weekly_plan_meals')
@@ -14321,9 +14369,15 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
       .eq('plan_id', plan.id)
       .order('day_of_week', { ascending: true })
       .order('sort_order',  { ascending: true });
+    console.log('[piano-diag] SELECT weekly_plan_meals RESULT', {
+      error: mealsRes.error,
+      rowCount: mealsRes.data ? mealsRes.data.length : 0,
+      firstRow: mealsRes.data && mealsRes.data[0],
+    });
     if (mealsRes.error) {
       console.warn('[piano-v4 passo2] fetch weekly_plan_meals error:', mealsRes.error);
       ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: plan, mealsByDay: {} };
+      console.log('[piano-diag] cache WRITE plan-only (meals select error)', { key: weekStartIso });
       reRenderIfVisible();
       return;
     }
@@ -14335,9 +14389,15 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
       mealsByDay[dow].push(_pianoV4MapRealMealToCard(row));
     });
     ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: plan, mealsByDay: mealsByDay };
+    console.log('[piano-diag] cache WRITE positive', {
+      key: weekStartIso,
+      planId: plan.id,
+      mealsByDayCounts: Object.keys(mealsByDay).reduce(function(acc,k){acc[k]=mealsByDay[k].length;return acc;},{}),
+    });
     reRenderIfVisible();
   } catch (e) {
     console.warn('[piano-v4 passo2] exception:', e);
+    console.log('[piano-diag] loader EXCEPTION', { error: e && e.message });
     ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
     reRenderIfVisible();
   }
@@ -14350,20 +14410,37 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
 function _pianoV4GetRealMealsForDay(weekOffset, dayOfWeek) {
   const iso = _pianoV4WeekStartIsoForOffset(weekOffset);
   const entry = _pianoV4GetCachedPlanWeek(iso);
-  if (!entry || entry.state !== 'loaded' || !entry.plan) return null;
-  return entry.mealsByDay[dayOfWeek] || [];
+  if (!entry || entry.state !== 'loaded' || !entry.plan) {
+    console.log('[piano-diag] _pianoV4GetRealMealsForDay → null', {
+      weekOffset: weekOffset, dayOfWeek: dayOfWeek, iso: iso,
+      hasEntry: !!entry, state: entry && entry.state, hasPlan: !!(entry && entry.plan),
+    });
+    return null;
+  }
+  const arr = entry.mealsByDay[dayOfWeek] || [];
+  console.log('[piano-diag] _pianoV4GetRealMealsForDay → array', {
+    weekOffset: weekOffset, dayOfWeek: dayOfWeek, iso: iso, mealsCount: arr.length,
+  });
+  return arr;
 }
 
 // Helper sync: true se per la settimana c'è un piano vero caricato (con almeno 1 pasto).
 function _pianoV4HasRealPlanForWeek(weekOffset) {
   const iso = _pianoV4WeekStartIsoForOffset(weekOffset);
   const entry = _pianoV4GetCachedPlanWeek(iso);
-  if (!entry || entry.state !== 'loaded' || !entry.plan) return false;
+  if (!entry || entry.state !== 'loaded' || !entry.plan) {
+    console.log('[piano-diag] _pianoV4HasRealPlanForWeek → false', { weekOffset: weekOffset, iso: iso, hasEntry: !!entry, state: entry && entry.state, hasPlan: !!(entry && entry.plan) });
+    return false;
+  }
   // Plan esiste ma vuoto di pasti → consideriamo "non ancora pronto" lato UI
   const mbd = entry.mealsByDay || {};
   for (let d = 1; d <= 7; d++) {
-    if (mbd[d] && mbd[d].length > 0) return true;
+    if (mbd[d] && mbd[d].length > 0) {
+      console.log('[piano-diag] _pianoV4HasRealPlanForWeek → true', { weekOffset: weekOffset, iso: iso });
+      return true;
+    }
   }
+  console.log('[piano-diag] _pianoV4HasRealPlanForWeek → false (plan exists but no meals)', { weekOffset: weekOffset, iso: iso });
   return false;
 }
 
@@ -14577,13 +14654,20 @@ function renderPianoV4DayOverlay() {
 
   // Passo 2 (25 mag): query weekly_plan_meals via cache. Fire-and-forget se mai
   // caricato: la cache viene popolata async e re-renderizza l'overlay al ritorno.
+  console.log('[piano-diag] renderPianoV4DayOverlay START', { weekOffset: s.weekOffset, dayOfWeek: s.dayOfWeek });
   const weekStartIso = _pianoV4WeekStartIsoForOffset(s.weekOffset);
   const cacheEntry = _pianoV4GetCachedPlanWeek(weekStartIso);
   if (!cacheEntry) {
+    console.log('[piano-diag] overlay: cache MISS → trigger load', { iso: weekStartIso });
     _pianoV4LoadRealPlanForWeek(weekStartIso); // fire-and-forget; non bloccante
   }
   const realMeals = _pianoV4GetRealMealsForDay(s.weekOffset, s.dayOfWeek);
   const isRealPlan = Array.isArray(realMeals) && realMeals.length > 0;
+  console.log('[piano-diag] renderPianoV4DayOverlay DECISION', {
+    iso: weekStartIso, dayOfWeek: s.dayOfWeek,
+    realMealsCount: realMeals ? realMeals.length : 0,
+    isRealPlan: isRealPlan,
+  });
 
   // Se piano vero presente → 2 card (pranzo+cena ordinate per sort_order).
   // Altrimenti → fallback ai 5 demo (banner + judgment range).
@@ -14655,12 +14739,25 @@ function renderPianoV4() {
 
   // ── Passo 2 (25 mag): fire-and-forget load piano vero per la settimana visualizzata ──
   // Al ritorno cache popolata → re-render automatico (reRenderIfVisible nel loader).
+  console.log('[piano-diag] renderPianoV4 START', {
+    pianoV4WeekOffset: ST.pianoV4WeekOffset,
+    offset: offset,
+    userId: ST.user && ST.user.id,
+    userEmail: ST.user && ST.user.email,
+    page: ST.page,
+  });
   try {
     const weekIsoForLoad = _pianoV4WeekStartIsoForOffset(offset);
-    if (!_pianoV4GetCachedPlanWeek(weekIsoForLoad)) _pianoV4LoadRealPlanForWeek(weekIsoForLoad);
-  } catch (e) { /* defensive */ }
+    if (!_pianoV4GetCachedPlanWeek(weekIsoForLoad)) {
+      console.log('[piano-diag] renderPianoV4 → trigger load (cache MISS)', { iso: weekIsoForLoad });
+      _pianoV4LoadRealPlanForWeek(weekIsoForLoad);
+    } else {
+      console.log('[piano-diag] renderPianoV4 → cache HIT, skip load', { iso: weekIsoForLoad });
+    }
+  } catch (e) { console.log('[piano-diag] renderPianoV4 load-trigger exception', e); }
   const hasRealPlan = _pianoV4HasRealPlanForWeek(offset);
   const realDaysCount = _pianoV4CountDaysWithRealMeals(offset);
+  console.log('[piano-diag] renderPianoV4 DECISION', { offset: offset, hasRealPlan: hasRealPlan, realDaysCount: realDaysCount });
 
   // ── Card stato settimana ──
   // Hint contestuale: settimana corrente/passata/futura ⨉ piano vero presente o no.
