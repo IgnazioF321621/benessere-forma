@@ -3006,7 +3006,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 15:45';
+const APP_VERSION = '2026.05.25 · 15:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5292,6 +5292,11 @@ async function refreshInBackground() {
     await loadTodaySuppLog();
     // Cross-device sync: rinfresca le serie training di oggi dal cloud
     await hydrateTrainingSetsFromCloud();
+    // Cross-device sync (Passo 2, 25 mag notte): invalida la cache piano vero.
+    // Se da un altro device è stato creato/modificato un piano weekly_plans, al
+    // prossimo render del tab Piano il loader rifà fetch. Le settimane già caricate
+    // positivamente vengono comunque ri-fetchate (coerenza > microttimizzazione).
+    ST.pianoV4RealPlanCache = {};
     const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
     if (profile) {
       ST.profile = profile;
@@ -14268,7 +14273,17 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
   if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return;
   if (!ST.pianoV4RealPlanCache) ST.pianoV4RealPlanCache = {};
   const existing = ST.pianoV4RealPlanCache[weekStartIso];
-  if (existing) return; // already loading or loaded — no duplicate fetch
+  if (existing) {
+    // Bugfix 25 mag (notte): le entries POSITIVE (state='loaded' + plan trovato)
+    // sono cache stabili — niente refetch. Le entries 'loading' evitano race fra
+    // chiamate concorrenti. Ma le entries NEGATIVE ('loaded' con plan=null) NON
+    // sono "verità durevoli": il piano potrebbe essere stato creato dal postino
+    // o sincronizzato da un altro device dopo la prima fetch fallita a vuoto.
+    // Le ri-tentiamo sempre al prossimo trigger.
+    if (existing.state === 'loading') return;
+    if (existing.state === 'loaded' && existing.plan) return;
+    // existing.state === 'loaded' && existing.plan === null → fall-through e ricarica
+  }
   ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loading' };
 
   function reRenderIfVisible() {

@@ -2024,6 +2024,38 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 25 maggio 2026 (tarda notte) — Fix: tab Piano non leggeva piano in stato `draft` ✅
+
+**Causa esatta**: la SELECT di `_pianoV4LoadRealPlanForWeek` su `weekly_plans` NON filtrava per status (confermato — qualsiasi status va bene). Il bug viveva nella **gestione cache**: a riga 14271 `if (existing) return;` trattava come stabile anche la cache NEGATIVA (`{state:'loaded', plan:null}`) salvata in un'apertura precedente quando il piano non esisteva ancora.
+
+Sequenza riproducibile:
+1. Utente apre l'app prima che il piano venga creato → SELECT 0 righe → cache popolata come `{state:'loaded', plan:null, mealsByDay:{}}`
+2. Postino crea il piano `draft` (creato oggi per `2026-05-25`)
+3. Utente naviga al tab Piano nello stesso device senza forzare svuotamento cache → `existing` esiste → loader **non ricarica mai** → `_pianoV4GetRealMealsForDay` ritorna `null` → `isRealPlan=false` → demo + banner
+
+Quando in passato il piano era `active`, l'utente apriva l'app DOPO che era stato attivato → cache popolata positivamente subito → tab Piano mostrava i pasti. Il bug era cache-related, non status-related — ma siccome la cache negativa si crea quando la SELECT torna 0 righe (= piano non ancora esistente), il sintomo combaciava con la transizione `assente → draft → active`.
+
+**Fix in 2 punti**:
+
+1. [_pianoV4LoadRealPlanForWeek](zona-tracker.html:14267): rivisto early-return. Ora distingue 3 stati:
+   - `state:'loading'` → return (evita race tra chiamate concorrenti)
+   - `state:'loaded'` con `plan` trovato → return (cache positiva stabile, niente refetch)
+   - `state:'loaded'` con `plan:null` → **fall-through**, ri-tenta la SELECT. Le entries negative non sono verità durevoli: un piano potrebbe essere stato creato meanwhile dal postino o sincronizzato da un altro device.
+
+2. [refreshInBackground](zona-tracker.html:5294): aggiunta invalidazione difensiva `ST.pianoV4RealPlanCache = {}` prima del `renderPage`. Quando l'utente torna foreground (cross-device sync già esistente lo richiama via visibility-change throttle 30s), la cache si svuota e al prossimo render del tab Piano i dati si ricaricano. Costo: piccola fetch extra per ogni settimana visualizzata; beneficio: coerenza cross-device garantita.
+
+**NON toccati**: la generazione coach/F.2a, il banner condizionale (`renderPianoV4DemoBanner`), il mapping pasti (`_pianoV4MapRealMealToCard`), il disclaimer colazione/merenda, schema DB, altri tab.
+
+**Nessuna invalidazione manuale richiesta lato utente.** Il fix garantisce che:
+- Una semplice riapertura del tab Piano (tap su PIANO) forza il loader, che ora supera l'early return negativo e fa la SELECT fresca.
+- Un return foreground (riapertura PWA dopo un periodo in background) svuota tutta la cache via `refreshInBackground`.
+
+**Collaudo** (piano test esiste già):
+1. Chiudi e riapri l'app (per scaricare la nuova build)
+2. Tab Nutrition → Piano → card stato deve mostrare contatore `7/7 GIORNI CON PASTI`, hint "Piano del coach pronto · pranzi e cene generati per 7 giorni"
+3. Le 7 card giorno mostrano lista compatta `PRANZO 13:00 — ...` / `CENA 20:00 — ...` (non "Nessun pasto pianificato")
+4. Tap su LUNEDÌ → 2 card pasto veri con ingredienti, orario, "PERCHÉ TI PROPONGO QUESTO" pieno + disclaimer "COLAZIONE & MERENDA"; banner "ESEMPIO DIMOSTRATIVO" **ASSENTE**
+
 ### 25 maggio 2026 (notte) — Fix spiegazioni pasto + disclaimer colazione/merenda ✅
 
 Due rifiniture rapide dopo Passo 2.
