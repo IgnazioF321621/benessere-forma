@@ -2024,6 +2024,48 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 25 maggio 2026 (notte) — Fix spiegazioni pasto + disclaimer colazione/merenda ✅
+
+Due rifiniture rapide dopo Passo 2.
+
+**Parte 1 — `ai_explanation` non più NULL.** Diagnosi: il mapping INSERT (`ai_explanation: m.explanation || null`) e il validatore funzionano, ma il **prompt marcava `explanation` come "opzionale"** e il **self-check finale non lo menzionava**. Il modello AI lo ometteva spesso → DB salvava NULL → "PERCHÉ TI PROPONGO QUESTO" vuoto nel dettaglio giorno.
+
+Fix in 3 punti:
+- **Regola 10 del prompt** riscritta: da "opzionale, max 15 parole" a **OBBLIGATORIO per ogni pasto** (mai vuoto, mai placeholder generico), 1-2 frasi voce coach personalizzate al profilo+ingredienti+slot, con chiamata esplicita a "è il testo che l'utente leggerà sotto PERCHÉ TI PROPONGO QUESTO" per dare al modello il framing UX.
+- **Self-check finale** del prompt esteso: include ora "ogni pasto ha la sua 'explanation' personalizzata e specifica (NON vuota, NON generica, NON uguale tra pasti diversi)".
+- **Validatore** ([_pianoV4F2aParseAndValidate](zona-tracker.html:13108)): aggiunto paracadute. Se l'AI omette comunque `explanation` (o lo lascia vuoto) → fallback non vuoto in voce coach, differenziato per slot. Pranzo: "Pranzo bilanciato secondo il tuo profilo e la dispensa ammessa, calibrato sui bersagli Zona del coach." Cena: "Cena calibrata sul tuo target serale, costruita con ingredienti coerenti col tuo regime alimentare." NON blocca la generazione: meglio fallback neutro che 14 NULL.
+
+**INSERT mapping invariato**: `ai_explanation: (m.explanation && String(m.explanation).trim()) || null`. Dopo il validatore `m.explanation` è sempre stringa popolata, quindi `ai_explanation` non sarà mai più NULL sui pasti generati dopo questo deploy.
+
+NON toccati: dispensa, regole 1-9 + 11-12, varietà di struttura, ripartizione 35/25, Opzione A, anti-doppione, hook postino.
+
+**Parte 2 — Disclaimer colazione/merenda nel dettaglio giorno** (solo modalità piano vero).
+
+In `renderPianoV4DayOverlay`, **dopo** le 2 card pranzo+cena, condizionale a `isRealPlan=true`:
+
+```
+COLAZIONE & MERENDA
+Colazione e merenda le gestisci tu: questo spazio è lasciato libero per le tue
+preferenze. Il coach pensa a pranzo e cena, i due pasti principali della giornata.
+```
+
+Stile coerente col coach card: sfondo sand `#FDF7E8`, border-left 3px `var(--mod-nutrition)` `#FAC775`, eyebrow Mono caps `#8B6B1E` warm gold, testo Syne italic. 3 nuove classi: `.pianov4-day-free-meals-note`, `.pianov4-day-free-meals-eyebrow`, `.pianov4-day-free-meals-text`. Non un toast, niente CTA — è una nota informativa pacata in voce coach.
+
+**Mostrato SOLO se `isRealPlan=true`**: in modalità demo (5 pasti coprono la giornata completa colazione/spuntino/pranzo/merenda/cena) non avrebbe senso.
+
+**Collaudo**:
+1. Liberare la settimana di Ignazio:
+   ```sql
+   DELETE FROM weekly_plan_meals WHERE plan_id IN (
+     SELECT id FROM weekly_plans WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25'
+   );
+   DELETE FROM weekly_plans WHERE user_id='bb6fa499-1364-4d8d-8ce6-774c8e392306' AND week_start='2026-05-25';
+   ```
+2. Aprire app con `?genera=1` → postino + F.2a generano nuova draft + 14 pasti
+3. SELECT `ai_explanation FROM weekly_plan_meals` → tutte le righe popolate, NON più NULL
+4. Tab Nutrition → Piano → tap su un giorno → box "PERCHÉ TI PROPONGO QUESTO" pieno con testo personalizzato; disclaimer "COLAZIONE & MERENDA" visibile in fondo
+5. Tap freccia › verso settimana futura senza piano → torna modalità demo → disclaimer NON visibile, banner "ESEMPIO DIMOSTRATIVO" e judgment range come prima
+
 ### 25 maggio 2026 (sera) — Passo 2: il tab Piano legge i pasti VERI dal DB ✅
 
 Chiusura del TODO mai completato in `renderPianoV4DayOverlay` ("Step F TODO: qui andrà query weekly_plan_meals"). Da oggi il tab Piano interroga davvero il database: se per la settimana visualizzata esiste un piano vero con pasti (`weekly_plans` + `weekly_plan_meals`) → mostra quelli, fa sparire il banner "ESEMPIO DIMOSTRATIVO" e adatta hint/contatore/totalizzatore. Altrimenti → fallback ai 5 demo + banner (comportamento Step C.3 invariato).
