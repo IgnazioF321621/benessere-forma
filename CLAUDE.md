@@ -228,17 +228,19 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 - **App live su GitHub Pages**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Versione visibile in app**: `v2026.05.18 · 17:04` (iniettata dal pre-commit hook `.git/hooks/pre-commit` al momento del commit)
 
-### Stato modulo Nutrition (24 maggio 2026, post-Sessione 8 Sicurezza) — ✅ CHIUSO per questa fase
+### Stato modulo Nutrition (25 maggio 2026, post-collegamento Tab Piano) — ✅ COMPLETO end-to-end
 
-Il modulo Nutrition è **chiuso per questa fase**. Riprendibile in futuro su singole rifiniture residue (vedi sotto), ma il grosso del lavoro è in produzione e funzionante.
+Il modulo Nutrition copre ora **l'intero ciclo coach** dall'inizio alla fine: il piano vero del coach si **genera**, si **salva** e si **vede**. Il 25 maggio pomeriggio/sera è stata chiusa l'ultima maglia mancante — la lettura dei pasti veri nel tab Piano — completando il filone partito il 20 maggio con lo Step A. Riprendibile in futuro su singole rifiniture residue (vedi sotto), ma il grosso del lavoro è in produzione, verificato dal vivo sul profilo Ignazio.
 
 - **Tab Oggi**: ✅ production-ready v3 (design system v3 + tipografia v2)
 - **Tab Integratori**: ✅ production-ready v3 (Blocco 1 + Blocco 2 + Step 2 extras) — completato 16-18 mag 2026 (vedi sezione "Modulo Integratori v3")
 - **Tab Analisi** (ex Storico): ✅ production-ready v3 — completato 18 mag 2026 pomeriggio (commit `09a2775`).
-- **Tab Piano v4**: ✅ Step A+B+C+D+E+F.1+**F.2a** chiusi. ⏸ F.2b colazione+merenda in STAND BY (decisione 23 mag sera: colazione+merenda lasciate alla gestione libera dell'utente). Step G/H/I non più previsti come priorità imminenti — possibili filoni futuri ma non schedulati. Feature flag `ST.pianoV4Enabled` resta attivo per rollback console.
+- **Tab Piano v4**: ✅ Step A+B+C+D+E+F.1+**F.2a v2**+**Passo 2** chiusi. Il piano vero (riga `weekly_plans` + 14 pasti `weekly_plan_meals` con ingredienti/dosi/orario/spiegazione) si vede nelle card giorno e nell'overlay dettaglio, banner "ESEMPIO DIMOSTRATIVO" condizionale sparisce, disclaimer "colazione/merenda gestisci tu" in fondo all'overlay. ⏸ F.2b colazione+merenda in STAND BY. Step G/H/I non schedulati. Feature flag `ST.pianoV4Enabled` resta attivo per rollback console.
 - **Sicurezza & coerenza obiettivo** (24 mag 2026, Sessione 8): ✅ A1 onboarding obiettivo SINGOLO + ✅ A2 cambio unificato in Impostazioni + ✅ B guard-rail calorie minime con avviso modale. Vedi entry changelog 24 maggio sopra.
 
 **Rifiniture Nutrition rimaste — NON bloccanti**, riprendibili quando si vuole:
+- **Tasti ACCETTA / SOSTITUISCI / SALTO sui pasti veri**: attualmente ghost disabilitati con tooltip "Azione disponibile presto sui pasti del coach". La logica reale (registrare il pasto in tab Oggi, sostituirlo, saltarlo, + tabella `weekly_plan_acceptance` + integrazione bidirezionale Tab Oggi ↔ piano vero) è un blocco futuro dedicato Nutrition, non prioritario.
+- **Contatore "N/7 GIORNI CON PASTI"**: proxy semplice (giorni con pasti veri presenti in `weekly_plan_meals`). La logica "giorni effettivamente seguiti" (acceptance reale) resta futura, dipendente dai tasti sopra.
 - Disclaimer "consulta un esperto" ricorrente (oltre al guard-rail sotto-soglia, promemoria gentile periodico anche con numeri normali — dove/quando = design a sé).
 - Validare soglie calorie 1200/1500 con un nutrizionista prima del rilascio pubblico.
 - Debito ordine macro card Piano legacy (Proteine→Carbo→Grassi vs Carbo→Proteine→Grassi).
@@ -247,7 +249,7 @@ Il modulo Nutrition è **chiuso per questa fase**. Riprendibile in futuro su sin
 - Collaudo dal vivo Fix B (replica profilo Ornella).
 - Cleanup `togglePianoObiettivo` no-op deprecata.
 
-**PROSSIMO grande filone**: **Modulo Training** (la prossima sessione si sposta dal Nutrition al Training). Punto di partenza preciso da scegliere a inizio sessione.
+**PROSSIMO grande filone**: **Modulo Training** (la prossima sessione si sposta dal Nutrition al Training). Punto di partenza preciso da scegliere a inizio sessione. Il blocco "tasti acceptance pasti" è un'opzione Nutrition futura, non prioritaria.
 
 ### Sistema visivo numeri (post-7119c2a)
 - **Titoli + body text**: Syne (display, identità visiva)
@@ -1669,7 +1671,7 @@ Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
 
 ## Lezioni di metodo (per sessioni future)
 
-Cinque principi distillati da incidenti reali — leggere PRIMA di affrontare anomalie o feature che leggono/scrivono dati persistenti.
+Sei principi distillati da incidenti reali — leggere PRIMA di affrontare anomalie o feature che leggono/scrivono dati persistenti.
 
 ### 1. Il DB è la fonte di verità, non il codice né questo file
 
@@ -1721,6 +1723,19 @@ Pomeriggio 22 mag: fix `b4259f5` (loadExtras + R3a) — STEP 3 ("verifica no-dup
 - Quando un fix tocca rendering/totali → produrre un riepilogo "cosa cambia visibilmente per l'utente" PRIMA del commit, non dopo
 - Quando 2 fix toccano lo stesso terreno (es. fix barretta mattino + loadExtras pomeriggio) → verificare esplicitamente l'interazione tra i due
 - Quando un fix introduce nuova sorgente dati o nuovo path di lettura → tracciare l'effetto su tutti i path che leggono la stessa struttura
+
+### 6. "Mostra A invece di B"? Verifica che B sia stato SCRITTO, prima di indagare la lettura
+
+Sera 25 mag (passo 2 → collegamento tab Piano): il tab Piano continuava a mostrare i pasti **demo** invece dei pasti veri del coach, nonostante 2 fix successivi sulla lettura. Catena di ipotesi sbagliate prima di trovare il vero problema:
+1. **"È un filtro su `status='active'`?"** → no, la SELECT non filtrava per status (verificato).
+2. **"È la cache negativa sticky?"** → fix legittimo, ma il bug si presentava anche su cache pulita.
+3. **"È un mismatch chiavi cache write/read?"** → no, entrambe passavano per lo stesso helper `_pianoV4WeekStartIsoForOffset`.
+
+Solo dopo aver aggiunto log diagnostici lungo tutta la catena (commit `3991322`) è emersa la verità: `weekly_plan_meals` per quel piano **conteneva 0 righe**. Un `?genera=1` precedente aveva creato la riga-madre `weekly_plans`, ma la generazione AI dei 14 pasti (F.2a v2) era fallita silenziosamente nello stesso turno — Opzione A: madre resta senza figli. Il `_pianoV4HasRealPlanForWeek` ritornava correttamente `false` (`plan exists but no meals`) → fallback demo, esattamente come progettato.
+
+**Regola operativa**: davanti al sintomo "vedo il dato di fallback X invece di quello atteso Y", la prima cosa da verificare NON è la catena di lettura/cache/filtro/render — è la SCRITTURA del dato atteso. Una SELECT diretta sul DB (`SELECT COUNT(*) FROM weekly_plan_meals WHERE plan_id = '…'`) ti dice in 2 secondi se stai cercando di leggere qualcosa che non esiste. Se Y non è in DB, qualsiasi fix sulla lettura è tempo sprecato.
+
+Vale come complemento alla lezione 1 ("il DB è la fonte di verità"): non basta ispezionare il DB della tabella sbagliata. Quando il sintomo è "fallback invece di valore reale", traccia la pipeline a ritroso fino alla scrittura del valore reale.
 
 ## Funzioni chiave aggiuntive (aprile–maggio 2026)
 
@@ -2023,6 +2038,26 @@ un interruttore a monte.
 - Effetto a cascata dell'interruttore su home/moduli (oltre al nascondere il tile Training).
 
 ## Cosa abbiamo fatto
+
+### 25 maggio 2026 (chiusura giornata) — Nutrition completo end-to-end ✅
+
+Riassunto della giornata di pomeriggio/sera (entry singole dettagliate sotto, qui solo il quadro consolidato).
+
+**Punto di arrivo**: il modulo Nutrition copre adesso **l'intero ciclo coach**: il piano vero del coach si **genera** (postino F.1 → riga-madre `weekly_plans`; F.2a v2 → 14 pasti `weekly_plan_meals` con ingredienti+dosi+orario+spiegazione obbligatoria), si **salva** correttamente con tutte le colonne nuove popolate, e si **vede** nel tab Piano (card giorno con anteprima pranzo+cena, overlay dettaglio con ingredienti reali e "PERCHÉ TI PROPONGO QUESTO" pieno, disclaimer "colazione/merenda gestisci tu", banner "ESEMPIO DIMOSTRATIVO" condizionale che sparisce). Verificato dal vivo sul profilo Ignazio (settimana `2026-05-25`, piano `a5dd98d2-…`).
+
+**Catena dei 6 commit della giornata**:
+- `47a7542` — **F.2a v2**: il coach ora genera pasti COMPLETI (ingredienti con dosi precise + meal_time + macro coerenti). Nuove colonne `weekly_plan_meals.ingredients (jsonb)` + `meal_time (text)` — ALTER TABLE eseguito manualmente in Supabase prima del deploy codice. Validatore + INSERT estesi.
+- `85c0554` — **Passo 2**: il tab Piano legge davvero da `weekly_plan_meals` (loader async + cache `ST.pianoV4RealPlanCache`, mapper riga DB → card UI, banner condizionale, card giorno con anteprima compatta pranzo+cena, totalizzatore senza judgment in modalità piano vero perché copre solo il 60% kcal).
+- `a7e87aa` — **Fix `ai_explanation` NULL** + disclaimer colazione/merenda. Causa: il prompt marcava `explanation` opzionale → l'AI lo ometteva → DB salvava NULL. Fix: regola 10 OBBLIGATORIA + framing UX esplicito + fallback non-vuoto nel validatore. Disclaimer "COLAZIONE & MERENDA" aggiunto in fondo all'overlay dettaglio giorno, solo in modalità piano vero.
+- `04a2048` — **Fix cache negativa sticky**: le entries `{state:'loaded', plan:null}` non sono più trattate come verità durevoli. Si rifà la query al prossimo trigger. + Invalidazione `ST.pianoV4RealPlanCache = {}` in `refreshInBackground` per cross-device sync.
+- `3991322` — **Log diagnostici `[piano-diag]` temporanei** lungo tutta la catena, per la diagnosi del bug "tab Piano mostra demo nonostante piano in DB".
+- `d3dc5ef` — **Rimozione log diagnostici** post-diagnosi. Cleanup (-97 righe nette).
+
+**Lezione strutturale aggiunta** (vedi Lezioni di metodo, punto 6): quando il sintomo è "vedo il fallback X invece del valore Y", la prima verifica è che Y sia stato SCRITTO in DB, non che la pipeline di lettura sia rotta. Il bug "tab Piano mostra demo" del pomeriggio ci ha portato fuori strada con 2 fix legittimi ma non risolutivi (status filter, cache negativa) prima di scoprire che era un `?genera=1` precedente con generazione pasti fallita silenziosamente (Opzione A: madre senza figli) — i 14 pasti semplicemente non esistevano in DB.
+
+**Stato moduli Nutrition aggiornato**: tutte e 4 le tab (Oggi, Integratori, Analisi, Piano v4) production-ready. Tasti ACCETTA/SOSTITUISCI/SALTO sui pasti veri restano ghost disabilitati — la logica reale (registrazione in Tab Oggi + tabella `weekly_plan_acceptance` + integrazione bidirezionale) è un blocco futuro Nutrition non prioritario. Contatore "N/7 GIORNI CON PASTI" è un proxy semplice; la versione acceptance-based arriva insieme ai tasti reali.
+
+**Prossimo grande filone**: Modulo Training (punto di partenza preciso da scegliere a inizio sessione). Resta in agenda parallela (non schedulato) il blocco tasti acceptance pasti.
 
 ### 25 maggio 2026 (tarda notte) — Fix: tab Piano non leggeva piano in stato `draft` ✅
 
