@@ -1947,7 +1947,86 @@ Il coach ragiona come il miglior coach del mondo: massima personalizzazione dent
 - Raffinare "quando" il finisher serve oltre dimagrimento/ricomposizione (es. longevità -> lavoro cardio dolce).
 - Idea: invito al check che si rafforza ad ogni blocco saltato.
 
+### ONBOARDING M1 — BLOCCO TRAINING (attrezzatura + giorni + tempo) + INTERRUTTORE
+*Design chiuso in sessione chat 25 maggio 2026. Solo decisioni di prodotto: implementazione (Claude Design + Claude Code) in sessioni successive.*
+
+**Perché**: il coach Training non può generare programmi per nuovi utenti senza sapere
+attrezzatura disponibile e giorni/tempo. Inoltre non tutti vogliono il Training → serve
+un interruttore a monte.
+
+**Interruttore Training (a monte del blocco)**
+- Step dedicato "Come vuoi che il coach ti accompagni?" con 2 card a selezione singola:
+  - Card 1 — **Alimentazione**: "Il coach pensa ai tuoi pasti e ai tuoi integratori"
+  - Card 2 — **Alimentazione e allenamento**: "Il coach ti segue anche con i workout su misura"
+- Salvataggio: `profiles.usa_training` (boolean, default true).
+- Se `usa_training = false`:
+  - il blocco training dell'onboarding viene SALTATO;
+  - il modulo/tile Training NON appare in home;
+  - il coach NON genera il programma di allenamento.
+- Ripensamento: il training è ATTIVABILE in seguito dalle Impostazioni. All'attivazione
+  mancheranno attrezzatura/giorni/tempo (mai chiesti) → servirà un mini-onboarding training
+  in quel punto (dettaglio da definire in sessione futura).
+
+**Attrezzatura — impianto a IMBUTO**
+- Passo 1 — "Dove ti alleni?" card a selezione singola (riusa pattern obiettivo `m1-card-goal`/`m1-card-level`):
+  - **Casa** → mostra Passo 2 (pillole attrezzatura)
+  - **Palestra attrezzata** → il coach assume "hai tutto", nessuna altra domanda
+  - **All'aperto / poco attrezzato** → corpo libero + sbarra/elastici portatili, nessuna pillola
+- Passo 2 — solo se "Casa": pillole multi-select (riusa pattern `m1-pill-toggle`), divise in 2 gruppi (come le limitazioni allo step 6):
+  - **Attrezzi**: Elastici (a tubo) · Manubri · Bilanciere + dischi · Kettlebell · Panca · Sbarra per trazioni · Fitball · TRX / anelli
+  - **Accessori elastici**: Maniglie · Barra corta · Barra lunga · Cavigliere
+- **Corpo libero è IMPLICITO** (non è una pillola): è la base sempre disponibile. Nessuna pillola accesa = coach lavora a corpo libero puro.
+- Lista aggiungibile in futuro, mai da togliere.
+- Salvataggio: `profiles.attrezzatura` (text[]). Per Palestra/Aperto si potrà salvare un marcatore coerente (da definire in implementazione); il "dove" va in `tipo_allenamento`.
+
+**Giorni a settimana**
+- Pillole a selezione singola: **2 · 3 · 4 · 5**
+- Lettura coach: 2 = full-body · 4 = upper/lower (schema attuale) · 5 = upper/lower + giorno jolly
+- Salvataggio: `profiles.giorni_allenamento` (integer).
+
+**Tempo-base a sessione**
+- Pillole a selezione singola: **30 · 45 · 60** min
+- È il tempo su cui il coach costruisce il blocco (tetto 45 + finisher; nessuna opzione oltre i 60).
+- Salvataggio: `profiles.durata_sessione` (integer).
+
+**Idea parcheggiata — Fase 2 "Oggi ho solo X min" (stile Freeletics)**
+- Funzione SEPARATA dal tempo-base: l'utente dichiara meno tempo per UNA singola sessione e il
+  coach la comprime (taglia serie/esercizi a bassa priorità, tiene i pattern fondamentali) senza
+  toccare la progressione del blocco. Vive nella "voce del coach" Training (modificabilità guidata Fase 2).
+
+**Ordine finale onboarding M1** (i nuovi step in grassetto):
+1. nome
+2. dati corporei
+3. obiettivo
+4. **interruttore "Come vuoi che il coach ti accompagni?"**
+5. attività + esperienza
+6. **blocco training (solo se `usa_training = true`): dove+attrezzatura · giorni · tempo**
+7. dieta + intolleranze
+8. limitazioni fisiche (per tutti, anche solo-nutrition)
+9. riepilogo + avvio check
+
+**Mappatura salvataggio su `profiles`** (riepilogo):
+- dove → `tipo_allenamento` (text)
+- attrezzatura → `attrezzatura` (text[], creata 25 mag)
+- giorni → `giorni_allenamento` (integer)
+- tempo → `durata_sessione` (integer)
+- interruttore → `usa_training` (boolean default true, creata 25 mag)
+
+**Punti aperti per le prossime sessioni** (non bloccanti):
+- Mini-onboarding training all'attivazione tardiva da Impostazioni.
+- Mostrare gli "Accessori elastici" solo se "Elastici" è acceso (raffinatezza da valutare in design).
+- Marcatore di salvataggio per Palestra/Aperto in `attrezzatura`.
+- Effetto a cascata dell'interruttore su home/moduli (oltre al nascondere il tile Training).
+
 ## Cosa abbiamo fatto
+
+### 25 maggio 2026 — Design onboarding M1: blocco Training + interruttore (solo decisioni)
+Sessione chat di sole decisioni di prodotto (no codice). Definito come l'onboarding raccoglierà
+attrezzatura (imbuto Dove→pillole-casa), giorni (2/3/4/5), tempo-base (30/45/60) e l'interruttore
+Nutrition-only / Nutrition+Training. Adottate 3 colonne `profiles` storiche (`tipo_allenamento`,
+`giorni_allenamento`, `durata_sessione`) e create 2 nuove colonne (`attrezzatura` text[], `usa_training`
+boolean default true). Vedi sezione "ONBOARDING M1 — BLOCCO TRAINING + INTERRUTTORE". Prossimo:
+Claude Design disegna i nuovi step, poi Claude Code implementa.
 
 ### 24 maggio 2026 — Sessione 8: Sicurezza + chiusura modulo Nutrition ✅
 
