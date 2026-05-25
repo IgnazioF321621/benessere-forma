@@ -820,6 +820,29 @@ select.inp{cursor:pointer;}
 .m1-pill-toggle{padding:9px 16px;border-radius:999px;border:1.5px solid var(--acc);background:var(--bg);color:var(--acc);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .m1-pill-toggle.selected{background:var(--acc);color:#fff;}
 
+/* Blocco training onboarding (25 mag 2026) ----------------- */
+/* Eyebrow piccola sopra card-level (Step A interruttore + Step B dove) */
+.m1-card-level-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:6px;line-height:1.3;}
+.m1-card-level.selected .m1-card-level-eyebrow{color:rgba(255,255,255,.85);}
+
+/* Chip statico "✓ Corpo libero · sempre incluso" (Step C) */
+.m1-gear-bodyweight-chip{display:inline-flex;align-items:center;gap:6px;background:var(--acc-lt);color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;padding:9px 14px;border-radius:999px;margin:4px 0 14px;border:1px solid rgba(42,122,111,.15);}
+
+/* Tile numeriche per Step D (giorni 2/3/4/5) e Step E (tempo 30/45/60) */
+.m1-num-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 18px;}
+.m1-num-grid-3{grid-template-columns:repeat(3,1fr);}
+.m1-tile-num{background:var(--s2);border:1px solid var(--b1);border-radius:14px;padding:18px 8px;cursor:pointer;transition:all .15s;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:inherit;}
+.m1-tile-num:hover{border-color:var(--acc);}
+.m1-tile-num-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;}
+.m1-tile-num-unit{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;}
+.m1-tile-num.selected{background:var(--acc);border-color:var(--acc);}
+.m1-tile-num.selected .m1-tile-num-value,.m1-tile-num.selected .m1-tile-num-unit{color:#fff;}
+
+/* Card descrittiva dinamica sotto tile numeriche (Step D + E) */
+.m1-explainer-card{background:var(--s2);border-left:3px solid var(--acc);border-radius:10px;padding:14px 16px;margin:6px 0 4px;}
+.m1-explainer-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--t1);line-height:1.3;margin-bottom:6px;}
+.m1-explainer-desc{font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);line-height:1.45;}
+
 /* Summary rows Step 7 -------------------------------------- */
 .m1-summary-row{padding:14px 0;border-top:1px solid var(--b1);}
 .m1-summary-row:first-of-type{border-top:none;padding-top:2px;}
@@ -1843,16 +1866,9 @@ select.inp{cursor:pointer;}
   <div class="onb-header">
     <button class="m1-back-btn" id="m1-back-btn" onclick="m1Back()" aria-label="Indietro" style="display:none;">←</button>
     <div class="m1-progress-row">
-      <div class="m1-progress-bar">
-        <span class="m1-progress-segment done" data-seg="1"></span>
-        <span class="m1-progress-segment" data-seg="2"></span>
-        <span class="m1-progress-segment" data-seg="3"></span>
-        <span class="m1-progress-segment" data-seg="4"></span>
-        <span class="m1-progress-segment" data-seg="5"></span>
-        <span class="m1-progress-segment" data-seg="6"></span>
-        <span class="m1-progress-segment" data-seg="7"></span>
-      </div>
-      <span class="m1-progress-label" id="m1-progress-label">Passo 1 di 7</span>
+      <!-- Segmenti generati runtime da m1GoStep() in base alla sequenza dinamica (8/11/12 step). -->
+      <div class="m1-progress-bar" id="m1-progress-bar"></div>
+      <span class="m1-progress-label" id="m1-progress-label">Passo 1 di 8</span>
     </div>
     <div class="onb-title" id="m1-title">Iniziamo da te</div>
     <div class="onb-sub" id="m1-subtitle">Useremo il tuo nome per parlarti durante il percorso.</div>
@@ -1969,6 +1985,27 @@ select.inp{cursor:pointer;}
       <div id="m1-err-s3" class="m1-err"></div>
     </div>
 
+    <!-- STEP A (s-coach) — Interruttore Nutrition / Nutrition+Training -->
+    <div id="m1-s-coach" class="m1-step">
+      <div class="onb-section">
+        <button type="button" class="m1-card-level" data-coach="false" onclick="m1SelectUsaTraining(false)">
+          <div class="m1-card-level-eyebrow">PIANO BASE</div>
+          <div class="m1-card-level-title">Alimentazione</div>
+          <div class="m1-card-level-desc">Il coach pensa ai tuoi pasti e ai tuoi integratori.</div>
+        </button>
+        <button type="button" class="m1-card-level" data-coach="true" onclick="m1SelectUsaTraining(true)">
+          <div class="m1-card-level-eyebrow">PIANO COMPLETO</div>
+          <div class="m1-card-level-title">Alimentazione e allenamento</div>
+          <div class="m1-card-level-desc">Il coach ti segue anche con i workout su misura.</div>
+        </button>
+        <p class="m1-mantra">Ogni percorso può essere semplice o completo: scegli quello che fa per te.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-coach')">Continua →</button>
+      </div>
+      <div id="m1-err-s-coach" class="m1-err"></div>
+    </div>
+
     <!-- STEP 4 — Il tuo livello -->
     <div id="m1-s4" class="m1-step">
       <div class="onb-section">
@@ -2017,6 +2054,130 @@ select.inp{cursor:pointer;}
         <button class="btn btn-primary btn-full" onclick="m1NextFrom('s4')">Continua →</button>
       </div>
       <div id="m1-err-s4" class="m1-err"></div>
+    </div>
+
+    <!-- STEP B (s-where) — Dove ti alleni? (solo se usa_training=true) -->
+    <div id="m1-s-where" class="m1-step">
+      <div class="onb-section">
+        <button type="button" class="m1-card-level" data-where="casa" onclick="m1SelectTipoAllenamento('casa')">
+          <div class="m1-card-level-eyebrow">SPAZIO · INDOOR</div>
+          <div class="m1-card-level-title">Casa</div>
+          <div class="m1-card-level-desc">Mi alleno tra le mura di casa, con quel che ho.</div>
+        </button>
+        <button type="button" class="m1-card-level" data-where="palestra" onclick="m1SelectTipoAllenamento('palestra')">
+          <div class="m1-card-level-eyebrow">SPAZIO · ATTREZZATO</div>
+          <div class="m1-card-level-title">Palestra attrezzata</div>
+          <div class="m1-card-level-desc">Manubri, bilancieri, macchine e cavi a disposizione.</div>
+        </button>
+        <button type="button" class="m1-card-level" data-where="aperto" onclick="m1SelectTipoAllenamento('aperto')">
+          <div class="m1-card-level-eyebrow">SPAZIO · OUTDOOR</div>
+          <div class="m1-card-level-title">All'aperto</div>
+          <div class="m1-card-level-desc">Corpo libero, parco, qualche attrezzo portatile.</div>
+        </button>
+        <p class="m1-mantra">Il primo passo è capire dove ti muovi.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-where')">Continua →</button>
+      </div>
+      <div id="m1-err-s-where" class="m1-err"></div>
+    </div>
+
+    <!-- STEP C (s-gear) — Cosa hai a disposizione? (solo se tipo_allenamento='casa') -->
+    <div id="m1-s-gear" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-gear-bodyweight-chip">✓ CORPO LIBERO · SEMPRE INCLUSO</div>
+
+        <div class="m1-eyebrow-subsection">Attrezzi</div>
+        <div class="m1-pill-wrap">
+          <button type="button" class="m1-pill-toggle" data-gear="elastici_tubo" onclick="m1ToggleAttrezzatura('elastici_tubo')">Elastici a tubo</button>
+          <button type="button" class="m1-pill-toggle" data-gear="manubri" onclick="m1ToggleAttrezzatura('manubri')">Manubri</button>
+          <button type="button" class="m1-pill-toggle" data-gear="bilanciere" onclick="m1ToggleAttrezzatura('bilanciere')">Bilanciere + dischi</button>
+          <button type="button" class="m1-pill-toggle" data-gear="kettlebell" onclick="m1ToggleAttrezzatura('kettlebell')">Kettlebell</button>
+          <button type="button" class="m1-pill-toggle" data-gear="panca" onclick="m1ToggleAttrezzatura('panca')">Panca</button>
+          <button type="button" class="m1-pill-toggle" data-gear="sbarra" onclick="m1ToggleAttrezzatura('sbarra')">Sbarra per trazioni</button>
+          <button type="button" class="m1-pill-toggle" data-gear="fitball" onclick="m1ToggleAttrezzatura('fitball')">Fitball</button>
+          <button type="button" class="m1-pill-toggle" data-gear="trx" onclick="m1ToggleAttrezzatura('trx')">TRX / anelli</button>
+        </div>
+
+        <!-- Accessori elastici: visibili SOLO se "Elastici a tubo" selezionato (RITOCCO 2) -->
+        <div id="m1-gear-accessories-block" style="display:none;">
+          <div class="m1-eyebrow-subsection">Accessori elastici</div>
+          <div class="m1-pill-wrap">
+            <button type="button" class="m1-pill-toggle" data-gear="maniglie" onclick="m1ToggleAttrezzatura('maniglie')">Maniglie</button>
+            <button type="button" class="m1-pill-toggle" data-gear="barra_corta" onclick="m1ToggleAttrezzatura('barra_corta')">Barra corta</button>
+            <button type="button" class="m1-pill-toggle" data-gear="barra_lunga" onclick="m1ToggleAttrezzatura('barra_lunga')">Barra lunga</button>
+            <button type="button" class="m1-pill-toggle" data-gear="cavigliere" onclick="m1ToggleAttrezzatura('cavigliere')">Cavigliere</button>
+          </div>
+        </div>
+
+        <p class="m1-mantra">Anche poco basta, se è chiaro cosa puoi usare.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-gear')">Continua →</button>
+      </div>
+      <div id="m1-err-s-gear" class="m1-err"></div>
+    </div>
+
+    <!-- STEP D (s-days) — Quanti giorni a settimana? -->
+    <div id="m1-s-days" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-num-grid">
+          <button type="button" class="m1-tile-num" data-days="2" onclick="m1SelectGiorni(2)">
+            <span class="m1-tile-num-value">2</span>
+            <span class="m1-tile-num-unit">GG</span>
+          </button>
+          <button type="button" class="m1-tile-num" data-days="3" onclick="m1SelectGiorni(3)">
+            <span class="m1-tile-num-value">3</span>
+            <span class="m1-tile-num-unit">GG</span>
+          </button>
+          <button type="button" class="m1-tile-num" data-days="4" onclick="m1SelectGiorni(4)">
+            <span class="m1-tile-num-value">4</span>
+            <span class="m1-tile-num-unit">GG</span>
+          </button>
+          <button type="button" class="m1-tile-num" data-days="5" onclick="m1SelectGiorni(5)">
+            <span class="m1-tile-num-value">5</span>
+            <span class="m1-tile-num-unit">GG</span>
+          </button>
+        </div>
+        <div id="m1-days-explainer" class="m1-explainer-card" style="display:none;">
+          <div class="m1-explainer-title" id="m1-days-explainer-title"></div>
+          <div class="m1-explainer-desc" id="m1-days-explainer-desc"></div>
+        </div>
+        <p class="m1-mantra">Trova il ritmo che puoi davvero mantenere.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-days')">Continua →</button>
+      </div>
+      <div id="m1-err-s-days" class="m1-err"></div>
+    </div>
+
+    <!-- STEP E (s-time) — Quanto tempo per allenarti? -->
+    <div id="m1-s-time" class="m1-step">
+      <div class="onb-section">
+        <div class="m1-num-grid m1-num-grid-3">
+          <button type="button" class="m1-tile-num" data-time="30" onclick="m1SelectDurata(30)">
+            <span class="m1-tile-num-value">30</span>
+            <span class="m1-tile-num-unit">MIN</span>
+          </button>
+          <button type="button" class="m1-tile-num" data-time="45" onclick="m1SelectDurata(45)">
+            <span class="m1-tile-num-value">45</span>
+            <span class="m1-tile-num-unit">MIN</span>
+          </button>
+          <button type="button" class="m1-tile-num" data-time="60" onclick="m1SelectDurata(60)">
+            <span class="m1-tile-num-value">60</span>
+            <span class="m1-tile-num-unit">MIN</span>
+          </button>
+        </div>
+        <div id="m1-time-explainer" class="m1-explainer-card" style="display:none;">
+          <div class="m1-explainer-title" id="m1-time-explainer-title"></div>
+          <div class="m1-explainer-desc" id="m1-time-explainer-desc"></div>
+        </div>
+        <p class="m1-mantra">Tempo onesto, sessione vera.</p>
+      </div>
+      <div class="m1-cta-sticky">
+        <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-time')">Continua →</button>
+      </div>
+      <div id="m1-err-s-time" class="m1-err"></div>
     </div>
 
     <!-- STEP 5 — Come mangi -->
@@ -3006,7 +3167,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 17:20';
+const APP_VERSION = '2026.05.25 · 21:31';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3039,6 +3200,12 @@ const ST = {
     eta:null, sesso:null, altezza:null,
     peso_attuale:null, peso_obiettivo:null,
     obiettivi:[],
+    // Blocco training onboarding (25 mag 2026)
+    usa_training:null,        // null=non scelto, true=Alimentazione+Allenamento, false=solo Alimentazione
+    tipo_allenamento:null,    // 'casa'|'palestra'|'aperto' — solo se usa_training=true
+    attrezzatura:[],          // slug attrezzi disponibili — solo se tipo_allenamento='casa'
+    giorni_allenamento:null,  // 2|3|4|5 — solo se usa_training=true
+    durata_sessione:null,     // 30|45|60 (min) — solo se usa_training=true
     attivita:null, esperienza:null,
     stile_alimentare:null,
     intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
@@ -3370,15 +3537,65 @@ async function m1Resend() {
 }
 
 // ── M1 step navigation ────────────────────────────────────
+// I 5 nuovi step (25 mag 2026) usano slug non-numerici per non rompere il pattern
+// `parseInt(stepId.slice(1))` legacy. La navigazione passa per getM1Sequence()
+// che restituisce l'array dinamico di step ID in ordine, basato su ST.m1Data
+// (usa_training + tipo_allenamento). Indice e totale "Passo X di N" sono calcolati
+// runtime sulla sequenza effettiva (8 step se solo nutrition, 11-12 se training).
 const M1_HEADERS = {
-  s1: { title:'Iniziamo da te',          sub:'Useremo il tuo nome per parlarti durante il percorso.' },
-  s2: { title:'Parlaci di te',           sub:'Servono per calcolare il tuo fabbisogno e personalizzare il piano.' },
-  s3: { title:"Definiamo l'obiettivo",   sub:'Scegli il tuo obiettivo. Potrai cambiarlo più avanti.' },
-  s4: { title:'Il tuo livello',          sub:'Per calibrare il piano alle tue capacità reali.' },
-  s5: { title:'Come mangi',              sub:'Per costruire un piano che rispetti il tuo stile alimentare.' },
-  s6: { title:'Cosa devo sapere',        sub:'Aree del corpo o condizioni che richiedono attenzione. Ci servono per adattare il piano allenamento.' },
-  s7: { title:'',                        sub:'I tuoi dati base sono salvati. Manca un ultimo passo per attivare il tuo piano personale.' },
+  s1:        { title:'Iniziamo da te',          sub:'Useremo il tuo nome per parlarti durante il percorso.' },
+  s2:        { title:'Parlaci di te',           sub:'Servono per calcolare il tuo fabbisogno e personalizzare il piano.' },
+  s3:        { title:"Definiamo l'obiettivo",   sub:'Scegli il tuo obiettivo. Potrai cambiarlo più avanti.' },
+  's-coach': { title:'Come vuoi che il coach<br>ti accompagni?', sub:'Puoi farti seguire solo sui pasti oppure anche sugli allenamenti.' },
+  s4:        { title:'Il tuo livello',          sub:'Per calibrare il piano alle tue capacità reali.' },
+  's-where': { title:'Dove ti alleni?',         sub:'Il coach adatta i workout allo spazio che hai.' },
+  's-gear':  { title:'Cosa hai a disposizione?',sub:'Seleziona gli attrezzi che hai in casa. Il corpo libero è sempre incluso.' },
+  's-days':  { title:'Quanti giorni a settimana?', sub:'Scegli il ritmo che riesci a mantenere davvero.' },
+  's-time':  { title:'Quanto tempo per allenarti?',sub:'La durata-base di ogni sessione. Decide quanti esercizi entrano.' },
+  s5:        { title:'Come mangi',              sub:'Per costruire un piano che rispetti il tuo stile alimentare.' },
+  s6:        { title:'Cosa devo sapere',        sub:'Aree del corpo o condizioni che richiedono attenzione. Ci servono per adattare il piano allenamento.' },
+  s7:        { title:'',                        sub:'I tuoi dati base sono salvati. Manca un ultimo passo per attivare il tuo piano personale.' },
 };
+
+// Card descrittive dinamiche sotto le tile numero (Step D giorni, Step E tempo).
+// Mostrate solo dopo selezione, sostituiscono nulla finché vuote.
+const M1_DAYS_DESC = {
+  2: { title: '2 giorni',                desc: 'Una sessione totale per metà settimana. Recupero ampio.' },
+  3: { title: '3 giorni',                desc: 'Tre sessioni complete, buon equilibrio tra stimolo e recupero. Ottimo punto di partenza.' },
+  4: { title: '4 giorni · UPPER / LOWER',desc: 'Split su parte alta e bassa. Lavoro più mirato per muscolo.' },
+  5: { title: '5 giorni · U/L + EXTRA',  desc: 'Quattro sessioni split più un giorno dedicato (core o cardio).' },
+};
+const M1_TIME_DESC = {
+  30: { title: '30 MIN · SESSIONI DENSE',  desc: 'Allenamenti rapidi e densi. Si lavora su pochi grandi movimenti.' },
+  45: { title: '45 MIN · EQUILIBRATO',     desc: 'Tempo per riscaldarsi, lavorare bene e chiudere senza fretta.' },
+  60: { title: '60 MIN · VOLUME COMPLETO', desc: 'Più volume e accessori per costruire bene la sessione.' },
+};
+
+// Slug attrezzi accessori elastici (gestione visibility/cleanup quando "elastici_tubo" è spento).
+const M1_GEAR_ELASTIC_ACCESSORIES = ['maniglie','barra_corta','barra_lunga','cavigliere'];
+
+// Sequenza dinamica step M1 — dipende da usa_training + tipo_allenamento.
+// Ritorna l'array ordinato di step ID che l'utente attraverserà.
+// - 8 step se usa_training=false (solo nutrition)
+// - 11 step se usa_training=true (palestra o aperto: skip Step C attrezzatura)
+// - 12 step se usa_training=true && tipo_allenamento='casa' (include Step C)
+// NB: quando usa_training=null (non ancora scelto) trattiamo come "lungo" (default
+// dell'app) — la sequenza si aggiorna automaticamente alla scelta su s-coach.
+function getM1Sequence() {
+  const d = ST.m1Data;
+  const seq = ['s1','s2','s3','s-coach'];
+  if (d.usa_training === false) {
+    // Percorso solo-nutrition: salta blocco training, mantieni s4 (attività+esperienza)
+    // perché serve per calcolare TDEE e per il coach in tutti i casi.
+    seq.push('s4','s5','s6','s7');
+  } else {
+    // Percorso completo (true OR null): s4 + blocco training + s5/s6/s7
+    seq.push('s4','s-where');
+    if (d.tipo_allenamento === 'casa') seq.push('s-gear');
+    seq.push('s-days','s-time','s5','s6','s7');
+  }
+  return seq;
+}
 
 function m1GoStep(stepId) {
   if(!M1_HEADERS[stepId]) return;
@@ -3386,8 +3603,13 @@ function m1GoStep(stepId) {
   // toggle visibility steps
   document.querySelectorAll('#onboarding-screen .m1-step').forEach(el => el.classList.remove('active'));
   document.getElementById('m1-' + stepId)?.classList.add('active');
-  // header
-  const n = parseInt(stepId.slice(1), 10);
+  // posizione dinamica nella sequenza effettiva
+  const seq = getM1Sequence();
+  let idx = seq.indexOf(stepId);
+  if (idx < 0) idx = 0;
+  const n = idx + 1;
+  const total = seq.length;
+  // header (innerHTML per supportare <br> nei titoli statici — stringhe non utente)
   let title = M1_HEADERS[stepId].title;
   if(stepId === 's7') {
     const nome = (ST.m1Data.nome || '').trim() || 'amico';
@@ -3396,17 +3618,26 @@ function m1GoStep(stepId) {
   const titleEl = document.getElementById('m1-title');
   const subEl   = document.getElementById('m1-subtitle');
   const lblEl   = document.getElementById('m1-progress-label');
-  if(titleEl) titleEl.textContent = title;
-  if(subEl)   subEl.textContent   = M1_HEADERS[stepId].sub;
-  if(lblEl)   lblEl.textContent   = `Passo ${n} di 7`;
-  // progress segments
-  document.querySelectorAll('#onboarding-screen .m1-progress-segment').forEach(seg => {
-    const k = parseInt(seg.getAttribute('data-seg'), 10);
-    seg.classList.toggle('done', k <= n);
-  });
-  // back button: visible da s2 in poi
+  if(titleEl) titleEl.innerHTML = title;
+  if(subEl)   subEl.textContent = M1_HEADERS[stepId].sub;
+  if(lblEl)   lblEl.textContent = `Passo ${n} di ${total}`;
+  // render dinamico segmenti progress bar (numero variabile in base alla sequenza)
+  const barEl = document.getElementById('m1-progress-bar');
+  if (barEl) {
+    let html = '';
+    for (let i = 1; i <= total; i++) {
+      const done = i <= n ? ' done' : '';
+      html += `<span class="m1-progress-segment${done}" data-seg="${i}"></span>`;
+    }
+    barEl.innerHTML = html;
+  }
+  // back button: visibile da step 2 in poi nella sequenza
   const back = document.getElementById('m1-back-btn');
-  if(back) back.style.display = n > 1 ? 'block' : 'none';
+  if(back) back.style.display = idx > 0 ? 'block' : 'none';
+  // restore UI specifici nuovi step (visibility accessori, explainer)
+  if (stepId === 's-gear') m1GearApplyVisibility();
+  if (stepId === 's-days') m1DaysApplyExplainer();
+  if (stepId === 's-time') m1TimeApplyExplainer();
   // err reset + scroll top
   const errEl = document.getElementById('m1-err-' + stepId);
   if(errEl) errEl.classList.remove('show');
@@ -3414,9 +3645,10 @@ function m1GoStep(stepId) {
 }
 
 function m1Back() {
-  const n = parseInt(ST.m1Step.slice(1), 10);
-  if(n <= 1) return;
-  m1GoStep('s' + (n - 1));
+  const seq = getM1Sequence();
+  const idx = seq.indexOf(ST.m1Step);
+  if (idx <= 0) return;
+  m1GoStep(seq[idx - 1]);
 }
 
 function m1NextFrom(stepId) {
@@ -3436,15 +3668,27 @@ function m1NextFrom(stepId) {
   } else if(stepId === 's3') {
     // Fix A1: obiettivo singolo obbligatorio (length deve essere ESATTAMENTE 1)
     if(!d.obiettivi || d.obiettivi.length !== 1) return showErr('Scegli il tuo obiettivo.');
+  } else if(stepId === 's-coach') {
+    if(typeof d.usa_training !== 'boolean') return showErr("Scegli un'opzione.");
   } else if(stepId === 's4') {
     if(!d.attivita)    return showErr('Scegli il tuo livello di attività.');
     if(!d.esperienza)  return showErr("Scegli il tuo livello di esperienza con l'allenamento.");
+  } else if(stepId === 's-where') {
+    if(!d.tipo_allenamento) return showErr('Scegli dove ti alleni.');
+  } else if(stepId === 's-gear') {
+    // nessuna validazione: anche zero attrezzi è valido (corpo libero implicito)
+  } else if(stepId === 's-days') {
+    if(!d.giorni_allenamento) return showErr('Scegli quanti giorni a settimana.');
+  } else if(stepId === 's-time') {
+    if(!d.durata_sessione) return showErr('Scegli la durata-base.');
   } else if(stepId === 's5') {
     if(!d.stile_alimentare) return showErr('Scegli il tuo stile alimentare.');
   }
   // s6 e s7: no required fields. s7 callback è saveOnboarding diretto.
-  const n = parseInt(stepId.slice(1), 10);
-  m1GoStep('s' + (n + 1));
+  const seq = getM1Sequence();
+  const idx = seq.indexOf(stepId);
+  if (idx < 0 || idx >= seq.length - 1) return;
+  m1GoStep(seq[idx + 1]);
 }
 
 // ── Toggles / setters per step content ─────────────────────
@@ -3502,6 +3746,96 @@ function m1TogglePill(group, val) {
   // gestione speciale "altro"
   if(val === 'altro') m1ToggleAltro(group === 'intolleranze' ? 'intol' : 'lim');
 }
+
+// ── Handler Step A (s-coach) — Interruttore Nutrition / Nutrition+Training ──
+// Bool esplicito: false = solo Alimentazione, true = Alimentazione + Allenamento.
+// La scelta dirotta la sequenza degli step successivi (vedi getM1Sequence).
+function m1SelectUsaTraining(val) {
+  const v = !!val;
+  ST.m1Data.usa_training = v;
+  document.querySelectorAll('#m1-s-coach .m1-card-level').forEach(el => {
+    const k = el.getAttribute('data-coach') === 'true';
+    el.classList.toggle('selected', k === v);
+  });
+}
+
+// ── Handler Step B (s-where) — Dove ti alleni? ──
+function m1SelectTipoAllenamento(val) {
+  ST.m1Data.tipo_allenamento = val;
+  document.querySelectorAll('#m1-s-where .m1-card-level').forEach(el =>
+    el.classList.toggle('selected', el.getAttribute('data-where') === val));
+}
+
+// ── Handler Step C (s-gear) — Attrezzatura casa ──
+// RITOCCO 2: il gruppo "Accessori elastici" è visibile SOLO se "Elastici a tubo"
+// è acceso. Spegnere "Elastici a tubo" deseleziona anche gli accessori già scelti
+// (no fantasmi salvati in DB senza la pillola madre).
+function m1ToggleAttrezzatura(slug) {
+  const arr = ST.m1Data.attrezzatura;
+  const i = arr.indexOf(slug);
+  if (i >= 0) arr.splice(i, 1);
+  else arr.push(slug);
+  document.querySelectorAll(`#m1-s-gear [data-gear="${slug}"]`).forEach(el =>
+    el.classList.toggle('selected', arr.includes(slug)));
+  // Cleanup accessori elastici se "elastici_tubo" è stato spento
+  if (slug === 'elastici_tubo' && !arr.includes('elastici_tubo')) {
+    M1_GEAR_ELASTIC_ACCESSORIES.forEach(acc => {
+      const ai = arr.indexOf(acc);
+      if (ai >= 0) arr.splice(ai, 1);
+      document.querySelectorAll(`#m1-s-gear [data-gear="${acc}"]`).forEach(el =>
+        el.classList.remove('selected'));
+    });
+  }
+  m1GearApplyVisibility();
+}
+
+// Show/hide del blocco "Accessori elastici" in base a presenza di "elastici_tubo".
+function m1GearApplyVisibility() {
+  const block = document.getElementById('m1-gear-accessories-block');
+  if (!block) return;
+  const on = (ST.m1Data.attrezzatura || []).includes('elastici_tubo');
+  block.style.display = on ? 'block' : 'none';
+}
+
+// ── Handler Step D (s-days) — Giorni a settimana ──
+function m1SelectGiorni(val) {
+  const v = parseInt(val, 10);
+  ST.m1Data.giorni_allenamento = v;
+  document.querySelectorAll('#m1-s-days [data-days]').forEach(el =>
+    el.classList.toggle('selected', parseInt(el.getAttribute('data-days'), 10) === v));
+  m1DaysApplyExplainer();
+}
+function m1DaysApplyExplainer() {
+  const val = ST.m1Data.giorni_allenamento;
+  const box = document.getElementById('m1-days-explainer');
+  const tEl = document.getElementById('m1-days-explainer-title');
+  const dEl = document.getElementById('m1-days-explainer-desc');
+  if (!box) return;
+  if (!val || !M1_DAYS_DESC[val]) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (tEl) tEl.textContent = M1_DAYS_DESC[val].title;
+  if (dEl) dEl.textContent = M1_DAYS_DESC[val].desc;
+}
+
+// ── Handler Step E (s-time) — Durata sessione ──
+function m1SelectDurata(val) {
+  const v = parseInt(val, 10);
+  ST.m1Data.durata_sessione = v;
+  document.querySelectorAll('#m1-s-time [data-time]').forEach(el =>
+    el.classList.toggle('selected', parseInt(el.getAttribute('data-time'), 10) === v));
+  m1TimeApplyExplainer();
+}
+function m1TimeApplyExplainer() {
+  const val = ST.m1Data.durata_sessione;
+  const box = document.getElementById('m1-time-explainer');
+  const tEl = document.getElementById('m1-time-explainer-title');
+  const dEl = document.getElementById('m1-time-explainer-desc');
+  if (!box) return;
+  if (!val || !M1_TIME_DESC[val]) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (tEl) tEl.textContent = M1_TIME_DESC[val].title;
+  if (dEl) dEl.textContent = M1_TIME_DESC[val].desc;
+}
 function m1ToggleAltro(which) {
   const isIntol = (which === 'intol');
   const arrKey = isIntol ? 'intolleranze' : 'limitazioni';
@@ -3551,6 +3885,29 @@ function m1ApplySelections() {
   const limAltroOpen   = (d.limitazioni  || []).includes('altro');
   const tx1 = document.getElementById('m1-altre-intol'); if(tx1) tx1.style.display = intolAltroOpen ? 'block' : 'none';
   const tx2 = document.getElementById('m1-altre-lim');   if(tx2) tx2.style.display = limAltroOpen   ? 'block' : 'none';
+  // Nuovo blocco training (25 mag 2026) — restore visuale
+  if (typeof d.usa_training === 'boolean') {
+    document.querySelectorAll('#m1-s-coach .m1-card-level').forEach(el => {
+      const k = el.getAttribute('data-coach') === 'true';
+      el.classList.toggle('selected', k === d.usa_training);
+    });
+  }
+  if (d.tipo_allenamento) {
+    document.querySelectorAll('#m1-s-where .m1-card-level').forEach(el =>
+      el.classList.toggle('selected', el.getAttribute('data-where') === d.tipo_allenamento));
+  }
+  (d.attrezzatura || []).forEach(slug => document.querySelectorAll(`#m1-s-gear [data-gear="${slug}"]`).forEach(el => el.classList.add('selected')));
+  m1GearApplyVisibility();
+  if (d.giorni_allenamento) {
+    document.querySelectorAll('#m1-s-days [data-days]').forEach(el =>
+      el.classList.toggle('selected', parseInt(el.getAttribute('data-days'), 10) === d.giorni_allenamento));
+    m1DaysApplyExplainer();
+  }
+  if (d.durata_sessione) {
+    document.querySelectorAll('#m1-s-time [data-time]').forEach(el =>
+      el.classList.toggle('selected', parseInt(el.getAttribute('data-time'), 10) === d.durata_sessione));
+    m1TimeApplyExplainer();
+  }
 }
 
 // "Salta per ora" su step 7 — salva profilo + segna M2 skip
@@ -4081,6 +4438,21 @@ async function saveOnboarding(opts) {
   // obiettivi: CSV string (i reader esistenti lo splittano già — calcAdaptedTargets, applyProfile)
   const obiettivoCSV = (d.obiettivi && d.obiettivi.length) ? d.obiettivi.join(',') : null;
 
+  // Blocco training onboarding (25 mag 2026) — regole:
+  // - usa_training: default true se non scelto (col DB ha default true comunque)
+  // - se usa_training=false → tutti i 4 campi training NULL (no rumore nel DB)
+  // - se usa_training=true:
+  //     · tipo_allenamento sempre salvato
+  //     · attrezzatura salvata SOLO se tipo_allenamento='casa'
+  //       (per palestra/aperto il coach interpreta dal tipo_allenamento)
+  //     · giorni_allenamento + durata_sessione sempre salvati
+  const usaTraining = (d.usa_training === false) ? false : true;
+  const tipoAllen   = usaTraining ? (d.tipo_allenamento || null) : null;
+  const attrezz     = (usaTraining && tipoAllen === 'casa' && (d.attrezzatura || []).length)
+    ? d.attrezzatura.slice() : null;
+  const giorni      = usaTraining ? (d.giorni_allenamento || null) : null;
+  const durata      = usaTraining ? (d.durata_sessione    || null) : null;
+
   const profileData = {
     id: ST.user.id,
     first_name: d.nome.trim(),
@@ -4099,6 +4471,12 @@ async function saveOnboarding(opts) {
     dieta:        d.stile_alimentare || null,
     intolleranze: intolList.length ? intolList : null,
     note_salute:  noteSalute,
+    // Blocco training (25 mag 2026)
+    usa_training:        usaTraining,
+    tipo_allenamento:    tipoAllen,
+    attrezzatura:        attrezz,
+    giorni_allenamento:  giorni,
+    durata_sessione:     durata,
     updated_at:   new Date().toISOString(),
   };
 

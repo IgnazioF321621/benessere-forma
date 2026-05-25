@@ -1984,7 +1984,7 @@ Il coach ragiona come il miglior coach del mondo: massima personalizzazione dent
 - Idea: invito al check che si rafforza ad ogni blocco saltato.
 
 ### ONBOARDING M1 — BLOCCO TRAINING (attrezzatura + giorni + tempo) + INTERRUTTORE
-*Design chiuso in sessione chat 25 maggio 2026. Solo decisioni di prodotto: implementazione (Claude Design + Claude Code) in sessioni successive.*
+*Design chiuso in sessione chat 25 maggio 2026. **IMPLEMENTATO il 25 maggio 2026** in [zona-tracker.html](zona-tracker.html) — 5 nuovi step nell'onboarding + sequenza dinamica + progress bar dinamica + 5 nuovi campi salvati su `profiles`. Vedi entry log dedicata in "Cosa abbiamo fatto" (25 maggio 2026 sera). La sezione qui sotto resta come riferimento di prodotto consolidato.*
 
 **Perché**: il coach Training non può generare programmi per nuovi utenti senza sapere
 attrezzatura disponibile e giorni/tempo. Inoltre non tutti vogliono il Training → serve
@@ -2050,11 +2050,60 @@ un interruttore a monte.
 
 **Punti aperti per le prossime sessioni** (non bloccanti):
 - Mini-onboarding training all'attivazione tardiva da Impostazioni.
-- Mostrare gli "Accessori elastici" solo se "Elastici" è acceso (raffinatezza da valutare in design).
-- Marcatore di salvataggio per Palestra/Aperto in `attrezzatura`.
+- ~~Mostrare gli "Accessori elastici" solo se "Elastici" è acceso~~ ✅ implementato (RITOCCO 2, 25 mag).
+- Marcatore di salvataggio per Palestra/Aperto in `attrezzatura` — al momento si salva `NULL` (il coach interpreta dal `tipo_allenamento`).
 - Effetto a cascata dell'interruttore su home/moduli (oltre al nascondere il tile Training).
 
 ## Cosa abbiamo fatto
+
+### 25 maggio 2026 (sera) — Nuovi step onboarding M1: interruttore + blocco training ✅
+
+Implementazione dei 5 nuovi step nell'onboarding M1, design approvato il 25 mag mattina. La nuova sequenza M1 ora copre l'interruttore "Come vuoi che il coach ti accompagni?" + 4 step del blocco Training (dove · attrezzatura · giorni · tempo) — il tutto con navigazione **dinamica** e progress bar **dinamica** in base alle scelte dell'utente.
+
+**Nuovi step aggiunti** (5):
+- **Step A — `m1-s-coach` "Come vuoi che il coach<br>ti accompagni?"**: 2 card a selezione singola con eyebrow "PIANO BASE" / "PIANO COMPLETO". Salva → `profiles.usa_training` (true=completo, false=solo nutrition).
+- **Step B — `m1-s-where` "Dove ti alleni?"** (visibile solo se `usa_training=true`): 3 card (Casa SPAZIO·INDOOR · Palestra SPAZIO·ATTREZZATO · All'aperto SPAZIO·OUTDOOR). Salva → `profiles.tipo_allenamento`.
+- **Step C — `m1-s-gear` "Cosa hai a disposizione?"** (visibile solo se `tipo_allenamento='casa'`): chip statico "✓ CORPO LIBERO · SEMPRE INCLUSO" + 2 gruppi di pillole multi-select (Attrezzi 8 voci + Accessori elastici 4 voci). **RITOCCO 2 implementato**: il gruppo "Accessori elastici" è visibile SOLO se "Elastici a tubo" è acceso; spegnerlo deseleziona anche gli accessori già scelti (no fantasmi). Salva → `profiles.attrezzatura` (text[]).
+- **Step D — `m1-s-days` "Quanti giorni a settimana?"**: 4 tile numeriche grandi (2·3·4·5) + card descrittiva dinamica sotto. **RITOCCO 3 applicato**: "3 giorni" non ha più sigla tecnica ("full-body+"), solo "3 giorni" + descrizione. Salva → `profiles.giorni_allenamento`.
+- **Step E — `m1-s-time` "Quanto tempo per allenarti?"**: 3 tile (30·45·60 MIN) + card descrittiva dinamica sotto. Salva → `profiles.durata_sessione`.
+
+**Architettura — sequenza dinamica + progress bar dinamica**
+
+- I 5 nuovi step usano slug non-numerici (`s-coach`, `s-where`, `s-gear`, `s-days`, `s-time`) per non rompere la logica legacy `parseInt(stepId.slice(1))` degli step esistenti `s1`..`s7`.
+- Nuova funzione `getM1Sequence()` (~riga 3584): ritorna l'array ordinato di step ID in base allo stato corrente di `ST.m1Data`. Tre possibili lunghezze:
+  - **8 step** se `usa_training=false`: `[s1,s2,s3,s-coach,s4,s5,s6,s7]`
+  - **11 step** se `usa_training=true` e `tipo_allenamento ∈ {palestra,aperto}`: `[s1,s2,s3,s-coach,s4,s-where,s-days,s-time,s5,s6,s7]`
+  - **12 step** se `usa_training=true` e `tipo_allenamento='casa'`: `[s1,s2,s3,s-coach,s4,s-where,s-gear,s-days,s-time,s5,s6,s7]`
+- `m1GoStep(stepId)`, `m1Back()`, `m1NextFrom(stepId)` **refattorizzate** per consultare `getM1Sequence()` invece di `parseInt` aritmetico. La validazione step-by-step resta nei singoli rami `if/else` di `m1NextFrom`.
+- **Progress bar dinamica**: i 7 segmenti `<span>` hardcoded sono stati rimossi dall'HTML e ora `m1GoStep` rigenera runtime N segmenti in base a `getM1Sequence().length`. Label "Passo X di N" calcolata dinamicamente. Quando l'utente sceglie `usa_training=false` sullo step A, alla pressione di "Continua" la sequenza si accorcia da 11 a 8 e il totale visibile diventa "Passo 5 di 8" (scatto onesto, non camuffato).
+- **`<br>` nel titolo Step A**: per onorare il RITOCCO 1 ("Come vuoi che il coach<br>ti accompagni?"), `m1GoStep` ora usa `titleEl.innerHTML = title` invece di `textContent`. I titoli sono stringhe statiche definite in `M1_HEADERS`, non input utente → nessun rischio XSS.
+
+**Nuovi campi `ST.m1Data`**: `usa_training` (bool|null) · `tipo_allenamento` (string|null) · `attrezzatura` (array) · `giorni_allenamento` (int|null) · `durata_sessione` (int|null).
+
+**Nuove costanti**: `M1_DAYS_DESC`, `M1_TIME_DESC` (mappe descrittive per le card explainer dinamiche sotto le tile numeriche), `M1_GEAR_ELASTIC_ACCESSORIES` (slug accessori elastici per cleanup automatico).
+
+**Nuovi handler globali**: `m1SelectUsaTraining`, `m1SelectTipoAllenamento`, `m1ToggleAttrezzatura` (con cleanup automatico accessori), `m1GearApplyVisibility`, `m1SelectGiorni`, `m1DaysApplyExplainer`, `m1SelectDurata`, `m1TimeApplyExplainer`.
+
+**`m1ApplySelections()` esteso**: ripristina visualmente i 5 nuovi step se l'utente torna indietro durante l'onboarding (card selezionata, pillole accese, explainer popolato, visibilità accessori).
+
+**`saveOnboarding()` esteso**: 5 nuovi campi nel payload `profileData` con regole NULL coerenti:
+- `usa_training`: default `true` se non scelto esplicitamente
+- Se `usa_training=false` → tutti i 4 campi training salvati come `null` (no rumore nel DB)
+- Se `usa_training=true`:
+  - `tipo_allenamento` sempre salvato
+  - `attrezzatura` salvato come `text[]` SOLO se `tipo_allenamento='casa'` (per palestra/aperto = `null`, il coach interpreta dal `tipo_allenamento`)
+  - `giorni_allenamento` + `durata_sessione` sempre salvati
+
+**Nuove classi CSS**: `.m1-card-level-eyebrow`, `.m1-gear-bodyweight-chip`, `.m1-num-grid` (+ `.m1-num-grid-3` per 3 colonne), `.m1-tile-num` (+ `-value`, `-unit`), `.m1-explainer-card` (+ `-title`, `-desc`). Riuso completo di `.m1-card-level` (con eyebrow opzionale) per Step A e Step B → coerenza visiva con onboarding esistente, niente font nuovi (Syne + JetBrains Mono già attivi).
+
+**Stato DB**: le 5 colonne `profiles.usa_training/tipo_allenamento/attrezzatura/giorni_allenamento/durata_sessione` erano già state create da Ignazio il 25 mag mattina (vedi sezione "ONBOARDING M1 — BLOCCO TRAINING"). Questa implementazione popola tali colonne — nessuna migration applicata in questa sessione.
+
+**Vincoli rispettati**: M1 esistente intatto (s1-s7 funzionano identicamente per chi sceglie "solo Alimentazione"); M2 non toccato; routing/auth/saveOnboarding test-mode (`test-user-001`) preservati; nessuna nuova dipendenza.
+
+**Cosa NON è stato fatto** (volutamente fuori scope di questa sessione):
+- Mini-onboarding training all'attivazione tardiva da Impostazioni (per utenti che hanno scelto "Alimentazione" in onboarding e poi cambiano idea).
+- Cascata dell'interruttore `usa_training=false` sulla home (tile Training nascosto) — quando il modulo Training arriverà come blocco di prossima implementazione, dovrà rispettare questo flag.
+- Marcatore esplicito per Palestra/Aperto in `attrezzatura` (oggi `null`, da definire quando il coach Training inizierà a leggere il campo).
 
 ### 25 maggio 2026 (post-chiusura) — Tab Oggi allineato al piano vero del coach ✅
 
