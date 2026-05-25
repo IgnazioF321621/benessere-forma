@@ -2024,6 +2024,86 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 25 maggio 2026 (sera) — Passo 2: il tab Piano legge i pasti VERI dal DB ✅
+
+Chiusura del TODO mai completato in `renderPianoV4DayOverlay` ("Step F TODO: qui andrà query weekly_plan_meals"). Da oggi il tab Piano interroga davvero il database: se per la settimana visualizzata esiste un piano vero con pasti (`weekly_plans` + `weekly_plan_meals`) → mostra quelli, fa sparire il banner "ESEMPIO DIMOSTRATIVO" e adatta hint/contatore/totalizzatore. Altrimenti → fallback ai 5 demo + banner (comportamento Step C.3 invariato).
+
+NON tocca la generazione coach/F.2a (già completa) né lo schema DB.
+
+**Distinzione "piano vero" vs "demo"**
+- Cache in-memory `ST.pianoV4RealPlanCache` keyed su `week_start` ISO. Stati per chiave: `undefined` (mai caricato), `{state:'loading'}` (in flight), `{state:'loaded', plan:{...}|null, mealsByDay:{1:[...], 2:[...]}}` (caricato).
+- Loader async `_pianoV4LoadRealPlanForWeek(weekStartIso)` ([zona-tracker.html](zona-tracker.html)):
+  1. SELECT `weekly_plans` WHERE `user_id` AND `week_start` (no filter su `status` — qualsiasi piano vero esistente vale, draft/active/archived)
+  2. Se row trovata → SELECT `weekly_plan_meals` WHERE `plan_id` ORDER BY `day_of_week, sort_order`
+  3. Raggruppa per `day_of_week` (1..7 ISO) → popola cache → re-render automatico (`renderPianoV4` se tab attiva, `renderPianoV4DayOverlay` se overlay aperto)
+- Fire-and-forget: agganciato a `openPianoV4DayOverlay`, `renderPianoV4DayOverlay`, `renderPianoV4`. Mai bloccante. Skip per `test-user-001`.
+- Helper sincroni: `_pianoV4GetRealMealsForDay(weekOffset, dayOfWeek)` → array (vuoto se nessun pasto per quel giorno) o null (cache non popolata); `_pianoV4HasRealPlanForWeek(weekOffset)`; `_pianoV4CountDaysWithRealMeals(weekOffset)`.
+- `isRealPlan` calcolato a runtime in `renderPianoV4DayOverlay` come `Array.isArray(realMeals) && realMeals.length > 0`. Propagato ai 3 renderer figli.
+
+**Mapper DB → card**
+Nuovo helper `_pianoV4MapRealMealToCard(row)`: trasforma una riga `weekly_plan_meals` nel formato già consumato da `renderPianoV4MealsList` / `renderPianoV4DayTotals` (preesistenti per i demo). Mapping:
+- `id` ← `'real-' + row.id` (prefisso anti-collisione con id demo `'demo-N'` / alt `'alt-XXX-N'`)
+- `realId` ← `row.id` uuid (riservato a futura logica acceptance reale)
+- `slot` ← `row.slot` (`pranzo`/`cena`)
+- `time` ← `row.meal_time` con default `'13:00'`/`'20:00'` per slot se NULL (per righe pre-F.2a v2)
+- `name` ← `row.description`
+- `kcal/carbs/protein/fat` ← omonimi (Number coercion)
+- `ingredients` ← `row.ingredients` (parse JSON difensivo se string; filter stringhe non vuote)
+- `reasoning` ← `row.ai_explanation`
+- `sort_order` ← `row.sort_order` (per render ordinato pranzo→cena)
+
+**Pasti veri = solo pranzo + cena (2 card, non 5)**
+Quando `isRealPlan=true`, l'overlay del giorno mostra le **2 card reali** (pranzo + cena ordinate per `sort_order`), niente card vuote/inventate per colazione/spuntino/merenda. Coerente con la decisione product F.2a (coach genera solo il 60% kcal della giornata; colazione+merenda lasciate alla gestione libera dell'utente).
+
+**Banner demo condizionale**
+[renderPianoV4DemoBanner(isRealPlan)](zona-tracker.html:14393): ritorna stringa vuota quando `isRealPlan=true`. Il banner "ESEMPIO DIMOSTRATIVO · Questi sono pasti di esempio... il tuo piano personalizzato arriverà domenica sera." resta visibile **solo** se non c'è piano vero.
+
+**Totalizzatore in modalità piano vero**
+[renderPianoV4DayTotals(meals, isRealPlan)](zona-tracker.html:14343): se `isRealPlan=true`, **niente judgment in/sotto/sopra** rispetto al target intero (sarebbe sempre "SOTTO TARGET", perché 2 pasti coprono solo il 60% kcal). Eyebrow esplicito `"TOTALE PRANZO + CENA · 60% DELLA GIORNATA"`, somma kcal + macro, label `"su X totali"` invece di `"/ X target"`. In modalità demo (5 pasti coprono ~100% target) il judgment ±10% resta invariato.
+
+In più, **i flag demo `skipped`/`substituted` da localStorage vengono ignorati** in modalità piano vero (paranoia anti-leak: se un utente aveva flag skip sullo slot 'pranzo' da una sessione demo precedente, non devono ora escludere un pasto vero dal totale).
+
+**Card stato settimana (renderPianoV4)**
+- **Hint contestuale**: se `hasRealPlan=true` → `"Piano del coach pronto · pranzi e cene generati per N giorni"`. Altrimenti hint originali (offset 0 / passato / futuro / "arriverà domenica").
+- **Contatore N/7**: in Passo 2 mostra **numero di giorni con pasti veri presenti** (semplice e intuitivo). Logica "giorni effettivamente seguiti" (acceptance reale sui pasti veri) arriva in sessione dedicata futura quando verrà costruita l'integrazione bidirezionale Tab Oggi ↔ piano. Label cambiata da `GIORNI SEGUITI` → `GIORNI CON PASTI`.
+- **Badge `ATTIVO`**: in modalità piano vero il badge perde la classe `pianov4-status-badge-empty` (passa da attenuato grigio a chip evergreen pieno).
+- **Barra 7 segmenti**: i segmenti dei giorni con pasti veri vengono colorati ambra (`var(--mod-nutrition)` `#FAC775`) tramite nuova classe `.pianov4-status-seg-real`. I giorni senza pasti veri restano grigio neutro.
+
+**Card giorno**
+- Se per quel giorno esistono pasti veri → la card NON dice più "Nessun pasto pianificato". Mostra invece una **lista compatta** dei pasti veri (es. `PRANZO 13:00 — Pasta integrale...` / `CENA 20:00 — Branzino al cartoccio...`). Nuova classe `.pianov4-day-card-real` (background `var(--s1)`, border-left 3px ambra `var(--mod-nutrition)`).
+- Se nessun pasto vero → comportamento originale (card dashed grigio "Nessun pasto pianificato").
+- Tap sulla card resta `openPianoV4DayOverlay(dow)` come prima.
+
+**ACCETTA / SOSTITUISCI / SALTO sui pasti veri**
+**Soluzione più sicura scelta: ghost disabilitato in modalità piano vero.** I 3 bottoni vengono renderizzati come `pianov4-meal-btn pianov4-meal-btn-ghost` disabilitati con `title="Azione disponibile presto sui pasti del coach"`. Nessuna nuova logica di accettazione/sostituzione/salto implementata (fuori scope come da brief). Il render dei bottoni in modalità demo resta invariato (verde solid ACCETTA, secondary SOSTITUISCI, skip SALTO).
+
+Inoltre, in modalità piano vero la funzione `_pianoV4GetMealForCard` viene **bypassata** (il pasto vero non ha alternative localStorage). Stati `isAccepted/isSubstituted/isSkipped` sempre false in piano vero (le chiavi localStorage demo non matchano gli id `'real-…'`).
+
+**Cleanup logout**
+`logout()` ora resetta `ST.pianoV4RealPlanCache = {}` prima di tornare alla schermata auth, evitando leak della cache tra utenti diversi sullo stesso device.
+
+**Nessun nuovo schema DB · Nessuna nuova dipendenza · Nessuna nuova chiamata AI · Altri tab (Oggi/Integratori/Analisi) e Training: intatti.**
+
+**Collaudo**
+1. Apri https://ignaziof321621.github.io/benessere-forma/zona-tracker.html (Ignazio account principale)
+2. Tab Nutrition → PIANO
+3. Verifica card stato settimana: hint "Piano del coach pronto · pranzi e cene generati per 7 giorni", contatore `7/7`, barra 7 segmenti ambra
+4. Le 7 card giorno mostrano lista compatta pranzo+cena (NON "Nessun pasto pianificato")
+5. Tap su un giorno (es. LUNEDÌ) → overlay si apre
+   - **Banner "ESEMPIO DIMOSTRATIVO" deve essere SPARITO**
+   - Solo 2 card pasto: PRANZO + CENA, ingredienti reali, orari `13:00`/`20:00`
+   - "PERCHÉ TI PROPONGO QUESTO" valorizzato da `ai_explanation`
+   - Totalizzatore in alto: eyebrow `"TOTALE PRANZO + CENA · 60% DELLA GIORNATA"`, somma kcal + macro, no judgment SOTTO/SOPRA TARGET
+   - I 3 bottoni ACCETTA/SOSTITUISCI/SALTO sono ghost disabilitati con tooltip "Azione disponibile presto sui pasti del coach"
+6. Tap freccia ‹/› per navigare a settimana futura senza piano (es. settimana successiva al 25 mag) → l'hint torna a "Piano in arrivo · sarà generato domenica sera", le card giorno tornano "Nessun pasto pianificato"
+7. Tap su un giorno della settimana senza piano → overlay mostra di nuovo banner demo + 5 pasti esempio + judgment range come prima
+8. Logout + login con altro account (es. test mode `?test=1`) → la cache si svuota e si riparte da zero (no leak cross-user)
+
+**Cosa NON è stato fatto** (volutamente fuori scope, segnalato come da brief):
+- Logica reale di **acceptance** sui pasti veri (scrittura su `weekly_plan_acceptance` + match con `meals` tab Oggi). I 3 bottoni restano ghost disabilitati. Sessione dedicata futura — coordinata con l'integrazione bidirezionale Tab Oggi ↔ piano vero.
+- **Logica "X/7 giorni seguiti" reale** (basata su acceptance, non su presenza pasti). Contatore mostra ora "giorni con pasti veri" come proxy semplice e onesto; la versione reale arriva quando arriverà l'acceptance.
+- **Logica di sostituzione/salto** sui pasti veri (richiede tabella `weekly_plan_acceptance.status` + UI dedicata; non si appoggia più a localStorage demo).
+
 ### 25 maggio 2026 (pomeriggio) — F.2a v2: pasti completi con ingredienti + dosi + orario ✅
 
 Estensione di F.2a (Step 7 del Tab Piano v4) per portare ogni pasto generato dal coach al livello di dettaglio delle card demo: lista ingredienti con dosi precise in grammi + orario indicativo. NON tocca la generazione (dispensa, 10 regole esistenti, varietà di struttura, ripartizione 35/25, Opzione A, anti-doppione, hook in `_pianoV4MaybePostino`) né il rendering Tab Piano (passo 2 separato).

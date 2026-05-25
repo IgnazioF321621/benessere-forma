@@ -1397,6 +1397,16 @@ select.inp{cursor:pointer;}
 .pianov4-day-today{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.2em;color:var(--acc);background:var(--acc-lt);padding:3px 7px;border-radius:4px;text-transform:uppercase;}
 .pianov4-day-empty-text{font-family:'Syne',sans-serif;font-size:12px;font-style:italic;color:var(--t3);margin:0;line-height:1.4;}
 
+/* ── Passo 2 (25 mag 2026) — card giorno con pasti VERI del coach ── */
+.pianov4-day-card-real{background:var(--s1);border:1px solid var(--b1);border-left:3px solid var(--mod-nutrition);}
+.pianov4-day-card-real:active{background:var(--s2);}
+.pianov4-day-real-list{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:4px;}
+.pianov4-day-real-row{font-family:'Syne',sans-serif;font-size:13px;color:var(--t1);line-height:1.4;display:flex;gap:8px;align-items:baseline;}
+.pianov4-day-real-slot{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--t3);text-transform:uppercase;flex:0 0 auto;}
+.pianov4-day-real-name{font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;}
+.pianov4-status-seg-real{background:var(--mod-nutrition) !important;}
+.pianov4-day-totals-real{border-color:var(--b1);background:var(--s1);}
+
 /* ── Memoria AI (Step B.3) — paper-cream coerente con decisione design 19 mag 2026 ── */
 .pianov4-memory-card{background:var(--bg);border:0.5px solid var(--b1);border-top:2px solid var(--mod-nutrition);border-radius:12px;padding:16px;margin:4px 16px 14px;}
 .pianov4-memory-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;gap:10px;}
@@ -2993,7 +3003,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 15:03';
+const APP_VERSION = '2026.05.25 · 15:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3116,6 +3126,10 @@ const ST = {
   pianoV4WeekOffset: 0,    // 0=settimana corrente, -1=passata, +1=futura (offset in settimane)
   // PIANO V4 Step C.1 (20 mag 2026) — overlay Dettaglio Giorno
   pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
+  // PIANO V4 Passo 2 (25 mag 2026) — cache piano vero da weekly_plan_meals
+  // chiavi = 'YYYY-MM-DD' (week_start ISO). Valore: undefined (mai caricato) /
+  // {state:'loading'} / {state:'loaded', plan:{...}|null, mealsByDay:{1:[...], 2:[...]} }
+  pianoV4RealPlanCache: {},
   // PIANO V4 Step C.5 (21 mag 2026) — bottom sheet selettore alternative SOSTITUISCI
   pianoV4SubstSheet: null, // { slot, weekOffset, dayOfWeek } | null — snapshot al tap SOSTITUISCI
   // PIANO V4 Step E.1 (22 mag 2026) — Welcome overlay domenicale (parte 1: UI + dati)
@@ -5332,6 +5346,7 @@ async function logout() {
   await supa.auth.signOut();
   try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
   ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];
+  ST.pianoV4RealPlanCache = {}; // Passo 2: pulisci cache piano vero per non leaktare cross-user
   showScreen('auth');
 }
 
@@ -12172,6 +12187,12 @@ function openPianoV4DayOverlay(dayOfWeek) {
     dayOfWeek: dayOfWeek,
     weekOffset: ST.pianoV4WeekOffset || 0,
   };
+  // Passo 2 (25 mag): fire-and-forget load del piano vero per la settimana.
+  // Se cache già popolata → no-op. Se non ancora → al ritorno re-render automatico.
+  try {
+    const iso = _pianoV4WeekStartIsoForOffset(ST.pianoV4DayOverlay.weekOffset);
+    if (!_pianoV4GetCachedPlanWeek(iso)) _pianoV4LoadRealPlanForWeek(iso);
+  } catch (e) { /* defensive */ }
   renderPianoV4DayOverlay();
 }
 
@@ -14180,10 +14201,163 @@ function renderPianoV4SubstituteSheet() {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
+// ═══════════════════════════════════════════════════════════
+// PIANO V4 Passo 2 (25 mag 2026) — Lettura pasti VERI da weekly_plan_meals
+// Se per la settimana esiste un piano vero con pasti (>0 righe) → li mostriamo
+// al posto dei demo. Altrimenti fallback al comportamento Step C.3 (demo + banner).
+// Cache in-memory per (user_id, week_start) per non re-fetchare ad ogni render.
+// ═══════════════════════════════════════════════════════════
+
+// Helper: ritorna 'YYYY-MM-DD' del lunedì della settimana selezionata via offset.
+function _pianoV4WeekStartIsoForOffset(offset) {
+  return _pianoV4MondayToIso(getPianoV4WeekStart(offset || 0));
+}
+
+// Helper: ritorna l'entry cache per la settimana, o undefined se mai caricata.
+function _pianoV4GetCachedPlanWeek(weekStartIso) {
+  if (!ST.pianoV4RealPlanCache) ST.pianoV4RealPlanCache = {};
+  return ST.pianoV4RealPlanCache[weekStartIso];
+}
+
+// Mapper: trasforma una riga weekly_plan_meals nel formato della card UI
+// (atteso da renderPianoV4MealsList / renderPianoV4DayTotals).
+function _pianoV4MapRealMealToCard(row) {
+  // ingredients può arrivare come array (jsonb già parsato) o stringa (parse difensivo)
+  let ings = row.ingredients;
+  if (typeof ings === 'string') {
+    try { ings = JSON.parse(ings); } catch (e) { ings = []; }
+  }
+  if (!Array.isArray(ings)) ings = [];
+  ings = ings.filter(function(x) { return typeof x === 'string' && x.trim().length > 0; });
+  const slot = String(row.slot || '').toLowerCase();
+  const time = (row.meal_time && String(row.meal_time).trim())
+    || (slot === 'pranzo' ? '13:00' : (slot === 'cena' ? '20:00' : ''));
+  return {
+    id:          'real-' + row.id,            // prefisso anti-collisione con id demo
+    realId:      row.id,                       // uuid originale (riservato a futura logica acceptance)
+    slot:        slot,
+    time:        time,
+    name:        String(row.description || '').trim(),
+    kcal:        (row.kcal != null) ? Number(row.kcal) : 0,
+    carbs:       (row.carbs != null) ? Number(row.carbs) : 0,
+    protein:     (row.protein != null) ? Number(row.protein) : 0,
+    fat:         (row.fat != null) ? Number(row.fat) : 0,
+    ingredients: ings,
+    reasoning:   String(row.ai_explanation || '').trim(),
+    sort_order:  (row.sort_order != null) ? Number(row.sort_order) : 99,
+  };
+}
+
+// Loader async: carica piano + pasti veri per quella week_start e popola la cache.
+// Fire-and-forget — non blocca il render. Re-render automatico al completamento
+// se l'utente è ancora sul tab Piano o ha l'overlay dettaglio giorno aperto.
+async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return;
+  if (!ST.pianoV4RealPlanCache) ST.pianoV4RealPlanCache = {};
+  const existing = ST.pianoV4RealPlanCache[weekStartIso];
+  if (existing) return; // already loading or loaded — no duplicate fetch
+  ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loading' };
+
+  function reRenderIfVisible() {
+    if (ST.page === 'piano') {
+      try { renderPianoV4(); } catch (e) { /* defensive */ }
+    }
+    if (ST.pianoV4DayOverlay) {
+      try { renderPianoV4DayOverlay(); } catch (e) { /* defensive */ }
+    }
+  }
+
+  try {
+    const planRes = await supa
+      .from('weekly_plans')
+      .select('id, week_start, status, target_kcal, target_protein, target_carbs, target_fat, ai_reasoning')
+      .eq('user_id', ST.user.id)
+      .eq('week_start', weekStartIso)
+      .limit(1);
+    if (planRes.error) {
+      console.warn('[piano-v4 passo2] fetch weekly_plans error:', planRes.error);
+      ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
+      reRenderIfVisible();
+      return;
+    }
+    const plan = (planRes.data && planRes.data.length > 0) ? planRes.data[0] : null;
+    if (!plan) {
+      ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
+      reRenderIfVisible();
+      return;
+    }
+    // Plan esiste — carica i suoi pasti
+    const mealsRes = await supa
+      .from('weekly_plan_meals')
+      .select('id, plan_id, day_of_week, slot, description, ingredients, meal_time, kcal, protein, carbs, fat, ai_explanation, sort_order')
+      .eq('plan_id', plan.id)
+      .order('day_of_week', { ascending: true })
+      .order('sort_order',  { ascending: true });
+    if (mealsRes.error) {
+      console.warn('[piano-v4 passo2] fetch weekly_plan_meals error:', mealsRes.error);
+      ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: plan, mealsByDay: {} };
+      reRenderIfVisible();
+      return;
+    }
+    const mealsByDay = {};
+    (mealsRes.data || []).forEach(function(row) {
+      const dow = Number(row.day_of_week);
+      if (!Number.isInteger(dow) || dow < 1 || dow > 7) return;
+      if (!mealsByDay[dow]) mealsByDay[dow] = [];
+      mealsByDay[dow].push(_pianoV4MapRealMealToCard(row));
+    });
+    ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: plan, mealsByDay: mealsByDay };
+    reRenderIfVisible();
+  } catch (e) {
+    console.warn('[piano-v4 passo2] exception:', e);
+    ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loaded', plan: null, mealsByDay: {} };
+    reRenderIfVisible();
+  }
+}
+
+// Helper sync: ritorna l'array di pasti veri per il giorno specifico,
+// oppure null se la cache non è popolata (state !== 'loaded' o nessun piano).
+// Un array vuoto = piano esiste ma nessun pasto per quel giorno (es. utente futuro
+// con piano solo per alcuni giorni).
+function _pianoV4GetRealMealsForDay(weekOffset, dayOfWeek) {
+  const iso = _pianoV4WeekStartIsoForOffset(weekOffset);
+  const entry = _pianoV4GetCachedPlanWeek(iso);
+  if (!entry || entry.state !== 'loaded' || !entry.plan) return null;
+  return entry.mealsByDay[dayOfWeek] || [];
+}
+
+// Helper sync: true se per la settimana c'è un piano vero caricato (con almeno 1 pasto).
+function _pianoV4HasRealPlanForWeek(weekOffset) {
+  const iso = _pianoV4WeekStartIsoForOffset(weekOffset);
+  const entry = _pianoV4GetCachedPlanWeek(iso);
+  if (!entry || entry.state !== 'loaded' || !entry.plan) return false;
+  // Plan esiste ma vuoto di pasti → consideriamo "non ancora pronto" lato UI
+  const mbd = entry.mealsByDay || {};
+  for (let d = 1; d <= 7; d++) {
+    if (mbd[d] && mbd[d].length > 0) return true;
+  }
+  return false;
+}
+
+// Helper sync: numero di giorni della settimana che hanno almeno 1 pasto vero.
+// Usato dal contatore della card stato in renderPianoV4 (N/7).
+function _pianoV4CountDaysWithRealMeals(weekOffset) {
+  const iso = _pianoV4WeekStartIsoForOffset(weekOffset);
+  const entry = _pianoV4GetCachedPlanWeek(iso);
+  if (!entry || entry.state !== 'loaded' || !entry.plan) return 0;
+  const mbd = entry.mealsByDay || {};
+  let n = 0;
+  for (let d = 1; d <= 7; d++) if (mbd[d] && mbd[d].length > 0) n++;
+  return n;
+}
+
 // Step C.5: totalizzatore giorno in cima all'overlay con feedback range vs target.
-// Somma kcal/macro dei 5 pasti effettivi (con sostituzioni applicate).
+// Somma kcal/macro dei pasti effettivi (con sostituzioni applicate per i demo).
 // Tolleranza ±10% vs ST.TARGET.kcal per stato "in range" / "sotto" / "sopra".
-function renderPianoV4DayTotals(originalMeals) {
+// Passo 2 (25 mag): se isRealPlan=true → niente judgment in/sotto/sopra
+// (i pasti veri coprono solo il 60% del giorno = pranzo+cena, confronto col 100%
+// del target sarebbe sempre "sotto"). Mostriamo solo somma + macro + eyebrow chiaro.
+function renderPianoV4DayTotals(originalMeals, isRealPlan) {
   if (!ST.pianoV4DayOverlay) return '';
   const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
   const weekOffset = ST.pianoV4DayOverlay.weekOffset;
@@ -14191,12 +14365,13 @@ function renderPianoV4DayTotals(originalMeals) {
   let totals = { kcal: 0, carbs: 0, protein: 0, fat: 0 };
   let skippedCount = 0;
   originalMeals.forEach(function(orig) {
-    // Step C.6: pasti saltati esclusi dal totalizzatore (kcal/macro non contate)
-    if (_pianoV4IsSlotSkipped(weekOffset, dayOfWeek, orig.slot)) {
+    // Passo 2 (25 mag): in modalità piano vero ignoriamo flag skipped/substituted
+    // demo (sono in localStorage solo per la modalità demo). Somma diretta.
+    if (!isRealPlan && _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, orig.slot)) {
       skippedCount++;
       return;
     }
-    const m = _pianoV4GetMealForCard(orig, weekOffset, dayOfWeek);
+    const m = isRealPlan ? orig : _pianoV4GetMealForCard(orig, weekOffset, dayOfWeek);
     totals.kcal += (m.kcal || 0);
     totals.carbs += (m.carbs || 0);
     totals.protein += (m.protein || 0);
@@ -14204,6 +14379,29 @@ function renderPianoV4DayTotals(originalMeals) {
   });
 
   const target = (ST.TARGET && ST.TARGET.kcal) ? ST.TARGET.kcal : 2326;
+  const skippedNote = skippedCount > 0
+    ? `<span class="pianov4-day-totals-skip-note">· ${skippedCount} saltat${skippedCount === 1 ? 'o' : 'i'}</span>`
+    : '';
+
+  if (isRealPlan) {
+    // Passo 2: piano vero copre solo pranzo+cena (60% giornata). Niente judgment
+    // in/sotto/sopra: l'utente gestisce liberamente colazione e merenda fuori dal
+    // piano del coach. Mostriamo somma + macro + eyebrow esplicito.
+    return `<div class="pianov4-day-totals pianov4-day-totals-real">
+      <div class="pianov4-day-totals-header">
+        <span class="pianov4-day-totals-eyebrow">TOTALE PRANZO + CENA · 60% DELLA GIORNATA${skippedNote}</span>
+      </div>
+      <div class="pianov4-day-totals-row">
+        <span class="pianov4-day-totals-kcal">${totals.kcal} KCAL</span>
+        <span class="pianov4-day-totals-target">su ${fmtNum(target)} totali</span>
+      </div>
+      <div class="pianov4-day-totals-macros">
+        ${totals.carbs}g C · ${totals.protein}g P · ${totals.fat}g G
+      </div>
+    </div>`;
+  }
+
+  // Modalità demo (Step C.5): judgment range ±10% vs target intero
   const tolerance = 0.10;
   const kcalLow = target * (1 - tolerance);
   const kcalHigh = target * (1 + tolerance);
@@ -14211,9 +14409,6 @@ function renderPianoV4DayTotals(originalMeals) {
   const status = inRange ? 'in-range' : (totals.kcal < kcalLow ? 'under' : 'over');
   const icon = inRange ? '✓' : (status === 'under' ? '↓' : '↑');
   const label = inRange ? 'IN RANGE' : (status === 'under' ? 'SOTTO TARGET' : 'SOPRA TARGET');
-  const skippedNote = skippedCount > 0
-    ? `<span class="pianov4-day-totals-skip-note">· ${skippedCount} saltat${skippedCount === 1 ? 'o' : 'i'}</span>`
-    : '';
 
   return `<div class="pianov4-day-totals pianov4-day-totals-${status}">
     <div class="pianov4-day-totals-header">
@@ -14230,33 +14425,41 @@ function renderPianoV4DayTotals(originalMeals) {
   </div>`;
 }
 
-// Banner "ESEMPIO DIMOSTRATIVO" sempre visibile in C.3. In Step F sarà
-// condizionale (solo se query weekly_plan_meals ritorna 0 righe).
-function renderPianoV4DemoBanner() {
+// Banner "ESEMPIO DIMOSTRATIVO": visibile SOLO in modalità demo (Passo 2, 25 mag).
+// In modalità piano vero (rows>0 in weekly_plan_meals per quel giorno) → sparisce.
+function renderPianoV4DemoBanner(isRealPlan) {
+  if (isRealPlan) return '';
   return `<div class="pianov4-demo-banner">
     <div class="pianov4-demo-banner-label">ESEMPIO DIMOSTRATIVO</div>
     <div class="pianov4-demo-banner-text">Questi sono pasti di esempio per mostrarti come funzionerà il piano AI. Il tuo piano personalizzato arriverà domenica sera.</div>
   </div>`;
 }
 
-// Lista 5 card pasto con macro + ingredienti + box "PERCHÉ TI PROPONGO QUESTO".
+// Lista card pasto con macro + ingredienti + box "PERCHÉ TI PROPONGO QUESTO".
 // Step C.4: aggiunti bottoni azione (ACCETTA attivo + SOSTITUISCI/SALTO ghost disabled).
 // Step C.5: SOSTITUISCI attivo (secondary) + card mostra pasto effettivo (originale o
 // alternativa scelta) + badge ⇄ SOSTITUITO. ACCETTA disattiva SOSTITUISCI (no duplicati).
-function renderPianoV4MealsList(originalMeals) {
+// Passo 2 (25 mag): in modalità piano vero (isRealPlan=true) i 3 bottoni vengono
+// resi GHOST disabilitati con title="Disponibile presto". La logica reale di
+// ACCETTA/SOSTITUISCI/SALTO sui pasti veri arriva in una sessione dedicata.
+function renderPianoV4MealsList(originalMeals, isRealPlan) {
   if (!ST.pianoV4DayOverlay) return '';
   const dayOfWeek = ST.pianoV4DayOverlay.dayOfWeek;
   const weekOffset = ST.pianoV4DayOverlay.weekOffset;
 
   const cards = originalMeals.map(function(originalMeal) {
     // C.5: pasto effettivo (originale o alternativa scelta tramite SOSTITUISCI)
-    const m = _pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek);
-    const isAccepted = _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, m.id);
-    const isSubstituted = _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, originalMeal.slot) !== null;
+    // Su piano vero non ci sono sostituzioni demo (id 'real-…' non matcha gli alt-…),
+    // quindi _pianoV4GetMealForCard ritorna `originalMeal` invariato.
+    const m = isRealPlan ? originalMeal : _pianoV4GetMealForCard(originalMeal, weekOffset, dayOfWeek);
+    // In modalità piano vero: niente stati da localStorage demo (id 'real-…' non
+    // matcha le chiavi demo-N → tutti i flag false).
+    const isAccepted    = !isRealPlan && _pianoV4IsDemoAccepted(weekOffset, dayOfWeek, m.id);
+    const isSubstituted = !isRealPlan && _pianoV4GetActiveSubstitution(weekOffset, dayOfWeek, originalMeal.slot) !== null;
     // C.6: stato saltato per slot (no demoMealId, è dello slot del giorno)
-    const isSkipped = _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, originalMeal.slot);
+    const isSkipped     = !isRealPlan && _pianoV4IsSlotSkipped(weekOffset, dayOfWeek, originalMeal.slot);
 
-    const ingredientsHTML = m.ingredients.map(function(i) {
+    const ingredientsHTML = (m.ingredients || []).map(function(i) {
       return `<li>${esc(i)}</li>`;
     }).join('');
 
@@ -14274,34 +14477,38 @@ function renderPianoV4MealsList(originalMeals) {
     else if (isSkipped) topBadge = `<div class="pianov4-meal-skipped-badge">✕ SALTATO</div>`;
     else if (isSubstituted) topBadge = `<div class="pianov4-meal-substituted-badge">⇄ SOSTITUITO</div>`;
 
-    // ACCETTA: verde solid se libero, disabled se accepted, ghost se skipped
-    let acceptBtn;
-    if (isAccepted) {
-      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`;
-    } else if (isSkipped) {
-      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">ACCETTA</button>`;
+    // Bottoni: in modalità piano vero tutti ghost disabilitati ("Disponibile presto").
+    let acceptBtn, substBtn, skipBtn;
+    if (isRealPlan) {
+      const tip = 'Azione disponibile presto sui pasti del coach';
+      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">ACCETTA</button>`;
+      substBtn  = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">SOSTITUISCI</button>`;
+      skipBtn   = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">SALTO</button>`;
     } else {
-      acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
-    }
-
-    // SOSTITUISCI: attivo se libero, ghost se accepted o skipped
-    let substBtn;
-    if (isAccepted) {
-      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SOSTITUISCI</button>`;
-    } else if (isSkipped) {
-      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">SOSTITUISCI</button>`;
-    } else {
-      substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-secondary" onclick="openPianoV4SubstituteSheet('${esc(originalMeal.slot)}')">SOSTITUISCI</button>`;
-    }
-
-    // SALTO: attivo se libero, ↺ ANNULLA se skipped, ghost se accepted (definitivo)
-    let skipBtn;
-    if (isAccepted) {
-      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SALTO</button>`;
-    } else if (isSkipped) {
-      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip-active" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">↺ ANNULLA</button>`;
-    } else {
-      skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">SALTO</button>`;
+      // ACCETTA: verde solid se libero, disabled se accepted, ghost se skipped
+      if (isAccepted) {
+        acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accepted" disabled>ACCETTATO</button>`;
+      } else if (isSkipped) {
+        acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">ACCETTA</button>`;
+      } else {
+        acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-accept" onclick="acceptPianoV4DemoMeal('${esc(m.id)}')">ACCETTA</button>`;
+      }
+      // SOSTITUISCI: attivo se libero, ghost se accepted o skipped
+      if (isAccepted) {
+        substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SOSTITUISCI</button>`;
+      } else if (isSkipped) {
+        substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto saltato">SOSTITUISCI</button>`;
+      } else {
+        substBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-secondary" onclick="openPianoV4SubstituteSheet('${esc(originalMeal.slot)}')">SOSTITUISCI</button>`;
+      }
+      // SALTO: attivo se libero, ↺ ANNULLA se skipped, ghost se accepted (definitivo)
+      if (isAccepted) {
+        skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="Pasto già accettato">SALTO</button>`;
+      } else if (isSkipped) {
+        skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip-active" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">↺ ANNULLA</button>`;
+      } else {
+        skipBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-skip" onclick="togglePianoV4SkipMeal('${esc(originalMeal.slot)}')">SALTO</button>`;
+      }
     }
 
     return `<div class="${cardCls}" data-meal-id="${esc(m.id)}">
@@ -14340,10 +14547,19 @@ function renderPianoV4DayOverlay() {
   const s = ST.pianoV4DayOverlay;
   const titleStr = _pianoV4FormatDayHeader(s.weekOffset, s.dayOfWeek);
 
-  // Step F TODO: qui andrà query Supabase weekly_plan_meals.
-  // Se rows.length > 0 → usa quelle; altrimenti fallback _pianoV4GetDemoMeals.
-  // In C.3 sempre demo (decisione product 20 mag 2026).
-  const meals = _pianoV4GetDemoMeals(s.dayOfWeek);
+  // Passo 2 (25 mag): query weekly_plan_meals via cache. Fire-and-forget se mai
+  // caricato: la cache viene popolata async e re-renderizza l'overlay al ritorno.
+  const weekStartIso = _pianoV4WeekStartIsoForOffset(s.weekOffset);
+  const cacheEntry = _pianoV4GetCachedPlanWeek(weekStartIso);
+  if (!cacheEntry) {
+    _pianoV4LoadRealPlanForWeek(weekStartIso); // fire-and-forget; non bloccante
+  }
+  const realMeals = _pianoV4GetRealMealsForDay(s.weekOffset, s.dayOfWeek);
+  const isRealPlan = Array.isArray(realMeals) && realMeals.length > 0;
+
+  // Se piano vero presente → 2 card (pranzo+cena ordinate per sort_order).
+  // Altrimenti → fallback ai 5 demo (banner + judgment range).
+  const meals = isRealPlan ? realMeals : _pianoV4GetDemoMeals(s.dayOfWeek);
 
   const overlayHTML = `<div id="pianov4-day-overlay" class="pianov4-day-overlay" onclick="if(event.target===this)closePianoV4DayOverlay()">
     <div class="pianov4-day-screen" onclick="event.stopPropagation()">
@@ -14353,9 +14569,9 @@ function renderPianoV4DayOverlay() {
         <div class="pianov4-day-eyebrow">DETTAGLIO GIORNO</div>
         <div class="pianov4-day-title">${esc(titleStr)}</div>
       </div>
-      ${renderPianoV4DemoBanner()}
-      ${renderPianoV4DayTotals(meals)}
-      ${renderPianoV4MealsList(meals)}
+      ${renderPianoV4DemoBanner(isRealPlan)}
+      ${renderPianoV4DayTotals(meals, isRealPlan)}
+      ${renderPianoV4MealsList(meals, isRealPlan)}
     </div>
   </div>`;
 
@@ -14403,37 +14619,77 @@ function renderPianoV4() {
       <button class="pianov4-week-arrow" onclick="ST.pianoV4WeekOffset++; renderPianoV4();" title="Settimana successiva">›</button>
     </div>`;
 
-  // ── Card stato settimana (B.4: hint contestuale a settimana navigata) ──
-  // Counter 0/7 e badge ATTIVO attenuato ancora hardcoded (D1). Solo l'hint diventa
-  // contestuale: corrente / passata / futura. Logica reale arriva in Step C/D/F.
+  // ── Passo 2 (25 mag): fire-and-forget load piano vero per la settimana visualizzata ──
+  // Al ritorno cache popolata → re-render automatico (reRenderIfVisible nel loader).
+  try {
+    const weekIsoForLoad = _pianoV4WeekStartIsoForOffset(offset);
+    if (!_pianoV4GetCachedPlanWeek(weekIsoForLoad)) _pianoV4LoadRealPlanForWeek(weekIsoForLoad);
+  } catch (e) { /* defensive */ }
+  const hasRealPlan = _pianoV4HasRealPlanForWeek(offset);
+  const realDaysCount = _pianoV4CountDaysWithRealMeals(offset);
+
+  // ── Card stato settimana ──
+  // Hint contestuale: settimana corrente/passata/futura ⨉ piano vero presente o no.
+  // Counter "X/7": Passo 2 mostra il numero di giorni con pasti veri presenti.
+  // Logica "giorni effettivamente seguiti" (acceptance reale) arriva in sessione dedicata.
   let statusHint = '';
-  if (offset === 0) {
+  if (hasRealPlan) {
+    statusHint = realDaysCount === 7
+      ? 'Piano del coach pronto · pranzi e cene generati per tutti i 7 giorni.'
+      : `Piano del coach pronto · pranzi e cene generati per ${realDaysCount} ${realDaysCount === 1 ? 'giorno' : 'giorni'}.`;
+  } else if (offset === 0) {
     statusHint = 'Il tuo primo piano arriverà domenica sera.';
   } else if (offset < 0) {
     statusHint = 'Settimana archiviata · nessun piano registrato.';
   } else {
     statusHint = 'Piano in arrivo · sarà generato domenica sera.';
   }
+  const badgeCls = hasRealPlan ? 'pianov4-status-badge' : 'pianov4-status-badge pianov4-status-badge-empty';
+  const counterValue = hasRealPlan ? realDaysCount : 0;
   const statusCard = `
     <div class="pianov4-status-card">
       <div class="pianov4-status-row">
-        <span class="pianov4-status-badge pianov4-status-badge-empty">ATTIVO</span>
-        <span class="pianov4-status-count">0<span class="pianov4-status-count-total">/7</span></span>
-        <span class="pianov4-status-label">GIORNI SEGUITI</span>
+        <span class="${badgeCls}">ATTIVO</span>
+        <span class="pianov4-status-count">${counterValue}<span class="pianov4-status-count-total">/7</span></span>
+        <span class="pianov4-status-label">GIORNI CON PASTI</span>
       </div>
       <div class="pianov4-status-bar">
-        ${Array(7).fill('<span class="pianov4-status-seg"></span>').join('')}
+        ${Array(7).fill(0).map(function(_, idx){
+          const dow = idx + 1;
+          const hasReal = _pianoV4GetRealMealsForDay(offset, dow);
+          const segCls = (hasReal && hasReal.length > 0) ? 'pianov4-status-seg pianov4-status-seg-real' : 'pianov4-status-seg';
+          return `<span class="${segCls}"></span>`;
+        }).join('')}
       </div>
       <p class="pianov4-status-hint">${statusHint}</p>
     </div>`;
 
   // ── 7 card giorno (Step C.1: tap → openPianoV4DayOverlay con dayOfWeek 1-7 ISO) ──
+  // Passo 2: se per quel giorno esistono pasti veri → riepilogo compatto + niente
+  // "Nessun pasto pianificato". Altrimenti comportamento demo invariato.
   const days = getPianoV4Days(weekStart);
   const daysHTML = `
     <div class="pianov4-days">
       ${days.map(function(d, i) {
         const dow = i + 1; // 1=LUN, 7=DOM (ISO, coerente con weekly_plan_meals.day_of_week CHECK)
         const todayBadge = d.isToday ? `<span class="pianov4-day-today">OGGI</span>` : '';
+        const dayRealMeals = _pianoV4GetRealMealsForDay(offset, dow);
+        if (dayRealMeals && dayRealMeals.length > 0) {
+          // Lista compatta dei pasti veri del giorno (max 2: pranzo + cena)
+          const items = dayRealMeals.map(function(rm) {
+            const slotLbl = (rm.slot || '').toUpperCase();
+            const tlbl = rm.time ? ` ${esc(rm.time)}` : '';
+            return `<li class="pianov4-day-real-row"><span class="pianov4-day-real-slot">${esc(slotLbl)}${tlbl}</span> <span class="pianov4-day-real-name">${esc(rm.name || '')}</span></li>`;
+          }).join('');
+          return `<div class="pianov4-day-card pianov4-day-card-real" onclick="openPianoV4DayOverlay(${dow})">
+            <div class="pianov4-day-head">
+              <span class="pianov4-day-name">${d.name}</span>
+              ${todayBadge}
+              <span class="pianov4-day-date">${d.dateLabel}</span>
+            </div>
+            <ul class="pianov4-day-real-list">${items}</ul>
+          </div>`;
+        }
         return `<div class="pianov4-day-card pianov4-day-card-empty" onclick="openPianoV4DayOverlay(${dow})">
           <div class="pianov4-day-head">
             <span class="pianov4-day-name">${d.name}</span>
