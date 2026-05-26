@@ -2056,6 +2056,44 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### Sessione 26 mag 2026 — Modulo Training: restyling + flusso serie ✅
+
+Sessione lunga sul modulo Training conclusa **collaudata dal vivo** sul telefono. Restyling visivo completo delle 3 tab + ridisegno della schermata Recupero + introduzione della schermata Esecuzione tra "+S{n}" e logger. 5 commit in cronologia, 1 fix di onboarding scollegato. Stato finale: tutto in produzione.
+
+**Cosa è stato fatto (COMPLETO e collaudato dal vivo)**:
+- **BLOCCO 1 — Restyling grafico 3 tab** (Sessione/Programma/Progressione). Tutto l'azzurro legacy del modulo (`#185FA5`, `#E8F0FA`, `#F5F8FF`, `#1A7A9A`, `#93b4d4`, `rgba(24,95,165,*)`) sostituito con evergreen del design system (`var(--acc)`, `var(--acc-lt)`, `var(--acc2)`, `var(--s2)`, `var(--b2)`). Preservato il `#185FA5` semantico del BMI "Sottopeso" nel modulo Body (non-Training). `--mod-training` (#B5D4F4 azzurro chiaro) **resta SOLO come accento d'identità** (dot tile Home, non funzionale). Commit `c2c0a06`.
+- **BLOCCO 2A — Schermata Recupero ridisegnata**: countdown con **ring SVG** (`stroke-dashoffset` che si svuota progressivamente), **GIF esecuzione SEMPRE visibile** (sorgente animata = `cached_url` dal Worker via `ensureRestGif`/`ST.exerciseGifCache`, **NON** i PNG statici `executionImg`), chip APPENA FATTA + PROSSIMA (riusa `getProgressionSuggestion`, nuovo helper `getLastLoggedSetLabel`), coach AI ora a **2-3 punti brevi** (prompt riscritto), RIPASSO RAPIDO alleggerito + link "Scheda completa" che apre `openExerciseAI` (z-index alzato a 1100 per stare sopra `rest-modal-overlay` 1001). **Anti-flicker GIF**: il tick aggiorna solo numero+ring via surgical DOM update, NON ricrea l'`<img>`. Commit `404a749` + 4 fix post-collaudo `6820181` + micro-fix GIF height 96→120 `b44ba05`.
+- **BLOCCO 2B — Schermata Esecuzione NUOVA + cambio flusso**. Nuovo stato `ST.trainExecOpen`. Flusso aggiornato: tap "+S{n}" → `openTrainExec` (schermata esecuzione: **GIF grande animata**, "SERIE n/tot", badge reps/RIR, "Fine serie" + "‹ Indietro") → "Fine serie" (`trainExecFinishSet`) apre il **logger esistente `openLogModal` INVARIATO** → logga → recupero (2A). "‹ Indietro" (`trainExecBack`) annulla senza loggare nulla. La schermata esecuzione **non ha timer attivi** → la GIF si anima senza re-render. Commit `2a23288`.
+
+**Decisioni di prodotto consolidate (da ricordare per i prossimi blocchi)**:
+- **Esecuzione = pannello spoglio** (solo GIF + minimo testo). **Recupero = pannello ricco** (ring countdown, coach, ripasso, APPENA FATTA/PROSSIMA, link scheda completa).
+- La **GIF animata vera** è quella servita dal Worker (`cached_url`, GIF salvata in Supabase Storage). I PNG `assets/exercises/*-esecuzione.png` e `*-muscoli.png` sono per il modal "scheda completa" (anatomia + fermo-immagine).
+- Convenzione: **i numeri/sigle delle serie vanno sempre in font Mono** (JetBrains Mono), coerente con tutto il modulo. I titoli/copy in Syne.
+- `--mod-training` (#B5D4F4) è **identità modulo**, non colore funzionale. Usabile per accenti decorativi (dot navbar, tile Home).
+- Stato della GIF: `loading` / `cached` / `missing` / `error` — placeholder neutro `var(--s2)` (mai crash).
+
+**Cosa RESTA da fare (prossime sessioni, NON ancora implementato)**:
+- **BLOCCO 3 — I DUE LOGGER per attrezzo** (design già approvato in Claude Design, **non ancora a codice**):
+  - **"Trazioni alla sbarra"** = **BANDA di assistenza**, scelta per COLORE, lista fissa da meno a più resistenza: **Gialla · Rossa · Nera · Viola**. **Logica INVERTITA** (meno banda = più forte; progredire = scendere di colore).
+  - **TUTTI gli altri esercizi** = **elastici a tubi di resistenza**, valore in **LIBBRE**, step di 10 (10, 20, 30, ...). Si scrive solo il **TOTALE** (niente somma di più elastici nell'app). Logica normale.
+  - **NB tecnico**: oggi il logger ha un solo campo `resistance` (numerico/testo). Per la banda-colore serve gestire un valore "colore" → probabile impatto su come si salva la resistenza. **Verificare colonna `resistance` in `training_logs`/`workout_sets` PRIMA di implementare** (possibile DDL su Supabase per supportare testo + numero coerentemente). Da progettare con cura.
+  - **Scartare definitivamente dai mockup**: il vecchio "combinatore elastici" colorato e il "RIR effettivo +/-". NON vanno implementati.
+- **BLOCCO 4 — NOTA per esercizio/giorno** (design approvato, 4 stati: vuoto / editing / pieno / storico). Una nota per esercizio valida per quel giorno; resta salvata nel tempo; storico delle note passate rileggibile. È **memoria personale di COME** si è eseguito (es. "barra al posto delle maniglie", "piede appoggiato così"), **NON modifica l'esercizio prescritto**. Richiede storage su Supabase (nuova tabella o colonna legata a `user_id` + `exercise_name` + `date`) → DDL da progettare.
+
+**Regola d'oro mantenuta**:
+Un passo per volta, conferma dell'utente prima di ogni step. Ignazio non è sviluppatore: spiegazioni semplici, niente codice in chat. Lavoro spezzato in blocchi con collaudo dal vivo tra uno e l'altro. Il workflow di sessione (BLOCCO 1 → 2A → 4 fix → micro-fix GIF → 2B, ognuno con commit + push + verifica visiva) è stato confermato come il pattern operativo corretto per i prossimi blocchi (3 e 4).
+
+### 26 maggio 2026 (tarda sera, post-4-fix) — Micro-fix GIF hero recupero più alta ✅
+
+Micro-ritocco visuale post-collaudo dei 4 fix BLOCCO 2A: la GIF esecuzione nella hero del recupero era un po' piccola. Ingrandita solo verticalmente.
+
+- `.rest-hero-gif` height: `96px` → `120px` (+25%)
+- `.rest-hero-gif-placeholder` height: idem (coerenza loading/cached state)
+- `max-width: 200px` INVARIATO per non rompere il layout grid 2 colonne su mobile: iPhone 375 wide → 375 − 36 (padding) − 128 (countdown wrap) − 14 (gap) = ~197px disponibili per la colonna right → max-width 200 già al limite, qualsiasi aumento orizzontale avrebbe rotto l'affiancamento.
+- `object-fit: contain` preserva proporzioni → l'omino non si stira.
+
+Commit `b44ba05`. APP_VERSION `2026.05.26 · 18:15`.
+
 ### 26 maggio 2026 (notte) — Training BLOCCO 2B: schermata ESECUZIONE (nuova) ✅
 
 Inserita la schermata di **esecuzione** tra il tap "+S{n}" e l'apertura del logger. Prima del 2B il tap "+S{n}" apriva direttamente il form `reps + resistenza`. Da ora invece apre un pannello "zen" con la GIF dell'esercizio grande al centro: l'utente esegue la serie guardando la GIF e poi tappa "Fine serie" per andare al logger (invariato), oppure "Indietro" per annullare senza loggare nulla.
