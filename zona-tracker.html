@@ -696,10 +696,14 @@ select.inp{cursor:pointer;}
   align-self:flex-end;
 }
 .rest-hero-skip:hover{color:var(--acc);background:var(--acc-lt);}
+/* GIF hero recupero: ingrandita verticalmente (26 mag 2026, micro-fix post-2A).
+   Solo altezza (96 → 120, +25%). max-width 200 invariato per non rompere
+   il layout grid 2 colonne su mobile (calcolo: 375 - 36 pad - 128 cd - 14 gap
+   = ~197px disponibili). object-fit:contain preserva le proporzioni. */
 .rest-hero-gif{
   width:100%;
   max-width:200px;
-  height:96px;
+  height:120px;
   border-radius:10px;
   background:var(--s2);
   object-fit:contain;
@@ -708,7 +712,7 @@ select.inp{cursor:pointer;}
 .rest-hero-gif-placeholder{
   width:100%;
   max-width:200px;
-  height:96px;
+  height:120px;
   border-radius:10px;
   background:var(--s2);
   display:flex;
@@ -3402,7 +3406,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 18:09';
+const APP_VERSION = '2026.05.26 · 18:15';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
