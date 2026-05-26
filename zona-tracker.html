@@ -2038,23 +2038,27 @@ body.preview-onboarding #m1-preview-banner{display:block;}
           <div class="m1-card-level-desc">Atleta o lavoro fisico quotidiano</div>
         </button>
 
-        <div class="m1-eyebrow-section">Esperienza con l'allenamento</div>
-        <button type="button" class="m1-card-level" data-esp="mai" onclick="m1SetEsperienza('mai')">
-          <div class="m1-card-level-title">Mai allenato</div>
-          <div class="m1-card-level-desc">È la prima volta che inizio un percorso</div>
-        </button>
-        <button type="button" class="m1-card-level" data-esp="base" onclick="m1SetEsperienza('base')">
-          <div class="m1-card-level-title">Base</div>
-          <div class="m1-card-level-desc">Ho fatto sport saltuariamente</div>
-        </button>
-        <button type="button" class="m1-card-level" data-esp="intermedio" onclick="m1SetEsperienza('intermedio')">
-          <div class="m1-card-level-title">Intermedio</div>
-          <div class="m1-card-level-desc">Ho una routine consolidata</div>
-        </button>
-        <button type="button" class="m1-card-level" data-esp="avanzato" onclick="m1SetEsperienza('avanzato')">
-          <div class="m1-card-level-title">Avanzato</div>
-          <div class="m1-card-level-desc">Anni di esperienza, conosco i protocolli</div>
-        </button>
+        <!-- Esperienza allenamento: visibile SOLO se usa_training !== false.
+             Show/hide gestito da m1S4ApplyExperienceVisibility(). -->
+        <div id="m1-s4-experience-block">
+          <div class="m1-eyebrow-section">Esperienza con l'allenamento</div>
+          <button type="button" class="m1-card-level" data-esp="mai" onclick="m1SetEsperienza('mai')">
+            <div class="m1-card-level-title">Mai allenato</div>
+            <div class="m1-card-level-desc">È la prima volta che inizio un percorso</div>
+          </button>
+          <button type="button" class="m1-card-level" data-esp="base" onclick="m1SetEsperienza('base')">
+            <div class="m1-card-level-title">Base</div>
+            <div class="m1-card-level-desc">Ho fatto sport saltuariamente</div>
+          </button>
+          <button type="button" class="m1-card-level" data-esp="intermedio" onclick="m1SetEsperienza('intermedio')">
+            <div class="m1-card-level-title">Intermedio</div>
+            <div class="m1-card-level-desc">Ho una routine consolidata</div>
+          </button>
+          <button type="button" class="m1-card-level" data-esp="avanzato" onclick="m1SetEsperienza('avanzato')">
+            <div class="m1-card-level-title">Avanzato</div>
+            <div class="m1-card-level-desc">Anni di esperienza, conosco i protocolli</div>
+          </button>
+        </div>
         <p class="m1-mantra">Sapere da dove parti rende il viaggio più chiaro.</p>
       </div>
       <div class="m1-cta-sticky">
@@ -3174,7 +3178,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 10:19';
+const APP_VERSION = '2026.05.26 · 10:41';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3646,6 +3650,7 @@ function m1GoStep(stepId) {
   const back = document.getElementById('m1-back-btn');
   if(back) back.style.display = idx > 0 ? 'block' : 'none';
   // restore UI specifici nuovi step (visibility accessori, explainer)
+  if (stepId === 's4')     m1S4ApplyExperienceVisibility();
   if (stepId === 's-gear') m1GearApplyVisibility();
   if (stepId === 's-days') m1DaysApplyExplainer();
   if (stepId === 's-time') m1TimeApplyExplainer();
@@ -3683,7 +3688,12 @@ function m1NextFrom(stepId) {
     if(typeof d.usa_training !== 'boolean') return showErr("Scegli un'opzione.");
   } else if(stepId === 's4') {
     if(!d.attivita)    return showErr('Scegli il tuo livello di attività.');
-    if(!d.esperienza)  return showErr("Scegli il tuo livello di esperienza con l'allenamento.");
+    // Esperienza richiesta SOLO per il percorso completo (usa_training !== false).
+    // Per gli utenti solo-nutrition il blocco è nascosto: non si può chiedere una
+    // selezione che non viene mostrata. Coerente con d.esperienza = null in DB.
+    if(d.usa_training !== false && !d.esperienza) {
+      return showErr("Scegli il tuo livello di esperienza con l'allenamento.");
+    }
   } else if(stepId === 's-where') {
     if(!d.tipo_allenamento) return showErr('Scegli dove ti alleni.');
   } else if(stepId === 's-gear') {
@@ -3761,13 +3771,25 @@ function m1TogglePill(group, val) {
 // ── Handler Step A (s-coach) — Interruttore Nutrition / Nutrition+Training ──
 // Bool esplicito: false = solo Alimentazione, true = Alimentazione + Allenamento.
 // La scelta dirotta la sequenza degli step successivi (vedi getM1Sequence).
+// Fix 26 mag 2026: quando l'utente passa a "Alimentazione" (false), reset
+// d.esperienza a null perché il blocco "Esperienza con l'allenamento" nello
+// step s4 viene nascosto — non avrebbe senso mantenere un valore selezionato
+// che l'utente non vede più. Se poi cambia idea e torna su "Alimentazione e
+// allenamento", il blocco riappare vuoto e l'utente sceglie ex novo.
 function m1SelectUsaTraining(val) {
   const v = !!val;
+  const prev = ST.m1Data.usa_training;
   ST.m1Data.usa_training = v;
   document.querySelectorAll('#m1-s-coach .m1-card-level').forEach(el => {
     const k = el.getAttribute('data-coach') === 'true';
     el.classList.toggle('selected', k === v);
   });
+  // Cleanup esperienza se passiamo a solo-nutrition
+  if (v === false && prev !== false) {
+    ST.m1Data.esperienza = null;
+    document.querySelectorAll('#m1-s4 [data-esp]').forEach(el =>
+      el.classList.remove('selected'));
+  }
 }
 
 // ── Handler Step B (s-where) — Dove ti alleni? ──
@@ -3798,6 +3820,17 @@ function m1ToggleAttrezzatura(slug) {
     });
   }
   m1GearApplyVisibility();
+}
+
+// Show/hide del blocco "Esperienza con l'allenamento" (s4) in base a usa_training.
+// Nascosto se usa_training === false (utente solo-nutrition): è un dato che ha
+// senso solo per chi si allena. Quando il blocco è nascosto, m1NextFrom('s4')
+// non richiede d.esperienza per avanzare (validazione condizionale).
+function m1S4ApplyExperienceVisibility() {
+  const block = document.getElementById('m1-s4-experience-block');
+  if (!block) return;
+  const hide = (ST.m1Data.usa_training === false);
+  block.style.display = hide ? 'none' : '';
 }
 
 // Show/hide del blocco "Accessori elastici" in base a presenza di "elastici_tubo".
@@ -3903,6 +3936,8 @@ function m1ApplySelections() {
       el.classList.toggle('selected', k === d.usa_training);
     });
   }
+  // Visibility blocco esperienza in s4: gated da usa_training (26 mag 2026)
+  m1S4ApplyExperienceVisibility();
   if (d.tipo_allenamento) {
     document.querySelectorAll('#m1-s-where .m1-card-level').forEach(el =>
       el.classList.toggle('selected', el.getAttribute('data-where') === d.tipo_allenamento));

@@ -2056,6 +2056,27 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 26 maggio 2026 — Fix onboarding: blocco "Esperienza allenamento" nascosto per solo-nutrition ✅
+
+Bug emerso testando `?preview=onboarding` post-implementazione blocco training: lo step "Il tuo livello" (s4) mostrava il blocco "Esperienza con l'allenamento" anche agli utenti che avevano scelto "Alimentazione" (`usa_training=false`) — dato inutile per chi non si allena.
+
+**Fix**:
+- Wrappato eyebrow + 4 card esperienza in `<div id="m1-s4-experience-block">` (così possiamo toggle in blocco)
+- Nuovo helper `m1S4ApplyExperienceVisibility()`: legge `ST.m1Data.usa_training` e applica `display:none` se `=== false`
+- Hook in `m1GoStep('s4')` (entrata nello step) e in `m1ApplySelections()` (restore all'apertura/refresh)
+- **Validazione condizionale** in `m1NextFrom('s4')`: `d.esperienza` richiesta SOLO se `usa_training !== false`. Altrimenti l'utente solo-nutrition resterebbe bloccato sul "Continua" perché manca una selezione che non gli è mostrata
+- **Cleanup automatico** in `m1SelectUsaTraining(false)`: quando l'utente passa da `true` a `false` su Step A (cambio idea), `d.esperienza` viene resettata a `null` e le card vengono deselezionate visivamente — coerente con il principio "se nascondo, il dato non resta orfano"
+
+**Casi gestiti**:
+- Utente sceglie "Alimentazione" → s4 mostra solo Attività; Continua passa con solo Attività selezionata
+- Utente sceglie "Alimentazione+Allenamento" → s4 mostra entrambi i blocchi; Continua richiede entrambi (comportamento originale)
+- Cambio idea avanti-dietro su Step A → visibilità + dato si aggiornano coerentemente
+- Restore visuale all'apertura onboarding (con stato già esistente in `ST.m1Data`) → applica la visibilità giusta tramite `m1ApplySelections`
+
+DB: nessuna migration. `saveOnboarding` salva già `esperienza` dentro `note_salute` solo se valorizzata — in solo-nutrition resta null/assente, comportamento naturalmente coerente con un utente che non si allena.
+
+Testabile con `?preview=onboarding` in entrambi i percorsi.
+
 ### 25 maggio 2026 (sera, post-implementazione M1) — Modalità anteprima onboarding ✅
 
 Aggiunta una modalità anteprima dei nuovi step M1 invocabile via URL: `?preview=onboarding`. Pensata per testare l'intero flusso onboarding (sequenza dinamica, salti su interruttore/casa/palestra, visibilità accessori elastici, ecc.) **senza creare un nuovo utente né resettare il profilo reale**. Nessuna scrittura su Supabase, nessun effetto collaterale sull'utente loggato.
