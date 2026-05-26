@@ -2056,6 +2056,36 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 26 maggio 2026 (pomeriggio) — Restyling grafico modulo Training (BLOCCO 1) ✅
+
+Restyling **PURAMENTE estetico** delle 3 tab Training (Sessione · Programma · Progressione) per allinearle al design system già in uso su Home e Nutrition. **Zero modifiche** a logica JS, nomi funzione, comportamento, dati o chiamate Supabase. Solo sostituzioni di stringhe di colore in CSS rules e template literal.
+
+**Cosa è stato sostituito** (tutte le occorrenze, modulo Training):
+- `#185FA5` (azzurro testo/bordi/azioni) → `var(--acc)` (#2A7A6F evergreen) — **67 occorrenze**
+- `#E8F0FA` (sfondi badge/selezioni) → `var(--acc-lt)` (#E6F4F2) — **16 occorrenze**
+- `#F5F8FF` (box informativo "ESEMPIO — Trazioni") → `var(--s2)` — **1 occorrenza**
+- `#1A7A9A` (Lower in SESS_COLOR calendario) → `var(--acc2)` (#235F56 evergreen scuro) — **1 occorrenza**
+- `#93b4d4` (bottone Salva disabled) → `var(--b2)` (grigio neutro design system) — **1 occorrenza**
+- `rgba(24,95,165,.18)` (progress bar trasparente) → `rgba(42,122,111,.18)` — **1 occorrenza**
+- `rgba(24,95,165,.25)` (shadow settimana attiva) → `rgba(42,122,111,.25)` — **1 occorrenza**
+
+**Aree visivamente impattate**:
+- **Tab Sessione**: badge tipo (FORZA/IPERTROFIA/RIR), pillola `.ex-rir-pill`, bottone `.ex-add-set-btn`, modal scheda esercizio (`.modal-section h4`, `.modal-params`, `.ex-meta-row`), badge serie loggate `S1/S2/S3`, modal log Recap (input REPS bordo), countdown blocco attivazione (Pause/Resume/Skip/Back), barra progress attivazione, card "Attivazione completata", bottone Salva training
+- **Tab Programma**: pattern giorni `G1-G6` (DAY_SPLIT con label/desc Upper/Lower), card ciclo carico/scarico (CYCLE_WEEKS — settimana attiva ora in evergreen pieno con shadow), circoli numerati progressione doppia (1·2·3), box "ESEMPIO — Trazioni"
+- **Tab Progressione**: calendario mensile (sigle UP A/UP B = evergreen, LO A/LO B = evergreen scuro, REC↑/REC↓ = evergreen come da prompt "recupero/verde resta `--acc`"), stat card Sessioni/Streak/Freq, dropdown selettore esercizio (border attivo, tab Programma/Esercizio, righe selezionate), chart SVG (barre/dots/linea), chip metrica (Peso/Reps/Volume/Tempo), stat best peso/reps/ultimo, modal Dettaglio giorno (badge serie, input edit inline)
+
+**Vincoli rispettati**:
+- ✅ Modulo Body: `#185FA5` preservato a riga 10146 (`cbmiCol` per "Sottopeso" — è colore semantico medico, non Training). Protetto con placeholder durante il replace globale e poi ripristinato.
+- ✅ Logica JS intatta: nessuna rinomina, nessun cambio di comportamento, nessun cambio nei dati. Solo stringhe colore in CSS rules e template literal.
+- ✅ Recupero verde resta `var(--acc)` come da prompt (recoveryUpper/recoveryLower in SESS_COLOR puntano ora alla variabile invece di hex letterale).
+- ✅ Colori semantici fuori-tema preservati (rest grigio #9CA3AF, rest_injury terracotta #B84C2A).
+- ✅ `--mod-training` (#B5D4F4 azzurro chiaro identità) non rimosso — resta disponibile come accento d'identità se serve riusarlo in futuro su header banda / dot nav (oggi non usato attivamente).
+- ✅ Funzionalità Training (logging serie, timer attivazione, calendario, chart progressione, modal AI esercizio, GIF on-demand) tutte invariate.
+
+**File modificato**: solo `zona-tracker.html`. Nessuna modifica a CSS variables in `:root`, nessun nuovo asset, nessuna dipendenza.
+
+**Sintassi**: verificata con `new Function(...)` su script (829KB) → OK.
+
 ### 26 maggio 2026 — Fix onboarding: blocco "Esperienza allenamento" nascosto per solo-nutrition ✅
 
 Bug emerso testando `?preview=onboarding` post-implementazione blocco training: lo step "Il tuo livello" (s4) mostrava il blocco "Esperienza con l'allenamento" anche agli utenti che avevano scelto "Alimentazione" (`usa_training=false`) — dato inutile per chi non si allena.

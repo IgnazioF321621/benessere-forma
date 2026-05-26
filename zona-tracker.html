@@ -616,11 +616,11 @@ select.inp{cursor:pointer;}
   display:block;
 }
 .modal-section{margin-bottom:16px;}
-.modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#185FA5;margin:0 0 8px 0;font-family:var(--font-mono);}
+.modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin:0 0 8px 0;font-family:var(--font-mono);}
 .modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
 .modal-list{margin:0;padding-left:20px;}
 .modal-list li{margin-bottom:4px;}
-.modal-params{background:#f5f5f5;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;text-align:center;margin-bottom:16px;color:#185FA5;font-weight:700;}
+.modal-params{background:#f5f5f5;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;text-align:center;margin-bottom:16px;color:var(--acc);font-weight:700;}
 .modal-alert{background:#FFF4E5;border-left:3px solid #B84C2A;padding:10px 12px;border-radius:6px;font-size:13px;color:#7A3A1A;margin-bottom:16px;line-height:1.45;font-family:var(--font-sans);}
 .modal-ai-section{background:#F0F7F5;padding:12px;border-radius:8px;margin-bottom:12px;}
 .modal-ai-section h4{color:#2A7A6F;}
@@ -670,9 +670,9 @@ select.inp{cursor:pointer;}
 .ex-title-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
 .ex-title{font-size:15px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin:0;flex:1;line-height:1.25;}
 .ex-info-icon{color:#2A7A6F;font-size:14px;opacity:0.65;flex-shrink:0;}
-.ex-meta-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--font-mono);font-size:11px;color:#185FA5;}
+.ex-meta-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-family:var(--font-mono);font-size:11px;color:var(--acc);}
 .ex-params{font-weight:700;}
-.ex-rir-pill{background:#E8F0FA;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;}
+.ex-rir-pill{background:var(--acc-lt);padding:2px 7px;border-radius:999px;font-size:10px;font-weight:700;}
 .ex-rest{color:var(--t3);font-size:10px;}
 .ex-info{margin-bottom:8px;}
 .ex-equipment{font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.3;}
@@ -681,7 +681,7 @@ select.inp{cursor:pointer;}
 .ex-action-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;}
 .ex-progress{font-size:11px;font-family:var(--font-mono);font-weight:700;color:var(--t3);}
 .ex-progress.done{color:#2A7A6F;}
-.ex-add-set-btn{background:#E8F0FA;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;color:#185FA5;font-weight:700;font-family:var(--font-mono);}
+.ex-add-set-btn{background:var(--acc-lt);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;color:var(--acc);font-weight:700;font-family:var(--font-mono);}
 .ex-done-badge{background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);display:inline-block;}
 
 /* ── PICKER SELECT (REPS / CARICO / RIR nel modal log serie) ── */
@@ -3178,7 +3178,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 10:41';
+const APP_VERSION = '2026.05.26 · 17:02';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7268,7 +7268,10 @@ function getProgressionSuggestion(exName, sessionId){
 
 function renderCalendar(workouts, year, month){
   const SESS_LABEL = { upperA:'UP A', upperB:'UP B', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REST', rest_injury:'STOP' };
-  const SESS_COLOR = { upperA:'#185FA5', upperB:'#185FA5', lowerA:'#1A7A9A', lowerB:'#1A7A9A', recoveryUpper:'#2A7A6F', recoveryLower:'#2A7A6F', rest:'#9CA3AF', rest_injury:'#B84C2A' };
+  // Calendar palette: evergreen primary (Upper), evergreen scuro (Lower per distinguere),
+  // evergreen anch'esso per Recovery (la sigla "REC↑/REC↓" basta a distinguere dalle Upper),
+  // grigio per Rest, terracotta per infortunio. Tutti dal design system, niente hex orfani.
+  const SESS_COLOR = { upperA:'var(--acc)', upperB:'var(--acc)', lowerA:'var(--acc2)', lowerB:'var(--acc2)', recoveryUpper:'var(--acc)', recoveryLower:'var(--acc)', rest:'#9CA3AF', rest_injury:'#B84C2A' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
@@ -7299,9 +7302,9 @@ function renderCalendar(workouts, year, month){
     const ds = year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
     const w = wMap[ds];
     const isToday = ds === today;
-    const bg = w ? SESS_COLOR[w.session_type]||'#185FA5' : (isToday ? 'var(--s2)' : 'transparent');
+    const bg = w ? SESS_COLOR[w.session_type]||'var(--acc)' : (isToday ? 'var(--s2)' : 'transparent');
     const tc = w ? '#fff' : (isToday ? 'var(--t1)' : 'var(--t3)');
-    const brd = (!w && isToday) ? '1.5px solid #185FA5' : '1px solid transparent';
+    const brd = (!w && isToday) ? '1.5px solid var(--acc)' : '1px solid transparent';
     const lbl = w ? (SESS_LABEL[w.session_type]||w.session_type)+(w.completed?'✓':'') : '';
     const tooltipNote = w?.session_type === 'rest_injury' && w?.note ? ' — '+String(w.note).replace(/"/g,'&quot;') : '';
     const tooltipLbl = w ? (SESS_LABEL[w.session_type]||w.session_type) + tooltipNote : '';
@@ -7330,9 +7333,9 @@ function renderCalendar(workouts, year, month){
     + cells
     + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">'
-    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+completedSessions.length+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Sessioni</div></div>'
-    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+streak+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Streak</div></div>'
-    + '<div style="flex:1;text-align:center;"><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:#185FA5;">'+topLabel+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Freq.</div></div>'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">'+completedSessions.length+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Sessioni</div></div>'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">'+streak+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Streak</div></div>'
+    + '<div style="flex:1;text-align:center;"><div style="font-size:16px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">'+topLabel+'</div><div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;">Freq.</div></div>'
     + '</div>'
     + '</div>';
 }
@@ -7813,7 +7816,7 @@ function tickCountdown(){
           const b = Math.round(111 + (42-111)*(1-pct));
           numEl.style.color = 'rgb('+r+','+g+','+b+')';
         } else {
-          numEl.style.color = '#185FA5';
+          numEl.style.color = 'var(--acc)';
         }
       } else {
         renderTraining(); // fallback se DOM non ready
@@ -8209,24 +8212,24 @@ function _renderActivationSection(){
     const dur = cur.seconds || 60;
     const pct = dur ? Math.round((dur - flow.remaining)/dur*100) : 0;
     const playPauseBtn = flow.running
-      ? `<button onclick="activationFlowPause()" title="Pausa" style="background:#185FA5;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
-      : `<button onclick="activationFlowResume()" title="Riprendi" style="background:#185FA5;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
+      ? `<button onclick="activationFlowPause()" title="Pausa" style="background:var(--acc);color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
+      : `<button onclick="activationFlowResume()" title="Riprendi" style="background:var(--acc);color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
     heroHtml = `
-      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:18px;margin-bottom:16px;">
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:18px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span style="font-size:10px;color:#185FA5;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">Attivazione</span>
+          <span style="font-size:10px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">Attivazione</span>
         </div>
         <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${cur.name}</div>
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
-          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:#185FA5;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
-            <button onclick="activationFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #185FA5;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#185FA5;font-size:18px;font-weight:700;">⏪</button>
+            <button onclick="activationFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏪</button>
             ${playPauseBtn}
-            <button onclick="activationFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid #185FA5;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#185FA5;font-size:18px;font-weight:700;">⏩</button>
+            <button onclick="activationFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏩</button>
           </div>
         </div>
-        <div style="height:6px;background:rgba(24,95,165,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-          <div style="height:100%;width:${pct}%;background:#185FA5;transition:width .35s linear;"></div>
+        <div style="height:6px;background:rgba(42,122,111,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${pct}%;background:var(--acc);transition:width .35s linear;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
           <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
@@ -8235,9 +8238,9 @@ function _renderActivationSection(){
       </div>`;
   } else if(flow.active && flow.currentIdx >= exs.length){
     heroHtml = `
-      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
         <div style="font-size:36px;margin-bottom:8px;">✓</div>
-        <div style="font-size:18px;font-weight:700;color:#185FA5;font-family:var(--font-sans);margin-bottom:4px;">Attivazione completata</div>
+        <div style="font-size:18px;font-weight:700;color:var(--acc);font-family:var(--font-sans);margin-bottom:4px;">Attivazione completata</div>
         <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${exs.length}/${exs.length} esercizi</div>
       </div>`;
   } else {
@@ -8245,14 +8248,14 @@ function _renderActivationSection(){
     const startBtnDisabled = recoveryRunning;
     const startBtnStyle = startBtnDisabled
       ? 'background:#CCC;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:var(--font-sans);opacity:.6;'
-      : 'background:#185FA5;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
+      : 'background:var(--acc);color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
     const startBtnAction = startBtnDisabled ? '' : 'onclick="activationFlowStart()"';
     heroHtml = `
-      <div style="background:#E8F0FA;border:2px solid #185FA5;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:11px;color:#185FA5;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
         <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">Blocco Attivazione</div>
         ${allDone
-          ? `<div style="font-size:14px;color:#185FA5;font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
+          ? `<div style="font-size:14px;color:var(--acc);font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
           : `<button ${startBtnAction} ${startBtnDisabled?'disabled':''} style="${startBtnStyle}">▶ Start attivazione</button>${startBtnDisabled?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Recupero in corso</div>':''}`}
       </div>`;
   }
@@ -8265,8 +8268,8 @@ function _renderActivationSection(){
     const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
     const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
     const checkBox = isDone
-      ? `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:#185FA5;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-      : `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid #185FA5;flex-shrink:0;cursor:pointer;"></div>`;
+      ? `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:var(--acc);border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+      : `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;"></div>`;
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
         ${checkBox}
@@ -8281,8 +8284,8 @@ function _renderActivationSection(){
   return `
     <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${allDone?'#2A7A6F':'#185FA5'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span style="font-size:13px;font-weight:700;color:${allDone?'#2A7A6F':'#185FA5'};font-family:var(--font-sans);">Blocco Attivazione — ${totMin} min</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${allDone?'#2A7A6F':'var(--acc)'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <span style="font-size:13px;font-weight:700;color:${allDone?'#2A7A6F':'var(--acc)'};font-family:var(--font-sans);">Blocco Attivazione — ${totMin} min</span>
         ${allDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
       </div>
       ${heroHtml}
@@ -8515,7 +8518,7 @@ function renderTraining(){
       const isRecovery = s.rir === null;
       const typeBadge = isRecovery
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
-        : `<span style="background:#E8F0FA;color:#185FA5;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
+        : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
       // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
       const activationSection = _renderActivationSection();
@@ -8536,8 +8539,8 @@ function renderTraining(){
           const sn = k.split('_')[2];
           if(ST.editLogKey === k){
             const dr = ST.editLogDraft || {};
-            return `<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F0FA;border:1.5px solid #185FA5;padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
-              <span style="font-size:10px;color:#185FA5;font-weight:700;">S${sn}</span>
+            return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
+              <span style="font-size:10px;color:var(--acc);font-weight:700;">S${sn}</span>
               <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
               <span style="font-size:10px;color:var(--t3);">r</span>
               <input id="el-resist" type="number" min="0" max="999" value="${dr.resistance||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="width:46px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
@@ -8546,7 +8549,7 @@ function renderTraining(){
               <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
             </span>`;
           }
-          return `<span style="display:inline-flex;align-items:center;gap:4px;background:#E8F0FA;color:#185FA5;padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance+(/^\d+$/.test(String(d.resistance))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:#185FA5;font-size:11px;line-height:1;">✏️</button></span>`;
+          return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);color:var(--acc);padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance+(/^\d+$/.test(String(d.resistance))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:var(--acc);font-size:11px;line-height:1;">✏️</button></span>`;
         }).join('');
         const resistOptions = RESIST_VALUES.map(v =>
           `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
@@ -8556,11 +8559,11 @@ function renderTraining(){
         const isTimed = parsedReps && parsedReps.kind === 'seconds';
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
-            <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
             <div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimed ? 'DURATA (sec)' : 'REPS'}</label>
-                <select id="tl-reps" class="picker-select" style="border:1.5px solid #185FA5;">
+                <select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);">
                   <option value="" disabled selected>—</option>
                   ${(()=>{
                     if(isTimed){
@@ -8597,7 +8600,7 @@ function renderTraining(){
             </div>
             <div style="display:flex;gap:8px;">
               <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
-                style="flex:1;padding:10px;background:${ST.trainSaving?'#93b4d4':'#185FA5'};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:${ST.trainSaving?'default':'pointer'};">
+                style="flex:1;padding:10px;background:${ST.trainSaving?'var(--b2)':'var(--acc)'};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:${ST.trainSaving?'default':'pointer'};">
                 ${ST.trainSaving?'...':'Salva S'+nextSet}
               </button>
               <button onclick="ST.trainLogOpen=null;renderTraining();"
@@ -8683,7 +8686,7 @@ function renderTraining(){
         const checkBadge = lastDate
           ? `<div style="position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:4px;background:${isToday?'#E6F4F2':'var(--s2)'};color:${isToday?'#2A7A6F':'var(--t3)'};padding:3px 7px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">✓ ${fmtDate(lastDate)}</div>`
           : '';
-        const typeColor = isRecovery ? '#2A7A6F' : '#185FA5';
+        const typeColor = isRecovery ? '#2A7A6F' : 'var(--acc)';
         const metaLine = isRecovery
           ? `${s.exercises.length} esercizi · ~20 min`
           : `RIR ${s.rir} · ${s.exercises.length} esercizi`;
@@ -8710,11 +8713,11 @@ function renderTraining(){
   } else if(subnav === 'piano'){
     // ── Piano tab ───────────────────────────────────────────
     const DAY_SPLIT = [
-      { day:'G1', session:'upperA',  label:'Upper A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
-      { day:'G2', session:'lowerA',  label:'Lower A',  desc:'Forza',         color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G1', session:'upperA',  label:'Upper A',  desc:'Forza',         color:'var(--acc)', bg:'var(--acc-lt)' },
+      { day:'G2', session:'lowerA',  label:'Lower A',  desc:'Forza',         color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G3', session:'recoveryUpper',label:'Rec Upper', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
-      { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
-      { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'#185FA5', bg:'#E8F0FA' },
+      { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'var(--acc)', bg:'var(--acc-lt)' },
+      { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G6', session:'recoveryLower',label:'Rec Lower', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
     ];
     const splitCells = DAY_SPLIT.map((d,i)=>`
@@ -8745,12 +8748,12 @@ function renderTraining(){
     }
     const cycleCards = CYCLE_WEEKS.map(w=>`
       <div style="flex:1;border-radius:var(--r-md,12px);padding:12px 8px;text-align:center;
-        background:${w.active?'#185FA5':w.type==='SCARICO'?'#F0F4F0':'var(--s1,#fff)'};
-        box-shadow:${w.active?'0 2px 8px rgba(24,95,165,.25)':'0 1px 3px rgba(0,0,0,.06)'};
+        background:${w.active?'var(--acc)':w.type==='SCARICO'?'#F0F4F0':'var(--s1,#fff)'};
+        box-shadow:${w.active?'0 2px 8px rgba(42,122,111,.25)':'0 1px 3px rgba(0,0,0,.06)'};
         border:${w.active?'none':'1px solid var(--s2)'};
         transition:all .2s;">
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.7)':'var(--t3)'};margin-bottom:4px;">SETT ${w.n}</div>
-        <div style="font-size:12px;font-weight:800;font-family:var(--font-sans);color:${w.active?'#fff':w.type==='SCARICO'?'#2A7A6F':'#185FA5'};margin-bottom:2px;">${w.type}</div>
+        <div style="font-size:12px;font-weight:800;font-family:var(--font-sans);color:${w.active?'#fff':w.type==='SCARICO'?'#2A7A6F':'var(--acc)'};margin-bottom:2px;">${w.type}</div>
         <div style="font-size:10px;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.8)':'var(--t3)'};">${w.rir}</div>
       </div>`).join('');
 
@@ -8775,20 +8778,20 @@ function renderTraining(){
             <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Come funziona</div>
             <div style="display:flex;flex-direction:column;gap:8px;">
               <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:#E8F0FA;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:#185FA5;font-family:var(--font-mono);">1</div>
+                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">1</div>
                 <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Esegui le serie restando al <strong>RIR target</strong> della settimana (es. RIR 2 = fermarsi 2 rip prima del cedimento)</div>
               </div>
               <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:#E8F0FA;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:#185FA5;font-family:var(--font-mono);">2</div>
+                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">2</div>
                 <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → aumenta il carico</div>
               </div>
               <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:#E8F0FA;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:#185FA5;font-family:var(--font-mono);">3</div>
+                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">3</div>
                 <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Riparte dal <strong>minimo delle reps</strong> con il nuovo carico</div>
               </div>
             </div>
-            <div style="margin-top:14px;padding:10px 12px;background:#F5F8FF;border-radius:8px;border-left:3px solid #185FA5;">
-              <div style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);margin-bottom:4px;">ESEMPIO — Trazioni (4×4–6)</div>
+            <div style="margin-top:14px;padding:10px 12px;background:var(--s2);border-radius:8px;border-left:3px solid var(--acc);">
+              <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:4px;">ESEMPIO — Trazioni (4×4–6)</div>
               <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">4×4 → 4×5 → 4×6 → +elastico → 4×4 ↺</div>
             </div>
           </div>
@@ -8851,9 +8854,9 @@ function renderTraining(){
     // Helper riga esercizio (cliccabile, evidenziato se selezionato)
     const renderExRow = (name) => {
       const isSel = name === selEx;
-      return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:${isSel?'#E8F0FA':'transparent'};border-left:3px solid ${isSel?'#185FA5':'transparent'};min-height:44px;font-size:14px;font-family:var(--font-sans);color:${isSel?'#185FA5':'var(--t1)'};font-weight:${isSel?'700':'500'};">
+      return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:${isSel?'var(--acc-lt)':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};min-height:44px;font-size:14px;font-family:var(--font-sans);color:${isSel?'var(--acc)':'var(--t1)'};font-weight:${isSel?'700':'500'};">
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
-        ${isSel?`<span style="color:#185FA5;font-weight:700;flex-shrink:0;margin-left:8px;">✓</span>`:''}
+        ${isSel?`<span style="color:var(--acc);font-weight:700;flex-shrink:0;margin-left:8px;">✓</span>`:''}
       </div>`;
     };
 
@@ -8869,7 +8872,7 @@ function renderTraining(){
 
     const tab1HTML = `
       <div>
-        <div style="font-size:9px;font-weight:800;color:#185FA5;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px 4px;">Programma attuale</div>
+        <div style="font-size:9px;font-weight:800;color:var(--acc);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px 4px;">Programma attuale</div>
         ${programGroups.length === 0
           ? `<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-sans);">Nessun esercizio trovato</div>`
           : programGroups.map(g => `
@@ -8909,12 +8912,12 @@ function renderTraining(){
 
     const dropdownHTML = `
       <div style="position:relative;margin-bottom:16px;">
-        <button onclick="toggleProgDropdown();" style="width:100%;background:var(--s1,#fff);border:1.5px solid ${ddOpen?'#185FA5':'var(--s2)'};border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:var(--font-sans);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border-color .15s;text-align:left;">
+        <button onclick="toggleProgDropdown();" style="width:100%;background:var(--s1,#fff);border:1.5px solid ${ddOpen?'var(--acc)':'var(--s2)'};border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:var(--font-sans);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border-color .15s;text-align:left;">
           <span style="display:flex;align-items:baseline;gap:8px;flex:1;min-width:0;">
             <span style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Esercizio:</span>
-            <span style="font-size:14px;font-weight:600;color:${selEx?'#185FA5':'var(--t3)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${selEx || 'Seleziona…'}</span>
+            <span style="font-size:14px;font-weight:600;color:${selEx?'var(--acc)':'var(--t3)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${selEx || 'Seleziona…'}</span>
           </span>
-          <span style="font-size:14px;color:#185FA5;display:inline-block;transform:rotate(${ddOpen?'180deg':'0deg'});transition:transform .15s;flex-shrink:0;margin-left:8px;">▾</span>
+          <span style="font-size:14px;color:var(--acc);display:inline-block;transform:rotate(${ddOpen?'180deg':'0deg'});transition:transform .15s;flex-shrink:0;margin-left:8px;">▾</span>
         </button>
         ${ddOpen ? `
           <div onclick="closeProgDropdown();" style="position:fixed;inset:0;z-index:240;"></div>
@@ -8925,7 +8928,7 @@ function renderTraining(){
             <div style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--s2);">
               ${[['programma','Per programma'],['esercizio','Per esercizio']].map(([id,lbl]) => {
                 const active = ddTab === id;
-                return `<button onclick="setProgDropdownTab('${id}');" style="flex:1;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;border:1.5px solid ${active?'#185FA5':'var(--s2)'};background:${active?'#185FA5':'transparent'};color:${active?'#fff':'var(--t2)'};cursor:pointer;">${lbl}</button>`;
+                return `<button onclick="setProgDropdownTab('${id}');" style="flex:1;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;border:1.5px solid ${active?'var(--acc)':'var(--s2)'};background:${active?'var(--acc)':'transparent'};color:${active?'#fff':'var(--t2)'};cursor:pointer;">${lbl}</button>`;
               }).join('')}
             </div>
             <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
@@ -9011,8 +9014,8 @@ function renderTraining(){
             const h = (v/maxV) * chartH;
             const x = padL + i*slot + (slot-barW)/2;
             const y = padT + chartH - h;
-            return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(2,h)}" fill="#185FA5" rx="2" style="cursor:pointer" onclick="openDayExerciseDetail('${p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
-              ${v>0?`<text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="#185FA5" font-weight="700" font-family="JetBrains Mono, monospace">${v}</text>`:''}
+            return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(2,h)}" fill="var(--acc)" rx="2" style="cursor:pointer" onclick="openDayExerciseDetail('${p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
+              ${v>0?`<text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono, monospace">${v}</text>`:''}
               <text x="${x+barW/2}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${p.dateShort}</text>`;
           }).join('');
           return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}${bars}</svg>`;
@@ -9029,11 +9032,11 @@ function renderTraining(){
           const labelEvery = Math.ceil(points.length / 6);
           const dots = pts.map((d,i) => {
             const showLabel = (i % labelEvery) === 0 || i === pts.length-1;
-            return `<circle cx="${d.x}" cy="${d.y}" r="3.5" fill="#185FA5"/>
+            return `<circle cx="${d.x}" cy="${d.y}" r="3.5" fill="var(--acc)"/>
               <rect x="${d.x-12}" y="${d.y-12}" width="24" height="24" fill="transparent" style="cursor:pointer" onclick="openDayExerciseDetail('${d.p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
               ${showLabel?`<text x="${d.x}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${d.p.dateShort}</text>`:''}`;
           }).join('');
-          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}<polyline points="${polyline}" fill="none" stroke="#185FA5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}<polyline points="${polyline}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
         }
       })();
 
@@ -9043,7 +9046,7 @@ function renderTraining(){
         : [['peso','Peso'],['reps','Reps'],['volume','Volume']];
       const chipHTML = chipDef.map(([m,lbl]) => {
         const active = safeMetric === m;
-        return `<button onclick="ST.trainProgMetric='${m}';renderTraining();" style="flex:1;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1.5px solid ${active?'#185FA5':'var(--s2)'};background:${active?'#185FA5':'var(--s1,#fff)'};color:${active?'#fff':'var(--t2)'};cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">${lbl}</button>`;
+        return `<button onclick="ST.trainProgMetric='${m}';renderTraining();" style="flex:1;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1.5px solid ${active?'var(--acc)':'var(--s2)'};background:${active?'var(--acc)':'var(--s1,#fff)'};color:${active?'#fff':'var(--t2)'};cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">${lbl}</button>`;
       }).join('');
 
       // Stat cards (best peso, best reps/tempo, ultimo)
@@ -9053,15 +9056,15 @@ function renderTraining(){
         <div style="display:flex;gap:8px;margin-top:14px;">
           <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
             <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Best peso</div>
-            <div style="font-size:15px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${bestPeso || '—'}${bestPeso?' lbs':''}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${bestPeso || '—'}${bestPeso?' lbs':''}</div>
           </div>
           <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
             <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">${repsOrTempoLbl}</div>
-            <div style="font-size:15px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${bestRepsOrTempo || '—'}${bestRepsOrTempo&&repsOrTempoUnit?' '+repsOrTempoUnit:''}</div>
+            <div style="font-size:15px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${bestRepsOrTempo || '—'}${bestRepsOrTempo&&repsOrTempoUnit?' '+repsOrTempoUnit:''}</div>
           </div>
           <div style="flex:1.2;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
             <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Ultimo</div>
-            <div style="font-size:13px;font-weight:700;color:#185FA5;font-family:var(--font-mono);">${last ? lastVal+' '+mInfo.unit : '—'}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${last ? lastVal+' '+mInfo.unit : '—'}</div>
             <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);margin-top:1px;">${last ? shortDate(last.date) : ''}</div>
           </div>
         </div>`;
@@ -9197,7 +9200,7 @@ function renderTraining(){
       const cueLoading = !cueContent;
 
       // Color shift ultimi 10 sec
-      let numColor = '#185FA5';
+      let numColor = 'var(--acc)';
       if (cd.seconds <= 10) {
         const pct = cd.seconds / 10;
         const r = Math.round(42 + (184-42)*(1-pct));
@@ -9290,8 +9293,8 @@ function renderTraining(){
           if(l.id === editId){
             // Edit inline
             return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
-              <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid #185FA5;border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
+              <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
+              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
               <input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">
               <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
               <button onclick="confirmEditLogRow();" style="background:#2A7A6F;color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
@@ -9300,7 +9303,7 @@ function renderTraining(){
           }
           const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${l.resistance?' · '+l.resistance+' lbs':''}`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
-            <span style="font-size:11px;font-weight:700;color:#185FA5;font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
+            <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
             <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} ${repsLbl}</span>
             ${l.resistance?`<span style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${l.resistance} lbs</span>`:''}
             ${l.rir_actual!=null?`<span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
