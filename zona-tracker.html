@@ -858,6 +858,11 @@ select.inp{cursor:pointer;}
 .m1-err{color:var(--err);font-size:12px;margin-top:10px;font-family:'JetBrains Mono',monospace;display:none;}
 .m1-err.show{display:block;}
 
+/* Banner modalità anteprima (25 mag 2026) ----------------- */
+/* Visibile solo se body ha classe `.preview-onboarding` (settata da showScreen). */
+#m1-preview-banner{display:none;background:#FFF7E0;color:#8B6B1E;border-bottom:1px solid #E8D8A8;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;text-align:center;padding:10px 14px;line-height:1.4;}
+body.preview-onboarding #m1-preview-banner{display:block;}
+
 /* ── HOME V2 — Fase D Giro 1 (typo tuning 16 mag 2026) ─────── */
 #header.home-v2-hide{display:none;}
 .home-v2-wrap{padding:calc(env(safe-area-inset-top) + 16px) 0 0;display:flex;flex-direction:column;gap:20px;}
@@ -1863,6 +1868,8 @@ select.inp{cursor:pointer;}
 
 <!-- ONBOARDING M1 (7 step) -->
 <div id="onboarding-screen">
+  <!-- Banner ANTEPRIMA (visibile solo se body.preview-onboarding) -->
+  <div id="m1-preview-banner">🔒 ANTEPRIMA · NESSUN DATO VERRÀ SALVATO</div>
   <div class="onb-header">
     <button class="m1-back-btn" id="m1-back-btn" onclick="m1Back()" aria-label="Indietro" style="display:none;">←</button>
     <div class="m1-progress-row">
@@ -3167,7 +3174,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.25 · 21:31';
+const APP_VERSION = '2026.05.26 · 10:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3195,6 +3202,10 @@ const ST = {
   m1Step: 's1',             // 's1'..'s7' (dentro #onboarding-screen)
   m1OtpCells: ['','','','','',''],
   m1OtpResendIn: 0,         // secondi residui prima del resend abilitato
+  // Modalità anteprima onboarding (25 mag 2026, sera): se true, la schermata M1
+  // viene mostrata in sola lettura per l'utente reale loggato — saveOnboarding
+  // viene intercettato e NON scrive nulla su Supabase. Attivata da `?preview=onboarding`.
+  previewOnboarding: false,
   m1Data: {
     nome:'', cognome:'',
     eta:null, sesso:null, altezza:null,
@@ -4401,12 +4412,64 @@ function hideAuthMsg() {
 // ═══════════════════════════════════════════════════════════
 // ONBOARDING
 // ═══════════════════════════════════════════════════════════
+
+// Uscita pulita dalla modalità anteprima onboarding (25 mag 2026):
+// - mostra un toast informativo
+// - reset del flag e di ST.m1Data agli iniziali
+// - rimuove `?preview=onboarding` dall'URL (history.replaceState — niente reload)
+// - riporta l'app allo stato normale dell'utente:
+//     · profilo reale completo → app (home)
+//     · nessun profilo / non completo → schermata auth
+// - non scrive mai su Supabase
+function _exitOnboardingPreview(toastMsg) {
+  ST.previewOnboarding = false;
+  // Reset m1Data agli iniziali per non sporcare lo stato dell'app
+  ST.m1Data = {
+    nome:'', cognome:'',
+    eta:null, sesso:null, altezza:null,
+    peso_attuale:null, peso_obiettivo:null,
+    obiettivi:[],
+    usa_training:null, tipo_allenamento:null, attrezzatura:[],
+    giorni_allenamento:null, durata_sessione:null,
+    attivita:null, esperienza:null,
+    stile_alimentare:null,
+    intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
+    limitazioni:[], altre_limitazioni:'', altro_lim_open:false,
+  };
+  // Pulizia URL: rimuovi solo il parametro preview, conserva il resto
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('preview');
+    history.replaceState(null, '', url.pathname + (url.search ? url.search : '') + (url.hash || ''));
+  } catch (e) { /* URL malformato: ignora */ }
+  // Toast (durata 5000ms — convenzione "testi importanti più lunghi del default")
+  try { if (typeof showToast === 'function') showToast(toastMsg || 'Anteprima conclusa', '🔒', 5000); } catch(e) {}
+  // Riporta l'app allo stato normale dell'utente loggato
+  if (ST.user && ST.profile && profileIsComplete(ST.profile)) {
+    applyProfile(ST.profile);
+    showScreen('app');
+    try { renderOggi(); } catch(e) {}
+    try { showPage('home'); } catch(e) {}
+  } else {
+    // Caso edge: anteprima invocata senza utente loggato o profilo incompleto
+    showScreen('auth');
+  }
+}
+
 async function saveOnboarding(opts) {
   opts = opts || {};
   const d = ST.m1Data;
   const errEl = document.getElementById('m1-err-s7');
   const showErr = (msg) => { if(errEl){ errEl.textContent = msg; errEl.classList.add('show'); } };
   if(errEl) errEl.classList.remove('show');
+
+  // ── Guard modalità anteprima onboarding (25 mag 2026, sera) ──
+  // Se l'utente è in `?preview=onboarding`, il flusso M1 è solo dimostrativo.
+  // NON scriviamo nulla su Supabase, NON tocchiamo il profilo reale.
+  // Mostriamo un toast informativo e riportiamo l'app allo stato precedente.
+  if (ST.previewOnboarding) {
+    return _exitOnboardingPreview('Anteprima conclusa — nessun dato è stato salvato.');
+  }
 
   // Validazione minima (i passi precedenti hanno già validato; ridondanza difensiva)
   if(!d.nome || !d.nome.trim())      return showErr('Inserisci il nome.');
@@ -5552,6 +5615,31 @@ async function m2ShouldShowEntry(profile) {
 }
 
 async function loadAndStart() {
+  // ── Modalità anteprima onboarding (?preview=onboarding) ──
+  // Mostra l'onboarding M1 dall'inizio per l'utente reale loggato, in sola lettura.
+  // NON tocca ST.profile reale, NON skippa M2 nello stato persistente, NON scrive
+  // su Supabase. saveOnboarding() ha un guard speculare che intercetta il save.
+  // Per uscire dalla preview prima della fine: rimuovere il parametro dall'URL
+  // e ricaricare la pagina (no pulsante UI per design: serve solo il parametro).
+  if (ST.previewOnboarding) {
+    // Reset m1Data agli iniziali così l'utente parte da capo (eventuale precedente
+    // contenuto di una preview attuale viene scartato).
+    ST.m1Data = {
+      nome:'', cognome:'',
+      eta:null, sesso:null, altezza:null,
+      peso_attuale:null, peso_obiettivo:null,
+      obiettivi:[],
+      usa_training:null, tipo_allenamento:null, attrezzatura:[],
+      giorni_allenamento:null, durata_sessione:null,
+      attivita:null, esperienza:null,
+      stile_alimentare:null,
+      intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
+      limitazioni:[], altre_limitazioni:'', altro_lim_open:false,
+    };
+    showScreen('onboarding');
+    return;
+  }
+
   let cache = loadCache();
 
   // Sanity-check: la cache localStorage è una chiave globale (zt_cache), non
@@ -5710,6 +5798,9 @@ function showScreen(name) {
     document.getElementById('app').classList.add('visible');
     updateNavVisibility();
   }
+  // Banner ANTEPRIMA: classe sul body settata in base al flag preview.
+  // Il CSS mostra/nasconde #m1-preview-banner solo se la classe è attiva.
+  document.body.classList.toggle('preview-onboarding', !!ST.previewOnboarding);
 }
 
 function updateNavVisibility() {
@@ -19079,6 +19170,16 @@ async function _saveSettingsExecute(goalChanged) {
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════
 setTimeout(async () => {
+  // Modalità anteprima onboarding (25 mag 2026, sera): `?preview=onboarding`
+  // mostra l'onboarding M1 in sola anteprima per l'utente reale loggato.
+  // Il flag viene letto qui UNA VOLTA e poi consumato da loadAndStart() /
+  // saveOnboarding() — vedi guard `ST.previewOnboarding`.
+  try {
+    if (new URLSearchParams(window.location.search).get('preview') === 'onboarding') {
+      ST.previewOnboarding = true;
+    }
+  } catch (e) { /* URL non parsabile: ignora */ }
+
   // Modalità test
   if (new URLSearchParams(window.location.search).get('test') === '1') {
     localStorage.removeItem(ZT_CACHE_KEY);

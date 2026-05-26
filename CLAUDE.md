@@ -2056,6 +2056,37 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 25 maggio 2026 (sera, post-implementazione M1) — Modalità anteprima onboarding ✅
+
+Aggiunta una modalità anteprima dei nuovi step M1 invocabile via URL: `?preview=onboarding`. Pensata per testare l'intero flusso onboarding (sequenza dinamica, salti su interruttore/casa/palestra, visibilità accessori elastici, ecc.) **senza creare un nuovo utente né resettare il profilo reale**. Nessuna scrittura su Supabase, nessun effetto collaterale sull'utente loggato.
+
+**URL da aprire**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html**?preview=onboarding**
+
+(Si può aggiungere il parametro anche su localhost o su `dashboardzona.html`/`zona-tracker.html`; il flag funziona solo sulla zona-tracker.)
+
+**Come funziona**:
+- Bootstrap legge `?preview=onboarding` PRIMA del check `?test=1` esistente e setta `ST.previewOnboarding=true` (default false).
+- `loadAndStart()` ha un branch all'inizio: se il flag è attivo → reset `ST.m1Data` agli iniziali + `showScreen('onboarding')` direttamente, **bypassando** il caricamento profilo, il check M2 entry, il postino F.1 e il welcome overlay. **NON tocca `ST.profile` reale** (resta caricato in memoria per il rientro post-preview).
+- `saveOnboarding()` ha un guard all'inizio: se `previewOnboarding=true` → chiama `_exitOnboardingPreview()` che:
+  1. Reset `ST.previewOnboarding=false` + reset `ST.m1Data` agli iniziali
+  2. Pulisce l'URL via `history.replaceState` (rimuove solo `?preview`, conserva altri parametri e hash)
+  3. Mostra toast `🔒 Anteprima conclusa — nessun dato è stato salvato.` (durata 5000ms)
+  4. Se il profilo reale è completo → `showScreen('app')` + `renderOggi()` + `showPage('home')`; altrimenti → `showScreen('auth')` (caso edge difensivo).
+- Stesso percorso per "Salta per ora" sull'ultimo step (chiama `saveOnboarding({skipM2:true})` → guard cattura).
+
+**Banner visivo**: `#m1-preview-banner` dentro `#onboarding-screen` con testo `🔒 ANTEPRIMA · NESSUN DATO VERRÀ SALVATO` sand+ambra (`#FFF7E0` su `#8B6B1E`, Mono caps 11px tracking .14em). Visibile solo se `body.preview-onboarding` è attiva (toggle gestito da `showScreen`). Non è un pulsante: serve solo a rassicurare l'utente che è in modalità sicura.
+
+**Uscita anticipata** (l'utente non vuole completare il flusso): nessun pulsante UI per design del prompt. Per uscire prima della fine: rimuovere `?preview=onboarding` dall'URL e ricaricare la pagina, oppure chiudere/riaprire la PWA. Il profilo reale resta intatto.
+
+**Vincoli rispettati**:
+- M1 reale (s1-s7 + 5 nuovi step) intatto per utenti veri.
+- M2 non toccato.
+- `test-user-001` invariato (è un'altra modalità, complementare ma separata).
+- Routing/auth/bootstrap intatti — la flag agisce SOLO sui due punti dichiarati (loadAndStart + saveOnboarding).
+- Nessuna dipendenza nuova.
+
+**Nuove righe**: `ST.previewOnboarding: false`, helper `_exitOnboardingPreview(toastMsg)`, branch in `loadAndStart()`, guard in `saveOnboarding()`, banner HTML + 3 righe CSS, classList toggle in `showScreen()`, parser URL in cima al bootstrap.
+
 ### 25 maggio 2026 (sera) — Nuovi step onboarding M1: interruttore + blocco training ✅
 
 Implementazione dei 5 nuovi step nell'onboarding M1, design approvato il 25 mag mattina. La nuova sequenza M1 ora copre l'interruttore "Come vuoi che il coach ti accompagni?" + 4 step del blocco Training (dove · attrezzatura · giorni · tempo) — il tutto con navigazione **dinamica** e progress bar **dinamica** in base alle scelte dell'utente.
