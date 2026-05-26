@@ -2056,6 +2056,67 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 26 maggio 2026 (notte) — Training BLOCCO 2B: schermata ESECUZIONE (nuova) ✅
+
+Inserita la schermata di **esecuzione** tra il tap "+S{n}" e l'apertura del logger. Prima del 2B il tap "+S{n}" apriva direttamente il form `reps + resistenza`. Da ora invece apre un pannello "zen" con la GIF dell'esercizio grande al centro: l'utente esegue la serie guardando la GIF e poi tappa "Fine serie" per andare al logger (invariato), oppure "Indietro" per annullare senza loggare nulla.
+
+**Nuovo flusso utente** (opzione A confermata):
+1. Tap "+S{n}" sull'esercizio → apre **schermata ESECUZIONE** (overlay fullscreen z-index 1050)
+2. Esecuzione: l'utente esegue la serie guardando la GIF animata
+3a. Tap **"Fine serie"** → chiude esecuzione + apre il **logger esistente** (`openLogModal` invariato) → "Logga serie" → `saveTrainingSet()` → recupero (BLOCCO 2A) → nessun cambio al resto del flusso
+3b. Tap **"Indietro"** (‹) → chiude esecuzione e basta. Nessun dato toccato, nessun logger aperto. Caso d'uso: "ho premuto +S per sbaglio"
+
+**Architettura tecnica**:
+- Nuovo stato globale `ST.trainExecOpen` (default `null`, oppure `{sessionId, exName, setNum}` quando esecuzione attiva). Inizializzato accanto a `trainLogOpen` con commento esplicativo.
+- 3 nuove funzioni handler:
+  - `openTrainExec(sessionId, exName, setNum)`: setta `trainExecOpen`, chiama `ensureRestGif(exName)` per pre-fetch GIF (stessa pipeline del recupero), `_unlockAudio()` per coerenza, poi `renderTraining()`.
+  - `trainExecFinishSet()`: setta `trainExecOpen=null` + chiama `openLogModal(sessionId, exName, setNum)` esistente. Il logger appare al posto dell'esecuzione.
+  - `trainExecBack()`: setta `trainExecOpen=null` + `renderTraining()`. Nessun side-effect.
+- `ensureRestGif()` esteso (singola modifica, additiva): la condizione di re-render include ora anche `ST.trainExecOpen.exName === exName`, così quando la GIF arriva dal Worker il placeholder viene sostituito senza intervento utente.
+- `closeTrainingSession()` esteso (cleanup): reset di `ST.trainExecOpen = null` insieme agli altri timer/flow (così uscire dalla sessione mentre esecuzione è aperta non lascia stati sporchi).
+- Bottone "+S{n}" (riga 9057): chiamata cambiata da `openLogModal(...)` a `openTrainExec(...)`. Stesso pattern di apice singolo + `safeName` escape esistente.
+- Nuovo `execHTML` generato in `renderTraining()` (~riga 9752) e concatenato in `innerHTML` tra `countdownHTML` e `dayDetailHTML` (ordine coerente col flusso temporale: countdown vive prima dell'eventuale dayDetail).
+
+**Layout schermata esecuzione**:
+- **Header**: dot evergreen + "SERIE n/tot · IN CORSO" Mono caps a sinistra; "‹ Indietro" Mono caps a destra (ghost button, hover evergreen).
+- **Body** centrato (flex column, gap 18px):
+  - Nome esercizio Syne 800 26px
+  - Badge `{fascia reps}` (es. "4-6") + `RIR {n}` (Mono caps in pill `var(--acc-lt)` su `var(--acc)`). RIR nascosto per esercizi temporali (`iso:true` con reps in secondi) — coerente con la card sessione.
+  - GIF grande (max-width 380px, max-height 50vh, `object-fit:contain`). Placeholder neutro `var(--s2)` con copy "Caricamento esecuzione…" / "Anteprima non disponibile" se loading/missing.
+- **Footer**: bottone primario full-width "Fine serie" evergreen pieno (Syne 700 16px) con `:active` scale .98 + box-shadow evergreen soft.
+
+**Sorgente GIF**: `ST.exerciseGifCache[exName].url` (= `m.cached_url` dal Worker `/exercise-media`), **stessa identica pipeline del recupero**. Animata. Nessun PNG statico.
+
+**Anti-flicker GIF**: la schermata esecuzione non ha countdown attivo, quindi nessun re-render periodico. La GIF, una volta caricata, resta nel DOM e continua ad animarsi senza interruzioni (il problema del fix 1 del 2A — full re-render ogni secondo — qui non esiste).
+
+**Z-index ordering**:
+- `.train-exec-overlay` = 1050
+- `.rest-modal-overlay` (recupero) = 1001
+- `.info-modal-overlay` (modal scheda esercizio) = 1100 (style inline da fix 4 BLOCCO 2A)
+- Layering: in esecuzione non c'è recupero attivo, quindi 1050 vince. Non si può aprire `openExerciseAI` dall'esecuzione (non c'è link), quindi il caso "modal scheda sopra esecuzione" non si verifica.
+
+**Casi gestiti** (come da prompt):
+- ✅ "+S{n}" → esecuzione → Indietro → ri-tap "+S{n}" → esecuzione riparte pulita (`openTrainExec` sovrascrive `trainExecOpen`, niente residui).
+- ✅ "+S{n}" → esecuzione → Fine serie → logger esistente → Logga → recupero → flusso completo invariato.
+- ✅ GIF non disponibile per quell'esercizio → esecuzione mostra placeholder, "Fine serie" funziona lo stesso (apre logger).
+
+**Vincoli rispettati**:
+- ✅ `saveTrainingSet()` NON toccato. Logica salvataggio/recupero (2A) intatta.
+- ✅ Logger esistente (`openLogModal`, `tl-reps` focus, `RESIST_VALUES`) IDENTICO: cambia solo il MOMENTO in cui si apre (dopo "Fine serie", non più subito al tap "+S{n}").
+- ✅ Timer countdown/beep/tick: NON toccati.
+- ✅ GIF: stessa funzione `ensureRestGif`, solo estesa la condizione di re-render. Nessuna funzione GIF nuova creata.
+- ✅ Stile evergreen/Syne/Mono, mobile-first, coerente con Home/Nutrition/Blocco 1/Blocco 2A.
+
+**Nuove righe**:
+- Stato `ST.trainExecOpen: null` + cleanup in `closeTrainingSession`
+- 3 funzioni handler `openTrainExec`/`trainExecFinishSet`/`trainExecBack`
+- Estensione `ensureRestGif` (condizione re-render: aggiunto OR `trainExecOpen.exName === exName`)
+- 13 nuove classi CSS `.train-exec-*` (overlay/container/header/eyebrow/eyebrow-dot/back/body/ex-name/badges/badge/gif/gif-placeholder/footer/finish-btn)
+- Render `execHTML` + concat in innerHTML
+- Modifica button "+S{n}" → `openTrainExec`
+
+**Sintassi**: validata con `new Function(...)` su script (841KB) → OK.
+
 ### 26 maggio 2026 (tarda sera) — Training BLOCCO 2A · 4 fix post-collaudo ✅
 
 Dopo il collaudo dal vivo sul telefono della schermata Recupero (commit `404a749`), emersi 4 problemi puntuali. Tutti corretti con interventi mirati, nessuna modifica al layout approvato.

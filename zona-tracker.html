@@ -843,6 +843,130 @@ select.inp{cursor:pointer;}
   margin:14px 0 10px;
   line-height:1.3;
 }
+
+/* ── Schermata ESECUZIONE BLOCCO 2B (26 mag 2026) ──
+   Pannello "zen" che si apre tra il tap "+S{n}" e il logger esistente.
+   Solo GIF grande + nome esercizio + badge reps/RIR + Fine serie + Indietro.
+   Niente setup/esecuzione/errori/coach (quelli vivono nel recupero). */
+.train-exec-overlay{
+  position:fixed; inset:0;
+  background:var(--bg);
+  z-index:1050; /* sopra rest-modal-overlay 1001, sotto modal scheda 1100 */
+  display:flex; align-items:stretch; justify-content:center;
+  padding:0;
+}
+.train-exec-container{
+  width:100%;
+  max-width:560px;
+  display:flex; flex-direction:column;
+  background:var(--bg);
+  overflow:hidden;
+}
+.train-exec-header{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+  padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;
+  border-bottom:1px solid var(--b1);
+}
+.train-exec-eyebrow{
+  display:flex; align-items:center; gap:8px;
+  font-family:var(--font-mono);
+  font-size:11px; font-weight:700;
+  letter-spacing:.16em; text-transform:uppercase;
+  color:var(--acc);
+}
+.train-exec-eyebrow-dot{
+  width:8px; height:8px; border-radius:50%;
+  background:var(--acc);
+  flex-shrink:0;
+  box-shadow:0 0 0 3px var(--acc-lt);
+}
+.train-exec-back{
+  background:transparent; border:none;
+  color:var(--t2);
+  font-family:var(--font-mono);
+  font-size:11px; font-weight:700;
+  letter-spacing:.12em; text-transform:uppercase;
+  cursor:pointer;
+  padding:6px 8px;
+  border-radius:6px;
+}
+.train-exec-back:hover{color:var(--acc);background:var(--acc-lt);}
+
+.train-exec-body{
+  flex:1;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:18px;
+  padding:24px 20px 14px;
+  overflow-y:auto;
+}
+.train-exec-ex-name{
+  font-family:var(--font-sans);
+  font-size:26px; font-weight:800;
+  color:var(--t1);
+  line-height:1.2;
+  text-align:center;
+  letter-spacing:-0.3px;
+}
+.train-exec-badges{
+  display:flex; gap:8px; flex-wrap:wrap; justify-content:center;
+}
+.train-exec-badge{
+  background:var(--acc-lt);
+  color:var(--acc);
+  font-family:var(--font-mono);
+  font-size:11px; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase;
+  padding:5px 11px;
+  border-radius:999px;
+}
+.train-exec-gif{
+  width:100%;
+  max-width:380px;
+  max-height:50vh;
+  border-radius:14px;
+  background:var(--s2);
+  object-fit:contain;
+  display:block;
+}
+.train-exec-gif-placeholder{
+  width:100%;
+  max-width:380px;
+  height:240px;
+  border-radius:14px;
+  background:var(--s2);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--t3);
+  text-align:center;
+  padding:0 24px;
+}
+
+.train-exec-footer{
+  padding:14px 18px calc(env(safe-area-inset-bottom) + 18px);
+  background:var(--bg);
+  border-top:1px solid var(--b1);
+}
+.train-exec-finish-btn{
+  width:100%;
+  background:var(--acc);
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  padding:16px 18px;
+  font-family:var(--font-sans);
+  font-size:16px; font-weight:700;
+  letter-spacing:.01em;
+  cursor:pointer;
+  box-shadow:0 2px 8px rgba(42,122,111,.22);
+  transition:transform .08s, box-shadow .15s;
+}
+.train-exec-finish-btn:hover{background:var(--acc2);}
+.train-exec-finish-btn:active{transform:scale(.98);}
 .modal-section{margin-bottom:16px;}
 .modal-section h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);margin:0 0 8px 0;font-family:var(--font-mono);}
 .modal-section p,.modal-section li{font-size:14px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);}
@@ -3406,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 18:15';
+const APP_VERSION = '2026.05.26 · 18:32';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3461,6 +3585,11 @@ const ST = {
   trainTab: null,
   trainSession: null,
   trainLogOpen: null,
+  // BLOCCO 2B (26 mag 2026) — Schermata ESECUZIONE inserita tra "+S{n}" e logger.
+  // Quando attiva mostra GIF grande + nome esercizio + badge reps/RIR + bottone
+  // "Fine serie" (→ apre il logger esistente) e Indietro (→ chiude senza loggare).
+  // Null = esecuzione non attiva. { sessionId, exName, setNum } = esecuzione aperta.
+  trainExecOpen: null,
   trainCountdown: null,
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
   trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
@@ -8022,7 +8151,13 @@ async function ensureRestGif(exName) {
   } catch(e) {
     ST.exerciseGifCache[exName] = { url: null, status: 'error' };
   }
-  if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
+  // Re-render se l'utente e' ancora sul countdown recupero (BLOCCO 2A) o sulla
+  // schermata esecuzione (BLOCCO 2B) per QUESTO esercizio: arrivata la GIF, sostituisce
+  // il placeholder. Negli altri casi il prefetch e' silenzioso (cache letta al prossimo render).
+  if (ST.page === 'training' && (
+        (ST.trainCountdown && ST.trainCountdown.exName === exName) ||
+        (ST.trainExecOpen  && ST.trainExecOpen.exName  === exName)
+      )) {
     renderTraining();
   }
 }
@@ -8919,7 +9054,7 @@ function renderTraining(){
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
-                  ? `<button class="ex-add-set-btn" onclick="openLogModal('${sel}','${safeName}',${nextSet});">+S${nextSet}</button>`
+                  ? `<button class="ex-add-set-btn" onclick="openTrainExec('${sel}','${safeName}',${nextSet});">+S${nextSet}</button>`
                   : ''}
             </div>
             ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">${badges}</div>` : ''}
@@ -9608,6 +9743,53 @@ function renderTraining(){
     }
   }
 
+  // ── BLOCCO 2B (26 mag 2026) — Schermata ESECUZIONE serie ────────────
+  // Si apre al tap "+S{n}" (al posto di aprire subito il logger). Mostra:
+  // - eyebrow "SERIE n/tot · IN CORSO" con dot evergreen
+  // - nome esercizio grande + badge reps + RIR
+  // - GIF esecuzione grande (cached_url Worker, stessa pipeline del recupero)
+  // - "Fine serie" (chiude exec → openLogModal) e "Indietro" (chiude senza nulla)
+  let execHTML = '';
+  if(ST.trainExecOpen){
+    const ex2 = ST.trainExecOpen;
+    const exDef = findExercise(ex2.exName, ex2.sessionId);
+    const sessDef = TRAINING_SESSIONS[ex2.sessionId] || {};
+    const tot = exDef?.sets || '?';
+    // Badge: reps + RIR (riusa la convenzione della card sessione)
+    const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(exDef.reps)}</span>` : '';
+    const rirVal = sessDef.rir;
+    // RIR nascosto per esercizi temporali (iso:true con reps in secondi) — coerente con renderTraining
+    const parsedReps = exDef?.reps ? (typeof parseRepsRange === 'function' ? parseRepsRange(exDef.reps) : null) : null;
+    const isTimed = parsedReps && parsedReps.kind === 'seconds';
+    const rirBadge = (rirVal != null && !isTimed) ? `<span class="train-exec-badge">RIR ${rirVal}</span>` : '';
+    // GIF: stessa logica del recupero (cached_url Worker animata)
+    const gifEntry2 = ST.exerciseGifCache[ex2.exName];
+    const hasGif2 = gifEntry2 && gifEntry2.status === 'cached' && gifEntry2.url;
+    const gifLoading2 = gifEntry2 && gifEntry2.status === 'loading';
+    const gifBlock = hasGif2
+      ? `<img src="${gifEntry2.url}" alt="Esecuzione ${esc(ex2.exName)}" class="train-exec-gif">`
+      : `<div class="train-exec-gif-placeholder">${gifLoading2 ? 'Caricamento esecuzione…' : 'Anteprima non disponibile'}</div>`;
+    execHTML = `<div class="train-exec-overlay">
+      <div class="train-exec-container">
+        <div class="train-exec-header">
+          <div class="train-exec-eyebrow">
+            <span class="train-exec-eyebrow-dot"></span>
+            <span>SERIE ${ex2.setNum} / ${tot} · IN CORSO</span>
+          </div>
+          <button class="train-exec-back" onclick="trainExecBack()" aria-label="Indietro">‹ Indietro</button>
+        </div>
+        <div class="train-exec-body">
+          <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
+          ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
+          ${gifBlock}
+        </div>
+        <div class="train-exec-footer">
+          <button class="train-exec-finish-btn" onclick="trainExecFinishSet()">Fine serie</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // Modal Dettaglio Giorno (apertura da calendario o chart)
   let dayDetailHTML = '';
   if(ST.trainDayDetail){
@@ -9709,7 +9891,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
@@ -16787,7 +16969,42 @@ function closeTrainingSession(){
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
+  // BLOCCO 2B: chiusura schermata esecuzione se aperta (cleanup per uscita session)
+  ST.trainExecOpen = null;
   releaseWakeLock();
+  renderTraining();
+}
+
+// ── BLOCCO 2B (26 mag 2026) — Schermata ESECUZIONE ────────────
+// Nuovo flusso: utente tap "+S{n}" → openTrainExec (schermata esecuzione con
+// GIF grande) → tap "Fine serie" → openLogModal (logger esistente invariato)
+// → "Logga serie" → saveTrainingSet → recupero (BLOCCO 2A).
+// Tap "Indietro" dall'esecuzione: torna alla sessione senza loggare nulla.
+
+// Apre la schermata di esecuzione per la prossima serie.
+// Pre-fetch GIF (riusa ensureRestGif esistente) + unlock audio (per coerenza).
+function openTrainExec(sessionId, exName, setNum){
+  ST.trainExecOpen = { sessionId, exName, setNum };
+  _unlockAudio();
+  // Pre-fetch GIF esecuzione (stessa pipeline del recupero: cached_url Worker).
+  ensureRestGif(exName);
+  renderTraining();
+}
+
+// "Fine serie" sulla schermata esecuzione → chiude exec e apre il logger
+// (openLogModal esistente). Riusa il pattern già rodato: nessun cambio al
+// logger né a saveTrainingSet. Il logger appare al posto dell'esecuzione.
+function trainExecFinishSet(){
+  const e = ST.trainExecOpen;
+  if(!e) return;
+  ST.trainExecOpen = null;
+  openLogModal(e.sessionId, e.exName, e.setNum);
+}
+
+// "Indietro" → chiude l'esecuzione senza loggare niente, senza aprire il
+// logger. Nessun dato toccato. Caso: ho premuto +S per sbaglio.
+function trainExecBack(){
+  ST.trainExecOpen = null;
   renderTraining();
 }
 
