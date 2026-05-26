@@ -3402,7 +3402,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 17:44';
+const APP_VERSION = '2026.05.26 · 18:09';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4340,16 +4340,20 @@ function buildCoachPrompt(exName, sessionId) {
   const sess = TRAINING_SESSIONS[sessionId] || {};
   const sessionLabel = sess.label || sess.name || '';
   const sessionType = sess.type || '';
+  // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
+  // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
   return `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
 
 Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
 
-Genera SOLO un consiglio operativo aggiuntivo (max 3 frasi) che NON ripeta info già presenti come setup, esecuzione, errori comuni o muscoli target. Concentrati su:
-- Cue tecnico avanzato specifico
-- Gestione fatica nelle ultime serie
-- Variazione respiratoria utile per questo esercizio
+Rispondi con 2-3 punti BREVISSIMI (max 8 parole ciascuno), in formato elenco. Ogni punto su una riga separata, inizia con "• " (bullet + spazio). NIENTE paragrafi. NIENTE introduzioni. NIENTE ripetizione del nome esercizio.
 
-NIENTE preamboli, niente ripetizione del nome esercizio, niente lista numerata. Solo prosa diretta. Italiano.`;
+Contenuto dei punti (scegli i 2-3 più rilevanti): cue tecnico avanzato, gestione fatica nelle ultime serie, variazione respiratoria, attenzione protezioni (lombari/ginocchia) se rilevante per questo movimento. Non ripetere info banali tipo setup o muscoli target.
+
+Italiano. Esempio di formato corretto:
+• Mento alla sbarra, non collo
+• Scapole giù attivate
+• Espira sulla salita`;
 }
 // LEGACY: mantenuta per compatibilità (chiamate non ancora migrate al pattern items)
 async function estimateMacrosLegacy(desc) {
@@ -8065,18 +8069,33 @@ function tickCountdown(){
     if (cd.done) {
       renderTraining(); // full re-render per done state (PRONTO!)
     } else {
-      // Update surgical: aggiorna solo il numero countdown (preserva scroll utente)
-      const numEl = document.querySelector('.rest-cd-num');
+      // Update SURGICAL: aggiorna solo il numero countdown + ring stroke-dashoffset.
+      // Critico per preservare l'animazione della GIF: un full re-render ad ogni
+      // secondo ricrea l'<img class="rest-hero-gif"> dal DOM resettando la GIF al
+      // frame 1, facendola sembrare statica. Selector .rest-hero-cd-num (BLOCCO 2A).
+      const numEl  = document.querySelector('.rest-hero-cd-num');
+      const ringEl = document.querySelector('.rest-ring-fill');
       if (numEl) {
-        numEl.textContent = String(remaining);
+        const fmtTime = (sec) => sec >= 60
+          ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`
+          : String(sec);
+        numEl.textContent = fmtTime(remaining);
+        let numColor = 'var(--acc)';
         if (remaining <= 10) {
           const pct = remaining / 10;
           const r = Math.round(42 + (184-42)*(1-pct));
           const g = Math.round(122 + (76-122)*(1-pct));
           const b = Math.round(111 + (42-111)*(1-pct));
-          numEl.style.color = 'rgb('+r+','+g+','+b+')';
-        } else {
-          numEl.style.color = 'var(--acc)';
+          numColor = 'rgb('+r+','+g+','+b+')';
+        }
+        numEl.style.color = numColor;
+        // Ring SVG surgical: aggiorna stroke-dashoffset + stroke senza ricreare il DOM
+        if (ringEl) {
+          const ringC = 326.73;
+          const ringPct = (cd.total > 0) ? (remaining / cd.total) : 0;
+          const ringOffset = ringC * (1 - ringPct);
+          ringEl.setAttribute('stroke-dashoffset', ringOffset.toFixed(2));
+          ringEl.style.stroke = numColor;
         }
       } else {
         renderTraining(); // fallback se DOM non ready
@@ -9400,7 +9419,7 @@ function renderTraining(){
       ? `<ol class="modal-list">${ai.execution.map(s=>`<li>${s}</li>`).join('')}</ol>` : '';
     const errorsList = (ai.commonErrors && ai.commonErrors.length)
       ? `<ul class="modal-list">${ai.commonErrors.map(s=>`<li>${s}</li>`).join('')}</ul>` : '';
-    modalHTML = `<div class="info-modal-overlay" onclick="ST.exerciseAIOpen=null;renderTraining()">
+    modalHTML = `<div class="info-modal-overlay" style="z-index:1100;" onclick="ST.exerciseAIOpen=null;renderTraining()">
       <div class="info-modal" style="max-width:560px;max-height:88vh;overflow-y:auto;padding:20px;" onclick="event.stopPropagation()">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:8px;">
           <div>
@@ -9434,7 +9453,7 @@ function renderTraining(){
           <h4>🤖 Coach</h4>
           ${ai.loading
             ? `<div class="ai-loading">Genero un cue avanzato per te…</div>`
-            : `<div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${ai.content || 'Nessun consiglio aggiuntivo disponibile.'}</div>`}
+            : `<div style="font-size:14px;line-height:1.6;color:var(--t2);font-family:var(--font-sans);">${String(ai.content || 'Nessun consiglio aggiuntivo disponibile.').replace(/\n/g, '<br>')}</div>`}
         </div>
       </div>
     </div>`;
@@ -9486,16 +9505,18 @@ function renderTraining(){
       const totalDisplay = fmtTime(cd.total || cd.seconds);
 
       // APPENA FATTA — ultima serie loggata oggi per (sessionId, exName).
+      // FIX 2 (26 mag sera): font Mono uniforme con PROSSIMA (entrambi sono numerici/sigle).
       const lastSet = getLastLoggedSetLabel(cd.sessionId, cd.exName);
       const lastSetHTML = lastSet
         ? `<span class="rest-card-value mono">${esc(lastSet)}</span>`
-        : `<span class="rest-card-value" style="color:var(--t3);">—</span>`;
+        : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
-      // PROSSIMA — riusa getProgressionSuggestion (la riga promemoria oggi della tab Sessione).
+      // PROSSIMA — riusa getProgressionSuggestion (la riga promemoria della tab Sessione).
+      // FIX 2 (26 mag sera): aggiunto class "mono" per uniformare con APPENA FATTA.
       const sugg = (typeof getProgressionSuggestion === 'function') ? getProgressionSuggestion(cd.exName, cd.sessionId) : '';
       const nextHTML = sugg
-        ? `<span class="rest-card-value">${sugg}</span>`
-        : `<span class="rest-card-value" style="color:var(--t3);">—</span>`;
+        ? `<span class="rest-card-value mono">${sugg}</span>`
+        : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
       // GIF: SEMPRE VISIBILE accanto al countdown (no più toggle). Placeholder se manca.
       const gifEntry = ST.exerciseGifCache[cd.exName];
@@ -9555,7 +9576,7 @@ function renderTraining(){
               <div class="rest-coach-card-eyebrow">🤖 Coach</div>
               ${cueLoading
                 ? `<div class="rest-coach-card-loading">Genero un cue avanzato per te…</div>`
-                : `<div class="rest-coach-card-content">${cueContent}</div>`
+                : `<div class="rest-coach-card-content">${String(cueContent || '').replace(/\n/g, '<br>')}</div>`
               }
             </div>
 

@@ -2056,6 +2056,49 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 26 maggio 2026 (tarda sera) — Training BLOCCO 2A · 4 fix post-collaudo ✅
+
+Dopo il collaudo dal vivo sul telefono della schermata Recupero (commit `404a749`), emersi 4 problemi puntuali. Tutti corretti con interventi mirati, nessuna modifica al layout approvato.
+
+**FIX 1 — GIF non animata (priorità alta)**
+
+*Causa*: `tickCountdown()` (riga ~8069) cercava `.rest-cd-num` (la vecchia classe della sticky bar). Il BLOCCO 2A ha rinominato il selettore in `.rest-hero-cd-num`, quindi `document.querySelector('.rest-cd-num')` ritornava `null` → l'`if(numEl)` falliva → il fallback `renderTraining()` faceva un **full re-render del DOM ogni secondo** → l'elemento `<img class="rest-hero-gif">` veniva rimosso e ricreato → la GIF ricominciava dal frame 1 e sembrava statica.
+
+*Sorgente immagine confermata*: `ST.exerciseGifCache[cd.exName].url` (= `m.cached_url` dal Worker `/exercise-media`, GIF animata su Supabase Storage). NON è `executionImg` (PNG statico Wger), NON è una sostituzione: è esattamente la pipeline pre-2A.
+
+*Fix*: in `tickCountdown` aggiornato il selettore a `.rest-hero-cd-num` + esteso l'update surgical anche al ring SVG (`document.querySelector('.rest-ring-fill')` → `setAttribute('stroke-dashoffset', ...)` + `style.stroke = numColor`). Aggiunto helper inline `fmtTime(sec)` per formattare MM:SS / SS (coerente col rendering del template). Risultato: il DOM dell'`<img>` GIF non viene più ricreato → l'animazione continua fluida, ring si svuota progressivamente, numero countdown si aggiorna senza flicker.
+
+**FIX 2 — Font diverso tra "APPENA FATTA" e "PROSSIMA"**
+
+*Causa*: `lastSetHTML` aveva `class="rest-card-value mono"` (Mono), `nextHTML` aveva solo `class="rest-card-value"` (Syne sans).
+
+*Fix*: aggiunta classe `mono` a `nextHTML` (sia stato popolato che placeholder `—`). Ora entrambi i chip mostrano la sigla `S3 · 6r · 30 lbs · RIR 2` in `var(--font-mono)` (JetBrains Mono), coerente col resto del modulo Training dove i numeri sono sempre Mono. Stessa dimensione (14px), stesso peso (700), stesso colore (`var(--t1)`).
+
+**FIX 3 — Cue Coach troppo lungo**
+
+*Causa*: `buildCoachPrompt` chiedeva "consiglio operativo aggiuntivo (max 3 frasi)... prosa diretta" → output paragrafo lungo difficile da consultare al volo durante il recupero.
+
+*Fix*: prompt riscritto chiedendo esplicitamente *"2-3 punti BREVISSIMI (max 8 parole ciascuno), in formato elenco. Ogni punto su una riga separata, inizia con '• ' (bullet + spazio). NIENTE paragrafi. NIENTE introduzioni"*. Aggiunto esempio di formato in coda al prompt (`• Mento alla sbarra, non collo / • Scapole giù attivate / • Espira sulla salita`). Logica di cache (`ensureRestCue`, `ST.aiCue`) NON toccata.
+
+Rendering aggiornato in **2 punti** (entrambi i contesti che usano lo stesso cue): `rest-coach-card-content` (modal recupero) e `modal-ai-section` (modal scheda esercizio completo). Trasformazione `\n` → `<br>` con `String(content || '').replace(/\n/g, '<br>')` per visualizzare i bullet come righe separate.
+
+*Nota*: i cue già cached in `ST.aiCue` (generati col vecchio prompt) restano lunghi finché non scadono. Per generare cue nuovi servirà aprire un esercizio mai aperto in questa sessione di app, oppure attendere reload completo.
+
+**FIX 4 — "Scheda completa ›" non apre nulla**
+
+*Causa*: il click chiamava correttamente `openExerciseAI(cd.exName, cd.sessionId)`, settava `ST.exerciseAIOpen` e triggerava `renderTraining()`. Il render produceva entrambi gli overlay nello stesso innerHTML (`modalHTML + countdownHTML`), ma `.info-modal-overlay` ha z-index **1000** mentre `.rest-modal-overlay` ha z-index **1001**. Risultato: il modal scheda esercizio si apriva sotto il modal di recupero, **invisibile** all'utente — sembrava "non fa nulla".
+
+*Fix*: aggiunto `style="z-index:1100;"` inline all'`info-modal-overlay` del modal scheda esercizio (riga 9422). Solo style inline → non altera gli altri usi di `.info-modal-overlay` nell'app (es. low-kcal warning, info modal training pattern, ecc.). Z-index 1100 > 1001 del rest-modal-overlay → modal scheda esercizio ora visibile sopra il countdown. Tap fuori chiude il modal e torna al countdown (il rest-modal-overlay resta dietro, intatto).
+
+**Vincoli rispettati**:
+- ✅ Solo i 4 fix mirati. Nessuna modifica al layout del recupero (è approvato).
+- ✅ Countdown/beep/endTime/tick: NON toccati.
+- ✅ Schermata di esecuzione (BLOCCO 2B): NON creata.
+- ✅ Logica cache cue (`ensureRestCue`, `ST.aiCue`): NON modificata. Solo il prompt cambia.
+- ✅ Pipeline GIF (`fetchExerciseMedia`, `ensureRestGif`, `ST.exerciseGifCache`): NON toccata. Solo il selettore in `tickCountdown` aggiornato per allinearlo al nuovo template.
+
+**Sintassi**: validata con `new Function(...)` su script (836KB) → OK.
+
 ### 26 maggio 2026 (sera) — Training BLOCCO 2A: schermata Recupero riorganizzata ✅
 
 Refactor del rendering della schermata di recupero (modal `.rest-modal-overlay`, branch `!cd.done` dentro `renderTraining()`, ~riga 9201). Layout completamente riorganizzato secondo i mockup approvati; nessuna logica funzionale toccata.
