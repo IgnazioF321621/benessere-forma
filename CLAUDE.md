@@ -2056,6 +2056,66 @@ un interruttore a monte.
 
 ## Cosa abbiamo fatto
 
+### 26 maggio 2026 (sera) — Training BLOCCO 2A: schermata Recupero riorganizzata ✅
+
+Refactor del rendering della schermata di recupero (modal `.rest-modal-overlay`, branch `!cd.done` dentro `renderTraining()`, ~riga 9201). Layout completamente riorganizzato secondo i mockup approvati; nessuna logica funzionale toccata.
+
+**Nuovo layout dall'alto**:
+
+1. **HERO (sticky in cima)** — countdown + GIF SEMPRE VISIBILE + skip
+   - **Ring SVG circolare** attorno al numero countdown (`r=52`, circumference 326.73): si svuota progressivamente man mano che scorre il tempo (`stroke-dashoffset = circumference × (1 - seconds/total)`). Stroke `var(--acc)` evergreen.
+   - **Numero countdown** Mono 38px tabular-nums dentro al ring (formato `MM:SS` se totale ≥ 60s, altrimenti `SS`). Color-shift ultimi 10s preservato (evergreen → terracotta).
+   - **GIF esecuzione SEMPRE VISIBILE** a destra (max-width 200px, height 96px, `object-fit:contain`). Niente più toggle "▶ Mostra esecuzione" (rimosso). Placeholder neutro `var(--s2)` se GIF in loading o non disponibile (no crash, no spazio sbilenco).
+   - **Skip button** `Salta ⏭` in alto a destra dell'hero (Mono caps, ghost button con hover evergreen).
+   - **Label "Recupero · MM:SS"** sotto la GIF in Mono caps grigio (mostra il totale del recupero).
+
+2. **Row 2 chip APPENA FATTA / PROSSIMA** (grid 2 colonne, sotto il nome esercizio)
+   - **APPENA FATTA** legge da `ST.trainLoggedSets` via nuovo helper `getLastLoggedSetLabel(sessionId, exName)` (definito subito sopra `getProgressionSuggestion`): estrae l'ultima serie loggata OGGI per quel (sessione, esercizio) e la formatta come `S3 · 6r · 30 lbs · RIR 2`. Gestisce resistance numerica (con unit) vs testuale ("Banda viola"). Ritorna `null` se nessuna serie loggata oggi → chip mostra `—` grigio.
+   - **PROSSIMA** riusa `getProgressionSuggestion()` SENZA modificarla. La stringa che oggi appare nella tab Sessione viene "spostata" qui per essere visibile durante il recupero, quando la card esercizio non si vede più.
+
+3. **Coach AI card** evergreen-soft (background `var(--acc-lt)`)
+   - Eyebrow Mono caps `🤖 Coach`, contenuto Syne 13.5px. Stato loading "Genero un cue avanzato per te…" invariato.
+   - Riusa `ST.aiCue[sessionId_exName]` + `ensureRestCue()` esistenti.
+
+4. **Ripasso rapido** (versione ALLEGGERITA di setup/esecuzione/errori)
+   - Setup → 1 riga (prima entry di `ex.setup` se array, altrimenti string intera).
+   - Esecuzione → max 2 punti (`ex.execution.slice(0, 2)`).
+   - Errori → max 2 punti (`ex.commonErrors.slice(0, 2)`).
+   - Alert `ex.alert` mostrato se presente (riusa `.modal-alert` esistente).
+   - **CTA "Scheda completa ›"** Mono caps evergreen → chiama `openExerciseAI(cd.exName, cd.sessionId)` (modal completo con anatomia + esecuzione + GIF + AI cue lungo, già esistente, riusato senza modifiche).
+
+5. **Stato PRONTO! 💪** (branch `cd.done`)
+   - Layout invariato (info-modal-overlay 1001), riveste solo gli hex letterali `#2A7A6F` con `var(--acc)` per coerenza design system.
+
+**Comportamenti preservati al 100%** (vincoli prompt rispettati):
+- Countdown basato su `endTime`, tick 250ms, beep (`playPrepBeep`, `playFinalTripleBeep`) intatti.
+- `cd.done` → PRONTO + bottone OK + auto-close 1s preservati.
+- Color-shift ultimi 10s preservato (base `var(--acc)`, vira verso terracotta `rgb(184,76,42)`).
+- `ensureRestGif()` e `ST.exerciseGifCache` riusati (no modifiche). Pre-fetch all'apertura countdown invariato.
+- `getProgressionSuggestion()` riusata. Riferimenti residui nella card esercizio della tab Sessione invariati.
+- `skipCountdown()` invariato.
+- `findExercise()` per setup/execution/commonErrors/alert intatto.
+- `ST.aiCue` + `ensureRestCue()` con loading state invariati.
+
+**Nuove righe**:
+- Helper `getLastLoggedSetLabel(sessionId, exName)` (~32 righe JS).
+- 11 nuove classi CSS scoped `.rest-hero-*`, `.rest-ring*`, `.rest-card*`, `.rest-coach-card*`, `.rest-quick-recap`, `.rest-quick-section`, `.rest-quick-eyebrow`, `.rest-quick-text`, `.rest-quick-link`, `.rest-ex-name-row` (CSS pulito, variabili design system ovunque).
+
+**Classi/funzioni dormienti** (definite ma non più chiamate — lasciate nel codice per minimizzare churn, cleanup separato futuro):
+- Funzione JS `toggleRestGif()` (~riga 8023): non più referenziata da nessun HTML dopo la rimozione del toggle GIF.
+- CSS `.rest-modal-sticky`, `.rest-cd-num`, `.rest-cd-skip`, `.rest-gif-block`, `.rest-gif-toggle`, `.rest-gif-arrow`, `.rest-gif-img`, `.rest-suggestion`, `.rest-ex-name`: classi della vecchia schermata recupero, non più applicate al DOM. Codice innocuo (~50 righe CSS). Da rimuovere in cleanup separato dopo verifica produzione stabile.
+- Campo `ST.trainCountdown.gifOpen`: continua a essere settato da `startTrainingCountdown` ma non più letto. Innocuo.
+
+**Vincoli rispettati**:
+- ✅ NON toccata logica countdown/beep/endTime/tick.
+- ✅ NON toccato il logger né `getProgressionSuggestion` (riusata, non modificata).
+- ✅ NON creata schermata di esecuzione (riservata a BLOCCO 2B).
+- ✅ Immagini esercizi (`assets/exercises/`) non sostituite.
+- ✅ Funzionalità equivalente: loggare serie → recupero → fine → torna a sessione.
+- ✅ Mobile-first: schermata scrollabile, hero sticky in cima.
+
+**Sintassi**: validata con `new Function(...)` su script (835KB) → OK.
+
 ### 26 maggio 2026 (pomeriggio) — Restyling grafico modulo Training (BLOCCO 1) ✅
 
 Restyling **PURAMENTE estetico** delle 3 tab Training (Sessione · Programma · Progressione) per allinearle al design system già in uso su Home e Nutrition. **Zero modifiche** a logica JS, nomi funzione, comportamento, dati o chiamate Supabase. Solo sostituzioni di stringhe di colore in CSS rules e template literal.
