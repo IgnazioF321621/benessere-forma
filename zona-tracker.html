@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 14:47';
+const APP_VERSION = '2026.05.27 · 15:20';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3721,7 +3721,8 @@ const ST = {
   trainNotesLoaded: {},             // { [sessionId]: true } — anti-doppio-fetch sessione corrente
   editLogKey: null,
   editLogDraft: null,
-  aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
+  aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' } — PROSSIMA (output suggestProgressionAI)
+  aiSuggestionsLoading: {},         // { `${sessionId}_${exName}`: true } — flag in-flight per mostrare "calcolo…"
   aiCue: {},                        // { `${sessionId}_${exName}`: 'cue AI Coach' } - persistente in sessione
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
@@ -7929,64 +7930,62 @@ function getLastLoggedSetLabel(sessionId, exName){
 }
 
 // ── Suggerimento progressione (sync, legge dalla cache) ──────
+// FIX PROGRESSIONE (27 mag 2026) — Helper unificato per la riga "PROSSIMA".
+// Fonte UNICA di verità per: (a) .ex-suggestion nelle card esercizio, (b) nextHTML
+// nella schermata recupero. Garantisce che i due punti mostrino la stessa cosa.
+//
+// Priorità:
+//   1. AI suggerimento se presente (ST.aiSuggestions[key])
+//   2. "🎯 calcolo…" se AI in flight (ST.aiSuggestionsLoading[key])
+//   3. Fallback da getProgressionSuggestion (Inizia con… / Ultima volta…)
+//   4. Stringa vuota se davvero nulla
+function getProgressionLive(exName, sessionId){
+  const key = `${sessionId}_${exName}`;
+  const ai = ST.aiSuggestions && ST.aiSuggestions[key];
+  if(ai) return `🎯 ${ai}`;
+  if(ST.aiSuggestionsLoading && ST.aiSuggestionsLoading[key]) return '🎯 calcolo…';
+  // Fallback iniziale (solo se nessuna serie loggata oggi — vedi getProgressionSuggestion)
+  return getProgressionSuggestion(exName, sessionId) || '';
+}
+
+// FIX PROGRESSIONE (27 mag 2026) — Ridotta a SOLO fallback iniziale.
+// La logica "ripesca ultima serie loggata oggi e ristampa" è stata RIMOSSA perché
+// era una fotocopia di APPENA FATTA, non un suggerimento per la PROSSIMA serie.
+// Il vero suggerimento progressivo (serie-per-serie) viene da suggestProgressionAI
+// e finisce in ST.aiSuggestions. Questo helper resta SOLO per il primissimo render:
+// quando nessuna serie è stata loggata né in questa sessione né nello storico,
+// suggerisce un punto di partenza ragionevole.
 function getProgressionSuggestion(exName, sessionId){
   const ex = findExercise(exName, sessionId);
   if(!ex) return '';
-  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-
-  // 1. Cerca serie più recente di OGGI per questo esercizio nella sessione corrente
+  const isPullUp = isPullUpExercise(exName);
+  // Se c'è già una serie loggata oggi → niente fallback: la PROSSIMA è dominio
+  // di suggestProgressionAI (vedi getProgressionLive).
   const today = todayKey();
   const prefix = `${sessionId}_${exName}_`;
   const suffix = `_${today}`;
-  let bestSetNum = 0;
-  let bestKey = null;
-  Object.keys(ST.trainLoggedSets || {}).forEach(k => {
-    if(k.startsWith(prefix) && k.endsWith(suffix)){
-      // formato: sessionId_exName_setNum_YYYY-MM-DD
-      const middle = k.slice(prefix.length, k.length - suffix.length);
-      const setNum = parseInt(middle, 10);
-      if(!isNaN(setNum) && setNum > bestSetNum){
-        bestSetNum = setNum;
-        bestKey = k;
-      }
-    }
-  });
-
-  // BLOCCO 3 — Trazioni: il "carico" è il colore banda. Default suggerimento iniziale = Viola
-  // (banda più pesante = aiuto massimo = trazione più facile, da cui scalare verso Gialla).
-  const isPullUp = isPullUpExercise(exName);
-
-  if(bestKey){
-    const s = ST.trainLoggedSets[bestKey];
+  const anyLoggedToday = Object.keys(ST.trainLoggedSets || {}).some(k =>
+    k.startsWith(prefix) && k.endsWith(suffix)
+  );
+  if(anyLoggedToday) return '';
+  // Se c'è storico (ultima volta su un'altra data) → mostra come ripartenza
+  const last = ST.lastLoggedSets[exName];
+  if(last){
+    const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
     let resistTxt = isPullUp ? '' : 'corpo libero';
-    // Preferisci band_color se presente (popolato in cache da saveTrainingSet e hydrateTrainingSetsFromCloud)
-    const rawResist = (s.band_color && BAND_COLORS.includes(s.band_color)) ? s.band_color : s.resistance;
-    if(rawResist != null && String(rawResist).trim() !== ''){
-      const r = String(rawResist).trim();
+    const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
+    if(lastResist != null && String(lastResist).trim() !== ''){
+      const r = String(lastResist).trim();
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
-    const rirVal = (s.rir != null) ? s.rir : s.rir_actual;
-    const rirTxt = (rirVal != null) ? ` · RIR ${rirVal}` : '';
-    return `🎯 Serie ${bestSetNum}: ${s.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
+    return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
   }
-
-  // 2. Fallback: ultimo allenamento
-  const last = ST.lastLoggedSets[exName];
-  if(!last){
-    const m = String(ex.reps || '').match(/^(\d+)/);
-    const repsMin = m ? parseInt(m[1], 10) : 8;
-    if(isPullUp) return `💡 Inizia con ${repsMin} reps · banda Viola`;
-    return `💡 Inizia con ${repsMin} reps a 10 lbs`;
-  }
-  let resistTxt = isPullUp ? '' : 'corpo libero';
-  // Per trazioni: usa band_color se la riga DB ce l'ha (training_logs.band_color), altrimenti resistance legacy
-  const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
-  if(lastResist != null && String(lastResist).trim() !== ''){
-    const r = String(lastResist).trim();
-    resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
-  }
-  const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-  return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+  // Nessuna serie loggata + nessuno storico → punto di partenza generico
+  const m = String(ex.reps || '').match(/^(\d+)/);
+  const repsMin = m ? parseInt(m[1], 10) : 8;
+  if(isPullUp) return `💡 Inizia con ${repsMin} reps · banda Viola`;
+  return `💡 Inizia con ${repsMin} reps a 10 lbs`;
 }
 
 function renderCalendar(workouts, year, month){
@@ -8755,15 +8754,13 @@ async function loadTrainingAllCompleted(){
   }
 }
 
-async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance, rir, exData, sess}){
+async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor}){
+  const cacheKey = `${sessionId}_${exName}`;
   try {
     if(!ST.user || ST.user.id==='test-user-001') return;
     if(!sess || !exData) return;
     // Skip per Active Recovery (no progressione di carico)
     if(sess.type === 'Recupero') return;
-    // BLOCCO 3 — Skip suggerimento AI per trazioni: la "resistenza" è il colore banda, non lbs.
-    // Il coach generatore futuro gestirà la logica colore. Per ora niente prompt.
-    if(isPullUpExercise(exName)) return;
     // Parsing range reps: usa parseRepsRange (gestisce reps, secondi, per lato)
     const parsed = parseRepsRange(exData.reps);
     if(!parsed) return; // formato non gestito (es. "10 min"), skippa
@@ -8774,12 +8771,18 @@ async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance
     const unitLbl = isTimed ? 'sec' : 'reps';
     const stepUnit = isTimed ? 5 : 1; // step progressione: +5 sec o +1 rep
     const targetRIR = (sess.rir != null) ? sess.rir : 2;
-    const sessionType = sess.type; // 'Forza' | 'Ipertrofia'
-    const sessionLabel = `${sess.name} — ${sess.type}`; // es. "Upper A — Forza"
+    const sessionType = sess.type;
+    const sessionLabel = `${sess.name} — ${sess.type}`;
+    const nextSetNum = (Number(setNum) || 0) + 1; // numero della PROSSIMA serie
+    const isPullUp = isPullUpExercise(exName);
 
-    // Storico ultime 3 sessioni distinte (escluso oggi)
+    // Mark in-flight (per UI "calcolo…")
+    ST.aiSuggestionsLoading[cacheKey] = true;
+    if(ST.page === 'training') renderTraining();
+
+    // Storico ultime 3 sessioni distinte (escluso oggi). Carichiamo anche band_color per le trazioni.
     const { data: history } = await supa.from('training_logs')
-      .select('date, set_number, reps, resistance, rir_actual')
+      .select('date, set_number, reps, resistance, band_color, rir_actual')
       .eq('user_id', ST.user.id)
       .eq('exercise_name', exName)
       .order('date', {ascending:false})
@@ -8787,19 +8790,67 @@ async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance
     const byDate = {};
     (history||[]).forEach(r=>{ if(r.date===todayKey()) return; (byDate[r.date]=byDate[r.date]||[]).push(r); });
     const lastDates = Object.keys(byDate).sort().reverse().slice(0,3);
-    const historyText = lastDates.length
-      ? lastDates.map(d=>`${d}: ${byDate[d].sort((a,b)=>a.set_number-b.set_number).map(r=>`S${r.set_number} ${r.reps}r·${r.resistance||'?'}lbs·RIR${r.rir_actual??'?'}`).join(' / ')}`).join(' | ')
-      : '';
 
-    // Resistance può essere null/0 (corpo libero) o stringa numerica
-    const resistInt = (resistance == null || resistance === '') ? 0 : (parseInt(resistance, 10) || 0);
-    const resistDisplay = resistInt === 0 ? '0 (corpo libero)' : `${resistInt}`;
-    const rirActual = (rir == null) ? 'non riportato' : rir;
-    // Floor a 0 per il "-10 lbs" suggerito (non scendere sotto corpo libero)
-    const resistMinusTen = Math.max(0, resistInt - 10);
-    const resistPlusTen = Math.min(250, resistInt + 10);
+    let prompt;
+    if(isPullUp){
+      // Ramo TRAZIONI — la "resistenza" è il colore della BANDA di assistenza.
+      // BAND_COLORS = ['Gialla','Rossa','Nera','Viola']: indice 0 = più dura (meno aiuto),
+      // indice 3 = più facile (più aiuto). Progredire = scendere di indice verso Gialla.
+      const bandsList = BAND_COLORS.join(' → '); // "Gialla → Rossa → Nera → Viola"
+      const cur = (bandColor && BAND_COLORS.includes(bandColor)) ? bandColor : null;
+      const curIdx = cur ? BAND_COLORS.indexOf(cur) : -1;
+      const harder = (curIdx > 0) ? BAND_COLORS[curIdx-1] : null;
+      const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
+      const onYellowTop = (cur === 'Gialla');
+      const rirActual = (rir == null) ? 'non riportato' : rir;
+      const historyText = lastDates.length
+        ? lastDates.map(d => `${d}: ${byDate[d].sort((a,b)=>a.set_number-b.set_number).map(r=>`S${r.set_number} ${r.reps}r·${r.band_color||r.resistance||'?'}·RIR${r.rir_actual??'?'}`).join(' / ')}`).join(' | ')
+        : 'Nessuno storico disponibile';
+      prompt = `Sei un coach di forza per Ignazio (55 anni). Esercizio: TRAZIONI ALLA SBARRA con banda di assistenza (la banda AIUTA: più pesante = più aiuto = più facile).
 
-    const prompt = `Sei un coach di forza e ipertrofia. Ignazio ha 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allenamento con elastici a tubo.
+SCALA BANDE (dalla più DURA / meno aiuto, alla più FACILE / più aiuto): ${bandsList}
+- Gialla = banda più leggera = MENO aiuto = trazione PIÙ DURA
+- Viola = banda più pesante = PIÙ aiuto = trazione PIÙ FACILE
+- Progredire = scendere di un gradino verso la GIALLA (banda più dura)
+- Limite assoluto = già su Gialla al tetto reps con buon RIR → suggerisci "trazione libera senza banda"
+
+TIPO SESSIONE: ${sessionType} (${sessionLabel})
+RANGE REPS PRESCRITTO: ${repsMin}-${repsMax} reps${parsed.perLato?' per lato':''}
+RIR TARGET: ${targetRIR}
+
+SERIE APPENA COMPLETATA (#${setNum}):
+- Reps eseguite: ${reps}
+- Banda usata: ${cur || 'non specificata'}
+- RIR effettivo: ${rirActual}
+
+STORICO ULTIME 3 SESSIONI (esclusa oggi):
+${historyText}
+
+LOGICA PROGRESSIONE:
+- Tetto reps (${repsMax}) + RIR ≥ ${targetRIR} → ${onYellowTop ? 'GIÀ SU GIALLA AL TETTO → suggerisci TRAZIONE LIBERA senza banda' : `banda PIÙ DURA: ${harder || 'GIALLA'}, riparti da ${repsMin} reps`}
+- Dentro range + RIR = ${targetRIR} → stessa banda (${cur || 'attuale'}), +1 rep (max ${repsMax})
+- RIR > ${targetRIR} (facile) → stessa banda, alza reps verso ${repsMax}
+- RIR = 0 (cedimento) ma reps nel range → stessa banda, abbassa reps di 1
+- Sotto ${repsMin} reps → banda PIÙ FACILE: ${easier || 'Viola (max aiuto)'}
+
+FORMATO RISPOSTA: UNA frase breve, MAX 25 parole, in italiano. Inizia con "Serie ${nextSetNum}: " e finisci con una micro-motivazione di 3-4 parole (es. "spingi ancora 💪", "ottimo lavoro", "tieni il ritmo", "quasi al limite", "alza l'asticella"). Niente preamboli, niente spiegazioni lunghe, solo il consiglio operativo + motivazione finale.
+
+Esempi formato:
+- "Serie ${nextSetNum}: 6 reps con banda ${cur || 'Viola'}, RIR ${targetRIR} — tieni il ritmo 💪"
+- "Serie ${nextSetNum}: passa a banda ${harder || 'Gialla'}, riparti da ${repsMin} reps — spingi ancora 🔥"
+- "Serie ${nextSetNum}: trazione libera senza banda, ${repsMin}-${repsMax} reps — sei al top 🚀"`;
+    } else {
+      // Ramo ELASTICI A TUBO — resistenza numerica in libbre.
+      const resistInt = (resistance == null || resistance === '') ? 0 : (parseInt(resistance, 10) || 0);
+      const resistDisplay = resistInt === 0 ? '0 (corpo libero)' : `${resistInt}`;
+      const rirActual = (rir == null) ? 'non riportato' : rir;
+      const resistMinusTen = Math.max(0, resistInt - 10);
+      const resistPlusTen = Math.min(250, resistInt + 10);
+      const historyText = lastDates.length
+        ? lastDates.map(d=>`${d}: ${byDate[d].sort((a,b)=>a.set_number-b.set_number).map(r=>`S${r.set_number} ${r.reps}r·${r.resistance||'?'}lbs·RIR${r.rir_actual??'?'}`).join(' / ')}`).join(' | ')
+        : 'Nessuno storico disponibile';
+
+      prompt = `Sei un coach di forza e ipertrofia. Ignazio ha 55 anni, ex nuotatore/pallanuotista, lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allenamento con elastici a tubo.
 
 ESERCIZIO: ${exName}
 TIPO SESSIONE: ${sessionType} (${sessionLabel})
@@ -8812,31 +8863,38 @@ SERIE APPENA COMPLETATA (#${setNum}):
 - RIR effettivo: ${rirActual}
 
 STORICO ULTIME 3 SESSIONI (esclusa oggi):
-${historyText || 'Nessuno storico disponibile'}
+${historyText}
 
-VINCOLI RIGOROSI per il tuo suggerimento sulla prossima serie:
+VINCOLI RIGOROSI:
 
-1. RESISTENZE DISPONIBILI: SOLO multipli di 10 lbs (0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250). Combinazioni di elastici giallo (10), verde (20), rosso (30), blu (40), nero (50). MAI suggerire 12, 14, 25, 35, ecc. 0 lbs = corpo libero.
+1. RESISTENZE DISPONIBILI: SOLO multipli di 10 lbs (0, 10, 20, ... 250). 0 lbs = corpo libero. MAI suggerire valori non multipli di 10.
 
-2. ${isTimed ? 'TEMPO' : 'REPS'}: SEMPRE entro il range ${repsMin}-${repsMax} ${unitLbl}. MAI suggerire ${unitLbl} fuori da questo range.
+2. ${isTimed ? 'TEMPO' : 'REPS'}: SEMPRE entro il range ${repsMin}-${repsMax} ${unitLbl}.
 
-3. LOGICA DOPPIA PROGRESSIONE (unità: ${unitLbl}, step: ${stepUnit}${unitLbl === 'sec' ? ' sec' : ' rep'}):
-   - Se ${unitLbl} raggiunte = ${repsMax} (tetto) E RIR effettivo >= ${targetRIR}: suggerisci RESISTENZA +10 lbs (= ${resistPlusTen} lbs), ripartendo da ${repsMin} ${unitLbl}.
-   - Se ${unitLbl} dentro il range [${repsMin}-${repsMax}] E RIR effettivo = ${targetRIR}: suggerisci STESSA resistenza (${resistInt} lbs), prova ${unitLbl} + ${stepUnit} (mai oltre ${repsMax}).
-   - Se RIR effettivo > ${targetRIR} (troppo facile): suggerisci STESSA resistenza (${resistInt} lbs), alza ${unitLbl} verso ${repsMax}.
-   - Se RIR effettivo = 0 (cedimento): suggerisci RESISTENZA -10 lbs (= ${resistMinusTen} lbs)${resistInt === 0 ? ' — ATTENZIONE: già a corpo libero, suggerisci esercizio assistito o variante più facile' : ''}.
-   - Se ${unitLbl} eseguite < ${repsMin} (sotto range): suggerisci STESSA resistenza (${resistInt} lbs), focus arrivare a ${repsMin}.
+3. LOGICA DOPPIA PROGRESSIONE (step ${stepUnit}${unitLbl === 'sec' ? ' sec' : ' rep'}):
+   - ${unitLbl} = ${repsMax} (tetto) E RIR ≥ ${targetRIR} → +10 lbs (${resistPlusTen} lbs), riparti da ${repsMin} ${unitLbl}
+   - ${unitLbl} dentro range + RIR = ${targetRIR} → stessa resistenza (${resistInt} lbs), +${stepUnit} ${unitLbl}
+   - RIR > ${targetRIR} (facile) → stessa resistenza, alza ${unitLbl} verso ${repsMax}
+   - RIR = 0 (cedimento) ma ${unitLbl} nel range → stessa resistenza, abbassa ${unitLbl} di ${stepUnit}
+   - ${unitLbl} < ${repsMin} (sotto range) → -10 lbs (${resistMinusTen} lbs)${resistInt === 0 ? ' — ATTENZIONE: già a corpo libero, suggerisci variante più facile' : ''}
 
-FORMATO RISPOSTA: 1 frase breve max 25 parole. Esempi: "Prossima: ${Math.min(repsMax, (typeof reps === 'number' ? reps : repsMin) + stepUnit)} ${unitLbl} a ${resistInt} lbs, mantieni RIR ${targetRIR}." oppure "Tetto raggiunto: prossima ${repsMin} ${unitLbl} a ${resistPlusTen} lbs."
+FORMATO RISPOSTA: UNA frase breve, MAX 25 parole, in italiano. Inizia con "Serie ${nextSetNum}: " e finisci con una micro-motivazione di 3-4 parole (es. "spingi ancora 💪", "ottimo lavoro", "tieni il ritmo", "alza l'asticella 🔥"). Niente preamboli.
 
-NIENTE preamboli, niente spiegazioni lunghe, solo il consiglio operativo. Italiano.`;
+Esempi:
+- "Serie ${nextSetNum}: ${Math.min(repsMax, (Number(reps)||repsMin) + stepUnit)} ${unitLbl} a ${resistInt} lbs, RIR ${targetRIR} — tieni il ritmo 💪"
+- "Serie ${nextSetNum}: tetto raggiunto, sali a ${resistPlusTen} lbs e riparti da ${repsMin} ${unitLbl} — alza l'asticella 🔥"`;
+    }
 
-    const text = await callAI(prompt, 100);
-    const clean = (text||'').trim().replace(/^["'`]|["'`]$/g,'').replace(/\n+/g,' ').slice(0, 220);
-    if(!clean) return;
-    ST.aiSuggestions[`${sessionId}_${exName}`] = clean;
+    const text = await callAI(prompt, 120);
+    const clean = (text||'').trim().replace(/^["'`]|["'`]$/g,'').replace(/\n+/g,' ').slice(0, 240);
+    delete ST.aiSuggestionsLoading[cacheKey];
+    if(!clean){ if(ST.page === 'training') renderTraining(); return; }
+    ST.aiSuggestions[cacheKey] = clean;
     if(ST.page === 'training') renderTraining();
-  } catch(e){}
+  } catch(e){
+    delete ST.aiSuggestionsLoading[cacheKey];
+    if(ST.page === 'training') renderTraining();
+  }
 }
 
 async function completeSession(sessionId){
@@ -8930,10 +8988,11 @@ async function saveTrainingSet(){
   startTrainingCountdown(restSec, form.exName, form.sessionId);
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
-  // Suggerimento progressione AI (fail silenzioso)
+  // Suggerimento progressione AI (fail silenzioso) — per trazioni passa bandColor (banda usata)
   suggestProgressionAI({
     sessionId: form.sessionId, exName: form.exName, setNum: form.setNum,
     reps, resistance, rir, exData, sess: sessObj,
+    bandColor: bandColor, // null per esercizi non-trazione
   });
   // Auto-completion: se tutte le serie di tutti gli esercizi sono loggate, salva workout
   if(sessExercises.length){
@@ -9652,7 +9711,9 @@ function renderTraining(){
             </div>
           </div>` : '';
         const restLabel = restSecToText(getRestSec(sel, e));
-        const suggestion = getProgressionSuggestion(e.name, sel);
+        // FIX PROGRESSIONE (27 mag 2026) — Fonte unica: getProgressionLive
+        // (AI se presente, "calcolo…" se in flight, fallback iniziale altrimenti).
+        const suggestion = getProgressionLive(e.name, sel);
         const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
         // GRAFICA L2 (27 mag 2026) — Restyling card allineato al mockup approvato.
         // Mantiene tutta la logica (logger, ✏️ edit, openExerciseAI su header, +S→exec,
@@ -9705,7 +9766,6 @@ function renderTraining(){
                   : ''}
             </div>
             ${_renderTrainNoteBlock(e.name)}
-            ${ST.aiSuggestions[`${sel}_${e.name}`] ? `<div style="margin-top:6px;font-size:11px;color:#2A7A6F;font-family:var(--font-sans);font-style:italic;line-height:1.4;display:flex;align-items:flex-start;gap:4px;"><span style="flex-shrink:0;">🤖</span><span>${ST.aiSuggestions[`${sel}_${e.name}`]}</span></div>` : ''}
             ${logForm}
           </div>`;
       }).join('');
@@ -10334,11 +10394,11 @@ function renderTraining(){
         ? `<span class="rest-card-value mono">${esc(lastSet)}</span>`
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
-      // PROSSIMA — riusa getProgressionSuggestion (la riga promemoria della tab Sessione).
-      // FIX 2 (26 mag sera): aggiunto class "mono" per uniformare con APPENA FATTA.
-      const sugg = (typeof getProgressionSuggestion === 'function') ? getProgressionSuggestion(cd.exName, cd.sessionId) : '';
+      // PROSSIMA — FIX PROGRESSIONE (27 mag 2026): stessa fonte della card sessione
+      // (getProgressionLive: AI se presente, "calcolo…" se in flight, fallback altrimenti).
+      const sugg = (typeof getProgressionLive === 'function') ? getProgressionLive(cd.exName, cd.sessionId) : '';
       const nextHTML = sugg
-        ? `<span class="rest-card-value mono">${sugg}</span>`
+        ? `<span class="rest-card-value mono">${esc(sugg)}</span>`
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
       // GIF: SEMPRE VISIBILE accanto al countdown (no più toggle). Placeholder se manca.
