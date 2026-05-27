@@ -3530,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 08:04';
+const APP_VERSION = '2026.05.27 · 08:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3637,7 +3637,8 @@ const ST = {
   trainLogBandColor: null,          // BLOCCO 3 — colore banda corrente nel logger trazioni (es. 'Viola')
   // BLOCCO 4 — Note esercizio/giorno (training_notes)
   trainNotes: {},                   // { [exName]: { id, note, updated_at } } — nota di OGGI per esercizio
-  trainNotesHistory: {},            // { [exName]: [{ id, date, note }, ...] } — storico note passate (lazy)
+  trainNoteHistoryCount: {},        // { [exName]: N } — conteggio note passate per esercizio (batch all'apertura sessione)
+  trainNotesHistory: {},            // { [exName]: [{ id, date, note }, ...] } — storico note passate (lazy, con testo)
   trainNoteEditing: null,           // exName dell'esercizio attualmente in editing (null se nessuno)
   trainNoteDraft: '',               // testo correntemente in editing
   trainNoteSaving: false,           // flag durante upsert
@@ -7575,7 +7576,8 @@ async function loadLastLoggedSets(sessionId){
 const TRAINING_NOTE_MAX_LEN = 500; // cap morbido (textarea libera, ma evita testi mostruosi)
 
 // Carica le note di OGGI per TUTTI gli esercizi della sessione in un solo round-trip.
-// Chiamata da openTrainingSession.
+// Chiamata da openTrainingSession. Carica anche il CONTEGGIO delle note passate per esercizio
+// (FIX 1 del 27 mag 2026): seconda query leggera che proietta solo exercise_name → count client-side.
 async function loadTodayNotes(sessionId){
   if(!ST.user || ST.user.id==='test-user-001') return;
   if(ST.trainNotesLoaded[sessionId]) return; // anti-doppio-fetch nella stessa sessione
@@ -7584,19 +7586,39 @@ async function loadTodayNotes(sessionId){
   try {
     const exNames = sess.exercises.map(e => e.name);
     const today = todayKey();
-    const { data, error } = await supa.from('training_notes')
+    // Query 1: note di OGGI con testo completo (popola ST.trainNotes)
+    const todayP = supa.from('training_notes')
       .select('id, exercise_name, note, updated_at')
       .eq('user_id', ST.user.id)
       .eq('date', today)
       .in('exercise_name', exNames);
-    if(error){ console.warn('loadTodayNotes:', error.message); return; }
-    (data || []).forEach(row => {
+    // Query 2: solo exercise_name di tutte le note PASSATE per gli esercizi della sessione
+    // (proiezione leggera: niente testo, niente date — solo conteggio client-side).
+    const pastP = supa.from('training_notes')
+      .select('exercise_name')
+      .eq('user_id', ST.user.id)
+      .lt('date', today)
+      .in('exercise_name', exNames);
+    const [todayRes, pastRes] = await Promise.all([todayP, pastP]);
+    if(todayRes.error){ console.warn('loadTodayNotes:', todayRes.error.message); return; }
+    (todayRes.data || []).forEach(row => {
       ST.trainNotes[row.exercise_name] = {
         id: row.id,
         note: row.note,
         updated_at: row.updated_at,
       };
     });
+    // Conteggio note passate per esercizio
+    if(pastRes.error){
+      console.warn('loadTodayNotes past count:', pastRes.error.message);
+    } else {
+      const counts = {};
+      (pastRes.data || []).forEach(row => {
+        counts[row.exercise_name] = (counts[row.exercise_name] || 0) + 1;
+      });
+      // Inizializza a 0 per gli esercizi senza note passate (così il render sa che il count è noto)
+      exNames.forEach(n => { ST.trainNoteHistoryCount[n] = counts[n] || 0; });
+    }
     ST.trainNotesLoaded[sessionId] = true;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
   } catch(e){
@@ -7622,6 +7644,8 @@ async function loadNoteHistory(exName){
       .limit(50); // limite di safety: 50 note passate = oltre un anno se uno scrive ogni settimana
     if(error){ console.warn('loadNoteHistory:', error.message); return; }
     ST.trainNotesHistory[exName] = data || [];
+    // FIX 1 — riallinea il count se serve (es. se nel frattempo qualcuno ha inserito da SQL)
+    ST.trainNoteHistoryCount[exName] = (data || []).length;
     if(ST.page === 'training') renderTraining();
   } catch(e){
     console.warn('loadNoteHistory exception:', e?.message);
@@ -7664,8 +7688,16 @@ function cancelNoteEdit(){
 }
 
 // Aggiorna il draft mentre l'utente scrive (oninput).
+// FIX 3 (27 mag 2026): aggiorna anche il contatore "N / 500" via DOM surgical
+// (niente renderTraining() — preserva focus + caret nella textarea).
 function updateNoteDraft(value){
-  ST.trainNoteDraft = (value || '').slice(0, TRAINING_NOTE_MAX_LEN);
+  const v = (value || '').slice(0, TRAINING_NOTE_MAX_LEN);
+  ST.trainNoteDraft = v;
+  if(ST.trainNoteEditing){
+    const safeId = ST.trainNoteEditing.replace(/[^a-zA-Z0-9]/g,'_');
+    const counter = document.getElementById('note-counter-'+safeId);
+    if(counter) counter.textContent = `${v.length} / ${TRAINING_NOTE_MAX_LEN}`;
+  }
 }
 
 // Salva la nota: upsert su training_notes (vincolo UNIQUE user_id+exercise_name+date).
@@ -8851,20 +8883,25 @@ function _renderTrainNoteBlock(exName){
   const editing = ST.trainNoteEditing === exName;
   const historyOpen = !!ST.trainNoteHistoryOpen[exName];
   const historyArr = ST.trainNotesHistory[exName];
-  const historyCount = Array.isArray(historyArr) ? historyArr.length : null; // null = non ancora caricato
   const saving = ST.trainNoteSaving;
 
-  // Link "Note passate (N) ›" — visibile solo se conosciamo il count e N > 0.
-  // Se il count non è noto (storico mai caricato), mostriamo comunque il link generico
-  // in modo che il primo tap faccia partire il lazy load.
-  const historyLinkText = (historyCount === null)
-    ? 'Note passate ›'
-    : (historyCount > 0 ? `Note passate (${historyCount}) ${historyOpen?'▾':'›'}` : '');
-  const historyLink = historyLinkText
-    ? `<button type="button" onclick="event.stopPropagation();toggleNoteHistory('${safeName}');" style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:11px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em;padding:0;font-weight:600;">${historyLinkText}</button>`
+  // FIX 1+2 (27 mag 2026) — Il link "Note passate (N) ›" appare SOLO se sappiamo
+  // con certezza che N > 0. Source of truth = ST.trainNoteHistoryCount[exName] popolato
+  // in batch da loadTodayNotes. Se il count non è ancora noto (es. fetch in corso o
+  // utente test), il link resta nascosto: meglio assente che fuorviante.
+  // Quando lo storico è già stato caricato (Array.isArray) usiamo la lunghezza reale
+  // come sorgente più aggiornata.
+  let historyCount = null;
+  if(Array.isArray(historyArr)) historyCount = historyArr.length;
+  else if(typeof ST.trainNoteHistoryCount[exName] === 'number') historyCount = ST.trainNoteHistoryCount[exName];
+
+  const historyLink = (historyCount && historyCount > 0)
+    ? `<button type="button" onclick="event.stopPropagation();toggleNoteHistory('${safeName}');" style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:11px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em;padding:0;font-weight:600;">Note passate (${historyCount}) ${historyOpen?'▾':'›'}</button>`
     : '';
 
-  // Pila storico (visibile solo se aperto e caricato)
+  // Pila storico (visibile solo se aperto). Il link toggle compare solo con count>0,
+  // quindi qui non gestiamo più il caso "0 note" (impossibile via UI). Resta solo
+  // "caricamento" come fallback durante lazy fetch.
   const historyPile = (historyOpen && Array.isArray(historyArr) && historyArr.length > 0)
     ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);">
         <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px;">Note passate</div>
@@ -8875,16 +8912,15 @@ function _renderTrainNoteBlock(exName){
           </div>
         `).join('')}
       </div>`
-    : (historyOpen && Array.isArray(historyArr) && historyArr.length === 0)
-      ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);font-size:11px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.12em;text-align:center;">Nessuna nota passata</div>`
-      : (historyOpen && historyCount === null)
-        ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);font-size:11px;font-family:var(--font-mono);color:var(--t3);text-align:center;">Caricamento…</div>`
-        : '';
+    : (historyOpen && !Array.isArray(historyArr))
+      ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);font-size:11px;font-family:var(--font-mono);color:var(--t3);text-align:center;">Caricamento…</div>`
+      : '';
 
   // Stato EDITING
   if(editing){
     const draft = String(ST.trainNoteDraft || '');
-    const remaining = TRAINING_NOTE_MAX_LEN - draft.length;
+    // FIX 3 (27 mag 2026) — contatore dinamico "N / 500" aggiornato via DOM surgical
+    // su input (evita re-render globale che perderebbe focus/caret nella textarea).
     return `
       <div style="margin-top:10px;padding:10px;background:var(--s1);border-radius:8px;border:1px solid var(--acc-lt);">
         <div style="font-size:10px;font-family:var(--font-mono);color:var(--acc);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px;">● Nota di oggi</div>
@@ -8894,7 +8930,7 @@ function _renderTrainNoteBlock(exName){
           maxlength="${TRAINING_NOTE_MAX_LEN}"
           style="width:100%;min-height:80px;padding:8px;border:1.5px solid var(--acc);border-radius:6px;font-size:14px;font-family:var(--font-sans);line-height:1.4;resize:vertical;box-sizing:border-box;background:#fff;color:var(--t1);">${esc(draft)}</textarea>
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;">
-          <span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);">${remaining} caratteri</span>
+          <span id="note-counter-${safeId}" style="font-size:10px;font-family:var(--font-mono);color:var(--t3);">${draft.length} / ${TRAINING_NOTE_MAX_LEN}</span>
           <div style="display:flex;gap:6px;">
             <button onclick="event.stopPropagation();cancelNoteEdit();"
               style="padding:6px 12px;background:#fff;color:var(--t2);border:1px solid var(--s2);border-radius:6px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
@@ -8924,13 +8960,14 @@ function _renderTrainNoteBlock(exName){
       </div>`;
   }
 
-  // Stato VUOTO (nessuna nota di oggi)
+  // Stato VUOTO (nessuna nota di oggi) — FIX 3 (27 mag 2026): badge OPZIONALE accanto al CTA
   return `
     <div style="margin-top:10px;padding:8px 10px;background:var(--s1);border-radius:8px;border:1px dashed var(--s2);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <button onclick="event.stopPropagation();openNoteEditor('${safeName}');"
-          style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:12px;font-family:var(--font-sans);font-weight:600;padding:4px 0;text-align:left;flex:1;">
-          <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-right:6px;">●</span>+ Aggiungi nota
+          style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:12px;font-family:var(--font-sans);font-weight:600;padding:4px 0;text-align:left;flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="display:inline-flex;align-items:center;"><span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-right:6px;">●</span>+ Aggiungi nota</span>
+          <span style="font-family:var(--font-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);font-weight:500;">Opzionale</span>
         </button>
         ${historyLink}
       </div>
