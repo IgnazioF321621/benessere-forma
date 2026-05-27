@@ -3530,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 08:27';
+const APP_VERSION = '2026.05.27 · 10:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3607,6 +3607,10 @@ const ST = {
     { remaining:60,  total:60,  running:false },
   ],
   trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
+  // GRAFICA L1 — Cronometro TEMPO WORKOUT per sessione del giorno. Persistito su
+  // localStorage zt_train_work_<YYYY-MM-DD>. Struttura: { [sessionId]: { totalSec, execStartedAt|null } }
+  // totalSec = secondi cumulati delle serie completate; execStartedAt = ms al kickoff serie in corso.
+  trainWorkTime: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_work_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
   trainProgMetric: 'peso',          // 'peso' (default) | 'reps' | 'volume' | 'tempo' (solo iso temporali)
@@ -8975,6 +8979,94 @@ function _renderTrainNoteBlock(exName){
     </div>`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// GRAFICA L1 (27 mag 2026) — Hero sessione + Cronometro TEMPO WORKOUT
+// Cronometra il tempo effettivo passato in esecuzione delle serie (escluso
+// recupero e serie annullate). Persistito su localStorage per sopravvivere a
+// chiusura/riapertura PWA. Aggiornamento LIVE al secondo via setInterval, con
+// DOM surgical update su #train-work-display (niente re-render).
+// ═══════════════════════════════════════════════════════════
+
+// Interval ID module-scope (fuori da ST per non sporcare la cache serializzata)
+let _trainWorkTickInterval = null;
+
+function _workTimePersist(){
+  try {
+    localStorage.setItem('zt_train_work_'+todayKey(), JSON.stringify(ST.trainWorkTime));
+  } catch(e){}
+}
+
+function _workTimeEntry(sessionId){
+  if(!ST.trainWorkTime[sessionId]) ST.trainWorkTime[sessionId] = { totalSec: 0, execStartedAt: null };
+  return ST.trainWorkTime[sessionId];
+}
+
+// Secondi cumulati per la sessione + eventuale delta della serie in corso.
+function workTimeCurrent(sessionId){
+  const e = ST.trainWorkTime[sessionId];
+  if(!e) return 0;
+  const base = Number(e.totalSec) || 0;
+  if(e.execStartedAt){
+    const delta = Math.max(0, Math.floor((Date.now() - e.execStartedAt) / 1000));
+    return base + delta;
+  }
+  return base;
+}
+
+// Formato MM'SS'' (es. 22'14''). Sopra 1h: H:MM'SS'' (es. 1:05'07'').
+function workTimeFormat(sec){
+  const s = Math.max(0, Math.floor(Number(sec) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  if(h > 0) return `${h}:${pad(m)}'${pad(ss)}''`;
+  return `${pad(m)}'${pad(ss)}''`;
+}
+
+// Marca l'inizio della serie in esecuzione. Se per qualche motivo c'è già un
+// execStartedAt vecchio (es. crash dell'app durante una serie), lo sostituiamo:
+// abbiamo già perso quel tempo, è più sicuro ripartire da zero.
+function workTimeStartExec(sessionId){
+  const e = _workTimeEntry(sessionId);
+  e.execStartedAt = Date.now();
+  _workTimePersist();
+}
+
+// Ferma la serie. commit=true → somma il delta a totalSec (serie completata).
+// commit=false → scarta il delta (serie annullata via "Indietro").
+function workTimeStopExec(sessionId, commit){
+  const e = _workTimeEntry(sessionId);
+  if(e.execStartedAt){
+    if(commit){
+      const delta = Math.max(0, Math.floor((Date.now() - e.execStartedAt) / 1000));
+      e.totalSec = (Number(e.totalSec) || 0) + delta;
+    }
+    e.execStartedAt = null;
+    _workTimePersist();
+  }
+}
+
+// Aggiornamento live del display via DOM surgical (no re-render → no flicker)
+function _workTimeUpdateDisplay(sessionId){
+  const el = document.getElementById('train-work-display');
+  if(el) el.textContent = workTimeFormat(workTimeCurrent(sessionId));
+}
+
+// Avvia il tick 1s solo quando una serie è in esecuzione.
+function workTimeStartTick(sessionId){
+  if(_trainWorkTickInterval) return; // già attivo
+  _workTimeUpdateDisplay(sessionId); // sync iniziale
+  _trainWorkTickInterval = setInterval(()=> _workTimeUpdateDisplay(sessionId), 1000);
+}
+
+function workTimeStopTick(){
+  if(_trainWorkTickInterval){
+    clearInterval(_trainWorkTickInterval);
+    _trainWorkTickInterval = null;
+  }
+}
+
 // ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -9466,6 +9558,46 @@ function renderTraining(){
       const audioBanner = ST.audioBlocked
         ? `<div onclick="dismissAudioBanner();" style="background:#FFF7E6;border:1px solid #F0B85A;color:#7A5500;padding:8px 12px;border-radius:8px;font-size:12px;font-family:var(--font-sans);font-weight:600;margin-bottom:12px;cursor:pointer;text-align:center;">🔔 Tocca per attivare l'audio</div>`
         : '';
+
+      // GRAFICA L1 (27 mag 2026) — Hero sessione + cronometro TEMPO WORKOUT.
+      // Solo per sessioni NON-recovery (le recovery G3/G6 non hanno serie loggate
+      // né openTrainExec, quindi tengono l'header minimale legacy).
+      let heroBlock;
+      if(isRecoverySession){
+        heroBlock = `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+            <div style="font-size:22px;font-weight:800;color:var(--t1);font-family:var(--font-sans);">${s.name}</div>
+            ${typeBadge}
+          </div>`;
+      } else {
+        const totalSets = (s.exercises || []).reduce((acc, ex) => acc + (Number(ex.sets) || 0), 0);
+        const doneSets = Object.keys(ST.trainLoggedSets).filter(k =>
+          k.startsWith(sel + '_') && k.endsWith('_' + today)
+        ).length;
+        const pctSets = totalSets > 0 ? Math.min(100, Math.round((doneSets / totalSets) * 100)) : 0;
+        const workSecInit = workTimeCurrent(sel);
+        heroBlock = `
+          <div class="train-hero" style="background:var(--s1);border-radius:14px;padding:16px;margin-bottom:18px;border:1px solid var(--s2);">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+              <h2 style="margin:0;font-size:24px;font-weight:800;color:var(--t1);font-family:var(--font-sans);letter-spacing:-.01em;">${s.name}</h2>
+              ${typeBadge}
+            </div>
+            <div style="margin-bottom:14px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                <span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.14em;font-weight:600;">Serie</span>
+                <span style="font-family:var(--font-mono);font-size:14px;color:var(--t1);font-weight:700;font-variant-numeric:tabular-nums;">${doneSets}<span style="color:var(--t3);font-weight:500;">/${totalSets}</span></span>
+              </div>
+              <div style="height:6px;background:var(--s2);border-radius:999px;overflow:hidden;">
+                <div style="width:${pctSets}%;height:100%;background:var(--acc);border-radius:999px;transition:width .35s ease;"></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding-top:12px;border-top:1px dashed var(--s2);">
+              <span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.14em;font-weight:600;">Tempo workout</span>
+              <span id="train-work-display" style="font-family:var(--font-mono);font-size:22px;color:var(--acc);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;">${workTimeFormat(workSecInit)}</span>
+            </div>
+          </div>`;
+      }
+
       body = `
         <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));">
           <button onclick="closeTrainingSession();"
@@ -9474,10 +9606,7 @@ function renderTraining(){
             Sessioni
           </button>
           ${audioBanner}
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-            <div style="font-size:22px;font-weight:800;color:var(--t1);font-family:var(--font-sans);">${s.name}</div>
-            ${typeBadge}
-          </div>
+          ${heroBlock}
 
           ${activationSection}
 
@@ -17312,6 +17441,18 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && ST.trainCountdown){
     tickCountdown();
   }
+  // GRAFICA L1 — Cronometro TEMPO WORKOUT: al rientro foreground risincronizza il display
+  // (iOS sospende setInterval in background; execStartedAt è in localStorage quindi il
+  // calcolo da Date.now() resta corretto). Ri-arma il tick se siamo in esecuzione.
+  if(document.visibilityState === 'visible' && ST.trainSession){
+    const wt = ST.trainWorkTime[ST.trainSession];
+    if(wt){
+      _workTimeUpdateDisplay(ST.trainSession);
+      if(wt.execStartedAt && !_trainWorkTickInterval){
+        workTimeStartTick(ST.trainSession);
+      }
+    }
+  }
 });
 
 // Sblocco audio one-shot al primo gesto utente (iOS richiede gesture per AudioContext)
@@ -17349,8 +17490,21 @@ function openTrainingSession(sid){
   loadLastLoggedSets(sid); // popola cache + ricarica render quando pronto
   // BLOCCO 4 — pre-fetch note di oggi per gli esercizi della sessione
   loadTodayNotes(sid);
+  // GRAFICA L1 — Se la sessione di oggi ha una serie in esecuzione persistita
+  // (PWA chiusa durante una serie e riaperta dopo), riarma il tick live.
+  const wt = ST.trainWorkTime[sid];
+  if(wt && wt.execStartedAt){
+    workTimeStartTick(sid);
+  }
 }
 function closeTrainingSession(){
+  // GRAFICA L1 — Se uscita con serie in esecuzione: scarta il delta (come trainExecBack)
+  // e ferma il tick. Il totalSec accumulato dalle serie completate resta in localStorage
+  // e ricompare se l'utente riapre la stessa sessione oggi.
+  if(ST.trainExecOpen && ST.trainExecOpen.sessionId){
+    workTimeStopExec(ST.trainExecOpen.sessionId, false);
+  }
+  workTimeStopTick();
   ST.trainSession = null;
   ST.trainActivation = [false,false,false];
   ST.trainLogOpen = null;
@@ -17404,6 +17558,9 @@ function openTrainExec(sessionId, exName, setNum){
   _unlockAudio();
   // Pre-fetch GIF esecuzione (stessa pipeline del recupero: cached_url Worker).
   ensureRestGif(exName);
+  // GRAFICA L1 — Avvia cronometro TEMPO WORKOUT per questa serie
+  workTimeStartExec(sessionId);
+  workTimeStartTick(sessionId);
   renderTraining();
 }
 
@@ -17413,6 +17570,9 @@ function openTrainExec(sessionId, exName, setNum){
 function trainExecFinishSet(){
   const e = ST.trainExecOpen;
   if(!e) return;
+  // GRAFICA L1 — Ferma cronometro e ACCUMULA il delta (serie completata)
+  workTimeStopExec(e.sessionId, true);
+  workTimeStopTick();
   ST.trainExecOpen = null;
   openLogModal(e.sessionId, e.exName, e.setNum);
 }
@@ -17420,6 +17580,10 @@ function trainExecFinishSet(){
 // "Indietro" → chiude l'esecuzione senza loggare niente, senza aprire il
 // logger. Nessun dato toccato. Caso: ho premuto +S per sbaglio.
 function trainExecBack(){
+  const e = ST.trainExecOpen;
+  // GRAFICA L1 — Ferma cronometro SCARTANDO il delta (serie annullata)
+  if(e) workTimeStopExec(e.sessionId, false);
+  workTimeStopTick();
   ST.trainExecOpen = null;
   renderTraining();
 }
