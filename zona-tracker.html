@@ -3530,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 10:45';
+const APP_VERSION = '2026.05.27 · 11:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8990,6 +8990,13 @@ function _renderTrainNoteBlock(exName){
 // Interval ID module-scope (fuori da ST per non sporcare la cache serializzata)
 let _trainWorkTickInterval = null;
 
+// CAP CRONOMETRO (27 mag 2026) — Soglia "serie dimenticata".
+// Se una serie singola dura > 45 min (telefono in tasca a lungo), non accumuliamo
+// il tempo reale ma una stima: media delle serie valide oggi, o 2 min se non
+// abbiamo ancora osservazioni valide.
+const WORK_SET_CAP_SEC = 2700;     // 45 minuti — sopra questo delta la serie è "dimenticata"
+const WORK_SET_DEFAULT_SEC = 120;  // 2 minuti — fallback se nessuna serie valida ancora
+
 function _workTimePersist(){
   try {
     localStorage.setItem('zt_train_work_'+todayKey(), JSON.stringify(ST.trainWorkTime));
@@ -8997,11 +9004,20 @@ function _workTimePersist(){
 }
 
 function _workTimeEntry(sessionId){
-  if(!ST.trainWorkTime[sessionId]) ST.trainWorkTime[sessionId] = { totalSec: 0, execStartedAt: null };
+  if(!ST.trainWorkTime[sessionId]){
+    ST.trainWorkTime[sessionId] = { totalSec: 0, execStartedAt: null, validDurations: [] };
+  } else {
+    // Retro-compat: vecchi record (pre-cap) in localStorage senza validDurations.
+    if(!Array.isArray(ST.trainWorkTime[sessionId].validDurations)){
+      ST.trainWorkTime[sessionId].validDurations = [];
+    }
+  }
   return ST.trainWorkTime[sessionId];
 }
 
 // Secondi cumulati per la sessione + eventuale delta della serie in corso.
+// Il display LIVE durante una serie attiva mostra il delta reale (anche oltre il CAP).
+// Il cap entra in gioco SOLO alla chiusura della serie ("Fine serie"), come da specifica.
 function workTimeCurrent(sessionId){
   const e = ST.trainWorkTime[sessionId];
   if(!e) return 0;
@@ -9033,14 +9049,42 @@ function workTimeStartExec(sessionId){
   _workTimePersist();
 }
 
+// Calcola la stima per una serie "dimenticata" (delta > CAP).
+// Se ci sono già serie valide oggi → media delle loro durate.
+// Altrimenti → default 120 sec.
+function _workTimeEstimateForCappedSet(entry){
+  const arr = Array.isArray(entry.validDurations) ? entry.validDurations : [];
+  if(arr.length === 0) return WORK_SET_DEFAULT_SEC;
+  const sum = arr.reduce((a, n) => a + (Number(n) || 0), 0);
+  return Math.max(1, Math.round(sum / arr.length));
+}
+
 // Ferma la serie. commit=true → somma il delta a totalSec (serie completata).
 // commit=false → scarta il delta (serie annullata via "Indietro").
+//
+// CAP "serie dimenticata":
+//  - delta ≤ CAP (45 min) → accumula il delta reale + lo aggiunge a validDurations
+//    (osservazione utile per future medie).
+//  - delta > CAP           → accumula una STIMA (media valide oggi o default 120s).
+//    La stima NON va in validDurations: è una guess, non un'osservazione.
 function workTimeStopExec(sessionId, commit){
   const e = _workTimeEntry(sessionId);
   if(e.execStartedAt){
     if(commit){
       const delta = Math.max(0, Math.floor((Date.now() - e.execStartedAt) / 1000));
-      e.totalSec = (Number(e.totalSec) || 0) + delta;
+      if(delta > WORK_SET_CAP_SEC){
+        // Serie dimenticata: rimpiazza il delta reale con una stima sensata
+        const est = _workTimeEstimateForCappedSet(e);
+        e.totalSec = (Number(e.totalSec) || 0) + est;
+        if(typeof console !== 'undefined') console.info(`[train-work] capped set: delta=${delta}s → estimate=${est}s (session=${sessionId})`);
+      } else {
+        // Serie valida: accumula tempo reale + registra durata per media future
+        e.totalSec = (Number(e.totalSec) || 0) + delta;
+        if(!Array.isArray(e.validDurations)) e.validDurations = [];
+        e.validDurations.push(delta);
+        // Safety cap sulla dimensione array (oltre 200 serie/giorno = bug a monte)
+        if(e.validDurations.length > 200) e.validDurations = e.validDurations.slice(-200);
+      }
     }
     e.execStartedAt = null;
     _workTimePersist();
