@@ -2131,6 +2131,86 @@ Nessun utente resta mai senza allenamento.
 1. **Coach generatore**: logica che legge onboarding (attrezzatura/giorni/durata/esperienza/obiettivo/limitazioni) + pesca dal catalogo `esercizi_catalog` + applica le regole (cautele, RIR per livello, continuità intra-blocco, varietà tra blocchi). Decisioni di logica PRIMA del codice (stessa metodologia design-prima di Nutrition).
 2. **Salvataggio schede per-utente in DB** + lettura dal modulo Training con **fallback** su `TRAINING_SESSIONS` (rete di sicurezza).
 
+### PARTE 5 — COACH GENERATORE: DECISIONI DI LOGICA COMPLETE (27 mag sera)
+*Sessione dedicata: chiuso TUTTE le decisioni di logica del generatore prima di scrivere codice. La fase decisioni è chiusa. Mancano da fare: (1) SQL tabella `schede_utente` su Supabase, (2) brief tecnico Claude Code del generatore vero.*
+
+**Catalogo — aggiornamenti**
+- Aggiunta colonna `uso` (text) a `esercizi_catalog`: valori ammessi `principale` / `finisher` / `recupero` (separati da `;` se più di uno). Indica per quale tipo di sessione l'esercizio è adatto. Migrazione: `alter table public.esercizi_catalog add column if not exists uso text;` (già applicata).
+- Catalogo ampliato da 30 a **33 esercizi**: aggiunti Mountain climber controllato (`EX031`, finisher), Hollow hold (`EX032`, finisher), Step-up al ritmo (`EX033`, `finisher;recupero`). Sync via menu "Sync Esercizi" sul Google Sheet (Apps Script v3 con `onOpen()` che crea menu nativo nel foglio, popup risultato invece di log).
+- Etichettatura attuale: 27 esercizi `principale`, 12 con tag `finisher`, 6 con tag `recupero` (alcuni multi-uso).
+
+**Split (deciso dai giorni di allenamento dichiarati in M1)**
+- **2 giorni** → Full Body × 2
+- **3 giorni** → Full Body × 3 (se livello principiante) · Upper / Lower / Full (se intermedio o avanzato)
+- **4 giorni** → Upper / Lower × 2
+- **5 giorni** → Push / Pull / Legs / Upper / Lower
+
+**Parametri training (decisi da obiettivo × esperienza, NON solo obiettivo)**
+4 profili base, modulati dall'esperienza per evitare regressioni su utenti avanzati:
+- **Forza** (`forza_performance`): reps 4-6, RIR 2-3, recupero 3 min
+- **Ipertrofia** (`ipertrofia`): reps 8-12, RIR 1-2, recupero 90-120s
+- **Ricomp / metabolico** (`dimagrimento`, `ricomposizione`): reps 10-15 per principianti, range più bassi per intermedi/avanzati, RIR 1, recupero 60-90s
+- **Salute** (`longevita`, `mantenimento`): reps 6-10, RIR 2, recupero 90-120s
+- **RIR attivo SOLO per intermedio/avanzato**. Principianti: schede SENZA RIR (già deciso stamattina, qui consolidato).
+
+**Tempo & numero esercizi**
+- Il numero esercizi NON è fisso per durata: viene calcolato dal coach come `serie × reps × recupero` finché copre il tempo dichiarato (30/45/60 min). Range orientativo: 2-4 a 30 min, 3-5 a 45 min, 4-6 a 60 min — varia per profilo (Forza ha recuperi lunghi → meno esercizi).
+- **Recupero attivo opzionale**: nuovo step in onboarding M1 da aggiungere — chiede 0/1/2 giorni di recupero attivo aggiuntivi rispetto ai giorni di allenamento dichiarati. Genera sessioni con `uso=recupero` dal catalogo.
+- **Finisher metabolico Tabata**: ~5 min in coda alla sessione (durata totale = dichiarata + 5), SOLO per obiettivo `dimagrimento` / `ricomposizione`. Pesca esercizi con `uso` che contiene `finisher`. Tutti i finisher rispettano le regole già decise: basso impatto articolare, no salti, no flessione lombare ripetuta (nessun crunch).
+
+**Selezione esercizi (opzione C: equilibrio garantito + libertà di enfasi)**
+Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
+- **Full Body**: 1 spinta + 1 tirata + 1 dominante ginocchia + 1 dominante anca + 1 core
+- **Upper**: 1 spinta orizz + 1 spinta vert + 1 tirata orizz + 1 tirata vert
+- **Lower**: 1 dominante ginocchia + 1 dominante anca + 1 core
+- **Push**: spinta orizz + spinta vert · **Pull**: tirata orizz + tirata vert · **Legs**: ginocchia + anca
+- Sopra il minimo: enfasi/isolamento a scelta del coach in base all'obiettivo.
+
+**Ordine esercizi (regola fissa, valida per tutti)**
+1. **Multiarticolari pesanti** (compound: squat, stacco, panca, military, trazioni) all'inizio quando si è freschi
+2. **Complementari** (multiarticolari secondari o varianti) al centro
+3. **Isolamenti** (curl, push-down, polpacci) alla fine
+4. **Core / anti-rotazione** in coda (o all'inizio se attivazione)
+
+**Cautele utente** (già deciso stamattina, qui solo richiamo)
+- L'utente dichiara limitazioni in onboarding M1 (campo `limitazioni` array + `altre_limitazioni`).
+- Coach incrocia con `zone_rischio` dell'esercizio. **Regola: prima ADATTA (colonna `adattamento`), solo se non basta SOSTITUISCE con `alternativa`**.
+
+**Varietà tra blocchi (approccio misto, calibrato sull'esperienza)**
+- **Dentro il blocco** (~4 settimane): esercizi FISSI (la progressione ha bisogno di riferimento stabile per lo storico).
+- **Tra blocchi**:
+  - **Principianti** → cambiano 1-2 esercizi a blocco (stesso pattern, esercizio diverso), gli altri restano → continuità per imparare la tecnica
+  - **Intermedi/avanzati** → maggiore rotazione, possibili blocchi tematici (es. blocco forza → blocco ipertrofia → blocco ricomp/condizionamento)
+
+**Scambio esercizio su richiesta utente (opzione C limitata)**
+- Pulsante "cambia esercizio" disponibile, ma con vincoli:
+  - **Massimo 1-2 scambi per sessione**
+  - **L'alternativa la propone IL COACH** (stesso pattern), non l'utente dal catalogo intero
+  - **Lo scambio NON è permanente**: vale solo per la sessione corrente. La sessione successiva torna l'esercizio originale del blocco (la progressione non si spezza).
+
+**Persistenza scheda in DB (decisione architetturale)**
+- **Approccio JSON unico** (NON multi-tabelle relazionali). Coerente con pattern esistenti (`weekly_plan_meals.ingredients jsonb`, `profiles.piano_ai jsonb`).
+- Nuova tabella da creare: `schede_utente` con colonne minime:
+  - `user_id` (uuid)
+  - `blocco_n` (int — numero progressivo blocco, per varietà)
+  - `scheda` (jsonb — intera scheda con sessioni ed esercizi)
+  - `created_at` (timestamptz)
+  - `attiva` (boolean — quale scheda l'app deve leggere)
+- Statistiche di progressione restano in `workout_sets` e `training_logs` (già esistenti, relazionali) — non si toccano.
+
+**Quando il coach genera la scheda**
+1. ✅ **Fine onboarding M1** → genera SUBITO la prima scheda (altrimenti l'utente cade sul fallback `TRAINING_SESSIONS` = scheda di Ignazio, senza senso per altri utenti).
+2. ✅ **Fine blocco (~4 settimane)** → genera il successivo, MA solo dopo check-in fisica M2 completata (4 foto + misurazioni). Senza M2 il coach NON genera: aspetta. Il coach legge i nuovi dati M2 (peso, misure, foto) per modulare il blocco successivo basandosi sui progressi reali. Aggancio: `m2EntryIntro()` già presente in codice, è il cancello tra un blocco e il successivo.
+3. ❌ **Su richiesta utente "rigenera scheda"** → NO per ora (rischio rigenerazioni ripetute → progressione persa). Rivalutabile in futuro.
+
+### PROSSIMI PASSI COACH GENERATORE (ordine, post-decisioni 27 mag sera)
+1. **SQL creazione tabella `schede_utente`** su Supabase (artifact pronto).
+2. **Brief tecnico Claude Code: funzione generatrice del coach** (legge onboarding + dati M2 + catalogo → produce JSON scheda → salva in `schede_utente`).
+3. **Modifica modulo Training**: lettura scheda da `schede_utente.attiva` con fallback su `TRAINING_SESSIONS` se nessuna scheda.
+4. **Modifica onboarding M1**: aggiungere step "giorni di recupero attivo (0/1/2)".
+5. **Trigger generazione blocco N+1** dopo M2 completato (aggancio a `m2EntryIntro()`).
+6. **UI "cambia esercizio"** (opzione C con vincoli).
+
 ## Cosa abbiamo fatto
 
 ### Sessione 27 mag 2026 — Modulo Training: logger trazioni + note + cronometro + restyling + fix progressione ✅
