@@ -3530,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 07:31';
+const APP_VERSION = '2026.05.27 · 08:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3635,6 +3635,14 @@ const ST = {
   audioBlocked: false,
   trainLogResist: null,
   trainLogBandColor: null,          // BLOCCO 3 — colore banda corrente nel logger trazioni (es. 'Viola')
+  // BLOCCO 4 — Note esercizio/giorno (training_notes)
+  trainNotes: {},                   // { [exName]: { id, note, updated_at } } — nota di OGGI per esercizio
+  trainNotesHistory: {},            // { [exName]: [{ id, date, note }, ...] } — storico note passate (lazy)
+  trainNoteEditing: null,           // exName dell'esercizio attualmente in editing (null se nessuno)
+  trainNoteDraft: '',               // testo correntemente in editing
+  trainNoteSaving: false,           // flag durante upsert
+  trainNoteHistoryOpen: {},         // { [exName]: true } — storico espanso per esercizio
+  trainNotesLoaded: {},             // { [sessionId]: true } — anti-doppio-fetch sessione corrente
   editLogKey: null,
   editLogDraft: null,
   aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
@@ -7557,6 +7565,186 @@ async function loadLastLoggedSets(sessionId){
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// BLOCCO 4 — Note esercizio/giorno (training_notes)
+// Una nota per (user_id, exercise_name, date). UNIQUE constraint in DB.
+// Le note di oggi vivono in ST.trainNotes; le note passate sono caricate
+// lazy in ST.trainNotesHistory quando l'utente espande il link "Note passate (N) ›".
+// ═══════════════════════════════════════════════════════════
+
+const TRAINING_NOTE_MAX_LEN = 500; // cap morbido (textarea libera, ma evita testi mostruosi)
+
+// Carica le note di OGGI per TUTTI gli esercizi della sessione in un solo round-trip.
+// Chiamata da openTrainingSession.
+async function loadTodayNotes(sessionId){
+  if(!ST.user || ST.user.id==='test-user-001') return;
+  if(ST.trainNotesLoaded[sessionId]) return; // anti-doppio-fetch nella stessa sessione
+  const sess = TRAINING_SESSIONS[sessionId];
+  if(!sess) return;
+  try {
+    const exNames = sess.exercises.map(e => e.name);
+    const today = todayKey();
+    const { data, error } = await supa.from('training_notes')
+      .select('id, exercise_name, note, updated_at')
+      .eq('user_id', ST.user.id)
+      .eq('date', today)
+      .in('exercise_name', exNames);
+    if(error){ console.warn('loadTodayNotes:', error.message); return; }
+    (data || []).forEach(row => {
+      ST.trainNotes[row.exercise_name] = {
+        id: row.id,
+        note: row.note,
+        updated_at: row.updated_at,
+      };
+    });
+    ST.trainNotesLoaded[sessionId] = true;
+    if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
+  } catch(e){
+    console.warn('loadTodayNotes exception:', e?.message);
+  }
+}
+
+// Carica lo storico note passate per UN esercizio (lazy, on-demand quando l'utente
+// espande "Note passate (N) ›"). Esclude la nota di oggi.
+async function loadNoteHistory(exName){
+  if(!ST.user || ST.user.id==='test-user-001'){
+    ST.trainNotesHistory[exName] = [];
+    return;
+  }
+  try {
+    const today = todayKey();
+    const { data, error } = await supa.from('training_notes')
+      .select('id, date, note')
+      .eq('user_id', ST.user.id)
+      .eq('exercise_name', exName)
+      .lt('date', today)
+      .order('date', { ascending: false })
+      .limit(50); // limite di safety: 50 note passate = oltre un anno se uno scrive ogni settimana
+    if(error){ console.warn('loadNoteHistory:', error.message); return; }
+    ST.trainNotesHistory[exName] = data || [];
+    if(ST.page === 'training') renderTraining();
+  } catch(e){
+    console.warn('loadNoteHistory exception:', e?.message);
+  }
+}
+
+// Toggle espansione storico note passate per un esercizio (lazy load alla prima apertura).
+function toggleNoteHistory(exName){
+  const open = !!ST.trainNoteHistoryOpen[exName];
+  if(open){
+    ST.trainNoteHistoryOpen[exName] = false;
+    renderTraining();
+    return;
+  }
+  ST.trainNoteHistoryOpen[exName] = true;
+  // Lazy load se non già in cache
+  if(!Array.isArray(ST.trainNotesHistory[exName])){
+    loadNoteHistory(exName); // re-render in callback
+  }
+  renderTraining();
+}
+
+// Entra in editing della nota di oggi (pre-compila il draft col testo attuale, se esiste).
+function openNoteEditor(exName){
+  const existing = ST.trainNotes[exName];
+  ST.trainNoteEditing = exName;
+  ST.trainNoteDraft = existing?.note || '';
+  renderTraining();
+  setTimeout(()=>{
+    const ta = document.getElementById('note-textarea-'+exName.replace(/[^a-zA-Z0-9]/g,'_'));
+    if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }, 50);
+}
+
+// Esce dall'editor senza salvare.
+function cancelNoteEdit(){
+  ST.trainNoteEditing = null;
+  ST.trainNoteDraft = '';
+  renderTraining();
+}
+
+// Aggiorna il draft mentre l'utente scrive (oninput).
+function updateNoteDraft(value){
+  ST.trainNoteDraft = (value || '').slice(0, TRAINING_NOTE_MAX_LEN);
+}
+
+// Salva la nota: upsert su training_notes (vincolo UNIQUE user_id+exercise_name+date).
+async function saveTrainingNote(exName){
+  if(ST.trainNoteSaving) return;
+  const text = (ST.trainNoteDraft || '').trim();
+  if(!text){ showToast('La nota è vuota','⚠️'); return; }
+  ST.trainNoteSaving = true;
+  renderTraining();
+  const today = todayKey();
+  if(!ST.user || ST.user.id==='test-user-001'){
+    // Test mode: aggiorna solo state locale, niente DB
+    ST.trainNotes[exName] = { id: 'local-'+Date.now(), note: text, updated_at: new Date().toISOString() };
+    ST.trainNoteEditing = null;
+    ST.trainNoteDraft = '';
+    ST.trainNoteSaving = false;
+    renderTraining();
+    showToast('Nota salvata','📝');
+    return;
+  }
+  try {
+    const payload = {
+      user_id: ST.user.id,
+      exercise_name: exName,
+      date: today,
+      note: text,
+    };
+    const { data, error } = await supa.from('training_notes')
+      .upsert(payload, { onConflict: 'user_id,exercise_name,date' })
+      .select('id, note, updated_at')
+      .single();
+    if(error){
+      console.warn('saveTrainingNote:', error.message);
+      showToast('Errore salvataggio nota','⚠️');
+      ST.trainNoteSaving = false;
+      renderTraining();
+      return;
+    }
+    ST.trainNotes[exName] = {
+      id: data.id,
+      note: data.note,
+      updated_at: data.updated_at,
+    };
+    ST.trainNoteEditing = null;
+    ST.trainNoteDraft = '';
+    ST.trainNoteSaving = false;
+    renderTraining();
+    showToast('Nota salvata','📝');
+  } catch(e){
+    console.warn('saveTrainingNote exception:', e?.message);
+    showToast('Errore salvataggio nota','⚠️');
+    ST.trainNoteSaving = false;
+    renderTraining();
+  }
+}
+
+// Format orario "SALVATA · ORA" tipo "08:42" da un ISO timestamp.
+function formatNoteTime(isoTs){
+  if(!isoTs) return '';
+  try {
+    const d = new Date(isoTs);
+    if(isNaN(d.getTime())) return '';
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  } catch(e){ return ''; }
+}
+
+// Format data breve "24 APR" da una date YYYY-MM-DD (per storico note).
+function formatNoteDate(dateStr){
+  if(!dateStr) return '';
+  try {
+    const [y,m,d] = String(dateStr).split('-').map(Number);
+    if(!y || !m || !d) return dateStr;
+    const MONTHS = ['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];
+    return `${d} ${MONTHS[m-1] || ''}`;
+  } catch(e){ return dateStr; }
+}
+
 // Parser unificato per il campo `reps` di un esercizio.
 // Restituisce { kind, min, max, perLato, unit } oppure null se formato non gestito.
 //   kind: 'reps' | 'seconds' | null
@@ -8653,6 +8841,103 @@ async function saveTrainingSet(){
   }
 }
 
+// ── BLOCCO 4 — Render blocco nota dentro la card esercizio ──
+// Stati: vuoto / editing / pieno / pieno+storico aperto.
+// Lo storico è caricato lazy quando l'utente espande "Note passate (N) ›".
+function _renderTrainNoteBlock(exName){
+  const safeId = exName.replace(/[^a-zA-Z0-9]/g,'_');
+  const safeName = exName.replace(/'/g,"\\'");
+  const today = ST.trainNotes[exName] || null;
+  const editing = ST.trainNoteEditing === exName;
+  const historyOpen = !!ST.trainNoteHistoryOpen[exName];
+  const historyArr = ST.trainNotesHistory[exName];
+  const historyCount = Array.isArray(historyArr) ? historyArr.length : null; // null = non ancora caricato
+  const saving = ST.trainNoteSaving;
+
+  // Link "Note passate (N) ›" — visibile solo se conosciamo il count e N > 0.
+  // Se il count non è noto (storico mai caricato), mostriamo comunque il link generico
+  // in modo che il primo tap faccia partire il lazy load.
+  const historyLinkText = (historyCount === null)
+    ? 'Note passate ›'
+    : (historyCount > 0 ? `Note passate (${historyCount}) ${historyOpen?'▾':'›'}` : '');
+  const historyLink = historyLinkText
+    ? `<button type="button" onclick="event.stopPropagation();toggleNoteHistory('${safeName}');" style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:11px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em;padding:0;font-weight:600;">${historyLinkText}</button>`
+    : '';
+
+  // Pila storico (visibile solo se aperto e caricato)
+  const historyPile = (historyOpen && Array.isArray(historyArr) && historyArr.length > 0)
+    ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);">
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px;">Note passate</div>
+        ${historyArr.map(h => `
+          <div style="padding:6px 0;border-bottom:1px solid var(--s2);">
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:2px;">${formatNoteDate(h.date)}</div>
+            <div style="font-size:13px;font-family:var(--font-sans);color:var(--t1);line-height:1.4;white-space:pre-wrap;">${esc(h.note || '')}</div>
+          </div>
+        `).join('')}
+      </div>`
+    : (historyOpen && Array.isArray(historyArr) && historyArr.length === 0)
+      ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);font-size:11px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.12em;text-align:center;">Nessuna nota passata</div>`
+      : (historyOpen && historyCount === null)
+        ? `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--s2);font-size:11px;font-family:var(--font-mono);color:var(--t3);text-align:center;">Caricamento…</div>`
+        : '';
+
+  // Stato EDITING
+  if(editing){
+    const draft = String(ST.trainNoteDraft || '');
+    const remaining = TRAINING_NOTE_MAX_LEN - draft.length;
+    return `
+      <div style="margin-top:10px;padding:10px;background:var(--s1);border-radius:8px;border:1px solid var(--acc-lt);">
+        <div style="font-size:10px;font-family:var(--font-mono);color:var(--acc);text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px;">● Nota di oggi</div>
+        <textarea id="note-textarea-${safeId}"
+          oninput="updateNoteDraft(this.value);"
+          placeholder="Es. 'barra al posto delle maniglie', 'piede appoggiato sul rialzo', 'presa neutra per il polso sx'…"
+          maxlength="${TRAINING_NOTE_MAX_LEN}"
+          style="width:100%;min-height:80px;padding:8px;border:1.5px solid var(--acc);border-radius:6px;font-size:14px;font-family:var(--font-sans);line-height:1.4;resize:vertical;box-sizing:border-box;background:#fff;color:var(--t1);">${esc(draft)}</textarea>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:8px;">
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);">${remaining} caratteri</span>
+          <div style="display:flex;gap:6px;">
+            <button onclick="event.stopPropagation();cancelNoteEdit();"
+              style="padding:6px 12px;background:#fff;color:var(--t2);border:1px solid var(--s2);border-radius:6px;font-size:12px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+            <button onclick="event.stopPropagation();saveTrainingNote('${safeName}');" ${saving?'disabled':''}
+              style="padding:6px 14px;background:${saving?'var(--b2)':'var(--acc)'};color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:${saving?'default':'pointer'};">${saving?'…':'Salva'}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Stato PIENO (nota di oggi presente)
+  if(today && today.note){
+    const savedAt = formatNoteTime(today.updated_at);
+    return `
+      <div style="margin-top:10px;padding:10px;background:var(--s1);border-radius:8px;border-left:3px solid var(--acc);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--acc);text-transform:uppercase;letter-spacing:.14em;font-weight:600;">● Nota di oggi</span>
+          ${historyLink}
+        </div>
+        <div style="font-size:14px;font-family:var(--font-sans);color:var(--t1);line-height:1.45;white-space:pre-wrap;">${esc(today.note)}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;">
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.12em;">Salvata${savedAt?' · '+savedAt:''}</span>
+          <button onclick="event.stopPropagation();openNoteEditor('${safeName}');"
+            style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:11px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.1em;padding:0;font-weight:600;">Modifica ›</button>
+        </div>
+        ${historyPile}
+      </div>`;
+  }
+
+  // Stato VUOTO (nessuna nota di oggi)
+  return `
+    <div style="margin-top:10px;padding:8px 10px;background:var(--s1);border-radius:8px;border:1px dashed var(--s2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <button onclick="event.stopPropagation();openNoteEditor('${safeName}');"
+          style="background:none;border:none;cursor:pointer;color:var(--acc);font-size:12px;font-family:var(--font-sans);font-weight:600;padding:4px 0;text-align:left;flex:1;">
+          <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--t3);margin-right:6px;">●</span>+ Aggiungi nota
+        </button>
+        ${historyLink}
+      </div>
+      ${historyPile}
+    </div>`;
+}
+
 // ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -9135,6 +9420,7 @@ function renderTraining(){
                   : ''}
             </div>
             ${badges ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">${badges}</div>` : ''}
+            ${_renderTrainNoteBlock(e.name)}
             ${ST.aiSuggestions[`${sel}_${e.name}`] ? `<div style="margin-top:6px;font-size:11px;color:#2A7A6F;font-family:var(--font-sans);font-style:italic;line-height:1.4;display:flex;align-items:flex-start;gap:4px;"><span style="flex-shrink:0;">🤖</span><span>${ST.aiSuggestions[`${sel}_${e.name}`]}</span></div>` : ''}
             ${logForm}
           </div>`;
@@ -17024,6 +17310,8 @@ function openTrainingSession(sid){
   // Hydrate cross-device prima di calcolare suggerimento "ultima volta"
   hydrateTrainingSetsFromCloud();
   loadLastLoggedSets(sid); // popola cache + ricarica render quando pronto
+  // BLOCCO 4 — pre-fetch note di oggi per gli esercizi della sessione
+  loadTodayNotes(sid);
 }
 function closeTrainingSession(){
   ST.trainSession = null;
@@ -17031,6 +17319,10 @@ function closeTrainingSession(){
   ST.trainLogOpen = null;
   ST.editLogKey = null;
   ST.editLogDraft = null;
+  // BLOCCO 4 — reset stato editor nota (le note salvate restano in cache, ok)
+  ST.trainNoteEditing = null;
+  ST.trainNoteDraft = '';
+  ST.trainNoteHistoryOpen = {};
   resetAllActivationTimers();
   // Stop + reset timer recovery (no orfani in background)
   if(ST.trainRecoveryTimers){
