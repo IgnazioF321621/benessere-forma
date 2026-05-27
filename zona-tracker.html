@@ -3530,7 +3530,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.26 · 18:32';
+const APP_VERSION = '2026.05.27 · 07:31';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3634,6 +3634,7 @@ const ST = {
   bodyAdvOpen: false,
   audioBlocked: false,
   trainLogResist: null,
+  trainLogBandColor: null,          // BLOCCO 3 — colore banda corrente nel logger trazioni (es. 'Viola')
   editLogKey: null,
   editLogDraft: null,
   aiSuggestions: {},                // { `${sessionId}_${exName}`: 'testo AI' }
@@ -3715,6 +3716,13 @@ const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:
 const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
+
+// BLOCCO 3 — Logger banda di assistenza (solo trazioni).
+// Ordine FISSO dalla più LEGGERA (= meno assistenza, trazione più dura) alla più PESANTE (= più assistenza, più facile).
+// Progredire = scendere verso la Gialla.
+const BAND_COLORS = ['Gialla', 'Rossa', 'Nera', 'Viola'];
+const PULL_UP_EXERCISE_NAME = 'Trazioni alla sbarra';
+function isPullUpExercise(name){ return name === PULL_UP_EXERCISE_NAME; }
 
 // ═══════════════════════════════════════════════════════════
 // UTILS
@@ -7477,19 +7485,24 @@ async function hydrateTrainingSetsFromCloud(){
   const today = todayKey();
   try {
     const { data, error } = await supa.from('training_logs')
-      .select('session_id, exercise_name, set_number, reps, resistance, rir_actual')
+      .select('session_id, exercise_name, set_number, reps, resistance, band_color, rir_actual')
       .eq('user_id', ST.user.id)
       .eq('date', today);
     if(error) { console.warn('hydrateTrainingSets:', error.message); return; }
     if(!data) return;
-    // Costruisci mappa cloud nello stesso formato di trainLoggedSets
+    // Costruisci mappa cloud nello stesso formato di trainLoggedSets.
+    // BLOCCO 3 — Trazioni: in DB resistance è NULL e band_color contiene il colore. Nella cache locale
+    // mettiamo il colore nel campo `resistance` (stringa) così che getLastLoggedSetLabel e i badge
+    // continuino a funzionare. band_color esplicito anche, per usi futuri.
     const cloudMap = {};
     data.forEach(row => {
       const key = `${row.session_id}_${row.exercise_name}_${row.set_number}_${today}`;
+      const resistFromBand = row.band_color || null;
       cloudMap[key] = {
         reps: row.reps,
-        resistance: row.resistance != null ? String(row.resistance) : '',
+        resistance: resistFromBand != null ? resistFromBand : (row.resistance != null ? String(row.resistance) : ''),
         rir: row.rir_actual,
+        band_color: resistFromBand,
       };
     });
     // Merge: cloud vince in caso di conflitto (più recente, fonte autoritativa)
@@ -7525,7 +7538,7 @@ async function loadLastLoggedSets(sessionId){
     // Esclude le serie loggate oggi così il suggerimento mostra sempre l'ULTIMA SESSIONE PRECEDENTE,
     // non quella in corso.
     const { data } = await supa.from('training_logs')
-      .select('exercise_name, reps, resistance, rir_actual, date, set_number')
+      .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
       .eq('user_id', ST.user.id)
       .eq('session_id', sessionId)
       .in('exercise_name', exNames)
@@ -7598,10 +7611,11 @@ function getLastLoggedSetLabel(sessionId, exName){
   if(!bestKey) return null;
   const d = ST.trainLoggedSets[bestKey] || {};
   const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-  // resistance può essere numerica ("30") o testuale ("Banda viola"): se numerica aggiungi unit
+  // BLOCCO 3 — Trazioni: preferisci band_color se presente. Altrimenti resistance numerica/testuale.
   let resistTxt = '';
-  if(d.resistance !== undefined && d.resistance !== null && String(d.resistance).trim() !== ''){
-    const r = String(d.resistance).trim();
+  const raw = (d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance;
+  if(raw !== undefined && raw !== null && String(raw).trim() !== ''){
+    const r = String(raw).trim();
     resistTxt = /^\d+$/.test(r) ? `${r} ${unitLbl}` : r;
   }
   const parts = [`S${bestSet}`];
@@ -7635,16 +7649,22 @@ function getProgressionSuggestion(exName, sessionId){
     }
   });
 
+  // BLOCCO 3 — Trazioni: il "carico" è il colore banda. Default suggerimento iniziale = Viola
+  // (banda più pesante = aiuto massimo = trazione più facile, da cui scalare verso Gialla).
+  const isPullUp = isPullUpExercise(exName);
+
   if(bestKey){
     const s = ST.trainLoggedSets[bestKey];
-    let resistTxt = 'corpo libero';
-    if(s.resistance != null && String(s.resistance).trim() !== ''){
-      const r = String(s.resistance).trim();
+    let resistTxt = isPullUp ? '' : 'corpo libero';
+    // Preferisci band_color se presente (popolato in cache da saveTrainingSet e hydrateTrainingSetsFromCloud)
+    const rawResist = (s.band_color && BAND_COLORS.includes(s.band_color)) ? s.band_color : s.resistance;
+    if(rawResist != null && String(rawResist).trim() !== ''){
+      const r = String(rawResist).trim();
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
     const rirVal = (s.rir != null) ? s.rir : s.rir_actual;
     const rirTxt = (rirVal != null) ? ` · RIR ${rirVal}` : '';
-    return `🎯 Serie ${bestSetNum}: ${s.reps}r · ${resistTxt}${rirTxt}`;
+    return `🎯 Serie ${bestSetNum}: ${s.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
   }
 
   // 2. Fallback: ultimo allenamento
@@ -7652,15 +7672,18 @@ function getProgressionSuggestion(exName, sessionId){
   if(!last){
     const m = String(ex.reps || '').match(/^(\d+)/);
     const repsMin = m ? parseInt(m[1], 10) : 8;
+    if(isPullUp) return `💡 Inizia con ${repsMin} reps · banda Viola`;
     return `💡 Inizia con ${repsMin} reps a 10 lbs`;
   }
-  let resistTxt = 'corpo libero';
-  if(last.resistance != null && String(last.resistance).trim() !== ''){
-    const r = String(last.resistance).trim();
+  let resistTxt = isPullUp ? '' : 'corpo libero';
+  // Per trazioni: usa band_color se la riga DB ce l'ha (training_logs.band_color), altrimenti resistance legacy
+  const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
+  if(lastResist != null && String(lastResist).trim() !== ''){
+    const r = String(lastResist).trim();
     resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
   }
   const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-  return `💡 Ultima volta: ${last.reps}r · ${resistTxt}${rirTxt}`;
+  return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
 }
 
 function renderCalendar(workouts, year, month){
@@ -7918,10 +7941,12 @@ function closeDayDetail(){
 function editLogRow(id){
   const log = (ST.trainDayLogs || []).find(l => l.id === id);
   if(!log) return;
+  // BLOCCO 3 — Trazioni: il valore editabile è il colore banda (band_color), non resistance numerica.
+  const isPullUp = isPullUpExercise(log.exercise_name);
   ST.trainEditLogRow = {
     id,
     reps: log.reps != null ? String(log.reps) : '',
-    resistance: log.resistance || '',
+    resistance: isPullUp ? (log.band_color || '') : (log.resistance || ''),
     rir: log.rir_actual != null ? String(log.rir_actual) : '',
   };
   renderTraining();
@@ -7944,18 +7969,26 @@ async function confirmEditLogRow(){
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
-  const resistInt = resistance ? (parseInt(resistance) || null) : null;
-  // Trova log originale per la composite key fallback su workout_sets
+  // Trova log originale per la composite key fallback su workout_sets e per detect trazioni
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
+  const isPullUp = orig && isPullUpExercise(orig.exercise_name);
+  const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
+  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
+  const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
+  const resistanceText = isPullUp ? null : (resistance || null);
   // 1. UPDATE training_logs by id (sorgente per Progressione)
   try {
-    await supa.from('training_logs').update({ reps, resistance: resistance||null, rir_actual: rir })
-      .eq('id', e.id).eq('user_id', ST.user.id);
+    await supa.from('training_logs').update({
+      reps,
+      resistance: resistanceText,
+      band_color: bandColor,
+      rir_actual: rir,
+    }).eq('id', e.id).eq('user_id', ST.user.id);
   } catch(err){ showToast('Errore aggiornamento: '+err.message); }
   // 2. UPDATE workout_sets by composite key (training_logs.id ≠ workout_sets.id)
   if(orig){
     try {
-      await supa.from('workout_sets').update({ reps, resistance: resistInt, rir_actual: rir })
+      await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor, rir_actual: rir })
         .eq('user_id', ST.user.id).eq('date', orig.date).eq('session_type', orig.session_id)
         .eq('exercise_name', orig.exercise_name).eq('set_number', orig.set_number);
     } catch(err){}
@@ -8425,6 +8458,9 @@ async function suggestProgressionAI({sessionId, exName, setNum, reps, resistance
     if(!sess || !exData) return;
     // Skip per Active Recovery (no progressione di carico)
     if(sess.type === 'Recupero') return;
+    // BLOCCO 3 — Skip suggerimento AI per trazioni: la "resistenza" è il colore banda, non lbs.
+    // Il coach generatore futuro gestirà la logica colore. Per ora niente prompt.
+    if(isPullUpExercise(exName)) return;
     // Parsing range reps: usa parseRepsRange (gestisce reps, secondi, per lato)
     const parsed = parseRepsRange(exData.reps);
     if(!parsed) return; // formato non gestito (es. "10 min"), skippa
@@ -8523,9 +8559,16 @@ async function saveTrainingSet(){
   const repsEl = document.getElementById('tl-reps');
   const rirEl = document.getElementById('tl-rir');
   const reps = parseInt(repsEl?.value)||0;
-  const resistance = (ST.trainLogResist != null) ? String(ST.trainLogResist) : '';
+  // BLOCCO 3 — Trazioni: resistance NULL nel DB, band_color = colore scelto; ST.trainLoggedSets memorizza il colore
+  // come stringa nel campo resistance (compat con getLastLoggedSetLabel + render badge).
+  const isPullUp = isPullUpExercise(form.exName);
+  const bandColor = isPullUp ? (BAND_COLORS.includes(ST.trainLogBandColor) ? ST.trainLogBandColor : null) : null;
+  const resistance = isPullUp
+    ? (bandColor || '')
+    : ((ST.trainLogResist != null) ? String(ST.trainLogResist) : '');
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
+  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
   ST.trainSaving = true;
   renderTraining();
   let insertError = null;
@@ -8537,7 +8580,8 @@ async function saveTrainingSet(){
       exercise_name: form.exName,
       set_number: form.setNum,
       reps,
-      resistance: resistance||null,
+      resistance: isPullUp ? null : (resistance||null),
+      band_color: bandColor,
       rir_actual: rir,
     });
     insertError = error;
@@ -8549,7 +8593,7 @@ async function saveTrainingSet(){
   const prevKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(form.sessionId+'_')&&k.endsWith('_'+todayKey()));
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
-  ST.trainLoggedSets[key] = {reps, resistance, rir};
+  ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   // Insert in workout_sets (in parallelo, fail silenzioso se la tabella manca)
   const unitVal = (ST.profile && ST.profile.unit) || 'lbs';
@@ -8562,7 +8606,8 @@ async function saveTrainingSet(){
       exercise_name: form.exName,
       set_number: form.setNum,
       reps,
-      resistance: resistance ? parseInt(resistance)||null : null,
+      resistance: isPullUp ? null : (resistance ? parseInt(resistance)||null : null),
+      band_color: bandColor,
       unit: unitVal,
       rir_actual: rir,
     }).select('id').single().then((res)=>{
@@ -8957,6 +9002,22 @@ function renderTraining(){
           const sn = k.split('_')[2];
           if(ST.editLogKey === k){
             const dr = ST.editLogDraft || {};
+            // BLOCCO 3 — Trazioni: edit inline mostra select COLORE al posto di input lbs
+            if(isPullUpExercise(e.name)){
+              const colorOpts = BAND_COLORS.map(c =>
+                `<option value="${c}" ${dr.resistance === c ? 'selected' : ''}>${c}</option>`
+              ).join('');
+              return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
+                <span style="font-size:10px;color:var(--acc);font-weight:700;">S${sn}</span>
+                <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
+                <span style="font-size:10px;color:var(--t3);">r</span>
+                <select id="el-resist" onchange="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-sans);">
+                  <option value="">—</option>${colorOpts}
+                </select>
+                <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:#2A7A6F;color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
+                <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
+              </span>`;
+            }
             return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
               <span style="font-size:10px;color:var(--acc);font-weight:700;">S${sn}</span>
               <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
@@ -8967,7 +9028,9 @@ function renderTraining(){
               <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
             </span>`;
           }
-          return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);color:var(--acc);padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${d.resistance?' · '+d.resistance+(/^\d+$/.test(String(d.resistance))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:var(--acc);font-size:11px;line-height:1;">✏️</button></span>`;
+          // BLOCCO 3 — Trazioni: badge mostra colore banda al posto di "N lbs"
+          const badgeResist = (d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance;
+          return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);color:var(--acc);padding:2px 4px 2px 8px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--font-mono);">S${sn} ${d.reps}r${badgeResist?' · '+badgeResist+(/^\d+$/.test(String(badgeResist))?' '+unitLbl:''):''}<button onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica" style="background:transparent;border:none;cursor:pointer;padding:0 2px;color:var(--acc);font-size:11px;line-height:1;">✏️</button></span>`;
         }).join('');
         const resistOptions = RESIST_VALUES.map(v =>
           `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
@@ -9007,15 +9070,29 @@ function renderTraining(){
                 </select>
               </div>` : ''}
             </div>
-            <div style="margin-bottom:6px;">
-              <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
-              <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);"
-                style="border:1.5px solid var(--s2);">
-                <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
-                ${resistOptions}
-              </select>
-              <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:4px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
-            </div>
+            ${isPullUpExercise(e.name) ? `
+              <div style="margin-bottom:6px;">
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">COLORE BANDA</label>
+                <div style="display:flex;gap:6px;">
+                  ${BAND_COLORS.map(c => {
+                    const active = ST.trainLogBandColor === c;
+                    return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
+                      style="flex:1;padding:10px 6px;background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t1)'};border:1.5px solid ${active?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
+                  }).join('')}
+                </div>
+                <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">la banda AIUTA · Gialla = più dura · Viola = più facile</div>
+              </div>
+            ` : `
+              <div style="margin-bottom:6px;">
+                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
+                <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);"
+                  style="border:1.5px solid var(--s2);">
+                  <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
+                  ${resistOptions}
+                </select>
+                <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:4px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
+              </div>
+            `}
             <div style="display:flex;gap:8px;">
               <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
                 style="flex:1;padding:10px;background:${ST.trainSaving?'var(--b2)':'var(--acc)'};color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:${ST.trainSaving?'default':'pointer'};">
@@ -9813,23 +9890,33 @@ function renderTraining(){
         const logs = byEx[exName];
         const isTimed = isTimedExerciseByName(exName);
         const repsLbl = isTimed ? 'sec' : 'r';
+        const isPullUpEx = isPullUpExercise(exName);
         const rows = logs.map(l => {
           if(l.id === editId){
-            // Edit inline
+            // Edit inline — BLOCCO 3: trazioni → select colore al posto di input lbs
+            const resistInput = isPullUpEx
+              ? `<select id="elr-resist" onchange="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-sans);">
+                  <option value="">—</option>${BAND_COLORS.map(c=>`<option value="${c}" ${editD.resistance===c?'selected':''}>${c}</option>`).join('')}
+                </select>`
+              : `<input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">`;
             return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
               <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
               <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
-              <input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">
+              ${resistInput}
               <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
               <button onclick="confirmEditLogRow();" style="background:#2A7A6F;color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
               <button onclick="cancelEditLogRow();" style="background:#fff;color:var(--t3);border:1.5px solid var(--s2);border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;">✕</button>
             </div>`;
           }
-          const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${l.resistance?' · '+l.resistance+' lbs':''}`;
+          // BLOCCO 3 — Trazioni: mostra colore banda al posto di "X lbs"
+          const resistLabel = isPullUpEx
+            ? (l.band_color || '')
+            : (l.resistance ? l.resistance + ' lbs' : '');
+          const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${resistLabel?' · '+resistLabel:''}`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
             <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
             <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} ${repsLbl}</span>
-            ${l.resistance?`<span style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${l.resistance} lbs</span>`:''}
+            ${resistLabel?`<span style="font-size:12px;color:var(--t2);font-family:var(${isPullUpEx?'--font-sans':'--font-mono'});">${resistLabel}</span>`:''}
             ${l.rir_actual!=null?`<span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
             <button onclick="editLogRow('${l.id}');" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Modifica">✏️</button>
             <button onclick="confirmDeleteSet('${l.id}','${lblShort.replace(/'/g,"\\'")}');" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Elimina serie">🗑️</button>
@@ -17016,11 +17103,20 @@ function openLogModal(sessionId, exName, setNum){
     .sort();
   const lastKey = prevKeys.pop();
   const lastResist = lastKey ? ST.trainLoggedSets[lastKey]?.resistance : null;
-  // Default = ultimo valore loggato per questo esercizio oggi.
-  // Se prima volta o valore fuori RESIST_VALUES → null (placeholder "—").
-  let initial = parseInt(lastResist);
-  if(isNaN(initial) || !RESIST_VALUES.includes(initial)) initial = null;
-  ST.trainLogResist = initial;
+  if(isPullUpExercise(exName)){
+    // BLOCCO 3 — Trazioni: il "carico" è il COLORE della banda di assistenza.
+    // L'ultimo colore loggato vive in resistance (testuale) o in band_color esplicito.
+    const lastBand = lastKey ? (ST.trainLoggedSets[lastKey]?.band_color || ST.trainLoggedSets[lastKey]?.resistance) : null;
+    ST.trainLogBandColor = (lastBand && BAND_COLORS.includes(lastBand)) ? lastBand : null;
+    ST.trainLogResist = null;
+  } else {
+    // Default = ultimo valore loggato per questo esercizio oggi.
+    // Se prima volta o valore fuori RESIST_VALUES → null (placeholder "—").
+    let initial = parseInt(lastResist);
+    if(isNaN(initial) || !RESIST_VALUES.includes(initial)) initial = null;
+    ST.trainLogResist = initial;
+    ST.trainLogBandColor = null;
+  }
   ST.trainLogOpen = { sessionId, exName, setNum };
   _unlockAudio();
   renderTraining();
@@ -17050,25 +17146,29 @@ async function confirmEditLog(k){
   const resistance = (resistEl?.value || '').toString().trim();
   if(!reps){ repsEl?.focus(); return; }
   const prev = ST.trainLoggedSets[k] || {};
-  ST.trainLoggedSets[k] = { ...prev, reps, resistance };
-  try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   // [sessionId, exName, setNum, date]
   const parts = k.split('_');
   const date = parts[parts.length-1];
   const setNum = parseInt(parts[parts.length-2]);
   const sessionId = parts[0];
   const exName = parts.slice(1, parts.length-2).join('_');
+  // BLOCCO 3 — Trazioni: resistance contiene il colore banda. DB: resistance NULL + band_color.
+  const isPullUp = isPullUpExercise(exName);
+  const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
+  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
+  ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
+  try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
-    const resistInt = resistance ? (parseInt(resistance) || null) : null;
+    const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
     // 1. UPDATE workout_sets (sorgente di verità per la nuova UI) — by id se disponibile, altrimenti composite
     try {
       const setId = prev.setId;
       if(setId){
-        await supa.from('workout_sets').update({ reps, resistance: resistInt })
+        await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor })
           .eq('id', setId)
           .eq('user_id', ST.user.id);
       } else {
-        await supa.from('workout_sets').update({ reps, resistance: resistInt })
+        await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor })
           .eq('user_id', ST.user.id)
           .eq('date', date)
           .eq('session_type', sessionId)
@@ -17078,7 +17178,11 @@ async function confirmEditLog(k){
     } catch(e){}
     // 2. UPDATE training_logs (compat — usata da Progressione e altri viewer)
     try {
-      await supa.from('training_logs').update({ reps, resistance: resistance||null })
+      await supa.from('training_logs').update({
+        reps,
+        resistance: isPullUp ? null : (resistance||null),
+        band_color: bandColor,
+      })
         .eq('user_id', ST.user.id)
         .eq('date', date)
         .eq('session_id', sessionId)
