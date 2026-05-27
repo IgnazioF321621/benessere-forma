@@ -449,6 +449,33 @@ RLS abilitata — policy: `auth.uid() = user_id`.
 ### Tabella `nutrilite_catalog`
 64 prodotti reali pre-inseriti (Nutrilite + Bodykey + XS Sports), aggiornati una tantum via sync Google Sheet. RLS SELECT pubblica. Nessun `user_id`. Colonne usate dal catalogo v3: `codice` (PK logica), `nome`, `linea` (Nutrilite/Bodykey/XS Sports), `categoria` (16+ valori reali — vedi `CATEGORY_TO_TINT`), `confezione`, `dose_die`, `dose_unit`, `kcal`, `carbo`, `proteine`, `grassi`, `prezzo_partner`, `costo_mensile_partner`, `costo_dose_partner`.
 
+### Tabella `esercizi_catalog` (27 maggio 2026)
+Catalogo esercizi verificati per il futuro coach generatore di schede Training. Stesso pattern di `nutrilite_catalog`: nessun `user_id`, RLS SELECT pubblica (`using(true)`), nessuna scrittura da client (popolata solo via sync service-role). PK logica = `codice`.
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `codice` | `text` PK logica | identificativo univoco esercizio (es. `TRAZ-BANDA`, `CHEST-EL-IN-PIEDI`) |
+| `nome` | `text` | nome leggibile, in italiano |
+| `pattern` | `text` | pattern motorio (spinta_orizz, spinta_vert, tirata_orizz, tirata_vert, dominante_ginocchio, dominante_anca, core, isolamento, mobilita) |
+| `attrezzo` | `text` | elastico, banda, manubri, bilanciere, panca, sbarra, kettlebell, corpo_libero, fitball, trx, ecc. |
+| `luogo` | `text` | casa, palestra, aperto, qualsiasi |
+| `muscoli` | `text` | lista muscoli target separati da `;` |
+| `livello` | `text` | principiante, intermedio, avanzato (o lista separata da `;`) |
+| `zone_rischio` | `text` | tag IDENTICI all'onboarding M1 (`lombare;cervicale;spalle;gomiti;polsi;anche;ginocchia;caviglie;ernie;cardiovascolari;ipertensione`) separati da `;`. Vuoto = nessuna controindicazione |
+| `adattamento` | `text` | come ADATTARE l'esercizio per le zone a rischio (es. "rom ridotto, niente iperestensione") |
+| `alternativa` | `text` | `codice` dell'esercizio sostitutivo se l'adattamento non basta |
+| `setup` | `text` | posizione iniziale + attrezzatura (1 frase) |
+| `esecuzione` | `text` | step movimento separati da `;` |
+| `errori` | `text` | errori comuni separati da `;` |
+| `nota_sicurezza` | `text` | warning opzionale (es. "scapole basse e indietro, no scrollare") |
+| `updated_at` | `timestamptz` | gestito da sync, default `now()` |
+
+**Seme iniziale**: 30 esercizi che coprono tutti i pattern (spinta/tirata orizz.+vert., dominante ginocchia/anca, core, isolamento, mobilità) per casa/palestra/corpo libero. Include i 4 esercizi storici di Ignazio (trazioni banda, chest/shoulder/row elastico). Da ampliare nel tempo.
+
+**Sorgente**: Google Sheet dedicato `esercizi_catalog` (ID `1kEaq1SNsd5pY66p2JkFJCfBaPLtCMCk-2an3z4w9mo8`), scheda `esercizi_catalog`.
+
+**Sync**: Google Apps Script DEDICATO e SEPARATO da quello Nutrilite — funzione `syncEsercizi`, UPSERT `on_conflict=codice` via service_role. Lanciato a mano da Ignazio quando aggiorna il catalogo. Opzione futura: integrare nel sync esistente; per ora separato per sicurezza.
+
 ### Tabella `profiles`
 Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
 
@@ -2054,7 +2081,144 @@ un interruttore a monte.
 - Marcatore di salvataggio per Palestra/Aperto in `attrezzatura` — al momento si salva `NULL` (il coach interpreta dal `tipo_allenamento`).
 - Effetto a cascata dell'interruttore su home/moduli (oltre al nascondere il tile Training).
 
+### PARTE 3 — TABELLA PROGRESSIONE (27 mag 2026)
+Decisioni consolidate. Valgono per il prompt AI di `suggestProgressionAI` e per il futuro coach generatore. Logica serie-per-serie: ogni serie loggata produce la proposta per quella SUCCESSIVA. Nuova sessione → la 1ª serie riparte dall'ultima serie loggata la volta precedente (storico DB), poi progredisce.
+
+**Elastici a tubo (resistenza in lbs)**
+- Tetto reps + RIR ≥ target → **+10 lbs**, riparti dal minimo reps
+- Dentro range + RIR = target → stessa resistenza, **+1 rep**
+- RIR > target (facile) → stessa resistenza, **alza reps** verso il tetto
+- RIR 0 (cedimento) ma reps nel range → stessa resistenza, **abbassa reps**
+- Sotto il minimo reps → **-10 lbs**
+
+**Trazioni alla sbarra (resistenza = colore banda)**
+Scala da PIÙ DURA a PIÙ FACILE: `Gialla → Rossa → Nera → Viola`. La banda AIUTA: più pesante = più aiuto = trazione più facile. `BAND_COLORS = ['Gialla','Rossa','Nera','Viola']`, indice 0 = più dura. Progredire = scendere verso Gialla.
+- Tetto reps + RIR ≥ target → **banda un gradino PIÙ DURA** (verso Gialla, indice minore), riparti dal minimo reps
+- Dentro range + RIR = target → **stessa banda, +1 rep**
+- RIR > target → stessa banda, **alza reps**
+- RIR 0 (cedimento) ma reps nel range → stessa banda, **abbassa reps**
+- Sotto il minimo reps → **banda un gradino PIÙ FACILE** (verso Viola, più aiuto)
+- Limite raggiunto = già su Gialla al tetto reps con buon RIR → suggerisci **trazione libera senza banda**
+
+### PARTE 4 — COACH GENERATORE (architettura, DA COSTRUIRE)
+*Decisioni di product/architettura prese il 27 mag 2026. Implementazione nelle prossime sessioni.*
+
+**Filosofia**: opzione **"catalogo verificato + AI che assembla"** — NON l'AI inventa esercizi. Stesso principio del catalogo integratori Nutrilite: fonte unica, scalabile, l'utente fa onboarding e il coach gli costruisce la scheda. Vale per Ignazio e per i nuovi tester (es. Ginevra).
+
+**Lettura limitazioni utente — niente intervento manuale**
+L'utente DICHIARA le limitazioni fisiche nell'onboarding M1 (campo `limitazioni` array + `altre_limitazioni`, già esistenti in `profiles`/`note_salute`). Il coach legge e si regola da solo, nessun intervento manuale di Ignazio per caso singolo.
+
+**Gestione cautele — adatta prima, sostituisci dopo**
+Il coach incrocia `limitazioni` utente × tag `zone_rischio` dell'esercizio nel catalogo. Regola:
+1. **PRIMA ADATTA** usando la colonna `adattamento` dell'esercizio.
+2. **SOLO SE NON BASTA SOSTITUISCE** con l'esercizio in `alternativa` (codice).
+
+**RIR controllato — solo intermedio/avanzato**
+Il RIR è ATTIVO solo per livello intermedio/avanzato. Per i **principianti** il coach genera schede SENZA RIR (lo introdurrà quando l'utente raggiunge il livello intermedio).
+
+**Continuità vs varietà — "schede su schede in continuità"**
+- **DENTRO il blocco** (~4 settimane): l'esercizio resta lo STESSO. La progressione ha bisogno di un riferimento stabile per lo storico (carichi, reps, RIR confrontabili settimana per settimana).
+- **TRA blocchi**: il coach VARIA gli esercizi mantenendo i pattern (cambia esercizio, non schema motorio). Stimolo nuovo, ma il dato di partenza eredita dal blocco precedente.
+
+**Fallback `TRAINING_SESSIONS`**
+Gli esercizi fissi nel codice (`TRAINING_SESSIONS`) RESTANO come rete di sicurezza. Logica futura del modulo Training:
+1. Cerca la scheda personale dell'utente in DB.
+2. Se non c'è → usa `TRAINING_SESSIONS` come fallback.
+
+Nessun utente resta mai senza allenamento.
+
+### PROSSIMI PASSI MODULO TRAINING (ordine)
+1. **Coach generatore**: logica che legge onboarding (attrezzatura/giorni/durata/esperienza/obiettivo/limitazioni) + pesca dal catalogo `esercizi_catalog` + applica le regole (cautele, RIR per livello, continuità intra-blocco, varietà tra blocchi). Decisioni di logica PRIMA del codice (stessa metodologia design-prima di Nutrition).
+2. **Salvataggio schede per-utente in DB** + lettura dal modulo Training con **fallback** su `TRAINING_SESSIONS` (rete di sicurezza).
+
 ## Cosa abbiamo fatto
+
+### Sessione 27 mag 2026 — Modulo Training: logger trazioni + note + cronometro + restyling + fix progressione ✅
+
+Sessione lunga sul modulo Training, **collaudata dal vivo** sul telefono in tutte le sue parti. Catena di blocchi consecutivi che hanno completato l'esperienza di sessione: nuovo logger per le trazioni a banda, blocco nota per esercizio/giorno, hero sessione col cronometro TEMPO WORKOUT, restyling card al mockup approvato, allineamento stile finale, fix critico del bug "PROSSIMA = fotocopia". 9 commit complessivi su `main`.
+
+**1. BLOCCO 3 — Due logger per attrezzo** (commit `81af3c1`, ver `2026.05.27 · 07:31`)
+- Trazioni: logger a COLORE della banda di assistenza (Gialla/Rossa/Nera/Viola), 4 pillole orizzontali. Scala fissa, banda AIUTA: Gialla = più dura, Viola = più facile.
+- Tutti gli altri esercizi: logger a LIBBRE (dropdown `RESIST_VALUES`) invariato. Multipli di 10 lbs.
+- DB: nuova colonna `band_color text` su `workout_sets` + `training_logs` (DDL eseguito manualmente prima del deploy).
+- Edit inline badge + edit modal Dettaglio Giorno: branch trazioni con select colore. Update DB con `band_color`.
+- Hydrate da cloud + `getProgressionSuggestion` + `getLastLoggedSetLabel` + badge display: tutti aggiornati per leggere/mostrare `band_color`.
+- `suggestProgressionAI` skippato per trazioni in questo blocco (riattivato dopo nel fix progressione).
+- Selezione logger via match nome esercizio: `PULL_UP_EXERCISE_NAME = 'Trazioni alla sbarra'` (costante).
+
+**2. BLOCCO 4 — Nota personale per esercizio/giorno con storico** (commit `1e98781`, ver `2026.05.27 · 08:04`)
+- Nuova tabella `training_notes(id, user_id, exercise_name, date, note, created_at, updated_at)` con UNIQUE `(user_id, exercise_name, date)` → una nota per esercizio + giorno (decisione: condivisa tra sessioni se lo stesso esercizio compare in più sessioni nello stesso giorno).
+- 4 policy RLS `own_*` + trigger `set_updated_at`. DDL eseguito da Ignazio prima del deploy.
+- Render `_renderTrainNoteBlock(exName)` dentro la card esercizio. 4 stati: vuoto / editing / pieno / pieno+storico aperto.
+- Storico note passate caricato lazy on-expand, LIMIT 50 ordine DESC.
+- Salvataggio: upsert `onConflict:'user_id,exercise_name,date'`. Test mode: solo state locale.
+- Edit pre-compilato (la textarea parte col testo attuale, no perdita).
+
+**3. FIX BLOCCO 4** (commit `3042b74`, ver `2026.05.27 · 08:27`)
+- **FIX 1**: il link "Note passate" non appare più se 0 note passate. Nuovo `ST.trainNoteHistoryCount[exName]` popolato in batch dentro `loadTodayNotes` con una seconda query ultra-leggera (`SELECT exercise_name` filtrato `date < today`).
+- **FIX 2**: il link mostra sempre `(N)` (es. "Note passate (3) ›") — count noto a priori grazie a FIX 1.
+- **FIX 3a**: aggiunta etichetta "OPZIONALE" Mono caps grigia accanto a "+ Aggiungi nota" nello stato vuoto.
+- **FIX 3b**: contatore caratteri dinamico `N / 500` (invece di "500 caratteri" statico). DOM surgical update via `updateNoteDraft` sul nodo `#note-counter-{safeId}` — niente re-render, focus + caret preservati.
+
+**4. GRAFICA L1 — Hero sessione + cronometro TEMPO WORKOUT** (commit `4a3ad4e`, ver `2026.05.27 · 10:45`)
+- Hero in cima alla tab Sessione (sostituisce header minimal): titolo Syne 24px + badge tipo+RIR + barra progresso serie `N/T` evergreen + **cronometro TEMPO WORKOUT** Mono 22px evergreen format `MM'SS''`.
+- Hero applicata solo a sessioni non-recovery (Upper A/B, Lower A/B). Sessioni Recovery (G3/G6) tengono header legacy.
+- **Cronometro**: tempo effettivo in ESECUZIONE serie, escluso recupero e serie annullate.
+  - Parte in `openTrainExec` (workTimeStartExec + workTimeStartTick)
+  - Stop + commit in `trainExecFinishSet` (somma delta a totalSec)
+  - Stop SCARTANDO in `trainExecBack` (serie annullata = 0)
+  - Stop tick in `closeTrainingSession`
+  - Persistito su localStorage `zt_train_work_<YYYY-MM-DD>` con struttura `{ [sessionId]: { totalSec, execStartedAt } }`
+- Display LIVE al secondo via `setInterval(1000)` + DOM surgical update su `#train-work-display` (no re-render, no flicker).
+- Sopravvive a chiusura/riapertura PWA: `execStartedAt` persistente → al rientro `Date.now() − execStartedAt` ricalcola, `visibilitychange` riarma il tick.
+
+**5. CAP cronometro "serie dimenticata"** (commit `f83c890`, ver `2026.05.27 · 11:04`)
+- Se una serie supera `WORK_SET_CAP_SEC = 2700` (45 min) tra apertura e "Fine serie" (telefono in tasca a lungo), il tempo reale NON viene accumulato → si accumula una STIMA.
+- Stima = media di `validDurations[]` (serie valide ≤ CAP per quella sessione di oggi) o `WORK_SET_DEFAULT_SEC = 120` (2 min) se nessuna serie valida ancora.
+- Struct estesa: `ST.trainWorkTime[sessionId]` ora ha `{ totalSec, execStartedAt, validDurations:[] }`. Retro-compat su record vecchi.
+- `console.info [train-work] capped set: delta=Xs → estimate=Ys` per diagnostica.
+- Display LIVE durante serie attiva sopra CAP mostra il delta reale (è la verità); il cap scatta solo a "Fine serie".
+
+**6. GRAFICA L2 — Card esercizio allineata al mockup** (commit `857c928`, ver `2026.05.27 · 12:28`)
+- Quadratino numero esercizio `.ex-num-box` (riusabile, 30×30 r9 dopo allineamento L2.1).
+- "N × range" spostato in alto a destra del titolo (`.ex-params-top` Mono 700 evergreen).
+- Eyebrow MAIUSCOLO Mono tracked per attrezzatura (`.ex-equipment-eyebrow`).
+- Meta-row alleggerita: solo `[RIR N]` pill + "rec M:SS" (nuovo helper `restSecToCompact`, `restSecToText` invariato per modal recupero).
+- Suggerimento `.ex-suggestion` spostato fuori da `.ex-info` (rimossa) → vive direttamente nella card.
+- Badge serie pieni evergreen (`.ex-set-pill-done`) con testo bianco + ✏️ semi-trasparente. Badge serie vuote (`.ex-set-pill-empty`) dashed grigi per slot ancora da fare.
+- Contenuto invariato: "S1 · 6r · Viola" per trazioni, "S1 · 6r · 70 lbs" per elastici. NO sigla "CP" del mockup (residuo combinatore elastici scartato).
+
+**7. GRAFICA L2.1 — Allineamento stile finale** (commit `3e6d7a1`, ver `2026.05.27 · 14:47`)
+- **Num-box "parlante" per stato**: 30×30 r9 con 4 modificatori CSS basati sui flag già calcolati nel render:
+  - `.idle` (grigio): nessuna serie loggata, mostra numero
+  - `.in-progress` (acc-lt + acc): ≥1 serie ma non tutte, mostra numero
+  - `.done-state` (acc fill + bianco): tutte le serie completate, mostra ✓ bianco
+  - `.logging` (acc fill + bianco): logger aperto, mostra numero
+  - Transition 150ms.
+- **Card attiva evidenziata**: `.exercise-card.logging` con `border:1.25px solid var(--acc)` + `box-shadow:0 4px 14px rgba(42,122,111,.10)`. Border base trasparente per evitare layout shift.
+- **Label "S{n}" nei chip serie**: pill interna semi-trasparente bianca (`background:rgba(255,255,255,.18)`, padding 1px 6px, border-radius 999px) per stacco visivo netto da "6r · Viola"/"6r · 70 lbs".
+
+**8. FIX PROGRESSIONE "PROSSIMA"** (commit `b0b91f8`, ver `2026.05.27 · 15:20`)
+- **PROBLEMA**: la riga "🎯 PROSSIMA" (card sessione + schermata recupero) faceva una FOTOCOPIA dell'ultima serie loggata oggi via `getProgressionSuggestion()`, mostrando contenuto identico ad "APPENA FATTA" e numero serie sbagliato (la appena fatta invece della prossima). Sulle trazioni la riga era proprio skippata.
+- **DECISIONE LOGICA** presa con Ignazio:
+  - Progressione calcolata SERIE-PER-SERIE: ogni serie loggata genera la proposta per quella successiva. La proposta dopo l'ultima serie del giorno NON si salva: la nuova sessione riparte automaticamente dall'ultima serie loggata la volta precedente (storico DB), poi progredisce.
+  - Calcolo via AI (`suggestProgressionAI`), output = proposta + 3-4 parole di motivazione. Durante l'attesa AI la riga mostra "🎯 calcolo…".
+  - Le regole consolidate (elastici + trazioni con banda) sono documentate in PARTE 3 di "MODULO TRAINING — REGOLE DEL COACH".
+- **IMPLEMENTAZIONE**:
+  - `suggestProgressionAI` estesa alle trazioni (rimosso lo skip). Ramo BANDA con logica invertita rispetto alle libbre (vedi PARTE 3). Nuovo param `bandColor` passato da `saveTrainingSet`. Numero serie corretto = `setNum + 1` (la PROSSIMA).
+  - Aggiunta micro-motivazione 3-4 parole alla fine del prompt (es. "spingi ancora 💪", "tieni il ritmo", "alza l'asticella 🔥").
+  - Nuovo state `ST.aiSuggestionsLoading { key: true }` per il flag in-flight.
+  - Nuovo helper `getProgressionLive(exName, sessionId)`: fonte unica di verità per la riga PROSSIMA. Priorità: AI salvata → "🎯 calcolo…" → fallback iniziale. Usato sia in card che in recupero → mai disallineamento.
+  - `getProgressionSuggestion` ridotta a SOLO fallback iniziale: rimosso il ramo "ripesca ultima serie loggata oggi" (era la fotocopia bug). Resta solo "Inizia con N reps…" / "Ultima volta…" da storico DB.
+  - Card sessione: rimosso il blocco 🤖 separato sotto la nota (era la riga AI duplicata). Output AI accorpato in `.ex-suggestion` sopra i badge serie → una riga sola.
+  - Schermata recupero: `nextHTML` legge da `getProgressionLive` (stessa fonte della card). `esc(sugg)` per safety XSS.
+
+**Decisioni architetturali emerse il 27 mag** (documentate in MODULO TRAINING, parti 3+4 e in `esercizi_catalog`):
+- Coach generatore di schede da costruire: "catalogo verificato + AI che assembla", NO AI che inventa esercizi.
+- Tabella `esercizi_catalog` creata su Supabase con 30 esercizi seme e sync Google Sheet dedicato (`syncEsercizi`).
+- Continuità intra-blocco (4 sett. stesso esercizio per progressione) + varietà inter-blocco (cambio esercizio mantenendo pattern).
+- `TRAINING_SESSIONS` resta come fallback nel codice quando l'utente non ha ancora una scheda personale in DB.
+- RIR attivo solo per livello intermedio/avanzato. Principianti = niente RIR.
 
 ### Sessione 26 mag 2026 — Modulo Training: restyling + flusso serie ✅
 
