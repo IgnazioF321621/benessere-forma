@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 07:02';
+const APP_VERSION = '2026.05.28 · 07:08';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8108,27 +8108,29 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
 
     console.log('[train-gen] scheda costruita (pre-save):', scheda);
 
-  // BLOCCO 14 — SALVATAGGIO DB
-  //   _trainGenSaveToDB(userId, scheda):
-  //     1. UPDATE schede_utente SET attiva=false
-  //        WHERE user_id=ST.user.id AND attiva=true
-  //        (mai due schede attive contemporaneamente — muro DB)
-  //     2. INSERT { user_id, blocco_n: 1, scheda: <jsonb>, attiva: true }
-  //     3. Su errore DB → toast voce coach, return null (NON throw,
-  //        l'onboarding deve completare lo stesso)
-  //     4. Su successo → toast voce coach
-  //        "Il coach ha preparato la tua scheda di allenamento"
-  // TODO Step 3.14
+    // BLOCCO 14 — SALVATAGGIO DB (prima scrittura del sistema)
+    // _trainGenSaveToDB:
+    //   1. UPDATE schede_utente SET attiva=false (spegne le precedenti)
+    //   2. INSERT nuova riga con attiva=true + blocco_n incrementale
+    //   3. Su errore: toast voce coach, ritorna { ok:false, reason }
+    //   4. Mai throw: l'onboarding (chiamante futuro) deve completare
+    //      anche se il save fallisce. La scheda è add-on, come la riga
+    //      madre del postino F.1 Nutrition (Opzione A documentata).
+    //   Il muro DB uq_schede_utente_una_attiva garantisce max 1 scheda
+    //   attiva per utente; race condition cross-device → unique violation
+    //   23505 gestita come non-bloccante.
+    const saveResult = await _trainGenSaveToDB(ST.user.id, scheda);
 
-  // BLOCCO 15 — RETURN
-  //   Ritorna l'oggetto scheda inserito (utile per debug/diagnostica)
-  //   o null in caso di guard/errore. Mai throw.
-  // TODO Step 3.15
-
-    // Return scheda costruita. BLOCCO 14 (save DB) ancora TODO Step 3.14:
-    // quando sarà attivo, restituirà l'oggetto scheda con eventuale `id`
-    // DB aggiunto. Per ora utile per console DevTools diagnostiche.
-    return scheda;
+    // BLOCCO 15 — RETURN
+    // Sempre l'oggetto scheda costruito (utile per debug/diagnostica):
+    //   - su save success → arricchito con id DB + blocco_n + _saved:true
+    //   - su save fail (non-bloccante) → _saved:false + _reason
+    //   - su errore globale (catch sotto) → null
+    // Mai throw.
+    if (saveResult && saveResult.ok) {
+      return { ...scheda, id: saveResult.id, blocco_n: saveResult.blocco_n, _saved: true };
+    }
+    return { ...scheda, _saved: false, _reason: (saveResult && saveResult.reason) || 'unknown' };
 
   } catch (e) {
     // Try/catch globale: cattura qualunque errore non gestito dai branch
@@ -8541,9 +8543,112 @@ Scrivi SOLO la nota, niente altro.`;
 }
 
 async function _trainGenSaveToDB(userId, scheda) {
-  // TODO Step 3.14 — deactivate previous + INSERT new. Toast voce coach.
-  // Su errore: return null + toast, NON throw.
-  throw new Error('_trainGenSaveToDB: not implemented');
+  // Salvataggio in tabella `schede_utente` (Supabase).
+  //
+  // ORDINE OPERAZIONI (concordato con utente, sfrutta muro DB):
+  //   1. UPDATE schede_utente SET attiva=false WHERE user_id=? AND attiva=true
+  //      → spegne eventuali schede precedentemente attive
+  //   2. INSERT nuova riga {user_id, blocco_n, scheda, attiva:true}
+  //      → il muro DB uq_schede_utente_una_attiva (UNIQUE PARTIAL su
+  //        user_id WHERE attiva=true) garantisce max 1 attiva per utente
+  //
+  // ERROR HANDLING (mai throw, sempre return {ok, ...}):
+  //   - Deactivate fallisce → log warning, prosegui all'INSERT (best-effort;
+  //     il muro DB ci proteggerà se il problema è una previous active rimasta)
+  //   - INSERT con unique violation (23505) → race cross-device, l'altro
+  //     dispositivo ha già preparato la scheda. Toast informativo + ok:false
+  //   - INSERT con altri errori → toast errore + ok:false
+  //   - Exception generica → toast errore + ok:false
+  //
+  // Toast voce coach (~5500ms, coerente con postino F.1 Nutrition):
+  //   - Success (prima scheda)    → "Il coach ha preparato la tua prima scheda
+  //                                  di allenamento" 🏋️
+  //   - Success (schede successive) → "Il coach ha preparato la tua nuova scheda
+  //                                    di allenamento" 🏋️
+  //   - Race cross-device          → "La tua scheda è già pronta — apri di nuovo
+  //                                   l'app" ℹ️
+  //   - Errore generico            → "Il coach non è riuscito a preparare la
+  //                                   scheda — riprova più tardi" ⚠️
+  //
+  // RETURN: { ok:true, id, blocco_n } oppure { ok:false, reason }
+
+  // Calcola blocco_n incrementale: count esistenti + 1.
+  // Per il primo trigger (onboarding) sarà sempre 1.
+  // Per trigger futuri (post-M2) sarà 2, 3, ... blocco N.
+  let bloccoN = 1;
+  try {
+    const { count, error: countErr } = await supa
+      .from('schede_utente')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if (!countErr && Number.isFinite(count)) {
+      bloccoN = (count || 0) + 1;
+    } else if (countErr) {
+      console.warn('[train-gen] save: count blocco_n fallito, default 1 →', countErr.message);
+    }
+  } catch (e) {
+    console.warn('[train-gen] save: count blocco_n eccezione, default 1 →', (e && e.message) || e);
+  }
+  const isFirstSchema = (bloccoN === 1);
+
+  // Step 1: deactivate previous active (best-effort)
+  try {
+    const { error: updErr } = await supa
+      .from('schede_utente')
+      .update({ attiva: false })
+      .eq('user_id', userId)
+      .eq('attiva', true);
+    if (updErr) {
+      console.warn('[train-gen] save: deactivate previous fallito:', updErr.message);
+      // Proseguiamo all'INSERT: il muro DB unique constraint farà rete
+      // di sicurezza se serve.
+    }
+  } catch (e) {
+    console.warn('[train-gen] save: deactivate eccezione:', (e && e.message) || e);
+  }
+
+  // Step 2: INSERT nuova riga attiva
+  try {
+    const payload = {
+      user_id: userId,
+      blocco_n: bloccoN,
+      scheda: scheda,
+      attiva: true,
+    };
+    const { data, error: insErr } = await supa
+      .from('schede_utente')
+      .insert(payload)
+      .select('id, blocco_n')
+      .single();
+
+    if (insErr) {
+      // Unique violation 23505 = race cross-device (altro dispositivo ha già
+      // preparato la scheda. Tipico se l'utente apre l'app contemporaneamente
+      // su iPhone e iPad post-onboarding).
+      const isUniqueViolation = insErr.code === '23505'
+        || /unique|duplicate/i.test(insErr.message || '');
+      if (isUniqueViolation) {
+        console.warn('[train-gen] save: INSERT unique violation (race cross-device):', insErr.message);
+        try { showToast("La tua scheda è già pronta — apri di nuovo l'app", 'ℹ️', 5500); } catch(_) {}
+        return { ok: false, reason: 'unique-violation-race' };
+      }
+      console.warn('[train-gen] save: INSERT errore:', insErr.message);
+      try { showToast('Il coach non è riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
+      return { ok: false, reason: 'insert-error' };
+    }
+
+    // Successo!
+    const successMsg = isFirstSchema
+      ? 'Il coach ha preparato la tua prima scheda di allenamento'
+      : 'Il coach ha preparato la tua nuova scheda di allenamento';
+    try { showToast(successMsg, '🏋️', 5500); } catch(_) {}
+    return { ok: true, id: data && data.id, blocco_n: data && data.blocco_n };
+
+  } catch (e) {
+    console.warn('[train-gen] save: INSERT eccezione:', (e && e.message) || e);
+    try { showToast('Il coach non è riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
+    return { ok: false, reason: 'exception' };
+  }
 }
 
 function _trainGenParseEsperienzaFromNote(noteSalute) {
