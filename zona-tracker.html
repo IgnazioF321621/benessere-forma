@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 15:01';
+const APP_VERSION = '2026.05.28 · 15:23';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3727,6 +3727,8 @@ const ST = {
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
   trainAllCompleted: [],            // tutti i workout completati validi (esclusi rest/rest_injury) — usato per calcolo settimana ciclo
+  userTrainingSessions: null,       // Mossa 3 (28 mag 2026): { sessionId: sessionObj } popolato da loadActiveScheda; null = fallback TRAINING_SESSIONS hardcoded
+  userSessionCycle: null,           // Mossa 3: array di session id in ordine dello split; null = fallback SESSION_CYCLE hardcoded
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
@@ -4563,7 +4565,7 @@ async function fetchExerciseMedia(exName) {
 // buildCoachPrompt — prompt riusabile per cue AI Coach (modal scheda + modal recupero).
 // Mantiene il prompt unificato: cosi il cue cached e' coerente fra i due modal.
 function buildCoachPrompt(exName, sessionId) {
-  const sess = TRAINING_SESSIONS[sessionId] || {};
+  const sess = getTrainingSession(sessionId) || {};
   const sessionLabel = sess.label || sess.name || '';
   const sessionType = sess.type || '';
   // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
@@ -5072,6 +5074,7 @@ async function loadAndStart_thenM2Entry() {
   await loadAllDays();
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
+  await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS
   const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   if(profile) ST.profile = profile;
   if(ST.profile) applyProfile(ST.profile);
@@ -6152,6 +6155,7 @@ async function loadAndStart() {
     await loadPackages();
     await loadExtras();
     await loadTodaySuppLog();
+    await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS (ramo cache-hit)
     if (profileIsComplete(ST.profile)) {
       applyProfile(ST.profile);
       // M2 entry per utenti esistenti senza check completato
@@ -6189,6 +6193,7 @@ async function loadAndStart() {
   await loadAllDays();
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
+  await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS
   const {data: profile, error: profileErr} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
@@ -6253,6 +6258,8 @@ async function refreshInBackground() {
     await loadTodaySuppLog();
     // Cross-device sync: rinfresca le serie training di oggi dal cloud
     await hydrateTrainingSetsFromCloud();
+    // Cross-device sync Mossa 3: rinfresca scheda allenamento attiva
+    await loadActiveScheda();
     // Cross-device sync (Passo 2, 25 mag notte): invalida la cache piano vero.
     // Se da un altro device è stato creato/modificato un piano weekly_plans, al
     // prossimo render del tab Piano il loader rifà fetch. Le settimane già caricate
@@ -6384,9 +6391,10 @@ async function loadTrainingHomeData(){
       renderHome(); return;
     }
 
-    // nextSession: cicla su SESSION_CYCLE (7 voci, ogni id è univoco)
-    const lastIdx = SESSION_CYCLE.indexOf(lastWorkout.session_type);
-    const nextSession = lastIdx >= 0 ? SESSION_CYCLE[(lastIdx + 1) % SESSION_CYCLE.length] : 'upperA';
+    // nextSession: cicla su getSessionCycle() (scheda utente o SESSION_CYCLE hardcoded)
+    const cycle = getSessionCycle();
+    const lastIdx = cycle.indexOf(lastWorkout.session_type);
+    const nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
     const { data: completedArr } = await supa.from('workouts')
@@ -6485,7 +6493,7 @@ function getProssimaAzioneSimple(){
     const sid = hd.inProgress ? hd.lastSession : hd.nextSession;
     const isRecovery = sid === 'recoveryUpper' || sid === 'recoveryLower' || sid === 'rest';
     if(!isRecovery){
-      const sess = TRAINING_SESSIONS[sid] || TRAINING_SESSIONS.upperA;
+      const sess = getTrainingSession(sid) || getTrainingSession('upperA');
       return {
         titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
         dettaglio: `Sessione ${sess.name} a digiuno. Si parte con 5 minuti di preparazione.`,
@@ -6612,20 +6620,20 @@ function renderHomeV2(){
     const weekStr = `SETTIMANA ${cycleWeek} / 4`;
     let sessName, weekEyebrow;
     if(!hd || hd.notStarted){
-      const firstSess = TRAINING_SESSIONS.upperA;
+      const firstSess = getTrainingSession('upperA');
       sessName = `Sessione ${firstSess.name}`;
       weekEyebrow = `INIZIA IL PROGRAMMA · ${weekStr}`;
     } else if(hd.doneToday){
-      const completedSess = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
-      const nextSessObj   = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+      const completedSess = getTrainingSession(hd.lastSession) || getTrainingSession('upperA');
+      const nextSessObj   = getTrainingSession(hd.nextSession) || getTrainingSession('upperA');
       sessName = `Sessione ${completedSess.name}`;
       weekEyebrow = `COMPLETATA · ${weekStr} · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
     } else if(hd.inProgress){
-      const sessObj = TRAINING_SESSIONS[hd.lastSession] || TRAINING_SESSIONS.upperA;
+      const sessObj = getTrainingSession(hd.lastSession) || getTrainingSession('upperA');
       sessName = `Sessione ${sessObj.name}`;
       weekEyebrow = `SESSIONE IN CORSO · ${weekStr}`;
     } else {
-      const nextSessObj = TRAINING_SESSIONS[hd.nextSession] || TRAINING_SESSIONS.upperA;
+      const nextSessObj = getTrainingSession(hd.nextSession) || getTrainingSession('upperA');
       const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
       sessName    = `Sessione ${nextSessObj.name}`;
       weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()} · ${weekStr}`;
@@ -7544,6 +7552,101 @@ const TRAINING_SESSIONS = {
     exercises:[]
   },
 };
+
+// ═══════════════════════════════════════════════════════════
+// TRAINING — LETTURA SCHEDA UTENTE (Mossa 3 — 28 mag 2026)
+// ═══════════════════════════════════════════════════════════
+// Architettura: ogni accesso a TRAINING_SESSIONS passa per
+// getTrainingSession(sid) / getSessionCycle() / getAllTrainingSessions(),
+// che leggono ST.userTrainingSessions/userSessionCycle se popolati
+// dalla scheda DB (loadActiveScheda), altrimenti fallback automatico
+// a TRAINING_SESSIONS / SESSION_CYCLE hardcoded.
+// Skip test mode (test-user-001) → resta sempre sui dati hardcoded.
+//
+// Risultato runtime:
+//   - Utente con scheda generata in schede_utente.attiva:
+//     vede 4 sessioni Upper/Lower (o split coach generato)
+//   - Utente senza scheda generata / errore caricamento:
+//     vede TRAINING_SESSIONS originale (6 sessioni Upper/Lower/Recovery)
+//   - Test mode: sempre TRAINING_SESSIONS hardcoded
+//
+// TODO post-Mossa 3: "Settimana N/4" hardcoded calcola Math.floor(N/6)%4,
+// per scheda 4gg dovrebbe essere Math.floor(N/4)%4. Quirk display non
+// bloccante, fix successivo.
+
+async function loadActiveScheda() {
+  // Carica la scheda di allenamento attiva dell'utente (schede_utente).
+  // Popola ST.userTrainingSessions (oggetto sessionId→session) e
+  // ST.userSessionCycle (array di sessionId in ordine dello split).
+  // Mai throw: errore o no scheda → fallback automatico sui hardcoded.
+  ST.userTrainingSessions = null;
+  ST.userSessionCycle = null;
+  if (!ST.user || !ST.user.id) return;
+  if (ST.user.id === 'test-user-001') return; // test mode skippa, usa hardcoded
+  try {
+    const { data, error } = await supa.from('schede_utente')
+      .select('scheda, blocco_n')
+      .eq('user_id', ST.user.id)
+      .eq('attiva', true)
+      .maybeSingle();
+    if (error) {
+      console.warn('[scheda] errore caricamento:', error.message);
+      return;
+    }
+    if (!data || !data.scheda) {
+      console.log('[scheda] nessuna scheda attiva, fallback TRAINING_SESSIONS hardcoded');
+      return;
+    }
+    const sessioniArr = data.scheda.sessioni;
+    if (!Array.isArray(sessioniArr) || sessioniArr.length === 0) {
+      console.warn('[scheda] scheda attiva senza sessioni, fallback hardcoded');
+      return;
+    }
+    const sessMap = {};
+    const cycle = [];
+    sessioniArr.forEach(s => {
+      if (s && s.id) {
+        sessMap[s.id] = s;
+        cycle.push(s.id);
+      }
+    });
+    if (Object.keys(sessMap).length === 0) {
+      console.warn('[scheda] sessioni senza id valido, fallback hardcoded');
+      return;
+    }
+    ST.userTrainingSessions = sessMap;
+    ST.userSessionCycle = cycle;
+    console.log('[scheda] caricata scheda blocco_n=' + data.blocco_n + ',', cycle.length, 'sessioni:', cycle.join(', '));
+  } catch (e) {
+    console.warn('[scheda] eccezione caricamento:', (e && e.message) || e);
+  }
+}
+
+// Helper di accesso UNIFICATI — usati ovunque al posto di getTrainingSession(X).
+// Fallback automatico ai hardcoded se ST.userTrainingSessions non popolato.
+
+function getTrainingSession(sid) {
+  // Restituisce l'oggetto sessione per id, dalla scheda utente se presente,
+  // altrimenti dai TRAINING_SESSIONS hardcoded. Ritorna undefined se id
+  // sconosciuto in entrambi (chiamanti già gestiscono con ?. e || {}).
+  if (ST.userTrainingSessions && ST.userTrainingSessions[sid]) {
+    return ST.userTrainingSessions[sid];
+  }
+  return getTrainingSession(sid);
+}
+
+function getAllTrainingSessions() {
+  // Restituisce l'oggetto completo {id: session} della scheda utente
+  // se popolata, altrimenti TRAINING_SESSIONS hardcoded.
+  // Usato per Object.values/keys iterativi (es. findExInAllSessions).
+  return ST.userTrainingSessions || TRAINING_SESSIONS;
+}
+
+function getSessionCycle() {
+  // Restituisce l'array di session id in ordine dello split.
+  // Fallback a SESSION_CYCLE hardcoded se la scheda non è caricata.
+  return ST.userSessionCycle || SESSION_CYCLE;
+}
 
 // ═══════════════════════════════════════════════════════════
 // TRAINING — COACH GENERATORE SCHEDE (Step 2 — 28 mag 2026)
@@ -8989,7 +9092,7 @@ window.ztSchedaWhy = async function() {
 // Ipertrofia compound: 75s — target classico ipertrofia 60-90s
 // Iso/accessori (entrambi i tipi sessione): 60s — recupero corto, no SNC pesante
 function getRestSec(sessionId, ex){
-  const sess = TRAINING_SESSIONS[sessionId];
+  const sess = getTrainingSession(sessionId);
   const isForza = sess?.type === 'Forza';
   const isIso = !!ex?.iso;
   if(isIso) return 60;
@@ -9009,7 +9112,7 @@ function restSecToCompact(sec){
 
 // ── Lookup esercizio (sync) ─────────────────────────────────
 function findExercise(exName, sessionId){
-  const sess = TRAINING_SESSIONS[sessionId];
+  const sess = getTrainingSession(sessionId);
   if(!sess || !sess.exercises) return null;
   return sess.exercises.find(e => e.name === exName) || null;
 }
@@ -9067,7 +9170,7 @@ async function hydrateTrainingSetsFromCloud(){
 // ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
 async function loadLastLoggedSets(sessionId){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.lastLoggedSets = {}; return; }
-  const sess = TRAINING_SESSIONS[sessionId];
+  const sess = getTrainingSession(sessionId);
   if(!sess) return;
   try {
     const exNames = sess.exercises.map(e => e.name);
@@ -9110,7 +9213,7 @@ const TRAINING_NOTE_MAX_LEN = 500; // cap morbido (textarea libera, ma evita tes
 async function loadTodayNotes(sessionId){
   if(!ST.user || ST.user.id==='test-user-001') return;
   if(ST.trainNotesLoaded[sessionId]) return; // anti-doppio-fetch nella stessa sessione
-  const sess = TRAINING_SESSIONS[sessionId];
+  const sess = getTrainingSession(sessionId);
   if(!sess) return;
   try {
     const exNames = sess.exercises.map(e => e.name);
@@ -9603,7 +9706,7 @@ function selectProgEx(name){
 
 // Cerca un esercizio per nome in tutte le TRAINING_SESSIONS, ritorna {ex, sess} o null
 function findExInAllSessions(exName){
-  for(const s of Object.values(TRAINING_SESSIONS)){
+  for(const s of Object.values(getAllTrainingSessions())){
     if(!s.exercises) continue;
     const ex = s.exercises.find(e => e.name === exName);
     if(ex) return { ex, sess: s };
@@ -10035,7 +10138,7 @@ function scrollToActiveExercise(){
   try {
     const sel = ST.trainSession;
     if(!sel) return;
-    const sess = TRAINING_SESSIONS[sel];
+    const sess = getTrainingSession(sel);
     if(!sess || !sess.exercises) return;
     const today = todayKey();
     const activeEx = sess.exercises.find(ex => {
@@ -10424,10 +10527,10 @@ async function saveTrainingSet(){
       }
     }, ()=>{});
   } catch(e){}
-  const sessExercises = TRAINING_SESSIONS[form.sessionId]?.exercises || [];
+  const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
   const exData = currentIdx >= 0 ? sessExercises[currentIdx] : null;
-  const sessObj = TRAINING_SESSIONS[form.sessionId];
+  const sessObj = getTrainingSession(form.sessionId);
   const restSec = getRestSec(form.sessionId, exData);
   ST.trainLogOpen = null;
   startTrainingCountdown(restSec, form.exName, form.sessionId);
@@ -11016,9 +11119,9 @@ function renderTraining(){
 
   if(subnav === 'sessione'){
     const sel = ST.trainSession;
-    if(sel && TRAINING_SESSIONS[sel]){
+    if(sel && getTrainingSession(sel)){
       // ── Dettaglio sessione ──────────────────────────────────
-      const s = TRAINING_SESSIONS[sel];
+      const s = getTrainingSession(sel);
       const isRecovery = s.rir === null;
       const typeBadge = isRecovery
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
@@ -11285,7 +11388,7 @@ function renderTraining(){
       // Con grid 2-col riempie riga per riga: G1|G4 / G2|G5 / G3|G6 (recovery in fondo)
       const allSessions = ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower'];
       const sessionCards = allSessions.map(sid=>{
-        const s = TRAINING_SESSIONS[sid];
+        const s = getTrainingSession(sid);
         const lastDate = ST.sessionLastCompletion?.[sid];
         const dayN = SESSION_DAY_NUM[sid];
         const isToday = lastDate === todayKey();
@@ -11470,7 +11573,7 @@ function renderTraining(){
     // Tab "Per programma" — gerarchico per sessione del programma attuale
     const sessionOrder = ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower'];
     const programGroups = sessionOrder.map(sid => {
-      const sess = TRAINING_SESSIONS[sid];
+      const sess = getTrainingSession(sid);
       if(!sess?.exercises) return null;
       const filtered = sess.exercises.filter(e => matchesSearch(e.name));
       if(filtered.length === 0) return null;
@@ -11942,7 +12045,7 @@ function renderTraining(){
   if(ST.trainExecOpen){
     const ex2 = ST.trainExecOpen;
     const exDef = findExercise(ex2.exName, ex2.sessionId);
-    const sessDef = TRAINING_SESSIONS[ex2.sessionId] || {};
+    const sessDef = getTrainingSession(ex2.sessionId) || {};
     const tot = exDef?.sets || '?';
     // Badge: reps + RIR (riusa la convenzione della card sessione)
     const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(exDef.reps)}</span>` : '';
@@ -11984,7 +12087,7 @@ function renderTraining(){
   if(ST.trainDayDetail){
     const dd = ST.trainDayDetail;
     const w = (ST.trainWorkouts || []).find(x => x.date === dd.date);
-    const sessName = w ? (TRAINING_SESSIONS[w.session_type]?.name || w.session_type) : '';
+    const sessName = w ? (getTrainingSession(w.session_type)?.name || w.session_type) : '';
     const headerStr = formatDayHeader(dd.date) + (sessName ? ' · ' + sessName : '');
     let dayBody = '';
     if(ST.trainDayLogs === null){
@@ -18905,7 +19008,7 @@ function swipeEnd(e, id) {
 // Firma: (exName, sessionId). I dati statici (setup, execution, commonErrors, muscles, alert)
 // vengono letti da TRAINING_SESSIONS; il testo AI è un cue avanzato aggiuntivo.
 async function openExerciseAI(exName, sessionId) {
-  const sess = TRAINING_SESSIONS[sessionId];
+  const sess = getTrainingSession(sessionId);
   const ex = findExercise(exName, sessionId);
   const media = EXERCISE_MEDIA[exName] || {};
   // Priorità: ex.muscleImg (esplicito su esercizi recovery G3/G6, può essere null intenzionale)
@@ -19505,7 +19608,7 @@ function _recoveryFlowClearInterval(){
 function _recoveryFlowCurrentExercise(){
   const sel = ST.trainSession;
   if(!sel) return null;
-  const sess = TRAINING_SESSIONS[sel];
+  const sess = getTrainingSession(sel);
   if(!sess || sess.type !== 'Recupero') return null;
   const idx = ST.trainRecoveryFlow.currentIdx;
   return sess.exercises[idx] || null;
@@ -19521,7 +19624,7 @@ function _allExercisesDoneInBlock(blockName, exs){
 }
 function _recoveryFlowAdvance(){
   // Marca corrente come done. Poi decide: fine sessione / stop blocco / micro-pausa / esercizio successivo.
-  const sess = TRAINING_SESSIONS[ST.trainSession];
+  const sess = getTrainingSession(ST.trainSession);
   if(!sess) return;
   const flow = ST.trainRecoveryFlow;
   const cur = sess.exercises[flow.currentIdx];
@@ -19610,7 +19713,7 @@ function _recoveryFlowTick(){
 function recoveryFlowStart(){
   // Mutual exclusion: non avviare se activation flow è running
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
-  const sess = TRAINING_SESSIONS[ST.trainSession];
+  const sess = getTrainingSession(ST.trainSession);
   if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   _recoveryFlowClearInterval();
@@ -19642,7 +19745,7 @@ function recoveryFlowResume(){
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   // Branch blockStop: riparte dal primo esercizio del nuovo blocco (currentIdx già avanzato in _recoveryFlowAdvance)
   if(flow.blockStop && flow.blockStop.active){
-    const sess = TRAINING_SESSIONS[ST.trainSession];
+    const sess = getTrainingSession(ST.trainSession);
     const cur = sess && sess.exercises[flow.currentIdx];
     if(cur) flow.remaining = cur.duration_sec || 30;
     flow.blockStop = { active:false, nextBlockName:'', nextExStartIdx:0 };
@@ -19664,7 +19767,7 @@ function recoveryFlowBack(){
   // Disabilitato durante micro-pausa
   if(flow.microPause && flow.microPause.active) return;
 
-  const sess = TRAINING_SESSIONS[ST.trainSession];
+  const sess = getTrainingSession(ST.trainSession);
   if(!sess) return;
 
   // Branch blockStop: torna all'esercizio precedente (ultimo del blocco precedente), NO resume
@@ -19764,7 +19867,7 @@ function toggleRecoveryDone(exName){
 async function checkRecoverySessionDone(){
   const sel = ST.trainSession;
   if(!sel) return;
-  const sess = TRAINING_SESSIONS[sel];
+  const sess = getTrainingSession(sel);
   if(!sess || sess.type !== 'Recupero') return;
   const allDone = sess.exercises.every(ex => !!(ST.trainRecoveryDone && ST.trainRecoveryDone[ex.name]));
   if(!allDone) return;
