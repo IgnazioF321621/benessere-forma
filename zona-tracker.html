@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 06:41';
+const APP_VERSION = '2026.05.28 · 06:48';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7928,30 +7928,59 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
         codici: s.exercises.map(e => e.codice),
       })));
 
-  // BLOCCO 7 — ORDERING ESERCIZI NELLA SESSIONE
-  //   Regola fissa (PARTE 5):
-  //     1. Multiarticolari pesanti (compound: spinta_orizz/vert + tirata
-  //        + dominante_ginocchio + dominante_anca)
-  //     2. Complementari
-  //     3. Isolamenti
-  //     4. Core in coda
-  //   _trainGenOrderExercises(exercises) ritorna lista riordinata.
-  // TODO Step 3.7
+    // BLOCCO 7+8 — CAUTELE (limitazioni × zone_rischio) + ORDERING
+    //
+    // PIPELINE: applichiamo BLOCCO 8 PRIMA del BLOCCO 7 (numero del blocco
+    // è concetto, non ordine d'esecuzione). Motivo: le cautele possono
+    // SOSTITUIRE un esercizio con la sua "alternativa" che potrebbe avere
+    // pattern diverso → l'ordering post-sostituzione produce il risultato
+    // corretto sequenza compound → isolamento → core.
+    //
+    // BLOCCO 8 (sicurezza, 100% deterministico, mai AI):
+    //   Per ogni esercizio: intersect(limitazioni utente, zone_rischio).
+    //   - intersezione vuota → keep
+    //   - non vuota:
+    //     (a) adattamento presente → keep + propaga `adattamento` come alert
+    //     (b) altrimenti alternativa presente nel catalogMap → sostituisci
+    //         (con re-check cautele sull'alternativa, 1 livello, no loop)
+    //     (c) né adattamento né alternativa → skip + log warning
+    //
+    // BLOCCO 7 (ordering fisso, PARTE 5):
+    //   1. multiarticolari compound (spinta_*/tirata_*/dominante_*)
+    //   2. isolamento + mobilita
+    //   3. core in coda
+    //   Sub-sort per codice (stabile, coerente con pickByPattern).
+    const sessioniProcessate = sessioniRaw.map(s => {
+      const cautelati = _trainGenApplyCautions(s.exercises, limitazioni, catalogMap);
+      // Dedup post-sostituzioni: l'alternativa di un esercizio potrebbe
+      // coincidere con un altro già selezionato dal BLOCCO 6 (caso edge
+      // raro: pickByPattern dedup via Set codici in fase di selezione,
+      // ma una sostituzione delle cautele potrebbe produrre un duplicato
+      // post-hoc, es. due esercizi diversi che puntano alla stessa
+      // alternativa quando entrambi in conflitto).
+      const seen = new Set();
+      const deduped = cautelati.filter(w => {
+        if (seen.has(w.ex.codice)) {
+          console.warn(`[train-gen] dedup post-cautele: '${w.ex.codice}' già presente in sessione → escluso`);
+          return false;
+        }
+        seen.add(w.ex.codice);
+        return true;
+      });
+      const ordinati = _trainGenOrderExercises(deduped);
+      return { ...s, exercises: ordinati };
+    });
 
-  // BLOCCO 8 — APPLICAZIONE CAUTELE (limitazioni × zone_rischio)
-  //   Per OGNI esercizio scelto in OGNI sessione:
-  //     - intersect: limitazioni utente ∩ zone_rischio esercizio
-  //     - se intersezione vuota → mantieni esercizio inalterato
-  //     - se intersezione non vuota:
-  //         (a) ha campo adattamento non vuoto → KEEP esercizio,
-  //             propaga adattamento come nota di sicurezza nel JSON
-  //         (b) non ha adattamento → SOSTITUISCI con esercizio
-  //             dal campo alternativa (lookup nel Map<codice>)
-  //         (c) non ha né adattamento né alternativa →
-  //             SKIP + log warning (l'esercizio non entra,
-  //             il pattern resta "buco" per questo blocco — accettabile)
-  //   Risultato: lista esercizi adattati/sostituiti, sempre safe per l'utente.
-  // TODO Step 3.8
+    console.log('[train-gen] sessioni processate (post cautele + ordering):',
+      sessioniProcessate.map(s => ({
+        type: s.sessionType,
+        count: s.exercises.length,
+        sequenza: s.exercises.map(w => ({
+          codice: w.ex.codice,
+          pattern: w.ex.pattern,
+          action: w.action,
+        })),
+      })));
 
   // BLOCCO 9 — FINISHER TABATA (solo dimagrimento/ricomposizione)
   //   Se addFinisher === true:
@@ -8165,19 +8194,130 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
   return candidates[0];
 }
 
-function _trainGenOrderExercises(exercises) {
-  // TODO Step 3.7 — ordering fisso:
-  //   1. multiarticolari pesanti (compound)
-  //   2. complementari
-  //   3. isolamenti
-  //   4. core in coda
-  throw new Error('_trainGenOrderExercises: not implemented');
+function _trainGenOrderExercises(items) {
+  // Ordering fisso PARTE 5: compound → isolamento/mobilita → core.
+  // Accetta sia esercizi puri sia wrapper {ex, action, ...} (post-cautele).
+  // Sub-sort per codice (stabile, deterministico).
+  //
+  // NB: PARTE 5 distingue anche "complementari al centro", ma il catalogo
+  // attuale non ha un pattern dedicato (sarebbe sotto-categoria del
+  // compound). Per ora compound e complementari ricadono nella stessa
+  // priorità 1 → ordinati alfabeticamente. Affinamento = TODO futuro
+  // (richiede campo dedicato sul catalogo, es. `intensita_compound`).
+  const PRIORITY = {
+    spinta_orizz: 1, spinta_vert: 1,
+    tirata_orizz: 1, tirata_vert: 1,
+    dominante_ginocchio: 1, dominante_anca: 1,
+    isolamento: 2,
+    mobilita: 2,
+    core: 3,
+  };
+  const getEx = (item) => (item && item.ex) ? item.ex : item;
+  const getPriority = (item) => {
+    const ex = getEx(item);
+    const p = String(ex.pattern || '').toLowerCase().trim();
+    return PRIORITY[p] || 2; // pattern sconosciuto → priorità media
+  };
+  const getCodice = (item) => String(getEx(item).codice || '');
+
+  return [...(items || [])].sort((a, b) => {
+    const pA = getPriority(a), pB = getPriority(b);
+    if (pA !== pB) return pA - pB;
+    return getCodice(a).localeCompare(getCodice(b));
+  });
 }
 
 function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
-  // TODO Step 3.8 — incrocia limitazioni × zone_rischio.
-  // Branch: adatta (a) / sostituisci (b) / skip (c) come da BLOCCO 8.
-  throw new Error('_trainGenApplyCautions: not implemented');
+  // Applica le cautele utente in modo 100% DETERMINISTICO (mai AI).
+  // Per ogni esercizio: intersect(limitazioni utente, zone_rischio esercizio).
+  //   - intersezione vuota → keep inalterato
+  //   - intersezione non vuota:
+  //       (a) `adattamento` presente → keep + propaga adattamento come alert
+  //       (b) `alternativa` presente nel catalogMap → sostituisci con essa
+  //           (con re-check cautele sull'alternativa, max 1 livello: se
+  //            anche l'alternativa ha conflitto e non si adatta → skip)
+  //       (c) né adattamento né alternativa → skip + log warning
+  //
+  // Ritorna array di wrapper:
+  //   { ex, action, cautionNote, originalCodice?, conflict[]? }
+  //   action ∈ { 'keep', 'adapt', 'substitute', 'substitute-and-adapt' }
+  //   Esercizi skippati: esclusi dall'output (la sessione resta più corta).
+  //
+  // Caso edge alternativa→alternativa: protezione anti-loop via parametro
+  // depth (1 al primo tentativo, 0 sull'alternativa: nessuna ulteriore
+  // sostituzione, solo adatta-o-skip).
+  const limSet = new Set(
+    (Array.isArray(limitazioni) ? limitazioni : [])
+      .map(l => String(l).toLowerCase().trim())
+      .filter(Boolean)
+  );
+
+  const getConflitto = (ex) => {
+    const zone = String(ex.zone_rischio || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    return zone.filter(z => limSet.has(z));
+  };
+
+  // Risolve un singolo esercizio.
+  // depth=1 al primo tentativo (può sostituire), depth=0 sull'alternativa.
+  const resolve = (ex, depth) => {
+    if (limSet.size === 0) return { kind:'keep', ex };
+    const conflict = getConflitto(ex);
+    if (conflict.length === 0) return { kind:'keep', ex };
+
+    // Branch (a) adatta
+    const adattamento = String(ex.adattamento || '').trim();
+    if (adattamento) {
+      return { kind:'adapt', ex, adattamento, conflict };
+    }
+
+    // Branch (b) sostituisci — solo al primo livello, e solo se l'alternativa
+    // esiste nel catalogo (validazione obbligatoria del codice)
+    const altCodice = String(ex.alternativa || '').trim();
+    if (depth > 0 && altCodice) {
+      const altEx = catalogMap.get(altCodice);
+      if (!altEx) {
+        console.warn(`[train-gen] alternativa '${altCodice}' di '${ex.codice}' non trovata nel catalogMap → skip`);
+        return { kind:'skip', reason:'alternative-not-found', ex, conflict };
+      }
+      // Ricontrolla l'alternativa una sola volta (depth=0 → no sostituzione).
+      const altResolved = resolve(altEx, 0);
+      if (altResolved.kind === 'keep') {
+        return { kind:'substitute', ex: altEx, original: ex, conflict };
+      }
+      if (altResolved.kind === 'adapt') {
+        return { kind:'substitute-and-adapt', ex: altEx, original: ex,
+                 adattamento: altResolved.adattamento, conflict };
+      }
+      // L'alternativa stessa è in conflitto e non si adatta → skip totale.
+      console.warn(`[train-gen] alternativa '${altCodice}' di '${ex.codice}' anch'essa in conflitto e non adattabile → skip`);
+      return { kind:'skip', reason:'alternative-also-conflicts', ex, conflict };
+    }
+
+    // Branch (c) skip
+    console.warn(`[train-gen] '${ex.codice}' in conflitto con [${conflict.join(',')}] e niente adattamento né alternativa → skip`);
+    return { kind:'skip', reason:'no-adaptation-no-alternative', ex, conflict };
+  };
+
+  // Applica resolve a ogni esercizio + costruisce i wrapper finali
+  const output = [];
+  (exercises || []).forEach(ex => {
+    const r = resolve(ex, 1);
+    if (r.kind === 'keep') {
+      output.push({ ex: r.ex, action: 'keep', cautionNote: null });
+    } else if (r.kind === 'adapt') {
+      output.push({ ex: r.ex, action: 'adapt', cautionNote: r.adattamento, conflict: r.conflict });
+    } else if (r.kind === 'substitute') {
+      output.push({ ex: r.ex, action: 'substitute', cautionNote: null,
+                    originalCodice: r.original.codice, conflict: r.conflict });
+    } else if (r.kind === 'substitute-and-adapt') {
+      output.push({ ex: r.ex, action: 'substitute-and-adapt', cautionNote: r.adattamento,
+                    originalCodice: r.original.codice, conflict: r.conflict });
+    }
+    // skip → escluso dall'output (sessione più corta)
+  });
+
+  return output;
 }
 
 function _trainGenMapToSession(rawExercises, sessionMeta, params) {
