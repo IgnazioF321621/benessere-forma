@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.27 · 15:20';
+const APP_VERSION = '2026.05.28 · 06:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7538,6 +7538,463 @@ const TRAINING_SESSIONS = {
     exercises:[]
   },
 };
+
+// ═══════════════════════════════════════════════════════════
+// TRAINING — COACH GENERATORE SCHEDE (Step 2 — 28 mag 2026)
+// ═══════════════════════════════════════════════════════════
+//
+// Logica deterministica: l'AI è usata SOLO per una breve nota
+// motivazionale in voce coach (callAI ~150 token + fallback fisso).
+// Tutta la struttura (split, parametri, selezione esercizi,
+// cautele, finisher) è in JS puro che incrocia regole + catalogo.
+// Le cautele (limitazioni × zone_rischio) sono 100% deterministiche.
+//
+// Trigger: fine onboarding M1 (saveOnboarding), SOLO se usa_training=true.
+// Save: tabella `schede_utente` (Supabase), riga JSON, attiva=true.
+// Letta da: modulo Training (Step 3 separato — NON in scope qui).
+//
+// Vedi CLAUDE.md → "MODULO TRAINING — PARTE 5" per le decisioni
+// complete di logica chiuse il 27 mag 2026 sera.
+
+// ───────────────────────────────────────────────────────────
+// COSTANTI (mapping + regole) — confermate 28 mag 2026
+// ───────────────────────────────────────────────────────────
+
+// Mappa esperienza M1 (4 valori) → livello catalogo (3 valori).
+// 'ritorno-allenamento' → 'principiante' (cauto: onboarding futuro
+// distinguerà "da quanto non ti alleni" per gestione fine).
+const _TRAIN_GEN_EXPERIENCE_MAP = {
+  'principiante':         'principiante',
+  'intermedio':           'intermedio',
+  'avanzato':             'avanzato',
+  'ritorno-allenamento':  'principiante',
+};
+
+// Parametri sessione per obiettivo × esperienza.
+// - rir: null per TUTTI i principianti (decisione PARTE 5)
+// - type: 'Forza' solo per forza_performance, altrimenti 'Ipertrofia'
+//   (coerente con i tag già usati in TRAINING_SESSIONS)
+// - rest_sec: scelte dentro i range di PARTE 5
+//     · forza 180s · ipertrofia/salute/mantenimento 90s
+//     · ricomposizione 75s (centro range 60-90) · dimagrimento 60s (denso)
+// - reps intermedio/avanzato per ricomp/dimagrimento: più bassi del
+//   principiante (progressione naturale: più carico → meno reps)
+const _TRAIN_GEN_PARAMS_BY_GOAL = {
+  forza_performance: {
+    principiante: { sets:4, reps_min:4,  reps_max:6,  rir:null, rest_sec:180, type:'Forza' },
+    intermedio:   { sets:4, reps_min:4,  reps_max:6,  rir:2,    rest_sec:180, type:'Forza' },
+    avanzato:     { sets:4, reps_min:4,  reps_max:6,  rir:2,    rest_sec:180, type:'Forza' },
+  },
+  ipertrofia: {
+    principiante: { sets:3, reps_min:8,  reps_max:12, rir:null, rest_sec:90,  type:'Ipertrofia' },
+    intermedio:   { sets:4, reps_min:8,  reps_max:12, rir:1,    rest_sec:90,  type:'Ipertrofia' },
+    avanzato:     { sets:4, reps_min:8,  reps_max:12, rir:1,    rest_sec:90,  type:'Ipertrofia' },
+  },
+  dimagrimento: {
+    principiante: { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:60,  type:'Ipertrofia' },
+    intermedio:   { sets:3, reps_min:8,  reps_max:12, rir:1,    rest_sec:60,  type:'Ipertrofia' },
+    avanzato:     { sets:4, reps_min:6,  reps_max:10, rir:1,    rest_sec:60,  type:'Ipertrofia' },
+  },
+  ricomposizione: {
+    principiante: { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:75,  type:'Ipertrofia' },
+    intermedio:   { sets:3, reps_min:8,  reps_max:12, rir:1,    rest_sec:75,  type:'Ipertrofia' },
+    avanzato:     { sets:4, reps_min:6,  reps_max:10, rir:1,    rest_sec:75,  type:'Ipertrofia' },
+  },
+  longevita: {
+    principiante: { sets:3, reps_min:6,  reps_max:10, rir:null, rest_sec:90,  type:'Ipertrofia' },
+    intermedio:   { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+    avanzato:     { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+  },
+  mantenimento: {
+    principiante: { sets:3, reps_min:6,  reps_max:10, rir:null, rest_sec:90,  type:'Ipertrofia' },
+    intermedio:   { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+    avanzato:     { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+  },
+};
+
+// Split sessioni per giorni × esperienza (PARTE 5).
+// I "nomi visibili" (Full Body A/B, Upper A/B, ...) li calcola
+// runtime _trainGenMapToSession aggiungendo lettere progressive.
+const _TRAIN_GEN_SPLIT_BY_DAYS = {
+  2: {
+    principiante: ['fullbody','fullbody'],
+    intermedio:   ['fullbody','fullbody'],
+    avanzato:     ['fullbody','fullbody'],
+  },
+  3: {
+    principiante: ['fullbody','fullbody','fullbody'],
+    intermedio:   ['upper','lower','fullbody'],
+    avanzato:     ['upper','lower','fullbody'],
+  },
+  4: {
+    principiante: ['upper','lower','upper','lower'],
+    intermedio:   ['upper','lower','upper','lower'],
+    avanzato:     ['upper','lower','upper','lower'],
+  },
+  5: {
+    principiante: ['push','pull','legs','upper','lower'],
+    intermedio:   ['push','pull','legs','upper','lower'],
+    avanzato:     ['push','pull','legs','upper','lower'],
+  },
+};
+
+// Pattern minimi obbligatori per tipo sessione.
+// Ogni elemento è un array OR: "almeno UN esercizio che matchi UNO
+// di questi pattern". Sopra il minimo, il selettore può aggiungere
+// enfasi/isolamento coerente con obiettivo.
+//
+// fullbody è l'UNICO tipo con regole diverse per livello:
+// per principianti la spinta è SOLO orizzontale (più sicura per chi
+// inizia, no carico verticale sulla colonna). Tirata resta OR per tutti.
+// Resolver: _trainGenGetPatterns(sessionType, livello) sotto.
+const _TRAIN_GEN_PATTERN_REQUIREMENTS = {
+  fullbody: {
+    principiante: [
+      ['spinta_orizz'],                       // solo orizz per principianti
+      ['tirata_orizz', 'tirata_vert'],
+      ['dominante_ginocchio'],
+      ['dominante_anca'],
+      ['core'],
+    ],
+    intermedio: [
+      ['spinta_orizz', 'spinta_vert'],
+      ['tirata_orizz', 'tirata_vert'],
+      ['dominante_ginocchio'],
+      ['dominante_anca'],
+      ['core'],
+    ],
+    avanzato: [
+      ['spinta_orizz', 'spinta_vert'],
+      ['tirata_orizz', 'tirata_vert'],
+      ['dominante_ginocchio'],
+      ['dominante_anca'],
+      ['core'],
+    ],
+  },
+  upper: [
+    ['spinta_orizz'],
+    ['spinta_vert'],
+    ['tirata_orizz'],
+    ['tirata_vert'],
+  ],
+  lower: [
+    ['dominante_ginocchio'],
+    ['dominante_anca'],
+    ['core'],
+  ],
+  push: [
+    ['spinta_orizz'],
+    ['spinta_vert'],
+  ],
+  pull: [
+    ['tirata_orizz'],
+    ['tirata_vert'],
+  ],
+  legs: [
+    ['dominante_ginocchio'],
+    ['dominante_anca'],
+  ],
+};
+
+// Budget tempo per dimensionare numero esercizi a sessione.
+// PARTE 5: orientativo 2-4 a 30min, 3-5 a 45min, 4-6 a 60min
+// (Forza meno per recuperi lunghi).
+// Formula in _trainGenComputeMaxExercises:
+//   tempo_disponibile = durata_min*60 - warmup - (finisher?:0) - buffer
+//   tempo_per_esercizio = sets * (set_execution + rest_sec)
+//   maxEx = clamp(floor(tempo_disponibile / tempo_per_esercizio),
+//                 min_exercises, max_exercises)
+const _TRAIN_GEN_TIME_BUDGET = {
+  set_execution_sec: 30,            // tempo medio esecuzione UNA serie
+  warmup_sec: 300,                  // 5 min blocco attivazione (già esistente)
+  finisher_sec: 300,                // 5 min tabata se obiettivo lo richiede
+  buffer_sec: 60,                   // margine transizioni tra esercizi
+  min_exercises_per_session: 2,
+  max_exercises_per_session: 6,
+};
+
+// Fallback voce coach se callAI fallisce nella nota motivazionale.
+// Stesso pattern del postino F.1 (_PIANOV4_POSTINO_FALLBACK_REASONING):
+// tono caldo, no termini tecnici, no preamboli, max 2 frasi.
+const _TRAIN_GEN_FALLBACK_REASONING =
+  "Il coach ha preparato la tua prima scheda di allenamento. " +
+  "Cresceremo insieme blocco dopo blocco, leggendo i tuoi check fisici.";
+
+// ───────────────────────────────────────────────────────────
+// FUNZIONE PRINCIPALE
+// ───────────────────────────────────────────────────────────
+
+async function generateTrainingProgram({ source = 'onboarding' } = {}) {
+  // BLOCCO 1 — GUARD INIZIALI
+  //   - Se ST.user mancante → return null (niente crash)
+  //   - Se ST.user.id === 'test-user-001' → return null (test mode salta)
+  //   - Se ST.profile.usa_training === false → return null (utente solo-nutrition)
+  //   - Try/catch globale: qualunque errore = log + toast voce coach,
+  //     ma NON deve bloccare il flusso chiamante (onboarding deve completare)
+  // TODO Step 3.1
+
+  // BLOCCO 2 — LETTURA DATI INPUT
+  //   Fonte primaria: ST.profile (sempre disponibile dopo upsert).
+  //   Per esperienza/limitazioni:
+  //     - se source === 'onboarding' E ST.m1Data popolato → leggi da m1Data
+  //       (sono ancora in memoria, NON serve parsare note_salute)
+  //     - altrimenti (trigger futuro post-M2) → parsa note_salute con regex
+  //       via _trainGenParseEsperienzaFromNote
+  //   Estraggo: obiettivo, esperienza, limitazioni[], tipo_allenamento,
+  //            attrezzatura[], giorni_allenamento, durata_sessione,
+  //            sex, age, weight_kg
+  // TODO Step 3.2
+
+  // BLOCCO 3 — CARICAMENTO CATALOGO
+  //   SELECT * FROM esercizi_catalog (RLS SELECT pubblica, no .eq user_id).
+  //   Risultato: array di 33+ esercizi con tutti i campi.
+  //   Conservo anche un Map<codice, exercise> per lookup O(1) (serve a
+  //   validazione finale + risoluzione "alternativa" nelle cautele).
+  // TODO Step 3.3
+
+  // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE
+  //   Risolvo: livelloMappato (da _TRAIN_GEN_EXPERIENCE_MAP)
+  //            → params (sets/reps/RIR/rest da _TRAIN_GEN_PARAMS_BY_GOAL)
+  //            → splitArray (da _TRAIN_GEN_SPLIT_BY_DAYS)
+  //            → patternsByType (da _TRAIN_GEN_PATTERN_REQUIREMENTS via
+  //                              _trainGenGetPatterns: resolver fullbody-per-livello)
+  //            → maxExercisesPerSession (da _trainGenComputeMaxExercises)
+  //            → addFinisher (true se obiettivo ∈ {dimagrimento, ricomposizione})
+  // TODO Step 3.4
+
+  // BLOCCO 5 — FILTRI BASE SUL CATALOGO
+  //   Sotto-funzione _trainGenFilterPool(catalog, profile, params):
+  //     - luogo compatibile con tipo_allenamento (o 'qualsiasi')
+  //     - attrezzo presente in attrezzatura utente (se casa)
+  //       [palestra → tutto ammesso; aperto → corpo_libero + portatili]
+  //     - livello compatibile con esperienza
+  //     - uso include 'principale' (i 'finisher' restano nel pool a parte)
+  //   Risultato: poolPrincipali[] + poolFinisher[] + poolRecupero[] (futuro)
+  // TODO Step 3.5
+
+  // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE
+  //   Per OGNI sessione dello split (es. 4 iterazioni):
+  //     - tipo sessione (fullbody/upper/lower/push/pull/legs)
+  //     - pattern minimi obbligatori (es. upper = [spinta_orizz, spinta_vert,
+  //       tirata_orizz, tirata_vert])
+  //     - _trainGenPickByPattern(pool, pattern, usedSoFar):
+  //         pesca 1 esercizio del pattern richiesto, preferendo varietà
+  //         (no duplicati nella stessa sessione)
+  //     - se restano slot dopo i pattern obbligatori (perché maxExercises
+  //       lo permette): aggiungi enfasi/isolamento coerente con obiettivo
+  // TODO Step 3.6
+
+  // BLOCCO 7 — ORDERING ESERCIZI NELLA SESSIONE
+  //   Regola fissa (PARTE 5):
+  //     1. Multiarticolari pesanti (compound: spinta_orizz/vert + tirata
+  //        + dominante_ginocchio + dominante_anca)
+  //     2. Complementari
+  //     3. Isolamenti
+  //     4. Core in coda
+  //   _trainGenOrderExercises(exercises) ritorna lista riordinata.
+  // TODO Step 3.7
+
+  // BLOCCO 8 — APPLICAZIONE CAUTELE (limitazioni × zone_rischio)
+  //   Per OGNI esercizio scelto in OGNI sessione:
+  //     - intersect: limitazioni utente ∩ zone_rischio esercizio
+  //     - se intersezione vuota → mantieni esercizio inalterato
+  //     - se intersezione non vuota:
+  //         (a) ha campo adattamento non vuoto → KEEP esercizio,
+  //             propaga adattamento come nota di sicurezza nel JSON
+  //         (b) non ha adattamento → SOSTITUISCI con esercizio
+  //             dal campo alternativa (lookup nel Map<codice>)
+  //         (c) non ha né adattamento né alternativa →
+  //             SKIP + log warning (l'esercizio non entra,
+  //             il pattern resta "buco" per questo blocco — accettabile)
+  //   Risultato: lista esercizi adattati/sostituiti, sempre safe per l'utente.
+  // TODO Step 3.8
+
+  // BLOCCO 9 — FINISHER TABATA (solo dimagrimento/ricomposizione)
+  //   Se addFinisher === true:
+  //     - pesca 1-2 esercizi dal poolFinisher per sessione
+  //     - schema 20s ON / 10s OFF × 4 round (~5 min)
+  //     - marker speciale nel JSON (es. flag isFinisher: true)
+  //     - durata totale sessione = dichiarata + 5 min
+  // TODO Step 3.9
+
+  // BLOCCO 10 — MAPPING AL FORMATO TRAINING_SESSIONS
+  //   _trainGenMapToSession(rawExercises, sessionMeta, params):
+  //     per ogni esercizio raw del catalogo →
+  //       {
+  //         codice: cat.codice,              // NUOVO: tracciabilità catalogo
+  //         name: cat.nome,
+  //         sets: params.sets,
+  //         reps: `${reps_min}-${reps_max}`,
+  //         eq: cat.attrezzo + cat.setup (compatto),
+  //         setup: cat.setup.split(';'),
+  //         execution: cat.esecuzione.split(';'),
+  //         commonErrors: cat.errori.split(';'),
+  //         muscles: cat.muscoli.split(';'),
+  //         alert: cat.nota_sicurezza || cautionAdaptation (se applicato),
+  //         iso: (booleano derivato da pattern === 'isolamento'),
+  //       }
+  //   Per la sessione top-level:
+  //     { id, name, type ('Forza'/'Ipertrofia'), rir, label, rest, exercises[] }
+  //   Lettere progressive ("Upper A", "Upper B") calcolate qui.
+  // TODO Step 3.10
+
+  // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
+  //   _trainGenValidateCodes(scheda, catalogMap):
+  //     verifica che ogni `codice` esista nel Map<codice> del catalogo.
+  //   Se trovo un codice fantasma → log + skip esercizio (no crash).
+  //   In approccio A il rischio è basso (selezioniamo dal pool reale)
+  //   ma è rete di sicurezza obbligatoria (vincolo del brief).
+  // TODO Step 3.11
+
+  // BLOCCO 12 — NOTA MOTIVAZIONALE AI (voce coach)
+  //   _trainGenAINote(profile, schedaMeta):
+  //     Prompt italiano, prima persona plurale, max 2-3 frasi,
+  //     tono caldo, no preamboli, no elenchi puntati.
+  //     Contenuto: cita giorni a settimana + tempo + obiettivo,
+  //     promette evoluzione blocco dopo blocco con i check fisici.
+  //     Try/catch: se callAI fallisce o ritorna vuoto →
+  //                usa _TRAIN_GEN_FALLBACK_REASONING.
+  //   Salvato come campo `reasoning` del JSON.
+  // TODO Step 3.12
+
+  // BLOCCO 13 — BUILD JSON FINALE
+  //   Struttura della colonna `scheda` (jsonb in DB):
+  //     {
+  //       version: '1.0',
+  //       generated_at: ISO timestamp,
+  //       obiettivo, esperienza, livello_mappato,
+  //       tipo_allenamento, attrezzatura,
+  //       giorni_allenamento, durata_sessione,
+  //       reasoning: "<nota AI o fallback>",
+  //       sessioni: [ ...vedi BLOCCO 10 ]
+  //     }
+  // TODO Step 3.13
+
+  // BLOCCO 14 — SALVATAGGIO DB
+  //   _trainGenSaveToDB(userId, scheda):
+  //     1. UPDATE schede_utente SET attiva=false
+  //        WHERE user_id=ST.user.id AND attiva=true
+  //        (mai due schede attive contemporaneamente — muro DB)
+  //     2. INSERT { user_id, blocco_n: 1, scheda: <jsonb>, attiva: true }
+  //     3. Su errore DB → toast voce coach, return null (NON throw,
+  //        l'onboarding deve completare lo stesso)
+  //     4. Su successo → toast voce coach
+  //        "Il coach ha preparato la tua scheda di allenamento"
+  // TODO Step 3.14
+
+  // BLOCCO 15 — RETURN
+  //   Ritorna l'oggetto scheda inserito (utile per debug/diagnostica)
+  //   o null in caso di guard/errore. Mai throw.
+  // TODO Step 3.15
+
+  return null; // placeholder finché Step 3.x non riempiono i blocchi
+}
+
+// ───────────────────────────────────────────────────────────
+// HELPER PRIVATI — corpo riempito ai sotto-step 3.x
+// (throw Error per intercettare chiamate accidentali pre-implementazione)
+// ───────────────────────────────────────────────────────────
+
+function _trainGenFilterPool(catalog, profile, params) {
+  // TODO Step 3.5 — filtri luogo / attrezzatura / livello / uso
+  throw new Error('_trainGenFilterPool: not implemented');
+}
+
+function _trainGenGetPatterns(sessionType, livello) {
+  // TODO Step 3.4 — resolver pattern: gestisce sia forma piatta
+  // (upper/lower/push/pull/legs) sia forma per-livello (fullbody).
+  // Se Array.isArray(def) → ritorna def; altrimenti def[livello].
+  throw new Error('_trainGenGetPatterns: not implemented');
+}
+
+function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
+  // TODO Step 3.4 — formula tempo:
+  //   tempo_disp = durata_min*60 - warmup - (finisher?:0) - buffer
+  //   tempo_ex   = sets * (set_execution + rest_sec)
+  //   clamp(floor(tempo_disp / tempo_ex), min, max) dal _TRAIN_GEN_TIME_BUDGET
+  throw new Error('_trainGenComputeMaxExercises: not implemented');
+}
+
+function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
+  // TODO Step 3.6 — pesca 1 esercizio dal pool che matchi UNO dei
+  // pattern in patternOptions (array OR), evitando duplicati in usedSoFar.
+  // Preferenza varietà (es. round-robin se più candidati, o random
+  // deterministico). Ritorna esercizio scelto o null se pool esaurito.
+  throw new Error('_trainGenPickByPattern: not implemented');
+}
+
+function _trainGenOrderExercises(exercises) {
+  // TODO Step 3.7 — ordering fisso:
+  //   1. multiarticolari pesanti (compound)
+  //   2. complementari
+  //   3. isolamenti
+  //   4. core in coda
+  throw new Error('_trainGenOrderExercises: not implemented');
+}
+
+function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
+  // TODO Step 3.8 — incrocia limitazioni × zone_rischio.
+  // Branch: adatta (a) / sostituisci (b) / skip (c) come da BLOCCO 8.
+  throw new Error('_trainGenApplyCautions: not implemented');
+}
+
+function _trainGenMapToSession(rawExercises, sessionMeta, params) {
+  // TODO Step 3.10 — mappa esercizio catalogo → formato TRAINING_SESSIONS.
+  // Calcola lettere progressive ("Upper A", "Upper B") da sessionMeta.
+  throw new Error('_trainGenMapToSession: not implemented');
+}
+
+function _trainGenValidateCodes(scheda, catalogMap) {
+  // TODO Step 3.11 — sanity check: ogni `codice` deve esistere nel catalogo.
+  // Skip esercizi fantasma + log warning. No throw.
+  throw new Error('_trainGenValidateCodes: not implemented');
+}
+
+async function _trainGenAINote(profile, schedaMeta) {
+  // TODO Step 3.12 — callAI(prompt, 150) per nota motivazionale voce coach.
+  // Fallback _TRAIN_GEN_FALLBACK_REASONING se fallisce/vuoto. Mai throw.
+  throw new Error('_trainGenAINote: not implemented');
+}
+
+async function _trainGenSaveToDB(userId, scheda) {
+  // TODO Step 3.14 — deactivate previous + INSERT new. Toast voce coach.
+  // Su errore: return null + toast, NON throw.
+  throw new Error('_trainGenSaveToDB: not implemented');
+}
+
+function _trainGenParseEsperienzaFromNote(noteSalute) {
+  // TODO Step 3.2 (variante post-M2) — parsa note_salute con regex per
+  // ricavare esperienza + limitazioni quando ST.m1Data non è disponibile
+  // (es. trigger fine blocco dopo check M2). Per il primo trigger
+  // (onboarding) leggiamo direttamente da ST.m1Data — questo helper
+  // serve solo ai trigger futuri.
+  throw new Error('_trainGenParseEsperienzaFromNote: not implemented');
+}
+
+// ───────────────────────────────────────────────────────────
+// DIAGNOSTICA / FORZATURE COLLAUDO (Step 3.16, dopo aver riempito i blocchi)
+// ───────────────────────────────────────────────────────────
+//   window.ztTestGeneraScheda()   — forza generazione bypassando guard
+//   window.ztSchedaWhy()          — console.table delle decisioni intermedie
+//                                   (livello mappato, params, split, pool size,
+//                                   esercizi per pattern, cautele, ecc.)
+//   ?schedaGen=1   — flag URL: forza generazione (analogo a ?genera=1 postino)
+//   ?schedaDebug=1 — flag URL: console.log status (analogo a ?generaDebug=1)
+// TODO Step 3.16
+
+// ───────────────────────────────────────────────────────────
+// Hook in saveOnboarding (Step 3.17):
+//   Subito DOPO checkLowKcalAndWarn e PRIMA del branch
+//   opts.skipM2 / loadAndStart_thenM2Entry, aggiungere:
+//
+//     if (usaTraining === true) {
+//       try { await generateTrainingProgram({source:'onboarding'}); }
+//       catch(e) { console.warn('[train-gen] onboarding hook failed:', e); }
+//     }
+//
+//   Generazione fire-and-forget: errore NON deve bloccare l'avanzamento
+//   verso M2. La scheda è un add-on (stesso pattern del postino F.1).
+// TODO Step 3.17
 
 // Recupero tra serie (sec) calibrato per allenamento con elastici a RIR controllato.
 // Forza compound: 120s — sufficiente per elastici a RIR 2 (no powerlifting puro)
