@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 07:08';
+const APP_VERSION = '2026.05.28 · 07:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6162,12 +6162,14 @@ async function loadAndStart() {
         renderOggi();
         showPage('home');
         // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
-        // Sequenza: postino (await) → welcome force URL → welcome auto.
+        // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
+        // (la funzione training resta non-agganciata al boot automatico — solo URL force).
         (async () => {
           await _pianoV4MaybePostino({}); // auto, no force
           _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
           _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
           _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+          _trainGenMaybeForceFromUrl();       // 3.16 collaudo training ?schedaGen=1 / ?schedaDebug=1
         })();
       }
     } else {
@@ -6196,11 +6198,13 @@ async function loadAndStart() {
     renderOggi();
     showPage('home');
     // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
+    // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
     (async () => {
       await _pianoV4MaybePostino({}); // auto, no force
       _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
       _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
       _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+      _trainGenMaybeForceFromUrl();       // 3.16 collaudo training ?schedaGen=1 / ?schedaDebug=1
     })();
     return;
   }
@@ -6218,11 +6222,13 @@ async function loadAndStart() {
     renderOggi();
     showPage('home');
     // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
+    // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
     (async () => {
       await _pianoV4MaybePostino({}); // auto, no force
       _pianoV4MaybeForcePostinoFromUrl(); // collaudo ?genera=1
       _pianoV4MaybeForceWelcomeFromUrl(); // E.1 collaudo ?welcome=1
       _pianoV4MaybeAutoWelcome();         // E.2 trigger automatico (giorno+flag, ora neutralizzata)
+      _trainGenMaybeForceFromUrl();       // 3.16 collaudo training ?schedaGen=1 / ?schedaDebug=1
     })();
     saveCache();
     ST.lastRefreshAt = Date.now();
@@ -7724,9 +7730,17 @@ const _TRAIN_GEN_FALLBACK_REASONING =
 // FUNZIONE PRINCIPALE
 // ───────────────────────────────────────────────────────────
 
-async function generateTrainingProgram({ source = 'onboarding' } = {}) {
+async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false } = {}) {
   // Try/catch globale: qualunque errore → log + return null.
   // NON deve mai bloccare il flusso chiamante (onboarding deve completare).
+  //
+  // Parametri opzionali (Step 3.16 diagnostica):
+  //   force=true  → bypass guard "test mode" + "dati training incompleti"
+  //                 (usato da ztTestGeneraScheda / ztSchedaWhy / ?schedaGen=1).
+  //                 Default attivi: utente loggato, profilo presente,
+  //                 usa_training non-false, obiettivo presente, catalogo OK.
+  //   dryRun=true → skip BLOCCO 12 (no callAI) + skip BLOCCO 14 (no DB write).
+  //                 Usato da ztSchedaWhy per ispezione senza side-effect.
   try {
 
     // BLOCCO 1 — GUARD INIZIALI
@@ -7735,8 +7749,12 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
       return null;
     }
     if (ST.user.id === 'test-user-001') {
-      console.log('[train-gen] skip: test mode');
-      return null;
+      if (force) {
+        console.warn('[train-gen][force] bypass test mode guard (force=true)');
+      } else {
+        console.log('[train-gen] skip: test mode');
+        return null;
+      }
     }
     if (!ST.profile || ST.profile.usa_training === false) {
       console.log('[train-gen] skip: usa_training=false o profilo mancante');
@@ -7786,14 +7804,23 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
     }
     const livello = _TRAIN_GEN_EXPERIENCE_MAP[esperienzaRaw] || 'principiante';
 
-    // Resto profilo training
-    const tipoAllen     = profile.tipo_allenamento || null;
-    const attrezzatura  = Array.isArray(profile.attrezzatura) ? profile.attrezzatura.slice() : [];
-    const giorni        = profile.giorni_allenamento || null;
-    const durata        = profile.durata_sessione    || null;
+    // Resto profilo training (let perché possono essere riassegnati a default
+    // se force=true bypassa il guard "dati incompleti")
+    let tipoAllen     = profile.tipo_allenamento || null;
+    let attrezzatura  = Array.isArray(profile.attrezzatura) ? profile.attrezzatura.slice() : [];
+    let giorni        = profile.giorni_allenamento || null;
+    let durata        = profile.durata_sessione    || null;
     if (!tipoAllen || !giorni || !durata) {
-      console.warn('[train-gen] dati training incompleti:', { tipoAllen, giorni, durata });
-      return null;
+      if (force) {
+        console.warn('[train-gen][force] dati training incompleti, uso default casa/3gg/45min:', { tipoAllen, giorni, durata });
+        tipoAllen = tipoAllen || 'casa';
+        giorni    = giorni    || 3;
+        durata    = durata    || 45;
+        if (attrezzatura.length === 0) attrezzatura = ['elastico','corpo_libero'];
+      } else {
+        console.warn('[train-gen] dati training incompleti:', { tipoAllen, giorni, durata });
+        return null;
+      }
     }
 
     const inputData = {
@@ -8076,6 +8103,8 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
     // Una singola chiamata callAI con fallback fisso se fallisce o vuoto.
     // Niente termini tecnici (no RIR/DUP/RPE/pattern), tono caldo,
     // max 2-3 frasi italiane. Stessa filosofia del postino F.1 Nutrition.
+    // dryRun=true: skippa la chiamata AI (placeholder esplicito per
+    // diagnostica ztSchedaWhy senza side-effect Worker/Groq).
     const schedaMeta = {
       obiettivo,
       esperienzaRaw,
@@ -8085,7 +8114,9 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
       durata,
       sessioniCount: sessioniValidate.length,
     };
-    const reasoning = await _trainGenAINote(profile, schedaMeta);
+    const reasoning = dryRun
+      ? '[dry-run] nota motivazionale skippata per diagnostica'
+      : await _trainGenAINote(profile, schedaMeta);
 
     // BLOCCO 13 — BUILD JSON FINALE
     // Struttura della colonna `scheda` (jsonb in schede_utente).
@@ -8119,6 +8150,13 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
     //   Il muro DB uq_schede_utente_una_attiva garantisce max 1 scheda
     //   attiva per utente; race condition cross-device → unique violation
     //   23505 gestita come non-bloccante.
+    //
+    // dryRun=true: skippa completamente save. Ritorno arricchito con
+    // _reason='dry-run' per distinguerlo da fail reali.
+    if (dryRun) {
+      console.log('[train-gen][dry-run] save DB skippato');
+      return { ...scheda, _saved: false, _reason: 'dry-run' };
+    }
     const saveResult = await _trainGenSaveToDB(ST.user.id, scheda);
 
     // BLOCCO 15 — RETURN
@@ -8661,15 +8699,106 @@ function _trainGenParseEsperienzaFromNote(noteSalute) {
 }
 
 // ───────────────────────────────────────────────────────────
-// DIAGNOSTICA / FORZATURE COLLAUDO (Step 3.16, dopo aver riempito i blocchi)
+// DIAGNOSTICA / FORZATURE COLLAUDO (Step 3.16)
 // ───────────────────────────────────────────────────────────
-//   window.ztTestGeneraScheda()   — forza generazione bypassando guard
-//   window.ztSchedaWhy()          — console.table delle decisioni intermedie
-//                                   (livello mappato, params, split, pool size,
-//                                   esercizi per pattern, cautele, ecc.)
-//   ?schedaGen=1   — flag URL: forza generazione (analogo a ?genera=1 postino)
-//   ?schedaDebug=1 — flag URL: console.log status (analogo a ?generaDebug=1)
-// TODO Step 3.16
+//   window.ztTestGeneraScheda()   — forza generazione PIPELINE REALE
+//                                   (scrive DB). Bypassa solo "test mode"
+//                                   e "dati incompleti" via force=true.
+//   window.ztSchedaWhy()          — dry-run + console.table delle decisioni
+//                                   intermedie. NON chiama AI né scrive DB.
+//   ?schedaGen=1   — flag URL: equivalente a ztTestGeneraScheda al boot
+//                    (agganciato in loadAndStart, dopo postino Nutrition).
+//   ?schedaDebug=1 — flag URL: setta window._trainGenDebug=true (verbose
+//                    log future-proof; ad oggi i log [train-gen] sono
+//                    già emessi sempre, marker per evoluzioni future).
+
+// Handler URL force: chiamato nei 3 rami di loadAndStart subito dopo il
+// postino Nutrition. Fire-and-forget, mai bloccante.
+async function _trainGenMaybeForceFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('schedaDebug')) {
+      window._trainGenDebug = true;
+      console.log('[train-gen][debug-url] ?schedaDebug=1 attivato');
+    }
+    if (!params.has('schedaGen')) return;
+    console.log('[train-gen][force-url] ?schedaGen=1 trigger forzato → pipeline reale (scrive DB)');
+    setTimeout(function() {
+      generateTrainingProgram({ source: 'url-force', force: true })
+        .catch(e => console.warn('[train-gen][force-url] errore:', (e && e.message) || e));
+    }, 200);
+  } catch (e) {
+    console.warn('[train-gen][force-url] eccezione:', (e && e.message) || e);
+  }
+}
+
+// Diagnostica console: pipeline reale (scrive DB)
+window.ztTestGeneraScheda = async function() {
+  console.log('=== ztTestGeneraScheda: PIPELINE REALE — questo SCRIVERÀ in DB ===');
+  const r = await generateTrainingProgram({ source: 'manual-test', force: true });
+  console.log('--- ritorno ---');
+  console.log(r);
+  return r;
+};
+
+// Diagnostica console: dry-run + console.table, no DB no AI
+window.ztSchedaWhy = async function() {
+  console.log('=== ztSchedaWhy: dry-run diagnostico (NO save DB, NO chiamata AI) ===');
+  console.log('--- profilo utente corrente ---');
+  console.log({
+    user: ST.user && { id: ST.user.id, email: ST.user.email },
+    obiettivo: ST.profile && ST.profile.obiettivo,
+    usa_training: ST.profile && ST.profile.usa_training,
+    tipo_allenamento: ST.profile && ST.profile.tipo_allenamento,
+    attrezzatura: ST.profile && ST.profile.attrezzatura,
+    giorni_allenamento: ST.profile && ST.profile.giorni_allenamento,
+    durata_sessione: ST.profile && ST.profile.durata_sessione,
+    m1Data_esperienza: ST.m1Data && ST.m1Data.esperienza,
+    m1Data_limitazioni: ST.m1Data && ST.m1Data.limitazioni,
+  });
+  const scheda = await generateTrainingProgram({
+    source: 'why-diagnostic', force: true, dryRun: true
+  });
+  if (!scheda) {
+    console.warn('[ztSchedaWhy] nessuna scheda generata — vedi log [train-gen] sopra per il guard fallito');
+    return null;
+  }
+  console.log('--- meta scheda (dry-run, NON salvata) ---');
+  console.table({
+    obiettivo:        scheda.obiettivo,
+    esperienza:       scheda.esperienza,
+    livello_mappato:  scheda.livello_mappato,
+    tipo_allenamento: scheda.tipo_allenamento,
+    attrezzatura:     (scheda.attrezzatura || []).join(','),
+    giorni:           scheda.giorni_allenamento,
+    durata_min:       scheda.durata_sessione,
+    sessioni_count:   (scheda.sessioni || []).length,
+  });
+  console.log('--- sessioni ---');
+  console.table(
+    (scheda.sessioni || []).map(s => ({
+      id:           s.id,
+      name:         s.name,
+      type:         s.type,
+      rir:          s.rir,
+      rest:         s.rest,
+      duration_min: s.duration_min,
+      esercizi:     (s.exercises || []).length,
+      codici:       (s.exercises || []).map(e => e.codice).join(','),
+    }))
+  );
+  console.log('--- dettaglio esercizi (raw) ---');
+  console.log((scheda.sessioni || []).map(s => ({
+    name: s.name,
+    exercises: (s.exercises || []).map(e => ({
+      codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
+      iso: !!e.iso, isFinisher: !!e.isFinisher,
+      replacedFromCodice: e.replacedFromCodice || null,
+      alert: e.alert || null,
+    })),
+  })));
+  return scheda;
+};
 
 // ───────────────────────────────────────────────────────────
 // Hook in saveOnboarding (Step 3.17):
