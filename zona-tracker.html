@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 06:48';
+const APP_VERSION = '2026.05.28 · 06:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7982,34 +7982,88 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
         })),
       })));
 
-  // BLOCCO 9 — FINISHER TABATA (solo dimagrimento/ricomposizione)
-  //   Se addFinisher === true:
-  //     - pesca 1-2 esercizi dal poolFinisher per sessione
-  //     - schema 20s ON / 10s OFF × 4 round (~5 min)
-  //     - marker speciale nel JSON (es. flag isFinisher: true)
-  //     - durata totale sessione = dichiarata + 5 min
-  // TODO Step 3.9
+    // BLOCCO 9 — FINISHER TABATA (solo dimagrimento/ricomposizione)
+    // Aggiunge 1-2 esercizi dal poolFinisher in coda alla sessione, con
+    // schema Tabata 20s ON / 10s OFF × 4 round (~5 min totali, marcati
+    // isFinisher:true in BLOCCO 10).
+    // Cautele applicate ANCHE ai finisher per coerenza sicurezza.
+    // Esercizi già in sessione (cross-pool) esclusi per evitare duplicati.
+    // No-op se obiettivo non lo richiede.
+    const sessioniConFinisher = sessioniProcessate.map(s => {
+      if (!addFinisher) return s;
 
-  // BLOCCO 10 — MAPPING AL FORMATO TRAINING_SESSIONS
-  //   _trainGenMapToSession(rawExercises, sessionMeta, params):
-  //     per ogni esercizio raw del catalogo →
-  //       {
-  //         codice: cat.codice,              // NUOVO: tracciabilità catalogo
-  //         name: cat.nome,
-  //         sets: params.sets,
-  //         reps: `${reps_min}-${reps_max}`,
-  //         eq: cat.attrezzo + cat.setup (compatto),
-  //         setup: cat.setup.split(';'),
-  //         execution: cat.esecuzione.split(';'),
-  //         commonErrors: cat.errori.split(';'),
-  //         muscles: cat.muscoli.split(';'),
-  //         alert: cat.nota_sicurezza || cautionAdaptation (se applicato),
-  //         iso: (booleano derivato da pattern === 'isolamento'),
-  //       }
-  //   Per la sessione top-level:
-  //     { id, name, type ('Forza'/'Ipertrofia'), rir, label, rest, exercises[] }
-  //   Lettere progressive ("Upper A", "Upper B") calcolate qui.
-  // TODO Step 3.10
+      // Escludi finisher già presenti nella sessione (cross-pool dedup)
+      const codiciInSessione = new Set(s.exercises.map(w => w.ex.codice));
+      const candidati = pools.poolFinisher.filter(ex => !codiciInSessione.has(ex.codice));
+      if (candidati.length === 0) {
+        console.warn(`[train-gen] finisher: nessun candidato per ${s.sessionType}`);
+        return s;
+      }
+
+      // Cautele sicurezza anche sui finisher
+      const cautelati = _trainGenApplyCautions(candidati, limitazioni, catalogMap);
+      if (cautelati.length === 0) {
+        console.warn(`[train-gen] finisher: tutti scartati dalle cautele per ${s.sessionType}`);
+        return s;
+      }
+
+      // Selezione deterministica: sort per codice + first 1-2
+      cautelati.sort((a, b) => String(a.ex.codice).localeCompare(String(b.ex.codice)));
+      const finisherWrappers = cautelati.slice(0, 2).map(w => ({ ...w, isFinisher: true }));
+
+      return { ...s, exercises: [...s.exercises, ...finisherWrappers] };
+    });
+
+    // BLOCCO 10 — MAPPING AL FORMATO TRAINING_SESSIONS
+    // Replica i nomi campo già usati in TRAINING_SESSIONS legacy (così il
+    // modulo Training di lettura — Step 3 separato — userà gli stessi
+    // accessor senza adattamento): sets, reps, eq, setup[], execution[],
+    // commonErrors[], muscles[], alert?, iso?. AGGIUNTO solo `codice`
+    // per tracciabilità + marker isFinisher per i Tabata.
+    //
+    // Lettere progressive (A/B/C) calcolate qui:
+    //   - tipo che si ripete (['upper','lower','upper','lower']) → A/A/B/B
+    //   - tipo unico in lista (['upper','lower','fullbody']) → no lettera
+    const TYPE_DISPLAY = {
+      fullbody:'Full Body', upper:'Upper', lower:'Lower',
+      push:'Push', pull:'Pull', legs:'Legs',
+    };
+    const typeCounter = {};
+    splitArray.forEach(t => { typeCounter[t] = (typeCounter[t] || 0) + 1; });
+    const typeProgressivo = {};
+    splitArray.forEach(t => { typeProgressivo[t] = 0; });
+
+    const restText = (typeof restSecToText === 'function')
+      ? restSecToText(params.rest_sec)
+      : `${params.rest_sec} sec`;
+
+    const sessioniFinali = sessioniConFinisher.map(s => {
+      typeProgressivo[s.sessionType]++;
+      const idx = typeProgressivo[s.sessionType];
+      const isMulti = typeCounter[s.sessionType] > 1;
+      const letter = isMulti ? String.fromCharCode(64 + idx) : ''; // 65='A'
+      const displayName = TYPE_DISPLAY[s.sessionType] || s.sessionType;
+      const sessionMeta = {
+        id:    `${s.sessionType}${letter}`,
+        name:  letter ? `${displayName} ${letter}` : displayName,
+        type:  params.type,
+        rir:   params.rir,
+        label: letter ? `${displayName} ${letter} — ${params.type}` : `${displayName} — ${params.type}`,
+        rest:  restText,
+        duration_min: (Number(durata) || 0) + (addFinisher ? 5 : 0),
+      };
+      return _trainGenMapToSession(s.exercises, sessionMeta, params);
+    });
+
+    console.log('[train-gen] sessioni finali (mapped):',
+      sessioniFinali.map(s => ({
+        id: s.id, name: s.name, type: s.type, rir: s.rir, rest: s.rest,
+        duration_min: s.duration_min,
+        exercises: s.exercises.map(e => ({
+          codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
+          finisher: !!e.isFinisher, alert: !!e.alert,
+        })),
+      })));
 
   // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
   //   _trainGenValidateCodes(scheda, catalogMap):
@@ -8320,10 +8374,78 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
   return output;
 }
 
-function _trainGenMapToSession(rawExercises, sessionMeta, params) {
-  // TODO Step 3.10 — mappa esercizio catalogo → formato TRAINING_SESSIONS.
-  // Calcola lettere progressive ("Upper A", "Upper B") da sessionMeta.
-  throw new Error('_trainGenMapToSession: not implemented');
+function _trainGenMapToSession(wrappers, sessionMeta, params) {
+  // Mapping al formato TRAINING_SESSIONS:
+  //   sessione top-level: { id, name, type, rir, label, rest, exercises[], duration_min }
+  //   esercizio: { codice, name, sets, reps, eq, setup[], execution[],
+  //                commonErrors[], muscles[], alert?, iso?, isFinisher? }
+  //
+  // Replica ESATTAMENTE i nomi campo esistenti in TRAINING_SESSIONS — il
+  // modulo Training di lettura (Step 3 separato) userà gli stessi accessor.
+  // Aggiunge solo `codice` (tracciabilità catalogo) + `isFinisher` (marker
+  // Tabata) + opzionale `replacedFromCodice` (UI futura: "ti propongo Y
+  // al posto di X perché hai conflitto con Z").
+  //
+  // ALERT propagazione: nota_sicurezza intrinseca dell'esercizio (sempre
+  // presente nel catalogo per esercizi con warning) UNITA a cautionNote
+  // (adattamento personalizzato dalle cautele). Separatore ' · '.
+  // Se nessuno dei due è presente: alert omesso dal JSON.
+
+  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+
+  const exercises = (wrappers || []).map(w => {
+    const cat = w.ex;
+    const isFinisher = !!w.isFinisher;
+    const cautionNote = w.cautionNote ? String(w.cautionNote).trim() : '';
+    const notaSicurezza = String(cat.nota_sicurezza || '').trim();
+
+    // Alert: intrinseco + personalizzato (se entrambi → concat con ' · ')
+    const alertParts = [];
+    if (notaSicurezza) alertParts.push(notaSicurezza);
+    if (cautionNote)   alertParts.push(cautionNote);
+    const alert = alertParts.length ? alertParts.join(' · ') : null;
+
+    // iso flag = recupero corto in getRestSec().
+    // Coerente con TRAINING_SESSIONS attuale (Face pull / Lateral raise /
+    // Curl / Tricipiti / Glute bridge iso / Leg curl / Calf raise = iso:true).
+    // Marco iso per: isFinisher, pattern isolamento, pattern mobilita.
+    const pattern = String(cat.pattern || '').toLowerCase().trim();
+    const iso = isFinisher || pattern === 'isolamento' || pattern === 'mobilita';
+
+    // Finisher Tabata: 4 round × 20s ON (10s OFF gestito dal modulo lettura)
+    const sets = isFinisher ? 4 : params.sets;
+    const reps = isFinisher ? '20 sec' : `${params.reps_min}-${params.reps_max}`;
+
+    const exObj = {
+      codice: cat.codice,
+      name:   cat.nome,
+      sets,
+      reps,
+      eq:     String(cat.attrezzo || '').trim(),
+      setup:        splitField(cat.setup),
+      execution:    splitField(cat.esecuzione),
+      commonErrors: splitField(cat.errori),
+      muscles:      splitField(cat.muscoli),
+    };
+    if (iso)         exObj.iso = true;
+    if (alert)       exObj.alert = alert;
+    if (isFinisher)  exObj.isFinisher = true;
+    // Traceability: se è stato sostituito tramite cautele
+    if (w.originalCodice) exObj.replacedFromCodice = w.originalCodice;
+
+    return exObj;
+  });
+
+  return {
+    id:    sessionMeta.id,
+    name:  sessionMeta.name,
+    type:  sessionMeta.type,
+    rir:   sessionMeta.rir,
+    label: sessionMeta.label,
+    rest:  sessionMeta.rest,
+    duration_min: sessionMeta.duration_min,
+    exercises,
+  };
 }
 
 function _trainGenValidateCodes(scheda, catalogMap) {
