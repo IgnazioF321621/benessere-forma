@@ -3613,7 +3613,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 16:00';
+const APP_VERSION = '2026.05.28 · 22:40';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3741,6 +3741,7 @@ const ST = {
   trainAllCompleted: [],            // tutti i workout completati validi (esclusi rest/rest_injury) — usato per calcolo settimana ciclo
   userTrainingSessions: null,       // Mossa 3 (28 mag 2026): { sessionId: sessionObj } popolato da loadActiveScheda; null = fallback TRAINING_SESSIONS hardcoded
   userSessionCycle: null,           // Mossa 3: array di session id in ordine dello split; null = fallback SESSION_CYCLE hardcoded
+  trainTabataFlow: null,            // Tabata vero (28 mag sera): { active, sessionId, round, totalRounds, exIdx, phase:'work'|'rest', remaining, running, _iv, finisher }
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
@@ -8165,36 +8166,29 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         })),
       })));
 
-    // BLOCCO 9 — FINISHER TABATA (solo dimagrimento/ricomposizione)
-    // Aggiunge 1-2 esercizi dal poolFinisher in coda alla sessione, con
-    // schema Tabata 20s ON / 10s OFF × 4 round (~5 min totali, marcati
-    // isFinisher:true in BLOCCO 10).
-    // Cautele applicate ANCHE ai finisher per coerenza sicurezza.
-    // Esercizi già in sessione (cross-pool) esclusi per evitare duplicati.
-    // No-op se obiettivo non lo richiede.
+    // BLOCCO 9 — FINISHER TABATA VERO (solo dimagrimento/ricomposizione)
+    // Costruisce oggetto finisher dedicato (schema separato da exercises[]):
+    //   { type:'tabata', work_sec:20, rest_sec:10, round:8, exercises:[4 distinti] }
+    // 4 esercizi cardio_metabolico distinti che si alternano sui 8 round
+    // (ogni esercizio fa 2 round, ~4 min effettivi + transizioni = ~5 min).
+    // Round-robin tra sessioni via typeOrderIdx (Upper A pesca diversi da
+    // Upper B, Lower A da Lower B). Cautele applicate per sicurezza.
+    // No-op se obiettivo non lo richiede o pool tabata vuoto.
+    const typeProgressivoForFinisher = {};
+    splitArray.forEach(t => { typeProgressivoForFinisher[t] = 0; });
     const sessioniConFinisher = sessioniProcessate.map(s => {
+      const typeOrderIdx = typeProgressivoForFinisher[s.sessionType];
+      typeProgressivoForFinisher[s.sessionType]++;
       if (!addFinisher) return s;
-
-      // Escludi finisher già presenti nella sessione (cross-pool dedup)
-      const codiciInSessione = new Set(s.exercises.map(w => w.ex.codice));
-      const candidati = pools.poolFinisher.filter(ex => !codiciInSessione.has(ex.codice));
-      if (candidati.length === 0) {
-        console.warn(`[train-gen] finisher: nessun candidato per ${s.sessionType}`);
-        return s;
-      }
-
-      // Cautele sicurezza anche sui finisher
-      const cautelati = _trainGenApplyCautions(candidati, limitazioni, catalogMap);
-      if (cautelati.length === 0) {
-        console.warn(`[train-gen] finisher: tutti scartati dalle cautele per ${s.sessionType}`);
-        return s;
-      }
-
-      // Selezione deterministica: sort per codice + first 1-2
-      cautelati.sort((a, b) => String(a.ex.codice).localeCompare(String(b.ex.codice)));
-      const finisherWrappers = cautelati.slice(0, 2).map(w => ({ ...w, isFinisher: true }));
-
-      return { ...s, exercises: [...s.exercises, ...finisherWrappers] };
+      const finisher = _trainGenBuildTabata({
+        poolTabata: pools.poolFinisherTabata,
+        limitazioni,
+        catalogMap,
+        sessionIndex: typeOrderIdx,
+        sessionType: s.sessionType,
+      });
+      if (!finisher) return s; // pool vuoto / cautele troppo restrittive
+      return { ...s, finisher };
     });
 
     // BLOCCO 10 — MAPPING AL FORMATO TRAINING_SESSIONS
@@ -8235,7 +8229,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         rest:  restText,
         duration_min: (Number(durata) || 0) + (addFinisher ? 5 : 0),
       };
-      return _trainGenMapToSession(s.exercises, sessionMeta, params);
+      return _trainGenMapToSession(s.exercises, sessionMeta, params, s.finisher);
     });
 
     console.log('[train-gen] sessioni finali (mapped):',
@@ -8243,9 +8237,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         id: s.id, name: s.name, type: s.type, rir: s.rir, rest: s.rest,
         duration_min: s.duration_min,
         exercises: s.exercises.map(e => ({
-          codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
-          finisher: !!e.isFinisher, alert: !!e.alert,
+          codice: e.codice, name: e.name, sets: e.sets, reps: e.reps, alert: !!e.alert,
         })),
+        finisher: s.finisher ? { type: s.finisher.type, round: s.finisher.round, exercises: s.finisher.exercises.map(e => e.codice) } : null,
       })));
 
     // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
@@ -8401,6 +8395,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
 
   const poolPrincipali = [];
   const poolFinisher = [];
+  const poolFinisherTabata = []; // NUOVO (28 mag sera): solo cardio_metabolico+finisher
 
   catalog.forEach(ex => {
     // FILTRO 1 — luogo (lista separata da ';', alias aperto↔libero,
@@ -8466,10 +8461,17 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     const exTagged = isSurrogato ? { ...ex, _surrogato: true } : ex;
     if (usi.includes('principale')) poolPrincipali.push(exTagged);
     if (usi.includes('finisher'))   poolFinisher.push(exTagged);
+    // Pool Tabata: solo cardio_metabolico + finisher (sottoinsieme di poolFinisher
+    // dedicato al Tabata vero del BLOCCO 9. Distinto perché finisher generici
+    // tipo push-up/plank non sono cardio anaerobici per Tabata 20/10).
+    const patternNorm = _normPattern(ex.pattern);
+    if (patternNorm === 'cardio_metabolico' && usi.includes('finisher')) {
+      poolFinisherTabata.push(exTagged);
+    }
     // 'recupero' ignorato in questa fase
   });
 
-  return { poolPrincipali, poolFinisher };
+  return { poolPrincipali, poolFinisher, poolFinisherTabata };
 }
 
 function _trainGenGetPatterns(sessionType, livello) {
@@ -8539,6 +8541,70 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex) {
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
   const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
   return candidates[idx];
+}
+
+// _trainGenBuildTabata — costruisce l'oggetto finisher Tabata per una sessione.
+// (28 mag sera 2026) Tabata vero: 4 esercizi cardio_metabolico distinti che si
+// alternano su 8 round × 20s ON / 10s OFF. Round-robin via sessionIndex per
+// produrre Tabata diversi tra Upper A/Upper B (e Lower A/Lower B).
+// Cautele zone_rischio applicate. Esercizi scartati dalle cautele → ridotti
+// in numero (4 minimi, accetta meno se pool ridotto post-cautele).
+// Ritorna oggetto finisher o null se pool insufficiente.
+function _trainGenBuildTabata({ poolTabata, limitazioni, catalogMap, sessionIndex, sessionType }) {
+  if (!Array.isArray(poolTabata) || poolTabata.length === 0) {
+    console.warn(`[train-gen] tabata: poolFinisherTabata vuoto per ${sessionType}`);
+    return null;
+  }
+  // Cautele sui cardio (es. lombare/ginocchia di Ignazio → adattamento ROM)
+  const cautelati = _trainGenApplyCautions(poolTabata, limitazioni, catalogMap);
+  if (cautelati.length === 0) {
+    console.warn(`[train-gen] tabata: tutti i cardio scartati dalle cautele per ${sessionType}`);
+    return null;
+  }
+  // Pesca 4 esercizi distinti con round-robin (riusa pattern _trainGenPickByPattern).
+  // Sort deterministico per codice → seleziona [sessionIndex % len], [...], evita duplicati.
+  cautelati.sort((a, b) => String(a.ex.codice || '').localeCompare(String(b.ex.codice || '')));
+  const used = new Set();
+  const picked = [];
+  for (let i = 0; i < 4; i++) {
+    const remaining = cautelati.filter(w => !used.has(w.ex.codice));
+    if (remaining.length === 0) break; // pool esaurito
+    const idx = (((Number(sessionIndex) || 0) + i) % remaining.length + remaining.length) % remaining.length;
+    const chosen = remaining[idx];
+    used.add(chosen.ex.codice);
+    picked.push(chosen);
+  }
+  if (picked.length === 0) {
+    console.warn(`[train-gen] tabata: nessun esercizio selezionato per ${sessionType}`);
+    return null;
+  }
+  // Mappa al formato JSON output: campi essenziali per il renderer Tabata.
+  // alert combinato (cautele + nota_surrogato se applicabile) per ogni esercizio.
+  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  const exercises = picked.map(w => {
+    const cat = w.ex;
+    const cautionNote = w.cautionNote ? String(w.cautionNote).trim() : '';
+    const notaSicurezza = String(cat.nota_sicurezza || '').trim();
+    const alertParts = [];
+    if (notaSicurezza) alertParts.push(notaSicurezza);
+    if (cautionNote)   alertParts.push(cautionNote);
+    return {
+      codice: cat.codice,
+      name:   cat.nome,
+      setup:        splitField(cat.setup),
+      execution:    splitField(cat.esecuzione),
+      commonErrors: splitField(cat.errori),
+      muscles:      splitField(cat.muscoli),
+      ...(alertParts.length ? { alert: alertParts.join(' · ') } : {}),
+    };
+  });
+  return {
+    type:     'tabata',
+    work_sec: 20,
+    rest_sec: 10,
+    round:    8,
+    exercises,
+  };
 }
 
 function _trainGenOrderExercises(items) {
@@ -8668,17 +8734,21 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
   return output;
 }
 
-function _trainGenMapToSession(wrappers, sessionMeta, params) {
+function _trainGenMapToSession(wrappers, sessionMeta, params, finisher) {
   // Mapping al formato TRAINING_SESSIONS:
-  //   sessione top-level: { id, name, type, rir, label, rest, exercises[], duration_min }
+  //   sessione top-level: { id, name, type, rir, label, rest, exercises[],
+  //                         duration_min, finisher? }
   //   esercizio: { codice, name, sets, reps, eq, setup[], execution[],
-  //                commonErrors[], muscles[], alert?, iso?, isFinisher? }
+  //                commonErrors[], muscles[], alert?, iso?, isSurrogato? }
+  //   finisher (NUOVO 28 mag sera 2026): oggetto Tabata separato
+  //     { type:'tabata', work_sec:20, rest_sec:10, round:8, exercises:[4 cardio] }
+  //     Vedi _trainGenBuildTabata.
   //
   // Replica ESATTAMENTE i nomi campo esistenti in TRAINING_SESSIONS — il
-  // modulo Training di lettura (Step 3 separato) userà gli stessi accessor.
-  // Aggiunge solo `codice` (tracciabilità catalogo) + `isFinisher` (marker
-  // Tabata) + opzionale `replacedFromCodice` (UI futura: "ti propongo Y
-  // al posto di X perché hai conflitto con Z").
+  // modulo Training di lettura (Mossa 3) userà gli stessi accessor.
+  // Aggiunge solo `codice` (tracciabilità catalogo), `isSurrogato`/`notaSurrogato`
+  // (versione casalinga di esercizi palestra), `replacedFromCodice` (cautele).
+  // RIMOSSO `isFinisher` dagli esercizi: il finisher è ora oggetto separato.
   //
   // ALERT propagazione: nota_sicurezza intrinseca dell'esercizio (sempre
   // presente nel catalogo per esercizi con warning) UNITA a cautionNote
@@ -8689,7 +8759,6 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
 
   const exercises = (wrappers || []).map(w => {
     const cat = w.ex;
-    const isFinisher = !!w.isFinisher;
     const isSurrogato = !!cat._surrogato;
     const cautionNote = w.cautionNote ? String(w.cautionNote).trim() : '';
     const notaSicurezza = String(cat.nota_sicurezza || '').trim();
@@ -8712,14 +8781,14 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     // iso flag = recupero corto in getRestSec().
     // Coerente con TRAINING_SESSIONS attuale (Face pull / Lateral raise /
     // Curl / Tricipiti / Glute bridge iso / Leg curl / Calf raise = iso:true).
-    // Marco iso per: isFinisher, pattern isolamento, pattern mobilita
+    // Marco iso per: pattern isolamento, pattern mobilita
     // (vocabolario catalogo Sheet — 'mobilita' senza accento).
     const pattern = _normPattern(cat.pattern);
-    const iso = isFinisher || pattern === 'isolamento' || pattern === 'mobilita';
+    const iso = pattern === 'isolamento' || pattern === 'mobilita';
 
-    // Finisher Tabata: 4 round × 20s ON (10s OFF gestito dal modulo lettura)
-    const sets = isFinisher ? 4 : params.sets;
-    const reps = isFinisher ? '20 sec' : `${params.reps_min}-${params.reps_max}`;
+    // Sets/reps standard (il finisher Tabata è oggetto separato, non più qui)
+    const sets = params.sets;
+    const reps = `${params.reps_min}-${params.reps_max}`;
 
     const exObj = {
       codice: cat.codice,
@@ -8740,7 +8809,6 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     };
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
-    if (isFinisher)  exObj.isFinisher = true;
     if (isSurrogato) {
       exObj.isSurrogato = true;
       // Campo dedicato per render card (oltre all'alert che concatena
@@ -8755,7 +8823,7 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     return exObj;
   });
 
-  return {
+  const result = {
     id:    sessionMeta.id,
     name:  sessionMeta.name,
     type:  sessionMeta.type,
@@ -8765,6 +8833,10 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     duration_min: sessionMeta.duration_min,
     exercises,
   };
+  // Finisher Tabata: oggetto separato (vedi _trainGenBuildTabata).
+  // Aggiunto solo se la sessione ha addFinisher=true e il pool tabata era popolato.
+  if (finisher && finisher.type) result.finisher = finisher;
+  return result;
 }
 
 function _trainGenValidateCodes(sessioni, catalogMap) {
@@ -11407,6 +11479,21 @@ function renderTraining(){
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
+          ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0) ? (() => {
+            const fin = s.finisher;
+            const durMin = Math.round(fin.totalRounds ? fin.totalRounds*(fin.work_sec+fin.rest_sec)/60 : fin.round*(fin.work_sec+fin.rest_sec)/60);
+            const exList = fin.exercises.map((e,i)=>`<li style="padding:4px 0;">${i+1}. ${e.name}</li>`).join('');
+            return `
+            <div style="margin-top:20px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#FFF4E5 0%,#FFE4B8 100%);border:1px solid #E5A857;">
+              <div style="font-size:10px;font-weight:700;color:#7A3A1A;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 FINISHER TABATA · ~${durMin} MIN</div>
+              <div style="font-size:14px;color:#7A3A1A;font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati</div>
+              <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:#5A2A0A;font-family:var(--font-sans);list-style:none;">${exList}</ul>
+              <button onclick="tabataFlowStart();"
+                style="width:100%;padding:12px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
+                ▶ Start Finisher
+              </button>
+            </div>` ;
+          })() : ''}
           ${Object.keys(ST.trainLoggedSets).some(k=>k.startsWith(sel+'_')&&k.endsWith('_'+today)) ? `
           <button onclick="completeSession('${sel}');"
             style="width:100%;margin-top:8px;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
@@ -12225,7 +12312,39 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML;
+  // Overlay Tabata Flow (full-screen quando attivo) — clone leggero dello stile recovery
+  let tabataHTML = '';
+  if(ST.trainTabataFlow && ST.trainTabataFlow.active){
+    const f = ST.trainTabataFlow;
+    const ex = _tabataFlowCurrentExercise();
+    const phaseColor = f.phase === 'work' ? '#B84C2A' : '#2A7A6F';
+    const phaseLabel = f.phase === 'work' ? 'LAVORO' : 'RECUPERO';
+    const phaseBg    = f.phase === 'work' ? 'linear-gradient(135deg,#FFE4D5 0%,#FFCAB0 100%)' : 'linear-gradient(135deg,#E0F2EE 0%,#B5DFD5 100%)';
+    const numColor   = f.remaining <= 3 ? '#B84C2A' : phaseColor;
+    tabataHTML = `
+      <div style="position:fixed;inset:0;z-index:1050;background:${phaseBg};display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px;padding-top:max(48px, env(safe-area-inset-top));overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:480px;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:${phaseColor};font-family:var(--font-mono);letter-spacing:.18em;">TABATA · ROUND ${f.round}/${f.totalRounds}</div>
+          <button onclick="tabataFlowEnd()" style="background:transparent;border:none;color:${phaseColor};font-size:11px;font-family:var(--font-mono);letter-spacing:.06em;cursor:pointer;text-decoration:underline;">termina</button>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:${phaseColor};font-family:var(--font-mono);letter-spacing:.2em;margin-bottom:12px;">${phaseLabel}</div>
+        <div style="font-size:96px;font-weight:800;color:${numColor};font-family:var(--font-mono);font-variant-numeric:tabular-nums;line-height:1;margin-bottom:16px;">${f.remaining}</div>
+        ${ex ? `
+          <div style="font-size:24px;font-weight:700;color:#3A1A0A;font-family:var(--font-sans);text-align:center;margin-bottom:6px;max-width:480px;">${ex.name}</div>
+          ${ex.alert ? `<div style="font-size:12px;font-style:italic;color:#5A2A0A;text-align:center;max-width:420px;margin-bottom:16px;line-height:1.4;">${ex.alert}</div>` : ''}
+        ` : ''}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:420px;margin-top:24px;">
+          ${f.running
+            ? `<button onclick="tabataFlowPause()" style="flex:1;min-width:100px;padding:14px;background:#fff;color:${phaseColor};border:2px solid ${phaseColor};border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">⏸ Pausa</button>`
+            : `<button onclick="tabataFlowResume()" style="flex:1;min-width:100px;padding:14px;background:${phaseColor};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">▶ Riprendi</button>`}
+          <button onclick="tabataFlowSkip()" style="flex:1;min-width:100px;padding:14px;background:#fff;color:${phaseColor};border:2px solid ${phaseColor};border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">⏭ Skip</button>
+        </div>
+        <div style="font-size:11px;color:#5A2A0A;font-family:var(--font-mono);letter-spacing:.04em;margin-top:20px;opacity:.7;text-align:center;max-width:420px;">
+          ${f.finisher.work_sec}s lavoro / ${f.finisher.rest_sec}s recupero × ${f.totalRounds} round · 4 esercizi alternati
+        </div>
+      </div>`;
+  }
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
@@ -19836,6 +19955,130 @@ function recoveryFlowEnd(){
   ST.trainRecoveryFlow.remaining = 0;
   ST.trainRecoveryFlow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
   ST.trainRecoveryFlow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
+  renderTraining();
+}
+
+// ═══════════════════════════════════════════════════════════
+// TABATA FLOW (28 mag sera 2026) — cronometro 20/10 × 8 round
+// ═══════════════════════════════════════════════════════════
+// Modello: 8 round, ogni round = 20s WORK + 10s REST.
+// 4 esercizi cardio_metabolico che si alternano: round N → exercises[(N-1) % 4].
+// Ergo: ex[0], ex[1], ex[2], ex[3], ex[0], ex[1], ex[2], ex[3] = 2 cicli.
+// Ultimo round termina dopo WORK (no REST finale).
+// Audio: riusa playPrepBeep (5..1 countdown) + playFinalTripleBeep (fine round).
+// WakeLock: già attivo durante sessione (apertura openTrainingSession).
+// Clone leggero di _recoveryFlowTick, no micro-pause/blockStop.
+
+function _tabataFlowClearInterval(){
+  if(ST.trainTabataFlow && ST.trainTabataFlow._iv){
+    clearInterval(ST.trainTabataFlow._iv);
+    ST.trainTabataFlow._iv = null;
+  }
+}
+function _tabataFlowCurrentExercise(){
+  const f = ST.trainTabataFlow;
+  if(!f || !f.finisher || !Array.isArray(f.finisher.exercises) || f.finisher.exercises.length === 0) return null;
+  const idx = ((f.round - 1) % f.finisher.exercises.length + f.finisher.exercises.length) % f.finisher.exercises.length;
+  return f.finisher.exercises[idx];
+}
+function _tabataFlowAdvance(){
+  // Chiamato a fine fase (work o rest). Decide cosa fare:
+  //   - era work → passa a rest 10s (a meno che era l'ultimo round)
+  //   - era rest → incrementa round, passa a work 20s
+  //   - finito ultimo round work → END (no rest finale)
+  const f = ST.trainTabataFlow;
+  if(!f) return;
+  try { playFinalTripleBeep(); } catch(e) {}
+  if(f.phase === 'work'){
+    // Era work → ultimo round? FINE
+    if(f.round >= f.totalRounds){
+      _tabataFlowEndCompleted();
+      return;
+    }
+    // Altrimenti → rest 10s
+    f.phase = 'rest';
+    f.remaining = f.finisher.rest_sec;
+  } else {
+    // Era rest → prossimo round work
+    f.round++;
+    f.phase = 'work';
+    f.remaining = f.finisher.work_sec;
+  }
+  renderTraining();
+}
+function _tabataFlowTick(){
+  const f = ST.trainTabataFlow;
+  if(!f || !f.running) return;
+  f.remaining = Math.max(0, f.remaining - 1);
+  // Beep prep ultimi 3 secondi (alleggerito vs recovery che fa 5..1)
+  if(f.remaining > 0 && f.remaining <= 3){
+    try { playPrepBeep(); } catch(e) {}
+  }
+  if(f.remaining <= 0){
+    _tabataFlowAdvance();
+  } else {
+    renderTraining();
+  }
+}
+function tabataFlowStart(){
+  // Avvio: la sessione corrente (ST.trainSession) deve avere un finisher.
+  const sess = getTrainingSession(ST.trainSession);
+  if(!sess || !sess.finisher || !sess.finisher.exercises || sess.finisher.exercises.length === 0){
+    showToast('Nessun finisher Tabata in questa sessione', 'ℹ️');
+    return;
+  }
+  // Mutual exclusion col recovery flow + attivazione flow
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  _tabataFlowClearInterval();
+  try { _unlockAudio(); } catch(e) {}
+  ST.trainTabataFlow = {
+    active: true,
+    sessionId: ST.trainSession,
+    finisher: sess.finisher,
+    totalRounds: sess.finisher.round || 8,
+    round: 1,
+    phase: 'work',
+    remaining: sess.finisher.work_sec || 20,
+    running: true,
+    _iv: setInterval(_tabataFlowTick, 1000),
+  };
+  renderTraining();
+}
+function tabataFlowPause(){
+  const f = ST.trainTabataFlow;
+  if(!f || !f.active) return;
+  _tabataFlowClearInterval();
+  f.running = false;
+  renderTraining();
+}
+function tabataFlowResume(){
+  const f = ST.trainTabataFlow;
+  if(!f || !f.active) return;
+  try { _unlockAudio(); } catch(e) {}
+  f.running = true;
+  f._iv = setInterval(_tabataFlowTick, 1000);
+  renderTraining();
+}
+function tabataFlowSkip(){
+  // Skip: salta il resto della fase corrente, passa direttamente alla successiva
+  const f = ST.trainTabataFlow;
+  if(!f || !f.active) return;
+  f.remaining = 0;
+  _tabataFlowAdvance();
+}
+function tabataFlowEnd(){
+  // Termina manualmente prima della fine
+  _tabataFlowClearInterval();
+  ST.trainTabataFlow = null;
+  renderTraining();
+}
+function _tabataFlowEndCompleted(){
+  // Fine naturale dopo l'ultimo round work
+  _tabataFlowClearInterval();
+  try { if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]); } catch(e) {}
+  showToast('Tabata completato! 💪', '🔥');
+  ST.trainTabataFlow = null;
   renderTraining();
 }
 function toggleRecoveryBlockCollapsed(blockName){
