@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 07:36';
+const APP_VERSION = '2026.05.28 · 07:49';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7653,52 +7653,55 @@ const _TRAIN_GEN_SPLIT_BY_DAYS = {
 // per principianti la spinta è SOLO orizzontale (più sicura per chi
 // inizia, no carico verticale sulla colonna). Tirata resta OR per tutti.
 // Resolver: _trainGenGetPatterns(sessionType, livello) sotto.
+// VALORI CANONICI: vocabolario del catalogo Google Sheet (28 mag 2026,
+// Opzione 3 utente). Parole intere con spazi, 'dominante ginocchia' al
+// plurale, 'mobilita' senza accento. Il foglio è la fonte di verità.
 const _TRAIN_GEN_PATTERN_REQUIREMENTS = {
   fullbody: {
     principiante: [
-      ['spinta_orizz'],                       // solo orizz per principianti
-      ['tirata_orizz', 'tirata_vert'],
-      ['dominante_ginocchio'],
-      ['dominante_anca'],
+      ['spinta orizzontale'],                       // solo orizz per principianti
+      ['tirata orizzontale', 'tirata verticale'],
+      ['dominante ginocchia'],
+      ['dominante anca'],
       ['core'],
     ],
     intermedio: [
-      ['spinta_orizz', 'spinta_vert'],
-      ['tirata_orizz', 'tirata_vert'],
-      ['dominante_ginocchio'],
-      ['dominante_anca'],
+      ['spinta orizzontale', 'spinta verticale'],
+      ['tirata orizzontale', 'tirata verticale'],
+      ['dominante ginocchia'],
+      ['dominante anca'],
       ['core'],
     ],
     avanzato: [
-      ['spinta_orizz', 'spinta_vert'],
-      ['tirata_orizz', 'tirata_vert'],
-      ['dominante_ginocchio'],
-      ['dominante_anca'],
+      ['spinta orizzontale', 'spinta verticale'],
+      ['tirata orizzontale', 'tirata verticale'],
+      ['dominante ginocchia'],
+      ['dominante anca'],
       ['core'],
     ],
   },
   upper: [
-    ['spinta_orizz'],
-    ['spinta_vert'],
-    ['tirata_orizz'],
-    ['tirata_vert'],
+    ['spinta orizzontale'],
+    ['spinta verticale'],
+    ['tirata orizzontale'],
+    ['tirata verticale'],
   ],
   lower: [
-    ['dominante_ginocchio'],
-    ['dominante_anca'],
+    ['dominante ginocchia'],
+    ['dominante anca'],
     ['core'],
   ],
   push: [
-    ['spinta_orizz'],
-    ['spinta_vert'],
+    ['spinta orizzontale'],
+    ['spinta verticale'],
   ],
   pull: [
-    ['tirata_orizz'],
-    ['tirata_vert'],
+    ['tirata orizzontale'],
+    ['tirata verticale'],
   ],
   legs: [
-    ['dominante_ginocchio'],
-    ['dominante_anca'],
+    ['dominante ginocchia'],
+    ['dominante anca'],
   ],
 };
 
@@ -7725,6 +7728,16 @@ const _TRAIN_GEN_TIME_BUDGET = {
 const _TRAIN_GEN_FALLBACK_REASONING =
   "Il coach ha preparato la tua prima scheda di allenamento. " +
   "Cresceremo insieme blocco dopo blocco, leggendo i tuoi check fisici.";
+
+// Normalizzazione tollerante per pattern catalogo: lowercase + trim.
+// I valori canonici interni del generatore coincidono ora con quelli
+// del catalogo Google Sheet (parole intere con spazi, es. 'spinta
+// orizzontale', 'dominante ginocchia' plurale, 'mobilita' senza accento).
+// Decisione 28 mag 2026 (Opzione 3 utente): il foglio è la fonte di
+// verità del vocabolario pattern; il codice si è adeguato. Questo helper
+// assorbe piccole differenze di maiuscole/spazi accidentali senza
+// richiedere migrazione Sheet futura.
+const _normPattern = (s) => String(s || '').toLowerCase().trim();
 
 // ───────────────────────────────────────────────────────────
 // FUNZIONE PRINCIPALE
@@ -8325,7 +8338,7 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
   const optionsSet = new Set(patternOptions);
 
   const candidates = pool.filter(ex =>
-    optionsSet.has(String(ex.pattern || '').toLowerCase().trim())
+    optionsSet.has(_normPattern(ex.pattern))
     && !used.has(ex.codice)
   );
   if (candidates.length === 0) return null;
@@ -8344,19 +8357,20 @@ function _trainGenOrderExercises(items) {
   // compound). Per ora compound e complementari ricadono nella stessa
   // priorità 1 → ordinati alfabeticamente. Affinamento = TODO futuro
   // (richiede campo dedicato sul catalogo, es. `intensita_compound`).
+  // Vocabolario catalogo Sheet (Opzione 3 utente 28 mag 2026):
+  // chiavi con spazi, 'dominante ginocchia' plurale, 'mobilita' senza accento.
   const PRIORITY = {
-    spinta_orizz: 1, spinta_vert: 1,
-    tirata_orizz: 1, tirata_vert: 1,
-    dominante_ginocchio: 1, dominante_anca: 1,
-    isolamento: 2,
-    mobilita: 2,
-    core: 3,
+    'spinta orizzontale': 1, 'spinta verticale': 1,
+    'tirata orizzontale': 1, 'tirata verticale': 1,
+    'dominante ginocchia': 1, 'dominante anca': 1,
+    'isolamento': 2,
+    'mobilita': 2,
+    'core': 3,
   };
   const getEx = (item) => (item && item.ex) ? item.ex : item;
   const getPriority = (item) => {
     const ex = getEx(item);
-    const p = String(ex.pattern || '').toLowerCase().trim();
-    return PRIORITY[p] || 2; // pattern sconosciuto → priorità media
+    return PRIORITY[_normPattern(ex.pattern)] || 2; // pattern sconosciuto → priorità media
   };
   const getCodice = (item) => String(getEx(item).codice || '');
 
@@ -8494,8 +8508,9 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     // iso flag = recupero corto in getRestSec().
     // Coerente con TRAINING_SESSIONS attuale (Face pull / Lateral raise /
     // Curl / Tricipiti / Glute bridge iso / Leg curl / Calf raise = iso:true).
-    // Marco iso per: isFinisher, pattern isolamento, pattern mobilita.
-    const pattern = String(cat.pattern || '').toLowerCase().trim();
+    // Marco iso per: isFinisher, pattern isolamento, pattern mobilita
+    // (vocabolario catalogo Sheet — 'mobilita' senza accento).
+    const pattern = _normPattern(cat.pattern);
     const iso = isFinisher || pattern === 'isolamento' || pattern === 'mobilita';
 
     // Finisher Tabata: 4 round × 20s ON (10s OFF gestito dal modulo lettura)
