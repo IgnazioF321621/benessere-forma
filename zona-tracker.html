@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 06:19';
+const APP_VERSION = '2026.05.28 · 06:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7725,42 +7725,140 @@ const _TRAIN_GEN_FALLBACK_REASONING =
 // ───────────────────────────────────────────────────────────
 
 async function generateTrainingProgram({ source = 'onboarding' } = {}) {
-  // BLOCCO 1 — GUARD INIZIALI
-  //   - Se ST.user mancante → return null (niente crash)
-  //   - Se ST.user.id === 'test-user-001' → return null (test mode salta)
-  //   - Se ST.profile.usa_training === false → return null (utente solo-nutrition)
-  //   - Try/catch globale: qualunque errore = log + toast voce coach,
-  //     ma NON deve bloccare il flusso chiamante (onboarding deve completare)
-  // TODO Step 3.1
+  // Try/catch globale: qualunque errore → log + return null.
+  // NON deve mai bloccare il flusso chiamante (onboarding deve completare).
+  try {
 
-  // BLOCCO 2 — LETTURA DATI INPUT
-  //   Fonte primaria: ST.profile (sempre disponibile dopo upsert).
-  //   Per esperienza/limitazioni:
-  //     - se source === 'onboarding' E ST.m1Data popolato → leggi da m1Data
-  //       (sono ancora in memoria, NON serve parsare note_salute)
-  //     - altrimenti (trigger futuro post-M2) → parsa note_salute con regex
-  //       via _trainGenParseEsperienzaFromNote
-  //   Estraggo: obiettivo, esperienza, limitazioni[], tipo_allenamento,
-  //            attrezzatura[], giorni_allenamento, durata_sessione,
-  //            sex, age, weight_kg
-  // TODO Step 3.2
+    // BLOCCO 1 — GUARD INIZIALI
+    if (!ST.user || !ST.user.id) {
+      console.log('[train-gen] skip: utente non loggato');
+      return null;
+    }
+    if (ST.user.id === 'test-user-001') {
+      console.log('[train-gen] skip: test mode');
+      return null;
+    }
+    if (!ST.profile || ST.profile.usa_training === false) {
+      console.log('[train-gen] skip: usa_training=false o profilo mancante');
+      return null;
+    }
 
-  // BLOCCO 3 — CARICAMENTO CATALOGO
-  //   SELECT * FROM esercizi_catalog (RLS SELECT pubblica, no .eq user_id).
-  //   Risultato: array di 33+ esercizi con tutti i campi.
-  //   Conservo anche un Map<codice, exercise> per lookup O(1) (serve a
-  //   validazione finale + risoluzione "alternativa" nelle cautele).
-  // TODO Step 3.3
+    // BLOCCO 2 — LETTURA DATI INPUT
+    // Fonte primaria: ST.profile (sempre disponibile dopo upsert).
+    // Per esperienza/limitazioni:
+    //   - source='onboarding' → leggo da ST.m1Data (fresco in memoria,
+    //     niente parse di note_salute necessario)
+    //   - source futuri (post-M2) → useranno _trainGenParseEsperienzaFromNote
+    //     (TODO Step 3.x); per ora fallback conservativo a 'principiante'
+    const profile = ST.profile;
 
-  // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE
-  //   Risolvo: livelloMappato (da _TRAIN_GEN_EXPERIENCE_MAP)
-  //            → params (sets/reps/RIR/rest da _TRAIN_GEN_PARAMS_BY_GOAL)
-  //            → splitArray (da _TRAIN_GEN_SPLIT_BY_DAYS)
-  //            → patternsByType (da _TRAIN_GEN_PATTERN_REQUIREMENTS via
-  //                              _trainGenGetPatterns: resolver fullbody-per-livello)
-  //            → maxExercisesPerSession (da _trainGenComputeMaxExercises)
-  //            → addFinisher (true se obiettivo ∈ {dimagrimento, ricomposizione})
-  // TODO Step 3.4
+    // Obiettivo: primo valore del CSV (legacy) + migrazione
+    // (perdita_peso → dimagrimento, massa_muscolare → ipertrofia)
+    let obiettivo = null;
+    if (profile.obiettivo) {
+      const raw = String(profile.obiettivo).split(',')[0].trim();
+      obiettivo = (typeof migrateObiettivo === 'function') ? migrateObiettivo(raw) : raw;
+    }
+    if (!obiettivo) {
+      console.warn('[train-gen] skip: obiettivo mancante nel profilo');
+      return null;
+    }
+
+    // Esperienza + limitazioni
+    let esperienzaRaw = null;
+    let limitazioni = [];
+    let altreLimitazioni = '';
+    if (source === 'onboarding' && ST.m1Data) {
+      esperienzaRaw = ST.m1Data.esperienza || null;
+      limitazioni = Array.isArray(ST.m1Data.limitazioni)
+        ? ST.m1Data.limitazioni.filter(x => x !== 'altro')
+        : [];
+      altreLimitazioni = (ST.m1Data.altre_limitazioni || '').trim();
+    } else {
+      // Trigger futuro post-M2: il parser di note_salute verrà riempito
+      // a Step 3.x quando arriverà il momento. Per ora fallback conservativo.
+      esperienzaRaw = 'principiante';
+      console.log('[train-gen] source non-onboarding: fallback principiante (parser note_salute non implementato)');
+    }
+    if (!esperienzaRaw) {
+      esperienzaRaw = 'principiante';
+      console.warn('[train-gen] esperienza mancante in m1Data, fallback principiante');
+    }
+    const livello = _TRAIN_GEN_EXPERIENCE_MAP[esperienzaRaw] || 'principiante';
+
+    // Resto profilo training
+    const tipoAllen     = profile.tipo_allenamento || null;
+    const attrezzatura  = Array.isArray(profile.attrezzatura) ? profile.attrezzatura.slice() : [];
+    const giorni        = profile.giorni_allenamento || null;
+    const durata        = profile.durata_sessione    || null;
+    if (!tipoAllen || !giorni || !durata) {
+      console.warn('[train-gen] dati training incompleti:', { tipoAllen, giorni, durata });
+      return null;
+    }
+
+    const inputData = {
+      source, obiettivo, esperienzaRaw, livello,
+      limitazioni, altreLimitazioni,
+      tipoAllen, attrezzatura, giorni, durata,
+      sex: profile.sex, age: profile.age, weight_kg: profile.weight_kg,
+    };
+
+    // BLOCCO 3 — CARICAMENTO CATALOGO
+    // SELECT * FROM esercizi_catalog (RLS SELECT pubblica, no .eq user_id).
+    // Map<codice, esercizio> per lookup O(1) (serve a validazione finale
+    // + risoluzione "alternativa" nelle cautele).
+    let catalog = [];
+    try {
+      const { data, error } = await supa.from('esercizi_catalog').select('*');
+      if (error) {
+        console.warn('[train-gen] errore caricamento catalogo:', error.message);
+        return null;
+      }
+      catalog = data || [];
+    } catch (e) {
+      console.warn('[train-gen] eccezione caricamento catalogo:', e);
+      return null;
+    }
+    if (catalog.length === 0) {
+      console.warn('[train-gen] catalogo esercizi vuoto');
+      return null;
+    }
+    const catalogMap = new Map();
+    catalog.forEach(ex => { if (ex.codice) catalogMap.set(ex.codice, ex); });
+
+    // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE
+    // Risolvo params, split, pattern, maxEx, finisher dalle costanti.
+    const paramsByObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo];
+    if (!paramsByObj) {
+      console.warn('[train-gen] obiettivo non riconosciuto:', obiettivo);
+      return null;
+    }
+    const params = paramsByObj[livello] || paramsByObj['principiante'];
+
+    const splitByDays = _TRAIN_GEN_SPLIT_BY_DAYS[giorni];
+    if (!splitByDays) {
+      console.warn('[train-gen] giorni non riconosciuti:', giorni);
+      return null;
+    }
+    const splitArray = splitByDays[livello] || splitByDays['principiante'];
+
+    const addFinisher = (obiettivo === 'dimagrimento' || obiettivo === 'ricomposizione');
+    const maxExercisesPerSession = _trainGenComputeMaxExercises(durata, params, addFinisher);
+
+    // Pre-compilo i pattern requirements per ogni tipo sessione presente
+    // nello split (resolver gestisce fullbody-per-livello).
+    const patternsByType = {};
+    splitArray.forEach(type => {
+      if (!patternsByType[type]) {
+        patternsByType[type] = _trainGenGetPatterns(type, livello);
+      }
+    });
+
+    const sessionMeta = {
+      params, splitArray, addFinisher, maxExercisesPerSession, patternsByType,
+    };
+
+    console.log('[train-gen] decisioni intermedie:', { inputData, sessionMeta, catalogSize: catalog.length });
 
   // BLOCCO 5 — FILTRI BASE SUL CATALOGO
   //   Sotto-funzione _trainGenFilterPool(catalog, profile, params):
@@ -7887,7 +7985,14 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
   //   o null in caso di guard/errore. Mai throw.
   // TODO Step 3.15
 
-  return null; // placeholder finché Step 3.x non riempiono i blocchi
+    return null; // placeholder finché Step 3.5→3.15 non riempiono i blocchi
+
+  } catch (e) {
+    // Try/catch globale: cattura qualunque errore non gestito dai branch
+    // interni. Log only — il chiamante (onboarding) NON deve crashare.
+    console.warn('[train-gen] errore globale:', e);
+    return null;
+  }
 }
 
 // ───────────────────────────────────────────────────────────
@@ -7901,18 +8006,33 @@ function _trainGenFilterPool(catalog, profile, params) {
 }
 
 function _trainGenGetPatterns(sessionType, livello) {
-  // TODO Step 3.4 — resolver pattern: gestisce sia forma piatta
+  // Resolver pattern requirements: gestisce sia forma piatta
   // (upper/lower/push/pull/legs) sia forma per-livello (fullbody).
-  // Se Array.isArray(def) → ritorna def; altrimenti def[livello].
-  throw new Error('_trainGenGetPatterns: not implemented');
+  const def = _TRAIN_GEN_PATTERN_REQUIREMENTS[sessionType];
+  if (!def) {
+    console.warn('[train-gen] pattern requirements non trovati per sessionType:', sessionType);
+    return [];
+  }
+  // Forma piatta: array di pattern requirements (uguale per tutti i livelli)
+  if (Array.isArray(def)) return def;
+  // Forma per-livello (oggetto): chiave livello con fallback a principiante
+  return def[livello] || def['principiante'] || [];
 }
 
 function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
-  // TODO Step 3.4 — formula tempo:
+  // Formula tempo: tempo_disp / tempo_per_esercizio, clampato min..max.
   //   tempo_disp = durata_min*60 - warmup - (finisher?:0) - buffer
   //   tempo_ex   = sets * (set_execution + rest_sec)
-  //   clamp(floor(tempo_disp / tempo_ex), min, max) dal _TRAIN_GEN_TIME_BUDGET
-  throw new Error('_trainGenComputeMaxExercises: not implemented');
+  const t = _TRAIN_GEN_TIME_BUDGET;
+  const finisherSec = addFinisher ? t.finisher_sec : 0;
+  const tempoDisponibile = (Number(durata_min) || 0) * 60 - t.warmup_sec - finisherSec - t.buffer_sec;
+  const tempoPerEsercizio = (Number(params.sets) || 0) * (t.set_execution_sec + (Number(params.rest_sec) || 0));
+  if (tempoPerEsercizio <= 0 || tempoDisponibile <= 0) {
+    // Edge case (durata troppo bassa o params malformati): garantisce minimo
+    return t.min_exercises_per_session;
+  }
+  const raw = Math.floor(tempoDisponibile / tempoPerEsercizio);
+  return Math.max(t.min_exercises_per_session, Math.min(t.max_exercises_per_session, raw));
 }
 
 function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
