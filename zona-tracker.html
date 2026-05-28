@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 12:27';
+const APP_VERSION = '2026.05.28 · 14:36';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7932,15 +7932,25 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // Selezione deterministica stabile (sort by codice + first available).
     // La varietà tra blocchi sarà introdotta in uno step successivo con un
     // seed basato su blocco_n (PARTE 5: "varietà inter-blocco").
+    // Round-robin: contatore per-tipo per sessionIndex 0-based usato da
+    // _trainGenPickByPattern. Esempio split=['upper','lower','upper','lower']:
+    //   Upper A → typeOrderIdx=0, Lower A → 0, Upper B → 1, Lower B → 1.
+    // Così pattern con 2 candidati alternano correttamente tra A e B.
+    const typeProgressivoForPick = {};
+    splitArray.forEach(t => { typeProgressivoForPick[t] = 0; });
+
     const sessioniRaw = splitArray.map((sessionType, sessionIdx) => {
+      const typeOrderIdx = typeProgressivoForPick[sessionType];
+      typeProgressivoForPick[sessionType]++;
+
       const usedSoFar = new Set();
       const exercises = [];
       const required = patternsByType[sessionType] || [];
       const targetCount = Math.max(maxExercisesPerSession, required.length);
 
-      // 1) Pattern obbligatori
+      // 1) Pattern obbligatori (con round-robin typeOrderIdx)
       required.forEach((patternOptions) => {
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar);
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar, typeOrderIdx);
         if (picked) {
           usedSoFar.add(picked.codice);
           exercises.push(picked);
@@ -7949,10 +7959,12 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         }
       });
 
-      // 2) Slot extra → isolamento (se disponibile nel pool)
+      // 2) Slot extra → isolamento (con round-robin typeOrderIdx).
+      // NB: dentro il loop, le iterazioni successive escludono già il
+      // primo isolamento via usedSoFar → naturale alternanza progressiva.
       const extraSlots = Math.max(0, targetCount - exercises.length);
       for (let i = 0; i < extraSlots; i++) {
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar);
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar, typeOrderIdx);
         if (!picked) break; // pool isolamento esaurito → stop, sessione resta più corta
         usedSoFar.add(picked.codice);
         exercises.push(picked);
@@ -8359,13 +8371,29 @@ function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   return Math.max(t.min_exercises_per_session, Math.min(t.max_exercises_per_session, raw));
 }
 
-function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
+function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex) {
   // Pesca 1 esercizio dal pool che matchi UNO dei pattern in patternOptions
   // (array OR), evitando duplicati già usati nella sessione corrente.
   //
-  // Strategia: deterministica stabile (sort by codice + first available).
-  // Per il primo blocco (blocco_n=1) coerenza > varietà; la varietà tra
-  // blocchi successivi sarà gestita con un seed basato su blocco_n.
+  // Strategia: deterministica stabile + ROUND-ROBIN inter-sessione (28 mag).
+  //   - sort candidati per codice (sempre uguale per stesso pool/pattern)
+  //   - selezione = candidates[sessionIndex % candidates.length]
+  //
+  // sessionIndex (default 0) = INDICE PROGRESSIVO PER TIPO SESSIONE.
+  // Es. split ['upper','lower','upper','lower'] → upper ha indici 0,1
+  // (Upper A=0, Upper B=1) e lower ha indici 0,1 (Lower A=0, Lower B=1).
+  // Calcolato dal chiamante (BLOCCO 6 generateTrainingProgram) tramite
+  // contatore per-tipo, NON dall'indice assoluto della sessione nello
+  // split (che farebbe collassare Upper A e Upper B su stesso esercizio
+  // per pattern con solo 2 candidati: sessionIdx 0 e 2 → 0%2=2%2=0).
+  //
+  // Pattern con 1 solo candidato → ripetuto in tutte le sessioni del
+  // tipo (fine catalogo, accettabile come da decisione utente).
+  // Pattern con 2+ candidati → alterna correttamente.
+  //
+  // usedSoFar resta lo stesso: evita duplicati DENTRO la stessa sessione
+  // (es. se uno stesso esercizio matcha 2 pattern requirement diversi
+  // nella stessa sessione fullbody, non viene preso 2 volte).
   if (!Array.isArray(pool) || pool.length === 0) return null;
   if (!Array.isArray(patternOptions) || patternOptions.length === 0) return null;
   const used = (usedSoFar instanceof Set) ? usedSoFar : new Set(usedSoFar || []);
@@ -8378,7 +8406,8 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
   if (candidates.length === 0) return null;
 
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
-  return candidates[0];
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
 }
 
 function _trainGenOrderExercises(items) {
