@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 07:19';
+const APP_VERSION = '2026.05.28 · 07:36';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8189,16 +8189,28 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   //   poolFinisher   = esercizi adatti al tabata di coda
   //
   // FILTRI APPLICATI in ordine:
-  //   1) luogo:    compatibile con tipo_allenamento (o 'qualsiasi')
+  //   1) luogo:    SPLIT su ';' → accetta se la lista contiene tipoAllen
+  //                OPPURE 'qualsiasi' OPPURE l'alias (aperto ↔ libero).
+  //                Catalogo reale usa liste tipo "casa;libero;palestra".
+  //                Profilo M1 salva "aperto" mentre catalogo usa "libero":
+  //                il LUOGO_ALIASES rende i due valori equivalenti.
   //   2) attrezzo: dipende da tipo_allenamento
   //                · 'palestra' → tutto ammesso
-  //                · 'casa'     → corpo_libero + attrezzatura utente
+  //                · 'casa'     → corpo libero + attrezzatura utente
   //                · 'aperto'   → whitelist hardcoded "portatili"
-  //                  (corpo_libero, elastico, banda, sbarra, cavigliere, trx)
+  //                Normalizzato bidirezionalmente "corpo libero" ↔ "corpo_libero"
+  //                (catalogo usa lo spazio, codice interno usa underscore;
+  //                _normAttrezzo converte 'corpo libero' → 'corpo_libero').
   //   3) livello:  utente avanzato fa anche intermedio/principiante,
-  //                intermedio fa anche principiante, principiante solo principiante
-  //   4) uso:      split su ';' → 'principale' / 'finisher' / 'recupero'
-  //                Un esercizio può appartenere a più pool (es. uso='principale;finisher')
+  //                intermedio fa anche principiante, principiante solo principiante.
+  //   4) uso:      split su ';' → 'principale' / 'finisher' / 'recupero'.
+  //                Un esercizio può appartenere a più pool (es. uso='principale;finisher').
+  //
+  // NB: la Leva C (surrogati casa con elastico — cioè "esercizio marcato
+  // bilanciere/manubri replicabile con elastico+barra") NON è implementata
+  // qui. Sessione di design futura dedicata. Per ora un utente casa con
+  // attrezzatura ridotta vedrà solo gli esercizi marcati esplicitamente
+  // come elastico/corpo libero/sbarra/banda nel catalogo.
 
   const APERTO_WHITELIST = new Set(['corpo_libero','elastico','banda','sbarra','cavigliere','trx']);
   const LIVELLI_AMMESSI = {
@@ -8208,27 +8220,47 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   };
   const livelliOk = LIVELLI_AMMESSI[livello] || LIVELLI_AMMESSI.principiante;
 
+  // Alias bidirezionale "aperto" (profilo M1) ↔ "libero" (catalogo).
+  // Decisione documentata: M1 chiede "aperto" all'utente; il catalogo
+  // usa la convenzione "libero". Gli alias evitano una migrazione Sheet.
+  const LUOGO_ALIASES = { aperto: 'libero', libero: 'aperto' };
+
+  // Normalizza attrezzo: spazi → underscore. Risolve il mismatch
+  // 'corpo libero' (catalogo, con spazio) vs 'corpo_libero' (codice).
+  // Funziona in entrambe le direzioni: se nuovi attrezzi multi-parola
+  // arrivassero nel Sheet ('sbarra olimpionica', ecc.) sarebbero
+  // automaticamente trattati con il formato canonico interno underscore.
+  const _normAttrezzo = (s) => String(s || '').toLowerCase().trim().replace(/\s+/g, '_');
+
   // corpo_libero sempre ammesso a casa (base implicita anche se non
-  // dichiarato dall'utente in onboarding)
-  const attrezzaturaSet = new Set(Array.isArray(attrezzatura) ? attrezzatura.map(x => String(x).toLowerCase()) : []);
+  // dichiarato dall'utente in onboarding). Normalizziamo anche
+  // l'attrezzatura dell'utente nella forma underscore canonica.
+  const attrezzaturaSet = new Set(
+    (Array.isArray(attrezzatura) ? attrezzatura : []).map(_normAttrezzo)
+  );
   attrezzaturaSet.add('corpo_libero');
+
+  const tipoAllenNorm = String(tipoAllen || '').toLowerCase().trim();
+  const tipoAllenAlias = LUOGO_ALIASES[tipoAllenNorm] || null;
 
   const poolPrincipali = [];
   const poolFinisher = [];
 
   catalog.forEach(ex => {
-    const luogoL = String(ex.luogo || '').toLowerCase().trim();
-    const attrezzoL = String(ex.attrezzo || '').toLowerCase().trim();
-
-    // FILTRO 1 — luogo
-    const luogoOk = (luogoL === tipoAllen) || (luogoL === 'qualsiasi');
+    // FILTRO 1 — luogo (lista separata da ';', alias aperto↔libero)
+    const luoghiEsercizio = String(ex.luogo || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    const luogoOk = luoghiEsercizio.includes('qualsiasi')
+      || luoghiEsercizio.includes(tipoAllenNorm)
+      || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias));
     if (!luogoOk) return;
 
-    // FILTRO 2 — attrezzo
+    // FILTRO 2 — attrezzo (normalizzato spazi→underscore)
+    const attrezzoL = _normAttrezzo(ex.attrezzo);
     let attrezzoOk = false;
-    if (tipoAllen === 'palestra')      attrezzoOk = true;
-    else if (tipoAllen === 'casa')     attrezzoOk = attrezzaturaSet.has(attrezzoL);
-    else if (tipoAllen === 'aperto')   attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
+    if (tipoAllenNorm === 'palestra')    attrezzoOk = true;
+    else if (tipoAllenNorm === 'casa')   attrezzoOk = attrezzaturaSet.has(attrezzoL);
+    else if (tipoAllenNorm === 'aperto') attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
     if (!attrezzoOk) return;
 
     // FILTRO 3 — livello (campo livello = lista separata da ';',
