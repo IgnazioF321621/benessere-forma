@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 07:49';
+const APP_VERSION = '2026.05.28 · 12:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8260,19 +8260,49 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   const poolFinisher = [];
 
   catalog.forEach(ex => {
-    // FILTRO 1 — luogo (lista separata da ';', alias aperto↔libero)
+    // FILTRO 1 — luogo (lista separata da ';', alias aperto↔libero,
+    // bypass per surrogato casalingo)
+    // Bypass surrogato: se tipoAllen='casa' E surrogato_attrezzo è popolato,
+    // accetta l'esercizio anche se luogo non include 'casa'. Semantica:
+    // "l'esercizio dichiara esplicitamente una versione casalinga (es. EX006
+    // Military press, luogo=palestra, surrogato=elastico+barra), quindi il
+    // filtro luogo non lo blocca". Il check effettivo della disponibilità
+    // attrezzi avviene poi nel FILTRO 2 (branch surrogato).
     const luoghiEsercizio = String(ex.luogo || '').toLowerCase()
       .split(';').map(s => s.trim()).filter(Boolean);
+    const hasSurrogato = ex.surrogato_attrezzo && String(ex.surrogato_attrezzo).trim();
     const luogoOk = luoghiEsercizio.includes('qualsiasi')
       || luoghiEsercizio.includes(tipoAllenNorm)
-      || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias));
+      || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias))
+      || (tipoAllenNorm === 'casa' && hasSurrogato);
     if (!luogoOk) return;
 
     // FILTRO 2 — attrezzo (normalizzato spazi→underscore)
+    // CON branch SURROGATO per casa: se l'utente non possiede l'attrezzo
+    // nativo dell'esercizio MA possiede TUTTI gli attrezzi listati in
+    // surrogato_attrezzo (split su '+'), l'esercizio è disponibile in
+    // versione casalinga. Es: EX002 Panca piana (attrezzo='bilanciere',
+    // surrogato_attrezzo='panca+elastico') è disponibile per chi ha
+    // panca E elastico, con la nota_surrogato che spiega l'esecuzione.
+    // Decisione 28 mag 2026 (Leva C surrogati) — la nota_surrogato verrà
+    // propagata nell'alert dell'esercizio da _trainGenMapToSession.
     const attrezzoL = _normAttrezzo(ex.attrezzo);
     let attrezzoOk = false;
+    let isSurrogato = false;
     if (tipoAllenNorm === 'palestra')    attrezzoOk = true;
-    else if (tipoAllenNorm === 'casa')   attrezzoOk = attrezzaturaSet.has(attrezzoL);
+    else if (tipoAllenNorm === 'casa') {
+      attrezzoOk = attrezzaturaSet.has(attrezzoL);
+      // Branch surrogato: solo se nativo fallisce e l'esercizio dichiara
+      // una lista surrogato_attrezzo non vuota
+      if (!attrezzoOk && ex.surrogato_attrezzo) {
+        const surrAttrezzi = String(ex.surrogato_attrezzo).toLowerCase()
+          .split('+').map(s => s.trim()).filter(Boolean).map(_normAttrezzo);
+        if (surrAttrezzi.length > 0 && surrAttrezzi.every(a => attrezzaturaSet.has(a))) {
+          attrezzoOk = true;
+          isSurrogato = true;
+        }
+      }
+    }
     else if (tipoAllenNorm === 'aperto') attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
     if (!attrezzoOk) return;
 
@@ -8285,10 +8315,14 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     if (!livelloOk) return;
 
     // FILTRO 4 — uso (split su ';', un esercizio può comparire in più pool)
+    // Se isSurrogato, clone shallow per non mutare l'oggetto del catalogo
+    // condiviso (necessario perché lo stesso esercizio potrebbe essere
+    // analizzato in scenari diversi senza state leak).
     const usi = String(ex.uso || '').toLowerCase()
       .split(';').map(s => s.trim()).filter(Boolean);
-    if (usi.includes('principale')) poolPrincipali.push(ex);
-    if (usi.includes('finisher'))   poolFinisher.push(ex);
+    const exTagged = isSurrogato ? { ...ex, _surrogato: true } : ex;
+    if (usi.includes('principale')) poolPrincipali.push(exTagged);
+    if (usi.includes('finisher'))   poolFinisher.push(exTagged);
     // 'recupero' ignorato in questa fase
   });
 
@@ -8496,12 +8530,22 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
   const exercises = (wrappers || []).map(w => {
     const cat = w.ex;
     const isFinisher = !!w.isFinisher;
+    const isSurrogato = !!cat._surrogato;
     const cautionNote = w.cautionNote ? String(w.cautionNote).trim() : '';
     const notaSicurezza = String(cat.nota_sicurezza || '').trim();
+    // Nota surrogato: propagata SOLO se l'esercizio è stato matchato come
+    // surrogato da _trainGenFilterPool (flag _surrogato sul wrapper).
+    // Spiega all'utente "come farlo a casa" con gli attrezzi che ha.
+    const notaSurrogato = (isSurrogato && cat.nota_surrogato)
+      ? String(cat.nota_surrogato).trim() : '';
 
-    // Alert: intrinseco + personalizzato (se entrambi → concat con ' · ')
+    // Alert combinato (separatore ' · '):
+    //   nota_sicurezza intrinseca + nota_surrogato (se surrogato)
+    //   + cautionNote (se cautele zone_rischio)
+    // Vuoti omessi. Se tutti vuoti → alert omesso dal JSON.
     const alertParts = [];
     if (notaSicurezza) alertParts.push(notaSicurezza);
+    if (notaSurrogato) alertParts.push(notaSurrogato);
     if (cautionNote)   alertParts.push(cautionNote);
     const alert = alertParts.length ? alertParts.join(' · ') : null;
 
@@ -8531,6 +8575,7 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
     if (isFinisher)  exObj.isFinisher = true;
+    if (isSurrogato) exObj.isSurrogato = true;
     // Traceability: se è stato sostituito tramite cautele
     if (w.originalCodice) exObj.replacedFromCodice = w.originalCodice;
 
