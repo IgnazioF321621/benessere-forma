@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 06:30';
+const APP_VERSION = '2026.05.28 · 06:41';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7860,27 +7860,73 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
 
     console.log('[train-gen] decisioni intermedie:', { inputData, sessionMeta, catalogSize: catalog.length });
 
-  // BLOCCO 5 — FILTRI BASE SUL CATALOGO
-  //   Sotto-funzione _trainGenFilterPool(catalog, profile, params):
-  //     - luogo compatibile con tipo_allenamento (o 'qualsiasi')
-  //     - attrezzo presente in attrezzatura utente (se casa)
-  //       [palestra → tutto ammesso; aperto → corpo_libero + portatili]
-  //     - livello compatibile con esperienza
-  //     - uso include 'principale' (i 'finisher' restano nel pool a parte)
-  //   Risultato: poolPrincipali[] + poolFinisher[] + poolRecupero[] (futuro)
-  // TODO Step 3.5
+    // BLOCCO 5 — FILTRI BASE SUL CATALOGO
+    // poolPrincipali = esercizi per le sessioni standard
+    // poolFinisher   = esercizi per il tabata di coda (solo dimagrimento/ricomp)
+    // Pool di recupero (uso='recupero') ignorato in questa fase: l'onboarding
+    // M1 non chiede ancora "giorni di recupero attivo" — verrà aggiunto in
+    // un round futuro insieme a un nuovo step M1.
+    const pools = _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello });
+    if (pools.poolPrincipali.length === 0) {
+      console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
+      return null;
+    }
+    console.log('[train-gen] pool size:', {
+      principali: pools.poolPrincipali.length,
+      finisher:   pools.poolFinisher.length,
+    });
 
-  // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE
-  //   Per OGNI sessione dello split (es. 4 iterazioni):
-  //     - tipo sessione (fullbody/upper/lower/push/pull/legs)
-  //     - pattern minimi obbligatori (es. upper = [spinta_orizz, spinta_vert,
-  //       tirata_orizz, tirata_vert])
-  //     - _trainGenPickByPattern(pool, pattern, usedSoFar):
-  //         pesca 1 esercizio del pattern richiesto, preferendo varietà
-  //         (no duplicati nella stessa sessione)
-  //     - se restano slot dopo i pattern obbligatori (perché maxExercises
-  //       lo permette): aggiungi enfasi/isolamento coerente con obiettivo
-  // TODO Step 3.6
+    // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE
+    // Per OGNI sessione dello split:
+    //   1) pesca 1 esercizio per ognuno dei pattern obbligatori
+    //      (no duplicati nella stessa sessione)
+    //   2) se restano slot rispetto a targetCount, riempi con isolamento
+    //      (semplificazione di "enfasi/isolamento a scelta del coach in base
+    //      all'obiettivo" di PARTE 5 — sofisticazione = TODO futuro)
+    //
+    // targetCount: vince il maggiore tra maxExercises calcolato dal tempo e
+    // numero di pattern obbligatori. I pattern minimi sono qualità
+    // irrinunciabile; il tempo è orientativo. Cap superiore già applicato
+    // in _trainGenComputeMaxExercises (max 6).
+    //
+    // Selezione deterministica stabile (sort by codice + first available).
+    // La varietà tra blocchi sarà introdotta in uno step successivo con un
+    // seed basato su blocco_n (PARTE 5: "varietà inter-blocco").
+    const sessioniRaw = splitArray.map((sessionType, sessionIdx) => {
+      const usedSoFar = new Set();
+      const exercises = [];
+      const required = patternsByType[sessionType] || [];
+      const targetCount = Math.max(maxExercisesPerSession, required.length);
+
+      // 1) Pattern obbligatori
+      required.forEach((patternOptions) => {
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar);
+        if (picked) {
+          usedSoFar.add(picked.codice);
+          exercises.push(picked);
+        } else {
+          console.warn(`[train-gen] sessione ${sessionIdx+1} (${sessionType}): pattern scoperto`, patternOptions);
+        }
+      });
+
+      // 2) Slot extra → isolamento (se disponibile nel pool)
+      const extraSlots = Math.max(0, targetCount - exercises.length);
+      for (let i = 0; i < extraSlots; i++) {
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar);
+        if (!picked) break; // pool isolamento esaurito → stop, sessione resta più corta
+        usedSoFar.add(picked.codice);
+        exercises.push(picked);
+      }
+
+      return { sessionType, sessionIdx, exercises };
+    });
+
+    console.log('[train-gen] sessioni selezionate (raw, pre-ordering):',
+      sessioniRaw.map(s => ({
+        type: s.sessionType,
+        count: s.exercises.length,
+        codici: s.exercises.map(e => e.codice),
+      })));
 
   // BLOCCO 7 — ORDERING ESERCIZI NELLA SESSIONE
   //   Regola fissa (PARTE 5):
@@ -8000,9 +8046,71 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
 // (throw Error per intercettare chiamate accidentali pre-implementazione)
 // ───────────────────────────────────────────────────────────
 
-function _trainGenFilterPool(catalog, profile, params) {
-  // TODO Step 3.5 — filtri luogo / attrezzatura / livello / uso
-  throw new Error('_trainGenFilterPool: not implemented');
+function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
+  // Filtra il catalogo per produrre due pool:
+  //   poolPrincipali = esercizi adatti alle sessioni standard
+  //   poolFinisher   = esercizi adatti al tabata di coda
+  //
+  // FILTRI APPLICATI in ordine:
+  //   1) luogo:    compatibile con tipo_allenamento (o 'qualsiasi')
+  //   2) attrezzo: dipende da tipo_allenamento
+  //                · 'palestra' → tutto ammesso
+  //                · 'casa'     → corpo_libero + attrezzatura utente
+  //                · 'aperto'   → whitelist hardcoded "portatili"
+  //                  (corpo_libero, elastico, banda, sbarra, cavigliere, trx)
+  //   3) livello:  utente avanzato fa anche intermedio/principiante,
+  //                intermedio fa anche principiante, principiante solo principiante
+  //   4) uso:      split su ';' → 'principale' / 'finisher' / 'recupero'
+  //                Un esercizio può appartenere a più pool (es. uso='principale;finisher')
+
+  const APERTO_WHITELIST = new Set(['corpo_libero','elastico','banda','sbarra','cavigliere','trx']);
+  const LIVELLI_AMMESSI = {
+    principiante: new Set(['principiante']),
+    intermedio:   new Set(['principiante','intermedio']),
+    avanzato:     new Set(['principiante','intermedio','avanzato']),
+  };
+  const livelliOk = LIVELLI_AMMESSI[livello] || LIVELLI_AMMESSI.principiante;
+
+  // corpo_libero sempre ammesso a casa (base implicita anche se non
+  // dichiarato dall'utente in onboarding)
+  const attrezzaturaSet = new Set(Array.isArray(attrezzatura) ? attrezzatura.map(x => String(x).toLowerCase()) : []);
+  attrezzaturaSet.add('corpo_libero');
+
+  const poolPrincipali = [];
+  const poolFinisher = [];
+
+  catalog.forEach(ex => {
+    const luogoL = String(ex.luogo || '').toLowerCase().trim();
+    const attrezzoL = String(ex.attrezzo || '').toLowerCase().trim();
+
+    // FILTRO 1 — luogo
+    const luogoOk = (luogoL === tipoAllen) || (luogoL === 'qualsiasi');
+    if (!luogoOk) return;
+
+    // FILTRO 2 — attrezzo
+    let attrezzoOk = false;
+    if (tipoAllen === 'palestra')      attrezzoOk = true;
+    else if (tipoAllen === 'casa')     attrezzoOk = attrezzaturaSet.has(attrezzoL);
+    else if (tipoAllen === 'aperto')   attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
+    if (!attrezzoOk) return;
+
+    // FILTRO 3 — livello (campo livello = lista separata da ';',
+    // vuoto = ammesso a tutti i livelli)
+    const livelliEsercizio = String(ex.livello || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    const livelloOk = livelliEsercizio.length === 0
+      || livelliEsercizio.some(l => livelliOk.has(l));
+    if (!livelloOk) return;
+
+    // FILTRO 4 — uso (split su ';', un esercizio può comparire in più pool)
+    const usi = String(ex.uso || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    if (usi.includes('principale')) poolPrincipali.push(ex);
+    if (usi.includes('finisher'))   poolFinisher.push(ex);
+    // 'recupero' ignorato in questa fase
+  });
+
+  return { poolPrincipali, poolFinisher };
 }
 
 function _trainGenGetPatterns(sessionType, livello) {
@@ -8036,11 +8144,25 @@ function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
 }
 
 function _trainGenPickByPattern(pool, patternOptions, usedSoFar) {
-  // TODO Step 3.6 — pesca 1 esercizio dal pool che matchi UNO dei
-  // pattern in patternOptions (array OR), evitando duplicati in usedSoFar.
-  // Preferenza varietà (es. round-robin se più candidati, o random
-  // deterministico). Ritorna esercizio scelto o null se pool esaurito.
-  throw new Error('_trainGenPickByPattern: not implemented');
+  // Pesca 1 esercizio dal pool che matchi UNO dei pattern in patternOptions
+  // (array OR), evitando duplicati già usati nella sessione corrente.
+  //
+  // Strategia: deterministica stabile (sort by codice + first available).
+  // Per il primo blocco (blocco_n=1) coerenza > varietà; la varietà tra
+  // blocchi successivi sarà gestita con un seed basato su blocco_n.
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  if (!Array.isArray(patternOptions) || patternOptions.length === 0) return null;
+  const used = (usedSoFar instanceof Set) ? usedSoFar : new Set(usedSoFar || []);
+  const optionsSet = new Set(patternOptions);
+
+  const candidates = pool.filter(ex =>
+    optionsSet.has(String(ex.pattern || '').toLowerCase().trim())
+    && !used.has(ex.codice)
+  );
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  return candidates[0];
 }
 
 function _trainGenOrderExercises(exercises) {
