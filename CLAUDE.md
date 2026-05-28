@@ -456,9 +456,9 @@ Catalogo esercizi verificati per il futuro coach generatore di schede Training. 
 |---|---|---|
 | `codice` | `text` PK logica | identificativo univoco esercizio (es. `TRAZ-BANDA`, `CHEST-EL-IN-PIEDI`) |
 | `nome` | `text` | nome leggibile, in italiano |
-| `pattern` | `text` | pattern motorio (spinta_orizz, spinta_vert, tirata_orizz, tirata_vert, dominante_ginocchio, dominante_anca, core, isolamento, mobilita) |
-| `attrezzo` | `text` | elastico, banda, manubri, bilanciere, panca, sbarra, kettlebell, corpo_libero, fitball, trx, ecc. |
-| `luogo` | `text` | casa, palestra, aperto, qualsiasi |
+| `pattern` | `text` | pattern motorio. **Vocabolario del Google Sheet** (con spazi/accenti: "spinta orizzontale", "spinta verticale", "tirata orizzontale", "tirata verticale", "dominante ginocchio", "dominante anca", "core", "isolamento", "mobilita", **`cardio_metabolico`** dal 28 mag). Il codice normalizza via `_normPattern()` (lowercase + trim + spazi→underscore) prima di confrontare — vedi "Opzione 3" 28 mag: è il codice che si adegua alle parole del foglio, NON il foglio che deve usare gli underscore |
+| `attrezzo` | `text` | `elastico`, `manubri`, `bilanciere`, `panca`, `sbarra`, `kettlebell`, `corpo libero` (con SPAZIO, non underscore — vedi Leva A 28 mag), `fitball`, `trx`, ecc. Lista separata da `;` |
+| `luogo` | `text` | `casa`, `palestra`, `aperto`/`libero` (alias equivalenti — vedi Leva A), `qualsiasi`. Lista separata da `;` |
 | `muscoli` | `text` | lista muscoli target separati da `;` |
 | `livello` | `text` | principiante, intermedio, avanzato (o lista separata da `;`) |
 | `zone_rischio` | `text` | tag IDENTICI all'onboarding M1 (`lombare;cervicale;spalle;gomiti;polsi;anche;ginocchia;caviglie;ernie;cardiovascolari;ipertensione`) separati da `;`. Vuoto = nessuna controindicazione |
@@ -468,13 +468,32 @@ Catalogo esercizi verificati per il futuro coach generatore di schede Training. 
 | `esecuzione` | `text` | step movimento separati da `;` |
 | `errori` | `text` | errori comuni separati da `;` |
 | `nota_sicurezza` | `text` | warning opzionale (es. "scapole basse e indietro, no scrollare") |
+| `uso` | `text` | (27 mag sera, PARTE 5) `principale` / `finisher` / `recupero` separati da `;` — per quale tipo di sessione l'esercizio è adatto |
+| `surrogato_attrezzo` | `text` | (28 mag) attrezzatura casalinga alternativa con cui eseguire un esercizio "da palestra" a casa, lista separata da `+` (es. `panca+elastico`). Se popolato E l'utente si allena a casa E possiede TUTTI gli attrezzi del surrogato → l'esercizio diventa disponibile come **surrogato** (flag `_surrogato` nel pool, `isSurrogato` nell'oggetto sessione) |
+| `nota_surrogato` | `text` | (28 mag) come eseguire la versione surrogata casalinga (es. "usa l'elastico ancorato in basso al posto del bilanciere"). Mostrata come avviso nella card quando l'esercizio è servito come surrogato |
 | `updated_at` | `timestamptz` | gestito da sync, default `now()` |
 
-**Seme iniziale**: 30 esercizi che coprono tutti i pattern (spinta/tirata orizz.+vert., dominante ginocchia/anca, core, isolamento, mobilità) per casa/palestra/corpo libero. Include i 4 esercizi storici di Ignazio (trazioni banda, chest/shoulder/row elastico). Da ampliare nel tempo.
+**Seme attuale**: **54 esercizi** (PK `EX001`…`EX054`). Storia: 30 iniziali (27 mag) → +3 (`EX031` Mountain climber, `EX032` Hollow hold, `EX033` Step-up, 27 mag sera PARTE 5) → +14 nuovi principali `EX034`-`EX047` (28 mag, per arricchire la copertura pattern del generatore) → +7 cardio Tabata `EX048`-`EX054` (28 mag, `pattern=cardio_metabolico`, `uso=finisher`, basso impatto articolare: no salti, no flessione lombare ripetuta). Inoltre **`EX031` riclassificato** da pattern motorio a `cardio_metabolico` (28 mag). Include i 4 esercizi storici di Ignazio (trazioni banda, chest/shoulder/row elastico). Da ampliare nel tempo.
 
 **Sorgente**: Google Sheet dedicato `esercizi_catalog` (ID `1kEaq1SNsd5pY66p2JkFJCfBaPLtCMCk-2an3z4w9mo8`), scheda `esercizi_catalog`.
 
-**Sync**: Google Apps Script DEDICATO e SEPARATO da quello Nutrilite — funzione `syncEsercizi`, UPSERT `on_conflict=codice` via service_role. Lanciato a mano da Ignazio quando aggiorna il catalogo. Opzione futura: integrare nel sync esistente; per ora separato per sicurezza.
+**Sync**: Google Apps Script DEDICATO e SEPARATO da quello Nutrilite — funzione `syncEsercizi`, UPSERT `on_conflict=codice` via service_role. Lanciato a mano da Ignazio quando aggiorna il catalogo (menu nativo "Sync Esercizi" nel foglio, popup risultato). Opzione futura: integrare nel sync esistente; per ora separato per sicurezza.
+
+### Tabella `schede_utente` (28 maggio 2026)
+Contenitore JSON della scheda di allenamento generata dal coach per un utente. Approccio **JSON unico** (NON multi-tabelle relazionali), coerente con `weekly_plan_meals.ingredients`/`profiles.piano_ai`. Le statistiche di progressione restano in `workout_sets`/`training_logs` (relazionali, intatte).
+
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | `uuid` PK | |
+| `user_id` | `uuid` NOT NULL | FK → `auth.users` |
+| `blocco_n` | `integer` NOT NULL | numero progressivo del blocco (~4 settimane), per la varietà inter-blocco |
+| `scheda` | `jsonb` NOT NULL | intera scheda: `{ meta:{...}, sessioni:[ {id, name, type, rir, label, rest, exercises:[...], finisher?:{...}} ] }` |
+| `attiva` | `boolean` NOT NULL | default `false`. Quale scheda l'app deve leggere |
+| `created_at` | `timestamptz` NOT NULL | default `now()` |
+
+**Muro DB anti-doppia-attiva**: indice UNIQUE PARTIAL `uq_schede_utente_una_attiva` su `(user_id) WHERE attiva = true` → max 1 scheda attiva per utente garantito dal DB. Salvataggio (`_trainGenSaveToDB`): prima `UPDATE schede_utente SET attiva=false WHERE user_id=? AND attiva=true`, poi INSERT della nuova con `attiva=true`. RLS: 4 policy `own_*` (auth.uid() = user_id).
+
+**Lettura dall'app** (Mossa 3): `loadActiveScheda()` popola `ST.userTrainingSessions` (mappa `sessionId→session`) + `ST.userSessionCycle` (array ordinato). I 4 helper unificati `getTrainingSession(sid)` / `getAllTrainingSessions()` / `getSessionCycle()` (+ `findExInAllSessions`) leggono dalla scheda utente se presente, **fallback automatico su `TRAINING_SESSIONS` hardcoded** se nessuna scheda. ⚠️ Dentro questi helper i riferimenti DEVONO restare `TRAINING_SESSIONS`/`SESSION_CYCLE` originali — sostituirli col nome dell'helper stesso causa ricorsione infinita → stack overflow → pagina bianca (bug rilevato e fixato post-deploy Mossa 3, vedi changelog 28 mag).
 
 ### Tabella `profiles`
 Dati utente: `height_cm`, `weight_kg`, `goal_weight_kg`, `target_kcal/protein/carbs/fat`, `sex`, `age`, `activity_level`, `train_start_date` (opzionale).
@@ -2204,14 +2223,70 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 3. ❌ **Su richiesta utente "rigenera scheda"** → NO per ora (rischio rigenerazioni ripetute → progressione persa). Rivalutabile in futuro.
 
 ### PROSSIMI PASSI COACH GENERATORE (ordine, post-decisioni 27 mag sera)
-1. **SQL creazione tabella `schede_utente`** su Supabase (artifact pronto).
-2. **Brief tecnico Claude Code: funzione generatrice del coach** (legge onboarding + dati M2 + catalogo → produce JSON scheda → salva in `schede_utente`).
-3. **Modifica modulo Training**: lettura scheda da `schede_utente.attiva` con fallback su `TRAINING_SESSIONS` se nessuna scheda.
-4. **Modifica onboarding M1**: aggiungere step "giorni di recupero attivo (0/1/2)".
-5. **Trigger generazione blocco N+1** dopo M2 completato (aggancio a `m2EntryIntro()`).
-6. **UI "cambia esercizio"** (opzione C con vincoli).
+1. ✅ **SQL creazione tabella `schede_utente`** su Supabase (28 mag — vedi schema sopra + muro UNIQUE PARTIAL).
+2. ✅ **Funzione generatrice del coach** (28 mag — `generateTrainingProgram()` + 15 helper + diagnostica. Legge onboarding/profilo + catalogo → produce JSON scheda → salva in `schede_utente`). ⚠️ MA output ancora POVERO vs hardcoded — vedi "PROBLEMATICHE APERTE".
+3. ✅ **Lettura scheda dal modulo Training** (28 mag — Mossa 3: `loadActiveScheda` + 4 helper unificati + fallback `TRAINING_SESSIONS`).
+4. **Modifica onboarding M1**: aggiungere step "giorni di recupero attivo (0/1/2)". ⏳ NON fatto.
+5. **Trigger generazione blocco N+1** dopo M2 completato (aggancio a `m2EntryIntro()`). ⏳ NON fatto.
+6. **UI "cambia esercizio"** (opzione C con vincoli). ⏳ NON fatto.
+7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore oggi gira SOLO via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro, MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
 
 ## Cosa abbiamo fatto
+
+### Sessione 28 mag 2026 — Coach generatore schede Training (implementazione completa) ✅ + problematiche aperte
+
+Sessione lunga e densa: costruito da zero il **motore che genera la scheda di allenamento** dell'utente ("catalogo verificato + AI che assembla", NON l'AI inventa esercizi), agganciato il modulo Training a leggere la scheda dal DB con fallback, ampliato il catalogo, implementato un vero finisher Tabata. **Il motore funziona end-to-end e scrive in DB**, ma la scheda prodotta è ancora **più povera** di quella hardcoded di Ignazio (vedi "PROBLEMATICHE APERTE" in fondo). Catena commit principali (oldest→newest): `aa5464a` · `4245efe` · `52ca781` · `eb227b8` · `5d5fc99` · `5143d33` · `59a9695` · `a636d99` · `700e9a4` · `f8a0420` · `3fe7972` · `6bbd7d3` · `496e335` · `74d6847` · `19e1249` · `81d0bf9` · `8d06894` (latest training). APP_VERSION finale `2026.05.28 · …` (vedi `8d06894`).
+
+**1. Tabella `schede_utente` (Supabase)** — JSON unico, muro UNIQUE PARTIAL `uq_schede_utente_una_attiva` (max 1 attiva/utente). DDL eseguito a mano da Ignazio prima del codice. Schema completo in sezione "Tabella `schede_utente`".
+
+**2. Motore `generateTrainingProgram({source, force, dryRun})`** ([zona-tracker.html:7868](zona-tracker.html:7868)) + **15 helper** (la "fabbrica" della PARTE 5):
+- `_TRAIN_GEN_PARAMS_BY_GOAL` — tabella parametri per obiettivo × esperienza (sets/reps_min/reps_max/rir/rest_sec/type). RIR `null` per principianti (niente RIR finché non sono intermedi). Forza 4×4-6 RIR2-3 rec180; Ipertrofia 8-12 RIR1-2 rec90; Dimagrimento/Ricomposizione range più alti per principianti, rec brevi; Salute (longevita/mantenimento) 6-10 RIR2.
+- `_TRAIN_GEN_SPLIT_BY_DAYS` — split per giorni × esperienza: 2→FullBody×2 · 3→FB×3 (principiante) o Upper/Lower/Full (int/avanz) · 4→Upper/Lower×2 · 5→Push/Pull/Legs/Upper/Lower.
+- `_trainGenFilterPool(catalog, {tipoAllen, attrezzatura, livello})` — filtra il catalogo per luogo+attrezzatura+livello dell'utente. Costruisce anche `poolFinisherTabata` (solo `cardio_metabolico` + `uso` contiene `finisher`). Gestisce i **surrogati casa** (flag `_surrogato`).
+- `_trainGenGetPatterns(sessionType, livello)` — pattern minimi obbligatori per tipo sessione (Full Body / Upper / Lower / Push / Pull / Legs), opzione C "equilibrio garantito + libertà di enfasi".
+- `_trainGenComputeMaxExercises(durata_min, params, addFinisher)` — calcola quanti esercizi entrano nel tempo dichiarato (serie × reps × recupero), NON numero fisso.
+- `_trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex)` — pesca esercizio per pattern con **round-robin via `sessionIndex`**: pattern con 2+ candidati alternano correttamente tra sessioni multiple (es. due Upper nella stessa settimana non ripetono lo stesso esercizio).
+- `_trainGenBuildTabata({poolTabata, limitazioni, catalogMap, sessionIndex, sessionType})` — costruisce il finisher Tabata: 4 esercizi `cardio_metabolico` distinti, round-robin via `sessionIndex`.
+- `_trainGenOrderExercises(items)` — ordine fisso: compound pesanti → complementari → isolamenti → core in coda.
+- `_trainGenApplyCautions(exercises, limitazioni, catalogMap)` — incrocia `limitazioni` utente × `zone_rischio` esercizio: **prima ADATTA** (colonna `adattamento`), **solo se non basta SOSTITUISCE** con `alternativa` (anti-loop alternativa→alternativa).
+- `_trainGenMapToSession(wrappers, sessionMeta, params, finisher)` — assembla l'oggetto sessione finale nel formato `TRAINING_SESSIONS` (id, name, type, rir, label, rest, exercises[], finisher?). Aggiunge `codice` (tracciabilità), `isSurrogato`/`notaSurrogato`, `iso`.
+- `_trainGenValidateCodes(sessioni, catalogMap)` — verifica che ogni `codice` referenziato esista nel catalogo.
+- `_trainGenAINote(profile, schedaMeta)` — chiamata AI (voce coach) per la nota introduttiva della scheda, con fallback.
+- `_trainGenSaveToDB(userId, scheda)` — UPDATE attiva=false → INSERT nuova attiva=true (vedi muro DB).
+- `_trainGenParseEsperienzaFromNote(noteSalute)` — **parser Via A** ([zona-tracker.html:9029](zona-tracker.html:9029)): estrae `esperienza` + `limitazioni` da `profiles.note_salute` quando `ST.m1Data` non è disponibile (trigger post-M2, test manuale, `?schedaGen=1`, blocchi N+1 futuri). Regex case-insensitive, ordine segmenti libero, segmenti liberi extra ignorati senza rompere, mai throw.
+- `_trainGenMaybeForceFromUrl()` — handler `?schedaGen=1` / `?schedaDebug=1`.
+
+**3. Diagnostica + forzature**: `window.ztTestGeneraScheda()` (forza PIPELINE REALE, **scrive in DB**), `window.ztSchedaWhy()` (dry-run, spiega le scelte senza scrivere), `?schedaGen=1` (genera al boot), `?schedaDebug=1` (`window._trainGenDebug=true`, log verbose).
+
+**4. Fix vocabolario pattern (Opzione 3, `f8a0420`)**: il foglio Google usa le parole naturali ("spinta orizzontale", "dominante ginocchio", "cardio_metabolico"). Invece di costringere Ignazio a scrivere underscore, è il **codice che si adegua** via `_normPattern()` (lowercase + trim + spazi→underscore). Decisione: il foglio resta leggibile in italiano naturale.
+
+**5. Fix luogo/attrezzo (Leva A, `700e9a4`)**: `luogo` e `attrezzo` sono liste separate da `;` → split corretto. `corpo libero` con **SPAZIO** (non underscore) gestito sia spazio sia underscore. Alias `aperto`↔`libero` equivalenti. Così gli esercizi a corpo libero non venivano più scartati erroneamente.
+
+**6. Surrogati casa (Leva C, `3fe7972` + card `81d0bf9`)**: nuovi campi catalogo `surrogato_attrezzo` (lista `+`) + `nota_surrogato`. Se l'utente si allena a CASA e possiede TUTTI gli attrezzi del surrogato, un esercizio "da palestra" diventa disponibile come surrogato (flag `_surrogato` → `isSurrogato` nella sessione). **Fix card 81d0bf9**: la card mostra l'attrezzo casalingo reale (da `surrogato_attrezzo`, non il bilanciere) + la `nota_surrogato` come avviso visibile + flag `isSurrogato` propagato a `_trainGenMapToSession`.
+
+**7. Round-robin sessioni multiple (`6bbd7d3`)**: `sessionIndex` passato a `_trainGenPickByPattern`/`_trainGenBuildTabata` → pattern con più candidati alternano tra le sessioni della settimana (no fotocopia tra due Upper o due Full Body).
+
+**8. Mossa 3 — il modulo Training legge la scheda dal DB (`74d6847`)**: `loadActiveScheda()` popola `ST.userTrainingSessions` + `ST.userSessionCycle`. Helper unificati `getTrainingSession` / `getAllTrainingSessions` / `getSessionCycle` (+ `findExInAllSessions`) leggono dalla scheda utente con **fallback automatico su `TRAINING_SESSIONS` hardcoded**. Nessun utente resta senza allenamento.
+
+**9. Hotfix ricorsione infinita (`19e1249`)**: dentro gli helper unificati, i riferimenti erano stati erroneamente sostituiti col nome dell'helper stesso → `getTrainingSession` chiamava se stessa → stack overflow → pagina bianca. Fix: dentro gli helper restano i riferimenti ORIGINALI `TRAINING_SESSIONS`/`SESSION_CYCLE`. Documentato con commento `← MAI cambiare` inline nel codice.
+
+**10. Finisher Tabata vero (`8d06894`)**: cronometro reale **20s lavoro / 10s recupero × 8 round**, 4 esercizi `cardio_metabolico` che si alternano (round N → `exercises[(N-1) % 4]`). Solo per obiettivo dimagrimento/ricomposizione. Cronometro **clonato da `recoveryFlow`**: funzioni `tabataFlowStart/Pause/Resume/Skip/End` + interni `_tabataFlowTick/_tabataFlowAdvance/_tabataFlowCurrentExercise/_tabataFlowEndCompleted/_tabataFlowClearInterval`. Helper di costruzione `_trainGenBuildTabata` (catalogo) produce il blocco `finisher:{round, work_sec, rest_sec, exercises[]}` salvato nella sessione.
+
+**11. Catalogo ampliato (Google Sheet + sync)**: +14 esercizi principali `EX034`-`EX047` (copertura pattern più ricca), +7 cardio Tabata `EX048`-`EX054` (`cardio_metabolico` + `uso=finisher`, basso impatto: no salti, no flessione lombare ripetuta), `EX031` riclassificato a `cardio_metabolico`. Catalogo ora **54 esercizi**. Sync via menu "Sync Esercizi" del foglio.
+
+#### ⚠️ PROBLEMATICHE APERTE (da affrontare nelle prossime sessioni)
+
+Il motore gira e scrive in DB, ma la scheda generata **non è ancora all'altezza** di quella hardcoded di Ignazio. 9 nodi aperti, in ordine di impatto consigliato (vedi anche la raccomandazione di priorità: prima qualità #1+#2, poi etichette #7+#3, infine hook+GIF):
+
+1. **Scheda POVERA vs vecchia hardcoded** — mancano gli **isolamenti dedicati per i gruppi piccoli**: tricipiti, polpacci, bicipiti, deltoidi laterali, deltoidi posteriori. La vecchia scheda li copriva, la generata no. È il problema centrale: finché non è risolto, il motore non è pronto a sostituire il fallback.
+2. **Serie fisse a 4** — il generatore mette 4 serie a tutto; la vecchia usava **compound 4 / isolamenti 3**. Serve serie variabili per tipo di esercizio.
+3. **Titoli surrogati fuorvianti** — i titoli dei surrogati riportano ancora "bilanciere" (es. "stacco con bilanciere") anche quando l'esecuzione reale è con elastico+panca. Il titolo va riscritto in base all'attrezzo casalingo effettivo.
+4. **Sottotitoli attrezzo da arricchire** — l'`eq` dovrebbe descrivere meglio il setup completo (es. "panca + maniglie + elastico"), non solo l'attrezzo grezzo.
+5. **GIF mancanti sui nuovi esercizi** — il Worker `MATCH_DATA` è **hardcoded** e copre solo i 20 nomi vecchi. I nuovi `EX034`-`EX054` non hanno GIF. Serve un approccio con **`edbId` nel Google Sheet** (colonna nuova) così il Worker risolve la GIF dal catalogo invece che dalla mappa hardcoded.
+6. **"Settimana ciclo" hardcoded a 6 giorni** — la UI/logica ciclo assume ancora 6 giorni (rotazione storica di Ignazio) mentre la scheda generata ha 4 (o i giorni scelti in onboarding). Da rendere dinamico sui giorni reali della scheda.
+7. **Etichetta "Ipertrofia" → "Ricomposizione"** — `_TRAIN_GEN_PARAMS_BY_GOAL` usa `type:'Ipertrofia'` per molti obiettivi (incluso ricomposizione/dimagrimento). L'etichetta mostrata va corretta in "Ricomposizione" dove appropriato. Quick win.
+8. **Hook `saveOnboarding` mai fatto (Step 3.17)** — il motore NON è agganciato all'onboarding automatico: gira solo via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro. Un nuovo utente a fine M1 NON riceve ancora la scheda in automatico. **Da non agganciare finché #1/#2 non sono risolti** (daresti una scheda mediocre in automatico).
+9. **Gestione Google Sheet complessa** — col catalogo a 54 esercizi + colonne surrogato + edbId futuro, il foglio sta diventando difficile da mantenere a mano. Da ripensare (validazioni, struttura, magari UI dedicata).
 
 ### Sessione 27 mag 2026 — Modulo Training: logger trazioni + note + cronometro + restyling + fix progressione ✅
 
