@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 14:36';
+const APP_VERSION = '2026.05.28 · 15:01';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7800,16 +7800,26 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     let limitazioni = [];
     let altreLimitazioni = '';
     if (source === 'onboarding' && ST.m1Data) {
+      // Onboarding: m1Data fresco in memoria (path principale)
       esperienzaRaw = ST.m1Data.esperienza || null;
       limitazioni = Array.isArray(ST.m1Data.limitazioni)
         ? ST.m1Data.limitazioni.filter(x => x !== 'altro')
         : [];
       altreLimitazioni = (ST.m1Data.altre_limitazioni || '').trim();
     } else {
-      // Trigger futuro post-M2: il parser di note_salute verrà riempito
-      // a Step 3.x quando arriverà il momento. Per ora fallback conservativo.
-      esperienzaRaw = 'principiante';
-      console.log('[train-gen] source non-onboarding: fallback principiante (parser note_salute non implementato)');
+      // Source non-onboarding (post-M2, manual-test via ztTestGeneraScheda,
+      // ?schedaGen=1 URL, blocchi N+1 futuri): parsa note_salute del profilo
+      // per ricavare esperienza + limitazioni. Fallback principiante SOLO
+      // se il parser non trova il segmento "Esperienza:".
+      const parsed = _trainGenParseEsperienzaFromNote(profile.note_salute);
+      esperienzaRaw = parsed.esperienza;
+      limitazioni = parsed.limitazioni;
+      if (esperienzaRaw) {
+        console.log('[train-gen] esperienza letta da note_salute:', esperienzaRaw,
+          '· limitazioni:', limitazioni);
+      } else {
+        console.log('[train-gen] note_salute senza "Esperienza:" → fallback principiante');
+      }
     }
     if (!esperienzaRaw) {
       esperienzaRaw = 'principiante';
@@ -8811,12 +8821,51 @@ async function _trainGenSaveToDB(userId, scheda) {
 }
 
 function _trainGenParseEsperienzaFromNote(noteSalute) {
-  // TODO Step 3.2 (variante post-M2) — parsa note_salute con regex per
-  // ricavare esperienza + limitazioni quando ST.m1Data non è disponibile
-  // (es. trigger fine blocco dopo check M2). Per il primo trigger
-  // (onboarding) leggiamo direttamente da ST.m1Data — questo helper
-  // serve solo ai trigger futuri.
-  throw new Error('_trainGenParseEsperienzaFromNote: not implemented');
+  // Parsa note_salute per ricavare esperienza + limitazioni quando
+  // ST.m1Data non è disponibile (trigger post-M2, ztTestGeneraScheda
+  // manual-test, ?schedaGen=1 URL, futuri trigger blocco N+1).
+  //
+  // Formato canonico atteso (prodotto da saveOnboarding M1, riga ~4980):
+  //   "<segmenti liberi opzionali> · Esperienza: <valore> ·
+  //    Limitazioni: <csv comma-separated> · Altre condizioni: ... ·
+  //    Altre intolleranze: ..."
+  // Separatore segmenti: ' · ' (spazio + bullet U+00B7 + spazio).
+  // Segmenti aggiuntivi liberi (es. 'ferritina bassa') vengono IGNORATI
+  // senza rompere il parsing.
+  //
+  // Robustezza:
+  //   - case-insensitive (gestisce ESPERIENZA: AVANZATO)
+  //   - tollera spazi extra (Esperienza : avanzato)
+  //   - ordine segmenti libero (Limitazioni prima di Esperienza ok)
+  //   - segmenti mancanti → null / [] (mai throw)
+  //   - input null/'' → output di default
+  //   - sezione Limitazioni terminata dal prossimo ' · ' o fine stringa
+  //
+  // Ritorna: { esperienza: string|null, limitazioni: string[] }
+  //   esperienza valori attesi: 'principiante'/'intermedio'/'avanzato'/
+  //   'ritorno-allenamento' (lowercase normalizzato).
+  //   Il chiamante mappa via _TRAIN_GEN_EXPERIENCE_MAP a livello catalogo.
+  const out = { esperienza: null, limitazioni: [] };
+  if (!noteSalute) return out;
+  const s = String(noteSalute);
+
+  // Esperienza: parola con lettere accentate e trattini (cattura
+  // 'ritorno-allenamento' che ha trattino interno).
+  const mEsp = s.match(/Esperienza\s*:\s*([a-zàèéìòù\-]+)/i);
+  if (mEsp && mEsp[1]) {
+    out.esperienza = mEsp[1].toLowerCase().trim();
+  }
+
+  // Limitazioni: cattura tutto dopo 'Limitazioni:' fino al prossimo
+  // separatore ' · ' o newline o fine stringa. Split su virgola.
+  const mLim = s.match(/Limitazioni\s*:\s*([^·\n]+)/i);
+  if (mLim && mLim[1]) {
+    out.limitazioni = mLim[1].split(',')
+      .map(x => x.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  return out;
 }
 
 // ───────────────────────────────────────────────────────────
