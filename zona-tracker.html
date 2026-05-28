@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 06:57';
+const APP_VERSION = '2026.05.28 · 07:02';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8065,37 +8065,48 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
         })),
       })));
 
-  // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
-  //   _trainGenValidateCodes(scheda, catalogMap):
-  //     verifica che ogni `codice` esista nel Map<codice> del catalogo.
-  //   Se trovo un codice fantasma → log + skip esercizio (no crash).
-  //   In approccio A il rischio è basso (selezioniamo dal pool reale)
-  //   ma è rete di sicurezza obbligatoria (vincolo del brief).
-  // TODO Step 3.11
+    // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
+    // Rete di sicurezza: ogni `codice` di ogni esercizio deve esistere
+    // nel catalogMap. In approccio A (logica JS che pesca dal pool reale)
+    // il rischio è basso, ma il vincolo del brief è esplicito: validazione
+    // obbligatoria + no crash. Esercizi fantasma → skip + warning.
+    const sessioniValidate = _trainGenValidateCodes(sessioniFinali, catalogMap);
 
-  // BLOCCO 12 — NOTA MOTIVAZIONALE AI (voce coach)
-  //   _trainGenAINote(profile, schedaMeta):
-  //     Prompt italiano, prima persona plurale, max 2-3 frasi,
-  //     tono caldo, no preamboli, no elenchi puntati.
-  //     Contenuto: cita giorni a settimana + tempo + obiettivo,
-  //     promette evoluzione blocco dopo blocco con i check fisici.
-  //     Try/catch: se callAI fallisce o ritorna vuoto →
-  //                usa _TRAIN_GEN_FALLBACK_REASONING.
-  //   Salvato come campo `reasoning` del JSON.
-  // TODO Step 3.12
+    // BLOCCO 12 — NOTA MOTIVAZIONALE AI (voce coach)
+    // Una singola chiamata callAI con fallback fisso se fallisce o vuoto.
+    // Niente termini tecnici (no RIR/DUP/RPE/pattern), tono caldo,
+    // max 2-3 frasi italiane. Stessa filosofia del postino F.1 Nutrition.
+    const schedaMeta = {
+      obiettivo,
+      esperienzaRaw,
+      livello,
+      tipoAllen,
+      giorni,
+      durata,
+      sessioniCount: sessioniValidate.length,
+    };
+    const reasoning = await _trainGenAINote(profile, schedaMeta);
 
-  // BLOCCO 13 — BUILD JSON FINALE
-  //   Struttura della colonna `scheda` (jsonb in DB):
-  //     {
-  //       version: '1.0',
-  //       generated_at: ISO timestamp,
-  //       obiettivo, esperienza, livello_mappato,
-  //       tipo_allenamento, attrezzatura,
-  //       giorni_allenamento, durata_sessione,
-  //       reasoning: "<nota AI o fallback>",
-  //       sessioni: [ ...vedi BLOCCO 10 ]
-  //     }
-  // TODO Step 3.13
+    // BLOCCO 13 — BUILD JSON FINALE
+    // Struttura della colonna `scheda` (jsonb in schede_utente).
+    // Tutti i campi sono "snapshot" del profilo utente al momento della
+    // generazione, così future letture della scheda restano coerenti
+    // anche se il profilo dell'utente cambia successivamente.
+    const scheda = {
+      version: '1.0',
+      generated_at: new Date().toISOString(),
+      obiettivo,
+      esperienza: esperienzaRaw,
+      livello_mappato: livello,
+      tipo_allenamento: tipoAllen,
+      attrezzatura,
+      giorni_allenamento: giorni,
+      durata_sessione: durata,
+      reasoning,
+      sessioni: sessioniValidate,
+    };
+
+    console.log('[train-gen] scheda costruita (pre-save):', scheda);
 
   // BLOCCO 14 — SALVATAGGIO DB
   //   _trainGenSaveToDB(userId, scheda):
@@ -8114,7 +8125,10 @@ async function generateTrainingProgram({ source = 'onboarding' } = {}) {
   //   o null in caso di guard/errore. Mai throw.
   // TODO Step 3.15
 
-    return null; // placeholder finché Step 3.5→3.15 non riempiono i blocchi
+    // Return scheda costruita. BLOCCO 14 (save DB) ancora TODO Step 3.14:
+    // quando sarà attivo, restituirà l'oggetto scheda con eventuale `id`
+    // DB aggiunto. Per ora utile per console DevTools diagnostiche.
+    return scheda;
 
   } catch (e) {
     // Try/catch globale: cattura qualunque errore non gestito dai branch
@@ -8448,16 +8462,82 @@ function _trainGenMapToSession(wrappers, sessionMeta, params) {
   };
 }
 
-function _trainGenValidateCodes(scheda, catalogMap) {
-  // TODO Step 3.11 — sanity check: ogni `codice` deve esistere nel catalogo.
-  // Skip esercizi fantasma + log warning. No throw.
-  throw new Error('_trainGenValidateCodes: not implemented');
+function _trainGenValidateCodes(sessioni, catalogMap) {
+  // Sanity check finale: ogni esercizio in ogni sessione deve avere un
+  // `codice` che esista nel catalogMap. Esercizi fantasma (codice mancante
+  // o non in catalogo) vengono ESCLUSI con warning.
+  //
+  // Approccio A: il rischio è basso (selezioniamo dal pool reale già in
+  // BLOCCO 5), ma è rete di sicurezza obbligatoria — vincolo esplicito
+  // del brief utente. Mai throw: in caso di anomalia la scheda esce
+  // più povera, NON crasha il flusso.
+  return (sessioni || []).map(s => {
+    const cleaned = (s.exercises || []).filter(ex => {
+      if (!ex || !ex.codice) {
+        console.warn(`[train-gen] esercizio senza codice in sessione '${s.id}' → escluso`);
+        return false;
+      }
+      if (!catalogMap.has(ex.codice)) {
+        console.warn(`[train-gen] codice fantasma '${ex.codice}' in sessione '${s.id}' → escluso`);
+        return false;
+      }
+      return true;
+    });
+    return { ...s, exercises: cleaned };
+  });
 }
 
 async function _trainGenAINote(profile, schedaMeta) {
-  // TODO Step 3.12 — callAI(prompt, 150) per nota motivazionale voce coach.
-  // Fallback _TRAIN_GEN_FALLBACK_REASONING se fallisce/vuoto. Mai throw.
-  throw new Error('_trainGenAINote: not implemented');
+  // Una sola chiamata callAI(~150 token) per nota motivazionale voce coach.
+  // Italiano, prima persona plurale, max 2-3 frasi, no preamboli, no
+  // termini tecnici (DUP/RIR/RPE/pattern). Stesso pattern del postino F.1.
+  //
+  // Try/catch: se callAI fallisce o ritorna vuoto/whitespace →
+  // _TRAIN_GEN_FALLBACK_REASONING. Mai throw.
+  const OBJ_DISPLAY = {
+    forza_performance: 'forza e performance',
+    ipertrofia:        'ipertrofia',
+    dimagrimento:      'dimagrimento',
+    ricomposizione:    'ricomposizione',
+    longevita:         'longevità',
+    mantenimento:      'mantenimento',
+  };
+  const obiettivoLeggibile = OBJ_DISPLAY[schedaMeta.obiettivo] || schedaMeta.obiettivo || 'allenamento';
+  const nomeUtente = (profile && profile.first_name) ? ` ${profile.first_name}` : '';
+
+  const prompt = `Sei un coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente} in voce calda e diretta.
+
+Dati utente:
+- Obiettivo: ${obiettivoLeggibile}
+- Giorni di allenamento a settimana: ${schedaMeta.giorni}
+- Durata sessione: ${schedaMeta.durata} minuti
+- Numero sessioni nella scheda: ${schedaMeta.sessioniCount}
+
+Scrivi una breve nota motivazionale che annuncia la nuova scheda di allenamento.
+
+REGOLE:
+- Italiano, voce calda, no preamboli ("Ciao!", "Ecco la tua scheda...")
+- Prima persona plurale ("abbiamo costruito", "cresceremo insieme") oppure tu/te
+- Cita giorni a settimana e/o tempo
+- Promette evoluzione blocco dopo blocco grazie ai check fisici
+- Max 2-3 frasi totali
+- No elenchi puntati, no parentesi tecniche
+- VIETATO usare termini tecnici come DUP, RIR, RPE, "pattern motorio", "split"
+
+Scrivi SOLO la nota, niente altro.`;
+
+  try {
+    const txt = await callAI(prompt, 150);
+    const cleaned = String(txt || '').trim();
+    if (!cleaned) {
+      console.warn('[train-gen] AI nota vuota → fallback');
+      return _TRAIN_GEN_FALLBACK_REASONING;
+    }
+    return cleaned;
+  } catch (e) {
+    console.warn('[train-gen] AI nota errore → fallback:', (e && e.message) || e);
+    return _TRAIN_GEN_FALLBACK_REASONING;
+  }
 }
 
 async function _trainGenSaveToDB(userId, scheda) {
