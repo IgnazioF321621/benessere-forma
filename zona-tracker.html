@@ -3601,7 +3601,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 15:23';
+const APP_VERSION = '2026.05.28 · 15:31';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7622,8 +7622,14 @@ async function loadActiveScheda() {
   }
 }
 
-// Helper di accesso UNIFICATI — usati ovunque al posto di getTrainingSession(X).
+// Helper di accesso UNIFICATI — usati ovunque al posto di TRAINING_SESSIONS[X].
 // Fallback automatico ai hardcoded se ST.userTrainingSessions non popolato.
+//
+// IMPORTANTE — riferimenti hardcoded all'interno degli helper:
+// dentro questi 3 helper DEVONO restare i riferimenti ORIGINALI
+// (TRAINING_SESSIONS / SESSION_CYCLE), MAI sostituiti con i nomi
+// degli helper stessi. Altrimenti loop infinito → stack overflow →
+// pagina bianca (bug rilevato post-deploy Mossa 3, fix immediato).
 
 function getTrainingSession(sid) {
   // Restituisce l'oggetto sessione per id, dalla scheda utente se presente,
@@ -7632,7 +7638,7 @@ function getTrainingSession(sid) {
   if (ST.userTrainingSessions && ST.userTrainingSessions[sid]) {
     return ST.userTrainingSessions[sid];
   }
-  return getTrainingSession(sid);
+  return TRAINING_SESSIONS[sid]; // ← MAI cambiare in getTrainingSession (loop infinito)
 }
 
 function getAllTrainingSessions() {
