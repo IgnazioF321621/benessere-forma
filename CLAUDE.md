@@ -457,6 +457,7 @@ Catalogo esercizi verificati per il futuro coach generatore di schede Training. 
 | `codice` | `text` PK logica | identificativo univoco esercizio (es. `TRAZ-BANDA`, `CHEST-EL-IN-PIEDI`) |
 | `nome` | `text` | nome leggibile, in italiano |
 | `pattern` | `text` | pattern motorio. **Vocabolario del Google Sheet** (con spazi/accenti: "spinta orizzontale", "spinta verticale", "tirata orizzontale", "tirata verticale", "dominante ginocchio", "dominante anca", "core", "isolamento", "mobilita", **`cardio_metabolico`** dal 28 mag). Il codice normalizza via `_normPattern()` (lowercase + trim + spazi→underscore) prima di confrontare — vedi "Opzione 3" 28 mag: è il codice che si adegua alle parole del foglio, NON il foglio che deve usare gli underscore |
+| `gruppo_target` | `text` NULL | **(29 mag)** dimensione semantica per pescare gli ISOLAMENTI per gruppo muscolare specifico. **Vocabolario chiuso**: iso muscolari `bicipiti` `tricipiti` `deltoidi laterali` `deltoidi posteriori` `ischiocrurali` `polpacci` `glutei` `avambracci` `trapezi`; core `core anti-estensione` (Plank, Dead bug, Hollow hold, Plank fitball) e `core anti-rotazione` (Pallof press, Bird dog, Side plank, Stir the pot). VUOTO per i compound (pattern motori). ⚠️ **ANTI-PATTERN**: NON dedurre il gruppo target parsando la colonna `muscoli` (testo libero) — il vocabolario differisce (es. `ischiocrurali` nel Sheet vs `femorali/hamstring` letterario; "deltoide laterale" non compare MAI nei muscoli scritti). Serve QUESTA colonna dedicata, compilata a mano nel foglio |
 | `attrezzo` | `text` | `elastico`, `manubri`, `bilanciere`, `panca`, `sbarra`, `kettlebell`, `corpo libero` (con SPAZIO, non underscore — vedi Leva A 28 mag), `fitball`, `trx`, ecc. Lista separata da `;` |
 | `luogo` | `text` | `casa`, `palestra`, `aperto`/`libero` (alias equivalenti — vedi Leva A), `qualsiasi`. Lista separata da `;` |
 | `muscoli` | `text` | lista muscoli target separati da `;` |
@@ -473,7 +474,23 @@ Catalogo esercizi verificati per il futuro coach generatore di schede Training. 
 | `nota_surrogato` | `text` | (28 mag) come eseguire la versione surrogata casalinga (es. "usa l'elastico ancorato in basso al posto del bilanciere"). Mostrata come avviso nella card quando l'esercizio è servito come surrogato |
 | `updated_at` | `timestamptz` | gestito da sync, default `now()` |
 
-**Seme attuale**: **54 esercizi** (PK `EX001`…`EX054`). Storia: 30 iniziali (27 mag) → +3 (`EX031` Mountain climber, `EX032` Hollow hold, `EX033` Step-up, 27 mag sera PARTE 5) → +14 nuovi principali `EX034`-`EX047` (28 mag, per arricchire la copertura pattern del generatore) → +7 cardio Tabata `EX048`-`EX054` (28 mag, `pattern=cardio_metabolico`, `uso=finisher`, basso impatto articolare: no salti, no flessione lombare ripetuta). Inoltre **`EX031` riclassificato** da pattern motorio a `cardio_metabolico` (28 mag). Include i 4 esercizi storici di Ignazio (trazioni banda, chest/shoulder/row elastico). Da ampliare nel tempo.
+**Seme attuale**: **70 esercizi** (PK `EX001`…`EX070`). Storia: 30 iniziali (27 mag) → +3 (`EX031` Mountain climber, `EX032` Hollow hold, `EX033` Step-up, 27 mag sera PARTE 5) → +14 nuovi principali `EX034`-`EX047` (28 mag) → +7 cardio Tabata `EX048`-`EX054` (28 mag, `pattern=cardio_metabolico`, `uso=finisher`, basso impatto articolare). **+16 isolamenti `EX055`-`EX070` (29 mag)** per dare al generatore un isolamento per ogni gruppo muscolare piccolo: 3 deltoidi laterali, 2 deltoidi posteriori, 2 bicipiti, 2 tricipiti, 1 ischiocrurali, 2 polpacci, 2 glutei, 1 avambracci, 1 trapezi. Riclassificazioni: `EX031`→`cardio_metabolico` (28 mag); **`EX030` Band pull-apart** `mobilita`→`isolamento`, `recupero`→`principale`, `gruppo_target=deltoidi posteriori` (29 mag); **`EX043` Leg curl fitball** `dominante anca`→`isolamento`, `gruppo_target=ischiocrurali` (29 mag); **`EX032` Hollow hold** `uso`: `finisher`→`principale;finisher` (29 mag). Gli 8 esercizi core (`EX021/EX022/EX023/EX032/EX036/EX037/EX042/EX046`) hanno ricevuto `gruppo_target` (Pallof/Bird dog/Side plank/Stir the pot = anti-rotazione; Plank/Dead bug/Hollow/Plank-fitball = anti-estensione). **Totale isolamenti con `gruppo_target` popolato: 23** (post-sync 29 mag). Include i 4 esercizi storici di Ignazio (trazioni banda, chest/shoulder/row elastico). Da ampliare nel tempo.
+
+**Copertura isolamenti per gruppo_target** (post-sync 29 mag, pool `uso=principale`):
+
+| gruppo_target | esercizi |
+|---|---|
+| deltoidi laterali | EX055, EX056, EX057 |
+| deltoidi posteriori | EX030, EX058, EX059 |
+| bicipiti | EX024, EX025, EX060, EX061 |
+| tricipiti | EX026, EX027, EX062, EX063 |
+| ischiocrurali | EX043, EX064 |
+| polpacci | EX028, EX065, EX066 |
+| glutei | EX067, EX068 |
+| avambracci | EX069 |
+| trapezi | EX070 |
+| core anti-estensione | EX021 Plank, EX022 Dead bug, EX042 Plank fitball (+ EX032 Hollow hold solo se `uso` include `principale`) |
+| core anti-rotazione | EX023 Pallof, EX036 Bird dog, EX037 Side plank, EX046 Stir the pot |
 
 **Sorgente**: Google Sheet dedicato `esercizi_catalog` (ID `1kEaq1SNsd5pY66p2JkFJCfBaPLtCMCk-2an3z4w9mo8`), scheda `esercizi_catalog`.
 
@@ -2233,6 +2250,132 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 — Coach generatore: la scheda generata supera la hardcoded ✅ (collaudo end-to-end Ignazio)
+
+Giornata decisiva per il modulo Training. Il coach generatore — costruito il 28 mag ma con output ancora "povero" rispetto alla vecchia `TRAINING_SESSIONS` hardcoded — è stato portato a regime con tre filoni di lavoro consecutivi (Regole A+B+DUP → fix core/3°-compound → core come slot fisso). Esito: **la scheda generata è ora di qualità SUPERIORE alla vecchia hardcoded**, verificata end-to-end nel browser sul profilo reale di Ignazio (4 sessioni, tutte corrette) e salvata in `schede_utente`. Catena commit principali: `bde0c1a` → `5ed1cc2` → `36a6d0d`. Tutto su `main`, deployato.
+
+**Regola d'oro della collaborazione (consolidata oggi)**: per ogni decisione di Training si ragiona **come il miglior preparatore atletico / personal trainer del mondo, basandosi sulla letteratura scientifica globale**, non su sensazioni. Da qui derivano tutte le scelte sotto (DUP, core anti-estensione settimanale, recuperi differenziati).
+
+#### 1. Estensione vocabolario `gruppo_target` (nuova dimensione del catalogo)
+
+Aggiunta la colonna `gruppo_target` a `esercizi_catalog` (Supabase + Google Sheet) come dimensione semantica per pescare gli **isolamenti** per gruppo muscolare specifico (vedi schema completo + tabella copertura nella sezione "Tabella `esercizi_catalog`"). Vocabolario chiuso definitivo: iso muscolari `bicipiti` `tricipiti` `deltoidi laterali` `deltoidi posteriori` `ischiocrurali` `polpacci` `glutei` `avambracci` `trapezi`; core `core anti-estensione` / `core anti-rotazione`; **vuoto per i compound**.
+
+**Decisione strutturale chiave (ANTI-PATTERN documentato)**: la colonna `muscoli` (testo libero) NON basta a classificare i gruppi target, perché il suo vocabolario diverge da quello tecnico-programmatico — il foglio scrive `ischiocrurali` mentre la letteratura usa "femorali/hamstring", e "deltoide laterale" non compare MAI nei muscoli scritti (si trova solo "deltoidi" generico). Quindi: **mai parsare `muscoli` per dedurre il gruppo target; serve una colonna dedicata compilata a mano**.
+
+#### 2. Catalogo ampliato 54 → 70 esercizi
+
++16 isolamenti `EX055`-`EX070` (3 deltoidi laterali, 2 posteriori, 2 bicipiti, 2 tricipiti, 1 ischiocrurali, 2 polpacci, 2 glutei, 1 avambracci, 1 trapezi) per garantire al generatore un isolamento per ogni gruppo piccolo. Ri-tag di 2 esistenti: `EX030` Band pull-apart (`mobilita`→`isolamento`, `recupero`→`principale`, `gruppo_target=deltoidi posteriori`) e `EX043` Leg curl su fitball (`dominante anca`→`isolamento`, `gruppo_target=ischiocrurali`). Ri-classificazione `uso` di `EX032` Hollow hold (`finisher`→`principale;finisher`). 8 esercizi core hanno ricevuto `gruppo_target`. Dettaglio completo + tabella copertura nella sezione "Tabella `esercizi_catalog`" (23 isolamenti totali con gruppo_target post-sync).
+
+#### 3. Schema DB `esercizi_catalog` aggiornato
+
+Aggiunta `gruppo_target text NULL` (vedi tabella schema aggiornata). Il resto invariato. Popolazione del foglio a mano da Ignazio + "Sync Esercizi".
+
+#### 4. Anatomia del motore coach generatore (stato 29 mag)
+
+Il motore (`generateTrainingProgram`) compone ogni sessione in fasi: risolve TIPO (DUP) → pesca COMPOUND per pattern → aggiunge ISO OBBLIGATORI muscolari + CORE fisso → riempie con BONUS se c'è tempo → applica cautele/ordering → aggiunge finisher Tabata. Le regole:
+
+**Regola A — Isolamenti obbligatori per categoria** (`_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`):
+
+| Categoria | Iso obbligatori (in ordine) |
+|---|---|
+| Upper Forza | deltoidi posteriori, core anti-rotazione |
+| Upper Ipertrofia | deltoidi laterali, bicipiti, tricipiti, core anti-rotazione |
+| Lower Forza | glutei, core anti-estensione |
+| Lower Ipertrofia | ischiocrurali, polpacci, core anti-estensione |
+| Full Body | rotazione muscolari (deltoidi posteriori/polpacci) + core alternato via `occurrenceIdx` |
+| Push | deltoidi laterali, tricipiti, core anti-rotazione |
+| Pull | deltoidi posteriori, bicipiti, core anti-rotazione |
+| Legs | ischiocrurali, polpacci, core anti-estensione |
+
+Pescati con `_trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIndex)` — esteso il 29 mag per accettare anche `pattern=core` (non solo `isolamento`), così i core vengono pescati per `gruppo_target`.
+
+**Regola B — Serie variabili per tipo esercizio** (`_TRAIN_GEN_PARAMS_BY_GOAL` ristrutturato): ogni obiettivo × esperienza ha 3 sub-set — `compound`, `iso`, `iso_isometrico`. Per gli obiettivi ipertrofia-like (ipertrofia, ricomposizione, dimagrimento) il compound espone 2 varianti per la DUP: `compound_forza` e `compound_ipertrofia`. Valori finali (post-taratura 29 mag):
+
+| Profilo | compound | iso | iso_isometrico |
+|---|---|---|---|
+| Forza | 4×4-6 RIR 2 rest 180s | 3×8-12 RIR 2 rest 90s | 3×30-45 sec rest 60s |
+| Ipertrofia | 4×8-12 RIR 1 rest 90s | 3×12-15 RIR 1 rest 60s | 3×30-60 sec rest 45s |
+| Ricomposizione/Dimagrimento | 3×10-15 RIR 1 rest 60s (DUP usa compound_forza/ipertrofia su int/avanz) | 3×12-15 RIR 1 rest 45s | 3×20-40 sec rest 30s |
+| Longevità/Mantenimento | ridotti (3×6-10) | 3×10-12 | 2×20-30 sec rest 30s |
+
+La selezione del sub-set per ogni esercizio è in `_trainGenGetExerciseParams(ex, sessionParams)`.
+
+**DUP per-sessione** (Daily Undulating Periodization, `_trainGenResolveSessionType` + `_trainGenIsDupSession` + `_trainGenResolveSessionParams`): principianti → tipo unico per tutta la scheda; intermedio/avanzato con split duplicati (Upper×2, Lower×2, ...) + obiettivo ipertrofia-like → la PRIMA sessione del duplicato è Forza, la SECONDA Ipertrofia (Upper A=Forza, Upper B=Ipertrofia, idem Lower); single-day split (Full Body, Push/Pull/Legs non duplicati) → tipo unico; `forza_performance` → sempre Forza; `longevita`/`mantenimento` → tipo bilanciato unico ('Equilibrio'). **Razionale letterario** (Schoenfeld 2014, Zourdos 2016): la DUP combina lo stimolo di forza (preserva massa magra in deficit) e quello ipertrofico (volume metabolico) — è lo standard per la ricomposizione di intermedi/avanzati.
+
+**Riconoscimento `iso_isometrico`** (`_trainGenIsIsometric`, logica OR robusta): (1) `pattern=core` AND nome senza keyword dinamica (`marcia|ritmo|veloce|controllat|alternat|cammina`); (2) nome contiene `isometric`; (3) nome in whitelist `wall sit|plank|dead bug|hollow|pallof|side plank|bird dog|stir the pot`; (4) `pattern=isolamento` AND `gruppo_target=glutei` AND nome con keyword isometrico. Quando isometrico: `reps` con suffisso `" sec"`, `rir:null`, flag `isTimed:true` — la UI nasconde la pill RIR via `parseRepsRange(reps).kind==='seconds'` (reader Mossa 3, non toccato).
+
+**Pattern compound per categoria** (`_TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY` — rimpiazza il vecchio `_TRAIN_GEN_PATTERN_REQUIREMENTS`): liste piatte, `core` RIMOSSO dai compound di Lower/Legs (era il bug "Plank-come-compound-pesante"). Un pattern ripetuto pesca un 2° esercizio DISTINTO via round-robin `+1` (es. Squat poi Affondi su Lower, non due squat).
+
+| Categoria | Pattern compound (in ordine) |
+|---|---|
+| Upper Forza/Iper | spinta orizz, spinta vert, tirata orizz, tirata vert (4) |
+| Lower Forza/Iper | dominante ginocchia, dominante anca, dominante ginocchia (3) |
+| Full Body | spinta orizz, tirata orizz, dominante ginocchia, dominante anca (4) |
+| Push | spinta orizz, spinta vert, spinta orizz (3) |
+| Pull | tirata orizz, tirata vert, tirata orizz (3) |
+| Legs | come Lower (3) |
+
+**Criticità iso e ordine di taglio** (`_TRAIN_GEN_ISO_CRITICALITY`): `core anti-estensione`=5 (MAI tagliato — sicurezza lombare); `bicipiti`/`tricipiti`=3; `deltoidi posteriori`/`glutei`/`ischiocrurali`/`core anti-rotazione`=2; `polpacci`/`deltoidi laterali`/`avambracci`/`trapezi`=1. Ordine di taglio quando il tempo non basta: bonus extra → iso muscolari meno critici → core anti-rotazione (Upper) → **MAI core anti-estensione (Lower)** → MAI compound primari. Il core anti-estensione è gestito come slot PROTETTO (riservato, tenuto anche oltre il soft-max con warn esplicito); il core anti-rotazione compete per criticità coi muscolari e può essere skippato in silenzio su Upper se manca tempo.
+
+**Soft-max esercizi per durata** (`_TRAIN_GEN_SOFT_MAX_BY_DURATA`, alzato il 29 mag per ospitare il core fisso): 30 min → 6, 45 min → 8, 60 min → 9.
+
+**Fill bonus tier-ordinato** (`_BONUS_TIERS`): (1) iso muscolari di gruppi non coperti → (2) core/isometrici → (3) compound complementari. Ogni bonus usa i SUOI parametri (compound/iso/iso_isometrico) — la Regola B vale anche fuori dagli obbligatori.
+
+**Diagnostica esposta**: `window.ztSchedaWhy()` (dry-run + `console.table`, sezione ISO OBBLIGATORI con colonna `core` separata, NO scrittura DB / NO AI); `window.ztTestGeneraScheda()` (pipeline reale + scrittura DB); `window.ztTrainGenPatternPick(splitType)` (dry-run con log dettagliato del picker); `window._trainGenDebug = true` (abilita i log verbosi di `_trainGenFilterPool` — esclusioni luogo/attrezzo/livello — e `_trainGenPickByPattern` — candidati, già usati, scelto). Riepilogo per-sessione sempre loggato: `[lower_forza] compound: EX013,EX015,EX017; iso obbligatori: EX067; core: EX021 (anti-estensione, isometrico); bonus: —`.
+
+#### 5. Core come SLOT FISSO obbligatorio (protezione lombare)
+
+Decisione presa col preparatore: il core va allenato in OGNI sessione (utente con limitazione lombare conclamata). Promosso da "bonus se resta tempo" (di fatto mai pescato sulle sessioni di Forza per sforamento tempo) a **slot fisso obbligatorio**, distinto per natura: **anti-estensione** sulle Lower/Legs (protegge la colonna sotto carico di squat/stacchi), **anti-rotazione** su Upper/Push/Pull (stabilità del busto), **alternato** su Full Body. Letteratura: core anti-estensione settimanale per chi ha storia lombare (McGill, Stuart McGill "Big 3").
+
+#### 6. Esiti collaudo end-to-end (profilo Ignazio)
+
+Profilo: casa, 4 giorni, 45 min, ricomposizione, avanzato, attrezzatura completa, limitazioni lombare+ginocchia. Scheda salvata in `schede_utente` (29 mag h ~07:47):
+
+| Sessione | Tipo | N | Esercizi |
+|---|---|---|---|
+| Upper A | Forza | 6 | Chest press, Shoulder press, Trazioni, Row, EX030 Band pull-apart (delt post), EX023 Pallof press (core anti-rot) |
+| Upper B | Ipertrofia | 8 | Panca, Military, Lat machine, Rematore, EX025 Curl, EX027 French press, EX056 Alzate laterali, EX036 Bird dog (core anti-rot) |
+| Lower A | Forza | 5 | Squat, Affondi, Hip thrust, EX067 Abduzione (glutei), EX021 Plank (core anti-est) |
+| Lower B | Ipertrofia | 6 | Squat barra, Affondi, Stacco rumeno, EX064 Leg curl (ischio), EX066 Calf raise unilat (polpacci), EX022 Dead bug (core anti-est) |
+
+Conferme: compound 4 serie / iso 3 serie; recuperi differenziati (180s compound forza, 90s compound iper, 60-45s iso, 60-30s iso_isometrico); DUP funziona (Upper A=Forza, Upper B=Ipertrofia, idem Lower); core fisso in ogni sessione, anti-estensione su Lower / anti-rotazione su Upper; Plank a 3×20-40 sec rest 1:00 (MAI più 4×4-6 RIR 2); nuovi esercizi del catalogo pescati (EX056, EX064, EX066, EX067); finisher Tabata su tutte le sessioni.
+
+**Confronto vs vecchia hardcoded `TRAINING_SESSIONS`**: la nuova è più ricca (Upper B 8 vs 6 esercizi), include il core in TUTTE le sessioni (vecchia: zero), include il finisher Tabata (vecchia: nessuno) e applica la DUP coerentemente. **La scheda generata è di qualità superiore alla vecchia.** Resta la rete di sicurezza: senza scheda utente in DB il modulo Training ricade su `TRAINING_SESSIONS` (Mossa 3, non toccata).
+
+#### 7. Commit chiave (timeline 29 mag)
+
+| Commit | Cosa | APP_VERSION |
+|---|---|---|
+| `bde0c1a` | Regole A+B (isolamenti obbligatori + serie variabili) + DUP per-sessione | `2026.05.29 · 06:38` |
+| `5ed1cc2` | Fix core isometrici (mai più compound pesanti) + 3° compound Lower (Affondi) + bonus tier-ordinato | `2026.05.29 · 07:20` |
+| `36a6d0d` | Core slot fisso in ogni sessione + criticità anti-estensione massima (protezione lombare) | `2026.05.29 · 07:38` |
+
+#### Problematiche aperte aggiornate (29 mag 2026)
+
+**RISOLTE oggi** ✅:
+- ✅ **#1 Isolamenti gruppi piccoli mancanti** — risolto con i 16 nuovi isolamenti `EX055`-`EX070` + Regola A (iso obbligatori per categoria/`gruppo_target`).
+- ✅ **#2 Serie fisse a 4** — risolto con la Regola B (compound 4 / iso 3 / iso_isometrico a tempo), parametri per-esercizio.
+- ✅ **#7 Etichetta "Ipertrofia"→"Ricomposizione"** — risolto via DUP: le sessioni duplicate mostrano `Forza`/`Ipertrofia` esplicite; resta solo il caso uniforme (vedi sotto).
+
+**RESTANO aperte** 🟡:
+- 🟡 **Sforamento tempo sui giorni Forza** (~50-60 min stimati vs 45 dichiarati): inerente a 4 compound irrinunciabili × 180s di recupero + core + finisher. Decisione consapevole (sicurezza/qualità > tempo). Da rivalutare in futuro (accettare / ridurre rest / ridurre compound).
+- 🟡 **Label "Ricomposizione" vs "Ipertrofia" sulle sessioni UNIFORMI** (single-day, principianti): oggi mostrano 'Ipertrofia' (DUP rule 1, supera il quick-fix #7 storico). Cosmetico, da decidere se preferire 'Ricomposizione'.
+- 🟡 **Titoli surrogati con "bilanciere" fuorvianti** sulle versioni casa (es. "Stacco con bilanciere" eseguito con elastico+panca). Il titolo va riscritto in base all'attrezzo casalingo effettivo.
+- 🟡 **Sottotitoli attrezzo (`eq`) da arricchire** (es. "panca + maniglie + elastico", non solo l'attrezzo grezzo).
+- 🟡 **GIF mancanti sui nuovi esercizi `EX034`+**: il Worker `MATCH_DATA` è hardcoded sui 20 nomi vecchi. Serve un `edbId` nel Google Sheet (colonna nuova) per risolvere la GIF dal catalogo.
+- 🟡 **"Settimana ciclo" hardcoded a 6 giorni** vs i giorni reali della scheda (4 per Ignazio). Da rendere dinamico.
+- 🟡 **Hook `saveOnboarding` (Step 3.17) mai fatto**: il motore gira solo via trigger manuale (`ztTestGeneraScheda()` / `?schedaGen=1` / post-M2 futuro), MAI in automatico a fine onboarding. Da agganciare ORA che la qualità è alta (prima era sconsigliato perché dava schede mediocri).
+- 🟡 **Gestione Google Sheet sempre più complessa** (70 esercizi + colonne surrogato + gruppo_target + edbId futuro): architettura del foglio da ripensare.
+- 🟡 **Regole C/D/E/F (28 mag)** parzialmente implementate, da rifinire: range esercizi non rigido, ordinamento fine entro categorie, recuperi differenziati per obiettivo (parz fatto), round-robin completo iso (parz fatto).
+
+#### Principi/learnings consolidati
+
+- **Ragionare da top preparatore/PT mondiale, sulla letteratura globale** — regola d'oro della collaborazione Ignazio×Claude per le decisioni Training. Sempre.
+- **DUP** è lo standard per la ricomposizione di intermedi/avanzati (Schoenfeld 2014, Zourdos 2016).
+- **Core anti-estensione settimanale** per chi ha storia lombare (McGill).
+- **Recupero compound > recupero iso** (2-3 min Forza, 1-1.5 min Ipertrofia vs 45-90s iso) — Henselmans, Schoenfeld 2016.
+- **Vocabolario chiuso `gruppo_target` con plurali italiani** — più leggibile del singolare tecnico, e indispensabile perché `muscoli` (testo libero) non basta a classificare.
+
 ### Sessione 28 mag 2026 — Coach generatore schede Training (implementazione completa) ✅ + problematiche aperte
 
 Sessione lunga e densa: costruito da zero il **motore che genera la scheda di allenamento** dell'utente ("catalogo verificato + AI che assembla", NON l'AI inventa esercizi), agganciato il modulo Training a leggere la scheda dal DB con fallback, ampliato il catalogo, implementato un vero finisher Tabata. **Il motore funziona end-to-end e scrive in DB**, ma la scheda prodotta è ancora **più povera** di quella hardcoded di Ignazio (vedi "PROBLEMATICHE APERTE" in fondo). Catena commit principali (oldest→newest): `aa5464a` · `4245efe` · `52ca781` · `eb227b8` · `5d5fc99` · `5143d33` · `59a9695` · `a636d99` · `700e9a4` · `f8a0420` · `3fe7972` · `6bbd7d3` · `496e335` · `74d6847` · `19e1249` · `81d0bf9` · `8d06894` (latest training). APP_VERSION finale `2026.05.28 · …` (vedi `8d06894`).
@@ -2275,6 +2418,8 @@ Sessione lunga e densa: costruito da zero il **motore che genera la scheda di al
 **11. Catalogo ampliato (Google Sheet + sync)**: +14 esercizi principali `EX034`-`EX047` (copertura pattern più ricca), +7 cardio Tabata `EX048`-`EX054` (`cardio_metabolico` + `uso=finisher`, basso impatto: no salti, no flessione lombare ripetuta), `EX031` riclassificato a `cardio_metabolico`. Catalogo ora **54 esercizi**. Sync via menu "Sync Esercizi" del foglio.
 
 #### ⚠️ PROBLEMATICHE APERTE (da affrontare nelle prossime sessioni)
+
+> **⚠️ LISTA SUPERATA — aggiornata al 29 mag 2026.** I nodi #1, #2 e #7 sono stati RISOLTI il 29 mag (isolamenti gruppi piccoli + serie variabili + etichette via DUP). Per lo stato corrente delle problematiche aperte vedi **"### Sessione 29 mag 2026 → Problematiche aperte aggiornate"** più sotto. Il blocco qui sotto resta come fotografia storica del 28 mag.
 
 Il motore gira e scrive in DB, ma la scheda generata **non è ancora all'altezza** di quella hardcoded di Ignazio. 9 nodi aperti, in ordine di impatto consigliato (vedi anche la raccomandazione di priorità: prima qualità #1+#2, poi etichette #7+#3, infine hook+GIF):
 
