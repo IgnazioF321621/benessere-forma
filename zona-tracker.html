@@ -2597,28 +2597,20 @@ body.preview-onboarding #m1-preview-banner{display:block;}
       <div id="m1-err-s-days" class="m1-err"></div>
     </div>
 
-    <!-- STEP E (s-time) — Quanto tempo per allenarti? -->
+    <!-- STEP E (s-time) — Quanto vuoi che sia la sessione? (volume: essenziale/completo) -->
     <div id="m1-s-time" class="m1-step">
       <div class="onb-section">
-        <div class="m1-num-grid m1-num-grid-3">
-          <button type="button" class="m1-tile-num" data-time="30" onclick="m1SelectDurata(30)">
-            <span class="m1-tile-num-value">30</span>
-            <span class="m1-tile-num-unit">MIN</span>
-          </button>
-          <button type="button" class="m1-tile-num" data-time="45" onclick="m1SelectDurata(45)">
-            <span class="m1-tile-num-value">45</span>
-            <span class="m1-tile-num-unit">MIN</span>
-          </button>
-          <button type="button" class="m1-tile-num" data-time="60" onclick="m1SelectDurata(60)">
-            <span class="m1-tile-num-value">60</span>
-            <span class="m1-tile-num-unit">MIN</span>
-          </button>
-        </div>
-        <div id="m1-time-explainer" class="m1-explainer-card" style="display:none;">
-          <div class="m1-explainer-title" id="m1-time-explainer-title"></div>
-          <div class="m1-explainer-desc" id="m1-time-explainer-desc"></div>
-        </div>
-        <p class="m1-mantra">Tempo onesto, sessione vera.</p>
+        <button type="button" class="m1-card-level" data-volume="essenziale" onclick="m1SelectVolume('essenziale')">
+          <div class="m1-card-level-eyebrow">ESSENZIALE</div>
+          <div class="m1-card-level-title">Sessione corta</div>
+          <div class="m1-card-level-desc">Solo i fondamentali: i grandi movimenti e il core. Allenamento rapido, dritto al punto.</div>
+        </button>
+        <button type="button" class="m1-card-level" data-volume="completo" onclick="m1SelectVolume('completo')">
+          <div class="m1-card-level-eyebrow">COMPLETO</div>
+          <div class="m1-card-level-title">Sessione piena</div>
+          <div class="m1-card-level-desc">Fondamentali più gli esercizi di rifinitura, per costruire bene ogni sessione.</div>
+        </button>
+        <p class="m1-mantra">Meglio una sessione vera che una promessa di minuti.</p>
       </div>
       <div class="m1-cta-sticky">
         <button class="btn btn-primary btn-full" onclick="m1NextFrom('s-time')">Continua →</button>
@@ -3613,7 +3605,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 07:38';
+const APP_VERSION = '2026.05.29 · 10:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3655,7 +3647,7 @@ const ST = {
     tipo_allenamento:null,    // 'casa'|'palestra'|'aperto' — solo se usa_training=true
     attrezzatura:[],          // slug attrezzi disponibili — solo se tipo_allenamento='casa'
     giorni_allenamento:null,  // 2|3|4|5 — solo se usa_training=true
-    durata_sessione:null,     // 30|45|60 (min) — solo se usa_training=true
+    volume_sessione:'completo', // 'essenziale'|'completo' — default Completo. (durata_sessione dismessa, dormiente in DB)
     attivita:null, esperienza:null,
     stile_alimentare:null,
     intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
@@ -4031,7 +4023,7 @@ const M1_HEADERS = {
   's-where': { title:'Dove ti alleni?',         sub:'Il coach adatta i workout allo spazio che hai.' },
   's-gear':  { title:'Cosa hai a disposizione?',sub:'Seleziona gli attrezzi che hai in casa. Il corpo libero è sempre incluso.' },
   's-days':  { title:'Quanti giorni a settimana?', sub:'Scegli il ritmo che riesci a mantenere davvero.' },
-  's-time':  { title:'Quanto tempo per allenarti?',sub:'La durata-base di ogni sessione. Decide quanti esercizi entrano.' },
+  's-time':  { title:'Quanto vuoi che sia la sessione?',sub:'Quanti esercizi monta il coach. Puoi cambiarlo più avanti.' },
   s5:        { title:'Come mangi',              sub:'Per costruire un piano che rispetti il tuo stile alimentare.' },
   s6:        { title:'Cosa devo sapere',        sub:'Aree del corpo o condizioni che richiedono attenzione. Ci servono per adattare il piano allenamento.' },
   s7:        { title:'',                        sub:'I tuoi dati base sono salvati. Manca un ultimo passo per attivare il tuo piano personale.' },
@@ -4044,11 +4036,6 @@ const M1_DAYS_DESC = {
   3: { title: '3 giorni',                desc: 'Tre sessioni complete, buon equilibrio tra stimolo e recupero. Ottimo punto di partenza.' },
   4: { title: '4 giorni · UPPER / LOWER',desc: 'Split su parte alta e bassa. Lavoro più mirato per muscolo.' },
   5: { title: '5 giorni · U/L + EXTRA',  desc: 'Quattro sessioni split più un giorno dedicato (core o cardio).' },
-};
-const M1_TIME_DESC = {
-  30: { title: '30 MIN · SESSIONI DENSE',  desc: 'Allenamenti rapidi e densi. Si lavora su pochi grandi movimenti.' },
-  45: { title: '45 MIN · EQUILIBRATO',     desc: 'Tempo per riscaldarsi, lavorare bene e chiudere senza fretta.' },
-  60: { title: '60 MIN · VOLUME COMPLETO', desc: 'Più volume e accessori per costruire bene la sessione.' },
 };
 
 // Slug attrezzi accessori elastici (gestione visibility/cleanup quando "elastici_tubo" è spento).
@@ -4118,7 +4105,6 @@ function m1GoStep(stepId) {
   if (stepId === 's4')     m1S4ApplyExperienceVisibility();
   if (stepId === 's-gear') m1GearApplyVisibility();
   if (stepId === 's-days') m1DaysApplyExplainer();
-  if (stepId === 's-time') m1TimeApplyExplainer();
   // err reset + scroll top
   const errEl = document.getElementById('m1-err-' + stepId);
   if(errEl) errEl.classList.remove('show');
@@ -4166,7 +4152,7 @@ function m1NextFrom(stepId) {
   } else if(stepId === 's-days') {
     if(!d.giorni_allenamento) return showErr('Scegli quanti giorni a settimana.');
   } else if(stepId === 's-time') {
-    if(!d.durata_sessione) return showErr('Scegli la durata-base.');
+    if(!d.volume_sessione) return showErr('Scegli il livello della sessione.');
   } else if(stepId === 's5') {
     if(!d.stile_alimentare) return showErr('Scegli il tuo stile alimentare.');
   }
@@ -4326,24 +4312,13 @@ function m1DaysApplyExplainer() {
   if (dEl) dEl.textContent = M1_DAYS_DESC[val].desc;
 }
 
-// ── Handler Step E (s-time) — Durata sessione ──
-function m1SelectDurata(val) {
-  const v = parseInt(val, 10);
-  ST.m1Data.durata_sessione = v;
-  document.querySelectorAll('#m1-s-time [data-time]').forEach(el =>
-    el.classList.toggle('selected', parseInt(el.getAttribute('data-time'), 10) === v));
-  m1TimeApplyExplainer();
-}
-function m1TimeApplyExplainer() {
-  const val = ST.m1Data.durata_sessione;
-  const box = document.getElementById('m1-time-explainer');
-  const tEl = document.getElementById('m1-time-explainer-title');
-  const dEl = document.getElementById('m1-time-explainer-desc');
-  if (!box) return;
-  if (!val || !M1_TIME_DESC[val]) { box.style.display = 'none'; return; }
-  box.style.display = 'block';
-  if (tEl) tEl.textContent = M1_TIME_DESC[val].title;
-  if (dEl) dEl.textContent = M1_TIME_DESC[val].desc;
+// ── Handler Step E (s-time) — Volume sessione (Essenziale / Completo) ──
+// Sostituisce la vecchia scelta minuti (durata_sessione, ora dormiente in DB).
+function m1SelectVolume(val) {
+  const v = (val === 'essenziale') ? 'essenziale' : 'completo';
+  ST.m1Data.volume_sessione = v;
+  document.querySelectorAll('#m1-s-time [data-volume]').forEach(el =>
+    el.classList.toggle('selected', el.getAttribute('data-volume') === v));
 }
 function m1ToggleAltro(which) {
   const isIntol = (which === 'intol');
@@ -4414,10 +4389,9 @@ function m1ApplySelections() {
       el.classList.toggle('selected', parseInt(el.getAttribute('data-days'), 10) === d.giorni_allenamento));
     m1DaysApplyExplainer();
   }
-  if (d.durata_sessione) {
-    document.querySelectorAll('#m1-s-time [data-time]').forEach(el =>
-      el.classList.toggle('selected', parseInt(el.getAttribute('data-time'), 10) === d.durata_sessione));
-    m1TimeApplyExplainer();
+  if (d.volume_sessione) {
+    document.querySelectorAll('#m1-s-time [data-volume]').forEach(el =>
+      el.classList.toggle('selected', el.getAttribute('data-volume') === d.volume_sessione));
   }
 }
 
@@ -4934,7 +4908,7 @@ function _exitOnboardingPreview(toastMsg) {
     peso_attuale:null, peso_obiettivo:null,
     obiettivi:[],
     usa_training:null, tipo_allenamento:null, attrezzatura:[],
-    giorni_allenamento:null, durata_sessione:null,
+    giorni_allenamento:null, volume_sessione:'completo',
     attivita:null, esperienza:null,
     stile_alimentare:null,
     intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
@@ -5012,13 +4986,15 @@ async function saveOnboarding(opts) {
   //     · tipo_allenamento sempre salvato
   //     · attrezzatura salvata SOLO se tipo_allenamento='casa'
   //       (per palestra/aperto il coach interpreta dal tipo_allenamento)
-  //     · giorni_allenamento + durata_sessione sempre salvati
+  //     · giorni_allenamento + volume_sessione sempre salvati
+  // NB: durata_sessione (minuti) è DISMESSA — colonna dormiente in DB, non più
+  //     scritta. Sostituita da volume_sessione ('essenziale'|'completo').
   const usaTraining = (d.usa_training === false) ? false : true;
   const tipoAllen   = usaTraining ? (d.tipo_allenamento || null) : null;
   const attrezz     = (usaTraining && tipoAllen === 'casa' && (d.attrezzatura || []).length)
     ? d.attrezzatura.slice() : null;
   const giorni      = usaTraining ? (d.giorni_allenamento || null) : null;
-  const durata      = usaTraining ? (d.durata_sessione    || null) : null;
+  const volume      = usaTraining ? (d.volume_sessione    || 'completo') : null;
 
   const profileData = {
     id: ST.user.id,
@@ -5043,7 +5019,7 @@ async function saveOnboarding(opts) {
     tipo_allenamento:    tipoAllen,
     attrezzatura:        attrezz,
     giorni_allenamento:  giorni,
-    durata_sessione:     durata,
+    volume_sessione:     volume,
     updated_at:   new Date().toISOString(),
   };
 
@@ -6135,7 +6111,7 @@ async function loadAndStart() {
       peso_attuale:null, peso_obiettivo:null,
       obiettivi:[],
       usa_training:null, tipo_allenamento:null, attrezzatura:[],
-      giorni_allenamento:null, durata_sessione:null,
+      giorni_allenamento:null, volume_sessione:'completo',
       attivita:null, esperienza:null,
       stile_alimentare:null,
       intolleranze:[], altre_intolleranze:'', altro_intol_open:false,
@@ -7887,12 +7863,13 @@ const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimag
 // fisso in ogni sessione oltre a compound + iso muscolari (es. Upper Ipertrofia
 // = 4 compound + 3 iso + 1 core = 8). Le sessioni Forza sforano un po' il tempo
 // dichiarato: accettato (vincolo sicurezza/qualità > tempo, ~5 min in più).
-const _TRAIN_GEN_SOFT_MAX_BY_DURATA = (durata_min) => {
-  const d = Number(durata_min) || 45;
-  if (d <= 30) return 6;
-  if (d <= 45) return 8;
-  return 9;
-};
+// Tetto fisso esercizi/sessione (count). NON dipende più dai minuti (la scelta
+// "durata in minuti" è stata sostituita dal volume Essenziale/Completo, 29 mag).
+// Tenuto al valore generoso (9) così l'ossatura intoccabile — compound + iso
+// obbligatori + core fisso — non viene MAI tagliata in nessuna modalità; in
+// "Completo" è anche il cap del riempimento bonus. (Funzione duration-based
+// _TRAIN_GEN_SOFT_MAX_BY_DURATA rimossa: era l'unico uso.)
+const _TRAIN_GEN_SOFT_MAX = 9;
 
 // Split sessioni per giorni × esperienza (PARTE 5).
 // I "nomi visibili" (Full Body A/B, Upper A/B, ...) li calcola
@@ -8073,16 +8050,18 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     let tipoAllen     = profile.tipo_allenamento || null;
     let attrezzatura  = Array.isArray(profile.attrezzatura) ? profile.attrezzatura.slice() : [];
     let giorni        = profile.giorni_allenamento || null;
-    let durata        = profile.durata_sessione    || null;
-    if (!tipoAllen || !giorni || !durata) {
+    // Volume sessione (sostituisce durata in minuti). Fallback 'completo' →
+    // copre profili pre-esistenti senza la colonna e ogni valore inatteso.
+    const volume      = (profile.volume_sessione === 'essenziale') ? 'essenziale' : 'completo';
+    // durata NON è più necessaria per generare: il guard chiede solo dove+giorni.
+    if (!tipoAllen || !giorni) {
       if (force) {
-        console.warn('[train-gen][force] dati training incompleti, uso default casa/3gg/45min:', { tipoAllen, giorni, durata });
+        console.warn('[train-gen][force] dati training incompleti, uso default casa/3gg:', { tipoAllen, giorni });
         tipoAllen = tipoAllen || 'casa';
         giorni    = giorni    || 3;
-        durata    = durata    || 45;
         if (attrezzatura.length === 0) attrezzatura = ['elastico','corpo_libero'];
       } else {
-        console.warn('[train-gen] dati training incompleti:', { tipoAllen, giorni, durata });
+        console.warn('[train-gen] dati training incompleti:', { tipoAllen, giorni });
         return null;
       }
     }
@@ -8090,7 +8069,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const inputData = {
       source, obiettivo, esperienzaRaw, livello,
       limitazioni, altreLimitazioni,
-      tipoAllen, attrezzatura, giorni, durata,
+      tipoAllen, attrezzatura, giorni, volume,
       sex: profile.sex, age: profile.age, weight_kg: profile.weight_kg,
     };
 
@@ -8151,8 +8130,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     splitArray.forEach(t => { splitTypeCount[t] = (splitTypeCount[t] || 0) + 1; });
 
     const sessionMeta = {
-      splitArray, addFinisher, splitTypeCount,
-      softMaxPerSession: _TRAIN_GEN_SOFT_MAX_BY_DURATA(durata),
+      splitArray, addFinisher, splitTypeCount, volume,
+      softMaxPerSession: _TRAIN_GEN_SOFT_MAX,
     };
 
     console.log('[train-gen] decisioni intermedie:', { inputData, sessionMeta, catalogSize: catalog.length });
@@ -8298,35 +8277,32 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const keptObbligatori = keptMuscular; // alias per compatibilità log/diag
       const exercises = [...compoundPicks, ...keptMuscular.map(o => o.ex), ...(coreKept ? [coreKept.ex] : [])];
 
-      // 3) ISO BONUS — riempi fino al target tempo-based modesto, gate secondi.
+      // 3) ISO BONUS — SOLO in modalità "Completo".
+      // In "Essenziale" la sessione si ferma all'ossatura intoccabile:
+      // compound + iso obbligatori + core fisso (l'A+B). Nessun bonus.
+      // In "Completo" riempi fino al soft-max (count), SENZA dipendenza dai
+      // minuti (la scelta durata è stata sostituita dal volume).
       // ORDINE (Fix 29 mag): iso MUSCOLARI (gruppi piccoli) → core/isometrici →
       // compound complementari. Ogni bonus usa i PROPRI parametri
       // (compound/iso/iso_isometrico via _trainGenGetExerciseParams), MAI
       // quelli di sessione → il core esce con parametri iso_isometrico.
-      const _BONUS_TIERS = [
-        { label: 'iso-musc',  patterns: ['isolamento'] },
-        { label: 'core-iso',  patterns: ['core'] },
-        { label: 'compound',  patterns: ['spinta orizzontale','spinta verticale','tirata orizzontale','tirata verticale','dominante ginocchia','dominante anca'] },
-      ];
-      const timeBasedTarget = _trainGenComputeMaxExercises(durata, sessionParams.compound, addFinisher);
-      const tempoDisp = (Number(durata) || 0) * 60
-        - _TRAIN_GEN_TIME_BUDGET.warmup_sec
-        - (addFinisher ? _TRAIN_GEN_TIME_BUDGET.finisher_sec : 0)
-        - _TRAIN_GEN_TIME_BUDGET.buffer_sec;
-      let timeUsed = exercises.reduce((t, ex) => t + _trainGenExerciseTimeCost(ex, sessionParams), 0);
       const bonusPicks = [];
-      for (const tier of _BONUS_TIERS) {
-        while (exercises.length < timeBasedTarget && exercises.length < softMax) {
-          const bonus = _trainGenPickByPattern(pools.poolPrincipali, tier.patterns, usedSoFar, occurrenceIdx);
-          if (!bonus) break; // tier esaurito → passa al successivo
-          const cost = _trainGenExerciseTimeCost(bonus, sessionParams);
-          if (timeUsed + cost > tempoDisp) break; // niente tempo reale → stop totale bonus
-          usedSoFar.add(bonus.codice);
-          exercises.push(bonus);
-          timeUsed += cost;
-          bonusPicks.push({ ex: bonus, tier: tier.label });
+      if (sessionMeta.volume !== 'essenziale') {
+        const _BONUS_TIERS = [
+          { label: 'iso-musc',  patterns: ['isolamento'] },
+          { label: 'core-iso',  patterns: ['core'] },
+          { label: 'compound',  patterns: ['spinta orizzontale','spinta verticale','tirata orizzontale','tirata verticale','dominante ginocchia','dominante anca'] },
+        ];
+        for (const tier of _BONUS_TIERS) {
+          while (exercises.length < softMax) {
+            const bonus = _trainGenPickByPattern(pools.poolPrincipali, tier.patterns, usedSoFar, occurrenceIdx);
+            if (!bonus) break; // tier esaurito → passa al successivo
+            usedSoFar.add(bonus.codice);
+            exercises.push(bonus);
+            bonusPicks.push({ ex: bonus, tier: tier.label });
+          }
+          if (exercises.length >= softMax) break;
         }
-        if (timeUsed >= tempoDisp || exercises.length >= timeBasedTarget || exercises.length >= softMax) break;
       }
 
       // Riepilogo per sessione (sempre) — aiuta il debug futuro.
@@ -8483,7 +8459,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         rir:   sessRir,
         label: letter ? `${displayName} ${letter} — ${sessType}` : `${displayName} — ${sessType}`,
         rest:  restText,
-        duration_min: (Number(durata) || 0) + (addFinisher ? 5 : 0),
+        duration_min: null, // dismesso: niente più stima minuti (volume-based)
       };
       const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher);
       // _diag (Regola A): iso obbligatori pescati/tagliati + bonus. Solo per
@@ -8521,7 +8497,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       livello,
       tipoAllen,
       giorni,
-      durata,
+      volume,
       sessioniCount: sessioniValidate.length,
     };
     const reasoning = dryRun
@@ -8542,7 +8518,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       tipo_allenamento: tipoAllen,
       attrezzatura,
       giorni_allenamento: giorni,
-      durata_sessione: durata,
+      volume_sessione: volume,
       reasoning,
       sessioni: sessioniValidate,
     };
@@ -8734,6 +8710,10 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   return { poolPrincipali, poolFinisher, poolFinisherTabata };
 }
 
+// DORMIENTE (29 mag): non più chiamata dal generatore — il riempimento bonus
+// ora è cap-by-count (soft-max) e gated dal volume Essenziale/Completo, non
+// dai minuti. Tenuta come riferimento; rimuovere in cleanup futuro con
+// _trainGenExerciseTimeCost e _TRAIN_GEN_TIME_BUDGET (usati solo qui).
 function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   // Formula tempo: tempo_disp / tempo_per_esercizio, clampato min..max.
   //   tempo_disp = durata_min*60 - warmup - (finisher?:0) - buffer
@@ -8907,8 +8887,9 @@ function _trainGenGetExerciseParams(ex, sessionParams) {
 }
 
 // Stima realistica del tempo (sec) di un esercizio: serie × esecuzione +
-// (serie-1) × recupero (nessun recupero dopo l'ultima serie). Usata per
-// decidere se aggiungere iso BONUS oltre gli obbligatori.
+// (serie-1) × recupero (nessun recupero dopo l'ultima serie).
+// DORMIENTE (29 mag): il riempimento bonus non è più tempo-based → non più
+// chiamata. Tenuta come riferimento (vedi _trainGenComputeMaxExercises).
 function _trainGenExerciseTimeCost(ex, sessionParams) {
   const p = _trainGenGetExerciseParams(ex, sessionParams) || {};
   const work = _TRAIN_GEN_TIME_BUDGET.set_execution_sec;
@@ -9301,7 +9282,7 @@ async function _trainGenAINote(profile, schedaMeta) {
 Dati utente:
 - Obiettivo: ${obiettivoLeggibile}
 - Giorni di allenamento a settimana: ${schedaMeta.giorni}
-- Durata sessione: ${schedaMeta.durata} minuti
+- Tipo di sessione: ${schedaMeta.volume === 'essenziale' ? 'essenziale (solo i fondamentali)' : 'completa (fondamentali + rifiniture)'}
 - Numero sessioni nella scheda: ${schedaMeta.sessioniCount}
 
 Scrivi una breve nota motivazionale che annuncia la nuova scheda di allenamento.
@@ -9309,7 +9290,7 @@ Scrivi una breve nota motivazionale che annuncia la nuova scheda di allenamento.
 REGOLE:
 - Italiano, voce calda, no preamboli ("Ciao!", "Ecco la tua scheda...")
 - Prima persona plurale ("abbiamo costruito", "cresceremo insieme") oppure tu/te
-- Cita giorni a settimana e/o tempo
+- Puoi citare i giorni a settimana
 - Promette evoluzione blocco dopo blocco grazie ai check fisici
 - Max 2-3 frasi totali
 - No elenchi puntati, no parentesi tecniche
@@ -9547,7 +9528,7 @@ window.ztSchedaWhy = async function() {
     tipo_allenamento: ST.profile && ST.profile.tipo_allenamento,
     attrezzatura: ST.profile && ST.profile.attrezzatura,
     giorni_allenamento: ST.profile && ST.profile.giorni_allenamento,
-    durata_sessione: ST.profile && ST.profile.durata_sessione,
+    volume_sessione: ST.profile && ST.profile.volume_sessione,
     m1Data_esperienza: ST.m1Data && ST.m1Data.esperienza,
     m1Data_limitazioni: ST.m1Data && ST.m1Data.limitazioni,
   });
@@ -9566,7 +9547,7 @@ window.ztSchedaWhy = async function() {
     tipo_allenamento: scheda.tipo_allenamento,
     attrezzatura:     (scheda.attrezzatura || []).join(','),
     giorni:           scheda.giorni_allenamento,
-    durata_min:       scheda.durata_sessione,
+    volume:           scheda.volume_sessione,
     sessioni_count:   (scheda.sessioni || []).length,
   });
   console.log('--- sessioni ---');
