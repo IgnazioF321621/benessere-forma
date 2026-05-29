@@ -3613,7 +3613,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.28 · 22:40';
+const APP_VERSION = '2026.05.29 · 06:38';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7698,46 +7698,189 @@ const _TRAIN_GEN_EXPERIENCE_MAP = {
   'ritorno-allenamento':  'principiante',
 };
 
-// Parametri sessione per obiettivo × esperienza.
+// DUP compound params (chiarimento utente 28 mag 2026): giorno Forza vs
+// giorno Ipertrofia della periodizzazione DUP. Usati SOLO dagli obiettivi
+// ipertrofia-like (ipertrofia/ricomposizione/dimagrimento) per intermedi e
+// avanzati con split a sessioni DUPLICATE (Upper×2, Lower×2, Push×2, ...).
+// Numeri fissi da regola utente:
+//   Forza      → 4 serie 4-6 reps, RIR 2, rest 180s
+//   Ipertrofia → 4 serie 8-12 reps, RIR 1, rest 90s
+const _DUP_COMPOUND_FORZA      = { sets:4, reps_min:4, reps_max:6,  rir:2, rest_sec:180, type:'Forza' };
+const _DUP_COMPOUND_IPERTROFIA = { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90,  type:'Ipertrofia' };
+
+// Parametri sessione per obiettivo × esperienza (Regola B, 28 mag 2026).
+// Ogni livello espone sub-set per TIPO di esercizio:
+//   compound             → multiarticolari sulle sessioni a TIPO UNICO
+//   compound_forza       → SOLO ipertrofia-like, intermedio/avanzato: giorno
+//   compound_ipertrofia    Forza / Ipertrofia della periodizzazione DUP
+//   iso                  → isolamenti a reps (serie 3, < compound)
+//   iso_isometrico       → isolamenti a tempo (durationBased, reps in secondi,
+//                          RIR null — la pill RIR si nasconde, logger a durata)
 // - rir: null per TUTTI i principianti (decisione PARTE 5)
-// - type: 'Forza' solo per forza_performance, altrimenti 'Ipertrofia'
-//   (coerente con i tag già usati in TRAINING_SESSIONS)
-// - rest_sec: scelte dentro i range di PARTE 5
-//     · forza 180s · ipertrofia/salute/mantenimento 90s
-//     · ricomposizione 75s (centro range 60-90) · dimagrimento 60s (denso)
-// - reps intermedio/avanzato per ricomp/dimagrimento: più bassi del
-//   principiante (progressione naturale: più carico → meno reps)
+// - type label: 'Forza' è l'UNICO valore che cambia il comportamento a valle
+//   (getRestSec + badge); 'Ipertrofia'/'Equilibrio' sono solo display.
+//   Per ricomposizione/dimagrimento uniformi uso 'Ipertrofia' (DUP rule 1:
+//   "ricomposizione/ipertrofia/dimagrimento → Ipertrofia"). Questo SUPERA il
+//   quick-fix #7 del brief (che voleva 'Ricomposizione'): la regola DUP è più
+//   recente e specifica. Sulle sessioni DUP il label è 'Forza'/'Ipertrofia'.
+//   longevita/mantenimento → 'Equilibrio' ("tipo bilanciato" della DUP rule 1).
 const _TRAIN_GEN_PARAMS_BY_GOAL = {
   forza_performance: {
-    principiante: { sets:4, reps_min:4,  reps_max:6,  rir:null, rest_sec:180, type:'Forza' },
-    intermedio:   { sets:4, reps_min:4,  reps_max:6,  rir:2,    rest_sec:180, type:'Forza' },
-    avanzato:     { sets:4, reps_min:4,  reps_max:6,  rir:2,    rest_sec:180, type:'Forza' },
+    principiante: {
+      compound:       { sets:4, reps_min:4, reps_max:6, rir:null, rest_sec:180, type:'Forza' },
+      iso:            { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Forza' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+    },
+    intermedio: {
+      compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
+      iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+    },
+    avanzato: {
+      compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
+      iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+    },
   },
   ipertrofia: {
-    principiante: { sets:3, reps_min:8,  reps_max:12, rir:null, rest_sec:90,  type:'Ipertrofia' },
-    intermedio:   { sets:4, reps_min:8,  reps_max:12, rir:1,    rest_sec:90,  type:'Ipertrofia' },
-    avanzato:     { sets:4, reps_min:8,  reps_max:12, rir:1,    rest_sec:90,  type:'Ipertrofia' },
+    principiante: {
+      compound:       { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+    },
+    intermedio: {
+      compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+    },
+    avanzato: {
+      compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+    },
   },
   dimagrimento: {
-    principiante: { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:60,  type:'Ipertrofia' },
-    intermedio:   { sets:3, reps_min:8,  reps_max:12, rir:1,    rest_sec:60,  type:'Ipertrofia' },
-    avanzato:     { sets:4, reps_min:6,  reps_max:10, rir:1,    rest_sec:60,  type:'Ipertrofia' },
+    principiante: {
+      compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
+    intermedio: {
+      compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:60, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
+    avanzato: {
+      compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:60, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
   },
   ricomposizione: {
-    principiante: { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:75,  type:'Ipertrofia' },
-    intermedio:   { sets:3, reps_min:8,  reps_max:12, rir:1,    rest_sec:75,  type:'Ipertrofia' },
-    avanzato:     { sets:4, reps_min:6,  reps_max:10, rir:1,    rest_sec:75,  type:'Ipertrofia' },
+    principiante: {
+      compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:75, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
+    intermedio: {
+      compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:75, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
+    avanzato: {
+      compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:75, type:'Ipertrofia' },
+      compound_forza:      _DUP_COMPOUND_FORZA,
+      compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+    },
   },
   longevita: {
-    principiante: { sets:3, reps_min:6,  reps_max:10, rir:null, rest_sec:90,  type:'Ipertrofia' },
-    intermedio:   { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
-    avanzato:     { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+    principiante: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:null, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:null, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
+    intermedio: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
+    avanzato: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
   },
   mantenimento: {
-    principiante: { sets:3, reps_min:6,  reps_max:10, rir:null, rest_sec:90,  type:'Ipertrofia' },
-    intermedio:   { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
-    avanzato:     { sets:3, reps_min:6,  reps_max:10, rir:2,    rest_sec:90,  type:'Ipertrofia' },
+    principiante: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:null, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:null, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
+    intermedio: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
+    avanzato: {
+      compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
+      iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+    },
   },
+};
+
+// Isolamenti OBBLIGATORI per categoria di sessione (Regola A, 28 mag 2026).
+// Categoria = _trainGenGetSessionCategory(splitType, sessionType). Valori =
+// gruppo_target del catalogo (vocabolario chiuso). fullbody: rotazione 1-2
+// via sessionIndex. core non ha isolamenti dedicati nel catalogo → il picker
+// ritorna null e logga (NON crasha): la sessione resta più corta.
+const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
+  upper_forza:      ['deltoidi posteriori'],
+  upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti'],
+  lower_forza:      ['glutei'],
+  lower_ipertrofia: ['ischiocrurali', 'polpacci'],
+  fullbody:         ['deltoidi posteriori', 'polpacci', 'core'],
+  push:             ['deltoidi laterali', 'tricipiti'],
+  pull:             ['deltoidi posteriori', 'bicipiti'],
+  legs:             ['ischiocrurali', 'polpacci'],
+};
+
+// Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
+// MENO critico = rimosso PRIMA. Vincoli documentati dall'utente:
+//   deltoidi laterali < bicipiti = tricipiti  (Upper Ipertrofia)
+//   polpacci < ischiocrurali                  (Lower Ipertrofia)
+// Gli iso bonus (non obbligatori) vengono rimossi PRIMA di qualsiasi
+// obbligatorio; i compound primari NON si rimuovono MAI.
+const _TRAIN_GEN_ISO_CRITICALITY = {
+  'deltoidi laterali': 1, 'polpacci': 1, 'core': 1, 'avambracci': 1, 'trapezi': 1,
+  'deltoidi posteriori': 2, 'glutei': 2, 'ischiocrurali': 2,
+  'bicipiti': 3, 'tricipiti': 3,
+};
+
+// Obiettivi "ipertrofia-like" → eleggibili alla periodizzazione DUP
+// (Forza/Ipertrofia alternati) per intermedio/avanzato con split duplicato.
+const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimagrimento']);
+
+// Tetto massimo esercizi per sessione in base alla durata (count-based).
+// Accomoda compound (3-5) + iso obbligatori (1-3). Il taglio per tempo
+// rimuove gli obbligatori MENO critici se si supera questo tetto.
+const _TRAIN_GEN_SOFT_MAX_BY_DURATA = (durata_min) => {
+  const d = Number(durata_min) || 45;
+  if (d <= 30) return 5;
+  if (d <= 45) return 7;
+  return 8;
 };
 
 // Split sessioni per giorni × esperienza (PARTE 5).
@@ -7998,14 +8141,20 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const catalogMap = new Map();
     catalog.forEach(ex => { if (ex.codice) catalogMap.set(ex.codice, ex); });
 
-    // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE
-    // Risolvo params, split, pattern, maxEx, finisher dalle costanti.
+    // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE (Regola B + DUP, 28 mag)
+    // I parametri NON sono più unici per scheda: ogni sessione risolve il
+    // proprio TIPO (Forza/Ipertrofia/uniforme) via DUP, e da lì i sub-set
+    // compound/iso/iso_isometrico. Qui calcolo solo split + pattern + finisher
+    // + conteggio occorrenze per tipo (serve alla DUP e alle lettere A/B).
     const paramsByObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo];
     if (!paramsByObj) {
       console.warn('[train-gen] obiettivo non riconosciuto:', obiettivo);
       return null;
     }
-    const params = paramsByObj[livello] || paramsByObj['principiante'];
+    if (!(paramsByObj[livello] || paramsByObj['principiante'])) {
+      console.warn('[train-gen] params livello mancanti:', obiettivo, livello);
+      return null;
+    }
 
     const splitByDays = _TRAIN_GEN_SPLIT_BY_DAYS[giorni];
     if (!splitByDays) {
@@ -8015,7 +8164,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const splitArray = splitByDays[livello] || splitByDays['principiante'];
 
     const addFinisher = (obiettivo === 'dimagrimento' || obiettivo === 'ricomposizione');
-    const maxExercisesPerSession = _trainGenComputeMaxExercises(durata, params, addFinisher);
 
     // Pre-compilo i pattern requirements per ogni tipo sessione presente
     // nello split (resolver gestisce fullbody-per-livello).
@@ -8026,8 +8174,13 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       }
     });
 
+    // Conteggio occorrenze per tipo split (Upper×2, Lower×2, ...) → guida DUP.
+    const splitTypeCount = {};
+    splitArray.forEach(t => { splitTypeCount[t] = (splitTypeCount[t] || 0) + 1; });
+
     const sessionMeta = {
-      params, splitArray, addFinisher, maxExercisesPerSession, patternsByType,
+      splitArray, addFinisher, patternsByType, splitTypeCount,
+      softMaxPerSession: _TRAIN_GEN_SOFT_MAX_BY_DURATA(durata),
     };
 
     console.log('[train-gen] decisioni intermedie:', { inputData, sessionMeta, catalogSize: catalog.length });
@@ -8048,68 +8201,110 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       finisher:   pools.poolFinisher.length,
     });
 
-    // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE
+    // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE (DUP + Regola A, 28 mag)
     // Per OGNI sessione dello split:
-    //   1) pesca 1 esercizio per ognuno dei pattern obbligatori
-    //      (no duplicati nella stessa sessione)
-    //   2) se restano slot rispetto a targetCount, riempi con isolamento
-    //      (semplificazione di "enfasi/isolamento a scelta del coach in base
-    //      all'obiettivo" di PARTE 5 — sofisticazione = TODO futuro)
+    //   0) risolvi TIPO (DUP) + parametri + categoria iso
+    //   1) COMPOUND: 1 esercizio per ogni pattern obbligatorio (SEMPRE,
+    //      irrinunciabili — mai tagliati per tempo)
+    //   2) ISO OBBLIGATORI per categoria (Regola A): pesca per gruppo_target,
+    //      ordinati per criticità DESC; TAGLIO per tempo = soft-max per durata
+    //      (compound + obbligatori ≤ softMax) → i meno critici cadono per primi
+    //   3) ISO BONUS: riempi fino al target tempo-based (modesto) SE c'è ancora
+    //      tempo reale stimato (gate secondi). I bonus cadono PRIMA di tutto.
+    //   4) finisher Tabata (BLOCCO 9, invariato)
     //
-    // targetCount: vince il maggiore tra maxExercises calcolato dal tempo e
-    // numero di pattern obbligatori. I pattern minimi sono qualità
-    // irrinunciabile; il tempo è orientativo. Cap superiore già applicato
-    // in _trainGenComputeMaxExercises (max 6).
-    //
-    // Selezione deterministica stabile (sort by codice + first available).
-    // La varietà tra blocchi sarà introdotta in uno step successivo con un
-    // seed basato su blocco_n (PARTE 5: "varietà inter-blocco").
-    // Round-robin: contatore per-tipo per sessionIndex 0-based usato da
-    // _trainGenPickByPattern. Esempio split=['upper','lower','upper','lower']:
-    //   Upper A → typeOrderIdx=0, Lower A → 0, Upper B → 1, Lower B → 1.
-    // Così pattern con 2 candidati alternano correttamente tra A e B.
+    // occurrenceIdx = indice 0-based della sessione DENTRO il suo tipo split
+    //   (Upper A→0, Upper B→1). Guida DUP (Forza/Ipertrofia) e round-robin.
     const typeProgressivoForPick = {};
     splitArray.forEach(t => { typeProgressivoForPick[t] = 0; });
 
-    const sessioniRaw = splitArray.map((sessionType, sessionIdx) => {
-      const typeOrderIdx = typeProgressivoForPick[sessionType];
-      typeProgressivoForPick[sessionType]++;
+    const sessioniRaw = splitArray.map((splitType, sessionIdx) => {
+      const occurrenceIdx = typeProgressivoForPick[splitType];
+      typeProgressivoForPick[splitType]++;
+      const typeCount = splitTypeCount[splitType] || 1;
+
+      // 0) Tipo + parametri + categoria (DUP)
+      const resolvedType  = _trainGenResolveSessionType(obiettivo, livello, splitType, occurrenceIdx, typeCount);
+      const isDup         = _trainGenIsDupSession(obiettivo, livello, splitType, typeCount);
+      const sessionParams = _trainGenResolveSessionParams(obiettivo, livello, resolvedType, isDup);
+      const category      = _trainGenGetSessionCategory(splitType, resolvedType);
+      const sessionLabel  = `${splitType}#${occurrenceIdx} (${resolvedType})`;
 
       const usedSoFar = new Set();
-      const exercises = [];
-      const required = patternsByType[sessionType] || [];
-      const targetCount = Math.max(maxExercisesPerSession, required.length);
+      const required  = patternsByType[splitType] || [];
 
-      // 1) Pattern obbligatori (con round-robin typeOrderIdx)
+      // 1) COMPOUND (sempre, protetti)
+      const compoundPicks = [];
       required.forEach((patternOptions) => {
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar, typeOrderIdx);
-        if (picked) {
-          usedSoFar.add(picked.codice);
-          exercises.push(picked);
-        } else {
-          console.warn(`[train-gen] sessione ${sessionIdx+1} (${sessionType}): pattern scoperto`, patternOptions);
-        }
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar, occurrenceIdx);
+        if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
+        else console.warn(`[train-gen] ${sessionLabel}: pattern scoperto`, patternOptions);
       });
 
-      // 2) Slot extra → isolamento (con round-robin typeOrderIdx).
-      // NB: dentro il loop, le iterazioni successive escludono già il
-      // primo isolamento via usedSoFar → naturale alternanza progressiva.
-      const extraSlots = Math.max(0, targetCount - exercises.length);
-      for (let i = 0; i < extraSlots; i++) {
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar, typeOrderIdx);
-        if (!picked) break; // pool isolamento esaurito → stop, sessione resta più corta
-        usedSoFar.add(picked.codice);
-        exercises.push(picked);
+      // 2) ISO OBBLIGATORI per categoria (Regola A)
+      let isoTargets = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
+      // Full Body: rotazione 1-2 dalla lista via occurrenceIdx
+      if (splitType === 'fullbody' && isoTargets.length > 2) {
+        const start = ((Number(occurrenceIdx) || 0) % isoTargets.length + isoTargets.length) % isoTargets.length;
+        isoTargets = [isoTargets[start], isoTargets[(start + 1) % isoTargets.length]];
+      }
+      // ordina per criticità DESC: i PIÙ critici pescati per primi (così,
+      // se il taglio rimuove dalla coda, cadono i MENO critici)
+      isoTargets.sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a] || 0));
+      const obbligatoriPicks = [];
+      isoTargets.forEach(gt => {
+        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx, sessionLabel);
+        if (picked) { usedSoFar.add(picked.codice); obbligatoriPicks.push({ ex: picked, gruppoTarget: gt }); }
+      });
+
+      // TAGLIO per tempo (count-based): compound protetti, obbligatori meno
+      // critici rimossi se compound+obbligatori superano il soft-max.
+      const softMax = sessionMeta.softMaxPerSession;
+      const allowedObbligatori = Math.max(0, softMax - compoundPicks.length);
+      const keptObbligatori = obbligatoriPicks.slice(0, allowedObbligatori);
+      const cutObbligatori  = obbligatoriPicks.slice(allowedObbligatori);
+      if (cutObbligatori.length) {
+        console.warn(`[train-gen] ${sessionLabel}: iso obbligatori tagliati per tempo (soft-max ${softMax}):`,
+          cutObbligatori.map(o => o.gruppoTarget));
       }
 
-      return { sessionType, sessionIdx, exercises };
+      const exercises = [...compoundPicks, ...keptObbligatori.map(o => o.ex)];
+
+      // 3) ISO BONUS: riempi fino al target tempo-based modesto, gate secondi.
+      const timeBasedTarget = _trainGenComputeMaxExercises(durata, sessionParams.compound, addFinisher);
+      const tempoDisp = (Number(durata) || 0) * 60
+        - _TRAIN_GEN_TIME_BUDGET.warmup_sec
+        - (addFinisher ? _TRAIN_GEN_TIME_BUDGET.finisher_sec : 0)
+        - _TRAIN_GEN_TIME_BUDGET.buffer_sec;
+      let timeUsed = exercises.reduce((t, ex) => t + _trainGenExerciseTimeCost(ex, sessionParams), 0);
+      let bonusN = 0;
+      while (exercises.length < timeBasedTarget && exercises.length < softMax) {
+        const bonus = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar, occurrenceIdx);
+        if (!bonus) break;
+        const cost = _trainGenExerciseTimeCost(bonus, sessionParams);
+        if (timeUsed + cost > tempoDisp) break; // niente tempo reale per il bonus
+        usedSoFar.add(bonus.codice);
+        exercises.push(bonus);
+        timeUsed += cost;
+        bonusN++;
+      }
+
+      return {
+        splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
+        sessionParams, category, exercises,
+        _diag: {
+          compoundN: compoundPicks.length,
+          obbligatoriKept: keptObbligatori.map(o => o.gruppoTarget),
+          obbligatoriCut: cutObbligatori.map(o => o.gruppoTarget),
+          bonusN,
+        },
+      };
     });
 
     console.log('[train-gen] sessioni selezionate (raw, pre-ordering):',
       sessioniRaw.map(s => ({
-        type: s.sessionType,
-        count: s.exercises.length,
-        codici: s.exercises.map(e => e.codice),
+        split: s.splitType, tipo: s.resolvedType, count: s.exercises.length,
+        codici: s.exercises.map(e => e.codice), iso: s._diag,
       })));
 
     // BLOCCO 7+8 — CAUTELE (limitazioni × zone_rischio) + ORDERING
@@ -8157,7 +8352,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
 
     console.log('[train-gen] sessioni processate (post cautele + ordering):',
       sessioniProcessate.map(s => ({
-        type: s.sessionType,
+        split: s.splitType, tipo: s.resolvedType,
         count: s.exercises.length,
         sequenza: s.exercises.map(w => ({
           codice: w.ex.codice,
@@ -8177,15 +8372,15 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const typeProgressivoForFinisher = {};
     splitArray.forEach(t => { typeProgressivoForFinisher[t] = 0; });
     const sessioniConFinisher = sessioniProcessate.map(s => {
-      const typeOrderIdx = typeProgressivoForFinisher[s.sessionType];
-      typeProgressivoForFinisher[s.sessionType]++;
+      const typeOrderIdx = typeProgressivoForFinisher[s.splitType];
+      typeProgressivoForFinisher[s.splitType]++;
       if (!addFinisher) return s;
       const finisher = _trainGenBuildTabata({
         poolTabata: pools.poolFinisherTabata,
         limitazioni,
         catalogMap,
         sessionIndex: typeOrderIdx,
-        sessionType: s.sessionType,
+        sessionType: s.splitType,
       });
       if (!finisher) return s; // pool vuoto / cautele troppo restrittive
       return { ...s, finisher };
@@ -8210,26 +8405,34 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const typeProgressivo = {};
     splitArray.forEach(t => { typeProgressivo[t] = 0; });
 
-    const restText = (typeof restSecToText === 'function')
-      ? restSecToText(params.rest_sec)
-      : `${params.rest_sec} sec`;
-
     const sessioniFinali = sessioniConFinisher.map(s => {
-      typeProgressivo[s.sessionType]++;
-      const idx = typeProgressivo[s.sessionType];
-      const isMulti = typeCounter[s.sessionType] > 1;
+      typeProgressivo[s.splitType]++;
+      const idx = typeProgressivo[s.splitType];
+      const isMulti = typeCounter[s.splitType] > 1;
       const letter = isMulti ? String.fromCharCode(64 + idx) : ''; // 65='A'
-      const displayName = TYPE_DISPLAY[s.sessionType] || s.sessionType;
+      const displayName = TYPE_DISPLAY[s.splitType] || s.splitType;
+      // type/rir/rest a livello sessione = compound della sessione (DUP):
+      // sono i valori "rappresentativi" letti dal reader (badge + getRestSec).
+      const sp = s.sessionParams || {};
+      const sessType = s.resolvedType || (sp.compound && sp.compound.type) || 'Ipertrofia';
+      const sessRir  = (sp.rir !== undefined) ? sp.rir : null;
+      const compoundRest = (sp.compound && sp.compound.rest_sec) || 90;
+      const restText = (typeof restSecToText === 'function')
+        ? restSecToText(compoundRest) : `${compoundRest} sec`;
       const sessionMeta = {
-        id:    `${s.sessionType}${letter}`,
+        id:    `${s.splitType}${letter}`,
         name:  letter ? `${displayName} ${letter}` : displayName,
-        type:  params.type,
-        rir:   params.rir,
-        label: letter ? `${displayName} ${letter} — ${params.type}` : `${displayName} — ${params.type}`,
+        type:  sessType,
+        rir:   sessRir,
+        label: letter ? `${displayName} ${letter} — ${sessType}` : `${displayName} — ${sessType}`,
         rest:  restText,
         duration_min: (Number(durata) || 0) + (addFinisher ? 5 : 0),
       };
-      return _trainGenMapToSession(s.exercises, sessionMeta, params, s.finisher);
+      const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher);
+      // _diag (Regola A): iso obbligatori pescati/tagliati + bonus. Solo per
+      // diagnostica (ztSchedaWhy); STRIPPATO prima del save DB (_trainGenSaveToDB).
+      mapped._diag = s._diag || null;
+      return mapped;
     });
 
     console.log('[train-gen] sessioni finali (mapped):',
@@ -8543,6 +8746,120 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex) {
   return candidates[idx];
 }
 
+// ───────────────────────────────────────────────────────────
+// DUP + Regola A/B helpers (28 mag 2026)
+// ───────────────────────────────────────────────────────────
+
+// Risolve il TIPO di una singola sessione applicando la periodizzazione DUP.
+// occurrenceIdx = indice 0-based dell'occorrenza di QUEL tipo nello split
+//   (es. split ['upper','lower','upper','lower'] → upper: 0,1 / lower: 0,1).
+// typeCount = numero totale di occorrenze di quel tipo nello split.
+// DUP attiva sse: obiettivo ipertrofia-like + livello intermedio/avanzato +
+//   split duplicato (typeCount>=2) + NON fullbody (escluso dalla regola DUP).
+//   → prima occorrenza = 'Forza', seconda = 'Ipertrofia' (alterna se >2).
+// Altrimenti: tipo UNIFORME dal compound di default dell'obiettivo.
+function _trainGenResolveSessionType(obiettivo, livello, splitType, occurrenceIdx, typeCount) {
+  const isDupLevel = (livello === 'intermedio' || livello === 'avanzato');
+  const isDupObj   = _TRAIN_GEN_DUP_OBIETTIVI.has(obiettivo);
+  const isDupSplit = (Number(typeCount) >= 2 && splitType !== 'fullbody');
+  if (isDupLevel && isDupObj && isDupSplit) {
+    return ((Number(occurrenceIdx) || 0) % 2 === 0) ? 'Forza' : 'Ipertrofia';
+  }
+  const byObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo] || {};
+  const lvl = byObj[livello] || byObj.principiante || {};
+  return (lvl.compound && lvl.compound.type) || 'Ipertrofia';
+}
+
+// Vero sse la sessione usa la periodizzazione DUP (per scegliere
+// compound_forza/compound_ipertrofia invece del compound di default).
+function _trainGenIsDupSession(obiettivo, livello, splitType, typeCount) {
+  return (livello === 'intermedio' || livello === 'avanzato')
+    && _TRAIN_GEN_DUP_OBIETTIVI.has(obiettivo)
+    && Number(typeCount) >= 2
+    && splitType !== 'fullbody';
+}
+
+// Risolve i parametri (compound/iso/iso_isometrico) per una sessione dato il
+// suo tipo risolto. Su sessione DUP sceglie compound_forza/compound_ipertrofia.
+function _trainGenResolveSessionParams(obiettivo, livello, sessionType, isDup) {
+  const byObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo] || {};
+  const lvl = byObj[livello] || byObj.principiante || {};
+  let compound = lvl.compound;
+  if (isDup) {
+    if (sessionType === 'Forza' && lvl.compound_forza) compound = lvl.compound_forza;
+    else if (sessionType === 'Ipertrofia' && lvl.compound_ipertrofia) compound = lvl.compound_ipertrofia;
+  }
+  compound = compound || lvl.compound || {};
+  return {
+    compound,
+    iso: lvl.iso || compound,
+    iso_isometrico: lvl.iso_isometrico || lvl.iso || compound,
+    type: compound.type || sessionType,
+    rir: (compound.rir !== undefined) ? compound.rir : null,
+    rest_sec: compound.rest_sec,
+  };
+}
+
+// Categoria sessione per la tabella iso obbligatori (Regola A).
+// upper/lower → variante _forza/_ipertrofia dal tipo risolto.
+// push/pull/legs/fullbody → la chiave del tipo (nessuna variante).
+function _trainGenGetSessionCategory(splitType, sessionType) {
+  if (splitType === 'upper' || splitType === 'lower') {
+    return splitType + (sessionType === 'Forza' ? '_forza' : '_ipertrofia');
+  }
+  return splitType;
+}
+
+// Sceglie quale sub-set di parametri usare per UN esercizio (Regola B):
+//   pattern isolamento + nome contiene 'isometric' → iso_isometrico
+//   pattern isolamento / mobilita                  → iso
+//   tutto il resto (multiarticolari, cardio princ.) → compound
+function _trainGenGetExerciseParams(ex, sessionParams) {
+  const pattern = _normPattern(ex && ex.pattern);
+  if (pattern === 'isolamento') {
+    const nome = String((ex && ex.nome) || '').toLowerCase();
+    if (/isometric/.test(nome) && sessionParams.iso_isometrico) return sessionParams.iso_isometrico;
+    return sessionParams.iso || sessionParams.compound;
+  }
+  if (pattern === 'mobilita') return sessionParams.iso || sessionParams.compound;
+  return sessionParams.compound;
+}
+
+// Stima realistica del tempo (sec) di un esercizio: serie × esecuzione +
+// (serie-1) × recupero (nessun recupero dopo l'ultima serie). Usata per
+// decidere se aggiungere iso BONUS oltre gli obbligatori.
+function _trainGenExerciseTimeCost(ex, sessionParams) {
+  const p = _trainGenGetExerciseParams(ex, sessionParams) || {};
+  const work = _TRAIN_GEN_TIME_BUDGET.set_execution_sec;
+  const sets = Number(p.sets) || 0;
+  const rest = Number(p.rest_sec) || 0;
+  return sets * work + Math.max(0, sets - 1) * rest;
+}
+
+// Pesca UN isolamento dal pool per gruppo_target (Regola A), round-robin via
+// sessionIndex, evitando duplicati. gruppo_target del catalogo è lista ';'.
+// Ritorna null + warn se nessun candidato (NON crasha: sessione più corta).
+function _trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIndex, sessionLabel) {
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  const target = String(gruppoTarget || '').toLowerCase().trim();
+  if (!target) return null;
+  const used = (usedSoFar instanceof Set) ? usedSoFar : new Set(usedSoFar || []);
+  const candidates = pool.filter(ex => {
+    if (_normPattern(ex.pattern) !== 'isolamento') return false;
+    if (used.has(ex.codice)) return false;
+    const gt = String(ex.gruppo_target || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    return gt.includes(target);
+  });
+  if (candidates.length === 0) {
+    console.warn(`[train-gen] iso obbligatorio non disponibile: gruppoTarget=${target}, sessione=${sessionLabel || '?'}`);
+    return null;
+  }
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
+}
+
 // _trainGenBuildTabata — costruisce l'oggetto finisher Tabata per una sessione.
 // (28 mag sera 2026) Tabata vero: 4 esercizi cardio_metabolico distinti che si
 // alternano su 8 round × 20s ON / 10s OFF. Round-robin via sessionIndex per
@@ -8734,7 +9051,7 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
   return output;
 }
 
-function _trainGenMapToSession(wrappers, sessionMeta, params, finisher) {
+function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
   // Mapping al formato TRAINING_SESSIONS:
   //   sessione top-level: { id, name, type, rir, label, rest, exercises[],
   //                         duration_min, finisher? }
@@ -8786,9 +9103,15 @@ function _trainGenMapToSession(wrappers, sessionMeta, params, finisher) {
     const pattern = _normPattern(cat.pattern);
     const iso = pattern === 'isolamento' || pattern === 'mobilita';
 
-    // Sets/reps standard (il finisher Tabata è oggetto separato, non più qui)
-    const sets = params.sets;
-    const reps = `${params.reps_min}-${params.reps_max}`;
+    // Regola B (28 mag): parametri PER-ESERCIZIO (compound vs iso vs
+    // iso_isometrico), non più unici di sessione. Compound 4 serie, iso 3.
+    // iso_isometrico → reps in secondi ("20-30 sec") così il reader nasconde
+    // la pill RIR e il logger passa a durata (parseRepsRange kind='seconds').
+    const exParams = _trainGenGetExerciseParams(cat, sessionParams) || {};
+    const sets = exParams.sets;
+    const reps = exParams.durationBased
+      ? `${exParams.reps_min}-${exParams.reps_max} sec`
+      : `${exParams.reps_min}-${exParams.reps_max}`;
 
     const exObj = {
       codice: cat.codice,
@@ -8819,6 +9142,14 @@ function _trainGenMapToSession(wrappers, sessionMeta, params, finisher) {
     }
     // Traceability: se è stato sostituito tramite cautele
     if (w.originalCodice) exObj.replacedFromCodice = w.originalCodice;
+
+    // Parametri per-esercizio anche nel JSON (self-describing): il reader
+    // mostra la pill RIR dal valore di SESSIONE e calcola il recupero via
+    // getRestSec, quindi questi campi sono informativi/future-proof e non
+    // alterano il comportamento attuale del modulo Training.
+    exObj.rir = (exParams.rir !== undefined) ? exParams.rir : null;
+    if (exParams.rest_sec !== undefined) exObj.rest_sec = exParams.rest_sec;
+    if (exParams.durationBased) exObj.durationBased = true;
 
     return exObj;
   });
@@ -8984,10 +9315,15 @@ async function _trainGenSaveToDB(userId, scheda) {
 
   // Step 2: INSERT nuova riga attiva
   try {
+    // Strip _diag (diagnostica Regola A) dalle sessioni prima del save:
+    // resta nel valore di ritorno (ztSchedaWhy) ma NON sporca il jsonb in DB.
+    const schedaClean = (scheda && Array.isArray(scheda.sessioni))
+      ? { ...scheda, sessioni: scheda.sessioni.map(({ _diag, ...rest }) => rest) }
+      : scheda;
     const payload = {
       user_id: userId,
       blocco_n: bloccoN,
-      scheda: scheda,
+      scheda: schedaClean,
       attiva: true,
     };
     const { data, error: insErr } = await supa
@@ -9163,15 +9499,32 @@ window.ztSchedaWhy = async function() {
       codici:       (s.exercises || []).map(e => e.codice).join(','),
     }))
   );
+  console.log('--- ISO OBBLIGATORI (Regola A) ---');
+  console.table(
+    (scheda.sessioni || []).map(s => {
+      const d = s._diag || {};
+      return {
+        sessione:        s.name,
+        tipo:            s.type,
+        compound:        d.compoundN != null ? d.compoundN : '?',
+        iso_obbligatori: (d.obbligatoriKept || []).join(', ') || '—',
+        tagliati_tempo:  (d.obbligatoriCut || []).join(', ') || '—',
+        iso_bonus:       d.bonusN != null ? d.bonusN : 0,
+        tot_esercizi:    (s.exercises || []).length,
+      };
+    })
+  );
   console.log('--- dettaglio esercizi (raw) ---');
   console.log((scheda.sessioni || []).map(s => ({
     name: s.name,
     exercises: (s.exercises || []).map(e => ({
       codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
-      iso: !!e.iso, isFinisher: !!e.isFinisher,
+      rir: (e.rir !== undefined ? e.rir : null),
+      iso: !!e.iso, durationBased: !!e.durationBased,
       replacedFromCodice: e.replacedFromCodice || null,
       alert: e.alert || null,
     })),
+    finisher: s.finisher ? `tabata ${s.finisher.round}×(${s.finisher.work_sec}/${s.finisher.rest_sec}) — ${(s.finisher.exercises||[]).map(e=>e.codice).join(',')}` : null,
   })));
   return scheda;
 };
