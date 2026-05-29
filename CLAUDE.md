@@ -2252,6 +2252,17 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Blocco Attivazione persiste e si collassa ✅
+
+Lo stato del Blocco Attivazione (i 3 flag fatto/non fatto + il collasso) ora **PERSISTE** e si **COLLASSA** a completamento.
+
+- **Persistenza**: localStorage `zt_train_activation_<YYYY-MM-DD>` = `{ [sessionId]: { done:[bool,bool,bool], collapsed:bool } }` (stesso pattern di `zt_train_work_<data>`). Risolve: prima lo stato viveva solo in memoria volatile → background PWA un attimo durante l'allenamento = attivazione azzerata ("Start attivazione", tutta espansa) anche a sessione avanti.
+- **Idratazione**: `_hydrateActivation(sid)` in `openTrainingSession` (subito dopo `ST.trainSession = sid`).
+- **Salvataggio**: `_persistActivation()` / `_activationAutoCollapse()` chiamati ad ogni mutazione dei flag (`_activationFlowAdvance` per-step + fine, `startActivationTimer` completamento, `toggleActivation`). `_activationAutoCollapse` collassa quando tutti e 3 i flag sono true, poi salva sempre.
+- **Collasso**: a completamento il blocco diventa una barra compatta "✓ Blocco Attivazione completato · tocca per riaprire" (early-return in `_renderActivationSection` se `ST.trainActivationCollapsed`). Tap riapre (`toggleActivationCollapsed`); resta collassato sui render successivi (passaggio tra esercizi). Aggiunto anche un link "nascondi ▴" nell'header quando `allDone`.
+- **Reset**: `closeTrainingSession` azzera `ST.trainActivationCollapsed` in memoria MA **non** tocca localStorage → riaprendo la stessa sessione lo stato si ri-idrata (sopravvive). Nuovo campo `ST.trainActivationCollapsed: false` nell'init.
+- Comportamentale, **non serve rigenerare la scheda**.
+
 ### Sessione 29 mag 2026 (SERA) — Dopo l'ultima serie si resta nella sessione ✅
 
 Fix UX modulo Training. Salvando l'**ultima serie** di un esercizio, l'app non esce più alla home Training: **resta nella sessione** e **scorre automaticamente al prossimo esercizio non completato**, così lo si prepara durante il recupero. L'uscita (toast "🎉 Sessione completata!") avviene **solo a sessione completa** (tutti gli esercizi finiti) — comportamento invariato.

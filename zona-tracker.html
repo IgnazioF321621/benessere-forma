@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 19:20';
+const APP_VERSION = '2026.05.29 · 19:34';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3679,6 +3679,7 @@ const ST = {
   },
   trainActivationFlow: { active:false, currentIdx:0, remaining:0, running:false, _iv:null }, // countdown ibrido auto-advance blocco attivazione 5 min
   trainActivation: [false, false, false],
+  trainActivationCollapsed: false, // blocco attivazione collassato (persistito in zt_train_activation_<data>)
   trainActivationTimers: [
     { remaining:120, total:120, running:false },
     { remaining:120, total:120, running:false },
@@ -11369,6 +11370,16 @@ function workTimeStopTick(){
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
   if(!Array.isArray(ST.trainActivation) || ST.trainActivation.length !== ACTIVATION_BLOCK.length) ST.trainActivation = ACTIVATION_BLOCK.map(()=>false);
+  if(ST.trainActivationCollapsed === undefined) ST.trainActivationCollapsed = false;
+  if(ST.trainActivationCollapsed){
+    return `
+      <div onclick="toggleActivationCollapsed()"
+        style="display:flex;align-items:center;gap:8px;background:var(--s1,#fff);border:1px solid var(--s2);border-radius:var(--r-md,12px);padding:12px 16px;margin-bottom:20px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A7A6F" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        <span style="font-size:13px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);flex:1;">Blocco Attivazione completato</span>
+        <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">tocca per riaprire ▾</span>
+      </div>`;
+  }
   const flow = ST.trainActivationFlow;
   const exs = ACTIVATION_BLOCK;
   const totalSecAll = exs.reduce((a,e)=>a+(e.seconds||0),0);
@@ -11462,6 +11473,7 @@ function _renderActivationSection(){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${allDone?'#2A7A6F':'var(--acc)'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         <span style="font-size:13px;font-weight:700;color:${allDone?'#2A7A6F':'var(--acc)'};font-family:var(--font-sans);">Blocco Attivazione — ${totMin} min</span>
         ${allDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
+        ${allDone ? `<button onclick="toggleActivationCollapsed()" style="margin-left:auto;background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">nascondi ▴</button>` : ''}
       </div>
       ${heroHtml}
       ${itemsHtml}
@@ -19859,6 +19871,7 @@ document.addEventListener('keydown', (e) => {
 // ── Helpers apertura/chiusura sessione Training ────────────
 function openTrainingSession(sid){
   ST.trainSession = sid;
+  _hydrateActivation(sid); // ripristina flag fatto + collasso del Blocco Attivazione (per sessione+giorno)
   ST.lastLoggedSets = {}; // reset cache mentre carica (suggestion mostra "prima volta")
   _unlockAudio();
   requestWakeLock();
@@ -19885,6 +19898,7 @@ function closeTrainingSession(){
   workTimeStopTick();
   ST.trainSession = null;
   ST.trainActivation = [false,false,false];
+  ST.trainActivationCollapsed = false; // reset in memoria; lo stato salvato in localStorage sopravvive (ri-idratato alla riapertura)
   ST.trainLogOpen = null;
   ST.editLogKey = null;
   ST.editLogDraft = null;
@@ -20084,6 +20098,7 @@ function startActivationTimer(idx){
       if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
       ST.trainActivation[idx] = true;
       _playActivationBeep();
+      _activationAutoCollapse();
       if(ST.page==='training') renderTraining();
     } else if(ST.page==='training'){
       const el = document.getElementById('act-timer-'+idx);
@@ -20127,6 +20142,7 @@ function _activationFlowAdvance(){
     ST.trainActivation[ST.trainActivationFlow.currentIdx] = true;
     try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
     try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+    _activationAutoCollapse();
   }
   ST.trainActivationFlow.currentIdx++;
   if(ST.trainActivationFlow.currentIdx >= ACTIVATION_BLOCK.length){
@@ -20136,6 +20152,7 @@ function _activationFlowAdvance(){
     ST.trainActivationFlow.running = false;
     ST.trainActivationFlow.remaining = 0;
     checkActivationSessionDone();
+    _activationAutoCollapse();
     renderTraining();
     return;
   }
@@ -20211,6 +20228,52 @@ function checkActivationSessionDone(){
   if(allDone){
     showToast('Attivazione completata', '✓');
   }
+}
+
+// ── Persistenza + collasso Blocco Attivazione ──
+// Stato (flag fatto + collasso) salvato per sessione+giorno in localStorage,
+// stesso schema di zt_train_work_<data>: { [sessionId]: { done:[bool], collapsed:bool } }.
+// Sopravvive a reload/background PWA; ri-idratato all'apertura sessione.
+function _persistActivation(){
+  try{
+    const sid = ST.trainSession; if(!sid) return;
+    const key = 'zt_train_activation_' + todayKey();
+    let all = {}; try { all = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e){}
+    all[sid] = {
+      done: Array.isArray(ST.trainActivation) ? ST.trainActivation : [false,false,false],
+      collapsed: !!ST.trainActivationCollapsed
+    };
+    localStorage.setItem(key, JSON.stringify(all));
+  }catch(e){}
+}
+function _hydrateActivation(sid){
+  try{
+    const all = JSON.parse(localStorage.getItem('zt_train_activation_' + todayKey()) || '{}');
+    const rec = all[sid];
+    if(rec && Array.isArray(rec.done)){
+      ST.trainActivation = rec.done.slice(0, ACTIVATION_BLOCK.length);
+      ST.trainActivationCollapsed = !!rec.collapsed;
+    } else {
+      ST.trainActivation = ACTIVATION_BLOCK.map(()=>false);
+      ST.trainActivationCollapsed = false;
+    }
+  }catch(e){
+    ST.trainActivation = ACTIVATION_BLOCK.map(()=>false);
+    ST.trainActivationCollapsed = false;
+  }
+}
+function _activationAutoCollapse(){
+  // Se tutti completati → collassa. Poi salva sempre.
+  if(Array.isArray(ST.trainActivation) && ST.trainActivation.length &&
+     ST.trainActivation.every(v => v === true)){
+    ST.trainActivationCollapsed = true;
+  }
+  _persistActivation();
+}
+function toggleActivationCollapsed(){
+  ST.trainActivationCollapsed = !ST.trainActivationCollapsed;
+  _persistActivation();
+  renderTraining();
 }
 
 // ── Recovery FLOW (countdown ibrido G3/G6, auto-advance) ──
@@ -20673,6 +20736,7 @@ function toggleActivation(idx) {
     const orig = (ACTIVATION_BLOCK[idx] && ACTIVATION_BLOCK[idx].seconds) || (idx===2 ? 60 : 120);
     ST.trainActivationTimers[idx] = { remaining: orig, total: orig, running: false };
   }
+  _activationAutoCollapse();
   renderTraining();
 }
 
