@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 11:45';
+const APP_VERSION = '2026.05.29 · 15:41';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -9130,8 +9130,9 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
   //
   // Replica ESATTAMENTE i nomi campo esistenti in TRAINING_SESSIONS — il
   // modulo Training di lettura (Mossa 3) userà gli stessi accessor.
-  // Aggiunge solo `codice` (tracciabilità catalogo), `isSurrogato`/`notaSurrogato`
-  // (versione casalinga di esercizi palestra), `replacedFromCodice` (cautele).
+  // Aggiunge solo `codice` (tracciabilità catalogo), `isSurrogato` (versione
+  // casalinga di esercizi palestra; la nota_surrogato diventa il `setup`, non è
+  // più un campo separato), `replacedFromCodice` (cautele).
   // RIMOSSO `isFinisher` dagli esercizi: il finisher è ora oggetto separato.
   //
   // ALERT propagazione: nota_sicurezza intrinseca dell'esercizio (sempre
@@ -9149,16 +9150,16 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
     // Nota surrogato: propagata SOLO se l'esercizio è stato matchato come
     // surrogato da _trainGenFilterPool (flag _surrogato sul wrapper).
     // Spiega all'utente "come farlo a casa" con gli attrezzi che ha.
+    // (29 mag) NON va più nell'alert né in un campo separato: SOSTITUISCE il
+    // setup nativo (vedi sotto), così non compare duplicata.
     const notaSurrogato = (isSurrogato && cat.nota_surrogato)
       ? String(cat.nota_surrogato).trim() : '';
 
     // Alert combinato (separatore ' · '):
-    //   nota_sicurezza intrinseca + nota_surrogato (se surrogato)
-    //   + cautionNote (se cautele zone_rischio)
+    //   nota_sicurezza intrinseca + cautionNote (se cautele zone_rischio).
     // Vuoti omessi. Se tutti vuoti → alert omesso dal JSON.
     const alertParts = [];
     if (notaSicurezza) alertParts.push(notaSicurezza);
-    if (notaSurrogato) alertParts.push(notaSurrogato);
     if (cautionNote)   alertParts.push(cautionNote);
     const alert = alertParts.length ? alertParts.join(' · ') : null;
 
@@ -9189,21 +9190,18 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
       eq: (isSurrogato && cat.surrogato_attrezzo)
         ? String(cat.surrogato_attrezzo).trim()
         : String(cat.attrezzo || '').trim(),
-      setup:        splitField(cat.setup),
+      // Surrogato: la nota_surrogato SOSTITUISCE il setup nativo (il setup del
+      // catalogo descrive la versione palestra → fuorviante per chi usa l'elastico).
+      setup:        (isSurrogato && notaSurrogato) ? splitField(notaSurrogato) : splitField(cat.setup),
       execution:    splitField(cat.esecuzione),
       commonErrors: splitField(cat.errori),
       muscles:      splitField(cat.muscoli),
     };
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
-    if (isSurrogato) {
-      exObj.isSurrogato = true;
-      // Campo dedicato per render card (oltre all'alert che concatena
-      // tutto): permette al render del modulo Training di mostrare solo
-      // la nota surrogato sotto l'eq, senza appiccicarla alla cautele
-      // di sicurezza. Le cautele restano nell'alert + modal AI.
-      if (notaSurrogato) exObj.notaSurrogato = notaSurrogato;
-    }
+    // isSurrogato serve ancora per `eq` (mostra surrogato_attrezzo) e
+    // tracciabilità. La nota_surrogato non è più un campo separato: è il setup.
+    if (isSurrogato) exObj.isSurrogato = true;
     // Traceability: se è stato sostituito tramite cautele
     if (w.originalCodice) exObj.replacedFromCodice = w.originalCodice;
 
@@ -11797,7 +11795,6 @@ function renderTraining(){
                 <span class="ex-params-top">${e.sets} × ${e.reps}</span>
               </div>
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
-              ${e.notaSurrogato ? `<div class="ex-surrogato-note">${e.notaSurrogato}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
                 ${(s.rir!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${s.rir}</span>`:''}
