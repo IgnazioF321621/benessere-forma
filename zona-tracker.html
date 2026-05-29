@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 16:11';
+const APP_VERSION = '2026.05.29 · 16:21';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10091,11 +10091,18 @@ function getProgressionSuggestion(exName, sessionId){
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
     return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
   }
-  // Nessuna serie loggata + nessuno storico → punto di partenza generico
-  const m = String(ex.reps || '').match(/^(\d+)/);
-  const repsMin = m ? parseInt(m[1], 10) : 8;
-  if(isPullUp) return `💡 Inizia con ${repsMin} reps · banda Viola`;
-  return `💡 Inizia con ${repsMin} reps a 10 lbs`;
+  // Nessuna serie loggata + nessuno storico → punto di partenza generico,
+  // COERENTE col tipo di esercizio (B4 fix):
+  //   - trazioni → banda Viola (invariato)
+  //   - isometrico (reps in secondi, parseRepsRange kind='seconds') → "N sec di
+  //     tenuta", niente reps/lbs (così è coerente col logger a durata)
+  //   - corpo libero / elastico / altro → "N reps", SENZA "10 lbs" fittizio
+  const parsed = parseRepsRange(ex.reps);
+  const firstNum = (String(ex.reps || '').match(/(\d+)/) || [])[1];
+  const startN = parsed ? parsed.min : (firstNum ? parseInt(firstNum, 10) : 8);
+  if(isPullUp) return `💡 Inizia con ${startN} reps · banda Viola`;
+  if(parsed && parsed.kind === 'seconds') return `💡 Inizia con ${startN} sec di tenuta`;
+  return `💡 Inizia con ${startN} reps`;
 }
 
 function renderCalendar(workouts, year, month){
