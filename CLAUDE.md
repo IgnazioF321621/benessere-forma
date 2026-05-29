@@ -2252,6 +2252,10 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — A fine recupero "Inizia serie" parte dal pop-up ✅
+
+Stato "PRONTO!" del recupero (countdown a zero): il bottone primario ora è **"▶ Inizia S{n}"** e apre **direttamente** la schermata esecuzione della serie successiva (`openTrainExec(sessionId, exName, _nextSet)`), invece del vecchio "OK ✓" che chiudeva soltanto (l'utente doveva poi ritrovare il "+S" nella card). `_nextSet` = serie già loggate oggi per quell'esercizio +1. Link secondario **"Più tardi"** per chiudere senza partire (riposare ancora). **Fallback "OK ✓"** se non c'è una serie successiva (`_nextSet > sets`, caso di bordo). Punto: stato `if(cd.done)` del countdown. Riusa `findExercise`/`todayKey`/`openTrainExec`/`skipCountdown`. Comportamentale — non serve rigenerare la scheda.
+
 ### Sessione 29 mag 2026 (SERA) — B3: pulsante "+S" più impattante ✅
 
 Il pulsante "+S{n}" (avvio serie) era una pillola piccola/tenue (`--acc-lt`, testo piccolo) a destra del "0/4 serie" → poco visibile, l'utente si dimenticava di premerlo e cronometro/serie non partiva. Reso impattante: **pillola piena evergreen**, testo bianco, font 15px weight 800, padding maggiore (11×22), ombra evergreen, feedback tap (`:active` scale .96). Solo CSS (`.ex-add-set-btn`); posizione e `onclick="openTrainExec(...)"` invariati.

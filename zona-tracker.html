@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 21:37';
+const APP_VERSION = '2026.05.29 · 21:54';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12492,11 +12492,25 @@ function renderTraining(){
     const cd = ST.trainCountdown;
     if(cd.done){
       // PRONTO! state — design system evergreen (BLOCCO 2A, 26 mag 2026)
+      // Il bottone primario fa partire DIRETTAMENTE la serie successiva
+      // (apre la schermata esecuzione), con "Più tardi" per chiudere e riposare ancora.
+      const _exDef = findExercise(cd.exName, cd.sessionId);
+      const _doneKeys = Object.keys(ST.trainLoggedSets).filter(k =>
+        k.startsWith(`${cd.sessionId}_${cd.exName}_`) && k.endsWith(`_${todayKey()}`)
+      );
+      const _nextSet = _doneKeys.length + 1;
+      const _hasNext = !!(_exDef && _exDef.sets && _nextSet <= _exDef.sets);
+      const _safeName = String(cd.exName).replace(/'/g, "\\'");
+
       countdownHTML = `<div class="info-modal-overlay" style="z-index:1001;">
         <div class="info-modal" style="max-width:300px;text-align:center;padding:32px 24px;" onclick="event.stopPropagation()">
           <div style="font-size:52px;line-height:1;margin-bottom:12px;">💪</div>
           <div style="font-size:26px;font-weight:700;color:var(--acc);font-family:var(--font-sans);letter-spacing:.02em;margin-bottom:24px;">PRONTO!</div>
-          <button onclick="skipCountdown()" style="padding:10px 28px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>
+          ${_hasNext
+            ? `<button onclick="skipCountdown();openTrainExec('${cd.sessionId}','${_safeName}',${_nextSet});"
+                 style="width:100%;padding:15px;background:var(--acc);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;font-family:var(--font-sans);cursor:pointer;box-shadow:0 2px 8px rgba(42,122,111,.3);">▶ Inizia S${_nextSet}</button>
+               <button onclick="skipCountdown();" style="margin-top:12px;background:transparent;border:none;color:var(--t3);font-size:13px;font-family:var(--font-sans);font-weight:600;cursor:pointer;text-decoration:underline;">Più tardi</button>`
+            : `<button onclick="skipCountdown();" style="padding:10px 28px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>`}
         </div>
       </div>`;
     } else {
