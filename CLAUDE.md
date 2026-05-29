@@ -2250,6 +2250,61 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (POMERIGGIO) — Volume sessione, refining box recupero, catalogo v2 con surrogati, bonus coerenti ✅
+
+Sessione di refining post-coach-generator, focalizzata sulla **correttezza della scheda mostrata all'utente** e sulla **qualità del catalogo**. Tutti i lavori collaudati dal vivo da Ignazio (Mac/Arc + iPhone). Catena commit (oldest→newest): `b564f48` · `c31f6bb` · `8ef7550` · `fb80c62` · `8fe6755` · `d5967bd` · `5245d03`. APP_VERSION finale `2026.05.29 · 16:21`. Tutto su `main`, deployato.
+
+#### 1. Volume sessione: minuti → Essenziale/Completo (commit `b564f48`, APP_VERSION `10:04`)
+- Eliminata la scelta "durata in minuti" nell'onboarding M1 (Step `s-time`): generava una **promessa di durata che il motore non manteneva** (sforamento sui giorni Forza).
+- Sostituita con scelta qualitativa **Essenziale** / **Completo** (default Completo). **Essenziale** = solo ossatura (compound + iso obbligatori + core fisso); **Completo** = ossatura + bonus accessori. L'unica differenza è il blocco bonus.
+- Nuova colonna DB **`profiles.volume_sessione`** (text, default `'completo'`, nullable). SQL `ALTER TABLE` eseguito a mano su Supabase. La colonna `durata_sessione` resta **DORMIENTE** (non rinominata, non più letta né scritta).
+- Handler `m1SelectDurata`→`m1SelectVolume`; rimossi `m1TimeApplyExplainer` + `M1_TIME_DESC`; `_trainGenComputeMaxExercises` + `_TRAIN_GEN_TIME_BUDGET` resi dormienti; la generazione **non richiede più `durata`** (guard solo dove+giorni; fallback `volume='completo'` per profili pre-esistenti).
+
+#### 2. Refining box recupero (PROSSIMA serie) — più commit
+- **Progressione DETERMINISTICA** (commit `c31f6bb`, `11:00`): rimossa `suggestProgressionAI` (chiamava `callAI` a ogni serie → lenta, a volte **regrediva** o **sforava il range**, e suggeriva "Serie 5" su un esercizio da 4 serie). Nuova funzione **`computeNextSetSuggestion`** (pura matematica): doppia progressione (satura reps → +carico) in codice, rami **ELASTICI** (lbs, multipli di 10) e **TRAZIONI** (banda colore Gialla→Viola). Niente più "spingi ancora 💪".
+- **Chiusura esercizio**: dopo l'ultima serie niente "Serie N+1" inesistente → toast **"Esercizio completato ✓"** + ritorno all'elenco Sessioni (riusa `closeTrainingSession`).
+- **Etichetta SN + via 🎯** (commit `8ef7550`, `11:27`): `Serie N:` → `SN:` (coerente con APPENA FATTA); rimossa l'emoji 🎯 dal box PROSSIMA (mantenute le 🎯 legittime di piano obiettivo + toast obiettivo).
+- **RIR sempre presente** (parte di `8ef7550`/`fb80c62`): ogni suggerimento termina con `· RIR <target>` (RIR target della sessione, non quello eseguito), centralizzato in un unico punto.
+- **Punto medio + card evergreen** (commit `fb80c62`, `11:45`): separatori dei suggerimenti uniformati a ` · ` (come "APPENA FATTA"), niente virgole; card PROSSIMA con sfondo `var(--acc-lt)` + bordo `var(--acc)` (classe `.rest-card--next`) per dare risalto (è l'azione da fare). "APPENA FATTA" invariata.
+- **Regola progressione (dal preparatore):** il carico sale SOLO quando si è al **tetto del range reps E RIR ≥ target**. Con RIR < target (vicino al cedimento) si **mantiene** il carico, non si sale.
+
+#### 3. Catalogo v2 — tempo/respiro + surrogati (Google Sheet, importato e sync da Ignazio)
+- Tutte le **70 righe**: colonna `esecuzione` riscritta con **tempo** (eccentrica/concentrica) + **respirazione**, uniformata a formato a punti `;`. Calibrazione per tipo:
+  - isolamenti = eccentrica 2-3s + "espira nello sforzo";
+  - compound pesanti = respiro prudente **Valsalva-leggero** ("inspira e tieni il core in tensione, espira spingendo; non trattenere a lungo");
+  - core isometrici = "respira normalmente";
+  - cardio = "respiro ritmico continuo".
+- **Valsalva-leggero** scelto consapevolmente: Ignazio ha **pressione controllata da farmaco** (stabile da anni, dona sangue senza problemi) → versione minima, mai blocco prolungato. **Da rivedere col medico.**
+- **19 surrogati elastico** totali (11 preesistenti + 8 nuovi: EX056, EX057, EX059, EX060, EX062, EX065, EX069, EX070), tutti **senza prefisso "A casa:"**.
+- **2 correzioni setup mini-band→tubo** (EX067 abduzione, EX068 kickback gluteo): Ignazio NON ha mini-band corte, solo **elastici a tubo lunghi + banda trazioni**. Setup nativo riscritto per elastico a tubo + ancoraggio/cavigliera.
+- **EX054** (Burpee, era il placeholder "Yeah.") → esecuzione scritta correttamente. **EX016** Leg press → nessun surrogato (saltato, non replicabile con elastico).
+- Attrezzatura reale di Ignazio (da `ST.profile.attrezzatura`): `['elastico','barra','sbarra','panca','fitball','corpo libero']`.
+
+#### 4. Setup surrogato sostituisce il nativo (commit `8fe6755`, `15:41`)
+- In `_trainGenMapToSession`: per gli esercizi surrogati la **`nota_surrogato` SOSTITUISCE il setup nativo** nella card (box SETUP, visibile nel dettaglio esercizio + ripasso recupero), invece del setup palestra fuorviante.
+- Rimossa la nota surrogato dall'**alert** (resta solo `nota_sicurezza` + cautele `zone_rischio`) e dal campo separato `ex-surrogato-note` (render rimosso; CSS `.ex-surrogato-note` lasciato **inerte** — da rimuovere in cleanup futuro).
+- `_trainGenBuildTabata` (mappatura finisher) **NON toccata**: i finisher sono cardio a corpo libero, mai surrogati.
+
+#### 5. Bonus coerenti per gruppo muscolare + softMax 6 (commit `d5967bd`, `16:11`)
+- **Bug risolto:** il riempimento bonus pescava QUALSIASI isolamento → su **Lower** comparivano bicipiti/tricipiti (incluso doppione curl). Ora i bonus pescano **solo isolamenti coerenti con la macro-categoria** della sessione (nuova mappa **`_TRAIN_GEN_BONUS_BY_MACRO`**: Lower = glutei/ischiocrurali/polpacci + dominante ginocchia/anca; Upper = deltoidi/bicipiti/tricipiti/trapezi/avambracci + spinte/tirate; fullbody = unione). **No doppioni** dello stesso gruppo. Core bonus dello **stesso tipo** della sessione.
+- **`_TRAIN_GEN_SOFT_MAX` 9 → 6** (9 dava sessioni troppo lunghe).
+- **Ossatura sacra:** rimossa la vecchia cut-logic che con softMax basso avrebbe tagliato gli iso obbligatori. Ora **compound + iso obbligatori + core fisso NON vengono MAI tagliati**; il softMax limita **SOLO i bonus**. Es: Upper Ipertrofia resta a **8** (ossatura) con 0 bonus.
+- Esito simulato 4 sessioni Ignazio (DUP): Lower A **6** (bonus polpacci), Lower B **6**, Upper A **6**, Upper B **8** — **zero braccia su Lower**.
+
+#### 6. Suggerimento iniziale per tipo (commit `5245d03`, `16:21`)
+- Il fallback "Inizia con…" di `getProgressionSuggestion` non è più "N reps a 10 lbs" fisso. Ora: **isometrici** (reps in secondi via `parseRepsRange` kind='seconds') → "Inizia con N sec di tenuta"; **corpo libero / elastico** → "Inizia con N reps" (no "10 lbs" fittizio); **trazioni** → invariato "banda Viola". Tocca SOLO il ramo fallback finale.
+
+**Pulizia serie di prova:** cancellati i log di test del giorno da `training_logs` + `workout_sets` (filtro `user_id` + `date` = oggi) + localStorage `zt_train_sets_<oggi>`. Storico precedente intatto.
+
+#### TODO / pendenze (29 mag pomeriggio)
+- **Refuso catalogo:** in alcune `esecuzione` il "non trattenere a lungo" compare come punto separato (`;` di troppo) — accorpare alla frase del respiro in un prossimo giro sul Sheet.
+- **CSS `.ex-surrogato-note`** ora inerte → rimuovere in cleanup.
+- **Disallineamento slug attrezzatura:** l'onboarding nuovo salva `elastici_tubo`, il profilo di Ignazio ha `elastico`. Riguarda solo utenti futuri — da uniformare (slug onboarding vs valori catalogo).
+- **GIF mancanti EX034+:** `edbId` da compilare nel Sheet (Exercise DB) — lavoro manuale.
+- **Mini-progetti parcheggiati (sessioni dedicate):** hook `saveOnboarding` (aggancio generatore automatico a fine onboarding — oggi serve trigger manuale, vedi sotto); modello "esercizio madre + varianti" per il catalogo (valutato e accantonato in favore dei surrogati); titoli surrogati ("Stacco con bilanciere" eseguito con elastico); settimana ciclo hardcoded a 6gg vs 4 reali; gestione del foglio a 100+ esercizi.
+- **Blocchi mattino ancora aperti:** B3 (pulsante +S1 più grande/impattante — si dimentica di premerlo); B5 in gran parte risolto dal catalogo v2 (resta da verificare la nota "rialzo talloni" dove c'è il ginocchio).
+- **Comando rigenerazione scheda (console):** `await generateTrainingProgram({ source: 'manual-test', force: true, dryRun: false })` + reload. ⚠️ Le modifiche a **codice/catalogo NON si vedono finché non si rigenera**: le schede salvate in `schede_utente` contengono i testi/esercizi vecchi.
+
 ### Sessione 29 mag 2026 — Coach generatore: la scheda generata supera la hardcoded ✅ (collaudo end-to-end Ignazio)
 
 Giornata decisiva per il modulo Training. Il coach generatore — costruito il 28 mag ma con output ancora "povero" rispetto alla vecchia `TRAINING_SESSIONS` hardcoded — è stato portato a regime con tre filoni di lavoro consecutivi (Regole A+B+DUP → fix core/3°-compound → core come slot fisso). Esito: **la scheda generata è ora di qualità SUPERIORE alla vecchia hardcoded**, verificata end-to-end nel browser sul profilo reale di Ignazio (4 sessioni, tutte corrette) e salvata in `schede_utente`. Catena commit principali: `bde0c1a` → `5ed1cc2` → `36a6d0d`. Tutto su `main`, deployato.
