@@ -2167,6 +2167,8 @@ Nessun utente resta mai senza allenamento.
 1. **Coach generatore**: logica che legge onboarding (attrezzatura/giorni/durata/esperienza/obiettivo/limitazioni) + pesca dal catalogo `esercizi_catalog` + applica le regole (cautele, RIR per livello, continuità intra-blocco, varietà tra blocchi). Decisioni di logica PRIMA del codice (stessa metodologia design-prima di Nutrition).
 2. **Salvataggio schede per-utente in DB** + lettura dal modulo Training con **fallback** su `TRAINING_SESSIONS` (rete di sicurezza).
 
+**🅿️ PARCHEGGIATO — Progressione per variante (esercizi a corpo libero)** — progetto dedicato. Quando le reps saturano il range, il coach deve proporre una **variante più dura** (es. Affondo → pausa 2s → Bulgarian → Bulgarian con elastico), **non +1 rep all'infinito**. VINCOLO: il cambio variante avviene SOLO al **cambio blocco** (ogni 4 settimane), mai a metà ciclo (la progressione intra-blocco ha bisogno di un riferimento stabile). Vive nella "voce del coach" Training. Emerso accanto al fix "per lato" del 29 mag sera.
+
 ### PARTE 5 — COACH GENERATORE: DECISIONI DI LOGICA COMPLETE (27 mag sera)
 *Sessione dedicata: chiuso TUTTE le decisioni di logica del generatore prima di scrivere codice. La fase decisioni è chiusa. Mancano da fare: (1) SQL tabella `schede_utente` su Supabase, (2) brief tecnico Claude Code del generatore vero.*
 
@@ -2249,6 +2251,16 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore oggi gira SOLO via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro, MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
 
 ## Cosa abbiamo fatto
+
+### Sessione 29 mag 2026 (SERA) — Esercizi unilaterali mostrano "per lato" ✅
+
+Fix mirato di leggibilità sul modulo Training. Gli esercizi che si eseguono un lato per volta (affondi, step-up, ecc.) ora mostrano **"per lato"** nelle ripetizioni, sia nella **prescrizione della scheda** sia nel **box PROSSIMA** (suggerimento serie successiva). Prima mostravano solo il numero (es. "5 reps") → volume ambiguo.
+
+- **Lista unilaterali** — nuova costante `_TRAIN_GEN_UNILATERAL` (vicino a `_TRAIN_GEN_SOFT_MAX`): `['EX015','EX033','EX035','EX038','EX039','EX041','EX047','EX066']` = Affondi · Step-up al ritmo · Single-leg glute bridge · Affondo camminato · Affondo posteriore · Step-up alto su panca · Bulgarian split squat · Calf raise unilaterale.
+- **Generatore** (`_trainGenMapToSession`): le `reps` ricevono " per lato" in coda se `cat.codice` è nella lista (vale sia per range reps che range secondi). `parseRepsRange` riconosce già il suffisso.
+- **Box PROSSIMA** (`computeNextSetSuggestion`): `parseRepsRange().perLato` ora consumato — `unitLbl` diventa `"reps per lato"` / `"sec per lato"`. Modifica di una riga → copre tutti i rami (elastici, corpo libero, isometrici). I codici unilaterali non sono trazioni, quindi il ramo TRAZIONI (reps hardcoded) non è interessato.
+- **Fallback `TRAINING_SESSIONS`**: le righe già scritte "per lato" (es. Bulgarian, Single leg RDL) beneficiano anch'esse del box PROSSIMA aggiornato (consumo di `perLato`), senza modifiche al loro testo.
+- ⚠️ **Schede già salvate in DB hanno i testi vecchi**: dopo il deploy l'utente deve **RIGENERARE la scheda** per vedere il "per lato" nella prescrizione (le reps sono materializzate in `schede_utente`). Comando console: `await generateTrainingProgram({ source: 'manual-test', force: true, dryRun: false })` + reload. Il box PROSSIMA invece si adegua subito anche su schede vecchie SE la riga reps contiene già "per lato" (raro per le schede generate prima di oggi).
 
 ### Sessione 29 mag 2026 (POMERIGGIO) — Volume sessione, refining box recupero, catalogo v2 con surrogati, bonus coerenti ✅
 

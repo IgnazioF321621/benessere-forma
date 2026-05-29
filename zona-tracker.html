@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 16:21';
+const APP_VERSION = '2026.05.29 · 18:59';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7883,6 +7883,16 @@ const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimag
 // Abbassato 9→6 (29 mag): 9 produceva sessioni troppo lunghe.
 const _TRAIN_GEN_SOFT_MAX = 6;
 
+// Esercizi UNILATERALI (un lato per volta): le reps prescritte si intendono
+// "per lato", così il volume non è ambiguo. La prescrizione (scheda) e il box
+// PROSSIMA mostrano " per lato". (29 mag 2026)
+//   EX015 Affondi · EX033 Step-up al ritmo · EX035 Single-leg glute bridge ·
+//   EX038 Affondo camminato · EX039 Affondo posteriore · EX041 Step-up alto su
+//   panca · EX047 Bulgarian split squat · EX066 Calf raise unilaterale.
+// NB: il box PROSSIMA consuma parseRepsRange().perLato (vedi computeNextSetSuggestion),
+// quindi anche le righe già "per lato" del fallback TRAINING_SESSIONS sono coperte.
+const _TRAIN_GEN_UNILATERAL = ['EX015','EX033','EX035','EX038','EX039','EX041','EX047','EX066'];
+
 // Split sessioni per giorni × esperienza (PARTE 5).
 // I "nomi visibili" (Full Body A/B, Upper A/B, ...) li calcola
 // runtime _trainGenMapToSession aggiungendo lettere progressive.
@@ -9185,9 +9195,12 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
     // pill RIR e il logger passa a durata (parseRepsRange kind='seconds').
     const exParams = _trainGenGetExerciseParams(cat, sessionParams) || {};
     const sets = exParams.sets;
-    const reps = exParams.durationBased
+    // Esercizi unilaterali → " per lato" in coda alle reps (sia range secondi
+    // che range reps), così il volume è esplicito. parseRepsRange lo riconosce.
+    const reps = (exParams.durationBased
       ? `${exParams.reps_min}-${exParams.reps_max} sec`
-      : `${exParams.reps_min}-${exParams.reps_max}`;
+      : `${exParams.reps_min}-${exParams.reps_max}`)
+      + (_TRAIN_GEN_UNILATERAL.includes(cat.codice) ? ' per lato' : '');
 
     // iso flag = recupero corto in getRestSec(). Vero per OGNI esercizio che
     // NON usa i parametri compound (isolamento, mobilita, core, isometrico):
@@ -10887,7 +10900,9 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   if(!parsed || parsed.min === parsed.max) return ''; // formato non gestito o valore singolo
   const repsMin = parsed.min, repsMax = parsed.max;
   const isTimed = parsed.kind === 'seconds';
-  const unitLbl = isTimed ? 'sec' : 'reps';
+  // Esercizi unilaterali (parsed.perLato): ogni suggerimento mostra "per lato".
+  // Una riga sola → copre tutti i rami (elastici, corpo libero, isometrici).
+  const unitLbl = (isTimed ? 'sec' : 'reps') + (parsed.perLato ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
   const targetRIR = (sess.rir != null) ? sess.rir : 2;
   const nextSetNum = (Number(setNum) || 0) + 1;
