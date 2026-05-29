@@ -2252,6 +2252,10 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — B3: pulsante "+S" più impattante ✅
+
+Il pulsante "+S{n}" (avvio serie) era una pillola piccola/tenue (`--acc-lt`, testo piccolo) a destra del "0/4 serie" → poco visibile, l'utente si dimenticava di premerlo e cronometro/serie non partiva. Reso impattante: **pillola piena evergreen**, testo bianco, font 15px weight 800, padding maggiore (11×22), ombra evergreen, feedback tap (`:active` scale .96). Solo CSS (`.ex-add-set-btn`); posizione e `onclick="openTrainExec(...)"` invariati.
+
 ### Sessione 29 mag 2026 (SERA) — Tabata: alert breve + "PROSSIMO" esercizio ✅
 
 Due rifiniture sulla schermata Tabata (`if(ST.trainTabataFlow && ST.trainTabataFlow.active)`):
