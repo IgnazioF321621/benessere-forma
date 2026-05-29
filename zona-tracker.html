@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 22:13';
+const APP_VERSION = '2026.05.29 · 22:54';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8110,6 +8110,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         return null;
       }
       catalog = data || [];
+      // Pulizia automatica testi (accenti, "anche:", maiuscola) — una volta sola
+      const _txtFields = ['adattamento','nota_sicurezza','setup','esecuzione','errori','nota_surrogato'];
+      catalog.forEach(ex => {
+        _txtFields.forEach(f => { if(ex[f]) ex[f] = _cleanCatalogText(ex[f]); });
+      });
     } catch (e) {
       console.warn('[train-gen] eccezione caricamento catalogo:', e);
       return null;
@@ -8599,6 +8604,34 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
 // HELPER PRIVATI — corpo riempito ai sotto-step 3.x
 // (throw Error per intercettare chiamate accidentali pre-implementazione)
 // ───────────────────────────────────────────────────────────
+
+// Pulizia testi catalogo: accenti scritti come apostrofo, "anche:" concatenato,
+// iniziale maiuscola. Lista accenti CHIUSA (solo correzioni certe); gli apostrofi
+// di elisione (l', all', dell'…) NON sono in lista e restano intatti.
+const _CAT_ACCENT_FIX = {
+  "piu'": "più", "mobilita'": "mobilità", "profondita'": "profondità",
+  "finche'": "finché", "e'": "è", "instabilita'": "instabilità",
+  "stabilita'": "stabilità", "velocita'": "velocità", "qualita'": "qualità",
+  "intensita'": "intensità", "attivita'": "attività", "puo'": "può",
+  "cosi'": "così", "perche'": "perché", "poiche'": "poiché", "piedi'": "piedi"
+};
+function _cleanCatalogText(s){
+  if(!s || typeof s !== 'string') return s;
+  let t = s;
+  // 1) Accenti: sostituzione case-insensitive a parola intera, preserva la
+  //    maiuscola iniziale se la parola era capitalizzata.
+  for(const [bad, good] of Object.entries(_CAT_ACCENT_FIX)){
+    const re = new RegExp('\\b' + bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+    t = t.replace(re, (m) => (m[0] === m[0].toUpperCase()) ? (good[0].toUpperCase()+good.slice(1)) : good);
+  }
+  // 2) "anche:" concatenato → diventa una voce separata col separatore ';'
+  //    (così il reader la tratta come punto a sé). Gestisce ". anche:" e " anche:".
+  t = t.replace(/\.\s*anche\s*:\s*/gi, '; ').replace(/\s+anche\s*:\s*/gi, '; ');
+  // 3) Iniziale maiuscola
+  t = t.trim();
+  if(t.length) t = t[0].toUpperCase() + t.slice(1);
+  return t;
+}
 
 function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   // Filtra il catalogo per produrre due pool:

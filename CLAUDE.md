@@ -2252,6 +2252,17 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Pulizia automatica testi catalogo ✅
+
+I testi del catalogo (`adattamento`, `nota_sicurezza`, `setup`, `esecuzione`, `errori`, `nota_surrogato`) avevano difetti diffusi su quasi tutte le 70 righe — sistemarli a mano sul foglio Google è impraticabile. Ora si puliscono **in automatico alla lettura del catalogo** (in `generateTrainingProgram`, subito dopo `catalog = data || []`), una volta sola, valido anche per esercizi futuri.
+
+- **`_cleanCatalogText(s)`** (helper vicino a `_trainGenFilterPool`) fa 3 cose:
+  1. **Accenti scritti come apostrofo** (`piu'`→`più`, `mobilita'`→`mobilità`, `e'`→`è`, ecc.) via lista **CHIUSA** `_CAT_ACCENT_FIX` (solo correzioni certe), sostituzione a parola intera (`\b`), preservando la maiuscola iniziale se la parola era capitalizzata. **Gli apostrofi di elisione (`l'`, `all'`, `dell'`, `d'`, `un'`…) NON sono in lista → restano intatti.**
+  2. **`anche:` concatenato** (`. anche:` / ` anche:`) → spezzato in voce separata col separatore `;` (così il reader lo tratta come punto a sé, non come cautela appiccicata).
+  3. **Iniziale maiuscola** forzata.
+- Applicata a 6 campi testuali su ogni riga del catalogo prima di costruire `catalogMap`. I campi multi-voce (`setup`/`esecuzione`/`errori`) sono puliti sull'intera stringa prima dello `splitField('; ')`, quindi il punto 2 genera semplicemente una voce in più (comportamento voluto).
+- ⚠️ Agisce alla **generazione**: le schede già salvate hanno i testi vecchi → dopo il deploy l'utente deve **RIGENERARE la scheda** (`await generateTrainingProgram({ source: 'manual-test', force: true, dryRun: false })` + reload).
+
 ### Sessione 29 mag 2026 (SERA) — Pulsante avvio serie uniformato a "▶ Inizia S{n}" ✅
 
 Il pulsante avvio serie nella card esercizio mostrava "+S{n}", mentre il pop-up "PRONTO!" usa "▶ Inizia S{n}" → stesso gesto, dicitura diversa. Uniformato il testo della card a **"▶ Inizia S{n}"** (coerente ovunque). Solo testo nella `ex-action-row`; logica `nextSet` (serie loggate +1) e stile `.ex-add-set-btn` invariati.
