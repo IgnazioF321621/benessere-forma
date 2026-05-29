@@ -3613,7 +3613,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 07:20';
+const APP_VERSION = '2026.05.29 · 07:38';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7846,15 +7846,20 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
 // gruppo_target del catalogo (vocabolario chiuso). fullbody: rotazione 1-2
 // via sessionIndex. core non ha isolamenti dedicati nel catalogo → il picker
 // ritorna null e logga (NON crasha): la sessione resta più corta.
+// Iso obbligatori per categoria. Il CORE è uno SLOT FISSO (29 mag, decisione
+// col preparatore: core in ogni sessione per protezione lombare):
+//   Lower/Legs → core anti-estensione · Upper/Push/Pull → core anti-rotazione.
+// fullbody NON elenca il core qui: alterna i due tipi via occurrenceIdx in
+// BLOCCO 6 (la lista qui è solo muscolare, con rotazione 1-2).
 const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
-  upper_forza:      ['deltoidi posteriori'],
-  upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti'],
-  lower_forza:      ['glutei'],
-  lower_ipertrofia: ['ischiocrurali', 'polpacci'],
-  fullbody:         ['deltoidi posteriori', 'polpacci', 'core'],
-  push:             ['deltoidi laterali', 'tricipiti'],
-  pull:             ['deltoidi posteriori', 'bicipiti'],
-  legs:             ['ischiocrurali', 'polpacci'],
+  upper_forza:      ['deltoidi posteriori', 'core anti-rotazione'],
+  upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti', 'core anti-rotazione'],
+  lower_forza:      ['glutei', 'core anti-estensione'],
+  lower_ipertrofia: ['ischiocrurali', 'polpacci', 'core anti-estensione'],
+  fullbody:         ['deltoidi posteriori', 'polpacci'],
+  push:             ['deltoidi laterali', 'tricipiti', 'core anti-rotazione'],
+  pull:             ['deltoidi posteriori', 'bicipiti', 'core anti-rotazione'],
+  legs:             ['ischiocrurali', 'polpacci', 'core anti-estensione'],
 };
 
 // Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
@@ -7864,9 +7869,11 @@ const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
 // Gli iso bonus (non obbligatori) vengono rimossi PRIMA di qualsiasi
 // obbligatorio; i compound primari NON si rimuovono MAI.
 const _TRAIN_GEN_ISO_CRITICALITY = {
-  'deltoidi laterali': 1, 'polpacci': 1, 'core': 1, 'avambracci': 1, 'trapezi': 1,
-  'deltoidi posteriori': 2, 'glutei': 2, 'ischiocrurali': 2,
+  'core anti-estensione': 5,                                  // Lower — protezione lombare, MAI sacrificabile
   'bicipiti': 3, 'tricipiti': 3,
+  'deltoidi posteriori': 2, 'glutei': 2, 'ischiocrurali': 2,
+  'core anti-rotazione': 2,                                   // Upper — media (tagliato dopo i muscolari meno critici)
+  'deltoidi laterali': 1, 'polpacci': 1, 'avambracci': 1, 'trapezi': 1,
 };
 
 // Obiettivi "ipertrofia-like" → eleggibili alla periodizzazione DUP
@@ -7876,11 +7883,15 @@ const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimag
 // Tetto massimo esercizi per sessione in base alla durata (count-based).
 // Accomoda compound (3-5) + iso obbligatori (1-3). Il taglio per tempo
 // rimuove gli obbligatori MENO critici se si supera questo tetto.
+// Tetto esercizi/sessione (count). Alzato (29 mag) per ospitare lo SLOT CORE
+// fisso in ogni sessione oltre a compound + iso muscolari (es. Upper Ipertrofia
+// = 4 compound + 3 iso + 1 core = 8). Le sessioni Forza sforano un po' il tempo
+// dichiarato: accettato (vincolo sicurezza/qualità > tempo, ~5 min in più).
 const _TRAIN_GEN_SOFT_MAX_BY_DURATA = (durata_min) => {
   const d = Number(durata_min) || 45;
-  if (d <= 30) return 5;
-  if (d <= 45) return 7;
-  return 8;
+  if (d <= 30) return 6;
+  if (d <= 45) return 8;
+  return 9;
 };
 
 // Split sessioni per giorni × esperienza (PARTE 5).
@@ -8215,34 +8226,77 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
 
-      // 2) ISO OBBLIGATORI per categoria (Regola A)
-      let isoTargets = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
-      // Full Body: rotazione 1-2 dalla lista via occurrenceIdx
-      if (splitType === 'fullbody' && isoTargets.length > 2) {
-        const start = ((Number(occurrenceIdx) || 0) % isoTargets.length + isoTargets.length) % isoTargets.length;
-        isoTargets = [isoTargets[start], isoTargets[(start + 1) % isoTargets.length]];
+      // 2) ISO OBBLIGATORI per categoria (Regola A) — muscolari + CORE FISSO.
+      // Il core è uno SLOT FISSO in ogni sessione (protezione lombare):
+      //   Lower/Legs → core ANTI-ESTENSIONE (sotto carico squat/stacchi)
+      //   Upper/Push/Pull → core ANTI-ROTAZIONE (stabilità busto)
+      //   Full Body → alterna i due tipi via occurrenceIdx
+      const _isCoreGt = (gt) => /^core /.test(String(gt || ''));
+      let muscularTargets, coreTarget;
+      if (splitType === 'fullbody') {
+        let m = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE.fullbody || []).slice(); // solo muscolari
+        if (m.length > 2) {
+          const start = ((Number(occurrenceIdx) || 0) % m.length + m.length) % m.length;
+          m = [m[start], m[(start + 1) % m.length]];
+        }
+        muscularTargets = m;
+        coreTarget = ((Number(occurrenceIdx) || 0) % 2 === 0) ? 'core anti-estensione' : 'core anti-rotazione';
+      } else {
+        const all = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
+        coreTarget = all.find(_isCoreGt) || null;
+        muscularTargets = all.filter(t => !_isCoreGt(t));
       }
-      // ordina per criticità DESC: i PIÙ critici pescati per primi (così,
-      // se il taglio rimuove dalla coda, cadono i MENO critici)
-      isoTargets.sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a] || 0));
-      const obbligatoriPicks = [];
-      isoTargets.forEach(gt => {
+
+      // Pesca muscolari (ordinati per criticità DESC: se il taglio morde,
+      // cadono i meno critici — es. polpacci < ischiocrurali)
+      const muscularSorted = muscularTargets.slice()
+        .sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a] || 0));
+      const muscularPicks = [];
+      muscularSorted.forEach(gt => {
         const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx, sessionLabel);
-        if (picked) { usedSoFar.add(picked.codice); obbligatoriPicks.push({ ex: picked, gruppoTarget: gt }); }
+        if (picked) { usedSoFar.add(picked.codice); muscularPicks.push({ ex: picked, gruppoTarget: gt }); }
       });
-
-      // TAGLIO per tempo (count-based): compound protetti, obbligatori meno
-      // critici rimossi se compound+obbligatori superano il soft-max.
-      const softMax = sessionMeta.softMaxPerSession;
-      const allowedObbligatori = Math.max(0, softMax - compoundPicks.length);
-      const keptObbligatori = obbligatoriPicks.slice(0, allowedObbligatori);
-      const cutObbligatori  = obbligatoriPicks.slice(allowedObbligatori);
-      if (cutObbligatori.length && window._trainGenDebug) {
-        console.log(`[train-gen] ${sessionLabel}: iso obbligatori tagliati per tempo (soft-max ${softMax}):`,
-          cutObbligatori.map(o => o.gruppoTarget));
+      // Pesca core (slot fisso)
+      let corePick = null;
+      if (coreTarget) {
+        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, occurrenceIdx, sessionLabel);
+        if (picked) { usedSoFar.add(picked.codice); corePick = { ex: picked, gruppoTarget: coreTarget }; }
+        else console.warn(`[train-gen] ${sessionLabel}: CORE obbligatorio '${coreTarget}' non disponibile nel pool (gruppo_target nel catalogo?)`);
       }
 
-      const exercises = [...compoundPicks, ...keptObbligatori.map(o => o.ex)];
+      // TAGLIO per tempo (count soft-max). Protezioni:
+      //   compound primari        → MAI tagliati
+      //   core ANTI-ESTENSIONE    → MAI tagliato (sicurezza lombare): slot
+      //                             riservato, tenuto anche OLTRE il soft-max
+      //   core ANTI-ROTAZIONE     → criticità media, compete coi muscolari
+      //                             (tagliato dopo i muscolari meno critici)
+      //   muscolari               → tagliati per criticità crescente
+      const softMax = sessionMeta.softMaxPerSession;
+      const protectedCore = corePick && corePick.gruppoTarget === 'core anti-estensione';
+      let keptMuscular, cutTargets = [], coreKept = null, coreSkippedTime = false;
+      if (protectedCore) {
+        const allowedMuscular = Math.max(0, softMax - compoundPicks.length - 1); // 1 slot riservato al core lombare
+        keptMuscular = muscularPicks.slice(0, allowedMuscular);
+        cutTargets   = muscularPicks.slice(allowedMuscular).map(o => o.gruppoTarget);
+        coreKept = corePick; // SEMPRE
+        const total = compoundPicks.length + keptMuscular.length + 1;
+        if (total > softMax) console.warn(`[train-gen] ${sessionLabel}: core lombare (anti-estensione) mantenuto OLTRE il soft-max (${total}>${softMax}) — vincolo sicurezza > tempo`);
+      } else {
+        // core anti-rotazione (o assente) → cuttabile insieme ai muscolari
+        const cuttable = corePick ? [...muscularPicks, corePick] : muscularPicks.slice();
+        cuttable.sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b.gruppoTarget] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a.gruppoTarget] || 0));
+        const allowed = Math.max(0, softMax - compoundPicks.length);
+        const keptAll = cuttable.slice(0, allowed);
+        const cutAll  = cuttable.slice(allowed);
+        keptMuscular = keptAll.filter(o => !_isCoreGt(o.gruppoTarget));
+        coreKept     = keptAll.find(o => _isCoreGt(o.gruppoTarget)) || null;
+        cutTargets   = cutAll.map(o => o.gruppoTarget);
+        coreSkippedTime = !!(corePick && !coreKept);
+        if (coreSkippedTime && window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: core (${corePick.gruppoTarget}) skippato per tempo (soft-max ${softMax})`);
+      }
+
+      const keptObbligatori = keptMuscular; // alias per compatibilità log/diag
+      const exercises = [...compoundPicks, ...keptMuscular.map(o => o.ex), ...(coreKept ? [coreKept.ex] : [])];
 
       // 3) ISO BONUS — riempi fino al target tempo-based modesto, gate secondi.
       // ORDINE (Fix 29 mag): iso MUSCOLARI (gruppi piccoli) → core/isometrici →
@@ -8278,10 +8332,15 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // Riepilogo per sessione (sempre) — aiuta il debug futuro.
       const _isoLabel = (ex) => _trainGenIsIsometric(ex) ? 'iso_isometrico'
         : (['isolamento','core','mobilita'].includes(_normPattern(ex.pattern)) ? 'iso' : 'compound');
+      const _coreShort = coreTarget ? coreTarget.replace('core anti-', 'anti-') : null;
+      const coreLog = coreKept
+        ? `${coreKept.ex.codice} (${_coreShort}, isometrico)`
+        : (coreTarget ? (coreSkippedTime ? `SKIPPATO per tempo (${_coreShort})` : `NON DISPONIBILE (${_coreShort})`) : 'nessuno');
       console.log(`[${category}] compound: ${compoundPicks.map(e=>e.codice).join(',') || '—'}`
         + ` (atteso ${requiredPatterns.length}${compoundMissing.length ? ', mancante: ' + compoundMissing.join('/') : ''});`
-        + ` iso obbligatori: ${keptObbligatori.map(o=>o.ex.codice).join(',') || '—'}`
-        + `${cutObbligatori.length ? ' (tagliati: ' + cutObbligatori.map(o=>o.gruppoTarget).join('/') + ')' : ''};`
+        + ` iso obbligatori: ${keptMuscular.map(o=>o.ex.codice).join(',') || '—'}`
+        + `${cutTargets.length ? ' (tagliati: ' + cutTargets.join('/') + ')' : ''};`
+        + ` core: ${coreLog};`
         + ` bonus: ${bonusPicks.map(b=>`${b.ex.codice}(${_isoLabel(b.ex)})`).join(',') || '—'}`);
 
       return {
@@ -8290,8 +8349,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         _diag: {
           compoundN: compoundPicks.length,
           compoundMissing,
-          obbligatoriKept: keptObbligatori.map(o => o.gruppoTarget),
-          obbligatoriCut: cutObbligatori.map(o => o.gruppoTarget),
+          obbligatoriKept: keptMuscular.map(o => o.gruppoTarget),
+          obbligatoriCut: cutTargets,
+          core: corePick ? { gruppo: corePick.gruppoTarget, codice: (coreKept ? coreKept.ex.codice : null), kept: !!coreKept, skippedTime: coreSkippedTime } : { gruppo: coreTarget, codice: null, kept: false, skippedTime: false },
           bonusN: bonusPicks.length,
           bonus: bonusPicks.map(b => `${b.ex.codice}:${b.tier}`),
         },
@@ -8866,7 +8926,10 @@ function _trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIn
   if (!target) return null;
   const used = (usedSoFar instanceof Set) ? usedSoFar : new Set(usedSoFar || []);
   const candidates = pool.filter(ex => {
-    if (_normPattern(ex.pattern) !== 'isolamento') return false;
+    // accetta isolamento (gruppi muscolari) E core (slot core fisso, 29 mag):
+    // entrambi sono "iso obbligatori" pescati per gruppo_target.
+    const p = _normPattern(ex.pattern);
+    if (p !== 'isolamento' && p !== 'core') return false;
     if (used.has(ex.codice)) return false;
     const gt = String(ex.gruppo_target || '').toLowerCase()
       .split(';').map(s => s.trim()).filter(Boolean);
@@ -9523,11 +9586,19 @@ window.ztSchedaWhy = async function() {
   console.table(
     (scheda.sessioni || []).map(s => {
       const d = s._diag || {};
+      const c = d.core || {};
+      let coreCol = 'nessuno';
+      if (c.gruppo) {
+        const short = String(c.gruppo).replace('core anti-', 'anti-');
+        coreCol = c.kept ? `${c.codice} (${short})`
+          : (c.skippedTime ? `SKIP tempo (${short})` : `NON DISP. (${short})`);
+      }
       return {
         sessione:        s.name,
         tipo:            s.type,
         compound:        d.compoundN != null ? d.compoundN : '?',
-        iso_obbligatori: (d.obbligatoriKept || []).join(', ') || '—',
+        iso_muscolari:   (d.obbligatoriKept || []).join(', ') || '—',
+        core:            coreCol,
         tagliati_tempo:  (d.obbligatoriCut || []).join(', ') || '—',
         iso_bonus:       d.bonusN != null ? d.bonusN : 0,
         tot_esercizi:    (s.exercises || []).length,
