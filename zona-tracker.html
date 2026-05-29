@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 19:34';
+const APP_VERSION = '2026.05.29 · 21:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3668,6 +3668,7 @@ const ST = {
   // "Fine serie" (→ apre il logger esistente) e Indietro (→ chiude senza loggare).
   // Null = esecuzione non attiva. { sessionId, exName, setNum } = esecuzione aperta.
   trainExecOpen: null,
+  trainExecTimer: { running:false, elapsed:0, _iv:null, beeped:false }, // cronometro tenuta esercizi isometrici (schermata esecuzione)
   trainCountdown: null,
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
   trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
@@ -12669,6 +12670,11 @@ function renderTraining(){
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
           ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
           ${gifBlock}
+          ${isTimed ? `
+            <div style="text-align:center;margin-top:18px;">
+              <div id="exec-hold-timer" style="font-size:54px;font-weight:800;font-family:var(--font-mono);color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;">00:00</div>
+              <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:6px;">obiettivo ${parsedReps.min}${parsedReps.max && parsedReps.max!==parsedReps.min ? '-'+parsedReps.max : ''} sec</div>
+            </div>` : ''}
         </div>
         <div class="train-exec-footer">
           <button class="train-exec-finish-btn" onclick="trainExecFinishSet()">Fine serie</button>
@@ -19895,6 +19901,7 @@ function closeTrainingSession(){
   if(ST.trainExecOpen && ST.trainExecOpen.sessionId){
     workTimeStopExec(ST.trainExecOpen.sessionId, false);
   }
+  execTimerStop(); // ferma il cronometro di tenuta (no interval orfano)
   workTimeStopTick();
   ST.trainSession = null;
   ST.trainActivation = [false,false,false];
@@ -19945,6 +19952,43 @@ function closeTrainingSession(){
 
 // Apre la schermata di esecuzione per la prossima serie.
 // Pre-fetch GIF (riusa ensureRestGif esistente) + unlock audio (per coerenza).
+// ── Cronometro di tenuta (esercizi isometrici a tempo) ──
+// Conta IN AVANTI da 0 sulla schermata esecuzione. Beep+vibrazione una volta
+// al raggiungimento del minimo target. Display aggiornato via #exec-hold-timer
+// senza re-render (così il tick non si azzera).
+function _execTimerClear(){
+  if(ST.trainExecTimer && ST.trainExecTimer._iv){
+    clearInterval(ST.trainExecTimer._iv);
+    ST.trainExecTimer._iv = null;
+  }
+}
+function execTimerStart(targetMin){
+  _execTimerClear();
+  ST.trainExecTimer = { running:true, elapsed:0, _iv:null, beeped:false };
+  try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  ST.trainExecTimer._iv = setInterval(()=>{
+    if(!ST.trainExecTimer.running) return;
+    ST.trainExecTimer.elapsed++;
+    // Beep una sola volta al raggiungimento del minimo target
+    if(!ST.trainExecTimer.beeped && targetMin && ST.trainExecTimer.elapsed >= targetMin){
+      ST.trainExecTimer.beeped = true;
+      try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+    }
+    // Aggiorna solo il display (no re-render completo, evita di resettare il tick)
+    const el = document.getElementById('exec-hold-timer');
+    if(el){
+      const m = String(Math.floor(ST.trainExecTimer.elapsed/60)).padStart(2,'0');
+      const s = String(ST.trainExecTimer.elapsed%60).padStart(2,'0');
+      el.textContent = `${m}:${s}`;
+      if(ST.trainExecTimer.beeped) el.style.color = 'var(--acc)';
+    }
+  }, 1000);
+}
+function execTimerStop(){
+  _execTimerClear();
+  if(ST.trainExecTimer) ST.trainExecTimer.running = false;
+}
+
 function openTrainExec(sessionId, exName, setNum){
   ST.trainExecOpen = { sessionId, exName, setNum };
   _unlockAudio();
@@ -19954,12 +19998,19 @@ function openTrainExec(sessionId, exName, setNum){
   workTimeStartExec(sessionId);
   workTimeStartTick(sessionId);
   renderTraining();
+  // Cronometro di tenuta per esercizi isometrici (a tempo)
+  const _exDef = findExercise(exName, sessionId);
+  const _pr = (_exDef && _exDef.reps && typeof parseRepsRange === 'function') ? parseRepsRange(_exDef.reps) : null;
+  if(_pr && _pr.kind === 'seconds'){
+    execTimerStart(_pr.min || 0);
+  }
 }
 
 // "Fine serie" sulla schermata esecuzione → chiude exec e apre il logger
 // (openLogModal esistente). Riusa il pattern già rodato: nessun cambio al
 // logger né a saveTrainingSet. Il logger appare al posto dell'esecuzione.
 function trainExecFinishSet(){
+  execTimerStop(); // ferma il cronometro di tenuta (se attivo)
   const e = ST.trainExecOpen;
   if(!e) return;
   // GRAFICA L1 — Ferma cronometro e ACCUMULA il delta (serie completata)
@@ -19972,6 +20023,7 @@ function trainExecFinishSet(){
 // "Indietro" → chiude l'esecuzione senza loggare niente, senza aprire il
 // logger. Nessun dato toccato. Caso: ho premuto +S per sbaglio.
 function trainExecBack(){
+  execTimerStop(); // ferma il cronometro di tenuta (se attivo)
   const e = ST.trainExecOpen;
   // GRAFICA L1 — Ferma cronometro SCARTANDO il delta (serie annullata)
   if(e) workTimeStopExec(e.sessionId, false);

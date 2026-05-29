@@ -2252,6 +2252,21 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Cronometro di tenuta sugli esercizi a tempo ✅
+
+Gli esercizi isometrici (Plank, ecc.) si misurano a TEMPO ma la schermata di esecuzione ("Fine serie") non mostrava cronometro. Ora, **SOLO** quando l'esercizio è a tempo (`parseRepsRange().kind === 'seconds'`), la schermata mostra un **cronometro di tenuta** che:
+- conta **in avanti da 0** (così vedi se reggi oltre il minimo);
+- mostra il target sotto (`obiettivo X-Y sec`);
+- al raggiungimento del minimo target → **beep + vibrazione una volta** (`playFinalTripleBeep`) + il numero vira evergreen, senza fermare nulla;
+- si chiude con "Fine serie" come sempre. Sugli esercizi a ripetizioni: nessun cronometro (invariato).
+
+- **Stato**: `ST.trainExecTimer = { running, elapsed, _iv, beeped }` (nell'init, vicino a `trainExecOpen`).
+- **Funzioni**: `execTimerStart(targetMin)` / `execTimerStop()` / `_execTimerClear()` (vicino a `openTrainExec`). Il display si aggiorna via lookup `#exec-hold-timer` **senza re-render** (per non azzerare il tick); lo stato `elapsed` vive in `ST.trainExecTimer`.
+- **Avvio**: in `openTrainExec`, dopo `renderTraining()`, se `parseRepsRange(exDef.reps).kind === 'seconds'` → `execTimerStart(min)`.
+- **Stop**: in `trainExecFinishSet` + `trainExecBack` (e difensivamente in `closeTrainingSession`, per non lasciare interval orfani).
+- **Render**: blocco condizionato a `isTimed` dentro `.train-exec-body`, dopo la GIF. Numero JetBrains Mono 54px tabular-nums.
+- Comportamentale, **non serve rigenerare la scheda**.
+
 ### Sessione 29 mag 2026 (SERA) — Blocco Attivazione persiste e si collassa ✅
 
 Lo stato del Blocco Attivazione (i 3 flag fatto/non fatto + il collasso) ora **PERSISTE** e si **COLLASSA** a completamento.
