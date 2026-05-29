@@ -3613,7 +3613,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 06:38';
+const APP_VERSION = '2026.05.29 · 07:20';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7729,114 +7729,114 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
     principiante: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:null, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:60, type:'Forza', durationBased:true },
     },
     intermedio: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:60, type:'Forza', durationBased:true },
     },
     avanzato: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:60, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:60, type:'Forza', durationBased:true },
     },
   },
   ipertrofia: {
     principiante: {
       compound:       { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Ipertrofia' },
       iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
   },
   dimagrimento: {
     principiante: {
       compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
       iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:60, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:60, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
   },
   ricomposizione: {
     principiante: {
       compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:75, type:'Ipertrofia' },
       iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:75, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:75, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Ipertrofia', durationBased:true },
     },
   },
   longevita: {
     principiante: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:null, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:null, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
     intermedio: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
     avanzato: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
   },
   mantenimento: {
     principiante: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:null, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:null, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
     intermedio: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
     avanzato: {
       compound:       { sets:3, reps_min:6, reps_max:10, rir:2, rest_sec:90, type:'Equilibrio' },
       iso:            { sets:3, reps_min:10, reps_max:12, rir:2, rest_sec:60, type:'Equilibrio' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:30, rir:null, rest_sec:45, type:'Equilibrio', durationBased:true },
+      iso_isometrico: { sets:2, reps_min:20, reps_max:30, rir:null, rest_sec:30, type:'Equilibrio', durationBased:true },
     },
   },
 };
@@ -7909,65 +7909,30 @@ const _TRAIN_GEN_SPLIT_BY_DAYS = {
   },
 };
 
-// Pattern minimi obbligatori per tipo sessione.
-// Ogni elemento è un array OR: "almeno UN esercizio che matchi UNO
-// di questi pattern". Sopra il minimo, il selettore può aggiungere
-// enfasi/isolamento coerente con obiettivo.
+// Pattern COMPOUND obbligatori per CATEGORIA sessione (Regola A fix, 29 mag).
+// Categoria = _trainGenGetSessionCategory(splitType, resolvedType). Lista
+// PIATTA di pattern (ognuno = 1 esercizio compound da pescare). Risolta in
+// BLOCCO 6 dopo aver calcolato la categoria DUP della sessione.
 //
-// fullbody è l'UNICO tipo con regole diverse per livello:
-// per principianti la spinta è SOLO orizzontale (più sicura per chi
-// inizia, no carico verticale sulla colonna). Tirata resta OR per tutti.
-// Resolver: _trainGenGetPatterns(sessionType, livello) sotto.
-// VALORI CANONICI: vocabolario del catalogo Google Sheet (28 mag 2026,
-// Opzione 3 utente). Parole intere con spazi, 'dominante ginocchia' al
-// plurale, 'mobilita' senza accento. Il foglio è la fonte di verità.
-const _TRAIN_GEN_PATTERN_REQUIREMENTS = {
-  fullbody: {
-    principiante: [
-      ['spinta orizzontale'],                       // solo orizz per principianti
-      ['tirata orizzontale', 'tirata verticale'],
-      ['dominante ginocchia'],
-      ['dominante anca'],
-      ['core'],
-    ],
-    intermedio: [
-      ['spinta orizzontale', 'spinta verticale'],
-      ['tirata orizzontale', 'tirata verticale'],
-      ['dominante ginocchia'],
-      ['dominante anca'],
-      ['core'],
-    ],
-    avanzato: [
-      ['spinta orizzontale', 'spinta verticale'],
-      ['tirata orizzontale', 'tirata verticale'],
-      ['dominante ginocchia'],
-      ['dominante anca'],
-      ['core'],
-    ],
-  },
-  upper: [
-    ['spinta orizzontale'],
-    ['spinta verticale'],
-    ['tirata orizzontale'],
-    ['tirata verticale'],
-  ],
-  lower: [
-    ['dominante ginocchia'],
-    ['dominante anca'],
-    ['core'],
-  ],
-  push: [
-    ['spinta orizzontale'],
-    ['spinta verticale'],
-  ],
-  pull: [
-    ['tirata orizzontale'],
-    ['tirata verticale'],
-  ],
-  legs: [
-    ['dominante ginocchia'],
-    ['dominante anca'],
-  ],
+// Differenze chiave vs la vecchia _TRAIN_GEN_PATTERN_REQUIREMENTS:
+//   - 'core' RIMOSSO dai compound di Lower/Legs: Plank/Dead bug NON sono più
+//     uno slot compound (sarebbero usciti con parametri pesanti 4×4-6 RIR2).
+//     Il core arriva ora come iso BONUS con parametri iso_isometrico (Fix 1/3).
+//   - Lower/Legs ha un TERZO compound = secondo 'dominante ginocchia'
+//     (unilaterale distinto dal primo, garantito da usedSoFar in pickByPattern).
+//   - Push/Pull hanno un terzo compound ripetendo il pattern orizzontale.
+// VALORI CANONICI: vocabolario catalogo Google Sheet — 'dominante ginocchia'
+// al PLURALE (il foglio è la fonte di verità; il brief usava il singolare,
+// qui corretto al plurale reale del catalogo).
+const _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY = {
+  upper_forza:      ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
+  upper_ipertrofia: ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
+  lower_forza:      ['dominante ginocchia', 'dominante anca', 'dominante ginocchia'],
+  lower_ipertrofia: ['dominante ginocchia', 'dominante anca', 'dominante ginocchia'],
+  fullbody:         ['spinta orizzontale', 'tirata orizzontale', 'dominante ginocchia', 'dominante anca'],
+  push:             ['spinta orizzontale', 'spinta verticale', 'spinta orizzontale'],
+  pull:             ['tirata orizzontale', 'tirata verticale', 'tirata orizzontale'],
+  legs:             ['dominante ginocchia', 'dominante anca', 'dominante ginocchia'],
 };
 
 // Budget tempo per dimensionare numero esercizi a sessione.
@@ -8165,21 +8130,17 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
 
     const addFinisher = (obiettivo === 'dimagrimento' || obiettivo === 'ricomposizione');
 
-    // Pre-compilo i pattern requirements per ogni tipo sessione presente
-    // nello split (resolver gestisce fullbody-per-livello).
-    const patternsByType = {};
-    splitArray.forEach(type => {
-      if (!patternsByType[type]) {
-        patternsByType[type] = _trainGenGetPatterns(type, livello);
-      }
-    });
+    // I pattern compound sono ora risolti PER CATEGORIA (DUP) in BLOCCO 6
+    // via _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY (non più pre-compilati
+    // per splitType: la categoria upper_forza/upper_ipertrofia dipende dal
+    // tipo risolto della singola sessione).
 
     // Conteggio occorrenze per tipo split (Upper×2, Lower×2, ...) → guida DUP.
     const splitTypeCount = {};
     splitArray.forEach(t => { splitTypeCount[t] = (splitTypeCount[t] || 0) + 1; });
 
     const sessionMeta = {
-      splitArray, addFinisher, patternsByType, splitTypeCount,
+      splitArray, addFinisher, splitTypeCount,
       softMaxPerSession: _TRAIN_GEN_SOFT_MAX_BY_DURATA(durata),
     };
 
@@ -8231,14 +8192,27 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const sessionLabel  = `${splitType}#${occurrenceIdx} (${resolvedType})`;
 
       const usedSoFar = new Set();
-      const required  = patternsByType[splitType] || [];
+      // Pattern compound per CATEGORIA (lista piatta — Fix 29 mag). Per Lower
+      // contiene 'dominante ginocchia' DUE volte: il 2° pick è un unilaterale
+      // distinto dal 1° grazie a usedSoFar in _trainGenPickByPattern.
+      const requiredPatterns = _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY[category] || [];
 
-      // 1) COMPOUND (sempre, protetti)
+      // 1) COMPOUND (sempre, protetti). Skip SILENZIOSO se un pattern non ha
+      // candidati (no warn rumoroso): il motore tira avanti col resto.
+      // patternRepeat: per pattern ripetuti nella stessa sessione (es. Lower =
+      // ['dominante ginocchia','dominante anca','dominante ginocchia']) il
+      // 2° pick usa indice round-robin +1 → pesca un esercizio DIVERSO e più
+      // vario (es. Squat poi Affondi, non due squat). usedSoFar già evita il
+      // doppione esatto; questo migliora la varietà della scelta.
       const compoundPicks = [];
-      required.forEach((patternOptions) => {
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, patternOptions, usedSoFar, occurrenceIdx);
+      const compoundMissing = [];
+      const patternRepeat = {};
+      requiredPatterns.forEach((pat) => {
+        const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
+        const pickIdx = (Number(occurrenceIdx) || 0) + r;
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`);
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
-        else console.warn(`[train-gen] ${sessionLabel}: pattern scoperto`, patternOptions);
+        else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
 
       // 2) ISO OBBLIGATORI per categoria (Regola A)
@@ -8263,40 +8237,63 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const allowedObbligatori = Math.max(0, softMax - compoundPicks.length);
       const keptObbligatori = obbligatoriPicks.slice(0, allowedObbligatori);
       const cutObbligatori  = obbligatoriPicks.slice(allowedObbligatori);
-      if (cutObbligatori.length) {
-        console.warn(`[train-gen] ${sessionLabel}: iso obbligatori tagliati per tempo (soft-max ${softMax}):`,
+      if (cutObbligatori.length && window._trainGenDebug) {
+        console.log(`[train-gen] ${sessionLabel}: iso obbligatori tagliati per tempo (soft-max ${softMax}):`,
           cutObbligatori.map(o => o.gruppoTarget));
       }
 
       const exercises = [...compoundPicks, ...keptObbligatori.map(o => o.ex)];
 
-      // 3) ISO BONUS: riempi fino al target tempo-based modesto, gate secondi.
+      // 3) ISO BONUS — riempi fino al target tempo-based modesto, gate secondi.
+      // ORDINE (Fix 29 mag): iso MUSCOLARI (gruppi piccoli) → core/isometrici →
+      // compound complementari. Ogni bonus usa i PROPRI parametri
+      // (compound/iso/iso_isometrico via _trainGenGetExerciseParams), MAI
+      // quelli di sessione → il core esce con parametri iso_isometrico.
+      const _BONUS_TIERS = [
+        { label: 'iso-musc',  patterns: ['isolamento'] },
+        { label: 'core-iso',  patterns: ['core'] },
+        { label: 'compound',  patterns: ['spinta orizzontale','spinta verticale','tirata orizzontale','tirata verticale','dominante ginocchia','dominante anca'] },
+      ];
       const timeBasedTarget = _trainGenComputeMaxExercises(durata, sessionParams.compound, addFinisher);
       const tempoDisp = (Number(durata) || 0) * 60
         - _TRAIN_GEN_TIME_BUDGET.warmup_sec
         - (addFinisher ? _TRAIN_GEN_TIME_BUDGET.finisher_sec : 0)
         - _TRAIN_GEN_TIME_BUDGET.buffer_sec;
       let timeUsed = exercises.reduce((t, ex) => t + _trainGenExerciseTimeCost(ex, sessionParams), 0);
-      let bonusN = 0;
-      while (exercises.length < timeBasedTarget && exercises.length < softMax) {
-        const bonus = _trainGenPickByPattern(pools.poolPrincipali, ['isolamento'], usedSoFar, occurrenceIdx);
-        if (!bonus) break;
-        const cost = _trainGenExerciseTimeCost(bonus, sessionParams);
-        if (timeUsed + cost > tempoDisp) break; // niente tempo reale per il bonus
-        usedSoFar.add(bonus.codice);
-        exercises.push(bonus);
-        timeUsed += cost;
-        bonusN++;
+      const bonusPicks = [];
+      for (const tier of _BONUS_TIERS) {
+        while (exercises.length < timeBasedTarget && exercises.length < softMax) {
+          const bonus = _trainGenPickByPattern(pools.poolPrincipali, tier.patterns, usedSoFar, occurrenceIdx);
+          if (!bonus) break; // tier esaurito → passa al successivo
+          const cost = _trainGenExerciseTimeCost(bonus, sessionParams);
+          if (timeUsed + cost > tempoDisp) break; // niente tempo reale → stop totale bonus
+          usedSoFar.add(bonus.codice);
+          exercises.push(bonus);
+          timeUsed += cost;
+          bonusPicks.push({ ex: bonus, tier: tier.label });
+        }
+        if (timeUsed >= tempoDisp || exercises.length >= timeBasedTarget || exercises.length >= softMax) break;
       }
+
+      // Riepilogo per sessione (sempre) — aiuta il debug futuro.
+      const _isoLabel = (ex) => _trainGenIsIsometric(ex) ? 'iso_isometrico'
+        : (['isolamento','core','mobilita'].includes(_normPattern(ex.pattern)) ? 'iso' : 'compound');
+      console.log(`[${category}] compound: ${compoundPicks.map(e=>e.codice).join(',') || '—'}`
+        + ` (atteso ${requiredPatterns.length}${compoundMissing.length ? ', mancante: ' + compoundMissing.join('/') : ''});`
+        + ` iso obbligatori: ${keptObbligatori.map(o=>o.ex.codice).join(',') || '—'}`
+        + `${cutObbligatori.length ? ' (tagliati: ' + cutObbligatori.map(o=>o.gruppoTarget).join('/') + ')' : ''};`
+        + ` bonus: ${bonusPicks.map(b=>`${b.ex.codice}(${_isoLabel(b.ex)})`).join(',') || '—'}`);
 
       return {
         splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
         sessionParams, category, exercises,
         _diag: {
           compoundN: compoundPicks.length,
+          compoundMissing,
           obbligatoriKept: keptObbligatori.map(o => o.gruppoTarget),
           obbligatoriCut: cutObbligatori.map(o => o.gruppoTarget),
-          bonusN,
+          bonusN: bonusPicks.length,
+          bonus: bonusPicks.map(b => `${b.ex.codice}:${b.tier}`),
         },
       };
     });
@@ -8616,7 +8613,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       || luoghiEsercizio.includes(tipoAllenNorm)
       || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias))
       || (tipoAllenNorm === 'casa' && hasSurrogato);
-    if (!luogoOk) return;
+    if (!luogoOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: LUOGO (${ex.luogo} vs ${tipoAllenNorm})`); return; }
 
     // FILTRO 2 — attrezzo (normalizzato spazi→underscore)
     // CON branch SURROGATO per casa: se l'utente non possiede l'attrezzo
@@ -8645,7 +8642,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       }
     }
     else if (tipoAllenNorm === 'aperto') attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
-    if (!attrezzoOk) return;
+    if (!attrezzoOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: ATTREZZO (${ex.attrezzo}${ex.surrogato_attrezzo?' / surr '+ex.surrogato_attrezzo:''})`); return; }
 
     // FILTRO 3 — livello (campo livello = lista separata da ';',
     // vuoto = ammesso a tutti i livelli)
@@ -8653,7 +8650,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       .split(';').map(s => s.trim()).filter(Boolean);
     const livelloOk = livelliEsercizio.length === 0
       || livelliEsercizio.some(l => livelliOk.has(l));
-    if (!livelloOk) return;
+    if (!livelloOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: LIVELLO (${ex.livello} vs ${livello})`); return; }
 
     // FILTRO 4 — uso (split su ';', un esercizio può comparire in più pool)
     // Se isSurrogato, clone shallow per non mutare l'oggetto del catalogo
@@ -8677,20 +8674,6 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   return { poolPrincipali, poolFinisher, poolFinisherTabata };
 }
 
-function _trainGenGetPatterns(sessionType, livello) {
-  // Resolver pattern requirements: gestisce sia forma piatta
-  // (upper/lower/push/pull/legs) sia forma per-livello (fullbody).
-  const def = _TRAIN_GEN_PATTERN_REQUIREMENTS[sessionType];
-  if (!def) {
-    console.warn('[train-gen] pattern requirements non trovati per sessionType:', sessionType);
-    return [];
-  }
-  // Forma piatta: array di pattern requirements (uguale per tutti i livelli)
-  if (Array.isArray(def)) return def;
-  // Forma per-livello (oggetto): chiave livello con fallback a principiante
-  return def[livello] || def['principiante'] || [];
-}
-
 function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   // Formula tempo: tempo_disp / tempo_per_esercizio, clampato min..max.
   //   tempo_disp = durata_min*60 - warmup - (finisher?:0) - buffer
@@ -8707,9 +8690,11 @@ function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   return Math.max(t.min_exercises_per_session, Math.min(t.max_exercises_per_session, raw));
 }
 
-function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex) {
+function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, debugLabel) {
   // Pesca 1 esercizio dal pool che matchi UNO dei pattern in patternOptions
   // (array OR), evitando duplicati già usati nella sessione corrente.
+  // debugLabel (opzionale): se window._trainGenDebug è true, logga candidati
+  // nel pool, scartati perché già usati, e il codice scelto.
   //
   // Strategia: deterministica stabile + ROUND-ROBIN inter-sessione (28 mag).
   //   - sort candidati per codice (sempre uguale per stesso pool/pattern)
@@ -8735,15 +8720,24 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex) {
   const used = (usedSoFar instanceof Set) ? usedSoFar : new Set(usedSoFar || []);
   const optionsSet = new Set(patternOptions);
 
-  const candidates = pool.filter(ex =>
-    optionsSet.has(_normPattern(ex.pattern))
-    && !used.has(ex.codice)
-  );
-  if (candidates.length === 0) return null;
+  const matchPattern = pool.filter(ex => optionsSet.has(_normPattern(ex.pattern)));
+  const candidates = matchPattern.filter(ex => !used.has(ex.codice));
+  if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
+    const scartatiUsati = matchPattern.filter(ex => used.has(ex.codice)).map(e => e.codice);
+    console.log(`[train-gen][pick] ${debugLabel}: nel pool=${matchPattern.length} [${matchPattern.map(e=>e.codice).join(',')}]`
+      + ` · già usati=${scartatiUsati.length ? scartatiUsati.join(',') : '—'}`
+      + ` · disponibili=${candidates.length}`);
+  }
+  if (candidates.length === 0) {
+    if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) console.log(`[train-gen][pick] ${debugLabel}: NESSUN candidato → null`);
+    return null;
+  }
 
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
   const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
-  return candidates[idx];
+  const chosen = candidates[idx];
+  if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) console.log(`[train-gen][pick] ${debugLabel}: scelto ${chosen.codice} (${chosen.nome})`);
+  return chosen;
 }
 
 // ───────────────────────────────────────────────────────────
@@ -8814,14 +8808,41 @@ function _trainGenGetSessionCategory(splitType, sessionType) {
 //   pattern isolamento + nome contiene 'isometric' → iso_isometrico
 //   pattern isolamento / mobilita                  → iso
 //   tutto il resto (multiarticolari, cardio princ.) → compound
-function _trainGenGetExerciseParams(ex, sessionParams) {
+// Riconoscimento ROBUSTO esercizio isometrico/anti-movimento (Fix 1, 29 mag).
+// Plank, Dead bug, Pallof, Hollow, Bird dog, Side plank, Stir the pot non hanno
+// la keyword 'isometrico' nel nome → servirebbe trattarli come compound pesanti.
+// Logica OR:
+//   1) pattern=core E nome NON dinamico (marcia|ritmo|veloce|controllat|
+//      alternat|cammina) → core statico = isometrico
+//   2) nome contiene 'isometric'
+//   3) nome tra i noti isometrici (wall sit|plank|dead bug|hollow|pallof|
+//      side plank|bird dog|stir the pot)
+//   4) isolamento glutei isometrico (ponte|hip thrust isometrico|wall sit)
+function _trainGenIsIsometric(ex) {
   const pattern = _normPattern(ex && ex.pattern);
-  if (pattern === 'isolamento') {
-    const nome = String((ex && ex.nome) || '').toLowerCase();
-    if (/isometric/.test(nome) && sessionParams.iso_isometrico) return sessionParams.iso_isometrico;
+  const nome = String((ex && ex.nome) || '').toLowerCase();
+  const gt = String((ex && ex.gruppo_target) || '').toLowerCase()
+    .split(';').map(s => s.trim()).filter(Boolean);
+  const dinamico = /marcia|ritmo|veloce|controllat|alternat|cammina/.test(nome);
+  if (pattern === 'core' && !dinamico) return true;
+  if (/isometric/.test(nome)) return true;
+  if (/wall sit|plank|dead bug|hollow|pallof|side plank|bird dog|stir the pot/.test(nome)) return true;
+  if (pattern === 'isolamento' && gt.includes('glutei') && /ponte|hip thrust isometric|wall sit/.test(nome)) return true;
+  return false;
+}
+
+// Sceglie il sub-set di parametri per UN esercizio (Regola B + Fix 1):
+//   isometrico (vedi _trainGenIsIsometric)        → iso_isometrico (a tempo)
+//   isolamento / mobilita / core (dinamico)       → iso (reps, serie ridotte)
+//   tutto il resto (multiarticolari, cardio princ) → compound
+function _trainGenGetExerciseParams(ex, sessionParams) {
+  if (_trainGenIsIsometric(ex)) {
+    return sessionParams.iso_isometrico || sessionParams.iso || sessionParams.compound;
+  }
+  const pattern = _normPattern(ex && ex.pattern);
+  if (pattern === 'isolamento' || pattern === 'mobilita' || pattern === 'core') {
     return sessionParams.iso || sessionParams.compound;
   }
-  if (pattern === 'mobilita') return sessionParams.iso || sessionParams.compound;
   return sessionParams.compound;
 }
 
@@ -9095,23 +9116,20 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
     if (cautionNote)   alertParts.push(cautionNote);
     const alert = alertParts.length ? alertParts.join(' · ') : null;
 
-    // iso flag = recupero corto in getRestSec().
-    // Coerente con TRAINING_SESSIONS attuale (Face pull / Lateral raise /
-    // Curl / Tricipiti / Glute bridge iso / Leg curl / Calf raise = iso:true).
-    // Marco iso per: pattern isolamento, pattern mobilita
-    // (vocabolario catalogo Sheet — 'mobilita' senza accento).
-    const pattern = _normPattern(cat.pattern);
-    const iso = pattern === 'isolamento' || pattern === 'mobilita';
-
-    // Regola B (28 mag): parametri PER-ESERCIZIO (compound vs iso vs
-    // iso_isometrico), non più unici di sessione. Compound 4 serie, iso 3.
-    // iso_isometrico → reps in secondi ("20-30 sec") così il reader nasconde
-    // la pill RIR e il logger passa a durata (parseRepsRange kind='seconds').
+    // Regola B (28 mag) + Fix 1 (29 mag): parametri PER-ESERCIZIO (compound vs
+    // iso vs iso_isometrico), non più unici di sessione. Compound 4 serie, iso 3.
+    // iso_isometrico → reps in secondi ("30-45 sec") così il reader nasconde la
+    // pill RIR e il logger passa a durata (parseRepsRange kind='seconds').
     const exParams = _trainGenGetExerciseParams(cat, sessionParams) || {};
     const sets = exParams.sets;
     const reps = exParams.durationBased
       ? `${exParams.reps_min}-${exParams.reps_max} sec`
       : `${exParams.reps_min}-${exParams.reps_max}`;
+
+    // iso flag = recupero corto in getRestSec(). Vero per OGNI esercizio che
+    // NON usa i parametri compound (isolamento, mobilita, core, isometrico):
+    // così Plank/Dead bug ricevono recupero breve invece di quello compound.
+    const iso = exParams !== sessionParams.compound;
 
     const exObj = {
       codice: cat.codice,
@@ -9149,7 +9167,9 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
     // alterano il comportamento attuale del modulo Training.
     exObj.rir = (exParams.rir !== undefined) ? exParams.rir : null;
     if (exParams.rest_sec !== undefined) exObj.rest_sec = exParams.rest_sec;
-    if (exParams.durationBased) exObj.durationBased = true;
+    // isTimed (Fix 1): chiarezza diagnostica. La UI nasconde la pill RIR già da
+    // sé quando reps termina in " sec" (parseRepsRange.kind==='seconds').
+    if (exParams.durationBased) { exObj.durationBased = true; exObj.isTimed = true; }
 
     return exObj;
   });
@@ -9527,6 +9547,22 @@ window.ztSchedaWhy = async function() {
     finisher: s.finisher ? `tabata ${s.finisher.round}×(${s.finisher.work_sec}/${s.finisher.rest_sec}) — ${(s.finisher.exercises||[]).map(e=>e.codice).join(',')}` : null,
   })));
   return scheda;
+};
+
+// Diagnostica pattern picker (Fix 29 mag): dry-run con log dettagliato di
+// _trainGenFilterPool (esclusioni luogo/attrezzo/livello) e _trainGenPickByPattern
+// (candidati nel pool, già usati, scelto). NON scrive DB, NON chiama AI.
+// Esempio: await ztTrainGenPatternPick('lower') → poi filtra i log [lower_*]/[train-gen][pick].
+window.ztTrainGenPatternPick = async function(splitTypeFilter) {
+  console.log('=== ztTrainGenPatternPick: dry-run + log dettagliato pattern picker ===');
+  if (splitTypeFilter) console.log(`   cerca nei log le righe '[train-gen][pick] ${splitTypeFilter}#...' e '[${splitTypeFilter}_...]'`);
+  const prev = window._trainGenDebug;
+  window._trainGenDebug = true;
+  try {
+    return await generateTrainingProgram({ source: 'pattern-pick-diag', force: true, dryRun: true });
+  } finally {
+    window._trainGenDebug = prev;
+  }
 };
 
 // ───────────────────────────────────────────────────────────
