@@ -3605,7 +3605,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 11:00';
+const APP_VERSION = '2026.05.29 · 11:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10036,7 +10036,7 @@ function getLastLoggedSetLabel(sessionId, exName){
 function getProgressionLive(exName, sessionId){
   const key = `${sessionId}_${exName}`;
   const s = ST.aiSuggestions && ST.aiSuggestions[key];
-  if(s) return `🎯 ${s}`;
+  if(s) return s;
   // Fallback iniziale (solo se nessuna serie loggata oggi — vedi getProgressionSuggestion)
   return getProgressionSuggestion(exName, sessionId) || '';
 }
@@ -10871,7 +10871,7 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   if(exData.sets && nextSetNum > exData.sets) return '';
   const repsDone = Number(reps) || 0;
   const rirVal = (rir == null || rir === '') ? null : Number(rir);
-  const head = `Serie ${nextSetNum}:`;
+  const head = `S${nextSetNum}:`;
   const clampReps = (n) => Math.max(repsMin, Math.min(repsMax, n));
 
   if(isPullUpExercise(exName)){
