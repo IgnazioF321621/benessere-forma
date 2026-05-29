@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 18:59';
+const APP_VERSION = '2026.05.29 · 19:20';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11077,14 +11077,45 @@ async function saveTrainingSet(){
 
   if(exerciseComplete){
     // Ultima serie dell'esercizio → niente rest countdown, niente "PROSSIMA"
-    // inesistente. Messaggio sobrio + ritorno all'elenco Sessioni (riusa
-    // closeTrainingSession = stesso comportamento del bottone "‹ Sessioni").
-    // Se la sessione intera è completa, il toast "🎉 Sessione completata!"
-    // arriva da saveWorkoutRecord qui sopra → niente doppio toast.
+    // inesistente.
     if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
-    if(!sessionComplete) showToast('Esercizio completato ✓');
     loadTrainingHomeData();
-    closeTrainingSession();
+
+    if(sessionComplete){
+      // Sessione finita: comportamento invariato (esci all'elenco Sessioni).
+      // Il toast "🎉 Sessione completata!" arriva da saveWorkoutRecord qui sopra.
+      closeTrainingSession();
+      return;
+    }
+
+    // Esercizio finito ma sessione in corso → RESTA nella sessione e scorri al
+    // prossimo esercizio non completato (così lo si prepara durante il recupero).
+    showToast('Esercizio completato ✓');
+    ST.trainLogOpen = null;
+    ST.trainExecOpen = null;
+    renderTraining();
+
+    // Trova il prossimo esercizio NON completato (scansione circolare da currentIdx+1).
+    const isDone = (ex) => {
+      const keys = Object.keys(ST.trainLoggedSets).filter(k =>
+        k.startsWith(`${form.sessionId}_${ex.name}_`) && k.endsWith(`_${todayKey()}`)
+      );
+      return keys.length >= ex.sets;
+    };
+    let nextEx = null;
+    for(let i = 1; i <= sessExercises.length; i++){
+      const cand = sessExercises[(currentIdx + i) % sessExercises.length];
+      if(cand && !isDone(cand)){ nextEx = cand; break; }
+    }
+
+    // Scorri la card del prossimo esercizio in cima (dopo il repaint).
+    if(nextEx){
+      const cardId = 'excard-' + nextEx.name.replace(/[^a-zA-Z0-9]/g, '_');
+      requestAnimationFrame(() => {
+        const el = document.getElementById(cardId);
+        if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
     return;
   }
 

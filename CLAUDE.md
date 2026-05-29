@@ -2252,6 +2252,15 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Dopo l'ultima serie si resta nella sessione ✅
+
+Fix UX modulo Training. Salvando l'**ultima serie** di un esercizio, l'app non esce più alla home Training: **resta nella sessione** e **scorre automaticamente al prossimo esercizio non completato**, così lo si prepara durante il recupero. L'uscita (toast "🎉 Sessione completata!") avviene **solo a sessione completa** (tutti gli esercizi finiti) — comportamento invariato.
+
+- **Punto**: ramo `if(exerciseComplete){…}` di `saveTrainingSet` (intorno a riga 11078).
+- **Logica**: se `sessionComplete` → `closeTrainingSession()` (come prima). Altrimenti → toast "Esercizio completato ✓", reset `ST.trainLogOpen`/`ST.trainExecOpen`, `renderTraining()`, poi scansione **circolare** da `currentIdx+1` per il primo esercizio non ancora completato (`isDone` conta le chiavi `${sessionId}_${ex.name}_…_${todayKey()}` ≥ `ex.sets`).
+- **Scroll**: `requestAnimationFrame` → `document.getElementById('excard-' + nome.replace(/[^a-zA-Z0-9]/g,'_')).scrollIntoView({behavior:'smooth', block:'start'})` (dopo il repaint).
+- Il ramo serie intermedia (recupero + box PROSSIMA) resta invariato. `sessionComplete` è già calcolato prima del ramo.
+
 ### Sessione 29 mag 2026 (SERA) — Esercizi unilaterali mostrano "per lato" ✅
 
 Fix mirato di leggibilità sul modulo Training. Gli esercizi che si eseguono un lato per volta (affondi, step-up, ecc.) ora mostrano **"per lato"** nelle ripetizioni, sia nella **prescrizione della scheda** sia nel **box PROSSIMA** (suggerimento serie successiva). Prima mostravano solo il numero (es. "5 reps") → volume ambiguo.
@@ -2442,6 +2451,7 @@ Conferme: compound 4 serie / iso 3 serie; recuperi differenziati (180s compound 
 - **Core anti-estensione settimanale** per chi ha storia lombare (McGill).
 - **Recupero compound > recupero iso** (2-3 min Forza, 1-1.5 min Ipertrofia vs 45-90s iso) — Henselmans, Schoenfeld 2016.
 - **Vocabolario chiuso `gruppo_target` con plurali italiani** — più leggibile del singolare tecnico, e indispensabile perché `muscoli` (testo libero) non basta a classificare.
+- **Pulizia dati di test cancella DB + browser ma NON la memoria locale (`zt_train_sets_<data>`) degli ALTRI device** → o si pulisce ogni device, o si conta sul reset giornaliero (la chiave è per-giorno, quindi il residuo sparisce da solo il giorno dopo). Possibile miglioria futura (progetto a sé): far sì che `hydrateTrainingSetsFromCloud` rimuova anche i residui locali non più presenti nel cloud.
 
 ### Sessione 28 mag 2026 — Coach generatore schede Training (implementazione completa) ✅ + problematiche aperte
 
