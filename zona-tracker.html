@@ -757,6 +757,9 @@ select.inp{cursor:pointer;}
   line-height:1.3;
 }
 .rest-card-value.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+/* Card PROSSIMA: evergreen tenue per dare impatto (è l'azione da fare).
+   Solo sfondo + bordo evergreen — stesse dimensioni/padding della card neutra. */
+.rest-card--next{background:var(--acc-lt);border-color:var(--acc);}
 
 /* Coach card evergreen-soft (esiste .modal-ai-section, ma qui usiamo nuovo design) */
 .rest-coach-card{
@@ -3605,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 11:35';
+const APP_VERSION = '2026.05.29 · 11:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10873,9 +10876,10 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const rirVal = (rir == null || rir === '') ? null : Number(rir);
   const head = `S${nextSetNum}:`;
   const clampReps = (n) => Math.max(repsMin, Math.min(repsMax, n));
-  // RIR target SEMPRE in coda al suggerimento (formato costante). Centralizzato
-  // in un unico punto così ogni ritorno valido lo include senza duplicazioni.
-  const withRir = (msg) => `${msg}, RIR ${targetRIR}`;
+  // Suggerimento = sigla "SN:" + pezzi separati da " · " (punto medio, coerente
+  // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
+  // così la punteggiatura è uniforme e non restano virgole di separazione.
+  const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
 
   if(isPullUpExercise(exName)){
     // Ramo TRAZIONI — la "resistenza" è il colore della BANDA di assistenza.
@@ -10887,18 +10891,18 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
     const bandTxt = cur ? `banda ${cur}` : 'stessa banda';
     // 1) cedimento (RIR 0) ma reps nel range → stessa banda, -1 rep
-    if(rirVal === 0 && repsDone >= repsMin) return withRir(`${head} ${bandTxt}, scendi a ${clampReps(repsDone - 1)} reps`);
+    if(rirVal === 0 && repsDone >= repsMin) return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
     // 2) tetto + RIR ≥ target → banda più dura (o trazione libera se già Gialla)
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
-      if(curIdx === 0) return withRir(`${head} prova la trazione libera senza banda, ${repsMin}-${repsMax} reps`);
-      return withRir(`${head} banda ${harder || 'Gialla'} (più dura), riparti da ${repsMin} reps`);
+      if(curIdx === 0) return out('prova la trazione libera senza banda', `${repsMin}-${repsMax} reps`);
+      return out(`banda ${harder || 'Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
     }
     // 3) sotto range → banda più facile
-    if(repsDone < repsMin) return withRir(`${head} banda ${easier || 'Viola'} (più aiuto), punta a ${repsMin} reps`);
+    if(repsDone < repsMin) return out(`banda ${easier || 'Viola'} (più aiuto)`, `punta a ${repsMin} reps`);
     // 4) RIR > target (facile) → stessa banda, alza reps verso il tetto
-    if(rirVal != null && rirVal > targetRIR) return withRir(`${head} ${bandTxt}, sali a ${clampReps(repsDone + 1)} reps`);
+    if(rirVal != null && rirVal > targetRIR) return out(bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
     // 5) default (RIR = target o non riportato) → stessa banda, +1 rep
-    return withRir(`${head} ${bandTxt}, ${clampReps(repsDone + 1)} reps`);
+    return out(bandTxt, `${clampReps(repsDone + 1)} reps`);
   }
 
   // Ramo ELASTICI / corpo libero — resistenza in lbs (multipli di 10).
@@ -10907,18 +10911,18 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const plusTen  = Math.min(250, resistInt + 10);
   const minusTen = Math.max(0, resistInt - 10);
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
-  if(rirVal === 0 && repsDone >= repsMin) return withRir(`${head} ${loadTxt(resistInt)}, scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+  if(rirVal === 0 && repsDone >= repsMin) return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
   // 2) tetto + RIR ≥ target → +10 lbs, riparti da repsMin
-  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return withRir(`${head} ${loadTxt(plusTen)}, riparti da ${repsMin} ${unitLbl}`);
+  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusTen), `riparti da ${repsMin} ${unitLbl}`);
   // 3) sotto range → -10 lbs (o variante più facile se già a corpo libero)
   if(repsDone < repsMin){
-    if(resistInt <= 0) return withRir(`${head} variante più facile, punta a ${repsMin} ${unitLbl}`);
-    return withRir(`${head} ${loadTxt(minusTen)}, punta a ${repsMin} ${unitLbl}`);
+    if(resistInt <= 0) return out('variante più facile', `punta a ${repsMin} ${unitLbl}`);
+    return out(loadTxt(minusTen), `punta a ${repsMin} ${unitLbl}`);
   }
   // 4) RIR > target (facile) → stessa resistenza, alza verso il tetto
-  if(rirVal != null && rirVal > targetRIR) return withRir(`${head} ${loadTxt(resistInt)}, sali a ${clampReps(repsDone + step)} ${unitLbl}`);
+  if(rirVal != null && rirVal > targetRIR) return out(loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
   // 5) default (RIR = target o non riportato) → stessa resistenza, +step
-  return withRir(`${head} ${loadTxt(resistInt)}, ${clampReps(repsDone + step)} ${unitLbl}`);
+  return out(loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
 }
 
 async function completeSession(sessionId){
@@ -12510,7 +12514,7 @@ function renderTraining(){
                 <span class="rest-card-eyebrow">APPENA FATTA</span>
                 ${lastSetHTML}
               </div>
-              <div class="rest-card">
+              <div class="rest-card rest-card--next">
                 <span class="rest-card-eyebrow">PROSSIMA</span>
                 ${nextHTML}
               </div>
