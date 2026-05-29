@@ -2252,6 +2252,10 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Pulsante avvio serie uniformato a "▶ Inizia S{n}" ✅
+
+Il pulsante avvio serie nella card esercizio mostrava "+S{n}", mentre il pop-up "PRONTO!" usa "▶ Inizia S{n}" → stesso gesto, dicitura diversa. Uniformato il testo della card a **"▶ Inizia S{n}"** (coerente ovunque). Solo testo nella `ex-action-row`; logica `nextSet` (serie loggate +1) e stile `.ex-add-set-btn` invariati.
+
 ### Sessione 29 mag 2026 (SERA) — A fine recupero "Inizia serie" parte dal pop-up ✅
 
 Stato "PRONTO!" del recupero (countdown a zero): il bottone primario ora è **"▶ Inizia S{n}"** e apre **direttamente** la schermata esecuzione della serie successiva (`openTrainExec(sessionId, exName, _nextSet)`), invece del vecchio "OK ✓" che chiudeva soltanto (l'utente doveva poi ritrovare il "+S" nella card). `_nextSet` = serie già loggate oggi per quell'esercizio +1. Link secondario **"Più tardi"** per chiudere senza partire (riposare ancora). **Fallback "OK ✓"** se non c'è una serie successiva (`_nextSet > sets`, caso di bordo). Punto: stato `if(cd.done)` del countdown. Riusa `findExercise`/`todayKey`/`openTrainExec`/`skipCountdown`. Comportamentale — non serve rigenerare la scheda.

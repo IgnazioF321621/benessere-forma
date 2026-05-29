@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 21:54';
+const APP_VERSION = '2026.05.29 · 22:13';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11892,7 +11892,7 @@ function renderTraining(){
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
-                  ? `<button class="ex-add-set-btn" onclick="openTrainExec('${sel}','${safeName}',${nextSet});">+S${nextSet}</button>`
+                  ? `<button class="ex-add-set-btn" onclick="openTrainExec('${sel}','${safeName}',${nextSet});">▶ Inizia S${nextSet}</button>`
                   : ''}
             </div>
             ${_renderTrainNoteBlock(e.name)}
