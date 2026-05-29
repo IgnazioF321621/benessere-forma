@@ -2252,6 +2252,13 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — Tabata: alert breve + "PROSSIMO" esercizio ✅
+
+Due rifiniture sulla schermata Tabata (`if(ST.trainTabataFlow && ST.trainTabataFlow.active)`):
+- **Alert ridotto a una riga d'impatto**: prima mostrava l'`alert` completo (multi-riga, illeggibile durante lo sforzo). Ora mostra solo la **prima indicazione** (split su `· ; .`), resa più grande/leggibile (15px, weight 600). Il testo completo resta nella scheda esercizio → nulla si perde.
+- **Blocco PROSSIMO esercizio** sotto i tasti Riprendi/Skip (con 10s di recupero serviva sapere cosa arriva per mettersi in posizione). Helper `_tabataFlowNextExercise()` (vicino a `_tabataFlowCurrentExercise`): il prossimo è quello del round+1 → `nextIdx = round % len` (corrente è `(round-1) % len`); ritorna null nell'ultimo round → mostra **"ULTIMO ROUND"** invece di "PROSSIMO: …".
+- Comportamentale/visiva, **non serve rigenerare la scheda**.
+
 ### Sessione 29 mag 2026 (SERA) — Cronometro di tenuta sugli esercizi a tempo ✅
 
 Gli esercizi isometrici (Plank, ecc.) si misurano a TEMPO ma la schermata di esecuzione ("Fine serie") non mostrava cronometro. Ora, **SOLO** quando l'esercizio è a tempo (`parseRepsRange().kind === 'seconds'`), la schermata mostra un **cronometro di tenuta** che:

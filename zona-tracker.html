@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 21:17';
+const APP_VERSION = '2026.05.29 · 21:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12813,7 +12813,10 @@ function renderTraining(){
         <div style="font-size:96px;font-weight:800;color:${numColor};font-family:var(--font-mono);font-variant-numeric:tabular-nums;line-height:1;margin-bottom:16px;">${f.remaining}</div>
         ${ex ? `
           <div style="font-size:24px;font-weight:700;color:#3A1A0A;font-family:var(--font-sans);text-align:center;margin-bottom:6px;max-width:480px;">${ex.name}</div>
-          ${ex.alert ? `<div style="font-size:12px;font-style:italic;color:#5A2A0A;text-align:center;max-width:420px;margin-bottom:16px;line-height:1.4;">${ex.alert}</div>` : ''}
+          ${ex.alert ? (() => {
+            const short = String(ex.alert).split(/[·;.]/)[0].trim();
+            return `<div style="font-size:15px;font-weight:600;color:#5A2A0A;text-align:center;max-width:420px;margin-bottom:16px;line-height:1.3;">${short}</div>`;
+          })() : ''}
         ` : ''}
         <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;width:100%;max-width:420px;margin-top:24px;">
           ${f.running
@@ -12821,6 +12824,15 @@ function renderTraining(){
             : `<button onclick="tabataFlowResume()" style="flex:1;min-width:100px;padding:14px;background:${phaseColor};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">▶ Riprendi</button>`}
           <button onclick="tabataFlowSkip()" style="flex:1;min-width:100px;padding:14px;background:#fff;color:${phaseColor};border:2px solid ${phaseColor};border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">⏭ Skip</button>
         </div>
+        ${(() => {
+          const nx = _tabataFlowNextExercise();
+          if(!nx) return `<div style="font-size:13px;font-weight:700;color:${phaseColor};font-family:var(--font-mono);letter-spacing:.08em;margin-top:20px;text-align:center;">ULTIMO ROUND</div>`;
+          return `
+            <div style="margin-top:20px;text-align:center;max-width:420px;width:100%;">
+              <div style="font-size:10px;font-weight:700;color:${phaseColor};font-family:var(--font-mono);letter-spacing:.16em;margin-bottom:4px;">PROSSIMO</div>
+              <div style="font-size:18px;font-weight:700;color:#3A1A0A;font-family:var(--font-sans);line-height:1.2;">${nx.name}</div>
+            </div>`;
+        })()}
         <div style="font-size:11px;color:#5A2A0A;font-family:var(--font-mono);letter-spacing:.04em;margin-top:20px;opacity:.7;text-align:center;max-width:420px;">
           ${f.finisher.work_sec}s lavoro / ${f.finisher.rest_sec}s recupero × ${f.totalRounds} round · 4 esercizi alternati
         </div>
@@ -20559,6 +20571,15 @@ function _tabataFlowCurrentExercise(){
   if(!f || !f.finisher || !Array.isArray(f.finisher.exercises) || f.finisher.exercises.length === 0) return null;
   const idx = ((f.round - 1) % f.finisher.exercises.length + f.finisher.exercises.length) % f.finisher.exercises.length;
   return f.finisher.exercises[idx];
+}
+function _tabataFlowNextExercise(){
+  const f = ST.trainTabataFlow;
+  if(!f || !f.finisher || !Array.isArray(f.finisher.exercises) || !f.finisher.exercises.length) return null;
+  // Se siamo nell'ultimo round (work) non c'è un prossimo esercizio
+  if(f.round >= f.totalRounds) return null;
+  const len = f.finisher.exercises.length;
+  const nextIdx = (f.round % len + len) % len; // round corrente (1-based) → indice del round+1
+  return f.finisher.exercises[nextIdx];
 }
 function _tabataFlowAdvance(){
   // Chiamato a fine fase (work o rest). Decide cosa fare:
