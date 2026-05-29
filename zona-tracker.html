@@ -3608,7 +3608,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 15:41';
+const APP_VERSION = '2026.05.29 · 16:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7854,24 +7854,34 @@ const _TRAIN_GEN_ISO_CRITICALITY = {
   'deltoidi laterali': 1, 'polpacci': 1, 'avambracci': 1, 'trapezi': 1,
 };
 
+// Bonus coerenti per MACRO-categoria (fix 29 mag). Il riempimento bonus NON
+// deve infilare esercizi di un'altra zona (bug reale: bicipiti/tricipiti su una
+// Lower). gruppi = gruppo_target (vocabolario chiuso catalogo) ammessi per la
+// macro; compound = pattern motori ammessi per i bonus compound complementari.
+// Lower/Legs → solo zona gambe; Upper/Push/Pull → solo zona alta;
+// fullbody → unione delle due (vedi calcolo macro nel blocco bonus).
+const _TRAIN_GEN_BONUS_BY_MACRO = {
+  lower: {
+    gruppi:   ['glutei', 'ischiocrurali', 'polpacci'],
+    compound: ['dominante ginocchia', 'dominante anca'],
+  },
+  upper: {
+    gruppi:   ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'trapezi', 'avambracci'],
+    compound: ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
+  },
+};
+
 // Obiettivi "ipertrofia-like" → eleggibili alla periodizzazione DUP
 // (Forza/Ipertrofia alternati) per intermedio/avanzato con split duplicato.
 const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimagrimento']);
 
-// Tetto massimo esercizi per sessione in base alla durata (count-based).
-// Accomoda compound (3-5) + iso obbligatori (1-3). Il taglio per tempo
-// rimuove gli obbligatori MENO critici se si supera questo tetto.
-// Tetto esercizi/sessione (count). Alzato (29 mag) per ospitare lo SLOT CORE
-// fisso in ogni sessione oltre a compound + iso muscolari (es. Upper Ipertrofia
-// = 4 compound + 3 iso + 1 core = 8). Le sessioni Forza sforano un po' il tempo
-// dichiarato: accettato (vincolo sicurezza/qualità > tempo, ~5 min in più).
-// Tetto fisso esercizi/sessione (count). NON dipende più dai minuti (la scelta
-// "durata in minuti" è stata sostituita dal volume Essenziale/Completo, 29 mag).
-// Tenuto al valore generoso (9) così l'ossatura intoccabile — compound + iso
-// obbligatori + core fisso — non viene MAI tagliata in nessuna modalità; in
-// "Completo" è anche il cap del riempimento bonus. (Funzione duration-based
-// _TRAIN_GEN_SOFT_MAX_BY_DURATA rimossa: era l'unico uso.)
-const _TRAIN_GEN_SOFT_MAX = 9;
+// Tetto esercizi/sessione (count). NON dipende dai minuti (la scelta "durata
+// in minuti" è stata sostituita dal volume Essenziale/Completo, 29 mag).
+// Limita SOLO il riempimento BONUS in modalità "Completo": l'ossatura
+// (compound + iso obbligatori + core fisso) NON viene MAI tagliata, anche se
+// la supera (es. Upper Ipertrofia 4+3+1=8 con softMax 6 resta 8, 0 bonus).
+// Abbassato 9→6 (29 mag): 9 produceva sessioni troppo lunghe.
+const _TRAIN_GEN_SOFT_MAX = 6;
 
 // Split sessioni per giorni × esperienza (PARTE 5).
 // I "nomi visibili" (Full Body A/B, Upper A/B, ...) li calcola
@@ -8245,65 +8255,71 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         else console.warn(`[train-gen] ${sessionLabel}: CORE obbligatorio '${coreTarget}' non disponibile nel pool (gruppo_target nel catalogo?)`);
       }
 
-      // TAGLIO per tempo (count soft-max). Protezioni:
-      //   compound primari        → MAI tagliati
-      //   core ANTI-ESTENSIONE    → MAI tagliato (sicurezza lombare): slot
-      //                             riservato, tenuto anche OLTRE il soft-max
-      //   core ANTI-ROTAZIONE     → criticità media, compete coi muscolari
-      //                             (tagliato dopo i muscolari meno critici)
-      //   muscolari               → tagliati per criticità crescente
+      // OSSATURA SACRA (fix volume 29 mag): compound primari + iso obbligatori
+      // (muscolari) + core fisso NON si tagliano MAI, neppure oltre il softMax.
+      // Il softMax limita SOLO il riempimento BONUS (sotto) → l'ossatura resta
+      // sempre integra (es. Upper Ipertrofia 4+3+1=8 anche con softMax=6).
       const softMax = sessionMeta.softMaxPerSession;
-      const protectedCore = corePick && corePick.gruppoTarget === 'core anti-estensione';
-      let keptMuscular, cutTargets = [], coreKept = null, coreSkippedTime = false;
-      if (protectedCore) {
-        const allowedMuscular = Math.max(0, softMax - compoundPicks.length - 1); // 1 slot riservato al core lombare
-        keptMuscular = muscularPicks.slice(0, allowedMuscular);
-        cutTargets   = muscularPicks.slice(allowedMuscular).map(o => o.gruppoTarget);
-        coreKept = corePick; // SEMPRE
-        const total = compoundPicks.length + keptMuscular.length + 1;
-        if (total > softMax) console.warn(`[train-gen] ${sessionLabel}: core lombare (anti-estensione) mantenuto OLTRE il soft-max (${total}>${softMax}) — vincolo sicurezza > tempo`);
-      } else {
-        // core anti-rotazione (o assente) → cuttabile insieme ai muscolari
-        const cuttable = corePick ? [...muscularPicks, corePick] : muscularPicks.slice();
-        cuttable.sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b.gruppoTarget] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a.gruppoTarget] || 0));
-        const allowed = Math.max(0, softMax - compoundPicks.length);
-        const keptAll = cuttable.slice(0, allowed);
-        const cutAll  = cuttable.slice(allowed);
-        keptMuscular = keptAll.filter(o => !_isCoreGt(o.gruppoTarget));
-        coreKept     = keptAll.find(o => _isCoreGt(o.gruppoTarget)) || null;
-        cutTargets   = cutAll.map(o => o.gruppoTarget);
-        coreSkippedTime = !!(corePick && !coreKept);
-        if (coreSkippedTime && window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: core (${corePick.gruppoTarget}) skippato per tempo (soft-max ${softMax})`);
-      }
-
+      const keptMuscular = muscularPicks;     // tutti gli iso obbligatori
+      const coreKept = corePick;              // core fisso sempre (se nel pool)
+      const cutTargets = [];                  // nessun taglio dell'ossatura
+      const coreSkippedTime = false;
       const keptObbligatori = keptMuscular; // alias per compatibilità log/diag
       const exercises = [...compoundPicks, ...keptMuscular.map(o => o.ex), ...(coreKept ? [coreKept.ex] : [])];
 
-      // 3) ISO BONUS — SOLO in modalità "Completo".
-      // In "Essenziale" la sessione si ferma all'ossatura intoccabile:
-      // compound + iso obbligatori + core fisso (l'A+B). Nessun bonus.
-      // In "Completo" riempi fino al soft-max (count), SENZA dipendenza dai
-      // minuti (la scelta durata è stata sostituita dal volume).
-      // ORDINE (Fix 29 mag): iso MUSCOLARI (gruppi piccoli) → core/isometrici →
-      // compound complementari. Ogni bonus usa i PROPRI parametri
-      // (compound/iso/iso_isometrico via _trainGenGetExerciseParams), MAI
-      // quelli di sessione → il core esce con parametri iso_isometrico.
+      // 3) ISO BONUS — SOLO in modalità "Completo", COERENTI per zona muscolare.
+      // In "Essenziale" ci si ferma all'ossatura. In "Completo" si riempie fino
+      // al soft-max (count), ma i bonus devono restare nella stessa MACRO della
+      // sessione (niente bicipiti/tricipiti su una Lower — bug 29 mag).
+      // ORDINE: iso muscolari (gruppo coerente, no doppioni di gruppo) → core
+      // dello STESSO tipo della sessione → compound complementari coerenti.
+      // Ogni bonus usa i PROPRI parametri (via _trainGenGetExerciseParams).
       const bonusPicks = [];
       if (sessionMeta.volume !== 'essenziale') {
-        const _BONUS_TIERS = [
-          { label: 'iso-musc',  patterns: ['isolamento'] },
-          { label: 'core-iso',  patterns: ['core'] },
-          { label: 'compound',  patterns: ['spinta orizzontale','spinta verticale','tirata orizzontale','tirata verticale','dominante ginocchia','dominante anca'] },
-        ];
-        for (const tier of _BONUS_TIERS) {
-          while (exercises.length < softMax) {
-            const bonus = _trainGenPickByPattern(pools.poolPrincipali, tier.patterns, usedSoFar, occurrenceIdx);
-            if (!bonus) break; // tier esaurito → passa al successivo
+        const macro = (splitType === 'lower' || splitType === 'legs') ? 'lower'
+                    : (splitType === 'upper' || splitType === 'push' || splitType === 'pull') ? 'upper'
+                    : 'fullbody';
+        const lo = _TRAIN_GEN_BONUS_BY_MACRO.lower, up = _TRAIN_GEN_BONUS_BY_MACRO.upper;
+        const gruppiAmmessi   = new Set(macro === 'lower' ? lo.gruppi : macro === 'upper' ? up.gruppi : [...lo.gruppi, ...up.gruppi]);
+        const compoundAmmessi = macro === 'lower' ? lo.compound : macro === 'upper' ? up.compound : [...lo.compound, ...up.compound];
+        const _gtOf = (ex) => String(ex && ex.gruppo_target || '').toLowerCase().split(';').map(s => s.trim()).filter(Boolean);
+        // Gruppi già presenti (ossatura) → no doppione di muscolo nei bonus
+        const gruppiPresenti = new Set();
+        exercises.forEach(ex => _gtOf(ex).forEach(g => gruppiPresenti.add(g)));
+
+        // Tier 1 — iso muscolari coerenti con la macro, senza doppioni di gruppo
+        while (exercises.length < softMax) {
+          const cand = pools.poolPrincipali.filter(ex => {
+            if (_normPattern(ex.pattern) !== 'isolamento') return false;
+            const gts = _gtOf(ex);
+            return gts.some(g => gruppiAmmessi.has(g)) && !gts.some(g => gruppiPresenti.has(g));
+          });
+          const bonus = _trainGenPickByPattern(cand, ['isolamento'], usedSoFar, occurrenceIdx);
+          if (!bonus) break;
+          usedSoFar.add(bonus.codice);
+          _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
+          exercises.push(bonus); bonusPicks.push({ ex: bonus, tier: 'iso-musc' });
+        }
+        // Tier 2 — core dello STESSO tipo della sessione (escluso se già presente)
+        if (exercises.length < softMax && coreTarget) {
+          const cand = pools.poolPrincipali.filter(ex => {
+            if (_normPattern(ex.pattern) !== 'core') return false;
+            const gts = _gtOf(ex);
+            return gts.includes(coreTarget) && !gts.some(g => gruppiPresenti.has(g));
+          });
+          const bonus = _trainGenPickByPattern(cand, ['core'], usedSoFar, occurrenceIdx);
+          if (bonus) {
             usedSoFar.add(bonus.codice);
-            exercises.push(bonus);
-            bonusPicks.push({ ex: bonus, tier: tier.label });
+            _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
+            exercises.push(bonus); bonusPicks.push({ ex: bonus, tier: 'core-iso' });
           }
-          if (exercises.length >= softMax) break;
+        }
+        // Tier 3 — compound complementari coerenti con la macro
+        while (exercises.length < softMax) {
+          const bonus = _trainGenPickByPattern(pools.poolPrincipali, compoundAmmessi, usedSoFar, occurrenceIdx);
+          if (!bonus) break;
+          usedSoFar.add(bonus.codice);
+          exercises.push(bonus); bonusPicks.push({ ex: bonus, tier: 'compound' });
         }
       }
 
