@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 10:42';
+const APP_VERSION = '2026.05.30 · 10:54';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11746,9 +11746,10 @@ function renderTraining(){
 
   let body = '';
 
-  if(subnav === 'sessione'){
+  // Dettaglio sessione TAB-AGNOSTICO: se una sessione è aperta, mostra il dettaglio
+  // qualunque sia la pillola attiva (Sessione o Programma). La pillola resta invariata.
+  if(ST.trainSession && getTrainingSession(ST.trainSession)){
     const sel = ST.trainSession;
-    if(sel && getTrainingSession(sel)){
       // ── Dettaglio sessione ──────────────────────────────────
       const s = getTrainingSession(sel);
       const isRecovery = s.rir === null;
@@ -11995,7 +11996,7 @@ function renderTraining(){
           <button onclick="closeTrainingSession();"
             style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-            Sessioni
+            ${ST.trainTab === 'piano' ? 'I tuoi giorni' : 'Sessioni'}
           </button>
           ${audioBanner}
           ${heroBlock}
@@ -12026,7 +12027,7 @@ function renderTraining(){
           </button>` : ''}
         </div>`;
 
-    } else {
+  } else if(subnav === 'sessione'){
       // ── Lista sessioni ──────────────────────────────────────
       // Ordine intenzionale: ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower']
       // Con grid 2-col riempie riga per riga: G1|G4 / G2|G5 / G3|G6 (recovery in fondo)
@@ -12062,7 +12063,6 @@ function renderTraining(){
             ${sessionCards}
           </div>
         </div>`;
-    }
 
   } else if(subnav === 'piano'){
     // ── Piano tab ───────────────────────────────────────────
@@ -12131,12 +12131,15 @@ function renderTraining(){
       const accentCol = isIper ? SALVIA : 'var(--acc)';
       const isToday = d.session === todaySession;
       return `
-        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${accentCol};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+        <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${accentCol};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
             <span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${d.label}</span>
             ${isToday?oggiBadge:''}
           </div>
-          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${accentCol};text-transform:uppercase;">● ${d.desc}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${accentCol};text-transform:uppercase;">● ${d.desc}</span>
+            <span style="font-size:15px;color:var(--t3);line-height:1;flex-shrink:0;">›</span>
+          </div>
         </div>`;
     }).join('');
 
@@ -12144,11 +12147,14 @@ function renderTraining(){
     const recoveryRows = recoveryDays.map(d=>{
       const isToday = d.session === todaySession;
       return `
-        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
           <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
             <span style="color:var(--acc);font-size:10px;line-height:1;">●</span>${d.label}${isToday?' '+oggiBadge:''}
           </span>
-          <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">RECUPERO</span>
+          <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">RECUPERO</span>
+            <span style="font-size:15px;color:var(--t3);line-height:1;">›</span>
+          </span>
         </div>`;
     }).join('');
 
@@ -12231,8 +12237,29 @@ function renderTraining(){
         </div>
       </div>`;
 
+    // ── Scorciatoia "Allenamento di oggi" — apre il target REALE della rotazione (fresco dal Passo 1) ──
+    const todayTargetSid = todaySession || 'upperA';
+    const todayTargetSess = getTrainingSession(todayTargetSid);
+    const todayTargetName = todayTargetSess?.name || 'Allenamento';
+    const todayTargetMeta = todayTargetSess
+      ? (todayTargetSess.type === 'Recupero'
+          ? `${todayTargetSess.exercises.length} esercizi · ~20 min`
+          : `RIR ${todayTargetSess.rir} · ${todayTargetSess.exercises.length} esercizi`)
+      : '';
+    const shortcutHTML = `
+      <div onclick="openTrainingSession('${todayTargetSid}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="min-width:0;">
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">ALLENAMENTO DI OGGI</div>
+          <div style="font-size:18px;font-weight:800;font-family:var(--font-sans);color:#fff;line-height:1.15;">${todayTargetName}</div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">${todayTargetMeta}</div>
+        </div>
+        <div style="font-size:22px;color:rgba(255,255,255,.9);flex-shrink:0;line-height:1;">›</div>
+      </div>`;
+
     body = `
       <div style="padding:16px;display:flex;flex-direction:column;gap:20px;">
+
+        ${shortcutHTML}
 
         ${heroHTML}
 
