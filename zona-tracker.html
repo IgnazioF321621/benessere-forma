@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 11:10';
+const APP_VERSION = '2026.05.30 · 14:56';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7655,6 +7655,47 @@ function getSessionCycle() {
   // Restituisce l'array di session id in ordine dello split.
   // Fallback a SESSION_CYCLE hardcoded se la scheda non è caricata.
   return ST.userSessionCycle || SESSION_CYCLE;
+}
+
+// Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
+// NESSUNA scrittura DB, nessun campo persistito: si ricalcola ad ogni render.
+// Ritorna { debt:[sid,...], target:sid } — "solo giro corrente", i recuperi non vanno mai in debito.
+function computeTrainingDebt(){
+  const cycle = getSessionCycle();
+  const len = cycle.length;
+  const all = ST.trainAllCompleted || [];
+  const debt = new Set();
+  const isRecoverySid = (sid) => {
+    const ss = getTrainingSession(sid);
+    return (ss && ss.type === 'Recupero') || /^recovery/i.test(sid);
+  };
+  let pos = -1; // indice ciclo del "fronte" raggiunto
+  for(const w of all){
+    const Wi = cycle.indexOf(w.session_type);
+    if(Wi === -1) continue;                 // tipo non nel ciclo → ignora
+    if(pos === -1){ pos = Wi; continue; }    // primo workout valido = fronte iniziale
+    // Recupero del debito: questo tipo era in debito → azzeralo. NON toccare pos (niente debiti spuri da wrap).
+    if(debt.has(w.session_type)){ debt.delete(w.session_type); continue; }
+    const forward = (Wi - pos + len) % len;
+    if(forward === 1 || forward === 0){
+      pos = Wi;                              // sequenziale o stesso tipo ripetuto
+    } else {                                 // forward >= 2 → salto in avanti
+      for(let step = 1; step < forward; step++){
+        const sidJ = cycle[(pos + step) % len];
+        if(!isRecoverySid(sidJ)) debt.add(sidJ);
+      }
+      pos = Wi;
+    }
+  }
+  let target;
+  if(debt.size > 0){
+    // debito più vecchio = indice ciclo più basso tra i membri
+    target = [...debt].reduce((best, sid) =>
+      cycle.indexOf(sid) < cycle.indexOf(best) ? sid : best);
+  } else {
+    target = ST.trainHomeData?.nextSession || null;
+  }
+  return { debt: [...debt], target };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -12184,8 +12225,12 @@ function renderTraining(){
     const activeWeekNum = activeWeek.n;                 // 1..4
     const activeIsScarico = activeWeek.type === 'SCARICO';
     const SALVIA = '#6FA99B';                            // verde salvia (stessa famiglia evergreen) — Ipertrofia / scarico
-    const todaySession = ST.trainHomeData?.nextSession || null; // giorno corrente nella rotazione (logica esistente)
     const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">OGGI</span>`;
+
+    // ── Passo 4 · DEBITO (allenamenti saltati per anticipo) — calcolato dallo storico, niente DB ──
+    const { debt: trainDebt, target: debtTarget } = computeTrainingDebt();
+    const debtSet = new Set(trainDebt);
+    const debtBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.04em;color:#fff;background:#B84C2A;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">DA RECUPERARE</span>`;
 
     // ── 1 · HERO settimana ──────────────────────────────────
     const heroSegs = [0,1,2,3].map(i=>{
@@ -12216,12 +12261,24 @@ function renderTraining(){
     const dayCards = workoutDays.map(d=>{
       const isIper = d.desc === 'Ipertrofia';
       const accentCol = isIper ? SALVIA : 'var(--acc)';
-      const isToday = d.session === todaySession;
+      // Stato card — priorità: FATTO oggi > DA RECUPERARE (debito) > OGGI (target) > FUTURO neutro
+      const lastDate = ST.sessionLastCompletion ? ST.sessionLastCompletion[d.session] : null;
+      const doneToday = lastDate === todayKey();
+      let leftBorder = accentCol, cardOpacity = '1', stateBadge = '';
+      if(doneToday){
+        cardOpacity = '.72';
+        stateBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(lastDate)}</span>`;
+      } else if(debtSet.has(d.session)){
+        leftBorder = '#B84C2A';
+        stateBadge = debtBadge;
+      } else if(d.session === debtTarget){
+        stateBadge = oggiBadge;
+      }
       return `
-        <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${accentCol};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;">
+        <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${leftBorder};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;opacity:${cardOpacity};">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
             <span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${d.label}</span>
-            ${isToday?oggiBadge:''}
+            ${stateBadge}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
             <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${accentCol};text-transform:uppercase;">● ${d.desc}</span>
@@ -12232,7 +12289,7 @@ function renderTraining(){
 
     const recoveryDays = DAY_SPLIT.filter(d => d.session.startsWith('recovery'));
     const recoveryRows = recoveryDays.map(d=>{
-      const isToday = d.session === todaySession;
+      const isToday = d.session === debtTarget;
       return `
         <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
           <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
@@ -12324,8 +12381,8 @@ function renderTraining(){
         </div>
       </div>`;
 
-    // ── Scorciatoia "Allenamento di oggi" — apre il target REALE della rotazione (fresco dal Passo 1) ──
-    const todayTargetSid = todaySession || 'upperA';
+    // ── Scorciatoia "Allenamento di oggi" — punta al target (debito più vecchio se presente, altrimenti rotazione) ──
+    const todayTargetSid = debtTarget || 'upperA';
     const todayTargetSess = getTrainingSession(todayTargetSid);
     const todayTargetName = todayTargetSess?.name || 'Allenamento';
     const todayTargetMeta = todayTargetSess
@@ -20154,15 +20211,19 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Helpers apertura/chiusura sessione Training ────────────
-// Passo 3 — un giorno è ATTIVO (loggabile oggi) se è il target reale della rotazione,
-// o ha serie loggate oggi, o è stato completato oggi, o è stato anticipato in questa sessione app.
+// Passo 3 — un giorno è ATTIVO (loggabile oggi) se ha serie loggate oggi, è stato completato oggi,
+// è stato anticipato in questa sessione app, o è il "today" debito-aware (Passo 4).
 function isActiveDay(sid){
   if(!sid) return false;
   const tk = todayKey();
-  if(sid === (ST.trainHomeData && ST.trainHomeData.nextSession)) return true;
   if(Object.keys(ST.trainLoggedSets || {}).some(k => k.startsWith(sid+'_') && k.endsWith('_'+tk))) return true;
   if((ST.sessionLastCompletion || {})[sid] === tk) return true;
   if(sid === ST.trainAnticipato) return true;
+  // Passo 4 — "today" debito-aware: target = debito più vecchio se presente, altrimenti rotazione (nextSession).
+  // I giorni in debito (DA RECUPERARE) sono loggabili direttamente; un futuro neutro resta in anteprima.
+  const { debt, target } = computeTrainingDebt();
+  if(sid === target) return true;          // ≡ sid===nextSession quando non c'è debito (nessuna regressione)
+  if(debt.includes(sid)) return true;
   return false;
 }
 
