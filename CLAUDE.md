@@ -2169,6 +2169,15 @@ Nessun utente resta mai senza allenamento.
 
 **🅿️ PARCHEGGIATO — Progressione per variante (esercizi a corpo libero)** — progetto dedicato. Quando le reps saturano il range, il coach deve proporre una **variante più dura** (es. Affondo → pausa 2s → Bulgarian → Bulgarian con elastico), **non +1 rep all'infinito**. VINCOLO: il cambio variante avviene SOLO al **cambio blocco** (ogni 4 settimane), mai a metà ciclo (la progressione intra-blocco ha bisogno di un riferimento stabile). Vive nella "voce del coach" Training. Emerso accanto al fix "per lato" del 29 mag sera.
 
+**🅿️ CANTIERE — Fusione tab "Sessione" dentro "Programma" (progetto dedicato)** — emerso dal restyling tab Programma del 30 mag (vedi changelog + limiti noti). Idea: **unificare le due tab**. In "I tuoi giorni", tap su una card → apre la **sessione di quel giorno** (sotto-livello), così il programma e l'allenamento vivono in un'unica tab. La tab "Sessione" attuale viene **riusata, non riscritta**.
+
+Nodi da rispettare:
+- **Anteprima vs attiva**: giorno futuro = **anteprima in sola lettura** (vedi gli esercizi); giorno di **OGGI** = sessione attiva e loggabile. Il log delle serie resta ancorato a oggi (non si logga un allenamento che non si sta facendo).
+- **Scorciatoia "Allenamento di oggi"** in cima, per non seppellire l'azione principale.
+- **Nomi recuperi corretti** (dalla tab Sessione, da usare al posto di "Rec Upper / Rec Lower"): G3 = **"Recupero Mobilità"**, G6 = **"Recupero Stretching"**. Collocarli nei giorni giusti della rotazione.
+- **Aggancio dati reali**: questo cantiere include il collegamento alla **rotazione/scheda reale**, che risolve sia il **badge OGGI sbagliato** (oggi usa `ST.trainHomeData.nextSession`, non la rotazione reale) sia il "dove sono nel blocco".
+- **Workflow**: primo passo = **Claude Design**, ma per il **FLUSSO** (cosa apre un tap, com'è l'anteprima, dov'è "oggi"), non solo per l'estetica.
+
 ### PARTE 5 — COACH GENERATORE: DECISIONI DI LOGICA COMPLETE (27 mag sera)
 *Sessione dedicata: chiuso TUTTE le decisioni di logica del generatore prima di scrivere codice. La fase decisioni è chiusa. Mancano da fare: (1) SQL tabella `schede_utente` su Supabase, (2) brief tecnico Claude Code del generatore vero.*
 
@@ -2251,6 +2260,26 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore oggi gira SOLO via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro, MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
 
 ## Cosa abbiamo fatto
+
+### Sessione 30 mag 2026 — Restyling grafico tab "Programma" ✅
+
+Restyling **SOLO grafico/layout** della tab Programma (`subnav === 'piano'` del modulo Training). **Logica e dati intatti**: `DAY_SPLIT` e `CYCLE_WEEKS` restano hardcoded, nessun aggancio alla scheda reale, nessuna funzione rinominata. Unica aggiunta comportamentale: il flag/toggle della sezione collassabile "Come cresci".
+
+**Nuovo layout** (dall'alto in basso):
+- **HERO settimana protagonista** in cima: "Settimana N di 4" (titolo più grande della pagina) + fase **Carico/Scarico** + barra a **4 segmenti** (N pieni) + pill **RIR**. Valori derivati dalla stessa logica `currentWeek` già presente in `CYCLE_WEEKS` (nessun dato nuovo).
+- **"I tuoi giorni"**: 4 card allenamenti in griglia 2×2 (bordo-sx **Forza = evergreen `var(--acc)`** / **Ipertrofia = salvia `#6FA99B`**) + i 2 recuperi come **righe sottili** full-width. Badge **OGGI** sul giorno corrente.
+- **"Ciclo · 4 settimane"** retoccato: micro-label **Base / +1 set / +1 rep / −40% vol**, fase Carico/Scarico, settimana attiva piena evergreen con badge **"QUI"**.
+- **"Come cresci"** (progressione doppia) ora **collassabile** (default chiuso) via flag `ST.trainComeCresciOpen` + funzione `toggleTrainComeCresci()`.
+- **"Riposo extra"**: invariato.
+
+**Catena commit**:
+- `bdfa288` — restyling tab Programma (APP_VERSION `2026.05.30 · 07:18`)
+- `f60c4ca` — FIX 1: titoli di sezione `16px/800` → `14px/700` (sotto l'hero, gerarchia) (`07:41`)
+- `2f02571` — FIX 2: badge "QUI" ancorato a filo sul bordo superiore (`top:0`+`translate(-50%,-50%)`) + look allineato a "OGGI" (background `var(--acc)`, letter-spacing `.08em`, padding `2px 6px`) (`08:22`)
+
+**⚠️ Limiti noti emersi dal vivo** (da risolvere nel cantiere "Fusione Sessione + Programma", vedi roadmap):
+- Il badge **"OGGI"** sulle card usa `ST.trainHomeData.nextSession`: **NON riflette la rotazione reale dell'utente** (segnava "Upper B" mentre l'utente era nel giorno di recupero). La tab non legge i workout loggati né la scheda reale.
+- Le **micro-label del ciclo** (+1 set / +1 rep / −40% vol) sono **illustrative** e potrebbero NON corrispondere alla vera progressione del coach (progressione doppia: saturi reps → sali di carico, + RIR calante). Coerenza da verificare.
 
 ### Sessione 29 mag 2026 (SERA) — CHIUSURA GIORNATA · riepilogo fastidi d'uso reale ✅
 
