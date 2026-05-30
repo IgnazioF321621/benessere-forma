@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 07:41';
+const APP_VERSION = '2026.05.30 · 08:22';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12166,7 +12166,7 @@ function renderTraining(){
         box-shadow:${w.active?'0 2px 8px rgba(42,122,111,.25)':'0 1px 3px rgba(0,0,0,.06)'};
         border:${w.active?'none':'1px solid var(--s2)'};
         transition:all .2s;">
-        ${w.active?`<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.06em;color:#fff;background:var(--acc2);padding:2px 7px;border-radius:999px;">QUI</div>`:''}
+        ${w.active?`<div style="position:absolute;top:0;left:50%;transform:translate(-50%,-50%);font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;">QUI</div>`:''}
         <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.7)':'var(--t3)'};margin-bottom:3px;">SETT ${w.n}</div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.85)':(w.type==='SCARICO'?'#2A7A6F':'var(--acc)')};margin-bottom:3px;">${phase}</div>
         <div style="font-size:11px;font-weight:800;font-family:var(--font-sans);color:${w.active?'#fff':'var(--t1)'};">${cycleSub[i]}</div>
