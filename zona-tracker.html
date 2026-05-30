@@ -3352,6 +3352,22 @@ body.preview-onboarding #m1-preview-banner{display:block;}
   </div>
 </div>
 
+<!-- INJURY MODAL (riposo per infortunio) -->
+<div id="injury-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeInjuryModal()">
+  <div class="weight-modal-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span class="lbl" style="margin:0;">🩹 Riposo per infortunio</span>
+      <button onclick="closeInjuryModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:14px;">Indica la zona del corpo coinvolta (opzionale).</div>
+    <input id="injury-zone-inp" class="inp" type="text" placeholder='es. "ginocchio dx", "lombare"' style="margin-bottom:16px;"/>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeInjuryModal()">Annulla</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="closeInjuryModal(); markRestInjury(document.getElementById('injury-zone-inp').value);">Segna riposo</button>
+    </div>
+  </div>
+</div>
+
 <!-- CATALOG MODAL -->
 <div id="catalog-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeCatalogModal()">
   <div class="weight-modal-inner">
@@ -3609,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 16:47';
+const APP_VERSION = '2026.05.30 · 17:00';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10882,18 +10898,29 @@ async function markRestChosen(){
 }
 
 // Riposo PER INFORTUNIO: marca giorno come "rest_injury" + nota su zona del corpo.
-async function markRestInjury(){
+// Mini-modal "Riposo per infortunio" (sostituisce il prompt() di sistema) — riusa il pattern .weight-modal.
+function openInjuryModal(){
+  const inp = document.getElementById('injury-zone-inp');
+  if(inp) inp.value = '';
+  const m = document.getElementById('injury-modal');
+  if(m) m.style.display = 'flex';
+  if(inp) setTimeout(()=>inp.focus(), 50);
+}
+function closeInjuryModal(){
+  const m = document.getElementById('injury-modal');
+  if(m) m.style.display = 'none';
+}
+
+async function markRestInjury(zoneNote){
   if(!ST.user || ST.user.id==='test-user-001') return;
   const today = todayKey();
-  const note = prompt('Zona del corpo coinvolta (opzionale, es. "ginocchio dx", "lombare"):');
-  if(note === null) return; // utente ha annullato
   try {
     const { data: existing } = await supa.from('workouts')
       .select('id').eq('user_id', ST.user.id).eq('date', today).eq('session_type', 'rest_injury').maybeSingle();
     if(existing){ showToast('Riposo per infortunio già segnato per oggi'); return; }
     const { error } = await supa.from('workouts').insert({
       user_id: ST.user.id, date: today, session_type: 'rest_injury', completed: true, duration_min: 0,
-      note: note.trim() || null
+      note: (zoneNote || '').trim() || null
     });
     if(error) throw error;
     showToast('🩹 Riposo per infortunio segnato');
@@ -12405,7 +12432,7 @@ function renderTraining(){
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">🩹 Riposo per infortunio</div>
                 <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Stop forzato. Permette di appuntare la zona del corpo.</div>
               </div>
-              <button onclick="markRestInjury();" style="flex-shrink:0;background:#B84C2A;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
+              <button onclick="openInjuryModal();" style="flex-shrink:0;background:#B84C2A;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
           </div>
         </div>
