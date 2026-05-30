@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 16:42';
+const APP_VERSION = '2026.05.30 · 16:47';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10945,7 +10945,7 @@ async function saveWorkoutRecord(sessionId){
   return data?.id || null;
 }
 
-async function loadSessionLastCompletion(){
+async function loadSessionLastCompletion(opts){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.sessionLastCompletion={}; return; }
   try {
     const today = todayKey();
@@ -10963,12 +10963,12 @@ async function loadSessionLastCompletion(){
     ST.sessionLastCompletion = map;
     ST.trainCompletedToday = {};
     Object.keys(map).forEach(st=>{ if(map[st] === today) ST.trainCompletedToday[st] = true; });
-    if(ST.page === 'training') renderTraining();
+    if(ST.page === 'training' && !(opts && opts.skipRender)) renderTraining();
   } catch(e){}
 }
 
 // Carica TUTTI i workout completati validi (escluso rest e rest_injury) per conteggio settimana ciclo.
-async function loadTrainingAllCompleted(){
+async function loadTrainingAllCompleted(opts){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainAllCompleted = []; return; }
   try {
     const { data, error } = await supa.from('workouts')
@@ -10980,8 +10980,10 @@ async function loadTrainingAllCompleted(){
       .order('date', {ascending:true});
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
-    if(ST.page === 'training') renderTraining();
-    else if(ST.page === 'home') renderHome();
+    if(!(opts && opts.skipRender)){
+      if(ST.page === 'training') renderTraining();
+      else if(ST.page === 'home') renderHome();
+    }
   } catch(e){
     ST.trainAllCompleted = [];
   }
@@ -21075,8 +21077,14 @@ async function checkRecoverySessionDone(){
   const wid = await saveWorkoutRecord(sel);
   if(wid){
     showToast('🎉 Recupero completato!');
-    loadTrainingHomeData();
-    loadSessionLastCompletion();
+    // Micro-fix refresh (30 mag): aggiorna IN SEQUENZA tutte le fonti lette dal render di Programma
+    // (rotazione + storico completo + ultimo completamento), poi UN SOLO re-render → niente race tra
+    // async indipendenti né doppio render. computeTrainHomeData è DOM-free (no renderHome: nessun
+    // flicker della Home off-screen mentre si è in Training).
+    await computeTrainHomeData();                          // ST.trainHomeData fresco (nextSession)
+    await loadTrainingAllCompleted({ skipRender: true });  // storico completo per computeTrainingDebt + settimana ciclo
+    await loadSessionLastCompletion({ skipRender: true });  // ultimo completamento + trainCompletedToday
+    if(ST.page === 'training') renderTraining();
   }
 }
 
