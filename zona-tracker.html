@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 10:54';
+const APP_VERSION = '2026.05.30 · 11:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3663,6 +3663,7 @@ const ST = {
   suppSheet: { mode: null, selGroup: null, singleQuery: '', singleSelId: null, singleDose: 1, singleUnit: 'cps', singleTime: '' },
   trainTab: null,
   trainSession: null,
+  trainAnticipato: null,            // Passo 3: giorno futuro "anticipato" a oggi (in memoria, no DB) — reset in closeTrainingSession
   trainLogOpen: null,
   // BLOCCO 2B (26 mag 2026) — Schermata ESECUZIONE inserita tra "+S{n}" e logger.
   // Quando attiva mostra GIF grande + nome esercizio + badge reps/RIR + bottone
@@ -11733,6 +11734,86 @@ function _renderRecoverySection(s, sel){
   return heroHtml + listHtml;
 }
 
+// Passo 3 — render ANTEPRIMA sola lettura di una sessione (giorno futuro non ancora attivo).
+// Percorso SEPARATO dal dettaglio loggabile: nessun log, nessun controllo serie/attivazione/finisher.
+// Riusa le classi di presentazione del modal scheda esercizio (.modal-section/.modal-list/.modal-params/.modal-alert).
+function _renderSessionPreview(s, sel){
+  const backLabel = ST.trainTab === 'piano' ? 'I tuoi giorni' : 'Sessioni';
+  const isRec = s.rir === null;
+  const typeBadge = isRec
+    ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
+    : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>`;
+
+  let exHTML;
+  if(s.type === 'Recupero'){
+    // Recupero in anteprima: elenco esercizi sola lettura (nome + eventuale durata), senza i controlli del flow.
+    exHTML = (s.exercises||[]).map((e,i)=>{
+      const dur = e.duration_sec ? `${e.duration_sec}s` : (e.reps || '');
+      const sideTag = e.side ? ` · ${e.side}` : '';
+      return `
+        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span style="font-size:14px;font-weight:600;font-family:var(--font-sans);color:var(--t1);"><span style="color:var(--t3);font-family:var(--font-mono);margin-right:6px;">${i+1}</span>${e.name}${sideTag}</span>
+          ${dur ? `<span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);flex-shrink:0;">${dur}</span>` : ''}
+        </div>`;
+    }).join('');
+    exHTML = `<div style="display:flex;flex-direction:column;gap:8px;">${exHTML}</div>`;
+  } else {
+    exHTML = (s.exercises||[]).map((e,i)=>{
+      const rirPart  = (s.rir != null) ? ` · RIR ${s.rir}` : '';
+      const restPart = s.rest ? ` · rec ${s.rest}` : '';
+      const setupSec = (Array.isArray(e.setup) && e.setup.length) ? `<div class="modal-section"><h4>Setup</h4><ul class="modal-list">${e.setup.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
+      const execSec  = (Array.isArray(e.execution) && e.execution.length) ? `<div class="modal-section"><h4>Esecuzione</h4><ol class="modal-list">${e.execution.map(x=>`<li>${x}</li>`).join('')}</ol></div>` : '';
+      const errSec   = (Array.isArray(e.commonErrors) && e.commonErrors.length) ? `<div class="modal-section"><h4>Errori comuni da evitare</h4><ul class="modal-list">${e.commonErrors.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
+      const muscSec  = (Array.isArray(e.muscles) && e.muscles.length) ? `<div class="modal-section"><h4>Muscoli</h4><p>${e.muscles.join(' · ')}</p></div>` : '';
+      const alertSec = e.alert ? `<div class="modal-alert">${e.alert}</div>` : '';
+      return `
+        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px;">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
+            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);color:var(--t3);">${i+1}</span>
+            <span style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.2;">${e.name}</span>
+          </div>
+          ${e.eq ? `<div style="font-size:11px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">${e.eq}</div>` : `<div style="height:6px;"></div>`}
+          <div class="modal-params" style="margin-bottom:14px;">${e.sets} × ${e.reps}${rirPart}${restPart}</div>
+          ${setupSec}
+          ${execSec}
+          ${errSec}
+          ${muscSec}
+          ${alertSec}
+        </div>`;
+    }).join('');
+  }
+
+  return `
+    <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));">
+      <button onclick="closeTrainingSession();"
+        style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        ${backLabel}
+      </button>
+
+      <div onclick="allenaQuestoOggi('${sel}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+        <div style="min-width:0;">
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">ANTEPRIMA</div>
+          <div style="font-size:17px;font-weight:800;font-family:var(--font-sans);color:#fff;line-height:1.15;">Allena questo oggi</div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">Sblocca ${s.name} e registra le serie su oggi</div>
+        </div>
+        <div style="font-size:22px;color:rgba(255,255,255,.9);flex-shrink:0;line-height:1;">›</div>
+      </div>
+
+      <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:8px;">ANTEPRIMA · SOLA LETTURA</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <span style="font-size:22px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.15;">${s.name}</span>
+          ${typeBadge}
+        </div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;">Questo giorno arriva più avanti nella rotazione. Puoi vedere gli esercizi; per loggarli, anticipalo con <strong>Allena questo oggi</strong>.</div>
+      </div>
+
+      <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI · SOLA LETTURA · PRESCRIZIONE</div>
+      ${exHTML}
+    </div>`;
+}
+
 function renderTraining(){
   const subnav = ST.trainTab || 'sessione';
   const tabs = [
@@ -11752,6 +11833,11 @@ function renderTraining(){
     const sel = ST.trainSession;
       // ── Dettaglio sessione ──────────────────────────────────
       const s = getTrainingSession(sel);
+      // Passo 3 — gate ANTEPRIMA: giorno non attivo → percorso sola lettura SEPARATO (il loggabile resta byte-stabile).
+      const preview = !isActiveDay(sel);
+      if(preview){
+        body = _renderSessionPreview(s, sel);
+      } else {
       const isRecovery = s.rir === null;
       const typeBadge = isRecovery
         ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
@@ -12026,6 +12112,7 @@ function renderTraining(){
             ✓ Completa sessione
           </button>` : ''}
         </div>`;
+      }
 
   } else if(subnav === 'sessione'){
       // ── Lista sessioni ──────────────────────────────────────
@@ -20067,6 +20154,25 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Helpers apertura/chiusura sessione Training ────────────
+// Passo 3 — un giorno è ATTIVO (loggabile oggi) se è il target reale della rotazione,
+// o ha serie loggate oggi, o è stato completato oggi, o è stato anticipato in questa sessione app.
+function isActiveDay(sid){
+  if(!sid) return false;
+  const tk = todayKey();
+  if(sid === (ST.trainHomeData && ST.trainHomeData.nextSession)) return true;
+  if(Object.keys(ST.trainLoggedSets || {}).some(k => k.startsWith(sid+'_') && k.endsWith('_'+tk))) return true;
+  if((ST.sessionLastCompletion || {})[sid] === tk) return true;
+  if(sid === ST.trainAnticipato) return true;
+  return false;
+}
+
+// Passo 3 — sblocca il giorno in anteprima: lo rende attivo/loggabile (anticipo in memoria, no DB).
+function allenaQuestoOggi(sid){
+  ST.trainAnticipato = sid;
+  if(ST.trainSession === sid){ renderTraining(); }
+  else { openTrainingSession(sid); }
+}
+
 function openTrainingSession(sid){
   ST.trainSession = sid;
   _hydrateActivation(sid); // ripristina flag fatto + collasso del Blocco Attivazione (per sessione+giorno)
@@ -20096,6 +20202,7 @@ function closeTrainingSession(){
   execTimerStop(); // ferma il cronometro di tenuta (no interval orfano)
   workTimeStopTick();
   ST.trainSession = null;
+  ST.trainAnticipato = null; // Passo 3: l'anticipo dura finché la sessione è aperta; dopo il primo log il giorno resta attivo via "serie oggi"
   ST.trainActivation = [false,false,false];
   ST.trainActivationCollapsed = false; // reset in memoria; lo stato salvato in localStorage sopravvive (ri-idratato alla riapertura)
   ST.trainLogOpen = null;
