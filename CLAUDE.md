@@ -2252,6 +2252,30 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 29 mag 2026 (SERA) — CHIUSURA GIORNATA · riepilogo fastidi d'uso reale ✅
+
+Blocco di consolidamento della serata. Tutte le voci nascono da incongruenze viste **DAL VIVO** durante l'allenamento; le singole entry dettagliate sono qui sotto, commit per commit. Stato finale build: **APP_VERSION `2026.05.29 · 22:54`** (commit `4fd69b7`). Tutto su `main`, deployato.
+
+**Le 10 cose fatte (in ordine)**:
+1. **Esercizi UNILATERALI mostrano "per lato"** (generatore + box PROSSIMA). Lista `_TRAIN_GEN_UNILATERAL` = **11 codici**: EX015, EX033, EX035, EX038, EX039, EX041, EX047, EX066, EX062, EX067, EX068.
+2. **Dopo l'ULTIMA serie** di un esercizio: se la sessione è in corso si RESTA nella sessione e si scorre al prossimo esercizio non completato (no più ritorno alla home). Uscita solo a sessione completa.
+3. **Blocco ATTIVAZIONE**: persiste (localStorage `zt_train_activation_<data>`) e si COLLASSA a completamento (barra compatta, tap per riaprire). Risolve reset al background PWA + ingombro passando tra esercizi.
+4. **CRONOMETRO DI TENUTA** sugli esercizi a tempo (Plank/isometrici): conta in avanti da 0, target sotto, beep+vibrazione al minimo. **[DA TESTARE dal vivo — vedi sotto]**
+5. **TABATA**: alert ridotto alla prima indicazione (leggibile sotto sforzo) + blocco "PROSSIMO" esercizio sotto i tasti ("ULTIMO ROUND" se non c'è).
+6. **B3**: pulsante avvio serie reso impattante (pillola piena evergreen, 15px, ombra, feedback tap).
+7. **Fine recupero ("PRONTO!")**: bottone "▶ Inizia S{n}" che apre direttamente l'esecuzione della serie successiva (+ link "Più tardi").
+8. **Pulsante avvio serie nella card uniformato a "▶ Inizia S{n}"** (coerente col pop-up). Stesso gesto, stessa dicitura ovunque.
+9. **PULIZIA AUTOMATICA testi catalogo** alla generazione (`_cleanCatalogText`): accenti scritti come apostrofo corretti (lista chiusa, elisioni `l'`/`all'`/`dell'` intatte), "anche:" concatenato spezzato in voce separata, maiuscola iniziale.
+10. **B5 VERIFICATO** (nessuna modifica): cautela "talloni rialzati" presente sugli squat (EX013/EX014/EX045/EX047); sugli Affondi (EX015) NON serve il rialzo — la cautela corretta lì è passo lungo + ridurre profondità, già presente.
+
+**Learning consolidato**: pulire dati di test cancella DB + browser ma NON la memoria locale (`zt_train_sets_<data>`) degli altri device → o si pulisce ogni device, o si conta sul reset giornaliero (chiave per-giorno). Miglioria futura possibile: `hydrateTrainingSetsFromCloud` che rimuove anche i residui locali non più nel cloud.
+
+**DA FARE alla prossima sessione (promemoria)**:
+- [ ] **TESTARE dal vivo il cronometro di tenuta del Plank** (oggi non testabile: esercizi già completati). Verificare: parte da 00:00, beep+evergreen al minimo, stop su "Fine serie", assente sugli esercizi a reps.
+- [ ] Valutare il mini-progetto #7: **hook `saveOnboarding`** (agganciare il generatore all'onboarding automatico; oggi serve il comando manuale da console).
+
+**Parcheggiato (progetto dedicato, NON al volo)**: progressione per **VARIANTE** sugli esercizi a corpo libero — quando le reps saturano il range, il coach propone una variante più dura (Affondo → pausa 2s → Bulgarian → Bulgarian con elastico), non +1 rep all'infinito. VINCOLO: cambio variante SOLO al cambio blocco (ogni 4 settimane), mai a metà ciclo. Vive nella voce del coach.
+
 ### Sessione 29 mag 2026 (SERA) — Pulizia automatica testi catalogo ✅
 
 I testi del catalogo (`adattamento`, `nota_sicurezza`, `setup`, `esecuzione`, `errori`, `nota_surrogato`) avevano difetti diffusi su quasi tutte le 70 righe — sistemarli a mano sul foglio Google è impraticabile. Ora si puliscono **in automatico alla lettura del catalogo** (in `generateTrainingProgram`, subito dopo `catalog = data || []`), una volta sola, valido anche per esercizi futuri.
