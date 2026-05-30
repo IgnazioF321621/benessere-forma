@@ -2263,6 +2263,16 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 30 mag 2026 — Rimozione pillola "Sessione" (chiusura cantiere Fusione) ✅
+
+Ultimo pezzo del cantiere "Fusione Sessione dentro Programma": rimossa la pillola "Sessione" e la sua lista "SELEZIONA SESSIONE" (doppione di "I tuoi giorni", che ha già gli stati OGGI/futuro/fatto/debito). La barra Training mostra ora solo **Programma · Progressione**; entrando in Training si apre Programma di default.
+- `subnav` default → `'piano'` (`const subnav = ST.trainTab || 'piano'`) + normalizzazione difensiva (`ST.trainTab === 'sessione' → null`) per eventuali stati vecchi in memoria (`ST.trainTab` è init `null`, mai persistito su localStorage).
+- Array `tabs` ridotto a Programma + Progressione (rimosso `id:'sessione'`).
+- Rimosso per intero il ramo `else if(subnav === 'sessione')` (lista 6 card): il dettaglio TAB-AGNOSTICO si aggancia ora direttamente a `else if(subnav === 'piano')` (brace balance verificato).
+- Back semplificato a stringa fissa "‹ I tuoi giorni" (la sessione si apre sempre da Programma); `onclick="closeTrainingSession()"` invariato.
+- Invariati: dettaglio loggabile, anteprima, debito, scorciatoia "Allenamento di oggi", Hero/Ciclo/Come cresci/Riposo extra; `openTrainingSession`/`closeTrainingSession` (ancora chiamati da Programma).
+- Commit `6aa698a`, APP_VERSION `2026.05.30 · 15:53`. **Cantiere "Fusione Sessione dentro Programma" ora pienamente chiuso** — restano solo il collaudo dal vivo dei 4 stati + i nodi parcheggiati (test debito reale, stato infortunio che mette in pausa la rotazione senza generare debito).
+
 ### Sessione 30 mag 2026 — Fix nomi recuperi in "I tuoi giorni" (post-cantiere) ✅
 
 Rifinitura dopo la chiusura del cantiere. Le righe recupero della lista "I tuoi giorni" (tab Programma) mostravano le label hardcoded "Rec Upper"/"Rec Lower" del `DAY_SPLIT`. Ora usano il nome reale della sessione (`getTrainingSession(d.session)?.name || d.label`) → **"Recupero Mobilità"** (G3) e **"Recupero Stretching"** (G6), agganciato alla fonte (niente più disallineamento). Solo la stringa del nome: `desc`/colori/`day`/struttura, label calendario (`SESS_LABEL`) e card allenamento invariati. Commit `4099405`, APP_VERSION `2026.05.30 · 15:28`.
@@ -2288,7 +2298,7 @@ Obiettivo: una sola tab. In "I tuoi giorni" (Programma), tap su una card → apr
 **APP_VERSION fine cantiere:** `2026.05.30 · 14:56`.
 
 **Lavoro residuo / nodi aperti (Programma):**
-- Rimuovere la pillola "Sessione" (obiettivo finale del cantiere) — da fare dopo collaudo dei 4 stati nell'uso reale.
+- ✅ Pillola "Sessione" rimossa (30 mag, commit `6aa698a`, obiettivo finale del cantiere): barra Training = solo Programma + Progressione, default Programma, lista "SELEZIONA SESSIONE" eliminata. Resta il collaudo dei 4 stati nell'uso reale.
 - Test dal vivo del debito: rimandato all'uso reale (non si logga una serie di prova per non sporcare lo storico). Punto 1 (scorciatoia + apertura giorno) verificabile senza loggare.
 - Nodo parcheggiato: stato infortunio / riposo forzato che mette in PAUSA la rotazione SENZA generare debito (esistono già stati `rest`/`rest_injury`, label REST/STOP) — da progettare.
 
