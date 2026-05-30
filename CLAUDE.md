@@ -2169,7 +2169,7 @@ Nessun utente resta mai senza allenamento.
 
 **🅿️ PARCHEGGIATO — Progressione per variante (esercizi a corpo libero)** — progetto dedicato. Quando le reps saturano il range, il coach deve proporre una **variante più dura** (es. Affondo → pausa 2s → Bulgarian → Bulgarian con elastico), **non +1 rep all'infinito**. VINCOLO: il cambio variante avviene SOLO al **cambio blocco** (ogni 4 settimane), mai a metà ciclo (la progressione intra-blocco ha bisogno di un riferimento stabile). Vive nella "voce del coach" Training. Emerso accanto al fix "per lato" del 29 mag sera.
 
-**🅿️ CANTIERE — Fusione tab "Sessione" dentro "Programma" (progetto dedicato)** — emerso dal restyling tab Programma del 30 mag (vedi changelog + limiti noti). Idea: **unificare le due tab**. In "I tuoi giorni", tap su una card → apre la **sessione di quel giorno** (sotto-livello), così il programma e l'allenamento vivono in un'unica tab. La tab "Sessione" attuale viene **riusata, non riscritta**.
+**✅ CANTIERE CHIUSO (30 mag 2026) — Fusione tab "Sessione" dentro "Programma" (progetto dedicato)** — emerso dal restyling tab Programma del 30 mag (vedi changelog + limiti noti). Idea: **unificare le due tab**. In "I tuoi giorni", tap su una card → apre la **sessione di quel giorno** (sotto-livello), così il programma e l'allenamento vivono in un'unica tab. La tab "Sessione" attuale viene **riusata, non riscritta**.
 
 Nodi da rispettare:
 - **Anteprima vs attiva**: giorno futuro = **anteprima in sola lettura** (vedi gli esercizi); giorno di **OGGI** = sessione attiva e loggabile. Il log delle serie resta ancorato a oggi (non si logga un allenamento che non si sta facendo).
@@ -2177,6 +2177,8 @@ Nodi da rispettare:
 - **Nomi recuperi corretti** (dalla tab Sessione, da usare al posto di "Rec Upper / Rec Lower"): G3 = **"Recupero Mobilità"**, G6 = **"Recupero Stretching"**. Collocarli nei giorni giusti della rotazione.
 - **Aggancio dati reali**: questo cantiere include il collegamento alla **rotazione/scheda reale**, che risolve sia il **badge OGGI sbagliato** (oggi usa `ST.trainHomeData.nextSession`, non la rotazione reale) sia il "dove sono nel blocco".
 - **Workflow**: primo passo = **Claude Design**, ma per il **FLUSSO** (cosa apre un tap, com'è l'anteprima, dov'è "oggi"), non solo per l'estetica.
+
+Implementato in 4 passi il 30 mag — vedi changelog sotto.
 
 ### PARTE 5 — COACH GENERATORE: DECISIONI DI LOGICA COMPLETE (27 mag sera)
 *Sessione dedicata: chiuso TUTTE le decisioni di logica del generatore prima di scrivere codice. La fase decisioni è chiusa. Mancano da fare: (1) SQL tabella `schede_utente` su Supabase, (2) brief tecnico Claude Code del generatore vero.*
@@ -2260,6 +2262,35 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore oggi gira SOLO via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro, MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
 
 ## Cosa abbiamo fatto
+
+### Sessione 30 mag 2026 — Fix nomi recuperi in "I tuoi giorni" (post-cantiere) ✅
+
+Rifinitura dopo la chiusura del cantiere. Le righe recupero della lista "I tuoi giorni" (tab Programma) mostravano le label hardcoded "Rec Upper"/"Rec Lower" del `DAY_SPLIT`. Ora usano il nome reale della sessione (`getTrainingSession(d.session)?.name || d.label`) → **"Recupero Mobilità"** (G3) e **"Recupero Stretching"** (G6), agganciato alla fonte (niente più disallineamento). Solo la stringa del nome: `desc`/colori/`day`/struttura, label calendario (`SESS_LABEL`) e card allenamento invariati. Commit `4099405`, APP_VERSION `2026.05.30 · 15:28`.
+
+### Sessione 30 mag 2026 — CANTIERE "Fusione Sessione dentro Programma" (Passi 1–4) ✅
+
+Obiettivo: una sola tab. In "I tuoi giorni" (Programma), tap su una card → apre l'allenamento di quel giorno DENTRO Programma. La tab "Sessione" è stata RIUSATA, non riscritta. Prossimo step del progetto: rimuovere la pillola "Sessione".
+
+**Decisioni di flusso (chat):**
+- Tap su un giorno apre il dettaglio dentro Programma (pillola resta su "Programma"), in vista di eliminare la pillola Sessione.
+- OGGI = loggabile · giorno futuro = anteprima sola lettura, con azione "Allena questo oggi" per anticipare (il log resta ancorato a oggi).
+- "Oggi/prossimo" calcolato dalla rotazione reale (fine del badge OGGI finto).
+- Debito (allenamento saltato per anticipo): CALCOLATO dallo storico workout (`workouts` in Supabase, già sincronizzato su tutti i dispositivi/browser) — nessuna scrittura/colonna DB, nessun campo persistito. Politica "solo giro corrente": il debito non si trascina tra cicli; si azzera quando si recupera il giorno.
+- Allenamento saltato = debito ("DA RECUPERARE", terracotta). Recupero saltato = nessun debito.
+- Quando c'è un debito, badge OGGI e scorciatoia puntano al debito più vecchio; l'utente può comunque scavalcare.
+
+**Implementazione (4 commit):**
+- Passo 1 `c91382f` — dato OGGI reale: estratto `computeTrainHomeData()` DOM-free; `loadTrainingHomeData()` wrapper invariato; `showPage('training')` ricalcola la rotazione fresca e re-renderizza Training (guard `ST.page==='training'`, Home off-screen non toccata).
+- Passo 2 `401b57c` — dettaglio reso tab-agnostico (render del dettaglio sollevato a guard `if(ST.trainSession && getTrainingSession(...))`, blocco loggabile byte-identico wrappato); card "I tuoi giorni" cliccabili (`openTrainingSession`); scorciatoia evergreen "Allenamento di oggi" in cima; back contestuale ("‹ I tuoi giorni" su piano, "‹ Sessioni" su sessione).
+- Passo 3 `ea55919` — anteprima sola lettura: helper `isActiveDay(sid)` (target reale / serie oggi / completato oggi / anticipato); `_renderSessionPreview()` separato che riusa le classi modal scheda (`.modal-section/.modal-list/.modal-params/.modal-alert`); `allenaQuestoOggi(sid)` → `ST.trainAnticipato` in memoria (no DB), reset in `closeTrainingSession()`. Percorso loggabile invariato.
+- Passo 4 `da16367` — `computeTrainingDebt()` → `{debt, target}` derivato da `ST.trainAllCompleted` (algoritmo "solo giro corrente": salto avanti mette in debito i workout scavalcati, mai i recuperi; recupero del debito lo azzera senza debiti spuri da wrap; target = debito più vecchio o nextSession). `isActiveDay` reso debito-aware (≡ nextSession senza debito → nessuna regressione). Card 4 stati con priorità FATTO oggi → DA RECUPERARE (terracotta `#B84C2A`) → OGGI → FUTURO; recuperi mai in debito.
+
+**APP_VERSION fine cantiere:** `2026.05.30 · 14:56`.
+
+**Lavoro residuo / nodi aperti (Programma):**
+- Rimuovere la pillola "Sessione" (obiettivo finale del cantiere) — da fare dopo collaudo dei 4 stati nell'uso reale.
+- Test dal vivo del debito: rimandato all'uso reale (non si logga una serie di prova per non sporcare lo storico). Punto 1 (scorciatoia + apertura giorno) verificabile senza loggare.
+- Nodo parcheggiato: stato infortunio / riposo forzato che mette in PAUSA la rotazione SENZA generare debito (esistono già stati `rest`/`rest_injury`, label REST/STOP) — da progettare.
 
 ### Sessione 30 mag 2026 — Restyling grafico tab "Programma" ✅
 
