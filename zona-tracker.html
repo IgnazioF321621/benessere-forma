@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 16:30';
+const APP_VERSION = '2026.05.30 · 16:42';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12200,7 +12200,7 @@ function renderTraining(){
     const activeWeekNum = activeWeek.n;                 // 1..4
     const activeIsScarico = activeWeek.type === 'SCARICO';
     const SALVIA = '#6FA99B';                            // verde salvia (stessa famiglia evergreen) — Ipertrofia / scarico
-    const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">OGGI</span>`;
+    const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">PROSSIMO</span>`;
 
     // ── Passo 4 · DEBITO (allenamenti saltati per anticipo) — calcolato dallo storico, niente DB ──
     const { debt: trainDebt, target: debtTarget } = computeTrainingDebt();
@@ -12368,7 +12368,7 @@ function renderTraining(){
     const shortcutHTML = `
       <div onclick="openTrainingSession('${todayTargetSid}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div style="min-width:0;">
-          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">ALLENAMENTO DI OGGI</div>
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">PROSSIMO ALLENAMENTO</div>
           <div style="font-size:18px;font-weight:800;font-family:var(--font-sans);color:#fff;line-height:1.15;">${todayTargetName}</div>
           <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">${todayTargetMeta}</div>
         </div>
