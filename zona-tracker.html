@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 14:56';
+const APP_VERSION = '2026.05.30 · 15:28';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12293,7 +12293,7 @@ function renderTraining(){
       return `
         <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
           <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
-            <span style="color:var(--acc);font-size:10px;line-height:1;">●</span>${d.label}${isToday?' '+oggiBadge:''}
+            <span style="color:var(--acc);font-size:10px;line-height:1;">●</span>${getTrainingSession(d.session)?.name || d.label}${isToday?' '+oggiBadge:''}
           </span>
           <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
             <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">RECUPERO</span>
