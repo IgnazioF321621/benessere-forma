@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 07:18';
+const APP_VERSION = '2026.05.30 · 07:41';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12148,7 +12148,7 @@ function renderTraining(){
     const giorniHTML = `
       <div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">
-          <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">I tuoi giorni</div>
+          <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);">I tuoi giorni</div>
           <div style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">4 + 2</div>
         </div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">UPPER / LOWER · 4 ALLENAMENTI</div>
@@ -12175,7 +12175,7 @@ function renderTraining(){
 
     const cicloHTML = `
       <div>
-        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 4 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
+        <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 4 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">SETTIMANA ${activeWeekNum} · ${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
         <div style="display:flex;gap:8px;">${cycleCards}</div>
       </div>`;
