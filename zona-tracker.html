@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 15:53';
+const APP_VERSION = '2026.05.30 · 16:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6389,8 +6389,9 @@ async function computeTrainHomeData(){
       return;
     }
 
-    // nextSession: cicla su getSessionCycle() (scheda utente o SESSION_CYCLE hardcoded)
-    const cycle = getSessionCycle();
+    // nextSession: cicla sull'ORDINE CANONICO 6 giorni (getRotationCycle), NON sull'array della scheda.
+    // La scheda non contiene i recuperi → con getSessionCycle un recupero darebbe indexOf=-1 → fallback errato a upperA.
+    const cycle = getRotationCycle();
     const lastIdx = cycle.indexOf(lastWorkout.session_type);
     const nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
 
@@ -7657,11 +7658,21 @@ function getSessionCycle() {
   return ST.userSessionCycle || SESSION_CYCLE;
 }
 
+// Opzione A (fix 30 mag) — ORDINE CANONICO della rotazione a 6 giorni (G1..G6), derivato da SESSION_DAY_NUM.
+// Perché serve: la scheda generata NON contiene i recuperi (G3/G6), quindi getSessionCycle() su scheda attiva
+// ritorna solo i 4 giorni di lavoro → completando un recupero indexOf=-1 → "prossimo" sbagliato (fallback a upperA).
+// "I tuoi giorni" mostra comunque la rotazione 6-day di DAY_SPLIT: il calcolo di "prossimo" e del debito DEVE
+// seguire QUESTA sequenza (così REC↑/G3 → UP B/G4). getSessionCycle() resta la fonte dei CONTENUTI (getTrainingSession),
+// NON della rotazione.
+function getRotationCycle() {
+  return Object.keys(SESSION_DAY_NUM).sort((a, b) => SESSION_DAY_NUM[a] - SESSION_DAY_NUM[b]);
+}
+
 // Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
 // NESSUNA scrittura DB, nessun campo persistito: si ricalcola ad ogni render.
 // Ritorna { debt:[sid,...], target:sid } — "solo giro corrente", i recuperi non vanno mai in debito.
 function computeTrainingDebt(){
-  const cycle = getSessionCycle();
+  const cycle = getRotationCycle(); // ordine canonico 6 giorni (recuperi inclusi); i recuperi restano esclusi dal debito via isRecoverySid
   const len = cycle.length;
   const all = ST.trainAllCompleted || [];
   const debt = new Set();
