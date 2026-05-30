@@ -2277,6 +2277,29 @@ Ultimo pezzo del cantiere "Fusione Sessione dentro Programma": rimossa la pillol
 
 Rifinitura dopo la chiusura del cantiere. Le righe recupero della lista "I tuoi giorni" (tab Programma) mostravano le label hardcoded "Rec Upper"/"Rec Lower" del `DAY_SPLIT`. Ora usano il nome reale della sessione (`getTrainingSession(d.session)?.name || d.label`) → **"Recupero Mobilità"** (G3) e **"Recupero Stretching"** (G6), agganciato alla fonte (niente più disallineamento). Solo la stringa del nome: `desc`/colori/`day`/struttura, label calendario (`SESS_LABEL`) e card allenamento invariati. Commit `4099405`, APP_VERSION `2026.05.30 · 15:28`.
 
+### Sessione 30 mag 2026 — Fix post-collaudo dal vivo cantiere Fusione ✅
+
+Dopo la chiusura del cantiere (4 passi + rimozione pillola Sessione), il collaudo dal vivo nel browser ha fatto emergere alcuni problemi reali, tutti risolti.
+
+**1. Rotazione sbagliata dopo un recupero (commit `9a286fd`)**
+Bug osservato: completato Recupero Mobilità (recoveryUpper, G3), il "prossimo" indicava Upper A invece di Upper B. Causa reale (diagnosi confermata in ispezione, NON l'ipotesi iniziale array-wrap): la scheda salvata in `schede_utente` contiene SOLO i 4 allenamenti (upperA, lowerA, upperB, lowerB) — i recuperi NON sono nella scheda, vengono dal DAY_SPLIT hardcoded a 6 giorni. Quindi `getSessionCycle()` (derivato dalla scheda) non conteneva i recuperi → `indexOf('recoveryUpper') === -1` → fallback a `cycle[0]` = upperA.
+Fix (Opzione A): nuovo helper `getRotationCycle()` che ritorna l'ordine canonico a 6 giorni `['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower']` derivato da `SESSION_DAY_NUM` (single source of truth dei giorni). `computeTrainHomeData` (nextSession) e `computeTrainingDebt` ora usano `getRotationCycle()`; `getSessionCycle()` resta invariato come accessor dei CONTENUTI sessione (getTrainingSession). I 4 test del debito del Passo 4 ripassano identici (nessuna regressione). Assunzione: tutti gli utenti seguono lo split 6-day upper/lower/recovery (oggi già vero app-wide, DAY_SPLIT hardcoded).
+
+**2. Etichetta "OGGI" → "PROSSIMO" (commit `0a1956b`)**
+Il badge indica il prossimo allenamento da fare nella rotazione, non necessariamente di oggi (se oggi ho già allenato, è il giorno successivo). "OGGI" era fuorviante. Cambiate due sole stringhe nel ramo Programma: eyebrow scorciatoia "ALLENAMENTO DI OGGI" → "PROSSIMO ALLENAMENTO"; badge card "OGGI" → "PROSSIMO". Nessun cambio di stile/logica. Logica: se oggi non ho ancora fatto → PROSSIMO = giorno di oggi; se ho già fatto → PROSSIMO = giorno successivo.
+
+**3. Refresh in-place dopo completamento recupero (commit `61bd985`)**
+Chiusura della nota emersa dall'Opzione A: completando un recupero mentre si è in Training, il "prossimo" poteva non aggiornarsi in modo affidabile (storico `ST.trainAllCompleted` non ricaricato lì + micro-race tra due async). Fix: aggiunto parametro opzionale `{skipRender}` (retro-compatibile) a `loadSessionLastCompletion` e `loadTrainingAllCompleted`; `checkRecoverySessionDone` ora sequenzializza con await (`computeTrainHomeData` DOM-free → `loadTrainingAllCompleted({skipRender:true})` → `loadSessionLastCompletion({skipRender:true})`) e fa UN solo `renderTraining()` finale. Niente flicker Home, niente doppio render, debito legge storico fresco.
+
+**4. Mini-modal "Riposo per infortunio" al posto del prompt() di sistema (commit `8fbe853`)**
+La logica infortunio era già corretta (rest_injury escluso da rotazione e debito → mette in pausa SENZA creare debito, salva la zona del corpo). Unico difetto: l'input zona usava il `prompt()` grigio del browser, fuori design. Fix: nuovo `#injury-modal` che riusa le classi esistenti `.weight-modal`/`.weight-modal-inner`/`.inp`/`.btn`/`.btn-ghost`/`.btn-primary` (nessuno stile nuovo); `openInjuryModal()`/`closeInjuryModal()`; `markRestInjury(zoneNote)` senza prompt, riceve la nota dal modal. Logica DB (anti-duplica, insert rest_injury, toast, refresh) invariata. `markRestChosen` non toccato.
+
+**APP_VERSION fine sessione:** `2026.05.30 · 17:00`.
+
+**Residui (rinviati):**
+- Infortunio: durata stop multi-giorno (oggi si segna un singolo giorno per volta) + UI storico infortuni (oggi la zona si vede solo come tooltip nel calendario). Punti 2-3 del nodo infortunio, valutati separatamente.
+- Collaudo debito dal vivo: rimandato all'uso reale (non si logga una serie di prova per non sporcare lo storico).
+
 ### Sessione 30 mag 2026 — CANTIERE "Fusione Sessione dentro Programma" (Passi 1–4) ✅
 
 Obiettivo: una sola tab. In "I tuoi giorni" (Programma), tap su una card → apre l'allenamento di quel giorno DENTRO Programma. La tab "Sessione" è stata RIUSATA, non riscritta. Prossimo step del progetto: rimuovere la pillola "Sessione".
