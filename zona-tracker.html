@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 08:22';
+const APP_VERSION = '2026.05.30 · 10:42';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6362,12 +6362,14 @@ function showPage(id){
   renderPage(id);
   if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); }
   if(id==='body') loadBodyLogs();
-  if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); }
+  if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); computeTrainHomeData().then(()=>{ if(ST.page==='training') renderTraining(); }); }
 }
-async function loadTrainingHomeData(){
+// Calcola e setta ST.trainHomeData dalla rotazione REALE (ultimo workout valido → nextSession su getSessionCycle()).
+// NON tocca il DOM: il chiamante decide cosa ri-renderizzare quando il dato è pronto (Home tile o badge OGGI tab Programma).
+async function computeTrainHomeData(){
   if(!ST.user || ST.user.id==='test-user-001'){
     ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
-    renderHome(); return;
+    return;
   }
   const today = todayKey();
   try {
@@ -6383,7 +6385,7 @@ async function loadTrainingHomeData(){
 
     if(!lastWorkout){
       ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
-      renderHome(); return;
+      return;
     }
 
     // nextSession: cicla su getSessionCycle() (scheda utente o SESSION_CYCLE hardcoded)
@@ -6419,12 +6421,17 @@ async function loadTrainingHomeData(){
       doneToday,
       inProgress,
     };
-    renderHome();
   } catch(e){
     console.warn('loadTrainingHomeData:', e.message);
     ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
-    renderHome();
   }
+}
+
+// Wrapper storico: calcola la rotazione e aggiorna la Home (tile Training).
+// Comportamento INVARIATO per tutti i chiamanti esistenti (compute → renderHome).
+async function loadTrainingHomeData(){
+  await computeTrainHomeData();
+  renderHome();
 }
 
 function versionFooter(){
