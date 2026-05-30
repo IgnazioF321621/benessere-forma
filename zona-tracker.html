@@ -3609,7 +3609,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.29 · 22:54';
+const APP_VERSION = '2026.05.30 · 07:18';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3698,6 +3698,7 @@ const ST = {
   trainProgDropdownOpen: false,     // dropdown selezione esercizio aperto/chiuso
   trainProgDropdownTab: 'programma',// 'programma' (default) | 'esercizio'
   trainProgDropdownSearch: '',      // testo barra ricerca dropdown
+  trainComeCresciOpen: false,       // tab Programma: sezione "Come cresci" (progressione doppia) espansa/collassata, default chiuso
   allExerciseNamesCache: null,      // null=non caricato, []=loaded vuoto, [...]=loaded — distinct da training_logs
   trainHomeData: null,
   trainCalMonth: null,
@@ -10295,6 +10296,12 @@ function closeProgDropdown(){
   renderTraining();
 }
 
+// Tab Programma — toggle sezione collassabile "Come cresci" (progressione doppia)
+function toggleTrainComeCresci(){
+  ST.trainComeCresciOpen = !ST.trainComeCresciOpen;
+  renderTraining();
+}
+
 function setProgDropdownTab(tab){
   ST.trainProgDropdownTab = tab;
   renderTraining();
@@ -12060,15 +12067,6 @@ function renderTraining(){
       { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G6', session:'recoveryLower',label:'Rec Lower', desc:'Mobilità + stretch', color:'#2A7A6F', bg:'#E6F4F2' },
     ];
-    const splitCells = DAY_SPLIT.map((d,i)=>`
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.04em;">${d.day}</div>
-        <div style="padding:6px 2px;width:100%;text-align:center;border-radius:8px;background:${d.bg};border:1.5px solid ${d.color}22;">
-          <span style="font-size:10px;font-weight:800;font-family:var(--font-mono);color:${d.color};display:block;line-height:1.2;">${d.label}</span>
-          <span style="font-size:9px;font-family:var(--font-mono);color:${d.color};opacity:.7;">${d.desc}</span>
-        </div>
-      </div>`).join('');
-
     const CYCLE_WEEKS = [
       { n:1, type:'CARICO',  rir:'RIR 2 / 1', active:false },
       { n:2, type:'CARICO',  rir:'RIR 2 / 1', active:false },
@@ -12086,56 +12084,156 @@ function renderTraining(){
       // Nessun workout ancora: evidenzia SETT 1 come "in attesa di iniziare"
       CYCLE_WEEKS[0].active = true;
     }
-    const cycleCards = CYCLE_WEEKS.map(w=>`
-      <div style="flex:1;border-radius:var(--r-md,12px);padding:12px 8px;text-align:center;
+
+    // ── Valori derivati (NON nuovi dati: stessa logica della settimana attiva sopra) ──
+    const activeWeek = CYCLE_WEEKS.find(w => w.active) || CYCLE_WEEKS[0];
+    const activeWeekNum = activeWeek.n;                 // 1..4
+    const activeIsScarico = activeWeek.type === 'SCARICO';
+    const SALVIA = '#6FA99B';                            // verde salvia (stessa famiglia evergreen) — Ipertrofia / scarico
+    const todaySession = ST.trainHomeData?.nextSession || null; // giorno corrente nella rotazione (logica esistente)
+    const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">OGGI</span>`;
+
+    // ── 1 · HERO settimana ──────────────────────────────────
+    const heroSegs = [0,1,2,3].map(i=>{
+      const filled = i < activeWeekNum;
+      const col = filled ? (i === 3 ? SALVIA : 'var(--acc)') : 'var(--s3)';
+      return `<div style="flex:1;height:6px;border-radius:3px;background:${col};"></div>`;
+    }).join('');
+
+    const heroHTML = `
+      <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;">BLOCCO · FORZA + IPERTROFIA</div>
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--acc);background:var(--acc-lt);padding:3px 9px;border-radius:999px;white-space:nowrap;">${activeWeek.rir}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="font-size:24px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.1;">Settimana ${activeWeekNum} <span style="font-size:15px;font-weight:600;color:var(--t3);">di 4</span></div>
+          <div style="font-size:10px;font-weight:800;font-family:var(--font-mono);letter-spacing:.06em;color:#fff;background:${activeIsScarico?SALVIA:'var(--acc)'};padding:4px 11px;border-radius:999px;">${activeWeek.type}</div>
+        </div>
+        <div style="display:flex;gap:5px;margin-bottom:8px;">${heroSegs}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;">${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
+          <div style="font-size:11px;font-weight:800;font-family:var(--font-mono);color:var(--acc);">${activeWeekNum} / 4</div>
+        </div>
+      </div>`;
+
+    // ── 2 · I TUOI GIORNI ───────────────────────────────────
+    const workoutDays = DAY_SPLIT.filter(d => !d.session.startsWith('recovery'));
+    const dayCards = workoutDays.map(d=>{
+      const isIper = d.desc === 'Ipertrofia';
+      const accentCol = isIper ? SALVIA : 'var(--acc)';
+      const isToday = d.session === todaySession;
+      return `
+        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${accentCol};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;">
+            <span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${d.label}</span>
+            ${isToday?oggiBadge:''}
+          </div>
+          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${accentCol};text-transform:uppercase;">● ${d.desc}</div>
+        </div>`;
+    }).join('');
+
+    const recoveryDays = DAY_SPLIT.filter(d => d.session.startsWith('recovery'));
+    const recoveryRows = recoveryDays.map(d=>{
+      const isToday = d.session === todaySession;
+      return `
+        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
+            <span style="color:var(--acc);font-size:10px;line-height:1;">●</span>${d.label}${isToday?' '+oggiBadge:''}
+          </span>
+          <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">RECUPERO</span>
+        </div>`;
+    }).join('');
+
+    const giorniHTML = `
+      <div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">
+          <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">I tuoi giorni</div>
+          <div style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">4 + 2</div>
+        </div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">UPPER / LOWER · 4 ALLENAMENTI</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">${dayCards}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${recoveryRows}</div>
+      </div>`;
+
+    // ── 3 · CICLO 4 SETTIMANE ───────────────────────────────
+    const cycleSub = ['Base','+1 set','+1 rep','−40% vol'];
+    const cycleCards = CYCLE_WEEKS.map((w,i)=>{
+      const phase = w.type === 'SCARICO' ? 'Scarico' : 'Carico';
+      return `
+      <div style="flex:1;border-radius:var(--r-md,12px);padding:11px 6px;text-align:center;position:relative;
         background:${w.active?'var(--acc)':w.type==='SCARICO'?'#F0F4F0':'var(--s1,#fff)'};
         box-shadow:${w.active?'0 2px 8px rgba(42,122,111,.25)':'0 1px 3px rgba(0,0,0,.06)'};
         border:${w.active?'none':'1px solid var(--s2)'};
         transition:all .2s;">
-        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.7)':'var(--t3)'};margin-bottom:4px;">SETT ${w.n}</div>
-        <div style="font-size:12px;font-weight:800;font-family:var(--font-sans);color:${w.active?'#fff':w.type==='SCARICO'?'#2A7A6F':'var(--acc)'};margin-bottom:2px;">${w.type}</div>
-        <div style="font-size:10px;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.8)':'var(--t3)'};">${w.rir}</div>
-      </div>`).join('');
+        ${w.active?`<div style="position:absolute;top:-7px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.06em;color:#fff;background:var(--acc2);padding:2px 7px;border-radius:999px;">QUI</div>`:''}
+        <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.7)':'var(--t3)'};margin-bottom:3px;">SETT ${w.n}</div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:${w.active?'rgba(255,255,255,.85)':(w.type==='SCARICO'?'#2A7A6F':'var(--acc)')};margin-bottom:3px;">${phase}</div>
+        <div style="font-size:11px;font-weight:800;font-family:var(--font-sans);color:${w.active?'#fff':'var(--t1)'};">${cycleSub[i]}</div>
+      </div>`;
+    }).join('');
+
+    const cicloHTML = `
+      <div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 4 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">SETTIMANA ${activeWeekNum} · ${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
+        <div style="display:flex;gap:8px;">${cycleCards}</div>
+      </div>`;
+
+    // ── 4 · COME CRESCI (progressione doppia, collassabile) ──
+    const comeCresciOpen = !!ST.trainComeCresciOpen;
+    const ccStepsHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">1</div>
+          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Esegui le serie restando al <strong>RIR target</strong> della settimana (es. RIR 2 = fermarsi 2 rip prima del cedimento)</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">2</div>
+          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → aumenta il carico</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">3</div>
+          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Riparte dal <strong>minimo delle reps</strong> con il nuovo carico</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:12px;background:var(--s2);border-radius:8px;border-left:3px solid var(--acc);">
+        <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:9px;letter-spacing:.04em;">ESEMPIO · CHEST PRESS · 4-6 REPS</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          ${[['S1','5/5/5/5',false],['S2','6/6/5/5',false],['S3','6/6/6/6',false],['S4','4/4/4/4',true]].map(([s,v,full],idx)=>`
+            ${idx>0?`<span style="color:var(--t3);font-size:11px;">→</span>`:''}
+            <span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;padding:5px 9px;border-radius:8px;background:${full?'var(--acc)':'var(--s1,#fff)'};border:1px solid ${full?'var(--acc)':'var(--s3)'};">
+              <span style="font-size:8px;font-weight:700;font-family:var(--font-mono);color:${full?'rgba(255,255,255,.75)':'var(--t3)'};">${s}</span>
+              <span style="font-size:11px;font-weight:800;font-family:var(--font-mono);color:${full?'#fff':'var(--t1)'};">${v}</span>
+            </span>`).join('')}
+        </div>
+      </div>`;
+
+    const comeCresciHTML = `
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">PROGRESSIONE DOPPIA · IL METODO <span class="info-icon" onclick="showInfoModal('progressione')">i</span></div>
+        <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+          <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:${comeCresciOpen?'12px':'8px'};">Come cresci</div>
+          ${comeCresciOpen ? `
+            ${ccStepsHTML}
+            <div onclick="toggleTrainComeCresci();" style="margin-top:14px;text-align:center;font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.06em;color:var(--acc);cursor:pointer;">CHIUDI ▴</div>
+          ` : `
+            <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:10px;">Spingi al <strong>RIR target</strong> → saturi le <strong>reps</strong> → aumenti il <strong>carico</strong></div>
+            <div onclick="toggleTrainComeCresci();" style="font-size:12px;font-weight:700;font-family:var(--font-mono);color:var(--acc);cursor:pointer;">Vedi di più ▾</div>
+          `}
+        </div>
+      </div>`;
 
     body = `
       <div style="padding:16px;display:flex;flex-direction:column;gap:20px;">
 
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">SPLIT — 6 GIORNI</div>
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-            <div style="display:flex;gap:4px;">${splitCells}</div>
-          </div>
-        </div>
+        ${heroHTML}
 
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">CICLO 4 SETTIMANE <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
-          <div style="display:flex;gap:8px;">${cycleCards}</div>
-        </div>
+        ${giorniHTML}
 
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">PROGRESSIONE DOPPIA <span class="info-icon" onclick="showInfoModal('progressione')">i</span></div>
-          <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-            <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Come funziona</div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">1</div>
-                <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Esegui le serie restando al <strong>RIR target</strong> della settimana (es. RIR 2 = fermarsi 2 rip prima del cedimento)</div>
-              </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">2</div>
-                <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → aumenta il carico</div>
-              </div>
-              <div style="display:flex;align-items:flex-start;gap:10px;">
-                <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">3</div>
-                <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Riparte dal <strong>minimo delle reps</strong> con il nuovo carico</div>
-              </div>
-            </div>
-            <div style="margin-top:14px;padding:10px 12px;background:var(--s2);border-radius:8px;border-left:3px solid var(--acc);">
-              <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:4px;">ESEMPIO — Trazioni (4×4–6)</div>
-              <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">4×4 → 4×5 → 4×6 → +elastico → 4×4 ↺</div>
-            </div>
-          </div>
-        </div>
+        ${cicloHTML}
+
+        ${comeCresciHTML}
 
         <div>
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:10px;">RIPOSO EXTRA</div>
