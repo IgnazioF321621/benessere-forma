@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.31 · 12:29';
+const APP_VERSION = '2026.05.31 · 16:28';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7923,6 +7923,28 @@ const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
   legs:             ['ischiocrurali', 'polpacci', 'core anti-estensione'],
 };
 
+// BLOCCO C (31 mag) — copertura pattern compound → gruppi muscolari allenati come
+// SECONDARI. Serve a declassare gli iso obbligatori già coperti dai compound scelti:
+// un iso muscolare è obbligatorio SOLO se il suo gruppo NON è coperto. Chiavi =
+// pattern motori normalizzati con _normPattern (lowercase+trim, SPAZI come nel
+// catalogo e in _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY). Valori = gruppo_target
+// del catalogo (vocabolario chiuso). NB: 'lombari' NON è un gruppo_target del
+// catalogo → non corrisponde mai a un iso obbligatorio (effetto nullo sul filtro,
+// resta come documentazione del lavoro reale del pattern). Il core NON è qui:
+// resta sempre slot fisso, mai declassato.
+const _TRAIN_GEN_COMPOUND_COVERAGE = {
+  'spinta orizzontale': ['petto', 'tricipiti', 'deltoidi anteriori'],
+  // spinta verticale: forte sui deltoidi ANTERIORI, marginale sui LATERALI →
+  // i laterali NON sono coperti (le alzate laterali restano iso d'elezione).
+  'spinta verticale':   ['deltoidi anteriori', 'tricipiti'],
+  // tirata orizzontale: tocca i deltoidi posteriori ma non a sufficienza →
+  // restano iso mirato obbligatorio (no copertura).
+  'tirata orizzontale': ['dorsali', 'bicipiti'],
+  'tirata verticale':   ['dorsali', 'bicipiti'],
+  'dominante ginocchia':['quadricipiti', 'glutei'],
+  'dominante anca':     ['glutei', 'ischiocrurali', 'lombari'],
+};
+
 // Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
 // MENO critico = rimosso PRIMA. Vincoli documentati dall'utente:
 //   deltoidi laterali < bicipiti = tricipiti  (Upper Ipertrofia)
@@ -8350,6 +8372,15 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
 
+      // BLOCCO C — gruppi muscolari coperti dai compound EFFETTIVAMENTE scelti.
+      // Si usa la pattern REALE dell'esercizio pescato (non il pattern richiesto):
+      // se un pattern non aveva candidati e manca, il suo gruppo NON risulta coperto.
+      const gruppiCopertiDaCompound = new Set();
+      compoundPicks.forEach(ex => {
+        const cov = _TRAIN_GEN_COMPOUND_COVERAGE[_normPattern(ex.pattern)] || [];
+        cov.forEach(g => gruppiCopertiDaCompound.add(g));
+      });
+
       // 2) ISO OBBLIGATORI per categoria (Regola A) — muscolari + CORE FISSO.
       // Il core è uno SLOT FISSO in ogni sessione (protezione lombare):
       //   Lower/Legs → core ANTI-ESTENSIONE (sotto carico squat/stacchi)
@@ -8369,6 +8400,14 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const all = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
         coreTarget = all.find(_isCoreGt) || null;
         muscularTargets = all.filter(t => !_isCoreGt(t));
+      }
+
+      // BLOCCO C — declassa gli iso muscolari il cui gruppo è GIÀ coperto dai
+      // compound scelti (ridondanti nell'ossatura). Restano candidabili come bonus
+      // (non sono più in gruppiPresenti, vedi blocco bonus). Il core NON è in
+      // muscularTargets (gestito da coreTarget) → mai filtrato.
+      if (gruppiCopertiDaCompound.size) {
+        muscularTargets = muscularTargets.filter(t => !gruppiCopertiDaCompound.has(t));
       }
 
       // Pesca muscolari (ordinati per criticità DESC: se il taglio morde,
