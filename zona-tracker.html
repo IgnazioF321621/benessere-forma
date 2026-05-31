@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.31 · 16:28';
+const APP_VERSION = '2026.05.31 · 17:55';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7765,9 +7765,13 @@ const _TRAIN_GEN_EXPERIENCE_MAP = {
 // avanzati con split a sessioni DUPLICATE (Upper×2, Lower×2, Push×2, ...).
 // Numeri fissi da regola utente:
 //   Forza      → 4 serie 4-6 reps, RIR 2, rest 180s
-//   Ipertrofia → 4 serie 8-12 reps, RIR 1, rest 90s
+//   Ipertrofia → 3 serie 8-12 reps, RIR 1, rest 90s (Blocco B, vedi sotto)
+// Blocco B 31 mag — compound ipertrofia 3 serie (Schoenfeld dose-response: il
+// grosso dello stimolo è nelle prime 3 serie, la 4ª ha resa marginale calante su
+// avanzato vicino al cedimento; recupera ~8 min/seduta senza perdere esercizi).
+// La FORZA resta 4 serie (accumulo di pratica sul gesto pesante).
 const _DUP_COMPOUND_FORZA      = { sets:4, reps_min:4, reps_max:6,  rir:2, rest_sec:180, type:'Forza' };
-const _DUP_COMPOUND_IPERTROFIA = { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90,  type:'Ipertrofia' };
+const _DUP_COMPOUND_IPERTROFIA = { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:90,  type:'Ipertrofia' };
 
 // Parametri sessione per obiettivo × esperienza (Regola B, 28 mag 2026).
 // Ogni livello espone sub-set per TIPO di esercizio:
