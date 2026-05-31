@@ -2263,6 +2263,39 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 31 maggio 2026 (sera/notte) — Audit attrezzatura casa + correzioni catalogo + rubrica alias ✅
+
+Audit dell'attrezzatura reale di Ignazio incrociata col catalogo, per far uscire dal generatore SOLO esercizi davvero eseguibili a casa. Tre filoni: (1) rubrica alias nel codice, (2) correzioni dati sul catalogo (foglio Google + alcune via SQL diretto per superare il sync), (3) allineamento del profilo di Ignazio. **Metodo**: filtrare il catalogo a monte sul profilo (luogo+attrezzo+surrogato) e segnalare i sospetti, NON controllare seduta per seduta (le sedute cambiano a ogni rigenerazione).
+
+**Codice (commit `fec026d` + doc `72dcd1e`, APP_VERSION via pre-commit hook `2026.05.31 · 21:25`)**
+- **Rubrica alias attrezzatura** in `_trainGenFilterPool` (zona-tracker.html): costante `GEAR_ALIASES = { elastici_tubo→elastico, cavigliere→cavigliera, barra_corta→barra, barra_lunga→barra }`, applicata al set utente subito dopo `attrezzaturaSet.add('corpo_libero')`. **Additiva** — aggiunge il termine-catalogo SENZA rimuovere lo slug originale → retrocompatibile coi profili vecchi che hanno già `elastico` (no-op, provato byte-identico). Risolve il **bug silenzioso**: i profili NUOVI salvano gli slug onboarding (`elastici_tubo` ecc.) ma il catalogo usa la parola singolare (`elastico` ecc.) → senza traduzione i nuovi utenti casa NON vedevano gli esercizi elastico. Collaudo Node harness 12/12 (estratta la funzione vera dal file, catalogo finto rappresentativo, retrocompat dimostrata confrontando una versione col blocco rimosso) + syntax-check intero script inline. NON tocca DB profili né onboarding. Documentata come RISOLTA nei "TODO / pendenze (29 mag pomeriggio)". ⚠️ Agisce alla generazione → scheda già salvata va rigenerata per vederne l'effetto.
+
+**Dati — correzioni catalogo (foglio Google + sync; alcune via SQL diretto in Supabase per superare il problema sync)**
+- **EX038 Affondo camminato**: luogo → `libero;palestra` (a casa non fattibile; a casa resta EX039 reverse lunge).
+- **EX065 Calf raise seduto con manubrio**: luogo → `palestra`, surrogato svuotato (a casa già coperti da EX028 / EX066).
+- **Doppione cat-cow**: **eliminato EX132**, tenuto EX029. Foglio + `DELETE FROM esercizi_catalog WHERE codice='EX132'`. **Catalogo 123 → 122** (la sezione schema "Tabella `esercizi_catalog`" conserva ancora il conteggio storico 123; questa è la fonte aggiornata).
+- **EX077 Inverted row**: attrezzo → `trx`; surrogato `barra+elastico` svuotato (via `UPDATE … SET surrogato_attrezzo=NULL` perché il sync non propaga le celle svuotate). A casa al suo posto esce EX011 Rematore con elastico.
+- **EX072 Dip alle parallele**: luogo → `palestra` (Ignazio non ha parallele; a casa resta EX063 dip su panca).
+- **EX097 Leg extension**: **nessuna correzione**, confermato OK (Ignazio ha le cavigliere).
+
+**Profilo Ignazio (SQL)**: `attrezzatura` ora = `elastico, barra, sbarra, panca, fitball, corpo libero, corda doppia, cavigliere`. Aggiunte oggi: **`corda doppia`** (EX026 push-down + EX058 face pull, attrezzo `elastico;corda doppia`) e **`cavigliere`**.
+
+**Attrezzatura reale di Ignazio confermata (audit)**: panca inclinabile SÌ · ancoraggio elastico a tutte le altezze SÌ · parallele NO · TRX NO · box NO · cavigliere SÌ.
+
+#### Principi/scoperte registrati (sera 31 mag)
+- **Rigenerazione scheda instabile**: `?schedaGen=1` ricostruisce la scheda da zero → gli esercizi cambiano e si perde lo storico carichi. Per ora rigenerare SOLO per applicare correzioni. Fix vero = voce "progressione tra blocchi" (pattern fissi nel blocco + memoria dei blocchi). **PRINCIPIO: la scheda deve restare stabile dentro il blocco.**
+- **Problema sync (Apps Script) — cella svuotata non propagata**: rendere vuota una cella nel foglio NON aggiorna Supabase (letta come "nessun cambiamento"). Workaround: `UPDATE … SET col=NULL` manuale + verificare sempre che la cella sia vuota anche nel foglio per evitare ritorni al prossimo sync. (Conferma del problema "zombie/sync" già noto — vedi Lezione 7.)
+- **Limitazioni NON escludono**: oggi limitazioni × `zone_rischio` fanno solo (1) preferenza variante più sicura in `_trainGenPickByPattern` (FASE 4) e (2) avviso via `_trainGenApplyCautions`. Nessun esercizio viene escluso.
+- **Tester = solo Nutrition**: non usano il modulo Training → sul Training si lavora solo con Ignazio. Nessuna urgenza "pulsante rigenera" per i tester.
+- **Maniglie**: presenti solo nel testo `setup` (~10 esercizi), mai in colonna `attrezzo`. Il pulsante onboarding "Maniglie" non filtra nulla. Sono accessorio default dell'elastico (vengono col kit).
+- **Metodo audit**: per trovare incongruenze conviene filtrare il catalogo a monte sul profilo (luogo+attrezzo+surrogato) e segnalare i sospetti, NON controllare seduta per seduta (le sedute cambiano a ogni rigenerazione).
+
+#### TODO / roadmap Training aggiunti (sera 31 mag)
+- **Sezione "Attrezzatura" in Impostazioni** (modificabile dopo l'onboarding, riusa le pill): includere anche **corda doppia, TRX, parallele**; ricollegare gli esercizi relativi (inverted row, dip parallele). Motivo: oggi l'attrezzatura si modifica SOLO in onboarding → utenti già onboardati (Ignazio) non hanno modo di aggiornarla senza SQL.
+- **Esclusione esercizi ad alto impatto/pliometrici (salti)** con limitazioni articolari (ginocchia/caviglie), distinta dalla semplice cautela. Caso scatenante: box jump. Regola da preparatore: fondamentali (squat/affondi) → cautela; salti → **esclusione**.
+- **Face pull come slot stabile nelle Upper** (oggi declassato a bonus quando i deltoidi posteriori sono coperti dai compound).
+- **Maniglie**: mostrarle nel "materiale" in cima alla card esercizio + decidere se il pulsante onboarding serve.
+
 ### Sessione 31 maggio 2026 (chiusura) — Stato LIVE modulo Training + scheda Ignazio rigenerata ✅
 
 Riepilogo di fine giornata. Le 3 migliorie del 31 mag sono **deployate e live** (dettaglio nelle rispettive entry sotto, qui solo lo stato consolidato + i fatti nuovi):
