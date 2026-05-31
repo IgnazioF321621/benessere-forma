@@ -2263,6 +2263,18 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 31 maggio 2026 (sera) — Compound ipertrofia 4→3 serie (Blocco B) · split 5gg SOSPESO ✅
+
+Coach generatore: i compound delle sessioni **Ipertrofia** della periodizzazione DUP passano da **4 a 3 serie**; la **Forza resta a 4**. Un solo valore in `_DUP_COMPOUND_IPERTROFIA` (`sets: 4 → 3`, reps/RIR/rest/type invariati), commit `20a4bf7` su `main` (push OK). **APP_VERSION `2026.05.31 · 17:55`.**
+
+- **Motivo (PT)**: 4 compound × 4 serie + iso/core facevano **sforare l'ora** sulla seduta ipertrofia di Ignazio (avanzato, ricomposizione). Per l'avanzato vicino al cedimento la 4ª serie ha resa marginale calante (Schoenfeld dose-response: il grosso dello stimolo è nelle prime 3 serie). Recupera **~8 min/seduta** senza perdere esercizi, pattern o stimolo significativo. La forza resta 4 serie (l'accumulo di pratica sul gesto pesante ha senso lì).
+- **Cosa NON è cambiato**: `_DUP_COMPOUND_FORZA` (sets 4); il `compound` generico dentro `ipertrofia` (ramo principiante/non-DUP, da valutare separatamente se servirà); iso (3 serie) e core; il numero di esercizi (resta 6/sessione — la modifica tocca le SERIE, non gli esercizi).
+- **Dry-run (harness, profilo Ignazio 4gg ricomp/avanzato)**: Upper A Forza compound **4** serie · Lower A Forza **4** · Upper B Ipertrofia compound **3** · Lower B Ipertrofia **3**. iso 3 / core invariati ovunque.
+
+**⚠️ Split a 5 giorni SOSPESO (NON committato).** Nello stesso working tree c'era anche la modifica Blocco A step 1 (`_TRAIN_GEN_SPLIT_BY_DAYS` voce `5`: PPL → `['upper','lower','upper','lower','upper']`). Decisione: **scartata, riportata all'originale `['push','pull','legs','upper','lower']`** prima del commit → NON è entrata in `20a4bf7`. Va **ripensata** prima di riprenderla: la 3ª upper usciva come **Upper Forza** (giornata pesante) per via dell'alternanza DUP, mentre il caso personale di Ignazio (vedi entry Blocco C → blockquote "Caso personale Ignazio — split 5 giorni") prevede il **5° allenamento come Upper Pump leggero** (alte reps, basso carico, no compound pesanti). Serve quindi, oltre allo split, una regola che assegni alla 3ª upper parametri "pump" invece di Forza. Resta in roadmap (Blocco A). La doc del caso personale resta valida nell'entry Blocco C.
+
+**Roadmap schema**: Blocco A (split 5gg + 5° giorno Pump) e Blocco D (progressione) ancora da implementare.
+
 ### Sessione 31 maggio 2026 (pomeriggio) — BLOCCO C: iso obbligatorio solo se non coperto dai compound ✅
 
 Coach generatore: un isolamento muscolare era imposto come obbligatorio anche quando il suo gruppo è già allenato come secondario dai compound della stessa sessione (es. bicipiti/tricipiti su Upper Ipertrofia → seduta a 8 esercizi gonfia). Ora un iso muscolare è obbligatorio **solo se il suo gruppo NON è coperto** dai compound effettivamente scelti; se coperto → declassato (resta candidabile come bonus). Il **core NON è mai coinvolto** (slot fisso, invariato). Un solo file (`zona-tracker.html`, +40/−1), commit `cb777f7` su `main` (push OK). **APP_VERSION `2026.05.31 · 16:28`.**
