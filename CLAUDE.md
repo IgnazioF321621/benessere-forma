@@ -2263,6 +2263,26 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 31 maggio 2026 (chiusura) — Stato LIVE modulo Training + scheda Ignazio rigenerata ✅
+
+Riepilogo di fine giornata. Le 3 migliorie del 31 mag sono **deployate e live** (dettaglio nelle rispettive entry sotto, qui solo lo stato consolidato + i fatti nuovi):
+1. **Rendering warm-up specifico** ✅ LIVE — commit `f49f2e8`, APP_VERSION `2026.05.31 · 12:29` (vedi entry "FASE A").
+2. **Iso non ridondante** (`_TRAIN_GEN_COMPOUND_COVERAGE`) ✅ — commit `cb777f7` (vedi entry "BLOCCO C"). Upper Ipertrofia 8→6, tutte le 4 sessioni a 6, deltoidi obbligatori sulle Upper, polpacci su Lower B, softMax 6.
+3. **Compound ipertrofia 4→3 serie** ✅ — commit `20a4bf7`, APP_VERSION `2026.05.31 · 17:55` (vedi entry "Blocco B"). Solo sessioni Ipertrofia (Upper B/Lower B); Forza resta 4.
+
+**Fatti NUOVI di questa chiusura:**
+
+- **Scheda VERA di Ignazio RIGENERATA e applicata**: eseguito `generateTrainingProgram({source:'manual-test', force:true, dryRun:false})` + reload → la scheda live in `schede_utente` ora riflette TUTTE le migliorie (Upper B a 6 esercizi, compound ipertrofia 3 serie, warm-up nei dati). **Verificato in app.** (Le schede salvate prima di oggi avevano i valori vecchi: la rigenerazione era il passo necessario per applicare le modifiche di codice — vedi nota ricorrente "per vederlo sulla scheda vera serve rigenerare".)
+
+- **Dati warm-up / finisher / carry presenti su TUTTE le sessioni** (confermato via `ST.userTrainingSessions`): tutte e 4 le sessioni hanno `warmup` (Upper = 1 voce: cuffia rotatori; Lower = 2 voci: mobilità anca/glutei), `finisher` (Tabata) = sì, `carry_conclusivo` solo su Upper A / Upper B. **I dati ESISTONO ovunque.**
+
+- **Warm-up e Tabata si VEDONO solo nel giorno ATTIVO** (allenamento di oggi / "Allena questo oggi"), **NON nell'anteprima sola-lettura** del giorno futuro. È **comportamento VOLUTO** (il warm-up card vive nel ramo live di `renderTraining`, non in `_renderSessionPreview`), **non un bug**. Decisione di Ignazio: lasciarlo così per ora (niente rendering warm-up/Tabata in anteprima).
+
+**Roadmap / sospesi (da NON perdere):**
+- **Split 5 giorni = SOSPESO** (non committato, codice resta PPL originale): da riprendere col **5° allenamento = Upper Pump leggero** (alte reps, basso carico, no compound pesanti). Oggi la 3ª upper uscirebbe come Upper Forza pesante → non risolve il tempo. Caso personale Ignazio (split 5gg Upper/Lower, NON PPL) già documentato nel blockquote dell'entry "BLOCCO C" — lasciarlo.
+- **Rendering `carry_conclusivo`** in app: dati presenti, card non ancora mostrata (era nel piano di oggi, mai arrivato). Countdown analogo al warm-up, a fine sessione.
+- **Schema programmazione approvato in chat, NON ancora implementato**: (a) regola GENERALE dello split per `giorni + obiettivo + attrezzatura + limitazioni` (oggi solo la tabella `_TRAIN_GEN_SPLIT_BY_DAYS`); (b) **progressione tra blocchi** — pattern fisso · variante compound che ruota ogni ~8 settimane · accessori ogni ~4 settimane; (c) **G6 Upper Pump** (5° giorno leggero). Blocco A + Blocco D.
+
 ### Sessione 31 maggio 2026 (sera) — Compound ipertrofia 4→3 serie (Blocco B) · split 5gg SOSPESO ✅
 
 Coach generatore: i compound delle sessioni **Ipertrofia** della periodizzazione DUP passano da **4 a 3 serie**; la **Forza resta a 4**. Un solo valore in `_DUP_COMPOUND_IPERTROFIA` (`sets: 4 → 3`, reps/RIR/rest/type invariati), commit `20a4bf7` su `main` (push OK). **APP_VERSION `2026.05.31 · 17:55`.**
@@ -2378,7 +2398,7 @@ Durante il collaudo locale `warmup`/`carry_conclusivo` "sparivano" nel raw di `z
 Sul profilo casa-elastici il carry usciva EX088 (farmer walk) invece di EX089 (suitcase). **Diagnosi**: i campi surrogato sono sulla **riga sbagliata** nel catalogo — `surrogato_attrezzo='elastico'` + nota (che descrive "una mano, di lato, da fermo" = suitcase) sono su EX088 Farmer walk; EX089 Suitcase carry ha surrogato VUOTO. Il codice è corretto (usa la logica surrogato esistente). **Fix lasciato a Ignazio nel Google Sheet** (chip task): svuotare surrogato su EX088, impostarlo su EX089. Decisione confermata: **niente rete di sicurezza nel codice — il dato basta** (si preferisce sempre il dato al codice hardcoded).
 
 #### Nuove funzioni `_trainGen*` aggiunte (riferimento)
-`_trainGenMapWarmupExercise` · `_trainGenPickWarmup` (gruppo_target) · `_trainGenPickWarmupByMuscle` (muscoli, pattern='mobilita') · `_trainGenMapCarryExercise` · nuovi pool `poolRiscaldamento`/`poolCarry` in `_trainGenFilterPool` · `_trainGenPickByPattern` firma estesa con `limitazioni`. Nuovi campi sessione: `warmup[]`, `carry_conclusivo{}` (separati come `finisher`, rendering rimandato).
+`_trainGenMapWarmupExercise` · `_trainGenPickWarmup` (gruppo_target) · `_trainGenPickWarmupByMuscle` (muscoli, pattern='mobilita') · `_trainGenMapCarryExercise` · nuovi pool `poolRiscaldamento`/`poolCarry` in `_trainGenFilterPool` · `_trainGenPickByPattern` firma estesa con `limitazioni`. Nuovi campi sessione: `warmup[]`, `carry_conclusivo{}` (separati come `finisher`). **Rendering**: `warmup[]` ✅ renderizzato e LIVE (FASE A, 31 mag — vedi entry "FASE A"); `carry_conclusivo{}` dati presenti ma card NON ancora mostrata (rendering da fare).
 
 #### TODO residui (post-31 mag)
 - **DATO Sheet #1 (carry)**: spostare surrogato elastico + nota da EX088 → EX089. Finché non fatto, carry casa-elastici resta EX088. Dopo: rigenerare con `ztSchedaWhy()` → deve diventare EX089.
