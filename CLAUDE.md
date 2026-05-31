@@ -2298,7 +2298,12 @@ Tutte e 4 a 6 esercizi; core ovunque; **polpacci** resta obbligatorio su Lower B
 
 **⚠️ Per applicare la regola alla scheda VERA di Ignazio** serve **rigenerare la scheda** dopo il deploy (`await generateTrainingProgram({source:'manual-test',force:true,dryRun:false})` + reload, oppure `?schedaGen=1`) — passo separato in roadmap.
 
-**Roadmap schema NON ancora implementata**: Blocco B (tetto compound), Blocco A (split 5 giorni Push/Pull/Legs/Upper/Lower), Blocco D (progressione). Restano in roadmap.
+**Roadmap schema NON ancora implementata**: Blocco B (tetto compound), Blocco A (split 5 giorni — vedi sotto), Blocco D (progressione). Restano in roadmap.
+
+> **Caso personale Ignazio — split 5 giorni (Blocco A, da implementare): Upper/Lower, NON PPL.**
+> Ciclo a 7 giorni: G1 Upper Forza · G2 Lower Forza · G3 recupero/mobilità · G4 Upper Ipertrofia · G5 Lower Ipertrofia · G6 Upper Pump (richiamo alte reps, basso carico, no compound pesanti) · G7 riposo → G8 = G1.
+> Motivazioni (preparatore): frequenza 2-3×/sett per gruppo (Schoenfeld); lower spalmato su 2 giorni = meno stress su ginocchia/lombari in singola seduta; Upper/Lower regge meglio l'attrezzatura casa (elastici/barra) del PPL; estende il DUP forza/ipertrofia già in uso. Recupero validato: ogni gruppo ≥72h.
+> NB: questo è il CASO PERSONALE di Ignazio. La regola GENERALE del generatore = lo split dipende da giorni + obiettivo + attrezzatura + limitazioni (matrice da definire nel Blocco A).
 
 ### Sessione 31 maggio 2026 (mezzogiorno) — FASE A: Rendering warm-up specifico in sessione + rifiniture attivazione ✅
 
