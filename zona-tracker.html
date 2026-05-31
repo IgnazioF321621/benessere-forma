@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.31 · 10:45';
+const APP_VERSION = '2026.05.31 · 12:29';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3757,6 +3757,9 @@ const ST = {
   userTrainingSessions: null,       // Mossa 3 (28 mag 2026): { sessionId: sessionObj } popolato da loadActiveScheda; null = fallback TRAINING_SESSIONS hardcoded
   userSessionCycle: null,           // Mossa 3: array di session id in ordine dello split; null = fallback SESSION_CYCLE hardcoded
   trainTabataFlow: null,            // Tabata vero (28 mag sera): { active, sessionId, round, totalRounds, exIdx, phase:'work'|'rest', remaining, running, _iv, finisher }
+  trainWarmupFlow: null,            // Warm-up specifico (FASE A, 31 mag): { active, sessionId, items, idx, phase:'work'|'rest', remaining, running, _iv }
+  trainWarmupCollapsed: false,      // Warm-up FASE A: collasso a fine flow (in-memory, riapribile al tap)
+  warmupInfoOpen: null,             // Warm-up FASE A: item s.warmup mostrato nella scheda "come si esegue" (modal content-only)
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
@@ -10963,6 +10966,39 @@ function playFinalTripleBeep(){
   } catch(e){}
 }
 
+// Bip lungo — segnala la (ri)partenza di un esercizio (warm-up FASE A).
+// Tono singolo 880Hz sine ~640ms, gain 0.8 + vibrazione [400].
+function playLongBeep(){
+  try {
+    if(navigator.vibrate){
+      try { navigator.vibrate([400]); } catch(e){}
+    }
+    const ctx = _ensureAudioCtx();
+    if(!ctx) return;
+    const fire = ()=>{
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const t0 = ctx.currentTime;
+        gain.gain.setValueAtTime(0.8, t0);
+        gain.gain.setValueAtTime(0.8, t0 + 0.60);
+        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.64);
+        osc.start(t0);
+        osc.stop(t0 + 0.66);
+      } catch(e){}
+    };
+    if(ctx.state === 'suspended'){
+      ctx.resume().then(fire).catch(()=>{});
+    } else {
+      fire();
+    }
+  } catch(e){}
+}
+
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
 function startTrainingCountdown(seconds, exName, sessionId){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
@@ -11865,19 +11901,17 @@ function _renderActivationSection(){
       </div>`;
   }
 
-  // ── Lista esercizi attivazione ──
+  // ── Lista esercizi attivazione ── (FASE A: niente checkbox tappabile; le voci si
+  // completano via il flow Start → auto-avanzamento, che marca ST.trainActivation[idx]=true
+  // in _activationFlowAdvance. Forma identica alla lista del riscaldamento: nome + durata.)
   const itemsHtml = exs.map((a, idx) => {
     const isDone = !!ST.trainActivation[idx];
     const isCurrent = flow.active && flow.currentIdx === idx;
     const bg = isCurrent ? '#FFF7E0' : (isDone ? '#F0F6FA' : 'var(--s1)');
     const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
     const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
-    const checkBox = isDone
-      ? `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:var(--acc);border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-      : `<div onclick="event.stopPropagation();toggleActivation(${idx})" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;"></div>`;
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
-        ${checkBox}
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;${nameStyle}">${a.name}</div>
         </div>
@@ -11894,6 +11928,122 @@ function _renderActivationSection(){
         ${allDone?'<span style="color:#2A7A6F;font-size:14px;font-weight:700;">✓</span>':''}
         ${allDone ? `<button onclick="toggleActivationCollapsed()" style="margin-left:auto;background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">nascondi ▴</button>` : ''}
       </div>
+      ${heroHtml}
+      ${itemsHtml}
+    </div>`;
+}
+
+// ── Renderer warm-up specifico (FASE A, 31 mag) — card SOTTO il Blocco Attivazione ──
+// Mostrato solo se la sessione ha s.warmup[] e NON è una sessione di Recupero.
+// Hero work/rest in stile Tabata (work evergreen / rest tenue), countdown grande,
+// ▶/⏸ + ⏩ skip + termina. È prehab a tempo: niente checkbox/log, solo indicazione visiva.
+function _renderWarmupSection(s){
+  if(!s || s.type === 'Recupero') return '';
+  if(!Array.isArray(s.warmup) || !s.warmup.length) return '';
+  const items = s.warmup;
+  // Collasso a fine flow (riga compatta riapribile al tap) — come il Blocco Attivazione
+  if(ST.trainWarmupCollapsed){
+    return `
+      <div onclick="toggleWarmupCollapsed()"
+        style="display:flex;align-items:center;gap:8px;background:var(--s1,#fff);border:1px solid var(--s2);border-radius:var(--r-md,12px);padding:12px 16px;margin-bottom:20px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2A7A6F" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+        <span style="font-size:13px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);flex:1;">Riscaldamento specifico completato</span>
+        <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">tocca per riaprire ▾</span>
+      </div>`;
+  }
+  const f = ST.trainWarmupFlow;
+  const flowActive = !!(f && f.active && f.sessionId === ST.trainSession);
+  // Mutua esclusione: altri blocchi in corso (attivazione / recupero / Tabata)
+  const otherRunning = !!((ST.trainActivationFlow && ST.trainActivationFlow.running)
+    || (ST.trainRecoveryFlow && ST.trainRecoveryFlow.running)
+    || (ST.trainTabataFlow && ST.trainTabataFlow.active));
+
+  let heroHtml;
+  if(flowActive){
+    const cur = _warmupFlowCurrentItem();
+    const next = _warmupFlowNextItem();
+    const isWork = f.phase === 'work';
+    const accent   = isWork ? 'var(--acc)' : '#9A8F73';   // work evergreen · rest tenue sand-grey
+    const accentBg = isWork ? 'var(--acc-lt)' : '#F3EFE5';
+    const eyebrow  = isWork ? 'RISCALDAMENTO' : 'CAMBIA POSIZIONE';
+    const numColor = (f.remaining <= 5) ? '#B84C2A' : accent;
+    const mm = String(Math.floor(f.remaining/60)).padStart(2,'0');
+    const ss = String(f.remaining % 60).padStart(2,'0');
+    const dur = isWork ? WARMUP_WORK_SEC : WARMUP_REST_SEC;
+    const pct = dur ? Math.round((dur - f.remaining)/dur*100) : 0;
+    const titleLine = isWork
+      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}</div>`
+      : `<div style="font-size:18px;font-weight:700;color:#1A1A1A;line-height:1.25;margin-bottom:14px;">${next ? 'Prossimo: ' + esc(next.name) : 'Cambia posizione'}</div>`;
+    const playPauseBtn = f.running
+      ? `<button onclick="warmupFlowPause()" title="Pausa" style="background:${accent};color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
+      : `<button onclick="warmupFlowResume()" title="Riprendi" style="background:${accent};color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
+    heroHtml = `
+      <div style="background:${accentBg};border:2px solid ${accent};border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:10px;color:${accent};font-family:var(--font-mono);letter-spacing:.14em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">${eyebrow}</div>
+        ${titleLine}
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:${numColor};font-variant-numeric:tabular-nums;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">
+            ${playPauseBtn}
+            <button onclick="warmupFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid ${accent};border-radius:10px;width:44px;height:52px;cursor:pointer;color:${accent};font-size:18px;font-weight:700;">⏩</button>
+          </div>
+        </div>
+        <div style="height:6px;background:rgba(0,0,0,.10);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+          <div style="height:100%;width:${pct}%;background:${accent};transition:width .35s linear;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
+          <span>${f.idx+1}/${items.length}</span>
+          <button onclick="warmupFlowEnd()" title="Termina" style="background:transparent;border:none;color:var(--t3);font-size:11px;font-family:var(--font-mono);cursor:pointer;text-decoration:underline;">termina</button>
+        </div>
+      </div>`;
+  } else {
+    const startBtnStyle = otherRunning
+      ? 'background:#CCC;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:var(--font-sans);opacity:.6;'
+      : 'background:var(--acc);color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
+    const startAction = otherRunning ? '' : 'onclick="warmupFlowStart()"';
+    heroHtml = `
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${items.length} esercizi · 1 min ciascuno</div>
+        <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">Riscaldamento specifico</div>
+        <button ${startAction} ${otherRunning?'disabled':''} style="${startBtnStyle}">▶ Start riscaldamento</button>
+        ${otherRunning?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Un altro blocco è in corso</div>':''}
+      </div>`;
+  }
+
+  // ── Lista voci warm-up (sola indicazione visiva, niente checkbox/log) ──
+  // ℹ accanto al nome → scheda "come si esegue" (stesso meccanismo/modal degli esercizi
+  // principali). Mostrata solo se l'item ha almeno un dettaglio (setup/esecuzione/errori/muscoli):
+  // niente icona inutile su voci senza contenuto. NON inventa nulla, mostra solo ciò che c'è.
+  const itemsHtml = items.map((w, idx) => {
+    const isCurrent = flowActive && f.idx === idx;
+    const bg = isCurrent ? '#FFF7E0' : 'var(--s1)';
+    const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
+    const nameStyle = isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);';
+    const eq = w.eq ? `<span style="color:var(--t3);font-weight:400;"> · ${esc(w.eq)}</span>` : '';
+    const hasDetail = (Array.isArray(w.setup) && w.setup.length)
+      || (Array.isArray(w.execution) && w.execution.length)
+      || (Array.isArray(w.commonErrors) && w.commonErrors.length)
+      || (Array.isArray(w.muscles) && w.muscles.length);
+    const infoIcon = hasDetail
+      ? `<span class="ex-info-icon" onclick="event.stopPropagation();openWarmupInfo(${idx})" style="cursor:pointer;padding:0 3px;" title="Come si esegue">ⓘ</span>`
+      : '';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:2px;">
+          <span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}
+        </div>
+        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">60s</div>
+      </div>`;
+  }).join('');
+
+  // ── Wrapper card ──
+  return `
+    <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-sans);">Riscaldamento specifico</span>
+      </div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">1 min a esercizio · 10s per cambiare posizione</div>
       ${heroHtml}
       ${itemsHtml}
     </div>`;
@@ -12215,6 +12365,8 @@ function renderTraining(){
 
       // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
       const activationSection = _renderActivationSection();
+      // Warm-up specifico (FASE A, 31 mag): card sotto l'Attivazione, solo se s.warmup presente e non Recupero
+      const warmupSection = _renderWarmupSection(s);
 
       const today = todayKey();
       const isRecoverySession = s.type === 'Recupero';
@@ -12458,6 +12610,8 @@ function renderTraining(){
           ${heroBlock}
 
           ${activationSection}
+
+          ${warmupSection}
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
@@ -13454,7 +13608,38 @@ function renderTraining(){
         </div>
       </div>`;
   }
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML;
+
+  // ── Scheda "come si esegue" del warm-up (FASE A) — modal content-only ──
+  // Riusa le classi del modal scheda esercizio (info-modal-overlay/info-modal/modal-section/
+  // modal-list). NIENTE AI Coach, NIENTE media: mostra solo i campi presenti nell'item.
+  let warmupInfoHTML = '';
+  if(ST.warmupInfoOpen){
+    const w = ST.warmupInfoOpen;
+    const setupList = (Array.isArray(w.setup) && w.setup.length)
+      ? `<div class="modal-section"><h4>Setup</h4><ul class="modal-list">${w.setup.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const execList = (Array.isArray(w.execution) && w.execution.length)
+      ? `<div class="modal-section"><h4>Esecuzione</h4><ol class="modal-list">${w.execution.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>` : '';
+    const errList = (Array.isArray(w.commonErrors) && w.commonErrors.length)
+      ? `<div class="modal-section"><h4>Errori comuni da evitare</h4><ul class="modal-list">${w.commonErrors.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+    const muscList = (Array.isArray(w.muscles) && w.muscles.length)
+      ? `<div class="modal-section"><h4>Muscoli coinvolti</h4><div style="font-size:13px;line-height:1.5;color:var(--t2);font-family:var(--font-sans);">${w.muscles.map(esc).join(' · ')}</div></div>` : '';
+    const anySection = setupList || execList || errList || muscList;
+    warmupInfoHTML = `<div class="info-modal-overlay" style="z-index:1100;" onclick="closeWarmupInfo()">
+      <div class="info-modal" style="max-width:560px;max-height:88vh;overflow-y:auto;padding:20px;" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:8px;">
+          <div>
+            <strong style="font-size:17px;display:block;line-height:1.25;">${esc(w.name)}</strong>
+            <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">Riscaldamento${w.eq ? ' · ' + esc(w.eq) : ''}</div>
+          </div>
+          <button onclick="closeWarmupInfo()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
+        </div>
+        ${setupList}${execList}${errList}${muscList}
+        ${anySection ? '' : `<div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Nessun dettaglio disponibile per questo esercizio.</div>`}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML;
 }
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
@@ -20587,6 +20772,13 @@ function closeTrainingSession(){
     clearInterval(ST.trainActivationFlow._iv);
   }
   ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
+  // Stop warm-up flow (FASE A) se attivo (no timer orfano in background)
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow._iv){
+    clearInterval(ST.trainWarmupFlow._iv);
+  }
+  ST.trainWarmupFlow = null;
+  ST.trainWarmupCollapsed = false; // reset collasso in memoria
+  ST.warmupInfoOpen = null;        // chiudi scheda warm-up se aperta
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
   ST.trainCountdown = null;
@@ -20874,8 +21066,9 @@ function _activationFlowTick(){
   }
 }
 function activationFlowStart(){
-  // Mutual exclusion: non avviare se recovery flow è running
+  // Mutual exclusion: non avviare se recovery / warm-up flow è running
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   if(!ACTIVATION_BLOCK.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   _activationFlowClearInterval();
@@ -20895,8 +21088,9 @@ function activationFlowPause(){
 function activationFlowResume(){
   if(ST.trainActivationFlow.running) return;
   if(!ST.trainActivationFlow.active) return;
-  // Mutual exclusion: non riprendere se recovery flow è running
+  // Mutual exclusion: non riprendere se recovery / warm-up flow è running
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   ST.trainActivationFlow.running = true;
   ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 1000);
@@ -21093,8 +21287,9 @@ function _recoveryFlowTick(){
   }
 }
 function recoveryFlowStart(){
-  // Mutual exclusion: non avviare se activation flow è running
+  // Mutual exclusion: non avviare se activation / warm-up flow è running
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   const sess = getTrainingSession(ST.trainSession);
   if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
@@ -21122,8 +21317,9 @@ function recoveryFlowResume(){
   const flow = ST.trainRecoveryFlow;
   if(flow.running) return;
   if(!flow.active) return;
-  // Mutual exclusion: non riprendere se activation flow è running
+  // Mutual exclusion: non riprendere se activation / warm-up flow è running
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
   // Branch blockStop: riparte dal primo esercizio del nuovo blocco (currentIdx già avanzato in _recoveryFlowAdvance)
   if(flow.blockStop && flow.blockStop.active){
@@ -21267,9 +21463,10 @@ function tabataFlowStart(){
     showToast('Nessun finisher Tabata in questa sessione', 'ℹ️');
     return;
   }
-  // Mutual exclusion col recovery flow + attivazione flow
+  // Mutual exclusion col recovery flow + attivazione flow + warm-up flow
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   _tabataFlowClearInterval();
   try { _unlockAudio(); } catch(e) {}
   ST.trainTabataFlow = {
@@ -21295,6 +21492,10 @@ function tabataFlowPause(){
 function tabataFlowResume(){
   const f = ST.trainTabataFlow;
   if(!f || !f.active) return;
+  // Mutual exclusion: non riprendere se attivazione / recupero / warm-up sono in corso
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   try { _unlockAudio(); } catch(e) {}
   f.running = true;
   f._iv = setInterval(_tabataFlowTick, 1000);
@@ -21319,6 +21520,150 @@ function _tabataFlowEndCompleted(){
   try { if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]); } catch(e) {}
   showToast('Tabata completato! 💪', '🔥');
   ST.trainTabataFlow = null;
+  renderTraining();
+}
+
+// ── WARM-UP specifico (FASE A, 31 mag) ──────────────────────
+// Countdown LINEARE su s.warmup[]: ogni voce = 60s WORK + 10s REST (cambio posizione).
+// Niente round/microPause/blockStop (più semplice del Tabata): lista lineare.
+// Audio: playLongBeep alla (ri)partenza di ogni esercizio + playPrepBeep ultimi 5s.
+// L'ultima voce termina dopo il WORK (no rest finale). Clone leggero del Tabata.
+const WARMUP_WORK_SEC = 60;
+const WARMUP_REST_SEC = 10;
+
+function _warmupFlowClearInterval(){
+  if(ST.trainWarmupFlow && ST.trainWarmupFlow._iv){
+    clearInterval(ST.trainWarmupFlow._iv);
+    ST.trainWarmupFlow._iv = null;
+  }
+}
+function _warmupFlowCurrentItem(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !Array.isArray(f.items) || f.idx < 0 || f.idx >= f.items.length) return null;
+  return f.items[f.idx];
+}
+function _warmupFlowNextItem(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !Array.isArray(f.items)) return null;
+  const ni = f.idx + 1;
+  if(ni >= f.items.length) return null;
+  return f.items[ni];
+}
+function _warmupFlowAdvance(){
+  // Chiamato a fine fase:
+  //   - era work → ultima voce? FINE; altrimenti pausa 10s (cambio posizione)
+  //   - era rest → prossima voce work + bip lungo (esercizio riparte)
+  const f = ST.trainWarmupFlow;
+  if(!f) return;
+  if(f.phase === 'work'){
+    if(f.idx >= f.items.length - 1){
+      _warmupFlowEndCompleted();
+      return;
+    }
+    f.phase = 'rest';
+    f.remaining = WARMUP_REST_SEC;
+  } else {
+    f.idx++;
+    f.phase = 'work';
+    f.remaining = WARMUP_WORK_SEC;
+    try { playLongBeep(); } catch(e){}
+  }
+  renderTraining();
+}
+function _warmupFlowTick(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !f.running) return;
+  f.remaining = Math.max(0, f.remaining - 1);
+  // Prep beep ultimi 5 secondi
+  if(f.remaining > 0 && f.remaining <= 5){
+    try { playPrepBeep(); } catch(e){}
+  }
+  if(f.remaining <= 0){
+    _warmupFlowAdvance();
+  } else {
+    renderTraining();
+  }
+}
+function warmupFlowStart(){
+  const sess = getTrainingSession(ST.trainSession);
+  if(!sess || !Array.isArray(sess.warmup) || sess.warmup.length === 0){
+    showToast('Nessun riscaldamento specifico in questa sessione', 'ℹ️');
+    return;
+  }
+  // Mutua esclusione: attivazione / recupero / Tabata
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  if(ST.trainTabataFlow && ST.trainTabataFlow.active) return;
+  _warmupFlowClearInterval();
+  try { _unlockAudio(); } catch(e){}
+  ST.trainWarmupCollapsed = false; // (ri)apri la card se era collassata
+  ST.trainWarmupFlow = {
+    active: true,
+    sessionId: ST.trainSession,
+    items: sess.warmup,
+    idx: 0,
+    phase: 'work',
+    remaining: WARMUP_WORK_SEC,
+    running: true,
+    _iv: setInterval(_warmupFlowTick, 1000),
+  };
+  try { playLongBeep(); } catch(e){} // l'esercizio parte
+  renderTraining();
+}
+function warmupFlowPause(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !f.active) return;
+  _warmupFlowClearInterval();
+  f.running = false;
+  renderTraining();
+}
+function warmupFlowResume(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !f.active) return;
+  // Mutua esclusione: non riprendere se attivazione / recupero sono in corso
+  if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
+  if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
+  try { _unlockAudio(); } catch(e){}
+  f.running = true;
+  f._iv = setInterval(_warmupFlowTick, 1000);
+  renderTraining();
+}
+function warmupFlowSkip(){
+  const f = ST.trainWarmupFlow;
+  if(!f || !f.active) return;
+  f.remaining = 0;
+  _warmupFlowAdvance();
+}
+function warmupFlowEnd(){
+  _warmupFlowClearInterval();
+  ST.trainWarmupFlow = null;
+  renderTraining();
+}
+function _warmupFlowEndCompleted(){
+  _warmupFlowClearInterval();
+  try { if(navigator.vibrate) navigator.vibrate([300,100,300]); } catch(e){}
+  showToast('Riscaldamento completato', '✓');
+  ST.trainWarmupFlow = null;
+  ST.trainWarmupCollapsed = true; // collassa in riga compatta riapribile (come l'attivazione)
+  renderTraining();
+}
+// Toggle collasso card warm-up (riga compatta ↔ card piena). In-memory.
+function toggleWarmupCollapsed(){
+  ST.trainWarmupCollapsed = !ST.trainWarmupCollapsed;
+  renderTraining();
+}
+// Scheda "come si esegue" del warm-up: legge l'item da s.warmup[idx] della sessione attiva.
+// Modal content-only (riusa le classi del modal scheda esercizio); mostra SOLO i campi presenti.
+function openWarmupInfo(idx){
+  const sess = getTrainingSession(ST.trainSession);
+  if(!sess || !Array.isArray(sess.warmup)) return;
+  const item = sess.warmup[idx];
+  if(!item) return;
+  ST.warmupInfoOpen = item;
+  renderTraining();
+}
+function closeWarmupInfo(){
+  ST.warmupInfoOpen = null;
   renderTraining();
 }
 function toggleRecoveryBlockCollapsed(blockName){
