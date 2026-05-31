@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.30 · 17:00';
+const APP_VERSION = '2026.05.31 · 10:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7942,11 +7942,20 @@ const _TRAIN_GEN_ISO_CRITICALITY = {
 // fullbody → unione delle due (vedi calcolo macro nel blocco bonus).
 const _TRAIN_GEN_BONUS_BY_MACRO = {
   lower: {
-    gruppi:   ['glutei', 'ischiocrurali', 'polpacci'],
+    // FASE 1 (catalogo 123): +'quadricipiti' (EX097 Leg extension, uso=principale).
+    // Già coperto dai compound dominante-ginocchia → ammesso SOLO come bonus, MAI obbligatorio.
+    gruppi:   ['glutei', 'ischiocrurali', 'polpacci', 'quadricipiti'],
     compound: ['dominante ginocchia', 'dominante anca'],
   },
   upper: {
-    gruppi:   ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'trapezi', 'avambracci'],
+    // FASE 1 (catalogo 123): +'petto'/'dorsali'/'deltoidi anteriori' (EX098 Croci,
+    // EX099 Pull-over, EX100 Alzate frontali). Già coperti dai compound spinta/tirata
+    // → ammessi SOLO come bonus, MAI obbligatori.
+    // NB: i bonus iso pescano da poolPrincipali. EX098 Croci ha uso='principale;finisher'
+    // (entra). EX099 Pull-over ed EX100 Alzate frontali hanno uso='finisher' nel catalogo
+    // (NON 'principale') → NON entreranno come bonus finché il catalogo non li marca anche
+    // 'principale'. È un limite di DATO (catalogo), non di codice — segnalato nel resoconto.
+    gruppi:   ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'trapezi', 'avambracci', 'petto', 'dorsali', 'deltoidi anteriori'],
     compound: ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
   },
 };
@@ -8276,6 +8285,32 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const typeProgressivoForPick = {};
     splitArray.forEach(t => { typeProgressivoForPick[t] = 0; });
 
+    // CARRY CONCLUSIVO (FASE 2): assegna 1-2 carry a settimana, NON in ogni
+    // sessione, distribuiti uniformemente sullo split, a rotazione (farmer walk
+    // / suitcase carry). Campo SEPARATO dal Tabata. Decisione cross-sessione →
+    // calcolata QUI (prima della map) per scegliere quali sessioni lo ricevono.
+    //   carryTotal = 1 se ≤3 sessioni, 2 se ≥4 (brief: "1-2 volte a settimana").
+    //   distribuzione = indici sessione equispaziati (es. 4 gg → sessioni 0 e 2).
+    //   rotazione = poolCarry ordinato per codice (EX088 farmer, EX089 suitcase),
+    //               carry k-esimo → poolCarry[k % len] → alterna farmer/suitcase.
+    // Se poolCarry è vuoto (es. casa senza manubri/kettlebell e senza surrogato
+    // nel catalogo) → nessun carry assegnato, carry_conclusivo assente ovunque.
+    const carryBySessionIdx = new Map();
+    if (Array.isArray(pools.poolCarry) && pools.poolCarry.length > 0 && splitArray.length > 0) {
+      const carryTotal = (splitArray.length <= 3) ? 1 : 2;
+      const carrySorted = pools.poolCarry.slice()
+        .sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+      for (let k = 0; k < carryTotal; k++) {
+        const sIdx = Math.min(Math.round(k * splitArray.length / carryTotal), splitArray.length - 1);
+        const carryEx = carrySorted[k % carrySorted.length];
+        if (carryEx && !carryBySessionIdx.has(sIdx)) carryBySessionIdx.set(sIdx, carryEx);
+      }
+      console.log('[train-gen] carry conclusivo assegnati:',
+        Array.from(carryBySessionIdx.entries()).map(([i, ex]) => `sess#${i}→${ex.codice}`).join(', ') || '—');
+    } else {
+      console.log('[train-gen] carry conclusivo: poolCarry vuoto → nessun carry (attrezzo/luogo del profilo non li ammette o catalogo senza surrogato)');
+    }
+
     const sessioniRaw = splitArray.map((splitType, sessionIdx) => {
       const occurrenceIdx = typeProgressivoForPick[splitType];
       typeProgressivoForPick[splitType]++;
@@ -8307,7 +8342,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       requiredPatterns.forEach((pat) => {
         const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
         const pickIdx = (Number(occurrenceIdx) || 0) + r;
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`);
+        const picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
         else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
@@ -8432,9 +8467,67 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         + ` core: ${coreLog};`
         + ` bonus: ${bonusPicks.map(b=>`${b.ex.codice}(${_isoLabel(b.ex)})`).join(',') || '—'}`);
 
+      // WARM-UP specifico (FASE 1): cuffia dei rotatori come PREHAB nelle sessioni
+      // macro UPPER (upper/push/pull — stessa convenzione macro di
+      // _TRAIN_GEN_BONUS_BY_MACRO e del blocco bonus). Carico leggero, 1-2 serie,
+      // mai a cedimento. Pescata da poolRiscaldamento (uso='riscaldamento'), NON
+      // dal poolPrincipali → non collide con la selezione esercizi né con i bonus.
+      // Campo SEPARATO `warmup` (come `finisher`): NON passa per cautele/ordering
+      // né per _trainGenValidateCodes, e sopravvive allo strip _diag del save.
+      // RENDERING in app demandato alla FASE 3.
+      // NB design: la cuffia EX101 ha zone_rischio vuoto → nessuna cautela da
+      // applicare in FASE 1. Quando il warm-up crescerà (FASE 3) si valuterà se
+      // far passare anche il warm-up per _trainGenApplyCautions.
+      const warmupExs = [];
+      const _macroSessione = (splitType === 'lower' || splitType === 'legs') ? 'lower'
+                           : (splitType === 'upper' || splitType === 'push' || splitType === 'pull') ? 'upper'
+                           : 'fullbody';
+      if (_macroSessione === 'upper') {
+        // FASE 1: cuffia dei rotatori (prehab spalla). Pescata per gruppo_target.
+        const _cuffia = _trainGenPickWarmup(pools.poolRiscaldamento, 'cuffia rotatori', occurrenceIdx);
+        if (_cuffia) {
+          const _w = _trainGenMapWarmupExercise(_cuffia);
+          if (_w) warmupExs.push(_w);
+        } else {
+          console.warn(`[train-gen] ${sessionLabel}: cuffia rotatori non disponibile nel poolRiscaldamento (warm-up Upper senza prehab cuffia)`);
+        }
+      } else if (_macroSessione === 'lower') {
+        // FASE 3: warm-up Lower = mobilità anca + glutei (slanci, affondo con
+        // rotazione, world's greatest stretch). Questi esercizi (uso='riscaldamento',
+        // pattern='mobilita') hanno gruppo_target VUOTO nel catalogo → pescati per
+        // MUSCOLI. Fino a 2 esercizi, round-robin via occurrenceIdx (Lower A diversi
+        // da Lower B), nessun duplicato. Carico leggero, attivazione non affaticamento.
+        const _LOWER_WARM_MUSCLES = ['anca', 'glutei', 'adduttori', 'ischiocrurali', 'flessori', 'quadricipiti'];
+        const _usedW = new Set();
+        for (let _k = 0; _k < 2; _k++) {
+          const _exW = _trainGenPickWarmupByMuscle(pools.poolRiscaldamento, _LOWER_WARM_MUSCLES, occurrenceIdx + _k, _usedW);
+          if (!_exW) break;
+          _usedW.add(_exW.codice);
+          const _w = _trainGenMapWarmupExercise(_exW);
+          if (_w) warmupExs.push(_w);
+        }
+        if (warmupExs.length === 0) {
+          console.warn(`[train-gen] ${sessionLabel}: nessun warm-up Lower (mobilità anca/glutei) disponibile nel poolRiscaldamento`);
+        }
+      }
+      // NB FASE 3 (scope confermato): solo warm-up Lower aggiunto. Il completamento
+      // del warm-up Upper (circonduzioni spalle + band pull-apart, oltre alla cuffia)
+      // e i recuperi G3/G6 (riempimento da uso='recupero;mobilita') restano per fasi
+      // successive. Il RENDERING in app di warmup/carry_conclusivo è una fase a sé.
+
+      // CARRY CONCLUSIVO (FASE 2): se questa sessione è tra quelle assegnate,
+      // mappa il carry. Campo separato, non passa per cautele/ordering/validate,
+      // sopravvive allo strip _diag. RENDERING in FASE 3 (a fine sessione,
+      // distinto dal Tabata). NB: la cuffia EX101 e i carry hanno zone_rischio
+      // vuoto → nessuna cautela da applicare in FASE 2 (come per il warm-up).
+      const _carryAssigned = carryBySessionIdx.get(sessionIdx) || null;
+      const carryConclusivo = _carryAssigned ? _trainGenMapCarryExercise(_carryAssigned) : null;
+
       return {
         splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
         sessionParams, category, exercises,
+        warmup: warmupExs,
+        carry_conclusivo: carryConclusivo,
         _diag: {
           compoundN: compoundPicks.length,
           compoundMissing,
@@ -8443,6 +8536,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           core: corePick ? { gruppo: corePick.gruppoTarget, codice: (coreKept ? coreKept.ex.codice : null), kept: !!coreKept, skippedTime: coreSkippedTime } : { gruppo: coreTarget, codice: null, kept: false, skippedTime: false },
           bonusN: bonusPicks.length,
           bonus: bonusPicks.map(b => `${b.ex.codice}:${b.tier}`),
+          warmup: warmupExs.map(w => w.codice), // FASE 1: prehab (cuffia su Upper)
+          carry: carryConclusivo ? carryConclusivo.codice : null, // FASE 2: carry conclusivo
         },
       };
     });
@@ -8575,6 +8670,14 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         duration_min: null, // dismesso: niente più stima minuti (volume-based)
       };
       const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher);
+      // WARM-UP specifico (FASE 1): campo separato come `finisher`. Sopravvive a
+      // _trainGenValidateCodes (non è in exercises[]) e allo strip _diag del save.
+      // Rendering demandato alla FASE 3.
+      if (Array.isArray(s.warmup) && s.warmup.length) mapped.warmup = s.warmup;
+      // CARRY CONCLUSIVO (FASE 2): campo separato come `finisher`/`warmup`.
+      // Sopravvive a _trainGenValidateCodes (non è in exercises[]) e allo strip
+      // _diag del save. Rendering demandato alla FASE 3.
+      if (s.carry_conclusivo) mapped.carry_conclusivo = s.carry_conclusivo;
       // _diag (Regola A): iso obbligatori pescati/tagliati + bonus. Solo per
       // diagnostica (ztSchedaWhy); STRIPPATO prima del save DB (_trainGenSaveToDB).
       mapped._diag = s._diag || null;
@@ -8589,6 +8692,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           codice: e.codice, name: e.name, sets: e.sets, reps: e.reps, alert: !!e.alert,
         })),
         finisher: s.finisher ? { type: s.finisher.type, round: s.finisher.round, exercises: s.finisher.exercises.map(e => e.codice) } : null,
+        // Diagnostica onesta: warmup/carry_conclusivo SONO nell'oggetto sessione
+        // (vedi harness) — la vecchia proiezione li ometteva e induceva a credere
+        // che si perdessero. Li mostro per coerenza con finisher.
+        warmup: Array.isArray(s.warmup) ? s.warmup.map(w => w.codice) : null,
+        carry_conclusivo: s.carry_conclusivo ? s.carry_conclusivo.codice : null,
       })));
 
     // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
@@ -8773,6 +8881,8 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   const poolPrincipali = [];
   const poolFinisher = [];
   const poolFinisherTabata = []; // NUOVO (28 mag sera): solo cardio_metabolico+finisher
+  const poolRiscaldamento = []; // FASE 1 (catalogo 123): esercizi uso='riscaldamento' (prehab/warm-up). Usato in FASE 1 per la cuffia (Upper); esteso a tutto il warm-up in FASE 3.
+  const poolCarry = [];        // FASE 2 (catalogo 123): loaded carry da fine sessione (campo carry_conclusivo, distinto dal Tabata). Solo pattern='loaded carry' + uso='finisher' = farmer walk + suitcase carry (get-up/overhead NON tagged finisher → esclusi).
 
   catalog.forEach(ex => {
     // FILTRO 1 — luogo (lista separata da ';', alias aperto↔libero,
@@ -8802,11 +8912,23 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // Decisione 28 mag 2026 (Leva C surrogati) — la nota_surrogato verrà
     // propagata nell'alert dell'esercizio da _trainGenMapToSession.
     const attrezzoL = _normAttrezzo(ex.attrezzo);
+    // FIX FASE 1 (catalogo 123) — ATTREZZO MULTIPLO:
+    // `attrezzo` nel catalogo nuovo è una LISTA separata da ';' (es.
+    // 'elastico;manubri', 'corpo libero;bilanciere;manubri;kettlebell').
+    // Prima si confrontava la STRINGA INTERA normalizzata col set utente
+    // → tutti i 38/123 esercizi multi-attrezzo venivano esclusi a casa
+    // anche possedendo uno degli attrezzi (es. EX101 cuffia 'elastico;manubri'
+    // escluso pur avendo l'elastico). Ora splitto su ';' e accetto se l'utente
+    // possiede ALMENO UNO degli attrezzi nativi. Per attrezzo SINGOLO il
+    // comportamento è identico a prima (split → 1 elemento). Retrocompatibile.
+    // _normAttrezzo è già stato applicato sull'intera stringa (spazi→underscore),
+    // quindi qui basta splittare su ';' e ritrimmare.
+    const attrezziNativi = attrezzoL.split(';').map(s => s.trim()).filter(Boolean);
     let attrezzoOk = false;
     let isSurrogato = false;
     if (tipoAllenNorm === 'palestra')    attrezzoOk = true;
     else if (tipoAllenNorm === 'casa') {
-      attrezzoOk = attrezzaturaSet.has(attrezzoL);
+      attrezzoOk = attrezziNativi.some(a => attrezzaturaSet.has(a));
       // Branch surrogato: solo se nativo fallisce e l'esercizio dichiara
       // una lista surrogato_attrezzo non vuota
       if (!attrezzoOk && ex.surrogato_attrezzo) {
@@ -8818,7 +8940,9 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
         }
       }
     }
-    else if (tipoAllenNorm === 'aperto') attrezzoOk = APERTO_WHITELIST.has(attrezzoL);
+    // 'aperto': stesso bug gemello (confronto su stringa intera) → stesso fix
+    // con la whitelist portatili (some su lista nativa).
+    else if (tipoAllenNorm === 'aperto') attrezzoOk = attrezziNativi.some(a => APERTO_WHITELIST.has(a));
     if (!attrezzoOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: ATTREZZO (${ex.attrezzo}${ex.surrogato_attrezzo?' / surr '+ex.surrogato_attrezzo:''})`); return; }
 
     // FILTRO 3 — livello (campo livello = lista separata da ';',
@@ -8836,8 +8960,21 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     const usi = String(ex.uso || '').toLowerCase()
       .split(';').map(s => s.trim()).filter(Boolean);
     const exTagged = isSurrogato ? { ...ex, _surrogato: true } : ex;
-    if (usi.includes('principale')) poolPrincipali.push(exTagged);
-    if (usi.includes('finisher'))   poolFinisher.push(exTagged);
+    if (usi.includes('principale'))    poolPrincipali.push(exTagged);
+    if (usi.includes('finisher'))      poolFinisher.push(exTagged);
+    if (usi.includes('riscaldamento')) poolRiscaldamento.push(exTagged);
+    // FASE 2 — Carry conclusivo: pattern 'loaded carry' + tag 'finisher'.
+    // Il tag 'finisher' nel catalogo distingue farmer walk + suitcase carry
+    // (uso='carry;finisher') da overhead walk + turkish get-up (uso='carry'
+    // senza finisher) → questi due NON entrano (get-up troppo tecnico,
+    // overhead resta in catalogo per altri profili / gestito da cautele).
+    // Guard extra anti-drift: esclude esplicitamente i get-up per nome, nel
+    // caso il catalogo in futuro li tagghi 'finisher' per errore.
+    // (patternNorm è dichiarato più sotto → qui ricalcolo inline con _normPattern.)
+    if (_normPattern(ex.pattern) === 'loaded carry' && usi.includes('finisher')
+        && !/get[\s-]?up/i.test(String(ex.nome || ''))) {
+      poolCarry.push(exTagged);
+    }
     // Pool Tabata: solo cardio_metabolico + finisher (sottoinsieme di poolFinisher
     // dedicato al Tabata vero del BLOCCO 9. Distinto perché finisher generici
     // tipo push-up/plank non sono cardio anaerobici per Tabata 20/10).
@@ -8848,7 +8985,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // 'recupero' ignorato in questa fase
   });
 
-  return { poolPrincipali, poolFinisher, poolFinisherTabata };
+  return { poolPrincipali, poolFinisher, poolFinisherTabata, poolRiscaldamento, poolCarry };
 }
 
 // DORMIENTE (29 mag): non più chiamata dal generatore — il riempimento bonus
@@ -8871,11 +9008,14 @@ function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   return Math.max(t.min_exercises_per_session, Math.min(t.max_exercises_per_session, raw));
 }
 
-function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, debugLabel) {
+function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, debugLabel, limitazioni) {
   // Pesca 1 esercizio dal pool che matchi UNO dei pattern in patternOptions
   // (array OR), evitando duplicati già usati nella sessione corrente.
   // debugLabel (opzionale): se window._trainGenDebug è true, logga candidati
   // nel pool, scartati perché già usati, e il codice scelto.
+  // limitazioni (opzionale, FASE 4): array di zone a rischio dell'utente
+  // (es. ['lombare','ginocchia']). Se passato, attiva la PREFERENZA SICUREZZA
+  // (vedi sotto). Le chiamate che NON lo passano (bonus) restano invariate.
   //
   // Strategia: deterministica stabile + ROUND-ROBIN inter-sessione (28 mag).
   //   - sort candidati per codice (sempre uguale per stesso pool/pattern)
@@ -8915,8 +9055,40 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
   }
 
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
-  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
-  const chosen = candidates[idx];
+
+  // FASE 4 — PREFERENZA SICUREZZA (zone_rischio).
+  // A parità di pattern, scegli PRIMA le varianti SENZA zone_rischio in
+  // conflitto col profilo dell'utente. Se esiste almeno una variante "sicura",
+  // il round-robin inter-sessione avviene SOLO tra le sicure → un esercizio
+  // rischioso NON viene scelto come compound quando c'è un'alternativa pulita
+  // nello stesso pattern (es. con lombare+ginocchia a rischio: Squat/Affondi
+  // puliti preferiti a Good morning / Pistol che hanno zone_rischio in conflitto).
+  // Se TUTTE le varianti sono rischiose (o limitazioni vuote / non passate dai
+  // bonus) → si usa l'intero set: la rete _trainGenApplyCautions (post-pick)
+  // gestirà comunque adatta → sostituisci → skip. Quindi questa è una
+  // PREFERENZA, non un filtro che può lasciare un pattern scoperto.
+  let pickPool = candidates;
+  const _limSet = new Set((Array.isArray(limitazioni) ? limitazioni : [])
+    .map(l => String(l).toLowerCase().trim()).filter(Boolean));
+  if (_limSet.size > 0) {
+    const _haConflitto = (ex) => String(ex.zone_rischio || '').toLowerCase()
+      .split(';').map(z => z.trim()).filter(Boolean)
+      .some(z => _limSet.has(z));
+    const _safe = candidates.filter(ex => !_haConflitto(ex));
+    if (_safe.length > 0) {
+      pickPool = _safe;
+      if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
+        const _risky = candidates.filter(_haConflitto).map(e => e.codice);
+        console.log(`[train-gen][pick] ${debugLabel}: preferenza sicurezza → sicuri=[${_safe.map(e=>e.codice).join(',')}]`
+          + (_risky.length ? ` · evitati (zone_rischio)=[${_risky.join(',')}]` : ''));
+      }
+    } else if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
+      console.log(`[train-gen][pick] ${debugLabel}: tutte le varianti hanno zone_rischio in conflitto → fallback a cautele (adatta/sostituisci/skip)`);
+    }
+  }
+
+  const idx = ((Number(sessionIndex) || 0) % pickPool.length + pickPool.length) % pickPool.length;
+  const chosen = pickPool[idx];
   if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) console.log(`[train-gen][pick] ${debugLabel}: scelto ${chosen.codice} (${chosen.nome})`);
   return chosen;
 }
@@ -9064,6 +9236,116 @@ function _trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIn
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
   const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
   return candidates[idx];
+}
+
+// ───────────────────────────────────────────────────────────
+// WARM-UP specifico per sessione (FASE 1, catalogo 123)
+// ───────────────────────────────────────────────────────────
+
+// _trainGenMapWarmupExercise — mappa una riga catalogo in un item di warm-up.
+// Formato MINIMALE e self-contained (i testi del catalogo sono già puliti da
+// _cleanCatalogText in BLOCCO 3). Carico leggero / alte reps / mai a cedimento:
+// è prehab, non lavoro. Il RENDERING in app è demandato alla FASE 3 (countdown
+// 1 min/esercizio + 10 s di pausa), che leggerà session.warmup[].
+function _trainGenMapWarmupExercise(cat) {
+  if (!cat) return null;
+  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  return {
+    codice:       cat.codice,
+    name:         cat.nome,
+    eq:           String(cat.attrezzo || '').trim(),
+    sets:         2,            // brief FASE 1: 1-2 serie → default 2
+    reps:         '15-20',      // carico leggero, alte reps, mai a cedimento
+    setup:        splitField(cat.setup),
+    execution:    splitField(cat.esecuzione),
+    commonErrors: splitField(cat.errori),
+    muscles:      splitField(cat.muscoli),
+    note:         'Riscaldamento · carico leggero, mai a cedimento',
+    warmup:       true,         // marker: item di warm-up, non esercizio di lavoro
+  };
+}
+
+// _trainGenPickWarmup — pesca UN esercizio di warm-up dal poolRiscaldamento per
+// gruppo_target (es. 'cuffia rotatori'), round-robin via sessionIndex, evitando
+// duplicati già scelti nel warm-up della stessa sessione (usedWarmup, opzionale).
+// Ritorna null se nessun candidato (la sessione resta senza quel warm-up, no crash).
+function _trainGenPickWarmup(pool, gruppoTarget, sessionIndex, usedWarmup) {
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  const target = String(gruppoTarget || '').toLowerCase().trim();
+  if (!target) return null;
+  const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
+  const candidates = pool.filter(ex => {
+    if (used.has(ex.codice)) return false;
+    const gt = String(ex.gruppo_target || '').toLowerCase()
+      .split(';').map(s => s.trim()).filter(Boolean);
+    return gt.includes(target);
+  });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
+}
+
+// _trainGenPickWarmupByMuscle — pesca UN esercizio di MOBILITÀ dal poolRiscaldamento
+// matchando i MUSCOLI (substring), non il gruppo_target. Serve per il warm-up Lower
+// (FASE 3): gli esercizi riscaldamento Lower (EX117 World's greatest, EX119 Slanci,
+// EX120 Affondo con rotazione) hanno gruppo_target VUOTO ma muscoli popolati
+// (anca/glutei/adduttori/ischiocrurali) → vanno pescati per muscolo.
+// Restringe a pattern='mobilita' per escludere gli isolamenti prehab Upper (cuffia,
+// Prone Y-W) che pure stanno nel poolRiscaldamento. Round-robin via sessionIndex,
+// evita duplicati (usedWarmup). null se nessun candidato (no crash).
+function _trainGenPickWarmupByMuscle(pool, muscleKeywords, sessionIndex, usedWarmup) {
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  const kws = (Array.isArray(muscleKeywords) ? muscleKeywords : [])
+    .map(k => String(k).toLowerCase().trim()).filter(Boolean);
+  if (kws.length === 0) return null;
+  const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
+  const candidates = pool.filter(ex => {
+    if (used.has(ex.codice)) return false;
+    if (_normPattern(ex.pattern) !== 'mobilita') return false; // solo mobilità (no iso prehab Upper)
+    const musc = String(ex.muscoli || '').toLowerCase();
+    return kws.some(k => musc.includes(k));
+  });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
+}
+
+// ───────────────────────────────────────────────────────────
+// CARRY CONCLUSIVO (FASE 2, catalogo 123)
+// ───────────────────────────────────────────────────────────
+
+// _trainGenMapCarryExercise — mappa una riga catalogo (loaded carry) in un item
+// di "carry conclusivo": a fine sessione, DISTINTO dal Tabata. Campo separato
+// `carry_conclusivo` (come `warmup`/`finisher`). Gestisce il surrogato casa
+// (suitcase con elastico ancorato di lato, DA FERMO): se l'esercizio è entrato
+// nel pool come surrogato (_surrogato=true), la nota_surrogato SOSTITUISCE il
+// setup nativo e `eq` mostra l'attrezzo surrogato — stessa logica di
+// _trainGenMapToSession. RENDERING in app demandato alla FASE 3.
+function _trainGenMapCarryExercise(cat) {
+  if (!cat) return null;
+  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  const isSurrogato = !!cat._surrogato;
+  const notaSurrogato = (isSurrogato && cat.nota_surrogato) ? String(cat.nota_surrogato).trim() : '';
+  return {
+    codice:       cat.codice,
+    name:         cat.nome,
+    eq:           (isSurrogato && cat.surrogato_attrezzo)
+                    ? String(cat.surrogato_attrezzo).trim()
+                    : String(cat.attrezzo || '').trim(),
+    sets:         3,
+    // Versione camminata: distanza. Versione surrogata casa (elastico, DA FERMO):
+    // tenuta isometrica a tempo per lato. parseRepsRange riconosce 'sec'.
+    reps:         isSurrogato ? '20-30 sec per lato' : '30-40 m',
+    setup:        (isSurrogato && notaSurrogato) ? splitField(notaSurrogato) : splitField(cat.setup),
+    execution:    splitField(cat.esecuzione),
+    commonErrors: splitField(cat.errori),
+    muscles:      splitField(cat.muscoli),
+    note:         'Carry conclusivo · core, grip e postura · non a cedimento',
+    isSurrogato:  isSurrogato || undefined,
+    carry:        true,        // marker: item di carry conclusivo
+  };
 }
 
 // _trainGenBuildTabata — costruisce l'oggetto finisher Tabata per una sessione.
@@ -9738,6 +10020,12 @@ window.ztSchedaWhy = async function() {
       replacedFromCodice: e.replacedFromCodice || null,
       alert: e.alert || null,
     })),
+    // Campi SEPARATI dall'array exercises (come finisher): mostrati esplicitamente
+    // qui nella proiezione diagnostica. SONO già nell'oggetto sessione finale e
+    // nella scheda salvata (provato con harness Node) — senza questa riga la
+    // proiezione li ometteva e sembrava (erroneamente) che si perdessero.
+    warmup:           Array.isArray(s.warmup) ? s.warmup.map(w => `${w.codice} ${w.name}`) : null,
+    carry_conclusivo: s.carry_conclusivo ? `${s.carry_conclusivo.codice} ${s.carry_conclusivo.name}` : null,
     finisher: s.finisher ? `tabata ${s.finisher.round}×(${s.finisher.work_sec}/${s.finisher.rest_sec}) — ${(s.finisher.exercises||[]).map(e=>e.codice).join(',')}` : null,
   })));
   return scheda;
@@ -12179,7 +12467,7 @@ function renderTraining(){
             const exList = fin.exercises.map((e,i)=>`<li style="padding:4px 0;">${i+1}. ${e.name}</li>`).join('');
             return `
             <div style="margin-top:20px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#FFF4E5 0%,#FFE4B8 100%);border:1px solid #E5A857;">
-              <div style="font-size:10px;font-weight:700;color:#7A3A1A;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 FINISHER TABATA · ~${durMin} MIN</div>
+              <div style="font-size:10px;font-weight:700;color:#7A3A1A;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 TABATA FINALE · ~${durMin} MIN</div>
               <div style="font-size:14px;color:#7A3A1A;font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati</div>
               <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:#5A2A0A;font-family:var(--font-sans);list-style:none;">${exList}</ul>
               <button onclick="tabataFlowStart();"
