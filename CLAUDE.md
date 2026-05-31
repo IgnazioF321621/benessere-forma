@@ -2263,6 +2263,30 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 31 maggio 2026 (mezzogiorno) — FASE A: Rendering warm-up specifico in sessione + rifiniture attivazione ✅
+
+Prima resa **in app** del warm-up specifico generato dal coach (campo `session.warmup[]`, prodotto da `_trainGenMapWarmupExercise` nella sessione mattutina). Lavoro a passi con collaudo locale (`python3 -m http.server` + harness Node fuori dal browser), **un solo file toccato** (`zona-tracker.html`, +357/−12), un commit finale `f49f2e8` su `main` (push OK). **APP_VERSION `2026.05.31 · 12:29`.**
+
+**1. Card warm-up sotto il Blocco Attivazione** (`_renderWarmupSection(s)`, iniettata come `${warmupSection}` tra Attivazione ed ESERCIZI, ramo live non-preview):
+- Mostrata SOLO se `s.warmup` presente E `s.type !== 'Recupero'`.
+- **Flow countdown lineare** (clone leggero del Tabata, niente round/microPause/blockStop): ogni voce = **60s lavoro + 10s pausa** ("cambia posizione"); l'ultima voce termina dopo il work (no rest finale). Stato `ST.trainWarmupFlow` + costanti `WARMUP_WORK_SEC=60`/`WARMUP_REST_SEC=10`. Funzioni `warmupFlowStart/Pause/Resume/Skip/End` + interni `_warmupFlow*`.
+- **Audio**: nuovo `playLongBeep()` (880Hz sine ~640ms, gain 0.8, vibrazione `[400]`) alla **(ri)partenza di ogni esercizio** (Start + ogni rest→work; NON sul resume da pausa); `playPrepBeep()` negli **ultimi 5 secondi** di ogni fase.
+- Hero work/rest in stile Tabata: work evergreen (`var(--acc)`), rest tenue sand-grey (`#9A8F73`, label "CAMBIA POSIZIONE" + "Prossimo: …"), timer grande `MM:SS`, ▶/⏸ + ⏩ skip + "termina", barra progresso. Card inline (non overlay), coerente con `_renderActivationSection`.
+
+**2. Icona ℹ sulle voci warm-up → scheda "come si esegue"**: `openWarmupInfo(idx)`/`closeWarmupInfo()` + blocco `warmupInfoHTML` appeso alla concat di `renderTraining`. **Modal content-only** che riusa le classi del modal scheda esercizio (`info-modal-overlay`/`info-modal`/`modal-section`/`modal-list`) ma SENZA AI Coach e SENZA media — mostra solo i campi presenti nell'item (`setup`/`execution`/`commonErrors`/`muscles`); campo vuoto → sezione assente; item senza dettagli → fallback "Nessun dettaglio disponibile". L'icona ℹ (`.ex-info-icon`, stesso glifo/stile degli esercizi principali) compare **solo se la voce ha almeno un dettaglio**. NON riusa `openExerciseAI` (cerca solo in `s.exercises` + forza AI/GIF = "inventare").
+
+**3. Blocco Attivazione: rimossi i quadratini tappabili** (`_renderActivationSection`): lista ora identica al warm-up (nome + durata). Le voci si completano **solo via il flow** (Start → auto-avanzamento): la marcatura `ST.trainActivation[idx]=true` era già in `_activationFlowAdvance` (NON dipendeva dal tap), quindi auto-collapse a fine blocco intatto. `toggleActivation` resta definita ma dormiente.
+
+**4. Warm-up collassa a fine flow** (come l'attivazione): `_warmupFlowEndCompleted` setta `ST.trainWarmupCollapsed=true` → riga compatta "Riscaldamento specifico completato" riapribile al tap (`toggleWarmupCollapsed`). **In-memory** (no persistenza localStorage — scelta per ridurre superficie); `closeTrainingSession` resetta `trainWarmupFlow`/`trainWarmupCollapsed`/`warmupInfoOpen`.
+
+**5. Mutua esclusione incrociata** tra i 4 flow (warm-up / attivazione / recupero / Tabata) su start e resume: nessuno parte/riprende se un altro è `running`.
+
+**Collaudo**: syntax `new Function()` 0 errori; harness Node (funzioni reali estratte + stub) verde su tutte le transizioni (work/rest, prep beep ultimi 5s, long beep su (ri)partenza, skip→end+toast+collasso, ℹ solo con dettagli, mutua esclusione, Recupero escluso). Collaudo dal vivo nel browser fatto da Ignazio via stub `s.warmup` in console (nessun Chrome connesso all'agente).
+
+**⚠️ Per vederlo sulla scheda VERA**: serve **rigenerare la scheda** dopo il deploy (`await generateTrainingProgram({source:'manual-test',force:true,dryRun:false})` + reload, oppure `?schedaGen=1`) — il campo `warmup` esiste solo nelle schede generate dopo la sessione mattutina. Passo separato in roadmap.
+
+**TODO warm-up residui** (non bloccanti): rendering `carry_conclusivo` (countdown analogo a fine sessione); warm-up Upper completo (oggi solo cuffia — mancano circonduzioni spalle EX121 + band pull-apart EX030); G3/G6 recuperi da catalogo. Vedi "TODO residui (post-31 mag)".
+
 ### Sessione 31 maggio 2026 — Estensione coach generatore al catalogo alberato (123 esercizi) — 4 FASI ✅
 
 Sessione lunga e metodica sul **coach generatore Training** (`generateTrainingProgram`), per fargli usare il nuovo catalogo `esercizi_catalog` riorganizzato ad albero e portato **da 70 a 123 esercizi**. Lavoro a 4 fasi con conferma utente tra una e l'altra, collaudo locale via `python3 -m http.server`, **un solo commit finale** `e83f316` su `main` (push OK, APP_VERSION `2026.05.31 · 10:45`). **Solo `zona-tracker.html` modificato** (+301/−13 righe). Tutte le decisioni di logica prese da preparatore; tutte le verifiche fatte con **harness Node fuori dal browser** sul catalogo reale + profilo reale di Ignazio.
@@ -2307,7 +2331,7 @@ Sul profilo casa-elastici il carry usciva EX088 (farmer walk) invece di EX089 (s
 - **DATO Sheet #2 (bonus iso)**: marcare EX099/EX100 `principale` se si vogliono dorsali/deltoidi-anteriori come bonus (oggi `finisher`). Opzionale.
 - **Warm-up Upper completo**: oggi solo cuffia (FASE 1). Mancano circonduzioni spalle (EX121, `gruppo_target` vuoto) + band pull-apart (EX030, `uso=principale` non `riscaldamento`) → da decidere come pescarli.
 - **G3/G6 recuperi**: riempirli da `uso='recupero;mobilita'` (EX123-132) — rimandato, oggi ancora hardcoded in `TRAINING_SESSIONS`.
-- **RENDERING in app** di `warmup` + `carry_conclusivo` (countdown 1 min/esercizio + 10s pausa, warm-up SUPPLEMENTA il blocco fisso Respirazione/Vacuum/Cat-Cow) — fase dedicata, tocca il reader `renderTraining`/`_renderActivationSection`.
+- **RENDERING in app** di `warmup` ✅ FATTO (FASE A, 31 mag — vedi entry dedicata sotto: card inline sotto il Blocco Attivazione, flow 60s/10s, `playLongBeep`). Resta `carry_conclusivo` (countdown analogo a fine sessione) — fase dedicata, tocca il reader `renderTraining`.
 - Per VEDERE warmup/carry in app serve **rigenerare la scheda** dopo il deploy (`await generateTrainingProgram({source:'manual-test',force:true,dryRun:false})` + reload, oppure `?schedaGen=1`).
 
 ### Sessione 30 mag 2026 — Fix post-collaudo dal vivo cantiere Fusione ✅
