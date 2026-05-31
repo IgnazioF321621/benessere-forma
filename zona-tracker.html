@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.31 · 17:55';
+const APP_VERSION = '2026.05.31 · 21:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8920,6 +8920,23 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     (Array.isArray(attrezzatura) ? attrezzatura : []).map(_normAttrezzo)
   );
   attrezzaturaSet.add('corpo_libero');
+
+  // Rubrica alias: traduce gli slug dell'onboarding nelle parole del catalogo.
+  // Risolve i mismatch elastici_tubo→elastico, cavigliere→cavigliera,
+  // barra_corta/lunga→barra (i profili NUOVI salvano gli slug onboarding, il
+  // catalogo usa la parola singolare → senza traduzione gli esercizi elastico
+  // non uscivano per i tester). Aggiunge il termine-catalogo SENZA rimuovere lo
+  // slug originale → retrocompatibile coi profili VECCHI che hanno già 'elastico'.
+  // Chiavi e valori sono in forma normalizzata (underscore), coerente con _normAttrezzo.
+  const GEAR_ALIASES = {
+    elastici_tubo: 'elastico',
+    cavigliere:    'cavigliera',
+    barra_corta:   'barra',
+    barra_lunga:   'barra',
+  };
+  Array.from(attrezzaturaSet).forEach(slug => {
+    if (GEAR_ALIASES[slug]) attrezzaturaSet.add(GEAR_ALIASES[slug]);
+  });
 
   const tipoAllenNorm = String(tipoAllen || '').toLowerCase().trim();
   const tipoAllenAlias = LUOGO_ALIASES[tipoAllenNorm] || null;
