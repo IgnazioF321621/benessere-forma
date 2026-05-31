@@ -2263,6 +2263,43 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 31 maggio 2026 (pomeriggio) — BLOCCO C: iso obbligatorio solo se non coperto dai compound ✅
+
+Coach generatore: un isolamento muscolare era imposto come obbligatorio anche quando il suo gruppo è già allenato come secondario dai compound della stessa sessione (es. bicipiti/tricipiti su Upper Ipertrofia → seduta a 8 esercizi gonfia). Ora un iso muscolare è obbligatorio **solo se il suo gruppo NON è coperto** dai compound effettivamente scelti; se coperto → declassato (resta candidabile come bonus). Il **core NON è mai coinvolto** (slot fisso, invariato). Un solo file (`zona-tracker.html`, +40/−1), commit `cb777f7` su `main` (push OK). **APP_VERSION `2026.05.31 · 16:28`.**
+
+**Implementazione (3 punti)**:
+1. **`_TRAIN_GEN_COMPOUND_COVERAGE`** (nuova costante accanto a `_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`): mappa pattern motorio → gruppi muscolari allenati come secondari. Chiavi normalizzate con `_normPattern` (lowercase+trim, **spazi** come nel catalogo e in `_TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY`; verificato che `_normPattern` NON converte spazi→underscore). Valori = `gruppo_target` del catalogo. Mappa:
+
+   | pattern | gruppi coperti |
+   |---|---|
+   | spinta orizzontale | petto · tricipiti · deltoidi anteriori |
+   | spinta verticale | deltoidi anteriori · tricipiti |
+   | tirata orizzontale | dorsali · bicipiti |
+   | tirata verticale | dorsali · bicipiti |
+   | dominante ginocchia | quadricipiti · glutei |
+   | dominante anca | glutei · ischiocrurali · lombari |
+
+   **Correzione PT (deltoidi)**: la spinta verticale allena forte i deltoidi ANTERIORI ma solo marginalmente i LATERALI → laterali **non** coperti (alzate laterali = iso d'elezione). La tirata orizzontale tocca i posteriori ma non a sufficienza → posteriori **non** coperti (iso mirato obbligatorio). `'lombari'` non è un `gruppo_target` del catalogo → effetto nullo sul filtro (resta come documentazione del lavoro reale del pattern).
+2. **`gruppiCopertiDaCompound`** (Set) costruito dopo il loop `compoundPicks`, dalla **pattern REALE** dei compound effettivamente pescati (non dal pattern teorico): un pattern senza candidati che manca → il suo gruppo NON risulta coperto.
+3. **Filtro** su `muscularTargets` (riga unica dopo il blocco if/else, copre ramo non-fullbody E fullbody): rimuove i target il cui gruppo è in `gruppiCopertiDaCompound`. Il core è in `coreTarget`, fuori da `muscularTargets` → mai filtrato. Il blocco bonus Tier 1 (più sotto) ripesca da solo gli iso coerenti per gruppo NON presente nell'ossatura → un gruppo declassato rientra come bonus se c'è spazio nel softMax (i compound hanno `gruppo_target` VUOTO, quindi non popolano `gruppiPresenti`).
+
+**Esito dry-run** (`ztSchedaWhy()`, profilo Ignazio 4 giorni Upper/Lower DUP — confermato live):
+
+| Sessione | tot | iso obbligatori | core |
+|---|---|---|---|
+| Upper A (Forza) | 6 | deltoidi posteriori | anti-rotazione |
+| Lower A (Forza) | 6 | — (glutei coperto→bonus) | anti-estensione |
+| Upper B (Ipertrofia) | **6** (era 8) | deltoidi laterali | anti-rotazione |
+| Lower B (Ipertrofia) | 6 | polpacci | anti-estensione |
+
+Tutte e 4 a 6 esercizi; core ovunque; **polpacci** resta obbligatorio su Lower B (nessun compound lo copre). `softMax` **invariato** (`_TRAIN_GEN_SOFT_MAX = 6`): in modalità "completo" gli slot liberati dai gruppi coperti vengono rifillati dai bonus → il count resta 6; in "essenziale" (no bonus) l'alleggerimento è maggiore.
+
+**Robustezza**: per l'Upper i deltoidi laterali/posteriori non sono coperti da NESSUN compound → restano obbligatori a prescindere da quali compound vengono pescati dal catalogo.
+
+**⚠️ Per applicare la regola alla scheda VERA di Ignazio** serve **rigenerare la scheda** dopo il deploy (`await generateTrainingProgram({source:'manual-test',force:true,dryRun:false})` + reload, oppure `?schedaGen=1`) — passo separato in roadmap.
+
+**Roadmap schema NON ancora implementata**: Blocco B (tetto compound), Blocco A (split 5 giorni Push/Pull/Legs/Upper/Lower), Blocco D (progressione). Restano in roadmap.
+
 ### Sessione 31 maggio 2026 (mezzogiorno) — FASE A: Rendering warm-up specifico in sessione + rifiniture attivazione ✅
 
 Prima resa **in app** del warm-up specifico generato dal coach (campo `session.warmup[]`, prodotto da `_trainGenMapWarmupExercise` nella sessione mattutina). Lavoro a passi con collaudo locale (`python3 -m http.server` + harness Node fuori dal browser), **un solo file toccato** (`zona-tracker.html`, +357/−12), un commit finale `f49f2e8` su `main` (push OK). **APP_VERSION `2026.05.31 · 12:29`.**
