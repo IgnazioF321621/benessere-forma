@@ -2268,6 +2268,29 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 1 giugno 2026 — FASE B.1: Rotazione adattiva 5 giorni (con Upper Pump) ✅
+
+Coach generatore / modulo Training: la **rotazione delle sessioni** (prossima sessione + calcolo debito + badge giorno) ora si **adatta alla scheda attiva** invece di essere fissa a 6 giorni. Codice delicato (rotazione + debito → rischio pagina bianca): lavorato con harness Node fuori dal browser + collaudo dal vivo. Un solo file (`zona-tracker.html`), commit `dee3f4b` su `main` (push OK). **APP_VERSION `2026.06.01 · 16:18`.**
+
+**Il problema**: con la Fase A una scheda a 5 giorni contiene `upperC` (Upper Pump), ma il ciclo fisso a 6 giorni (`SESSION_DAY_NUM`) non lo conteneva → la rotazione automatica non l'avrebbe mai proposto e sarebbe ricaduta su `upperA`.
+
+**Le 5 modifiche**:
+1. **`SESSION_DAY_NUM_5`** nuova costante (accanto a `SESSION_DAY_NUM`, NON sostituito): ciclo a 7 → **G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 upperC (Pump) · G7 rest** (riposo esplicito nel ciclo).
+2. **`_rotationDayMap()`** nuovo helper: ritorna `SESSION_DAY_NUM_5` se `ST.userSessionCycle` (scheda REALE caricata, non i giorni del profilo) include `'upperC'`, altrimenti `SESSION_DAY_NUM`. **`getRotationCycle()`** ordina la mappa scelta. `ST.userSessionCycle` null o scheda 4gg → ciclo 6 **invariato**.
+3. **`isRecoverySid`** in `computeTrainingDebt` esteso: esclude dal debito anche `type==='Riposo'` + sid `'rest'`/`'rest_injury'` → il riposo G7, se saltato, NON genera debito (come i recuperi attivi). `upperC` invece è sessione vera → va in debito se saltata.
+4. **Badge giorno Home** (`renderHomeV2`, `nextDayN`): da `SESSION_DAY_NUM[...]` a `_rotationDayMap()[...]` → numero corretto per `upperC`/`rest` su scheda 5gg.
+5. **`SESS_LABEL`/`SESS_COLOR`** (calendario): aggiunto `upperC` (`'UP C'`, colore `var(--acc)` come le altre Upper).
+
+**Invariato/verificato senza modifica**: split a 4 giorni + ciclo 6 (identici); `computeTrainHomeData.nextSession` già usa `getRotationCycle()` → adattivo in automatico; context-card `isRecovery` (riga ~6517) già include `'rest'` ed esclude `upperC` (la Pump è sessione vera → context card normale); contenuti `recoveryUpper` NON toccati (cantiere B.2); `rest_injury` invariato. `ST.trainAllCompleted` esclude già `rest`/`rest_injury` a monte.
+
+**Collaudo**: harness Node sulle funzioni VERE estratte dal file (`getRotationCycle`/`computeTrainingDebt`/`_rotationDayMap`) **14/14** + dal vivo in console (4gg→6 invariato, simulazione 5gg→7, ripristino→6, nessuna pagina bianca, schermata Training intatta). Syntax-check intero script: 0 errori.
+
+**⚠️ Residui aperti**:
+- **B.2 (cantiere separato, NON fatto)**: contenuti della seduta "Recupero attivo" (~30 min, `recoveryUpper`/`recoveryLower`) da ridisegnare sulle zone critiche di Ignazio (lombari, ginocchia, torace/spalle). Oggi i recuperi G3/G6 restano gli hardcoded del 12-13 mag in `TRAINING_SESSIONS`.
+- **Badge giorno `upperC` su scheda 4gg → "?"**: corretto così (la scheda 4gg non ha la Pump, quindi `upperC` non è nel suo ciclo). NON è un bug.
+- **404 service-worker** osservato dopo hard-refresh in locale: probabile cache SW, innocuo. Da tenere d'occhio solo se in produzione compaiono comportamenti di caricamento anomali.
+- Per vedere la rotazione a 7 sulla scheda VERA di Ignazio serve portarlo a 5 giorni e **rigenerare** (oggi è a 4gg → ciclo 6, comportamento invariato).
+
 ### Sessione 1 giugno 2026 — FASE A: Quinto allenamento Upper Pump (split 5 giorni) ✅
 
 Coach generatore: implementata la **Fase A** dello split a 5 giorni. Per **intermedio/avanzato** il 5gg passa da PPL a **Upper/Lower** con la **terza upper = Upper Pump** (seduta leggera prima del riposo). Sequenza: **Upper Forza · Lower Forza · Upper Iper · Lower Iper · Upper Pump**. Un solo file (`zona-tracker.html`), un commit `8023b7d` su `main` (push OK). **APP_VERSION `2026.06.01 · 10:53`.**
