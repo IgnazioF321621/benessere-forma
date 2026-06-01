@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.05.31 · 21:25';
+const APP_VERSION = '2026.06.01 · 10:53';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7906,6 +7906,19 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
   },
 };
 
+// FASE A (31 mag/1 giu 2026) — parametri della seduta Upper Pump (5° giorno
+// dello split a 5 giorni Upper/Lower). Seduta leggera: alte ripetizioni, basso
+// carico, RIR 0 (vicino al cedimento ma su carichi bassi), recuperi brevi.
+// NON ha compound pesanti: i pattern compound della categoria 'upper_pump' sono
+// vuoti (_TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY) → il blocco `compound` qui
+// rispecchia `iso` solo per sicurezza, non viene mai usato. Stesso stile dei
+// sub-set di _TRAIN_GEN_PARAMS_BY_GOAL (compound/iso/iso_isometrico).
+const _TRAIN_GEN_PUMP_PARAMS = {
+  compound:       { sets:3, reps_min:15, reps_max:25, rir:0, rest_sec:50, type:'Pump' },
+  iso:            { sets:3, reps_min:15, reps_max:25, rir:0, rest_sec:50, type:'Pump' },
+  iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Pump', durationBased:true },
+};
+
 // Isolamenti OBBLIGATORI per categoria di sessione (Regola A, 28 mag 2026).
 // Categoria = _trainGenGetSessionCategory(splitType, sessionType). Valori =
 // gruppo_target del catalogo (vocabolario chiuso). fullbody: rotazione 1-2
@@ -7919,6 +7932,9 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
 const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
   upper_forza:      ['deltoidi posteriori', 'core anti-rotazione'],
   upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti', 'core anti-rotazione'],
+  // FASE A — Upper Pump: 5 muscolari + core anti-rotazione = 6 esercizi (= softMax,
+  // tetto). I dorsali NON sono obbligatori → entrano solo come bonus se resta spazio.
+  upper_pump:       ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'petto', 'core anti-rotazione'],
   lower_forza:      ['glutei', 'core anti-estensione'],
   lower_ipertrofia: ['ischiocrurali', 'polpacci', 'core anti-estensione'],
   fullbody:         ['deltoidi posteriori', 'polpacci'],
@@ -8031,9 +8047,14 @@ const _TRAIN_GEN_SPLIT_BY_DAYS = {
     avanzato:     ['upper','lower','upper','lower'],
   },
   5: {
+    // FASE A (31 mag/1 giu 2026) — split 5gg = Upper/Lower per int/avanzato,
+    // con la TERZA upper = Upper Pump (vedi _trainGenResolveSessionType: la
+    // 3ª upper, occurrenceIdx===2, esce 'Pump' invece di Forza/Ipertrofia).
+    // Sequenza: Upper Forza · Lower Forza · Upper Iper · Lower Iper · Upper Pump.
+    // Principiante NON ha la periodizzazione DUP → resta sullo split PPL.
     principiante: ['push','pull','legs','upper','lower'],
-    intermedio:   ['push','pull','legs','upper','lower'],
-    avanzato:     ['push','pull','legs','upper','lower'],
+    intermedio:   ['upper','lower','upper','lower','upper'],
+    avanzato:     ['upper','lower','upper','lower','upper'],
   },
 };
 
@@ -8055,6 +8076,8 @@ const _TRAIN_GEN_SPLIT_BY_DAYS = {
 const _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY = {
   upper_forza:      ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
   upper_ipertrofia: ['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale'],
+  upper_pump:       [], // FASE A — la Pump non ha compound pesanti (è il suo senso): solo isolamenti ad alte reps
+
   lower_forza:      ['dominante ginocchia', 'dominante anca', 'dominante ginocchia'],
   lower_ipertrofia: ['dominante ginocchia', 'dominante anca', 'dominante ginocchia'],
   fullbody:         ['spinta orizzontale', 'tirata orizzontale', 'dominante ginocchia', 'dominante anca'],
@@ -8101,7 +8124,7 @@ const _normPattern = (s) => String(s || '').toLowerCase().trim();
 // FUNZIONE PRINCIPALE
 // ───────────────────────────────────────────────────────────
 
-async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false } = {}) {
+async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false, giorniOverride = null } = {}) {
   // Try/catch globale: qualunque errore → log + return null.
   // NON deve mai bloccare il flusso chiamante (onboarding deve completare).
   //
@@ -8190,6 +8213,13 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     let tipoAllen     = profile.tipo_allenamento || null;
     let attrezzatura  = Array.isArray(profile.attrezzatura) ? profile.attrezzatura.slice() : [];
     let giorni        = profile.giorni_allenamento || null;
+    // FASE A — override giorni SOLO in dry-run diagnostico (ztSchedaWhy({giorni:N})):
+    // permette di simulare uno split diverso senza toccare ST.profile né il DB.
+    // Variabile LOCALE: non viene mai scritta sul profilo/Supabase.
+    if (giorniOverride != null) {
+      giorni = Number(giorniOverride);
+      console.log(`[train-gen] override giorni → ${giorni} (dry-run test, profilo NON modificato)`);
+    }
     // Volume sessione (sostituisce durata in minuti). Fallback 'completo' →
     // copre profili pre-esistenti senza la colonna e ogni valore inatteso.
     const volume      = (profile.volume_sessione === 'essenziale') ? 'essenziale' : 'completo';
@@ -8661,7 +8691,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const sessioniConFinisher = sessioniProcessate.map(s => {
       const typeOrderIdx = typeProgressivoForFinisher[s.splitType];
       typeProgressivoForFinisher[s.splitType]++;
-      if (!addFinisher) return s;
+      // FASE A — la seduta Pump è già un lavoro metabolico ad alte reps → niente
+      // Tabata in coda (sarebbe ridondante e allungherebbe una seduta nata corta).
+      if (!addFinisher || s.resolvedType === 'Pump') return s;
       const finisher = _trainGenBuildTabata({
         poolTabata: pools.poolFinisherTabata,
         limitazioni,
@@ -9173,6 +9205,9 @@ function _trainGenResolveSessionType(obiettivo, livello, splitType, occurrenceId
   const isDupObj   = _TRAIN_GEN_DUP_OBIETTIVI.has(obiettivo);
   const isDupSplit = (Number(typeCount) >= 2 && splitType !== 'fullbody');
   if (isDupLevel && isDupObj && isDupSplit) {
+    // FASE A — la TERZA upper (occurrenceIdx===2, esiste solo nello split a 5
+    // giorni Upper/Lower) è una seduta Pump leggera, NON un'altra upper pesante.
+    if (splitType === 'upper' && Number(occurrenceIdx) === 2) return 'Pump';
     return ((Number(occurrenceIdx) || 0) % 2 === 0) ? 'Forza' : 'Ipertrofia';
   }
   const byObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo] || {};
@@ -9192,6 +9227,19 @@ function _trainGenIsDupSession(obiettivo, livello, splitType, typeCount) {
 // Risolve i parametri (compound/iso/iso_isometrico) per una sessione dato il
 // suo tipo risolto. Su sessione DUP sceglie compound_forza/compound_ipertrofia.
 function _trainGenResolveSessionParams(obiettivo, livello, sessionType, isDup) {
+  // FASE A — la seduta Pump ha parametri propri (indipendenti da obiettivo/
+  // livello): alte reps, basso carico, recuperi brevi. Stessa forma dell'oggetto
+  // ritornato sotto (compound/iso/iso_isometrico/type/rir/rest_sec).
+  if (sessionType === 'Pump') {
+    return {
+      compound:       _TRAIN_GEN_PUMP_PARAMS.compound,
+      iso:            _TRAIN_GEN_PUMP_PARAMS.iso,
+      iso_isometrico: _TRAIN_GEN_PUMP_PARAMS.iso_isometrico,
+      type: 'Pump',
+      rir: _TRAIN_GEN_PUMP_PARAMS.iso.rir,
+      rest_sec: _TRAIN_GEN_PUMP_PARAMS.iso.rest_sec,
+    };
+  }
   const byObj = _TRAIN_GEN_PARAMS_BY_GOAL[obiettivo] || {};
   const lvl = byObj[livello] || byObj.principiante || {};
   let compound = lvl.compound;
@@ -9215,6 +9263,10 @@ function _trainGenResolveSessionParams(obiettivo, livello, sessionType, isDup) {
 // push/pull/legs/fullbody → la chiave del tipo (nessuna variante).
 function _trainGenGetSessionCategory(splitType, sessionType) {
   if (splitType === 'upper' || splitType === 'lower') {
+    // FASE A — la seduta Pump ha categoria dedicata 'upper_pump' (per la 3ª
+    // upper dello split a 5 giorni): pattern compound vuoti + iso obbligatori
+    // pump-specifici. PRIMA del calcolo forza/ipertrofia.
+    if (sessionType === 'Pump') return splitType + '_pump';
     return splitType + (sessionType === 'Forza' ? '_forza' : '_ipertrofia');
   }
   return splitType;
@@ -10005,7 +10057,7 @@ window.ztTestGeneraScheda = async function() {
 };
 
 // Diagnostica console: dry-run + console.table, no DB no AI
-window.ztSchedaWhy = async function() {
+window.ztSchedaWhy = async function(opts = {}) {
   console.log('=== ztSchedaWhy: dry-run diagnostico (NO save DB, NO chiamata AI) ===');
   console.log('--- profilo utente corrente ---');
   console.log({
@@ -10015,12 +10067,14 @@ window.ztSchedaWhy = async function() {
     tipo_allenamento: ST.profile && ST.profile.tipo_allenamento,
     attrezzatura: ST.profile && ST.profile.attrezzatura,
     giorni_allenamento: ST.profile && ST.profile.giorni_allenamento,
+    giorni_override: (opts && opts.giorni != null) ? opts.giorni : '(nessuno, uso profilo reale)',
     volume_sessione: ST.profile && ST.profile.volume_sessione,
     m1Data_esperienza: ST.m1Data && ST.m1Data.esperienza,
     m1Data_limitazioni: ST.m1Data && ST.m1Data.limitazioni,
   });
   const scheda = await generateTrainingProgram({
-    source: 'why-diagnostic', force: true, dryRun: true
+    source: 'why-diagnostic', force: true, dryRun: true,
+    giorniOverride: (opts && opts.giorni != null) ? opts.giorni : null
   });
   if (!scheda) {
     console.warn('[ztSchedaWhy] nessuna scheda generata — vedi log [train-gen] sopra per il guard fallito');
