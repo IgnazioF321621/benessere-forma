@@ -2268,6 +2268,27 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 
 ## Cosa abbiamo fatto
 
+### Sessione 1 giugno 2026 — FASE B.2: Recovery Day (recupero attivo unico) + Rest Day ✅
+
+Modulo Training: le **2 sedute di recupero** separate (`recoveryUpper` "Recupero Mobilità" + `recoveryLower` "Recupero Stretching") sono state **unificate in una sola "Recovery Day"** completa, usata in tutti i cicli. Il giorno di riposo (`rest`) rinominato **"Rest Day"**. Codice delicato (riuso oggetti esercizio esistenti, niente invenzione): lavorato con script Node brace-aware + harness Node + collaudo dal vivo. Un solo file (`zona-tracker.html`), commit `2b0be92` su `main` (push OK). **APP_VERSION `2026.06.01 · 17:00`.** **Chiude il residuo B.2 della roadmap.**
+
+**La seduta Recovery Day** (versione DEFINITIVA): **~25 min wall-clock** (21.3 min di lavoro + attivazione 5min + micro-pause), **26 esercizi in 5 blocchi**:
+1. **Anche e bacino** (6): Hip CARs dx/sx · 90/90 hip switch · Affondo basso con rotazione dx/sx · Cossack squat alternati
+2. **Glutei e lombari** (5): Pigeon pose dx/sx · Figura 4 supino dx/sx · Knee-to-chest doppia
+3. **Colonna toracica e spalle** (6): Apertura toracica supina (candeliere) · Thread the needle dx/sx · Rotazione toracica seduto dx/sx · Scapular pull-ups a vuoto
+4. **Catena posteriore gambe** (5): Stretching femorali seduto · Couch stretch dx/sx · Stretching polpaccio gamba dritta dx/sx
+5. **Integrazione e respiro** (4): Cat-Cow · World's greatest stretch dx/sx · Savasana con respirazione profonda
+
+Tutti gli esercizi **riusano gli oggetti già esistenti** in `TRAINING_SESSIONS` (con `execution`/`commonErrors`/`muscleImg`/`muscles`/`duration_sec`/`side`), riordinati nei nuovi blocchi — nessun esercizio inventato. Mira alle zone critiche di Ignazio (lombari, ginocchia, torace/spalle).
+
+**Scelta DRY (single source of truth)**: dopo `const TRAINING_SESSIONS`, `TRAINING_SESSIONS.recoveryLower.exercises = TRAINING_SESSIONS.recoveryUpper.exercises;`. Verificato che il recovery flow (`_renderRecoverySection`) legge `exercises` dinamicamente, raggruppa per `block` e traccia il "fatto" per **nome** (`ST.trainRecoveryDone`, resettato a ogni apertura/chiusura) → **non muta** gli oggetti → reference condivisa sicura, niente drift fra le due copie. Net **−113 righe** (rimosso il vecchio array duplicato di `recoveryLower`).
+
+**Logica d'uso** (combinata con B.1): scheda **5 giorni → 1 Recovery Day** (G3); scheda **4 giorni → 2 Recovery Day** (G3 + G6, stessa seduta).
+
+**Invariato**: `id` interni (`recoveryUpper`/`recoveryLower`/`rest`) — NON cambiati (chiavi di rotazione/debito/render). `type:'Recupero'`/`'Riposo'` invariati. Cambiano solo i nomi VISIBILI ("Recovery Day", "Rest Day"). `SESS_LABEL` calendario: recuperi → `REC` (erano REC↑/REC↓), rest → `REST`. `DAY_SPLIT` G3/G6 → `label:'Recovery Day'`, `desc:'Recupero attivo'`. Etichetta durata card "PROSSIMO ALLENAMENTO" (SOLO ramo `type==='Recupero'`, verificato che le sessioni Upper/Lower usano `RIR N · X esercizi` e NON sono toccate): `~20`→`~25 min`.
+
+**Collaudo**: harness Node sui dati VERI estratti dal file (nomi/label, DRY reference `===`, 26 esercizi, 5 blocchi nell'ordine, durate per blocco, integrità campi, nomi univoci, nessun riferimento orfano ai 12 esercizi rimossi) **20/20** + dal vivo (Recovery Day · 26 esercizi, 5 blocchi, G6===G3, rest="Rest Day", flow scorre fino a Savasana e chiude, nessuna pagina bianca). Syntax-check: 0 errori.
+
 ### Sessione 1 giugno 2026 — FASE B.1: Rotazione adattiva 5 giorni (con Upper Pump) ✅
 
 Coach generatore / modulo Training: la **rotazione delle sessioni** (prossima sessione + calcolo debito + badge giorno) ora si **adatta alla scheda attiva** invece di essere fissa a 6 giorni. Codice delicato (rotazione + debito → rischio pagina bianca): lavorato con harness Node fuori dal browser + collaudo dal vivo. Un solo file (`zona-tracker.html`), commit `dee3f4b` su `main` (push OK). **APP_VERSION `2026.06.01 · 16:18`.**
@@ -2286,7 +2307,7 @@ Coach generatore / modulo Training: la **rotazione delle sessioni** (prossima se
 **Collaudo**: harness Node sulle funzioni VERE estratte dal file (`getRotationCycle`/`computeTrainingDebt`/`_rotationDayMap`) **14/14** + dal vivo in console (4gg→6 invariato, simulazione 5gg→7, ripristino→6, nessuna pagina bianca, schermata Training intatta). Syntax-check intero script: 0 errori.
 
 **⚠️ Residui aperti**:
-- **B.2 (cantiere separato, NON fatto)**: contenuti della seduta "Recupero attivo" (~30 min, `recoveryUpper`/`recoveryLower`) da ridisegnare sulle zone critiche di Ignazio (lombari, ginocchia, torace/spalle). Oggi i recuperi G3/G6 restano gli hardcoded del 12-13 mag in `TRAINING_SESSIONS`.
+- ~~**B.2 (cantiere separato, NON fatto)**: contenuti della seduta "Recupero attivo" (~30 min, `recoveryUpper`/`recoveryLower`) da ridisegnare sulle zone critiche di Ignazio (lombari, ginocchia, torace/spalle).~~ ✅ **FATTO 1 giu 2026** (commit `2b0be92`) — vedi entry "FASE B.2: Recovery Day". Seduta unica "Recovery Day" ~25 min, 26 esercizi, 5 blocchi (anche/bacino, glutei/lombari, colonna toracica/spalle, catena posteriore gambe, integrazione/respiro), DRY (G6===G3).
 - **Badge giorno `upperC` su scheda 4gg → "?"**: corretto così (la scheda 4gg non ha la Pump, quindi `upperC` non è nel suo ciclo). NON è un bug.
 - **404 service-worker** osservato dopo hard-refresh in locale: probabile cache SW, innocuo. Da tenere d'occhio solo se in produzione compaiono comportamenti di caricamento anomali.
 - Per vedere la rotazione a 7 sulla scheda VERA di Ignazio serve portarlo a 5 giorni e **rigenerare** (oggi è a 4gg → ciclo 6, comportamento invariato).
