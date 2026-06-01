@@ -3625,7 +3625,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.01 · 10:53';
+const APP_VERSION = '2026.06.01 · 16:18';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3831,6 +3831,10 @@ const ST = {
 // 'rest' (riposo scelto) e 'rest_injury' (riposo per infortunio) restano supportati come giorni extra
 // opzionali (markRestChosen / markRestInjury), ma NON sono in rotazione automatica.
 const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6 };
+// FASE B.1 — Ciclo 7 giorni per la scheda a 5 giorni di lavoro (intermedio/avanzato con Upper Pump):
+// G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 upperC (Pump) · G7 rest
+// (riposo esplicito nel ciclo, escluso dal debito come i recuperi — vedi isRecoverySid in computeTrainingDebt).
+const SESSION_DAY_NUM_5 = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, upperC:6, rest:7 };
 const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
@@ -6657,7 +6661,9 @@ function renderHomeV2(){
       weekEyebrow = `SESSIONE IN CORSO · ${weekStr}`;
     } else {
       const nextSessObj = getTrainingSession(hd.nextSession) || getTrainingSession('upperA');
-      const nextDayN    = SESSION_DAY_NUM[hd.nextSession] || '?';
+      // FASE B.1 — mappa adattiva: con scheda 5gg nextSession può essere 'upperC'/'rest'
+      // (non presenti in SESSION_DAY_NUM 6gg) → _rotationDayMap dà il numero corretto.
+      const nextDayN    = _rotationDayMap()[hd.nextSession] || '?';
       sessName    = `Sessione ${nextSessObj.name}`;
       weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()} · ${weekStr}`;
     }
@@ -7683,8 +7689,19 @@ function getSessionCycle() {
 // "I tuoi giorni" mostra comunque la rotazione 6-day di DAY_SPLIT: il calcolo di "prossimo" e del debito DEVE
 // seguire QUESTA sequenza (così REC↑/G3 → UP B/G4). getSessionCycle() resta la fonte dei CONTENUTI (getTrainingSession),
 // NON della rotazione.
+// FASE B.1 — mappa giorno→numero ADATTIVA alla scheda attiva. Se la scheda
+// caricata (ST.userSessionCycle, array reale dei sessionId) include 'upperC'
+// (Upper Pump → scheda 5gg int/avanzato) usa il ciclo a 7 (SESSION_DAY_NUM_5);
+// altrimenti il ciclo canonico a 6 (SESSION_DAY_NUM), invariato. Discriminante =
+// la scheda REALE, NON i giorni del profilo. null/senza upperC → 6 giorni.
+function _rotationDayMap() {
+  const cyc = ST.userSessionCycle;
+  if (Array.isArray(cyc) && cyc.includes('upperC')) return SESSION_DAY_NUM_5;
+  return SESSION_DAY_NUM;
+}
 function getRotationCycle() {
-  return Object.keys(SESSION_DAY_NUM).sort((a, b) => SESSION_DAY_NUM[a] - SESSION_DAY_NUM[b]);
+  const map = _rotationDayMap();
+  return Object.keys(map).sort((a, b) => map[a] - map[b]);
 }
 
 // Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
@@ -7697,7 +7714,10 @@ function computeTrainingDebt(){
   const debt = new Set();
   const isRecoverySid = (sid) => {
     const ss = getTrainingSession(sid);
-    return (ss && ss.type === 'Recupero') || /^recovery/i.test(sid);
+    // FASE B.1 — escludi dal debito anche il riposo: 'rest' è nel ciclo a 7
+    // (G7) ma saltarlo NON deve generare debito, come i recuperi attivi.
+    return (ss && (ss.type === 'Recupero' || ss.type === 'Riposo'))
+      || /^recovery/i.test(sid) || sid === 'rest' || sid === 'rest_injury';
   };
   let pos = -1; // indice ciclo del "fronte" raggiunto
   for(const w of all){
@@ -10637,11 +10657,11 @@ function getProgressionSuggestion(exName, sessionId){
 }
 
 function renderCalendar(workouts, year, month){
-  const SESS_LABEL = { upperA:'UP A', upperB:'UP B', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REST', rest_injury:'STOP' };
+  const SESS_LABEL = { upperA:'UP A', upperB:'UP B', upperC:'UP C', lowerA:'LO A', lowerB:'LO B', recoveryUpper:'REC↑', recoveryLower:'REC↓', rest:'REST', rest_injury:'STOP' };
   // Calendar palette: evergreen primary (Upper), evergreen scuro (Lower per distinguere),
   // evergreen anch'esso per Recovery (la sigla "REC↑/REC↓" basta a distinguere dalle Upper),
   // grigio per Rest, terracotta per infortunio. Tutti dal design system, niente hex orfani.
-  const SESS_COLOR = { upperA:'var(--acc)', upperB:'var(--acc)', lowerA:'var(--acc2)', lowerB:'var(--acc2)', recoveryUpper:'var(--acc)', recoveryLower:'var(--acc)', rest:'#9CA3AF', rest_injury:'#B84C2A' };
+  const SESS_COLOR = { upperA:'var(--acc)', upperB:'var(--acc)', upperC:'var(--acc)', lowerA:'var(--acc2)', lowerB:'var(--acc2)', recoveryUpper:'var(--acc)', recoveryLower:'var(--acc)', rest:'#9CA3AF', rest_injury:'#B84C2A' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
