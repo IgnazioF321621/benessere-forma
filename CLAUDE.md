@@ -2169,7 +2169,10 @@ Nessun utente resta mai senza allenamento.
 
 **🅿️ PARCHEGGIATO — Progressione per variante (esercizi a corpo libero)** — progetto dedicato. Quando le reps saturano il range, il coach deve proporre una **variante più dura** (es. Affondo → pausa 2s → Bulgarian → Bulgarian con elastico), **non +1 rep all'infinito**. VINCOLO: il cambio variante avviene SOLO al **cambio blocco** (ogni 4 settimane), mai a metà ciclo (la progressione intra-blocco ha bisogno di un riferimento stabile). Vive nella "voce del coach" Training. Emerso accanto al fix "per lato" del 29 mag sera.
 
-**🅿️ PARCHEGGIATO — Quinto allenamento · Upper Pump (split 5 giorni) [Blocco A]** — cantiere serio, da riprendere SOLO col 5° giorno pensato come **Upper Pump leggero**: alte ripetizioni, basso carico, **niente compound pesanti**, seduta corta. Oggi il 5gg di default nel codice (`_TRAIN_GEN_SPLIT_BY_DAYS` voce `5`) è ancora **PPL** → la terza upper uscirebbe come **upper pesante** (per l'alternanza DUP Forza/Ipertrofia) e **NON risolve** il problema tempo/recupero. Ciclo desiderato di Ignazio (7 giorni): **Upper Forza · Lower Forza · mobilità · Upper Ipertrofia · Lower Ipertrofia · Upper Pump · riposo**. Serve quindi, oltre allo split Upper/Lower (NON PPL), una **regola che assegni alla 3ª upper parametri "pump"** invece di Forza/Ipertrofia. Collegato a: **"regola generale dello split"** (giorni × obiettivo × attrezzatura × limitazioni — oggi solo la tabella statica) e **"progressione tra blocchi"** (Blocco D). Storia/contesto nei changelog: entry "BLOCCO C" (blockquote "Caso personale Ignazio — split 5 giorni"), "Blocco B · split 5gg SOSPESO" (split PPL scartato prima del commit, riportato all'originale), "(chiusura) — Roadmap/sospesi".
+**✅ FATTO (1 giu 2026, commit `8023b7d`, APP_VERSION `2026.06.01 · 10:53`) — Quinto allenamento · Upper Pump (split 5 giorni) [Blocco A, parte 1]** — implementata la **Fase A**: lo split a 5 giorni per **intermedio/avanzato** è ora **Upper/Lower** (`_TRAIN_GEN_SPLIT_BY_DAYS` voce `5` → `['upper','lower','upper','lower','upper']`), con la **terza upper = Upper Pump**. Sequenza: **Upper Forza · Lower Forza · Upper Iper · Lower Iper · Upper Pump**. La Pump è una seduta leggera: parametri **3×15-25 reps / RIR 0 / rest 50s** (core iso 20-40s/rest 30), **0 compound pesanti** (`_TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY.upper_pump = []`), iso obbligatori **deltoidi laterali + deltoidi posteriori + bicipiti + tricipiti + petto + core anti-rotazione** (= 6 esercizi = softMax; dorsali solo bonus), **niente Tabata** in coda. Implementazione: `_trainGenResolveSessionType` ritorna `'Pump'` per la 3ª upper (occurrenceIdx===2) dentro il ramo DUP; nuova costante `_TRAIN_GEN_PUMP_PARAMS`; `_trainGenResolveSessionParams` + `_trainGenGetSessionCategory` (→ `'upper_pump'`) gestiscono il tipo Pump; finisher gate `s.resolvedType === 'Pump'`. **Principiante 5gg resta PPL** (no periodizzazione DUP). Aggiunto **`ztSchedaWhy({giorni:N})`** (override giorni in dry-run puro, no DB, no scrittura profilo) per collaudare uno split diverso in app. Collaudo: harness Node resolver 20/20 + dal vivo `ztSchedaWhy({giorni:5})` (5 sessioni corrette, profilo/DB intatti).
+  - **Residuo aperto #1 — gating principiante 5gg**: oggi il principiante a 5 giorni resta su PPL (la Pump vive solo nel ramo DUP). Da decidere se/come dargli uno split sensato a 5 giorni quando arriverà la "regola generale dello split".
+  - **Residuo aperto #2 — edge non-DUP a 5gg senza Pump**: un obiettivo non-DUP (`forza_performance`/`longevita`/`mantenimento`) a 5 giorni int/avanzato prende lo split U/L/U/L/U **ma senza Pump** (il check Pump è nel ramo DUP) → 5 sessioni dello stesso tipo (es. 3 Upper Forza). Nessun impatto su Ignazio (ricomposizione = DUP) né sui tester (Nutrition-only). Da gestire con la regola generale dello split (Blocco A parte 2) + progressione tra blocchi (Blocco D).
+  - **Storia/contesto** nei changelog: entry "BLOCCO C" (blockquote "Caso personale Ignazio — split 5 giorni"), "Blocco B · split 5gg SOSPESO", "(chiusura) — Roadmap/sospesi". Resta da implementare il **ciclo 7 giorni desiderato** (Upper Forza · Lower Forza · mobilità · Upper Iper · Lower Iper · Upper Pump · riposo) e la regola generale dello split (giorni × obiettivo × attrezzatura × limitazioni).
 
 **✅ CANTIERE CHIUSO (30 mag 2026) — Fusione tab "Sessione" dentro "Programma" (progetto dedicato)** — emerso dal restyling tab Programma del 30 mag (vedi changelog + limiti noti). Idea: **unificare le due tab**. In "I tuoi giorni", tap su una card → apre la **sessione di quel giorno** (sotto-livello), così il programma e l'allenamento vivono in un'unica tab. La tab "Sessione" attuale viene **riusata, non riscritta**.
 
@@ -2264,6 +2267,29 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore oggi gira SOLO via `ztTestGeneraScheda()` manuale / `?schedaGen=1` / post-M2 futuro, MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
 
 ## Cosa abbiamo fatto
+
+### Sessione 1 giugno 2026 — FASE A: Quinto allenamento Upper Pump (split 5 giorni) ✅
+
+Coach generatore: implementata la **Fase A** dello split a 5 giorni. Per **intermedio/avanzato** il 5gg passa da PPL a **Upper/Lower** con la **terza upper = Upper Pump** (seduta leggera prima del riposo). Sequenza: **Upper Forza · Lower Forza · Upper Iper · Lower Iper · Upper Pump**. Un solo file (`zona-tracker.html`), un commit `8023b7d` su `main` (push OK). **APP_VERSION `2026.06.01 · 10:53`.**
+
+**Le 8 modifiche del generatore** (un unico diff interdipendente):
+1. `_TRAIN_GEN_SPLIT_BY_DAYS` voce `5`: `intermedio`/`avanzato` → `['upper','lower','upper','lower','upper']`. **`principiante` invariato** (resta PPL — no DUP).
+2. `_trainGenResolveSessionType` (ramo DUP): `if (splitType==='upper' && occurrenceIdx===2) return 'Pump'` (la 3ª upper esiste solo nello split 5gg).
+3. Nuova costante `_TRAIN_GEN_PUMP_PARAMS`: compound/iso `3×15-25 RIR0 rest50`, iso_isometrico `3×20-40s rest30`.
+4. `_trainGenResolveSessionParams`: ramo iniziale `if (sessionType==='Pump')` → ritorna i params Pump.
+5. `_trainGenGetSessionCategory`: `if (sessionType==='Pump') return splitType+'_pump'` → `'upper_pump'`.
+6. `_TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY`: `upper_pump: []` (nessun compound pesante = senso della Pump).
+7. `_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`: `upper_pump: ['deltoidi laterali','deltoidi posteriori','bicipiti','tricipiti','petto','core anti-rotazione']` (5 muscolari + core = 6 = softMax; **dorsali solo bonus**).
+8. Finisher gate: `if (!addFinisher || s.resolvedType === 'Pump') return s;` (niente Tabata sulla Pump).
+
+**+2 modifiche di test (9a/9b, stesso diff)**: `generateTrainingProgram` accetta `giorniOverride` (variabile LOCALE, mai scritta su profilo/DB); `ztSchedaWhy({giorni:N})` lo passa → si collauda uno split diverso **in dry-run puro** senza toccare `ST.profile` (Ignazio è a 4 giorni). `ztSchedaWhy()` senza argomenti = comportamento invariato.
+
+**Collaudo**: harness Node resolver (funzioni VERE estratte dal file) **20/20**; dal vivo su localhost `ztSchedaWhy({giorni:5})` → 5 sessioni con Upper C — Pump corretta (0 compound, 6 esercizi, RIR 0, rest 50s, niente Tabata), `ztSchedaWhy()` torna alle 4 reali, profilo/DB intatti. Syntax-check intero script: 0 errori.
+
+**⚠️ Residui aperti** (vedi voce roadmap "PROSSIMI PASSI MODULO TRAINING"):
+- **#1 gating principiante 5gg**: resta su PPL (Pump solo nel ramo DUP) — da gestire con la regola generale dello split.
+- **#2 edge non-DUP a 5gg senza Pump**: `forza_performance`/`longevita`/`mantenimento` a 5gg int/avanzato → split U/L/U/L/U ma 5 sessioni stesso tipo (nessun Pump). Nessun impatto su Ignazio (ricomposizione=DUP) né sui tester (Nutrition-only).
+- **Ciclo 7 giorni desiderato** (con mobilità+riposo) e **regola generale dello split** (giorni × obiettivo × attrezzatura × limitazioni) + **progressione tra blocchi** (Blocco D): ancora da implementare. ⚠️ Per applicare lo split alla scheda VERA di Ignazio serve portare `giorni_allenamento` a 5 e **rigenerare**.
 
 ### Sessione 31 maggio 2026 (sera/notte) — Audit attrezzatura casa + correzioni catalogo + rubrica alias ✅
 
