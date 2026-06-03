@@ -3478,6 +3478,20 @@ body.preview-onboarding #m1-preview-banner{display:block;}
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Usata per calcolare la settimana corrente nel ciclo 4 settimane (3 carico + 1 scarico).</div>
       </div>
       <div class="onb-field" style="margin-top:10px;">
+        <label>Giorni di allenamento a settimana</label>
+        <select id="set-giorni-allenamento" class="inp inp-sm">
+          <option value="2">2 giorni</option>
+          <option value="3">3 giorni</option>
+          <option value="4">4 giorni</option>
+          <option value="5">5 giorni</option>
+        </select>
+        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Dopo aver salvato, usa il pulsante qui sotto per generare la nuova scheda.</div>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" id="set-rigenera-btn" onclick="rigeneraSchedaDaImpostazioni()">Rigenera scheda →</button>
+        <div id="set-rigenera-msg" style="font-size:10px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-top:6px;display:none;"></div>
+      </div>
+      <div class="onb-field" style="margin-top:10px;">
         <label>Unità di misura peso/carico</label>
         <select id="set-unit" class="inp inp-sm">
           <option value="kg">kg</option>
@@ -3625,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.01 · 17:00';
+const APP_VERSION = '2026.06.03 · 15:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12769,7 +12783,86 @@ function renderTraining(){
         </div>`;
     }).join('');
 
-    const giorniHTML = `
+    // ── helpers "I tuoi giorni" — riusati da layout 4gg e 5gg ──────────────
+    const _mkDayCard = (sid, lbl, dsc, isIper) => {
+      const acCol = isIper ? SALVIA : 'var(--acc)';
+      const ld = ST.sessionLastCompletion ? ST.sessionLastCompletion[sid] : null;
+      const dt = ld === todayKey();
+      let lb = acCol, op = '1', sb = '';
+      if(dt){ op='.72'; sb=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(ld)}</span>`; }
+      else if(debtSet.has(sid)){ lb='#B84C2A'; sb=debtBadge; }
+      else if(sid===debtTarget){ sb=oggiBadge; }
+      return `<div onclick="openTrainingSession('${sid}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${lb};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;opacity:${op};"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;"><span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${lbl}</span>${sb}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${acCol};text-transform:uppercase;">● ${dsc}</span><span style="font-size:15px;color:var(--t3);line-height:1;flex-shrink:0;">›</span></div></div>`;
+    };
+    const _mkSep = (lbl, cnt) => {
+      const cntSpan = cnt ? '<span style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;">' + cnt + '</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:6px;margin:14px 0 8px;"><span style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;">—</span><span style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;flex:1;">${lbl}</span>${cntSpan}</div>`;
+    };
+    const is5day = Array.isArray(ST.userSessionCycle) && ST.userSessionCycle.includes('upperC');
+    const _obKey = ((ST.profile?.obiettivo || '').split(',')[0] || 'mantenimento');
+    const _obLabel = (OBJ_ADAPT[_obKey] || OBJ_ADAPT.mantenimento).label.toUpperCase();
+    let giorniHTML;
+    if(is5day){
+      const recSess = recoveryDays[0];
+      const recLd = ST.sessionLastCompletion ? ST.sessionLastCompletion[recSess?.session] : null;
+      const recDt = recLd === todayKey();
+      let recBadge = '';
+      if(recDt) recBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(recLd)}</span>`;
+      else if(recSess?.session === debtTarget) recBadge = oggiBadge;
+      const cSessObj = getTrainingSession('upperC');
+      const cLbl = cSessObj?.name || 'Upper C';
+      const cLd = ST.sessionLastCompletion ? ST.sessionLastCompletion['upperC'] : null;
+      const cDt = cLd === todayKey();
+      let cLb = SALVIA, cOp = '1', cBadge = '';
+      if(cDt){ cOp='.72'; cBadge=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(cLd)}</span>`; }
+      else if(debtSet.has('upperC')){ cLb='#B84C2A'; cBadge=debtBadge; }
+      else if('upperC'===debtTarget){ cBadge=oggiBadge; }
+      const recSessId = recSess ? recSess.session : 'recoveryUpper';
+      giorniHTML = `<div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">
+          <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);">I tuoi giorni</div>
+          <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.04em;">5 ALLEN · 1 REC · 1 RIPOSO</div>
+        </div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:4px;">${_obLabel}</div>
+        ${_mkSep('BLOCCO · FORZA', '2 ALLEN')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          ${_mkDayCard('upperA','Upper A','Forza',false)}
+          ${_mkDayCard('lowerA','Lower A','Forza',false)}
+        </div>
+        ${_mkSep('RECUPERO', '')}
+        <div style="margin-bottom:10px;">
+          <div onclick="openTrainingSession('${recSessId}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
+            <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
+              <span style="font-size:13px;line-height:1;">↻</span>Recovery Day${recBadge ? ' ' + recBadge : ''}
+            </span>
+            <span style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+              <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">~25 MIN</span>
+              <span style="font-size:15px;color:var(--t3);line-height:1;">›</span>
+            </span>
+          </div>
+        </div>
+        ${_mkSep('BLOCCO · IPERTROFIA', '3 ALLEN')}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          ${_mkDayCard('upperB','Upper B','Ipertrofia',true)}
+          ${_mkDayCard('lowerB','Lower B','Ipertrofia',true)}
+          <div onclick="openTrainingSession('upperC')" style="background:#F0F7F5;border:1px solid var(--s2);border-left:3px solid ${cLb};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;opacity:${cOp};grid-column:1/-1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px;">
+              <span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${cLbl}</span>
+              <div style="display:flex;align-items:center;gap:6px;">${cBadge}<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--t3);background:var(--s2);padding:2px 7px;border-radius:999px;white-space:nowrap;">5° · LEGGERO</span><span style="font-size:15px;color:var(--t3);line-height:1;flex-shrink:0;">›</span></div>
+            </div>
+            <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${SALVIA};text-transform:uppercase;">● ALTE REP · BASSO CARICO · ISOLAMENTI</div>
+          </div>
+        </div>
+        ${_mkSep('RIPOSO', '')}
+        <div style="background:transparent;border:1.5px dashed var(--b1,#DDD9D0);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;opacity:0.6;">
+          <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
+            <span style="font-size:13px;line-height:1;">☽</span>Rest Day
+          </span>
+          <span style="font-size:9px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:var(--t3);">RIPOSO COMPLETO</span>
+        </div>
+      </div>`;
+    } else {
+      giorniHTML = `
       <div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">
           <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);">I tuoi giorni</div>
@@ -12779,6 +12872,7 @@ function renderTraining(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">${dayCards}</div>
         <div style="display:flex;flex-direction:column;gap:8px;">${recoveryRows}</div>
       </div>`;
+    }
 
     // ── 3 · CICLO 4 SETTIMANE ───────────────────────────────
     const cycleSub = ['Base','+1 set','+1 rep','−40% vol'];
@@ -23795,6 +23889,8 @@ function openSettingsModal() {
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
+  const giorniSel = document.getElementById('set-giorni-allenamento');
+  if(giorniSel) giorniSel.value = String(p.giorni_allenamento || 4);
   const unitSel = document.getElementById('set-unit');
   if(unitSel) unitSel.value = p.unit || 'lbs';
   // Intolleranze
@@ -23971,6 +24067,7 @@ async function _saveSettingsExecute(goalChanged) {
     target_protein: targets.protein,
     target_carbs:  targets.carbs,
     target_fat:    targets.fat,
+    giorni_allenamento: parseInt(document.getElementById('set-giorni-allenamento')?.value) || null,
     updated_at:    new Date().toISOString(),
   };
 
@@ -23988,6 +24085,9 @@ async function _saveSettingsExecute(goalChanged) {
   // Unità peso/carico — salvata solo in localStorage prefs
   const unitVal = document.getElementById('set-unit')?.value || 'lbs';
   if(ST.profile) ST.profile.unit = unitVal;
+
+  // Giorni allenamento — sincronizza profilo locale
+  if(ST.profile) ST.profile.giorni_allenamento = parseInt(document.getElementById('set-giorni-allenamento')?.value) || ST.profile.giorni_allenamento;
 
   // Aggiorna stato locale
   Object.assign(ST.profile, updates);
@@ -24008,6 +24108,29 @@ async function _saveSettingsExecute(goalChanged) {
   if (goalChanged) {
     const labelNew = (typeof OBJ_ADAPT !== 'undefined' && OBJ_ADAPT[updates.obiettivo] && OBJ_ADAPT[updates.obiettivo].label) || updates.obiettivo;
     showToast('Obiettivo aggiornato. Da ora il coach userà «' + labelNew + '» per costruire i tuoi prossimi piani.', '🎯', 5000);
+  }
+}
+
+async function rigeneraSchedaDaImpostazioni() {
+  const btn = document.getElementById('set-rigenera-btn');
+  const msg = document.getElementById('set-rigenera-msg');
+  const giorni = parseInt(document.getElementById('set-giorni-allenamento')?.value) || ST.profile?.giorni_allenamento;
+  if(!giorni) { msg.style.display='block'; msg.textContent='Salva prima il numero di giorni.'; return; }
+  btn.disabled = true; btn.textContent = 'Generazione in corso...';
+  msg.style.display = 'none';
+  try {
+    if(ST.profile) ST.profile.giorni_allenamento = giorni;
+    await generateTrainingProgram({ source: 'manual', force: true });
+    await loadActiveScheda();
+    msg.style.display = 'block';
+    msg.textContent = 'Scheda rigenerata ✓';
+    btn.textContent = 'Rigenera scheda →';
+    btn.disabled = false;
+  } catch(e) {
+    msg.style.display = 'block';
+    msg.textContent = 'Errore: ' + (e.message || 'riprova');
+    btn.textContent = 'Rigenera scheda →';
+    btn.disabled = false;
   }
 }
 
