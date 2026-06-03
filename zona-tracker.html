@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.03 · 15:43';
+const APP_VERSION = '2026.06.03 · 16:02';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8661,10 +8661,10 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         ? restSecToText(compoundRest) : `${compoundRest} sec`;
       const sessionMeta = {
         id:    `${s.splitType}${letter}`,
-        name:  letter ? `${displayName} ${letter}` : displayName,
+        name:  s.resolvedType === 'Pump' ? 'Upper Pump' : (letter ? `${displayName} ${letter}` : displayName),
         type:  sessType,
         rir:   sessRir,
-        label: letter ? `${displayName} ${letter} — ${sessType}` : `${displayName} — ${sessType}`,
+        label: s.resolvedType === 'Pump' ? 'Upper Pump — Pump' : (letter ? `${displayName} ${letter} — ${sessType}` : `${displayName} — ${sessType}`),
         rest:  restText,
         duration_min: null, // dismesso: niente più stima minuti (volume-based)
       };
