@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.04 · 09:43';
+const APP_VERSION = '2026.06.04 · 10:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12593,7 +12593,7 @@ function renderTraining(){
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
-                  ? `<button class="ex-add-set-btn" onclick="openTrainExec('${sel}','${safeName}',${nextSet});">▶ Inizia S${nextSet}</button>`
+                  ? `<button class="ex-add-set-btn" onclick="try{playLongBeep();}catch(e){}openTrainExec('${sel}','${safeName}',${nextSet});">▶ Inizia S${nextSet}</button>`
                   : ''}
             </div>
             ${_renderTrainNoteBlock(e.name)}
@@ -13387,7 +13387,7 @@ function renderTraining(){
           <div style="font-size:52px;line-height:1;margin-bottom:12px;">💪</div>
           <div style="font-size:26px;font-weight:700;color:var(--acc);font-family:var(--font-sans);letter-spacing:.02em;margin-bottom:24px;">PRONTO!</div>
           ${_hasNext
-            ? `<button onclick="skipCountdown();openTrainExec('${cd.sessionId}','${_safeName}',${_nextSet});"
+            ? `<button onclick="try{playLongBeep();}catch(e){}skipCountdown();openTrainExec('${cd.sessionId}','${_safeName}',${_nextSet});"
                  style="width:100%;padding:15px;background:var(--acc);color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;font-family:var(--font-sans);cursor:pointer;box-shadow:0 2px 8px rgba(42,122,111,.3);">▶ Inizia S${_nextSet}</button>
                <button onclick="skipCountdown();" style="margin-top:12px;background:transparent;border:none;color:var(--t3);font-size:13px;font-family:var(--font-sans);font-weight:600;cursor:pointer;text-decoration:underline;">Più tardi</button>`
             : `<button onclick="skipCountdown();" style="padding:10px 28px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">OK ✓</button>`}
@@ -20959,6 +20959,9 @@ function execTimerStart(targetSec){
   ST.trainExecTimer._iv = setInterval(()=>{
     if(!ST.trainExecTimer.running) return;
     if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
+    if(ST.trainExecTimer.remaining > 0 && ST.trainExecTimer.remaining <= 3){
+      try{ playPrepBeep(); }catch(e){}
+    }
     const done = ST.trainExecTimer.remaining === 0;
     // Beep triplo una sola volta quando si arriva a 0
     if(done && !ST.trainExecTimer.beeped){
@@ -21009,6 +21012,7 @@ function execTimerLaunch(){
   const e = ST.trainExecOpen;
   if(!e || !e.isTimed) return;
   e.timedReady = true;
+  try{ playLongBeep(); }catch(e){}
   renderTraining();
   execTimerStart(e.timedTarget);
 }
@@ -21229,11 +21233,15 @@ function _activationFlowAdvance(){
   }
   const next = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
   ST.trainActivationFlow.remaining = next.seconds || 60;
+  try{ playLongBeep(); }catch(e){}
   renderTraining();
 }
 function _activationFlowTick(){
   if(!ST.trainActivationFlow.running) return;
   ST.trainActivationFlow.remaining = Math.max(0, ST.trainActivationFlow.remaining - 1);
+  if(ST.trainActivationFlow.remaining > 0 && ST.trainActivationFlow.remaining <= 3){
+    try{ playPrepBeep(); }catch(e){}
+  }
   if(ST.trainActivationFlow.remaining <= 0){
     _activationFlowAdvance();
   } else {
@@ -21246,6 +21254,7 @@ function activationFlowStart(){
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   if(!ACTIVATION_BLOCK.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  try{ playLongBeep(); }catch(e){}
   _activationFlowClearInterval();
   ST.trainActivationFlow.active = true;
   ST.trainActivationFlow.currentIdx = 0;
@@ -21436,6 +21445,7 @@ function _recoveryFlowAdvance(){
   flow.currentIdx = nextIdx;
   flow.remaining = next.duration_sec || 30;
   flow.microPause = { active:true, remaining:pauseSec, total:pauseSec, nextExName: next.name };
+  try{ playLongBeep(); }catch(e){}
   // running resta true → l'interval continua a ticchettare ma su microPause.remaining
   renderTraining();
 }
@@ -21455,6 +21465,9 @@ function _recoveryFlowTick(){
   }
   // Branch B — countdown esercizio normale
   flow.remaining = Math.max(0, flow.remaining - 1);
+  if(flow.remaining > 0 && flow.remaining <= 3){
+    try{ playPrepBeep(); }catch(e){}
+  }
   if(flow.remaining <= 0){
     _recoveryFlowAdvance();
   } else {
@@ -21468,6 +21481,7 @@ function recoveryFlowStart(){
   const sess = getTrainingSession(ST.trainSession);
   if(!sess || sess.type !== 'Recupero' || !sess.exercises.length) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  try{ playLongBeep(); }catch(e){}
   _recoveryFlowClearInterval();
   // Reset stato collapsed (nuova sessione = tutti i blocchi espansi)
   ST.trainRecoveryCollapsed = {};
@@ -21614,6 +21628,7 @@ function _tabataFlowAdvance(){
     f.round++;
     f.phase = 'work';
     f.remaining = f.finisher.work_sec;
+    try { playLongBeep(); } catch(e) {}
   }
   renderTraining();
 }
