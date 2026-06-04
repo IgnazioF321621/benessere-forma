@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.04 · 07:42';
+const APP_VERSION = '2026.06.04 · 07:58';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12318,8 +12318,10 @@ function _renderSessionPreview(s, sel){
     exHTML = `<div style="display:flex;flex-direction:column;gap:8px;">${exHTML}</div>`;
   } else {
     exHTML = (s.exercises||[]).map((e,i)=>{
-      const rirPart  = (s.rir != null) ? ` · RIR ${s.rir}` : '';
-      const restPart = s.rest ? ` · rec ${s.rest}` : '';
+      const isTimed = !!(e.isTimed || (typeof parseRepsRange === 'function' && parseRepsRange(e.reps)?.kind === 'seconds'));
+      const rirPart  = (s.rir != null && !isTimed) ? ` · RIR ${s.rir}` : '';
+      const restVal  = e.rest_sec ? restSecToText(e.rest_sec) : s.rest;
+      const restPart = restVal ? ` · rec ${restVal}` : '';
       const setupSec = (Array.isArray(e.setup) && e.setup.length) ? `<div class="modal-section"><h4>Setup</h4><ul class="modal-list">${e.setup.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
       const execSec  = (Array.isArray(e.execution) && e.execution.length) ? `<div class="modal-section"><h4>Esecuzione</h4><ol class="modal-list">${e.execution.map(x=>`<li>${x}</li>`).join('')}</ol></div>` : '';
       const errSec   = (Array.isArray(e.commonErrors) && e.commonErrors.length) ? `<div class="modal-section"><h4>Errori comuni da evitare</h4><ul class="modal-list">${e.commonErrors.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
