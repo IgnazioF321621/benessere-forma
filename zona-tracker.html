@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.03 · 16:02';
+const APP_VERSION = '2026.06.04 · 07:03';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6412,12 +6412,13 @@ async function computeTrainHomeData(){
   const today = todayKey();
   try {
     // Ultimo workout effettivo (esclude riposi, scelti o per infortunio) — fonte di verità per rotazione
-    const { data: lastArr, error: lastErr } = await supa.from('workouts')
+    let qLast = supa.from('workouts')
       .select('date, session_type, completed')
       .eq('user_id', ST.user.id)
-      .not('session_type', 'in', '(rest,rest_injury)')
-      .order('date', {ascending:false})
-      .limit(1);
+      .not('session_type', 'in', '(rest,rest_injury)');
+    if(ST.profile && ST.profile.train_start_date) qLast = qLast.gte('date', ST.profile.train_start_date);
+    qLast = qLast.order('date', {ascending:false}).limit(1);
+    const { data: lastArr, error: lastErr } = await qLast;
     if(lastErr) throw lastErr;
     const lastWorkout = (lastArr && lastArr[0]) || null;
 
@@ -11357,13 +11358,15 @@ async function loadSessionLastCompletion(opts){
 async function loadTrainingAllCompleted(opts){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainAllCompleted = []; return; }
   try {
-    const { data, error } = await supa.from('workouts')
+    let q = supa.from('workouts')
       .select('id, session_type, date')
       .eq('user_id', ST.user.id)
       .eq('completed', true)
       .neq('session_type', 'rest')
-      .neq('session_type', 'rest_injury')
-      .order('date', {ascending:true});
+      .neq('session_type', 'rest_injury');
+    if(ST.profile && ST.profile.train_start_date) q = q.gte('date', ST.profile.train_start_date);
+    q = q.order('date', {ascending:true});
+    const { data, error } = await q;
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
     if(!(opts && opts.skipRender)){
