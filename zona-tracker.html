@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.04 · 07:21';
+const APP_VERSION = '2026.06.04 · 07:42';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10105,6 +10105,8 @@ window.ztTrainGenPatternPick = async function(splitTypeFilter) {
 // Ipertrofia compound: 75s — target classico ipertrofia 60-90s
 // Iso/accessori (entrambi i tipi sessione): 60s — recupero corto, no SNC pesante
 function getRestSec(sessionId, ex){
+  // Prima priorità: rest_sec esplicito sull'esercizio (esercizi generati dal coach)
+  if(ex?.rest_sec) return ex.rest_sec;
   const sess = getTrainingSession(sessionId);
   const isForza = sess?.type === 'Forza';
   const isIso = !!ex?.iso;
@@ -12469,7 +12471,8 @@ function renderTraining(){
         ).join('');
         // Esercizi temporali (iso + reps in secondi): label "DURATA", picker 5-90 step 5, RIR nascosto
         const parsedReps = parseRepsRange(e.reps);
-        const isTimed = parsedReps && parsedReps.kind === 'seconds';
+        // e.isTimed è il flag esplicito degli esercizi generati dal coach (durationBased)
+        const isTimed = (parsedReps && parsedReps.kind === 'seconds') || !!e.isTimed;
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
