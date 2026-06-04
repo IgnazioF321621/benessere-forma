@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.04 · 08:17';
+const APP_VERSION = '2026.06.04 · 08:45';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7716,79 +7716,79 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
     principiante: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:null, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:90, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:75, type:'Forza', durationBased:true },
     },
     intermedio: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:90, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:75, type:'Forza', durationBased:true },
     },
     avanzato: {
       compound:       { sets:4, reps_min:4, reps_max:6, rir:2, rest_sec:180, type:'Forza' },
       iso:            { sets:3, reps_min:8, reps_max:12, rir:2, rest_sec:90, type:'Forza' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:90, type:'Forza', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:45, rir:null, rest_sec:75, type:'Forza', durationBased:true },
     },
   },
   ipertrofia: {
     principiante: {
       compound:       { sets:3, reps_min:8, reps_max:12, rir:null, rest_sec:90, type:'Ipertrofia' },
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:75, type:'Ipertrofia', durationBased:true },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:75, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:75, type:'Ipertrofia', durationBased:true },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:75, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:8, reps_max:12, rir:1, rest_sec:90, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:60, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:75, type:'Ipertrofia', durationBased:true },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:75, type:'Ipertrofia' },
+      iso_isometrico: { sets:3, reps_min:30, reps_max:60, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
   },
   dimagrimento: {
     principiante: {
       compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:60, type:'Ipertrofia' },
       iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:60, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:60, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
       iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
-      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
+      iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:45, type:'Ipertrofia', durationBased:true },
     },
   },
   ricomposizione: {
     principiante: {
       compound:       { sets:3, reps_min:10, reps_max:15, rir:null, rest_sec:75, type:'Ipertrofia' },
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:45, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:null, rest_sec:75, type:'Ipertrofia' },
       iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
     intermedio: {
       compound:            { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:75, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:75, type:'Ipertrofia' },
       iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
     avanzato: {
       compound:            { sets:4, reps_min:6, reps_max:10, rir:1, rest_sec:75, type:'Ipertrofia' },
       compound_forza:      _DUP_COMPOUND_FORZA,
       compound_ipertrofia: _DUP_COMPOUND_IPERTROFIA,
-      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:45, type:'Ipertrofia' },
+      iso:            { sets:3, reps_min:12, reps_max:15, rir:1, rest_sec:75, type:'Ipertrofia' },
       iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:60, type:'Ipertrofia', durationBased:true },
     },
   },
@@ -7838,7 +7838,7 @@ const _TRAIN_GEN_PARAMS_BY_GOAL = {
 const _TRAIN_GEN_PUMP_PARAMS = {
   compound:       { sets:3, reps_min:15, reps_max:25, rir:0, rest_sec:50, type:'Pump' },
   iso:            { sets:3, reps_min:15, reps_max:25, rir:0, rest_sec:50, type:'Pump' },
-  iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:45, type:'Pump', durationBased:true },
+  iso_isometrico: { sets:3, reps_min:20, reps_max:40, rir:null, rest_sec:30, type:'Pump', durationBased:true },
 };
 
 // Isolamenti OBBLIGATORI per categoria di sessione (Regola A, 28 mag 2026).
