@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.04 · 10:11';
+const APP_VERSION = '2026.06.08 · 07:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13333,6 +13333,7 @@ function renderTraining(){
           <div>
             <strong style="font-size:17px;display:block;line-height:1.25;">${ai.exName}</strong>
             ${ai.sessionLabel ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${ai.sessionLabel}</div>` : ''}
+            ${ai.isSurrogato ? `<div class="ex-surrogato-note" style="margin-top:6px;">⚠ Versione adattata · ${(ai.surrogatoEq||'').toUpperCase()}</div>` : ''}
           </div>
           <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
@@ -20633,6 +20634,14 @@ async function openExerciseAI(exName, sessionId) {
     content: '',
     loading: true,
   };
+  // Surrogato: ex.isSurrogato è impostato da _trainGenBuildExercise quando
+  // l'esercizio palestra è sostituito dalla variante casalinga (es. bilanciere →
+  // elastico). Il setup è già sovrascritto con nota_surrogato in fase di build;
+  // qui propaghiamo i flag al modal per mostrare il banner "Versione adattata".
+  if (ex?.isSurrogato) {
+    baseAi.isSurrogato = true;
+    baseAi.surrogatoEq = ex.eq || '';
+  }
   ST.exerciseAIOpen = baseAi;
   renderTraining();
 
