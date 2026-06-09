@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.08 · 07:24';
+const APP_VERSION = '2026.06.09 · 14:51';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4595,7 +4595,7 @@ async function fetchExerciseMedia(exName) {
 }
 // buildCoachPrompt — prompt riusabile per cue AI Coach (modal scheda + modal recupero).
 // Mantiene il prompt unificato: cosi il cue cached e' coerente fra i due modal.
-function buildCoachPrompt(exName, sessionId) {
+function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   const sess = getTrainingSession(sessionId) || {};
   const sessionLabel = sess.label || sess.name || '';
   const sessionType = sess.type || '';
@@ -4604,7 +4604,7 @@ function buildCoachPrompt(exName, sessionId) {
   return `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
 
 Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
-
+${attrezzoSessione ? `L'utente sta usando: ${attrezzoSessione}. Adatta i cue a questo attrezzo specifico (setup, presa, posizione, errori tipici di questo strumento).` : ''}
 Rispondi con 2-3 punti BREVISSIMI (max 8 parole ciascuno), in formato elenco. Ogni punto su una riga separata, inizia con "• " (bullet + spazio). NIENTE paragrafi. NIENTE introduzioni. NIENTE ripetizione del nome esercizio.
 
 Contenuto dei punti (scegli i 2-3 più rilevanti): cue tecnico avanzato, gestione fatica nelle ultime serie, variazione respiratoria, attenzione protezioni (lombari/ginocchia) se rilevante per questo movimento. Non ripetere info banali tipo setup o muscoli target.
@@ -7927,6 +7927,49 @@ const _TRAIN_GEN_BONUS_BY_MACRO = {
   },
 };
 
+// Preferenza attrezzo per tipo esercizio e ambiente.
+// Il generatore scorre la lista e prende il PRIMO che l'utente possiede.
+// 'compound' = multiarticolari pesanti; 'iso' = isolamenti e accessori.
+const _TRAIN_GEN_EQ_PRIORITY = {
+  casa: {
+    compound: ['sbarra', 'elastico', 'corpo_libero', 'banda'],
+    iso:      ['manubri', 'cavigliera', 'elastico', 'banda', 'corpo_libero'],
+  },
+  palestra: {
+    compound: ['bilanciere', 'manubri', 'cavo', 'elastico'],
+    iso:      ['manubri', 'cavo', 'elastico', 'bilanciere'],
+  },
+  aperto: {
+    compound: ['sbarra', 'elastico', 'corpo_libero', 'banda'],
+    iso:      ['elastico', 'banda', 'corpo_libero'],
+  },
+};
+
+// Sceglie UN attrezzo specifico per l'esercizio.
+// Surrogato → usa surrogato_attrezzo (già singolo).
+// Nativo → primo attrezzo nella lista priorità per ambiente/tipo che l'utente possiede.
+// Fallback: primo attrezzo nativo del catalogo.
+function _trainGenPickEq(cat, isSurrogato, tipoAllen, attrezzaturaSet, isIso) {
+  if (isSurrogato && cat.surrogato_attrezzo) {
+    return String(cat.surrogato_attrezzo).trim();
+  }
+  const _norm = (s) => String(s || '').toLowerCase().trim().replace(/\s+/g, '_');
+  const attrezziNativi = String(cat.attrezzo || '').split(';').map(s => _norm(s)).filter(Boolean);
+  const tipoNorm = _norm(tipoAllen);
+  const envKey = (tipoNorm === 'palestra') ? 'palestra' : (tipoNorm === 'aperto' ? 'aperto' : 'casa');
+  const catKey = isIso ? 'iso' : 'compound';
+  const priorita = (_TRAIN_GEN_EQ_PRIORITY[envKey] || _TRAIN_GEN_EQ_PRIORITY.casa)[catKey] || [];
+  for (const preferred of priorita) {
+    if (attrezziNativi.includes(preferred) && attrezzaturaSet.has(preferred)) {
+      const originalMatch = String(cat.attrezzo || '').split(';')
+        .map(s => s.trim()).find(s => _norm(s) === preferred);
+      return originalMatch || preferred;
+    }
+  }
+  const firstNative = String(cat.attrezzo || '').split(';').map(s => s.trim()).filter(Boolean)[0];
+  return firstNative || String(cat.attrezzo || '').trim();
+}
+
 // Obiettivi "ipertrofia-like" → eleggibili alla periodizzazione DUP
 // (Forza/Ipertrofia alternati) per intermedio/avanzato con split duplicato.
 const _TRAIN_GEN_DUP_OBIETTIVI = new Set(['ipertrofia', 'ricomposizione', 'dimagrimento']);
@@ -8240,6 +8283,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // M1 non chiede ancora "giorni di recupero attivo" — verrà aggiunto in
     // un round futuro insieme a un nuovo step M1.
     const pools = _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello });
+    const attrezzaturaSet = pools.attrezzaturaSet || new Set();
     if (pools.poolPrincipali.length === 0) {
       console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
       return null;
@@ -8669,7 +8713,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         rest:  restText,
         duration_min: null, // dismesso: niente più stima minuti (volume-based)
       };
-      const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher);
+      const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher, tipoAllen, attrezzaturaSet);
       // WARM-UP specifico (FASE 1): campo separato come `finisher`. Sopravvive a
       // _trainGenValidateCodes (non è in exercises[]) e allo strip _diag del save.
       // Rendering demandato alla FASE 3.
@@ -9002,7 +9046,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // 'recupero' ignorato in questa fase
   });
 
-  return { poolPrincipali, poolFinisher, poolFinisherTabata, poolRiscaldamento, poolCarry };
+  return { poolPrincipali, poolFinisher, poolFinisherTabata, poolRiscaldamento, poolCarry, attrezzaturaSet };
 }
 
 // DORMIENTE (29 mag): non più chiamata dal generatore — il riempimento bonus
@@ -9576,7 +9620,7 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
   return output;
 }
 
-function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
+function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, tipoAllen, attrezzaturaSet) {
   // Mapping al formato TRAINING_SESSIONS:
   //   sessione top-level: { id, name, type, rir, label, rest, exercises[],
   //                         duration_min, finisher? }
@@ -9644,13 +9688,9 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher) {
       name:   cat.nome,
       sets,
       reps,
-      // eq mostrato nella card Training:
-      //   - surrogato → surrogato_attrezzo (es. 'panca+elastico', 'elastico+barra')
-      //     così l'utente vede SUBITO cosa usare a casa (no più "BILANCIERE" fuorviante)
-      //   - nativo → cat.attrezzo (comportamento standard)
-      eq: (isSurrogato && cat.surrogato_attrezzo)
-        ? String(cat.surrogato_attrezzo).trim()
-        : String(cat.attrezzo || '').trim(),
+      // eq mostrato nella card Training: UN solo attrezzo scelto da _trainGenPickEq
+      // in base all'ambiente e alla dotazione utente (no più lista grezza del catalogo).
+      eq: _trainGenPickEq(cat, isSurrogato, tipoAllen || 'casa', attrezzaturaSet || new Set(), !!iso),
       // Surrogato: la nota_surrogato SOSTITUISCE il setup nativo (il setup del
       // catalogo descrive la versione palestra → fuorviante per chi usa l'elastico).
       setup:        (isSurrogato && notaSurrogato) ? splitField(notaSurrogato) : splitField(cat.setup),
@@ -11064,7 +11104,10 @@ async function ensureRestCue(exName, sessionId) {
   if (!exName || !sessionId) return;
   const key = `${sessionId}_${exName}`;
   if (ST.aiCue[key]) return;
-  const prompt = buildCoachPrompt(exName, sessionId);
+  const eqSessione = (ST.exerciseAIOpen?.exName === exName ? ST.exerciseAIOpen?.eq : null)
+    || (ST.trainExecOpen?.exName === exName ? ST.trainExecOpen?.eq : null)
+    || '';
+  const prompt = buildCoachPrompt(exName, sessionId, eqSessione);
   try {
     const text = await callAI(prompt, 200);
     const content = (text || '').trim()
@@ -20670,7 +20713,8 @@ async function openExerciseAI(exName, sessionId) {
     return;
   }
 
-  const prompt = buildCoachPrompt(exName, sessionId);
+  const eqSessione = ST.exerciseAIOpen?.eq || '';
+  const prompt = buildCoachPrompt(exName, sessionId, eqSessione);
 
   try {
     const text = await callAI(prompt, 200);
