@@ -60,6 +60,13 @@ https://github.com/IgnazioF321621/benessere-forma
 **Chiuso oggi:**
 
 - **Nomi esercizi — rimozione attrezzo dal campo nome**: fix editoriale nel Google Sheet — l'attrezzo non compare più ridondante nel nome dell'esercizio (es. "Squat con elastico" → "Squat"). Sincronizzato su `esercizi_catalog`.
+
+### 2026-06-09
+
+**Chiuso oggi:**
+
+- **Equipment coach-driven (sessione 9 giu 2026)**: Aggiunta costante `_TRAIN_GEN_EQ_PRIORITY` (mappa `{ambiente → {compound|iso → [priorità attrezzi]}}`) e funzione `_trainGenPickEq`. Il generatore sceglie ora UN SOLO attrezzo per esercizio al momento della generazione, scorrendo la lista priorità e prendendo il primo che l'utente possiede. Campo `eq` nel JSON scheda = stringa singola (es. `"elastico"`, `"panca+elastico"`). `_trainGenMapToSession` estesa con parametri `tipoAllen` + `attrezzaturaSet`. `buildCoachPrompt` riceve terzo parametro `attrezzoSessione` → prompt AI adattato all'attrezzo specifico. Rigenerazione scheda obbligatoria dopo deploy.
+- **Bug residuo eq surrogato**: EX002 Distensioni su panca — `setup` corretto (usa `nota_surrogato`), ma `execution` e `commonErrors` restano versione bilanciere. Fix richiede due nuove colonne catalogo: `esecuzione_surrogato` e `errori_surrogato`. Da implementare nella sessione dedicata al catalogo.
 - **Reset mesociclo**: `train_start_date = 2026-06-08` → la Settimana 1 del blocco riparte da Upper A lunedì 8 giugno.
 - **Recuperi corretti per letteratura**: valori `rest_sec` aggiornati su tutti gli obiettivi e livelli per iso, iso_isometrico e compound, secondo Schoenfeld e Israetel. I recuperi ora variano in modo coerente con l'intensità e il tipo di esercizio.
 - **RIR nascosto su isometrici**: la pill RIR non compare sulla card esercizio né nell'anteprima sessione quando `reps` termina in `sec` (esercizi isometrici/timed).
@@ -70,7 +77,8 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **On the horizon (aperti):**
 
-- **Attrezzo per sessione (coach-driven)**: il generatore deve scegliere un attrezzo specifico per ogni esercizio basandosi su una mappa di priorità `{obiettivo → {pattern → [attrezzi in ordine di efficacia]}}`. Il campo `eq` mostra solo quello scelto. Il modal ⓘ riceve `attrezzo_sessione` nel prompt AI → il testo di setup/esecuzione/errori viene generato dinamicamente coerente con l'attrezzo. Sessione dedicata — brief di apertura salvato in chat.
+- ~~**Attrezzo per sessione (coach-driven)**~~ ✅ Implementato 9 giu 2026 (commit `e945aad`). `_TRAIN_GEN_EQ_PRIORITY` + `_trainGenPickEq` + `buildCoachPrompt` esteso. Rigenerare scheda per applicare.
+- **Catalogo esercizi — revisione completa (sessione dedicata)**: caricare CSV catalogo e revisionare tutti i 122 esercizi. Nuove colonne da aggiungere: `esecuzione_surrogato` (testo esecuzione per versione casa), `errori_surrogato` (errori specifici versione casa). Priorità: esercizi con `surrogato_attrezzo` popolato. Obiettivo: rendere il catalogo fonte di verità completa e autosufficiente per ogni variante attrezzo.
 - **Salvataggio `giorni_allenamento` dall'app**: il campo non si salva correttamente dall'onboarding/impostazioni. Da investigare (regressione o bug storico).
 
 ---
@@ -1624,6 +1632,14 @@ Esiste un solo lettore — la funzione `getTodayPianoMeals()` — e si trova con
 Lasciare un lettore zombie ancorato alla vecchia fonte è uno dei modi più affidabili per generare bug di coerenza inter-tab/inter-feature, perché finché entrambe le fonti hanno dati, il bug è invisibile fino al primo "cambio di stato" (es. F.2a v2 scrive su `weekly_plan_meals` e non più su `piano_ai` → da quel momento i due dati divergono e il lettore zombie pubblica dato stantio).
 
 Complementare alla lezione 1 (DB fonte di verità) e alla 6 (verifica la SCRITTURA): qui la lezione è sulla **disciplina di chiusura della migrazione**.
+
+### 8. `eq` è ora stringa singola nel JSON scheda (post 9 giu 2026)
+
+La lista grezza del catalogo (`MANUBRI;ELASTICO;BILANCIERE`) viene risolta al momento della generazione tramite `_trainGenPickEq`. Schede generate prima di questa data hanno ancora `eq` multiplo — richiedono rigenerazione via **Impostazioni → Rigenera scheda** (o `?schedaGen=1`).
+
+### 9. Surrogato: solo `setup` sovrascritto, non `execution`/`commonErrors`
+
+Finché non esistono le colonne `esecuzione_surrogato`/`errori_surrogato` nel catalogo, i testi di esecuzione ed errori restano quelli dell'esercizio nativo anche per i surrogati. Il `setup` viene correttamente sostituito dalla `nota_surrogato`. Per esercizi come EX002 Distensioni su panca (surrogato panca+elastico), le istruzioni di esecuzione descrivono ancora la versione bilanciere → possibile confusione per l'utente. Fix richiede sessione dedicata al catalogo.
 
 ## Funzioni chiave aggiuntive (aprile–maggio 2026)
 
