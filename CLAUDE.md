@@ -51,6 +51,30 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **📚 Log storico delle sessioni**: il diario completo di ogni sessione di sviluppo (mag–giu 2026) è stato spostato in `CLAUDE.md.backup-20260603-150645` per liberare context. Se serve consultare la storia di una decisione o di un commit specifico, cercare in quel file.
 
+---
+
+## Log sessioni (giugno 2026)
+
+### 2026-06-08
+
+**Chiuso oggi:**
+
+- **Nomi esercizi — rimozione attrezzo dal campo nome**: fix editoriale nel Google Sheet — l'attrezzo non compare più ridondante nel nome dell'esercizio (es. "Squat con elastico" → "Squat"). Sincronizzato su `esercizi_catalog`.
+- **Reset mesociclo**: `train_start_date = 2026-06-08` → la Settimana 1 del blocco riparte da Upper A lunedì 8 giugno.
+- **Recuperi corretti per letteratura**: valori `rest_sec` aggiornati su tutti gli obiettivi e livelli per iso, iso_isometrico e compound, secondo Schoenfeld e Israetel. I recuperi ora variano in modo coerente con l'intensità e il tipo di esercizio.
+- **RIR nascosto su isometrici**: la pill RIR non compare sulla card esercizio né nell'anteprima sessione quando `reps` termina in `sec` (esercizi isometrici/timed).
+- **Timer countdown isometrici**: picker a step di 5s (range `repsMin-5` → `repsMax+15`) + countdown a schermo + `playLongBeep` all'avvio del timer. L'utente sceglie la durata target prima di partire.
+- **Audio unificato**: prep beep 3..1 su isometrici, 5..1 su recupero; `playLongBeep` su ripartenza serie, activation flow, recovery flow, Tabata work→rest. Audio coerente in tutta la sessione.
+- **Banner surrogato nel modal ⓘ**: quando un esercizio è la versione casalinga di un esercizio palestra (`isSurrogato: true`), il modal mostra sotto il titolo `⚠ Versione adattata · [ATTREZZO]` con classe `ex-surrogato-note`. Commit `8d26dea`.
+- **`giorni_allenamento = 5` forzato via SQL**: il salvataggio dall'app non funzionava (bug non ancora investigato); valore impostato direttamente su Supabase per sbloccare il collaudo split 5 giorni.
+
+**On the horizon (aperti):**
+
+- **Attrezzo per sessione (coach-driven)**: il generatore deve scegliere un attrezzo specifico per ogni esercizio basandosi su una mappa di priorità `{obiettivo → {pattern → [attrezzi in ordine di efficacia]}}`. Il campo `eq` mostra solo quello scelto. Il modal ⓘ riceve `attrezzo_sessione` nel prompt AI → il testo di setup/esecuzione/errori viene generato dinamicamente coerente con l'attrezzo. Sessione dedicata — brief di apertura salvato in chat.
+- **Salvataggio `giorni_allenamento` dall'app**: il campo non si salva correttamente dall'onboarding/impostazioni. Da investigare (regressione o bug storico).
+
+---
+
 ## Tester attivi
 
 - **Ignazio** (utente principale + dev) — iPhone + Android
