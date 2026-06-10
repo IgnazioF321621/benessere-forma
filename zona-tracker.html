@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.10 · 10:12';
+const APP_VERSION = '2026.06.10 · 15:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11052,46 +11052,35 @@ function playPrepBeep(){
   } catch(e){}
 }
 
-// Triplo beep finale — al raggiungimento di 0.
-// Tono alto/forte: sine 880Hz, 3 burst da 220ms, gap 200ms (cycle 420ms), gain 0.9
-// + vibrazione [220,120,220,120,220].
-function playFinalTripleBeep(){
+// Beep di stop — segnala fine round/fase (sine 659Hz, ~730ms, gain 0.85)
+// + vibrazione [400].
+function playStopBeep(){
   try {
-    if(navigator.vibrate){
-      try { navigator.vibrate([220,120,220,120,220]); } catch(e){}
-    }
+    if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} }
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
     const fire = ()=>{
-      for(let i = 0; i < 3; i++){
-        setTimeout(()=>{
-          try {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.frequency.value = 880;
-            osc.type = 'sine';
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            const t0 = ctx.currentTime;
-            gain.gain.setValueAtTime(0.9, t0);
-            gain.gain.setValueAtTime(0.9, t0 + 0.20);
-            gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.22);
-            osc.start(t0);
-            osc.stop(t0 + 0.23);
-          } catch(e){}
-        }, i * 420); // 220ms tone + 200ms gap
-      }
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = 659;
+        osc.type = 'sine';
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const t0 = ctx.currentTime;
+        gain.gain.setValueAtTime(0.85, t0);
+        gain.gain.setValueAtTime(0.85, t0 + 0.68);
+        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.72);
+        osc.start(t0);
+        osc.stop(t0 + 0.73);
+      } catch(e){}
     };
-    if(ctx.state === 'suspended'){
-      ctx.resume().then(fire).catch(()=>{});
-    } else {
-      fire();
-    }
+    if(ctx.state === 'suspended'){ ctx.resume().then(fire).catch(()=>{}); } else { fire(); }
   } catch(e){}
 }
 
-// Bip lungo — segnala la (ri)partenza di un esercizio (warm-up FASE A).
-// Tono singolo 880Hz sine ~640ms, gain 0.8 + vibrazione [400].
+// Bip lungo — segnala la (ri)partenza di un esercizio.
+// Tono singolo 1100Hz sine ~640ms, gain 0.8 + vibrazione [400].
 function playLongBeep(){
   try {
     if(navigator.vibrate){
@@ -11103,7 +11092,7 @@ function playLongBeep(){
       try {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.frequency.value = 880;
+        osc.frequency.value = 1100;
         osc.type = 'sine';
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -11215,14 +11204,16 @@ function tickCountdown(){
   // Triplo beep finale alla scadenza (idempotente: anche se utente torna in app dopo)
   if(remaining <= 0 && !cd.beeped){
     cd.beeped = true;
-    playFinalTripleBeep();
-    // Auto-close dopo 1s: chiude modal "PRONTO!" e scrolla all'esercizio attivo
+    playStopBeep();
     setTimeout(()=>{
       if(ST.trainCountdown && ST.trainCountdown.beeped){
-        skipCountdown();
-        scrollToActiveExercise();
+        try{ playLongBeep(); }catch(e){}
+        setTimeout(()=>{
+          skipCountdown();
+          scrollToActiveExercise();
+        }, 300);
       }
-    }, 1000);
+    }, 400);
   }
   // Re-render solo se il valore intero del secondo è cambiato (evita 4 render/sec)
   if(remaining !== cd.seconds){
@@ -21065,7 +21056,7 @@ function execTimerStart(targetSec){
     // Beep triplo una sola volta quando si arriva a 0
     if(done && !ST.trainExecTimer.beeped){
       ST.trainExecTimer.beeped = true;
-      try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+      try{ playStopBeep(); }catch(e){}
     }
     const el = document.getElementById('exec-hold-timer');
     if(el){
@@ -21315,7 +21306,7 @@ function _activationFlowAdvance(){
     if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
     ST.trainActivation[ST.trainActivationFlow.currentIdx] = true;
     try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
-    try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+    try{ playStopBeep(); }catch(e){}
     _activationAutoCollapse();
   }
   ST.trainActivationFlow.currentIdx++;
@@ -21491,7 +21482,7 @@ function _recoveryFlowAdvance(){
     if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
     ST.trainRecoveryDone[cur.name] = true;
     try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
-    try{ playFinalTripleBeep && playFinalTripleBeep(); }catch(e){}
+    try{ playStopBeep(); }catch(e){}
   }
 
   // 1) Auto-collapse blocco se completato (delay 2s per permettere all'utente di vedere il check finale)
@@ -21558,6 +21549,7 @@ function _recoveryFlowTick(){
       flow.microPause.active = false;
       flow.microPause.nextExName = '';
       try{ navigator.vibrate && navigator.vibrate([100]); }catch(e){}
+      try{ playLongBeep(); }catch(e){}
     }
     renderTraining();
     return;
@@ -21680,7 +21672,7 @@ function recoveryFlowEnd(){
 // 4 esercizi cardio_metabolico che si alternano: round N → exercises[(N-1) % 4].
 // Ergo: ex[0], ex[1], ex[2], ex[3], ex[0], ex[1], ex[2], ex[3] = 2 cicli.
 // Ultimo round termina dopo WORK (no REST finale).
-// Audio: riusa playPrepBeep (5..1 countdown) + playFinalTripleBeep (fine round).
+// Audio: riusa playPrepBeep (5..1 countdown) + playStopBeep (fine round) + playLongBeep (inizio round work).
 // WakeLock: già attivo durante sessione (apertura openTrainingSession).
 // Clone leggero di _recoveryFlowTick, no micro-pause/blockStop.
 
@@ -21712,7 +21704,7 @@ function _tabataFlowAdvance(){
   //   - finito ultimo round work → END (no rest finale)
   const f = ST.trainTabataFlow;
   if(!f) return;
-  try { playFinalTripleBeep(); } catch(e) {}
+  try { playStopBeep(); } catch(e) {}
   if(f.phase === 'work'){
     // Era work → ultimo round? FINE
     if(f.round >= f.totalRounds){
