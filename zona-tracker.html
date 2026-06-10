@@ -2225,6 +2225,19 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .pianov4-welcome-cta-secondary{width:100%;padding:14px 18px;background:transparent;border:none;font-family:'Syne',sans-serif;font-size:14px;font-weight:500;color:var(--t3);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .12s ease;}
 .pianov4-welcome-cta-secondary:active{color:var(--t2);}
 
+/* ─── Tab Progressione — strip calendario ─── */
+.cal-strip-wrap{display:flex;align-items:center;gap:4px;background:var(--s1,#fff);border-radius:16px;padding:12px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.cal-strip-days{display:flex;flex:1;gap:4px;justify-content:space-between;}
+.cal-strip-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;min-width:0;transition:background .12s,border-color .12s;}
+.cal-strip-day.today{border-color:var(--acc);}
+.cal-strip-day.has-workout .cal-dot{display:block;}
+.cal-strip-day.selected{background:var(--acc);}
+.cal-strip-day.selected .cal-day-num,.cal-strip-day.selected .cal-day-dow,.cal-strip-day.selected .cal-dot{color:#fff!important;background:#fff!important;}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--acc);display:none;margin:0 auto;}
+.cal-strip-nav{background:none;border:none;font-size:18px;cursor:pointer;color:var(--t2);padding:4px 6px;flex-shrink:0;line-height:1;border-radius:8px;}
+.cal-strip-nav:disabled{opacity:.3;cursor:default;}
+.cal-strip-nav:not(:disabled):active{background:var(--s2);}
+
 </style>
 </head>
 <body>
@@ -3639,7 +3652,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.10 · 15:25';
+const APP_VERSION = '2026.06.10 · 16:07';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3731,6 +3744,10 @@ const ST = {
   trainProgDropdownSearch: '',      // testo barra ricerca dropdown
   trainComeCresciOpen: false,       // tab Programma: sezione "Come cresci" (progressione doppia) espansa/collassata, default chiuso
   allExerciseNamesCache: null,      // null=non caricato, []=loaded vuoto, [...]=loaded — distinct da training_logs
+  trainCalStripOffset: 0,           // settimane indietro dalla corrente nella strip calendario (0=corrente)
+  trainProgChart: 'carico',         // 'carico'|'1rm'|'volume'|'zone' — chip grafico attivo in tab Progressione
+  trainProgLastSet: {},             // { [exName]: { reps, resistance, date } } — cache ultimo set per dropdown
+  trainCalSelectedDay: null,        // data ISO selezionata nella strip calendario (null=nessuna)
   trainHomeData: null,
   trainCalMonth: null,
   trainWorkouts: undefined,
@@ -10744,21 +10761,31 @@ async function loadTrainingLogs(exName){
 // DROPDOWN SELEZIONE ESERCIZIO (tab Progressione)
 // ─────────────────────────────────────────────────────────────
 
-// Lazy load distinct exercise_name da training_logs.
+// Lazy load distinct exercise_name + ultimo set da training_logs.
 // Cache invalidata da: saveTrainingSet (nuovo nome possibile), deleteSetConfirmed,
 // deleteWorkoutConfirmed (potenziale rimozione ultimo log di un esercizio).
 // FASE 2: invalidare anche dopo chiusura/cambio programma quando esisterà gestione programmi.
-async function loadAllExerciseNames(){
+async function loadAllExerciseNamesWithLast(){
   if(ST.allExerciseNamesCache !== null) return; // gia' loaded (anche [])
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.allExerciseNamesCache = []; return; }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.allExerciseNamesCache = []; ST.trainProgLastSet = {}; return; }
   try {
     const { data } = await supa.from('training_logs')
-      .select('exercise_name')
-      .eq('user_id', ST.user.id);
-    const distinct = [...new Set((data||[]).map(r => r.exercise_name).filter(Boolean))]
-      .sort((a,b) => a.localeCompare(b, 'it'));
+      .select('exercise_name, reps, resistance, date')
+      .eq('user_id', ST.user.id)
+      .order('date', {ascending: false});
+    const seen = new Set();
+    ST.trainProgLastSet = {};
+    const distinct = [];
+    (data||[]).forEach(r => {
+      if(r.exercise_name && !seen.has(r.exercise_name)){
+        seen.add(r.exercise_name);
+        distinct.push(r.exercise_name);
+        ST.trainProgLastSet[r.exercise_name] = { reps: r.reps, resistance: r.resistance, date: r.date };
+      }
+    });
+    distinct.sort((a,b) => a.localeCompare(b, 'it'));
     ST.allExerciseNamesCache = distinct;
-  } catch(e){ ST.allExerciseNamesCache = []; }
+  } catch(e){ ST.allExerciseNamesCache = []; ST.trainProgLastSet = {}; }
   // Re-render se dropdown e' aperto sulla tab Progressione
   if(ST.page === 'training' && ST.trainProgDropdownOpen) renderTraining();
   // Default selection: se nessun esercizio scelto e c'e' almeno un log, seleziona il primo alfabetico
@@ -10768,15 +10795,19 @@ async function loadAllExerciseNames(){
   }
 }
 
+// Retrocompat alias (chiamato da codice legacy che ancora usa il vecchio nome)
+const loadAllExerciseNames = loadAllExerciseNamesWithLast;
+
 function invalidateAllExerciseNamesCache(){
   ST.allExerciseNamesCache = null;
+  ST.trainProgLastSet = {};
 }
 
 function toggleProgDropdown(){
   ST.trainProgDropdownOpen = !ST.trainProgDropdownOpen;
   if(ST.trainProgDropdownOpen){
     ST.trainProgDropdownSearch = '';
-    loadAllExerciseNames(); // lazy load alla prima apertura
+    loadAllExerciseNamesWithLast(); // lazy load alla prima apertura
   }
   renderTraining();
 }
@@ -10787,6 +10818,203 @@ function closeProgDropdown(){
   renderTraining();
 }
 
+// ─────────────────────────────────────────────────────────────
+// STRIP CALENDARIO — tab Progressione
+// ─────────────────────────────────────────────────────────────
+
+function renderCalStrip(workouts){
+  const offset = ST.trainCalStripOffset || 0;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const todayIso = today.toISOString().slice(0,10);
+
+  // Lunedì della settimana corrente
+  const dow = today.getDay(); // 0=dom
+  const diffToMon = (dow === 0) ? -6 : 1 - dow;
+  const monday = new Date(today);
+  monday.setDate(monday.getDate() + diffToMon - offset * 7);
+
+  // Mappa rapida workout per data
+  const wMap = {};
+  if(Array.isArray(workouts)){
+    workouts.forEach(w => { if(w.completed) wMap[w.date] = true; });
+  }
+
+  const dayDows = ['L','M','M','G','V','S','D'];
+
+  const dayCells = Array.from({length:7}, (_,i) => {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    const ds = d.toISOString().slice(0,10);
+    const isFuture = d > today;
+    const isToday = ds === todayIso;
+    const isSel = ds === ST.trainCalSelectedDay;
+    const hasW = !!wMap[ds];
+    const cls = [
+      'cal-strip-day',
+      isToday ? 'today' : '',
+      isSel ? 'selected' : '',
+      hasW ? 'has-workout' : '',
+    ].filter(Boolean).join(' ');
+    const numColor = isToday && !isSel ? 'var(--acc)' : 'var(--t1)';
+    const dowColor = 'var(--t3)';
+    const clickFn = isFuture ? '' : `onclick="ST.trainCalSelectedDay='${ds}';openDayDetail('${ds}');renderTraining();"`;
+    return `<div class="${cls}" ${clickFn} style="${isFuture?'opacity:.35;cursor:default;':''}">
+      <span class="cal-day-dow" style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:${isSel?'#fff':dowColor};text-transform:uppercase;">${dayDows[i]}</span>
+      <span class="cal-day-num" style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${isSel?'#fff':numColor};line-height:1;">${d.getDate()}</span>
+      <span class="cal-dot" style="${isSel?'background:#fff;':''}"></span>
+    </div>`;
+  }).join('');
+
+  const prevBtn = `<button class="cal-strip-nav" onclick="ST.trainCalStripOffset++;renderTraining();" aria-label="Settimana precedente">‹</button>`;
+  const nextBtn = `<button class="cal-strip-nav" ${offset===0?'disabled':''} onclick="if(ST.trainCalStripOffset>0){ST.trainCalStripOffset--;renderTraining();}" aria-label="Settimana successiva">›</button>`;
+
+  return `<div class="cal-strip-wrap">${prevBtn}<div class="cal-strip-days">${dayCells}</div>${nextBtn}</div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// GRAFICO PROGRESSIONE — renderProgChart
+// ─────────────────────────────────────────────────────────────
+
+function renderProgChart(points, byDate, selEx){
+  const chartType = ST.trainProgChart || 'carico';
+  if(points.length === 0){
+    return `<div style="padding:32px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessuna sessione</div>`;
+  }
+
+  // ── Calcolo valori per modalità ──
+  let values, unitLabel, metaLabel;
+  if(chartType === 'carico'){
+    values = points.map(p => p.resist);
+    unitLabel = 'LBS'; metaLabel = 'CARICO';
+  } else if(chartType === '1rm'){
+    values = points.map(p => p.resist > 0 ? Math.round(p.resist * (1 + p.reps / 30)) : 0);
+    unitLabel = 'LBS'; metaLabel = '1RM STIMATO';
+  } else if(chartType === 'volume'){
+    values = points.map(p => {
+      const dayLogs = byDate[p.date] || [];
+      return dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0) * (parseInt(l.resistance)||0), 0);
+    });
+    unitLabel = 'LBS×REPS'; metaLabel = 'VOLUME';
+  } else {
+    // 'zone' — stacked bar
+    return _renderZoneChart(points, byDate, selEx);
+  }
+
+  const W = 340, H = 200;
+  const padL = 32, padR = 16, padT = 28, padB = 32;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const maxV = Math.max(...values, 1);
+  const yMax = Math.ceil(maxV * 1.1 / 50) * 50 || 1;
+
+  // Asse Y — 4 tick
+  const yTicks = [0, Math.round(yMax/3), Math.round(yMax*2/3), yMax];
+  const tickLines = yTicks.map(t => {
+    const y = padT + chartH - (t/yMax)*chartH;
+    const lbl = t >= 1000 ? (t/1000).toFixed(1)+'k' : t;
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#E5E7EB" stroke-width="0.5"/>
+      <text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${lbl}</text>`;
+  }).join('');
+
+  // Area + linea
+  const n = points.length;
+  const stepX = n > 1 ? chartW / (n-1) : chartW / 2;
+  const pts = values.map((v,i) => {
+    const x = n > 1 ? padL + i*stepX : padL + chartW/2;
+    const y = padT + chartH - (v/yMax)*chartH;
+    return { x, y, v, date: points[i].date, dateShort: points[i].dateShort };
+  });
+
+  const lineCoords = pts.map(d => `${d.x.toFixed(1)},${d.y.toFixed(1)}`).join(' ');
+  const areaCoords = `${pts[0].x.toFixed(1)},${(padT+chartH).toFixed(1)} ${lineCoords} ${pts[n-1].x.toFixed(1)},${(padT+chartH).toFixed(1)}`;
+
+  const labelEvery = Math.max(1, Math.ceil(n / 6));
+  const dots = pts.map((d,i) => {
+    const isLast = i === n-1;
+    const r = isLast ? 6 : 4;
+    const showLabel = (i % labelEvery === 0) || isLast;
+    const lastValLabel = isLast ? `<text x="${d.x.toFixed(1)}" y="${(d.y-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono,monospace">${d.v}</text>` : '';
+    return `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${r}" fill="${isLast?'var(--acc)':'#fff'}" stroke="var(--acc)" stroke-width="1.5"/>
+      <rect x="${(d.x-14).toFixed(1)}" y="${(d.y-14).toFixed(1)}" width="28" height="28" fill="transparent" style="cursor:pointer" onclick="openDayDetail('${d.date}')"></rect>
+      ${lastValLabel}
+      ${showLabel?`<text x="${d.x.toFixed(1)}" y="${(padT+chartH+12).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${d.dateShort}</text>`:''}`;
+  }).join('');
+
+  const lastVal = values[n-1] || 0;
+  const metaTop = `<text x="${padL}" y="${padT-8}" font-size="9" fill="#9A9388" font-weight="700" font-family="JetBrains Mono,monospace" text-transform="uppercase">${metaLabel} · <tspan fill="var(--acc)" font-size="11">${lastVal}</tspan> ${unitLabel}</text>`;
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;">
+    <defs>
+      <linearGradient id="pgGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--acc)" stop-opacity=".22"/>
+        <stop offset="100%" stop-color="var(--acc)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${tickLines}
+    ${metaTop}
+    <polygon points="${areaCoords}" fill="url(#pgGrad)"/>
+    <polyline points="${lineCoords}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
+}
+
+function _renderZoneChart(points, byDate){
+  const W = 340, H = 200;
+  const padL = 32, padR = 16, padT = 28, padB = 48;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const n = points.length;
+  const slot = n > 0 ? chartW / n : chartW;
+  const barW = slot * 0.6;
+
+  const zoneData = points.map(p => {
+    const dayLogs = byDate[p.date] || [];
+    let forza=0, iper=0, res=0;
+    dayLogs.forEach(l => {
+      const r = parseInt(l.reps)||0;
+      if(r <= 5) forza++;
+      else if(r <= 12) iper++;
+      else res++;
+    });
+    return { date: p.date, dateShort: p.dateShort, forza, iper, res, total: forza+iper+res };
+  });
+
+  const maxTotal = Math.max(...zoneData.map(z => z.total), 1);
+
+  const bars = zoneData.map((z,i) => {
+    const x = padL + i*slot + (slot-barW)/2;
+    const toY = (v) => padT + chartH - (v/maxTotal)*chartH;
+    const yBase = padT + chartH;
+    const hForza = (z.forza/maxTotal)*chartH;
+    const hIper = (z.iper/maxTotal)*chartH;
+    const hRes = (z.res/maxTotal)*chartH;
+    const yForza = yBase - hForza;
+    const yIper = yForza - hIper;
+    const yRes = yIper - hRes;
+    return [
+      z.forza > 0 ? `<rect x="${x.toFixed(1)}" y="${yForza.toFixed(1)}" width="${barW.toFixed(1)}" height="${hForza.toFixed(1)}" fill="#B5D4F4" rx="2"/>` : '',
+      z.iper > 0 ? `<rect x="${x.toFixed(1)}" y="${yIper.toFixed(1)}" width="${barW.toFixed(1)}" height="${hIper.toFixed(1)}" fill="var(--acc)" rx="2"/>` : '',
+      z.res > 0 ? `<rect x="${x.toFixed(1)}" y="${yRes.toFixed(1)}" width="${barW.toFixed(1)}" height="${hRes.toFixed(1)}" fill="#FAC775" rx="2"/>` : '',
+      `<rect x="${x.toFixed(1)}" y="${padT}" width="${barW.toFixed(1)}" height="${chartH}" fill="transparent" style="cursor:pointer" onclick="openDayDetail('${z.date}')"/>`,
+      `<text x="${(x+barW/2).toFixed(1)}" y="${(padT+chartH+12).toFixed(1)}" text-anchor="middle" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${z.dateShort}</text>`,
+    ].join('');
+  }).join('');
+
+  const legendY = padT + chartH + 28;
+  const legend = [
+    {c:'#B5D4F4',l:'FORZA ≤5'},
+    {c:'var(--acc)',l:'IPERT 6-12'},
+    {c:'#FAC775',l:'RES ≥13'},
+  ].map((it,i) => `<circle cx="${padL + i*80}" cy="${legendY}" r="4" fill="${it.c}"/>
+    <text x="${padL + i*80 + 8}" y="${legendY+4}" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${it.l}</text>`).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;">
+    ${bars}${legend}
+  </svg>`;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Tab Programma — toggle sezione collassabile "Come cresci" (progressione doppia)
 function toggleTrainComeCresci(){
   ST.trainComeCresciOpen = !ST.trainComeCresciOpen;
@@ -13088,46 +13316,48 @@ function renderTraining(){
   } else {
     // ── Progressione tab ────────────────────────────────────
 
-    // Auto-load calendario se non ancora caricato
+    // Auto-load workout per la strip calendario
     if(ST.trainWorkouts === undefined){
-      const calNow = new Date();
-      const calM = ST.trainCalMonth || { year: calNow.getFullYear(), month: calNow.getMonth()+1 };
-      loadWorkouts(calM.year, calM.month);
-      // loadWorkouts setta trainWorkouts=null e ri-renderizza
-    }
-
-    const calM = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
-    let calHTML = '';
-    if(ST.trainWorkouts === null){
-      calHTML = '<div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:32px 16px;margin-bottom:16px;text-align:center;color:var(--t3);font-family:var(--font-mono);font-size:13px;">Caricamento calendario…</div>';
-    } else {
-      calHTML = renderCalendar(ST.trainWorkouts, calM.year, calM.month);
+      const now = new Date();
+      loadWorkouts(now.getFullYear(), now.getMonth()+1);
     }
 
     const selEx = ST.trainProgEx;
 
-    // Lazy-load lista esercizi loggati alla prima entrata della tab Progressione (per default selection + tab "Per esercizio")
+    // Lazy-load lista esercizi con ultimo set
     if(ST.allExerciseNamesCache === null){
-      loadAllExerciseNames(); // fire-and-forget; al ritorno setta default + re-render
+      loadAllExerciseNamesWithLast();
     }
 
-    // Dropdown selezione esercizio (sostituisce vecchia chip-row)
+    // ── Strip calendario ──
+    let calStripHTML = '';
+    if(ST.trainWorkouts === null){
+      calStripHTML = `<div class="cal-strip-wrap" style="justify-content:center;color:var(--t3);font-family:var(--font-mono);font-size:12px;">Caricamento…</div>`;
+    } else {
+      calStripHTML = renderCalStrip(ST.trainWorkouts);
+    }
+
+    // ── Dropdown selezione esercizio (restyled) ──
     const ddOpen = !!ST.trainProgDropdownOpen;
     const ddTab = ST.trainProgDropdownTab || 'programma';
     const ddSearch = (ST.trainProgDropdownSearch || '').toLowerCase().trim();
     const matchesSearch = (name) => !ddSearch || (name && name.toLowerCase().includes(ddSearch));
     const escapeAttr = (s) => String(s).replace(/'/g, "\\'");
 
-    // Helper riga esercizio (cliccabile, evidenziato se selezionato)
     const renderExRow = (name) => {
       const isSel = name === selEx;
-      return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;background:${isSel?'var(--acc-lt)':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};min-height:44px;font-size:14px;font-family:var(--font-sans);color:${isSel?'var(--acc)':'var(--t1)'};font-weight:${isSel?'700':'500'};">
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
-        ${isSel?`<span style="color:var(--acc);font-weight:700;flex-shrink:0;margin-left:8px;">✓</span>`:''}
+      const last = ST.trainProgLastSet[name];
+      const lastMeta = last ? `${last.reps} reps · ${last.resistance||'—'}` : '';
+      return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:48px;background:${isSel?'var(--acc-lt,rgba(42,122,111,.08))':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};">
+        ${isSel?`<span style="width:6px;height:6px;border-radius:50%;background:var(--acc);flex-shrink:0;"></span>`:`<span style="width:6px;flex-shrink:0;"></span>`}
+        <span style="flex:1;min-width:0;">
+          <span style="display:block;font-size:14px;font-family:var(--font-sans);font-weight:${isSel?'700':'500'};color:${isSel?'var(--acc)':'var(--t1)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+          ${lastMeta?`<span style="display:block;font-size:11px;font-family:var(--font-mono);color:var(--t3);margin-top:2px;">${lastMeta}</span>`:''}
+        </span>
+        ${isSel?`<span style="color:var(--acc);font-weight:700;flex-shrink:0;font-size:16px;">✓</span>`:''}
       </div>`;
     };
 
-    // Tab "Per programma" — gerarchico per sessione del programma attuale
     const sessionOrder = ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower'];
     const programGroups = sessionOrder.map(sid => {
       const sess = getTrainingSession(sid);
@@ -13137,34 +13367,24 @@ function renderTraining(){
       return { sessionLabel: sess.name, exercises: filtered.map(e => e.name) };
     }).filter(Boolean);
 
-    const tab1HTML = `
-      <div>
-        <div style="font-size:9px;font-weight:800;color:var(--acc);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px 4px;">Programma attuale</div>
-        ${programGroups.length === 0
-          ? `<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-sans);">Nessun esercizio trovato</div>`
-          : programGroups.map(g => `
-            <div>
-              <div style="font-size:11px;font-weight:700;color:var(--t2);font-family:var(--font-sans);padding:8px 14px 2px;">${g.sessionLabel}</div>
-              ${g.exercises.map(renderExRow).join('')}
-            </div>`).join('')
-        }
-        <!--
-          TODO FASE 2 — gestione programmi multipli archiviati.
-          Predisporre quando esistera':
-            - Tabella Supabase 'programs': id, user_id, nome, data_inizio, data_fine (nullable se attivo), struttura sessioni JSON, created_at
-            - Colonna program_id su tabella workouts
-            - UI per chiudere il programma attuale e iniziarne uno nuovo (probabilmente in modulo Body o pannello admin)
-            - Quando esistono programmi archiviati, sostituire il placeholder sotto con lista collassabile:
-              - Header tap → espande/collassa programma
-              - Sotto: sessioni del programma + esercizi (renderExRow)
-            - Selezione esercizio da programma archiviato: il grafico filtra solo i workout di quel periodo programma (passare program_id a loadTrainingLogs).
-          Quando aggiunto, invalidare allExerciseNamesCache anche dopo chiusura/cambio programma.
-        -->
-        <div style="font-size:9px;font-weight:800;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:14px 14px 4px;border-top:1px solid var(--s2);margin-top:8px;">Programmi passati</div>
-        <div style="padding:10px 14px 14px;color:var(--t3);font-size:12px;font-family:var(--font-sans);font-style:italic;">Nessun programma archiviato</div>
-      </div>`;
+    const tab1HTML = `<div>
+      <div style="font-size:9px;font-weight:800;color:var(--acc);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:10px 14px 4px;">Programma attuale</div>
+      ${programGroups.length === 0
+        ? `<div style="padding:14px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-sans);">Nessun esercizio trovato</div>`
+        : programGroups.map(g => `<div>
+            <div style="font-size:11px;font-weight:700;color:var(--t2);font-family:var(--font-sans);padding:8px 14px 2px;">${g.sessionLabel}</div>
+            ${g.exercises.map(renderExRow).join('')}
+          </div>`).join('')
+      }
+      <!--
+        TODO FASE 2 — gestione programmi multipli archiviati.
+        Predisporre quando esisterà: tabella Supabase 'programs', colonna program_id su workouts,
+        UI chiusura programma, lista collassabile programmi archiviati in questo dropdown.
+      -->
+      <div style="font-size:9px;font-weight:800;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;padding:14px 14px 4px;border-top:1px solid var(--s2);margin-top:8px;">Programmi passati</div>
+      <div style="padding:10px 14px 14px;color:var(--t3);font-size:12px;font-family:var(--font-sans);font-style:italic;">Nessun programma archiviato</div>
+    </div>`;
 
-    // Tab "Per esercizio" — lista alfabetica piatta da training_logs (distinct)
     let tab2HTML = '';
     if(ST.allExerciseNamesCache === null){
       tab2HTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:12px;font-family:var(--font-mono);">Caricamento…</div>`;
@@ -13179,23 +13399,23 @@ function renderTraining(){
 
     const dropdownHTML = `
       <div style="position:relative;margin-bottom:16px;">
-        <button onclick="toggleProgDropdown();" style="width:100%;background:var(--s1,#fff);border:1.5px solid ${ddOpen?'var(--acc)':'var(--s2)'};border-radius:10px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-family:var(--font-sans);box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border-color .15s;text-align:left;">
-          <span style="display:flex;align-items:baseline;gap:8px;flex:1;min-width:0;">
-            <span style="font-size:10px;font-weight:700;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;">Esercizio:</span>
-            <span style="font-size:14px;font-weight:600;color:${selEx?'var(--acc)':'var(--t3)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${selEx || 'Seleziona…'}</span>
+        <button onclick="toggleProgDropdown();" style="width:100%;background:#fff;border:1.5px solid ${ddOpen?'var(--acc)':'var(--b1,#E5E5E5)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.04);transition:border-color .15s;text-align:left;">
+          <span style="flex:1;min-width:0;">
+            <span style="display:block;font-size:9px;font-weight:700;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;">ESERCIZIO</span>
+            <span style="display:block;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;color:${selEx?'var(--t1)':'var(--t3)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${selEx || 'Nessun esercizio'}</span>
           </span>
-          <span style="font-size:14px;color:var(--acc);display:inline-block;transform:rotate(${ddOpen?'180deg':'0deg'});transition:transform .15s;flex-shrink:0;margin-left:8px;">▾</span>
+          <span style="font-size:16px;color:var(--t3);transform:rotate(${ddOpen?'180deg':'0deg'});transition:transform .15s;flex-shrink:0;">▾</span>
         </button>
         ${ddOpen ? `
           <div onclick="closeProgDropdown();" style="position:fixed;inset:0;z-index:240;"></div>
-          <div style="position:absolute;top:100%;left:0;right:0;margin-top:6px;background:var(--s1,#fff);border:1.5px solid var(--s2);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:250;max-height:60vh;display:flex;flex-direction:column;overflow:hidden;">
-            <div style="padding:10px 12px;border-bottom:1px solid var(--s2);background:var(--s1,#fff);">
-              <input id="prog-dd-search" type="text" placeholder="Cerca esercizio…" value="${ddSearch.replace(/"/g,'&quot;')}" oninput="setProgDropdownSearch(this.value);" autocomplete="off" style="width:100%;padding:9px 12px;border:1.5px solid var(--s2);border-radius:8px;font-size:16px;font-family:var(--font-sans);outline:none;box-sizing:border-box;">
+          <div style="position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid var(--b1,#E5E5E5);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.13);z-index:250;max-height:60vh;display:flex;flex-direction:column;overflow:hidden;">
+            <div style="padding:10px 12px;border-bottom:1px solid var(--s2);">
+              <input id="prog-dd-search" type="text" placeholder="Cerca esercizio…" value="${ddSearch.replace(/"/g,'&quot;')}" oninput="setProgDropdownSearch(this.value);" autocomplete="off" style="width:100%;padding:9px 14px;border:1.5px solid var(--b1,#E5E5E5);border-radius:10px;font-size:15px;font-family:'Syne',sans-serif;outline:none;box-sizing:border-box;background:var(--s1,#fafafa);">
             </div>
-            <div style="display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--s2);">
+            <div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--s2);">
               ${[['programma','Per programma'],['esercizio','Per esercizio']].map(([id,lbl]) => {
                 const active = ddTab === id;
-                return `<button onclick="setProgDropdownTab('${id}');" style="flex:1;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;border:1.5px solid ${active?'var(--acc)':'var(--s2)'};background:${active?'var(--acc)':'transparent'};color:${active?'#fff':'var(--t2)'};cursor:pointer;">${lbl}</button>`;
+                return `<button onclick="setProgDropdownTab('${id}');" style="flex:1;padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em;border:none;background:${active?'#111':'transparent'};color:${active?'#fff':'var(--t2)'};cursor:pointer;transition:background .12s;">${lbl}</button>`;
               }).join('')}
             </div>
             <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;">
@@ -13205,154 +13425,134 @@ function renderTraining(){
         ` : ''}
       </div>`;
 
-    let logsHTML = '';
+    // ── Contenuto principale (esercizio selezionato) ──
+    let contentHTML = '';
     if(!selEx){
-      logsHTML = `<div style="padding:24px 0 8px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-sans);">Seleziona un esercizio per vedere la progressione</div>`;
+      contentHTML = `
+        <div style="background:var(--s1,#fafafa);border-radius:16px;padding:48px 24px;text-align:center;margin-top:8px;">
+          <div style="width:48px;height:48px;border-radius:12px;background:var(--s2,#eee);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;">📈</div>
+          <div style="font-size:15px;font-weight:600;font-family:'Syne',sans-serif;color:var(--t1);margin-bottom:6px;">Seleziona un esercizio</div>
+          <div style="font-size:13px;color:var(--t3);font-family:'Syne',sans-serif;">per vedere la progressione</div>
+        </div>`;
     } else if(ST.trainProgLogs === null){
-      logsHTML = `<div style="padding:24px 0;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+      contentHTML = `<div style="padding:40px 0;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento…</div>`;
     } else if(ST.trainProgLogs.length === 0){
-      logsHTML = `
-        <div style="padding:24px 0;text-align:center;">
-          <div style="font-size:28px;margin-bottom:8px;">📋</div>
-          <div style="font-size:14px;font-weight:600;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">Nessuna sessione registrata</div>
-          <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere il grafico qui</div>
+      contentHTML = `
+        <div style="background:var(--s1,#fafafa);border-radius:16px;padding:36px 24px;text-align:center;margin-top:8px;">
+          <div style="font-size:28px;margin-bottom:12px;">📋</div>
+          <div style="font-size:14px;font-weight:600;font-family:'Syne',sans-serif;color:var(--t1);margin-bottom:6px;">Nessuna sessione registrata</div>
+          <div style="font-size:13px;color:var(--t3);font-family:'Syne',sans-serif;">Logga le serie dalla tab Sessione per vedere il grafico</div>
         </div>`;
     } else {
-      // Raggruppa per giorno e calcola "best set" per ogni giorno
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
-      const dates = Object.keys(byDate).sort(); // cronologico ASC per il grafico
-      const isTimed = isTimedExerciseByName(selEx);
+      const dates = Object.keys(byDate).sort();
       const points = dates.map(date => {
         const best = bestSetOfDay(byDate[date]);
-        const reps = best?.reps || 0;
-        const resist = parseInt(best?.resistance) || 0;
-        const volume = reps * resist;
-        return { date, reps, resist, volume, dateShort: shortDate(date) };
+        return {
+          date,
+          dateShort: shortDate(date),
+          reps: best?.reps || 0,
+          resist: parseInt(best?.resistance) || 0,
+        };
       });
 
-      // Toggle metrica: peso (default), reps/tempo (alt), volume (solo non-iso)
-      const metric = ST.trainProgMetric || 'peso';
-      // Sanitize: se isTimed e metric === 'volume' o 'reps', forza 'peso'
-      const validMetrics = isTimed ? ['peso','tempo'] : ['peso','reps','volume'];
-      const safeMetric = validMetrics.includes(metric) ? metric : 'peso';
-      // Map metrica → campo + label
-      const metricMap = {
-        peso:   { field: 'resist', label: 'Peso',   unit: 'lbs' },
-        reps:   { field: 'reps',   label: 'Reps',   unit: 'reps' },
-        tempo:  { field: 'reps',   label: 'Tempo',  unit: 'sec' }, // su esercizi temporali, reps = secondi
-        volume: { field: 'volume', label: 'Volume', unit: 'reps×lbs' },
-      };
-      const mInfo = metricMap[safeMetric];
-
-      // Stats card: best peso/reps assoluti + ultimo
-      const allBests = points.map(p => bestSetOfDay(byDate[p.date]));
-      const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
-      const bestRepsOrTempo = points.reduce((m,p) => p.reps > m ? p.reps : m, 0);
-      const last = points[points.length-1];
-      const lastVal = last ? last[mInfo.field] : 0;
-
-      // Render chart SVG
-      const chartHTML = (() => {
-        if(points.length === 0){
-          return `<div style="padding:32px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessuna sessione</div>`;
-        }
-        const W = 320, H = 180;
-        const padL = 28, padR = 12, padT = 22, padB = 28;
-        const chartW = W - padL - padR;
-        const chartH = H - padT - padB;
-        const values = points.map(p => p[mInfo.field] || 0);
-        const maxV = Math.max(...values, 1);
-        // 4 tick Y
-        const ticks = [maxV, Math.round(maxV*2/3), Math.round(maxV/3), 0];
-        const tickLines = ticks.map(t => {
-          const y = padT + chartH - (t/maxV)*chartH;
-          return `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#E5E7EB" stroke-width="0.5"/>
-            <text x="${padL-4}" y="${y+3}" text-anchor="end" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${t}</text>`;
-        }).join('');
-
-        if(points.length <= 8){
-          // BARRE verticali
-          const slot = chartW / points.length;
-          const barW = slot * 0.55;
-          const bars = points.map((p,i) => {
-            const v = p[mInfo.field] || 0;
-            const h = (v/maxV) * chartH;
-            const x = padL + i*slot + (slot-barW)/2;
-            const y = padT + chartH - h;
-            return `<rect x="${x}" y="${y}" width="${barW}" height="${Math.max(2,h)}" fill="var(--acc)" rx="2" style="cursor:pointer" onclick="openDayExerciseDetail('${p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
-              ${v>0?`<text x="${x+barW/2}" y="${y-4}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono, monospace">${v}</text>`:''}
-              <text x="${x+barW/2}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${p.dateShort}</text>`;
-          }).join('');
-          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}${bars}</svg>`;
-        } else {
-          // LINEA + DOTS cliccabili
-          const stepX = chartW / (points.length-1);
-          const pts = points.map((p,i) => {
-            const v = p[mInfo.field] || 0;
-            const x = padL + i*stepX;
-            const y = padT + chartH - (v/maxV)*chartH;
-            return { x, y, p, v };
-          });
-          const polyline = pts.map(d => `${d.x},${d.y}`).join(' ');
-          const labelEvery = Math.ceil(points.length / 6);
-          const dots = pts.map((d,i) => {
-            const showLabel = (i % labelEvery) === 0 || i === pts.length-1;
-            return `<circle cx="${d.x}" cy="${d.y}" r="3.5" fill="var(--acc)"/>
-              <rect x="${d.x-12}" y="${d.y-12}" width="24" height="24" fill="transparent" style="cursor:pointer" onclick="openDayExerciseDetail('${d.p.date}','${selEx.replace(/'/g,"\\'")}')"></rect>
-              ${showLabel?`<text x="${d.x}" y="${H-padB+12}" text-anchor="middle" font-size="8" fill="#9CA3AF" font-family="JetBrains Mono, monospace">${d.p.dateShort}</text>`:''}`;
-          }).join('');
-          return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" width="100%" style="display:block;max-width:100%;height:auto;">${tickLines}<polyline points="${polyline}" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
-        }
-      })();
-
-      // Toggle chip metrica
-      const chipDef = isTimed
-        ? [['peso','Peso'],['tempo','Tempo']]
-        : [['peso','Peso'],['reps','Reps'],['volume','Volume']];
-      const chipHTML = chipDef.map(([m,lbl]) => {
-        const active = safeMetric === m;
-        return `<button onclick="ST.trainProgMetric='${m}';renderTraining();" style="flex:1;padding:8px 12px;border-radius:8px;font-family:var(--font-mono);font-size:11px;font-weight:700;border:1.5px solid ${active?'var(--acc)':'var(--s2)'};background:${active?'var(--acc)':'var(--s1,#fff)'};color:${active?'#fff':'var(--t2)'};cursor:pointer;text-transform:uppercase;letter-spacing:.04em;">${lbl}</button>`;
+      // 4 chip grafico
+      const chartChips = [
+        ['carico','CARICO'],
+        ['1rm','1RM STIMATO'],
+        ['volume','VOLUME TOTALE'],
+        ['zone','ZONE'],
+      ].map(([v,lbl]) => {
+        const active = (ST.trainProgChart || 'carico') === v;
+        return `<button onclick="ST.trainProgChart='${v}';renderTraining();" style="padding:8px 14px;border-radius:20px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid ${active?'var(--acc)':'var(--b1,#E5E5E5)'};background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t2)'};cursor:pointer;white-space:nowrap;flex-shrink:0;">${lbl}</button>`;
       }).join('');
 
-      // Stat cards (best peso, best reps/tempo, ultimo)
-      const repsOrTempoLbl = isTimed ? 'Best tempo' : 'Best reps';
-      const repsOrTempoUnit = isTimed ? 'sec' : '';
-      const statsHTML = `
-        <div style="display:flex;gap:8px;margin-top:14px;">
-          <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Best peso</div>
-            <div style="font-size:15px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${bestPeso || '—'}${bestPeso?' lbs':''}</div>
+      const chartSvg = renderProgChart(points, byDate, selEx);
+
+      // Stat cards 2×2
+      const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
+      const best1rm = points.reduce((m,p) => {
+        const v = p.resist > 0 ? Math.round(p.resist * (1 + p.reps/30)) : 0;
+        return v > m ? v : m;
+      }, 0);
+      const sessioni = points.length;
+      // Trend: media peso ultime 2 vs le 2 prima
+      let trendHTML = '<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">—</span>';
+      if(points.length >= 4){
+        const last2 = points.slice(-2).map(p=>p.resist);
+        const prev2 = points.slice(-4,-2).map(p=>p.resist);
+        const avgLast = (last2[0]+last2[1])/2;
+        const avgPrev = (prev2[0]+prev2[1])/2;
+        const diff = Math.round(avgLast - avgPrev);
+        if(diff > 0)       trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--ok,#16A34A);">↑ +${diff} lbs</span>`;
+        else if(diff < 0)  trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--err,#DC2626);">↓ ${diff} lbs</span>`;
+        else               trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">→ stabile</span>`;
+      } else if(points.length >= 2){
+        trendHTML = `<span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">≥4 sessioni per trend</span>`;
+      }
+
+      const statCards2x2 = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
+          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
+            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">BEST PESO</div>
+            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${bestPeso||'—'}</span>${bestPeso?`<span style="font-size:11px;font-family:'Syne',sans-serif;color:var(--t3);margin-left:3px;">lbs</span>`:''}
           </div>
-          <div style="flex:1;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">${repsOrTempoLbl}</div>
-            <div style="font-size:15px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${bestRepsOrTempo || '—'}${bestRepsOrTempo&&repsOrTempoUnit?' '+repsOrTempoUnit:''}</div>
+          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
+            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">1RM STIM.</div>
+            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${best1rm||'—'}</span>${best1rm?`<span style="font-size:11px;font-family:'Syne',sans-serif;color:var(--t3);margin-left:3px;">lbs</span>`:''}
           </div>
-          <div style="flex:1.2;background:var(--s1,#fff);border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);">
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Ultimo</div>
-            <div style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-mono);">${last ? lastVal+' '+mInfo.unit : '—'}</div>
-            <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);margin-top:1px;">${last ? shortDate(last.date) : ''}</div>
+          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
+            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">SESSIONI</div>
+            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${sessioni}</span>
+          </div>
+          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
+            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">TREND</div>
+            ${trendHTML}
           </div>
         </div>`;
 
-      logsHTML = `
-        <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 12px;margin-top:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-          <div style="display:flex;gap:6px;margin-bottom:12px;">
-            ${chipHTML}
+      // Coach insight deterministico
+      let insightText = '';
+      if(points.length < 3){
+        insightText = 'Logga almeno 3 sessioni per vedere un\'analisi della tua progressione.';
+      } else if(points.length >= 4){
+        const last2 = points.slice(-2).map(p=>p.resist);
+        const prev2 = points.slice(-4,-2).map(p=>p.resist);
+        const diff = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
+        if(diff > 0) insightText = 'Nelle ultime sessioni stai aumentando il carico. Sei in progressione — continua così.';
+        else if(diff < 0) insightText = 'Il carico è leggermente calato. Verifica recupero e qualità del sonno.';
+        else insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
+      } else {
+        insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
+      }
+
+      const coachInsight = `
+        <div style="background:#E6F4F2;border-radius:16px;padding:16px;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--font-mono);">Z</div>
+            <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--acc);">Coach</span>
           </div>
-          <div style="font-size:9px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">${mInfo.label.toUpperCase()} (${mInfo.unit})</div>
-          ${chartHTML}
-          ${statsHTML}
-          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:10px;line-height:1.4;">Tocca un punto per vedere il dettaglio del giorno</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--t1);font-family:'Syne',sans-serif;">${insightText}</div>
         </div>`;
+
+      contentHTML = `
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;">
+          <div style="display:flex;gap:8px;padding:2px 0;">${chartChips}</div>
+        </div>
+        <div style="background:#fff;border-radius:16px;padding:16px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+          ${chartSvg}
+        </div>
+        ${statCards2x2}
+        ${coachInsight}`;
     }
 
     body = `
       <div style="padding:16px;">
-        ${calHTML}
+        ${calStripHTML}
         ${dropdownHTML}
-        ${logsHTML}
+        ${contentHTML}
       </div>`;
   }
 
