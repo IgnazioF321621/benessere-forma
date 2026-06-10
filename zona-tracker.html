@@ -3639,7 +3639,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.09 · 14:51';
+const APP_VERSION = '2026.06.10 · 10:12';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8085,6 +8085,13 @@ const _TRAIN_GEN_FALLBACK_REASONING =
 // richiedere migrazione Sheet futura.
 const _normPattern = (s) => String(s || '').toLowerCase().trim();
 
+// Attrezzi che consentono progressione del carico (usati da FIX 2 per
+// rilevare esercizi "corpo libero puro" in sessioni Forza).
+const _ATTREZZI_CON_CARICO = new Set([
+  'elastico', 'manubri', 'bilanciere', 'kettlebell',
+  'maniglie', 'corda doppia', 'barra modulare',
+]);
+
 // ───────────────────────────────────────────────────────────
 // FUNZIONE PRINCIPALE
 // ───────────────────────────────────────────────────────────
@@ -8367,7 +8374,22 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       requiredPatterns.forEach((pat) => {
         const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
         const pickIdx = (Number(occurrenceIdx) || 0) + r;
-        const picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
+        let picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
+        // FIX 2 — Squat corpo libero in sessione Forza: se il compound
+        // 'dominante ginocchia' scelto non ha attrezzi con carico nel kit
+        // utente (es. EX013 Squat corpo libero), scarta e riprova.
+        // Con EX132 Goblet squat nel pool (elastico;maniglie), il secondo
+        // pick garantisce un esercizio con progressione del carico.
+        if (picked && resolvedType === 'Forza' && _normPattern(pat) === 'dominante ginocchia') {
+          const _attEx = String(picked.attrezzo || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean);
+          const _haCarico = _attEx.some(a => _ATTREZZI_CON_CARICO.has(a) && attrezzaturaSet.has(a));
+          if (!_haCarico) {
+            console.log(`[train-gen] FIX2: ${picked.codice} scartato da '${pat}' Forza (corpo libero puro, nessun attrezzo con carico nel kit) → retry`);
+            usedSoFar.add(picked.codice);
+            picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r} retry`, limitazioni);
+            if (picked) console.log(`[train-gen] FIX2 retry: trovato ${picked.codice} (${picked.nome})`);
+          }
+        }
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
         else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
@@ -8583,6 +8605,30 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         },
       };
     });
+
+    // FIX 1 — Dedup cross-sessione compound Upper A / Upper B.
+    // Se il pool di un pattern (es. 'spinta verticale') ha un solo candidato,
+    // il round-robin restituisce lo stesso esercizio in Upper A (occurrenceIdx=0)
+    // e Upper B (occurrenceIdx=1). In quel caso lo rimuoviamo dalla sessione
+    // Upper B: lo slot rimane vuoto (nessun rimpiazzo — non esistono altri
+    // candidati; i bonus iso possono compensare se il budget lo permette).
+    {
+      const _upperSess = sessioniRaw.filter(s => s.splitType === 'upper');
+      const _upperA = _upperSess.find(s => s.occurrenceIdx === 0);
+      const _upperB = _upperSess.find(s => s.occurrenceIdx === 1);
+      if (_upperA && _upperB) {
+        const _isCompound = (ex) => !['isolamento','core','mobilita','loaded carry']
+          .includes(_normPattern(ex.pattern));
+        const _upperACodici = new Set(_upperA.exercises.filter(_isCompound).map(e => e.codice));
+        _upperB.exercises = _upperB.exercises.filter(ex => {
+          if (_isCompound(ex) && _upperACodici.has(ex.codice)) {
+            console.log(`[train-gen] FIX1 dedup cross-upper: ${ex.codice} (${ex.nome}) rimosso da Upper B (stesso compound di Upper A, pattern '${ex.pattern}')`);
+            return false;
+          }
+          return true;
+        });
+      }
+    }
 
     console.log('[train-gen] sessioni selezionate (raw, pre-ordering):',
       sessioniRaw.map(s => ({
