@@ -65,6 +65,10 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Chiuso oggi:**
 
+- **Fix bug `fname` in `_saveSettingsExecute`** (commit `422bad4`): `ReferenceError: fname is not defined` introdotto il 24 maggio 2026 e rimasto silente fino all'11 giugno. Causa: refactor parziale che rinominò la variabile interna senza aggiornare un riferimento. Effetto: **nessun salvataggio impostazioni ha funzionato dal 24 maggio al 11 giugno** (ogni tentativo lanciava eccezione non visibile all'utente). Fix: ripristino della variabile corretta nella funzione `_saveSettingsExecute`.
+
+- **Fix "Rigenera scheda" non salvava `giorni_allenamento` su DB** (commit `9dea3aa`): prima del fix, `rigeneraSchedaDaImpostazioni` aggiornava `ST.profile.giorni_allenamento` solo in memoria locale senza scrivere su Supabase. A ogni ricarica dell'app il valore tornava a quello precedente (letto da DB), rendendo la rigenerazione inconsistente. Fix: aggiunto `UPDATE profiles SET giorni_allenamento` con gestione errore prima di chiamare `generateTrainingProgram` — se il write fallisce, la generazione non parte e l'errore appare in `#set-rigenera-msg`.
+
 - **Redesign tab Progressione**: completamente ridisegnata secondo mockup approvato da Claude Design. Strip calendario 7 giorni scorrevole con dot workout e navigazione settimana (fix bug timezone — costruzione data locale via `getFullYear()/getMonth()/getDate()` invece di `toISOString()`). Dropdown esercizio restyled con ultimo peso/reps inline per ogni voce (richiede `loadAllExerciseNames` estesa con `reps, resistance, date`). 4 grafici selezionabili via chip row: Carico (linea + area fill), 1RM stimato (formula Epley: `peso × (1 + reps/30)`), Volume totale (`reps × resistance` somma tutti i set), Zone reps (stacked bar forza/ipertrofia/resistenza). Stat cards 2×2: Best Peso, 1RM Stim., Sessioni, Trend (delta media ultime 2 vs precedenti 2 sessioni). Card Coach insight con testo deterministico. Stato vuoto con placeholder. Commit `e0fa603` + fix timezone + CSS classes `931a3d6`.
 
 - **Sistema audio unificato — decisioni**: definiti 3 suoni semantici globali per tutti i flow di allenamento:
