@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.11 · 21:32';
+const APP_VERSION = '2026.06.11 · 22:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3731,7 +3731,6 @@ const ST = {
   trainExecTimer: { running:false, elapsed:0, _iv:null, beeped:false }, // cronometro tenuta esercizi isometrici (schermata esecuzione)
   trainCountdown: null,
   trainRecoveryDone: {},     // { exName: true } — checkbox spuntate in sessioni recoveryUpper/Lower
-  trainRecoveryTimers: {},   // { exName: { remaining, total, running, _iv } } — LEGACY per-esercizio (dormant da 12 mag 2026)
   trainRecoveryCollapsed: {}, // { blockName: true } — blocchi collassati (auto al completamento o toggle manuale)
   trainRecoveryFlow: {       // countdown ibrido auto-advance G3/G6
     active:false, currentIdx:0, remaining:0, running:false, _iv:null,
@@ -21191,11 +21190,6 @@ function closeTrainingSession(){
   ST.trainNoteDraft = '';
   ST.trainNoteHistoryOpen = {};
   resetAllActivationTimers();
-  // Stop + reset timer recovery (no orfani in background)
-  if(ST.trainRecoveryTimers){
-    Object.values(ST.trainRecoveryTimers).forEach(t => { if(t._iv){ clearInterval(t._iv); t._iv = null; } });
-  }
-  ST.trainRecoveryTimers = {};
   ST.trainRecoveryDone = {};
   ST.trainRecoveryCollapsed = {};
   // Stop recovery flow countdown ibrido se attivo
@@ -22160,53 +22154,10 @@ function toggleRecoveryBlockCollapsed(blockName){
   renderTraining();
 }
 
-// ── Recovery timers (sessioni recoveryUpper/recoveryLower) ── LEGACY DORMANT (sostituiti da recoveryFlow*)
-function startRecoveryTimer(exName){
-  if(!ST.trainRecoveryTimers || !ST.trainRecoveryTimers[exName]) return;
-  const t = ST.trainRecoveryTimers[exName];
-  if(t.running || t.remaining <= 0) return;
-  t.running = true;
-  t._iv = setInterval(()=>{
-    const tt = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
-    if(!tt) return;
-    tt.remaining = Math.max(0, tt.remaining - 1);
-    if(tt.remaining <= 0){
-      tt.running = false;
-      clearInterval(tt._iv); tt._iv = null;
-      if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
-      ST.trainRecoveryDone[exName] = true;
-      try { _unlockAudio && _unlockAudio(); } catch(e){}
-      try { navigator.vibrate && navigator.vibrate([300,100,300,100,300]); } catch(e){}
-      checkRecoverySessionDone();
-    }
-    renderTraining();
-  }, 1000);
-  renderTraining();
-}
-function pauseRecoveryTimer(exName){
-  const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
-  if(!t) return;
-  t.running = false;
-  if(t._iv){ clearInterval(t._iv); t._iv = null; }
-  renderTraining();
-}
-function resumeRecoveryTimer(exName){ startRecoveryTimer(exName); }
-function resetRecoveryTimer(exName){
-  const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
-  if(!t) return;
-  if(t._iv){ clearInterval(t._iv); t._iv = null; }
-  t.remaining = t.total;
-  t.running = false;
-  if(ST.trainRecoveryDone) ST.trainRecoveryDone[exName] = false;
-  renderTraining();
-}
 function toggleRecoveryDone(exName){
   if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
   ST.trainRecoveryDone[exName] = !ST.trainRecoveryDone[exName];
   if(ST.trainRecoveryDone[exName]){
-    // Se l'utente spunta manualmente, ferma il timer in corso
-    const t = ST.trainRecoveryTimers && ST.trainRecoveryTimers[exName];
-    if(t && t._iv){ clearInterval(t._iv); t._iv = null; t.running = false; }
     checkRecoverySessionDone();
   }
   renderTraining();
