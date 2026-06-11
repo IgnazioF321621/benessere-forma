@@ -2237,6 +2237,21 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .cal-strip-nav{background:none;border:none;font-size:18px;cursor:pointer;color:var(--t2);padding:4px 6px;flex-shrink:0;line-height:1;border-radius:8px;}
 .cal-strip-nav:disabled{opacity:.3;cursor:default;}
 .cal-strip-nav:not(:disabled):active{background:var(--s2);}
+/* Progressione — chip grafico */
+.prog-chip-row{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 0;margin-bottom:12px;scrollbar-width:none;}
+.prog-chip-row::-webkit-scrollbar{display:none;}
+.prog-chip{padding:8px 16px;border-radius:20px;font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border:1.5px solid var(--b1,var(--s2));background:var(--s1,#fff);color:var(--t2);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s,color .15s;}
+.prog-chip.active{background:var(--acc);color:#fff;border-color:var(--acc);}
+/* Progressione — stat grid 2×2 */
+.prog-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.prog-stat-card{background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;}
+.prog-stat-label{font-size:9px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:4px;}
+.prog-stat-value{font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);line-height:1.1;}
+.prog-stat-unit{font-size:11px;font-weight:400;font-family:var(--font-sans);color:var(--t3);margin-left:3px;}
+/* Progressione — coach card */
+.prog-coach-card{background:#E6F4F2;border-radius:16px;padding:16px;margin-top:12px;}
+/* Progressione — empty state */
+.prog-empty{background:var(--s1,#fff);border-radius:16px;padding:48px 24px;text-align:center;margin-top:8px;}
 
 </style>
 </head>
@@ -3652,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.10 · 16:07';
+const APP_VERSION = '2026.06.11 · 12:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10826,7 +10841,9 @@ function renderCalStrip(workouts){
   const offset = ST.trainCalStripOffset || 0;
   const today = new Date();
   today.setHours(0,0,0,0);
-  const todayIso = today.toISOString().slice(0,10);
+  // Costruisce ISO locale (non UTC) per evitare shift in UTC+2
+  const localIso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const todayIso = localIso(today);
 
   // Lunedì della settimana corrente
   const dow = today.getDay(); // 0=dom
@@ -10845,7 +10862,7 @@ function renderCalStrip(workouts){
   const dayCells = Array.from({length:7}, (_,i) => {
     const d = new Date(monday);
     d.setDate(d.getDate() + i);
-    const ds = d.toISOString().slice(0,10);
+    const ds = localIso(d);
     const isFuture = d > today;
     const isToday = ds === todayIso;
     const isSel = ds === ST.trainCalSelectedDay;
@@ -13428,21 +13445,19 @@ function renderTraining(){
     // ── Contenuto principale (esercizio selezionato) ──
     let contentHTML = '';
     if(!selEx){
-      contentHTML = `
-        <div style="background:var(--s1,#fafafa);border-radius:16px;padding:48px 24px;text-align:center;margin-top:8px;">
-          <div style="width:48px;height:48px;border-radius:12px;background:var(--s2,#eee);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;">📈</div>
-          <div style="font-size:15px;font-weight:600;font-family:'Syne',sans-serif;color:var(--t1);margin-bottom:6px;">Seleziona un esercizio</div>
-          <div style="font-size:13px;color:var(--t3);font-family:'Syne',sans-serif;">per vedere la progressione</div>
-        </div>`;
+      contentHTML = `<div class="prog-empty">
+        <div style="width:48px;height:48px;border-radius:12px;background:var(--s2);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;">📈</div>
+        <div style="font-size:15px;font-weight:600;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">Seleziona un esercizio</div>
+        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">per vedere la progressione</div>
+      </div>`;
     } else if(ST.trainProgLogs === null){
       contentHTML = `<div style="padding:40px 0;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento…</div>`;
     } else if(ST.trainProgLogs.length === 0){
-      contentHTML = `
-        <div style="background:var(--s1,#fafafa);border-radius:16px;padding:36px 24px;text-align:center;margin-top:8px;">
-          <div style="font-size:28px;margin-bottom:12px;">📋</div>
-          <div style="font-size:14px;font-weight:600;font-family:'Syne',sans-serif;color:var(--t1);margin-bottom:6px;">Nessuna sessione registrata</div>
-          <div style="font-size:13px;color:var(--t3);font-family:'Syne',sans-serif;">Logga le serie dalla tab Sessione per vedere il grafico</div>
-        </div>`;
+      contentHTML = `<div class="prog-empty">
+        <div style="font-size:28px;margin-bottom:12px;">📋</div>
+        <div style="font-size:14px;font-weight:600;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">Nessuna sessione registrata</div>
+        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere il grafico</div>
+      </div>`;
     } else {
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
@@ -13458,89 +13473,80 @@ function renderTraining(){
         };
       });
 
-      // 4 chip grafico
+      // 4 chip grafico — usa classi CSS
+      const activeChart = ST.trainProgChart || 'carico';
       const chartChips = [
-        ['carico','CARICO'],
-        ['1rm','1RM STIMATO'],
-        ['volume','VOLUME TOTALE'],
-        ['zone','ZONE'],
-      ].map(([v,lbl]) => {
-        const active = (ST.trainProgChart || 'carico') === v;
-        return `<button onclick="ST.trainProgChart='${v}';renderTraining();" style="padding:8px 14px;border-radius:20px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1.5px solid ${active?'var(--acc)':'var(--b1,#E5E5E5)'};background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t2)'};cursor:pointer;white-space:nowrap;flex-shrink:0;">${lbl}</button>`;
-      }).join('');
+        ['carico','Carico'],
+        ['1rm','1RM Stimato'],
+        ['volume','Volume Totale'],
+        ['zone','Zone'],
+      ].map(([v,lbl]) =>
+        `<button class="prog-chip${activeChart===v?' active':''}" onclick="ST.trainProgChart='${v}';renderTraining();">${lbl}</button>`
+      ).join('');
 
       const chartSvg = renderProgChart(points, byDate, selEx);
 
-      // Stat cards 2×2
+      // Stat cards 2×2 — usa classi CSS
       const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
       const best1rm = points.reduce((m,p) => {
         const v = p.resist > 0 ? Math.round(p.resist * (1 + p.reps/30)) : 0;
         return v > m ? v : m;
       }, 0);
       const sessioni = points.length;
-      // Trend: media peso ultime 2 vs le 2 prima
-      let trendHTML = '<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">—</span>';
+      let trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">—</div>`;
       if(points.length >= 4){
         const last2 = points.slice(-2).map(p=>p.resist);
         const prev2 = points.slice(-4,-2).map(p=>p.resist);
-        const avgLast = (last2[0]+last2[1])/2;
-        const avgPrev = (prev2[0]+prev2[1])/2;
-        const diff = Math.round(avgLast - avgPrev);
-        if(diff > 0)       trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--ok,#16A34A);">↑ +${diff} lbs</span>`;
-        else if(diff < 0)  trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--err,#DC2626);">↓ ${diff} lbs</span>`;
-        else               trendHTML = `<span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">→ stabile</span>`;
+        const diff = Math.round(((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2));
+        if(diff > 0)      trendHTML = `<div class="prog-stat-value" style="color:var(--ok,#16A34A);">↑ +${diff}<span class="prog-stat-unit">lbs</span></div>`;
+        else if(diff < 0) trendHTML = `<div class="prog-stat-value" style="color:var(--err,#DC2626);">↓ ${diff}<span class="prog-stat-unit">lbs</span></div>`;
+        else              trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">→ stabile</div>`;
       } else if(points.length >= 2){
-        trendHTML = `<span style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">≥4 sessioni per trend</span>`;
+        trendHTML = `<div style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">≥4 sessioni per trend</div>`;
       }
 
-      const statCards2x2 = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;">
-          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
-            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">BEST PESO</div>
-            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${bestPeso||'—'}</span>${bestPeso?`<span style="font-size:11px;font-family:'Syne',sans-serif;color:var(--t3);margin-left:3px;">lbs</span>`:''}
-          </div>
-          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
-            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">1RM STIM.</div>
-            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${best1rm||'—'}</span>${best1rm?`<span style="font-size:11px;font-family:'Syne',sans-serif;color:var(--t3);margin-left:3px;">lbs</span>`:''}
-          </div>
-          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
-            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">SESSIONI</div>
-            <span style="font-size:20px;font-weight:700;font-family:var(--font-mono);color:var(--acc);">${sessioni}</span>
-          </div>
-          <div style="background:var(--s2,#F0EDE6);border-radius:12px;padding:12px 10px;">
-            <div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">TREND</div>
-            ${trendHTML}
-          </div>
-        </div>`;
+      const statCards2x2 = `<div class="prog-stat-grid">
+        <div class="prog-stat-card">
+          <div class="prog-stat-label">BEST PESO</div>
+          <div class="prog-stat-value">${bestPeso||'—'}${bestPeso?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+        </div>
+        <div class="prog-stat-card">
+          <div class="prog-stat-label">1RM STIM.</div>
+          <div class="prog-stat-value">${best1rm||'—'}${best1rm?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+        </div>
+        <div class="prog-stat-card">
+          <div class="prog-stat-label">SESSIONI</div>
+          <div class="prog-stat-value">${sessioni}</div>
+        </div>
+        <div class="prog-stat-card">
+          <div class="prog-stat-label">TREND</div>
+          ${trendHTML}
+        </div>
+      </div>`;
 
       // Coach insight deterministico
-      let insightText = '';
-      if(points.length < 3){
-        insightText = 'Logga almeno 3 sessioni per vedere un\'analisi della tua progressione.';
-      } else if(points.length >= 4){
+      let insightText = 'Logga almeno 3 sessioni per vedere un\'analisi della tua progressione.';
+      if(points.length >= 4){
         const last2 = points.slice(-2).map(p=>p.resist);
         const prev2 = points.slice(-4,-2).map(p=>p.resist);
         const diff = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
         if(diff > 0) insightText = 'Nelle ultime sessioni stai aumentando il carico. Sei in progressione — continua così.';
         else if(diff < 0) insightText = 'Il carico è leggermente calato. Verifica recupero e qualità del sonno.';
         else insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
-      } else {
-        insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
+      } else if(points.length >= 3){
+        insightText = 'Buon inizio. Logga ancora qualche sessione per vedere il trend completo.';
       }
 
-      const coachInsight = `
-        <div style="background:#E6F4F2;border-radius:16px;padding:16px;margin-top:12px;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            <div style="width:28px;height:28px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--font-mono);">Z</div>
-            <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--acc);">Coach</span>
-          </div>
-          <div style="font-size:13px;line-height:1.6;color:var(--t1);font-family:'Syne',sans-serif;">${insightText}</div>
-        </div>`;
+      const coachInsight = `<div class="prog-coach-card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--font-mono);flex-shrink:0;">Z</div>
+          <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--acc);">Coach</span>
+        </div>
+        <div style="font-size:13px;line-height:1.6;color:var(--t1);font-family:var(--font-sans);">${insightText}</div>
+      </div>`;
 
       contentHTML = `
-        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px;">
-          <div style="display:flex;gap:8px;padding:2px 0;">${chartChips}</div>
-        </div>
+        <div class="prog-chip-row">${chartChips}</div>
         <div style="background:#fff;border-radius:16px;padding:16px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
           ${chartSvg}
         </div>
