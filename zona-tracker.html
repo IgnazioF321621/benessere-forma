@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.11 · 15:47';
+const APP_VERSION = '2026.06.11 · 15:52';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -24492,6 +24492,8 @@ async function rigeneraSchedaDaImpostazioni() {
   btn.disabled = true; btn.textContent = 'Generazione in corso...';
   msg.style.display = 'none';
   try {
+    const { error: dbErr } = await supa.from('profiles').update({ giorni_allenamento: giorni }).eq('id', ST.user.id);
+    if(dbErr) throw new Error('Salvataggio giorni fallito: ' + (dbErr.message || JSON.stringify(dbErr)));
     if(ST.profile) ST.profile.giorni_allenamento = giorni;
     await generateTrainingProgram({ source: 'manual', force: true });
     await loadActiveScheda();
