@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.11 · 21:21';
+const APP_VERSION = '2026.06.11 · 21:32';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -16090,7 +16090,7 @@ function renderOggi(){
       const confettiColors=['var(--acc)','var(--carb)','var(--fat)','#FFD700'];
       const confettiHTML=[0,1,2,3,4,5,6,7].map(i=>`<div class="badge-confetti" style="left:${8+i*12}%;animation-delay:${(i*0.18).toFixed(2)}s;background:${confettiColors[i%4]};"></div>`).join('');
       const perfRatio = `${ST.TARGET.pCarbo||40}·${ST.TARGET.pProt||30}·${ST.TARGET.pFat||30}`;
-      html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati ${perfRatio}</div><div class="badge-macro-row"><span>P ${pP}%</span><span class="sep">·</span><span>C ${pC}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
+      html+=`<div class="badge-perfetto">${confettiHTML}<div class="badge-perfetto-inner"><div class="badge-icon">🏆</div><div class="badge-text">Giorno Perfetto</div><div class="badge-sub">Tutti i macro centrati ${perfRatio}</div><div class="badge-macro-row"><span>C ${pC}%</span><span class="sep">·</span><span>P ${pP}%</span><span class="sep">·</span><span>G ${pG}%</span></div></div></div>`;
     }
 
     // ── CTA pair v3 oppure form attivo (mutualmente esclusivi). Wrapper id per scroll target. ──
