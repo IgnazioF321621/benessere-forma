@@ -43,9 +43,9 @@ https://github.com/IgnazioF321621/benessere-forma
 - Tasti ACCETTA/SOSTITUISCI/SALTO sui pasti veri del coach + `weekly_plan_acceptance`
 
 **Debiti tecnici noti**:
-- Ordine macro incoerente tra Tab Oggi (Carbo→Prot→Grassi corretto) e Piano card (Prot→Carbo→Grassi invertito). Da uniformare.
 - Cleanup feature flag `ST.pianoV4Enabled` dopo validazione tester.
-- Pulizia funzioni legacy dormienti: Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`), Analisi v3 (`renderStoricoLegacy`, `setReportRange`), Piano v3→v4.
+- Pulizia funzioni legacy dormienti (candidati cantiere pulizia): Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`), Analisi v3 (`renderStoricoLegacy`, `setReportRange`), Piano v3→v4 (`renderPiano`, `updatePianoTargetCard`, `generatePianoAI` — irraggiungibili con `pianoV4Enabled: true`).
+- Commento fuorviante a riga 7536 (`// TODO: "Settimana N/4" hardcoded...`): il `6` è corretto per entrambe le schede 4 e 5 giorni — il Rest Day G7 è escluso dalla query, quindi ogni giro produce sempre 6 record. Il commento va aggiornato per chiarire che non è un debito tecnico reale.
 
 ---
 
@@ -65,7 +65,7 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Chiuso oggi:**
 
-- **Fix bug `fname` in `_saveSettingsExecute`** (commit `422bad4`): `ReferenceError: fname is not defined` introdotto il 24 maggio 2026 e rimasto silente fino all'11 giugno. Causa: refactor parziale che rinominò la variabile interna senza aggiornare un riferimento. Effetto: **nessun salvataggio impostazioni ha funzionato dal 24 maggio al 11 giugno** (ogni tentativo lanciava eccezione non visibile all'utente). Fix: ripristino della variabile corretta nella funzione `_saveSettingsExecute`.
+- **Fix bug `fname` in `_saveSettingsExecute`** (commit `422bad4`): `ReferenceError: fname is not defined` introdotto il 24 maggio 2026 e rimasto silente fino all'11 giugno. Causa: refactor parziale che rinominò la variabile interna senza aggiornare un riferimento. Effetto: **nessun salvataggio impostazioni ha funzionato dal 24 maggio al 11 giugno** per NESSUN campo (nome, cognome, peso, obiettivo, dieta, intolleranze, giorni allenamento, ecc.) — ogni tentativo lanciava eccezione non visibile all'utente. Fix: aggiunta lettura `fname` da DOM all'inizio di `_saveSettingsExecute`. ⚠️ **Azione richiesta**: avvisare Ginevra, Isabella e Ornella che eventuali modifiche alle impostazioni profilo tra il 24 maggio e l'11 giugno sono andate perse — ricontrollare e salvare di nuovo.
 
 - **Fix "Rigenera scheda" non salvava `giorni_allenamento` su DB** (commit `9dea3aa`): prima del fix, `rigeneraSchedaDaImpostazioni` aggiornava `ST.profile.giorni_allenamento` solo in memoria locale senza scrivere su Supabase. A ogni ricarica dell'app il valore tornava a quello precedente (letto da DB), rendendo la rigenerazione inconsistente. Fix: aggiunto `UPDATE profiles SET giorni_allenamento` con gestione errore prima di chiamare `generateTrainingProgram` — se il write fallisce, la generazione non parte e l'errore appare in `#set-rigenera-msg`.
 
@@ -88,6 +88,18 @@ https://github.com/IgnazioF321621/benessere-forma
 **Nuove funzioni aggiunte:**
 - `renderCalStrip(workouts)` — strip 7 giorni scorrevole
 - `renderProgChart(points, byDate, selEx)` — SVG unificato 4 modalità
+
+**Cantiere 2 — fix UI + verifiche (11 giu 2026):**
+
+- **Fix ordine macro Badge Giorno Perfetto** (commit `12d06ce`): la `badge-macro-row` mostrava `P·C·G` invece dell'ordine canonico Zona `C·P·G`. Corretta riga 16093 in `renderOggi`.
+
+- **Fix macro card Piano legacy** (commit `5125f13`): corretto l'ordine Proteine↔Carboidrati nelle tile della card target in `renderPiano`/`updatePianoTargetCard`. Tecnicamente corretto ma su **codice morto** — entrambe le funzioni sono irraggiungibili con `pianoV4Enabled: true` attivo (routing punta a `renderPianoV4`). Il fix è inerte in produzione normale.
+
+- **Card IMPOSTAZIONI·PIANO in Piano v4 verificata**: `macroLabel = ${pctC}·${pctP}·${pctF}` — già C·P·G corretto, nessun fix necessario.
+
+- **Divisore settimana N/4 verificato**: il `6` hardcoded in Home (riga 6693) e tab Programma (riga 13032) è corretto per entrambe le schede 4 e 5 giorni. Il ciclo 4-day ha 6 posizioni tutte contate; il ciclo 5-day ha 7 posizioni ma il Rest Day (G7) viene salvato come `session_type='rest'` ed è escluso dalla query `.neq('session_type','rest')` — ogni giro produce sempre esattamente 6 record. Nessun fix necessario. Il TODO a riga 7536 è fuorviante e verrà aggiornato nel cantiere pulizia.
+
+- **Codice morto confermato** (candidati al cantiere pulizia): `renderPiano()`, `updatePianoTargetCard()`, `generatePianoAI()` (irraggiungibili con v4 attivo); `renderStoricoLegacy()` (alias routing punta a `renderAnalisi`; contiene anche ordine macro P·C·G errato a riga 17355 ma irrilevante essendo dead code).
 
 ### 2026-06-10
 
@@ -1604,6 +1616,8 @@ Claude Code esegue **tutto il ciclo completo**: edit + commit + push + deploy.
 
 **Niente operazioni git silenziose.** Se Claude Code esegue git push senza resoconto, è una violazione del workflow.
 
+**Regola permanente — test prima del commit (aggiunta 11 giu 2026)**: mai eseguire commit/push senza prima aver eseguito (o fatto eseguire a Ignazio) il test definito nel brief. Se il test non è eseguibile autonomamente, fermarsi e chiedere conferma prima di procedere.
+
 **Worktree management**: indicare sempre quale worktree è attivo. Se ne viene creato uno nuovo, dichiararlo all'inizio della sessione.
 
 ## Lezioni di metodo (per sessioni future)
@@ -1692,6 +1706,12 @@ Complementare alla lezione 1 (DB fonte di verità) e alla 6 (verifica la SCRITTU
 ### 8. `eq` è ora stringa singola nel JSON scheda (post 9 giu 2026)
 
 La lista grezza del catalogo (`MANUBRI;ELASTICO;BILANCIERE`) viene risolta al momento della generazione tramite `_trainGenPickEq`. Schede generate prima di questa data hanno ancora `eq` multiplo — richiedono rigenerazione via **Impostazioni → Rigenera scheda** (o `?schedaGen=1`).
+
+### 10. Verificare il test definito nel brief PRIMA di committare
+
+Cantiere 2 (11 giu 2026): il fix `5125f13` ha corretto correttamente l'ordine macro in `renderPiano`/`updatePianoTargetCard`, ma quella card è irraggiungibile con `pianoV4Enabled: true`. Il test visivo avrebbe rivelato immediatamente che il fix non produceva nessun cambiamento visibile — e avrebbe diretto l'attenzione sui punti attivi (Badge Giorno Perfetto, zona-pill, card Piano v4).
+
+**Regola operativa**: prima di committare, eseguire il test visivo/funzionale definito nel brief. Se Claude Code non può eseguirlo autonomamente (es. richiede interazione con l'app sul device), dichiararlo esplicitamente e attendere conferma da Ignazio. Un commit su codice morto che "sembra corretto" è comunque rumore nel git log e falsa sicurezza.
 
 ### 9. Surrogato: solo `setup` sovrascritto, non `execution`/`commonErrors`
 
