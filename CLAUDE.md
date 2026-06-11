@@ -26,7 +26,7 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`).
 
-**Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). APP_VERSION attuale: `v2026.06.01 · 17:00`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
+**Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). Tab Progressione ridisegnata completamente (11 giu 2026): strip calendario 7 giorni scorrevole, 4 grafici selezionabili (Carico / 1RM stimato / Volume totale / Zone reps), stat cards 2×2 (Best Peso, 1RM Stim., Sessioni, Trend), Coach insight. Sistema audio unificato (3 suoni semantici: prepBeep 660Hz warning, stopBeep 659Hz stop, longBeep 1100Hz GO) — brief pronto per Claude Code. APP_VERSION attuale: `v2026.06.01 · 17:00`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
 
 **Modulo Body**: M2 check fisico funzionale (versione 13 mag) + design refinement applicato. Da ri-agganciare a fine blocco Training.
 
@@ -60,6 +60,30 @@ https://github.com/IgnazioF321621/benessere-forma
 **Chiuso oggi:**
 
 - **Nomi esercizi — rimozione attrezzo dal campo nome**: fix editoriale nel Google Sheet — l'attrezzo non compare più ridondante nel nome dell'esercizio (es. "Squat con elastico" → "Squat"). Sincronizzato su `esercizi_catalog`.
+
+### 2026-06-11
+
+**Chiuso oggi:**
+
+- **Redesign tab Progressione**: completamente ridisegnata secondo mockup approvato da Claude Design. Strip calendario 7 giorni scorrevole con dot workout e navigazione settimana (fix bug timezone — costruzione data locale via `getFullYear()/getMonth()/getDate()` invece di `toISOString()`). Dropdown esercizio restyled con ultimo peso/reps inline per ogni voce (richiede `loadAllExerciseNames` estesa con `reps, resistance, date`). 4 grafici selezionabili via chip row: Carico (linea + area fill), 1RM stimato (formula Epley: `peso × (1 + reps/30)`), Volume totale (`reps × resistance` somma tutti i set), Zone reps (stacked bar forza/ipertrofia/resistenza). Stat cards 2×2: Best Peso, 1RM Stim., Sessioni, Trend (delta media ultime 2 vs precedenti 2 sessioni). Card Coach insight con testo deterministico. Stato vuoto con placeholder. Commit `e0fa603` + fix timezone + CSS classes `931a3d6`.
+
+- **Sistema audio unificato — decisioni**: definiti 3 suoni semantici globali per tutti i flow di allenamento:
+  - `playPrepBeep` 660Hz — tic brevi · "sta per finire" (ultimi 3–5 sec) · invariato
+  - `playStopBeep` 659Hz — tono lungo 700ms · sostituisce `playFinalTripleBeep` ovunque
+  - `playLongBeep` 1100Hz — tono pieno 640ms · "GO / inizia" (era 880Hz)
+  - `playFinalTripleBeep` eliminata completamente
+  - `playLongBeep` aggiunto dove mancava: fine countdown recupero normale, fine micro-pausa Recovery Day
+  - Brief pronto per Claude Code — **non ancora implementato**.
+
+**Nuovi stati ST aggiunti:**
+- `trainCalStripOffset` — offset settimane strip calendario
+- `trainCalSelectedDay` — giorno selezionato nella strip
+- `trainProgChart` — grafico attivo (`'carico'|'1rm'|'volume'|'zone'`)
+- `trainProgLastSet` — cache ultimo set per esercizio (populate da `loadAllExerciseNames`)
+
+**Nuove funzioni aggiunte:**
+- `renderCalStrip(workouts)` — strip 7 giorni scorrevole
+- `renderProgChart(points, byDate, selEx)` — SVG unificato 4 modalità
 
 ### 2026-06-10
 
