@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 11:24';
+const APP_VERSION = '2026.06.12 · 15:16';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -19560,7 +19560,13 @@ async function _pianoV4LoadRealPlanForWeek(weekStartIso) {
     // o sincronizzato da un altro device dopo la prima fetch fallita a vuoto.
     // Le ri-tentiamo sempre al prossimo trigger.
     if (existing.state === 'loading') return;
-    if (existing.state === 'loaded' && existing.plan) return;
+    if (existing.state === 'loaded' && existing.plan) {
+      // Se plan esiste ma mealsByDay è vuoto → possibile RLS mismatch o errore rete: retry
+      const mbd = existing.mealsByDay || {};
+      const hasMeals = Object.keys(mbd).some(function(d) { return mbd[d] && mbd[d].length > 0; });
+      if (hasMeals) return; // cache valida, niente retry
+      // altrimenti fall-through: cancella cache entry e ricarica
+    }
     // existing.state === 'loaded' && existing.plan === null → fall-through e ricarica
   }
   ST.pianoV4RealPlanCache[weekStartIso] = { state: 'loading' };
