@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 16:42';
+const APP_VERSION = '2026.06.12 · 16:55';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8312,9 +8312,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
       return null;
     }
-      principali: pools.poolPrincipali.length,
-      finisher:   pools.poolFinisher.length,
-    });
 
     // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE (DUP + Regola A, 28 mag)
     // Per OGNI sessione dello split:
@@ -8353,7 +8350,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const carryEx = carrySorted[k % carrySorted.length];
         if (carryEx && !carryBySessionIdx.has(sIdx)) carryBySessionIdx.set(sIdx, carryEx);
       }
-        Array.from(carryBySessionIdx.entries()).map(([i, ex]) => `sess#${i}→${ex.codice}`).join(', ') || '—');
     } else {
     }
 
@@ -8535,11 +8531,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const coreLog = coreKept
         ? `${coreKept.ex.codice} (${_coreShort}, isometrico)`
         : (coreTarget ? (coreSkippedTime ? `SKIPPATO per tempo (${_coreShort})` : `NON DISPONIBILE (${_coreShort})`) : 'nessuno');
-        + ` (atteso ${requiredPatterns.length}${compoundMissing.length ? ', mancante: ' + compoundMissing.join('/') : ''});`
-        + ` iso obbligatori: ${keptMuscular.map(o=>o.ex.codice).join(',') || '—'}`
-        + `${cutTargets.length ? ' (tagliati: ' + cutTargets.join('/') + ')' : ''};`
-        + ` core: ${coreLog};`
-        + ` bonus: ${bonusPicks.map(b=>`${b.ex.codice}(${_isoLabel(b.ex)})`).join(',') || '—'}`);
 
       // WARM-UP specifico (FASE 1): cuffia dei rotatori come PREHAB nelle sessioni
       // macro UPPER (upper/push/pull — stessa convenzione macro di
@@ -8639,10 +8630,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       }
     }
 
-      sessioniRaw.map(s => ({
-        split: s.splitType, tipo: s.resolvedType, count: s.exercises.length,
-        codici: s.exercises.map(e => e.codice), iso: s._diag,
-      })));
 
     // BLOCCO 7+8 — CAUTELE (limitazioni × zone_rischio) + ORDERING
     //
@@ -8687,15 +8674,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       return { ...s, exercises: ordinati };
     });
 
-      sessioniProcessate.map(s => ({
-        split: s.splitType, tipo: s.resolvedType,
-        count: s.exercises.length,
-        sequenza: s.exercises.map(w => ({
-          codice: w.ex.codice,
-          pattern: w.ex.pattern,
-          action: w.action,
-        })),
-      })));
 
     // BLOCCO 9 — FINISHER TABATA VERO (solo dimagrimento/ricomposizione)
     // Costruisce oggetto finisher dedicato (schema separato da exercises[]):
@@ -8781,19 +8759,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       return mapped;
     });
 
-      sessioniFinali.map(s => ({
-        id: s.id, name: s.name, type: s.type, rir: s.rir, rest: s.rest,
-        duration_min: s.duration_min,
-        exercises: s.exercises.map(e => ({
-          codice: e.codice, name: e.name, sets: e.sets, reps: e.reps, alert: !!e.alert,
-        })),
-        finisher: s.finisher ? { type: s.finisher.type, round: s.finisher.round, exercises: s.finisher.exercises.map(e => e.codice) } : null,
-        // Diagnostica onesta: warmup/carry_conclusivo SONO nell'oggetto sessione
-        // (vedi harness) — la vecchia proiezione li ometteva e induceva a credere
-        // che si perdessero. Li mostro per coerenza con finisher.
-        warmup: Array.isArray(s.warmup) ? s.warmup.map(w => w.codice) : null,
-        carry_conclusivo: s.carry_conclusivo ? s.carry_conclusivo.codice : null,
-      })));
 
     // BLOCCO 11 — VALIDAZIONE CODICI (sanity check finale)
     // Rete di sicurezza: ogni `codice` di ogni esercizio deve esistere
@@ -9153,8 +9118,6 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
   const candidates = matchPattern.filter(ex => !used.has(ex.codice));
   if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
     const scartatiUsati = matchPattern.filter(ex => used.has(ex.codice)).map(e => e.codice);
-      + ` · già usati=${scartatiUsati.length ? scartatiUsati.join(',') : '—'}`
-      + ` · disponibili=${candidates.length}`);
   }
   if (candidates.length === 0) {
     return null;
@@ -9185,7 +9148,6 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
       pickPool = _safe;
       if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
         const _risky = candidates.filter(_haConflitto).map(e => e.codice);
-          + (_risky.length ? ` · evitati (zone_rischio)=[${_risky.join(',')}]` : ''));
       }
     } else if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
     }
@@ -10057,17 +10019,6 @@ window.ztTestGeneraScheda = async function() {
 
 // Diagnostica console: dry-run + console.table, no DB no AI
 window.ztSchedaWhy = async function(opts = {}) {
-    user: ST.user && { id: ST.user.id, email: ST.user.email },
-    obiettivo: ST.profile && ST.profile.obiettivo,
-    usa_training: ST.profile && ST.profile.usa_training,
-    tipo_allenamento: ST.profile && ST.profile.tipo_allenamento,
-    attrezzatura: ST.profile && ST.profile.attrezzatura,
-    giorni_allenamento: ST.profile && ST.profile.giorni_allenamento,
-    giorni_override: (opts && opts.giorni != null) ? opts.giorni : '(nessuno, uso profilo reale)',
-    volume_sessione: ST.profile && ST.profile.volume_sessione,
-    m1Data_esperienza: ST.m1Data && ST.m1Data.esperienza,
-    m1Data_limitazioni: ST.m1Data && ST.m1Data.limitazioni,
-  });
   const scheda = await generateTrainingProgram({
     source: 'why-diagnostic', force: true, dryRun: true,
     giorniOverride: (opts && opts.giorni != null) ? opts.giorni : null
@@ -10120,22 +10071,6 @@ window.ztSchedaWhy = async function(opts = {}) {
       };
     })
   );
-    name: s.name,
-    exercises: (s.exercises || []).map(e => ({
-      codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
-      rir: (e.rir !== undefined ? e.rir : null),
-      iso: !!e.iso, durationBased: !!e.durationBased,
-      replacedFromCodice: e.replacedFromCodice || null,
-      alert: e.alert || null,
-    })),
-    // Campi SEPARATI dall'array exercises (come finisher): mostrati esplicitamente
-    // qui nella proiezione diagnostica. SONO già nell'oggetto sessione finale e
-    // nella scheda salvata (provato con harness Node) — senza questa riga la
-    // proiezione li ometteva e sembrava (erroneamente) che si perdessero.
-    warmup:           Array.isArray(s.warmup) ? s.warmup.map(w => `${w.codice} ${w.name}`) : null,
-    carry_conclusivo: s.carry_conclusivo ? `${s.carry_conclusivo.codice} ${s.carry_conclusivo.name}` : null,
-    finisher: s.finisher ? `tabata ${s.finisher.round}×(${s.finisher.work_sec}/${s.finisher.rest_sec}) — ${(s.finisher.exercises||[]).map(e=>e.codice).join(',')}` : null,
-  })));
   return scheda;
 };
 
