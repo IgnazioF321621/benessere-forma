@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 17:29';
+const APP_VERSION = '2026.06.12 · 19:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11855,8 +11855,6 @@ async function saveTrainingSet(){
     reps, resistance, rir, exData, sess: sessObj, bandColor, // bandColor null per non-trazione
   });
   if(sugg) ST.aiSuggestions[sKey] = sugg; else if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
-  const restSec = getRestSec(form.sessionId, exData);
-  startTrainingCountdown(restSec, form.exName, form.sessionId);
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -12651,7 +12649,7 @@ function renderTraining(){
         const exNum = exIdx + 1; // numero progressivo 1, 2, 3 …
 
         // Branch NON-RECOVERY: logica esistente
-        const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name;
+        const isOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId===sel && ST.trainLogOpen.exName===e.name && !ST.trainCountdown;
         const loggedKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(`${sel}_${e.name}_`)&&k.endsWith(`_${today}`));
         const nextSet = loggedKeys.length + 1;
         const allDone = nextSet > e.sets;
@@ -13679,16 +13677,93 @@ function renderTraining(){
           <div class="rest-modal-body">
             <div class="rest-ex-name-row">${esc(cd.exName)}</div>
 
-            <div class="rest-row-cards">
-              <div class="rest-card">
-                <span class="rest-card-eyebrow">APPENA FATTA</span>
-                ${lastSetHTML}
-              </div>
-              <div class="rest-card rest-card--next">
-                <span class="rest-card-eyebrow">PROSSIMA</span>
-                ${nextHTML}
-              </div>
-            </div>
+            ${(()=>{
+              const logIsOpen = ST.trainLogOpen && ST.trainLogOpen.sessionId === cd.sessionId && ST.trainLogOpen.exName === cd.exName;
+              if(logIsOpen){
+                const formLO = ST.trainLogOpen;
+                const unitLbl2 = (ST.profile && ST.profile.unit) || 'lbs';
+                const parsedRepsM = ex?.reps ? parseRepsRange(ex.reps) : null;
+                const isTimedM = (parsedRepsM && parsedRepsM.kind === 'seconds') || !!ex?.isTimed;
+                const isPullUpM = isPullUpExercise(cd.exName);
+                const resistOptionsM = RESIST_VALUES.map(v =>
+                  `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
+                ).join('');
+                const nextSetM = formLO.setNum;
+                return `<div style="padding:12px 0 4px;">
+                  <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
+                  <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <div style="flex:1;">
+                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimedM ? 'DURATA (sec)' : 'REPS'}</label>
+                      <select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);">
+                        <option value="" disabled selected>—</option>
+                        ${(()=>{
+                          if(isTimedM){
+                            let opts = '';
+                            const lo2 = Math.max(5,(parsedRepsM.min||10)-10);
+                            const hi2 = (parsedRepsM.max||parsedRepsM.min||10)+15;
+                            for(let sv=lo2;sv<=hi2;sv+=5) opts+=`<option value="${sv}">${sv}</option>`;
+                            return opts;
+                          } else {
+                            return Array.from({length:31},(_,i)=>`<option value="${i}">${i}</option>`).join('');
+                          }
+                        })()}
+                      </select>
+                    </div>
+                    ${!isTimedM ? `<div style="flex:1;">
+                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
+                      <select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);">
+                        <option value="">—</option>
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                      </select>
+                    </div>` : ''}
+                  </div>
+                  ${isPullUpM ? `<div style="margin-bottom:10px;">
+                    <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">COLORE BANDA</label>
+                    <div style="display:flex;gap:6px;">
+                      ${BAND_COLORS.map(c => {
+                        const active2 = ST.trainLogBandColor === c;
+                        return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
+                          style="flex:1;padding:10px 6px;background:${active2?'var(--acc)':'#fff'};color:${active2?'#fff':'var(--t1)'};border:1.5px solid ${active2?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active2?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
+                      }).join('')}
+                    </div>
+                    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">la banda AIUTA · Gialla = più dura · Viola = più facile</div>
+                  </div>` : `<div style="margin-bottom:10px;">
+                    <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
+                    <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
+                      <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
+                      ${resistOptionsM}
+                    </select>
+                    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:4px;">lbs indicativi · scarto ±15% per gli elastici a tubo</div>
+                  </div>`}
+                  <div style="display:flex;gap:8px;margin-top:4px;">
+                    <button id="tl-save-btn" onclick="saveTrainingSet();" ${ST.trainSaving?'disabled':''}
+                      style="flex:1;padding:12px;background:${ST.trainSaving?'var(--b2)':'var(--acc)'};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:${ST.trainSaving?'default':'pointer'};">
+                      ${ST.trainSaving ? '…' : 'Salva serie →'}
+                    </button>
+                    <button onclick="ST.trainLogOpen=null;renderTraining();"
+                      style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">✕</button>
+                  </div>
+                </div>`;
+              } else {
+                const savedKeys2 = Object.keys(ST.trainLoggedSets).filter(k =>
+                  k.startsWith(`${cd.sessionId}_${cd.exName}_`) && k.endsWith(`_${todayKey()}`)
+                );
+                const savedN2 = savedKeys2.length;
+                return `<div class="rest-row-cards">
+                  <div class="rest-card">
+                    <span class="rest-card-eyebrow" ${savedN2 > 0 ? 'style="color:var(--acc);"' : ''}>${savedN2 > 0 ? `Serie ${savedN2} salvata ✓` : 'APPENA FATTA'}</span>
+                    ${lastSetHTML}
+                  </div>
+                  <div class="rest-card rest-card--next">
+                    <span class="rest-card-eyebrow">PROSSIMA</span>
+                    ${nextHTML}
+                  </div>
+                </div>`;
+              }
+            })()}
 
             <div class="rest-coach-card">
               <div class="rest-coach-card-eyebrow">🤖 Coach</div>
@@ -20881,6 +20956,9 @@ function trainExecFinishSet(){
   workTimeStopExec(e.sessionId, true);
   workTimeStopTick();
   const timedTarget = e.isTimed ? (e.timedTarget || null) : null;
+  const _restEx = findExercise(e.exName, e.sessionId);
+  const _restSec = getRestSec(e.sessionId, _restEx);
+  startTrainingCountdown(_restSec, e.exName, e.sessionId);
   ST.trainExecOpen = null;
   openLogModal(e.sessionId, e.exName, e.setNum, { timedTarget });
 }
