@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 16:00';
+const APP_VERSION = '2026.06.12 · 16:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3827,7 +3827,6 @@ const ST = {
   analisi: { window: 'SETTIMANA', dateOffset: 0 }, // window: SETTIMANA|MESE|3MESI|6MESI; offset: 0=corrente, -1=prec
   dayDetailScreen: null,   // { date:'YYYY-MM-DD', menuOpen:bool } — overlay drilldown dettaglio giorno
   // PIANO V4 Coach Attivo (Step B.1, 20 mag 2026) — feature flag + nav settimana
-  pianoV4Enabled: true,    // toggle rollback istantaneo a renderPiano legacy (modificabile da console)
   pianoV4WeekOffset: 0,    // 0=settimana corrente, -1=passata, +1=futura (offset in settimane)
   // PIANO V4 Step C.1 (20 mag 2026) — overlay Dettaglio Giorno
   pianoV4DayOverlay: null, // { dayOfWeek:1-7 ISO, weekOffset:N } | null — snapshot al tap card
@@ -4920,12 +4919,7 @@ async function verifyOTP() {
   btn.disabled = true; btn.textContent = 'Verifica…';
   hideAuthMsg();
 
-  // Prova prima con type 'email' (OTP numerico), poi con 'magiclink' come fallback
-  let result = await supa.auth.verifyOtp({ email: _otpEmail, token, type: 'email' });
-  if (result.error) {
-    result = await supa.auth.verifyOtp({ email: _otpEmail, token, type: 'magiclink' });
-  }
-  const {data, error} = result;
+  const {data, error} = await supa.auth.verifyOtp({ email: _otpEmail, token, type: 'email' });
 
   if (error) {
     showAuthMsg('Codice non valido o scaduto. Riprova.', 'err');
@@ -7561,7 +7555,6 @@ async function loadActiveScheda() {
       return;
     }
     if (!data || !data.scheda) {
-      console.log('[scheda] nessuna scheda attiva, fallback TRAINING_SESSIONS hardcoded');
       return;
     }
     const sessioniArr = data.scheda.sessioni;
@@ -7583,7 +7576,6 @@ async function loadActiveScheda() {
     }
     ST.userTrainingSessions = sessMap;
     ST.userSessionCycle = cycle;
-    console.log('[scheda] caricata scheda blocco_n=' + data.blocco_n + ',', cycle.length, 'sessioni:', cycle.join(', '));
   } catch (e) {
     console.warn('[scheda] eccezione caricamento:', (e && e.message) || e);
   }
@@ -8147,19 +8139,16 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
 
     // BLOCCO 1 — GUARD INIZIALI
     if (!ST.user || !ST.user.id) {
-      console.log('[train-gen] skip: utente non loggato');
       return null;
     }
     if (ST.user.id === 'test-user-001') {
       if (force) {
         console.warn('[train-gen][force] bypass test mode guard (force=true)');
       } else {
-        console.log('[train-gen] skip: test mode');
         return null;
       }
     }
     if (!ST.profile || ST.profile.usa_training === false) {
-      console.log('[train-gen] skip: usa_training=false o profilo mancante');
       return null;
     }
 
@@ -8204,10 +8193,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       esperienzaRaw = parsed.esperienza;
       limitazioni = parsed.limitazioni;
       if (esperienzaRaw) {
-        console.log('[train-gen] esperienza letta da note_salute:', esperienzaRaw,
           '· limitazioni:', limitazioni);
       } else {
-        console.log('[train-gen] note_salute senza "Esperienza:" → fallback principiante');
       }
     }
     if (!esperienzaRaw) {
@@ -8226,7 +8213,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // Variabile LOCALE: non viene mai scritta sul profilo/Supabase.
     if (giorniOverride != null) {
       giorni = Number(giorniOverride);
-      console.log(`[train-gen] override giorni → ${giorni} (dry-run test, profilo NON modificato)`);
     }
     // Volume sessione (sostituisce durata in minuti). Fallback 'completo' →
     // copre profili pre-esistenti senza la colonna e ogni valore inatteso.
@@ -8317,7 +8303,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       softMaxPerSession: _TRAIN_GEN_SOFT_MAX,
     };
 
-    console.log('[train-gen] decisioni intermedie:', { inputData, sessionMeta, catalogSize: catalog.length });
 
     // BLOCCO 5 — FILTRI BASE SUL CATALOGO
     // poolPrincipali = esercizi per le sessioni standard
@@ -8331,7 +8316,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
       return null;
     }
-    console.log('[train-gen] pool size:', {
       principali: pools.poolPrincipali.length,
       finisher:   pools.poolFinisher.length,
     });
@@ -8373,10 +8357,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const carryEx = carrySorted[k % carrySorted.length];
         if (carryEx && !carryBySessionIdx.has(sIdx)) carryBySessionIdx.set(sIdx, carryEx);
       }
-      console.log('[train-gen] carry conclusivo assegnati:',
         Array.from(carryBySessionIdx.entries()).map(([i, ex]) => `sess#${i}→${ex.codice}`).join(', ') || '—');
     } else {
-      console.log('[train-gen] carry conclusivo: poolCarry vuoto → nessun carry (attrezzo/luogo del profilo non li ammette o catalogo senza surrogato)');
     }
 
     const sessioniRaw = splitArray.map((splitType, sessionIdx) => {
@@ -8420,14 +8402,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           const _attEx = String(picked.attrezzo || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean);
           const _haCarico = _attEx.some(a => _ATTREZZI_CON_CARICO.has(a) && attrezzaturaSet.has(a));
           if (!_haCarico) {
-            console.log(`[train-gen] FIX2: ${picked.codice} scartato da '${pat}' Forza (corpo libero puro, nessun attrezzo con carico nel kit) → retry`);
             usedSoFar.add(picked.codice);
             picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r} retry`, limitazioni);
-            if (picked) console.log(`[train-gen] FIX2 retry: trovato ${picked.codice} (${picked.nome})`);
           }
         }
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
-        else { compoundMissing.push(pat); if (window._trainGenDebug) console.log(`[train-gen] ${sessionLabel}: pattern '${pat}' senza candidati → skip`); }
       });
 
       // BLOCCO C — gruppi muscolari coperti dai compound EFFETTIVAMENTE scelti.
@@ -8560,7 +8539,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const coreLog = coreKept
         ? `${coreKept.ex.codice} (${_coreShort}, isometrico)`
         : (coreTarget ? (coreSkippedTime ? `SKIPPATO per tempo (${_coreShort})` : `NON DISPONIBILE (${_coreShort})`) : 'nessuno');
-      console.log(`[${category}] compound: ${compoundPicks.map(e=>e.codice).join(',') || '—'}`
         + ` (atteso ${requiredPatterns.length}${compoundMissing.length ? ', mancante: ' + compoundMissing.join('/') : ''});`
         + ` iso obbligatori: ${keptMuscular.map(o=>o.ex.codice).join(',') || '—'}`
         + `${cutTargets.length ? ' (tagliati: ' + cutTargets.join('/') + ')' : ''};`
@@ -8658,7 +8636,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const _upperACodici = new Set(_upperA.exercises.filter(_isCompound).map(e => e.codice));
         _upperB.exercises = _upperB.exercises.filter(ex => {
           if (_isCompound(ex) && _upperACodici.has(ex.codice)) {
-            console.log(`[train-gen] FIX1 dedup cross-upper: ${ex.codice} (${ex.nome}) rimosso da Upper B (stesso compound di Upper A, pattern '${ex.pattern}')`);
             return false;
           }
           return true;
@@ -8666,7 +8643,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       }
     }
 
-    console.log('[train-gen] sessioni selezionate (raw, pre-ordering):',
       sessioniRaw.map(s => ({
         split: s.splitType, tipo: s.resolvedType, count: s.exercises.length,
         codici: s.exercises.map(e => e.codice), iso: s._diag,
@@ -8715,7 +8691,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       return { ...s, exercises: ordinati };
     });
 
-    console.log('[train-gen] sessioni processate (post cautele + ordering):',
       sessioniProcessate.map(s => ({
         split: s.splitType, tipo: s.resolvedType,
         count: s.exercises.length,
@@ -8810,7 +8785,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       return mapped;
     });
 
-    console.log('[train-gen] sessioni finali (mapped):',
       sessioniFinali.map(s => ({
         id: s.id, name: s.name, type: s.type, rir: s.rir, rest: s.rest,
         duration_min: s.duration_min,
@@ -8870,7 +8844,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       sessioni: sessioniValidate,
     };
 
-    console.log('[train-gen] scheda costruita (pre-save):', scheda);
 
     // BLOCCO 14 — SALVATAGGIO DB (prima scrittura del sistema)
     // _trainGenSaveToDB:
@@ -8887,7 +8860,6 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // dryRun=true: skippa completamente save. Ritorno arricchito con
     // _reason='dry-run' per distinguerlo da fail reali.
     if (dryRun) {
-      console.log('[train-gen][dry-run] save DB skippato');
       return { ...scheda, _saved: false, _reason: 'dry-run' };
     }
     const saveResult = await _trainGenSaveToDB(ST.user.id, scheda);
@@ -9043,7 +9015,6 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       || luoghiEsercizio.includes(tipoAllenNorm)
       || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias))
       || (tipoAllenNorm === 'casa' && hasSurrogato);
-    if (!luogoOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: LUOGO (${ex.luogo} vs ${tipoAllenNorm})`); return; }
 
     // FILTRO 2 — attrezzo (normalizzato spazi→underscore)
     // CON branch SURROGATO per casa: se l'utente non possiede l'attrezzo
@@ -9086,7 +9057,6 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // 'aperto': stesso bug gemello (confronto su stringa intera) → stesso fix
     // con la whitelist portatili (some su lista nativa).
     else if (tipoAllenNorm === 'aperto') attrezzoOk = attrezziNativi.some(a => APERTO_WHITELIST.has(a));
-    if (!attrezzoOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: ATTREZZO (${ex.attrezzo}${ex.surrogato_attrezzo?' / surr '+ex.surrogato_attrezzo:''})`); return; }
 
     // FILTRO 3 — livello (campo livello = lista separata da ';',
     // vuoto = ammesso a tutti i livelli)
@@ -9094,7 +9064,6 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       .split(';').map(s => s.trim()).filter(Boolean);
     const livelloOk = livelliEsercizio.length === 0
       || livelliEsercizio.some(l => livelliOk.has(l));
-    if (!livelloOk) { if (typeof window !== 'undefined' && window._trainGenDebug) console.log(`[train-gen][pool] ${ex.codice} escluso: LIVELLO (${ex.livello} vs ${livello})`); return; }
 
     // FILTRO 4 — uso (split su ';', un esercizio può comparire in più pool)
     // Se isSurrogato, clone shallow per non mutare l'oggetto del catalogo
@@ -9188,12 +9157,10 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
   const candidates = matchPattern.filter(ex => !used.has(ex.codice));
   if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
     const scartatiUsati = matchPattern.filter(ex => used.has(ex.codice)).map(e => e.codice);
-    console.log(`[train-gen][pick] ${debugLabel}: nel pool=${matchPattern.length} [${matchPattern.map(e=>e.codice).join(',')}]`
       + ` · già usati=${scartatiUsati.length ? scartatiUsati.join(',') : '—'}`
       + ` · disponibili=${candidates.length}`);
   }
   if (candidates.length === 0) {
-    if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) console.log(`[train-gen][pick] ${debugLabel}: NESSUN candidato → null`);
     return null;
   }
 
@@ -9222,17 +9189,14 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
       pickPool = _safe;
       if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
         const _risky = candidates.filter(_haConflitto).map(e => e.codice);
-        console.log(`[train-gen][pick] ${debugLabel}: preferenza sicurezza → sicuri=[${_safe.map(e=>e.codice).join(',')}]`
           + (_risky.length ? ` · evitati (zone_rischio)=[${_risky.join(',')}]` : ''));
       }
     } else if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) {
-      console.log(`[train-gen][pick] ${debugLabel}: tutte le varianti hanno zone_rischio in conflitto → fallback a cautele (adatta/sostituisci/skip)`);
     }
   }
 
   const idx = ((Number(sessionIndex) || 0) % pickPool.length + pickPool.length) % pickPool.length;
   const chosen = pickPool[idx];
-  if (typeof window !== 'undefined' && window._trainGenDebug && debugLabel) console.log(`[train-gen][pick] ${debugLabel}: scelto ${chosen.codice} (${chosen.nome})`);
   return chosen;
 }
 
@@ -10078,10 +10042,8 @@ async function _trainGenMaybeForceFromUrl() {
     const params = new URLSearchParams(window.location.search);
     if (params.has('schedaDebug')) {
       window._trainGenDebug = true;
-      console.log('[train-gen][debug-url] ?schedaDebug=1 attivato');
     }
     if (!params.has('schedaGen')) return;
-    console.log('[train-gen][force-url] ?schedaGen=1 trigger forzato → pipeline reale (scrive DB)');
     setTimeout(function() {
       generateTrainingProgram({ source: 'url-force', force: true })
         .catch(e => console.warn('[train-gen][force-url] errore:', (e && e.message) || e));
@@ -10093,18 +10055,12 @@ async function _trainGenMaybeForceFromUrl() {
 
 // Diagnostica console: pipeline reale (scrive DB)
 window.ztTestGeneraScheda = async function() {
-  console.log('=== ztTestGeneraScheda: PIPELINE REALE — questo SCRIVERÀ in DB ===');
   const r = await generateTrainingProgram({ source: 'manual-test', force: true });
-  console.log('--- ritorno ---');
-  console.log(r);
   return r;
 };
 
 // Diagnostica console: dry-run + console.table, no DB no AI
 window.ztSchedaWhy = async function(opts = {}) {
-  console.log('=== ztSchedaWhy: dry-run diagnostico (NO save DB, NO chiamata AI) ===');
-  console.log('--- profilo utente corrente ---');
-  console.log({
     user: ST.user && { id: ST.user.id, email: ST.user.email },
     obiettivo: ST.profile && ST.profile.obiettivo,
     usa_training: ST.profile && ST.profile.usa_training,
@@ -10124,7 +10080,6 @@ window.ztSchedaWhy = async function(opts = {}) {
     console.warn('[ztSchedaWhy] nessuna scheda generata — vedi log [train-gen] sopra per il guard fallito');
     return null;
   }
-  console.log('--- meta scheda (dry-run, NON salvata) ---');
   console.table({
     obiettivo:        scheda.obiettivo,
     esperienza:       scheda.esperienza,
@@ -10135,7 +10090,6 @@ window.ztSchedaWhy = async function(opts = {}) {
     volume:           scheda.volume_sessione,
     sessioni_count:   (scheda.sessioni || []).length,
   });
-  console.log('--- sessioni ---');
   console.table(
     (scheda.sessioni || []).map(s => ({
       id:           s.id,
@@ -10148,7 +10102,6 @@ window.ztSchedaWhy = async function(opts = {}) {
       codici:       (s.exercises || []).map(e => e.codice).join(','),
     }))
   );
-  console.log('--- ISO OBBLIGATORI (Regola A) ---');
   console.table(
     (scheda.sessioni || []).map(s => {
       const d = s._diag || {};
@@ -10171,8 +10124,6 @@ window.ztSchedaWhy = async function(opts = {}) {
       };
     })
   );
-  console.log('--- dettaglio esercizi (raw) ---');
-  console.log((scheda.sessioni || []).map(s => ({
     name: s.name,
     exercises: (s.exercises || []).map(e => ({
       codice: e.codice, name: e.name, sets: e.sets, reps: e.reps,
@@ -10197,8 +10148,6 @@ window.ztSchedaWhy = async function(opts = {}) {
 // (candidati nel pool, già usati, scelto). NON scrive DB, NON chiama AI.
 // Esempio: await ztTrainGenPatternPick('lower') → poi filtra i log [lower_*]/[train-gen][pick].
 window.ztTrainGenPatternPick = async function(splitTypeFilter) {
-  console.log('=== ztTrainGenPatternPick: dry-run + log dettagliato pattern picker ===');
-  if (splitTypeFilter) console.log(`   cerca nei log le righe '[train-gen][pick] ${splitTypeFilter}#...' e '[${splitTypeFilter}_...]'`);
   const prev = window._trainGenDebug;
   window._trainGenDebug = true;
   try {
@@ -15015,7 +14964,7 @@ function renderPage(id){
   else if(id==='integratori') renderIntegratori();
   else if(id==='analisi') renderAnalisi();
   else if(id==='storico') renderAnalisi(); // [LEGACY-STORICO-V3] alias retrocompat: vecchi link 'storico' → Analisi
-  else if(id==='piano') { if(ST.pianoV4Enabled) renderPianoV4(); else renderPiano(); }
+  else if(id==='piano') { renderPianoV4(); }
   else if(id==='training') renderTraining();
   else if(id==='body') renderBody();
 }
@@ -17330,8 +17279,7 @@ function nutriSubNav(active){
 // ═══════════════════════════════════════════════════════════
 // PAGE: PIANO V4 — Coach Attivo (Step B.1, 20 maggio 2026)
 // Scaffolding minimo: header v3 + sub-nav pillole + nav settimane.
-// Niente dati reali, niente fetch Supabase. Feature flag ST.pianoV4Enabled
-// permette rollback istantaneo da console a renderPiano legacy.
+// Niente dati reali, niente fetch Supabase.
 // Roadmap completa: vedi CLAUDE.md sezione "Tab Piano v4".
 // ═══════════════════════════════════════════════════════════
 
@@ -17391,7 +17339,7 @@ function _pianoV4FormatDayHeader(weekOffset, dayOfWeek) {
 
 // Apertura overlay: snapshot weekOffset corrente per non perdere navigazione
 function openPianoV4DayOverlay(dayOfWeek) {
-  if (!ST.pianoV4Enabled) return; // feature flag safety
+  if (!ST.page) return; // defensive guard
   ST.pianoV4DayOverlay = {
     dayOfWeek: dayOfWeek,
     weekOffset: ST.pianoV4WeekOffset || 0,
@@ -17578,7 +17526,7 @@ async function pianoV4WelcomeConfirmAndOpen() {
   }
 
   closePianoV4WelcomeOverlay();
-  // Vai a tab Piano (showPage gestisce sia 'piano' che il branch v4 via ST.pianoV4Enabled)
+  // Vai a tab Piano
   showPage('piano');
 }
 
@@ -17937,7 +17885,6 @@ async function _pianoV4MaybeAutoWelcome() {
     let debug = false;
     try { debug = new URLSearchParams(window.location.search).get('welcomeDebug') === '1'; } catch (e) {}
     if (debug) {
-      console.log('[welcome-auto] status:', status);
     }
 
     if (status.decision === 'open') {
@@ -18460,17 +18407,14 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
       return { ok: false, reason: 'guard-query-error', error: existing.error.message };
     }
     if (existing.data && existing.data.length > 0) {
-      if (debug) console.log('[postino-meals] skip: pasti già esistenti per plan_id', planId);
       return { ok: false, reason: 'skip-existing-meals' };
     }
 
     // Bersagli pranzo/cena
     const perMeal = _pianoV4F2aTargets(targets);
-    if (debug) console.log('[postino-meals] perMeal targets:', perMeal);
 
     // Prompt + chiamata AI
     const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal);
-    if (debug) console.log('[postino-meals] prompt:', prompt);
     let text = '';
     try {
       text = await callAI(prompt, 4000);
@@ -18478,7 +18422,6 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
       console.warn('[postino-meals] callAI error:', e);
       return { ok: false, reason: 'ai-call-failed', error: (e && e.message) || String(e) };
     }
-    if (debug) console.log('[postino-meals] AI raw response:', text);
 
     // Validazione — try/catch esplicito: _pianoV4F2aParseAndValidate non dovrebbe
     // mai throw (ha il proprio try/catch interno su JSON.parse), ma lo proteggiamo
@@ -18494,7 +18437,6 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
       console.warn('[postino-meals] validation failed:', v);
       return { ok: false, reason: 'validation-failed', detail: v };
     }
-    if (debug) console.log('[postino-meals] validation OK, 14 meals ready for INSERT');
 
     // Mappa meals validati → payload per INSERT batch
     // sort_order: pranzo=1, cena=2 (ordine cronologico nel giorno).
@@ -18526,7 +18468,6 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
       return { ok: false, reason: 'insert-failed', error: ins.error.message };
     }
     const insertedCount = (ins.data && ins.data.length) || 0;
-    if (debug) console.log('[postino-meals] INSERT batch OK:', insertedCount, 'pasti');
     return { ok: true, inserted: insertedCount };
   } catch (e) {
     console.warn('[postino-meals] exception:', e);
@@ -18548,7 +18489,6 @@ async function _pianoV4MaybePostino(opts) {
     // Diagnostica leggera dietro ?generaDebug=1
     let debug = false;
     try { debug = new URLSearchParams(window.location.search).get('generaDebug') === '1'; } catch (e) {}
-    if (debug) console.log('[postino] status:', status);
 
     if (status.decision !== 'create') {
       // Per le forzature di collaudo, se l'utente ha lanciato ztTestGenera() e
@@ -18584,7 +18524,6 @@ async function _pianoV4MaybePostino(opts) {
           return status;
         }
         if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[status.weekStart];
-        if (debug) console.log('[postino] forceAll: riga precedente cancellata', status.existingId);
       } catch (delErr) {
         console.warn('[postino] forceAll delete exception:', delErr);
         status.decision = 'error-delete';
@@ -18619,7 +18558,6 @@ async function _pianoV4MaybePostino(opts) {
         status.decision = 'skip-existing';
         status.existingFound = true;
         status.existingStatus = 'race-conflict';
-        if (debug) console.log('[postino] race-conflict: draft creata da un altro device per', status.weekStart);
         if (opts.toastOnSkip) showToast('Hai già un piano del coach per questa settimana', 'ℹ️', 5500);
         return status;
       }
@@ -18631,7 +18569,6 @@ async function _pianoV4MaybePostino(opts) {
       return status;
     }
 
-    if (debug) console.log('[postino] draft creata:', data);
     status.createdDraft = data;
     if (opts.toastOnSkip) showToast('Il coach ha generato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
 
@@ -18645,19 +18582,16 @@ async function _pianoV4MaybePostino(opts) {
     if (planId) {
       const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
       status.mealsResult = mealsResult;
-      if (debug) console.log('[postino-meals] result:', mealsResult);
       if (mealsResult.ok) {
         if (opts.toastOnSkip) showToast('Il coach ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
       } else if (mealsResult.reason === 'skip-existing-meals') {
         // Pasti già presenti (race condition rara). Nessun rollback necessario.
-        if (debug) console.log('[postino-meals] pasti già esistenti, nessun rollback');
       } else {
         // Fallimento AI (timeout, risposta malformata, errore DB): rollback della riga-madre.
         // Senza rollback, l'anti-doppione blocca tutti i tentativi successivi trovando
         // la riga vuota per questa week_start.
         try {
           const rollRes = await supa.from('weekly_plans').delete().eq('id', planId).eq('user_id', ST.user.id);
-          if (debug) console.log('[postino] rollback weekly_plans', planId, rollRes.error || 'OK');
         } catch (rollbackErr) {
           console.warn('[postino] rollback failed:', rollbackErr);
         }
@@ -20158,375 +20092,6 @@ function renderPianoV4() {
   document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
 }
 
-// PAGE: PIANO (LEGACY) — sostituito da renderPianoV4 dietro feature flag
-// ═══════════════════════════════════════════════════════════
-function renderPiano(){
-  const t = ST.TARGET;
-  const p = ST.profile || {};
-
-  // Restore piano da cache se non ancora in memoria
-  if(!ST.pianoAI && !ST.pianoLoading) {
-    try {
-      const cached = localStorage.getItem('zt_piano_' + (ST.user?.id || 'local'));
-      if(cached) { ST.pianoAI = JSON.parse(cached); ST.pianoOpenDay = 0; }
-    } catch(e) {}
-    if(!ST.pianoAI && p.piano_ai) {
-      ST.pianoAI = p.piano_ai;
-      ST.pianoOpenDay = 0;
-      try { localStorage.setItem('zt_piano_' + (ST.user?.id || 'local'), JSON.stringify(ST.pianoAI)); } catch(e) {}
-    }
-  }
-
-  const piano = ST.pianoAI || null;
-  const pianoLoading = ST.pianoLoading || false;
-  const pianoError = ST.pianoError || '';
-
-  // Card preferenze alimentari (editabile)
-  const OBJ_KEYS = ['dimagrimento','ricomposizione','ipertrofia','forza_performance','longevita','mantenimento'];
-  const OBJ_LABELS = {dimagrimento:'Dimagrimento',ricomposizione:'Ricomposizione corporea',ipertrofia:'Ipertrofia',forza_performance:'Forza & Performance',longevita:'Longevità',mantenimento:'Mantenimento'};
-  const INTOL_KEYS = ['lattosio','latticini','glutine','uova','frutta_a_guscio','arachidi','soia','pesce','crostacei','sesamo','nichel','istamina','fruttosio','lievito'];
-  const INTOL_LABELS = {lattosio:'Lattosio',latticini:'Latticini',glutine:'Glutine',uova:'Uova',frutta_a_guscio:'Frutta a guscio',arachidi:'Arachidi',soia:'Soia',pesce:'Pesce',crostacei:'Crostacei',sesamo:'Sesamo',nichel:'Nichel',istamina:'Istamina',fruttosio:'Fruttosio',lievito:'Lievito'};
-  const pianoObiettivi = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
-  const pianoIntol = p.intolleranze || [];
-  let html = `<div class="card" style="margin-bottom:12px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-    <span class="lbl" style="margin:0;">🥗 Preferenze alimentari</span>
-    <button id="piano-prefs-btn" class="btn btn-primary btn-sm" onclick="savePianoPrefs()">Salva →</button>
-  </div>
-
-  <div style="margin-bottom:16px;">
-    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:8px;">OBIETTIVO</div>
-    <!-- Fix A2 (24 mag 2026): obiettivo READ-ONLY nel tab Piano. Modifica solo
-         da Impostazioni (apre openSettingsModal). Mostra label dell'obiettivo
-         corrente + richiamo. togglePianoObiettivo non viene più chiamato da qui. -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--s1);border:1px solid var(--b1);border-radius:8px;">
-      <span style="font-size:13px;font-weight:600;color:var(--t1);font-family:var(--font-sans);">${esc(OBJ_LABELS[pianoObiettivi[0]] || OBJ_LABELS.mantenimento)}</span>
-      <button onclick="openSettingsModal()" style="background:none;border:none;color:var(--acc);font-size:11px;font-family:var(--font-mono);font-weight:700;letter-spacing:.06em;cursor:pointer;padding:0;">GESTISCI NELLE IMPOSTAZIONI →</button>
-    </div>
-  </div>
-
-  <div style="margin-bottom:16px;">
-    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">TIPO DI DIETA</div>
-    <select id="piano-dieta" class="inp inp-sm" style="width:100%;">
-      <option value="onnivoro" ${(p.dieta||'')==='onnivoro'?'selected':''}>Onnivoro</option>
-      <option value="pescetariano" ${(p.dieta||'')==='pescetariano'?'selected':''}>Pescetariano</option>
-      <option value="vegetariano" ${(p.dieta||'')==='vegetariano'?'selected':''}>Vegetariano</option>
-      <option value="vegano" ${(p.dieta||'')==='vegano'?'selected':''}>Vegano</option>
-    </select>
-  </div>
-
-  <div>
-    <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:var(--font-mono);margin-bottom:8px;">INTOLLERANZE / ALLERGIE</div>
-    <div style="display:flex;flex-wrap:wrap;gap:5px;">
-      ${INTOL_KEYS.map(k=>`<button id="pi-${k}" onclick="togglePianoIntol('${k}')" style="padding:5px 11px;border-radius:999px;border:1.5px solid ${pianoIntol.includes(k)?'var(--acc)':'var(--b2)'};background:${pianoIntol.includes(k)?'var(--acc)':'var(--s1)'};color:${pianoIntol.includes(k)?'#fff':'var(--t3)'};font-size:11px;font-family:var(--font-sans);font-weight:600;cursor:pointer;transition:all .15s;">${INTOL_LABELS[k]}</button>`).join('')}
-    </div>
-  </div>
-
-  <div id="piano-prefs-msg" style="font-size:11px;color:var(--acc);font-family:var(--font-mono);margin-top:10px;display:none;">Salvato ✓ — rigenera il piano per applicare</div>
-  </div>`;
-
-  // Card macro target — renderizzata inline con pianoObiettivi già calcolato
-  {
-    const _a = calcAdaptedTargets(pianoObiettivi, t.kcal);
-    const [_pC, _pP, _pF] = OBJ_ADAPT[pianoObiettivi[0] || 'mantenimento']?.pct || [40,30,30];
-    html += `<div id="piano-target-card"><div class="card card-green"><span class="lbl">${esc(_a.label||'Zona')} — ${_pC}·${_pP}·${_pF}</span>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',_a.kcal,'kcal','var(--acc)'],['Carboidrati '+_pC+'%',_a.carbs,'g','var(--carb)'],['Proteine '+_pP+'%',_a.protein,'g','var(--prot)'],['Grassi '+_pF+'%',_a.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
-    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;">${esc(_a.note||'')}</div></div></div>`;
-  }
-
-  // Card piano AI
-  html += `<div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <span class="lbl" style="margin-bottom:0;">🤖 Piano Alimentare coach</span>
-      ${piano ? `<button class="btn btn-ghost btn-sm" onclick="generatePianoAI(true)" ${pianoLoading?'disabled':''}>↻ Rigenera</button>` : ''}
-    </div>`;
-
-  if(pianoLoading) {
-    html += `<div style="text-align:center;padding:30px 0;">
-      <span class="loading" style="width:24px;height:24px;border-width:3px;display:inline-block;margin-bottom:12px;"></span>
-      <p style="font-size:13px;color:var(--t3);">Il coach sta costruendo il tuo piano personalizzato…<br><span style="font-size:11px;font-family:'JetBrains Mono',monospace;">Ci vogliono 10–20 secondi</span></p>
-    </div>`;
-  } else if(pianoError) {
-    html += `<p style="color:var(--err);font-size:13px;margin-bottom:12px;">⚠️ ${esc(pianoError)}</p>
-    <button class="btn btn-primary btn-sm" onclick="generatePianoAI(true)">Riprova →</button>`;
-  } else if(!piano) {
-    const fmtLabel = s => (s||'').replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
-    const dietaLabel = fmtLabel(p.dieta) || 'Non specificata';
-    const intolLabel = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.map(fmtLabel).join(', ') : 'Nessuna';
-    const obiettivoLabel = fmtLabel(p.obiettivo) || 'Benessere generale';
-    html += `<div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:14px;margin-bottom:14px;font-size:12px;color:var(--t2);line-height:1.8;">
-      <div style="font-size:10px;letter-spacing:1px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">IL TUO PROFILO</div>
-      <div>🥗 Dieta: <b style="color:var(--t1);">${esc(dietaLabel)}</b></div>
-      <div>⚠️ Intolleranze: <b style="color:var(--t1);">${esc(intolLabel)}</b></div>
-      <div>🎯 Obiettivo: <b style="color:var(--t1);">${esc(obiettivoLabel)}</b></div>
-      <div>🔥 Target: <b style="color:var(--acc);">${t.kcal} kcal · ${t.protein}g P · ${t.carbs}g C · ${t.fat}g G</b></div>
-    </div>
-    <button class="btn btn-primary btn-full" onclick="generatePianoAI(false)">✨ Genera Piano Settimanale →</button>`;
-  } else {
-    const generatoIl = piano.generato_il ? new Date(piano.generato_il).toLocaleDateString('it-IT',{day:'numeric',month:'long'}) : '';
-    html += `<div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">Generato il ${generatoIl} · basato sul tuo profilo</div>`;
-    (piano.giorni || []).forEach((g, i) => {
-      const isOpen = ST.pianoOpenDay === i;
-      html += `<div style="border:1px solid var(--b1);border-radius:10px;margin-bottom:8px;overflow:hidden;">
-        <div onclick="ST.pianoOpenDay=${isOpen?-1:i};renderPiano();" style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;background:${isOpen?'var(--acc-lt)':'var(--s1)'};">
-          <span style="font-weight:700;font-size:14px;color:${isOpen?'var(--acc)':'var(--t1)'};">` + esc(g.giorno) + `</span>
-          <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--t3);">` + (g.kcal_totali||'') + `kcal ${isOpen?'▲':'▼'}</span>
-        </div>`;
-      if(isOpen) {
-        html += `<div style="padding:12px 14px;background:var(--s1);border-top:1px solid var(--b1);">`;
-        const slotIcons = {colazione:'🌅',snack_mattina:'🍎',pranzo:'☀️',snack_pomeriggio:'🥜',cena:'🌙',snack:'🥜'};
-        const slotLabels = {colazione:'Colazione',snack_mattina:'Spuntino mattina',pranzo:'Pranzo',snack_pomeriggio:'Merenda',cena:'Cena',snack:'Snack'};
-        ['colazione','snack_mattina','pranzo','snack_pomeriggio','cena'].forEach(slot => {
-          const pasto = g[slot];
-          if(!pasto) return;
-          html += `<div style="margin-bottom:12px;">
-            <div style="font-size:10px;letter-spacing:1px;color:var(--acc);font-family:'JetBrains Mono',monospace;margin-bottom:5px;">${slotIcons[slot]||''} ${slotLabels[slot]||slot}</div>
-            <div style="font-size:13px;color:var(--t1);font-weight:600;margin-bottom:3px;">${esc(pasto.piatto||'')}</div>
-            ${pasto.ingredienti ? `<div style="font-size:12px;color:var(--t2);margin-bottom:4px;">${esc(pasto.ingredienti)}</div>` : ''}
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              ${pasto.kcal ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--t3);">${pasto.kcal}kcal</span>` : ''}
-              ${pasto.proteine ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--prot);">${pasto.proteine}g P</span>` : ''}
-              ${pasto.carboidrati ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--carb);">${pasto.carboidrati}g C</span>` : ''}
-              ${pasto.grassi ? `<span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--fat);">${pasto.grassi}g G</span>` : ''}
-            </div>
-          </div>`;
-        });
-        if(g.note) html += `<div style="font-size:11px;color:var(--t3);border-top:1px solid var(--b1);padding-top:8px;margin-top:4px;line-height:1.6;">💡 ${esc(g.note)}</div>`;
-        html += `</div>`;
-      }
-      html += `</div>`;
-    });
-  }
-  html += `</div>`;
-
-  // Card priorità cliniche — dinamica dal profilo utente
-  const fmtPrio = s => (s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  const noteSalute = (p.note_salute||'').toLowerCase();
-  const intolArr = p.intolleranze || [];
-  let prioRows = '';
-  if(noteSalute.includes('ferrit')) prioRows += `<div class="prio-row red"><div class="prio-title">🔴 Ferritina bassa</div><div class="prio-text">Pesce grasso 4–5×/sett · Legumi ogni giorno · Vitamina C su ogni pasto con ferro · No tè/caffè vicino ai pasti · Semi di zucca fissi</div></div>`;
-  if(noteSalute.includes('immun')) prioRows += `<div class="prio-row orange"><div class="prio-title">🟠 Sistema immunitario</div><div class="prio-text">2–3 noci del Brasile/die (selenio) · Semi di zucca (zinco) · Omega-3 da pesce grasso · Curcuma + pepe nero · Probiotici già attivi</div></div>`;
-  if(noteSalute.includes('infiamm')) prioRows += `<div class="prio-row yellow"><div class="prio-title">🟡 Infiammazione</div><div class="prio-text">Solo carbo a basso IG · Omega-3 antinfiammatori · Mirtilli, melograno, zenzero quotidiani</div></div>`;
-  if(intolArr.length) prioRows += `<div class="prio-row yellow"><div class="prio-title">⚠️ Intolleranze</div><div class="prio-text">Evitare: ${intolArr.map(fmtPrio).join(', ')}</div></div>`;
-  if(prioRows) html += `<div class="card"><span class="lbl">Priorità cliniche</span>${prioRows}</div>`;
-
-  html += `<div class="card" style="margin-bottom:30px;"><span class="lbl">Regole fuori casa</span>
-  ${['Chiedi pesce o legumi come proteina principale','Sostituisci il pane con verdure extra','Condimento: olio EVO + limone, evita salse pronte','A cena: salta il primo, punta su secondo + contorno abbondante','Segnala sempre intolleranza ai latticini','Sfizio occasionale? Compensa nel pasto successivo'].map((r,i)=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;"><span style="color:var(--acc);font-family:'JetBrains Mono',monospace;font-size:12px;min-width:18px;flex-shrink:0;font-weight:700;">${i+1}.</span><span style="font-size:13px;color:var(--t2);line-height:1.5;">${r}</span></div>`).join('')}</div>`;
-
-  document.getElementById('page-piano').innerHTML = nutriSubNav('piano')+html+versionFooter();
-}
-
-// ── MACRO ADATTIVI PER OBIETTIVO ───────────────────────────
-const OBJ_ADAPT = {
-  dimagrimento:      { pct:[38,32,30], label:'Dimagrimento',      note:'Proteine alte per preservare la massa magra. Carbo concentrati a colazione e pranzo.' },
-  ricomposizione:    { pct:[38,34,28], label:'Ricomposizione',     note:'Proteine elevate, carbo distribuiti intorno all\'attività fisica.' },
-  ipertrofia:        { pct:[40,35,25], label:'Ipertrofia',         note:'Massima sintesi proteica. Carbo abbondanti pre e post workout.' },
-  forza_performance: { pct:[42,33,25], label:'Forza & Performance',note:'Carbo superiori per energia e recupero muscolare.' },
-  longevita:         { pct:[40,30,30], label:'Longevità',          note:'Zona classica. Alimenti anti-infiammatori, varietà massima.' },
-  mantenimento:      { pct:[40,30,30], label:'Mantenimento',       note:'Zona classica. Distribuzione equilibrata, rotazione fonti.' },
-};
-
-function calcAdaptedTargets(obiettiviArr, kcal) {
-  const key = (obiettiviArr && obiettiviArr[0]) || 'mantenimento';
-  const adapt = OBJ_ADAPT[key] || OBJ_ADAPT.mantenimento;
-  const [pCarbo, pProt, pFat] = adapt.pct;
-  return {
-    kcal,
-    protein: Math.round(kcal * pProt  / 100 / 4),
-    carbs:   Math.round(kcal * pCarbo / 100 / 4),
-    fat:     Math.round(kcal * pFat   / 100 / 9),
-    pCarbo, pProt, pFat,
-    label: adapt.label,
-    note:  adapt.note,
-  };
-}
-
-// ── PREFERENZE PIANO ───────────────────────────────────────
-
-// DEPRECATED dal Fix A2 (24 mag 2026): l'obiettivo si gestisce SOLO dalle
-// Impostazioni (selezione singola + conferma su cambio). Nel tab Piano
-// l'obiettivo è ora read-only — il vecchio handler non viene più chiamato
-// da nessuna UI. Funzione conservata per safety (nel caso esistano in DOM
-// vecchi `onclick="togglePianoObiettivo(...)"` da cache PWA stale), ma è
-// orfana. Da rimuovere in un cleanup successivo.
-function togglePianoObiettivo(val) {
-  // No-op: rimanda l'utente alle Impostazioni con un toast informativo.
-  showToast('L\'obiettivo si gestisce dalle Impostazioni profilo.', 'ℹ️', 4000);
-  try { openSettingsModal(); } catch(e) {}
-}
-
-function togglePianoIntol(val) {
-  const arr = ST.profile.intolleranze ? [...ST.profile.intolleranze] : [];
-  const i = arr.indexOf(val);
-  if(i < 0) arr.push(val); else arr.splice(i, 1);
-  ST.profile.intolleranze = arr;
-  saveLocalPrefs();
-  const btn = document.getElementById('pi-'+val);
-  if(btn) {
-    const on = arr.includes(val);
-    btn.style.background = on ? 'var(--acc)' : 'var(--s1)';
-    btn.style.borderColor = on ? 'var(--acc)' : 'var(--b2)';
-    btn.style.color = on ? '#fff' : 'var(--t3)';
-  }
-}
-
-async function savePianoPrefs() {
-  const btn = document.getElementById('piano-prefs-btn');
-  const msg = document.getElementById('piano-prefs-msg');
-  if(btn) { btn.disabled = true; btn.textContent = 'Salvataggio...'; }
-  const dieta = document.getElementById('piano-dieta')?.value;
-  const obiettivo = ST.profile.obiettivo || '';
-  const intolleranze = ST.profile.intolleranze || [];
-  const obiettiviArr = obiettivo ? obiettivo.split(',').filter(Boolean) : [];
-  const adapted = calcAdaptedTargets(obiettiviArr, ST.TARGET.kcal);
-  const updates = {
-    obiettivo,
-    dieta,
-    intolleranze: intolleranze.length ? intolleranze : null,
-    target_protein: adapted.protein,
-    target_carbs:   adapted.carbs,
-    target_fat:     adapted.fat,
-    updated_at: new Date().toISOString(),
-  };
-  // Salva sempre in localStorage (indipendente dal DB)
-  saveLocalPrefs();
-  ST.profile = { ...ST.profile, ...updates };
-  ST.TARGET = { ...ST.TARGET, protein: adapted.protein, carbs: adapted.carbs, fat: adapted.fat,
-    pProt: adapted.pProt, pCarbo: adapted.pCarbo, pFat: adapted.pFat };
-
-  // Tenta salvataggio su Supabase (best-effort)
-  const { error } = await supa.from('profiles').update({
-    target_protein: adapted.protein,
-    target_carbs:   adapted.carbs,
-    target_fat:     adapted.fat,
-    updated_at:     new Date().toISOString(),
-  }).eq('id', ST.user.id);
-  if(btn) { btn.disabled = false; btn.textContent = 'Salva →'; }
-  if(error) { console.warn('Supabase profiles update:', error.message); }
-  if(msg) { msg.style.display = 'block'; setTimeout(() => { if(msg) msg.style.display = 'none'; }, 3000); }
-  renderPage(ST.page);
-}
-
-// ── GENERA PIANO AI ────────────────────────────────────────
-async function generatePianoAI(forza = false) {
-  const cacheKey = 'zt_piano_' + (ST.user?.id || 'local');
-  if(!forza) {
-    // 1. Prova localStorage (istantaneo)
-    try {
-      const cached = localStorage.getItem(cacheKey);
-      if(cached) { ST.pianoAI = JSON.parse(cached); ST.pianoOpenDay = 0; renderPiano(); return; }
-    } catch(e) {}
-    // 2. Prova Supabase (cross-device)
-    if(ST.profile?.piano_ai) {
-      ST.pianoAI = ST.profile.piano_ai;
-      ST.pianoOpenDay = 0;
-      try { localStorage.setItem(cacheKey, JSON.stringify(ST.pianoAI)); } catch(e) {}
-      renderPiano(); return;
-    }
-  }
-
-  ST.pianoLoading = true;
-  ST.pianoError = '';
-  ST.pianoAI = null;
-  renderPiano();
-
-  const p = ST.profile || {};
-  const t = ST.TARGET;
-  const dieta = p.dieta || 'pescetariana';
-  const intolleranze = (p.intolleranze && p.intolleranze.length) ? p.intolleranze.join(', ') : 'latticini';
-  const obiettiviArr = p.obiettivo ? p.obiettivo.split(',').filter(Boolean) : [];
-  const OBJ_LBL = {dimagrimento:'dimagrimento',ricomposizione:'ricomposizione corporea',ipertrofia:'ipertrofia',forza_performance:'forza e performance',longevita:'longevità',mantenimento:'mantenimento'};
-  const obiettivo = obiettiviArr.length ? obiettiviArr.map(o=>OBJ_LBL[o]||o).join(', ') : 'benessere generale';
-  const note = p.note_salute || '';
-
-  const kc = t.kcal;
-
-  // Adatta macro ratio e linee guida in base all'obiettivo (base sempre Zona 40-30-30)
-  const adaptedAI = calcAdaptedTargets(obiettiviArr, kc);
-  const [pCarbo, pProt, pFat] = OBJ_ADAPT[obiettiviArr[0] || 'mantenimento']?.pct || [40,30,30];
-  const adaptNoteAI = adaptedAI.note || '';
-  const aProtein = adaptedAI.protein;
-  const aCarbs   = adaptedAI.carbs;
-  const aFat     = adaptedAI.fat;
-
-  // Distribuzione calorica tra i 5 pasti
-  const ex = { col: Math.round(kc*0.20), smA: Math.round(kc*0.10), pra: Math.round(kc*0.35), smP: Math.round(kc*0.10), cen: Math.round(kc*0.25) };
-  const mp = slot => ({
-    prot: Math.round(aProtein * (ex[slot]/kc)),
-    carb: Math.round(aCarbs   * (ex[slot]/kc)),
-    fat:  Math.round(aFat     * (ex[slot]/kc)),
-  });
-
-  // Regole proteina in base alla dieta
-  const rDieta = dieta === 'vegano'        ? '- Solo proteine vegetali (tofu, tempeh, legumi, seitan, edamame, lenticchie)'
-    : dieta === 'vegetariano' ? '- Proteine da uova, legumi, latticini se tollerati, tofu, Greek yogurt'
-    : dieta === 'pescetariano' ? '- Proteine principalmente da pesce (salmone, tonno, merluzzo, branzino, gamberi, sgombro) e legumi'
-    : '- Proteine da carne magra, pesce, uova, legumi — ruota le fonti ogni giorno';
-  const rIntol = (p.intolleranze && p.intolleranze.length) ? `- Escludi tassativamente: ${p.intolleranze.join(', ')}` : '';
-  const rNote = note ? `- Note salute: ${note}` : '';
-
-  const prompt = `Sei un nutrizionista esperto in dieta a Zona. Crea un piano alimentare settimanale personalizzato.
-
-BASE: Dieta a Zona (equilibrio macro C/P/G), adattata all'obiettivo specifico.
-OBIETTIVO: ${obiettivo}
-ADATTAMENTO: ${adaptNoteAI}
-
-PROFILO:
-- Dieta: ${dieta}
-- Macro target adattati: ${pCarbo}% carbo · ${pProt}% proteine · ${pFat}% grassi
-- Calorie giornaliere OBBLIGATORIE: ${kc} kcal · ${aProtein}g P · ${aCarbs}g C · ${aFat}g G
-${rIntol}
-${rNote}
-
-REGOLE:
-${rDieta}
-- Solo carboidrati a basso indice glicemico (riso integrale, quinoa, avena, patata dolce, legumi, frutta intera)
-- Porzioni in grammi, alimenti reali, no prodotti industriali
-- 5 pasti: colazione, spuntino_mattina, pranzo, spuntino_pomeriggio, cena
-- Somma kcal dei 5 pasti = ${kc} kcal (±50 kcal tolleranza)
-- Piatti diversi ogni giorno della settimana
-
-DISTRIBUZIONE PER PASTO:
-- Colazione: ~${ex.col} kcal (${mp('col').prot}g P · ${mp('col').carb}g C · ${mp('col').fat}g G)
-- Spuntino mattina: ~${ex.smA} kcal (${mp('smA').prot}g P · ${mp('smA').carb}g C · ${mp('smA').fat}g G)
-- Pranzo: ~${ex.pra} kcal (${mp('pra').prot}g P · ${mp('pra').carb}g C · ${mp('pra').fat}g G)
-- Spuntino pomeriggio: ~${ex.smP} kcal (${mp('smP').prot}g P · ${mp('smP').carb}g C · ${mp('smP').fat}g G)
-- Cena: ~${ex.cen} kcal (${mp('cen').prot}g P · ${mp('cen').carb}g C · ${mp('cen').fat}g G)
-
-Rispondi SOLO con JSON valido, zero testo extra:
-{
-  "giorni": [
-    {
-      "giorno": "Lunedì",
-      "kcal_totali": ${kc},
-      "colazione": {"piatto": "nome piatto", "ingredienti": "ingredienti con grammi", "kcal": ${ex.col}, "proteine": ${mp('col').prot}, "carboidrati": ${mp('col').carb}, "grassi": ${mp('col').fat}},
-      "spuntino_mattina": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.smA}, "proteine": ${mp('smA').prot}, "carboidrati": ${mp('smA').carb}, "grassi": ${mp('smA').fat}},
-      "pranzo": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.pra}, "proteine": ${mp('pra').prot}, "carboidrati": ${mp('pra').carb}, "grassi": ${mp('pra').fat}},
-      "spuntino_pomeriggio": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.smP}, "proteine": ${mp('smP').prot}, "carboidrati": ${mp('smP').carb}, "grassi": ${mp('smP').fat}},
-      "cena": {"piatto": "nome", "ingredienti": "...", "kcal": ${ex.cen}, "proteine": ${mp('cen').prot}, "carboidrati": ${mp('cen').carb}, "grassi": ${mp('cen').fat}},
-      "note": "consiglio breve in italiano"
-    }
-  ]
-}
-Genera tutti e 7 i giorni (Lunedì–Domenica) con piatti diversi ogni giorno. Ingredienti: max 80 caratteri. Valori numerici: interi senza unità. JSON completo e valido.`;
-
-  try {
-    const raw = await callAI(prompt, 4000);
-    const clean = raw.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    ST.pianoAI = { ...parsed, generato_il: new Date().toISOString() };
-    ST.pianoOpenDay = 0;
-    try { localStorage.setItem(cacheKey, JSON.stringify(ST.pianoAI)); } catch(e) {}
-    // Salva su Supabase per sync cross-device
-    if(ST.user?.id && ST.user.id !== 'test-user-001') {
-      supa.from('profiles').update({piano_ai: ST.pianoAI, updated_at: new Date().toISOString()}).eq('id', ST.user.id).then(()=>{});
-    }
-  } catch(e) {
-    ST.pianoError = 'Errore nella generazione: ' + e.message;
-  }
-  ST.pianoLoading = false;
-  renderPiano();
-}
 
 // ═══════════════════════════════════════════════════════════
 // ACTIONS
@@ -24519,22 +24084,7 @@ setTimeout(async () => {
     return;
   }
 
-  // ── Gestione token nell'hash (flusso implicito, da auth-callback.html) ──
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const accessToken  = hashParams.get('access_token');
-  const refreshToken = hashParams.get('refresh_token');
-  if (accessToken && refreshToken) {
-    history.replaceState(null, '', window.location.pathname + window.location.search);
-    const {data, error} = await supa.auth.setSession({access_token: accessToken, refresh_token: refreshToken});
-    if (!error && data?.session?.user) {
-      ST.user = data.session.user;
-      await loadAndStart();
-      supa.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') showScreen('auth');
-      });
-      return;
-    }
-  }
+
 
   // ── Gestione code PKCE (flusso moderno, alcuni browser) ──
   const urlCode = new URLSearchParams(window.location.search).get('code');
