@@ -1848,6 +1848,9 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .pianov4-status-seg.partial{background:#FAC775;}
 .pianov4-status-seg.missed{background:#B84C2A;}
 .pianov4-status-hint{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.4;margin:0;}
+.pianov4-rigenera-btn{width:100%;margin-top:12px;padding:9px 14px;background:transparent;border:0.5px solid var(--b2);color:var(--t2);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;border-radius:8px;cursor:pointer;transition:opacity .15s;}
+.pianov4-rigenera-btn:disabled{opacity:.45;cursor:not-allowed;}
+.pianov4-rigenera-btn:not(:disabled):active{opacity:.6;}
 
 /* ── 7 card giorno (Step B.2: stato vuoto, non cliccabili) ── */
 .pianov4-days{display:flex;flex-direction:column;gap:8px;padding:0 16px;margin-bottom:14px;}
@@ -3664,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 10:14';
+const APP_VERSION = '2026.06.12 · 10:50';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3832,6 +3835,7 @@ const ST = {
   // chiavi = 'YYYY-MM-DD' (week_start ISO). Valore: undefined (mai caricato) /
   // {state:'loading'} / {state:'loaded', plan:{...}|null, mealsByDay:{1:[...], 2:[...]} }
   pianoV4RealPlanCache: {},
+  _pianoRigeneraLoading: false, // guard per evitare doppio tap su "Rigenera piano"
   // PIANO V4 Step C.5 (21 mag 2026) — bottom sheet selettore alternative SOSTITUISCI
   pianoV4SubstSheet: null, // { slot, weekOffset, dayOfWeek } | null — snapshot al tap SOSTITUISCI
   // PIANO V4 Step E.1 (22 mag 2026) — Welcome overlay domenicale (parte 1: UI + dati)
@@ -17573,6 +17577,29 @@ async function pianoV4WelcomeConfirmAndOpen() {
   showPage('piano');
 }
 
+// Pulsante "RIGENERA PIANO →" nel tab Piano v4.
+// Bypassa skip-day E skip-existing: cancella il piano esistente per questa week_start
+// e rigenera da zero. Rollback automatico se la chiamata AI fallisce.
+async function pianoV4RigeneraPiano() {
+  if (ST._pianoRigeneraLoading) return;
+  if (!confirm('Vuoi rigenerare il piano di questa settimana?\nI pasti attuali verranno sostituiti.')) return;
+  ST._pianoRigeneraLoading = true;
+  if (ST.page === 'piano') renderPianoV4(); // mostra bottone disabilitato + "GENERAZIONE IN CORSO…"
+  try {
+    await _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true });
+    // Invalida cache per la settimana corrente così il re-render legge i nuovi dati
+    const weekIso = _pianoV4WeekStartIsoForOffset(ST.pianoV4WeekOffset || 0);
+    if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[weekIso];
+    await _pianoV4LoadRealPlanForWeek(weekIso);
+  } catch (e) {
+    console.warn('[rigenera-piano] exception:', e);
+    showToast('Errore durante la rigenerazione. Riprova.', '⚠️', 5500);
+  } finally {
+    ST._pianoRigeneraLoading = false;
+    if (ST.page === 'piano') renderPianoV4();
+  }
+}
+
 // CTA secondaria "Più tardi": chiude e basta. Status resta 'draft'. Nessuna mutation DB.
 // E.2: scrive il flag "visto" solo se l'overlay era stato aperto via trigger automatico.
 function pianoV4WelcomeLater() {
@@ -18004,10 +18031,12 @@ function _pianoV4NextWeekStartIso() {
 // }
 async function _pianoV4ComputePostinoStatus(opts) {
   opts = opts || {};
-  const force = !!opts.force; // ?genera=1 bypassa solo il guard "giorno"
+  const force    = !!opts.force;    // ?genera=1 bypassa solo il guard "giorno"
+  const forceAll = !!opts.forceAll; // ?forceGenera=1 / pulsante Rigenera: bypassa giorno E anti-doppione
   const out = {
     when: new Date().toISOString(),
     force: force,
+    forceAll: forceAll,
     user_id: (ST.user && ST.user.id) || null,
     profilePlanDay: null,
     todayDow: null,
@@ -18018,6 +18047,8 @@ async function _pianoV4ComputePostinoStatus(opts) {
     weekStart: null,
     existingFound: false,
     existingStatus: null,
+    existingId: null,
+    existingForDeletion: false,
     targets: null,
     targetsValid: false,
     decision: null,
@@ -18045,7 +18076,7 @@ async function _pianoV4ComputePostinoStatus(opts) {
   out.nextDayDow = (out.planDow + 1) % 7;
   out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
 
-  if (!force && !out.dayMatch) {
+  if (!force && !forceAll && !out.dayMatch) {
     out.decision = 'skip-day';
     return out;
   }
@@ -18073,8 +18104,13 @@ async function _pianoV4ComputePostinoStatus(opts) {
     if (data && data.length > 0) {
       out.existingFound = true;
       out.existingStatus = data[0].status;
-      out.decision = 'skip-existing';
-      return out;
+      out.existingId = data[0].id;
+      if (!forceAll) {
+        out.decision = 'skip-existing';
+        return out;
+      }
+      // forceAll=true: la riga verrà cancellata in _pianoV4MaybePostino prima dell'INSERT
+      out.existingForDeletion = true;
     }
   } catch (e) {
     console.warn('[postino] anti-doppione exception:', e);
@@ -18519,6 +18555,30 @@ async function _pianoV4MaybePostino(opts) {
     }
 
     // OK, procediamo con creazione draft
+    // forceAll: cancella la riga esistente per questa week_start prima di inserire
+    if (opts.forceAll && status.existingForDeletion && status.existingId) {
+      try {
+        const delRes = await supa
+          .from('weekly_plans')
+          .delete()
+          .eq('id', status.existingId)
+          .eq('user_id', ST.user.id);
+        if (delRes.error) {
+          console.warn('[postino] forceAll delete error:', delRes.error);
+          status.decision = 'error-delete';
+          status.error = delRes.error.message;
+          if (opts.toastOnSkip) showToast('Errore nella sostituzione del piano precedente', '⚠️', 5500);
+          return status;
+        }
+        if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[status.weekStart];
+        if (debug) console.log('[postino] forceAll: riga precedente cancellata', status.existingId);
+      } catch (delErr) {
+        console.warn('[postino] forceAll delete exception:', delErr);
+        status.decision = 'error-delete';
+        if (opts.toastOnSkip) showToast('Errore nella sostituzione del piano precedente', '⚠️', 5500);
+        return status;
+      }
+    }
     const reasoning = await _pianoV4GenerateReasoning(status.targets);
 
     const payload = {
@@ -18575,9 +18635,22 @@ async function _pianoV4MaybePostino(opts) {
       if (debug) console.log('[postino-meals] result:', mealsResult);
       if (mealsResult.ok) {
         if (opts.toastOnSkip) showToast('Il coach ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
+      } else if (mealsResult.reason === 'skip-existing-meals') {
+        // Pasti già presenti (race condition rara). Nessun rollback necessario.
+        if (debug) console.log('[postino-meals] pasti già esistenti, nessun rollback');
       } else {
-        // Opzione A: la riga-madre resta. Solo log + toast informativo, no rollback.
-        if (opts.toastOnSkip) showToast('Piano pronto, ma il coach non è riuscito a preparare i pasti — riprova', '⚠️', 7500);
+        // Fallimento AI (timeout, risposta malformata, errore DB): rollback della riga-madre.
+        // Senza rollback, l'anti-doppione blocca tutti i tentativi successivi trovando
+        // la riga vuota per questa week_start.
+        try {
+          const rollRes = await supa.from('weekly_plans').delete().eq('id', planId).eq('user_id', ST.user.id);
+          if (debug) console.log('[postino] rollback weekly_plans', planId, rollRes.error || 'OK');
+        } catch (rollbackErr) {
+          console.warn('[postino] rollback failed:', rollbackErr);
+        }
+        if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[status.weekStart];
+        status.decision = 'error-meals-rollback';
+        if (opts.toastOnSkip) showToast('Il coach non è riuscito a generare i pasti. Riprova tra poco.', '⚠️', 7500);
       }
     }
 
@@ -18589,14 +18662,20 @@ async function _pianoV4MaybePostino(opts) {
   }
 }
 
-// Verifica parametro URL ?genera=1 e, se presente, forza l'esecuzione del postino
-// bypassando il guard "giorno". Chiamato dai 3 rami di loadAndStart.
-// Diversamente da ?welcome=1, NON bypassa l'anti-doppione (per evitare violazioni
-// del constraint UNIQUE; se vuoi ricreare la draft, prima UPDATE status o DELETE).
+// Verifica parametri URL di forzatura e, se presenti, esegue il postino.
+// ?genera=1      → bypassa solo skip-day (l'anti-doppione resta attivo).
+// ?forceGenera=1 → bypassa skip-day E skip-existing (cancella piano esistente e rigenera).
+//                  Usato solo per debug/recovery manuale da URL, niente UI dedicata.
+// Chiamato dai 3 rami di loadAndStart.
 function _pianoV4MaybeForcePostinoFromUrl() {
   try {
-    const flag = new URLSearchParams(window.location.search).get('genera');
-    if (flag === '1') {
+    const params = new URLSearchParams(window.location.search);
+    const genera = params.get('genera');
+    const forceGenera = params.get('forceGenera');
+    if (forceGenera === '1') {
+      // Delay più lungo per garantire che profile/user/TARGET siano tutti pronti
+      setTimeout(function() { _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true }); }, 400);
+    } else if (genera === '1') {
       // Piccolo delay per allinearsi col ritmo del welcome overlay e ridurre
       // race con applyProfile/ST.user/ST.TARGET.
       setTimeout(function() { _pianoV4MaybePostino({ force: true, toastOnSkip: true }); }, 200);
@@ -19893,6 +19972,9 @@ function renderPianoV4() {
         }).join('')}
       </div>
       <p class="pianov4-status-hint">${statusHint}</p>
+      <button class="pianov4-rigenera-btn" onclick="pianoV4RigeneraPiano()" ${ST._pianoRigeneraLoading ? 'disabled' : ''}>
+        ${ST._pianoRigeneraLoading ? 'GENERAZIONE IN CORSO…' : 'RIGENERA PIANO →'}
+      </button>
     </div>`;
 
   // ── 7 card giorno (Step C.1: tap → openPianoV4DayOverlay con dayOfWeek 1-7 ISO) ──
