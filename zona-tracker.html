@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 17:07';
+const APP_VERSION = '2026.06.12 · 17:29';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7555,9 +7555,10 @@ TRAINING_SESSIONS.recoveryLower.exercises = TRAINING_SESSIONS.recoveryUpper.exer
 //     vede TRAINING_SESSIONS originale (6 sessioni Upper/Lower/Recovery)
 //   - Test mode: sempre TRAINING_SESSIONS hardcoded
 //
-// TODO post-Mossa 3: "Settimana N/4" hardcoded calcola Math.floor(N/6)%4,
-// per scheda 4gg dovrebbe essere Math.floor(N/4)%4. Quirk display non
-// bloccante, fix successivo.
+// NB: il divisore 6 usato in "Settimana N/4" è CORRETTO per entrambe le schede
+// 4 e 5 giorni. Il Rest Day (G7 nello split 5gg) viene salvato con session_type='rest'
+// ed è escluso dalla query con .neq('session_type','rest'), quindi ogni giro del
+// ciclo produce sempre esattamente 6 record utili — nessun debito tecnico.
 
 async function loadActiveScheda() {
   // Carica la scheda di allenamento attiva dell'utente (schede_utente).
