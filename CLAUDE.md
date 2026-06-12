@@ -22,9 +22,9 @@ https://github.com/IgnazioF321621/benessere-forma
 - File principali: `zona-tracker.html`, `auth-callback.html`, `dashboardzona.html` (admin)
 
 
-## Stato corrente (sintesi al 3 giugno 2026)
+## Stato corrente (sintesi al 12 giugno 2026)
 
-**Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`).
+**Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`). ⚠️ Bug cache sticky `mealsByDay={}` da fixare prima di domenica sera (vedi log 12 giu).
 
 **Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). Tab Progressione ridisegnata completamente (11 giu 2026): strip calendario 7 giorni scorrevole, 4 grafici selezionabili (Carico / 1RM stimato / Volume totale / Zone reps), stat cards 2×2 (Best Peso, 1RM Stim., Sessioni, Trend), Coach insight. Sistema audio unificato (3 suoni semantici: prepBeep 660Hz warning, stopBeep 659Hz stop, longBeep 1100Hz GO) — brief pronto per Claude Code. APP_VERSION attuale: `v2026.06.01 · 17:00`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
 
@@ -44,8 +44,9 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Debiti tecnici noti**:
 - Cleanup feature flag `ST.pianoV4Enabled` dopo validazione tester.
-- Pulizia funzioni legacy dormienti (candidati cantiere pulizia): Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`), Analisi v3 (`renderStoricoLegacy`, `setReportRange`), Piano v3→v4 (`renderPiano`, `updatePianoTargetCard`, `generatePianoAI` — irraggiungibili con `pianoV4Enabled: true`).
+- Pulizia funzioni legacy dormienti (candidati cantiere pulizia — Cantiere 3 passo 4): Piano v3→v4 (`renderPiano`, `generatePianoAI` — irraggiungibili con `pianoV4Enabled: true`). IN ATTESA stabilità tester prima della rimozione. Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`) — separato.
 - Commento fuorviante a riga 7536 (`// TODO: "Settimana N/4" hardcoded...`): il `6` è corretto per entrambe le schede 4 e 5 giorni — il Rest Day G7 è escluso dalla query, quindi ogni giro produce sempre 6 record. Il commento va aggiornato per chiarire che non è un debito tecnico reale.
+- **⚠️ Bug cache sticky `mealsByDay={}`** (riga ~19563): se `_pianoV4LoadRealPlanForWeek` carica il piano ma riceve 0 pasti (es. RLS mismatch o errore rete), la cache diventa `{state:'loaded', plan:<non-null>, mealsByDay:{}}`. La guardia interna `if (existing.state === 'loaded' && existing.plan) return;` non fa mai retry. Da fixare aggiungendo un path di retry quando `plan` è presente ma `mealsByDay` è vuoto.
 
 ---
 
@@ -101,6 +102,38 @@ https://github.com/IgnazioF321621/benessere-forma
 
 - **Codice morto confermato** (candidati al cantiere pulizia): `renderPiano()`, `updatePianoTargetCard()`, `generatePianoAI()` (irraggiungibili con v4 attivo); `renderStoricoLegacy()` (alias routing punta a `renderAnalisi`; contiene anche ordine macro P·C·G errato a riga 17355 ma irrilevante essendo dead code).
 
+### 2026-06-12
+
+**Chiuso oggi:**
+
+- **Cantiere 3 — pulizia legacy parzialmente chiuso**:
+  - Passo 1 (commit `f8140c9`, −49 righe): rimossi recovery timer legacy (codice morto nel modulo Training).
+  - Passo 2 (commit `74f2414`, −54 righe): rimossi `renderStoricoLegacy`, `setReportRange`, CSS associato e campo ST.
+  - Passo 3 (commit `50458e0`, −11 righe): rimossa `updatePianoTargetCard` (funzione orfana irraggiungibile con v4 attivo).
+  - **Passo 4 (Piano v3 completo) — IN ATTESA**: `renderPiano` + `generatePianoAI` non rimosse. Si attendono verifiche di stabilità su tutti i tester prima della rimozione definitiva.
+
+- **Fix bug generazione piano Ignazio** (commit `07105ba`):
+  - **Causa**: `callAI(prompt, 2000)` — risposta Groq troncata a ~5831 caratteri per 14 pasti con ingredienti, macro e spiegazioni. JSON incompleto → `JSON.parse` crash → `validation-failed` → rollback → 0 pasti → toast errore.
+  - **Fix**: `maxTokens` portato da 2000 a 4000 in `_pianoV4GenerateAndInsertMeals`. Aggiunto `try/catch` esplicito attorno a `_pianoV4F2aParseAndValidate` per catturare eccezioni impreviste.
+  - Confermato: 7/7 giorni generati correttamente sul profilo Ignazio post-fix.
+
+- **Pulsante "RIGENERA PIANO →"** (commit `d978368`): aggiunto nel tab Piano v4 con rollback automatico della riga-madre `weekly_plans` se la generazione AI pasti fallisce. Bypassa i guard `skip-day` e `skip-existing` via `forceAll: true`. ⚠️ Il postino genera per `_pianoV4NextWeekStartIso()` (settimana PROSSIMA su qualsiasi giorno tranne lunedì) — il pulsante invalida e ricarica la cache per la settimana CORRENTEMENTE VISUALIZZATA. Comportamento: genera piano settimana +1, ricarica display settimana corrente (nessun conflitto se le due settimane sono diverse).
+
+- **Diagnostica piano Ginevra** (solo analisi, nessun fix codice):
+  - Piano per `week_start='2026-06-08'` con `status='active'` confermato in DB. 14 pasti confermati in `weekly_plan_meals`.
+  - week_start calcolata lato JS su venerdì 12 giugno = `'2026-06-08'` ✅ (nessun problema di timezone).
+  - Nessun filtro `status` in `_pianoV4LoadRealPlanForWeek` ✅ — il piano viene trovato.
+  - **Causa probabile**: `weekly_plan_meals.user_id` per le 14 righe di Ginevra ≠ `auth.uid()` di Ginevra → RLS blocca silenziosamente → `mealsRes.data = []` → `mealsByDay = {}`. Ignazio vede 14 righe via SQL Editor (service_role bypassa RLS).
+  - **Bug secondario (codice)**: una volta che la cache è `{state:'loaded', plan:<non-null>, mealsByDay:{}}`, né la guardia in `renderPianoV4` (`!entry` = false) né quella interna (`existing.plan` non-null → return) consentono mai un retry. Fix da implementare (vedi debiti tecnici).
+  - **Fix immediato per Ginevra**: verificare `user_id` nelle righe `weekly_plan_meals` via SQL Editor (confrontare con UUID di Ginevra da `auth.users`). Se mismatch → `UPDATE weekly_plan_meals SET user_id = <UUID Ginevra> WHERE plan_id = <id piano giu8>`. Poi hard reload app su device Ginevra.
+
+**⚠️ DA FARE PRIMA DI DOMENICA SERA (generazione automatica settimanale):**
+- Fix codice cache sticky `mealsByDay={}` (riga ~19563 in `_pianoV4LoadRealPlanForWeek`).
+- Verificare che tutti e 4 i tester vedano il piano domenica sera dopo la generazione automatica.
+- **Ginevra**: hard reload app + verifica visibilità 14 pasti settimana 08-giu dopo eventuale UPDATE SQL user_id.
+- **Isabella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 0 pasti — verificare se la generazione è fallita (maxTokens) o se il profilo manca di targets.
+- **Ornella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 14 pasti — verificare visibilità sul device (possibile stesso bug cache o user_id mismatch).
+
 ### 2026-06-10
 
 **Chiuso oggi:**
@@ -149,6 +182,7 @@ https://github.com/IgnazioF321621/benessere-forma
 - **Ignazio** (utente principale + dev) — iPhone + Android
 - **Ginevra** — iPhone e/o iPad
 - **Isabella** — Android + iPad (variante pescetariana)
+- **Ornella** — dispositivo da verificare
 
 Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione con richiesta di costanza nei log e feedback strutturato per 2 settimane.
 
