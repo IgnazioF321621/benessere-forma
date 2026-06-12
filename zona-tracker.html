@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 11:10';
+const APP_VERSION = '2026.06.12 · 11:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -18468,20 +18468,25 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
     if (debug) console.log('[postino-meals] prompt:', prompt);
     let text = '';
     try {
-      text = await callAI(prompt, 2000);
+      text = await callAI(prompt, 4000);
     } catch (e) {
       console.warn('[postino-meals] callAI error:', e);
       return { ok: false, reason: 'ai-call-failed', error: (e && e.message) || String(e) };
     }
     if (debug) console.log('[postino-meals] AI raw response:', text);
-    // DIAGNOSTICA TEMPORANEA — rimuovere dopo aver identificato il fallimento
-    console.log('[DIAG postino-meals] raw length:', text ? text.length : 0, '| first 500 chars:', text ? text.slice(0, 500) : '(vuoto)');
 
-    // Validazione
-    const v = _pianoV4F2aParseAndValidate(text);
+    // Validazione — try/catch esplicito: _pianoV4F2aParseAndValidate non dovrebbe
+    // mai throw (ha il proprio try/catch interno su JSON.parse), ma lo proteggiamo
+    // comunque per garantire il log di fallimento in ogni caso.
+    let v;
+    try {
+      v = _pianoV4F2aParseAndValidate(text);
+    } catch (e) {
+      console.warn('[postino-meals] validation exception:', e);
+      return { ok: false, reason: 'validation-exception', error: (e && e.message) || String(e) };
+    }
     if (!v.ok) {
       console.warn('[postino-meals] validation failed:', v);
-      console.log('[DIAG postino-meals] validation detail:', JSON.stringify(v));
       return { ok: false, reason: 'validation-failed', detail: v };
     }
     if (debug) console.log('[postino-meals] validation OK, 14 meals ready for INSERT');
