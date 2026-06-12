@@ -3664,7 +3664,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.11 · 22:55';
+const APP_VERSION = '2026.06.12 · 10:14';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -20241,17 +20241,6 @@ function calcAdaptedTargets(obiettiviArr, kcal) {
 }
 
 // ── PREFERENZE PIANO ───────────────────────────────────────
-function updatePianoTargetCard() {
-  const el = document.getElementById('piano-target-card');
-  if(!el) return;
-  const obiettiviArr = ST.profile.obiettivo ? ST.profile.obiettivo.split(',').filter(Boolean) : [];
-  const t = ST.TARGET;
-  const adapted = calcAdaptedTargets(obiettiviArr, t.kcal);
-  const [pC, pP, pF] = OBJ_ADAPT[obiettiviArr[0] || 'mantenimento']?.pct || [40,30,30];
-  el.innerHTML = `<div class="card card-green"><span class="lbl">${esc(adapted.label||'Zona')} — ${pC}·${pP}·${pF}</span>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;">${[['Calorie',adapted.kcal,'kcal','var(--acc)'],['Carboidrati '+pC+'%',adapted.carbs,'g','var(--carb)'],['Proteine '+pP+'%',adapted.protein,'g','var(--prot)'],['Grassi '+pF+'%',adapted.fat,'g','var(--fat)']].map(([l,v,u,c])=>`<div style="text-align:center;background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 8px;"><div style="font-size:20px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${v}<span style="font-size:11px;">${u}</span></div><div style="font-size:10px;color:var(--t3);margin-top:2px;">${l}</div></div>`).join('')}</div>
-  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px;font-size:12px;color:var(--t2);line-height:1.7;">${esc(adapted.note||'')}</div></div>`;
-}
 
 // DEPRECATED dal Fix A2 (24 mag 2026): l'obiettivo si gestisce SOLO dalle
 // Impostazioni (selezione singola + conferma su cambio). Nel tab Piano
