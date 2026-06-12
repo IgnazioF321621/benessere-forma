@@ -26,7 +26,7 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`). ⚠️ Bug cache sticky `mealsByDay={}` da fixare prima di domenica sera (vedi log 12 giu).
 
-**Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). Tab Progressione ridisegnata completamente (11 giu 2026): strip calendario 7 giorni scorrevole, 4 grafici selezionabili (Carico / 1RM stimato / Volume totale / Zone reps), stat cards 2×2 (Best Peso, 1RM Stim., Sessioni, Trend), Coach insight. Sistema audio unificato (3 suoni semantici: prepBeep 660Hz warning, stopBeep 659Hz stop, longBeep 1100Hz GO) — brief pronto per Claude Code. APP_VERSION attuale: `v2026.06.01 · 17:00`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
+**Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). Tab Progressione ridisegnata completamente (11 giu 2026): strip calendario 7 giorni scorrevole, 4 grafici selezionabili (Carico / 1RM stimato / Volume totale / Zone reps), stat cards 2×2 (Best Peso, 1RM Stim., Sessioni, Trend), Coach insight. Sistema audio unificato (3 suoni semantici: prepBeep 660Hz warning, stopBeep 659Hz stop, longBeep 1100Hz GO) — ✅ implementato. Timer recupero parallelo al form log + riepilogo post-salvataggio nel modal recupero (commit `6125812`, in collaudo). APP_VERSION attuale: `v2026.06.12 · XX:XX`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
 
 **Modulo Body**: M2 check fisico funzionale (versione 13 mag) + design refinement applicato. Da ri-agganciare a fine blocco Training.
 
@@ -43,9 +43,8 @@ https://github.com/IgnazioF321621/benessere-forma
 - Tasti ACCETTA/SOSTITUISCI/SALTO sui pasti veri del coach + `weekly_plan_acceptance`
 
 **Debiti tecnici noti**:
-- Cleanup feature flag `ST.pianoV4Enabled` dopo validazione tester.
-- Pulizia funzioni legacy dormienti (candidati cantiere pulizia — Cantiere 3 passo 4): Piano v3→v4 (`renderPiano`, `generatePianoAI` — irraggiungibili con `pianoV4Enabled: true`). IN ATTESA stabilità tester prima della rimozione. Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`) — separato.
-- Commento fuorviante a riga 7536 (`// TODO: "Settimana N/4" hardcoded...`): il `6` è corretto per entrambe le schede 4 e 5 giorni — il Rest Day G7 è escluso dalla query, quindi ogni giro produce sempre 6 record. Il commento va aggiornato per chiarire che non è un debito tecnico reale.
+- Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`) — cleanup separato, non ancora fatto.
+- **GIF esercizi nel modal recupero**: il toggle "▶ Mostra esecuzione" era presente ma il placeholder è ora nel mockup approvato — cantiere separato da aprire dopo collaudo del flow timer+form (commit `6125812`).
 - **⚠️ Bug cache sticky `mealsByDay={}`** (riga ~19563): se `_pianoV4LoadRealPlanForWeek` carica il piano ma riceve 0 pasti (es. RLS mismatch o errore rete), la cache diventa `{state:'loaded', plan:<non-null>, mealsByDay:{}}`. La guardia interna `if (existing.state === 'loaded' && existing.plan) return;` non fa mai retry. Da fixare aggiungendo un path di retry quando `plan` è presente ma `mealsByDay` è vuoto.
 
 ---
@@ -72,13 +71,12 @@ https://github.com/IgnazioF321621/benessere-forma
 
 - **Redesign tab Progressione**: completamente ridisegnata secondo mockup approvato da Claude Design. Strip calendario 7 giorni scorrevole con dot workout e navigazione settimana (fix bug timezone — costruzione data locale via `getFullYear()/getMonth()/getDate()` invece di `toISOString()`). Dropdown esercizio restyled con ultimo peso/reps inline per ogni voce (richiede `loadAllExerciseNames` estesa con `reps, resistance, date`). 4 grafici selezionabili via chip row: Carico (linea + area fill), 1RM stimato (formula Epley: `peso × (1 + reps/30)`), Volume totale (`reps × resistance` somma tutti i set), Zone reps (stacked bar forza/ipertrofia/resistenza). Stat cards 2×2: Best Peso, 1RM Stim., Sessioni, Trend (delta media ultime 2 vs precedenti 2 sessioni). Card Coach insight con testo deterministico. Stato vuoto con placeholder. Commit `e0fa603` + fix timezone + CSS classes `931a3d6`.
 
-- **Sistema audio unificato — decisioni**: definiti 3 suoni semantici globali per tutti i flow di allenamento:
-  - `playPrepBeep` 660Hz — tic brevi · "sta per finire" (ultimi 3–5 sec) · invariato
+- **Sistema audio unificato — ✅ implementato** (commit incluso nella sessione 11 giu): definiti 3 suoni semantici globali per tutti i flow di allenamento:
+  - `playPrepBeep` 660Hz — tic brevi · "sta per finire" (ultimi 3–5 sec)
   - `playStopBeep` 659Hz — tono lungo 700ms · sostituisce `playFinalTripleBeep` ovunque
   - `playLongBeep` 1100Hz — tono pieno 640ms · "GO / inizia" (era 880Hz)
   - `playFinalTripleBeep` eliminata completamente
   - `playLongBeep` aggiunto dove mancava: fine countdown recupero normale, fine micro-pausa Recovery Day
-  - Brief pronto per Claude Code — **non ancora implementato**.
 
 **Nuovi stati ST aggiunti:**
 - `trainCalStripOffset` — offset settimane strip calendario
@@ -106,11 +104,13 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Chiuso oggi:**
 
-- **Cantiere 3 — pulizia legacy parzialmente chiuso**:
+- **Cantiere 3 — pulizia legacy chiuso** (passi 1–4):
   - Passo 1 (commit `f8140c9`, −49 righe): rimossi recovery timer legacy (codice morto nel modulo Training).
   - Passo 2 (commit `74f2414`, −54 righe): rimossi `renderStoricoLegacy`, `setReportRange`, CSS associato e campo ST.
   - Passo 3 (commit `50458e0`, −11 righe): rimossa `updatePianoTargetCard` (funzione orfana irraggiungibile con v4 attivo).
-  - **Passo 4 (Piano v3 completo) — IN ATTESA**: `renderPiano` + `generatePianoAI` non rimosse. Si attendono verifiche di stabilità su tutti i tester prima della rimozione definitiva.
+  - **Passo 4 (Piano v3 + feature flag + Magic Link residui + 59 console.log)** — ✅ commit `8f46576` (+ hotfix `336805d`, `1c7b936`): rimossi `renderPiano`, `generatePianoAI`, `ST.pianoV4Enabled`; puliti residui Magic Link (fallback `verifyOtp({type:'magiclink'})`, branch bootstrap hash/PKCE, `auth-callback.html`); rimossi 59 `console.log` (manualmente, chirurgicamente — vedi Lezione 11).
+  - **Hook generazione scheda a fine onboarding M1** — ✅ commit `df4eaf1`: `saveOnboarding` chiama ora `generateTrainingProgram` al completamento (era rimasto manuale via `?schedaGen=1`).
+  - **Commento fuorviante N/4** — ✅ commit `6973826`: il `6` hardcoded è corretto, commento aggiornato a riga 7536.
 
 - **Fix bug generazione piano Ignazio** (commit `07105ba`):
   - **Causa**: `callAI(prompt, 2000)` — risposta Groq troncata a ~5831 caratteri per 14 pasti con ingredienti, macro e spiegazioni. JSON incompleto → `JSON.parse` crash → `validation-failed` → rollback → 0 pasti → toast errore.
@@ -133,6 +133,10 @@ https://github.com/IgnazioF321621/benessere-forma
 - **Ginevra**: hard reload app + verifica visibilità 14 pasti settimana 08-giu dopo eventuale UPDATE SQL user_id.
 - **Isabella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 0 pasti — verificare se la generazione è fallita (maxTokens) o se il profilo manca di targets.
 - **Ornella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 14 pasti — verificare visibilità sul device (possibile stesso bug cache o user_id mismatch).
+
+**Cantiere aperto (collaudo in attesa):**
+- **Timer recupero parallelo + form log nel modal recupero** (commit `6125812`): countdown parte al tap "Fine serie" (prima del salvataggio); form `tl-reps`/`tl-rir`/`tl-resist` integrato nel corpo del modal; post-salvataggio eyebrow "Serie N salvata ✓". Da testare su device domani.
+- **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
 
 ### 2026-06-10
 
@@ -235,11 +239,7 @@ Flusso:
 3. Utente inserisce il codice nella PWA → `verifyOtp({ email, token, type: 'email' })`
 4. Login completato direttamente nella PWA, senza uscire dall'app ✅
 
-**Residui Magic Link non ancora puliti** (rete di sicurezza fino a validazione tester — vedi task in "Prossimi step"):
-- Fallback `verifyOtp({type:'magiclink'})` in `verifyOTP()` a [zona-tracker.html:1693](zona-tracker.html:1693) — non attivato in pratica
-- Branch bootstrap hash `#access_token` ([zona-tracker.html:8569](zona-tracker.html:8569)) e PKCE `?code=` ([zona-tracker.html:8587](zona-tracker.html:8587)) — usati solo da callback browser esterno
-- `auth-callback.html` — rimane nel repo come fallback storico
-- Commento obsoleto a [zona-tracker.html:8626](zona-tracker.html:8626) ("Magic Link in Safari")
+**Residui Magic Link** — ✅ rimossi (commit `8f46576`, 12 giu 2026): fallback `verifyOtp({type:'magiclink'})`, branch bootstrap hash/PKCE, `auth-callback.html`, commento obsoleto riga 8626.
 
 **Rate limit Supabase:** durante i test intensivi si può raggiungere il limite OTP. Aspettare 1 ora per il reset.
 
@@ -723,7 +723,7 @@ I seguenti campi M1 sono raccolti ma attualmente serializzati come testo libero 
   - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
   - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
   - Info icon ⓘ su badge RIR (→ `showInfoModal('rir')`) e su serie (→ `showInfoModal('serie')`)
-  - Modal recupero (dopo log serie): countdown + suggerimento progressione + esecuzione/errori/coach + **toggle "▶ Mostra esecuzione"** opzionale (GIF Worker, 9 maggio 2026)
+  - Modal recupero: countdown parte subito al tap "Fine serie" (parallelo al form log); form `tl-reps`/`tl-rir`/`tl-resist` integrato nel corpo del modal (commit `6125812`); post-salvataggio mostra eyebrow "Serie N salvata ✓" + card APPENA FATTA/PROSSIMA. GIF esecuzione: cantiere separato in attesa collaudo.
 - **Programma** (label tab rinominato 8 maggio 2026, id `piano` per back-compat):
   - Split settimanale con giorni numerici G1–G6 (rotazione 6 giorni, dopo G6 → G1)
   - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1). Settimana corrente calcolata su workout completati (1 settimana = 6 workout veri, riposi esclusi)
@@ -1553,7 +1553,7 @@ Decisione utente Ignazio: **Opzione 3** (tutto tranne notifiche push iOS). Imple
   - Migrazioni DDL + RLS policies (4 policy `own_*` per ogni tabella + eventuale admin policy)
 
 - **Sessione 2 — Step B** ✅ (20 mag 2026, catena 7 commit `272e375`→`2984704`, APP_VERSION finale `v2026.05.20 · 16:01`): **UI Tab Piano vista principale v4 — scaffolding completo**
-  - Feature flag `ST.pianoV4Enabled: true` (rollback istantaneo da console a `renderPiano` legacy)
+  - Feature flag `ST.pianoV4Enabled` — ✅ rimosso (commit `8f46576`). `renderPiano` e `generatePianoAI` eliminate insieme.
   - Nuova funzione `renderPianoV4()` parallela a `renderPiano` legacy (rinomina rimandata a Step I)
   - Helper utility: `getPianoV4WeekStart(offset)`, `formatPianoV4WeekLabel(date)`, `getPianoV4Days(weekStart)`
   - 6 blocchi visivi: accent bar + header v3, nav settimane `‹ ›`, card stato sand `#FDF7E8` (hint contestuali), 7 card giorno dashed con badge OGGI, card Memoria AI bone + bordo top giallino `var(--mod-nutrition)`, card peso `getLatestBodyData()` + sparkline placeholder + CTA disabled tratteggiato grigio, profile compatto grid 2×2 con CTA `MODIFICA ›` → `openSettingsModal()`
@@ -1747,6 +1747,12 @@ Cantiere 2 (11 giu 2026): il fix `5125f13` ha corretto correttamente l'ordine ma
 
 **Regola operativa**: prima di committare, eseguire il test visivo/funzionale definito nel brief. Se Claude Code non può eseguirlo autonomamente (es. richiede interazione con l'app sul device), dichiararlo esplicitamente e attendere conferma da Ignazio. Un commit su codice morto che "sembra corretto" è comunque rumore nel git log e falsa sicurezza.
 
+### 11. Rimozione `console.log`: solo manuale e chirurgica, mai con script automatico su file monolite
+
+Cantiere pulizia 12 giu 2026: un tentativo di rimozione automatica via `sed` su `zona-tracker.html` (file monolite ~21.000 righe) ha prodotto sintassi rotta su righe multi-linea e template literal che includevano `console.log` come sotto-espressione. I 59 `console.log` sono stati poi rimossi manualmente riga per riga (commit `77ceff8` + hotfix `336805d`, `1c7b936` per ripristinare frammenti spezzati).
+
+**Regola operativa**: su `zona-tracker.html` NON usare mai `sed`/regex automatico per rimuovere blocchi multi-riga. Ogni rimozione di `console.log` va fatta a mano con Read → Edit mirato, verificando che nessun template literal venga spezzato.
+
 ### 9. Surrogato: solo `setup` sovrascritto, non `execution`/`commonErrors`
 
 Finché non esistono le colonne `esecuzione_surrogato`/`errori_surrogato` nel catalogo, i testi di esecuzione ed errori restano quelli dell'esercizio nativo anche per i surrogati. Il `setup` viene correttamente sostituito dalla `nota_surrogato`. Per esercizi come EX002 Distensioni su panca (surrogato panca+elastico), le istruzioni di esecuzione descrivono ancora la versione bilanciere → possibile confusione per l'utente. Fix richiede sessione dedicata al catalogo.
@@ -1900,9 +1906,9 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
-- [ ] GIF/video esecuzione esercizi nel modal scheda (collapsibile, click per aprire)
+- [ ] GIF esercizi nel modal recupero — cantiere separato, da aprire dopo collaudo commit `6125812`
 - [ ] **FASE 2 Programmi multipli archiviati** (predisposto in dropdown Progressione 9 maggio 2026): tabella `programs` Supabase, colonna `program_id` su workouts, UI chiusura programma, popolare sezione "PROGRAMMI PASSATI" del dropdown con lista collassabile, filtro grafico per periodo programma. Vedi commento HTML inline nel codice (cerca "TODO FASE 2 — gestione programmi multipli")
-- [ ] Pulizia residui Magic Link (post-validazione tester): rimuovere fallback `verifyOtp({type:'magiclink'})` a [zona-tracker.html:1693](zona-tracker.html:1693), branch bootstrap hash + PKCE [zona-tracker.html:8569-8599](zona-tracker.html:8569), commento obsoleto a riga 8626, file `auth-callback.html`
+- [x] Pulizia residui Magic Link — ✅ commit `8f46576` (12 giu 2026)
 
 ### Possibili evoluzioni future modulo Training
 
@@ -2199,7 +2205,7 @@ Pattern obbligatori MINIMI per sessione (sopra il minimo il coach ha libertà):
 4. **Modifica onboarding M1**: aggiungere step "giorni di recupero attivo (0/1/2)". ⏳ NON fatto.
 5. **Trigger generazione blocco N+1** dopo M2 completato (aggancio a `m2EntryIntro()`). ⏳ NON fatto.
 6. **UI "cambia esercizio"** (opzione C con vincoli). ⏳ NON fatto.
-7. ⚠️ **Hook generazione su `saveOnboarding`** (Step 3.17 mai fatto): il motore gira via `ztTestGeneraScheda()` / `?schedaGen=1` / **Impostazioni → Rigenera scheda** (`rigeneraSchedaDaImpostazioni`) / post-M2 futuro, ma MAI in automatico a fine onboarding. Vedi "PROBLEMATICHE APERTE" #8.
+7. ✅ **Hook generazione su `saveOnboarding`** (commit `df4eaf1`, 12 giu 2026): `saveOnboarding` chiama ora `generateTrainingProgram` al completamento — non più solo via `?schedaGen=1` / `ztTestGeneraScheda()` / Impostazioni.
 
 ## Bug noti
 
