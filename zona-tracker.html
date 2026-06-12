@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 15:16';
+const APP_VERSION = '2026.06.12 · 16:00';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5120,6 +5120,11 @@ async function saveOnboarding(opts) {
   // se target_kcal calcolato è sotto la soglia di sicurezza (per sesso).
   // Avviso informativo, NON blocca l'avanzamento (utente chiude e prosegue).
   checkLowKcalAndWarn(r.target, sexForDB);
+
+  if (usaTraining === true) {
+    try { await generateTrainingProgram({source:'onboarding'}); }
+    catch(e) { console.warn('[train-gen] onboarding hook failed:', e); }
+  }
 
   if(opts.skipM2) {
     // "Salta per ora" su Step 7: marca m2_skipped=true e vai all'app
