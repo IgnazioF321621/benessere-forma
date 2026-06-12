@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 16:55';
+const APP_VERSION = '2026.06.12 · 17:07';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6049,6 +6049,30 @@ const OBJ_MIGRATE = { perdita_peso: 'dimagrimento', massa_muscolare: 'ipertrofia
 function migrateObiettivo(str) {
   if (!str) return str;
   return str.split(',').map(v => OBJ_MIGRATE[v.trim()] || v.trim()).filter(Boolean).join(',');
+}
+
+const OBJ_ADAPT = {
+  dimagrimento:      { pct:[38,32,30], label:'Dimagrimento',       note:'Proteine alte per preservare la massa magra. Carbo concentrati a colazione e pranzo.' },
+  ricomposizione:    { pct:[38,34,28], label:'Ricomposizione',      note:'Proteine elevate, carbo distribuiti intorno all\'attività fisica.' },
+  ipertrofia:        { pct:[40,35,25], label:'Ipertrofia',          note:'Massima sintesi proteica. Carbo abbondanti pre e post workout.' },
+  forza_performance: { pct:[42,33,25], label:'Forza & Performance', note:'Carbo superiori per energia e recupero muscolare.' },
+  longevita:         { pct:[40,30,30], label:'Longevità',           note:'Zona classica. Alimenti anti-infiammatori, varietà massima.' },
+  mantenimento:      { pct:[40,30,30], label:'Mantenimento',        note:'Zona classica. Distribuzione equilibrata, rotazione fonti.' },
+};
+
+function calcAdaptedTargets(obiettiviArr, kcal) {
+  const key = (obiettiviArr && obiettiviArr[0]) || 'mantenimento';
+  const adapt = OBJ_ADAPT[key] || OBJ_ADAPT.mantenimento;
+  const [pCarbo, pProt, pFat] = adapt.pct;
+  return {
+    kcal,
+    protein: Math.round(kcal * pProt  / 100 / 4),
+    carbs:   Math.round(kcal * pCarbo / 100 / 4),
+    fat:     Math.round(kcal * pFat   / 100 / 9),
+    pCarbo, pProt, pFat,
+    label: adapt.label,
+    note:  adapt.note,
+  };
 }
 
 function saveLocalPrefs() {
