@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.13 · 10:05';
+const APP_VERSION = '2026.06.13 · 10:17';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -20960,10 +20960,19 @@ function trainExecFinishSet(){
   workTimeStopExec(e.sessionId, true);
   workTimeStopTick();
   const timedTarget = e.isTimed ? (e.timedTarget || null) : null;
-  const _restEx = findExercise(e.exName, e.sessionId);
-  const _restSec = getRestSec(e.sessionId, _restEx);
-  try{ playLongBeep(); }catch(e2){}
-  startTrainingCountdown(_restSec, e.exName, e.sessionId);
+  // Avvia countdown SOLO se c'è una serie successiva
+  const _exDef = findExercise(e.exName, e.sessionId);
+  const _doneCount = Object.keys(ST.trainLoggedSets)
+    .filter(k => k.startsWith(`${e.sessionId}_${e.exName}_`) && k.endsWith(`_${todayKey()}`))
+    .length;
+  const _nextSet = _doneCount + 1; // la serie che stiamo per loggare
+  const _hasNextAfter = !!(_exDef && _exDef.sets && (_nextSet + 1) <= _exDef.sets);
+  if(_hasNextAfter){
+    try{ playLongBeep(); }catch(e2){}
+    const _restEx = findExercise(e.exName, e.sessionId);
+    const _restSec = getRestSec(e.sessionId, _restEx);
+    startTrainingCountdown(_restSec, e.exName, e.sessionId);
+  }
   ST.trainExecOpen = null;
   openLogModal(e.sessionId, e.exName, e.setNum, { timedTarget });
 }
