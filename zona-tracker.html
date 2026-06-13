@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.12 · 19:24';
+const APP_VERSION = '2026.06.13 · 10:05';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11281,6 +11281,10 @@ function startTrainingCountdown(seconds, exName, sessionId){
     sessionId,                // sessione corrente (per buildCoachPrompt)
     gifOpen: false,           // toggle GIF esecuzione nel modal recupero (default chiuso)
   };
+  // Se recupero ≤5 sec, non emettere prep beep (sarebbero immediati e confusi dopo il GO beep)
+  if(seconds <= 5){
+    for(let s = 1; s <= 5; s++) ST.trainCountdown.prepBeeped[s] = true;
+  }
   ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
   ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
   ensureRestGif(exName);             // pre-fetch URL GIF in background (no-op se gia in cache)
@@ -20958,6 +20962,7 @@ function trainExecFinishSet(){
   const timedTarget = e.isTimed ? (e.timedTarget || null) : null;
   const _restEx = findExercise(e.exName, e.sessionId);
   const _restSec = getRestSec(e.sessionId, _restEx);
+  try{ playLongBeep(); }catch(e2){}
   startTrainingCountdown(_restSec, e.exName, e.sessionId);
   ST.trainExecOpen = null;
   openLogModal(e.sessionId, e.exName, e.setNum, { timedTarget });
