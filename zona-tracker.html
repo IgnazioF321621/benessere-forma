@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.13 · 10:17';
+const APP_VERSION = '2026.06.13 · 10:32';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11661,7 +11661,11 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
     const bandTxt = cur ? `banda ${cur}` : 'stessa banda';
     // 1) cedimento (RIR 0) ma reps nel range → stessa banda, -1 rep
-    if(rirVal === 0 && repsDone >= repsMin) return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
+    //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
+    if(rirVal === 0 && repsDone >= repsMin){
+      if(targetRIR === 0) return out(bandTxt, `mantieni ${repsDone} reps`);
+      return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
+    }
     // 2) tetto + RIR ≥ target → banda più dura (o trazione libera se già Gialla)
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
       if(curIdx === 0) return out('prova la trazione libera senza banda', `${repsMin}-${repsMax} reps`);
@@ -11681,7 +11685,11 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const plusTen  = Math.min(250, resistInt + 10);
   const minusTen = Math.max(0, resistInt - 10);
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
-  if(rirVal === 0 && repsDone >= repsMin) return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+  //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
+  if(rirVal === 0 && repsDone >= repsMin){
+    if(targetRIR === 0) return out(loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
+    return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+  }
   // 2) tetto + RIR ≥ target → +10 lbs, riparti da repsMin
   if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusTen), `riparti da ${repsMin} ${unitLbl}`);
   // 3) sotto range → -10 lbs (o variante più facile se già a corpo libero)
