@@ -138,6 +138,30 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Timer recupero parallelo + form log nel modal recupero**~~ ✅ commit `6125812` — collaudo in corso su device.
 - **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
 
+### 2026-06-15
+
+**Chiuso in questa sessione:**
+
+- **Cantiere: Doppio timer iso unilaterale** ✅
+
+  **Sessione normale** (commit `963083f`):
+  - `openTrainExec`: aggiunto `perLato` e `isoPhase:'A'` a `ST.trainExecOpen`
+  - `execTimerStart`: dopo il beep di fine, se `perLato` e `isoPhase==='A'` → transizione a `'pause'` + avvio `execTimerStartPause(5)`
+  - Nuova funzione `execTimerStartPause`: countdown 5s, prep beep ultimi 3s, a 0 imposta `isoPhase='B'` + long beep + rilancia `execTimerStart`
+  - Render timer: label condizionale LATO SX / CAMBIO POSIZIONE (ambra) / LATO DX; pulsante "In corso…" disabilitato durante fase A e pausa
+  - Esercizi coinvolti: Pallof press con elastico, Side plank, EX062/EX067/EX068 (identificati per nome o codice in `_TRAIN_GEN_UNILATERAL` + `_trainGenIsIsometric`)
+
+  **Warm-up specifico** (commit `08dc4c2`):
+  - Costanti `WARMUP_ISO_SIDE_SEC = 30` e `WARMUP_ISO_PAUSE_SEC = 5`
+  - Nuova funzione `_warmupFlowInitIsoPhase()`: legge `parseRepsRange(item.reps).perLato`, imposta `isoPhase` e `remaining` sull'item corrente
+  - `_warmupFlowAdvance`: gestisce transizioni `A → pause → B → avanza`; la fase `rest` chiama `_warmupFlowInitIsoPhase()` per il nuovo item
+  - `_warmupFlowTick`: prep beep threshold adattivo (3s durante pausa iso, 5s altrimenti)
+  - Render hero warm-up: label LATO SX / CAMBIO POSIZIONE / LATO DX, colori ambra durante pausa, progress bar `dur` corretta per fasi iso
+  - `warmupFlowSkip`: `isoPhase = null` per saltare tutta la sequenza
+  - Esercizi coinvolti: Glute bridge isometrico con cavigliera (unico item hardcoded con `reps:'20-30 sec per lato'` nel warm-up)
+
+  **Test pendente** (non eseguibile senza scattare serie reali): da verificare al prossimo allenamento.
+
 ### 2026-06-13
 
 **Chiuso in questa sessione:**
@@ -201,7 +225,7 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Attrezzo per sessione (coach-driven)**~~ ✅ Implementato 9 giu 2026 (commit `e945aad`). `_TRAIN_GEN_EQ_PRIORITY` + `_trainGenPickEq` + `buildCoachPrompt` esteso. Rigenerare scheda per applicare.
 - ~~**Catalogo esercizi — revisione completa**~~ ✅ Completato 10 giu 2026. Tutti i 122 esercizi revisionati, colonne `esecuzione_surrogato`/`errori_surrogato` aggiunte e compilate per i 16 esercizi con surrogato.
 - **Salvataggio `giorni_allenamento` dall'app**: il campo non si salva correttamente dall'onboarding/impostazioni. Da investigare (regressione o bug storico).
-- **Cantiere "Doppio timer iso unilaterale"**: tutti gli esercizi con `perLato=true` e `kind=seconds` (es. Pallof press, esercizi warm-up unilaterali) devono avere flow: timer lato A → pausa 5s automatica → timer lato B → recupero → log. Da aprire dopo stabilizzazione fix attuali.
+- ~~**Cantiere "Doppio timer iso unilaterale"**~~ ✅ Implementato 15 giu 2026 (commit `963083f` sessione normale + `08dc4c2` warm-up). Test live pendente (primo allenamento utile).
 
 ---
 
