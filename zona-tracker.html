@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.15 · 14:52';
+const APP_VERSION = '2026.06.15 · 15:21';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11824,9 +11824,12 @@ async function saveTrainingSet(){
     loadTrainingHomeData();
 
     if(sessionComplete){
-      // Sessione finita: comportamento invariato (esci all'elenco Sessioni).
-      // Il toast "🎉 Sessione completata!" arriva da saveWorkoutRecord qui sopra.
-      closeTrainingSession();
+      // Non chiudere automaticamente: l'utente deve poter fare il Tabata finale
+      // prima di uscire. Il bottone "Completa sessione" nella schermata chiude manualmente.
+      ST.trainLogOpen = null;
+      ST.trainExecOpen = null;
+      renderTraining();
+      requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
       return;
     }
 
