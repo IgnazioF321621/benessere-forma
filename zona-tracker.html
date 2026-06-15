@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.15 · 15:29';
+const APP_VERSION = '2026.06.15 · 16:05';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -13853,8 +13853,9 @@ function renderTraining(){
           ${gifBlock}
           ${isTimed ? (ex2.timedReady ? `
             <div style="text-align:center;margin-top:18px;">
-              <div id="exec-hold-timer" style="font-size:54px;font-weight:800;font-family:var(--font-mono);color:var(--t1);line-height:1;font-variant-numeric:tabular-nums;">${String(Math.floor((ex2.timedTarget||0)/60)).padStart(2,'0')}:${String((ex2.timedTarget||0)%60).padStart(2,'0')}</div>
-              <div id="exec-hold-sub" style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:6px;">obiettivo ${ex2.timedTarget} sec</div>
+              ${ex2.perLato ? `<div style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;color:${ex2.isoPhase==='pause'?'#D97706':ex2.isoPhase==='B'?'var(--acc)':'var(--t2)'};">${ex2.isoPhase==='pause'?'CAMBIO POSIZIONE':ex2.isoPhase==='B'?'LATO DX':'LATO SX'}</div>` : ''}
+              <div id="exec-hold-timer" style="font-size:54px;font-weight:800;font-family:var(--font-mono);color:${ex2.perLato&&ex2.isoPhase==='pause'?'#D97706':'var(--t1)'};line-height:1;font-variant-numeric:tabular-nums;">${String(Math.floor((ex2.timedTarget||0)/60)).padStart(2,'0')}:${String((ex2.timedTarget||0)%60).padStart(2,'0')}</div>
+              <div id="exec-hold-sub" style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:6px;">${ex2.perLato&&ex2.isoPhase==='pause'?'preparati per il lato dx':`obiettivo ${ex2.timedTarget} sec`}</div>
             </div>` : `
             <div style="margin-top:20px;padding:0 8px;">
               ${(()=>{const sugg2=getProgressionLive(ex2.exName,ex2.sessionId); return sugg2?`<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-bottom:12px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(sugg2)}</div>`:''})()}
@@ -13876,7 +13877,9 @@ function renderTraining(){
         <div class="train-exec-footer">
           ${isTimed && !ex2.timedReady
             ? `<button class="train-exec-finish-btn" onclick="execTimerLaunch()" style="background:var(--acc);">▶ Avvia</button>`
-            : `<button class="train-exec-finish-btn" onclick="trainExecFinishSet()">Fine serie</button>`
+            : (ex2.perLato && ex2.timedReady && ex2.isoPhase !== 'B')
+              ? `<button class="train-exec-finish-btn" style="background:var(--s2);color:var(--t3);cursor:default;" disabled>In corso…</button>`
+              : `<button class="train-exec-finish-btn" onclick="trainExecFinishSet()">Fine serie</button>`
           }
         </div>
       </div>
@@ -20901,10 +20904,20 @@ function execTimerStart(targetSec){
       try{ playPrepBeep(); }catch(e){}
     }
     const done = ST.trainExecTimer.remaining === 0;
-    // Beep triplo una sola volta quando si arriva a 0
+    // Beep una sola volta quando si arriva a 0
     if(done && !ST.trainExecTimer.beeped){
       ST.trainExecTimer.beeped = true;
       try{ playStopBeep(); }catch(e){}
+    }
+    // Doppio timer per esercizi perLato
+    if(done && ST.trainExecOpen && ST.trainExecOpen.perLato){
+      if(ST.trainExecOpen.isoPhase === 'A'){
+        ST.trainExecOpen.isoPhase = 'pause';
+        _execTimerClear();
+        execTimerStartPause(5);
+        return;
+      }
+      // fase B: cade through, timer finito, logger aprirà normalmente
     }
     const el = document.getElementById('exec-hold-timer');
     if(el){
@@ -20926,13 +20939,38 @@ function execTimerStop(){
   if(ST.trainExecTimer) ST.trainExecTimer.running = false;
 }
 
+function execTimerStartPause(sec){
+  _execTimerClear();
+  ST.trainExecTimer = { running:true, remaining:sec, _iv:null, beeped:false, isPause:true };
+  ST.trainExecTimer._iv = setInterval(()=>{
+    if(!ST.trainExecTimer.running) return;
+    if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
+    if(ST.trainExecTimer.remaining > 0 && ST.trainExecTimer.remaining <= 3){
+      try{ playPrepBeep(); }catch(e){}
+    }
+    const el = document.getElementById('exec-hold-timer');
+    if(el){
+      const s = ST.trainExecTimer.remaining;
+      el.textContent = `00:0${s}`;
+    }
+    if(ST.trainExecTimer.remaining <= 0){
+      _execTimerClear();
+      if(ST.trainExecOpen){
+        ST.trainExecOpen.isoPhase = 'B';
+        try{ playLongBeep(); }catch(e){}
+        execTimerStart(ST.trainExecOpen.timedTarget);
+      }
+    }
+  }, 1000);
+}
+
 function openTrainExec(sessionId, exName, setNum){
   const _exDef = findExercise(exName, sessionId);
   const _pr = (_exDef && _exDef.reps && typeof parseRepsRange === 'function') ? parseRepsRange(_exDef.reps) : null;
   const _isTimed = _pr && _pr.kind === 'seconds';
   // Per isometrici: picker target, valore iniziale = repsMin (default 20 se non specificato).
   const _timedTarget = _isTimed ? (_pr.min || 20) : null;
-  ST.trainExecOpen = { sessionId, exName, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false };
+  ST.trainExecOpen = { sessionId, exName, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: !!(_pr && _pr.perLato), isoPhase: 'A' };
   _unlockAudio();
   ensureRestGif(exName);
   // GRAFICA L1 — Avvia cronometro TEMPO WORKOUT per questa serie
