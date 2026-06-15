@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.13 · 10:32';
+const APP_VERSION = '2026.06.15 · 14:52';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3887,7 +3887,7 @@ const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,
 // Ordine FISSO dalla più LEGGERA (= meno assistenza, trazione più dura) alla più PESANTE (= più assistenza, più facile).
 // Progredire = scendere verso la Gialla.
 const BAND_COLORS = ['Gialla', 'Rossa', 'Nera', 'Viola'];
-const PULL_UP_EXERCISE_NAME = 'Trazioni alla sbarra';
+const PULL_UP_EXERCISE_NAME = 'Trazioni';
 function isPullUpExercise(name){ return name === PULL_UP_EXERCISE_NAME; }
 
 // ═══════════════════════════════════════════════════════════
@@ -6863,7 +6863,7 @@ const ACTIVATION_BLOCK = [
 ];
 const EXERCISE_MEDIA = {
   // ── UPPER A ──
-  'Trazioni alla sbarra': {
+  'Trazioni': {
     muscleImg: 'assets/exercises/trazioni-sbarra-muscoli.png',
     executionImg: 'assets/exercises/trazioni-sbarra-esecuzione.png'
   },
@@ -6959,7 +6959,7 @@ const TRAINING_SESSIONS = {
     label:'Upper A — Forza', rest:'2 min',
     exercises:[
       {
-        name:'Trazioni alla sbarra', sets:4, reps:'4-6',
+        name:'Trazioni', sets:4, reps:'4-6',
         eq:'Sbarra fissa da porta',
         setup:[
           "Presa pronata, larghezza poco più delle spalle",
