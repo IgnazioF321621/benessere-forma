@@ -22,9 +22,9 @@ https://github.com/IgnazioF321621/benessere-forma
 - File principali: `zona-tracker.html`, `auth-callback.html`, `dashboardzona.html` (admin)
 
 
-## Stato corrente (sintesi al 12 giugno 2026)
+## Stato corrente (sintesi al 15 giugno 2026)
 
-**Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`). ⚠️ Bug cache sticky `mealsByDay={}` da fixare prima di domenica sera (vedi log 12 giu).
+**Modulo Nutrition**: ✅ COMPLETO end-to-end. Tab Oggi, Integratori, Analisi v3 e Piano v4 (Step A→F.2a v2 + Passo 2) tutti production-ready. F.2b colazione+merenda in STAND BY (gestione libera utente). Tab Oggi e Piano leggono dalla stessa fonte (`weekly_plan_meals` via cache `ST.pianoV4RealPlanCache`). ✅ Bug cache sticky `mealsByDay={}` fixato (commit `f7ca675`) — verifica tester (Ginevra, Ornella, Isabella) in sospeso.
 
 **Modulo Training**: in sviluppo attivo. Coach generatore completo (catalogo 123 esercizi su `esercizi_catalog`), split 4/5 giorni con rotazione adattiva, Recovery Day + Rest Day unificati (giugno 2026). Tab Progressione ridisegnata completamente (11 giu 2026): strip calendario 7 giorni scorrevole, 4 grafici selezionabili (Carico / 1RM stimato / Volume totale / Zone reps), stat cards 2×2 (Best Peso, 1RM Stim., Sessioni, Trend), Coach insight. Sistema audio unificato (3 suoni semantici: prepBeep 660Hz warning, stopBeep 659Hz stop, longBeep 1100Hz GO) — ✅ implementato. Timer recupero parallelo al form log + riepilogo post-salvataggio nel modal recupero (commit `6125812`, in collaudo). APP_VERSION attuale: `v2026.06.12 · XX:XX`. Vedi sezione "MODULO TRAINING — REGOLE DEL COACH & DECISIONI" per specifiche complete.
 
@@ -45,7 +45,7 @@ https://github.com/IgnazioF321621/benessere-forma
 **Debiti tecnici noti**:
 - Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`) — cleanup separato, non ancora fatto.
 - **GIF esercizi nel modal recupero**: il toggle "▶ Mostra esecuzione" era presente ma il placeholder è ora nel mockup approvato — cantiere separato da aprire dopo collaudo del flow timer+form (commit `6125812`).
-- **⚠️ Bug cache sticky `mealsByDay={}`** (riga ~19563): se `_pianoV4LoadRealPlanForWeek` carica il piano ma riceve 0 pasti (es. RLS mismatch o errore rete), la cache diventa `{state:'loaded', plan:<non-null>, mealsByDay:{}}`. La guardia interna `if (existing.state === 'loaded' && existing.plan) return;` non fa mai retry. Da fixare aggiungendo un path di retry quando `plan` è presente ma `mealsByDay` è vuoto.
+- ~~**Bug cache sticky `mealsByDay={}`**~~ ✅ fixato (commit `f7ca675`, 13 giu 2026): aggiunto path di retry in `_pianoV4LoadRealPlanForWeek` quando `plan` non-null ma `mealsByDay` vuoto. Verifica tester (Ginevra, Ornella, Isabella) in sospeso.
 
 ---
 
@@ -128,15 +128,38 @@ https://github.com/IgnazioF321621/benessere-forma
   - **Fix immediato per Ginevra**: verificare `user_id` nelle righe `weekly_plan_meals` via SQL Editor (confrontare con UUID di Ginevra da `auth.users`). Se mismatch → `UPDATE weekly_plan_meals SET user_id = <UUID Ginevra> WHERE plan_id = <id piano giu8>`. Poi hard reload app su device Ginevra.
 
 **⚠️ DA FARE PRIMA DI DOMENICA SERA (generazione automatica settimanale):**
-- Fix codice cache sticky `mealsByDay={}` (riga ~19563 in `_pianoV4LoadRealPlanForWeek`).
+- ~~Fix codice cache sticky `mealsByDay={}` (riga ~19563 in `_pianoV4LoadRealPlanForWeek`).~~ ✅ commit `f7ca675`
 - Verificare che tutti e 4 i tester vedano il piano domenica sera dopo la generazione automatica.
 - **Ginevra**: hard reload app + verifica visibilità 14 pasti settimana 08-giu dopo eventuale UPDATE SQL user_id.
 - **Isabella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 0 pasti — verificare se la generazione è fallita (maxTokens) o se il profilo manca di targets.
 - **Ornella**: `weekly_plans` settimana 08-giu ha `status='draft'`, 14 pasti — verificare visibilità sul device (possibile stesso bug cache o user_id mismatch).
 
 **Cantiere aperto (collaudo in attesa):**
-- **Timer recupero parallelo + form log nel modal recupero** (commit `6125812`): countdown parte al tap "Fine serie" (prima del salvataggio); form `tl-reps`/`tl-rir`/`tl-resist` integrato nel corpo del modal; post-salvataggio eyebrow "Serie N salvata ✓". Da testare su device domani.
+- ~~**Timer recupero parallelo + form log nel modal recupero**~~ ✅ commit `6125812` — collaudo in corso su device.
 - **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
+
+### 2026-06-13
+
+**Chiuso in questa sessione:**
+
+- Hook generazione scheda a fine onboarding M1 ✅ commit `df4eaf1`
+- Piano v3 + `pianoV4Enabled` rimossi ✅ commit `8f46576`
+- Magic Link residui rimossi ✅ commit `8f46576`
+- `console.log` rimossi (59) ✅ commit `8f46576` + hotfix `336805d`, `1c7b936`
+- Commento fuorviante N/4 ✅ commit `6973826`
+- Sistema audio unificato ✅ già implementato (nota errata in CLAUDE.md)
+- Timer recupero parallelo + form log nel modal recupero ✅ commit `6125812` — collaudo in corso
+- Beep avvio serie + unlock audio iOS ✅ commit `b37a543` — collaudo in corso
+- No countdown recupero dopo ultima serie ✅ commit `c9886f5`
+- Sessione non si chiude automaticamente dopo ultima serie → Tabata accessibile ✅ commit `abeae13`
+- `PULL_UP_EXERCISE_NAME` → `'Trazioni'` allineato al nome esatto in `esercizi_catalog` ✅ commit `e9f2b61`
+- Progressione Pump: mantieni reps invece di scendere con RIR 0 ✅ commit `6c4b55b`
+- Beep fine step warm-up specifico ✅ commit `b37a543`
+- Fix cache sticky `_pianoV4LoadRealPlanForWeek`: se `plan` non-null ma `mealsByDay` vuoto → retry dal DB ✅ commit `f7ca675` — verifica tester (Ginevra, Ornella, Isabella) in sospeso
+
+**Lezione emersa in questa sessione:**
+
+- Rimozione `console.log` solo manuale e chirurgica, mai con script automatico su file monolite — rischio alto di rompere log multi-riga e codice adiacente. (dettaglio completo: Lezione 11)
 
 ### 2026-06-10
 
@@ -178,6 +201,7 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Attrezzo per sessione (coach-driven)**~~ ✅ Implementato 9 giu 2026 (commit `e945aad`). `_TRAIN_GEN_EQ_PRIORITY` + `_trainGenPickEq` + `buildCoachPrompt` esteso. Rigenerare scheda per applicare.
 - ~~**Catalogo esercizi — revisione completa**~~ ✅ Completato 10 giu 2026. Tutti i 122 esercizi revisionati, colonne `esecuzione_surrogato`/`errori_surrogato` aggiunte e compilate per i 16 esercizi con surrogato.
 - **Salvataggio `giorni_allenamento` dall'app**: il campo non si salva correttamente dall'onboarding/impostazioni. Da investigare (regressione o bug storico).
+- **Cantiere "Doppio timer iso unilaterale"**: tutti gli esercizi con `perLato=true` e `kind=seconds` (es. Pallof press, esercizi warm-up unilaterali) devono avere flow: timer lato A → pausa 5s automatica → timer lato B → recupero → log. Da aprire dopo stabilizzazione fix attuali.
 
 ---
 
