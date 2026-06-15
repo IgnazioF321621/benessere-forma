@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.15 · 15:21';
+const APP_VERSION = '2026.06.15 · 15:29';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -20979,6 +20979,7 @@ function trainExecFinishSet(){
   const _nextSet = _doneCount + 1; // la serie che stiamo per loggare
   const _hasNextAfter = !!(_exDef && _exDef.sets && (_nextSet + 1) <= _exDef.sets);
   if(_hasNextAfter){
+    try{ _unlockAudio(); }catch(e2){}
     try{ playLongBeep(); }catch(e2){}
     const _restEx = findExercise(e.exName, e.sessionId);
     const _restSec = getRestSec(e.sessionId, _restEx);
@@ -21721,6 +21722,7 @@ function _warmupFlowTick(){
     try { playPrepBeep(); } catch(e){}
   }
   if(f.remaining <= 0){
+    try { playStopBeep(); } catch(e){}
     _warmupFlowAdvance();
   } else {
     renderTraining();
