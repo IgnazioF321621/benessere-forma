@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.16 · 16:24';
+const APP_VERSION = '2026.06.16 · 16:30';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11365,7 +11365,6 @@ function tickCountdown(){
     playStopBeep();
     setTimeout(()=>{
       if(ST.trainCountdown && ST.trainCountdown.beeped){
-        try{ playLongBeep(); }catch(e){}
         setTimeout(()=>{
           skipCountdown();
           scrollToActiveExercise();
