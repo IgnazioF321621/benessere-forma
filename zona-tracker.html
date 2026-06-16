@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.16 · 16:07';
+const APP_VERSION = '2026.06.16 · 16:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -20911,7 +20911,7 @@ function execTimerStart(targetSec){
   ST.trainExecTimer._iv = setInterval(()=>{
     if(!ST.trainExecTimer.running) return;
     if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
-    if(ST.trainExecTimer.remaining > 0 && ST.trainExecTimer.remaining <= 3){
+    if(ST.trainExecTimer.remaining > 0 && ST.trainExecTimer.remaining <= 5){
       try{ playPrepBeep(); }catch(e){}
     }
     const done = ST.trainExecTimer.remaining === 0;
@@ -21237,7 +21237,7 @@ function _activationFlowAdvance(){
 function _activationFlowTick(){
   if(!ST.trainActivationFlow.running) return;
   ST.trainActivationFlow.remaining = Math.max(0, ST.trainActivationFlow.remaining - 1);
-  if(ST.trainActivationFlow.remaining > 0 && ST.trainActivationFlow.remaining <= 3){
+  if(ST.trainActivationFlow.remaining > 0 && ST.trainActivationFlow.remaining <= 5){
     try{ playPrepBeep(); }catch(e){}
   }
   if(ST.trainActivationFlow.remaining <= 0){
@@ -21463,7 +21463,7 @@ function _recoveryFlowTick(){
   }
   // Branch B — countdown esercizio normale
   flow.remaining = Math.max(0, flow.remaining - 1);
-  if(flow.remaining > 0 && flow.remaining <= 3){
+  if(flow.remaining > 0 && flow.remaining <= 5){
     try{ playPrepBeep(); }catch(e){}
   }
   if(flow.remaining <= 0){
@@ -21634,8 +21634,8 @@ function _tabataFlowTick(){
   const f = ST.trainTabataFlow;
   if(!f || !f.running) return;
   f.remaining = Math.max(0, f.remaining - 1);
-  // Beep prep ultimi 3 secondi (alleggerito vs recovery che fa 5..1)
-  if(f.remaining > 0 && f.remaining <= 3){
+  // Beep prep ultimi 5 secondi
+  if(f.remaining > 0 && f.remaining <= 5){
     try { playPrepBeep(); } catch(e) {}
   }
   if(f.remaining <= 0){
