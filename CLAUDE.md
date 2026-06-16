@@ -138,6 +138,40 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Timer recupero parallelo + form log nel modal recupero**~~ ✅ commit `6125812` — collaudo in corso su device.
 - **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
 
+### 2026-06-16
+
+**Chiuso in questa sessione: Audit completo audio Training** ✅
+
+Definita e applicata la **regola audio unica** per tutto il modulo Training:
+- **LONG** (`playLongBeep`) → parte/riparte un timer di esecuzione
+- **Corti** (`playPrepBeep`) → ultimi **5 secondi** di ogni countdown, in ogni contesto
+- **STOP** (`playStopBeep`) → fine fase/lato/serie
+- **Pausa cambio lato iso (5s)** → silenzio totale (né corti né STOP)
+- **Avvio serie a ripetizioni** col tasto → silenzio
+
+**6 commit su `main`:**
+1. `920fcb9` — `execTimerStartPause`: rimossi i corti durante la pausa cambio lato iso → pausa muta
+2. `20ac4c6` — `_recoveryFlowAdvance`: rimosso il LONG di inizio micro-pausa (doppio col LONG di fine pausa)
+3. `07c4c63` — `_warmupFlowTick`: soglia corti pausa iso 3→0 (pausa muta) + guard `if isoPhase!=='pause'` sullo STOP
+4. `802a595` — corti uniformati 3→5s in `execTimerStart`, `_recoveryFlowTick`, `_activationFlowTick`, `_tabataFlowTick`
+5. `143ae74` — `tickCountdown`: a fine recupero rimosso LONG → resta solo STOP; skip+scroll automatici invariati
+6. `340c7c2` — rimossi i `playLongBeep` inline dai due pulsanti "Inizia S" (card esercizio + modal recupero) → avvio serie a rep silenzioso
+
+**Note tecniche:**
+- `_playActivationBeep` (5 bip 880Hz) resta solo come test sblocco audio iOS, non è segnale di allenamento
+- Il `<= 3` residuo in `_warmupFlowTick` è colore del display (`numColor`), NON audio → invariato
+- Pausa cambio lato iso confermata a 5s; nessun suono durante la pausa per scelta utente
+
+**Sequenze di riferimento fissate:**
+- **Iso unilaterale:** Avvia=LONG → SX: corti(5s)+STOP → pausa 5s muta → DX=LONG → corti(5s)+STOP → logger
+- **Recovery flow:** fine esercizio=STOP → micro-pausa muta → ripartenza=LONG → corti(5s)
+- **Warm-up iso:** SX: corti(5s)+STOP → pausa muta → DX=LONG → corti(5s)+STOP
+- **Recupero tra serie:** corti(5s) → a 0 solo STOP → chiusura+scroll silenzio → utente avvia manualmente
+
+**Collaudo pendente:** giovedì (sessione giorno 4) — verificare dal vivo transizione iso SX→pausa→DX, recupero tra serie, warm-up.
+
+---
+
 ### 2026-06-15
 
 **Chiuso in questa sessione:**
