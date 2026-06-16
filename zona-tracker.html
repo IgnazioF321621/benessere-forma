@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.16 · 15:49';
+const APP_VERSION = '2026.06.16 · 15:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -21443,7 +21443,6 @@ function _recoveryFlowAdvance(){
   flow.currentIdx = nextIdx;
   flow.remaining = next.duration_sec || 30;
   flow.microPause = { active:true, remaining:pauseSec, total:pauseSec, nextExName: next.name };
-  try{ playLongBeep(); }catch(e){}
   // running resta true → l'interval continua a ticchettare ma su microPause.remaining
   renderTraining();
 }
