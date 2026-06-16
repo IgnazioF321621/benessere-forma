@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.16 · 15:57';
+const APP_VERSION = '2026.06.16 · 16:07';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -21797,13 +21797,15 @@ function _warmupFlowTick(){
   const f = ST.trainWarmupFlow;
   if(!f || !f.running) return;
   f.remaining = Math.max(0, f.remaining - 1);
-  // Prep beep: ultimi 3s durante la pausa iso (5s totali), ultimi 5s negli altri casi
-  const _prepThreshold = (f.isoPhase === 'pause') ? 3 : 5;
+  // Prep beep: ultimi 5s durante work/rest; pausa iso = soglia 0 → silenzio
+  const _prepThreshold = (f.isoPhase === 'pause') ? 0 : 5;
   if(f.remaining > 0 && f.remaining <= _prepThreshold){
     try { playPrepBeep(); } catch(e){}
   }
   if(f.remaining <= 0){
-    try { playStopBeep(); } catch(e){}
+    if(f.isoPhase !== 'pause'){
+      try { playStopBeep(); } catch(e){}
+    }
     _warmupFlowAdvance();
   } else {
     renderTraining();
