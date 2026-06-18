@@ -138,6 +138,23 @@ https://github.com/IgnazioF321621/benessere-forma
 - ~~**Timer recupero parallelo + form log nel modal recupero**~~ ✅ commit `6125812` — collaudo in corso su device.
 - **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
 
+### 2026-06-18
+
+**Chiuso in questa sessione: FIX rotazione swap-aware** ✅ commit `c0287c9`
+
+**Causa**: i recuperi (`recoveryUpper`/`recoveryLower`) erano trattati come posizione fissa nel ciclo canonico → uno swap del giorno di recupero generava falsi "DA RECUPERARE" e "prossimo allenamento" errato.
+
+**Principio**: il recupero è **TRASPARENTE** alla rotazione — non avanza il fronte, non genera debito, non guida il prossimo.
+
+**Tre punti corretti, stessa radice:**
+1. `computeTrainingDebt`: skip recuperi nel loop (`isRecoverySid → continue`) — i recuperi non entrano nel calcolo del fronte né creano debito.
+2. `computeTrainingDebt`: ramo debt-clear ora avanza `pos = Wi` — chi paga il debito avanza il fronte, elimina debiti spuri al giro successivo.
+3. `computeTrainHomeData`: `nextSession` deriva dall'ultimo workout di LAVORO (`lastWorkout`, filtro `!/^recovery/i`); `doneToday`/`inProgress` restano su `lastAny` (il più recente, anche recupero) → un recupero completato oggi conta come "allenato oggi".
+
+**Nota Pump**: `upperC` conta come debito solo quando saltato davvero (es. Lower B → settimana successiva senza pump). Con il fix, un recupero intercalato tra Lower B e Upper Pump non genera più un debito fantasma sulla Pump.
+
+---
+
 ### 2026-06-16
 
 **Chiuso in questa sessione: Audit completo audio Training** ✅
