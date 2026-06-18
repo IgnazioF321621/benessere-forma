@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.16 · 16:35';
+const APP_VERSION = '2026.06.18 · 12:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6471,10 +6471,11 @@ async function computeTrainHomeData(){
       .eq('user_id', ST.user.id)
       .not('session_type', 'in', '(rest,rest_injury)');
     if(ST.profile && ST.profile.train_start_date) qLast = qLast.gte('date', ST.profile.train_start_date);
-    qLast = qLast.order('date', {ascending:false}).limit(1);
+    qLast = qLast.order('date', {ascending:false}).limit(10);
     const { data: lastArr, error: lastErr } = await qLast;
     if(lastErr) throw lastErr;
-    const lastWorkout = (lastArr && lastArr[0]) || null;
+    const lastAny = (lastArr && lastArr[0]) || null; // più recente, anche recupero
+    const lastWorkout = (lastArr || []).find(w => !/^recovery/i.test(w.session_type)) || null; // ultimo di LAVORO
 
     if(!lastWorkout){
       ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
@@ -6503,13 +6504,13 @@ async function computeTrainHomeData(){
       else break;
     }
 
-    const doneToday   = lastWorkout.date === today && lastWorkout.completed === true;
-    const inProgress  = lastWorkout.date === today && lastWorkout.completed === false;
+    const doneToday   = !!lastAny && lastAny.date === today && lastAny.completed === true;
+    const inProgress  = !!lastAny && lastAny.date === today && lastAny.completed === false;
 
     ST.trainHomeData = {
       notStarted: false,
-      lastDate: lastWorkout.date,
-      lastSession: lastWorkout.session_type,
+      lastDate: (lastAny || lastWorkout).date,
+      lastSession: (lastAny || lastWorkout).session_type,
       nextSession,
       streak,
       doneToday,
@@ -7676,11 +7677,12 @@ function computeTrainingDebt(){
   };
   let pos = -1; // indice ciclo del "fronte" raggiunto
   for(const w of all){
+    if(isRecoverySid(w.session_type)) continue; // recupero trasparente alla rotazione
     const Wi = cycle.indexOf(w.session_type);
     if(Wi === -1) continue;                 // tipo non nel ciclo → ignora
     if(pos === -1){ pos = Wi; continue; }    // primo workout valido = fronte iniziale
-    // Recupero del debito: questo tipo era in debito → azzeralo. NON toccare pos (niente debiti spuri da wrap).
-    if(debt.has(w.session_type)){ debt.delete(w.session_type); continue; }
+    // Recupero del debito: questo tipo era in debito → azzeralo e avanza il fronte.
+    if(debt.has(w.session_type)){ debt.delete(w.session_type); pos = Wi; continue; }
     const forward = (Wi - pos + len) % len;
     if(forward === 1 || forward === 0){
       pos = Wi;                              // sequenziale o stesso tipo ripetuto
