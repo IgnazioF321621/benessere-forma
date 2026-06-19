@@ -44,7 +44,7 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Debiti tecnici noti**:
 - Integratori v3 (`// [LEGACY-INTEGRATORI-V3]`) — cleanup separato, non ancora fatto.
-- **GIF esercizi nel modal recupero**: il toggle "▶ Mostra esecuzione" era presente ma il placeholder è ora nel mockup approvato — cantiere separato da aprire dopo collaudo del flow timer+form (commit `6125812`).
+- ~~**GIF esercizi nel modal recupero**~~ ✅ implementato (commit `f536db8`, 19 giu 2026): Worker `zona-ai` migrato su nuovo account Cloudflare (`ignazio-f`), mappa `MATCH_BY_CODE` 39 esercizi, `fetchExerciseMedia(exName, exCode)` + `ensureRestGif(exName, exCode)` aggiornati. **PROSSIMO CANTIERE**: mappa muscolare per i nuovi esercizi EX031–EX132 (da PNG per gruppo → selezione automatica via `muscoli` nel catalogo).
 - ~~**Bug cache sticky `mealsByDay={}`**~~ ✅ fixato (commit `f7ca675`, 13 giu 2026): aggiunto path di retry in `_pianoV4LoadRealPlanForWeek` quando `plan` non-null ma `mealsByDay` vuoto. Verifica tester (Ginevra, Ornella, Isabella) in sospeso.
 
 ---
@@ -136,7 +136,18 @@ https://github.com/IgnazioF321621/benessere-forma
 
 **Cantiere aperto (collaudo in attesa):**
 - ~~**Timer recupero parallelo + form log nel modal recupero**~~ ✅ commit `6125812` — collaudo in corso su device.
-- **GIF esercizi nel modal recupero**: placeholder già nel mockup approvato. Cantiere separato da aprire dopo collaudo del flow `6125812`.
+- ~~**GIF esercizi nel modal recupero**~~ ✅ commit `f536db8` (19 giu 2026) — Worker migrato + MATCH_BY_CODE 39 voci + app aggiornata.
+
+### 2026-06-19
+
+**Chiuso in questa sessione: GIF esercizi + migrazione Worker** ✅ commit `d466fc5` (Worker) + `0eca52c` (WORKER_URL) + `f536db8` (app)
+
+- **Migrazione Worker Cloudflare**: account `ignaziof23` → `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Nuovo URL: `https://zona-ai.ignazio-f.workers.dev`. Secrets (`SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`) reinseriti. `wrangler.toml` aggiornato.
+- **Mappa `MATCH_BY_CODE`** (39 voci, commit `d466fc5`): endpoint Worker ora accetta `?code=EX###` (priorità) e usa cache KV indicizzata per codice. 6 esercizi esclusi (nessuna GIF adatta): EX021/EX030/EX034/EX036/EX051/EX053.
+- **App aggiornata** (commit `f536db8`): `WORKER_URL` + `fetchExerciseMedia(exName, exCode)` + `ensureRestGif(exName, exCode)` + `startTrainingCountdown` + `openTrainExec` + render modal recupero/esecuzione.
+- **Stato**: GIF funzionanti per 39 esercizi (MATCH_BY_CODE) + 20 storici (legacy name-lookup). Mappa muscolare EX031–EX132 = PROSSIMO CANTIERE.
+
+---
 
 ### 2026-06-18
 
@@ -294,7 +305,7 @@ Messaggio WhatsApp inviato 11 mag 2026 a Ginevra e Isabella per riattivazione co
 
 | Servizio | URL | Scopo |
 |---|---|---|
-| Cloudflare Worker | `zona-ai.ignaziof23.workers.dev` | Proxy verso Groq API (llama-3.3-70b-versatile) |
+| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy verso Groq API (llama-3.3-70b-versatile) + lookup GIF esercizi (ExerciseDB) |
 | Supabase | `https://qxiyeiahpoiliwpqslpr.supabase.co` | Database + Auth |
 
 ### Free tier limits dei servizi usati (verificati maggio 2026)
@@ -822,7 +833,7 @@ I seguenti campi M1 sono raccolti ma attualmente serializzati come testo libero 
   - Log serie inline per ogni esercizio: reps + resistenza + RIR → salva su `training_logs`
   - Badge S1/S2/... su card dopo il log, ✓ DONE quando tutte le serie completate
   - Info icon ⓘ su badge RIR (→ `showInfoModal('rir')`) e su serie (→ `showInfoModal('serie')`)
-  - Modal recupero: countdown parte subito al tap "Fine serie" (parallelo al form log); form `tl-reps`/`tl-rir`/`tl-resist` integrato nel corpo del modal (commit `6125812`); post-salvataggio mostra eyebrow "Serie N salvata ✓" + card APPENA FATTA/PROSSIMA. GIF esecuzione: cantiere separato in attesa collaudo.
+  - Modal recupero: countdown parte subito al tap "Fine serie" (parallelo al form log); form `tl-reps`/`tl-rir`/`tl-resist` integrato nel corpo del modal (commit `6125812`); post-salvataggio mostra eyebrow "Serie N salvata ✓" + card APPENA FATTA/PROSSIMA. GIF esecuzione: ✅ funzionante via `ensureRestGif(exName, exCode)` + Worker `MATCH_BY_CODE` (commit `f536db8`, 19 giu 2026). ❌ GIF nel modal informativo pre-serie (scheda esercizio AI): non mostrata → da decidere se aggiungerla.
 - **Programma** (label tab rinominato 8 maggio 2026, id `piano` per back-compat):
   - Split settimanale con giorni numerici G1–G6 (rotazione 6 giorni, dopo G6 → G1)
   - Ciclo 4 settimane (CARICO × 3 + SCARICO × 1). Settimana corrente calcolata su workout completati (1 settimana = 6 workout veri, riposi esclusi)
@@ -1011,6 +1022,44 @@ Tutti i 20 esercizi training sono mappati (i 3 esercizi di Active Recovery non h
 - Alcuni `executionImg` puntano a varianti `*-esecuzione-1.png` (esistono `-1` e `-2` da combinare in un'unica immagine senza suffisso)
 - `Chest press in piedi con elastico.muscleImg` riusa `chest-press-orizzontale-muscoli.png` come fallback (file `chest-press-in-piedi-muscoli.png` da generare)
 - `Hip thrust con elastico TUT alto` riusa il `muscleImg` di `Hip thrust con elastico` (stesso muscolo)
+
+### Media system — GIF esercizi (19 giugno 2026)
+
+Sistema di lookup GIF via Cloudflare Worker + ExerciseDB. Implementato in commit `d466fc5` (Worker) + `f536db8` (app).
+
+**Worker Cloudflare `zona-ai`**
+- **Account migrato** il 19 giu 2026: da account `ignaziof23` → account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`, email `ignazio.f@me.com`).
+- **Nuovo URL**: `https://zona-ai.ignazio-f.workers.dev` (vecchio `zona-ai.ignaziof23.workers.dev` non più accessibile).
+- `worker/wrangler.toml`: `account_id` aggiornato. Secrets reinseriti: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`.
+- Endpoint dual-mode:
+  - `?code=EX###` — priorità, usa `MATCH_BY_CODE` (39 voci codice → exerciseId ExerciseDB)
+  - `?name=...` — legacy, 20 esercizi storici (Upper A/B, Lower A/B hardcoded)
+- Cache su KV indicizzata per codice (chiave = codice stesso, es. `"EX055"`).
+
+**Mappa `MATCH_BY_CODE` (39 esercizi, commit `d466fc5`)**
+39 esercizi del catalogo `esercizi_catalog` mappati su exerciseId di ExerciseDB.  
+6 esercizi esclusi volutamente (nessuna GIF adatta): EX021 Plank · EX030 Band pull-apart · EX034 Pike push-up · EX036 Bird dog · EX051 Squat a corpo libero · EX053 Shadow boxing.
+
+**App `zona-tracker.html` (commit `f536db8`)**
+- `WORKER_URL` aggiornata a `https://zona-ai.ignazio-f.workers.dev`.
+- `fetchExerciseMedia(exName, exCode)` — se `exCode` presente invia `?code=EX###`, altrimenti `?name=...` (legacy).
+- `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`. Chiamata da:
+  - `startTrainingCountdown` (risolve `codice` via `findExercise`, lo passa)
+  - `openTrainExec` (aggiunge `codice` a `ST.trainExecOpen`)
+- Render modal recupero e schermata esecuzione usano `exCode || exName` come cache key.
+
+**Stato copertura**
+| Tipo media | Stato | Copertura |
+|---|---|---|
+| GIF nel modal recupero | ✅ funzionante | 39 via `MATCH_BY_CODE` + 20 storici legacy |
+| Mappa muscolare (PNG Wger) | ✅ funzionante | 19 esercizi storici in `assets/exercises/` |
+| Mappa muscolare nuovi esercizi (EX031–EX132) | ❌ mancante | **PROSSIMO CANTIERE** (vedi sotto) |
+| GIF nel modal informativo pre-serie (scheda esercizio AI) | ❌ non mostrata | da decidere se aggiungere |
+
+**Prossimo cantiere: mappa muscolare per EX031–EX132**
+- Il catalogo `esercizi_catalog` ha già il campo `muscoli` per ogni esercizio.
+- Strategia A: set di ~15-20 PNG per gruppo muscolare (Wger esistenti o nuovi), selezionati in automatico leggendo i muscoli dal catalogo. Niente file per singolo esercizio.
+- Strategia B (da valutare): API Muscle Visualizer di ExerciseDB — dinamica, no file locali, ma richiede lookup online.
 
 ### Scheda esercizio AI — `openExerciseAI(exName, sessionId)` (3 maggio 2026)
 
@@ -1873,7 +1922,7 @@ Finché non esistono le colonne `esecuzione_surrogato`/`errori_surrogato` nel ca
 | `markRestInjury()` | Segna riposo per infortunio + nota zona corpo (`workouts.session_type='rest_injury'`, `note=...`) (8 mag 2026) |
 | `scrollToActiveExercise()` | Scrolla card primo esercizio non completato al centro (8 mag 2026) |
 | `restSecToText(sec)` | Format recupero in stringa: 60→'1 min', 75→'75 sec', 120→'2 min' |
-| `ensureRestGif(exName)` | Pre-fetch silenzioso GIF esecuzione per modal recupero (toggle on-demand, cache `ST.exerciseGifCache`) (9 mag 2026) |
+| `ensureRestGif(exName, exCode?)` | Pre-fetch silenzioso GIF esecuzione per modal recupero (cache key = `exCode \|\| exName`). Se `exCode` presente usa `?code=EX###` al Worker. (9 mag 2026, aggiornato 19 giu 2026) |
 | `toggleRestGif()` | Apre/chiude blocco GIF esecuzione nel modal recupero (9 mag 2026) |
 | `findExInAllSessions(exName)` | Cerca esercizio per nome in tutte le `TRAINING_SESSIONS`, ritorna `{ex, sess}` o null (9 mag 2026) |
 | `isTimedExerciseByName(exName)` | True se esercizio è `iso:true` con reps in formato secondi (9 mag 2026) |
@@ -2005,15 +2054,18 @@ Lavoro rimasto dopo le 4 fasi di design (A/B/C/D). Ordinato per area, non per pr
 - [ ] Asset `assets/muscles/face-pull.jpg` da aggiungere manualmente (legacy — sostituito dal nuovo sistema `assets/exercises/`)
 - [ ] **Pannello admin** (gestione utenti, assegnazione programmi)
 - [ ] Fix backfill macro integratori vecchi
-- [ ] GIF esercizi nel modal recupero — cantiere separato, da aprire dopo collaudo commit `6125812`
+- [x] GIF esercizi nel modal recupero ✅ commit `f536db8` (19 giu 2026) — Worker migrato + MATCH_BY_CODE 39 esercizi + app aggiornata
+- [ ] Mappa muscolare per nuovi esercizi EX031–EX132 — PROSSIMO CANTIERE (vedi sezione "Media system")
 - [ ] **FASE 2 Programmi multipli archiviati** (predisposto in dropdown Progressione 9 maggio 2026): tabella `programs` Supabase, colonna `program_id` su workouts, UI chiusura programma, popolare sezione "PROGRAMMI PASSATI" del dropdown con lista collassabile, filtro grafico per periodo programma. Vedi commento HTML inline nel codice (cerca "TODO FASE 2 — gestione programmi multipli")
 - [x] Pulizia residui Magic Link — ✅ commit `8f46576` (12 giu 2026)
 
 ### Possibili evoluzioni future modulo Training
 
+- **Mappa muscolare EX031–EX132**: set ~15-20 PNG per gruppo muscolare (Wger + nuovi) selezionati automaticamente dal campo `muscoli` del catalogo. Alternativa: API Muscle Visualizer ExerciseDB (dinamica, no file locali). — **PROSSIMO CANTIERE** (vedi sezione "Media system")
 - Immagini esecuzione per i 9 esercizi senza foto: valutare AI generation via Cloudflare Workers AI (free tier 10.000 Neurons/giorno) + cache su Supabase Storage
 - Hip thrust TUT alto e Single leg RDL: nessun match dataset esterni, restano `EXERCISE_MEDIA` fallback
 - Rivedere immagini Wger per varianti laterale/posteriore (oggi solo frontali)
+- GIF nel modal informativo pre-serie (scheda esercizio AI): non mostrata — da decidere se aggiungere
 
 ## MODULO TRAINING — REGOLE DEL COACH & DECISIONI
 *Fonte: sessione design 24 maggio 2026. Diviso in: Parte 1 = regole che il coach AI userà per generare i programmi; Parte 2 = decisioni di prodotto.*
