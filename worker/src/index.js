@@ -2,6 +2,8 @@
 // Routes:
 //   POST /                 -> proxy Groq (compat backwards: tutto il traffico esistente)
 //   GET  /exercise-media   -> lookup cache Supabase + auto-fill da ExerciseDB
+//                            params: ?name=<nome_italiano>  (20 storici)
+//                                    ?code=<EX###>          (39 nuovi, catalogo)
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const STORAGE_BUCKET = 'exercise-media';
@@ -12,10 +14,9 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Match approvati esercizio-per-esercizio da Ignazio.
+// Match approvati esercizio-per-esercizio da Ignazio — lookup per NOME (20 storici).
 // Storage layout: cached_url punta a {edbId}.gif (1 GIF per exerciseId, riuso fra
 // piu' nomi italiani che mappano allo stesso esercizio ExerciseDB).
-// Per aggiungere un esercizio: append qui dopo conferma manuale.
 const MATCH_DATA = {
   'Trazioni alla sbarra': {
     edbId: 'lBDjFxJ',
@@ -199,6 +200,54 @@ const MATCH_DATA = {
   },
 };
 
+// Match approvati per CODICE catalogo (EX###). 39 voci — lookup via ?code=EX###.
+// DB key = il codice stesso (exercise_name_it = 'EX001' ecc.), no collisione con nomi italiani.
+// GIF Storage path = {edbId}.gif (riuso trasparente se lo stesso edbId e' gia' in cache).
+// Esercizi deliberatamente senza GIF (risposta 'missing'):
+//   EX021 Plank, EX030 Band pull apart, EX034 Pike push-up,
+//   EX036 Bird dog, EX051 Squat a corpo libero, EX053 Shadow boxing.
+const MATCH_BY_CODE = {
+  'EX001': { edbId: '4x5Okof',  gifUrl: 'https://static.exercisedb.dev/media/4x5Okof.gif',  isSurrogate: false, surrogateNote: null },
+  'EX002': { edbId: 'EIeI8Vf',  gifUrl: 'https://static.exercisedb.dev/media/EIeI8Vf.gif',  isSurrogate: false, surrogateNote: null },
+  'EX003': { edbId: '7E06s6d',  gifUrl: 'https://static.exercisedb.dev/media/7E06s6d.gif',  isSurrogate: true,  surrogateNote: "Nella GIF c'è un tocco al petto: tu fai il push-up normale, senza toccare." },
+  'EX006': { edbId: 'A6wtbuL',  gifUrl: 'https://static.exercisedb.dev/media/A6wtbuL.gif',  isSurrogate: false, surrogateNote: null },
+  'EX008': { edbId: '0V2YQjW',  gifUrl: 'https://static.exercisedb.dev/media/0V2YQjW.gif',  isSurrogate: false, surrogateNote: null },
+  'EX009': { edbId: '4c9BhzB',  gifUrl: 'https://static.exercisedb.dev/media/4c9BhzB.gif',  isSurrogate: false, surrogateNote: null },
+  'EX011': { edbId: 'BJ0Hz5L',  gifUrl: 'https://static.exercisedb.dev/media/BJ0Hz5L.gif',  isSurrogate: false, surrogateNote: null },
+  'EX013': { edbId: 'DhMl549',  gifUrl: 'https://static.exercisedb.dev/media/DhMl549.gif',  isSurrogate: false, surrogateNote: null },
+  'EX015': { edbId: 'IZVHb27',  gifUrl: 'https://static.exercisedb.dev/media/IZVHb27.gif',  isSurrogate: false, surrogateNote: null },
+  'EX016': { edbId: '10Z2DXU',  gifUrl: 'https://static.exercisedb.dev/media/10Z2DXU.gif',  isSurrogate: false, surrogateNote: null },
+  'EX017': { edbId: 'qKBpF7I',  gifUrl: 'https://static.exercisedb.dev/media/qKBpF7I.gif',  isSurrogate: false, surrogateNote: null },
+  'EX018': { edbId: 'wQ2c4XD',  gifUrl: 'https://static.exercisedb.dev/media/wQ2c4XD.gif',  isSurrogate: false, surrogateNote: null },
+  'EX022': { edbId: 'iny3m5y',  gifUrl: 'https://static.exercisedb.dev/media/iny3m5y.gif',  isSurrogate: false, surrogateNote: null },
+  'EX023': { edbId: '9pa4H5m',  gifUrl: 'https://static.exercisedb.dev/media/9pa4H5m.gif',  isSurrogate: false, surrogateNote: null },
+  'EX024': { edbId: 'NbVPDMW',  gifUrl: 'https://static.exercisedb.dev/media/NbVPDMW.gif',  isSurrogate: false, surrogateNote: null },
+  'EX026': { edbId: 'gAwDzB3',  gifUrl: 'https://static.exercisedb.dev/media/gAwDzB3.gif',  isSurrogate: false, surrogateNote: null },
+  'EX028': { edbId: 'bJYHBIN',  gifUrl: 'https://static.exercisedb.dev/media/bJYHBIN.gif',  isSurrogate: false, surrogateNote: null },
+  'EX031': { edbId: 'RJgzwny',  gifUrl: 'https://static.exercisedb.dev/media/RJgzwny.gif',  isSurrogate: false, surrogateNote: null },
+  'EX037': { edbId: '5VXmnV5',  gifUrl: 'https://static.exercisedb.dev/media/5VXmnV5.gif',  isSurrogate: false, surrogateNote: null },
+  'EX041': { edbId: 'aXtJhlg',  gifUrl: 'https://static.exercisedb.dev/media/aXtJhlg.gif',  isSurrogate: false, surrogateNote: null },
+  'EX043': { edbId: 'GOJKFfO',  gifUrl: 'https://static.exercisedb.dev/media/GOJKFfO.gif',  isSurrogate: false, surrogateNote: null },
+  'EX047': { edbId: '9E25EOx',  gifUrl: 'https://static.exercisedb.dev/media/9E25EOx.gif',  isSurrogate: true,  surrogateNote: "Nella GIF il piede posteriore è a terra; tu lo tieni rialzato su una panca (Bulgarian)." },
+  'EX048': { edbId: '1g5bPpA',  gifUrl: 'https://static.exercisedb.dev/media/1g5bPpA.gif',  isSurrogate: false, surrogateNote: null },
+  'EX049': { edbId: 'ealLwvX',  gifUrl: 'https://static.exercisedb.dev/media/ealLwvX.gif',  isSurrogate: false, surrogateNote: null },
+  'EX050': { edbId: 'zfNHMN9',  gifUrl: 'https://static.exercisedb.dev/media/zfNHMN9.gif',  isSurrogate: false, surrogateNote: null },
+  'EX052': { edbId: 'kMzUs9Y',  gifUrl: 'https://static.exercisedb.dev/media/kMzUs9Y.gif',  isSurrogate: false, surrogateNote: null },
+  'EX054': { edbId: 'dK9394r',  gifUrl: 'https://static.exercisedb.dev/media/dK9394r.gif',  isSurrogate: false, surrogateNote: null },
+  'EX055': { edbId: 'DsgkuIt',  gifUrl: 'https://static.exercisedb.dev/media/DsgkuIt.gif',  isSurrogate: false, surrogateNote: null },
+  'EX057': { edbId: 'fTlkJop',  gifUrl: 'https://static.exercisedb.dev/media/fTlkJop.gif',  isSurrogate: false, surrogateNote: null },
+  'EX059': { edbId: 'EAs3xL9',  gifUrl: 'https://static.exercisedb.dev/media/EAs3xL9.gif',  isSurrogate: false, surrogateNote: null },
+  'EX061': { edbId: 'hacCyUv',  gifUrl: 'https://static.exercisedb.dev/media/hacCyUv.gif',  isSurrogate: false, surrogateNote: null },
+  'EX062': { edbId: 'en550rk',  gifUrl: 'https://static.exercisedb.dev/media/en550rk.gif',  isSurrogate: false, surrogateNote: null },
+  'EX064': { edbId: 'C5jncD2',  gifUrl: 'https://static.exercisedb.dev/media/C5jncD2.gif',  isSurrogate: false, surrogateNote: null },
+  'EX066': { edbId: '9JprnPh',  gifUrl: 'https://static.exercisedb.dev/media/9JprnPh.gif',  isSurrogate: false, surrogateNote: null },
+  'EX098': { edbId: 'P9ZRyLT',  gifUrl: 'https://static.exercisedb.dev/media/P9ZRyLT.gif',  isSurrogate: false, surrogateNote: null },
+  'EX101': { edbId: 'x306lCW',  gifUrl: 'https://static.exercisedb.dev/media/x306lCW.gif',  isSurrogate: false, surrogateNote: null },
+  'EX117': { edbId: 'DFGXwZr',  gifUrl: 'https://static.exercisedb.dev/media/DFGXwZr.gif',  isSurrogate: false, surrogateNote: null },
+  'EX119': { edbId: '7WaDzyL',  gifUrl: 'https://static.exercisedb.dev/media/7WaDzyL.gif',  isSurrogate: false, surrogateNote: null },
+  'EX120': { edbId: 'K9VL0Jq',  gifUrl: 'https://static.exercisedb.dev/media/K9VL0Jq.gif',  isSurrogate: false, surrogateNote: null },
+};
+
 function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
     status,
@@ -275,6 +324,92 @@ async function storageObjectExists(publicUrl) {
   return r.ok;
 }
 
+// Logica condivisa per name-lookup e code-lookup.
+// key  = exercise_name_it usato come chiave DB (nome italiano oppure codice EX###)
+// match = { edbId, gifUrl, isSurrogate, surrogateNote }
+async function handleMediaLookup(env, key, match) {
+  // 1) DB cache: fast-path SOLO se stato 'cached' E exercisedb_id allineato al match
+  //    corrente (se il match cambia edbId, la riga va riprocessata).
+  //    Metadata sync: se is_surrogate o surrogate_note in DB differiscono, PATCH soli quei
+  //    campi (no re-download). Cosi cambi di nota/flag si propagano da soli.
+  const existing = await supabaseSelectByName(env, key);
+  if (existing && existing.status === 'cached' && existing.exercisedb_id === match.edbId) {
+    const matchSurrogate = !!match.isSurrogate;
+    const matchNote = match.surrogateNote ?? null;
+    const dbSurrogate = !!existing.is_surrogate;
+    const dbNote = existing.surrogate_note ?? null;
+    const metaDrift = (dbSurrogate !== matchSurrogate) || (dbNote !== matchNote);
+
+    let row = existing;
+    let metaSynced = false;
+    if (metaDrift) {
+      row = await supabasePatchByName(env, key, {
+        is_surrogate: matchSurrogate,
+        surrogate_note: matchNote,
+        last_updated: new Date().toISOString(),
+      });
+      metaSynced = true;
+    }
+
+    return jsonResponse({
+      status: 'cached',
+      cached_url: row.cached_url,
+      is_surrogate: row.is_surrogate ?? false,
+      surrogate_note: row.surrogate_note ?? null,
+      source: row.source ?? 'exercisedb',
+      from_cache: true,
+      meta_synced: metaSynced,
+    });
+  }
+  // existing null / status non-cached / exercisedb_id mismatch -> riprocessa (overwrite)
+
+  // 2) Storage path = {edbId}.gif (riuso fra piu' chiavi che mappano allo stesso edbId)
+  const storagePath = `${match.edbId}.gif`;
+  const cachedUrl = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${storagePath}`;
+
+  // 3) HEAD check: se la GIF e' gia' su Storage (caricata da mapping precedente),
+  //    salta download da ExerciseDB e upload.
+  const reusedExisting = await storageObjectExists(cachedUrl);
+
+  let bytesUploaded = null;
+  if (!reusedExisting) {
+    const gifResp = await fetch(match.gifUrl);
+    if (!gifResp.ok) {
+      return jsonResponse({
+        error: 'GIF download failed',
+        gifUrl: match.gifUrl,
+        status: gifResp.status,
+      }, 502);
+    }
+    const gifBuffer = await gifResp.arrayBuffer();
+    bytesUploaded = gifBuffer.byteLength;
+    await uploadToStorage(env, storagePath, gifBuffer, 'image/gif');
+  }
+
+  // 4) Upsert riga DB (cached_url punta sempre a {edbId}.gif)
+  const inserted = await supabaseUpsertRow(env, {
+    exercise_name_it: key,
+    exercisedb_id: match.edbId,
+    cached_url: cachedUrl,
+    status: 'cached',
+    is_surrogate: match.isSurrogate ?? false,
+    surrogate_note: match.surrogateNote ?? null,
+    source: 'exercisedb',
+  });
+
+  return jsonResponse({
+    status: 'cached',
+    cached_url: cachedUrl,
+    is_surrogate: match.isSurrogate ?? false,
+    surrogate_note: match.surrogateNote ?? null,
+    exercisedb_id: match.edbId,
+    gif_size_bytes: bytesUploaded,
+    reused_existing_file: reusedExisting,
+    from_cache: false,
+    db_row: inserted,
+  });
+}
+
 async function handleExerciseMedia(request, env) {
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: CORS });
@@ -284,103 +419,34 @@ async function handleExerciseMedia(request, env) {
   }
 
   const url = new URL(request.url);
+  const code = url.searchParams.get('code');
   const name = url.searchParams.get('name');
-  if (!name) return jsonResponse({ error: 'Missing query param: name' }, 400);
+
+  if (!code && !name) {
+    return jsonResponse({ error: 'Missing query param: name or code' }, 400);
+  }
 
   if (!env.SUPABASE_SERVICE_ROLE_KEY) {
     return jsonResponse({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }, 500);
   }
 
   try {
-    // 1) MATCH_DATA = source of truth. Nessuna approvazione manuale = missing
-    //    (NIENTE insert speculativo in DB: cosi se in futuro aggiungiamo il match,
-    //     la riga viene scritta solo come 'cached' al primo trigger).
+    // --- Lookup per CODICE (EX###) ---
+    if (code) {
+      const match = MATCH_BY_CODE[code];
+      if (!match) {
+        return jsonResponse({ status: 'missing', message: 'No approved match for this code yet' });
+      }
+      // Il codice stesso e' la chiave DB (exercise_name_it = 'EX001' ecc.)
+      return await handleMediaLookup(env, code, match);
+    }
+
+    // --- Lookup per NOME (20 storici, comportamento invariato) ---
     const match = MATCH_DATA[name];
     if (!match) {
       return jsonResponse({ status: 'missing', message: 'No approved match for this name yet' });
     }
-
-    // 2) DB cache: fast-path SOLO se stato 'cached' E exercisedb_id allineato al match
-    //    corrente (se MATCH_DATA cambia edbId, la riga va riprocessata).
-    //    Metadata sync: se is_surrogate o surrogate_note in DB differiscono da MATCH_DATA,
-    //    PATCH soli quei campi (no re-download). Cosi cambi di nota/flag si propagano da soli.
-    const existing = await supabaseSelectByName(env, name);
-    if (existing && existing.status === 'cached' && existing.exercisedb_id === match.edbId) {
-      const matchSurrogate = !!match.isSurrogate;
-      const matchNote = match.surrogateNote ?? null;
-      const dbSurrogate = !!existing.is_surrogate;
-      const dbNote = existing.surrogate_note ?? null;
-      const metaDrift = (dbSurrogate !== matchSurrogate) || (dbNote !== matchNote);
-
-      let row = existing;
-      let metaSynced = false;
-      if (metaDrift) {
-        row = await supabasePatchByName(env, name, {
-          is_surrogate: matchSurrogate,
-          surrogate_note: matchNote,
-          last_updated: new Date().toISOString(),
-        });
-        metaSynced = true;
-      }
-
-      return jsonResponse({
-        status: 'cached',
-        cached_url: row.cached_url,
-        is_surrogate: row.is_surrogate ?? false,
-        surrogate_note: row.surrogate_note ?? null,
-        source: row.source ?? 'exercisedb',
-        from_cache: true,
-        meta_synced: metaSynced,
-      });
-    }
-    // existing null / status non-cached / exercisedb_id mismatch -> riprocessa (overwrite)
-
-    // 3) Storage path = {edbId}.gif (riuso fra nomi italiani con stesso esercizio EDB)
-    const storagePath = `${match.edbId}.gif`;
-    const cachedUrl = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${storagePath}`;
-
-    // 4) HEAD check: se la GIF e' gia' su Storage (caricata da una mapping precedente),
-    //    saltiamo download da ExerciseDB e upload.
-    const reusedExisting = await storageObjectExists(cachedUrl);
-
-    let bytesUploaded = null;
-    if (!reusedExisting) {
-      const gifResp = await fetch(match.gifUrl);
-      if (!gifResp.ok) {
-        return jsonResponse({
-          error: 'GIF download failed',
-          gifUrl: match.gifUrl,
-          status: gifResp.status,
-        }, 502);
-      }
-      const gifBuffer = await gifResp.arrayBuffer();
-      bytesUploaded = gifBuffer.byteLength;
-      await uploadToStorage(env, storagePath, gifBuffer, 'image/gif');
-    }
-
-    // 5) Upsert riga DB (cached_url punta sempre a {edbId}.gif)
-    const inserted = await supabaseUpsertRow(env, {
-      exercise_name_it: name,
-      exercisedb_id: match.edbId,
-      cached_url: cachedUrl,
-      status: 'cached',
-      is_surrogate: match.isSurrogate ?? false,
-      surrogate_note: match.surrogateNote ?? null,
-      source: 'exercisedb',
-    });
-
-    return jsonResponse({
-      status: 'cached',
-      cached_url: cachedUrl,
-      is_surrogate: match.isSurrogate ?? false,
-      surrogate_note: match.surrogateNote ?? null,
-      exercisedb_match: match.edbName,
-      exercisedb_id: match.edbId,
-      gif_size_bytes: bytesUploaded,
-      reused_existing_file: reusedExisting,
-      from_cache: false,
-      db_row: inserted,
-    });
+    return await handleMediaLookup(env, name, match);
   } catch (e) {
     return jsonResponse({ error: e.message }, 500);
   }
