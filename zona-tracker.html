@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.19 · 11:59';
+const APP_VERSION = '2026.06.19 · 12:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4613,9 +4613,11 @@ async function callAI(prompt, maxTokens=400) {
 // fetchExerciseMedia — query Worker per cache/lookup GIF esecuzione esercizio.
 // Ritorna {status, cached_url?, is_surrogate?, surrogate_note?, ...} oppure
 // {status:'error'} se network/HTTP fallisce. Mai throw — sempre fallback safe.
-async function fetchExerciseMedia(exName) {
+async function fetchExerciseMedia(exName, exCode) {
   try {
-    const url = `${WORKER_URL}/exercise-media?name=${encodeURIComponent(exName)}`;
+    const url = exCode
+      ? `${WORKER_URL}/exercise-media?code=${encodeURIComponent(exCode)}`
+      : `${WORKER_URL}/exercise-media?name=${encodeURIComponent(exName)}`;
     const r = await fetch(url);
     if (!r.ok) return { status: 'error' };
     return await r.json();
@@ -11272,6 +11274,8 @@ function playLongBeep(){
 function startTrainingCountdown(seconds, exName, sessionId){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
   const endTime = Date.now() + seconds * 1000;
+  const _gifExDef = findExercise(exName, sessionId);
+  const _gifCode = _gifExDef?.codice || null;
   ST.trainCountdown = {
     seconds,                  // intero corrente per il display (in secondi)
     total: seconds,           // durata iniziale (legacy, per back-compat)
@@ -11280,6 +11284,7 @@ function startTrainingCountdown(seconds, exName, sessionId){
     prepBeeped: {},           // { 5:true, 4:true, ... } anti-doppio prep beep
     endTime,                  // ms timestamp di scadenza — sorgente di verità
     exName,                   // esercizio current per render Esecuzione/Errori/Alert
+    exCode: _gifCode,         // codice catalogo (EX###) per lookup GIF via ?code=
     sessionId,                // sessione corrente (per buildCoachPrompt)
     gifOpen: false,           // toggle GIF esecuzione nel modal recupero (default chiuso)
   };
@@ -11289,7 +11294,7 @@ function startTrainingCountdown(seconds, exName, sessionId){
   }
   ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
   ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
-  ensureRestGif(exName);             // pre-fetch URL GIF in background (no-op se gia in cache)
+  ensureRestGif(exName, _gifCode);   // pre-fetch GIF; usa ?code= se disponibile
 }
 
 // Garantisce che ST.aiCue[`${sessionId}_${exName}`] sia popolato. Se gia presente: no-op.
@@ -11322,18 +11327,19 @@ async function ensureRestCue(exName, sessionId) {
 // Pre-fetch silenzioso GIF esecuzione: popola ST.exerciseGifCache[exName] con {url, status}.
 // Chiamata da startTrainingCountdown. No-op se gia' fetched (anche status='missing'/'error').
 // Re-render del modal recupero solo se l'utente e' ancora sull'esercizio quando arriva la risposta.
-async function ensureRestGif(exName) {
+async function ensureRestGif(exName, exCode) {
   if (!exName) return;
-  if (ST.exerciseGifCache[exName]) return; // gia' fetched
-  ST.exerciseGifCache[exName] = { url: null, status: 'loading' };
+  const cacheKey = exCode || exName;
+  if (ST.exerciseGifCache[cacheKey]) return; // gia' fetched
+  ST.exerciseGifCache[cacheKey] = { url: null, status: 'loading' };
   try {
-    const m = await fetchExerciseMedia(exName);
-    ST.exerciseGifCache[exName] = {
+    const m = await fetchExerciseMedia(exName, exCode);
+    ST.exerciseGifCache[cacheKey] = {
       url: m.cached_url || null,
       status: m.status || 'missing'
     };
   } catch(e) {
-    ST.exerciseGifCache[exName] = { url: null, status: 'error' };
+    ST.exerciseGifCache[cacheKey] = { url: null, status: 'error' };
   }
   // Re-render se l'utente e' ancora sul countdown recupero (BLOCCO 2A) o sulla
   // schermata esecuzione (BLOCCO 2B) per QUESTO esercizio: arrivata la GIF, sostituisce
@@ -13662,7 +13668,7 @@ function renderTraining(){
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
       // GIF: SEMPRE VISIBILE accanto al countdown (no più toggle). Placeholder se manca.
-      const gifEntry = ST.exerciseGifCache[cd.exName];
+      const gifEntry = ST.exerciseGifCache[cd.exCode || cd.exName];
       const hasGif = gifEntry && gifEntry.status === 'cached' && gifEntry.url;
       const gifLoading = gifEntry && gifEntry.status === 'loading';
       const gifHTML = hasGif
@@ -13843,8 +13849,9 @@ function renderTraining(){
     const parsedReps = exDef?.reps ? (typeof parseRepsRange === 'function' ? parseRepsRange(exDef.reps) : null) : null;
     const isTimed = parsedReps && parsedReps.kind === 'seconds';
     const rirBadge = (rirVal != null && !isTimed) ? `<span class="train-exec-badge">RIR ${rirVal}</span>` : '';
-    // GIF: stessa logica del recupero (cached_url Worker animata)
-    const gifEntry2 = ST.exerciseGifCache[ex2.exName];
+    // GIF: stessa logica del recupero (cached_url Worker animata); codice come chiave se disponibile
+    const cacheKey2 = ex2.codice || ex2.exName;
+    const gifEntry2 = ST.exerciseGifCache[cacheKey2];
     const hasGif2 = gifEntry2 && gifEntry2.status === 'cached' && gifEntry2.url;
     const gifLoading2 = gifEntry2 && gifEntry2.status === 'loading';
     const gifBlock = hasGif2
@@ -20979,9 +20986,9 @@ function openTrainExec(sessionId, exName, setNum){
   const _isTimed = _pr && _pr.kind === 'seconds';
   // Per isometrici: picker target, valore iniziale = repsMin (default 20 se non specificato).
   const _timedTarget = _isTimed ? (_pr.min || 20) : null;
-  ST.trainExecOpen = { sessionId, exName, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: !!(_pr && _pr.perLato), isoPhase: 'A' };
+  ST.trainExecOpen = { sessionId, exName, codice: _exDef?.codice || null, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: !!(_pr && _pr.perLato), isoPhase: 'A' };
   _unlockAudio();
-  ensureRestGif(exName);
+  ensureRestGif(exName, _exDef?.codice || null);
   // GRAFICA L1 — Avvia cronometro TEMPO WORKOUT per questa serie
   workTimeStartExec(sessionId);
   workTimeStartTick(sessionId);
