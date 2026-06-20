@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.20 · 18:19';
+const APP_VERSION = '2026.06.20 · 18:23';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5250,7 +5250,7 @@ async function m2Start() {
   try {
     const { data, error } = await supa.from('body_checks').insert({
       user_id: ST.user.id,
-      check_type: 'initial',
+      check_type: (ST.bodyChecks||[]).some(c=>c.status==='completed') ? 'periodic' : 'initial',
       status: 'in_progress',
     }).select().single();
     if(error) throw error;
