@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.20 · 11:13';
+const APP_VERSION = '2026.06.20 · 18:19';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -14996,6 +14996,12 @@ function renderBody(){
           </div>`;
         }).join('')}
       </div>` : ''}
+      <div style="margin-top:12px;text-align:center;">
+        <button onclick="m2EntryIntro();"
+          style="padding:12px 24px;background:#2A7A6F;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;width:100%;">
+          ${(ST.bodyChecks||[]).some(c=>c.status==='in_progress') ? 'Riprendi check fisico →' : 'Nuovo check fisico →'}
+        </button>
+      </div>
     `;
 
   } else if(tab === 'tendenza'){
