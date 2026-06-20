@@ -204,8 +204,9 @@ const MATCH_DATA = {
 // DB key = il codice stesso (exercise_name_it = 'EX001' ecc.), no collisione con nomi italiani.
 // GIF Storage path = {edbId}.gif (riuso trasparente se lo stesso edbId e' gia' in cache).
 // Esercizi deliberatamente senza GIF (risposta 'missing'):
-//   EX021 Plank, EX030 Band pull apart, EX034 Pike push-up,
-//   EX036 Bird dog, EX051 Squat a corpo libero, EX053 Shadow boxing.
+//   EX021 Plank, EX030 Band pull apart, EX036 Bird dog,
+//   EX051 Squat a corpo libero, EX053 Shadow boxing.
+//   EX034 usa immagine statica Wger (nessuna GIF disponibile su ExerciseDB).
 const MATCH_BY_CODE = {
   'EX001': { edbId: '4x5Okof',  gifUrl: 'https://static.exercisedb.dev/media/4x5Okof.gif',  isSurrogate: false, surrogateNote: null },
   'EX002': { edbId: 'EIeI8Vf',  gifUrl: 'https://static.exercisedb.dev/media/EIeI8Vf.gif',  isSurrogate: false, surrogateNote: null },
@@ -246,6 +247,7 @@ const MATCH_BY_CODE = {
   'EX117': { edbId: 'DFGXwZr',  gifUrl: 'https://static.exercisedb.dev/media/DFGXwZr.gif',  isSurrogate: false, surrogateNote: null },
   'EX119': { edbId: '7WaDzyL',  gifUrl: 'https://static.exercisedb.dev/media/7WaDzyL.gif',  isSurrogate: false, surrogateNote: null },
   'EX120': { edbId: 'K9VL0Jq',  gifUrl: 'https://static.exercisedb.dev/media/K9VL0Jq.gif',  isSurrogate: false, surrogateNote: null },
+  'EX034': { edbId: null,       gifUrl: 'https://wger.de/media/exercise-images/454/447f3c17-405f-46e0-b138-65c2a8caaab0.png', isSurrogate: true, surrogateNote: 'Immagine illustrativa Wger (CC BY-SA 4.0) — stesso movimento: posizione a V, testa verso il basso, gomiti si piegano e risalgono.' },
 };
 
 function jsonResponse(obj, status = 200) {
@@ -363,8 +365,12 @@ async function handleMediaLookup(env, key, match) {
   }
   // existing null / status non-cached / exercisedb_id mismatch -> riprocessa (overwrite)
 
-  // 2) Storage path = {edbId}.gif (riuso fra piu' chiavi che mappano allo stesso edbId)
-  const storagePath = `${match.edbId}.gif`;
+  // 2) Storage path: {edbId}.{ext} se edbId presente, altrimenti filename da gifUrl.
+  //    Supporta sia GIF (ExerciseDB) che PNG (Wger e altre fonti statiche).
+  const mediaExt = (match.gifUrl.split('.').pop().split('?')[0] || 'gif').toLowerCase();
+  const storagePath = match.edbId
+    ? `${match.edbId}.${mediaExt}`
+    : match.gifUrl.split('/').pop().split('?')[0];
   const cachedUrl = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${storagePath}`;
 
   // 3) HEAD check: se la GIF e' gia' su Storage (caricata da mapping precedente),
@@ -383,7 +389,8 @@ async function handleMediaLookup(env, key, match) {
     }
     const gifBuffer = await gifResp.arrayBuffer();
     bytesUploaded = gifBuffer.byteLength;
-    await uploadToStorage(env, storagePath, gifBuffer, 'image/gif');
+    const contentType = mediaExt === 'png' ? 'image/png' : 'image/gif';
+    await uploadToStorage(env, storagePath, gifBuffer, contentType);
   }
 
   // 4) Upsert riga DB (cached_url punta sempre a {edbId}.gif)
@@ -394,7 +401,7 @@ async function handleMediaLookup(env, key, match) {
     status: 'cached',
     is_surrogate: match.isSurrogate ?? false,
     surrogate_note: match.surrogateNote ?? null,
-    source: 'exercisedb',
+    source: match.edbId ? 'exercisedb' : 'wger',
   });
 
   return jsonResponse({
