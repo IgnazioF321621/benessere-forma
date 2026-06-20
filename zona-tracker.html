@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.19 · 12:10';
+const APP_VERSION = '2026.06.20 · 11:13';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -20919,9 +20919,6 @@ function execTimerStart(targetSec){
   ST.trainExecTimer._iv = setInterval(()=>{
     if(!ST.trainExecTimer.running) return;
     if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
-    if(ST.trainExecTimer.remaining > 0 && ST.trainExecTimer.remaining <= 5){
-      try{ playPrepBeep(); }catch(e){}
-    }
     const done = ST.trainExecTimer.remaining === 0;
     // Beep una sola volta quando si arriva a 0
     if(done && !ST.trainExecTimer.beeped){
@@ -20961,6 +20958,7 @@ function execTimerStop(){
 function execTimerStartPause(sec){
   _execTimerClear();
   ST.trainExecTimer = { running:true, remaining:sec, _iv:null, beeped:false, isPause:true };
+  renderTraining(); // aggiorna UI: nasconde "Fine serie", mostra "In corso…" durante pausa
   ST.trainExecTimer._iv = setInterval(()=>{
     if(!ST.trainExecTimer.running) return;
     if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
@@ -20973,6 +20971,7 @@ function execTimerStartPause(sec){
       _execTimerClear();
       if(ST.trainExecOpen){
         ST.trainExecOpen.isoPhase = 'B';
+        renderTraining(); // aggiorna UI: mantiene "In corso…" per fase B
         try{ playLongBeep(); }catch(e){}
         execTimerStart(ST.trainExecOpen.timedTarget);
       }
