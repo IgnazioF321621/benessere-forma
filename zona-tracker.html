@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.21 · 10:43';
+const APP_VERSION = '2026.06.21 · 11:05';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -14100,7 +14100,7 @@ async function loadBodyLogs(){
   const [logsRes, measRes, checksRes] = await Promise.all([
     supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
     supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
-    supa.from('body_checks').select('id, status').eq('user_id', ST.user.id),
+    supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id),
   ]);
   ST.bodyLogs = logsRes.data || [];
   ST.bodyMeasurements = measRes.data || [];
