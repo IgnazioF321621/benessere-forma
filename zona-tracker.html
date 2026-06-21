@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.20 · 18:23';
+const APP_VERSION = '2026.06.21 · 10:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -14761,6 +14761,7 @@ function renderBody(){
   const tabs = [
     { id:'misure',   label:'Misure' },
     { id:'tendenza', label:'Tendenza' },
+    { id:'check',    label:'Check' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
     ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
@@ -15003,6 +15004,56 @@ function renderBody(){
         </button>
       </div>
     `;
+
+  } else if(tab === 'check'){
+    const completedChecks = (ST.bodyChecks || [])
+      .filter(c => c.status === 'completed')
+      .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+    if(completedChecks.length === 0){
+      body = `
+        <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;padding:24px;">
+          <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:32px 24px;text-align:center;width:100%;box-shadow:var(--shadow);">
+            <div style="width:48px;height:48px;border-radius:50%;background:#EDE9F8;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+              <span style="font-size:22px;">🧍</span>
+            </div>
+            <div style="font-size:16px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Nessun check fisico ancora.</div>
+            <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);margin-bottom:20px;">Registra il tuo primo check periodico<br>per seguire i progressi nel tempo.</div>
+            <button onclick="m2EntryIntro();" style="width:100%;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
+          </div>
+        </div>`;
+    } else {
+      const checkRows = completedChecks.map(c => {
+        const meas = (ST.bodyMeasurements || []).find(m => m.check_id === c.id) || {};
+        const dateLabel = c.created_at
+          ? new Date(c.created_at).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'})
+          : '—';
+        const vals = [
+          meas.weight_kg != null ? `${fmtMeasure(meas.weight_kg)} kg` : null,
+          meas.waist_cm  != null ? `${fmtMeasure(meas.waist_cm)} cm`  : null,
+          meas.body_fat_pct != null ? `${meas.body_fat_pct}%`         : null,
+        ].filter(Boolean).join(' · ');
+        return `
+          <div onclick="openBodyCheckDetail('${c.id}')" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:6px;">${dateLabel}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.5px;color:#5E4A7A;background:#EDE9F8;padding:2px 8px;border-radius:999px;text-transform:uppercase;">check</span>
+                ${vals ? `<span style="font-size:12px;font-family:var(--font-mono);color:var(--t2);">${vals}</span>` : ''}
+              </div>
+            </div>
+            <span style="font-size:18px;color:var(--t3);margin-left:12px;">›</span>
+          </div>`;
+      }).join('');
+
+      body = `
+        <div style="padding:16px;">
+          ${checkRows}
+          <div style="margin-top:8px;">
+            <button onclick="m2EntryIntro();" style="width:100%;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
+          </div>
+        </div>`;
+    }
 
   } else if(tab === 'tendenza'){
     body = renderBodyTrend();
