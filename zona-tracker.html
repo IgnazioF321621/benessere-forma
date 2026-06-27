@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.27 · 19:03';
+const APP_VERSION = '2026.06.27 · 19:10';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -10610,7 +10610,7 @@ function renderCalendar(workouts, year, month){
   // Calendar palette: evergreen primary (Upper), evergreen scuro (Lower per distinguere),
   // evergreen anch'esso per Recovery (la sigla "REC↑/REC↓" basta a distinguere dalle Upper),
   // grigio per Rest, terracotta per infortunio. Tutti dal design system, niente hex orfani.
-  const SESS_COLOR = { upperA:'var(--acc)', upperB:'var(--acc)', upperC:'var(--acc)', lowerA:'var(--acc2)', lowerB:'var(--acc2)', recoveryUpper:'var(--acc)', recoveryLower:'var(--acc)', rest:'#9CA3AF', rest_injury:'#B84C2A' };
+  const SESS_COLOR = { upperA:'var(--acc)', upperB:'var(--acc)', upperC:'var(--acc)', lowerA:'var(--acc2)', lowerB:'var(--acc2)', recoveryUpper:'var(--acc)', recoveryLower:'var(--acc)', rest:'var(--t3)', rest_injury:'var(--err)' };
   const MONTH_NAMES = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
   const DAY_NAMES = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
 
@@ -12402,16 +12402,16 @@ function _renderRecoverySection(s, sel){
       </div>`;
     }).join('');
     heroHtml = `
-      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:18px;margin-bottom:16px;">
-        <div style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Prossimo blocco</div>
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:10px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Prossimo blocco</div>
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;gap:8px;">
           <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;">${nextBlockName}</div>
           <div style="font-size:12px;font-family:var(--font-mono);color:var(--t2);font-weight:700;flex-shrink:0;">~${blockMin} min</div>
         </div>
         <div style="margin-bottom:14px;max-height:280px;overflow-y:auto;">${listItems}</div>
         <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:8px;">
-          <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏪</button>
-          <button onclick="recoveryFlowResume()" title="Riprendi" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:0 22px;height:52px;cursor:pointer;font-size:15px;font-weight:700;font-family:var(--font-sans);">▶ Riprendi</button>
+          <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏪</button>
+          <button onclick="recoveryFlowResume()" title="Riprendi" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:0 22px;height:52px;cursor:pointer;font-size:15px;font-weight:700;font-family:var(--font-sans);">▶ Riprendi</button>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
           <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
@@ -12452,27 +12452,27 @@ function _renderRecoverySection(s, sel){
     const ss = String(flow.remaining%60).padStart(2,'0');
     const dur = cur.duration_sec || 30;
     const pct = dur ? Math.round((dur - flow.remaining)/dur*100) : 0;
-    const sideBadge = cur.side ? `<span style="font-size:10px;font-weight:700;color:#fff;background:#2A7A6F;border-radius:4px;padding:2px 7px;font-family:var(--font-mono);margin-left:8px;">${cur.side.toUpperCase()}</span>` : '';
+    const sideBadge = cur.side ? `<span style="font-size:10px;font-weight:700;color:#fff;background:var(--acc);border-radius:4px;padding:2px 7px;font-family:var(--font-mono);margin-left:8px;">${cur.side.toUpperCase()}</span>` : '';
     const playPauseBtn = flow.running
-      ? `<button onclick="recoveryFlowPause()" title="Pausa" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
-      : `<button onclick="recoveryFlowResume()" title="Riprendi" style="background:#2A7A6F;color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
+      ? `<button onclick="recoveryFlowPause()" title="Pausa" style="background:var(--acc);color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
+      : `<button onclick="recoveryFlowResume()" title="Riprendi" style="background:var(--acc);color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">▶</button>`;
     heroHtml = `
-      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:18px;margin-bottom:16px;">
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:18px;margin-bottom:16px;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span style="font-size:10px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">${cur.block||''}</span>
+          <span style="font-size:10px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">${cur.block||''}</span>
           ${sideBadge}
         </div>
         <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${cur.name}</div>
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
-          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:#2A7A6F;line-height:1;flex-shrink:0;">${mm}:${ss}</div>
+          <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
-            <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏪</button>
+            <button onclick="recoveryFlowBack()" title="Indietro" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏪</button>
             ${playPauseBtn}
-            <button onclick="recoveryFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid #2A7A6F;border-radius:10px;width:44px;height:52px;cursor:pointer;color:#2A7A6F;font-size:18px;font-weight:700;">⏩</button>
+            <button onclick="recoveryFlowSkip()" title="Skip" style="background:transparent;border:1.5px solid var(--acc);border-radius:10px;width:44px;height:52px;cursor:pointer;color:var(--acc);font-size:18px;font-weight:700;">⏩</button>
           </div>
         </div>
         <div style="height:6px;background:rgba(42,122,111,.18);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-          <div style="height:100%;width:${pct}%;background:#2A7A6F;transition:width .35s linear;"></div>
+          <div style="height:100%;width:${pct}%;background:var(--acc);transition:width .35s linear;"></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--t2);font-family:var(--font-mono);">
           <span>${flow.currentIdx+1}/${exs.length} · ${doneCount} completati</span>
@@ -12482,9 +12482,9 @@ function _renderRecoverySection(s, sel){
   } else if(flow.active && flow.currentIdx >= exs.length){
     // Sessione completata via flow
     heroHtml = `
-      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:24px;text-align:center;margin-bottom:16px;">
         <div style="font-size:40px;margin-bottom:8px;">🎉</div>
-        <div style="font-size:18px;font-weight:700;color:#2A7A6F;font-family:var(--font-sans);margin-bottom:4px;">Sessione completata</div>
+        <div style="font-size:18px;font-weight:700;color:var(--acc);font-family:var(--font-sans);margin-bottom:4px;">Sessione completata</div>
         <div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);">${exs.length}/${exs.length} esercizi</div>
       </div>`;
   } else {
@@ -12494,14 +12494,14 @@ function _renderRecoverySection(s, sel){
     const activationRunning = !!(ST.trainActivationFlow && ST.trainActivationFlow.running);
     const startBtnStyle = activationRunning
       ? 'background:#CCC;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:not-allowed;font-family:var(--font-sans);opacity:.6;'
-      : 'background:#2A7A6F;color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
+      : 'background:var(--acc);color:#fff;border:none;border-radius:10px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;font-family:var(--font-sans);';
     const startBtnAction = activationRunning ? '' : 'onclick="recoveryFlowStart()"';
     heroHtml = `
-      <div style="background:#E6F4F2;border:2px solid #2A7A6F;border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:11px;color:#2A7A6F;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
+      <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${exs.length} esercizi · ~${totMin} min</div>
         <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">${s.label || s.name}</div>
         ${allManuallyDone
-          ? `<div style="font-size:14px;color:#2A7A6F;font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
+          ? `<div style="font-size:14px;color:var(--acc);font-weight:600;font-family:var(--font-sans);">✓ Tutti gli esercizi completati</div>`
           : `<button ${startBtnAction} ${activationRunning?'disabled':''} style="${startBtnStyle}">▶ Start sessione</button>${activationRunning?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Attivazione in corso</div>':''}`}
       </div>`;
   }
@@ -12551,8 +12551,8 @@ function _renderRecoverySection(s, sel){
       const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
       const sideBadge = e.side ? `<span style="font-size:9px;color:var(--t3);font-family:var(--font-mono);background:var(--s2);border-radius:4px;padding:1px 5px;margin-left:6px;">${e.side.toUpperCase()}</span>` : '';
       const checkBox = isDone
-        ? `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:#2A7A6F;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
-        : `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid #2A7A6F;flex-shrink:0;cursor:pointer;"></div>`;
+        ? `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:var(--acc);border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`
+        : `<div onclick="event.stopPropagation();toggleRecoveryDone('${safeName}')" style="width:20px;height:20px;border-radius:5px;background:transparent;border:1.5px solid var(--acc);flex-shrink:0;cursor:pointer;"></div>`;
       return `
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
           ${checkBox}
@@ -12579,7 +12579,7 @@ function _renderSessionPreview(s, sel){
   const backLabel = 'I tuoi giorni'; // pillola Sessione rimossa: la sessione si apre sempre da Programma
   const isRec = s.rir === null;
   const typeBadge = isRec
-    ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
+    ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
     : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>`;
 
   let exHTML;
@@ -12681,7 +12681,7 @@ function renderTraining(){
       } else {
       const isRecovery = s.rir === null;
       const typeBadge = isRecovery
-        ? `<span style="background:#E6F4F2;color:#2A7A6F;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
+        ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
         : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
       // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
@@ -12718,7 +12718,7 @@ function renderTraining(){
                 <select id="el-resist" onchange="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-sans);">
                   <option value="">—</option>${colorOpts}
                 </select>
-                <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:#2A7A6F;color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
+                <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:var(--acc);color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
                 <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
               </span>`;
             }
@@ -12728,7 +12728,7 @@ function renderTraining(){
               <span style="font-size:10px;color:var(--t3);">r</span>
               <input id="el-resist" type="number" min="0" max="999" value="${dr.resistance||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="width:46px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
               <span style="font-size:9px;color:var(--t3);">${unitLbl}</span>
-              <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:#2A7A6F;color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
+              <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:var(--acc);color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
               <button onclick="event.stopPropagation();cancelEditLog();" style="background:#fff;color:var(--t3);border:1px solid var(--s2);border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;">✕</button>
             </span>`;
           }
@@ -12944,19 +12944,19 @@ function renderTraining(){
             const durMin = Math.round(fin.totalRounds ? fin.totalRounds*(fin.work_sec+fin.rest_sec)/60 : fin.round*(fin.work_sec+fin.rest_sec)/60);
             const exList = fin.exercises.map((e,i)=>`<li style="padding:4px 0;">${i+1}. ${e.name}</li>`).join('');
             return `
-            <div style="margin-top:20px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#FFF4E5 0%,#FFE4B8 100%);border:1px solid #E5A857;">
-              <div style="font-size:10px;font-weight:700;color:#7A3A1A;font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 TABATA FINALE · ~${durMin} MIN</div>
-              <div style="font-size:14px;color:#7A3A1A;font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati</div>
-              <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:#5A2A0A;font-family:var(--font-sans);list-style:none;">${exList}</ul>
+            <div style="margin-top:20px;padding:14px;border-radius:12px;background:var(--s1);border:1px solid var(--s2);">
+              <div style="font-size:10px;font-weight:700;color:var(--t2);font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 TABATA FINALE · ~${durMin} MIN</div>
+              <div style="font-size:14px;color:var(--t2);font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati</div>
+              <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:var(--t2);font-family:var(--font-sans);list-style:none;">${exList}</ul>
               <button onclick="tabataFlowStart();"
-                style="width:100%;padding:12px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
+                style="width:100%;padding:12px;background:var(--err);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
                 ▶ Start Finisher
               </button>
             </div>` ;
           })() : ''}
           ${Object.keys(ST.trainLoggedSets).some(k=>k.startsWith(sel+'_')&&k.endsWith('_'+today)) ? `
           <button onclick="completeSession('${sel}');"
-            style="width:100%;margin-top:8px;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
+            style="width:100%;margin-top:8px;padding:14px;background:var(--acc);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">
             ✓ Completa sessione
           </button>` : ''}
         </div>`;
@@ -12967,10 +12967,10 @@ function renderTraining(){
     const DAY_SPLIT = [
       { day:'G1', session:'upperA',  label:'Upper A',  desc:'Forza',         color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G2', session:'lowerA',  label:'Lower A',  desc:'Forza',         color:'var(--acc)', bg:'var(--acc-lt)' },
-      { day:'G3', session:'recoveryUpper',label:'Recovery Day', desc:'Recupero attivo', color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G3', session:'recoveryUpper',label:'Recovery Day', desc:'Recupero attivo', color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G4', session:'upperB',  label:'Upper B',  desc:'Ipertrofia',    color:'var(--acc)', bg:'var(--acc-lt)' },
       { day:'G5', session:'lowerB',  label:'Lower B',  desc:'Ipertrofia',    color:'var(--acc)', bg:'var(--acc-lt)' },
-      { day:'G6', session:'recoveryLower',label:'Recovery Day', desc:'Recupero attivo', color:'#2A7A6F', bg:'#E6F4F2' },
+      { day:'G6', session:'recoveryLower',label:'Recovery Day', desc:'Recupero attivo', color:'var(--acc)', bg:'var(--acc-lt)' },
     ];
     const CYCLE_WEEKS = [
       { n:1, type:'CARICO',  rir:'RIR 2 / 1', active:false },
@@ -13003,7 +13003,7 @@ function renderTraining(){
     // ── Passo 4 · DEBITO (allenamenti saltati per anticipo) — calcolato dallo storico, niente DB ──
     const { debt: trainDebt, target: debtTarget } = computeTrainingDebt();
     const debtSet = new Set(trainDebt);
-    const debtBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.04em;color:#fff;background:#B84C2A;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">DA RECUPERARE</span>`;
+    const debtBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.04em;color:#fff;background:var(--err);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">DA RECUPERARE</span>`;
 
     // ── 1 · HERO settimana ──────────────────────────────────
     const heroSegs = [0,1,2,3].map(i=>{
@@ -13040,9 +13040,9 @@ function renderTraining(){
       let leftBorder = accentCol, cardOpacity = '1', stateBadge = '';
       if(doneToday){
         cardOpacity = '.72';
-        stateBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(lastDate)}</span>`;
+        stateBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(lastDate)}</span>`;
       } else if(debtSet.has(d.session)){
-        leftBorder = '#B84C2A';
+        leftBorder = 'var(--err)';
         stateBadge = debtBadge;
       } else if(d.session === debtTarget){
         stateBadge = oggiBadge;
@@ -13081,8 +13081,8 @@ function renderTraining(){
       const ld = ST.sessionLastCompletion ? ST.sessionLastCompletion[sid] : null;
       const dt = ld === todayKey();
       let lb = acCol, op = '1', sb = '';
-      if(dt){ op='.72'; sb=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(ld)}</span>`; }
-      else if(debtSet.has(sid)){ lb='#B84C2A'; sb=debtBadge; }
+      if(dt){ op='.72'; sb=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(ld)}</span>`; }
+      else if(debtSet.has(sid)){ lb='var(--err)'; sb=debtBadge; }
       else if(sid===debtTarget){ sb=oggiBadge; }
       return `<div onclick="openTrainingSession('${sid}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${lb};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;opacity:${op};"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;"><span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${lbl}</span>${sb}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${acCol};text-transform:uppercase;">● ${dsc}</span><span style="font-size:15px;color:var(--t3);line-height:1;flex-shrink:0;">›</span></div></div>`;
     };
@@ -13099,15 +13099,15 @@ function renderTraining(){
       const recLd = ST.sessionLastCompletion ? ST.sessionLastCompletion[recSess?.session] : null;
       const recDt = recLd === todayKey();
       let recBadge = '';
-      if(recDt) recBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(recLd)}</span>`;
+      if(recDt) recBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(recLd)}</span>`;
       else if(recSess?.session === debtTarget) recBadge = oggiBadge;
       const cSessObj = getTrainingSession('upperC');
       const cLbl = cSessObj?.name || 'Upper C';
       const cLd = ST.sessionLastCompletion ? ST.sessionLastCompletion['upperC'] : null;
       const cDt = cLd === todayKey();
       let cLb = SALVIA, cOp = '1', cBadge = '';
-      if(cDt){ cOp='.72'; cBadge=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:#2A7A6F;background:#E6F4F2;padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(cLd)}</span>`; }
-      else if(debtSet.has('upperC')){ cLb='#B84C2A'; cBadge=debtBadge; }
+      if(cDt){ cOp='.72'; cBadge=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(cLd)}</span>`; }
+      else if(debtSet.has('upperC')){ cLb='var(--err)'; cBadge=debtBadge; }
       else if('upperC'===debtTarget){ cBadge=oggiBadge; }
       const recSessId = recSess ? recSess.session : 'recoveryUpper';
       giorniHTML = `<div>
@@ -13274,14 +13274,14 @@ function renderTraining(){
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">🌙 Riposo scelto</div>
                 <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Giorno di riposo volontario. Non blocca la rotazione.</div>
               </div>
-              <button onclick="markRestChosen();" style="flex-shrink:0;background:#9CA3AF;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
+              <button onclick="markRestChosen();" style="flex-shrink:0;background:var(--t3);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
             <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">🩹 Riposo per infortunio</div>
                 <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Stop forzato. Permette di appuntare la zona del corpo.</div>
               </div>
-              <button onclick="openInjuryModal();" style="flex-shrink:0;background:#B84C2A;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
+              <button onclick="openInjuryModal();" style="flex-shrink:0;background:var(--err);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
           </div>
         </div>
@@ -13959,7 +13959,7 @@ function renderTraining(){
               <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
               ${resistInput}
               <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
-              <button onclick="confirmEditLogRow();" style="background:#2A7A6F;color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
+              <button onclick="confirmEditLogRow();" style="background:var(--acc);color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
               <button onclick="cancelEditLogRow();" style="background:#fff;color:var(--t3);border:1.5px solid var(--s2);border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;">✕</button>
             </div>`;
           }
