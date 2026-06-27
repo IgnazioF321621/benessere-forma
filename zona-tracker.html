@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.27 · 18:57';
+const APP_VERSION = '2026.06.27 · 18:59';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7679,6 +7679,7 @@ function getRotationCycle() {
 // NESSUNA scrittura DB, nessun campo persistito: si ricalcola ad ogni render.
 // Ritorna { debt:[sid,...], target:sid } — "solo giro corrente", i recuperi non vanno mai in debito.
 function computeTrainingDebt(){
+  if(!ST.user || ST.user.id === 'test-user-001') return { debt: [], target: null };
   const cycle = getRotationCycle(); // ordine canonico 6 giorni (recuperi inclusi); i recuperi restano esclusi dal debito via isRecoverySid
   const len = cycle.length;
   const all = ST.trainAllCompleted || [];
