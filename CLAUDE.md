@@ -31,7 +31,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ---
 
-## Stato corrente (19 giugno 2026)
+## Stato corrente (27 giugno 2026)
 
 **APP_VERSION attuale**: da verificare su device prima di ogni intervento.
 
@@ -48,9 +48,18 @@ Tab Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a) production-ready.
 - Timer recupero parallelo al form log + riepilogo post-salvataggio nel modal recupero (commit `6125812`)
 - Fix rotazione swap-aware: recuperi trasparenti alla rotazione, non avanzano il fronte (commit `c0287c9`)
 - GIF nel modal recupero: ✅ funzionante (commit `f536db8`) — Worker `MATCH_BY_CODE` 39 esercizi + 20 legacy name-lookup
+- **Settimana attiva corretta** (27 giugno 2026): `renderTraining()` tab Piano — se `validWorkoutsCount % 6 === 0` (multiplo esatto), mostra settimana precedente invece di saltare avanti. Formula: `rawWeek = Math.floor(count/6)%4; currentWeek = (count%6===0) ? (rawWeek===0?3:rawWeek-1) : rawWeek`
+- **Restyling colori Training** ✅ (27 giugno 2026): tutti i colori hardcoded sostituiti con CSS vars — `#2A7A6F→var(--acc)`, `#E6F4F2→var(--acc-lt)`, `#B84C2A→var(--err)`, `#9CA3AF→var(--t3)`, banner Tabata→`var(--s1)/var(--t2)`
+- **Debt guard**: `computeTrainingDebt()` ha guard `test-user-001` allineato a `computeTrainHomeData()`
 
 ### Modulo Body
 M2 check fisico funzionale. Da ri-agganciare a fine blocco Training.
+
+**Checkpoint sync mesociclo** (27 giugno 2026): `getNextCheckpointInfo()` considera la settimana del ciclo.
+- `overdue:true` solo se `validWorkoutsCount > 22` (workout #23+) **e** `currentWeekIdx === 3` (scarico) **e** `daysUntil < 0`
+- Settimane 1-3 (carico): `overdue:false` sempre, anche se >28 giorni dall'ultimo check
+- Fallback 0 workout: comportamento classico (overdue se >28 gg)
+- Label Home: se `daysUntil < 0 && !overdue` → mostra `"CHECKPOINT A FINE MESOCICLO"` (non numero negativo)
 
 ### Admin panel (`dashboardzona.html`) ✅ production-ready
 
@@ -60,7 +69,7 @@ M2 check fisico funzionale. Da ri-agganciare a fine blocco Training.
 
 1. **Mappa muscolare EX031–EX132** — PNG per gruppo muscolare (~15-20 file), selezionati automaticamente dal campo `muscoli` del catalogo. Strategia A: file locali `assets/muscles/<gruppo>.png`. Strategia B: API Muscle Visualizer ExerciseDB (da valutare). **PROSSIMO CANTIERE**.
 2. **Gating 5-day split per principianti** — impedire l'accesso al split 5 giorni DUP se `livello=principiante`.
-3. **Live debt collaudo** — testare la logica debito allenamento senza inquinare log reali.
+3. ~~**Live debt collaudo**~~ ✅ — guard test-user aggiunto, collaudo sicuro (nessun debito rilevato).
 4. **Injury residuals** — multi-day injury duration + history UI.
 5. **M2 entry point** — `"Nuovo check fisico"` sempre visibile in Body; reminder fine blocco; blood test history UI (`m2EntryIntro()` esiste, manca UI di accesso).
 6. **Progressione tab** — Volume + Carico per esercizio dentro card (prossimo livello grafico).
@@ -108,7 +117,7 @@ Rate limit Supabase OTP: se raggiunto, aspettare 1h.
 - **Sub-nav**: `.nutrition-subnav` + `.nsn-pill` — riusato su tutti i moduli
 - **"coach"** sostituisce "AI" in tutti i copy visibili UI
 
-*Nota: i sub-tab interni (Nutrition/Training/Body) hanno ancora elementi legacy — migrazione progressiva in corso.*
+*Nota: Training restyling completato (27 giugno 2026). Nutrition e Body hanno ancora elementi legacy — migrazione progressiva in corso.*
 
 ---
 
@@ -331,7 +340,7 @@ Sequenze di riferimento:
 
 ## Rotazione Training
 
-`getRotationCycle()` — helper canonico 6-day. Recuperi TRASPARENTI: non avanzano il fronte, non generano debito, non guidano il prossimo. `computeTrainingDebt`: skip recuperi nel loop (`isRecoverySid → continue`). `computeTrainHomeData`: `nextSession` deriva dall'ultimo workout di LAVORO (filtro `!/^recovery/i`).
+`getRotationCycle()` — helper canonico 6-day. Recuperi TRASPARENTI: non avanzano il fronte, non generano debito, non guidano il prossimo. `computeTrainingDebt`: skip recuperi nel loop (`isRecoverySid → continue`). Guard `test-user-001` all'inizio (→ `{ debt:[], target:null }`). `computeTrainHomeData`: `nextSession` deriva dall'ultimo workout di LAVORO (filtro `!/^recovery/i`).
 
 ---
 
