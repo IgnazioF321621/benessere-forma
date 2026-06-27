@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.27 · 18:38';
+const APP_VERSION = '2026.06.27 · 18:43';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6564,7 +6564,7 @@ function getNextCheckpointInfo(){
   let overdue = daysUntil < 0;
   if(validWorkoutsCount > 0){
     const currentWeekIdx = Math.floor(validWorkoutsCount / 6) % 4; // 0-based
-    const isDeloadWeek = currentWeekIdx >= 3 && validWorkoutsCount > 18;
+    const isDeloadWeek = currentWeekIdx >= 3 && validWorkoutsCount > 22;
     overdue = isDeloadWeek && daysUntil < 0;
     console.log('[checkpoint] trainAllCompleted.length:', validWorkoutsCount, '| currentWeekIdx:', currentWeekIdx, '(3=scarico) | daysUntil:', daysUntil, '| overdue:', overdue);
   } else {
