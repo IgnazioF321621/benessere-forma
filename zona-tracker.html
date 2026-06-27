@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.27 · 18:59';
+const APP_VERSION = '2026.06.27 · 19:03';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12983,7 +12983,10 @@ function renderTraining(){
     // Mostra SETT 1 di default se non ci sono ancora workout
     const validWorkoutsCount = (ST.trainAllCompleted || []).length;
     if(validWorkoutsCount > 0){
-      const currentWeek = Math.floor(validWorkoutsCount / 6) % 4;
+      const rawWeek = Math.floor(validWorkoutsCount / 6) % 4;
+      const currentWeek = (validWorkoutsCount % 6 === 0)
+        ? (rawWeek === 0 ? 3 : rawWeek - 1)
+        : rawWeek;
       CYCLE_WEEKS[currentWeek].active = true;
     } else {
       // Nessun workout ancora: evidenzia SETT 1 come "in attesa di iniziare"
