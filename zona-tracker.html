@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.06.27 · 18:30';
+const APP_VERSION = '2026.06.27 · 18:38';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6818,6 +6818,7 @@ function renderHomeV2(){
     if(!cp.hasCheck) cpLabel = 'PRIMO CHECKPOINT DA FARE';
     else if(cp.overdue) cpLabel = 'CHECKPOINT IN RITARDO';
     else if(cp.daysUntil === 0) cpLabel = 'CHECKPOINT OGGI';
+    else if(cp.daysUntil < 0 && !cp.overdue) cpLabel = 'CHECKPOINT A FINE MESOCICLO';
     else cpLabel = `CHECKPOINT TRA ${cp.daysUntil} GIORN${cp.daysUntil === 1 ? 'O' : 'I'}`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
