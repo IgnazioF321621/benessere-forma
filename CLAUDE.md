@@ -236,10 +236,13 @@ Macro % `[carbo, prot, fat]`:
 
 ## Media system
 
-### GIF esercizi (Worker + ExerciseDB)
-- Worker endpoint dual-mode: `?code=EX###` (priorità, usa `MATCH_BY_CODE`) · `?name=...` (legacy 20 esercizi storici)
-- `MATCH_BY_CODE`: 39 esercizi mappati su exerciseId ExerciseDB
-- 6 esercizi esclusi (nessuna GIF adatta): EX021/EX030/EX034/EX036/EX051/EX053
+### GIF esercizi (Worker + biblioteca Supabase)
+- Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
+- Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
+- Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
+- `biblioteca_gif`: 1.224 righe, bucket `biblioteca-gif` su Supabase Storage. Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`
+- `esercizi_catalog`: colonna `gif_slug` — 76 esercizi coperti su 123, 47 senza slug (fallback ExerciseDB)
+- Worker Version ID attuale: `29b77d2b` (deploy 28 giugno 2026)
 - Cache KV indicizzata per codice
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` (cache key = `exCode || exName`)
 - `surrogateNote` dice SOLO le differenze rispetto alla GIF — non ripete setup già mostrato
