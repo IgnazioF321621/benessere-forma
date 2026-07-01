@@ -240,8 +240,8 @@ Macro % `[carbo, prot, fat]`:
 - Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
-- `biblioteca_gif`: 1.346 righe (+8 Blocco 17 "Gambe e Glutei", 1 luglio 2026), bucket `biblioteca-gif` su Supabase Storage. Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`
-- `esercizi_catalog`: colonna `gif_slug` — 198 esercizi coperti su 245 (EX254–EX260 + EX262 aggiunti Blocco 17, EX261 gap intenzionale per doppione scartato; EX245–EX253 Blocco 16; EX095/EX097 già coperti, solo path/nome aggiornati), 47 senza slug (fallback ExerciseDB)
+- `biblioteca_gif`: 1.356 righe (+10 Blocco 18 "Gambe e Glutei", 1 luglio 2026), bucket `biblioteca-gif` su Supabase Storage. Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`
+- `esercizi_catalog`: colonna `gif_slug` — 208 esercizi coperti su 255 (EX263–EX272 aggiunti Blocco 18, incluso EX270 GIF identica a EX095 ma tenuta come voce distinta su richiesta esplicita; EX254–EX260 + EX262 Blocco 17, EX261 gap intenzionale; EX245–EX253 Blocco 16), 47 senza slug (fallback ExerciseDB)
 - Worker Version ID attuale: `29b77d2b` (deploy 28 giugno 2026)
 
 ### Cantiere GIF — workflow per blocco futuro (regola fissa dal 30 giu 2026)
