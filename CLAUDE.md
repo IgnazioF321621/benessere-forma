@@ -240,9 +240,26 @@ Macro % `[carbo, prot, fat]`:
 - Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
-- `biblioteca_gif`: 1.224 righe, bucket `biblioteca-gif` su Supabase Storage. Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`
-- `esercizi_catalog`: colonna `gif_slug` — 76 esercizi coperti su 123, 47 senza slug (fallback ExerciseDB)
+- `biblioteca_gif`: 1.338 righe (+10 Blocco 16 "Gambe e Glutei", 1 luglio 2026), bucket `biblioteca-gif` su Supabase Storage. Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`
+- `esercizi_catalog`: colonna `gif_slug` — 190 esercizi coperti su 237 (EX245–EX253 aggiunti Blocco 16; EX095/EX097 già coperti, solo path/nome aggiornati), 47 senza slug (fallback ExerciseDB)
 - Worker Version ID attuale: `29b77d2b` (deploy 28 giugno 2026)
+
+### Cantiere GIF — workflow per blocco futuro (regola fissa dal 30 giu 2026)
+1. **Sposta + rinomina** il file da `5° GIF DI MUSCOLAZIONE/.../ZONA (1)/` → `Biblioteca di esercizi/{Categoria}/` con nome italiano leggibile (es. `Crunch a braccia tese.gif`). Mai slug tecnico nel filename locale.
+2. **Upload** su Storage bucket `biblioteca-gif/{Categoria}/{Nome italiano leggibile}.gif` (stesso nome del file locale, spazi mantenuti)
+3. **Insert** `biblioteca_gif` (slug=kebab-case, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path=`{Categoria}/{Nome leggibile}.gif`, storage_url con %20 per spazi)
+4. **Insert** `esercizi_catalog` (codice, nome, pattern, gruppo_target, muscoli, attrezzo, luogo, livello, uso, gif_slug=slug)
+5. **Google Sheet** `catalogo_esercizi` → tab `esercizi_catalog`: aggiungere riga con stessi campi + colonna `gif_slug` (da aggiungere al foglio — mancante al 30 giu 2026)
+
+**Struttura cartelle locale (fissa)**:
+```
+Biblioteca di esercizi/
+├── 5° GIF DI MUSCOLAZIONE/   ← sorgente grezza, NON toccare
+├── Addominali e Core/         ← file confermati, nome italiano leggibile
+├── {Zona futura}/             ← una cartella per zona, stesso livello
+```
+
+**Nota accesso Sheet**: Claude Code non ha OAuth Google, non può scrivere sul Sheet programmaticamente. Operazione manuale. L'Apps Script "ZonaTracker-Sync-Esercizi (v3)" (menu "Sync Esercizi" nel foglio) sincronizza Sheet → Supabase; per nuovi blocchi aggiungere prima le righe nel Sheet, poi lanciare il sync. I passi 2-4 (Supabase) si possono fare in anticipo tramite script Python (`.env` ha `SUPABASE_SERVICE_ROLE_KEY`).
 - Cache KV indicizzata per codice
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` (cache key = `exCode || exName`)
 - `surrogateNote` dice SOLO le differenze rispetto alla GIF — non ripete setup già mostrato
