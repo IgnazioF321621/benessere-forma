@@ -245,12 +245,36 @@ Macro % `[carbo, prot, fat]`:
 - `esercizi_catalog`: colonna `gif_slug` — 232 esercizi coperti su 280 (EX294–EX299 aggiunti Blocco 23 "Gambe e Glutei", 2 luglio 2026: EX294 Squat con manubri ai lati→`squat-manubri-lati`, EX295 Squat profondo con bilanciere→`squat-profondo-bilanciere`, EX296 Squat su panca con manubri→`squat-panca-manubri`, EX297 Stacco da terra con manubri→`stacco-terra-manubri`, EX298 Stacco da terra con trap bar→`stacco-terra-trap-bar`, EX299 Squat con bilanciere al rack→`squat-bilanciere-rack` (fornitore `squat-libero-con-bilanciere.gif`, NON riusata la riga legacy orfana omonima ex-EX013); EX225 "Squat sumo a corpo libero" contenuto sovrascritto con nuovo asset su decisione utente nonostante analisi visiva contraria (il file fornitore sembrava un affondo laterale, non un sumo squat — verificare a occhio se il problema si ripresenta); EX218/EX219/EX273 già live e corretti, solo cleanup duplicati dalla cartella sorgente; **EX287 "Stacco da terra classico" in sospeso**: asset live (deadlift convenzionale) mantenuto, nuovo candidato `stacco-della-terra-con-bilanciere.gif` copiato in locale come "Stacco da terra classico - CANDIDATO da confrontare.gif" per revisione visiva utente, nessuna modifica a Storage/DB, sorgente originale non spostata; **EX289 "Pistol squat con manubrio" asset live mantenuto**, candidato `squat-con-manubri-su-una-gamba.gif` spostato in Scartati da revisionare (ambiguità irrisolvibile da frame statico); scarto `squat-sumo-peso-corporal.gif` (sumo femminile doppione di EX225) → Scartati da revisionare; EX291–EX293 aggiunti Blocco 22 "Gambe e Glutei", 2 luglio 2026: EX291 Squat al cavo incrociato→`squat-cavo-incrociato`, EX292 Squat al multipower→`squat-multipower`, EX293 Squat con bilanciere→`squat-bilanciere`; EX212 "Affondo indietro con bilanciere" e EX240 "Affondo bulgaro con manubri" — contenuto GIF sovrascritto: erano già live con lo slug corretto ma asset stale/sbagliato, individuato per hash-mismatch col vero file sorgente; EX282 "Affondo indietro con manubri" ricollegato da `kickback-passo-indietro` a `affondo-indietro-manubri` (nuovo asset, vecchio oggetto Storage eliminato — la premessa del brief "vecchia GIF già spostata in Scartati da revisionare" era falsa, verificato che il file non esisteva lì); EX019 "Ponte glutei a corpo libero" migrato da path legacy `muscolazione/arti-inferiori-e-glutei/` a `Gambe e Glutei/`, contenuto sovrascritto con nuovo asset (slug `ponte-dei-glutei` invariato); EX047 rinominato da "Bulgarian split squat (piede posteriore su panca)" a "Affondo bulgaro a corpo libero", ricollegato dal proprio slug legacy `squat-bulgaro-a-corpo-libero` (categoria `calisthenics`, ora orfano) allo slug `affondo-bulgaro-corpo-libero` già usato da EX238 (asset identico, nessun nuovo upload); **EX238 eliminato** (doppione di EX047, gap permanente come EX261/EX277 — zero riferimenti verificati in `schede_utente` su 81 righe prima della cancellazione); EX013 "Squat" ricollegato da `squat-libero-con-bilanciere` (bilanciere) a nuovo slug `squat` (corpo libero) — vecchio oggetto Storage eliminato, riga `biblioteca_gif` legacy lasciata orfana; campo `gruppo_target` non popolato per i nuovi codici di questo blocco (vocabolario chiuso non include valori tipo "Gambe e Glutei", coerente con EX280–EX290 che lo lasciano NULL); EX284–EX290 aggiunti Blocco 21 "Gambe e Glutei", 1 luglio 2026 — solo `affondo-salto-cambio-gamba-manubri` per EX288, unico asset realmente nuovo del blocco; gli altri 6 esercizi nuovi riusano slug legacy già live: EX284 Leg curl prono unilaterale→`leg-curl-prono-unilaterale`, EX285 Leg curl prono bilaterale→`leg-curl-prono`, EX286 Leg press 45 unilaterale→`leg-press-45-unilateral`, EX287 Stacco da terra classico→`stacco-della-terra`, EX288 Affondo con salto e cambio gamba con manubri→`affondo-salto-cambio-gamba-manubri` (nuovo upload, per decisione esplicita utente resta distinto da EX038 pur usando un file di partenza byte-identico a quello di EX038 "Affondo camminato"), EX289 Pistol squat con manubrio→`pistol-squat-1`, EX290 Ponte glutei a gambe tese (talloni su panca)→`ponte-dei-glutei-a-gambe-tese`; EX083 "Pistol squat" ricollegato da `pistol-squat-assistito` a `pistol-squat-2` (verificato visivamente: corpo libero); EX280–EX283 aggiunti Blocco 20 "Gambe e Glutei", tutti riusano slug legacy già live in Storage, nessun upload nuovo: EX280 Hip thrust al multipower→`hip-thrust-al-multipower`, EX281 Iperestensione inversa alla macchina→`iperestensione-inversa`, EX283 Leg press 45 gradi→`leg-press-45`; EX016 "Leg press" ricollegato da `leg-press-45` a `leg-press-horizontal` (stesso file già live, evita duplicato); EX279 "Hip thrust unilaterale" ricollegato da slug Blocco-19 `hip-thrust-unilaterale-schiena-su-panca` allo slug legacy `hip-thrust-unilaterale` — riga Blocco 19 lasciata orfana, non eliminata; EX273–EX276 + EX278–EX279 aggiunti Blocco 19, EX277 gap intenzionale — doppione di EX221 "Reverse hack squat"; EX221 rinominato per riflettere il contenuto reale; EX085 "Good morning a corpo libero" rinominato e privato del gif_slug errato — la GIF con bilanciere appartiene a EX233; EX263–EX272 Blocco 18, EX270 GIF identica a EX095; EX254–EX260 + EX262 Blocco 17, EX261 gap intenzionale; EX245–EX253 Blocco 16), 48 senza slug (fallback ExerciseDB)
 - Worker Version ID attuale: `29b77d2b` (deploy 28 giugno 2026)
 
-### Cantiere GIF — workflow per blocco futuro (regola fissa dal 30 giu 2026)
-1. **Sposta + rinomina** il file da `5° GIF DI MUSCOLAZIONE/.../ZONA (1)/` → `Biblioteca di esercizi/{Categoria}/` con nome italiano leggibile (es. `Crunch a braccia tese.gif`). Mai slug tecnico nel filename locale.
-2. **Upload** su Storage bucket `biblioteca-gif/{Categoria}/{Nome italiano leggibile}.gif` (stesso nome del file locale, spazi mantenuti)
-3. **Insert** `biblioteca_gif` (slug=kebab-case, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path=`{Categoria}/{Nome leggibile}.gif`, storage_url con %20 per spazi)
-4. **Insert** `esercizi_catalog` (codice, nome, pattern, gruppo_target, muscoli, attrezzo, luogo, livello, uso, gif_slug=slug)
-5. **Google Sheet** `catalogo_esercizi` → tab `esercizi_catalog`: aggiungere riga con stessi campi + colonna `gif_slug` (da aggiungere al foglio — mancante al 30 giu 2026)
+### Cantiere GIF — metodo e regole di processo (aggiornato 2 luglio 2026, sostituisce le regole precedenti)
+
+**Fonte di verità (la regola più importante)**
+- Il CSV locale del progetto NON è più la fonte per le decisioni — è la copia più vecchia e disallineata.
+- Gerarchia reale: Google Sheet `catalogo_esercizi` = master ufficiale (ci gira l'app) → Supabase = copia operativa (aggiornata in tempo reale da Claude Code durante il cantiere) → CSV locale = copia più vecchia.
+- A inizio sessione: l'utente scarica il Google Sheet aggiornato e lo carica in chat; Claude (chat) lavora su quella fotografia fresca per tutta la sessione, non sul CSV del repo.
+- In fase di verifica/esecuzione: Claude Code legge lo stato reale da Supabase (`esercizi_catalog` + `biblioteca_gif`), mai dal CSV locale.
+
+**Quattro controlli anti-errore (ad ogni blocco)**
+1. Decidere sul dato fresco, mai sul CSV vecchio (vedi sopra).
+2. Verificare la voce, non solo la GIF nuova — prima di agganciare una GIF a un codice esistente, controllare che quel codice abbia GIÀ nome/slug/GIF coerenti. Se la voce è già sbagliata, segnalare e correggere, non costruirci sopra.
+3. Controllo di coerenza finale a fine blocco, per ogni voce toccata: la GIF mostra davvero quel movimento? Nome e slug combaciano? Se no, stop.
+4. La lettura visiva di Claude prevale su una conferma veloce — se i fotogrammi contraddicono il nome (o una conferma rapida dell'utente), fermarsi e segnalarlo invece di procedere.
+
+**Cantieri di pulizia separati (NON mescolare con l'aggiunta di nuove GIF)**
+- Bonifica doppioni emersi dal pre-scan (es. Smith machine = multipower, gruppo estensione anca, stiff-leg).
+- Bonifica del "vecchio ereditato" (nomi/GIF sbagliati nelle voci storiche).
+- Sessioni dedicate, non durante la catalogazione.
+
+**Pre-scan doppioni a inizio zona**
+- Prima di catalogare una nuova cartella/zona: Claude Code fa un pre-scan (solo lettura) che confronta cartella origine ↔ destinazione e produce un report a tre fasce: 🔴 identici (hash uguale) / 🟡 molto simili (verifica utente) / 🟢 unici.
+- Claude Code NON decide e NON sposta/elimina: isola i candidati, l'utente conferma.
+
+**Cosa resta invariato**
+- Batch grande (20-30 GIF) analizzato insieme, con tabella unica di conferma e casi ambigui isolati in fondo.
+- File spostati (MOVE, non copy) da origine a destinazione, nome italiano ufficiale. Mai slug tecnico nel filename locale.
+- Convenzione nome: `Movimento base` + `variante` + `con attrezzo` (es. "Squat con salto con manubri"); termine base consolidato non tradotto (Front squat, Hip thrust, Jump squat, Pistol restano). Slug segue lo stesso ordine in kebab-case.
+- Doppioni → mai eliminare, spostati in `Scartati da revisionare/`.
+- Output per blocco: brief `.md` + CSV per Google Sheet (rigenerato con slug reali dopo il resoconto di Claude Code).
+- Resoconto obbligatorio a 6 punti dopo ogni esecuzione.
 
 **Struttura cartelle locale (fissa)**:
 ```
@@ -258,9 +282,12 @@ Biblioteca di esercizi/
 ├── 5° GIF DI MUSCOLAZIONE/   ← sorgente grezza, NON toccare
 ├── Addominali e Core/         ← file confermati, nome italiano leggibile
 ├── {Zona futura}/             ← una cartella per zona, stesso livello
+├── Scartati da revisionare/   ← doppioni/candidati scartati, mai eliminati
 ```
 
-**Nota accesso Sheet**: Claude Code non ha OAuth Google, non può scrivere sul Sheet programmaticamente. Operazione manuale. L'Apps Script "ZonaTracker-Sync-Esercizi (v3)" (menu "Sync Esercizi" nel foglio) sincronizza Sheet → Supabase; per nuovi blocchi aggiungere prima le righe nel Sheet, poi lanciare il sync. I passi 2-4 (Supabase) si possono fare in anticipo tramite script Python (`.env` ha `SUPABASE_SERVICE_ROLE_KEY`).
+**Nota accesso Sheet**: Claude Code non ha OAuth Google, non può scrivere sul Sheet programmaticamente. Operazione manuale. L'Apps Script "ZonaTracker-Sync-Esercizi (v3)" (menu "Sync Esercizi" nel foglio) sincronizza Sheet → Supabase; per nuovi blocchi aggiungere prima le righe nel Sheet, poi lanciare il sync. Upload Storage + insert `biblioteca_gif`/`esercizi_catalog` si possono fare in anticipo tramite script Python (`.env` ha `SUPABASE_SERVICE_ROLE_KEY`).
+
+**Note tecniche runtime** (invariate):
 - Cache KV indicizzata per codice
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` (cache key = `exCode || exName`)
 - `surrogateNote` dice SOLO le differenze rispetto alla GIF — non ripete setup già mostrato
