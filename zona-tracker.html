@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.06 · 07:41';
+const APP_VERSION = '2026.07.06 · 08:03';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8281,29 +8281,44 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       sex: profile.sex, age: profile.age, weight_kg: profile.weight_kg,
     };
 
-    // ROTAZIONE VARIETÀ PER MESOCICLO (6 lug). Il picking è deterministico: a
-    // parità di profilo pesca sempre i primi esercizi in ordine di codice → i
-    // nuovi esercizi del catalogo non entrano mai. Soluzione: un OFFSET di
-    // rotazione = indice mesociclo, sommato al round-robin per-tipo (occurrenceIdx)
-    // dentro i picker (via il loro sessionIndex). Effetto: la scheda resta FISSA
-    // per le 4 settimane del ciclo (stesso indice → stessa selezione, requisito
-    // determinismo), poi al mesociclo successivo l'offset cambia e pesca varianti
-    // diverse dallo stesso pool (stesso pattern/gruppo_target → continuità stimolo).
-    //   indice mesociclo = floor(settimane trascorse da train_start_date / 4).
-    // Nessuna data / data futura / onboarding senza start → 0 (comportamento storico).
-    let mesocicloIdx = 0;
-    {
-      const _startRaw = profile && profile.train_start_date;
-      if (_startRaw) {
-        const _start = new Date(String(_startRaw) + 'T00:00:00');
-        if (!isNaN(_start.getTime())) {
-          const _days = Math.floor((Date.now() - _start.getTime()) / 86400000);
-          if (_days > 0) mesocicloIdx = Math.floor(Math.floor(_days / 7) / 4);
-        }
+    // ROTAZIONE VARIETÀ A OGNI RIGENERAZIONE (6 lug, sostituisce il criterio
+    // calendario-based per-mesociclo del commit 34f4d6f — rimosso per evitare
+    // doppio offset). Il picking è deterministico: a parità di profilo pesca
+    // sempre i primi esercizi in ordine di codice → il catalogo ampliato non
+    // viene sfruttato. Soluzione: un OFFSET di rotazione = CONTATORE DI
+    // RIGENERAZIONI, sommato al round-robin per-tipo (occurrenceIdx) dentro i
+    // picker (via il loro sessionIndex). Cambia a OGNI save/rigenerazione, così
+    // ogni nuova scheda pesca varianti diverse dallo stesso pool (stesso
+    // pattern/gruppo_target → continuità di stimolo). L'utente rigenera quando
+    // cambia mesociclo, quindi copre di fatto anche la progressione temporale.
+    //
+    // Il contatore = numero di righe schede_utente GIÀ esistenti per l'utente
+    // (0-based). Il save (_trainGenSaveScheda) usa lo STESSO conteggio per
+    // blocco_n (= count+1) e INSERISCE una nuova riga a ogni rigenerazione (mai
+    // UPDATE/DELETE → il count cresce monotòno). Quindi:
+    //   - onboarding / prima scheda → count 0 → rigenIdx 0 (baseline, no rotazione)
+    //   - ogni rigenerazione successiva → count+1 → offset diverso → scheda diversa
+    //   - due generazioni SENZA save nel mezzo (es. dryRun ztSchedaWhy) → stesso
+    //     count → stesso rigenIdx → risultato IDENTICO (determinismo per debug).
+    // Errore/latenza query → rigenIdx 0 (fallback sicuro, comportamento storico).
+    // NB: NON tocca la progressione carichi (schedaGen/DUP): cambia solo QUALI
+    // esercizi entrano, non la storia di progressione già salvata.
+    let rigenIdx = 0;
+    try {
+      const { count, error: rigenErr } = await supa
+        .from('schede_utente')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', ST.user.id);
+      if (!rigenErr && Number.isFinite(count)) {
+        rigenIdx = count || 0;
+      } else if (rigenErr) {
+        console.warn('[train-gen] rotazione: count schede_utente fallito, rigenIdx=0 →', rigenErr.message);
       }
+    } catch (e) {
+      console.warn('[train-gen] rotazione: count schede_utente eccezione, rigenIdx=0 →', (e && e.message) || e);
     }
     if (typeof window !== 'undefined' && window._trainGenDebug) {
-      console.log(`[train-gen] rotazione mesociclo: indice=${mesocicloIdx} (train_start_date=${profile && profile.train_start_date || '—'})`);
+      console.log(`[train-gen] rotazione per rigenerazione: rigenIdx=${rigenIdx} (source=${source})`);
     }
 
     // BLOCCO 3 — CARICAMENTO CATALOGO
@@ -8456,9 +8471,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const patternRepeat = {};
       requiredPatterns.forEach((pat) => {
         const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
-        // +mesocicloIdx = rotazione varietà per mesociclo (si SOMMA al round-robin
+        // +rigenIdx = rotazione varietà per rigenerazione (si SOMMA al round-robin
         // per-tipo occurrenceIdx + al ripetitore intra-sessione r, non li sostituisce).
-        const pickIdx = (Number(occurrenceIdx) || 0) + r + mesocicloIdx;
+        const pickIdx = (Number(occurrenceIdx) || 0) + r + rigenIdx;
         let picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
         // FIX 2 — Squat corpo libero in sessione Forza: se il compound
         // 'dominante ginocchia' scelto non ha attrezzi con carico nel kit
@@ -8526,7 +8541,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         .sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a] || 0));
       const muscularPicks = [];
       muscularSorted.forEach(gt => {
-        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx + mesocicloIdx, sessionLabel);
+        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx + rigenIdx, sessionLabel);
         if (picked) { usedSoFar.add(picked.codice); muscularPicks.push({ ex: picked, gruppoTarget: gt }); }
       });
       // Pesca DUE core fissi di sottotipo DIVERSO (6 lug).
@@ -8534,9 +8549,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       //  Fallback secondario (in cascata): opposto → se non nel pool, stesso
       //  sottotipo del primario ma codice diverso (usedSoFar esclude già il 1°)
       //  → se neanche quello, resta 1 solo core (warn, nessun crash).
-      //  Entrambi i core ruotano per mesociclo (occurrenceIdx + mesocicloIdx),
-      //  come compound e iso muscolari: sottotipi fissi, varianti diverse nel tempo.
-      const _coreRotIdx = occurrenceIdx + mesocicloIdx;
+      //  Entrambi i core ruotano per rigenerazione (occurrenceIdx + rigenIdx),
+      //  come compound e iso muscolari: sottotipi fissi, varianti diverse a ogni scheda.
+      const _coreRotIdx = occurrenceIdx + rigenIdx;
       let corePick = null, corePick2 = null;
       if (coreTarget) {
         const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, _coreRotIdx, sessionLabel);
@@ -8601,7 +8616,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
             const gts = _gtOf(ex);
             return gts.some(g => gruppiAmmessi.has(g)) && !gts.some(g => gruppiPresenti.has(g));
           });
-          const bonus = _trainGenPickByPattern(cand, ['isolamento'], usedSoFar, occurrenceIdx + mesocicloIdx);
+          const bonus = _trainGenPickByPattern(cand, ['isolamento'], usedSoFar, occurrenceIdx + rigenIdx);
           if (!bonus) break;
           usedSoFar.add(bonus.codice);
           _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
@@ -8614,7 +8629,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
             const gts = _gtOf(ex);
             return gts.includes(coreTarget) && !gts.some(g => gruppiPresenti.has(g));
           });
-          const bonus = _trainGenPickByPattern(cand, ['core'], usedSoFar, occurrenceIdx + mesocicloIdx);
+          const bonus = _trainGenPickByPattern(cand, ['core'], usedSoFar, occurrenceIdx + rigenIdx);
           if (bonus) {
             usedSoFar.add(bonus.codice);
             _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
@@ -8623,7 +8638,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         }
         // Tier 3 — compound complementari coerenti con la macro
         while (exercises.length < softMax) {
-          const bonus = _trainGenPickByPattern(pools.poolPrincipali, compoundAmmessi, usedSoFar, occurrenceIdx + mesocicloIdx);
+          const bonus = _trainGenPickByPattern(pools.poolPrincipali, compoundAmmessi, usedSoFar, occurrenceIdx + rigenIdx);
           if (!bonus) break;
           usedSoFar.add(bonus.codice);
           exercises.push(bonus); bonusPicks.push({ ex: bonus, tier: 'compound' });
