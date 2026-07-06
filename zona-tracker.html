@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.05 · 07:38';
+const APP_VERSION = '2026.07.06 · 07:25';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7917,16 +7917,19 @@ const _TRAIN_GEN_PUMP_PARAMS = {
 // gruppo_target del catalogo (vocabolario chiuso). fullbody: rotazione 1-2
 // via sessionIndex. core non ha isolamenti dedicati nel catalogo → il picker
 // ritorna null e logga (NON crasha): la sessione resta più corta.
-// Iso obbligatori per categoria. Il CORE è uno SLOT FISSO (29 mag, decisione
-// col preparatore: core in ogni sessione per protezione lombare):
-//   Lower/Legs → core anti-estensione · Upper/Push/Pull → core anti-rotazione.
-// fullbody NON elenca il core qui: alterna i due tipi via occurrenceIdx in
-// BLOCCO 6 (la lista qui è solo muscolare, con rotazione 1-2).
+// Iso obbligatori per categoria. Il CORE sono DUE SLOT FISSI (29 mag core
+// singolo; 6 lug secondo core: due core di sottotipo DIVERSO per sessione,
+// protezione lombare + stabilità busto, mai lo stesso stimolo raddoppiato):
+//   primario per categoria (Lower/Legs → anti-estensione · Upper/Push/Pull →
+//   anti-rotazione), secondario = sottotipo OPPOSTO (fallback in BLOCCO 6).
+// fullbody NON elenca il core qui: mette ENTRAMBI i sottotipi in ogni sessione
+// (BLOCCO 6). La lista qui è solo muscolare, con rotazione 1-2.
 const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
   upper_forza:      ['deltoidi posteriori', 'core anti-rotazione'],
   upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti', 'core anti-rotazione'],
-  // FASE A — Upper Pump: 5 muscolari + core anti-rotazione = 6 esercizi (= softMax,
-  // tetto). I dorsali NON sono obbligatori → entrano solo come bonus se resta spazio.
+  // FASE A — Upper Pump: 5 muscolari + 2 core (anti-rotazione + anti-estensione,
+  // 6 lug) = 7 esercizi. L'ossatura (compresi i 2 core) NON si taglia mai anche se
+  // supera il softMax=6. I dorsali NON sono obbligatori → bonus solo se resta spazio.
   upper_pump:       ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'petto', 'core anti-rotazione'],
   lower_forza:      ['glutei', 'core anti-estensione'],
   lower_ipertrofia: ['ischiocrurali', 'polpacci', 'core anti-estensione'],
@@ -7965,10 +7968,12 @@ const _TRAIN_GEN_COMPOUND_COVERAGE = {
 // Gli iso bonus (non obbligatori) vengono rimossi PRIMA di qualsiasi
 // obbligatorio; i compound primari NON si rimuovono MAI.
 const _TRAIN_GEN_ISO_CRITICALITY = {
-  'core anti-estensione': 5,                                  // Lower — protezione lombare, MAI sacrificabile
+  // ENTRAMBI i core = MAI sacrificabili (6 lug): ogni sessione ha 2 core fissi
+  // di sottotipo diverso, entrambi nell'ossatura sacra (mai tagliati dal softMax).
+  'core anti-estensione': 5,                                  // protezione lombare
+  'core anti-rotazione': 5,                                   // stabilità busto — pari criticità
   'bicipiti': 3, 'tricipiti': 3,
   'deltoidi posteriori': 2, 'glutei': 2, 'ischiocrurali': 2,
-  'core anti-rotazione': 2,                                   // Upper — media (tagliato dopo i muscolari meno critici)
   'deltoidi laterali': 1, 'polpacci': 1, 'avambracci': 1, 'trapezi': 1,
 };
 
@@ -8453,12 +8458,15 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         cov.forEach(g => gruppiCopertiDaCompound.add(g));
       });
 
-      // 2) ISO OBBLIGATORI per categoria (Regola A) — muscolari + CORE FISSO.
-      // Il core è uno SLOT FISSO in ogni sessione (protezione lombare):
-      //   Lower/Legs → core ANTI-ESTENSIONE (sotto carico squat/stacchi)
-      //   Upper/Push/Pull → core ANTI-ROTAZIONE (stabilità busto)
-      //   Full Body → alterna i due tipi via occurrenceIdx
+      // 2) ISO OBBLIGATORI per categoria (Regola A) — muscolari + DUE CORE FISSI.
+      // Ogni sessione ha 2 core di sottotipo DIVERSO (6 lug), entrambi slot fissi:
+      //   Lower/Legs → primario ANTI-ESTENSIONE (sotto carico squat/stacchi)
+      //   Upper/Push/Pull → primario ANTI-ROTAZIONE (stabilità busto)
+      //   secondario = sottotipo OPPOSTO al primario (picking in BLOCCO 6)
+      //   Full Body → entrambi i sottotipi in OGNI sessione (non più alternati)
       const _isCoreGt = (gt) => /^core /.test(String(gt || ''));
+      const _oppositeCore = (ct) => ct === 'core anti-estensione' ? 'core anti-rotazione'
+                                  : ct === 'core anti-rotazione' ? 'core anti-estensione' : null;
       let muscularTargets, coreTarget;
       if (splitType === 'fullbody') {
         let m = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE.fullbody || []).slice(); // solo muscolari
@@ -8467,6 +8475,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           m = [m[start], m[(start + 1) % m.length]];
         }
         muscularTargets = m;
+        // Con 2 core fissi: entrambi i sottotipi in ogni full body. Il primario
+        // alterna via occurrenceIdx solo per varietà d'ORDINE; il secondario
+        // (opposto) completa la coppia sotto → sempre anti-estensione + anti-rotazione.
         coreTarget = ((Number(occurrenceIdx) || 0) % 2 === 0) ? 'core anti-estensione' : 'core anti-rotazione';
       } else {
         const all = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
@@ -8491,25 +8502,47 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx, sessionLabel);
         if (picked) { usedSoFar.add(picked.codice); muscularPicks.push({ ex: picked, gruppoTarget: gt }); }
       });
-      // Pesca core (slot fisso)
-      let corePick = null;
+      // Pesca DUE core fissi di sottotipo DIVERSO (6 lug).
+      //  1° = primario (coreTarget). 2° = sottotipo OPPOSTO.
+      //  Fallback secondario (in cascata): opposto → se non nel pool, stesso
+      //  sottotipo del primario ma codice diverso (usedSoFar esclude già il 1°)
+      //  → se neanche quello, resta 1 solo core (warn, nessun crash).
+      let corePick = null, corePick2 = null;
       if (coreTarget) {
         const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, occurrenceIdx, sessionLabel);
         if (picked) { usedSoFar.add(picked.codice); corePick = { ex: picked, gruppoTarget: coreTarget }; }
         else console.warn(`[train-gen] ${sessionLabel}: CORE obbligatorio '${coreTarget}' non disponibile nel pool (gruppo_target nel catalogo?)`);
+
+        // Secondo core: prima il sottotipo opposto…
+        const coreTarget2 = _oppositeCore(coreTarget);
+        let picked2 = coreTarget2
+          ? _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget2, usedSoFar, occurrenceIdx, sessionLabel)
+          : null;
+        let gruppo2 = picked2 ? coreTarget2 : null;
+        // …ripiego: stesso sottotipo del primario, codice diverso (usedSoFar
+        // contiene già il 1° core → il picker lo esclude, mai duplicato).
+        if (!picked2) {
+          picked2 = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, occurrenceIdx, sessionLabel);
+          gruppo2 = picked2 ? coreTarget : null;
+        }
+        if (picked2) { usedSoFar.add(picked2.codice); corePick2 = { ex: picked2, gruppoTarget: gruppo2 }; }
+        else console.warn(`[train-gen] ${sessionLabel}: SECONDO core non disponibile (né opposto né stesso sottotipo con codice diverso) → resta 1 solo core`);
       }
 
-      // OSSATURA SACRA (fix volume 29 mag): compound primari + iso obbligatori
-      // (muscolari) + core fisso NON si tagliano MAI, neppure oltre il softMax.
-      // Il softMax limita SOLO il riempimento BONUS (sotto) → l'ossatura resta
-      // sempre integra (es. Upper Ipertrofia 4+3+1=8 anche con softMax=6).
+      // OSSATURA SACRA (fix volume 29 mag; 2 core dal 6 lug): compound primari +
+      // iso obbligatori (muscolari) + ENTRAMBI i core fissi NON si tagliano MAI,
+      // neppure oltre il softMax. Il softMax limita SOLO il riempimento BONUS
+      // (sotto) → l'ossatura resta sempre integra (es. Upper Ipertrofia 4+3+2=9
+      // anche con softMax=6).
       const softMax = sessionMeta.softMaxPerSession;
       const keptMuscular = muscularPicks;     // tutti gli iso obbligatori
-      const coreKept = corePick;              // core fisso sempre (se nel pool)
+      const coreKept = corePick;              // 1° core fisso sempre (se nel pool)
+      const core2Kept = corePick2;            // 2° core fisso sempre (se nel pool)
       const cutTargets = [];                  // nessun taglio dell'ossatura
       const coreSkippedTime = false;
       const keptObbligatori = keptMuscular; // alias per compatibilità log/diag
-      const exercises = [...compoundPicks, ...keptMuscular.map(o => o.ex), ...(coreKept ? [coreKept.ex] : [])];
+      const exercises = [...compoundPicks, ...keptMuscular.map(o => o.ex),
+        ...(coreKept ? [coreKept.ex] : []), ...(core2Kept ? [core2Kept.ex] : [])];
 
       // 3) ISO BONUS — SOLO in modalità "Completo", COERENTI per zona muscolare.
       // In "Essenziale" ci si ferma all'ossatura. In "Completo" si riempie fino
@@ -8571,8 +8604,10 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const _isoLabel = (ex) => _trainGenIsIsometric(ex) ? 'iso_isometrico'
         : (['isolamento','core','mobilita'].includes(_normPattern(ex.pattern)) ? 'iso' : 'compound');
       const _coreShort = coreTarget ? coreTarget.replace('core anti-', 'anti-') : null;
-      const coreLog = coreKept
-        ? `${coreKept.ex.codice} (${_coreShort}, isometrico)`
+      const _coreShortOf = (ct) => ct ? ct.replace('core anti-', 'anti-') : null;
+      const _coresKept = [coreKept, core2Kept].filter(Boolean);
+      const coreLog = _coresKept.length
+        ? _coresKept.map(c => `${c.ex.codice} (${_coreShortOf(c.gruppoTarget)}, isometrico)`).join(' + ')
         : (coreTarget ? (coreSkippedTime ? `SKIPPATO per tempo (${_coreShort})` : `NON DISPONIBILE (${_coreShort})`) : 'nessuno');
 
       // WARM-UP specifico (FASE 1): cuffia dei rotatori come PREHAB nelle sessioni
@@ -8642,6 +8677,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           obbligatoriKept: keptMuscular.map(o => o.gruppoTarget),
           obbligatoriCut: cutTargets,
           core: corePick ? { gruppo: corePick.gruppoTarget, codice: (coreKept ? coreKept.ex.codice : null), kept: !!coreKept, skippedTime: coreSkippedTime } : { gruppo: coreTarget, codice: null, kept: false, skippedTime: false },
+          core2: corePick2 ? { gruppo: corePick2.gruppoTarget, codice: core2Kept.ex.codice, kept: !!core2Kept } : { gruppo: _oppositeCore(coreTarget), codice: null, kept: false },
           bonusN: bonusPicks.length,
           bonus: bonusPicks.map(b => `${b.ex.codice}:${b.tier}`),
           warmup: warmupExs.map(w => w.codice), // FASE 1: prehab (cuffia su Upper)
@@ -10095,13 +10131,13 @@ window.ztSchedaWhy = async function(opts = {}) {
   console.table(
     (scheda.sessioni || []).map(s => {
       const d = s._diag || {};
-      const c = d.core || {};
-      let coreCol = 'nessuno';
-      if (c.gruppo) {
+      const _coreCell = (c) => {
+        if (!c || !c.gruppo) return null;
         const short = String(c.gruppo).replace('core anti-', 'anti-');
-        coreCol = c.kept ? `${c.codice} (${short})`
+        return c.kept ? `${c.codice} (${short})`
           : (c.skippedTime ? `SKIP tempo (${short})` : `NON DISP. (${short})`);
-      }
+      };
+      const coreCol = [_coreCell(d.core), _coreCell(d.core2)].filter(Boolean).join(' + ') || 'nessuno';
       return {
         sessione:        s.name,
         tipo:            s.type,
