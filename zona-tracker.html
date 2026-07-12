@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.12 · 16:11';
+const APP_VERSION = '2026.07.12 · 20:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6486,8 +6486,14 @@ async function computeTrainHomeData(){
 
     // nextSession: cicla sull'ORDINE CANONICO 6 giorni (getRotationCycle), NON sull'array della scheda.
     // La scheda non contiene i recuperi → con getSessionCycle un recupero darebbe indexOf=-1 → fallback errato a upperA.
+    // Marcatore di posizione nel ciclo = workout più recente il cui session_type
+    // è PRESENTE nel ciclo canonico, recovery INCLUSI (lastArr è già desc e già
+    // esclude rest/rest_injury): completato recoveryUpper (G3) il prossimo è
+    // upperB (G4), non di nuovo il recovery. lastWorkout (solo LAVORO) resta la
+    // fonte per gli altri usi; fallback a lastWorkout se nulla matcha il ciclo.
     const cycle = getRotationCycle();
-    const lastIdx = cycle.indexOf(lastWorkout.session_type);
+    const lastInCycle = (lastArr || []).find(w => cycle.includes(w.session_type)) || lastWorkout;
+    const lastIdx = cycle.indexOf(lastInCycle.session_type);
     const nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
@@ -8433,6 +8439,18 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // un round futuro insieme a un nuovo step M1.
     const pools = _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello });
     const attrezzaturaSet = pools.attrezzaturaSet || new Set();
+    // Codici ammissibili per l'utente (unione dei pool già filtrati per
+    // luogo/attrezzo/livello): usato da _trainGenApplyCautions per validare
+    // le SOSTITUZIONI — un'alternativa fuori da questo Set non entra in scheda.
+    const ammissibiliSet = new Set(
+      [
+        ...(pools.poolPrincipali || []),
+        ...(pools.poolFinisher || []),
+        ...(pools.poolFinisherTabata || []),
+        ...(pools.poolRiscaldamento || []),
+        ...(pools.poolCarry || []),
+      ].map(ex => ex.codice).filter(Boolean)
+    );
     if (pools.poolPrincipali.length === 0) {
       console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
       return null;
@@ -8815,7 +8833,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     //   3. core in coda
     //   Sub-sort per codice (stabile, coerente con pickByPattern).
     const sessioniProcessate = sessioniRaw.map(s => {
-      const cautelati = _trainGenApplyCautions(s.exercises, limitazioni, catalogMap);
+      const cautelati = _trainGenApplyCautions(s.exercises, limitazioni, catalogMap, ammissibiliSet);
       // Dedup post-sostituzioni: l'alternativa di un esercizio potrebbe
       // coincidere con un altro già selezionato dal BLOCCO 6 (caso edge
       // raro: pickByPattern dedup via Set codici in fase di selezione,
@@ -8856,6 +8874,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         poolTabata: pools.poolFinisherTabata,
         limitazioni,
         catalogMap,
+        ammissibili: ammissibiliSet,
         sessionIndex: typeOrderIdx,
         sessionType: s.splitType,
       });
@@ -9601,13 +9620,13 @@ function _trainGenMapCarryExercise(cat) {
 // Cautele zone_rischio applicate. Esercizi scartati dalle cautele → ridotti
 // in numero (4 minimi, accetta meno se pool ridotto post-cautele).
 // Ritorna oggetto finisher o null se pool insufficiente.
-function _trainGenBuildTabata({ poolTabata, limitazioni, catalogMap, sessionIndex, sessionType }) {
+function _trainGenBuildTabata({ poolTabata, limitazioni, catalogMap, ammissibili, sessionIndex, sessionType }) {
   if (!Array.isArray(poolTabata) || poolTabata.length === 0) {
     console.warn(`[train-gen] tabata: poolFinisherTabata vuoto per ${sessionType}`);
     return null;
   }
   // Cautele sui cardio (es. lombare/ginocchia di Ignazio → adattamento ROM)
-  const cautelati = _trainGenApplyCautions(poolTabata, limitazioni, catalogMap);
+  const cautelati = _trainGenApplyCautions(poolTabata, limitazioni, catalogMap, ammissibili);
   if (cautelati.length === 0) {
     console.warn(`[train-gen] tabata: tutti i cardio scartati dalle cautele per ${sessionType}`);
     return null;
@@ -9692,8 +9711,15 @@ function _trainGenOrderExercises(items) {
   });
 }
 
-function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
+function _trainGenApplyCautions(exercises, limitazioni, catalogMap, ammissibili) {
   // Applica le cautele utente in modo 100% DETERMINISTICO (mai AI).
+  //
+  // ammissibili (opzionale): Set di codici che hanno superato i filtri
+  // luogo/attrezzo/livello (_trainGenFilterPool). Se passato, un'alternativa
+  // FUORI dal Set viene skippata come 'alternative-not-eligible' — evita che
+  // la sostituzione porti in scheda un esercizio solo-palestra a un utente
+  // casa (catalogMap è il catalogo COMPLETO non filtrato). Se assente,
+  // comportamento storico invariato (retrocompatibile).
   // Per ogni esercizio: intersect(limitazioni utente, zone_rischio esercizio).
   //   - intersezione vuota → keep inalterato
   //   - intersezione non vuota:
@@ -9744,6 +9770,12 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap) {
       if (!altEx) {
         console.warn(`[train-gen] alternativa '${altCodice}' di '${ex.codice}' non trovata nel catalogMap → skip`);
         return { kind:'skip', reason:'alternative-not-found', ex, conflict };
+      }
+      // L'alternativa deve superare gli stessi filtri luogo/attrezzo/livello
+      // dell'utente: fuori dal Set ammissibili → skip (stesso flusso not-found).
+      if (ammissibili && !ammissibili.has(altCodice)) {
+        console.warn(`[train-gen] alternativa '${altCodice}' di '${ex.codice}' non ammissibile per ambiente/attrezzi/livello utente → skip`);
+        return { kind:'skip', reason:'alternative-not-eligible', ex, conflict };
       }
       // Ricontrolla l'alternativa una sola volta (depth=0 → no sostituzione).
       const altResolved = resolve(altEx, 0);
