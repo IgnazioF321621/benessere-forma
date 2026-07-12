@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.06 · 08:03';
+const APP_VERSION = '2026.07.12 · 16:11';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7603,6 +7603,43 @@ async function loadActiveScheda() {
       console.warn('[scheda] scheda attiva senza sessioni, fallback hardcoded');
       return;
     }
+
+    // ── Risoluzione nomi esercizio a runtime dal catalogo ──
+    // Il jsonb salva codice+name come snapshot alla generazione; dopo i rename
+    // del catalogo (cantiere GIF) quei nomi sono obsoleti. Qui riallineiamo
+    // `name` al nome attuale di esercizi_catalog quando il `codice` combacia.
+    // SOLO in memoria: nessuna scrittura su schede_utente, il jsonb resta intatto.
+    // Se la query catalogo fallisce → scheda usata così com'è (comportamento attuale).
+    try {
+      const { data: catRows, error: catErr } = await supa
+        .from('esercizi_catalog')
+        .select('codice, nome');
+      if (catErr) {
+        console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
+      } else if (Array.isArray(catRows)) {
+        const nomeByCodice = new Map();
+        catRows.forEach(r => { if (r && r.codice) nomeByCodice.set(r.codice, r.nome); });
+        const remapEx = (ex) => {
+          if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
+          const nome = nomeByCodice.get(ex.codice);
+          if (nome == null) {                            // codice non a catalogo → tieni snapshot
+            console.warn('[scheda] codice non nel catalogo, nome snapshot mantenuto:', ex.codice);
+            return;
+          }
+          if (nome !== ex.name) ex.name = nome;          // riallinea al nome attuale
+        };
+        sessioniArr.forEach(s => {
+          if (!s) return;
+          if (Array.isArray(s.warmup)) s.warmup.forEach(remapEx);
+          if (Array.isArray(s.exercises)) s.exercises.forEach(remapEx);
+          if (s.carry_conclusivo) remapEx(s.carry_conclusivo);
+          if (s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(remapEx);
+        });
+      }
+    } catch (e) {
+      console.warn('[scheda] eccezione risoluzione nomi catalogo:', (e && e.message) || e);
+    }
+
     const sessMap = {};
     const cycle = [];
     sessioniArr.forEach(s => {
@@ -20806,7 +20843,8 @@ async function openExerciseAI(exName, sessionId) {
   renderTraining();
 
   // ── Fetch media in parallelo: la GIF arriva indipendentemente dall'AI ──
-  fetchExerciseMedia(exName).then(mediaResp => {
+  // Passa il codice EX (se presente) così il Worker risolve via ?code= (biblioteca_gif).
+  fetchExerciseMedia(exName, ex?.codice || null).then(mediaResp => {
     // user ha chiuso modal o ha aperto un altro esercizio nel frattempo
     if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
     ST.exerciseAIOpen = {
