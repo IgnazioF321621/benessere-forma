@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.12 · 22:29';
+const APP_VERSION = '2026.07.13 · 04:44';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -7719,16 +7719,25 @@ function getRotationCycle() {
 }
 
 // Settimana del mesociclo 3+1 (1..4) derivata dallo storico completato.
-// STESSA identica matematica del render Progressione: floor(count/6)%4 con
-// correttivo count%6===0 (multiplo esatto → resta sulla settimana appena
-// chiusa invece di saltare avanti). Consumata da: render Progressione (badge),
-// computeNextSetSuggestion (RIR 3 in scarico), vista sessione (badge SCARICO).
+// Conta i SOLI giorni di LAVORO: i recovery sono opzionali — chi non li logga
+// non deve allungare il mesociclo (con /6 lo scarico arrivava dopo ~6 settimane
+// reali a 4 workout/giro). rest/rest_injury già esclusi a monte dalla query di
+// loadTrainingAllCompleted. Stesso correttivo bordo storico: multiplo esatto
+// di workPerGiro → resta sulla settimana appena chiusa invece di saltare avanti.
+// Consumata da: render Progressione (badge), computeNextSetSuggestion
+// (RIR 3 in scarico), vista sessione (badge SCARICO).
 function getCycleWeekInfo(){
-  const validWorkoutsCount = (ST.trainAllCompleted || []).length;
+  const workCount = (ST.trainAllCompleted || [])
+    .filter(w => w && !/^recovery/i.test(w.session_type)).length;
+  // Slot di LAVORO per giro, derivati dal ciclo canonico attivo (mai hardcoded):
+  // 6gg → 4 (upperA/lowerA/upperB/lowerB) · 5 giorni → 5 (+upperC; 'rest' è
+  // nel ciclo a 7 ma non è lavoro).
+  const workPerGiro = Math.max(1, getRotationCycle()
+    .filter(sid => !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury').length);
   let weekIdx = 0; // default: settimana 1 (nessun workout ancora)
-  if(validWorkoutsCount > 0){
-    const rawWeek = Math.floor(validWorkoutsCount / 6) % 4;
-    weekIdx = (validWorkoutsCount % 6 === 0)
+  if(workCount > 0){
+    const rawWeek = Math.floor(workCount / workPerGiro) % 4;
+    weekIdx = (workCount % workPerGiro === 0)
       ? (rawWeek === 0 ? 3 : rawWeek - 1)
       : rawWeek;
   }
@@ -11870,23 +11879,28 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     return out(bandTxt, `${clampReps(repsDone + 1)} reps`);
   }
 
-  // Ramo ELASTICI / corpo libero — resistenza in lbs (multipli di 10).
-  const resistInt = (resistance == null || resistance === '') ? 0 : (parseInt(resistance, 10) || 0);
-  const loadTxt = (lbs) => lbs <= 0 ? 'corpo libero' : `${lbs} lbs`;
-  const plusTen  = Math.min(250, resistInt + 10);
-  const minusTen = Math.max(0, resistInt - 10);
+  // Ramo ELASTICI / corpo libero — resistenza nell'unità dell'utente
+  // (ST.profile.unit: 'kg' → step 2.5, altrimenti 'lbs' → step 10, default lbs).
+  // I valori loggati restano raw (nessuna conversione): cambiano solo
+  // etichetta e passo dei suggerimenti.
+  const loadUnit = (ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs';
+  const loadStep = loadUnit === 'kg' ? 2.5 : 10;
+  const resistInt = (resistance == null || resistance === '') ? 0 : (parseFloat(resistance) || 0);
+  const loadTxt = (v) => v <= 0 ? 'corpo libero' : `${v} ${loadUnit}`;
+  const plusStep  = Math.min(250, resistInt + loadStep);
+  const minusStep = Math.max(0, resistInt - loadStep);
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
   //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
   if(rirVal === 0 && repsDone >= repsMin){
     if(targetRIR === 0) return out(loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
     return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
   }
-  // 2) tetto + RIR ≥ target → +10 lbs, riparti da repsMin
-  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusTen), `riparti da ${repsMin} ${unitLbl}`);
-  // 3) sotto range → -10 lbs (o variante più facile se già a corpo libero)
+  // 2) tetto + RIR ≥ target → +1 step di carico (10 lbs / 2.5 kg), riparti da repsMin
+  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusStep), `riparti da ${repsMin} ${unitLbl}`);
+  // 3) sotto range → -1 step di carico (o variante più facile se già a corpo libero)
   if(repsDone < repsMin){
     if(resistInt <= 0) return out('variante più facile', `punta a ${repsMin} ${unitLbl}`);
-    return out(loadTxt(minusTen), `punta a ${repsMin} ${unitLbl}`);
+    return out(loadTxt(minusStep), `punta a ${repsMin} ${unitLbl}`);
   }
   // 4) RIR > target (facile) → stessa resistenza, alza verso il tetto
   if(rirVal != null && rirVal > targetRIR) return out(loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
@@ -13091,7 +13105,7 @@ function renderTraining(){
                 <span class="ex-rest">rec ${restCompact}</span>
               </div>
             </div>
-            ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : 'resistenza −20 lbs rispetto all’ultima sessione'} · RIR 3+</div>` : ''}
+            ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
             ${suggestion?`<div class="ex-suggestion">${suggestion}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
