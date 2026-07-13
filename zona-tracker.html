@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.13 · 04:44';
+const APP_VERSION = '2026.07.13 · 05:07';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6494,7 +6494,18 @@ async function computeTrainHomeData(){
     const cycle = getRotationCycle();
     const lastInCycle = (lastArr || []).find(w => cycle.includes(w.session_type)) || lastWorkout;
     const lastIdx = cycle.indexOf(lastInCycle.session_type);
-    const nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
+    let nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
+    // Slot 'rest' (ciclo a 7): proposto SOLO il giorno stesso dell'ultimo workout
+    // (es. sabato sera dopo la Pump → "domani riposo"). Se l'ultimo workout del
+    // ciclo NON è di oggi, il giorno di riposo è di fatto già trascorso → avanza
+    // al primo slot successivo non-rest (wrap incluso: dopo G7 → upperA).
+    if(/^rest/.test(nextSession) && !(lastInCycle && lastInCycle.date === today)){
+      const restIdx = cycle.indexOf(nextSession);
+      for(let k = 1; k <= cycle.length; k++){
+        const cand = cycle[(restIdx + k) % cycle.length];
+        if(!/^rest/.test(cand)){ nextSession = cand; break; }
+      }
+    }
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
     const { data: completedArr } = await supa.from('workouts')
@@ -6564,13 +6575,15 @@ function getNextCheckpointInfo(){
   const daysUntil = Math.ceil((nextTs - Date.now()) / (24 * 60 * 60 * 1000));
 
   // Checkpoint overdue solo in settimana scarico (sett 4 del mesociclo 3+1).
-  // Settimana corrente = floor(workout validi / 6) % 4 → 0=sett1 … 3=sett4(scarico).
+  // Settimana corrente: helper canonico getCycleWeekInfo (soli giorni di
+  // lavoro, correttivo day-aware). Guardia: almeno 3 giri di lavoro completati
+  // (workCount >= 3*workPerGiro — equivalente della vecchia soglia >22 su /6).
   // Fallback (0 workout): comportamento classico (overdue se >28 gg).
   const validWorkoutsCount = (ST.trainAllCompleted || []).length;
   let overdue = daysUntil < 0;
   if(validWorkoutsCount > 0){
-    const currentWeekIdx = Math.floor(validWorkoutsCount / 6) % 4; // 0-based
-    const isDeloadWeek = currentWeekIdx >= 3 && validWorkoutsCount > 22;
+    const wk = getCycleWeekInfo();
+    const isDeloadWeek = wk.isScarico && wk.workCount >= 3 * wk.workPerGiro;
     overdue = isDeloadWeek && daysUntil < 0;
   }
 
@@ -7722,10 +7735,12 @@ function getRotationCycle() {
 // Conta i SOLI giorni di LAVORO: i recovery sono opzionali — chi non li logga
 // non deve allungare il mesociclo (con /6 lo scarico arrivava dopo ~6 settimane
 // reali a 4 workout/giro). rest/rest_injury già esclusi a monte dalla query di
-// loadTrainingAllCompleted. Stesso correttivo bordo storico: multiplo esatto
-// di workPerGiro → resta sulla settimana appena chiusa invece di saltare avanti.
+// loadTrainingAllCompleted. Correttivo bordo DAY-AWARE: a multiplo esatto di
+// workPerGiro resta sulla settimana appena chiusa solo se l'ultimo workout è
+// di oggi; dal giorno dopo scatta la settimana nuova.
 // Consumata da: render Progressione (badge), computeNextSetSuggestion
-// (RIR 3 in scarico), vista sessione (badge SCARICO).
+// (RIR 3 in scarico), vista sessione (badge SCARICO), getNextCheckpointInfo
+// (guardia overdue checkpoint M2).
 function getCycleWeekInfo(){
   const workCount = (ST.trainAllCompleted || [])
     .filter(w => w && !/^recovery/i.test(w.session_type)).length;
@@ -7737,11 +7752,19 @@ function getCycleWeekInfo(){
   let weekIdx = 0; // default: settimana 1 (nessun workout ancora)
   if(workCount > 0){
     const rawWeek = Math.floor(workCount / workPerGiro) % 4;
-    weekIdx = (workCount % workPerGiro === 0)
+    // Correttivo bordo DAY-AWARE: a multiplo esatto di workPerGiro si resta
+    // sulla settimana appena completata SOLO se l'ultimo workout completato
+    // (ultimo elemento di trainAllCompleted, ordinato asc) è di OGGI — es.
+    // sabato sera dopo la Pump → ancora settimana corrente. Dal giorno dopo
+    // (riposo incluso) si passa alla settimana successiva.
+    const all = ST.trainAllCompleted || [];
+    const lastDate = all.length ? all[all.length - 1].date : null;
+    weekIdx = (workCount % workPerGiro === 0 && lastDate === todayKey())
       ? (rawWeek === 0 ? 3 : rawWeek - 1)
       : rawWeek;
   }
-  return { weekNum: weekIdx + 1, isScarico: weekIdx === 3 };
+  // workCount/workPerGiro esposti per i consumatori (es. guardia checkpoint M2).
+  return { weekNum: weekIdx + 1, isScarico: weekIdx === 3, workCount, workPerGiro };
 }
 
 // Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
@@ -13474,8 +13497,10 @@ function renderTraining(){
     const todayTargetName = todayTargetSess?.name || 'Allenamento';
     const todayTargetMeta = todayTargetSess
       ? (todayTargetSess.type === 'Recupero'
-          ? `${todayTargetSess.exercises.length} esercizi · ~25 min`
-          : `RIR ${todayTargetSess.rir} · ${todayTargetSess.exercises.length} esercizi`)
+          ? `${(todayTargetSess.exercises || []).length} esercizi · ~25 min`
+          : (/^rest/.test(todayTargetSid) || todayTargetSess.type === 'Riposo' || todayTargetSess.rir == null)
+            ? '' // rest day / sessione senza RIR: niente "RIR null · 0 esercizi"
+            : `RIR ${todayTargetSess.rir} · ${(todayTargetSess.exercises || []).length} esercizi`)
       : '';
     const shortcutHTML = `
       <div onclick="openTrainingSession('${todayTargetSid}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
