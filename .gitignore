@@ -1,4 +1,6 @@
 .claude/worktrees/
+.env
 .env.local
 scripts/test-output/
 .DS_Store
+tmp_*
