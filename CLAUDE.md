@@ -265,7 +265,7 @@ Macro % `[carbo, prot, fat]`:
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
 - `biblioteca_gif`: 1.498 righe (conteggio verificato su Supabase 12 luglio 2026). Zone complete: Addominali e Core · Gambe e Glutei · Bicipiti e Braccia · Pettorali · Spalle e Cuffia (+ asset legacy `muscolazione/*` residui). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: filename Storage `IT (EN).gif` con `°` strippato nel path; `nome_italiano` mantiene il `°`; `slug` = `gif_slug` del catalogo. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
 - `esercizi_catalog.gif_slug`: 327/329 slug risolvono su `biblioteca_gif` (verificato live 13 luglio 2026). Pendenti: EX057 GIF mai caricata (in coda cantiere Rinomina); EX088 corretto a `camminata-alternata-manubri`. Codici senza slug → fallback ExerciseDB.
-- Worker Version ID attuale: `29b77d2b` (deploy 28 giugno 2026)
+- Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
 ### Cantiere GIF — metodo e regole di processo (aggiornato 2 luglio 2026, sostituisce le regole precedenti)
 
