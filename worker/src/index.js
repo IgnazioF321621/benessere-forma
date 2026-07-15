@@ -440,6 +440,38 @@ async function handleExerciseMedia(request, env) {
   try {
     // --- Lookup per CODICE (EX###) ---
     if (code) {
+      // 1) Prova biblioteca_gif via gif_slug su esercizi_catalog
+      const catalogResp = await fetch(
+        `${SUPABASE_URL}/rest/v1/esercizi_catalog?select=gif_slug&codice=eq.${encodeURIComponent(code)}&limit=1`,
+        { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+      );
+      if (catalogResp.ok) {
+        const catalogRows = await catalogResp.json();
+        const gifSlug = catalogRows[0]?.gif_slug ?? null;
+        if (gifSlug) {
+          const bibResp = await fetch(
+            `${SUPABASE_URL}/rest/v1/biblioteca_gif?select=slug,storage_path&slug=eq.${encodeURIComponent(gifSlug)}&limit=1`,
+            { headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` } }
+          );
+          if (bibResp.ok) {
+            const bibRows = await bibResp.json();
+            const bib = bibRows[0];
+            if (bib) {
+              const cachedUrl = `${SUPABASE_URL}/storage/v1/object/public/biblioteca-gif/${bib.storage_path}`;
+              return jsonResponse({
+                status: 'cached',
+                cached_url: cachedUrl,
+                is_surrogate: false,
+                surrogate_note: null,
+                source: 'biblioteca',
+                from_cache: true,
+              });
+            }
+          }
+        }
+      }
+
+      // 2) Fallback: MATCH_BY_CODE (ExerciseDB)
       const match = MATCH_BY_CODE[code];
       if (!match) {
         return jsonResponse({ status: 'missing', message: 'No approved match for this code yet' });
