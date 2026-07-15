@@ -4,3 +4,11 @@
 scripts/test-output/
 .DS_Store
 tmp_*
+
+# Materiali di lavoro cantiere GIF (locali, fuori dal repo)
+Biblioteca di esercizi/
+Catalogo GIF Esercizi.csv
+mapping_gif_italiano.csv
+INVENTARIO_*.md
+DIAGNOSTICA_*.md
+tools/
