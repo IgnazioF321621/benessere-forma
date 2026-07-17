@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.17 · 10:52';
+const APP_VERSION = '2026.07.17 · 11:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6220,6 +6220,10 @@ async function loadAndStart() {
     showScreen('onboarding');
     return;
   }
+
+  // WS-QUEUE: al boot post-login smaltisce le scritture workout_sets rimaste
+  // in coda da sessioni precedenti (fire-and-forget, non blocca il caricamento)
+  try { _wsFlushQueue(); } catch(e){}
 
   let cache = loadCache();
 
@@ -11295,6 +11299,136 @@ function cancelEditLogRow(){
   renderTraining();
 }
 
+// ═══ WS-QUEUE — scritture affidabili su workout_sets ═══
+// Ogni insert/update/delete verso workout_sets passa da wsWrite(): 1 retry
+// immediato, poi coda persistente in localStorage con recupero automatico
+// (al boot e a ogni scrittura riuscita). training_logs resta la fonte primaria
+// e il flusso utente non si blocca mai: il fallimento produce solo un toast
+// discreto e l'operazione viene riconsegnata appena possibile.
+const WS_PENDING_CAP = 200;
+function _wsPendingKey(){ return 'zt_ws_pending_' + ((ST.user && ST.user.id) || 'anon'); }
+function _wsLoadPending(){
+  try { return JSON.parse(localStorage.getItem(_wsPendingKey())) || []; } catch(e){ return []; }
+}
+function _wsSavePending(q){
+  try { localStorage.setItem(_wsPendingKey(), JSON.stringify(q)); } catch(e){}
+}
+// Chiave composita di una serie: la stessa usata per riconciliare i due archivi
+function _wsKey(date, sessionType, exName, setNumber){
+  return [date, sessionType, exName, setNumber].join('|');
+}
+// Esegue una singola operazione su workout_sets. Ritorna il result supabase
+// ({ data, error }); le eccezioni di rete vengono normalizzate in { error }.
+async function _wsExec(op, payload){
+  try {
+    if(op === 'insert'){
+      return await supa.from('workout_sets').insert(payload).select('id').single();
+    }
+    if(op === 'update'){
+      let q = supa.from('workout_sets').update(payload.fields);
+      for(const c in payload.match) q = q.eq(c, payload.match[c]);
+      return await q;
+    }
+    if(op === 'delete'){
+      let q = supa.from('workout_sets').delete();
+      for(const c in payload.match) q = q.eq(c, payload.match[c]);
+      return await q;
+    }
+    return { error: { message: 'ws op sconosciuta: ' + op } };
+  } catch(e){
+    return { error: { message: e && e.message || 'network error' } };
+  }
+}
+function _wsEnqueue(op, payload, key){
+  const q = _wsLoadPending();
+  q.push({ op, payload, key, ts: Date.now() });
+  // Cap: oltre 200 operazioni scarta le più vecchie
+  while(q.length > WS_PENDING_CAP){
+    const dropped = q.shift();
+    console.warn('[ws-queue] cap ' + WS_PENDING_CAP + ' raggiunto, scartata op più vecchia:', dropped.op, dropped.key);
+  }
+  _wsSavePending(q);
+}
+// Scrittura con 1 retry immediato; se fallisce ancora → coda + toast discreto.
+// Ritorna il result supabase in caso di successo, null se accodata.
+async function wsWrite(op, payload, key, toastMsg){
+  if(!ST.user || ST.user.id === 'test-user-001') return null;
+  let res = await _wsExec(op, payload);
+  if(res.error) res = await _wsExec(op, payload); // 1 retry immediato
+  if(res.error){
+    _wsEnqueue(op, payload, key);
+    console.warn('[ws-queue] op accodata dopo retry fallito:', op, key, res.error.message);
+    showToast(toastMsg || 'Serie salvata, sincronizzazione in coda', '🔄', 4500);
+    return null;
+  }
+  _wsFlushQueue(); // scrittura riuscita: prova a smaltire eventuali pendenti (non bloccante)
+  return res;
+}
+// Replay di una singola op pendente. Ritorna true se l'op può uscire dalla coda.
+async function _wsReplayOp(item){
+  const { op, payload } = item;
+  if(op === 'insert'){
+    // Idempotente: verifica esistenza per chiave composita prima di inserire
+    const p = payload;
+    try {
+      const { data, error } = await supa.from('workout_sets').select('id')
+        .eq('user_id', p.user_id).eq('date', p.date).eq('session_type', p.session_type)
+        .eq('exercise_name', p.exercise_name).eq('set_number', p.set_number).limit(1);
+      if(error) return false;
+      if(data && data.length) return true; // già presente → esce dalla coda
+    } catch(e){ return false; }
+    const res = await _wsExec('insert', payload);
+    return !res.error;
+  }
+  if(op === 'update' || op === 'delete'){
+    // Riga inesistente = 0 match: non è un errore, l'op esce dalla coda
+    const res = await _wsExec(op, payload);
+    return !res.error;
+  }
+  return true; // op sconosciuta: scarta
+}
+// Svuotamento coda: chiamata al boot (post-login) e dopo ogni scrittura riuscita.
+// Per ogni chiave le op si eseguono in ordine di ts; se una fallisce, le successive
+// della stessa chiave restano in coda (ordine preservato). Un delete che segue un
+// insert pendente annulla entrambi senza toccare il DB.
+let _wsFlushing = false;
+async function _wsFlushQueue(){
+  if(_wsFlushing) return;
+  if(!ST.user || ST.user.id === 'test-user-001') return;
+  let q = _wsLoadPending();
+  if(!q.length) return;
+  _wsFlushing = true;
+  try {
+    q.sort((a,b) => (a.ts||0) - (b.ts||0));
+    // Annullamento insert+delete sulla stessa chiave (il delete è successivo)
+    const cancelled = new Set();
+    const byKey = {};
+    q.forEach((o,i) => { (byKey[o.key] = byKey[o.key] || []).push(i); });
+    for(const key in byKey){
+      const idxs = byKey[key];
+      const insIdx = idxs.find(i => q[i].op === 'insert');
+      if(insIdx !== undefined && idxs.some(i => q[i].op === 'delete' && (q[i].ts||0) >= (q[insIdx].ts||0))){
+        idxs.forEach(i => cancelled.add(i));
+      }
+    }
+    if(cancelled.size){
+      q = q.filter((_,i) => !cancelled.has(i));
+      _wsSavePending(q);
+    }
+    const remaining = [];
+    const failedKeys = new Set();
+    for(const item of q){
+      if(failedKeys.has(item.key)){ remaining.push(item); continue; }
+      let ok = false;
+      try { ok = await _wsReplayOp(item); } catch(e){ ok = false; }
+      if(!ok){ remaining.push(item); failedKeys.add(item.key); }
+    }
+    _wsSavePending(remaining);
+  } finally {
+    _wsFlushing = false;
+  }
+}
+
 async function confirmEditLogRow(){
   const e = ST.trainEditLogRow;
   if(!e) return;
@@ -11323,12 +11457,14 @@ async function confirmEditLogRow(){
     }).eq('id', e.id).eq('user_id', ST.user.id);
   } catch(err){ showToast('Errore aggiornamento: '+err.message); }
   // 2. UPDATE workout_sets by composite key (training_logs.id ≠ workout_sets.id)
+  //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
   if(orig){
-    try {
-      await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor, rir_actual: rir })
-        .eq('user_id', ST.user.id).eq('date', orig.date).eq('session_type', orig.session_id)
-        .eq('exercise_name', orig.exercise_name).eq('set_number', orig.set_number);
-    } catch(err){}
+    await wsWrite('update', {
+      fields: { reps, resistance: resistInt, band_color: bandColor, rir_actual: rir },
+      match: { user_id: ST.user.id, date: orig.date, session_type: orig.session_id,
+               exercise_name: orig.exercise_name, set_number: orig.set_number },
+    }, _wsKey(orig.date, orig.session_id, orig.exercise_name, orig.set_number),
+    'Modifica salvata, sincronizzazione in coda');
   }
   ST.trainEditLogRow = null;
   // Re-fetch logs del modal e progressione
@@ -11355,12 +11491,13 @@ async function deleteSetConfirmed(){
     await supa.from('training_logs').delete().eq('id', c.id).eq('user_id', ST.user.id);
   } catch(err){ showToast('Errore eliminazione: '+err.message); return; }
   // 2. DELETE workout_sets by composite key
+  //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
   if(orig){
-    try {
-      await supa.from('workout_sets').delete()
-        .eq('user_id', ST.user.id).eq('date', orig.date).eq('session_type', orig.session_id)
-        .eq('exercise_name', orig.exercise_name).eq('set_number', orig.set_number);
-    } catch(err){}
+    await wsWrite('delete', {
+      match: { user_id: ST.user.id, date: orig.date, session_type: orig.session_id,
+               exercise_name: orig.exercise_name, set_number: orig.set_number },
+    }, _wsKey(orig.date, orig.session_id, orig.exercise_name, orig.set_number),
+    'Eliminazione registrata, sincronizzazione in coda');
   }
   showToast('Serie eliminata');
   invalidateAllExerciseNamesCache(); // potrebbe essere ultimo log dell'esercizio
@@ -11990,29 +12127,29 @@ async function saveTrainingSet(){
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
-  // Insert in workout_sets (in parallelo, fail silenzioso se la tabella manca)
+  // Insert in workout_sets (in parallelo, non blocca il flusso) via wsWrite:
+  // retry immediato + coda persistente se fallisce — mai più perdite silenziose
   const unitVal = (ST.profile && ST.profile.unit) || 'lbs';
-  try {
-    supa.from('workout_sets').insert({
-      user_id: ST.user.id,
-      workout_id: null,
-      date: todayKey(),
-      session_type: form.sessionId,
-      exercise_name: form.exName,
-      set_number: form.setNum,
-      reps,
-      resistance: isPullUp ? null : (resistance ? parseInt(resistance)||null : null),
-      band_color: bandColor,
-      unit: unitVal,
-      rir_actual: rir,
-    }).select('id').single().then((res)=>{
-      const setId = res?.data?.id;
-      if(setId && ST.trainLoggedSets[key]){
-        ST.trainLoggedSets[key].setId = setId;
-        try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
-      }
-    }, ()=>{});
-  } catch(e){}
+  wsWrite('insert', {
+    user_id: ST.user.id,
+    workout_id: null,
+    date: todayKey(),
+    session_type: form.sessionId,
+    exercise_name: form.exName,
+    set_number: form.setNum,
+    reps,
+    resistance: isPullUp ? null : (resistance ? parseInt(resistance)||null : null),
+    band_color: bandColor,
+    unit: unitVal,
+    rir_actual: rir,
+  }, _wsKey(todayKey(), form.sessionId, form.exName, form.setNum),
+  'Serie salvata, sincronizzazione in coda').then((res)=>{
+    const setId = res?.data?.id;
+    if(setId && ST.trainLoggedSets[key]){
+      ST.trainLoggedSets[key].setId = setId;
+      try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
+    }
+  }, ()=>{});
   const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
   const exData = currentIdx >= 0 ? sessExercises[currentIdx] : null;
@@ -21508,22 +21645,17 @@ async function confirmEditLog(k){
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
     const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
-    // 1. UPDATE workout_sets (sorgente di verità per la nuova UI) — by id se disponibile, altrimenti composite
-    try {
-      const setId = prev.setId;
-      if(setId){
-        await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor })
-          .eq('id', setId)
-          .eq('user_id', ST.user.id);
-      } else {
-        await supa.from('workout_sets').update({ reps, resistance: resistInt, band_color: bandColor })
-          .eq('user_id', ST.user.id)
-          .eq('date', date)
-          .eq('session_type', sessionId)
-          .eq('exercise_name', exName)
-          .eq('set_number', setNum);
-      }
-    } catch(e){}
+    // 1. UPDATE workout_sets (sorgente di verità per la nuova UI) — by id se disponibile,
+    //    altrimenti composite — via wsWrite: retry + coda, nessun fallimento silenzioso
+    const setId = prev.setId;
+    await wsWrite('update', {
+      fields: { reps, resistance: resistInt, band_color: bandColor },
+      match: setId
+        ? { id: setId, user_id: ST.user.id }
+        : { user_id: ST.user.id, date, session_type: sessionId,
+            exercise_name: exName, set_number: setNum },
+    }, _wsKey(date, sessionId, exName, setNum),
+    'Modifica salvata, sincronizzazione in coda');
     // 2. UPDATE training_logs (compat — usata da Progressione e altri viewer)
     try {
       await supa.from('training_logs').update({
