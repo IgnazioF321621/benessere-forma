@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.17 · 11:06';
+const APP_VERSION = '2026.07.17 · 17:08';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -21240,6 +21240,10 @@ document.addEventListener('visibilitychange', ()=>{
       if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) _warmupFlowTick();
       if(ST.trainExecTimer && ST.trainExecTimer.running && ST.trainExecTimer._iv) _execTimerTick();
     }catch(e){}
+  }
+  // WS-QUEUE: al rientro in foreground prova a smaltire le scritture workout_sets pendenti
+  if(document.visibilityState === 'visible'){
+    try{ _wsFlushQueue(); }catch(e){}
   }
   // GRAFICA L1 — Cronometro TEMPO WORKOUT: al rientro foreground risincronizza il display
   // (iOS sospende setInterval in background; execStartedAt è in localStorage quindi il
