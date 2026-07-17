@@ -45,7 +45,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 Tab Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a) production-ready. F.2b (colazione/merenda) in STAND BY per scelta utente. Bug cache sticky `mealsByDay={}` fixato (commit `f7ca675`).
 
 ### Modulo Training — in sviluppo attivo
-- Coach generatore: 434 esercizi su `esercizi_catalog` (gap intenzionali da fusioni), split 4/5 giorni con rotazione adattiva
+- Coach generatore: 554 esercizi su `esercizi_catalog` (gap intenzionali da fusioni), split 4/5 giorni con rotazione adattiva
 - Split 5 giorni (DUP, intermedio/avanzato): 7 posizioni — upperA · lowerA · recoveryUpper · upperB · lowerB · upperC(Pump) · rest
 - Recovery unificato: singolo "Recovery Day" (~25 min, 26 esercizi, 5 blocchi); DRY reference `recoveryLower.exercises → recoveryUpper.exercises`
 - Upper Pump: 3×15-25 reps, RIR 0, rest 50s, isolamenti only, niente compound pesanti, niente Tabata
@@ -80,7 +80,7 @@ M2 check fisico funzionale. Da ri-agganciare a fine blocco Training.
 
 **Training (post-audit 13 luglio 2026):**
 1. **ALTO — avviso utente corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX da prendere (avviso in onboarding o generazione).
-2. **EX057** — GIF da caricare (cantiere Rinomina; zone mancanti: Dorsali, Tricipiti e restanti).
+2. **EX057** — GIF da caricare (cantiere Rinomina; zone mancanti: Dorsali e restanti).
 3. **Pool risicati casa** — deltoidi laterali 1, ischiocrurali 2, spinta verticale 1: si risolvono con le zone future del cantiere GIF.
 4. Residui storici invariati: memoria di blocco rotazione esercizi · gating principianti 5gg · infortuni multi-giorno (duration + history UI) · pulizia `EXERCISE_MEDIA` legacy · pill RIR per-esercizio in scarico (ritocco cosmetico).
 
@@ -193,7 +193,7 @@ PK = `id` (= `auth.users.id`). Colonne chiave:
 64 prodotti. RLS SELECT pubblica. PK logica = `codice`.
 
 ### `esercizi_catalog`
-434 righe, zero doppioni (verificato live 13 luglio 2026). RLS SELECT pubblica. **PK logica = `codice`**. Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi" (v3) → Supabase. **Mai editare Supabase direttamente**.
+554 righe (verificato live 17 luglio 2026; zero doppioni al 13 luglio 2026). Prossimo codice libero: **EX555**. RLS SELECT pubblica. **PK logica = `codice`**. Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi" (v3) → Supabase. **Mai editare Supabase direttamente**.
 
 Colonne chiave: `codice, nome, nome_en, pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
@@ -263,8 +263,9 @@ Macro % `[carbo, prot, fat]`:
 - Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
-- `biblioteca_gif`: 1.498 righe (conteggio verificato su Supabase 12 luglio 2026). Zone complete: Addominali e Core · Gambe e Glutei · Bicipiti e Braccia · Pettorali · Spalle e Cuffia (+ asset legacy `muscolazione/*` residui). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: filename Storage `IT (EN).gif` con `°` strippato nel path; `nome_italiano` mantiene il `°`; `slug` = `gif_slug` del catalogo. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
-- `esercizi_catalog.gif_slug`: 327/329 slug risolvono su `biblioteca_gif` (verificato live 13 luglio 2026). Pendenti: EX057 GIF mai caricata (in coda cantiere Rinomina); EX088 corretto a `camminata-alternata-manubri`. Codici senza slug → fallback ExerciseDB.
+- `biblioteca_gif`: 1.625 righe (conteggio verificato su Supabase 17 luglio 2026). Zone complete: Addominali e Core · Gambe e Glutei · Bicipiti e Braccia · Pettorali · Spalle e Cuffia · Tricipiti (+ asset legacy `muscolazione/*` residui). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: filename Storage `IT (EN).gif` con `°` strippato nel path; `nome_italiano` mantiene il `°`; `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
+- `esercizi_catalog.gif_slug`: 461/463 slug risolvono su `biblioteca_gif` (verificato live 17 luglio 2026). Pendenti invariati: EX057 GIF mai caricata (in coda cantiere Rinomina); EX088 `camminata-alternata-manubri` non presente in `biblioteca_gif`. Codici senza slug → fallback ExerciseDB.
+- ⚠️ Verifica risoluzione slug: `biblioteca_gif` supera le 1.000 righe → PostgREST tronca la SELECT al limite di default. Paginare con header `Range`, altrimenti compaiono orfani fantasma.
 - Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
 ### Cantiere GIF — metodo e regole di processo (aggiornato 2 luglio 2026, sostituisce le regole precedenti)
