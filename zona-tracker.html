@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.13 · 05:07';
+const APP_VERSION = '2026.07.17 · 10:52';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -21093,6 +21093,17 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && ST.trainCountdown){
     tickCountdown();
   }
+  // Flow timestamp-based (attivazione/recupero/tabata/warm-up/exec timer): forza un tick
+  // al rientro per ricalcolare da endTime e recuperare in silenzio le fasi saltate in background
+  if(document.visibilityState === 'visible'){
+    try{
+      if(ST.trainActivationFlow && ST.trainActivationFlow.running) _activationFlowTick();
+      if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) _recoveryFlowTick();
+      if(ST.trainTabataFlow && ST.trainTabataFlow.running) _tabataFlowTick();
+      if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) _warmupFlowTick();
+      if(ST.trainExecTimer && ST.trainExecTimer.running && ST.trainExecTimer._iv) _execTimerTick();
+    }catch(e){}
+  }
   // GRAFICA L1 — Cronometro TEMPO WORKOUT: al rientro foreground risincronizza il display
   // (iOS sospende setInterval in background; execStartedAt è in localStorage quindi il
   // calcolo da Date.now() resta corretto). Ri-arma il tick se siamo in esecuzione.
@@ -21238,79 +21249,117 @@ function closeTrainingSession(){
 // Conta IN AVANTI da 0 sulla schermata esecuzione. Beep+vibrazione una volta
 // al raggiungimento del minimo target. Display aggiornato via #exec-hold-timer
 // senza re-render (così il tick non si azzera).
+// ── Helpers timer timestamp-based (condivisi da exec timer e flow) ──
+// remaining intero (sec) da un endTime in ms — mai negativo, stesso calcolo di tickCountdown
+function _tsRemaining(endTime){
+  return Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+}
+// Base del prossimo endTime di fase: concatena dall'endTime precedente se la fase è
+// scaduta naturalmente (catena senza drift, anche al rientro da background); da adesso
+// se si avanza in anticipo (skip/back → la fase non era ancora scaduta).
+function _tsNextBase(endTime){
+  return (endTime && endTime <= Date.now()) ? endTime : Date.now();
+}
+
 function _execTimerClear(){
   if(ST.trainExecTimer && ST.trainExecTimer._iv){
     clearInterval(ST.trainExecTimer._iv);
     ST.trainExecTimer._iv = null;
   }
 }
-function execTimerStart(targetSec){
+// Aggiorna il display #exec-hold-timer senza re-render (il tick non azzera la GIF)
+function _execTimerDisplay(t, done){
+  const el = document.getElementById('exec-hold-timer');
+  if(!el) return;
+  if(t.isPause){
+    el.textContent = `00:0${t.remaining}`;
+    return;
+  }
+  const m = String(Math.floor(t.remaining/60)).padStart(2,'0');
+  const s = String(t.remaining%60).padStart(2,'0');
+  el.textContent = `${m}:${s}`;
+  if(done){
+    el.style.color = '#16A34A';
+    const sub = document.getElementById('exec-hold-sub');
+    if(sub){ sub.textContent = '✓ Fatto!'; sub.style.color = '#16A34A'; sub.style.fontWeight = '700'; }
+  } else {
+    el.style.color = '';
+  }
+}
+// Tick unico (250ms) per countdown principale e pausa cambio lato: remaining
+// ricalcolato da endTime, display aggiornato solo al cambio del secondo intero.
+function _execTimerTick(){
+  const t = ST.trainExecTimer;
+  if(!t || !t.running) return;
+  const remaining = _tsRemaining(t.endTime);
+  const secondChanged = remaining !== t.remaining;
+  if(secondChanged) t.remaining = remaining;
+  // ── Fase pausa cambio lato (5s, silenzio totale, poi LONG su lato B) ──
+  if(t.isPause){
+    if(secondChanged) _execTimerDisplay(t, false);
+    if(remaining <= 0){
+      _execTimerClear();
+      if(ST.trainExecOpen){
+        ST.trainExecOpen.isoPhase = 'B';
+        renderTraining(); // aggiorna UI: mantiene "In corso…" per fase B
+        // Catena senza drift: il lato B parte dalla fine della pausa. Se al rientro
+        // da background il lato B risulta già finito, LONG stantio → non emetterlo
+        // (anti-raffica): resta solo lo STOP finale idempotente.
+        const baseMs = _tsNextBase(t.endTime);
+        const staleB = (baseMs + (ST.trainExecOpen.timedTarget || 0) * 1000) <= Date.now();
+        if(!staleB){ try{ playLongBeep(); }catch(e){} }
+        execTimerStart(ST.trainExecOpen.timedTarget, baseMs);
+      }
+    }
+    return;
+  }
+  // ── Countdown principale (targetSec → 0) ──
+  const done = remaining <= 0;
+  // Beep una sola volta quando si arriva a 0 (idempotente anche al rientro da background)
+  if(done && !t.beeped){
+    t.beeped = true;
+    // Anti-raffica: se al rientro anche pausa e lato B risultano già trascorsi,
+    // lo STOP di fine lato A è stantio → lo emetterà solo il lato B.
+    const chainStale = ST.trainExecOpen && ST.trainExecOpen.perLato && ST.trainExecOpen.isoPhase === 'A'
+      && (t.endTime + 5000 + (ST.trainExecOpen.timedTarget || 0) * 1000) <= Date.now();
+    if(!chainStale){ try{ playStopBeep(); }catch(e){} }
+  }
+  // Doppio timer per esercizi perLato
+  if(done && ST.trainExecOpen && ST.trainExecOpen.perLato){
+    if(ST.trainExecOpen.isoPhase === 'A'){
+      ST.trainExecOpen.isoPhase = 'pause';
+      const baseMs = _tsNextBase(t.endTime);
+      _execTimerClear();
+      execTimerStartPause(5, baseMs);
+      return;
+    }
+    // fase B: cade through, timer finito, logger aprirà normalmente
+  }
+  if(secondChanged || (done && !t._doneShown)) _execTimerDisplay(t, done);
+  if(done) t._doneShown = true;
+}
+function execTimerStart(targetSec, _baseMs){
   _execTimerClear();
   // Countdown da targetSec → 0. A 0: ✓ verde + beep triplo.
+  // Timestamp-based: endTime è la sorgente di verità (come tickCountdown).
+  // _baseMs opzionale: concatena la fase alla precedente (doppio lato) senza drift.
   const start = (targetSec && targetSec > 0) ? targetSec : 0;
-  ST.trainExecTimer = { running:true, remaining:start, _iv:null, beeped:false };
+  const endTime = (_baseMs || Date.now()) + start * 1000;
+  ST.trainExecTimer = { running:true, remaining:start, endTime, _iv:null, beeped:false };
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
-  ST.trainExecTimer._iv = setInterval(()=>{
-    if(!ST.trainExecTimer.running) return;
-    if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
-    const done = ST.trainExecTimer.remaining === 0;
-    // Beep una sola volta quando si arriva a 0
-    if(done && !ST.trainExecTimer.beeped){
-      ST.trainExecTimer.beeped = true;
-      try{ playStopBeep(); }catch(e){}
-    }
-    // Doppio timer per esercizi perLato
-    if(done && ST.trainExecOpen && ST.trainExecOpen.perLato){
-      if(ST.trainExecOpen.isoPhase === 'A'){
-        ST.trainExecOpen.isoPhase = 'pause';
-        _execTimerClear();
-        execTimerStartPause(5);
-        return;
-      }
-      // fase B: cade through, timer finito, logger aprirà normalmente
-    }
-    const el = document.getElementById('exec-hold-timer');
-    if(el){
-      const m = String(Math.floor(ST.trainExecTimer.remaining/60)).padStart(2,'0');
-      const s = String(ST.trainExecTimer.remaining%60).padStart(2,'0');
-      el.textContent = `${m}:${s}`;
-      if(done){
-        el.style.color = '#16A34A';
-        const sub = document.getElementById('exec-hold-sub');
-        if(sub){ sub.textContent = '✓ Fatto!'; sub.style.color = '#16A34A'; sub.style.fontWeight = '700'; }
-      } else {
-        el.style.color = '';
-      }
-    }
-  }, 1000);
+  ST.trainExecTimer._iv = setInterval(_execTimerTick, 250);
 }
 function execTimerStop(){
   _execTimerClear();
   if(ST.trainExecTimer) ST.trainExecTimer.running = false;
 }
 
-function execTimerStartPause(sec){
+function execTimerStartPause(sec, _baseMs){
   _execTimerClear();
-  ST.trainExecTimer = { running:true, remaining:sec, _iv:null, beeped:false, isPause:true };
+  const endTime = (_baseMs || Date.now()) + sec * 1000;
+  ST.trainExecTimer = { running:true, remaining:sec, endTime, _iv:null, beeped:false, isPause:true };
   renderTraining(); // aggiorna UI: nasconde "Fine serie", mostra "In corso…" durante pausa
-  ST.trainExecTimer._iv = setInterval(()=>{
-    if(!ST.trainExecTimer.running) return;
-    if(ST.trainExecTimer.remaining > 0) ST.trainExecTimer.remaining--;
-    const el = document.getElementById('exec-hold-timer');
-    if(el){
-      const s = ST.trainExecTimer.remaining;
-      el.textContent = `00:0${s}`;
-    }
-    if(ST.trainExecTimer.remaining <= 0){
-      _execTimerClear();
-      if(ST.trainExecOpen){
-        ST.trainExecOpen.isoPhase = 'B';
-        renderTraining(); // aggiorna UI: mantiene "In corso…" per fase B
-        try{ playLongBeep(); }catch(e){}
-        execTimerStart(ST.trainExecOpen.timedTarget);
-      }
-    }
-  }, 1000);
+  ST.trainExecTimer._iv = setInterval(_execTimerTick, 250);
 }
 
 function openTrainExec(sessionId, exName, setNum){
@@ -21550,42 +21599,68 @@ function _activationFlowCurrentExercise(){
   return ACTIVATION_BLOCK[idx] || null;
 }
 function _activationFlowAdvance(){
-  const cur = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
+  const f = ST.trainActivationFlow;
+  const base = _tsNextBase(f.endTime);
+  const cur = ACTIVATION_BLOCK[f.currentIdx];
   if(cur){
     if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
-    ST.trainActivation[ST.trainActivationFlow.currentIdx] = true;
-    try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
-    try{ playStopBeep(); }catch(e){}
+    ST.trainActivation[f.currentIdx] = true;
+    if(!f._silent){
+      try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
+      try{ playStopBeep(); }catch(e){}
+    }
     _activationAutoCollapse();
   }
-  ST.trainActivationFlow.currentIdx++;
-  if(ST.trainActivationFlow.currentIdx >= ACTIVATION_BLOCK.length){
+  f.currentIdx++;
+  if(f.currentIdx >= ACTIVATION_BLOCK.length){
     // Fine attivazione
     _activationFlowClearInterval();
-    ST.trainActivationFlow.active = false;
-    ST.trainActivationFlow.running = false;
-    ST.trainActivationFlow.remaining = 0;
+    f.active = false;
+    f.running = false;
+    f.remaining = 0;
     checkActivationSessionDone();
     _activationAutoCollapse();
-    renderTraining();
+    if(!f._noRender) renderTraining();
     return;
   }
-  const next = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
-  ST.trainActivationFlow.remaining = next.seconds || 60;
-  try{ playLongBeep(); }catch(e){}
-  renderTraining();
+  const next = ACTIVATION_BLOCK[f.currentIdx];
+  f.remaining = next.seconds || 60;
+  f.endTime = base + f.remaining * 1000; // catena senza drift dalla fase precedente
+  f.prepBeeped = {};
+  if(!f._silent && !f._silentLong){ try{ playLongBeep(); }catch(e){} }
+  if(!f._noRender) renderTraining();
 }
 function _activationFlowTick(){
-  if(!ST.trainActivationFlow.running) return;
-  ST.trainActivationFlow.remaining = Math.max(0, ST.trainActivationFlow.remaining - 1);
-  if(ST.trainActivationFlow.remaining > 0 && ST.trainActivationFlow.remaining <= 5){
+  const f = ST.trainActivationFlow;
+  if(!f.running) return;
+  const remaining = _tsRemaining(f.endTime);
+  if(remaining === f.remaining) return; // render solo al cambio del secondo intero
+  if(!f.prepBeeped) f.prepBeeped = {};
+  // Anti-raffica al rientro da background: marca i prep saltati senza emetterli
+  if(remaining < f.remaining - 1){
+    for(let s = Math.min(5, f.remaining - 1); s > remaining; s--) f.prepBeeped[s] = true;
+  }
+  f.remaining = remaining;
+  // Prep beep idempotente: 1 tic alla transizione in 5,4,3,2,1
+  if(remaining >= 1 && remaining <= 5 && !f.prepBeeped[remaining]){
+    f.prepBeeped[remaining] = true;
     try{ playPrepBeep(); }catch(e){}
   }
-  if(ST.trainActivationFlow.remaining <= 0){
+  if(remaining > 0){ renderTraining(); return; }
+  // Fase scaduta: avanza. Se in background sono scadute anche fasi successive,
+  // avanzale in silenzio (niente raffica di beep), poi un solo render.
+  // late = confine di fase superato da >1.5s (rientro da background): il LONG "GO"
+  // è stantio e non va emesso; lo STOP del rientro resta (idempotente, come tickCountdown).
+  const late = (Date.now() - f.endTime) > 1500;
+  let guard = 0, silent = false;
+  do {
+    f._silent = silent; f._silentLong = late || silent; f._noRender = true;
     _activationFlowAdvance();
-  } else {
-    renderTraining();
-  }
+    silent = true; guard++;
+  } while(f.active && f.running && _tsRemaining(f.endTime) <= 0 && guard < 30);
+  f._silent = false; f._silentLong = false; f._noRender = false;
+  if(f.active && f.running) f.remaining = _tsRemaining(f.endTime);
+  renderTraining();
 }
 function activationFlowStart(){
   // Mutual exclusion: non avviare se recovery / warm-up flow è running
@@ -21598,12 +21673,16 @@ function activationFlowStart(){
   ST.trainActivationFlow.active = true;
   ST.trainActivationFlow.currentIdx = 0;
   ST.trainActivationFlow.remaining = ACTIVATION_BLOCK[0].seconds || 60;
+  ST.trainActivationFlow.endTime = Date.now() + ST.trainActivationFlow.remaining * 1000;
+  ST.trainActivationFlow.prepBeeped = {};
   ST.trainActivationFlow.running = true;
-  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 1000);
+  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 250);
   renderTraining();
 }
 function activationFlowPause(){
   if(!ST.trainActivationFlow.running) return;
+  // Congela il residuo esatto: alla ripresa endTime = Date.now() + remaining*1000
+  ST.trainActivationFlow.remaining = _tsRemaining(ST.trainActivationFlow.endTime);
   ST.trainActivationFlow.running = false;
   _activationFlowClearInterval();
   renderTraining();
@@ -21615,8 +21694,9 @@ function activationFlowResume(){
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   try{ _unlockAudio && _unlockAudio(); }catch(e){}
+  ST.trainActivationFlow.endTime = Date.now() + (ST.trainActivationFlow.remaining || 0) * 1000;
   ST.trainActivationFlow.running = true;
-  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 1000);
+  ST.trainActivationFlow._iv = setInterval(_activationFlowTick, 250);
   renderTraining();
 }
 function activationFlowSkip(){
@@ -21627,12 +21707,16 @@ function activationFlowBack(){
   if(!ST.trainActivationFlow.active) return;
   if(ST.trainActivationFlow.currentIdx <= 0){
     if(ACTIVATION_BLOCK[0]) ST.trainActivationFlow.remaining = ACTIVATION_BLOCK[0].seconds || 60;
+    ST.trainActivationFlow.endTime = Date.now() + ST.trainActivationFlow.remaining * 1000;
+    ST.trainActivationFlow.prepBeeped = {};
     renderTraining();
     return;
   }
   ST.trainActivationFlow.currentIdx--;
   const prev = ACTIVATION_BLOCK[ST.trainActivationFlow.currentIdx];
   ST.trainActivationFlow.remaining = prev.seconds || 60;
+  ST.trainActivationFlow.endTime = Date.now() + ST.trainActivationFlow.remaining * 1000;
+  ST.trainActivationFlow.prepBeeped = {};
   renderTraining();
 }
 function activationFlowEnd(){
@@ -21726,12 +21810,15 @@ function _recoveryFlowAdvance(){
   const sess = getTrainingSession(ST.trainSession);
   if(!sess) return;
   const flow = ST.trainRecoveryFlow;
+  const base = _tsNextBase(flow.endTime);
   const cur = sess.exercises[flow.currentIdx];
   if(cur){
     if(!ST.trainRecoveryDone) ST.trainRecoveryDone = {};
     ST.trainRecoveryDone[cur.name] = true;
-    try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
-    try{ playStopBeep(); }catch(e){}
+    if(!flow._silent){
+      try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
+      try{ playStopBeep(); }catch(e){}
+    }
   }
 
   // 1) Auto-collapse blocco se completato (delay 2s per permettere all'utente di vedere il check finale)
@@ -21759,7 +21846,7 @@ function _recoveryFlowAdvance(){
     flow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
     flow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
     checkRecoverySessionDone();
-    renderTraining();
+    if(!flow._noRender) renderTraining();
     return;
   }
 
@@ -21771,10 +21858,11 @@ function _recoveryFlowAdvance(){
     _recoveryFlowClearInterval();
     flow.currentIdx = nextIdx;
     flow.remaining = next.duration_sec || 30;
+    flow.prepBeeped = {};
     flow.running = false;
     flow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
     flow.blockStop  = { active:true, nextBlockName:nextBlock, nextExStartIdx:nextIdx };
-    renderTraining();
+    if(!flow._noRender) renderTraining();
     return;
   }
 
@@ -21783,35 +21871,79 @@ function _recoveryFlowAdvance(){
   const pauseSec = sameBase ? 5 : 10;
   flow.currentIdx = nextIdx;
   flow.remaining = next.duration_sec || 30;
-  flow.microPause = { active:true, remaining:pauseSec, total:pauseSec, nextExName: next.name };
-  // running resta true → l'interval continua a ticchettare ma su microPause.remaining
-  renderTraining();
+  // endTime dell'esercizio impostato alla FINE della micro-pausa (catena da mp.endTime)
+  flow.microPause = { active:true, remaining:pauseSec, total:pauseSec, nextExName: next.name, endTime: base + pauseSec * 1000 };
+  // running resta true → l'interval continua a ticchettare ma sulla micro-pausa
+  if(!flow._noRender) renderTraining();
 }
 function _recoveryFlowTick(){
   const flow = ST.trainRecoveryFlow;
   if(!flow.running) return;
-  // Branch A — micro-pausa attiva: decrementa pausa, poi parte esercizio
+  // Branch A — micro-pausa attiva (muta): countdown da endTime, poi parte esercizio
   if(flow.microPause && flow.microPause.active){
-    flow.microPause.remaining = Math.max(0, flow.microPause.remaining - 1);
-    if(flow.microPause.remaining <= 0){
-      flow.microPause.active = false;
-      flow.microPause.nextExName = '';
-      try{ navigator.vibrate && navigator.vibrate([100]); }catch(e){}
-      try{ playLongBeep(); }catch(e){}
+    const mp = flow.microPause;
+    const mpRem = _tsRemaining(mp.endTime);
+    if(mpRem > 0){
+      if(mpRem !== mp.remaining){ mp.remaining = mpRem; renderTraining(); }
+      return;
     }
-    renderTraining();
-    return;
+    mp.remaining = 0;
+    mp.active = false;
+    mp.nextExName = '';
+    // LONG stantio: se la fine pausa è passata da >1.5s (rientro da background), niente GO
+    const mpLate = (Date.now() - mp.endTime) > 1500;
+    // Catena senza drift: l'esercizio parte dalla fine della micro-pausa
+    flow.endTime = mp.endTime + flow.remaining * 1000;
+    flow.prepBeeped = {};
+    if(_tsRemaining(flow.endTime) > 0){
+      if(!mpLate){
+        try{ navigator.vibrate && navigator.vibrate([100]); }catch(e){}
+        try{ playLongBeep(); }catch(e){}
+      }
+      renderTraining();
+      return;
+    }
+    // Rientro da background oltre la fine dell'esercizio: LONG stantio → niente
+    // beep, prosegui subito col catch-up del Branch B qui sotto.
   }
   // Branch B — countdown esercizio normale
-  flow.remaining = Math.max(0, flow.remaining - 1);
-  if(flow.remaining > 0 && flow.remaining <= 5){
+  const remaining = _tsRemaining(flow.endTime);
+  if(remaining === flow.remaining) return; // render solo al cambio del secondo intero
+  if(!flow.prepBeeped) flow.prepBeeped = {};
+  // Anti-raffica al rientro da background: marca i prep saltati senza emetterli
+  if(remaining < flow.remaining - 1){
+    for(let s = Math.min(5, flow.remaining - 1); s > remaining; s--) flow.prepBeeped[s] = true;
+  }
+  flow.remaining = remaining;
+  // Prep beep idempotente: 1 tic alla transizione in 5,4,3,2,1
+  if(remaining >= 1 && remaining <= 5 && !flow.prepBeeped[remaining]){
+    flow.prepBeeped[remaining] = true;
     try{ playPrepBeep(); }catch(e){}
   }
-  if(flow.remaining <= 0){
+  if(remaining > 0){ renderTraining(); return; }
+  // Fase scaduta: avanza. Fasi intere saltate in background → avanzamento silenzioso
+  // (niente raffica di beep), poi un solo render.
+  let guard = 0, silent = false;
+  do {
+    flow._silent = silent; flow._noRender = true;
     _recoveryFlowAdvance();
-  } else {
-    renderTraining();
+    silent = true; guard++;
+    // advance può aprire una micro-pausa: se è già scaduta (background), chiudila
+    // in silenzio e concatena l'endTime dell'esercizio; se è in corso reale, stop qui.
+    if(flow.microPause && flow.microPause.active){
+      if(_tsRemaining(flow.microPause.endTime) > 0) break;
+      flow.microPause.active = false;
+      flow.microPause.remaining = 0;
+      flow.microPause.nextExName = '';
+      flow.endTime = flow.microPause.endTime + flow.remaining * 1000;
+      flow.prepBeeped = {};
+    }
+  } while(flow.active && flow.running && _tsRemaining(flow.endTime) <= 0 && guard < 100);
+  flow._silent = false; flow._noRender = false;
+  if(flow.active && flow.running && !(flow.microPause && flow.microPause.active)){
+    flow.remaining = _tsRemaining(flow.endTime);
   }
+  renderTraining();
 }
 function recoveryFlowStart(){
   // Mutual exclusion: non avviare se activation / warm-up flow è running
@@ -21827,16 +21959,20 @@ function recoveryFlowStart(){
   ST.trainRecoveryFlow.active = true;
   ST.trainRecoveryFlow.currentIdx = 0;
   ST.trainRecoveryFlow.remaining = sess.exercises[0].duration_sec || 30;
+  ST.trainRecoveryFlow.endTime = Date.now() + ST.trainRecoveryFlow.remaining * 1000;
+  ST.trainRecoveryFlow.prepBeeped = {};
   ST.trainRecoveryFlow.running = true;
   ST.trainRecoveryFlow.microPause = { active:false, remaining:0, total:0, nextExName:'' };
   ST.trainRecoveryFlow.blockStop  = { active:false, nextBlockName:'', nextExStartIdx:0 };
-  ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 1000);
+  ST.trainRecoveryFlow._iv = setInterval(_recoveryFlowTick, 250);
   renderTraining();
 }
 function recoveryFlowPause(){
   // Non interrompibile durante micro-pausa
   if(ST.trainRecoveryFlow.microPause && ST.trainRecoveryFlow.microPause.active) return;
   if(!ST.trainRecoveryFlow.running) return;
+  // Congela il residuo esatto: alla ripresa endTime = Date.now() + remaining*1000
+  ST.trainRecoveryFlow.remaining = _tsRemaining(ST.trainRecoveryFlow.endTime);
   ST.trainRecoveryFlow.running = false;
   _recoveryFlowClearInterval();
   renderTraining();
@@ -21854,10 +21990,12 @@ function recoveryFlowResume(){
     const sess = getTrainingSession(ST.trainSession);
     const cur = sess && sess.exercises[flow.currentIdx];
     if(cur) flow.remaining = cur.duration_sec || 30;
+    flow.prepBeeped = {};
     flow.blockStop = { active:false, nextBlockName:'', nextExStartIdx:0 };
   }
+  flow.endTime = Date.now() + (flow.remaining || 0) * 1000;
   flow.running = true;
-  flow._iv = setInterval(_recoveryFlowTick, 1000);
+  flow._iv = setInterval(_recoveryFlowTick, 250);
   renderTraining();
 }
 function recoveryFlowSkip(){
@@ -21883,6 +22021,7 @@ function recoveryFlowBack(){
       const prev = sess.exercises[flow.currentIdx];
       flow.remaining = prev.duration_sec || 30;
     }
+    flow.prepBeeped = {};
     flow.blockStop = { active:false, nextBlockName:'', nextExStartIdx:0 };
     flow.running = false;
     renderTraining();
@@ -21892,12 +22031,16 @@ function recoveryFlowBack(){
   if(flow.currentIdx <= 0){
     // Già al primo: solo reset countdown
     if(sess.exercises[0]) flow.remaining = sess.exercises[0].duration_sec || 30;
+    flow.endTime = Date.now() + flow.remaining * 1000;
+    flow.prepBeeped = {};
     renderTraining();
     return;
   }
   flow.currentIdx--;
   const prev = sess.exercises[flow.currentIdx];
   flow.remaining = prev.duration_sec || 30;
+  flow.endTime = Date.now() + flow.remaining * 1000;
+  flow.prepBeeped = {};
   // NOTA: non un-marca da trainRecoveryDone (volutamente)
   renderTraining();
 }
@@ -21952,7 +22095,8 @@ function _tabataFlowAdvance(){
   //   - finito ultimo round work → END (no rest finale)
   const f = ST.trainTabataFlow;
   if(!f) return;
-  try { playStopBeep(); } catch(e) {}
+  const base = _tsNextBase(f.endTime);
+  if(!f._silent){ try { playStopBeep(); } catch(e) {} }
   if(f.phase === 'work'){
     // Era work → ultimo round? FINE
     if(f.round >= f.totalRounds){
@@ -21962,28 +22106,49 @@ function _tabataFlowAdvance(){
     // Altrimenti → rest 10s
     f.phase = 'rest';
     f.remaining = f.finisher.rest_sec;
+    f.endTime = base + f.remaining * 1000; // catena senza drift dalla fase precedente
   } else {
     // Era rest → prossimo round work
     f.round++;
     f.phase = 'work';
     f.remaining = f.finisher.work_sec;
-    try { playLongBeep(); } catch(e) {}
+    f.endTime = base + f.remaining * 1000;
+    if(!f._silent && !f._silentLong){ try { playLongBeep(); } catch(e) {} }
   }
-  renderTraining();
+  f.prepBeeped = {};
+  if(!f._noRender) renderTraining();
 }
 function _tabataFlowTick(){
   const f = ST.trainTabataFlow;
   if(!f || !f.running) return;
-  f.remaining = Math.max(0, f.remaining - 1);
-  // Beep prep ultimi 5 secondi
-  if(f.remaining > 0 && f.remaining <= 5){
+  const remaining = _tsRemaining(f.endTime);
+  if(remaining === f.remaining) return; // render solo al cambio del secondo intero
+  if(!f.prepBeeped) f.prepBeeped = {};
+  // Anti-raffica al rientro da background: marca i prep saltati senza emetterli
+  if(remaining < f.remaining - 1){
+    for(let s = Math.min(5, f.remaining - 1); s > remaining; s--) f.prepBeeped[s] = true;
+  }
+  f.remaining = remaining;
+  // Beep prep idempotente ultimi 5 secondi
+  if(remaining >= 1 && remaining <= 5 && !f.prepBeeped[remaining]){
+    f.prepBeeped[remaining] = true;
     try { playPrepBeep(); } catch(e) {}
   }
-  if(f.remaining <= 0){
+  if(remaining > 0){ renderTraining(); return; }
+  // Fase scaduta: avanza. Fasi intere saltate in background → avanzamento silenzioso
+  // (niente raffica di beep; LONG stantio soppresso al rientro), poi un solo render.
+  const late = (Date.now() - f.endTime) > 1500;
+  let guard = 0, silent = false;
+  do {
+    f._silent = silent; f._silentLong = late || silent; f._noRender = true;
     _tabataFlowAdvance();
-  } else {
-    renderTraining();
+    silent = true; guard++;
+  } while(ST.trainTabataFlow && f.running && _tsRemaining(f.endTime) <= 0 && guard < 40);
+  if(ST.trainTabataFlow){
+    f._silent = false; f._silentLong = false; f._noRender = false;
+    if(f.running) f.remaining = _tsRemaining(f.endTime);
   }
+  renderTraining();
 }
 function tabataFlowStart(){
   // Avvio: la sessione corrente (ST.trainSession) deve avere un finisher.
@@ -22006,8 +22171,10 @@ function tabataFlowStart(){
     round: 1,
     phase: 'work',
     remaining: sess.finisher.work_sec || 20,
+    endTime: Date.now() + (sess.finisher.work_sec || 20) * 1000,
+    prepBeeped: {},
     running: true,
-    _iv: setInterval(_tabataFlowTick, 1000),
+    _iv: setInterval(_tabataFlowTick, 250),
   };
   renderTraining();
 }
@@ -22015,6 +22182,8 @@ function tabataFlowPause(){
   const f = ST.trainTabataFlow;
   if(!f || !f.active) return;
   _tabataFlowClearInterval();
+  // Congela il residuo esatto: alla ripresa endTime = Date.now() + remaining*1000
+  f.remaining = _tsRemaining(f.endTime);
   f.running = false;
   renderTraining();
 }
@@ -22026,8 +22195,9 @@ function tabataFlowResume(){
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   try { _unlockAudio(); } catch(e) {}
+  f.endTime = Date.now() + (f.remaining || 0) * 1000;
   f.running = true;
-  f._iv = setInterval(_tabataFlowTick, 1000);
+  f._iv = setInterval(_tabataFlowTick, 250);
   renderTraining();
 }
 function tabataFlowSkip(){
@@ -22102,21 +22272,26 @@ function _warmupFlowAdvance(){
   //   - era rest → prossima voce work + bip lungo (esercizio riparte)
   const f = ST.trainWarmupFlow;
   if(!f) return;
+  const base = _tsNextBase(f.endTime);
   if(f.phase === 'work'){
     // Gestione doppio lato per esercizi iso unilaterali
     if(f.isoPhase === 'A'){
-      // Fine lato SX → pausa 5s
+      // Fine lato SX → pausa 5s (muta)
       f.isoPhase = 'pause';
       f.remaining = WARMUP_ISO_PAUSE_SEC;
-      renderTraining();
+      f.endTime = base + f.remaining * 1000; // catena senza drift
+      f.prepBeeped = {};
+      if(!f._noRender) renderTraining();
       return;
     }
     if(f.isoPhase === 'pause'){
       // Fine pausa → lato DX
       f.isoPhase = 'B';
       f.remaining = WARMUP_ISO_SIDE_SEC;
-      try { playLongBeep(); } catch(e){}
-      renderTraining();
+      f.endTime = base + f.remaining * 1000;
+      f.prepBeeped = {};
+      if(!f._silent && !f._silentLong){ try { playLongBeep(); } catch(e){} }
+      if(!f._noRender) renderTraining();
       return;
     }
     // isoPhase === 'B' oppure null (esercizio normale) → avanza
@@ -22126,31 +22301,54 @@ function _warmupFlowAdvance(){
     }
     f.phase = 'rest';
     f.remaining = WARMUP_REST_SEC;
+    f.endTime = base + f.remaining * 1000;
+    f.prepBeeped = {};
   } else {
     f.idx++;
     f.phase = 'work';
     _warmupFlowInitIsoPhase(); // imposta remaining e isoPhase per il nuovo item
-    try { playLongBeep(); } catch(e){}
+    f.endTime = base + f.remaining * 1000;
+    f.prepBeeped = {};
+    if(!f._silent && !f._silentLong){ try { playLongBeep(); } catch(e){} }
   }
-  renderTraining();
+  if(!f._noRender) renderTraining();
 }
 function _warmupFlowTick(){
   const f = ST.trainWarmupFlow;
   if(!f || !f.running) return;
-  f.remaining = Math.max(0, f.remaining - 1);
+  const remaining = _tsRemaining(f.endTime);
+  if(remaining === f.remaining) return; // render solo al cambio del secondo intero
+  if(!f.prepBeeped) f.prepBeeped = {};
   // Prep beep: ultimi 5s durante work/rest; pausa iso = soglia 0 → silenzio
   const _prepThreshold = (f.isoPhase === 'pause') ? 0 : 5;
-  if(f.remaining > 0 && f.remaining <= _prepThreshold){
+  // Anti-raffica al rientro da background: marca i prep saltati senza emetterli
+  if(remaining < f.remaining - 1){
+    for(let s = Math.min(_prepThreshold, f.remaining - 1); s > remaining; s--) f.prepBeeped[s] = true;
+  }
+  f.remaining = remaining;
+  if(remaining >= 1 && remaining <= _prepThreshold && !f.prepBeeped[remaining]){
+    f.prepBeeped[remaining] = true;
     try { playPrepBeep(); } catch(e){}
   }
-  if(f.remaining <= 0){
-    if(f.isoPhase !== 'pause'){
+  if(remaining > 0){ renderTraining(); return; }
+  // Fase scaduta: avanza. Fasi intere saltate in background → avanzamento silenzioso
+  // (lo STOP suona solo per la prima fase; LONG stantio soppresso; niente raffica),
+  // poi un solo render.
+  const late = (Date.now() - f.endTime) > 1500;
+  let guard = 0, silent = false;
+  do {
+    if(!silent && f.isoPhase !== 'pause'){
       try { playStopBeep(); } catch(e){}
     }
+    f._silent = silent; f._silentLong = late || silent; f._noRender = true;
     _warmupFlowAdvance();
-  } else {
-    renderTraining();
+    silent = true; guard++;
+  } while(ST.trainWarmupFlow && f.running && _tsRemaining(f.endTime) <= 0 && guard < 120);
+  if(ST.trainWarmupFlow){
+    f._silent = false; f._silentLong = false; f._noRender = false;
+    if(f.running) f.remaining = _tsRemaining(f.endTime);
   }
+  renderTraining();
 }
 function warmupFlowStart(){
   const sess = getTrainingSession(ST.trainSession);
@@ -22173,11 +22371,14 @@ function warmupFlowStart(){
     phase: 'work',
     remaining: WARMUP_WORK_SEC,
     isoPhase: null,
+    prepBeeped: {},
     running: true,
-    _iv: setInterval(_warmupFlowTick, 1000),
+    _iv: null,
   };
-  // Se il primo item è perLato, inizializza la fase iso
+  // Se il primo item è perLato, inizializza la fase iso (imposta remaining)
   _warmupFlowInitIsoPhase();
+  ST.trainWarmupFlow.endTime = Date.now() + ST.trainWarmupFlow.remaining * 1000;
+  ST.trainWarmupFlow._iv = setInterval(_warmupFlowTick, 250);
   try { playLongBeep(); } catch(e){} // l'esercizio parte
   renderTraining();
 }
@@ -22185,6 +22386,8 @@ function warmupFlowPause(){
   const f = ST.trainWarmupFlow;
   if(!f || !f.active) return;
   _warmupFlowClearInterval();
+  // Congela il residuo esatto: alla ripresa endTime = Date.now() + remaining*1000
+  f.remaining = _tsRemaining(f.endTime);
   f.running = false;
   renderTraining();
 }
@@ -22195,8 +22398,9 @@ function warmupFlowResume(){
   if(ST.trainActivationFlow && ST.trainActivationFlow.running) return;
   if(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running) return;
   try { _unlockAudio(); } catch(e){}
+  f.endTime = Date.now() + (f.remaining || 0) * 1000;
   f.running = true;
-  f._iv = setInterval(_warmupFlowTick, 1000);
+  f._iv = setInterval(_warmupFlowTick, 250);
   renderTraining();
 }
 function warmupFlowSkip(){
