@@ -35,9 +35,14 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - Incollare righe nel Google Sheet: mai in append — sovrascrivere le righe con lo stesso codice, poi verificare doppioni con COUNTIF prima del sync (errore 21000 ON CONFLICT = doppioni).
 - Colonne extra non nominate nel Sheet rompono il sync (PGRST204 colonna `''`): eliminare le colonne, non svuotarle.
 
+**Lezioni operative (17 luglio 2026):**
+- supabase-js NON lancia eccezioni sugli errori API: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error` (causa storica dei buchi silenziosi su `workout_sets`).
+- Ramo `?name=` del Worker: match ESATTO su dizionario hardcoded (~20 nomi storici, `MATCH_DATA`), nessuna normalizzazione — non tocca né catalogo né `biblioteca_gif`.
+- `biblioteca_gif`: 1.625 righe di cui il 72% (1.164) non referenziate da alcun `gif_slug` del catalogo — riserva del cantiere GIF, ma pesa su Storage/DB free tier.
+
 ---
 
-## Stato corrente (13 luglio 2026)
+## Stato corrente (17 luglio 2026)
 
 **APP_VERSION attuale**: da verificare su device prima di ogni intervento.
 
@@ -54,6 +59,12 @@ Tab Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a) production-ready.
 - Timer recupero parallelo al form log + riepilogo post-salvataggio nel modal recupero (commit `6125812`)
 - **Restyling colori Training** ✅ (27 giugno 2026): tutti i colori hardcoded sostituiti con CSS vars — `#2A7A6F→var(--acc)`, `#E6F4F2→var(--acc-lt)`, `#B84C2A→var(--err)`, `#9CA3AF→var(--t3)`, banner Tabata→`var(--s1)/var(--t2)`
 - **Debt guard**: `computeTrainingDebt()` ha guard `test-user-001` allineato a `computeTrainHomeData()`
+
+**Sessione 17 luglio 2026 — audit Training + fix affidabilità:**
+- **Timer unificati su orologio reale** (commit `e834320` + `fcd5185`): Tabata, warm-up (iso A/pausa/B), recovery (micro-pausa + blockStop), attivazione ed exec timer (doppio lato) ora timestamp-based su `endTime` come `tickCountdown` — tick 250ms, catena fasi senza drift, rientro da background con catch-up silenzioso (STOP idempotente, LONG stantio soppresso >1.5s), pausa/ripresa con residuo congelato. ⏳ IN OSSERVAZIONE: test su workout reali in corso.
+- **WS-QUEUE** (commit `871aaf3` + `fcd5185`): nessuna scrittura su `workout_sets` può più perdersi in silenzio. `wsWrite()` = 1 retry immediato → coda persistente `zt_ws_pending_<userId>` in localStorage → toast discreto. Flush al boot post-login, a ogni scrittura riuscita e al rientro in foreground. Insert idempotente al replay, insert+delete stessa chiave si annullano, cap 200 op.
+- **Storico bonificato (solo DB, nessun commit)**: rename asimmetrico 32 righe WS · reinserite 18 righe del 2/6 maggio · `band_color='Viola'` su 4 trazioni · migrazione ai nomi catalogo (35 rinomine: 408 righe TL + 407 WS) · bonifica 4 doppioni TL. **Stato finale: TL = WS = 912 righe, divergenza 0, doppioni 0**; orfani residui solo 2 congelati per scelta ("Squat con elastico e talloni rialzati", "Mobilità articolare").
+- **Audit diagnosi completata**: mappa problemi 4 rossi / 6 gialli / 8 note (dettaglio in `mappa-audit-training.md` di Ignazio). Punti ancora aperti: 91 esercizi senza `gif_slug` (di cui 53 principali) · slug rotti EX057/EX088 · sessioni fallback hardcoded senza codice · rientro soft dopo pause lunghe assente · infortunio solo giornaliero · `GEAR_ALIASES` corto · 1.164 GIF orfane in biblioteca.
 
 **Fix deployati post-audit (5 commit, 12-13 luglio 2026):**
 - **Scheda attiva — nomi runtime**: il loader di `schede_utente` riallinea in memoria i `name` degli esercizi al catalogo live via Map codice→nome (warmup, exercises, carry_conclusivo, finisher.exercises). Il jsonb NON si tocca mai. Fallback: senza codice o codice non a catalogo → resta lo snapshot. Fix GIF modal: `openExerciseAI` passa `ex.codice` a `fetchExerciseMedia` (risolve via `?code=`).
@@ -78,7 +89,8 @@ M2 check fisico funzionale. Da ri-agganciare a fine blocco Training.
 
 ## Prossimi cantieri (priorità aperte)
 
-**Training (post-audit 13 luglio 2026):**
+**Training (post-audit 17 luglio 2026):**
+0. **PRIMA DI TUTTO — test timer su workout reali** (commit `e834320` in osservazione) → poi scegliere tra i gialli restanti della mappa audit (punti 7-10) e il cantiere GIF dei 91 esercizi senza `gif_slug`. Zona Polpacci sempre in coda.
 1. **ALTO — avviso utente corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX da prendere (avviso in onboarding o generazione).
 2. **EX057** — GIF da caricare (cantiere Rinomina; zone mancanti: Dorsali e restanti).
 3. **Pool risicati casa** — deltoidi laterali 1, ischiocrurali 2, spinta verticale 1: si risolvono con le zone future del cantiere GIF.
@@ -264,7 +276,7 @@ Macro % `[carbo, prot, fat]`:
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
 - `biblioteca_gif`: 1.625 righe (conteggio verificato su Supabase 17 luglio 2026). Zone complete: Addominali e Core · Gambe e Glutei · Bicipiti e Braccia · Pettorali · Spalle e Cuffia · Tricipiti (+ asset legacy `muscolazione/*` residui). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: filename Storage `IT (EN).gif` con `°` strippato nel path; `nome_italiano` mantiene il `°`; `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
-- `esercizi_catalog.gif_slug`: 461/463 slug risolvono su `biblioteca_gif` (verificato live 17 luglio 2026). Pendenti invariati: EX057 GIF mai caricata (in coda cantiere Rinomina); EX088 `camminata-alternata-manubri` non presente in `biblioteca_gif`. Codici senza slug → fallback ExerciseDB.
+- `esercizi_catalog.gif_slug`: 461/463 slug risolvono su `biblioteca_gif` (verificato live 17 luglio 2026). Pendenti invariati: EX057 GIF mai caricata (in coda cantiere Rinomina); EX088 `gif_slug` reale = `camminata-manubri` (verificato 17 luglio 2026), non presente in `biblioteca_gif`. Codici senza slug → fallback ExerciseDB.
 - ⚠️ Verifica risoluzione slug: `biblioteca_gif` supera le 1.000 righe → PostgREST tronca la SELECT al limite di default. Paginare con header `Range`, altrimenti compaiono orfani fantasma.
 - Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
