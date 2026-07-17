@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.17 · 17:57';
+const APP_VERSION = '2026.07.17 · 18:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -11984,6 +11984,102 @@ async function loadTrainingAllCompleted(opts){
 // Ritorna "Serie N: <azione operativa>" (niente emoji/motivazione finale),
 // oppure '' se non applicabile. Gestisce sia trazioni (banda) sia elastici (lbs).
 // Chiamato solo per serie NON-ultima → mai una "Serie N" inesistente.
+// ═══ RIENTRO SOFT — ripartenza graduale dopo pause lunghe (17 lug 2026) ═══
+// Rilevamento all'apertura di una sessione di lavoro: se sono passati ≥10 giorni
+// dall'ultimo allenamento reale (riposi/recuperi esclusi), propone un rientro
+// graduale. SOLO suggerimenti: scheda, storico DB e settimana mesociclo intatti.
+// Livello 1 (pausa 10-29 gg): −20% carico, RIR +1 · Livello 2 (≥30 gg): −35%, RIR +2.
+// La scelta vale per tutto il rientro (7 giorni) e vive in localStorage per-utente:
+// zt_soft_return_<userId> = { active, startDate, level, decidedFor }.
+const SOFT_RETURN_MIN_DAYS = 10;
+const SOFT_RETURN_L2_DAYS = 30;
+const SOFT_RETURN_DURATION_DAYS = 7;
+function _srKey(){ return 'zt_soft_return_' + ((ST.user && ST.user.id) || 'anon'); }
+function _srLoad(){ try { return JSON.parse(localStorage.getItem(_srKey())) || null; } catch(e){ return null; } }
+function _srSave(o){ try { localStorage.setItem(_srKey(), JSON.stringify(o)); } catch(e){} }
+function _srDaysBetween(a, b){
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
+// Stato attivo corrente (null se spento o scaduto). Scadenza automatica: 7 giorni
+// dalla prima sessione di rientro, poi la progressione normale riprende da sola.
+function getSoftReturn(){
+  const sr = _srLoad();
+  if(!sr || !sr.active || !sr.startDate) return null;
+  if(_srDaysBetween(sr.startDate, todayKey()) >= SOFT_RETURN_DURATION_DAYS){
+    _srSave({ ...sr, active: false });
+    return null;
+  }
+  return sr;
+}
+// Ultimo allenamento REALE precedente a oggi: max(date) in training_logs
+// escludendo le sessioni recovery (i riposi non loggano, i recuperi non contano).
+async function _srLastWorkoutDate(){
+  const { data, error } = await supa.from('training_logs')
+    .select('date')
+    .eq('user_id', ST.user.id)
+    .not('session_id', 'ilike', 'recovery%')
+    .lt('date', todayKey())
+    .order('date', { ascending: false })
+    .limit(1);
+  if(error || !data || !data.length) return null;
+  return data[0].date;
+}
+// Chiamata fire-and-forget da openTrainingSession, solo sessioni di lavoro.
+async function maybeProposeSoftReturn(sid){
+  try {
+    if(!ST.user || ST.user.id === 'test-user-001') return;
+    const sess = getTrainingSession(sid);
+    if(!sess || sess.type === 'Recupero') return;
+    if(getSoftReturn()) return; // rientro già attivo: scelta ricordata, niente prompt
+    const last = await _srLastWorkoutDate();
+    if(!last) return; // nessuno storico → primo allenamento, non è un rientro
+    const gap = _srDaysBetween(last, todayKey());
+    if(gap < SOFT_RETURN_MIN_DAYS) return;
+    const sr = _srLoad();
+    if(sr && sr.decidedFor === last) return; // scelta già presa per QUESTA pausa
+    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last };
+    if(ST.page === 'training' && ST.trainSession === sid) renderTraining();
+  } catch(e){}
+}
+function softReturnAccept(){
+  const p = ST.softReturnPrompt;
+  if(!p) return;
+  _srSave({ active: true, startDate: todayKey(), level: p.level, decidedFor: p.lastDate });
+  ST.softReturnPrompt = null;
+  showToast(p.level === 2
+    ? 'Rientro soft attivo: −35% e RIR +2 per 7 giorni'
+    : 'Rientro soft attivo: −20% e RIR +1 per 7 giorni', '🌱', 4000);
+  renderTraining();
+}
+function softReturnDecline(){
+  const p = ST.softReturnPrompt;
+  if(!p) return;
+  // Rifiuto ricordato: non riproporre finché non si chiude una NUOVA pausa ≥10 gg
+  _srSave({ active: false, startDate: null, level: p.level, decidedFor: p.lastDate });
+  ST.softReturnPrompt = null;
+  renderTraining();
+}
+// Carico suggerito in rientro (solo display): −20% L1 / −35% L2,
+// arrotondato allo step pratico (5 lbs / 2.5 kg).
+function softReturnLoad(v){
+  const sr = getSoftReturn();
+  if(!sr || !(v > 0)) return null;
+  const factor = sr.level === 2 ? 0.65 : 0.8;
+  const step = (ST.profile && ST.profile.unit === 'kg') ? 2.5 : 5;
+  return Math.max(0, Math.round((v * factor) / step) * step);
+}
+// Testo riga RIENTRO sul primo set: valore concreto se c'è l'ultima sessione.
+function _softReturnRowText(exName){
+  const sr = getSoftReturn();
+  if(!sr) return '';
+  const pct = sr.level === 2 ? 35 : 20;
+  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  const v = (last && last.resistance != null && last.resistance !== '') ? parseFloat(last.resistance) : null;
+  if(v > 0) return `riparti da ~${softReturnLoad(v)} ${unitLbl} (−${pct}% di ${v})`;
+  return `riduci di ~${pct}% il carico dell'ultima volta`;
+}
+
 function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor}){
   if(!exData || !sess) return '';
   if(sess.type === 'Recupero') return ''; // Active Recovery: nessuna progressione di carico
@@ -11998,7 +12094,12 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
   // elastici/corpo libero, isometrici) — override su sess.rir, Pump incluso.
   // Settimane 1-3: comportamento invariato (sess.rir o default 2).
-  const targetRIR = getCycleWeekInfo().isScarico ? 3 : ((sess.rir != null) ? sess.rir : 2);
+  let targetRIR = getCycleWeekInfo().isScarico ? 3 : ((sess.rir != null) ? sess.rir : 2);
+  // RIENTRO SOFT attivo: RIR consigliato +1 (L1) / +2 (L2) su tutti i rami.
+  // Solo suggerimenti — il carico ridotto vive nella riga RIENTRO del primo set
+  // (niente riduzione qui: comporrebbe il −% a ogni serie loggata).
+  const _softRet = getSoftReturn();
+  if(_softRet) targetRIR = Math.min(4, targetRIR + (_softRet.level === 2 ? 2 : 1));
   const nextSetNum = (Number(setNum) || 0) + 1;
   // Difensivo: se per qualunque motivo è l'ultima serie (o oltre), niente PROSSIMA.
   if(exData.sets && nextSetNum > exData.sets) return '';
@@ -13081,9 +13182,25 @@ function renderTraining(){
       const scaricoBadge = (cycleWk.isScarico && !isRecovery)
         ? `<span style="background:${SALVIA_SCARICO};color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;" onclick="showInfoModal('scarico')">SCARICO</span>`
         : '';
+      // Rientro soft: badge discreto (stile analogo a SCARICO) + banner proposta
+      const softRet = !isRecovery ? getSoftReturn() : null;
+      const RIENTRO_BLU = '#6B93C4'; // blu derivato dalla tinta Training (--mod-training)
+      const rientroBadge = softRet
+        ? `<span style="background:${RIENTRO_BLU};color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;" onclick="showInfoModal('rientro')">RIENTRO</span>`
+        : '';
+      const srPrompt = (!isRecovery && ST.softReturnPrompt) ? ST.softReturnPrompt : null;
+      const softReturnBanner = srPrompt ? `
+        <div style="background:var(--s1);border:1px solid ${RIENTRO_BLU};border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${RIENTRO_BLU};letter-spacing:.06em;margin-bottom:6px;">RIENTRO</div>
+          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Sei stato fermo ${srPrompt.gapDays} giorni — ripartiamo più leggeri?</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="softReturnAccept()" style="flex:1;min-width:150px;background:${RIENTRO_BLU};color:#fff;border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Rientro soft (consigliato)</button>
+            <button onclick="softReturnDecline()" style="flex:1;min-width:120px;background:var(--s2);color:var(--t1);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Continua normale</button>
+          </div>
+        </div>` : '';
       const typeBadge = isRecovery
         ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
-        : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${scaricoBadge}${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
+        : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>${scaricoBadge}${rientroBadge}${s.rir!=null?'<span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>':''}`;
 
       // Blocco Attivazione: nuovo flow ibrido con hero card (Fase 12 mag 2026)
       const activationSection = _renderActivationSection();
@@ -13266,6 +13383,7 @@ function renderTraining(){
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
+            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
             ${suggestion?`<div class="ex-suggestion">${suggestion}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
@@ -13335,6 +13453,7 @@ function renderTraining(){
           ${audioBanner}
           ${heroBlock}
 
+          ${softReturnBanner}
           ${activationSection}
 
           ${warmupSection}
@@ -21310,6 +21429,7 @@ function openTrainingSession(sid){
   ST.trainSession = sid;
   _hydrateActivation(sid); // ripristina flag fatto + collasso del Blocco Attivazione (per sessione+giorno)
   ST.lastLoggedSets = {}; // reset cache mentre carica (suggestion mostra "prima volta")
+  maybeProposeSoftReturn(sid); // rientro soft: avviso non bloccante se pausa ≥10 giorni
   _unlockAudio();
   requestWakeLock();
   renderTraining();
@@ -22694,6 +22814,10 @@ function showInfoModal(key) {
     scarico: {
       title: 'Settimana di Scarico',
       text: 'Ogni 4ª settimana: stessi esercizi e serie, carichi ridotti e RIR 3+ (3+ ripetizioni di margine). Non è riposo — è recupero attivo. I tendini si adattano più lentamente dei muscoli e hanno bisogno di scaricare. La supercompensazione avviene durante lo scarico, non durante il carico.'
+    },
+    rientro: {
+      title: 'Rientro Soft',
+      text: 'Dopo una pausa lunga il corpo ha bisogno di riprendere gradualmente: per 7 giorni i suggerimenti mostrano carichi ridotti (−20% dopo 10+ giorni di stop, −35% dopo 30+) e più margine (RIR +1 o +2). È solo un consiglio: la scheda non cambia e logghi sempre quello che vuoi. Dopo 7 giorni la progressione normale riprende da sola.'
     },
     progressione: {
       title: 'Doppia Progressione',
