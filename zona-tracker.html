@@ -3667,7 +3667,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.17 · 17:08';
+const APP_VERSION = '2026.07.17 · 17:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6998,7 +6998,7 @@ const TRAINING_SESSIONS = {
     label:'Upper A — Forza', rest:'2 min',
     exercises:[
       {
-        name:'Trazioni', sets:4, reps:'4-6',
+        name:'Trazioni', codice:'EX008', sets:4, reps:'4-6',
         eq:'Sbarra fissa da porta',
         setup:[
           "Presa pronata, larghezza poco più delle spalle",
@@ -7017,7 +7017,7 @@ const TRAINING_SESSIONS = {
         muscles:['dorsale','bicipiti','trapezio','romboidi']
       },
       {
-        name:'Chest press in piedi con elastico', sets:4, reps:'4-6',
+        name:'Chest press in piedi con elastico', codice:'EX001', sets:4, reps:'4-6',
         eq:'Elastico + 2 maniglie singole',
         setup:[
           "Elastico ancorato dietro all'altezza del petto",
@@ -7037,7 +7037,7 @@ const TRAINING_SESSIONS = {
         muscles:['pettorale','deltoide anteriore','tricipiti']
       },
       {
-        name:'Shoulder press in piedi con elastico', sets:3, reps:'4-6',
+        name:'Shoulder press in piedi con elastico', codice:'EX006', sets:3, reps:'4-6',
         eq:'Elastico + 2 maniglie singole',
         setup:[
           "Bilaterale, elastico sotto entrambi i piedi",
@@ -7057,7 +7057,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Lombari: core e gluteo SEMPRE contratti per evitare iperestensione (iperlordosi)."
       },
       {
-        name:'Row in piedi con elastico', sets:4, reps:'4-6',
+        name:'Row in piedi con elastico', codice:'EX470', sets:4, reps:'4-6',
         eq:'Elastico + barra lunga',
         setup:[
           "Elastico ancorato davanti all'altezza del petto",
@@ -7077,7 +7077,7 @@ const TRAINING_SESSIONS = {
         muscles:['dorsale','romboidi','trapezio medio','bicipiti']
       },
       {
-        name:'Face pull con elastico', sets:3, reps:'6-8', iso:true,
+        name:'Face pull con elastico', codice:'EX500', sets:3, reps:'6-8', iso:true,
         eq:'Elastico + corda doppia',
         setup:[
           "Elastico ancorato sopra all'altezza del viso",
@@ -7102,7 +7102,7 @@ const TRAINING_SESSIONS = {
     label:'Upper B — Ipertrofia', rest:'75 sec',
     exercises:[
       {
-        name:'Inverted row con elastico', sets:4, reps:'8-12',
+        name:'Inverted row con elastico', codice:'EX077', sets:4, reps:'8-12',
         eq:'Elastico + 2 maniglie o corda doppia',
         setup:[
           "Elastico ancorato basso",
@@ -7122,7 +7122,7 @@ const TRAINING_SESSIONS = {
         muscles:['dorsale','romboidi','trapezio medio','bicipiti']
       },
       {
-        name:'Chest press inclinata su panca', sets:3, reps:'8-12',
+        name:'Chest press inclinata su panca', codice:'EX071', sets:3, reps:'8-12',
         eq:'Panca 30-45° + elastico + 2 maniglie',
         setup:[
           "Sdraiato su panca inclinata 30-45°",
@@ -7142,7 +7142,7 @@ const TRAINING_SESSIONS = {
         muscles:['pettorale alto','deltoide anteriore','tricipiti']
       },
       {
-        name:'Lateral raise con elastico', sets:3, reps:'12-15', iso:true,
+        name:'Lateral raise con elastico', codice:'EX055', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + 2 maniglie singole',
         setup:[
           "In piedi sopra l'elastico",
@@ -7162,7 +7162,7 @@ const TRAINING_SESSIONS = {
         muscles:['deltoide laterale','sovraspinato']
       },
       {
-        name:'Row inclinato in piedi busto 45°', sets:4, reps:'8-12',
+        name:'Row inclinato in piedi busto 45°', codice:'EX470', sets:4, reps:'8-12',
         eq:'Elastico + barra corta',
         setup:[
           "Elastico ancorato basso",
@@ -7183,7 +7183,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Lombari: schiena rigorosamente neutra, mai flessa (iperlordosi)."
       },
       {
-        name:'Curl bicipiti con elastico', sets:3, reps:'12-15', iso:true,
+        name:'Curl bicipiti con elastico', codice:'EX314', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + 2 maniglie singole',
         setup:[
           "In piedi sopra l'elastico",
@@ -7203,7 +7203,7 @@ const TRAINING_SESSIONS = {
         muscles:['bicipite brachiale','brachiale','brachioradiale']
       },
       {
-        name:'Tricipiti overhead con elastico', sets:3, reps:'12-15', iso:true,
+        name:'Tricipiti overhead con elastico', codice:'EX524', sets:3, reps:'12-15', iso:true,
         eq:'Elastico + corda doppia o maniglia singola',
         setup:[
           "Elastico ancorato basso",
@@ -7229,7 +7229,7 @@ const TRAINING_SESSIONS = {
     label:'Lower A — Forza', rest:'2 min',
     exercises:[
       {
-        name:'Bulgarian split squat con elastico', sets:4, reps:'4-6 per lato',
+        name:'Bulgarian split squat con elastico', codice:'EX047', sets:4, reps:'4-6 per lato',
         eq:'Panca + elastico + 2 maniglie',
         setup:[
           "Piede posteriore sulla panca",
@@ -7250,7 +7250,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Ginocchia: tallone rialzato non negoziabile. Ginocchio in linea col piede (valgismo dinamico)."
       },
       {
-        name:'Romanian deadlift con elastico', sets:4, reps:'4-6',
+        name:'Romanian deadlift con elastico', codice:'EX018', sets:4, reps:'4-6',
         eq:'Elastico + barra lunga',
         setup:[
           "Elastico sotto entrambi i piedi (larghezza spalle)",
@@ -7270,7 +7270,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Lombari: schiena SEMPRE neutra, mai flessa (iperlordosi). Movimento dalle anche, non dalla colonna."
       },
       {
-        name:'Hip thrust con elastico', sets:4, reps:'4-6',
+        name:'Hip thrust con elastico', codice:'EX017', sets:4, reps:'4-6',
         eq:'Panca + elastico + 2 maniglie',
         setup:[
           "Spalle appoggiate sulla panca",
@@ -7290,7 +7290,7 @@ const TRAINING_SESSIONS = {
         muscles:['gluteo massimo','femorali','gluteo medio']
       },
       {
-        name:'Glute bridge isometrico con cavigliera', sets:3, reps:'20-30 sec per lato', iso:true,
+        name:'Glute bridge isometrico con cavigliera', codice:'EX019', sets:3, reps:'20-30 sec per lato', iso:true,
         eq:'Elastico + cavigliera',
         setup:[
           "Supino, ginocchia flesse, piedi a terra",
@@ -7338,7 +7338,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Ginocchia + lombari: talloni rialzati riducono stress su entrambi. Non saltare il rialzo."
       },
       {
-        name:'Single leg Romanian deadlift con elastico', sets:3, reps:'8-12 per lato',
+        name:'Single leg Romanian deadlift con elastico', codice:'EX291', sets:3, reps:'8-12 per lato',
         eq:'Elastico + 1 maniglia singola',
         setup:[
           "Elastico sotto piede d'appoggio",
@@ -7358,7 +7358,7 @@ const TRAINING_SESSIONS = {
         alert:"⚠️ Lombari: meglio toccare col piede posteriore che inarcare la schiena."
       },
       {
-        name:'Hip thrust con elastico TUT alto', sets:4, reps:'12-15',
+        name:'Hip thrust con elastico TUT alto', codice:'EX017', sets:4, reps:'12-15',
         eq:'Panca + elastico + 2 maniglie',
         setup:[
           "Identico al hip thrust forza ma focus su tempo sotto tensione"
@@ -7376,7 +7376,7 @@ const TRAINING_SESSIONS = {
         muscles:['gluteo massimo','femorali','gluteo medio']
       },
       {
-        name:'Leg curl con elastico sulla fitball', sets:3, reps:'12-15', iso:true,
+        name:'Leg curl con elastico sulla fitball', codice:'EX043', sets:3, reps:'12-15', iso:true,
         eq:'Fitball + cavigliera (opz.)',
         setup:[
           "Supino, talloni sulla fitball, bacino sollevato",
@@ -7395,7 +7395,7 @@ const TRAINING_SESSIONS = {
         muscles:['femorali','gluteo','polpaccio']
       },
       {
-        name:'Calf raise con elastico', sets:3, reps:'15-20', iso:true,
+        name:'Calf raise con elastico', codice:'EX028', sets:3, reps:'15-20', iso:true,
         eq:'Elastico + 2 maniglie singole',
         setup:[
           "In piedi sopra l'elastico (avampiede)",
@@ -7436,17 +7436,17 @@ const TRAINING_SESSIONS = {
         muscles:['anche','glutei','adduttori'],
         execution:['Seduto con gambe in 90/90 (una avanti, una di lato)','Alterna ruotando entrambe le ginocchia lato per lato','Mantieni il busto eretto'],
         commonErrors:['Curvare la schiena','Ginocchia che si sollevano','Velocità troppo elevata'] },
-      { name:'Affondo basso con rotazione dx', duration_sec:45, block:'Anche e bacino', side:'dx',
+      { name:'Affondo basso con rotazione dx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'dx',
         muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['flessori','glutei','colonna toracica'],
         execution:['Affondo profondo gamba destra avanti','Mano sinistra a terra interna al piede','Ruota braccio destro verso il cielo aprendo il petto'],
         commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
-      { name:'Affondo basso con rotazione sx', duration_sec:45, block:'Anche e bacino', side:'sx',
+      { name:'Affondo basso con rotazione sx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'sx',
         muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['flessori','glutei','colonna toracica'],
         execution:['Affondo profondo gamba sinistra avanti','Mano destra a terra interna al piede','Ruota braccio sinistro verso il cielo aprendo il petto'],
         commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
-      { name:'Cossack squat alternati', duration_sec:60, block:'Anche e bacino',
+      { name:'Cossack squat alternati', codice:'EX082', duration_sec:60, block:'Anche e bacino',
         muscleImg:'assets/exercises/squat-talloni-rialzati-muscoli.png',
         muscles:['adduttori','glutei','quadricipiti'],
         execution:['Gambe larghe, mani in preghiera davanti',"Piega una gamba spingendo i glutei indietro, l'altra dritta",'Alterna lato per lato'],
@@ -7483,22 +7483,22 @@ const TRAINING_SESSIONS = {
         muscles:['petto','deltoidi anteriori','colonna toracica'],
         execution:['Sdraiato supino, braccia a 90° a candeliere','Lascia cadere le braccia verso il pavimento','Respira nel petto aperto'],
         commonErrors:['Forzare le braccia oltre il range','Iperestendere la lombare','Trattenere il respiro'] },
-      { name:'Thread the needle dx', duration_sec:45, block:'Colonna toracica e spalle', side:'dx',
+      { name:'Thread the needle dx', codice:'EX123', duration_sec:45, block:'Colonna toracica e spalle', side:'dx',
         muscleImg:'assets/exercises/row-inclinato-muscoli.png',
         muscles:['colonna toracica','scapole','romboidi'],
         execution:['In quadrupedia','Infila il braccio destro sotto al sinistro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
         commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
-      { name:'Thread the needle sx', duration_sec:45, block:'Colonna toracica e spalle', side:'sx',
+      { name:'Thread the needle sx', codice:'EX123', duration_sec:45, block:'Colonna toracica e spalle', side:'sx',
         muscleImg:'assets/exercises/row-inclinato-muscoli.png',
         muscles:['colonna toracica','scapole','romboidi'],
         execution:['In quadrupedia','Infila il braccio sinistro sotto al destro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
         commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
-      { name:'Rotazione toracica seduto dx', duration_sec:30, block:'Colonna toracica e spalle', side:'dx',
+      { name:'Rotazione toracica seduto dx', codice:'EX124', duration_sec:30, block:'Colonna toracica e spalle', side:'dx',
         muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano sinistra sul ginocchio destro, destra dietro la schiena','Ruota dolcemente verso destra'],
         commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
-      { name:'Rotazione toracica seduto sx', duration_sec:30, block:'Colonna toracica e spalle', side:'sx',
+      { name:'Rotazione toracica seduto sx', codice:'EX124', duration_sec:30, block:'Colonna toracica e spalle', side:'sx',
         muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano destra sul ginocchio sinistro, sinistra dietro la schiena','Ruota dolcemente verso sinistra'],
@@ -7535,7 +7535,7 @@ const TRAINING_SESSIONS = {
         execution:['Affondo gamba sinistra dietro, ginocchio dritto','Tallone a terra, busto eretto','Spingi anche in avanti per aumentare lo stretch'],
         commonErrors:['Tallone che si solleva','Ginocchio piegato','Compensare con la lombare'] },
       // Blocco 5 — Integrazione e respiro
-      { name:'Cat-Cow', duration_sec:60, block:'Integrazione e respiro',
+      { name:'Cat-Cow', codice:'EX029', duration_sec:60, block:'Integrazione e respiro',
         muscleImg:null,
         muscles:['colonna vertebrale','addominali'],
         execution:['In quadrupedia','Inspira incurvando la schiena verso il basso (cow)',"Espira inarcando verso l'alto (cat)"],
