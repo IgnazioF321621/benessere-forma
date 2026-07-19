@@ -335,6 +335,70 @@ Macro % `[carbo, prot, fat]`:
 - ⚠️ Verifica risoluzione slug: `biblioteca_gif` supera le 1.000 righe → PostgREST tronca la SELECT al limite di default. Paginare con header `Range`, altrimenti compaiono orfani fantasma.
 - Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
+### Nomenclatura esercizi — regole normative (19 luglio 2026)
+
+Valgono per `esercizi_catalog.nome` / `nome_en`, per `biblioteca_gif.nome_italiano` / `nome_originale` e per il filename `Nome italiano (English name).gif`. **Normative**: un nome nuovo che le viola va corretto prima di entrare, non dopo.
+
+**1. Ordine fisso dei campi, identico nelle due lingue**
+
+```
+[Movimento] · [Attrezzo] · [Variante] · [Posizione]
+```
+
+L'ordine è lo stesso in italiano e in inglese: il nome EN non è una traduzione libera ma la stessa struttura con lessico inglese. Esempio: `Curl Hammer manubri alternato seduto` / `Seated Dumbbell Hammer Alternating Curl`.
+
+**2. Qualificatori lessicalizzati — restano attaccati al movimento**
+
+Non sono varianti: fanno parte del nome del movimento e non si spostano nel campo Variante. **Lista chiusa:**
+
+`Hammer · Zottman · Arnold · Rumeno · Bulgarian · Pendlay · Concentrato · Sumo · Goblet · Face pull · Pull-over`
+
+Criterio per estenderla: si aggiunge un termine **solo se, rimuovendolo, il nome diventa irriconoscibile per un preparatore**. Ogni aggiunta richiede **decisione esplicita di Ignazio** — la lista non si allarga per inerzia durante un cantiere.
+
+**3. Default omessi in entrambe le lingue**
+
+Si scrive solo l'eccezione, mai il caso normale:
+
+| Lingua | Default omesso | Si scrive solo |
+|---|---|---|
+| IT | bilaterale, simultaneo | alternato · a un braccio |
+| EN | Simultaneous, Bilateral, Both arms, Two-arm | Alternating · Single-Arm · One-Arm |
+
+**"In piedi" / "Standing"** si mantengono **solo quando distinguono** da seduto o sdraiato. Se non esiste la variante seduta o sdraiata, si omettono.
+
+**4. Attrezzo = ciò che si impugna o si carica · Posizione = assetto e supporto**
+
+> ⚠️ **Questa versione supera quella scritta poco prima nella stessa sessione**, che collocava le panche nel campo Attrezzo. Le panche stanno in **Posizione**. In caso di conflitto con appunti o brief precedenti, vale quanto scritto qui.
+
+**Attrezzo** — ciò che si impugna o si carica: `manubri` · `bilanciere dritto` · `bilanciere EZ` · `corda` · `barra dritta` · `maniglia` · `V-bar` · `kettlebell` · `elastico` · `macchina`.
+
+- **Al cavo l'attrezzo è l'attacco** — `corda`, `barra dritta`, `maniglia`, `V-bar` — **non il cavo** (invariato).
+
+**Posizione** — assetto e supporto: `in piedi` · `seduto` · `sdraiato` · `a terra` · e **le panche**.
+
+Vocabolario panche **chiuso a 5 voci**:
+
+`panca piana` · `panca inclinata` · `panca declinata` · `panca verticale` · `panca Scott`
+
+- **`panca verticale` sostituisce ogni forma preesistente**: "90 gradi", "90°", "con schienale", "schienale alto".
+- Il termine scelto è **`verticale` e non `dritta`** per evitare collisione con `bilanciere dritto`.
+- **Nessun simbolo di grado nel vocabolario panche**: si scrive `panca verticale`, mai "90°" o "90 gradi". Il `°` è non-ASCII e causa `400 InvalidKey` in Storage (vedi lezioni operative 18-19 luglio).
+  - ⚠️ *Distinto dal `°` di angolo vero* (`Leg press 45°`, `panca inclinata 30°`): oggi 18 esercizi e 16 righe indice lo usano, e la convenzione documentata è che `nome_italiano` lo **mantiene** mentre lo `storage_path` lo strippa (0 path su 1.660 contengono `°`). Quella regola resta in vigore e **non** è toccata da qui. Se un giorno si volesse eliminare il `°` anche dagli angoli, è una migrazione a parte su 18 voci, da decidere esplicitamente.
+- **L'estensione del vocabolario panche richiede decisione esplicita di Ignazio** — come per la lista dei qualificatori lessicalizzati, non si allarga durante un cantiere.
+
+**5. Conseguenza operativa (la ragione per cui queste regole sono normative)**
+
+Lo slug è costruito su **nome IT + nome EN** (`slug(nome_it)-slug(nome_en)`). Un nome sbagliato produce quindi uno slug sbagliato, e correggerlo dopo che la GIF è in produzione **non è un rename ma il ciclo a 4 passi**:
+
+1. **copia** in Storage col nome nuovo + nuova riga in `biblioteca_gif`
+2. **aggiorna** `gif_slug` nel Google Sheet + sync
+3. **verifica** che l'esercizio risolva sul nuovo slug e che nessuno usi il vecchio
+4. **cancella** file e riga vecchi
+
+Invertire l'ordine rompe le GIF in produzione. È il motivo per cui conviene spendere tempo sul nome **prima** dell'upload: dopo costa 4 operazioni su 3 sistemi diversi (Storage, indice, Sheet).
+
+---
+
 ### Cantiere GIF — metodo e regole di processo (aggiornato 19 luglio 2026)
 
 ⚠️ **Il metodo corrente è la riconciliazione a tre fonti zona per zona** (vedi "Sessione 18-19 luglio 2026" sopra): sostituisce il caricamento per liste descritto qui sotto, che restava cieco ai file già presenti sotto altro nome. Le regole di seguito (fonte di verità, controlli anti-errore, convenzioni di nome, struttura cartelle) restano tutte valide.
@@ -365,7 +429,7 @@ Macro % `[carbo, prot, fat]`:
 **Cosa resta invariato**
 - Batch grande (20-30 GIF) analizzato insieme, con tabella unica di conferma e casi ambigui isolati in fondo.
 - File spostati (MOVE, non copy) da origine a destinazione, nome italiano ufficiale. Mai slug tecnico nel filename locale.
-- Convenzione nome: `Movimento base` + `variante` + `con attrezzo` (es. "Squat con salto con manubri"); termine base consolidato non tradotto (Front squat, Hip thrust, Jump squat, Pistol restano). Slug segue lo stesso ordine in kebab-case.
+- Convenzione nome: ⚠️ **superata dalle "Nomenclatura esercizi — regole normative" sopra** (ordine `[Movimento] · [Attrezzo] · [Variante] · [Posizione]`), che prevalgono in caso di conflitto. Resta valido da qui: termine base consolidato non tradotto (Front squat, Hip thrust, Jump squat, Pistol restano); slug in kebab-case nello stesso ordine del nome.
 - **Nomi e path SEMPRE ASCII** (accenti solo in `nome_italiano`/catalogo — vedi lezioni operative 18-19 luglio): Storage rifiuta le chiavi NFD con `400 InvalidKey`.
 - **"corpo libero" nel nome solo quando distingue** da una versione con carico; se la variante caricata non esiste, si omette.
 - Slug nuovi: `slug(nome_it)-slug(nome_en)` dal filename `Nome italiano (English name).gif`.
