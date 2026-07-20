@@ -272,7 +272,7 @@ PK = `id` (= `auth.users.id`). Colonne chiave:
 
 Colonne chiave: `codice, nome, nome_en, pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
-`nome_en` (text, nullable): nome inglese di riferimento, popolato progressivamente per zone insieme alle GIF.
+`nome_en` (text, nullable): ⚠️ **DEPRECATA dal 19 luglio 2026** — vedi "Nomenclatura esercizi v2", punto 1: il catalogo ha un solo nome. La colonna resta in tabella e i dati non sono migrati, ma **non è più portante**: non usarla per costruire slug, filename o UI.
 
 **Regole `surrogato_attrezzo` (vincolanti, verificate 13 luglio 2026):**
 - SOLO token puliti separati da `+` (tutti richiesti). Vocabolario valido: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`. MAI testo libero, MAI alternative con "o".
@@ -340,72 +340,111 @@ Macro % `[carbo, prot, fat]`:
 - Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
-- `biblioteca_gif`: 1.660 righe indice, di cui ~1.150 orfane (puntano a file eliminati con la pulizia Storage del 18 luglio 2026 → riallineamento = cantiere E). Bucket Storage `biblioteca-gif`: **524 file / 333,3 MB**, solo le 8 zone curate — Addominali e Core · Gambe e Glutei · Schiena e Trapezio · Pettorali · Bicipiti e Braccia · Spalle e Cuffia · Tricipiti · Polpacci (cartelle legacy `funzionale-hiit`/`muscolazione`/`calisthenics`/`stretching` eliminate il 18/07/2026). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: filename Storage `IT (EN).gif` con `°` strippato nel path; `nome_italiano` mantiene il `°`; `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
+- `biblioteca_gif`: 1.660 righe indice, di cui ~1.150 orfane (puntano a file eliminati con la pulizia Storage del 18 luglio 2026 → riallineamento = cantiere E). Bucket Storage `biblioteca-gif`: **524 file / 333,3 MB**, solo le 8 zone curate — Addominali e Core · Gambe e Glutei · Schiena e Trapezio · Pettorali · Bicipiti e Braccia · Spalle e Cuffia · Tricipiti · Polpacci (cartelle legacy `funzionale-hiit`/`muscolazione`/`calisthenics`/`stretching` eliminate il 18/07/2026). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: ⚠️ **superate dalla "Nomenclatura esercizi v2"** (nome unico, niente parte `(EN)` nel filename, `°` abolito ovunque e scritto `gradi`). Le righe storiche conservano il vecchio formato `IT (EN).gif` finché non vengono ri-cicliate. `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
 - `esercizi_catalog.gif_slug`: **503/503 slug risolvono** su `biblioteca_gif` (ri-verificato 19 luglio dopo il cantiere rinomine: 0 rotte; 83 codici restano senza slug). EX057 condivide la GIF Spalle con l'esercizio originale (riuso voluto, vedi sotto). Storico dei 463/463 (17 luglio) — chiusi allora gli ultimi 2: EX057 → riuso GIF Spalle `alzate-laterali-manubri-prono-panca-inclinata-45-…` (45° vs 30° del nome: solo angolo diverso); EX088 → `camminata-alternata-manubri` (era un mismatch di slug, la GIF esisteva già). Entrambi corretti via Google Sheet + sync. Codici senza slug → fallback ExerciseDB.
 - ⚠️ Verifica risoluzione slug: `biblioteca_gif` supera le 1.000 righe → PostgREST tronca la SELECT al limite di default. Paginare con header `Range`, altrimenti compaiono orfani fantasma.
 - Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
-### Nomenclatura esercizi — regole normative (19 luglio 2026)
+### Nomenclatura esercizi — regole normative (19 luglio 2026, v2)
 
-Valgono per `esercizi_catalog.nome` / `nome_en`, per `biblioteca_gif.nome_italiano` / `nome_originale` e per il filename `Nome italiano (English name).gif`. **Normative**: un nome nuovo che le viola va corretto prima di entrare, non dopo.
+> ⚠️ **Questa versione supera e sostituisce ogni regola precedente sui nomi**, inclusa la "regola 4" del commit `301b3fe` (che collocava le panche in Posizione mantenendo il doppio nome IT/EN). In caso di conflitto con appunti, brief o commit precedenti, vale **solo** quanto scritto qui.
 
-**1. Ordine fisso dei campi, identico nelle due lingue**
+Valgono per `esercizi_catalog.nome`, per `biblioteca_gif.nome_italiano` e per il filename `Nome.gif`. **Normative**: un nome nuovo che le viola va corretto prima di entrare, non dopo.
+
+**1. Nome unico**
+
+Il catalogo ha **un solo nome per esercizio**. Il doppio nome IT/EN è **abolito**: la colonna `nome_en` è **deprecata e non più portante**.
+
+- La colonna **non si cancella** e **non si migrano i dati** in questo passaggio: esce solo dal sistema normativo.
+- Il nome è **in italiano** quando l'italiano è il termine realmente usato in sala.
+- Quando il termine di sala è **inglese, resta inglese così com'è**, senza traduzione forzata: `plank` · `crunch` · `lat machine` · `hip thrust` · `front squat` · `face pull` · `pistol` · `jump squat`.
+
+**2. Formula (invariata)**
 
 ```
-[Movimento] · [Attrezzo] · [Variante] · [Posizione]
+[Movimento] [Attrezzo] [Variante] [Posizione]
 ```
 
-L'ordine è lo stesso in italiano e in inglese: il nome EN non è una traduzione libera ma la stessa struttura con lessico inglese. Esempio: `Curl Hammer manubri alternato seduto` / `Seated Dumbbell Hammer Alternating Curl`.
+- **Preposizioni rimosse.**
+- **Default omessi**: bilaterale, simultaneo.
+- **Attrezzo = ciò che si impugna o si carica.** Al cavo l'attrezzo è **l'attacco**, non il cavo.
 
-**2. Qualificatori lessicalizzati — restano attaccati al movimento**
+**3. Maiuscole**
 
-Non sono varianti: fanno parte del nome del movimento e non si spostano nel campo Variante. **Lista chiusa:**
+Maiuscola alla **prima lettera del nome** e ai **soli nomi propri** (di persona o di luogo). Tutto il resto minuscolo, **anche se inglese**.
 
-`Hammer · Zottman · Arnold · Rumeno · Bulgarian · Pendlay · Concentrato · Sumo · Goblet · Face pull · Pull-over`
+La **posizione nel nome è irrilevante**: un nome proprio resta maiuscolo ovunque compaia, un termine comune resta minuscolo anche se attaccato al movimento.
 
-Criterio per estenderla: si aggiunge un termine **solo se, rimuovendolo, il nome diventa irriconoscibile per un preparatore**. Ogni aggiunta richiede **decisione esplicita di Ignazio** — la lista non si allarga per inerzia durante un cantiere.
+**Lista chiusa dei nomi propri:**
 
-**3. Default omessi in entrambe le lingue**
+`Scott · Zottman · Arnold · Pendlay · Bulgarian · Hack · Jefferson · Svend · Larsen · Kelso`
 
-Si scrive solo l'eccezione, mai il caso normale:
+Fuori da questa lista: **minuscolo**.
 
-| Lingua | Default omesso | Si scrive solo |
-|---|---|---|
-| IT | bilaterale, simultaneo | alternato · a un braccio |
-| EN | Simultaneous, Bilateral, Both arms, Two-arm | Alternating · Single-Arm · One-Arm |
+> **Nota sulle due lingue.** Gli aggettivi italiani derivati da luogo seguono l'ortografia italiana e restano **minuscoli** (`Stacco rumeno`), mentre le forme inglesi lessicalizzate mantengono la **maiuscola** (`Bulgarian split squat`). Non è un'incoerenza: è la regola ortografica di ciascuna lingua applicata al termine nella lingua in cui è usato.
 
-**"In piedi" / "Standing"** si mantengono **solo quando distinguono** da seduto o sdraiato. Se non esiste la variante seduta o sdraiata, si omettono.
+Esempi:
 
-**4. Attrezzo = ciò che si impugna o si carica · Posizione = assetto e supporto**
+```
+Curl hammer manubri panca verticale
+Curl manubri panca Scott
+Arnold press manubri seduto
+Squat goblet kettlebell
+Face pull cavo corda
+```
 
-> ⚠️ **Questa versione supera quella scritta poco prima nella stessa sessione**, che collocava le panche nel campo Attrezzo. Le panche stanno in **Posizione**. In caso di conflitto con appunti o brief precedenti, vale quanto scritto qui.
+**4. Panche (invariato, si conferma)**
 
-**Attrezzo** — ciò che si impugna o si carica: `manubri` · `bilanciere dritto` · `bilanciere EZ` · `corda` · `barra dritta` · `maniglia` · `V-bar` · `kettlebell` · `elastico` · `macchina`.
-
-- **Al cavo l'attrezzo è l'attacco** — `corda`, `barra dritta`, `maniglia`, `V-bar` — **non il cavo** (invariato).
-
-**Posizione** — assetto e supporto: `in piedi` · `seduto` · `sdraiato` · `a terra` · e **le panche**.
-
-Vocabolario panche **chiuso a 5 voci**:
+Vocabolario **chiuso a 5 voci** nel campo Posizione:
 
 `panca piana` · `panca inclinata` · `panca declinata` · `panca verticale` · `panca Scott`
 
-- **`panca verticale` sostituisce ogni forma preesistente**: "90 gradi", "90°", "con schienale", "schienale alto".
-- Il termine scelto è **`verticale` e non `dritta`** per evitare collisione con `bilanciere dritto`.
-- **Nessun simbolo di grado nel vocabolario panche**: si scrive `panca verticale`, mai "90°" o "90 gradi". Il `°` è non-ASCII e causa `400 InvalidKey` in Storage (vedi lezioni operative 18-19 luglio).
-  - ⚠️ *Distinto dal `°` di angolo vero* (`Leg press 45°`, `panca inclinata 30°`): oggi 18 esercizi e 16 righe indice lo usano, e la convenzione documentata è che `nome_italiano` lo **mantiene** mentre lo `storage_path` lo strippa (0 path su 1.660 contengono `°`). Quella regola resta in vigore e **non** è toccata da qui. Se un giorno si volesse eliminare il `°` anche dagli angoli, è una migrazione a parte su 18 voci, da decidere esplicitamente.
-- **L'estensione del vocabolario panche richiede decisione esplicita di Ignazio** — come per la lista dei qualificatori lessicalizzati, non si allarga durante un cantiere.
+`panca verticale` **assorbe ogni forma preesistente** ("90 gradi", "con schienale", "schienale alto").
 
-**5. Conseguenza operativa (la ragione per cui queste regole sono normative)**
+**5. Gradi**
 
-Lo slug è costruito su **nome IT + nome EN** (`slug(nome_it)-slug(nome_en)`). Un nome sbagliato produce quindi uno slug sbagliato, e correggerlo dopo che la GIF è in produzione **non è un rename ma il ciclo a 4 passi**:
+Il simbolo **`°` è abolito ovunque, nome compreso**. Si scrive **`gradi`** per esteso:
+
+```
+Hyperextension 45 gradi
+```
+
+⚠️ Supera la regola precedente, che ammetteva il `°` nel nome strippandolo solo in filename e slug. Ora non entra affatto.
+
+**6. Slug**
+
+`gif_slug` diventa **monolingue**: kebab-case ASCII derivato dal **solo nome unico**. Lo schema `slug(nome_it)-slug(nome_en)` è **abolito**.
+
+```
+Distensioni manubri panca piana  →  distensioni-manubri-panca-piana
+Hyperextension 45 gradi          →  hyperextension-45-gradi
+```
+
+**7. Codice esercizio**
+
+Il codice (`EX###`) è un **identificatore stabile e permanente**.
+
+- **Mai derivato** dalla zona, dalla cartella o da qualunque attributo variabile.
+- Un esercizio che **cambia zona conserva il codice**.
+- I **gap restano permanenti**: mai renumerare.
+- La rintracciabilità per zona è una **funzione della vista**, non del codice.
+
+**8. Storico**
+
+Qualunque rinomina futura resta accompagnata dalla **migrazione parallela su `training_logs` e `workout_sets`**, che indicizzano per **nome testuale**.
+
+**Nessuna rinomina senza rimappatura dello storico.**
+
+**Conseguenza operativa (invariata)**
+
+Lo slug deriva dal nome: un nome sbagliato produce uno slug sbagliato, e correggerlo dopo che la GIF è in produzione **non è un rename ma il ciclo a 4 passi**:
 
 1. **copia** in Storage col nome nuovo + nuova riga in `biblioteca_gif`
 2. **aggiorna** `gif_slug` nel Google Sheet + sync
 3. **verifica** che l'esercizio risolva sul nuovo slug e che nessuno usi il vecchio
 4. **cancella** file e riga vecchi
 
-Invertire l'ordine rompe le GIF in produzione. È il motivo per cui conviene spendere tempo sul nome **prima** dell'upload: dopo costa 4 operazioni su 3 sistemi diversi (Storage, indice, Sheet).
+Invertire l'ordine rompe le GIF in produzione. Da qui in avanti il ciclo va inteso **più la rimappatura dello storico** (punto 8).
 
 ---
 
@@ -439,10 +478,10 @@ Invertire l'ordine rompe le GIF in produzione. È il motivo per cui conviene spe
 **Cosa resta invariato**
 - Batch grande (20-30 GIF) analizzato insieme, con tabella unica di conferma e casi ambigui isolati in fondo.
 - File spostati (MOVE, non copy) da origine a destinazione, nome italiano ufficiale. Mai slug tecnico nel filename locale.
-- Convenzione nome: ⚠️ **superata dalle "Nomenclatura esercizi — regole normative" sopra** (ordine `[Movimento] · [Attrezzo] · [Variante] · [Posizione]`), che prevalgono in caso di conflitto. Resta valido da qui: termine base consolidato non tradotto (Front squat, Hip thrust, Jump squat, Pistol restano); slug in kebab-case nello stesso ordine del nome.
+- Convenzione nome: ⚠️ **superata dalla "Nomenclatura esercizi v2" sopra**, che prevale in caso di conflitto. Resta valido da qui: il termine di sala consolidato non si traduce (front squat, hip thrust, jump squat, pistol restano).
 - **Nomi e path SEMPRE ASCII** (accenti solo in `nome_italiano`/catalogo — vedi lezioni operative 18-19 luglio): Storage rifiuta le chiavi NFD con `400 InvalidKey`.
 - **"corpo libero" nel nome solo quando distingue** da una versione con carico; se la variante caricata non esiste, si omette.
-- Slug nuovi: `slug(nome_it)-slug(nome_en)` dal filename `Nome italiano (English name).gif`.
+- Slug nuovi: ⚠️ **schema abolito** — vedi "Nomenclatura esercizi v2" punto 6: slug monolingue derivato dal solo nome unico.
 - Doppioni → mai eliminare, spostati in `Scartati da revisionare/`.
 - Output per blocco: brief `.md` + CSV per Google Sheet (rigenerato con slug reali dopo il resoconto di Claude Code).
 - Resoconto obbligatorio a 6 punti dopo ogni esecuzione.
