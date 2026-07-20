@@ -371,17 +371,38 @@ Il catalogo ha **un solo nome per esercizio**. Il doppio nome IT/EN è **abolito
 
 **3. Maiuscole**
 
-Maiuscola alla **prima lettera del nome** e ai **soli nomi propri** (di persona o di luogo). Tutto il resto minuscolo, **anche se inglese**.
+Mantengono la maiuscola **tre sole categorie**:
 
-La **posizione nel nome è irrilevante**: un nome proprio resta maiuscolo ovunque compaia, un termine comune resta minuscolo anche se attaccato al movimento.
+1. la **prima lettera del nome**;
+2. i **nomi propri** di persona o di luogo, da **lista chiusa**;
+3. le **sigle e designazioni tecniche**, nella loro **forma canonica** — regola **aperta**, non lista.
 
-**Lista chiusa dei nomi propri:**
+Tutto il resto minuscolo, **anche se inglese**.
 
-`Scott · Zottman · Arnold · Pendlay · Bulgarian · Hack · Jefferson · Svend · Larsen · Kelso`
+La **posizione nel nome è irrilevante**: un nome proprio o una sigla restano maiuscoli ovunque compaiano, un termine comune resta minuscolo anche se attaccato al movimento.
 
-Fuori da questa lista: **minuscolo**.
+**Categoria 2 — lista chiusa dei nomi propri (9 voci):**
 
-> **Nota sulle due lingue.** Gli aggettivi italiani derivati da luogo seguono l'ortografia italiana e restano **minuscoli** (`Stacco rumeno`), mentre le forme inglesi lessicalizzate mantengono la **maiuscola** (`Bulgarian split squat`). Non è un'incoerenza: è la regola ortografica di ciascuna lingua applicata al termine nella lingua in cui è usato.
+`Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso`
+
+Fuori da questa lista: **minuscolo**. In particolare **`Squat hack machine` resta minuscolo**: `hack squat` è un termine di sala, non un eponimo.
+
+> **Perché `Bulgarian` è in lista.** È l'unica voce non-cognome: è un aggettivo di luogo **inglese lessicalizzato**, e resta in lista per quel motivo. Gli aggettivi **italiani** derivati da luogo seguono invece l'ortografia italiana e restano **minuscoli** (`Stacco rumeno`). Non è un'incoerenza: è la regola ortografica di ciascuna lingua applicata al termine nella lingua in cui è usato.
+
+**Categoria 3 — sigle e designazioni tecniche (regola aperta):**
+
+`EZ · TRX · IT · Y-W · V` e simili.
+
+**Non è una lista chiusa**, e non può esserlo: le sigle sono troppe e imprevedibili, e la regola deve valere anche per i ~600 esercizi che entreranno in futuro. Il criterio è generale: **se un termine è un acronimo o una sigla che in sala si scrive in maiuscolo, si rispetta la forma canonica.**
+
+```
+Foam roll bandelletta IT      (non "it")
+Curl bilanciere EZ
+Rematore invertito TRX
+```
+
+> **Criterio di distinzione** (codificabile dall'auditor):
+> **nome proprio** = persona o luogo → lista chiusa di 9 · **sigla tecnica** = acronimo o designazione → regola aperta sulla forma canonica · **tutto il resto** → minuscolo.
 
 Esempi:
 
@@ -390,7 +411,9 @@ Curl hammer manubri panca verticale
 Curl manubri panca Scott
 Arnold press manubri seduto
 Squat goblet kettlebell
+Squat hack machine
 Face pull cavo corda
+Curl bilanciere EZ presa stretta
 ```
 
 **4. Panche (invariato, si conferma)**
