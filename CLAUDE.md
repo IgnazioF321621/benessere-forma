@@ -473,6 +473,20 @@ Lo slug deriva dal nome: un nome sbagliato produce uno slug sbagliato, e corregg
 
 Invertire l'ordine rompe le GIF in produzione. Da qui in avanti il ciclo va inteso **più la rimappatura dello storico** (punto 8).
 
+**Guardia obbligatoria — "1 solo codice per slug", non "1 sola riga indice per slug"**
+
+Prima di qualunque rinomina massiva, contare **quanti codici di catalogo puntano allo stesso `gif_slug`**. Il controllo "una sola riga in `biblioteca_gif` per quello slug" **non basta**: due esercizi distinti possono condividere legittimamente la stessa riga indice (riuso voluto di una GIF).
+
+Se uno script assume che ogni codice possieda la propria riga, il primo codice processato se la rinomina e il secondo resta **senza riga indice → GIF rotta**, con il catalogo scritto lo stesso.
+
+*Origine: incidente del 21 luglio 2026 sulla coppia EX057/EX408, che condividevano la GIF Spalle a 45°. Chiusa lo stesso giorno con la strada A — vedi sotto.*
+
+**Codici che condividono una GIF — strada A (seconda riga indice)**
+
+Quando due codici devono servire lo **stesso file** ma con nomi diversi, non si sceglie quale dei due tiene lo slug conforme: si crea una **seconda riga in `biblioteca_gif` con lo stesso `storage_path`** e lo slug derivato dal secondo nome. Nessun file duplicato in Storage — è solo una riga d'indice in più su un file già presente, e ogni codice ottiene lo slug conforme al proprio nome.
+
+Il giorno che arriva la GIF dedicata al secondo esercizio, si aggiorna **solo lo `storage_path` di quella riga**, senza altri effetti su catalogo o slug.
+
 ---
 
 ### Cantiere GIF — metodo e regole di processo (aggiornato 19 luglio 2026)
