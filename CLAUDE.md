@@ -381,13 +381,17 @@ Tutto il resto minuscolo, **anche se inglese**.
 
 La **posizione nel nome è irrilevante**: un nome proprio o una sigla restano maiuscoli ovunque compaiano, un termine comune resta minuscolo anche se attaccato al movimento.
 
-**Categoria 2 — lista chiusa dei nomi propri (9 voci):**
+**Categoria 2 — lista chiusa dei nomi propri (11 voci):**
 
-`Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso`
+`Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso · Russian · Yates`
 
 Fuori da questa lista: **minuscolo**. In particolare **`Squat hack machine` resta minuscolo**: `hack squat` è un termine di sala, non un eponimo.
 
-> **Perché `Bulgarian` è in lista.** È l'unica voce non-cognome: è un aggettivo di luogo **inglese lessicalizzato**, e resta in lista per quel motivo. Gli aggettivi **italiani** derivati da luogo seguono invece l'ortografia italiana e restano **minuscoli** (`Stacco rumeno`). Non è un'incoerenza: è la regola ortografica di ciascuna lingua applicata al termine nella lingua in cui è usato.
+> **Perché `Bulgarian` e `Russian` sono in lista.** Sono le due voci non-cognome: aggettivi di luogo **inglesi lessicalizzati** (`Squat bulgaro` a parte, il riferimento è a `Bulgarian split squat` e `Russian twist`), e restano in lista per quel motivo. Gli aggettivi **italiani** derivati da luogo seguono invece l'ortografia italiana e restano **minuscoli** (`Stacco rumeno`). Non è un'incoerenza: è la regola ortografica di ciascuna lingua applicata al termine nella lingua in cui è usato.
+
+> **`Yates`** è un cognome (Dorian Yates), stesso criterio di `Pendlay` e `Kelso`.
+
+*Estensione del 21 luglio 2026: la lista passa da 9 a 11 voci con l'aggiunta di `Russian` e `Yates`, emersa dal dry-run del Blocco 2 — l'auditor lasciava `Russian` maiuscolo pur non essendo in lista (incoerenza con la regola) e abbassava `Yates` pur essendo un eponimo.*
 
 **Categoria 3 — sigle e designazioni tecniche (regola aperta):**
 
