@@ -428,6 +428,8 @@ Vocabolario **chiuso a 5 voci** nel campo Posizione:
 
 `panca verticale` **assorbe ogni forma preesistente** ("90 gradi", "con schienale", "schienale alto").
 
+> **`panca romana` e `sedia romana` sono due attrezzi distinti, mai unificati** (campo **Attrezzo**, non Posizione — quindi **fuori** dal vocabolario chiuso delle 5 panche qui sopra). `panca romana` = iperestensore a 45° (appoggio sulle cosce, busto a pancia in giù → estensioni dorsali, es. EX445/446/447). `sedia romana` = torre verticale (appoggio su avambracci, sollevamento gambe, es. EX153). L'auditor **non deve segnalarle come violazione della regola 4**: quella governa solo il campo Posizione. Il sovraccarico (disco, manubrio) resta nel **nome**, non nel campo Attrezzo, che per questo gruppo è uniforme a `panca romana`. *Ratificato il 21 luglio 2026 chiudendo il gruppo EX445–EX447.*
+
 **5. Gradi**
 
 Il simbolo **`°` è abolito ovunque, nome compreso**. Si scrive **`gradi`** per esteso:
