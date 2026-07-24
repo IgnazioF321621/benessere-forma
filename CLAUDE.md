@@ -38,7 +38,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 **Lezioni operative (17 luglio 2026):**
 - supabase-js NON lancia eccezioni sugli errori API: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error` (causa storica dei buchi silenziosi su `workout_sets`).
 - Ramo `?name=` del Worker: match ESATTO su dizionario hardcoded (~20 nomi storici, `MATCH_DATA`), nessuna normalizzazione — non tocca né catalogo né `biblioteca_gif`.
-- `biblioteca_gif`: 1.660 righe indice, di cui ~1.150 orfane dopo la pulizia Storage del 18 luglio 2026 (puntano a file eliminati) → riallineamento = cantiere E futuro. I file fisici delle zone curate restano la riserva del cantiere GIF; gli originali completi sono nella cartella locale `Biblioteca di esercizi/`.
+- `biblioteca_gif`: **1.653 righe** indice, di cui ~1.150 orfane dopo la pulizia Storage del 18 luglio 2026 (puntano a file eliminati) → riallineamento = cantiere E futuro. I file fisici delle zone curate restano la riserva del cantiere GIF; gli originali completi sono nella cartella locale `Biblioteca di esercizi/`.
 
 **Lezioni operative (18-19 luglio 2026 — riconciliazione zone):**
 - **Path e nomi file SEMPRE ASCII.** Storage rifiuta con `400 InvalidKey` le chiavi con caratteri combinanti: i file macOS sono in **NFD** (la `ù` è `u` + U+0300), non NFC. Gli accenti vivono solo in `nome_italiano` e nel catalogo, mai nel path — stessa logica già in vigore per il `°`. Verificato: 0 righe su 1.659 hanno non-ASCII in `storage_path`. Vale anche per simboli come `→` finiti nei filename per errore di editing.
@@ -126,6 +126,58 @@ Stato finale: `biblioteca_gif` **1.659 righe** · Storage **523 file / 333,9 MB*
 - **Nomi EN con Posizione in coda** (`… Vertical Bench`): scelta ratificata: l'ordine dei campi è identico nelle due lingue, e `Seated` decade perché implicito nella panca.
 - **EX327 chiuso** con ciclo singolo: slug finale `curl-concentrato-cavo-basso-seduto-seated-cable-concentration-curl`, vecchio file e riga rimossi dopo verifica (md5 invariato, 385 KB).
 
+---
+
+## ✅ CANTIERE NOMENCLATURA v2 — CHIUSO (21-24 luglio 2026)
+
+### 🔴 La lezione, prima di tutto: l'identità di un esercizio si accerta guardando la GIF
+
+**Mai dedurla dai nomi, dagli slug o dalla coerenza dei campi.**
+
+Il caso esemplare è la catena **EX150–EX155**. La diagnosi tecnica concludeva: *"gli slug sono scivolati di una posizione, i nomi sono corretti"*. Era **esattamente invertita** — erano i **nomi** a essere sbagliati, e lo slug originale era l'unica parte coerente col contenuto reale. Peggio: **due dei sei non erano nemmeno crunch inversi** ma esercizi di famiglie diverse (un V-sit tuck-up e un sollevamento gambe alla sedia romana), entrambi **doppioni** di voci già a catalogo.
+
+L'errore è emerso **solo con l'ispezione visiva**. La spiegazione tecnica tornava perfettamente: era elegante, coerente, e sbagliata. Rigenerando gli slug dai nomi si erano allineati slug corretti a nomi errati, **cancellando l'ultimo indizio** che segnalava il problema.
+
+> **Regola operativa vincolante.** Prima di **rinominare, accorpare o eliminare** un esercizio, la GIF va **guardata da Ignazio**. L'analisi tecnica prepara la decisione, non la sostituisce. Nessuna scorciatoia, **anche quando la spiegazione tecnica torna perfettamente** — soprattutto allora.
+
+### Esito
+
+- `esercizi_catalog` **586 → 583 righe**. Tre eliminazioni per doppione, tutte con **storico vuoto verificato** (0 righe in `training_logs`, `workout_sets`, `schede_utente`):
+  - **EX151** ≡ EX193 (V-sit tuck up cavo basso)
+  - **EX170** ≡ EX153 (sollevamento gambe tese sedia romana)
+  - **EX528** ≡ EX538 (french press sbarra cavo panca piana)
+
+  In tutti e tre i casi **due file fisici distinti in Storage con contenuto byte-identico**, non righe indice condivise. **Gap permanenti: mai renumerare.** Prossimo codice libero resta **EX587**.
+- **Slug rigenerati monolingue**: 396 (blocco 1) + 53 (blocco 2) + 6 (catena) + i casi manuali. **500 `gif_slug` attivi, 0 rotti**; 83 codici restano senza slug.
+- **Simbolo `°` eliminato da tutti i `nome`** del catalogo — regola 5 pienamente applicata. Resta legittimamente nei **campi descrittivi** (`setup`, `esecuzione`, `errori`, ~28 righe), dove è prosa italiana e non entra in slug o filename.
+- `biblioteca_gif` **1.660 → 1.653**: −8 righe rimosse (1 orfana legacy `sit-up-con-peso` + 3 righe dei codici eliminati + 4 da sessione parallela), +1 aggiunta con la strada A per EX057.
+- **Casi panca chiusi**: 3 `panca romana` riclassificate ad attrezzo (EX445-447), 3 normalizzate a `panca piana` (EX168, EX343, EX535), EX154 risolto dalla catena.
+
+### Guardie tecniche apprese — da applicare sempre
+
+1. **"1 codice per slug", non "1 riga indice per slug"** — causa dell'incidente EX057/EX408 (vedi guardia dedicata alla regola 6).
+2. **Strada A** come soluzione standard per due codici sullo stesso file: seconda riga indice con lo stesso `storage_path`.
+3. **Confronto per hash SHA-256 prima di ogni rinomina massiva**, per stanare i doppioni di *contenuto* che il confronto per nome non vede.
+4. **Script idempotenti con timeout esteso** — lezione dell'interruzione a metà del blocco 1 (99 righe scritte su 396, 1 riga a metà: catalogo aggiornato ma indice no → GIF rotta finché non ripresa).
+5. **Procedura sicura per i file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire.
+6. **Il sync del Sheet non elimina**: le righe dei codici eliminati vanno **cancellate a mano nel Sheet** prima del sync, altrimenti vengono re-inserite.
+
+### Vocabolario consolidato
+
+- **`panca romana`** (iperestensore 45 gradi) e **`sedia romana`** (torre verticale) — due attrezzi **distinti, mai unificati**, entrambi campo **Attrezzo**, entrambi **fuori** dal vocabolario chiuso delle 5 panche.
+- **`power tower` non esiste più** in catalogo: era solo in EX170, eliminato.
+- **Nessuna *french press* con barra sagomata**, al cavo o altrove: la variante è decaduta con EX528. ⚠️ La barra sagomata **resta** su altri movimenti (EX549, EX550 — pushdown al cavo): non è un termine ritirato dal vocabolario.
+
+### Residui aperti
+
+| Residuo | Stato |
+|---|---|
+| **EX249** | nome corretto (`Leg press 45 gradi entrambe le gambe`), **GIF assente** (`gif_slug` NULL) — da verificare |
+| **EX107** | sovrapposizione concettuale con il sollevamento gambe alla sedia romana (EX153) — da decidere |
+| **83 righe senza `gif_slug`** | invariato, cantiere GIF |
+| **7 righe con `°` in `nome_en`** | EX057, EX138, EX145, EX147, EX407, EX408, EX563 — colonna **deprecata e non portante**, nessun effetto su slug/filename |
+| **56 righe con `nome_italiano` divergente** nell'indice | ⚠️ **non 10**: le ~46 aggiuntive nascono dal blocco 2, il cui perimetro di scrittura era `nome` + `gif_slug` e **non** toccava `nome_italiano` dell'indice. Deriva di sola dicitura: **non tocca la catena di risoluzione** (`gif_slug` → `slug` → `storage_path`). Candidata naturale del cantiere E |
+
 **Fix deployati post-audit (5 commit, 12-13 luglio 2026):**
 - **Scheda attiva — nomi runtime**: il loader di `schede_utente` riallinea in memoria i `name` degli esercizi al catalogo live via Map codice→nome (warmup, exercises, carry_conclusivo, finisher.exercises). Il jsonb NON si tocca mai. Fallback: senza codice o codice non a catalogo → resta lo snapshot. Fix GIF modal: `openExerciseAI` passa `ex.codice` a `fetchExerciseMedia` (risolve via `?code=`).
 - **Rotazione**: `nextSession` usa `lastInCycle` (recovery inclusi come marcatori di posizione); slot `rest` consumato se l'ultimo workout non è di oggi (avanza con wrap a upperA). `computeTrainingDebt` invariato: recovery trasparenti al debito.
@@ -150,7 +202,7 @@ M2 check fisico funzionale. Da ri-agganciare a fine blocco Training.
 ## Prossimi cantieri (priorità aperte)
 
 **Training (post-audit 17 luglio 2026):**
-0. **PRIMA DI TUTTO — test timer su workout reali** (commit `e834320` in osservazione) → poi scegliere tra i gialli restanti della mappa audit (punti 7-10) e il cantiere GIF degli 88 esercizi senza `gif_slug`. ~~Zona Polpacci~~ chiusa 18 luglio.
+0. **PRIMA DI TUTTO — test timer su workout reali** (commit `e834320` in osservazione) → poi scegliere tra i gialli restanti della mappa audit (punti 7-10) e il cantiere GIF degli **83** esercizi senza `gif_slug`. ~~Zona Polpacci~~ chiusa 18 luglio. ~~Cantiere nomenclatura v2~~ **chiuso 24 luglio** (vedi sezione dedicata).
 0-quater. **Code dalla riconciliazione zone (19 luglio 2026)**: **zone ancora da riconciliare** — Gambe e Glutei (Mac 125 / Storage 112) · Pettorali (77/56) · Schiena e Trapezio (104/87): il grosso dei candidati NON è calisthenics ma un blocco "sala pesi" mai salito (leg curl/extension, leg press), da decidere zona per zona col metodo a tre fonti. · **Bicipiti e Braccia riconciliata** il 19 luglio (75/68): restano **7 GIF da caricare** (MANCA_STORAGE, ~7,8 MB, servono 7 codici da EX587) e **EX069 "Wrist curl da seduto"** senza `gif_slug`; i 39 NOME_DIVERSO della zona sono stati assorbiti dal cantiere rinomine. · **EX085** (`gruppo_target='Gambe e Glutei'`, è un nome di zona) ed **EX322** (`'gambe'`): due valori fuori dal vocabolario chiuso, entrambi senza `gif_slug` → correggere via Sheet. · **8 righe orfane inutilizzate in Addominali e Core** (legacy pre-cantiere, nessun file Mac, nessun esercizio le usa) → candidate naturali del cantiere E. · **Cartella `Scartati da revisionare/`** (1 file: `Calf raise leg press`, duplicato bit-a-bit di EX563) → da svuotare o archiviare con una decisione unica.
 0-ter. **Code dalla pulizia Storage (18 luglio 2026)**: **C** — 28 file L2 residui nelle zone curate (indicizzati ma non referenziati, 15,7 MB): verifica extra prima di toccarli. **D** — bucket `exercise-media` legacy (43 file, 5,9 MB): confermare che l'app non lo usi più. **E** — riallineamento indice `biblioteca_gif`: ~1.150 righe orfane su file eliminati + 13 righe già a file morto pre-pulizia + 1 `storage_path` duplicato. Sessioni di rifinitura separate, nessuna urgenza.
 0-bis. ~~**Due code aperte da Polpacci**~~ **CHIUSE il 18 luglio 2026 sera** dalla riconciliazione a tre fonti: **EX215 "Calf raise corpo libero su gradino"** — NON è un doppione (hash SHA-256 diverso da EX066/EX028 e dalla nuova "su scalini"): è un movimento distinto, il suo file resta archiviato sotto `Gambe e Glutei/` pur avendo `gruppo_target='polpacci'` → **eccezione di zona documentata, si lascia com'è** (spostarlo richiederebbe riscrivere `storage_path` + `gif_slug` a fronte di zero beneficio). **`calf-raise-leg-press`** — verificato: la riga **non esiste più** in `biblioteca_gif`, nulla da bonificare. Il file Mac omonimo era duplicato bit-a-bit di EX563 → spostato in `Scartati da revisionare/`.
@@ -268,7 +320,7 @@ PK = `id` (= `auth.users.id`). Colonne chiave:
 64 prodotti. RLS SELECT pubblica. PK logica = `codice`.
 
 ### `esercizi_catalog`
-586 righe (verificato live 19 luglio 2026; zero doppioni al 13 luglio 2026). Prossimo codice libero: **EX587**. RLS SELECT pubblica. **PK logica = `codice`**. Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi" (v3) → Supabase. **Mai editare Supabase direttamente**.
+**583 righe** (verificato live 24 luglio 2026, a chiusura del cantiere nomenclatura v2; zero doppioni). Prossimo codice libero: **EX587** — i gap **EX151/EX170/EX528** sono permanenti, mai renumerare. RLS SELECT pubblica. **PK logica = `codice`**. Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi" (v3) → Supabase. **Mai editare Supabase direttamente**.
 
 Colonne chiave: `codice, nome, nome_en, pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
@@ -340,8 +392,8 @@ Macro % `[carbo, prot, fat]`:
 - Worker endpoint dual-mode: `?code=EX###` (priorità) · `?name=...` (legacy 20 esercizi storici)
 - Flusso `?code=EX###`: cerca `gif_slug` su `esercizi_catalog WHERE codice=EX###` → se presente, lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif` (source: `biblioteca`)
 - Fallback: se `gif_slug` NULL → vecchio `MATCH_BY_CODE` ExerciseDB (source: `exercisedb`)
-- `biblioteca_gif`: 1.660 righe indice, di cui ~1.150 orfane (puntano a file eliminati con la pulizia Storage del 18 luglio 2026 → riallineamento = cantiere E). Bucket Storage `biblioteca-gif`: **524 file / 333,3 MB**, solo le 8 zone curate — Addominali e Core · Gambe e Glutei · Schiena e Trapezio · Pettorali · Bicipiti e Braccia · Spalle e Cuffia · Tricipiti · Polpacci (cartelle legacy `funzionale-hiit`/`muscolazione`/`calisthenics`/`stretching` eliminate il 18/07/2026). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: ⚠️ **superate dalla "Nomenclatura esercizi v2"** (nome unico, niente parte `(EN)` nel filename, `°` abolito ovunque e scritto `gradi`). Le righe storiche conservano il vecchio formato `IT (EN).gif` finché non vengono ri-cicliate. `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
-- `esercizi_catalog.gif_slug`: **503/503 slug risolvono** su `biblioteca_gif` (ri-verificato 19 luglio dopo il cantiere rinomine: 0 rotte; 83 codici restano senza slug). EX057 condivide la GIF Spalle con l'esercizio originale (riuso voluto, vedi sotto). Storico dei 463/463 (17 luglio) — chiusi allora gli ultimi 2: EX057 → riuso GIF Spalle `alzate-laterali-manubri-prono-panca-inclinata-45-…` (45° vs 30° del nome: solo angolo diverso); EX088 → `camminata-alternata-manubri` (era un mismatch di slug, la GIF esisteva già). Entrambi corretti via Google Sheet + sync. Codici senza slug → fallback ExerciseDB.
+- `biblioteca_gif`: **1.653 righe** indice (24 luglio 2026), di cui ~1.150 orfane (puntano a file eliminati con la pulizia Storage del 18 luglio 2026 → riallineamento = cantiere E). Bucket Storage `biblioteca-gif`: ~**520 file**, solo le 8 zone curate — Addominali e Core · Gambe e Glutei · Schiena e Trapezio · Pettorali · Bicipiti e Braccia · Spalle e Cuffia · Tricipiti · Polpacci (cartelle legacy `funzionale-hiit`/`muscolazione`/`calisthenics`/`stretching` eliminate il 18/07/2026). Tabella: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. Convenzioni: ⚠️ **superate dalla "Nomenclatura esercizi v2"** (nome unico, niente parte `(EN)` nel filename, `°` abolito ovunque e scritto `gradi`). Le righe storiche conservano il vecchio formato `IT (EN).gif` finché non vengono ri-cicliate. `slug` = `gif_slug` del catalogo. Il `:` nel filename è ammesso e NON viene sanificato da Storage (5 varianti "skull crusher" in `Tricipiti/`): verificato 17 luglio 2026, chiave reale = `storage_path` del TSV. La cronologia dettagliata dei batch/blocchi (giu-lug 2026) è nel git log di questo file.
+- `esercizi_catalog.gif_slug`: **500/500 slug risolvono** su `biblioteca_gif` (ri-verificato 24 luglio a chiusura del cantiere nomenclatura v2: 0 rotte; 83 codici restano senza slug). EX057 condivide la GIF Spalle con l'esercizio originale (riuso voluto, vedi sotto). Storico dei 463/463 (17 luglio) — chiusi allora gli ultimi 2: EX057 → riuso GIF Spalle `alzate-laterali-manubri-prono-panca-inclinata-45-…` (45° vs 30° del nome: solo angolo diverso); EX088 → `camminata-alternata-manubri` (era un mismatch di slug, la GIF esisteva già). Entrambi corretti via Google Sheet + sync. Codici senza slug → fallback ExerciseDB.
 - ⚠️ Verifica risoluzione slug: `biblioteca_gif` supera le 1.000 righe → PostgREST tronca la SELECT al limite di default. Paginare con header `Range`, altrimenti compaiono orfani fantasma.
 - Worker Version ID attuale: `da1e0007` (deploy 29 giugno 2026)
 
