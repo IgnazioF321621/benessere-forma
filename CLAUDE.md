@@ -70,7 +70,7 @@ Tab Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a) production-ready.
 - **Timer unificati su orologio reale** (commit `e834320` + `fcd5185`): Tabata, warm-up (iso A/pausa/B), recovery (micro-pausa + blockStop), attivazione ed exec timer (doppio lato) ora timestamp-based su `endTime` come `tickCountdown` — tick 250ms, catena fasi senza drift, rientro da background con catch-up silenzioso (STOP idempotente, LONG stantio soppresso >1.5s), pausa/ripresa con residuo congelato. ⏳ IN OSSERVAZIONE: test su workout reali in corso.
 - **WS-QUEUE** (commit `871aaf3` + `fcd5185`): nessuna scrittura su `workout_sets` può più perdersi in silenzio. `wsWrite()` = 1 retry immediato → coda persistente `zt_ws_pending_<userId>` in localStorage → toast discreto. Flush al boot post-login, a ogni scrittura riuscita e al rientro in foreground. Insert idempotente al replay, insert+delete stessa chiave si annullano, cap 200 op.
 - **Storico bonificato (solo DB, nessun commit)**: rename asimmetrico 32 righe WS · reinserite 18 righe del 2/6 maggio · `band_color='Viola'` su 4 trazioni · migrazione ai nomi catalogo (35 rinomine: 408 righe TL + 407 WS) · bonifica 4 doppioni TL. **Stato finale: TL = WS = 912 righe, divergenza 0, doppioni 0**; orfani residui solo 2 congelati per scelta ("Squat con elastico e talloni rialzati", "Mobilità articolare").
-- **Audit diagnosi completata**: mappa problemi 4 rossi / 6 gialli / 8 note (dettaglio in `mappa-audit-training.md` di Ignazio). Punti ancora aperti: 88 esercizi senza `gif_slug` (di cui 52 principali; erano 91/53 prima di Polpacci) · `GEAR_ALIASES` corto · righe orfane in `biblioteca_gif` (~1.150 dopo la pulizia Storage del 18 luglio → cantiere E). ~~Infortunio solo giornaliero~~ chiuso 17 luglio sera: periodo multi-giorno (1/3/7 gg o aperto) in `zt_injury_<userId>`, righe `rest_injury` materializzate una al giorno al passaggio (idempotenti, calendario/debito/ciclo leggono le stesse righe di sempre), barra in Training con data rientro e "Sto bene, riprendo", doppia marcatura riposo+infortunio bloccata (nota 14 chiusa), aggancio automatico al rientro soft verificato. ~~Rientro soft~~ implementato 17 luglio sera: pausa ≥10 gg (fonte `training_logs`, recovery esclusi) → banner non bloccante in sessione; L1 10-29 gg −20%/RIR+1, L2 ≥30 gg −35%/RIR+2; scelta persistita in `zt_soft_return_<userId>` (7 giorni, scadenza automatica; rifiuto ricordato per pausa); badge RIENTRO + riga primo set stile SCARICO; solo suggerimenti, zero effetti su scheda/DB/settimana ciclo. ~~Sessioni fallback hardcoded senza codice~~ chiuso 17 luglio sera: 27 campi `codice` aggiunti a `TRAINING_SESSIONS` (18 da mappatura storico + Trazioni→EX008 + 8 recovery); restano senza codice per scelta "Squat con elastico e talloni rialzati" (congelato) e 12 voci recovery mai catalogate → idea futura mini-zona "Mobilità" del catalogo (segnata, non pianificata). ~~Slug rotti EX057/EX088~~ chiusi il 17 luglio sera (fix `gif_slug` via Sheet + sync, riuso GIF esistenti: nessun upload).
+- **Audit diagnosi completata**: mappa problemi 4 rossi / 6 gialli / 8 note (dettaglio in `mappa-audit-training.md` di Ignazio). Punti ancora aperti *(stato al 17 luglio; oggi sono **81** — vedi "Manutenzione residua")*: 88 esercizi senza `gif_slug` (di cui 52 principali; erano 91/53 prima di Polpacci) · `GEAR_ALIASES` corto · righe orfane in `biblioteca_gif` (~1.150 dopo la pulizia Storage del 18 luglio → cantiere E). ~~Infortunio solo giornaliero~~ chiuso 17 luglio sera: periodo multi-giorno (1/3/7 gg o aperto) in `zt_injury_<userId>`, righe `rest_injury` materializzate una al giorno al passaggio (idempotenti, calendario/debito/ciclo leggono le stesse righe di sempre), barra in Training con data rientro e "Sto bene, riprendo", doppia marcatura riposo+infortunio bloccata (nota 14 chiusa), aggancio automatico al rientro soft verificato. ~~Rientro soft~~ implementato 17 luglio sera: pausa ≥10 gg (fonte `training_logs`, recovery esclusi) → banner non bloccante in sessione; L1 10-29 gg −20%/RIR+1, L2 ≥30 gg −35%/RIR+2; scelta persistita in `zt_soft_return_<userId>` (7 giorni, scadenza automatica; rifiuto ricordato per pausa); badge RIENTRO + riga primo set stile SCARICO; solo suggerimenti, zero effetti su scheda/DB/settimana ciclo. ~~Sessioni fallback hardcoded senza codice~~ chiuso 17 luglio sera: 27 campi `codice` aggiunti a `TRAINING_SESSIONS` (18 da mappatura storico + Trazioni→EX008 + 8 recovery); restano senza codice per scelta "Squat con elastico e talloni rialzati" (congelato) e 12 voci recovery mai catalogate → idea futura mini-zona "Mobilità" del catalogo (segnata, non pianificata). ~~Slug rotti EX057/EX088~~ chiusi il 17 luglio sera (fix `gif_slug` via Sheet + sync, riuso GIF esistenti: nessun upload).
 
 **Sessione 18 luglio 2026 — zona GIF Polpacci chiusa (solo Storage + DB, nessun commit):**
 - 16 GIF caricate in `biblioteca-gif/Polpacci/` (~11,9 MB) + 16 righe in `biblioteca_gif` (1.625 → 1.641). Codici: EX028, EX065, EX066, EX216, EX555–EX566.
@@ -154,6 +154,18 @@ L'errore è emerso **solo con l'ispezione visiva**. La spiegazione tecnica torna
 - `biblioteca_gif` **1.660 → 1.653**: −8 righe rimosse (1 orfana legacy `sit-up-con-peso` + 3 righe dei codici eliminati + 4 da sessione parallela), +1 aggiunta con la strada A per EX057.
 - **Casi panca chiusi**: 3 `panca romana` riclassificate ad attrezzo (EX445-447), 3 normalizzate a `panca piana` (EX168, EX343, EX535), EX154 risolto dalla catena.
 
+### Stato di allineamento (24 luglio 2026)
+
+**Le tre fonti sono allineate a 582 righe**, sync eseguito:
+
+| Fonte | Stato |
+|---|---|
+| **Supabase** `esercizi_catalog` | 582 righe · 501 `gif_slug` attivi, **0 rotti** · 81 senza slug |
+| **Google Sheet** `catalogo_esercizi` | allineato, sync eseguito (righe dei 4 codici eliminati cancellate a mano, vedi guardia 6) |
+| **File locale** | allineato |
+
+**Il cantiere non ha più decisioni aperte.** Quello che resta è **manutenzione ordinaria, non cantiere**: nessuna voce richiede una scelta editoriale, solo lavoro incrementale quando se ne presenta l'occasione.
+
 ### Guardie tecniche apprese — da applicare sempre
 
 1. **"1 codice per slug", non "1 riga indice per slug"** — causa dell'incidente EX057/EX408 (vedi guardia dedicata alla regola 6).
@@ -172,16 +184,54 @@ L'errore è emerso **solo con l'ispezione visiva**. La spiegazione tecnica torna
 - **`power tower` non esiste più** in catalogo: era solo in EX170, eliminato.
 - **Nessuna *french press* con barra sagomata**, al cavo o altrove: la variante è decaduta con EX528. ⚠️ La barra sagomata **resta** su altri movimenti (EX549, EX550 — pushdown al cavo): non è un termine ritirato dal vocabolario.
 
-### Residui aperti
+### Decisioni chiuse in corso d'opera
 
-| Residuo | Stato |
+| Caso | Esito |
 |---|---|
-| ~~**EX249**~~ | ✅ **chiuso 24 luglio**: collegato a `leg-press-45-gradi-entrambe-le-gambe` (GIF già in Storage, mai agganciata; confermata visivamente e per hash contro la libreria Mac). Filename e slug allineati a v2 |
-| ~~**EX107**~~ | ✅ **chiuso 24 luglio**: **eliminato**. Voce generica il cui `setup` copriva entrambe le esecuzioni ("appeso alla sbarra **o** appoggiato alla sedia romana"), già specializzate in EX169 (sbarra, ginocchia) ed EX153 (sedia romana, gambe tese). Zero storico, zero schede, zero occorrenze nel codice, nessuna GIF, `gruppo_target` NULL (quindi già inerte nei pool del coach) |
-| **81 righe senza `gif_slug`** | erano 83: −1 per EX249 (collegato), −1 per EX107 (eliminato, era senza slug). Cantiere GIF |
-| **7 righe con `°` in `nome_en`** | EX057, EX138, EX145, EX147, EX407, EX408, EX563 — colonna **deprecata e non portante**, nessun effetto su slug/filename |
-| **EX576** `Piegamenti tocco ai piedi` | ⚠️ **autoriferimento preesistente**: `alternativa` = `EX576` (se stesso). Non generato dal cantiere — voce calisthenics del 19 luglio. Fuori perimetro, non toccato: da correggere quando si passa dalle sue parti |
-| **56 righe con `nome_italiano` divergente** nell'indice | ⚠️ **non 10**: le ~46 aggiuntive nascono dal blocco 2, il cui perimetro di scrittura era `nome` + `gif_slug` e **non** toccava `nome_italiano` dell'indice. Deriva di sola dicitura: **non tocca la catena di risoluzione** (`gif_slug` → `slug` → `storage_path`). Candidata naturale del cantiere E |
+| **EX249** | ✅ **chiuso 24 luglio**: collegato a `leg-press-45-gradi-entrambe-le-gambe` (GIF già in Storage, mai agganciata; confermata visivamente e per hash contro la libreria Mac). Filename e slug allineati a v2 |
+| **EX107** | ✅ **chiuso 24 luglio**: **eliminato**. Voce generica il cui `setup` copriva entrambe le esecuzioni ("appeso alla sbarra **o** appoggiato alla sedia romana"), già specializzate in EX169 (sbarra, ginocchia) ed EX153 (sedia romana, gambe tese). Zero storico, zero schede, zero occorrenze nel codice, nessuna GIF, `gruppo_target` NULL (quindi già inerte nei pool del coach) |
+
+### Manutenzione residua — **non è un cantiere**
+
+Nessuna di queste voci richiede una decisione editoriale, e **nessuna tocca la catena di risoluzione** (`gif_slug` → `slug` → `storage_path`): si sistemano incrementalmente quando si passa da quelle parti.
+
+| Voce | Dettaglio |
+|---|---|
+| **81 righe senza `gif_slug`** | erano 83: −1 per EX249 (collegato), −1 per EX107 (eliminato, era senza slug). È il perimetro del **cantiere 600 GIF** qui sotto |
+| **7 righe con `°` in `nome_en`** | EX057, EX138, EX145, EX147, EX407, EX408, EX563 — colonna **deprecata e non portante**, nessun effetto su slug o filename |
+| **56 righe con `nome_italiano` divergente** nell'indice | residuo di **perimetro del blocco 2**, che scriveva `nome` + `gif_slug` e **non** toccava `nome_italiano` dell'indice. Deriva di sola dicitura |
+| **EX576** `Piegamenti tocco ai piedi` | **autoriferimento preesistente**: `alternativa` = `EX576` (se stesso). Non generato dal cantiere — voce calisthenics del 19 luglio |
+| **Campi `attrezzo` non uniformati** | dove il **nome** dice `panca piana` ma **`attrezzo`** dice `panca` generico (es. EX168, EX343, EX535). Non è un conflitto — nel nome è **Posizione**, in `attrezzo` è il supporto — ma resta una disomogeneità da uniformare se si vuole |
+
+---
+
+## ▶️ PROSSIMO CANTIERE — 600 GIF (impostazione, non procedura definitiva)
+
+*Indicazioni operative fissate a chiusura del v2. Da raffinare quando il cantiere parte davvero.*
+
+### Il primo passo non è inserire le GIF
+
+**È progettare la vista di conferma visiva a blocchi.** Uno strumento che permetta a Ignazio di **scorrere e confermare più GIF per volta**, invece di una alla volta.
+
+Questo viene **prima** di qualunque inserimento: è il collo di bottiglia reale del cantiere, non la scrittura sul DB.
+
+### Perché il metodo del v2 non si può riusare
+
+L'approccio **caso-per-caso** del cantiere nomenclatura — un brief, una diagnosi, un documento HTML, una conferma, una scrittura — ha funzionato su decine di voci ed è stato l'unico modo di scoprire errori come la catena EX150–EX155. **Su ~600 file non è sostenibile**: al ritmo del v2 servirebbero centinaia di cicli di conferma.
+
+La conferma visiva **non si elimina** (vedi regola sotto): si **raggruppa**.
+
+### Requisiti già fissati
+
+- **Le nuove voci entrano già conformi alla v2**: nome unico, `gif_slug` monolingue derivato dal nome, filename `IT (EN).gif`, ASCII, `°` scritto `gradi`. Nessuna sanatoria a posteriori — un nome che viola le regole va corretto **prima** di entrare.
+- **Passaggio per l'auditor già collaudato**, quello usato nei blocchi 1 e 2.
+- **Tutte le guardie tecniche del v2 restano in vigore** (vedi elenco 1-7 sopra): hash SHA-256 prima delle rinomine, "1 codice per slug", script idempotenti con timeout esteso, procedura sicura Storage, scansione dei riferimenti incrociati.
+
+### 🔴 La regola che non si negozia
+
+> **Nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF.**
+
+Vale identica a come vale nel v2. Il cantiere 600 cambia **come** si guarda (a blocchi invece che uno per volta), **non se** si guarda. È la lezione della catena EX150–EX155: la spiegazione tecnica può tornare perfettamente ed essere sbagliata.
 
 **Fix deployati post-audit (5 commit, 12-13 luglio 2026):**
 - **Scheda attiva — nomi runtime**: il loader di `schede_utente` riallinea in memoria i `name` degli esercizi al catalogo live via Map codice→nome (warmup, exercises, carry_conclusivo, finisher.exercises). Il jsonb NON si tocca mai. Fallback: senza codice o codice non a catalogo → resta lo snapshot. Fix GIF modal: `openExerciseAI` passa `ex.codice` a `fetchExerciseMedia` (risolve via `?code=`).
