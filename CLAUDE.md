@@ -134,7 +134,9 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.653 righe** (24 luglio 2026), di cui ~1.150 orfane (file eliminati il 18/07 — cantiere E futuro). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. **`categoria`/`gruppo_muscolare` non hanno convenzione unica tra zone** — verificare sempre sulle righe esistenti della zona prima di inserire. Bucket Storage `biblioteca-gif`: ~520 file, 8 zone curate (Addominali e Core · Bicipiti e Braccia · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti). Cartelle legacy eliminate il 18/07/2026.
+**1.653 righe** (24 luglio 2026), di cui ~1.150 orfane (file eliminati il 18/07 — cantiere E futuro). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. **`categoria`/`gruppo_muscolare` non hanno convenzione unica tra zone** — verificare sempre sulle righe esistenti della zona prima di inserire. Bucket Storage `biblioteca-gif`: ~520 file, 9 zone curate (Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti). Cartelle legacy eliminate il 18/07/2026.
+
+**`Cardio e Conditioning` è una zona di capacità, non muscolare**: raccoglie gli esercizi il cui stimolo non è isolabile su un gruppo muscolare. Le altre 8 restano zone muscolari.
 
 ### `training_logs`
 `id, user_id, date, session_id, exercise_name, set_number, reps, resistance, rir_actual, notes`. Stato: 912 righe, divergenza 0, doppioni 0 (bonificato 17 luglio).
@@ -186,11 +188,25 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **5. Gradi**: simbolo `°` abolito ovunque nel nome — si scrive `gradi` per esteso. Nei campi descrittivi (`setup`, `esecuzione`, `errori`) è ammesso.
 
-**6. Slug monolingue**: `gif_slug` = kebab-case ASCII dal solo nome unico. Schema `slug(IT)-slug(EN)` abolito. Path e filename SEMPRE ASCII.
+**6. Slug monolingue**: `gif_slug` = kebab-case ASCII dal solo nome unico. Schema `slug(IT)-slug(EN)` abolito. Path e filename SEMPRE ASCII. **L'apostrofo diventa trattino** (`Corsa all'indietro` → `corsa-all-indietro`), mai eliminato e mai sostituito da apostrofo tipografico. ⚠️ I nomi file macOS sono in forma decomposta (NFD): la `à` è `a` + U+0300. Prima della conversione ASCII **normalizzare a NFC** (`unicodedata.normalize('NFC', s)`), poi traslitterare — mai tagliare byte per byte, che su NFD lascia la lettera base seguita dal segno diacritico orfano.
 
 **7. Codice stabile**: `EX###` mai derivato dalla zona. Gap permanenti, mai renumerare.
 
 **8. Storico**: qualunque rinomina va accompagnata da migrazione parallela su `training_logs` e `workout_sets` (indicizzano per nome testuale).
+
+**9. Estensione attiva del rachide** — gli esercizi che estendono attivamente la schiena (superman, swimming, reverse hyper, iperestensioni) vanno in `Schiena e Trapezio` con `gruppo_target = lombari`, **mai in `Addominali e Core`**. Motivo: gli slot core dell'app sono anti-estensione e anti-rotazione, e richiedono tenuta isometrica; un esercizio che estende attivamente la schiena in quello slot produce lo stimolo opposto a quello richiesto.
+
+**10. Campo `uso` per i conditioning** — tre valori secondo il tipo di stimolo:
+
+| Tipo | `uso` | Effetto |
+|---|---|---|
+| Conditioning ciclico ad alta intensità | `finisher` | Entra nel pool Tabata (insieme a `pattern = cardio_metabolico`) |
+| Andature, agilità, lavoro tecnico di corsa | `riscaldamento` | Pool riscaldamento |
+| Pliometria massimale (salti singoli esplosivi) | *vuoto* | Resta fuori da ogni pool |
+
+Pliometria massimale fuori dai pool perché è espressione di potenza e va eseguita a fresco: il generatore non ha ancora uno slot dedicato.
+
+Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuoto**, per non inquinare il picker degli isolamenti.
 
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
