@@ -216,7 +216,9 @@ Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuot
 
 Nella grande maggioranza dei casi la regola coincide già con `[Movimento] [Attrezzo] [Variante] [Posizione]`, perché la famiglia **è** il movimento. La precisazione serve per i casi in cui la famiglia verrebbe altrimenti trattata come aggettivo o complemento.
 
-Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · andatura · plank · boxe · calcio · affondo`.
+**Eccezione — famiglia preceduta da preposizione.** Una parola di famiglia preceduta da preposizione è un complemento, non la famiglia: in quel caso non va anteposta. `Skip con calcio` resta tale — la famiglia è `skip`, il calcio è il modo.
+
+Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · skip · andatura · plank · boxe · calcio · affondo`.
 
 `boxe` copre i colpi di braccia, `calcio` quelli di gamba: un roundhouse al sacco è `Calcio circolare sacco`, non `Boxe calcio circolare`.
 
