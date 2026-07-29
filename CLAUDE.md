@@ -208,6 +208,14 @@ Pliometria massimale fuori dai pool perché è espressione di potenza e va esegu
 
 Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuoto**, per non inquinare il picker degli isolamenti.
 
+**11. Famiglia in testa** — precisazione della regola 2, non sua sostituzione. La parola di famiglia apre sempre il nome, anche dove grammaticalmente suonerebbe meglio in seconda posizione. Serve a far ordinare vicini gli esercizi imparentati e a renderli riconoscibili a colpo d'occhio in un elenco alfabetico.
+
+`Boxe combo gancio-montante`, non `Combo boxe gancio-montante`.
+
+Nella grande maggioranza dei casi la regola coincide già con `[Movimento] [Attrezzo] [Variante] [Posizione]`, perché la famiglia **è** il movimento. La precisazione serve per i casi in cui la famiglia verrebbe altrimenti trattata come aggettivo o complemento.
+
+Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · andatura · plank · boxe · affondo`.
+
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
 **Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage.
