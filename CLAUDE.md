@@ -182,7 +182,9 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **2. Formula**: `[Movimento] [Attrezzo] [Variante] [Posizione]` — preposizioni rimosse, default (bilaterale, simultaneo) omessi. Attrezzo = ciò che si impugna: al cavo l'attrezzo è l'attacco (corda, maniglia…), non il cavo.
 
-**3. Maiuscole**: prima lettera del nome + nomi propri (lista chiusa 11 voci: `Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso · Russian · Yates`) + sigle/designazioni tecniche nella forma canonica (`EZ · TRX · IT · Y-W · V`). Tutto il resto minuscolo anche se inglese.
+**3. Maiuscole**: prima lettera del nome + nomi propri (lista chiusa 12 voci: `Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso · Russian · Yates · Bosu`) + sigle/designazioni tecniche nella forma canonica (`EZ · TRX · IT · Y-W · V · T · X`). Tutto il resto minuscolo anche se inglese.
+
+`Bosu` è un marchio di attrezzo, non un termine comune. `T` e `X` sono designazioni di forma come `Y-W` e `V`: `Push up T prono`, `Corsa conetti a X`.
 
 **4. Panche** — vocabolario chiuso a 5: `panca piana · panca inclinata · panca declinata · panca verticale · panca Scott`. `panca verticale` assorbe "90 gradi/con schienale". `panca romana` (iperestensore 45°) e `sedia romana` (torre verticale) sono **attrezzi distinti**, campo Attrezzo, fuori dal vocabolario delle 5 panche.
 
@@ -214,7 +216,11 @@ Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuot
 
 Nella grande maggioranza dei casi la regola coincide già con `[Movimento] [Attrezzo] [Variante] [Posizione]`, perché la famiglia **è** il movimento. La precisazione serve per i casi in cui la famiglia verrebbe altrimenti trattata come aggettivo o complemento.
 
-Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · andatura · plank · boxe · affondo`.
+Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · andatura · plank · boxe · calcio · affondo`.
+
+`boxe` copre i colpi di braccia, `calcio` quelli di gamba: un roundhouse al sacco è `Calcio circolare sacco`, non `Boxe calcio circolare`.
+
+Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi propri di esercizio e restano interi.
 
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
