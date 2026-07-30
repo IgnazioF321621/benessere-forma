@@ -198,17 +198,19 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **9. Estensione attiva del rachide** — gli esercizi che estendono attivamente la schiena (superman, swimming, reverse hyper, iperestensioni) vanno in `Schiena e Trapezio` con `gruppo_target = lombari`, **mai in `Addominali e Core`**. Motivo: gli slot core dell'app sono anti-estensione e anti-rotazione, e richiedono tenuta isometrica; un esercizio che estende attivamente la schiena in quello slot produce lo stimolo opposto a quello richiesto.
 
-**10. Campo `uso` per i conditioning** — tre valori secondo il tipo di stimolo:
+**10. Campo `uso` per i conditioning** — vale **solo per gli esercizi che stanno nella zona `Cardio e Conditioning`**. Tre valori secondo il tipo di stimolo:
 
 | Tipo | `uso` | Effetto |
 |---|---|---|
 | Conditioning ciclico ad alta intensità | `finisher` | Entra nel pool Tabata (insieme a `pattern = cardio_metabolico`) |
 | Andature, agilità, lavoro tecnico di corsa | `riscaldamento` | Pool riscaldamento |
-| Pliometria massimale (salti singoli esplosivi) | *vuoto* | Resta fuori da ogni pool |
+| Pliometria massimale che resta in Cardio | *vuoto* | Resta fuori da ogni pool |
 
-Pliometria massimale fuori dai pool perché è espressione di potenza e va eseguita a fresco: il generatore non ha ancora uno slot dedicato.
+`uso` vuoto è previsto **solo** per chi resta in `Cardio e Conditioning` e non deve entrare in alcun pool: è espressione di potenza e va eseguita a fresco, e il generatore non ha ancora uno slot dedicato.
 
 Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuoto**, per non inquinare il picker degli isolamenti.
+
+**La zona comanda.** La pliometria massimale ricollocata in una zona muscolare segue le regole di quella zona: riceve `pattern`, `gruppo_target` e `uso` come ogni altro esercizio di zona, ed entra nei pool del generatore. Precedenti a catalogo: EX268 `Squat pliometrico manubri` e EX212 `Affondo pliometrico manubri`. Vale anche quando l'esercizio era già a catalogo come conditioning: otto salti identici per natura non possono essere trattati in due modi diversi solo perché uno di essi c'era già.
 
 **11. Famiglia in testa** — precisazione della regola 2, non sua sostituzione. La parola di famiglia apre sempre il nome, anche dove grammaticalmente suonerebbe meglio in seconda posizione. Serve a far ordinare vicini gli esercizi imparentati e a renderli riconoscibili a colpo d'occhio in un elenco alfabetico.
 
