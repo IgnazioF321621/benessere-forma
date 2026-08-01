@@ -38,13 +38,16 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ---
 
-## Stato corrente (24 luglio 2026)
+## Stato corrente (1 agosto 2026)
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b (colazione/merenda) in stand-by.
 
 **Training** — in sviluppo attivo. Coach generatore funzionante: 582 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft.
 
 **Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). 501 `gif_slug` attivi, 0 rotti, 81 codici senza slug.
+
+**Cantiere nomi biblioteca** — in corso. Riordino dei nomi delle 891 GIF in 10 cartelle sotto `Biblioteca di esercizi/`, mobilità compresa. Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `migra.py`). Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
+Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto). In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Bicipiti e Braccia 75 (prossima)** · Spalle e Cuffia 63 · Tricipiti 61 · Cardio 31 · Polpacci 19.
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -53,16 +56,17 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 ## Prossimi cantieri
 
 1. **Test timer su workout reali** — commit `e834320` (timer unificati timestamp-based) in osservazione. PRIMA di qualunque altro cantiere Training.
-2. **Cantiere 600 GIF** — 81 codici senza `gif_slug`. **Prima di partire**: progettare la vista di conferma visiva a blocchi (collo di bottiglia reale, non la scrittura DB). Metodo: riconciliazione a tre fonti zona per zona (vedi sezione Media system). Zone ancora da riconciliare: Gambe e Glutei (Mac 125/Storage 112) · Pettorali (77/56) · Schiena e Trapezio (104/87) · Bicipiti e Braccia (7 GIF da caricare, 7 codici da EX587).
-3. **Code pulizia Storage** — C: 28 file L2 residui nelle zone curate (indicizzati, non referenziati) · D: bucket `exercise-media` legacy (43 file, 5,9 MB, verificare se l'app lo usa ancora) · E: riallineamento indice `biblioteca_gif` (~1.150 righe orfane su file eliminati).
-4. **Code catalogo** — EX085 (`gruppo_target='Gambe e Glutei'` fuori vocabolario) · EX322 (`'gambe'` fuori vocabolario) · 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine) · 5 `alternativa` pendenti già bonificati ma da monitorare se emergono altri.
-5. **Avviso corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o generazione).
-6. **EX287 "Stacco da terra classico"** — decisione pendente: GIF live vs candidato in `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif`.
-7. **M2 entry point** — CTA sempre visibile in Body; reminder fine blocco; blood test history UI.
-8. **F.2b colazione/merenda** — stand-by, riattivare solo se onboarding lo richiede.
-9. **Refresh onboarding M1** — preferenze generazione piano (giorno/ora) + tracking peso. ⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
-10. **Push notifications** — sistema unico (piano + training + integratori).
-11. **"Oggi ho solo X min"** — compressione singola sessione senza toccare progressione blocco.
+2. **Cantiere 600 GIF** — 81 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
+3. **Code pulizia Storage** — C: 28 file L2 residui nelle zone curate (indicizzati, non referenziati) · D: bucket `exercise-media` legacy (43 file, 5,9 MB, verificare se l'app lo usa ancora) · E: riallineamento indice `biblioteca_gif` (924 righe puntano a file inesistenti).
+4. **Lista da consolidare** — coppie di codici distinti che puntano a file di **contenuto identico** (SHA-256 uguale). Non è materia di rinomina ma di consolidamento: un codice eliminato resta bruciato. La lista si accumula cartella per cartella e si affronta in **un giro unico alla fine**, mai durante una migrazione. Aperte da Addominali e Core: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103). Registro: `tools/biblioteca-nomi/`.
+5. **Code catalogo** — EX085 (`gruppo_target='Gambe e Glutei'` fuori vocabolario) · EX322 (`'gambe'` fuori vocabolario) · 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine) · 5 `alternativa` pendenti già bonificati ma da monitorare se emergono altri.
+6. **Avviso corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o generazione).
+7. **EX287 "Stacco da terra classico"** — decisione pendente: GIF live vs candidato in `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif`.
+8. **M2 entry point** — CTA sempre visibile in Body; reminder fine blocco; blood test history UI.
+9. **F.2b colazione/merenda** — stand-by, riattivare solo se onboarding lo richiede.
+10. **Refresh onboarding M1** — preferenze generazione piano (giorno/ora) + tracking peso. ⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
+11. **Push notifications** — sistema unico (piano + training + integratori).
+12. **"Oggi ho solo X min"** — compressione singola sessione senza toccare progressione blocco.
 
 ## Bug noti aperti
 
@@ -118,7 +122,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**582 righe** (24 luglio 2026). Gap permanenti: EX107/EX151/EX170/EX528 — mai renumerare. Prossimo libero: **EX587**. RLS SELECT pubblica. PK logica = `codice`. **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
+**582 righe** (1 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 — mai renumerare. Prossimo libero: **EX587**. RLS SELECT pubblica. PK logica = `codice`. **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
 Colonne: `codice, nome, nome_en (⚠️ DEPRECATA dal 19/07/2026 — non portante, non usarla per slug/filename/UI), pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
@@ -134,7 +138,9 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.653 righe** (24 luglio 2026), di cui ~1.150 orfane (file eliminati il 18/07 — cantiere E futuro). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. **`categoria`/`gruppo_muscolare` non hanno convenzione unica tra zone** — verificare sempre sulle righe esistenti della zona prima di inserire. Bucket Storage `biblioteca-gif`: ~520 file, 9 zone curate (Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti). Cartelle legacy eliminate il 18/07/2026.
+**1.550 righe** (1 agosto 2026), di cui **924 puntano a file inesistenti** (misurato — cantiere E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **624 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+
+**`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona (`Pettorali`); Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
 **`Cardio e Conditioning` è una zona di capacità, non muscolare**: raccoglie gli esercizi il cui stimolo non è isolabile su un gruppo muscolare. Le altre 8 restano zone muscolari.
 
@@ -164,12 +170,20 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 ## Media system
 
 ### Flusso GIF (Worker)
-- `?code=EX###` (priorità): cerca `gif_slug` su `esercizi_catalog` → lookup `biblioteca_gif WHERE slug=gif_slug` → URL `biblioteca-gif/{categoria}/{gruppo_muscolare}/{slug}.gif`
+- `?code=EX###` (priorità): cerca `gif_slug` su `esercizi_catalog` → lookup `biblioteca_gif WHERE slug=gif_slug` → URL costruito su **`storage_path` letto dalla riga**, non ricavato da slug o categoria
 - Fallback se `gif_slug` NULL: vecchio `MATCH_BY_CODE` ExerciseDB (~39 esercizi storici)
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**501/501 `gif_slug` risolvono, 0 rotti** (24 luglio). 81 codici senza slug → fallback ExerciseDB.
+**501/501 `gif_slug` risolvono, 0 rotti** (24 luglio; i 22 slug migrati il 1 agosto riverificati uno per uno). 81 codici senza slug → fallback ExerciseDB.
+
+### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
+
+**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256**, non il nome. In un cantiere in cui i nomi sono proprio ciò che cambia, l'aggancio per nome classifica come libere righe che sono vive: già successo, 6 righe su 69.
+
+**Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta: **(1)** rinomina nel bucket e aggiorna `storage_path`, slug invariato · **(2)** aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi · **(3)** sincronizza il Sheet · **(4)** verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**. Non deve esistere un istante in cui una GIF è irraggiungibile.
+
+**Rinominare i file nel bucket è cosmesi.** L'app risolve via `storage_path`: il nome del file non è ciò che rompe o aggiusta le immagini.
 
 ### Mappe muscolari
 19 esercizi storici: PNG locali in `assets/exercises/` (Wger CC BY-SA 4.0). EX031+: mancanti (cantiere futuro).
@@ -228,24 +242,24 @@ Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi
 
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
-**Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage.
+**Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento, che si affronta a parte (vedi *Lista da consolidare*).
 
 **"corpo libero" nel nome solo quando distingue** da una versione con carico.
 
 ### Regole cantiere GIF (riconciliazione a tre fonti)
 
-Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog` del `gruppo_target`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. `NOME_DIVERSO` va sempre confermato per hash SHA-256.
+Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. L'appaiamento è sempre per SHA-256, mai per nome.
 
 **La regola che non si negozia**: nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF. L'analisi tecnica prepara la decisione, non la sostituisce — anche quando la spiegazione tecnica torna perfettamente.
 
 **Guardie tecniche** (sempre attive):
 1. "1 codice per slug" — contare quanti codici puntano allo stesso `gif_slug` prima di rinomine massive
-2. Strada A per codici che condividono una GIF
-3. Hash SHA-256 prima di ogni rinomina massiva (stanare doppioni di contenuto)
-4. Script idempotenti con timeout esteso
-5. Procedura sicura Storage (copia → verifica → aggiorna → cancella)
-6. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
-7. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (il campo `alternativa` non ha FK)
+2. SHA-256 prima di ogni rinomina massiva, per stanare i doppioni di contenuto (vedi *Aggancio per impronta*)
+3. Script idempotenti con timeout esteso
+4. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
+5. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (il campo `alternativa` non ha FK)
+
+**Strumenti che raccolgono lavoro manuale**: ogni conferma si salva su disco **nell'istante in cui viene data**, con `fsync`, senza dipendere da un bottone di applicazione o dalla chiusura di un blocco. Registrare la scelta e agire sui file sono operazioni separate. Si collauda chiudendo la scheda e riavviando il processo **prima** di consegnarlo: se il lavoro non si ritrova, lo strumento non è pronto.
 
 ---
 
