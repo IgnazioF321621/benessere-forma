@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.07.17 · 22:13';
+const APP_VERSION = '2026.08.02 · 09:16';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -9214,6 +9214,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       || luoghiEsercizio.includes(tipoAllenNorm)
       || (tipoAllenAlias && luoghiEsercizio.includes(tipoAllenAlias))
       || (tipoAllenNorm === 'casa' && hasSurrogato);
+    if (!luogoOk) return;
 
     // FILTRO 2 — attrezzo (normalizzato spazi→underscore)
     // CON branch SURROGATO per casa: se l'utente non possiede l'attrezzo
@@ -9256,6 +9257,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // 'aperto': stesso bug gemello (confronto su stringa intera) → stesso fix
     // con la whitelist portatili (some su lista nativa).
     else if (tipoAllenNorm === 'aperto') attrezzoOk = attrezziNativi.some(a => APERTO_WHITELIST.has(a));
+    if (!attrezzoOk) return;
 
     // FILTRO 3 — livello (campo livello = lista separata da ';',
     // vuoto = ammesso a tutti i livelli)
@@ -9263,6 +9265,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
       .split(';').map(s => s.trim()).filter(Boolean);
     const livelloOk = livelliEsercizio.length === 0
       || livelliEsercizio.some(l => livelliOk.has(l));
+    if (!livelloOk) return;
 
     // FILTRO 4 — uso (split su ';', un esercizio può comparire in più pool)
     // Se isSurrogato, clone shallow per non mutare l'oggetto del catalogo
