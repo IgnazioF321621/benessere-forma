@@ -55,8 +55,11 @@ Il modulo Training ha un solo utente: Ignazio. Gli altri tester usano Nutrition 
 Chiuse:
 - **Addominali e Core** — 68 righe migrate (1 agosto); zona poi **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori (72 righe toccate, 11 a certezza media confermate da Ignazio).
 - **Bicipiti e Braccia** — 73 righe: 68 codici vivi + 5 liberi indicizzati. Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
+- **Cardio e Conditioning** — 31 righe, tutte senza codice. 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata. Zona a 39 righe e 39 oggetti, 31/31 verificate scaricando il file e confrontandone l'impronta.
 
-In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Cardio 31 · Polpacci 19.
+In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Polpacci 19.
+
+**Zona senza codici: slug in place, niente righe doppie.** Se nessun `gif_slug` punta alla zona non esiste la catena da proteggere: lo slug si aggiorna sulla riga esistente e non serve né la riga doppia né il sync del Sheet. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma. Primo caso: Cardio e Conditioning.
 
 ⚠️ **Due file parcheggiati, fuori da ogni tabella.** Spostati e rinominati, contenuto verificato per SHA-256, **non presenti né in `biblioteca_gif` né in `esercizi_catalog`**. Non essendo in nessuna tabella, questa è l'unica traccia che li ritrova:
 
@@ -64,6 +67,10 @@ In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezi
 |---|---|---|
 | `Piegamenti sulle dita` | Pettorali | zona Pettorali |
 | `Piegamenti mani ruotate all'indietro` | Tricipiti | zona Tricipiti |
+
+**Cardio e Conditioning — otto salti parcheggiati.** Presenti **nel bucket ma non sul Mac**, quindi fuori dalla conferma visiva della zona: `Pistol jump box` · `Salto all indietro` · `Salto in lungo da fermo` · `Salto monopodalico avanti` · `Salto verticale esplosivo` · `Squat jump box` · `Squat jump ginocchia alte` · `Squat thrust`. Non si toccano con Cardio: sono pliometria e si decidono **con Gambe e Glutei**, dove vale la regola «la zona comanda» (regola 10).
+
+La zona non è agganciata al catalogo: **0 codici** hanno un `gif_slug` che punti a una sua riga, e dei 14 `pattern = cardio_metabolico` a catalogo 13 hanno `gif_slug` vuoto. Qui non esistono righe vive da proteggere: la migrazione non richiede l'ordine a righe doppie. Il cantiere cardio (testi e codici nuovi, `tools/cardio-conferma/`, TSV mai sincronizzato — assegna EX587+ mentre il catalogo si ferma a EX586) è **lavoro separato**, da riaprire dopo la conferma dei nomi.
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -163,7 +170,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.555 righe** (2 agosto 2026), di cui **924 puntano a file inesistenti** (misurato — cantiere E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **629 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+**1.556 righe** (2 agosto 2026), di cui **924 puntano a file inesistenti** (misurato — cantiere E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **630 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
 **`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona (`Pettorali`); Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
@@ -212,6 +219,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - Cache delle impronte in `lavoro/_impronte/<zona>.json`, indicizzata per `eTag` + dimensione: si ricalcola solo se l'oggetto cambia.
 - Stato **`indeterminato`**: se anche un solo oggetto del bucket non è scaricabile, i file senza riscontro **non** diventano `libero` — potrebbero essere proprio quello. Nel dubbio la GIF vale come viva: `conferma.py` e `conferma.html` la trattano come tale e non le applicano mai lo slug. Il ripiego silenzioso su `libero` è ciò che ha causato il difetto.
 - **Nessun nome entra nello strumento passando dalla chat.** Fonte unica dei nomi è il pannello di conferma, l'unico posto in cui il nome è stato scelto guardando la GIF.
+- **Un solo traslitteratore**, `nomenclatura.senza_accenti()`: lo usano sia `slug()` sia `percorso_ascii()`, che costruisce il nome file nel bucket. `pianifica.py` scriveva il percorso col nome confermato tal quale, quindi un nome accentato avrebbe portato l'accento dentro `storage_path` — emerso su `Cardio e Conditioning` (`agilità`), corretto alla fonte prima di eseguire. L'accento resta in `nome_italiano` e nel file sul Mac; l'apostrofo resta nel percorso e diventa trattino solo nello slug. Il piano conta i percorsi non-ASCII residui (`percorsi_non_ascii`) e li stampa: `senza_accenti` toglie i diacritici, non un `ø` o un `°`.
 
 **Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe.** `migra.py` costruisce il piano per impronta; `slug_da_migrare.tsv` scritto da `conferma.py` include solo le righe `collegato`/`pendente`. Su `Addominali e Core` sei righe non finirono nel TSV e furono recuperate da `migra.py`: è una rete, non un progetto, e non regge volumi grandi. Difetto residuo **non corretto**: `cantiere_96_pendente.tsv` è indicizzato per nome file sul Mac, quindi dopo una rinomina le chiavi non corrispondono più e lo stato `pendente` decade. Da affrontare col cantiere 96.
 
