@@ -24,7 +24,8 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - SQL Editor gira come admin: `auth.uid()` = NULL → usare UUID espliciti
 - **supabase-js NON lancia eccezioni sugli errori API**: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error`
 - `schedaGen=1` ricostruisce la scheda da zero, cancella storico progressione — solo per correzioni mirate
-- `console.log` da rimuovere solo manualmente, mai con script automatici
+- `console.log` da rimuovere solo manualmente, mai con script automatici. Caso reale: il commit `8f46576` (12 giu 2026) ha cancellato tre guard di `_trainGenFilterPool` — erano one-liner `if (!X) { if (debug) console.log(…); return; }` e lo script ha portato via l'intera riga, `return` compreso. Filtri luogo/attrezzo/livello morti per 7 settimane, scoperti il 2 ago, ripristinati in `7a60a97`. Stesso commit: persa `compoundMissing.push(pat)`, e `?schedaDebug=1` è rimasto scollegato (sopravvive 1 log su tutti). Il pericolo è la logica inglobata nella stessa riga del logging, non il logging
+- `GEAR_ALIASES` traduce verso parole che il catalogo deve parlare. Gli alias `barra_corta`/`barra_lunga → barra` e `cavigliere → cavigliera` puntano a termini con 0 occorrenze nel catalogo, né come attrezzo nativo né dentro un `surrogato_attrezzo`: l'utente dichiara quegli attrezzi in onboarding e non aprono un solo esercizio, in silenzio. Prima di aggiungere un alias, verificare che il termine di destinazione esista davvero nel catalogo
 - `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
 - Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`. Cache name: `zt-v2`
 - `APP_VERSION` aggiornata automaticamente dal pre-commit hook git
@@ -38,11 +39,13 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ---
 
-## Stato corrente (1 agosto 2026)
+## Stato corrente (2 agosto 2026)
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b (colazione/merenda) in stand-by.
 
-**Training** — in sviluppo attivo. Coach generatore funzionante: 582 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft.
+**Training** — in sviluppo attivo. Coach generatore funzionante: 582 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft. Filtri pool ripristinati (`7a60a97`), split 3 giorni non supportato dall'interfaccia.
+
+Il modulo Training ha un solo utente: Ignazio. Gli altri tester usano Nutrition e Body. Un bug del generatore non ha impatto su terzi.
 
 **Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). 501 `gif_slug` attivi, 0 rotti, 81 codici senza slug.
 
@@ -67,6 +70,8 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto). In coda per dimensio
 10. **Refresh onboarding M1** — preferenze generazione piano (giorno/ora) + tracking peso. ⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
 11. **Push notifications** — sistema unico (piano + training + integratori).
 12. **"Oggi ho solo X min"** — compressione singola sessione senza toccare progressione blocco.
+13. **Surrogati mancanti** — censire gli esercizi con `luogo = palestra` riproducibili a casa che hanno `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma i buchi tipo "deltoidi posteriori: 1 esercizio". Natura identica al cantiere GIF: si procede a gruppi con conferma visiva. Prerequisito: riparare `compoundMissing`.
+14. **Allineamento nomi attrezzo onboarding ↔ catalogo** — `barra` e `cavigliera` non esistono a catalogo. Due strade: correggere gli alias verso termini reali, oppure emettere un avviso quando un token del profilo non trova riscontro. Senza intervento l'utente dichiara attrezzi inerti.
 
 ## Bug noti aperti
 
@@ -76,6 +81,10 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto). In coda per dimensio
 - Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo (UX scadente mobile)
 - Isabella: `status=draft`, 0 meals per settimana corrente — non investigato
 - **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente, non generato dal cantiere)
+- **`compoundMissing` sempre vuoto** — `compoundMissing.push(pat)` persa nel commit `8f46576`. La variabile è dichiarata e finisce in `_diag.compoundMissing`, quindi `ztSchedaWhy()` riporta "nessun pattern scoperto" anche quando un pattern obbligatorio resta senza candidati. Diagnostica che mente: da riparare prima del cantiere surrogati, che userà proprio quello strumento. Una riga
+- **Rollback `weekly_plans` silenzioso** — nel postino Nutrition, `rollRes` è assegnato e mai letto (residuo `8f46576`). Poiché supabase-js non lancia sugli errori API, un rollback fallito non viene rilevato da nessuno
+- **`?schedaDebug=1` scollegato** — sopravvive 1 solo `console.log` sotto `window._trainGenDebug`. Il flag si accende, il dry-run gira, non stampa niente. Tre carcasse in `_trainGenPickByPattern`: due blocchi con solo calcoli morti e un `else if` vuoto. Anche il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è ora accettato e ignorato
+- **Deltoidi posteriori: 1 solo esercizio** nel pool casa ristretto. È slot obbligatorio in quasi ogni sessione Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altri gruppi al minimo: deltoidi laterali 3, `core anti-estensione` 4, `core anti-rotazione` 6
 
 ---
 
@@ -267,6 +276,14 @@ Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 
 **Filosofia**: catalogo verificato + AI che assembla. Mai inventare esercizi. Esercizi fissi dentro il blocco (4 sett.), variazione tra blocchi.
 
+**Filtri del pool (`_trainGenFilterPool`) — guardia critica.** Tre guard in cascata, tutti obbligatori: luogo → attrezzo → livello. Se uno solo manca, ogni riga del catalogo entra nei pool in base al solo campo `uso` e la scheda si riempie di esercizi non eseguibili. Verificare la loro presenza prima di qualunque intervento sul generatore.
+
+**Criterio di ammissibilità a casa**: la riproducibilità del movimento, non il nome dell'esercizio. Un rematore alla macchina replicato con elastico è legittimo: stesso pattern, stessa posizione, resistenza equivalente. Una leg curl prona alla macchina non lo è: nulla in casa riproduce quella resistenza in quella posizione.
+
+Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: 120 dei 283 esercizi ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
+
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo 582 righe): `poolPrincipali` 283 · `poolFinisher` 103 · `poolRiscaldamento` 17. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+
 **Pattern minimi per sessione**:
 - Full Body: spinta + tirata + dom.ginocchia + dom.anca + core
 - Upper: spinta orizz + spinta vert + tirata orizz + tirata vert
@@ -281,6 +298,10 @@ Tirata ≥ spinta. Core sempre obbligatorio. Ordine: compound pesanti → comple
 | 3 | Full Body × 3 (princ.) · Upper/Lower/Full (int/avanzato) |
 | 4 | Upper/Lower × 2 |
 | 5 | Upper/Lower DUP + Upper Pump (int/avanzato) · PPL (princ.) |
+
+⚠️ **Solo 4 e 5 giorni sono realmente supportati end-to-end.** Il generatore produce correttamente anche schede a 2 e 3 giorni e le salva in `schede_utente`, ma rotazione e rendering sono ancorati a id di sessione fissi (`upperA`/`lowerA`/`upperB`/`lowerB`/`recoveryUpper`/`recoveryLower`, più `upperC` per il 5 giorni). Una scheda a 3 giorni produce id `upper`/`lower`/`fullbody` che non combaciano con nessuna mappa: `getTrainingSession()` cade sul fallback `TRAINING_SESSIONS` hardcoded e l'utente vede la scheda d'emergenza con nomi esercizio non aggiornati.
+
+Punti da toccare per generalizzare: `SESSION_DAY_NUM` / `SESSION_DAY_NUM_5` · `_rotationDayMap()` / `getRotationCycle()` (discriminante binario sulla presenza di `upperC`) · `DAY_SPLIT` in "I tuoi giorni" (hardcoded, due soli layout) · `getCycleWeekInfo()` (`workPerGiro` derivato dal ciclo). Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 
 Split 5gg DUP: 7 posizioni — upperA · lowerA · recoveryUpper · upperB · lowerB · upperC(Pump) · rest.
 
