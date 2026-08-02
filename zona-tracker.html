@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.02 · 09:53';
+const APP_VERSION = '2026.08.02 · 10:40';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8018,27 +8018,61 @@ const _TRAIN_GEN_PUMP_PARAMS = {
 // gruppo_target del catalogo (vocabolario chiuso). fullbody: rotazione 1-2
 // via sessionIndex. core non ha isolamenti dedicati nel catalogo → il picker
 // ritorna null e logga (NON crasha): la sessione resta più corta.
-// Iso obbligatori per categoria. Il CORE sono DUE SLOT FISSI (29 mag core
-// singolo; 6 lug secondo core: due core di sottotipo DIVERSO per sessione,
-// protezione lombare + stabilità busto, mai lo stesso stimolo raddoppiato):
-//   primario per categoria (Lower/Legs → anti-estensione · Upper/Push/Pull →
-//   anti-rotazione), secondario = sottotipo OPPOSTO (fallback in BLOCCO 6).
-// fullbody NON elenca il core qui: mette ENTRAMBI i sottotipi in ogni sessione
-// (BLOCCO 6). La lista qui è solo muscolare, con rotazione 1-2.
+// Iso obbligatori per categoria — SOLO MUSCOLARI. Il core NON è più elencato
+// qui: ha una tabella propria (_TRAIN_GEN_CORE_BY_TYPE) perché dal 2 ago i due
+// slot core non sono più due sottotipi della stessa natura, ma due NATURE
+// diverse. La lista qui resta muscolare, con rotazione 1-2 per fullbody.
 const _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE = {
-  upper_forza:      ['deltoidi posteriori', 'core anti-rotazione'],
-  upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti', 'core anti-rotazione'],
-  // FASE A — Upper Pump: 5 muscolari + 2 core (anti-rotazione + anti-estensione,
-  // 6 lug) = 7 esercizi. L'ossatura (compresi i 2 core) NON si taglia mai anche se
-  // supera il softMax=6. I dorsali NON sono obbligatori → bonus solo se resta spazio.
-  upper_pump:       ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'petto', 'core anti-rotazione'],
-  lower_forza:      ['glutei', 'core anti-estensione'],
-  lower_ipertrofia: ['ischiocrurali', 'polpacci', 'core anti-estensione'],
+  upper_forza:      ['deltoidi posteriori'],
+  upper_ipertrofia: ['deltoidi laterali', 'bicipiti', 'tricipiti'],
+  // FASE A — Upper Pump: 5 muscolari + 2 core = 7 esercizi. L'ossatura (compresi
+  // i 2 core) NON si taglia mai anche se supera il softMax=6. I dorsali NON sono
+  // obbligatori → bonus solo se resta spazio.
+  upper_pump:       ['deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'petto'],
+  lower_forza:      ['glutei'],
+  lower_ipertrofia: ['ischiocrurali', 'polpacci'],
   fullbody:         ['deltoidi posteriori', 'polpacci'],
-  push:             ['deltoidi laterali', 'tricipiti', 'core anti-rotazione'],
-  pull:             ['deltoidi posteriori', 'bicipiti', 'core anti-rotazione'],
-  legs:             ['ischiocrurali', 'polpacci', 'core anti-estensione'],
+  push:             ['deltoidi laterali', 'tricipiti'],
+  pull:             ['deltoidi posteriori', 'bicipiti'],
+  legs:             ['ischiocrurali', 'polpacci'],
 };
+
+// CORE — DUE SLOT FISSI di NATURA DIVERSA (2 ago 2026, sostituisce la coppia
+// anti-estensione + anti-rotazione del 6 lug).
+//
+// Il core ha una funzione PROTETTIVA (resistere al movimento) e una PRODUTTIVA
+// (generarlo). La struttura precedente allenava solo la prima. Ora ogni sessione
+// riceve una TENUTA e un DINAMICO:
+//   slot 1 · tenuta   → 'core anti-estensione' | 'core anti-rotazione'
+//   slot 2 · dinamico → 'core flessione'       | 'core rotazione'
+//
+// Accoppiamento per PIANO di movimento, coerente con la scelta già in essere:
+//   Upper/Push/Pull → piano trasverso  → anti-rotazione + rotazione
+//   Lower/Legs      → piano sagittale  → anti-estensione + flessione
+// fullbody: alterna per sessione dentro ciascuna natura (vedi BLOCCO 6).
+const _TRAIN_GEN_CORE_BY_TYPE = {
+  upper_forza:      { tenuta: 'core anti-rotazione',   dinamico: 'core rotazione' },
+  upper_ipertrofia: { tenuta: 'core anti-rotazione',   dinamico: 'core rotazione' },
+  upper_pump:       { tenuta: 'core anti-rotazione',   dinamico: 'core rotazione' },
+  push:             { tenuta: 'core anti-rotazione',   dinamico: 'core rotazione' },
+  pull:             { tenuta: 'core anti-rotazione',   dinamico: 'core rotazione' },
+  lower_forza:      { tenuta: 'core anti-estensione',  dinamico: 'core flessione' },
+  lower_ipertrofia: { tenuta: 'core anti-estensione',  dinamico: 'core flessione' },
+  legs:             { tenuta: 'core anti-estensione',  dinamico: 'core flessione' },
+};
+
+// Fallback DENTRO la stessa natura. Se la funzione primaria non ha candidati nel
+// pool dell'utente si ripiega sull'altra della STESSA natura; mai da una natura
+// all'altra. Uno slot vuoto è preferibile a due esercizi della stessa natura:
+// raddoppiare la tenuta (o il dinamico) annulla il senso della coppia.
+const _TRAIN_GEN_CORE_FALLBACK = {
+  'core anti-rotazione':  'core anti-estensione',
+  'core anti-estensione': 'core anti-rotazione',
+  'core rotazione':       'core flessione',
+  'core flessione':       'core rotazione',
+};
+const _TRAIN_GEN_CORE_TENUTE   = ['core anti-estensione', 'core anti-rotazione'];
+const _TRAIN_GEN_CORE_DINAMICI = ['core flessione', 'core rotazione'];
 
 // BLOCCO C (31 mag) — copertura pattern compound → gruppi muscolari allenati come
 // SECONDARI. Serve a declassare gli iso obbligatori già coperti dai compound scelti:
@@ -8073,6 +8107,7 @@ const _TRAIN_GEN_ISO_CRITICALITY = {
   // di sottotipo diverso, entrambi nell'ossatura sacra (mai tagliati dal softMax).
   'core anti-estensione': 5,                                  // protezione lombare
   'core anti-rotazione': 5,                                   // stabilità busto — pari criticità
+  'core flessione': 5, 'core rotazione': 5,                   // dinamici — pari criticità (2 ago)
   'bicipiti': 3, 'tricipiti': 3,
   'deltoidi posteriori': 2, 'glutei': 2, 'ischiocrurali': 2,
   'deltoidi laterali': 1, 'polpacci': 1, 'avambracci': 1, 'trapezi': 1,
@@ -8615,15 +8650,13 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       });
 
       // 2) ISO OBBLIGATORI per categoria (Regola A) — muscolari + DUE CORE FISSI.
-      // Ogni sessione ha 2 core di sottotipo DIVERSO (6 lug), entrambi slot fissi:
-      //   Lower/Legs → primario ANTI-ESTENSIONE (sotto carico squat/stacchi)
-      //   Upper/Push/Pull → primario ANTI-ROTAZIONE (stabilità busto)
-      //   secondario = sottotipo OPPOSTO al primario (picking in BLOCCO 6)
-      //   Full Body → entrambi i sottotipi in OGNI sessione (non più alternati)
+      // Dal 2 ago i 2 core sono di NATURA diversa, non più due tenute:
+      //   slot 1 · TENUTA   → Lower/Legs anti-estensione · Upper/Push/Pull anti-rotazione
+      //   slot 2 · DINAMICO → Lower/Legs flessione       · Upper/Push/Pull rotazione
+      //   Full Body → alterna per sessione DENTRO ciascuna natura
+      // Il fallback (BLOCCO 6) resta sempre dentro la stessa natura.
       const _isCoreGt = (gt) => /^core /.test(String(gt || ''));
-      const _oppositeCore = (ct) => ct === 'core anti-estensione' ? 'core anti-rotazione'
-                                  : ct === 'core anti-rotazione' ? 'core anti-estensione' : null;
-      let muscularTargets, coreTarget;
+      let muscularTargets, coreTenuta, coreDinamico;
       if (splitType === 'fullbody') {
         let m = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE.fullbody || []).slice(); // solo muscolari
         if (m.length > 2) {
@@ -8631,15 +8664,21 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           m = [m[start], m[(start + 1) % m.length]];
         }
         muscularTargets = m;
-        // Con 2 core fissi: entrambi i sottotipi in ogni full body. Il primario
-        // alterna via occurrenceIdx solo per varietà d'ORDINE; il secondario
-        // (opposto) completa la coppia sotto → sempre anti-estensione + anti-rotazione.
-        coreTarget = ((Number(occurrenceIdx) || 0) % 2 === 0) ? 'core anti-estensione' : 'core anti-rotazione';
+        // Full body non ha un piano d'elezione: alterna a ogni sessione dentro
+        // ciascuna natura, così su due sedute consecutive le copre tutte e quattro.
+        const _alt = ((Number(sessionIdx) || 0) % 2 + 2) % 2;
+        coreTenuta   = _TRAIN_GEN_CORE_TENUTE[_alt];
+        coreDinamico = _TRAIN_GEN_CORE_DINAMICI[_alt];
       } else {
-        const all = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice();
-        coreTarget = all.find(_isCoreGt) || null;
-        muscularTargets = all.filter(t => !_isCoreGt(t));
+        muscularTargets = (_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE[category] || []).slice()
+          .filter(t => !_isCoreGt(t)); // guardia: la tabella è già solo muscolare
+        const _c = _TRAIN_GEN_CORE_BY_TYPE[category] || null;
+        coreTenuta   = _c ? _c.tenuta   : null;
+        coreDinamico = _c ? _c.dinamico : null;
       }
+      // coreTarget resta il riferimento della TENUTA: lo consumano il bonus
+      // Tier 2 e la riga di riepilogo, che ragionano sul core "primario".
+      const coreTarget = coreTenuta;
 
       // BLOCCO C — declassa gli iso muscolari il cui gruppo è GIÀ coperto dai
       // compound scelti (ridondanti nell'ossatura). Restano candidabili come bonus
@@ -8658,35 +8697,43 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx + rigenIdx, sessionLabel);
         if (picked) { usedSoFar.add(picked.codice); muscularPicks.push({ ex: picked, gruppoTarget: gt }); }
       });
-      // Pesca DUE core fissi di sottotipo DIVERSO (6 lug).
-      //  1° = primario (coreTarget). 2° = sottotipo OPPOSTO.
-      //  Fallback secondario (in cascata): opposto → se non nel pool, stesso
-      //  sottotipo del primario ma codice diverso (usedSoFar esclude già il 1°)
-      //  → se neanche quello, resta 1 solo core (warn, nessun crash).
-      //  Entrambi i core ruotano per rigenerazione (occurrenceIdx + rigenIdx),
-      //  come compound e iso muscolari: sottotipi fissi, varianti diverse a ogni scheda.
-      const _coreRotIdx = occurrenceIdx + rigenIdx;
-      let corePick = null, corePick2 = null;
-      if (coreTarget) {
-        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, _coreRotIdx, sessionLabel);
-        if (picked) { usedSoFar.add(picked.codice); corePick = { ex: picked, gruppoTarget: coreTarget }; }
-        else console.warn(`[train-gen] ${sessionLabel}: CORE obbligatorio '${coreTarget}' non disponibile nel pool (gruppo_target nel catalogo?)`);
-
-        // Secondo core: prima il sottotipo opposto…
-        const coreTarget2 = _oppositeCore(coreTarget);
-        let picked2 = coreTarget2
-          ? _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget2, usedSoFar, _coreRotIdx, sessionLabel)
-          : null;
-        let gruppo2 = picked2 ? coreTarget2 : null;
-        // …ripiego: stesso sottotipo del primario, codice diverso (usedSoFar
-        // contiene già il 1° core → il picker lo esclude, mai duplicato).
-        if (!picked2) {
-          picked2 = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, coreTarget, usedSoFar, _coreRotIdx, sessionLabel);
-          gruppo2 = picked2 ? coreTarget : null;
+      // Pesca DUE core fissi di NATURA DIVERSA (2 ago): una tenuta + un dinamico.
+      //  Fallback: SEMPRE dentro la stessa natura (_TRAIN_GEN_CORE_FALLBACK).
+      //  Mai da una natura all'altra: uno slot vuoto è preferibile a due
+      //  esercizi della stessa natura, che annullerebbero il senso della coppia.
+      //
+      //  INDICE — due correzioni rispetto al 6 lug:
+      //  1) sessionIdx (assoluto nello split) al posto di occurrenceIdx (indice
+      //     dentro il tipo). occurrenceIdx vale 0 sia per Upper A sia per Lower A
+      //     → le due sessioni convergevano sulla stessa coppia. È lo stesso
+      //     criterio del carry conclusivo, che infatti ruota correttamente.
+      //  2) i due slot usano indici DISTINTI (+0 e +1): pescano già da liste
+      //     disgiunte, ma con lo stesso indice le due liste scorrerebbero in
+      //     parallelo, ripetendo sempre gli stessi accoppiamenti.
+      //  rigenIdx resta sommato: è ciò che fa variare la scheda a ogni rigenerazione.
+      const _coreRotIdx = (Number(sessionIdx) || 0) + rigenIdx;
+      // Pesca un core della natura richiesta, con ripiego sull'altra funzione
+      // della STESSA natura. Ritorna { ex, gruppoTarget } oppure null.
+      const _pickCore = (target, rotIdx, natura) => {
+        if (!target) return null;
+        let ex = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, target, usedSoFar, rotIdx, sessionLabel);
+        let gt = target;
+        if (!ex) {
+          const alt = _TRAIN_GEN_CORE_FALLBACK[target];
+          if (alt) {
+            ex = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, alt, usedSoFar, rotIdx, sessionLabel);
+            gt = ex ? alt : target;
+          }
         }
-        if (picked2) { usedSoFar.add(picked2.codice); corePick2 = { ex: picked2, gruppoTarget: gruppo2 }; }
-        else console.warn(`[train-gen] ${sessionLabel}: SECONDO core non disponibile (né opposto né stesso sottotipo con codice diverso) → resta 1 solo core`);
-      }
+        if (!ex) {
+          console.warn(`[train-gen] ${sessionLabel}: core ${natura} non disponibile ('${target}' né il suo ripiego di pari natura) → slot vuoto`);
+          return null;
+        }
+        usedSoFar.add(ex.codice);
+        return { ex, gruppoTarget: gt };
+      };
+      const corePick  = _pickCore(coreTenuta,   _coreRotIdx,     'TENUTA');
+      const corePick2 = _pickCore(coreDinamico, _coreRotIdx + 1, 'DINAMICO');
 
       // OSSATURA SACRA (fix volume 29 mag; 2 core dal 6 lug): compound primari +
       // iso obbligatori (muscolari) + ENTRAMBI i core fissi NON si tagliano MAI,
@@ -8762,8 +8809,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // Riepilogo per sessione (sempre) — aiuta il debug futuro.
       const _isoLabel = (ex) => _trainGenIsIsometric(ex) ? 'iso_isometrico'
         : (['isolamento','core','mobilita'].includes(_normPattern(ex.pattern)) ? 'iso' : 'compound');
-      const _coreShort = coreTarget ? coreTarget.replace('core anti-', 'anti-') : null;
-      const _coreShortOf = (ct) => ct ? ct.replace('core anti-', 'anti-') : null;
+      const _coreShortOf = (ct) => ct ? ct.replace(/^core /, '') : null;
+      const _coreShort = _coreShortOf(coreTarget);
       const _coresKept = [coreKept, core2Kept].filter(Boolean);
       const coreLog = _coresKept.length
         ? _coresKept.map(c => `${c.ex.codice} (${_coreShortOf(c.gruppoTarget)}, isometrico)`).join(' + ')
@@ -8836,7 +8883,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           obbligatoriKept: keptMuscular.map(o => o.gruppoTarget),
           obbligatoriCut: cutTargets,
           core: corePick ? { gruppo: corePick.gruppoTarget, codice: (coreKept ? coreKept.ex.codice : null), kept: !!coreKept, skippedTime: coreSkippedTime } : { gruppo: coreTarget, codice: null, kept: false, skippedTime: false },
-          core2: corePick2 ? { gruppo: corePick2.gruppoTarget, codice: core2Kept.ex.codice, kept: !!core2Kept } : { gruppo: _oppositeCore(coreTarget), codice: null, kept: false },
+          core2: corePick2 ? { gruppo: corePick2.gruppoTarget, codice: core2Kept.ex.codice, kept: !!core2Kept } : { gruppo: coreDinamico, codice: null, kept: false },
           bonusN: bonusPicks.length,
           bonus: bonusPicks.map(b => `${b.ex.codice}:${b.tier}`),
           warmup: warmupExs.map(w => w.codice), // FASE 1: prehab (cuffia su Upper)
@@ -9531,6 +9578,13 @@ function _trainGenIsIsometric(ex) {
   const gt = String((ex && ex.gruppo_target) || '').toLowerCase()
     .split(';').map(s => s.trim()).filter(Boolean);
   const dinamico = /marcia|ritmo|veloce|controllat|alternat|cammina/.test(nome);
+  // 2 ago — quattro funzioni core: la NATURA la dichiara il gruppo_target, non
+  // il nome. Va PRIMA di ogni euristica sul nome, altrimenti 'Plank laterale
+  // crunch obliquo' (core rotazione, dinamico) cade nella regex /plank/ sotto e
+  // verrebbe prescritto a tempo. Senza questa riga tutti e 43 i core dinamici
+  // (crunch, sit-up, russian twist) uscirebbero in secondi invece che in reps.
+  if (gt.includes('core flessione') || gt.includes('core rotazione')) return false;
+  if (gt.includes('core anti-estensione') || gt.includes('core anti-rotazione')) return true;
   if (pattern === 'core' && !dinamico) return true;
   if (/isometric/.test(nome)) return true;
   if (/wall sit|plank|dead bug|hollow|pallof|side plank|bird dog|stir the pot/.test(nome)) return true;
