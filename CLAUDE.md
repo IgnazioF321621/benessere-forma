@@ -44,18 +44,18 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b (colazione/merenda) in stand-by.
 
-**Training** — in sviluppo attivo. Coach generatore funzionante: 582 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft. Filtri pool ripristinati (`7a60a97`), quattro funzioni core attive (`f16e035`) con pool core da 9 a 64, split 3 giorni non supportato dall'interfaccia.
+**Training** — in sviluppo attivo. Coach generatore funzionante: 610 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft. Filtri pool ripristinati (`7a60a97`), quattro funzioni core attive (`f16e035`) con pool core da 9 a 64, split 3 giorni non supportato dall'interfaccia.
 
 Il modulo Training ha un solo utente: Ignazio. Gli altri tester usano Nutrition e Body. Un bug del generatore non ha impatto su terzi.
 
-**Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). 501 `gif_slug` attivi, 0 rotti, 81 codici senza slug.
+**Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). **532 `gif_slug` attivi, 0 rotti, 78 codici senza slug** (2 agosto, dopo Cardio).
 
 **Cantiere nomi biblioteca** — in corso. Riordino dei nomi delle GIF in 10 cartelle sotto `Biblioteca di esercizi/`, mobilità compresa. Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `pianifica.py` → `migra_zona.py` → `verifica_worker.py`). Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
 
 Chiuse:
 - **Addominali e Core** — 68 righe migrate (1 agosto); zona poi **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori (72 righe toccate, 11 a certezza media confermate da Ignazio).
 - **Bicipiti e Braccia** — 73 righe: 68 codici vivi + 5 liberi indicizzati. Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
-- **Cardio e Conditioning** — 31 righe, tutte senza codice. 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata. Zona a 39 righe e 39 oggetti, 31/31 verificate scaricando il file e confrontandone l'impronta.
+- **Cardio e Conditioning** — chiusa **su entrambi i lati**. *Immagini*: 31 righe, 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata; zona a 39 righe e 39 oggetti. *Catalogo*: 3 codici esistenti agganciati e rinominati (EX049 · EX053 · EX114) + **28 righe nuove EX587→EX614**; catalogo da 582 a **610 righe**. Verifica finale **31/31 via Worker**, con confronto dell'impronta del file effettivamente scaricato. La zona è passata da **0 a 31 codici** che puntano a una sua riga.
 
 In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Polpacci 19.
 
@@ -70,7 +70,7 @@ In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezi
 
 **Cardio e Conditioning — otto salti parcheggiati.** Presenti **nel bucket ma non sul Mac**, quindi fuori dalla conferma visiva della zona: `Pistol jump box` · `Salto all indietro` · `Salto in lungo da fermo` · `Salto monopodalico avanti` · `Salto verticale esplosivo` · `Squat jump box` · `Squat jump ginocchia alte` · `Squat thrust`. Non si toccano con Cardio: sono pliometria e si decidono **con Gambe e Glutei**, dove vale la regola «la zona comanda» (regola 10).
 
-La zona non è agganciata al catalogo: **0 codici** hanno un `gif_slug` che punti a una sua riga, e dei 14 `pattern = cardio_metabolico` a catalogo 13 hanno `gif_slug` vuoto. Qui non esistono righe vive da proteggere: la migrazione non richiede l'ordine a righe doppie. Il cantiere cardio (testi e codici nuovi, `tools/cardio-conferma/`, TSV mai sincronizzato — assegna EX587+ mentre il catalogo si ferma a EX586) è **lavoro separato**, da riaprire dopo la conferma dei nomi.
+Quando la zona fu preparata **0 codici** puntavano a una sua riga: non c'erano righe vive da proteggere, quindi la migrazione delle immagini non ha richiesto l'ordine a righe doppie. Il popolamento del catalogo è stato **lavoro separato e successivo**, chiuso il 2 agosto: 3 agganci a codici esistenti e 28 righe nuove.
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -94,6 +94,8 @@ La zona non è agganciata al catalogo: **0 codici** hanno un `gif_slug` che punt
 14. **Dare un attrezzo ai 3 slug inerti** — `barra_corta`/`barra_lunga`/`cavigliere` sono dichiarabili in onboarding e non aprono un solo esercizio (l'app ora lo constata, vedi `_diagGear`). Non è materia di alias: il catalogo non ha alcun token per la barra da elastici né per le cavigliere, quindi la strada è aggiungerli sul Sheet ai `surrogato_attrezzo` degli esercizi che li useranno — lavoro con conferma visiva, natura identica al cantiere 13. In alternativa, toglierli dall'onboarding.
 15. **Riclassificazione funzionale delle altre zone** — il vocabolario anatomico vale ancora per le zone non core. Da valutare se il modello a funzioni (natura + piano) serva altrove o resti specifico del core.
 16. **Liberi indicizzati senza codice** — GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo è **decisione aperta, non presa**. Da Bicipiti e Braccia: 5 (`curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`). Stesso trattamento dei liberi di Addominali e Core.
+17. **Cinque attrezzi a catalogo non dichiarabili in onboarding** — è il cantiere 14 dal lato opposto: lì gli slug dichiarabili non aprivano esercizi, qui gli esercizi non sono raggiungibili da nessuno slug. Finché l'onboarding non li espone, questi **8 codici non escono mai dal generatore**: `sacco` (EX588 · EX595) · `battle rope` (EX587) · `scaletta agilità` (EX600 · EX603) · `conetti` (EX597 · EX606) · `corda per saltare` (EX610). Cinque di essi sono comunque eseguibili a casa — EX597/EX600/EX603/EX606 via surrogato `corpo libero`, EX610 di suo — quindi il buco è di dichiarazione, non di fattibilità. ⚠️ `corda per saltare` è token distinto **apposta**: `corda` a catalogo è l'attacco al cavo (9 esercizi), e riusarlo aprirebbe i pullover al cavo a chi dichiara la corda per saltare.
+18. **Testi di EX049 da riscrivere sulla propria GIF** — EX049 è `Skip ginocchia alte`, agganciato e verificato, ma `setup`/`esecuzione`/`errori` sono ancora quelli ereditati da `High knees a marcia`: «mani all'altezza dell'ombelico (pronate, palmi giù)», «alza il ginocchio verso la mano», «marcia non corsa». Quel testo **non descrive la sua GIF** — braccia libere in opposizione, ginocchio sopra l'orizzontale, fase di volo — ma descrive quasi parola per parola la GIF di **EX613 `Skip sul posto`**, i cui testi sono stati scritti apposta su mani ferme come riferimento e piede basso. Finché EX049 non viene riscritto i due testi si sovrappongono.
 
 ## Bug noti aperti
 
@@ -154,7 +156,9 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**582 righe** (1 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 — mai renumerare. Prossimo libero: **EX587**. RLS SELECT pubblica. PK logica = `codice`. **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
+**610 righe** (2 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 — mai renumerare. Prossimo libero: **EX615**. RLS SELECT pubblica. PK logica = `codice`. **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
+
+⚠️ **Il sync riporta indietro ciò che il foglio non ha.** L'upsert riscrive ogni riga presente nel foglio, quindi una modifica sincronizzata in un passo precedente viene **annullata** se il foglio usato per il sync successivo porta ancora i valori vecchi. Caso reale (2 ago, Cardio): EX049/EX053/EX114 erano stati rinominati e agganciati; il sync delle 28 righe nuove li ha riportati ai nomi vecchi con `gif_slug` svuotato e il `livello` di EX114 perso — stesso lotto, `updated_at` a 4 ms di distanza. Effetto sull'app: due `missing` e uno che serviva la GIF sbagliata da ExerciseDB. **Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi.**
 
 Colonne: `codice, nome, nome_en (⚠️ DEPRECATA dal 19/07/2026 — non portante, non usarla per slug/filename/UI), pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
@@ -207,7 +211,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**501/501 `gif_slug` risolvono, 0 rotti** (24 luglio; i 22 slug migrati il 1 agosto riverificati uno per uno). 81 codici senza slug → fallback ExerciseDB.
+**532/532 `gif_slug` risolvono, 0 rotti** (2 agosto; i 31 di Cardio verificati via Worker con confronto dell'impronta del file scaricato). 78 codici senza slug → fallback ExerciseDB.
 
 ### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
 
