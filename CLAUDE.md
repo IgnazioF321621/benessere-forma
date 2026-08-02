@@ -70,8 +70,9 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto). In coda per dimensio
 10. **Refresh onboarding M1** — preferenze generazione piano (giorno/ora) + tracking peso. ⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
 11. **Push notifications** — sistema unico (piano + training + integratori).
 12. **"Oggi ho solo X min"** — compressione singola sessione senza toccare progressione blocco.
-13. **Surrogati mancanti** — censire gli esercizi con `luogo = palestra` riproducibili a casa che hanno `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma i buchi tipo "deltoidi posteriori: 1 esercizio". Natura identica al cantiere GIF: si procede a gruppi con conferma visiva. Prerequisito: riparare `compoundMissing`.
-14. **Allineamento nomi attrezzo onboarding ↔ catalogo** — `barra` e `cavigliera` non esistono a catalogo. Due strade: correggere gli alias verso termini reali, oppure emettere un avviso quando un token del profilo non trova riscontro. Senza intervento l'utente dichiara attrezzi inerti.
+13. **Riparare `compoundMissing`** — `compoundMissing.push(pat)` persa nel commit `8f46576`: la variabile è dichiarata e finisce in `_diag.compoundMissing`, quindi `ztSchedaWhy()` riporta "nessun pattern scoperto" anche quando un pattern obbligatorio resta senza candidati. Ramo `else` da riaggiungere al `forEach(requiredPatterns)` di `generateTrainingProgram`, accanto a `if (picked) { usedSoFar.add(…); compoundPicks.push(picked); }`. Una riga. Prerequisito del cantiere 14, che si appoggia proprio a quella diagnostica.
+14. **Surrogati mancanti** — censire gli esercizi con `luogo = palestra` riproducibili a casa che hanno `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma i buchi tipo "deltoidi posteriori: 1 esercizio". Natura identica al cantiere GIF: si procede a gruppi con conferma visiva. Prerequisito: cantiere 13.
+15. **Allineamento nomi attrezzo onboarding ↔ catalogo** — `barra` e `cavigliera` non esistono a catalogo. Due strade: correggere gli alias verso termini reali, oppure emettere un avviso quando un token del profilo non trova riscontro. Senza intervento l'utente dichiara attrezzi inerti.
 
 ## Bug noti aperti
 
@@ -81,7 +82,6 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto). In coda per dimensio
 - Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo (UX scadente mobile)
 - Isabella: `status=draft`, 0 meals per settimana corrente — non investigato
 - **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente, non generato dal cantiere)
-- **`compoundMissing` sempre vuoto** — `compoundMissing.push(pat)` persa nel commit `8f46576`. La variabile è dichiarata e finisce in `_diag.compoundMissing`, quindi `ztSchedaWhy()` riporta "nessun pattern scoperto" anche quando un pattern obbligatorio resta senza candidati. Diagnostica che mente: da riparare prima del cantiere surrogati, che userà proprio quello strumento. Una riga
 - **Rollback `weekly_plans` silenzioso** — nel postino Nutrition, `rollRes` è assegnato e mai letto (residuo `8f46576`). Poiché supabase-js non lancia sugli errori API, un rollback fallito non viene rilevato da nessuno
 - **`?schedaDebug=1` scollegato** — sopravvive 1 solo `console.log` sotto `window._trainGenDebug`. Il flag si accende, il dry-run gira, non stampa niente. Tre carcasse in `_trainGenPickByPattern`: due blocchi con solo calcoli morti e un `else if` vuoto. Anche il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è ora accettato e ignorato
 - **Deltoidi posteriori: 1 solo esercizio** nel pool casa ristretto. È slot obbligatorio in quasi ogni sessione Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altri gruppi al minimo: deltoidi laterali 3, `core anti-estensione` 4, `core anti-rotazione` 6
