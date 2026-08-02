@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.02 · 09:16';
+const APP_VERSION = '2026.08.02 · 09:39';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8602,6 +8602,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           }
         }
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
+        else { compoundMissing.push(pat); }
       });
 
       // BLOCCO C — gruppi muscolari coperti dai compound EFFETTIVAMENTE scelti.
