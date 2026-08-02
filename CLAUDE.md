@@ -50,8 +50,20 @@ Il modulo Training ha un solo utente: Ignazio. Gli altri tester usano Nutrition 
 
 **Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). 501 `gif_slug` attivi, 0 rotti, 81 codici senza slug.
 
-**Cantiere nomi biblioteca** — in corso. Riordino dei nomi delle 891 GIF in 10 cartelle sotto `Biblioteca di esercizi/`, mobilità compresa. Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `migra.py`). Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
-Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto; zona poi **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori — 72 righe toccate, 11 a certezza media confermate da Ignazio). In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Bicipiti e Braccia 75 (prossima)** · Spalle e Cuffia 63 · Tricipiti 61 · Cardio 31 · Polpacci 19.
+**Cantiere nomi biblioteca** — in corso. Riordino dei nomi delle GIF in 10 cartelle sotto `Biblioteca di esercizi/`, mobilità compresa. Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `pianifica.py` → `migra_zona.py` → `verifica_worker.py`). Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
+
+Chiuse:
+- **Addominali e Core** — 68 righe migrate (1 agosto); zona poi **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori (72 righe toccate, 11 a certezza media confermate da Ignazio).
+- **Bicipiti e Braccia** — 73 righe: 68 codici vivi + 5 liberi indicizzati. Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
+
+In coda per dimensione: Mobilità 215 · Gambe e Glutei 166 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Cardio 31 · Polpacci 19.
+
+⚠️ **Due file parcheggiati, fuori da ogni tabella.** Spostati e rinominati, contenuto verificato per SHA-256, **non presenti né in `biblioteca_gif` né in `esercizi_catalog`**. Non essendo in nessuna tabella, questa è l'unica traccia che li ritrova:
+
+| file | cartella | da riprendere con |
+|---|---|---|
+| `Piegamenti sulle dita` | Pettorali | zona Pettorali |
+| `Piegamenti mani ruotate all'indietro` | Tricipiti | zona Tricipiti |
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -62,7 +74,7 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto; zona poi **riclassifi
 1. **Test timer su workout reali** — commit `e834320` (timer unificati timestamp-based) in osservazione. PRIMA di qualunque altro cantiere Training.
 2. **Cantiere 600 GIF** — 81 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
 3. **Code pulizia Storage** — C: 28 file L2 residui nelle zone curate (indicizzati, non referenziati) · D: bucket `exercise-media` legacy (43 file, 5,9 MB, verificare se l'app lo usa ancora) · E: riallineamento indice `biblioteca_gif` (924 righe puntano a file inesistenti).
-4. **Lista da consolidare** — coppie di codici distinti che puntano a file di **contenuto identico** (SHA-256 uguale). Non è materia di rinomina ma di consolidamento: un codice eliminato resta bruciato. La lista si accumula cartella per cartella e si affronta in **un giro unico alla fine**, mai durante una migrazione. Aperte da Addominali e Core: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103). Registro: `tools/biblioteca-nomi/`.
+4. **Lista da consolidare** — coppie di codici distinti che puntano a file di **contenuto identico** (SHA-256 uguale). Non è materia di rinomina ma di consolidamento: un codice eliminato resta bruciato. La lista si accumula cartella per cartella e si affronta in **un giro unico alla fine**, mai durante una migrazione. Aperte da Addominali e Core: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103). Da Bicipiti e Braccia: nessuna. Registro: `tools/biblioteca-nomi/`.
 5. **Code catalogo** — EX085 (`gruppo_target='Gambe e Glutei'` fuori vocabolario) · EX322 (`'gambe'` fuori vocabolario) · 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine) · 5 `alternativa` pendenti già bonificati ma da monitorare se emergono altri.
 6. **Avviso corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o generazione). Misurato il 2 ago: pool principale 101 righe, `compoundMissing` = `tirata orizzontale` + `tirata verticale`.
 7. **EX287 "Stacco da terra classico"** — decisione pendente: GIF live vs candidato in `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif`.
@@ -74,6 +86,7 @@ Chiuse: **Addominali e Core** (68 righe migrate, 1 agosto; zona poi **riclassifi
 13. **Surrogati mancanti** — censire gli esercizi con `luogo = palestra` **riproducibili a casa** con `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma buchi tipo "deltoidi posteriori: 1 candidato". Nella sola zona core ne sono già emersi 7. Metodo identico al cantiere GIF: gruppi da dieci con conferma visiva. La diagnostica di appoggio è `ztSchedaWhy()` → `_diag.compoundMissing`, riparata il 2 ago (`d40faaf`).
 14. **Dare un attrezzo ai 3 slug inerti** — `barra_corta`/`barra_lunga`/`cavigliere` sono dichiarabili in onboarding e non aprono un solo esercizio (l'app ora lo constata, vedi `_diagGear`). Non è materia di alias: il catalogo non ha alcun token per la barra da elastici né per le cavigliere, quindi la strada è aggiungerli sul Sheet ai `surrogato_attrezzo` degli esercizi che li useranno — lavoro con conferma visiva, natura identica al cantiere 13. In alternativa, toglierli dall'onboarding.
 15. **Riclassificazione funzionale delle altre zone** — il vocabolario anatomico vale ancora per le zone non core. Da valutare se il modello a funzioni (natura + piano) serva altrove o resti specifico del core.
+16. **Liberi indicizzati senza codice** — GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo è **decisione aperta, non presa**. Da Bicipiti e Braccia: 5 (`curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`). Stesso trattamento dei liberi di Addominali e Core.
 
 ## Bug noti aperti
 
@@ -150,7 +163,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.550 righe** (1 agosto 2026), di cui **924 puntano a file inesistenti** (misurato — cantiere E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **624 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+**1.555 righe** (2 agosto 2026), di cui **924 puntano a file inesistenti** (misurato — cantiere E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **629 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
 **`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona (`Pettorali`); Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
@@ -191,7 +204,16 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 ### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
 
-**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256**, non il nome. In un cantiere in cui i nomi sono proprio ciò che cambia, l'aggancio per nome classifica come libere righe che sono vive: già successo, 6 righe su 69.
+**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256**, non il nome. In un cantiere in cui i nomi sono proprio ciò che cambia, l'aggancio per nome classifica come libere righe che sono vive: 6 righe su 69 in `Addominali e Core`, 58 su 75 in `Bicipiti e Braccia`. Nel bucket i nomi sono già normalizzati da cantieri precedenti mentre sul Mac sono ancora quelli originali: lo stesso contenuto ha due nomi diversi sui due lati.
+
+**La regola vive nello strumento, non solo nel metodo.** `prepara.py` aggancia file → riga → codice per SHA-256 tramite `impronte.py`, che enumera gli oggetti del bucket della zona e ne calcola l'impronta. Il basename di `storage_path` non entra più nella classificazione.
+
+- `biblioteca_gif` si legge **live** con la chiave di servizio da `worker/.dev.vars` (mai stampata). L'export CSV è solo ripiego: invecchia a ogni migrazione, e una riga il cui `storage_path` è cambiato non si riconosce più.
+- Cache delle impronte in `lavoro/_impronte/<zona>.json`, indicizzata per `eTag` + dimensione: si ricalcola solo se l'oggetto cambia.
+- Stato **`indeterminato`**: se anche un solo oggetto del bucket non è scaricabile, i file senza riscontro **non** diventano `libero` — potrebbero essere proprio quello. Nel dubbio la GIF vale come viva: `conferma.py` e `conferma.html` la trattano come tale e non le applicano mai lo slug. Il ripiego silenzioso su `libero` è ciò che ha causato il difetto.
+- **Nessun nome entra nello strumento passando dalla chat.** Fonte unica dei nomi è il pannello di conferma, l'unico posto in cui il nome è stato scelto guardando la GIF.
+
+**Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe.** `migra.py` costruisce il piano per impronta; `slug_da_migrare.tsv` scritto da `conferma.py` include solo le righe `collegato`/`pendente`. Su `Addominali e Core` sei righe non finirono nel TSV e furono recuperate da `migra.py`: è una rete, non un progetto, e non regge volumi grandi. Difetto residuo **non corretto**: `cantiere_96_pendente.tsv` è indicizzato per nome file sul Mac, quindi dopo una rinomina le chiavi non corrispondono più e lo stato `pendente` decade. Da affrontare col cantiere 96.
 
 **Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta: **(1)** rinomina nel bucket e aggiorna `storage_path`, slug invariato · **(2)** aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi · **(3)** sincronizza il Sheet · **(4)** verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**. Non deve esistere un istante in cui una GIF è irraggiungibile.
 
@@ -206,7 +228,16 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **1. Nome unico.** Catalogo con un solo nome per esercizio. `nome_en` deprecata. Il nome è in italiano se l'italiano è il termine di sala; se il termine di sala è inglese resta inglese (`plank · crunch · hip thrust · face pull · pistol · jump squat · front squat · lat machine`).
 
-**2. Formula**: `[Movimento] [Attrezzo] [Variante] [Posizione]` — preposizioni rimosse, default (bilaterale, simultaneo) omessi. Attrezzo = ciò che si impugna: al cavo l'attrezzo è l'attacco (corda, maniglia…), non il cavo.
+**2. Formula**: `[Movimento] [Attrezzo] [Variante] [Posizione]` — preposizioni rimosse, default omessi. Attrezzo = ciò che si impugna: al cavo l'attrezzo è l'attacco (corda, maniglia…), non il cavo.
+
+**Default omessi** — si scrivono solo quando l'esercizio si scosta dal default. Valgono su tutte le zone:
+
+| default | si scrive solo | esempio |
+|---|---|---|
+| bilaterale · simultaneo | l'alternativa | `Curl alternato manubri` |
+| bilanciere = dritto | `bilanciere EZ` | `Curl bilanciere` / `Curl bilanciere EZ` |
+| presa = media | `presa larga` · `presa stretta` · `presa inversa` | `Curl bilanciere presa larga` |
+| corpo libero | quando distingue da una versione con carico | — |
 
 **3. Maiuscole**: prima lettera del nome + nomi propri (lista chiusa 12 voci: `Scott · Zottman · Arnold · Pendlay · Bulgarian · Jefferson · Svend · Larsen · Kelso · Russian · Yates · Bosu`) + sigle/designazioni tecniche nella forma canonica (`EZ · TRX · IT · Y-W · V · T · X`). Tutto il resto minuscolo anche se inglese.
 
@@ -255,8 +286,6 @@ Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
 **Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento, che si affronta a parte (vedi *Lista da consolidare*).
-
-**"corpo libero" nel nome solo quando distingue** da una versione con carico.
 
 ### Regole cantiere GIF (riconciliazione a tre fonti)
 
