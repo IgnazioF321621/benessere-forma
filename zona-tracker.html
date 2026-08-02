@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.02 · 09:39';
+const APP_VERSION = '2026.08.02 · 09:53';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -9042,6 +9042,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       volume_sessione: volume,
       reasoning,
       sessioni: sessioniValidate,
+      // Diagnostica: attrezzi dichiarati senza riscontro a catalogo. Come
+      // sessioni[]._diag, STRIPPATO da _trainGenSaveToDB → non sporca il jsonb.
+      _diagGear: pools.attrezziInerti || [],
     };
 
 
@@ -9190,6 +9193,30 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     if (GEAR_ALIASES[slug]) attrezzaturaSet.add(GEAR_ALIASES[slug]);
   });
 
+  // ATTREZZI INERTI — un token dichiarato in onboarding che il catalogo non
+  // usa da nessuna parte non apre un solo esercizio, e fallisce in SILENZIO:
+  // l'utente crede di aver dichiarato un attrezzo utile. Casi noti al 2 ago:
+  // barra_corta/barra_lunga (alias → 'barra') e cavigliere (alias →
+  // 'cavigliera') puntano a termini con 0 occorrenze, né come attrezzo nativo
+  // né dentro un surrogato_attrezzo. Qui si CONSTATA il vuoto — il rimedio
+  // (aggiungere il termine al catalogo o correggere l'alias) è lavoro di Sheet.
+  // Un token è inerte se NÉ lui NÉ il suo alias compaiono nel catalogo.
+  const attrezziCatalogo = new Set();
+  catalog.forEach(ex => {
+    _normAttrezzo(ex.attrezzo).split(';').forEach(a => { const t = a.trim(); if (t) attrezziCatalogo.add(t); });
+    String(ex.surrogato_attrezzo || '').toLowerCase().split('+')
+      .forEach(a => { const t = _normAttrezzo(a); if (t) attrezziCatalogo.add(t); });
+  });
+  const attrezziInerti = (Array.isArray(attrezzatura) ? attrezzatura : [])
+    .map(_normAttrezzo)
+    .filter(slug => slug && slug !== 'corpo_libero')
+    .filter(slug => !attrezziCatalogo.has(slug)
+                 && !(GEAR_ALIASES[slug] && attrezziCatalogo.has(GEAR_ALIASES[slug])));
+  if (attrezziInerti.length) {
+    console.warn('[train-gen] attrezzi dichiarati che non esistono nel catalogo (0 esercizi aperti):',
+      attrezziInerti.join(', '));
+  }
+
   const tipoAllenNorm = String(tipoAllen || '').toLowerCase().trim();
   const tipoAllenAlias = LUOGO_ALIASES[tipoAllenNorm] || null;
 
@@ -9300,7 +9327,7 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     // 'recupero' ignorato in questa fase
   });
 
-  return { poolPrincipali, poolFinisher, poolFinisherTabata, poolRiscaldamento, poolCarry, attrezzaturaSet };
+  return { poolPrincipali, poolFinisher, poolFinisherTabata, poolRiscaldamento, poolCarry, attrezzaturaSet, attrezziInerti };
 }
 
 // DORMIENTE (29 mag): non più chiamata dal generatore — il riempimento bonus
@@ -10139,11 +10166,13 @@ async function _trainGenSaveToDB(userId, scheda) {
 
   // Step 2: INSERT nuova riga attiva
   try {
-    // Strip _diag (diagnostica Regola A) dalle sessioni prima del save:
-    // resta nel valore di ritorno (ztSchedaWhy) ma NON sporca il jsonb in DB.
+    // Strip _diag (diagnostica Regola A) dalle sessioni + _diagGear (attrezzi
+    // inerti) dalla radice prima del save: restano nel valore di ritorno
+    // (ztSchedaWhy) ma NON sporcano il jsonb in DB.
+    const { _diagGear, ...schedaNoGear } = (scheda || {});
     const schedaClean = (scheda && Array.isArray(scheda.sessioni))
-      ? { ...scheda, sessioni: scheda.sessioni.map(({ _diag, ...rest }) => rest) }
-      : scheda;
+      ? { ...schedaNoGear, sessioni: scheda.sessioni.map(({ _diag, ...rest }) => rest) }
+      : schedaNoGear;
     const payload = {
       user_id: userId,
       blocco_n: bloccoN,
@@ -10288,6 +10317,7 @@ window.ztSchedaWhy = async function(opts = {}) {
     livello_mappato:  scheda.livello_mappato,
     tipo_allenamento: scheda.tipo_allenamento,
     attrezzatura:     (scheda.attrezzatura || []).join(','),
+    attrezzi_inerti:  (scheda._diagGear || []).join(',') || '—',
     giorni:           scheda.giorni_allenamento,
     volume:           scheda.volume_sessione,
     sessioni_count:   (scheda.sessioni || []).length,
