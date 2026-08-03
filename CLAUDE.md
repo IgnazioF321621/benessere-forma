@@ -95,6 +95,8 @@ Quando la zona fu preparata **0 codici** puntavano a una sua riga: non c'erano r
 15. **Riclassificazione funzionale delle altre zone** — il vocabolario anatomico vale ancora per le zone non core. Da valutare se il modello a funzioni (natura + piano) serva altrove o resti specifico del core.
 16. **Liberi indicizzati senza codice** — GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo è **decisione aperta, non presa**. Da Bicipiti e Braccia: 5 (`curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`). Stesso trattamento dei liberi di Addominali e Core.
 17. **Cinque attrezzi a catalogo non dichiarabili in onboarding** — è il cantiere 14 dal lato opposto: lì gli slug dichiarabili non aprivano esercizi, qui gli esercizi non sono raggiungibili da nessuno slug. Finché l'onboarding non li espone, questi **8 codici non escono mai dal generatore**: `sacco` (EX588 · EX595) · `battle rope` (EX587) · `scaletta agilità` (EX600 · EX603) · `conetti` (EX597 · EX606) · `corda per saltare` (EX610). Cinque di essi sono comunque eseguibili a casa — EX597/EX600/EX603/EX606 via surrogato `corpo libero`, EX610 di suo — quindi il buco è di dichiarazione, non di fattibilità. ⚠️ `corda per saltare` è token distinto **apposta**: `corda` a catalogo è l'attacco al cavo (9 esercizi), e riusarlo aprirebbe i pullover al cavo a chi dichiara la corda per saltare.
+
+Primo costo concreto misurato (3 ago): sul pool Tabata di Ignazio (casa, avanzato) il grezzo è 30 e ne restano **25**. Dei 5 esclusi, **4 cadono per questi token** — EX587 `battle rope`, EX588/EX595 `sacco`, EX610 `corda per saltare` — e il quinto (EX268) per i manubri, che invece sono dichiarabili. EX610 è il caso che pesa: eseguibile da chiunque abbia una corda, escluso solo perché il token non è dichiarabile.
 18. **Testi di EX049 da riscrivere sulla propria GIF** — EX049 è `Skip ginocchia alte`, agganciato e verificato, ma `setup`/`esecuzione`/`errori` sono ancora quelli ereditati da `High knees a marcia`: «mani all'altezza dell'ombelico (pronate, palmi giù)», «alza il ginocchio verso la mano», «marcia non corsa». Quel testo **non descrive la sua GIF** — braccia libere in opposizione, ginocchio sopra l'orizzontale, fase di volo — ma descrive quasi parola per parola la GIF di **EX613 `Skip sul posto`**, i cui testi sono stati scritti apposta su mani ferme come riferimento e piede basso. Finché EX049 non viene riscritto i due testi si sovrappongono.
 
 ## Bug noti aperti
@@ -107,7 +109,6 @@ Quando la zona fu preparata **0 codici** puntavano a una sua riga: non c'erano r
 - **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente, non generato dal cantiere)
 - **Rollback `weekly_plans` silenzioso** — nel postino Nutrition, `rollRes` è assegnato e mai letto (residuo `8f46576`). Poiché supabase-js non lancia sugli errori API, un rollback fallito non viene rilevato da nessuno
 - **`?schedaDebug=1` scollegato** — sopravvive 1 solo `console.log` sotto `window._trainGenDebug`. Il flag si accende, il dry-run gira, non stampa niente. Quattro blocchi vuoti residui: tre in `_trainGenPickByPattern` (due con soli calcoli morti, un `else if` vuoto) e uno nel carry. Il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
-- **Tabata congelato** — `_trainGenBuildTabata` riceve `sessionIndex: typeOrderIdx` senza `rigenIdx`: stessi 8 esercizi su 13 candidati dalla prima scheda, più collisione Upper/Lower. Correzione nota, non ancora applicata
 - **5 candidati core senza GIF** — EX023 Pallof press · EX032 Hollow hold · EX036 Bird dog · EX046 Stir the pot · EX109 Plank shoulder taps. Per Bird dog la GIF esiste in biblioteca: manca solo il `gif_slug`
 - **Deltoidi posteriori: 1 solo candidato** nel pool casa. Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altro gruppo al minimo: deltoidi laterali 3
 
@@ -326,7 +327,7 @@ Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: 120 dei 283 esercizi ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo 582 righe): `poolPrincipali` 283 · `poolFinisher` 103 · `poolRiscaldamento` 17 · pool core 64. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, **catalogo 610 righe**, 3 ago): `poolPrincipali` 283 · `poolFinisher` 115 · `poolRiscaldamento` 28 · pool core 64 · `poolFinisherTabata` 25. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato. ⚠️ La baseline si sposta anche quando cambia il **catalogo**, non solo il codice: le 28 righe di Cardio hanno portato finisher 103→115 e riscaldamento 17→28 senza che nessuno toccasse i filtri (`poolPrincipali` e core invariati: quelle righe hanno `gruppo_target` vuoto e non entrano fra i principali). Rimisurare dopo ogni sync del Sheet.
 
 **Core: quattro funzioni, due nature** (2 ago 2026, commit `f16e035`).
 
@@ -345,7 +346,7 @@ Upper/Push/Pull → piano trasverso (anti-rotazione + rotazione). Lower/Legs →
 
 ⚠️ **`_trainGenIsIsometric` discrimina sulla funzione, non sul pattern.** Prima classificava isometrico ogni `pattern = core` non intercettato da regex sui nomi: con le funzioni nuove tutti e 43 i dinamici sarebbero usciti prescritti in secondi (un crunch "30-45 sec"). Ora la natura la dichiara il `gruppo_target`, **controllato prima delle euristiche sul nome** — "Plank laterale crunch obliquo" è `core rotazione` ma cade sulla regex `/plank/`. Le tenute vanno a tempo, i dinamici a ripetizioni.
 
-**Indice di rotazione: `sessionIdx` (assoluto), non `occurrenceIdx`.** L'occorrenza dentro il tipo vale `0` sia per Upper A sia per Lower A: due sessioni di categoria diversa che attingono alla **stessa lista** con lo **stesso indice** convergono sullo stesso esercizio. Era il difetto degli slot core (corretto in `f16e035`, ora `sessionIdx + rigenIdx`, con `+0` e `+1` per i due slot) ed è tuttora quello del **Tabata**, che in più non riceve affatto `rigenIdx`.
+**Indice di rotazione: `sessionIdx` (assoluto), non `occurrenceIdx`.** L'occorrenza dentro il tipo vale `0` sia per Upper A sia per Lower A: due sessioni di categoria diversa che attingono alla **stessa lista** con lo **stesso indice** convergono sullo stesso esercizio. Era il difetto degli slot core (corretto in `f16e035`, ora `sessionIdx + rigenIdx`, con `+0` e `+1` per i due slot) ed era quello del **Tabata**, che in più non riceveva affatto `rigenIdx`: corretto in `054a495` con `sessionIdx + rigenIdx * numero di sessioni`. Il fattore moltiplicativo fa avanzare la finestra di un blocco intero, così una scheda non ripropone ciò che aveva la precedente — a passo 1 la Upper A della scheda N riceverebbe quello che aveva la Lower A della N−1.
 
 I compound hanno la stessa forma di indice ma non manifestano il difetto: Upper e Lower chiedono pattern diversi, quindi pescano da liste disgiunte. **Il discrimine non è l'offset, è se le liste sono disgiunte.** Il carry conclusivo è il riferimento corretto: distribuisce su `sessionIdx` e non collide mai.
 
@@ -384,7 +385,7 @@ RIR attivo SOLO per intermedio/avanzato.
 
 **Cautele**: `limitazioni` × `zone_rischio` → prima ADATTA (`adattamento`), poi SOSTITUISCE (`alternativa`). Alternativa accettata solo se nel Set ammissibili (unione 5 pool filtrati luogo/attrezzo/livello), altrimenti skip `alternative-not-eligible`. Vale anche per Tabata.
 
-**Finisher Tabata**: solo `dimagrimento`/`ricomposizione`, ~5 min, basso impatto, `uso=finisher`. Upper Pump: niente Tabata.
+**Finisher Tabata**: solo `dimagrimento`/`ricomposizione`, ~5 min, basso impatto, `uso=finisher`. Upper Pump: niente Tabata. 4 esercizi distinti per sessione, fissi dentro la scheda e rinnovati a ogni rigenerazione (indice `sessionIdx + rigenIdx × numero di sessioni`, vedi *Indice di rotazione*).
 
 **Isolamenti bonus**: pescano SOLO da `uso=principale`.
 
