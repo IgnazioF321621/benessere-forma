@@ -296,6 +296,16 @@ Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi
 
 Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi propri di esercizio e restano interi.
 
+**12. Lato del carico negli esercizi unilaterali** — quando un esercizio si esegue su una gamba o un braccio solo e il carico può stare dallo stesso lato dell'arto che lavora o dal lato opposto, la differenza si dichiara nel nome con la coppia chiusa `stesso lato` · `lato opposto`.
+
+Nessuna altra formulazione è ammessa. In particolare **non** si usano `omolaterale` e `controlaterale`: sono corretti ma sono gergo, e il catalogo è leggibile da chi si allena, non da chi studia anatomia.
+
+**Posizione nel nome**: è una variante, quindi segue l'attrezzo e precede la posizione, secondo l'ordine della regola 2 — `[Movimento] [Attrezzo] [Variante] [Posizione]`.
+
+**Si scrive solo quando distingue.** Se di quell'esercizio esiste una sola versione a catalogo, il lato del carico non si dichiara: la voce serve a separare due esercizi che altrimenti avrebbero lo stesso nome, non ad allungare i nomi per completezza descrittiva.
+
+Nello slug le due parole seguono le regole ordinarie (regola 6): minuscole, separate da trattino, nessun accento.
+
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
 **Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento, che si affronta a parte (vedi *Lista da consolidare*).
