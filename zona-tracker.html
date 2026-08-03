@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.02 · 10:40';
+const APP_VERSION = '2026.08.03 · 07:03';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -8965,9 +8965,22 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     //   { type:'tabata', work_sec:20, rest_sec:10, round:8, exercises:[4 distinti] }
     // 4 esercizi cardio_metabolico distinti che si alternano sui 8 round
     // (ogni esercizio fa 2 round, ~4 min effettivi + transizioni = ~5 min).
-    // Round-robin tra sessioni via typeOrderIdx (Upper A pesca diversi da
-    // Upper B, Lower A da Lower B). Cautele applicate per sicurezza.
-    // No-op se obiettivo non lo richiede o pool tabata vuoto.
+    // Rotazione (3 ago 2026) — l'indice passato al Tabata è
+    //   sessionIdx (assoluto nello split) + rigenIdx * numero di sessioni
+    // e sostituisce typeOrderIdx, che valeva 0 sia per Upper A sia per Lower A
+    // (due sessioni con lo STESSO indice sulla STESSA lista → stessi 4 esercizi:
+    // su 4 sessioni uscivano 2 soli set distinti) e non cambiava mai fra una
+    // generazione e l'altra (stesso Tabata su ogni scheda, per sempre — il pool
+    // era cresciuto da 14 a 30 senza che ne uscisse un esercizio nuovo).
+    //   · sessionIdx    → le sessioni della stessa scheda pescano set diversi
+    //   · rigenIdx      → a ogni nuova scheda i 4 esercizi cambiano
+    //   · × numSessioni → passo pari a un blocco intero, così una scheda non
+    //                     ripropone ciò che aveva la scheda precedente
+    // Dentro la stessa scheda restano fissi: la scheda è un documento e non
+    // deve cambiare sotto le mani dell'utente (rotazione per allenamento
+    // esplicitamente scartata). typeOrderIdx resta come fallback difensivo se
+    // sessionIdx non fosse valorizzato.
+    const _tabataNumSessioni = Math.max(1, splitArray.length);
     const typeProgressivoForFinisher = {};
     splitArray.forEach(t => { typeProgressivoForFinisher[t] = 0; });
     const sessioniConFinisher = sessioniProcessate.map(s => {
@@ -8976,12 +8989,14 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // FASE A — la seduta Pump è già un lavoro metabolico ad alte reps → niente
       // Tabata in coda (sarebbe ridondante e allungherebbe una seduta nata corta).
       if (!addFinisher || s.resolvedType === 'Pump') return s;
+      const _tabataIdx = (Number.isFinite(s.sessionIdx) ? s.sessionIdx : typeOrderIdx)
+        + rigenIdx * _tabataNumSessioni;
       const finisher = _trainGenBuildTabata({
         poolTabata: pools.poolFinisherTabata,
         limitazioni,
         catalogMap,
         ammissibili: ammissibiliSet,
-        sessionIndex: typeOrderIdx,
+        sessionIndex: _tabataIdx,
         sessionType: s.splitType,
       });
       if (!finisher) return s; // pool vuoto / cautele troppo restrittive
