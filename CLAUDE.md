@@ -1,6 +1,8 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages.
+PWA wellness single-file HTML, hostata su GitHub Pages. *(CLAUDE.md aggiornato: 7 agosto 2026)*
+
+**Indice**: File e URL · Servizi · Pattern tecnici critici · Workflow operativo · Stato corrente · Prossimi cantieri · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system (flusso GIF, regole di migrazione, nomenclatura v2, cantiere GIF) · Coach generatore · Audio Training · Rotazione e ciclo Training
 
 ## File e URL
 
@@ -30,13 +32,23 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
 - Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`. Cache name: `zt-v2`
 - `APP_VERSION` aggiornata automaticamente dal pre-commit hook git
-- PostgREST tronca SELECT al limite default → **paginare sempre** su tabelle >1000 righe (es. `biblioteca_gif`)
-- `biblioteca_gif` supera 1.000 righe: senza paginazione compaiono orfani fantasma nelle verifiche
+- PostgREST tronca SELECT al limite default → **paginare sempre** su tabelle >1000 righe (es. `biblioteca_gif`, che supera le 1.000): senza paginazione compaiono orfani fantasma nelle verifiche
 - Il ciclo canonico a 7 include `rest`: ogni logica che itera il ciclo deve gestire slot non loggabili (`rest`/`rest_injury`)
 - La settimana ciclo si legge SOLO da `getCycleWeekInfo()` — vietato ricalcolarla inline
 - TSV/CSV da Google Sheet: arrivano **UTF-8 con BOM + CRLF** — `csv.DictReader` senza `encoding='utf-8-sig'` produce silenziosamente 0 righe valide (la prima chiave diventa `﻿slug`). Controllare sempre il conteggio righe parsate
 - **Path e nomi file SEMPRE ASCII**: Storage rifiuta chiavi NFD con `400 InvalidKey`. I file macOS sono in NFD (la `ù` è `u` + U+0300). Accenti solo in `nome_italiano`/catalogo, mai nel path o filename
 - Il `:` nel filename è ammesso in Storage e NON viene sanificato (verificato su 5 file in `Tricipiti/`)
+
+---
+
+## Workflow operativo (vincolante)
+
+- **Divisione dei ruoli**: Claude chat = decisioni e brief · Claude Design = mockup · Claude Code = tutte le scritture su codice, Storage, DB, git. Nessuna sovrapposizione.
+- **Un passo alla volta**: Ignazio conferma prima di procedere. Nessuna proposta speculativa prima di aver letto DB e codice reali.
+- **Dry-run e backup** prima di ogni scrittura su Storage o DB.
+- **Resoconto obbligatorio a 6 punti** dopo ogni modifica: (1) file modificati con path esatto · (2) cosa è cambiato · (3) commit hash + branch · (4) push status su `origin/main` · (5) GitHub Pages ETA · (6) APP_VERSION.
+- **Commit message con conteggi reali misurati**, mai stimati.
+- **Comunicazione**: risposte brevi, dirette, senza gergo da sviluppatore verso Ignazio (non è un developer).
 
 ---
 
