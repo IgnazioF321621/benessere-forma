@@ -227,7 +227,8 @@ L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale 
 - **`ignoto` blocca come `diverso`**: un'impronta non determinabile non diventa mai "a posto" per silenzio
 - **Il download è l'eccezione, si chiede a voce, e vale per un file solo**: `prepara.py --scarica`, `verifica_worker.py --sha EX###`. Mai a tappeto
 - **Ogni strumento che può scaricare stampa i byte a fine esecuzione, anche a zero** (`stampa_consumo()`). Senza quel numero, i consumi si possono solo stimare
-- ⚠️ In `lavoro/` restano `_esegui_gambe_e_glutei.py` e `_costruisci_gambe_e_glutei.py`, residui one-off del cantiere Gambe: **scaricano ancora a tappeto e non vanno più lanciati**
+- In `lavoro/` restano `_esegui_gambe_e_glutei.py` e `_costruisci_gambe_e_glutei.py`, residui one-off del cantiere Gambe che scaricavano a tappeto: **disinnescati il 7 agosto**, si fermano all'avvio prima di toccare la rete. Originali in `_backup/oneoff_gambe_originali_20260807T161449/`
+- ⚠️ Fuori da `biblioteca-nomi` l'unico che scarica oggetti è `tools/auditor_nomenclatura.py`, e solo per gli slug in collisione (**oggi 0**, quindi scarica nulla). Ha `--no-hash` per spegnerlo del tutto
 
 **Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta:
 
