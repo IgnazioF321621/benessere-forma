@@ -1,0 +1,4199 @@
+{
+ "quando": "2026-08-07T14:58:20",
+ "_catalogo_righe": [
+  {
+   "codice": "EX001",
+   "nome": "Chest press",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX002",
+   "nome": "Distensioni manubri panca piana",
+   "gif_slug": "distensioni-manubri-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX003",
+   "nome": "Piegamenti",
+   "gif_slug": "piegamenti",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX004",
+   "nome": "Croci cavi alti",
+   "gif_slug": "croci-cavi-alti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX005",
+   "nome": "Curl bilanciere panca Scott seduto",
+   "gif_slug": "curl-bilanciere-panca-scott-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX006",
+   "nome": "Lento avanti bilanciere in piedi",
+   "gif_slug": "lento-avanti-bilanciere-in-piedi",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX007",
+   "nome": "Curl bilanciere arm blaster",
+   "gif_slug": "curl-bilanciere-arm-blaster",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX008",
+   "nome": "Trazioni sbarra",
+   "gif_slug": "trazioni-sbarra",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX009",
+   "nome": "Lat machine frontale",
+   "gif_slug": "lat-machine-frontale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX010",
+   "nome": "Curl hammer manubri alternato panca verticale",
+   "gif_slug": "curl-hammer-manubri-alternato-panca-verticale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX011",
+   "nome": "Rematore bilanciere busto flesso",
+   "gif_slug": "rematore-bilanciere-busto-flesso",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX012",
+   "nome": "Curl un braccio cavo basso in piedi",
+   "gif_slug": "curl-un-braccio-cavo-basso-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX013",
+   "nome": "Squat corpo libero",
+   "gif_slug": "squat-corpo-libero",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX014",
+   "nome": "Curl hammer manubri panca inclinata",
+   "gif_slug": "curl-hammer-manubri-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX015",
+   "nome": "Affondo sul posto",
+   "gif_slug": "affondo-sul-posto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX016",
+   "nome": "Leg press orizzontale macchina",
+   "gif_slug": "leg-press-orizzontale-macchina",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX017",
+   "nome": "Hip thrust bilanciere panca",
+   "gif_slug": "hip-thrust-bilanciere-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX018",
+   "nome": "Stacco rumeno bilanciere",
+   "gif_slug": "stacco-rumeno-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX019",
+   "nome": "Ponte glutei",
+   "gif_slug": "ponte-glutei",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX020",
+   "nome": "Curl inverso manubri",
+   "gif_slug": "curl-inverso-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX021",
+   "nome": "Plank",
+   "gif_slug": "plank",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX022",
+   "nome": "Dead bug",
+   "gif_slug": "dead-bug",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX023",
+   "nome": "Pallof press con elastico",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX024",
+   "nome": "Curl bilanciere",
+   "gif_slug": "curl-bilanciere",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX025",
+   "nome": "Curl spider bilanciere panca inclinata",
+   "gif_slug": "curl-spider-bilanciere-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX026",
+   "nome": "Pushdown corda cavo",
+   "gif_slug": "pushdown-corda-cavo",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX027",
+   "nome": "French press bilanciere supino panca piana",
+   "gif_slug": "french-press-bilanciere-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX028",
+   "nome": "Calf raise",
+   "gif_slug": "calf-raise",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX029",
+   "nome": "Cat-cow (mobilita colonna)",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX030",
+   "nome": "Band pull-apart (attivazione scapole)",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX031",
+   "nome": "Mountain climber controllato",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX032",
+   "nome": "Hollow hold",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX033",
+   "nome": "Step-up al ritmo",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX034",
+   "nome": "Piegamenti a V",
+   "gif_slug": "piegamenti-a-v",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX035",
+   "nome": "Single-leg glute bridge",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX036",
+   "nome": "Bird dog",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX037",
+   "nome": "Plank laterale avambraccio",
+   "gif_slug": "plank-laterale-avambraccio",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX038",
+   "nome": "Affondo camminato",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX039",
+   "nome": "Affondo indietro manubri",
+   "gif_slug": "affondo-indietro-manubri",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX040",
+   "nome": "Squat wall sit",
+   "gif_slug": "squat-wall-sit",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX041",
+   "nome": "Step-up alto su panca",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX042",
+   "nome": "Plank con avambracci su fitball",
+   "gif_slug": "plank-con-avambracci-su-fitball",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX043",
+   "nome": "Leg curl su fitball (hamstring curl supino)",
+   "gif_slug": null,
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX044",
+   "nome": "Hip thrust su fitball",
+   "gif_slug": null,
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX045",
+   "nome": "Squat wall fitball",
+   "gif_slug": "squat-wall-fitball",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX046",
+   "nome": "Stir the pot (anti-rotazione su fitball)",
+   "gif_slug": null,
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX047",
+   "nome": "Squat bulgaro corpo libero",
+   "gif_slug": "squat-bulgaro-corpo-libero",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX048",
+   "nome": "Jumping jack low-impact",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX049",
+   "nome": "Skip ginocchia alte",
+   "gif_slug": "skip-ginocchia-alte",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX050",
+   "nome": "Skater laterale senza salto",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX051",
+   "nome": "Squat veloci a corpo libero",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX052",
+   "nome": "Affondi alternati a ritmo",
+   "gif_slug": null,
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX053",
+   "nome": "Boxe pugni alternati",
+   "gif_slug": "boxe-pugni-alternati",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX054",
+   "nome": "Burpee modificato low-impact",
+   "gif_slug": null,
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX055",
+   "nome": "Alzate laterali manubri in piedi",
+   "gif_slug": "alzate-laterali-manubri-in-piedi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX056",
+   "nome": "Curl spider bilanciere panca piana",
+   "gif_slug": "curl-spider-bilanciere-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX057",
+   "nome": "Alzate laterali fianco manubrio panca inclinata 30 gradi",
+   "gif_slug": "alzate-laterali-fianco-manubrio-panca-inclinata-30-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX058",
+   "nome": "Tirate al viso corda cavo alto",
+   "gif_slug": "tirate-al-viso-corda-cavo-alto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX059",
+   "nome": "Croci inverse manubri busto flesso",
+   "gif_slug": "croci-inverse-manubri-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX060",
+   "nome": "Curl hammer manubri alternato",
+   "gif_slug": "curl-hammer-manubri-alternato",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX061",
+   "nome": "Curl alternato manubri panca Scott",
+   "gif_slug": "curl-alternato-manubri-panca-scott",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX062",
+   "nome": "Kickback manubri busto flesso",
+   "gif_slug": "kickback-manubri-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX063",
+   "nome": "Dip panca piedi a terra",
+   "gif_slug": "dip-panca-piedi-a-terra",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX064",
+   "nome": "Leg curl",
+   "gif_slug": null,
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX065",
+   "nome": "Calf raise manubrio panca piana su step seduto",
+   "gif_slug": "calf-raise-manubrio-panca-piana-su-step-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX066",
+   "nome": "Calf raise su step una gamba",
+   "gif_slug": "calf-raise-su-step-una-gamba",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX067",
+   "nome": "Abduzione laterale anca",
+   "gif_slug": null,
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX068",
+   "nome": "Kickback gluteo in quadrupedia",
+   "gif_slug": null,
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX069",
+   "nome": "Wrist curl da seduto",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX070",
+   "nome": "Scrollate bilanciere",
+   "gif_slug": "scrollate-bilanciere",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX071",
+   "nome": "Distensioni manubri panca inclinata",
+   "gif_slug": "distensioni-manubri-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX072",
+   "nome": "Dip parallele",
+   "gif_slug": "dip-parallele",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX073",
+   "nome": "Distensioni manubri terra",
+   "gif_slug": "distensioni-manubri-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX074",
+   "nome": "Lento Arnold manubri in piedi",
+   "gif_slug": "lento-arnold-manubri-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX075",
+   "nome": "Push press bilanciere",
+   "gif_slug": "push-press-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX076",
+   "nome": "Rematore manubri prono panca piana",
+   "gif_slug": "rematore-manubri-prono-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX077",
+   "nome": "Rematore invertito TRX",
+   "gif_slug": "rematore-invertito-trx",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX078",
+   "nome": "Renegade row",
+   "gif_slug": null,
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX079",
+   "nome": "Trazioni sbarra presa inversa",
+   "gif_slug": "trazioni-sbarra-presa-inversa",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX080",
+   "nome": "Pullup hold",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX081",
+   "nome": "Squat bilanciere frontale",
+   "gif_slug": "squat-bilanciere-frontale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX082",
+   "nome": "Squat cosacco",
+   "gif_slug": "squat-cosacco",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX083",
+   "nome": "Squat pistol corpo libero",
+   "gif_slug": "squat-pistol-corpo-libero",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX084",
+   "nome": "Kettlebell swing",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX085",
+   "nome": "Good morning a corpo libero",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX086",
+   "nome": "Stacco da terra sumo bilanciere",
+   "gif_slug": "stacco-da-terra-sumo-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX087",
+   "nome": "Stacco rumeno staggered stance",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX088",
+   "nome": "Camminata manubri",
+   "gif_slug": "camminata-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX089",
+   "nome": "Suitcase carry",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX090",
+   "nome": "Overhead walk",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX091",
+   "nome": "Turkish get-up",
+   "gif_slug": null,
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX092",
+   "nome": "Curl alternato manubri",
+   "gif_slug": "curl-alternato-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX093",
+   "nome": "Estensioni manubrio un braccio dietro nuca in piedi",
+   "gif_slug": "estensioni-manubrio-un-braccio-dietro-nuca-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX094",
+   "nome": "Prone Y-W raise",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX095",
+   "nome": "Leg curl macchina prona una gamba",
+   "gif_slug": "leg-curl-macchina-prona-una-gamba",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX096",
+   "nome": "Nordic curl panca romana",
+   "gif_slug": "nordic-curl-panca-romana",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX097",
+   "nome": "Leg extension macchina entrambe le gambe",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX098",
+   "nome": "Croci manubri panca inclinata",
+   "gif_slug": "croci-manubri-panca-inclinata",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX099",
+   "nome": "Pullover manubrio bacino allineato panca piana",
+   "gif_slug": "pullover-manubrio-bacino-allineato-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX100",
+   "nome": "Alzate frontali manubri in piedi",
+   "gif_slug": "alzate-frontali-manubri-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX101",
+   "nome": "Extrarotazione cavo",
+   "gif_slug": "extrarotazione-cavo",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX102",
+   "nome": "Wood chop",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX103",
+   "nome": "Russian twist",
+   "gif_slug": "russian-twist",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX104",
+   "nome": "Croci cavi alti traiettoria alta",
+   "gif_slug": "croci-cavi-alti-traiettoria-alta",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX105",
+   "nome": "Hollow rock",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX106",
+   "nome": "Scissor kicks",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX108",
+   "nome": "Windshield wipers",
+   "gif_slug": null,
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX109",
+   "nome": "Plank shoulder taps",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX111",
+   "nome": "Side bend",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX112",
+   "nome": "Box jump",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX113",
+   "nome": "Broad jump",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX114",
+   "nome": "Corsa calciata sul posto",
+   "gif_slug": "corsa-calciata-sul-posto",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX115",
+   "nome": "Lateral shuffle",
+   "gif_slug": null,
+   "livello": null
+  },
+  {
+   "codice": "EX116",
+   "nome": "Combo boxe (gancio-montante)",
+   "gif_slug": null,
+   "livello": null
+  },
+  {
+   "codice": "EX117",
+   "nome": "World s greatest stretch",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX118",
+   "nome": "Inchworm",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX119",
+   "nome": "Slanci gamba laterali",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX120",
+   "nome": "Affondo con rotazione",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX121",
+   "nome": "Riscaldamento spalle (circonduzioni)",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX122",
+   "nome": "Halo",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX123",
+   "nome": "Thread the needle",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX124",
+   "nome": "Rotazione toracica (T-spine)",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX125",
+   "nome": "Child s pose",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX126",
+   "nome": "Stretch flessori anca in ginocchio",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX127",
+   "nome": "Stretch ischiocrurali seduto",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX128",
+   "nome": "Stretch petto al muro",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX129",
+   "nome": "Foam roll ischiocrurali",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX130",
+   "nome": "Foam roll bandelletta IT",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX131",
+   "nome": "Passive hang",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX132",
+   "nome": "Goblet squat",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX133",
+   "nome": "Crunch bicicletta gambe tese 45 gradi",
+   "gif_slug": "crunch-bicicletta-gambe-tese-45-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX134",
+   "nome": "Crunch bicicletta",
+   "gif_slug": "crunch-bicicletta",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX135",
+   "nome": "Crunch obliquo rotazione",
+   "gif_slug": "crunch-obliquo-rotazione",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX136",
+   "nome": "Crunch sforbiciata ampia",
+   "gif_slug": "crunch-sforbiciata-ampia",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX137",
+   "nome": "Crunch obliquo tocco caviglie",
+   "gif_slug": "crunch-obliquo-tocco-caviglie",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX138",
+   "nome": "Crunch braccia tese gambe 45 gradi",
+   "gif_slug": "crunch-braccia-tese-gambe-45-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX139",
+   "nome": "Crunch farfalla toe touch",
+   "gif_slug": "crunch-farfalla-toe-touch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX140",
+   "nome": "Crunch cavo alto in ginocchio",
+   "gif_slug": "crunch-cavo-alto-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX141",
+   "nome": "Crunch cavo alto",
+   "gif_slug": "crunch-cavo-alto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX142",
+   "nome": "Crunch machine seduto",
+   "gif_slug": "crunch-machine-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX143",
+   "nome": "Crunch braccia tese dietro",
+   "gif_slug": "crunch-braccia-tese-dietro",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX144",
+   "nome": "Crunch con peso",
+   "gif_slug": "crunch-con-peso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX145",
+   "nome": "Crunch mani al petto gambe 90 gradi",
+   "gif_slug": "crunch-mani-al-petto-gambe-90-gradi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX146",
+   "nome": "Crunch mani al petto",
+   "gif_slug": "crunch-mani-al-petto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX147",
+   "nome": "Crunch mani dietro testa gambe 90 gradi",
+   "gif_slug": "crunch-mani-dietro-testa-gambe-90-gradi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX148",
+   "nome": "Crunch toe touch gambe verticali",
+   "gif_slug": "crunch-toe-touch-gambe-verticali",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX149",
+   "nome": "Crunch sforbiciata mani sotto glutei",
+   "gif_slug": "crunch-sforbiciata-mani-sotto-glutei",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX150",
+   "nome": "Crunch inverso doppio step",
+   "gif_slug": "crunch-inverso-doppio-step",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX152",
+   "nome": "Crunch inverso gambe tese panca piana",
+   "gif_slug": "crunch-inverso-gambe-tese-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX153",
+   "nome": "Sollevamento gambe tese power tower",
+   "gif_slug": "sollevamento-gambe-tese-power-tower",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX154",
+   "nome": "Crunch inverso gambe tese panca declinata",
+   "gif_slug": "crunch-inverso-gambe-tese-panca-declinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX155",
+   "nome": "Crunch inverso seduto panca piana",
+   "gif_slug": "crunch-inverso-seduto-panca-piana",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX156",
+   "nome": "Crunch isometrico barchetta",
+   "gif_slug": "crunch-isometrico-barchetta",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX157",
+   "nome": "Crunch laterale sul fianco",
+   "gif_slug": "crunch-laterale-sul-fianco",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX158",
+   "nome": "Crunch mani dietro testa",
+   "gif_slug": "crunch-mani-dietro-testa",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX159",
+   "nome": "Crunch obliquo sul fianco gambe flesse",
+   "gif_slug": "crunch-obliquo-sul-fianco-gambe-flesse",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX160",
+   "nome": "Crunch farfalla gomiti-ginocchia",
+   "gif_slug": "crunch-farfalla-gomiti-ginocchia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX161",
+   "nome": "Crunch flessione ginocchia",
+   "gif_slug": "crunch-flessione-ginocchia",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX162",
+   "nome": "Crunch obliquo gamba accavallata",
+   "gif_slug": "crunch-obliquo-gamba-accavallata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX163",
+   "nome": "Croci cavi bassi",
+   "gif_slug": "croci-cavi-bassi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX164",
+   "nome": "Dragon flag panca piana",
+   "gif_slug": "dragon-flag-panca-piana",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX165",
+   "nome": "Flessione laterale busto cavo basso",
+   "gif_slug": "flessione-laterale-busto-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX166",
+   "nome": "Flessione laterale busto fitball",
+   "gif_slug": "flessione-laterale-busto-fitball",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX167",
+   "nome": "Flessione laterale busto panca romana",
+   "gif_slug": "flessione-laterale-busto-panca-romana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX168",
+   "nome": "Crunch forbice seduto panca piana",
+   "gif_slug": "crunch-forbice-seduto-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX169",
+   "nome": "Sollevamento gambe piegate in sospensione",
+   "gif_slug": "sollevamento-gambe-piegate-in-sospensione",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX171",
+   "nome": "Mountain climber",
+   "gif_slug": "mountain-climber",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX172",
+   "nome": "Mountain climber incrociato",
+   "gif_slug": "mountain-climber-incrociato",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX173",
+   "nome": "Plank pike fitball",
+   "gif_slug": "plank-pike-fitball",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX174",
+   "nome": "Plank spider",
+   "gif_slug": "plank-spider",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX175",
+   "nome": "Plank avambracci avanti-indietro",
+   "gif_slug": "plank-avambracci-avanti-indietro",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX176",
+   "nome": "Plank avambracci",
+   "gif_slug": "plank-avambracci",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX177",
+   "nome": "Plank laterale crunch obliquo",
+   "gif_slug": "plank-laterale-crunch-obliquo",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX178",
+   "nome": "Plank rollout fitball",
+   "gif_slug": "plank-rollout-fitball",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX179",
+   "nome": "Rollout bilanciere",
+   "gif_slug": "rollout-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX180",
+   "nome": "Rollout ab wheel in ginocchio",
+   "gif_slug": "rollout-ab-wheel-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX181",
+   "nome": "Rollout bilanciere in ginocchio",
+   "gif_slug": "rollout-bilanciere-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX182",
+   "nome": "Rotazione diagonale busto cavo alto",
+   "gif_slug": "rotazione-diagonale-busto-cavo-alto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX183",
+   "nome": "Sit-up con peso",
+   "gif_slug": "sit-up-con-peso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX184",
+   "nome": "Sit-up farfalla",
+   "gif_slug": "sit-up-farfalla",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX185",
+   "nome": "Sit-up fitball",
+   "gif_slug": "sit-up-fitball",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX186",
+   "nome": "Sit-up mani alla nuca panca declinata",
+   "gif_slug": "sit-up-mani-alla-nuca-panca-declinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX187",
+   "nome": "Sit-up mani alla nuca",
+   "gif_slug": "sit-up-mani-alla-nuca",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX188",
+   "nome": "Sit-up mani alla fronte",
+   "gif_slug": "sit-up-mani-alla-fronte",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX189",
+   "nome": "Sit-up a libro gambe tese",
+   "gif_slug": "sit-up-a-libro-gambe-tese",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX190",
+   "nome": "Sollevamento gambe tese",
+   "gif_slug": "sollevamento-gambe-tese",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX191",
+   "nome": "V-sit sforbiciata",
+   "gif_slug": "v-sit-sforbiciata",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX192",
+   "nome": "V-sit tuck up",
+   "gif_slug": "v-sit-tuck-up",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX193",
+   "nome": "Crunch inverso gambe cavo basso",
+   "gif_slug": "crunch-inverso-gambe-cavo-basso",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX194",
+   "nome": "V-up fitball",
+   "gif_slug": "v-up-fitball",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX195",
+   "nome": "Abduzione macchina spinta posteriore",
+   "gif_slug": "abduzione-macchina-spinta-posteriore",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX196",
+   "nome": "Abduzione macchina seduto",
+   "gif_slug": "abduzione-macchina-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX197",
+   "nome": "Abduzione appoggio in piedi",
+   "gif_slug": "abduzione-appoggio-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX198",
+   "nome": "Abduzione una gamba cavo",
+   "gif_slug": "abduzione-una-gamba-cavo",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX199",
+   "nome": "Abduzione una gamba macchina spinta laterale",
+   "gif_slug": "abduzione-una-gamba-macchina-spinta-laterale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX200",
+   "nome": "Adduzione macchina seduto",
+   "gif_slug": "adduzione-macchina-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX201",
+   "nome": "Adduzione anca decubito laterale piede in appoggio",
+   "gif_slug": "adduzione-anca-decubito-laterale-piede-in-appoggio",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX202",
+   "nome": "Adduzione anca cavo",
+   "gif_slug": "adduzione-anca-cavo",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX203",
+   "nome": "Adduzione una gamba macchina in piedi",
+   "gif_slug": "adduzione-una-gamba-macchina-in-piedi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX204",
+   "nome": "Affondo avanti bilanciere",
+   "gif_slug": "affondo-avanti-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX205",
+   "nome": "Affondo avanti manubri",
+   "gif_slug": "affondo-avanti-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX206",
+   "nome": "Affondo avanti parziale manubri",
+   "gif_slug": "affondo-avanti-parziale-manubri",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX207",
+   "nome": "Croci cavi in piedi",
+   "gif_slug": "croci-cavi-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX208",
+   "nome": "Affondo incrociato indietro bilanciere",
+   "gif_slug": "affondo-incrociato-indietro-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX209",
+   "nome": "Affondo indietro bilanciere",
+   "gif_slug": "affondo-indietro-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX210",
+   "nome": "Affondo laterale bilanciere",
+   "gif_slug": "affondo-laterale-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX211",
+   "nome": "Affondo laterale manubri",
+   "gif_slug": "affondo-laterale-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX212",
+   "nome": "Jumping pliometrico manubri",
+   "gif_slug": "jumping-pliometrico-manubri",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX213",
+   "nome": "Affondo multipower",
+   "gif_slug": "affondo-multipower",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX214",
+   "nome": "Affondo bilanciere sul posto",
+   "gif_slug": "affondo-bilanciere-sul-posto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX215",
+   "nome": "Calf raise su gradino",
+   "gif_slug": "calf-raise-su-gradino",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX216",
+   "nome": "Calf raise leg press orizzontale",
+   "gif_slug": "calf-raise-leg-press-orizzontale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX217",
+   "nome": "Donkey kick mani a terra",
+   "gif_slug": "donkey-kick-mani-a-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX218",
+   "nome": "Donkey kick avambracci a terra",
+   "gif_slug": "donkey-kick-avambracci-a-terra",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX219",
+   "nome": "Donkey kick macchina",
+   "gif_slug": "donkey-kick-macchina",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX220",
+   "nome": "Donkey kick tesa panca",
+   "gif_slug": "donkey-kick-tesa-panca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX221",
+   "nome": "Estensione anca elastico",
+   "gif_slug": "estensione-anca-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX222",
+   "nome": "Curl spider manubri panca inclinata",
+   "gif_slug": "curl-spider-manubri-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX223",
+   "nome": "Estensione anca cavo busto flesso",
+   "gif_slug": "estensione-anca-cavo-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX224",
+   "nome": "Estensione anca cavo",
+   "gif_slug": "estensione-anca-cavo",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX225",
+   "nome": "Estensione anca glute machine",
+   "gif_slug": "estensione-anca-glute-machine",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX226",
+   "nome": "Estensione anca macchina",
+   "gif_slug": "estensione-anca-macchina",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX227",
+   "nome": "Estensione anca elastico busto flesso",
+   "gif_slug": "estensione-anca-elastico-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX230",
+   "nome": "Girata al petto bilanciere",
+   "gif_slug": "girata-al-petto-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX231",
+   "nome": "Good morning bilanciere",
+   "gif_slug": "good-morning-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX232",
+   "nome": "Good morning manubrio",
+   "gif_slug": "good-morning-manubrio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX233",
+   "nome": "Hip thrust corpo libero panca",
+   "gif_slug": "hip-thrust-corpo-libero-panca",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX234",
+   "nome": "Hip thrust multipower panca",
+   "gif_slug": "hip-thrust-multipower-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX235",
+   "nome": "Hip thrust bilanciere piedi su panca",
+   "gif_slug": "hip-thrust-bilanciere-piedi-su-panca",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX236",
+   "nome": "Hip thrust talloni elevati",
+   "gif_slug": "hip-thrust-talloni-elevati",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX237",
+   "nome": "Hip thrust una gamba panca",
+   "gif_slug": "hip-thrust-una-gamba-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX238",
+   "nome": "Iperestensione inversa panca romana",
+   "gif_slug": "iperestensione-inversa-panca-romana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX239",
+   "nome": "Leg curl cavo sdraiato",
+   "gif_slug": "leg-curl-cavo-sdraiato",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX240",
+   "nome": "Leg curl macchina prona entrambe le gambe",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX241",
+   "nome": "Leg curl macchina seduto",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX242",
+   "nome": "Leg curl macchina prese anteriori seduto",
+   "gif_slug": "leg-curl-macchina-prese-anteriori-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX243",
+   "nome": "Leg curl macchina prese laterali seduto",
+   "gif_slug": "leg-curl-macchina-prese-laterali-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX244",
+   "nome": "Leg curl cavo basso",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX245",
+   "nome": "Leg curl macchina in piedi",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX246",
+   "nome": "Leg curl macchina supporto coscia",
+   "gif_slug": null,
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX247",
+   "nome": "Leg curl una gamba macchina ginocchio rialzato",
+   "gif_slug": "leg-curl-una-gamba-macchina-ginocchio-rialzato",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX248",
+   "nome": "Leg extension macchina una gamba",
+   "gif_slug": "leg-extension-macchina-una-gamba",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX249",
+   "nome": "Leg press 45 gradi",
+   "gif_slug": "leg-press-45-gradi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX250",
+   "nome": "Leg press 45 gradi una gamba",
+   "gif_slug": "leg-press-45-gradi-una-gamba",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX251",
+   "nome": "Ponte glutei piedi su panca",
+   "gif_slug": "ponte-glutei-piedi-su-panca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX252",
+   "nome": "Ponte glutei gambe tese piedi su panca",
+   "gif_slug": "ponte-glutei-gambe-tese-piedi-su-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX253",
+   "nome": "Ponte glutei manubrio",
+   "gif_slug": "ponte-glutei-manubrio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX254",
+   "nome": "Ponte glutei frog pump",
+   "gif_slug": "ponte-glutei-frog-pump",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX255",
+   "nome": "Ponte glutei una gamba piede posteriore panca",
+   "gif_slug": "ponte-glutei-una-gamba-piede-posteriore-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX256",
+   "nome": "Ponte glutei una gamba tesa allineata corpo libero",
+   "gif_slug": "ponte-glutei-una-gamba-tesa-allineata-corpo-libero",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX257",
+   "nome": "Ponte glutei una gamba verticale corpo libero",
+   "gif_slug": "ponte-glutei-una-gamba-verticale-corpo-libero",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX258",
+   "nome": "Squat cavo basso",
+   "gif_slug": "squat-cavo-basso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX259",
+   "nome": "Squat cavi bassi",
+   "gif_slug": "squat-cavi-bassi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX260",
+   "nome": "Squat multipower",
+   "gif_slug": "squat-multipower",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX261",
+   "nome": "Squat hack machine",
+   "gif_slug": "squat-hack-machine",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX262",
+   "nome": "Squat inverso hack machine",
+   "gif_slug": "squat-inverso-hack-machine",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX263",
+   "nome": "Squat bilanciere",
+   "gif_slug": "squat-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX264",
+   "nome": "Squat bilanciere al rack",
+   "gif_slug": "squat-bilanciere-al-rack",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX265",
+   "nome": "Squat bilanciere landmine",
+   "gif_slug": "squat-bilanciere-landmine",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX266",
+   "nome": "Squat sumo bilanciere",
+   "gif_slug": "squat-sumo-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX267",
+   "nome": "Squat manubri",
+   "gif_slug": "squat-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX268",
+   "nome": "Squat pliometrico manubri",
+   "gif_slug": "squat-pliometrico-manubri",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX269",
+   "nome": "Squat bulgaro bilanciere",
+   "gif_slug": "squat-bulgaro-bilanciere",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX270",
+   "nome": "Squat bulgaro manubri",
+   "gif_slug": "squat-bulgaro-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX271",
+   "nome": "Curl bilanciere EZ",
+   "gif_slug": "curl-bilanciere-ez",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX272",
+   "nome": "Squat pistol manubrio",
+   "gif_slug": "squat-pistol-manubrio",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX273",
+   "nome": "Squat profondo bilanciere",
+   "gif_slug": "squat-profondo-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX274",
+   "nome": "Squat manubri seduto su panca",
+   "gif_slug": "squat-manubri-seduto-su-panca",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX275",
+   "nome": "Squat sumo corpo libero braccia distese",
+   "gif_slug": "squat-sumo-corpo-libero-braccia-distese",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX276",
+   "nome": "Squat sumo corpo libero mani al petto",
+   "gif_slug": "squat-sumo-corpo-libero-mani-al-petto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX277",
+   "nome": "Squat sumo bilanciere frontale",
+   "gif_slug": "squat-sumo-bilanciere-frontale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX278",
+   "nome": "Squat sumo manubrio",
+   "gif_slug": "squat-sumo-manubrio",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX279",
+   "nome": "Stacco gambe tese multipower",
+   "gif_slug": "stacco-gambe-tese-multipower",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX280",
+   "nome": "Stacco gambe tese bilanciere",
+   "gif_slug": "stacco-gambe-tese-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX281",
+   "nome": "Stacco gambe tese manubri",
+   "gif_slug": "stacco-gambe-tese-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX282",
+   "nome": "Stacco da terra bilanciere",
+   "gif_slug": "stacco-da-terra-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX283",
+   "nome": "Stacco da terra manubri",
+   "gif_slug": "stacco-da-terra-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX284",
+   "nome": "Stacco da terra trap bar",
+   "gif_slug": "stacco-da-terra-trap-bar",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX285",
+   "nome": "Stacco da terra macchina presa neutra",
+   "gif_slug": "stacco-da-terra-macchina-presa-neutra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX286",
+   "nome": "Stacco rumeno manubri",
+   "gif_slug": "stacco-rumeno-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX287",
+   "nome": "Stacco rumeno una gamba palla medica",
+   "gif_slug": "stacco-rumeno-una-gamba-palla-medica",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX288",
+   "nome": "Stacco rumeno una gamba multipower",
+   "gif_slug": "stacco-rumeno-una-gamba-multipower",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX289",
+   "nome": "Stacco rumeno una gamba bilanciere",
+   "gif_slug": "stacco-rumeno-una-gamba-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX290",
+   "nome": "Stacco rumeno una gamba kettlebell",
+   "gif_slug": "stacco-rumeno-una-gamba-kettlebell",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX291",
+   "nome": "Stacco rumeno una gamba manubri",
+   "gif_slug": "stacco-rumeno-una-gamba-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX292",
+   "nome": "Step-up bilanciere",
+   "gif_slug": "step-up-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX293",
+   "nome": "Step-up cavo basso",
+   "gif_slug": "step-up-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX294",
+   "nome": "Curl bilanciere EZ panca Scott seduto",
+   "gif_slug": "curl-bilanciere-ez-panca-scott-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX295",
+   "nome": "Curl bilanciere EZ panca Scott in piedi",
+   "gif_slug": "curl-bilanciere-ez-panca-scott-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX296",
+   "nome": "Curl bilanciere EZ presa inversa",
+   "gif_slug": "curl-bilanciere-ez-presa-inversa",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX297",
+   "nome": "Curl bilanciere EZ presa larga",
+   "gif_slug": "curl-bilanciere-ez-presa-larga",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX298",
+   "nome": "Curl bilanciere EZ presa stretta",
+   "gif_slug": "curl-bilanciere-ez-presa-stretta",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX299",
+   "nome": "Curl bilanciere EZ seduto",
+   "gif_slug": "curl-bilanciere-ez-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX300",
+   "nome": "Curl croce cavi alti",
+   "gif_slug": "curl-croce-cavi-alti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX301",
+   "nome": "Curl croci cavi bassi panca inclinata",
+   "gif_slug": "curl-croci-cavi-bassi-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX302",
+   "nome": "Curl barra cavo panca piana",
+   "gif_slug": "curl-barra-cavo-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX303",
+   "nome": "Curl cavo barra EZ",
+   "gif_slug": "curl-cavo-barra-ez",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX304",
+   "nome": "Curl cavo basso barra EZ",
+   "gif_slug": "curl-cavo-basso-barra-ez",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX305",
+   "nome": "Curl squat cavo basso",
+   "gif_slug": "curl-squat-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX306",
+   "nome": "Curl cavo basso panca inclinata",
+   "gif_slug": "curl-cavo-basso-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX307",
+   "nome": "Curl cavo basso panca Scott",
+   "gif_slug": "curl-cavo-basso-panca-scott",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX308",
+   "nome": "Curl hammer corda cavo basso",
+   "gif_slug": "curl-hammer-corda-cavo-basso",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX309",
+   "nome": "Curl macchina panca Scott",
+   "gif_slug": "curl-macchina-panca-scott",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX310",
+   "nome": "Curl hammer macchina panca Scott",
+   "gif_slug": "curl-hammer-macchina-panca-scott",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX311",
+   "nome": "Curl macchina",
+   "gif_slug": "curl-macchina",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX312",
+   "nome": "Curl Zottman manubri seduto",
+   "gif_slug": "curl-zottman-manubri-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX313",
+   "nome": "Curl diagonale manubri",
+   "gif_slug": "curl-diagonale-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX314",
+   "nome": "Curl manubri in piedi",
+   "gif_slug": "curl-manubri-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX315",
+   "nome": "Curl rotazione manubri panca inclinata",
+   "gif_slug": "curl-rotazione-manubri-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX316",
+   "nome": "Curl presa inversa manubri",
+   "gif_slug": "curl-presa-inversa-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX317",
+   "nome": "Curl hammer manubri arm blaster",
+   "gif_slug": "curl-hammer-manubri-arm-blaster",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX318",
+   "nome": "Curl hammer panca Scott",
+   "gif_slug": "curl-hammer-panca-scott",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX319",
+   "nome": "Croci cavi presa prona",
+   "gif_slug": "croci-cavi-presa-prona",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX320",
+   "nome": "Curl manubri panca verticale",
+   "gif_slug": "curl-manubri-panca-verticale",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX321",
+   "nome": "Curl hammer manubri",
+   "gif_slug": "curl-hammer-manubri",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX322",
+   "nome": "Affondo indietro manubri",
+   "gif_slug": null,
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX324",
+   "nome": "Curl un braccio cavo alto",
+   "gif_slug": "curl-un-braccio-cavo-alto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX325",
+   "nome": "Curl un braccio dietro schiena cavo basso",
+   "gif_slug": "curl-un-braccio-dietro-schiena-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX326",
+   "nome": "Curl un braccio panca Scott cavo basso",
+   "gif_slug": "curl-un-braccio-panca-scott-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX327",
+   "nome": "Curl concentrato un braccio cavo basso",
+   "gif_slug": "curl-concentrato-un-braccio-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX328",
+   "nome": "Curl hammer un braccio corda cavo",
+   "gif_slug": "curl-hammer-un-braccio-corda-cavo",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX329",
+   "nome": "Curl un braccio corpo libero seduto",
+   "gif_slug": "curl-un-braccio-corpo-libero-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX330",
+   "nome": "Curl hammer manubri un braccio panca verticale",
+   "gif_slug": "curl-hammer-manubri-un-braccio-panca-verticale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX331",
+   "nome": "Curl un braccio manubrio panca inclinata",
+   "gif_slug": "curl-un-braccio-manubrio-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX332",
+   "nome": "Curl un braccio manubrio panca Scott seduto",
+   "gif_slug": "curl-un-braccio-manubrio-panca-scott-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX333",
+   "nome": "Curl un braccio manubrio panca Scott in piedi",
+   "gif_slug": "curl-un-braccio-manubrio-panca-scott-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX334",
+   "nome": "Curl hammer manubri un braccio in piedi",
+   "gif_slug": "curl-hammer-manubri-un-braccio-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX335",
+   "nome": "Curl hammer manubri un braccio panca Scott",
+   "gif_slug": "curl-hammer-manubri-un-braccio-panca-scott",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX336",
+   "nome": "Curl concentrato un braccio manubrio",
+   "gif_slug": "curl-concentrato-un-braccio-manubrio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX337",
+   "nome": "Flessione polsi bilanciere dietro schiena",
+   "gif_slug": "flessione-polsi-bilanciere-dietro-schiena",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX338",
+   "nome": "Flessione polsi bilanciere appoggio su panca",
+   "gif_slug": "flessione-polsi-bilanciere-appoggio-su-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX339",
+   "nome": "Flessione polsi inversa bilanciere in ginocchio su panca",
+   "gif_slug": "flessione-polsi-inversa-bilanciere-in-ginocchio-su-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX340",
+   "nome": "Flessione hammer polso un braccio seduto",
+   "gif_slug": "flessione-hammer-polso-un-braccio-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX341",
+   "nome": "Flessione dita pinza a molla",
+   "gif_slug": "flessione-dita-pinza-a-molla",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX342",
+   "nome": "Flessione estensione polsi rullino",
+   "gif_slug": "flessione-estensione-polsi-rullino",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX343",
+   "nome": "Flessione polsi manubri panca piana",
+   "gif_slug": "flessione-polsi-manubri-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX344",
+   "nome": "Flessione polsi inversa bilanciere seduto",
+   "gif_slug": "flessione-polsi-inversa-bilanciere-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX345",
+   "nome": "Flessione polsi inversa manubri seduto",
+   "gif_slug": "flessione-polsi-inversa-manubri-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX346",
+   "nome": "Flessione radiale polso manubrio",
+   "gif_slug": "flessione-radiale-polso-manubrio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX347",
+   "nome": "Flessione polso disco",
+   "gif_slug": "flessione-polso-disco",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX348",
+   "nome": "Flessione polso manubrio",
+   "gif_slug": "flessione-polso-manubrio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX349",
+   "nome": "Curl spider bilanciere seduto",
+   "gif_slug": "curl-spider-bilanciere-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX350",
+   "nome": "Croci cavi panca declinata",
+   "gif_slug": "croci-cavi-panca-declinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX351",
+   "nome": "Croci cavi panca inclinata",
+   "gif_slug": "croci-cavi-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX352",
+   "nome": "Croci cavi panca piana",
+   "gif_slug": "croci-cavi-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX353",
+   "nome": "Croci macchina seduto",
+   "gif_slug": "croci-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX354",
+   "nome": "Croci manubri panca piana",
+   "gif_slug": "croci-manubri-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX355",
+   "nome": "Croci cavi un braccio panca declinata",
+   "gif_slug": "croci-cavi-un-braccio-panca-declinata",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX356",
+   "nome": "Dip assistiti macchina",
+   "gif_slug": "dip-assistiti-macchina",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX357",
+   "nome": "Dip parallele sovraccarico",
+   "gif_slug": "dip-parallele-sovraccarico",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX358",
+   "nome": "Distensioni alternate manubri panca piana",
+   "gif_slug": "distensioni-alternate-manubri-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX359",
+   "nome": "Distensioni bilanciere panca declinata",
+   "gif_slug": "distensioni-bilanciere-panca-declinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX360",
+   "nome": "Distensioni bilanciere panca inclinata",
+   "gif_slug": "distensioni-bilanciere-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX361",
+   "nome": "Distensioni bilanciere panca piana",
+   "gif_slug": "distensioni-bilanciere-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX362",
+   "nome": "Distensioni bilanciere piedi sollevati panca piana",
+   "gif_slug": "distensioni-bilanciere-piedi-sollevati-panca-piana",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX363",
+   "nome": "Distensioni bilanciere presa larga panca piana",
+   "gif_slug": "distensioni-bilanciere-presa-larga-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX364",
+   "nome": "Distensioni cavi panca inclinata",
+   "gif_slug": "distensioni-cavi-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX365",
+   "nome": "Distensioni cavi panca piana",
+   "gif_slug": "distensioni-cavi-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX366",
+   "nome": "Distensioni cavi seduto",
+   "gif_slug": "distensioni-cavi-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX367",
+   "nome": "Distensioni macchina seduto",
+   "gif_slug": "distensioni-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX368",
+   "nome": "Distensioni manubri presa stretta panca piana",
+   "gif_slug": "distensioni-manubri-presa-stretta-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX369",
+   "nome": "Distensioni multipower panca declinata",
+   "gif_slug": "distensioni-multipower-panca-declinata",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX370",
+   "nome": "Distensioni multipower panca inclinata",
+   "gif_slug": "distensioni-multipower-panca-inclinata",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX371",
+   "nome": "Distensioni multipower panca piana",
+   "gif_slug": "distensioni-multipower-panca-piana",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX372",
+   "nome": "Distensioni multipower presa larga panca piana",
+   "gif_slug": "distensioni-multipower-presa-larga-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX373",
+   "nome": "Distensioni orizzontali macchina seduto",
+   "gif_slug": "distensioni-orizzontali-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX374",
+   "nome": "Distensioni macchina articolata panca piana",
+   "gif_slug": "distensioni-macchina-articolata-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX375",
+   "nome": "Distensioni manubri un braccio panca piana",
+   "gif_slug": "distensioni-manubri-un-braccio-panca-piana",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX376",
+   "nome": "Distensioni verticali macchina presa neutra seduto",
+   "gif_slug": "distensioni-verticali-macchina-presa-neutra-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX377",
+   "nome": "Piegamenti alternati un braccio assistenza braccio teso",
+   "gif_slug": "piegamenti-alternati-un-braccio-assistenza-braccio-teso",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX378",
+   "nome": "Piegamenti assistiti elastico",
+   "gif_slug": "piegamenti-assistiti-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX379",
+   "nome": "Piegamenti declinati panca",
+   "gif_slug": "piegamenti-declinati-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX380",
+   "nome": "Piegamenti deficit",
+   "gif_slug": "piegamenti-deficit",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX381",
+   "nome": "Piegamenti ginocchia",
+   "gif_slug": "piegamenti-ginocchia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX382",
+   "nome": "Piegamenti mani elevate box",
+   "gif_slug": "piegamenti-mani-elevate-box",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX383",
+   "nome": "Piegamenti mani elevate panca",
+   "gif_slug": "piegamenti-mani-elevate-panca",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX384",
+   "nome": "Piegamenti mani larghe",
+   "gif_slug": "piegamenti-mani-larghe",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX385",
+   "nome": "Piegamenti mani step",
+   "gif_slug": "piegamenti-mani-step",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX386",
+   "nome": "Piegamenti maniglie",
+   "gif_slug": "piegamenti-maniglie",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX387",
+   "nome": "Piegamenti pliometrici mani",
+   "gif_slug": "piegamenti-pliometrici-mani",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX388",
+   "nome": "Piegamenti una mano palla medica",
+   "gif_slug": "piegamenti-una-mano-palla-medica",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX389",
+   "nome": "Pullover bilanciere panca piana",
+   "gif_slug": "pullover-bilanciere-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX390",
+   "nome": "Pullover macchina seduto",
+   "gif_slug": "pullover-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX391",
+   "nome": "Alzate frontali alternate manubri",
+   "gif_slug": "alzate-frontali-alternate-manubri",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX392",
+   "nome": "Pullover manubrio bacino declinato panca piana",
+   "gif_slug": "pullover-manubrio-bacino-declinato-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX393",
+   "nome": "Pullover manubrio fitball",
+   "gif_slug": "pullover-manubrio-fitball",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX394",
+   "nome": "Alzate frontali barra cavo basso",
+   "gif_slug": "alzate-frontali-barra-cavo-basso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX395",
+   "nome": "Alzate frontali bilanciere",
+   "gif_slug": "alzate-frontali-bilanciere",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX396",
+   "nome": "Alzate frontali diagonali manubri",
+   "gif_slug": "alzate-frontali-diagonali-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX397",
+   "nome": "Alzate frontali incrociate cavi bassi",
+   "gif_slug": "alzate-frontali-incrociate-cavi-bassi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX398",
+   "nome": "Alzate frontali manubri panca verticale",
+   "gif_slug": "alzate-frontali-manubri-panca-verticale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX399",
+   "nome": "Alzate frontali manubri prono panca inclinata 45 gradi",
+   "gif_slug": "alzate-frontali-manubri-prono-panca-inclinata-45-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX400",
+   "nome": "Alzate frontali cavo basso un braccio",
+   "gif_slug": "alzate-frontali-cavo-basso-un-braccio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX401",
+   "nome": "Alzate frontali un manubrio mani unite",
+   "gif_slug": "alzate-frontali-un-manubrio-mani-unite",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX402",
+   "nome": "Alzate laterali discesa frontale manubri",
+   "gif_slug": "alzate-laterali-discesa-frontale-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX403",
+   "nome": "Alzate laterali incrociate cavi bassi",
+   "gif_slug": "alzate-laterali-incrociate-cavi-bassi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX404",
+   "nome": "Alzate laterali macchina a leve seduto",
+   "gif_slug": "alzate-laterali-macchina-a-leve-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX405",
+   "nome": "Alzate laterali macchina appoggio gomito seduto",
+   "gif_slug": "alzate-laterali-macchina-appoggio-gomito-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX406",
+   "nome": "Alzate laterali manubri panca piana",
+   "gif_slug": "alzate-laterali-manubri-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX407",
+   "nome": "Alzate laterali manubri prono panca inclinata 45 gradi",
+   "gif_slug": "alzate-laterali-manubri-prono-panca-inclinata-45-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX408",
+   "nome": "Alzate laterali fianco manubrio panca inclinata 45 gradi",
+   "gif_slug": "alzate-laterali-fianco-manubrio-panca-inclinata-45-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX409",
+   "nome": "Alzate laterali cavo basso un braccio",
+   "gif_slug": "alzate-laterali-cavo-basso-un-braccio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX410",
+   "nome": "Alzate laterali manubrio un braccio gomito 90 gradi",
+   "gif_slug": "alzate-laterali-manubrio-un-braccio-gomito-90-gradi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX411",
+   "nome": "Alzate laterali cavo basso un braccio inclinazione laterale",
+   "gif_slug": "alzate-laterali-cavo-basso-un-braccio-inclinazione-laterale",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX412",
+   "nome": "Alzate laterali manubrio un braccio",
+   "gif_slug": "alzate-laterali-manubrio-un-braccio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX413",
+   "nome": "Alzate laterali manubrio un braccio inclinazione laterale",
+   "gif_slug": "alzate-laterali-manubrio-un-braccio-inclinazione-laterale",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX414",
+   "nome": "Alzate multi-angolo manubri",
+   "gif_slug": "alzate-multi-angolo-manubri",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX415",
+   "nome": "Distensioni landmine in ginocchio",
+   "gif_slug": "distensioni-landmine-in-ginocchio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX416",
+   "nome": "Intrarotazione cavo",
+   "gif_slug": "intrarotazione-cavo",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX417",
+   "nome": "Lento Arnold manubri panca verticale",
+   "gif_slug": "lento-arnold-manubri-panca-verticale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX418",
+   "nome": "Lento avanti manubri alternato isometrico",
+   "gif_slug": "lento-avanti-manubri-alternato-isometrico",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX419",
+   "nome": "Lento avanti bilanciere rack panca piana",
+   "gif_slug": "lento-avanti-bilanciere-rack-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX420",
+   "nome": "Lento avanti bilanciere rack in piedi",
+   "gif_slug": "lento-avanti-bilanciere-rack-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX421",
+   "nome": "Lento avanti bilanciere seduto a terra",
+   "gif_slug": "lento-avanti-bilanciere-seduto-a-terra",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX422",
+   "nome": "Lento avanti cavi bassi",
+   "gif_slug": "lento-avanti-cavi-bassi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX423",
+   "nome": "Lento avanti macchina a dischi seduto",
+   "gif_slug": "lento-avanti-macchina-a-dischi-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX424",
+   "nome": "Lento avanti macchina pacco pesi seduto",
+   "gif_slug": "lento-avanti-macchina-pacco-pesi-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX425",
+   "nome": "Lento avanti manubri in piedi",
+   "gif_slug": "lento-avanti-manubri-in-piedi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX426",
+   "nome": "Lento avanti manubri panca verticale",
+   "gif_slug": "lento-avanti-manubri-panca-verticale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX427",
+   "nome": "Lento avanti multipower in piedi",
+   "gif_slug": "lento-avanti-multipower-in-piedi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX428",
+   "nome": "Lento avanti multipower seduto",
+   "gif_slug": "lento-avanti-multipower-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX429",
+   "nome": "Lento avanti bilanciere pin press",
+   "gif_slug": "lento-avanti-bilanciere-pin-press",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX430",
+   "nome": "Lento avanti manubrio un braccio",
+   "gif_slug": "lento-avanti-manubrio-un-braccio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX431",
+   "nome": "Lento dietro bilanciere in piedi",
+   "gif_slug": "lento-dietro-bilanciere-in-piedi",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX432",
+   "nome": "Lento dietro bilanciere panca piana",
+   "gif_slug": "lento-dietro-bilanciere-panca-piana",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX433",
+   "nome": "Lento dietro multipower seduto",
+   "gif_slug": "lento-dietro-multipower-seduto",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX434",
+   "nome": "Push jerk bilanciere",
+   "gif_slug": "push-jerk-bilanciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX435",
+   "nome": "Croci inverse cavi alti",
+   "gif_slug": "croci-inverse-cavi-alti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX436",
+   "nome": "Croci inverse cavi bassi busto flesso",
+   "gif_slug": "croci-inverse-cavi-bassi-busto-flesso",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX437",
+   "nome": "Croci inverse cavi prono panca piana",
+   "gif_slug": "croci-inverse-cavi-prono-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX438",
+   "nome": "Croci inverse elastico",
+   "gif_slug": "croci-inverse-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX439",
+   "nome": "Croci inverse macchina seduto",
+   "gif_slug": "croci-inverse-macchina-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX440",
+   "nome": "Croci inverse manubri prono panca inclinata",
+   "gif_slug": "croci-inverse-manubri-prono-panca-inclinata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX441",
+   "nome": "Croci inverse manubri seduto",
+   "gif_slug": "croci-inverse-manubri-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX442",
+   "nome": "Estensione dorsale mani alla nuca a terra",
+   "gif_slug": "estensione-dorsale-mani-alla-nuca-a-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX443",
+   "nome": "Estensione dorsale macchina",
+   "gif_slug": "estensione-dorsale-macchina",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX444",
+   "nome": "Estensione dorsale panca piana",
+   "gif_slug": "estensione-dorsale-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX445",
+   "nome": "Estensione dorsale panca romana 45 gradi",
+   "gif_slug": "estensione-dorsale-panca-romana-45-gradi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX446",
+   "nome": "Estensione dorsale panca romana 45 gradi con disco",
+   "gif_slug": "estensione-dorsale-panca-romana-45-gradi-con-disco",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX447",
+   "nome": "Estensione dorsale panca romana 45 gradi con manubrio",
+   "gif_slug": "estensione-dorsale-panca-romana-45-gradi-con-manubrio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX448",
+   "nome": "Superman",
+   "gif_slug": "superman-a-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX449",
+   "nome": "Lat machine V-bar",
+   "gif_slug": "lat-machine-v-bar",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX450",
+   "nome": "Lat machine cavi incrociati in ginocchio",
+   "gif_slug": "lat-machine-cavi-incrociati-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX451",
+   "nome": "Lat machine dietro nuca barra dritta",
+   "gif_slug": "lat-machine-dietro-nuca-barra-dritta",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX452",
+   "nome": "Lat machine dietro nuca macchina",
+   "gif_slug": "lat-machine-dietro-nuca-macchina",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX453",
+   "nome": "Lat machine frontale presa inversa larga",
+   "gif_slug": "lat-machine-frontale-presa-inversa-larga",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX454",
+   "nome": "Lat machine frontale presa stretta barra dritta",
+   "gif_slug": "lat-machine-frontale-presa-stretta-barra-dritta",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX455",
+   "nome": "Lat machine macchina a leve",
+   "gif_slug": "lat-machine-macchina-a-leve",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX456",
+   "nome": "Lat machine maniglia un braccio",
+   "gif_slug": "lat-machine-maniglia-un-braccio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX457",
+   "nome": "Pullover barra dritta cavo alto",
+   "gif_slug": "pullover-barra-dritta-cavo-alto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX458",
+   "nome": "Pullover corda cavo alto",
+   "gif_slug": "pullover-corda-cavo-alto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX459",
+   "nome": "Pullover corda cavo basso panca piana",
+   "gif_slug": "pullover-corda-cavo-basso-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX460",
+   "nome": "Rematore V-bar cavo prono panca piana",
+   "gif_slug": "rematore-v-bar-cavo-prono-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX461",
+   "nome": "Rematore barra dritta cavo basso",
+   "gif_slug": "rematore-barra-dritta-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX462",
+   "nome": "Rematore barra dritta cavo prono panca inclinata",
+   "gif_slug": "rematore-barra-dritta-cavo-prono-panca-inclinata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX463",
+   "nome": "Rematore barra dritta cavo seduto",
+   "gif_slug": "rematore-barra-dritta-cavo-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX464",
+   "nome": "Rematore bilanciere Yates",
+   "gif_slug": "rematore-bilanciere-yates",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX465",
+   "nome": "Rematore bilanciere presa inversa busto flesso",
+   "gif_slug": "rematore-bilanciere-presa-inversa-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX466",
+   "nome": "Rematore bilanciere presa larga busto flesso",
+   "gif_slug": "rematore-bilanciere-presa-larga-busto-flesso",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX467",
+   "nome": "Rematore bilanciere prono panca inclinata",
+   "gif_slug": "rematore-bilanciere-prono-panca-inclinata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX468",
+   "nome": "Rematore corda cavo alto in ginocchio",
+   "gif_slug": "rematore-corda-cavo-alto-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX469",
+   "nome": "Rematore corda cavo prono panca piana",
+   "gif_slug": "rematore-corda-cavo-prono-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX470",
+   "nome": "Rematore elastico busto flesso",
+   "gif_slug": "rematore-elastico-busto-flesso",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX471",
+   "nome": "Rematore invertito multipower",
+   "gif_slug": "rematore-invertito-multipower",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX472",
+   "nome": "Rematore landmine busto flesso",
+   "gif_slug": "rematore-landmine-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX473",
+   "nome": "Rematore landmine presa larga busto flesso",
+   "gif_slug": "rematore-landmine-presa-larga-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX474",
+   "nome": "Rematore landmine un braccio presa neutra busto flesso",
+   "gif_slug": "rematore-landmine-un-braccio-presa-neutra-busto-flesso",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX475",
+   "nome": "Rematore landmine un braccio presa prona busto flesso",
+   "gif_slug": "rematore-landmine-un-braccio-presa-prona-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX476",
+   "nome": "Rematore macchina a dischi presa inversa",
+   "gif_slug": "rematore-macchina-a-dischi-presa-inversa",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX477",
+   "nome": "Rematore macchina a leve presa neutra seduto",
+   "gif_slug": "rematore-macchina-a-leve-presa-neutra-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX478",
+   "nome": "Rematore macchina a leve presa prona seduto",
+   "gif_slug": "rematore-macchina-a-leve-presa-prona-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX479",
+   "nome": "Rematore macchina pacco pesi presa inversa seduto",
+   "gif_slug": "rematore-macchina-pacco-pesi-presa-inversa-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX480",
+   "nome": "Rematore maniglia cavo",
+   "gif_slug": "rematore-maniglia-cavo",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX481",
+   "nome": "Rematore manubri busto flesso",
+   "gif_slug": "rematore-manubri-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX482",
+   "nome": "Rematore manubri presa inversa prono panca inclinata",
+   "gif_slug": "rematore-manubri-presa-inversa-prono-panca-inclinata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX483",
+   "nome": "Rematore manubrio un braccio busto flesso",
+   "gif_slug": "rematore-manubrio-un-braccio-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX484",
+   "nome": "Rematore manubrio un braccio ginocchio su panca",
+   "gif_slug": "rematore-manubrio-un-braccio-ginocchio-su-panca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX485",
+   "nome": "Rematore manubrio un braccio mano su panca",
+   "gif_slug": "rematore-manubrio-un-braccio-mano-su-panca",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX486",
+   "nome": "Rematore multipower presa inversa busto flesso",
+   "gif_slug": "rematore-multipower-presa-inversa-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX487",
+   "nome": "Scrollate barra dritta cavo basso",
+   "gif_slug": "scrollate-barra-dritta-cavo-basso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX488",
+   "nome": "Scrollate barra dritta cavo basso presa stretta",
+   "gif_slug": "scrollate-barra-dritta-cavo-basso-presa-stretta",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX489",
+   "nome": "Scrollate bilanciere dietro la schiena",
+   "gif_slug": "scrollate-bilanciere-dietro-la-schiena",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX490",
+   "nome": "Scrollate macchina a leve",
+   "gif_slug": "scrollate-macchina-a-leve",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX491",
+   "nome": "Scrollate manubri",
+   "gif_slug": "scrollate-manubri",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX492",
+   "nome": "Scrollate manubri prono panca inclinata",
+   "gif_slug": "scrollate-manubri-prono-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX493",
+   "nome": "Scrollate manubri supino panca inclinata",
+   "gif_slug": "scrollate-manubri-supino-panca-inclinata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX494",
+   "nome": "Scrollate multipower dietro la schiena",
+   "gif_slug": "scrollate-multipower-dietro-la-schiena",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX495",
+   "nome": "Tirate al mento barra dritta cavo basso",
+   "gif_slug": "tirate-al-mento-barra-dritta-cavo-basso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX496",
+   "nome": "Tirate al mento bilanciere EZ",
+   "gif_slug": "tirate-al-mento-bilanciere-ez",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX497",
+   "nome": "Tirate al mento bilanciere",
+   "gif_slug": "tirate-al-mento-bilanciere",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX498",
+   "nome": "Tirate al mento bilanciere presa larga",
+   "gif_slug": "tirate-al-mento-bilanciere-presa-larga",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX499",
+   "nome": "Tirate al mento manubri",
+   "gif_slug": "tirate-al-mento-manubri",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX500",
+   "nome": "Tirate al viso maniglie cavo alto",
+   "gif_slug": "tirate-al-viso-maniglie-cavo-alto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX501",
+   "nome": "Tirate al viso manubri busto flesso",
+   "gif_slug": "tirate-al-viso-manubri-busto-flesso",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX502",
+   "nome": "Tirate verticali cavi alti incrociati",
+   "gif_slug": "tirate-verticali-cavi-alti-incrociati",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX503",
+   "nome": "Tirate verticali elastico maniglie in ginocchio",
+   "gif_slug": "tirate-verticali-elastico-maniglie-in-ginocchio",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX504",
+   "nome": "Tirate verticali maniglia cavo alto un braccio in ginocchio",
+   "gif_slug": "tirate-verticali-maniglia-cavo-alto-un-braccio-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX505",
+   "nome": "Trazioni sbarra assistite elastico",
+   "gif_slug": "trazioni-sbarra-assistite-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX506",
+   "nome": "Trazioni sbarra dietro nuca",
+   "gif_slug": "trazioni-sbarra-dietro-nuca",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX507",
+   "nome": "Trazioni sbarra eccentriche",
+   "gif_slug": "trazioni-sbarra-eccentriche",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX508",
+   "nome": "Trazioni sbarra gravitron in ginocchio",
+   "gif_slug": "trazioni-sbarra-gravitron-in-ginocchio",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX509",
+   "nome": "Trazioni sbarra gravitron",
+   "gif_slug": "trazioni-sbarra-gravitron",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX510",
+   "nome": "Trazioni sbarra presa neutra",
+   "gif_slug": "trazioni-sbarra-presa-neutra",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX511",
+   "nome": "Trazioni sbarra presa stretta",
+   "gif_slug": "trazioni-sbarra-presa-stretta",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX512",
+   "nome": "Trazioni sbarra zavorrate",
+   "gif_slug": "trazioni-sbarra-zavorrate",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX513",
+   "nome": "Dip macchina seduto",
+   "gif_slug": "dip-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX514",
+   "nome": "Dip panca piedi rialzati",
+   "gif_slug": "dip-panca-piedi-rialzati",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX515",
+   "nome": "Distensioni bilanciere presa stretta supino panca piana",
+   "gif_slug": "distensioni-bilanciere-presa-stretta-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX516",
+   "nome": "Estensioni bilanciere EZ dietro nuca in piedi",
+   "gif_slug": "estensioni-bilanciere-ez-dietro-nuca-in-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX517",
+   "nome": "Estensioni bilanciere EZ dietro nuca seduto",
+   "gif_slug": "estensioni-bilanciere-ez-dietro-nuca-seduto",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX518",
+   "nome": "Estensioni corda cavo alto dietro nuca busto flesso",
+   "gif_slug": "estensioni-corda-cavo-alto-dietro-nuca-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX519",
+   "nome": "Estensioni corda cavo basso dietro nuca",
+   "gif_slug": "estensioni-corda-cavo-basso-dietro-nuca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX520",
+   "nome": "Estensioni macchina seduto",
+   "gif_slug": "estensioni-macchina-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX521",
+   "nome": "Estensioni macchina panca Scott",
+   "gif_slug": "estensioni-macchina-panca-scott",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX522",
+   "nome": "Estensioni maniglia cavo alto un braccio traverso",
+   "gif_slug": "estensioni-maniglia-cavo-alto-un-braccio-traverso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX523",
+   "nome": "Estensioni maniglia cavo basso un braccio dietro nuca",
+   "gif_slug": "estensioni-maniglia-cavo-basso-un-braccio-dietro-nuca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX524",
+   "nome": "Estensioni manubrio dietro nuca in piedi",
+   "gif_slug": "estensioni-manubrio-dietro-nuca-in-piedi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX525",
+   "nome": "Estensioni manubrio dietro nuca seduto",
+   "gif_slug": "estensioni-manubrio-dietro-nuca-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX526",
+   "nome": "Estensioni manubrio un braccio dietro nuca seduto",
+   "gif_slug": "estensioni-manubrio-un-braccio-dietro-nuca-seduto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX527",
+   "nome": "French press sbarra cavo supino panca inclinata",
+   "gif_slug": "french-press-sbarra-cavo-supino-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX529",
+   "nome": "French press bilanciere EZ supino panca inclinata",
+   "gif_slug": "french-press-bilanciere-ez-supino-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX530",
+   "nome": "French press bilanciere presa inversa supino panca piana",
+   "gif_slug": "french-press-bilanciere-presa-inversa-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX531",
+   "nome": "French press manubri dietro nuca supino panca piana",
+   "gif_slug": "french-press-manubri-dietro-nuca-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX532",
+   "nome": "French press manubri presa neutra supino panca piana",
+   "gif_slug": "french-press-manubri-presa-neutra-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX533",
+   "nome": "French press manubri supino a terra",
+   "gif_slug": "french-press-manubri-supino-a-terra",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX534",
+   "nome": "French press manubri supino panca inclinata",
+   "gif_slug": "french-press-manubri-supino-panca-inclinata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX535",
+   "nome": "French press manubrio supino di traverso panca piana",
+   "gif_slug": "french-press-manubrio-supino-di-traverso-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX536",
+   "nome": "French press manubrio un braccio supino panca piana",
+   "gif_slug": "french-press-manubrio-un-braccio-supino-panca-piana",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX537",
+   "nome": "French press manubrio un braccio traverso supino panca piana",
+   "gif_slug": "french-press-manubrio-un-braccio-traverso-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX538",
+   "nome": "French press sbarra cavo supino panca piana",
+   "gif_slug": "french-press-sbarra-cavo-supino-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX539",
+   "nome": "Kickback maniglia cavo presa inversa un braccio busto flesso",
+   "gif_slug": "kickback-maniglia-cavo-presa-inversa-un-braccio-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX540",
+   "nome": "Kickback maniglia cavo un braccio busto flesso",
+   "gif_slug": "kickback-maniglia-cavo-un-braccio-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX541",
+   "nome": "Kickback maniglie cavo busto flesso",
+   "gif_slug": "kickback-maniglie-cavo-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX542",
+   "nome": "Kickback manubrio un braccio busto flesso",
+   "gif_slug": "kickback-manubrio-un-braccio-busto-flesso",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX543",
+   "nome": "Kickback manubrio un braccio busto flesso appoggio panca",
+   "gif_slug": "kickback-manubrio-un-braccio-busto-flesso-appoggio-panca",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX544",
+   "nome": "Kickback manubrio un braccio busto flesso seduto",
+   "gif_slug": "kickback-manubrio-un-braccio-busto-flesso-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX545",
+   "nome": "Piegamenti diamante",
+   "gif_slug": "piegamenti-diamante",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX546",
+   "nome": "Piegamenti diamante ginocchia a terra",
+   "gif_slug": "piegamenti-diamante-ginocchia-a-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX547",
+   "nome": "Piegamenti muro",
+   "gif_slug": "piegamenti-muro",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX548",
+   "nome": "Piegamenti sfinge",
+   "gif_slug": "piegamenti-sfinge",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX549",
+   "nome": "Pushdown barra sagomata cavo",
+   "gif_slug": "pushdown-barra-sagomata-cavo",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX550",
+   "nome": "Pushdown barra sagomata cavo presa inversa",
+   "gif_slug": "pushdown-barra-sagomata-cavo-presa-inversa",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX551",
+   "nome": "Pushdown elastico",
+   "gif_slug": "pushdown-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX552",
+   "nome": "Pushdown maniglia cavo presa inversa un braccio",
+   "gif_slug": "pushdown-maniglia-cavo-presa-inversa-un-braccio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX553",
+   "nome": "Pushdown maniglia cavo un braccio in ginocchio",
+   "gif_slug": "pushdown-maniglia-cavo-un-braccio-in-ginocchio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX554",
+   "nome": "Pushdown maniglia cavo un braccio",
+   "gif_slug": "pushdown-maniglia-cavo-un-braccio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX555",
+   "nome": "Calf raise macchina",
+   "gif_slug": "calf-raise-macchina",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX556",
+   "nome": "Calf raise panca piana cavo",
+   "gif_slug": "calf-raise-panca-piana-cavo",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX557",
+   "nome": "Calf raise una gamba",
+   "gif_slug": "calf-raise-una-gamba",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX558",
+   "nome": "Calf raise macchina carico basso",
+   "gif_slug": "calf-raise-macchina-carico-basso",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX559",
+   "nome": "Calf raise macchina selettore",
+   "gif_slug": "calf-raise-macchina-selettore",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX560",
+   "nome": "Calf raise manubri su step",
+   "gif_slug": "calf-raise-manubri-su-step",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX561",
+   "nome": "Calf raise in squat",
+   "gif_slug": "calf-raise-in-squat",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX562",
+   "nome": "Calf raise inverso multipower su step",
+   "gif_slug": "calf-raise-inverso-multipower-su-step",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX563",
+   "nome": "Calf raise leg press 45 gradi",
+   "gif_slug": "calf-raise-leg-press-45-gradi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX564",
+   "nome": "Calf raise multipower",
+   "gif_slug": "calf-raise-multipower",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX565",
+   "nome": "Calf raise macchina dischi seduto",
+   "gif_slug": "calf-raise-macchina-dischi-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX566",
+   "nome": "Donkey calf raise panca piana",
+   "gif_slug": "donkey-calf-raise-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX567",
+   "nome": "Calf raise su scalini",
+   "gif_slug": "calf-raise-su-scalini",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX568",
+   "nome": "Donkey calf raise partner panca piana",
+   "gif_slug": "donkey-calf-raise-partner-panca-piana",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX569",
+   "nome": "Alzate laterali asciugamano parete un braccio",
+   "gif_slug": "alzate-laterali-asciugamano-parete-un-braccio",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX570",
+   "nome": "Camminata verticale",
+   "gif_slug": "camminata-verticale",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX571",
+   "nome": "Piegamenti pike deficit sedie",
+   "gif_slug": "piegamenti-pike-deficit-sedie",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX572",
+   "nome": "Piegamenti pike panca piana",
+   "gif_slug": "piegamenti-pike-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX573",
+   "nome": "Piegamenti verticale",
+   "gif_slug": "piegamenti-verticale",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX574",
+   "nome": "Trazione sbarra a corpo capovolto",
+   "gif_slug": "trazione-sbarra-a-corpo-capovolto",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX575",
+   "nome": "Human flag",
+   "gif_slug": "human-flag",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX576",
+   "nome": "Piegamenti tocco ai piedi",
+   "gif_slug": "piegamenti-tocco-ai-piedi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX577",
+   "nome": "Piegamenti tocco incrociato spalla",
+   "gif_slug": "piegamenti-tocco-incrociato-spalla",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX578",
+   "nome": "Dip a terra",
+   "gif_slug": "dip-a-terra",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX579",
+   "nome": "Dip su box",
+   "gif_slug": "dip-su-box",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX580",
+   "nome": "Dip su sedia",
+   "gif_slug": "dip-su-sedia",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX581",
+   "nome": "Estensioni tricipiti multipower",
+   "gif_slug": "estensioni-tricipiti-multipower",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX582",
+   "nome": "Piegamenti estensione tricipiti",
+   "gif_slug": "piegamenti-estensione-tricipiti",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX583",
+   "nome": "Piegamenti maniglie basse",
+   "gif_slug": "piegamenti-maniglie-basse",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX584",
+   "nome": "Piegamenti presa stretta ginocchia",
+   "gif_slug": "piegamenti-presa-stretta-ginocchia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX585",
+   "nome": "Piegamenti presa stretta palla medica",
+   "gif_slug": "piegamenti-presa-stretta-palla-medica",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX586",
+   "nome": "Curl hammer manubri panca verticale",
+   "gif_slug": "curl-hammer-manubri-panca-verticale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX587",
+   "nome": "Battle rope onde alternate",
+   "gif_slug": "battle-rope-onde-alternate",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX588",
+   "nome": "Boxe diretto al sacco",
+   "gif_slug": "boxe-diretto-al-sacco",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX589",
+   "nome": "Boxe diretto alternato",
+   "gif_slug": "boxe-diretto-alternato",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX590",
+   "nome": "Boxe footwork",
+   "gif_slug": "boxe-footwork",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX591",
+   "nome": "Boxe gancio",
+   "gif_slug": "boxe-gancio",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX592",
+   "nome": "Boxe jab",
+   "gif_slug": "boxe-jab",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX593",
+   "nome": "Burpee",
+   "gif_slug": "burpee",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX594",
+   "nome": "Burpee navy seal",
+   "gif_slug": "burpee-navy-seal",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX595",
+   "nome": "Calcio circolare sacco",
+   "gif_slug": "calcio-circolare-sacco",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX596",
+   "nome": "Camminata bear crawl",
+   "gif_slug": "camminata-bear-crawl",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX597",
+   "nome": "Corsa X con conetti",
+   "gif_slug": "corsa-x-con-conetti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX598",
+   "nome": "Corsa all'indietro",
+   "gif_slug": "corsa-all-indietro",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX599",
+   "nome": "Corsa falcata lunga",
+   "gif_slug": "corsa-falcata-lunga",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX600",
+   "nome": "Corsa laterale scaletta agilità",
+   "gif_slug": "corsa-laterale-scaletta-agilita",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX601",
+   "nome": "Corsa passi corti",
+   "gif_slug": "corsa-passi-corti",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX602",
+   "nome": "Corsa resistenza con elastico",
+   "gif_slug": "corsa-resistenza-con-elastico",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX603",
+   "nome": "Corsa scaletta agilità",
+   "gif_slug": "corsa-scaletta-agilita",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX604",
+   "nome": "Corsa sforbiciata",
+   "gif_slug": "corsa-sforbiciata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX605",
+   "nome": "Corsa sul posto",
+   "gif_slug": "corsa-sul-posto",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX606",
+   "nome": "Corsa zigzag con conetti",
+   "gif_slug": "corsa-zigzag-con-conetti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX607",
+   "nome": "Jumping jack",
+   "gif_slug": "jumping-jack",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX608",
+   "nome": "Jumping rimbalzato",
+   "gif_slug": "jumping-rimbalzato",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX609",
+   "nome": "Salti laterali rapidi",
+   "gif_slug": "salti-laterali-rapidi",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX610",
+   "nome": "Salto con la corda",
+   "gif_slug": "salto-con-la-corda",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX611",
+   "nome": "Skip con calcio",
+   "gif_slug": "skip-con-calcio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX612",
+   "nome": "Skip power",
+   "gif_slug": "skip-power",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX613",
+   "nome": "Skip sul posto",
+   "gif_slug": "skip-sul-posto",
+   "livello": "principiante;intermedio;avanzato"
+  },
+  {
+   "codice": "EX614",
+   "nome": "Spostamento laterale con tocco a terra",
+   "gif_slug": "spostamento-laterale-con-tocco-a-terra",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX615",
+   "nome": "Adduzione anca decubito laterale gamba tesa",
+   "gif_slug": "adduzione-anca-decubito-laterale-gamba-tesa",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX616",
+   "nome": "Affondo avanti alternato",
+   "gif_slug": "affondo-avanti-alternato",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX617",
+   "nome": "Jumping pistol box",
+   "gif_slug": "jumping-pistol-box",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX618",
+   "nome": "Salto all'indietro",
+   "gif_slug": "salto-all-indietro",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX619",
+   "nome": "Squat jump ginocchia alte",
+   "gif_slug": "squat-jump-ginocchia-alte",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX620",
+   "nome": "Squat thrust",
+   "gif_slug": "squat-thrust",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX621",
+   "nome": "Salto una gamba avanti",
+   "gif_slug": "salto-una-gamba-avanti",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX622",
+   "nome": "Salto verticale esplosivo",
+   "gif_slug": "salto-verticale-esplosivo",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX623",
+   "nome": "Leg curl macchina prona",
+   "gif_slug": "leg-curl-macchina-prona",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX624",
+   "nome": "Leg curl macchina in piedi una gamba",
+   "gif_slug": "leg-curl-macchina-in-piedi-una-gamba",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX625",
+   "nome": "Abduzione clamshell decubito laterale",
+   "gif_slug": "abduzione-clamshell-decubito-laterale",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX626",
+   "nome": "Abduzione clamshell elastico decubito laterale",
+   "gif_slug": "abduzione-clamshell-elastico-decubito-laterale",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX627",
+   "nome": "Abduzione anca decubito laterale",
+   "gif_slug": "abduzione-anca-decubito-laterale",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX628",
+   "nome": "Abduzione fire hydrant elastico quadrupedia",
+   "gif_slug": "abduzione-fire-hydrant-elastico-quadrupedia",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX629",
+   "nome": "Abduzione fire hydrant quadrupedia",
+   "gif_slug": "abduzione-fire-hydrant-quadrupedia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX630",
+   "nome": "Leg curl cavo in piedi una gamba",
+   "gif_slug": "leg-curl-cavo-in-piedi-una-gamba",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX631",
+   "nome": "Affondo inverso con knee drive",
+   "gif_slug": "affondo-inverso-con-knee-drive",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX632",
+   "nome": "Affondo inverso Bosu con knee drive",
+   "gif_slug": "affondo-inverso-bosu-con-knee-drive",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX633",
+   "nome": "Affondo maniglie elastico sul posto",
+   "gif_slug": "affondo-maniglie-elastico-sul-posto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX634",
+   "nome": "Leg extension macchina",
+   "gif_slug": "leg-extension-macchina",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX635",
+   "nome": "Affondo camminato con knee drive",
+   "gif_slug": "affondo-camminato-con-knee-drive",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX636",
+   "nome": "Jumping split lunge",
+   "gif_slug": "jumping-split-lunge",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX637",
+   "nome": "Affondo laterale alternato",
+   "gif_slug": "affondo-laterale-alternato",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX638",
+   "nome": "Camminata laterale elastico",
+   "gif_slug": "camminata-laterale-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX639",
+   "nome": "Donkey kick elastico quadrupedia",
+   "gif_slug": "donkey-kick-elastico-quadrupedia",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX640",
+   "nome": "Stacco rumeno una gamba maniglie elastico",
+   "gif_slug": "stacco-rumeno-una-gamba-maniglie-elastico",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX641",
+   "nome": "Hip thrust elastico in ginocchio",
+   "gif_slug": "hip-thrust-elastico-in-ginocchio",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX642",
+   "nome": "Leg press alternato barra elastico supino",
+   "gif_slug": "leg-press-alternato-barra-elastico-supino",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX643",
+   "nome": "Pistol squat su box",
+   "gif_slug": "pistol-squat-su-box",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX644",
+   "nome": "Reverse hyper elastico panca piana",
+   "gif_slug": "reverse-hyper-elastico-panca-piana",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX645",
+   "nome": "Squat goblet kettlebell banda",
+   "gif_slug": "squat-goblet-kettlebell-banda",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX646",
+   "nome": "Squat barra elastico",
+   "gif_slug": "squat-barra-elastico",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX647",
+   "nome": "Squat calcio laterale",
+   "gif_slug": "squat-calcio-laterale",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX648",
+   "nome": "Affondo barra elastico sul posto",
+   "gif_slug": "affondo-barra-elastico-sul-posto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX649",
+   "nome": "Squat elastico braccia alte",
+   "gif_slug": "squat-elastico-braccia-alte",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX650",
+   "nome": "Squat jump",
+   "gif_slug": "squat-jump",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX651",
+   "nome": "Squat wall ball palla medica",
+   "gif_slug": "squat-wall-ball-palla-medica",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX652",
+   "nome": "Stacco rumeno una gamba",
+   "gif_slug": "stacco-rumeno-una-gamba",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX653",
+   "nome": "Step up manubri con curl bicipiti",
+   "gif_slug": "step-up-manubri-con-curl-bicipiti",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX654",
+   "nome": "Swing elastico maniglie",
+   "gif_slug": "swing-elastico-maniglie",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX655",
+   "nome": "Squat wall sit inclinazione alternata",
+   "gif_slug": "squat-wall-sit-inclinazione-alternata",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX656",
+   "nome": "Affondo profondo una gamba",
+   "gif_slug": "affondo-profondo-una-gamba",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX657",
+   "nome": "Hip thrust bilanciere una gamba",
+   "gif_slug": "hip-thrust-bilanciere-una-gamba",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX658",
+   "nome": "Hip thrust una gamba panca spinta esplosiva",
+   "gif_slug": "hip-thrust-una-gamba-panca-spinta-esplosiva",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX659",
+   "nome": "Estensione anca elastico knee drive",
+   "gif_slug": "estensione-anca-elastico-knee-drive",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX660",
+   "nome": "Estensione anca in piedi appoggio bilanciere",
+   "gif_slug": "estensione-anca-in-piedi-appoggio-bilanciere",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX661",
+   "nome": "Abduzione anca elastico seduto panca",
+   "gif_slug": "abduzione-anca-elastico-seduto-panca",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX662",
+   "nome": "Squat pistol TRX",
+   "gif_slug": "squat-pistol-trx",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX663",
+   "nome": "Squat pistol assistito",
+   "gif_slug": "squat-pistol-assistito",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX664",
+   "nome": "Squat pistol kettlebell",
+   "gif_slug": "squat-pistol-kettlebell",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX665",
+   "nome": "Squat hawaiano",
+   "gif_slug": "squat-hawaiano",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX666",
+   "nome": "Squat shrimp",
+   "gif_slug": "squat-shrimp",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX667",
+   "nome": "Squat skater una gamba",
+   "gif_slug": "squat-skater-una-gamba",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX668",
+   "nome": "Squat sissy in ginocchio",
+   "gif_slug": "squat-sissy-in-ginocchio",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX669",
+   "nome": "Squat seduto su step",
+   "gif_slug": "squat-seduto-su-step",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX670",
+   "nome": "Squat torsione ginocchio alto",
+   "gif_slug": "squat-torsione-ginocchio-alto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX671",
+   "nome": "Camminata squat",
+   "gif_slug": "camminata-squat",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX672",
+   "nome": "Jumping box una gamba",
+   "gif_slug": "jumping-box-una-gamba",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX673",
+   "nome": "Jumping box",
+   "gif_slug": "jumping-box",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX674",
+   "nome": "Salto lungo da fermo",
+   "gif_slug": "salto-lungo-da-fermo",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX675",
+   "nome": "Squat pistol seduto su box",
+   "gif_slug": "squat-pistol-seduto-su-box",
+   "livello": "intermedio"
+  }
+ ],
+ "catalogo": {
+  "righe": 667,
+  "ultimo_sync": "2026-08-06T20:24:00.821000+00:00",
+  "righe_arenate": [],
+  "righe_senza_data": [],
+  "prossimo_codice_libero": "EX676",
+  "gap_permanenti": [
+   "EX107",
+   "EX110",
+   "EX151",
+   "EX170",
+   "EX228",
+   "EX229",
+   "EX323",
+   "EX528"
+  ],
+  "con_gif_slug": 602,
+  "senza_gif_slug": 65,
+  "codici_senza_gif_slug": [
+   "EX001",
+   "EX023",
+   "EX029",
+   "EX030",
+   "EX031",
+   "EX032",
+   "EX033",
+   "EX035",
+   "EX036",
+   "EX038",
+   "EX041",
+   "EX043",
+   "EX044",
+   "EX046",
+   "EX048",
+   "EX050",
+   "EX051",
+   "EX052",
+   "EX054",
+   "EX064",
+   "EX067",
+   "EX068",
+   "EX069",
+   "EX078",
+   "EX080",
+   "EX084",
+   "EX085",
+   "EX087",
+   "EX089",
+   "EX090",
+   "EX091",
+   "EX094",
+   "EX097",
+   "EX102",
+   "EX105",
+   "EX106",
+   "EX108",
+   "EX109",
+   "EX111",
+   "EX112",
+   "EX113",
+   "EX115",
+   "EX116",
+   "EX117",
+   "EX118",
+   "EX119",
+   "EX120",
+   "EX121",
+   "EX122",
+   "EX123",
+   "EX124",
+   "EX125",
+   "EX126",
+   "EX127",
+   "EX128",
+   "EX129",
+   "EX130",
+   "EX131",
+   "EX132",
+   "EX240",
+   "EX241",
+   "EX244",
+   "EX245",
+   "EX246",
+   "EX322"
+  ],
+  "slug_condivisi_da_piu_codici": {},
+  "slug_senza_riga_in_biblioteca": [],
+  "per_uso": {
+   "principale;finisher": 135,
+   "principale": 317,
+   "isolamento": 16,
+   "principale;finisher;recupero": 3,
+   "recupero": 3,
+   "finisher": 33,
+   "finisher;recupero": 1,
+   "principale;recupero": 2,
+   "accessorio;riscaldamento": 5,
+   "accessorio": 72,
+   "riscaldamento;attivazione": 3,
+   "carry;finisher": 2,
+   "carry": 2,
+   "riscaldamento;finisher": 2,
+   "riscaldamento": 18,
+   "recupero;mobilita": 7,
+   "principale;riscaldamento": 17,
+   "accessorio;riscaldamento;attivazione": 1,
+   "principale;accessorio": 6,
+   "accessorio;finisher": 18,
+   "skill": 4
+  },
+  "per_livello": {
+   "intermedio": 256,
+   "principiante": 162,
+   "avanzato": 55,
+   "intermedio;avanzato": 38,
+   "principiante;intermedio": 129,
+   "principiante;intermedio;avanzato": 25,
+   "(vuoto)": 2
+  }
+ },
+ "biblioteca_gif": {
+  "righe": 1570,
+  "slug_distinti": 1570,
+  "viva": 602,
+  "rotta": 0,
+  "libera": 46,
+  "morta": 922,
+  "elenco_rotte": [],
+  "elenco_libere": [
+   "adduzione-spalla-elastico-un-braccio-in-piedi",
+   "alzate-diagonali-elastico-maniglie-in-piedi",
+   "alzate-diagonali-elastico-un-braccio-in-piedi",
+   "alzate-laterali-isometriche-in-piedi",
+   "bird-dog",
+   "calf-raise-elastico-maniglie-in-piedi",
+   "chest-press-elastico-maniglie-in-piedi",
+   "croci-inverse-elastico-busto-flesso",
+   "croci-inverse-elastico-maniglie-busto-flesso",
+   "crunch-obliquo-panca-romana",
+   "curl-alternato-macchina",
+   "curl-alternato-manubri-panca-inclinata",
+   "curl-bilanciere-presa-larga",
+   "curl-bilanciere-presa-stretta",
+   "curl-manubri-panca-inclinata",
+   "estensione-anca-bilanciere",
+   "estensione-spalla-elastico-in-piedi",
+   "estensione-tricipiti-elastico-busto-flesso",
+   "flessione-laterale-cavo-basso",
+   "french-press-elastico-in-piedi",
+   "french-press-elastico-maniglie-panca-piana",
+   "incroci-braccia-in-piedi",
+   "lancio-al-petto-palla-medica-al-muro",
+   "lancio-rotazionale-palla-medica-al-muro",
+   "lancio-slam-palla-medica",
+   "lat-machine-elastico-maniglie-in-ginocchio",
+   "leg-curl-bilaterale-macchina-seduta",
+   "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
+   "lento-avanti-elastico-seduto",
+   "lento-avanti-isometrico-in-piedi",
+   "lento-dietro-barra-elastico-ai-piedi",
+   "lento-dietro-maniglia-elastico-un-braccio-in-piedi",
+   "piegamenti-cobra-prono",
+   "piegamenti-con-rotazione-a-t",
+   "plank-ginocchio-petto-apertura",
+   "plank-inchworm",
+   "plank-laterale-dip",
+   "plank-scivolamento-avanti",
+   "pushdown-elastico-in-piedi",
+   "pushdown-elastico-maniglie-in-piedi",
+   "retroversione-bacino-da-supino",
+   "squat-con-lancio-palla-un-braccio",
+   "squat-croce-di-ferro-manubri",
+   "superman",
+   "swimming-prono",
+   "torsione-busto-gomiti-alti-in-piedi"
+  ]
+ },
+ "bucket": {
+  "oggetti": 647,
+  "per_zona": {
+   "Addominali e Core": 77,
+   "Bicipiti e Braccia": 73,
+   "Cardio e Conditioning": 31,
+   "Gambe e Glutei": 169,
+   "Pettorali": 60,
+   "Polpacci": 19,
+   "Schiena e Trapezio": 96,
+   "Spalle e Cuffia": 63,
+   "Tricipiti": 59
+  },
+  "file_senza_riga": []
+ }
+}

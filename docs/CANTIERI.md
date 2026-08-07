@@ -123,8 +123,15 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 
-## 96. Unificare la chiave degli strumenti del cantiere
-`cantiere_96_pendente.tsv` è indicizzato per nome file sul Mac: dopo una rinomina lo stato `pendente` decade. Da chiudere **prima** di aprire una zona grande (Mobilità, 215 file). Vedi [L12](LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe).
+## 96. Unificare la chiave degli strumenti del cantiere — ✅ chiuso 7 agosto
+`cantiere_96_pendente.tsv` era indicizzato per nome file: **44 righe su 96 avevano già perso lo stato**. Convertito alla chiave SHA-256 (`chiave_pendente.py`), 96 righe su 96 risolte, zero perse. `prepara.py` cerca per impronta; `riconcilia.py` verifica che diario e piano coincidano prima di ogni migrazione.
+
+**Resta da guardare** (emerso dalla conversione):
+- **EX676-EX682**: sei codici allocati in anticipo e mai scritti a catalogo, mentre EX676 risulta il prossimo libero. Vanno riallocati al momento della scrittura → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano)
+- **2 righe con la cartella sbagliata**: `Pistol jump box` e `Salto monopodalico avanti` risultano in `Gambe e Glutei` ma sul Mac hanno nomi di altri esercizi (`Salti laterali rapidi`, `Skip sul posto`). Sono fra gli "otto salti" ricollocati: da verificare guardando le GIF.
+- **1 riga di Cardio** che il piano ha e il diario no (`Salti laterali rapidi`), trovata da `riconcilia.py` al primo giro.
+
+Vedi [L12](LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe) e [L23](LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave).
 
 ---
 
@@ -239,8 +246,8 @@ Diagnosi dei colli di bottiglia del flusso di lavoro. Top 5 in ordine consigliat
 
 1. ✅ **Ristrutturare CLAUDE.md** in guida snella + questi due archivi — *eseguito 7 agosto*
 2. ✅ **Portare `tools/` sotto git** — *eseguito 7 agosto*
-3. **`verifica_sync.py` + `stato.py`** — azzerano i giri ciechi post-sync ([L3](LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena), [L4](LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha)) e le ricognizioni ripetute a ogni sessione. Sola lettura, rischio nullo.
-4. **Unificare la chiave SHA-256 negli strumenti** — cantiere 96, da chiudere prima di Spalle e Cuffia
+3. ✅ **`verifica_sync.py` + `stato.py`** — *eseguito 7 agosto*. Sola lettura; i numeri vivono in [`STATO.md`](STATO.md)
+4. ✅ **Unificare la chiave SHA-256 negli strumenti** — *eseguito 7 agosto*, cantiere 96 chiuso
 5. **Wrapper errori Supabase a lotti** (45 chiamate su 116 non controllate) + fix `rollRes` + ricollegamento `?schedaDebug=1`
 
 Fuori dai primi cinque: pulizia delle **27 funzioni mai chiamate** in `zona-tracker.html` e mappa interna del file.

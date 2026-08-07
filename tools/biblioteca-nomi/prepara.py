@@ -80,17 +80,32 @@ def leggi_cantiere_pendente():
     """Il cantiere 96 righe non ancora sincronizzato sullo Sheet.
 
     I suoi file sono gia' impegnati: non vanno trattati come liberi.
-    Chiave = nome file attuale sul Mac.
+
+    Chiave = SHA-256, non il nome file. Il cantiere dei nomi RINOMINA i file:
+    con la chiave sul nome, appena un file veniva rinominato la riga smetteva di
+    risultare impegnata e il suo nome tornava disponibile. Misurato prima della
+    conversione: 44 righe su 96 avevano gia' perso lo stato.
+
+    Restituisce due mappe, sha -> (codice, nome) e nome -> (codice, nome).
+    La seconda e' solo un ripiego per eventuali righe senza impronta: la chiave
+    portante e' la prima.
     """
     cens = BASE / 'cantiere_96_pendente.tsv'
     if not cens.exists():
-        return {}
-    out = {}
+        return {}, {}
+    per_sha, per_nome = {}, {}
     with open(cens, encoding='utf-8-sig', newline='') as fh:
         for r in csv.DictReader(fh, delimiter='\t'):
+            # il codice vero e' quello ricavato dall'impronta; quello scritto a mano
+            # nel registro e' risultato sfasato su 22 righe su 96
+            codice = (r.get('codice_reale') or r.get('codice_registro')
+                      or r.get('codice') or '')
+            voce = (codice, r.get('nome_in_decisioni', ''))
+            if r.get('sha256'):
+                per_sha[r['sha256']] = voce
             if r.get('nome_file_mac'):
-                out[nfc(r['nome_file_mac'])] = (r['codice'], r['nome_in_decisioni'])
-    return out
+                per_nome[nfc(r['nome_file_mac'])] = voce
+    return per_sha, per_nome
 
 
 def main():
@@ -127,9 +142,9 @@ def main():
     catalogo, fonte_cat = leggi_catalogo(args.catalogo_copia)
     json.dump(catalogo, open(args.catalogo_copia, 'w'), ensure_ascii=False)
 
-    pendente = leggi_cantiere_pendente()
-    if pendente:
-        print('  cantiere 96 pendente: %d file impegnati' % len(pendente))
+    pendente, pendente_per_nome = leggi_cantiere_pendente()
+    if pendente or pendente_per_nome:
+        print('  cantiere 96 pendente: %d file impegnati (chiave SHA-256)' % len(pendente))
 
     # indice slug -> codici (guardia "1 codice per slug")
     per_slug = collections.defaultdict(list)
@@ -182,7 +197,7 @@ def main():
 
         if codici:
             stato = 'collegato'          # GIF viva nell'app -> slug SOLO registrato
-        elif nfc(f) in pendente:
+        elif sha in pendente or nfc(f) in pendente_per_nome:
             stato = 'pendente'           # impegnato dal cantiere 96 non sincronizzato
         elif hits:
             stato = 'indicizzato'        # riga in biblioteca_gif ma nessun codice
@@ -199,7 +214,8 @@ def main():
         #  - resto: si deduce dal nome file, che e' la fonte piu' debole
         dedotto = proponi(os.path.splitext(f)[0])
         if stato == 'pendente':
-            nome_prop, origine = pendente[nfc(f)][1], 'cantiere 96'
+            voce = pendente.get(sha) or pendente_per_nome.get(nfc(f))
+            nome_prop, origine = voce[1], 'cantiere 96'
         elif codici and codici[0].get('nome'):
             nome_prop, origine = codici[0]['nome'], 'catalogo'
         else:
@@ -217,7 +233,7 @@ def main():
             'storage_paths': paths,
             'slug_indice': [h['slug'] for h in hits],
             'condiviso': max([len(per_slug.get(h['slug'], [])) for h in hits], default=0) > 1,
-            'cantiere': list(pendente.get(nfc(f), ())) or None,
+            'cantiere': list(pendente.get(sha) or pendente_per_nome.get(nfc(f)) or ()) or None,
             'nome_proposto': nome_prop,
             'origine_proposta': origine,
             'nome_dedotto': dedotto,

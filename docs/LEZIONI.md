@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave
 
 ---
 
@@ -137,7 +137,13 @@ Lo strumento marca i codici non scaricati come **non verificabili**, non come a 
 
 **Perché.** `migra.py` costruisce il piano per impronta; `slug_da_migrare.tsv` scritto da `conferma.py` include solo le righe `collegato`/`pendente`. È una rete, non un progetto, e non regge volumi grandi.
 
-**Difetto residuo non corretto.** `cantiere_96_pendente.tsv` è indicizzato **per nome file sul Mac**: dopo una rinomina le chiavi non corrispondono più e lo stato `pendente` decade. Su Mobilità (215 file) questo costerebbe la ri-conferma di decine di righe. Da affrontare col cantiere 96, **prima** di aprire una zona grande.
+**Chiuso il 7 agosto.** `cantiere_96_pendente.tsv` era indicizzato **per nome file sul Mac**: dopo una rinomina le chiavi non corrispondevano più e lo stato `pendente` decadeva. Non era un rischio teorico — alla conversione **44 righe su 96 (il 46%) avevano già perso lo stato**.
+
+Il registro è ora indicizzato per SHA-256 (`chiave_pendente.py`), `prepara.py` cerca per impronta, e `riconcilia.py` verifica prima di ogni migrazione che diario e piano coincidano. **Il piano di `pianifica.py` è l'unica fonte di cosa si migra**; il diario resta la prova che la conferma è stata salvata nell'istante in cui è stata data.
+
+Al primo giro riconciliato, `riconcilia.py` ha subito trovato una riga che il piano di Cardio aveva e il diario no (`Salti laterali rapidi`): lo stesso difetto, colto prima che facesse danno invece che dopo.
+
+**Scoperta collaterale, più grave del difetto stesso** → vedi [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave).
 
 ---
 
@@ -242,3 +248,30 @@ Restituisce `{error}` nel result: i `try/catch` non li vedono. Un'operazione fal
 - l'audit del 7 agosto ha misurato **45 chiamate `await supa.` su 116 senza alcun controllo dell'errore**.
 
 **Regola nata:** controllare SEMPRE `res.error`.
+
+---
+
+## L23 — Il codice scritto a mano in un registro non è una chiave
+
+**Il caso.** 7 agosto, convertendo `cantiere_96_pendente.tsv` alla chiave SHA-256, è emerso che la colonna `codice` **non descriveva le righe accanto a cui era scritta**. Su 96 righe: 44 concordavano col catalogo, **22 puntavano a un codice diverso da quello vero**, le altre non erano verificabili.
+
+Lo sfasamento è sistematico e leggibile a occhio nudo — un blocco intero spostato di una posizione:
+
+| il registro dice | ma quel nome è in realtà |
+|---|---|
+| EX591 = `Boxe footwork` | EX590 |
+| EX592 = `Boxe gancio` | EX591 |
+| EX593 = `Boxe jab` | EX592 |
+| EX595 = `Burpee` | EX593 |
+| EX597 = `Corsa all'indietro` | EX598 |
+| EX602 = `Corsa falcata lunga` | EX599 |
+
+**Perché è successo.** È la stessa radice di [L5](#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno): un blocco di righe incollato disallineato di una posizione. Nessuno se ne è accorto perché il nome, da solo, era giusto — a essere sbagliato era solo l'accostamento fra nome e codice, che nessun controllo confrontava.
+
+**Perché non ha ancora fatto danno.** `prepara.py` controlla prima i codici veri (ricavati per impronta) e solo dopo il registro: `collegato` vince su `pendente`. La priorità del codice sul registro ha coperto il difetto per settimane.
+
+**Come si è chiuso.** Il codice non si legge più dal registro: si **ricava dall'impronta**, con la catena file → `biblioteca_gif` → `esercizi_catalog`. Il valore scritto a mano resta nel TSV in una colonna sua (`codice_registro`) accanto a quello ricavato (`codice_reale`) e a una colonna che dice se concordano: si conserva il dato invece di buttarlo, e la divergenza resta visibile.
+
+**Il punto generale.** In questo cantiere l'unica chiave che regge è l'impronta del contenuto. Il nome cambia perché rinominare è il lavoro; il codice scritto a mano può essere sbagliato dal momento in cui è stato scritto. Tutto ciò che si scrive a mano in un registro è un'annotazione, non una chiave.
+
+**Corollario emerso lo stesso giorno**: nel registro vivevano ancora **EX676-EX682, sei codici allocati in anticipo e mai scritti a catalogo** — mentre EX676 risulta il prossimo libero. Erano pronti a scontrarsi esattamente come in [L6](#l6--codici-allocati-in-anticipo-si-scontrano).

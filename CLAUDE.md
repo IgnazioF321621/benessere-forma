@@ -63,7 +63,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Zero slug orfani. Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **Prossima: Spalle e Cuffia.**
+**Catalogo GIF** — **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **Prossima: Spalle e Cuffia.**
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -137,6 +137,12 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
+**Dopo ogni sync si lancia `verifica_sync.py`** — stana righe arenate, valori riportati indietro e catene rotte in un colpo solo, confrontando il vivo contro `docs/STATO.json`:
+
+```bash
+python3 tools/biblioteca-nomi/verifica_sync.py && python3 tools/biblioteca-nomi/stato.py
+```
+
 Tre trappole del sync, tutte già costate giri a vuoto:
 - ⚠️ **Una riga tolta dal foglio non sparisce: si arena.** Si riconosce dall'`updated_at` più vecchio dell'ultimo lotto. È l'**unico** caso in cui cancellare direttamente da Supabase è sicuro → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena)
 - ⚠️ **Il sync riporta indietro ciò che il foglio non ha.** Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi → [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha)
@@ -156,9 +162,9 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.570 righe** (6 agosto 2026), di cui ~900 puntano a file inesistenti (cantiere 3E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.570 righe** (6 agosto 2026): 602 vive, 0 rotte, 46 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
-Bucket Storage `biblioteca-gif`: **630 oggetti in 9 cartelle**, zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
 **`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona; Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
@@ -233,6 +239,22 @@ Non deve esistere un istante in cui una GIF è irraggiungibile.
 Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. L'appaiamento è sempre per SHA-256, mai per nome.
 
 **La regola che non si negozia**: nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF. L'analisi tecnica prepara la decisione, non la sostituisce — anche quando la spiegazione tecnica torna perfettamente.
+
+**Strumenti di controllo** (sola lettura, si lanciano dalla radice del repo):
+
+| comando | quando | cosa dice |
+|---|---|---|
+| `python3 tools/biblioteca-nomi/stato.py` | dopo ogni sync e ogni migrazione | fotografa tutto in `docs/STATO.md` + `STATO.json` |
+| `python3 tools/biblioteca-nomi/verifica_sync.py` | **dopo ogni sync**, prima di ogni altra cosa | righe arenate, valori riportati indietro, catene rotte |
+| `python3 tools/biblioteca-nomi/riconcilia.py "<zona>"` | prima di migrare una zona | dove il diario del pannello e il piano divergono |
+
+**I numeri di riferimento stanno in [`docs/STATO.md`](docs/STATO.md), non qui.** Quel file si rigenera con un comando; i numeri scritti a mano in un documento invecchiano in silenzio.
+
+**Chiave unica SHA-256.** Tutti i registri del cantiere sono indicizzati per impronta, mai per nome file: il cantiere rinomina i file, e una chiave sul nome decade alla prima rinomina. Vale anche per `cantiere_96_pendente.tsv`, convertito il 7 agosto → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe)
+
+**Il piano di `pianifica.py` è l'unica fonte di cosa si migra.** Il diario `slug_da_migrare.tsv` resta la prova che una conferma è stata salvata nell'istante in cui è stata data, ma non decide più cosa migrare: `riconcilia.py` verifica che i due coincidano prima di partire.
+
+⚠️ **Il campo `codice` dei registri scritti a mano non è affidabile**: su `cantiere_96_pendente.tsv` 22 righe su 96 puntavano a un codice diverso da quello vero. Il codice si **ricava dall'impronta** (file → riga → codice), non si crede → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno)
 
 **Guardie tecniche** (sempre attive):
 1. "1 codice per slug" — contare quanti codici puntano allo stesso `gif_slug` prima di rinomine massive
@@ -399,3 +421,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 20. [La domanda giusta sui "liberi"](docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio) — cantieri 2 e 16
 21. [Salvare nell'istante della scelta](docs/LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta) — strumenti di conferma
 22. [supabase-js non lancia eccezioni](docs/LEZIONI.md#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api) — ogni scrittura DB
+23. [Il codice scritto a mano non è una chiave](docs/LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) — registri del cantiere
