@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conferma nomi — biblioteca esercizi</title>
+<style>
+  :root{
+    --bone:#F5F3EE; --ink:#1B1E1D; --muted:#6B7370; --line:#DDD8CE;
+    --evergreen:#2A7A6F; --card:#FFFFFF;
+    --collegato:#B45309; --pendente:#5E4A7A; --libero:#2A7A6F;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bone);color:var(--ink);
+       font:15px/1.5 ui-sans-serif,-apple-system,"Helvetica Neue",sans-serif}
+  code,.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+  header{position:sticky;top:0;z-index:5;background:var(--bone);
+         border-bottom:1px solid var(--line);padding:14px 22px;
+         display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;font-weight:650;letter-spacing:-.01em}
+  .grow{flex:1}
+  select,button,input{font:inherit;color:inherit}
+  select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  button{padding:8px 14px;border-radius:9px;border:1px solid var(--line);
+         background:var(--card);cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--evergreen)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--evergreen);color:#fff;border-color:var(--evergreen)}
+  button.ghost{background:transparent}
+  .stat{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--muted)}
+
+  main{padding:20px 22px 120px;max-width:1180px;margin:0 auto}
+
+  .riga{display:grid;grid-template-columns:340px 1fr;gap:20px;background:var(--card);
+        border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .riga.fatta{opacity:.5}
+  .riga.scelta{border-color:var(--evergreen);box-shadow:0 0 0 2px rgba(42,122,111,.13)}
+  .gif{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;
+       border:1px solid var(--line);border-radius:10px}
+
+  .campo{margin-bottom:11px}
+  .lab{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+       margin-bottom:3px;font-family:ui-monospace,monospace}
+  .val{font-family:ui-monospace,monospace;font-size:13px;word-break:break-word}
+  input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);
+                   border-radius:9px;background:var(--bone);font-size:15px}
+  input[type=text]:focus{outline:none;border-color:var(--evergreen);background:#fff}
+  .slug{color:var(--evergreen);font-weight:600}
+
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;
+         font-family:ui-monospace,monospace;color:#fff}
+  .b-collegato{background:var(--collegato)} .b-pendente{background:var(--pendente)}
+  .b-libero{background:var(--libero)} .b-indicizzato{background:var(--muted)}
+
+  .chip{display:inline-block;padding:3px 9px;border:1px dashed var(--line);border-radius:999px;
+        font-size:12px;cursor:pointer;background:transparent;margin:3px 5px 0 0}
+  .chip:hover{border-color:var(--evergreen);border-style:solid}
+
+  .azioni{display:flex;gap:9px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .avviso{font-size:12.5px;color:var(--collegato);margin-top:8px}
+  .nota{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  footer{position:fixed;bottom:0;left:0;right:0;background:var(--card);
+         border-top:1px solid var(--line);padding:12px 22px;
+         display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  #esito{margin-top:14px;border:1px solid var(--line);border-radius:12px;
+         background:var(--card);padding:14px;font-size:13px;display:none}
+  #esito table{border-collapse:collapse;width:100%;font-family:ui-monospace,monospace;font-size:12px}
+  #esito td,#esito th{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;
+                      vertical-align:top}
+  .ok{color:var(--evergreen)} .ko{color:var(--collegato)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Conferma nomi</h1>
+  <select id="zona"></select>
+  <span class="stat" id="avanz"></span>
+  <span class="grow"></span>
+  <button class="ghost" id="prev">← blocco</button>
+  <span class="stat" id="blocco"></span>
+  <button class="ghost" id="next">blocco →</button>
+  <label class="stat"><input type="checkbox" id="mostraFatte"> mostra già decise</label>
+</header>
+
+<main>
+  <div id="righe"></div>
+  <div id="esito"></div>
+</main>
+
+<footer>
+  <span class="stat" id="scelte">0 righe scelte</span>
+  <span class="grow"></span>
+  <button id="tutte">Scegli tutte le righe del blocco</button>
+  <button id="prova">Prova a vuoto</button>
+  <button class="primary" id="applica" disabled>Applica blocco</button>
+</footer>
+
+<script>
+const PER_BLOCCO = 10;
+let DATI = null, blocco = 0, scelte = new Map(), provato = false;
+
+/* Regola 6 — stessa identica trasformazione di nomenclatura.py */
+function slugify(s){
+  s = (s||'').normalize('NFC').replace(/['’]/g,'-');
+  s = s.normalize('NFD').replace(/\p{Mn}/gu,'');
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function caricaZone(){
+  const zone = await (await fetch('/api/zone')).json();
+  zona.innerHTML = zone.map(z=>`<option value="${z}">${z}</option>`).join('');
+  await carica();
+}
+
+async function carica(){
+  DATI = await (await fetch('/api/stato?zona='+encodeURIComponent(zona.value))).json();
+  if(DATI.error){ righe.innerHTML = '<p>'+esc(DATI.error)+'</p>'; return; }
+  scelte.clear(); provato = false;
+  disegna();
+}
+
+function visibili(){
+  return DATI.righe.filter(r => mostraFatte.checked || !r.gia_deciso);
+}
+
+function disegna(){
+  const v = visibili();
+  const nblocchi = Math.max(1, Math.ceil(v.length/PER_BLOCCO));
+  blocco = Math.min(Math.max(0, blocco), nblocchi-1);
+  const q = v.slice(blocco*PER_BLOCCO, blocco*PER_BLOCCO+PER_BLOCCO);
+
+  avanz.textContent = `${DATI.zona} · ${DATI.decise}/${DATI.righe.length} decise · da fare ${DATI.righe.length-DATI.decise}`;
+  blocco_.textContent = `blocco ${blocco+1} di ${nblocchi}`;
+  prev.disabled = blocco===0; next.disabled = blocco>=nblocchi-1;
+
+  righe.innerHTML = q.map(disegnaRiga).join('') || '<p>Niente da mostrare in questo blocco.</p>';
+  q.forEach(r=>{
+    const inp = document.getElementById('n'+r.i);
+    inp.addEventListener('input', ()=>{
+      document.getElementById('s'+r.i).textContent = slugify(inp.value) || '—';
+      if(scelte.has(r.i)) scelte.set(r.i, inp.value);
+      provato = false; aggiornaFooter();
+    });
+    inp.addEventListener('keydown', ev=>{ if(ev.key==='Enter'){ ev.preventDefault(); toggle(r.i); }});
+  });
+  esito.style.display='none';
+  aggiornaFooter();
+}
+
+function disegnaRiga(r){
+  const cat = r.codici.length ? r.codici[0] : null;
+  const chips = [];
+  if(cat && cat.nome !== r.nome_proposto)
+    chips.push(`<button class="chip" onclick="usa(${r.i}, this.dataset.v)" data-v="${esc(cat.nome)}">usa nome a catalogo</button>`);
+  if(r.nome_dedotto && r.nome_dedotto !== r.nome_proposto)
+    chips.push(`<button class="chip" onclick="usa(${r.i}, this.dataset.v)" data-v="${esc(r.nome_dedotto)}">usa nome dedotto dal file</button>`);
+
+  const avviso = (r.stato_binario==='collegato' || r.stato_binario==='pendente')
+    ? `<div class="avviso">GIF viva: il file viene rinominato, lo slug nuovo va solo in lista e non viene applicato da nessuna parte.</div>` : '';
+  const cond = r.condiviso ? `<div class="avviso">Attenzione: più codici puntano a questo slug — riga da trattare con la strada dei due codici.</div>` : '';
+  const gem = r.stesso_contenuto_di.length ? `<div class="avviso">Stesso contenuto di: ${esc(r.stesso_contenuto_di.join(', '))}</div>` : '';
+  const fatto = r.gia_deciso
+    ? `<div class="nota">Già deciso il ${esc(r.gia_deciso.quando)} — ${esc(r.gia_deciso.azione)} → <code>${esc(r.gia_deciso.nome_nuovo||'—')}</code></div>` : '';
+
+  return `
+  <div class="riga ${r.gia_deciso?'fatta':''} ${scelte.has(r.i)?'scelta':''}" id="r${r.i}">
+    <img class="gif" loading="lazy" src="/gif/${encodeURIComponent(r.cartella)}/${encodeURIComponent(r.file)}" alt="">
+    <div>
+      <div class="campo">
+        <span class="badge b-${r.stato_binario}">${r.stato_binario}</span>
+        ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
+        <span class="stat"> · proposta da: ${esc(r.origine_proposta)}</span>
+      </div>
+      <div class="campo"><div class="lab">nome file attuale</div><div class="val">${esc(r.file)}</div></div>
+      <div class="campo"><div class="lab">nome a catalogo</div><div class="val">${cat?esc(cat.nome):(r.cantiere?esc(r.cantiere[1])+' <span class="stat">(cantiere 96, non ancora sincronizzato)</span>':'—')}</div></div>
+      <div class="campo">
+        <div class="lab">nome proposto — correggilo guardando la GIF</div>
+        <input type="text" id="n${r.i}" value="${esc(r.nome_proposto)}">
+        ${chips.join('')}
+      </div>
+      <div class="campo"><div class="lab">slug</div><div class="val slug" id="s${r.i}">${esc(r.slug_proposto)||'—'}</div></div>
+      ${avviso}${cond}${gem}${fatto}
+      <div class="azioni">
+        <button class="${scelte.has(r.i)?'primary':''}" onclick="toggle(${r.i})">
+          ${scelte.has(r.i)?'✓ scelta':'Conferma'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function usa(i, v){
+  const inp = document.getElementById('n'+i);
+  inp.value = v; inp.dispatchEvent(new Event('input')); inp.focus();
+}
+
+function toggle(i){
+  if(scelte.has(i)) scelte.delete(i);
+  else scelte.set(i, document.getElementById('n'+i).value);
+  provato = false;
+  const el = document.getElementById('r'+i);
+  el.classList.toggle('scelta', scelte.has(i));
+  el.querySelector('.azioni button').className = scelte.has(i)?'primary':'';
+  el.querySelector('.azioni button').textContent = scelte.has(i)?'✓ scelta':'Conferma';
+  aggiornaFooter();
+}
+
+function aggiornaFooter(){
+  scelte_.textContent = `${scelte.size} righe scelte`;
+  applica.disabled = !(scelte.size && provato);
+  applica.textContent = provato ? 'Applica blocco' : 'Applica blocco (prima la prova)';
+}
+
+function payload(){
+  return {zona: zona.value,
+          scelte: [...scelte.entries()].map(([i,nome])=>({i, nome:document.getElementById('n'+i)?.value ?? nome}))};
+}
+
+function tabella(esiti, titolo){
+  esito.style.display='block';
+  esito.innerHTML = `<b>${titolo}</b><table><tr><th>file</th><th>azione</th><th>nuovo nome</th><th>slug</th><th>nota</th></tr>`+
+    esiti.map(e=>`<tr><td>${esc(e.file)}</td>
+      <td class="${e.azione==='salta'?'ko':'ok'}">${esc(e.azione)}</td>
+      <td>${esc(e.dest||'—')}</td><td>${esc(e.slug)}</td><td>${esc(e.nota||'')}</td></tr>`).join('')+'</table>';
+  esito.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+prova.onclick = async ()=>{
+  if(!scelte.size) return;
+  const r = await (await fetch('/api/prova',{method:'POST',body:JSON.stringify(payload())})).json();
+  provato = true; aggiornaFooter();
+  const ko = r.esiti.filter(e=>e.azione==='salta').length;
+  tabella(r.esiti, `Prova a vuoto — nessuna scrittura. ${r.esiti.length-ko} applicabili, ${ko} da saltare.`);
+};
+
+applica.onclick = async ()=>{
+  const n = scelte.size;
+  if(!confirm(`Sto per rinominare sul disco i file di ${n} righe. Procedo?`)) return;
+  const r = await (await fetch('/api/applica',{method:'POST',body:JSON.stringify(payload())})).json();
+  tabella(r.esiti, `Applicato — ${r.rinominate} rinominate, ${r.in_lista_slug} slug messi in lista. Backup: ${esc(r.backup)}`);
+  await carica();
+};
+
+tutte.onclick = ()=>{
+  visibili().slice(blocco*PER_BLOCCO, blocco*PER_BLOCCO+PER_BLOCCO)
+    .forEach(r=>{ if(!scelte.has(r.i)) scelte.set(r.i, document.getElementById('n'+r.i).value); });
+  provato=false; disegna();
+};
+
+prev.onclick = ()=>{ blocco--; scelte.clear(); disegna(); window.scrollTo(0,0); };
+next.onclick = ()=>{ blocco++; scelte.clear(); disegna(); window.scrollTo(0,0); };
+zona.onchange = ()=>{ blocco=0; carica(); };
+mostraFatte.onchange = ()=>{ blocco=0; scelte.clear(); disegna(); };
+
+/* id che collidono con parole riservate */
+const blocco_ = document.getElementById('blocco');
+const scelte_ = document.getElementById('scelte');
+
+caricaZone();
+</script>
+</body>
+</html>

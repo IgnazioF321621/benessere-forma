@@ -1,0 +1,765 @@
+{
+ "0": {
+  "stato": "confermato",
+  "nome": "Battle rope onde alternate",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "battle rope"
+ },
+ "1": {
+  "stato": "confermato",
+  "nome": "Boxe diretto sacco",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "sacco"
+ },
+ "2": {
+  "stato": "confermato",
+  "nome": "Boxe diretto",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "3": {
+  "stato": "confermato",
+  "nome": "Boxe diretti alternati",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "4": {
+  "stato": "confermato",
+  "nome": "Boxe footwork",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "5": {
+  "stato": "confermato",
+  "nome": "Boxe gancio",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "6": {
+  "stato": "confermato",
+  "nome": "Boxe jab",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "7": {
+  "stato": "confermato",
+  "nome": "Burpee navy seal",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "8": {
+  "stato": "confermato",
+  "nome": "Burpee",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "9": {
+  "stato": "confermato",
+  "nome": "Camminata bear crawl",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "10": {
+  "stato": "confermato",
+  "nome": "Spostamento laterale rapido",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero",
+  "codice": "EX115"
+ },
+ "11": {
+  "stato": "confermato",
+  "nome": "Corsa all'indietro",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "12": {
+  "stato": "confermato",
+  "nome": "Corsa calciata sul posto",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero",
+  "codice": "EX114"
+ },
+ "13": {
+  "stato": "saltato",
+  "nome": "",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "conetti"
+ },
+ "14": {
+  "stato": "confermato",
+  "nome": "Corsa zigzag conetti",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "conetti"
+ },
+ "15": {
+  "stato": "confermato",
+  "nome": "Corsa laterale scaletta agilità",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "scaletta agilità"
+ },
+ "16": {
+  "stato": "confermato",
+  "nome": "Spostamento laterale con tocco a terra",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "17": {
+  "stato": "confermato",
+  "nome": "Corsa passi corti",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "18": {
+  "stato": "confermato",
+  "nome": "Corsa falcata lunga",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "19": {
+  "stato": "confermato",
+  "nome": "Corsa resistenza con elastico",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "elastico"
+ },
+ "20": {
+  "stato": "confermato",
+  "nome": "Corsa scaletta agilità",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "scaletta agilità"
+ },
+ "21": {
+  "stato": "confermato",
+  "nome": "Corsa sforbiciata",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "22": {
+  "stato": "confermato",
+  "nome": "Corsa sul posto",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "23": {
+  "stato": "confermato",
+  "nome": "Calcio circolare sacco",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "sacco"
+ },
+ "24": {
+  "stato": "confermato",
+  "nome": "Jumping jack",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "25": {
+  "stato": "confermato",
+  "nome": "Pistol jump box",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "box"
+ },
+ "26": {
+  "stato": "confermato",
+  "nome": "Jumping rimbalzi",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "27": {
+  "stato": "confermato",
+  "nome": "Salto all'indietro",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero"
+ },
+ "28": {
+  "stato": "confermato",
+  "nome": "Salto con la corda",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corda"
+ },
+ "29": {
+  "stato": "confermato",
+  "nome": "Salto lungo da fermo",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero",
+  "codice": "EX113"
+ },
+ "30": {
+  "stato": "confermato",
+  "nome": "Salto monopodalico avanti",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero"
+ },
+ "31": {
+  "stato": "confermato",
+  "nome": "Salto verticale esplosivo",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero"
+ },
+ "32": {
+  "stato": "confermato",
+  "nome": "Skip con calcio",
+  "gt": "",
+  "uso": "riscaldamento",
+  "attrezzo": "corpo libero"
+ },
+ "33": {
+  "stato": "confermato",
+  "nome": "Skip ginocchia alte",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "34": {
+  "stato": "confermato",
+  "nome": "Skip power",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "35": {
+  "stato": "confermato",
+  "nome": "Skip sul posto",
+  "gt": "",
+  "uso": "finisher",
+  "attrezzo": "corpo libero"
+ },
+ "36": {
+  "stato": "confermato",
+  "nome": "Squat jump box",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "box",
+  "codice": "EX112"
+ },
+ "37": {
+  "stato": "confermato",
+  "nome": "Squat jump ginocchia alte",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero"
+ },
+ "38": {
+  "stato": "confermato",
+  "nome": "Squat thrust",
+  "gt": "quadricipiti",
+  "uso": "principale;finisher",
+  "attrezzo": "corpo libero"
+ },
+ "39": {
+  "stato": "confermato",
+  "nome": "Bird dog",
+  "gt": "addominali",
+  "uso": "",
+  "attrezzo": "corpo libero",
+  "codice": "EX036"
+ },
+ "40": {
+  "stato": "confermato",
+  "nome": "Plank inchworm",
+  "gt": "addominali",
+  "uso": "",
+  "attrezzo": "corpo libero",
+  "codice": "EX118"
+ },
+ "41": {
+  "stato": "confermato",
+  "nome": "Lancio rotazionale palla medica al muro",
+  "gt": "core anti-rotazione",
+  "uso": "",
+  "attrezzo": "palla medica"
+ },
+ "42": {
+  "stato": "confermato",
+  "nome": "Piegamenti con rotazione a T",
+  "gt": "core anti-rotazione",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "43": {
+  "stato": "confermato",
+  "nome": "Retroversione bacino da supino",
+  "gt": "core anti-estensione",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "44": {
+  "stato": "confermato",
+  "nome": "Torsione busto gomiti alti in piedi",
+  "gt": "core anti-rotazione",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "45": {
+  "stato": "confermato",
+  "nome": "Abduzione clamshell decubito laterale",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "46": {
+  "stato": "confermato",
+  "nome": "Abduzione clamshell elastico decubito laterale",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "47": {
+  "stato": "confermato",
+  "nome": "Abduzione anca decubito laterale",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "48": {
+  "stato": "da decidere",
+  "nome": "Abduzione anca elastico seduto panca piana",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "49": {
+  "stato": "confermato",
+  "nome": "Abduzione fire hydrant elastico quadrupedia",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "50": {
+  "stato": "confermato",
+  "nome": "Abduzione fire hydrant quadrupedia",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "51": {
+  "stato": "confermato",
+  "nome": "Adduzione anca decubito laterale",
+  "gt": "adduttori",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "52": {
+  "stato": "confermato",
+  "nome": "Affondo inverso con knee drive",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "53": {
+  "stato": "confermato",
+  "nome": "Affondo inverso Bosu con knee drive",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "Bosu"
+ },
+ "54": {
+  "stato": "confermato",
+  "nome": "Affondo split maniglie elastico",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "55": {
+  "stato": "confermato",
+  "nome": "Affondo alternato",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "56": {
+  "stato": "saltato",
+  "nome": "",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "elastico + maniglie"
+ },
+ "57": {
+  "stato": "confermato",
+  "nome": "Affondo camminato con knee drive",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "58": {
+  "stato": "confermato",
+  "nome": "Affondo jump lunge",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "59": {
+  "stato": "confermato",
+  "nome": "Affondo laterale",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "60": {
+  "stato": "confermato",
+  "nome": "Camminata laterale elastico caviglie",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "61": {
+  "stato": "confermato",
+  "nome": "Donkey kick elastico quadrupedia",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "62": {
+  "stato": "saltato",
+  "nome": "",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "63": {
+  "stato": "confermato",
+  "nome": "Hip hinge monopodalico elastico",
+  "gt": "ischiocrurali",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "64": {
+  "stato": "confermato",
+  "nome": "Hip thrust elastico in ginocchio",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "65": {
+  "stato": "confermato",
+  "nome": "Leg press elastico supino alternato",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "66": {
+  "stato": "confermato",
+  "nome": "Squat pistol al box",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "box"
+ },
+ "67": {
+  "stato": "confermato",
+  "nome": "Reverse hyper elastico panca",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico;panca"
+ },
+ "68": {
+  "stato": "confermato",
+  "nome": "Squat goblet kettlebell elastico",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "kettlebell;elastico"
+ },
+ "69": {
+  "stato": "confermato",
+  "nome": "Squat barra elastico",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "sbarra;elastico"
+ },
+ "70": {
+  "stato": "confermato",
+  "nome": "Squat calcio laterale tocco tallone",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "71": {
+  "stato": "confermato",
+  "nome": "Squat cosacco",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "72": {
+  "stato": "confermato",
+  "nome": "Squat elastico braccia alte",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "73": {
+  "stato": "confermato",
+  "nome": "Squat jump",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "74": {
+  "stato": "confermato",
+  "nome": "Squat wall ball palla medica",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "palla medica"
+ },
+ "75": {
+  "stato": "confermato",
+  "nome": "Stacco monopodalico",
+  "gt": "ischiocrurali",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "76": {
+  "stato": "confermato",
+  "nome": "Step up manubri con curl bicipiti",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "manubri;panca"
+ },
+ "77": {
+  "stato": "confermato",
+  "nome": "Swing elastico maniglie",
+  "gt": "glutei",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "78": {
+  "stato": "confermato",
+  "nome": "Squat wall sit inclinazione alternato",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "79": {
+  "stato": "confermato",
+  "nome": "Squat wall sit",
+  "gt": "quadricipiti",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "80": {
+  "stato": "confermato",
+  "nome": "Adduzione spalla elastico un braccio in piedi",
+  "gt": "petto",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "81": {
+  "stato": "confermato",
+  "nome": "Chest press elastico maniglie in piedi",
+  "gt": "petto",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "82": {
+  "stato": "confermato",
+  "nome": "Calf raise elastico maniglie in piedi",
+  "gt": "polpacci",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "83": {
+  "stato": "confermato",
+  "nome": "Croci inverse elastico busto flesso",
+  "gt": "deltoidi posteriori",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "84": {
+  "stato": "confermato",
+  "nome": "Croci inverse elastico maniglie busto flesso",
+  "gt": "deltoidi posteriori",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "85": {
+  "stato": "confermato",
+  "nome": "Estensione spalla elastico in piedi",
+  "gt": "dorsali",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "86": {
+  "stato": "confermato",
+  "nome": "Lancio al petto palla medica al muro",
+  "gt": "petto",
+  "uso": "",
+  "attrezzo": "palla medica"
+ },
+ "87": {
+  "stato": "confermato",
+  "nome": "Lancio slam palla medica",
+  "gt": "dorsali",
+  "uso": "",
+  "attrezzo": "palla medica"
+ },
+ "88": {
+  "stato": "confermato",
+  "nome": "Lat machine elastico maniglie in ginocchio",
+  "gt": "dorsali",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "89": {
+  "stato": "confermato",
+  "nome": "Piegamenti cobra prono",
+  "gt": "lombari",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "90": {
+  "stato": "confermato",
+  "nome": "Superman",
+  "gt": "lombari",
+  "uso": "",
+  "attrezzo": "corpo libero",
+  "codice": "EX110"
+ },
+ "91": {
+  "stato": "confermato",
+  "nome": "Swimming prono",
+  "gt": "lombari",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "92": {
+  "stato": "confermato",
+  "nome": "Alzate diagonali elastico un braccio in piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "93": {
+  "stato": "confermato",
+  "nome": "Alzate diagonali elastico maniglie in piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "94": {
+  "stato": "confermato",
+  "nome": "Alzate laterali isometriche in piedi",
+  "gt": "deltoidi laterali",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "95": {
+  "stato": "confermato",
+  "nome": "Incroci braccia in piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "96": {
+  "stato": "confermato",
+  "nome": "Lento avanti elastico seduto",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "97": {
+  "stato": "confermato",
+  "nome": "Lento avanti isometrico in piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "corpo libero"
+ },
+ "98": {
+  "stato": "confermato",
+  "nome": "Lento dietro barra elastico ai piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "sbarra;elastico"
+ },
+ "99": {
+  "stato": "confermato",
+  "nome": "Lento dietro maniglia elastico un braccio in piedi",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "100": {
+  "stato": "confermato",
+  "nome": "Squat croce di ferro manubri",
+  "gt": "deltoidi laterali",
+  "uso": "",
+  "attrezzo": "manubri"
+ },
+ "101": {
+  "stato": "confermato",
+  "nome": "Squat con lancio palla un braccio",
+  "gt": "deltoidi anteriori",
+  "uso": "",
+  "attrezzo": "palla medica"
+ },
+ "102": {
+  "stato": "confermato",
+  "nome": "Estensione tricipiti elastico busto flesso",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ },
+ "103": {
+  "stato": "confermato",
+  "nome": "French press elastico in piedi",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "104": {
+  "stato": "da decidere",
+  "nome": "French press elastico maniglie in piedi",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico + maniglie"
+ },
+ "105": {
+  "stato": "confermato",
+  "nome": "French press elastico maniglie panca piana",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico;maniglie;panca"
+ },
+ "106": {
+  "stato": "confermato",
+  "nome": "Pushdown elastico in piedi",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico"
+ },
+ "107": {
+  "stato": "confermato",
+  "nome": "Pushdown elastico maniglie in piedi",
+  "gt": "tricipiti",
+  "uso": "",
+  "attrezzo": "elastico;maniglie"
+ }
+}

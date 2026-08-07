@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Conferma visiva — cantiere Cardio e Conditioning</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --card:#fff; --line:#dcdcd6; --t1:#1c1c1a; --t2:#5c5c56; --t3:#95958d;
+    --ok:#2a7a6f; --skip:#8a6d1f; --warn:#b45309; --accent:#2a7a6f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--t1);
+       font:14px/1.45 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+  header{position:sticky;top:0;z-index:50;background:var(--bg);
+         border-bottom:1px solid var(--line);padding:10px 16px}
+  .hrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  h1{font-size:14px;margin:0;font-weight:600}
+  .stato{font-size:13px;color:var(--t2)}
+  .stato b{color:var(--t1)}
+  .grow{flex:1}
+  button{font:inherit;padding:5px 11px;border:1px solid var(--line);background:#fff;
+         border-radius:5px;cursor:pointer;color:var(--t1)}
+  button:hover{border-color:#b9b9b1}
+  button:disabled{opacity:.4;cursor:default}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.ghost{background:transparent}
+  .salvato{font-size:12px;color:var(--t3);min-width:130px}
+
+  .griglia{display:grid;gap:14px;padding:16px;
+           grid-template-columns:repeat(auto-fill,minmax(310px,1fr))}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:7px;
+       padding:10px;display:flex;flex-direction:column;gap:7px}
+  .box.confermato{border-color:var(--ok);box-shadow:inset 3px 0 0 var(--ok)}
+  .box.saltato{border-color:var(--skip);box-shadow:inset 3px 0 0 var(--skip)}
+  .box.chiarire{background:#fffdf5}
+
+  .gifwrap{background:#fff;border:1px solid var(--line);border-radius:5px;
+           height:190px;display:flex;align-items:center;justify-content:center;
+           cursor:zoom-in;overflow:hidden}
+  .gifwrap img{max-width:100%;max-height:100%;display:block}
+
+  .orig{font-size:11px;color:var(--t3);word-break:break-word}
+  .badge{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:3px;
+         border:1px solid var(--line);color:var(--t2);background:#fafaf8;
+         text-transform:uppercase;letter-spacing:.04em}
+  .badge.upd{border-color:var(--accent);color:var(--accent)}
+  .badge.warn{border-color:var(--warn);color:var(--warn)}
+  .badge.st-da{border-color:var(--t3);color:var(--t3)}
+  .badge.st-ok{border-color:var(--ok);color:var(--ok)}
+  .badge.st-skip{border-color:var(--skip);color:var(--skip)}
+
+  label{font-size:11px;color:var(--t2);display:block;margin-bottom:2px}
+  input[type=text],select,textarea{width:100%;font:inherit;padding:5px 7px;
+        border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--t1)}
+  input[type=text]:focus,select:focus{outline:2px solid #cfe3df;border-color:var(--accent)}
+  .r2{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+  .nota{font-size:11.5px;color:var(--t2);background:#faf9f5;border:1px solid var(--line);
+        border-radius:4px;padding:6px 7px;white-space:pre-wrap}
+  .slug{font-size:11px;color:var(--t3)}
+  .cmd{display:flex;gap:7px;margin-top:2px}
+  .cmd button{flex:1}
+
+  #lente{position:fixed;inset:0;background:rgba(20,20,18,.82);display:none;
+         align-items:center;justify-content:center;z-index:100;padding:24px;cursor:zoom-out}
+  #lente.on{display:flex}
+  #lente figure{margin:0;max-width:min(1100px,95vw);max-height:92vh;display:flex;
+                flex-direction:column;gap:8px;align-items:center}
+  #lente img{max-width:100%;max-height:82vh;background:#fff;border-radius:6px}
+  #lente figcaption{color:#f0f0ec;font-size:12.5px;text-align:center}
+  footer{padding:8px 16px 28px;color:var(--t3);font-size:11.5px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <h1>Conferma visiva — cantiere Cardio e Conditioning</h1>
+    <span class="stato" id="stato">caricamento…</span>
+    <span class="grow"></span>
+    <span class="salvato" id="salvato"></span>
+    <button id="prev">‹ Blocco precedente</button>
+    <button id="next">Blocco successivo ›</button>
+    <button id="confBlocco" class="primary">Conferma tutto il blocco</button>
+    <button id="esporta" class="ghost">Esporta i confermati (TSV)</button>
+  </div>
+</header>
+
+<div class="griglia" id="griglia"></div>
+<footer id="piede"></footer>
+
+<div id="lente"><figure><img id="lenteImg" alt=""><figcaption id="lenteCap"></figcaption></figure></div>
+
+<script>
+'use strict';
+
+const PER_BLOCCO = 10;
+const GT = ['','addominali','adduttori','avambracci','bicipiti','core anti-estensione',
+  'core anti-rotazione','cuffia rotatori','deltoidi anteriori','deltoidi laterali',
+  'deltoidi posteriori','dorsali','glutei','ischiocrurali','lombari','obliqui','petto',
+  'polpacci','quadricipiti','trapezi','tricipiti'];
+const USO = [['','(vuoto — pliometria massimale)'],['finisher','finisher'],['riscaldamento','riscaldamento']];
+
+// ordine standard del catalogo — 22 colonne.
+// ATTENZIONE: 'uso' è la DECIMA colonna, non la diciassettesima. Sbagliare l'ordine
+// disallinea tutto dalla decima in poi quando il TSV viene incollato nel Sheet.
+const COLONNE = ['codice','nome','nome_en','pattern','gruppo_target','attrezzo','luogo','muscoli',
+  'livello','uso','zone_rischio','adattamento','alternativa','setup','esecuzione','errori',
+  'nota_sicurezza','surrogato_attrezzo','nota_surrogato','esecuzione_surrogato',
+  'errori_surrogato','gif_slug'];
+
+let PROPOSTE = [], DEC = {}, blocco = 0, salvataggioInFlight = null;
+
+// ---------- slug: regola 6 (apostrofo -> trattino, NFC prima della traslitterazione) ----------
+function slugify(s){
+  s = (s||'').normalize('NFC').replace(/['’]/g,'-');
+  s = s.normalize('NFD').replace(/\p{Mn}/gu,'').toLowerCase();
+  return s.replace(/[^a-z0-9]+/g,'-').replace(/-{2,}/g,'-').replace(/^-|-$/g,'');
+}
+
+// ---------- persistenza: file vero, non storage del browser ----------
+async function salva(){
+  const corpo = JSON.stringify(DEC);
+  salvataggioInFlight = fetch('/decisioni.json', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:corpo
+  }).then(async r=>{
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok || j.error) throw new Error(j.error || ('HTTP '+r.status));
+    const t = new Date().toLocaleTimeString('it-IT');
+    document.getElementById('salvato').textContent = `salvato ${t}`;
+    document.getElementById('salvato').style.color = 'var(--t3)';
+  }).catch(e=>{
+    const el = document.getElementById('salvato');
+    el.textContent = 'SALVATAGGIO FALLITO: '+e.message;
+    el.style.color = 'var(--warn)';
+    alert('Il salvataggio su decisioni.json e\' fallito:\n'+e.message+
+          '\n\nLe modifiche restano a schermo ma NON sono su disco. Controlla che server.py sia in esecuzione.');
+  });
+  return salvataggioInFlight;
+}
+
+function dec(i){
+  if(!DEC[i]){
+    const p = PROPOSTE.find(x=>x.i===i);
+    DEC[i] = {stato:'da decidere', nome:p.nome, gt:p.gt, uso:p.uso, attrezzo:p.attrezzo};
+  }
+  return DEC[i];
+}
+
+// ---------- rendering ----------
+function intestazione(){
+  const tot = PROPOSTE.length;
+  const nb = Math.ceil(tot/PER_BLOCCO);
+  const conf = PROPOSTE.filter(p=>DEC[p.i]?.stato==='confermato').length;
+  document.getElementById('stato').innerHTML =
+    `Blocco <b>${blocco+1}</b> di <b>${nb}</b> · <b>${conf}</b> confermati · <b>${tot-conf}</b> da fare`;
+  document.getElementById('prev').disabled = blocco===0;
+  document.getElementById('next').disabled = blocco>=nb-1;
+}
+
+function riquadro(p){
+  const d = dec(p.i);
+  const box = document.createElement('div');
+  box.className = 'box' + (d.stato==='confermato'?' confermato':d.stato==='saltato'?' saltato':'')
+                + (p.chiarire && d.stato==='da decidere' ? ' chiarire':'');
+
+  const cardio = p.zona === 'Cardio e Conditioning';
+  const stBadge = d.stato==='confermato' ? '<span class="badge st-ok">confermato</span>'
+                : d.stato==='saltato'    ? '<span class="badge st-skip">saltato</span>'
+                : '<span class="badge st-da">da decidere</span>';
+
+  box.innerHTML = `
+    <div class="gifwrap"><img loading="lazy" src="/gif/${encodeURI(p.path)}" alt=""></div>
+    <div class="orig">${escapeHtml(p.file)}</div>
+    <div>
+      ${stBadge}
+      <span class="badge">${escapeHtml(p.zona)}</span>
+      ${p.codice ? `<span class="badge upd">aggiorna ${p.codice}</span>` : ''}
+      ${p.chiarire ? '<span class="badge warn">da chiarire</span>' : ''}
+      ${!p.visto ? '<span class="badge warn">non ancora esaminata</span>' : ''}
+    </div>
+    <div>
+      <label>Nome proposto</label>
+      <input type="text" class="f-nome" value="${escapeAttr(d.nome)}" placeholder="— da compilare guardando la GIF —">
+      <div class="slug">slug: <span class="f-slug mono">${escapeHtml(slugify(d.nome)||'—')}</span></div>
+    </div>
+    <div class="r2">
+      <div>
+        <label>gruppo_target</label>
+        ${cardio
+          ? `<input type="text" value="(vuoto — regola 10)" disabled>`
+          : `<select class="f-gt">${GT.map(g=>`<option value="${escapeAttr(g)}"${g===d.gt?' selected':''}>${g||'—'}</option>`).join('')}</select>`}
+      </div>
+      <div>
+        <label>${cardio ? 'uso (regola 10)' : 'attrezzo'}</label>
+        ${cardio
+          ? `<select class="f-uso">${USO.map(([v,t])=>`<option value="${v}"${v===d.uso?' selected':''}>${t}</option>`).join('')}</select>`
+          : `<input type="text" class="f-attr" value="${escapeAttr(d.attrezzo)}">`}
+      </div>
+    </div>
+    ${p.note ? `<div class="nota">${escapeHtml(p.note)}</div>` : ''}
+    <div class="cmd">
+      <button class="b-ok primary">Conferma</button>
+      <button class="b-orig" title="${escapeAttr(p.orig_pulito||'')}">Tieni l'originale</button>
+      <button class="b-skip">Salta</button>
+    </div>`;
+
+  const $ = s => box.querySelector(s);
+  $('.gifwrap').onclick = () => apriLente(p);
+  $('.f-nome').oninput = e => {
+    d.nome = e.target.value;
+    $('.f-slug').textContent = slugify(d.nome) || '—';
+    if(d.stato==='confermato'){ d.stato='da decidere'; disegna(); }
+    salva();
+  };
+  if($('.f-gt'))   $('.f-gt').onchange   = e => { d.gt = e.target.value; salva(); };
+  if($('.f-uso'))  $('.f-uso').onchange  = e => { d.uso = e.target.value; salva(); };
+  if($('.f-attr')) $('.f-attr').oninput  = e => { d.attrezzo = e.target.value; salva(); };
+  $('.b-ok').onclick = () => {
+    if(!d.nome.trim()){ alert('Nome vuoto: un riquadro senza nome non si conferma.\nGuarda la GIF ingrandita, oppure lascialo saltato.'); return; }
+    d.stato='confermato'; salva(); disegna();
+  };
+  // "Tieni l'originale": il nome file RIPULITO (non il grezzo) entra nel campo e conferma.
+  // La pulizia e' precalcolata in proposte.json: gradi per esteso, via la traduzione fra
+  // parentesi, apostrofi e accenti ripristinati, sentence case, famiglia in testa (regola 11).
+  $('.b-orig').onclick = () => {
+    const pulito = (p.orig_pulito||'').trim();
+    if(!pulito){ alert('Nessun nome originale utilizzabile per questo riquadro.'); return; }
+    d.nome = pulito;
+    $('.f-nome').value = pulito;
+    $('.f-slug').textContent = slugify(pulito) || '—';
+    d.stato = 'confermato';
+    salva(); disegna();
+  };
+  $('.b-skip').onclick = () => { d.stato='saltato'; salva(); disegna(); };
+  return box;
+}
+
+function disegna(){
+  const g = document.getElementById('griglia');
+  g.innerHTML = '';
+  const fetta = PROPOSTE.slice(blocco*PER_BLOCCO, (blocco+1)*PER_BLOCCO);
+  fetta.forEach(p => g.appendChild(riquadro(p)));
+  intestazione();
+  const nChiarire = PROPOSTE.filter(p=>p.chiarire).length;
+  const nNonViste = PROPOSTE.filter(p=>!p.visto).length;
+  document.getElementById('piede').textContent =
+    `${PROPOSTE.length} riquadri · ${nChiarire} marcati "da chiarire" · ${nNonViste} non ancora esaminati da Claude Code. ` +
+    `Le decisioni finiscono in decisioni.json nella stessa cartella. Questa pagina non scrive su Supabase, non carica file in Storage e non tocca i file sul Mac.`;
+}
+
+// ---------- lente ----------
+function apriLente(p){
+  document.getElementById('lenteImg').src = '/gif/' + encodeURI(p.path);
+  document.getElementById('lenteCap').textContent = p.file + '  ·  ' + p.zona;
+  document.getElementById('lente').classList.add('on');
+}
+document.getElementById('lente').onclick = () => document.getElementById('lente').classList.remove('on');
+document.addEventListener('keydown', e => {
+  if(e.key==='Escape') document.getElementById('lente').classList.remove('on');
+  if(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='SELECT') return;
+  if(e.key==='ArrowRight') document.getElementById('next').click();
+  if(e.key==='ArrowLeft')  document.getElementById('prev').click();
+});
+
+// ---------- comandi ----------
+document.getElementById('prev').onclick = () => { if(blocco>0){ blocco--; disegna(); scrollTo(0,0);} };
+document.getElementById('next').onclick = () => {
+  if(blocco < Math.ceil(PROPOSTE.length/PER_BLOCCO)-1){ blocco++; disegna(); scrollTo(0,0);} };
+
+document.getElementById('confBlocco').onclick = () => {
+  const fetta = PROPOSTE.slice(blocco*PER_BLOCCO, (blocco+1)*PER_BLOCCO);
+  const vuoti = fetta.filter(p => !dec(p.i).nome.trim());
+  if(vuoti.length){
+    alert(`${vuoti.length} riquadro/i di questo blocco non ha nome: vanno compilati o lasciati saltati.\n` +
+          'Confermo solo gli altri.');
+  }
+  fetta.forEach(p => { if(dec(p.i).nome.trim()) dec(p.i).stato='confermato'; });
+  salva(); disegna();
+};
+
+document.getElementById('esporta').onclick = async () => {
+  if(salvataggioInFlight) await salvataggioInFlight.catch(()=>{});
+  const righe = PROPOSTE.filter(p => DEC[p.i]?.stato==='confermato');
+  if(!righe.length){ alert('Nessun riquadro confermato: non c\'e\' niente da esportare.'); return; }
+  const out = [COLONNE.join('\t')];
+  righe.forEach(p => {
+    const d = DEC[p.i];
+    const cardio = p.zona==='Cardio e Conditioning';
+    const v = {
+      codice: p.codice || '',              // vuoto = nuovo inserimento, EX### = aggiornamento
+      nome: d.nome,
+      nome_en: '',                          // colonna deprecata dal 19/07/2026
+      pattern: cardio ? 'cardio_metabolico' : '',
+      gruppo_target: cardio ? '' : (d.gt||''),
+      attrezzo: d.attrezzo||'',
+      uso: cardio ? (d.uso||'') : '',
+      gif_slug: slugify(d.nome)
+    };
+    out.push(COLONNE.map(c => String(v[c]??'').replace(/[\t\r\n]+/g,' ')).join('\t'));
+  });
+  // UTF-8 con BOM + CRLF
+  const blob = new Blob(['﻿' + out.join('\r\n') + '\r\n'],
+                        {type:'text/tab-separated-values;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cardio-confermati-${new Date().toISOString().slice(0,10)}.tsv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+function escapeHtml(s){ return String(s??'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function escapeAttr(s){ return String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ---------- avvio: rilegge il file e riparte dal primo non deciso ----------
+(async function(){
+  PROPOSTE = await (await fetch('/proposte.json')).json();
+  const r = await fetch('/decisioni.json');
+  DEC = r.ok ? await r.json() : {};
+  const primo = PROPOSTE.findIndex(p => (DEC[p.i]?.stato||'da decidere') === 'da decidere');
+  blocco = primo >= 0 ? Math.floor(primo/PER_BLOCCO) : 0;
+  disegna();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>GIF Mapper — Zona Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'JetBrains Mono', monospace, sans-serif; background: #F5F3EE; color: #1a1a1a; }
+  header { background: #2A7A6F; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .02em; }
+  header span { font-size: .85rem; opacity: .8; }
+  #stats { font-size: .8rem; margin-left: auto; opacity: .9; }
+
+  #controls { padding: 14px 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid #ddd; background: #fff; }
+  input[type=text] { border: 1px solid #ccc; border-radius: 6px; padding: 6px 10px; font-size: .85rem; width: 220px; }
+  select { border: 1px solid #ccc; border-radius: 6px; padding: 6px 10px; font-size: .85rem; background: #fff; }
+  label { font-size: .8rem; color: #555; display: flex; align-items: center; gap: 5px; }
+
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; padding: 18px 20px; }
+
+  .card {
+    background: #fff; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); cursor: pointer;
+    transition: box-shadow .15s;
+  }
+  .card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.15); }
+  .card.selected { outline: 3px solid #2A7A6F; }
+
+  .card-img { width: 100%; height: 150px; object-fit: cover; background: #eee; display: block; }
+  .card-img.err { object-fit: contain; filter: grayscale(1) opacity(.3); }
+  .card-body { padding: 8px 10px 10px; }
+  .card-slug { font-size: .72rem; font-weight: 700; color: #2A7A6F; word-break: break-all; line-height: 1.3; }
+  .card-name { font-size: .78rem; color: #333; margin-top: 2px; line-height: 1.3; }
+  .card-cat { font-size: .68rem; color: #888; margin-top: 4px; }
+
+  #loader { text-align: center; padding: 60px; color: #666; font-size: .9rem; }
+  #empty { text-align: center; padding: 60px; color: #999; }
+
+  /* modal */
+  #modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+  #modal-bg.open { display: flex; }
+  #modal { background: #fff; border-radius: 14px; max-width: 500px; width: 90%; padding: 24px; position: relative; }
+  #modal img { width: 100%; max-height: 280px; object-fit: contain; border-radius: 8px; background: #f0f0f0; }
+  #modal h2 { font-size: 1rem; margin: 12px 0 4px; }
+  #modal p { font-size: .82rem; color: #555; margin: 2px 0; }
+  #modal code { font-size: .75rem; background: #f5f3ee; padding: 2px 6px; border-radius: 4px; word-break: break-all; }
+  #modal-close { position: absolute; top: 12px; right: 14px; font-size: 1.2rem; cursor: pointer; color: #666; background: none; border: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GIF Mapper</h1>
+  <span>biblioteca_gif · Supabase</span>
+  <div id="stats">Caricamento…</div>
+</header>
+
+<div id="controls">
+  <input type="text" id="search" placeholder="Cerca slug o nome…" oninput="applyFilter()">
+  <select id="filter-cat" onchange="applyFilter()"><option value="">Tutte le categorie</option></select>
+  <select id="filter-grp" onchange="applyFilter()"><option value="">Tutti i gruppi</option></select>
+  <label><input type="checkbox" id="only-missing" onchange="applyFilter()"> Solo senza storage_path</label>
+  <span id="count" style="margin-left:auto;font-size:.8rem;color:#666;"></span>
+</div>
+
+<div id="loader">Caricamento GIF dalla biblioteca…</div>
+<div id="grid" style="display:none"></div>
+<div id="empty" style="display:none">Nessun risultato.</div>
+
+<div id="modal-bg">
+  <div id="modal">
+    <button id="modal-close" onclick="closeModal()">✕</button>
+    <img id="modal-img" src="" alt="">
+    <h2 id="modal-name"></h2>
+    <p id="modal-slug"></p>
+    <p id="modal-cat"></p>
+    <p><code id="modal-path"></code></p>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
+let allRows = [];
+
+async function loadGifs() {
+  try {
+    const r = await fetch('/api/gifs');
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    allRows = data.rows;
+    document.getElementById('stats').textContent = `${data.total} GIF`;
+    buildFilters();
+    applyFilter();
+  } catch (e) {
+    document.getElementById('loader').textContent = 'Errore: ' + e.message;
+  }
+}
+
+function buildFilters() {
+  const cats = [...new Set(allRows.map(r => r.categoria).filter(Boolean))].sort();
+  const grps = [...new Set(allRows.map(r => r.gruppo_muscolare).filter(Boolean))].sort();
+  const catSel = document.getElementById('filter-cat');
+  const grpSel = document.getElementById('filter-grp');
+  cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catSel.appendChild(o); });
+  grps.forEach(g => { const o = document.createElement('option'); o.value = g; o.textContent = g; grpSel.appendChild(o); });
+}
+
+function applyFilter() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const cat = document.getElementById('filter-cat').value;
+  const grp = document.getElementById('filter-grp').value;
+  const onlyMissing = document.getElementById('only-missing').checked;
+
+  const filtered = allRows.filter(r => {
+    if (q && !r.slug?.toLowerCase().includes(q) && !r.nome_italiano?.toLowerCase().includes(q)) return false;
+    if (cat && r.categoria !== cat) return false;
+    if (grp && r.gruppo_muscolare !== grp) return false;
+    if (onlyMissing && r.storage_path) return false;
+    return true;
+  });
+
+  document.getElementById('count').textContent = `${filtered.length} risultati`;
+  renderGrid(filtered);
+}
+
+function renderGrid(rows) {
+  document.getElementById('loader').style.display = 'none';
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+
+  if (!rows.length) {
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+
+  grid.innerHTML = rows.map(r => {
+    const imgUrl = r.storage_path
+      ? `${SUPABASE_URL}/storage/v1/object/public/biblioteca-gif/${r.storage_path}`
+      : '';
+    const imgTag = imgUrl
+      ? `<img class="card-img" src="${imgUrl}" alt="${r.slug}" loading="lazy" onerror="this.classList.add('err')">`
+      : `<div class="card-img" style="display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#bbb">No GIF</div>`;
+    return `<div class="card" onclick="openModal(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+      ${imgTag}
+      <div class="card-body">
+        <div class="card-slug">${r.slug}</div>
+        <div class="card-name">${r.nome_italiano || '—'}</div>
+        <div class="card-cat">${r.categoria || ''}${r.gruppo_muscolare ? ' · ' + r.gruppo_muscolare : ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openModal(r) {
+  const imgUrl = r.storage_path
+    ? `${SUPABASE_URL}/storage/v1/object/public/biblioteca-gif/${r.storage_path}`
+    : '';
+  document.getElementById('modal-img').src = imgUrl;
+  document.getElementById('modal-name').textContent = r.nome_italiano || r.slug;
+  document.getElementById('modal-slug').textContent = 'slug: ' + r.slug;
+  document.getElementById('modal-cat').textContent = `${r.categoria || ''} · ${r.gruppo_muscolare || ''}`;
+  document.getElementById('modal-path').textContent = r.storage_path || '(nessun file)';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  document.getElementById('modal-img').src = '';
+}
+
+document.getElementById('modal-bg').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+loadGifs();
+</script>
+</body>
+</html>

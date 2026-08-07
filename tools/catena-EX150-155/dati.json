@@ -1,0 +1,116 @@
+[
+  {
+    "codice": "EX150",
+    "nome": "Crunch inverso gambe tese cavo basso",
+    "attrezzo": "corpo libero",
+    "setup": "Supino, mani sotto la testa o lungo i fianchi, ginocchia piegate al petto",
+    "esecuzione": "Solleva il bacino da terra portando le ginocchia verso il petto;Contrai l'addome basso in alto;Discesa controllata",
+    "slug_attuale": "crunch-inverso-gambe-tese-cavo-basso",
+    "slug_originale": "crunch-inverso-simultaneo",
+    "storage_path": "Addominali e Core/Crunch inverso gambe tese cavo basso (Reverse Crunch Straight Legs Low Cable).gif",
+    "frames": [
+      "frames/EX150_1.png",
+      "frames/EX150_2.png",
+      "frames/EX150_3.png"
+    ],
+    "n_frames": 18,
+    "bytes": 832393,
+    "sha": "eb54914b4139",
+    "muscoli": "retto addominale basso"
+  },
+  {
+    "codice": "EX151",
+    "nome": "Crunch inverso gambe tese panca piana",
+    "attrezzo": "cavo",
+    "setup": "Supino, cavigliera al cavo basso, gambe tese, mani sopra la testa per stabilità",
+    "esecuzione": "Solleva le gambe tese verso l'alto contraendo l'addome basso;Discesa controllata contro la resistenza del cavo",
+    "slug_attuale": "crunch-inverso-gambe-tese-panca-piana",
+    "slug_originale": "crunch-inverso-gambe-tese-cavo-basso",
+    "storage_path": "Addominali e Core/Crunch inverso gambe tese panca piana (Reverse Crunch Straight Legs Flat Bench).gif",
+    "frames": [
+      "frames/EX151_1.png",
+      "frames/EX151_2.png",
+      "frames/EX151_3.png"
+    ],
+    "n_frames": 12,
+    "bytes": 151160,
+    "sha": "71729d1a5b7a",
+    "muscoli": "retto addominale basso"
+  },
+  {
+    "codice": "EX152",
+    "nome": "Crunch inverso gambe tese sedia romana",
+    "attrezzo": "panca",
+    "setup": "Supino su panca piana, mani che afferrano il bordo dietro la testa, gambe tese",
+    "esecuzione": "Solleva le gambe tese e il bacino verso l'alto contraendo l'addome basso;Discesa controllata senza toccare la panca",
+    "slug_attuale": "crunch-inverso-gambe-tese-sedia-romana",
+    "slug_originale": "crunch-inverso-gambe-tese-panca-piana",
+    "storage_path": "Addominali e Core/Crunch inverso gambe tese sedia romana (Reverse Crunch Straight Legs Roman Chair).gif",
+    "frames": [
+      "frames/EX152_1.png",
+      "frames/EX152_2.png",
+      "frames/EX152_3.png"
+    ],
+    "n_frames": 12,
+    "bytes": 199717,
+    "sha": "9bcce23676d5",
+    "muscoli": "retto addominale basso"
+  },
+  {
+    "codice": "EX153",
+    "nome": "Crunch inverso panca declinata",
+    "attrezzo": "sedia romana",
+    "setup": "In appoggio su avambracci e schiena alla sedia romana, gambe tese pendenti",
+    "esecuzione": "Solleva le gambe tese fino a circa 90° contraendo l'addome basso;Discesa controllata senza slancio",
+    "slug_attuale": "crunch-inverso-panca-declinata",
+    "slug_originale": "crunch-inverso-gambe-tese-sedia-romana",
+    "storage_path": "Addominali e Core/Crunch inverso panca declinata (Reverse Crunch Decline Bench).gif",
+    "frames": [
+      "frames/EX153_1.png",
+      "frames/EX153_2.png",
+      "frames/EX153_3.png"
+    ],
+    "n_frames": 12,
+    "bytes": 256142,
+    "sha": "768cb89cba3e",
+    "muscoli": "retto addominale basso"
+  },
+  {
+    "codice": "EX154",
+    "nome": "Crunch inverso panca seduto",
+    "attrezzo": "panca declinata",
+    "setup": "Supino su panca declinata, mani che afferrano il bordo dietro la testa, ginocchia piegate",
+    "esecuzione": "Solleva il bacino portando le ginocchia verso il petto contraendo l'addome basso;Discesa controllata",
+    "slug_attuale": "crunch-inverso-panca-seduto",
+    "slug_originale": "crunch-inverso-panca-declinata",
+    "storage_path": "Addominali e Core/Crunch inverso panca seduto (Seated Reverse Crunch Bench).gif",
+    "frames": [
+      "frames/EX154_1.png",
+      "frames/EX154_2.png",
+      "frames/EX154_3.png"
+    ],
+    "n_frames": 12,
+    "bytes": 193861,
+    "sha": "812433ff467d",
+    "muscoli": "retto addominale basso"
+  },
+  {
+    "codice": "EX155",
+    "nome": "Crunch inverso",
+    "attrezzo": "panca",
+    "setup": "Seduto sul bordo della panca, busto inclinato indietro, mani che afferrano il bordo, ginocchia piegate",
+    "esecuzione": "Porta le ginocchia verso il petto contraendo l'addome basso;Estendi le gambe controllato senza toccare terra",
+    "slug_attuale": "crunch-inverso",
+    "slug_originale": "crunch-inverso-panca-seduto",
+    "storage_path": "Addominali e Core/Crunch inverso (Reverse Crunch).gif",
+    "frames": [
+      "frames/EX155_1.png",
+      "frames/EX155_2.png",
+      "frames/EX155_3.png"
+    ],
+    "n_frames": 12,
+    "bytes": 244561,
+    "sha": "a66b1f48f1ea",
+    "muscoli": "retto addominale basso"
+  }
+]

@@ -12,4 +12,31 @@ Catalogo GIF Esercizi.csv
 mapping_gif_italiano.csv
 INVENTARIO_*.md
 DIAGNOSTICA_*.md
-tools/
+
+# --- tools/ ---------------------------------------------------------------
+# Gli SCRIPT e i REGISTRI DELLE DECISIONI del cantiere GIF stanno nel repo:
+# sono il lavoro che non deve poter andare perso.
+# Restano fuori solo i materiali pesanti, ricreabili o gia' salvati altrove:
+# copie di GIF, dump del bucket, backup automatici, pagine di ispezione
+# con le immagini incorporate.
+
+# Backup automatici degli strumenti (le copie vere stanno nel bucket)
+tools/**/backup/
+tools/**/backup_*/
+tools/**/_backup/
+
+# Fotogrammi estratti dalle GIF per il confronto visivo
+tools/**/frames/
+
+# Pagine di ispezione one-off: pesano MB perche' hanno le immagini dentro
+tools/EX249-leg-press/*.html
+tools/catena-EX150-155/*.html
+tools/french-press-cavo-EX527-528-538/*.html
+tools/panca-EX168-343-535/*.html
+
+# Cartella di lavoro: fuori tutto tranne il registro dei consolidamenti
+tools/biblioteca-nomi/lavoro/*
+!tools/biblioteca-nomi/lavoro/da_consolidare.tsv
+
+# Backup temporanei locali
+*.bak-*

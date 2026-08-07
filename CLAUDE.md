@@ -1,8 +1,10 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages. *(CLAUDE.md aggiornato: 7 agosto 2026)*
+PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 7 agosto 2026)*
 
-**Indice**: File e URL · Servizi · Pattern tecnici critici · Workflow operativo · Stato corrente · Prossimi cantieri · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system (flusso GIF, regole di migrazione, nomenclatura v2, cantiere GIF) · Coach generatore · Audio Training · Rotazione e ciclo Training
+**Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md). Non serve leggere gli archivi per lavorare: si aprono quando servono.
+
+**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
 
 ## File e URL
 
@@ -10,6 +12,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(CLAUDE.md aggiornato: 
 - **Admin**: `dashboardzona.html` (email-gated `ignazio.f@me.com`, read-only)
 - **URL pubblico**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Repo**: https://github.com/IgnazioF321621/benessere-forma · branch `main`
+- **Strumenti cantiere GIF**: `tools/biblioteca-nomi/` (nel repo; i materiali di lavoro pesanti restano solo sul Mac)
 
 ## Servizi
 
@@ -19,25 +22,6 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(CLAUDE.md aggiornato: 
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
 Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`. Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `da1e0007`.
-
-## Pattern tecnici critici
-
-- Client Supabase si chiama `supa` (non `supabase`)
-- SQL Editor gira come admin: `auth.uid()` = NULL → usare UUID espliciti
-- **supabase-js NON lancia eccezioni sugli errori API**: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error`
-- `schedaGen=1` ricostruisce la scheda da zero, cancella storico progressione — solo per correzioni mirate
-- `console.log` da rimuovere **solo manualmente**, mai con script automatici. **Il pericolo è la logica inglobata nella stessa riga del logging**, non il logging. Caso reale: il commit `8f46576` (12 giu 2026) ha cancellato i tre guard di `_trainGenFilterPool` — erano one-liner `if (!X) { if (debug) console.log(…); return; }` e lo script ha portato via l'intera riga, `return` compreso. Filtri luogo/attrezzo/livello morti per 7 settimane, scoperti il 2 ago, ripristinati in `7a60a97`. Stesso commit: persa `compoundMissing.push(pat)` (riparata in `d40faaf`), `?schedaDebug=1` rimasto scollegato, quattro blocchi vuoti residui, `rollRes` del postino Nutrition mai più letto
-- **`GEAR_ALIASES` traduce verso parole che il catalogo deve parlare.** Gli alias `barra_corta`/`barra_lunga → barra` e `cavigliere → cavigliera` puntavano a termini con **0 occorrenze** nel catalogo, né come attrezzo nativo né dentro un `surrogato_attrezzo`: l'utente li dichiara in onboarding e non aprivano un solo esercizio, in silenzio. **Dal 5 agosto `barra` esiste davvero** — EX642 e EX646 lo usano come attrezzo nativo — quindi resta inerte il solo `cavigliere → cavigliera`. Prima di aggiungere un alias, verificare che il termine di destinazione esista davvero nel catalogo. Dal 2 ago `_trainGenFilterPool` **constata** i token senza riscontro (`console.warn` + `attrezziInerti` → `scheda._diagGear` → colonna `attrezzi_inerti` in `ztSchedaWhy`, strippato dal save come `sessioni[]._diag`). Constatare non è rimediare: colmare il vuoto è il cantiere 14
-- `APERTO_WHITELIST` ha lo stesso difetto, non ancora sanato: `banda` e `cavigliere` hanno 0 occorrenze a catalogo → inerti per `tipo_allenamento = aperto`. `corda` (9 esercizi) invece non è in whitelist
-- `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
-- Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`. Cache name: `zt-v2`
-- `APP_VERSION` aggiornata automaticamente dal pre-commit hook git
-- PostgREST tronca SELECT al limite default → **paginare sempre** su tabelle >1000 righe (es. `biblioteca_gif`, che supera le 1.000): senza paginazione compaiono orfani fantasma nelle verifiche
-- Il ciclo canonico a 7 include `rest`: ogni logica che itera il ciclo deve gestire slot non loggabili (`rest`/`rest_injury`)
-- La settimana ciclo si legge SOLO da `getCycleWeekInfo()` — vietato ricalcolarla inline
-- TSV/CSV da Google Sheet: arrivano **UTF-8 con BOM + CRLF** — `csv.DictReader` senza `encoding='utf-8-sig'` produce silenziosamente 0 righe valide (la prima chiave diventa `﻿slug`). Controllare sempre il conteggio righe parsate
-- **Path e nomi file SEMPRE ASCII**: Storage rifiuta chiavi NFD con `400 InvalidKey`. I file macOS sono in NFD (la `ù` è `u` + U+0300). Accenti solo in `nome_italiano`/catalogo, mai nel path o filename
-- Il `:` nel filename è ammesso in Storage e NON viene sanificato (verificato su 5 file in `Tricipiti/`)
 
 ---
 
@@ -49,93 +33,45 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - **Resoconto obbligatorio a 6 punti** dopo ogni modifica: (1) file modificati con path esatto · (2) cosa è cambiato · (3) commit hash + branch · (4) push status su `origin/main` · (5) GitHub Pages ETA · (6) APP_VERSION.
 - **Commit message con conteggi reali misurati**, mai stimati.
 - **Comunicazione**: risposte brevi, dirette, senza gergo da sviluppatore verso Ignazio (non è un developer).
+- La cartella locale sul Mac e GitHub devono restare allineate: si fanno da backup a vicenda.
 
 ---
 
-## Stato corrente (6 agosto 2026)
+## Pattern tecnici critici
 
-**Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b (colazione/merenda) in stand-by.
+- Client Supabase si chiama `supa` (non `supabase`)
+- SQL Editor gira come admin: `auth.uid()` = NULL → usare UUID espliciti
+- **supabase-js NON lancia eccezioni sugli errori API**: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error` → [L22](docs/LEZIONI.md#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api)
+- `schedaGen=1` ricostruisce la scheda da zero, cancella storico progressione — solo per correzioni mirate
+- **`console.log` da rimuovere solo manualmente, mai con script automatici.** Il pericolo è la logica inglobata nella stessa riga del logging → [L1](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)
+- **Prima di aggiungere un alias in `GEAR_ALIASES`, verificare che il termine di destinazione esista davvero nel catalogo.** Un token vive quando qualche riga lo usa → [L2](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Stesso difetto in `APERTO_WHITELIST` (`banda` e `cavigliere` a 0 occorrenze; `corda`, 9 esercizi, non è in whitelist)
+- `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
+- Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`. Cache name: `zt-v2`
+- `APP_VERSION` aggiornata automaticamente dal pre-commit hook git
+- **Paginare sempre** le SELECT su tabelle >1000 righe (es. `biblioteca_gif`): PostgREST tronca al limite default → [L13](docs/LEZIONI.md#l13--postgrest-tronca-le-select-al-limite-default)
+- Il ciclo canonico a 7 include `rest`: ogni logica che itera il ciclo deve gestire slot non loggabili (`rest`/`rest_injury`)
+- La settimana ciclo si legge SOLO da `getCycleWeekInfo()` — vietato ricalcolarla inline
+- TSV/CSV da Google Sheet: **UTF-8 con BOM + CRLF** — usare `encoding='utf-8-sig'` e controllare il conteggio righe parsate → [L14](docs/LEZIONI.md#l14--i-tsv-da-google-sheet-arrivano-utf-8-con-bom-e-crlf)
+- **Path e nomi file SEMPRE ASCII**: Storage rifiuta chiavi NFD con `400 InvalidKey`. Normalizzare a NFC, poi traslitterare → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta). Accenti solo in `nome_italiano`/catalogo, mai nel path o filename
+- Il `:` nel filename è ammesso in Storage e NON viene sanificato (verificato su 5 file in `Tricipiti/`)
 
-**Training** — in sviluppo attivo. Coach generatore funzionante: 667 esercizi su `esercizi_catalog`, split 4/5 giorni con rotazione adattiva, Recovery Day unificato (~25 min, 5 blocchi), Upper Pump (DUP 5gg), audio unificato, timer recupero parallelo al form log, WS-QUEUE (scrittura `workout_sets` con retry + coda localStorage), infortuni multi-giorno, rientro soft. Filtri pool ripristinati (`7a60a97`), quattro funzioni core attive (`f16e035`) con pool core da 9 a 67, split 3 giorni non supportato dall'interfaccia.
+---
 
-Il modulo Training ha un solo utente: Ignazio. Gli altri tester usano Nutrition e Body. Un bug del generatore non ha impatto su terzi.
+## Stato corrente (7 agosto 2026)
 
-**Catalogo GIF** — cantiere nomenclatura v2 chiuso (24 luglio). **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug** (6 agosto, dopo Gambe e Glutei e il giro dei consolidamenti). **Zero slug puntati da piu di un codice.** Ogni `gif_slug` ha la sua riga in `biblioteca_gif`: zero slug orfani.
+**Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b in stand-by.
 
-**Cantiere nomi biblioteca** — in corso. Riordino dei nomi delle GIF in 10 cartelle sotto `Biblioteca di esercizi/`, mobilità compresa. Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `pianifica.py` → `migra_zona.py` → `verifica_worker.py`). Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
+**Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-Chiuse:
-- **Addominali e Core** — 68 righe migrate (1 agosto); zona poi **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori (72 righe toccate, 11 a certezza media confermate da Ignazio).
-- **Bicipiti e Braccia** — 73 righe: 68 codici vivi + 5 liberi indicizzati. Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
-- **Cardio e Conditioning** — chiusa **su entrambi i lati**. *Immagini*: 31 righe, 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata; zona a 39 righe e 39 oggetti. *Catalogo*: 3 codici esistenti agganciati e rinominati (EX049 · EX053 · EX114) + **28 righe nuove EX587→EX614**; catalogo da 582 a **610 righe**. Verifica finale **31/31 via Worker**, con confronto dell'impronta del file effettivamente scaricato. La zona è passata da **0 a 31 codici** che puntano a una sua riga.
-
-- **Gambe e Glutei** — chiusa **su entrambi i lati** (5 agosto). *Immagini*: 35 righe doppie migrate e le vecchie eliminate una per una con verifica via Worker nell'istante prima di ogni cancellazione; 2 catene riparate con slug in place (EX015, EX247); `biblioteca_gif` da 1.609 a 1.570 righe. *Catalogo*: 40 nomi allineati + **36 righe nuove** (30 pendenti + 6 rinumerate da EX615) + **35 righe dal pezzo 2** (10 agganci a codici esistenti e 25 esercizi nuovi EX623→EX675); catalogo da 610 a 671 righe, poi a **667** dopo il giro dei consolidamenti. Verifica finale **602/602 via Worker**, 0 rotti, con confronto dell'impronta del file scaricato. La zona non ha piu GIF senza codice.
-
-In coda per dimensione: Mobilità 215 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Polpacci 19.
-
-**Zona senza codici: slug in place, niente righe doppie.** Se nessun `gif_slug` punta alla zona non esiste la catena da proteggere: lo slug si aggiorna sulla riga esistente e non serve né la riga doppia né il sync del Sheet. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma. Primo caso: Cardio e Conditioning.
-
-⚠️ **Due file parcheggiati, fuori da ogni tabella.** Spostati e rinominati, contenuto verificato per SHA-256, **non presenti né in `biblioteca_gif` né in `esercizi_catalog`**. Non essendo in nessuna tabella, questa è l'unica traccia che li ritrova:
-
-| file | cartella | da riprendere con |
-|---|---|---|
-| `Piegamenti sulle dita` | Pettorali | zona Pettorali |
-| `Piegamenti mani ruotate all'indietro` | Tricipiti | zona Tricipiti |
-
-**Cardio e Conditioning — otto salti parcheggiati: risolti** (5 agosto, con Gambe e Glutei). Erano nel bucket ma non sul Mac, quindi fuori dalla conferma visiva di Cardio. Trattati come pliometria di zona muscolare secondo la regola 10: hanno ricevuto `pattern = dominante ginocchia`, `gruppo_target = quadricipiti` e `uso`, quindi entrano nei pool.
-
-| salto | esito |
-|---|---|
-| `Pistol jump box` | **EX617** `Jumping pistol box` — doppione di `jumping-pistol-box`, adotta quella riga; l'oggetto in `Cardio e Conditioning/` esce nel giro dei consolidamenti |
-| `Salto all indietro` | **EX618** `Salto all'indietro` |
-| `Salto monopodalico avanti` | **EX621** `Salto una gamba avanti` |
-| `Salto verticale esplosivo` | **EX622** `Salto verticale esplosivo` |
-| `Squat jump ginocchia alte` | **EX619** `Squat jump ginocchia alte` |
-| `Squat thrust` | **EX620** `Squat thrust` (`pattern = composto`) |
-| `Squat jump box` | **EX650** `Squat jump` |
-| `Salto in lungo da fermo` | ancora aperto: GIF confermata `Salto lungo da fermo`, **nessun codice** — sta fra le 36 del pezzo 2 |
-
-⚠️ I quattro rinumerati nascono da una **collisione**: i codici EX609/EX611/EX613/EX614 erano stati allocati prima del sync di Cardio del 2 agosto, che nel frattempo li aveva presi. Rinumerati da EX615 in su. Lezione: allocare i codici al momento della scrittura, mai in anticipo.
-
-Quando la zona fu preparata **0 codici** puntavano a una sua riga: non c'erano righe vive da proteggere, quindi la migrazione delle immagini non ha richiesto l'ordine a righe doppie. Il popolamento del catalogo è stato **lavoro separato e successivo**, chiuso il 2 agosto: 3 agganci a codici esistenti e 28 righe nuove.
+**Catalogo GIF** — **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Zero slug orfani. Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **Prossima: Spalle e Cuffia.**
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-## Prossimi cantieri
+**Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
-1. **Test timer su workout reali** — commit `e834320` (timer unificati timestamp-based) in osservazione. PRIMA di qualunque altro cantiere Training.
-2. **Cantiere 600 GIF** — 65 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
-3. **Code pulizia Storage** — C: 28 file L2 residui nelle zone curate (indicizzati, non referenziati) · D: bucket `exercise-media` legacy (43 file, 5,9 MB, verificare se l'app lo usa ancora) · E: riallineamento indice `biblioteca_gif` (924 righe puntano a file inesistenti).
-4. **Lista da consolidare — giro eseguito il 6 agosto.** Coppie di codici distinti che puntano allo **stesso esercizio**. Non e materia di rinomina ma di consolidamento: un codice eliminato resta bruciato.
-
-**Chiuse il 6 agosto**: EX228/EX289 (sopravvive EX289) · EX229/EX291 (EX291) · EX110/EX448 (EX448) · EX015/EX323 (EX015) · l'oggetto gemello di EX617 in `Cardio e Conditioning/`. Quattro codici bruciati, catalogo 671 → 667, `biblioteca_gif` 1.572 → 1.570, e **le due violazioni della guardia "1 codice per slug" si sono sciolte da sole**: oggi zero slug puntati da piu di un codice. Copie locali degli oggetti eliminati in `tools/biblioteca-nomi/lavoro/_backup/oggetti/`.
-
-**Ancora aperte, da Addominali e Core**: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103). ⚠️ Su queste tre coppie il sospetto e che **non siano consolidamenti**: i due nomi descrivono esercizi diversi (plank sulle mani contro avambracci, crunch contro sit-up, plank statico contro rollout) e condividono il file solo perche a uno dei due e stata attaccata la GIF sbagliata. Se e cosi la soluzione non e eliminare un codice ma dare a uno dei due la sua immagine: e cantiere 2, non cantiere 4. Sei GIF da guardare prima di decidere.
-
-Registro: `tools/biblioteca-nomi/lavoro/da_consolidare.tsv`, con il sopravvissuto e la motivazione riga per riga.
-
-⚠️ **L'impronta trova i doppioni identici, non tutti i doppioni.** EX229/EX291 hanno SHA-256 diversi ed erano lo **stesso disegno** ricodificato: 12 frame identici, differenza solo di temporizzazione. EX617 idem, con in più un riscalamento di 1-3 px che gonfiava la differenza pixel a ~55k su 1,17 M. Il criterio che li ha stanati è il confronto **frame per frame dopo allineamento**: se il miglior offset cambia da frame a frame si tratta di riscalamento, non di due esecuzioni diverse. L'aggancio per impronta resta valido per collegare file a codice; per stanare i doppioni non basta.
-5. **Code catalogo** — EX085 (`gruppo_target='Gambe e Glutei'` fuori vocabolario) · EX322 (`'gambe'` fuori vocabolario) · 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine) · 5 `alternativa` pendenti già bonificati ma da monitorare se emergono altri.
-6. **Avviso corpo libero puro** — con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o generazione). Misurato il 2 ago: pool principale 101 righe, `compoundMissing` = `tirata orizzontale` + `tirata verticale`.
-7. **"Stacco da terra classico" — candidato senza codice.** Il file `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif` è ancora lì e non è mai stato deciso. ⚠️ La voce diceva "EX287": è **sbagliata**, EX287 è `Stacco rumeno una gamba palla medica` e non c'entra. Il confronto va fatto contro lo stacco da terra che sta a catalogo, da individuare, non contro EX287.
-8. **M2 entry point** — CTA sempre visibile in Body; reminder fine blocco; blood test history UI.
-9. **F.2b colazione/merenda** — stand-by, riattivare solo se onboarding lo richiede.
-10. **Refresh onboarding M1** — preferenze generazione piano (giorno/ora) + tracking peso. ⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
-11. **Push notifications** — sistema unico (piano + training + integratori).
-12. **"Oggi ho solo X min"** — compressione singola sessione senza toccare progressione blocco.
-13. **Surrogati mancanti** — censire gli esercizi con `luogo = palestra` **riproducibili a casa** con `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma buchi tipo "deltoidi posteriori: 1 candidato". Nella sola zona core ne sono già emersi 7. Metodo identico al cantiere GIF: gruppi da dieci con conferma visiva. La diagnostica di appoggio è `ztSchedaWhy()` → `_diag.compoundMissing`, riparata il 2 ago (`d40faaf`).
-14. **Dare un attrezzo agli slug inerti — metà fatto.** `barra_corta`/`barra_lunga → barra` è **risolto** dal 5 agosto: EX642 `Leg press alternato barra elastico supino`, EX646 `Squat barra elastico` ed EX648 `Affondo barra elastico sul posto` sono le prime righe con `attrezzo = barra`, e il token ora apre esercizi veri. Resta **`cavigliere → cavigliera`**, ancora a 0 occorrenze: dichiarabile in onboarding, apre zero esercizi, in silenzio (l'app lo constata, vedi `_diagGear`). Strada: aggiungerlo sul Sheet ai `surrogato_attrezzo` degli esercizi che lo useranno — conferma visiva, natura identica al cantiere 13. In alternativa toglierlo dall'onboarding. ⚠️ La lezione generale è che il rimedio non è l'alias ma il **catalogo**: un token vive quando qualche riga lo usa.
-15. **Riclassificazione funzionale delle altre zone** — il vocabolario anatomico vale ancora per le zone non core. Da valutare se il modello a funzioni (natura + piano) serva altrove o resti specifico del core.
-16. **Liberi indicizzati senza codice** — GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo e **decisione aperta, non presa**. Da Bicipiti e Braccia: 5 (`curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`). Stesso trattamento dei liberi di Addominali e Core. **Gambe e Glutei: chiusa il 6 agosto** — delle 36, 10 erano GIF mancanti di codici gia esistenti (agganciate), 25 sono diventate esercizi nuovi, 1 era una voce stantia. Zero scartate.
-
-⚠️ **La domanda giusta non e sempre "diventa un esercizio?".** Un terzo di quelle GIF corrispondeva a codici gia a catalogo ma **senza `gif_slug`**: non erano candidate del cantiere 16, erano buchi del cantiere 2. Costo completamente diverso — una cella invece di una riga a 22 colonne. Prima di aprire una lista di liberi, incrociare i nomi col catalogo e separare i due mucchi.
-17. **Cinque attrezzi a catalogo non dichiarabili in onboarding** — è il cantiere 14 dal lato opposto: lì gli slug dichiarabili non aprivano esercizi, qui gli esercizi non sono raggiungibili da nessuno slug. Finché l'onboarding non li espone, questi **8 codici non escono mai dal generatore**: `sacco` (EX588 · EX595) · `battle rope` (EX587) · `scaletta agilità` (EX600 · EX603) · `conetti` (EX597 · EX606) · `corda per saltare` (EX610). Cinque di essi sono comunque eseguibili a casa — EX597/EX600/EX603/EX606 via surrogato `corpo libero`, EX610 di suo — quindi il buco è di dichiarazione, non di fattibilità. ⚠️ `corda per saltare` è token distinto **apposta**: `corda` a catalogo è l'attacco al cavo (9 esercizi), e riusarlo aprirebbe i pullover al cavo a chi dichiara la corda per saltare.
-
-Primo costo concreto misurato (3 ago): sul pool Tabata di Ignazio (casa, avanzato) il grezzo è 30 e ne restano **25**. Dei 5 esclusi, **4 cadono per questi token** — EX587 `battle rope`, EX588/EX595 `sacco`, EX610 `corda per saltare` — e il quinto (EX268) per i manubri, che invece sono dichiarabili. EX610 è il caso che pesa: eseguibile da chiunque abbia una corda, escluso solo perché il token non è dichiarabile.
-18. **Testi di EX049 da riscrivere sulla propria GIF** — EX049 è `Skip ginocchia alte`, agganciato e verificato, ma `setup`/`esecuzione`/`errori` sono ancora quelli ereditati da `High knees a marcia`: «mani all'altezza dell'ombelico (pronate, palmi giù)», «alza il ginocchio verso la mano», «marcia non corsa». Quel testo **non descrive la sua GIF** — braccia libere in opposizione, ginocchio sopra l'orizzontale, fase di volo — ma descrive quasi parola per parola la GIF di **EX613 `Skip sul posto`**, i cui testi sono stati scritti apposta su mani ferme come riferimento e piede basso. Finché EX049 non viene riscritto i due testi si sovrappongono.
-19. **Due attrezzi nuovi introdotti da Gambe e Glutei** — `bosu` (EX632) e `box` (EX617, EX643, EX672, EX673, EX675) non esistevano a catalogo e **non sono dichiarabili in onboarding**: è il cantiere 17 che si allarga. Tutti e tre hanno però un `surrogato_attrezzo` (`corpo libero` per il Bosu, `panca` per il box), quindi restano raggiungibili e non si perde nessun esercizio. Da decidere in blocco col 17 se esporli o lasciarli vivere solo tramite surrogato.
+---
 
 ## Bug noti aperti
 
@@ -144,9 +80,11 @@ Primo costo concreto misurato (3 ago): sul pool Tabata di Ignazio (casa, avanzat
 - `body_logs` manca UNIQUE(user_id, date) — salvataggio usa insert/update manuale
 - Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo (UX scadente mobile)
 - Isabella: `status=draft`, 0 meals per settimana corrente — non investigato
-- **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente, non generato dal cantiere)
-- **Rollback `weekly_plans` silenzioso** — nel postino Nutrition, `rollRes` è assegnato e mai letto (residuo `8f46576`). Poiché supabase-js non lancia sugli errori API, un rollback fallito non viene rilevato da nessuno
-- **`?schedaDebug=1` scollegato** — sopravvive 1 solo `console.log` sotto `window._trainGenDebug`. Il flag si accende, il dry-run gira, non stampa niente. Quattro blocchi vuoti residui: tre in `_trainGenPickByPattern` (due con soli calcoli morti, un `else if` vuoto) e uno nel carry. Il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
+- **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente)
+- **Rollback `weekly_plans` silenzioso** — nel postino Nutrition `rollRes` è assegnato e mai letto: un rollback fallito non viene rilevato da nessuno
+- **45 chiamate `await supa.` su 116 senza controllo dell'errore** (misurato 7 agosto) — stessa radice del punto precedente
+- **`?schedaDebug=1` scollegato** — il flag si accende, il dry-run gira, non stampa niente (sopravvive 1 solo `console.log` sotto `window._trainGenDebug`). Quattro blocchi vuoti residui: tre in `_trainGenPickByPattern`, uno nel carry. Il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
+- **27 funzioni mai chiamate** in `zona-tracker.html` (misurato 7 agosto), tra cui il vecchio timer di attivazione e il vecchio modal pasti
 - **5 candidati core senza GIF** — EX023 Pallof press · EX032 Hollow hold · EX036 Bird dog · EX046 Stir the pot · EX109 Plank shoulder taps. Per Bird dog la GIF esiste in biblioteca: manca solo il `gif_slug`
 - **Deltoidi posteriori: 1 solo candidato** nel pool casa. Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altro gruppo al minimo: deltoidi laterali 3
 
@@ -195,19 +133,22 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**667 righe** (6 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · **EX110/EX228/EX229/EX323 bruciati dai consolidamenti del 6 agosto** — mai renumerare. Nessun codice libero sotto il massimo. Prossimo libero: **EX676**. RLS SELECT pubblica. PK logica = `codice`. **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
+**667 righe** (6 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (bruciati dai consolidamenti del 6 agosto) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX676**. RLS SELECT pubblica. PK logica = `codice`.
 
-⚠️ **Una riga tolta dal foglio non sparisce: si arena.** Il sync smette di riscriverla, quindi resta su Supabase con il suo vecchio `updated_at` mentre tutte le altre avanzano. Da fuori sembra che la cancellazione non abbia funzionato, e si e tentati di rimetterci mano nel foglio — dove pero la riga non c'e piu. **Il modo di accorgersene e confrontare l'`updated_at` della riga con quello dell'ultimo lotto**: se e piu vecchio, la riga e fuori dal foglio. Ed e l'unico caso in cui cancellarla **direttamente da Supabase** e sicuro e definitivo, perche nessun sync futuro puo riportarla indietro. Fuori da questo caso vale il divieto: mai editare Supabase direttamente. Riscontrato il 6 agosto sui quattro consolidamenti (EX110/EX228/EX229/EX323), scambiati per due volte per un sync fallito.
+**Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
-⚠️ **Il sync riporta indietro ciò che il foglio non ha.** L'upsert riscrive ogni riga presente nel foglio, quindi una modifica sincronizzata in un passo precedente viene **annullata** se il foglio usato per il sync successivo porta ancora i valori vecchi. Caso reale (2 ago, Cardio): EX049/EX053/EX114 erano stati rinominati e agganciati; il sync delle 28 righe nuove li ha riportati ai nomi vecchi con `gif_slug` svuotato e il `livello` di EX114 perso — stesso lotto, `updated_at` a 4 ms di distanza. Effetto sull'app: due `missing` e uno che serviva la GIF sbagliata da ExerciseDB. **Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi.**
+Tre trappole del sync, tutte già costate giri a vuoto:
+- ⚠️ **Una riga tolta dal foglio non sparisce: si arena.** Si riconosce dall'`updated_at` più vecchio dell'ultimo lotto. È l'**unico** caso in cui cancellare direttamente da Supabase è sicuro → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena)
+- ⚠️ **Il sync riporta indietro ciò che il foglio non ha.** Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi → [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha)
+- ⚠️ **Rimisurare la baseline dei pool dopo ogni sync**, non solo dopo le modifiche al codice → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice)
 
 Colonne: `codice, nome, nome_en (⚠️ DEPRECATA dal 19/07/2026 — non portante, non usarla per slug/filename/UI), pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
 
 - `uso` valori: `principale / finisher / recupero / riscaldamento / mobilita / carry / skill`
-- `uso: skill` — skill ginnastica (EX570/573/574/575): **escluse dalla generazione automatica**, non entrano nei pool del coach
+- `uso: skill` — skill ginnastica (EX570/573/574/575): **escluse dalla generazione automatica**
 - `pattern` normalizzato via `_normPattern()` (lowercase + trim)
 - `gruppo_target` vocabolario chiuso — **non dedurre da `muscoli`** (testo libero, vocabolario diverso)
-- `alternativa` contiene codici `EX###` in chiaro, nessuna FK: prima di eliminare un codice, scansionare tutti i campi testuali con regex `\bEX\d{3}\b` per trovare riferimenti incrociati pendenti
+- `alternativa` contiene codici `EX###` in chiaro, nessuna FK: prima di eliminare un codice, scansionare tutti i campi testuali con regex `\bEX\d{3}\b`
 
 Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`.
 
@@ -215,9 +156,11 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.570 righe** (6 agosto 2026), di cui ~900 puntano a file inesistenti (cantiere E; il numero cala a ogni giro di pulizia). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo. Bucket Storage `biblioteca-gif`: **630 oggetti in 9 cartelle**, zero file senza riga (controllo inverso eseguito): Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+**1.570 righe** (6 agosto 2026), di cui ~900 puntano a file inesistenti (cantiere 3E). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
-**`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona (`Pettorali`); Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
+Bucket Storage `biblioteca-gif`: **630 oggetti in 9 cartelle**, zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+
+**`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona; Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
 **`Cardio e Conditioning` è una zona di capacità, non muscolare**: raccoglie gli esercizi il cui stimolo non è isolabile su un gruppo muscolare. Le altre 8 restano zone muscolari.
 
@@ -252,34 +195,65 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**602/602 `gif_slug` risolvono, 0 rotti** (6 agosto, sweep su tutti i 667 codici via Worker con confronto dell'impronta del file effettivamente scaricato). 65 codici senza slug → fallback ExerciseDB.
+**602/602 `gif_slug` risolvono, 0 rotti** (6 agosto). 65 codici senza slug → fallback ExerciseDB.
 
-⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso.** Caso reale: dopo la riparazione del 5 agosto EX015 risolveva perfettamente — sulla GIF che il piano voleva eliminare. Un conto «534/534 risolvono» non sostituisce il controllo delle decisioni prese in `da_consolidare.tsv`.
-
-⚠️ **Lo sweep completo va lanciato con concorrenza bassa** (3, non 6): a 6 thread Storage risponde `429 Too Many Requests` su una manciata di codici. Lo strumento li marca come non verificabili invece di darli per buoni — un oggetto che non si scarica non diventa mai «a posto» per silenzio — ma il rumore va evitato alla fonte.
+⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
+⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa)
 
 ### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
 
-**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256**, non il nome. In un cantiere in cui i nomi sono proprio ciò che cambia, l'aggancio per nome classifica come libere righe che sono vive: 6 righe su 69 in `Addominali e Core`, 58 su 75 in `Bicipiti e Braccia`. Nel bucket i nomi sono già normalizzati da cantieri precedenti mentre sul Mac sono ancora quelli originali: lo stesso contenuto ha due nomi diversi sui due lati.
+**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256** → [L9](docs/LEZIONI.md#l9--aggancio-per-impronta-mai-per-nome). La regola vive nello strumento: `prepara.py` aggancia file → riga → codice per SHA-256 tramite `impronte.py`; il basename di `storage_path` non entra nella classificazione.
 
-**La regola vive nello strumento, non solo nel metodo.** `prepara.py` aggancia file → riga → codice per SHA-256 tramite `impronte.py`, che enumera gli oggetti del bucket della zona e ne calcola l'impronta. Il basename di `storage_path` non entra più nella classificazione.
-
-- `biblioteca_gif` si legge **live** con la chiave di servizio da `worker/.dev.vars` (mai stampata). L'export CSV è solo ripiego: invecchia a ogni migrazione, e una riga il cui `storage_path` è cambiato non si riconosce più.
+- `biblioteca_gif` si legge **live** con la chiave di servizio da `worker/.dev.vars` (mai stampata). L'export CSV è solo ripiego: invecchia a ogni migrazione.
 - Cache delle impronte in `lavoro/_impronte/<zona>.json`, indicizzata per `eTag` + dimensione: si ricalcola solo se l'oggetto cambia.
-- Stato **`indeterminato`**: se anche un solo oggetto del bucket non è scaricabile, i file senza riscontro **non** diventano `libero` — potrebbero essere proprio quello. Nel dubbio la GIF vale come viva: `conferma.py` e `conferma.html` la trattano come tale e non le applicano mai lo slug. Il ripiego silenzioso su `libero` è ciò che ha causato il difetto.
+- Stato **`indeterminato`**: se anche un solo oggetto del bucket non è scaricabile, i file senza riscontro **non** diventano `libero`. Nel dubbio la GIF vale come viva → [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto)
 - **Nessun nome entra nello strumento passando dalla chat.** Fonte unica dei nomi è il pannello di conferma, l'unico posto in cui il nome è stato scelto guardando la GIF.
-- **Un solo traslitteratore**, `nomenclatura.senza_accenti()`: lo usano sia `slug()` sia `percorso_ascii()`, che costruisce il nome file nel bucket. `pianifica.py` scriveva il percorso col nome confermato tal quale, quindi un nome accentato avrebbe portato l'accento dentro `storage_path` — emerso su `Cardio e Conditioning` (`agilità`), corretto alla fonte prima di eseguire. L'accento resta in `nome_italiano` e nel file sul Mac; l'apostrofo resta nel percorso e diventa trattino solo nello slug. Il piano conta i percorsi non-ASCII residui (`percorsi_non_ascii`) e li stampa: `senza_accenti` toglie i diacritici, non un `ø` o un `°`.
+- **Un solo traslitteratore**, `nomenclatura.senza_accenti()`, usato sia da `slug()` sia da `percorso_ascii()` → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta)
+- ⚠️ Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe)
 
-**Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe.** `migra.py` costruisce il piano per impronta; `slug_da_migrare.tsv` scritto da `conferma.py` include solo le righe `collegato`/`pendente`. Su `Addominali e Core` sei righe non finirono nel TSV e furono recuperate da `migra.py`: è una rete, non un progetto, e non regge volumi grandi. Difetto residuo **non corretto**: `cantiere_96_pendente.tsv` è indicizzato per nome file sul Mac, quindi dopo una rinomina le chiavi non corrispondono più e lo stato `pendente` decade. Da affrontare col cantiere 96.
+**Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta:
 
-**Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta: **(1)** rinomina nel bucket e aggiorna `storage_path`, slug invariato · **(2)** aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi · **(3)** sincronizza il Sheet · **(4)** verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**. Non deve esistere un istante in cui una GIF è irraggiungibile.
+1. rinomina nel bucket e aggiorna `storage_path`, slug invariato
+2. aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi
+3. sincronizza il Sheet
+4. verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**
+
+Non deve esistere un istante in cui una GIF è irraggiungibile.
+
+**Eccezione — zona senza codici**: se nessun `gif_slug` punta alla zona non esiste catena da proteggere, lo slug si aggiorna in place e non servono né righe doppie né sync. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma.
 
 **Rinominare i file nel bucket è cosmesi.** L'app risolve via `storage_path`: il nome del file non è ciò che rompe o aggiusta le immagini.
+
+**Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
+
+**Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento (cantiere 4).
+
+### Regole cantiere GIF (riconciliazione a tre fonti)
+
+Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. L'appaiamento è sempre per SHA-256, mai per nome.
+
+**La regola che non si negozia**: nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF. L'analisi tecnica prepara la decisione, non la sostituisce — anche quando la spiegazione tecnica torna perfettamente.
+
+**Guardie tecniche** (sempre attive):
+1. "1 codice per slug" — contare quanti codici puntano allo stesso `gif_slug` prima di rinomine massive
+2. SHA-256 prima di ogni rinomina massiva. ⚠️ Stana i doppioni identici, non tutti: per gli altri serve il confronto frame per frame dopo allineamento → [L7](docs/LEZIONI.md#l7--limpronta-trova-i-doppioni-identici-non-tutti-i-doppioni)
+3. Script idempotenti con timeout esteso
+4. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
+5. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (`alternativa` non ha FK)
+6. **Allocare i codici al momento della scrittura, mai in anticipo** → [L6](docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano)
+
+**I TSV da incollare nel foglio vanno consegnati CON la riga di intestazione**, dicendo di incollare dalla seconda riga in giù. Per una **riga singola** la forma più sicura non è il TSV ma l'elenco verticale `colonna → valore`, immune allo sfasamento. Prima di generare TSV posizionali, farsi dare la riga di intestazione del foglio e verificarne l'ordine → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno)
+
+**Prima di aprire una lista di liberi**, incrociare i nomi col catalogo e separare i due mucchi: candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio)
+
+**Strumenti che raccolgono lavoro manuale**: ogni conferma si salva su disco **nell'istante in cui viene data**, con `fsync`. Si collauda chiudendo la scheda e riavviando il processo **prima** di consegnarlo → [L21](docs/LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta)
 
 ### Mappe muscolari
 19 esercizi storici: PNG locali in `assets/exercises/` (Wger CC BY-SA 4.0). EX031+: mancanti (cantiere futuro).
 
-### Nomenclatura esercizi v2 (19 luglio 2026) — normativa vincolante
+---
+
+## Nomenclatura esercizi v2 (19 luglio 2026) — normativa vincolante
 
 > Supera ogni regola precedente. In caso di conflitto vale solo quanto scritto qui.
 
@@ -304,72 +278,40 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **5. Gradi**: simbolo `°` abolito ovunque nel nome — si scrive `gradi` per esteso. Nei campi descrittivi (`setup`, `esecuzione`, `errori`) è ammesso.
 
-**6. Slug monolingue**: `gif_slug` = kebab-case ASCII dal solo nome unico. Schema `slug(IT)-slug(EN)` abolito. Path e filename SEMPRE ASCII. **L'apostrofo diventa trattino** (`Corsa all'indietro` → `corsa-all-indietro`), mai eliminato e mai sostituito da apostrofo tipografico. ⚠️ I nomi file macOS sono in forma decomposta (NFD): la `à` è `a` + U+0300. Prima della conversione ASCII **normalizzare a NFC** (`unicodedata.normalize('NFC', s)`), poi traslitterare — mai tagliare byte per byte, che su NFD lascia la lettera base seguita dal segno diacritico orfano.
+**6. Slug monolingue**: `gif_slug` = kebab-case ASCII dal solo nome unico. Schema `slug(IT)-slug(EN)` abolito. Path e filename SEMPRE ASCII. **L'apostrofo diventa trattino** (`Corsa all'indietro` → `corsa-all-indietro`), mai eliminato e mai sostituito da apostrofo tipografico. ⚠️ Normalizzare a NFC prima di traslitterare → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta)
 
 **7. Codice stabile**: `EX###` mai derivato dalla zona. Gap permanenti, mai renumerare.
 
 **8. Storico**: qualunque rinomina va accompagnata da migrazione parallela su `training_logs` e `workout_sets` (indicizzano per nome testuale).
 
-**9. Estensione attiva del rachide** — gli esercizi che estendono attivamente la schiena (superman, swimming, reverse hyper, iperestensioni) vanno in `Schiena e Trapezio` con `gruppo_target = lombari`, **mai in `Addominali e Core`**. Motivo: gli slot core dell'app sono anti-estensione e anti-rotazione, e richiedono tenuta isometrica; un esercizio che estende attivamente la schiena in quello slot produce lo stimolo opposto a quello richiesto.
+**9. Estensione attiva del rachide** — gli esercizi che estendono attivamente la schiena (superman, swimming, reverse hyper, iperestensioni) vanno in `Schiena e Trapezio` con `gruppo_target = lombari`, **mai in `Addominali e Core`**. Motivo: gli slot core dell'app sono anti-estensione e anti-rotazione e richiedono tenuta isometrica; un esercizio che estende attivamente la schiena in quello slot produce lo stimolo opposto a quello richiesto.
 
-**10. Campo `uso` per i conditioning** — vale **solo per gli esercizi che stanno nella zona `Cardio e Conditioning`**. Tre valori secondo il tipo di stimolo:
+**10. Campo `uso` per i conditioning** — vale **solo per gli esercizi che stanno nella zona `Cardio e Conditioning`**:
 
 | Tipo | `uso` | Effetto |
 |---|---|---|
-| Conditioning ciclico ad alta intensità | `finisher` | Entra nel pool Tabata (insieme a `pattern = cardio_metabolico`) |
+| Conditioning ciclico ad alta intensità | `finisher` | Entra nel pool Tabata (con `pattern = cardio_metabolico`) |
 | Andature, agilità, lavoro tecnico di corsa | `riscaldamento` | Pool riscaldamento |
 | Pliometria massimale che resta in Cardio | *vuoto* | Resta fuori da ogni pool |
 
-`uso` vuoto è previsto **solo** per chi resta in `Cardio e Conditioning` e non deve entrare in alcun pool: è espressione di potenza e va eseguita a fresco, e il generatore non ha ancora uno slot dedicato.
+`uso` vuoto è previsto **solo** per chi resta in `Cardio e Conditioning` e non deve entrare in alcun pool: è espressione di potenza, va eseguita a fresco, e il generatore non ha ancora uno slot dedicato.
 
 Per tutti e tre i gruppi: `pattern = cardio_metabolico` e `gruppo_target` **vuoto**, per non inquinare il picker degli isolamenti.
 
-**La zona comanda.** La pliometria massimale ricollocata in una zona muscolare segue le regole di quella zona: riceve `pattern`, `gruppo_target` e `uso` come ogni altro esercizio di zona, ed entra nei pool del generatore. Precedenti a catalogo: EX268 `Squat pliometrico manubri` e EX212 `Affondo pliometrico manubri`. Vale anche quando l'esercizio era già a catalogo come conditioning: otto salti identici per natura non possono essere trattati in due modi diversi solo perché uno di essi c'era già.
+**La zona comanda.** La pliometria massimale ricollocata in una zona muscolare segue le regole di quella zona: riceve `pattern`, `gruppo_target` e `uso` come ogni altro esercizio di zona, ed entra nei pool. Precedenti: EX268, EX212. Vale anche quando l'esercizio era già a catalogo come conditioning — otto salti identici per natura non possono essere trattati in due modi diversi solo perché uno c'era già ([caso](docs/CANTIERI.md#gli-otto-salti-parcheggiati--risolti-5-agosto)).
 
-**11. Famiglia in testa** — precisazione della regola 2, non sua sostituzione. La parola di famiglia apre sempre il nome, anche dove grammaticalmente suonerebbe meglio in seconda posizione. Serve a far ordinare vicini gli esercizi imparentati e a renderli riconoscibili a colpo d'occhio in un elenco alfabetico.
+**11. Famiglia in testa** — precisazione della regola 2, non sua sostituzione. La parola di famiglia apre sempre il nome, anche dove grammaticalmente suonerebbe meglio in seconda posizione: `Boxe combo gancio-montante`, non `Combo boxe gancio-montante`. Serve a far ordinare vicini gli esercizi imparentati.
 
-`Boxe combo gancio-montante`, non `Combo boxe gancio-montante`.
+- **Eccezione**: una famiglia preceduta da preposizione è un complemento, non la famiglia, e non va anteposta. `Skip con calcio` resta tale.
+- Elenco **aperto**. Famiglie note: `squat · corsa · camminata · salto · skip · andatura · plank · boxe · calcio · affondo`. `boxe` copre i colpi di braccia, `calcio` quelli di gamba: un roundhouse al sacco è `Calcio circolare sacco`.
+- Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi propri e restano interi.
 
-Nella grande maggioranza dei casi la regola coincide già con `[Movimento] [Attrezzo] [Variante] [Posizione]`, perché la famiglia **è** il movimento. La precisazione serve per i casi in cui la famiglia verrebbe altrimenti trattata come aggettivo o complemento.
+**12. Lato del carico negli esercizi unilaterali** — quando un esercizio si esegue su una gamba o un braccio solo e il carico può stare dallo stesso lato dell'arto che lavora o dal lato opposto, la differenza si dichiara con la coppia chiusa `stesso lato` · `lato opposto`.
 
-**Eccezione — famiglia preceduta da preposizione.** Una parola di famiglia preceduta da preposizione è un complemento, non la famiglia: in quel caso non va anteposta. `Skip con calcio` resta tale — la famiglia è `skip`, il calcio è il modo.
-
-Elenco **aperto**, si amplia man mano che se ne incontrano. Famiglie note a oggi: `squat · corsa · camminata · salto · skip · andatura · plank · boxe · calcio · affondo`.
-
-`boxe` copre i colpi di braccia, `calcio` quelli di gamba: un roundhouse al sacco è `Calcio circolare sacco`, non `Boxe calcio circolare`.
-
-Non ogni parola ricorrente è una famiglia: `bear crawl` e `wall ball` sono nomi propri di esercizio e restano interi.
-
-**12. Lato del carico negli esercizi unilaterali** — quando un esercizio si esegue su una gamba o un braccio solo e il carico può stare dallo stesso lato dell'arto che lavora o dal lato opposto, la differenza si dichiara nel nome con la coppia chiusa `stesso lato` · `lato opposto`.
-
-Nessuna altra formulazione è ammessa. In particolare **non** si usano `omolaterale` e `controlaterale`: sono corretti ma sono gergo, e il catalogo è leggibile da chi si allena, non da chi studia anatomia.
-
-**Posizione nel nome**: è una variante, quindi segue l'attrezzo e precede la posizione, secondo l'ordine della regola 2 — `[Movimento] [Attrezzo] [Variante] [Posizione]`.
-
-**Si scrive solo quando distingue.** Se di quell'esercizio esiste una sola versione a catalogo, il lato del carico non si dichiara: la voce serve a separare due esercizi che altrimenti avrebbero lo stesso nome, non ad allungare i nomi per completezza descrittiva.
-
-Nello slug le due parole seguono le regole ordinarie (regola 6): minuscole, separate da trattino, nessun accento.
-
-**Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
-
-**Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento, che si affronta a parte (vedi *Lista da consolidare*).
-
-### Regole cantiere GIF (riconciliazione a tre fonti)
-
-Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. L'appaiamento è sempre per SHA-256, mai per nome.
-
-**La regola che non si negozia**: nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF. L'analisi tecnica prepara la decisione, non la sostituisce — anche quando la spiegazione tecnica torna perfettamente.
-
-**Guardie tecniche** (sempre attive):
-1. "1 codice per slug" — contare quanti codici puntano allo stesso `gif_slug` prima di rinomine massive
-2. SHA-256 prima di ogni rinomina massiva, per stanare i doppioni di contenuto (vedi *Aggancio per impronta*)
-3. Script idempotenti con timeout esteso
-4. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
-5. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (il campo `alternativa` non ha FK)
-
-**I TSV da incollare nel foglio vanno consegnati CON la riga di intestazione**, dicendo di incollare dalla seconda riga in giu. Senza intestazione l'allineamento non e verificabile da nessuno: un TSV di 22 colonne senza titoli e indistinguibile da uno sfasato di una colonna. Costo reale: il 6 agosto la riga di EX015 e stata incollata sfasata, il difetto non era visibile nel file, e ci sono voluti tre giri di sync per accorgersene — l'ordine delle colonne del foglio non coincideva piu con quello dei TSV generati. ⚠️ Per una **riga singola** la forma piu sicura non e il TSV ma l'elenco verticale `colonna → valore`: e indipendente dall'ordine delle colonne, quindi immune al problema. E prima di generare TSV posizionali, farsi dare la riga di intestazione del foglio e verificarne l'ordine.
-
-**Strumenti che raccolgono lavoro manuale**: ogni conferma si salva su disco **nell'istante in cui viene data**, con `fsync`, senza dipendere da un bottone di applicazione o dalla chiusura di un blocco. Registrare la scelta e agire sui file sono operazioni separate. Si collauda chiudendo la scheda e riavviando il processo **prima** di consegnarlo: se il lavoro non si ritrova, lo strumento non è pronto.
+- Nessuna altra formulazione è ammessa: **non** si usano `omolaterale`/`controlaterale`, che sono gergo (il catalogo è leggibile da chi si allena, non da chi studia anatomia).
+- È una variante: segue l'attrezzo e precede la posizione.
+- **Si scrive solo quando distingue.** Se di quell'esercizio esiste una sola versione a catalogo, il lato del carico non si dichiara.
+- Nello slug: regole ordinarie (regola 6).
 
 ---
 
@@ -377,34 +319,29 @@ Per ogni zona: confrontare **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 
 **Filosofia**: catalogo verificato + AI che assembla. Mai inventare esercizi. Esercizi fissi dentro il blocco (4 sett.), variazione tra blocchi.
 
-**Filtri del pool (`_trainGenFilterPool`) — guardia critica.** Tre guard in cascata, tutti obbligatori: luogo → attrezzo → livello. Se uno solo manca, ogni riga del catalogo entra nei pool in base al solo campo `uso` e la scheda si riempie di esercizi non eseguibili. Verificare la loro presenza prima di qualunque intervento sul generatore.
+**Filtri del pool (`_trainGenFilterPool`) — guardia critica.** Tre guard in cascata, tutti obbligatori: luogo → attrezzo → livello. Se uno solo manca, ogni riga del catalogo entra nei pool in base al solo campo `uso` e la scheda si riempie di esercizi non eseguibili. **Verificare la loro presenza prima di qualunque intervento sul generatore** → [L1](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)
 
 **Criterio di ammissibilità a casa**: la riproducibilità del movimento, non il nome dell'esercizio. Un rematore alla macchina replicato con elastico è legittimo: stesso pattern, stessa posizione, resistenza equivalente. Una leg curl prona alla macchina non lo è: nulla in casa riproduce quella resistenza in quella posizione.
 
-Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: 127 dei 332 esercizi ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
+Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **127 dei 332 esercizi** ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, **catalogo 667 righe**, 6 ago): `poolPrincipali` 332 · `poolFinisher` 130 · `poolRiscaldamento` 43 · **pool core 67 pescabili su 67 ammessi** · `poolFinisherTabata` 25 · `poolCarry` 1. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo 667 righe, 6 ago): `poolPrincipali` **332** · `poolFinisher` **130** · `poolRiscaldamento` **43** · pool core **67 pescabili su 67 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 
-⚠️ **Il pool core si conta come *pescabili*, non come righe ammesse.** Gli slot core pescano per **funzione** (`gruppo_target`), quindi una riga `pattern = core` con `gruppo_target` vuoto passa tutti i filtri, occupa un posto nel pool e **non può essere scelta da nessuno slot**. I due numeri divergono finché esiste una riga così. **Dal 6 agosto i due numeri coincidono**: EX110 `Superman`, l'ultima riga senza funzione, e stata eliminata come doppione di EX448. Se tornano a divergere, c'e una riga nuova da classificare. Le altre quattro sono state colmate il 5 agosto: EX102 e EX108 → `core rotazione`, EX106 → `core anti-estensione`, EX111 → `core rotazione`.
+⚠️ Il pool core si conta come **pescabili**, non come righe ammesse: una riga `pattern = core` con `gruppo_target` vuoto passa i filtri e non può essere scelta da nessuno slot. Se i due numeri tornano a divergere, c'è una riga nuova da classificare → [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse)
 
-⚠️ **La baseline si sposta anche quando cambia il catalogo, non solo il codice.** Precedenti: le 28 righe di Cardio (2 ago) hanno portato finisher 103→115 e riscaldamento 17→28 senza che nessuno toccasse i filtri; le 36 righe di Gambe e Glutei (5 ago) hanno portato principali 283→316, finisher 115→128, riscaldamento 28→38. Il Tabata è rimasto 25 in entrambi i casi. **Rimisurare dopo ogni sync del Sheet.**
+⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
-Storico: catalogo 610 (3 ago) → 283 · 115 · 28 · core 64 · Tabata 25. Catalogo 646 (5 ago) → 316 · 128 · 38 · core 67 · Tabata 25. Catalogo 671 (6 ago, prima dei consolidamenti) → 335 · 131 · 43 · core 67 su 68 · Tabata 25.
+**I gruppi più poveri del pool non sono nelle gambe.** Con 667 righe restano: deltoidi posteriori **1 candidato**, avambracci 3, deltoidi laterali 3, deltoidi anteriori 4. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno — il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
 
-**I gruppi piu poveri del pool non sono nelle gambe.** Con 667 righe restano: deltoidi posteriori **1 candidato**, avambracci 3, deltoidi laterali 3, deltoidi anteriori 4. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno — il cantiere che cambia davvero l'allenamento e **Spalle e Cuffia**, non la zona piu grossa.
+### Core: quattro funzioni, due nature
+(2 ago 2026, commit `f16e035`)
 
-**Core: quattro funzioni, due nature** (2 ago 2026, commit `f16e035`).
-
-| Funzione | Natura | Righe a catalogo (5 ago) |
+| Funzione | Natura | Righe a catalogo |
 |---|---|---|
 | `core anti-estensione` | tenuta | 21 |
 | `core anti-rotazione` | tenuta | 8 |
 | `core flessione` | dinamica | 31 |
 | `core rotazione` | dinamica | 15 |
-
-Più **1 riga `pattern = core` senza funzione**: EX110 `Superman`, da eliminare (cantiere 4), non da classificare.
-
-⚠️ Il vocabolario delle funzioni **non ha un piano frontale**. `EX111 Side bend` è flessione laterale pura — il suo stesso campo `errori` mette «rotazione del busto» fra gli sbagli — ed è stato messo in `core rotazione` come casella dei dinamici sugli obliqui. È un adattamento consapevole: la prescrizione che ne esce (ripetizioni, non secondi) resta corretta.
 
 Tutte con `pattern = core`. Ogni sessione ha **due slot core: uno di tenuta, uno dinamico** — il core va allenato sia nel resistere al movimento sia nel produrlo. Mappa categoria → coppia in `_TRAIN_GEN_CORE_BY_TYPE`; il core è uscito da `_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`, che torna solo muscolare.
 
@@ -412,22 +349,23 @@ Upper/Push/Pull → piano trasverso (anti-rotazione + rotazione). Lower/Legs →
 
 **Fallback**: se una funzione non ha candidati, si ripiega sull'altra della **stessa natura** (`_TRAIN_GEN_CORE_FALLBACK`). Mai attraversare le nature: slot vuoto è preferibile a due esercizi della stessa natura.
 
-⚠️ **`_trainGenIsIsometric` discrimina sulla funzione, non sul pattern.** Prima classificava isometrico ogni `pattern = core` non intercettato da regex sui nomi: con le funzioni nuove tutti e 43 i dinamici sarebbero usciti prescritti in secondi (un crunch "30-45 sec"). Ora la natura la dichiara il `gruppo_target`, **controllato prima delle euristiche sul nome** — "Plank laterale crunch obliquo" è `core rotazione` ma cade sulla regex `/plank/`. Le tenute vanno a tempo, i dinamici a ripetizioni.
+⚠️ **`_trainGenIsIsometric` discrimina sulla funzione, non sul pattern.** La natura la dichiara il `gruppo_target`, **controllato prima delle euristiche sul nome**. Le tenute vanno a tempo, i dinamici a ripetizioni → [L19](docs/LEZIONI.md#l19--_traingenisisometric-deve-discriminare-sulla-funzione-non-sul-pattern)
 
-**Indice di rotazione: `sessionIdx` (assoluto), non `occurrenceIdx`.** L'occorrenza dentro il tipo vale `0` sia per Upper A sia per Lower A: due sessioni di categoria diversa che attingono alla **stessa lista** con lo **stesso indice** convergono sullo stesso esercizio. Era il difetto degli slot core (corretto in `f16e035`, ora `sessionIdx + rigenIdx`, con `+0` e `+1` per i due slot) ed era quello del **Tabata**, che in più non riceveva affatto `rigenIdx`: corretto in `054a495` con `sessionIdx + rigenIdx * numero di sessioni`. Il fattore moltiplicativo fa avanzare la finestra di un blocco intero, così una scheda non ripropone ciò che aveva la precedente — a passo 1 la Upper A della scheda N riceverebbe quello che aveva la Lower A della N−1.
+⚠️ Il vocabolario delle funzioni **non ha un piano frontale**: `EX111 Side bend` è flessione laterale pura ed è stato messo in `core rotazione` come casella dei dinamici sugli obliqui. Adattamento consapevole.
 
-I compound hanno la stessa forma di indice ma non manifestano il difetto: Upper e Lower chiedono pattern diversi, quindi pescano da liste disgiunte. **Il discrimine non è l'offset, è se le liste sono disgiunte.** Il carry conclusivo è il riferimento corretto: distribuisce su `sessionIdx` e non collide mai.
+### Indice di rotazione
+**`sessionIdx` (assoluto), non `occurrenceIdx`.** Due sessioni di categoria diversa che attingono alla stessa lista con lo stesso indice convergono sullo stesso esercizio. Slot core: `sessionIdx + rigenIdx` (`+0` e `+1` per i due slot). Tabata: `sessionIdx + rigenIdx × numero di sessioni`.
 
-Effetto noto e accettato: con indice lineare gli esercizi **scorrono lungo lo split** a ogni rigenerazione invece di ripescare in modo imprevedibile. Spezzare la regolarità richiede un offset non lineare — decisione aperta.
+**Il discrimine non è l'offset, è se le liste sono disgiunte** — i compound non manifestano il difetto perché Upper e Lower chiedono pattern diversi. Il carry conclusivo è il riferimento corretto → [L18](docs/LEZIONI.md#l18--lindice-di-rotazione-deve-essere-assoluto-non-loccorrenza-dentro-il-tipo)
 
-**Pattern minimi per sessione**:
+### Pattern minimi per sessione
 - Full Body: spinta + tirata + dom.ginocchia + dom.anca + core
 - Upper: spinta orizz + spinta vert + tirata orizz + tirata vert
 - Lower: dom.ginocchia + dom.anca + core
 
 Tirata ≥ spinta. Core sempre obbligatorio. Ordine: compound pesanti → complementari → isolamenti → core.
 
-**Split**:
+### Split
 | Giorni | Split |
 |---|---|
 | 2 | Full Body × 2 |
@@ -435,13 +373,11 @@ Tirata ≥ spinta. Core sempre obbligatorio. Ordine: compound pesanti → comple
 | 4 | Upper/Lower × 2 |
 | 5 | Upper/Lower DUP + Upper Pump (int/avanzato) · PPL (princ.) |
 
-⚠️ **Solo 4 e 5 giorni sono realmente supportati end-to-end.** Il generatore produce correttamente anche schede a 2 e 3 giorni e le salva in `schede_utente`, ma rotazione e rendering sono ancorati a id di sessione fissi (`upperA`/`lowerA`/`upperB`/`lowerB`/`recoveryUpper`/`recoveryLower`, più `upperC` per il 5 giorni). Una scheda a 3 giorni produce id `upper`/`lower`/`fullbody` che non combaciano con nessuna mappa: `getTrainingSession()` cade sul fallback `TRAINING_SESSIONS` hardcoded e l'utente vede la scheda d'emergenza con nomi esercizio non aggiornati — sintomo diagnostico utile.
-
-Punti da toccare per generalizzare: `SESSION_DAY_NUM` / `SESSION_DAY_NUM_5` · `_rotationDayMap()` / `getRotationCycle()` (discriminante binario sulla presenza di `upperC`) · `DAY_SPLIT` in "I tuoi giorni" (hardcoded, due soli layout) · `getCycleWeekInfo()` (`workPerGiro` derivato dal ciclo). Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
+⚠️ **Solo 4 e 5 giorni sono realmente supportati end-to-end.** Il generatore produce correttamente anche schede a 2 e 3 giorni e le salva in `schede_utente`, ma rotazione e rendering sono ancorati a id di sessione fissi (`upperA`/`lowerA`/`upperB`/`lowerB`/`recoveryUpper`/`recoveryLower`, più `upperC` per il 5 giorni). Una scheda a 3 giorni produce id `upper`/`lower`/`fullbody` che non combaciano con nessuna mappa: `getTrainingSession()` cade sul fallback `TRAINING_SESSIONS` hardcoded e l'utente vede la scheda d'emergenza con nomi esercizio non aggiornati — sintomo diagnostico utile. Punti da toccare per generalizzare: [cantiere 20](docs/CANTIERI.md#20-generalizzare-lo-split-a-2-e-3-giorni).
 
 Split 5gg DUP: 7 posizioni — upperA · lowerA · recoveryUpper · upperB · lowerB · upperC(Pump) · rest.
 
-**Parametri**:
+### Parametri
 | Obiettivo | Reps | RIR | Recupero |
 |---|---|---|---|
 | Forza | 4-6 | 2-3 | 3 min |
@@ -453,7 +389,7 @@ RIR attivo SOLO per intermedio/avanzato.
 
 **Cautele**: `limitazioni` × `zone_rischio` → prima ADATTA (`adattamento`), poi SOSTITUISCE (`alternativa`). Alternativa accettata solo se nel Set ammissibili (unione 5 pool filtrati luogo/attrezzo/livello), altrimenti skip `alternative-not-eligible`. Vale anche per Tabata.
 
-**Finisher Tabata**: solo `dimagrimento`/`ricomposizione`, ~5 min, basso impatto, `uso=finisher`. Upper Pump: niente Tabata. 4 esercizi distinti per sessione, fissi dentro la scheda e rinnovati a ogni rigenerazione (indice `sessionIdx + rigenIdx × numero di sessioni`, vedi *Indice di rotazione*).
+**Finisher Tabata**: solo `dimagrimento`/`ricomposizione`, ~5 min, basso impatto, `uso=finisher`. Upper Pump: niente Tabata. 4 esercizi distinti per sessione, fissi dentro la scheda e rinnovati a ogni rigenerazione.
 
 **Isolamenti bonus**: pescano SOLO da `uso=principale`.
 
@@ -488,3 +424,32 @@ Pausa cambio lato iso (5s) → silenzio totale. Avvio serie a reps → silenzio.
 **Infortuni multi-giorno**: periodo 1/3/7 gg o aperto in `zt_injury_<userId>`. Righe `rest_injury` materializzate una al giorno al passaggio (idempotenti). Barra in Training con data rientro e "Sto bene, riprendo".
 
 **Rientro soft**: pausa ≥10 gg → banner non bloccante. L1 (10-29 gg) −20%/RIR+1, L2 (≥30 gg) −35%/RIR+2. Solo suggerimenti, zero effetti su scheda/DB/settimana ciclo.
+
+---
+
+## Indice delle lezioni
+
+Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
+
+1. [Uno script che toglie i log si porta via la logica sulla stessa riga](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga) — filtri pool, `8f46576`
+2. [Un alias può puntare a una parola che non esiste](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste) — `GEAR_ALIASES`, onboarding
+3. [Una riga tolta dal foglio non sparisce: si arena](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena) — sync Sheet
+4. [Il sync riporta indietro ciò che il foglio non ha](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha) — sync Sheet
+5. [Un TSV senza intestazione non è verificabile](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno) — consegna righe al foglio
+6. [Codici allocati in anticipo si scontrano](docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano) — nuovi `EX###`
+7. [L'impronta trova i doppioni identici, non tutti](docs/LEZIONI.md#l7--limpronta-trova-i-doppioni-identici-non-tutti-i-doppioni) — consolidamenti
+8. [Catena integra ≠ catena giusta](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso) — verifiche via Worker
+9. [Aggancio per impronta, mai per nome](docs/LEZIONI.md#l9--aggancio-per-impronta-mai-per-nome) — `prepara.py`
+10. [Il ripiego silenzioso su "libero"](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto) — stato `indeterminato`
+11. [Sweep con concorrenza 3, non 6](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa) — verifica massiva GIF
+12. [Due liste che non coincidono](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe) — `conferma.py` vs `migra.py`
+13. [PostgREST tronca le SELECT](docs/LEZIONI.md#l13--postgrest-tronca-le-select-al-limite-default) — `biblioteca_gif`
+14. [BOM e CRLF dai TSV Google](docs/LEZIONI.md#l14--i-tsv-da-google-sheet-arrivano-utf-8-con-bom-e-crlf) — ogni parsing
+15. [I nomi file macOS sono in NFD](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta) — path Storage
+16. [Pool core: ammessi ≠ pescabili](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse) — baseline
+17. [La baseline si sposta col catalogo](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice) — dopo ogni sync
+18. [Indice di rotazione assoluto](docs/LEZIONI.md#l18--lindice-di-rotazione-deve-essere-assoluto-non-loccorrenza-dentro-il-tipo) — core, Tabata
+19. [Isometrico per funzione, non per pattern](docs/LEZIONI.md#l19--_traingenisisometric-deve-discriminare-sulla-funzione-non-sul-pattern) — prescrizione core
+20. [La domanda giusta sui "liberi"](docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio) — cantieri 2 e 16
+21. [Salvare nell'istante della scelta](docs/LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta) — strumenti di conferma
+22. [supabase-js non lancia eccezioni](docs/LEZIONI.md#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api) — ogni scrittura DB

@@ -1,0 +1,104 @@
+﻿codice	nome	nome_en	pattern	gruppo_target	attrezzo	luogo	muscoli	livello	uso	zone_rischio	adattamento	alternativa	setup	esecuzione	errori	nota_sicurezza	surrogato_attrezzo	nota_surrogato	esecuzione_surrogato	errori_surrogato	gif_slug
+EX587	Battle rope onde alternate		cardio_metabolico		battle rope				finisher												battle-rope-onde-alternate
+EX588	Boxe diretto sacco		cardio_metabolico		sacco				finisher												boxe-diretto-sacco
+EX589	Boxe diretto		cardio_metabolico		corpo libero				finisher												boxe-diretto
+EX590	Boxe diretti alternati		cardio_metabolico		corpo libero				finisher												boxe-diretti-alternati
+EX591	Boxe footwork		cardio_metabolico		corpo libero				riscaldamento												boxe-footwork
+EX592	Boxe gancio		cardio_metabolico		corpo libero				finisher												boxe-gancio
+EX593	Boxe jab		cardio_metabolico		corpo libero				finisher												boxe-jab
+EX594	Burpee navy seal		cardio_metabolico		corpo libero				finisher												burpee-navy-seal
+EX595	Burpee		cardio_metabolico		corpo libero				finisher												burpee
+EX596	Camminata bear crawl		cardio_metabolico		corpo libero				riscaldamento												camminata-bear-crawl
+EX597	Corsa all'indietro		cardio_metabolico		corpo libero				riscaldamento												corsa-all-indietro
+EX598	Corsa zigzag conetti		cardio_metabolico		conetti				riscaldamento												corsa-zigzag-conetti
+EX599	Corsa laterale scaletta agilità		cardio_metabolico		scaletta agilità				riscaldamento												corsa-laterale-scaletta-agilita
+EX600	Spostamento laterale con tocco a terra		cardio_metabolico		corpo libero				riscaldamento												spostamento-laterale-con-tocco-a-terra
+EX601	Corsa passi corti		cardio_metabolico		corpo libero				riscaldamento												corsa-passi-corti
+EX602	Corsa falcata lunga		cardio_metabolico		corpo libero				finisher												corsa-falcata-lunga
+EX603	Corsa resistenza con elastico		cardio_metabolico		elastico				finisher												corsa-resistenza-con-elastico
+EX604	Corsa scaletta agilità		cardio_metabolico		scaletta agilità				riscaldamento												corsa-scaletta-agilita
+EX605	Corsa sforbiciata		cardio_metabolico		corpo libero				finisher												corsa-sforbiciata
+EX606	Corsa sul posto		cardio_metabolico		corpo libero				finisher												corsa-sul-posto
+EX607	Calcio circolare sacco		cardio_metabolico		sacco				finisher												calcio-circolare-sacco
+EX608	Jumping jack		cardio_metabolico		corpo libero				finisher												jumping-jack
+EX609	Pistol jump box		dominante ginocchia	quadricipiti	box				principale;finisher												pistol-jump-box
+EX610	Jumping rimbalzi		cardio_metabolico		corpo libero				riscaldamento												jumping-rimbalzi
+EX611	Salto all'indietro		dominante ginocchia	quadricipiti	corpo libero				principale;finisher												salto-all-indietro
+EX612	Salto con la corda		cardio_metabolico		corda				finisher												salto-con-la-corda
+EX613	Salto monopodalico avanti		dominante ginocchia	quadricipiti	corpo libero				principale;finisher												salto-monopodalico-avanti
+EX614	Salto verticale esplosivo		dominante ginocchia	quadricipiti	corpo libero				principale;finisher												salto-verticale-esplosivo
+EX615	Skip con calcio		cardio_metabolico		corpo libero				riscaldamento												skip-con-calcio
+EX616	Skip ginocchia alte		cardio_metabolico		corpo libero				finisher												skip-ginocchia-alte
+EX617	Skip power		cardio_metabolico		corpo libero				finisher												skip-power
+EX618	Skip sul posto		cardio_metabolico		corpo libero				finisher												skip-sul-posto
+EX619	Squat jump ginocchia alte		dominante ginocchia	quadricipiti	corpo libero				principale;finisher												squat-jump-ginocchia-alte
+EX620	Squat thrust		composto	quadricipiti	corpo libero				principale;finisher												squat-thrust
+EX621	Lancio rotazionale palla medica al muro			core anti-rotazione	palla medica																lancio-rotazionale-palla-medica-al-muro
+EX622	Piegamenti con rotazione a T			core anti-rotazione	corpo libero																piegamenti-con-rotazione-a-t
+EX623	Retroversione bacino da supino			core anti-estensione	corpo libero																retroversione-bacino-da-supino
+EX624	Torsione busto gomiti alti in piedi			core anti-rotazione	corpo libero																torsione-busto-gomiti-alti-in-piedi
+EX625	Abduzione clamshell decubito laterale			glutei	corpo libero																abduzione-clamshell-decubito-laterale
+EX626	Abduzione clamshell elastico decubito laterale			glutei	elastico																abduzione-clamshell-elastico-decubito-laterale
+EX627	Abduzione anca decubito laterale			glutei	corpo libero																abduzione-anca-decubito-laterale
+EX628	Abduzione fire hydrant elastico quadrupedia			glutei	elastico																abduzione-fire-hydrant-elastico-quadrupedia
+EX629	Abduzione fire hydrant quadrupedia			glutei	corpo libero																abduzione-fire-hydrant-quadrupedia
+EX630	Adduzione anca decubito laterale			adduttori	corpo libero																adduzione-anca-decubito-laterale
+EX631	Affondo inverso con knee drive			quadricipiti	corpo libero																affondo-inverso-con-knee-drive
+EX632	Affondo inverso Bosu con knee drive			quadricipiti	Bosu																affondo-inverso-bosu-con-knee-drive
+EX633	Affondo split maniglie elastico			quadricipiti	elastico;maniglie																affondo-split-maniglie-elastico
+EX634	Affondo alternato			quadricipiti	corpo libero																affondo-alternato
+EX635	Affondo camminato con knee drive			quadricipiti	corpo libero																affondo-camminato-con-knee-drive
+EX636	Affondo jump lunge			quadricipiti	corpo libero																affondo-jump-lunge
+EX637	Affondo laterale			quadricipiti	corpo libero																affondo-laterale
+EX638	Camminata laterale elastico caviglie			glutei	elastico																camminata-laterale-elastico-caviglie
+EX639	Donkey kick elastico quadrupedia			glutei	elastico																donkey-kick-elastico-quadrupedia
+EX640	Hip hinge monopodalico elastico			ischiocrurali	elastico																hip-hinge-monopodalico-elastico
+EX641	Hip thrust elastico in ginocchio			glutei	elastico																hip-thrust-elastico-in-ginocchio
+EX642	Leg press elastico supino alternato			quadricipiti	elastico																leg-press-elastico-supino-alternato
+EX643	Squat pistol al box			quadricipiti	box																squat-pistol-al-box
+EX644	Reverse hyper elastico panca			glutei	elastico;panca																reverse-hyper-elastico-panca
+EX645	Squat goblet kettlebell elastico			quadricipiti	kettlebell;elastico																squat-goblet-kettlebell-elastico
+EX646	Squat barra elastico			quadricipiti	sbarra;elastico																squat-barra-elastico
+EX647	Squat calcio laterale tocco tallone			quadricipiti	corpo libero																squat-calcio-laterale-tocco-tallone
+EX648	Squat cosacco			quadricipiti	corpo libero																squat-cosacco
+EX649	Squat elastico braccia alte			quadricipiti	elastico																squat-elastico-braccia-alte
+EX650	Squat jump			quadricipiti	corpo libero																squat-jump
+EX651	Squat wall ball palla medica			quadricipiti	palla medica																squat-wall-ball-palla-medica
+EX652	Stacco monopodalico			ischiocrurali	corpo libero																stacco-monopodalico
+EX653	Step up manubri con curl bicipiti			quadricipiti	manubri;panca																step-up-manubri-con-curl-bicipiti
+EX654	Swing elastico maniglie			glutei	elastico;maniglie																swing-elastico-maniglie
+EX655	Squat wall sit inclinazione alternato			quadricipiti	corpo libero																squat-wall-sit-inclinazione-alternato
+EX656	Squat wall sit			quadricipiti	corpo libero																squat-wall-sit
+EX657	Adduzione spalla elastico un braccio in piedi			petto	elastico																adduzione-spalla-elastico-un-braccio-in-piedi
+EX658	Chest press elastico maniglie in piedi			petto	elastico;maniglie																chest-press-elastico-maniglie-in-piedi
+EX659	Calf raise elastico maniglie in piedi			polpacci	elastico;maniglie																calf-raise-elastico-maniglie-in-piedi
+EX660	Croci inverse elastico busto flesso			deltoidi posteriori	elastico																croci-inverse-elastico-busto-flesso
+EX661	Croci inverse elastico maniglie busto flesso			deltoidi posteriori	elastico;maniglie																croci-inverse-elastico-maniglie-busto-flesso
+EX662	Estensione spalla elastico in piedi			dorsali	elastico																estensione-spalla-elastico-in-piedi
+EX663	Lancio al petto palla medica al muro			petto	palla medica																lancio-al-petto-palla-medica-al-muro
+EX664	Lancio slam palla medica			dorsali	palla medica																lancio-slam-palla-medica
+EX665	Lat machine elastico maniglie in ginocchio			dorsali	elastico;maniglie																lat-machine-elastico-maniglie-in-ginocchio
+EX666	Piegamenti cobra prono			lombari	corpo libero																piegamenti-cobra-prono
+EX667	Swimming prono			lombari	corpo libero																swimming-prono
+EX668	Alzate diagonali elastico un braccio in piedi			deltoidi anteriori	elastico;maniglie																alzate-diagonali-elastico-un-braccio-in-piedi
+EX669	Alzate diagonali elastico maniglie in piedi			deltoidi anteriori	elastico;maniglie																alzate-diagonali-elastico-maniglie-in-piedi
+EX670	Alzate laterali isometriche in piedi			deltoidi laterali	corpo libero																alzate-laterali-isometriche-in-piedi
+EX671	Incroci braccia in piedi			deltoidi anteriori	corpo libero																incroci-braccia-in-piedi
+EX672	Lento avanti elastico seduto			deltoidi anteriori	elastico;maniglie																lento-avanti-elastico-seduto
+EX673	Lento avanti isometrico in piedi			deltoidi anteriori	corpo libero																lento-avanti-isometrico-in-piedi
+EX674	Lento dietro barra elastico ai piedi			deltoidi anteriori	sbarra;elastico																lento-dietro-barra-elastico-ai-piedi
+EX675	Lento dietro maniglia elastico un braccio in piedi			deltoidi anteriori	elastico;maniglie																lento-dietro-maniglia-elastico-un-braccio-in-piedi
+EX676	Squat croce di ferro manubri			deltoidi laterali	manubri																squat-croce-di-ferro-manubri
+EX677	Squat con lancio palla un braccio			deltoidi anteriori	palla medica																squat-con-lancio-palla-un-braccio
+EX678	Estensione tricipiti elastico busto flesso			tricipiti	elastico;maniglie																estensione-tricipiti-elastico-busto-flesso
+EX679	French press elastico in piedi			tricipiti	elastico																french-press-elastico-in-piedi
+EX680	French press elastico maniglie panca piana			tricipiti	elastico;maniglie;panca																french-press-elastico-maniglie-panca-piana
+EX681	Pushdown elastico in piedi			tricipiti	elastico																pushdown-elastico-in-piedi
+EX682	Pushdown elastico maniglie in piedi			tricipiti	elastico;maniglie																pushdown-elastico-maniglie-in-piedi
+EX115	Spostamento laterale rapido		cardio_metabolico		corpo libero	casa;libero;palestra	gambe;glutei;cardio		finisher	ginocchia;caviglie	ginocchia/caviglie: spostamenti più lenti, range ridotto, mantieni la posizione atletica senza accovacciarti troppo	EX050	Posizione atletica, ginocchia morbide	Spostati lateralmente con passi rapidi;Resta basso;Cambia direzione	Busto alto;Piedi che si incrociano;Spalle che oscillano	Posizione atletica mantenuta: ginocchia morbide, bacino basso, busto eretto. I piedi non si incrociano mai					spostamento-laterale-rapido
+EX114	Corsa calciata sul posto		cardio_metabolico		corpo libero	casa;libero;palestra	ischiocrurali;polpacci;cardio		finisher	ginocchia	ginocchia: versione marcia lenta, talloni verso glutei senza saltare; atterraggio sempre sulle punte	EX049	In piedi sul posto o in avanzamento	Porta i talloni verso i glutei in rapida successione;Busto eretto;Ritmo costante	Busto piegato;Falcata troppo ampia;Spalle rigide	Versione marcia (basso impatto): atterraggio sulle punte, busto eretto. Aumenta gradualmente il ritmo					corsa-calciata-sul-posto
+EX113	Salto lungo da fermo		dominante ginocchia	quadricipiti	corpo libero	casa;libero;palestra	gambe;glutei;polpacci	intermedio	principale;finisher	ginocchia	alto impatto: atterra morbido piegando le ginocchia	EX052	In piedi, piedi alla larghezza delle anche	Salta in avanti il piu lontano possibile;Atterra morbido in mezzo squat;Stabilizza	Atterraggio rigido;Squilibrio in atterraggio;Ginocchia che collassano	Atterraggio in mezzo squat con ginocchia in linea con i piedi. Evitare con problemi a ginocchia					salto-lungo-da-fermo
+EX112	Squat jump box		dominante ginocchia	quadricipiti	corpo libero	casa;libero;palestra	gambe;glutei;polpacci	intermedio	principale;finisher	ginocchia	alto impatto: scegli un box basso, scendi a passo non saltando giu	EX033	In piedi davanti a un box stabile	Salta sul box atterrando morbido;Estendi anche e ginocchia in cima;Scendi a passo	Atterraggio rigido;Box troppo alto;Scendere saltando	Evitare con problemi a ginocchia o caviglie. Atterraggio SEMPRE morbido sulle punte con ginocchia che cedono					squat-jump-box
+EX036	Bird dog		core	core anti-rotazione	corpo libero	casa;libero;palestra	core;lombari;glutei;deltoide posteriore	principiante;intermedio;avanzato	principale	lombare	Se lombare sensibile ROM ridotto (estensione parziale di braccio e gamba)	EX021	A quattro zampe (mani sotto le spalle, ginocchia sotto le anche), schiena neutra, core attivo	Estendi braccio e gamba opposti fino a formare una linea;Pausa breve in massima estensione;Ritorno controllato, alterna lato;Respira normalmente, non bloccare il fiato	Schiena che si inarca durante l'estensione;Anche che ruotano apertamente;Movimento veloce senza controllo	Anti-estensione: la colonna deve restare neutra durante tutto il movimento					bird-dog
+EX118	Plank inchworm		mobilita		corpo libero	casa;libero;palestra	catena posteriore;core;spalle	principiante	riscaldamento	lombare;polsi	lombare: ginocchia morbide durante la flessione; polsi: usa le nocche se i polsi sono sensibili	EX029	In piedi, gambe tese	Piegati e cammina con le mani fino al plank;Cammina indietro;Risali	Ginocchia troppo piegate;Bacino che cede in plank;Fretta	Lombare: gambe leggermente piegate durante la camminata con le mani se gli ischiocrurali sono rigidi. Polsi: peso distribuito su tutta la mano					plank-inchworm
+EX110	Superman		core	lombari	corpo libero	casa;libero;palestra	erettori spinali;glutei;catena posteriore	principiante	principale;finisher	lombare;cervicale	catena posteriore: solleva senza strappo, sguardo a terra	EX036	Prono a terra, braccia distese avanti	Solleva braccia e gambe contemporaneamente;Tieni 1-2 sec;Discesa controllata	Iperestensione del collo;Strappo;Apnea	Cervicale: sguardo al pavimento, non alzare la testa. Lombare: il sollevamento viene dalla catena posteriore, non dall'inarcamento					superman

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conferma nomi — biblioteca esercizi</title>
+<style>
+  :root{
+    --bone:#F5F3EE; --ink:#1B1E1D; --muted:#6B7370; --line:#DDD8CE;
+    --evergreen:#2A7A6F; --card:#FFF; --over:#B45309; --viola:#5E4A7A;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bone);color:var(--ink);
+       font:15px/1.5 ui-sans-serif,-apple-system,"Helvetica Neue",sans-serif}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+  header{position:sticky;top:0;z-index:5;background:var(--bone);
+         border-bottom:1px solid var(--line);padding:13px 22px;
+         display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;font-weight:650}
+  .grow{flex:1}
+  select,button,input{font:inherit;color:inherit}
+  select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+  button{padding:8px 14px;border-radius:9px;border:1px solid var(--line);
+         background:var(--card);cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--evergreen)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--evergreen);color:#fff;border-color:var(--evergreen)}
+
+  /* il contatore mostra sempre cio' che risulta SU DISCO */
+  .disco{font-family:ui-monospace,monospace;font-size:13px;background:var(--evergreen);
+         color:#fff;padding:5px 12px;border-radius:999px;font-weight:600}
+  .stat{font-family:ui-monospace,monospace;font-size:12.5px;color:var(--muted)}
+
+  main{padding:20px 22px 40px;max-width:1180px;margin:0 auto}
+
+  .riga{display:grid;grid-template-columns:330px 1fr;gap:20px;background:var(--card);
+        border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .riga.decisa{border-color:var(--evergreen);background:#FAFDFC}
+  .gif{width:100%;aspect-ratio:1;object-fit:contain;background:#fff;
+       border:1px solid var(--line);border-radius:10px}
+
+  .campo{margin-bottom:11px}
+  .lab{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+       margin-bottom:3px;font-family:ui-monospace,monospace}
+  .val{font-family:ui-monospace,monospace;font-size:13px;word-break:break-word}
+  input[type=text]{width:100%;padding:9px 11px;border:1px solid var(--line);
+                   border-radius:9px;background:var(--bone);font-size:15px}
+  input[type=text]:focus{outline:none;border-color:var(--evergreen);background:#fff}
+  .slug{color:var(--evergreen);font-weight:600}
+
+  .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;
+         font-family:ui-monospace,monospace;color:#fff}
+  .b-collegato{background:var(--over)} .b-pendente{background:var(--viola)}
+  .b-libero{background:var(--evergreen)} .b-indicizzato{background:var(--muted)}
+  .b-indeterminato{background:#B45309}
+  .b-pop{background:#1B1E1D}
+
+  .chip{display:inline-block;padding:3px 9px;border:1px dashed var(--line);border-radius:999px;
+        font-size:12px;cursor:pointer;background:transparent;margin:3px 5px 0 0}
+  .chip:hover{border-color:var(--evergreen);border-style:solid}
+
+  .azioni{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  .esito{font-size:12.5px;font-family:ui-monospace,monospace}
+  .ok{color:var(--evergreen)} .ko{color:var(--over)}
+  .avviso{font-size:12.5px;color:var(--over);margin-top:8px}
+  .nota{font-size:12.5px;color:var(--muted);margin-top:6px}
+
+  details{margin-top:26px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+          padding:14px 16px}
+  summary{cursor:pointer;font-weight:600}
+  table{border-collapse:collapse;width:100%;font-family:ui-monospace,monospace;font-size:12px;
+        margin-top:12px}
+  td,th{border-bottom:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+  .scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Conferma nomi</h1>
+  <select id="zona"></select>
+  <span class="disco" id="disco">— su disco</span>
+  <span class="stat" id="dettaglio"></span>
+  <span class="grow"></span>
+  <button id="prev">← gruppo</button>
+  <span class="stat" id="gruppo"></span>
+  <button id="next">gruppo →</button>
+  <label class="stat"><input type="checkbox" id="nascondiDecise"> nascondi già decise</label>
+</header>
+
+<main>
+  <div id="righe"></div>
+
+  <details id="pannelloRinomina">
+    <summary>Rinomina i file sul Mac — passo separato, agisce solo su ciò che è già deciso</summary>
+    <p class="stat">La registrazione delle decisioni è indipendente da questo pannello.
+       Se una rinomina fallisce, la decisione registrata resta valida.</p>
+    <div class="azioni">
+      <button id="provaRin">Prova a vuoto</button>
+      <button class="primary" id="applicaRin" disabled>Esegui rinomine</button>
+    </div>
+    <div class="scroll"><div id="esitoRin"></div></div>
+  </details>
+</main>
+
+<script>
+const PER_GRUPPO = 10;
+let DATI = null, gruppo = 0;
+const timerBozza = new Map();     // solo per il ritardo di scrittura, non e' stato
+
+/* Regola 6 — identica a nomenclatura.py */
+function slugify(s){
+  s = (s||'').normalize('NFC').replace(/['’]/g,'-');
+  s = s.normalize('NFD').replace(/\p{Mn}/gu,'');
+  return s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+const esc = s => (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* keepalive: la richiesta sopravvive alla chiusura della scheda.
+   inVolo tiene le conferme partite ma non ancora confermate dal server: se la
+   scheda viene chiusa in quell'istante le rispediamo con sendBeacon, che e' il
+   meccanismo pensato apposta per sopravvivere all'unload. Il server scarta i
+   doppioni identici, quindi la ridondanza non sporca il registro. */
+const inVolo = new Map();
+function invia(url, body){
+  return fetch(url, {method:'POST', keepalive:true,
+                     headers:{'Content-Type':'application/json'},
+                     body:JSON.stringify(body)});
+}
+addEventListener('pagehide', ()=>{
+  for(const [k,b] of inVolo)
+    navigator.sendBeacon('/api/decidi', new Blob([JSON.stringify(b)], {type:'application/json'}));
+});
+
+async function caricaZone(){
+  const zone = await (await fetch('/api/zone')).json();
+  zona.innerHTML = zone.map(z=>`<option value="${z}">${z}</option>`).join('');
+  await carica();
+}
+
+/* Lo stato viene SEMPRE riletto dal disco: mai contato in memoria. */
+async function carica(){
+  DATI = await (await fetch('/api/stato?zona='+encodeURIComponent(zona.value))).json();
+  if(DATI.error){ righe.innerHTML = '<p>'+esc(DATI.error)+'</p>'; return; }
+  disegna();
+}
+
+const visibili = () => DATI.righe.filter(r => !nascondiDecise.checked || !r.decisione);
+
+/* I gruppi non sono fette fisse di dieci: quando la zona e' ordinata per famiglia
+   di movimento, il numero di gruppo arriva gia' deciso da chi ha costruito il file
+   di lavoro, e un taglio meccanico spezzerebbe a meta' una famiglia di varianti.
+   Senza quel campo si torna al comportamento di prima. */
+function chiavi(v){
+  return v[0] && v[0].gruppo ? [...new Set(v.map(r=>r.gruppo))]
+                             : Array.from({length:Math.max(1,Math.ceil(v.length/PER_GRUPPO))},(_,i)=>i);
+}
+function fetta(v, k){
+  return v[0] && v[0].gruppo ? v.filter(r=>r.gruppo===k)
+                             : v.slice(k*PER_GRUPPO, k*PER_GRUPPO+PER_GRUPPO);
+}
+
+function disegna(){
+  const v = visibili();
+  const ks = chiavi(v);
+  const n = ks.length;
+  gruppo = Math.min(Math.max(0, gruppo), n-1);
+  const q = fetta(v, ks[gruppo]);
+
+  disco.textContent = `${DATI.decise} su ${DATI.righe.length} salvate su disco`;
+  dettaglio.textContent = `${DATI.zona} · da decidere ${DATI.righe.length-DATI.decise} · file rinominati ${DATI.rinominate}`;
+  const fam = q.length && q[0].famiglia_nome ? ` · ${q[0].famiglia_nome} · ${q.length} voci` : '';
+  gruppo_.textContent = `${gruppo+1} di ${n}${fam}`;
+  prev.disabled = gruppo===0; next.disabled = gruppo>=n-1;
+
+  righe.innerHTML = q.map(disegnaRiga).join('') || '<p>Niente da mostrare qui.</p>';
+  q.forEach(r=>{
+    const inp = document.getElementById('n'+r.i);
+    inp.addEventListener('input', ()=>{
+      document.getElementById('s'+r.i).textContent = slugify(inp.value) || '—';
+      salvaBozza(r, inp.value);                       // anche il non confermato va su disco
+    });
+    inp.addEventListener('keydown', ev=>{
+      if(ev.key==='Enter'){ ev.preventDefault(); conferma(r.i); }
+    });
+  });
+}
+
+function disegnaRiga(r){
+  const cat = r.codici.length ? r.codici[0] : null;
+  const valore = r.decisione ? r.decisione.nome_confermato : (r.bozza ?? r.nome_proposto);
+
+  const chips = [];
+  if(cat && cat.nome !== valore)
+    chips.push(`<button class="chip" data-v="${esc(cat.nome)}" onclick="usa(${r.i},this.dataset.v)">nome a catalogo</button>`);
+  if(r.nome_proposto !== valore)
+    chips.push(`<button class="chip" data-v="${esc(r.nome_proposto)}" onclick="usa(${r.i},this.dataset.v)">proposta iniziale</button>`);
+  if(r.nome_dedotto && r.nome_dedotto !== valore)
+    chips.push(`<button class="chip" data-v="${esc(r.nome_dedotto)}" onclick="usa(${r.i},this.dataset.v)">dedotto dal file</button>`);
+
+  // "indeterminato": impronta del bucket non calcolabile. Nel dubbio vale come viva.
+  const vivo = (r.stato_binario==='collegato' || r.stato_binario==='pendente'
+                || r.stato_binario==='indeterminato');
+  const avviso = vivo ? `<div class="avviso">GIF viva nell'app: lo slug nuovo va solo in lista, non viene applicato da nessuna parte.</div>` : '';
+  const cond = r.condiviso ? `<div class="avviso">Più codici puntano a questo slug: riga da trattare con la strada dei due codici.</div>` : '';
+  const gem = r.stesso_contenuto_di.length ? `<div class="avviso">Stesso contenuto di: ${esc(r.stesso_contenuto_di.join(', '))}</div>` : '';
+  const stato = r.decisione
+    ? `<span class="esito ok" id="e${r.i}">✓ salvata su disco il ${esc(r.decisione.quando)} — ${esc(r.decisione.origine)}</span>`
+    : `<span class="esito" id="e${r.i}"></span>`;
+
+  /* r.src esiste quando l'immagine non viene dalla cartella del Mac: e' il caso
+     degli oggetti che stanno solo nel bucket, scaricati e verificati per impronta. */
+  const src = r.src || `/gif/${encodeURIComponent(r.cartella)}/${encodeURIComponent(r.file)}`;
+  const pop = r.popolazione ? `<span class="badge b-pop">${esc(r.popolazione)}</span> ` : '';
+  const daBucket = r.fonte_immagine === 'bucket'
+    ? `<div class="avviso">Nessun file sul Mac: immagine scaricata dal bucket (${esc((r.storage_paths||[])[0]||'')}). Si rinomina in migrazione, non sul disco.</div>` : '';
+  const fuoriSede = r.popolazione === 'salti'
+    ? `<div class="avviso">Oggetto nel bucket sotto "Cardio e Conditioning": in migrazione cambia cartella. Il nome del bucket non è un suggerimento.</div>` : '';
+  const mai = r.popolazione === 'mai caricato'
+    ? `<div class="nota">Mai caricata nel bucket: in migrazione è un caricamento, non una rinomina.</div>` : '';
+
+  return `
+  <div class="riga ${r.decisione?'decisa':''}" id="r${r.i}">
+    <img class="gif" loading="lazy" src="${src}" alt="">
+    <div>
+      <div class="campo">
+        ${pop}<span class="badge b-${r.stato_binario}">${r.stato_binario}</span>
+        ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
+        ${r.rinominato?'<span class="stat"> · file già rinominato</span>':''}
+      </div>
+      <div class="campo"><div class="lab">${r.fonte_immagine==='bucket'?'nome oggetto nel bucket':'nome file attuale'}</div><div class="val">${esc(r.file)}</div></div>
+      <div class="campo"><div class="lab">nome a catalogo</div><div class="val">${cat?esc(cat.nome):(r.cantiere?esc(r.cantiere[1])+' <span class="stat">(cantiere 96)</span>':'—')}</div></div>
+      <div class="campo">
+        <div class="lab">nome — correggilo guardando la GIF, poi conferma</div>
+        <input type="text" id="n${r.i}" value="${esc(valore)}">
+        ${chips.join('')}
+      </div>
+      <div class="campo"><div class="lab">slug</div><div class="val slug" id="s${r.i}">${esc(slugify(valore))||'—'}</div></div>
+      ${avviso}${cond}${gem}${daBucket}${fuoriSede}${mai}
+      <div class="azioni">
+        <button class="primary" onclick="conferma(${r.i})">${r.decisione?'Aggiorna la decisione':'Conferma'}</button>
+        ${stato}
+      </div>
+    </div>
+  </div>`;
+}
+
+function riga(i){ return DATI.righe.find(r=>r.i===i); }
+
+function usa(i,v){
+  const inp = document.getElementById('n'+i);
+  inp.value = v; inp.dispatchEvent(new Event('input')); inp.focus();
+}
+
+/* La bozza va su disco con un piccolo ritardo per non scrivere a ogni tasto,
+   ma viene sempre svuotata prima di navigare o chiudere. */
+function salvaBozza(r, testo){
+  clearTimeout(timerBozza.get(r.sha256));
+  timerBozza.set(r.sha256, setTimeout(()=>{
+    invia('/api/bozza', {zona:zona.value, sha256:r.sha256, testo});
+    timerBozza.delete(r.sha256);
+  }, 450));
+}
+function svuotaBozze(){
+  for(const [sha,t] of timerBozza){
+    clearTimeout(t);
+    const r = DATI.righe.find(x=>x.sha256===sha);
+    const inp = r && document.getElementById('n'+r.i);
+    if(inp) invia('/api/bozza', {zona:zona.value, sha256:sha, testo:inp.value});
+  }
+  timerBozza.clear();
+}
+
+/* Conferma = scrittura su disco. Nessuna precondizione, nessun accumulo. */
+async function conferma(i){
+  const r = riga(i), inp = document.getElementById('n'+i), e = document.getElementById('e'+i);
+  const nome = inp.value.trim();
+  if(!nome){ e.className='esito ko'; e.textContent='nome vuoto: non salvo'; return; }
+  e.className='esito'; e.textContent='salvo…';
+  const payload = {zona:zona.value, sha256:r.sha256, nome};
+  inVolo.set(r.sha256, payload);
+  try{
+    const res = await chiama('/api/decidi', payload);
+    inVolo.delete(r.sha256);
+    e.className='esito ok'; e.textContent='✓ salvata su disco';
+    document.getElementById('r'+i).classList.add('decisa');
+    disco.textContent = `${res.decise} su ${DATI.righe.length} salvate su disco`;
+    r.decisione = {quando:'adesso', nome_confermato:nome, origine:'—'};
+    DATI.decise = res.decise;
+    dettaglio.textContent = `${DATI.zona} · da decidere ${DATI.righe.length-res.decise} · file rinominati ${DATI.rinominate}`;
+  }catch(err){
+    e.className='esito ko'; e.textContent='NON salvata: '+err.message+' — riprova';
+  }
+}
+
+/* Navigazione: non azzera niente, non distrugge niente di non salvato. */
+function vai(d){ svuotaBozze(); gruppo += d; disegna(); window.scrollTo(0,0); }
+prev.onclick = ()=>vai(-1);
+next.onclick = ()=>vai(1);
+zona.onchange = ()=>{ svuotaBozze(); gruppo=0; carica(); };
+nascondiDecise.onchange = ()=>{ svuotaBozze(); gruppo=0; disegna(); };
+addEventListener('pagehide', svuotaBozze);
+
+/* ---- rinomina, pannello separato ---- */
+function tabellaRin(esiti, titolo){
+  esitoRin.innerHTML = `<p><b>${esc(titolo)}</b></p><table>
+    <tr><th>da</th><th>a</th><th>azione</th><th>esito</th><th>nota</th></tr>`+
+    esiti.map(e=>`<tr><td>${esc(e.da)}</td><td>${esc(e.a)}</td>
+      <td class="${(e.azione==='salta'||e.azione==='non trovato')?'ko':'ok'}">${esc(e.azione)}</td>
+      <td>${esc(e.esito||'—')}${e.verificato===true?' ✓':(e.verificato===false?' ✗ non trovato':'')}</td>
+      <td>${esc(e.nota||'')}</td></tr>`).join('')+'</table>';
+}
+/* Ogni chiamata passa di qui: una risposta non-JSON, un 500 o una rete caduta
+   diventano un messaggio a schermo, mai un bottone che non fa niente. */
+async function chiama(url, body){
+  let res;
+  try{ res = await invia(url, body); }
+  catch(err){ throw new Error('il server non risponde ('+err.message+'). È ancora avviato?'); }
+  const testo = await res.text();
+  let dato;
+  try{ dato = JSON.parse(testo); }
+  catch(e){ throw new Error('risposta non valida dal server (HTTP '+res.status+'): '+testo.slice(0,200)); }
+  if(!res.ok || dato.ok === false) throw new Error(dato.error || ('HTTP '+res.status));
+  return dato;
+}
+
+function erroreRin(msg){
+  esitoRin.innerHTML = `<p class="esito ko"><b>Non eseguito.</b> ${esc(msg)}</p>`;
+}
+
+provaRin.onclick = async ()=>{
+  esitoRin.innerHTML = '<p class="stat">provo…</p>';
+  try{
+    const r = await chiama('/api/rinomina/prova', {zona:zona.value});
+    const da = r.esiti.filter(e=>e.azione==='rinomina').length;
+    const c = conta(r.esiti);
+    tabellaRin(r.esiti, `Prova a vuoto — nessuna scrittura. ${da} da rinominare · ${c}`);
+    applicaRin.disabled = da===0;
+    applicaRin.textContent = da ? `Esegui ${da} rinomine` : 'Niente da rinominare';
+  }catch(err){ erroreRin(err.message); applicaRin.disabled = true; }
+};
+
+/* Niente confirm() nativo: il browser puo' sopprimere i dialoghi ripetuti e in
+   quel caso confirm() torna false senza mostrare nulla — un click che non fa
+   niente e nessun messaggio. La conferma e' in pagina, sempre visibile. */
+let armato = false;
+applicaRin.onclick = async ()=>{
+  if(!armato){
+    armato = true;
+    applicaRin.textContent = 'Premi di nuovo per eseguire davvero';
+    applicaRin.style.background = '#B45309';
+    setTimeout(()=>{ if(armato){ armato=false; applicaRin.style.background=''; provaRin.onclick(); } }, 6000);
+    return;
+  }
+  armato = false; applicaRin.style.background = '';
+  applicaRin.disabled = true;
+  esitoRin.innerHTML = '<p class="stat">eseguo…</p>';
+  try{
+    const r = await chiama('/api/rinomina/applica', {zona:zona.value});
+    tabellaRin(r.esiti, `Eseguito — ${r.rinominate} rinominate · ${conta(r.esiti)} · backup ${r.backup}`);
+    await carica();
+  }catch(err){ erroreRin(err.message); }
+  finally{ applicaRin.textContent = 'Esegui rinomine'; }
+};
+
+const conta = esiti => Object.entries(esiti.reduce((a,e)=>((a[e.azione]=(a[e.azione]||0)+1),a),{}))
+                             .map(([k,v])=>`${v} ${k}`).join(' · ');
+
+/* Rete di sicurezza: qualunque errore non gestito diventa visibile. */
+function bannerErrore(msg){
+  let b = document.getElementById('bannerErr');
+  if(!b){ b = document.createElement('div'); b.id='bannerErr';
+    b.style.cssText='position:fixed;left:0;right:0;bottom:0;background:#B45309;color:#fff;'+
+                    'padding:10px 16px;font-family:ui-monospace,monospace;font-size:13px;z-index:99';
+    document.body.appendChild(b); }
+  b.textContent = 'Errore: ' + msg + '  (clicca per chiudere)';
+  b.onclick = ()=>b.remove();
+}
+addEventListener('error', ev => bannerErrore(ev.message));
+addEventListener('unhandledrejection', ev => bannerErrore(ev.reason && ev.reason.message || ev.reason));
+
+const gruppo_ = document.getElementById('gruppo');
+caricaZone();
+</script>
+</body>
+</html>

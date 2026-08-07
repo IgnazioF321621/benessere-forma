@@ -1,0 +1,59 @@
+{
+  "EX168": {
+    "nome": "Forbice panca seduto",
+    "nome_en": "Seated Bench Flutter Kick",
+    "attrezzo": "panca",
+    "setup": "Seduto sul bordo della panca, busto leggermente inclinato indietro, mani ai lati per stabilità, gambe tese sollevate",
+    "pattern": "flessione anca isometrica",
+    "gruppo_target": "addominali",
+    "muscoli": "retto addominale;ileopsoas",
+    "slug": "forbice-alternata-panca-seduto",
+    "storage_path": "Addominali e Core/Forbice panca seduto (Seated Bench Flutter Kick).gif",
+    "n_frames": 12,
+    "frames": [
+      "frames/EX168_1.png",
+      "frames/EX168_2.png",
+      "frames/EX168_3.png"
+    ],
+    "sha": "2df8d077c4a0b75604588ace71a89290d1bf034313fd35aa8be58ebbe7250e45",
+    "bytes": 312735
+  },
+  "EX343": {
+    "nome": "Flessione polsi manubri su panca",
+    "nome_en": "Dumbbell Wrist Curl On Bench",
+    "attrezzo": "manubri;panca",
+    "setup": "Avambraccio in appoggio stabile, polso libero di muoversi oltre il bordo di appoggio.",
+    "pattern": "isolamento",
+    "gruppo_target": "avambracci",
+    "muscoli": "flessori avambraccio;estensori avambraccio",
+    "slug": "flessione-polsi-manubri-su-panca-dumbbell-wrist-curl-on-bench",
+    "storage_path": "Bicipiti e Braccia/Flessione polsi manubri su panca (Dumbbell Wrist Curl On Bench).gif",
+    "n_frames": 12,
+    "frames": [
+      "frames/EX343_1.png",
+      "frames/EX343_2.png",
+      "frames/EX343_3.png"
+    ],
+    "sha": "d886affd61e4f2316134173bf8577d9db7f26accf252bfd4ed9621f663808c14",
+    "bytes": 1296062
+  },
+  "EX535": {
+    "nome": "French press manubrio supino di traverso su panca",
+    "nome_en": "Cross-bench dumbbell tricep extension",
+    "attrezzo": "manubri;panca",
+    "setup": "Supino di traverso su panca, carico sopra il petto a braccia tese, gomiti puntati in alto e fermi",
+    "pattern": "isolamento",
+    "gruppo_target": "tricipiti",
+    "muscoli": "tricipiti",
+    "slug": "french-press-manubrio-supino-di-traverso-su-panca-cross-bench-dumbbell-tricep-extension",
+    "storage_path": "Tricipiti/French press manubrio supino di traverso su panca (Cross-bench dumbbell tricep extension : Cross-bench skull crusher).gif",
+    "n_frames": 12,
+    "frames": [
+      "frames/EX535_1.png",
+      "frames/EX535_2.png",
+      "frames/EX535_3.png"
+    ],
+    "sha": "9096927dd4487c0e9c726bdac8a4c8116e63de61b872bb703d498fd2413efdaa",
+    "bytes": 377594
+  }
+}
