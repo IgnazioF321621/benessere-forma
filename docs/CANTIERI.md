@@ -166,7 +166,7 @@ Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaric
 
 **Chiuso il 7 agosto anche il seguito** (`libera_prenotati.py`): i **6 codici prenotati e mai scritti** (EX676-EX680, EX682) sono stati tolti dal registro. Le righe restano con impronta e nome; il codice si assegna alla scrittura. Verificato: 96 righe prima e dopo, impronte identiche, zero campi portanti toccati, `prepara.py` continua a vedere quei file come impegnati (5 pendenti in Tricipiti).
 
-## 96-bis. Il registro pendente è al 93% storico, e 20 righe hanno un'impronta inattendibile
+## 96-bis. Registro ripulito e verifica circolare tolta — ✅ chiuso 7 agosto
 
 Emerso il 7 agosto guardando le due righe che sembravano "GIF ricollocate". Due cose distinte:
 
@@ -189,15 +189,27 @@ Scheda di confronto pronta in `tools/biblioteca-nomi/lavoro/revisione_2_gif.md` 
 
 **Nessun danno operativo**: tutte e 20 risultano già sincronizzate, e in `prepara.py` lo stato `collegato` vince su `pendente`.
 
-**Proposta, da confermare**: ritirare dal registro le 89 righe sincronizzate (conservandole in `backup/`), tenendo solo le 7 ancora aperte; e togliere da `chiave_pendente.py` il terzo tentativo di risoluzione — se un file non si ritrova per nome, l'impronta resta vuota e la riga si marca *da riverificare*, invece di dedurla da un dato che non regge.
+**Fatto il 7 agosto**, con una correzione importante rispetto alla proposta.
 
-## 96-ter. `riconcilia.py` segnala un falso allarme
+Il criterio proposto — «conclusa se il codice ha un `gif_slug`» — è stato **misurato e scartato**: su 89 righe ne avrebbe ritirate **23 il cui file è ancora da migrare**, 8 delle quali in Spalle e Cuffia, la prossima zona. Il codice ha sì la sua GIF, ma un'altra: dice qualcosa sul codice, niente sul file della riga accanto.
+
+Il criterio giusto parte dall'**impronta**: una riga è conclusa se il suo file è servito da un codice vivo (`impronta → oggetto → riga → codice`). Con quello: **66 ritirate, 30 restano** (archivio in `backup/cantiere_96_concluse_*.tsv`).
+
+Verifica funzionale: `prepara.py` su Tricipiti, Pettorali, Spalle e Cuffia e Gambe e Glutei dà **classificazione identica prima e dopo** — nessun file ha perso la protezione del nome. Spalle e Cuffia conserva i suoi 10 pendenti.
+
+Tolto anche da `chiave_pendente.py` il terzo tentativo di risoluzione: se un file non si ritrova per nome, l'impronta resta vuota e la riga si marca *da riverificare*. Vedi [L25](LEZIONI.md#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice).
+
+## 96-ter. Falso allarme di `riconcilia.py` — ✅ chiuso 7 agosto
 
 La riga `Salti laterali rapidi` che `riconcilia.py` dava come divergente nel piano di Cardio **non è un'anomalia**: al momento della decisione (2 agosto) era in stato `indicizzato`, e `conferma.py` scrive nel diario `slug_da_migrare.tsv` **solo** per gli stati `collegato`/`pendente`/`indeterminato`. Una riga `indicizzato` cambia slug in place e nel diario non ci entra per costruzione.
 
 Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` sono nel diario, l'unica `indicizzato` no — e per tutte e sei lo slug vecchio è morto e il nuovo è vivo, cioè **la migrazione è già stata fatta**. Il piano di Cardio è un reperto storico.
 
-**Proposta, da confermare**: `riconcilia.py` deve confrontare solo le righe che nel diario ci devono stare (quelle con `slug_applicabile = no`), e dire "già migrata" invece di segnalare quando lo slug vecchio è morto e il nuovo è vivo.
+**Fatto il 7 agosto.** `riconcilia.py` ora pretende nel diario solo le righe con `slug_applicabile = no`, e riconosce le righe già migrate (slug vecchio morto, nuovo vivo) invece di segnalarle.
+
+Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
+
+Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare
 
 ---
 
@@ -304,3 +304,34 @@ L'MD5 non regge contro chi costruisce apposta due file diversi con la stessa imp
 3. **Ogni strumento che può scaricare stampa i byte scaricati a fine esecuzione, anche quando sono zero.** Prima nessuno strumento lo sapeva, ed è il motivo per cui la ricognizione dei consumi ha dovuto scrivere "stima" su una voce da 3 GB.
 
 **Effetto misurato**: preparare una zona passa da ~200 MB a **0 byte**; verificare i 68 codici di Bicipiti e Braccia da ~38 MB a **0 byte**.
+
+---
+
+## L25 — Un'impronta dedotta dal codice non verifica quel codice
+
+**Il caso.** 7 agosto, conversione di `cantiere_96_pendente.tsv` alla chiave SHA-256. Per le righe il cui file non si trovava più col nome scritto nel registro, lo strumento ricavava l'impronta così:
+
+> codice del registro → `gif_slug` → `storage_path` → oggetto nel bucket → impronta
+
+Poi usava quell'impronta per ricavare il codice «vero», e lo confrontava col codice del registro. Tornava sempre conferma. **Ovvio: era lo stesso codice, fatto girare in tondo.**
+
+Un cerchio non verifica niente. E siccome il codice del registro è proprio il dato che [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) aveva appena dimostrato inaffidabile, il giro produceva impronte sbagliate con l'aria di essere confermate.
+
+**Quanto è costato.** 20 righe su 96 risolte così. Su tutte e 20 il nome del registro non coincideva col nome del codice ottenuto; in **4** erano esercizi proprio diversi:
+
+| il registro dice | il codice ottenuto è |
+|---|---|
+| EX598 `Corsa zigzag conetti` | `Corsa all'indietro` |
+| EX609 `Pistol jump box` | `Salti laterali rapidi` |
+| EX610 `Jumping rimbalzi` | `Salto con la corda` |
+| EX613 `Salto monopodalico avanti` | `Skip sul posto` |
+
+Nessun danno operativo: erano tutte già sincronizzate, e in `prepara.py` lo stato `collegato` vince comunque.
+
+**La seconda occorrenza, lo stesso giorno.** Lo strumento che ritira le righe concluse (`ritira_concluse.py`) è nato col criterio «la riga è conclusa se il suo codice ha un `gif_slug`». Sembra ragionevole e non lo è: **23 righe su 89** lo superavano pur avendo il file ancora da migrare, perché quel codice ha sì la sua GIF — ma un'altra. Applicarlo avrebbe tolto la protezione a 23 file ancora da lavorare, **8 dei quali in Spalle e Cuffia**, la prossima zona da aprire. Fermato in prova a vuoto.
+
+**La regola.** Una verifica deve partire da qualcosa che non dipende da ciò che si sta verificando. In questo cantiere l'unico dato indipendente è **il contenuto del file**: l'impronta si legge da un file che esiste, non si deduce da un codice.
+
+Se il file non si trova, la risposta giusta è **non lo so** — riga senza impronta, marcata `da riverificare`. Una risposta assente si vede; una risposta falsa che si conferma da sola, no.
+
+**Corollario, valido per ogni criterio di questo cantiere:** «il codice ha un `gif_slug`» dice qualcosa sul *codice*, mai sul *file* della riga accanto. Per sapere se il lavoro su un file è concluso si parte dalla sua impronta e si guarda se un codice vivo la serve — `impronta → oggetto → riga → codice`. È la stessa direzione di [L9](#l9--aggancio-per-impronta-mai-per-nome), applicata a una domanda diversa.

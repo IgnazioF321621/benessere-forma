@@ -34,12 +34,26 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from impronte import leggi_tutto, stampa_consumo  # noqa: E402
 from nomenclatura import slug as fslug  # noqa: E402
 
 BASE = Path(__file__).parent
 PIANI = BASE / 'lavoro' / '_piani'
 DIARIO = BASE / 'esiti' / 'slug_da_migrare.tsv'
 REGISTRO = BASE / 'esiti' / 'registro_decisioni.tsv'
+
+# Gli stati in cui la GIF e' viva (o potrebbe esserlo) e lo slug si puo' soltanto
+# registrare: sono gli unici che conferma.py scrive nel diario. Stessa tupla di
+# conferma.py — se cambia li', va cambiata qui.
+SOLO_REGISTRATO = ('collegato', 'pendente', 'indeterminato')
+
+
+def _slug_vivi():
+    """Slug che oggi esistono in biblioteca_gif. Sola lettura, nessun download."""
+    bib, err = leggi_tutto('biblioteca_gif', 'slug', 'slug')
+    if err:
+        return None, err
+    return {b['slug'] for b in bib}, None
 
 
 def leggi_tsv(p):
@@ -79,23 +93,74 @@ def main():
         sys.exit('manca il piano: %s\n  lancia prima: python3 pianifica.py "%s"' % (pfile, Z))
     piano = json.loads(pfile.read_text(encoding='utf-8'))
 
-    # Nel piano, cio' che va migrato davvero: lo slug cambia -> serve l'ordine a
-    # righe doppie. Le altre righe non richiedono il giro sul Sheet.
-    da_migrare = {r['sha256']: r for r in piano['righe'] if r.get('slug_cambia')}
     tutte_piano = {r['sha256']: r for r in piano['righe']}
-
     diario = per_impronta(leggi_tsv(DIARIO), zona=Z)
     registro = per_impronta(leggi_tsv(REGISTRO), zona=Z)
 
+    # Quali righe DEVONO stare nel diario.
+    #
+    # Non tutte quelle con lo slug che cambia: conferma.py scrive in
+    # slug_da_migrare.tsv solo per gli stati 'collegato'/'pendente'/'indeterminato',
+    # cioe' quelli in cui la GIF e' viva (o potrebbe esserlo) e lo slug si puo'
+    # soltanto registrare. Una riga 'indicizzato' cambia slug IN PLACE e nel diario
+    # non ci entra per costruzione: pretenderla li' era un falso allarme, ed e'
+    # quello che questo strumento segnalava su Cardio al primo giro.
+    #
+    # Il registro delle decisioni porta gia' la risposta in `slug_applicabile`:
+    # 'no' = solo registrato = deve stare nel diario.
+    def deve_stare_nel_diario(sha):
+        d = registro.get(sha)
+        if not d:
+            return False
+        if d.get('slug_applicabile'):
+            return d['slug_applicabile'].strip().lower() == 'no'
+        return (d.get('stato_binario') or '') in SOLO_REGISTRATO
+
+    # Righe gia' migrate: lo slug vecchio non esiste piu' in biblioteca_gif e il
+    # nuovo si'. Il piano di una zona chiusa e' un reperto storico, non un lavoro
+    # da fare: segnalarlo come anomalia sarebbe rumore.
+    slug_vivi, err = _slug_vivi()
+    if err:
+        print('  (biblioteca_gif non leggibile: %s — non posso dire cosa e gia migrato)\n' % err)
+        slug_vivi = None
+
+    def gia_migrata(r):
+        if slug_vivi is None or not r.get('slug_cambia'):
+            return False
+        return r.get('slug_attuale') not in slug_vivi and r.get('slug_nuovo') in slug_vivi
+
+    da_migrare, migrate = {}, {}
+    for sha, r in tutte_piano.items():
+        if not r.get('slug_cambia'):
+            continue
+        (migrate if gia_migrata(r) else da_migrare)[sha] = r
+
     print('Riconciliazione "%s"' % Z)
-    print('  piano            : %d righe, di cui %d con slug che cambia'
-          % (len(tutte_piano), len(da_migrare)))
-    print('  diario pannello  : %d righe per questa zona' % len(diario))
+    print('  piano             : %d righe, di cui %d con slug che cambia'
+          % (len(tutte_piano), len(da_migrare) + len(migrate)))
+    if migrate:
+        print('                      %d gia migrate (slug vecchio morto, nuovo vivo)'
+              % len(migrate))
+    print('  ancora da migrare : %d' % len(da_migrare))
+    print('  diario pannello   : %d righe per questa zona' % len(diario))
     print('  registro decisioni: %d righe per questa zona\n' % len(registro))
 
-    solo_piano = sorted(set(da_migrare) - set(diario))
+    # Si pretende nel diario solo cio' che nel diario ci deve stare, e che non
+    # sia gia' stato migrato.
+    attese = {s for s in da_migrare if deve_stare_nel_diario(s)}
+    solo_piano = sorted(attese - set(diario))
     solo_diario = sorted(set(diario) - set(tutte_piano))
     problemi = 0
+
+    in_place = [s for s in da_migrare if not deve_stare_nel_diario(s)]
+    if in_place:
+        print('  %s slug in place: nel diario non ci deve stare.' % plur(len(in_place),
+              'riga cambia', 'righe cambiano') if len(in_place) == 1 else
+              '  %d righe cambiano slug in place: nel diario non ci devono stare.'
+              % len(in_place))
+        for s in in_place[:10]:
+            print('      %s' % da_migrare[s]['nome_finale'][:56])
+        print('')
 
     if solo_piano:
         problemi += len(solo_piano)
@@ -151,9 +216,11 @@ def main():
     if problemi:
         print('ESITO: %s da guardare prima di migrare.' % plur(problemi, 'cosa', 'cose'))
         print('       Ricorda: comanda il piano, non il diario.')
+        stampa_consumo()
         return 1
     print('ESITO: le due liste coincidono. Il piano copre tutto il diario')
     print('       e ogni riga ha la sua decisione registrata.')
+    stampa_consumo()
     return 0
 
 

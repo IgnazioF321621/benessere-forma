@@ -22,11 +22,20 @@ che sopravvive al cantiere. Il codice per calcolarla c'era gia' in impronte.py.
 
 Come ritrova i file gia' rinominati
 -----------------------------------
-Tre tentativi, in ordine di costo crescente:
+Due tentativi, entrambi sul contenuto reale di un file che esiste:
   1. nome originale in `nome_file_mac`
   2. `nome_in_decisioni` + .gif — il nome che il cantiere gli ha dato
-  3. la catena: codice -> gif_slug -> biblioteca_gif.storage_path -> oggetto nel
-     bucket -> impronta, e poi si cerca quell'impronta fra i file sul Mac
+
+Se nessuno dei due trova il file, la riga resta **senza impronta e marcata
+"da riverificare"**. Non si deduce.
+
+C'era un terzo tentativo, tolto il 7 agosto: partiva dal `codice` del registro
+per risalire a `gif_slug` -> `storage_path` -> oggetto nel bucket -> impronta. Ma
+il codice del registro e' proprio il dato che non regge [L23], e usarlo per
+ricavare l'impronta con cui poi si "verifica" il codice e' un cerchio: si ottiene
+sempre conferma, anche quando il codice e' sbagliato. Su 20 righe risolte cosi',
+in tutte e 20 il nome del registro non coincideva col nome del codice ottenuto, e
+in 4 erano esercizi proprio diversi. Vedi [L25].
 
 Nessuna riga viene persa: quelle irrisolte restano nel TSV senza impronta, con il
 motivo scritto accanto. Sparire in silenzio sarebbe il difetto che si sta chiudendo.
@@ -44,7 +53,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import impronte_zona, leggi_tutto, nfc, sha_file  # noqa: E402
+from impronte import (impronte_zona, leggi_tutto, nfc, sha_file,  # noqa: E402
+                      stampa_consumo)
 from nomenclatura import slug as fslug  # noqa: E402
 
 BASE = Path(__file__).parent
@@ -132,10 +142,6 @@ def main():
                 bucket_cache[zona] = {p: s for s, ps in per_sha.items() for p in ps}
         return bucket_cache[zona]
 
-    def sha_da_bucket(storage_path):
-        """Impronta dell'oggetto del bucket, riusando la cache per zona."""
-        return carica_zona(storage_path.split('/')[0]).get(nfc(storage_path))
-
     # --- impronta -> codice, ricavata dalla catena autorevole -------------
     # E' la direzione giusta: file -> riga -> codice, per SHA-256.
     # La colonna `codice` del registro NON e' affidabile — misurato: su 96 righe
@@ -166,6 +172,7 @@ def main():
     fuori = []
     conta = collections.Counter()
     for r in righe:
+        cod_reg = (r.get('codice_registro') or r.get('codice') or '').strip()
         cart, nome_v = r.get('cartella_mac', ''), nfc(r.get('nome_file_mac', ''))
         deciso = nfc(r.get('nome_in_decisioni', ''))
         sha, via, nota = None, '', ''
@@ -178,47 +185,37 @@ def main():
             sha, via = sha_file(p2), 'nome deciso'
             nota = 'file gia rinominato in "%s.gif"' % deciso
         else:
-            cod = per_cod.get(r['codice'])
-            gslug = (cod or {}).get('gif_slug')
-            riga_bib = per_slug.get(gslug) if gslug else None
-            if riga_bib and riga_bib.get('storage_path'):
-                sb = sha_da_bucket(riga_bib['storage_path'])
-                if sb:
-                    if sb in mac:
-                        sha, via = sb, 'catena catalogo->bucket'
-                        nota = 'sul Mac ora si chiama "%s"' % os.path.basename(mac[sb][0])
-                    else:
-                        sha, via = sb, 'bucket (non sul Mac)'
-                        nota = 'impronta dal bucket; sul Mac il file non c\'e\' piu\''
-                else:
-                    nota = 'oggetto del bucket non leggibile'
-            else:
-                nota = ('codice non a catalogo' if not cod else 'codice senza gif_slug')
+            # Nessun file da cui leggere l'impronta. Qui finiva il terzo tentativo,
+            # tolto il 7 agosto: partire dal codice del registro per ricavare
+            # l'impronta con cui poi si verifica quel codice e' un cerchio, e
+            # torna sempre conferma. Meglio nessuna risposta di una falsa [L25].
+            nota = ('file non trovato ne col nome originale ne con quello deciso: '
+                    'impronta non determinabile senza guardare la GIF')
 
-        # Il codice VERO si ricava dall'impronta. Quello del registro si conserva
-        # accanto, per poter vedere dove i due divergono invece di perdere il dato.
+        # Il codice VERO si ricava dall'impronta — e solo da un'impronta letta da
+        # un file vero. Quello del registro si conserva accanto, per vedere dove i
+        # due divergono invece di perdere il dato.
         vero = sha_a_codice.get(sha) if sha else None
         cod_reale = vero['codice'] if vero else ''
         nome_cat = vero['nome'] if vero else ''
-        concordano = 'si' if (cod_reale and cod_reale == r['codice']) else 'NO'
+        concordano = 'si' if (cod_reale and cod_reale == cod_reg) else 'NO'
         if not cod_reale:
             concordano = '?'
 
-        # E' ancora pendente? Lo dice il catalogo tramite il codice ricavato.
-        if cod_reale:
-            stato = 'sincronizzato'          # ha impronta, riga e codice: la catena c'e'
-        elif r['codice'] not in per_cod:
-            stato = 'codice inesistente'
-        elif (per_cod[r['codice']].get('gif_slug') or '').strip():
-            stato = 'sincronizzato'
+        # Lo stato lo decide l'IMPRONTA, non il codice: la riga e' conclusa solo
+        # se il suo file e' davvero servito da un codice vivo.
+        if not sha:
+            stato = 'da riverificare'
+        elif cod_reale:
+            stato = 'sincronizzato'          # impronta, riga e codice: la catena c'e'
         else:
-            stato = 'pendente'
+            stato = 'pendente'               # il file c'e' ma nessun codice lo serve
 
         conta[via or 'non risolta'] += 1
         conta['stato:' + stato] += 1
         conta['concordano:' + concordano] += 1
         fuori.append({
-            'sha256': sha or '', 'codice_reale': cod_reale, 'codice_registro': r['codice'],
+            'sha256': sha or '', 'codice_reale': cod_reale, 'codice_registro': cod_reg,
             'codici_concordano': concordano, 'nome_file_mac': r['nome_file_mac'],
             'cartella_mac': cart, 'nome_in_decisioni': r['nome_in_decisioni'],
             'nome_catalogo': nome_cat, 'stato': stato, 'impronta_da': via,
@@ -228,12 +225,13 @@ def main():
     risolte = [x for x in fuori if x['sha256']]
     irrisolte = [x for x in fuori if not x['sha256']]
     print('  IMPRONTA TROVATA: %d righe su %d' % (len(risolte), len(fuori)))
-    for k in ('nome originale', 'nome deciso', 'catena catalogo->bucket', 'bucket (non sul Mac)'):
+    for k in ('nome originale', 'nome deciso'):
         if conta[k]:
             print('     %-26s %3d' % (k, conta[k]))
     if irrisolte:
-        print('\n  SENZA IMPRONTA: %d righe — restano nel registro, con il motivo scritto'
+        print('\n  SENZA IMPRONTA: %d righe — restano nel registro marcate "da riverificare".'
               % len(irrisolte))
+        print('  Non si deduce l\'impronta dal codice: tornerebbe sempre conferma [L25].')
         for x in irrisolte:
             print('     %-7s %-38s %s' % (x['codice'], x['nome_in_decisioni'][:38], x['nota']))
 
@@ -274,7 +272,7 @@ def main():
 
     # codici allocati in anticipo e mai scritti: pronti a scontrarsi (lezione L6)
     inesistenti = sorted({x['codice_registro'] for x in fuori
-                          if x['stato'] == 'codice inesistente'})
+                          if x['codice_registro'] and x['codice_registro'] not in per_cod})
     if inesistenti:
         print('\n  ⚠️  CODICI ALLOCATI IN ANTICIPO E MAI SCRITTI: %s' % ', '.join(inesistenti))
         print('      Non sono a catalogo. Se qualcuno li alloca per altro, si scontrano.')
@@ -283,6 +281,7 @@ def main():
     if not args.applica:
         print('\n  PROVA A VUOTO: non ho scritto niente.')
         print('  Per applicare:  python3 chiave_pendente.py --applica')
+        stampa_consumo()
         return
 
     BACKUP.mkdir(parents=True, exist_ok=True)
@@ -300,6 +299,7 @@ def main():
     print('\n  backup del vecchio: %s' % copia)
     print('  scritto: %s' % TSV)
     print('  riletto: %d righe, %d con impronta — nessuna riga persa.' % (len(ric), con_sha))
+    stampa_consumo()
 
 
 if __name__ == '__main__':
