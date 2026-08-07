@@ -69,6 +69,8 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
+⚠️ **Egress Supabase fuori quota — cantiere biblioteca in pausa fino al 15 agosto 2026.** Cached Egress al 171% (8,55 GB su 5) misurato il 7 agosto; il ciclo si azzera il 15. Fino ad allora **nessuna migrazione di zona e nessun download dal bucket**. Gli strumenti di sola lettura (`stato.py`, `verifica_sync.py`, `riconcilia.py`, `collaudo_egress.py`) si possono lanciare: non scaricano nulla e lo dimostrano col contatore. La causa e i rimedi restano in [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo); i due rimedi ancora da fare — ricomprimere le GIF (sono 1080×1080, −82%) e rimettere il `cache-control` (oggi `no-cache` su tutti i 647 oggetti) — sono in [`docs/CANTIERI.md`](docs/CANTIERI.md).
+
 **Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
 ---
@@ -204,18 +206,28 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 **602/602 `gif_slug` risolvono, 0 rotti** (6 agosto). 65 codici senza slug → fallback ExerciseDB.
 
 ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
-⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa)
+⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
 
 ### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
 
 **Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256** → [L9](docs/LEZIONI.md#l9--aggancio-per-impronta-mai-per-nome). La regola vive nello strumento: `prepara.py` aggancia file → riga → codice per SHA-256 tramite `impronte.py`; il basename di `storage_path` non entra nella classificazione.
 
 - `biblioteca_gif` si legge **live** con la chiave di servizio da `worker/.dev.vars` (mai stampata). L'export CSV è solo ripiego: invecchia a ogni migrazione.
-- Cache delle impronte in `lavoro/_impronte/<zona>.json`, indicizzata per `eTag` + dimensione: si ricalcola solo se l'oggetto cambia.
-- Stato **`indeterminato`**: se anche un solo oggetto del bucket non è scaricabile, i file senza riscontro **non** diventano `libero`. Nel dubbio la GIF vale come viva → [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto)
+- Stato **`indeterminato`**: se anche un solo oggetto del bucket non ha impronta determinabile, i file senza riscontro **non** diventano `libero`. Nel dubbio la GIF vale come viva → [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto)
 - **Nessun nome entra nello strumento passando dalla chat.** Fonte unica dei nomi è il pannello di conferma, l'unico posto in cui il nome è stato scelto guardando la GIF.
 - **Un solo traslitteratore**, `nomenclatura.senza_accenti()`, usato sia da `slug()` sia da `percorso_ascii()` → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta)
 - ⚠️ Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe)
+
+**L'impronta si legge dall'`eTag`, il contenuto dal Mac — mai scaricando** *(dal 7 agosto 2026)* → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
+
+L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale al file gemello sul Mac e quindi al suo SHA-256, senza far uscire un byte dal bucket. Copertura misurata: **647 oggetti su 647**. È ciò che ha portato il costo di una zona da ~200 MB a 0.
+
+- **Due cache, entrambe sul contenuto**: `lavoro/_impronte/_locale.json` (percorso → md5+sha256, rinfrescata per mtime) e `lavoro/_impronte/_per_impronta.json` (`md5|bytes` → sha256). ⚠️ **Mai indicizzare sul percorso**: il cantiere rinomina, e la chiave sul percorso costava un download a ogni rinomina — 150 file scaricati due volte
+- **Le verifiche si fanno con `HEAD`**, non scaricando: `verifica_oggetto()` in `impronte.py` è il punto unico. Usata da `migra_zona.py`, `verifica_worker.py`, `fase7_cancella_vecchie.py`, `ripara_slug_in_place.py`
+- **`ignoto` blocca come `diverso`**: un'impronta non determinabile non diventa mai "a posto" per silenzio
+- **Il download è l'eccezione, si chiede a voce, e vale per un file solo**: `prepara.py --scarica`, `verifica_worker.py --sha EX###`. Mai a tappeto
+- **Ogni strumento che può scaricare stampa i byte a fine esecuzione, anche a zero** (`stampa_consumo()`). Senza quel numero, i consumi si possono solo stimare
+- ⚠️ In `lavoro/` restano `_esegui_gambe_e_glutei.py` e `_costruisci_gambe_e_glutei.py`, residui one-off del cantiere Gambe: **scaricano ancora a tappeto e non vanno più lanciati**
 
 **Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta:
 
@@ -247,10 +259,11 @@ Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 | `python3 tools/biblioteca-nomi/stato.py` | dopo ogni sync e ogni migrazione | fotografa tutto in `docs/STATO.md` + `STATO.json` |
 | `python3 tools/biblioteca-nomi/verifica_sync.py` | **dopo ogni sync**, prima di ogni altra cosa | righe arenate, valori riportati indietro, catene rotte |
 | `python3 tools/biblioteca-nomi/riconcilia.py "<zona>"` | prima di migrare una zona | dove il diario del pannello e il piano divergono |
+| `python3 tools/biblioteca-nomi/collaudo_egress.py` | dopo ogni modifica a `impronte.py` | che l'impronta da `eTag` coincida con quella da download, oggetto per oggetto |
 
 **I numeri di riferimento stanno in [`docs/STATO.md`](docs/STATO.md), non qui.** Quel file si rigenera con un comando; i numeri scritti a mano in un documento invecchiano in silenzio.
 
-**Chiave unica SHA-256.** Tutti i registri del cantiere sono indicizzati per impronta, mai per nome file: il cantiere rinomina i file, e una chiave sul nome decade alla prima rinomina. Vale anche per `cantiere_96_pendente.tsv`, convertito il 7 agosto → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe)
+**Chiave unica SHA-256.** Tutti i registri del cantiere sono indicizzati per impronta, mai per nome file: il cantiere rinomina i file, e una chiave sul nome decade alla prima rinomina. Vale anche per `cantiere_96_pendente.tsv`, convertito il 7 agosto → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe), e per le cache delle impronte, convertite lo stesso giorno → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
 
 **Il piano di `pianifica.py` è l'unica fonte di cosa si migra.** Il diario `slug_da_migrare.tsv` resta la prova che una conferma è stata salvata nell'istante in cui è stata data, ma non decide più cosa migrare: `riconcilia.py` verifica che i due coincidano prima di partire.
 
@@ -422,3 +435,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 21. [Salvare nell'istante della scelta](docs/LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta) — strumenti di conferma
 22. [supabase-js non lancia eccezioni](docs/LEZIONI.md#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api) — ogni scrittura DB
 23. [Il codice scritto a mano non è una chiave](docs/LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) — registri del cantiere
+24. [L'impronta si legge senza scaricare](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo) — `eTag` = MD5, verifiche `HEAD`, contatore byte

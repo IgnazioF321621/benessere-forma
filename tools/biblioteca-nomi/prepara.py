@@ -18,7 +18,13 @@ ancora quelli originali: confrontare i nomi dichiarava "libere" GIF vive nell'ap
 
 Scrive un solo file: lavoro/<zona>.json
 
-Uso:  python3 prepara.py "Addominali e Core" [--bib percorso.csv]
+Le impronte del bucket arrivano dai file gemelli sul Mac, non da un download:
+l'`eTag` che Storage dichiara nell'elenco e' l'MD5 del contenuto, e per 647 oggetti
+su 647 quel contenuto e' gia' sul disco. Con `--scarica` si riaprono i download per
+gli oggetti che sul Mac non hanno gemello; senza, quegli oggetti restano
+"non determinabili" e la zona resta INDETERMINATA, che e' la risposta prudente [L10].
+
+Uso:  python3 prepara.py "Addominali e Core" [--bib percorso.csv] [--scarica]
 """
 import argparse
 import collections
@@ -31,7 +37,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import impronte_zona  # noqa: E402
+from impronte import impronte_zona, stampa_consumo  # noqa: E402
 from impronte import leggi_tutto as leggi_tutto_supa  # noqa: E402
 from nomenclatura import nfc, proponi, slug  # noqa: E402
 
@@ -113,6 +119,8 @@ def main():
     ap.add_argument('zona')
     ap.add_argument('--bib', default=str(Path.home() / 'Downloads' / 'Biblioteca GIF Rows.csv'))
     ap.add_argument('--catalogo-copia', default=str(BASE / 'lavoro' / '_catalogo.json'))
+    ap.add_argument('--scarica', action='store_true',
+                    help='consenti il download degli oggetti senza gemello sul Mac')
     args = ap.parse_args()
 
     cartella = GIF_ROOT / args.zona
@@ -163,7 +171,8 @@ def main():
     # Questo e' l'aggancio: SHA-256 dell'oggetto nel bucket contro SHA-256 del file
     # sul Mac. Il nome dei due lati non c'entra e non deve entrarci.
     per_sha_bucket, falliti, err_bucket = impronte_zona(
-        args.zona, LAVORO / '_impronte' / (slug(args.zona) + '.json'))
+        args.zona, LAVORO / '_impronte' / (slug(args.zona) + '.json'),
+        consenti_download=args.scarica)
     if err_bucket:
         print('  ATTENZIONE: bucket non raggiungibile (%s)' % err_bucket)
         print('  senza impronte l\'aggancio NON e\' determinabile: nessuna riga sara'
@@ -171,6 +180,10 @@ def main():
     if falliti:
         print('  ATTENZIONE: %d oggetti del bucket senza impronta calcolabile'
               % len(falliti))
+        for f in falliti[:10]:
+            print('     %s — %s' % (f['storage_path'], f['errore']))
+        if not args.scarica:
+            print('     (rilanciare con --scarica per risolverli scaricandoli)')
 
     # Se anche una sola impronta manca, "non ho trovato riscontro" non equivale piu' a
     # "non c'e' riscontro": il file potrebbe corrispondere proprio all'oggetto mancante.
@@ -280,6 +293,7 @@ def main():
                   for r in righe if r['stesso_contenuto_di']})
     print('    doppioni di contenuto (SHA-256): %s' % (dop if dop else 'nessuno'))
     print('\n  scritto: %s' % dest)
+    stampa_consumo('prepara "%s"' % args.zona)
 
 
 if __name__ == '__main__':

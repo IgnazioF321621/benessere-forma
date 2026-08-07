@@ -3,25 +3,35 @@
 """Fase 7: cancella le righe vecchie della migrazione a righe doppie.
 
 Una per una, e ognuna solo dopo aver constatato NELL'ISTANTE PRIMA che il suo
-codice risolve gia' sullo slug nuovo: si interroga il Worker, si scarica il file
-che restituisce e se ne confronta l'impronta con quella dell'oggetto atteso.
+codice risolve gia' sullo slug nuovo: si interroga il Worker e si confronta
+l'impronta dell'oggetto che restituisce con quella dell'oggetto atteso.
 Non basta che il DB sia coerente con se stesso.
+
+Dal 7 agosto 2026 il confronto si fa con due richieste HEAD invece che con due
+download: l'`eTag` che Storage restituisce nelle intestazioni E' l'MD5 del
+contenuto, quindi due oggetti con lo stesso eTag e la stessa dimensione sono lo
+stesso file. Prima ogni codice costava ~2 MB (l'oggetto atteso piu' quello del
+Worker); ora costa qualche centinaio di byte di intestazioni.
 
 Al primo controllo che non passa ci si ferma: le righe gia' cancellate restano
 cancellate (sono quelle che avevano superato la verifica), nessuna altra viene
-toccata.
+toccata. Un'impronta che non si riesce a leggere e' un NO, non un silenzio-assenso.
 
 Backup di TUTTE le righe candidate prima di cancellarne una sola.
 SOLA LETTURA senza --esegui.
 """
-import hashlib
 import json
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from impronte import (cache_impronte, firma, indice_locale,  # noqa: E402
+                      sha_di_firma, stampa_consumo)
 
 BASE = Path(__file__).parent
 SUPA = 'https://qxiyeiahpoiliwpqslpr.supabase.co'
@@ -69,12 +79,31 @@ def enc(u):
     return urllib.parse.urlunsplit((p.scheme, p.netloc, urllib.parse.quote(p.path), p.query, p.fragment))
 
 
-def scarica(u, headers):
-    return urllib.request.urlopen(urllib.request.Request(enc(u), headers=headers), timeout=180).read()
+def testa(u, headers):
+    """HEAD: (firma, errore). Nessun byte di contenuto attraversa la rete.
+
+    niente quote() sull'URL qui: ci pensa enc(), e quotare due volte trasforma
+    %20 in %2520 e Storage risponde 400.
+    """
+    try:
+        r = urllib.request.urlopen(
+            urllib.request.Request(enc(u), headers=headers, method='HEAD'), timeout=60)
+        dim = r.headers.get('content-length')
+        return firma((r.headers.get('etag') or '').strip('"'),
+                     int(dim) if dim is not None else None), None
+    except urllib.error.HTTPError as e:
+        return None, '%s %s' % (e.code, e.reason)
+    except Exception as e:
+        return None, str(e)
 
 
 def risolve(cod, slug_atteso, bib):
-    """Constata via Worker. Torna (True, nota) solo se tutto torna."""
+    """Constata via Worker. Torna (True, nota) solo se tutto torna.
+
+    Due HEAD: l'oggetto che la riga dice, e l'oggetto che il Worker serve davvero.
+    Stessa firma (MD5 + dimensione) = stesso contenuto. Dove il file gemello sta
+    sul Mac si riporta anche lo SHA-256, che e' la chiave con cui ragiona il cantiere.
+    """
     riga = bib.get(slug_atteso)
     if not riga:
         return False, 'la riga %s non esiste' % slug_atteso
@@ -88,21 +117,23 @@ def risolve(cod, slug_atteso, bib):
     url = d.get('cached_url')
     if not url:
         return False, 'nessun cached_url'
-    try:
-        # niente quote() qui: ci pensa enc() dentro scarica(), e quotare due
-        # volte trasforma %20 in %2520 e Storage risponde 400.
-        atteso = hashlib.sha256(scarica(
-            SUPA + '/storage/v1/object/biblioteca-gif/' + riga['storage_path'], H)).hexdigest()
-        vero = hashlib.sha256(scarica(url, UA)).hexdigest()
-    except Exception as e:
-        return False, 'download fallito: %s' % str(e)[:60]
-    if atteso != vero:
-        return False, 'impronta diversa: %s vs %s' % (atteso[:12], vero[:12])
-    return True, vero[:12]
+
+    f_atteso, e1 = testa(SUPA + '/storage/v1/object/biblioteca-gif/' + riga['storage_path'], H)
+    if e1:
+        return False, 'oggetto atteso non raggiungibile: %s' % e1
+    f_vero, e2 = testa(url, UA)
+    if e2:
+        return False, 'oggetto del Worker non raggiungibile: %s' % e2
+    if f_atteso != f_vero:
+        return False, 'contenuto diverso: %s vs %s' % (f_atteso[:12], f_vero[:12])
+    sha, dove = sha_di_firma(f_vero)
+    return True, ('%s via %s' % (sha[:12], dove)) if sha else ('firma %s' % f_vero[:12])
 
 
 def main(esegui):
     import csv
+    indice_locale()
+    cache_impronte()
     with open(FASE1, encoding='utf-8-sig', newline='') as fh:
         fase1 = list(csv.DictReader(fh, delimiter='\t'))
     bib = {b['slug']: b for b in leggi_tutto('biblioteca_gif', '*', 'slug')}
@@ -137,6 +168,7 @@ def main(esegui):
         for cod, sv, sn in cand:
             print('     %s  cancellerebbe %s  (vive su %s)' % (cod, sv, sn))
         print('\nNiente cancellato. Rilanciare con --esegui.')
+        stampa_consumo('fase7 dry-run')
         return 0
 
     ts = datetime.now().strftime('%Y%m%dT%H%M%S')
@@ -167,6 +199,7 @@ def main(esegui):
     print('\n  cancellate : %d' % len(esiti))
     print('  esito      : %s' % ('FERMATO su %s' % fermato[0] if fermato else 'completo'))
     print('  log        : %s' % log)
+    stampa_consumo('fase7 esecuzione')
     return 1 if fermato else 0
 
 

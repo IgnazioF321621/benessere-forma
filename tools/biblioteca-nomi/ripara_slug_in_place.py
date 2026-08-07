@@ -12,16 +12,25 @@ guardia e' applicata riga per riga, non allentata.
 `storage_path` non viene mai toccato: si riscrivono solo `slug` e
 `nome_italiano`. L'impronta dell'oggetto e' letta prima e dopo e deve coincidere.
 
+Dal 7 agosto 2026 quella lettura si fa con una HEAD invece che scaricando il file:
+l'`eTag` di Storage e' l'MD5 del contenuto, quindi basta a dire se l'oggetto e'
+rimasto lo stesso — che e' esattamente cio' che questo controllo deve accertare,
+visto che qui non si tocca nemmeno un byte di Storage.
+
 SOLA LETTURA senza --esegui.
 """
-import hashlib
 import json
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from impronte import (cache_impronte, firma, indice_locale,  # noqa: E402
+                      sha_di_firma, stampa_consumo)
 
 BASE = Path(__file__).parent
 SUPA = 'https://qxiyeiahpoiliwpqslpr.supabase.co'
@@ -68,12 +77,28 @@ def leggi_tutto(tab, sel, ordine):
 
 
 def impronta(path):
+    """(firma, byte) dell'oggetto, via HEAD. Solleva se non e' raggiungibile.
+
+    La firma e' MD5+dimensione, le due cose che Storage dichiara da se'. Serve a
+    dire "e' lo stesso oggetto di prima", e per quello basta e avanza.
+    """
     u = SUPA + '/storage/v1/object/biblioteca-gif/' + urllib.parse.quote(path)
-    d = urllib.request.urlopen(urllib.request.Request(u, headers=H), timeout=180).read()
-    return hashlib.sha256(d).hexdigest(), len(d)
+    r = urllib.request.urlopen(
+        urllib.request.Request(u, headers=H, method='HEAD'), timeout=60)
+    dim = r.headers.get('content-length')
+    dim = int(dim) if dim is not None else None
+    return firma((r.headers.get('etag') or '').strip('"'), dim), (dim or 0)
+
+
+def sha_leggibile(f):
+    """Lo SHA-256 se il gemello sta sul Mac o in cache, altrimenti la firma."""
+    sha, dove = sha_di_firma(f)
+    return ('%s (%s)' % (sha[:12], dove)) if sha else ('firma %s' % f[:12])
 
 
 def main(esegui):
+    indice_locale()
+    cache_impronte()
     bib = {b['slug']: b for b in leggi_tutto('biblioteca_gif', '*', 'slug')}
     cat = leggi_tutto('esercizi_catalog', 'codice,nome,gif_slug', 'codice')
     per_slug = {}
@@ -108,7 +133,7 @@ def main(esegui):
         try:
             p['sha_prima'], p['byte'] = impronta(riga['storage_path'])
         except Exception as e:
-            blocchi.append('%s: oggetto non scaricabile: %s' % (cod, str(e)[:60])); continue
+            blocchi.append('%s: oggetto non raggiungibile: %s' % (cod, str(e)[:60])); continue
         piano.append(p)
 
     print('== DRY-RUN ==' if not esegui else '== ESECUZIONE ==')
@@ -116,13 +141,15 @@ def main(esegui):
         print('  %s  %s -> %s' % (p['codice'], p['slug_vecchio'], p['slug_nuovo']))
         print('      nome_italiano : %s -> %s' % (p['nome_italiano_da'], p['nome_italiano_a']))
         print('      storage_path  : %s  (INVARIATO)' % p['storage_path'])
-        print('      impronta      : %s  %d byte' % (p['sha_prima'][:12], p['byte']))
+        print('      impronta      : %s  %d byte' % (sha_leggibile(p['sha_prima']), p['byte']))
     for b in blocchi:
         print('  BLOCCATO  %s' % b)
     if blocchi:
+        stampa_consumo('ripara_slug_in_place')
         sys.exit('\n%d righe bloccate: non si esegue niente.' % len(blocchi))
     if not esegui:
         print('\nNiente scritto. Rilanciare con --esegui.')
+        stampa_consumo('ripara_slug_in_place dry-run')
         return 0
 
     ts = datetime.now().strftime('%Y%m%dT%H%M%S')
@@ -149,6 +176,7 @@ def main(esegui):
                                               'intatto' if ok else 'CAMBIATO'))
     (bkdir / ('esito_slug_in_place_%s.json' % ts)).write_text(
         json.dumps(esiti, ensure_ascii=False, indent=1), encoding='utf-8')
+    stampa_consumo('ripara_slug_in_place esecuzione')
     return 0
 
 

@@ -24,7 +24,6 @@ Uso:  python3 migra_zona.py "Bicipiti e Braccia" <passo>
 """
 import collections
 import csv
-import hashlib
 import json
 import os
 import sys
@@ -33,8 +32,9 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import (BUCKET, U, _testa, api, chiave, elenco_bucket,  # noqa: E402
-                      leggi_tutto, nfc, sha_file)
+from impronte import (BUCKET, U, api, cache_impronte, chiave,  # noqa: E402
+                      elenco_bucket, indice_locale, leggi_tutto, nfc,
+                      stampa_consumo, verifica_oggetto)
 from nomenclatura import slug as fslug  # noqa: E402
 
 BASE = Path(__file__).parent
@@ -59,11 +59,19 @@ def url_pubblico(path):
     return '%s/storage/v1/object/public/%s/%s' % (U, BUCKET, urllib.parse.quote(path))
 
 
-def sha_oggetto(path):
-    req = urllib.request.Request('%s/storage/v1/object/%s/%s'
-                                 % (U, BUCKET, urllib.parse.quote(path)),
-                                 headers=_testa(chiave()))
-    return hashlib.sha256(urllib.request.urlopen(req, timeout=300).read()).hexdigest()
+def impronta_giusta(path, sha_atteso):
+    """L'oggetto che sta ora in `path` ha l'impronta attesa? (True, nota) o (False, motivo).
+
+    Fino al 7 agosto qui si RISCARICAVA l'oggetto appena copiato o caricato per
+    ricalcolarne lo SHA-256: ~1 MB per ogni file toccato dalla migrazione. Ora si
+    fa una HEAD, che restituisce l'`eTag` — cioe' l'MD5 del contenuto — e si risale
+    allo SHA-256 dal file gemello sul Mac. Nessun byte di contenuto attraversa la rete.
+
+    Un'impronta ignota NON e' un via libera: se il contenuto non si riconosce, la
+    funzione dice di no e il chiamante non cancella niente [L10].
+    """
+    esito, dettaglio = verifica_oggetto(path, sha_atteso)
+    return esito == 'ok', dettaglio
 
 
 def oggetti_zona(zona):
@@ -138,11 +146,11 @@ def passo1(zona, piano):
             print('  ERRORE copia %s: %s' % (cod, err))
             continue
 
-        sha = sha_oggetto(dst)
-        if sha != r['sha256']:
-            e.update(esito='errore', dettaglio='impronta della copia diversa')
+        ok, nota = impronta_giusta(dst, r['sha256'])
+        if not ok:
+            e.update(esito='errore', dettaglio='impronta della copia: %s' % nota)
             esiti.append(e)
-            print('  ERRORE impronta %s: la copia non coincide, NON cancello nulla' % cod)
+            print('  ERRORE impronta %s: %s — NON cancello nulla' % (cod, nota))
             continue
 
         _, err = api('PATCH', '/rest/v1/biblioteca_gif?slug=eq.%s'
@@ -385,8 +393,9 @@ def _carica_nuova(zona, r):
         urllib.request.urlopen(req, timeout=300)
     except Exception as ex:
         return 'errore', 'caricamento: %s' % str(ex)[:120]
-    if sha_oggetto(r['storage_path_dest']) != r['sha256']:
-        return 'errore', 'impronta diversa dopo il caricamento'
+    ok, nota = impronta_giusta(r['storage_path_dest'], r['sha256'])
+    if not ok:
+        return 'errore', 'impronta dopo il caricamento: %s' % nota
     riga = {'slug': r['slug_nuovo'], 'nome_italiano': r['nome_finale'],
             'nome_originale': None, 'categoria': zona,
             'gruppo_muscolare': None,
@@ -437,5 +446,13 @@ if __name__ == '__main__':
         sys.exit(__doc__)
     Z, P = sys.argv[1], sys.argv[2]
     pia = carica(Z)
-    {'backup': passo_backup, 'prova': passo_prova, '1': passo1, '2': passo2,
-     'slug': passo_slug, '4': passo4, '5': passo5, '6': passo6, '7': passo7}[P](Z, pia)
+    # L'indice delle impronte si carica una volta sola, prima del passo: e' cio' che
+    # permette alle verifiche di rispondere senza scaricare.
+    indice_locale()
+    cache_impronte()
+    try:
+        {'backup': passo_backup, 'prova': passo_prova, '1': passo1, '2': passo2,
+         'slug': passo_slug, '4': passo4, '5': passo5, '6': passo6,
+         '7': passo7}[P](Z, pia)
+    finally:
+        stampa_consumo('migra_zona passo %s' % P)

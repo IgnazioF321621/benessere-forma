@@ -20,7 +20,7 @@ Vedi anche [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-eser
 
 ## 3. Pulizia Storage
 - **C**: 28 file L2 residui nelle zone curate (indicizzati, non referenziati)
-- **D**: bucket `exercise-media` legacy (43 file, 5,9 MB) — verificare se l'app lo usa ancora
+- **D**: bucket `exercise-media` legacy (**52 file, 6,9 MB** — rimisurato 7 agosto) — serve ancora ai 65 codici senza `gif_slug`: non si tocca finché il cantiere 2 non è chiuso
 - **E**: riallineamento indice `biblioteca_gif` — **924 righe** puntano a file inesistenti (il numero cala a ogni giro di pulizia)
 
 ## 4. Lista da consolidare
@@ -122,6 +122,44 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 - `getCycleWeekInfo()` — `workPerGiro` derivato dal ciclo
 
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
+
+## 21. Ricomprimere le GIF — il cantiere che chiude il problema Storage
+Le GIF del bucket sono **tutte 1080×1080**, per un'immagine che sul telefono viene mostrata larga ~350 px: nove volte i pixel che servono. Misurato ricomprimendo davvero due file:
+
+| | oggi | a 480 px | in WebP 480 px |
+|---|---|---|---|
+| `Burpee navy seal` | 6,73 MB | 1,06 MB (−84%) | 0,36 MB (−95%) |
+| `Squat jump ginocchia alte` | 3,77 MB | 0,73 MB (−81%) | 0,21 MB (−94%) |
+| **bucket intero** | **631 MB (73%)** | **~115 MB** | **~40 MB** |
+| **giro di scheda di Ignazio** | **62,9 MB** | ~11 MB | ~4 MB |
+
+**Perché è urgente**: la Mobilità sono 215 GIF da 1,94 MB di media = **407 MB**. Caricarla a piena risoluzione porta lo Storage a 1,04 GB e **sfonda il limite di 1 GB** del piano Free.
+
+Va fatto con l'ordine a righe doppie: cambia il contenuto dei file, quindi cambiano le impronte e i registri vanno riallineati. **Ricomprimere prima sul Mac**, rigenerare l'indice locale, poi caricare — così la catena non è mai scoperta e il caricamento non costa egress (i byte entrano, non escono).
+
+Da mettere in conto: la compressione va nella **procedura di caricamento**, non fatta a posteriori, o fra due cantieri si è di nuovo qui.
+
+## 22. Rimettere il `cache-control` sulle GIF
+Tutti e 647 gli oggetti rispondono `cache-control: no-cache` — verificato su tutte e 9 le zone. Non è una scelta: gli script caricano con una POST diretta senza indicare la durata della cache, e in quel caso Supabase mette `no-cache` d'ufficio. Conseguenza: il telefono deve ricontrollare a ogni apertura e, se ha buttato via il file (facile, con GIF da 1-3 MB), lo riscarica per intero.
+
+Rimedio: ricaricare con `public, max-age=31536000, immutable`. **Non consuma egress** — i byte entrano — e i file sono già tutti sul Mac. È sicuro perché il cantiere non riscrive mai un percorso esistente: rinominare significa creare un percorso nuovo.
+
+Se si fa il cantiere 21, questo viene gratis: si sta già ricaricando tutto, basta aggiungere l'intestazione.
+
+## 23. Strumenti del cantiere a consumo zero — ✅ chiuso 7 agosto
+`impronte.py` scaricava ogni oggetto per calcolarne l'impronta, e le verifiche riscaricavano il file per confrontarlo: la voce più grossa dell'egress che ha portato il piano Free al 171%.
+
+Ora l'impronta si ricava dall'`eTag` (che è l'MD5 del contenuto) e si risale al file gemello sul Mac. Copertura **647 su 647**. Le verifiche usano `HEAD`. Ogni strumento stampa i byte scaricati a fine esecuzione.
+
+Collaudo: `collaudo_egress.py` confronta l'impronta da `eTag` con quella ottenuta scaricando davvero — **647 coincidono, 0 divergono**, 644 dei confronti indipendenti.
+
+| operazione | prima | dopo |
+|---|---|---|
+| preparare una zona (Polpacci) | ~20 MB | **0 byte** |
+| verificare 68 codici (Bicipiti) | ~38 MB | **0 byte** |
+| sweep dei 602 codici vivi | ~660 MB | **0 byte** |
+
+Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo).
 
 ## 96. Unificare la chiave degli strumenti del cantiere — ✅ chiuso 7 agosto
 `cantiere_96_pendente.tsv` era indicizzato per nome file: **44 righe su 96 avevano già perso lo stato**. Convertito alla chiave SHA-256 (`chiave_pendente.py`), 96 righe su 96 risolte, zero perse. `prepara.py` cerca per impronta; `riconcilia.py` verifica che diario e piano coincidano prima di ogni migrazione.

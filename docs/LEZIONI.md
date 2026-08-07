@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare
 
 ---
 
@@ -275,3 +275,32 @@ Lo sfasamento è sistematico e leggibile a occhio nudo — un blocco intero spos
 **Il punto generale.** In questo cantiere l'unica chiave che regge è l'impronta del contenuto. Il nome cambia perché rinominare è il lavoro; il codice scritto a mano può essere sbagliato dal momento in cui è stato scritto. Tutto ciò che si scrive a mano in un registro è un'annotazione, non una chiave.
 
 **Corollario emerso lo stesso giorno**: nel registro vivevano ancora **EX676-EX682, sei codici allocati in anticipo e mai scritti a catalogo** — mentre EX676 risulta il prossimo libero. Erano pronti a scontrarsi esattamente come in [L6](#l6--codici-allocati-in-anticipo-si-scontrano).
+
+---
+
+## L24 — L'impronta di un oggetto si legge senza scaricarlo
+
+**Il caso.** Il 7 agosto il piano Supabase Free è andato al **171% di Cached Egress** (8,55 GB su 5). La ricognizione ha trovato che il colpevole non era l'app — l'uso normale di Ignazio e dei tester spiega meno di 1,5 GB — ma gli strumenti del cantiere, che per rispondere a una sola domanda («questo oggetto ha l'impronta che ho deciso?») **scaricavano l'oggetto intero**. A ~1 MB a GIF: 797 download solo per il calcolo delle impronte, ~660 MB per ogni sweep dei 602 codici vivi.
+
+**Cosa non si era visto.** Supabase espone l'`eTag` di ogni oggetto già nell'elenco del bucket e nelle intestazioni di una richiesta `HEAD`. E **l'`eTag` è l'MD5 del contenuto**. Misurato su tutti e 647 gli oggetti: 640 combaciano con l'MD5 di un file già presente sul Mac, dimensione compresa. Con le copie in `lavoro/_bucket` e la cache storica, la copertura è **647 su 647**.
+
+Quindi la catena che serve esisteva già, e non passa dalla rete:
+
+```
+elenco del bucket (pochi kB)  →  eTag = MD5  →  file gemello sul Mac  →  il suo SHA-256
+```
+
+**Il difetto dentro il difetto.** La cache delle impronte esisteva, ma era **indicizzata sul percorso**. Il cantiere rinomina i file: ogni rinomina rendeva la voce irriconoscibile e faceva ripartire il download. Misurato: 797 voci in cache per 647 oggetti reali, cioè **150 file scaricati due volte per il solo fatto di essere stati rinominati** — la stessa radice di [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave), una chiave che non è il contenuto.
+
+**Cosa si è perso in rigore: niente.** Il collaudo ha confrontato l'impronta ricavata dall'`eTag` con quella ottenuta scaricando davvero, su tutti e 647 gli oggetti: **647 coincidono, 0 divergono**, e 644 dei confronti sono indipendenti (impronta dal Mac contro impronta storica scaricata). La controprova con un'impronta falsa viene respinta.
+
+L'MD5 non regge contro chi costruisce apposta due file diversi con la stessa impronta. Qui i file sono i nostri, la dimensione fa da secondo riscontro, e dove serve la certezza SHA-256 piena resta la strada esplicita (`--sha`, `--scarica`) su un singolo oggetto, mai a tappeto.
+
+**La regola che non cambia.** Un'impronta che non si riesce a determinare **non diventa "a posto" per silenzio**: `verifica_oggetto` risponde `ignoto`, che blocca esattamente come `diverso`. È [L10](#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto) applicata al nuovo meccanismo.
+
+**Regole nate:**
+1. **L'impronta si legge dall'`eTag`, il contenuto dal Mac.** Il download di un oggetto è l'eccezione, si chiede a voce e vale per un file solo.
+2. **Ogni registro di impronte si indicizza sul contenuto**, mai sul percorso — vale per la cache come per i TSV.
+3. **Ogni strumento che può scaricare stampa i byte scaricati a fine esecuzione, anche quando sono zero.** Prima nessuno strumento lo sapeva, ed è il motivo per cui la ricognizione dei consumi ha dovuto scrivere "stima" su una voce da 3 GB.
+
+**Effetto misurato**: preparare una zona passa da ~200 MB a **0 byte**; verificare i 68 codici di Bicipiti e Braccia da ~38 MB a **0 byte**.
