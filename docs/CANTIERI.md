@@ -164,12 +164,40 @@ Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaric
 ## 96. Unificare la chiave degli strumenti del cantiere — ✅ chiuso 7 agosto
 `cantiere_96_pendente.tsv` era indicizzato per nome file: **44 righe su 96 avevano già perso lo stato**. Convertito alla chiave SHA-256 (`chiave_pendente.py`), 96 righe su 96 risolte, zero perse. `prepara.py` cerca per impronta; `riconcilia.py` verifica che diario e piano coincidano prima di ogni migrazione.
 
-**Resta da guardare** (emerso dalla conversione):
-- **EX676-EX682**: sei codici allocati in anticipo e mai scritti a catalogo, mentre EX676 risulta il prossimo libero. Vanno riallocati al momento della scrittura → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano)
-- **2 righe con la cartella sbagliata**: `Pistol jump box` e `Salto monopodalico avanti` risultano in `Gambe e Glutei` ma sul Mac hanno nomi di altri esercizi (`Salti laterali rapidi`, `Skip sul posto`). Sono fra gli "otto salti" ricollocati: da verificare guardando le GIF.
-- **1 riga di Cardio** che il piano ha e il diario no (`Salti laterali rapidi`), trovata da `riconcilia.py` al primo giro.
+**Chiuso il 7 agosto anche il seguito** (`libera_prenotati.py`): i **6 codici prenotati e mai scritti** (EX676-EX680, EX682) sono stati tolti dal registro. Le righe restano con impronta e nome; il codice si assegna alla scrittura. Verificato: 96 righe prima e dopo, impronte identiche, zero campi portanti toccati, `prepara.py` continua a vedere quei file come impegnati (5 pendenti in Tricipiti).
 
-Vedi [L12](LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe) e [L23](LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave).
+## 96-bis. Il registro pendente è al 93% storico, e 20 righe hanno un'impronta inattendibile
+
+Emerso il 7 agosto guardando le due righe che sembravano "GIF ricollocate". Due cose distinte:
+
+**a) Il registro è quasi tutto lavoro già fatto.** Delle 96 righe: **89 sincronizzate**, 6 liberate (Spalle e Cuffia, Tricipiti — ancora da scrivere), **1 sola davvero pendente** (`Pettorali/Chest press elastico maniglie in piedi`). Un registro che per il 93% descrive lavoro concluso non è un registro, è un archivio: tenerlo così fa lavorare `prepara.py` a vuoto e conserva dati vecchi.
+
+**b) Venti righe hanno un'impronta ricavata in modo circolare.** Nella conversione del 7 agosto, le righe il cui file non era più trovabile per nome sono state risolte partendo dal **codice del registro** → `gif_slug` → oggetto nel bucket → impronta. Ma quel codice è proprio ciò che [L23](LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) ha dimostrato inaffidabile: si usa il codice per trovare l'impronta e poi l'impronta restituisce lo stesso codice. **Non è una verifica, è un'eco.**
+
+Su tutte e 20 il nome del registro non coincide col nome del codice risolto. Per la maggior parte è solo rifinitura del nome (`Boxe diretto sacco` → `Boxe diretto al sacco`), ma su quattro sono **esercizi diversi**:
+
+| il registro dice | il codice risolto è |
+|---|---|
+| EX598 `Corsa zigzag conetti` | `Corsa all'indietro` |
+| EX609 `Pistol jump box` | `Salti laterali rapidi` |
+| EX610 `Jumping rimbalzi` | `Salto con la corda` |
+| EX613 `Salto monopodalico avanti` | `Skip sul posto` |
+
+Sono esattamente i codici toccati dalla rinumerazione di [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano) e dallo sfasamento del blocco Cardio: `Pistol jump box` è diventato **EX617** e `Salto monopodalico avanti` **EX621** — entrambi a catalogo con la loro GIF in `Gambe e Glutei/`, cioè la zona che il registro dichiarava — mentre EX609/EX613 sono andati ad altri esercizi di Cardio. I file originali (`Squat Pistol box jump.gif`, `Salto monopodalico in avanti.gif`) non esistono più sul Mac: **il lavoro è concluso, le righe sono il residuo**.
+
+Scheda di confronto pronta in `tools/biblioteca-nomi/lavoro/revisione_2_gif.md` (locale). Restano da confermare guardando le due GIF: che EX617 e EX621 siano davvero gli esercizi confermati allora.
+
+**Nessun danno operativo**: tutte e 20 risultano già sincronizzate, e in `prepara.py` lo stato `collegato` vince su `pendente`.
+
+**Proposta, da confermare**: ritirare dal registro le 89 righe sincronizzate (conservandole in `backup/`), tenendo solo le 7 ancora aperte; e togliere da `chiave_pendente.py` il terzo tentativo di risoluzione — se un file non si ritrova per nome, l'impronta resta vuota e la riga si marca *da riverificare*, invece di dedurla da un dato che non regge.
+
+## 96-ter. `riconcilia.py` segnala un falso allarme
+
+La riga `Salti laterali rapidi` che `riconcilia.py` dava come divergente nel piano di Cardio **non è un'anomalia**: al momento della decisione (2 agosto) era in stato `indicizzato`, e `conferma.py` scrive nel diario `slug_da_migrare.tsv` **solo** per gli stati `collegato`/`pendente`/`indeterminato`. Una riga `indicizzato` cambia slug in place e nel diario non ci entra per costruzione.
+
+Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` sono nel diario, l'unica `indicizzato` no — e per tutte e sei lo slug vecchio è morto e il nuovo è vivo, cioè **la migrazione è già stata fatta**. Il piano di Cardio è un reperto storico.
+
+**Proposta, da confermare**: `riconcilia.py` deve confrontare solo le righe che nel diario ci devono stare (quelle con `slug_applicabile = no`), e dire "già migrata" invece di segnalare quando lo slug vecchio è morto e il nuovo è vivo.
 
 ---
 

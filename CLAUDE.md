@@ -276,7 +276,7 @@ Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 3. Script idempotenti con timeout esteso
 4. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
 5. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (`alternativa` non ha FK)
-6. **Allocare i codici al momento della scrittura, mai in anticipo** → [L6](docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano)
+6. **Allocare i codici al momento della scrittura, mai in anticipo** → [L6](docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano). Vale anche **dentro i registri**: un `EX###` scritto in un TSV prima di esistere a catalogo non è una prenotazione, è una collisione che aspetta — nessuno tiene il posto, e quando il foglio assegna quel codice a qualcos'altro si scontrano. Le righe in attesa si tengono per **impronta e nome**, senza codice; `libera_prenotati.py` toglie quelli già scritti (6 liberati il 7 agosto: EX676-EX680, EX682)
 
 **I TSV da incollare nel foglio vanno consegnati CON la riga di intestazione**, dicendo di incollare dalla seconda riga in giù. Per una **riga singola** la forma più sicura non è il TSV ma l'elenco verticale `colonna → valore`, immune allo sfasamento. Prima di generare TSV posizionali, farsi dare la riga di intestazione del foglio e verificarne l'ordine → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno)
 
