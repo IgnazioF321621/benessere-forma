@@ -161,19 +161,17 @@ Collaudo: `collaudo_egress.py` confronta l'impronta da `eTag` con quella ottenut
 
 Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo).
 
-## 21. Wrapper errori Supabase — lotti 2 e 3
-Il lotto 1 (Nutrition, 16 scritture) è chiuso il 7 agosto: `dbq()` esiste e le scritture di pasti, digiuni, integratori, pacchetti, pesi, obiettivi e piani ci passano dentro.
+## 21. Wrapper errori Supabase — ✅ scritture chiuse 8 agosto
+Tre lotti, uno per sessione, mai a tappeto ([L1](LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)): Nutrition 16 scritture (7 ago) · Training 3 · Body 4 (8 ago). **Scritture scoperte: 0.**
 
-**Restano 8 scritture scoperte**, da fare in due lotti separati:
+**Una sola esclusione, voluta**: `_wsExec` della WS-QUEUE. Un censimento la segnala come scoperta e non lo è — tutti e quattro i chiamanti (`wsWrite` ×2 per il retry, `_wsReplayOp` ×2) leggono `res.error`. La coda è una rete più fitta di `dbq`: riprova, persiste su localStorage e riconsegna. Avvolgerla darebbe un allarme d'errore a ogni intoppo passeggero che la coda sta già gestendo da sola. La motivazione è scritta accanto alla funzione perché nessuno la "corregga".
 
-| lotto | modulo | punti |
-|---|---|---|
-| 2 | Training | `workout_sets` insert · `training_logs` update ×2 · `training_logs` delete |
-| 3 | Body | `body_checks`/`body_measurements`/`body_check_photos` delete · rimozione foto da Storage |
+**Tre punti dove è emerso più di un avvolgimento:**
+- **Serie aggiornata** — se l'update di `training_logs` falliva, `workout_sets` veniva aggiornato lo stesso (via WS-QUEUE, affidabile) e i due archivi divergevano, mentre l'utente leggeva «Serie aggiornata». Ora il messaggio di riuscita compare solo se l'operazione è riuscita.
+- **Serie eliminata** — il `return` sull'errore esisteva già ma solo per le cadute di rete; ora vale anche per gli errori dell'API, così non si cancella da `workout_sets` una riga che in `training_logs` è rimasta.
+- **Scarto del checkpoint Body** — quattro pulizie in cascata, prima completamente silenziose. Ora ognuna lascia traccia in console e un solo avviso riassume cosa è rimasto indietro. Il caso che pesa è `body_checks`: se non si cancella, il check resta `in_progress` e l'app riproporrà di riprendere un lavoro buttato.
 
-Più **46 letture su 101** senza controllo: meno urgenti (una lettura fallita di solito si vede subito a schermo), ma la stessa medicina vale.
-
-⚠️ Un lotto per sessione, mai a tappeto: è la regola nata da [L1](LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga).
+**Restano 37 letture su 93** senza controllo: una lettura fallita di solito si vede subito a schermo, quindi non hanno urgenza.
 
 ## 96. Unificare la chiave degli strumenti del cantiere — ✅ chiuso 7 agosto
 `cantiere_96_pendente.tsv` era indicizzato per nome file: **44 righe su 96 avevano già perso lo stato**. Convertito alla chiave SHA-256 (`chiave_pendente.py`), 96 righe su 96 risolte, zero perse. `prepara.py` cerca per impronta; `riconcilia.py` verifica che diario e piano coincidano prima di ogni migrazione.

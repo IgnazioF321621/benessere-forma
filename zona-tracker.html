@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.08 · 06:18';
+const APP_VERSION = '2026.08.08 · 10:26';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5299,17 +5299,37 @@ async function m2ResumeContinue() {
 async function m2ResumeDiscard() {
   try {
     if(ST.m2.checkId){
-      // Cleanup foto storage (best-effort)
+      // Pulizia di uno scarto volontario: qualunque cosa vada storta, l'utente ha
+      // chiesto di ricominciare e da qui in poi si ricomincia. Per questo ogni
+      // pezzo e' silenzioso — un toast per ciascuno sarebbe una raffica — ma
+      // NESSUNO passa piu' inosservato: se qualcosa resta indietro finisce in
+      // console e un avviso solo lo dice.
+      // Il pezzo che pesa davvero e' l'ultimo: se `body_checks` non si cancella,
+      // il check resta 'in_progress' e alla prossima apertura l'app riproporra'
+      // di riprendere un lavoro che l'utente aveva buttato.
+      const rimasti = [];
+      // Foto nello Storage (best-effort: le righe contano piu' dei file)
       try {
         const { data: photos } = await supa.from('body_check_photos').select('storage_path').eq('check_id', ST.m2.checkId);
         if(photos && photos.length){
-          await supa.storage.from('body-check-photos').remove(photos.map(p => p.storage_path));
+          const f = await dbq('cancellare le foto del checkpoint', supa.storage.from('body-check-photos').remove(photos.map(p => p.storage_path)), {silenzioso:true});
+          if(f && f.error) rimasti.push('le foto');
         }
       } catch(e) { console.warn('[m2] photo cleanup:', e); }
-      // Cleanup rows (in ordine FK)
-      await supa.from('body_check_photos').delete().eq('check_id', ST.m2.checkId);
-      await supa.from('body_measurements').delete().eq('check_id', ST.m2.checkId);
-      await supa.from('body_checks').delete().eq('id', ST.m2.checkId);
+      // Righe, in ordine di dipendenza (figlie prima della madre)
+      const r1 = await dbq('cancellare le foto del checkpoint', supa.from('body_check_photos').delete().eq('check_id', ST.m2.checkId), {silenzioso:true});
+      if(r1 && r1.error) rimasti.push('le foto');
+      const r2 = await dbq('cancellare le misure del checkpoint', supa.from('body_measurements').delete().eq('check_id', ST.m2.checkId), {silenzioso:true});
+      if(r2 && r2.error) rimasti.push('le misure');
+      const r3 = await dbq('cancellare il checkpoint', supa.from('body_checks').delete().eq('id', ST.m2.checkId), {silenzioso:true});
+      if(r3 && r3.error){
+        rimasti.push('il checkpoint');
+        console.error('[m2] il check', ST.m2.checkId, 'resta in_progress: alla prossima apertura l\'app potrebbe riproporre di riprenderlo');
+      }
+      if(rimasti.length){
+        console.error('[m2] scarto incompleto, sono rimasti indietro:', rimasti.join(', '));
+        showToast('Ho ricominciato, ma qualcosa del vecchio checkpoint è rimasto salvato', '⚠️', 5500);
+      }
     }
   } catch(e) { console.warn('[m2] discard error:', e); }
   // Reset state locale e ricomincia
@@ -11535,6 +11555,16 @@ function _wsKey(date, sessionType, exName, setNumber){
 }
 // Esegue una singola operazione su workout_sets. Ritorna il result supabase
 // ({ data, error }); le eccezioni di rete vengono normalizzate in { error }.
+//
+// ⚠️ QUI NON SI USA dbq(), ED E' VOLUTO. Un censimento delle chiamate senza
+// controllo d'errore segnala queste righe come scoperte: non lo sono. L'esito
+// e' controllato da TUTTI e quattro i chiamanti — wsWrite (due volte, per il
+// retry) e _wsReplayOp (due volte) — che leggono `res.error`.
+// La WS-QUEUE e' una rete piu' fitta di dbq, non piu' larga: riprova subito,
+// poi accoda su localStorage e riconsegna al boot o alla prima scrittura
+// riuscita. Avvolgere qui aggiungerebbe un toast d'errore a ogni intoppo
+// passeggero che la coda sta gia' gestendo da sola, dicendo all'utente che
+// qualcosa e' andato perso quando invece e' solo in attesa.
 async function _wsExec(op, payload){
   try {
     if(op === 'insert'){
@@ -11664,14 +11694,17 @@ async function confirmEditLogRow(){
   const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
   const resistanceText = isPullUp ? null : (resistance || null);
   // 1. UPDATE training_logs by id (sorgente per Progressione)
-  try {
-    await supa.from('training_logs').update({
-      reps,
-      resistance: resistanceText,
-      band_color: bandColor,
-      rir_actual: rir,
-    }).eq('id', e.id).eq('user_id', ST.user.id);
-  } catch(err){ showToast('Errore aggiornamento: '+err.message); }
+  // Il try/catch da solo vedeva le cadute di rete ma non gli errori dell'API.
+  // Qui l'esito conta il doppio: il passo 2 aggiorna workout_sets comunque, e se
+  // questo passo fallisce in silenzio i due archivi divergono — proprio la
+  // divergenza che la bonifica del 17 luglio aveva riportato a zero.
+  const upd = await dbq('aggiornare la serie', supa.from('training_logs').update({
+    reps,
+    resistance: resistanceText,
+    band_color: bandColor,
+    rir_actual: rir,
+  }).eq('id', e.id).eq('user_id', ST.user.id));
+  const updOk = !(upd && upd.error);
   // 2. UPDATE workout_sets by composite key (training_logs.id ≠ workout_sets.id)
   //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
   if(orig){
@@ -11688,7 +11721,9 @@ async function confirmEditLogRow(){
     await openDayDetail(ST.trainDayDetail.date, ST.trainDayDetail.exName);
   }
   if(ST.trainProgEx) await loadTrainingLogs(ST.trainProgEx);
-  showToast('Serie aggiornata');
+  // Il "fatto" si dice solo se e' fatto: se l'update sopra e' fallito, dbq ha gia'
+  // mostrato l'avviso e aggiungere "Serie aggiornata" direbbe il contrario.
+  if(updOk) showToast('Serie aggiornata');
 }
 
 function confirmDeleteSet(id, label){
@@ -11703,9 +11738,13 @@ async function deleteSetConfirmed(){
   if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
   const orig = (ST.trainDayLogs || []).find(l => l.id === c.id);
   // 1. DELETE training_logs by id
-  try {
-    await supa.from('training_logs').delete().eq('id', c.id).eq('user_id', ST.user.id);
-  } catch(err){ showToast('Errore eliminazione: '+err.message); return; }
+  // Il try/catch fermava tutto sulle cadute di rete (return), ma non vedeva gli
+  // errori dell'API. Si tiene lo stesso comportamento anche per quelli: se la
+  // riga primaria non si cancella non si tocca workout_sets, altrimenti i due
+  // archivi divergerebbero — con l'aggravante che la serie resterebbe visibile
+  // in Progressione, che legge da training_logs.
+  const del = await dbq('eliminare la serie', supa.from('training_logs').delete().eq('id', c.id).eq('user_id', ST.user.id));
+  if(del && del.error){ renderTraining(); return; }
   // 2. DELETE workout_sets by composite key
   //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
   if(orig){
@@ -22125,18 +22164,21 @@ async function confirmEditLog(k){
     }, _wsKey(date, sessionId, exName, setNum),
     'Modifica salvata, sincronizzazione in coda');
     // 2. UPDATE training_logs (compat — usata da Progressione e altri viewer)
-    try {
-      await supa.from('training_logs').update({
-        reps,
-        resistance: isPullUp ? null : (resistance||null),
-        band_color: bandColor,
-      })
-        .eq('user_id', ST.user.id)
-        .eq('date', date)
-        .eq('session_id', sessionId)
-        .eq('exercise_name', exName)
-        .eq('set_number', setNum);
-    } catch(e){}
+    // Il catch vuoto qui sopra ingoiava tutto, errori di rete compresi: era il
+    // punto piu' cieco dei tre. workout_sets viene aggiornato dal passo 1 con
+    // retry e coda, quindi un fallimento silenzioso qui lascia i due archivi
+    // disallineati e la Progressione — che legge da training_logs — mostra il
+    // valore vecchio senza che niente lo dica.
+    await dbq('aggiornare la serie', supa.from('training_logs').update({
+      reps,
+      resistance: isPullUp ? null : (resistance||null),
+      band_color: bandColor,
+    })
+      .eq('user_id', ST.user.id)
+      .eq('date', date)
+      .eq('session_id', sessionId)
+      .eq('exercise_name', exName)
+      .eq('set_number', setNum));
   }
   ST.editLogKey = null;
   ST.editLogDraft = null;
