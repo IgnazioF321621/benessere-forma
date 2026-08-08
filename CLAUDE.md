@@ -42,6 +42,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - Client Supabase si chiama `supa` (non `supabase`)
 - SQL Editor gira come admin: `auth.uid()` = NULL → usare UUID espliciti
 - **supabase-js NON lancia eccezioni sugli errori API**: restituisce `{error}` nel result → i `try/catch` non li vedono. Controllare SEMPRE `res.error` → [L22](docs/LEZIONI.md#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api)
+- **Ogni chiamata a Supabase si avvolge in `dbq('cosa sta facendo', …)`**: controlla l'errore, lo scrive in console col nome dell'operazione e mostra un toast da 5500 ms. Restituisce lo stesso `{data, error}`, quindi non cambia la logica di chi la usa. `{silenzioso:true}` per i rollback e le operazioni di sfondo, dove il toast sarebbe rumore. Migrazione a lotti: **Nutrition fatto (16 scritture)**, Training e Body nei lotti successivi
 - `schedaGen=1` ricostruisce la scheda da zero, cancella storico progressione — solo per correzioni mirate
 - **`console.log` da rimuovere solo manualmente, mai con script automatici.** Il pericolo è la logica inglobata nella stessa riga del logging → [L1](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)
 - **Prima di aggiungere un alias in `GEAR_ALIASES`, verificare che il termine di destinazione esista davvero nel catalogo.** Un token vive quando qualche riga lo usa → [L2](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Stesso difetto in `APERTO_WHITELIST` (`banda` e `cavigliere` a 0 occorrenze; `corda`, 9 esercizi, non è in whitelist)
@@ -83,9 +84,9 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo (UX scadente mobile)
 - Isabella: `status=draft`, 0 meals per settimana corrente — non investigato
 - **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente)
-- **Rollback `weekly_plans` silenzioso** — nel postino Nutrition `rollRes` è assegnato e mai letto: un rollback fallito non viene rilevato da nessuno
-- **45 chiamate `await supa.` su 116 senza controllo dell'errore** (misurato 7 agosto) — stessa radice del punto precedente
-- **`?schedaDebug=1` scollegato** — il flag si accende, il dry-run gira, non stampa niente (sopravvive 1 solo `console.log` sotto `window._trainGenDebug`). Quattro blocchi vuoti residui: tre in `_trainGenPickByPattern`, uno nel carry. Il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
+- ~~Rollback `weekly_plans` silenzioso~~ — **risolto 7 agosto**: `rollRes` ora è controllato, un rollback fallito finisce in console e in `status.decision = 'error-meals-rollback-failed'`. Stesso trattamento al rollback del pasto orfano
+- **Chiamate `await supa.` senza controllo dell'errore: 46 su 101** (rimisurato 7 agosto dopo il lotto Nutrition; la stima iniziale di 45 su 116 era più grossolana). Le scritture scoperte sono **8**: 4 Training (`workout_sets`, `training_logs`) e 4 Body (`body_checks`, `body_measurements`, `body_check_photos`, Storage foto)
+- ~~`?schedaDebug=1` scollegato~~ — **risolto 7 agosto**: stampa la baseline dei sei pool in riga copiabile e la lascia in `window._ztBaselinePool`. Se core pescabili ≠ ammessi elenca le righe da classificare. Resta aperto: il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
 - **27 funzioni mai chiamate** in `zona-tracker.html` (misurato 7 agosto), tra cui il vecchio timer di attivazione e il vecchio modal pasti
 - **5 candidati core senza GIF** — EX023 Pallof press · EX032 Hollow hold · EX036 Bird dog · EX046 Stir the pot · EX109 Plank shoulder taps. Per Bird dog la GIF esiste in biblioteca: manca solo il `gif_slug`
 - **Deltoidi posteriori: 1 solo candidato** nel pool casa. Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altro gruppo al minimo: deltoidi laterali 3

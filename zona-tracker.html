@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.03 · 07:03';
+const APP_VERSION = '2026.08.08 · 06:18';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -5643,7 +5643,7 @@ async function m2Complete() {
 // ═══════════════════════════════════════════════════════════
 async function saveWeightEntry(kg) {
   // store weight in profile
-  await supa.from('profiles').update({weight_kg:kg, updated_at:new Date().toISOString()}).eq('id', ST.user.id);
+  await dbq('salvare il peso', supa.from('profiles').update({weight_kg:kg, updated_at:new Date().toISOString()}).eq('id', ST.user.id));
 if(ST.profile) ST.profile.weight_kg = kg;
 const el = document.getElementById('h-weight'); if(el) el.textContent = kg;
 }
@@ -5657,7 +5657,7 @@ async function saveWeight() {
   let recalcSex = null;
   if(ST.profile) {
     const r = calcTDEE(ST.profile.sex||'M', ST.profile.age||35, ST.profile.height_cm||175, v, ST.profile.activity_level||'moderate');
-    await supa.from('profiles').update({target_kcal:r.target, target_protein:r.protein, target_carbs:r.carbs, target_fat:r.fat, updated_at:new Date().toISOString()}).eq('id', ST.user.id);
+    await dbq('aggiornare gli obiettivi nutrizionali', supa.from('profiles').update({target_kcal:r.target, target_protein:r.protein, target_carbs:r.carbs, target_fat:r.fat, updated_at:new Date().toISOString()}).eq('id', ST.user.id));
     ST.TARGET = {kcal:r.target, protein:r.protein, carbs:r.carbs, fat:r.fat};
     ST.profile.weight_kg = v;
     recalcTarget = r.target;
@@ -5701,6 +5701,59 @@ async function renderWeightChart() {
 // ═══════════════════════════════════════════════════════════
 // SUPABASE DATA LAYER
 // ═══════════════════════════════════════════════════════════
+
+// dbq — l'unico posto in cui si controlla l'esito di una chiamata a Supabase.
+//
+// PERCHE' ESISTE: supabase-js NON lancia eccezioni sugli errori dell'API.
+// Restituisce {data, error} e basta. Un try/catch attorno non vede niente, e una
+// scrittura fallita passa per riuscita: nessun errore in console, nessun avviso a
+// schermo, il dato semplicemente non c'e'. Misurato il 7 agosto: 61 chiamate su
+// 116 non guardavano `error`, 24 delle quali erano SCRITTURE.
+//
+// USO — si avvolge la chiamata, senza toccarne la logica:
+//     await supa.from('meals').delete().eq('id', id);
+//     await dbq('cancellare il pasto', supa.from('meals').delete().eq('id', id));
+//
+// Restituisce sempre lo stesso {data, error} di supabase-js, quindi chi leggeva
+// `.data` continua a funzionare identico.
+//
+// COSA FA IN PIU':
+//   - scrive in console l'operazione fallita, con il suo nome in chiaro
+//   - mostra un toast lungo all'utente (5500ms: un errore deve restare leggibile,
+//     i 2500ms del toast di conferma sono troppo pochi per leggere e capire)
+//   - non rilancia: il chiamante decide se proseguire. Chi vuole fermarsi
+//     controlla `res.error` come prima.
+//
+// `opzioni.silenzioso` per le operazioni di sfondo, dove un toast sarebbe rumore
+// (es. il replay della coda WS): logga ma non disturba.
+async function dbq(operazione, chiamata, opzioni) {
+  const opt = opzioni || {};
+  // Avvisare non deve poter rompere l'operazione: dbq gira anche durante il boot,
+  // quando l'elemento #toast puo' non essere ancora nel DOM e showToast andrebbe
+  // in errore su un null. Un avviso mancato e' un fastidio, un'eccezione qui
+  // fermerebbe la scrittura che stiamo cercando di proteggere.
+  const avvisa = (testo) => {
+    if (opt.silenzioso) return;
+    try { showToast(testo, '⚠️', 5500); } catch (e) { /* niente DOM: resta il log */ }
+  };
+  let res;
+  try {
+    res = await chiamata;
+  } catch (e) {
+    // Qui ci si arriva solo per un guasto di rete o un bug del client, non per
+    // un errore dell'API: quelli tornano dentro res.error.
+    console.error('[db] "' + operazione + '" non ha risposto:', e);
+    avvisa('Problema di connessione: ' + operazione);
+    return { data: null, error: e };
+  }
+  if (res && res.error) {
+    const msg = (res.error && (res.error.message || res.error.hint)) || String(res.error);
+    console.error('[db] "' + operazione + '" fallita:', msg, res.error);
+    avvisa('Non riesco a ' + operazione + ': riprova');
+  }
+  return res;
+}
+
 async function loadMeals(date) {
   const {data: meals} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
   if (!meals || meals.length === 0) return [];
@@ -5948,18 +6001,18 @@ async function dbAddMeal(meal) {
 }
 
 async function dbDeleteMeal(mealId) {
-  await supa.from('meals').delete().eq('id', mealId).eq('user_id', ST.user.id);
+  await dbq('cancellare il pasto', supa.from('meals').delete().eq('id', mealId).eq('user_id', ST.user.id));
 }
 
 async function dbToggleFasting(date, on) {
-  if(on) await supa.from('fasting_days').upsert({user_id:ST.user.id, date}, {onConflict:'user_id,date'});
-  else   await supa.from('fasting_days').delete().eq('user_id', ST.user.id).eq('date', date);
+  if(on) await dbq('segnare il giorno di digiuno', supa.from('fasting_days').upsert({user_id:ST.user.id, date}, {onConflict:'user_id,date'}));
+  else   await dbq('togliere il giorno di digiuno', supa.from('fasting_days').delete().eq('user_id', ST.user.id).eq('date', date));
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
   // Delete prima (idempotente — funziona senza UNIQUE constraint)
-  await supa.from('supplements_log').delete()
-    .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName);
+  await dbq('segnare l\'integratore come preso', supa.from('supplements_log').delete()
+    .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName));
   if (taken) {
     const {error} = await supa.from('supplements_log').insert(
       {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName}
@@ -5998,16 +6051,16 @@ async function loadTodaySuppLog() {
 }
 
 async function dbUpdateSupp(id, changes) {
-  await supa.from('supplements').update(changes).eq('id', id).eq('user_id', ST.user.id);
+  await dbq('aggiornare l\'integratore', supa.from('supplements').update(changes).eq('id', id).eq('user_id', ST.user.id));
 }
 
 async function dbAddSupp(suppData) {
-  const {data} = await supa.from('supplements').insert({...suppData, user_id:ST.user.id}).select().single();
+  const {data} = await dbq('aggiungere l\'integratore', supa.from('supplements').insert({...suppData, user_id:ST.user.id}).select().single());
   return data;
 }
 
 async function dbDeleteSupp(id) {
-  await supa.from('supplements').delete().eq('id', id).eq('user_id', ST.user.id);
+  await dbq('cancellare l\'integratore', supa.from('supplements').delete().eq('id', id).eq('user_id', ST.user.id));
 }
 
 // Bulk update orario gruppo integratori — chiamata da renderOggi() timeline
@@ -6337,7 +6390,7 @@ async function loadAndStart() {
   } else {
     // Onboarding non completato: crea riga profilo vuota se non esiste
     if (!profile) {
-      await supa.from('profiles').upsert({ id: ST.user.id, updated_at: new Date().toISOString() });
+      await dbq('creare il tuo profilo', supa.from('profiles').upsert({ id: ST.user.id, updated_at: new Date().toISOString() }));
       ST.profile = { id: ST.user.id };
     }
     showScreen('onboarding');
@@ -8547,6 +8600,61 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     if (pools.poolPrincipali.length === 0) {
       console.warn('[train-gen] pool principali vuoto dopo filtri:', { tipoAllen, attrezzatura, livello });
       return null;
+    }
+
+    // ?schedaDebug=1 — BASELINE DEI POOL, in forma copiabile.
+    //
+    // Sono i sei numeri di riferimento del generatore. Vanno rimisurati dopo ogni
+    // sync del Sheet e dopo ogni modifica ai filtri: se divergono senza che nessuno
+    // abbia toccato niente, qualcosa nei filtri è cambiato [L17].
+    // Solo l'app sa calcolarli — i filtri luogo/attrezzo/livello vivono qui — quindi
+    // stato.py non può farlo e li prende da questa stampa.
+    if (typeof window !== 'undefined' && window._trainGenDebug) {
+      // Il core si conta in PESCABILI, non in righe ammesse: una riga pattern=core
+      // con gruppo_target vuoto passa i filtri e non può essere scelta da nessuno
+      // slot, perché gli slot pescano per funzione [L16]. Se i due numeri divergono
+      // c'è una riga nuova da classificare.
+      const funzioniCore = new Set();
+      Object.values(_TRAIN_GEN_CORE_BY_TYPE).forEach(c => {
+        funzioniCore.add(c.tenuta); funzioniCore.add(c.dinamico);
+      });
+      const isCore = ex => String(ex.pattern || '').trim().toLowerCase() === 'core';
+      const coreAmmessi  = pools.poolPrincipali.filter(isCore);
+      const corePescabili = coreAmmessi.filter(ex => funzioniCore.has(String(ex.gruppo_target || '').trim()));
+
+      const b = {
+        poolPrincipali:     pools.poolPrincipali.length,
+        poolFinisher:       (pools.poolFinisher || []).length,
+        poolRiscaldamento:  (pools.poolRiscaldamento || []).length,
+        corePescabili:      corePescabili.length,
+        coreAmmessi:        coreAmmessi.length,
+        poolFinisherTabata: (pools.poolFinisherTabata || []).length,
+        poolCarry:          (pools.poolCarry || []).length,
+      };
+
+      console.log('[train-gen] ═══ BASELINE POOL ═══');
+      console.log(`  profilo: ${tipoAllen} · ${livello} · catalogo ${catalog.length} righe`);
+      console.log(`  attrezzatura: ${Array.from(attrezzaturaSet).sort().join(', ') || '(nessuna)'}`);
+      if ((pools.attrezziInerti || []).length) {
+        console.log(`  ⚠️ attrezzi dichiarati che non aprono nessun esercizio: ${pools.attrezziInerti.join(', ')}`);
+      }
+      // Riga copiabile: è questa che si incolla in docs/CANTIERI.md → Storico baseline.
+      console.log(
+        `  poolPrincipali ${b.poolPrincipali} · poolFinisher ${b.poolFinisher} · ` +
+        `poolRiscaldamento ${b.poolRiscaldamento} · core ${b.corePescabili} pescabili su ${b.coreAmmessi} ammessi · ` +
+        `poolFinisherTabata ${b.poolFinisherTabata} · poolCarry ${b.poolCarry}`
+      );
+      if (b.corePescabili !== b.coreAmmessi) {
+        const senzaFunzione = coreAmmessi.filter(ex => !funzioniCore.has(String(ex.gruppo_target || '').trim()));
+        console.warn('[train-gen] righe core che nessuno slot può pescare (gruppo_target da classificare):',
+                     senzaFunzione.map(ex => `${ex.codice} ${ex.nome} → "${ex.gruppo_target || ''}"`));
+      }
+      // A disposizione per copia/incolla o per stato.py, senza dover rileggere il log.
+      window._ztBaselinePool = Object.assign({}, b, {
+        quando: new Date().toISOString(),
+        catalogoRighe: catalog.length, tipoAllen, livello,
+      });
+      console.log('[train-gen] anche in window._ztBaselinePool ═══');
     }
 
     // BLOCCO 6 — SELEZIONE ESERCIZI PER SESSIONE (DUP + Regola A, 28 mag)
@@ -15017,7 +15125,7 @@ async function saveBodyLog(){
   if(error){ alert('Errore: '+error.message); renderBody(); return; }
 
   if(!isNaN(weight)){
-    await supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id);
+    await dbq('salvare il peso', supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id));
     if(ST.profile) ST.profile.weight_kg = weight;
   }
   await loadBodyLogs();
@@ -16708,8 +16816,13 @@ window.smartSavePasto = async function() {
       }));
       const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
       if (itemsErr) {
-        // Rollback meal orfano
-        await supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id);
+        // Rollback meal orfano. Silenzioso perche' l'errore vero viene rilanciato
+        // subito dopo e mostrato dal chiamante: due toast sarebbero rumore. Ma se
+        // ANCHE il rollback fallisce resta un pasto orfano in tabella, e questo
+        // deve comparire in console — e' esattamente il caso che nel postino
+        // Nutrition non veniva rilevato da nessuno.
+        const rb = await dbq('annullare il pasto incompleto', supa.from('meals').delete().eq('id', meal.id).eq('user_id', ST.user.id), {silenzioso:true});
+        if (rb && rb.error) console.error('[db] ROLLBACK FALLITO: il pasto', meal.id, 'resta orfano in tabella meals');
         throw itemsErr;
       }
       const d = getDay(ST.activeDay);
@@ -19468,14 +19581,24 @@ async function _pianoV4MaybePostino(opts) {
         // Fallimento AI (timeout, risposta malformata, errore DB): rollback della riga-madre.
         // Senza rollback, l'anti-doppione blocca tutti i tentativi successivi trovando
         // la riga vuota per questa week_start.
-        try {
-          const rollRes = await supa.from('weekly_plans').delete().eq('id', planId).eq('user_id', ST.user.id);
-        } catch (rollbackErr) {
-          console.warn('[postino] rollback failed:', rollbackErr);
+        // Il try/catch da solo non bastava: supabase-js non lancia sugli errori
+        // API, quindi `rollRes` veniva assegnato e mai letto e un rollback fallito
+        // non lo rilevava nessuno. E' il caso peggiore possibile: se la riga-madre
+        // resta, l'anti-doppione la ritrova a ogni tentativo successivo e il piano
+        // di quella settimana non si genera piu'.
+        // Toast silenzioso: quello per l'utente c'e' gia' due righe piu' sotto.
+        const rollRes = await dbq('annullare il piano incompleto', supa.from('weekly_plans').delete().eq('id', planId).eq('user_id', ST.user.id), {silenzioso:true});
+        const rollbackOk = !(rollRes && rollRes.error);
+        if (!rollbackOk) {
+          console.error('[postino] ROLLBACK FALLITO per il piano', planId, '— la riga-madre resta e',
+                        'bloccherà i prossimi tentativi per la settimana', status.weekStart);
         }
         if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[status.weekStart];
-        status.decision = 'error-meals-rollback';
-        if (opts.toastOnSkip) showToast('Il coach non è riuscito a generare i pasti. Riprova tra poco.', '⚠️', 7500);
+        status.decision = rollbackOk ? 'error-meals-rollback' : 'error-meals-rollback-failed';
+        status.rollbackOk = rollbackOk;
+        if (opts.toastOnSkip) showToast(rollbackOk
+          ? 'Il coach non è riuscito a generare i pasti. Riprova tra poco.'
+          : 'Il coach non è riuscito a generare i pasti. Riprova più tardi.', '⚠️', 7500);
       }
     }
 
@@ -21237,8 +21360,8 @@ async function confirmSuppSingle() {
   const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 
   // Delete prima per evitare duplicati (nessuna UNIQUE constraint richiesta)
-  await supa.from('supplements_log').delete()
-    .eq('user_id', ST.user.id).eq('date', ST.activeDay).eq('supplement_name', name);
+  await dbq('registrare l\'integratore', supa.from('supplements_log').delete()
+    .eq('user_id', ST.user.id).eq('date', ST.activeDay).eq('supplement_name', name));
   const { error } = await supa.from('supplements_log').insert(
     { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name }
   );
@@ -24056,11 +24179,11 @@ async function _pkgEditorFlushMetaPending() {
   const e = ST.packageEditor;
   if(!e || !e.packageId || !e.dirty) return;
   e.saving = true;
-  await supa.from('supplement_packages').update({
+  await dbq('salvare il pacchetto', supa.from('supplement_packages').update({
     name:  e.name.trim() || ('Pacchetto ' + e.time),
     emoji: e.emoji,
     time:  e.time,
-  }).eq('id', e.packageId).eq('user_id', ST.user.id);
+  }).eq('id', e.packageId).eq('user_id', ST.user.id));
   // Sincronizza ST.packages
   const idx = ST.packages.findIndex(p => p.id === e.packageId);
   if(idx >= 0) {
@@ -24430,7 +24553,7 @@ function pkgEditorRemoveItem(supplementId) {
     const conf = ST.pkgRemoveItemConfirm;
     ST.pkgRemoveItemConfirm = null;
     if(conf.itemId) {
-      await supa.from('supplement_package_items').delete().eq('id', conf.itemId);
+      await dbq('togliere l\'integratore dal pacchetto', supa.from('supplement_package_items').delete().eq('id', conf.itemId));
     }
     // Aggiorna ST.packages
     if(e.packageId) {

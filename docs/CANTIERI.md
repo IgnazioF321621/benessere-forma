@@ -161,6 +161,20 @@ Collaudo: `collaudo_egress.py` confronta l'impronta da `eTag` con quella ottenut
 
 Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo).
 
+## 21. Wrapper errori Supabase — lotti 2 e 3
+Il lotto 1 (Nutrition, 16 scritture) è chiuso il 7 agosto: `dbq()` esiste e le scritture di pasti, digiuni, integratori, pacchetti, pesi, obiettivi e piani ci passano dentro.
+
+**Restano 8 scritture scoperte**, da fare in due lotti separati:
+
+| lotto | modulo | punti |
+|---|---|---|
+| 2 | Training | `workout_sets` insert · `training_logs` update ×2 · `training_logs` delete |
+| 3 | Body | `body_checks`/`body_measurements`/`body_check_photos` delete · rimozione foto da Storage |
+
+Più **46 letture su 101** senza controllo: meno urgenti (una lettura fallita di solito si vede subito a schermo), ma la stessa medicina vale.
+
+⚠️ Un lotto per sessione, mai a tappeto: è la regola nata da [L1](LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga).
+
 ## 96. Unificare la chiave degli strumenti del cantiere — ✅ chiuso 7 agosto
 `cantiere_96_pendente.tsv` era indicizzato per nome file: **44 righe su 96 avevano già perso lo stato**. Convertito alla chiave SHA-256 (`chiave_pendente.py`), 96 righe su 96 risolte, zero perse. `prepara.py` cerca per impronta; `riconcilia.py` verifica che diario e piano coincidano prima di ogni migrazione.
 
