@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste
 
 ---
 
@@ -335,3 +335,29 @@ Nessun danno operativo: erano tutte già sincronizzate, e in `prepara.py` lo sta
 Se il file non si trova, la risposta giusta è **non lo so** — riga senza impronta, marcata `da riverificare`. Una risposta assente si vede; una risposta falsa che si conferma da sola, no.
 
 **Corollario, valido per ogni criterio di questo cantiere:** «il codice ha un `gif_slug`» dice qualcosa sul *codice*, mai sul *file* della riga accanto. Per sapere se il lavoro su un file è concluso si parte dalla sua impronta e si guarda se un codice vivo la serve — `impronta → oggetto → riga → codice`. È la stessa direzione di [L9](#l9--aggancio-per-impronta-mai-per-nome), applicata a una domanda diversa.
+
+---
+
+## L26 — Una vista dedotta dal nome di una funzione non è una vista che esiste
+
+**Il caso.** 9 agosto, Cantiere Giorno. Correggendo i punti che calcolavano la data in UTC, ne è emerso uno in `loadWorkouts()`: `new Date(y, m, 0)` è mezzanotte **locale**, e passarlo per `toISOString()` lo riportava indietro di un giorno. Il mese veniva chiesto fino al 30 agosto invece che al 31. Difetto vero, verificato su cinque mesi.
+
+L'errore non è stato correggerlo. È stato **raccontare cosa si rompeva** senza aprire la schermata.
+
+Dal nome della funzione e dal fatto che chiedesse un mese intero ho dedotto l'esistenza di un «calendario mensile degli allenamenti», e ho annunciato che la correzione «rende visibili 3 allenamenti oggi nascosti: 31 maggio, 30 giugno, 31 luglio». Ignazio ha risposto che quella vista nell'app non c'è.
+
+**Cosa ho trovato controllando davvero:**
+
+| quello che avevo detto | quello che il codice dice |
+|---|---|
+| esiste un calendario mensile | `renderCalendar()` non è chiamata da nessuno: vista **rimossa** il 10 giugno (`e0fa603`), corpo rimasto |
+| tre allenamenti recuperati | non erano persi. Intatti a database (16, 21 e 15 serie), e sempre contati da `loadTrainingAllCompleted`, che non ha limiti di mese: rotazione, streak, debito e mesociclo li hanno sempre visti |
+| la correzione serve a quella vista | serve alla **striscia settimanale** di Progressione, l'unica viva. Effetto reale: l'ultimo giorno del mese corrente smette di essere cieco. Prima occasione: 31 agosto |
+
+Il difetto era reale, la portata inventata. È la variante di [L8](#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso) applicata al codice invece che ai dati: **che una funzione esista e sia sbagliata non dice che qualcuno la guardi**.
+
+**La regola.** Prima di dichiarare cosa un utente vedrà cambiare, si risale dalla riga alla schermata: chi chiama questa funzione, chi consuma il suo risultato, e quel percorso è raggiungibile? Sono tre `grep`. Senza quei tre `grep` si descrive il codice, non l'app — e la differenza non si nota, perché il racconto torna comunque.
+
+**Corollario, che vale in questo repo più che altrove.** Le 27 funzioni mai chiamate censite in `CLAUDE.md` non sono un dettaglio di igiene: sono 27 occasioni di raccontare una funzionalità che non esiste. Quando una funzione sembra spiegare un comportamento, **verificare che sia chiamata è il primo passo, non l'ultimo**.
+
+**Il commit resta com'è.** `b88a3b5` è pubblicato e il codice che contiene è corretto; riscriverne la storia per aggiustare una frase nasconderebbe proprio l'errore da cui c'è da imparare. La rettifica vive qui, e i due difetti veri emersi dalla verifica sono i cantieri [24](CANTIERI.md#24-striscia-settimanale-cieca-a-cavallo-di-mese) e [25](CANTIERI.md#25-rendercalendar--codice-morto-dal-10-giugno).

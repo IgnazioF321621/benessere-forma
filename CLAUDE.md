@@ -439,3 +439,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 23. [Il codice scritto a mano non è una chiave](docs/LEZIONI.md#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) — registri del cantiere
 24. [L'impronta si legge senza scaricare](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo) — `eTag` = MD5, verifiche `HEAD`, contatore byte
 25. [Un'impronta dedotta dal codice non verifica quel codice](docs/LEZIONI.md#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice) — criteri di verifica
+26. [Una vista dedotta dal nome di una funzione non esiste](docs/LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste) — portata di una modifica, funzioni mai chiamate

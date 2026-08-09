@@ -2,7 +2,7 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 7 agosto 2026.*
+*Aggiornato: 9 agosto 2026.*
 
 Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF chiuse](#zone-gif-chiuse) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
@@ -145,6 +145,27 @@ Tutti e 647 gli oggetti rispondono `cache-control: no-cache` — verificato su t
 Rimedio: ricaricare con `public, max-age=31536000, immutable`. **Non consuma egress** — i byte entrano — e i file sono già tutti sul Mac. È sicuro perché il cantiere non riscrive mai un percorso esistente: rinominare significa creare un percorso nuovo.
 
 Se si fa il cantiere 21, questo viene gratis: si sta già ricaricando tutto, basta aggiungere l'intestazione.
+
+## 24. Striscia settimanale cieca a cavallo di mese
+La striscia calendario di Progressione (`renderCalStrip`) mostra una settimana da lunedì a domenica, ma i dati che disegna arrivano da `loadWorkouts(anno, mese)`, che carica **un mese solo** — quello corrente. Ogni settimana a cavallo di due mesi ha quindi una parte cieca: i giorni che cadono nel mese precedente non hanno il pallino, anche se l'allenamento è stato fatto.
+
+Ricade su tre punti, tutti raggiungibili:
+- il pallino manca nella casella
+- il dettaglio del giorno si apre senza il nome della sessione in intestazione (`ST.trainWorkouts` non ha quella data)
+- *Elimina allenamento* dal dettaglio risponde «Workout non trovato in calendario» e non elimina
+
+Le serie in `training_logs` si vedono lo stesso: `openDayDetail` le interroga per conto suo. È solo la riga `workouts` a mancare.
+
+Rimedio minimo: caricare l'intervallo che serve alla striscia (la settimana visualizzata, o il mese ± i giorni di bordo) invece del mese solare. Da valutare insieme se `loadWorkouts` debba continuare a ragionare per mesi, ora che l'unica vista mensile non esiste più — vedi cantiere 25.
+
+Emerso il 9 agosto verificando la portata attribuita a `b88a3b5` → [L26](LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste). **È il difetto più grosso dei due, e più grosso di quello corretto in quel commit**, che riguardava solo l'ultimo giorno del mese corrente.
+
+## 25. `renderCalendar` — codice morto dal 10 giugno
+La griglia mensile con le frecce ← → e il piedino *Sessioni · Streak · Freq.* è nata l'1 maggio (`f9616d7`) ed è stata sostituita dalla striscia settimanale nel redesign di Progressione del 10 giugno (`e0fa603`). Il redesign ha tolto la chiamata e lasciato il corpo: **~100 righe mai eseguite**, comprese le due frecce di navigazione mese che chiamano `loadWorkouts`.
+
+È una delle 27 funzioni mai chiamate censite in `CLAUDE.md`, ma va segnalata a parte perché è quella che ha fatto attribuire a `b88a3b5` una portata che non aveva: leggendo il codice sembra esistere una vista mensile, e non esiste.
+
+Da decidere insieme alla 24: se la striscia smette di ragionare per mesi, `renderCalendar` e il mese in `loadWorkouts` se ne vanno insieme.
 
 ## 23. Strumenti del cantiere a consumo zero — ✅ chiuso 7 agosto
 `impronte.py` scaricava ogni oggetto per calcolarne l'impronta, e le verifiche riscaricavano il file per confrontarlo: la voce più grossa dell'egress che ha portato il piano Free al 171%.
