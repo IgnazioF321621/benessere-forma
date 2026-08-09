@@ -1442,6 +1442,17 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .int-v3-extra-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:500;color:var(--t1);line-height:1.3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .int-v3-extra-more{color:var(--t3);font-size:18px;line-height:1;letter-spacing:.1em;flex-shrink:0;}
 
+/* ── SOSPESI (9 ago 2026) — un prodotto sospeso resta in libreria ma esce dalla
+   routine quotidiana. Deve riconoscersi a colpo d'occhio, senza sembrare rotto:
+   niente rosso (non e' un errore ne' una cancellazione), fondo smorzato e
+   l'ambra gia' in uso per gli stati "attenzione" (OVER_COLOR). ── */
+.int-v3-extra-row.sospeso{background:transparent;border-style:dashed;border-color:var(--b2);}
+.int-v3-extra-row.sospeso .int-v3-extra-time,
+.int-v3-extra-row.sospeso .int-v3-extra-name{color:var(--t3);}
+.int-v3-sospesi-head{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;line-height:1.4;text-transform:uppercase;color:var(--t3);}
+.int-v3-sospesi-head::after{content:'';flex:1;height:1px;background:var(--b1);}
+.zt-badge-sospeso{flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;line-height:1;text-transform:uppercase;color:#B45309;background:#FBF0E0;border-radius:4px;padding:3px 6px;}
+
 .int-v3-empty-section{padding:24px 16px;text-align:center;background:var(--s1);border:1px dashed var(--b1);border-radius:12px;}
 .int-v3-empty-emoji{font-size:32px;margin-bottom:8px;}
 .int-v3-empty-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.25em;line-height:1.4;color:var(--t2);text-transform:uppercase;margin-bottom:6px;}
@@ -1505,8 +1516,19 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .pkg-item-days-left{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;color:var(--t3);text-transform:uppercase;margin-left:8px;}
 .pkg-item-cost{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;line-height:1.4;color:var(--t3);text-transform:uppercase;}
 .pkg-item-remove{display:block;width:100%;margin-top:12px;padding:10px 0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;line-height:1.4;color:#C44434;text-transform:uppercase;background:none;border:none;border-top:1px solid #E8E4DC;cursor:pointer;}
+/* Sospendi/Riprendi: azione reversibile, quindi mai rossa. Grigia quando
+   sospende, evergreen quando riattiva (e' il gesto positivo). */
+.pkg-item-suspend{display:block;width:100%;margin-top:12px;padding:10px 0;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.25em;line-height:1.4;color:var(--t2);text-transform:uppercase;background:none;border:none;border-top:1px solid #E8E4DC;cursor:pointer;}
+.pkg-item-suspend.riprendi{color:var(--acc);}
+.pkg-item-suspend + .pkg-item-remove{margin-top:0;border-top:none;}
+.pkg-item-card.sospeso{border-style:dashed;}
+.pkg-item-card.sospeso .pkg-item-name{color:var(--t2);}
 
 .pkg-editor-delete{display:block;width:100%;margin-top:32px;padding:14px 0;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.25em;line-height:1.4;color:#C44434;text-transform:uppercase;background:none;border:none;cursor:pointer;}
+.pkg-editor-suspend{display:block;width:100%;margin-top:28px;padding:14px 0;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.25em;line-height:1.4;color:var(--t2);text-transform:uppercase;background:none;border:1px solid var(--b2);border-radius:10px;cursor:pointer;}
+.pkg-editor-suspend.riprendi{color:var(--acc);border-color:var(--acc);}
+.pkg-editor-suspend + .pkg-editor-delete{margin-top:14px;}
+.pkg-editor-suspend-note{font-family:'Syne',sans-serif;font-size:12px;color:var(--t3);line-height:1.5;text-align:center;margin:8px 2px 0;}
 
 .pkg-editor-empty{padding:36px 16px;text-align:center;}
 .pkg-editor-empty-emoji{font-size:42px;margin-bottom:12px;}
@@ -3671,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 10:06';
+const APP_VERSION = '2026.08.09 · 10:59';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -17436,7 +17458,11 @@ function renderIntegratori(){
   } else {
     pkgsHTML += pkgs.map(p => {
       const nItems = (p.items||[]).length;
-      const itemsLabel = nItems === 1 ? '1 PRODOTTO' : `${nItems} PRODOTTI`;
+      // Il conteggio nudo mentiva: "8 PRODOTTI" contava anche i sospesi, che nella
+      // giornata non compaiono. Se ce n'è almeno uno, il cartellino lo dichiara.
+      const nSosp = (p.items||[]).filter(it => it.supplement && !it.supplement.active).length;
+      const itemsLabel = (nItems === 1 ? '1 PRODOTTO' : `${nItems} PRODOTTI`)
+        + (nSosp > 0 ? ` · ${nSosp} SOSPES${nSosp === 1 ? 'O' : 'I'}` : '');
       // Stock warn: se uno qualsiasi degli items ha ≤7gg
       const hasLowStock = (p.items||[]).some(it => {
         const d = _suppDaysLeft(it.supplement);
@@ -17476,6 +17502,18 @@ function renderIntegratori(){
     </div>
     <div class="int-v3-section-eb">SINGOLI CON ORARIO</div>`;
 
+  // I sospesi non si mescolano più agli attivi: prima erano disegnati identici e
+  // solo il contatore "N ATTIVI" li escludeva, quindi la lista contraddiceva la
+  // sua stessa intestazione. Ora stanno sotto una riga di separazione, smorzati.
+  const sospesiExtras = extras.filter(s => !s.active);
+  const rigaExtra = (s, sospeso) => `
+      <div class="int-v3-extra-row${sospeso?' sospeso':''}" onclick="openExtraEditor('${esc(s.local_id)}')">
+        <div class="int-v3-extra-time">${esc(s.slot || '--:--')}</div>
+        <div class="int-v3-extra-name">${esc(s.name)}</div>
+        ${sospeso?'<span class="zt-badge-sospeso">Sospeso</span>':''}
+        <span class="int-v3-extra-more">···</span>
+      </div>`;
+
   if(extras.length === 0){
     extrasHTML += `<div class="int-v3-empty-section">
       <div class="int-v3-empty-emoji">💊</div>
@@ -17483,12 +17521,19 @@ function renderIntegratori(){
       <div class="int-v3-empty-text">Gli integratori fuori dai pacchetti compaiono qui.</div>
     </div>`;
   } else {
-    extrasHTML += extras.map(s => `
-      <div class="int-v3-extra-row" onclick="openExtraEditor('${esc(s.local_id)}')">
-        <div class="int-v3-extra-time">${esc(s.slot || '--:--')}</div>
-        <div class="int-v3-extra-name">${esc(s.name)}</div>
-        <span class="int-v3-extra-more">···</span>
-      </div>`).join('');
+    if(activeExtras.length === 0){
+      extrasHTML += `<div class="int-v3-empty-section">
+        <div class="int-v3-empty-emoji">⏸️</div>
+        <div class="int-v3-empty-title">NESSUN EXTRA ATTIVO</div>
+        <div class="int-v3-empty-text">Sono tutti sospesi. Aprine uno e premi Riprendi per rimetterlo nella tua giornata.</div>
+      </div>`;
+    } else {
+      extrasHTML += activeExtras.map(s => rigaExtra(s, false)).join('');
+    }
+    if(sospesiExtras.length > 0){
+      extrasHTML += `<div class="int-v3-sospesi-head">Sospesi · ${sospesiExtras.length}</div>`;
+      extrasHTML += sospesiExtras.map(s => rigaExtra(s, true)).join('');
+    }
   }
 
   extrasHTML += `<button class="int-v3-cta secondary" onclick="openCatalogForExtra()">
@@ -23380,9 +23425,30 @@ async function fetchAdvice(){
   ST.advLoading=false;renderOggi();
 }
 
+// Sospendi / Riprendi un integratore. Ricollegata alla UI il 9 ago 2026: la
+// funzione esisteva ed era corretta, ma nessuna schermata la chiamava piu'.
+//
+// Sospendere e' un gesto sul FUTURO: il prodotto esce dalla routine quotidiana
+// (activeSupps() lo filtra ovunque — gruppi di Oggi, pannello di registrazione,
+// totali dei giorni a venire) e NON tocca una riga di supplements_log. Se era
+// gia' spuntato oggi quella registrazione resta, perche' e' vera: il toast lo
+// dice, invece di cancellarla per far tornare la grafica.
 async function toggleSuppActive(id){
-  const s=ST.supps.find(s=>s.local_id===id);
-  if(s){s.active=!s.active;await dbUpdateSupp(id,{active:s.active});renderIntegratori();saveCache();showToast(s.active?'Integratore attivato':'Integratore disattivato', s.active?'✅':'⏸️');}
+  const s = ST.supps.find(x => x.local_id === id);
+  if(!s) return;
+  // Prima di cambiare stato: era gia' registrato oggi? Serve solo per il messaggio.
+  const presoOggi = (getDay(todayKey()).suppsTaken || []).includes(id);
+  s.active = !s.active;
+  await dbUpdateSupp(id, {active: s.active});
+  renderIntegratori();
+  if(ST.packageEditor) renderPackageEditor();   // l'editor e' aperto sopra: va ridisegnato
+  if(ST.page === 'oggi') renderOggi();
+  saveCache();
+  if(s.active) {
+    showToast('Ripreso · torna nella tua giornata', '✅');
+  } else {
+    showToast(presoOggi ? 'Sospeso · l\'assunzione di oggi resta registrata' : 'Sospeso · lo storico resta intatto', '⏸️');
+  }
 }
 
 function updateSuppMultiplier(id, newMultiplier) {
@@ -24396,6 +24462,10 @@ function _renderPkgItemCard(it, expanded) {
   const monthly = suppMonthlyCost(s);
   const daily = monthly / 30;
   const sid = esc(s.local_id);
+  // La stessa card serve sia gli item di un pacchetto sia l'editor dell'extra:
+  // in modalita' extra le azioni stanno in fondo alla schermata, non nella card.
+  const inPkgMode = !!(ST.packageEditor && ST.packageEditor.mode !== 'extra');
+  const sospeso = !s.active;
 
   const expand = expanded ? `<div class="pkg-item-expand">
     ${(kcal||showMacros)?`<div class="pkg-item-chips">
@@ -24434,10 +24504,11 @@ function _renderPkgItemCard(it, expanded) {
     </div>
     ${daysLeft!==null?`<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);letter-spacing:.06em;padding:4px 0 6px;">= ${daysLeft} giorni rimasti${dosePerDay?` (${dosePerDay} ${esc(unit)}/die)`:''}</div>`:''}
     <div class="pkg-item-cost">€ ${daily.toFixed(2)}/oggi · ${monthly.toFixed(2)}/mese</div>
-    ${ST.packageEditor && ST.packageEditor.mode !== 'extra' ? `<button class="pkg-item-remove" onclick="pkgEditorRemoveItem('${sid}')">× Rimuovi dal pacchetto</button>` : ''}
+    ${inPkgMode ? `<button class="pkg-item-suspend${sospeso?' riprendi':''}" onclick="toggleSuppActive('${sid}')">${sospeso?'▶ Riprendi':'⏸ Sospendi'}</button>` : ''}
+    ${inPkgMode ? `<button class="pkg-item-remove" onclick="pkgEditorRemoveItem('${sid}')">× Rimuovi dal pacchetto</button>` : ''}
   </div>` : '';
 
-  const collapsed = ST.packageEditor && ST.packageEditor.mode !== 'extra';
+  const collapsed = inPkgMode;
   const header = collapsed ? `<div class="pkg-item-row" onclick="pkgEditorToggleItem('${sid}')">
     <span class="pkg-item-drag" onclick="event.stopPropagation()">⠿</span>
     <div class="pkg-item-body">
@@ -24445,12 +24516,13 @@ function _renderPkgItemCard(it, expanded) {
       <div class="pkg-item-meta">
         <span>${metaParts.join(' · ')}</span>
         ${stockBadge}
+        ${sospeso?'<span class="zt-badge-sospeso">Sospeso</span>':''}
       </div>
     </div>
     <span class="pkg-item-chev">▾</span>
   </div>` : '';
 
-  return `<div class="pkg-item-card${expanded?' expanded':''}">${header}${expand}</div>`;
+  return `<div class="pkg-item-card${expanded?' expanded':''}${sospeso?' sospeso':''}">${header}${expand}</div>`;
 }
 
 // ── EXTRA editor: usa lo stesso overlay con UI semplificata ──
@@ -24485,17 +24557,29 @@ function _renderExtraEditor() {
         <h2 class="int-v3-section-title">Dettagli prodotto</h2>
       </div>
       ${_renderPkgItemCard({supplement_id: s.local_id, supplement: s, sort_order:0, id:null}, true)}
+      <button class="pkg-editor-suspend${s.active?'':' riprendi'}" onclick="toggleSuppActive('${esc(s.local_id)}')">${s.active?'⏸ Sospendi':'▶ Riprendi'}</button>
+      <div class="pkg-editor-suspend-note">${s.active
+        ? 'Esce dalla tua giornata ma resta qui: lo riprendi quando vuoi.'
+        : 'Sospeso. Non compare più nella giornata finché non lo riprendi.'}</div>
       <button class="pkg-editor-delete" onclick="pkgEditorConfirmDeleteExtra('${esc(s.local_id)}')">Elimina dalla libreria</button>
     </div>`;
 
   // Conferma elimina extra (riusa flag pkgDeleteConfirm)
+  // Testo rivisto 9 ago 2026: prima la riga rassicurante ("lo storico resta")
+  // era schiacciata fra "rimosso definitivamente" e "l'operazione è definitiva",
+  // e l'insieme si leggeva come una minaccia globale — al punto da far credere
+  // che si perdessero anche le assunzioni passate. Ora la cosa vera e importante
+  // sta da sola e per prima, e il messaggio indica la via d'uscita reversibile.
   if(ST.pkgDeleteConfirm) {
     body += `<div class="info-modal-overlay" style="z-index:1600;" onclick="if(event.target===this)pkgEditorCancelDelete()">
       <div class="info-modal">
-        <h3 style="margin:0 0 10px;font-family:'Syne',sans-serif;font-size:17px;color:var(--t1);">Eliminare l'integratore?</h3>
-        <p style="font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.5;margin:0 0 18px;">
-          ${esc(s.name)} verrà rimosso definitivamente. Lo storico delle assunzioni viene mantenuto.<br><br>
-          <span style="font-size:12px;color:var(--t3);">L'operazione è definitiva.</span>
+        <h3 style="margin:0 0 10px;font-family:'Syne',sans-serif;font-size:17px;color:var(--t1);">Eliminare ${esc(s.name)}?</h3>
+        <p style="font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.5;margin:0 0 14px;">
+          Le assunzioni già registrate <b>restano nello storico</b>: quello che hai preso in passato non si perde.<br><br>
+          Sparisce dalla tua libreria e dalla registrazione di ogni giorno.
+        </p>
+        <p style="font-family:'Syne',sans-serif;font-size:13px;color:var(--t3);line-height:1.5;margin:0 0 18px;padding:10px 12px;background:var(--s1);border-radius:8px;">
+          Se vuoi solo smettere di prenderlo, usa <b>Sospendi</b>: lo ritrovi qui quando decidi di riprenderlo.
         </p>
         <div style="display:flex;gap:10px;">
           <button class="btn btn-ghost" style="flex:1;" onclick="pkgEditorCancelDelete()">Annulla</button>
