@@ -146,26 +146,32 @@ Rimedio: ricaricare con `public, max-age=31536000, immutable`. **Non consuma egr
 
 Se si fa il cantiere 21, questo viene gratis: si sta già ricaricando tutto, basta aggiungere l'intestazione.
 
-## 24. Striscia settimanale cieca a cavallo di mese
-La striscia calendario di Progressione (`renderCalStrip`) mostra una settimana da lunedì a domenica, ma i dati che disegna arrivano da `loadWorkouts(anno, mese)`, che carica **un mese solo** — quello corrente. Ogni settimana a cavallo di due mesi ha quindi una parte cieca: i giorni che cadono nel mese precedente non hanno il pallino, anche se l'allenamento è stato fatto.
+## 24. Striscia settimanale cieca sullo storico — ✅ chiuso 9 agosto (`2b2fe95`)
+**Il titolo di questa voce era sbagliato, e con esso la diagnosi.** Non era «cieca a cavallo di mese»: era cieca su **qualunque settimana precedente al mese corrente**, per intero.
 
-Ricade su tre punti, tutti raggiungibili:
-- il pallino manca nella casella
-- il dettaglio del giorno si apre senza il nome della sessione in intestazione (`ST.trainWorkouts` non ha quella data)
-- *Elimina allenamento* dal dettaglio risponde «Workout non trovato in calendario» e non elimina
+Il motivo l'ha detto il codice, non l'intuizione: la striscia (`renderCalStrip`) va solo all'indietro e cambiando settimana **non ricarica niente** — sposta un contatore e ridisegna. I dati venivano da `loadWorkouts(anno, mese)`, che caricava il solo mese corrente. Misurato sui dati veri il 9 agosto: **81 allenamenti, 6 nel mese corrente e 75 fuori** — il 93% dello storico spariva al primo tocco della freccia indietro. Non i giorni di bordo: tutto.
 
-Le serie in `training_logs` si vedono lo stesso: `openDayDetail` le interroga per conto suo. È solo la riga `workouts` a mancare.
+I tre sintomi, tutti raggiungibili:
+- pallino assente nella casella
+- dettaglio del giorno senza nome sessione in intestazione (`ST.trainWorkouts` non aveva quella data)
+- *Elimina allenamento* rispondeva «Workout non trovato in calendario» e non eliminava
 
-Rimedio minimo: caricare l'intervallo che serve alla striscia (la settimana visualizzata, o il mese ± i giorni di bordo) invece del mese solare. Da valutare insieme se `loadWorkouts` debba continuare a ragionare per mesi, ora che l'unica vista mensile non esiste più — vedi cantiere 25.
+Le serie in `training_logs` si vedevano comunque: `openDayDetail` le interroga per conto suo. Mancava solo la riga `workouts`.
 
-Emerso il 9 agosto verificando la portata attribuita a `b88a3b5` → [L26](LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste). **È il difetto più grosso dei due, e più grosso di quello corretto in quel commit**, che riguardava solo l'ultimo giorno del mese corrente.
+**Rimedio adottato**: `loadWorkouts()` carica tutto lo storico dell'utente, paginato (L13) e con `{error}` controllato. Sparisce la classe di difetto invece di spostarne il confine — niente logica sui bordi, niente rete a ogni tocco di freccia. È il criterio che `loadTrainingAllCompleted` usa da sempre, ed è il motivo per cui rotazione, streak e debito non hanno mai sbagliato mentre la striscia sì.
 
-## 25. `renderCalendar` — codice morto dal 10 giugno
-La griglia mensile con le frecce ← → e il piedino *Sessioni · Streak · Freq.* è nata l'1 maggio (`f9616d7`) ed è stata sostituita dalla striscia settimanale nel redesign di Progressione del 10 giugno (`e0fa603`). Il redesign ha tolto la chiamata e lasciato il corpo: **~100 righe mai eseguite**, comprese le due frecce di navigazione mese che chiamano `loadWorkouts`.
+Collaudo sulla settimana reale 27 lug – 2 ago 2026 (5 allenamenti): pallini da 1/5 a **5/5**, nomi sessione da 4 intestazioni vuote a `upperA · lowerA · upperB · lowerB · upperC`, eliminazione da 4 blocchi a **0**. Settimana corrente invariata a 5 pallini. Copertura da 6/81 a **81/81**.
 
-È una delle 27 funzioni mai chiamate censite in `CLAUDE.md`, ma va segnalata a parte perché è quella che ha fatto attribuire a `b88a3b5` una portata che non aveva: leggendo il codice sembra esistere una vista mensile, e non esiste.
+Emerso il 9 agosto verificando la portata attribuita a `b88a3b5` → [L26](LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste).
 
-Da decidere insieme alla 24: se la striscia smette di ragionare per mesi, `renderCalendar` e il mese in `loadWorkouts` se ne vanno insieme.
+## 25. `renderCalendar` — codice morto rimosso — ✅ chiuso 9 agosto
+La griglia mensile con le frecce ← → e il piedino *Sessioni · Streak · Freq.* è nata l'1 maggio (`f9616d7`) ed è stata sostituita dalla striscia settimanale nel redesign di Progressione del 10 giugno (`e0fa603`). Il redesign ha tolto la chiamata e lasciato il corpo: **73 righe mai eseguite per due mesi**.
+
+Era una delle 27 funzioni mai chiamate censite in `CLAUDE.md`, segnalata a parte perché è quella che ha fatto attribuire a `b88a3b5` una portata che non aveva: leggendo il codice sembrava esistere una vista mensile, e non esisteva.
+
+**Rimosso**: la funzione (73 righe, con le sue `SESS_LABEL`/`SESS_COLOR`/`MONTH_NAMES` e le due frecce, ultimi punti che passavano anno e mese a `loadWorkouts`) e lo stato `ST.trainCalMonth`, che **nessuno impostava mai**. Il suo unico lettore vivo era in `saveWorkoutRecord`, dentro un «se siamo nel mese corrente» sempre vero: semplificato alla sola riga che conta, l'invalidazione della cache dopo un allenamento salvato.
+
+Niente markup né CSS orfani da togliere: la funzione restituiva una stringa che nessuno inseriva nel documento e usava solo stili in linea. La vista non era nascosta, era scollegata.
 
 ## 23. Strumenti del cantiere a consumo zero — ✅ chiuso 7 agosto
 `impronte.py` scaricava ogni oggetto per calcolarne l'impronta, e le verifiche riscaricavano il file per confrontarlo: la voce più grossa dell'egress che ha portato il piano Free al 171%.
