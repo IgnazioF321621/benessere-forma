@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 10:59';
+const APP_VERSION = '2026.08.09 · 12:05';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3704,6 +3704,11 @@ const ST = {
   TARGET: {kcal:1900, protein:143, carbs:190, fat:63},
   page: 'oggi',
   activeDay: todayKey(),
+  // Qual era "oggi" l'ultima volta che l'app ha guardato l'orologio. Serve a
+  // capire, al risveglio, se activeDay stava seguendo il giorno corrente o se
+  // l'utente si era parcheggiato apposta su un giorno passato. Vedi
+  // _allineaGiornoCorrente().
+  dayAnchor: todayKey(),
   db: {days:{}},
   supps: [],
   logSlot: 'colazione',
@@ -3770,11 +3775,15 @@ const ST = {
     { remaining:120, total:120, running:false },
     { remaining:60,  total:60,  running:false },
   ],
-  trainLoggedSets: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_sets_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
+  // La chiave si LEGGE qui e si SCRIVE in 5 punti, tutti via todayKey(). Devono
+  // usare lo stesso orologio: se qui restasse UTC, dopo il passaggio all'ora
+  // locale fra mezzanotte e le due si scriverebbe su un giorno e si rileggerebbe
+  // l'altro, e le serie loggate sparirebbero al riavvio.
+  trainLoggedSets: (()=>{ try { const raw=localStorage.getItem('zt_train_sets_'+todayKey()); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   // GRAFICA L1 — Cronometro TEMPO WORKOUT per sessione del giorno. Persistito su
   // localStorage zt_train_work_<YYYY-MM-DD>. Struttura: { [sessionId]: { totalSec, execStartedAt|null } }
   // totalSec = secondi cumulati delle serie completate; execStartedAt = ms al kickoff serie in corso.
-  trainWorkTime: (()=>{ try { const today=new Date().toISOString().slice(0,10); const raw=localStorage.getItem('zt_train_work_'+today); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
+  trainWorkTime: (()=>{ try { const raw=localStorage.getItem('zt_train_work_'+todayKey()); return raw?JSON.parse(raw):{}; } catch(e){ return {}; } })(),
   trainProgEx: null,
   trainProgLogs: [],
   trainProgMetric: 'peso',          // 'peso' (default) | 'reps' | 'volume' | 'tempo' (solo iso temporali)
@@ -3919,7 +3928,22 @@ function isPullUpExercise(name){ return name === PULL_UP_EXERCISE_NAME; }
 // ═══════════════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════════════
-function todayKey(){return new Date().toISOString().slice(0,10);}
+// ── CHIAVE GIORNO — unico modo, in tutto il file, di trasformare una data in
+// 'YYYY-MM-DD'. Legge l'ora del TELEFONO, mai UTC.
+//
+// toISOString() risponde in UTC. In Italia (+2 d'estate, +1 d'inverno) fra
+// mezzanotte e le due l'app credeva fosse ancora ieri, e tutto quello che si
+// registrava in quella fascia atterrava sul giorno prima. Misurato sui dati veri
+// il 9 ago 2026: 68 righe di supplements_log gia' finite sul giorno sbagliato,
+// una sera da 13 registrazioni in un colpo solo.
+//
+// Accetta una Date, una stringa 'YYYY-MM-DD', o niente (= adesso).
+function dayKey(d){
+  const x = (d instanceof Date) ? d : (d != null ? new Date(d) : new Date());
+  const p = n => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
+}
+function todayKey(){ return dayKey(); }
 function fmtDate(k){return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});}
 function J(x){return JSON.parse(JSON.stringify(x));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -4506,7 +4530,7 @@ function calcStreak() {
   let streak = 0;
   let d = new Date();
   for(let i=0; i<keys.length; i++) {
-    const expected = d.toISOString().slice(0,10);
+    const expected = dayKey(d);
     if(keys[i] !== expected) break;
     const day = ST.db.days[keys[i]];
     if(day.fasting || (day.meals && day.meals.length > 0)) streak++;
@@ -4605,6 +4629,21 @@ function dayTotals(day) {
   };
 }
 function activeSupps(){return ST.supps.filter(s=>s.active);}
+// Prodotti da MOSTRARE in una giornata: gli attivi, piu' quelli che quel giorno
+// sono stati davvero registrati anche se nel frattempo sono stati sospesi.
+//
+// Debito lasciato dal cantiere Sospendi: sospendere qualcosa gia' spuntato oggi
+// ne faceva sparire la scheda mentre le sue calorie restavano — giustamente — nel
+// totale, e a schermo non c'era piu' niente che spiegasse quel numero. La cura non
+// e' cancellare la registrazione (e' vera) ma continuare a mostrarla, con
+// l'etichetta SOSPESO. Il giorno dopo, non essendo piu' registrato, sparisce da se'.
+//
+// Solo per la VISTA. La registrazione (renderSuppSheet, confirmSuppGroup) resta
+// sui soli attivi: un sospeso non si puo' spuntare di nuovo.
+function suppsDelGiorno(day){
+  const presi = (day && day.suppsTaken) || [];
+  return (ST.supps||[]).filter(s => s.active || presi.includes(s.local_id));
+}
 function suppMonthlyCost(s){
   const multiplier = s.dose_multiplier != null ? parseFloat(s.dose_multiplier) : 1;
   const doseDie    = s.dose_die        != null ? parseFloat(s.dose_die)        : 1;
@@ -5596,7 +5635,7 @@ function m2SetBloodGate(hasRecent) {
   // Default data esame = oggi
   if(hasRecent){
     const el = document.getElementById('m2-test-date');
-    if(el && !el.value) el.value = new Date().toISOString().slice(0,10);
+    if(el && !el.value) el.value = todayKey();
   }
 }
 
@@ -6345,7 +6384,7 @@ async function loadAndStart() {
     await loadCatalog();
     await loadSupps();
     await loadPackages();
-    await loadExtras();
+    await loadExtras(ST.activeDay);
     await loadTodaySuppLog();
     await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS (ramo cache-hit)
     if (profileIsComplete(ST.profile)) {
@@ -6381,7 +6420,7 @@ async function loadAndStart() {
   await loadCatalog();   // ← catalogo prima, serve per arricchire supplements
   await loadSupps();
   await loadPackages();
-  await loadExtras();
+  await loadExtras(ST.activeDay);
   await loadAllDays();
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
@@ -6439,12 +6478,34 @@ async function loadAndStart() {
   }
 }
 
+// ── Il giorno e' cambiato mentre l'app dormiva? ──────────────────────────────
+// Su iPhone la PWA non viene chiusa ma sospesa: riaprendola il giorno dopo,
+// ST.activeDay era rimasto fermo alla data dell'avvio e l'intestazione mostrava
+// ancora ieri. Qui si guarda l'orologio e si decide.
+//
+// La regola, in una riga: seguo il calendario solo se stavi seguendo il
+// calendario. Se ti eri parcheggiato su un giorno passato per consultarlo, resti
+// dov'eri — non ti si strappa la navigazione di mano mentre leggi.
+//
+// Non tocca la rete e non scrive niente: ritorna solo true se ha spostato il
+// giorno, cosi' chi chiama sa che deve ricaricare.
+function _allineaGiornoCorrente() {
+  const oggi = todayKey();
+  if (oggi === ST.dayAnchor) return false;          // stesso giorno, nulla da fare
+  const seguivaIlCalendario = (ST.activeDay === ST.dayAnchor);
+  ST.dayAnchor = oggi;
+  if (!seguivaIlCalendario) return false;           // parcheggiato nel passato: si resta
+  ST.activeDay = oggi;
+  ST.advice = '';                                   // il consiglio era di ieri
+  return true;
+}
+
 async function refreshInBackground() {
   try {
     await loadCatalog();  // catalogo prima
     await loadSupps();
     await loadPackages();
-    await loadExtras();
+    await loadExtras(ST.activeDay);
     await loadAllDays();
     // Sovrascrive suppsTaken di oggi con dati freschi PRIMA di renderare
     await loadTodaySuppLog();
@@ -6620,7 +6681,7 @@ async function computeTrainHomeData(){
     const completedDates = new Set((completedArr||[]).map(w=>w.date));
     let streak=0, check=new Date(today);
     for(let i=0;i<60;i++){
-      const k=check.toISOString().slice(0,10);
+      const k=dayKey(check);
       if(completedDates.has(k)){ streak++; check.setDate(check.getDate()-1); }
       else if(i===0) break;
       else break;
@@ -11092,7 +11153,7 @@ function renderCalendar(workouts, year, month){
   let streak = 0;
   const cur = new Date(today);
   while(true){
-    const dk = cur.toISOString().slice(0,10);
+    const dk = dayKey(cur);
     if(wMap[dk]?.completed){ streak++; cur.setDate(cur.getDate()-1); } else break;
   }
 
@@ -11229,8 +11290,8 @@ function renderCalStrip(workouts){
   const offset = ST.trainCalStripOffset || 0;
   const today = new Date();
   today.setHours(0,0,0,0);
-  // Costruisce ISO locale (non UTC) per evitare shift in UTC+2
-  const localIso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  // dayKey() e' il formattatore canonico (era duplicato qui a mano)
+  const localIso = dayKey;
   const todayIso = localIso(today);
 
   // Lunedì della settimana corrente
@@ -12097,7 +12158,11 @@ async function loadWorkouts(year, month){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainWorkouts=[]; renderTraining(); return; }
   const y = String(year), m = String(month).padStart(2,'0');
   const firstDay = y+'-'+m+'-01';
-  const lastDay = new Date(year, month, 0).toISOString().slice(0,10);
+  // new Date(year, month, 0) e' l'ultimo giorno del mese in ora LOCALE: passarlo
+  // da toISOString lo riportava indietro di un giorno (mezzanotte locale = 22:00
+  // UTC del giorno prima), quindi il calendario chiedeva fino al 30 agosto invece
+  // che al 31. Tre allenamenti veri risultavano invisibili: 31 mag, 30 giu, 31 lug.
+  const lastDay = dayKey(new Date(year, month, 0));
   const { data } = await supa.from('workouts')
     .select('*')
     .eq('user_id', ST.user.id)
@@ -12192,8 +12257,7 @@ function _injSave(o){ try { localStorage.setItem(_injKey(), JSON.stringify(o)); 
 function _injAddDays(dateStr, n){
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
-  const p = (x) => String(x).padStart(2, '0');
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return dayKey(d);
 }
 // Periodo attivo (null se spento o scaduto). Scadenza automatica oltre endDate.
 function getInjuryPeriod(){
@@ -16473,7 +16537,7 @@ function isSuppGroupCollapsed(slot, takenN, total) {
 }
 function toggleSuppGroup(slot) {
   const taken = (getDay(ST.activeDay).suppsTaken || []);
-  const ss = activeSupps().filter(s => s.slot === slot);
+  const ss = suppsDelGiorno(getDay(ST.activeDay)).filter(s => s.slot === slot);
   const collapsed = isSuppGroupCollapsed(slot, ss.filter(s=>taken.includes(s.local_id)).length, ss.length);
   localStorage.setItem('fascia_collapsed_' + slot, collapsed ? '0' : '1');
   renderOggi();
@@ -17033,7 +17097,7 @@ function renderOggi(){
   const idx=allDays.indexOf(ST.activeDay);
   const isToday=ST.activeDay===todayKey();
   const bySlot={};MEAL_SLOTS.forEach(s=>{bySlot[s.id]=meals.filter(m=>m.slot===s.id);});
-  const actSupps=activeSupps();
+  const actSupps=suppsDelGiorno(day);
   const shakeSupps=actSupps.filter(s=>s.grp==='Shake Mami');
   const otherSupps=actSupps.filter(s=>s.grp!=='Shake Mami');
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
@@ -17064,7 +17128,7 @@ function renderOggi(){
     const remFasting = Math.max(0, ST.TARGET.kcal - sTot.kcal);
     html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(sTot.kcal,ST.TARGET.kcal)}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(sTot)}</div>`;
     // Integratori visibili anche in digiuno
-    const actSupps=activeSupps();
+    const actSupps=suppsDelGiorno(day);
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();
     html+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span class="lbl" style="margin:0;">🌿 Integratori di oggi</span><button class="btn btn-ghost btn-sm" onclick="showPage('integratori')">Gestisci →</button></div>`;
     if(actSupps.length){
@@ -17328,7 +17392,7 @@ function renderOggi(){
         }
         takenOtherSlots.forEach(slot => {
           const ss = otherSupps.filter(s => s.slot === slot);
-          const allActive = [...new Set(activeSupps().map(x => x.slot))].sort();
+          const allActive = [...new Set(suppsDelGiorno(day).map(x => x.slot))].sort();
           const sc = SLOT_COLOR_MAP[slot] || SLOT_PAL[allActive.indexOf(slot) % SLOT_PAL.length];
           const takenN = ss.filter(s => taken.includes(s.local_id)).length;
           const collapsed = isSuppGroupCollapsed(slot, takenN, ss.length);
@@ -21181,11 +21245,18 @@ function renderPianoV4() {
 // ═══════════════════════════════════════════════════════════
 // ACTIONS
 // ═══════════════════════════════════════════════════════════
-function navDay(dir){
+async function navDay(dir){
   const all=Object.keys(ST.db.days).sort();
   const idx=all.indexOf(ST.activeDay);
   const ni=idx+dir;
-  if(ni>=0&&ni<all.length){ST.activeDay=all[ni];ST.advice='';renderOggi();}
+  if(ni<0||ni>=all.length) return;
+  ST.activeDay=all[ni];
+  ST.advice='';
+  renderOggi();                          // subito, senza aspettare la rete
+  // Gli extra si caricano per un giorno solo: cambiando giorno vanno ripresi,
+  // altrimenti restano quelli del giorno precedente e finiscono nel totale
+  // sbagliato. Il render si rifa' quando sono arrivati.
+  try { await loadExtras(ST.activeDay); renderOggi(); } catch(e){ console.warn('navDay loadExtras:', e); }
 }
 
 async function toggleFasting(){
@@ -23659,6 +23730,9 @@ function oggiSuppCardHTML(s, taken) {
     : (_daysLeft !== null && _daysLeft <= 7)
       ? `<span style="${cs}background:#FCEEE9;color:#B84C2A;letter-spacing:.04em;">⚠ ${_daysLeft}gg</span>`
       : '';
+  // Sospeso ma registrato quel giorno: compare lo stesso, dichiarato. E' cio' che
+  // spiega le sue calorie nel totale — vedi suppsDelGiorno().
+  const sospesoBadge = s.active ? '' : `<span class="zt-badge-sospeso">Sospeso</span>`;
   // card: verde tenue quando assunto — distinto ma non aggressivo
   const cardStyle = on
     ? 'background:#edf7f1;border-color:#b6dfc8;box-shadow:0 1px 3px rgba(0,0,0,0.06);'
@@ -23671,6 +23745,7 @@ function oggiSuppCardHTML(s, taken) {
     <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
       ${takenDot}
       <span style="font-weight:600;font-size:0.88rem;color:var(--t1);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</span>
+      ${sospesoBadge}
       ${stockBadge}
       <select style="font-size:10px;font-family:'JetBrains Mono',monospace;background:var(--b2);border:1px solid var(--b3);border-radius:4px;padding:1px 3px;color:var(--t2);max-width:58px;" onchange="setSuppSlotOggi('${s.local_id}',this.value)" onclick="event.stopPropagation()">${slotOpts}</select>
     </div>
@@ -25090,14 +25165,19 @@ async function confirmExtraScreenSubmit() {
   if(!e || e.submitting) return;
   if(e.items.length === 0) return;
   e.submitting = true;
-  const today = todayKey();
+  // Scrive sul GIORNO VISUALIZZATO, non su "oggi". Prima gli extra andavano
+  // sempre su todayKey() mentre gruppi e singoli andavano su ST.activeDay: due
+  // gesti a pochi centimetri di distanza producevano due giorni diversi sulla
+  // stessa schermata. Ora tutta la registrazione degli integratori segue la data
+  // che l'utente ha davanti, come gia' fanno i pasti (dbAddMeal).
+  const giorno = ST.activeDay || todayKey();
   const insertedIds = [];
   try {
     for(const it of e.items) {
       // Scala macro/costo proporzionalmente alla dose scelta (snapshot immutabile)
       const ratio = (it.defaultDose && it.defaultDose > 0) ? (it.dose / it.defaultDose) : 1;
       const row = {
-        date:      today,
+        date:      giorno,
         slot:      it.slot,
         name:      it.name,
         codice:    it.codice,
@@ -25123,7 +25203,7 @@ async function confirmExtraScreenSubmit() {
   ST.catalogSelected = [];
   ST.catalogContext = null;
   // Refresh ST.extras + chiudi schermata + re-render tab Oggi
-  await loadExtras();
+  await loadExtras(ST.activeDay);
   closeConfirmExtraScreen();
   // Chiudi anche il catalog modal (era nascosto dietro)
   document.getElementById('catalog-modal').style.display = 'none';
@@ -25166,7 +25246,7 @@ async function cextraUndoToastClick() {
   for(const id of ids) {
     try { await dbDeleteExtraLog(id); } catch(e) { console.warn('undo delete:', e); }
   }
-  await loadExtras();
+  await loadExtras(ST.activeDay);
   if(ST.page === 'oggi') renderOggi();
   showToast('Registrazione annullata','↩️');
 }
@@ -25185,7 +25265,7 @@ async function doDeleteExtraFromTimeline() {
   if(!c) return;
   try { await dbDeleteExtraLog(c.logId); } catch(e) { console.warn('delete extra:', e); }
   ST.pkgExtraDeleteConfirm = null;
-  await loadExtras();
+  await loadExtras(ST.activeDay);
   if(ST.page === 'oggi') renderOggi();
   showToast('Extra eliminato','🗑️');
 }
@@ -25203,7 +25283,12 @@ async function deleteSupp(id){
   }
 }
 
-function goToDay(day){ST.activeDay=day;ST.advice='';showPage('oggi');}
+async function goToDay(day){
+  ST.activeDay=day;
+  ST.advice='';
+  showPage('oggi');
+  try { await loadExtras(ST.activeDay); if(ST.page==='oggi') renderOggi(); } catch(e){ console.warn('goToDay loadExtras:', e); }
+}
 
 function enterTestMode() {
   ST.user    = { id: 'test-user-001', email: 'test@local' };
@@ -25609,8 +25694,13 @@ setTimeout(async () => {
       }
       return;
     }
+    // (a-bis) E' cambiato il giorno mentre l'app era sospesa? Il controllo guarda
+    // solo l'orologio, non costa niente, e SCAVALCA il freno dei 30 secondi qui
+    // sotto: se e' passata la mezzanotte il rinfresco deve partire comunque,
+    // altrimenti si resterebbe sulla giornata di ieri fino al prossimo giro.
+    const giornoCambiato = _allineaGiornoCorrente();
     // (b) Re-fetch silenzioso con throttle 30s
-    if (Date.now() - (ST.lastRefreshAt || 0) < 30000) return;
+    if (!giornoCambiato && Date.now() - (ST.lastRefreshAt || 0) < 30000) return;
     try {
       await refreshInBackground();
     } catch(e) {
