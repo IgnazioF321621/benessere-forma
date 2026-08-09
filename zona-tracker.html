@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 10:04';
+const APP_VERSION = '2026.08.09 · 10:06';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -24237,6 +24237,15 @@ async function _pkgEditorFlushMetaPending() {
   e.saving = false;
 }
 
+// ── Articolo determinativo plurale maschile davanti a una CIFRA ──
+// L'articolo segue come si PRONUNCIA il numero, non come si scrive: "gli 8"
+// perché si legge "otto", "gli 11" perché si legge "undici". Tutti gli altri
+// numeri che possono comparire qui (prodotti in un pacchetto, 2..64) iniziano
+// per consonante — 18 è "diciotto", 28 è "ventotto" — e vogliono "i".
+function _artNumPlurale(n) {
+  return (n === 8 || n === 11) ? 'Gli' : 'I';
+}
+
 // ── Renderer principale dell'overlay ──
 function renderPackageEditor() {
   const e = ST.packageEditor;
@@ -24325,7 +24334,7 @@ function renderPackageEditor() {
     const nLib = (e.items || []).length;
     const libFrase = nLib === 0
       ? `Il pacchetto è vuoto: non c'è nessun prodotto da spostare.`
-      : `${nLib === 1 ? 'Il prodotto che contiene resta' : `I <b>${nLib} prodotti</b> che contiene restano`} nella tua libreria e ${nLib === 1 ? 'lo ritrovi' : 'li ritrovi'} in <b>Integratori extra</b>.`;
+      : `${nLib === 1 ? 'Il prodotto che contiene resta' : `${_artNumPlurale(nLib)} <b>${nLib} prodotti</b> che contiene restano`} nella tua libreria e ${nLib === 1 ? 'lo ritrovi' : 'li ritrovi'} in <b>Integratori extra</b>.`;
     body += `<div class="info-modal-overlay" style="z-index:1600;" onclick="if(event.target===this)pkgEditorCancelDelete()">
       <div class="info-modal">
         <h3 style="margin:0 0 10px;font-family:'Syne',sans-serif;font-size:17px;color:var(--t1);">Eliminare il pacchetto?</h3>
