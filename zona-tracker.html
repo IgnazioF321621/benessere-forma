@@ -3671,7 +3671,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.08 · 10:26';
+const APP_VERSION = '2026.08.09 · 10:04';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -24319,12 +24319,19 @@ function renderPackageEditor() {
 
   // Modal conferma eliminazione pacchetto
   if(ST.pkgDeleteConfirm) {
+    // Il testo nomina quanti prodotti si liberano e DOVE finiscono. Dal cantiere
+    // "Sospendi" (9 ago 2026) è veritiero: pkgEditorDoDelete non cancella più i
+    // supplements, scioglie solo il gruppo.
+    const nLib = (e.items || []).length;
+    const libFrase = nLib === 0
+      ? `Il pacchetto è vuoto: non c'è nessun prodotto da spostare.`
+      : `${nLib === 1 ? 'Il prodotto che contiene resta' : `I <b>${nLib} prodotti</b> che contiene restano`} nella tua libreria e ${nLib === 1 ? 'lo ritrovi' : 'li ritrovi'} in <b>Integratori extra</b>.`;
     body += `<div class="info-modal-overlay" style="z-index:1600;" onclick="if(event.target===this)pkgEditorCancelDelete()">
       <div class="info-modal">
         <h3 style="margin:0 0 10px;font-family:'Syne',sans-serif;font-size:17px;color:var(--t1);">Eliminare il pacchetto?</h3>
         <p style="font-family:'Syne',sans-serif;font-size:14px;color:var(--t2);line-height:1.5;margin:0 0 18px;">
-          ${esc(e.name || 'Pacchetto')} verrà rimosso. Gli integratori restano nella tua libreria come extra.<br><br>
-          <span style="font-size:12px;color:var(--t3);">L'operazione è definitiva.</span>
+          ${esc(e.name || 'Pacchetto')} verrà rimosso. ${libFrase}<br><br>
+          <span style="font-size:12px;color:var(--t3);">Il pacchetto non si può recuperare.</span>
         </p>
         <div style="display:flex;gap:10px;">
           <button class="btn btn-ghost" style="flex:1;" onclick="pkgEditorCancelDelete()">Annulla</button>
@@ -24631,38 +24638,43 @@ function pkgEditorCancelDelete() {
 async function pkgEditorDoDelete() {
   const e = ST.packageEditor;
   if(!e || !e.packageId) return;
-  // Decisione architetturale 16 mag 2026: pacchetti e extra sono mondi separati e
-  // indipendenti. Eliminare un pacchetto cancella anche TUTTI i suoi integratori
-  // dalla libreria (supplements), non li trasforma in extra fantasma.
-  // Ordine: prima cancello i supplements del pacchetto (bulk DELETE), poi il
-  // pacchetto stesso (CASCADE su supplement_package_items via FK).
+  // REVISIONE 9 ago 2026 — eliminare un pacchetto NON cancella più i suoi prodotti.
+  // Prima li cancellava dalla libreria mentre il messaggio di conferma prometteva
+  // il contrario: chi eliminava "Pack Colazione" perdeva 8 integratori configurati
+  // credendo di sciogliere un gruppo. Ora l'esito è quello già promesso dal testo e
+  // già valido per "× Rimuovi dal pacchetto": si scioglie il gruppo, i prodotti
+  // restano e ricompaiono fra gli extra.
+  //
+  // Nessuna scrittura serve per "promuoverli" a extra: _extraSupps() definisce gli
+  // extra come "i supplements che non stanno in nessun pacchetto", quindi appena il
+  // legame sparisce ci finiscono da soli.
+  //
+  // Ordine: prima i legami, poi il pacchetto. Le righe di supplement_package_items
+  // le cancelliamo esplicitamente invece di affidarci a un CASCADE che non è stato
+  // verificato: così l'esito è lo stesso che il vincolo ci sia o no, e ripetere
+  // l'operazione non fa danni.
   const suppIds = (e.items || []).map(it => it.supplement_id).filter(Boolean);
-  if(suppIds.length > 0) {
-    const {error: delSuppErr} = await supa.from('supplements')
-      .delete()
-      .in('id', suppIds)
-      .eq('user_id', ST.user.id);
-    if(delSuppErr) {
-      console.error('pkgEditorDoDelete supplements:', delSuppErr);
-      showToast('Errore eliminazione integratori del pacchetto','⚠️');
-      return;
-    }
+  const {error: delItemsErr} = await supa.from('supplement_package_items')
+    .delete()
+    .eq('package_id', e.packageId)
+    .eq('user_id', ST.user.id);
+  if(delItemsErr) {
+    console.error('pkgEditorDoDelete items:', delItemsErr);
+    showToast('Errore sciogliendo il pacchetto','⚠️');
+    return;
   }
-  // Ora elimina il pacchetto (CASCADE pulisce supplement_package_items)
   const {error: delPkgErr} = await supa.from('supplement_packages')
     .delete()
     .eq('id', e.packageId)
     .eq('user_id', ST.user.id);
   if(delPkgErr) {
+    // I legami sono già andati: i prodotti sono comunque salvi e visibili fra gli
+    // extra. Resta un pacchetto vuoto, che l'utente può rieliminare.
     console.error('pkgEditorDoDelete package:', delPkgErr);
     showToast('Errore eliminazione pacchetto','⚠️');
     return;
   }
-  // Sync in-memory: rimuovi supplements eliminati + pacchetto
-  if(suppIds.length > 0) {
-    const setIds = new Set(suppIds);
-    ST.supps = (ST.supps || []).filter(s => !setIds.has(s.local_id));
-  }
+  // Sync in-memory: sparisce il pacchetto, i supplements restano tutti.
   ST.packages = (ST.packages || []).filter(p => p.id !== e.packageId);
   // Re-fetch authoritative dal DB per garantire coerenza cross-device + macro
   // aggregate aggiornate (suppMonthlyCost, tile Home Nutrition, ecc.)
@@ -24671,7 +24683,7 @@ async function pkgEditorDoDelete() {
   saveCache();
   closePackageEditor();
   const msg = suppIds.length > 0
-    ? `Pacchetto eliminato (${suppIds.length} integrator${suppIds.length===1?'e':'i'})`
+    ? `Pacchetto eliminato · ${suppIds.length} prodott${suppIds.length===1?'o spostato':'i spostati'} negli extra`
     : 'Pacchetto eliminato';
   showToast(msg, '🗑️');
 }
