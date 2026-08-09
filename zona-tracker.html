@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 15:27';
+const APP_VERSION = '2026.08.09 · 16:16';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -12255,24 +12255,53 @@ function scrollToActiveExercise(){
   } catch(e){}
 }
 
-async function loadWorkouts(year, month){
+// Carica gli allenamenti per la striscia calendario, il dettaglio giorno e il
+// pulsante "elimina allenamento": tutti e tre cercano una data dentro
+// ST.trainWorkouts, quindi condividono la stessa cache e lo stesso buco.
+//
+// CANTIERE 24 (9 ago 2026) — prima caricava UN MESE SOLO, quello corrente.
+// La striscia pero' va solo all'indietro e cambiando settimana non ricarica
+// niente: sposta un contatore e ridisegna. Risultato, qualunque settimana
+// precedente al mese corrente era cieca per intero — non solo i giorni di bordo
+// come diceva la diagnosi iniziale. Misurato sui dati veri: 81 allenamenti, 6 nel
+// mese corrente e 75 fuori, cioe' il 93% dello storico invisibile appena si
+// tornava indietro. I sintomi erano tre: casella senza pallino, dettaglio giorno
+// senza nome sessione, e "Workout non trovato in calendario" premendo elimina.
+//
+// Ora si carica tutto lo storico dell'utente. Sono poche righe (81 oggi) e sparisce
+// l'intera classe di difetto invece di spostarne il confine di qualche giorno:
+// niente piu' logica sui bordi, e niente chiamata di rete a ogni tocco di freccia.
+// E' lo stesso criterio che loadTrainingAllCompleted usa da sempre — il motivo per
+// cui rotazione, streak e debito hanno sempre visto giusto mentre la striscia no.
+//
+// Gli argomenti anno/mese non servono piu'. Restano accettati e ignorati perche'
+// due chiamanti li passano ancora: le frecce dentro renderCalendar, codice mai
+// eseguito dal 10 giugno (cantiere 25, fuori perimetro qui).
+async function loadWorkouts(){
   ST.trainWorkouts = null; // loading
   renderTraining();
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainWorkouts=[]; renderTraining(); return; }
-  const y = String(year), m = String(month).padStart(2,'0');
-  const firstDay = y+'-'+m+'-01';
-  // new Date(year, month, 0) e' l'ultimo giorno del mese in ora LOCALE: passarlo
-  // da toISOString lo riportava indietro di un giorno (mezzanotte locale = 22:00
-  // UTC del giorno prima), quindi il calendario chiedeva fino al 30 agosto invece
-  // che al 31. Tre allenamenti veri risultavano invisibili: 31 mag, 30 giu, 31 lug.
-  const lastDay = dayKey(new Date(year, month, 0));
-  const { data } = await supa.from('workouts')
-    .select('*')
-    .eq('user_id', ST.user.id)
-    .gte('date', firstDay)
-    .lte('date', lastDay)
-    .order('date');
-  ST.trainWorkouts = data || [];
+  // Paginata (L13): oggi 81 righe sono lontane dal limite di 1000, ma al ritmo di
+  // 4-5 allenamenti a settimana ci si arriva in qualche anno.
+  const BLOCCO = 1000;
+  const tutti = [];
+  for(let da = 0; ; da += BLOCCO){
+    const { data, error } = await supa.from('workouts')
+      .select('*')
+      .eq('user_id', ST.user.id)
+      .order('date')
+      .range(da, da + BLOCCO - 1);
+    if(error){
+      console.warn('loadWorkouts:', error.message);
+      ST.trainWorkouts = [];      // niente cache muta: la vista sa di non avere dati
+      renderTraining();
+      return;
+    }
+    const blocco = data || [];
+    tutti.push(...blocco);
+    if(blocco.length < BLOCCO) break;   // blocco non pieno = ultimo
+  }
+  ST.trainWorkouts = tutti;
   renderTraining();
 }
 
@@ -12736,8 +12765,7 @@ async function deleteWorkout(id, date){
   if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
   const { error } = await supa.from('workouts').delete().eq('id', id).eq('user_id', ST.user.id);
   if(error){ showToast('Errore eliminazione: '+error.message); } else { showToast('Workout eliminato'); }
-  const calM = ST.trainCalMonth || { year: new Date().getFullYear(), month: new Date().getMonth()+1 };
-  loadWorkouts(calM.year, calM.month);
+  loadWorkouts();   // storico intero: non c'è più un mese da scegliere
   loadTrainingAllCompleted();
 }
 
@@ -14362,10 +14390,9 @@ function renderTraining(){
   } else {
     // ── Progressione tab ────────────────────────────────────
 
-    // Auto-load workout per la strip calendario
+    // Auto-load workout per la strip calendario (storico intero, non un mese)
     if(ST.trainWorkouts === undefined){
-      const now = new Date();
-      loadWorkouts(now.getFullYear(), now.getMonth()+1);
+      loadWorkouts();
     }
 
     const selEx = ST.trainProgEx;
