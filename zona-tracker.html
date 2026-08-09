@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 12:05';
+const APP_VERSION = '2026.08.09 · 15:27';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -3856,6 +3856,10 @@ const ST = {
   packages: [],            // [{id, name, emoji, time, sort_order, items:[{id, supplement_id, sort_order, supplement:{...}}]}]
   // Integratori Step 2 (18 mag 2026) — extras come supplements_log events
   extras: [],              // [{id, date, slot, name, codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at}] della data attiva
+  // Archivio extra di TUTTO lo storico, indicizzato per data: { 'YYYY-MM-DD': [...] }.
+  // È la fonte unica da cui dayTotals prende le kcal/macro degli extra, per ogni
+  // giorno. ST.extras qui sopra ne è solo la vista del giorno visualizzato.
+  extrasByDay: {},
   confirmExtra: null,      // schermata Conferma Extra fullscreen: { items:[{codice,name,categoria,linea,dose,dose_unit,slot,kcal,carbo,proteine,grassi,costo,confezione}], removeUndo:{codice:{timer,item}}, submitting }
   pkgExtraDeleteConfirm: null, // { logId, name } — modal conferma elimina extra dalla timeline
   // ANALISI V3 (18 mag 2026) — refresh tab Storico → Analisi
@@ -3953,7 +3957,12 @@ function kcalRimaste(consumate,target){return Math.round((Number(target)||0)-(Nu
 function macroRimasti(consumati,target){return Math.round((Number(target)||0)-(Number(consumati)||0));}
 function isOverTarget(consumati,target){return (Number(consumati)||0)>(Number(target)||0);}
 const OVER_COLOR='#B45309'; // ambra scuro per stato "oltre target" — leggibile, non allarmante
-function getDay(key){if(!ST.db.days[key])ST.db.days[key]={meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};if(!ST.db.days[key].suppsTaken)ST.db.days[key].suppsTaken=[];if(!ST.db.days[key].rawSuppLogs)ST.db.days[key].rawSuppLogs=[];return ST.db.days[key];}
+// Ogni giornata porta con sé la propria data (`key`). Serve a dayTotals per
+// sapere quali extra le appartengono senza doversi far passare la chiave da
+// fuori: prima il confronto era per identità con il giorno visualizzato, ed è il
+// motivo per cui gli extra non entravano mai nei totali degli altri giorni.
+function _nuovoGiorno(key){ return {key, meals:[], fasting:false, suppsTaken:[], rawSuppLogs:[]}; }
+function getDay(key){if(!ST.db.days[key])ST.db.days[key]=_nuovoGiorno(key);if(!ST.db.days[key].key)ST.db.days[key].key=key;if(!ST.db.days[key].suppsTaken)ST.db.days[key].suppsTaken=[];if(!ST.db.days[key].rawSuppLogs)ST.db.days[key].rawSuppLogs=[];return ST.db.days[key];}
 
 // ═══════════════════════════════════════════════════════════
 // TDEE CALCULATOR
@@ -4602,11 +4611,16 @@ function extraSuppsTotals(day) {
 
 // Helper unico: totali completi del giorno (pasti + standard supps + extra supps).
 // Step 2 Integratori (18 mag 2026): totali extras dalla nuova architettura supplements_log.
-// ST.extras è caricato solo per ST.activeDay. Se day === ST.db.days[ST.activeDay], sommo gli ST.extras.
+//
+// REVISIONE 9 ago 2026 — gli extra si prendono dall'archivio per giorno
+// (ST.extrasByDay), non piu' da ST.extras confrontando l'identita' con il giorno
+// visualizzato. Quel confronto e' il motivo per cui i grafici di Analisi non
+// hanno mai visto le calorie degli extra passati. Ora vale per ogni giornata, e
+// siccome la fonte e' una sola non c'e' modo di contarle due volte.
 function _extrasV3Totals(day) {
-  const todayDay = ST.db && ST.db.days && ST.db.days[ST.activeDay];
-  if(day !== todayDay) return {kcal:0,protein:0,carbs:0,fat:0};
-  const tot = (ST.extras || []).reduce((a, x) => ({
+  const key = day && day.key;
+  const lista = (key && ST.extrasByDay) ? (ST.extrasByDay[key] || []) : [];
+  const tot = lista.reduce((a, x) => ({
     kcal:    a.kcal    + (Number(x.kcal)     || 0),
     protein: a.protein + (Number(x.proteine) || 0),
     carbs:   a.carbs   + (Number(x.carbo)    || 0),
@@ -5865,23 +5879,52 @@ async function loadAllDays() {
     itemsByMeal[it.meal_id].push(it);
   });
   const {data:fasting, error:fastingErr} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
-  const {data:suppLog, error:suppErr}    = await supa.from('supplements_log').select('date,supplement_name,slot').eq('user_id', ST.user.id);
+  // supplements_log dello storico — DUE correzioni, 9 ago 2026:
+  //
+  // 1. is_extra=false. Mancava, quindi le righe extra finivano qui dentro e nei
+  //    giorni passati venivano valutate col dato sbagliato (dose della libreria o
+  //    macro del catalogo, mai lo snapshot registrato). Ora gli extra hanno il
+  //    loro archivio — loadExtrasAll — e questo canale porta solo gli standard.
+  //    Toglie anche il doppio conteggio che compariva navigando su un giorno
+  //    passato, dove convivevano queste righe e ST.extras.
+  //
+  // 2. PAGINAZIONE (L13). La query non ne aveva: 2.009 righe in tabella e il
+  //    limite PostgREST a 1.000 significavano 179 righe perse per l'utente con
+  //    piu' storico, per giunta senza order() quindi non sempre le stesse.
+  const suppLog = [];
+  let suppErr = null;
+  {
+    const BLOCCO = 1000;
+    for(let da = 0; ; da += BLOCCO) {
+      const res = await supa.from('supplements_log')
+        .select('date,supplement_name,slot')
+        .eq('user_id', ST.user.id)
+        .eq('is_extra', false)
+        .order('date', { ascending: true })
+        .order('slot',  { ascending: true })
+        .range(da, da + BLOCCO - 1);
+      if(res.error) { suppErr = res.error; console.warn('loadAllDays supplements_log:', res.error.message); break; }
+      const blocco = res.data || [];
+      suppLog.push(...blocco);
+      if(blocco.length < BLOCCO) break;
+    }
+  }
 
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   if (mealsErr || meals === null) return;
 
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
-    if(!ST.db.days[m.date]) ST.db.days[m.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
+    if(!ST.db.days[m.date]) ST.db.days[m.date] = _nuovoGiorno(m.date);
     ST.db.days[m.date].meals.push({...m, local_id: m.id, items: itemsByMeal[m.id] || []});
   });
   (fasting||[]).forEach(f => {
-    if(!ST.db.days[f.date]) ST.db.days[f.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
+    if(!ST.db.days[f.date]) ST.db.days[f.date] = _nuovoGiorno(f.date);
     ST.db.days[f.date].fasting = true;
   });
   // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti)
   (suppLog||[]).forEach(s => {
-    if(!ST.db.days[s.date]) ST.db.days[s.date] = {meals:[],fasting:false,suppsTaken:[],rawSuppLogs:[]};
+    if(!ST.db.days[s.date]) ST.db.days[s.date] = _nuovoGiorno(s.date);
     if(!ST.db.days[s.date].rawSuppLogs) ST.db.days[s.date].rawSuppLogs = [];
     const supp = ST.supps.find(x => x.name === s.supplement_name);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
@@ -5971,21 +6014,13 @@ async function loadPackages() {
 // pre-migration con campi macro NULL → fallback DERIVATO da ST.catalog × dose
 // (rete di sicurezza, mai riscrive la riga DB → storico onesto se catalog cambia).
 // Default dose quando NULL: 1 (coerente col codice precedente, semplice e trasparente).
-async function loadExtras(targetDate) {
-  ST.extras = [];
-  if(!ST.user || !ST.user.id) return;
-  const d = targetDate || todayKey();
-  const {data, error} = await supa
-    .from('supplements_log')
-    .select('id, date, slot, supplement_name, supplement_codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at')
-    .eq('user_id', ST.user.id)
-    .eq('date', d)
-    .eq('is_extra', true)
-    .order('slot', { ascending: true })
-    .order('created_at', { ascending: true });
-  if(error) { console.warn('loadExtras error:', error); return; }
-  const catalog = ST.catalog || [];
-  ST.extras = (data || []).map(r => {
+const _EXTRA_COLS = 'id, date, slot, supplement_name, supplement_codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at';
+
+// Trasforma UNA riga supplements_log(is_extra=true) nell'oggetto usato da app e
+// totali. Estratto da loadExtras il 9 ago 2026 perché ora serve a due lettori:
+// quella del giorno e quella dell'intero storico. Un solo posto in cui si decide
+// cosa vale una riga.
+function _extraDaRiga(r, catalog) {
     const dose = r.dose != null ? parseFloat(r.dose) : 1;
     // Snapshot raw — null se la colonna DB è NULL (rilevante per riga pre-migration)
     const snapKcal  = r.kcal     != null ? (parseFloat(r.kcal)     || 0) : null;
@@ -6023,7 +6058,70 @@ async function loadExtras(targetDate) {
       _fromFallback: snapKcal == null && snapCarbo == null && snapProt == null && snapGras == null,
       created_at: r.created_at,
     };
+}
+
+// ── ARCHIVIO EXTRA PER GIORNO — fonte unica dei loro kcal/macro ──────────────
+// Prima gli extra si caricavano per UN giorno solo e i totali li sommavano solo
+// se era il giorno visualizzato: nei grafici di Analisi le loro calorie non sono
+// mai entrate (11.658,5 kcal su tre utenti, misurate il 9 ago 2026).
+//
+// Nota importante: NON erano semplicemente assenti. loadAllDays leggeva
+// supplements_log senza filtro is_extra, quindi le righe extra finivano lo stesso
+// nei giorni passati — ma valutate male: 107 righe come integratore standard alla
+// dose della libreria, 112 con le macro del catalogo x dose 1, mai con lo
+// snapshot registrato. Ora loadAllDays le esclude (is_extra=false) e questo
+// archivio e' l'unico posto da cui i totali le prendono: il doppio conteggio
+// diventa impossibile per costruzione, non per guardia.
+//
+// PAGINAZIONE OBBLIGATORIA (L13): PostgREST tronca a 1000 righe.
+async function loadExtrasAll() {
+  if(!ST.user || !ST.user.id) { ST.extrasByDay = {}; ST.extras = []; return; }
+  const BLOCCO = 1000;
+  const righe = [];
+  for(let da = 0; ; da += BLOCCO) {
+    const {data, error} = await supa
+      .from('supplements_log')
+      .select(_EXTRA_COLS)
+      .eq('user_id', ST.user.id)
+      .eq('is_extra', true)
+      .order('date', { ascending: true })
+      .order('slot', { ascending: true })
+      .order('created_at', { ascending: true })
+      .range(da, da + BLOCCO - 1);
+    if(error) { console.warn('loadExtrasAll error:', error); return; }  // archivio precedente intatto
+    const blocco = data || [];
+    righe.push(...blocco);
+    if(blocco.length < BLOCCO) break;   // blocco non pieno = ultimo
+  }
+  const catalog = ST.catalog || [];
+  const perGiorno = {};
+  righe.forEach(r => {
+    const e = _extraDaRiga(r, catalog);
+    (perGiorno[e.date] || (perGiorno[e.date] = [])).push(e);
   });
+  ST.extrasByDay = perGiorno;
+  ST.extras = perGiorno[ST.activeDay] || [];
+}
+
+// Ricarica il solo giorno indicato e lo rinfresca dentro l'archivio. Serve dopo
+// un inserimento o una cancellazione, e cambiando giorno: costa una riga di rete
+// invece di rileggere tutto lo storico.
+async function loadExtras(targetDate) {
+  if(!ST.user || !ST.user.id) { ST.extras = []; return; }
+  const d = targetDate || todayKey();
+  const {data, error} = await supa
+    .from('supplements_log')
+    .select(_EXTRA_COLS)
+    .eq('user_id', ST.user.id)
+    .eq('date', d)
+    .eq('is_extra', true)
+    .order('slot', { ascending: true })
+    .order('created_at', { ascending: true });
+  if(error) { console.warn('loadExtras error:', error); return; }  // niente da riscrivere
+  const catalog = ST.catalog || [];
+  if(!ST.extrasByDay) ST.extrasByDay = {};
+  ST.extrasByDay[d] = (data || []).map(r => _extraDaRiga(r, catalog));
+  ST.extras = ST.extrasByDay[ST.activeDay] || [];
 }
 
 // Helper insert singolo extra in supplements_log
@@ -6378,13 +6476,18 @@ async function loadAndStart() {
   if (cache) {
     // Cache hit: ripristina subito senza loading overlay
     if (cache.profile)  ST.profile  = cache.profile;
-    if (cache.db)       ST.db       = cache.db;
+    if (cache.db) {
+      ST.db = cache.db;
+      // Le giornate salvate prima del 9 ago 2026 non hanno il campo `key`, e
+      // senza quello dayTotals non sa quali extra appartengano a ciascuna.
+      try { Object.keys(ST.db.days || {}).forEach(k => { ST.db.days[k].key = k; }); } catch(e) {}
+    }
     if (cache.TARGET)   ST.TARGET   = cache.TARGET;
     // Catalogo e supplements: ricarica SEMPRE da Supabase per avere dati freschi
     await loadCatalog();
     await loadSupps();
     await loadPackages();
-    await loadExtras(ST.activeDay);
+    await loadExtrasAll();   // archivio completo: serve ai grafici di Analisi
     await loadTodaySuppLog();
     await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS (ramo cache-hit)
     if (profileIsComplete(ST.profile)) {
@@ -6420,7 +6523,7 @@ async function loadAndStart() {
   await loadCatalog();   // ← catalogo prima, serve per arricchire supplements
   await loadSupps();
   await loadPackages();
-  await loadExtras(ST.activeDay);
+  await loadExtrasAll();   // archivio completo: serve ai grafici di Analisi
   await loadAllDays();
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
@@ -6505,7 +6608,7 @@ async function refreshInBackground() {
     await loadCatalog();  // catalogo prima
     await loadSupps();
     await loadPackages();
-    await loadExtras(ST.activeDay);
+    await loadExtrasAll();   // archivio completo: serve ai grafici di Analisi
     await loadAllDays();
     // Sovrascrive suppsTaken di oggi con dati freschi PRIMA di renderare
     await loadTodaySuppLog();
@@ -17694,12 +17797,12 @@ function _analisiCollectDays(start, end) {
   const d = new Date(start);
   d.setHours(12, 0, 0, 0);
   while(d <= end) {
-    const key = d.toISOString().slice(0, 10);
+    const key = dayKey(d);   // locale, coerente col Cantiere Giorno (era toISOString)
     const dayData = ST.db.days && ST.db.days[key] ? ST.db.days[key] : null;
     const totals = dayData ? dayTotals(dayData) : {kcal:0, protein:0, carbs:0, fat:0};
     const status = _zoneStatusForDayKey(key);
     const mealsN = dayData?.meals?.length || 0;
-    const extrasN = (key === ST.activeDay) ? ((ST.extras || []).length) : 0;
+    const extrasN = ((ST.extrasByDay && ST.extrasByDay[key]) || []).length;
     result.push({ date: new Date(d), key, dayData, totals, status, mealsN, extrasN });
     d.setDate(d.getDate() + 1);
   }
@@ -18273,8 +18376,9 @@ function renderDayDetailScreen() {
   const meals = (dayData && dayData.meals) || [];
   const taken = (dayData && dayData.suppsTaken) || [];
   const rawLogs = (dayData && dayData.rawSuppLogs) || [];
-  // Extras V3 (solo se data === activeDay, altrimenti non disponibili in cache)
-  const extras = (date === ST.activeDay) ? (ST.extras || []) : [];
+  // Extras V3 — dall'archivio storico: disponibili per ogni giorno, non solo per
+  // quello visualizzato (prima gli altri giorni li vedevano sempre a zero).
+  const extras = ((ST.extrasByDay && ST.extrasByDay[date]) || []);
 
   // Costruisci eventi cronologici
   const events = [];
