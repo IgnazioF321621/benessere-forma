@@ -38,5 +38,15 @@ tools/panca-EX168-343-535/*.html
 tools/biblioteca-nomi/lavoro/*
 !tools/biblioteca-nomi/lavoro/da_consolidare.tsv
 
+# I piani di migrazione scritti a mano: un piano che vive solo sul Mac e' senza
+# backup, e il Mac deve restare specchio di GitHub. Entrano SOLO i PIANO_*.md:
+# gli altri file di _piani/ (piano_*.json, piano_*.tsv, incolla_sheet_*.tsv, ops_*.json)
+# sono generati dagli strumenti e si rifanno con un comando.
+# Le tre righe vanno insieme: git non scende in una cartella esclusa, quindi
+# prima si riammette la cartella, poi si riesclude il contenuto, poi i piani.
+!tools/biblioteca-nomi/lavoro/_piani/
+tools/biblioteca-nomi/lavoro/_piani/*
+!tools/biblioteca-nomi/lavoro/_piani/PIANO_*.md
+
 # Backup temporanei locali
 *.bak-*

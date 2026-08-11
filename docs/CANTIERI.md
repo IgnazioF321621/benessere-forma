@@ -266,7 +266,7 @@ Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → 
 
 ## Pettorali — nomi confermati, migrazione ferma al 15 agosto
 
-**82 nomi su 82 confermati** nel pannello l'11 agosto. Piano di migrazione pronto e approvato: `lavoro/_piani/PIANO_pettorali.md` (locale, la cartella è fuori dal repo).
+**82 nomi su 82 confermati** nel pannello l'11 agosto. Piano di migrazione pronto e approvato: [`lavoro/_piani/PIANO_pettorali.md`](../tools/biblioteca-nomi/lavoro/_piani/PIANO_pettorali.md), nel repo dall'11 agosto insieme a quello di Gambe e Glutei — un piano che vive solo sul Mac è senza backup.
 
 **Esecuzione dal 15 agosto**, quando si azzera il ciclo dell'egress. La migrazione consumerebbe pochissimo — copie server-side, caricamenti in ingresso, verifica via `HEAD` — ma la regola sulla pausa non si aggira per convenienza.
 
@@ -276,7 +276,19 @@ Controlli tutti puliti: 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0
 
 **I 22 caricamenti restano GIF libere senza codice**: il popolamento del catalogo è una fase separata, dopo la migrazione. Confluiscono nel [cantiere 16](#16-liberi-indicizzati-senza-codice).
 
-⚠️ Il 15 agosto si lancia `pianifica.py "Pettorali"` **prima** di eseguire: il documento non ha la coppia `piano_<zona>.json`/`.tsv` che `migra_zona.py` consuma, e la rimisura sul vivo vale più dei numeri scritti → [L17](LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+### Alla ripresa, in quest'ordine
+
+1. **Lanciare `pianifica.py "Pettorali"`.** Il piano scritto è leggibile ma non eseguibile: manca la coppia `_piani/piano_pettorali.json` + `.tsv`, che è ciò che `migra_zona.py` consuma davvero. Lo strumento la genera e nel farlo rimisura sul vivo. **Se i suoi numeri divergono dal piano scritto, vince lo strumento** e il piano si rilegge prima di eseguire: la baseline si sposta anche solo perché è cambiato il catalogo → [L17](LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+
+```bash
+python3 tools/biblioteca-nomi/pianifica.py "Pettorali"
+```
+
+2. **Verificare le 85 rinomine sul Mac contro il disco.** `log_rinomine.tsv` dichiara 85 eventi `rinominato` e il file di lavoro dà gli 82 nomi come allineati, ma il confronto con ciò che sta davvero sul disco non è stato fatto: costa rileggere 109 MB. Da fare **prima della fase 2**.
+
+3. **Decidere sul termine `medi`**, comparso in `Croci cavi medi in piedi` (EX207, con EX104 e EX319). Introduce una terza altezza del cavo accanto ad `alti` e `bassi` e non è un termine dichiarato nella nomenclatura v2. Non blocca la migrazione — il nome è stato confermato guardando la GIF — ma è un valore nuovo entrato senza una decisione esplicita, esattamente come stava per succedere alle panche.
+
+I punti 2 e 3 sono le due voci rimaste aperte l'11 agosto; il punto 1 è il prerequisito tecnico dell'esecuzione.
 
 ### Le tre decisioni sul vocabolario, prese l'11 agosto
 
@@ -289,11 +301,6 @@ Controlli tutti puliti: 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0
 Le prime due chiudono la domanda "esiste una sesta panca?": no. Il vocabolario resta a cinque — piana, inclinata, declinata, verticale, Scott.
 
 Sul terzo: `slug` è unico su tutte e 1.570 le righe di `biblioteca_gif`, quindi la riga nuova non entra finché la vecchia non se ne va. **Sul bucket non c'è conflitto** — `Dip station.gif` e `Dip parallele.gif` sono percorsi diversi. Il vincolo è solo sull'unicità dello slug, ed è per questo che guardando i 22 caricamenti da soli non si vedeva.
-
-### Due voci aperte
-
-- **Le 85 rinomine sul Mac non sono state verificate contro il disco.** `log_rinomine.tsv` dichiara 85 eventi `rinominato` e il file di lavoro dà gli 82 nomi come allineati, ma il confronto con ciò che sta davvero sul disco non è stato fatto: costa rileggere 109 MB. Da fare prima della fase 2.
-- **Il termine `medi`**, comparso in `Croci cavi medi in piedi` (EX207, con EX104 e EX319), introduce una terza altezza del cavo accanto ad `alti` e `bassi`. Non è un termine dichiarato nella nomenclatura v2. Non blocca la migrazione — il nome è stato confermato guardando la GIF — ma è un valore nuovo entrato senza una decisione esplicita, esattamente come stava per succedere alle panche.
 
 ## Addominali e Core — chiusa 1 agosto
 68 righe migrate. La zona è poi stata **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori: 72 righe toccate, 11 a certezza media confermate da Ignazio.
