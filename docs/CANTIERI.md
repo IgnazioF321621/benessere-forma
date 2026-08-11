@@ -2,9 +2,9 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 9 agosto 2026.*
+*Aggiornato: 11 agosto 2026.*
 
-Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF chiuse](#zone-gif-chiuse) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
+Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
 ---
 
@@ -252,7 +252,7 @@ Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancant
 
 ---
 
-# Zone GIF chiuse
+# Zone GIF
 
 **Cantiere nomenclatura v2**: chiuso il 24 luglio 2026. La normativa che ne è uscita è in `CLAUDE.md`.
 
@@ -260,9 +260,40 @@ Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancant
 Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `pianifica.py` → `migra_zona.py` → `verifica_worker.py`).
 Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
 
-**In coda per dimensione**: Mobilità 215 · Schiena e Trapezio 112 · Pettorali 80 · **Spalle e Cuffia 63 (prossima)** · Tricipiti 61 · Polpacci 19.
+**In coda per dimensione**: Mobilità 215 · Schiena e Trapezio 112 · **Pettorali 82 (in corso, esecuzione dal 15 agosto)** · Spalle e Cuffia 63 · Tricipiti 61 · Polpacci 19.
 
 > I gruppi più poveri del pool non sono nelle gambe: il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
+
+## Pettorali — nomi confermati, migrazione ferma al 15 agosto
+
+**82 nomi su 82 confermati** nel pannello l'11 agosto. Piano di migrazione pronto e approvato: `lavoro/_piani/PIANO_pettorali.md` (locale, la cartella è fuori dal repo).
+
+**Esecuzione dal 15 agosto**, quando si azzera il ciclo dell'egress. La migrazione consumerebbe pochissimo — copie server-side, caricamenti in ingresso, verifica via `HEAD` — ma la regola sulla pausa non si aggira per convenienza.
+
+Le sei popolazioni: **A** collegati slug invariato 35 · **B** collegati slug nuovo **22** · **C** indicizzato libero invariato 1 · **D** indicizzati liberi slug nuovo 2 · **E** caricamenti liberi 21 · **F** caricamento in coda 1. Solo il gruppo B apre la finestra da coprire con le righe doppie, e quindi la fermata per il sync del foglio.
+
+Controlli tutti puliti: 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0 percorsi non-ASCII, 0 codici che resterebbero senza GIF, 0 doppioni di contenuto, 0 impronte non determinabili su 60 oggetti.
+
+**I 22 caricamenti restano GIF libere senza codice**: il popolamento del catalogo è una fase separata, dopo la migrazione. Confluiscono nel [cantiere 16](#16-liberi-indicizzati-senza-codice).
+
+⚠️ Il 15 agosto si lancia `pianifica.py "Pettorali"` **prima** di eseguire: il documento non ha la coppia `piano_<zona>.json`/`.tsv` che `migra_zona.py` consuma, e la rimisura sul vivo vale più dei numeri scritti → [L17](LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+
+### Le tre decisioni sul vocabolario, prese l'11 agosto
+
+| caso | decisione |
+|---|---|
+| `Piegamenti declinati panca` · `Piegamenti inclinati panca` | **restano come sono.** Qui `panca` è il supporto su cui appoggiano mani o piedi, non un valore del vocabolario delle panche: l'inclinazione la dichiara l'aggettivo del movimento. Non sono una sesta panca |
+| `Piegamenti deficit slancio panche piane` | **resta al plurale.** Il vocabolario chiude i termini, non il numero: `piana` è dentro, e due panche affiancate sono due |
+| `dip-parallele` conteso | **il caricamento va in coda**, dopo il sync e dopo che EX072 ha liberato lo slug passando a `dip-station` |
+
+Le prime due chiudono la domanda "esiste una sesta panca?": no. Il vocabolario resta a cinque — piana, inclinata, declinata, verticale, Scott.
+
+Sul terzo: `slug` è unico su tutte e 1.570 le righe di `biblioteca_gif`, quindi la riga nuova non entra finché la vecchia non se ne va. **Sul bucket non c'è conflitto** — `Dip station.gif` e `Dip parallele.gif` sono percorsi diversi. Il vincolo è solo sull'unicità dello slug, ed è per questo che guardando i 22 caricamenti da soli non si vedeva.
+
+### Due voci aperte
+
+- **Le 85 rinomine sul Mac non sono state verificate contro il disco.** `log_rinomine.tsv` dichiara 85 eventi `rinominato` e il file di lavoro dà gli 82 nomi come allineati, ma il confronto con ciò che sta davvero sul disco non è stato fatto: costa rileggere 109 MB. Da fare prima della fase 2.
+- **Il termine `medi`**, comparso in `Croci cavi medi in piedi` (EX207, con EX104 e EX319), introduce una terza altezza del cavo accanto ad `alti` e `bassi`. Non è un termine dichiarato nella nomenclatura v2. Non blocca la migrazione — il nome è stato confermato guardando la GIF — ma è un valore nuovo entrato senza una decisione esplicita, esattamente come stava per succedere alle panche.
 
 ## Addominali e Core — chiusa 1 agosto
 68 righe migrate. La zona è poi stata **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori: 72 righe toccate, 11 a certezza media confermate da Ignazio.
@@ -332,10 +363,12 @@ Come sono stati stanati i doppioni non identici: [L7](LEZIONI.md#l7--limpronta-t
 
 ⚠️ **Due file fuori da ogni tabella.** Spostati e rinominati, contenuto verificato per SHA-256, **non presenti né in `biblioteca_gif` né in `esercizi_catalog`**. Non essendo in nessuna tabella, questa è l'unica traccia che li ritrova:
 
-| file | cartella | da riprendere con |
-|---|---|---|
-| `Piegamenti sulle dita` | Pettorali | zona Pettorali |
-| `Piegamenti mani ruotate all'indietro` | Tricipiti | zona Tricipiti |
+| file | cartella | da riprendere con | stato |
+|---|---|---|---|
+| `Piegamenti sulle dita` | Pettorali | zona Pettorali | ✅ **ripreso 11 agosto**: confermato e dentro il piano Pettorali, gruppo E |
+| `Piegamenti mani ruotate all'indietro` | Tricipiti | zona Tricipiti | ancora fuori da ogni tabella |
+
+⚠️ La decisione su `Piegamenti sulle dita` porta l'etichetta di zona **`Bicipiti e Braccia`**: era stata presa il 1 agosto, quando il file stava lì, prima dello spostamento in Pettorali. Stessa impronta (`18a5654fce02`), stesso nome, conferma data guardando la GIF — vale, ed è stata contata come l'82ª di Pettorali. È il motivo per cui il registro, filtrato per etichetta di zona, ne mostra 81.
 
 ---
 
