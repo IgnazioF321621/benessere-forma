@@ -64,7 +64,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **Prossima: Spalle e Cuffia.**
+**Catalogo GIF** — **602 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **In corso: Pettorali** — 82 nomi confermati, migrazione dal 15 agosto, poi popolamento catalogo. **Poi Polpacci.** Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -247,6 +247,22 @@ Non deve esistere un istante in cui una GIF è irraggiungibile.
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
 **Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento (cantiere 4).
+
+### Una cartella si chiude su tre lavori
+
+**Regola di metodo vincolante, dall'11 agosto 2026.** Ogni cartella della biblioteca si chiude su **tre lavori, in quest'ordine**, prima di aprire la successiva:
+
+1. **conferma dei nomi** — pannello locale, dieci alla volta, guardando la GIF
+2. **migrazione delle immagini** — bucket + `biblioteca_gif` + Sheet
+3. **popolamento del catalogo** — le GIF della zona che restano senza codice diventano righe di `esercizi_catalog`, o si decide esplicitamente che non lo diventino
+
+**Nessuna cartella nuova con lavori arretrati su quella precedente.** Il terzo lavoro non è una coda opzionale: una zona con le immagini migrate e il catalogo non popolato è una zona **aperta**, non chiusa, e non autorizza ad aprirne un'altra.
+
+Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
+
+**Ordine delle zone rimanenti** *(registrato l'11 agosto)*: **Pettorali** (in corso) → **Polpacci** → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+
+Non è più l'ordine per dimensione. **Spalle e Cuffia è anticipata** rispetto alle zone più grosse perché contiene i gruppi più poveri del pool: deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. È il cantiere che cambia davvero l'allenamento.
 
 ### Regole cantiere GIF (riconciliazione a tre fonti)
 

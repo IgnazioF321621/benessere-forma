@@ -83,6 +83,8 @@ Il vocabolario anatomico vale ancora per le zone non core. Da valutare se il mod
 ## 16. Liberi indicizzati senza codice
 GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo è **decisione aperta, non presa**.
 
+⚠️ **Questo cantiere non cresce più.** Dall'11 agosto il popolamento del catalogo è il terzo lavoro obbligatorio di ogni cartella → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori). Quello che resta qui è l'arretrato delle zone chiuse **prima** della regola; le zone da Pettorali in poi si chiudono col catalogo già popolato.
+
 - **Da Bicipiti e Braccia: 5** — `curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`. Stesso trattamento dei liberi di Addominali e Core.
 - **Gambe e Glutei: chiusa il 6 agosto** — delle 36, 10 erano GIF mancanti di codici già esistenti (agganciate), 25 sono diventate esercizi nuovi, 1 era una voce stantia. Zero scartate.
 
@@ -260,9 +262,34 @@ Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancant
 Strumento: pagina locale `tools/biblioteca-nomi/` (`prepara.py` → `conferma.py` su :8768 → `pianifica.py` → `migra_zona.py` → `verifica_worker.py`).
 Metodo in tre tempi: conferma visiva a gruppi di dieci → rinomina sul Mac → migrazione dei tre posti (bucket, `biblioteca_gif`, Sheet).
 
-**In coda per dimensione**: Mobilità 215 · Schiena e Trapezio 112 · **Pettorali 82 (in corso, esecuzione dal 15 agosto)** · Spalle e Cuffia 63 · Tricipiti 61 · Polpacci 19.
+## Una cartella si chiude su tre lavori
 
-> I gruppi più poveri del pool non sono nelle gambe: il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
+**Regola di metodo vincolante, dall'11 agosto 2026.** In `CLAUDE.md` sotto *Media system*.
+
+Ogni cartella si chiude su **tre lavori, in quest'ordine**, prima di aprire la successiva:
+
+1. **conferma dei nomi** — pannello locale, dieci alla volta, guardando la GIF
+2. **migrazione delle immagini** — bucket + `biblioteca_gif` + Sheet
+3. **popolamento del catalogo** — le GIF della zona rimaste senza codice diventano righe di `esercizi_catalog`, o si decide esplicitamente che non lo diventino
+
+**Nessuna cartella nuova con lavori arretrati su quella precedente.** Una zona con le immagini migrate e il catalogo non popolato è **aperta**, non chiusa, e non autorizza ad aprirne un'altra.
+
+Perché la regola esiste: i primi quattro giri hanno lasciato dietro i 65 codici senza `gif_slug` del [cantiere 2](#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
+
+### Ordine delle zone rimanenti
+
+Registrato l'11 agosto. **Non è più l'ordine per dimensione.**
+
+| # | zona | file | nota |
+|---|---|---|---|
+| 1 | **Pettorali** | 82 | in corso — nomi confermati, migrazione dal 15 agosto |
+| 2 | **Polpacci** | 19 | la più piccola: si chiude in un giro |
+| 3 | **Spalle e Cuffia** | 63 | **anticipata** rispetto alle zone più grosse |
+| 4 | Tricipiti | 61 | |
+| 5 | Schiena e Trapezio | 112 | |
+| 6 | Mobilità | 215 | |
+
+> **Perché Spalle e Cuffia passa avanti a Tricipiti, Schiena e Mobilità**: contiene i gruppi più poveri del pool — deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. Il deltoide posteriore è slot obbligatorio in quasi ogni Upper, quindi oggi esce lo stesso esercizio blocco dopo blocco. È il cantiere che cambia davvero l'allenamento, non la zona più grossa.
 
 ## Pettorali — nomi confermati, migrazione ferma al 15 agosto
 
@@ -274,7 +301,7 @@ Le sei popolazioni: **A** collegati slug invariato 35 · **B** collegati slug nu
 
 Controlli tutti puliti: 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0 percorsi non-ASCII, 0 codici che resterebbero senza GIF, 0 doppioni di contenuto, 0 impronte non determinabili su 60 oggetti.
 
-**I 22 caricamenti restano GIF libere senza codice**: il popolamento del catalogo è una fase separata, dopo la migrazione. Confluiscono nel [cantiere 16](#16-liberi-indicizzati-senza-codice).
+**I 22 caricamenti entrano in `biblioteca_gif` senza codice.** Diventare esercizi a catalogo è il **terzo lavoro**, non una coda: dall'11 agosto il popolamento è obbligatorio prima di aprire Polpacci → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori). Non confluiscono più nel [cantiere 16](#16-liberi-indicizzati-senza-codice): quel cantiere raccoglie l'arretrato delle zone chiuse prima della regola, e Pettorali non deve aggiungerne.
 
 ### Alla ripresa, in quest'ordine
 
@@ -287,6 +314,12 @@ python3 tools/biblioteca-nomi/pianifica.py "Pettorali"
 2. **Verificare le 85 rinomine sul Mac contro il disco.** `log_rinomine.tsv` dichiara 85 eventi `rinominato` e il file di lavoro dà gli 82 nomi come allineati, ma il confronto con ciò che sta davvero sul disco non è stato fatto: costa rileggere 109 MB. Da fare **prima della fase 2**.
 
 3. **Decidere sul termine `medi`**, comparso in `Croci cavi medi in piedi` (EX207, con EX104 e EX319). Introduce una terza altezza del cavo accanto ad `alti` e `bassi` e non è un termine dichiarato nella nomenclatura v2. Non blocca la migrazione — il nome è stato confermato guardando la GIF — ma è un valore nuovo entrato senza una decisione esplicita, esattamente come stava per succedere alle panche.
+
+4. **Eseguire la migrazione** secondo le otto fasi del piano, dal 15 agosto.
+
+5. **Popolare il catalogo — terzo lavoro, obbligatorio.** Le 22 GIF caricate avranno riga in `biblioteca_gif` e nessun codice in `esercizi_catalog`. Per ognuna si decide, guardando la GIF, se diventa un esercizio: in caso affermativo entra a catalogo dal Sheet, altrimenti resta libera **con la decisione scritta**, non per omissione. Prima di aprire la lista, incrociare i nomi col catalogo e separare i due mucchi — candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). I codici si allocano **al momento della scrittura** → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
+
+**Pettorali è chiusa solo dopo il punto 5.** Fino ad allora Polpacci non si apre.
 
 I punti 2 e 3 sono le due voci rimaste aperte l'11 agosto; il punto 1 è il prerequisito tecnico dell'esecuzione.
 
