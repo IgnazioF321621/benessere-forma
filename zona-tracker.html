@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.09 · 16:31';
+const APP_VERSION = '2026.08.11 · 22:46';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4711,7 +4711,7 @@ function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   const sessionType = sess.type || '';
   // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
   // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
-  return `Sei un coach di forza e ipertrofia. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
+  return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
 
 Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
 ${attrezzoSessione ? `L'utente sta usando: ${attrezzoSessione}. Adatta i cue a questo attrezzo specifico (setup, presa, posizione, errori tipici di questo strumento).` : ''}
@@ -4951,7 +4951,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
 
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
-    'Sei un nutrizionista esperto in dieta a Zona (40-30-30).',
+    'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.',
     [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
     macroBlock,
     consumedBlock,
@@ -10446,7 +10446,7 @@ async function _trainGenAINote(profile, schedaMeta) {
   const obiettivoLeggibile = OBJ_DISPLAY[schedaMeta.obiettivo] || schedaMeta.obiettivo || 'allenamento';
   const nomeUtente = (profile && profile.first_name) ? ` ${profile.first_name}` : '';
 
-  const prompt = `Sei un coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente} in voce calda e diretta.
+  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente} in voce calda e diretta. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
 
 Dati utente:
 - Obiettivo: ${obiettivoLeggibile}
@@ -19292,12 +19292,13 @@ const _PIANOV4_POSTINO_FALLBACK_REASONING =
 // Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
 async function _pianoV4GenerateReasoning(targets) {
   const prompt =
-    "Sei il coach nutrizionale di Zona Tracker. Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
+    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. " +
+    "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
     "Gli obiettivi NON cambiano rispetto alla settimana scorsa: kcal " + targets.kcal +
     ", proteine " + targets.protein + "g, carboidrati " + targets.carbs + "g, grassi " + targets.fat + "g.\n\n" +
     "Scrivi 2-3 frasi in italiano, prima persona plurale (\"questa settimana confermiamo...\"), tono caldo " +
-    "e incoraggiante, prosa diretta. NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno, " +
-    "NIENTE nome proprio (l'app non dà un nome al coach). Concentra il messaggio sull'idea che gli obiettivi " +
+    "e incoraggiante, prosa diretta. NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno. " +
+    "Concentra il messaggio sull'idea che gli obiettivi " +
     "restano fermi perché stanno funzionando, e che ora conta la costanza.";
   try {
     const txt = await callAI(prompt, 200);
@@ -19461,7 +19462,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   const pantry = _pianoV4F2aBuildPantry(dieta, intolleranze);
 
   return [
-    "Sei il coach nutrizionale di Zona Tracker. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
     "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),
