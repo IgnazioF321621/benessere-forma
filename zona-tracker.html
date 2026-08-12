@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.11 · 22:46';
+const APP_VERSION = '2026.08.12 · 21:24';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4951,7 +4951,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
 
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
-    'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.',
+    'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\nREGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.',
     [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
     macroBlock,
     consumedBlock,
@@ -10446,7 +10446,9 @@ async function _trainGenAINote(profile, schedaMeta) {
   const obiettivoLeggibile = OBJ_DISPLAY[schedaMeta.obiettivo] || schedaMeta.obiettivo || 'allenamento';
   const nomeUtente = (profile && profile.first_name) ? ` ${profile.first_name}` : '';
 
-  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente} in voce calda e diretta. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
+  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente}. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
+
+REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.
 
 Dati utente:
 - Obiettivo: ${obiettivoLeggibile}
@@ -10454,11 +10456,11 @@ Dati utente:
 - Tipo di sessione: ${schedaMeta.volume === 'essenziale' ? 'essenziale (solo i fondamentali)' : 'completa (fondamentali + rifiniture)'}
 - Numero sessioni nella scheda: ${schedaMeta.sessioniCount}
 
-Scrivi una breve nota motivazionale che annuncia la nuova scheda di allenamento.
+Scrivi una breve nota che annuncia la nuova scheda di allenamento.
 
 REGOLE:
-- Italiano, voce calda, no preamboli ("Ciao!", "Ecco la tua scheda...")
-- Prima persona plurale ("abbiamo costruito", "cresceremo insieme") oppure tu/te
+- Italiano, no preamboli ("Ciao!", "Ecco la tua scheda...")
+- Il "noi" solo per il lavoro fatto insieme ("abbiamo costruito", "ripartiamo"); corpo, progressi e risultati sono dell'utente e vanno al "tuo", mai al "nostro"
 - Puoi citare i giorni a settimana
 - Promette evoluzione blocco dopo blocco grazie ai check fisici
 - Max 2-3 frasi totali
@@ -19292,12 +19294,17 @@ const _PIANOV4_POSTINO_FALLBACK_REASONING =
 // Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
 async function _pianoV4GenerateReasoning(targets) {
   const prompt =
-    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. " +
+    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\n" +
+    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. " +
+    "Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di " +
+    "incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece " +
+    "di riempire con frasi motivazionali generiche.\n\n" +
     "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
     "Gli obiettivi NON cambiano rispetto alla settimana scorsa: kcal " + targets.kcal +
     ", proteine " + targets.protein + "g, carboidrati " + targets.carbs + "g, grassi " + targets.fat + "g.\n\n" +
-    "Scrivi 2-3 frasi in italiano, prima persona plurale (\"questa settimana confermiamo...\"), tono caldo " +
-    "e incoraggiante, prosa diretta. NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno. " +
+    "Scrivi 2-3 frasi in italiano, prosa diretta. Il \"noi\" solo per il lavoro fatto insieme " +
+    "(\"ripartiamo\", \"vediamo come va\"): il corpo, il peso, i risultati e i progressi sono dell'utente e vanno " +
+    "al \"tuo\", mai al \"nostro\". NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno. " +
     "Concentra il messaggio sull'idea che gli obiettivi " +
     "restano fermi perché stanno funzionando, e che ora conta la costanza.";
   try {
@@ -19464,6 +19471,8 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   return [
     "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
     "",
+    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.",
+    "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),
     "",
@@ -19483,7 +19492,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "7. CUCINA ITALIANA, piatti realistici e semplici da preparare a casa.",
     "8. BERSAGLI MACRO: le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
     "9. description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali con nomi corretti e riconoscibili (es. \"Pasta integrale al pesto di basilico con pomodorini e fiocchi di mandorle\").",
-    "10. explanation: OBBLIGATORIO per ogni pasto (mai vuoto, mai placeholder generico). 1-2 frasi brevi in italiano, voce coach calda e concreta (max 25 parole) sul PERCHÉ proponi proprio QUESTO pasto a QUESTO utente: collega al regime alimentare, all'obiettivo, agli ingredienti scelti, al bilanciamento Zona o agli orari della giornata. È il testo che l'utente leggerà sotto \"PERCHÉ TI PROPONGO QUESTO\" — deve essere personalizzato e specifico, mai una frase di servizio interscambiabile tra pasti.",
+    "10. explanation: OBBLIGATORIO per ogni pasto (mai vuoto, mai placeholder generico). 1-2 frasi brevi in italiano, SCRITTE IN PRIMA PERSONA da chi ha scelto quel piatto e ne spiega il motivo (\"ti metto...\", \"ho scelto... perché...\", \"qui punto su...\") — NON una didascalia da menù che descrive il piatto in terza persona, NON un elenco di proprietà degli ingredienti (max 25 parole) sul PERCHÉ proponi proprio QUESTO pasto a QUESTO utente: collega al regime alimentare, all'obiettivo, agli ingredienti scelti, al bilanciamento Zona o agli orari della giornata. È il testo che l'utente leggerà sotto \"PERCHÉ TI PROPONGO QUESTO\" — deve essere personalizzato e specifico, mai una frase di servizio interscambiabile tra pasti. Vale anche qui il REGISTRO dichiarato in testa: amico diretto e schietto, concreto, senza enfasi.",
     "11. INGREDIENTI CON DOSI PRECISE. Ogni pasto include una lista 'ingredients' di 3-5 voci, ognuna nella forma 'NomeIngrediente NUMEROg' (es. 'Filetto salmone 150g', 'Quinoa 70g (peso secco)', 'Olio EVO 10g'). Le dosi devono essere REALISTICHE (da bilancia, tipicamente multipli di 5 o 10g) e COERENTI coi macro dichiarati del pasto: la somma calorica e per macro degli ingredienti deve avvicinarsi a kcal/protein/carbs/fat del pasto. Riferimenti di coerenza utili: 150g salmone ≈ 30g proteine + 15g grassi + ~270 kcal; 70g quinoa secca ≈ 53g carboidrati + 9g proteine + ~250 kcal; 10g olio EVO ≈ 10g grassi + 90 kcal. FALLO QUADRARE: se i macro non tornano, aggiusta le dosi PRIMA di rispondere. Specifica '(peso secco)' o '(peso a crudo)' per cereali e legumi quando ha senso. Tutti gli ingredienti devono essere nella DISPENSA AMMESSA e rispettare le intolleranze (regole 1-5 valgono anche dentro la lista 'ingredients').",
     "12. ORARIO PASTO. Ogni oggetto pasto include 'time': '13:00' per i pranzi, '20:00' per le cene. Sempre questi due valori fissi.",
     "",
