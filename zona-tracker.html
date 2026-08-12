@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.12 · 21:24';
+const APP_VERSION = '2026.08.12 · 21:57';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -4947,7 +4947,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   const notaTomorrow = isTomorrow
     ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
     : '';
-  const istruzioniLine = `${istruzioniBase}${notaTomorrow} Italiano, diretto. Max 120 parole.`;
+  const istruzioniLine = `${istruzioniBase}${notaTomorrow} Italiano, diretto, prosa corrente. NIENTE elenchi puntati. Max 120 parole.`;
 
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
