@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.13 · 15:06';
+const APP_VERSION = '2026.08.13 · 16:10';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -8552,10 +8552,11 @@ const _TRAIN_GEN_TIME_BUDGET = {
 
 // Fallback voce coach se callAI fallisce nella nota motivazionale.
 // Stesso pattern del postino F.1 (_PIANOV4_POSTINO_FALLBACK_REASONING):
-// tono caldo, no termini tecnici, no preamboli, max 2 frasi.
+// prima persona, registro dell'esempio di tono del prompt B, no termini
+// tecnici, no preamboli, nessuna chiusura motivazionale, max 2 frasi.
 const _TRAIN_GEN_FALLBACK_REASONING =
-  "Il coach ha preparato la tua prima scheda di allenamento. " +
-  "Cresceremo insieme blocco dopo blocco, leggendo i tuoi check fisici.";
+  "Scheda nuova, esercizi nuovi: le prime sessioni ti sembreranno pesanti, ed è normale. " +
+  "Al check di fine blocco vediamo cosa è cambiato.";
 
 // Normalizzazione tollerante per pattern catalogo: lowercase + trim.
 // I valori canonici interni del generatore coincidono ora con quelli
@@ -10518,14 +10519,14 @@ async function _trainGenSaveToDB(userId, scheda) {
   //   - Exception generica → toast errore + ok:false
   //
   // Toast voce coach (~5500ms, coerente con postino F.1 Nutrition):
-  //   - Success (prima scheda)    → "Il coach ha preparato la tua prima scheda
-  //                                  di allenamento" 🏋️
-  //   - Success (schede successive) → "Il coach ha preparato la tua nuova scheda
-  //                                    di allenamento" 🏋️
+  //   - Success (prima scheda)    → "<COACH_NAME> ha preparato la tua prima
+  //                                  scheda di allenamento" 🏋️
+  //   - Success (schede successive) → "<COACH_NAME> ha preparato la tua nuova
+  //                                    scheda di allenamento" 🏋️
   //   - Race cross-device          → "La tua scheda è già pronta — apri di nuovo
   //                                   l'app" ℹ️
-  //   - Errore generico            → "Il coach non è riuscito a preparare la
-  //                                   scheda — riprova più tardi" ⚠️
+  //   - Errore generico            → "Non sono riuscito a preparare la scheda —
+  //                                   riprova più tardi" ⚠️
   //
   // RETURN: { ok:true, id, blocco_n } oppure { ok:false, reason }
 
@@ -10597,20 +10598,20 @@ async function _trainGenSaveToDB(userId, scheda) {
         return { ok: false, reason: 'unique-violation-race' };
       }
       console.warn('[train-gen] save: INSERT errore:', insErr.message);
-      try { showToast('Il coach non è riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
+      try { showToast('Non sono riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
       return { ok: false, reason: 'insert-error' };
     }
 
     // Successo!
     const successMsg = isFirstSchema
-      ? 'Il coach ha preparato la tua prima scheda di allenamento'
-      : 'Il coach ha preparato la tua nuova scheda di allenamento';
+      ? COACH_NAME + ' ha preparato la tua prima scheda di allenamento'
+      : COACH_NAME + ' ha preparato la tua nuova scheda di allenamento';
     try { showToast(successMsg, '🏋️', 5500); } catch(_) {}
     return { ok: true, id: data && data.id, blocco_n: data && data.blocco_n };
 
   } catch (e) {
     console.warn('[train-gen] save: INSERT eccezione:', (e && e.message) || e);
-    try { showToast('Il coach non è riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
+    try { showToast('Non sono riuscito a preparare la scheda — riprova più tardi', '⚠️', 5500); } catch(_) {}
     return { ok: false, reason: 'exception' };
   }
 }
@@ -12050,7 +12051,7 @@ async function ensureRestCue(exName, sessionId) {
       .replace(/\n/g, '<br>');
     ST.aiCue[key] = content || '<em style="color:var(--t3);">(nessun cue disponibile)</em>';
   } catch(e) {
-    ST.aiCue[key] = '<em style="color:#B84C2A;">Errore di connessione coach.</em>';
+    ST.aiCue[key] = '<em style="color:#B84C2A;">Cue non disponibile — connessione assente.</em>';
   }
   // Re-render solo se l'utente e' ancora sul modal di recupero per QUESTO esercizio
   if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
@@ -21817,7 +21818,7 @@ async function openExerciseAI(exName, sessionId) {
     ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content, loading: false };
   } catch(e) {
     if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Errore di connessione coach.', loading: false };
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Cue non disponibile — connessione assente.', loading: false };
   }
   renderTraining();
 }
