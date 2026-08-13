@@ -3693,7 +3693,18 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.13 · 14:49';
+const APP_VERSION = '2026.08.13 · 15:06';
+
+// ═══════════════════════════════════════════════════════════
+// NOME DEL COACH — provvisorio, in prova.
+// Cambiarlo qui cambia ogni testo visibile che lo nomina.
+// NON entra nelle etichette in maiuscolo (COACH · RIEQUILIBRIO,
+// PIANIFICATO · DAL COACH, MEMORIA · COACH, Voce del coach):
+// lì "coach" indica il ruolo, non la persona.
+// NON entra nei prompt: lì il nome è scritto per esteso dentro
+// l'identità, perché il modello lo legge come testo, non come dato.
+// ═══════════════════════════════════════════════════════════
+const COACH_NAME = 'Pirsi';
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -16737,7 +16748,7 @@ window.smartAnalyze = async function() {
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    alert('Errore nell\'analisi coach: ' + (e.message || 'riprova'));
+    alert('Non sono riuscito ad analizzare il pasto: ' + (e.message || 'riprova'));
   } finally {
     ST.smartForm.analyzing = false;
     renderOggi();
@@ -19293,8 +19304,8 @@ async function _pianoV4ComputePostinoStatus(opts) {
 // Fallback fisso usato se callAI() fallisce o ritorna stringa vuota.
 // Tono coerente con la voce del coach (variante OBIETTIVI INVARIATI).
 const _PIANOV4_POSTINO_FALLBACK_REASONING =
-  "Questa settimana confermiamo la rotta: gli obiettivi restano gli stessi della settimana scorsa. " +
-  "Hai messo basi solide — ora si tratta di mantenerle con costanza, un pasto alla volta.";
+  "Stessi numeri della settimana scorsa: stanno funzionando, non li tocco. " +
+  "Quello che cambia le cose adesso è chiudere la settimana intera, un pasto alla volta.";
 
 // Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
 async function _pianoV4GenerateReasoning(targets) {
@@ -19586,8 +19597,8 @@ function _pianoV4F2aParseAndValidate(text) {
     // generazione per questo: meglio un fallback neutro che 14 pasti senza spiegazione.
     if (!m.explanation || typeof m.explanation !== 'string' || !m.explanation.trim()) {
       m.explanation = (slot === 'pranzo')
-        ? 'Pranzo bilanciato secondo il tuo profilo e la dispensa ammessa, calibrato sui bersagli Zona del coach.'
-        : 'Cena calibrata sul tuo target serale, costruita con ingredienti coerenti col tuo regime alimentare.';
+        ? 'Te lo propongo perché sta nei tuoi bersagli Zona e usa solo quello che puoi mangiare.'
+        : 'L\'ho calibrato sul tuo target della sera, con ingredienti che rientrano nel tuo regime.';
     } else {
       m.explanation = m.explanation.trim();
     }
@@ -19714,10 +19725,10 @@ async function _pianoV4MaybePostino(opts) {
       if (opts.toastOnSkip) {
         const msg = {
           'skip-no-user':    'Devi accedere prima per ricevere un piano',
-          'skip-no-profile': 'Il coach non riesce a leggere il tuo profilo — riprova',
-          'skip-day':        'Il coach genera i piani nel giorno che hai scelto',
-          'skip-existing':   'Hai già un piano del coach per questa settimana',
-          'skip-no-targets': 'Il coach ha bisogno dei tuoi obiettivi per generare un piano',
+          'skip-no-profile': 'Non riesco a leggere il tuo profilo — riprova',
+          'skip-day':        'Genero i piani nel giorno che hai scelto',
+          'skip-existing':   'Hai già un piano per questa settimana',
+          'skip-no-targets': 'Mi servono i tuoi obiettivi per generare un piano',
         }[status.decision] || 'Qualcosa è andato storto — riprova';
         showToast(msg, 'ℹ️', 5500);
       }
@@ -19775,7 +19786,7 @@ async function _pianoV4MaybePostino(opts) {
         status.decision = 'skip-existing';
         status.existingFound = true;
         status.existingStatus = 'race-conflict';
-        if (opts.toastOnSkip) showToast('Hai già un piano del coach per questa settimana', 'ℹ️', 5500);
+        if (opts.toastOnSkip) showToast('Hai già un piano per questa settimana', 'ℹ️', 5500);
         return status;
       }
       // Altro errore DB: log e ritorna status come "errore"
@@ -19787,7 +19798,7 @@ async function _pianoV4MaybePostino(opts) {
     }
 
     status.createdDraft = data;
-    if (opts.toastOnSkip) showToast('Il coach ha generato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
+    if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
 
     // ── F.2a: generazione pasti figli pranzo+cena (Opzione A: no rollback su errore) ──
     // SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (siamo arrivati
@@ -19800,7 +19811,7 @@ async function _pianoV4MaybePostino(opts) {
       const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
       status.mealsResult = mealsResult;
       if (mealsResult.ok) {
-        if (opts.toastOnSkip) showToast('Il coach ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
+        if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
       } else if (mealsResult.reason === 'skip-existing-meals') {
         // Pasti già presenti (race condition rara). Nessun rollback necessario.
       } else {
@@ -19823,8 +19834,8 @@ async function _pianoV4MaybePostino(opts) {
         status.decision = rollbackOk ? 'error-meals-rollback' : 'error-meals-rollback-failed';
         status.rollbackOk = rollbackOk;
         if (opts.toastOnSkip) showToast(rollbackOk
-          ? 'Il coach non è riuscito a generare i pasti. Riprova tra poco.'
-          : 'Il coach non è riuscito a generare i pasti. Riprova più tardi.', '⚠️', 7500);
+          ? 'Non sono riuscito a generare i pasti. Riprova tra poco.'
+          : 'Non sono riuscito a generare i pasti. Riprova più tardi.', '⚠️', 7500);
       }
     }
 
@@ -20114,13 +20125,13 @@ function _pianoV4GetAlternatives(originalSlot) {
         id: 'alt-cola-1', name: 'Pasto test alt 1 - Toast avocado + uova',
         kcal: 420, carbs: 38, protein: 22, fat: 20,
         ingredients: ['Pane integrale 60g','Avocado 80g','2 uova in camicia','Pomodorini 100g'],
-        reasoning: 'Alternativa proteica con grassi buoni dell\'avocado. Esempio dimostrativo che mostra come l\'AI potrà bilanciare diversamente la colazione mantenendo il target calorico vicino.'
+        reasoning: 'Alternativa proteica con grassi buoni dell\'avocado. Esempio dimostrativo che mostra come ' + COACH_NAME + ' potrà bilanciare diversamente la colazione mantenendo il target calorico vicino.'
       },
       {
         id: 'alt-cola-2', name: 'Pasto test alt 2 - Smoothie bowl di soia',
         kcal: 480, carbs: 58, protein: 24, fat: 14,
         ingredients: ['Latte di soia 200ml','Banana 1 (media)','Frutti di bosco 80g','Semi di chia 10g','Mandorle a scaglie 15g'],
-        reasoning: 'Alternativa più ricca di carboidrati a basso indice glicemico. Esempio di come l\'AI potrà variare la fonte proteica restando dairy-free.'
+        reasoning: 'Alternativa più ricca di carboidrati a basso indice glicemico. Esempio di come ' + COACH_NAME + ' potrà variare la fonte proteica restando dairy-free.'
       },
       {
         id: 'alt-cola-3', name: 'Pasto test alt 3 - Pancake proteici di avena',
@@ -20915,7 +20926,7 @@ function renderPianoV4DemoBanner(isRealPlan) {
   if (isRealPlan) return '';
   return `<div class="pianov4-demo-banner">
     <div class="pianov4-demo-banner-label">ESEMPIO DIMOSTRATIVO</div>
-    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio per mostrarti come funzionerà il piano AI. Il tuo piano personalizzato arriverà domenica sera.</div>
+    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio, per mostrarti come funzionerà il piano di ${COACH_NAME}. Il tuo piano personalizzato arriverà domenica sera.</div>
   </div>`;
 }
 
@@ -20964,7 +20975,7 @@ function renderPianoV4MealsList(originalMeals, isRealPlan) {
     // Bottoni: in modalità piano vero tutti ghost disabilitati ("Disponibile presto").
     let acceptBtn, substBtn, skipBtn;
     if (isRealPlan) {
-      const tip = 'Azione disponibile presto sui pasti del coach';
+      const tip = 'Azione disponibile presto sui pasti del piano';
       acceptBtn = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">ACCETTA</button>`;
       substBtn  = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">SOSTITUISCI</button>`;
       skipBtn   = `<button class="pianov4-meal-btn pianov4-meal-btn-ghost" disabled title="${tip}">SALTO</button>`;
@@ -21059,7 +21070,7 @@ function renderPianoV4DayOverlay() {
       ${isRealPlan ? `
         <div class="pianov4-day-free-meals-note">
           <div class="pianov4-day-free-meals-eyebrow">COLAZIONE &amp; MERENDA</div>
-          <div class="pianov4-day-free-meals-text">Colazione e merenda le gestisci tu: questo spazio è lasciato libero per le tue preferenze. Il coach pensa a pranzo e cena, i due pasti principali della giornata.</div>
+          <div class="pianov4-day-free-meals-text">Colazione e merenda le gestisci tu: questo spazio resta libero per le tue preferenze. ${COACH_NAME} pensa a pranzo e cena, i due pasti principali della giornata.</div>
         </div>
       ` : ''}
     </div>
@@ -21125,8 +21136,8 @@ function renderPianoV4() {
   let statusHint = '';
   if (hasRealPlan) {
     statusHint = realDaysCount === 7
-      ? 'Piano del coach pronto · pranzi e cene generati per tutti i 7 giorni.'
-      : `Piano del coach pronto · pranzi e cene generati per ${realDaysCount} ${realDaysCount === 1 ? 'giorno' : 'giorni'}.`;
+      ? 'Piano pronto · pranzi e cene per tutti i 7 giorni.'
+      : `Piano pronto · pranzi e cene per ${realDaysCount} ${realDaysCount === 1 ? 'giorno' : 'giorni'}.`;
   } else if (offset === 0) {
     statusHint = 'Il tuo primo piano arriverà domenica sera.';
   } else if (offset < 0) {
@@ -21204,7 +21215,7 @@ function renderPianoV4() {
         <span class="pianov4-memory-see-all">VEDI TUTTE ›</span>
       </div>
       <p class="pianov4-memory-empty">
-        Il coach inizierà a memorizzare le tue preferenze man mano che registri pasti e fai sostituzioni.
+        ${COACH_NAME} inizierà a memorizzare le tue preferenze man mano che registri pasti e fai sostituzioni.
       </p>
     </div>`;
 
@@ -23570,7 +23581,7 @@ async function fetchAdvice(){
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
   ST.advLoading=true;ST.advice='';renderOggi();
   try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
-  catch(e){ST.advice='Errore coach: '+e.message;}
+  catch(e){ST.advice='Non sono riuscito a preparare il consiglio: '+e.message;}
   ST.advLoading=false;renderOggi();
 }
 
