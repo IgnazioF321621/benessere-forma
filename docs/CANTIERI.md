@@ -138,7 +138,7 @@ Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 | | bucket | risparmio | del piano |
 |---|---|---|---|
 | oggi | 639 MB | | 62% |
-| **dopo le prime 4 zone** | **473 MB** | −166 MB | **46%** |
+| **dopo le prime 5 zone** | **444 MB** | −195 MB | **43%** |
 | **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
 | + palette 128 colori | 305 MB | −52% | 30% |
 | + palette 64 colori | 253 MB | −60% | 25% |
@@ -156,7 +156,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
 | Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
 | Schiena e Trapezio | 96 | 31 | 70,2 | ~44 | da fare, 3 senza gemello |
-| Spalle e Cuffia | 63 | 27 | 62,2 | ~38 | da fare |
+| Spalle e Cuffia | 63 | 27 | 62,2 | **32,9** | ✅ 15 agosto (−47%) |
 | Tricipiti | 59 | 20 | 50,0 | **28,2** | ✅ 15 agosto (−44%) |
 
 **Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entreranno nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Il piano in `lavoro/_piani/` resta valido; va eseguito dopo questo cantiere.
@@ -165,7 +165,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 
 ### Ordine delle zone che restano
 
-Registrato il 15 agosto: **Spalle e Cuffia → Bicipiti e Braccia → Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
+Registrato il 15 agosto: ~~Spalle e Cuffia~~ → **Bicipiti e Braccia → Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
 
 ### Cosa e' rimasto aperto
 
