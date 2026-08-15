@@ -191,7 +191,8 @@ def main():
             'origine_mac': str(src),
             'lato_prima': lato, 'lato_dopo': lato_n,
             'fotogrammi': fotogrammi, 'fotogrammi_dopo': fotogrammi_n,
-            'durata_ms': durata, 'fotogrammi_fusi': fusi,
+            'durata_ms': durata, 'durata_ms_dopo': durata_n,
+            'fotogrammi_fusi': fusi,
             'md5_bucket': f.split('|')[0], 'byte_bucket': byte_bucket,
             'sha256_bucket': gem['sha256'],
             'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
@@ -218,6 +219,29 @@ def main():
         print('\nSaltati, restano intatti nel bucket:')
         for s in senza_gemello:
             print('   %s' % s)
+
+    # Riepilogo delle anomalie. Su una zona da 169 file le righe singole si
+    # perdono: cio' che non e' andato liscio va ripetuto in fondo, dove si legge.
+    fusi_l = [v for v in voci if v.get('fotogrammi_fusi')]
+    deriva = [v for v in voci if v['durata_ms_dopo'] != v['durata_ms']]
+    if fusi_l or deriva:
+        print('\nDA GUARDARE:')
+        if fusi_l:
+            print('  %d file con fotogrammi doppi fusi da -O3 (durata invariata):'
+                  % len(fusi_l))
+            for v in fusi_l:
+                print('     %-52.52s %d -> %d fotogrammi, %d ms invariati'
+                      % (v['storage_path'].split('/')[-1], v['fotogrammi'],
+                         v['fotogrammi_dopo'], v['durata_ms']))
+        if deriva:
+            print('  %d file con la durata cambiata (dentro la tolleranza, ma'
+                  ' guardali):' % len(deriva))
+            for v in deriva:
+                print('     %-52.52s %d -> %d ms'
+                      % (v['storage_path'].split('/')[-1], v['durata_ms'],
+                         v['durata_ms_dopo']))
+    else:
+        print('\nNessuna anomalia: durata e fotogrammi invariati su tutti i file.')
 
     PIANI.mkdir(parents=True, exist_ok=True)
     piano = PIANI / ('%s.json' % zona.lower().replace(' ', '-'))

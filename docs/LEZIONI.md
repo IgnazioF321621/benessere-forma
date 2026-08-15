@@ -422,3 +422,23 @@ Guardando lì: 18 oggetti su 19 avevano `public, max-age=31536000, immutable` fi
 **La regola.** Prima di dichiarare fallita una scrittura, controllare che il posto in cui la si sta leggendo sia il posto in cui l'effetto si vede. Vale il criterio già scritto in [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice): una verifica che guarda un canale diverso da quello dell'utente non verifica l'utente. Qui il canale dell'utente è l'URL pubblico, e costa `Range: bytes=0-0` — un byte — arrivarci.
 
 **Coda.** Cloudflare risponde **403** allo User-Agent di `urllib`: per interrogare il Worker come lo interroga l'app serve un UA da browser. Non è un aggiramento, è fare la stessa richiesta che fa il telefono. Anche il `cached_url` che il Worker restituisce ha **gli spazi non codificati** e va ricodificato prima dell'uso, o `urllib` solleva `InvalidURL`. Entrambe stanno in `verifica_480.py`.
+
+---
+
+## L30 — La CDN convalida per ETag: se i byte non cambiano, l'intestazione vecchia resta
+
+**Il caso.** 15 agosto 2026, Gambe e Glutei, la zona più grossa. Caricati 169 oggetti, tutti con `cache-control: public, max-age=31536000, immutable`. Il bucket lo conferma su tutti e 169. Il collaudo però si ferma: **due codici servono ancora `no-cache`**.
+
+Non erano rotti — i byte erano giusti. Erano due file **già sotto i 480 px**, quindi ricaricati identici: stessi byte, stesso ETag. Cloudflare aveva le loro copie sul bordo da **33 ore**, di prima del caricamento, e continuava a servirle con l'intestazione di allora.
+
+**Non si sblocca aspettando.** Forzata la rivalidazione con `Cache-Control: no-cache` in richiesta: `cf-cache-status: HIT`, e l'età che continua a crescere di richiesta in richiesta. Finché l'ETag non cambia, quella voce non si muove.
+
+**Perché solo due su 169.** Servono due condizioni insieme: byte non cambiati **e** oggetto già in cache sul bordo in quel momento. I 128 ricompressi delle prime tre zone non l'hanno mai avuto — i loro byte cambiano, quindi la voce viene sostituita da sé. Dei 91 invariati, 89 semplicemente non erano in cache.
+
+**Il rimedio.** `gifsicle -O3` senza ridimensionare: riscrive come i fotogrammi sono codificati fra loro, non cosa mostrano. Verificato pixel per pixel su tutti i fotogrammi dei due file — differenza massima **0**, stesso conteggio, stessa durata. I byte cambiano, l'ETag cambia, la CDN è costretta a sostituire la voce: dopo il caricamento `cf-cache-status: MISS`. Effetto secondario: −7% di peso.
+
+**Il costo.** Un giro di collaudo fallito e uno strumento in più (`ripara_cache.py`). Zero danni: il collaudo si è fermato prima di sgomberare `_480/`, quindi il materiale per rifare era ancora tutto lì.
+
+**La regola.** Una scrittura che cambia i **metadati** ma non il **contenuto** può non arrivare mai all'utente, perché fra il bucket e l'utente c'è una cache che ragiona sul contenuto. Verificare nel bucket non basta: il canale da guardare è quello dell'utente — è lo stesso criterio di [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice) e [L29](#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata), che questo cantiere ha ormai incontrato tre volte in tre forme diverse.
+
+**Corollario — la verifica che si ferma vale più di quella che passa.** Le prime due zone erano passate lisce e la terza no. Se il collaudo avesse guardato solo il bucket, come faceva la prima versione, sarebbe passata liscia anche questa e il difetto sarebbe rimasto nascosto in ogni zona successiva, silenzioso e mai contato.

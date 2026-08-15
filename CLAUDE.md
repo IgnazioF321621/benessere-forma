@@ -72,7 +72,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: Polpacci** (19,6 → 8,9 MB) e **Cardio e Conditioning** (87,7 → 45,2 MB). Bucket a **586 MB, 57% del piano**. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: Polpacci · Cardio e Conditioning · Gambe e Glutei.** Bucket da 639 a **495 MB, 48% del piano** — 144 MB liberati. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
 **Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
@@ -274,6 +274,7 @@ python3 tools/biblioteca-nomi/ricomprimi.py "<zona>"          # solo Mac, 0 byte
 python3 tools/biblioteca-nomi/carica_480.py "<zona>" --prova  # controlla, non scrive
 python3 tools/biblioteca-nomi/carica_480.py "<zona>"          # carica e verifica
 python3 tools/biblioteca-nomi/verifica_480.py "<zona>"        # collauda e sgombera
+python3 tools/biblioteca-nomi/ripara_cache.py "<zona>"        # solo se il collaudo si ferma
 ```
 
 Il collaudo fa **due** verifiche, e la seconda non basta da sola: tutti gli oggetti del piano letti dall'elenco del bucket (impronta, dimensione, `cache-control`), **e** i codici chiesti al Worker come fa l'app. Solo la prima copre i "liberi", che nel bucket ci sono anche se nessun codice li punta.
@@ -289,6 +290,8 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 ⚠️ **Prima di cancellare si registrano le impronte nella cache per contenuto, e non è un dettaglio.** Nel bucket ci sono byte ricompressi, e una volta sgomberata `_480/` **nessun file sul Mac ha più quell'impronta**: senza registrarla, ogni strumento vedrebbe quegli oggetti come "impronta ignota", che per [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto) blocca come "diverso". `verifica_480.py` la registra, cancella, e **ricontrolla dopo** che tutti gli oggetti risolvano ancora. Misurato su Polpacci: 7 dal Mac (quelli non toccati), 12 dalla cache, 0 ignoti.
 
 **Il piano `lavoro/_480/<zona>.json` non si cancella mai**: è il registro che tiene insieme byte nuovi ed esercizio — `storage_path`, file di origine sul Mac, impronta prima e impronta dopo. È l'unico posto in cui quel legame resta scritto una volta sgomberata la cartella.
+
+⚠️ **Un oggetto ricaricato identico può continuare a servire l'intestazione vecchia.** La CDN indicizza per URL e convalida per **ETag**: se i byte non cambiano l'ETag non cambia, e la voce vecchia resta anche forzando la rivalidazione. Colpisce solo i file già sotto i 480px (ricaricati identici) che erano in cache in quel momento — misurato: **2 su 219** nelle prime tre zone. Li sblocca `ripara_cache.py`, che li riscrive con `gifsicle -O3`: **non tocca un pixel** (verificato fotogramma per fotogramma, differenza 0) ma cambia i byte, quindi la CDN è costretta a sostituire la voce → [L30](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)
 
 ⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
 
@@ -571,3 +574,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 27. [Due istruzioni opposte nello stesso prompt](docs/LEZIONI.md#l27--due-istruzioni-opposte-nello-stesso-prompt-e-il-modello-obbedisce-alla-vecchia) — registro di Pirsi, esempi contro aggettivi
 28. [Una stima sui pixel non è una misura sui byte](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte) — il −82% che era −49%, e il campione preso male
 29. [La HEAD autenticata dice sempre `no-cache`](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata) — dove si verifica una scrittura
+30. [La CDN convalida per ETag](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta) — metadati cambiati, contenuto no
