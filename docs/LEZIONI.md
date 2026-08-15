@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt
 
 ---
 
@@ -363,3 +363,25 @@ Il difetto era reale, la portata inventata. È la variante di [L8](#l8--che-la-c
 **Il commit resta com'è.** `b88a3b5` è pubblicato e il codice che contiene è corretto; riscriverne la storia per aggiustare una frase nasconderebbe proprio l'errore da cui c'è da imparare. La rettifica vive qui, e i due difetti veri emersi dalla verifica — entrambi chiusi il 9 agosto — sono i cantieri [24](CANTIERI.md#24-striscia-settimanale-cieca-sullo-storico---chiuso-9-agosto-2b2fe95) e [25](CANTIERI.md#25-rendercalendar--codice-morto-rimosso---chiuso-9-agosto).
 
 **Coda della stessa lezione.** Chiudendo il cantiere 24 il titolo che avevo dato al difetto si è rivelato sbagliato a sua volta: non «settimana cieca a cavallo di mese» ma striscia cieca su **tutto** lo storico precedente al mese corrente, 75 allenamenti su 81. Avevo dedotto la portata dal punto in cui il difetto si vedeva, invece che da come la striscia carica i dati. Stessa forma dell'errore, due giorni dopo: la regola dei tre `grep` vale anche quando si scrive una voce di cantiere, non solo quando si annuncia una correzione.
+
+---
+
+## L27 — Due istruzioni opposte nello stesso prompt, e il modello obbedisce alla vecchia
+
+**Il caso.** 13 agosto 2026, cantiere Pirsi. Il coach riceve un nome e i cinque prompt vengono allineati a un registro unico. Nel commit `7cf1cb8` entra in B, C ed E una terna di indicazioni identiche su cosa fa quella voce, fra cui **«sceglie una cosa invece di offrirne tre»**.
+
+In E quell'indicazione atterra a poche righe da un'istruzione che c'era da mesi: **«Fornisci 2-3 suggerimenti CONCRETI e VARI»**.
+
+Il collaudo fuori dall'app, tre generazioni, ha dato 3 su 3 con due o tre piatti offerti. Il modello non ha esitato e non ha mediato: ha obbedito alla vecchia e ha ignorato la nuova, senza nessun segnale che ci fosse un conflitto.
+
+**Come ci sono arrivato.** Il brief chiedeva le tre indicazioni **identiche nei tre prompt**, e le ho scritte identiche. La verifica che avevo in mano — un controllo automatico che contava le varianti distinte del testo — ha detto «1 variante su 3 estrazioni», e quel numero era vero. Misurava che l'inserimento fosse coerente, non che il prompt lo fosse.
+
+**Il costo.** Un commit in più (`4e8a4b8`) per riscrivere l'istruzione preesistente in «Fornisci UN SOLO suggerimento, concreto e motivato», e un giro di collaudo in più.
+
+**L'effetto collaterale che non mi aspettavo.** Tolta la contraddizione, **l'esempio di tono si è sbloccato da solo**. Prima le tre generazioni aprivano con «Per cena, potresti optare per»; dopo, tutte e tre aprono con **«Ti restano 780 kcal per la cena»** — cioè l'incipit dell'esempio, il fatto concreto prima del consiglio. Non era una questione di enfasi: finché il modello doveva servire tre piatti non aveva spazio per l'apertura secca. **Un'istruzione che non funziona può essere schiacciata da un'altra, non ignorata di suo.**
+
+**La regola.** Quando si aggiunge un'istruzione a un prompt esistente, si rilegge **l'intero prompt** cercando quella che dice il contrario, prima di scrivere. Un prompt non è un elenco a cui si accoda: è un testo unico, e il modello lo legge tutto. E la verifica giusta non è «l'ho inserito», è **«il risultato è cambiato»**: contare che una stringa sia identica in tre punti non dice niente su cosa il modello farà.
+
+**Corollario — gli esempi valgono più degli aggettivi.** Lo stesso cantiere lo ha mostrato due volte. Otto generazioni su B e C con un paragrafo di registro fatto di aggettivi («amico diretto e schietto») rispettavano le regole e restavano generiche: *«il tuo corpo sarà messo alla prova»*, *«l'importante adesso è la costanza»*. Una frase scritta **come la direbbe Pirsi**, dichiarata come modello di voce e non di contenuto, ha spostato più di tre righe di descrizione. Con una cautela: se l'esempio contiene fatti inventati — nell'esempio di C ci sono due cene saltate — va detto esplicitamente al modello che sono inventati, o li attribuisce all'utente. Verificato su 3 generazioni: zero rimproveri inventati.
+
+**Coda.** Due residui noti sono rimasti aperti di proposito e stanno in [CANTIERI 26](CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi): C ripete i numeri uno per uno nonostante il divieto, ed E non ha una whitelist della dispensa e può proporre ingredienti fuori regime. Nessuno dei due nasce dal registro: erano lì prima.

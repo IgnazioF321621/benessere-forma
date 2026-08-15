@@ -1,10 +1,10 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 7 agosto 2026)*
+PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 agosto 2026)*
 
 **Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md); come si nominano gli esercizi in [`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md) (allegato normativo, in vigore). Non serve leggere gli archivi per lavorare: si aprono quando servono.
 
-**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
+**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
 
 ## File e URL
 
@@ -58,9 +58,11 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ---
 
-## Stato corrente (7 agosto 2026)
+## Stato corrente (13 agosto 2026)
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b in stand-by.
+
+**Pirsi** ✅ chiuso 13 agosto — il coach ha un nome, **provvisorio e in prova**. Prompt allineati su un registro unico, stringhe visibili riscritte nei tre moduli, nome in `COACH_NAME`. Regole in [Pirsi](#pirsi--nome-e-voce-del-coach), residui aperti nel [cantiere 26](docs/CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi).
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
@@ -107,7 +109,7 @@ Bootstrap (`setTimeout(..., 1800)`): `?test=1` → `#access_token` → `?code=` 
 - **Background**: bone `#F5F3EE` · **Accent**: evergreen `#2A7A6F`
 - **Tinte modulo**: Nutrition `#FAC775` · Training `#B5D4F4` · Body `#AFA9EC` (forte `#5E4A7A` solo checkpoint)
 - **Over-target**: `OVER_COLOR='#B45309'`
-- **"coach"** sostituisce "AI" in tutti i copy visibili UI
+- **"coach"** sostituisce "AI" in tutti i copy visibili UI. Dal 13 agosto 2026 il coach ha un nome: vedi [Pirsi](#pirsi--nome-e-voce-del-coach)
 - Training: restyling CSS vars completo (27 giugno 2026). Nutrition e Body: migrazione legacy in corso.
 
 ---
@@ -314,6 +316,68 @@ Indice: 1 nome unico · 2 formula e default omessi · 3 maiuscole · 4 panche ·
 
 ---
 
+## Pirsi — nome e voce del coach
+
+**In vigore dal 13 agosto 2026.** Il coach si chiama **Pirsi**. Il nome è **provvisorio, in fase di test**: è per questo che vive in un posto solo.
+
+### La costante
+
+```js
+const COACH_NAME = 'Pirsi';   // zona-tracker.html, subito dopo APP_VERSION
+```
+
+**Fuori dai prompt il nome non si scrive mai per esteso**: 22 usi, tutti da `COACH_NAME`. Cambiarlo è una riga.
+
+⚠️ **Nei prompt il nome è scritto per esteso, ed è voluto.** Lì il modello lo legge come testo dentro la frase d'identità, non come dato: passarlo da una variabile non darebbe nessun vantaggio e renderebbe i prompt illeggibili nel sorgente.
+
+⚠️ **L'HTML statico nel `<body>` non può leggere la costante.** Le due card dello step `s-coach` sono markup statico: `${COACH_NAME}` lì dentro finirebbe a schermo così com'è scritto. Il nome ci entra a runtime da `m1ApplyCoachNameToCards()`, chiamata da `m1GoStep` quando si apre lo step, usando i selettori `data-coach` che già esistono. **Il testo statico resta senza nome**, così prima che il JS giri non si vede niente di sbagliato. Chi aggiunge testi con il nome in HTML statico deve passare di lì o non funzionerà.
+
+### Chi parla in che persona
+
+| Chi scrive il testo | Persona | Nome |
+|---|---|---|
+| il modello (prompt) | **prima** — "ti metto", "non li tocco" | mai: non si nomina, non si firma |
+| l'app | **terza** — "Pirsi ha preparato…" | solo dove c'è un'azione per l'utente |
+| ripieghi (sostituiscono una risposta AI mancata) | **prima** | mai |
+
+**Errori e messaggi di servizio**: il nome si toglie **senza sostituirlo**, e la frase va in prima persona. `Il coach non riesce a leggere il tuo profilo` → `Non riesco a leggere il tuo profilo`.
+
+**Il nome compare solo dove Pirsi fa qualcosa per l'utente** — piano pronto, scheda preparata, obiettivo che userà. Un nome ripetuto trenta volte stanca, e finché è in prova ogni occorrenza in meno è lavoro in meno se cambia.
+
+### Cosa NON prende il nome
+
+- **Etichette di ruolo in maiuscolo**: `COACH · RIEQUILIBRIO` · `PIANIFICATO · DAL COACH` · `MEMORIA · COACH` · `Voce del coach` · `COACH · <data>` · `✨ Stima coach` · `⏳ Analisi coach…` · `🤖 Coach` (×2, sopra i cue) · la label `Coach` accanto al pallino con la Z in Progressione. Lì "coach" indica il **ruolo**, e un nome proprio in maiuscolo si legge come un marchio.
+- **La riga dei crediti** `Modello coach: Llama 3.3 70B via Groq`: uso tecnico del termine.
+- **I cue tecnici del recupero** (prompt A): bullet da tre parole letti col fiato corto tra le serie. Pirsi lì **non ha voce**, e i loro messaggi d'errore sono neutri, senza soggetto che parla — `Cue non disponibile — connessione assente.`
+
+### La parentesi di presentazione
+
+`(il tuo coach AI)` compare **esattamente 3 volte in tutta l'app**, mai due volte nella stessa schermata, e **solo in testi descrittivi** — mai nei toast, mai negli errori:
+
+1. sottotitolo dello step `s-coach` in onboarding M1 (la presentazione)
+2. card colazione e merenda, tab Piano
+3. stato vuoto della memoria, tab Piano
+
+Le ultime due esistono per chi l'onboarding non lo rifà (Ornella, Isabella): incontrerebbero il nome senza spiegazione. **Se compare più spesso diventa un tic.**
+
+### Riscrivere, non sostituire
+
+⚠️ **"il coach" è un nome comune con l'articolo, "il Pirsi" non esiste.** Ogni stringa va **riscritta per intero**: "del coach" → "di Pirsi", "al coach" → "a Pirsi", e in molti casi la frase migliore è quella che il nome non ce l'ha. Una sostituzione meccanica produce italiano rotto → [L27](docs/LEZIONI.md#l27--due-istruzioni-opposte-nello-stesso-prompt-e-il-modello-obbedisce-alla-vecchia)
+
+### Il registro nei prompt
+
+I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio) dichiarano l'identità `Sei Pirsi, il coach…` più l'ordine di parlare in prima persona senza nominarsi né firmarsi. **F, G, H restituiscono solo JSON e non hanno identità.**
+
+**B, C, D, E condividono un paragrafo di registro identico, 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
+
+⚠️ **Gli esempi valgono più degli aggettivi.** "Amico diretto" al modello dice poco; una frase scritta come la direbbe Pirsi gli dice tutto. B, C, E hanno un **esempio di tono** dichiarato come modello di *voce e non di contenuto*, coi suoi numeri e alimenti dichiarati inventati. L'esempio di C contiene un rimprovero (cene saltate) e porta con sé una guardia esplicita: **mai attribuire all'utente mancanze che non risultano dai dati ricevuti**.
+
+⚠️ **Il "noi" non possiede il corpo dell'utente.** Ammesso solo per il lavoro fatto insieme — *ripartiamo*, *vediamo come va*, *abbiamo costruito*. Corpo, peso, risultati e progressi sono suoi e vanno al **"tuo"**, mai al "nostro". Regola presente in B e in C.
+
+**Storia dell'intervento**: `ece8d66` nome nei prompt · `264851b` registro unico · `edbb7da` prosa in E · `7cf1cb8` esempi di tono · `4e8a4b8` contraddizione tolta da E · `5089e09` stringhe Piano · `f895056` stringhe Training · `04dcb85` onboarding e presentazione.
+
+---
+
 ## Coach generatore — regole
 
 **Filosofia**: catalogo verificato + AI che assembla. Mai inventare esercizi. Esercizi fissi dentro il blocco (4 sett.), variazione tra blocchi.
@@ -456,3 +520,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 24. [L'impronta si legge senza scaricare](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo) — `eTag` = MD5, verifiche `HEAD`, contatore byte
 25. [Un'impronta dedotta dal codice non verifica quel codice](docs/LEZIONI.md#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice) — criteri di verifica
 26. [Una vista dedotta dal nome di una funzione non esiste](docs/LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste) — portata di una modifica, funzioni mai chiamate
+27. [Due istruzioni opposte nello stesso prompt](docs/LEZIONI.md#l27--due-istruzioni-opposte-nello-stesso-prompt-e-il-modello-obbedisce-alla-vecchia) — registro di Pirsi, esempi contro aggettivi

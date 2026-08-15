@@ -2,7 +2,7 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 11 agosto 2026.*
+*Aggiornato: 13 agosto 2026.*
 
 Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
@@ -147,6 +147,18 @@ Tutti e 647 gli oggetti rispondono `cache-control: no-cache` — verificato su t
 Rimedio: ricaricare con `public, max-age=31536000, immutable`. **Non consuma egress** — i byte entrano — e i file sono già tutti sul Mac. È sicuro perché il cantiere non riscrive mai un percorso esistente: rinominare significa creare un percorso nuovo.
 
 Se si fa il cantiere 21, questo viene gratis: si sta già ricaricando tutto, basta aggiungere l'intestazione.
+
+## 26. Residui noti dei prompt di Pirsi
+*Aperto il 13 agosto 2026, a fine cantiere Pirsi. Nessuno di questi nasce dal registro: erano lì prima.*
+
+- **C ripete i numeri uno per uno.** Il prompt dice `NIENTE numeri ripetuti uno per uno`, e su quattro generazioni tre elencano per intero «2150 kcal, 160g di proteine, 215g di carboidrati e 60g di grassi». La leva probabilmente non è irrigidire il divieto ma **togliere i numeri dal prompt**: sono l'unico contenuto fattuale che il modello ha in mano, e senza quelli non gli resta che l'incoraggiamento generico.
+- **E non ha whitelist della dispensa.** Riceve solo `DIETA: pescetariano` e può proporre ingredienti fuori regime: in un collaudo ha suggerito **seitan**, che è glutine di frumento. La whitelist per categorie esiste già in D (`_pianoV4F2aBuildPantry`) e non è mai stata passata a E.
+- **Aritmetica dei macro in D.** In un collaudo, 100g di uova + 50g di tofu dichiarati 50g di proteine, e 750 kcal con 10g di carboidrati. Il prompt ha già una regola 11 che chiede di far quadrare le dosi prima di rispondere. Problema del modello, indipendente dal nome e dal registro.
+- **Asimmetria nella card dei cue.** Il messaggio di caricamento è in prima persona — «Genero un cue avanzato per te…» — mentre l'errore accanto è neutro per decisione presa (`Cue non disponibile — connessione assente`). Voluto finché non si guarda a schermo.
+
+**Il nome è in prova.** Se cambia, si cambia `COACH_NAME` in `zona-tracker.html` e basta: fuori dai prompt non esiste nessun'altra riga che contenga «Pirsi». Nei prompt il nome è scritto per esteso in cinque punti (identità di A, B, C, D, E) e va cambiato a mano — è la scelta dichiarata in `CLAUDE.md`.
+
+**Body**: nessuna stringa del modulo nominava il coach, quindi non c'è un quarto giro da fare.
 
 ## 24. Striscia settimanale cieca sullo storico — ✅ chiuso 9 agosto (`2b2fe95`)
 **Il titolo di questa voce era sbagliato, e con esso la diagnosi.** Non era «cieca a cavallo di mese»: era cieca su **qualunque settimana precedente al mese corrente**, per intero.
