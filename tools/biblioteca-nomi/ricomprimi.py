@@ -47,7 +47,7 @@ import sys
 import time
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageSequence
 
 BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
@@ -73,12 +73,23 @@ def md5_sha(path):
 
 
 def misura(path):
-    """(lato lungo, numero fotogrammi) o (None, None) se non si apre."""
+    """(lato lungo, fotogrammi, durata totale in ms). (None, None, None) se non si apre.
+
+    La durata e' la grandezza che conta davvero: `-O3` fonde i fotogrammi
+    consecutivi identici sommandone i ritardi, quindi il CONTEGGIO cala mentre
+    l'animazione resta la stessa. Misurato su `Burpee navy seal`: 279 -> 241
+    fotogrammi, durata 9300 ms prima e 9300 ms dopo.
+    """
     try:
         im = Image.open(path)
-        return max(im.size), getattr(im, 'n_frames', 1)
+        durata = 0
+        n = 0
+        for f in ImageSequence.Iterator(im):
+            durata += f.info.get('duration', 0)
+            n += 1
+        return max(im.size), n, durata
     except Exception:
-        return None, None
+        return None, None, None
 
 
 def ricomprimi_file(src, dst):
@@ -135,7 +146,7 @@ def main():
             continue
 
         src = Path(gem['percorso'])
-        lato, fotogrammi = misura(src)
+        lato, fotogrammi, durata = misura(src)
         dst = DEST_ROOT / zona / o['name']
 
         if lato is None:
@@ -156,22 +167,31 @@ def main():
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
 
-        # Guardia: la ricompressione non deve perdere fotogrammi ne' rompere il file
-        lato_n, fotogrammi_n = misura(dst)
+        # Guardia: la ricompressione non deve accorciare l'animazione ne' rompere
+        # il file. Si controlla la DURATA, non il conteggio dei fotogrammi: `-O3`
+        # fonde i consecutivi identici sommandone i ritardi, e il conteggio cala
+        # mentre cio' che si vede resta identico.
+        lato_n, fotogrammi_n, durata_n = misura(dst)
         if lato_n is None:
             sys.exit('ERRORE: il file prodotto non si apre: %s' % dst)
-        if fotogrammi_n != fotogrammi:
-            sys.exit('ERRORE: fotogrammi %d -> %d su %s'
+        if abs(durata_n - durata) > max(100, 0.02 * durata):
+            sys.exit('ERRORE: durata %d ms -> %d ms su %s'
+                     % (durata, durata_n, sp))
+        if fotogrammi_n > fotogrammi:
+            sys.exit('ERRORE: fotogrammi aumentati %d -> %d su %s'
                      % (fotogrammi, fotogrammi_n, sp))
         if lato_n > LATO:
             sys.exit('ERRORE: %s e ancora a %dpx' % (sp, lato_n))
+        fusi = fotogrammi - fotogrammi_n
 
         md5_n, sha_n = md5_sha(dst)
         byte_n = dst.stat().st_size
         voci.append({
             'storage_path': sp,
             'origine_mac': str(src),
-            'lato_prima': lato, 'lato_dopo': lato_n, 'fotogrammi': fotogrammi,
+            'lato_prima': lato, 'lato_dopo': lato_n,
+            'fotogrammi': fotogrammi, 'fotogrammi_dopo': fotogrammi_n,
+            'durata_ms': durata, 'fotogrammi_fusi': fusi,
             'md5_bucket': f.split('|')[0], 'byte_bucket': byte_bucket,
             'sha256_bucket': gem['sha256'],
             'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
@@ -179,8 +199,11 @@ def main():
             'azione': azione,
         })
         ris = 100 - 100.0 * byte_n / byte_bucket if byte_bucket else 0
+        nota = azione
+        if fusi:
+            nota += ' (%d fotogrammi doppi fusi, durata invariata)' % fusi
         print('%-50.50s %7.0fk %7.0fk %5.0f%%  %s'
-              % (o['name'], byte_bucket / 1024, byte_n / 1024, ris, azione))
+              % (o['name'], byte_bucket / 1024, byte_n / 1024, ris, nota))
 
     prima = sum(v['byte_bucket'] for v in voci)
     dopo = sum(v['byte_nuovo'] for v in voci)
