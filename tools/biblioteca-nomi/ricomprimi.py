@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Ricompressione a 480px di una zona, sul Mac. Nessuna scrittura su Storage o DB.
+
+    python3 tools/biblioteca-nomi/ricomprimi.py "Polpacci"
+
+Cosa fa, in ordine:
+  1. elenca gli oggetti della zona nel bucket (poche decine di kB, zero download)
+  2. per ognuno trova il gemello sul Mac per impronta (eTag = MD5) -> [L24]
+  3. i file sopra i 480px li ricomprime, gli altri li copia identici
+  4. scrive il piano in lavoro/_480/<zona>.json, che e' anche il riferimento
+     per la verifica e per il rientro dopo il caricamento
+
+------------------------------------------------------------------------------
+MASSIMO 480px, MAI INGRANDIRE
+------------------------------------------------------------------------------
+Nel bucket 371 oggetti su 647 sono gia' a 360px o meno. Portarli a 480 li
+ingrandirebbe: file piu' pesanti e piu' sfocati. Il ridimensionamento e' un
+tetto, non una misura: chi sta sotto non si tocca.
+
+------------------------------------------------------------------------------
+PALETTE INTATTA
+------------------------------------------------------------------------------
+Deciso il 15 agosto 2026: si ridimensiona e basta, `--colors` non si usa.
+Misurato su 54 file presi a caso nelle 9 zone: il solo 480px toglie il 49% del
+peso del bucket; ridurre anche i colori ne toglierebbe un altro 6% (128 colori)
+o 22% (64 colori), ma introduce banding permanente sulle sfumature. Con la sola
+riduzione di dimensione la biblioteca completa — Pettorali e Mobilita' comprese —
+sta a meta' del piano Free, quindi il margine non serve comprarlo con la qualita'.
+
+Verificato: su queste GIF `--colors 256` produce un file IDENTICO byte per byte
+al solo ridimensionamento. Hanno gia' 256 colori esatti: non c'e' niente da ridurre.
+
+------------------------------------------------------------------------------
+PERCHE' gifsicle E NON Pillow
+------------------------------------------------------------------------------
+Pillow rifa' i fotogrammi da capo e perde la codifica differenziale fra l'uno e
+l'altro: misurato, due file su sei uscivano PIU' PESANTI dell'originale (+89%).
+gifsicle la conserva. Sta in tools/bin/, si rifa' con installa_gifsicle.sh.
+"""
+import argparse
+import hashlib
+import json
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from PIL import Image
+
+BASE = Path(__file__).parent
+sys.path.insert(0, str(BASE))
+import impronte as I                                    # noqa: E402
+
+REPO = BASE.parent.parent
+GIFSICLE = REPO / 'tools' / 'bin' / 'gifsicle'
+GIF_ROOT = Path('/Users/ignaziofiorito/benessere-forma/Biblioteca di esercizi')
+# Sotto la biblioteca: e' gia' fuori da git, e impronte.py fa rglob sulla radice,
+# quindi i file ricompressi entrano nell'indice delle impronte da soli.
+DEST_ROOT = GIF_ROOT / '_480'
+PIANI = BASE / 'lavoro' / '_480'
+LATO = 480
+
+
+def md5_sha(path):
+    m, s = hashlib.md5(), hashlib.sha256()
+    with open(path, 'rb') as fh:
+        for b in iter(lambda: fh.read(1 << 20), b''):
+            m.update(b)
+            s.update(b)
+    return m.hexdigest(), s.hexdigest()
+
+
+def misura(path):
+    """(lato lungo, numero fotogrammi) o (None, None) se non si apre."""
+    try:
+        im = Image.open(path)
+        return max(im.size), getattr(im, 'n_frames', 1)
+    except Exception:
+        return None, None
+
+
+def ricomprimi_file(src, dst):
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(
+        [str(GIFSICLE), '--resize-fit', '%dx%d' % (LATO, LATO),
+         '--resize-method', 'mix', '-O3', str(src), '-o', str(dst)],
+        capture_output=True)
+    if r.returncode != 0:
+        return 'gifsicle: %s' % r.stderr.decode()[:160]
+    if not dst.exists() or dst.stat().st_size == 0:
+        return 'gifsicle non ha prodotto nulla'
+    return None
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('zona')
+    ap.add_argument('--rifai', action='store_true',
+                    help='ricomprime anche cio che e gia in _480/')
+    args = ap.parse_args()
+    zona = args.zona
+
+    if not GIFSICLE.exists():
+        sys.exit('manca %s — lancia prima:\n  bash tools/biblioteca-nomi/'
+                 'installa_gifsicle.sh' % GIFSICLE)
+
+    oggetti, err = I.elenco_bucket(zona + '/')
+    if err:
+        sys.exit('elenco del bucket fallito: %s' % err)
+    oggetti = [o for o in oggetti if o.get('id') is not None]
+    if not oggetti:
+        sys.exit('nessun oggetto nel bucket per la zona "%s"' % zona)
+
+    idx = I.indice_locale(verbose=True)
+    print('\nzona "%s": %d oggetti nel bucket\n' % (zona, len(oggetti)))
+
+    voci, senza_gemello = [], []
+    t0 = time.time()
+    print('%-50s %7s %7s %6s  %s' % ('file', 'prima', 'dopo', 'ris.', 'esito'))
+    for o in sorted(oggetti, key=lambda x: x['name']):
+        sp = I.nfc('%s/%s' % (zona, o['name']))
+        meta = o.get('metadata') or {}
+        byte_bucket = meta.get('size', 0)
+        f = I.firma(meta.get('eTag'), byte_bucket)
+        gem = idx.get(f)
+
+        if not gem:
+            # Senza gemello sul Mac non sappiamo che cosa stiamo sostituendo:
+            # non entra nel piano e resta esattamente com'e' [L10].
+            senza_gemello.append(sp)
+            print('%-50.50s %7.0fk %7s %6s  SALTATO: nessun gemello sul Mac'
+                  % (o['name'], byte_bucket / 1024, '-', '-'))
+            continue
+
+        src = Path(gem['percorso'])
+        lato, fotogrammi = misura(src)
+        dst = DEST_ROOT / zona / o['name']
+
+        if lato is None:
+            senza_gemello.append(sp)
+            print('%-50.50s %7.0fk %7s %6s  SALTATO: non si apre'
+                  % (o['name'], byte_bucket / 1024, '-', '-'))
+            continue
+
+        azione = 'ricompresso' if lato > LATO else 'invariato'
+        rifare = args.rifai or not dst.exists()
+
+        if rifare:
+            if azione == 'ricompresso':
+                e = ricomprimi_file(src, dst)
+                if e:
+                    sys.exit('ERRORE su %s: %s' % (sp, e))
+            else:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+
+        # Guardia: la ricompressione non deve perdere fotogrammi ne' rompere il file
+        lato_n, fotogrammi_n = misura(dst)
+        if lato_n is None:
+            sys.exit('ERRORE: il file prodotto non si apre: %s' % dst)
+        if fotogrammi_n != fotogrammi:
+            sys.exit('ERRORE: fotogrammi %d -> %d su %s'
+                     % (fotogrammi, fotogrammi_n, sp))
+        if lato_n > LATO:
+            sys.exit('ERRORE: %s e ancora a %dpx' % (sp, lato_n))
+
+        md5_n, sha_n = md5_sha(dst)
+        byte_n = dst.stat().st_size
+        voci.append({
+            'storage_path': sp,
+            'origine_mac': str(src),
+            'lato_prima': lato, 'lato_dopo': lato_n, 'fotogrammi': fotogrammi,
+            'md5_bucket': f.split('|')[0], 'byte_bucket': byte_bucket,
+            'sha256_bucket': gem['sha256'],
+            'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
+            'byte_nuovo': byte_n,
+            'azione': azione,
+        })
+        ris = 100 - 100.0 * byte_n / byte_bucket if byte_bucket else 0
+        print('%-50.50s %7.0fk %7.0fk %5.0f%%  %s'
+              % (o['name'], byte_bucket / 1024, byte_n / 1024, ris, azione))
+
+    prima = sum(v['byte_bucket'] for v in voci)
+    dopo = sum(v['byte_nuovo'] for v in voci)
+    n_ric = sum(1 for v in voci if v['azione'] == 'ricompresso')
+    print('\n%d file: %d ricompressi, %d lasciati come sono, %d saltati'
+          % (len(voci), n_ric, len(voci) - n_ric, len(senza_gemello)))
+    print('peso: %.1f MB -> %.1f MB  (%.0f%% in meno) in %.0fs'
+          % (prima / 1048576, dopo / 1048576,
+             100 - 100.0 * dopo / prima if prima else 0, time.time() - t0))
+
+    if senza_gemello:
+        print('\nSaltati, restano intatti nel bucket:')
+        for s in senza_gemello:
+            print('   %s' % s)
+
+    PIANI.mkdir(parents=True, exist_ok=True)
+    piano = PIANI / ('%s.json' % zona.lower().replace(' ', '-'))
+    piano.write_text(json.dumps({
+        'zona': zona, 'lato': LATO, 'palette': 'intatta',
+        'generato': time.strftime('%Y-%m-%dT%H:%M:%S'),
+        'byte_prima': prima, 'byte_dopo': dopo,
+        'senza_gemello': senza_gemello, 'voci': voci,
+    }, ensure_ascii=False, indent=1), encoding='utf-8')
+    print('\npiano: %s' % piano)
+    I.stampa_consumo()
+
+
+if __name__ == '__main__':
+    main()

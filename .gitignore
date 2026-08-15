@@ -50,3 +50,6 @@ tools/biblioteca-nomi/lavoro/_piani/*
 
 # Backup temporanei locali
 *.bak-*
+
+# Binari compilati per questo Mac (si rifanno con installa_gifsicle.sh)
+tools/bin/

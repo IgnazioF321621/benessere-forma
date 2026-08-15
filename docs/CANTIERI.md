@@ -126,27 +126,46 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 
 ## 21. Ricomprimere le GIF — il cantiere che chiude il problema Storage
-Le GIF del bucket sono **tutte 1080×1080**, per un'immagine che sul telefono viene mostrata larga ~350 px: nove volte i pixel che servono. Misurato ricomprimendo davvero due file:
-
-| | oggi | a 480 px | in WebP 480 px |
-|---|---|---|---|
-| `Burpee navy seal` | 6,73 MB | 1,06 MB (−84%) | 0,36 MB (−95%) |
-| `Squat jump ginocchia alte` | 3,77 MB | 0,73 MB (−81%) | 0,21 MB (−94%) |
-| **bucket intero** | **631 MB (73%)** | **~115 MB** | **~40 MB** |
-| **giro di scheda di Ignazio** | **62,9 MB** | ~11 MB | ~4 MB |
-
-**Perché è urgente**: la Mobilità sono 215 GIF da 1,94 MB di media = **407 MB**. Caricarla a piena risoluzione porta lo Storage a 1,04 GB e **sfonda il limite di 1 GB** del piano Free.
-
-Va fatto con l'ordine a righe doppie: cambia il contenuto dei file, quindi cambiano le impronte e i registri vanno riallineati. **Ricomprimere prima sul Mac**, rigenerare l'indice locale, poi caricare — così la catena non è mai scoperta e il caricamento non costa egress (i byte entrano, non escono).
-
-Da mettere in conto: la compressione va nella **procedura di caricamento**, non fatta a posteriori, o fra due cantieri si è di nuovo qui.
-
 ## 22. Rimettere il `cache-control` sulle GIF
-Tutti e 647 gli oggetti rispondono `cache-control: no-cache` — verificato su tutte e 9 le zone. Non è una scelta: gli script caricano con una POST diretta senza indicare la durata della cache, e in quel caso Supabase mette `no-cache` d'ufficio. Conseguenza: il telefono deve ricontrollare a ogni apertura e, se ha buttato via il file (facile, con GIF da 1-3 MB), lo riscarica per intero.
+*I due si fanno insieme: si sta gia' ricaricando tutto, l'intestazione viene gratis. Aperti il 15 agosto 2026.*
 
-Rimedio: ricaricare con `public, max-age=31536000, immutable`. **Non consuma egress** — i byte entrano — e i file sono già tutti sul Mac. È sicuro perché il cantiere non riscrive mai un percorso esistente: rinominare significa creare un percorso nuovo.
+**La regola operativa sta in [CLAUDE.md](../CLAUDE.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente)** — qui resta solo cosa manca da fare e cosa e' stato misurato.
 
-Se si fa il cantiere 21, questo viene gratis: si sta già ricaricando tutto, basta aggiungere l'intestazione.
+**Il vincolo vero e' lo spazio, non il traffico.** Il bucket occupa **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione portano a ~1150 MB e **sfondano il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **513 MB, il 50% del piano**.
+
+**I numeri veri, misurati il 15 agosto** su 54 file estratti a caso e stratificati sulle 9 zone. Le stime precedenti in questo file — −82%, «tutte 1080×1080», «bucket ~115 MB» — **erano sbagliate su entrambi i fronti** e sono state tolte: il −82% era un rapporto fra aree mai misurato, e le GIF a 1080 px erano 283 su 674, non tutte → [L28](LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte).
+
+| | bucket | risparmio | del piano |
+|---|---|---|---|
+| oggi | 639 MB | | 62% |
+| **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
+| + palette 128 colori | 305 MB | −52% | 30% |
+| + palette 64 colori | 253 MB | −60% | 25% |
+
+La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanente, e il margine c'e' gia'.
+
+### Stato zona per zona
+
+| zona | oggetti | da ridurre | MB prima | MB dopo | stato |
+|---|---|---|---|---|---|
+| Polpacci | 19 | 12 | 19,6 | 8,9 | ✅ 15 agosto |
+| Addominali e Core | 77 | 26 | 55,1 | ~34 | da fare |
+| Bicipiti e Braccia | 73 | 16 | 40,1 | ~28 | da fare |
+| Cardio e Conditioning | 31 | 31 | 87,7 | ~37 | da fare |
+| Gambe e Glutei | 169 | 85 | 201,6 | ~104 | da fare |
+| Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
+| Schiena e Trapezio | 96 | 31 | 70,2 | ~44 | da fare, 3 senza gemello |
+| Spalle e Cuffia | 63 | 27 | 62,2 | ~38 | da fare |
+| Tricipiti | 59 | 20 | 50,0 | ~33 | da fare |
+
+**Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entreranno nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Il piano in `lavoro/_piani/` resta valido; va eseguito dopo questo cantiere.
+
+**Tre oggetti di Schiena e Trapezio non hanno gemello sul Mac** — `Rematore invertito TRX`, `Trazioni sbarra assistite elastico`, `Trazioni sbarra presa neutra`. Senza originale locale non sono ripristinabili: `ricomprimi.py` li esclude dal piano da solo e restano intatti con `no-cache`. Per trattarli servirebbe scaricarli una volta (~3 MB), da decidere a voce quando si arriva a quella zona.
+
+### Cosa e' rimasto aperto
+
+- **Il contatore misura il contenuto, non le intestazioni.** Una zona costa qualche decina di byte di contenuto e qualche decina di kB di intestazioni HTTP, che nessuno strumento conta oggi. Non e' un problema di quota; e' un limite da sapere quando si legge «0 byte».
+- **Il disco del Mac e' al 98%** (12 GB liberi). `_480/` aggiungera' ~300 MB a biblioteca completa: ci sta, ma non c'e' margine per molto altro.
 
 ## 26. Residui noti dei prompt di Pirsi
 *Aperto il 13 agosto 2026, a fine cantiere Pirsi. Nessuno di questi nasce dal registro: erano lì prima.*

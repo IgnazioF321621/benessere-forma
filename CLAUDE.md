@@ -72,7 +72,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-⚠️ **Egress Supabase fuori quota — cantiere biblioteca in pausa fino al 15 agosto 2026.** Cached Egress al 171% (8,55 GB su 5) misurato il 7 agosto; il ciclo si azzera il 15. Fino ad allora **nessuna migrazione di zona e nessun download dal bucket**. Gli strumenti di sola lettura (`stato.py`, `verifica_sync.py`, `riconcilia.py`, `collaudo_egress.py`) si possono lanciare: non scaricano nulla e lo dimostrano col contatore. La causa e i rimedi restano in [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo); i due rimedi ancora da fare — ricomprimere le GIF (sono 1080×1080, −82%) e rimettere il `cache-control` (oggi `no-cache` su tutti i 647 oggetti) — sono in [`docs/CANTIERI.md`](docs/CANTIERI.md).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: Polpacci** (19,6 → 8,9 MB). Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
 **Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
@@ -245,6 +245,46 @@ Non deve esistere un istante in cui una GIF è irraggiungibile.
 **Eccezione — zona senza codici**: se nessun `gif_slug` punta alla zona non esiste catena da proteggere, lo slug si aggiorna in place e non servono né righe doppie né sync. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma.
 
 **Rinominare i file nel bucket è cosmesi.** L'app risolve via `storage_path`: il nome del file non è ciò che rompe o aggiusta le immagini.
+
+### Ogni GIF entra nel bucket ridotta e con la cache — regola permanente
+
+**In vigore dal 15 agosto 2026.** Nessuna GIF entra nel bucket a piena risoluzione. La riduzione **fa parte della procedura di caricamento**, non è un intervento da fare dopo: fra due cantieri ci si ritroverebbe di nuovo con lo Storage pieno.
+
+```bash
+tools/bin/gifsicle --resize-fit 480x480 --resize-method mix -O3 <src> -o <dst>
+```
+
+Due proprietà, entrambe obbligatorie:
+
+| | valore | dove si controlla |
+|---|---|---|
+| lato lungo | **massimo 480 px** | `max(Image.open(p).size)` |
+| `cache-control` | `public, max-age=31536000, immutable` | `metadata.cacheControl` nell'elenco |
+
+⚠️ **480 px è un tetto, non una misura: chi sta sotto non si tocca.** Nel bucket 371 oggetti su 647 erano già a 360 px o meno; ridimensionarli a 480 li **ingrandirebbe**, più pesanti e più sfocati. `ricomprimi.py` li copia identici e li ricarica solo per l'intestazione.
+
+⚠️ **`--colors` non si usa.** Deciso il 15 agosto: si ridimensiona e basta. Il solo 480 px toglie il 49% del peso del bucket; ridurre anche i colori ne toglierebbe un altro 6% o 22% in cambio di banding permanente, e il margine non serve — con la sola riduzione di dimensione la biblioteca completa sta a metà del piano Free. Su queste GIF `--colors 256` è per giunta **identico byte per byte** al solo ridimensionamento: hanno già 256 colori esatti → [L28](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte)
+
+⚠️ **gifsicle, non Pillow.** Pillow rifà i fotogrammi da capo e perde la codifica differenziale: misurato, due file su sei uscivano **più pesanti dell'originale** (+89%). gifsicle non sta sul Mac di serie e non c'è Homebrew: si compila con `bash tools/biblioteca-nomi/installa_gifsicle.sh` in `tools/bin/`, fuori da git.
+
+**Le tre fasi, in quest'ordine** — la seconda non parte se la prima non ha prodotto un piano, la terza legge il piano:
+
+```bash
+python3 tools/biblioteca-nomi/ricomprimi.py "<zona>"          # solo Mac, 0 byte
+python3 tools/biblioteca-nomi/carica_480.py "<zona>" --prova  # controlla, non scrive
+python3 tools/biblioteca-nomi/carica_480.py "<zona>"          # carica e verifica
+python3 tools/biblioteca-nomi/verifica_480.py "<zona>"        # collaudo via Worker
+```
+
+**Le righe doppie qui non servono, e non è una scorciatoia.** Quell'ordine protegge la catena quando cambia uno **slug**: qui non cambiano né lo slug, né `storage_path`, né `biblioteca_gif`, né il Sheet — **il database non si tocca affatto**. Cambiano solo i byte all'indirizzo di sempre e un'intestazione. La garanzia che serve — mai un istante con la GIF irraggiungibile — la dà il caricamento stesso, che è una sostituzione e non una cancellazione seguita da una scrittura: se fallisce, quello che c'era resta dov'era.
+
+**Il backup è la biblioteca sul Mac**, e il piano lo dimostra riga per riga: registra md5, sha256 e dimensione di ciò che sta nel bucket *ora* e il file locale da cui quei byte provengono. Prima di scrivere si ricontrolla che il bucket sia ancora in quello stato; se anche un solo oggetto è cambiato, ci si ferma senza scrivere. Un oggetto **senza gemello sul Mac non è ripristinabile e quindi non si tocca**: `ricomprimi.py` lo esclude dal piano da solo.
+
+I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome che hanno nel bucket** — così il caricamento è una corrispondenza uno a uno. La cartella sta dentro la biblioteca, quindi è già fuori da git, e `impronte.py` fa `rglob` sulla radice: le impronte nuove entrano nell'indice da sole, senza toccare `RADICI_LOCALI`.
+
+⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
+
+**Per una zona non ancora migrata** — oggi Pettorali e Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro.
 
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 
@@ -521,3 +561,5 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 25. [Un'impronta dedotta dal codice non verifica quel codice](docs/LEZIONI.md#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice) — criteri di verifica
 26. [Una vista dedotta dal nome di una funzione non esiste](docs/LEZIONI.md#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste) — portata di una modifica, funzioni mai chiamate
 27. [Due istruzioni opposte nello stesso prompt](docs/LEZIONI.md#l27--due-istruzioni-opposte-nello-stesso-prompt-e-il-modello-obbedisce-alla-vecchia) — registro di Pirsi, esempi contro aggettivi
+28. [Una stima sui pixel non è una misura sui byte](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte) — il −82% che era −49%, e il campione preso male
+29. [La HEAD autenticata dice sempre `no-cache`](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata) — dove si verifica una scrittura

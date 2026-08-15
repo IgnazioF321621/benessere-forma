@@ -385,3 +385,40 @@ Il collaudo fuori dall'app, tre generazioni, ha dato 3 su 3 con due o tre piatti
 **Corollario — gli esempi valgono più degli aggettivi.** Lo stesso cantiere lo ha mostrato due volte. Otto generazioni su B e C con un paragrafo di registro fatto di aggettivi («amico diretto e schietto») rispettavano le regole e restavano generiche: *«il tuo corpo sarà messo alla prova»*, *«l'importante adesso è la costanza»*. Una frase scritta **come la direbbe Pirsi**, dichiarata come modello di voce e non di contenuto, ha spostato più di tre righe di descrizione. Con una cautela: se l'esempio contiene fatti inventati — nell'esempio di C ci sono due cene saltate — va detto esplicitamente al modello che sono inventati, o li attribuisce all'utente. Verificato su 3 generazioni: zero rimproveri inventati.
 
 **Coda.** Due residui noti sono rimasti aperti di proposito e stanno in [CANTIERI 26](CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi): C ripete i numeri uno per uno nonostante il divieto, ed E non ha una whitelist della dispensa e può proporre ingredienti fuori regime. Nessuno dei due nasce dal registro: erano lì prima.
+
+---
+
+## L28 — Una stima sui pixel non è una misura sui byte
+
+**Il caso.** 15 agosto 2026, cantiere 21. In CLAUDE.md la ricompressione a 480 px valeva **−82%**, e su quel numero era stato deciso il cantiere. Quel numero non era mai stato misurato: era `(480÷1080)² = 0,198`, cioè il rapporto fra le aree. Il peso di una GIF non segue l'area — buona parte è la codifica differenziale fra un fotogramma e l'altro, che il ridimensionamento non tocca. Misurato sul bucket vero: **−49%**.
+
+Sulla stessa riga c'era scritto che le GIF erano «tutte 1080×1080». Erano 283 su 674. **363 erano già a 360 px**: applicare la regola così com'era scritta le avrebbe **ingrandite**, più pesanti e più sfocate.
+
+**Il secondo errore, dentro la correzione.** Per correggere la stima ho ricompresso sei file veri e ottenuto −36%. Numero misurato, quindi credibile — e sbagliato. Quei sei erano **il primo file in ordine alfabetico di ogni zona**: non un campione, una comodità di scrittura del ciclo. Rifatto con 54 file estratti a caso e stratificati per zona, il risultato è −49%. La prima misura sbagliava di 13 punti, e sbagliava *in peggio*: avrebbe fatto scegliere una palette più aggressiva per recuperare margine che c'era già.
+
+**Il costo.** Nessuno: sono state entrambe corrette prima di toccare il bucket, e la seconda è stata scoperta perché Ignazio ha chiesto se il 480 px fosse già dentro le percentuali. Se fosse passata, la biblioteca avrebbe perso qualità in modo permanente per comprare un margine che non serviva.
+
+**La regola.** Un numero che decide un cantiere si misura sul materiale vero, e il campione si estrae a caso. Un ciclo che fa `break` sul primo elemento che soddisfa una condizione non produce un campione: produce il primo elemento in ordine alfabetico. E una stima analitica — aree, rapporti, proporzioni — si scrive nei documenti **dichiarandola stima**, o fra sei mesi qualcuno ci decide sopra.
+
+**Corollario.** La misura larga ha anche cambiato la decisione di merito. Con −49% dal solo ridimensionamento, ridurre la palette aggiungeva **6 punti** (128 colori) o 22 (64 colori) in cambio di banding permanente. Sul bucket il solo 480 px basta a tenere la biblioteca completa a metà del piano Free: il margine non andava comprato con la qualità. Verificato per giunta che su queste GIF `--colors 256` produce un file **identico byte per byte** al solo ridimensionamento — hanno già 256 colori esatti, non c'è niente da ridurre.
+
+---
+
+## L29 — La HEAD autenticata dice sempre `no-cache`, qualunque cosa sia memorizzata
+
+**Il caso.** 15 agosto 2026, caricamento di Polpacci con l'intestazione `cache-control: public, max-age=31536000, immutable`. Diciannove oggetti caricati, byte verificati, e diciannove avvisi: `cache-control letto: 'no-cache'`. Sembrava che Supabase avesse ignorato l'intestazione.
+
+Ho provato tre forme diverse dell'intestazione, poi il caricamento multipart col campo `cacheControl`. Sempre `no-cache`. Il caricamento era andato bene tutte e quattro le volte: **era la verifica a leggere nel posto sbagliato**.
+
+`HEAD /storage/v1/object/<bucket>/<path>` con la chiave di servizio risponde sempre `cache-control: no-cache`. È la regola di Supabase per le richieste autenticate — non vuole che contenuto autenticato finisca in cache — e non dice niente su cosa sia memorizzato sull'oggetto. Il valore vero sta in due posti, e coincidono:
+
+- `metadata.cacheControl` nell'**elenco** del bucket — gratis, arriva già con l'impronta e la dimensione
+- l'intestazione servita dall'**URL pubblico**, che è quello che l'app chiede davvero
+
+Guardando lì: 18 oggetti su 19 avevano `public, max-age=31536000, immutable` fin dal primo caricamento, e `cf-cache-status: MISS` — cioè Cloudflare stava iniziando a metterli in cache. Il diciannovesimo aveva il valore parziale del mio esperimento.
+
+**Il costo.** Quattro caricamenti di prova invece di uno, tutti gratuiti (l'ingress non si paga) e tutti innocui: la verifica per impronta ha continuato a dire che i byte erano giusti anche mentre l'intestazione sembrava sbagliata. È quella verifica che ha impedito di «aggiustare» qualcosa che non era rotto.
+
+**La regola.** Prima di dichiarare fallita una scrittura, controllare che il posto in cui la si sta leggendo sia il posto in cui l'effetto si vede. Vale il criterio già scritto in [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice): una verifica che guarda un canale diverso da quello dell'utente non verifica l'utente. Qui il canale dell'utente è l'URL pubblico, e costa `Range: bytes=0-0` — un byte — arrivarci.
+
+**Coda.** Cloudflare risponde **403** allo User-Agent di `urllib`: per interrogare il Worker come lo interroga l'app serve un UA da browser. Non è un aggiramento, è fare la stessa richiesta che fa il telefono. Anche il `cached_url` che il Worker restituisce ha **gli spazi non codificati** e va ricodificato prima dell'uso, o `urllib` solleva `InvalidURL`. Entrambe stanno in `verifica_480.py`.
