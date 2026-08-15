@@ -138,7 +138,7 @@ Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 | | bucket | risparmio | del piano |
 |---|---|---|---|
 | oggi | 639 MB | | 62% |
-| **dopo le prime 5 zone** | **444 MB** | −195 MB | **43%** |
+| **dopo le prime 6 zone** | **424 MB** | −216 MB | **41%** |
 | **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
 | + palette 128 colori | 305 MB | −52% | 30% |
 | + palette 64 colori | 253 MB | −60% | 25% |
@@ -151,7 +151,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 |---|---|---|---|---|---|
 | Polpacci | 19 | 12 | 19,6 | **8,9** | ✅ 15 agosto (−55%) |
 | Addominali e Core | 77 | 26 | 55,1 | ~34 | da fare |
-| Bicipiti e Braccia | 73 | 16 | 40,1 | ~28 | da fare |
+| Bicipiti e Braccia | 73 | 16 | 40,1 | **19,8** | ✅ 15 agosto (−51%) |
 | Cardio e Conditioning | 31 | 31 | 87,7 | **45,2** | ✅ 15 agosto (−48%) |
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
 | Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
@@ -165,7 +165,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 
 ### Ordine delle zone che restano
 
-Registrato il 15 agosto: ~~Spalle e Cuffia~~ → **Bicipiti e Braccia → Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
+Registrato il 15 agosto: ~~Spalle e Cuffia~~ → ~~Bicipiti e Braccia~~ → **Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
 
 ### Cosa e' rimasto aperto
 
