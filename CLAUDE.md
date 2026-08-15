@@ -72,7 +72,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: Polpacci · Cardio e Conditioning · Gambe e Glutei.** Bucket da 639 a **495 MB, 48% del piano** — 144 MB liberati. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: Polpacci · Cardio e Conditioning · Gambe e Glutei · Tricipiti.** Bucket da 639 a **473 MB, 46% del piano** — 166 MB liberati. Restano, in quest'ordine: Spalle e Cuffia · Bicipiti e Braccia · Addominali e Core · Schiena e Trapezio. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
 **Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
@@ -250,18 +250,31 @@ Non deve esistere un istante in cui una GIF è irraggiungibile.
 
 **In vigore dal 15 agosto 2026.** Nessuna GIF entra nel bucket a piena risoluzione. La riduzione **fa parte della procedura di caricamento**, non è un intervento da fare dopo: fra due cantieri ci si ritroverebbe di nuovo con lo Storage pieno.
 
+**Nessun file entra nel bucket con i byte di prima.** Due casi, un comando ciascuno:
+
 ```bash
+# sopra i 480 px: si ridimensiona
 tools/bin/gifsicle --resize-fit 480x480 --resize-method mix -O3 <src> -o <dst>
+# già sotto i 480 px: si riscrive la sola codifica, i pixel non si toccano
+tools/bin/gifsicle -O3 <src> -o <dst>
 ```
 
-Due proprietà, entrambe obbligatorie:
+Tre proprietà, tutte obbligatorie:
 
 | | valore | dove si controlla |
 |---|---|---|
 | lato lungo | **massimo 480 px** | `max(Image.open(p).size)` |
+| byte | **diversi da quelli di prima** | `md5_nuovo != md5_bucket` |
 | `cache-control` | `public, max-age=31536000, immutable` | `metadata.cacheControl` nell'elenco |
 
-⚠️ **480 px è un tetto, non una misura: chi sta sotto non si tocca.** Nel bucket 371 oggetti su 647 erano già a 360 px o meno; ridimensionarli a 480 li **ingrandirebbe**, più pesanti e più sfocati. `ricomprimi.py` li copia identici e li ricarica solo per l'intestazione.
+⚠️ **480 px è un tetto, non una misura: chi sta sotto non si ridimensiona.** Nel bucket 371 oggetti su 647 erano già a 360 px o meno; portarli a 480 li **ingrandirebbe**, più pesanti e più sfocati. Passano comunque per `-O3`, che cambia i byte senza toccare un pixel.
+
+⚠️ **Il perché dei byte nuovi non è il peso, è l'ETag.** *(regola dal 15 agosto 2026)* Un file ricaricato identico lascia l'ETag invariato, e la CDN può restare bloccata sull'intestazione vecchia — ma solo se quell'oggetto era in cache in quel momento, cioè **a seconda della fortuna**. Una procedura che riesce o fallisce a seconda di questo non va bene: si toglie la condizione alla radice. `ripara_cache.py` resta come rete di sicurezza, non come metodo → [L30](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)
+
+**Le guardie, uguali nei due casi.** Durata totale invariata (tolleranza 2%), fotogrammi mai in aumento, e confronto **a tempi uguali** — mai a indici uguali, perché `-O3` fonde i fotogrammi consecutivi identici e gli indici non si corrispondono più. Lo scostamento si misura e si stampa:
+
+- **riottimizzati `-O3`**: differenza massima su qualsiasi pixel **deve essere 0**. Se non lo è, lo strumento si ferma: `-O3` riscrive la codifica, non i colori.
+- **ridimensionati**: media a tempi uguali, con la mediana e il massimo della zona in fondo. Sopra 3,0 vanno guardati; oltre 5,0 lo strumento si ferma. Misurato su 85 file di Gambe e Glutei: mediana 0,53, massimo 1,17.
 
 ⚠️ **`--colors` non si usa.** Deciso il 15 agosto: si ridimensiona e basta. Il solo 480 px toglie il 49% del peso del bucket; ridurre anche i colori ne toglierebbe un altro 6% o 22% in cambio di banding permanente, e il margine non serve — con la sola riduzione di dimensione la biblioteca completa sta a metà del piano Free. Su queste GIF `--colors 256` è per giunta **identico byte per byte** al solo ridimensionamento: hanno già 256 colori esatti → [L28](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte)
 
@@ -295,7 +308,7 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 ⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
 
-**Per una zona non ancora migrata** — oggi Pettorali e Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro.
+**Per una zona non ancora migrata** — oggi Pettorali e Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro. Vale anche per i file già sotto i 480 px: entrano passati per `-O3`, mai con i byte del Mac.
 
 **Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
 

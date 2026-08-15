@@ -138,7 +138,7 @@ Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 | | bucket | risparmio | del piano |
 |---|---|---|---|
 | oggi | 639 MB | | 62% |
-| **dopo le prime 3 zone** | **495 MB** | −144 MB | **48%** |
+| **dopo le prime 4 zone** | **473 MB** | −166 MB | **46%** |
 | **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
 | + palette 128 colori | 305 MB | −52% | 30% |
 | + palette 64 colori | 253 MB | −60% | 25% |
@@ -157,15 +157,15 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
 | Schiena e Trapezio | 96 | 31 | 70,2 | ~44 | da fare, 3 senza gemello |
 | Spalle e Cuffia | 63 | 27 | 62,2 | ~38 | da fare |
-| Tricipiti | 59 | 20 | 50,0 | ~33 | da fare |
+| Tricipiti | 59 | 20 | 50,0 | **28,2** | ✅ 15 agosto (−44%) |
 
 **Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entreranno nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Il piano in `lavoro/_piani/` resta valido; va eseguito dopo questo cantiere.
 
 **Tre oggetti di Schiena e Trapezio non hanno gemello sul Mac** — `Rematore invertito TRX`, `Trazioni sbarra assistite elastico`, `Trazioni sbarra presa neutra`. Senza originale locale non sono ripristinabili: `ricomprimi.py` li esclude dal piano da solo e restano intatti con `no-cache`. Per trattarli servirebbe scaricarli una volta (~3 MB), da decidere a voce quando si arriva a quella zona.
 
-### Da decidere per le zone che restano
+### Ordine delle zone che restano
 
-**Riottimizzare con `-O3` anche i file gia' sotto i 480px?** Oggi vengono ricaricati identici, e per questo due di loro sono rimasti bloccati sulla CDN (→ [L30](LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)). Passarli tutti per `-O3` risolverebbe il problema alla radice invece che a valle, e toglierebbe un altro ~5% del loro peso. Non tocca un pixel: `-O3` riscrive la codifica fra fotogrammi, non i colori. Restano **91 file** cosi' nelle 5 zone da fare. In alternativa si continua a ripararli dopo con `ripara_cache.py`, che finora e' bastato: 2 casi su 219.
+Registrato il 15 agosto: **Spalle e Cuffia → Bicipiti e Braccia → Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
 
 ### Cosa e' rimasto aperto
 
