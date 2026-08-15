@@ -1,36 +1,44 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Collaudo di una zona ricompressa, dal lato dell'app. Costa 1 byte per GIF.
+"""Collaudo di una zona ricompressa e sgombero di _480/. Costa 1 byte per GIF.
 
     python3 tools/biblioteca-nomi/verifica_480.py "Polpacci"
+    python3 tools/biblioteca-nomi/verifica_480.py "Polpacci" --tieni   # non sgombera
 
-Fa la stessa domanda che fa l'app — `?code=EX###` al Worker — e poi controlla che
-l'indirizzo restituito serva davvero i byte ricompressi con l'intestazione giusta.
-E' l'unica verifica che attraversa tutta la catena:
+Due verifiche, e la seconda non basta da sola:
+
+  1. TUTTI gli oggetti del piano, letti dall'elenco del bucket: impronta,
+     dimensione e cache-control. Gratis, una richiesta per la zona.
+  2. I CODICI che puntano alla zona, chiesti al Worker come fa l'app, e poi
+     l'indirizzo restituito interrogato per un byte solo.
+
+La seconda da sola lascerebbe scoperti gli oggetti che nessun codice punta —
+i "liberi" del cantiere 16, che nel bucket ci sono comunque. La prima da sola
+direbbe che il file e' giusto, non che il Worker ci arrivi [L8]. Insieme
+coprono tutta la catena:
 
     esercizi_catalog.gif_slug -> biblioteca_gif.slug -> storage_path -> file -> CDN
 
-Perche' non basta guardare il bucket: il bucket dice che il file e' quello giusto,
-non che il Worker ci arrivi [L8]. E perche' non basta il Worker: il Worker dice
-che l'indirizzo esiste, non che dietro ci sia il file ricompresso.
+------------------------------------------------------------------------------
+_480/ E' UNA CARTELLA DI TRANSITO, NON UN ARCHIVIO
+------------------------------------------------------------------------------
+A zona verificata i ricompressi si cancellano: gli originali restano sul Mac e
+`ricomprimi.py` li rigenera identici byte per byte (verificato su Polpacci, 4 su 4).
+Tenerne due copie con il disco al 98% non ha motivo.
 
-------------------------------------------------------------------------------
-DUE TRAPPOLE, ENTRAMBE COSTATE UN GIRO
-------------------------------------------------------------------------------
-1. Cloudflare risponde 403 allo User-Agent di urllib. Serve un UA da browser:
-   non e' un aggiramento, e' la stessa richiesta che fa il telefono.
-2. Il `cached_url` del Worker torna con gli SPAZI NON CODIFICATI. Passato cosi'
-   a urllib solleva InvalidURL. Il percorso va ricodificato prima dell'uso.
+Prima di cancellare pero' si registra l'impronta di ogni file nella cache per
+contenuto. Serve: nel bucket ora ci sono byte ricompressi, e nessun file sul Mac
+ha piu' quell'impronta — senza registrarla, ogni strumento vedrebbe quegli
+oggetti come "impronta ignota", che per [L10] blocca come "diverso". Con la
+registrazione continuano a risolvere, dalla cache invece che dal Mac.
 
-------------------------------------------------------------------------------
-IL COSTO
-------------------------------------------------------------------------------
-`Range: bytes=0-0` chiede un byte solo: l'eTag e il cache-control arrivano nelle
-intestazioni, il contenuto no. Una zona intera costa qualche decina di byte di
-egress, e il contatore lo stampa a fine giro anche quando e' zero [L24].
+Il legame fra i byte nuovi e l'esercizio resta scritto nel piano della zona
+(`lavoro/_480/<zona>.json`): storage_path, file di origine sul Mac, impronta
+prima e impronta dopo. Il piano NON si cancella.
 """
 import argparse
 import json
+import shutil
 import sys
 import urllib.parse
 import urllib.request
@@ -54,79 +62,172 @@ def enc(url):
         (p.scheme, p.netloc, urllib.parse.quote(p.path), p.query, p.fragment))
 
 
+def stato_zona(zona):
+    """storage_path -> (etag, byte, cacheControl). Dall'elenco: una richiesta.
+
+    E' l'unico posto in cui il cache-control si legge davvero: la HEAD
+    autenticata risponde sempre `no-cache` [L29].
+    """
+    ogg, err = I.elenco_bucket(zona + '/')
+    if err:
+        return None, err
+    out = {}
+    for o in ogg:
+        if o.get('id') is None:
+            continue
+        m = o.get('metadata') or {}
+        out[I.nfc('%s/%s' % (zona, o['name']))] = (
+            (m.get('eTag') or '').strip('"'), m.get('size'), m.get('cacheControl'))
+    return out, None
+
+
+def registra_impronte(voci):
+    """Insegna alla cache per contenuto le impronte dei file ricompressi.
+
+    Da fare PRIMA di cancellare _480/, o gli oggetti del bucket restano senza
+    riscontro possibile. La chiave e' il contenuto (md5|byte), mai il percorso:
+    il cantiere rinomina, e una chiave sul percorso decade alla prima rinomina [L24].
+    """
+    c = I.cache_impronte()
+    nuove = 0
+    for v in voci:
+        k = I.firma(v['md5_nuovo'], v['byte_nuovo'])
+        if c.get(k) != v['sha256_nuovo']:
+            c[k] = v['sha256_nuovo']
+            nuove += 1
+    if nuove:
+        I._salva_json(I.CACHE_IMPRONTE, c)
+    return nuove
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('zona')
+    ap.add_argument('--tieni', action='store_true',
+                    help='non cancellare i ricompressi in _480/ a fine collaudo')
     args = ap.parse_args()
 
     piano_p = PIANI / ('%s.json' % args.zona.lower().replace(' ', '-'))
     if not piano_p.exists():
         sys.exit('manca il piano: %s' % piano_p)
     piano = json.loads(piano_p.read_text(encoding='utf-8'))
-    atteso = {v['storage_path']: v for v in piano['voci']}
+    voci = piano['voci']
+    atteso = {v['storage_path']: v for v in voci}
 
+    # ------------------------------------------------ 1. tutti gli oggetti
+    print('zona "%s": %d oggetti nel piano\n' % (args.zona, len(voci)))
+    print('1. stato nel bucket (impronta, dimensione, cache-control)...')
+    stato, err = stato_zona(args.zona)
+    if err:
+        sys.exit('elenco del bucket fallito: %s' % err)
+    ko_bucket = []
+    for v in voci:
+        s = stato.get(v['storage_path'])
+        etag, dim, cc = s if s else (None, None, None)
+        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc == CACHE_ATTESA:
+            continue
+        ko_bucket.append((v['storage_path'],
+                          'impronta %s dim %s cache %r'
+                          % ('ok' if etag == v['md5_nuovo'] else 'NO',
+                             'ok' if dim == v['byte_nuovo'] else 'NO', cc)))
+    if ko_bucket:
+        for sp, d in ko_bucket:
+            print('   NO  %-52.52s %s' % (sp.split('/')[-1], d))
+    print('   %d su %d a posto' % (len(voci) - len(ko_bucket), len(voci)))
+
+    # ------------------------------------------------------- 2. via Worker
     righe, err = I.leggi_tutto('biblioteca_gif', 'slug,storage_path', 'slug')
     if err:
         sys.exit('biblioteca_gif: %s' % err)
     cat, err = I.leggi_tutto('esercizi_catalog', 'codice,nome,gif_slug', 'codice')
     if err:
         sys.exit('esercizi_catalog: %s' % err)
-
     per_slug = {r['slug']: r['storage_path'] for r in righe}
     della_zona = {r['slug'] for r in righe
                   if (r.get('storage_path') or '').startswith(args.zona + '/')}
     codici = [c for c in cat if c.get('gif_slug') in della_zona]
 
-    print('zona "%s": %d codici la puntano\n' % (args.zona, len(codici)))
-    ko = 0
+    print('\n2. i %d codici che puntano alla zona, chiesti al Worker come fa l app:'
+          % len(codici))
+    ko_worker = 0
     for c in sorted(codici, key=lambda x: x['codice']):
         try:
             d = json.loads(urllib.request.urlopen(
                 urllib.request.Request(WORKER % urllib.parse.quote(c['codice']),
                                        headers=UA), timeout=60).read())
         except Exception as e:
-            print('  %-7s ERRORE dal Worker: %s' % (c['codice'], e))
-            ko += 1
+            print('   %-7s ERRORE dal Worker: %s' % (c['codice'], e))
+            ko_worker += 1
             continue
-
         url = d.get('cached_url')
         if not url:
-            print('  %-7s %-34.34s status=%s NESSUN URL'
+            print('   %-7s %-34.34s status=%s NESSUN URL'
                   % (c['codice'], c['nome'][:34], d.get('status')))
-            ko += 1
+            ko_worker += 1
             continue
-
         try:
             r = urllib.request.urlopen(
-                urllib.request.Request(enc(url),
-                                       headers=dict(UA, Range='bytes=0-0')),
+                urllib.request.Request(enc(url), headers=dict(UA, Range='bytes=0-0')),
                 timeout=60)
             I.conta_download(len(r.read()))
         except Exception as e:
-            print('  %-7s %-34.34s NON RAGGIUNGIBILE: %s'
+            print('   %-7s %-34.34s NON RAGGIUNGIBILE: %s'
                   % (c['codice'], c['nome'][:34], e))
-            ko += 1
+            ko_worker += 1
             continue
-
         v = atteso.get(per_slug.get(c['gif_slug']))
         etag = (r.headers.get('etag') or '').strip('"')
         cc = r.headers.get('cache-control')
         ok_b = bool(v) and etag == v['md5_nuovo']
         ok_c = cc == CACHE_ATTESA
         if not (ok_b and ok_c):
-            ko += 1
-        print('  %-7s %-34.34s byte %-3s cache %-3s'
-              % (c['codice'], c['nome'][:34],
-                 'ok' if ok_b else 'NO', 'ok' if ok_c else 'NO'))
+            ko_worker += 1
+            print('   %-7s %-34.34s byte %-3s cache %-3s'
+                  % (c['codice'], c['nome'][:34],
+                     'ok' if ok_b else 'NO', 'ok' if ok_c else 'NO'))
+    print('   %d su %d a posto' % (len(codici) - ko_worker, len(codici)))
 
+    # ------------------------------------------------------------ 3. esito
+    tutto_ok = not ko_bucket and not ko_worker
     print()
-    if ko == 0:
-        print('ESITO: tutti e %d i codici arrivano alla GIF ricompressa, '
-              'con la cache giusta.' % len(codici))
+    if not tutto_ok:
+        print('ESITO: %d oggetti e %d codici NON tornano. _480/ resta dov e.'
+              % (len(ko_bucket), ko_worker))
+        I.stampa_consumo('collaudo: 1 byte a GIF, il resto sono intestazioni')
+        return 1
+
+    print('ESITO: tutti e %d gli oggetti e tutti e %d i codici a posto.'
+          % (len(voci), len(codici)))
+
+    # --------------------------------------------------------- 4. sgombero
+    cartella = Path(piano['voci'][0]['file_480']).parent if voci else None
+    if args.tieni:
+        print('\n--tieni: %s resta dov e.' % cartella)
+    elif cartella and cartella.exists():
+        nuove = registra_impronte(voci)
+        print('\nsgombero di _480/:')
+        print('   %d impronte registrate nella cache per contenuto' % nuove)
+        # Controprova: senza i file, gli oggetti devono comunque risolvere.
+        I._INDICE = None
+        _per_sha, falliti, e = I.impronte_zona(args.zona, verbose=False)
+        peso = sum(p.stat().st_size for p in cartella.rglob('*') if p.is_file())
+        shutil.rmtree(cartella)
+        I._INDICE = None
+        _per_sha, falliti2, e2 = I.impronte_zona(args.zona, verbose=False)
+        if falliti2:
+            print('   ATTENZIONE: dopo la cancellazione %d oggetti non hanno piu'
+                  ' impronta determinabile:' % len(falliti2))
+            for f in falliti2[:5]:
+                print('     %s' % f['storage_path'])
+        else:
+            print('   %d oggetti risolvono ancora, dalla cache' % len(voci))
+        print('   liberati %.1f MB sul Mac (%s)' % (peso / 1048576, cartella))
+        print('   il piano resta: %s' % piano_p)
     else:
-        print('ESITO: %d codici su %d NON tornano.' % (ko, len(codici)))
+        print('\n_480/ gia sgombera.')
+
     I.stampa_consumo('collaudo: 1 byte a GIF, il resto sono intestazioni')
-    return 1 if ko else 0
+    return 0
 
 
 if __name__ == '__main__':

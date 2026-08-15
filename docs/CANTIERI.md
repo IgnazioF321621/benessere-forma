@@ -165,7 +165,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 ### Cosa e' rimasto aperto
 
 - **Il contatore misura il contenuto, non le intestazioni.** Una zona costa qualche decina di byte di contenuto e qualche decina di kB di intestazioni HTTP, che nessuno strumento conta oggi. Non e' un problema di quota; e' un limite da sapere quando si legge «0 byte».
-- **Il disco del Mac e' al 98%** (12 GB liberi). `_480/` aggiungera' ~300 MB a biblioteca completa: ci sta, ma non c'e' margine per molto altro.
+- **Il disco del Mac e' al 98%** (12 GB liberi). Non e' piu' un vincolo per questo cantiere: dal 15 agosto `_480/` si sgombera a zona verificata e non accumula. Il picco e' una zona alla volta — al massimo ~104 MB, Gambe e Glutei.
 
 ## 26. Residui noti dei prompt di Pirsi
 *Aperto il 13 agosto 2026, a fine cantiere Pirsi. Nessuno di questi nasce dal registro: erano lì prima.*

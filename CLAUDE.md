@@ -273,14 +273,22 @@ Due proprietà, entrambe obbligatorie:
 python3 tools/biblioteca-nomi/ricomprimi.py "<zona>"          # solo Mac, 0 byte
 python3 tools/biblioteca-nomi/carica_480.py "<zona>" --prova  # controlla, non scrive
 python3 tools/biblioteca-nomi/carica_480.py "<zona>"          # carica e verifica
-python3 tools/biblioteca-nomi/verifica_480.py "<zona>"        # collaudo via Worker
+python3 tools/biblioteca-nomi/verifica_480.py "<zona>"        # collauda e sgombera
 ```
+
+Il collaudo fa **due** verifiche, e la seconda non basta da sola: tutti gli oggetti del piano letti dall'elenco del bucket (impronta, dimensione, `cache-control`), **e** i codici chiesti al Worker come fa l'app. Solo la prima copre i "liberi", che nel bucket ci sono anche se nessun codice li punta.
 
 **Le righe doppie qui non servono, e non è una scorciatoia.** Quell'ordine protegge la catena quando cambia uno **slug**: qui non cambiano né lo slug, né `storage_path`, né `biblioteca_gif`, né il Sheet — **il database non si tocca affatto**. Cambiano solo i byte all'indirizzo di sempre e un'intestazione. La garanzia che serve — mai un istante con la GIF irraggiungibile — la dà il caricamento stesso, che è una sostituzione e non una cancellazione seguita da una scrittura: se fallisce, quello che c'era resta dov'era.
 
 **Il backup è la biblioteca sul Mac**, e il piano lo dimostra riga per riga: registra md5, sha256 e dimensione di ciò che sta nel bucket *ora* e il file locale da cui quei byte provengono. Prima di scrivere si ricontrolla che il bucket sia ancora in quello stato; se anche un solo oggetto è cambiato, ci si ferma senza scrivere. Un oggetto **senza gemello sul Mac non è ripristinabile e quindi non si tocca**: `ricomprimi.py` lo esclude dal piano da solo.
 
 I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome che hanno nel bucket** — così il caricamento è una corrispondenza uno a uno. La cartella sta dentro la biblioteca, quindi è già fuori da git, e `impronte.py` fa `rglob` sulla radice: le impronte nuove entrano nell'indice da sole, senza toccare `RADICI_LOCALI`.
+
+⚠️ **`_480/` è una cartella di transito, non un archivio.** A zona verificata i ricompressi si cancellano: gli originali restano sul Mac e `ricomprimi.py` li rigenera identici byte per byte (verificato, 4 su 4). Con il disco al 98% non ha senso tenerne due copie. Lo fa `verifica_480.py` da solo quando il collaudo passa; `--tieni` lo trattiene.
+
+⚠️ **Prima di cancellare si registrano le impronte nella cache per contenuto, e non è un dettaglio.** Nel bucket ci sono byte ricompressi, e una volta sgomberata `_480/` **nessun file sul Mac ha più quell'impronta**: senza registrarla, ogni strumento vedrebbe quegli oggetti come "impronta ignota", che per [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto) blocca come "diverso". `verifica_480.py` la registra, cancella, e **ricontrolla dopo** che tutti gli oggetti risolvano ancora. Misurato su Polpacci: 7 dal Mac (quelli non toccati), 12 dalla cache, 0 ignoti.
+
+**Il piano `lavoro/_480/<zona>.json` non si cancella mai**: è il registro che tiene insieme byte nuovi ed esercizio — `storage_path`, file di origine sul Mac, impronta prima e impronta dopo. È l'unico posto in cui quel legame resta scritto una volta sgomberata la cartella.
 
 ⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
 
