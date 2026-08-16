@@ -336,6 +336,94 @@ def scarica_oggetto(storage_path):
     return dati
 
 
+# ------------------------------------------------------------------ scrittura
+# UNICO punto da cui i byte entrano nel bucket. Prima del 16 agosto ce n'erano
+# tre: questo, la copia server-side di migra_zona.passo1 e il caricamento grezzo
+# di migra_zona._carica_nuova. Gli ultimi due sono nati prima della regola dei
+# 480px e la violavano entrambi — la copia perche' trasporta i byte di prima con
+# l'intestazione di prima, il caricamento grezzo perche' non mandava nessun
+# cache-control e dichiarava `image/gif` fisso. Tenere un solo scrittore e' cio'
+# che impedisce alla prossima zona di reintrodurre lo stesso difetto.
+CACHE_IMMUTABILE = 'public, max-age=31536000, immutable'
+
+# L'estensione non dice il formato: nel bucket due file `.gif` sono JPEG [L32].
+_MIME = {'GIF': 'image/gif', 'PNG': 'image/png', 'JPEG': 'image/jpeg',
+         'WEBP': 'image/webp'}
+
+
+def mimetype_da_contenuto(path):
+    """Il mimetype letto dai BYTE, mai dall'estensione. None se non si riconosce.
+
+    Serve per i file che nel bucket non ci sono ancora: per quelli che ci sono
+    gia' il tipo si RILEGGE dall'oggetto e si rimanda uguale [L33], perche' un
+    valore ricalcolato qui potrebbe non coincidere con quello registrato.
+    """
+    try:
+        from PIL import Image
+        return _MIME.get(Image.open(path).format)
+    except Exception:
+        return None
+
+
+def carica_bytes(storage_path, dati, content_type, cache_control=CACHE_IMMUTABILE):
+    """Scrive un oggetto nel bucket con la sua intestazione. None se e' andata.
+
+    `content_type` e' obbligatorio e senza valore di riserva, di proposito: un
+    default `image/gif` e' esattamente l'errore che [L33] descrive, e con un
+    parametro obbligatorio nessun chiamante puo' dimenticarselo per distrazione.
+    Il chiamante lo rilegge dall'oggetto esistente, o dal contenuto del file se
+    l'oggetto non esiste ancora.
+
+    Caricare non consuma egress: il traffico si paga in uscita, non in entrata.
+
+    `x-upsert` rende la scrittura una SOSTITUZIONE, non una cancellazione seguita
+    da una scrittura: se fallisce, quello che c'era resta dov'era. E' la proprieta'
+    che garantisce che non esista un istante con la GIF irraggiungibile.
+    """
+    k = chiave()
+    if not k:
+        return 'manca SUPABASE_SERVICE_ROLE_KEY in worker/.dev.vars'
+    url = '%s/storage/v1/object/%s/%s' % (U, BUCKET, urllib.parse.quote(storage_path))
+    req = urllib.request.Request(url, data=dati, method='POST',
+                                 headers={'apikey': k,
+                                          'Authorization': 'Bearer ' + k,
+                                          'Content-Type': content_type,
+                                          'Cache-Control': cache_control,
+                                          'x-upsert': 'true'})
+    try:
+        urllib.request.urlopen(req, timeout=300)
+        return None
+    except urllib.error.HTTPError as e:
+        return '%s %s: %s' % (e.code, e.reason, e.read().decode()[:200])
+    except Exception as e:
+        return str(e)
+
+
+def stato_bucket(zona):
+    """storage_path -> {etag, byte, cache, mimetype} per una zona. (dato, errore).
+
+    Si legge dall'ELENCO, non da una HEAD per oggetto: una richiesta invece di
+    centinaia, e soprattutto e' l'unico posto in cui il cache-control si vede
+    davvero. La HEAD autenticata risponde SEMPRE `no-cache` qualunque cosa sia
+    memorizzata, e verificare li' fa sembrare fallito un caricamento riuscito [L29].
+    """
+    ogg, err = elenco_bucket(zona + '/')
+    if err:
+        return None, err
+    out = {}
+    for o in ogg:
+        if o.get('id') is None:
+            continue
+        m = o.get('metadata') or {}
+        out[nfc('%s/%s' % (zona, o['name']))] = {
+            'etag': (m.get('eTag') or '').strip('"'),
+            'byte': m.get('size'),
+            'cache': m.get('cacheControl'),
+            'mimetype': m.get('mimetype'),
+        }
+    return out, None
+
+
 def testa_oggetto(storage_path):
     """HEAD su un oggetto: (etag, dimensione, errore). NON scarica il contenuto.
 

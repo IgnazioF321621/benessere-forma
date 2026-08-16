@@ -2,14 +2,41 @@
 # -*- coding: utf-8 -*-
 """Ricompressione a 480px di una zona, sul Mac. Nessuna scrittura su Storage o DB.
 
-    python3 tools/biblioteca-nomi/ricomprimi.py "Polpacci"
+    python3 tools/biblioteca-nomi/ricomprimi.py "Polpacci"     # zona gia' migrata
+    python3 tools/biblioteca-nomi/ricomprimi.py "Pettorali"    # zona in migrazione
 
 Cosa fa, in ordine:
-  1. elenca gli oggetti della zona nel bucket (poche decine di kB, zero download)
-  2. per ognuno trova il gemello sul Mac per impronta (eTag = MD5) -> [L24]
-  3. i file sopra i 480px li ricomprime, gli altri li copia identici
+  1. costruisce l'elenco delle unita' di lavoro (vedi sotto)
+  2. per ognuna trova il file di origine sul Mac
+  3. i file sopra i 480px li ricomprime, gli altri li riscrive con -O3
   4. scrive il piano in lavoro/_480/<zona>.json, che e' anche il riferimento
      per la verifica e per il rientro dopo il caricamento
+
+------------------------------------------------------------------------------
+L'UNITA' DI LAVORO E' IL PERCORSO DI DESTINAZIONE, NON L'OGGETTO NEL BUCKET
+------------------------------------------------------------------------------
+Fino al 16 agosto lo strumento era indicizzato sugli oggetti del bucket: elencava
+la cartella, trovava il gemello sul Mac per eTag e lavorava su quelli. Andava bene
+per le otto zone gia' migrate, dove ogni file era gia' dentro e al suo posto.
+
+Non regge le zone che devono ancora migrare, ed e' un difetto strutturale, non un
+caso particolare di Pettorali: li' i percorsi CAMBIANO (il file esce con un nome
+nuovo) e 22 file su 82 nel bucket non ci sono ancora. Su Mobilita' saranno 214 su
+214. Indicizzando sul bucket, i file nuovi non entrano mai nel piano — e sono
+esattamente quelli per cui la regola dei 480px e' stata scritta.
+
+Quindi l'unita' e' «questo file del Mac, destinato a questo percorso», e le
+sorgenti sono due, con la stessa forma in uscita:
+
+  zona CON piano di migrazione (lavoro/_piani/piano_<zona>.json)
+      le righe del piano danno file di origine, percorso di destinazione e, se
+      c'e', percorso attuale. Copre anche i file mai caricati.
+  zona SENZA piano (le otto gia' migrate)
+      si elenca il bucket e si risale al gemello per impronta, come prima.
+      Destinazione = percorso attuale: nessun file si sposta.
+
+Il piano prodotto ha la stessa forma nei due casi, cosi' carica_480.py e
+verifica_480.py non sanno nemmeno da quale delle due sorgenti viene.
 
 ------------------------------------------------------------------------------
 MASSIMO 480px, MAI INGRANDIRE
@@ -199,11 +226,79 @@ def confronta(src, dst, ridimensionato):
     return somma / len(coppie), massimo
 
 
+def piano_migrazione(zona):
+    """Il piano di pianifica.py, se la zona ne ha uno. None altrimenti."""
+    from nomenclatura import slug as fslug
+    p = BASE / 'lavoro' / '_piani' / ('piano_%s.json' % fslug(zona))
+    if not p.exists():
+        return None
+    return json.loads(p.read_text(encoding='utf-8'))
+
+
+def unita_di_lavoro(zona, stato, idx, migrazione=False):
+    """[{origine_mac, dest, attuale}] piu' l'elenco di cio' che si salta.
+
+    `dest` e' dove i byte andranno, `attuale` dove stanno ora (None se il file
+    nel bucket non c'e' ancora). Nelle zone gia' migrate i due coincidono.
+
+    Quale delle due sorgenti si usa lo DICE IL CHIAMANTE, non lo si indovina.
+    La tentazione era dedurlo: se il piano di migrazione descrive ancora il
+    bucket allora la zona sta migrando, altrimenti no. Non regge sui fatti — il
+    piano di "Gambe e Glutei" ha 3 righe che indicano ancora da spostare file
+    che invece sono vivi da settimane sotto un altro nome, con la loro riga e il
+    loro codice: durante quella migrazione si e' deciso diverso dal piano, e il
+    piano su disco non e' il verbale di cio' che e' stato fatto. Una deduzione
+    da quello stato avrebbe rimesso in movimento file a posto [L8].
+    """
+    mig = piano_migrazione(zona) if migrazione else None
+    if migrazione and not mig:
+        sys.exit('nessun piano di migrazione per "%s": lancia prima pianifica.py'
+                 % zona)
+
+    if mig:
+        unita, saltati = [], []
+        for r in mig['righe']:
+            src = GIF_ROOT / zona / r['file_mac']
+            if not src.exists():
+                saltati.append('%s — file del piano assente sul Mac' % r['file_mac'])
+                continue
+            att = I.nfc(r['storage_path_attuale']) if r.get('storage_path_attuale') else None
+            dst = I.nfc(r['storage_path_dest'])
+            # Dove stanno i byte ADESSO: all'indirizzo vecchio se c'e' ancora,
+            # altrimenti a quello nuovo se la riga e' gia' passata. Senza questo,
+            # rilanciare lo strumento a migrazione iniziata farebbe sembrare "mai
+            # caricate" tutte le righe gia' spostate.
+            ora = att if (att and att in stato) else (dst if dst in stato else None)
+            unita.append({'origine_mac': src, 'dest': dst, 'attuale': ora})
+        # Un oggetto nel bucket che il piano non nomina non e' un dettaglio: il
+        # piano dovrebbe coprire la zona intera, e cio' che resta fuori resta
+        # anche a piena risoluzione senza che nessuno se ne accorga.
+        coperti = {u['attuale'] for u in unita if u['attuale']}
+        for sp in sorted(set(stato) - coperti):
+            saltati.append('%s — nel bucket ma fuori dal piano di migrazione' % sp)
+        return unita, saltati, 'piano di migrazione (%d righe)' % len(mig['righe'])
+
+    # Zona gia' migrata: l'unita' e' l'oggetto che sta nel bucket, e non si sposta.
+    unita, saltati = [], []
+    for sp, s in sorted(stato.items()):
+        gem = idx.get(I.firma(s['etag'], s['byte']))
+        if not gem:
+            # Senza gemello sul Mac non sappiamo che cosa stiamo sostituendo:
+            # non entra nel piano e resta esattamente com'e' [L10].
+            saltati.append('%s — nessun gemello sul Mac' % sp)
+            continue
+        unita.append({'origine_mac': Path(gem['percorso']), 'dest': sp, 'attuale': sp})
+    return unita, saltati, 'elenco del bucket'
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('zona')
     ap.add_argument('--rifai', action='store_true',
                     help='ricomprime anche cio che e gia in _480/')
+    ap.add_argument('--migrazione', action='store_true',
+                    help='la zona sta migrando: le unita vengono dal piano di '
+                         'pianifica.py, percorsi di destinazione compresi')
     args = ap.parse_args()
     zona = args.zona
 
@@ -211,42 +306,53 @@ def main():
         sys.exit('manca %s — lancia prima:\n  bash tools/biblioteca-nomi/'
                  'installa_gifsicle.sh' % GIFSICLE)
 
-    oggetti, err = I.elenco_bucket(zona + '/')
+    stato, err = I.stato_bucket(zona)
     if err:
         sys.exit('elenco del bucket fallito: %s' % err)
-    oggetti = [o for o in oggetti if o.get('id') is not None]
-    if not oggetti:
-        sys.exit('nessun oggetto nel bucket per la zona "%s"' % zona)
 
     idx = I.indice_locale(verbose=True)
-    print('\nzona "%s": %d oggetti nel bucket\n' % (zona, len(oggetti)))
+    if not args.migrazione and piano_migrazione(zona):
+        print('\n  NOTA: per "%s" esiste un piano di migrazione, e non lo sto'
+              ' usando.\n        Se la zona sta migrando rilancia con'
+              ' --migrazione, o i file\n        nuovi e i percorsi di'
+              ' destinazione restano fuori dal piano.' % zona)
+    unita, senza_gemello, sorgente = unita_di_lavoro(zona, stato, idx,
+                                                     migrazione=args.migrazione)
+    if not unita:
+        print('\nnessuna unita di lavoro per la zona "%s".' % zona)
+        if senza_gemello:
+            print('%d oggetti saltati — tipicamente una zona gia ridotta, i cui'
+                  ' byte nel bucket\nnon hanno piu un gemello sul Mac perche'
+                  ' _480/ e stata sgomberata:' % len(senza_gemello))
+            for s in senza_gemello[:5]:
+                print('   %s' % s)
+            if len(senza_gemello) > 5:
+                print('   ... e altri %d' % (len(senza_gemello) - 5))
+        I.stampa_consumo()
+        return
+    nuovi = sum(1 for u in unita if u['attuale'] is None)
+    print('\nzona "%s": %d unita da %s — %d gia nel bucket, %d da caricare\n'
+          % (zona, len(unita), sorgente, len(unita) - nuovi, nuovi))
 
-    voci, senza_gemello = [], []
+    voci = []
     t0 = time.time()
     print('%-50s %7s %7s %6s  %s' % ('file', 'prima', 'dopo', 'ris.', 'esito'))
-    for o in sorted(oggetti, key=lambda x: x['name']):
-        sp = I.nfc('%s/%s' % (zona, o['name']))
-        meta = o.get('metadata') or {}
-        byte_bucket = meta.get('size', 0)
-        f = I.firma(meta.get('eTag'), byte_bucket)
-        gem = idx.get(f)
+    for u in sorted(unita, key=lambda x: x['dest']):
+        sp = u['dest']
+        nome_dest = sp.split('/')[-1]
+        # Stato di CIO' CHE STA NEL BUCKET ORA: per una rinomina e' all'indirizzo
+        # vecchio, per un file mai caricato non c'e' niente.
+        s_ora = stato.get(u['attuale']) if u['attuale'] else None
+        byte_bucket = s_ora['byte'] if s_ora else 0
 
-        if not gem:
-            # Senza gemello sul Mac non sappiamo che cosa stiamo sostituendo:
-            # non entra nel piano e resta esattamente com'e' [L10].
-            senza_gemello.append(sp)
-            print('%-50.50s %7.0fk %7s %6s  SALTATO: nessun gemello sul Mac'
-                  % (o['name'], byte_bucket / 1024, '-', '-'))
-            continue
-
-        src = Path(gem['percorso'])
+        src = u['origine_mac']
         lato, fotogrammi, durata = misura(src)
-        dst = DEST_ROOT / zona / o['name']
+        dst = DEST_ROOT / zona / nome_dest
 
         if lato is None:
-            senza_gemello.append(sp)
+            senza_gemello.append('%s — non si apre: %s' % (sp, src))
             print('%-50.50s %7.0fk %7s %6s  SALTATO: non si apre'
-                  % (o['name'], byte_bucket / 1024, '-', '-'))
+                  % (nome_dest, byte_bucket / 1024, '-', '-'))
             continue
 
         # Dal 15 agosto 2026 NESSUN file entra nel bucket con i byte di prima:
@@ -301,31 +407,47 @@ def main():
 
         md5_n, sha_n = md5_sha(dst)
         byte_n = dst.stat().st_size
+        # Il mimetype si rilegge dall'oggetto e si rimanda uguale [L33]. Se
+        # l'oggetto non esiste ancora non c'e' niente da rileggere e lo si
+        # deduce dal CONTENUTO del file, mai dall'estensione [L32].
+        s_dest = stato.get(sp)
+        mimetype = ((s_dest or s_ora or {}).get('mimetype')
+                    or I.mimetype_da_contenuto(src))
         voci.append({
             'storage_path': sp,
+            'storage_path_attuale': u['attuale'],
+            'percorso_cambia': u['attuale'] != sp,
             'origine_mac': str(src),
             'lato_prima': lato, 'lato_dopo': lato_n,
             'fotogrammi': fotogrammi, 'fotogrammi_dopo': fotogrammi_n,
             'durata_ms': durata, 'durata_ms_dopo': durata_n,
             'fotogrammi_fusi': fusi,
             'diff_media': round(media, 3), 'diff_massima': massimo,
-            'formato': formato,
-            'md5_bucket': f.split('|')[0], 'byte_bucket': byte_bucket,
-            'sha256_bucket': gem['sha256'],
+            'formato': formato, 'mimetype': mimetype,
+            'md5_bucket': s_ora['etag'] if s_ora else None,
+            'byte_bucket': byte_bucket or None,
+            'cache_bucket': s_ora['cache'] if s_ora else None,
             'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
             'byte_nuovo': byte_n,
             'azione': azione,
         })
         ris = 100 - 100.0 * byte_n / byte_bucket if byte_bucket else 0
         nota = azione
+        if u['attuale'] is None:
+            nota += ' (mai caricato)'
+        elif u['attuale'] != sp:
+            nota += ' (cambia percorso)'
         if fusi:
             nota += ' (%d fotogrammi doppi fusi, durata invariata)' % fusi
-        if not ridimensiona and byte_n >= byte_bucket:
+        if not ridimensiona and byte_bucket and byte_n >= byte_bucket:
             nota += ' (byte nuovi, peso invariato)'
-        print('%-50.50s %7.0fk %7.0fk %5.0f%%  %s'
-              % (o['name'], byte_bucket / 1024, byte_n / 1024, ris, nota))
+        print('%-50.50s %7s %7.0fk %5s  %s'
+              % (nome_dest,
+                 '%.0fk' % (byte_bucket / 1024) if byte_bucket else '-',
+                 byte_n / 1024,
+                 '%.0f%%' % ris if byte_bucket else '-', nota))
 
-    prima = sum(v['byte_bucket'] for v in voci)
+    prima = sum(v['byte_bucket'] or 0 for v in voci)
     dopo = sum(v['byte_nuovo'] for v in voci)
     n_ric = sum(1 for v in voci if v['azione'] == 'ricompresso')
     n_fermi = sum(1 for v in voci if v['azione'] == 'fermo-non-riscrivibile')
@@ -333,9 +455,23 @@ def main():
           ' %d fermi non riscrivibili, %d saltati'
           % (len(voci), n_ric, len(voci) - n_ric - n_fermi, n_fermi,
              len(senza_gemello)))
-    print('peso: %.1f MB -> %.1f MB  (%.0f%% in meno) in %.0fs'
-          % (prima / 1048576, dopo / 1048576,
-             100 - 100.0 * dopo / prima if prima else 0, time.time() - t0))
+    # Il confronto "prima -> dopo" vale solo per chi nel bucket c'e' gia': i file
+    # mai caricati non hanno un prima, e sommarli al totale farebbe sembrare la
+    # riduzione peggiore di quello che e'. Il peso in ingresso si dichiara a parte.
+    sostituiti = [v for v in voci if v['byte_bucket']]
+    dopo_sost = sum(v['byte_nuovo'] for v in sostituiti)
+    print('peso di cio che e gia nel bucket: %.1f MB -> %.1f MB  (%.0f%% in meno)'
+          ' in %.0fs'
+          % (prima / 1048576, dopo_sost / 1048576,
+             100 - 100.0 * dopo_sost / prima if prima else 0, time.time() - t0))
+    mai = [v for v in voci if not v['byte_bucket']]
+    if mai:
+        grezzo = sum(Path(v['origine_mac']).stat().st_size for v in mai)
+        print('mai caricati: %d file, %.1f MB sul Mac -> %.1f MB in ingresso'
+              '  (%.0f%% in meno)'
+              % (len(mai), grezzo / 1048576,
+                 sum(v['byte_nuovo'] for v in mai) / 1048576,
+                 100 - 100.0 * sum(v['byte_nuovo'] for v in mai) / grezzo))
 
     if senza_gemello:
         print('\nSaltati, restano intatti nel bucket:')
@@ -379,7 +515,35 @@ def main():
 
     # La proprieta' che tiene in piedi la regola: nessun file entra con i byte
     # di prima, o la CDN puo' restare bloccata sull'intestazione vecchia [L30].
-    identici = [v for v in voci if v['md5_nuovo'] == v['md5_bucket']
+    #
+    # La guardia vale per chi finisce SULLO STESSO indirizzo: e' li' che una voce
+    # di cache vecchia puo' sopravvivere. Un file che cambia percorso arriva a un
+    # URL che la CDN non ha mai visto, quindi non c'e' nessuna voce da sostituire
+    # e byte uguali non fanno danno — la riduzione, quando serve, la garantisce
+    # comunque il controllo sul lato lungo.
+    #
+    # Byte uguali a quelli gia' nel bucket vogliono dire due cose opposte, e le
+    # distingue l'intestazione. Se l'oggetto ha gia' il cache-control giusto, quel
+    # file e' semplicemente GIA' STATO FATTO — rilanciare lo strumento dopo aver
+    # caricato una parte della zona e' normale, e non deve fermare il giro. Se
+    # invece serve ancora `no-cache`, allora e' il caso pericoloso: si riscriverebbe
+    # senza cambiare l'ETag e la CDN potrebbe tenersi l'intestazione vecchia [L30].
+    gia_fatti = [v for v in voci if v['md5_bucket']
+                 and v['md5_nuovo'] == v['md5_bucket']
+                 and not v['percorso_cambia']
+                 and v.get('cache_bucket') == I.CACHE_IMMUTABILE]
+    if gia_fatti:
+        print('\n%d file sono gia nel bucket con questi byte e l intestazione'
+              ' giusta: gia fatti.' % len(gia_fatti))
+        for v in gia_fatti[:5]:
+            print('   %s' % v['storage_path'].split('/')[-1])
+        if len(gia_fatti) > 5:
+            print('   ... e altri %d' % (len(gia_fatti) - 5))
+
+    identici = [v for v in voci if v['md5_bucket']
+                and v['md5_nuovo'] == v['md5_bucket']
+                and not v['percorso_cambia']
+                and v.get('cache_bucket') != I.CACHE_IMMUTABILE
                 and v['azione'] != 'fermo-non-riscrivibile']
     if identici:
         sys.exit('ERRORE: %d file avrebbero i byte identici a quelli gia nel '
@@ -389,7 +553,10 @@ def main():
 
     # -O3 non sempre migliora un file gia' ottimizzato: su quelli serve l'ETag
     # nuovo, non il peso, quindi un aumento si accetta — ma si dice.
-    piu_pesanti = [v for v in voci if v['byte_nuovo'] > v['byte_bucket']]
+    # Solo per chi nel bucket c'e' gia': per un file mai caricato non esiste un
+    # "prima" con cui confrontarsi.
+    piu_pesanti = [v for v in voci
+                   if v['byte_bucket'] and v['byte_nuovo'] > v['byte_bucket']]
     if piu_pesanti:
         print('\n%d file sono diventati piu pesanti (accettabile: li si riscrive'
               ' per l ETag, non per il peso):' % len(piu_pesanti))

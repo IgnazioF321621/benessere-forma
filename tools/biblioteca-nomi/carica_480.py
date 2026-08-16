@@ -52,7 +52,7 @@ sys.path.insert(0, str(BASE))
 import impronte as I                                    # noqa: E402
 
 PIANI = BASE / 'lavoro' / '_480'
-CACHE_NUOVA = 'public, max-age=31536000, immutable'
+CACHE_NUOVA = I.CACHE_IMMUTABILE
 ESITI = BASE / 'lavoro' / '_esiti_480'
 
 
@@ -61,68 +61,35 @@ def _url(storage_path):
         I.U, I.BUCKET, urllib.parse.quote(storage_path))
 
 
-def carica_bytes(storage_path, dati, cache_control, content_type='image/gif'):
-    """Sostituisce l'oggetto e ne fissa l'intestazione. Ingress: non si paga.
-
-    ⚠️ Il `content_type` va PASSATO, non dedotto: nel bucket ci sono un PNG e tre
-    JPEG, e due di questi ultimi hanno estensione `.gif` pur essendo JPEG. Un
-    `image/gif` fisso corromperebbe il mimetype del PNG. Il chiamante rilegge
-    quello gia' registrato sull'oggetto e lo rimanda uguale: questo cantiere
-    cambia i byte e la cache, non il tipo dichiarato.
-    """
-    k = I.chiave()
-    if not k:
-        return 'manca SUPABASE_SERVICE_ROLE_KEY in worker/.dev.vars'
-    req = urllib.request.Request(_url(storage_path), data=dati, method='POST',
-                                 headers={'apikey': k,
-                                          'Authorization': 'Bearer ' + k,
-                                          'Content-Type': content_type,
-                                          'Cache-Control': cache_control,
-                                          'x-upsert': 'true'})
-    try:
-        urllib.request.urlopen(req, timeout=300)
-        return None
-    except urllib.error.HTTPError as e:
-        return '%s %s: %s' % (e.code, e.reason, e.read().decode()[:200])
-    except Exception as e:
-        return str(e)
+# Lo scrittore e' uno solo e vive in impronte.py: e' cio' che impedisce a un
+# secondo strumento di rimettere byte nel bucket senza cache-control o con un
+# mimetype scritto fisso. Qui si riesporta con il nome di prima, perche' la
+# firma e' cambiata (il content_type e' diventato obbligatorio) e i chiamanti
+# devono accorgersene passando da qui.
+carica_bytes = I.carica_bytes
 
 
 def stato_zona(zona):
     """storage_path -> (etag, byte, cacheControl) per tutta la zona. (dato, errore).
 
-    Si legge dall'ELENCO, non da una HEAD per oggetto: una richiesta invece di
-    venti, e soprattutto e' l'unico posto dove il cache-control si vede davvero.
-
-    ATTENZIONE, costato un giro a vuoto: la HEAD autenticata su
-    /storage/v1/object/<bucket>/<path> risponde SEMPRE `cache-control: no-cache`,
-    qualunque cosa sia stata memorizzata — e' la regola di Supabase per le
-    richieste autenticate, non lo stato dell'oggetto. Verificando li' un
-    caricamento perfettamente riuscito sembra non aver funzionato.
-    Il valore vero sta in due posti, e coincidono:
-      - metadata.cacheControl nell'elenco (gratis, e' quello che si usa qui)
-      - l'intestazione servita dall'URL pubblico, quello che l'app chiede davvero
+    Adattatore sulla forma a tupla usata qui e da ripara_cache.py; la lettura
+    vera e' I.stato_bucket, che e' anche l'unico posto in cui il cache-control
+    si vede davvero: la HEAD autenticata risponde SEMPRE `no-cache` qualunque
+    cosa sia memorizzata, e verificare li' fa sembrare fallito un caricamento
+    perfettamente riuscito [L29].
     """
-    ogg, err = I.elenco_bucket(zona + '/')
+    d, err = I.stato_bucket(zona)
     if err:
         return None, err
-    out = {}
-    for o in ogg:
-        if o.get('id') is None:
-            continue
-        m = o.get('metadata') or {}
-        out[I.nfc('%s/%s' % (zona, o['name']))] = (
-            (m.get('eTag') or '').strip('"'), m.get('size'), m.get('cacheControl'))
-    return out, None
+    return {sp: (v['etag'], v['byte'], v['cache']) for sp, v in d.items()}, None
 
 
 def mimetype_zona(zona):
-    """storage_path -> mimetype gia' registrato. Si rimanda uguale al caricamento."""
-    ogg, err = I.elenco_bucket(zona + '/')
+    """storage_path -> mimetype gia' registrato. Si rimanda uguale al caricamento [L33]."""
+    d, err = I.stato_bucket(zona)
     if err:
         return {}, err
-    return {I.nfc('%s/%s' % (zona, o['name'])): (o.get('metadata') or {}).get('mimetype')
-            for o in ogg if o.get('id') is not None}, None
+    return {sp: v['mimetype'] for sp, v in d.items()}, None
 
 
 def verifica_pubblico(storage_url):
@@ -228,8 +195,8 @@ def main():
     falliti_subito = 0
     for i, v in enumerate(da_fare, 1):
         err = carica_bytes(v['storage_path'], Path(v['file_480']).read_bytes(),
-                           CACHE_NUOVA,
-                           mime.get(v['storage_path']) or 'image/gif')
+                           mime.get(v['storage_path']) or 'image/gif',
+                           CACHE_NUOVA)
         if err:
             # Un caricamento fallito non lascia un buco: quello che c'era prima
             # e' ancora li'. Si annota e si tira dritto; la verifica dira' come sta.
@@ -266,8 +233,8 @@ def main():
         print('   NON CORRISPONDE %-40.40s atteso %s/%d, trovato %s/%s cc=%r'
               % (sp.split('/')[-1], v['md5_nuovo'][:10], v['byte_nuovo'],
                  (etag or '?')[:10], dim, cc))
-        e2 = carica_bytes(sp, Path(v['origine_mac']).read_bytes(), 'no-cache',
-                          mime.get(sp) or 'image/gif')
+        e2 = carica_bytes(sp, Path(v['origine_mac']).read_bytes(),
+                          mime.get(sp) or 'image/gif', 'no-cache')
         ripristinati += 1
         esiti[sp] = {'storage_path': sp, 'esito': 'ripristinato',
                      'dettaglio': 'verifica fallita; ripristino: %s' % (e2 or 'riuscito')}

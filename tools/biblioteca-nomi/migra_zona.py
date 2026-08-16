@@ -10,8 +10,9 @@ si aggiorna solo dal Google Sheet.
 Ordine a righe doppie — non deve esistere un istante in cui una GIF e' irraggiungibile:
 
   backup  righe biblioteca_gif della zona + elenco del bucket        (nessuna scrittura)
-  1       Storage: copia -> verifica SHA-256 -> aggiorna storage_path -> cancella la
-          vecchia.  Slug INVARIATO: il Worker continua a risolvere per tutto il passo.
+  1       Storage: carica i byte RIDOTTI al percorso di destinazione -> verifica
+          l'impronta -> aggiorna storage_path -> cancella il vecchio oggetto.
+          Slug INVARIATO: il Worker continua a risolvere per tutto il passo.
   2       biblioteca_gif: INSERISCE le righe con lo slug nuovo, stesso storage_path.
           Da qui vecchio e nuovo risolvono entrambi.
   --      Ignazio sincronizza il Sheet.  FERMATA OBBLIGATORIA.
@@ -20,26 +21,38 @@ Ordine a righe doppie — non deve esistere un istante in cui una GIF e' irraggi
   6       riga nuova del libero che aspettava uno slug occupato
   7       le altre righe nuove
 
-Uso:  python3 migra_zona.py "Bicipiti e Braccia" <passo>
+I BYTE ARRIVANO SEMPRE DAL PIANO DEI 480px, MAI DAL MAC
+Dal 15 agosto 2026 nessun file entra nel bucket con i byte di prima: si entra
+ridotti a 480px e con `cache-control: immutable`. Questo strumento non ha nessuna
+strada per scrivere byte che non passi da lavoro/_480/<zona>.json, quindi va
+lanciato ricomprimi.py PRIMA, o il passo si ferma senza scrivere.
+
+  python3 ricomprimi.py "<zona>"                    # prepara i byte ridotti
+  python3 migra_zona.py "<zona>" prova              # dice cosa farebbe
+  python3 migra_zona.py "<zona>" 1 --solo="<nome>"  # una riga sola, per collaudo
+
+Uso:  python3 migra_zona.py "Bicipiti e Braccia" <passo> [--solo=<nome o percorso>]
 """
 import collections
 import csv
 import json
-import os
 import sys
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import (BUCKET, U, api, cache_impronte, chiave,  # noqa: E402
-                      elenco_bucket, indice_locale, leggi_tutto, nfc,
-                      stampa_consumo, verifica_oggetto)
+from impronte import (BUCKET, CACHE_IMMUTABILE, U, api,  # noqa: E402
+                      cache_impronte, carica_bytes, elenco_bucket,
+                      indice_locale, leggi_tutto, nfc, stampa_consumo,
+                      stato_bucket, verifica_oggetto)
 from nomenclatura import slug as fslug  # noqa: E402
 
 BASE = Path(__file__).parent
-GIF_ROOT = Path(os.environ.get('BIBLIOTECA_ROOT',
-                               '/Users/ignaziofiorito/benessere-forma/Biblioteca di esercizi'))
+# Dal 16 agosto questo strumento NON legge piu' la biblioteca sul Mac: ogni byte
+# che scrive arriva dal piano dei 480px, che e' l'unico posto in cui un file e'
+# gia' stato ridotto e collaudato. Se qui ricomparisse una radice locale, sarebbe
+# il segno che qualcuno ha riaperto una strada per caricare a piena risoluzione.
 
 
 def carica(zona):
@@ -47,6 +60,85 @@ def carica(zona):
     if not p.exists():
         sys.exit('manca il piano: %s' % p)
     return json.loads(p.read_text(encoding='utf-8'))
+
+
+def piano_480(zona):
+    """Il piano di ricomprimi.py, indicizzato per percorso di DESTINAZIONE.
+
+    E' obbligatorio, e non e' una comodita': dal 15 agosto 2026 nessun file entra
+    nel bucket con i byte di prima, ridotto a 480px e con il cache-control. Questo
+    strumento non ha piu' nessuna strada per scrivere byte che non passi di qui,
+    quindi senza il piano si ferma invece di caricare a piena risoluzione.
+    """
+    p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
+    if not p.exists():
+        sys.exit('manca il piano dei 480px: %s\nlancia prima:\n'
+                 '  python3 tools/biblioteca-nomi/ricomprimi.py "%s"' % (p, zona))
+    d = json.loads(p.read_text(encoding='utf-8'))
+    return {nfc(v['storage_path']): v for v in d['voci']}
+
+
+def scrivi_oggetto(p480, storage_path, stato):
+    """Mette nel bucket i byte ridotti destinati a `storage_path`. (ok, nota).
+
+    Sostituisce sia la copia server-side sia il caricamento grezzo che stavano
+    qui prima del 16 agosto. La copia trasportava i byte di prima con
+    l'intestazione di prima; il caricamento grezzo non mandava cache-control e
+    dichiarava `image/gif` fisso [L33]. Entrambi erano nati prima della regola.
+
+    L'impronta attesa e' quella del file RIDOTTO — `sha256_nuovo` — non quella
+    dell'originale sul Mac: sono byte diversi, ed e' il file ridotto quello che
+    finisce nel bucket.
+
+    `stato` e' la fotografia della zona letta dall'ELENCO, una volta sola per
+    passo. Serve a ricontrollare, PRIMA di scrivere, che il bucket sia ancora
+    nello stato che il piano ha registrato: se qualcosa e' cambiato da allora ci
+    si ferma senza scrivere, perche' il piano non descrive piu' cio' che si sta
+    sostituendo. Si legge dall'elenco e non con una HEAD o una GET perche' quelle
+    andrebbero a toccare l'oggetto, e su un file che entra identico sarebbe il
+    sondaggio stesso a creare la voce di cache che si vuole evitare [L31].
+    """
+    sp = nfc(storage_path)
+    v = p480.get(sp)
+    if not v:
+        return False, 'nessuna voce nel piano dei 480px per %s' % storage_path
+    f = Path(v['file_480'])
+    if not f.exists():
+        return False, ('manca il file ridotto %s — rilancia ricomprimi.py' % f)
+    if not v.get('mimetype'):
+        return False, 'mimetype non determinato per %s' % storage_path
+
+    ora = stato.get(sp)
+    gia_nostro = bool(ora) and ora['etag'] == v['md5_nuovo'] \
+        and ora['byte'] == v['byte_nuovo']
+    if gia_nostro and ora['cache'] == CACHE_IMMUTABILE:
+        return True, 'gia a posto (byte ridotti e intestazione gia presenti)'
+
+    if v['percorso_cambia']:
+        # La destinazione deve essere libera. Se ospita gia' i nostri byte e'
+        # un secondo giro sullo stesso passo e si prosegue; qualunque altra cosa
+        # sarebbe una sovrascrittura di un oggetto che nessuno ha esaminato.
+        if ora and not gia_nostro:
+            return False, ('la destinazione e occupata da un altro oggetto'
+                           ' (etag %s)' % ora['etag'][:12])
+        att = stato.get(nfc(v['storage_path_attuale'])) \
+            if v.get('storage_path_attuale') else None
+        if att and v.get('md5_bucket') and att['etag'] != v['md5_bucket']:
+            return False, ('l oggetto di partenza e cambiato dopo il piano:'
+                           ' atteso %s, trovato %s'
+                           % (v['md5_bucket'][:12], att['etag'][:12]))
+    elif ora and v.get('md5_bucket') and not gia_nostro \
+            and ora['etag'] != v['md5_bucket']:
+        return False, ('l oggetto e cambiato dopo il piano: atteso %s, trovato %s'
+                       % (v['md5_bucket'][:12], ora['etag'][:12]))
+
+    err = carica_bytes(sp, f.read_bytes(), v['mimetype'])
+    if err:
+        return False, 'caricamento: %s' % err
+    ok, nota = impronta_giusta(sp, v['sha256_nuovo'])
+    if not ok:
+        return False, 'impronta dopo il caricamento: %s' % nota
+    return True, nota
 
 
 def bk(zona):
@@ -111,46 +203,59 @@ def passo_backup(zona, piano):
 
 
 # ------------------------------------------------------------------ passo 1
-def passo1(zona, piano):
-    """Storage + storage_path, slug invariato.
+def passo1(zona, piano, solo=None):
+    """Bucket: i byte ridotti al percorso di destinazione. Slug invariato.
 
-    Copia -> verifica l'impronta della copia -> aggiorna l'indice -> cancella la
-    vecchia. Mai invertire: se si cancellasse prima, un errore lascerebbe un buco.
+    Carica il file ridotto -> verifica l'impronta -> aggiorna l'indice -> cancella
+    il vecchio oggetto. Mai invertire: se si cancellasse prima, un errore
+    lascerebbe un buco.
+
+    Fino al 16 agosto questo passo faceva una COPIA server-side. Una copia porta
+    i byte di prima al percorso nuovo: piena risoluzione, stesso ETag, `no-cache`
+    conservato — cioe' tutte e tre le proprieta' obbligatorie mancate in un colpo
+    solo. Ora la rinomina e' una scrittura, e i byte scritti sono quelli ridotti.
+
+    Copre anche le righe che NON cambiano percorso. Prima erano fra le "righe che
+    non si toccano", e per la sola migrazione era vero; con la regola dei 480px
+    non lo e' piu': quei file stanno nel bucket a piena risoluzione e senza
+    intestazione esattamente come gli altri. Per loro sorgente e destinazione
+    coincidono, quindi non c'e' niente da cancellare dopo.
     """
-    da_fare = [r for r in piano['righe']
-               if r['storage_path_attuale'] and r['percorso_cambia']]
-    print('== PASSO 1: %d oggetti da rinominare (slug invariato) ==' % len(da_fare))
+    p480 = piano_480(zona)
+    stato, err = stato_bucket(zona)
+    if err:
+        sys.exit('elenco del bucket fallito: %s' % err)
+    da_fare = [r for r in piano['righe'] if r['storage_path_attuale']]
+    if solo:
+        da_fare = [r for r in da_fare
+                   if solo in (r['storage_path_dest'], r['nome_finale'])]
+        if not da_fare:
+            sys.exit('nessuna riga corrisponde a "%s"' % solo)
+    n_mv = sum(1 for r in da_fare if r['percorso_cambia'])
+    print('== PASSO 1: %d oggetti — %d cambiano percorso, %d riscritti in place =='
+          % (len(da_fare), n_mv, len(da_fare) - n_mv))
     presenti = oggetti_zona(zona)
     esiti = []
     for i, r in enumerate(da_fare, 1):
-        src, dst = r['storage_path_attuale'], r['storage_path_dest']
+        src, dst = nfc(r['storage_path_attuale']), nfc(r['storage_path_dest'])
         cod = ','.join(c['codice'] for c in r['codici']) or '-'
         e = {'codice': cod, 'slug': r['slug_attuale'], 'da': src, 'a': dst}
 
-        if dst in presenti and src not in presenti:
-            e['esito'] = 'gia fatto'
-            esiti.append(e)
-            continue
-        if dst in presenti:
-            e['esito'] = 'saltato'
-            e['dettaglio'] = 'la destinazione esiste gia ed e un altro oggetto'
+        # Una destinazione gia' occupata da un ALTRO oggetto non si sovrascrive.
+        # Se invece e' lo stesso oggetto (riscrittura in place) si procede: i byte
+        # che ci mettiamo sono diversi da quelli che ci sono, ed e' il punto.
+        if dst != src and dst in presenti:
+            e.update(esito='saltato',
+                     dettaglio='la destinazione esiste gia ed e un altro oggetto')
             esiti.append(e)
             print('  SALTATO %s: destinazione occupata' % cod)
             continue
 
-        _, err = api('POST', '/storage/v1/object/copy',
-                     {'bucketId': BUCKET, 'sourceKey': src, 'destinationKey': dst})
-        if err:
-            e.update(esito='errore', dettaglio='copia: %s' % err)
-            esiti.append(e)
-            print('  ERRORE copia %s: %s' % (cod, err))
-            continue
-
-        ok, nota = impronta_giusta(dst, r['sha256'])
+        ok, nota = scrivi_oggetto(p480, dst, stato)
         if not ok:
-            e.update(esito='errore', dettaglio='impronta della copia: %s' % nota)
+            e.update(esito='errore', dettaglio=nota)
             esiti.append(e)
-            print('  ERRORE impronta %s: %s — NON cancello nulla' % (cod, nota))
+            print('  ERRORE %s (%s): %s — NON cancello nulla' % (cod, dst, nota))
             continue
 
         _, err = api('PATCH', '/rest/v1/biblioteca_gif?slug=eq.%s'
@@ -160,7 +265,14 @@ def passo1(zona, piano):
         if err:
             e.update(esito='errore', dettaglio='patch indice: %s' % err)
             esiti.append(e)
-            print('  ERRORE indice %s: %s — la copia resta, la vecchia NON si cancella' % (cod, err))
+            print('  ERRORE indice %s: %s — il nuovo resta, il vecchio NON si cancella'
+                  % (cod, err))
+            continue
+
+        if dst == src:
+            e.update(esito='fatto', dettaglio='riscritto in place: %s' % nota)
+            esiti.append(e)
+            presenti.add(dst)
             continue
 
         _, err = api('DELETE', '/storage/v1/object/%s/%s'
@@ -177,7 +289,7 @@ def passo1(zona, piano):
 
     c = collections.Counter(x['esito'] for x in esiti)
     print('  esiti: %s' % dict(c))
-    log(zona, 'passo1.json', esiti)
+    log(zona, 'passo1.json' if not solo else 'passo1_solo.json', esiti)
     return c
 
 
@@ -260,16 +372,28 @@ def passo_prova(zona, piano):
     print('  codici del catalogo che puntano alla zona: %d %s' % (len(punt), punt or ''))
     if punt:
         print('  ATTENZIONE: con dei codici lo slug NON si aggiorna in place.')
-    fermi = [r for r in R if not r['percorso_cambia'] and not r['slug_cambia']]
+    # Non esistono piu' "righe che non si toccano": una riga che resta al suo
+    # percorso ha comunque i byte a piena risoluzione e l'intestazione vecchia,
+    # quindi va riscritta come tutte le altre. Cambia solo che per lei non c'e'
+    # un vecchio oggetto da cancellare dopo.
+    inplace = [r for r in R if r['storage_path_attuale'] and not r['percorso_cambia']]
     mv = [r for r in R if r['percorso_cambia'] and r['storage_path_attuale']]
     sl = [r for r in R if r['slug_cambia']]
     nu = [r for r in R if r['operazione'] == 'nuova']
-    print('\n  -- 0. righe che NON si toccano: %d --' % len(fermi))
-    for r in fermi:
-        print('     %s' % r['nome_finale'])
+    p480 = piano_480(zona)
+    print('\n  -- 0. riscritte in place, stesso percorso: %d --' % len(inplace))
+    for r in inplace:
+        print('     %s' % r['storage_path_dest'])
     print('\n  -- 1. bucket: rinomina + storage_path (slug invariato): %d --' % len(mv))
     for r in mv:
         print('     %s\n        -> %s' % (r['storage_path_attuale'], r['storage_path_dest']))
+    # Il piano dei 480px deve coprire ogni riga che scrive byte, o il passo 1 si
+    # ferma a meta' strada scoprendolo un file alla volta.
+    scoperte = [r['storage_path_dest'] for r in R
+                if nfc(r['storage_path_dest']) not in p480]
+    print('\n  -- righe senza byte ridotti nel piano dei 480px: %d --' % len(scoperte))
+    for s in scoperte:
+        print('     %s' % s)
     print('\n  -- 2. slug aggiornato IN PLACE (nessuna riga doppia): %d --' % len(sl))
     for r in sl:
         print('     %-40s %s -> %s' % (r['nome_finale'][:40], r['slug_attuale'], r['slug_nuovo']))
@@ -380,22 +504,17 @@ def passo5(zona, piano):
 
 
 # ------------------------------------------------------------------ passo 6/7
-def _carica_nuova(zona, r):
-    """Carica il file dal Mac e inserisce la riga. Verifica l'impronta dopo il caricamento."""
-    src = GIF_ROOT / zona / r['file_mac']
-    dati = open(src, 'rb').read()
-    k = chiave()
-    req = urllib.request.Request(
-        '%s/storage/v1/object/%s/%s' % (U, BUCKET, urllib.parse.quote(r['storage_path_dest'])),
-        data=dati, method='POST',
-        headers={'apikey': k, 'Authorization': 'Bearer ' + k, 'Content-Type': 'image/gif'})
-    try:
-        urllib.request.urlopen(req, timeout=300)
-    except Exception as ex:
-        return 'errore', 'caricamento: %s' % str(ex)[:120]
-    ok, nota = impronta_giusta(r['storage_path_dest'], r['sha256'])
+def _carica_nuova(zona, r, p480, stato):
+    """Carica il file RIDOTTO e inserisce la riga. Verifica l'impronta dopo.
+
+    Prima del 16 agosto qui si spediva il file del Mac cosi' com'era: piena
+    risoluzione, nessun cache-control, `Content-Type: image/gif` scritto fisso.
+    Per una zona che entra da zero — Mobilita' sono 214 file — significava
+    riempire il bucket esattamente di cio' che la regola dei 480px vieta.
+    """
+    ok, nota = scrivi_oggetto(p480, r['storage_path_dest'], stato)
     if not ok:
-        return 'errore', 'impronta dopo il caricamento: %s' % nota
+        return 'errore', nota
     riga = {'slug': r['slug_nuovo'], 'nome_italiano': r['nome_finale'],
             'nome_originale': None, 'categoria': zona,
             'gruppo_muscolare': None,
@@ -421,6 +540,10 @@ def passo7(zona, piano):
 
 
 def _nuove(zona, piano, da_fare, n):
+    p480 = piano_480(zona)
+    stato, err = stato_bucket(zona)
+    if err:
+        sys.exit('elenco del bucket fallito: %s' % err)
     bib, e = leggi_tutto('biblioteca_gif', 'slug', 'slug')
     if e:
         sys.exit(e)
@@ -433,7 +556,7 @@ def _nuove(zona, piano, da_fare, n):
                           'dettaglio': 'slug gia occupato'})
             print('  SALTATA %s: slug gia occupato' % r['slug_nuovo'])
             continue
-        esito, det = _carica_nuova(zona, r)
+        esito, det = _carica_nuova(zona, r, p480, stato)
         esiti.append({'slug': r['slug_nuovo'], 'esito': esito, 'dettaglio': det})
         if esito != 'inserita':
             print('  ERRORE %s: %s' % (r['slug_nuovo'], det))
@@ -445,14 +568,24 @@ if __name__ == '__main__':
     if len(sys.argv) < 3:
         sys.exit(__doc__)
     Z, P = sys.argv[1], sys.argv[2]
+    # `--solo <percorso o nome>` restringe il passo 1 a una riga. Non e' una
+    # scorciatoia: e' il modo di collaudare il giro completo su un file solo
+    # prima di lanciarlo sugli altri.
+    SOLO = None
+    for a in sys.argv[3:]:
+        if a.startswith('--solo='):
+            SOLO = a.split('=', 1)[1]
     pia = carica(Z)
     # L'indice delle impronte si carica una volta sola, prima del passo: e' cio' che
     # permette alle verifiche di rispondere senza scaricare.
     indice_locale()
     cache_impronte()
     try:
-        {'backup': passo_backup, 'prova': passo_prova, '1': passo1, '2': passo2,
-         'slug': passo_slug, '4': passo4, '5': passo5, '6': passo6,
-         '7': passo7}[P](Z, pia)
+        if P == '1':
+            passo1(Z, pia, solo=SOLO)
+        else:
+            {'backup': passo_backup, 'prova': passo_prova, '2': passo2,
+             'slug': passo_slug, '4': passo4, '5': passo5, '6': passo6,
+             '7': passo7}[P](Z, pia)
     finally:
         stampa_consumo('migra_zona passo %s' % P)

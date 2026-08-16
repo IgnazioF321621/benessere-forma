@@ -52,7 +52,8 @@ from PIL import Image, ImageSequence, ImageChops
 BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
 import impronte as I                                    # noqa: E402
-from carica_480 import carica_bytes, stato_zona, CACHE_NUOVA   # noqa: E402
+from carica_480 import (carica_bytes, mimetype_zona, stato_zona,  # noqa: E402
+                        CACHE_NUOVA)
 
 REPO = BASE.parent.parent
 GIFSICLE = REPO / 'tools' / 'bin' / 'gifsicle'
@@ -148,6 +149,10 @@ def main():
         return 0
 
     print('\nriottimizzo e ricarico:')
+    # Il tipo dichiarato si rilegge dall'oggetto e si rimanda uguale [L33].
+    mime, err = mimetype_zona(args.zona)
+    if err:
+        sys.exit('lettura dei mimetype fallita: %s' % err)
     riparati = 0
     for v, _cc, _cf in da_riparare:
         src = Path(v['origine_mac'])
@@ -175,7 +180,12 @@ def main():
             continue
 
         dati = tmp.read_bytes()
-        err = carica_bytes(v['storage_path'], dati, CACHE_NUOVA)
+        # Il mimetype si rilegge dall'oggetto e si rimanda uguale [L33]: qui si
+        # riscrivono i byte per sbloccare la CDN, non il tipo dichiarato. Prima
+        # del 16 agosto questa chiamata si affidava al vecchio default
+        # `image/gif`, che su un PNG ne avrebbe riscritto il tipo.
+        err = carica_bytes(v['storage_path'], dati,
+                           mime.get(v['storage_path']) or 'image/gif', CACHE_NUOVA)
         if err:
             tmp.unlink(missing_ok=True)
             print('   ERRORE caricamento %s: %s' % (v['storage_path'], err))
