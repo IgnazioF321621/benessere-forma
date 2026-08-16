@@ -138,7 +138,7 @@ Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 | | bucket | risparmio | del piano |
 |---|---|---|---|
 | oggi | 639 MB | | 62% |
-| **dopo le prime 7 zone** | **397 MB** | −242 MB | **39%** |
+| **a cantiere chiuso (8 zone)** | **362 MB** | **−277 MB** | **35%** |
 | **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
 | + palette 128 colori | 305 MB | −52% | 30% |
 | + palette 64 colori | 253 MB | −60% | 25% |
@@ -155,17 +155,21 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | Cardio e Conditioning | 31 | 31 | 87,7 | **45,2** | ✅ 15 agosto (−48%) |
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
 | Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
-| Schiena e Trapezio | 96 | 31 | 70,2 | ~44 | da fare, 3 senza gemello |
+| Schiena e Trapezio | 96 | 32 | 70,2 | **35,7** | ✅ 16 agosto (−49%) |
 | Spalle e Cuffia | 63 | 27 | 62,2 | **32,9** | ✅ 15 agosto (−47%) |
 | Tricipiti | 59 | 20 | 50,0 | **28,2** | ✅ 15 agosto (−44%) |
 
 **Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entreranno nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Il piano in `lavoro/_piani/` resta valido; va eseguito dopo questo cantiere.
 
-**Tre oggetti di Schiena e Trapezio non hanno gemello sul Mac** — `Rematore invertito TRX`, `Trazioni sbarra assistite elastico`, `Trazioni sbarra presa neutra`. Senza originale locale non sono ripristinabili: `ricomprimi.py` li esclude dal piano da solo e restano intatti con `no-cache`. Per trattarli servirebbe scaricarli una volta (~3 MB), da decidere a voce quando si arriva a quella zona.
+**I tre oggetti di Schiena e Trapezio senza gemello — risolti il 16 agosto.** Scaricati su decisione di Ignazio (1,4 MB reali, non i 3 stimati) e trattati come tutti gli altri. Tre MB su un ciclo azzerato costano meno di tre eccezioni permanenti, e il Mac riacquista il gemello per ogni verifica futura.
+
+⚠️ **Stanno in `lavoro/_bucket/schiena-e-trapezio/`, non nella biblioteca, e non è un ripiego.** Due dei tre hanno sul Mac un file **con lo stesso nome** — e non è la stessa GIF: `Trazioni sbarra assistite elastico` è 12 fotogrammi da 3000 ms nel bucket contro 66 da 6600 ms sul Mac, `Trazioni sbarra presa neutra` 12 contro 36. Confrontate a tempi uguali danno **25 e 24 su 255**, venti volte lo scostamento di un ridimensionamento: sono **animazioni diverse dello stesso esercizio**, non versioni della stessa. Metterle in `Biblioteca di esercizi/Schiena e Trapezio/` avrebbe sovrascritto due GIF che non c'entrano. `lavoro/_bucket/` è la cartella che `impronte.py` indicizza proprio per gli oggetti che sul Mac non esistono.
+
+Resta aperta una domanda, ma è del cantiere nomi e non di questo: quale delle due animazioni sia quella giusta per quell'esercizio. Nel bucket c'è la prima, ed è quella che l'app mostra da sempre.
 
 ### Ordine delle zone che restano
 
-Registrato il 15 agosto: ~~Spalle e Cuffia~~ → ~~Bicipiti e Braccia~~ → ~~Addominali e Core~~ → **Schiena e Trapezio**, l'ultima. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
+Tutte fatte fra il 15 e il 16 agosto 2026. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
 
 ### L'eccezione dichiarata di Addominali e Core
 
