@@ -8,11 +8,37 @@ soltanto lavoro/piano_<zona>.json e un TSV leggibile.
 
 L'aggancio file -> riga -> codice si fa per IMPRONTA SHA-256, mai per nome.
 
-Tre tipi di operazione:
-  nuova          il file non e' nel bucket: oggetto nuovo + riga nuova, nessun codice
-  slug invariato il percorso cambia ma lo slug no: rinomina nel bucket + storage_path
-  slug nuovo     lo slug cambia: ordine a righe doppie, perche' esercizi_catalog.gif_slug
-                 si aggiorna dal Sheet a mano e la finestra fra i due va coperta
+Quattro tipi di operazione:
+  nuova                    il file non e' nel bucket: oggetto nuovo + riga nuova
+  slug invariato           il percorso cambia ma lo slug no: rinomina + storage_path
+  slug nuovo, righe doppie lo slug cambia E un codice punta alla riga
+  slug nuovo, in place     lo slug cambia e NESSUN codice punta alla riga
+
+------------------------------------------------------------------------------
+PERCHE' I DUE "SLUG NUOVO" SONO ETICHETTE DIVERSE
+------------------------------------------------------------------------------
+Erano un'etichetta sola, `slug nuovo`, e coprivano due operazioni che non hanno
+niente in comune se non il fatto che lo slug cambia:
+
+  con codici    serve l'ordine a righe doppie — si inserisce la riga nuova, si
+                aspetta il sync manuale del Sheet, si verifica, si cancella la
+                vecchia. Quattro passi e una fermata, perche' fra il cambio qui e
+                il Sheet passano ore e in mezzo `gif_slug` punterebbe nel vuoto.
+  senza codici  non c'e' nessuna catena da proteggere: si aggiorna lo slug sulla
+                riga e basta. Un passo, nessuna fermata.
+
+Un'etichetta sola per due operazioni ha sbagliato TRE volte in tre punti che la
+leggevano — passo2 avrebbe inserito 24 righe doppie invece di 22 occupando lo
+slug che la fase 3 doveva prendere, passo5 avrebbe contato 24 cancellazioni
+invece di 22, e passo_prova le mostrava mescolate. Ogni volta la riparazione era
+di due righe e sembrava locale. Alla terza si corregge il nome → [L35].
+
+⚠️ L'ETICHETTA E' UNA PREVISIONE, NON UN PERMESSO. Dice quale operazione era
+prevista quando il piano e' stato scritto, non chi punta a quella riga adesso:
+il piano non e' il verbale di cio' che e' stato fatto [L34]. Chi esegue rilegge
+VIVO il catalogo e si ferma se non coincide. Le due cose non si sostituiscono —
+l'etichetta toglie l'ambiguita' su cosa fare, la lettura viva dice se e' ancora
+lecito farlo.
 
 Uso:  python3 pianifica.py "Bicipiti e Braccia"
 """
@@ -32,6 +58,15 @@ BASE = Path(__file__).parent
 GIF_ROOT = Path(os.environ.get('BIBLIOTECA_ROOT',
                                '/Users/ignaziofiorito/benessere-forma/Biblioteca di esercizi'))
 
+# Il vocabolario delle operazioni vive qui, dove viene scritto, e i lettori lo
+# importano invece di ripetere la stringa. Una stringa ripetuta in cinque punti
+# e' un'etichetta che nessuno puo' rinominare senza dimenticarne uno.
+OP_NUOVA = 'nuova'
+OP_SLUG_INVARIATO = 'slug invariato'
+OP_SLUG_DOPPIE = 'slug nuovo, righe doppie'      # un codice punta alla riga
+OP_SLUG_IN_PLACE = 'slug nuovo, in place'        # nessun codice punta alla riga
+OP_SLUG = (OP_SLUG_DOPPIE, OP_SLUG_IN_PLACE)     # tutte quelle in cui lo slug cambia
+
 # I nomi hanno UNA sola fonte: il pannello di conferma, cioe' l'unico posto in cui
 # il nome e' stato scelto guardando la GIF. Nessun nome entra qui per altre strade.
 
@@ -47,6 +82,41 @@ def registro_ultimo():
     return out
 
 
+def ponte_480(zona, presenti):
+    """percorso del file sul Mac -> storage_path del suo oggetto RIDOTTO nel bucket.
+
+    Senza questo, un file gia' migrato risulta «mai caricato». L'aggancio storico
+    e' per SHA-256: si prende l'impronta del file sul Mac e la si cerca fra quelle
+    degli oggetti del bucket. Dal 15 agosto 2026 quel confronto non puo' piu'
+    riuscire — nel bucket ci sono i byte RIDOTTI, che hanno un'impronta diversa
+    per definizione, ed e' il punto della regola dei 480px. Misurato su Pettorali
+    a migrazione conclusa: 0 impronte del Mac su 82 presenti nel bucket, 82 su 82
+    quelle ridotte. Ogni riga usciva `nuova`, con 82 collisioni di slug.
+
+    E' la QUARTA comparsa dello stesso difetto — dopo passo1, _carica_nuova e
+    verifica_worker — e la stessa causa: due artefatti per lo stesso esercizio,
+    e un aggancio che non dice di quale dei due parla → [L35].
+
+    Il legame fra i due artefatti e' scritto in un posto solo, il piano dei 480px,
+    che infatti non si cancella mai: `origine_mac` dice da quale file del Mac
+    provengono i byte che stanno all'indirizzo `storage_path`. Qui si legge di li'.
+
+    Si tengono solo le voci il cui oggetto e' DAVVERO nel bucket: il piano dei
+    480px elenca anche cio' che si deve ancora caricare, e quelle righe devono
+    continuare a risultare `nuova`, perche' lo sono.
+    """
+    p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
+    if not p.exists():
+        return {}, 0
+    voci = json.loads(p.read_text(encoding='utf-8'))['voci']
+    ponte = {}
+    for v in voci:
+        sp = nfc(v['storage_path'])
+        if v.get('origine_mac') and sp in presenti:
+            ponte[nfc(v['origine_mac'])] = sp
+    return ponte, len(ponte)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('zona')
@@ -60,6 +130,11 @@ def main():
         sys.exit('bucket non raggiungibile: %s' % err)
     if falliti:
         sys.exit('%d oggetti senza impronta: piano non costruibile' % len(falliti))
+    presenti = {p for lista in per_sha.values() for p in lista}
+    ponte, quanti = ponte_480(Z, presenti)
+    if ponte:
+        print('  ponte dal piano dei 480px: %d file del Mac collegati al loro'
+              ' oggetto ridotto' % quanti)
 
     bib, e = leggi_tutto('biblioteca_gif', 'slug,nome_italiano,categoria,storage_path', 'slug')
     if e:
@@ -86,7 +161,15 @@ def main():
     for f in sorted((nfc(x) for x in os.listdir(cartella) if x.lower().endswith('.gif')),
                     key=str.lower):
         sha = sha_file(cartella / f)
+        # Prima l'aggancio per impronta, che resta il criterio [L9]. Se non trova
+        # nulla, il file puo' essere gia' nel bucket in forma RIDOTTA, con
+        # un'impronta diversa: allora lo dice il piano dei 480px, che e' l'unico
+        # posto in cui il legame fra i due artefatti resta scritto.
         paths = per_sha.get(sha, [])
+        if not paths:
+            sp = ponte.get(nfc(str(cartella / f)))
+            if sp:
+                paths = [sp]
         bib_rows = [r for p in paths for r in per_path.get(p, [])]
         codici = []
         for r in bib_rows:
@@ -108,11 +191,13 @@ def main():
         path_dest = '%s/%s.gif' % (Z, percorso_ascii(nome))
 
         if not paths:
-            op = 'nuova'
+            op = OP_NUOVA
         elif slug_nuovo != slug_attuale:
-            op = 'slug nuovo'
+            # La discriminante e' se un codice punta alla riga: e' cio' che decide
+            # se serve l'ordine a righe doppie o basta l'aggiornamento in place.
+            op = OP_SLUG_DOPPIE if codici else OP_SLUG_IN_PLACE
         else:
-            op = 'slug invariato'
+            op = OP_SLUG_INVARIATO
 
         righe.append({
             'file_mac': f, 'sha256_mac': sha, 'bytes': (cartella / f).stat().st_size,
@@ -209,7 +294,7 @@ def main():
 
     c = collections.Counter(r['operazione'] for r in righe)
     print('PIANO "%s"  —  %d righe' % (Z, len(righe)))
-    for k in ('slug invariato', 'slug nuovo', 'nuova'):
+    for k in (OP_SLUG_INVARIATO, OP_SLUG_DOPPIE, OP_SLUG_IN_PLACE, OP_NUOVA):
         print('  %-15s %3d' % (k, c[k]))
     print('  %-15s %3d' % ('TOTALE', sum(c.values())))
     print('  percorso che cambia : %d' % sum(1 for r in righe if r['percorso_cambia']))

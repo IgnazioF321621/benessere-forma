@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-16 alle 12:06.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-16 alle 21:59.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -13,7 +13,7 @@
 | | valore | nota |
 |---|---|---|
 | Righe totali | 667 |  |
-| Ultimo sync | 2026-08-06 20:24 | istante in cui il foglio ha riscritto le righe |
+| Ultimo sync | 2026-08-16 19:18 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
 | Prossimo codice libero | EX676 | da allocare al momento della scrittura, mai in anticipo |
 | Codici con GIF | 602 |  |
@@ -39,9 +39,9 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 |---|---|---|
 | **Viva** | 602 | un codice la punta e il file c'è — è ciò che l'app mostra |
 | **Rotta** | 0 | un codice la punta ma il file non c'è — **l'app mostra `missing`** |
-| **Libera** | 46 | la GIF c'è ma nessun codice la usa — cantiere 16 |
+| **Libera** | 68 | la GIF c'è ma nessun codice la usa — cantiere 16 |
 | **Morta** | 922 | nessun codice e nessun file — cantiere 3E |
-| TOTALE | 1570 | |
+| TOTALE | 1592 | |
 
 ## Bucket Storage (`biblioteca-gif`)
 
@@ -51,12 +51,12 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 | Bicipiti e Braccia | 73 |
 | Cardio e Conditioning | 31 |
 | Gambe e Glutei | 169 |
-| Pettorali | 60 |
+| Pettorali | 82 |
 | Polpacci | 19 |
 | Schiena e Trapezio | 96 |
 | Spalle e Cuffia | 63 |
 | Tricipiti | 59 |
-| **TOTALE** | **647** |
+| **TOTALE** | **669** |
 
 File nel bucket che nessuna riga indicizza: **0**
 

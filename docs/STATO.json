@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-16T12:06:25",
+ "quando": "2026-08-16T21:59:38",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -429,14 +429,14 @@
   },
   {
    "codice": "EX072",
-   "nome": "Dip parallele",
-   "gif_slug": "dip-parallele",
+   "nome": "Dip station",
+   "gif_slug": "dip-station",
    "livello": "avanzato"
   },
   {
    "codice": "EX073",
-   "nome": "Distensioni manubri terra",
-   "gif_slug": "distensioni-manubri-terra",
+   "nome": "Distensioni manubri sdraiato a terra",
+   "gif_slug": "distensioni-manubri-sdraiato-a-terra",
    "livello": "principiante"
   },
   {
@@ -621,8 +621,8 @@
   },
   {
    "codice": "EX104",
-   "nome": "Croci cavi alti traiettoria alta",
-   "gif_slug": "croci-cavi-alti-traiettoria-alta",
+   "nome": "Croci cavi medi traiettoria alta",
+   "gif_slug": "croci-cavi-medi-traiettoria-alta",
    "livello": "intermedio"
   },
   {
@@ -1215,8 +1215,8 @@
   },
   {
    "codice": "EX207",
-   "nome": "Croci cavi in piedi",
-   "gif_slug": "croci-cavi-in-piedi",
+   "nome": "Croci cavi medi in piedi",
+   "gif_slug": "croci-cavi-medi-in-piedi",
    "livello": "principiante"
   },
   {
@@ -1875,8 +1875,8 @@
   },
   {
    "codice": "EX319",
-   "nome": "Croci cavi presa prona",
-   "gif_slug": "croci-cavi-presa-prona",
+   "nome": "Croci cavi medi presa prona",
+   "gif_slug": "croci-cavi-medi-presa-prona",
    "livello": "principiante"
   },
   {
@@ -2055,20 +2055,20 @@
   },
   {
    "codice": "EX350",
-   "nome": "Croci cavi panca declinata",
-   "gif_slug": "croci-cavi-panca-declinata",
+   "nome": "Croci cavi bassi panca declinata",
+   "gif_slug": "croci-cavi-bassi-panca-declinata",
    "livello": "intermedio"
   },
   {
    "codice": "EX351",
-   "nome": "Croci cavi panca inclinata",
-   "gif_slug": "croci-cavi-panca-inclinata",
+   "nome": "Croci cavi bassi panca inclinata",
+   "gif_slug": "croci-cavi-bassi-panca-inclinata",
    "livello": "intermedio"
   },
   {
    "codice": "EX352",
-   "nome": "Croci cavi panca piana",
-   "gif_slug": "croci-cavi-panca-piana",
+   "nome": "Croci cavi bassi panca piana",
+   "gif_slug": "croci-cavi-bassi-panca-piana",
    "livello": "intermedio"
   },
   {
@@ -2085,8 +2085,8 @@
   },
   {
    "codice": "EX355",
-   "nome": "Croci cavi un braccio panca declinata",
-   "gif_slug": "croci-cavi-un-braccio-panca-declinata",
+   "nome": "Croci cavi bassi un braccio panca declinata",
+   "gif_slug": "croci-cavi-bassi-un-braccio-panca-declinata",
    "livello": "avanzato"
   },
   {
@@ -2097,8 +2097,8 @@
   },
   {
    "codice": "EX357",
-   "nome": "Dip parallele sovraccarico",
-   "gif_slug": "dip-parallele-sovraccarico",
+   "nome": "Dip station sovraccarico",
+   "gif_slug": "dip-station-sovraccarico",
    "livello": "avanzato"
   },
   {
@@ -2145,14 +2145,14 @@
   },
   {
    "codice": "EX365",
-   "nome": "Distensioni cavi panca piana",
-   "gif_slug": "distensioni-cavi-panca-piana",
+   "nome": "Distensioni cavi bassi panca piana",
+   "gif_slug": "distensioni-cavi-bassi-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX366",
-   "nome": "Distensioni cavi seduto",
-   "gif_slug": "distensioni-cavi-seduto",
+   "nome": "Distensioni cavi panca verticale",
+   "gif_slug": "distensioni-cavi-panca-verticale",
    "livello": "principiante"
   },
   {
@@ -2211,14 +2211,14 @@
   },
   {
    "codice": "EX376",
-   "nome": "Distensioni verticali macchina presa neutra seduto",
-   "gif_slug": "distensioni-verticali-macchina-presa-neutra-seduto",
+   "nome": "Distensioni orizzontali macchina presa neutra seduto",
+   "gif_slug": "distensioni-orizzontali-macchina-presa-neutra-seduto",
    "livello": "principiante"
   },
   {
    "codice": "EX377",
-   "nome": "Piegamenti alternati un braccio assistenza braccio teso",
-   "gif_slug": "piegamenti-alternati-un-braccio-assistenza-braccio-teso",
+   "nome": "Piegamenti archer",
+   "gif_slug": "piegamenti-archer",
    "livello": "avanzato"
   },
   {
@@ -2235,26 +2235,26 @@
   },
   {
    "codice": "EX380",
-   "nome": "Piegamenti deficit",
-   "gif_slug": "piegamenti-deficit",
+   "nome": "Piegamenti deficit rialzo",
+   "gif_slug": "piegamenti-deficit-rialzo",
    "livello": "avanzato"
   },
   {
    "codice": "EX381",
-   "nome": "Piegamenti ginocchia",
-   "gif_slug": "piegamenti-ginocchia",
+   "nome": "Piegamenti facilitati ginocchia",
+   "gif_slug": "piegamenti-facilitati-ginocchia",
    "livello": "principiante"
   },
   {
    "codice": "EX382",
-   "nome": "Piegamenti mani elevate box",
-   "gif_slug": "piegamenti-mani-elevate-box",
+   "nome": "Piegamenti inclinati box",
+   "gif_slug": "piegamenti-inclinati-box",
    "livello": "principiante"
   },
   {
    "codice": "EX383",
-   "nome": "Piegamenti mani elevate panca",
-   "gif_slug": "piegamenti-mani-elevate-panca",
+   "nome": "Piegamenti inclinati panca",
+   "gif_slug": "piegamenti-inclinati-panca",
    "livello": "principiante"
   },
   {
@@ -2265,14 +2265,14 @@
   },
   {
    "codice": "EX385",
-   "nome": "Piegamenti mani step",
-   "gif_slug": "piegamenti-mani-step",
+   "nome": "Piegamenti mani neutre step",
+   "gif_slug": "piegamenti-mani-neutre-step",
    "livello": "intermedio"
   },
   {
    "codice": "EX386",
-   "nome": "Piegamenti maniglie",
-   "gif_slug": "piegamenti-maniglie",
+   "nome": "Piegamenti deficit dip station",
+   "gif_slug": "piegamenti-deficit-dip-station",
    "livello": "intermedio"
   },
   {
@@ -2283,8 +2283,8 @@
   },
   {
    "codice": "EX388",
-   "nome": "Piegamenti una mano palla medica",
-   "gif_slug": "piegamenti-una-mano-palla-medica",
+   "nome": "Piegamenti deficit un braccio palla medica",
+   "gif_slug": "piegamenti-deficit-un-braccio-palla-medica",
    "livello": "avanzato"
   },
   {
@@ -3411,8 +3411,8 @@
   },
   {
    "codice": "EX577",
-   "nome": "Piegamenti tocco incrociato spalla",
-   "gif_slug": "piegamenti-tocco-incrociato-spalla",
+   "nome": "Piegamenti tocco incrociato",
+   "gif_slug": "piegamenti-tocco-incrociato",
    "livello": "intermedio"
   },
   {
@@ -4006,7 +4006,7 @@
  ],
  "catalogo": {
   "righe": 667,
-  "ultimo_sync": "2026-08-06T20:24:00.821000+00:00",
+  "ultimo_sync": "2026-08-16T19:18:43.547000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX676",
@@ -4125,29 +4125,35 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1570,
-  "slug_distinti": 1570,
+  "righe": 1592,
+  "slug_distinti": 1592,
   "viva": 602,
   "rotta": 0,
-  "libera": 46,
+  "libera": 68,
   "morta": 922,
   "elenco_rotte": [],
   "elenco_libere": [
-   "adduzione-spalla-elastico-un-braccio-in-piedi",
+   "adduzione-braccio-elastico-in-piedi",
    "alzate-diagonali-elastico-maniglie-in-piedi",
    "alzate-diagonali-elastico-un-braccio-in-piedi",
    "alzate-laterali-isometriche-in-piedi",
    "bird-dog",
    "calf-raise-elastico-maniglie-in-piedi",
-   "chest-press-elastico-maniglie-in-piedi",
+   "chest-press-elastico-inclinato",
    "croci-inverse-elastico-busto-flesso",
    "croci-inverse-elastico-maniglie-busto-flesso",
+   "croci-trx",
    "crunch-obliquo-panca-romana",
    "curl-alternato-macchina",
    "curl-alternato-manubri-panca-inclinata",
    "curl-bilanciere-presa-larga",
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
+   "dip-anelli",
+   "dip-coreano-parallele",
+   "dip-parallele",
+   "dip-parallele-impossible",
+   "dip-sedie",
    "estensione-anca-bilanciere",
    "estensione-spalla-elastico-in-piedi",
    "estensione-tricipiti-elastico-busto-flesso",
@@ -4165,8 +4171,24 @@
    "lento-avanti-isometrico-in-piedi",
    "lento-dietro-barra-elastico-ai-piedi",
    "lento-dietro-maniglia-elastico-un-braccio-in-piedi",
+   "piegamenti-archer-braccio-rialzato",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
+   "piegamenti-declinati-fitball",
+   "piegamenti-deficit-kettlebell",
+   "piegamenti-deficit-slancio-panche-piane",
+   "piegamenti-fitball",
+   "piegamenti-gamba-sollevata",
+   "piegamenti-indu",
+   "piegamenti-mani-incrociate",
+   "piegamenti-planche",
+   "piegamenti-pliometrici-tocco-petto",
+   "piegamenti-sovraccarico-disco",
+   "piegamenti-sui-pugni",
+   "piegamenti-sulle-dita",
+   "piegamenti-trx",
+   "piegamenti-un-braccio",
+   "piegamenti-un-braccio-palla-medica",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",
@@ -4182,13 +4204,13 @@
   ]
  },
  "bucket": {
-  "oggetti": 647,
+  "oggetti": 669,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
    "Cardio e Conditioning": 31,
    "Gambe e Glutei": 169,
-   "Pettorali": 60,
+   "Pettorali": 82,
    "Polpacci": 19,
    "Schiena e Trapezio": 96,
    "Spalle e Cuffia": 63,

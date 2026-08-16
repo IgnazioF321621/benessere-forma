@@ -51,6 +51,8 @@ from impronte import (BUCKET, CACHE_IMMUTABILE, U, api,  # noqa: E402
                       indice_locale, leggi_tutto, nfc, stampa_consumo,
                       stato_bucket, verifica_oggetto)
 from nomenclatura import slug as fslug  # noqa: E402
+from pianifica import (OP_NUOVA, OP_SLUG_DOPPIE,  # noqa: E402
+                       OP_SLUG_IN_PLACE, OP_SLUG)
 
 BASE = Path(__file__).parent
 # Dal 16 agosto questo strumento NON legge piu' la biblioteca sul Mac: ogni byte
@@ -316,10 +318,9 @@ def passo2(zona, piano):
     aveva codici quando e' stato scritto, non chi ne ha adesso [L34].
     """
     punt = _codici_per_slug()
-    da_fare = [r for r in piano['righe']
-               if r['operazione'] == 'slug nuovo' and punt.get(r['slug_attuale'])]
-    saltate = [r for r in piano['righe']
-               if r['operazione'] == 'slug nuovo' and not punt.get(r['slug_attuale'])]
+    da_fare = [r for r in piano['righe'] if r['operazione'] == OP_SLUG_DOPPIE]
+    saltate = [r for r in piano['righe'] if r['operazione'] == OP_SLUG_IN_PLACE]
+    _controlla_etichetta(da_fare, saltate, punt)
     print('== PASSO 2: %d righe con lo slug nuovo da inserire ==' % len(da_fare))
     if saltate:
         print('  %d righe con lo slug che cambia ma SENZA codici: non prendono la'
@@ -408,8 +409,9 @@ def passo_prova(zona, piano):
     # un vecchio oggetto da cancellare dopo.
     inplace = [r for r in R if r['storage_path_attuale'] and not r['percorso_cambia']]
     mv = [r for r in R if r['percorso_cambia'] and r['storage_path_attuale']]
-    sl = [r for r in R if r['slug_cambia']]
-    nu = [r for r in R if r['operazione'] == 'nuova']
+    sl_d = [r for r in R if r['operazione'] == OP_SLUG_DOPPIE]
+    sl_p = [r for r in R if r['operazione'] == OP_SLUG_IN_PLACE]
+    nu = [r for r in R if r['operazione'] == OP_NUOVA]
     p480 = piano_480(zona)
     print('\n  -- 0. riscritte in place, stesso percorso: %d --' % len(inplace))
     for r in inplace:
@@ -424,13 +426,49 @@ def passo_prova(zona, piano):
     print('\n  -- righe senza byte ridotti nel piano dei 480px: %d --' % len(scoperte))
     for s in scoperte:
         print('     %s' % s)
-    print('\n  -- 2. slug aggiornato IN PLACE (nessuna riga doppia): %d --' % len(sl))
-    for r in sl:
-        print('     %-40s %s -> %s' % (r['nome_finale'][:40], r['slug_attuale'], r['slug_nuovo']))
+    print('\n  -- 2. slug nuovo, ORDINE A RIGHE DOPPIE (un codice le punta): %d --'
+          % len(sl_d))
+    for r in sl_d:
+        print('     %-40s %s -> %s  [%s]'
+              % (r['nome_finale'][:40], r['slug_attuale'], r['slug_nuovo'],
+                 ','.join(c['codice'] for c in r['codici'])))
+    print('\n  -- 2b. slug nuovo, IN PLACE (nessun codice le punta): %d --' % len(sl_p))
+    for r in sl_p:
+        print('     %-40s %s -> %s'
+              % (r['nome_finale'][:40], r['slug_attuale'], r['slug_nuovo']))
     print('\n  -- 3. caricamento nel bucket + riga nuova: %d --' % len(nu))
     for r in nu:
         print('     %s  (%d byte)' % (r['storage_path_dest'], r['bytes']))
     print('\n  esercizi_catalog: non viene toccato. Sheet: nessun sync.')
+
+
+def _controlla_etichetta(doppie, in_place, punt):
+    """L'etichetta del piano coincide ancora con chi punta alle righe? Se no, ferma.
+
+    L'etichetta dice quale operazione era prevista quando il piano e' stato
+    scritto. Non e' un permesso: fra allora e adesso un codice puo' aver preso o
+    lasciato uno slug, e il piano non se ne accorge [L34]. Qui le due letture si
+    confrontano, e una divergenza ferma il passo invece di farlo proseguire sulla
+    parola del piano — perche' le due operazioni sono opposte: una riga marcata
+    `in place` che oggi ha un codice si spezzerebbe la catena, e una marcata
+    `righe doppie` che oggi non ne ha lascerebbe una riga vecchia orfana.
+    """
+    guai = []
+    for r in doppie:
+        if not punt.get(r['slug_attuale']):
+            guai.append('%s: il piano dice righe doppie, ma oggi NESSUN codice'
+                        ' punta a "%s"' % (r['nome_finale'], r['slug_attuale']))
+    for r in in_place:
+        c = punt.get(r['slug_attuale'])
+        if c:
+            guai.append('%s: il piano dice in place, ma oggi ci puntano %s'
+                        % (r['nome_finale'], ','.join(c)))
+    if guai:
+        print('  L ETICHETTA DEL PIANO NON COINCIDE PIU CON IL CATALOGO VIVO:')
+        for g in guai:
+            print('     %s' % g)
+        sys.exit('  mi fermo senza scrivere: rigenera il piano con pianifica.py'
+                 ' e rileggilo prima di procedere.')
 
 
 def _codici_per_slug():
@@ -608,7 +646,7 @@ def passo5(zona, piano):
     if e:
         sys.exit(e)
     esistenti = {b['slug'] for b in bib}
-    da_fare = [r for r in piano['righe'] if r['operazione'] == 'slug nuovo']
+    da_fare = [r for r in piano['righe'] if r['operazione'] == OP_SLUG_DOPPIE]
     assenti = [r for r in da_fare if r['slug_attuale'] not in esistenti]
     da_fare = [r for r in da_fare if r['slug_attuale'] in esistenti]
     print('\n== PASSO 5: cancellazione delle righe vecchie ==')
@@ -663,14 +701,14 @@ def passo6(zona, piano):
     """Le righe nuove il cui slug era occupato da un codice vivo, ora liberato."""
     occupati = {x['slug'] for x in piano['collisioni_slug_esterne']}
     da_fare = [r for r in piano['righe']
-               if r['operazione'] == 'nuova' and r['slug_nuovo'] in occupati]
+               if r['operazione'] == OP_NUOVA and r['slug_nuovo'] in occupati]
     return _nuove(zona, piano, da_fare, 6)
 
 
 def passo7(zona, piano):
     occupati = {x['slug'] for x in piano['collisioni_slug_esterne']}
     da_fare = [r for r in piano['righe']
-               if r['operazione'] == 'nuova' and r['slug_nuovo'] not in occupati]
+               if r['operazione'] == OP_NUOVA and r['slug_nuovo'] not in occupati]
     return _nuove(zona, piano, da_fare, 7)
 
 
