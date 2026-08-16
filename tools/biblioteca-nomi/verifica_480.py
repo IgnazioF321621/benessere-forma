@@ -114,6 +114,19 @@ def main():
     voci = piano['voci']
     atteso = {v['storage_path']: v for v in voci}
 
+    # Eccezioni dichiarate: casi in cui si e' deciso a voce che uno scostamento
+    # resta. Non sono un lasciapassare — ognuna dice QUALE scostamento tollera e
+    # PERCHE', e tutto il resto di quell'oggetto viene controllato come gli altri.
+    # Senza questo, una zona con una decisione presa resterebbe bloccata per sempre.
+    ecc = {e['storage_path']: e for e in piano.get('eccezioni', [])}
+    if ecc:
+        print('%d eccezioni dichiarate nel piano:' % len(ecc))
+        for sp, e in ecc.items():
+            print('   %s — tollera %s = %r (decisa il %s)'
+                  % (sp.split('/')[-1], e['tollera'], e['valore_atteso'],
+                     e.get('decisa', '?')))
+        print()
+
     # ------------------------------------------------ 1. tutti gli oggetti
     print('zona "%s": %d oggetti nel piano\n' % (args.zona, len(voci)))
     print('1. stato nel bucket (impronta, dimensione, cache-control)...')
@@ -124,7 +137,9 @@ def main():
     for v in voci:
         s = stato.get(v['storage_path'])
         etag, dim, cc = s if s else (None, None, None)
-        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc == CACHE_ATTESA:
+        e = ecc.get(v['storage_path'])
+        cc_ok = cc == CACHE_ATTESA or (e and e['tollera'] == 'cache_control')
+        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc_ok:
             continue
         ko_bucket.append((v['storage_path'],
                           'impronta %s dim %s cache %r'
@@ -175,11 +190,19 @@ def main():
                   % (c['codice'], c['nome'][:34], e))
             ko_worker += 1
             continue
-        v = atteso.get(per_slug.get(c['gif_slug']))
+        sp_v = per_slug.get(c['gif_slug'])
+        v = atteso.get(sp_v)
+        e = ecc.get(sp_v)
         etag = (r.headers.get('etag') or '').strip('"')
         cc = r.headers.get('cache-control')
         ok_b = bool(v) and etag == v['md5_nuovo']
         ok_c = cc == CACHE_ATTESA
+        if ok_b and not ok_c and e and e['tollera'] == 'cache_control' \
+                and cc == e['valore_atteso']:
+            # Lo scostamento e' esattamente quello dichiarato: non blocca, ma si dice.
+            print('   %-7s %-34.34s byte ok  cache %r — eccezione dichiarata'
+                  % (c['codice'], c['nome'][:34], cc))
+            continue
         if not (ok_b and ok_c):
             ko_worker += 1
             print('   %-7s %-34.34s byte %-3s cache %-3s'

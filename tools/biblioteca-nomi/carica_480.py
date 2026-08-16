@@ -61,15 +61,22 @@ def _url(storage_path):
         I.U, I.BUCKET, urllib.parse.quote(storage_path))
 
 
-def carica_bytes(storage_path, dati, cache_control):
-    """Sostituisce l'oggetto e ne fissa l'intestazione. Ingress: non si paga."""
+def carica_bytes(storage_path, dati, cache_control, content_type='image/gif'):
+    """Sostituisce l'oggetto e ne fissa l'intestazione. Ingress: non si paga.
+
+    ⚠️ Il `content_type` va PASSATO, non dedotto: nel bucket ci sono un PNG e tre
+    JPEG, e due di questi ultimi hanno estensione `.gif` pur essendo JPEG. Un
+    `image/gif` fisso corromperebbe il mimetype del PNG. Il chiamante rilegge
+    quello gia' registrato sull'oggetto e lo rimanda uguale: questo cantiere
+    cambia i byte e la cache, non il tipo dichiarato.
+    """
     k = I.chiave()
     if not k:
         return 'manca SUPABASE_SERVICE_ROLE_KEY in worker/.dev.vars'
     req = urllib.request.Request(_url(storage_path), data=dati, method='POST',
                                  headers={'apikey': k,
                                           'Authorization': 'Bearer ' + k,
-                                          'Content-Type': 'image/gif',
+                                          'Content-Type': content_type,
                                           'Cache-Control': cache_control,
                                           'x-upsert': 'true'})
     try:
@@ -107,6 +114,15 @@ def stato_zona(zona):
         out[I.nfc('%s/%s' % (zona, o['name']))] = (
             (m.get('eTag') or '').strip('"'), m.get('size'), m.get('cacheControl'))
     return out, None
+
+
+def mimetype_zona(zona):
+    """storage_path -> mimetype gia' registrato. Si rimanda uguale al caricamento."""
+    ogg, err = I.elenco_bucket(zona + '/')
+    if err:
+        return {}, err
+    return {I.nfc('%s/%s' % (zona, o['name'])): (o.get('metadata') or {}).get('mimetype')
+            for o in ogg if o.get('id') is not None}, None
 
 
 def verifica_pubblico(storage_url):
@@ -195,6 +211,16 @@ def main():
 
     # ------------------------------------------------------- 3. caricamento
     da_fare = [v for v in voci if v['storage_path'] not in gia_fatti]
+    mime, err = mimetype_zona(piano['zona'])
+    if err:
+        sys.exit('lettura dei mimetype fallita: %s' % err)
+    diversi = {sp: m for sp, m in mime.items() if m and m != 'image/gif'}
+    if diversi:
+        print('   %d oggetti non sono dichiarati image/gif: il tipo si rimanda'
+              ' uguale, non si corregge.' % len(diversi))
+        for sp, m in sorted(diversi.items()):
+            print('     %-52.52s %s' % (sp.split('/')[-1], m))
+
     print('3. carico %d oggetti...' % len(da_fare))
     esiti = {v['storage_path']: {'storage_path': v['storage_path'],
                                  'esito': 'gia fatto'} for v in voci}
@@ -202,7 +228,8 @@ def main():
     falliti_subito = 0
     for i, v in enumerate(da_fare, 1):
         err = carica_bytes(v['storage_path'], Path(v['file_480']).read_bytes(),
-                           CACHE_NUOVA)
+                           CACHE_NUOVA,
+                           mime.get(v['storage_path']) or 'image/gif')
         if err:
             # Un caricamento fallito non lascia un buco: quello che c'era prima
             # e' ancora li'. Si annota e si tira dritto; la verifica dira' come sta.
@@ -239,7 +266,8 @@ def main():
         print('   NON CORRISPONDE %-40.40s atteso %s/%d, trovato %s/%s cc=%r'
               % (sp.split('/')[-1], v['md5_nuovo'][:10], v['byte_nuovo'],
                  (etag or '?')[:10], dim, cc))
-        e2 = carica_bytes(sp, Path(v['origine_mac']).read_bytes(), 'no-cache')
+        e2 = carica_bytes(sp, Path(v['origine_mac']).read_bytes(), 'no-cache',
+                          mime.get(sp) or 'image/gif')
         ripristinati += 1
         esiti[sp] = {'storage_path': sp, 'esito': 'ripristinato',
                      'dettaglio': 'verifica fallita; ripristino: %s' % (e2 or 'riuscito')}

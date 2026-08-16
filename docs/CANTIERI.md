@@ -138,7 +138,7 @@ Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 | | bucket | risparmio | del piano |
 |---|---|---|---|
 | oggi | 639 MB | | 62% |
-| **dopo le prime 6 zone** | **424 MB** | −216 MB | **41%** |
+| **dopo le prime 7 zone** | **397 MB** | −242 MB | **39%** |
 | **solo 480 px** (scelta) | **326 MB** | **−49%** | 32% |
 | + palette 128 colori | 305 MB | −52% | 30% |
 | + palette 64 colori | 253 MB | −60% | 25% |
@@ -150,7 +150,7 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | zona | oggetti | da ridurre | MB prima | MB dopo | stato |
 |---|---|---|---|---|---|
 | Polpacci | 19 | 12 | 19,6 | **8,9** | ✅ 15 agosto (−55%) |
-| Addominali e Core | 77 | 26 | 55,1 | ~34 | da fare |
+| Addominali e Core | 77 | 25 | 55,1 | **28,4** | ✅ 15 agosto (−49%) |
 | Bicipiti e Braccia | 73 | 16 | 40,1 | **19,8** | ✅ 15 agosto (−51%) |
 | Cardio e Conditioning | 31 | 31 | 87,7 | **45,2** | ✅ 15 agosto (−48%) |
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
@@ -165,7 +165,24 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 
 ### Ordine delle zone che restano
 
-Registrato il 15 agosto: ~~Spalle e Cuffia~~ → ~~Bicipiti e Braccia~~ → **Addominali e Core → Schiena e Trapezio**. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
+Registrato il 15 agosto: ~~Spalle e Cuffia~~ → ~~Bicipiti e Braccia~~ → ~~Addominali e Core~~ → **Schiena e Trapezio**, l'ultima. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
+
+### L'eccezione dichiarata di Addominali e Core
+
+**`Plank laterale avambraccio.jpg` (EX037) resta con `no-cache`.** Decisione di Ignazio del 15 agosto 2026, scritta anche nel piano della zona sotto `eccezioni` cosi' che `verifica_480.py` passi sapendo il motivo. Il perche' per intero, perche' fra sei mesi non sara' ovvio:
+
+- **E' un JPEG, e per un JPEG non esiste riscrittura senza perdita** con gli strumenti che abbiamo. Provato: `quality='keep'` sposta comunque i pixel di 6 su 255 e fa **crescere** il file del 10%; con `optimize` cresce del 4%. Pillow rifa' il giro DCT, non esiste un percorso davvero senza perdita tipo `jpegtran`.
+- **Ridimensionarlo non aiuta**: e' 562x296 e gia' molto compresso (18,4 kB). A 480 px con qualita' 92 diventa **+28%**; a qualita' 85 pareggia il peso ma perde di piu'. Si pagherebbe qualita' su un'immagine ferma **per non guadagnare niente**.
+- **Caricarlo identico era sicuro nel momento in cui e' stato deciso**: controllato prima, `cf=MISS`, nessuna voce in cache a cui restare attaccati. Quel controllo pero' e' esattamente cio' che ce l'ha messa, e mezz'ora dopo il caricamento serviva ancora l'intestazione vecchia con `cf=HIT, age=1818` → [L31](LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo).
+- **Il costo e' 18 kB su 397 MB.** I byte nel bucket sono giusti e verificati; l'unico effetto e' che questa immagine si rivalida a ogni vista invece di stare in cache — un giro di rete, non un riscaricamento.
+
+Se un giorno servisse sbloccarla, l'unica strada e' riscriverla accettando 6 su 255 di perdita. `ripara_cache.py` **non** puo' farlo: e' costruito su gifsicle e tratta solo le GIF. Lo segnala e basta.
+
+### Da guardare al consolidamento dei doppioni
+
+**`Plank avambracci (Forearm Plank).gif` (EX176) e `Plank frontale.gif` (EX021) sono gli stessi byte.** Stesso eTag `a4ba80bdf557`, stessi 15.011 byte, due oggetti distinti nel bucket e due righe distinte in `biblioteca_gif`. Sono anche **due JPEG con estensione `.gif`**.
+
+Non toccati durante la ricompressione, per scelta: e' materia del [cantiere 4](#4-lista-da-consolidare), non di questo. Le domande da farsi allora sono due, e sono separate: se i due codici debbano restare distinti (e allora la strada e' la Strada A, una sola copia in Storage e due righe che la puntano), e se convenga rinominarli con l'estensione giusta. Nessuna delle due e' urgente: funzionano, perche' il browser guarda i byte e non il nome.
 
 ### Cosa e' rimasto aperto
 

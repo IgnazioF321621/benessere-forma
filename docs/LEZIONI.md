@@ -442,3 +442,47 @@ Non erano rotti — i byte erano giusti. Erano due file **già sotto i 480 px**,
 **La regola.** Una scrittura che cambia i **metadati** ma non il **contenuto** può non arrivare mai all'utente, perché fra il bucket e l'utente c'è una cache che ragiona sul contenuto. Verificare nel bucket non basta: il canale da guardare è quello dell'utente — è lo stesso criterio di [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice) e [L29](#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata), che questo cantiere ha ormai incontrato tre volte in tre forme diverse.
 
 **Corollario — la verifica che si ferma vale più di quella che passa.** Le prime due zone erano passate lisce e la terza no. Se il collaudo avesse guardato solo il bucket, come faceva la prima versione, sarebbe passata liscia anche questa e il difetto sarebbe rimasto nascosto in ogni zona successiva, silenzioso e mai contato.
+
+---
+
+## L31 — Per un file che entra identico si carica prima e si controlla dopo
+
+**Il caso.** 15 agosto 2026, Addominali e Core. Un JPEG doveva entrare nel bucket con i byte di prima e la sola intestazione nuova — l'unica eccezione alla regola dei byte nuovi, perché per un JPEG non esiste riscrittura senza perdita. Il rischio noto era [L30](#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta): se l'oggetto è in cache sul bordo, la voce vecchia non si sposta.
+
+Ho controllato prima di caricare. `cf=MISS` su tutti e due i file non-GIF che stavo per toccare: nessuno in cache, quindi caricare identico era sicuro. Trenta minuti dopo, a caricamento fatto, il JPEG serviva ancora `no-cache` con `cf=HIT` e `age=1818`.
+
+Milleottocentodiciotto secondi sono esattamente i trenta minuti passati dal controllo. **La richiesta che verificava se fosse in cache è ciò che ce l'ha messo.** Un `MISS` non è un'osservazione neutra: è una richiesta che manca la cache, va all'origine, e *popola la cache* con quello che trova — in quel momento, l'intestazione vecchia.
+
+**La prova è nei file che stanno bene.** Nella stessa zona c'erano altri due file che entravano identici. Non li avevo sondati, perché la mia ricognizione per estensione non li aveva visti (→ [L32](#l32--lestensione-non-dice-il-formato)). Non sono mai entrati in cache, e sono a posto. Il PNG che avevo sondato è a posto lo stesso, ma per un altro motivo: i suoi byte sono cambiati, quindi la voce è stata sostituita comunque. L'unico che si è bloccato è l'unico che ho sondato **e** che è entrato identico.
+
+**Il costo.** Un'immagine da 18 kB che si rivalida a ogni vista invece di stare in cache, accettata come eccezione dichiarata. Nessun danno: i byte nel bucket sono giusti e verificati.
+
+**La regola.** Quando la scrittura non cambia il contenuto, **si scrive prima e si osserva dopo**. Osservare prima non è gratis: la lettura di verifica è essa stessa un evento che cambia lo stato che si voleva misurare, e nel caso peggiore crea proprio la condizione che si stava cercando di escludere. Un `MISS` letto prima di una scrittura non dice «è sicuro procedere», dice «adesso non lo è più».
+
+**Corollario.** Vale ogni volta che il canale di verifica coincide col canale che si vuole misurare — cache, contatori di accesso, `last_accessed_at`, log di primo utilizzo. Se il solo guardare sposta il valore, l'ordine delle operazioni fa parte della correttezza, non è un dettaglio di comodità.
+
+---
+
+## L32 — L'estensione non dice il formato
+
+**Il caso.** Stesso giorno, stessa zona. Cercando cosa gifsicle non riusciva ad aprire, ho contato le estensioni degli oggetti del bucket: 645 `.gif`, 1 `.png`, 1 `.jpg`. Due file non-GIF, entrambi trovati, problema circoscritto.
+
+Sbagliato. Rileggendo il **contenuto** invece del nome, i file non-GIF erano **quattro**: `Plank avambracci (Forearm Plank).gif` e `Plank frontale.gif` sono JPEG con l'estensione `.gif`. Sono anche registrati in Storage con `mimetype: image/gif`. Funzionano da sempre perché il browser guarda i byte e non il nome — ma qualunque strumento che si fidi dell'estensione li tratta per quello che non sono.
+
+**Come li ho trovati.** Non cercandoli: lo strumento, riscritto per non morire sul primo formato che non conosce, li ha classificati da sé aprendo ogni file con Pillow. La ricognizione per estensione fatta mezz'ora prima li aveva mancati entrambi.
+
+**Il costo.** Nessuno, per fortuna: erano già sotto i 480 px e sarebbero comunque entrati identici. Ma la ricognizione per estensione mi aveva fatto scrivere «due file, entrambi qui» in un resoconto, ed era falso.
+
+**La regola.** In una ricognizione il formato si legge **dal contenuto**, sempre. `path.suffix` dice come si chiama un file, non che cosa è. Vale per il conteggio quanto per la scelta dello strumento con cui aprirlo: `formato_di()` in `ricomprimi.py` fa `Image.open(p).format` e non guarda mai il nome.
+
+---
+
+## L33 — Il mimetype si rilegge dall'oggetto, non si scrive fisso
+
+**Il caso.** `carica_480.py` mandava `Content-Type: image/gif` scritto nel codice. Per otto zone su nove è andata bene, perché erano tutte GIF. Sulla nona il bucket conteneva un PNG registrato come `image/png`: caricarlo avrebbe **riscritto il suo mimetype in `image/gif`**, silenziosamente, come effetto collaterale di un cantiere che cambia i byte e la cache e non ha mai avuto niente a che fare con i tipi dichiarati.
+
+L'ho visto prima di eseguire, ma solo perché stavo già guardando quei file per un altro motivo. Con una zona di sole GIF non se ne sarebbe accorto nessuno, e il difetto sarebbe rimasto lì per la migrazione di Pettorali e Mobilità.
+
+**Il rimedio.** Il chiamante rilegge `metadata.mimetype` dall'elenco del bucket e lo rimanda uguale. Il caricamento stampa quali oggetti non sono `image/gif`, dicendo esplicitamente che il tipo **si rimanda uguale, non si corregge** — compresi i due JPEG che si chiamano `.gif` e sono registrati `image/gif`: sbagliato o no, non è questo il cantiere che lo cambia.
+
+**La regola.** Una scrittura che deve modificare *alcuni* attributi di un oggetto non può inventare gli altri: o li rilegge e li rimanda uguali, o li omette. Un valore costante scritto nel codice al posto di un attributo esistente è una modifica non dichiarata, e si nota solo quando l'oggetto diverso finalmente arriva — cioè quando ha già fatto danno. È la stessa forma di [L4](#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha): ciò che la sorgente non porta con sé viene riportato indietro a un valore che nessuno ha scelto.

@@ -41,6 +41,7 @@ gifsicle la conserva. Sta in tools/bin/, si rifa' con installa_gifsicle.sh.
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -91,18 +92,56 @@ def misura(path):
         return None, None, None
 
 
-def ricomprimi_file(src, dst, ridimensiona):
+# ---------------------------------------------------------------- formati
+# Il bucket NON contiene solo GIF: ci sono anche immagini ferme, per gli esercizi
+# per cui una GIF non esisteva. Misurato il 15 agosto su tutti e 647 gli oggetti:
+# 645 GIF, 1 PNG, 1 JPEG, questi ultimi due entrambi in "Addominali e Core" ed
+# entrambi puntati da un codice vivo (EX156, EX037). gifsicle non li apre, e prima
+# di questa versione lo strumento moriva sul primo che incontrava.
+SENZA_PERDITA = {'GIF', 'PNG'}     # si possono riscrivere senza toccare i pixel
+
+
+def formato_di(path):
+    """Il formato VERO, letto dal contenuto: l'estensione non fa fede."""
+    try:
+        return Image.open(path).format
+    except Exception:
+        return None
+
+
+def ricomprimi_file(src, dst, ridimensiona, formato):
     """Sopra i 480px si ridimensiona; sotto si riscrive soltanto la codifica."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    cmd = [str(GIFSICLE)]
-    if ridimensiona:
-        cmd += ['--resize-fit', '%dx%d' % (LATO, LATO), '--resize-method', 'mix']
-    cmd += ['-O3', str(src), '-o', str(dst)]
-    r = subprocess.run(cmd, capture_output=True)
-    if r.returncode != 0:
-        return 'gifsicle: %s' % r.stderr.decode()[:160]
-    if not dst.exists() or dst.stat().st_size == 0:
-        return 'gifsicle non ha prodotto nulla'
+
+    if formato == 'GIF':
+        cmd = [str(GIFSICLE)]
+        if ridimensiona:
+            cmd += ['--resize-fit', '%dx%d' % (LATO, LATO),
+                    '--resize-method', 'mix']
+        cmd += ['-O3', str(src), '-o', str(dst)]
+        r = subprocess.run(cmd, capture_output=True)
+        if r.returncode != 0:
+            return 'gifsicle: %s' % r.stderr.decode()[:160]
+        if not dst.exists() or dst.stat().st_size == 0:
+            return 'gifsicle non ha prodotto nulla'
+        return None
+
+    if formato == 'PNG':
+        # PNG e' senza perdita per definizione: riscriverlo con optimize cambia
+        # solo come i pixel sono impacchettati, mai quali sono.
+        im = Image.open(src)
+        if ridimensiona:
+            w, h = im.size
+            s = LATO / max(w, h)
+            im = im.resize((max(1, round(w * s)), max(1, round(h * s))),
+                           Image.LANCZOS)
+        im.save(dst, 'PNG', optimize=True)
+        return None
+
+    # Formati con perdita (oggi: un JPEG). Non si riscrivono MAI in automatico:
+    # ogni riscrittura sposta i pixel, e su un file gia' molto compresso il
+    # ridimensionamento lo fa pure CRESCERE. Si copia identico e si dichiara.
+    shutil.copy2(src, dst)
     return None
 
 
@@ -215,12 +254,19 @@ def main():
         # -O3. Ricaricare byte identici lascia l'ETag invariato, e la CDN puo'
         # restare bloccata sull'intestazione vecchia — cosa che dipende dal fatto
         # che l'oggetto fosse in cache o no, cioe' dalla fortuna [L30].
+        formato = formato_di(src)
         ridimensiona = lato > LATO
-        azione = 'ricompresso' if ridimensiona else 'riottimizzato'
+        riscrivibile = formato in SENZA_PERDITA
+        if not riscrivibile:
+            # Immagine ferma con perdita: entra identica, per scelta dichiarata.
+            azione = 'fermo-non-riscrivibile'
+            ridimensiona = False
+        else:
+            azione = 'ricompresso' if ridimensiona else 'riottimizzato'
         rifare = args.rifai or not dst.exists()
 
         if rifare:
-            e = ricomprimi_file(src, dst, ridimensiona)
+            e = ricomprimi_file(src, dst, ridimensiona, formato)
             if e:
                 sys.exit('ERRORE su %s: %s' % (sp, e))
 
@@ -237,16 +283,18 @@ def main():
         if fotogrammi_n > fotogrammi:
             sys.exit('ERRORE: fotogrammi aumentati %d -> %d su %s'
                      % (fotogrammi, fotogrammi_n, sp))
-        if lato_n > LATO:
+        # Le immagini ferme con perdita restano alla loro dimensione per scelta:
+        # ridimensionarle le farebbe crescere invece che calare.
+        if lato_n > LATO and riscrivibile:
             sys.exit('ERRORE: %s e ancora a %dpx' % (sp, lato_n))
         fusi = fotogrammi - fotogrammi_n
 
         media, massimo = confronta(src, dst, ridimensiona)
         # Senza ridimensionamento il confronto e' esatto: un solo pixel diverso
-        # vuol dire che -O3 ha fatto qualcosa che non doveva, e ci si ferma.
+        # vuol dire che la riscrittura ha fatto qualcosa che non doveva.
         if not ridimensiona and massimo != 0:
-            sys.exit('ERRORE: -O3 ha cambiato i pixel di %s (differenza %d)'
-                     % (sp, massimo))
+            sys.exit('ERRORE: la riscrittura ha cambiato i pixel di %s'
+                     ' (differenza %d)' % (sp, massimo))
         if ridimensiona and media > 5.0:
             sys.exit('ERRORE: %s si discosta troppo dall originale (media %.2f)'
                      % (sp, media))
@@ -261,6 +309,7 @@ def main():
             'durata_ms': durata, 'durata_ms_dopo': durata_n,
             'fotogrammi_fusi': fusi,
             'diff_media': round(media, 3), 'diff_massima': massimo,
+            'formato': formato,
             'md5_bucket': f.split('|')[0], 'byte_bucket': byte_bucket,
             'sha256_bucket': gem['sha256'],
             'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
@@ -279,8 +328,11 @@ def main():
     prima = sum(v['byte_bucket'] for v in voci)
     dopo = sum(v['byte_nuovo'] for v in voci)
     n_ric = sum(1 for v in voci if v['azione'] == 'ricompresso')
-    print('\n%d file: %d ridimensionati a 480px, %d riottimizzati -O3, %d saltati'
-          % (len(voci), n_ric, len(voci) - n_ric, len(senza_gemello)))
+    n_fermi = sum(1 for v in voci if v['azione'] == 'fermo-non-riscrivibile')
+    print('\n%d file: %d ridimensionati a 480px, %d riscritti senza perdita,'
+          ' %d fermi non riscrivibili, %d saltati'
+          % (len(voci), n_ric, len(voci) - n_ric - n_fermi, n_fermi,
+             len(senza_gemello)))
     print('peso: %.1f MB -> %.1f MB  (%.0f%% in meno) in %.0fs'
           % (prima / 1048576, dopo / 1048576,
              100 - 100.0 * dopo / prima if prima else 0, time.time() - t0))
@@ -295,6 +347,7 @@ def main():
     # rumore di ricampionamento, e si guarda la media a tempi uguali.
     ric = [v for v in voci if v['azione'] == 'ricompresso']
     rio = [v for v in voci if v['azione'] == 'riottimizzato']
+    fermi = [v for v in voci if v['azione'] == 'fermo-non-riscrivibile']
     print('\nSCOSTAMENTO DALL ORIGINALE (0 = identico, 255 = opposto)')
     if rio:
         peggio = max(v['diff_massima'] for v in rio)
@@ -313,9 +366,21 @@ def main():
         else:
             print('     nessuno sopra 3.0')
 
+    if fermi:
+        print('\n%d immagini ferme con perdita: entrano IDENTICHE, per scelta.'
+              % len(fermi))
+        print('  Riscriverle sposterebbe i pixel senza far calare il peso.')
+        print('  Prendono comunque il cache-control; se una restasse bloccata')
+        print('  sulla CDN lo direbbe ripara_cache.py.')
+        for v in fermi:
+            print('     %-50.50s %s  %d byte'
+                  % (v['storage_path'].split('/')[-1], v['formato'],
+                     v['byte_nuovo']))
+
     # La proprieta' che tiene in piedi la regola: nessun file entra con i byte
     # di prima, o la CDN puo' restare bloccata sull'intestazione vecchia [L30].
-    identici = [v for v in voci if v['md5_nuovo'] == v['md5_bucket']]
+    identici = [v for v in voci if v['md5_nuovo'] == v['md5_bucket']
+                and v['azione'] != 'fermo-non-riscrivibile']
     if identici:
         sys.exit('ERRORE: %d file avrebbero i byte identici a quelli gia nel '
                  'bucket, la CDN non si sbloccherebbe:\n   %s'

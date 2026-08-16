@@ -72,7 +72,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: 6 su 8** — Polpacci · Cardio e Conditioning · Gambe e Glutei · Tricipiti · Spalle e Cuffia · Bicipiti e Braccia. Bucket da 639 a **424 MB, 41% del piano** — 216 MB liberati. Restano: Addominali e Core · Schiena e Trapezio. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, **in corso dal 15 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Zone fatte: 7 su 8** — Polpacci · Cardio e Conditioning · Gambe e Glutei · Tricipiti · Spalle e Cuffia · Bicipiti e Braccia · Addominali e Core. Bucket da 639 a **397 MB, 39% del piano** — 242 MB liberati. Resta **Schiena e Trapezio**, l'ultima, con i tre oggetti senza gemello sul Mac. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
 **Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
@@ -307,6 +307,16 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 ⚠️ **Un oggetto ricaricato identico può continuare a servire l'intestazione vecchia.** La CDN indicizza per URL e convalida per **ETag**: se i byte non cambiano l'ETag non cambia, e la voce vecchia resta anche forzando la rivalidazione. Colpisce solo i file già sotto i 480px (ricaricati identici) che erano in cache in quel momento — misurato: **2 su 219** nelle prime tre zone. Li sblocca `ripara_cache.py`, che li riscrive con `gifsicle -O3`: **non tocca un pixel** (verificato fotogramma per fotogramma, differenza 0) ma cambia i byte, quindi la CDN è costretta a sostituire la voce → [L30](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)
 
 ⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
+
+**Nel bucket non ci sono solo GIF.** Misurato sul contenuto, non sul nome: **645 GIF, 1 PNG, 3 JPEG** su 647, tutti e quattro i non-GIF in Addominali e Core e tutti puntati da un codice vivo. Due dei tre JPEG **si chiamano `.gif`** e sono registrati `image/gif`: funzionano perché il browser guarda i byte → [L32](docs/LEZIONI.md#l32--lestensione-non-dice-il-formato). Gli strumenti devono reggerli, non morirci sopra:
+
+- il formato si legge **dal contenuto** (`Image.open(p).format`), mai dall'estensione
+- **PNG**: si riscrive con `optimize=True` — senza perdita per definizione, differenza 0 sui pixel
+- **JPEG e altri formati con perdita**: non si riscrivono **mai** in automatico. Ogni riscrittura sposta i pixel e su un file già compresso il ridimensionamento lo fa pure crescere. Entrano identici, dichiarati nel piano
+- il **mimetype si rilegge dall'oggetto e si rimanda uguale**, mai un valore fisso: un `image/gif` scritto nel codice riscriverebbe il tipo del PNG → [L33](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso)
+- per un file che entra **identico** si carica **prima** e si controlla **dopo**: sondare la cache è ciò che ce lo mette → [L31](docs/LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo)
+
+**Le eccezioni si dichiarano nel piano**, in `eccezioni`: quale scostamento si tollera, su quale oggetto, perché e da quando. `verifica_480.py` le legge, tollera **solo** quello scostamento e controlla tutto il resto come sempre. Senza, una zona con una decisione presa a voce resterebbe bloccata per sempre.
 
 **Per una zona non ancora migrata** — oggi Pettorali e Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro. Vale anche per i file già sotto i 480 px: entrano passati per `-O3`, mai con i byte del Mac.
 
@@ -588,3 +598,6 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 28. [Una stima sui pixel non è una misura sui byte](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte) — il −82% che era −49%, e il campione preso male
 29. [La HEAD autenticata dice sempre `no-cache`](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata) — dove si verifica una scrittura
 30. [La CDN convalida per ETag](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta) — metadati cambiati, contenuto no
+31. [Si carica prima e si controlla dopo](docs/LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo) — il sondaggio crea la condizione che escludeva
+32. [L'estensione non dice il formato](docs/LEZIONI.md#l32--lestensione-non-dice-il-formato) — due `.gif` erano JPEG
+33. [Il mimetype si rilegge, non si scrive fisso](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso) — attributi non dichiarati
