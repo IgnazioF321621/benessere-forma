@@ -244,6 +244,10 @@ Non deve esistere un istante in cui una GIF è irraggiungibile.
 
 **Eccezione — zona senza codici**: se nessun `gif_slug` punta alla zona non esiste catena da proteggere, lo slug si aggiorna in place e non servono né righe doppie né sync. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma.
 
+**La stessa eccezione vale per la singola riga, e la domanda va posta alla riga.** «La zona ha codici» e «questa riga ha codici» non sono la stessa domanda: su Pettorali 57 codici puntano alla zona e le 2 righe del gruppo D — GIF indicizzate che nessun esercizio usa — non ne hanno nessuno. La guardia di zona resta com'è ed è giusta per l'uso di zona; per una riga sola c'è `migra_zona.py "<zona>" slug-riga --solo="<slug, nome o percorso>"`, che **rilegge vivo** chi punta a quella riga, si ferma se qualcuno la punta indicando l'ordine a righe doppie, e lavora **una riga per volta di proposito**. `--prova` non scrive.
+
+⚠️ **Il piano dice chi non aveva codici quando è stato scritto, non chi non ne ha adesso** → [L34](docs/LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto). La verifica si rifà viva a ogni chiamata.
+
 **Rinominare i file nel bucket è cosmesi.** L'app risolve via `storage_path`: il nome del file non è ciò che rompe o aggiusta le immagini.
 
 ### Ogni GIF entra nel bucket ridotta e con la cache — regola permanente
@@ -601,3 +605,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 31. [Si carica prima e si controlla dopo](docs/LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo) — il sondaggio crea la condizione che escludeva
 32. [L'estensione non dice il formato](docs/LEZIONI.md#l32--lestensione-non-dice-il-formato) — due `.gif` erano JPEG
 33. [Il mimetype si rilegge, non si scrive fisso](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso) — attributi non dichiarati
+34. [Il piano su disco non è il verbale di ciò che è stato fatto](docs/LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto) — la scelta del ramo si dichiara, non si deduce

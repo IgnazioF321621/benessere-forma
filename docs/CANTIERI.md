@@ -154,12 +154,30 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | Bicipiti e Braccia | 73 | 16 | 40,1 | **19,8** | ✅ 15 agosto (−51%) |
 | Cardio e Conditioning | 31 | 31 | 87,7 | **45,2** | ✅ 15 agosto (−48%) |
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
-| Pettorali | 60 | 25 | 52,5 | ~32 | ⚠️ vedi sotto |
+| Pettorali | 60 (+22) | 47 su 82 | 52,5 (+56,5) | **23,0 (+31,0)** | 🔄 in migrazione dal 16 agosto |
 | Schiena e Trapezio | 96 | 32 | 70,2 | **35,7** | ✅ 16 agosto (−49%) |
 | Spalle e Cuffia | 63 | 27 | 62,2 | **32,9** | ✅ 15 agosto (−47%) |
 | Tricipiti | 59 | 20 | 50,0 | **28,2** | ✅ 15 agosto (−44%) |
 
-**Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entreranno nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Il piano in `lavoro/_piani/` resta valido; va eseguito dopo questo cantiere.
+**Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entrano nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Migrazione avviata il 16 agosto.
+
+**Numeri misurati il 16 agosto** su tutti e 82 i file, non stimati: i 60 gia' nel bucket scendono da **52,5 a 23,0 MB** (−56%), i 22 mai caricati entrano a **31,0 MB** invece di 56,5 (−45%). Zona completa a **54,0 MB** contro i 109 che avrebbe occupato a piena risoluzione. Guardie: 35 riottimizzati `-O3` con differenza massima **0** su ogni pixel, 47 ridimensionati con mediana **0,61** e massimo **1,43** (limite 3,0), durata invariata su tutti.
+
+### ⚠️ Le 3 righe divergenti di `piano_gambe-e-glutei.json` — cosa nota, niente di rotto
+
+Emerse il 16 agosto costruendo il ramo per percorso di destinazione di `ricomprimi.py`. Il piano su disco indica **3 righe come «ancora da spostare»**:
+
+| il piano dice di spostare | dove il file sta davvero |
+|---|---|
+| `Leg curl bilaterale simultaneo alla macchina seduta con prese anteriori.gif` | e' li', vivo, puntato da un codice |
+| `Leg curl macchina ginocchio rialzato (machine leg curl with elevated knee support).gif` | e' li', vivo, puntato da un codice |
+| `Estensione anca bilanciere (barbell hip extension).gif` | e' li', vivo, riga senza codice |
+
+**Non e' un arretrato e non c'e' niente da riparare.** Sono 3 dei 7 oggetti della zona che stanno a percorsi diversi dalle destinazioni del piano: tutti e 7 hanno la loro riga in `biblioteca_gif`, 4 sono puntati da codici vivi, e tutti e 7 servono gia' `public, max-age=31536000, immutable`. Durante la migrazione del 4-6 agosto si e' deciso diverso da quanto il piano prevedeva — che e' esattamente cio' che deve poter succedere, visto che chiude la decisione umana e non l'analisi tecnica. Quello che non e' successo e' che qualcuno tornasse a riscrivere il file del piano.
+
+**Perche' e' annotato qui.** Perche' un piano eseguito resta in `_piani/` indistinguibile da uno vivo, e la prima cosa che ci ha sbattuto contro e' stato uno strumento che provava a dedurre dallo stato del bucket se una zona stesse migrando: avrebbe rimesso in movimento tre file a posto. Da li' la regola che **il ramo si dichiara e non si deduce** (`ricomprimi.py --migrazione`) e la lezione [L34](LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto).
+
+**Resta da decidere**, e non e' urgente: come distinguere i piani spesi da quelli vivi — archiviarli, marcarli, o rigenerarli a fine migrazione perche' descrivano lo stato finale invece di quello iniziale.
 
 **I tre oggetti di Schiena e Trapezio senza gemello — risolti il 16 agosto.** Scaricati su decisione di Ignazio (1,4 MB reali, non i 3 stimati) e trattati come tutti gli altri. Tre MB su un ciclo azzerato costano meno di tre eccezioni permanenti, e il Mac riacquista il gemello per ogni verifica futura.
 
@@ -362,17 +380,29 @@ Controlli tutti puliti: 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0
 
 ### Alla ripresa, in quest'ordine
 
-1. **Lanciare `pianifica.py "Pettorali"`.** Il piano scritto è leggibile ma non eseguibile: manca la coppia `_piani/piano_pettorali.json` + `.tsv`, che è ciò che `migra_zona.py` consuma davvero. Lo strumento la genera e nel farlo rimisura sul vivo. **Se i suoi numeri divergono dal piano scritto, vince lo strumento** e il piano si rilegge prima di eseguire: la baseline si sposta anche solo perché è cambiato il catalogo → [L17](LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+1. ~~**Lanciare `pianifica.py "Pettorali"`**~~ — ✅ **fatto il 16 agosto.** La coppia `_piani/piano_pettorali.json` + `.tsv` esiste. **I conteggi sul vivo confermano il piano scritto senza scarti**: 36 slug invariato (A+C), 24 slug nuovo (B+D), 22 nuove (E+F), 81 percorsi su 82 che cambiano, `dip-parallele` unica collisione esterna, 0 collisioni interne, 0 di percorso, 0 sovrascritture, 0 percorsi non-ASCII, 0 codici che resterebbero senza GIF.
+
+   Poi `ricomprimi.py "Pettorali" --migrazione` ha prodotto i byte ridotti per tutti e 82 (nessuno saltato) → misure nel [cantiere 21](#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage). **Il gruppo C è stato eseguito e verificato**: riscrittura in place, 1080→480 px, `no-cache` → `immutable`, slug e percorso invariati.
 
 ```bash
 python3 tools/biblioteca-nomi/pianifica.py "Pettorali"
+python3 tools/biblioteca-nomi/ricomprimi.py "Pettorali" --migrazione
 ```
+
+   ⚠️ **`--migrazione` non è facoltativo per una zona che sta migrando**: senza, `ricomprimi.py` lavora sugli oggetti già nel bucket e i 22 file mai caricati restano fuori dal piano. Il flag si dichiara, non si deduce → [L34](LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto).
 
 2. **Verificare le 85 rinomine sul Mac contro il disco.** `log_rinomine.tsv` dichiara 85 eventi `rinominato` e il file di lavoro dà gli 82 nomi come allineati, ma il confronto con ciò che sta davvero sul disco non è stato fatto: costa rileggere 109 MB. Da fare **prima della fase 2**.
 
 3. **Decidere sul termine `medi`**, comparso in `Croci cavi medi in piedi` (EX207, con EX104 e EX319). Introduce una terza altezza del cavo accanto ad `alti` e `bassi` e non è un termine dichiarato nella nomenclatura v2. Non blocca la migrazione — il nome è stato confermato guardando la GIF — ma è un valore nuovo entrato senza una decisione esplicita, esattamente come stava per succedere alle panche.
 
-4. **Eseguire la migrazione** secondo le otto fasi del piano, dal 15 agosto.
+4. **Eseguire la migrazione** secondo le otto fasi del piano. Avviata il 16 agosto: fatto il gruppo C, restano gli 81.
+
+   ⚠️ **La fase 3 (gruppo D, 2 righe) non passa da `passo_slug`.** Quella è una guardia di **zona** e rifiuta se un solo codice punta alla zona — qui ne puntano 57, mentre le 2 righe del gruppo D non ne hanno nessuno. Si usa `slug-riga`, che pone la stessa domanda alla singola riga e la rilegge viva:
+
+```bash
+python3 tools/biblioteca-nomi/migra_zona.py "Pettorali" slug-riga --solo="Adduzione braccio elastico in piedi" --prova
+python3 tools/biblioteca-nomi/migra_zona.py "Pettorali" slug-riga --solo="Chest press elastico inclinato" --prova
+```
 
 5. **Popolare il catalogo — terzo lavoro, obbligatorio.** Le 22 GIF caricate avranno riga in `biblioteca_gif` e nessun codice in `esercizi_catalog`. Per ognuna si decide, guardando la GIF, se diventa un esercizio: in caso affermativo entra a catalogo dal Sheet, altrimenti resta libera **con la decisione scritta**, non per omissione. Prima di aprire la lista, incrociare i nomi col catalogo e separare i due mucchi — candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). I codici si allocano **al momento della scrittura** → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
 

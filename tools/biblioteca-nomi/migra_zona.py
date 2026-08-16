@@ -21,6 +21,10 @@ Ordine a righe doppie — non deve esistere un istante in cui una GIF e' irraggi
   6       riga nuova del libero che aspettava uno slug occupato
   7       le altre righe nuove
 
+  slug      slug in place per una zona in cui NESSUN codice entra (guardia di zona)
+  slug-riga slug in place di UNA riga a cui nessun codice punta, in una zona che
+            invece i codici ce li ha. Stessa domanda, posta alla riga.
+
 I BYTE ARRIVANO SEMPRE DAL PIANO DEI 480px, MAI DAL MAC
 Dal 15 agosto 2026 nessun file entra nel bucket con i byte di prima: si entra
 ridotti a 480px e con `cache-control: immutable`. Questo strumento non ha nessuna
@@ -403,8 +407,97 @@ def passo_prova(zona, piano):
     print('\n  esercizi_catalog: non viene toccato. Sheet: nessun sync.')
 
 
+def _codici_per_slug():
+    """slug -> [codici che lo puntano]. Letto vivo, mai dal piano."""
+    cat, e = leggi_tutto('esercizi_catalog', 'codice,gif_slug', 'codice')
+    if e:
+        sys.exit(e)
+    out = {}
+    for c in cat:
+        if c.get('gif_slug'):
+            out.setdefault(c['gif_slug'], []).append(c['codice'])
+    return out
+
+
+def passo_slug_riga(zona, piano, solo=None, prova=False):
+    """Aggiorna lo slug di UNA riga, se nessun codice punta A QUELLA RIGA.
+
+    `passo_slug` fa la stessa domanda alla zona intera e ha ragione a farlo: se
+    un codice qualsiasi punta alla zona, aggiornare gli slug in blocco lo
+    lascerebbe orfano, e la catena gif_slug -> slug va protetta con le righe
+    doppie. Quella guardia non si tocca ed e' giusta per l'uso di zona.
+
+    Ma «la zona ha codici» e «questa riga ha codici» non sono la stessa domanda.
+    Su Pettorali 57 codici puntano alla zona, e le 2 righe del gruppo D — GIF
+    indicizzate che nessun esercizio usa — non ne hanno nessuno. Per loro non
+    esiste catena da proteggere, quindi non servono ne' righe doppie ne' sync:
+    e' l'eccezione «zona senza codici» applicata alla singola riga, che CLAUDE.md
+    gia' prevede ma che nessuno strumento sapeva eseguire.
+
+    Una riga alla volta, e la verifica si rifa' VIVA a ogni chiamata: il piano
+    dice chi non aveva codici quando e' stato scritto, non chi non ne ha adesso.
+    """
+    if not solo:
+        sys.exit('serve --solo=<slug, nome o percorso> — questa operazione'
+                 ' aggiorna una riga alla volta, di proposito')
+
+    cand = [r for r in piano['righe'] if r['slug_cambia']
+            and solo in (r['slug_attuale'], r['slug_nuovo'], r['nome_finale'],
+                         r['storage_path_dest'])]
+    if len(cand) != 1:
+        sys.exit('"%s" corrisponde a %d righe con lo slug che cambia: serve'
+                 ' esattamente una' % (solo, len(cand)))
+    r = cand[0]
+
+    bib, e = leggi_tutto('biblioteca_gif', 'slug,nome_italiano,storage_path', 'slug')
+    if e:
+        sys.exit(e)
+    per_slug = {b['slug']: b for b in bib}
+    punt = _codici_per_slug()
+
+    riga = per_slug.get(r['slug_attuale'])
+    print('== SLUG DI UNA RIGA ==')
+    print('  nome        : %s' % r['nome_finale'])
+    print('  slug        : %s -> %s' % (r['slug_attuale'], r['slug_nuovo']))
+    print('  storage_path: %s' % (riga or {}).get('storage_path', '—'))
+
+    if not riga:
+        sys.exit('  FERMO: nessuna riga con slug "%s"' % r['slug_attuale'])
+    if not nfc(riga.get('storage_path') or '').startswith(zona + '/'):
+        sys.exit('  FERMO: la riga non appartiene alla zona "%s"' % zona)
+    if r['slug_nuovo'] in per_slug:
+        sys.exit('  FERMO: lo slug "%s" e gia occupato' % r['slug_nuovo'])
+
+    # LA guardia: per riga, non per zona, e riletta viva.
+    codici = punt.get(r['slug_attuale'], [])
+    print('  codici che puntano a QUESTA riga: %s' % (codici or 'nessuno'))
+    if codici:
+        sys.exit('  FERMO: %d codici puntano a questa riga. Lo slug non si tocca'
+                 ' in place:\n         serve l ordine a righe doppie (passo 2 ->'
+                 ' sync del Sheet -> passo 4 -> passo 5).' % len(codici))
+
+    if prova:
+        print('\n  PROVA: nessuna scrittura. Aggiornerei slug e nome_italiano.')
+        return
+
+    _, err = api('PATCH', '/rest/v1/biblioteca_gif?slug=eq.%s'
+                 % urllib.parse.quote(r['slug_attuale']),
+                 {'slug': r['slug_nuovo'], 'nome_italiano': r['nome_finale']})
+    if err:
+        sys.exit('  ERRORE: %s' % err)
+    print('\n  aggiornata.')
+    log(zona, 'slug_riga_%s.json' % fslug(r['slug_nuovo']),
+        {'da': r['slug_attuale'], 'a': r['slug_nuovo'],
+         'nome': r['nome_finale'], 'codici_al_momento': codici})
+
+
 def passo_slug(zona, piano):
-    """Aggiorna slug e nome_italiano in place. Solo per zone senza codici."""
+    """Aggiorna slug e nome_italiano in place. Solo per zone senza codici.
+
+    Guardia di ZONA, e resta tale: per aggiornare lo slug di una riga sola in una
+    zona che invece dei codici ce li ha, esiste `slug-riga`, che pone la stessa
+    domanda alla singola riga.
+    """
     punt = _nessun_codice(zona)
     if punt:
         sys.exit('%d codici puntano alla zona: lo slug NON si tocca in place. %s'
@@ -571,10 +664,12 @@ if __name__ == '__main__':
     # `--solo <percorso o nome>` restringe il passo 1 a una riga. Non e' una
     # scorciatoia: e' il modo di collaudare il giro completo su un file solo
     # prima di lanciarlo sugli altri.
-    SOLO = None
+    SOLO, PROVA = None, False
     for a in sys.argv[3:]:
         if a.startswith('--solo='):
             SOLO = a.split('=', 1)[1]
+        elif a == '--prova':
+            PROVA = True
     pia = carica(Z)
     # L'indice delle impronte si carica una volta sola, prima del passo: e' cio' che
     # permette alle verifiche di rispondere senza scaricare.
@@ -583,6 +678,8 @@ if __name__ == '__main__':
     try:
         if P == '1':
             passo1(Z, pia, solo=SOLO)
+        elif P == 'slug-riga':
+            passo_slug_riga(Z, pia, solo=SOLO, prova=PROVA)
         else:
             {'backup': passo_backup, 'prova': passo_prova, '2': passo2,
              'slug': passo_slug, '4': passo4, '5': passo5, '6': passo6,

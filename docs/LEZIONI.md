@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale
 
 ---
 
@@ -486,3 +486,28 @@ L'ho visto prima di eseguire, ma solo perché stavo già guardando quei file per
 **Il rimedio.** Il chiamante rilegge `metadata.mimetype` dall'elenco del bucket e lo rimanda uguale. Il caricamento stampa quali oggetti non sono `image/gif`, dicendo esplicitamente che il tipo **si rimanda uguale, non si corregge** — compresi i due JPEG che si chiamano `.gif` e sono registrati `image/gif`: sbagliato o no, non è questo il cantiere che lo cambia.
 
 **La regola.** Una scrittura che deve modificare *alcuni* attributi di un oggetto non può inventare gli altri: o li rilegge e li rimanda uguali, o li omette. Un valore costante scritto nel codice al posto di un attributo esistente è una modifica non dichiarata, e si nota solo quando l'oggetto diverso finalmente arriva — cioè quando ha già fatto danno. È la stessa forma di [L4](#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha): ciò che la sorgente non porta con sé viene riportato indietro a un valore che nessuno ha scelto.
+
+---
+
+## L34 — Il piano su disco non è il verbale di ciò che è stato fatto
+
+**Il caso.** 16 agosto 2026. Stavo riscrivendo `ricomprimi.py` perché lavorasse per percorso di destinazione, e serviva sapere quali zone stessero migrando e quali no. La deduzione sembrava ovvia e persino elegante: *se il piano di migrazione descrive ancora il bucket, la zona sta migrando; se non c'è più niente da spostare, il piano è speso e si torna all'elenco del bucket.* Nessun flag da ricordare, nessun modo di sbagliare l'invocazione.
+
+L'ho scritta, e poi l'ho provata sulle zone già chiuse — non perché dubitassi, ma perché una modifica strutturale si prova su tutti i casi, non solo sul proprio. `Gambe e Glutei`, chiusa da dodici giorni, è tornata indietro con **164 unità dal ramo del piano** e tre righe «ancora da spostare».
+
+Quei tre file esistono davvero ai percorsi che il piano chiama vecchi. Ma non sono residui: hanno la loro riga in `biblioteca_gif`, quattro dei sette oggetti fuori piano sono **puntati da codici vivi**, e tutti servono già `public, max-age=31536000, immutable` dal cantiere 21+22. Sono vivi e a posto da settimane. Durante quella migrazione, guardando le GIF, si è deciso diverso da quanto il piano prevedeva — ed è esattamente ciò che deve poter succedere, perché [la regola che non si negozia](../CLAUDE.md#regole-cantiere-gif-riconciliazione-a-tre-fonti) dice che è la decisione umana a chiudere, non l'analisi tecnica. Quello che non è successo è che qualcuno tornasse a riscrivere il file del piano.
+
+**Che cosa sarebbe costata.** La deduzione avrebbe classificato `Gambe e Glutei` come zona in migrazione e messo in movimento tre file a posto, spostandoli a percorsi che nessuno ha scelto e lasciando le loro righe a puntare altrove. Il danno non sarebbe stato la perdita di un file — la copia c'è — ma quattro codici vivi che smettono di risolvere, in una zona chiusa che nessuno stava più guardando.
+
+**Il costo reale.** Zero: una prova prima di eseguire. È la stessa forma di [L31](#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo) e [L30](#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta) — il difetto si è fatto vedere perché la verifica è stata fatta sul caso che *non* interessava, non su quello che si stava costruendo.
+
+**La regola.** Un piano è una **proposta scritta in un istante**, non un registro di ciò che è accaduto. `PIANO_*.md` e `piano_*.json` dicono che cosa si era deciso di fare quel giorno: non dicono che cosa c'è adesso, e nessuno li aggiorna quando l'esecuzione prende una strada diversa. Lo stato vero si legge da dove vive: **il bucket e il database**.
+
+Da qui due conseguenze operative:
+
+1. **La scelta del ramo si dichiara, non si deduce.** `ricomprimi.py` prende `--migrazione` da chi lo lancia. Un flag in più da ricordare è un prezzo minuscolo rispetto a uno strumento che sceglie da solo, sulla base di un file che può mentire senza saperlo.
+2. **Un piano si rilegge, non si crede.** Il documento di Pettorali lo diceva già di sé stesso — *«se i conteggi di `pianifica.py` divergono, vince lui»* — ed è la stessa disciplina di [L17](#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice): si rimisura, non si cita.
+
+**Corollario — un piano eseguito va archiviato o marcato, non lasciato dov'era.** Finché `piano_gambe-e-glutei.json` sta in `_piani/` accanto a quello di Pettorali, i due sono indistinguibili per chiunque, strumento o persona. La divergenza nota è annotata nel [cantiere 21](CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage); il modo di distinguere i piani spesi da quelli vivi resta da decidere.
+
+**Corollario secondo.** Vale per ogni artefatto che descrive un'intenzione e sopravvive alla propria esecuzione: piani, TSV di consegna, registri scritti a mano. È la stessa famiglia di [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) e [L8](#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso) — la fonte che descrive non è la fonte che decide, e quando le due divergono ha ragione il mondo, non il documento.
