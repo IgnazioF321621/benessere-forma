@@ -177,7 +177,18 @@ Emerse il 16 agosto costruendo il ramo per percorso di destinazione di `ricompri
 
 **Perche' e' annotato qui.** Perche' un piano eseguito resta in `_piani/` indistinguibile da uno vivo, e la prima cosa che ci ha sbattuto contro e' stato uno strumento che provava a dedurre dallo stato del bucket se una zona stesse migrando: avrebbe rimesso in movimento tre file a posto. Da li' la regola che **il ramo si dichiara e non si deduce** (`ricomprimi.py --migrazione`) e la lezione [L34](LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto).
 
-**Resta da decidere**, e non e' urgente: come distinguere i piani spesi da quelli vivi — archiviarli, marcarli, o rigenerarli a fine migrazione perche' descrivano lo stato finale invece di quello iniziale.
+### ✅ Decisione del 16 agosto 2026 — i piani si rigenerano a fine migrazione
+
+**A migrazione conclusa si rilancia `pianifica.py "<zona>"`**, cosi' che il piano su disco descriva lo **stato finale** invece di quello iniziale. Su una zona chiusa il piano rigenerato deve risultare tutto `slug invariato` con `percorso che cambia: 0`: se cosi' non e', c'e' qualcosa da guardare, e il file diventa un controllo invece di un documento che invecchia.
+
+Le altre due strade sono state scartate, e il motivo conta:
+
+- **archiviare** il piano lo toglie di mezzo ma lo lascia **falso**: un documento sbagliato messo in un'altra cartella resta sbagliato, e prima o poi qualcuno lo riapre;
+- **marcare** i piani spesi aggiunge uno stato da tenere aggiornato **a mano** — ed e' esattamente la mano che ha prodotto la divergenza di Gambe e Glutei. Un rimedio che si affida alla stessa disciplina che e' gia' venuta meno non e' un rimedio.
+
+Rigenerare non chiede disciplina: chiede un comando, e il comando misura il vivo.
+
+**Si applica da Pettorali in avanti.** Le otto zone gia' chiuse si ripassano dopo, in un giro loro: rigenerare adesso otto piani significherebbe otto letture complete di `biblioteca_gif` e del bucket per un beneficio che non e' urgente, e la divergenza nota e' quella qui sopra.
 
 **I tre oggetti di Schiena e Trapezio senza gemello — risolti il 16 agosto.** Scaricati su decisione di Ignazio (1,4 MB reali, non i 3 stimati) e trattati come tutti gli altri. Tre MB su un ciclo azzerato costano meno di tre eccezioni permanenti, e il Mac riacquista il gemello per ogni verifica futura.
 
@@ -405,6 +416,12 @@ python3 tools/biblioteca-nomi/migra_zona.py "Pettorali" slug-riga --solo="Chest 
 ```
 
 5. **Popolare il catalogo — terzo lavoro, obbligatorio.** Le 22 GIF caricate avranno riga in `biblioteca_gif` e nessun codice in `esercizi_catalog`. Per ognuna si decide, guardando la GIF, se diventa un esercizio: in caso affermativo entra a catalogo dal Sheet, altrimenti resta libera **con la decisione scritta**, non per omissione. Prima di aprire la lista, incrociare i nomi col catalogo e separare i due mucchi — candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). I codici si allocano **al momento della scrittura** → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
+
+6. **Rigenerare il piano** perché descriva lo stato finale → [decisione del 16 agosto](#-decisione-del-16-agosto-2026--i-piani-si-rigenerano-a-fine-migrazione). Atteso: tutto `slug invariato`, `percorso che cambia: 0`. Se non torna, è un controllo che ha trovato qualcosa.
+
+```bash
+python3 tools/biblioteca-nomi/pianifica.py "Pettorali"
+```
 
 **Pettorali è chiusa solo dopo il punto 5.** Fino ad allora Polpacci non si apre.
 
