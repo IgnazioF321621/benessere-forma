@@ -299,9 +299,35 @@ def passo1(zona, piano, solo=None):
 
 # ------------------------------------------------------------------ passo 2
 def passo2(zona, piano):
-    """Righe doppie: inserisce lo slug nuovo accanto al vecchio, stesso file."""
-    da_fare = [r for r in piano['righe'] if r['operazione'] == 'slug nuovo']
+    """Righe doppie: inserisce lo slug nuovo accanto al vecchio, stesso file.
+
+    Riguarda SOLO le righe a cui punta almeno un codice. La riga doppia esiste
+    per coprire la finestra fra il cambio di slug qui e il sync del Sheet, che e'
+    manuale e puo' durare ore: senza, `esercizi_catalog.gif_slug` punterebbe a
+    uno slug che non esiste piu' e il Worker risponderebbe `missing`. Dove nessun
+    codice punta, quella finestra non esiste e la riga doppia non serve: si
+    aggiorna lo slug in place con `slug-riga`, che e' la fase 3 del piano.
+
+    Il filtro era `operazione == 'slug nuovo'`, che prende anche le righe senza
+    codici: su Pettorali avrebbe inserito 24 righe invece di 22, e le 2 del
+    gruppo D si sarebbero trovate lo slug nuovo gia' occupato quando la fase 3
+    fosse arrivata a chiederlo. La domanda giusta e' la stessa di `slug-riga` —
+    «questa riga ha codici?» — e si rilegge VIVA, perche' il piano dice chi
+    aveva codici quando e' stato scritto, non chi ne ha adesso [L34].
+    """
+    punt = _codici_per_slug()
+    da_fare = [r for r in piano['righe']
+               if r['operazione'] == 'slug nuovo' and punt.get(r['slug_attuale'])]
+    saltate = [r for r in piano['righe']
+               if r['operazione'] == 'slug nuovo' and not punt.get(r['slug_attuale'])]
     print('== PASSO 2: %d righe con lo slug nuovo da inserire ==' % len(da_fare))
+    if saltate:
+        print('  %d righe con lo slug che cambia ma SENZA codici: non prendono la'
+              ' riga doppia,' % len(saltate))
+        print('  vanno in fase 3 con "slug-riga".')
+        for r in saltate:
+            print('     %-38.38s %s -> %s'
+                  % (r['nome_finale'], r['slug_attuale'], r['slug_nuovo']))
     bib, e = leggi_tutto('biblioteca_gif', '*', 'slug')
     if e:
         sys.exit(e)
