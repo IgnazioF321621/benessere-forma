@@ -39,7 +39,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from impronte import (cache_impronte, conta_download, firma,  # noqa: E402
-                      indice_locale, sha_di_firma, stampa_consumo)
+                      indice_locale, nfc, sha_di_firma, stampa_consumo)
 from nomenclatura import slug as fslug  # noqa: E402
 
 BASE = Path(__file__).parent
@@ -78,13 +78,39 @@ def scarica_url(url):
     return dati
 
 
+def _impronte_attese(zona, piano):
+    """codice -> sha256 che l'oggetto nel bucket DEVE avere.
+
+    Il piano di migrazione porta lo `sha256` del file com'e' sul Mac. Dal 15
+    agosto 2026 pero' nel bucket non ci finiscono quei byte: ci finisce il file
+    RIDOTTO a 480px, che ha per forza un'impronta diversa — e' il punto della
+    regola. Confrontare con lo `sha256` del piano fa fallire ogni singolo codice
+    di una zona perfettamente migrata: misurato su Pettorali, 57 KO su 57, tutti
+    con l'impronta del file ridotto al posto di quella dell'originale.
+
+    L'impronta buona sta nel piano dei 480px, in `sha256_nuovo`, indicizzata per
+    percorso di destinazione. Se il piano non c'e' — zona mai passata dalla
+    riduzione — si torna allo `sha256` del piano di migrazione, che li' e' ancora
+    quello giusto.
+    """
+    p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
+    if not p.exists():
+        return {}, 'piano di migrazione (file non ridotti)'
+    voci = json.loads(p.read_text(encoding='utf-8'))['voci']
+    return ({nfc(v['storage_path']): v['sha256_nuovo'] for v in voci},
+            'piano dei 480px (byte ridotti)')
+
+
 def main(zona, sha_per=()):
     piano = json.loads((BASE / 'lavoro' / '_piani' / ('piano_%s.json' % fslug(zona)))
                        .read_text(encoding='utf-8'))
+    ridotti, fonte = _impronte_attese(zona, piano)
     atteso = {}
     for r in piano['righe']:
+        sha = ridotti.get(nfc(r['storage_path_dest']), r['sha256'])
         for c in r['codici']:
-            atteso[c['codice']] = (r['sha256'], r['storage_path_dest'], r['nome_finale'])
+            atteso[c['codice']] = (sha, r['storage_path_dest'], r['nome_finale'])
+    print('  impronte attese da: %s' % fonte)
 
     indice_locale()
     cache_impronte()
