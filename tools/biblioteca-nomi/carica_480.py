@@ -138,13 +138,13 @@ def main():
         # giusta. Sui 371 oggetti gia' sotto i 480px i byte non cambiano affatto —
         # guardare solo quelli li farebbe passare per fatti, e resterebbero con
         # il `no-cache` che questo giro esiste proprio per togliere.
-        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc == CACHE_NUOVA:
+        if etag == v['md5_bucket_atteso'] and dim == v['byte_bucket_atteso'] and cc == CACHE_NUOVA:
             gia_fatti.append(v['storage_path'])       # giro gia' fatto: idempotente
             continue
-        if etag != v['md5_bucket'] or dim != v['byte_bucket']:
+        if etag != v['md5_bucket_ora'] or dim != v['byte_bucket_ora']:
             guasti.append((v['storage_path'],
                            'atteso %s/%d, trovato %s/%s'
-                           % (v['md5_bucket'][:10], v['byte_bucket'],
+                           % (v['md5_bucket_ora'][:10], v['byte_bucket_ora'],
                               (etag or '?')[:10], dim)))
     if guasti:
         print('\n   MI FERMO: %d oggetti non sono come il piano li descrive.' % len(guasti))
@@ -170,7 +170,7 @@ def main():
     if args.prova:
         da_fare = [v for v in voci if v['storage_path'] not in gia_fatti]
         print('\nPROVA: caricherei %d oggetti (%.1f MB), ne lascerei %d gia a posto.'
-              % (len(da_fare), sum(v['byte_nuovo'] for v in da_fare) / 1048576,
+              % (len(da_fare), sum(v['byte_bucket_atteso'] for v in da_fare) / 1048576,
                  len(gia_fatti)))
         print('       cache-control: %s' % CACHE_NUOVA)
         I.stampa_consumo()
@@ -222,16 +222,16 @@ def main():
             continue
         s = stato2.get(sp)
         etag, dim, cc = s if s else (None, None, None)
-        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc == CACHE_NUOVA:
+        if etag == v['md5_bucket_atteso'] and dim == v['byte_bucket_atteso'] and cc == CACHE_NUOVA:
             if sp not in gia_fatti:          # gia' a posto da prima: non e' un caricamento di oggi
                 caricati += 1
             esiti[sp] = {'storage_path': sp, 'esito': 'fatto',
-                         'byte_prima': v['byte_bucket'], 'byte_dopo': v['byte_nuovo'],
+                         'byte_prima': v['byte_bucket_ora'], 'byte_dopo': v['byte_bucket_atteso'],
                          'cache_control': cc}
             continue
         # Non e' quello che doveva essere: rimetto l'originale dal Mac.
         print('   NON CORRISPONDE %-40.40s atteso %s/%d, trovato %s/%s cc=%r'
-              % (sp.split('/')[-1], v['md5_nuovo'][:10], v['byte_nuovo'],
+              % (sp.split('/')[-1], v['md5_bucket_atteso'][:10], v['byte_bucket_atteso'],
                  (etag or '?')[:10], dim, cc))
         e2 = carica_bytes(sp, Path(v['origine_mac']).read_bytes(),
                           mime.get(sp) or 'image/gif', 'no-cache')

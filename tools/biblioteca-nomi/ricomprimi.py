@@ -343,7 +343,7 @@ def main():
         # Stato di CIO' CHE STA NEL BUCKET ORA: per una rinomina e' all'indirizzo
         # vecchio, per un file mai caricato non c'e' niente.
         s_ora = stato.get(u['attuale']) if u['attuale'] else None
-        byte_bucket = s_ora['byte'] if s_ora else 0
+        byte_bucket_ora = s_ora['byte'] if s_ora else 0
 
         src = u['origine_mac']
         lato, fotogrammi, durata = misura(src)
@@ -352,7 +352,7 @@ def main():
         if lato is None:
             senza_gemello.append('%s — non si apre: %s' % (sp, src))
             print('%-50.50s %7.0fk %7s %6s  SALTATO: non si apre'
-                  % (nome_dest, byte_bucket / 1024, '-', '-'))
+                  % (nome_dest, byte_bucket_ora / 1024, '-', '-'))
             continue
 
         # Dal 15 agosto 2026 NESSUN file entra nel bucket con i byte di prima:
@@ -424,14 +424,14 @@ def main():
             'fotogrammi_fusi': fusi,
             'diff_media': round(media, 3), 'diff_massima': massimo,
             'formato': formato, 'mimetype': mimetype,
-            'md5_bucket': s_ora['etag'] if s_ora else None,
-            'byte_bucket': byte_bucket or None,
-            'cache_bucket': s_ora['cache'] if s_ora else None,
-            'file_480': str(dst), 'md5_nuovo': md5_n, 'sha256_nuovo': sha_n,
-            'byte_nuovo': byte_n,
+            'md5_bucket_ora': s_ora['etag'] if s_ora else None,
+            'byte_bucket_ora': byte_bucket_ora or None,
+            'cache_bucket_ora': s_ora['cache'] if s_ora else None,
+            'file_480': str(dst), 'md5_bucket_atteso': md5_n, 'sha256_bucket_atteso': sha_n,
+            'byte_bucket_atteso': byte_n,
             'azione': azione,
         })
-        ris = 100 - 100.0 * byte_n / byte_bucket if byte_bucket else 0
+        ris = 100 - 100.0 * byte_n / byte_bucket_ora if byte_bucket_ora else 0
         nota = azione
         if u['attuale'] is None:
             nota += ' (mai caricato)'
@@ -439,16 +439,16 @@ def main():
             nota += ' (cambia percorso)'
         if fusi:
             nota += ' (%d fotogrammi doppi fusi, durata invariata)' % fusi
-        if not ridimensiona and byte_bucket and byte_n >= byte_bucket:
+        if not ridimensiona and byte_bucket_ora and byte_n >= byte_bucket_ora:
             nota += ' (byte nuovi, peso invariato)'
         print('%-50.50s %7s %7.0fk %5s  %s'
               % (nome_dest,
-                 '%.0fk' % (byte_bucket / 1024) if byte_bucket else '-',
+                 '%.0fk' % (byte_bucket_ora / 1024) if byte_bucket_ora else '-',
                  byte_n / 1024,
-                 '%.0f%%' % ris if byte_bucket else '-', nota))
+                 '%.0f%%' % ris if byte_bucket_ora else '-', nota))
 
-    prima = sum(v['byte_bucket'] or 0 for v in voci)
-    dopo = sum(v['byte_nuovo'] for v in voci)
+    prima = sum(v['byte_bucket_ora'] or 0 for v in voci)
+    dopo = sum(v['byte_bucket_atteso'] for v in voci)
     n_ric = sum(1 for v in voci if v['azione'] == 'ricompresso')
     n_fermi = sum(1 for v in voci if v['azione'] == 'fermo-non-riscrivibile')
     print('\n%d file: %d ridimensionati a 480px, %d riscritti senza perdita,'
@@ -458,20 +458,20 @@ def main():
     # Il confronto "prima -> dopo" vale solo per chi nel bucket c'e' gia': i file
     # mai caricati non hanno un prima, e sommarli al totale farebbe sembrare la
     # riduzione peggiore di quello che e'. Il peso in ingresso si dichiara a parte.
-    sostituiti = [v for v in voci if v['byte_bucket']]
-    dopo_sost = sum(v['byte_nuovo'] for v in sostituiti)
+    sostituiti = [v for v in voci if v['byte_bucket_ora']]
+    dopo_sost = sum(v['byte_bucket_atteso'] for v in sostituiti)
     print('peso di cio che e gia nel bucket: %.1f MB -> %.1f MB  (%.0f%% in meno)'
           ' in %.0fs'
           % (prima / 1048576, dopo_sost / 1048576,
              100 - 100.0 * dopo_sost / prima if prima else 0, time.time() - t0))
-    mai = [v for v in voci if not v['byte_bucket']]
+    mai = [v for v in voci if not v['byte_bucket_ora']]
     if mai:
         grezzo = sum(Path(v['origine_mac']).stat().st_size for v in mai)
         print('mai caricati: %d file, %.1f MB sul Mac -> %.1f MB in ingresso'
               '  (%.0f%% in meno)'
               % (len(mai), grezzo / 1048576,
-                 sum(v['byte_nuovo'] for v in mai) / 1048576,
-                 100 - 100.0 * sum(v['byte_nuovo'] for v in mai) / grezzo))
+                 sum(v['byte_bucket_atteso'] for v in mai) / 1048576,
+                 100 - 100.0 * sum(v['byte_bucket_atteso'] for v in mai) / grezzo))
 
     if senza_gemello:
         print('\nSaltati, restano intatti nel bucket:')
@@ -511,7 +511,7 @@ def main():
         for v in fermi:
             print('     %-50.50s %s  %d byte'
                   % (v['storage_path'].split('/')[-1], v['formato'],
-                     v['byte_nuovo']))
+                     v['byte_bucket_atteso']))
 
     # La proprieta' che tiene in piedi la regola: nessun file entra con i byte
     # di prima, o la CDN puo' restare bloccata sull'intestazione vecchia [L30].
@@ -528,10 +528,10 @@ def main():
     # caricato una parte della zona e' normale, e non deve fermare il giro. Se
     # invece serve ancora `no-cache`, allora e' il caso pericoloso: si riscriverebbe
     # senza cambiare l'ETag e la CDN potrebbe tenersi l'intestazione vecchia [L30].
-    gia_fatti = [v for v in voci if v['md5_bucket']
-                 and v['md5_nuovo'] == v['md5_bucket']
+    gia_fatti = [v for v in voci if v['md5_bucket_ora']
+                 and v['md5_bucket_atteso'] == v['md5_bucket_ora']
                  and not v['percorso_cambia']
-                 and v.get('cache_bucket') == I.CACHE_IMMUTABILE]
+                 and v.get('cache_bucket_ora') == I.CACHE_IMMUTABILE]
     if gia_fatti:
         print('\n%d file sono gia nel bucket con questi byte e l intestazione'
               ' giusta: gia fatti.' % len(gia_fatti))
@@ -540,10 +540,10 @@ def main():
         if len(gia_fatti) > 5:
             print('   ... e altri %d' % (len(gia_fatti) - 5))
 
-    identici = [v for v in voci if v['md5_bucket']
-                and v['md5_nuovo'] == v['md5_bucket']
+    identici = [v for v in voci if v['md5_bucket_ora']
+                and v['md5_bucket_atteso'] == v['md5_bucket_ora']
                 and not v['percorso_cambia']
-                and v.get('cache_bucket') != I.CACHE_IMMUTABILE
+                and v.get('cache_bucket_ora') != I.CACHE_IMMUTABILE
                 and v['azione'] != 'fermo-non-riscrivibile']
     if identici:
         sys.exit('ERRORE: %d file avrebbero i byte identici a quelli gia nel '
@@ -556,15 +556,15 @@ def main():
     # Solo per chi nel bucket c'e' gia': per un file mai caricato non esiste un
     # "prima" con cui confrontarsi.
     piu_pesanti = [v for v in voci
-                   if v['byte_bucket'] and v['byte_nuovo'] > v['byte_bucket']]
+                   if v['byte_bucket_ora'] and v['byte_bucket_atteso'] > v['byte_bucket_ora']]
     if piu_pesanti:
         print('\n%d file sono diventati piu pesanti (accettabile: li si riscrive'
               ' per l ETag, non per il peso):' % len(piu_pesanti))
         for v in piu_pesanti:
             print('   %-50.50s %6.0fk -> %6.0fk  (+%.0f%%)'
-                  % (v['storage_path'].split('/')[-1], v['byte_bucket'] / 1024,
-                     v['byte_nuovo'] / 1024,
-                     100.0 * v['byte_nuovo'] / v['byte_bucket'] - 100))
+                  % (v['storage_path'].split('/')[-1], v['byte_bucket_ora'] / 1024,
+                     v['byte_bucket_atteso'] / 1024,
+                     100.0 * v['byte_bucket_atteso'] / v['byte_bucket_ora'] - 100))
 
     # Riepilogo delle anomalie. Su una zona da 169 file le righe singole si
     # perdono: cio' che non e' andato liscio va ripetuto in fondo, dove si legge.

@@ -90,7 +90,7 @@ def scrivi_oggetto(p480, storage_path, stato):
     l'intestazione di prima; il caricamento grezzo non mandava cache-control e
     dichiarava `image/gif` fisso [L33]. Entrambi erano nati prima della regola.
 
-    L'impronta attesa e' quella del file RIDOTTO — `sha256_nuovo` — non quella
+    L'impronta attesa e' quella del file RIDOTTO — `sha256_bucket_atteso` — non quella
     dell'originale sul Mac: sono byte diversi, ed e' il file ridotto quello che
     finisce nel bucket.
 
@@ -113,8 +113,8 @@ def scrivi_oggetto(p480, storage_path, stato):
         return False, 'mimetype non determinato per %s' % storage_path
 
     ora = stato.get(sp)
-    gia_nostro = bool(ora) and ora['etag'] == v['md5_nuovo'] \
-        and ora['byte'] == v['byte_nuovo']
+    gia_nostro = bool(ora) and ora['etag'] == v['md5_bucket_atteso'] \
+        and ora['byte'] == v['byte_bucket_atteso']
     if gia_nostro and ora['cache'] == CACHE_IMMUTABILE:
         return True, 'gia a posto (byte ridotti e intestazione gia presenti)'
 
@@ -127,19 +127,19 @@ def scrivi_oggetto(p480, storage_path, stato):
                            ' (etag %s)' % ora['etag'][:12])
         att = stato.get(nfc(v['storage_path_attuale'])) \
             if v.get('storage_path_attuale') else None
-        if att and v.get('md5_bucket') and att['etag'] != v['md5_bucket']:
+        if att and v.get('md5_bucket_ora') and att['etag'] != v['md5_bucket_ora']:
             return False, ('l oggetto di partenza e cambiato dopo il piano:'
                            ' atteso %s, trovato %s'
-                           % (v['md5_bucket'][:12], att['etag'][:12]))
-    elif ora and v.get('md5_bucket') and not gia_nostro \
-            and ora['etag'] != v['md5_bucket']:
+                           % (v['md5_bucket_ora'][:12], att['etag'][:12]))
+    elif ora and v.get('md5_bucket_ora') and not gia_nostro \
+            and ora['etag'] != v['md5_bucket_ora']:
         return False, ('l oggetto e cambiato dopo il piano: atteso %s, trovato %s'
-                       % (v['md5_bucket'][:12], ora['etag'][:12]))
+                       % (v['md5_bucket_ora'][:12], ora['etag'][:12]))
 
     err = carica_bytes(sp, f.read_bytes(), v['mimetype'])
     if err:
         return False, 'caricamento: %s' % err
-    ok, nota = impronta_giusta(sp, v['sha256_nuovo'])
+    ok, nota = impronta_giusta(sp, v['sha256_bucket_atteso'])
     if not ok:
         return False, 'impronta dopo il caricamento: %s' % nota
     return True, nota

@@ -320,6 +320,16 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 - il **mimetype si rilegge dall'oggetto e si rimanda uguale**, mai un valore fisso: un `image/gif` scritto nel codice riscriverebbe il tipo del PNG → [L33](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso)
 - per un file che entra **identico** si carica **prima** e si controlla **dopo**: sondare la cache è ciò che ce lo mette → [L31](docs/LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo)
 
+**I nomi dei campi dicono di quale file parlano** *(dal 16 agosto 2026)*. Con la riduzione, lo stesso esercizio esiste come **due artefatti con due impronte diverse**: il file sul Mac e l'oggetto ridotto nel bucket. Un campo chiamato `sha256` non dice quale dei due, e in poche ore ha prodotto lo stesso difetto in tre punti → [L35](docs/LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette). Tre suffissi, obbligatori in ogni piano e in ogni strumento:
+
+| campo | descrive |
+|---|---|
+| `sha256_mac` | il file com'è sul Mac (piano di `pianifica.py`) |
+| `md5_bucket_ora` · `byte_bucket_ora` · `cache_bucket_ora` | ciò che nel bucket c'è **adesso** |
+| `md5_bucket_atteso` · `sha256_bucket_atteso` · `byte_bucket_atteso` | ciò che nel bucket ci **deve** essere dopo la scrittura |
+
+⚠️ **Chi verifica un oggetto del bucket usa `_bucket_atteso`, mai `sha256_mac`**: sono byte diversi per definizione, ed è il punto della regola dei 480px. Il registro del pannello (`registro_decisioni.tsv`) tiene il suo `sha256` lato Mac e non è toccato.
+
 **Le eccezioni si dichiarano nel piano**, in `eccezioni`: quale scostamento si tollera, su quale oggetto, perché e da quando. `verifica_480.py` le legge, tollera **solo** quello scostamento e controlla tutto il resto come sempre. Senza, una zona con una decisione presa a voce resterebbe bloccata per sempre.
 
 **Per una zona non ancora migrata** — oggi Pettorali e Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro. Vale anche per i file già sotto i 480 px: entrano passati per `-O3`, mai con i byte del Mac.
@@ -606,3 +616,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 32. [L'estensione non dice il formato](docs/LEZIONI.md#l32--lestensione-non-dice-il-formato) — due `.gif` erano JPEG
 33. [Il mimetype si rilegge, non si scrive fisso](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso) — attributi non dichiarati
 34. [Il piano su disco non è il verbale di ciò che è stato fatto](docs/LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto) — la scelta del ramo si dichiara, non si deduce
+35. [Alla terza volta si corregge il nome, non il terzo posto](docs/LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette) — `sha256_mac` · `_bucket_ora` · `_bucket_atteso`

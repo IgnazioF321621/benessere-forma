@@ -91,9 +91,9 @@ def registra_impronte(voci):
     c = I.cache_impronte()
     nuove = 0
     for v in voci:
-        k = I.firma(v['md5_nuovo'], v['byte_nuovo'])
-        if c.get(k) != v['sha256_nuovo']:
-            c[k] = v['sha256_nuovo']
+        k = I.firma(v['md5_bucket_atteso'], v['byte_bucket_atteso'])
+        if c.get(k) != v['sha256_bucket_atteso']:
+            c[k] = v['sha256_bucket_atteso']
             nuove += 1
     if nuove:
         I._salva_json(I.CACHE_IMPRONTE, c)
@@ -139,12 +139,12 @@ def main():
         etag, dim, cc = s if s else (None, None, None)
         e = ecc.get(v['storage_path'])
         cc_ok = cc == CACHE_ATTESA or (e and e['tollera'] == 'cache_control')
-        if etag == v['md5_nuovo'] and dim == v['byte_nuovo'] and cc_ok:
+        if etag == v['md5_bucket_atteso'] and dim == v['byte_bucket_atteso'] and cc_ok:
             continue
         ko_bucket.append((v['storage_path'],
                           'impronta %s dim %s cache %r'
-                          % ('ok' if etag == v['md5_nuovo'] else 'NO',
-                             'ok' if dim == v['byte_nuovo'] else 'NO', cc)))
+                          % ('ok' if etag == v['md5_bucket_atteso'] else 'NO',
+                             'ok' if dim == v['byte_bucket_atteso'] else 'NO', cc)))
     if ko_bucket:
         for sp, d in ko_bucket:
             print('   NO  %-52.52s %s' % (sp.split('/')[-1], d))
@@ -195,7 +195,7 @@ def main():
         e = ecc.get(sp_v)
         etag = (r.headers.get('etag') or '').strip('"')
         cc = r.headers.get('cache-control')
-        ok_b = bool(v) and etag == v['md5_nuovo']
+        ok_b = bool(v) and etag == v['md5_bucket_atteso']
         ok_c = cc == CACHE_ATTESA
         if ok_b and not ok_c and e and e['tollera'] == 'cache_control' \
                 and cc == e['valore_atteso']:

@@ -171,7 +171,7 @@ def main():
             continue
 
         md5_n, sha_n = md5_sha(tmp)
-        if md5_n == v['md5_nuovo']:
+        if md5_n == v['md5_bucket_atteso']:
             # Gia' ottimizzato al massimo: i byte non cambiano, quindi l'ETag
             # non cambia e la CDN non mollerebbe comunque la voce.
             print('   SALTATO %-46.46s i byte non cambiano, la CDN non si sblocca'
@@ -197,9 +197,9 @@ def main():
             f480.write_bytes(dati)
         tmp.unlink(missing_ok=True)
 
-        prima = v['byte_nuovo']
-        v['md5_nuovo'], v['sha256_nuovo'] = md5_n, sha_n
-        v['byte_nuovo'] = len(dati)
+        prima = v['byte_bucket_atteso']
+        v['md5_bucket_atteso'], v['sha256_bucket_atteso'] = md5_n, sha_n
+        v['byte_bucket_atteso'] = len(dati)
         v['azione'] = 'riottimizzato'
         v['nota'] = 'riscritto con -O3 per sbloccare la cache della CDN; %s' % motivo
         riparati += 1
@@ -221,13 +221,13 @@ def main():
             continue
         etag, dim, cc_meta = stato.get(v['storage_path'], (None, None, None))
         cc_cdn, cf = cache_servita(url_di[v['storage_path']])
-        ok = (etag == v['md5_nuovo'] and dim == v['byte_nuovo']
+        ok = (etag == v['md5_bucket_atteso'] and dim == v['byte_bucket_atteso']
               and cc_meta == CACHE_NUOVA and cc_cdn == CACHE_NUOVA)
         if not ok:
             ko += 1
         print('   %-46.46s bucket %-3s cdn %-3s (cf=%s)'
               % (v['storage_path'].split('/')[-1],
-                 'ok' if etag == v['md5_nuovo'] else 'NO',
+                 'ok' if etag == v['md5_bucket_atteso'] else 'NO',
                  'ok' if cc_cdn == CACHE_NUOVA else 'NO', cf))
 
     print('\npiano aggiornato: %s' % piano_p)

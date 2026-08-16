@@ -93,7 +93,7 @@ def main():
         sys.exit('manca il piano: %s\n  lancia prima: python3 pianifica.py "%s"' % (pfile, Z))
     piano = json.loads(pfile.read_text(encoding='utf-8'))
 
-    tutte_piano = {r['sha256']: r for r in piano['righe']}
+    tutte_piano = {r['sha256_mac']: r for r in piano['righe']}
     diario = per_impronta(leggi_tsv(DIARIO), zona=Z)
     registro = per_impronta(leggi_tsv(REGISTRO), zona=Z)
 

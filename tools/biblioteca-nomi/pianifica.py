@@ -115,7 +115,7 @@ def main():
             op = 'slug invariato'
 
         righe.append({
-            'file_mac': f, 'sha256': sha, 'bytes': (cartella / f).stat().st_size,
+            'file_mac': f, 'sha256_mac': sha, 'bytes': (cartella / f).stat().st_size,
             'nome_finale': nome, 'origine_nome': origine_nome,
             'slug_attuale': slug_attuale, 'slug_nuovo': slug_nuovo,
             'slug_cambia': bool(slug_attuale) and slug_nuovo != slug_attuale,
@@ -156,7 +156,7 @@ def main():
                                               if r['storage_path_attuale'] else [])}
     for r in righe:
         alt = occupati.get(r['storage_path_dest'])
-        if alt is not None and alt['sha256'] != r['sha256']:
+        if alt is not None and alt['sha256_mac'] != r['sha256_mac']:
             sovrascritture.append({'dest': r['storage_path_dest'],
                                    'chi_scrive': r['nome_finale'],
                                    'chi_occupa_ora': alt['nome_finale'],
@@ -182,7 +182,7 @@ def main():
     non_ascii = [{'nome': r['nome_finale'], 'percorso': r['storage_path_dest']}
                  for r in righe if any(ord(ch) > 127 for ch in r['storage_path_dest'])]
 
-    piano = {'zona': Z, 'aggancio': 'sha256', 'righe': righe,
+    piano = {'zona': Z, 'aggancio': 'sha256_mac', 'righe': righe,
              'percorsi_non_ascii': non_ascii,
              'collisioni_slug_interne': collisioni_interne,
              'collisioni_slug_esterne': collisioni_esterne,
@@ -196,7 +196,7 @@ def main():
 
     tsv = piani / ('piano_%s.tsv' % slug(Z))
     col = ['operazione', 'codice', 'nome_finale', 'slug_attuale', 'slug_nuovo',
-           'slug_cambia', 'storage_path_attuale', 'storage_path_dest', 'sha256']
+           'slug_cambia', 'storage_path_attuale', 'storage_path_dest', 'sha256_mac']
     with open(tsv, 'w', encoding='utf-8-sig', newline='') as fh:
         w = csv.writer(fh, delimiter='\t', lineterminator='\r\n')
         w.writerow(col)
@@ -205,7 +205,7 @@ def main():
                         r['nome_finale'], r['slug_attuale'] or '-', r['slug_nuovo'],
                         'SI' if r['slug_cambia'] else 'no',
                         r['storage_path_attuale'] or '-', r['storage_path_dest'],
-                        r['sha256'][:12]])
+                        r['sha256_mac'][:12]])
 
     c = collections.Counter(r['operazione'] for r in righe)
     print('PIANO "%s"  —  %d righe' % (Z, len(righe)))

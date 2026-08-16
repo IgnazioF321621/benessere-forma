@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome
 
 ---
 
@@ -511,3 +511,37 @@ Da qui due conseguenze operative:
 **Corollario — un piano eseguito va archiviato o marcato, non lasciato dov'era.** Finché `piano_gambe-e-glutei.json` sta in `_piani/` accanto a quello di Pettorali, i due sono indistinguibili per chiunque, strumento o persona. La divergenza nota è annotata nel [cantiere 21](CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage); il modo di distinguere i piani spesi da quelli vivi resta da decidere.
 
 **Corollario secondo.** Vale per ogni artefatto che descrive un'intenzione e sopravvive alla propria esecuzione: piani, TSV di consegna, registri scritti a mano. È la stessa famiglia di [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) e [L8](#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso) — la fonte che descrive non è la fonte che decide, e quando le due divergono ha ragione il mondo, non il documento.
+
+---
+
+## L35 — Quando lo stesso difetto ricompare tre volte, si corregge il nome che lo permette
+
+**Il caso.** Il cantiere dei 480 px ha creato una cosa che prima non esisteva: lo stesso esercizio ha **due artefatti diversi con due impronte diverse** — il file com'è sul Mac e il file ridotto che finisce nel bucket. Il campo che porta l'impronta però si chiamava `sha256`, e non dice di quale dei due parla.
+
+Il difetto è comparso **tre volte, in tre punti, nel giro di poche ore**:
+
+1. `migra_zona.passo1` verificava la rinomina contro `r['sha256']` — l'originale sul Mac. Avrebbe fatto fallire tutte e 59 le rinomine.
+2. `migra_zona._carica_nuova` faceva lo stesso sui 22 caricamenti.
+3. `verifica_worker.py`, subito dopo un passo 1 andato perfettamente, ha dato **57 codici su 57 per rotti**.
+
+I primi due li ho corretti mentre riscrivevo quello strumento, e li ho letti come una conseguenza ovvia del cambio di regola. Il terzo è arrivato da un file che non avevo toccato, e a quel punto la forma era chiara: non erano tre sviste, era **un nome che invita all'errore**, e ogni nuovo punto che legge quel campo ha la stessa probabilità di sbagliare del precedente.
+
+**Il segnale sta nel numero, non nella gravità.** Ogni correzione, presa da sola, sembrava locale e ragionevole — «qui va usato l'altro campo», due righe, fatto. È esattamente ciò che rende il difetto capace di sopravvivere: si ripara sempre l'istanza, mai la condizione, e la riparazione è talmente piccola da non far sospettare niente. Una volta è un errore. Due è una coincidenza. **Tre è una proprietà del progetto.**
+
+**Il rimedio.** Non la quarta correzione: i nomi. Tre suffissi che dicono di quale artefatto parla ogni impronta, e che rendono la riga sbagliata leggibile come sbagliata senza sapere niente del contesto:
+
+| campo | che cosa descrive |
+|---|---|
+| `sha256_mac` | il file com'è sul Mac |
+| `md5_bucket_ora` · `byte_bucket_ora` · `cache_bucket_ora` | ciò che nel bucket c'è **adesso** |
+| `md5_bucket_atteso` · `sha256_bucket_atteso` · `byte_bucket_atteso` | ciò che nel bucket ci **deve** essere dopo la scrittura |
+
+`impronta_giusta(path, sha256_mac)` si legge male ad alta voce; `impronta_giusta(path, sha256_bucket_atteso)` no. È tutto qui il guadagno, e basta.
+
+**Il costo del rinominare.** Sei strumenti, diciassette file di piano già su disco migrati con backup, e una verifica su tutti i lettori. Un'ora. La quarta occorrenza sarebbe costata meno a ripararla e molto di più a trovarla — perché a quel punto la fiducia nella verifica era già incrinata, e il rischio vero non è il difetto: è **smettere di credere allo strumento che dice di no**.
+
+**La regola.** Alla terza comparsa dello stesso difetto in punti diversi, si smette di correggere le istanze e si corregge ciò che le rende possibili. Quasi sempre è un **nome che omette la dimensione che discrimina** — di quale file, in quale momento, in quale unità di misura, in quale fuso. Finché il nome tace, ogni chiamante nuovo tira a indovinare, e indovina bene solo chi già conosce la storia.
+
+**Corollario — l'audit fa parte della correzione, non la segue.** Rinominare senza ricontrollare ogni lettore sposta il difetto invece di toglierlo. Dopo il rinominare vanno riguardati **tutti** i punti che leggono quel campo, uno per uno, chiedendosi contro che cosa confrontano: qui sono risultati corretti tutti quelli lato Mac — pannello, conferma, pianificazione — dove `sha256` significava davvero l'originale, e per quelli il nome esplicito è servito a **confermarlo**, non a cambiarlo.
+
+**Corollario secondo — un verificatore che sbaglia è peggio di un verificatore che manca.** I 57 KO erano falsi, e la loro uniformità è ciò che ha salvato la lettura: 57 su 57 con lo stesso sintomo non sono 57 file rotti, sono una referenza sbagliata. Se fossero stati tre su 57 avrei cercato tre file, non un campo — e la diagnosi sarebbe stata quella sbagliata. Vale come criterio: **un guasto troppo regolare accusa lo strumento di misura, non il misurato.**

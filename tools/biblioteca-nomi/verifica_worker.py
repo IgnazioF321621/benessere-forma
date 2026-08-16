@@ -88,7 +88,7 @@ def _impronte_attese(zona, piano):
     di una zona perfettamente migrata: misurato su Pettorali, 57 KO su 57, tutti
     con l'impronta del file ridotto al posto di quella dell'originale.
 
-    L'impronta buona sta nel piano dei 480px, in `sha256_nuovo`, indicizzata per
+    L'impronta buona sta nel piano dei 480px, in `sha256_bucket_atteso`, indicizzata per
     percorso di destinazione. Se il piano non c'e' — zona mai passata dalla
     riduzione — si torna allo `sha256` del piano di migrazione, che li' e' ancora
     quello giusto.
@@ -97,7 +97,7 @@ def _impronte_attese(zona, piano):
     if not p.exists():
         return {}, 'piano di migrazione (file non ridotti)'
     voci = json.loads(p.read_text(encoding='utf-8'))['voci']
-    return ({nfc(v['storage_path']): v['sha256_nuovo'] for v in voci},
+    return ({nfc(v['storage_path']): v['sha256_bucket_atteso'] for v in voci},
             'piano dei 480px (byte ridotti)')
 
 
@@ -107,7 +107,7 @@ def main(zona, sha_per=()):
     ridotti, fonte = _impronte_attese(zona, piano)
     atteso = {}
     for r in piano['righe']:
-        sha = ridotti.get(nfc(r['storage_path_dest']), r['sha256'])
+        sha = ridotti.get(nfc(r['storage_path_dest']), r['sha256_mac'])
         for c in r['codici']:
             atteso[c['codice']] = (sha, r['storage_path_dest'], r['nome_finale'])
     print('  impronte attese da: %s' % fonte)
