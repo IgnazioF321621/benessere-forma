@@ -600,8 +600,24 @@ def passo5(zona, piano):
     if e:
         sys.exit(e)
     usati = {c['gif_slug'] for c in cat if c.get('gif_slug')}
+    # Le righe che esistono DAVVERO ancora. Le righe del gruppo D hanno cambiato
+    # slug in place con `slug-riga`: il loro slug vecchio non esiste piu', e una
+    # DELETE su di esso non trova nulla e non da' errore — verrebbe contata come
+    # "cancellata" gonfiando il totale. I conteggi si misurano, non si stimano.
+    bib, e = leggi_tutto('biblioteca_gif', 'slug', 'slug')
+    if e:
+        sys.exit(e)
+    esistenti = {b['slug'] for b in bib}
     da_fare = [r for r in piano['righe'] if r['operazione'] == 'slug nuovo']
+    assenti = [r for r in da_fare if r['slug_attuale'] not in esistenti]
+    da_fare = [r for r in da_fare if r['slug_attuale'] in esistenti]
     print('\n== PASSO 5: cancellazione delle righe vecchie ==')
+    print('  righe vecchie ancora presenti: %d' % len(da_fare))
+    if assenti:
+        print('  %d slug vecchi non esistono piu (aggiornati in place dalla fase 3),'
+              ' non c e niente da cancellare:' % len(assenti))
+        for r in assenti:
+            print('     %s' % r['slug_attuale'])
     esiti = []
     for r in da_fare:
         cod = ','.join(c['codice'] for c in r['codici'])
