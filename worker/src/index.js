@@ -510,7 +510,17 @@ async function handleGroqProxy(request, env) {
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
         messages: body.messages,
-        max_tokens: body.max_tokens || 400,
+        // I budget che manda l'app (150..4000) sono spazio per la RISPOSTA, tarati
+        // su Llama che non ragionava. gpt-oss-120b spende token per ragionare prima
+        // di rispondere e li prende dallo stesso budget: senza margine la risposta
+        // esce troncata a meta'. 2000 di margine sopra al richiesto; e' un tetto,
+        // non un consumo, Groq conta i token davvero generati.
+        max_completion_tokens: (body.max_tokens || 400) + 2000,
+        // 'low': queste sono estrazioni strutturate, non problemi da risolvere.
+        reasoning_effort: 'low',
+        // I GPT-OSS non supportano reasoning_format: usano include_reasoning.
+        // A false il ragionamento non finisce dentro il testo della risposta.
+        include_reasoning: false,
         temperature: 0.3,
       }),
     });
