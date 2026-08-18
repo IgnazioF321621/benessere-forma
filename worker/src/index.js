@@ -508,7 +508,7 @@ async function handleGroqProxy(request, env) {
         Authorization: `Bearer ${env.API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages: body.messages,
         max_tokens: body.max_tokens || 400,
         temperature: 0.3,
