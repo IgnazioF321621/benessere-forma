@@ -524,11 +524,63 @@ async function handleGroqProxy(request, env) {
         temperature: 0.3,
       }),
     });
+    // Groq non lancia eccezioni: un 429, una chiave revocata o un modello dismesso
+    // tornano come risposta regolare. Senza questo controllo il body senza 'choices'
+    // diventava testo vuoto con HTTP 200, e il fallimento esplodeva lontano dalla
+    // causa, dentro il JSON.parse dell'app. -> L36
+    if (!response.ok) {
+      const grezzo = await response.text();
+      let dettaglio = null;
+      try { dettaglio = JSON.parse(grezzo); } catch (_) { /* Groq non risponde sempre JSON */ }
+      const err = (dettaglio && dettaglio.error) || {};
+      const code = err.code || null;
+      const message = err.message || grezzo.slice(0, 300) || response.statusText || 'errore sconosciuto';
+      // L'ordine conta. Il messaggio di un rate limit contiene il NOME del modello
+      // ("Request too large for model `openai/gpt-oss-120b`"), quindi cercare
+      // "model" nel messaggio lo classificherebbe come modello non disponibile:
+      // misurato dal vivo, un 413 rate_limit_exceeded etichettato male.
+      // Il codice di Groq e' la fonte affidabile, il messaggio no.
+      const kind =
+        (response.status === 429 || response.status === 413 || code === 'rate_limit_exceeded') ? 'rate-limit' :
+        (response.status === 401 || response.status === 403) ? 'auth' :
+        (/^model_/.test(String(code)) || /decommission|deprecated|does not exist/i.test(message)) ? 'model-unavailable' :
+        'generic';
+      return jsonResponse(
+        { error: { source: 'groq', kind, status: response.status, code, message } },
+        (response.status >= 400 && response.status <= 599) ? response.status : 502
+      );
+    }
+
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || '';
-    return jsonResponse({ content: [{ type: 'text', text }] });
+
+    // 200 ma senza contenuto utile: e' un fallimento, non una stringa vuota.
+    // finish_reason dice spesso il perche' ('length' = budget token finito).
+    if (!text) {
+      const motivo = (data.choices && data.choices[0] && data.choices[0].finish_reason) || null;
+      return jsonResponse({
+        error: {
+          source: 'groq',
+          kind: 'empty-response',
+          status: 200,
+          code: motivo,
+          message: motivo === 'length'
+            ? 'Risposta vuota: budget token esaurito prima del contenuto'
+            : 'Risposta vuota: nessun contenuto utile nella risposta di Groq',
+        },
+      }, 502);
+    }
+
+    // Forma di successo INVARIATA: 'content' resta identico byte per byte, cosi'
+    // analisi pasto, piano e cue continuano a leggere come prima. 'usage' si
+    // aggiunge solo se Groq lo manda: assenza silenziosa, mai inventato.
+    const ok = { content: [{ type: 'text', text }] };
+    if (data.usage) ok.usage = data.usage;
+    return jsonResponse(ok);
   } catch (error) {
-    return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({
+      error: { source: 'worker', kind: 'exception', status: null, code: null, message: error.message },
+    }, 500);
   }
 }
 

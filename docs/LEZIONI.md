@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano
 
 ---
 
@@ -551,3 +551,27 @@ A trovarla non è stato un sospetto, ma il controllo introdotto dalla [decisione
 Il rimedio è di nuovo il legame fra i due artefatti, non un terzo aggancio: il piano dei 480px è l'unico posto in cui è scritto quale file del Mac ha prodotto i byte che stanno a un certo indirizzo, ed è da lì che `pianifica.py` ora costruisce il ponte quando l'impronta diretta non trova nulla.
 
 **Corollario secondo — un verificatore che sbaglia è peggio di un verificatore che manca.** I 57 KO erano falsi, e la loro uniformità è ciò che ha salvato la lettura: 57 su 57 con lo stesso sintomo non sono 57 file rotti, sono una referenza sbagliata. Se fossero stati tre su 57 avrei cercato tre file, non un campo — e la diagnosi sarebbe stata quella sbagliata. Vale come criterio: **un guasto troppo regolare accusa lo strumento di misura, non il misurato.**
+
+---
+
+## L36 — Un servizio che non lancia eccezioni va controllato a mano
+
+**Il caso.** Il 18 agosto 2026 Groq ha dismesso `llama-3.3-70b-versatile`. Il proxy nel Worker chiamava l'API e leggeva il risultato così:
+
+```js
+const data = await response.json();
+const text = data.choices?.[0]?.message?.content || '';
+return jsonResponse({ content: [{ type: 'text', text }] });
+```
+
+`response.ok` non compare. Un errore di Groq non è un'eccezione: è una risposta regolare con un body diverso, senza `choices`. L'optional chaining lo assorbe senza protestare, `|| ''` lo converte in stringa vuota, e il Worker risponde **200 OK con testo vuoto**. A valle l'app faceva `JSON.parse('')` e mostrava `Unexpected end of JSON input` — un errore di sintassi JSON per un problema di modello dismesso.
+
+**È lo stesso difetto di [L22](#l22--supabase-js-non-lancia-eccezioni-sugli-errori-api)**, su un altro servizio. Lì è supabase-js che restituisce `{error}` invece di lanciare; qui è `fetch`, che considera un 429 una richiesta riuscita. In entrambi i casi il `try/catch` è lì e non serve a niente, perché non c'è niente da catturare.
+
+**Quanto è costato.** Due giorni. E non per la riparazione — per la diagnosi: **chiave revocata, rate limit e modello dismesso arrivavano all'app identici**, testo vuoto con HTTP 200. Senza il codice di errore non c'era modo di distinguerli se non per congettura, e la congettura è andata due volte sulla causa sbagliata. Il rate limit poi si è ripresentato durante i collaudi con la stessa maschera, ed è stato riconosciuto solo dai **tempi di risposta** — 0,24 s è troppo poco per aver generato qualcosa.
+
+**Il rimedio.** Controllo esplicito dell'esito prima di leggere il body, errore propagato con status non-200 e un body che porta origine, tipo, status, codice e messaggio. Più il caso gemello, che è quello che sfugge: **200 con body valido ma senza contenuto utile è un fallimento, non una stringa vuota** — e `finish_reason` dice spesso perché.
+
+**La regola.** Prima di leggere il risultato di un servizio, chiedersi se quel servizio segnala i guasti lanciando o restituendo. Se restituisce, il controllo va scritto a mano e non c'è `try/catch` che tenga: `response.ok` per `fetch`, `res.error` per supabase-js. Il costo di ometterlo non si paga dove si omette — si paga **lontano dalla causa**, quando il dato vuoto incontra qualcuno che si aspettava un dato pieno.
+
+**Corollario — un valore di ripiego cancella la diagnosi.** Il pezzo che ha fatto il danno non è l'`if` mancante, è `|| ''`. Un default messo per non far crashare il codice trasforma un guasto identificabile in un dato lecito e indistinguibile, e da quel momento l'informazione su cosa è andato storto non esiste più da nessuna parte. Un ripiego va bene dove il vuoto è un esito previsto; su un canale che può fallire è **distruzione di prove**.
