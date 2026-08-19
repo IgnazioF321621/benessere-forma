@@ -3573,7 +3573,7 @@ body.preview-onboarding #m1-preview-banner{display:block;}
         <ul>
           <li>Animazioni esecuzione: <a href="https://exercisedb.dev" target="_blank" rel="noopener">ExerciseDB</a> (open source)</li>
           <li>Mappe muscolari: <a href="https://wger.de" target="_blank" rel="noopener">Wger.de</a> — Licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></li>
-          <li>Modello coach: Llama 3.3 70B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
+          <li>Modello coach: GPT-OSS 120B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
           <li>Database: <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></li>
         </ul>
       </div>
@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.13 · 19:13';
+const APP_VERSION = '2026.08.19 · 12:13';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -4706,9 +4706,58 @@ function periodCost(range){return activeSupps().reduce((a,s)=>a+(s.price/s.doses
 // ═══════════════════════════════════════════════════════════
 // AI
 // ═══════════════════════════════════════════════════════════
+// Errore AI con il `kind` del Worker attaccato, cosi' ogni chiamante distingue i
+// casi senza rileggere il body. I kind normalizzati dal Worker sono rate-limit,
+// auth, model-unavailable, empty-response, generic, exception; 'network' lo
+// aggiunge callAI ed e' l'UNICO caso in cui la connessione manca davvero.
+function _aiError(kind, messaggio, causa) {
+  const e = new Error(messaggio);
+  e.aiKind = kind;
+  if (causa) e.aiCause = causa;
+  return e;
+}
+
+// Messaggio per l'utente, mappato sul kind. Tre situazioni e non sei: quello che
+// cambia per chi legge e' se riprovare ha senso. Mai lo status HTTP, mai il testo
+// di Groq — quelli vanno in console.
+function aiErrMsg(kind) {
+  if (kind === 'rate-limit') return 'Il servizio è momentaneamente sovraccarico, riprova tra un minuto.';
+  if (kind === 'auth' || kind === 'model-unavailable') return 'C\'è un problema di configurazione del servizio: riprovare non serve.';
+  if (kind === 'network') return 'Connessione assente, controlla la rete.';
+  return 'Riprova tra poco.';
+}
+
+// Stessa informazione per i cue tecnici del recupero, dove per decisione presa
+// Pirsi non ha voce: frasi neutre, nessun soggetto che parla. Fonte unica —
+// la usano sia ensureRestCue sia openExerciseAI, non si riscrive due volte.
+function cueErrMsg(kind) {
+  if (kind === 'rate-limit') return 'Cue non disponibile — servizio sovraccarico, riprova tra poco.';
+  if (kind === 'auth' || kind === 'model-unavailable') return 'Cue non disponibile — servizio non configurato.';
+  if (kind === 'network') return 'Cue non disponibile — connessione assente.';
+  return 'Cue non disponibile — riprova tra poco.';
+}
+
 async function callAI(prompt, maxTokens=400) {
-  const r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
-  if(!r.ok) throw new Error(`Worker error: ${r.status}`);
+  let r;
+  try {
+    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
+  } catch (e) {
+    // fetch lancia solo se la richiesta non parte: qui la rete manca sul serio.
+    throw _aiError('network', 'Rete non raggiungibile', e);
+  }
+  if (!r.ok) {
+    // Il Worker manda {error:{source,kind,status,code,message}}. Se il body e'
+    // illeggibile o non ha quella forma si ripiega su 'generic': gestire il
+    // fallimento non puo' a sua volta fallire.
+    let info = null;
+    try { info = (await r.json()).error; } catch (_) {}
+    console.warn('[ai] errore dal Worker —',
+                 'kind:', (info && info.kind) || 'generic',
+                 '· HTTP:', (info && info.status) || r.status,
+                 '· code:', (info && info.code) || null,
+                 '·', (info && info.message) || '');
+    throw _aiError((info && info.kind) || 'generic', `Worker error: ${r.status}`);
+  }
   const d = await r.json();
   return d.content?.[0]?.text || '';
 }
@@ -12064,7 +12113,7 @@ async function ensureRestCue(exName, sessionId) {
       .replace(/\n/g, '<br>');
     ST.aiCue[key] = content || '<em style="color:var(--t3);">(nessun cue disponibile)</em>';
   } catch(e) {
-    ST.aiCue[key] = '<em style="color:#B84C2A;">Cue non disponibile — connessione assente.</em>';
+    ST.aiCue[key] = '<em style="color:#B84C2A;">' + cueErrMsg(e.aiKind) + '</em>';
   }
   // Re-render solo se l'utente e' ancora sul modal di recupero per QUESTO esercizio
   if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
@@ -16762,7 +16811,7 @@ window.smartAnalyze = async function() {
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    alert('Non sono riuscito ad analizzare il pasto: ' + (e.message || 'riprova'));
+    alert('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
   } finally {
     ST.smartForm.analyzing = false;
     renderOggi();
@@ -16833,7 +16882,7 @@ window.smartRecalcRow = async function(tempId) {
     it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
   } catch (e) {
     console.error('Single item estimate error:', e);
-    alert('Errore stima ingrediente: ' + (e.message || 'riprova'));
+    alert('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
   } finally {
     it.calculating = false;
     renderOggi();
@@ -19662,7 +19711,7 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
       text = await callAI(prompt, 4000);
     } catch (e) {
       console.warn('[postino-meals] callAI error:', e);
-      return { ok: false, reason: 'ai-call-failed', error: (e && e.message) || String(e) };
+      return { ok: false, reason: 'ai-call-failed', error: (e && e.message) || String(e), aiKind: e && e.aiKind };
     }
 
     // Validazione — try/catch esplicito: _pianoV4F2aParseAndValidate non dovrebbe
@@ -19847,9 +19896,15 @@ async function _pianoV4MaybePostino(opts) {
         if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[status.weekStart];
         status.decision = rollbackOk ? 'error-meals-rollback' : 'error-meals-rollback-failed';
         status.rollbackOk = rollbackOk;
-        if (opts.toastOnSkip) showToast(rollbackOk
-          ? 'Non sono riuscito a generare i pasti. Riprova tra poco.'
-          : 'Non sono riuscito a generare i pasti. Riprova più tardi.', '⚠️', 7500);
+        // Un problema di configurazione non si risolve riprovando: dirlo, invece di
+        // mandare l'utente a ritentare a vuoto. Ogni altro caso resta com'era.
+        const inutileRiprovare = mealsResult.aiKind === 'auth' || mealsResult.aiKind === 'model-unavailable';
+        if (opts.toastOnSkip) showToast(
+          inutileRiprovare
+            ? 'Non sono riuscito a generare i pasti: c\'è un problema di configurazione del servizio.'
+            : rollbackOk
+              ? 'Non sono riuscito a generare i pasti. Riprova tra poco.'
+              : 'Non sono riuscito a generare i pasti. Riprova più tardi.', '⚠️', 7500);
       }
     }
 
@@ -21831,7 +21886,7 @@ async function openExerciseAI(exName, sessionId) {
     ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content, loading: false };
   } catch(e) {
     if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: 'Cue non disponibile — connessione assente.', loading: false };
+    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: cueErrMsg(e.aiKind), loading: false };
   }
   renderTraining();
 }
@@ -23595,7 +23650,7 @@ async function fetchAdvice(){
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
   ST.advLoading=true;ST.advice='';renderOggi();
   try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
-  catch(e){ST.advice='Non sono riuscito a preparare il consiglio: '+e.message;}
+  catch(e){console.warn('[advice] errore AI:', e); ST.advice='Non sono riuscito a preparare il consiglio. '+aiErrMsg(e.aiKind);}
   ST.advLoading=false;renderOggi();
 }
 

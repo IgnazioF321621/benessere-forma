@@ -18,7 +18,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 agosto 
 
 | Servizio | URL | Scopo |
 |---|---|---|
-| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (llama-3.3-70b-versatile) + lookup GIF |
+| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF |
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
 Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`. Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `68df3dba`.
@@ -435,7 +435,7 @@ const COACH_NAME = 'Pirsi';   // zona-tracker.html, subito dopo APP_VERSION
 ### Cosa NON prende il nome
 
 - **Etichette di ruolo in maiuscolo**: `COACH · RIEQUILIBRIO` · `PIANIFICATO · DAL COACH` · `MEMORIA · COACH` · `Voce del coach` · `COACH · <data>` · `✨ Stima coach` · `⏳ Analisi coach…` · `🤖 Coach` (×2, sopra i cue) · la label `Coach` accanto al pallino con la Z in Progressione. Lì "coach" indica il **ruolo**, e un nome proprio in maiuscolo si legge come un marchio.
-- **La riga dei crediti** `Modello coach: Llama 3.3 70B via Groq`: uso tecnico del termine.
+- **La riga dei crediti** `Modello coach: GPT-OSS 120B via Groq`: uso tecnico del termine.
 - **I cue tecnici del recupero** (prompt A): bullet da tre parole letti col fiato corto tra le serie. Pirsi lì **non ha voce**, e i loro messaggi d'errore sono neutri, senza soggetto che parla — `Cue non disponibile — connessione assente.`
 
 ### La parentesi di presentazione
