@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.19 · 12:13';
+const APP_VERSION = '2026.08.19 · 21:13';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -5034,7 +5034,11 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     istruzioniLine,
   ].filter(Boolean);
 
-  return await callAI(sections.join('\n\n'), 300);
+  // 700 e non 300: il prompt qui sopra chiede "Max 120 parole", che in italiano
+  // costano 200-250 token, e il contenuto misurato su 13 giri e' arrivato a 334.
+  // Con 300 la risposta usciva mozzata o vuota 2 volte su 14. Il margine globale
+  // del Worker (+600) non c'entra e resta dov'e': qui si muove solo questo budget.
+  return await callAI(sections.join('\n\n'), 700);
 }
 
 // ═══════════════════════════════════════════════════════════
