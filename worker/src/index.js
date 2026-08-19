@@ -513,9 +513,19 @@ async function handleGroqProxy(request, env) {
         // I budget che manda l'app (150..4000) sono spazio per la RISPOSTA, tarati
         // su Llama che non ragionava. gpt-oss-120b spende token per ragionare prima
         // di rispondere e li prende dallo stesso budget: senza margine la risposta
-        // esce troncata a meta'. 2000 di margine sopra al richiesto; e' un tetto,
-        // non un consumo, Groq conta i token davvero generati.
-        max_completion_tokens: (body.max_tokens || 400) + 2000,
+        // esce troncata a meta'.
+        //
+        // Il margine e' 600 e non di piu' per una ragione che non e' il consumo.
+        // Groq AMMETTE la richiesta contando prompt + tetto riservato, ma poi conta
+        // i token davvero generati: col margine a 2000 il piano settimanale chiedeva
+        // ~8988 token in ammissione contro un limite di 8000 al minuto del piano
+        // free, e si prendeva un 413 pur consumandone davvero 6128. Limare il tetto
+        // non riduce il consumo: riduce la cauzione.
+        //
+        // 600 copre il ragionamento misurato sul piano (567 token) e porta
+        // l'ammissione a ~7588. NON e' il numero definitivo: e' un taglio prudente
+        // in attesa di misurare usage su piu' generazioni e piu' profili.
+        max_completion_tokens: (body.max_tokens || 400) + 600,
         // 'low': queste sono estrazioni strutturate, non problemi da risolvere.
         reasoning_effort: 'low',
         // I GPT-OSS non supportano reasoning_format: usano include_reasoning.

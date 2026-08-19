@@ -261,6 +261,26 @@ Era una delle 27 funzioni mai chiamate censite in `CLAUDE.md`, segnalata a parte
 
 Niente markup né CSS orfani da togliere: la funzione restituiva una stringa che nessuno inseriva nel documento e usava solo stili in linea. La vista non era nascosta, era scollegata.
 
+## 27. Il piano settimanale vive al limite degli 8.000 token al minuto
+
+*Aperto il 19 agosto 2026, a valle del Passo 1 sugli errori del Worker. Non è lavoro da fare adesso: è la nota che impedisce a una strada sbagliata di tornare in tavola come se fosse semplice.*
+
+**Il vincolo.** Il piano free di Groq dà **8.000 token al minuto (TPM)**. Due grandezze da non confondere, perché Groq usa la prima per ammettere la richiesta e la seconda per contarla:
+
+| | valore misurato | sul limite |
+|---|---|---|
+| chiesto in ammissione | prompt + tetto riservato | **~7.588** dopo il taglio a +600 (era ~8.988, cioè il 112%) |
+| consumato davvero | `usage.total_tokens` | **6.128**, di cui 567 di ragionamento |
+
+Qualunque margine si scelga, una singola generazione del piano occupa i tre quarti della capacità di un minuto intero. **Limare il margine non toglie il problema: sposta il bordo.**
+
+⚠️ **«Spezzare in due chiamate da 7 pasti» non è la strada semplice che sembra.** In ammissione risolve — due richieste da ~5.500 stanno comode sotto 8.000 — ma sul **totale al minuto peggiora**: il prompt sono ~2.988 token di istruzioni, dispensa e regole, e viaggerebbe **due volte**, portando il consumo da ~6.128 a ~9.100. Due chiamate nello stesso minuto tornerebbero contro il tetto, per una ragione nuova e meno leggibile della prima.
+
+Resta praticabile a una condizione, e va dichiarata insieme alla proposta: **o le due metà si distanziano nel tempo, o il prompt della seconda si alleggerisce.**
+
+**Cosa viene prima di qualunque decisione.** La misura: tre o quattro generazioni su profili diversi, leggendo `usage` ogni volta — oggi il numero è **un campione solo**. Con una distribuzione si decide il margine definitivo, si decide se un margine unico per tutti e nove i chiamanti ha ancora senso o se va reso proporzionale al budget, e si decide la domanda vera, che non è il margine: **restare sul piano free o passare a pagamento.**
+
+
 ## 23. Strumenti del cantiere a consumo zero — ✅ chiuso 7 agosto
 `impronte.py` scaricava ogni oggetto per calcolarne l'impronta, e le verifiche riscaricavano il file per confrontarlo: la voce più grossa dell'egress che ha portato il piano Free al 171%.
 

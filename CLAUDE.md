@@ -21,7 +21,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 agosto 
 | Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (llama-3.3-70b-versatile) + lookup GIF |
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
-Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`. Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `59e2778f`.
+Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`. Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `68df3dba`.
 
 ---
 
@@ -618,3 +618,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 34. [Il piano su disco non è il verbale di ciò che è stato fatto](docs/LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto) — la scelta del ramo si dichiara, non si deduce
 35. [Alla terza volta si corregge il nome, non il terzo posto](docs/LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette) — `sha256_mac` · `_bucket_ora` · `_bucket_atteso`
 36. [Un servizio che non lancia eccezioni va controllato a mano](docs/LEZIONI.md#l36--un-servizio-che-non-lancia-eccezioni-va-controllato-a-mano) — `response.ok` verso Groq, come `res.error` per supabase-js
+37. [Il messaggio nomina chi ha fallito, il codice dice cosa](docs/LEZIONI.md#l37--un-messaggio-derrore-nomina-la-cosa-che-ha-fallito-non-dice-cosa-è-successo) — classificare sul codice, mai sul testo

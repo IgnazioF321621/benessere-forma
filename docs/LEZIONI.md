@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa
 
 ---
 
@@ -575,3 +575,29 @@ return jsonResponse({ content: [{ type: 'text', text }] });
 **La regola.** Prima di leggere il risultato di un servizio, chiedersi se quel servizio segnala i guasti lanciando o restituendo. Se restituisce, il controllo va scritto a mano e non c'è `try/catch` che tenga: `response.ok` per `fetch`, `res.error` per supabase-js. Il costo di ometterlo non si paga dove si omette — si paga **lontano dalla causa**, quando il dato vuoto incontra qualcuno che si aspettava un dato pieno.
 
 **Corollario — un valore di ripiego cancella la diagnosi.** Il pezzo che ha fatto il danno non è l'`if` mancante, è `|| ''`. Un default messo per non far crashare il codice trasforma un guasto identificabile in un dato lecito e indistinguibile, e da quel momento l'informazione su cosa è andato storto non esiste più da nessuna parte. Un ripiego va bene dove il vuoto è un esito previsto; su un canale che può fallire è **distruzione di prove**.
+
+---
+
+## L37 — Un messaggio d'errore nomina la cosa che ha fallito, non dice cosa è successo
+
+**Il caso.** Nel Passo 1 (18 agosto 2026) il Worker ha imparato a classificare gli errori di Groq in quattro tipi. La riga che sceglieva il tipo "modello non disponibile" era questa:
+
+```js
+/model/i.test(String(code) + ' ' + message) ? 'model-unavailable' : 'generic'
+```
+
+Al primo errore vero catturato dal vivo — un rate limit — il Worker ha risposto `kind: 'model-unavailable'`. Il messaggio di Groq era:
+
+> Request too large for **model** `openai/gpt-oss-120b` in organization ... on tokens per minute (TPM): Limit 8000, Requested 8988
+
+La regex ha trovato la parola `model` e ha fatto il suo lavoro. Il messaggio la conteneva perché **ogni errore nomina il soggetto su cui è avvenuto**: un rate limit su un modello dice il nome del modello, esattamente come un errore di quota su un bucket dice il nome del bucket.
+
+**Il punto.** Un messaggio d'errore contiene due informazioni di natura diversa, e la ricerca testuale non le distingue: **chi** ha fallito — il modello, l'oggetto, l'endpoint — e **cosa** è successo. Cercare parole nel testo pesca indifferentemente dalle due, e siccome il nome del soggetto compare quasi sempre, la classificazione tende a collassare sul tipo che porta quel nome. Qui il soggetto era il modello e la diagnosi il rate limit: la regex ha scambiato l'uno per l'altra.
+
+**Il rimedio.** Classificare sul **codice**, che è il campo costruito apposta per dire cosa è successo e ha vocabolario chiuso — qui `rate_limit_exceeded`, inequivocabile e presente fin dall'inizio nella stessa risposta. Lo status HTTP è il secondo appiglio buono. Il messaggio è per gli umani: si registra, si mostra in console, non si interroga per decidere.
+
+Dove il codice non basta, il confronto va ancorato: `code.startsWith('model_')` invece di cercare `model` ovunque, e sul messaggio solo espressioni che descrivono un **evento** e non un soggetto — `decommission`, `deprecated`, `does not exist`.
+
+**Come è saltato fuori.** Non da una rilettura del codice: dal primo collaudo che ha prodotto un errore vero. Il ramo era stato scritto ragionando su quali errori Groq potesse restituire, mai su come li scrive. **Un classificatore non si verifica leggendolo**, perché la sua correttezza dipende da testi che stanno da un'altra parte: si verifica solo dandogli in pasto le stringhe reali del servizio che deve classificare.
+
+**La regola.** Per decidere cosa fare di un errore si usano i campi strutturati — codice, status. Il testo del messaggio non si interroga mai per classificare: nomina il soggetto, non la diagnosi. E ogni ramo di classificazione va collaudato su un errore vero, non su uno immaginato.
