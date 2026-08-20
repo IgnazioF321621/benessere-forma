@@ -619,3 +619,5 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 35. [Alla terza volta si corregge il nome, non il terzo posto](docs/LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette) — `sha256_mac` · `_bucket_ora` · `_bucket_atteso`
 36. [Un servizio che non lancia eccezioni va controllato a mano](docs/LEZIONI.md#l36--un-servizio-che-non-lancia-eccezioni-va-controllato-a-mano) — `response.ok` verso Groq, come `res.error` per supabase-js
 37. [Il messaggio nomina chi ha fallito, il codice dice cosa](docs/LEZIONI.md#l37--un-messaggio-derrore-nomina-la-cosa-che-ha-fallito-non-dice-cosa-è-successo) — classificare sul codice, mai sul testo
+38. [Per un evento di coda la mediana è la direzione sbagliata](docs/LEZIONI.md#l38--quando-il-difetto-è-un-evento-di-coda-la-mediana-è-una-direzione-sbagliata) — il criterio di lettura si fissa prima di misurare
+39. [Uno strumento con stub incompleti genera il difetto che misura](docs/LEZIONI.md#l39--uno-strumento-di-misura-con-stub-incompleti-genera-il-difetto-che-poi-misura) — prima di dire che un dato manca, guardare l'ingresso

@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura
 
 ---
 
@@ -601,3 +601,50 @@ Dove il codice non basta, il confronto va ancorato: `code.startsWith('model_')` 
 **Come è saltato fuori.** Non da una rilettura del codice: dal primo collaudo che ha prodotto un errore vero. Il ramo era stato scritto ragionando su quali errori Groq potesse restituire, mai su come li scrive. **Un classificatore non si verifica leggendolo**, perché la sua correttezza dipende da testi che stanno da un'altra parte: si verifica solo dandogli in pasto le stringhe reali del servizio che deve classificare.
 
 **La regola.** Per decidere cosa fare di un errore si usano i campi strutturati — codice, status. Il testo del messaggio non si interroga mai per classificare: nomina il soggetto, non la diagnosi. E ogni ramo di classificazione va collaudato su un errore vero, non su uno immaginato.
+
+---
+
+## L38 — Quando il difetto è un evento di coda, la mediana è una direzione sbagliata
+
+**Il caso.** Cantiere 27. `getAdvice` usciva troncata o vuota 2 volte su 14: un **evento di coda**, non un consumo medio alto. Per capire cosa lo producesse si sono confrontati tre stati del prompt, 15 giri ciascuno, misurando i token di ragionamento:
+
+| stato | mediana | MAX | dispersione |
+|---|---:|---:|---:|
+| vuoto | 467 | 785 | 257 |
+| **senza-istruzioni** | **63** | **901** | **327** |
+| pieno | 203 | **321** | **98** |
+
+Lo stato "senza-istruzioni" ha la **mediana migliore dei tre** — 63 contro 467 e 203, sette volte meglio del vuoto — e il **massimo peggiore di tutti**, 901. I valori ordinati spiegano perché: `21 24 33 48 49 51 57 63 147 175 339 344 803 880 901`. Non è una distribuzione con una coda, sono **due popolazioni** con quasi niente in mezzo: otto giri sotto i 65 token e tre oltre gli 800.
+
+Letto per mediana, quello stato era il vincitore netto e la modifica sarebbe stata adottata. Letto per massimo, era il candidato peggiore: la modifica **allungava** la coda da 785 a 901, cioè peggiorava esattamente la cosa che si stava cercando di riparare.
+
+**Il punto.** La statistica giusta la decide **il difetto, non i dati**. Un troncamento avviene quando il consumo supera un tetto: dipende solo dalla coda, e il caso tipico non lo tocca nemmeno. Una mediana che migliora mentre la coda peggiora non è un compromesso, è un **peggioramento travestito** — e travestito bene, perché il numero che si guarda per primo dice il contrario.
+
+Vale in generale: se il guasto è "a volte supera una soglia", le misure di centro sono cieche per costruzione. Servono massimo, quantili alti, e **quanti campioni stanno vicino al massimo** — che è ciò che distingue un valore isolato da una popolazione.
+
+**Il rimedio, ed è procedurale.** Il criterio di lettura va **fissato prima di misurare**, scritto insieme al piano. Qui era stato dichiarato in anticipo — *«il numero che conta è il massimo e quanti giri stanno vicino al massimo, non la mediana»* — e questo ha salvato la lettura: davanti a una mediana sette volte migliore, la tentazione di rileggerla come il risultato buono sarebbe stata forte, e legittima a posteriori.
+
+**La regola.** Prima di misurare si dichiara quale statistica decide, e si sceglie in base alla forma del difetto: coda per gli eventi di soglia, centro per i costi ricorrenti. Un criterio scelto **dopo** aver visto i numeri non è un criterio: è una spiegazione del risultato che si preferisce.
+
+---
+
+## L39 — Uno strumento di misura con stub incompleti genera il difetto che poi misura
+
+**Il caso.** Cantiere 27, banco di misura di `getAdvice`. La funzione è chiamata dall'app con lo stato in memoria, quindi per replicarla fuori dall'app servivano degli stub:
+
+```js
+global.getDay = () => ({ suppsTaken: [], rawSuppLogs: [] });   // nessun campo `meals`
+global.ST = { profile: {...}, extras: [], supps: [], catalog: [] };   // niente note_salute
+```
+
+Il prompt che ne usciva non conteneva né i pasti consumati, né gli integratori, né le note salute — mentre le istruzioni finali dicevano di tenerne conto. Da lì la conclusione: tre istruzioni che rimandano a dati che l'app non passa, con un'ipotesi costruita sopra e un intero passo di lavoro pianificato per ripararle.
+
+**Erano gli stub.** `consumedBlock`, `supplementsBlock` e `noteLine` esistono, sono nell'array delle sezioni, e passano i loro dati quando ci sono. Rigenerando il prompt con uno stub popolato compaiono tutti e tre. Le istruzioni non erano orfane: erano orfane **nella misura**, perché la misura non forniva i dati.
+
+**Il punto.** Uno strumento che osserva un sistema attraverso una replica del suo stato **produce il difetto che poi riporta**, e lo riporta con la stessa forma che avrebbe un difetto vero. Un blocco assente perché il codice non lo genera e un blocco assente perché lo stub non gli ha dato niente sono **indistinguibili guardando l'uscita**: bisogna guardare l'ingresso.
+
+Il danno non si è fermato all'ipotesi. Le 15 misure di collaudo del budget erano state fatte su quel prompt monco, quindi validavano un tetto sul caso corto credendolo il caso normale — un errore che si sarebbe scoperto in produzione.
+
+**Il rimedio.** Prima di concludere che un dato manca, **verificare che sia lo strumento a non fornirlo**: cercare nel codice il punto che dovrebbe produrlo, invece di dedurne l'assenza dall'uscita. E per gli stub, la regola pratica è che devono rappresentare il caso **pieno**, non il caso vuoto: uno stub vuoto è comodo da scrivere e silenziosamente sbagliato, perché ogni campo che dimentichi diventa una scoperta.
+
+**Corollario — vale anche quando la conclusione è giusta.** Qui l'osservazione «il prompt vuoto fa ragionare di più» è risultata vera e utile. Ma è vera **per il caso vuoto**, che è un caso reale e non quello tipico. Uno strumento monco non produce solo conclusioni false: produce conclusioni vere su un caso che non è quello che si credeva di stare guardando, ed è la variante più difficile da smascherare.

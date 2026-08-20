@@ -261,7 +261,7 @@ Era una delle 27 funzioni mai chiamate censite in `CLAUDE.md`, segnalata a parte
 
 Niente markup né CSS orfani da togliere: la funzione restituiva una stringa che nessuno inseriva nel documento e usava solo stili in linea. La vista non era nascosta, era scollegata.
 
-## 27. Il piano settimanale vive al limite degli 8.000 token al minuto
+## 27. Il consumo token, misurato — ✅ chiuso 19 agosto
 
 *Aperto il 19 agosto 2026, a valle del Passo 1 sugli errori del Worker. Non è lavoro da fare adesso: è la nota che impedisce a una strada sbagliata di tornare in tavola come se fosse semplice.*
 
@@ -280,6 +280,54 @@ Resta praticabile a una condizione, e va dichiarata insieme alla proposta: **o l
 
 **Cosa viene prima di qualunque decisione.** La misura: tre o quattro generazioni su profili diversi, leggendo `usage` ogni volta — oggi il numero è **un campione solo**. Con una distribuzione si decide il margine definitivo, si decide se un margine unico per tutti e nove i chiamanti ha ancora senso o se va reso proporzionale al budget, e si decide la domanda vera, che non è il margine: **restare sul piano free o passare a pagamento.**
 
+
+### Esito della misura — 19 agosto
+
+**60 misure**, tutti e nove i chiamanti coperti, i due volatili ripetuti. Il difetto trovato non era dove lo cercavamo: non il piano settimanale, ma **`getAdvice`**, che usciva troncata o vuota **2 volte su 14** a input identico. Riparata alzando il suo budget da 300 a 700 (`cf60451`): il prompt chiede "Max 120 parole" e il contenuto misurato arrivava a 334 token contro un budget di 300, quindi era stretto anche con ragionamento zero.
+
+⚠️ **L'ipotesi delle istruzioni orfane è FALSIFICATA. Non è "da approfondire": è sbagliata, e non va ritentata.**
+
+Il prompt di `getAdvice` contiene tre istruzioni che rimandano a pasti consumati, integratori e note salute. Sembravano orfane. **Non lo sono**: `consumedBlock`, `supplementsBlock` e `noteLine` passano quei dati quando esistono — l'apparenza nasceva da uno stub di misura incompleto → [L39](LEZIONI.md#l39--uno-strumento-di-misura-con-stub-incompleti-genera-il-difetto-che-poi-misura).
+
+Restava l'ipotesi ristretta: quando il dato manca davvero, è la domanda senza risposta a far ragionare a vuoto? Misurata su tre stati, 15 giri ciascuno, ragionamento in token:
+
+| stato | mediana | **MAX** | dispersione | giri > 600 |
+|---|---:|---:|---:|---:|
+| vuoto (dati assenti, istruzioni presenti) | 467 | 785 | 257 | 4 |
+| **senza-istruzioni** (dati assenti, istruzioni tolte) | **63** | **901** | **327** | 3 |
+| pieno (dati presenti) | 203 | **321** | **98** | **0** |
+
+Togliere le tre frasi **allunga la coda invece di accorciarla**, da 785 a 901. **La leva è la presenza dei dati, non la formulazione delle istruzioni**: il "pieno" è l'unico stato senza coda, con dispersione un terzo degli altri e zero giri sopra 600.
+
+⚠️ Il terzo stato aveva la **mediana migliore dei tre** e il **massimo peggiore**. Letto per mediana sarebbe stato il vincitore → [L38](LEZIONI.md#l38--quando-il-difetto-è-un-evento-di-coda-la-mediana-è-una-direzione-sbagliata).
+
+**Il tetto di `getAdvice` è 1.300 e non va cambiato adesso — ma non è collaudato.** L'aria osservata al peggiore era 230 al Passo A, **scesa a 129** con misure successive su una variante innocua. Nessun troncamento finora. Quindici giri in più su una variante qualsiasi ne hanno eroso metà: il numero regge, la fiducia nel numero no.
+
+### Cosa NON è stato risolto e resta aperto
+
+Il cantiere si chiude sulla misura, non sulle decisioni che la misura doveva alimentare:
+
+- **Asse 2 mai eseguito.** La variabilità *fra profili diversi* non è misurata: serve leggere i profili reali a DB, e quella lettura è stata bloccata. Tutto ciò che sta qui sopra è variabilità **a parità di input**.
+- **Il margine globale del Worker resta +600**, scelto come taglio prudente e mai rivisto con una distribuzione davanti.
+- **Free contro pagamento non è decidibile con quello che sappiamo.** Gli 8.000 TPM sono un limite *al minuto*, non una quota; i tetti giornalieri di Groq non si leggono da un messaggio d'errore. Consumo settimanale stimato per un utente attivo: **~45.500 token**, su ipotesi di frequenza non misurate.
+- **Spezzare il piano in due chiamate** resta la trappola descritta sopra: risolve in ammissione, peggiora sul totale al minuto.
+
+---
+
+## 28. Il consiglio a giornata vuota — questione di prodotto, non di token
+
+*Aperto il 19 agosto 2026, dalla misura del cantiere 27. Non è un'ottimizzazione: è una decisione di prodotto, e va presa, non limata.*
+
+`getAdvice` chiesto a **giornata vuota** — nessun pasto registrato, nessun integratore — è simultaneamente il caso **più caro** (ragionamento fino a 901 contro 321 a giornata piena), **più instabile** (dispersione 257-327 contro 98) e **meno informativo**: il modello non sa niente della giornata e deve consigliare lo stesso.
+
+Ed è il caso in cui l'utente lo chiede di più.
+
+Le due strade, da decidere:
+
+1. **Dargli tetto sufficiente** e accettare che quel caso costi di più e vari molto.
+2. **Ripensare se il consiglio abbia senso** prima che ci sia qualcosa da consigliare — offrire altro, chiedere prima un dato, o non offrirlo affatto.
+
+La seconda non è una questione di token, ed è il motivo per cui questo non sta nel cantiere 27: nessun margine, per quanto largo, rende utile un consiglio dato senza informazioni.
 
 ## 23. Strumenti del cantiere a consumo zero — ✅ chiuso 7 agosto
 `impronte.py` scaricava ogni oggetto per calcolarne l'impronta, e le verifiche riscaricavano il file per confrontarlo: la voce più grossa dell'egress che ha portato il piano Free al 171%.
