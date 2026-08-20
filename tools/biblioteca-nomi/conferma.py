@@ -30,6 +30,7 @@ import http.server
 import json
 import os
 import posixpath
+import re
 import socketserver
 import sys
 import threading
@@ -39,7 +40,7 @@ import urllib.parse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from nomenclatura import nfc, slug  # noqa: E402
+from nomenclatura import DEFAULT_OMESSI, nfc, slug  # noqa: E402
 
 PORT = 8768
 BASE = Path(__file__).parent
@@ -69,6 +70,15 @@ COL_LOG = ['quando', 'zona', 'da', 'a', 'sha256', 'esito', 'dettaglio']
 L3_REGISTRO = ESITI / 'lavoro3_pettorali.tsv'
 COL_L3 = ['quando', 'zona', 'chiave', 'sezione', 'slug', 'file', 'confronto',
           'scelta', 'nota']
+
+# Tre fonti: registro append-only delle scelte sui nomi che divergono fra Mac,
+# biblioteca_gif e catalogo. Stesso principio degli altri registri: una scelta
+# data e' una scelta scritta, con fsync, nell'istante in cui arriva [L21].
+# Registra e basta: non applica niente su Mac, bucket, DB o TSV di sync.
+TF_PIANO = LAVORO / '_tre_fonti.json'
+TF_REGISTRO = ESITI / 'tre_fonti.tsv'
+COL_TF = ['quando', 'codice', 'zona', 'sha256_mac', 'nome_mac', 'nome_supabase',
+          'nome_sheet', 'nome_scelto', 'slug_scelto', 'condivide_gif_con']
 
 MIME = {'.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg'}
 # GIF viva, o di cui non sappiamo se e' viva: slug mai applicato.
@@ -222,6 +232,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
             dati['decise'] = sum(1 for p in dati['passi'] if p['decisione'])
             return self._send(dati)
 
+        # ---- Tre fonti: i casi in cui il nome non e' lo stesso nei tre posti.
+        # Rotte AGGIUNTIVE, come quelle del lavoro 3: il pannello dei nomi non e' toccato.
+        if path in ('/tre-fonti', '/tre_fonti.html'):
+            return self._send((BASE / 'tre_fonti.html').read_bytes(),
+                              'text/html; charset=utf-8')
+
+        if path == '/api/tre-fonti':
+            if not TF_PIANO.exists():
+                return self._send(
+                    {'error': 'manca %s — lancia costruisci_tre_fonti.py' % TF_PIANO},
+                    status=404)
+            dati = json.loads(TF_PIANO.read_text(encoding='utf-8'))
+            prese = stato_corrente(TF_REGISTRO, chiave='codice')
+            for c in dati['casi']:
+                c['decisione'] = prese.get(c['codice'])
+            dati['decise'] = sum(1 for c in dati['casi'] if c['decisione'])
+            return self._send(dati)
+
         if path.startswith('/gif/'):
             target = (GIF_ROOT / path[len('/gif/'):]).resolve()
             try:
@@ -251,6 +279,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.decidi(body)
             if path == '/api/lavoro3/decidi':
                 return self.lavoro3_decidi(body)
+            if path == '/api/tre-fonti/decidi':
+                return self.tre_fonti_decidi(body)
             if path == '/api/bozza':
                 return self.bozza(body)
             if path in ('/api/rinomina/prova', '/api/rinomina/applica'):
@@ -288,6 +318,53 @@ class Handler(http.server.BaseHTTPRequestHandler):
         prese = stato_corrente(L3_REGISTRO, chiave='chiave')
         return self._send({'ok': True, 'decise': len(prese),
                            'totale': len(passi)})
+
+    # -- Tre fonti: la scelta si registra, non si applica ------------------
+    def tre_fonti_decidi(self, body):
+        """Registra il nome scelto per un caso. Nessun effetto altrove.
+
+        Le regole che si possono leggere nel testo si controllano qui e non
+        solo nella pagina: un controllo che vive solo nel browser non e' una
+        regola, e' un promemoria. Ordine dei termini e scelta della lingua non
+        si controllano da soli — quelli li decide Ignazio guardando la GIF.
+        """
+        if not TF_PIANO.exists():
+            return self._send({'error': 'manca il piano delle tre fonti'}, status=404)
+        casi = {c['codice']: c for c in
+                json.loads(TF_PIANO.read_text(encoding='utf-8'))['casi']}
+        c = casi.get(body.get('chiave'))
+        if not c:
+            return self._send({'error': 'caso sconosciuto: %r'
+                               % body.get('chiave')}, status=404)
+
+        nome = nfc((body.get('nome') or '').strip())
+        problemi = []
+        if not nome:
+            problemi.append('il nome e vuoto')
+        if '(' in nome or ')' in nome:
+            problemi.append('un nome solo: niente parentesi con la traduzione')
+        if '\u00b0' in nome:
+            problemi.append('"gradi" per esteso, mai il simbolo grado')
+        for d in DEFAULT_OMESSI:
+            if re.search(r'(?i)\b%s\b' % re.escape(d), nome):
+                problemi.append('"%s" e un valore di default: non si scrive' % d)
+        # Regola 1 — il nome e' unico: non puo' essere gia' di un altro codice.
+        for col in c.get('collisioni_nome', []):
+            if nfc(col['nome']).lower() == nome.lower():
+                problemi.append('"%s" e gia il nome di %s' % (nome, col['codice']))
+        if problemi:
+            return self._send({'error': ' · '.join(problemi)}, status=400)
+
+        appendi(TF_REGISTRO, COL_TF, [{
+            'quando': ora(), 'codice': c['codice'], 'zona': c['zona'],
+            'sha256_mac': c['sha256_mac'],
+            'nome_mac': c['nomi']['mac'], 'nome_supabase': c['nomi']['supabase'],
+            'nome_sheet': c['nomi']['sheet'],
+            'nome_scelto': nome, 'slug_scelto': slug(nome),
+            'condivide_gif_con': ','.join(
+                x['codice'] or x['slug'] for x in c.get('condivide_gif_con', []))}])
+        prese = stato_corrente(TF_REGISTRO, chiave='codice')
+        return self._send({'ok': True, 'decise': len(prese), 'totale': len(casi)})
 
     # -- registrazione: nessuna precondizione, scrittura immediata ---------
     def decidi(self, body):

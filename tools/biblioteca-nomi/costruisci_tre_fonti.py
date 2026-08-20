@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Carica nel pannello i casi in cui le tre fonti del nome non coincidono.
+
+    python3 tools/biblioteca-nomi/costruisci_tre_fonti.py
+
+Legge e basta: catalogo, biblioteca_gif, i due registri dello storico e i file
+sul Mac. Scrive un solo file, `lavoro/_tre_fonti.json`, che e' il piano che il
+pannello mostra. Nessun UPDATE, nessuna rinomina, nessuna riga nel TSV di sync.
+
+Il nome di un esercizio vive in tre posti — nome del file sul Mac, `nome_italiano`
+in `biblioteca_gif`, `nome` a catalogo (specchio del Sheet) — e questi sono i casi
+in cui i tre non dicono la stessa cosa. Il pannello non propone niente: la scelta
+si fa guardando la GIF, che e' la sola cosa che stabilisce l'identita'.
+
+⚠️ Un file solo sul Mac puo' servire DUE oggetti del bucket con due codici diversi:
+sono doppioni per contenuto, e li stana l'impronta [L7]. Dove succede, la domanda
+non e' piu' «quale nome» ma «sono due esercizi o uno». Il piano lo dichiara in
+`condivide_gif_con` e il pannello lo mette in cima al caso, perche' cambiare il
+nome di uno dei due senza decidere quello non risolve niente.
+"""
+import json
+import sys
+import unicodedata
+import urllib.parse
+from pathlib import Path
+
+BASE = Path(__file__).parent
+sys.path.insert(0, str(BASE))
+import impronte as I                                    # noqa: E402
+
+CASI = ['EX021', 'EX042', 'EX184', 'EX013', 'EX250', 'EX563']
+BIB = Path('/Users/ignaziofiorito/benessere-forma/Biblioteca di esercizi')
+DEST = BASE / 'lavoro' / '_tre_fonti.json'
+
+
+def nfc(s):
+    return unicodedata.normalize('NFC', s or '')
+
+
+def conta(tabella, nome):
+    """Quante righe di storico portano questo nome testuale. 0 = rinomina indolore."""
+    if not nome:
+        return 0
+    d, e = I.api('GET', '/rest/v1/%s?select=id&exercise_name=eq.%s&limit=100000'
+                 % (tabella, urllib.parse.quote(nome, safe='')))
+    if e:
+        raise SystemExit('lettura %s fallita: %s' % (tabella, e))
+    return len(d)
+
+
+def sha256_mac(zona, storage_path, file_mac):
+    """SHA-256 del file sul Mac, dal piano di pianifica.py se c'e'.
+
+    Il campo si chiama `sha256_mac` e sta nel piano di `pianifica.py`, non nel
+    piano dei 480: quello descrive i byte RIDOTTI del bucket, che dopo la
+    riduzione sono altri byte per definizione [L35]. Dove il piano non esiste
+    si legge il file, che e' la stessa cosa detta dalla stessa fonte.
+    """
+    p = BASE / 'lavoro' / '_piani' / ('piano_%s.json' % zona.lower().replace(' ', '-'))
+    if p.exists():
+        for r in json.loads(p.read_text(encoding='utf-8'))['righe']:
+            if nfc(r.get('storage_path_dest')) == nfc(storage_path):
+                return r['sha256_mac'], p.name
+    f = BIB / zona / file_mac
+    return I.sha_file(f), 'letto dal file sul Mac'
+
+
+def main():
+    bg, e1 = I.leggi_tutto('biblioteca_gif', 'slug,nome_italiano,storage_path', 'slug')
+    cat, e2 = I.leggi_tutto('esercizi_catalog', 'codice,nome,gif_slug', 'codice')
+    if e1 or e2:
+        raise SystemExit('lettura fallita: %s %s' % (e1, e2))
+    per_slug = {r['slug']: r for r in bg}
+    per_cod = {r['codice']: r for r in cat}
+
+    # Un file del Mac -> tutti gli oggetti del bucket che ne portano i byte.
+    # Il legame Mac<->bucket si legge dal piano dei 480: dopo la riduzione le due
+    # impronte sono diverse e un confronto diretto non appaia piu' niente.
+    gemelli = {}
+    for zona in {per_slug[per_cod[c]['gif_slug']]['storage_path'].split('/')[0] for c in CASI}:
+        p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
+        if not p.exists():
+            continue
+        for v in json.loads(p.read_text(encoding='utf-8'))['voci']:
+            gemelli.setdefault(nfc(v['origine_mac']), []).append(nfc(v['storage_path']))
+
+    per_sp = {nfc(r['storage_path']): r for r in bg if r.get('storage_path')}
+    cod_di = {}
+    for c in cat:
+        if c.get('gif_slug'):
+            cod_di.setdefault(c['gif_slug'], []).append(c)
+
+    casi = []
+    for cod in CASI:
+        c = per_cod[cod]
+        r = per_slug[c['gif_slug']]
+        sp = r['storage_path']
+        zona = sp.split('/')[0]
+
+        origine = next((k for k, v in gemelli.items() if nfc(sp) in v), None)
+        file_mac = Path(origine).name if origine else Path(sp).name
+        sul_mac = (BIB / zona / file_mac).is_file()
+
+        # gli altri codici che mostrano ESATTAMENTE questa immagine
+        condivisi = []
+        for altro_sp in gemelli.get(nfc(origine or ''), []):
+            if nfc(altro_sp) == nfc(sp):
+                continue
+            ar = per_sp.get(nfc(altro_sp))
+            if not ar:
+                continue
+            for ac in cod_di.get(ar['slug'], []) or [None]:
+                condivisi.append({
+                    'codice': ac['codice'] if ac else None,
+                    'nome_sheet': ac['nome'] if ac else None,
+                    'nome_italiano': ar['nome_italiano'],
+                    'slug': ar['slug'], 'storage_path': altro_sp})
+
+        nomi = {'mac': Path(file_mac).stem,
+                'supabase': r['nome_italiano'],
+                'sheet': c['nome']}
+
+        # lo stesso nome testuale usato da un altro codice: un UPDATE per nome
+        # colpirebbe righe che non c'entrano, e due esercizi non possono chiamarsi uguale
+        collisioni = []
+        for etichetta, nome in nomi.items():
+            for altro in cat:
+                if altro['codice'] != cod and nfc(altro['nome']) == nfc(nome):
+                    collisioni.append({'nome': nome, 'etichetta': etichetta,
+                                       'codice': altro['codice']})
+
+        sha, fonte = sha256_mac(zona, sp, file_mac)
+        storico = {}
+        for etichetta, nome in nomi.items():
+            storico[etichetta] = {'nome': nome,
+                                  'training_logs': conta('training_logs', nome),
+                                  'workout_sets': conta('workout_sets', nome)}
+
+        casi.append({
+            'chiave': cod, 'codice': cod, 'zona': zona,
+            'sha256_mac': sha, 'fonte_sha256': fonte,
+            'file_mac': file_mac, 'cartella': zona, 'file_sul_mac': sul_mac,
+            'nomi': nomi, 'gif_slug': c['gif_slug'], 'storage_path': sp,
+            'storico': storico, 'condivide_gif_con': condivisi,
+            'collisioni_nome': collisioni})
+        print('  %s  %-22s mac="%s" supa="%s" sheet="%s"%s'
+              % (cod, zona, nomi['mac'], nomi['supabase'], nomi['sheet'],
+                 '  ⚠ condivide la GIF con %s' % ', '.join(
+                     x['codice'] or x['slug'] for x in condivisi) if condivisi else ''))
+
+    DEST.parent.mkdir(parents=True, exist_ok=True)
+    DEST.write_text(json.dumps({'titolo': 'Divergenze fra le tre fonti del nome',
+                                'generato': I.time.strftime('%Y-%m-%dT%H:%M:%S'),
+                                'casi': casi}, ensure_ascii=False, indent=1),
+                    encoding='utf-8')
+    print('\npiano: %s (%d casi)' % (DEST, len(casi)))
+    I.stampa_consumo('costruzione piano')
+
+
+if __name__ == '__main__':
+    main()

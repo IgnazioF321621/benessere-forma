@@ -1,0 +1,215 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Nomi · tre fonti che divergono</title>
+<style>
+  :root{--bone:#F5F3EE;--ink:#1c1b19;--muted:#6b675f;--line:#ddd8cf;--ever:#2A7A6F;
+        --warn:#B45309;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bone);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;background:var(--bone);border-bottom:1px solid var(--line);
+         padding:10px 18px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;z-index:5}
+  h1{font-size:15px;margin:0;font-weight:600}
+  .muted{color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  main{padding:18px;max-width:1180px;margin:0 auto}
+  .caso{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;
+        background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+  .caso img{width:320px;height:auto;display:block;border-radius:6px;background:#f0ede7}
+  .dx{flex:1 1 420px;min-width:340px}
+  .sez{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+       margin-bottom:10px}
+  table.nomi{border-collapse:collapse;width:100%;margin:6px 0 4px}
+  table.nomi td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.nomi td.et{color:var(--muted);font-size:12px;width:96px;white-space:nowrap}
+  table.nomi td.st{width:150px;color:var(--muted);font-size:12px;text-align:right}
+  .campi div{display:flex;gap:10px;padding:2px 0;font-size:13px}
+  .campi b{min-width:104px;color:var(--muted);font-weight:500;font-size:12px}
+  .avviso{background:#fdf3e7;border:1px solid #f0d9b5;border-radius:8px;padding:9px 12px;
+          margin:10px 0;font-size:13px;color:var(--warn)}
+  .regole{font-size:12px;color:var(--muted);margin:8px 0 0;padding-left:18px}
+  .regole li{margin:1px 0}
+  button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--line);
+         background:#fff;cursor:pointer}
+  button.pri{background:var(--ever);color:#fff;border-color:var(--ever)}
+  button:disabled{opacity:.4;cursor:default}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);
+                   border-radius:8px;flex:1 1 340px;background:#fff}
+  .esito{font-size:13px}
+  .ok{color:var(--ever)}
+  .ko{color:var(--warn)}
+  .presa{background:#eef5f3;border:1px solid #cfe3de;border-radius:8px;padding:8px 12px;
+         margin:10px 0;font-size:13px}
+  .slug{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+</style>
+
+<header>
+  <h1>Nomi · le tre fonti che divergono</h1>
+  <span class="muted" id="avanz">…</span>
+  <span style="flex:1"></span>
+  <button id="prev">‹ indietro</button>
+  <button id="next">avanti ›</button>
+</header>
+
+<main>
+  <div class="sez" id="sez"></div>
+  <div class="caso" id="caso"></div>
+</main>
+
+<script>
+/* Nessun nome e' preselezionato e non c'e' nessun suggerimento cliccabile:
+   la scelta si fa guardando la GIF, e un campo gia' pieno e' un suggerimento
+   travestito. I tre nomi attuali si vedono, ma sopra il campo, non dentro. */
+let dati = null, i = 0;
+
+const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* Regola 6 — lo slug si deriva dal solo nome, senza accenti. Qui serve solo a
+   far vedere cosa ne uscirebbe: quello vero lo calcola nomenclatura.slug(). */
+function slugify(s){
+  return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/['’]/g,'-').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+/* Le regole che il nome deve rispettare. Quelle che si possono controllare sul
+   testo si controllano qui e bloccano; l'ordine dei termini e la scelta della
+   lingua non si controllano da soli e restano scritti sotto il campo. */
+function verifica(nome, caso){
+  const p = [];
+  const n = (nome||'').trim();
+  if(!n) p.push('il nome e vuoto');
+  if(/[()]/.test(n)) p.push('un nome solo: niente parentesi con la traduzione');
+  if(/°/.test(n)) p.push('«gradi» per esteso, mai il simbolo °');
+  const def = n.match(/\b(bilaterale|simultaneo|simultanea)\b/i);
+  if(def) p.push('«'+def[1]+'» e un valore di default: non si scrive');
+  if(n && n.slice(1) !== n.slice(1).replace(/\b[A-Z][a-z]/g, m =>
+       PROPRI.some(x=>x.toLowerCase()===m.toLowerCase().slice(0,2))?m:m))
+    { /* i nomi propri li controlla il server, che ha la lista chiusa */ }
+  for(const c of (caso.collisioni_nome||[]))
+    if(c.nome.toLowerCase() === n.toLowerCase())
+      p.push('questo nome e gia di '+c.codice+': due esercizi non possono chiamarsi uguale');
+  return p;
+}
+const PROPRI = [];
+
+function riga(et, nome, st){
+  const s = st ? `${st.training_logs} log · ${st.workout_sets} set` : '';
+  return `<tr><td class="et">${esc(et)}</td><td>${esc(nome)}</td>
+          <td class="st">${esc(s)}</td></tr>`;
+}
+
+function disegna(){
+  const c = dati.casi[i];
+  document.getElementById('sez').textContent =
+    `caso ${i+1} di ${dati.casi.length} · ${c.codice} · ${c.zona}`;
+  document.getElementById('avanz').textContent =
+    `${dati.decise} decisi su ${dati.casi.length}`;
+
+  const cond = (c.condivide_gif_con||[]).map(x =>
+    `${esc(x.codice||'(nessun codice)')} «${esc(x.nome_sheet||x.nome_italiano)}»`).join(', ');
+  const avvCond = cond ? `<div class="avviso"><b>Questa GIF non e sua soltanto.</b>
+      Sul Mac esiste un file solo, e nel bucket i suoi byte stanno anche sotto
+      ${cond}. Prima del nome va decisa un'altra cosa: sono due esercizi diversi
+      o uno duplicato. Se sono lo stesso, rinominare non risolve niente.</div>` : '';
+
+  const avvColl = (c.collisioni_nome||[]).length
+    ? `<div class="avviso">Uno dei tre nomi e gia il nome di un altro codice:
+       ${c.collisioni_nome.map(x=>`«${esc(x.nome)}» → ${esc(x.codice)}`).join(', ')}.
+       Sceglierlo violerebbe la regola del nome unico.</div>` : '';
+
+  const st = c.storico;
+  const totLog = Object.values(st).reduce((a,x)=>a+x.training_logs,0);
+  const avvSto = totLog
+    ? `<div class="avviso">C'e storico su questo nome: la rinomina va migrata
+       nello stesso passaggio in <b>training_logs</b> e <b>workout_sets</b>,
+       o le serie gia registrate si scollegano.</div>` : '';
+
+  const presa = c.decisione
+    ? `<div class="presa">✓ scelto «${esc(c.decisione.nome_scelto)}» il
+       ${esc(c.decisione.quando)}. Registrato e basta: non e stato applicato da
+       nessuna parte.</div>` : '';
+
+  document.getElementById('caso').innerHTML = `
+    <img src="/gif/${encodeURIComponent(c.cartella)}/${encodeURIComponent(c.file_mac)}" alt="">
+    <div class="dx">
+      ${avvCond}${avvColl}${avvSto}${presa}
+      <table class="nomi">
+        ${riga('Mac', c.nomi.mac, st.mac)}
+        ${riga('Supabase', c.nomi.supabase, st.supabase)}
+        ${riga('Sheet', c.nomi.sheet, st.sheet)}
+      </table>
+      <div class="campi">
+        <div><b>gif_slug</b><span class="mono">${esc(c.gif_slug)}</span></div>
+        <div><b>storage_path</b><span class="mono">${esc(c.storage_path)}</span></div>
+        <div><b>sha256 Mac</b><span class="mono">${esc(c.sha256_mac)}</span></div>
+        <div><b>file sul Mac</b><span class="mono">${esc(c.file_mac)}</span></div>
+      </div>
+      <div class="row">
+        <input type="text" id="nome" placeholder="il nome scelto, guardando la GIF" value="">
+      </div>
+      <div class="slug" id="slug">slug: —</div>
+      <ul class="regole">
+        <li>un nome solo, mai la traduzione fra parentesi</li>
+        <li>italiano se il termine di sala e italiano, inglese se e inglese
+            (plank · crunch · hip thrust · lat machine · pistol)</li>
+        <li>ordine [Movimento][Attrezzo][Variante][Posizione]</li>
+        <li>«bilaterale» e «simultaneo» sono i default: non si scrivono</li>
+        <li>«gradi» per esteso, mai °</li>
+        <li>maiuscola solo sulla prima lettera, sui nomi propri della lista chiusa e sulle sigle</li>
+        <li>accenti solo nel nome a catalogo, mai nello slug, nel path o nel filename</li>
+      </ul>
+      <div class="row">
+        <button class="pri" id="salva">Registra la scelta</button>
+        <span class="esito" id="esito"></span>
+        <span class="muted" style="font-size:12px">registra e basta — non applica niente</span>
+      </div>
+    </div>`;
+
+  const inp = document.getElementById('nome');
+  const agg = () => {
+    const p = verifica(inp.value, c);
+    document.getElementById('slug').textContent = 'slug: ' + (slugify(inp.value)||'—');
+    document.getElementById('esito').innerHTML = p.length
+      ? '<span class="ko">'+esc(p[0])+'</span>' : '';
+    document.getElementById('salva').disabled = p.length > 0;
+  };
+  inp.addEventListener('input', agg);
+  agg();
+  document.getElementById('salva').onclick = () => salva(c, inp.value.trim());
+}
+
+async function salva(c, nome){
+  const b = document.getElementById('salva');
+  b.disabled = true;
+  document.getElementById('esito').textContent = 'salvo…';
+  const res = await fetch('/api/tre-fonti/decidi', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({chiave: c.chiave, nome: nome})});
+  const d = await res.json();
+  if(!res.ok || d.error){
+    document.getElementById('esito').innerHTML =
+      '<span class="ko">'+esc(d.error||'errore')+'</span>';
+    b.disabled = false;
+    return;
+  }
+  await carica();
+  disegna();
+}
+
+async function carica(){
+  dati = await (await fetch('/api/tre-fonti')).json();
+}
+
+document.getElementById('prev').onclick = () => { if(i>0){ i--; disegna(); } };
+document.getElementById('next').onclick = () => {
+  if(i < dati.casi.length-1){ i++; disegna(); } };
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT') return;
+  if(e.key === 'ArrowLeft') document.getElementById('prev').click();
+  if(e.key === 'ArrowRight') document.getElementById('next').click();
+});
+
+carica().then(disegna);
+</script>
