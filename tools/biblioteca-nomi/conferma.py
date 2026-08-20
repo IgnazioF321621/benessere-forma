@@ -61,6 +61,15 @@ COL_MIGRARE = ['quando', 'zona', 'codice', 'nome_catalogo', 'slug_vecchio', 'slu
                'nome_file_nuovo', 'sha256']
 COL_LOG = ['quando', 'zona', 'da', 'a', 'sha256', 'esito', 'dettaglio']
 
+# Lavoro 3: registro append-only delle decisioni "entra a catalogo / resta libera".
+# Stesso principio del registro dei nomi: una decisione data e' una decisione
+# scritta, con fsync, nell'istante in cui arriva [L21]. `chiave` identifica il
+# passo (una GIF, o una coppia GIF+codice), non il file: un confronto puo'
+# ripetere la stessa GIF contro codici diversi ed e' una decisione per ciascuno.
+L3_REGISTRO = ESITI / 'lavoro3_pettorali.tsv'
+COL_L3 = ['quando', 'zona', 'chiave', 'sezione', 'slug', 'file', 'confronto',
+          'scelta', 'nota']
+
 MIME = {'.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg'}
 # GIF viva, o di cui non sappiamo se e' viva: slug mai applicato.
 # "indeterminato" arriva da prepara.py quando l'impronta di un oggetto del bucket non
@@ -194,6 +203,25 @@ class Handler(http.server.BaseHTTPRequestHandler):
             ext = posixpath.splitext(target.name)[1].lower()
             return self._send(target.read_bytes(), MIME.get(ext, 'application/octet-stream'))
 
+        # ---- Lavoro 3: si guardano le GIF per decidere se entrano a catalogo.
+        # Rotte AGGIUNTIVE: il pannello dei nomi qui sopra non e' toccato.
+        if path in ('/lavoro3', '/lavoro3.html'):
+            return self._send((BASE / 'lavoro3.html').read_bytes(),
+                              'text/html; charset=utf-8')
+
+        if path == '/api/lavoro3':
+            f = LAVORO / '_lavoro3_pettorali.json'
+            if not f.exists():
+                return self._send({'error': 'manca %s' % f}, status=404)
+            dati = json.loads(f.read_text(encoding='utf-8'))
+            # Le decisioni gia' prese si rileggono SEMPRE dal disco, mai da uno
+            # stato tenuto in memoria: e' il principio del registro append-only.
+            prese = stato_corrente(L3_REGISTRO, chiave='chiave')
+            for p in dati['passi']:
+                p['decisione'] = prese.get(p['chiave'])
+            dati['decise'] = sum(1 for p in dati['passi'] if p['decisione'])
+            return self._send(dati)
+
         if path.startswith('/gif/'):
             target = (GIF_ROOT / path[len('/gif/'):]).resolve()
             try:
@@ -221,6 +249,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         try:
             if path == '/api/decidi':
                 return self.decidi(body)
+            if path == '/api/lavoro3/decidi':
+                return self.lavoro3_decidi(body)
             if path == '/api/bozza':
                 return self.bozza(body)
             if path in ('/api/rinomina/prova', '/api/rinomina/applica'):
@@ -233,6 +263,31 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send({'ok': False,
                                'error': '%s: %s' % (type(ex).__name__, ex),
                                'traccia': traccia.splitlines()[-3:]}, status=500)
+
+    # -- Lavoro 3: una scelta arrivata e' una scelta su disco, subito ------
+    def lavoro3_decidi(self, body):
+        f = LAVORO / '_lavoro3_pettorali.json'
+        if not f.exists():
+            return self._send({'error': 'manca il piano del lavoro 3'}, status=404)
+        passi = {p['chiave']: p for p in
+                 json.loads(f.read_text(encoding='utf-8'))['passi']}
+        p = passi.get(body.get('chiave'))
+        if not p:
+            return self._send({'error': 'passo sconosciuto: %r'
+                               % body.get('chiave')}, status=404)
+        scelta = (body.get('scelta') or '').strip()
+        if scelta not in p['scelte']:
+            return self._send({'error': 'scelta non ammessa per questo passo: %r'
+                               % scelta}, status=400)
+        appendi(L3_REGISTRO, COL_L3, [{
+            'quando': ora(), 'zona': 'Pettorali', 'chiave': p['chiave'],
+            'sezione': p['sezione'], 'slug': p['sinistra']['slug'],
+            'file': p['sinistra']['file'],
+            'confronto': (p.get('destra') or {}).get('codice', ''),
+            'scelta': scelta, 'nota': (body.get('nota') or '').strip()}])
+        prese = stato_corrente(L3_REGISTRO, chiave='chiave')
+        return self._send({'ok': True, 'decise': len(prese),
+                           'totale': len(passi)})
 
     # -- registrazione: nessuna precondizione, scrittura immediata ---------
     def decidi(self, body):

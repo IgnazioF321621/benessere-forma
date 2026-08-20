@@ -1,0 +1,156 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Pettorali · Lavoro 3</title>
+<style>
+  :root{--bone:#F5F3EE;--ink:#1c1b19;--muted:#6b675f;--line:#ddd8cf;--ever:#2A7A6F;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bone);color:var(--ink);
+       font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  header{position:sticky;top:0;background:var(--bone);border-bottom:1px solid var(--line);
+         padding:10px 18px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;z-index:5}
+  h1{font-size:15px;margin:0;font-weight:600}
+  .muted{color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+  main{padding:18px;max-width:1180px;margin:0 auto}
+  .sez{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+       margin-bottom:10px}
+  .gifs{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;
+        flex:1 1 340px;min-width:300px}
+  .card img{width:100%;height:auto;display:block;border-radius:6px;background:#f0ede7}
+  .lab{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;align-items:baseline}
+  .campi{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  .campi div{display:flex;gap:10px;padding:2px 0}
+  .campi b{min-width:88px;color:var(--muted);font-weight:500;font-size:12px}
+  .q{margin:20px 0 8px;font-weight:600}
+  button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--line);
+         background:#fff;cursor:pointer}
+  button.pri{background:var(--ever);color:#fff;border-color:var(--ever)}
+  button:disabled{opacity:.4;cursor:default}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input[type=text]{font:inherit;padding:8px 10px;border:1px solid var(--line);
+                   border-radius:8px;flex:1 1 320px;background:#fff}
+  .esito{margin-left:6px;font-size:13px}
+  .ok{color:var(--ever)}
+  .ko{color:#B45309}
+  .presa{background:#eef5f3;border:1px solid #cfe3de;border-radius:8px;padding:8px 12px;
+         margin:10px 0;font-size:13px}
+</style>
+
+<header>
+  <h1>Pettorali · Lavoro 3</h1>
+  <span class="muted" id="avanz">…</span>
+  <span class="muted" id="salv"></span>
+  <span style="flex:1"></span>
+  <button id="prev">‹ indietro</button>
+  <button id="next">avanti ›</button>
+</header>
+
+<main>
+  <div class="sez" id="sez"></div>
+  <div class="gifs" id="gifs"></div>
+  <div id="campi"></div>
+  <div class="q" id="q"></div>
+  <div id="gia"></div>
+  <div class="row" id="scelte"></div>
+  <div class="row" style="margin-top:10px">
+    <input type="text" id="nota" placeholder="nota (facoltativa)">
+  </div>
+</main>
+
+<script>
+const TITOLI = {
+  1: 'Sezione 1 · confronto con i campi tecnici di EX001',
+  2: 'Sezione 2 · coppie sospette',
+  3: 'Sezione 3 · senza somiglianze',
+  4: 'Sezione 4 · le restanti (somiglianza solo generica)'
+};
+let dati = null, i = 0;
+
+function card(v, extra){
+  const cod = v.codice ? `<span class="mono">${v.codice}</span>` : '';
+  return `<div class="card">
+    <div class="lab"><span class="mono">${v.slug}</span>${cod}</div>
+    <img src="${v.url}" alt="">
+    <div class="mono muted" style="margin-top:8px">${v.file}</div>
+    ${extra || ''}
+  </div>`;
+}
+
+function mostra(){
+  const p = dati.passi[i];
+  document.getElementById('sez').textContent = TITOLI[p.sezione];
+  document.getElementById('avanz').textContent =
+    `${i+1} di ${dati.passi.length} · decise ${dati.decise}`;
+  document.getElementById('gifs').innerHTML =
+    card(p.sinistra) + (p.destra ? card(p.destra) : '');
+
+  let c = '';
+  if (p.campi){
+    c = '<div class="card"><div class="sez">campi tecnici di EX001</div><div class="campi">' +
+      Object.entries(p.campi).map(([k,v]) =>
+        `<div><b>${k}</b><span>${v}</span></div>`).join('') + '</div></div>';
+  }
+  document.getElementById('campi').innerHTML = c;
+  document.getElementById('q').textContent = p.domanda;
+
+  const d = p.decisione;
+  document.getElementById('gia').innerHTML = d
+    ? `<div class="presa">già deciso: <b>${d.scelta}</b>${d.nota ? ' — ' + d.nota : ''}
+       <span class="muted">(${d.quando})</span> · rispondere di nuovo lo sostituisce</div>` : '';
+
+  document.getElementById('scelte').innerHTML = p.scelte.map((s,n) =>
+    `<button class="${n===0?'pri':''}" data-s="${s}">${s}</button>`).join('') +
+    '<span class="esito" id="esito"></span>';
+  document.getElementById('nota').value = d ? (d.nota || '') : '';
+  document.querySelectorAll('#scelte button').forEach(b =>
+    b.onclick = () => decidi(b.dataset.s));
+  document.getElementById('prev').disabled = i === 0;
+  document.getElementById('next').disabled = i === dati.passi.length - 1;
+}
+
+async function decidi(scelta){
+  const p = dati.passi[i];
+  const e = document.getElementById('esito');
+  e.textContent = 'salvo…'; e.className = 'esito muted';
+  try{
+    const r = await fetch('/api/lavoro3/decidi', {method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chiave: p.chiave, scelta,
+                            nota: document.getElementById('nota').value})});
+    const j = await r.json();
+    if(!r.ok || j.error){ e.textContent = 'ERRORE: ' + (j.error || r.status);
+                          e.className='esito ko'; return; }
+    // Rileggo dal disco invece di aggiornare a mente: e' il disco che comanda.
+    await carica(false);
+    dati.passi[i].decisione = {scelta, nota: document.getElementById('nota').value,
+                               quando: 'adesso'};
+    e.textContent = 'salvata'; e.className = 'esito ok';
+    document.getElementById('avanz').textContent =
+      `${i+1} di ${dati.passi.length} · decise ${j.decise}`;
+    setTimeout(() => { if(i < dati.passi.length-1){ i++; mostra(); } }, 350);
+  }catch(ex){ e.textContent = 'ERRORE: ' + ex; e.className='esito ko'; }
+}
+
+async function carica(disegna=true){
+  const r = await fetch('/api/lavoro3');
+  const j = await r.json();
+  if(j.error){ document.body.innerHTML =
+    '<main><h1>Errore</h1><p class="mono">'+j.error+'</p></main>'; throw new Error(j.error); }
+  dati = j;
+  if(disegna){
+    const primo = dati.passi.findIndex(p => !p.decisione);
+    i = primo === -1 ? 0 : primo;
+    mostra();
+  }
+}
+
+document.getElementById('prev').onclick = () => { if(i>0){ i--; mostra(); } };
+document.getElementById('next').onclick = () => { if(i<dati.passi.length-1){ i++; mostra(); } };
+document.addEventListener('keydown', ev => {
+  if(ev.target.tagName === 'INPUT') return;
+  if(ev.key === 'ArrowLeft'  && i>0){ i--; mostra(); }
+  if(ev.key === 'ArrowRight' && i<dati.passi.length-1){ i++; mostra(); }
+});
+carica();
+</script>
