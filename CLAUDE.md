@@ -153,7 +153,15 @@ Tre trappole del sync, tutte già costate giri a vuoto:
 - ⚠️ **Il sync riporta indietro ciò che il foglio non ha.** Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi → [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha)
 - ⚠️ **Rimisurare la baseline dei pool dopo ogni sync**, non solo dopo le modifiche al codice → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice)
 
-Colonne: `codice, nome, nome_en (⚠️ DEPRECATA dal 19/07/2026 — non portante, non usarla per slug/filename/UI), pattern, gruppo_target, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, uso, surrogato_attrezzo, nota_surrogato, esecuzione_surrogato, errori_surrogato`.
+**Colonne: 23, nell'ordine fisico della tabella** (riletto dal vivo il 20 agosto 2026):
+
+`codice, nome, pattern, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, updated_at, uso, surrogato_attrezzo, nota_surrogato, gruppo_target, esecuzione_surrogato, errori_surrogato, gif_slug, nome_en`
+
+- **`gif_slug` è portante**: è il primo anello della catena `gif_slug → biblioteca_gif.slug → storage_path → file`. Fino al 20 agosto mancava da questo elenco, ed è la colonna che si scrive a ogni migrazione.
+- `updated_at` la scrive il sync: serve a riconoscere le righe arenate → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena).
+- `nome_en` ⚠️ **DEPRECATA dal 19/07/2026** — non portante, non usarla per slug/filename/UI.
+
+⚠️ **Questo è l'ordine della tabella, non quello del foglio, e i due non coincidono per forza.** Non è una lista da cui costruire un TSV posizionale: prima di generarne uno, farsi dare la riga di intestazione del foglio e confrontarla → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno). Per poche celle la forma sicura non è il TSV ma l'elenco `codice · colonna · valore`.
 
 - `uso` valori: `principale / finisher / recupero / riscaldamento / mobilita / carry / skill`
 - `uso: skill` — skill ginnastica (EX570/573/574/575): **escluse dalla generazione automatica**
