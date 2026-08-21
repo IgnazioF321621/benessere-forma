@@ -393,30 +393,193 @@ def applica_fase1(ops):
     return not guasti
 
 
+def applica_fase2(ops):
+    """Rinomina lo storico. Si fa DOPO il sync, mai prima.
+
+    L'app aggancia le serie per `exercise_name`: finche' il catalogo dice il nome
+    vecchio, lo storico deve dirlo. Qui il catalogo dice gia' quello nuovo, quindi
+    e' lo storico a dover recuperare.
+    """
+    fase2 = [o for o in ops if o['fase'] == 2]
+    if not fase2:
+        print('\n=== FASE 2 === niente da fare.')
+        return True
+    print('\n=== BACKUP ===')
+    marca = I.time.strftime('%Y%m%dT%H%M%S')
+    BACKUP.mkdir(parents=True, exist_ok=True)
+    for tab in LOG_TAB:
+        d, e = I.leggi_tutto(tab, '*', 'id')
+        if e:
+            raise SystemExit('backup di %s fallito: %s — non si scrive niente' % (tab, e))
+        f = BACKUP / ('allinea_sei_%s_%s.json' % (tab, marca))
+        f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+        print('  %s (%d righe) -> %s' % (tab, len(d), f.name))
+
+    print('\n=== FASE 2 ===')
+    tutto = True
+    for o in fase2:
+        prima_vecchio = conta(o['tabella'], o['prima'])
+        prima_nuovo = conta(o['tabella'], o['dopo'])
+        d, e = I.api('PATCH', '/rest/v1/%s?exercise_name=eq.%s'
+                     % (o['tabella'], urllib.parse.quote(o['prima'], safe='')),
+                     {'exercise_name': o['dopo']})
+        if e:
+            print('  ERRORE   %-16s %s' % (o['tabella'], e))
+            tutto = False
+            continue
+        # non basta l'assenza di errore: si ricontano le due parti [L22]
+        dopo_vecchio = conta(o['tabella'], o['prima'])
+        dopo_nuovo = conta(o['tabella'], o['dopo'])
+        ok = dopo_vecchio == 0 and dopo_nuovo == prima_nuovo + prima_vecchio
+        tutto = tutto and ok
+        print('  %-9s %-16s %-38.38s -> %-30.30s %d righe (restano %d sul vecchio, '
+              '%d sul nuovo)' % ('spostate' if ok else 'DA GUARDARE', o['tabella'],
+                                 o['prima'], o['dopo'], prima_vecchio,
+                                 dopo_vecchio, dopo_nuovo))
+    return tutto
+
+
+def applica_fase3(ops, tsv_del):
+    """Cancella le righe arenate a catalogo e le righe di biblioteca_gif orfane.
+
+    Una riga tolta dal foglio non sparisce da Supabase: si arena, e si riconosce
+    dall'`updated_at` piu' vecchio dell'ultimo lotto. E' l'UNICO caso in cui
+    cancellare direttamente da Supabase e' sicuro, perche' il foglio non le ha
+    piu' e nessun sync futuro puo' riportarle indietro [L3].
+
+    L'ordine dentro la fase non e' libero: prima il catalogo, poi biblioteca_gif.
+    Finche' la riga arenata esiste, il suo `gif_slug` punta ancora la riga che
+    stiamo per togliere, e toglierla prima lascerebbe un codice senza immagine.
+    """
+    cat, e1 = I.leggi_tutto('esercizi_catalog', '*', 'codice')
+    if e1:
+        raise SystemExit('lettura catalogo fallita: %s' % e1)
+    ultimo = max(r['updated_at'] for r in cat)
+    per_cod = {r['codice']: r for r in cat}
+
+    print('\n=== BACKUP ===')
+    marca = I.time.strftime('%Y%m%dT%H%M%S')
+    BACKUP.mkdir(parents=True, exist_ok=True)
+    for tab, ord_ in (('esercizi_catalog', 'codice'), ('biblioteca_gif', 'slug')):
+        d, e = I.leggi_tutto(tab, '*', ord_)
+        if e:
+            raise SystemExit('backup di %s fallito: %s — non si scrive niente' % (tab, e))
+        f = BACKUP / ('allinea_sei_f3_%s_%s.json' % (tab, marca))
+        f.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding='utf-8')
+        print('  %s (%d righe) -> %s' % (tab, len(d), f.name))
+
+    print('\n=== FASE 3a — righe arenate a catalogo ===')
+    tutto = True
+    for r in tsv_del:
+        cod = r['codice']
+        riga = per_cod.get(cod)
+        if riga is None:
+            print('  gia via   %s' % cod)
+            continue
+        if riga['updated_at'] >= ultimo:
+            print('  FERMO     %s: updated_at %s non e piu vecchio dell ultimo lotto %s — '
+                  'non e arenata, il foglio potrebbe averla ancora'
+                  % (cod, riga['updated_at'], ultimo))
+            tutto = False
+            continue
+        # guardia 5: `alternativa` non ha FK, si scandisce a regex su tutto il testo
+        cita = [x['codice'] for x in cat if x['codice'] != cod
+                and any(isinstance(v, str) and campo != 'codice'
+                        and re.search(r'\b%s\b' % cod, v)
+                        for campo, v in x.items())]
+        if cita:
+            print('  FERMO     %s: lo nominano ancora %s' % (cod, cita))
+            tutto = False
+            continue
+        _, e = I.api('DELETE', '/rest/v1/esercizi_catalog?codice=eq.%s' % cod)
+        d2, _ = I.api('GET', '/rest/v1/esercizi_catalog?select=codice&codice=eq.%s' % cod)
+        ok = (not e) and not d2
+        tutto = tutto and ok
+        print('  %-9s %-8s %-44.44s ferma dal %s'
+              % ('tolta' if ok else 'ERRORE', cod, riga['nome'], riga['updated_at'][:10]))
+
+    if not tutto:
+        print('\n  qualcosa si e fermato in 3a: biblioteca_gif non si tocca.')
+        return False
+
+    cat2, _ = I.leggi_tutto('esercizi_catalog', 'codice,gif_slug', 'codice')
+    punta = {}
+    for r in cat2:
+        if r.get('gif_slug'):
+            punta.setdefault(r['gif_slug'], []).append(r['codice'])
+
+    print('\n=== FASE 3b — righe biblioteca_gif rimaste orfane ===')
+    for o in [x for x in ops if x['fase'] == 3]:
+        s = o['chiave'].split('=', 1)[1]
+        chi = punta.get(s)
+        if chi:
+            print('  FERMO     %s: la puntano ancora %s' % (s, chi))
+            tutto = False
+            continue
+        _, e = I.api('DELETE', '/rest/v1/biblioteca_gif?slug=eq.%s'
+                     % urllib.parse.quote(s, safe=''))
+        d2, _ = I.api('GET', '/rest/v1/biblioteca_gif?select=slug&slug=eq.%s'
+                      % urllib.parse.quote(s, safe=''))
+        ok = (not e) and not d2
+        tutto = tutto and ok
+        print('  %-9s %-38s "%s" — oggetto nel bucket NON toccato'
+              % ('tolta' if ok else 'ERRORE', s, o['prima']))
+    return tutto
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--applica', action='store_true',
-                    help='esegue la FASE 1 (biblioteca_gif + file sul Mac), con backup. '
-                         'Le fasi 2 e 3 vanno dopo il sync del Sheet.')
+                    help='esegue la FASE 1 (biblioteca_gif + file sul Mac), con backup.')
+    ap.add_argument('--fase2', action='store_true',
+                    help='storico: training_logs + workout_sets. SOLO dopo il sync.')
+    ap.add_argument('--fase3', action='store_true',
+                    help='elimina le righe arenate a catalogo e le orfane in '
+                         'biblioteca_gif. SOLO dopo il sync e dopo la fase 2.')
     args = ap.parse_args()
 
-    ops, allarmi, tsv_cat, tsv_del = costruisci()
-    stampa(ops, allarmi, tsv_cat, tsv_del)
     piano = BASE / 'lavoro' / '_allinea_sei.json'
-    piano.write_text(json.dumps({'ops': ops, 'allarmi': allarmi, 'catalogo': tsv_cat,
-                                 'eliminare': tsv_del,
-                                 'generato': I.time.strftime('%Y-%m-%dT%H:%M:%S')},
-                                ensure_ascii=False, indent=1), encoding='utf-8')
-    print('piano: %s' % piano)
+
+    # Applicare NON rigenera il piano: si esegue quello confermato.
+    # Il piano descrive un mondo — quello del momento in cui e' stato guardato —
+    # e dopo ogni fase quel mondo si muove. Ricostruirlo a meta' strada produce
+    # un piano che parla di uno stato che non esiste piu': dopo il sync la
+    # ricostruzione proponeva di cancellare proprio le righe che i superstiti
+    # avevano appena cominciato a usare [L34]. Il piano si congela una volta e
+    # si esegue; a rigenerarlo si ricomincia da capo, non si continua.
+    if args.applica or args.fase2 or args.fase3:
+        if not piano.exists():
+            raise SystemExit('manca il piano confermato: %s' % piano)
+        d = json.loads(piano.read_text(encoding='utf-8'))
+        ops, allarmi, tsv_cat, tsv_del = (d['ops'], d.get('allarmi', []),
+                                          d.get('catalogo', []), d['eliminare'])
+        print('piano confermato del %s (congelato: %s)'
+              % (d['generato'], d.get('congelato_il', '—')))
+    else:
+        ops, allarmi, tsv_cat, tsv_del = costruisci()
+        stampa(ops, allarmi, tsv_cat, tsv_del)
+        if piano.exists():
+            print('\n⚠ %s esiste gia: NON lo sovrascrivo.\n'
+                  '  Questa e una ricostruzione da confrontare, non il piano da eseguire.'
+                  % piano.name)
+        else:
+            piano.write_text(json.dumps(
+                {'ops': ops, 'allarmi': allarmi, 'catalogo': tsv_cat, 'eliminare': tsv_del,
+                 'generato': I.time.strftime('%Y-%m-%dT%H:%M:%S')},
+                ensure_ascii=False, indent=1), encoding='utf-8')
+            print('piano: %s' % piano)
 
     if any(a.startswith('FERMARSI') for a in allarmi):
         raise SystemExit('\nCi sono allarmi bloccanti: non si applica niente.')
-    if not args.applica:
+    if not any((args.applica, args.fase2, args.fase3)):
         print('\nProva soltanto: non e stato scritto niente.')
-    elif applica_fase1(ops):
-        print('\nFase 1 conclusa. Le fasi 2 e 3 si fanno DOPO il sync del Sheet.')
     else:
-        raise SystemExit('\nQualcosa non e andato: guarda le righe qui sopra.')
+        fatto = (applica_fase1(ops) if args.applica else
+                 applica_fase2(ops) if args.fase2 else
+                 applica_fase3(ops, tsv_del))
+        if not fatto:
+            raise SystemExit('\nQualcosa non e andato: guarda le righe qui sopra.')
+        print('\nFase conclusa.')
     I.stampa_consumo('allinea sei')
 
 
