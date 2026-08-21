@@ -176,7 +176,14 @@ def main():
     def confronta(etichetta, ora_v, pri_v, atteso=None):
         segno = ''
         if pri_v is not None and ora_v != pri_v:
-            segno = '   (era %s, %+d)' % (pri_v, ora_v - pri_v)
+            # Non tutti i valori confrontati sono numeri: `prossimo codice libero`
+            # e' un EX###, e la differenza non si calcola. Prima si tentava
+            # comunque, e lo strumento moriva la prima volta che quel valore
+            # cambiava — cioe' al primo codice nuovo dopo mesi di sync.
+            try:
+                segno = '   (era %s, %+d)' % (pri_v, ora_v - pri_v)
+            except TypeError:
+                segno = '   (era %s)' % (pri_v,)
         riga = '   %-34s %6s%s' % (etichetta, ora_v, segno)
         if atteso is not None and ora_v != atteso:
             anomalie.append('%s: %s invece di %s' % (etichetta, ora_v, atteso))
