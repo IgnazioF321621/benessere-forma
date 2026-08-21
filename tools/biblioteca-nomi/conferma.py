@@ -77,8 +77,9 @@ COL_L3 = ['quando', 'zona', 'chiave', 'sezione', 'slug', 'file', 'confronto',
 # Registra e basta: non applica niente su Mac, bucket, DB o TSV di sync.
 TF_PIANO = LAVORO / '_tre_fonti.json'
 TF_REGISTRO = ESITI / 'tre_fonti.tsv'
-COL_TF = ['quando', 'codice', 'zona', 'sha256_mac', 'nome_mac', 'nome_supabase',
-          'nome_sheet', 'nome_scelto', 'slug_scelto', 'condivide_gif_con']
+COL_TF = ['quando', 'chiave', 'codice', 'zona', 'sha256_mac', 'nome_mac',
+          'nome_supabase', 'nome_sheet', 'nome_scelto', 'slug_scelto',
+          'condivide_gif_con']
 
 MIME = {'.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg'}
 # GIF viva, o di cui non sappiamo se e' viva: slug mai applicato.
@@ -110,6 +111,16 @@ def appendi(path, colonne, righe):
     with _scrittura:
         path.parent.mkdir(parents=True, exist_ok=True)
         nuovo = not path.exists()
+        # L'intestazione si scrive solo la prima volta: se le colonne cambiano
+        # dopo, ogni riga nuova finisce sotto i titoli sbagliati e il registro
+        # mente in silenzio. Meglio fermarsi e migrare il file a mano.
+        if not nuovo:
+            with open(path, 'r', encoding='utf-8-sig') as fh:
+                testa = (fh.readline().rstrip('\r\n')).split('\t')
+            if testa != list(colonne):
+                raise RuntimeError(
+                    'intestazione diversa in %s: sul disco %s, in scrittura %s. '
+                    'Migra il file prima di scriverci.' % (path.name, testa, list(colonne)))
         buf = []
         if nuovo:
             buf.append('﻿' + '\t'.join(colonne))
@@ -244,9 +255,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     {'error': 'manca %s — lancia costruisci_tre_fonti.py' % TF_PIANO},
                     status=404)
             dati = json.loads(TF_PIANO.read_text(encoding='utf-8'))
-            prese = stato_corrente(TF_REGISTRO, chiave='codice')
+            prese = stato_corrente(TF_REGISTRO, chiave='chiave')
             for c in dati['casi']:
-                c['decisione'] = prese.get(c['codice'])
+                c['decisione'] = prese.get(c['chiave'])
             dati['decise'] = sum(1 for c in dati['casi'] if c['decisione'])
             return self._send(dati)
 
@@ -330,7 +341,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         """
         if not TF_PIANO.exists():
             return self._send({'error': 'manca il piano delle tre fonti'}, status=404)
-        casi = {c['codice']: c for c in
+        casi = {c['chiave']: c for c in
                 json.loads(TF_PIANO.read_text(encoding='utf-8'))['casi']}
         c = casi.get(body.get('chiave'))
         if not c:
@@ -348,6 +359,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         for d in DEFAULT_OMESSI:
             if re.search(r'(?i)\b%s\b' % re.escape(d), nome):
                 problemi.append('"%s" e un valore di default: non si scrive' % d)
+        # I default che valgono per QUESTA famiglia e non per tutto il catalogo:
+        # il piano li dichiara sul caso, il server li fa rispettare come gli altri.
+        for d in c.get('vietati', []):
+            if re.search(r'(?i)\b%s\b' % re.escape(d), nome):
+                problemi.append('"%s" e il default in questa famiglia: non si scrive' % d)
         # Regola 1 — il nome e' unico: non puo' essere gia' di un altro codice.
         for col in c.get('collisioni_nome', []):
             if nfc(col['nome']).lower() == nome.lower():
@@ -356,10 +372,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send({'error': ' · '.join(problemi)}, status=400)
 
         appendi(TF_REGISTRO, COL_TF, [{
-            'quando': ora(), 'codice': c['codice'], 'zona': c['zona'],
-            'sha256_mac': c['sha256_mac'],
+            'quando': ora(), 'chiave': c['chiave'], 'codice': c['codice'] or '',
+            'zona': c['zona'], 'sha256_mac': c['sha256_mac'],
             'nome_mac': c['nomi']['mac'], 'nome_supabase': c['nomi']['supabase'],
-            'nome_sheet': c['nomi']['sheet'],
+            'nome_sheet': c['nomi']['sheet'] or '',
             'nome_scelto': nome, 'slug_scelto': slug(nome),
             'condivide_gif_con': ','.join(
                 x['codice'] or x['slug'] for x in c.get('condivide_gif_con', []))}])

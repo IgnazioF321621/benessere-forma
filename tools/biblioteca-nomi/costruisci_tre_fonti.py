@@ -29,7 +29,19 @@ BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
 import impronte as I                                    # noqa: E402
 
-CASI = ['EX021', 'EX042', 'EX184', 'EX013', 'EX250', 'EX563']
+# Un caso e' un codice EX### oppure — quando l'esercizio a catalogo non c'e'
+# ancora — lo slug della riga di `biblioteca_gif`. Il secondo caso non e' un
+# ripiego: le righe senza codice sono quelle del lavoro 3, e la stessa scelta
+# che ne fissa il nome decide anche se entrano a catalogo.
+CASI = ['EX021', 'EX042', 'EX184', 'EX013', 'EX250', 'EX563',
+        'calf-raise-elastico-maniglie-in-piedi']
+
+# Parole che per QUESTO caso non si scrivono, oltre a quelle vietate sempre.
+# Stanno nel piano e non nel codice del server: "in piedi" e' un default nella
+# famiglia dei calf raise — dove "seduto" e' marcato e l'altra e' sottintesa —
+# ma nel resto del catalogo compare 23 volte e distingue davvero. Una regola
+# globale sarebbe sbagliata; una regola dichiarata sul caso e' giusta.
+VIETATI = {'calf-raise-elastico-maniglie-in-piedi': ['in piedi']}
 BIB = Path('/Users/ignaziofiorito/benessere-forma/Biblioteca di esercizi')
 DEST = BASE / 'lavoro' / '_tre_fonti.json'
 
@@ -78,7 +90,10 @@ def main():
     # Il legame Mac<->bucket si legge dal piano dei 480: dopo la riduzione le due
     # impronte sono diverse e un confronto diretto non appaia piu' niente.
     gemelli = {}
-    for zona in {per_slug[per_cod[c]['gif_slug']]['storage_path'].split('/')[0] for c in CASI}:
+    def riga_di(c):
+        return per_slug[c] if c not in per_cod else per_slug[per_cod[c]['gif_slug']]
+
+    for zona in {riga_di(c)['storage_path'].split('/')[0] for c in CASI}:
         p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
         if not p.exists():
             continue
@@ -93,13 +108,31 @@ def main():
 
     casi = []
     for cod in CASI:
-        c = per_cod[cod]
-        r = per_slug[c['gif_slug']]
+        senza_codice = cod not in per_cod
+        c = None if senza_codice else per_cod[cod]
+        r = per_slug[cod] if senza_codice else per_slug[c['gif_slug']]
         sp = r['storage_path']
         zona = sp.split('/')[0]
 
         origine = next((k for k, v in gemelli.items() if nfc(sp) in v), None)
-        file_mac = Path(origine).name if origine else Path(sp).name
+        # Il nome del file si chiede all'IMPRONTA, non al percorso registrato nel
+        # piano dei 480: il cantiere rinomina, e quel piano tiene percorsi che
+        # invecchiano — la voce di EX563 punta ancora al nome di prima della
+        # rinomina di fase 1 [L34]. Rinominare non tocca i byte, quindi lo sha
+        # del piano di prepara.py regge attraverso qualunque rinomina.
+        file_mac = Path(sp).name
+        prep = BASE / 'lavoro' / ('%s.json' % zona.lower())
+        if prep.exists():
+            for rr in json.loads(prep.read_text(encoding='utf-8'))['righe']:
+                if nfc(sp) in [nfc(x) for x in rr['storage_paths']]:
+                    vivo = next((v['percorso'] for v in
+                                 I.indice_locale(verbose=False).values()
+                                 if v['sha256'] == rr['sha256']), None)
+                    if vivo:
+                        file_mac = Path(vivo).name
+                    break
+        if not (BIB / zona / file_mac).is_file() and origine:
+            file_mac = Path(origine).name
         sul_mac = (BIB / zona / file_mac).is_file()
 
         # gli altri codici che mostrano ESATTAMENTE questa immagine
@@ -119,12 +152,14 @@ def main():
 
         nomi = {'mac': Path(file_mac).stem,
                 'supabase': r['nome_italiano'],
-                'sheet': c['nome']}
+                'sheet': None if senza_codice else c['nome']}
 
         # lo stesso nome testuale usato da un altro codice: un UPDATE per nome
         # colpirebbe righe che non c'entrano, e due esercizi non possono chiamarsi uguale
         collisioni = []
         for etichetta, nome in nomi.items():
+            if nome is None:
+                continue
             for altro in cat:
                 if altro['codice'] != cod and nfc(altro['nome']) == nfc(nome):
                     collisioni.append({'nome': nome, 'etichetta': etichetta,
@@ -138,14 +173,16 @@ def main():
                                   'workout_sets': conta('workout_sets', nome)}
 
         casi.append({
-            'chiave': cod, 'codice': cod, 'zona': zona,
+            'chiave': cod, 'codice': None if senza_codice else cod, 'zona': zona,
+            'vietati': VIETATI.get(cod, []),
             'sha256_mac': sha, 'fonte_sha256': fonte,
             'file_mac': file_mac, 'cartella': zona, 'file_sul_mac': sul_mac,
-            'nomi': nomi, 'gif_slug': c['gif_slug'], 'storage_path': sp,
+            'nomi': nomi, 'gif_slug': r['slug'], 'storage_path': sp,
             'storico': storico, 'condivide_gif_con': condivisi,
             'collisioni_nome': collisioni})
-        print('  %s  %-22s mac="%s" supa="%s" sheet="%s"%s'
-              % (cod, zona, nomi['mac'], nomi['supabase'], nomi['sheet'],
+        print('  %-38s %-22s mac="%s" supa="%s" sheet="%s"%s'
+              % (cod, zona, nomi['mac'], nomi['supabase'],
+                 nomi['sheet'] if nomi['sheet'] else '— nessun codice —',
                  '  ⚠ condivide la GIF con %s' % ', '.join(
                      x['codice'] or x['slug'] for x in condivisi) if condivisi else ''))
 

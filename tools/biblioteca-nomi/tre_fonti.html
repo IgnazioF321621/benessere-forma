@@ -87,6 +87,9 @@ function verifica(nome, caso){
   if(n && n.slice(1) !== n.slice(1).replace(/\b[A-Z][a-z]/g, m =>
        PROPRI.some(x=>x.toLowerCase()===m.toLowerCase().slice(0,2))?m:m))
     { /* i nomi propri li controlla il server, che ha la lista chiusa */ }
+  for(const d of (caso.vietati||[]))
+    if(new RegExp('\\b'+d.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(n))
+      p.push('«'+d+'» e il default in questa famiglia: non si scrive');
   for(const c of (caso.collisioni_nome||[]))
     if(c.nome.toLowerCase() === n.toLowerCase())
       p.push('questo nome e gia di '+c.codice+': due esercizi non possono chiamarsi uguale');
@@ -95,15 +98,16 @@ function verifica(nome, caso){
 const PROPRI = [];
 
 function riga(et, nome, st){
-  const s = st ? `${st.training_logs} log · ${st.workout_sets} set` : '';
-  return `<tr><td class="et">${esc(et)}</td><td>${esc(nome)}</td>
+  const s = (st && nome) ? `${st.training_logs} log · ${st.workout_sets} set` : '';
+  const v = nome ? esc(nome) : '<span class="muted">— nessun codice a catalogo —</span>';
+  return `<tr><td class="et">${esc(et)}</td><td>${v}</td>
           <td class="st">${esc(s)}</td></tr>`;
 }
 
 function disegna(){
   const c = dati.casi[i];
   document.getElementById('sez').textContent =
-    `caso ${i+1} di ${dati.casi.length} · ${c.codice} · ${c.zona}`;
+    `caso ${i+1} di ${dati.casi.length} · ${c.codice || 'nessun codice a catalogo'} · ${c.zona}`;
   document.getElementById('avanz').textContent =
     `${dati.decise} decisi su ${dati.casi.length}`;
 
@@ -156,6 +160,7 @@ function disegna(){
             (plank · crunch · hip thrust · lat machine · pistol)</li>
         <li>ordine [Movimento][Attrezzo][Variante][Posizione]</li>
         <li>«bilaterale» e «simultaneo» sono i default: non si scrivono</li>
+        ${(c.vietati||[]).map(d=>`<li>«${esc(d)}» e il default in questa famiglia: non si scrive</li>`).join('')}
         <li>«gradi» per esteso, mai °</li>
         <li>maiuscola solo sulla prima lettera, sui nomi propri della lista chiusa e sulle sigle</li>
         <li>accenti solo nel nome a catalogo, mai nello slug, nel path o nel filename</li>
