@@ -66,7 +66,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **599 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei. **In corso: Pettorali** — 82 nomi confermati, migrazione dal 15 agosto, poi popolamento catalogo. **Poi Polpacci.** Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **600 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** (chiusa il 21 agosto su tutti e tre i lavori: 19 GIF, 19 codici, zero slug senza codice). **In corso: Pettorali** — immagini migrate e collaudate, nomi a posto, **restano 25 GIF senza codice a catalogo**. Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -139,7 +139,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**664 righe** (21 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · **EX139/EX176/EX178** (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX676**. RLS SELECT pubblica. PK logica = `codice`.
+**665 righe** (21 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · **EX139/EX176/EX178** (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX677**. RLS SELECT pubblica. PK logica = `codice`.
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
@@ -176,7 +176,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.589 righe** (21 agosto 2026): 599 vive, 0 rotte, 68 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.589 righe** (21 agosto 2026): 600 vive, 0 rotte, 67 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
 Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
@@ -215,7 +215,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**599/599 `gif_slug` risolvono, 0 rotti** (21 agosto). 65 codici senza slug → fallback ExerciseDB.
+**600/600 `gif_slug` risolvono, 0 rotti** (21 agosto). 65 codici senza slug → fallback ExerciseDB.
 
 ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
 ⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
@@ -359,7 +359,9 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto)*: **Pettorali** (in corso) → **Polpacci** → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21)*: ~~Polpacci~~ **chiusa** → **Pettorali** (aperta: mancano 25 codici) → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+
+⚠️ **Polpacci è stata chiusa prima di Pettorali, e questo è un arretrato, non un ordine nuovo.** Pettorali resta aperta con 25 GIF senza codice: la regola dice che una cartella non si apre finché la precedente non è chiusa su tutti e tre i lavori, e qui è successo il contrario. Il debito da saldare è il terzo lavoro di Pettorali.
 
 Non è più l'ordine per dimensione. **Spalle e Cuffia è anticipata** rispetto alle zone più grosse perché contiene i gruppi più poveri del pool: deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. È il cantiere che cambia davvero l'allenamento.
 
@@ -484,6 +486,8 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 **Criterio di ammissibilità a casa**: la riproducibilità del movimento, non il nome dell'esercizio. Un rematore alla macchina replicato con elastico è legittimo: stesso pattern, stessa posizione, resistenza equivalente. Una leg curl prona alla macchina non lo è: nulla in casa riproduce quella resistenza in quella posizione.
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **127 dei 332 esercizi** ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
+
+⚠️ **Baseline da rimisurare** *(21 agosto, sera)*: il catalogo è a **665 righe** (EX676) e due `luogo` corretti — EX065 ed EX568 — hanno aperto altrettanti esercizi al pool casa. Nei polpacci i pescabili a casa sono passati da **15 su 18 a 18 su 19**. I numeri qui sotto sono di prima e vanno riletti con `?schedaDebug=1` → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
 
 **Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **664 righe, 21 agosto**): `poolPrincipali` **329** · `poolFinisher` **129** · `poolRiscaldamento` **42** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 

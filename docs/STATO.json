@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-21T08:55:14",
+ "quando": "2026-08-21T15:47:19",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -3984,14 +3984,20 @@
    "nome": "Squat pistol seduto su box",
    "gif_slug": "squat-pistol-seduto-su-box",
    "livello": "intermedio"
+  },
+  {
+   "codice": "EX676",
+   "nome": "Calf raise cavo basso dietro",
+   "gif_slug": "calf-raise-cavo-basso-dietro",
+   "livello": "principiante"
   }
  ],
  "catalogo": {
-  "righe": 664,
-  "ultimo_sync": "2026-08-21T06:49:00.986000+00:00",
+  "righe": 665,
+  "ultimo_sync": "2026-08-21T13:45:26.617000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX676",
+  "prossimo_codice_libero": "EX677",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4005,7 +4011,7 @@
    "EX323",
    "EX528"
   ],
-  "con_gif_slug": 599,
+  "con_gif_slug": 600,
   "senza_gif_slug": 65,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4078,7 +4084,7 @@
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
    "principale;finisher": 134,
-   "principale": 316,
+   "principale": 317,
    "isolamento": 16,
    "principale;finisher;recupero": 3,
    "recupero": 3,
@@ -4101,7 +4107,7 @@
   },
   "per_livello": {
    "intermedio": 256,
-   "principiante": 160,
+   "principiante": 161,
    "avanzato": 54,
    "intermedio;avanzato": 38,
    "principiante;intermedio": 129,
@@ -4112,9 +4118,9 @@
  "biblioteca_gif": {
   "righe": 1589,
   "slug_distinti": 1589,
-  "viva": 599,
+  "viva": 600,
   "rotta": 0,
-  "libera": 68,
+  "libera": 67,
   "morta": 922,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4123,7 +4129,6 @@
    "alzate-diagonali-elastico-un-braccio-in-piedi",
    "alzate-laterali-isometriche-in-piedi",
    "bird-dog",
-   "calf-raise-elastico-maniglie-in-piedi",
    "chest-press-elastico-inclinato",
    "croci-inverse-elastico-busto-flesso",
    "croci-inverse-elastico-maniglie-busto-flesso",
