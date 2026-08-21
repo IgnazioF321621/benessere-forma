@@ -593,7 +593,10 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 3 ago | 610 | 283 | 115 | 28 | 64 | 25 |
 | 5 ago | 646 | 316 | 128 | 38 | 67 | 25 |
 | 6 ago (pre-consolidamenti) | 671 | 335 | 131 | 43 | 67 su 68 | 25 |
-| **6 ago (attuale)** | **667** | **332** | **130** | **43** | **67 su 67** | **25** |
+| 6 ago | 667 | 332 | 130 | 43 | 67 su 67 | 25 |
+| **21 ago (attuale)** | **664** | **329** | **129** | **42** | **64 su 64** | **25** |
+
+**21 agosto — lo scostamento torna per intero.** Le fusioni hanno tolto EX139, EX176 ed EX178, tutte e tre `pattern = core`: da lì −3 su `principali` e −3 sul core. Le stesse tre righe comparivano anche fra i finisher e i riscaldamenti, e infatti quei due calano di 1 ciascuno. Nessuna riga persa oltre le tre volute, e il core resta **pescabili = ammessi**: nessuna riga nuova da classificare → [L16](LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse).
 
 Precedenti: le 28 righe di Cardio (2 agosto) portarono finisher 103→115 e riscaldamento 17→28. `poolCarry` è sempre stato 1.
 

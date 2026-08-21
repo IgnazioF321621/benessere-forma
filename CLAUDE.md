@@ -91,6 +91,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - ~~`?schedaDebug=1` scollegato~~ — **risolto 7 agosto**: stampa la baseline dei sei pool in riga copiabile e la lascia in `window._ztBaselinePool`. Se core pescabili ≠ ammessi elenca le righe da classificare. Resta aperto: il parametro `splitTypeFilter` di `ztTrainGenPatternPick` è accettato e ignorato
 - **27 funzioni mai chiamate** in `zona-tracker.html` (misurato 7 agosto), tra cui il vecchio timer di attivazione e il vecchio modal pasti
 - **5 candidati core senza GIF** — EX023 Pallof press · EX032 Hollow hold · EX036 Bird dog · EX046 Stir the pot · EX109 Plank shoulder taps. Per Bird dog la GIF esiste in biblioteca: manca solo il `gif_slug`
+- **`cavigliere` e `cavigliera`: nessuna delle due esiste a catalogo** (misurato 21 agosto). L'app avvisa che `cavigliere` non apre nessun esercizio, e l'alias `GEAR_ALIASES` lo manda su `cavigliera` — che ha **0 occorrenze** in `attrezzo` e **0** in `surrogato_attrezzo`, esattamente come `cavigliere`. Non è un doppione da unificare: sono **due termini morti**, e la pillola dell'onboarding non può aprire niente in nessuno dei due modi → [L2](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Le 130 righe che contengono "cavigli" lo hanno nella prosa (`zone_rischio`, `setup`, `esecuzione`) e parlano della **caviglia**, non dell'attrezzo
 - **Deltoidi posteriori: 1 solo candidato** nel pool casa. Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altro gruppo al minimo: deltoidi laterali 3
 
 ---
@@ -484,9 +485,9 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **127 dei 332 esercizi** ammessi al pool principale di un profilo casa entrano da lì. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-⚠️ **Baseline da rimisurare**: il catalogo è passato da 667 a 664 righe il 21 agosto (fusioni EX139/EX176/EX178) e nessuna delle tre era un plank pescabile a casa, ma il numero va riletto, non dedotto → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **664 righe, 21 agosto**): `poolPrincipali` **329** · `poolFinisher` **129** · `poolRiscaldamento` **42** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo 667 righe, 6 ago): `poolPrincipali` **332** · `poolFinisher` **130** · `poolRiscaldamento` **43** · pool core **67 pescabili su 67 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Lo scostamento dal 6 agosto torna per intero, ed è questo il valore della misura**: −3 su `poolPrincipali` e −3 sul core sono le tre righe eliminate dalle fusioni (EX139, EX176, EX178, tutte e tre core); −1 su `poolFinisher` e −1 su `poolRiscaldamento` sono le stesse tre righe, che comparivano anche in quei due pool. **Nessuna riga persa oltre le tre volute.** Storico completo in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
 ⚠️ Il pool core si conta come **pescabili**, non come righe ammesse: una riga `pattern = core` con `gruppo_target` vuoto passa i filtri e non può essere scelta da nessuno slot. Se i due numeri tornano a divergere, c'è una riga nuova da classificare → [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse)
 
