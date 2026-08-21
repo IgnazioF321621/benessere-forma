@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-16T21:59:38",
+ "quando": "2026-08-21T08:55:14",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -123,8 +123,8 @@
   },
   {
    "codice": "EX021",
-   "nome": "Plank",
-   "gif_slug": "plank",
+   "nome": "Plank avambracci",
+   "gif_slug": "plank-avambracci",
    "livello": "principiante"
   },
   {
@@ -249,8 +249,8 @@
   },
   {
    "codice": "EX042",
-   "nome": "Plank con avambracci su fitball",
-   "gif_slug": "plank-con-avambracci-su-fitball",
+   "nome": "Plank rollout fitball",
+   "gif_slug": "plank-rollout-fitball",
    "livello": "intermedio;avanzato"
   },
   {
@@ -818,12 +818,6 @@
    "livello": "intermedio"
   },
   {
-   "codice": "EX139",
-   "nome": "Crunch farfalla toe touch",
-   "gif_slug": "crunch-farfalla-toe-touch",
-   "livello": "principiante"
-  },
-  {
    "codice": "EX140",
    "nome": "Crunch cavo alto in ginocchio",
    "gif_slug": "crunch-cavo-alto-in-ginocchio",
@@ -1028,21 +1022,9 @@
    "livello": "intermedio"
   },
   {
-   "codice": "EX176",
-   "nome": "Plank avambracci",
-   "gif_slug": "plank-avambracci",
-   "livello": "principiante"
-  },
-  {
    "codice": "EX177",
    "nome": "Plank laterale crunch obliquo",
    "gif_slug": "plank-laterale-crunch-obliquo",
-   "livello": "avanzato"
-  },
-  {
-   "codice": "EX178",
-   "nome": "Plank rollout fitball",
-   "gif_slug": "plank-rollout-fitball",
    "livello": "avanzato"
   },
   {
@@ -4005,22 +3987,25 @@
   }
  ],
  "catalogo": {
-  "righe": 667,
-  "ultimo_sync": "2026-08-16T19:18:43.547000+00:00",
+  "righe": 664,
+  "ultimo_sync": "2026-08-21T06:49:00.986000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX676",
   "gap_permanenti": [
    "EX107",
    "EX110",
+   "EX139",
    "EX151",
    "EX170",
+   "EX176",
+   "EX178",
    "EX228",
    "EX229",
    "EX323",
    "EX528"
   ],
-  "con_gif_slug": 602,
+  "con_gif_slug": 599,
   "senza_gif_slug": 65,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4092,8 +4077,8 @@
   "slug_condivisi_da_piu_codici": {},
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
-   "principale;finisher": 135,
-   "principale": 317,
+   "principale;finisher": 134,
+   "principale": 316,
    "isolamento": 16,
    "principale;finisher;recupero": 3,
    "recupero": 3,
@@ -4108,16 +4093,16 @@
    "riscaldamento;finisher": 2,
    "riscaldamento": 18,
    "recupero;mobilita": 7,
-   "principale;riscaldamento": 17,
    "accessorio;riscaldamento;attivazione": 1,
    "principale;accessorio": 6,
    "accessorio;finisher": 18,
+   "principale;riscaldamento": 16,
    "skill": 4
   },
   "per_livello": {
    "intermedio": 256,
-   "principiante": 162,
-   "avanzato": 55,
+   "principiante": 160,
+   "avanzato": 54,
    "intermedio;avanzato": 38,
    "principiante;intermedio": 129,
    "principiante;intermedio;avanzato": 25,
@@ -4125,15 +4110,15 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1592,
-  "slug_distinti": 1592,
-  "viva": 602,
+  "righe": 1589,
+  "slug_distinti": 1589,
+  "viva": 599,
   "rotta": 0,
   "libera": 68,
   "morta": 922,
   "elenco_rotte": [],
   "elenco_libere": [
-   "adduzione-braccio-elastico-in-piedi",
+   "adduzione-un-braccio-elastico-in-piedi",
    "alzate-diagonali-elastico-maniglie-in-piedi",
    "alzate-diagonali-elastico-un-braccio-in-piedi",
    "alzate-laterali-isometriche-in-piedi",
@@ -4150,8 +4135,8 @@
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
    "dip-anelli",
-   "dip-coreano-parallele",
-   "dip-parallele",
+   "dip-parallele-coreano",
+   "dip-parallele-ginniche",
    "dip-parallele-impossible",
    "dip-sedie",
    "estensione-anca-bilanciere",
@@ -4177,13 +4162,13 @@
    "piegamenti-declinati-fitball",
    "piegamenti-deficit-kettlebell",
    "piegamenti-deficit-slancio-panche-piane",
+   "piegamenti-disco-sovraccarico",
    "piegamenti-fitball",
    "piegamenti-gamba-sollevata",
    "piegamenti-indu",
    "piegamenti-mani-incrociate",
    "piegamenti-planche",
    "piegamenti-pliometrici-tocco-petto",
-   "piegamenti-sovraccarico-disco",
    "piegamenti-sui-pugni",
    "piegamenti-sulle-dita",
    "piegamenti-trx",
@@ -4216,6 +4201,10 @@
    "Spalle e Cuffia": 63,
    "Tricipiti": 59
   },
-  "file_senza_riga": []
+  "file_senza_riga": [
+   "Addominali e Core/Crunch farfalla toe touch (Butterfly Toe-Touch Crunch).gif",
+   "Addominali e Core/Plank frontale.gif",
+   "Addominali e Core/Plank su fitball.gif"
+  ]
  }
 }
