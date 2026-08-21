@@ -594,7 +594,14 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 5 ago | 646 | 316 | 128 | 38 | 67 | 25 |
 | 6 ago (pre-consolidamenti) | 671 | 335 | 131 | 43 | 67 su 68 | 25 |
 | 6 ago | 667 | 332 | 130 | 43 | 67 su 67 | 25 |
-| **21 ago (attuale)** | **664** | **329** | **129** | **42** | **64 su 64** | **25** |
+| 21 ago (dopo le fusioni) | 664 | 329 | 129 | 42 | 64 su 64 | 25 |
+| **21 ago sera (attuale)** | **665** | **366** | **142** | **42** | **64 su 64** | **25** |
+
+**21 agosto sera — +37 principali senza una riga nuova.** Ai 57 esercizi con `manubri` come attrezzo unico è stato dato `surrogato_attrezzo = elastico` con le istruzioni complete: il catalogo cresce di 1 sola riga (EX676) e il pool casa passa da 329 a **366** principali e da 129 a **142** finisher. Il riscaldamento non si muove, perché i surrogati nuovi sono tutti `principale` o `finisher`. È lo spostamento più grande da quando la baseline esiste, ed è ampiezza guadagnata sul catalogo che c'era già.
+
+⚠️ Sui **gruppi poveri non cambia quasi niente**: deltoidi posteriori restano a 1 candidato, laterali a 3. I 57 sono concentrati su petto, quadricipiti e braccia. Resta vero che il cantiere che cambia l'allenamento è **Spalle e Cuffia**, e i surrogati non lo sostituiscono.
+
+⚠️ I numeri del 21 agosto sera vengono da una **replica del filtro in Python**, non da `?schedaDebug=1`: vanno riletti in app: misurare la baseline con una replica dei filtri che deve sorvegliare è un cerchio chiuso.
 
 **21 agosto — lo scostamento torna per intero.** Le fusioni hanno tolto EX139, EX176 ed EX178, tutte e tre `pattern = core`: da lì −3 su `principali` e −3 sul core. Le stesse tre righe comparivano anche fra i finisher e i riscaldamenti, e infatti quei due calano di 1 ciascuno. Nessuna riga persa oltre le tre volute, e il core resta **pescabili = ammessi**: nessuna riga nuova da classificare → [L16](LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse).
 
