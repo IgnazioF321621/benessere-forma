@@ -648,3 +648,30 @@ Il danno non si è fermato all'ipotesi. Le 15 misure di collaudo del budget eran
 **Il rimedio.** Prima di concludere che un dato manca, **verificare che sia lo strumento a non fornirlo**: cercare nel codice il punto che dovrebbe produrlo, invece di dedurne l'assenza dall'uscita. E per gli stub, la regola pratica è che devono rappresentare il caso **pieno**, non il caso vuoto: uno stub vuoto è comodo da scrivere e silenziosamente sbagliato, perché ogni campo che dimentichi diventa una scoperta.
 
 **Corollario — vale anche quando la conclusione è giusta.** Qui l'osservazione «il prompt vuoto fa ragionare di più» è risultata vera e utile. Ma è vera **per il caso vuoto**, che è un caso reale e non quello tipico. Uno strumento monco non produce solo conclusioni false: produce conclusioni vere su un caso che non è quello che si credeva di stare guardando, ed è la variante più difficile da smascherare.
+
+
+---
+
+## L40 — Un piano rigenerato a metà strada parla di un mondo che non c'è più
+
+**Il caso.** Allineamento dei sei nomi divergenti, 20-21 agosto. Lo strumento `allinea_sei.py` costruiva il piano leggendo il vivo — catalogo, `biblioteca_gif`, storico — e stampava riga per riga cosa avrebbe cambiato. Il dry-run è stato confermato, la fase 1 eseguita, il Sheet sincronizzato a mano.
+
+Poi, per la fase 2, lo strumento è stato rilanciato. Ha ricostruito il piano da capo, sul vivo di **dopo** il sync. E il piano nuovo diceva due cose diverse da quello confermato:
+
+- **la fase 2 era sparita**: le quattro operazioni sullo storico non venivano più generate. Il criterio era «il nome a catalogo cambia»; dopo il sync il catalogo diceva già il nome nuovo, quindi il criterio era falso. Ma `training_logs` diceva ancora `Plank`, e quelle 120 righe erano esattamente il lavoro da fare.
+- **la fase 3 puntava le righe sbagliate**: proponeva di cancellare `plank-avambracci` e `plank-rollout-fitball` — le righe di `biblioteca_gif` che i superstiti avevano cominciato a usare **con quel sync** — invece delle due rimaste orfane.
+
+Una guardia avrebbe fermato la cancellazione, perché quelle righe erano ancora puntate da un codice. L'omissione silenziosa della fase 2, no: nessuna guardia scatta su un'operazione che non viene proposta.
+
+**Il punto.** Un piano descrive un mondo: quello dell'istante in cui è stato guardato. Un piano a fasi *cambia* quel mondo a ogni fase, ed è il suo mestiere. Rigenerarlo fra una fase e l'altra non lo aggiorna — gli fa descrivere un mondo diverso da quello per cui è stato confermato, e nel quale le operazioni che restano da fare **hanno già l'aspetto di operazioni fatte**.
+
+**Il rimedio.** Il piano si **congela** quando viene confermato, e le fasi eseguono quello. Chi applica non ricostruisce: legge. `allinea_sei.py` senza argomenti ricostruisce e stampa, ma se il piano esiste già **non lo sovrascrive** e dichiara che quella è una ricostruzione da confrontare, non il piano da eseguire.
+
+**Il rapporto con [L34](#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto), che dice il contrario.** L34 nasce dal difetto opposto: un piano su disco usato come verbale di ciò che era stato fatto, quando andava riletto il vivo. Le due lezioni non si contraddicono, dividono i ruoli:
+
+| domanda | fonte |
+|---|---|
+| **cosa si è deciso di fare** | il piano congelato — non cambia, o non era una decisione |
+| **com'è il mondo adesso** | il vivo, riletto a ogni chiamata — le guardie stanno qui |
+
+Il difetto, in entrambi i casi, è chiedere a una delle due la domanda dell'altra. `allinea_sei.py` fa così: prende le operazioni dal piano congelato, e prima di ognuna verifica sul vivo che sia ancora sicura — che la riga sia arenata davvero, che nessun codice punti ancora lo slug, che dopo la PATCH i conti tornino.
