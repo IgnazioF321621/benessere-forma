@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-21T15:47:19",
+ "quando": "2026-08-21T19:38:53",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -3994,7 +3994,7 @@
  ],
  "catalogo": {
   "righe": 665,
-  "ultimo_sync": "2026-08-21T13:45:26.617000+00:00",
+  "ultimo_sync": "2026-08-21T17:35:45.422000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX677",
