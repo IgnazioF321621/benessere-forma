@@ -181,7 +181,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.589 righe** (21 agosto 2026): 625 vive, 0 rotte, 42 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.585 righe** (22 agosto 2026): 625 vive, 0 rotte, 42 libere, **918 morte** (cantiere 3E). Le 4 righe morte che avevano `storage_path` in `Gambe e Glutei` — `affondo-bulgaro-corpo-libero`, `leg-extension`, `ponte-dei-glutei`, `squat`, tutte del 28 giugno-2 luglio, nessun codice e nessun file — sono state cancellate il 22 agosto sera. Backup in `tools/biblioteca-nomi/_backup/`. Le 918 rimaste hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
 Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
