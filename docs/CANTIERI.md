@@ -596,7 +596,10 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 6 ago | 667 | 332 | 130 | 43 | 67 su 67 | 25 |
 | 21 ago (dopo le fusioni) | 664 | 329 | 129 | 42 | 64 su 64 | 25 |
 | 21 ago sera | 665 | 366 | 142 | 42 | 64 su 64 | 25 |
-| **21 ago, Pettorali chiusa (attuale)** | **690** | **376** | **144** | **43** | **64 su 64** | **25** |
+| 21 ago, Pettorali chiusa | 690 | 376 | 144 | 43 | 64 su 64 | 25 |
+| **22 ago (attuale)** | **689** | **376** | **208** | **43** | **64 su 64** | **25** |
+
+**22 agosto — +64 finisher, zero principali, e il gruppo povero resta povero.** Le 88 righe con `uso` fuori vocabolario sono state sanate: tutte e 88 sono diventate `finisher`, nessuna `principale`. Il `poolFinisher` passa da 144 a **208**, il `poolPrincipali` non si muove. Fra le 88 c'erano 8 deltoidi posteriori e 12 laterali — i due gruppi più poveri — ma gli slot di isolamento obbligatorio pescano da `poolPrincipali`, quindi non li vedono: deltoidi posteriori resta a **1 candidato**. Il catalogo scende a 689 con l'eliminazione di EX322.
 
 **21 agosto, Pettorali chiusa — +25 righe, +10 principali.** Le 25 GIF della zona che nessun esercizio puntava sono diventate EX677-EX701. Al pool casa ne arrivano 10 fra i principali e 2 fra i finisher: le altre sono da palestra, oppure `uso: skill` — sei righe, planche e un-braccio comprese — che per definizione la generazione automatica non pesca.
 

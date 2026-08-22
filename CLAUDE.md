@@ -64,7 +64,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Pirsi** ✅ chiuso 13 agosto — il coach ha un nome, **provvisorio e in prova**. Prompt allineati su un registro unico, stringhe visibili riscritte nei tre moduli, nome in `COACH_NAME`. Regole in [Pirsi](#pirsi--nome-e-voce-del-coach), residui aperti nel [cantiere 26](docs/CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi).
 
-**Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
+**Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **689 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
 **Catalogo GIF** — **625 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Prossima: Spalle e Cuffia.** Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
@@ -173,7 +173,7 @@ Tre trappole del sync, tutte già costate giri a vuoto:
 - `gruppo_target` vocabolario chiuso — **non dedurre da `muscoli`** (testo libero, vocabolario diverso)
 - `alternativa` contiene codici `EX###` in chiaro, nessuna FK: prima di eliminare un codice, scansionare tutti i campi testuali con regex `\bEX\d{3}\b`
 
-Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`. **265 righe su 665** ne hanno uno *(21 agosto)*, `elastico` in 242.
+Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`. **265 righe su 689** ne hanno uno *(22 agosto)*, `elastico` in 242.
 
 ⚠️ **Due modi di sbagliare il campo, entrambi silenziosi.** Un surrogato uguale all'attrezzo nativo (`attrezzo = manubri`, `surrogato = manubri`) non apre niente e in più fa passare il **filtro `luogo`**, che guarda solo se il campo è popolato: l'esercizio entra a casa senza avere una versione casalinga. Un surrogato dichiarato **senza `nota_surrogato`** è peggio: `_trainGenMapToSession` sostituisce il `setup` con la nota solo se c'è, e senza cade sul setup nativo — la scheda mostra l'attrezzo surrogato e le istruzioni dell'attrezzo vero.
 
@@ -490,11 +490,13 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 
 **Criterio di ammissibilità a casa**: la riproducibilità del movimento, non il nome dell'esercizio. Un rematore alla macchina replicato con elastico è legittimo: stesso pattern, stessa posizione, resistenza equivalente. Una leg curl prona alla macchina non lo è: nulla in casa riproduce quella resistenza in quella posizione.
 
-Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **162 dei 366 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **229 delle 501 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **265 su 665** *(misurato il 21 agosto sera)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
+Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **161 dei 376 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **228 delle 516 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **265 su 689** *(misurato il 22 agosto)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **690 righe, 21 agosto sera**): `poolPrincipali` **376** · `poolFinisher` **144** · `poolRiscaldamento` **43** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Righe ammesse dai tre filtri: **516 su 690**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **689 righe, 22 agosto**): `poolPrincipali` **376** · `poolFinisher` **208** · `poolRiscaldamento` **43** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Righe ammesse dai tre filtri: **516 su 689**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 
 ⚠️ **Questi numeri vengono da una replica del filtro in Python, non da `?schedaDebug=1`.** È una debolezza da sapere: la baseline serve a stanare una deriva nei filtri dell'app, e misurarla con una replica di quegli stessi filtri è un cerchio che si chiude su sé stesso. Alla prima occasione vanno riletti in app e confrontati; se divergono, il sospettato è la replica.
+
+⚠️ **Le 88 righe sanate il 22 agosto sono diventate tutte `finisher`, nessuna `principale`.** Da lì il salto del `poolFinisher` da 144 a **208** e il `poolPrincipali` fermo a 376. Conta perché fra quelle 88 c'erano **8 deltoidi posteriori e 12 laterali**, cioè i due gruppi più poveri — ma gli slot di isolamento obbligatorio pescano da `poolPrincipali` (`_trainGenPickIsoByGruppoTarget(pools.poolPrincipali, …)`), quindi **non li vedono**. Il gruppo che stava a 1 candidato sta ancora a 1.
 
 **Cosa ha spostato la baseline**, in due passi lo stesso giorno: le fusioni EX139/EX176/EX178 (−3 righe) hanno portato il 6 agosto da 332/130/43 a **329/129/42** su 664 righe; poi i **57 surrogati elastici** aggiunti alle righe manubri-unico hanno portato i principali a **366** e i finisher a **142**, senza aggiungere una sola riga a catalogo. Il riscaldamento non si muove: i surrogati nuovi sono tutti `uso=principale` o `finisher`.
 
@@ -504,7 +506,7 @@ Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza a
 
 ⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
-**I gruppi più poveri del pool non sono nelle gambe.** Con 667 righe restano: deltoidi posteriori **1 candidato**, avambracci 3, deltoidi laterali 3, deltoidi anteriori 4. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno — il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
+**I gruppi più poveri del pool non sono nelle gambe.** Con 689 righe restano, nel `poolPrincipali`: deltoidi posteriori **1 candidato**, deltoidi laterali 3, deltoidi anteriori 6, avambracci 7, adduttori 7. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno — il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
 
 ### Core: quattro funzioni, due nature
 (2 ago 2026, commit `f16e035`)
