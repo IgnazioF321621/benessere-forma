@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-22 alle 09:56.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-22 alle 12:02.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -12,24 +12,24 @@
 
 | | valore | nota |
 |---|---|---|
-| Righe totali | 690 |  |
-| Ultimo sync | 2026-08-21 19:41 | istante in cui il foglio ha riscritto le righe |
+| Righe totali | 689 |  |
+| Ultimo sync | 2026-08-22 09:47 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
 | Prossimo codice libero | EX702 | da allocare al momento della scrittura, mai in anticipo |
 | Codici con GIF | 625 |  |
-| Codici senza GIF | 65 | cantiere 2 |
+| Codici senza GIF | 64 | cantiere 2 |
 | Catene rotte | 0 | gif_slug che non trova riga in biblioteca_gif |
 | Slug su più codici | 0 | guardia "1 codice per slug" |
 
 ### Gap permanenti
 
-Codici bruciati, **mai renumerare**: EX107, EX110, EX139, EX151, EX170, EX176, EX178, EX228, EX229, EX323, EX528
+Codici bruciati, **mai renumerare**: EX107, EX110, EX139, EX151, EX170, EX176, EX178, EX228, EX229, EX322, EX323, EX528
 
 ### Ripartizione
 
-**Per uso**: accessorio 72 · accessorio;finisher 18 · accessorio;riscaldamento 5 · accessorio;riscaldamento;attivazione 1 · carry 2 · carry;finisher 2 · finisher 36 · finisher;recupero 1 · isolamento 16 · principale 331 · principale;accessorio 6 · principale;finisher 135 · principale;finisher;recupero 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 7 · riscaldamento 18 · riscaldamento;attivazione 3 · riscaldamento;finisher 2 · skill 10
+**Per uso**: carry 2 · carry;finisher 2 · finisher 142 · finisher;recupero 1 · finisher;riscaldamento 6 · principale 330 · principale;finisher 141 · principale;finisher;recupero 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 7 · riscaldamento 21 · riscaldamento;finisher 2 · skill 10
 
-**Per livello**: (vuoto) 2 · avanzato 64 · intermedio 262 · intermedio;avanzato 43 · principiante 162 · principiante;intermedio 132 · principiante;intermedio;avanzato 25
+**Per livello**: (vuoto) 2 · avanzato 64 · intermedio 261 · intermedio;avanzato 43 · principiante 162 · principiante;intermedio 132 · principiante;intermedio;avanzato 25
 
 ## Indice delle GIF (`biblioteca_gif`)
 

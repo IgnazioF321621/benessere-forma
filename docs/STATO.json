@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-22T09:56:19",
+ "quando": "2026-08-22T12:02:02",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -1872,12 +1872,6 @@
    "nome": "Curl hammer manubri",
    "gif_slug": "curl-hammer-manubri",
    "livello": "principiante"
-  },
-  {
-   "codice": "EX322",
-   "nome": "Affondo indietro manubri",
-   "gif_slug": null,
-   "livello": "intermedio"
   },
   {
    "codice": "EX324",
@@ -4143,8 +4137,8 @@
   }
  ],
  "catalogo": {
-  "righe": 690,
-  "ultimo_sync": "2026-08-21T19:41:49.019000+00:00",
+  "righe": 689,
+  "ultimo_sync": "2026-08-22T09:47:18.474000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX702",
@@ -4158,11 +4152,12 @@
    "EX178",
    "EX228",
    "EX229",
+   "EX322",
    "EX323",
    "EX528"
   ],
   "con_gif_slug": 625,
-  "senza_gif_slug": 65,
+  "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
    "EX023",
@@ -4227,36 +4222,29 @@
    "EX241",
    "EX244",
    "EX245",
-   "EX246",
-   "EX322"
+   "EX246"
   ],
   "slug_condivisi_da_piu_codici": {},
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
-   "principale;finisher": 135,
-   "principale": 331,
-   "isolamento": 16,
+   "principale;finisher": 141,
+   "principale": 330,
+   "finisher": 142,
    "principale;finisher;recupero": 3,
    "recupero": 3,
-   "finisher": 36,
    "finisher;recupero": 1,
    "principale;recupero": 2,
-   "accessorio;riscaldamento": 5,
-   "accessorio": 72,
-   "riscaldamento;attivazione": 3,
+   "finisher;riscaldamento": 6,
+   "riscaldamento": 21,
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
-   "riscaldamento": 18,
    "recupero;mobilita": 7,
-   "accessorio;riscaldamento;attivazione": 1,
-   "principale;accessorio": 6,
-   "accessorio;finisher": 18,
    "principale;riscaldamento": 17,
    "skill": 10
   },
   "per_livello": {
-   "intermedio": 262,
+   "intermedio": 261,
    "principiante": 162,
    "avanzato": 64,
    "intermedio;avanzato": 43,
