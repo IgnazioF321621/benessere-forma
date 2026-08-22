@@ -595,7 +595,10 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 6 ago (pre-consolidamenti) | 671 | 335 | 131 | 43 | 67 su 68 | 25 |
 | 6 ago | 667 | 332 | 130 | 43 | 67 su 67 | 25 |
 | 21 ago (dopo le fusioni) | 664 | 329 | 129 | 42 | 64 su 64 | 25 |
-| **21 ago sera (attuale)** | **665** | **366** | **142** | **42** | **64 su 64** | **25** |
+| 21 ago sera | 665 | 366 | 142 | 42 | 64 su 64 | 25 |
+| **21 ago, Pettorali chiusa (attuale)** | **690** | **376** | **144** | **43** | **64 su 64** | **25** |
+
+**21 agosto, Pettorali chiusa — +25 righe, +10 principali.** Le 25 GIF della zona che nessun esercizio puntava sono diventate EX677-EX701. Al pool casa ne arrivano 10 fra i principali e 2 fra i finisher: le altre sono da palestra, oppure `uso: skill` — sei righe, planche e un-braccio comprese — che per definizione la generazione automatica non pesca.
 
 **21 agosto sera — +37 principali senza una riga nuova.** Ai 57 esercizi con `manubri` come attrezzo unico è stato dato `surrogato_attrezzo = elastico` con le istruzioni complete: il catalogo cresce di 1 sola riga (EX676) e il pool casa passa da 329 a **366** principali e da 129 a **142** finisher. Il riscaldamento non si muove, perché i surrogati nuovi sono tutti `principale` o `finisher`. È lo spostamento più grande da quando la baseline esiste, ed è ampiezza guadagnata sul catalogo che c'era già.
 

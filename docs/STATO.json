@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-21T19:38:53",
+ "quando": "2026-08-22T09:56:19",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -3990,14 +3990,164 @@
    "nome": "Calf raise cavo basso dietro",
    "gif_slug": "calf-raise-cavo-basso-dietro",
    "livello": "principiante"
+  },
+  {
+   "codice": "EX677",
+   "nome": "Adduzione un braccio elastico in piedi",
+   "gif_slug": "adduzione-un-braccio-elastico-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX678",
+   "nome": "Chest press elastico inclinato",
+   "gif_slug": "chest-press-elastico-inclinato",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX679",
+   "nome": "Croci TRX",
+   "gif_slug": "croci-trx",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX680",
+   "nome": "Dip anelli",
+   "gif_slug": "dip-anelli",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX681",
+   "nome": "Dip parallele coreano",
+   "gif_slug": "dip-parallele-coreano",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX682",
+   "nome": "Dip parallele ginniche",
+   "gif_slug": "dip-parallele-ginniche",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX683",
+   "nome": "Dip parallele impossible",
+   "gif_slug": "dip-parallele-impossible",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX684",
+   "nome": "Dip sedie",
+   "gif_slug": "dip-sedie",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX685",
+   "nome": "Lancio al petto palla medica al muro",
+   "gif_slug": "lancio-al-petto-palla-medica-al-muro",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX686",
+   "nome": "Piegamenti archer braccio rialzato",
+   "gif_slug": "piegamenti-archer-braccio-rialzato",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX687",
+   "nome": "Piegamenti declinati fitball",
+   "gif_slug": "piegamenti-declinati-fitball",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX688",
+   "nome": "Piegamenti deficit kettlebell",
+   "gif_slug": "piegamenti-deficit-kettlebell",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX689",
+   "nome": "Piegamenti deficit slancio panche piane",
+   "gif_slug": "piegamenti-deficit-slancio-panche-piane",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX690",
+   "nome": "Piegamenti disco sovraccarico",
+   "gif_slug": "piegamenti-disco-sovraccarico",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX691",
+   "nome": "Piegamenti fitball",
+   "gif_slug": "piegamenti-fitball",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX692",
+   "nome": "Piegamenti gamba sollevata",
+   "gif_slug": "piegamenti-gamba-sollevata",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX693",
+   "nome": "Piegamenti indù",
+   "gif_slug": "piegamenti-indu",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX694",
+   "nome": "Piegamenti mani incrociate",
+   "gif_slug": "piegamenti-mani-incrociate",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX695",
+   "nome": "Piegamenti planche",
+   "gif_slug": "piegamenti-planche",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX696",
+   "nome": "Piegamenti pliometrici tocco petto",
+   "gif_slug": "piegamenti-pliometrici-tocco-petto",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX697",
+   "nome": "Piegamenti sui pugni",
+   "gif_slug": "piegamenti-sui-pugni",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX698",
+   "nome": "Piegamenti sulle dita",
+   "gif_slug": "piegamenti-sulle-dita",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX699",
+   "nome": "Piegamenti TRX",
+   "gif_slug": "piegamenti-trx",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX700",
+   "nome": "Piegamenti un braccio",
+   "gif_slug": "piegamenti-un-braccio",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX701",
+   "nome": "Piegamenti un braccio palla medica",
+   "gif_slug": "piegamenti-un-braccio-palla-medica",
+   "livello": "avanzato"
   }
  ],
  "catalogo": {
-  "righe": 665,
-  "ultimo_sync": "2026-08-21T17:35:45.422000+00:00",
+  "righe": 690,
+  "ultimo_sync": "2026-08-21T19:41:49.019000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX677",
+  "prossimo_codice_libero": "EX702",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4011,7 +4161,7 @@
    "EX323",
    "EX528"
   ],
-  "con_gif_slug": 600,
+  "con_gif_slug": 625,
   "senza_gif_slug": 65,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4083,12 +4233,12 @@
   "slug_condivisi_da_piu_codici": {},
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
-   "principale;finisher": 134,
-   "principale": 317,
+   "principale;finisher": 135,
+   "principale": 331,
    "isolamento": 16,
    "principale;finisher;recupero": 3,
    "recupero": 3,
-   "finisher": 33,
+   "finisher": 36,
    "finisher;recupero": 1,
    "principale;recupero": 2,
    "accessorio;riscaldamento": 5,
@@ -4102,15 +4252,15 @@
    "accessorio;riscaldamento;attivazione": 1,
    "principale;accessorio": 6,
    "accessorio;finisher": 18,
-   "principale;riscaldamento": 16,
-   "skill": 4
+   "principale;riscaldamento": 17,
+   "skill": 10
   },
   "per_livello": {
-   "intermedio": 256,
-   "principiante": 161,
-   "avanzato": 54,
-   "intermedio;avanzato": 38,
-   "principiante;intermedio": 129,
+   "intermedio": 262,
+   "principiante": 162,
+   "avanzato": 64,
+   "intermedio;avanzato": 43,
+   "principiante;intermedio": 132,
    "principiante;intermedio;avanzato": 25,
    "(vuoto)": 2
   }
@@ -4118,32 +4268,24 @@
  "biblioteca_gif": {
   "righe": 1589,
   "slug_distinti": 1589,
-  "viva": 600,
+  "viva": 625,
   "rotta": 0,
-  "libera": 67,
+  "libera": 42,
   "morta": 922,
   "elenco_rotte": [],
   "elenco_libere": [
-   "adduzione-un-braccio-elastico-in-piedi",
    "alzate-diagonali-elastico-maniglie-in-piedi",
    "alzate-diagonali-elastico-un-braccio-in-piedi",
    "alzate-laterali-isometriche-in-piedi",
    "bird-dog",
-   "chest-press-elastico-inclinato",
    "croci-inverse-elastico-busto-flesso",
    "croci-inverse-elastico-maniglie-busto-flesso",
-   "croci-trx",
    "crunch-obliquo-panca-romana",
    "curl-alternato-macchina",
    "curl-alternato-manubri-panca-inclinata",
    "curl-bilanciere-presa-larga",
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
-   "dip-anelli",
-   "dip-parallele-coreano",
-   "dip-parallele-ginniche",
-   "dip-parallele-impossible",
-   "dip-sedie",
    "estensione-anca-bilanciere",
    "estensione-spalla-elastico-in-piedi",
    "estensione-tricipiti-elastico-busto-flesso",
@@ -4151,7 +4293,6 @@
    "french-press-elastico-in-piedi",
    "french-press-elastico-maniglie-panca-piana",
    "incroci-braccia-in-piedi",
-   "lancio-al-petto-palla-medica-al-muro",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
    "lat-machine-elastico-maniglie-in-ginocchio",
@@ -4161,24 +4302,8 @@
    "lento-avanti-isometrico-in-piedi",
    "lento-dietro-barra-elastico-ai-piedi",
    "lento-dietro-maniglia-elastico-un-braccio-in-piedi",
-   "piegamenti-archer-braccio-rialzato",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
-   "piegamenti-declinati-fitball",
-   "piegamenti-deficit-kettlebell",
-   "piegamenti-deficit-slancio-panche-piane",
-   "piegamenti-disco-sovraccarico",
-   "piegamenti-fitball",
-   "piegamenti-gamba-sollevata",
-   "piegamenti-indu",
-   "piegamenti-mani-incrociate",
-   "piegamenti-planche",
-   "piegamenti-pliometrici-tocco-petto",
-   "piegamenti-sui-pugni",
-   "piegamenti-sulle-dita",
-   "piegamenti-trx",
-   "piegamenti-un-braccio",
-   "piegamenti-un-braccio-palla-medica",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",

@@ -66,7 +66,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **667 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **600 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** (chiusa il 21 agosto su tutti e tre i lavori: 19 GIF, 19 codici, zero slug senza codice). **In corso: Pettorali** — immagini migrate e collaudate, nomi a posto, **restano 25 GIF senza codice a catalogo**. Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **625 `gif_slug` attivi, 0 rotti, 65 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Prossima: Spalle e Cuffia.** Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -92,7 +92,9 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - **27 funzioni mai chiamate** in `zona-tracker.html` (misurato 7 agosto), tra cui il vecchio timer di attivazione e il vecchio modal pasti
 - **5 candidati core senza GIF** — EX023 Pallof press · EX032 Hollow hold · EX036 Bird dog · EX046 Stir the pot · EX109 Plank shoulder taps. Per Bird dog la GIF esiste in biblioteca: manca solo il `gif_slug`
 - **`cavigliere` e `cavigliera`: nessuna delle due esiste a catalogo** (misurato 21 agosto). L'app avvisa che `cavigliere` non apre nessun esercizio, e l'alias `GEAR_ALIASES` lo manda su `cavigliera` — che ha **0 occorrenze** in `attrezzo` e **0** in `surrogato_attrezzo`, esattamente come `cavigliere`. Non è un doppione da unificare: sono **due termini morti**, e la pillola dell'onboarding non può aprire niente in nessuno dei due modi → [L2](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Le 130 righe che contengono "cavigli" lo hanno nella prosa (`zone_rischio`, `setup`, `esecuzione`) e parlano della **caviglia**, non dell'attrezzo
-- **7 righe ammesse al pool con `uso=principale` e `gruppo_target` vuoto** (misurato 21 agosto): EX017 · EX035 · EX040 · EX041 · EX044 · EX082 · EX132. Passano i tre filtri e **nessuno slot muscolare può pescarle**: è [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse) fuori dal core. Le altre 52 righe ammesse senza `gruppo_target` sono `cardio_metabolico` e `mobilita`, che il campo non lo usano: quelle stanno bene così
+- **88 righe che nessun pool può pescare** (misurato 21 agosto, **preesistente**: identiche nei dump del 20 e del 21 mattina): `uso = accessorio` su **72** righe e `uso = isolamento` su **16**, entrambi fuori dal vocabolario che `_trainGenFilterPool` cerca al filtro 4. Non rompono niente e non si vedono: l'esercizio semplicemente non esce mai. **52 delle 88 passano già luogo, attrezzo e livello a casa**, e toccano i gruppi poveri — trapezi 14, petto 10, **deltoidi posteriori 8**, deltoidi laterali 4. I 16 `uso = isolamento` sembrano un travaso di colonna: `isolamento` è un valore di `pattern`, e quelle righe hanno `pattern = isolamento` identico. Stanate dalla sezione 5 di `verifica_sync.py`
+- **2 `gruppo_target` fuori vocabolario**: `gambe` e `gambe e glutei`, una riga ciascuno
+- **12 righe ammesse al pool con `uso=principale` e `gruppo_target` vuoto** (misurato 21 agosto sera, su tutto il catalogo): EX017 · EX035 · EX038 · EX039 · EX040 · EX041 · EX044 · EX078 · EX082 · EX084 · EX087 · EX132. Passano i tre filtri e **nessuno slot muscolare può pescarle**: è [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse) fuori dal core. Le altre 52 righe ammesse senza `gruppo_target` sono `cardio_metabolico` e `mobilita`, che il campo non lo usano: quelle stanno bene così
 - **6 righe `cavo → elastico` con `nota_surrogato` ma senza `esecuzione_surrogato` né `errori_surrogato`**: EX101 · EX140 · EX141 · EX165 · EX182 · EX193. Meno grave delle 57 sanate il 21 agosto — lì mancava la nota, e il `setup` cadeva su quello nativo; qui il setup è giusto e restano nativi solo esecuzione ed errori
 - **EX212 `Jumping pliometrico manubri`**: `luogo = palestra` e nessun surrogato, unico rimasto delle 9 righe manubri-unico che erano fuori per luogo. Le altre 8 adesso entrano dal bypass del surrogato — ma il loro `luogo` dice ancora `palestra` pur essendo fattibili in casa: il dato resta impreciso, solo non blocca più
 - **Deltoidi posteriori: 1 solo candidato** nel pool casa. Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Altro gruppo al minimo: deltoidi laterali 3
@@ -142,7 +144,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**665 righe** (21 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · **EX139/EX176/EX178** (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX677**. RLS SELECT pubblica. PK logica = `codice`.
+**690 righe** (21 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · **EX139/EX176/EX178** (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX702**. RLS SELECT pubblica. PK logica = `codice`.
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
@@ -181,7 +183,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.589 righe** (21 agosto 2026): 600 vive, 0 rotte, 67 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.589 righe** (21 agosto 2026): 625 vive, 0 rotte, 42 libere, **922 morte** (cantiere 3E). Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
 Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
@@ -220,7 +222,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**600/600 `gif_slug` risolvono, 0 rotti** (21 agosto). 65 codici senza slug → fallback ExerciseDB.
+**625/625 `gif_slug` risolvono, 0 rotti** (21 agosto). 65 codici senza slug → fallback ExerciseDB.
 
 ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
 ⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
@@ -364,9 +366,9 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21)*: ~~Polpacci~~ **chiusa** → **Pettorali** (aperta: mancano 25 codici) → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ **chiuse** → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
 
-⚠️ **Polpacci è stata chiusa prima di Pettorali, e questo è un arretrato, non un ordine nuovo.** Pettorali resta aperta con 25 GIF senza codice: la regola dice che una cartella non si apre finché la precedente non è chiusa su tutti e tre i lavori, e qui è successo il contrario. Il debito da saldare è il terzo lavoro di Pettorali.
+L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
 
 Non è più l'ordine per dimensione. **Spalle e Cuffia è anticipata** rispetto alle zone più grosse perché contiene i gruppi più poveri del pool: deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. È il cantiere che cambia davvero l'allenamento.
 
@@ -492,7 +494,7 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **162 dei 366 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **229 delle 501 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **265 su 665** *(misurato il 21 agosto sera)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **665 righe, 21 agosto sera**): `poolPrincipali` **366** · `poolFinisher` **142** · `poolRiscaldamento` **42** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **690 righe, 21 agosto sera**): `poolPrincipali` **376** · `poolFinisher` **144** · `poolRiscaldamento` **43** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Righe ammesse dai tre filtri: **516 su 690**. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 
 ⚠️ **Questi numeri vengono da una replica del filtro in Python, non da `?schedaDebug=1`.** È una debolezza da sapere: la baseline serve a stanare una deriva nei filtri dell'app, e misurarla con una replica di quegli stessi filtri è un cerchio che si chiude su sé stesso. Alla prima occasione vanno riletti in app e confrontati; se divergono, il sospettato è la replica.
 
