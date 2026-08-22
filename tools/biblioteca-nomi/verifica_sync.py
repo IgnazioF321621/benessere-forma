@@ -30,6 +30,7 @@ Uso:  python3 verifica_sync.py
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -78,6 +79,37 @@ def confronta_campi(prima_per_codice, catalogo):
             else:
                 cambiati.append(voce)
     return regressioni, cambiati
+
+
+# ---------------------------------------------------------------- vocabolari
+# Non sono liste di gusto: sono le parole che il GENERATORE cerca. Un valore
+# fuori da qui non rompe niente e non si vede — l'esercizio semplicemente non
+# esce mai. E' il modo peggiore di sbagliare, perche' il catalogo sembra a posto.
+#
+# `uso`: i token su cui _trainGenFilterPool smista nei pool (FILTRO 4).
+USO_VIVI = {'principale', 'finisher', 'riscaldamento', 'recupero', 'mobilita',
+            'carry', 'skill'}
+# `pattern`: quelli che il generatore chiede per gli slot delle sessioni, piu'
+# i tre descrittivi usati solo dalle righe `uso: skill`, che nessuno slot pesca.
+PATTERN_VIVI = {'spinta orizzontale', 'spinta verticale', 'tirata orizzontale',
+                'tirata verticale', 'dominante ginocchia', 'dominante anca',
+                'core', 'cardio_metabolico', 'mobilita', 'loaded carry',
+                'isolamento', 'composto', 'pressa gambe', 'affondo'}
+PATTERN_SKILL = {'locomozione', 'isometria', 'flessione', 'anti-rotazione'}
+# `gruppo_target`: le quattro funzioni core di _TRAIN_GEN_CORE_BY_TYPE piu' i
+# muscolari di _TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE e degli isolamenti bonus.
+GRUPPO_VIVI = {'core anti-estensione', 'core anti-rotazione', 'core flessione',
+               'core rotazione', 'petto', 'dorsali', 'tricipiti', 'bicipiti',
+               'deltoidi anteriori', 'deltoidi laterali', 'deltoidi posteriori',
+               'trapezi', 'avambracci', 'quadricipiti', 'ischiocrurali',
+               'glutei', 'polpacci', 'adduttori', 'lombari', 'cuffia rotatori',
+               'obliqui'}
+# I pattern che NON usano gruppo_target: sono pescati per pattern e per `uso`.
+PATTERN_SENZA_GRUPPO = {'cardio_metabolico', 'mobilita', 'loaded carry'}
+
+
+def tok(v):
+    return [x.strip().lower() for x in str(v or '').split(';') if x.strip()]
 
 
 def main():
@@ -226,8 +258,73 @@ def main():
     else:
         print('   ✅ nessuno slug puntato da più di un codice.')
 
+    # ------------------------------------------ 5. vocabolari dei campi
+    # Questa sezione non confronta con la fotografia: guarda il valore in se'.
+    # Serve per il difetto che il confronto non vede — un campo sbagliato da
+    # sempre, che nessun sync ha mai cambiato e che quindi non risulta mai
+    # "diverso da prima".
+    # I difetti trovati qui NON entrano in `anomalie`: quelle dicono se il SYNC
+    # e' andato bene, e un campo sbagliato da settimane non e' colpa di questo
+    # sync. Tenerli insieme renderebbe il verdetto rosso per sempre e la catena
+    # `verifica_sync && stato.py` non passerebbe mai piu'. Si contano a parte e
+    # si stampano lo stesso, ogni volta, finche' non sono sistemati.
+    debiti = []
+    print('\n5. VOCABOLARI DEI CAMPI CHE IL GENERATORE LEGGE')
+    print('   (debiti del catalogo, non di questo sync: non cambiano l esito)')
+
+    muti = [r for r in catalogo
+            if tok(r.get('uso')) and not (set(tok(r.get('uso'))) & USO_VIVI)]
+    if muti:
+        debiti.append('%d righe che nessun pool pesca' % len(muti))
+        print('   ⚠️  %d righe con `uso` fuori vocabolario: NESSUN pool può pescarle'
+              % len(muti))
+        for v, n in sorted(Counter(r['uso'] for r in muti).items(),
+                           key=lambda x: -x[1]):
+            print('       uso=%-28r %d righe' % (v, n))
+        print('       ammessi: %s' % ', '.join(sorted(USO_VIVI)))
+    else:
+        print('   ✅ ogni riga ha almeno un `uso` che un pool cerca.')
+
+    pat = Counter()
+    for r in catalogo:
+        for x in tok(r.get('pattern')):
+            if x not in PATTERN_VIVI and x not in PATTERN_SKILL:
+                pat[x] += 1
+    if pat:
+        debiti.append('%d pattern fuori vocabolario' % sum(pat.values()))
+        print('   ⚠️  `pattern` fuori vocabolario: %s' % dict(pat))
+    else:
+        print('   ✅ `pattern`: nessun valore fuori vocabolario.')
+
+    gru = Counter()
+    for r in catalogo:
+        for x in tok(r.get('gruppo_target')):
+            if x not in GRUPPO_VIVI:
+                gru[x] += 1
+    orfani = [r for r in catalogo
+              if not tok(r.get('gruppo_target'))
+              and tok(r.get('pattern'))
+              and not (set(tok(r.get('pattern'))) & PATTERN_SENZA_GRUPPO)
+              and 'principale' in tok(r.get('uso'))]
+    if gru:
+        debiti.append('%d gruppo_target fuori vocabolario' % sum(gru.values()))
+        print('   ⚠️  `gruppo_target` fuori vocabolario: %s' % dict(gru))
+    else:
+        print('   ✅ `gruppo_target`: nessun valore fuori vocabolario.')
+    if orfani:
+        debiti.append('%d righe senza gruppo_target' % len(orfani))
+        print('   ⚠️  %d righe `uso=principale` con pattern muscolare e '
+              '`gruppo_target` vuoto:' % len(orfani))
+        print('       nessuno slot muscolare può pescarle → L16')
+        print('       %s' % ', '.join(r['codice'] for r in orfani[:20]))
+    else:
+        print('   ✅ ogni riga `principale` con pattern muscolare ha il suo gruppo.')
+
     # ----------------------------------------------------------- esito
     print('\n' + '─' * 68)
+    if debiti:
+        print('DEBITI DEL CATALOGO (non di questo sync): %s' % ' · '.join(debiti))
+        print()
     if anomalie:
         print('ESITO: %s — %s'
               % ('1 cosa da guardare' if len(anomalie) == 1
