@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-22T15:36:36",
+ "quando": "2026-08-23T11:35:26",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -33,7 +33,7 @@
   },
   {
    "codice": "EX006",
-   "nome": "Lento avanti bilanciere in piedi",
+   "nome": "Lento avanti bilanciere",
    "gif_slug": "lento-avanti-bilanciere-in-piedi",
    "livello": "avanzato"
   },
@@ -327,7 +327,7 @@
   },
   {
    "codice": "EX055",
-   "nome": "Alzate laterali manubri in piedi",
+   "nome": "Alzate laterali manubri",
    "gif_slug": "alzate-laterali-manubri-in-piedi",
    "livello": "principiante;intermedio"
   },
@@ -339,7 +339,7 @@
   },
   {
    "codice": "EX057",
-   "nome": "Alzate laterali fianco manubrio panca inclinata 30 gradi",
+   "nome": "Alzate laterali fianco manubrio panca inclinata",
    "gif_slug": "alzate-laterali-fianco-manubrio-panca-inclinata-30-gradi",
    "livello": "intermedio"
   },
@@ -441,7 +441,7 @@
   },
   {
    "codice": "EX074",
-   "nome": "Lento Arnold manubri in piedi",
+   "nome": "Lento Arnold manubri",
    "gif_slug": "lento-arnold-manubri-in-piedi",
    "livello": "intermedio"
   },
@@ -597,7 +597,7 @@
   },
   {
    "codice": "EX100",
-   "nome": "Alzate frontali manubri in piedi",
+   "nome": "Alzate frontali manubri",
    "gif_slug": "alzate-frontali-manubri-in-piedi",
    "livello": "principiante"
   },
@@ -2325,13 +2325,13 @@
   },
   {
    "codice": "EX399",
-   "nome": "Alzate frontali manubri prono panca inclinata 45 gradi",
+   "nome": "Alzate frontali manubri prono panca inclinata",
    "gif_slug": "alzate-frontali-manubri-prono-panca-inclinata-45-gradi",
    "livello": "intermedio"
   },
   {
    "codice": "EX400",
-   "nome": "Alzate frontali cavo basso un braccio",
+   "nome": "Alzate frontali un braccio cavo basso",
    "gif_slug": "alzate-frontali-cavo-basso-un-braccio",
    "livello": "principiante;intermedio"
   },
@@ -2373,43 +2373,37 @@
   },
   {
    "codice": "EX407",
-   "nome": "Alzate laterali manubri prono panca inclinata 45 gradi",
+   "nome": "Alzate laterali manubri prono panca inclinata",
    "gif_slug": "alzate-laterali-manubri-prono-panca-inclinata-45-gradi",
    "livello": "intermedio"
   },
   {
-   "codice": "EX408",
-   "nome": "Alzate laterali fianco manubrio panca inclinata 45 gradi",
-   "gif_slug": "alzate-laterali-fianco-manubrio-panca-inclinata-45-gradi",
-   "livello": "intermedio"
-  },
-  {
    "codice": "EX409",
-   "nome": "Alzate laterali cavo basso un braccio",
+   "nome": "Alzate laterali un braccio cavo basso",
    "gif_slug": "alzate-laterali-cavo-basso-un-braccio",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX410",
-   "nome": "Alzate laterali manubrio un braccio gomito 90 gradi",
+   "nome": "Alzate laterali un braccio manubrio gomito 90 gradi",
    "gif_slug": "alzate-laterali-manubrio-un-braccio-gomito-90-gradi",
    "livello": "intermedio"
   },
   {
    "codice": "EX411",
-   "nome": "Alzate laterali cavo basso un braccio inclinazione laterale",
+   "nome": "Alzate laterali un braccio cavo basso inclinazione laterale",
    "gif_slug": "alzate-laterali-cavo-basso-un-braccio-inclinazione-laterale",
    "livello": "intermedio;avanzato"
   },
   {
    "codice": "EX412",
-   "nome": "Alzate laterali manubrio un braccio",
+   "nome": "Alzate laterali un braccio manubrio",
    "gif_slug": "alzate-laterali-manubrio-un-braccio",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX413",
-   "nome": "Alzate laterali manubrio un braccio inclinazione laterale",
+   "nome": "Alzate laterali un braccio manubrio inclinazione laterale",
    "gif_slug": "alzate-laterali-manubrio-un-braccio-inclinazione-laterale",
    "livello": "intermedio;avanzato"
   },
@@ -2439,7 +2433,7 @@
   },
   {
    "codice": "EX418",
-   "nome": "Lento avanti manubri alternato isometrico",
+   "nome": "Lento avanti alternato manubri",
    "gif_slug": "lento-avanti-manubri-alternato-isometrico",
    "livello": "intermedio;avanzato"
   },
@@ -2451,7 +2445,7 @@
   },
   {
    "codice": "EX420",
-   "nome": "Lento avanti bilanciere rack in piedi",
+   "nome": "Lento avanti bilanciere rack",
    "gif_slug": "lento-avanti-bilanciere-rack-in-piedi",
    "livello": "intermedio"
   },
@@ -2481,7 +2475,7 @@
   },
   {
    "codice": "EX425",
-   "nome": "Lento avanti manubri in piedi",
+   "nome": "Lento avanti manubri",
    "gif_slug": "lento-avanti-manubri-in-piedi",
    "livello": "principiante;intermedio"
   },
@@ -2493,7 +2487,7 @@
   },
   {
    "codice": "EX427",
-   "nome": "Lento avanti multipower in piedi",
+   "nome": "Lento avanti multipower",
    "gif_slug": "lento-avanti-multipower-in-piedi",
    "livello": "principiante;intermedio"
   },
@@ -2511,19 +2505,19 @@
   },
   {
    "codice": "EX430",
-   "nome": "Lento avanti manubrio un braccio",
+   "nome": "Lento avanti un braccio manubrio",
    "gif_slug": "lento-avanti-manubrio-un-braccio",
    "livello": "intermedio"
   },
   {
    "codice": "EX431",
-   "nome": "Lento dietro bilanciere in piedi",
+   "nome": "Lento dietro bilanciere",
    "gif_slug": "lento-dietro-bilanciere-in-piedi",
    "livello": "avanzato"
   },
   {
    "codice": "EX432",
-   "nome": "Lento dietro bilanciere panca piana",
+   "nome": "Lento dietro bilanciere seduto",
    "gif_slug": "lento-dietro-bilanciere-panca-piana",
    "livello": "avanzato"
   },
@@ -3339,7 +3333,7 @@
   },
   {
    "codice": "EX569",
-   "nome": "Alzate laterali asciugamano parete un braccio",
+   "nome": "Alzate laterali un braccio asciugamano parete",
    "gif_slug": "alzate-laterali-asciugamano-parete-un-braccio",
    "livello": "principiante"
   },
@@ -4137,8 +4131,8 @@
   }
  ],
  "catalogo": {
-  "righe": 689,
-  "ultimo_sync": "2026-08-22T13:15:15.424000+00:00",
+  "righe": 688,
+  "ultimo_sync": "2026-08-23T09:29:18.671000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX702",
@@ -4154,9 +4148,10 @@
    "EX229",
    "EX322",
    "EX323",
+   "EX408",
    "EX528"
   ],
-  "con_gif_slug": 625,
+  "con_gif_slug": 624,
   "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4229,7 +4224,7 @@
   "per_uso": {
    "principale;finisher": 141,
    "principale": 330,
-   "finisher": 142,
+   "finisher": 141,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
@@ -4244,7 +4239,7 @@
    "skill": 10
   },
   "per_livello": {
-   "intermedio": 261,
+   "intermedio": 260,
    "principiante": 162,
    "avanzato": 64,
    "intermedio;avanzato": 43,
@@ -4256,14 +4251,15 @@
  "biblioteca_gif": {
   "righe": 1585,
   "slug_distinti": 1585,
-  "viva": 625,
+  "viva": 624,
   "rotta": 0,
-  "libera": 42,
+  "libera": 43,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
    "alzate-diagonali-elastico-maniglie-in-piedi",
    "alzate-diagonali-elastico-un-braccio-in-piedi",
+   "alzate-laterali-fianco-manubrio-panca-inclinata-45-gradi",
    "alzate-laterali-isometriche-in-piedi",
    "bird-dog",
    "croci-inverse-elastico-busto-flesso",
