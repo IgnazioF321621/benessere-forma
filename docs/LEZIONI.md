@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata
 
 ---
 
@@ -675,3 +675,34 @@ Una guardia avrebbe fermato la cancellazione, perché quelle righe erano ancora 
 | **com'è il mondo adesso** | il vivo, riletto a ogni chiamata — le guardie stanno qui |
 
 Il difetto, in entrambi i casi, è chiedere a una delle due la domanda dell'altra. `allinea_sei.py` fa così: prende le operazioni dal piano congelato, e prima di ognuna verifica sul vivo che sia ancora sicura — che la riga sia arenata davvero, che nessun codice punti ancora lo slug, che dopo la PATCH i conti tornino.
+
+## L41 — Dopo ogni sync, confronto codice per codice contro la lista consegnata, prima di qualunque cancellazione
+
+**Il fatto.** In due giorni il passaggio verso il Google Sheet si è sfasato **tre volte**, in tre modi diversi:
+
+1. il CSV del catalogo consegnato con **23 colonne nell'ordine della tabella Supabase**, mentre il foglio ne ha 22 in un ordine diverso: non era incollabile;
+2. `lento-avanti-manubri` finito su **EX424** invece che su EX425 — uno scivolamento di una riga durante il secondo sync di Spalle e Cuffia;
+3. i `gif_slug` di **EX702 · EX703 · EX709 · EX710** riscritti a mano invece che copiati dal registro delle conferme: `alzate-diagonali-elastico-maniglie` al posto di `alzate-diagonali-inclinate-elastico`, e altri tre così.
+
+Tre gesti diversi — un export costruito sulla struttura sbagliata, un incollamento scivolato, quattro celle ribattute a memoria — con lo stesso esito: **il valore vivo non è quello deciso**.
+
+**Perché nessuno strumento l'ha visto.** Ogni volta la catena restava **formalmente integra**: lo slug esisteva, la riga in `biblioteca_gif` c'era, il file nel bucket c'era. `verifica_sync.py` rispondeva verde su tutte e cinque le sezioni, e aveva ragione secondo i suoi criteri — controlla l'**integrità**, non la **corrispondenza con quanto è stato deciso**. Nel caso di EX424 il verdetto era addirittura «tutto a posto»: il codice puntava a una GIF vera, solo che era la GIF di un altro esercizio.
+
+È [L8](#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso) applicata al passaggio verso il foglio. E non è riparabile con un controllo in più dentro gli strumenti: l'informazione su *quale* slug spetti a EX424 non esiste da nessuna parte nel database — esiste solo nella lista che è stata consegnata.
+
+**Perché è pericoloso, e non solo sbagliato.** Lo sfasamento di EX424 è stato trovato **mentre stavo per cancellare le righe vecchie**. Quella cancellazione elimina le righe rimaste orfane dopo il sync: con lo sfasamento in piedi, `lento-avanti-macchina-pacco-pesi-seduto` era diventata orfana **proprio a causa dell'errore**, ed era la riga giusta di EX424. Cancellarla avrebbe **consolidato l'errore invece di lasciarlo riparabile**: il legame fra quel codice e la sua GIF sarebbe sparito dal database, e per ricostruirlo sarebbe servito ripartire dal piano.
+
+Fino a quel momento nulla era rotto per l'utente — nessun `missing`, nessuna GIF mancante. Un difetto che non si manifesta e che il passo successivo rende permanente.
+
+**La regola.** Dopo ogni sync, e **prima di qualunque cancellazione**, si confrontano i valori vivi **codice per codice contro la lista consegnata** — non contro l'esito degli strumenti. Due controlli, entrambi obbligatori:
+
+| controllo | se fallisce |
+|---|---|
+| ogni codice della lista ha il valore della lista | il sync non ha preso, o è scivolato |
+| **nessun codice fuori dalla lista ha preso un valore della lista** | è scivolato: fermarsi e non cancellare niente |
+
+Il secondo è quello che conta. Il primo si accorge di un valore mancante, che è innocuo — resta il vecchio, e tutto continua a funzionare. Il secondo si accorge di un valore **finito altrove**, che è l'unico caso in cui la cancellazione fa danno.
+
+**Corollario — la lista consegnata è un artefatto, e va tenuta.** Il confronto è possibile solo se la lista sopravvive alla consegna. Da qui in avanti ogni elenco per il foglio si salva su disco accanto ai log della migrazione (`backup_migrazione_<zona>/`), nella forma `codice · colonna · valore`, che è anche quella che [L5](#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno) prescrive come immune allo sfasamento — e che qui, va detto, **non è bastata**: l'elenco verticale toglie lo sfasamento di colonna, non quello di riga né la ribattitura a mano.
+
+**Corollario secondo — un export per il foglio si costruisce sulla struttura del foglio.** Il primo dei tre casi non era un errore di trascrizione ma di forma: le colonne della tabella Supabase non sono quelle del foglio, e non coincidono né per numero né per ordine. L'intestazione del foglio si recupera dall'ultimo TSV consegnato (`lavoro/_piani/incolla_sheet_*.tsv`) o si chiede: sono dieci secondi contro un file da rifare.

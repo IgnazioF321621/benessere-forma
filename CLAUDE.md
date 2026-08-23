@@ -252,7 +252,8 @@ L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale 
 1. rinomina nel bucket e aggiorna `storage_path`, slug invariato
 2. aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi
 3. sincronizza il Sheet
-4. verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**
+4. **confronta i valori vivi codice per codice contro la lista consegnata al foglio** — non contro l'esito degli strumenti → [L41](docs/LEZIONI.md#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione). Se un codice **fuori** dalla lista ha preso un valore della lista, fermarsi: la cancellazione consoliderebbe lo sfasamento invece di lasciarlo riparabile
+5. verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**
 
 Non deve esistere un istante in cui una GIF è irraggiungibile.
 
@@ -654,3 +655,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 38. [Per un evento di coda la mediana è la direzione sbagliata](docs/LEZIONI.md#l38--quando-il-difetto-è-un-evento-di-coda-la-mediana-è-una-direzione-sbagliata) — il criterio di lettura si fissa prima di misurare
 39. [Uno strumento con stub incompleti genera il difetto che misura](docs/LEZIONI.md#l39--uno-strumento-di-misura-con-stub-incompleti-genera-il-difetto-che-poi-misura) — prima di dire che un dato manca, guardare l'ingresso
 40. [Un piano rigenerato a metà strada parla di un mondo che non c'è più](docs/LEZIONI.md#l40--un-piano-rigenerato-a-metà-strada-parla-di-un-mondo-che-non-cè-più) — si congela e si esegue, non si ricostruisce
+41. [Confronto codice per codice contro la lista consegnata](docs/LEZIONI.md#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione) — dopo ogni sync, prima di ogni cancellazione
