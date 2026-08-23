@@ -196,6 +196,28 @@ Rigenerare non chiede disciplina: chiede un comando, e il comando misura il vivo
 
 Resta aperta una domanda, ma è del cantiere nomi e non di questo: quale delle due animazioni sia quella giusta per quell'esercizio. Nel bucket c'è la prima, ed è quella che l'app mostra da sempre.
 
+### ✅ `prepara.py` aggancia via `ponte_480` — 23 agosto 2026
+
+**Il primo passo del lavoro 1 vedeva il bucket vuoto.** `prepara.py` agganciava il file del Mac al suo oggetto confrontando lo SHA-256 del Mac con le impronte del bucket, che dal 15 agosto contiene i byte ridotti a 480px. Su Tricipiti: **0 impronte del Mac su 61** presenti fra quelle del bucket.
+
+Cosa avrebbe prodotto il pannello, misurato prima di toccare il codice:
+
+| stato | senza il ponte | col ponte (vero) |
+|---|---|---|
+| `collegato` | **0** | **55** |
+| `pendente` | 5 | 5 |
+| `indicizzato` | 0 | 0 |
+| `libero` | **57** | **2** |
+| `indeterminato` | 0 | 0 |
+
+Il pannello si sarebbe aperto dichiarando **libere 57 GIF di cui 54 puntate da un codice vivo**, proponendo per ognuna il nome dedotto dal nome del file invece che dal catalogo — e ogni conferma finisce sul registro append-only nell'istante in cui è data.
+
+**La riparazione vive in un esemplare solo.** `prepara.py` fa `from pianifica import ponte_480`: non una copia. La quarta comparsa era nata proprio perché la stessa logica di aggancio stava scritta a mano in due file, e riparare l'uno non toccava l'altro. Racconto completo in [L35](LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette), paragrafo «La quinta comparsa».
+
+**Verifica.** Cinque stati come attesi (55/5/0/2/0, totale 62 file); **54 codici distinti fra i collegati, identici uno per uno** ai 54 del censimento della zona — nessuno mancante, nessuno nuovo, **0 impronte che hanno cambiato codice**. Le 55 righe `collegato` contro 54 codici sono il doppione di contenuto `bedc9bb3f425` (due file del Mac, stesso oggetto, EX538). 0 byte scaricati.
+
+⚠️ **Gli altri chiamanti non sono stati verificati.** Questo passo ha toccato `prepara.py` e basta. Chiunque altro agganci Mac↔bucket per impronta ha lo stesso difetto finché non importa `ponte_480`.
+
 ### Ordine delle zone che restano
 
 Tutte fatte fra il 15 e il 16 agosto 2026. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
@@ -439,7 +461,7 @@ Registrato l'11 agosto. **Non è più l'ordine per dimensione.**
 | 1 | **Pettorali** | 82 | in corso — nomi confermati, migrazione dal 15 agosto |
 | 2 | **Polpacci** | 19 | la più piccola: si chiude in un giro |
 | 3 | **Spalle e Cuffia** | 63 | **anticipata** rispetto alle zone più grosse |
-| 4 | Tricipiti | 61 | |
+| 4 | **Tricipiti** | 62 | **in corso** — lavoro 1 sbloccato il 23 agosto: `prepara.py` classifica 55 collegato · 5 pendente · 2 libero |
 | 5 | Schiena e Trapezio | 112 | |
 | 6 | Mobilità | 215 | |
 

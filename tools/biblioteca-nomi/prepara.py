@@ -40,6 +40,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from impronte import impronte_zona, stampa_consumo  # noqa: E402
 from impronte import leggi_tutto as leggi_tutto_supa  # noqa: E402
 from nomenclatura import nfc, proponi, slug  # noqa: E402
+# Un solo esemplare della riparazione, importato: copiarla qui sarebbe la
+# condizione da cui nasce questa famiglia di difetti — pianifica.py era stato
+# riparato e prepara.py no proprio perche' la logica stava in due posti.
+from pianifica import ponte_480  # noqa: E402
 
 BASE = Path(__file__).parent
 GIF_ROOT = Path(os.environ.get('BIBLIOTECA_ROOT',
@@ -189,6 +193,18 @@ def main():
     # "non c'e' riscontro": il file potrebbe corrispondere proprio all'oggetto mancante.
     incerto = bool(err_bucket) or bool(falliti)
 
+    # Dal 15 agosto 2026 nel bucket ci sono i byte RIDOTTI a 480px, che hanno
+    # un'impronta diversa da quella del file sul Mac per definizione: l'aggancio
+    # per SHA-256 da solo non puo' piu' riuscire. Misurato su Tricipiti: 0 impronte
+    # del Mac su 61 presenti fra quelle del bucket, e 57 righe su 62 uscivano
+    # `libero` con 54 codici vivi che le puntavano. Il legame fra i due artefatti
+    # e' scritto in un posto solo, il piano dei 480px [L35].
+    presenti = {sp for lista in per_sha_bucket.values() for sp in lista}
+    ponte, ponte_sha, quanti = ponte_480(args.zona, presenti)
+    if ponte or ponte_sha:
+        print('  ponte dal piano dei 480px: %d file del Mac collegati al loro'
+              ' oggetto ridotto' % quanti)
+
     # --- i file reali sul disco -------------------------------------------
     files = sorted((nfc(f) for f in os.listdir(cartella) if f.lower().endswith('.gif')),
                    key=str.lower)
@@ -198,7 +214,17 @@ def main():
     for i, f in enumerate(files):
         p = cartella / f
         sha = sha256(p)
+        # Prima l'aggancio per impronta, che resta il criterio [L9]. Se non trova
+        # nulla, il file puo' essere gia' nel bucket in forma RIDOTTA, con
+        # un'impronta diversa: allora lo dice il piano dei 480px, che e' l'unico
+        # posto in cui il legame fra i due artefatti resta scritto.
         paths = per_sha_bucket.get(sha, [])
+        if not paths:
+            # percorso prima (esatto quando vale, e disambigua i contenuti gemelli),
+            # impronta come ripiego dopo che il pannello ha rinominato i file
+            sp = ponte.get(nfc(str(cartella / f))) or ponte_sha.get(sha)
+            if sp:
+                paths = [sp]
         hits = [r for sp in paths for r in per_path.get(sp, [])]
         codici = []
         visti = set()
