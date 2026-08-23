@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-23 alle 17:23.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-23 alle 22:52.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -39,9 +39,9 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 |---|---|---|
 | **Viva** | 634 | un codice la punta e il file c'è — è ciò che l'app mostra |
 | **Rotta** | 0 | un codice la punta ma il file non c'è — **l'app mostra `missing`** |
-| **Libera** | 32 | la GIF c'è ma nessun codice la usa — cantiere 16 |
+| **Libera** | 31 | la GIF c'è ma nessun codice la usa — cantiere 16 |
 | **Morta** | 918 | nessun codice e nessun file — cantiere 3E |
-| TOTALE | 1584 | |
+| TOTALE | 1583 | |
 
 ## Bucket Storage (`biblioteca-gif`)
 
@@ -55,8 +55,8 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 | Polpacci | 19 |
 | Schiena e Trapezio | 96 |
 | Spalle e Cuffia | 63 |
-| Tricipiti | 59 |
-| **TOTALE** | **669** |
+| Tricipiti | 58 |
+| **TOTALE** | **668** |
 
 File nel bucket che nessuna riga indicizza: **3**
 

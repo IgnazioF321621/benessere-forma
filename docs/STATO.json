@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-23T17:23:08",
+ "quando": "2026-08-23T22:52:32",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4309,11 +4309,11 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1584,
-  "slug_distinti": 1584,
+  "righe": 1583,
+  "slug_distinti": 1583,
   "viva": 634,
   "rotta": 0,
-  "libera": 32,
+  "libera": 31,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4343,7 +4343,6 @@
    "plank-inchworm",
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
-   "pushdown-elastico-in-piedi",
    "pushdown-elastico-maniglie-in-piedi",
    "retroversione-bacino-da-supino",
    "superman",
@@ -4352,7 +4351,7 @@
   ]
  },
  "bucket": {
-  "oggetti": 669,
+  "oggetti": 668,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
@@ -4362,7 +4361,7 @@
    "Polpacci": 19,
    "Schiena e Trapezio": 96,
    "Spalle e Cuffia": 63,
-   "Tricipiti": 59
+   "Tricipiti": 58
   },
   "file_senza_riga": [
    "Addominali e Core/Crunch farfalla toe touch (Butterfly Toe-Touch Crunch).gif",
