@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-23 alle 15:04.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-23 alle 17:23.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -12,11 +12,11 @@
 
 | | valore | nota |
 |---|---|---|
-| Righe totali | 688 |  |
-| Ultimo sync | 2026-08-23 13:01 | istante in cui il foglio ha riscritto le righe |
+| Righe totali | 698 |  |
+| Ultimo sync | 2026-08-23 15:16 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
-| Prossimo codice libero | EX702 | da allocare al momento della scrittura, mai in anticipo |
-| Codici con GIF | 624 |  |
+| Prossimo codice libero | EX712 | da allocare al momento della scrittura, mai in anticipo |
+| Codici con GIF | 634 |  |
 | Codici senza GIF | 64 | cantiere 2 |
 | Catene rotte | 0 | gif_slug che non trova riga in biblioteca_gif |
 | Slug su più codici | 0 | guardia "1 codice per slug" |
@@ -27,9 +27,9 @@ Codici bruciati, **mai renumerare**: EX107, EX110, EX139, EX151, EX170, EX176, E
 
 ### Ripartizione
 
-**Per uso**: carry 2 · carry;finisher 2 · finisher 141 · finisher;recupero 1 · finisher;riscaldamento 6 · principale 330 · principale;finisher 141 · principale;finisher;recupero 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 7 · riscaldamento 21 · riscaldamento;finisher 2 · skill 10
+**Per uso**: carry 2 · carry;finisher 2 · finisher 145 · finisher;recupero 1 · finisher;riscaldamento 6 · principale 334 · principale;finisher 141 · principale;finisher;recupero 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 7 · riscaldamento 23 · riscaldamento;finisher 2 · skill 10
 
-**Per livello**: (vuoto) 2 · avanzato 64 · intermedio 260 · intermedio;avanzato 43 · principiante 162 · principiante;intermedio 132 · principiante;intermedio;avanzato 25
+**Per livello**: (vuoto) 2 · avanzato 64 · intermedio 262 · intermedio;avanzato 45 · principiante 165 · principiante;intermedio 135 · principiante;intermedio;avanzato 25
 
 ## Indice delle GIF (`biblioteca_gif`)
 
@@ -37,9 +37,9 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 
 | casella | righe | cosa significa |
 |---|---|---|
-| **Viva** | 624 | un codice la punta e il file c'è — è ciò che l'app mostra |
+| **Viva** | 634 | un codice la punta e il file c'è — è ciò che l'app mostra |
 | **Rotta** | 0 | un codice la punta ma il file non c'è — **l'app mostra `missing`** |
-| **Libera** | 42 | la GIF c'è ma nessun codice la usa — cantiere 16 |
+| **Libera** | 32 | la GIF c'è ma nessun codice la usa — cantiere 16 |
 | **Morta** | 918 | nessun codice e nessun file — cantiere 3E |
 | TOTALE | 1584 | |
 

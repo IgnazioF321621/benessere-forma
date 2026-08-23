@@ -66,7 +66,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **689 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **624 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia**: migrazione delle immagini **chiusa il 23 agosto** — 63 nomi confermati, file rinominati, bucket migrato, 21 righe doppie inserite e poi cancellate dopo il secondo sync; EX408 consolidato in EX057. Resta aperto il **terzo lavoro**, il popolamento del catalogo: **10 GIF della zona non hanno ancora un codice**. Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **634 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Prossima: Tricipiti** (63 file sul Mac, 59 nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -95,7 +95,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - ~~88 righe che nessun pool poteva pescare~~ · ~~2 `gruppo_target` fuori vocabolario~~ · ~~12 righe `principale` senza `gruppo_target`~~ — **tutti e tre chiusi il 22 agosto**, stanati dalla sezione 5 di `verifica_sync.py` il giorno prima. Le 72 `accessorio` e le 16 `uso = isolamento` (queste ultime un travaso della colonna `pattern`) sono rientrate nel vocabolario; i 12 orfani hanno il loro gruppo. La sezione 5 dice ✅ su tutti e quattro i controlli
 - ~~6 righe `cavo → elastico` con `nota_surrogato` ma senza `esecuzione_surrogato` né `errori_surrogato`~~ — **chiuse il 22 agosto sera** col sync delle 50 righe: EX101 · EX140 · EX141 · EX165 · EX182 · EX193 hanno tutti e tre i campi. In tutto il catalogo **0 righe** hanno la nota senza esecuzione o errori, **0** un surrogato uguale all'attrezzo nativo, **0** un surrogato senza nota
 - **11 righe a manubri con `luogo = palestra` che a casa si fanno**, residuo aperto rimisurato il 22 agosto sera: EX002 · EX071 · EX099 · EX212 · EX317 · EX354 · EX358 · EX368 · EX375 · EX392 · EX393. Dieci hanno il surrogato ed entrano dal bypass, quindi il `luogo` impreciso non le blocca — le mostra solo come esercizi da palestra. **EX212 `Jumping pliometrico manubri` è l'unica senza surrogato**, e quella resta fuori davvero. Il sync del 22 agosto sera non le ha toccate: le 8 righe con `casa` aggiunto erano quelle a corpo libero (EX038 · EX072 · EX357 · EX570 · EX599 · EX681 · EX682 · EX683)
-- **Deltoidi posteriori: 1 solo candidato** nel pool casa (EX030 Band pull-apart). Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. Gli altri due gruppi al minimo: **deltoidi anteriori 1** (EX100 Alzate frontali manubri) e **laterali 3**. Il sync del 22 agosto sera non ne ha spostato nessuno: le 35 righe a cavi entrate sono tricipiti, dorsali e bicipiti
+- **Deltoidi posteriori: 1 solo candidato** nel pool casa (EX030 Band pull-apart). Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. **Spalle e Cuffia ha alzato gli altri due**: laterali da 3 a **4** (EX703) e anteriori da 1 a **2** (EX702). I posteriori no, ed era prevedibile: fra le 10 GIF della zona non c'era una sola apertura all'indietro. Il gruppo si riempirà semmai da **Schiena e Trapezio**
 
 ---
 
@@ -142,7 +142,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**688 righe** (23 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX702**. RLS SELECT pubblica. PK logica = `codice`.
+**698 righe** (23 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX712**. RLS SELECT pubblica. PK logica = `codice`.
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
@@ -181,7 +181,7 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.584 righe** (23 agosto 2026): 624 vive, 0 rotte, 42 libere, **918 morte** (cantiere 3E). Le 21 righe doppie di Spalle e Cuffia e la riga morta di EX408 sono state cancellate il 23 agosto, dopo il secondo sync e dopo aver verificato che i 53 codici della zona risolvessero tutti. Le 918 morte hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.584 righe** (23 agosto 2026): 634 vive, 0 rotte, 32 libere, **918 morte** (cantiere 3E). Le 10 libere in meno sono le GIF di Spalle e Cuffia diventate EX702-EX711. Le 21 righe doppie di Spalle e Cuffia e la riga morta di EX408 sono state cancellate il 23 agosto, dopo il secondo sync e dopo aver verificato che i 53 codici della zona risolvessero tutti. Le 918 morte hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
 Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
@@ -220,7 +220,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**624/624 `gif_slug` risolvono, 0 rotti** (23 agosto). 64 codici senza slug → fallback ExerciseDB.
+**634/634 `gif_slug` risolvono, 0 rotti** (23 agosto). 64 codici senza slug → fallback ExerciseDB.
 
 ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
 ⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
@@ -364,11 +364,11 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ **chiuse** → **Spalle e Cuffia** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ **chiuse** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
 
 L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
 
-Non è più l'ordine per dimensione. **Spalle e Cuffia è anticipata** rispetto alle zone più grosse perché contiene i gruppi più poveri del pool: deltoidi posteriori **1 solo candidato**, anteriori **1**, laterali **3**. È il cantiere che cambia davvero l'allenamento.
+Non era più l'ordine per dimensione: **Spalle e Cuffia era stata anticipata** rispetto alle zone più grosse perché conteneva i gruppi più poveri del pool — deltoidi posteriori 1 candidato, anteriori 1, laterali 3. **La scommessa ha pagato a metà**: chiusa il 23 agosto, ha portato i laterali a 4 e gli anteriori a 2, ma non ha aggiunto un solo deltoide posteriore. Quel gruppo resta a 1 e va cercato altrove, verosimilmente in **Schiena e Trapezio**.
 
 ### Regole cantiere GIF (riconciliazione a tre fonti)
 
@@ -492,7 +492,9 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **176 dei 397 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **261 delle 559 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **300 su 689** *(misurato il 22 agosto, dopo il sync delle 50 righe)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **688 righe, 23 agosto**): `poolPrincipali` **397** · `poolFinisher` **237** · `poolRiscaldamento` **45** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Righe ammesse dai tre filtri: **559 su 688**. Il consolidamento di EX408 non l'ha spostata: era `finisher` e `luogo = palestra` senza surrogato, quindi dal profilo casa non entrava in nessun pool. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **698 righe, 23 agosto sera**): `poolPrincipali` **401** · `poolFinisher` **240** · `poolRiscaldamento` **47** · pool core **64 pescabili su 64 ammessi** · `poolCarry` **1**. Righe ammesse dai tre filtri: **568 su 698**.
+
+**Cosa l'ha spostata**: le 10 righe nuove di Spalle e Cuffia (EX702-EX711), quasi tutte a elastico o corpo libero, quindi quasi tutte ammesse a casa — **+4 principali · +3 finisher · +2 riscaldamento**. Il consolidamento di EX408 invece non l'aveva spostata: era `finisher` e `luogo = palestra` senza surrogato, e dal profilo casa non entrava in nessun pool. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
 
 **Cosa l'ha spostata**: il sync delle 50 righe del 22 agosto sera — 35 righe a cavi con surrogato `elastico` nuovo e 8 righe a corpo libero con `casa` aggiunto al `luogo`. Lo scarto torna per intero e si attribuisce riga per riga: **+21 principali** (18 dalle cavi, 3 dalle otto) · **+23 finisher** (tutte dalle cavi) · **+1 riscaldamento** (EX599 Corsa falcata lunga) · **+42 ammesse**. Delle 8 righe, tre — EX570, EX681, EX683 — hanno `uso = skill` e restano fuori da ogni pool per regola. Core e carry non si muovono.
 
@@ -510,7 +512,7 @@ Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza a
 
 ⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
-**I gruppi più poveri del pool non sono nelle gambe.** Con 688 righe restano, nel `poolPrincipali`: deltoidi posteriori **1 candidato**, deltoidi anteriori **1**, laterali **3**, adduttori 5, avambracci 7, ischiocrurali 7. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno, e nemmeno il sync del 22 agosto sera — il cantiere che cambia davvero l'allenamento è **Spalle e Cuffia**, non la zona più grossa.
+**I gruppi più poveri del pool non sono nelle gambe.** Con 698 righe restano, nel `poolPrincipali`: deltoidi posteriori **1 candidato**, deltoidi anteriori **2**, adduttori 5, laterali 4, avambracci 7, ischiocrurali 7. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno; **Spalle e Cuffia, che era stata anticipata proprio per questo, ha alzato laterali e anteriori ma non i posteriori** — nessuna delle sue 10 GIF nuove è un'apertura all'indietro.
 
 ⚠️ **Il candidato si conta sui pescabili, non sulle righe col gruppo giusto — e per i deltoidi anteriori i due numeri differiscono di sei volte.** `_trainGenPickIsoByGruppoTarget` scarta tutto ciò che non ha `pattern` `isolamento` o `core`, prima ancora di guardare il `gruppo_target`. I deltoidi anteriori hanno **6 righe** nel `poolPrincipali` ma **1 sola pescabile**: le altre cinque — EX006, EX074, EX425, EX571, EX572 — sono `spinta verticale`, e lo slot di isolamento non le vede. Contare le righe col gruppo giusto dice 6 e fa sembrare il gruppo sano; è lo stesso errore di lettura di [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse), su un campo diverso.
 

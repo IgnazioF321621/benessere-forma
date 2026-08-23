@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-23T15:04:37",
+ "quando": "2026-08-23T17:23:08",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4128,14 +4128,74 @@
    "nome": "Piegamenti un braccio palla medica",
    "gif_slug": "piegamenti-un-braccio-palla-medica",
    "livello": "avanzato"
+  },
+  {
+   "codice": "EX702",
+   "nome": "Alzate diagonali inclinate elastico",
+   "gif_slug": "alzate-diagonali-inclinate-elastico",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX703",
+   "nome": "Alzate diagonali un braccio elastico gomito 90 gradi",
+   "gif_slug": "alzate-diagonali-un-braccio-elastico-gomito-90-gradi",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX704",
+   "nome": "Alzate laterali isometriche",
+   "gif_slug": "alzate-laterali-isometriche",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX705",
+   "nome": "Incroci braccia",
+   "gif_slug": "incroci-braccia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX706",
+   "nome": "Lento avanti elastico seduto",
+   "gif_slug": "lento-avanti-elastico-seduto",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX707",
+   "nome": "Lento avanti isometrico",
+   "gif_slug": "lento-avanti-isometrico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX708",
+   "nome": "Lento dietro barra elastico",
+   "gif_slug": "lento-dietro-barra-elastico",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX709",
+   "nome": "Lento dietro un braccio elastico",
+   "gif_slug": "lento-dietro-un-braccio-elastico",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX710",
+   "nome": "Squat con lancio palla un braccio",
+   "gif_slug": "squat-con-lancio-palla-un-braccio",
+   "livello": "intermedio;avanzato"
+  },
+  {
+   "codice": "EX711",
+   "nome": "Squat croce di ferro manubri",
+   "gif_slug": "squat-croce-di-ferro-manubri",
+   "livello": "intermedio"
   }
  ],
  "catalogo": {
-  "righe": 688,
-  "ultimo_sync": "2026-08-23T13:01:47.775000+00:00",
+  "righe": 698,
+  "ultimo_sync": "2026-08-23T15:16:35.063000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX702",
+  "prossimo_codice_libero": "EX712",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4151,7 +4211,7 @@
    "EX408",
    "EX528"
   ],
-  "con_gif_slug": 624,
+  "con_gif_slug": 634,
   "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4223,14 +4283,14 @@
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
    "principale;finisher": 141,
-   "principale": 330,
-   "finisher": 141,
+   "principale": 334,
+   "finisher": 145,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
    "principale;recupero": 2,
    "finisher;riscaldamento": 6,
-   "riscaldamento": 21,
+   "riscaldamento": 23,
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
@@ -4239,11 +4299,11 @@
    "skill": 10
   },
   "per_livello": {
-   "intermedio": 260,
-   "principiante": 162,
+   "intermedio": 262,
+   "principiante": 165,
    "avanzato": 64,
-   "intermedio;avanzato": 43,
-   "principiante;intermedio": 132,
+   "intermedio;avanzato": 45,
+   "principiante;intermedio": 135,
    "principiante;intermedio;avanzato": 25,
    "(vuoto)": 2
   }
@@ -4251,15 +4311,12 @@
  "biblioteca_gif": {
   "righe": 1584,
   "slug_distinti": 1584,
-  "viva": 624,
+  "viva": 634,
   "rotta": 0,
-  "libera": 42,
+  "libera": 32,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
-   "alzate-diagonali-inclinate-elastico",
-   "alzate-diagonali-un-braccio-elastico-gomito-90-gradi",
-   "alzate-laterali-isometriche",
    "bird-dog",
    "croci-inverse-elastico-busto-flesso",
    "croci-inverse-elastico-maniglie-busto-flesso",
@@ -4275,16 +4332,11 @@
    "flessione-laterale-cavo-basso",
    "french-press-elastico-in-piedi",
    "french-press-elastico-maniglie-panca-piana",
-   "incroci-braccia",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
    "lat-machine-elastico-maniglie-in-ginocchio",
    "leg-curl-bilaterale-macchina-seduta",
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
-   "lento-avanti-elastico-seduto",
-   "lento-avanti-isometrico",
-   "lento-dietro-barra-elastico",
-   "lento-dietro-un-braccio-elastico",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
    "plank-ginocchio-petto-apertura",
@@ -4294,8 +4346,6 @@
    "pushdown-elastico-in-piedi",
    "pushdown-elastico-maniglie-in-piedi",
    "retroversione-bacino-da-supino",
-   "squat-con-lancio-palla-un-braccio",
-   "squat-croce-di-ferro-manubri",
    "superman",
    "swimming-prono",
    "torsione-busto-gomiti-alti-in-piedi"
