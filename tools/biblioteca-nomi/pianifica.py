@@ -104,17 +104,50 @@ def ponte_480(zona, presenti):
     Si tengono solo le voci il cui oggetto e' DAVVERO nel bucket: il piano dei
     480px elenca anche cio' che si deve ancora caricare, e quelle righe devono
     continuare a risultare `nuova`, perche' lo sono.
+
+    DUE INDICI, non uno (22 agosto 2026)
+    ------------------------------------
+    `origine_mac` e' un PERCORSO, e il primo lavoro del cantiere e' rinominare i
+    file sul Mac: appena il pannello applica le rinomine, quel percorso non esiste
+    piu'. Misurato su Spalle e Cuffia subito dopo le 62 rinomine: 3 origine_mac
+    valide su 63, e 61 righe uscite `nuova` con 33 collisioni di slug. E' la stessa
+    causa gia' scritta per le cache delle impronte — «mai indicizzare sul percorso:
+    il cantiere rinomina» — che qui era rimasta.
+
+    Il ripiego e' l'impronta: `sha256_bucket_ora` e' l'impronta del file PRIMA
+    della riduzione, cioe' quella che il file sul Mac ha ancora, perche' la
+    rinomina cambia il nome e non i byte.
+
+    I due indici servono entrambi e non si sostituiscono:
+      - il percorso e' esatto quando e' valido, e disambigua due oggetti che hanno
+        lo stesso contenuto (Addominali ne ha 8, Gambe 3);
+      - i piani piu' vecchi non hanno `sha256_bucket_ora` — Pettorali, 82 voci su
+        82 — perche' quella zona e' entrata nel bucket gia' ridotta e un "bucket
+        ora" non c'era: li' funziona solo il percorso.
+
+    Un'impronta che porta a DUE storage_path diversi non aggancia niente: nel
+    dubbio la riga resta `nuova` e la si guarda, che e' il ripiego prudente di
+    [L10], non quello silenzioso.
     """
     p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
     if not p.exists():
-        return {}, 0
+        return {}, {}, 0
     voci = json.loads(p.read_text(encoding='utf-8'))['voci']
-    ponte = {}
+    ponte, per_impronta, ambigue = {}, {}, set()
     for v in voci:
         sp = nfc(v['storage_path'])
-        if v.get('origine_mac') and sp in presenti:
+        if sp not in presenti:
+            continue
+        if v.get('origine_mac'):
             ponte[nfc(v['origine_mac'])] = sp
-    return ponte, len(ponte)
+        s = v.get('sha256_bucket_ora')
+        if s:
+            if s in per_impronta and per_impronta[s] != sp:
+                ambigue.add(s)
+            per_impronta[s] = sp
+    for s in ambigue:
+        per_impronta.pop(s, None)
+    return ponte, per_impronta, len(set(ponte.values()) | set(per_impronta.values()))
 
 
 def main():
@@ -131,8 +164,8 @@ def main():
     if falliti:
         sys.exit('%d oggetti senza impronta: piano non costruibile' % len(falliti))
     presenti = {p for lista in per_sha.values() for p in lista}
-    ponte, quanti = ponte_480(Z, presenti)
-    if ponte:
+    ponte, ponte_sha, quanti = ponte_480(Z, presenti)
+    if ponte or ponte_sha:
         print('  ponte dal piano dei 480px: %d file del Mac collegati al loro'
               ' oggetto ridotto' % quanti)
 
@@ -167,7 +200,9 @@ def main():
         # posto in cui il legame fra i due artefatti resta scritto.
         paths = per_sha.get(sha, [])
         if not paths:
-            sp = ponte.get(nfc(str(cartella / f)))
+            # percorso prima (esatto quando vale, e disambigua i contenuti gemelli),
+            # impronta come ripiego dopo che il pannello ha rinominato i file
+            sp = ponte.get(nfc(str(cartella / f))) or ponte_sha.get(sha)
             if sp:
                 paths = [sp]
         bib_rows = [r for p in paths for r in per_path.get(p, [])]
