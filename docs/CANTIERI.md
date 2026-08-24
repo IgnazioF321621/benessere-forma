@@ -268,26 +268,36 @@ Non toccati durante la ricompressione, per scelta: e' materia del [cantiere 4](#
 
 **Body**: nessuna stringa del modulo nominava il coach, quindi non c'è un quarto giro da fare.
 
-## 29. Mesociclo 5+1 — la riga a sei card non ci sta su mobile
-*Aperto il 24 agosto 2026, subito dopo il passaggio del ciclo da 4 a 6 settimane.*
+## 29. Mesociclo 5+1 — la riga del ciclo a sei card — ✅ chiuso 24 agosto
+*Aperto e chiuso il 24 agosto 2026. Il ciclo era passato a 5 carico + 1 scarico; il layout della card «Ciclo · 6 settimane» era rimasto indietro.*
 
-Il ciclo è passato a **5 carico + 1 scarico**: calcolo, checkpoint Body, testi e barra della hero sono tutti a sei. Resta aperta **una sola cosa, ed è di layout**: la card «Ciclo · 6 settimane» dispone le settimane in una riga sola, `display:flex` con `gap:8px` e ogni card `flex:1`. Con quattro card funzionava; con sei no.
+**Il problema.** Le settimane stavano in una riga sola, `display:flex; gap:8px` con ogni card `flex:1`. Con quattro card funzionava; con sei restavano **38,5 px di testo per card** su un iPhone da 375 px (343 utili − 40 di gap = 303 ÷ 6 = 50,5, meno il `padding:11px 6px`). Quattro etichette su sei traboccavano: `Scarico`, `+1 rep`, `+1 set` e `−40% vol`, quest'ultima di un terzo abbondante.
 
-**La misura, non l'impressione.** Il contenitore ha `padding:16px`. Su un iPhone da 375 px restano 343 px, meno 5 gap da 8 = 303, diviso 6 = **50,5 px a card**; tolto il `padding:11px 6px` restano **38,5 px di testo**. Contro quello che le card devono scrivere:
+**La scelta: due righe da tre.** Il contenitore diventa una griglia, le card non cambiano di una virgola — stesso markup, stesso `padding:11px 6px`, stessi stili. Via il `flex:1` dalla card, che in griglia non serve.
 
-| testo | font | larghezza stimata |
+```
+display:grid; grid-template-columns:repeat(3,1fr); column-gap:8px; row-gap:14px;
+```
+
+⚠️ **`row-gap` è 14 e non 8, e non è estetica.** Il badge «QUI» della settimana attiva è in `position:absolute` con `top:0; transform:translate(-50%,-50%)`: sporge di metà della propria altezza **sopra** il bordo della card. Con `row-gap:8` il badge di una card della seconda riga finirebbe addosso alle card della prima. Misurato: badge alto 16,0 px, quindi 8 px sopra il bordo, e con `row-gap:14` restano **6,0 px** di distanza dal bordo inferiore della card sopra. È il margine che quel numero compra: chi lo abbassa a 8 riporta la sovrapposizione.
+
+**Le due alternative scartate.**
+- **Scorrimento orizzontale con card a larghezza fissa.** Nasconde metà del ciclo dietro un gesto: la card serve a far vedere *dove si è dentro le sei settimane*, e una vista che non le mostra tutte insieme perde il suo unico scopo.
+- **Card in colonna, una per riga.** Sei righe alte per sei parole: mangia mezza schermata e allontana la sezione «Come cresci» sotto. La griglia 3×2 occupa due righe e resta sopra la piega.
+
+**Come è stata verificata.** Non a occhio: banco di prova in Chrome headless con **i font veri** (Syne 800 e JetBrains Mono caricati e confermati da `document.fonts.check`), con il markup della card **estratto dal sorgente e confrontato carattere per carattere** con quello dell'app — se il banco misurasse una card diversa, non misurerebbe niente. Otto casi: 375 px e 393 px × settimana attiva 1, 4, 5, 6.
+
+| | 375 px | 393 px |
 |---|---|---|
-| `SETT 1` | 9 px mono | ~32 px ✅ |
-| `Carico` | 10 px mono | ~36 px — al limite |
-| `Scarico` | 10 px mono | ~42 px ❌ |
-| `+1 rep` · `+1 set` | 11 px Syne 800 | ~41 px ❌ |
-| `−40% vol` | 11 px Syne 800 | ~54 px ❌ |
+| larghezza card | 109,0 px | 115,0 px |
+| etichette a capo o traboccate | **0** | **0** |
+| margine residuo dell'etichetta più stretta (`−40% vol`) | **22,2 px** | **28,2 px** |
+| distanza badge «QUI» / card della riga sopra (attiva S4, S5, S6) | **6,0 px** | **6,0 px** |
+| griglia dentro lo spazio utile | 343,0 in 343,0 ✅ | 361,0 in 361,0 ✅ |
 
-Quattro etichette su sei traboccano o vanno a capo, e `−40% vol` di un terzo abbondante. Su 393 px il conto migliora di 3 px a card: non cambia niente.
+L'`active` sulle settimane 4, 5 e 6 è stato forzato **nel banco, non nel sorgente**: così non c'è nessun ripristino da ricordarsi di fare.
 
-**Il layout non è stato deciso in questo giro, per istruzione esplicita.** Le strade sono almeno tre e sono scelte di prodotto, non di codice: due righe da tre · scorrimento orizzontale con le card a larghezza fissa · card più basse in colonna. Va guardata a schermo prima di sceglierne una.
-
-Il resto del ciclo a 6 è in produzione e non dipende da questa decisione.
+**La barra a segmenti della hero non è stata toccata**: sono sei rettangoli senza testo, e a 375 px stanno larghi.
 
 ## 24. Striscia settimanale cieca sullo storico — ✅ chiuso 9 agosto (`2b2fe95`)
 **Il titolo di questa voce era sbagliato, e con esso la diagnosi.** Non era «cieca a cavallo di mese»: era cieca su **qualunque settimana precedente al mese corrente**, per intero.

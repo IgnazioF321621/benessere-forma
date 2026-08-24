@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.24 · 04:23';
+const APP_VERSION = '2026.08.24 · 04:34';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -14280,7 +14280,7 @@ function renderTraining(){
     const cycleCards = CYCLE_WEEKS.map((w,i)=>{
       const phase = w.type === 'SCARICO' ? 'Scarico' : 'Carico';
       return `
-      <div style="flex:1;border-radius:var(--r-md,12px);padding:11px 6px;text-align:center;position:relative;
+      <div style="border-radius:var(--r-md,12px);padding:11px 6px;text-align:center;position:relative;
         background:${w.active?'var(--acc)':w.type==='SCARICO'?'#F0F4F0':'var(--s1,#fff)'};
         box-shadow:${w.active?'0 2px 8px rgba(42,122,111,.25)':'0 1px 3px rgba(0,0,0,.06)'};
         border:${w.active?'none':'1px solid var(--s2)'};
@@ -14296,7 +14296,7 @@ function renderTraining(){
       <div>
         <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 6 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">SETTIMANA ${activeWeekNum} · ${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
-        <div style="display:flex;gap:8px;">${cycleCards}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);column-gap:8px;row-gap:14px;">${cycleCards}</div>
       </div>`;
 
     // ── 4 · COME CRESCI (progressione doppia, collassabile) ──
