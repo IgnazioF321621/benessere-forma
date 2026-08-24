@@ -218,6 +218,18 @@ Il pannello si sarebbe aperto dichiarando **libere 57 GIF di cui 54 puntate da u
 
 ⚠️ **Gli altri chiamanti non sono stati verificati.** Questo passo ha toccato `prepara.py` e basta. Chiunque altro agganci Mac↔bucket per impronta ha lo stesso difetto finché non importa `ponte_480`.
 
+### ⚠️ Tricipiti — la decisione del 24 agosto 03:08 su `e1ec80e2c7dc` non è una scelta viva
+
+**Il registro delle conferme è append-only e non si invalida: sta scritto qui perché nessuno la rilegga come decisione.**
+
+Alle 03:08 del 24 agosto la GIF `e1ec80e2c7dc` — *French press* a barra sotto il piede — è stata riconfermata al pannello come **«French press elastico barra piedi in piedi»**, slug `french-press-elastico-barra-piedi-in-piedi`. **Non era un cambio di decisione**: era la manovra per sbloccare il salvataggio al pannello, che rifiutava la rinomina perché due impronte rivendicavano lo stesso nome — il log ne conta **sette tentativi falliti** fra le 22:00 e le 22:38, tutti `saltato` o `errore`.
+
+La decisione vera è quella eseguita poche ore dopo: **quella GIF esce**. Stesso movimento della GIF a maniglie, attrezzo diverso, e Ignazio ha scelto di tenerne una sola. Riga, oggetto e file Mac sono stati eliminati il 24 agosto; lo slug `french-press-elastico-in-piedi` appartiene ora alla GIF a maniglie, `501696ada650`.
+
+Chi rilegge `registro_decisioni.tsv` trova ancora quella riga, ed è giusto che la trovi — è la traccia di cosa fu fatto e quando. **Ma non descrive un esercizio che esiste**: la GIF non c'è più, in nessuna delle tre fonti. Lo slug `french-press-elastico-barra-piedi-in-piedi` non è mai entrato in `biblioteca_gif` e non deve entrarci.
+
+⚠️ **Il caso vale oltre sé stesso.** Una conferma data per aggirare un blocco tecnico è indistinguibile, nel registro, da una conferma data guardando la GIF — stesso formato, stessa colonna `origine`. Finché il registro non distingue le due cose, l'unico posto dove la differenza resta scritta è qui.
+
 ### Ordine delle zone che restano
 
 Tutte fatte fra il 15 e il 16 agosto 2026. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
