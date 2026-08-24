@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-24T04:06:57",
+ "quando": "2026-08-24T16:28:15",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -159,8 +159,8 @@
   },
   {
    "codice": "EX027",
-   "nome": "French press bilanciere supino panca piana",
-   "gif_slug": "french-press-bilanciere-supino-panca-piana",
+   "nome": "French press bilanciere panca piana",
+   "gif_slug": "french-press-bilanciere-panca-piana",
    "livello": "intermedio"
   },
   {
@@ -3033,8 +3033,8 @@
   },
   {
    "codice": "EX518",
-   "nome": "Estensioni corda cavo alto dietro nuca busto flesso",
-   "gif_slug": "estensioni-corda-cavo-alto-dietro-nuca-busto-flesso",
+   "nome": "Estensioni corda cavo alto busto flesso",
+   "gif_slug": "estensioni-corda-cavo-alto-busto-flesso",
    "livello": "principiante;intermedio"
   },
   {
@@ -3057,14 +3057,14 @@
   },
   {
    "codice": "EX522",
-   "nome": "Estensioni maniglia cavo alto un braccio traverso",
-   "gif_slug": "estensioni-maniglia-cavo-alto-un-braccio-traverso",
+   "nome": "Estensioni cavo alto un braccio traverso",
+   "gif_slug": "estensioni-cavo-alto-un-braccio-traverso",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX523",
-   "nome": "Estensioni maniglia cavo basso un braccio dietro nuca",
-   "gif_slug": "estensioni-maniglia-cavo-basso-un-braccio-dietro-nuca",
+   "nome": "Estensioni cavo basso un braccio dietro nuca",
+   "gif_slug": "estensioni-cavo-basso-un-braccio-dietro-nuca",
    "livello": "principiante;intermedio"
   },
   {
@@ -3087,32 +3087,32 @@
   },
   {
    "codice": "EX527",
-   "nome": "French press sbarra cavo supino panca inclinata",
-   "gif_slug": "french-press-sbarra-cavo-supino-panca-inclinata",
+   "nome": "French press sbarra cavo basso panca inclinata",
+   "gif_slug": "french-press-sbarra-cavo-basso-panca-inclinata",
    "livello": "intermedio"
   },
   {
    "codice": "EX529",
-   "nome": "French press bilanciere EZ supino panca inclinata",
-   "gif_slug": "french-press-bilanciere-ez-supino-panca-inclinata",
+   "nome": "French press bilanciere EZ panca inclinata",
+   "gif_slug": "french-press-bilanciere-ez-panca-inclinata",
    "livello": "intermedio"
   },
   {
    "codice": "EX530",
-   "nome": "French press bilanciere presa inversa supino panca piana",
-   "gif_slug": "french-press-bilanciere-presa-inversa-supino-panca-piana",
+   "nome": "French press bilanciere presa inversa panca piana",
+   "gif_slug": "french-press-bilanciere-presa-inversa-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX531",
-   "nome": "French press manubri dietro nuca supino panca piana",
-   "gif_slug": "french-press-manubri-dietro-nuca-supino-panca-piana",
+   "nome": "French press manubrio panca piana",
+   "gif_slug": "french-press-manubrio-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX532",
-   "nome": "French press manubri presa neutra supino panca piana",
-   "gif_slug": "french-press-manubri-presa-neutra-supino-panca-piana",
+   "nome": "French press manubri presa neutra panca piana",
+   "gif_slug": "french-press-manubri-presa-neutra-panca-piana",
    "livello": "intermedio"
   },
   {
@@ -3123,50 +3123,50 @@
   },
   {
    "codice": "EX534",
-   "nome": "French press manubri supino panca inclinata",
-   "gif_slug": "french-press-manubri-supino-panca-inclinata",
+   "nome": "French press manubrio panca inclinata",
+   "gif_slug": "french-press-manubrio-panca-inclinata",
    "livello": "intermedio"
   },
   {
    "codice": "EX535",
-   "nome": "French press manubrio supino di traverso panca piana",
-   "gif_slug": "french-press-manubrio-supino-di-traverso-panca-piana",
+   "nome": "French press manubrio traverso panca piana",
+   "gif_slug": "french-press-manubrio-traverso-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX536",
-   "nome": "French press manubrio un braccio supino panca piana",
-   "gif_slug": "french-press-manubrio-un-braccio-supino-panca-piana",
+   "nome": "French press manubrio un braccio panca piana",
+   "gif_slug": "french-press-manubrio-un-braccio-panca-piana",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX537",
-   "nome": "French press manubrio un braccio traverso supino panca piana",
-   "gif_slug": "french-press-manubrio-un-braccio-traverso-supino-panca-piana",
+   "nome": "French press manubrio un braccio traverso panca piana",
+   "gif_slug": "french-press-manubrio-un-braccio-traverso-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX538",
-   "nome": "French press sbarra cavo supino panca piana",
-   "gif_slug": "french-press-sbarra-cavo-supino-panca-piana",
+   "nome": "French press sbarra cavo panca piana",
+   "gif_slug": "french-press-sbarra-cavo-panca-piana",
    "livello": "intermedio"
   },
   {
    "codice": "EX539",
-   "nome": "Kickback maniglia cavo presa inversa un braccio busto flesso",
-   "gif_slug": "kickback-maniglia-cavo-presa-inversa-un-braccio-busto-flesso",
+   "nome": "Kickback cavo un braccio presa inversa busto flesso",
+   "gif_slug": "kickback-cavo-un-braccio-presa-inversa-busto-flesso",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX540",
-   "nome": "Kickback maniglia cavo un braccio busto flesso",
-   "gif_slug": "kickback-maniglia-cavo-un-braccio-busto-flesso",
+   "nome": "Kickback cavo un braccio busto flesso",
+   "gif_slug": "kickback-cavo-un-braccio-busto-flesso",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX541",
-   "nome": "Kickback maniglie cavo busto flesso",
-   "gif_slug": "kickback-maniglie-cavo-busto-flesso",
+   "nome": "Kickback cavo busto flesso",
+   "gif_slug": "kickback-cavo-busto-flesso",
    "livello": "principiante;intermedio"
   },
   {
@@ -3201,8 +3201,8 @@
   },
   {
    "codice": "EX547",
-   "nome": "Piegamenti muro",
-   "gif_slug": "piegamenti-muro",
+   "nome": "Piegamenti al muro",
+   "gif_slug": "piegamenti-al-muro",
    "livello": "principiante"
   },
   {
@@ -3231,20 +3231,20 @@
   },
   {
    "codice": "EX552",
-   "nome": "Pushdown maniglia cavo presa inversa un braccio",
-   "gif_slug": "pushdown-maniglia-cavo-presa-inversa-un-braccio",
+   "nome": "Pushdown cavo un braccio presa inversa",
+   "gif_slug": "pushdown-cavo-un-braccio-presa-inversa",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX553",
-   "nome": "Pushdown maniglia cavo un braccio in ginocchio",
-   "gif_slug": "pushdown-maniglia-cavo-un-braccio-in-ginocchio",
+   "nome": "Pushdown cavo un braccio in ginocchio",
+   "gif_slug": "pushdown-cavo-un-braccio-in-ginocchio",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX554",
-   "nome": "Pushdown maniglia cavo un braccio",
-   "gif_slug": "pushdown-maniglia-cavo-un-braccio",
+   "nome": "Pushdown cavo un braccio",
+   "gif_slug": "pushdown-cavo-un-braccio",
    "livello": "principiante;intermedio"
   },
   {
@@ -3423,8 +3423,8 @@
   },
   {
    "codice": "EX584",
-   "nome": "Piegamenti presa stretta ginocchia",
-   "gif_slug": "piegamenti-presa-stretta-ginocchia",
+   "nome": "Piegamenti presa stretta ginocchia a terra",
+   "gif_slug": "piegamenti-presa-stretta-ginocchia-a-terra",
    "livello": "principiante"
   },
   {
@@ -4192,7 +4192,7 @@
  ],
  "catalogo": {
   "righe": 698,
-  "ultimo_sync": "2026-08-23T15:16:35.063000+00:00",
+  "ultimo_sync": "2026-08-24T13:30:38.460000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX712",
@@ -4309,11 +4309,11 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1583,
-  "slug_distinti": 1583,
+  "righe": 1584,
+  "slug_distinti": 1584,
   "viva": 634,
   "rotta": 0,
-  "libera": 31,
+  "libera": 32,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4331,7 +4331,7 @@
    "estensione-tricipiti-elastico-busto-flesso",
    "flessione-laterale-cavo-basso",
    "french-press-elastico-in-piedi",
-   "french-press-elastico-maniglie-panca-piana",
+   "french-press-elastico-panca-piana",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
    "lat-machine-elastico-maniglie-in-ginocchio",
@@ -4339,11 +4339,12 @@
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
+   "piegamenti-mani-ruotate-all-indietro",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
-   "pushdown-elastico-maniglie-in-piedi",
+   "pushdown-cavi-in-piedi",
    "retroversione-bacino-da-supino",
    "superman",
    "swimming-prono",
@@ -4351,7 +4352,7 @@
   ]
  },
  "bucket": {
-  "oggetti": 668,
+  "oggetti": 669,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
@@ -4361,7 +4362,7 @@
    "Polpacci": 19,
    "Schiena e Trapezio": 96,
    "Spalle e Cuffia": 63,
-   "Tricipiti": 58
+   "Tricipiti": 59
   },
   "file_senza_riga": [
    "Addominali e Core/Crunch farfalla toe touch (Butterfly Toe-Touch Crunch).gif",
