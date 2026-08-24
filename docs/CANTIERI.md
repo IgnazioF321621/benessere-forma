@@ -268,6 +268,27 @@ Non toccati durante la ricompressione, per scelta: e' materia del [cantiere 4](#
 
 **Body**: nessuna stringa del modulo nominava il coach, quindi non c'è un quarto giro da fare.
 
+## 29. Mesociclo 5+1 — la riga a sei card non ci sta su mobile
+*Aperto il 24 agosto 2026, subito dopo il passaggio del ciclo da 4 a 6 settimane.*
+
+Il ciclo è passato a **5 carico + 1 scarico**: calcolo, checkpoint Body, testi e barra della hero sono tutti a sei. Resta aperta **una sola cosa, ed è di layout**: la card «Ciclo · 6 settimane» dispone le settimane in una riga sola, `display:flex` con `gap:8px` e ogni card `flex:1`. Con quattro card funzionava; con sei no.
+
+**La misura, non l'impressione.** Il contenitore ha `padding:16px`. Su un iPhone da 375 px restano 343 px, meno 5 gap da 8 = 303, diviso 6 = **50,5 px a card**; tolto il `padding:11px 6px` restano **38,5 px di testo**. Contro quello che le card devono scrivere:
+
+| testo | font | larghezza stimata |
+|---|---|---|
+| `SETT 1` | 9 px mono | ~32 px ✅ |
+| `Carico` | 10 px mono | ~36 px — al limite |
+| `Scarico` | 10 px mono | ~42 px ❌ |
+| `+1 rep` · `+1 set` | 11 px Syne 800 | ~41 px ❌ |
+| `−40% vol` | 11 px Syne 800 | ~54 px ❌ |
+
+Quattro etichette su sei traboccano o vanno a capo, e `−40% vol` di un terzo abbondante. Su 393 px il conto migliora di 3 px a card: non cambia niente.
+
+**Il layout non è stato deciso in questo giro, per istruzione esplicita.** Le strade sono almeno tre e sono scelte di prodotto, non di codice: due righe da tre · scorrimento orizzontale con le card a larghezza fissa · card più basse in colonna. Va guardata a schermo prima di sceglierne una.
+
+Il resto del ciclo a 6 è in produzione e non dipende da questa decisione.
+
 ## 24. Striscia settimanale cieca sullo storico — ✅ chiuso 9 agosto (`2b2fe95`)
 **Il titolo di questa voce era sbagliato, e con esso la diagnosi.** Non era «cieca a cavallo di mese»: era cieca su **qualunque settimana precedente al mese corrente**, per intero.
 

@@ -3529,7 +3529,7 @@ body.preview-onboarding #m1-preview-banner{display:block;}
       <div class="onb-field">
         <label>Data inizio programma</label>
         <input id="set-train-start" class="inp inp-sm" type="date" placeholder="YYYY-MM-DD"/>
-        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Usata per calcolare la settimana corrente nel ciclo 4 settimane (3 carico + 1 scarico).</div>
+        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Usata per calcolare la settimana corrente nel ciclo 6 settimane (5 carico + 1 scarico).</div>
       </div>
       <div class="onb-field" style="margin-top:10px;">
         <label>Giorni di allenamento a settimana</label>
@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.19 · 21:13';
+const APP_VERSION = '2026.08.24 · 04:23';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6903,7 +6903,7 @@ function versionFooter(){
 function renderHome(){ renderHomeV2(); }
 
 // Calcola il "prossimo checkpoint" Body partendo dall'ultimo check fisico completato.
-// Frequenza checkpoint: 28 giorni (decisione "ogni 4 settimane"). Sorgente: timeline unificata
+// Frequenza checkpoint: 42 giorni (decisione "ogni 6 settimane"). Sorgente: timeline unificata
 // filtrata per source='check' (solo body_measurements, che esistono solo per check_id completati).
 function getNextCheckpointInfo(){
   if(ST.bodyMeasurements === null || ST.bodyMeasurements === undefined){
@@ -6916,19 +6916,19 @@ function getNextCheckpointInfo(){
   }
   checks.sort((a,b) => b._ts - a._ts);
   const lastTs = checks[0]._ts;
-  const nextTs = lastTs + 28 * 24 * 60 * 60 * 1000;
+  const nextTs = lastTs + 42 * 24 * 60 * 60 * 1000;
   const daysUntil = Math.ceil((nextTs - Date.now()) / (24 * 60 * 60 * 1000));
 
-  // Checkpoint overdue solo in settimana scarico (sett 4 del mesociclo 3+1).
+  // Checkpoint overdue solo in settimana scarico (sett 6 del mesociclo 5+1).
   // Settimana corrente: helper canonico getCycleWeekInfo (soli giorni di
-  // lavoro, correttivo day-aware). Guardia: almeno 3 giri di lavoro completati
-  // (workCount >= 3*workPerGiro — equivalente della vecchia soglia >22 su /6).
-  // Fallback (0 workout): comportamento classico (overdue se >28 gg).
+  // lavoro, correttivo day-aware). Guardia: almeno 5 giri di lavoro completati
+  // (workCount >= 5*workPerGiro — un giro per ogni settimana di carico).
+  // Fallback (0 workout): comportamento classico (overdue se >42 gg).
   const validWorkoutsCount = (ST.trainAllCompleted || []).length;
   let overdue = daysUntil < 0;
   if(validWorkoutsCount > 0){
     const wk = getCycleWeekInfo();
-    const isDeloadWeek = wk.isScarico && wk.workCount >= 3 * wk.workPerGiro;
+    const isDeloadWeek = wk.isScarico && wk.workCount >= 5 * wk.workPerGiro;
     overdue = isDeloadWeek && daysUntil < 0;
   }
 
@@ -7084,15 +7084,17 @@ function renderHomeV2(){
     </div>`;
 
   // ── Card Training (riusa ST.trainHomeData già popolato da loadTrainingHomeData) ──
-  // Settimana del programma: ciclo 4 settimane (CARICO×3 + SCARICO×1) che si ripete.
-  // Nessun "totale assoluto" definito — si mostra la posizione nel ciclo corrente (N / 4).
+  // Settimana del programma: ciclo 6 settimane (CARICO×5 + SCARICO×1) che si ripete.
+  // Nessun "totale assoluto" definito — si mostra la posizione nel ciclo corrente (N / 6).
   // Richiede ST.trainAllCompleted (caricato in showPage('home')).
   let trainingCard = '';
   if(hasTraining()){
     const hd = ST.trainHomeData;
-    const validWorkouts = (ST.trainAllCompleted || []).length;
-    const cycleWeek = validWorkouts > 0 ? (Math.floor(validWorkouts / 6) % 4) + 1 : 1;
-    const weekStr = `SETTIMANA ${cycleWeek} / 4`;
+    // Fonte unica: getCycleWeekInfo() — il calcolo inline precedente aveva il
+    // divisore hardcoded a 6 e contava anche i recovery, quindi poteva divergere
+    // dal numero mostrato in Programma.
+    const cycleWeek = getCycleWeekInfo().weekNum;
+    const weekStr = `SETTIMANA ${cycleWeek} / 6`;
     let sessName, weekEyebrow;
     if(!hd || hd.notStarted){
       const firstSess = getTrainingSession('upperA');
@@ -8076,7 +8078,7 @@ function getRotationCycle() {
   return Object.keys(map).sort((a, b) => map[a] - map[b]);
 }
 
-// Settimana del mesociclo 3+1 (1..4) derivata dallo storico completato.
+// Settimana del mesociclo 5+1 (1..6) derivata dallo storico completato.
 // Conta i SOLI giorni di LAVORO: i recovery sono opzionali — chi non li logga
 // non deve allungare il mesociclo (con /6 lo scarico arrivava dopo ~6 settimane
 // reali a 4 workout/giro). rest/rest_injury già esclusi a monte dalla query di
@@ -8096,7 +8098,7 @@ function getCycleWeekInfo(){
     .filter(sid => !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury').length);
   let weekIdx = 0; // default: settimana 1 (nessun workout ancora)
   if(workCount > 0){
-    const rawWeek = Math.floor(workCount / workPerGiro) % 4;
+    const rawWeek = Math.floor(workCount / workPerGiro) % 6;
     // Correttivo bordo DAY-AWARE: a multiplo esatto di workPerGiro si resta
     // sulla settimana appena completata SOLO se l'ultimo workout completato
     // (ultimo elemento di trainAllCompleted, ordinato asc) è di OGGI — es.
@@ -8105,11 +8107,11 @@ function getCycleWeekInfo(){
     const all = ST.trainAllCompleted || [];
     const lastDate = all.length ? all[all.length - 1].date : null;
     weekIdx = (workCount % workPerGiro === 0 && lastDate === todayKey())
-      ? (rawWeek === 0 ? 3 : rawWeek - 1)
+      ? (rawWeek === 0 ? 5 : rawWeek - 1)
       : rawWeek;
   }
   // workCount/workPerGiro esposti per i consumatori (es. guardia checkpoint M2).
-  return { weekNum: weekIdx + 1, isScarico: weekIdx === 3, workCount, workPerGiro };
+  return { weekNum: weekIdx + 1, isScarico: weekIdx === 5, workCount, workPerGiro };
 }
 
 // Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
@@ -13767,7 +13769,7 @@ function renderTraining(){
         body = _renderSessionPreview(s, sel);
       } else {
       const isRecovery = s.rir === null;
-      // Settimana del mesociclo: in SCARICO (sett. 4) badge dedicato + riga
+      // Settimana del mesociclo: in SCARICO (sett. 6) badge dedicato + riga
       // carico leggero sul primo set di ogni esercizio (solo display, jsonb intatto).
       const cycleWk = getCycleWeekInfo();
       const SALVIA_SCARICO = '#6FA99B'; // stesso hex SALVIA del render Progressione
@@ -14088,19 +14090,21 @@ function renderTraining(){
     const CYCLE_WEEKS = [
       { n:1, type:'CARICO',  rir:'RIR 2 / 1', active:false },
       { n:2, type:'CARICO',  rir:'RIR 2 / 1', active:false },
-      { n:3, type:'CARICO',  rir:'RIR 1 / 0', active:false },
-      { n:4, type:'SCARICO', rir:'RIR 3+',     active:false },
+      { n:3, type:'CARICO',  rir:'RIR 2 / 1', active:false },
+      { n:4, type:'CARICO',  rir:'RIR 1 / 1', active:false },
+      { n:5, type:'CARICO',  rir:'RIR 1 / 1', active:false },
+      { n:6, type:'SCARICO', rir:'RIR 3+',     active:false },
     ];
     // Settimana corrente: helper canonico getCycleWeekInfo() — stessa
-    // matematica del calcolo inline storico (floor(count/6)%4 + correttivo
-    // count%6===0), estratta per riuso (RIR scarico, badge sessione).
+    // matematica del calcolo inline storico (floor(count/workPerGiro)%6 +
+    // correttivo di bordo), estratta per riuso (RIR scarico, badge sessione).
     // Esclude rest/rest_injury (riposi non contano per progressione carico/scarico).
     // Mostra SETT 1 di default se non ci sono ancora workout.
     CYCLE_WEEKS[getCycleWeekInfo().weekNum - 1].active = true;
 
     // ── Valori derivati (NON nuovi dati: stessa logica della settimana attiva sopra) ──
     const activeWeek = CYCLE_WEEKS.find(w => w.active) || CYCLE_WEEKS[0];
-    const activeWeekNum = activeWeek.n;                 // 1..4
+    const activeWeekNum = activeWeek.n;                 // 1..6
     const activeIsScarico = activeWeek.type === 'SCARICO';
     const SALVIA = '#6FA99B';                            // verde salvia (stessa famiglia evergreen) — Ipertrofia / scarico
     const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">PROSSIMO</span>`;
@@ -14111,9 +14115,9 @@ function renderTraining(){
     const debtBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.04em;color:#fff;background:var(--err);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">DA RECUPERARE</span>`;
 
     // ── 1 · HERO settimana ──────────────────────────────────
-    const heroSegs = [0,1,2,3].map(i=>{
+    const heroSegs = [0,1,2,3,4,5].map(i=>{
       const filled = i < activeWeekNum;
-      const col = filled ? (i === 3 ? SALVIA : 'var(--acc)') : 'var(--s3)';
+      const col = filled ? (i === 5 ? SALVIA : 'var(--acc)') : 'var(--s3)';
       return `<div style="flex:1;height:6px;border-radius:3px;background:${col};"></div>`;
     }).join('');
 
@@ -14124,13 +14128,13 @@ function renderTraining(){
           <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--acc);background:var(--acc-lt);padding:3px 9px;border-radius:999px;white-space:nowrap;">${activeWeek.rir}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <div style="font-size:24px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.1;">Settimana ${activeWeekNum} <span style="font-size:15px;font-weight:600;color:var(--t3);">di 4</span></div>
+          <div style="font-size:24px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.1;">Settimana ${activeWeekNum} <span style="font-size:15px;font-weight:600;color:var(--t3);">di 6</span></div>
           <div style="font-size:10px;font-weight:800;font-family:var(--font-mono);letter-spacing:.06em;color:#fff;background:${activeIsScarico?SALVIA:'var(--acc)'};padding:4px 11px;border-radius:999px;">${activeWeek.type}</div>
         </div>
         <div style="display:flex;gap:5px;margin-bottom:8px;">${heroSegs}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;">${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
-          <div style="font-size:11px;font-weight:800;font-family:var(--font-mono);color:var(--acc);">${activeWeekNum} / 4</div>
+          <div style="font-size:11px;font-weight:800;font-family:var(--font-mono);color:var(--acc);">${activeWeekNum} / 6</div>
         </div>
       </div>`;
 
@@ -14271,8 +14275,8 @@ function renderTraining(){
       </div>`;
     }
 
-    // ── 3 · CICLO 4 SETTIMANE ───────────────────────────────
-    const cycleSub = ['Base','+1 set','+1 rep','−40% vol'];
+    // ── 3 · CICLO 6 SETTIMANE ───────────────────────────────
+    const cycleSub = ['Base','+1 rep','+1 set','+1 rep','Picco','−40% vol'];
     const cycleCards = CYCLE_WEEKS.map((w,i)=>{
       const phase = w.type === 'SCARICO' ? 'Scarico' : 'Carico';
       return `
@@ -14290,7 +14294,7 @@ function renderTraining(){
 
     const cicloHTML = `
       <div>
-        <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 4 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
+        <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);margin-bottom:3px;">Ciclo · 6 settimane <span class="info-icon" onclick="showInfoModal('scarico')">i</span></div>
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.06em;margin-bottom:12px;">SETTIMANA ${activeWeekNum} · ${activeIsScarico?'SETTIMANA DI SCARICO':'CARICO PROGRESSIVO'}</div>
         <div style="display:flex;gap:8px;">${cycleCards}</div>
       </div>`;
@@ -23477,7 +23481,7 @@ function showInfoModal(key) {
     },
     scarico: {
       title: 'Settimana di Scarico',
-      text: 'Ogni 4ª settimana: stessi esercizi e serie, carichi ridotti e RIR 3+ (3+ ripetizioni di margine). Non è riposo — è recupero attivo. I tendini si adattano più lentamente dei muscoli e hanno bisogno di scaricare. La supercompensazione avviene durante lo scarico, non durante il carico.'
+      text: 'Ogni 6ª settimana: stessi esercizi e serie, carichi ridotti e RIR 3+ (3+ ripetizioni di margine). Non è riposo — è recupero attivo. I tendini si adattano più lentamente dei muscoli e hanno bisogno di scaricare. La supercompensazione avviene durante lo scarico, non durante il carico.'
     },
     rientro: {
       title: 'Rientro Soft',

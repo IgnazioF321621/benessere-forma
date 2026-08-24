@@ -597,9 +597,24 @@ Pausa cambio lato iso (5s) → silenzio totale. Avvio serie a reps → silenzio.
 
 **Recuperi TRASPARENTI**: non avanzano il fronte, non generano debito. `computeTrainingDebt`: skip recuperi nel loop; guard `test-user-001` → `{ debt:[], target:null }`. `nextSession` dall'ultimo workout di LAVORO (filtro `!/^recovery/i`).
 
-**`getCycleWeekInfo()`**: helper canonico UNICO per la settimana ciclo. Conta SOLO giorni di lavoro (recovery esclusi). `workPerGiro` derivato dal ciclo (6gg→4, 5gg→5). **Non ricalcolare inline.**
+**Il mesociclo è 5+1: sei settimane, cinque di carico e una di scarico** *(dal 24 agosto 2026, prima era 3+1)*. La tabella, uguale in `CYCLE_WEEKS` e nella card Ciclo del Programma:
 
-**`getNextCheckpointInfo()`**: `overdue:true` solo se `isScarico` **e** `workCount >= 3*workPerGiro` **e** `daysUntil < 0`. Settimane 1-3 carico: `overdue:false` sempre.
+| Sett. | Progressione | RIR |
+|---|---|---|
+| 1 | Base | 2 / 1 |
+| 2 | +1 rep | 2 / 1 |
+| 3 | +1 set | 2 / 1 |
+| 4 | +1 rep | 1 / 1 |
+| 5 | Picco | 1 / 1 |
+| 6 | Scarico −40% vol | 3+ |
+
+⚠️ **La S3 prima dichiarava `RIR 1 / 0`, e RIR 0 è il cedimento**: contraddiceva il modale info, che promette margine in ogni settimana di carico. Ora è `2 / 1`.
+
+**`getCycleWeekInfo()`**: helper canonico UNICO per la settimana ciclo. Conta SOLO giorni di lavoro (recovery esclusi). `workPerGiro` derivato dal ciclo (6gg→4, 5gg→5). Settimana = `floor(workCount / workPerGiro) % 6`, `isScarico` = `weekIdx === 5`. **Non ricalcolare inline.**
+
+⚠️ **Il divisore del ciclo è `workPerGiro`, non 6.** Fino al 24 agosto la card Training in Home ricalcolava la settimana con `Math.floor(validWorkouts / 6) % 4` — divisore hardcoded **e** recovery contati — quindi Home e Programma potevano mostrare due numeri diversi. Ora la card chiama `getCycleWeekInfo().weekNum`: un calcolo inline della settimana è per definizione una divergenza che aspetta.
+
+**`getNextCheckpointInfo()`**: `overdue:true` solo se `isScarico` **e** `workCount >= 5*workPerGiro` **e** `daysUntil < 0`. Settimane 1-5 carico: `overdue:false` sempre. Frequenza checkpoint **42 giorni**, allineata alla durata del mesociclo: le due cadenze si muovono insieme, se una cambia cambia anche l'altra.
 
 **WS-QUEUE**: `wsWrite()` = 1 retry immediato → coda `zt_ws_pending_<userId>` in localStorage → toast discreto. Flush al boot, a ogni scrittura riuscita, al rientro in foreground. Insert idempotente al replay, cap 200 op.
 
