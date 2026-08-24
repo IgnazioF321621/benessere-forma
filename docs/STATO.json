@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-24T16:28:15",
+ "quando": "2026-08-24T17:19:20",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4188,14 +4188,44 @@
    "nome": "Squat croce di ferro manubri",
    "gif_slug": "squat-croce-di-ferro-manubri",
    "livello": "intermedio"
+  },
+  {
+   "codice": "EX712",
+   "nome": "Estensione tricipiti elastico busto flesso",
+   "gif_slug": "estensione-tricipiti-elastico-busto-flesso",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX713",
+   "nome": "French press elastico in piedi",
+   "gif_slug": "french-press-elastico-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX714",
+   "nome": "French press elastico panca piana",
+   "gif_slug": "french-press-elastico-panca-piana",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX715",
+   "nome": "Pushdown cavi in piedi",
+   "gif_slug": "pushdown-cavi-in-piedi",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX716",
+   "nome": "Piegamenti mani ruotate all'indietro",
+   "gif_slug": "piegamenti-mani-ruotate-all-indietro",
+   "livello": "intermedio"
   }
  ],
  "catalogo": {
-  "righe": 698,
-  "ultimo_sync": "2026-08-24T13:30:38.460000+00:00",
+  "righe": 703,
+  "ultimo_sync": "2026-08-24T15:09:26.545000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX712",
+  "prossimo_codice_libero": "EX717",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4211,7 +4241,7 @@
    "EX408",
    "EX528"
   ],
-  "con_gif_slug": 634,
+  "con_gif_slug": 639,
   "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4283,8 +4313,8 @@
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
    "principale;finisher": 141,
-   "principale": 334,
-   "finisher": 145,
+   "principale": 335,
+   "finisher": 149,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
@@ -4299,8 +4329,8 @@
    "skill": 10
   },
   "per_livello": {
-   "intermedio": 262,
-   "principiante": 165,
+   "intermedio": 263,
+   "principiante": 169,
    "avanzato": 64,
    "intermedio;avanzato": 45,
    "principiante;intermedio": 135,
@@ -4311,9 +4341,9 @@
  "biblioteca_gif": {
   "righe": 1584,
   "slug_distinti": 1584,
-  "viva": 634,
+  "viva": 639,
   "rotta": 0,
-  "libera": 32,
+  "libera": 27,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4328,10 +4358,7 @@
    "curl-manubri-panca-inclinata",
    "estensione-anca-bilanciere",
    "estensione-spalla-elastico-in-piedi",
-   "estensione-tricipiti-elastico-busto-flesso",
    "flessione-laterale-cavo-basso",
-   "french-press-elastico-in-piedi",
-   "french-press-elastico-panca-piana",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
    "lat-machine-elastico-maniglie-in-ginocchio",
@@ -4339,12 +4366,10 @@
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
-   "piegamenti-mani-ruotate-all-indietro",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
-   "pushdown-cavi-in-piedi",
    "retroversione-bacino-da-supino",
    "superman",
    "swimming-prono",

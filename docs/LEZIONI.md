@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata · L42 updated_at non distingue il toccato dal non toccato · L43 i campi del resoconto si rileggono, non si ereditano
 
 ---
 
@@ -712,3 +712,51 @@ Il secondo è quello che conta. Il primo si accorge di un valore mancante, che �
 **Corollario — la lista consegnata è un artefatto, e va tenuta.** Il confronto è possibile solo se la lista sopravvive alla consegna. Da qui in avanti ogni elenco per il foglio si salva su disco accanto ai log della migrazione (`backup_migrazione_<zona>/`), nella forma `codice · colonna · valore`, che è anche quella che [L5](#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno) prescrive come immune allo sfasamento — e che qui, va detto, **non è bastata**: l'elenco verticale toglie lo sfasamento di colonna, non quello di riga né la ribattitura a mano.
 
 **Corollario secondo — un export per il foglio si costruisce sulla struttura del foglio.** Il primo dei tre casi non era un errore di trascrizione ma di forma: le colonne della tabella Supabase non sono quelle del foglio, e non coincidono né per numero né per ordine. L'intestazione del foglio si recupera dall'ultimo TSV consegnato (`lavoro/_piani/incolla_sheet_*.tsv`) o si chiede: sono dieci secondi contro un file da rifare.
+
+---
+
+## L42 — `updated_at` non distingue il toccato dal non toccato, quando il sync riscrive tutto
+
+**Il caso.** Chiuso il lavoro 3 di Tricipiti, la verifica chiedeva di confermare che il sync avesse toccato **solo** le 5 righe nuove e lasciato intatte le 698 preesistenti. Il criterio proposto era naturale: `updated_at` cambiato solo sulle 5.
+
+Non funziona, e non perché il sync abbia sbagliato. L'Apps Script fa un **upsert dell'intero foglio**: riscrive ogni riga a ogni giro, e `updated_at` esce **identico su tutte e 703** — `2026-08-24T15:09:26`, un solo timestamp distinto in tutta la tabella. Un campo che vale lo stesso ovunque non discrimina niente.
+
+**Il rovescio è già scritto altrove, ed è ciò che confonde.** [L3](#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena) usa `updated_at` per stanare le righe **arenate**, e lì funziona benissimo: la riga arenata è quella che il sync **non** ha riscritto, e si riconosce proprio perché il suo timestamp è più vecchio dell'ultimo lotto. Da lì è facile concludere che il campo dica anche il contrario — quali righe il sync ha *modificato*. Non lo dice. Dice solo quali ha *visitate*, e le visita tutte.
+
+Il segnale che dovrebbe fermare: `verifica_sync.py` dà ✅ al punto 1 con la frase «**ogni** riga del catalogo è stata riscritta da questo sync». Quel ✅ e l'ipotesi «updated_at cambia solo sulle righe modificate» non possono essere veri insieme.
+
+**Il rimedio: confronto valore per valore contro la fotografia committata.** `docs/STATO.json` conserva `_catalogo_righe` con `codice`, `nome`, `gif_slug`, `livello`, ed è in git — quindi esiste una copia di ciò che il catalogo era **prima**, a una revisione precisa:
+
+```bash
+git show <commit>:docs/STATO.json
+```
+
+Su Tricipiti: 698 righe confrontate campo per campo contro la fotografia di `8e953ac`, **0 valori cambiati**, 0 codici spariti, 5 comparsi ed erano esattamente i 5 attesi. Questo risponde alla domanda; `updated_at` no.
+
+**La regola.** Prima di usare un campo come prova, chiedersi che cosa lo scrive e quando. Un timestamp scritto da un processo che passa su **tutte** le righe misura l'esecuzione del processo, non l'effetto sul dato. Per sapere se un valore è cambiato serve il valore di prima — e per averlo serve che qualcuno l'abbia congelato: qui è la fotografia in git, ed è la seconda volta che si rivela il vero strumento di verifica dopo [L41](#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione).
+
+⚠️ **La fotografia conserva 4 campi su 23.** `nome`, `gif_slug`, `livello` e `codice` sono coperti; tutto il resto — `setup`, `esecuzione`, `surrogato_attrezzo`, `luogo` — non lo è, e una modifica silenziosa su quei campi oggi non la vedrebbe nessuno. Il confronto vale per ciò che la fotografia porta, e conviene dirlo invece di lasciar credere che copra tutta la riga.
+
+---
+
+## L43 — I campi del resoconto si rileggono dalla fonte a ogni giro, non si ereditano dal giro prima
+
+**Il caso.** Il resoconto obbligatorio a 6 punti chiude ogni modifica, e il punto 6 è `APP_VERSION`. Il 23 agosto alle 22:52 l'ho letta dal file: valeva `2026.08.19 · 21:13`, ed era giusta. L'ho poi **ripetuta a memoria** in tutti i resoconti successivi, fino a quello delle 16:28 del 24 agosto.
+
+Nel frattempo il pre-commit hook era scattato **due volte**, su due commit di Ignazio che toccavano `zona-tracker.html`: `0360705` alle 04:23 e `a411860` alle 04:34. Il valore vero era `2026.08.24 · 04:34` da dodici ore. L'ha trovato Ignazio, non io.
+
+**Perché è potuto succedere.** `APP_VERSION` è l'unico dei sei punti che **non dipende da ciò che ho appena fatto**: file modificati, commit, push e Pages li conosco perché li ho eseguiti io in quel turno. La versione invece la scrive un hook, su commit che possono non essere miei. È il campo con la probabilità più alta di cambiare alle mie spalle, ed è precisamente quello che ho smesso di rileggere — perché per parecchi giri di fila era rimasto identico, e l'immobilità di un valore si scambia facilmente per la sua stabilità.
+
+⚠️ **Ripetere un valore stabile non costa niente finché è giusto, e quando smette di esserlo non c'è nessun segnale.** Un resoconto sbagliato non fallisce: si legge esattamente come uno giusto. È la stessa forma di [L34](#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto) — il piano su disco dice com'era il mondo quando fu scritto, non com'è adesso — applicata alla memoria conversazionale invece che a un file.
+
+**La regola.** Ogni campo del resoconto si rilegge dalla sua fonte nel turno in cui lo si scrive:
+
+| punto | fonte da rileggere |
+|---|---|
+| file modificati | `git status` / `git diff --stat` |
+| commit | `git log --oneline -1` |
+| push | `git log --oneline -1 origin/main` |
+| APP_VERSION | `grep -m1 APP_VERSION zona-tracker.html` — **anche quando non ho toccato quel file** |
+
+Il costo è un comando. Il costo dell'alternativa è un resoconto che afferma il falso con la stessa faccia di uno vero, e la fiducia in **tutti** gli altri cinque punti che si incrina insieme al sesto.
+

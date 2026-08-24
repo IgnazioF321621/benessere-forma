@@ -230,6 +230,24 @@ Chi rilegge `registro_decisioni.tsv` trova ancora quella riga, ed è giusto che 
 
 ⚠️ **Il caso vale oltre sé stesso.** Una conferma data per aggirare un blocco tecnico è indistinguibile, nel registro, da una conferma data guardando la GIF — stesso formato, stessa colonna `origine`. Finché il registro non distingue le due cose, l'unico posto dove la differenza resta scritta è qui.
 
+### ✅ Tricipiti chiusa sui tre lavori — 24 agosto 2026
+
+**59 GIF · 59 righe in `biblioteca_gif` · 59 codici a catalogo.** È l'unica zona in cui i quattro numeri — file sul Mac, oggetti nel bucket, righe indicizzate, codici che le puntano — coincidono tutti. Prossimo codice libero: **EX717**.
+
+I tre lavori, in ordine:
+
+1. **Nomi** — 59 conferme al pannello, tutte guardando la GIF. Sbloccato il 23 agosto portando `ponte_480` in `prepara.py`: senza, il pannello avrebbe dichiarato libere 57 GIF di cui 54 puntate da un codice vivo.
+2. **Migrazione** — 58 oggetti rinominati e riscritti ridotti a 480px, 22 righe doppie a coprire la finestra del sync, 2 slug in place, 1 GIF entrata da zero. Confronto L41 dopo il sync: 22 codici su 22, zero sfasamenti. Le righe vecchie cancellate solo dopo.
+3. **Catalogo** — le 5 GIF rimaste senza codice sono diventate **EX712-EX716**, tutte `gruppo_target = tricipiti`. Confronto L41: 5 su 5, e 0 valori cambiati sulle 698 righe preesistenti verificati contro la fotografia di `8e953ac`.
+
+**Tre sostituzioni di immagine decise lungo il percorso**, tutte con backup e verifica per impronta prima di ogni eliminazione:
+
+- **EX551** passa dalla GIF femminile alla maschile (`38355ee2afae`); la femminile è ritirata.
+- **French press elastico in piedi**: entra la versione a maniglie (`501696ada650`), esce quella a barra sotto il piede (`e1ec80e2c7dc`) — stesso movimento, attrezzo diverso, tenuta una sola.
+- **Doppione di contenuto** `bedc9bb3f425`: due nomi sugli stessi byte, eliminato quello a `barra sagomata`.
+
+⚠️ **Una domanda resta aperta e non è stata risolta, solo superata.** EX527 e EX538 dichiaravano `sbarra` a catalogo mentre il file sul Mac e `nome_originale` dicevano `angled-bar`: quale barra mostrino davvero quelle due GIF non è stato stabilito guardandole. I nomi nuovi — `French press sbarra cavo basso panca inclinata` e `French press sbarra cavo panca piana` — **non nominano più la forma della barra**, quindi la contraddizione non è più visibile. Non è stata sciolta: è stata resa non osservabile.
+
 ### Ordine delle zone che restano
 
 Tutte fatte fra il 15 e il 16 agosto 2026. Schiena per ultima di proposito: e' l'unica con i tre oggetti senza gemello sul Mac, e cosi' quella decisione arriva alla fine invece che in mezzo al giro.
@@ -504,7 +522,7 @@ Registrato l'11 agosto. **Non è più l'ordine per dimensione.**
 | 1 | **Pettorali** | 82 | in corso — nomi confermati, migrazione dal 15 agosto |
 | 2 | **Polpacci** | 19 | la più piccola: si chiude in un giro |
 | 3 | **Spalle e Cuffia** | 63 | **anticipata** rispetto alle zone più grosse |
-| 4 | **Tricipiti** | 62 | **in corso** — lavoro 1 sbloccato il 23 agosto: `prepara.py` classifica 55 collegato · 5 pendente · 2 libero |
+| 4 | ~~Tricipiti~~ | 59 | ✅ **chiusa il 24 agosto** sui tre lavori — 59 GIF · 59 righe · 59 codici |
 | 5 | Schiena e Trapezio | 112 | |
 | 6 | Mobilità | 215 | |
 

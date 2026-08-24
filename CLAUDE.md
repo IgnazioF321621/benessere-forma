@@ -66,7 +66,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **689 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **634 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Prossima: Tricipiti** (63 file sul Mac, 59 nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **639 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Restano due zone: Schiena e Trapezio** (113 file sul Mac, 96 nel bucket, 88 codici) **e Mobilità** (~215 GIF, mai entrata nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
@@ -142,7 +142,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**698 righe** (23 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX712**. RLS SELECT pubblica. PK logica = `codice`.
+**703 righe** (24 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX717**. RLS SELECT pubblica. PK logica = `codice`.
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
@@ -365,7 +365,7 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ **chiuse** → **Tricipiti** → **Schiena e Trapezio** → **Mobilità**.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ **chiuse** → **Schiena e Trapezio** → **Mobilità**.
 
 L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
 
@@ -671,3 +671,5 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 39. [Uno strumento con stub incompleti genera il difetto che misura](docs/LEZIONI.md#l39--uno-strumento-di-misura-con-stub-incompleti-genera-il-difetto-che-poi-misura) — prima di dire che un dato manca, guardare l'ingresso
 40. [Un piano rigenerato a metà strada parla di un mondo che non c'è più](docs/LEZIONI.md#l40--un-piano-rigenerato-a-metà-strada-parla-di-un-mondo-che-non-cè-più) — si congela e si esegue, non si ricostruisce
 41. [Confronto codice per codice contro la lista consegnata](docs/LEZIONI.md#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione) — dopo ogni sync, prima di ogni cancellazione
+42. [`updated_at` non distingue il toccato dal non toccato](docs/LEZIONI.md#l42--updated_at-non-distingue-il-toccato-dal-non-toccato-quando-il-sync-riscrive-tutto) — il sync riscrive tutto: si confronta valore per valore contro la fotografia in git
+43. [I campi del resoconto si rileggono, non si ereditano](docs/LEZIONI.md#l43--i-campi-del-resoconto-si-rileggono-dalla-fonte-a-ogni-giro-non-si-ereditano-dal-giro-prima) — `APP_VERSION` ripetuta a memoria per dodici ore
