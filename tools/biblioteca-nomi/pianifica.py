@@ -51,7 +51,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import impronte_zona, leggi_tutto, nfc, sha_file  # noqa: E402
+from impronte import (impronte_zona, indice_locale, leggi_tutto, nfc,  # noqa: E402
+                      sha_file)
 from nomenclatura import percorso_ascii, slug  # noqa: E402
 
 BASE = Path(__file__).parent
@@ -80,6 +81,21 @@ def registro_ultimo():
             if r.get('sha256'):
                 out[r['sha256']] = r
     return out
+
+
+def voci_480(zona):
+    """Le voci del piano dei 480px di una zona. [] se la zona non ne ha uno.
+
+    E' il punto UNICO in cui si sa dove sta quel piano e come si chiama. Le
+    domande che gli si fanno sono diverse — `ponte_480` chiede dove sia finito
+    un file, `gemelli_480` quali oggetti portino gli stessi byte, `sha_mac_a_bucket`
+    quale oggetto abbia una certa impronta — ma la fonte e' una sola, e nessuno
+    dei chiamanti deve conoscerne il percorso.
+    """
+    p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
+    if not p.exists():
+        return []
+    return json.loads(p.read_text(encoding='utf-8'))['voci']
 
 
 def ponte_480(zona, presenti):
@@ -129,10 +145,9 @@ def ponte_480(zona, presenti):
     dubbio la riga resta `nuova` e la si guarda, che e' il ripiego prudente di
     [L10], non quello silenzioso.
     """
-    p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
-    if not p.exists():
+    voci = voci_480(zona)
+    if not voci:
         return {}, {}, 0
-    voci = json.loads(p.read_text(encoding='utf-8'))['voci']
     ponte, per_impronta, ambigue = {}, {}, set()
     for v in voci:
         sp = nfc(v['storage_path'])
@@ -148,6 +163,106 @@ def ponte_480(zona, presenti):
     for s in ambigue:
         per_impronta.pop(s, None)
     return ponte, per_impronta, len(set(ponte.values()) | set(per_impronta.values()))
+
+
+def sha_mac_a_bucket(zona, verbose=False):
+    """Impronta di un file SUL MAC -> [storage_path] degli oggetti che ne portano i byte.
+
+    Restituisce (mappa, falliti, errore), la stessa forma di `impronte_zona`.
+
+    E' la domanda degli strumenti che partono da un'impronta e non da un file:
+    `chiave_pendente.py`, che deve dire quale codice serve un file del registro, e
+    `ritira_concluse.py`, che deve dire se quel file e' gia' servito dall'app.
+    Fino al 25 agosto 2026 la risolvevano confrontando l'impronta del Mac con
+    quella degli oggetti del bucket, e dal 15 agosto quel confronto non puo' piu'
+    riuscire su una zona ridotta: nel bucket ci sono byte diversi per definizione,
+    ed e' il punto della regola dei 480px. Misurato su Schiena e Trapezio prima
+    della riparazione: 0 agganci su 94 file.
+
+    Vive qui, accanto a `ponte_480`, perche' i due chiamanti chiedono la stessa
+    identica cosa: scritta due volte sarebbe di nuovo la condizione di [L35] —
+    due esemplari della stessa decisione, e riparare l'uno non tocca l'altro.
+
+    Tre strade, in quest'ordine, tutte sopra `ponte_480`, nessuna copia:
+      1. impronta cruda dal bucket — vale finche' la zona non e' stata ridotta;
+      2. `sha256_bucket_ora` — l'impronta che l'oggetto aveva PRIMA della
+         riduzione, cioe' quella che il file sul Mac ha ancora, perche' la
+         rinomina cambia il nome e non i byte;
+      3. `origine_mac` risolto nell'indice locale — l'unica strada per le zone
+         entrate nel bucket gia' ridotte, dove un "bucket ora" non e' mai
+         esistito: Pettorali, Spalle e Cuffia e Tricipiti hanno 0 voci con
+         `sha256_bucket_ora` e 82, 63 e 59 con `origine_mac`.
+
+    Le tre non si sostituiscono, si sommano: nessuna da sola copre tutte le zone.
+    """
+    per_sha, falliti, err = impronte_zona(zona, verbose=verbose)
+    if err:
+        return {}, falliti, err
+    presenti = {p for lista in per_sha.values() for p in lista}
+    ponte, ponte_sha, _quanti = ponte_480(zona, presenti)
+
+    mappa = {sha: list(paths) for sha, paths in per_sha.items()}
+
+    def aggiungi(sha, sp):
+        if not sha:
+            return
+        att = mappa.setdefault(sha, [])
+        if sp not in att:
+            att.append(sp)
+
+    for sha, sp in ponte_sha.items():
+        aggiungi(sha, sp)
+
+    # `origine_mac` e' un percorso: l'impronta di quel percorso la sa gia' l'indice
+    # locale, che l'ha calcolata una volta sola. Il ripiego su `sha_file` serve ai
+    # contenuti gemelli, che nell'indice per impronta compaiono con un percorso solo.
+    loc = indice_locale(verbose=False)
+    per_percorso = {v['percorso']: v['sha256'] for v in loc.values()}
+    for mac, sp in ponte.items():
+        sha = per_percorso.get(nfc(mac))
+        if sha is None:
+            f = Path(mac)
+            if f.is_file():
+                sha = sha_file(f)
+        aggiungi(sha, sp)
+
+    return mappa, falliti, None
+
+
+def gemelli_480(zona, presenti):
+    """storage_path -> {origine_mac, sha256_bucket_ora, fratelli}.
+
+    Domanda diversa da quella di `ponte_480`: non «dove e' finito questo file»
+    ma «quali oggetti del bucket portano gli stessi byte». Serve dove un file
+    solo del Mac serve DUE oggetti con due codici diversi — 8 casi in Addominali
+    e Core, 3 in Gambe e Glutei — cioe' proprio i doppioni per contenuto di [L7].
+
+    `ponte_480` quei due li collassa di proposito: la sua risposta e' una
+    destinazione sola per file, e l'ultima letta vince. Qui vanno tenuti tutti e
+    due, quindi il raggruppamento si fa sulle voci, non sul ponte. La fonte pero'
+    resta la stessa, letta da `voci_480`: due domande, un piano solo.
+
+    I `fratelli` si raggruppano per `origine_mac` quando il piano ce l'ha, per
+    `sha256_bucket_ora` quando non c'e': sono le stesse due chiavi di `ponte_480`
+    e per la stessa ragione — il cantiere rinomina, e un percorso invecchia.
+    """
+    voci = [v for v in voci_480(zona) if nfc(v['storage_path']) in presenti]
+
+    def chiave_di(v):
+        return (nfc(v.get('origine_mac') or '') or v.get('sha256_bucket_ora')
+                or nfc(v['storage_path']))
+
+    gruppi = collections.defaultdict(list)
+    for v in voci:
+        gruppi[chiave_di(v)].append(nfc(v['storage_path']))
+
+    out = {}
+    for v in voci:
+        sp = nfc(v['storage_path'])
+        out[sp] = {'origine_mac': v.get('origine_mac'),
+                   'sha256_bucket_ora': v.get('sha256_bucket_ora'),
+                   'fratelli': [x for x in gruppi[chiave_di(v)] if x != sp]}
+    return out
 
 
 def main():

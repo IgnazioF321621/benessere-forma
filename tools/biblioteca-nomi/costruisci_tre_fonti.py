@@ -28,6 +28,9 @@ from pathlib import Path
 BASE = Path(__file__).parent
 sys.path.insert(0, str(BASE))
 import impronte as I                                    # noqa: E402
+# Quali oggetti del bucket portano gli stessi byte lo dice il piano dei 480px, e
+# quel piano si legge in un posto solo, accanto a ponte_480 -> [L35].
+from pianifica import gemelli_480                       # noqa: E402
 
 # Un caso e' un codice EX### oppure — quando l'esercizio a catalogo non c'e'
 # ancora — lo slug della riga di `biblioteca_gif`. Il secondo caso non e' un
@@ -86,19 +89,27 @@ def main():
     per_slug = {r['slug']: r for r in bg}
     per_cod = {r['codice']: r for r in cat}
 
-    # Un file del Mac -> tutti gli oggetti del bucket che ne portano i byte.
-    # Il legame Mac<->bucket si legge dal piano dei 480: dopo la riduzione le due
-    # impronte sono diverse e un confronto diretto non appaia piu' niente.
-    gemelli = {}
+    # Un oggetto del bucket -> il file del Mac da cui viene e gli altri oggetti
+    # che ne portano gli stessi byte. Il legame Mac<->bucket si legge dal piano
+    # dei 480: dopo la riduzione le due impronte sono diverse e un confronto
+    # diretto non appaia piu' niente.
+    #
+    # Fino al 25 agosto 2026 il piano si leggeva qui, e solo per `origine_mac`.
+    # Ma `origine_mac` e' un PERCORSO, e il primo lavoro del cantiere e' proprio
+    # rinominare i file: appena il pannello applica le rinomine quel percorso non
+    # esiste piu'. Il ripiego e' `sha256_bucket_ora`, l'impronta che il file sul
+    # Mac ha ancora perche' la rinomina cambia il nome e non i byte — la stessa
+    # riparazione portata in ponte_480 il 22 agosto. Qui si importa: una sola
+    # implementazione, un solo lettore del piano.
     def riga_di(c):
         return per_slug[c] if c not in per_cod else per_slug[per_cod[c]['gif_slug']]
 
+    gemelli = {}          # storage_path -> {origine_mac, sha256_bucket_ora, fratelli}
     for zona in {riga_di(c)['storage_path'].split('/')[0] for c in CASI}:
-        p = BASE / 'lavoro' / '_480' / ('%s.json' % zona.lower().replace(' ', '-'))
-        if not p.exists():
-            continue
-        for v in json.loads(p.read_text(encoding='utf-8'))['voci']:
-            gemelli.setdefault(nfc(v['origine_mac']), []).append(nfc(v['storage_path']))
+        stato, e = I.stato_bucket(zona)
+        if e:
+            raise SystemExit('elenco del bucket "%s" fallito: %s' % (zona, e))
+        gemelli.update(gemelli_480(zona, set(stato)))
 
     per_sp = {nfc(r['storage_path']): r for r in bg if r.get('storage_path')}
     cod_di = {}
@@ -114,7 +125,8 @@ def main():
         sp = r['storage_path']
         zona = sp.split('/')[0]
 
-        origine = next((k for k, v in gemelli.items() if nfc(sp) in v), None)
+        gem = gemelli.get(nfc(sp)) or {}
+        origine = gem.get('origine_mac')
         # Il nome del file si chiede all'IMPRONTA, non al percorso registrato nel
         # piano dei 480: il cantiere rinomina, e quel piano tiene percorsi che
         # invecchiano — la voce di EX563 punta ancora al nome di prima della
@@ -133,13 +145,19 @@ def main():
                     break
         if not (BIB / zona / file_mac).is_file() and origine:
             file_mac = Path(origine).name
+        # Ultimo ripiego, e quello che regge alle rinomine: l'impronta che
+        # l'oggetto aveva prima della riduzione e' quella che il file sul Mac ha
+        # ancora, quindi l'indice locale sa dove quel file sta ADESSO [L34].
+        if not (BIB / zona / file_mac).is_file() and gem.get('sha256_bucket_ora'):
+            vivo = next((v['percorso'] for v in I.indice_locale(verbose=False).values()
+                         if v['sha256'] == gem['sha256_bucket_ora']), None)
+            if vivo:
+                file_mac = Path(vivo).name
         sul_mac = (BIB / zona / file_mac).is_file()
 
         # gli altri codici che mostrano ESATTAMENTE questa immagine
         condivisi = []
-        for altro_sp in gemelli.get(nfc(origine or ''), []):
-            if nfc(altro_sp) == nfc(sp):
-                continue
+        for altro_sp in gem.get('fratelli', []):
             ar = per_sp.get(nfc(altro_sp))
             if not ar:
                 continue

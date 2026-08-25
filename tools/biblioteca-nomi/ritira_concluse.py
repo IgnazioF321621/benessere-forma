@@ -51,7 +51,10 @@ import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import impronte_zona, leggi_tutto, nfc, stampa_consumo  # noqa: E402
+from impronte import leggi_tutto, nfc, stampa_consumo  # noqa: E402
+# Il legame fra il file sul Mac e il suo oggetto RIDOTTO nel bucket vive in un
+# posto solo, accanto a ponte_480: si importa, non si riscrive qui -> [L35].
+from pianifica import sha_mac_a_bucket  # noqa: E402
 
 BASE = Path(__file__).parent
 TSV = BASE / 'cantiere_96_pendente.tsv'
@@ -117,21 +120,29 @@ def main():
 
     zone = sorted({r['cartella_mac'] for r in righe if r.get('cartella_mac')})
     print('  leggo le impronte del bucket in %d zone (nessun download)…' % len(zone))
+    # La chiave e' l'impronta del file SUL MAC, che e' quella scritta nel registro.
+    # Fino al 25 agosto 2026 qui si leggeva l'impronta dell'OGGETTO, e dal 15
+    # agosto le due non coincidono piu': nel bucket ci sono i byte ridotti, e su
+    # una zona ridotta nessuna riga del registro trovava piu' il suo file —
+    # misurato su Schiena e Trapezio, 0 agganci su 94. Falliva dalla parte
+    # prudente (nessun ritiro), ma falliva. Il ponte lo legge sha_mac_a_bucket.
     sha_a_codici = {}
     for z in zone:
-        ps, falliti, e = impronte_zona(z, None, verbose=False)
+        mappa, falliti, e = sha_mac_a_bucket(z)
         if e:
             sys.exit('  bucket "%s" non leggibile: %s — mi fermo, non ritiro niente' % (z, e))
         if falliti:
             # Un'impronta non determinabile rende INDETERMINATO lo stato: non si
             # puo' dire "conclusa" per silenzio [L10]. Meglio fermarsi.
             sys.exit('  %d oggetti senza impronta in "%s": non ritiro niente' % (len(falliti), z))
-        for sha, paths in ps.items():
+        print('     %-24s %3d oggetti raggiunti da un impronta locale'
+              % (z, len({sp for paths in mappa.values() for sp in paths})))
+        for sha, paths in mappa.items():
             cod = [c for p in paths for s in per_path.get(nfc(p), [])
                    for c in per_slug_cod.get(s, [])]
             if cod:
                 sha_a_codici[sha] = cod
-    print('  %d impronte del bucket risultano puntate da un codice vivo\n'
+    print('  %d impronte del Mac risultano servite da un codice vivo\n'
           % len(sha_a_codici))
 
     concluse, restano = [], []

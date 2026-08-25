@@ -53,9 +53,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from impronte import (impronte_zona, leggi_tutto, nfc, sha_file,  # noqa: E402
-                      stampa_consumo)
-from nomenclatura import slug as fslug  # noqa: E402
+from impronte import leggi_tutto, nfc, sha_file, stampa_consumo  # noqa: E402
+# Il legame fra il file sul Mac e il suo oggetto RIDOTTO nel bucket vive in un
+# posto solo, accanto a ponte_480: si importa, non si riscrive qui -> [L35].
+from pianifica import sha_mac_a_bucket  # noqa: E402
 
 BASE = Path(__file__).parent
 GIF_ROOT = Path(os.environ.get('BIBLIOTECA_ROOT',
@@ -128,18 +129,30 @@ def main():
     mac = impronte_mac(cartelle)
     print('  %d impronte distinte sul Mac\n' % len(mac))
 
-    # --- impronte del bucket, solo per le zone che servono ----------------
+    # --- impronta del file sul Mac -> oggetto nel bucket ------------------
+    # Non e' il confronto fra l'impronta del Mac e quella dell'oggetto che stava
+    # qui prima del 25 agosto 2026. Dal 15 agosto nel bucket ci sono i byte
+    # RIDOTTI, che hanno un'impronta diversa per definizione: quel confronto non
+    # aggancia piu' niente su una zona ridotta — misurato su Schiena e Trapezio,
+    # 0 agganci su 94 file. Il legame fra i due artefatti sta nel piano dei 480px
+    # e lo legge sha_mac_a_bucket, che vive accanto a ponte_480.
     bucket_cache = {}
 
     def carica_zona(zona):
         if zona not in bucket_cache:
-            per_sha, falliti, e = impronte_zona(
-                zona, BASE / 'lavoro' / '_impronte' / (fslug(zona) + '.json'), verbose=False)
+            mappa, falliti, e = sha_mac_a_bucket(zona)
             if e:
                 print('   bucket "%s" non leggibile: %s' % (zona, e))
                 bucket_cache[zona] = {}
             else:
-                bucket_cache[zona] = {p: s for s, ps in per_sha.items() for p in ps}
+                if falliti:
+                    # Un oggetto di cui non si conosce l'impronta non diventa
+                    # "assente" per silenzio: si dice, e le righe che ne
+                    # dipendono restano senza risposta invece di averne una
+                    # falsa [L10].
+                    print('   bucket "%s": %d oggetti senza impronta determinabile'
+                          % (zona, len(falliti)))
+                bucket_cache[zona] = mappa
         return bucket_cache[zona]
 
     # --- impronta -> codice, ricavata dalla catena autorevole -------------
@@ -155,17 +168,23 @@ def main():
     for c in cat:
         if (c.get('gif_slug') or '').strip():
             per_slug_cod.setdefault(c['gif_slug'], c)
+    per_path_bib = {}
+    for b in bib:
+        if b.get('storage_path'):
+            per_path_bib.setdefault(nfc(b['storage_path']), b)
+
     sha_a_codice = {}
     for z in sorted(z for z in zone_bib if z):
         mappa = carica_zona(z)
-        for b in bib:
-            sp = nfc(b.get('storage_path') or '')
-            if not sp.startswith(z + '/'):
-                continue
-            s = mappa.get(sp)
-            c = per_slug_cod.get(b['slug'])
-            if s and c:
-                sha_a_codice.setdefault(s, c)
+        print('     %-24s %3d oggetti raggiunti da un impronta locale'
+              % (z, len({sp for paths in mappa.values() for sp in paths})))
+        for sha, paths in mappa.items():
+            for sp in paths:
+                b = per_path_bib.get(nfc(sp))
+                c = per_slug_cod.get(b['slug']) if b else None
+                if c:
+                    sha_a_codice.setdefault(sha, c)
+                    break
     print('  %d impronte agganciate a un codice\n' % len(sha_a_codice))
 
     # --- risoluzione riga per riga ----------------------------------------
@@ -233,7 +252,8 @@ def main():
               % len(irrisolte))
         print('  Non si deduce l\'impronta dal codice: tornerebbe sempre conferma [L25].')
         for x in irrisolte:
-            print('     %-7s %-38s %s' % (x['codice'], x['nome_in_decisioni'][:38], x['nota']))
+            print('     %-7s %-38s %s'
+                  % (x['codice_registro'], x['nome_in_decisioni'][:38], x['nota']))
 
     print('\n  Stato reale delle righe (lo dice il catalogo, non il registro):')
     print('     ancora pendenti  %3d' % conta['stato:pendente'])
