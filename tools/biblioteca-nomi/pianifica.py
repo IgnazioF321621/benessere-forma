@@ -98,6 +98,37 @@ def voci_480(zona):
     return json.loads(p.read_text(encoding='utf-8'))['voci']
 
 
+def posizione_480(v, presenti):
+    """Dove l'oggetto di questa voce sta ADESSO. None se non e' nel bucket.
+
+    Un piano dei 480px ha due indirizzi e nessuno dei due e' sempre quello buono:
+    `storage_path` e' la DESTINAZIONE, `storage_path_attuale` l'indirizzo di
+    partenza. Quale dei due sia la posizione attuale dipende da quanto la
+    migrazione e' avanzata, e non si deduce dal piano: si chiede al bucket.
+
+    E' la stessa regola che `ricomprimi.py` applica quando costruisce le unita'
+    di lavoro, e va tenuta identica: leggere un campo solo sbaglia in entrambe
+    le direzioni. Misurato il 26 agosto 2026 sui piani reali:
+      - leggendo solo `storage_path`, a migrazione APERTA si perdono le voci non
+        ancora spostate: su "Schiena e Trapezio" 6 oggetti agganciati su 94, e
+        88 file vivi nel bucket sarebbero usciti `libero` dal pannello;
+      - leggendo solo `storage_path_attuale`, a migrazione CHIUSA si perdono
+        quelle arrivate: "Spalle e Cuffia" da 63 a 3, "Tricipiti" da 59 a 2.
+
+    E' la famiglia di [L35] su un asse nuovo: li' la domanda senza risposta era
+    «di quale dei due artefatti parli», qui e' «di quale dei due momenti parli».
+    La risposta e' sempre ADESSO, e adesso lo sa solo il bucket.
+
+    I piani piu' vecchi non hanno `storage_path_attuale` — Addominali, Bicipiti,
+    Cardio, Gambe e Polpacci, 0 voci su 369 — e per loro non cambia nulla.
+    """
+    att = v.get('storage_path_attuale')
+    if att and nfc(att) in presenti:
+        return nfc(att)
+    sp = nfc(v['storage_path'])
+    return sp if sp in presenti else None
+
+
 def ponte_480(zona, presenti):
     """percorso del file sul Mac -> storage_path del suo oggetto RIDOTTO nel bucket.
 
@@ -150,8 +181,9 @@ def ponte_480(zona, presenti):
         return {}, {}, 0
     ponte, per_impronta, ambigue = {}, {}, set()
     for v in voci:
-        sp = nfc(v['storage_path'])
-        if sp not in presenti:
+        # dove l'oggetto sta ORA: lo decide il bucket, non il piano
+        sp = posizione_480(v, presenti)
+        if sp is None:
             continue
         if v.get('origine_mac'):
             ponte[nfc(v['origine_mac'])] = sp
@@ -246,19 +278,19 @@ def gemelli_480(zona, presenti):
     `sha256_bucket_ora` quando non c'e': sono le stesse due chiavi di `ponte_480`
     e per la stessa ragione — il cantiere rinomina, e un percorso invecchia.
     """
-    voci = [v for v in voci_480(zona) if nfc(v['storage_path']) in presenti]
+    voci = [v for v in voci_480(zona) if posizione_480(v, presenti)]
 
     def chiave_di(v):
         return (nfc(v.get('origine_mac') or '') or v.get('sha256_bucket_ora')
-                or nfc(v['storage_path']))
+                or posizione_480(v, presenti))
 
     gruppi = collections.defaultdict(list)
     for v in voci:
-        gruppi[chiave_di(v)].append(nfc(v['storage_path']))
+        gruppi[chiave_di(v)].append(posizione_480(v, presenti))
 
     out = {}
     for v in voci:
-        sp = nfc(v['storage_path'])
+        sp = posizione_480(v, presenti)
         out[sp] = {'origine_mac': v.get('origine_mac'),
                    'sha256_bucket_ora': v.get('sha256_bucket_ora'),
                    'fratelli': [x for x in gruppi[chiave_di(v)] if x != sp]}
