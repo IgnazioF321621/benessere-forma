@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-26T16:12:53",
+ "quando": "2026-08-26T16:40:05",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4377,7 +4377,7 @@
   ]
  },
  "bucket": {
-  "oggetti": 669,
+  "oggetti": 668,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
@@ -4385,7 +4385,7 @@
    "Gambe e Glutei": 169,
    "Pettorali": 82,
    "Polpacci": 19,
-   "Schiena e Trapezio": 96,
+   "Schiena e Trapezio": 95,
    "Spalle e Cuffia": 63,
    "Tricipiti": 59
   },

@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-26 alle 16:12.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-26 alle 16:40.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -53,10 +53,10 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 | Gambe e Glutei | 169 |
 | Pettorali | 82 |
 | Polpacci | 19 |
-| Schiena e Trapezio | 96 |
+| Schiena e Trapezio | 95 |
 | Spalle e Cuffia | 63 |
 | Tricipiti | 59 |
-| **TOTALE** | **669** |
+| **TOTALE** | **668** |
 
 File nel bucket che nessuna riga indicizza: **3**
 
