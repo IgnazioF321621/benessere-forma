@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-26T16:40:05",
+ "quando": "2026-08-26T16:46:21",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -2614,7 +2614,7 @@
   {
    "codice": "EX448",
    "nome": "Superman",
-   "gif_slug": "superman-a-terra",
+   "gif_slug": "superman",
    "livello": "principiante"
   },
   {
@@ -4222,7 +4222,7 @@
  ],
  "catalogo": {
   "righe": 703,
-  "ultimo_sync": "2026-08-24T15:09:26.545000+00:00",
+  "ultimo_sync": "2026-08-26T14:43:49.209000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX717",
@@ -4339,11 +4339,11 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1584,
-  "slug_distinti": 1584,
+  "righe": 1583,
+  "slug_distinti": 1583,
   "viva": 639,
   "rotta": 0,
-  "libera": 27,
+  "libera": 26,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4371,7 +4371,6 @@
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
    "retroversione-bacino-da-supino",
-   "superman",
    "swimming-prono",
    "torsione-busto-gomiti-alti-in-piedi"
   ]
