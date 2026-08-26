@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-26T16:46:21",
+ "quando": "2026-08-26T21:29:01",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4339,14 +4339,15 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1583,
-  "slug_distinti": 1583,
+  "righe": 1601,
+  "slug_distinti": 1601,
   "viva": 639,
   "rotta": 0,
-  "libera": 26,
+  "libera": 44,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
+   "back-lever-parallele",
    "bird-dog",
    "croci-inverse-elastico-busto-flesso",
    "croci-inverse-elastico-maniglie-busto-flesso",
@@ -4359,6 +4360,7 @@
    "estensione-anca-bilanciere",
    "estensione-spalla-elastico-in-piedi",
    "flessione-laterale-cavo-basso",
+   "front-lever-pulldown-parallele",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
    "lat-machine-elastico-maniglie-in-ginocchio",
@@ -4366,17 +4368,33 @@
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
+   "piegamenti-scapolari",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
+   "rematore-alla-porta",
+   "rematore-invertito-anelli",
+   "rematore-invertito-sotto-tavolo",
    "retroversione-bacino-da-supino",
    "swimming-prono",
-   "torsione-busto-gomiti-alti-in-piedi"
+   "torsione-busto-gomiti-alti-in-piedi",
+   "trazioni-muscle-up",
+   "trazioni-sbarra-alternate-alla-spalla",
+   "trazioni-sbarra-arciere",
+   "trazioni-sbarra-assistite-asciugamano-un-braccio",
+   "trazioni-sbarra-con-salto",
+   "trazioni-sbarra-isometriche",
+   "trazioni-sbarra-l-sit",
+   "trazioni-sbarra-oscillazione-giro-completo",
+   "trazioni-sbarra-parziale-presa-stretta",
+   "trazioni-sbarra-presa-neutra-stretta",
+   "trazioni-sbarra-rotazione",
+   "trazioni-sbarra-scapolare"
   ]
  },
  "bucket": {
-  "oggetti": 668,
+  "oggetti": 686,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
@@ -4384,7 +4402,7 @@
    "Gambe e Glutei": 169,
    "Pettorali": 82,
    "Polpacci": 19,
-   "Schiena e Trapezio": 95,
+   "Schiena e Trapezio": 113,
    "Spalle e Cuffia": 63,
    "Tricipiti": 59
   },
