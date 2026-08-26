@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-26 alle 21:29.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-26 alle 22:28.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 

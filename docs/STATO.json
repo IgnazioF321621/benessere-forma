@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-26T21:29:01",
+ "quando": "2026-08-26T22:28:29",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4349,8 +4349,8 @@
   "elenco_libere": [
    "back-lever-parallele",
    "bird-dog",
+   "croci-inverse-elastico-alla-barra-busto-flesso",
    "croci-inverse-elastico-busto-flesso",
-   "croci-inverse-elastico-maniglie-busto-flesso",
    "crunch-obliquo-panca-romana",
    "curl-alternato-macchina",
    "curl-alternato-manubri-panca-inclinata",
@@ -4358,12 +4358,11 @@
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
    "estensione-anca-bilanciere",
-   "estensione-spalla-elastico-in-piedi",
+   "estensione-spalla-elastico",
    "flessione-laterale-cavo-basso",
    "front-lever-pulldown-parallele",
    "lancio-rotazionale-palla-medica-al-muro",
    "lancio-slam-palla-medica",
-   "lat-machine-elastico-maniglie-in-ginocchio",
    "leg-curl-bilaterale-macchina-seduta",
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-cobra-prono",
@@ -4378,6 +4377,7 @@
    "rematore-invertito-sotto-tavolo",
    "retroversione-bacino-da-supino",
    "swimming-prono",
+   "tirate-elastico-in-ginocchio",
    "torsione-busto-gomiti-alti-in-piedi",
    "trazioni-muscle-up",
    "trazioni-sbarra-alternate-alla-spalla",
