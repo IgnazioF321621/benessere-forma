@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-26T22:28:29",
+ "quando": "2026-08-27T18:29:39",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4218,14 +4218,38 @@
    "nome": "Piegamenti mani ruotate all'indietro",
    "gif_slug": "piegamenti-mani-ruotate-all-indietro",
    "livello": "intermedio"
+  },
+  {
+   "codice": "EX717",
+   "nome": "Estensione spalla elastico",
+   "gif_slug": "estensione-spalla-elastico",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX718",
+   "nome": "Lancio slam palla medica",
+   "gif_slug": "lancio-slam-palla-medica",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX719",
+   "nome": "Piegamenti cobra prono",
+   "gif_slug": "piegamenti-cobra-prono",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX720",
+   "nome": "Swimming prono",
+   "gif_slug": "swimming-prono",
+   "livello": "principiante"
   }
  ],
  "catalogo": {
-  "righe": 703,
-  "ultimo_sync": "2026-08-26T14:43:49.209000+00:00",
+  "righe": 707,
+  "ultimo_sync": "2026-08-27T16:26:09.832000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX717",
+  "prossimo_codice_libero": "EX721",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4241,7 +4265,7 @@
    "EX408",
    "EX528"
   ],
-  "con_gif_slug": 639,
+  "con_gif_slug": 643,
   "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4314,26 +4338,26 @@
   "per_uso": {
    "principale;finisher": 141,
    "principale": 335,
-   "finisher": 149,
+   "finisher": 150,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
    "principale;recupero": 2,
-   "finisher;riscaldamento": 6,
+   "finisher;riscaldamento": 8,
    "riscaldamento": 23,
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
-   "recupero;mobilita": 7,
+   "recupero;mobilita": 8,
    "principale;riscaldamento": 17,
    "skill": 10
   },
   "per_livello": {
    "intermedio": 263,
-   "principiante": 169,
+   "principiante": 172,
    "avanzato": 64,
    "intermedio;avanzato": 45,
-   "principiante;intermedio": 135,
+   "principiante;intermedio": 136,
    "principiante;intermedio;avanzato": 25,
    "(vuoto)": 2
   }
@@ -4341,9 +4365,9 @@
  "biblioteca_gif": {
   "righe": 1601,
   "slug_distinti": 1601,
-  "viva": 639,
+  "viva": 643,
   "rotta": 0,
-  "libera": 44,
+  "libera": 40,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4358,14 +4382,11 @@
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
    "estensione-anca-bilanciere",
-   "estensione-spalla-elastico",
    "flessione-laterale-cavo-basso",
    "front-lever-pulldown-parallele",
    "lancio-rotazionale-palla-medica-al-muro",
-   "lancio-slam-palla-medica",
    "leg-curl-bilaterale-macchina-seduta",
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
-   "piegamenti-cobra-prono",
    "piegamenti-con-rotazione-a-t",
    "piegamenti-scapolari",
    "plank-ginocchio-petto-apertura",
@@ -4376,7 +4397,6 @@
    "rematore-invertito-anelli",
    "rematore-invertito-sotto-tavolo",
    "retroversione-bacino-da-supino",
-   "swimming-prono",
    "tirate-elastico-in-ginocchio",
    "torsione-busto-gomiti-alti-in-piedi",
    "trazioni-muscle-up",
