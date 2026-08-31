@@ -125,6 +125,32 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 
+## 30. I gruppi muscolari che il generatore sa chiedere
+*Aperto il 31 agosto 2026, dal lavoro 3 di Schiena e Trapezio. **Non è una cella da correggere: è il motore.***
+
+Gli slot di isolamento chiedono `_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`, e quella mappa nomina **otto gruppi soli**: deltoidi posteriori · deltoidi laterali · bicipiti · tricipiti · petto · glutei · ischiocrurali · polpacci.
+
+Restano fuori quattro gruppi che a catalogo esistono e sono popolati:
+
+| gruppo | righe a catalogo | come entra oggi in scheda |
+|---|---|---|
+| `dorsali` | 59 | solo dai pattern `tirata verticale` / `tirata orizzontale`, mai come isolamento |
+| `trapezi` | 14 | **mai** — nessuno slot lo chiede |
+| `lombari` | 8 | **mai** |
+| dentato anteriore | (non esiste nel vocabolario) | **mai** |
+
+Le conseguenze si sono viste tutte nello stesso giorno. Le 14 `Scrollate` e `Tirate al mento` di `trapezi` sono a catalogo dal primo giorno e **non sono mai finite in una scheda**. `Piegamenti scapolari` è entrato con `gruppo_target` vuoto perché il dentato anteriore non ha una casella, e nessuna delle 22 esistenti lo descrive senza mentire. E la stessa mappa spiega perché `Trazioni sbarra scapolare`, che pure prende `trapezi`, resterà comunque inerte.
+
+**Il difetto di lettura è lo stesso di [L16](LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse) e del conteggio dei deltoidi anteriori**: contare le righe che hanno il gruppo giusto dice che il gruppo è sano, mentre quello che conta è se qualcuno le pesca.
+
+Da decidere quando si apre, in quest'ordine:
+
+1. se il vocabolario dei `gruppo_target` va allargato (**dentato anteriore**) o se quelle righe restano senza gruppo
+2. quali dei quattro entrano negli slot obbligatori, e per quale categoria di sessione — un isolamento di trapezi ha senso in Upper, uno di lombari quasi solo in Lower
+3. se serve una terza via fra «obbligatorio» e «invisibile»: oggi un gruppo non richiesto può entrare **solo** come isolamento bonus, e anche lì [`_trainGenPickIsoByGruppoTarget`](../zona-tracker.html) scarta tutto ciò che non ha `pattern` `isolamento` o `core`
+
+⚠️ **Tocca la baseline dei pool.** Qualunque modifica qui va misurata prima e dopo → [L17](LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice), e possibilmente letta da `?schedaDebug=1` in app invece che dalla replica in Python, che per i pool secondari non è un termine di paragone affidabile.
+
 ## 21. Ricomprimere le GIF — il cantiere che chiude il problema Storage
 ## 22. Rimettere il `cache-control` sulle GIF
 *I due si fanno insieme: si sta gia' ricaricando tutto, l'intestazione viene gratis. Aperti il 15 agosto 2026.*
