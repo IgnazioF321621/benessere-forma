@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-31T16:28:29",
+ "quando": "2026-08-31T16:47:53",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -63,8 +63,8 @@
   },
   {
    "codice": "EX011",
-   "nome": "Rematore bilanciere busto flesso",
-   "gif_slug": "rematore-bilanciere-busto-flesso",
+   "nome": "Rematore bilanciere presa larga busto flesso",
+   "gif_slug": "rematore-bilanciere-presa-larga-busto-flesso",
    "livello": "intermedio;avanzato"
   },
   {
@@ -4246,7 +4246,7 @@
  ],
  "catalogo": {
   "righe": 707,
-  "ultimo_sync": "2026-08-31T14:20:31.631000+00:00",
+  "ultimo_sync": "2026-08-31T14:45:08.590000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX721",
@@ -4363,11 +4363,11 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1602,
-  "slug_distinti": 1602,
+  "righe": 1601,
+  "slug_distinti": 1601,
   "viva": 643,
   "rotta": 0,
-  "libera": 41,
+  "libera": 40,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
@@ -4394,7 +4394,6 @@
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
    "rematore-alla-porta",
-   "rematore-bilanciere-presa-larga-busto-flesso",
    "rematore-invertito-anelli",
    "rematore-invertito-sotto-tavolo",
    "retroversione-bacino-da-supino",
