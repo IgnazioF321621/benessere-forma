@@ -706,7 +706,30 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 21 ago (dopo le fusioni) | 664 | 329 | 129 | 42 | 64 su 64 | 25 |
 | 21 ago sera | 665 | 366 | 142 | 42 | 64 su 64 | 25 |
 | 21 ago, Pettorali chiusa | 690 | 376 | 144 | 43 | 64 su 64 | 25 |
-| **22 ago (attuale)** | **689** | **376** | **208** | **43** | **64 su 64** | **25** |
+| 22 ago | 689 | 376 | 208 | 43 | 64 su 64 | 25 |
+| 23 ago sera, Spalle e Cuffia chiusa | 698 | 401 | 240 | 47 | 64 su 64 | 25 |
+| **31 ago (attuale)** | **725** | **406** | **253** | **49** | **64 su 64** | **25** |
+
+*La riga del 22 agosto sera (sync delle 50 righe) non c'è: quel sync **modificò** righe esistenti invece di aggiungerne, quindi lo stato di allora non si ricostruisce togliendo codici e i suoi numeri si potrebbero solo dedurre per aritmetica. Un numero deciso a tavolino in una tabella di misure invecchia in silenzio.*
+
+**31 agosto — la replica adesso sta su disco, e il dubbio si chiude.** I numeri di questa riga vengono da `tools/baseline_pool.py`, scritto una volta e tenuto nel repo invece di essere riscritto a mano a ogni misura. La prova che serviva: **rimuovendo dal catalogo le 27 righe aggiunte dal 24 agosto in poi, la replica restituisce `698 · 401 · 240 · 47 · 1 · 568` — tutti e sei i numeri della baseline documentata del 23 agosto sera.** La replica precedente, sullo stesso confronto, sbagliava di 6 sui finisher, 1 sul riscaldamento e 1 sulle ammesse, e non si poteva dire quale delle due avesse ragione perché nessuna delle due esisteva più → il difetto è chiuso, il cerchio no: la verità resta `?schedaDebug=1` in app.
+
+**31 agosto — +27 righe, e lo scostamento si attribuisce blocco per blocco.**
+
+| blocco | righe | principali | finisher | riscaldamento | ammesse |
+|---|---|---|---|---|---|
+| EX712–EX716 · Tricipiti, 24 ago | +5 | +1 | +4 | +0 | +5 |
+| EX717–EX720 · Schiena e Trapezio, 30 ago | +4 | +0 | +2 | +2 | +3 |
+| EX721–EX738 · calisthenics, 31 ago | +18 | +4 | +7 | +0 | +17 |
+| **somma** | **+27** | **+5** | **+13** | **+2** | **+25** |
+
+La somma dei blocchi coincide con lo scostamento misurato su tutti e cinque i numeri: **nessuna riga persa e nessuna riga entrata di straforo**. Il `poolCarry` resta 1, come sempre.
+
+Delle 18 calisthenics ne entrano **17 su 18**: l'unica esclusa è **EX721 `Rematore invertito anelli`**, che passa il filtro luogo e cade su quello attrezzo — `anelli` non è fra gli attrezzi dichiarati da Ignazio, e la riga non ha surrogato. Il `luogo = casa;palestra;libero` deciso il 31 agosto è corretto in sé, ma **per questo profilo non apre niente**. Le 6 `skill` sono ammesse dai tre filtri e non entrano in nessun pool, come previsto.
+
+⚠️ **Un gruppo povero nuovo, e non è nelle spalle: il petto ha 2 candidati pescabili su 29 righe col gruppo giusto.** Le altre 27 sono `spinta orizzontale`, e `_trainGenPickIsoByGruppoTarget` scarta tutto ciò che non è `isolamento` o `core` prima ancora di guardare il gruppo. È lo stesso errore di lettura dei deltoidi anteriori, su un gruppo che nessuno sospettava → [L16](LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse). I deltoidi posteriori restano a **1**, i laterali a **4**.
+
+⚠️ **`cavigliere` è ancora inerte**: dichiarato nel profilo di Ignazio, 0 esercizi aperti, e l'alias lo manda su `cavigliera` che a catalogo non esiste → [L2](LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Invariato.
 
 **22 agosto — +64 finisher, zero principali, e il gruppo povero resta povero.** Le 88 righe con `uso` fuori vocabolario sono state sanate: tutte e 88 sono diventate `finisher`, nessuna `principale`. Il `poolFinisher` passa da 144 a **208**, il `poolPrincipali` non si muove. Fra le 88 c'erano 8 deltoidi posteriori e 12 laterali — i due gruppi più poveri — ma gli slot di isolamento obbligatorio pescano da `poolPrincipali`, quindi non li vedono: deltoidi posteriori resta a **1 candidato**. Il catalogo scende a 689 con l'eliminazione di EX322.
 
