@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-27T22:18:22",
+ "quando": "2026-08-31T15:26:51",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -417,8 +417,8 @@
   },
   {
    "codice": "EX070",
-   "nome": "Scrollate bilanciere",
-   "gif_slug": "scrollate-bilanciere",
+   "nome": "Scrollate bilanciere presa stretta",
+   "gif_slug": "scrollate-bilanciere-presa-stretta",
    "livello": "principiante;intermedio"
   },
   {
@@ -453,8 +453,8 @@
   },
   {
    "codice": "EX076",
-   "nome": "Rematore manubri prono panca piana",
-   "gif_slug": "rematore-manubri-prono-panca-piana",
+   "nome": "Rematore manubri panca piana",
+   "gif_slug": "rematore-manubri-panca-piana",
    "livello": "principiante;intermedio"
   },
   {
@@ -2547,8 +2547,8 @@
   },
   {
    "codice": "EX437",
-   "nome": "Croci inverse cavi prono panca piana",
-   "gif_slug": "croci-inverse-cavi-prono-panca-piana",
+   "nome": "Croci inverse cavi alti prono panca piana",
+   "gif_slug": "croci-inverse-cavi-alti-prono-panca-piana",
    "livello": "principiante;intermedio"
   },
   {
@@ -2595,20 +2595,20 @@
   },
   {
    "codice": "EX445",
-   "nome": "Estensione dorsale panca romana 45 gradi",
-   "gif_slug": "estensione-dorsale-panca-romana-45-gradi",
+   "nome": "Estensione dorsale panca romana",
+   "gif_slug": "estensione-dorsale-panca-romana",
    "livello": "principiante"
   },
   {
    "codice": "EX446",
-   "nome": "Estensione dorsale panca romana 45 gradi con disco",
-   "gif_slug": "estensione-dorsale-panca-romana-45-gradi-con-disco",
+   "nome": "Estensione dorsale con disco panca romana",
+   "gif_slug": "estensione-dorsale-con-disco-panca-romana",
    "livello": "intermedio"
   },
   {
    "codice": "EX447",
-   "nome": "Estensione dorsale panca romana 45 gradi con manubrio",
-   "gif_slug": "estensione-dorsale-panca-romana-45-gradi-con-manubrio",
+   "nome": "Estensione dorsale con manubrio panca romana",
+   "gif_slug": "estensione-dorsale-con-manubrio-panca-romana",
    "livello": "intermedio"
   },
   {
@@ -2631,14 +2631,14 @@
   },
   {
    "codice": "EX451",
-   "nome": "Lat machine dietro nuca barra dritta",
-   "gif_slug": "lat-machine-dietro-nuca-barra-dritta",
+   "nome": "Lat machine dietro barra dritta",
+   "gif_slug": "lat-machine-dietro-barra-dritta",
    "livello": "avanzato"
   },
   {
    "codice": "EX452",
-   "nome": "Lat machine dietro nuca macchina",
-   "gif_slug": "lat-machine-dietro-nuca-macchina",
+   "nome": "Lat machine dietro macchina",
+   "gif_slug": "lat-machine-dietro-macchina",
    "livello": "intermedio;avanzato"
   },
   {
@@ -2649,8 +2649,8 @@
   },
   {
    "codice": "EX454",
-   "nome": "Lat machine frontale presa stretta barra dritta",
-   "gif_slug": "lat-machine-frontale-presa-stretta-barra-dritta",
+   "nome": "Lat machine frontale presa stretta",
+   "gif_slug": "lat-machine-frontale-presa-stretta",
    "livello": "principiante;intermedio"
   },
   {
@@ -2661,20 +2661,20 @@
   },
   {
    "codice": "EX456",
-   "nome": "Lat machine maniglia un braccio",
-   "gif_slug": "lat-machine-maniglia-un-braccio",
+   "nome": "Lat machine un braccio maniglia",
+   "gif_slug": "lat-machine-un-braccio-maniglia",
    "livello": "intermedio"
   },
   {
    "codice": "EX457",
-   "nome": "Pullover barra dritta cavo alto",
-   "gif_slug": "pullover-barra-dritta-cavo-alto",
+   "nome": "Lat pulldown barra cavo alto",
+   "gif_slug": "lat-pulldown-barra-cavo-alto",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX458",
-   "nome": "Pullover corda cavo alto",
-   "gif_slug": "pullover-corda-cavo-alto",
+   "nome": "Lat pulldown corda cavo alto",
+   "gif_slug": "lat-pulldown-corda-cavo-alto",
    "livello": "principiante;intermedio"
   },
   {
@@ -2685,26 +2685,26 @@
   },
   {
    "codice": "EX460",
-   "nome": "Rematore V-bar cavo prono panca piana",
-   "gif_slug": "rematore-v-bar-cavo-prono-panca-piana",
+   "nome": "Rematore V-bar cavo medio panca piana",
+   "gif_slug": "rematore-v-bar-cavo-medio-panca-piana",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX461",
-   "nome": "Rematore barra dritta cavo basso",
-   "gif_slug": "rematore-barra-dritta-cavo-basso",
+   "nome": "Rematore barra cavo basso",
+   "gif_slug": "rematore-barra-cavo-basso",
    "livello": "intermedio"
   },
   {
    "codice": "EX462",
-   "nome": "Rematore barra dritta cavo prono panca inclinata",
-   "gif_slug": "rematore-barra-dritta-cavo-prono-panca-inclinata",
+   "nome": "Rematore barra cavo medio panca inclinata",
+   "gif_slug": "rematore-barra-cavo-medio-panca-inclinata",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX463",
-   "nome": "Rematore barra dritta cavo seduto",
-   "gif_slug": "rematore-barra-dritta-cavo-seduto",
+   "nome": "Rematore barra cavo basso presa larga seduto",
+   "gif_slug": "rematore-barra-cavo-basso-presa-larga-seduto",
    "livello": "principiante;intermedio"
   },
   {
@@ -2715,8 +2715,8 @@
   },
   {
    "codice": "EX465",
-   "nome": "Rematore bilanciere presa inversa busto flesso",
-   "gif_slug": "rematore-bilanciere-presa-inversa-busto-flesso",
+   "nome": "Rematore bilanciere presa inversa",
+   "gif_slug": "rematore-bilanciere-presa-inversa",
    "livello": "intermedio"
   },
   {
@@ -2727,20 +2727,20 @@
   },
   {
    "codice": "EX467",
-   "nome": "Rematore bilanciere prono panca inclinata",
-   "gif_slug": "rematore-bilanciere-prono-panca-inclinata",
+   "nome": "Rematore bilanciere panca inclinata",
+   "gif_slug": "rematore-bilanciere-panca-inclinata",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX468",
-   "nome": "Rematore corda cavo alto in ginocchio",
-   "gif_slug": "rematore-corda-cavo-alto-in-ginocchio",
+   "nome": "Tirate al mento corda cavo alto inginocchiato",
+   "gif_slug": "tirate-al-mento-corda-cavo-alto-inginocchiato",
    "livello": "intermedio"
   },
   {
    "codice": "EX469",
-   "nome": "Rematore corda cavo prono panca piana",
-   "gif_slug": "rematore-corda-cavo-prono-panca-piana",
+   "nome": "Rematore corda cavo panca piana",
+   "gif_slug": "rematore-corda-cavo-panca-piana",
    "livello": "principiante;intermedio"
   },
   {
@@ -2805,8 +2805,8 @@
   },
   {
    "codice": "EX480",
-   "nome": "Rematore maniglia cavo",
-   "gif_slug": "rematore-maniglia-cavo",
+   "nome": "Rematore cavo medio V-bar",
+   "gif_slug": "rematore-cavo-medio-v-bar",
    "livello": "principiante;intermedio"
   },
   {
@@ -2817,8 +2817,8 @@
   },
   {
    "codice": "EX482",
-   "nome": "Rematore manubri presa inversa prono panca inclinata",
-   "gif_slug": "rematore-manubri-presa-inversa-prono-panca-inclinata",
+   "nome": "Rematore manubri presa inversa panca inclinata",
+   "gif_slug": "rematore-manubri-presa-inversa-panca-inclinata",
    "livello": "principiante;intermedio"
   },
   {
@@ -2829,14 +2829,14 @@
   },
   {
    "codice": "EX484",
-   "nome": "Rematore manubrio un braccio ginocchio su panca",
-   "gif_slug": "rematore-manubrio-un-braccio-ginocchio-su-panca",
+   "nome": "Rematore manubrio un braccio appoggio su panca inclinata",
+   "gif_slug": "rematore-manubrio-un-braccio-appoggio-su-panca-inclinata",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX485",
-   "nome": "Rematore manubrio un braccio mano su panca",
-   "gif_slug": "rematore-manubrio-un-braccio-mano-su-panca",
+   "nome": "Rematore manubrio un braccio appoggio su panca piana",
+   "gif_slug": "rematore-manubrio-un-braccio-appoggio-su-panca-piana",
    "livello": "intermedio"
   },
   {
@@ -2847,14 +2847,14 @@
   },
   {
    "codice": "EX487",
-   "nome": "Scrollate barra dritta cavo basso",
-   "gif_slug": "scrollate-barra-dritta-cavo-basso",
+   "nome": "Scrollate barra cavo basso",
+   "gif_slug": "scrollate-barra-cavo-basso",
    "livello": "principiante;intermedio"
   },
   {
    "codice": "EX488",
-   "nome": "Scrollate barra dritta cavo basso presa stretta",
-   "gif_slug": "scrollate-barra-dritta-cavo-basso-presa-stretta",
+   "nome": "Scrollate barra cavo basso presa stretta",
+   "gif_slug": "scrollate-barra-cavo-basso-presa-stretta",
    "livello": "principiante;intermedio"
   },
   {
@@ -2877,8 +2877,8 @@
   },
   {
    "codice": "EX492",
-   "nome": "Scrollate manubri prono panca inclinata",
-   "gif_slug": "scrollate-manubri-prono-panca-inclinata",
+   "nome": "Scrollate manubri panca inclinata",
+   "gif_slug": "scrollate-manubri-panca-inclinata",
    "livello": "intermedio"
   },
   {
@@ -2895,8 +2895,8 @@
   },
   {
    "codice": "EX495",
-   "nome": "Tirate al mento barra dritta cavo basso",
-   "gif_slug": "tirate-al-mento-barra-dritta-cavo-basso",
+   "nome": "Tirate al mento barra cavo basso",
+   "gif_slug": "tirate-al-mento-barra-cavo-basso",
    "livello": "intermedio"
   },
   {
@@ -2925,8 +2925,8 @@
   },
   {
    "codice": "EX500",
-   "nome": "Tirate al viso maniglie cavo alto",
-   "gif_slug": "tirate-al-viso-maniglie-cavo-alto",
+   "nome": "Tirate al viso cavi alti incrociati",
+   "gif_slug": "tirate-al-viso-cavi-alti-incrociati",
    "livello": "intermedio"
   },
   {
@@ -2943,14 +2943,14 @@
   },
   {
    "codice": "EX503",
-   "nome": "Tirate verticali elastico maniglie in ginocchio",
-   "gif_slug": "tirate-verticali-elastico-maniglie-in-ginocchio",
+   "nome": "Tirate verticali elastico in ginocchio",
+   "gif_slug": "tirate-verticali-elastico-in-ginocchio",
    "livello": "principiante"
   },
   {
    "codice": "EX504",
-   "nome": "Tirate verticali maniglia cavo alto un braccio in ginocchio",
-   "gif_slug": "tirate-verticali-maniglia-cavo-alto-un-braccio-in-ginocchio",
+   "nome": "Tirate verticali un braccio cavo alto in ginocchio",
+   "gif_slug": "tirate-verticali-un-braccio-cavo-alto-in-ginocchio",
    "livello": "intermedio"
   },
   {
@@ -2991,8 +2991,8 @@
   },
   {
    "codice": "EX511",
-   "nome": "Trazioni sbarra presa stretta",
-   "gif_slug": "trazioni-sbarra-presa-stretta",
+   "nome": "Trazioni sbarra presa inversa stretta",
+   "gif_slug": "trazioni-sbarra-presa-inversa-stretta",
    "livello": "intermedio;avanzato"
   },
   {
@@ -3363,8 +3363,8 @@
   },
   {
    "codice": "EX574",
-   "nome": "Trazione sbarra a corpo capovolto",
-   "gif_slug": "trazione-sbarra-a-corpo-capovolto",
+   "nome": "Trazioni sbarra a corpo capovolto",
+   "gif_slug": "trazioni-sbarra-a-corpo-capovolto",
    "livello": "avanzato"
   },
   {
@@ -4246,7 +4246,7 @@
  ],
  "catalogo": {
   "righe": 707,
-  "ultimo_sync": "2026-08-27T16:26:09.832000+00:00",
+  "ultimo_sync": "2026-08-27T20:35:57.870000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX721",
@@ -4363,17 +4363,16 @@
   }
  },
  "biblioteca_gif": {
-  "righe": 1634,
-  "slug_distinti": 1634,
+  "righe": 1601,
+  "slug_distinti": 1601,
   "viva": 643,
   "rotta": 0,
-  "libera": 73,
+  "libera": 40,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
    "back-lever-parallele",
    "bird-dog",
-   "croci-inverse-cavi-alti-prono-panca-piana",
    "croci-inverse-elastico-alla-barra-busto-flesso",
    "croci-inverse-elastico-busto-flesso",
    "crunch-obliquo-panca-romana",
@@ -4383,18 +4382,9 @@
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
    "estensione-anca-bilanciere",
-   "estensione-dorsale-con-disco-panca-romana",
-   "estensione-dorsale-con-manubrio-panca-romana",
-   "estensione-dorsale-panca-romana",
    "flessione-laterale-cavo-basso",
    "front-lever-pulldown-parallele",
    "lancio-rotazionale-palla-medica-al-muro",
-   "lat-machine-dietro-barra-dritta",
-   "lat-machine-dietro-macchina",
-   "lat-machine-frontale-presa-stretta",
-   "lat-machine-un-braccio-maniglia",
-   "lat-pulldown-barra-cavo-alto",
-   "lat-pulldown-corda-cavo-alto",
    "leg-curl-bilaterale-macchina-seduta",
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-con-rotazione-a-t",
@@ -4404,34 +4394,12 @@
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
    "rematore-alla-porta",
-   "rematore-barra-cavo-basso",
-   "rematore-barra-cavo-basso-presa-larga-seduto",
-   "rematore-barra-cavo-medio-panca-inclinata",
-   "rematore-bilanciere-panca-inclinata",
-   "rematore-bilanciere-presa-inversa",
-   "rematore-cavo-medio-v-bar",
-   "rematore-corda-cavo-panca-piana",
    "rematore-invertito-anelli",
    "rematore-invertito-sotto-tavolo",
-   "rematore-manubri-panca-piana",
-   "rematore-manubri-presa-inversa-panca-inclinata",
-   "rematore-manubrio-un-braccio-appoggio-su-panca-inclinata",
-   "rematore-manubrio-un-braccio-appoggio-su-panca-piana",
-   "rematore-v-bar-cavo-medio-panca-piana",
    "retroversione-bacino-da-supino",
-   "scrollate-barra-cavo-basso",
-   "scrollate-barra-cavo-basso-presa-stretta",
-   "scrollate-bilanciere-presa-stretta",
-   "scrollate-manubri-panca-inclinata",
-   "tirate-al-mento-barra-cavo-basso",
-   "tirate-al-mento-corda-cavo-alto-inginocchiato",
-   "tirate-al-viso-cavi-alti-incrociati",
    "tirate-elastico-in-ginocchio",
-   "tirate-verticali-elastico-in-ginocchio",
-   "tirate-verticali-un-braccio-cavo-alto-in-ginocchio",
    "torsione-busto-gomiti-alti-in-piedi",
    "trazioni-muscle-up",
-   "trazioni-sbarra-a-corpo-capovolto",
    "trazioni-sbarra-alternate-alla-spalla",
    "trazioni-sbarra-arciere",
    "trazioni-sbarra-assistite-asciugamano-un-braccio",
@@ -4440,7 +4408,6 @@
    "trazioni-sbarra-l-sit",
    "trazioni-sbarra-oscillazione-giro-completo",
    "trazioni-sbarra-parziale-presa-stretta",
-   "trazioni-sbarra-presa-inversa-stretta",
    "trazioni-sbarra-presa-neutra-stretta",
    "trazioni-sbarra-rotazione",
    "trazioni-sbarra-scapolare"
