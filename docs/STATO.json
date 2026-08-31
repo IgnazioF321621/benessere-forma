@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-31T17:10:37",
+ "quando": "2026-08-31T21:21:34",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4242,14 +4242,122 @@
    "nome": "Swimming prono",
    "gif_slug": "swimming-prono",
    "livello": "principiante"
+  },
+  {
+   "codice": "EX721",
+   "nome": "Rematore invertito anelli",
+   "gif_slug": "rematore-invertito-anelli",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX722",
+   "nome": "Rematore invertito sotto tavolo",
+   "gif_slug": "rematore-invertito-sotto-tavolo",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX723",
+   "nome": "Rematore alla porta",
+   "gif_slug": "rematore-alla-porta",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX724",
+   "nome": "Trazioni sbarra scapolare",
+   "gif_slug": "trazioni-sbarra-scapolare",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX725",
+   "nome": "Piegamenti scapolari",
+   "gif_slug": "piegamenti-scapolari",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX726",
+   "nome": "Trazioni Muscle up",
+   "gif_slug": "trazioni-muscle-up",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX727",
+   "nome": "Trazioni sbarra L-sit",
+   "gif_slug": "trazioni-sbarra-l-sit",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX728",
+   "nome": "Trazioni sbarra rotazione",
+   "gif_slug": "trazioni-sbarra-rotazione",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX729",
+   "nome": "Trazioni sbarra oscillazione giro completo",
+   "gif_slug": "trazioni-sbarra-oscillazione-giro-completo",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX730",
+   "nome": "Front lever pulldown parallele",
+   "gif_slug": "front-lever-pulldown-parallele",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX731",
+   "nome": "Back lever parallele",
+   "gif_slug": "back-lever-parallele",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX732",
+   "nome": "Trazioni sbarra con salto",
+   "gif_slug": "trazioni-sbarra-con-salto",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX733",
+   "nome": "Trazioni sbarra isometriche",
+   "gif_slug": "trazioni-sbarra-isometriche",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX734",
+   "nome": "Trazioni sbarra parziale presa stretta",
+   "gif_slug": "trazioni-sbarra-parziale-presa-stretta",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX735",
+   "nome": "Trazioni sbarra presa neutra stretta",
+   "gif_slug": "trazioni-sbarra-presa-neutra-stretta",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX736",
+   "nome": "Trazioni sbarra assistite asciugamano un braccio",
+   "gif_slug": "trazioni-sbarra-assistite-asciugamano-un-braccio",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX737",
+   "nome": "Trazioni sbarra arciere",
+   "gif_slug": "trazioni-sbarra-arciere",
+   "livello": "avanzato"
+  },
+  {
+   "codice": "EX738",
+   "nome": "Trazioni sbarra alternate alla spalla",
+   "gif_slug": "trazioni-sbarra-alternate-alla-spalla",
+   "livello": "avanzato"
   }
  ],
  "catalogo": {
-  "righe": 707,
-  "ultimo_sync": "2026-08-31T14:45:08.590000+00:00",
+  "righe": 725,
+  "ultimo_sync": "2026-08-31T19:17:41.433000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX721",
+  "prossimo_codice_libero": "EX739",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4265,7 +4373,7 @@
    "EX408",
    "EX528"
   ],
-  "con_gif_slug": 643,
+  "con_gif_slug": 661,
   "senza_gif_slug": 64,
   "codici_senza_gif_slug": [
    "EX001",
@@ -4337,8 +4445,8 @@
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
    "principale;finisher": 141,
-   "principale": 335,
-   "finisher": 150,
+   "principale": 340,
+   "finisher": 157,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
@@ -4350,14 +4458,14 @@
    "riscaldamento;finisher": 2,
    "recupero;mobilita": 8,
    "principale;riscaldamento": 17,
-   "skill": 10
+   "skill": 16
   },
   "per_livello": {
-   "intermedio": 263,
-   "principiante": 172,
-   "avanzato": 64,
+   "intermedio": 265,
+   "principiante": 177,
+   "avanzato": 73,
    "intermedio;avanzato": 45,
-   "principiante;intermedio": 136,
+   "principiante;intermedio": 138,
    "principiante;intermedio;avanzato": 25,
    "(vuoto)": 2
   }
@@ -4365,13 +4473,12 @@
  "biblioteca_gif": {
   "righe": 1601,
   "slug_distinti": 1601,
-  "viva": 643,
+  "viva": 661,
   "rotta": 0,
-  "libera": 40,
+  "libera": 22,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
-   "back-lever-parallele",
    "bird-dog",
    "croci-inverse-elastico-alla-barra-busto-flesso",
    "croci-inverse-elastico-busto-flesso",
@@ -4383,34 +4490,17 @@
    "curl-manubri-panca-inclinata",
    "estensione-anca-bilanciere",
    "flessione-laterale-cavo-basso",
-   "front-lever-pulldown-parallele",
    "lancio-rotazionale-palla-medica-al-muro",
    "leg-curl-bilaterale-macchina-seduta",
    "leg-curl-unilaterale-macchina-piedi-supporto-coscia",
    "piegamenti-con-rotazione-a-t",
-   "piegamenti-scapolari",
    "plank-ginocchio-petto-apertura",
    "plank-inchworm",
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
-   "rematore-alla-porta",
-   "rematore-invertito-anelli",
-   "rematore-invertito-sotto-tavolo",
    "retroversione-bacino-da-supino",
    "tirate-elastico-in-ginocchio",
-   "torsione-busto-gomiti-alti-in-piedi",
-   "trazioni-muscle-up",
-   "trazioni-sbarra-alternate-alla-spalla",
-   "trazioni-sbarra-arciere",
-   "trazioni-sbarra-assistite-asciugamano-un-braccio",
-   "trazioni-sbarra-con-salto",
-   "trazioni-sbarra-isometriche",
-   "trazioni-sbarra-l-sit",
-   "trazioni-sbarra-oscillazione-giro-completo",
-   "trazioni-sbarra-parziale-presa-stretta",
-   "trazioni-sbarra-presa-neutra-stretta",
-   "trazioni-sbarra-rotazione",
-   "trazioni-sbarra-scapolare"
+   "torsione-busto-gomiti-alti-in-piedi"
   ]
  },
  "bucket": {
