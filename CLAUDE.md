@@ -1,6 +1,6 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 agosto 2026)*
+PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 31 agosto 2026)*
 
 **Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md); come si nominano gli esercizi in [`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md) (allegato normativo, in vigore). Non serve leggere gli archivi per lavorare: si aprono quando servono.
 
@@ -58,23 +58,23 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ---
 
-## Stato corrente (13 agosto 2026)
+## Stato corrente (31 agosto 2026)
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b in stand-by.
 
 **Pirsi** ✅ chiuso 13 agosto — il coach ha un nome, **provvisorio e in prova**. Prompt allineati su un registro unico, stringhe visibili riscritte nei tre moduli, nome in `COACH_NAME`. Regole in [Pirsi](#pirsi--nome-e-voce-del-coach), residui aperti nel [cantiere 26](docs/CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi).
 
-**Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **689 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
+**Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **725 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **639 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Restano due zone: Schiena e Trapezio** (113 file sul Mac, 96 nel bucket, 88 codici) **e Mobilità** (~215 GIF, mai entrata nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **661 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Schiena e Trapezio** — **chiusa il 31 agosto su tutti e tre i lavori**: 113 oggetti, 113 righe, 110 codici, 0 righe senza oggetto e 0 oggetti senza riga. Le 18 GIF calisthenics senza codice sono diventate **EX721-EX738**, e prima di loro EX717-EX720; 3 righe restano senza codice **per decisione**, non per arretrato. **Resta una zona sola: Mobilità** (~215 GIF, mai entrata nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
 **Body** — M2 check fisico funzionante. Da ri-agganciare a fine blocco Training.
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, ✅ **chiusi il 16 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Tutte e 8 le zone migrate sono scese**, fra il 15 e il 16 agosto. Bucket da 639 a **362 MB, 35% del piano Free** — **277 MB liberati**, e tutti i 647 oggetti servono `public, max-age=31536000, immutable`. Con Pettorali e Mobilità dentro, già ridotte al caricamento, la biblioteca completa si ferma a **~531 MB, il 52% del piano**. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, ✅ **chiusi il 16 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne aggiungerebbero 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Tutte e 8 le zone migrate sono scese**, fra il 15 e il 16 agosto. Bucket da 639 a **362 MB, 35% del piano Free** — **277 MB liberati**, e tutti gli oggetti servono `public, max-age=31536000, immutable` — **686 oggi**, perché da allora sono entrate le zone nuove, che entrano già ridotte. Con Pettorali e Mobilità dentro, già ridotte al caricamento, la biblioteca completa si ferma a **~531 MB, il 52% del piano**. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
-**Prossimo passo**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro su Training. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
+**Prossimo passo su Training**: cantiere 1 — test timer su workout reali, prima di qualunque altro lavoro sul generatore. **Sul fronte GIF**: **Mobilità**, l'ultima zona, ~215 file mai entrati nel bucket — e per regola entrano già ridotti a 480 px. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
 ---
 
@@ -95,7 +95,9 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - ~~88 righe che nessun pool poteva pescare~~ · ~~2 `gruppo_target` fuori vocabolario~~ · ~~12 righe `principale` senza `gruppo_target`~~ — **tutti e tre chiusi il 22 agosto**, stanati dalla sezione 5 di `verifica_sync.py` il giorno prima. Le 72 `accessorio` e le 16 `uso = isolamento` (queste ultime un travaso della colonna `pattern`) sono rientrate nel vocabolario; i 12 orfani hanno il loro gruppo. La sezione 5 dice ✅ su tutti e quattro i controlli
 - ~~6 righe `cavo → elastico` con `nota_surrogato` ma senza `esecuzione_surrogato` né `errori_surrogato`~~ — **chiuse il 22 agosto sera** col sync delle 50 righe: EX101 · EX140 · EX141 · EX165 · EX182 · EX193 hanno tutti e tre i campi. In tutto il catalogo **0 righe** hanno la nota senza esecuzione o errori, **0** un surrogato uguale all'attrezzo nativo, **0** un surrogato senza nota
 - **11 righe a manubri con `luogo = palestra` che a casa si fanno**, residuo aperto rimisurato il 22 agosto sera: EX002 · EX071 · EX099 · EX212 · EX317 · EX354 · EX358 · EX368 · EX375 · EX392 · EX393. Dieci hanno il surrogato ed entrano dal bypass, quindi il `luogo` impreciso non le blocca — le mostra solo come esercizi da palestra. **EX212 `Jumping pliometrico manubri` è l'unica senza surrogato**, e quella resta fuori davvero. Il sync del 22 agosto sera non le ha toccate: le 8 righe con `casa` aggiunto erano quelle a corpo libero (EX038 · EX072 · EX357 · EX570 · EX599 · EX681 · EX682 · EX683)
-- **Deltoidi posteriori: 1 solo candidato** nel pool casa (EX030 Band pull-apart). Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione. **Spalle e Cuffia ha alzato gli altri due**: laterali da 3 a **4** (EX703) e anteriori da 1 a **2** (EX702). I posteriori no, ed era prevedibile: fra le 10 GIF della zona non c'era una sola apertura all'indietro. Il gruppo si riempirà semmai da **Schiena e Trapezio**
+- **Deltoidi posteriori: 1 solo candidato** nel pool casa (EX030 Band pull-apart). Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione.
+  ⚠️ **Non è una carenza del catalogo, ed è la scoperta del 31 agosto**: le righe con `gruppo_target = deltoidi posteriori` sono **13**, e **12 passano tutti e tre i filtri** per il profilo casa — sono `isolamento`, hanno il gruppo giusto, sono lì. Ne resta pescabile **una sola** perché le altre dodici non hanno `principale` nel campo `uso`: sono `finisher` o `riscaldamento`, e lo slot di isolamento pesca da `poolPrincipali`. EX059, EX094, EX438, EX441, EX501 sono a manubri, elastico o corpo libero, cioè eseguibili così come sono.
+  Il rimedio è **una parola nel campo `uso` di quelle righe**, non una GIF nuova e non una zona nuova: la previsione che il gruppo si sarebbe riempito da Spalle e Cuffia prima e da Schiena e Trapezio poi **è stata smentita due volte**, e ora si sa perché. Delle due sorelle, **Spalle e Cuffia aveva alzato laterali da 3 a 4** (EX703) **e anteriori da 1 a 2** (EX702); Schiena e Trapezio non ha spostato nessuno dei tre
 
 ---
 
@@ -142,7 +144,7 @@ Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, go
 `id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
 
 ### `esercizi_catalog`
-**703 righe** (24 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX717**. RLS SELECT pubblica. PK logica = `codice`.
+**725 righe** (31 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX739**. RLS SELECT pubblica. PK logica = `codice`.
 
 **Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
 
@@ -173,7 +175,7 @@ Tre trappole del sync, tutte già costate giri a vuoto:
 - `gruppo_target` vocabolario chiuso — **non dedurre da `muscoli`** (testo libero, vocabolario diverso)
 - `alternativa` contiene codici `EX###` in chiaro, nessuna FK: prima di eliminare un codice, scansionare tutti i campi testuali con regex `\bEX\d{3}\b`
 
-Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`. **300 righe su 689** ne hanno uno *(22 agosto, dopo il sync delle 50 righe)*, `elastico` in 278.
+Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`. **302 righe su 725** ne hanno uno *(rimisurato il 31 agosto)*, `elastico` in 280.
 
 ⚠️ **Due modi di sbagliare il campo, entrambi silenziosi.** Un surrogato uguale all'attrezzo nativo (`attrezzo = manubri`, `surrogato = manubri`) non apre niente e in più fa passare il **filtro `luogo`**, che guarda solo se il campo è popolato: l'esercizio entra a casa senza avere una versione casalinga. Un surrogato dichiarato **senza `nota_surrogato`** è peggio: `_trainGenMapToSession` sostituisce il `setup` con la nota solo se c'è, e senza cade sul setup nativo — la scheda mostra l'attrezzo surrogato e le istruzioni dell'attrezzo vero.
 
@@ -181,9 +183,9 @@ Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `
 `id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
 
 ### `biblioteca_gif`
-**1.584 righe** (23 agosto 2026): 634 vive, 0 rotte, 32 libere, **918 morte** (cantiere 3E). Le 10 libere in meno sono le GIF di Spalle e Cuffia diventate EX702-EX711. Le 21 righe doppie di Spalle e Cuffia e la riga morta di EX408 sono state cancellate il 23 agosto, dopo il secondo sync e dopo aver verificato che i 53 codici della zona risolvessero tutti. Le 918 morte hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
+**1.601 righe** (31 agosto 2026): 661 vive, 0 rotte, 22 libere, **918 morte** (cantiere 3E). Le libere calano a ogni zona che si chiude: le ultime 18 sono le calisthenics di Schiena e Trapezio diventate EX721-EX738. Le 21 righe doppie di Spalle e Cuffia e la riga morta di EX408 sono state cancellate il 23 agosto, dopo il secondo sync e dopo aver verificato che i 53 codici della zona risolvessero tutti. Le 918 morte hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
 
-Bucket Storage `biblioteca-gif`: **647 oggetti in 9 cartelle** (misurato 7 agosto), zero file senza riga: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
+Bucket Storage `biblioteca-gif`: **686 oggetti in 9 cartelle** (misurato 31 agosto), **3 file senza riga**, tutti e tre in Addominali e Core (`Crunch farfalla toe touch`, `Plank frontale`, `Plank su fitball`): hanno cache immutabile e impronta determinabile, nessun codice li punta, e vanno guardati col cantiere di quella zona. Le 9 cartelle: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
 
 **`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona; Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
 
@@ -220,7 +222,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 - `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
 - App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
 
-**634/634 `gif_slug` risolvono, 0 rotti** (23 agosto). 64 codici senza slug → fallback ExerciseDB.
+**661/661 `gif_slug` risolvono, 0 rotti** (31 agosto). 64 codici senza slug → fallback ExerciseDB.
 
 ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
 ⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
@@ -237,7 +239,7 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 **L'impronta si legge dall'`eTag`, il contenuto dal Mac — mai scaricando** *(dal 7 agosto 2026)* → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
 
-L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale al file gemello sul Mac e quindi al suo SHA-256, senza far uscire un byte dal bucket. Copertura misurata: **647 oggetti su 647**. È ciò che ha portato il costo di una zona da ~200 MB a 0.
+L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale al file gemello sul Mac e quindi al suo SHA-256, senza far uscire un byte dal bucket. Copertura misurata: **686 oggetti su 686** *(rimisurata il 31 agosto, 0 byte scaricati)*. È ciò che ha portato il costo di una zona da ~200 MB a 0.
 
 - **Due cache, entrambe sul contenuto**: `lavoro/_impronte/_locale.json` (percorso → md5+sha256, rinfrescata per mtime) e `lavoro/_impronte/_per_impronta.json` (`md5|bytes` → sha256). ⚠️ **Mai indicizzare sul percorso**: il cantiere rinomina, e la chiave sul percorso costava un download a ogni rinomina — 150 file scaricati due volte
 - **Le verifiche si fanno con `HEAD`**, non scaricando: `verifica_oggetto()` in `impronte.py` è il punto unico. Usata da `migra_zona.py`, `verifica_worker.py`, `fase7_cancella_vecchie.py`, `ripara_slug_in_place.py`
@@ -365,7 +367,7 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ **chiuse** → **Schiena e Trapezio** → **Mobilità**.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ · ~~Schiena e Trapezio~~ **chiuse** → **Mobilità**, l'ultima.
 
 L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
 
@@ -525,7 +527,22 @@ Il profilo lo legge dal vivo da `profiles` — anche il livello, che sta dentro 
 
 ⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
-**I gruppi più poveri del pool non sono nelle gambe.** Con 698 righe restano, nel `poolPrincipali`: deltoidi posteriori **1 candidato**, deltoidi anteriori **2**, adduttori 5, laterali 4, avambracci 7, ischiocrurali 7. Gambe e Glutei ha aggiunto 61 righe senza spostarne nessuno; **Spalle e Cuffia, che era stata anticipata proprio per questo, ha alzato laterali e anteriori ma non i posteriori** — nessuna delle sue 10 GIF nuove è un'apertura all'indietro.
+**I gruppi più poveri del pool non sono nelle gambe.** Rimisurati a **725 righe** col comando qui sopra, contando i **pescabili** e non le righe col gruppo giusto:
+
+| gruppo | pescabili | righe nel pool col gruppo |
+|---|---|---|
+| deltoidi posteriori | **1** | 1 |
+| deltoidi anteriori | **2** | 9 |
+| **petto** | **2** | **29** |
+| deltoidi laterali | 4 | 4 |
+| adduttori | 5 | 7 |
+| avambracci | 7 | 7 |
+| ischiocrurali | 7 | 20 |
+| dorsali | **0** | 49 |
+
+Tre zone chiuse di fila non hanno spostato i posteriori: Gambe e Glutei aggiunse 61 righe, Spalle e Cuffia alzò laterali e anteriori ma non loro, Schiena e Trapezio nessuno dei tre. Il motivo vero non è nelle GIF ed è scritto sopra, fra i [bug noti](#bug-noti-aperti): è il campo `uso`.
+
+⚠️ **`dorsali` è il caso limite: 49 righe nel pool, 0 pescabili.** Nessuna è `isolamento`, quindi lo slot non ne vede una — i dorsali entrano in scheda solo dai pattern di tirata, mai come isolamento. Insieme a `trapezi`, `lombari` e al dentato anteriore è il [cantiere 30](docs/CANTIERI.md#30-i-gruppi-muscolari-che-il-generatore-sa-chiedere).
 
 ⚠️ **Il candidato si conta sui pescabili, non sulle righe col gruppo giusto — e per i deltoidi anteriori i due numeri differiscono di sei volte.** `_trainGenPickIsoByGruppoTarget` scarta tutto ciò che non ha `pattern` `isolamento` o `core`, prima ancora di guardare il `gruppo_target`. I deltoidi anteriori hanno **6 righe** nel `poolPrincipali` ma **1 sola pescabile**: le altre cinque — EX006, EX074, EX425, EX571, EX572 — sono `spinta verticale`, e lo slot di isolamento non le vede. Contare le righe col gruppo giusto dice 6 e fa sembrare il gruppo sano; è lo stesso errore di lettura di [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse), su un campo diverso.
 
