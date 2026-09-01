@@ -1,0 +1,13 @@
+﻿codice	nome	attrezzo	uso_attuale	uso_nuovo	proposto	motivo
+EX058	Tirate al viso corda cavo alto	corda	finisher;riscaldamento	principale;finisher;riscaldamento	si	face pull: carico vero e prehab, tiene tutti e tre
+EX059	Croci inverse manubri busto flesso	manubri	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX094	Prone Y-W raise	corpo libero;manubri	riscaldamento;finisher	riscaldamento;finisher	no	NON proposto: attivazione a carico bassissimo, non un costruttore
+EX435	Croci inverse cavi alti	cavi	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX436	Croci inverse cavi bassi busto flesso	cavo basso	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX437	Croci inverse cavi alti prono panca piana	cavi	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX438	Croci inverse elastico	elastico	finisher;riscaldamento	principale;finisher;riscaldamento	si	croce inversa; tiene riscaldamento, elastico leggero
+EX439	Croci inverse macchina seduto	macchina	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX440	Croci inverse manubri prono panca inclinata	panca inclinata	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX441	Croci inverse manubri seduto	manubri	finisher	principale;finisher	si	croce inversa, il movimento cardine del gruppo
+EX500	Tirate al viso cavi alti incrociati	maniglie	finisher;riscaldamento	principale;finisher;riscaldamento	si	face pull: carico vero e prehab, tiene tutti e tre
+EX501	Tirate al viso manubri busto flesso	manubri	finisher	principale;finisher	si	face pull a manubri, carico vero
