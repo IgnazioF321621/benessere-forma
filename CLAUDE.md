@@ -95,9 +95,8 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - ~~88 righe che nessun pool poteva pescare~~ · ~~2 `gruppo_target` fuori vocabolario~~ · ~~12 righe `principale` senza `gruppo_target`~~ — **tutti e tre chiusi il 22 agosto**, stanati dalla sezione 5 di `verifica_sync.py` il giorno prima. Le 72 `accessorio` e le 16 `uso = isolamento` (queste ultime un travaso della colonna `pattern`) sono rientrate nel vocabolario; i 12 orfani hanno il loro gruppo. La sezione 5 dice ✅ su tutti e quattro i controlli
 - ~~6 righe `cavo → elastico` con `nota_surrogato` ma senza `esecuzione_surrogato` né `errori_surrogato`~~ — **chiuse il 22 agosto sera** col sync delle 50 righe: EX101 · EX140 · EX141 · EX165 · EX182 · EX193 hanno tutti e tre i campi. In tutto il catalogo **0 righe** hanno la nota senza esecuzione o errori, **0** un surrogato uguale all'attrezzo nativo, **0** un surrogato senza nota
 - **11 righe a manubri con `luogo = palestra` che a casa si fanno**, residuo aperto rimisurato il 22 agosto sera: EX002 · EX071 · EX099 · EX212 · EX317 · EX354 · EX358 · EX368 · EX375 · EX392 · EX393. Dieci hanno il surrogato ed entrano dal bypass, quindi il `luogo` impreciso non le blocca — le mostra solo come esercizi da palestra. **EX212 `Jumping pliometrico manubri` è l'unica senza surrogato**, e quella resta fuori davvero. Il sync del 22 agosto sera non le ha toccate: le 8 righe con `casa` aggiunto erano quelle a corpo libero (EX038 · EX072 · EX357 · EX570 · EX599 · EX681 · EX682 · EX683)
-- **Deltoidi posteriori: 1 solo candidato** nel pool casa (EX030 Band pull-apart). Slot obbligatorio in quasi ogni Upper → stesso esercizio blocco dopo blocco. Non blocca la generazione.
-  ⚠️ **Non è una carenza del catalogo, ed è la scoperta del 31 agosto**: le righe con `gruppo_target = deltoidi posteriori` sono **13**, e **12 passano tutti e tre i filtri** per il profilo casa — sono `isolamento`, hanno il gruppo giusto, sono lì. Ne resta pescabile **una sola** perché le altre dodici non hanno `principale` nel campo `uso`: sono `finisher` o `riscaldamento`, e lo slot di isolamento pesca da `poolPrincipali`. EX059, EX094, EX438, EX441, EX501 sono a manubri, elastico o corpo libero, cioè eseguibili così come sono.
-  Il rimedio è **una parola nel campo `uso` di quelle righe**, non una GIF nuova e non una zona nuova: la previsione che il gruppo si sarebbe riempito da Spalle e Cuffia prima e da Schiena e Trapezio poi **è stata smentita due volte**, e ora si sa perché. Delle due sorelle, **Spalle e Cuffia aveva alzato laterali da 3 a 4** (EX703) **e anteriori da 1 a 2** (EX702); Schiena e Trapezio non ha spostato nessuno dei tre
+- ~~**Deltoidi posteriori: 1 solo candidato**~~ — **risolto il 1 settembre 2026, da 1 a 12 pescabili**. Non era una carenza del catalogo: le righe col gruppo erano **13** e **dodici passavano già tutti e tre i filtri**, già `isolamento`, già lì. Ne restava pescabile una sola perché alle altre mancava `principale` nel campo `uso`, e lo slot di isolamento pesca da `poolPrincipali`. Sono bastate **11 celle** — 8 croci inverse e 3 tirate al viso — senza una GIF nuova e senza una zona nuova. **EX094 `Prone Y-W raise` è stata lasciata fuori di proposito**: attivazione a carico bassissimo, da `principale` verrebbe scelta come isolamento portante di un Upper.
+  ⚠️ **La lezione vale oltre questo gruppo**: tre zone GIF chiuse di fila — Gambe e Glutei, Spalle e Cuffia, Schiena e Trapezio — non avevano spostato il gruppo di un'unità, perché il collo di bottiglia non era mai stato nelle immagini. Prima di aprire un cantiere per riempire un gruppo povero, **guardare il campo `uso` delle righe che quel gruppo ce l'hanno già**
 
 ---
 
@@ -495,7 +494,7 @@ I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** 
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **177 dei 406 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **263 delle 593 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **302 su 725** *(rimisurato il 31 agosto con `tools/baseline_pool.py`)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **725 righe, 31 agosto**): `poolPrincipali` **406** · `poolFinisher` **253** · `poolRiscaldamento` **49** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Righe ammesse dai tre filtri: **593 su 725**, di cui **263 dal ramo surrogato**.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **725 righe, 1 settembre**): `poolPrincipali` **417** · `poolFinisher` **253** · `poolRiscaldamento` **49** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Righe ammesse dai tre filtri: **593 su 725**, di cui **263 dal ramo surrogato**.
 
 **Si rimisura con un comando, e la replica sta su disco:**
 
@@ -504,6 +503,8 @@ python3 tools/baseline_pool.py --gruppi
 ```
 
 Il profilo lo legge dal vivo da `profiles` — anche il livello, che sta dentro `note_salute` (`Esperienza: avanzato`) come fa `_trainGenParseEsperienzaFromNote`. Sola lettura.
+
+**Cosa l'ha spostata, 1 settembre**: **11 celle del campo `uso`**, nessuna riga nuova. Alle 11 righe `deltoidi posteriori` che erano solo `finisher` o `riscaldamento` è stato aggiunto `principale`: `poolPrincipali` **406 → 417**, e **nient'altro si muove** — finisher, riscaldamento, core, Tabata, carry e ammesse restano identici, perché nessuna riga ha perso un uso e nessuna è entrata o uscita dai tre filtri. Lo scarto è **+11 e solo +11**: la verifica più pulita che la baseline abbia mai dato.
 
 **Cosa l'ha spostata, 31 agosto**: le 27 righe entrate dal 24 agosto in poi — Tricipiti (EX712-EX716), EX717-EX720 e le 18 calisthenics (EX721-EX738). Lo scarto si attribuisce blocco per blocco e la somma coincide con la misura: **+5 principali · +13 finisher · +2 riscaldamento · +25 ammesse**, carry e core fermi. Delle 18 calisthenics ne entrano **17**: l'unica fuori è **EX721 `Rematore invertito anelli`**, che cade sul filtro attrezzo perché `anelli` non è fra quelli dichiarati e la riga non ha surrogato. Tabella in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
@@ -527,11 +528,11 @@ Il profilo lo legge dal vivo da `profiles` — anche il livello, che sta dentro 
 
 ⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
 
-**I gruppi più poveri del pool non sono nelle gambe.** Rimisurati a **725 righe** col comando qui sopra, contando i **pescabili** e non le righe col gruppo giusto:
+**I gruppi più poveri del pool non sono nelle gambe.** Rimisurati il **1 settembre** col comando qui sopra, contando i **pescabili** e non le righe col gruppo giusto:
 
 | gruppo | pescabili | righe nel pool col gruppo |
 |---|---|---|
-| deltoidi posteriori | **1** | 1 |
+| deltoidi posteriori | 12 | 12 |
 | deltoidi anteriori | **2** | 9 |
 | **petto** | **2** | **29** |
 | deltoidi laterali | 4 | 4 |
@@ -540,7 +541,7 @@ Il profilo lo legge dal vivo da `profiles` — anche il livello, che sta dentro 
 | ischiocrurali | 7 | 20 |
 | dorsali | **0** | 49 |
 
-Tre zone chiuse di fila non hanno spostato i posteriori: Gambe e Glutei aggiunse 61 righe, Spalle e Cuffia alzò laterali e anteriori ma non loro, Schiena e Trapezio nessuno dei tre. Il motivo vero non è nelle GIF ed è scritto sopra, fra i [bug noti](#bug-noti-aperti): è il campo `uso`.
+I deltoidi posteriori erano il caso peggiore, **a 1 candidato per mesi**, e sono usciti dalla lista il 1 settembre con 11 celle del campo `uso` — non con una zona GIF. Tre zone chiuse di fila non li avevano spostati di un'unità, e il motivo è raccontato fra i [bug noti](#bug-noti-aperti). **Il gruppo peggiore adesso è il petto**, e la sua causa è diversa: non il campo `uso` ma il `pattern`.
 
 ⚠️ **`dorsali` è il caso limite: 49 righe nel pool, 0 pescabili.** Nessuna è `isolamento`, quindi lo slot non ne vede una — i dorsali entrano in scheda solo dai pattern di tirata, mai come isolamento. Insieme a `trapezi`, `lombari` e al dentato anteriore è il [cantiere 30](docs/CANTIERI.md#30-i-gruppi-muscolari-che-il-generatore-sa-chiedere).
 

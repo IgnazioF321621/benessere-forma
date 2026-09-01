@@ -1,5 +1,5 @@
 {
- "quando": "2026-08-31T21:21:34",
+ "quando": "2026-09-01T06:44:19",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4354,7 +4354,7 @@
  ],
  "catalogo": {
   "righe": 725,
-  "ultimo_sync": "2026-08-31T19:17:41.433000+00:00",
+  "ultimo_sync": "2026-09-01T04:42:35.945000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX739",
@@ -4444,19 +4444,20 @@
   "slug_condivisi_da_piu_codici": {},
   "slug_senza_riga_in_biblioteca": [],
   "per_uso": {
-   "principale;finisher": 141,
+   "principale;finisher": 149,
    "principale": 340,
-   "finisher": 157,
+   "finisher": 149,
    "principale;finisher;recupero": 3,
    "recupero": 3,
    "finisher;recupero": 1,
    "principale;recupero": 2,
-   "finisher;riscaldamento": 8,
+   "principale;finisher;riscaldamento": 3,
    "riscaldamento": 23,
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
    "recupero;mobilita": 8,
+   "finisher;riscaldamento": 5,
    "principale;riscaldamento": 17,
    "skill": 16
   },

@@ -708,9 +708,20 @@ Profilo di riferimento: Ignazio, casa, avanzato.
 | 21 ago, Pettorali chiusa | 690 | 376 | 144 | 43 | 64 su 64 | 25 |
 | 22 ago | 689 | 376 | 208 | 43 | 64 su 64 | 25 |
 | 23 ago sera, Spalle e Cuffia chiusa | 698 | 401 | 240 | 47 | 64 su 64 | 25 |
-| **31 ago (attuale)** | **725** | **406** | **253** | **49** | **64 su 64** | **25** |
+| 31 ago | 725 | 406 | 253 | 49 | 64 su 64 | 25 |
+| **1 set (attuale)** | **725** | **417** | **253** | **49** | **64 su 64** | **25** |
 
 *La riga del 22 agosto sera (sync delle 50 righe) non c'è: quel sync **modificò** righe esistenti invece di aggiungerne, quindi lo stato di allora non si ricostruisce togliendo codici e i suoi numeri si potrebbero solo dedurre per aritmetica. Un numero deciso a tavolino in una tabella di misure invecchia in silenzio.*
+
+**1 settembre — +11 principali senza una riga nuova, e un gruppo povero esce dalla lista.** Alle 11 righe con `gruppo_target = deltoidi posteriori` che erano solo `finisher` o `riscaldamento` è stato aggiunto `principale` nel campo `uso`: 8 croci inverse e 3 tirate al viso. **I pescabili del gruppo passano da 1 a 12.**
+
+Lo scarto è il più pulito che la baseline abbia registrato: **+11 su `poolPrincipali` e nient'altro**. Finisher, riscaldamento, core, Tabata, carry e righe ammesse restano identici al numero — nessuna riga ha perso un uso, nessuna è entrata o uscita dai tre filtri. Era esattamente ciò che lo strumento aveva simulato prima del sync.
+
+⚠️ **Il collo di bottiglia non era mai stato nelle GIF.** Gambe e Glutei aveva aggiunto 61 righe, Spalle e Cuffia era stata *anticipata sull'ordine proprio per questo gruppo*, Schiena e Trapezio era la speranza successiva: tre zone chiuse di fila senza spostarlo di un'unità. Le dodici righe che servivano erano a catalogo da sempre, passavano già tutti e tre i filtri ed erano già `isolamento`. Mancava una parola. **Prima di aprire un cantiere per riempire un gruppo povero, si guarda il campo `uso` delle righe che quel gruppo ce l'hanno già.**
+
+**EX094 `Prone Y-W raise` è stata lasciata fuori di proposito** — attivazione a carico bassissimo: da `principale` verrebbe scelta come isolamento portante di un Upper. I pescabili sarebbero 13 invece di 12.
+
+⚠️ **Il sync di queste 11 celle è costato un giro.** Su EX058 il valore destinato a `uso` è finito in `livello`, una colonna a sinistra: `livello = principale;finisher;riscaldamento` non contiene nessuno dei tre livelli ammessi, quindi la riga era **uscita da tutti i pool** invece di entrarci — un peggioramento silenzioso. L'ha stanato `verifica_sync.py` alla sezione 2, e il valore vero era recuperabile dalla fotografia in git. Le due celle sono state corrette e il giro rifatto.
 
 **31 agosto — la replica adesso sta su disco, e il dubbio si chiude.** I numeri di questa riga vengono da `tools/baseline_pool.py`, scritto una volta e tenuto nel repo invece di essere riscritto a mano a ogni misura. La prova che serviva: **rimuovendo dal catalogo le 27 righe aggiunte dal 24 agosto in poi, la replica restituisce `698 · 401 · 240 · 47 · 1 · 568` — tutti e sei i numeri della baseline documentata del 23 agosto sera.** La replica precedente, sullo stesso confronto, sbagliava di 6 sui finisher, 1 sul riscaldamento e 1 sulle ammesse, e non si poteva dire quale delle due avesse ragione perché nessuna delle due esisteva più → il difetto è chiuso, il cerchio no: la verità resta `?schedaDebug=1` in app.
 

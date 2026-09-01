@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-08-31 alle 21:21.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-09-01 alle 06:44.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -13,7 +13,7 @@
 | | valore | nota |
 |---|---|---|
 | Righe totali | 725 |  |
-| Ultimo sync | 2026-08-31 19:17 | istante in cui il foglio ha riscritto le righe |
+| Ultimo sync | 2026-09-01 04:42 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
 | Prossimo codice libero | EX739 | da allocare al momento della scrittura, mai in anticipo |
 | Codici con GIF | 661 |  |
@@ -27,7 +27,7 @@ Codici bruciati, **mai renumerare**: EX107, EX110, EX139, EX151, EX170, EX176, E
 
 ### Ripartizione
 
-**Per uso**: carry 2 · carry;finisher 2 · finisher 157 · finisher;recupero 1 · finisher;riscaldamento 8 · principale 340 · principale;finisher 141 · principale;finisher;recupero 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 8 · riscaldamento 23 · riscaldamento;finisher 2 · skill 16
+**Per uso**: carry 2 · carry;finisher 2 · finisher 149 · finisher;recupero 1 · finisher;riscaldamento 5 · principale 340 · principale;finisher 149 · principale;finisher;recupero 3 · principale;finisher;riscaldamento 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 8 · riscaldamento 23 · riscaldamento;finisher 2 · skill 16
 
 **Per livello**: (vuoto) 2 · avanzato 73 · intermedio 265 · intermedio;avanzato 45 · principiante 177 · principiante;intermedio 138 · principiante;intermedio;avanzato 25
 
