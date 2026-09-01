@@ -37,6 +37,7 @@ import threading
 import traceback
 import unicodedata
 import urllib.parse
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -100,6 +101,73 @@ def sha256(path):
         for blk in iter(lambda: fh.read(1 << 20), b''):
             h.update(blk)
     return h.hexdigest()
+
+
+def _nome_intermedio(cartella):
+    """Un nome libero e riconoscibile per il passo di mezzo di una rinomina.
+
+    Tiene l'estensione .gif di proposito: se un giorno un'interruzione brutale ne
+    lasciasse uno indietro, deve comparire nell'elenco della zona e nel prossimo
+    `prepara.py`, non sparire perche' nascosto. Un residuo visibile si ripara; uno
+    invisibile toglie una GIF dalla zona senza che nessuno se ne accorga.
+    """
+    for _ in range(20):
+        cand = '_rinomina-in-corso-%s.gif' % uuid.uuid4().hex[:12]
+        if not (cartella / cand).exists():
+            return cand
+    raise RuntimeError('nessun nome intermedio libero dopo 20 tentativi')
+
+
+def rinomina_su_disco(cartella, da, a, sha_atteso):
+    """Rinomina un file dentro la cartella. Solleva se qualcosa non torna.
+
+    IL CASO DELLA SOLA MAIUSCOLA
+    ----------------------------
+    Il filesystem del Mac non distingue maiuscole da minuscole: chiedendo se
+    esiste `Superman.gif` mentre sul disco c'e' `superman.gif` la risposta e' si'.
+    La guardia contro le sovrascritture leggeva quel si' come "destinazione
+    occupata" e si fermava — ma il file trovato ERA quello di partenza, e il nome
+    era libero. Misurato sul piano di Mobilita e Stretching: 68 righe su 134.
+
+    La distinzione che serve non e' sui nomi ma sull'IDENTITA': `samefile` confronta
+    l'inode, quindi risponde "e' sé stesso" dove il confronto sul nome non puo'
+    arrivare, e continua a dire "e' un altro" su un filesystem che le maiuscole le
+    distingue, dove `Superman.gif` e `superman.gif` possono coesistere davvero.
+    La guardia contro le sovrascritture resta intera: cambia solo che smette di
+    scattare contro il file stesso.
+
+    Quando la destinazione e' sé stesso si passa per un nome intermedio. Su questo
+    Mac `os.rename` reggerebbe anche il passaggio diretto (provato), ma il doppio
+    passo non dipende da come il volume tratta le maiuscole, e un'operazione su
+    file non deve funzionare per una proprieta' del disco che nessuno ha scelto.
+    Se il secondo passo fallisce il primo si annulla: nessun file resta col nome
+    di mezzo.
+    """
+    src, dst = cartella / nfc(da), cartella / nfc(a)
+    if not src.is_file():
+        raise FileNotFoundError('il file di partenza non c\'e\' piu\': %s' % da)
+
+    # "la destinazione e' sé stesso" e' una domanda sull'inode, non sul nome
+    e_se_stesso = dst.exists() and os.path.samefile(src, dst)
+    if dst.exists() and not e_se_stesso:
+        raise FileExistsError('destinazione comparsa nel frattempo')
+
+    if e_se_stesso:
+        tmp = cartella / _nome_intermedio(cartella)
+        os.rename(src, tmp)
+        try:
+            os.rename(tmp, dst)
+        except Exception:
+            os.rename(tmp, src)          # nessun residuo col nome di mezzo
+            raise
+    else:
+        os.rename(src, dst)
+
+    # si verifica il CONTENUTO, non il nome: che un file si chiami come volevamo
+    # non dice che sia il nostro file
+    if sha256(dst) != sha_atteso:
+        raise OSError('dopo la rinomina il contenuto non e quello atteso'
+                      ' (attesa %s, trovata %s)' % (sha_atteso[:12], sha256(dst)[:12]))
 
 
 def appendi(path, colonne, righe):
@@ -535,9 +603,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         for e in lavoro:
             if e['azione'] == 'rinomina':
                 try:
-                    if (cartella / e['a']).exists():
-                        raise FileExistsError('destinazione comparsa nel frattempo')
-                    os.rename(cartella / e['da'], cartella / e['a'])
+                    rinomina_su_disco(cartella, e['da'], e['a'], e['sha256'])
                     e['esito'] = 'rinominato'
                 except Exception as ex:
                     e['esito'], e['nota'] = 'errore', str(ex)
