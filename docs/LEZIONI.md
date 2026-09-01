@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata · L42 updated_at non distingue il toccato dal non toccato · L43 i campi del resoconto si rileggono, non si ereditano
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata · L42 updated_at non distingue il toccato dal non toccato · L43 i campi del resoconto si rileggono, non si ereditano · L44 l'avviso copriva la riga, il danno è arrivato dalla colonna
 
 ---
 
@@ -760,3 +760,30 @@ Nel frattempo il pre-commit hook era scattato **due volte**, su due commit di Ig
 
 Il costo è un comando. Il costo dell'alternativa è un resoconto che afferma il falso con la stessa faccia di uno vero, e la fiducia in **tutti** gli altri cinque punti che si incrina insieme al sesto.
 
+---
+
+## L44 — L'avviso copriva lo sfasamento di riga; il danno è arrivato da quello di colonna
+
+**Il caso.** Undici celle del campo `uso` da cambiare, su righe sparse in 4 blocchi non contigui del foglio. Avevo consegnato l'elenco `codice · colonna · valore` — la forma prescritta da [L5](#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno) per poche celle — e insieme la sola colonna `uso` nei blocchi, con un avviso esplicito: *«se incolli a colonna, controlla il codice della prima e dell'ultima riga di ogni blocco: una colonna incollata su righe sfasate sposta valori senza dirlo»*.
+
+Dieci celle su undici sono arrivate a destinazione. Sulla undicesima, EX058, il valore è finito **una colonna a sinistra**:
+
+| campo | doveva essere | è diventato |
+|---|---|---|
+| `uso` | `principale;finisher;riscaldamento` | `finisher;riscaldamento` — invariato |
+| `livello` | `principiante;intermedio` | `principale;finisher;riscaldamento` |
+
+**Perché è peggio di una cella non passata.** Il filtro livello di `_trainGenFilterPool` ammette solo `principiante`, `intermedio`, `avanzato`. Nessuno dei tre valori finiti lì lo è, quindi EX058 **è uscita da tutti i pool** invece di entrare in `poolPrincipali`: prima almeno entrava come finisher e riscaldamento. Un'operazione fatta per aggiungere un candidato ne ha tolto uno, **e senza un solo messaggio d'errore** — è la stessa firma di [L2](#l2--un-alias-può-puntare-a-una-parola-che-non-esiste) e dei filtri che escludono in silenzio.
+
+⚠️ **L'avviso era giusto e non è servito, perché copriva l'asse sbagliato.** Avevo protetto l'allineamento **verticale** — quale riga riceve quale valore — e il guasto è arrivato su quello **orizzontale**: quale colonna. Un incolla può sbagliare su entrambi gli assi, e la guardia che ne copre uno solo dà la sensazione di aver coperto il problema.
+
+⚠️ **Un valore fuori posto non si riconosce dalla sua forma.** `principale;finisher;riscaldamento` è una stringa perfettamente formata: nel campo `uso` è corretta, nel campo `livello` è distruttiva. Non c'è validazione di tipo che la fermi, perché entrambe le colonne sono liste di token separati da `;`. **Le colonne adiacenti con la stessa forma sono il posto dove uno sfasamento non si vede.**
+
+**Cosa l'ha trovato, e va detto perché è la parte che ha funzionato.** `verifica_sync.py`, alla sezione 2 «valori riportati indietro», confrontando il vivo contro `docs/STATO.json`. Non cercava questo: cercava campi svuotati o tornati indietro, e ha stanato un campo **cambiato** fra quelli sorvegliati. E il valore vero del `livello` era recuperabile **perché la fotografia sta in git** → [L42](#l42--updated_at-non-distingue-il-toccato-dal-non-toccato-quando-il-sync-riscrive-tutto). Senza quei due, la correzione sarebbe stata una ricostruzione a memoria.
+
+**Le regole.**
+
+1. **Quando si consegnano poche celle, la forma è l'elenco `codice · colonna · valore` e basta.** Il blocco-colonna «per comodità» è ciò che ha reso possibile lo sfasamento: se non lo si offre, non lo si può sbagliare. Undici celle a mano costano meno di un giro perso.
+2. **Se un blocco-colonna si offre lo stesso, l'avviso deve nominare entrambi gli assi**, riga *e* colonna — e dire quale colonna sta a sinistra e a destra di quella giusta, perché sono quelle il bersaglio.
+3. **Dopo un sync che tocca poche celle, si controlla anche ciò che NON doveva cambiare.** Il confronto contro la fotografia in git su tutti i campi sorvegliati costa un comando e copre la classe intera, non solo le celle attese.
+4. **Un intervento che dichiara di aggiungere qualcosa va misurato anche in negativo**: dopo, il conteggio dei pool deve essere salito di quanto previsto **e nient'altro deve essere sceso**. Qui finisher e riscaldamento erano calati di 1 ciascuno, ed era la firma del guasto prima ancora di sapere quale fosse.
