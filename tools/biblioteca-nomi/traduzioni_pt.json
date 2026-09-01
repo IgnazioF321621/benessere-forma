@@ -1,0 +1,548 @@
+{
+ "cosa_e": "Nota di lettura: che cosa dice il nome di partenza, in italiano. NON e un suggerimento di nome e non deve diventarlo: e letterale, minuscola, non nella forma [Movimento][Attrezzo][Variante][Posizione], non omette i default. Il nome lo decide Ignazio guardando la GIF.",
+ "chiave": "SHA-256 del file, non il nome: il nome cambia a ogni conferma, l impronta no",
+ "campo_da": "il nome di partenza al momento in cui la traduzione e stata scritta, solo per rileggerla",
+ "generato": "2026-09-01",
+ "voci": {
+  "ca2438ee1651b5eee94a93721734731db2ad67e7eb8030dcb99535bd732d77ee": {
+   "da": "allungamento-di-gluteos-sdraiato",
+   "it": "allungamento dei glutei, sdraiato",
+   "incerta": false
+  },
+  "d46178c80adde83b2c7f5e2db70ed7eac871d739842026f95113c871e2a15b55": {
+   "da": "allungamento-di-quadriceps-inginocchiato",
+   "it": "allungamento del quadricipite, in ginocchio",
+   "incerta": false
+  },
+  "c085ff45bc88c692702d4ba7aa0891ee89ba371b3098cc39ff79d1c23c57253b": {
+   "da": "allungamento-di-spalla-con-o-braccio-incrociato",
+   "it": "allungamento della spalla con il braccio incrociato",
+   "incerta": false
+  },
+  "dff81c84a6cd7214bda7f72c039982cd1e06cb65814293c4ed931cd5f8f36689": {
+   "da": "Alongamento de panturrilha em posição estática",
+   "it": "allungamento del polpaccio in posizione statica",
+   "incerta": false
+  },
+  "da0815453201b9c0cbf61a75d01b99dfa4f97b6a432d693864a311f06fee90df": {
+   "da": "Alongamento de Pernas Duplo",
+   "it": "allungamento delle gambe, doppio",
+   "incerta": false
+  },
+  "bc0f43e111b08904c9eb4fa74938977d47d03b3565b94d7e7f266cb085a8c1e2": {
+   "da": "Alongamento de Punho",
+   "it": "allungamento del polso",
+   "incerta": false
+  },
+  "4133c9af0c9bfcea2c1cbd7a03d9fb2599a30219638663a658365334f4c44af5": {
+   "da": "Alongamento de quadril 90-90",
+   "it": "allungamento dell'anca 90-90",
+   "incerta": false
+  },
+  "f767124d0f8997e3271d055cf996272528802856e6d479b4ae1f26ff25895a04": {
+   "da": "Alongamento de Quadríceps em Quatro Apoios",
+   "it": "allungamento del quadricipite a quattro appoggi",
+   "incerta": false
+  },
+  "f4a1717e48438360c8cd93bab51fd1c560e0361f19eb84293b5e53012e814c51": {
+   "da": "Alongamento de rotação da coluna em pé",
+   "it": "allungamento in rotazione della colonna, in piedi",
+   "incerta": false
+  },
+  "89774ad729a19024246e12ae236fd3d8075a6ab335c4d618b5f188ab4abf6239": {
+   "da": "Alongamento de tríceps em pé",
+   "it": "allungamento del tricipite, in piedi",
+   "incerta": false
+  },
+  "a2552ce3692f7f5325661c192308197e1445a34dd43a2f89b30b90d968438fdd": {
+   "da": "Alongamento Dinâmico do Peitoral",
+   "it": "allungamento dinamico del pettorale",
+   "incerta": false
+  },
+  "6e4af6b6caf9e97b6f0b5302f0b98667c35b088d6fab21771ee2489ffdee670c": {
+   "da": "Alongamento do desviador ulnar e extensor do punho",
+   "it": "allungamento del deviatore ulnare e dell'estensore del polso",
+   "incerta": false
+  },
+  "4f193a087be555629676a2c9cd96107531b5319e7e14f17fe4a0b62932872699": {
+   "da": "Alongamento do Gastrocnêmio com Joelho Flexionado",
+   "it": "allungamento del gastrocnemio con il ginocchio flesso",
+   "incerta": false
+  },
+  "2184bf12929f8f75a2dc9edbc065ea1b77feb8f22a0f9847d8b8ae35b699d07e": {
+   "da": "Alongamento do manguito rotador",
+   "it": "allungamento della cuffia dei rotatori",
+   "incerta": false
+  },
+  "099230c56aeb89b38caaa31d0c66a474407013f5664e0487972421e6256d2458": {
+   "da": "Alongamento do ombro com toalha",
+   "it": "allungamento della spalla con l'asciugamano",
+   "incerta": false
+  },
+  "9c4d804f52f5e09719078ca644b8439f78a8530c0e1abca33475ca14b442b883": {
+   "da": "Alongamento do Peito Acima da Cabeça",
+   "it": "allungamento del petto sopra la testa",
+   "incerta": false
+  },
+  "142d1636724154f3daf9872b99cc0f37492d7fdc19bcc6fe949004b43833ea4f": {
+   "da": "Alongamento do peito com rolo de espuma",
+   "it": "allungamento del petto con il rullo di schiuma",
+   "incerta": false
+  },
+  "1878166e0eaa1919c28cd62ec7eb78e79a2020602708f00e88120ed4bce3c962": {
+   "da": "Alongamento do Peito e Parte Frontal dos Ombros",
+   "it": "allungamento del petto e della parte frontale delle spalle",
+   "incerta": false
+  },
+  "aef9b1a0857d1cf15f9c82b28be2e183e0ca0a852765ab2de4dbeede0458e8a1": {
+   "da": "Alongamento do Peitoral até as Costas",
+   "it": "allungamento del pettorale fino alla schiena",
+   "incerta": false
+  },
+  "14d614dc5834a79a43a8fff648657f39ab91cc6138fd56415421e9cb8cb9db8c": {
+   "da": "Alongamento do Peitoral com um Braço em Pé",
+   "it": "allungamento del pettorale con un braccio, in piedi",
+   "incerta": false
+  },
+  "a8e711703593737b850e7ada30833f91b5c456ea8c46a196013a666141c982df": {
+   "da": "Alongamento do peitoral e do ombro na porta",
+   "it": "allungamento del pettorale e della spalla alla porta",
+   "incerta": false
+  },
+  "5b7382a56723f62ccac08b40251861256d5416e39c7de1c105fd25775389396c": {
+   "da": "Alongamento do peitoral reverso",
+   "it": "allungamento del pettorale, inverso",
+   "incerta": false
+  },
+  "f016ff3c89b9bc6f86a76cf1700cb12363bdae92080b66bb58798ad61c52afff": {
+   "da": "Alongamento do Piriforme Sentado",
+   "it": "allungamento del piriforme, seduto",
+   "incerta": false
+  },
+  "3be5176f72c13f6f3252ce17b157f15db3a5c92eb779a5fd37ea9229ab56342c": {
+   "da": "Alongamento do tendão de Aquiles em pé",
+   "it": "allungamento del tendine d'Achille, in piedi",
+   "incerta": false
+  },
+  "e101b1573928650fcd518d63690a24bafff5d88a6ef8f100e555074db20a4ba7": {
+   "da": "Alongamento do tibial posterior",
+   "it": "allungamento del tibiale posteriore",
+   "incerta": false
+  },
+  "44aa8a17b6eafc312868bd73733f6a47767e05febbd46256aa0ed980bee4f756": {
+   "da": "Alongamento do trato iliotibial com rolo de espuma",
+   "it": "allungamento del tratto ileotibiale con il rullo di schiuma",
+   "incerta": false
+  },
+  "d53679dba0360f1567a08b082676660aee5785128b4ad02fe4c34e898923f297": {
+   "da": "Alongamento dos Adutores com a Perna Estendida ajoelhado",
+   "it": "allungamento degli adduttori con la gamba estesa, in ginocchio",
+   "incerta": false
+  },
+  "8a09ef5c41b00614125eeb3f52e95e89a83944d8222088bb6b54adae1cd63f22": {
+   "da": "Alongamento dos Adutores com Pernas Abertas em Pé",
+   "it": "allungamento degli adduttori a gambe aperte, in piedi",
+   "incerta": false
+  },
+  "3475a3d48bf88d3150fcb4ba4fb184c6b5218a2374f57206c009090bdacafa0f": {
+   "da": "Alongamento dos adutores da coxa com rolo de espuma",
+   "it": "allungamento degli adduttori della coscia con il rullo di schiuma",
+   "incerta": false
+  },
+  "2d29550354a4a1f4f6e7fe26b5d8df99f092a623804f43b875f17dd7e4ec652f": {
+   "da": "Alongamento dos Adutores em Posição Sentada com Pernas Abertas",
+   "it": "allungamento degli adduttori in posizione seduta, a gambe aperte",
+   "incerta": false
+  },
+  "ec0b1adf11e665a96a5c35acd33ee59f50d8a89b6676fec2574e50bc35fa9e11": {
+   "da": "Alongamento dos adutores sentado",
+   "it": "allungamento degli adduttori, seduto",
+   "incerta": false
+  },
+  "82d15a387c5cf46b16f03dd6507899783059db9851301677e249ecb9c529f67a": {
+   "da": "Alongamento dos Extensores dos Dedos dos Pés",
+   "it": "allungamento degli estensori delle dita dei piedi",
+   "incerta": false
+  },
+  "1b1df2e8189675f0439424b7995f5fe9e784e025753a8668b0762506d3114ee5": {
+   "da": "Alongamento dos flexores de quadril ajoelhado",
+   "it": "allungamento dei flessori dell'anca, in ginocchio",
+   "incerta": false
+  },
+  "ea774777fab58270c9cd8de465ad49052bab9916c4b58cd583423a7d1b61edc0": {
+   "da": "Alongamento dos flexores do quadril em posição de joelho",
+   "it": "allungamento dei flessori dell'anca in posizione di ginocchio",
+   "incerta": false
+  },
+  "4be13841c88f847d33200cc700dc0ffe58d3babef26bbb39ac65fb6d7981397f": {
+   "da": "Alongamento dos flexores dos dedos dos pés em pé",
+   "it": "allungamento dei flessori delle dita dei piedi, in piedi",
+   "incerta": false
+  },
+  "839b45215540666c17b15aef8cc4e1d56ab2a9ff86591dcfea3c02a85e9d4323": {
+   "da": "Alongamento dos isquiotibiais em pé com a perna cruzada",
+   "it": "allungamento degli ischiocrurali in piedi, con la gamba incrociata",
+   "incerta": false
+  },
+  "56259caccd3298c4fa87bde2860d0b3951e676cfa40bccec0e2e10d2ffbe57b1": {
+   "da": "Alongamento dos isquiotibiais em pé",
+   "it": "allungamento degli ischiocrurali, in piedi",
+   "incerta": false
+  },
+  "02ad65f50df3b9aaf137dc27ea1f3b9e6e7e1118af33ae17046dcd61ddb833d4": {
+   "da": "Alongamento dos Isquiotibiais Sentado",
+   "it": "allungamento degli ischiocrurali, seduto",
+   "incerta": false
+  },
+  "c1211dba57dd9e69f0571d6fc9d46f0c4e4a98aeec18aa9e6b875a6ec127a5f7": {
+   "da": "Alongamento dos latíssimos dorsais com rolo de espuma",
+   "it": "allungamento dei gran dorsali con il rullo di schiuma",
+   "incerta": false
+  },
+  "9b12689108adde507a894d27f4e22bde9b419ab2c7c0e1ba8f0aae807ffc23dd": {
+   "da": "Alongamento dos ombros por trás das costas",
+   "it": "allungamento delle spalle dietro la schiena",
+   "incerta": false
+  },
+  "826e78f54c969e8b33f5733b698265c44e08193bed905a449ab2648e0be694bf": {
+   "da": "Alongamento em Círculos nos Punhos",
+   "it": "allungamento in cerchi ai polsi",
+   "incerta": false
+  },
+  "24e5920411878a006338b84bbc38530a5f42090957bcaa690dc4d639c21b1802": {
+   "da": "Alongamento em Pé dos Quadríceps",
+   "it": "allungamento in piedi dei quadricipiti",
+   "incerta": false
+  },
+  "67afb1d6877d675b05472a2f78ae14dd6ba59fb087cfd827b8d58dcd400d5913": {
+   "da": "Alongamento Inclinado Lateral em Pé",
+   "it": "allungamento inclinato laterale, in piedi",
+   "incerta": false
+  },
+  "54f8a7a9a78c4d57d99561bcf808e3b5c8916d46b04518c9acdb810b660cb32d": {
+   "da": "Alongamento Lateral da Parte Interna da Coxa",
+   "it": "allungamento laterale della parte interna della coscia",
+   "incerta": false
+  },
+  "8b61235c508a79d35960e39e6828b373ec09a310d436fcb8256ef99df49a534d": {
+   "da": "Alongamento na parede do canto",
+   "it": "allungamento alla parete dell'angolo",
+   "incerta": false
+  },
+  "d0c88a7d24f4a90f8a0afeaf10fd9a776ce3a98ef59c466b82842b73b2f5bdb9": {
+   "da": "Alongamento Piriforme",
+   "it": "allungamento del piriforme",
+   "incerta": false
+  },
+  "b931ce8e6c0d4c9a7d07190bad00628ba4bb2de9403b982df51b7b64c1ba8b0f": {
+   "da": "Alongamento reverso assistido (peito e ombro)",
+   "it": "allungamento inverso assistito (petto e spalla)",
+   "incerta": false
+  },
+  "58127e51966eb1959f1c060f177a4dba55c4072de0545f30c10694606eb91e8d": {
+   "da": "Alongamento Reverso de Pulso",
+   "it": "allungamento inverso del polso",
+   "incerta": false
+  },
+  "234f019f4d347531aeece2b169dc5ab33ad340fcef5880db75ef47c4ea5bb378": {
+   "da": "Alongamento Sentado para a Panturrilha com Perna Esticada",
+   "it": "allungamento da seduto per il polpaccio, con la gamba tesa",
+   "incerta": false
+  },
+  "4c46a61de14740ec1afd2729fd99ece32ddb4003eac86737207c96cdd03e4dac": {
+   "da": "Alongamentos de pés e tornozelos",
+   "it": "allungamenti di piedi e caviglie",
+   "incerta": false
+  },
+  "00b322f4aa702d5184a6df057f9b31581568999329bc9d17a4af033222763fda": {
+   "da": "Arremesso de Bola de Reação",
+   "it": "lancio della palla di reazione",
+   "incerta": false
+  },
+  "601c621bf7b2fb5c7dc72fa2e749aa8f0f94f0f2d3fbf948c5955b30fe8bb0ec": {
+   "da": "Catavento corporal",
+   "it": "girandola del corpo",
+   "incerta": false
+  },
+  "c4d7377601d280377d4ab23fe58f10105a9b6c805f4a7bd49d27dfa07c339f27": {
+   "da": "Contração abdominal",
+   "it": "contrazione addominale",
+   "incerta": false
+  },
+  "9be437d4af57e709d7e5bc5c3aca2cc8c6a23bf53d50476c030dc304baaccbf6": {
+   "da": "Círculos com os braços",
+   "it": "cerchi con le braccia",
+   "incerta": false
+  },
+  "394efa5c2e5349a68c45e9b585ca370298aa0d55755f6e81f65a4ec9a670775e": {
+   "da": "Círculos com um braço",
+   "it": "cerchi con un braccio",
+   "incerta": false
+  },
+  "50436ab1dcf41abb60b190db72046b163a0393ada09a0a9998f72033925a3511": {
+   "da": "Deslize de parede do serrátil com rolo de espuma",
+   "it": "scivolamento al muro del dentato, con il rullo di schiuma",
+   "incerta": false
+  },
+  "f2a290d09f94e20d3054da19a3002180b59fc491c1af8568f9dcc23663871872": {
+   "da": "Dorsiflexão plantar",
+   "it": "dorsiflessione plantare",
+   "incerta": false
+  },
+  "5801e543903e42923b08328a3dd855af07861002640cc73399137cfe77c57a51": {
+   "da": "Elevação lateral de deltóide posterior com halteres",
+   "it": "alzata laterale per il deltoide posteriore con i manubri",
+   "incerta": false
+  },
+  "65d63fda30303ab52fc17b9683ef6831fcb7dd4a11f00f2bc6017314bc8bb17c": {
+   "da": "Exercício de bailarina sentada",
+   "it": "esercizio della ballerina, da seduta",
+   "incerta": false
+  },
+  "07ddc393f6b99c88cc6aba6c7e7fa8e502cf1e7fa82d48b23a191307cb2d8d31": {
+   "da": "Exercício de retração escapular sentada",
+   "it": "esercizio di retrazione scapolare, da seduta",
+   "incerta": false
+  },
+  "4371d6233723c523da3c0508d20fe7e2b12eb09d560d50292f21fb9a33f25934": {
+   "da": "Flexão alternada de ombro",
+   "it": "flessione alternata di spalla",
+   "incerta": false
+  },
+  "ab6a2325c255a3c62d49a6497639616168e493b3878a3b7a20303f6479b93388": {
+   "da": "Inclinação Lateral em Pé",
+   "it": "inclinazione laterale, in piedi",
+   "incerta": false
+  },
+  "1570747edfa551a2d93e0af65de932e873c915ca4449d9a3a31ba0e84c62fa75": {
+   "da": "Joelho Alternado no Peito",
+   "it": "ginocchio alternato al petto",
+   "incerta": false
+  },
+  "d81a551d49fa61d5bdf68fe5e90c193afe1b60771db4c2811157231392e2bc70": {
+   "da": "Levantamento de braço apoiado na parede",
+   "it": "sollevamento del braccio con appoggio alla parete",
+   "incerta": false
+  },
+  "389120a0e241d67e1ab30b3b160b8ec5f82d8050a5c5e08659cda4f7b67e05f9": {
+   "da": "Postura da Cobra - Alongamento Abdominal",
+   "it": "postura del cobra - allungamento addominale",
+   "incerta": false
+  },
+  "f99756ae21fcb6a155a526aff7287e734b3ece8335fc7b5da370431fd1efc2c0": {
+   "da": "Postura da Virilha Sentada",
+   "it": "postura dell'inguine, da seduto",
+   "incerta": false
+  },
+  "f5e84c0081908b17811b299dca5d016ad4dfbb5f8d4d8db743839a2ec24757eb": {
+   "da": "Postura de meio sapo",
+   "it": "postura del mezzo rospo",
+   "incerta": true
+  },
+  "1c19f676bf1c83de610b0d2a37cd9662b24481aba1dc629eb85a3ec19caa3cc6": {
+   "da": "Postura de peixe",
+   "it": "postura del pesce",
+   "incerta": false
+  },
+  "74542d2f82a0d7700560a973438629103cc8396882158146148e86257af4ca85": {
+   "da": "Postura do Arco Oscilante",
+   "it": "postura dell'arco oscillante",
+   "incerta": false
+  },
+  "d03c9c8e63d5b6ddd0a2d84a1ae730d89f96d5b89032e22d5c0396cac3b7416a": {
+   "da": "Postura do Arco",
+   "it": "postura dell'arco",
+   "incerta": false
+  },
+  "8029060e35b7efed93fd40b484b68faea9d296f7de9c8cf2ffc9cbcf38f98495": {
+   "da": "Postura do Bebê Feliz",
+   "it": "postura del bambino felice",
+   "incerta": false
+  },
+  "e8cec0dfd689d53d8a2f5d542c327e5494f91f0ba2e482e1ca015406b43c1c7c": {
+   "da": "Postura do sapo",
+   "it": "postura del rospo",
+   "incerta": true
+  },
+  "6b7c5853ed9c008be55a9a5e2473a66e7c753b2cb153b59538da1b5f1d0a3ef4": {
+   "da": "protracao-e-retracao-della-escapula",
+   "it": "protrazione e retrazione della scapola",
+   "incerta": false
+  },
+  "21338c169312ec3921bb34185c9da801ff54d7bec2b122d60abb3735d7f8479e": {
+   "da": "Rolagem de espuma para isquiotibiais",
+   "it": "rullata di schiuma per gli ischiocrurali",
+   "incerta": false
+  },
+  "734de4203a9314a316c73ff02cfa6bf92f67fd226190908a29b10a84cabd318b": {
+   "da": "Rolamento de espuma nas costas",
+   "it": "rullata di schiuma sulla schiena",
+   "incerta": false
+  },
+  "ed188e702a0671b01dc57685e8b0ccfdfab7d89f49853f4926e691f015636476": {
+   "da": "Rolamento de espuma nos quadríceps",
+   "it": "rullata di schiuma sui quadricipiti",
+   "incerta": false
+  },
+  "5488a241b088fe5e104957de7d72d15456d2af77b523ffdb5e29e500efd77e7b": {
+   "da": "Rolamento de espuma nos romboides",
+   "it": "rullata di schiuma sui romboidi",
+   "incerta": false
+  },
+  "3df2cc14180c0ec7848f4402d00cc941b5afbe1d4fca1d531b994d8fb2f842f1": {
+   "da": "Rolamento de Espuma para Panturrilhas",
+   "it": "rullata di schiuma per i polpacci",
+   "incerta": false
+  },
+  "8cd6251ee39025ad211b190aa8947ff73d2105c283e31fbfad29b6bf82d122bd": {
+   "da": "Rolo de espuma ombro posterior",
+   "it": "rullo di schiuma, spalla posteriore",
+   "incerta": false
+  },
+  "3b7a9d0735f823b50345c0be4309197932c788386eb1a9925d43f48ac974adb8": {
+   "da": "Rolo de espuma para fascite plantar",
+   "it": "rullo di schiuma per la fascite plantare",
+   "incerta": false
+  },
+  "995917cbb6b92a91be44fc89fd38e0da89ded7206614b37b1681109669eb31a8": {
+   "da": "Rolo de espuma para ombro e peito frontal",
+   "it": "rullo di schiuma per spalla e petto frontale",
+   "incerta": false
+  },
+  "719aa700e14c07fbeddb82a043cc0b6b76e33f6c8af1b84f5591f446ac363f6b": {
+   "da": "rolo-di-di-schiuma-per-os-gluteos",
+   "it": "rullo di schiuma per i glutei",
+   "incerta": false
+  },
+  "5c587460159ef30fc3b709ad1fcd3156fbef02872882c9f0e8a50373b07c8d04": {
+   "da": "Rotação da coluna torácica de joelhos",
+   "it": "rotazione della colonna toracica, in ginocchio",
+   "incerta": false
+  },
+  "e091807cead80417b1696491214ec19a69ba9ac2e4b6245123c73c24a84ada18": {
+   "da": "Rotação de Pé e Tornozelo",
+   "it": "rotazione di piede e caviglia",
+   "incerta": false
+  },
+  "de01da6793fd300a7559b9e4913169c1f0fe5748b7860df355a9eb34436f844d": {
+   "da": "Rotação do corpo superior deitado",
+   "it": "rotazione della parte superiore del corpo, sdraiato",
+   "incerta": false
+  },
+  "ab15b6f3666c7e6539bf69149adf465e03ee000d992b04365cf6bcec847a51a7": {
+   "da": "Rotação em Pé",
+   "it": "rotazione in piedi",
+   "incerta": false
+  },
+  "41251e55363722f5654de12d59150c907c3c38c141794052f954857c488ca6a8": {
+   "da": "Rotação espinhal deitado",
+   "it": "rotazione spinale, sdraiato",
+   "incerta": false
+  },
+  "15855a1cebcbb681bca160861ea78aa0523f7dd2dfadaaa927536634139421d6": {
+   "da": "Rotação externa com cabo a 90 graus",
+   "it": "rotazione esterna con il cavo a 90 gradi",
+   "incerta": false
+  },
+  "27dd1f5925b01740a80abeca358a48e2d9fd0a7db754763ec26064d29c51456e": {
+   "da": "Rotação externa com cabo em posição de joelhos",
+   "it": "rotazione esterna con il cavo, in ginocchio",
+   "incerta": false
+  },
+  "0abf4e4d5ec7fe53a429fbc3b521388e95375fbdcf9b9e91314c4de829b66be2": {
+   "da": "Rotação externa de halteres apoiada no banco",
+   "it": "rotazione esterna con i manubri, appoggiata alla panca",
+   "incerta": false
+  },
+  "06eda1526efe21bc32d11bc9728df27f94cfddbeb3c9b2d3fbc5ddd37bd20d55": {
+   "da": "Rotação Externa de Ombro com Cabo",
+   "it": "rotazione esterna di spalla con il cavo",
+   "incerta": false
+  },
+  "3297f3baef2d8d56286a183637e721e3f246c932f75f411b9b5bdec2518ed7ce": {
+   "da": "Rotação externa de ombro com faixa elástica",
+   "it": "rotazione esterna di spalla con la banda elastica",
+   "incerta": false
+  },
+  "cfb4aac41857af6d375395f75a734b06b0a37279024f9b4792a2d98ac0aa6afe": {
+   "da": "Rotação Externa De Quadril Com Faixa Elástica",
+   "it": "rotazione esterna dell'anca con la banda elastica",
+   "incerta": false
+  },
+  "5d09367cf536eba28d9dcf8a0c317cccc9c708160d482511d0e00f10c6f9ff78": {
+   "da": "Rotação Externa de Quadril Sentado com Faixa Elástica",
+   "it": "rotazione esterna dell'anca da seduto, con la banda elastica",
+   "incerta": false
+  },
+  "8db96235f6744c3b4d9d5f97fa04639a5aeb9a79bede07555093daaa8ee1e032": {
+   "da": "Rotação externa do ombro deitado com haltere",
+   "it": "rotazione esterna della spalla, sdraiato, con il manubrio",
+   "incerta": false
+  },
+  "78ee7d62de74597b9ab7e2e5adc7cd9ca1f19e08728fc18eb3463cc1990f7b2d": {
+   "da": "Rotação externa do ombro",
+   "it": "rotazione esterna della spalla",
+   "incerta": false
+  },
+  "b023474b945739c9d1b8090cd175c19ffd70c796a44e97c7cce15b68d9477392": {
+   "da": "Rotação Externa do Pé com Faixa Elástica",
+   "it": "rotazione esterna del piede con la banda elastica",
+   "incerta": false
+  },
+  "f6d4c78da5a11842ebdeedf6edfdc9ca87c0ad847dd6653c598a084fb8e9b392": {
+   "da": "Rotação interna de cabo a 90 graus",
+   "it": "rotazione interna al cavo a 90 gradi",
+   "incerta": false
+  },
+  "a31bd9178027300532d9448b650803f788e75dad5993f710976e95e1170bcac1": {
+   "da": "Rotação interna de ombro com cabo",
+   "it": "rotazione interna di spalla con il cavo",
+   "incerta": false
+  },
+  "ade39c804bd0d9a0cf4b8c38e505d576bfcb5096c2e67558cf4de2ac6495441c": {
+   "da": "Rotação interna do ombro sentada com cabo",
+   "it": "rotazione interna della spalla, da seduta, con il cavo",
+   "incerta": false
+  },
+  "c2ad5ca7fa5d7b159abf012ea1b763dd02dcc5c2d6764738b3c233c94d4fe618": {
+   "da": "Rotação interna do ombro",
+   "it": "rotazione interna della spalla",
+   "incerta": false
+  },
+  "e1d76a90a62c0b132181d310bc6a591fe92e95d2fdcfdd6f7a3126cb6a4e929f": {
+   "da": "Rotação Interna do Quadril Sentado com Faixa Elástica",
+   "it": "rotazione interna dell'anca da seduto, con la banda elastica",
+   "incerta": false
+  },
+  "d820d4c7a289e1f1b097602d6582fe3c6cabaa232fd8025b32c00acf4adf3b4f": {
+   "da": "Rotação para trás de joelhos",
+   "it": "rotazione all'indietro, in ginocchio",
+   "incerta": true
+  },
+  "d510d24562d808c711660d61d1f597284b678aab6036e9138bec7d8d9e38773a": {
+   "da": "Toque Lateral dos Dedos dos Pés em Pé",
+   "it": "tocco laterale delle dita dei piedi, in piedi",
+   "incerta": false
+  },
+  "085e7c71e9ac5110ca0291622364963e35708230c67ec168f136596345c2a6ee": {
+   "da": "Toque nos Dedos dos Pés em Pé",
+   "it": "tocco delle dita dei piedi, in piedi",
+   "incerta": false
+  },
+  "837bfe23a75d52f39994b33beaee603f71c55006f1a4868f12a9745fae89c6e3": {
+   "da": "Toque nos Dedos dos Pés Sentado",
+   "it": "tocco delle dita dei piedi, da seduto",
+   "incerta": false
+  },
+  "9ae9349684f8abc21b9d12cff4ee5d48c70a32abed3aaeb7e1bf2acd8551d9ef": {
+   "da": "Toques de Dedos em Pé",
+   "it": "tocchi di dita, in piedi",
+   "incerta": false
+  },
+  "c8ca6a53fcd1972a9e48ddda69415aa0345cfb747b0f9b0470c6db97f7040d56": {
+   "da": "torcao-obliqua-seduta",
+   "it": "torsione obliqua, da seduto",
+   "incerta": false
+  }
+ }
+}

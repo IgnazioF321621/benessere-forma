@@ -49,6 +49,17 @@
   input[type=text]:focus{outline:none;border-color:var(--evergreen);background:#fff}
   .slug{color:var(--evergreen);font-weight:600}
 
+  /* Nota di lettura del nome portoghese. Deliberatamente piu' piccola e piu'
+     tenue del campo del nome: e' un aiuto a leggere il nome di partenza, non una
+     risposta del sistema. `user-select:none` la rende non copiabile con un gesto
+     solo — non e' una difesa, e' un attrito: un nome si scrive, non si incolla
+     da qui. Per la stessa ragione non ha un chip: i chip riempiono il campo. */
+  .trad{font-size:12px;line-height:1.45;color:var(--muted);margin-top:3px;
+        font-style:italic;user-select:none;-webkit-user-select:none}
+  .trad .et{font-style:normal;font-family:ui-monospace,monospace;font-size:10px;
+            letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin-right:5px}
+  .trad.incerta .et{color:#B45309;opacity:1}
+
   .badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;
          font-family:ui-monospace,monospace;color:#fff}
   .b-collegato{background:var(--over)} .b-pendente{background:var(--viola)}
@@ -205,6 +216,15 @@ function disegnaRiga(r){
   const avviso = vivo ? `<div class="avviso">GIF viva nell'app: lo slug nuovo va solo in lista, non viene applicato da nessuna parte.</div>` : '';
   const cond = r.condiviso ? `<div class="avviso">Più codici puntano a questo slug: riga da trattare con la strada dei due codici.</div>` : '';
   const gem = r.stesso_contenuto_di.length ? `<div class="avviso">Stesso contenuto di: ${esc(r.stesso_contenuto_di.join(', '))}</div>` : '';
+  /* Nota di lettura, non suggerimento: sta sotto il NOME DI PARTENZA, dove aiuta
+     a capire cosa c'e' scritto, e non sotto il campo del nome, dove sembrerebbe la
+     risposta da mettere dentro. Non genera chip e non tocca mai il valore del campo. */
+  const trad = r.traduzione
+    ? `<div class="trad${r.traduzione.incerta?' incerta':''}"><span class="et">${
+        r.traduzione.incerta?'dal portoghese · traduzione incerta':'dal portoghese'
+      }</span>${esc(r.traduzione.it)}</div>`
+    : '';
+
   const stato = r.decisione
     ? `<span class="esito ok" id="e${r.i}">✓ salvata su disco il ${esc(r.decisione.quando)} — ${esc(r.decisione.origine)}</span>`
     : `<span class="esito" id="e${r.i}"></span>`;
@@ -229,7 +249,7 @@ function disegnaRiga(r){
         ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
         ${r.rinominato?'<span class="stat"> · file già rinominato</span>':''}
       </div>
-      <div class="campo"><div class="lab">${r.fonte_immagine==='bucket'?'nome oggetto nel bucket':'nome file attuale'}</div><div class="val">${esc(r.file)}</div></div>
+      <div class="campo"><div class="lab">${r.fonte_immagine==='bucket'?'nome oggetto nel bucket':'nome file attuale'}</div><div class="val">${esc(r.file)}</div>${trad}</div>
       <div class="campo"><div class="lab">nome a catalogo</div><div class="val">${cat?esc(cat.nome):(r.cantiere?esc(r.cantiere[1])+' <span class="stat">(cantiere 96)</span>':'—')}</div></div>
       <div class="campo">
         <div class="lab">nome — correggilo guardando la GIF, poi conferma</div>

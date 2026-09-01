@@ -56,6 +56,12 @@ BOZZE = ESITI / 'bozze.tsv'
 MIGRARE = ESITI / 'slug_da_migrare.tsv'
 LOG = ESITI / 'log_rinomine.tsv'
 
+# Note di lettura del nome di partenza: dizionario di sola lettura, indicizzato per
+# SHA-256 perche' il nome file cambia a ogni conferma e l'impronta no — e' quello
+# che le tiene visibili anche dopo la rinomina. Sta fuori dal codice per potersi
+# correggere senza toccare il pannello, e non e' un registro: qui non si scrive mai.
+TRADUZIONI = BASE / 'traduzioni_pt.json'
+
 COL_REGISTRO = ['quando', 'zona', 'sha256', 'nome_vecchio', 'nome_confermato', 'slug',
                 'stato_binario', 'origine', 'slug_applicabile', 'codice', 'nome_catalogo']
 COL_BOZZE = ['quando', 'zona', 'sha256', 'nome_vecchio', 'testo']
@@ -202,6 +208,18 @@ def appendi(path, colonne, righe):
             os.fsync(fh.fileno())
 
 
+def leggi_traduzioni():
+    """sha256 -> {'it', 'incerta'}. {} se il file non c'e' o e' illeggibile.
+
+    Una nota di lettura mancante non deve poter fermare il pannello: senza
+    dizionario le schede si confermano come prima, solo senza aiuto.
+    """
+    try:
+        return json.loads(TRADUZIONI.read_text(encoding='utf-8')).get('voci', {})
+    except Exception:
+        return {}
+
+
 def leggi_tsv(path):
     if not path.exists():
         return []
@@ -266,10 +284,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
             bozze = stato_corrente(BOZZE)
             rinominati = {r['sha256']: r for r in leggi_tsv(LOG) if r.get('esito') in
                           ('rinominato', 'gia con quel nome')}
+            trad = leggi_traduzioni()
             for r in dati['righe']:
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')
                 r['rinominato'] = r['sha256'] in rinominati
+                # solo a schermo: non entra nel piano su disco, ne' nel registro
+                r['traduzione'] = trad.get(r['sha256'])
             dati['decise'] = sum(1 for r in dati['righe'] if r['decisione'])
             dati['rinominate'] = sum(1 for r in dati['righe'] if r['rinominato'])
             return self._send(dati)
