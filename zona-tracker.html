@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.08.24 · 04:34';
+const APP_VERSION = '2026.09.07 · 07:08';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -3932,12 +3932,43 @@ const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','reco
 
 const RESIST_VALUES = [0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250];
 
-// BLOCCO 3 — Logger banda di assistenza (solo trazioni).
-// Ordine FISSO dalla più LEGGERA (= meno assistenza, trazione più dura) alla più PESANTE (= più assistenza, più facile).
-// Progredire = scendere verso la Gialla.
-const BAND_COLORS = ['Gialla', 'Rossa', 'Nera', 'Viola'];
-const PULL_UP_EXERCISE_NAME = 'Trazioni';
-function isPullUpExercise(name){ return name === PULL_UP_EXERCISE_NAME; }
+// BLOCCO 3 — Scala di assistenza del logger trazioni.
+// Ordine FISSO dalla PIÙ DURA (nessuna assistenza) alla PIÙ FACILE (più assistenza).
+// 'Corpo libero' NON è un colore: è l'assenza di banda, ed è il gradino più duro
+// della scala — un valore reale, non un caso speciale. Progredire = scendere di indice.
+const BAND_FREE = 'Corpo libero';
+const BAND_COLORS = [BAND_FREE, 'Gialla', 'Rossa', 'Nera', 'Viola'];
+// Prosa: si dice "banda Gialla" ma "a corpo libero" — "banda Corpo libero" non esiste.
+function bandPhrase(v){ return v === BAND_FREE ? 'a corpo libero' : `banda ${v}`; }
+// Etichetta compatta per badge, righe di storico e "Ultima volta".
+function bandLabel(v){ return v === BAND_FREE ? 'corpo libero' : v; }
+// UNICO punto di verità per "questo esercizio è una trazione". Il catalogo genera
+// varianti ("Trazioni sbarra presa neutra"): il confronto è per PREFISSO normalizzato,
+// mai per uguaglianza col nome esatto — era la regressione che tornava a ogni
+// rigenerazione della scheda, col logger che mostrava le libbre al posto delle bande.
+// Nessun altro confronto sul nome va introdotto: si passa da qui.
+function isPullUpExercise(name){
+  return String(name || '').normalize('NFC').trim().toLowerCase().startsWith('trazion');
+}
+
+// Picker della scala di assistenza — sorgente unica per i due punti che lo mostrano
+// (card esercizio e schermata recupero). 'Corpo libero' sta a larghezza piena SOPRA
+// la riga dei quattro colori: si legge come gradino a sé, non come un quinto colore.
+function bandPickerHTML(mb){
+  const btn = (c, full) => {
+    const active = ST.trainLogBandColor === c;
+    return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
+      style="${full ? 'width:100%;' : 'flex:1;'}padding:10px 6px;background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t1)'};border:1.5px solid ${active?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
+  };
+  return `<div style="margin-bottom:${mb}px;">
+    <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">ASSISTENZA</label>
+    ${btn(BAND_FREE, true)}
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      ${BAND_COLORS.filter(c => c !== BAND_FREE).map(c => btn(c, false)).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">la banda AIUTA · Corpo libero = più dura · Viola = più facile</div>
+  </div>`;
+}
 
 // ═══════════════════════════════════════════════════════════
 // UTILS
@@ -11238,7 +11269,7 @@ function getLastLoggedSetLabel(sessionId, exName){
   let resistTxt = '';
   const raw = (d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance;
   if(raw !== undefined && raw !== null && String(raw).trim() !== ''){
-    const r = String(raw).trim();
+    const r = bandLabel(String(raw).trim());
     resistTxt = /^\d+$/.test(r) ? `${r} ${unitLbl}` : r;
   }
   const parts = [`S${bestSet}`];
@@ -11296,7 +11327,7 @@ function getProgressionSuggestion(exName, sessionId){
     let resistTxt = isPullUp ? '' : 'corpo libero';
     const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
     if(lastResist != null && String(lastResist).trim() !== ''){
-      const r = String(lastResist).trim();
+      const r = bandLabel(String(lastResist).trim());
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
@@ -11888,7 +11919,7 @@ async function confirmEditLogRow(){
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
   const isPullUp = orig && isPullUpExercise(orig.exercise_name);
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
-  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
+  if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
   const resistanceText = isPullUp ? null : (resistance || null);
   // 1. UPDATE training_logs by id (sorgente per Progressione)
@@ -12708,30 +12739,35 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
 
   if(isPullUpExercise(exName)){
-    // Ramo TRAZIONI — la "resistenza" è il colore della BANDA di assistenza.
-    // BAND_COLORS = ['Gialla','Rossa','Nera','Viola']: idx 0 = più dura (meno aiuto),
-    // idx 3 = più facile (più aiuto). Progredire = scendere di idx verso Gialla.
+    // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.
+    // BAND_COLORS = ['Corpo libero','Gialla','Rossa','Nera','Viola']: idx 0 = più dura
+    // (nessun aiuto), ultimo idx = più facile (più aiuto). Progredire = scendere di idx.
+    // Corpo libero è un valore reale della scala: da Gialla la "banda più dura" ci
+    // arriva da sola, senza il caso speciale "prova la trazione libera" di prima.
     const cur = (bandColor && BAND_COLORS.includes(bandColor)) ? bandColor : null;
     const curIdx = cur ? BAND_COLORS.indexOf(cur) : -1;
-    const harder = (curIdx > 0) ? BAND_COLORS[curIdx-1] : null;                       // verso Gialla
+    const harder = (curIdx > 0) ? BAND_COLORS[curIdx-1] : null;                       // verso Corpo libero
     const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
-    const bandTxt = cur ? `banda ${cur}` : 'stessa banda';
-    // 1) cedimento (RIR 0) ma reps nel range → stessa banda, -1 rep
+    const bandTxt = cur ? bandPhrase(cur) : 'stessa banda';
+    // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
       if(targetRIR === 0) return out(bandTxt, `mantieni ${repsDone} reps`);
       return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
     }
-    // 2) tetto + RIR ≥ target → banda più dura (o trazione libera se già Gialla)
+    // 2) tetto + RIR ≥ target → un gradino più duro.
+    //    Su Corpo libero (idx 0) non esiste niente di più duro: si sale di reps,
+    //    oltre il tetto del range, perché la banda non è più una leva disponibile.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
-      if(curIdx === 0) return out('prova la trazione libera senza banda', `${repsMin}-${repsMax} reps`);
-      return out(`banda ${harder || 'Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
+      if(curIdx === 0) return out(bandTxt, `sali a ${repsDone + 1} reps`);
+      return out(`${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
     }
-    // 3) sotto range → banda più facile
-    if(repsDone < repsMin) return out(`banda ${easier || 'Viola'} (più aiuto)`, `punta a ${repsMin} reps`);
-    // 4) RIR > target (facile) → stessa banda, alza reps verso il tetto
+    // 3) sotto range → un gradino più facile. Su Viola (ultimo idx) non esiste
+    //    niente di più facile: si resta su Viola.
+    if(repsDone < repsMin) return out(`${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
+    // 4) RIR > target (facile) → stesso gradino, alza reps verso il tetto
     if(rirVal != null && rirVal > targetRIR) return out(bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
-    // 5) default (RIR = target o non riportato) → stessa banda, +1 rep
+    // 5) default (RIR = target o non riportato) → stesso gradino, +1 rep
     return out(bandTxt, `${clampReps(repsDone + 1)} reps`);
   }
 
@@ -12795,7 +12831,7 @@ async function saveTrainingSet(){
     : ((ST.trainLogResist != null) ? String(ST.trainLogResist) : '');
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
-  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
+  if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   ST.trainSaving = true;
   renderTraining();
   let insertError = null;
@@ -13845,7 +13881,7 @@ function renderTraining(){
             </span>`;
           }
           // BLOCCO 3 — Trazioni: badge mostra colore banda al posto di "N lbs"
-          const badgeResist = (d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance;
+          const badgeResist = bandLabel((d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance);
           // GRAFICA L2 — pill PIENA evergreen, testo bianco, ✏️ inline
           const resistTxt = badgeResist
             ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
@@ -13900,19 +13936,7 @@ function renderTraining(){
                 </select>
               </div>` : ''}
             </div>
-            ${isPullUpExercise(e.name) ? `
-              <div style="margin-bottom:6px;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">COLORE BANDA</label>
-                <div style="display:flex;gap:6px;">
-                  ${BAND_COLORS.map(c => {
-                    const active = ST.trainLogBandColor === c;
-                    return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
-                      style="flex:1;padding:10px 6px;background:${active?'var(--acc)':'#fff'};color:${active?'#fff':'var(--t1)'};border:1.5px solid ${active?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
-                  }).join('')}
-                </div>
-                <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">la banda AIUTA · Gialla = più dura · Viola = più facile</div>
-              </div>
-            ` : `
+            ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
               <div style="margin-bottom:6px;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
                 <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);"
@@ -14882,17 +14906,7 @@ function renderTraining(){
                       </select>
                     </div>` : ''}
                   </div>
-                  ${isPullUpM ? `<div style="margin-bottom:10px;">
-                    <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:6px;">COLORE BANDA</label>
-                    <div style="display:flex;gap:6px;">
-                      ${BAND_COLORS.map(c => {
-                        const active2 = ST.trainLogBandColor === c;
-                        return `<button type="button" onclick="ST.trainLogBandColor='${c}';renderTraining();"
-                          style="flex:1;padding:10px 6px;background:${active2?'var(--acc)':'#fff'};color:${active2?'#fff':'var(--t1)'};border:1.5px solid ${active2?'var(--acc)':'var(--s2)'};border-radius:8px;font-size:12px;font-weight:${active2?700:500};font-family:var(--font-sans);cursor:pointer;">${c}</button>`;
-                      }).join('')}
-                    </div>
-                    <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-top:6px;">la banda AIUTA · Gialla = più dura · Viola = più facile</div>
-                  </div>` : `<div style="margin-bottom:10px;">
+                  ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
                     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
                     <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
                       <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
@@ -15077,7 +15091,7 @@ function renderTraining(){
           }
           // BLOCCO 3 — Trazioni: mostra colore banda al posto di "X lbs"
           const resistLabel = isPullUpEx
-            ? (l.band_color || '')
+            ? (l.band_color ? bandLabel(l.band_color) : '')
             : (l.resistance ? l.resistance + ' lbs' : '');
           const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${resistLabel?' · '+resistLabel:''}`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
@@ -22429,7 +22443,7 @@ async function confirmEditLog(k){
   // BLOCCO 3 — Trazioni: resistance contiene il colore banda. DB: resistance NULL + band_color.
   const isPullUp = isPullUpExercise(exName);
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
-  if(isPullUp && !bandColor){ showToast('Scegli il colore della banda','⚠️'); return; }
+  if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
