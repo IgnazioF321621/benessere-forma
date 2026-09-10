@@ -54,6 +54,20 @@
      risposta del sistema. `user-select:none` la rende non copiabile con un gesto
      solo — non e' una difesa, e' un attrito: un nome si scrive, non si incolla
      da qui. Per la stessa ragione non ha un chip: i chip riempiono il campo. */
+  /* Suggerimenti di nome. Un clic li mette nel campo, non conferma: sono proposte,
+     e devono leggersi come proposte. Piu' piccoli del campo e su fondo trasparente,
+     con il bordo pieno che li distingue dai chip tratteggiati delle altre fonti. */
+  .sugg{margin-top:7px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .sugg .et{font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+            color:var(--muted);font-family:ui-monospace,monospace;margin-right:2px}
+  .sg{display:inline-block;padding:4px 11px;border:1px solid var(--evergreen);
+      border-radius:999px;font-size:13px;cursor:pointer;background:transparent;
+      color:var(--evergreen);line-height:1.3;text-align:left}
+  .sg:hover{background:var(--evergreen);color:#fff}
+  .guarda{margin-top:7px;font-size:12px;color:#B45309;font-style:italic}
+  .guarda .et{font-style:normal;font-family:ui-monospace,monospace;font-size:10px;
+              letter-spacing:.08em;text-transform:uppercase;margin-right:5px}
+
   .trad{font-size:12px;line-height:1.45;color:var(--muted);margin-top:3px;
         font-style:italic;user-select:none;-webkit-user-select:none}
   .trad .et{font-style:normal;font-family:ui-monospace,monospace;font-size:10px;
@@ -225,6 +239,19 @@ function disegnaRiga(r){
       }</span>${esc(r.traduzione.it)}</div>`
     : '';
 
+  /* I suggerimenti stanno SOTTO il campo del nome, dove sono la risposta alla domanda
+     "come lo chiamo": un clic riempie il campo e basta, la conferma resta separata.
+     Le righe che si confondono con un'altra non ricevono un suggerimento forzato:
+     ricevono il motivo per cui vanno guardate. */
+  const sugg = (r.suggerimenti && r.suggerimenti.length)
+    ? `<div class="sugg"><span class="et">suggerimenti</span>${r.suggerimenti.map(s =>
+        `<button class="sg" data-v="${esc(s)}" onclick="usa(${r.i},this.dataset.v)">${esc(s)}</button>`
+      ).join('')}</div>`
+    : '';
+  const guarda = r.da_guardare
+    ? `<div class="guarda"><span class="et">da guardare sulla GIF</span>${esc(r.da_guardare)}</div>`
+    : '';
+
   const stato = r.decisione
     ? `<span class="esito ok" id="e${r.i}">✓ salvata su disco il ${esc(r.decisione.quando)} — ${esc(r.decisione.origine)}</span>`
     : `<span class="esito" id="e${r.i}"></span>`;
@@ -255,6 +282,7 @@ function disegnaRiga(r){
         <div class="lab">nome — correggilo guardando la GIF, poi conferma</div>
         <input type="text" id="n${r.i}" value="${esc(valore)}">
         ${chips.join('')}
+        ${sugg}${guarda}
       </div>
       <div class="campo"><div class="lab">slug</div><div class="val slug" id="s${r.i}">${esc(slugify(valore))||'—'}</div></div>
       ${avviso}${cond}${gem}${daBucket}${fuoriSede}${mai}

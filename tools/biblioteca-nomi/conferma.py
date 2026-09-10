@@ -62,6 +62,12 @@ LOG = ESITI / 'log_rinomine.tsv'
 # correggere senza toccare il pannello, e non e' un registro: qui non si scrive mai.
 TRADUZIONI = BASE / 'traduzioni_pt.json'
 
+# Suggerimenti di nome: stessa natura del dizionario qui sopra — dati, non decisioni,
+# indicizzati per SHA-256 perche' il nome file cambia a ogni conferma e l'impronta no.
+# Qui non si scrive mai: un suggerimento vive a schermo e finisce nel registro solo
+# se Ignazio lo mette nel campo e conferma, cioe' come qualunque nome scritto a mano.
+SUGGERIMENTI = BASE / 'suggerimenti_nomi.json'
+
 COL_REGISTRO = ['quando', 'zona', 'sha256', 'nome_vecchio', 'nome_confermato', 'slug',
                 'stato_binario', 'origine', 'slug_applicabile', 'codice', 'nome_catalogo']
 COL_BOZZE = ['quando', 'zona', 'sha256', 'nome_vecchio', 'testo']
@@ -227,6 +233,18 @@ def leggi_traduzioni(zona):
     return d.get('voci', {})
 
 
+def leggi_suggerimenti():
+    """sha256 -> {'suggerimenti': [...], 'da_guardare': '...'}. {} se il file manca.
+
+    Come per le note, un file assente non ferma il pannello: si confermano le schede
+    come prima, solo senza proposte.
+    """
+    try:
+        return json.loads(SUGGERIMENTI.read_text(encoding='utf-8')).get('voci', {})
+    except Exception:
+        return {}
+
+
 def leggi_tsv(path):
     if not path.exists():
         return []
@@ -292,12 +310,16 @@ class Handler(http.server.BaseHTTPRequestHandler):
             rinominati = {r['sha256']: r for r in leggi_tsv(LOG) if r.get('esito') in
                           ('rinominato', 'gia con quel nome')}
             trad = leggi_traduzioni(dati['zona'])
+            sugg = leggi_suggerimenti()
             for r in dati['righe']:
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')
                 r['rinominato'] = r['sha256'] in rinominati
                 # solo a schermo: non entra nel piano su disco, ne' nel registro
                 r['traduzione'] = trad.get(r['sha256'])
+                v = sugg.get(r['sha256']) or {}
+                r['suggerimenti'] = v.get('suggerimenti') or []
+                r['da_guardare'] = v.get('da_guardare')
             dati['decise'] = sum(1 for r in dati['righe'] if r['decisione'])
             dati['rinominate'] = sum(1 for r in dati['righe'] if r['rinominato'])
             return self._send(dati)

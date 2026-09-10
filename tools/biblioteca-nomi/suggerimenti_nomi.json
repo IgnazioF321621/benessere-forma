@@ -1,0 +1,928 @@
+{
+ "cosa_e": "Suggerimenti di nome, non decisioni. Un clic li mette nel campo, che resta modificabile; la conferma e un gesto separato. Il nome lo sceglie Ignazio guardando la GIF.",
+ "criterio": "Le meccaniche (un movimento con un attrezzo) prendono un nome descrittivo italiano. Le posizioni statiche tengono il nome inglese, che identifica una forma riconoscibile invece di descriverla. Dove esistono entrambe le nature i suggerimenti sono tre: nome secco, nome piu muscolo, descrittivo italiano.",
+ "chiave": "SHA-256 del file, non il nome: il nome cambia a ogni conferma, l impronta no",
+ "da_guardare": "righe la cui differenza da un altra riga non e deducibile dal nome file: nessun suggerimento, si guarda la GIF",
+ "generato": "2026-09-10",
+ "voci": {
+  "c4d7377601d280377d4ab23fe58f10105a9b6c805f4a7bd49d27dfa07c339f27": {
+   "da": "abdominal hollowing (o abdominal draw-in maneuver)",
+   "suggerimenti": [
+    "Attivazione del trasverso addominale",
+    "Retrazione addominale sdraiato"
+   ]
+  },
+  "b931ce8e6c0d4c9a7d07190bad00628ba4bb2de9403b982df51b7b64c1ba8b0f": {
+   "da": "allungamento-inverso-assistito-petto-e-spalla",
+   "suggerimenti": [
+    "Allungamento petto e spalle inverso assistito",
+    "Allungamento petto e spalle con appoggio dietro"
+   ]
+  },
+  "4371d6233723c523da3c0508d20fe7e2b12eb09d560d50292f21fb9a33f25934": {
+   "da": "alternating shoulder flexion (o alternating front arm raises)",
+   "suggerimenti": [
+    "Alzate frontali alternate",
+    "Flessione di spalla alternata"
+   ]
+  },
+  "9be437d4af57e709d7e5bc5c3aca2cc8c6a23bf53d50476c030dc304baaccbf6": {
+   "da": "arm circles",
+   "suggerimenti": [
+    "Circonduzioni delle braccia",
+    "Cerchi con le braccia"
+   ]
+  },
+  "5b7382a56723f62ccac08b40251861256d5416e39c7de1c105fd25775389396c": {
+   "da": "bench chest stretch (o dips position stretch)",
+   "suggerimenti": [
+    "Allungamento petto in posizione di dip",
+    "Allungamento petto alla panca"
+   ]
+  },
+  "aef9b1a0857d1cf15f9c82b28be2e183e0ca0a852765ab2de4dbeede0458e8a1": {
+   "da": "bench lat stretch (o incline bench chest stretch)",
+   "suggerimenti": [
+    "Allungamento gran dorsale alla panca",
+    "Allungamento petto alla panca inclinata"
+   ]
+  },
+  "74542d2f82a0d7700560a973438629103cc8396882158146148e86257af4ca85": {
+   "da": "bow pose setup",
+   "suggerimenti": [
+    "Bow pose setup",
+    "Preparazione alla bow pose",
+    "Allungamento addominali e quadricipiti prono"
+   ]
+  },
+  "d03c9c8e63d5b6ddd0a2d84a1ae730d89f96d5b89032e22d5c0396cac3b7416a": {
+   "da": "bow pose",
+   "suggerimenti": [
+    "Bow pose",
+    "Allungamento addominali bow pose",
+    "Allungamento addominali e quadricipiti in arco"
+   ]
+  },
+  "571f0bec74a10e2cc762d0cc2dcf380e38255ff047ca666f0d00060b9ef1eadd": {
+   "da": "Butterfly stretch",
+   "suggerimenti": [
+    "Butterfly stretch",
+    "Allungamento adduttori butterfly",
+    "Allungamento adduttori a farfalla seduto"
+   ]
+  },
+  "15855a1cebcbb681bca160861ea78aa0523f7dd2dfadaaa927536634139421d6": {
+   "da": "cable standing 90-degree shoulder external rotation (o standing cable external rotation at 90 deg abduction)",
+   "suggerimenti": [
+    "Extrarotazione spalla al cavo a 90 gradi",
+    "Extrarotazione al cavo in piedi a 90 gradi"
+   ]
+  },
+  "f6d4c78da5a11842ebdeedf6edfdc9ca87c0ad847dd6653c598a084fb8e9b392": {
+   "da": "cable standing 90-degree shoulder internal rotation",
+   "suggerimenti": [
+    "Intrarotazione spalla al cavo a 90 gradi",
+    "Intrarotazione al cavo in piedi a 90 gradi"
+   ]
+  },
+  "a2552ce3692f7f5325661c192308197e1445a34dd43a2f89b30b90d968438fdd": {
+   "da": "chest hugs (o arm hug stretch)",
+   "suggerimenti": [
+    "Abbracci dinamici per il petto",
+    "Allungamento pettorale dinamico con abbraccio"
+   ]
+  },
+  "54de347f6f0e5ad40c94b4500c005a60bc8972cffdabdb69ae423974f7d879ff": {
+   "da": "chest opener (o standing chest stretch)",
+   "suggerimenti": [
+    "Apertura del petto in piedi",
+    "Allungamento petto in piedi"
+   ]
+  },
+  "2f530b4a9c0ae1fdb8dc21d3674212bfd88a17ae91a5384e275a6470abbe4637": {
+   "da": "chest opener with clasped hands (o standing rear deltoid : chest stretch)",
+   "suggerimenti": [
+    "Apertura del petto a mani intrecciate",
+    "Allungamento petto e deltoidi posteriori a mani intrecciate"
+   ]
+  },
+  "389120a0e241d67e1ab30b3b160b8ec5f82d8050a5c5e08659cda4f7b67e05f9": {
+   "da": "cobra stretch (o bhujangasana)",
+   "suggerimenti": [
+    "Cobra pose",
+    "Allungamento addominali cobra pose",
+    "Allungamento addominali prono in estensione"
+   ]
+  },
+  "8b61235c508a79d35960e39e6828b373ec09a310d436fcb8256ef99df49a534d": {
+   "da": "corner chest stretch (o wall corner pec stretch)",
+   "suggerimenti": [
+    "Allungamento petto nell'angolo del muro",
+    "Allungamento pettorale all'angolo"
+   ]
+  },
+  "54f8a7a9a78c4d57d99561bcf808e3b5c8916d46b04518c9acdb810b660cb32d": {
+   "da": "cossack squat stretch (o side lunge adductor stretch)",
+   "suggerimenti": [
+    "Cossack squat",
+    "Allungamento adduttori cossack squat",
+    "Allungamento adduttori in affondo laterale"
+   ]
+  },
+  "099230c56aeb89b38caaa31d0c66a474407013f5664e0487972421e6256d2458": {
+   "da": "cow face pose arms (o towel shoulder stretch)",
+   "suggerimenti": [
+    "Cow face pose con asciugamano",
+    "Allungamento spalle cow face con asciugamano",
+    "Allungamento spalle dietro la schiena con asciugamano"
+   ]
+  },
+  "9b12689108adde507a894d27f4e22bde9b419ab2c7c0e1ba8f0aae807ffc23dd": {
+   "da": "cow face pose arms",
+   "suggerimenti": [
+    "Cow face pose",
+    "Allungamento spalle cow face pose",
+    "Allungamento spalle mani in presa dietro la schiena"
+   ]
+  },
+  "2774818a0409e5fee7083bffc8625ea18210178ac413fb6604c4fde1ea556980": {
+   "da": "dead hang (o passive pull-up hang)",
+   "suggerimenti": [
+    "Dead hang",
+    "Allungamento dorsali dead hang",
+    "Sospensione passiva alla sbarra"
+   ]
+  },
+  "984072213dc365e70ff984032083ea6065083152589ab614f741e99fbccdbd27": {
+   "da": "deep squat shoulder stretch",
+   "suggerimenti": [
+    "Allungamento spalle in squat profondo",
+    "Allungamento petto e spalle in accosciata"
+   ]
+  },
+  "14d614dc5834a79a43a8fff648657f39ab91cc6138fd56415421e9cb8cb9db8c": {
+   "da": "doorway chest stretch (o wall pec stretch)",
+   "suggerimenti": [
+    "Allungamento petto alla porta",
+    "Allungamento pettorale con braccio al muro"
+   ]
+  },
+  "a8e711703593737b850e7ada30833f91b5c456ea8c46a196013a666141c982df": {
+   "da": "doorway chest stretch (variante Y : High-arm doorway stretch)",
+   "suggerimenti": [
+    "Allungamento petto alla porta a braccio alto",
+    "Allungamento pettorale alla porta variante a Y"
+   ]
+  },
+  "ca2438ee1651b5eee94a93721734731db2ad67e7eb8030dcb99535bd732d77ee": {
+   "da": "figure 4 stretch",
+   "suggerimenti": [
+    "Figure 4",
+    "Allungamento glutei figure 4",
+    "Allungamento glutei a gambe incrociate sdraiato"
+   ]
+  },
+  "1c19f676bf1c83de610b0d2a37cd9662b24481aba1dc629eb85a3ec19caa3cc6": {
+   "da": "fish pose (o matsyasana)",
+   "suggerimenti": [
+    "Fish pose",
+    "Allungamento petto fish pose",
+    "Allungamento petto e collo in appoggio dorsale"
+   ]
+  },
+  "3475a3d48bf88d3150fcb4ba4fb184c6b5218a2374f57206c009090bdacafa0f": {
+   "da": "Foam roller adductor roll",
+   "suggerimenti": [
+    "Foam roller adduttori",
+    "Rullaggio adduttori con foam roller"
+   ]
+  },
+  "3df2cc14180c0ec7848f4402d00cc941b5afbe1d4fca1d531b994d8fb2f842f1": {
+   "da": "foam roller calf roll",
+   "suggerimenti": [
+    "Foam roller polpacci",
+    "Rullaggio polpacci con foam roller"
+   ]
+  },
+  "995917cbb6b92a91be44fc89fd38e0da89ded7206614b37b1681109669eb31a8": {
+   "da": "foam roller chest roll (o foam roller anterior shoulder:pectoral release)",
+   "suggerimenti": [
+    "Foam roller petto e spalla anteriore",
+    "Rullaggio pettorale e deltoide anteriore con foam roller"
+   ]
+  },
+  "142d1636724154f3daf9872b99cc0f37492d7fdc19bcc6fe949004b43833ea4f": {
+   "da": "foam roller chest stretch",
+   "suggerimenti": [
+    "Foam roller petto",
+    "Allungamento petto con foam roller"
+   ]
+  },
+  "719aa700e14c07fbeddb82a043cc0b6b76e33f6c8af1b84f5591f446ac363f6b": {
+   "da": "foam roller glute roll (o foam roller piriformis roll)",
+   "suggerimenti": [
+    "Foam roller glutei",
+    "Rullaggio glutei e piriforme con foam roller"
+   ]
+  },
+  "21338c169312ec3921bb34185c9da801ff54d7bec2b122d60abb3735d7f8479e": {
+   "da": "foam roller hamstring roll",
+   "suggerimenti": [
+    "Foam roller ischiocrurali",
+    "Rullaggio ischiocrurali con foam roller"
+   ]
+  },
+  "44aa8a17b6eafc312868bd73733f6a47767e05febbd46256aa0ed980bee4f756": {
+   "da": "foam roller IT band roll",
+   "suggerimenti": [
+    "Foam roller tratto ileotibiale",
+    "Rullaggio tratto ileotibiale con foam roller"
+   ]
+  },
+  "c1211dba57dd9e69f0571d6fc9d46f0c4e4a98aeec18aa9e6b875a6ec127a5f7": {
+   "da": "foam roller lat stretch",
+   "suggerimenti": [
+    "Foam roller gran dorsale",
+    "Allungamento gran dorsale con foam roller"
+   ]
+  },
+  "3b7a9d0735f823b50345c0be4309197932c788386eb1a9925d43f48ac974adb8": {
+   "da": "foam roller plantar fascia roll (o standing foot sole roll)",
+   "suggerimenti": [
+    "Foam roller pianta del piede",
+    "Rullaggio fascia plantare"
+   ]
+  },
+  "8cd6251ee39025ad211b190aa8947ff73d2105c283e31fbfad29b6bf82d122bd": {
+   "da": "foam roller posterior shoulder roll (o foam roller lat:rear deltoid release)",
+   "suggerimenti": [
+    "Foam roller spalla posteriore",
+    "Rullaggio deltoide posteriore e gran dorsale con foam roller"
+   ]
+  },
+  "ed188e702a0671b01dc57685e8b0ccfdfab7d89f49853f4926e691f015636476": {
+   "da": "foam roller quadriceps roll",
+   "suggerimenti": [
+    "Foam roller quadricipiti",
+    "Rullaggio quadricipiti con foam roller"
+   ]
+  },
+  "5488a241b088fe5e104957de7d72d15456d2af77b523ffdb5e29e500efd77e7b": {
+   "da": "foam roller rhomboid:upper back roll",
+   "suggerimenti": [
+    "Foam roller romboidi",
+    "Rullaggio romboidi e parte alta della schiena con foam roller"
+   ]
+  },
+  "50436ab1dcf41abb60b190db72046b163a0393ada09a0a9998f72033925a3511": {
+   "da": "foam roller wall slide (o serratus wall slide with foam roller)",
+   "suggerimenti": [
+    "Scivolamento al muro con foam roller",
+    "Attivazione del dentato al muro con foam roller"
+   ]
+  },
+  "e8cec0dfd689d53d8a2f5d542c327e5494f91f0ba2e482e1ca015406b43c1c7c": {
+   "da": "frog pose setup",
+   "suggerimenti": [
+    "Frog pose setup",
+    "Allungamento adduttori frog pose",
+    "Preparazione alla frog pose"
+   ]
+  },
+  "d53679dba0360f1567a08b082676660aee5785128b4ad02fe4c34e898923f297": {
+   "da": "Half frog adductor stretch",
+   "suggerimenti": [
+    "Half frog pose",
+    "Allungamento adduttori half frog",
+    "Allungamento adduttori con gamba estesa in ginocchio"
+   ]
+  },
+  "ea774777fab58270c9cd8de465ad49052bab9916c4b58cd583423a7d1b61edc0": {
+   "da": "half kneeling hip flexor stretch",
+   "suggerimenti": [
+    "Allungamento flessori dell'anca in mezzo inginocchiamento",
+    "Allungamento flessori dell'anca in affondo a terra"
+   ]
+  },
+  "d46178c80adde83b2c7f5e2db70ed7eac871d739842026f95113c871e2a15b55": {
+   "da": "half kneeling quad stretch (o kneeling quadriceps stretch)",
+   "suggerimenti": [
+    "Allungamento quadricipite in mezzo inginocchiamento",
+    "Allungamento quadricipite in ginocchio"
+   ]
+  },
+  "27dd1f5925b01740a80abeca358a48e2d9fd0a7db754763ec26064d29c51456e": {
+   "da": "half-kneeling cable external rotation",
+   "suggerimenti": [
+    "Extrarotazione al cavo in mezzo inginocchiamento",
+    "Extrarotazione spalla al cavo in ginocchio"
+   ]
+  },
+  "8029060e35b7efed93fd40b484b68faea9d296f7de9c8cf2ffc9cbcf38f98495": {
+   "da": "happy baby pose",
+   "suggerimenti": [
+    "Happy baby pose",
+    "Allungamento adduttori happy baby",
+    "Allungamento anche e adduttori supino"
+   ]
+  },
+  "4133c9af0c9bfcea2c1cbd7a03d9fb2599a30219638663a658365334f4c44af5": {
+   "da": "hip switches 90:90 (o seated hip windshield wipers)",
+   "suggerimenti": [
+    "Rotazioni d'anca 90-90 seduto",
+    "Allungamento anca 90-90 seduto"
+   ]
+  },
+  "0abf4e4d5ec7fe53a429fbc3b521388e95375fbdcf9b9e91314c4de829b66be2": {
+   "da": "incline bench dumbbell external rotation (o bench-supported external rotation)",
+   "suggerimenti": [
+    "Extrarotazione con manubrio alla panca inclinata",
+    "Extrarotazione spalla con manubrio in appoggio"
+   ]
+  },
+  "1b1df2e8189675f0439424b7995f5fe9e784e025753a8668b0762506d3114ee5": {
+   "da": "kneeling hip flexor stretch",
+   "suggerimenti": [
+    "Allungamento flessori dell'anca in ginocchio",
+    "Allungamento flessori dell'anca gamba dietro"
+   ]
+  },
+  "d81a551d49fa61d5bdf68fe5e90c193afe1b60771db4c2811157231392e2bc70": {
+   "da": "Levantamento de braço apoiado na parede",
+   "suggerimenti": [
+    "Sollevamento del braccio con appoggio alla parete",
+    "Scivolamento del braccio al muro"
+   ]
+  },
+  "222e80ac41d4c6a308eefaff04dd1458d960caa59b34e6237e01e43d953da4a1": {
+   "da": "lying resistance band calf stretch",
+   "suggerimenti": [
+    "Allungamento polpaccio con elastico sdraiato",
+    "Allungamento polpaccio con banda elastica supino"
+   ]
+  },
+  "1570747edfa551a2d93e0af65de932e873c915ca4449d9a3a31ba0e84c62fa75": {
+   "da": "lying single-leg knee to chest stretch (o supine single knee pull)",
+   "suggerimenti": [
+    "Ginocchio al petto sdraiato",
+    "Allungamento glutei ginocchio al petto supino"
+   ]
+  },
+  "41251e55363722f5654de12d59150c907c3c38c141794052f954857c488ca6a8": {
+   "da": "lying spinal twist (o supine spinal rotation)",
+   "suggerimenti": [
+    "Supine spinal twist",
+    "Allungamento colonna supine twist",
+    "Torsione della colonna sdraiato"
+   ]
+  },
+  "73a01c1c419c450a9837ed9079d84e9b25696ef99b52f80dc58e30fdb4947c5b": {
+   "da": "lying straight leg raise stretch (o supine single leg hamstring stretch)",
+   "suggerimenti": [
+    "Allungamento ischiocrurali sdraiato a gamba tesa",
+    "Allungamento ischiocrurali supino una gamba"
+   ]
+  },
+  "9c4d804f52f5e09719078ca644b8439f78a8530c0e1abca33475ca14b442b883": {
+   "da": "Mani sopra la testa",
+   "suggerimenti": [
+    "Allungamento petto con mani sopra la testa",
+    "Apertura del petto a braccia alte"
+   ]
+  },
+  "f4a1717e48438360c8cd93bab51fd1c560e0361f19eb84293b5e53012e814c51": {
+   "da": "Overhead triceps stretch",
+   "suggerimenti": [
+    "Allungamento tricipite sopra la testa",
+    "Allungamento tricipite a braccio flesso dietro la testa"
+   ]
+  },
+  "f99756ae21fcb6a155a526aff7287e734b3ece8335fc7b5da370431fd1efc2c0": {
+   "da": "postura-dellinguine-seduto",
+   "suggerimenti": [
+    "Allungamento inguine seduto",
+    "Allungamento adduttori seduto pianta contro pianta"
+   ]
+  },
+  "bc0f43e111b08904c9eb4fa74938977d47d03b3565b94d7e7f266cb085a8c1e2": {
+   "da": "prayer stretch (o palms together wrist stretch)",
+   "suggerimenti": [
+    "Prayer stretch",
+    "Allungamento polsi a mani unite"
+   ]
+  },
+  "cfb4aac41857af6d375395f75a734b06b0a37279024f9b4792a2d98ac0aa6afe": {
+   "da": "prone cable hip external rotation (o prone resistance band hip external rotation)",
+   "suggerimenti": [
+    "Extrarotazione d'anca prono con elastico",
+    "Extrarotazione d'anca al cavo prono"
+   ]
+  },
+  "6e4af6b6caf9e97b6f0b5302f0b98667c35b088d6fab21771ee2489ffdee670c": {
+   "da": "quadruped wrist extension stretch (o palms-up wrist stretch)",
+   "suggerimenti": [
+    "Allungamento polsi in quadrupedia",
+    "Allungamento polsi a palmi in su"
+   ]
+  },
+  "1bfb5c8aca4e1ec059945e48c412354484759bfc7c3a7545e108bc1da0f60ef4": {
+   "da": "quadrupede-con-sollevamento-di-braccio-e-gamba-contralateral-2",
+   "suggerimenti": [
+    "Quadrupedia con sollevamento braccio e gamba opposti",
+    "Sollevamento braccio e gamba opposti in quadrupedia"
+   ]
+  },
+  "f767124d0f8997e3271d055cf996272528802856e6d479b4ae1f26ff25895a04": {
+   "da": "quadrupedia : allungamento (variante Child's Pose o Quadruped hold)",
+   "suggerimenti": [
+    "Child's pose",
+    "Allungamento dorsale child's pose",
+    "Allungamento schiena seduto sui talloni"
+   ]
+  },
+  "4c46a61de14740ec1afd2729fd99ece32ddb4003eac86737207c96cdd03e4dac": {
+   "da": "reverse plank calf hold (o seated leg-lift extension)",
+   "suggerimenti": [
+    "Reverse plank",
+    "Allungamento polpacci reverse plank",
+    "Tenuta in plank inverso"
+   ]
+  },
+  "58127e51966eb1959f1c060f177a4dba55c4072de0545f30c10694606eb91e8d": {
+   "da": "reverse prayer wrist stretch (o reverse prayer extension)",
+   "suggerimenti": [
+    "Reverse prayer",
+    "Allungamento polsi reverse prayer",
+    "Allungamento polsi a mani unite dietro la schiena"
+   ]
+  },
+  "6b7c5853ed9c008be55a9a5e2473a66e7c753b2cb153b59538da1b5f1d0a3ef4": {
+   "da": "scapular protraction and retraction (o standing scapular push-up)",
+   "suggerimenti": [
+    "Protrazione e retrazione scapolare",
+    "Push-up scapolare in piedi"
+   ]
+  },
+  "e091807cead80417b1696491214ec19a69ba9ac2e4b6245123c73c24a84ada18": {
+   "da": "seated ankle circles (o seated ankle rotation)",
+   "suggerimenti": [
+    "Circonduzioni di caviglia da seduto",
+    "Rotazioni della caviglia seduto"
+   ]
+  },
+  "ade39c804bd0d9a0cf4b8c38e505d576bfcb5096c2e67558cf4de2ac6495441c": {
+   "da": "seated cable shoulder internal rotation",
+   "suggerimenti": [
+    "Intrarotazione spalla al cavo da seduto",
+    "Intrarotazione al cavo seduto"
+   ]
+  },
+  "d0c88a7d24f4a90f8a0afeaf10fd9a776ce3a98ef59c466b82842b73b2f5bdb9": {
+   "da": "seated figure 4 stretch (o seated glute stretch)",
+   "suggerimenti": [
+    "Figure 4 seduto",
+    "Allungamento glutei figure 4 seduto",
+    "Allungamento piriforme seduto"
+   ]
+  },
+  "f016ff3c89b9bc6f86a76cf1700cb12363bdae92080b66bb58798ad61c52afff": {
+   "da": "seated figure 4 stretch (o seated pigeon stretch)",
+   "suggerimenti": [
+    "Seated pigeon",
+    "Allungamento glutei seated pigeon",
+    "Allungamento piriforme seduto busto in avanti"
+   ]
+  },
+  "c8ca6a53fcd1972a9e48ddda69415aa0345cfb747b0f9b0470c6db97f7040d56": {
+   "da": "seated oblique twist (o seated Russian twist setup)",
+   "suggerimenti": [
+    "Torsione obliqua da seduto",
+    "Russian twist setup"
+   ]
+  },
+  "b023474b945739c9d1b8090cd175c19ffd70c796a44e97c7cce15b68d9477392": {
+   "da": "seated resistance band foot eversion (o seated ankle eversion with band)",
+   "suggerimenti": [
+    "Eversione del piede con elastico da seduto",
+    "Eversione di caviglia con banda elastica"
+   ]
+  },
+  "5d09367cf536eba28d9dcf8a0c317cccc9c708160d482511d0e00f10c6f9ff78": {
+   "da": "seated resistance band hip external rotation",
+   "suggerimenti": [
+    "Extrarotazione d'anca con elastico da seduto",
+    "Extrarotazione d'anca seduto con banda elastica"
+   ]
+  },
+  "e1d76a90a62c0b132181d310bc6a591fe92e95d2fdcfdd6f7a3126cb6a4e929f": {
+   "da": "seated resistance band hip internal rotation",
+   "suggerimenti": [
+    "Intrarotazione d'anca con elastico da seduto",
+    "Intrarotazione d'anca seduto con banda elastica"
+   ]
+  },
+  "07ddc393f6b99c88cc6aba6c7e7fa8e502cf1e7fa82d48b23a191307cb2d8d31": {
+   "da": "seated scapular retraction",
+   "suggerimenti": [
+    "Retrazione scapolare da seduto",
+    "Retrazione delle scapole seduto"
+   ]
+  },
+  "65d63fda30303ab52fc17b9683ef6831fcb7dd4a11f00f2bc6017314bc8bb17c": {
+   "da": "seated shoulder external rotation stretch (o seated butterfly shoulder stretch)",
+   "suggerimenti": [
+    "Extrarotazione di spalla da seduto",
+    "Allungamento spalle a farfalla da seduto"
+   ]
+  },
+  "e101b1573928650fcd518d63690a24bafff5d88a6ef8f100e555074db20a4ba7": {
+   "da": "seated tibialis anterior stretch with band (o seated plantarflexion resistance)",
+   "suggerimenti": [
+    "Allungamento tibiale anteriore con elastico da seduto",
+    "Flessione plantare con elastico seduto"
+   ]
+  },
+  "837bfe23a75d52f39994b33beaee603f71c55006f1a4868f12a9745fae89c6e3": {
+   "da": "seated toe touch setup (o seated forward bend prep)",
+   "suggerimenti": [
+    "Seated forward bend",
+    "Allungamento ischiocrurali seated forward bend",
+    "Allungamento ischiocrurali seduto mani ai piedi"
+   ]
+  },
+  "8c5936f9f3580ae7ccc17ac7ba72947de4c0bc453f2c27edf82a86b32a9c8625": {
+   "da": "shoulder pendulum exercise (o codman pendulum stretch)",
+   "suggerimenti": [
+    "Pendolo di Codman",
+    "Pendolo di spalla"
+   ]
+  },
+  "5801e543903e42923b08328a3dd855af07861002640cc73399137cfe77c57a51": {
+   "da": "side-lying dumbbell rear deltoid raise",
+   "suggerimenti": [
+    "Alzata per deltoide posteriore su un fianco con manubrio",
+    "Alzata laterale sdraiato su un fianco"
+   ]
+  },
+  "8db96235f6744c3b4d9d5f97fa04639a5aeb9a79bede07555093daaa8ee1e032": {
+   "da": "side-lying dumbbell shoulder external rotation",
+   "suggerimenti": [
+    "Extrarotazione con manubrio su un fianco",
+    "Extrarotazione di spalla sdraiato su un fianco"
+   ]
+  },
+  "de01da6793fd300a7559b9e4913169c1f0fe5748b7860df355a9eb34436f844d": {
+   "da": "side-lying thoracic rotation (o open book stretch)",
+   "suggerimenti": [
+    "Open book",
+    "Allungamento toracico open book",
+    "Rotazione toracica su un fianco"
+   ]
+  },
+  "394efa5c2e5349a68c45e9b585ca370298aa0d55755f6e81f65a4ec9a670775e": {
+   "da": "single arm circles",
+   "suggerimenti": [
+    "Circonduzioni di un braccio",
+    "Cerchi con un braccio"
+   ]
+  },
+  "3be5176f72c13f6f3252ce17b157f15db3a5c92eb779a5fd37ea9229ab56342c": {
+   "da": "soleus stretch on step (o bent-knee calf stretch on step)",
+   "suggerimenti": [
+    "Allungamento soleo su step",
+    "Allungamento polpaccio a ginocchio flesso su step"
+   ]
+  },
+  "f23b9bb49ed17e9b3ec8e2b05db07d2feca9be81c52670454ebee75b42391d74": {
+   "da": "stair calf stretch (o single-leg step heel drop)",
+   "suggerimenti": [
+    "Allungamento polpaccio su gradino una gamba",
+    "Discesa del tallone su step una gamba"
+   ]
+  },
+  "06eda1526efe21bc32d11bc9728df27f94cfddbeb3c9b2d3fbc5ddd37bd20d55": {
+   "da": "standing cable shoulder external rotation",
+   "suggerimenti": [
+    "Extrarotazione al cavo in piedi",
+    "Extrarotazione di spalla al cavo"
+   ]
+  },
+  "a31bd9178027300532d9448b650803f788e75dad5993f710976e95e1170bcac1": {
+   "da": "standing cable shoulder internal rotation",
+   "suggerimenti": [
+    "Intrarotazione al cavo in piedi",
+    "Intrarotazione di spalla al cavo"
+   ]
+  },
+  "d510d24562d808c711660d61d1f597284b678aab6036e9138bec7d8d9e38773a": {
+   "da": "standing cross toe touch (o standing diagonal toe touch stretch)",
+   "suggerimenti": [
+    "Toccare le dita dei piedi incrociato in piedi",
+    "Toccata diagonale delle dita dei piedi"
+   ]
+  },
+  "839b45215540666c17b15aef8cc4e1d56ab2a9ff86591dcfea3c02a85e9d4323": {
+   "da": "standing forward bend (o Uttanasana)",
+   "suggerimenti": [
+    "Standing forward bend",
+    "Allungamento ischiocrurali standing forward bend",
+    "Allungamento ischiocrurali in piedi busto avanti"
+   ]
+  },
+  "5bcbec3dde15a2093c0bdf1341ae8f280c889cf0f8ff08399de96915364aaad5": {
+   "da": "standing gastrocnemius stretch (o standing lunge calf stretch)",
+   "suggerimenti": [
+    "Allungamento gastrocnemio in piedi",
+    "Allungamento polpaccio in affondo"
+   ]
+  },
+  "56259caccd3298c4fa87bde2860d0b3951e676cfa40bccec0e2e10d2ffbe57b1": {
+   "da": "standing hamstring stretch (o standing single-leg hamstring stretch)",
+   "suggerimenti": [
+    "Allungamento ischiocrurali in piedi una gamba",
+    "Allungamento ischiocrurali in piedi gamba avanti"
+   ]
+  },
+  "5625f3b8c8b4b69093cf6d3852c6a89967e5142ffb377953ce0a14c137cfbeae": {
+   "da": "standing knee to chest stretch (o standing single knee hug)",
+   "suggerimenti": [
+    "Ginocchio al petto in piedi",
+    "Allungamento glutei ginocchio al petto in piedi"
+   ]
+  },
+  "24e5920411878a006338b84bbc38530a5f42090957bcaa690dc4d639c21b1802": {
+   "da": "standing quad stretch",
+   "suggerimenti": [
+    "Allungamento quadricipite in piedi",
+    "Allungamento quadricipite tallone al gluteo"
+   ]
+  },
+  "3297f3baef2d8d56286a183637e721e3f246c932f75f411b9b5bdec2518ed7ce": {
+   "da": "standing resistance band shoulder external rotation",
+   "suggerimenti": [
+    "Extrarotazione con elastico in piedi",
+    "Extrarotazione di spalla con banda elastica"
+   ]
+  },
+  "2184bf12929f8f75a2dc9edbc065ea1b77feb8f22a0f9847d8b8ae35b699d07e": {
+   "da": "standing rhomboid stretch",
+   "suggerimenti": [
+    "Allungamento romboidi in piedi",
+    "Allungamento romboidi a braccia avanti"
+   ]
+  },
+  "78ee7d62de74597b9ab7e2e5adc7cd9ca1f19e08728fc18eb3463cc1990f7b2d": {
+   "da": "standing shoulder external rotation (o standing rotator cuff stretch:activation)",
+   "suggerimenti": [
+    "Extrarotazione di spalla in piedi",
+    "Attivazione della cuffia dei rotatori in piedi"
+   ]
+  },
+  "c2ad5ca7fa5d7b159abf012ea1b763dd02dcc5c2d6764738b3c233c94d4fe618": {
+   "da": "standing shoulder internal rotation (o standing rotator cuff internal rotation stretch)",
+   "suggerimenti": [
+    "Intrarotazione di spalla in piedi",
+    "Allungamento cuffia dei rotatori in intrarotazione"
+   ]
+  },
+  "ab6a2325c255a3c62d49a6497639616168e493b3878a3b7a20303f6479b93388": {
+   "da": "standing side reach stretch (o standing overhead side bend)",
+   "suggerimenti": [
+    "Allungamento laterale con braccio sopra la testa",
+    "Inclinazione laterale a braccio alto in piedi"
+   ]
+  },
+  "82d15a387c5cf46b16f03dd6507899783059db9851301677e249ecb9c529f67a": {
+   "da": "standing tibialis anterior stretch (o standing toe point stretch)",
+   "suggerimenti": [
+    "Allungamento tibiale anteriore in piedi",
+    "Allungamento dorso del piede in piedi"
+   ]
+  },
+  "f2a290d09f94e20d3054da19a3002180b59fc491c1af8568f9dcc23663871872": {
+   "da": "standing toe raises (o standing tibialis raises)",
+   "suggerimenti": [
+    "Sollevamenti delle punte in piedi",
+    "Alzate del tibiale in piedi"
+   ]
+  },
+  "ab15b6f3666c7e6539bf69149adf465e03ee000d992b04365cf6bcec847a51a7": {
+   "da": "standing torso rotation (o standing trunk rotation)",
+   "suggerimenti": [
+    "Rotazione del busto in piedi",
+    "Torsione del tronco in piedi"
+   ]
+  },
+  "1e1e960ff31aa91d0f1d1e15cf95161d38d038a0511a6441306e51e9a752e379": {
+   "da": "standing upper back stretch (o clasped hands upper back stretch)",
+   "suggerimenti": [
+    "Allungamento parte alta della schiena in piedi",
+    "Allungamento schiena a mani intrecciate avanti"
+   ]
+  },
+  "5e75041584eccb2cde0922acf0e77ba02643adb76ccb8de354b52ccc47d6cbf5": {
+   "da": "standing wall calf stretch (o toe-up-wall stretch)",
+   "suggerimenti": [
+    "Allungamento polpaccio al muro",
+    "Allungamento polpaccio con punta al muro"
+   ]
+  },
+  "826e78f54c969e8b33f5733b698265c44e08193bed905a449ab2648e0be694bf": {
+   "da": "standing wrist circles (o wrist rolls)",
+   "suggerimenti": [
+    "Circonduzioni dei polsi",
+    "Rotazioni dei polsi in piedi"
+   ]
+  },
+  "3cb0d553066a3c5d1c571bf29070c5efcb699cc2dd844c25a8d114be19a84dd9": {
+   "da": "step heel drop stretch (o standing calf stretch on step)",
+   "suggerimenti": [
+    "Discesa del tallone su step",
+    "Allungamento polpaccio su step"
+   ]
+  },
+  "1878166e0eaa1919c28cd62ec7eb78e79a2020602708f00e88120ed4bce3c962": {
+   "da": "straight bar chest stretch",
+   "suggerimenti": [
+    "Allungamento petto alla barra",
+    "Apertura del petto con barra"
+   ]
+  },
+  "e9640a8efd2bcbadfc241467639430dccaef8fb9e8497ceee997b2c491573d9a": {
+   "da": "straight leg raise hold (o legs-up-the-wall : vertical leg stretch)",
+   "suggerimenti": [
+    "Legs up the wall",
+    "Allungamento ischiocrurali legs up the wall",
+    "Gambe verticali al muro"
+   ]
+  },
+  "2a32e1b1adcc49b8eaff434c482017e5ca70803aa2864e34fbb00ac5a517e8bb": {
+   "da": "Sumo squat stretch (o goddess pose : frog squat)",
+   "suggerimenti": [
+    "Goddess pose",
+    "Allungamento adduttori goddess pose",
+    "Allungamento adduttori in accosciata sumo"
+   ]
+  },
+  "f8760ade1c284ad3b7e43dc6bb98b9ee64f93d419d4c20cd7ccd9ed2f5b09dc1": {
+   "da": "superman hold (o prone back extension hold)",
+   "suggerimenti": [
+    "Superman hold",
+    "Allungamento lombari superman hold",
+    "Estensione della schiena prono"
+   ]
+  },
+  "dff81c84a6cd7214bda7f72c039982cd1e06cb65814293c4ed931cd5f8f36689": {
+   "da": "wall calf stretch (o forearms-to-wall calf stretch)",
+   "suggerimenti": [
+    "Allungamento polpaccio con avambracci al muro",
+    "Allungamento polpaccio al muro in appoggio"
+   ]
+  },
+  "00b322f4aa702d5184a6df057f9b31581568999329bc9d17a4af033222763fda": {
+   "da": "wall shoulder external rotation stretch (o wall internal:external rotator stretch)",
+   "suggerimenti": [
+    "Extrarotazione di spalla al muro",
+    "Allungamento rotatori di spalla al muro"
+   ]
+  },
+  "4be13841c88f847d33200cc700dc0ffe58d3babef26bbb39ac65fb6d7981397f": {
+   "da": "wall toe stretch (o wall-assisted tibialis stretch)",
+   "suggerimenti": [
+    "Allungamento dita dei piedi al muro",
+    "Allungamento tibiale con appoggio al muro"
+   ]
+  },
+  "e9283d0a14a99fa289bc2fc43b4cda96412fca99338120174129294ab7517d2d": {
+   "da": "wand shoulder stretch (o stick shoulder internal rotation stretch)",
+   "suggerimenti": [
+    "Allungamento spalle con bastone",
+    "Intrarotazione di spalla con bastone"
+   ]
+  },
+  "8a09ef5c41b00614125eeb3f52e95e89a83944d8222088bb6b54adae1cd63f22": {
+   "da": "Wide-leg forward fold",
+   "suggerimenti": [
+    "Wide-leg forward fold",
+    "Allungamento adduttori wide-leg forward fold",
+    "Allungamento adduttori a gambe larghe busto avanti"
+   ]
+  },
+  "ec0b1adf11e665a96a5c35acd33ee59f50d8a89b6676fec2574e50bc35fa9e11": {
+   "da": "wide-legged forward bend (Prasarita Padottanasana)",
+   "suggerimenti": [
+    "Prasarita padottanasana",
+    "Allungamento adduttori prasarita",
+    "Allungamento adduttori a gambe larghe mani a terra"
+   ]
+  },
+  "601c621bf7b2fb5c7dc72fa2e749aa8f0f94f0f2d3fbf948c5955b30fe8bb0ec": {
+   "da": "windmill stretch (o standing toe touch twist)",
+   "suggerimenti": [
+    "Windmill",
+    "Allungamento ischiocrurali windmill",
+    "Torsione in piedi con tocco al piede opposto"
+   ]
+  },
+  "234f019f4d347531aeece2b169dc5ab33ad340fcef5880db75ef47c4ea5bb378": {
+   "da": "allungamento-seduto-del-polpaccio-con-gamba-tesa",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 17d5ad33: due allungamenti di polpaccio seduto a gamba tesa"
+  },
+  "17d5ad33798e0700449453d3b3024b9269ecd2eedd195cecefca066368d2bf87": {
+   "da": "seated calf stretch (o seated dorsiflexion hold)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 234f019f: due allungamenti di polpaccio seduto a gamba tesa"
+  },
+  "4f193a087be555629676a2c9cd96107531b5319e7e14f17fe4a0b62932872699": {
+   "da": "runner's calf stretch (o downward dog calf variation)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 45839f9a: due «runner's calf stretch» con la stessa alternativa"
+  },
+  "45839f9a1dfc920868bcf085e6c1a7b8f31b22bb9d1326070fd5653d16eb52f9": {
+   "da": "runner's calf stretch (o downward dog variation)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 4f193a08: due «runner's calf stretch» con la stessa alternativa"
+  },
+  "f5e84c0081908b17811b299dca5d016ad4dfbb5f8d4d8db743839a2ec24757eb": {
+   "da": "sphinx pose (o half frog pose : seal stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 8e2e2d7e: due «sphinx pose»"
+  },
+  "8e2e2d7e7e6797610ce130d7f8bf0c583dbb9de6383271af5c2f972e304aa46e": {
+   "da": "sphinx pose",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con f5e84c00: due «sphinx pose»"
+  },
+  "da0815453201b9c0cbf61a75d01b99dfa4f97b6a432d693864a311f06fee90df": {
+   "da": "rolling back (o rolling like a ball)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con d48fc99b: i due nomi «rolling back» e «rolling like a ball» si scambiano"
+  },
+  "d48fc99be5c20fb8cb1330a7574a96347434b0ccd9c3bcf0b573376e927c0dfe": {
+   "da": "rolling like a ball (o spinal roll)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con da081545: i due nomi «rolling back» e «rolling like a ball» si scambiano"
+  },
+  "02ddc97181bd82156795ea3956195b13088dafc6d88d34665d994f85f54f090d": {
+   "da": "foam roller thoracic extension",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 734de420: l'alternativa dell'uno e il nome dell'altro"
+  },
+  "734de4203a9314a316c73ff02cfa6bf92f67fd226190908a29b10a84cabd318b": {
+   "da": "foam roller upper back roll (o foam roller thoracic spine extension)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 02ddc971: l'alternativa dell'uno e il nome dell'altro"
+  },
+  "c3441eb2e8b6abb216015dafff338abc5c93d19f7d7d0b76f0f3d6ba569fdd44": {
+   "da": "standing side bend (o standing obliques stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 67afb1d6: due «standing side bend» con la stessa alternativa"
+  },
+  "67afb1d6877d675b05472a2f78ae14dd6ba59fb087cfd827b8d58dcd400d5913": {
+   "da": "standing side bend stretch (o standing obliques stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con c3441eb2: due «standing side bend» con la stessa alternativa"
+  },
+  "2d29550354a4a1f4f6e7fe26b5d8df99f092a623804f43b875f17dd7e4ec652f": {
+   "da": "Seated straddle stretch (o middle split stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 02ad65f5: due «seated straddle stretch» identici"
+  },
+  "02ad65f50df3b9aaf137dc27ea1f3b9e6e7e1118af33ae17046dcd61ddb833d4": {
+   "da": "seated straddle stretch",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 2d295503: due «seated straddle stretch» identici"
+  },
+  "d820d4c7a289e1f1b097602d6582fe3c6cabaa232fd8025b32c00acf4adf3b4f": {
+   "da": "quadruped thoracic reach and rotate (o quadruped thread the needle setup)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 5c587460: due «quadruped thread the needle»"
+  },
+  "5c587460159ef30fc3b709ad1fcd3156fbef02872882c9f0e8a50373b07c8d04": {
+   "da": "quadruped thoracic rotation (o quadruped thread the needle setup)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con d820d4c7: due «quadruped thread the needle»"
+  },
+  "c085ff45bc88c692702d4ba7aa0891ee89ba371b3098cc39ff79d1c23c57253b": {
+   "da": "cross-body shoulder stretch (o cross-body deltoid stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 89774ad7: i due nomi «cross-body shoulder» e «cross-body deltoid» si scambiano"
+  },
+  "89774ad729a19024246e12ae236fd3d8075a6ab335c4d618b5f188ab4abf6239": {
+   "da": "standing cross-body deltoid stretch (o cross-body shoulder stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con c085ff45: i due nomi «cross-body shoulder» e «cross-body deltoid» si scambiano"
+  },
+  "085e7c71e9ac5110ca0291622364963e35708230c67ec168f136596345c2a6ee": {
+   "da": "standing toe touch (o standing forward fold stretch)",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 9ae93496: due «toccare le dita dei piedi in piedi»"
+  },
+  "9ae9349684f8abc21b9d12cff4ee5d48c70a32abed3aaeb7e1bf2acd8551d9ef": {
+   "da": "tocco-delle-dita-in-piedi",
+   "suggerimenti": [],
+   "da_guardare": "si confonde con 085e7c71: due «toccare le dita dei piedi in piedi»"
+  }
+ }
+}
