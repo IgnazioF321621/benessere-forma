@@ -208,16 +208,23 @@ def appendi(path, colonne, righe):
             os.fsync(fh.fileno())
 
 
-def leggi_traduzioni():
-    """sha256 -> {'it', 'incerta'}. {} se il file non c'e' o e' illeggibile.
+def leggi_traduzioni(zona):
+    """sha256 -> {'it', 'incerta'} per una zona. {} se spenta, assente o illeggibile.
 
     Una nota di lettura mancante non deve poter fermare il pannello: senza
     dizionario le schede si confermano come prima, solo senza aiuto.
     """
     try:
-        return json.loads(TRADUZIONI.read_text(encoding='utf-8')).get('voci', {})
+        d = json.loads(TRADUZIONI.read_text(encoding='utf-8'))
     except Exception:
         return {}
+    # L'interruttore sta nel file dati, non qui: una zona i cui file non portano piu'
+    # un nome portoghese non deve vedere l'etichetta "dal portoghese", e le voci non
+    # si cancellano per questo — si smette di mostrarle. Togliere la zona
+    # dall'elenco le riaccende, senza toccare il codice.
+    if nfc(zona) in {nfc(z) for z in d.get('zone_spente', [])}:
+        return {}
+    return d.get('voci', {})
 
 
 def leggi_tsv(path):
@@ -284,7 +291,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             bozze = stato_corrente(BOZZE)
             rinominati = {r['sha256']: r for r in leggi_tsv(LOG) if r.get('esito') in
                           ('rinominato', 'gia con quel nome')}
-            trad = leggi_traduzioni()
+            trad = leggi_traduzioni(dati['zona'])
             for r in dati['righe']:
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')

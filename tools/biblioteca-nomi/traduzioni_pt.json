@@ -544,5 +544,9 @@
    "it": "torsione obliqua, da seduto",
    "incerta": false
   }
- }
+ },
+ "zone_spente": [
+  "Mobilita e Stretching"
+ ],
+ "perche_spente": "I file di questa zona sono stati rinominati a mano con nomi INGLESI il 10 settembre 2026. Una nota \"dal portoghese\" accanto a un nome inglese confonde invece di aiutare, quindi il pannello smette di mostrarla. Le 108 voci restano qui intatte, indicizzate per impronta: togliere la zona da questo elenco le riaccende."
 }
