@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 20:55';
+const APP_VERSION = '2026.09.12 · 21:05';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -3851,6 +3851,8 @@ const ST = {
   warmupInfoOpen: null,             // Warm-up FASE A: item s.warmup mostrato nella scheda "come si esegue" (modal content-only)
   exerciseGifCache: {},             // { [exName]: { url, status } } — cache GIF esecuzione per modal recupero (toggle on-demand)
   lastLoggedSets: {},               // { exName: { reps, resistance, rir_actual, date } } cache ultima serie loggata
+  exAliasByNorm: null,              // Map normNome→codice (alias storici, lazy) — vedi ensureExNameAliases
+  catalogNomeByCodice: null,        // Map codice→nome vivo, popolata da loadActiveScheda
   lastRefreshAt: 0,                 // timestamp ms ultimo re-fetch riuscito (per throttle on-visibility)
   // FASE 2 Smart Ingredient form: { items, freeText, notes, analyzing } + FASE 4 campi edit
   smartForm: {
@@ -8027,6 +8029,7 @@ async function loadActiveScheda() {
       } else if (Array.isArray(catRows)) {
         const nomeByCodice = new Map();
         catRows.forEach(r => { if (r && r.codice) nomeByCodice.set(r.codice, r.nome); });
+        ST.catalogNomeByCodice = nomeByCodice;           // riusata dagli alias nome↔codice
         const remapEx = (ex) => {
           if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
           const nome = nomeByCodice.get(ex.codice);
@@ -8034,7 +8037,13 @@ async function loadActiveScheda() {
             console.warn('[scheda] codice non nel catalogo, nome snapshot mantenuto:', ex.codice);
             return;
           }
-          if (nome !== ex.name) ex.name = nome;          // riallinea al nome attuale
+          if (nome !== ex.name) {
+            // Il nome di prima NON si butta: è quello con cui le serie vecchie sono
+            // finite in training_logs, ed è l'unico modo di ritrovarle dopo una
+            // rinomina del catalogo (vedi loadLastLoggedSets, passaggio 2).
+            if (!ex.nameSnapshot) ex.nameSnapshot = ex.name;
+            ex.name = nome;                              // riallinea al nome attuale
+          }
         };
         sessioniArr.forEach(s => {
           if (!s) return;
@@ -10980,30 +10989,164 @@ async function hydrateTrainingSetsFromCloud(){
   }
 }
 
+// ── Nome esercizio: forma normalizzata per il CONFRONTO ─────
+// Unico normalizzatore dei nomi esercizio in tutto il file. NFD + rimozione dei
+// segni diacritici (accenti), spazi collassati, minuscolo. Serve a confrontare un
+// nome scritto in `training_logs` mesi fa con quello che il catalogo mostra oggi:
+// una maiuscola, un accento o un doppio spazio non devono spezzare lo storico.
+// NON è uno slug: non tocca la punteggiatura, quindi non fonde nomi diversi.
+function _normExName(s){
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim().toLowerCase();
+}
+
+// ── Alias storici nome↔codice esercizio ─────────────────────
+// `training_logs` non ha una colonna col codice: la serie viene scritta col NOME
+// mostrato a schermo in quel momento. Quando il catalogo rinomina un esercizio
+// (cantiere GIF), il nome nei log vecchi non è più quello della scheda di oggi e
+// lo storico si stacca. Qui ricostruiamo il ponte nome→codice mettendo insieme
+// TUTTE le schede dell'utente (ogni blocco è una fotografia dei nomi di allora)
+// più il catalogo vivo. Caricato pigramente: costa una query, e solo quando un
+// esercizio risulta senza storico.
+async function ensureExNameAliases(){
+  if(ST.exAliasByNorm) return ST.exAliasByNorm;           // già costruito
+  const byNorm = new Map();                                // normNome → codice
+  if(!ST.user || !ST.user.id || ST.user.id === 'test-user-001'){ ST.exAliasByNorm = byNorm; return byNorm; }
+  const addFromScheda = (scheda) => {
+    const sessioni = scheda && Array.isArray(scheda.sessioni) ? scheda.sessioni : [];
+    const addEx = (ex) => {
+      if(!ex || !ex.codice || !ex.name) return;
+      const k = _normExName(ex.name);
+      if(k && !byNorm.has(k)) byNorm.set(k, ex.codice);
+    };
+    sessioni.forEach(s => {
+      if(!s) return;
+      if(Array.isArray(s.warmup)) s.warmup.forEach(addEx);
+      if(Array.isArray(s.exercises)) s.exercises.forEach(addEx);
+      if(s.carry_conclusivo) addEx(s.carry_conclusivo);
+      if(s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(addEx);
+    });
+  };
+  const res = await supa.from('schede_utente')
+    .select('scheda, blocco_n')
+    .eq('user_id', ST.user.id)
+    .order('blocco_n', { ascending: false })
+    .limit(50);
+  if(res.error){
+    console.warn('[alias] schede storiche non caricate:', res.error.message);
+  } else {
+    (res.data || []).forEach(r => addFromScheda(r.scheda));
+  }
+  // Catalogo vivo: i nomi di oggi (già caricati da loadActiveScheda quando disponibili).
+  if(ST.catalogNomeByCodice instanceof Map){
+    ST.catalogNomeByCodice.forEach((nome, codice) => {
+      const k = _normExName(nome);
+      if(k && !byNorm.has(k)) byNorm.set(k, codice);
+    });
+  }
+  ST.exAliasByNorm = byNorm;
+  return byNorm;
+}
+
 // ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
+// Il collegamento log↔esercizio avviene in tre passaggi, dal più stretto al più largo:
+//   1. nome normalizzato (copre maiuscole, accenti, spazi)
+//   2. codice esercizio, risolto via alias storici (copre le rinomine del catalogo)
+//   3. stesso esercizio in un'ALTRA sessione (copre gli esercizi spostati di sessione
+//      da una rigenerazione della scheda)
+// Prima leggeva solo `.in('exercise_name', nomi di oggi)`: bastava una rinomina a
+// catalogo perché "Ultima volta" sparisse per quell'esercizio.
 async function loadLastLoggedSets(sessionId){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.lastLoggedSets = {}; return; }
   const sess = getTrainingSession(sessionId);
   if(!sess) return;
   try {
-    const exNames = sess.exercises.map(e => e.name);
     const today = todayKey();
+    // Indice degli esercizi della sessione: forma normalizzata → nome canonico
+    // (quello mostrato a schermo, che è la chiave di ST.lastLoggedSets).
+    const canonByNorm = new Map();      // normNome → nome canonico
+    const canonByCodice = new Map();    // codice   → nome canonico
+    (sess.exercises || []).forEach(e => {
+      if(!e || !e.name) return;
+      canonByNorm.set(_normExName(e.name), e.name);
+      if(e.nameSnapshot) canonByNorm.set(_normExName(e.nameSnapshot), e.name);   // nome com'era alla generazione
+      if(e.codice) canonByCodice.set(e.codice, e.name);
+    });
+    const map = {};
+    const mancanti = () => (sess.exercises || []).filter(e => e && e.name && !map[e.name]);
+
     // Legge da training_logs (storico autorevole — workout_sets è incompleto su sessioni vecchie).
     // Esclude le serie loggate oggi così il suggerimento mostra sempre l'ULTIMA SESSIONE PRECEDENTE,
-    // non quella in corso.
-    const { data } = await supa.from('training_logs')
-      .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
-      .eq('user_id', ST.user.id)
-      .eq('session_id', sessionId)
-      .in('exercise_name', exNames)
-      .lt('date', today)
-      .order('date', { ascending: false })
-      .order('set_number', { ascending: false });
-    // Per ogni esercizio prendi la prima riga (= data più recente, set_number più alto)
-    const map = {};
-    (data || []).forEach(row => {
-      if(!map[row.exercise_name]) map[row.exercise_name] = row;
-    });
+    // non quella in corso. Paginato (L13): PostgREST tronca a 1000 righe e uno storico
+    // di mesi le supera. Si ferma appena tutti gli esercizi hanno il loro ultimo set.
+    const PAGE = 1000, MAX_ROWS = 6000;
+    let rows = [];
+    for(let from = 0; from < MAX_ROWS; from += PAGE){
+      const res = await supa.from('training_logs')
+        .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
+        .eq('user_id', ST.user.id)
+        .eq('session_id', sessionId)
+        .lt('date', today)
+        .order('date', { ascending: false })
+        .order('set_number', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if(res.error){ console.warn('loadLastLoggedSets:', res.error.message); break; }
+      const page = res.data || [];
+      rows = rows.concat(page);
+      // Passaggio 1 — nome normalizzato
+      page.forEach(row => {
+        const canon = canonByNorm.get(_normExName(row.exercise_name));
+        if(canon && !map[canon]) map[canon] = row;
+      });
+      if(page.length < PAGE || mancanti().length === 0) break;
+    }
+
+    // Passaggio 2 — codice: risolve le rinomine del catalogo (il log ha il nome vecchio).
+    if(mancanti().length > 0 && canonByCodice.size > 0){
+      const byNorm = await ensureExNameAliases();
+      rows.forEach(row => {
+        const codice = byNorm.get(_normExName(row.exercise_name));
+        if(!codice) return;
+        const canon = canonByCodice.get(codice);
+        if(canon && !map[canon]) map[canon] = row;   // rows è già in ordine data desc
+      });
+    }
+
+    // Passaggio 3 — stesso esercizio in un'altra sessione (scheda rigenerata che lo
+    // ha spostato). Ultima spiaggia: si chiede solo per gli esercizi ancora scoperti.
+    const ancora = mancanti();
+    if(ancora.length > 0){
+      const byNorm = ST.exAliasByNorm || await ensureExNameAliases();
+      const nomiPerCanon = new Map();
+      ancora.forEach(e => {
+        const nomi = new Set([e.name]);
+        if(e.nameSnapshot) nomi.add(e.nameSnapshot);
+        if(e.codice && byNorm) byNorm.forEach((cod, norm) => { if(cod === e.codice) nomi.add(norm); });
+        nomiPerCanon.set(e.name, nomi);
+      });
+      const tuttiNomi = [...new Set([].concat(...[...nomiPerCanon.values()].map(s => [...s])))];
+      if(tuttiNomi.length > 0 && tuttiNomi.length <= 200){
+        const res2 = await supa.from('training_logs')
+          .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
+          .eq('user_id', ST.user.id)
+          .lt('date', today)
+          .order('date', { ascending: false })
+          .order('set_number', { ascending: false })
+          .limit(1000);
+        if(res2.error) console.warn('loadLastLoggedSets (altre sessioni):', res2.error.message);
+        (res2.data || []).forEach(row => {
+          const norm = _normExName(row.exercise_name);
+          for(const [canon, nomi] of nomiPerCanon){
+            if(map[canon]) continue;
+            const match = [...nomi].some(n => _normExName(n) === norm || n === norm);
+            if(match) map[canon] = row;
+          }
+        });
+      }
+    }
+
     ST.lastLoggedSets = map;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
   } catch(e){
