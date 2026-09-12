@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.07 · 07:08';
+const APP_VERSION = '2026.09.12 · 20:55';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -3942,13 +3942,24 @@ const BAND_COLORS = [BAND_FREE, 'Gialla', 'Rossa', 'Nera', 'Viola'];
 function bandPhrase(v){ return v === BAND_FREE ? 'a corpo libero' : `banda ${v}`; }
 // Etichetta compatta per badge, righe di storico e "Ultima volta".
 function bandLabel(v){ return v === BAND_FREE ? 'corpo libero' : v; }
-// UNICO punto di verità per "questo esercizio è una trazione". Il catalogo genera
+// UNICO punto di verità per "questo esercizio si logga a banda". Il catalogo genera
 // varianti ("Trazioni sbarra presa neutra"): il confronto è per PREFISSO normalizzato,
 // mai per uguaglianza col nome esatto — era la regressione che tornava a ogni
 // rigenerazione della scheda, col logger che mostrava le libbre al posto delle bande.
 // Nessun altro confronto sul nome va introdotto: si passa da qui.
+//
+// ⚠️ Due famiglie di trazioni NON si loggano a banda, e il nome lo dichiara:
+//   · zavorrate → la resistenza è il carico AGGIUNTO (kg/lbs), non l'assistenza
+//   · gravitron → macchina assistita a pacco pesi: l'aiuto si misura in peso
+// Per loro il selettore giusto è quello numerico, non la scala delle bande.
+// Criterio esplicito, non euristico: sono gli unici due casi fra i 23 nomi che
+// iniziano per "trazion" a catalogo (censiti il 12 settembre 2026 — EX508, EX509
+// gravitron, EX512 zavorrate). Ogni altra variante è alla sbarra, e alla sbarra
+// l'unica assistenza disponibile è l'elastico.
+const PULL_UP_NON_BANDA = /(^|\s)(zavorrat|gravitron)/;
 function isPullUpExercise(name){
-  return String(name || '').normalize('NFC').trim().toLowerCase().startsWith('trazion');
+  const n = String(name || '').normalize('NFC').trim().toLowerCase();
+  return n.startsWith('trazion') && !PULL_UP_NON_BANDA.test(n);
 }
 
 // Picker della scala di assistenza — sorgente unica per i due punti che lo mostrano
