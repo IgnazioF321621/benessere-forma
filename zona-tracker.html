@@ -1342,6 +1342,38 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .home-v2-action-next-eb{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.25em;line-height:1.4;text-transform:uppercase;color:var(--t3);}
 .home-v2-action-next-chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;color:var(--acc);background:var(--acc-lt);border:1px solid rgba(42,122,111,.22);border-radius:999px;padding:5px 11px;}
 
+/* ── QUADRO SETTIMANALE — Fase 1 (12 set 2026) ─────────────── */
+.wp-mini{display:flex;gap:14px;padding-left:18px;flex-wrap:wrap;}
+.wp-mini-stat{min-width:0;}
+.wp-mini-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--t3);line-height:1.3;}
+.wp-mini-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--t1);line-height:1.2;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;white-space:nowrap;}
+.wp-mini-val.wp-nr{font-size:11px;font-weight:500;color:var(--t3);letter-spacing:0;line-height:24px;}
+.wp-mini-sub{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.2em;line-height:1.4;color:var(--t3);text-transform:uppercase;margin-top:10px;padding-left:18px;}
+.wp-top{display:flex;align-items:center;justify-content:space-between;padding-top:6px;}
+.wp-back{background:none;border:none;padding:6px 0;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--acc);cursor:pointer;}
+.wp-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--t1);letter-spacing:-0.6px;line-height:1.2;}
+.wp-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
+.wp-nav-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--b1);background:#FFFCF6;color:var(--t1);font-size:20px;line-height:1;cursor:pointer;flex-shrink:0;}
+.wp-nav-btn:disabled{opacity:.3;cursor:default;}
+.wp-range{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--t1);}
+.wp-range-sub{display:block;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);margin-top:3px;}
+.wp-sec{background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.wp-sec-head{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.wp-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.wp-sec-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--t2);}
+.wp-pill{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;border-radius:999px;padding:3px 9px;margin-left:auto;}
+.wp-pill + .wp-pill{margin-left:0;}
+.wp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;}
+.wp-stat-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);line-height:1.35;margin-bottom:3px;}
+.wp-stat-val{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--t1);line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;overflow-wrap:anywhere;}
+.wp-stat-val.wp-nr{font-size:12px;font-weight:500;color:var(--t3);letter-spacing:0;line-height:28px;}
+.wp-unit{font-size:11px;font-weight:500;color:var(--t3);margin-left:3px;letter-spacing:0;}
+.wp-delta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);margin-top:1px;}
+.wp-ctx{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
+.wp-go{display:block;margin:12px 0 0 auto;background:none;border:1px solid var(--b1);border-radius:999px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--acc);cursor:pointer;}
+.wp-alert{font-family:'Syne',sans-serif;font-size:13px;color:var(--err);background:var(--err-lt);border-radius:12px;padding:10px 14px;}
+.wp-loading{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);text-align:center;padding:40px 0;}
+
 /* ── OGGI V3 — Restyling Nutrition tab (15 mag) · typo tuning (16 mag 2026) ── */
 .oggi-v3-accent{height:3px;background:var(--mod-nutrition);margin:-18px -16px 18px;border-radius:0 0 2px 2px;}
 .oggi-v3-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:18px;}
@@ -3693,7 +3725,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 22:12';
+const APP_VERSION = '2026.09.12 · 22:24';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6845,7 +6877,8 @@ function showPage(id){
   const bottomBtns=document.querySelectorAll('#bottom-nav .nav-btn');
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
-  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); }
+  if(id !== 'home') ST.homeView = null;   // il quadro settimanale si chiude uscendo dalla Home
+  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); }
   if(id==='body') loadBodyLogs();
   if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); computeTrainHomeData().then(()=>{ if(ST.page==='training') renderTraining(); }); }
 }
@@ -7311,7 +7344,268 @@ async function buildWeeklyPicture(weekStart, opts){
   });
 }
 
+// ── Caricamento: ST.weeklyPicture = { 'YYYY-MM-DD' (lunedì): quadro } per la sessione ──
+// La settimana corrente si ricalcola a ogni apertura della Home (force); quelle
+// passate restano in memoria finché l'app è aperta.
+const _wpInflight = {};
+function _wpUsable(){ return !!(ST.user && ST.user.id && ST.user.id !== 'test-user-001'); }
+function loadWeeklyPicture(weekStart, opts){
+  const o = opts || {};
+  if(!_wpUsable()) return Promise.resolve(null);
+  ST.weeklyPicture = ST.weeklyPicture || {};
+  const cur = wpMonday();
+  const ws = weekStart > cur ? cur : weekStart;
+  if(!o.force && ST.weeklyPicture[ws]) return Promise.resolve(ST.weeklyPicture[ws]);
+  if(_wpInflight[ws]) return _wpInflight[ws];
+  const p = (async () => {
+    try {
+      const pic = await buildWeeklyPicture(ws);
+      if(pic){
+        ST.weeklyPicture[ws] = pic;
+        if(pic.meta.errors.length && !o.silenzioso){
+          try { showToast('Non riesco a leggere tutti i dati della settimana', '⚠️', 5500); } catch(e){}
+        }
+      }
+      return pic;
+    } catch(e){
+      console.error('[quadro] calcolo fallito:', e);
+      return ST.weeklyPicture[ws] || null;
+    } finally {
+      delete _wpInflight[ws];
+    }
+  })();
+  _wpInflight[ws] = p;
+  return p;
+}
+function _wpRerenderIfOpen(){ if(ST.page === 'home') renderHome(); }
+
+// ── Formattazione: italiano, virgola decimale, segno vero ──
+function _wpNum(v, dec){
+  if(v == null || !isFinite(v)) return null;
+  // Separatore delle migliaia sempre (2.302), come la card Nutrition: it-IT da solo non raggruppa le 4 cifre.
+  const [int, frac] = Math.abs(Number(v)).toFixed(dec || 0).split('.');
+  return (Number(v) < 0 ? '-' : '') + int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (frac ? ',' + frac : '');
+}
+function _wpSigned(v, dec){
+  if(v == null || !isFinite(v)) return null;
+  const s = _wpNum(Math.abs(v), dec);
+  return (v > 0 ? '+' : v < 0 ? '−' : '') + s;
+}
+const _WP_MON = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+function _wpShortDate(key){ const d = new Date(key + 'T12:00:00'); return d.getDate() + ' ' + _WP_MON[d.getMonth()]; }
+function _wpRange(ws){
+  const a = new Date(ws + 'T12:00:00'), b = new Date(wpAddDays(ws, 6) + 'T12:00:00');
+  return a.getMonth() === b.getMonth()
+    ? `${a.getDate()} – ${b.getDate()} ${_WP_MON[b.getMonth()]}`
+    : `${a.getDate()} ${_WP_MON[a.getMonth()]} – ${b.getDate()} ${_WP_MON[b.getMonth()]}`;
+}
+function _wpStat(label, value, unit, extra){
+  const val = value == null
+    ? `<div class="wp-stat-val wp-nr">Non registrato</div>`
+    : `<div class="wp-stat-val">${value}${unit ? `<span class="wp-unit">${unit}</span>` : ''}</div>`;
+  return `<div class="wp-stat"><div class="wp-stat-lbl">${label}</div>${val}${extra ? `<div class="wp-delta">${extra}</div>` : ''}</div>`;
+}
+function _wpPill(txt, bg, fg){ return `<span class="wp-pill" style="background:${bg};color:${fg};">${txt}</span>`; }
+
+// ── Card in cima alla Home ──
+function _wpHomeCardHTML(){
+  if(!_wpUsable()) return '';
+  const cur = wpMonday();
+  const pic = ST.weeklyPicture && ST.weeklyPicture[cur];
+  const mini = (label, value, unit) => `<div class="wp-mini-stat"><div class="wp-mini-lbl">${label}</div>${value == null
+    ? '<div class="wp-mini-val wp-nr">Non registrato</div>'
+    : `<div class="wp-mini-val">${value}${unit ? `<span class="wp-unit">${unit}</span>` : ''}</div>`}</div>`;
+  let inner;
+  if(!pic){
+    inner = `<div class="wp-mini-sub" style="margin-top:0;">Caricamento…</div>`;
+  } else {
+    const t = pic.training;
+    const stats = [
+      mini('Peso medio', _wpNum(pic.weight && pic.weight.weight_avg, 1), 'kg'),
+      t ? mini('Sessioni', !t.sessions_done ? null : t.sessions_planned != null ? `${t.sessions_done}/${t.sessions_planned}` : String(t.sessions_done), '') : '',
+      mini('Kcal medie', _wpNum(pic.nutrition && pic.nutrition.kcal_avg), ''),
+    ].join('');
+    const aree = Math.round((pic.meta.completeness || 0) * 5);
+    inner = `<div class="wp-mini">${stats}</div>
+      <div class="wp-mini-sub">${_wpRange(cur)} · ${aree} di 5 aree con dati</div>`;
+  }
+  return `
+    <div class="home-v2-card" onclick="openQuadro()">
+      <span class="home-v2-card-dot" style="background:var(--acc);"></span>
+      <div style="flex:1;min-width:0;">
+        <div class="home-v2-card-title">La tua settimana</div>
+        ${inner}
+      </div>
+      <span class="home-v2-card-arrow">›</span>
+    </div>`;
+}
+
+// ── Vista completa ──
+function openQuadro(){
+  ST.homeView = 'quadro';
+  ST.quadroWeek = wpMonday();
+  renderHome();
+  try { window.scrollTo(0, 0); } catch(e){}
+  loadWeeklyPicture(ST.quadroWeek).then(_wpRerenderIfOpen);
+}
+function closeQuadro(){
+  ST.homeView = null;
+  renderHome();
+  try { window.scrollTo(0, 0); } catch(e){}
+}
+function _wpFirstWeek(){
+  const c = ST.profile && ST.profile.created_at;
+  return c ? wpMonday(new Date(c)) : null;
+}
+function quadroShift(dir){
+  const cur = wpMonday();
+  let ws = wpAddDays(ST.quadroWeek || cur, dir * 7);
+  if(ws > cur) ws = cur;
+  const first = _wpFirstWeek();
+  if(first && ws < first) ws = first;
+  ST.quadroWeek = ws;
+  renderHome();
+  loadWeeklyPicture(ws).then(() => { if(ST.quadroWeek === ws) _wpRerenderIfOpen(); });
+}
+// I pulsanti delle sezioni portano dove il dato si inserisce.
+function quadroGo(dest){
+  if(dest === 'peso'){ openWeighInSheet(); return; }     // il foglio si apre sopra il quadro
+  ST.homeView = null;
+  if(dest === 'pasti') showPage('oggi');
+  else if(dest === 'allenamento') showPage('training');
+  else { ST.bodyTab = 'check'; showPage('body'); }      // check ed esami stanno nel tab Check
+}
+
+function renderQuadroView(){
+  const cur = wpMonday();
+  const ws = ST.quadroWeek || cur;
+  const pic = ST.weeklyPicture && ST.weeklyPicture[ws];
+  const first = _wpFirstWeek();
+  const head = `
+    <div class="wp-top"><button class="wp-back" onclick="closeQuadro()">‹ Home</button></div>
+    <div>
+      <div class="home-v2-date">QUADRO SETTIMANALE</div>
+      <div class="wp-title">La tua settimana</div>
+      <div class="wp-nav">
+        <button class="wp-nav-btn" onclick="quadroShift(-1)" ${first && ws <= first ? 'disabled' : ''} aria-label="Settimana precedente">‹</button>
+        <div class="wp-range">${_wpRange(ws)}<span class="wp-range-sub">${ws === cur ? 'Settimana in corso' : ws === wpAddDays(cur, -7) ? 'Settimana scorsa' : 'Settimana chiusa'}${pic ? ' · ' + Math.round((pic.meta.completeness || 0) * 5) + ' di 5 aree con dati' : ''}</span></div>
+        <button class="wp-nav-btn" onclick="quadroShift(1)" ${ws >= cur ? 'disabled' : ''} aria-label="Settimana successiva">›</button>
+      </div>
+    </div>`;
+  if(!pic){
+    return head + `<div class="wp-loading">Caricamento…</div>`;
+  }
+  const err = pic.meta.errors || [];
+  const failed = (keys) => keys.some(k => err.includes(k));
+  const nonLetto = 'Non sono riuscito a leggere questi dati: riprova tra poco.';
+  const sezione = (tint, titolo, pills, stats, ctx, btn) => `
+    <section class="wp-sec">
+      <div class="wp-sec-head"><span class="wp-dot" style="background:${tint};"></span><span class="wp-sec-title">${titolo}</span>${pills || ''}</div>
+      <div class="wp-grid">${stats}</div>
+      <div class="wp-ctx">${ctx}</div>
+      ${btn || ''}
+    </section>`;
+  const vai = (dest, label) => `<button class="wp-go" onclick="quadroGo('${dest}')">${label} →</button>`;
+
+  // Peso
+  const w = pic.weight || {};
+  let ctxPeso;
+  if(!pic.weight) ctxPeso = failed(['weightLogs','bodyLogs','measurements']) ? nonLetto : 'Nessuna pesata';
+  else if(w.weight_avg == null) ctxPeso = 'Nessuna pesata in questa settimana';
+  else if(w.weight_delta_prev != null) ctxPeso = `${_wpSigned(w.weight_delta_prev, 1)} kg rispetto alla settimana prima`;
+  else ctxPeso = 'Nessuna pesata nella settimana prima: niente confronto';
+  if(w.weight_target != null) ctxPeso += ` · obiettivo ${_wpNum(w.weight_target, 1)} kg`;
+  const secPeso = sezione('#5E4A7A', 'Peso', '',
+    _wpStat('Media', _wpNum(w.weight_avg, 1), 'kg') +
+    _wpStat('Pesate', w.weight_n ? String(w.weight_n) : null, '') +
+    _wpStat('Tendenza 4 sett.', _wpSigned(w.weight_trend_4w, 1), 'kg/sett') +
+    _wpStat('Rispetto alla prec.', _wpSigned(w.weight_delta_prev, 1), 'kg'),
+    ctxPeso, vai('peso', 'Pesati'));
+
+  // Nutrizione
+  const n = pic.nutrition || {};
+  let ctxNutr;
+  if(!pic.nutrition) ctxNutr = nonLetto;
+  else if(!n.days_logged) ctxNutr = 'Nessun pasto registrato in questa settimana';
+  else if(n.partial) ctxNutr = `Dato parziale: in ${n.days_under_75} giorni su ${n.days_logged} le kcal registrate restano sotto il 75% del target di ${_wpNum(n.kcal_target)}. Probabilmente mancano dei pasti, e i numeri non sono corretti con stime.`;
+  else ctxNutr = `Media sui ${n.days_logged} giorni con almeno un pasto${n.kcal_target ? ` · target ${_wpNum(n.kcal_target)} kcal` : ''}`;
+  const dentro = (n.adherence_kcal != null && n.days_logged) ? Math.round(n.adherence_kcal * n.days_logged) : null;
+  const secNutr = sezione('#FAC775', 'Nutrizione', n.partial ? _wpPill('Parziale', '#FFF3DC', '#854F0B') : '',
+    _wpStat('Kcal medie', _wpNum(n.kcal_avg), n.kcal_target ? `/ ${_wpNum(n.kcal_target)}` : '') +
+    _wpStat('Proteine medie', _wpNum(n.protein_avg), 'g') +
+    _wpStat('Giorni registrati', n.days_logged ? String(n.days_logged) : null, '/ 7') +
+    _wpStat('Nel target ±10%', dentro != null ? String(dentro) : null, `/ ${n.days_logged} giorni`),
+    ctxNutr, vai('pasti', 'Pasti'));
+
+  // Allenamento
+  const t = pic.training;
+  let secTrain;
+  if(!t){
+    secTrain = sezione('#B5D4F4', 'Allenamento', '',
+      _wpStat('Sessioni', null) + _wpStat('Serie', null),
+      failed(['workouts','sets']) ? nonLetto : 'Nessun allenamento registrato',
+      hasTraining() ? vai('allenamento', 'Allenamento') : '');
+  } else {
+    const parti = [];
+    if(!pic.meta.is_closed) parti.push('Settimana in corso');
+    else if(t.sessions_missed != null) parti.push(t.sessions_missed === 0
+      ? `Fatte tutte le ${t.sessions_planned} sessioni previste`
+      : `${t.sessions_missed} ${t.sessions_missed === 1 ? 'sessione' : 'sessioni'} in meno delle ${t.sessions_planned} previste`);
+    if(t.recovery_done) parti.push(`${t.recovery_done} ${t.recovery_done === 1 ? 'recupero attivo' : 'recuperi attivi'}`);
+    if(t.injury_days) parti.push(`${t.injury_days} ${t.injury_days === 1 ? 'giorno' : 'giorni'} di infortunio segnati`);
+    else if(t.injury_active) parti.push('Infortunio o rientro in corso');
+    const pills = (t.is_deload ? _wpPill('Scarico', '#E6F0FA', '#2F5E8C') : '') + (t.injury_active ? _wpPill('Infortunio', 'var(--err-lt)', 'var(--err)') : '');
+    secTrain = sezione('#B5D4F4', 'Allenamento', pills,
+      // Un conteggio a zero a schermo è "Non registrato" (regola del quadro); nell'oggetto resta 0.
+      _wpStat('Sessioni', !t.sessions_done ? null : t.sessions_planned != null ? `${t.sessions_done}/${t.sessions_planned}` : String(t.sessions_done), '') +
+      _wpStat('Serie', t.volume_sets ? String(t.volume_sets) : null, '') +
+      _wpStat('RIR medio', _wpNum(t.avg_rir, 1), '') +
+      _wpStat('Settimana ciclo', t.block_week != null ? String(t.block_week) : null, '/ 6'),
+      parti.join(' · ') || 'Nessuna sessione in questa settimana',
+      hasTraining() ? vai('allenamento', 'Allenamento') : '');
+  }
+
+  // Corpo
+  const b = pic.body || {};
+  const lm = b.last_measurements || {};
+  const misura = (key, label) => {
+    const m = lm[key];
+    if(!m) return _wpStat(label, null);
+    return _wpStat(label, _wpNum(m.value, m.value % 1 ? 1 : 0), 'cm', m.delta != null ? `${_wpSigned(m.delta, 1)} cm dal check prima` : '');
+  };
+  let ctxCorpo;
+  if(!pic.body) ctxCorpo = nonLetto;
+  else if(!b.last_check_date) ctxCorpo = 'Nessun check fisico completato';
+  else ctxCorpo = `Check del ${_wpShortDate(b.last_check_date)}${b.prev_check_date ? ` · differenze rispetto al check del ${_wpShortDate(b.prev_check_date)}` : ''}`;
+  if(b.check_due) ctxCorpo += ' · È ora del check di fine blocco';
+  const secCorpo = sezione('#5E4A7A', 'Corpo', b.check_due ? _wpPill('Check da fare', '#EDE9F8', '#5E4A7A') : '',
+    _wpStat('Ultimo check', b.days_since_check != null ? String(b.days_since_check) : null, b.days_since_check === 1 ? 'giorno fa' : 'giorni fa') +
+    misura('waist_cm', 'Vita') + misura('hips_cm', 'Fianchi') + misura('chest_cm', 'Petto'),
+    ctxCorpo, vai('check', 'Check'));
+
+  // Esami
+  const e = pic.blood || {};
+  const secEsami = sezione('#AFA9EC', 'Esami', '',
+    _wpStat('Ultimo esame', e.last_test_date ? _wpShortDate(e.last_test_date) : null, '') +
+    _wpStat('Giorni fa', e.days_since_test != null ? String(e.days_since_test) : null, '') +
+    _wpStat('Esami registrati', pic.blood && e.test_count ? String(e.test_count) : null, ''),
+    !pic.blood ? nonLetto : e.last_test_date ? `Ultimo esame del sangue del ${_wpShortDate(e.last_test_date)}` : 'Nessun esame del sangue registrato',
+    vai('esami', 'Esami'));
+
+  const alert = err.length ? `<div class="wp-alert">Alcuni dati non si sono caricati: le sezioni interessate lo dicono.</div>` : '';
+  return head + alert + secPeso + secNutr + secTrain + secCorpo + secEsami;
+}
+
 function renderHomeV2(){
+  // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
+  if(ST.homeView === 'quadro' && _wpUsable()){
+    document.getElementById('page-home').innerHTML = `<div class="home-v2-wrap">${renderQuadroView()}${versionFooter()}</div>`;
+    return;
+  }
+  return _renderHomeCards();
+}
+
+function _renderHomeCards(){
   // ── Dati nutrition (riusa dayTotals + ST.TARGET già esistenti) ──
   const today = todayKey();
   const day   = getDay(today);
@@ -7543,6 +7837,7 @@ function renderHomeV2(){
         </div>
         <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
       </div>
+      ${_wpHomeCardHTML()}
       ${nutritionCard}
       ${trainingCard}
       ${bodyCard}
@@ -21010,6 +21305,7 @@ async function confirmWeighIn() {
   showToast('Pesata salvata · ' + v.toFixed(1) + ' kg', '⚖️');
   if(ST.page === 'piano') renderPianoV4();
   else if(ST.page === 'oggi') renderOggi(); // re-render banner reminder (deve sparire)
+  else if(ST.page === 'home') loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); // quadro: la pesata entra subito
 }
 
 function renderWeighInSheet() {
