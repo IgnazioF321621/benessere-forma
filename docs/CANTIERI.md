@@ -2,13 +2,23 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 13 agosto 2026.*
+*Aggiornato: 12 settembre 2026.*
 
 Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
 ---
 
 # Cantieri aperti
+
+## 33. Eseguire la migrazione di `weekly_pictures` e collaudare lo storico dal vivo
+*Aperto il 12 settembre 2026, a chiusura del [Quadro settimanale](#quadro-settimanale--chiuso-12-settembre-2026).*
+
+Il codice dello storico è su `main`, la tabella **no**: da Claude Code non c'è una chiave che crei tabelle (la chiave di servizio scrive righe, non schema) e l'estensione Chrome non era collegata. Finché la tabella manca il DB risponde `PGRST205`, l'app lo riconosce, non avvisa e calcola ogni settimana dal vivo: **niente è rotto, lo storico semplicemente non si accumula**.
+
+1. SQL Editor → incollare `supabase/migrations/20260912_weekly_pictures.sql` → Run (idempotente)
+2. aprire l'app una volta sul telefono
+3. dal Mac: `node tools/banco/verifica_quadro_vivo.js` — atteso: righe = settimane chiuse dalla nascita del profilo, massimo 8 · doppioni 0 · settimana corrente non salvata · uguali al ricalcolo N/N
+4. riaprire l'app e rilanciare il punto 3: le righe non devono aumentare
 
 ## 1. Test timer su workout reali
 Commit `e834320` (timer unificati timestamp-based) in osservazione. **PRIMA di qualunque altro cantiere Training.**
@@ -543,6 +553,27 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## Quadro settimanale — ✅ chiuso 12 settembre 2026
+*Fase 1. **È l'ingresso del coach delle Fasi 3 e 4**: quello che il coach leggerà per ragionare sulla settimana e sulla tendenza è questo oggetto, non le tabelle.*
+
+Tre pezzi, un commit ciascuno:
+
+- **calcolo** (`16f739b`) — `buildWeeklyPicture(weekStart)` = `_wpFetch` (8 letture in parallelo, paginate, ognuna in `dbq`) + `computeWeeklyPicture` (puro, senza rete). Forma dell'oggetto e regola `null ≠ 0` in `CLAUDE.md`
+- **vista** (`5fa8667`) — card «La tua settimana» in cima alla Home e vista completa peso → nutrizione → allenamento → corpo → esami, con frecce di settimana. Screenshot dei quattro stati in `docs/screenshots/fase1/`
+- **storico** (`9bf48e1`) — tabella `weekly_pictures`, backfill di 8 settimane una volta per sessione, la corrente mai salvata. Migrazione da eseguire → [cantiere 33](#33-eseguire-la-migrazione-di-weekly_pictures-e-collaudare-lo-storico-dal-vivo)
+
+**Le scelte che il brief non diceva, o diceva diversamente:**
+
+- **peso da tre tabelle, non da `body_logs`.** Dal vivo Ignazio ha **1** riga in `body_logs` e **11** in `weight_logs` (il foglio «Pesati ora» del Piano): con la sola `body_logs` il blocco sarebbe vuoto per sempre. Una pesata al giorno, priorità `weight_logs` > `body_logs` > misure del check → [L47](LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta)
+- **sessioni dal calendario** (`workouts`), serie e RIR da `training_logs`. Previste = `profiles.giorni_allenamento`. Le saltate si contano solo a settimana chiusa
+- **settimana ciclo e reminder check non si ricalcolano**: `getCycleWeekInfo` e `getBlockCheckReminder` accettano un «a quella data» facoltativo, e senza argomenti fanno ciò che facevano (4 prove del banco identiche prima/dopo). ⚠️ `check_due` segue quindi la regola del tab Body — blocco finito **e** nessun check nelle ultime 4 settimane — non «≥ 28 giorni **o** blocco finito» come diceva il brief. Per Ignazio oggi: ultimo check 41 giorni fa, blocco al giorno 19, `check_due = false`, come il tab Body
+- **nutrizione «parziale»** se metà o più dei giorni registrati sta sotto il 75% del target. Si dichiara, non si stima. Ignazio: 5 giorni su 5 sotto, 1.164 kcal medie su 2.324
+- **a schermo un conteggio a zero si legge «Non registrato»**; nell'oggetto resta 0
+
+**Da guardare, non rotto**: la settimana del 17 agosto ha **19 serie in `training_logs` e nessuna riga in `workouts`** (una Upper A iniziata e mai chiusa). Il calendario non la mostra e il quadro dice lo stesso: 0 sessioni, 19 serie.
 
 ---
 

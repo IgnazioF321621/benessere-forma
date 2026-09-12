@@ -835,3 +835,15 @@ Ha permesso di misurare, non di dedurre: il picker a bande che compare per `Traz
 ⚠️ **Un banco non sostituisce la prova sul telefono.** Dice che la logica fa ciò che deve con quei dati; non dice come si legge a 375 px, né cosa risponde il DB vero. Resta il primo filtro, non l'ultimo.
 
 **La regola.** Una modifica si verifica **eseguendola**, e se la rete non c'è si porta il mondo dentro casa: fixture al posto del DB, file vero al posto della copia, e la stessa prova ripetuta sul codice di prima. Un banco costruito su una copia del codice non misura il codice → [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice).
+
+---
+
+## L47 — Lo schema dice dove un dato può stare, le righe dicono dove sta
+
+**Il caso.** Il brief del Quadro settimanale chiedeva il peso «da `body_logs`, campo peso e data». La tabella esiste, ha la colonna `weight_kg`, e il tab Body Tendenza la legge davvero: sulla carta tutto tornava, e lo schema letto dal vivo lo confermava.
+
+Contando le righe di Ignazio, `body_logs` ne aveva **una**, del 28 aprile. Le pesate stavano in **`weight_logs`** — 11 righe, scritte dal foglio «Pesati ora» del tab Piano, che per scelta del 22 maggio non tocca `body_logs`. Tre tabelle hanno una colonna `weight_kg` (`body_logs`, `weight_logs`, `body_measurements`), e la pesata di tutti i giorni finisce in quella che il brief non nominava. Con la sola `body_logs` il blocco peso sarebbe stato `null` per sempre, e `null` qui vuol dire «non registrato»: il quadro avrebbe detto a Ignazio che non si pesa.
+
+⚠️ **Il difetto non avrebbe dato nessun segnale.** Nessun errore, nessuna eccezione, un numero mancante in una schermata nuova che nessuno aveva ancora visto piena. È la forma peggiore: un dato assente che somiglia a un dato vero.
+
+**La regola.** Leggere lo schema dice quali colonne esistono; **prima di scegliere la fonte di un numero si contano le righe dell'utente vero in ogni tabella che potrebbe contenerlo.** Quando più tabelle hanno la stessa colonna, la scelta si dichiara nel codice e nel resoconto (qui: una pesata al giorno, `weight_logs` > `body_logs` > misure del check). È [L26](#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste) dal lato dei dati: là una vista dedotta dal nome di una funzione, qui una fonte dedotta dal nome di una tabella.

@@ -1,10 +1,10 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 31 agosto 2026)*
+PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 12 settembre 2026)*
 
 **Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md); come si nominano gli esercizi in [`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md) (allegato normativo, in vigore). Non serve leggere gli archivi per lavorare: si aprono quando servono.
 
-**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
+**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Quadro settimanale · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
 
 ## File e URL
 
@@ -69,6 +69,8 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **725 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
 **Catalogo GIF** — **661 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Schiena e Trapezio** — **chiusa il 31 agosto su tutti e tre i lavori**: 113 oggetti, 113 righe, 110 codici, 0 righe senza oggetto e 0 oggetti senza riga. Le 18 GIF calisthenics senza codice sono diventate **EX721-EX738**, e prima di loro EX717-EX720; 3 righe restano senza codice **per decisione**, non per arretrato. **Resta una zona sola: Mobilità** (~215 GIF, mai entrata nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+
+**Quadro settimanale** ✅ chiuso 12 settembre — card «La tua settimana» in Home e vista completa, calcolo e storico. ⚠️ La tabella `weekly_pictures` va ancora creata → [cantiere 33](docs/CANTIERI.md#33-eseguire-la-migrazione-di-weekly_pictures-e-collaudare-lo-storico-dal-vivo). Regole in [Quadro settimanale](#quadro-settimanale).
 
 **Body** — M2 check fisico funzionante. Dal 12 settembre la CTA «Nuovo check fisico» è **fissa nell'intestazione del tab**, visibile nei tre tab e in tutti gli stati, con reminder di fine blocco (42 giorni da `train_start_date`, nessun check completato nelle ultime 4 settimane) e **storico degli esami del sangue** in coda al tab Check. Da ri-agganciare a fine blocco Training.
 
@@ -202,7 +204,7 @@ Bucket Storage `biblioteca-gif`: **686 oggetti in 9 cartelle** (misurato 31 agos
 `id, plan_id→weekly_plans CASCADE, user_id, day_of_week (1-7), slot, description, ingredients jsonb, meal_time, kcal/protein/carbs/fat, ai_explanation, sort_order`.
 
 ### Altre tabelle
-`blood_tests (test_date + hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh — nessun intervallo di riferimento a schema: etichette e unità in `BLOOD_FIELDS`, [cantiere 32](docs/CANTIERI.md#32-intervalli-di-riferimento-degli-esami-del-sangue))` · `body_checks (status in_progress/completed)` · `body_measurements (check_id)` · `body_logs (weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip/chest/bicep_cm, body_age — no UNIQUE)` · `weight_logs (UNIQUE user_id+date)` · `supplements_log (UNIQUE user_id+date+supplement_name, is_extra, snapshot macro)` · `supplement_packages + supplement_package_items (UNIQUE package_id+supplement_id)` · `ai_memory (category, content, confidence, evidence_count, last_observed, active)` · `weekly_plan_acceptance (plan_meal_id→CASCADE, status, actual_meal_id→SET NULL — UNIQUE plan_meal_id)` · `nutrilite_catalog (64 prodotti, SELECT pubblica)` · `fasting_days, supplements, workout_sets`.
+`weekly_pictures (user_id+week_start UNIQUE, picture jsonb, computed_at — storico del [Quadro settimanale](#quadro-settimanale))` · `workouts (date, session_type, completed — fonte del calendario e della rotazione; rest/rest_injury inclusi)` · `blood_tests (test_date + hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh — nessun intervallo di riferimento a schema: etichette e unità in `BLOOD_FIELDS`, [cantiere 32](docs/CANTIERI.md#32-intervalli-di-riferimento-degli-esami-del-sangue))` · `body_checks (status in_progress/completed)` · `body_measurements (check_id)` · `body_logs (weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip/chest/bicep_cm, body_age — no UNIQUE)` · `weight_logs (UNIQUE user_id+date)` · `supplements_log (UNIQUE user_id+date+supplement_name, is_extra, snapshot macro)` · `supplement_packages + supplement_package_items (UNIQUE package_id+supplement_id)` · `ai_memory (category, content, confidence, evidence_count, last_observed, active)` · `weekly_plan_acceptance (plan_meal_id→CASCADE, status, actual_meal_id→SET NULL — UNIQUE plan_meal_id)` · `nutrilite_catalog (64 prodotti, SELECT pubblica)` · `fasting_days, supplements, workout_sets`.
 
 ---
 
@@ -421,6 +423,33 @@ Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 Le 12 regole per nominare un esercizio e derivarne lo slug stanno in **[`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md)** — allegato normativo, non archivio: è lo standard in vigore dal 19 luglio 2026 e supera ogni regola precedente. Si apre ogni volta che un esercizio entra a catalogo o viene rinominato.
 
 Indice: 1 nome unico · 2 formula e default omessi · 3 maiuscole · 4 panche · 5 gradi · 6 slug monolingue · 7 codice stabile · 8 storico · 9 estensione attiva del rachide · 10 campo `uso` per i conditioning · 11 famiglia in testa · 12 lato del carico
+
+---
+
+## Quadro settimanale
+
+**In vigore dal 12 settembre 2026 (Fase 1).** Una fotografia della settimana lunedì→domenica, ricalcolata dai dati, **ingresso del coach delle Fasi 3-4**. Nessuna decisione e nessuna AI: raccoglie e mostra.
+
+`buildWeeklyPicture(weekStart)` = `_wpFetch` (legge) + `computeWeeklyPicture` (calcola, senza rete). Forma dell'oggetto:
+
+```
+weight     { weight_avg, weight_n, weight_delta_prev, weight_trend_4w, weight_target }
+nutrition  { kcal_target, protein_target, kcal_avg, protein_avg, days_logged, adherence_kcal, partial, days_under_75 }
+training   { sessions_planned, sessions_done, sessions_missed, recovery_done, block_week, is_deload, volume_sets, avg_rir, injury_days, injury_active }
+body       { last_check_date, days_since_check, check_due, last_measurements{ chiave: {value, delta} }, prev_check_date }
+blood      { last_test_date, days_since_test, test_count }
+meta       { version, week_start, week_end, is_closed, computed_at, completeness (0-1, su 5 blocchi), errors[] }
+```
+
+⚠️ **`null` = non registrato, MAI zero.** Le medie senza dati sono `null`; i conteggi possono valere 0 perché sono un fatto; un blocco intero è `null` se il modulo non è in uso **o se la sua lettura è fallita** (e allora `meta.errors` lo nomina). A schermo, ogni `null` e ogni conteggio a zero si leggono «Non registrato» in grigio.
+
+- **Fonti**: peso da `weight_logs` > `body_logs` > `body_measurements`, una pesata al giorno → [L47](docs/LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta) · pasti da `meals` · sessioni da `workouts` (come il calendario) · serie e RIR da `training_logs` · check da `body_checks` completati + `body_measurements` · esami da `blood_tests`
+- **Settimana chiusa**: «adesso» è la fine della domenica, così un ricalcolo domani dà gli stessi numeri (tranne `computed_at`)
+- **Settimana ciclo e reminder check non si ricalcolano mai inline**: si chiamano `getCycleWeekInfo({ completed, asOf })` e `getBlockCheckReminder({ nowTs, checks })`, che senza argomenti fanno ciò che hanno sempre fatto
+- **Nutrizione parziale**: metà o più dei giorni registrati sotto il 75% del target. Si etichetta, non si corregge con stime
+- **Stato**: `ST.weeklyPicture[lunedì]` per la sessione. La corrente si ricalcola a ogni apertura della Home; le chiuse si leggono da `weekly_pictures`, e se manca la riga si calcolano e si salvano
+- **`weekly_pictures`** (`user_id, week_start` UNIQUE, `picture` jsonb, RLS sulle proprie righe): backfill di 8 settimane una volta per sessione, **mai prima della settimana di nascita del profilo**, **mai la corrente**, **mai un quadro con `meta.errors`**. Migrazione in `supabase/migrations/20260912_weekly_pictures.sql`. Tabella assente (`PGRST205`) → nessun avviso, solo calcolo dal vivo
+- **Verifica**: `tools/banco/prova_quadro_calcolo.js` · `prova_quadro_vista.js` · `prova_quadro_storico.js` (senza rete) · `verifica_quadro_vivo.js` (dati veri, sola lettura, serve `npm install jsdom @supabase/supabase-js` fuori dal repo)
 
 ---
 
@@ -708,3 +737,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 44. [L'avviso copriva la riga, il danno è arrivato dalla colonna](docs/LEZIONI.md#l44--lavviso-copriva-lo-sfasamento-di-riga-il-danno-è-arrivato-da-quello-di-colonna) — uno sfasamento di colonna in un incolla, e il valore fuori posto era ben formato
 45. [Il nome mostrato a schermo non è una chiave](docs/LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave) — lo storico si collega per codice, non per nome
 46. [Quando la rete è chiusa, il banco si costruisce sul file vero](docs/LEZIONI.md#l46--quando-la-rete-è-chiusa-il-banco-di-prova-si-costruisce-sul-file-vero) — jsdom + fixture, e la stessa prova ripetuta sul codice di prima
+47. [Lo schema dice dove un dato può stare, le righe dove sta](docs/LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta) — il peso stava in `weight_logs`, non in `body_logs`
