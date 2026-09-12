@@ -14,7 +14,7 @@ function makeSupaMock(tables){
     api.insert = chain((p)=>{ st.payload = p; });
     api.update = chain((p)=>{ st.payload = p; });
     api.delete = chain(()=>{});
-    api.upsert = chain((p)=>{ st.payload = p; });
+    api.upsert = chain((p, o)=>{ st.payload = p; st.upsertOpts = o || {}; });
     ['eq','neq','lt','lte','gt','gte','like','ilike','is','in','contains'].forEach(f=>{
       api[f] = chain((col,val)=>{ st.filters.push([f,col,val]); });
     });
@@ -27,6 +27,17 @@ function makeSupaMock(tables){
     function run(){
       calls.push(st);
       let rows = (tables[table] || []).slice();
+      if(st.op === 'upsert' && st.upsertOpts.onConflict){
+        // upsert vero in memoria: chiave onConflict, ignoreDuplicates rispettato
+        const keys = st.upsertOpts.onConflict.split(',').map(k=>k.trim());
+        const t = tables[table] || (tables[table] = []);
+        (Array.isArray(st.payload) ? st.payload : [st.payload]).forEach(row => {
+          const i = t.findIndex(r => keys.every(k => String(r[k]) === String(row[k])));
+          if(i === -1) t.push({ id:'fake-'+t.length, ...row });
+          else if(!st.upsertOpts.ignoreDuplicates) t[i] = { ...t[i], ...row };
+        });
+        return Promise.resolve({ data:null, error:null });
+      }
       if(st.op !== 'select'){ return Promise.resolve({ data:[{id:'fake-id'}], error:null }); }
       for(const [f,col,val] of st.filters){
         if(f==='eq') rows = rows.filter(r=>String(r[col])===String(val));

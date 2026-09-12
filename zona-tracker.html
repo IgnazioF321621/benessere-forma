@@ -3725,7 +3725,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 22:24';
+const APP_VERSION = '2026.09.12 · 22:28';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6878,7 +6878,7 @@ function showPage(id){
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
   if(id !== 'home') ST.homeView = null;   // il quadro settimanale si chiude uscendo dalla Home
-  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); }
+  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); weeklyPicturesBackfill(); }
   if(id==='body') loadBodyLogs();
   if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); computeTrainHomeData().then(()=>{ if(ST.page==='training') renderTraining(); }); }
 }
@@ -7345,27 +7345,58 @@ async function buildWeeklyPicture(weekStart, opts){
 }
 
 // ── Caricamento: ST.weeklyPicture = { 'YYYY-MM-DD' (lunedì): quadro } per la sessione ──
-// La settimana corrente si ricalcola a ogni apertura della Home (force); quelle
-// passate restano in memoria finché l'app è aperta.
+// Settimana corrente: si ricalcola sempre (a ogni apertura della Home, force).
+// Settimane chiuse: prima dalla tabella weekly_pictures; se la riga non c'è si
+// calcola e si salva. Un quadro con letture fallite non si salva mai: congelerebbe
+// dei null che non sono "non registrato" ma "non letto".
 const _wpInflight = {};
+let _wpTableOk = true;   // diventa false se weekly_pictures non risponde: da lì solo calcolo dal vivo
 function _wpUsable(){ return !!(ST.user && ST.user.id && ST.user.id !== 'test-user-001'); }
+function _wpTableError(res, cosa){
+  if(!res.error) return false;
+  const code = res.error.code || '';
+  // Tabella assente (migrazione non ancora eseguita): si smette di chiederla per la sessione.
+  if(code === 'PGRST205' || code === '42P01' || /weekly_pictures/.test(res.error.message || '')) _wpTableOk = false;
+  console.warn('[quadro] ' + cosa + ':', res.error.message || res.error);
+  return true;
+}
+async function _wpReadStored(ws){
+  if(!_wpTableOk) return null;
+  const res = await dbq('leggere il quadro salvato', supa.from('weekly_pictures')
+    .select('picture').eq('user_id', ST.user.id).eq('week_start', ws).maybeSingle(), { silenzioso:true });
+  if(_wpTableError(res, 'lettura storico')) return null;
+  return (res.data && res.data.picture) || null;
+}
+// Salva solo settimane CHIUSE e lette per intero. ignoreDuplicates: una riga che
+// esiste già non si riscrive (niente doppioni, niente sovrascritture a sorpresa).
+async function _wpSaveClosed(pics){
+  const righe = pics.filter(p => p && p.meta && p.meta.is_closed && !(p.meta.errors || []).length && p.meta.week_start < wpMonday())
+    .map(p => ({ user_id: ST.user.id, week_start: p.meta.week_start, picture: p, computed_at: p.meta.computed_at }));
+  if(!righe.length || !_wpTableOk) return 0;
+  const res = await dbq('salvare lo storico dei quadri', supa.from('weekly_pictures')
+    .upsert(righe, { onConflict: 'user_id,week_start', ignoreDuplicates: true }), { silenzioso:true });
+  if(_wpTableError(res, 'salvataggio storico')) return 0;
+  return righe.length;
+}
 function loadWeeklyPicture(weekStart, opts){
   const o = opts || {};
   if(!_wpUsable()) return Promise.resolve(null);
   ST.weeklyPicture = ST.weeklyPicture || {};
   const cur = wpMonday();
   const ws = weekStart > cur ? cur : weekStart;
-  if(!o.force && ST.weeklyPicture[ws]) return Promise.resolve(ST.weeklyPicture[ws]);
+  if(ST.weeklyPicture[ws] && !(o.force && ws === cur)) return Promise.resolve(ST.weeklyPicture[ws]);
   if(_wpInflight[ws]) return _wpInflight[ws];
   const p = (async () => {
     try {
-      const pic = await buildWeeklyPicture(ws);
-      if(pic){
-        ST.weeklyPicture[ws] = pic;
-        if(pic.meta.errors.length && !o.silenzioso){
+      let pic = ws < cur ? await _wpReadStored(ws) : null;
+      if(!pic){
+        pic = await buildWeeklyPicture(ws);
+        if(pic && ws < cur) _wpSaveClosed([pic]);          // chiusa senza riga: la si salva
+        if(pic && pic.meta.errors.length && !o.silenzioso){
           try { showToast('Non riesco a leggere tutti i dati della settimana', '⚠️', 5500); } catch(e){}
         }
       }
+      if(pic) ST.weeklyPicture[ws] = pic;
       return pic;
     } catch(e){
       console.error('[quadro] calcolo fallito:', e);
@@ -7376,6 +7407,39 @@ function loadWeeklyPicture(weekStart, opts){
   })();
   _wpInflight[ws] = p;
   return p;
+}
+// All'apertura dell'app, una volta per sessione: le settimane chiuse fino a 8
+// indietro che non hanno ancora una riga si calcolano e si salvano. Mai prima
+// della settimana in cui il profilo è nato. Una alla volta, in sottofondo.
+const WP_BACKFILL_WEEKS = 8;
+let _wpBackfillStarted = false;
+async function weeklyPicturesBackfill(){
+  if(_wpBackfillStarted || !_wpUsable() || !_wpTableOk) return;
+  _wpBackfillStarted = true;
+  try {
+    const cur = wpMonday();
+    const first = _wpFirstWeek();
+    const settimane = Array.from({ length: WP_BACKFILL_WEEKS }, (_, k) => wpAddDays(cur, -7 * (k + 1)))
+      .filter(ws => !first || ws >= first);
+    if(!settimane.length) return;
+    const res = await dbq('leggere lo storico dei quadri', supa.from('weekly_pictures')
+      .select('week_start').eq('user_id', ST.user.id).in('week_start', settimane), { silenzioso:true });
+    if(_wpTableError(res, 'backfill')) return;
+    const presenti = new Set((res.data || []).map(r => r.week_start));
+    const mancanti = settimane.filter(ws => !presenti.has(ws));
+    const calcolati = [];
+    for(const ws of mancanti){
+      const pic = await buildWeeklyPicture(ws);
+      if(!pic) continue;
+      calcolati.push(pic);
+      ST.weeklyPicture = ST.weeklyPicture || {};
+      if(!ST.weeklyPicture[ws]) ST.weeklyPicture[ws] = pic;
+    }
+    const n = await _wpSaveClosed(calcolati);
+    if(n) console.log('[quadro] storico: ' + n + ' settimane salvate');
+  } catch(e){
+    console.warn('[quadro] backfill:', e);
+  }
 }
 function _wpRerenderIfOpen(){ if(ST.page === 'home') renderHome(); }
 
