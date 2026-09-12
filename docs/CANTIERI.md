@@ -48,8 +48,8 @@ Il file `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDID
 
 ⚠️ Una vecchia annotazione diceva "EX287": è **sbagliata**. EX287 è `Stacco rumeno una gamba palla medica` e non c'entra. Il confronto va fatto contro lo stacco da terra che sta a catalogo, da individuare.
 
-## 8. M2 entry point
-CTA sempre visibile in Body · reminder fine blocco · blood test history UI.
+## 8. M2 entry point — ✅ chiuso 12 settembre 2026
+Tutte e tre le voci fatte: CTA sempre visibile in Body · reminder fine blocco · storico esami del sangue. Il verbale sta in [archivio](#8-m2-entry-point--chiuso-12-settembre-2026-1), in coda a questo file.
 
 ## 9. F.2b colazione/merenda
 Stand-by. Riattivare solo se l'onboarding lo richiede.
@@ -124,6 +124,35 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 - `getCycleWeekInfo()` — `workPerGiro` derivato dal ciclo
 
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
+
+## 31. Il codice esercizio dentro `training_logs`
+*Aperto il 12 settembre 2026, dalla diagnosi dei risultati della settimana precedente → [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave).*
+
+`training_logs` (e `workout_sets`) registrano l'esercizio **per nome**, quello mostrato a schermo nell'istante del salvataggio. Il catalogo però rinomina, e a ogni rinomina lo storico di quell'esercizio si stacca dalla scheda di oggi.
+
+Il 12 settembre il ponte è stato ricostruito **a valle**, leggendo gli alias dalle schede salvate e dal catalogo vivo: funziona, ed è quello che rimette a posto lo storico di oggi. Ma resta un caso non ricostruibile — un nome vissuto **solo fra due rinomine**, mai presente in una scheda salvata — e soprattutto resta la classe di difetto, che torna a ogni cartella GIF che si chiude.
+
+**La cura è una colonna.** Da decidere e da fare in quest'ordine:
+
+1. `ALTER TABLE training_logs ADD COLUMN exercise_code text` (e la gemella su `workout_sets`)
+2. scrivere il codice al salvataggio — `saveTrainLog` ha già `exData.codice` in mano
+3. backfill delle 912 righe esistenti tramite lo stesso ponte alias di `ensureExNameAliases()`, una volta sola e verificato riga per riga
+4. solo dopo, `loadLastLoggedSets` può leggere per codice e tenere il nome come semplice ripiego
+
+⚠️ Il punto 3 è quello che va guardato: le righe che il ponte **non** risolve vanno elencate, non lasciate a `NULL` in silenzio → [L10](LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto).
+
+## 32. Intervalli di riferimento degli esami del sangue
+*Aperto il 12 settembre 2026, insieme allo storico esami.*
+
+`blood_tests` contiene **solo i valori**, nessun intervallo di riferimento. Lo storico quindi mostra i numeri e una riga sola, sempre uguale — «Valori da rivedere con il tuo medico» — senza pallini, senza colori e senza giudizi: **inventare un intervallo era l'unica cosa da non fare**, perché un valore marcato fuori norma da un'app che non sa quale laboratorio lo ha prodotto è peggio di nessuna indicazione.
+
+Cosa serve per chiuderlo:
+
+- gli intervalli veri, che dipendono da **sesso, età e metodica del laboratorio**: vanno presi dai referti di Ignazio, non da una tabella generica
+- decidere se stanno nel codice (un campo `range` in `BLOOD_FIELDS`, il posto già predisposto) o in una tabella, se devono variare per utente
+- decidere cosa mostrare al limite: un valore al bordo dell'intervallo non è «fuori», e un pallino acceso per 0,1 è rumore
+
+⚠️ **Il pallino è mezzo passo dall'interpretazione**, che è Fase 4. Quando si apre questo cantiere va detto subito dove finisce: segnalare *fuori intervallo* è un fatto, dire *cosa farci* non lo è.
 
 ## 30. I gruppi muscolari che il generatore sa chiedere
 *Aperto il 31 agosto 2026, dal lavoro 3 di Schiena e Trapezio. **Non è una cella da correggere: è il motore.***
@@ -514,6 +543,45 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## Trazioni e storico — ✅ 12 settembre 2026
+*Due lavori dello stesso giorno, nessuno dei due era un cantiere aperto: sono nati da due sintomi riportati da Ignazio.*
+
+**Il logger delle trazioni prendeva dentro tre esercizi di troppo.** Il riconoscimento per prefisso `trazion` (`afbb6da`, 7 settembre) è giusto per 20 nomi su 23, ma offriva la scala delle bande anche a `EX512 Trazioni sbarra zavorrate` e alle due `gravitron` (`EX508`, `EX509`), dove la resistenza è **carico**, non assistenza: sulle zavorrate i kg aggiunti — il dato che conta — non c'era modo di registrarli. Ora cadono sul selettore numerico, con criterio esplicito scritto in `isPullUpExercise` e censito su tutti e 23 i nomi. Zero falsi positivi fuori dal prefisso sulle 725 righe.
+
+⚠️ **Un nome tipo «Trazione al cavo alto» passerebbe il prefisso** e oggi non esiste a catalogo. Se un giorno entra, è la riga da rivedere: il criterio è scritto lì e non altrove.
+
+**«Ultima volta» spariva per alcuni esercizi.** Causa radice e cura in [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave); la cura definitiva è il [cantiere 31](#31-il-codice-esercizio-dentro-training_logs). Misurato prima/dopo con le stesse fixture: 3 esercizi su 5 senza storico prima, **0 dopo**.
+
+---
+
+## 8. M2 entry point — ✅ chiuso 12 settembre 2026
+*Aperto da mesi con tre voci in una riga sola. Chiuse tutte e tre lo stesso giorno.*
+
+**CTA sempre visibile.** Il pulsante «Nuovo check fisico» c'era in tre posti e in nessuno di questi era garantito: nel tab Misure in fondo alla pagina, nel tab Check sempre, e nel tab **Tendenza soltanto con esattamente un check fatto** — cioè con due o più, il caso normale dopo il secondo blocco, da Tendenza non si apriva un check in nessun modo. Ora la CTA sta nell'intestazione del tab Body, uguale nei tre tab e in tutti gli stati, in tinta Body `#5E4A7A`. Passa da `m2EntryIntro()` come tutte le altre, quindi la ripresa di un check interrotto non è logica duplicata: è la stessa funzione, che instrada da sé.
+
+Tolti i due pulsanti che sarebbero comparsi **due volte nella stessa schermata** (fondo del tab Misure, fondo dell'elenco Check). Restano i due che vivono dentro una card che dice qualcosa in più: lo stato vuoto del tab Check e la card «fai un nuovo check per vedere come stai cambiando» in Tendenza.
+
+**Reminder fine blocco.** `getBlockCheckReminder()`: 42 giorni da `train_start_date` (durata del mesociclo 5+1, la stessa cadenza dei 42 giorni di `getNextCheckpointInfo` — se una cambia cambiano tutte e due) e nessun check completato nelle ultime 4 settimane. Vale anche per chi un check non l'ha mai fatto: `getNextCheckpointInfo()` lì risponde `hasCheck:false` e non direbbe niente. Nessuna notifica push — quelle sono Fase 6, [cantiere 11](#11-push-notifications).
+
+**Storico esami del sangue.** Gli esami si inserivano in M2 (step s10) e poi non si rivedevano più, se non dentro il dettaglio di **un** check e solo se la data cadeva nei ±30 giorni da quel check. Ora in coda al tab Check c'è la card «Esami del sangue»: tutte le date, la più recente in alto, 12 visibili e «Mostra altri N»; tocco su una data e si aprono i valori con etichetta italiana e unità, saltando i campi vuoti.
+
+`BLOOD_FIELDS` è la sorgente unica di etichette e unità: le stesse 11 righe stavano scritte a mano anche nel dettaglio del check, e ora le legge da lì. Le colonne sono state prese dal codice di inserimento (`m2SaveBloodTests`), non indovinate: `test_date, hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh`.
+
+⚠️ **Nessun intervallo di riferimento, e nessuno inventato** → [cantiere 32](#32-intervalli-di-riferimento-degli-esami-del-sangue).
+
+**Come è stato verificato** — banco jsdom sul file vero, senza rete → [L46](LEZIONI.md#l46--quando-la-rete-è-chiusa-il-banco-di-prova-si-costruisce-sul-file-vero):
+
+| stato | Misure | Tendenza | Check |
+|---|---|---|---|
+| storico vuoto | CTA | CTA | CTA + card stato vuoto |
+| check completato ieri | CTA | CTA + card «nuovo check» | CTA |
+| check in corso | «Riprendi» | «Riprendi» | «Riprendi» |
+| fine blocco senza check | CTA + reminder | CTA + reminder | CTA + reminder |
+
+Blocco a 10 giorni: CTA sì, reminder no. Profilo senza Training: CTA sì, reminder no. Storico esami con 0 / 1 / 3 / 15 righe: stato vuoto · 1 riga · 3 righe (quella con due campi nulli dice «9 valori» e salta le righe vuote) · 12 righe + «Mostra altri 3». Zero errori in console in tutti i casi.
 
 ---
 

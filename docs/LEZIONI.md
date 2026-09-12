@@ -2,7 +2,7 @@
 
 Archivio dei casi reali. **Qui c'è il racconto di come ci si è arrivati; la regola che ne è nata vive in `CLAUDE.md`.** Si legge quando serve capire *perché* una regola esiste, o quando un sintomo somiglia a qualcosa di già visto.
 
-Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata · L42 updated_at non distingue il toccato dal non toccato · L43 i campi del resoconto si rileggono, non si ereditano · L44 l'avviso copriva la riga, il danno è arrivato dalla colonna
+Indice: L1 script sul logging · L2 alias verso il nulla · L3 riga arenata · L4 il sync riporta indietro · L5 TSV senza intestazione · L6 codici allocati in anticipo · L7 doppioni non identici · L8 catena integra ≠ catena giusta · L9 aggancio per nome · L10 il ripiego silenzioso · L11 sweep e 429 · L12 due liste che non coincidono · L13 paginazione PostgREST · L14 BOM e CRLF · L15 NFD e path · L16 pool core: ammessi ≠ pescabili · L17 baseline che si sposta · L18 indice di rotazione · L19 isometrico per funzione · L20 la domanda giusta sui liberi · L21 strumenti che raccolgono lavoro manuale · L22 supabase-js non lancia · L23 il codice non è una chiave · L24 l'impronta si legge senza scaricare · L25 la verifica circolare · L26 una vista dedotta non esiste · L27 due istruzioni opposte nello stesso prompt · L28 stima sui pixel ≠ misura sui byte · L29 la HEAD dice sempre no-cache · L30 la CDN convalida per ETag · L31 si carica prima e si controlla dopo · L32 l'estensione non dice il formato · L33 il mimetype si rilegge · L34 il piano non è il verbale · L35 alla terza volta si corregge il nome · L36 chi non lancia eccezioni va controllato a mano · L37 il messaggio nomina chi ha fallito, il codice dice cosa · L38 per un evento di coda la mediana è la direzione sbagliata · L39 uno strumento con stub incompleti genera il difetto che misura · L40 un piano rigenerato a metà strada · L41 confronto codice per codice contro la lista consegnata · L42 updated_at non distingue il toccato dal non toccato · L43 i campi del resoconto si rileggono, non si ereditano · L44 l'avviso copriva la riga, il danno è arrivato dalla colonna · L45 il nome mostrato non è una chiave · L46 quando la rete è chiusa, il banco si costruisce sul file vero
 
 ---
 
@@ -787,3 +787,51 @@ Dieci celle su undici sono arrivate a destinazione. Sulla undicesima, EX058, il 
 2. **Se un blocco-colonna si offre lo stesso, l'avviso deve nominare entrambi gli assi**, riga *e* colonna — e dire quale colonna sta a sinistra e a destra di quella giusta, perché sono quelle il bersaglio.
 3. **Dopo un sync che tocca poche celle, si controlla anche ciò che NON doveva cambiare.** Il confronto contro la fotografia in git su tutti i campi sorvegliati costa un comando e copre la classe intera, non solo le celle attese.
 4. **Un intervento che dichiara di aggiungere qualcosa va misurato anche in negativo**: dopo, il conteggio dei pool deve essere salito di quanto previsto **e nient'altro deve essere sceso**. Qui finisher e riscaldamento erano calati di 1 ciascuno, ed era la firma del guasto prima ancora di sapere quale fosse.
+
+---
+
+## L45 — Il nome mostrato a schermo non è una chiave
+
+**Il caso.** «Per alcuni esercizi non vedo più i risultati della settimana precedente.» Alcuni, non tutti: ed è l'*alcuni* che conteneva la diagnosi.
+
+`training_logs` non ha una colonna col codice esercizio. Quando una serie si salva, ci finisce il **nome mostrato a schermo in quel momento**. La scheda invece mostra il nome che il catalogo ha **adesso**: `loadActiveScheda` riallinea a runtime `codice → nome` proprio per non lasciare in giro i nomi vecchi. I due si incontrano in `loadLastLoggedSets`, che chiedeva al server `.in('exercise_name', nomi di oggi)`.
+
+Finché nessuno rinomina, i due nomi coincidono e tutto funziona. Alla prima rinomina del catalogo — e il cantiere GIF ne ha fatte a centinaia, cartella dopo cartella — il log vecchio porta il nome vecchio, la query chiede il nome nuovo, e lo storico di **quell'esercizio e solo di quello** sparisce. Nessun errore, nessun log: la query risponde correttamente «nessuna riga».
+
+**Cosa NON era.** Tre ipotesi plausibili, tutte e tre false, e vale la pena averle scritte:
+
+- **la settimana cercata a −7 giorni mentre la rotazione a 6 la sposta**: la query non usa nessuna finestra di date, cerca l'ultima data `< oggi`;
+- **la lettura limitata al mese corrente**, il difetto di `renderCalStrip` del [cantiere 24](CANTIERI.md#24-striscia-settimanale-cieca-sullo-storico--chiuso-9-agosto-2b2fe95): qui non c'è nessun filtro di mese;
+- **il troncamento a 1000 righe** di [L13](#l13--postgrest-tronca-le-select-al-limite-default): falso sul codice vecchio, **proprio perché** il filtro per nome restringeva lato server. Diventava vero togliendolo — quindi la paginazione è servita lo stesso, ma come conseguenza della cura, non come causa del male.
+
+⚠️ **Un'ipotesi già vista altrove è la più facile da confermare per somiglianza.** Il mese corrente era la spiegazione pronta: stesso modulo, stesso sintomo, già successo. Le tre si sono chiuse leggendo la query, non ragionando sul sintomo.
+
+**La cura, e perché non è il fallback sul nome.** Il collegamento passa dal **codice** quando è disponibile:
+
+1. nome normalizzato (`_normExName`: NFD senza accenti, spazi collassati, minuscolo) — copre maiuscole e spaziature;
+2. **codice**, risolto con gli alias storici: ogni blocco di `schede_utente` è una fotografia dei nomi di allora, e insieme al catalogo vivo ricostruisce nome→codice all'indietro;
+3. stesso esercizio in un'altra sessione, per gli esercizi che una rigenerazione ha spostato.
+
+E il nome snapshot non si butta più: `loadActiveScheda` lo conserva in `ex.nameSnapshot` prima di riallineare. Era l'unica copia del nome con cui le serie vecchie sono state scritte.
+
+⚠️ **Resta un buco, ed è il buco della classe, non dell'implementazione.** Un nome usato **solo** fra due rinomine, mai salvato in nessuna scheda, non è ricostruibile da nessuna parte. La cura definitiva è scrivere il codice dentro `training_logs` al momento del salvataggio → [cantiere 31](CANTIERI.md#31-il-codice-esercizio-dentro-training_logs).
+
+**La regola.** Un nome mostrato all'utente è testo di presentazione, e il catalogo lo riscrive quando vuole. **Ciò che si scrive in una riga di storico per ritrovarla dopo dev'essere il codice.** Dove la colonna col codice non c'è ancora, il ponte nome→codice va costruito e dichiarato, mai lasciato all'uguaglianza fra due stringhe scritte in momenti diversi. È [L23](#l23--il-codice-scritto-a-mano-in-un-registro-non-è-una-chiave) dal lato opposto: lì un codice scritto a mano non era una chiave, qui non lo è un nome scritto dall'app.
+
+---
+
+## L46 — Quando la rete è chiusa, il banco di prova si costruisce sul file vero
+
+**Il caso.** Fase intera da verificare — logger trazioni, storico, due viste nuove del tab Body — con Supabase, il Worker e la CDN tutti irraggiungibili dall'ambiente: niente DB vivo, niente `supabase-js` da jsdelivr, niente app che parta in un browser.
+
+La tentazione, in quelle condizioni, è verificare **rileggendo il codice**: «la funzione ora fa X, quindi X succede». È esattamente la forma di ragionamento che [L26](#l26--una-vista-dedotta-dal-nome-di-una-funzione-non-è-una-vista-che-esiste) ha già smentito una volta — una vista dedotta dal nome di una funzione che non esisteva.
+
+**Cosa è stato fatto invece.** `zona-tracker.html` caricato **così com'è** in jsdom, con due sole cose finte: un `window.supabase` che serve fixture in memoria imitando la catena di PostgREST (`.eq/.in/.lt/.order/.range`, troncamento a 1000 righe compreso) e gli oggetti del browser che jsdom non ha. Tutto il resto — render, stato, helper — è il file che va in produzione, byte per byte.
+
+Ha permesso di misurare, non di dedurre: il picker a bande che compare per `Trazioni sbarra presa neutra` e **non** per `Trazioni sbarra zavorrate`; «Ultima volta» che passa da 3 esercizi scoperti su 5 a 0; la CTA del check contata tab per tab in quattro stati; lo storico esami con 0, 1, 3 e 15 righe.
+
+⚠️ **Il valore sta nel confronto prima/dopo con le stesse fixture.** Il file pre-modifica (`git show HEAD:zona-tracker.html`) si carica nello stesso banco: la stessa prova che sul nuovo dà OK deve dare KO sul vecchio, altrimenti non sta misurando ciò che si crede. È così che la causa radice si è dimostrata invece di essere argomentata.
+
+⚠️ **Un banco non sostituisce la prova sul telefono.** Dice che la logica fa ciò che deve con quei dati; non dice come si legge a 375 px, né cosa risponde il DB vero. Resta il primo filtro, non l'ultimo.
+
+**La regola.** Una modifica si verifica **eseguendola**, e se la rete non c'è si porta il mondo dentro casa: fixture al posto del DB, file vero al posto della copia, e la stessa prova ripetuta sul codice di prima. Un banco costruito su una copia del codice non misura il codice → [L25](#l25--unimpronta-dedotta-dal-codice-non-verifica-quel-codice).
