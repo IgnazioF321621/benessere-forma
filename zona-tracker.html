@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 21:00';
+const APP_VERSION = '2026.09.12 · 22:12';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -7043,6 +7043,274 @@ function getProssimaAzioneSimple(){
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// QUADRO SETTIMANALE — Fase 1 (12 set 2026)
+// ═══════════════════════════════════════════════════════════
+// Una fotografia della settimana (lunedì→domenica, ora locale del telefono)
+// ricalcolata dai dati: peso · nutrizione · allenamento · corpo · esami.
+// Nessuna decisione e nessuna AI: è l'ingresso del coach delle fasi 3-4.
+//
+// ⚠️ REGOLA: null = "non registrato", MAI zero. Le medie senza dati sono null;
+// i conteggi (pesate, giorni, sessioni, serie) possono essere 0 perché sono
+// un fatto, ma l'intero blocco è null se il modulo non è in uso.
+//
+// Divisa in due: _wpFetch legge (in parallelo, paginato, {error} controllato),
+// computeWeeklyPicture calcola senza toccare la rete. buildWeeklyPicture unisce.
+// Per le settimane passate "adesso" è la fine della settimana: un quadro chiuso
+// ricalcolato domani dà gli stessi numeri (tranne computed_at).
+const WP_VERSION = 1;
+const WP_PARTIAL_KCAL_RATIO = 0.75;   // un giorno sotto il 75% del target conta come "sotto"
+const WP_PARTIAL_DAYS_RATIO = 0.5;    // metà o più dei giorni registrati sotto → nutrizione "parziale"
+const WP_MEASURE_KEYS = ['weight_kg','waist_cm','hips_cm','chest_cm','shoulders_cm','neck_cm','biceps_cm','thigh_cm','calf_cm','body_fat_pct','muscle_mass_kg','visceral_fat'];
+
+function wpMonday(d){
+  const x = new Date(dayKey(d) + 'T12:00:00');   // mezzogiorno: nessun salto d'ora legale
+  const dow = x.getDay();
+  x.setDate(x.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return dayKey(x);
+}
+function wpAddDays(key, n){
+  const x = new Date(key + 'T12:00:00');
+  x.setDate(x.getDate() + n);
+  return dayKey(x);
+}
+function _wpR1(x){ if(x == null || !isFinite(x)) return null; const r = Math.round(x * 10) / 10; return r === 0 ? 0 : r; }
+function _wpR2(x){ if(x == null || !isFinite(x)) return null; return Math.round(x * 100) / 100; }
+function _wpMean(arr){ const v = arr.filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a,b)=>a+b,0) / v.length : null; }
+
+// SELECT paginata: PostgREST tronca a 1000 righe (L13). mk() costruisce la query
+// già ordinata; ogni pagina passa da dbq (L22), silenziosa: l'avviso lo dà chi
+// mostra il quadro, uno solo per tutta la lettura.
+async function _wpAll(label, mk){
+  const PAGE = 1000;
+  const out = [];
+  for(let from = 0; ; from += PAGE){
+    const res = await dbq('leggere ' + label + ' per il quadro', mk().range(from, from + PAGE - 1), { silenzioso:true });
+    if(res.error) return { data:null, error:res.error };
+    const rows = res.data || [];
+    out.push(...rows);
+    if(rows.length < PAGE) break;
+  }
+  return { data:out, error:null };
+}
+
+async function _wpFetch(userId, weekStart){
+  const we = wpAddDays(weekStart, 6);
+  const w5 = wpAddDays(weekStart, -28);            // peso: 5 settimane in una passata sola
+  const start = ST.profile && ST.profile.train_start_date;
+  const wFrom = (start && start < weekStart) ? start : weekStart;
+  const Q = {
+    weightLogs:   ['le pesate',          () => supa.from('weight_logs').select('date, weight_kg').eq('user_id', userId).gte('date', w5).lte('date', we).order('date').order('id')],
+    bodyLogs:     ['i log del corpo',    () => supa.from('body_logs').select('date, weight_kg').eq('user_id', userId).gte('date', w5).lte('date', we).order('date').order('id')],
+    measurements: ['le misure dei check',() => supa.from('body_measurements').select('*').eq('user_id', userId).order('created_at').order('id')],
+    checks:       ['i check fisici',     () => supa.from('body_checks').select('id, status, created_at, completed_at').eq('user_id', userId).order('created_at').order('id')],
+    meals:        ['i pasti',            () => supa.from('meals').select('date, slot, kcal, protein').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('id')],
+    sets:         ['le serie',           () => supa.from('training_logs').select('date, session_id, rir_actual').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('id')],
+    workouts:     ['gli allenamenti',    () => supa.from('workouts').select('date, session_type, completed').eq('user_id', userId).eq('completed', true).gte('date', wFrom).lte('date', we).order('date').order('id')],
+    blood:        ['gli esami',          () => supa.from('blood_tests').select('test_date').eq('user_id', userId).lte('test_date', we).order('test_date').order('id')],
+  };
+  const keys = Object.keys(Q);
+  const results = await Promise.all(keys.map(k => _wpAll(Q[k][0], Q[k][1])));
+  const raw = { errors: [] };
+  keys.forEach((k, i) => {
+    raw[k] = results[i].error ? null : results[i].data;
+    if(results[i].error) raw.errors.push(k);
+  });
+  return raw;
+}
+
+// Calcolo puro. raw = uscita di _wpFetch (una tabella a null = lettura fallita).
+// ctx = { today, nowTs, profile, target, injuryActiveNow }.
+function computeWeeklyPicture(raw, weekStart, ctx){
+  const c = ctx || {};
+  const today = c.today || todayKey();
+  const profile = c.profile || {};
+  const we = wpAddDays(weekStart, 6);
+  const isClosed = today > we;
+  // "Adesso" del quadro: fine domenica per le settimane chiuse, l'istante reale per la corrente.
+  const refTs = isClosed ? new Date(we + 'T23:59:59').getTime() : (c.nowTs != null ? c.nowTs : Date.now());
+  const refDay = isClosed ? we : today;
+  const daysBetween = (fromTs) => Math.floor((refTs - fromTs) / 86400000);
+  const inWeek = (d) => d >= weekStart && d <= we;
+
+  // ── Peso: una pesata al giorno, weight_logs > body_logs > misure del check ──
+  let weight = null;
+  if(raw.weightLogs && raw.bodyLogs && raw.measurements){
+    const daily = {};
+    const put = (date, v, rank) => {
+      const n = v == null ? NaN : Number(v);
+      if(!date || !isFinite(n)) return;
+      if(!daily[date] || rank < daily[date].rank) daily[date] = { v:n, rank };
+    };
+    raw.weightLogs.forEach(r => put(r.date, r.weight_kg, 0));
+    raw.bodyLogs.forEach(r => put(r.date, r.weight_kg, 1));
+    raw.measurements.forEach(m => { if(m.created_at) put(dayKey(new Date(m.created_at)), m.weight_kg, 2); });
+    const settimana = (k) => {                       // k = 0 questa, 1 la precedente, …
+      const s = wpAddDays(weekStart, -7 * k), e = wpAddDays(s, 6);
+      const vals = Object.keys(daily).filter(d => d >= s && d <= e).map(d => daily[d].v);
+      return { avg: _wpMean(vals), n: vals.length };
+    };
+    const sett = [0,1,2,3].map(settimana);
+    const pts = sett.map((s, k) => ({ x: -k, y: s.avg })).filter(p => p.y != null);
+    let trend = null;
+    if(pts.length >= 3){                            // pendenza ai minimi quadrati, kg/settimana
+      const mx = _wpMean(pts.map(p => p.x)), my = _wpMean(pts.map(p => p.y));
+      const num = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0);
+      const den = pts.reduce((a, p) => a + (p.x - mx) ** 2, 0);
+      trend = den > 0 ? num / den : null;
+    }
+    const goal = profile.goal_weight_kg != null ? Number(profile.goal_weight_kg) : null;
+    weight = {
+      weight_avg:        _wpR1(sett[0].avg),
+      weight_n:          sett[0].n,
+      weight_delta_prev: (sett[0].avg != null && sett[1].avg != null) ? _wpR1(sett[0].avg - sett[1].avg) : null,
+      weight_trend_4w:   _wpR1(trend),
+      weight_target:     isFinite(goal) ? goal : null,
+    };
+  }
+
+  // ── Nutrizione: media sui soli giorni con almeno un pasto ──
+  let nutrition = null;
+  if(raw.meals){
+    const perDay = {};
+    raw.meals.filter(m => inWeek(m.date)).forEach(m => {
+      const d = perDay[m.date] || (perDay[m.date] = { kcal:0, protein:0 });
+      d.kcal += Number(m.kcal) || 0;
+      d.protein += Number(m.protein) || 0;
+    });
+    const days = Object.values(perDay);
+    const tk = Number((c.target && c.target.kcal) || profile.target_kcal) || null;
+    const tp = Number((c.target && c.target.protein) || profile.target_protein) || null;
+    const kcalAvg = _wpMean(days.map(d => d.kcal));
+    const dentro = tk ? days.filter(d => d.kcal >= tk * 0.9 && d.kcal <= tk * 1.1).length : null;
+    const sotto  = tk ? days.filter(d => d.kcal < tk * WP_PARTIAL_KCAL_RATIO).length : 0;
+    nutrition = {
+      kcal_target:    tk,
+      protein_target: tp,
+      kcal_avg:       kcalAvg == null ? null : Math.round(kcalAvg),
+      protein_avg:    days.length ? Math.round(_wpMean(days.map(d => d.protein))) : null,
+      days_logged:    days.length,
+      adherence_kcal: (tk && days.length) ? _wpR2(dentro / days.length) : null,
+      // Il piano copre pranzo+cena: colazione e merende spesso non si registrano.
+      // Non si stima niente: si dichiara soltanto che il dato è parziale.
+      partial:        !!(tk && days.length && sotto / days.length >= WP_PARTIAL_DAYS_RATIO),
+      days_under_75:  tk ? sotto : null,
+    };
+  }
+
+  // ── Allenamento: sessioni dal calendario (workouts), serie e RIR da training_logs ──
+  let training = null;
+  const start = profile.train_start_date || null;
+  if(raw.workouts && raw.sets && (start || raw.workouts.some(w => inWeek(w.date)) || raw.sets.length)){
+    const isWork = (sid) => !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury';
+    const uniq = (arr) => [...new Set(arr)];
+    const settimana = raw.workouts.filter(w => inWeek(w.date));
+    const lavoro = uniq(settimana.filter(w => isWork(w.session_type)).map(w => w.date + '|' + w.session_type));
+    const recuperi = uniq(settimana.filter(w => /^recovery/i.test(w.session_type)).map(w => w.date + '|' + w.session_type));
+    const infortunio = uniq(settimana.filter(w => w.session_type === 'rest_injury').map(w => w.date));
+    const planned = Number(profile.giorni_allenamento) || null;
+    let blockWeek = null, isDeload = null;
+    if(start && we >= start){
+      // Stessa regola di getCycleWeekInfo (helper canonico), valutata "a quel giorno":
+      // per la settimana corrente oggi; per una chiusa l'ultimo giorno di lavoro della settimana.
+      const completati = raw.workouts.filter(w => w.date >= start && w.session_type !== 'rest' && w.session_type !== 'rest_injury');
+      const ultimoLavoro = lavoro.length ? lavoro.map(k => k.split('|')[0]).sort().pop() : null;
+      const asOf = isClosed ? (ultimoLavoro || we) : today;
+      const info = getCycleWeekInfo({ completed: completati, asOf });
+      blockWeek = info.weekNum;
+      isDeload = info.isScarico;
+    }
+    const rir = raw.sets.filter(s => inWeek(s.date) && s.rir_actual != null).map(s => Number(s.rir_actual));
+    training = {
+      sessions_planned: planned,
+      sessions_done:    lavoro.length,
+      sessions_missed:  (isClosed && planned != null) ? Math.max(0, planned - lavoro.length) : null,
+      recovery_done:    recuperi.length,
+      block_week:       blockWeek,
+      is_deload:        isDeload,
+      volume_sets:      raw.sets.filter(s => inWeek(s.date)).length,
+      avg_rir:          _wpR1(_wpMean(rir)),
+      injury_days:      infortunio.length,
+      injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
+    };
+  }
+
+  // ── Corpo: ultimo check COMPLETATO fino a fine settimana ──
+  let body = null;
+  if(raw.checks && raw.measurements){
+    const completati = raw.checks
+      .filter(ch => ch.status === 'completed' && ch.created_at && new Date(ch.created_at).getTime() <= refTs)
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const ultimo = completati[completati.length - 1] || null;
+    const prec = completati[completati.length - 2] || null;
+    const misure = (ch) => ch ? (raw.measurements.find(m => m.check_id === ch.id) || null) : null;
+    const mU = misure(ultimo), mP = misure(prec);
+    let last = null;
+    if(mU){
+      last = {};
+      WP_MEASURE_KEYS.forEach(k => {
+        if(mU[k] == null) return;
+        const v = Number(mU[k]);
+        const p = mP && mP[k] != null ? Number(mP[k]) : null;
+        last[k] = { value: v, delta: p == null ? null : _wpR1(v - p) };
+      });
+    }
+    const rem = getBlockCheckReminder({ nowTs: refTs, checks: completati });
+    body = {
+      last_check_date:   ultimo ? dayKey(new Date(ultimo.created_at)) : null,
+      days_since_check:  ultimo ? daysBetween(new Date(ultimo.created_at).getTime()) : null,
+      check_due:         !!rem,
+      last_measurements: last,
+      prev_check_date:   prec ? dayKey(new Date(prec.created_at)) : null,
+    };
+  }
+
+  // ── Esami ──
+  let blood = null;
+  if(raw.blood){
+    const esami = raw.blood.filter(b => b.test_date && b.test_date <= refDay).map(b => b.test_date).sort();
+    const ultimo = esami[esami.length - 1] || null;
+    blood = {
+      last_test_date:  ultimo,
+      days_since_test: ultimo ? Math.floor((new Date(refDay + 'T12:00:00') - new Date(ultimo + 'T12:00:00')) / 86400000) : null,
+      test_count:      esami.length,
+    };
+  }
+
+  const conDati = [
+    weight && weight.weight_n > 0,
+    nutrition && nutrition.days_logged > 0,
+    training && (training.sessions_done > 0 || training.volume_sets > 0),
+    body && body.last_check_date != null,
+    blood && blood.test_count > 0,
+  ].filter(Boolean).length;
+
+  return {
+    weight, nutrition, training, body, blood,
+    meta: {
+      version:      WP_VERSION,
+      week_start:   weekStart,
+      week_end:     we,
+      is_closed:    isClosed,
+      computed_at:  new Date(c.nowTs != null ? c.nowTs : Date.now()).toISOString(),
+      completeness: _wpR2(conDati / 5),
+      errors:       (raw.errors || []).slice(),
+    },
+  };
+}
+
+async function buildWeeklyPicture(weekStart, opts){
+  const o = opts || {};
+  const userId = o.userId || (ST.user && ST.user.id);
+  if(!userId) return null;
+  const raw = await _wpFetch(userId, weekStart);
+  let injuryNow = false;
+  try { injuryNow = !!(getInjuryPeriod() || getSoftReturn()); } catch(e){}
+  return computeWeeklyPicture(raw, weekStart, {
+    today: todayKey(), profile: ST.profile || {}, target: ST.TARGET, injuryActiveNow: injuryNow,
+  });
+}
+
 function renderHomeV2(){
   // ── Dati nutrition (riusa dayTotals + ST.TARGET già esistenti) ──
   const today = todayKey();
@@ -8142,8 +8410,17 @@ function getRotationCycle() {
 // Consumata da: render Progressione (badge), computeNextSetSuggestion
 // (RIR 3 in scarico), vista sessione (badge SCARICO), getNextCheckpointInfo
 // (guardia overdue checkpoint M2).
-function getCycleWeekInfo(){
-  const workCount = (ST.trainAllCompleted || [])
+// opts (facoltativo, Quadro settimanale): { completed, asOf } — la stessa regola
+// applicata a una data passata. `completed` sostituisce ST.trainAllCompleted
+// (stessa forma: workout completati, rest esclusi, ordinati asc), `asOf`
+// ('YYYY-MM-DD') fa da "oggi": si contano i soli workout fino a quel giorno e il
+// correttivo di bordo guarda quel giorno. Senza opts il comportamento è identico.
+function getCycleWeekInfo(opts){
+  const o = opts || {};
+  const oggi = o.asOf || todayKey();
+  const sorgente = o.completed || ST.trainAllCompleted || [];
+  const completati = o.asOf ? sorgente.filter(w => w && w.date <= o.asOf) : sorgente;
+  const workCount = completati
     .filter(w => w && !/^recovery/i.test(w.session_type)).length;
   // Slot di LAVORO per giro, derivati dal ciclo canonico attivo (mai hardcoded):
   // 6gg → 4 (upperA/lowerA/upperB/lowerB) · 5 giorni → 5 (+upperC; 'rest' è
@@ -8158,9 +8435,9 @@ function getCycleWeekInfo(){
     // (ultimo elemento di trainAllCompleted, ordinato asc) è di OGGI — es.
     // sabato sera dopo la Pump → ancora settimana corrente. Dal giorno dopo
     // (riposo incluso) si passa alla settimana successiva.
-    const all = ST.trainAllCompleted || [];
+    const all = completati;
     const lastDate = all.length ? all[all.length - 1].date : null;
-    weekIdx = (workCount % workPerGiro === 0 && lastDate === todayKey())
+    weekIdx = (workCount % workPerGiro === 0 && lastDate === oggi)
       ? (rawWeek === 0 ? 5 : rawWeek - 1)
       : rawWeek;
   }
@@ -16147,19 +16424,24 @@ function renderBodyTrend(){
 // momento in cui serve, e getNextCheckpointInfo() li' risponde hasCheck:false.
 const BLOCK_DAYS = 42;          // durata mesociclo — vedi CYCLE_WEEKS (5 carico + 1 scarico)
 const CHECK_RECENT_DAYS = 28;   // "recente" = ultime 4 settimane
-function getBlockCheckReminder(){
+// opts (facoltativo, Quadro settimanale): { nowTs, checks } — la stessa regola
+// valutata a un istante passato e su un elenco di check fornito dal chiamante.
+// Senza opts legge ST e Date.now() come sempre.
+function getBlockCheckReminder(opts){
+  const o = opts || {};
   const start = ST.profile && ST.profile.train_start_date;
   if(!start) return null;                                  // senza Training non c'e' blocco
-  if(ST.bodyMeasurements === null || ST.bodyChecks === null) return null;   // ancora in caricamento
+  if(!o.checks && (ST.bodyMeasurements === null || ST.bodyChecks === null)) return null;   // ancora in caricamento
+  const nowTs = o.nowTs != null ? o.nowTs : Date.now();
   const startTs = new Date(start + 'T00:00:00').getTime();
   if(!isFinite(startTs)) return null;
-  const giorniDaInizio = Math.floor((Date.now() - startTs) / 86400000);
+  const giorniDaInizio = Math.floor((nowTs - startTs) / 86400000);
   if(giorniDaInizio < BLOCK_DAYS) return null;             // blocco non ancora finito
   // Ultimo check COMPLETATO: stessa fonte della timeline unificata (source='check').
-  const completati = (ST.bodyChecks || []).filter(c => c.status === 'completed' && c.created_at);
+  const completati = (o.checks || ST.bodyChecks || []).filter(c => c.status === 'completed' && c.created_at && new Date(c.created_at).getTime() <= nowTs);
   let ultimoTs = null;
   completati.forEach(c => { const t = new Date(c.created_at).getTime(); if(isFinite(t) && (ultimoTs === null || t > ultimoTs)) ultimoTs = t; });
-  const giorniDaUltimo = ultimoTs === null ? null : Math.floor((Date.now() - ultimoTs) / 86400000);
+  const giorniDaUltimo = ultimoTs === null ? null : Math.floor((nowTs - ultimoTs) / 86400000);
   if(giorniDaUltimo !== null && giorniDaUltimo < CHECK_RECENT_DAYS) return null;   // check recente, niente riga
   return { giorniDaInizio, giorniDaUltimo };
 }

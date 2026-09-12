@@ -78,7 +78,7 @@ function makeSupaMock(tables){
 }
 
 function boot(tables, opts={}){
-  const html = fs.readFileSync(opts.file || require('path').join(__dirname, '..', '..', 'zona-tracker.html'),'utf8');
+  const html = fs.readFileSync(opts.file || process.env.BANCO_FILE || require('path').join(__dirname, '..', '..', 'zona-tracker.html'),'utf8');
   const vc = new VirtualConsole();
   const logs = [];
   vc.on('jsdomError', e => logs.push(['jsdomError', e.message]));
