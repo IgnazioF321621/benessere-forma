@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 21:05';
+const APP_VERSION = '2026.09.12 · 20:58';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -16052,6 +16052,56 @@ function renderBodyTrend(){
   return switchHTML + sec1 + sec2 + sec3;
 }
 
+// ── Reminder "check di fine blocco" ─────────────────────────
+// Il mesociclo dura 6 settimane (42 giorni, stessa cadenza di getNextCheckpointInfo:
+// se una cambia cambiano tutte e due). Quando il blocco e' finito e non c'e' un check
+// completato nelle ultime 4 settimane, il tab Body lo dice — senza notifiche, che
+// arrivano piu' avanti.
+// Vale anche per chi un check non l'ha mai fatto: il primo blocco finito e' il
+// momento in cui serve, e getNextCheckpointInfo() li' risponde hasCheck:false.
+const BLOCK_DAYS = 42;          // durata mesociclo — vedi CYCLE_WEEKS (5 carico + 1 scarico)
+const CHECK_RECENT_DAYS = 28;   // "recente" = ultime 4 settimane
+function getBlockCheckReminder(){
+  const start = ST.profile && ST.profile.train_start_date;
+  if(!start) return null;                                  // senza Training non c'e' blocco
+  if(ST.bodyMeasurements === null || ST.bodyChecks === null) return null;   // ancora in caricamento
+  const startTs = new Date(start + 'T00:00:00').getTime();
+  if(!isFinite(startTs)) return null;
+  const giorniDaInizio = Math.floor((Date.now() - startTs) / 86400000);
+  if(giorniDaInizio < BLOCK_DAYS) return null;             // blocco non ancora finito
+  // Ultimo check COMPLETATO: stessa fonte della timeline unificata (source='check').
+  const completati = (ST.bodyChecks || []).filter(c => c.status === 'completed' && c.created_at);
+  let ultimoTs = null;
+  completati.forEach(c => { const t = new Date(c.created_at).getTime(); if(isFinite(t) && (ultimoTs === null || t > ultimoTs)) ultimoTs = t; });
+  const giorniDaUltimo = ultimoTs === null ? null : Math.floor((Date.now() - ultimoTs) / 86400000);
+  if(giorniDaUltimo !== null && giorniDaUltimo < CHECK_RECENT_DAYS) return null;   // check recente, niente riga
+  return { giorniDaInizio, giorniDaUltimo };
+}
+
+// CTA permanente del tab Body — visibile in TUTTI e tre i tab e in tutti gli stati.
+// Prima il "Nuovo check fisico" c'era solo in alcuni: in Tendenza compariva solo con
+// ESATTAMENTE un check, quindi chi ne ha due o piu' non aveva nessun modo di aprirne
+// uno da li'. Il pulsante e' uno solo e passa sempre da m2EntryIntro(), che instrada
+// da se' alla ripresa se un check e' rimasto in corso.
+function _bodyCheckCtaHTML(){
+  const inCorso = (ST.bodyChecks || []).some(c => c.status === 'in_progress');
+  const label = inCorso ? 'Riprendi check fisico →' : 'Nuovo check fisico →';
+  const btn = (full) => `<button onclick="m2EntryIntro();" style="${full ? 'width:100%;margin-top:10px;' : ''}padding:10px 16px;background:#5E4A7A;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;white-space:nowrap;">${label}</button>`;
+  const rem = getBlockCheckReminder();
+  if(rem){
+    const quando = rem.giorniDaUltimo === null
+      ? 'Non ne hai ancora fatto uno.'
+      : `L'ultimo è di ${rem.giorniDaUltimo} giorni fa.`;
+    return `<div style="margin:12px 16px 0;background:#EDE9F8;border:1px solid #AFA9EC;border-radius:var(--r-lg);padding:14px 16px;">
+      <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.06em;color:#5E4A7A;text-transform:uppercase;margin-bottom:4px;">Fine blocco</div>
+      <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">È ora del check di fine blocco</div>
+      <div style="font-size:12px;color:var(--t2);font-family:var(--font-sans);margin-top:2px;">${quando}</div>
+      ${btn(true)}
+    </div>`;
+  }
+  return `<div style="margin:12px 16px 0;display:flex;justify-content:flex-end;">${btn(false)}</div>`;
+}
+
 function renderBody(){
   if(ST.bodyTab === 'composizione') ST.bodyTab = 'misure';
   const tab = ST.bodyTab || 'misure';
@@ -16294,12 +16344,6 @@ function renderBody(){
           </div>`;
         }).join('')}
       </div>` : ''}
-      <div style="margin-top:12px;text-align:center;">
-        <button onclick="m2EntryIntro();"
-          style="padding:12px 24px;background:#2A7A6F;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;width:100%;">
-          ${(ST.bodyChecks||[]).some(c=>c.status==='in_progress') ? 'Riprendi check fisico →' : 'Nuovo check fisico →'}
-        </button>
-      </div>
     `;
 
   } else if(tab === 'check'){
@@ -16346,9 +16390,6 @@ function renderBody(){
       body = `
         <div style="padding:16px;">
           ${checkRows}
-          <div style="margin-top:8px;">
-            <button onclick="m2EntryIntro();" style="width:100%;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
-          </div>
         </div>`;
     }
 
@@ -16377,7 +16418,7 @@ function renderBody(){
     </div>`;
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + body + versionFooter() + bodyDeleteConfirmHTML;
+  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + body + versionFooter() + bodyDeleteConfirmHTML;
 }
 
 function renderPage(id){
