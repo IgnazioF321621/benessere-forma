@@ -3693,7 +3693,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 20:58';
+const APP_VERSION = '2026.09.12 · 21:00';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -3819,6 +3819,9 @@ const ST = {
   bodyLogs: null,
   bodyMeasurements: null,  // record da body_measurements (check fisici M2) — letti insieme a bodyLogs
   bodyChecks: null,        // record da body_checks (id + status) — per filtrare i check completed in Tendenza
+  bloodTests: null,        // righe blood_tests (desc per test_date) — null = non caricate
+  bloodOpenId: null,       // id dell'esame aperto nello storico (accordion)
+  bloodShowAll: false,     // "mostra altri" dello storico esami
   bodyDeleteConfirm: null, // { kind:'log'|'check', id, checkId, date } — conferma elimina log Body
   bodyCheckDetail: null,   // dati del check fisico aperto nell'overlay dettaglio
   bodyTrendRange: '30d',   // intervallo selettore tab Tendenza: '7d'|'30d'|'90d'|'all'
@@ -15390,14 +15393,109 @@ function renderTraining(){
 
   document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML;
 }
+// ── Esami del sangue ────────────────────────────────────────
+// Sorgente UNICA di etichette e unità dei parametri ematici: la usano il
+// dettaglio del check fisico e lo storico nel tab Check. L'ordine è quello del
+// modulo di inserimento in M2 (m2SaveBloodTests), così chi li ha digitati li
+// ritrova nella stessa sequenza.
+// ⚠️ La tabella blood_tests NON contiene intervalli di riferimento, e qui non se
+// ne inventano: si mostrano i valori e basta. Quando gli intervalli saranno
+// definiti, il posto dove aggiungerli è questa riga (campo `range`), non le due
+// viste che la leggono.
+const BLOOD_FIELDS = [
+  { key:'hemoglobin',      label:'Emoglobina',       unit:'g/dL'   },
+  { key:'ferritin',        label:'Ferritina',        unit:'ng/mL'  },
+  { key:'glucose',         label:'Glicemia',         unit:'mg/dL'  },
+  { key:'cholesterol_tot', label:'Colesterolo tot.', unit:'mg/dL'  },
+  { key:'hdl',             label:'HDL',              unit:'mg/dL'  },
+  { key:'triglycerides',   label:'Trigliceridi',     unit:'mg/dL'  },
+  { key:'creatinine',      label:'Creatinina',       unit:'mg/dL'  },
+  { key:'alt',             label:'ALT',              unit:'U/L'    },
+  { key:'vitamin_d',       label:'Vitamina D',       unit:'ng/mL'  },
+  { key:'vitamin_b12',     label:'Vitamina B12',     unit:'pg/mL'  },
+  { key:'tsh',             label:'TSH',              unit:'µUI/mL' },
+];
+const BLOOD_MEDICO = 'Valori da rivedere con il tuo medico';
+const BLOOD_VISIBLE_DEFAULT = 12;   // quanti esami si vedono senza "mostra altri"
+
+async function loadBloodTests(){
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bloodTests = []; return; }
+  const res = await supa.from('blood_tests')
+    .select('*')
+    .eq('user_id', ST.user.id)
+    .order('test_date', { ascending:false })
+    .limit(200);
+  if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
+    console.warn('[blood] storico non caricato:', res.error.message);
+    ST.bloodTests = [];
+    return;
+  }
+  ST.bloodTests = res.data || [];
+}
+
+// Card "Esami del sangue" — storico in sola lettura, sotto la sezione Check.
+// Nessuna interpretazione: i valori si leggono, non si giudicano (l'analisi del
+// coach arriva in Fase 4).
+function _bloodHistoryHTML(){
+  const rows = ST.bloodTests;
+  const card = (inner) => `<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-top:14px;box-shadow:var(--shadow);">
+      <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Esami del sangue</div>
+      ${inner}</div>`;
+  if(rows === null || rows === undefined) return card(`<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Caricamento…</div>`);
+  if(rows.length === 0){
+    return card(`<div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;">Non hai ancora registrato esami del sangue.<br>Li puoi aggiungere durante un check fisico: restano qui, in ordine di data.</div>`);
+  }
+  const tutti = !!ST.bloodShowAll;
+  const visibili = tutti ? rows : rows.slice(0, BLOOD_VISIBLE_DEFAULT);
+  const righe = visibili.map(r => {
+    const aperto = ST.bloodOpenId === r.id;
+    const data = r.test_date ? fmtDate(r.test_date) : '—';
+    const valori = BLOOD_FIELDS.filter(f => r[f.key] != null);
+    const dettaglio = aperto ? `
+      <div style="padding:4px 0 2px;">
+        ${valori.length === 0
+          ? `<div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);">Nessun valore registrato per questa data.</div>`
+          : valori.map(f => `
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--s2);">
+            <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${f.label}</span>
+            <span style="font-size:12px;font-family:var(--font-mono);color:var(--t1);font-weight:700;">${r[f.key]} ${f.unit}</span>
+          </div>`).join('')}
+        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:10px;">${BLOOD_MEDICO}</div>
+      </div>` : '';
+    return `
+      <div style="border-bottom:1px solid var(--s2);">
+        <div onclick="toggleBloodTest('${r.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;cursor:pointer;">
+          <span style="font-size:13px;color:var(--t1);font-family:var(--font-mono);">${data}</span>
+          <span style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${valori.length} valori</span>
+            <span style="font-size:13px;color:var(--t3);">${aperto ? '⌄' : '›'}</span>
+          </span>
+        </div>
+        ${dettaglio}
+      </div>`;
+  }).join('');
+  const altri = rows.length > BLOOD_VISIBLE_DEFAULT
+    ? `<div style="text-align:center;margin-top:10px;">
+        <button onclick="ST.bloodShowAll=${tutti ? 'false' : 'true'};renderBody();" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#5E4A7A;font-family:var(--font-sans);padding:4px;">${tutti ? 'Mostra meno' : `Mostra altri ${rows.length - BLOOD_VISIBLE_DEFAULT} →`}</button>
+      </div>` : '';
+  return card(righe + altri);
+}
+
+function toggleBloodTest(id){
+  ST.bloodOpenId = (ST.bloodOpenId === id) ? null : id;
+  renderBody();
+}
+
 async function loadBodyLogs(){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
-  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; renderBody(); }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; renderBody(); }
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
+  // + blood_tests (storico esami, card in coda al tab Check)
   const [logsRes, measRes, checksRes] = await Promise.all([
     supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
     supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
     supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id),
+    loadBloodTests(),
   ]);
   ST.bodyLogs = logsRes.data || [];
   ST.bodyMeasurements = measRes.data || [];
@@ -15742,19 +15840,7 @@ function renderBodyCheckDetail(){
         <span style="font-size:12px;color:var(--t2);font-family:var(--font-sans);">${label}</span>
         <span style="font-size:12px;font-family:var(--font-mono);color:var(--t1);font-weight:700;">${val} ${unit}</span>
       </div>`;
-    const bRows = [
-      bRow('Emoglobina', b.hemoglobin, 'g/dL'),
-      bRow('Ferritina', b.ferritin, 'ng/mL'),
-      bRow('Glicemia', b.glucose, 'mg/dL'),
-      bRow('Colesterolo tot.', b.cholesterol_tot, 'mg/dL'),
-      bRow('HDL', b.hdl, 'mg/dL'),
-      bRow('Trigliceridi', b.triglycerides, 'mg/dL'),
-      bRow('Creatinina', b.creatinine, 'mg/dL'),
-      bRow('ALT', b.alt, 'U/L'),
-      bRow('Vitamina D', b.vitamin_d, 'ng/mL'),
-      bRow('Vitamina B12', b.vitamin_b12, 'pg/mL'),
-      bRow('TSH', b.tsh, 'µUI/mL'),
-    ].join('');
+    const bRows = BLOOD_FIELDS.map(f => bRow(f.label, b[f.key], f.unit)).join('');
     if(bRows.trim()){
       const bDate = b.test_date ? fmtDate(b.test_date) : '';
       bloodHTML = `
@@ -16362,7 +16448,8 @@ function renderBody(){
             <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);margin-bottom:20px;">Registra il tuo primo check periodico<br>per seguire i progressi nel tempo.</div>
             <button onclick="m2EntryIntro();" style="width:100%;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
           </div>
-        </div>`;
+        </div>
+        <div style="padding:0 16px 16px;">${_bloodHistoryHTML()}</div>`;
     } else {
       const checkRows = completedChecks.map(c => {
         const meas = (ST.bodyMeasurements || []).find(m => m.check_id === c.id) || {};
@@ -16390,6 +16477,7 @@ function renderBody(){
       body = `
         <div style="padding:16px;">
           ${checkRows}
+          ${_bloodHistoryHTML()}
         </div>`;
     }
 
