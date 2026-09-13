@@ -656,6 +656,8 @@ Registrato l'11 agosto, stato aggiornato al 13 settembre. **Non è più l'ordine
 ## Addominali e Core — chiusa 1 agosto
 68 righe migrate. La zona è poi stata **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori: 72 righe toccate, 11 a certezza media confermate da Ignazio.
 
+⚠️ **11 righe di `esiti/slug_da_migrare.tsv` su questa zona sono superate, non lavoro da fare.** Scritte dal pannello l'11 e il 12 settembre su EX133 · EX134 · EX138 · EX140 · EX141 · EX143, in un ripasso con nomi prima inglesi e poi di nuovo italiani. Verificate il 13 settembre in sola lettura: nessuna è stata migrata, e catalogo, `biblioteca_gif`, bucket e file sul Mac sono tutti allineati sugli slug di sempre. **Non vanno eseguite**: le ultime scelte per EX133 ed EX138 toglierebbero `gradi` dallo slug (contro la [regola 5](NOMENCLATURA.md)), quelle dell'11 settembre darebbero slug inglesi (contro la regola 6), e per EX143 il registro dice `Crunch braccia tese` dove catalogo, Mac e bucket dicono `Crunch braccia tese dietro`. Il diario non decide cosa si migra, lo decide il piano: le righe restano come storia.
+
 ## Bicipiti e Braccia — chiusa 2 agosto
 73 righe: 68 codici vivi + 5 liberi indicizzati (→ cantiere 16). Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
 
