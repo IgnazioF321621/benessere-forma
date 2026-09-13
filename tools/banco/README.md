@@ -12,6 +12,8 @@ node tools/banco/prova_quadro_peso.js   # peso attuale: 0/1/3 pesate, obiettivo,
 node tools/banco/prova_lettura_foto.js  # lettura delle foto del check: card, pulsante, errori, quadro
 node tools/banco/prova_body_tendenza.js # Tendenza e «Ultimi log» con le pesate rapide (cantiere 35)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
+node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
+node tools/banco/verifica_proposte_vivo.js [user] [N]  # dal vivo: proposte sulle ultime N settimane salvate
 node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch finto (niente jsdom)
 ```
 
