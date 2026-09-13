@@ -38,30 +38,30 @@ La Fase 3 non l'ha risolto, l'ha aggirato: un target proteico accettato da Pirsi
 Collegato: **«3 allenamenti invece di 4» non ha una scheda** ([cantiere 20](#20-generalizzare-lo-split-a-2-e-3-giorni)). Accettarla segna la scelta e basta: `giorni_allenamento` resta 4, perché con 3 la prossima rigenerazione produrrebbe la scheda d'emergenza.
 
 ## 2. Cantiere 600 GIF
-65 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
+64 codici senza `gif_slug` *(rimisurato il 13 settembre)*, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
 
 Vedi anche [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio): un terzo dei "liberi" sono in realtà buchi di questo cantiere, non candidati nuovi.
 
 ## 3. Pulizia Storage
 - **C**: 28 file L2 residui nelle zone curate (indicizzati, non referenziati)
-- **D**: bucket `exercise-media` legacy (**52 file, 6,9 MB** — rimisurato 7 agosto) — serve ancora ai 65 codici senza `gif_slug`: non si tocca finché il cantiere 2 non è chiuso
-- **E**: riallineamento indice `biblioteca_gif` — **924 righe** puntano a file inesistenti (il numero cala a ogni giro di pulizia)
+- **D**: bucket `exercise-media` legacy (**52 file, 6,9 MB** — rimisurato 7 agosto) — serve ancora ai 64 codici senza `gif_slug`: non si tocca finché il cantiere 2 non è chiuso
+- **E**: riallineamento indice `biblioteca_gif` — **918 righe** puntano a file inesistenti (rimisurato il 13 settembre, il numero cala a ogni giro di pulizia)
 
 ## 4. Lista da consolidare
 Coppie di codici distinti che puntano allo **stesso esercizio**. Non è materia di rinomina ma di consolidamento: un codice eliminato resta bruciato.
 
 Registro: `tools/biblioteca-nomi/lavoro/da_consolidare.tsv`, con il sopravvissuto e la motivazione riga per riga.
 
-**Ancora aperte, da Addominali e Core**: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103).
+**Da Addominali e Core**: ~~EX021/EX176 · EX139/EX184 · EX042/EX178~~ — ✅ **chiuse il 21 agosto** con la fusione: EX176, EX139 ed EX178 non esistono più. **Resta aperto** `Russian twist` (file Mac di contenuto diverso da EX103).
 
-⚠️ Su queste tre coppie il sospetto è che **non siano consolidamenti**: i due nomi descrivono esercizi diversi (plank sulle mani contro avambracci, crunch contro sit-up, plank statico contro rollout) e condividono il file solo perché a uno dei due è stata attaccata la GIF sbagliata. Se è così la soluzione non è eliminare un codice ma dare a uno dei due la sua immagine: è **cantiere 2, non cantiere 4**. Sei GIF da guardare prima di decidere.
+⚠️ Su quelle tre coppie, prima della fusione, il sospetto è che **non siano consolidamenti**: i due nomi descrivono esercizi diversi (plank sulle mani contro avambracci, crunch contro sit-up, plank statico contro rollout) e condividono il file solo perché a uno dei due è stata attaccata la GIF sbagliata. Se è così la soluzione non è eliminare un codice ma dare a uno dei due la sua immagine: è **cantiere 2, non cantiere 4**. Sei GIF da guardare prima di decidere.
 
 Per il giro già eseguito vedi [Consolidamenti](#consolidamenti).
 
 ## 5. Code catalogo
-- EX085: `gruppo_target='Gambe e Glutei'` fuori vocabolario
-- EX322: `'gambe'` fuori vocabolario
-- 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine)
+- ~~EX085: `gruppo_target='Gambe e Glutei'` fuori vocabolario~~ — ✅ oggi `glutei`
+- ~~EX322: `'gambe'` fuori vocabolario~~ — ✅ codice eliminato il 22 agosto
+- ~~56 righe con `nome_italiano` divergente nell'indice~~ — ✅ **0** al 13 settembre
 - 5 `alternativa` pendenti già bonificati, da monitorare se ne emergono altri
 
 ## 6. Avviso corpo libero puro
@@ -86,12 +86,12 @@ Sistema unico (piano + training + integratori).
 Compressione di una singola sessione senza toccare la progressione del blocco.
 
 ## 13. Surrogati mancanti
-Censire gli esercizi con `luogo = palestra` **riproducibili a casa** con `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma buchi tipo "deltoidi posteriori: 1 candidato". Nella sola zona core ne sono già emersi 7.
+Censire gli esercizi con `luogo = palestra` **riproducibili a casa** con `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma buchi tipo "deltoidi posteriori: 1 candidato" — quel caso è risolto il 1 settembre (12 pescabili), e non dal surrogato ma dal campo `uso`. Nella sola zona core ne sono già emersi 7.
 
 Metodo identico al cantiere GIF: gruppi da dieci con conferma visiva. Diagnostica di appoggio: `ztSchedaWhy()` → `_diag.compoundMissing`, riparata il 2 agosto (`d40faaf`).
 
 ## 14. Dare un attrezzo agli slug inerti — metà fatto
-- ✅ `barra_corta`/`barra_lunga → barra`: **risolto** dal 5 agosto. EX642 `Leg press alternato barra elastico supino`, EX646 `Squat barra elastico` ed EX648 `Affondo barra elastico sul posto` sono le prime righe con `attrezzo = barra`.
+- ✅ `barra_corta`/`barra_lunga → barra`: **risolto** dal 5 agosto. EX642 `Leg press alternato barra elastico supino`, EX646 `Squat barra elastico` ed EX648 `Affondo barra elastico sul posto` sono le prime righe con `attrezzo = barra`; al 13 settembre sono **4**, con EX708.
 - ❌ `cavigliere → cavigliera`: ancora a 0 occorrenze. Dichiarabile in onboarding, apre zero esercizi, in silenzio (l'app lo constata, vedi `_diagGear`).
 
 **Strada**: aggiungerlo sul Sheet ai `surrogato_attrezzo` degli esercizi che lo useranno — conferma visiva, natura identica al cantiere 13. In alternativa toglierlo dall'onboarding.
@@ -132,12 +132,12 @@ EX049 è `Skip ginocchia alte`, agganciato e verificato, ma `setup`/`esecuzione`
 Quel testo **non descrive la sua GIF** — braccia libere in opposizione, ginocchio sopra l'orizzontale, fase di volo — ma descrive quasi parola per parola la GIF di **EX613 `Skip sul posto`**, i cui testi sono stati scritti apposta su mani ferme come riferimento e piede basso. Finché EX049 non viene riscritto i due testi si sovrappongono.
 
 ## 19. Due attrezzi nuovi introdotti da Gambe e Glutei
-`bosu` (EX632) e `box` (EX617, EX643, EX672, EX673, EX675) non esistevano a catalogo e **non sono dichiarabili in onboarding**: è il cantiere 17 che si allarga.
+`bosu` (EX632) e `box` (EX579, EX617, EX643, EX672, EX673, EX675) non esistevano a catalogo e **non sono dichiarabili in onboarding**: è il cantiere 17 che si allarga.
 
 Tutti hanno però un `surrogato_attrezzo` (`corpo libero` per il Bosu, `panca` per il box), quindi restano raggiungibili e non si perde nessun esercizio. Da decidere in blocco col 17 se esporli o lasciarli vivere solo tramite surrogato.
 
 ## 20. Generalizzare lo split a 2 e 3 giorni
-Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagnostico stanno in `CLAUDE.md`, sezione Split). Punti da toccare:
+Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagnostico stanno in [`TRAINING.md`, sezione Split](TRAINING.md#split)). Punti da toccare:
 
 - `SESSION_DAY_NUM` / `SESSION_DAY_NUM_5`
 - `_rotationDayMap()` / `getRotationCycle()` — discriminante binario sulla presenza di `upperC`
