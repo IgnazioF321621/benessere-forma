@@ -737,7 +737,7 @@ python3 tools/biblioteca-nomi/migra_zona.py "Pettorali" slug-riga --solo="Chest 
 
 5. **Popolare il catalogo — terzo lavoro, obbligatorio.** Le 22 GIF caricate avranno riga in `biblioteca_gif` e nessun codice in `esercizi_catalog`. Per ognuna si decide, guardando la GIF, se diventa un esercizio: in caso affermativo entra a catalogo dal Sheet, altrimenti resta libera **con la decisione scritta**, non per omissione. Prima di aprire la lista, incrociare i nomi col catalogo e separare i due mucchi — candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). I codici si allocano **al momento della scrittura** → [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
 
-6. **Rigenerare il piano** perché descriva lo stato finale → [decisione del 16 agosto](#-decisione-del-16-agosto-2026--i-piani-si-rigenerano-a-fine-migrazione). Atteso: tutto `slug invariato`, `percorso che cambia: 0`. Se non torna, è un controllo che ha trovato qualcosa.
+6. ~~**Rigenerare il piano**~~ — ✅ **fatto il 13 settembre.** 82 righe, tutte `slug invariato`, `percorso che cambia: 0`, `slug che cambia: 0`, 0 collisioni, 0 codici senza GIF: il piano su disco descrive lo stato finale → [decisione del 16 agosto](#-decisione-del-16-agosto-2026--i-piani-si-rigenerano-a-fine-migrazione). Il piano del 16 agosto è in `_backup/piano_pettorali_20260816_pre_rigenerazione/`.
 
 ```bash
 python3 tools/biblioteca-nomi/pianifica.py "Pettorali"
