@@ -6,3 +6,8 @@ account_id = "2186a57344e459853657cea6213a2c74"
 # Secrets gestite via `wrangler secret put` (NON in questo file):
 # - API_KEY                    (Groq, già presente nel Worker deployato)
 # - SUPABASE_SERVICE_ROLE_KEY  (da aggiungere prima del deploy)
+# - GEMINI_API_KEY             (lettura AI dei check fisici, /vision-check)
+
+# Binding Images: riduce le foto dei check a 1024 px prima di mandarle a Gemini.
+[images]
+binding = "IMAGES"

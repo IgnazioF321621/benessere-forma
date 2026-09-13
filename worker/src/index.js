@@ -4,6 +4,9 @@
 //   GET  /exercise-media   -> lookup cache Supabase + auto-fill da ExerciseDB
 //                            params: ?name=<nome_italiano>  (20 storici)
 //                                    ?code=<EX###>          (39 nuovi, catalogo)
+//   POST /vision-check     -> lettura AI delle foto di un check fisico (Gemini, src/vision-check.js)
+
+import { handleVisionCheck } from './vision-check.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const STORAGE_BUCKET = 'exercise-media';
@@ -11,7 +14,7 @@ const STORAGE_BUCKET = 'exercise-media';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
 // Match approvati esercizio-per-esercizio da Ignazio — lookup per NOME (20 storici).
@@ -599,6 +602,9 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/exercise-media') {
       return handleExerciseMedia(request, env);
+    }
+    if (url.pathname === '/vision-check') {
+      return handleVisionCheck(request, env, CORS);
     }
     return handleGroqProxy(request, env);
   },
