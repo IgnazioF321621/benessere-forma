@@ -134,10 +134,10 @@ var ZTCoachRules = (function(){
     var tk = prof.target_kcal != null ? Number(prof.target_kcal) : null;
     var numeriPeso = function(){
       return [
-        { label: 'Ritmo, ultime 2 sett. contro le 2 prima', value: segno(r0, 2) + ' kg/sett' },
-        { label: 'Ritmo, una settimana fa', value: segno(r1, 2) + ' kg/sett' },
-        { label: 'Medie peso (questa → 3 sett. fa)', value: [0,1,2,3].map(function(k){ return num(mediaPeso(k), 1); }).join(' · ') },
-        { label: 'Nel target kcal ±10%', value: pct(a0) + (a1 != null ? ' · sett. prima ' + pct(a1) : '') },
+        { label: 'Ritmo peso', value: segno(r0, 2) + ' kg/sett' },
+        { label: 'Ritmo sett. prima', value: segno(r1, 2) + ' kg/sett' },
+        { label: 'Medie peso, 4 sett.', value: [0,1,2,3].map(function(k){ return num(mediaPeso(k), 1); }).join(' · ') },
+        { label: 'Giorni nel target', value: pct(a0) + (a1 != null ? ' · sett. prima ' + pct(a1) : '') },
       ];
     };
     var datiPeso = function(){ return { direzione: dir, ritmo: r0, ritmo_prec: r1, medie_peso: [0,1,2,3].map(mediaPeso), aderenza: a0, aderenza_prec: a1, target_kcal: tk }; };

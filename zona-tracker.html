@@ -1380,6 +1380,31 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .wp-hero-when{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);}
 .wp-hero-line{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.45;margin-top:3px;}
 .wp-go-inline{display:inline-block;margin:10px 0 0;}
+/* Pirsi propone (Fase 3, 13 set 2026) */
+.cp-card{background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:18px 16px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.cp-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px;}
+.cp-title-main{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--t1);}
+.cp-week{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);}
+.cp-item{padding:14px 0 12px;border-top:1px solid var(--b1);}
+.cp-item:first-of-type{border-top:none;}
+.cp-kind{display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;}
+.cp-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--t1);line-height:1.3;}
+.cp-reason{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.5;margin-top:5px;}
+.cp-nums{margin:10px 0 0;padding:8px 10px;background:var(--s2);border-radius:10px;}
+.cp-num{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.7;}
+.cp-num span:first-child{color:var(--t3);}
+.cp-num span:last-child{color:var(--t1);font-weight:600;text-align:right;font-variant-numeric:tabular-nums;}
+.cp-actions{display:flex;gap:8px;margin-top:12px;}
+.cp-yes{flex:1;padding:11px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.cp-no{flex:1;padding:11px;background:none;color:var(--t2);border:1px solid var(--b1);border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.cp-yes:disabled,.cp-no:disabled{opacity:.5;cursor:default;}
+.cp-note{font-family:'Syne',sans-serif;font-size:12px;color:var(--t3);line-height:1.45;padding-top:10px;border-top:1px solid var(--b1);}
+.cp-hist{list-style:none;margin:0;padding:0;}
+.cp-hist li{padding:10px 0;border-top:1px solid var(--b1);}
+.cp-hist li:first-child{border-top:none;padding-top:0;}
+.cp-hist-top{display:flex;align-items:baseline;gap:8px;}
+.cp-hist-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--t1);line-height:1.3;flex:1;}
+.cp-hist .wp-pill{flex-shrink:0;}
 /* Lettura delle foto del check (Fase 2, 13 set 2026) */
 .wp-ai-line{display:flex;align-items:center;gap:7px;margin-top:6px;}
 .bca-card{background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
@@ -3761,7 +3786,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.13 · 10:25';
+const APP_VERSION = '2026.09.13 · 10:35';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6622,6 +6647,7 @@ function applyProfile(profile) {
     pCarbo:  adapted.pCarbo,
     pFat:    adapted.pFat,
   };
+  _coachApplyProteinFloor(ST.TARGET);   // proteine accettate da Pirsi: un minimo, i carboidrati cedono la differenza
   applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
   updateHeaderWeight();
@@ -7309,10 +7335,10 @@ var ZTCoachRules = (function(){
     var tk = prof.target_kcal != null ? Number(prof.target_kcal) : null;
     var numeriPeso = function(){
       return [
-        { label: 'Ritmo, ultime 2 sett. contro le 2 prima', value: segno(r0, 2) + ' kg/sett' },
-        { label: 'Ritmo, una settimana fa', value: segno(r1, 2) + ' kg/sett' },
-        { label: 'Medie peso (questa → 3 sett. fa)', value: [0,1,2,3].map(function(k){ return num(mediaPeso(k), 1); }).join(' · ') },
-        { label: 'Nel target kcal ±10%', value: pct(a0) + (a1 != null ? ' · sett. prima ' + pct(a1) : '') },
+        { label: 'Ritmo peso', value: segno(r0, 2) + ' kg/sett' },
+        { label: 'Ritmo sett. prima', value: segno(r1, 2) + ' kg/sett' },
+        { label: 'Medie peso, 4 sett.', value: [0,1,2,3].map(function(k){ return num(mediaPeso(k), 1); }).join(' · ') },
+        { label: 'Giorni nel target', value: pct(a0) + (a1 != null ? ' · sett. prima ' + pct(a1) : '') },
       ];
     };
     var datiPeso = function(){ return { direzione: dir, ritmo: r0, ritmo_prec: r1, medie_peso: [0,1,2,3].map(mediaPeso), aderenza: a0, aderenza_prec: a1, target_kcal: tk }; };
@@ -8118,15 +8144,23 @@ function _cpTableError(res, cosa){
 async function loadCoachProposals(){
   if(!_wpUsable() || !_cpTableOk) return ST.coachProposals || [];
   const da = wpAddDays(wpMonday(), -7 * (COACH_HISTORY_WEEKS + 1));
-  const [res, sc] = await Promise.all([
+  const [res, sc, pr] = await Promise.all([
     dbq('leggere le proposte di ' + COACH_NAME, supa.from('coach_proposals').select('*')
       .eq('user_id', ST.user.id).gte('week_start', da).order('week_start').order('created_at').range(0, 999), { silenzioso:true }),
     dbq('leggere gli scarichi accettati', supa.from('coach_proposals').select('applied_at')
       .eq('user_id', ST.user.id).eq('kind', 'deload').eq('status', 'accepted').order('applied_at').range(0, 999), { silenzioso:true }),
+    dbq('leggere le proteine accettate', supa.from('coach_proposals').select('change, applied_at')
+      .eq('user_id', ST.user.id).eq('kind', 'protein').eq('status', 'accepted').order('applied_at').range(0, 999), { silenzioso:true }),
   ]);
   if(_cpTableError(res, 'lettura proposte')) return ST.coachProposals || [];
   ST.coachProposals = res.data || [];
   if(!sc.error) ST.coachDeloads = (sc.data || []).filter(r => r.applied_at).map(r => dayKey(new Date(r.applied_at)));
+  if(!pr.error){
+    const ultima = (pr.data || []).filter(r => r.change && r.change.target_protein).pop();
+    const prima = _coachProteinFloor();
+    _cpSetProteinFloor(ultima ? Number(ultima.change.target_protein.to) : null);
+    if(prima !== ST.coachProteinFloor && ST.profile) applyProfile(ST.profile);   // il minimo è cambiato: TARGET si riallinea
+  }
   return ST.coachProposals;
 }
 async function ensureCoachProposals(){
@@ -8162,6 +8196,190 @@ async function ensureCoachProposals(){
     _wpRerenderIfOpen();
   } catch(e){
     console.warn('[pirsi] generazione:', e);
+  }
+}
+
+// ── Proteine accettate: un minimo che sopravvive ai ricalcoli ──
+// ST.TARGET nasce dalle percentuali dell'obiettivo (calcAdaptedTargets): un target
+// proteico accettato da Pirsi le sovrascriverebbe al primo applyProfile. Per questo
+// vale come MINIMO: protein = max(percentuale, accettato), e i carboidrati cedono gli
+// stessi grammi, così le kcal restano quelle. Si tiene anche in localStorage per il
+// primo avvio offline, prima che coach_proposals risponda.
+function _cpProteinKey(){ return 'zt_coach_protein_' + ((ST.user && ST.user.id) || 'local'); }
+function _coachProteinFloor(){
+  if(ST.coachProteinFloor !== undefined) return ST.coachProteinFloor;
+  try { const v = Number(localStorage.getItem(_cpProteinKey())); return v > 0 ? v : null; } catch(e){ return null; }
+}
+function _coachApplyProteinFloor(t){
+  const floor = _coachProteinFloor();
+  if(!t || !floor || !(floor > (t.protein || 0))) return t;
+  t.carbs = Math.max(0, (t.carbs || 0) - (floor - t.protein));
+  t.protein = floor;
+  return t;
+}
+function _cpSetProteinFloor(g){
+  ST.coachProteinFloor = g || null;
+  try { if(g) localStorage.setItem(_cpProteinKey(), String(g)); else localStorage.removeItem(_cpProteinKey()); } catch(e){}
+}
+// I quattro target come li scrive l'app: percentuali dell'obiettivo sulle kcal, poi il minimo di proteine.
+function _cpTargetsFor(kcal, proteinFloor){
+  const obj = (ST.profile && ST.profile.obiettivo ? String(ST.profile.obiettivo).split(',').filter(Boolean) : []);
+  const t = calcAdaptedTargets(obj, kcal);
+  const x = { kcal, protein: t.protein, carbs: t.carbs, fat: t.fat };
+  const floor = proteinFloor != null ? proteinFloor : _coachProteinFloor();
+  if(floor && floor > x.protein){ x.carbs = Math.max(0, x.carbs - (floor - x.protein)); x.protein = floor; }
+  return { target_kcal: x.kcal, target_protein: x.protein, target_carbs: x.carbs, target_fat: x.fat };
+}
+
+const _CP_ORDINE = { weigh_in: 0, logging: 1, kcal: 10, protein: 11, keep: 12, training_volume: 20, deload: 21, check: 30, blood_test: 31 };
+const _CP_AREA = {
+  weigh_in: ['Peso', '#5E4A7A'], logging: ['Nutrizione', '#FAC775'], kcal: ['Nutrizione', '#FAC775'], protein: ['Nutrizione', '#FAC775'],
+  keep: ['Settimana', 'var(--acc)'], training_volume: ['Allenamento', '#B5D4F4'], deload: ['Allenamento', '#B5D4F4'],
+  check: ['Corpo', '#5E4A7A'], blood_test: ['Esami', '#AFA9EC'],
+};
+const _CP_STATO = { pending: ['In attesa', '#FFF3DC', '#854F0B'], accepted: ['Accettata', '#E6F4F2', '#235F56'], rejected: ['Non ora', '#F0EDE6', '#555047'], expired: ['Scaduta', '#F0EDE6', '#9A9388'] };
+function _cpPending(){
+  if(!_wpUsable() || !_cpTableOk) return [];
+  return (ST.coachProposals || []).filter(p => p.status === 'pending')
+    .sort((a, b) => (a.week_start < b.week_start ? 1 : a.week_start > b.week_start ? -1 : 0) || (_CP_ORDINE[a.kind] - _CP_ORDINE[b.kind]));
+}
+function _cpNumsHTML(p){
+  const righe = (p.evidence && Array.isArray(p.evidence.numeri)) ? p.evidence.numeri : [];
+  if(!righe.length) return '';
+  return `<div class="cp-nums">${righe.map(r => `<div class="cp-num"><span>${esc(r.label)}</span><span>${esc(r.value)}</span></div>`).join('')}</div>`;
+}
+function _cpHomeCardHTML(){
+  const lista = _cpPending();
+  if(!lista.length) return '';
+  const busy = ST.cpBusy || {};
+  const ws = lista[0].week_start;
+  const items = lista.map(p => {
+    const [area, tinta] = _CP_AREA[p.kind] || ['Settimana', 'var(--acc)'];
+    const off = busy[p.id] ? 'disabled' : '';
+    return `<div class="cp-item" data-cp="${esc(p.id)}">
+      <div class="cp-kind"><span class="wp-dot" style="background:${tinta};"></span>${area}</div>
+      <div class="cp-title">${esc(p.title)}</div>
+      <div class="cp-reason">${esc(p.reason)}</div>
+      ${_cpNumsHTML(p)}
+      <div class="cp-actions">
+        <button class="cp-yes" ${off} onclick="acceptCoachProposal('${esc(p.id)}')">${busy[p.id] === 'yes' ? 'Un momento…' : 'Accetto'}</button>
+        <button class="cp-no" ${off} onclick="rejectCoachProposal('${esc(p.id)}')">Non ora</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <div class="cp-card">
+      <div class="cp-head"><div class="cp-title-main">${COACH_NAME} propone</div><div class="cp-week">${_wpRange(ws)}</div></div>
+      ${items}
+      <div class="cp-note">${COACH_NAME} propone, decidi tu. Per la salute conta il parere del tuo medico.</div>
+    </div>`;
+}
+// Vista completa del quadro: cosa ha proposto Pirsi per la settimana guardata
+function _cpHistoryHTML(ws){
+  const lista = (ST.coachProposals || []).filter(p => p.week_start === ws)
+    .sort((a, b) => _CP_ORDINE[a.kind] - _CP_ORDINE[b.kind]);
+  if(!lista.length) return '';
+  return `<section class="wp-sec">
+    <div class="wp-sec-head"><span class="wp-dot" style="background:var(--acc);"></span><span class="wp-sec-title">Cosa ha proposto ${COACH_NAME}</span></div>
+    <ul class="cp-hist">${lista.map(p => {
+      const [lbl, bg, fg] = _CP_STATO[p.status] || _CP_STATO.pending;
+      return `<li><div class="cp-hist-top"><span class="cp-hist-title">${esc(p.title)}</span>${_wpPill(lbl, bg, fg)}</div><div class="cp-reason">${esc(p.reason)}</div></li>`;
+    }).join('')}</ul>
+  </section>`;
+}
+function _cpRerender(){ if(ST.page === 'home') renderHome(); }
+function _cpSetBusy(id, v){ ST.cpBusy = ST.cpBusy || {}; if(v) ST.cpBusy[id] = v; else delete ST.cpBusy[id]; _cpRerender(); }
+async function _cpMark(p, status, applied){
+  const now = new Date().toISOString();
+  const patch = { status, decided_at: now };
+  if(applied) patch.applied_at = now;
+  const res = await dbq(status === 'accepted' ? 'accettare la proposta' : 'rimandare la proposta',
+    supa.from('coach_proposals').update(patch).eq('id', p.id).eq('user_id', ST.user.id));
+  if(res.error) return false;
+  Object.assign(p, patch);
+  return true;
+}
+// Scrive i campi del profilo; se poi la proposta non si segna, li rimette com'erano.
+async function _cpUpdateProfile(updates){
+  const prima = {};
+  Object.keys(updates).forEach(k => { prima[k] = ST.profile ? ST.profile[k] : null; });
+  const res = await dbq('aggiornare i target', supa.from('profiles').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', ST.user.id));
+  if(res.error) return null;
+  return prima;
+}
+async function _cpRollbackProfile(prima){
+  const res = await dbq('rimettere i target di prima', supa.from('profiles').update(prima).eq('id', ST.user.id), { silenzioso:true });
+  if(res.error) console.error('[pirsi] rollback profilo fallito:', res.error);
+}
+function _cpApplyLocal(updates){
+  if(!ST.profile) return;
+  Object.assign(ST.profile, updates);
+  applyProfile(ST.profile);
+  try { saveCache(); } catch(e){}
+}
+async function acceptCoachProposal(id){
+  const p = (ST.coachProposals || []).find(x => x.id === id);
+  if(!p || p.status !== 'pending' || (ST.cpBusy && ST.cpBusy[id])) return;
+  _cpSetBusy(id, 'yes');
+  let vai = null;                          // dove portare l'utente dopo, a card già aggiornata
+  try {
+    const ch = p.change || {};
+    if(p.kind === 'kcal' && ch.target_kcal){
+      const updates = _cpTargetsFor(Number(ch.target_kcal.to));
+      const prima = await _cpUpdateProfile(updates);
+      if(!prima) return;
+      if(!(await _cpMark(p, 'accepted', true))){ await _cpRollbackProfile(prima); return; }
+      _cpApplyLocal(updates);
+      showToast(`Da domani il piano usa ${fmtNum(updates.target_kcal)} kcal`, '✅', 4500);
+    } else if(p.kind === 'protein' && ch.target_protein){
+      const g = Number(ch.target_protein.to);
+      const updates = _cpTargetsFor(Number((ST.profile && ST.profile.target_kcal) || (ST.TARGET && ST.TARGET.kcal)), g);
+      const prima = await _cpUpdateProfile(updates);
+      if(!prima) return;
+      if(!(await _cpMark(p, 'accepted', true))){ await _cpRollbackProfile(prima); return; }
+      _cpSetProteinFloor(g);
+      _cpApplyLocal(updates);
+      showToast(`Proteine a ${fmtNum(updates.target_protein)} g: da domani il piano le usa`, '✅', 4500);
+    } else if(p.kind === 'training_volume' && ch.giorni_allenamento){
+      const to = Number(ch.giorni_allenamento.to);
+      if(COACH_SUPPORTED_DAYS.includes(to)){
+        const prima = await _cpUpdateProfile({ giorni_allenamento: to });
+        if(!prima) return;
+        if(!(await _cpMark(p, 'accepted', true))){ await _cpRollbackProfile(prima); return; }
+        _cpApplyLocal({ giorni_allenamento: to });
+        showToast(`${to} allenamenti a settimana da ora`, '✅', 4500);
+      } else {
+        // La rotazione a quei giorni non esiste (cantiere 20): si segna la scelta, profilo e scheda restano.
+        if(!(await _cpMark(p, 'accepted', false))) return;
+        showToast(`Segnato: fanne ${to} a settimana. La scheda a ${to} giorni non c'è ancora, tieni la tua`, '✅', 5500);
+      }
+    } else if(p.kind === 'deload'){
+      if(!(await _cpMark(p, 'accepted', true))) return;
+      ST.coachDeloads = [...(ST.coachDeloads || []), todayKey()];
+      showToast('Scarico da oggi: stessi esercizi e serie, carichi più leggeri', '✅', 4500);
+    } else {
+      if(!(await _cpMark(p, 'accepted', false))) return;
+      if(p.kind === 'weigh_in') vai = () => openWeighInSheet();
+      else if(p.kind === 'logging') vai = () => showPage('oggi');
+      else if(p.kind === 'check' || p.kind === 'blood_test') vai = () => { ST.bodyTab = 'check'; showPage('body'); };
+      else showToast('Bene, questa settimana non cambio nulla', '✅', 4000);
+    }
+  } catch(e){
+    console.error('[pirsi] accettazione:', e);
+    showToast('Non sono riuscito a salvare la scelta: riprova', '⚠️', 5500);
+  } finally {
+    _cpSetBusy(id, null);
+  }
+  if(vai) vai();
+}
+async function rejectCoachProposal(id){
+  const p = (ST.coachProposals || []).find(x => x.id === id);
+  if(!p || p.status !== 'pending' || (ST.cpBusy && ST.cpBusy[id])) return;
+  _cpSetBusy(id, 'no');
+  try {
+    if(await _cpMark(p, 'rejected', false)) showToast('Va bene, per ora lascio tutto com\'è', '✅', 4000);
+  } finally {
+    _cpSetBusy(id, null);
   }
 }
 
@@ -8425,7 +8643,7 @@ function renderQuadroView(){
     vai('esami', 'Esami'));
 
   const alert = err.length ? `<div class="wp-alert">Alcuni dati non si sono caricati: le sezioni interessate lo dicono.</div>` : '';
-  return head + alert + secPeso + secNutr + secTrain + secCorpo + secEsami;
+  return head + alert + secPeso + secNutr + secTrain + secCorpo + secEsami + _cpHistoryHTML(ws);
 }
 
 function renderHomeV2(){
@@ -8669,6 +8887,7 @@ function _renderHomeCards(){
         <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
       </div>
       ${_wpHomeCardHTML()}
+      ${_cpHomeCardHTML()}
       ${nutritionCard}
       ${trainingCard}
       ${bodyCard}

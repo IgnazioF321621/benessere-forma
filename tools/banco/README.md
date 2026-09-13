@@ -15,6 +15,7 @@ node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
 node tools/banco/verifica_proposte_vivo.js [user] [N]  # dal vivo: proposte sulle ultime N settimane salvate
 node tools/banco/prova_pirsi_generazione.js # ripiego dell'app che genera le proposte + scarico anticipato nel ciclo
+node tools/banco/prova_pirsi_card.js [cartella] # card «Pirsi propone», Accetto / Non ora, cronologia nel quadro, schermate
 TZ=UTC node worker/test/prova_coach_cron.mjs # il cron del lunedì con fetch finto, in UTC come Cloudflare
 TZ=UTC node worker/test/vivo_coach_cron.mjs  # dal vivo, in prova: quadri del Worker contro quelli del telefono, giro senza scritture
 node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch finto (niente jsdom)
