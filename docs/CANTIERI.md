@@ -649,7 +649,7 @@ Registrato l'11 agosto, stato aggiornato al 13 settembre. **Non è più l'ordine
 | 3 | ~~Spalle e Cuffia~~ | 63 | ✅ **chiusa il 23 agosto** sui tre lavori |
 | 4 | ~~Tricipiti~~ | 59 | ✅ **chiusa il 24 agosto** sui tre lavori — 59 GIF · 59 righe · 59 codici |
 | 5 | ~~Schiena e Trapezio~~ | 112 | ✅ **chiusa il 31 agosto** sui tre lavori |
-| 6 | **Mobilità** | 215 | l'unica ancora aperta |
+| 6 | **Mobilità** | 133 | l'unica ancora aperta |
 
 > **Perché Spalle e Cuffia passa avanti a Tricipiti, Schiena e Mobilità**: contiene i gruppi più poveri del pool — deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. Il deltoide posteriore è slot obbligatorio in quasi ogni Upper, quindi oggi esce lo stesso esercizio blocco dopo blocco. È il cantiere che cambia davvero l'allenamento, non la zona più grossa.
 
