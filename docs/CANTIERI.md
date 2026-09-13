@@ -2,13 +2,27 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 12 settembre 2026.*
+*Aggiornato: 13 settembre 2026.*
 
 Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
 ---
 
 # Cantieri aperti
+
+## 34. Lettura delle foto dei check — cosa osservare dopo il rilascio
+*Aperto il 13 settembre 2026, a chiusura della Fase 2. Niente di rotto: sono misure che servono l'uso vero.*
+
+- **Costo per lettura.** Ogni lettura salva i token in `result.meta.usage`. Misurati sulle due letture di collaudo con `gemini-3.1-flash-lite` (0,25 $/M in ingresso, 1,50 $/M in uscita): coppia di check **9.911 + 245 token ≈ 0,29 centesimi di dollaro**, primo check **5.541 + 195 ≈ 0,17**. Con il nuovo tentativo sul JSON il caso peggiore raddoppia. Sul piano gratuito della chiave il costo è zero ma valgono i limiti di richieste: dopo qualche settimana d'uso, rileggere `meta.usage` da `body_check_ai` e confermare o correggere la stima
+- **Binding Images di Cloudflare.** Riduce le 8 foto a 1024 px (`meta.resized = true` in entrambe le letture). Le trasformazioni si contano uniche per foto e parametri al mese: **da verificare nel pannello Cloudflare** a quale piano appartengono e quante ne restano. Se il binding manca o fallisce, il Worker manda l'originale e lo dichiara (`resized = false`): con foto da 2-3 MB l'una la coppia sfiora il limite di 20 MB di Gemini, e lì la chiamata fallirebbe
+- **La regola «le misure prevalgono».** Sulla coppia 2 agosto / 4 luglio il modello ha scritto `stabile` con misure miste (vita −2, fianchi +4, petto −3, peso −0,9) e ha detto nel summary che foto e misure non vanno nella stessa direzione. È il comportamento chiesto; va riguardato sulla prima lettura di un check con misure tutte nello stesso verso
+- **Nessun «rifai la lettura».** Dopo i 10 minuti il Worker accetta una lettura nuova sullo stesso check e sovrascrive la riga, ma l'app non offre il pulsante: la card, una volta fatta, resta quella. Da decidere se serve
+- **Il modello.** `gemini-2.5-flash-lite` (0,10 / 0,40 $/M, il più economico in listino) risponde **404** a questa chiave: la documentazione lo dà stabile, la chiave non lo vede. Se un giorno torna disponibile, va provato sulle stesse due coppie prima di cambiare
+
+## 35. Tab Body: grafici Tendenza e «Ultimi log» senza le pesate rapide
+*Aperto il 13 settembre 2026, dall'allineamento del peso attuale → [L48](LEZIONI.md#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda).*
+
+Il 13 settembre numero grande, pillola in alto e card Body in Home hanno smesso di ignorare `weight_logs` (`getWeighIns()`). **Non l'hanno fatto** il grafico del peso nel tab Tendenza e l'elenco «Ultimi log», che leggono ancora `getUnifiedBodyTimeline()` — solo `body_logs` e misure dei check. Per Ignazio la Tendenza del peso ha quindi 5 punti (1 log + 4 check) invece di 17. Lasciati fuori di proposito: «Ultimi log» ha il pulsante di cancellazione per riga, e una pesata rapida lì dentro va cancellata da `weight_logs`, che oggi quel pulsante non conosce.
 
 ## 31. Il codice esercizio dentro `training_logs`
 *Aperto il 12 settembre 2026, dalla diagnosi dei risultati della settimana precedente → [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave).*
@@ -428,6 +442,39 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## Check fotografico AI — ✅ chiuso 13 settembre 2026
+*Fase 2. Le foto dei check lette da Gemini, come suggerimento: l'app mostra, non cambia niente. Regole in `CLAUDE.md` → Lettura AI dei check.*
+
+In ordine di commit:
+
+- **peso attuale** (`7b37d0b`) — nel quadro il numero grande è l'ultima pesata, sotto media della settimana e obiettivo. Allineati tab Body, pillola e card Body: per Ignazio dicevano 69,95 (check del 2 agosto) contro la pesata di oggi, 72,1 → [L48](LEZIONI.md#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda)
+- **tabella** (`201c17a`) — `body_check_ai`, migrazione eseguita da Ignazio il 13 settembre. RLS provata col token utente: SELECT 2 righe proprie, INSERT 403, UPDATE e DELETE 0 righe, anonimo 0
+- **prompt** (`c91b690`) — `worker/src/prompts/vision-check-2026-09-13.js`
+- **Worker** (`26f4586`) — `POST /vision-check`, versione `fc496e50`
+- **app** (`9b67878`) — card «Lettura di Pirsi» nel dettaglio check, proposta a fine M2, riga nel blocco Corpo del quadro. Schermate in `docs/screenshots/fase2/`
+
+**Le letture di collaudo, dal vivo:**
+
+| check | tempo | token in / out | esito |
+|---|---|---|---|
+| 2 agosto contro 4 luglio | 9,2 s | 9.911 / 245 | `stabile`, affidabilità `media`, foto `ok: false` (abbigliamento e distanza diversi) |
+| 13 maggio, primo check | 5,7 s | 5.541 / 195 | `primo_check`, affidabilità `bassa` (luce, distanza e posa diverse fra le pose) |
+
+Doppio tocco sulla coppia: 429 in 0,5 s. Token errato: 401. Check di un altro utente: 403. Le due righe restano in `body_check_ai`, e sono quelle che Ignazio vede aprendo i due check.
+
+**Le scelte che il brief non diceva, o diceva diversamente:**
+
+- **il Worker non chiamava Gemini.** Il brief chiedeva di riusarne client e chiave: non esistevano, c'erano solo Groq (testo) e il lookup GIF. Chiave nuova creata da Ignazio (`GEMINI_API_KEY`). Sul piano gratuito, in UE, Google applica le regole del piano a pagamento: i contenuti non vengono usati per migliorare i prodotti
+- **quattro pose, non tre.** Le righe di `body_check_photos` hanno `front · right · left · back`, nessun `side`. Si mandano tutte e quattro, e una posa mancante si dichiara come `foto mancante: right`
+- **il check del 2 agosto ha un precedente** (4 luglio). La lettura «senza precedente» è stata fatta sul primo check vero, il 13 maggio: una lettura `primo_check` salvata sul 2 agosto sarebbe comparsa a Ignazio sbagliata
+- **niente «AI» a schermo** (scelta di Ignazio): card «Lettura di Pirsi», pulsante «Confronta le foto con Pirsi →», «Fai leggere le foto a Pirsi →» su un primo check
+- **`photo_quality.issues` a vocabolario chiuso** (8 voci), perché l'app le traduce in consigli; `foto mancante: <posa>` la aggiunge il Worker, non il modello
+- **la proposta a fine M2 compare solo se c'è un check con cui confrontare**; sul primo check il pulsante resta nel dettaglio
+- **nel quadro, le settimane chiuse non si riscrivono**: la lettura compare dalla settimana in corso, e in una settimana chiusa solo se fatta prima della sua domenica
+- **peso attuale: «oggi», non «stamattina»** — `weight_logs` non dice l'ora, e una pesata della sera diventerebbe «stamattina». Obiettivo in parole: «mancano 4,1 kg da perdere» / «da prendere» / «raggiunto»
 
 ---
 

@@ -1,10 +1,10 @@
 # Zona Tracker
 
-PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 12 settembre 2026)*
+PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settembre 2026)*
 
 **Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md); come si nominano gli esercizi in [`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md) (allegato normativo, in vigore). Non serve leggere gli archivi per lavorare: si aprono quando servono.
 
-**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Quadro settimanale · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
+**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Quadro settimanale · Lettura AI dei check · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
 
 ## File e URL
 
@@ -18,10 +18,10 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 12 settemb
 
 | Servizio | URL | Scopo |
 |---|---|---|
-| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF |
+| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF + lettura foto dei check (Gemini `gemini-3.1-flash-lite`) |
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
-Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY`. Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `68df3dba`.
+Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY` (Groq) + `GEMINI_API_KEY`. Binding: `IMAGES` (riduzione foto dei check). Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `fc496e50`.
 
 ---
 
@@ -54,13 +54,14 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - **Paginare sempre** le SELECT su tabelle >1000 righe (es. `biblioteca_gif`): PostgREST tronca al limite default → [L13](docs/LEZIONI.md#l13--postgrest-tronca-le-select-al-limite-default)
 - Il ciclo canonico a 7 include `rest`: ogni logica che itera il ciclo deve gestire slot non loggabili (`rest`/`rest_injury`)
 - La settimana ciclo si legge SOLO da `getCycleWeekInfo()` — vietato ricalcolarla inline
+- **Il peso attuale si legge SOLO da `weighInsByDay`** (`getWeighIns()` nel tab Body): una pesata al giorno, `weight_logs` > `body_logs` > misure del check. Quadro, numero grande del tab Body, pillola in alto e card Body in Home passano tutti da lì → [L48](docs/LEZIONI.md#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda). Fuori, per ora: grafico Tendenza e «Ultimi log» ([cantiere 35](docs/CANTIERI.md#35-tab-body-grafici-tendenza-e-ultimi-log-senza-le-pesate-rapide))
 - TSV/CSV da Google Sheet: **UTF-8 con BOM + CRLF** — usare `encoding='utf-8-sig'` e controllare il conteggio righe parsate → [L14](docs/LEZIONI.md#l14--i-tsv-da-google-sheet-arrivano-utf-8-con-bom-e-crlf)
 - **Path e nomi file SEMPRE ASCII**: Storage rifiuta chiavi NFD con `400 InvalidKey`. Normalizzare a NFC, poi traslitterare → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta). Accenti solo in `nome_italiano`/catalogo, mai nel path o filename
 - Il `:` nel filename è ammesso in Storage e NON viene sanificato (verificato su 5 file in `Tricipiti/`)
 
 ---
 
-## Stato corrente (31 agosto 2026)
+## Stato corrente (13 settembre 2026)
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b in stand-by.
 
@@ -70,9 +71,9 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Catalogo GIF** — **661 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Schiena e Trapezio** — **chiusa il 31 agosto su tutti e tre i lavori**: 113 oggetti, 113 righe, 110 codici, 0 righe senza oggetto e 0 oggetti senza riga. Le 18 GIF calisthenics senza codice sono diventate **EX721-EX738**, e prima di loro EX717-EX720; 3 righe restano senza codice **per decisione**, non per arretrato. **Resta una zona sola: Mobilità** (~215 GIF, mai entrata nel bucket). Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
 
-**Quadro settimanale** ✅ chiuso 12 settembre — card «La tua settimana» in Home e vista completa, calcolo e storico. `weekly_pictures` creata e collaudata il 13 settembre: 8 settimane, 0 doppioni, 8/8 uguali al ricalcolo. Regole in [Quadro settimanale](#quadro-settimanale).
+**Quadro settimanale** ✅ chiuso 12 settembre — card «La tua settimana» in Home e vista completa, calcolo e storico. Dal 13 settembre il blocco Peso ha il **peso attuale** grande (ultima pesata) con media e obiettivo sotto. `weekly_pictures` creata e collaudata il 13 settembre: 8 settimane, 0 doppioni, 8/8 uguali al ricalcolo. Regole in [Quadro settimanale](#quadro-settimanale).
 
-**Body** — M2 check fisico funzionante. Dal 12 settembre la CTA «Nuovo check fisico» è **fissa nell'intestazione del tab**, visibile nei tre tab e in tutti gli stati, con reminder di fine blocco (42 giorni da `train_start_date`, nessun check completato nelle ultime 4 settimane) e **storico degli esami del sangue** in coda al tab Check. Da ri-agganciare a fine blocco Training.
+**Body** — M2 check fisico funzionante. Dal 12 settembre la CTA «Nuovo check fisico» è **fissa nell'intestazione del tab**, visibile nei tre tab e in tutti gli stati, con reminder di fine blocco (42 giorni da `train_start_date`, nessun check completato nelle ultime 4 settimane) e **storico degli esami del sangue** in coda al tab Check. Da ri-agganciare a fine blocco Training. **Lettura delle foto dei check** ✅ dal 13 settembre: regole in [Lettura AI dei check](#lettura-ai-dei-check).
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
@@ -204,7 +205,7 @@ Bucket Storage `biblioteca-gif`: **686 oggetti in 9 cartelle** (misurato 31 agos
 `id, plan_id→weekly_plans CASCADE, user_id, day_of_week (1-7), slot, description, ingredients jsonb, meal_time, kcal/protein/carbs/fat, ai_explanation, sort_order`.
 
 ### Altre tabelle
-`weekly_pictures (user_id+week_start UNIQUE, picture jsonb, computed_at — storico del [Quadro settimanale](#quadro-settimanale))` · `workouts (date, session_type, completed — fonte del calendario e della rotazione; rest/rest_injury inclusi)` · `blood_tests (test_date + hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh — nessun intervallo di riferimento a schema: etichette e unità in `BLOOD_FIELDS`, [cantiere 32](docs/CANTIERI.md#32-intervalli-di-riferimento-degli-esami-del-sangue))` · `body_checks (status in_progress/completed)` · `body_measurements (check_id)` · `body_logs (weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip/chest/bicep_cm, body_age — no UNIQUE)` · `weight_logs (UNIQUE user_id+date)` · `supplements_log (UNIQUE user_id+date+supplement_name, is_extra, snapshot macro)` · `supplement_packages + supplement_package_items (UNIQUE package_id+supplement_id)` · `ai_memory (category, content, confidence, evidence_count, last_observed, active)` · `weekly_plan_acceptance (plan_meal_id→CASCADE, status, actual_meal_id→SET NULL — UNIQUE plan_meal_id)` · `nutrilite_catalog (64 prodotti, SELECT pubblica)` · `fasting_days, supplements, workout_sets`.
+`weekly_pictures (user_id+week_start UNIQUE, picture jsonb, computed_at — storico del [Quadro settimanale](#quadro-settimanale))` · `body_check_ai (check_id UNIQUE, previous_check_id, model, result jsonb, confidence bassa/media/alta, created_at — RLS solo SELECT sulle proprie righe, scrive il Worker: [Lettura AI dei check](#lettura-ai-dei-check))` · `body_check_photos (check_id, pose front/right/left/back — quattro, nessun side —, storage_path nel bucket privato body-check-photos)` · `workouts (date, session_type, completed — fonte del calendario e della rotazione; rest/rest_injury inclusi)` · `blood_tests (test_date + hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh — nessun intervallo di riferimento a schema: etichette e unità in `BLOOD_FIELDS`, [cantiere 32](docs/CANTIERI.md#32-intervalli-di-riferimento-degli-esami-del-sangue))` · `body_checks (status in_progress/completed)` · `body_measurements (check_id)` · `body_logs (weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip/chest/bicep_cm, body_age — no UNIQUE)` · `weight_logs (UNIQUE user_id+date)` · `supplements_log (UNIQUE user_id+date+supplement_name, is_extra, snapshot macro)` · `supplement_packages + supplement_package_items (UNIQUE package_id+supplement_id)` · `ai_memory (category, content, confidence, evidence_count, last_observed, active)` · `weekly_plan_acceptance (plan_meal_id→CASCADE, status, actual_meal_id→SET NULL — UNIQUE plan_meal_id)` · `nutrilite_catalog (64 prodotti, SELECT pubblica)` · `fasting_days, supplements, workout_sets`.
 
 ---
 
@@ -433,10 +434,10 @@ Indice: 1 nome unico · 2 formula e default omessi · 3 maiuscole · 4 panche ·
 `buildWeeklyPicture(weekStart)` = `_wpFetch` (legge) + `computeWeeklyPicture` (calcola, senza rete). Forma dell'oggetto:
 
 ```
-weight     { weight_avg, weight_n, weight_delta_prev, weight_trend_4w, weight_target }
+weight     { weight_avg, weight_n, weight_delta_prev, weight_trend_4w, weight_target, weight_last, weight_last_date }
 nutrition  { kcal_target, protein_target, kcal_avg, protein_avg, days_logged, adherence_kcal, partial, days_under_75 }
 training   { sessions_planned, sessions_done, sessions_missed, recovery_done, block_week, is_deload, volume_sets, avg_rir, injury_days, injury_active }
-body       { last_check_date, days_since_check, check_due, last_measurements{ chiave: {value, delta} }, prev_check_date }
+body       { last_check_date, days_since_check, check_due, last_measurements{ chiave: {value, delta} }, prev_check_date, ai_overall, ai_confidence, ai_check_date }
 blood      { last_test_date, days_since_test, test_count }
 meta       { version, week_start, week_end, is_closed, computed_at, completeness (0-1, su 5 blocchi), errors[] }
 ```
@@ -445,11 +446,80 @@ meta       { version, week_start, week_end, is_closed, computed_at, completeness
 
 - **Fonti**: peso da `weight_logs` > `body_logs` > `body_measurements`, una pesata al giorno → [L47](docs/LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta) · pasti da `meals` · sessioni da `workouts` (come il calendario) · serie e RIR da `training_logs` · check da `body_checks` completati + `body_measurements` · esami da `blood_tests`
 - **Settimana chiusa**: «adesso» è la fine della domenica, così un ricalcolo domani dà gli stessi numeri (tranne `computed_at`)
+- **Peso attuale** *(dal 13 settembre)*: `weight_last` è l'ultima pesata fino all'«adesso» del quadro, dentro le 5 settimane lette. È «attuale» se non più vecchia di **7 giorni** rispetto a quell'adesso, altrimenti a schermo «Non registrato» e il pulsante Pesati anche nella card Home. L'etichetta di data si legge da oggi: «oggi», «ieri», «N giorni fa», oltre 7 giorni la data. Con una pesata sola nella settimana la media non si mostra. Obiettivo: «mancano X kg da perdere / da prendere», «raggiunto»
+- **Lettura delle foto** *(dal 13 settembre)*: `ai_*` = ultima lettura in `body_check_ai` del check più recente che ne ha una, **fatta entro l'adesso del quadro**. `body_check_ai` assente (`PGRST205`) = nessuna lettura, non un errore
+- **Campi aggiunti dopo il salvataggio**: le righe di `weekly_pictures` salvate prima del 13 settembre non hanno `weight_last*` né `ai_*`, e **non si riscrivono**. Per la vista `weight_last*` si ricalcola al volo; `verifica_quadro_vivo.js` confronta il resto
 - **Settimana ciclo e reminder check non si ricalcolano mai inline**: si chiamano `getCycleWeekInfo({ completed, asOf })` e `getBlockCheckReminder({ nowTs, checks })`, che senza argomenti fanno ciò che hanno sempre fatto
 - **Nutrizione parziale**: metà o più dei giorni registrati sotto il 75% del target. Si etichetta, non si corregge con stime
 - **Stato**: `ST.weeklyPicture[lunedì]` per la sessione. La corrente si ricalcola a ogni apertura della Home; le chiuse si leggono da `weekly_pictures`, e se manca la riga si calcolano e si salvano
 - **`weekly_pictures`** (`user_id, week_start` UNIQUE, `picture` jsonb, RLS sulle proprie righe): backfill di 8 settimane una volta per sessione, **mai prima della settimana di nascita del profilo**, **mai la corrente**, **mai un quadro con `meta.errors`**. Migrazione in `supabase/migrations/20260912_weekly_pictures.sql`. ⚠️ `jsonb` riordina le chiavi: un quadro letto dal DB si confronta col ricalcolo **a chiavi ordinate**, mai come stringa Tabella assente (`PGRST205`) → nessun avviso, solo calcolo dal vivo
-- **Verifica**: `tools/banco/prova_quadro_calcolo.js` · `prova_quadro_vista.js` · `prova_quadro_storico.js` (senza rete) · `verifica_quadro_vivo.js` (dati veri, sola lettura, serve `npm install jsdom @supabase/supabase-js` fuori dal repo)
+- **Verifica**: `tools/banco/prova_quadro_calcolo.js` · `prova_quadro_vista.js` · `prova_quadro_storico.js` · `prova_quadro_peso.js` (senza rete, orologio fermo) · `verifica_quadro_vivo.js` (dati veri, sola lettura, serve `npm install jsdom @supabase/supabase-js` fuori dal repo)
+
+---
+
+## Lettura AI dei check
+
+**In vigore dal 13 settembre 2026 (Fase 2).** Le foto di un check fisico lette da Gemini, confrontate col check completato subito prima. **È un suggerimento, mai un automatismo**: parte solo da un tocco, si salva, si mostra. Non cambia scheda, piano, target né niente altro.
+
+### Circuito e chiavi
+
+Bucket privato `body-check-photos` → Worker (chiave di servizio) → Gemini. **Le foto non passano mai dall'app** e le chiavi stanno solo nei secret del Worker. Il Worker **non scrive mai nei log** il contenuto delle foto: solo stato HTTP e tipo d'errore.
+
+### `POST /vision-check`
+
+Corpo `{ user_id, check_id_current, check_id_previous }` (il precedente può mancare: primo check), header `Authorization: Bearer <token utente Supabase>`. Codice in `worker/src/vision-check.js`.
+
+1. token verificato su `/auth/v1/user` → **401** se non valido; token, `user_id` e check devono coincidere → **403**; check non completato → **409**; precedente più recente dell'attuale → **400**
+2. anti doppio tocco: **una lettura per check ogni 10 minuti** (da `body_check_ai.created_at`) più un blocco sulle richieste in volo → **429** `too-soon` / `in-progress`
+3. legge le **quattro pose** `front · right · left · back` dei due check; una posa mancante non ferma, si dichiara (`foto mancante: right` in `photo_quality.issues`, `ok = false`)
+4. riduce ogni foto a **1024 px** sul lato lungo col binding `IMAGES`; se non riesce manda l'originale e lo dice in `meta.resized`
+5. manda le misure dei due check come testo (peso, vita, fianchi, petto, % grasso, giorni fra i check, differenze) e le foto etichettate, prima il precedente poi l'attuale
+6. JSON con schema, validato; **un solo nuovo tentativo**, poi **502** `invalid-json`
+7. upsert su `body_check_ai` (una riga per check) e risposta `{ ok, reading }`
+
+Tempo massimo **60 s**. Errori di Gemini verso l'app: 429 resta 429 (`rate-limit`), il resto 502 col codice vero nel messaggio. Tabella assente → **503** `table-missing`, prima di chiamare il modello.
+
+### Schema del giudizio
+
+```
+{
+  "overall": "migliorato" | "stabile" | "peggiorato" | "primo_check",
+  "confidence": "bassa" | "media" | "alta",
+  "areas": [ { "zona": "addome|torace|spalle|braccia|schiena|gambe", "change": "più definito|uguale|meno definito|non valutabile", "note": "una frase" } ],
+  "photo_quality": { "ok": true|false, "issues": [ ... ] },
+  "summary": "2–3 frasi",
+  "suggested_focus": "una frase oppure vuoto",
+  "meta": { "prompt_version", "poses_current", "poses_previous", "days_between", "resized", "usage" }   ← aggiunto dal Worker
+}
+```
+
+`issues` a **vocabolario chiuso**, perché l'app le traduce in consigli: `luce diversa · distanza diversa · posa diversa · sfondo diverso · abbigliamento diverso · luce scarsa · foto sfocata · inquadratura parziale`, più `foto mancante: <posa>` che scrive **il Worker, non il modello**. Primo check: `overall = primo_check` e `areas = []`, altrimenti la risposta non è valida.
+
+### Prompt
+
+In `worker/src/prompts/vision-check-<data>.js`, **un file per versione**: una versione nuova è un file nuovo, e la data finisce in `meta.prompt_version`. Regole portanti:
+
+- **solo giudizio qualitativo**: mai percentuali di grasso, kg o cm stimati dalle foto
+- **nessun commento estetico** né giudizio sulla persona
+- foto non confrontabili → `confidence = bassa` e `overall = stabile`
+- **le misure prevalgono** sull'impressione visiva, e il disaccordo si dice nel `summary`
+- primo check: niente confronto, solo qualità delle foto e cosa tenere uguale la volta dopo
+
+Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-E.
+
+### Modello e costo
+
+`gemini-3.1-flash-lite`: 0,25 $/M token in ingresso, 1,50 $/M in uscita. Misurato: **coppia di check ≈ 0,29 centesimi di dollaro** (9.911 + 245 token), primo check ≈ 0,17. `gemini-2.5-flash-lite`, più economico in listino, a questa chiave risponde **404**. Osservazioni aperte nel [cantiere 34](docs/CANTIERI.md#34-lettura-delle-foto-dei-check--cosa-osservare-dopo-il-rilascio).
+
+### Nell'app
+
+- **dettaglio di un check completato** (`bcaCardHTML` in `renderBodyCheckDetail`): con lettura, card «Lettura di Pirsi» — esito, pallino di affidabilità (bassa grigio · media ambra `--warn` · alta evergreen), summary, **solo le zone diverse da `uguale` e `non valutabile`**, consiglio per le prossime 4 settimane, e con `photo_quality.ok = false` il riquadro «Per un confronto migliore la prossima volta:». Senza lettura, il pulsante in tinta Body `#5E4A7A`: «Confronta le foto con Pirsi →», o «Fai leggere le foto a Pirsi →» se non c'è un check precedente. Durante la chiamata spinner «Sto guardando le foto…» e pulsante spento
+- **nota fissa, sempre**: «Lettura indicativa basata sulle foto: contano più le misure e la tendenza del peso.»
+- **fine flusso M2**: se esiste un check con cui confrontare, proposta «Vuoi che Pirsi confronti le foto con l'ultimo check?» con Confronta / Non ora, 15 s. **Non parte da sola**
+- **quadro, blocco Corpo**: riga «Lettura foto del <data>: <esito> · <affidabilità>»
+- ⚠️ **a schermo non si scrive «AI»** (regola del design system, confermata da Ignazio per questa card): il ruolo è il coach, il nome è Pirsi
+
+**Verifica**: `node worker/test/prova_vision_check.mjs` (Worker con fetch finto) · `node tools/banco/prova_lettura_foto.js` (app, senza rete).
 
 ---
 
@@ -503,9 +573,9 @@ Le ultime due esistono per chi l'onboarding non lo rifà (Ornella, Isabella): in
 
 ### Il registro nei prompt
 
-I cinque prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio) dichiarano l'identità `Sei Pirsi, il coach…` più l'ordine di parlare in prima persona senza nominarsi né firmarsi. **F, G, H restituiscono solo JSON e non hanno identità.**
+I prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio · **I** lettura delle foto dei check, nel Worker dal 13 settembre) dichiarano l'identità `Sei Pirsi, il coach…` più l'ordine di parlare in prima persona senza nominarsi né firmarsi. **F, G, H restituiscono solo JSON e non hanno identità.** I restituisce JSON anche lui, ma `summary` e `suggested_focus` si leggono a schermo: per questo ha identità e registro.
 
-**B, C, D, E condividono un paragrafo di registro identico, 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
+**B, C, D, E (e dal 13 settembre I) condividono un paragrafo di registro identico, 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
 
 ⚠️ **Gli esempi valgono più degli aggettivi.** "Amico diretto" al modello dice poco; una frase scritta come la direbbe Pirsi gli dice tutto. B, C, E hanno un **esempio di tono** dichiarato come modello di *voce e non di contenuto*, coi suoi numeri e alimenti dichiarati inventati. L'esempio di C contiene un rimprovero (cene saltate) e porta con sé una guardia esplicita: **mai attribuire all'utente mancanze che non risultano dai dati ricevuti**.
 
@@ -738,3 +808,4 @@ Il racconto completo di ognuna è in [`docs/LEZIONI.md`](docs/LEZIONI.md).
 45. [Il nome mostrato a schermo non è una chiave](docs/LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave) — lo storico si collega per codice, non per nome
 46. [Quando la rete è chiusa, il banco si costruisce sul file vero](docs/LEZIONI.md#l46--quando-la-rete-è-chiusa-il-banco-di-prova-si-costruisce-sul-file-vero) — jsdom + fixture, e la stessa prova ripetuta sul codice di prima
 47. [Lo schema dice dove un dato può stare, le righe dove sta](docs/LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta) — il peso stava in `weight_logs`, non in `body_logs`
+48. [Si cercano tutti i posti che rispondono alla stessa domanda](docs/LEZIONI.md#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda) — il tab Body diceva 69,95, la pesata di oggi 72,1
