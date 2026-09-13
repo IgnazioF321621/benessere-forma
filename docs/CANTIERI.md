@@ -37,6 +37,118 @@ La Fase 3 non l'ha risolto, l'ha aggirato: un target proteico accettato da Pirsi
 
 Collegato: **«3 allenamenti invece di 4» non ha una scheda** ([cantiere 20](#20-generalizzare-lo-split-a-2-e-3-giorni)). Accettarla segna la scelta e basta: `giorni_allenamento` resta 4, perché con 3 la prossima rigenerazione produrrebbe la scheda d'emergenza.
 
+## 1. Test timer su workout reali
+Commit `e834320` (timer unificati timestamp-based) in osservazione. **PRIMA di qualunque altro cantiere Training.**
+
+## 2. Cantiere 600 GIF
+65 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
+
+Vedi anche [L20](LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio): un terzo dei "liberi" sono in realtà buchi di questo cantiere, non candidati nuovi.
+
+## 3. Pulizia Storage
+- **C**: 28 file L2 residui nelle zone curate (indicizzati, non referenziati)
+- **D**: bucket `exercise-media` legacy (**52 file, 6,9 MB** — rimisurato 7 agosto) — serve ancora ai 65 codici senza `gif_slug`: non si tocca finché il cantiere 2 non è chiuso
+- **E**: riallineamento indice `biblioteca_gif` — **924 righe** puntano a file inesistenti (il numero cala a ogni giro di pulizia)
+
+## 4. Lista da consolidare
+Coppie di codici distinti che puntano allo **stesso esercizio**. Non è materia di rinomina ma di consolidamento: un codice eliminato resta bruciato.
+
+Registro: `tools/biblioteca-nomi/lavoro/da_consolidare.tsv`, con il sopravvissuto e la motivazione riga per riga.
+
+**Ancora aperte, da Addominali e Core**: EX021/EX176 · EX139/EX184 · EX042/EX178 · `Russian twist` (file Mac di contenuto diverso da EX103).
+
+⚠️ Su queste tre coppie il sospetto è che **non siano consolidamenti**: i due nomi descrivono esercizi diversi (plank sulle mani contro avambracci, crunch contro sit-up, plank statico contro rollout) e condividono il file solo perché a uno dei due è stata attaccata la GIF sbagliata. Se è così la soluzione non è eliminare un codice ma dare a uno dei due la sua immagine: è **cantiere 2, non cantiere 4**. Sei GIF da guardare prima di decidere.
+
+Per il giro già eseguito vedi [Consolidamenti](#consolidamenti).
+
+## 5. Code catalogo
+- EX085: `gruppo_target='Gambe e Glutei'` fuori vocabolario
+- EX322: `'gambe'` fuori vocabolario
+- 56 righe con `nome_italiano` divergente nell'indice (residuo blocco rinomine)
+- 5 `alternativa` pendenti già bonificati, da monitorare se ne emergono altri
+
+## 6. Avviso corpo libero puro
+Con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o in generazione). Misurato il 2 agosto: pool principale 101 righe, `compoundMissing` = `tirata orizzontale` + `tirata verticale`.
+
+## 7. "Stacco da terra classico" — candidato senza codice
+Il file `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif` è ancora lì e non è mai stato deciso.
+
+⚠️ Una vecchia annotazione diceva "EX287": è **sbagliata**. EX287 è `Stacco rumeno una gamba palla medica` e non c'entra. Il confronto va fatto contro lo stacco da terra che sta a catalogo, da individuare.
+
+## 9. F.2b colazione/merenda
+Stand-by. Riattivare solo se l'onboarding lo richiede.
+
+## 10. Refresh onboarding M1
+Preferenze generazione piano (giorno/ora) + tracking peso.
+⚠️ `profiles_plan_day_check` ammette solo `'fri'/'sat'/'sun'`.
+
+## 11. Push notifications
+Sistema unico (piano + training + integratori).
+
+## 12. "Oggi ho solo X min"
+Compressione di una singola sessione senza toccare la progressione del blocco.
+
+## 13. Surrogati mancanti
+Censire gli esercizi con `luogo = palestra` **riproducibili a casa** con `surrogato_attrezzo` vuoto: oggi restano fuori dal pool senza che nessuno lo sappia. È il lavoro che colma buchi tipo "deltoidi posteriori: 1 candidato". Nella sola zona core ne sono già emersi 7.
+
+Metodo identico al cantiere GIF: gruppi da dieci con conferma visiva. Diagnostica di appoggio: `ztSchedaWhy()` → `_diag.compoundMissing`, riparata il 2 agosto (`d40faaf`).
+
+## 14. Dare un attrezzo agli slug inerti — metà fatto
+- ✅ `barra_corta`/`barra_lunga → barra`: **risolto** dal 5 agosto. EX642 `Leg press alternato barra elastico supino`, EX646 `Squat barra elastico` ed EX648 `Affondo barra elastico sul posto` sono le prime righe con `attrezzo = barra`.
+- ❌ `cavigliere → cavigliera`: ancora a 0 occorrenze. Dichiarabile in onboarding, apre zero esercizi, in silenzio (l'app lo constata, vedi `_diagGear`).
+
+**Strada**: aggiungerlo sul Sheet ai `surrogato_attrezzo` degli esercizi che lo useranno — conferma visiva, natura identica al cantiere 13. In alternativa toglierlo dall'onboarding.
+
+Contesto completo: [L2](LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste).
+
+## 15. Riclassificazione funzionale delle altre zone
+Il vocabolario anatomico vale ancora per le zone non core. Da valutare se il modello a funzioni (natura + piano) serva altrove o resti specifico del core.
+
+## 16. Liberi indicizzati senza codice
+GIF nel bucket e in `biblioteca_gif` che nessun codice punta. Se debbano diventare codici a catalogo è **decisione aperta, non presa**.
+
+⚠️ **Questo cantiere non cresce più.** Dall'11 agosto il popolamento del catalogo è il terzo lavoro obbligatorio di ogni cartella → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori). Quello che resta qui è l'arretrato delle zone chiuse **prima** della regola; le zone da Pettorali in poi si chiudono col catalogo già popolato.
+
+- **Da Bicipiti e Braccia: 5** — `curl-alternato-macchina` · `curl-alternato-manubri-panca-inclinata` · `curl-bilanciere-presa-larga` · `curl-bilanciere-presa-stretta` · `curl-manubri-panca-inclinata`. Stesso trattamento dei liberi di Addominali e Core.
+- **Gambe e Glutei: chiusa il 6 agosto** — delle 36, 10 erano GIF mancanti di codici già esistenti (agganciate), 25 sono diventate esercizi nuovi, 1 era una voce stantia. Zero scartate.
+
+## 17. Cinque attrezzi a catalogo non dichiarabili in onboarding
+È il cantiere 14 dal lato opposto: lì gli slug dichiarabili non aprivano esercizi, qui gli esercizi non sono raggiungibili da nessuno slug. Finché l'onboarding non li espone, questi **8 codici non escono mai dal generatore**:
+
+| token | codici |
+|---|---|
+| `sacco` | EX588 · EX595 |
+| `battle rope` | EX587 |
+| `scaletta agilità` | EX600 · EX603 |
+| `conetti` | EX597 · EX606 |
+| `corda per saltare` | EX610 |
+
+Cinque sono comunque eseguibili a casa — EX597/EX600/EX603/EX606 via surrogato `corpo libero`, EX610 di suo — quindi il buco è di **dichiarazione, non di fattibilità**.
+
+⚠️ `corda per saltare` è token distinto **apposta**: `corda` a catalogo è l'attacco al cavo (9 esercizi), e riusarlo aprirebbe i pullover al cavo a chi dichiara la corda per saltare.
+
+**Primo costo concreto misurato (3 agosto).** Sul pool Tabata di Ignazio (casa, avanzato) il grezzo è 30 e ne restano **25**. Dei 5 esclusi, **4 cadono per questi token** — EX587, EX588/EX595, EX610 — e il quinto (EX268) per i manubri, che invece sono dichiarabili. EX610 è il caso che pesa: eseguibile da chiunque abbia una corda, escluso solo perché il token non è dichiarabile.
+
+## 18. Testi di EX049 da riscrivere sulla propria GIF
+EX049 è `Skip ginocchia alte`, agganciato e verificato, ma `setup`/`esecuzione`/`errori` sono ancora quelli ereditati da `High knees a marcia`: «mani all'altezza dell'ombelico (pronate, palmi giù)», «alza il ginocchio verso la mano», «marcia non corsa».
+
+Quel testo **non descrive la sua GIF** — braccia libere in opposizione, ginocchio sopra l'orizzontale, fase di volo — ma descrive quasi parola per parola la GIF di **EX613 `Skip sul posto`**, i cui testi sono stati scritti apposta su mani ferme come riferimento e piede basso. Finché EX049 non viene riscritto i due testi si sovrappongono.
+
+## 19. Due attrezzi nuovi introdotti da Gambe e Glutei
+`bosu` (EX632) e `box` (EX617, EX643, EX672, EX673, EX675) non esistevano a catalogo e **non sono dichiarabili in onboarding**: è il cantiere 17 che si allarga.
+
+Tutti hanno però un `surrogato_attrezzo` (`corpo libero` per il Bosu, `panca` per il box), quindi restano raggiungibili e non si perde nessun esercizio. Da decidere in blocco col 17 se esporli o lasciarli vivere solo tramite surrogato.
+
+## 20. Generalizzare lo split a 2 e 3 giorni
+Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagnostico stanno in `CLAUDE.md`, sezione Split). Punti da toccare:
+
+- `SESSION_DAY_NUM` / `SESSION_DAY_NUM_5`
+- `_rotationDayMap()` / `getRotationCycle()` — discriminante binario sulla presenza di `upperC`
+- `DAY_SPLIT` in "I tuoi giorni" — hardcoded, due soli layout
+- `getCycleWeekInfo()` — `workPerGiro` derivato dal ciclo
+
+Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
+
 ## 31. Il codice esercizio dentro `training_logs`
 *Aperto il 12 settembre 2026, dalla diagnosi dei risultati della settimana precedente → [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave).*
 
