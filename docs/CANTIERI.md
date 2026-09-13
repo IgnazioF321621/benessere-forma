@@ -67,11 +67,6 @@ Per il giro già eseguito vedi [Consolidamenti](#consolidamenti).
 ## 6. Avviso corpo libero puro
 Con zero attrezzi non esistono tirate/deltoidi copribili: scelta UX (avviso in onboarding o in generazione). Misurato il 2 agosto: pool principale 101 righe, `compoundMissing` = `tirata orizzontale` + `tirata verticale`.
 
-## 7. "Stacco da terra classico" — candidato senza codice
-Il file `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif` è ancora lì e non è mai stato deciso.
-
-⚠️ Una vecchia annotazione diceva "EX287": è **sbagliata**. EX287 è `Stacco rumeno una gamba palla medica` e non c'entra. Il confronto va fatto contro lo stacco da terra che sta a catalogo, da individuare.
-
 ## 9. F.2b colazione/merenda
 Stand-by. Riattivare solo se l'onboarding lo richiede.
 
@@ -566,6 +561,17 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## 7. "Stacco da terra classico" — ✅ chiuso 13 settembre 2026: file non più esistente
+**Chiuso senza decisione, perché non c'è più niente da decidere.** Il 13 settembre il file candidato non esiste: nessun file con «classico» nel nome nella biblioteca, in `_ritirate/`, in `tools/` o nella cartella utente; mai stato in git; nessuna traccia in `log_rinomine.tsv` né nel registro delle decisioni. Il 3 agosto il pannello ha confermato i cinque stacchi da terra di oggi — bilanciere, manubri, sumo, trap bar, macchina (EX086, EX282–EX285) — e nessuno si chiamava «classico»: i due file sono spariti prima, fuori dagli strumenti del cantiere. Il Cestino di macOS non è stato letto (accesso negato).
+
+Il testo com'era:
+
+> Il file `Biblioteca di esercizi/Gambe e Glutei/Stacco da terra classico - CANDIDATO da confrontare.gif` è ancora lì e non è mai stato deciso.
+>
+> ⚠️ Una vecchia annotazione diceva "EX287": è **sbagliata**. EX287 è `Stacco rumeno una gamba palla medica` e non c'entra. Il confronto va fatto contro lo stacco da terra che sta a catalogo, da individuare.
 
 ---
 
