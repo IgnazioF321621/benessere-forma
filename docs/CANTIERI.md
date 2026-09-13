@@ -163,6 +163,8 @@ Rigenerare non chiede disciplina: chiede un comando, e il comando misura il vivo
 
 Resta aperta una domanda, ma è del cantiere nomi e non di questo: quale delle due animazioni sia quella giusta per quell'esercizio. Nel bucket c'è la prima, ed è quella che l'app mostra da sempre.
 
+⚠️ **Due di quei tre fermano `verifica_480.py` su questa zona — falso allarme, annotato il 13 settembre.** `Rematore invertito TRX (TRX inverted row).gif` (EX077) e `Trazioni sbarra presa neutra (Neutral grip pull-up).gif` (EX510) hanno ancora il nome vecchio nel bucket e il piano `lavoro/_480/schiena-e-trapezio.json` li elenca in `senza_gemello`, «nel bucket ma fuori dal piano di migrazione». Senza un'impronta attesa, il controllo via Worker li segna `byte NO` e lo strumento si ferma prima dello sgombero. **Le due GIF stanno bene**: verificato il 13 settembre, la CDN serve gli stessi byte del bucket con `immutable`, il Worker ci arriva e il gemello resta in `lavoro/_bucket/`. `_480/Schiena e Trapezio` è stata sgomberata a mano con gli stessi passi dello strumento (18 impronte registrate, 0 non determinabili prima e dopo). Si chiude insieme alla domanda qui sopra: scelta l'animazione, i due oggetti prendono nome e piano come gli altri.
+
 ### ✅ `prepara.py` aggancia via `ponte_480` — 23 agosto 2026
 
 **Il primo passo del lavoro 1 vedeva il bucket vuoto.** `prepara.py` agganciava il file del Mac al suo oggetto confrontando lo SHA-256 del Mac con le impronte del bucket, che dal 15 agosto contiene i byte ridotti a 480px. Su Tricipiti: **0 impronte del Mac su 61** presenti fra quelle del bucket.
