@@ -6,6 +6,10 @@
 // col ricalcolo dal vivo (tolto computed_at). Non scrive niente.
 process.env.TZ = 'Europe/Rome';
 const { bootVivo } = require('./vivo');
+// jsonb riordina le chiavi (per lunghezza, poi alfabetico): confrontare le stringhe
+// dice "diverso" su quadri identici. Si confronta a chiavi ordinate.
+const ordina = (v) => Array.isArray(v) ? v.map(ordina)
+  : (v && typeof v === 'object') ? Object.fromEntries(Object.keys(v).sort().map(k => [k, ordina(v[k])])) : v;
 const U = process.argv[2] || 'bb6fa499-1364-4d8d-8ce6-774c8e392306';   // Ignazio
 (async () => {
   const { win, real } = bootVivo();
@@ -27,7 +31,7 @@ const U = process.argv[2] || 'bb6fa499-1364-4d8d-8ce6-774c8e392306';   // Ignazi
     const vivo = JSON.parse(JSON.stringify(await win.buildWeeklyPicture(row.week_start)));
     const salvato = JSON.parse(JSON.stringify(row.picture));
     delete vivo.meta.computed_at; delete salvato.meta.computed_at;
-    if(JSON.stringify(vivo) === JSON.stringify(salvato)) uguali++;
+    if(JSON.stringify(ordina(vivo)) === JSON.stringify(ordina(salvato))) uguali++;
     else console.log('  diverso:', row.week_start, JSON.stringify(salvato).length, 'vs', JSON.stringify(vivo).length, 'caratteri');
   }
   console.log('uguali al ricalcolo:', uguali, '/', r.data.length);
