@@ -3761,7 +3761,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.13 · 08:41';
+const APP_VERSION = '2026.09.13 · 09:57';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -16332,20 +16332,46 @@ function getWeighIns(){
   return Object.keys(daily).sort().reverse().map(d => ({ date: d, weight_kg: daily[d].v }));
 }
 
-// Timeline unificata: body_logs + body_measurements normalizzati in un unico
-// array ordinato per data DESC. source: 'log' | 'check'. Usata da "Ultimi log"
+// Timeline unificata: body_logs + weight_logs + body_measurements normalizzati in un
+// unico array ordinato per data DESC. source: 'log' | 'check'. Usata da "Ultimi log"
 // e dai grafici Tendenza.
+// Il PESO segue la regola del quadro e del peso attuale (weighInsByDay, L47/L48):
+// una pesata al giorno, weight_logs > body_logs > misure del check. Una pesata rapida
+// senza body_logs quel giorno diventa una riga sua (id null, quick true); con un
+// body_logs lo stesso giorno il peso della riga è quello della pesata rapida. Un check
+// in un giorno che ha già una pesata tiene il suo peso in check_weight_kg, e weight_kg
+// null: così il grafico ha un punto solo per giorno.
 function getUnifiedBodyTimeline(){
   const logs = ST.bodyLogs || [];
   const meas = ST.bodyMeasurements || [];
+  const quick = ST.weightLogs || [];
+  const daily = weighInsByDay(quick, logs, meas);
+  const quickDates = new Set(quick.filter(q => q.date && q.weight_kg != null && isFinite(Number(q.weight_kg))).map(q => q.date));
+  const logDates = new Set(logs.map(l => l.date));
   const out = [];
+  for(const q of quick){
+    if(!quickDates.has(q.date) || logDates.has(q.date)) continue;
+    out.push({
+      date: q.date,
+      _ts: new Date(q.date).getTime(),
+      source: 'log',
+      id: null,                 // nessuna riga body_logs: si cancella da weight_logs per data
+      quick: true,
+      weight_kg: Number(q.weight_kg),
+      waist_cm: null, hip_cm: null, chest_cm: null, bf_pct: null, visceral_fat: null, body_age: null,
+    });
+    quickDates.delete(q.date);  // weight_logs è UNIQUE(user_id,date): una riga per giorno comunque
+  }
   for(const l of logs){
+    const pesata = daily[l.date];
+    const conRapida = !!(pesata && pesata.rank === 0);
     out.push({
       date: l.date,
       _ts: new Date(l.date).getTime(),
       source: 'log',
       id: l.id,                 // body_logs.id — per delete
-      weight_kg:    l.weight_kg ?? null,
+      quick: conRapida,         // c'è anche una pesata rapida quel giorno: si cancellano entrambe
+      weight_kg:    conRapida ? pesata.v : (l.weight_kg ?? null),
       waist_cm:     l.waist_cm ?? null,
       hip_cm:       l.hip_cm ?? null,
       chest_cm:     l.chest_cm ?? null,
@@ -16357,13 +16383,16 @@ function getUnifiedBodyTimeline(){
   for(const m of meas){
     // created_at è timestamptz: la data per la UI è la parte YYYY-MM-DD
     const dateStr = (m.created_at || '').slice(0,10);
+    const giorno = m.created_at ? dayKey(new Date(m.created_at)) : null;
+    const battuto = !!(giorno && daily[giorno] && daily[giorno].rank < 2);   // pesata rapida o log lo stesso giorno
     out.push({
       date: dateStr,
       _ts: new Date(m.created_at).getTime(),
       source: 'check',
       id: m.id,                 // body_measurements.id
       check_id: m.check_id,     // body_checks.id — per delete cascade
-      weight_kg:    m.weight_kg ?? null,
+      weight_kg:    battuto ? null : (m.weight_kg ?? null),
+      check_weight_kg: m.weight_kg ?? null,
       waist_cm:     m.waist_cm ?? null,
       hip_cm:       m.hips_cm ?? null,
       chest_cm:     m.chest_cm ?? null,
@@ -16443,8 +16472,16 @@ async function deleteBodyLogConfirmed(){
   ST.bodyDeleteConfirm = null;
   try {
     if(c.kind === 'log'){
-      const { error } = await supa.from('body_logs').delete().eq('id', c.id);
-      if(error) throw error;
+      // Una riga di "Ultimi log" può essere un body_logs, una pesata rapida (weight_logs,
+      // UNIQUE per giorno) o entrambi lo stesso giorno: si cancella ciò che la riga mostra.
+      if(c.id){
+        const { error } = await dbq('eliminare il log del corpo', supa.from('body_logs').delete().eq('id', c.id).eq('user_id', ST.user.id), { silenzioso:true });
+        if(error) throw error;
+      }
+      if((ST.weightLogs || []).some(q => q.date === c.date)){
+        const { error } = await dbq('eliminare la pesata', supa.from('weight_logs').delete().eq('user_id', ST.user.id).eq('date', c.date), { silenzioso:true });
+        if(error) throw error;
+      }
     } else {
       // Check M2: prima cancella le foto da Storage, poi la riga body_checks
       // (ON DELETE CASCADE rimuove body_check_photos + body_measurements).
@@ -16461,10 +16498,10 @@ async function deleteBodyLogConfirmed(){
       if(error) throw error;
     }
     await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
-    showToast(c.kind === 'log' ? 'Log eliminato' : 'Check fisico eliminato');
+    showToast(c.kind === 'log' ? 'Log eliminato' : 'Check fisico eliminato', '✅', 4000);
   } catch(e){
     console.error('[body-delete] error:', e);
-    showToast('Errore eliminazione: ' + e.message);
+    showToast('Errore eliminazione: ' + e.message, '⚠️', 5500);
     renderBody();
   }
 }
@@ -17350,7 +17387,7 @@ function renderBody(){
               ${isCheck ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
             </div>
             <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;align-items:center;">
-              ${l.weight_kg ? `<span>${l.weight_kg} kg</span>` : ''}
+              ${(l.weight_kg ?? l.check_weight_kg) ? `<span>${l.weight_kg ?? l.check_weight_kg} kg</span>` : ''}
               ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
               ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
               ${isCheck ? `<span style="color:var(--t3);font-size:13px;">→</span>` : ''}
@@ -21541,7 +21578,7 @@ async function loadWeightLogs() {
     .select('date, weight_kg')
     .eq('user_id', ST.user.id)
     .order('date', { ascending: false })
-    .limit(60);
+    .limit(1000);   // una riga al giorno: copre quasi tre anni, e la Tendenza «Tutto» le mostra tutte
   if(error) { console.warn('loadWeightLogs error:', error); ST.weightLogs = []; return; }
   ST.weightLogs = data || [];
 }

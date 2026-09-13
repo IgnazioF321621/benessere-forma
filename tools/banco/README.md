@@ -10,6 +10,7 @@ node tools/banco/prova_body_cta.js
 node tools/banco/prova_esami.js
 node tools/banco/prova_quadro_peso.js   # peso attuale: 0/1/3 pesate, obiettivo, tab Body
 node tools/banco/prova_lettura_foto.js  # lettura delle foto del check: card, pulsante, errori, quadro
+node tools/banco/prova_body_tendenza.js # Tendenza e «Ultimi log» con le pesate rapide (cantiere 35)
 node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch finto (niente jsdom)
 ```
 
