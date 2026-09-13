@@ -22,9 +22,9 @@ Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consoli
 ## 36. Pirsi propone — collaudo dal vivo e prima settimana vera
 *Aperto il 13 settembre 2026, a chiusura della Fase 3. Il codice è in `main` e il Worker è deployato (`8a9b4fc9`); manca ciò che solo il DB vero e un lunedì vero possono dire.*
 
-- **Migrazione da eseguire**: `supabase/migrations/20260913_coach_proposals.sql`. Fino ad allora la card non compare, l'app non genera e il cron del lunedì si ferma senza scrivere (`coach_proposals assente: migrazione non eseguita, giro fermo`). Verificato su tutti e tre i percorsi, senza errori a schermo
-- **RLS da provare col token utente**, come per `body_check_ai`: SELECT delle proprie righe, INSERT solo `pending`, UPDATE solo di `status/decided_at/applied_at` (un update di `title` deve fallire), nessun DELETE, anonimo 0
-- **Accetto dal vivo** su una proposta kcal: `profiles.target_*` aggiornati, `ST.TARGET` uguale dopo un reload, Postino con i target nuovi. Nel banco passa (`prova_pirsi_card.js`, 29 OK); dal vivo no, per la tabella assente
+- ~~Migrazione da eseguire~~ — **eseguita da Ignazio il 13 settembre**
+- ~~RLS da provare col token utente~~ — **provata il 13 settembre** con una sessione di Ignazio: insert di una riga già `accepted` rifiutato, insert per un altro utente rifiutato, insert propria `pending` ok, doppione ignorato, select 1, anonimo 0, update del `title` rifiutato, delete 0 righe
+- ~~Accetto dal vivo~~ — **provato il 13 settembre** col codice dell'app su una proposta di prova (settimana 6 luglio): `profiles` 2.324/198/221/72 → **2.174/185/207/68**, proposta `accepted` con `decided_at` e `applied_at`, toast giusto, dopo il reload `ST.TARGET` = `profiles`, 0 errori in console. Poi profilo rimesso com'era e riga cancellata (backup in `~/zt-backup/`). Il Postino in quel momento si è fermato prima dei target perché il piano del 14 settembre esiste già (`skip-existing`): che legga `ST.profile.target_*` lo prova il banco, non la prova dal vivo
 - **Prima esecuzione del cron**: lunedì 14 settembre alle 06:00 di Roma (04:00 UTC). Esito da leggere con `wrangler tail` o in `coach_proposals`. La prova manuale del 13 (`wrangler dev --test-scheduled`, in prova) ha girato su 4 utenti, 0 errori, 4,8 s
 - **Tre profili senza training né pesate ricevono tre proposte a settimana** (pesati, registra i pasti, esami). Da guardare dopo due-tre settimane se diventano rumore: il raffreddamento di 4 settimane oggi vale solo per check, esami, volume e scarico, non per `weigh_in` e `logging`
 
