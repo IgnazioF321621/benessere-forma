@@ -11,3 +11,8 @@ account_id = "2186a57344e459853657cea6213a2c74"
 # Binding Images: riduce le foto dei check a 1024 px prima di mandarle a Gemini.
 [images]
 binding = "IMAGES"
+
+# Pirsi propone (Fase 3): ogni lunedì alle 06:00 Europe/Rome. I cron sono in UTC:
+# 04:00 d'estate (CEST) e 05:00 d'inverno (CET); il Worker lavora solo in quello che a Roma sono le 6.
+[triggers]
+crons = ["0 4 * * 1", "0 5 * * 1"]

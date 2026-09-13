@@ -5,8 +5,11 @@
 //                            params: ?name=<nome_italiano>  (20 storici)
 //                                    ?code=<EX###>          (39 nuovi, catalogo)
 //   POST /vision-check     -> lettura AI delle foto di un check fisico (Gemini, src/vision-check.js)
+// Cron:
+//   lunedì 06:00 Europe/Rome -> Pirsi propone: quadro della settimana chiusa + proposte (src/coach-cron.js)
 
 import { handleVisionCheck } from './vision-check.js';
+import { handleScheduled } from './coach-cron.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const STORAGE_BUCKET = 'exercise-media';
@@ -607,5 +610,8 @@ export default {
       return handleVisionCheck(request, env, CORS);
     }
     return handleGroqProxy(request, env);
+  },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(handleScheduled(event, env, ctx));
   },
 };

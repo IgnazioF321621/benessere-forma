@@ -26,6 +26,8 @@ function makeSupaMock(tables){
     api.then = (res, rej) => run().then(res, rej);
     function run(){
       calls.push(st);
+      // tables.__assenti = ['nome']: la tabella non esiste (migrazione non eseguita) → PGRST205
+      if((tables.__assenti || []).includes(table)) return Promise.resolve({ data:null, error:{ code:'PGRST205', message:`Could not find the table 'public.${table}' in the schema cache` } });
       let rows = (tables[table] || []).slice();
       if(st.op === 'upsert' && st.upsertOpts.onConflict){
         // upsert vero in memoria: chiave onConflict, ignoreDuplicates rispettato

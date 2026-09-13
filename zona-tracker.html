@@ -3761,7 +3761,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.13 · 10:11';
+const APP_VERSION = '2026.09.13 · 10:25';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6973,7 +6973,7 @@ function showPage(id){
   if(bottomBtns[idx]) bottomBtns[idx].classList.add('active');
   renderPage(id);
   if(id !== 'home') ST.homeView = null;   // il quadro settimanale si chiude uscendo dalla Home
-  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); weeklyPicturesBackfill(); }
+  if(id==='home'){ loadTrainingHomeData(); loadBodyLogs(); if(hasTraining()) loadTrainingAllCompleted(); loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); Promise.resolve(weeklyPicturesBackfill()).then(ensureCoachProposals); }
   if(id==='body') loadBodyLogs();
   if(id==='training'){ loadSessionLastCompletion(); loadTrainingAllCompleted(); computeTrainHomeData().then(()=>{ if(ST.page==='training') renderTraining(); }); }
 }
@@ -7525,46 +7525,392 @@ if(typeof module === 'object' && module && module.exports) module.exports = ZTCo
 // computeWeeklyPicture calcola senza toccare la rete. buildWeeklyPicture unisce.
 // Per le settimane passate "adesso" è la fine della settimana: un quadro chiuso
 // ricalcolato domani dà gli stessi numeri (tranne computed_at).
-// v2 (Fase 3, 13 set 2026): la nutrizione conta l'intera giornata come il tab Nutrition
-// (pasti + integratori spuntati + extra, shared/nutrizione.js) e "parziale" guarda i pasti
-// principali, non più le kcal. Le righe salvate con una versione più vecchia si ricalcolano.
-const WP_VERSION = 2;
-const WP_PARTIAL_KCAL_RATIO = 0.75;   // days_under_75: un giorno sotto il 75% del target (dato, non etichetta)
-const WP_PARTIAL_DAYS_RATIO = 0.5;    // metà o più dei giorni registrati con meno di 2 pasti principali → "parziale"
-const WP_MAIN_SLOTS = ['colazione', 'pranzo', 'cena'];
-const WP_MAIN_MIN = 2;                // un giorno con meno di 2 pasti principali su 3 è un giorno parziale
-const WP_MEASURE_KEYS = ['weight_kg','waist_cm','hips_cm','chest_cm','shoulders_cm','neck_cm','biceps_cm','thigh_cm','calf_cm','body_fat_pct','muscle_mass_kg','visceral_fat'];
+// Il calcolo vive in shared/quadro.js (copiato qui sotto), lo stesso che usa il cron del
+// Worker il lunedì mattina (Fase 3, 13 set 2026). Qui restano la lettura con supabase-js,
+// il caricamento/salvataggio e la vista; le funzioni con i nomi di prima sono involucri.
+// ⟦MODULO shared/quadro.js — copia generata da tools/moduli.js: si modifica shared/quadro.js, non qui⟧
+// ═══════════════════════════════════════════════════════════
+// shared/quadro.js — il quadro settimanale, calcolo puro
+// ═══════════════════════════════════════════════════════════
+// Modulo condiviso fra l'app e il Worker. Nell'app NON si modifica a mano:
+// sta incollato dentro zona-tracker.html fra i marcatori e lo riscrive
+// `node tools/moduli.js`.
+//
+// Spostato qui dall'app il 13 settembre 2026 (Fase 3) perché il cron del lunedì
+// deve calcolare lo stesso quadro che calcola il telefono. Contiene:
+//   fetchSpec          COSA leggere (tabelle, colonne, filtri, ordine): l'app lo esegue
+//                      con supabase-js, il Worker con fetch sul REST. Una lista sola.
+//   computeWeeklyPicture  il calcolo, senza rete (regola null ≠ 0, forma in CLAUDE.md)
+//   cycleWeekInfo      la settimana del mesociclo 5+1 (cuore di getCycleWeekInfo)
+//   blockCheckReminder il reminder di fine blocco (cuore di getBlockCheckReminder)
+//   weighInsByDay      una pesata al giorno, weight_logs > body_logs > check (L47)
+//   makeClock          le date "di calendario": ora locale del telefono nell'app,
+//                      Europe/Rome nel Worker (che gira in UTC)
+//
+// Richiede ZTNutrizione (shared/nutrizione.js) per la somma della giornata.
+var ZTQuadro = (function(){
+  'use strict';
+  var N = (typeof ZTNutrizione !== 'undefined') ? ZTNutrizione : require('./nutrizione.js');
 
-function wpMonday(d){
-  const x = new Date(dayKey(d) + 'T12:00:00');   // mezzogiorno: nessun salto d'ora legale
-  const dow = x.getDay();
-  x.setDate(x.getDate() + (dow === 0 ? -6 : 1 - dow));
-  return dayKey(x);
-}
-function wpAddDays(key, n){
-  const x = new Date(key + 'T12:00:00');
-  x.setDate(x.getDate() + n);
-  return dayKey(x);
-}
-function _wpR1(x){ if(x == null || !isFinite(x)) return null; const r = Math.round(x * 10) / 10; return r === 0 ? 0 : r; }
-function _wpR2(x){ if(x == null || !isFinite(x)) return null; return Math.round(x * 100) / 100; }
-function _wpMean(arr){ const v = arr.filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a,b)=>a+b,0) / v.length : null; }
+  var WP_VERSION = 2;
+  var WP_PARTIAL_KCAL_RATIO = 0.75;   // days_under_75: un giorno sotto il 75% del target (dato, non etichetta)
+  var WP_PARTIAL_DAYS_RATIO = 0.5;    // metà o più dei giorni registrati con meno di 2 pasti principali → "parziale"
+  var WP_MAIN_SLOTS = ['colazione', 'pranzo', 'cena'];
+  var WP_MAIN_MIN = 2;                // un giorno con meno di 2 pasti principali su 3 è un giorno parziale
+  var WP_MEASURE_KEYS = ['weight_kg','waist_cm','hips_cm','chest_cm','shoulders_cm','neck_cm','biceps_cm','thigh_cm','calf_cm','body_fat_pct','muscle_mass_kg','visceral_fat'];
+  var BLOCK_DAYS = 42;                // durata mesociclo (5 carico + 1 scarico)
+  var CHECK_RECENT_DAYS = 28;         // "recente" = ultime 4 settimane
+
+  // ── Orologio di calendario ──
+  // Senza timeZone: l'ora locale del dispositivo (identico al dayKey dell'app).
+  // Con timeZone ('Europe/Rome'): la stessa data e la stessa mezzanotte che vede il telefono in Italia.
+  function makeClock(timeZone){
+    var p2 = function(n){ return String(n).padStart(2, '0'); };
+    if(!timeZone){
+      return {
+        dayKey: function(d){ var x = (d instanceof Date) ? d : (d != null ? new Date(d) : new Date()); return x.getFullYear() + '-' + p2(x.getMonth() + 1) + '-' + p2(x.getDate()); },
+        parseLocal: function(key, time){ return new Date(key + 'T' + (time || '00:00:00')).getTime(); },
+      };
+    }
+    var fmt = new Intl.DateTimeFormat('en-CA', { timeZone: timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+    var parts = function(ts){ var o = {}; fmt.formatToParts(new Date(ts)).forEach(function(p){ o[p.type] = p.value; }); return o; };
+    // scarto del fuso a un istante: (ora di muro letta come UTC) − istante
+    var offset = function(ts){ var o = parts(ts); return Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour, +o.minute, +o.second) - Math.floor(ts / 1000) * 1000; };
+    return {
+      dayKey: function(d){ var x = (d instanceof Date) ? d : (d != null ? new Date(d) : new Date()); var o = parts(x.getTime()); return o.year + '-' + o.month + '-' + o.day; },
+      parseLocal: function(key, time){
+        var t = (time || '00:00:00').split(':').map(Number);
+        var k = key.split('-').map(Number);
+        var muro = Date.UTC(k[0], k[1] - 1, k[2], t[0] || 0, t[1] || 0, t[2] || 0);
+        var ts = muro - offset(muro);
+        return muro - offset(ts);            // secondo passaggio: giusto anche a cavallo del cambio d'ora
+      },
+    };
+  }
+  var LOCALE = makeClock(null);
+
+  // ── Date come chiavi 'YYYY-MM-DD' (aritmetica di calendario, nessun fuso) ──
+  function addDays(key, n){ var d = new Date(key + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function mondayOf(key){ var dow = new Date(key + 'T12:00:00Z').getUTCDay(); return addDays(key, dow === 0 ? -6 : 1 - dow); }
+
+  function r1(x){ if(x == null || !isFinite(x)) return null; var r = Math.round(x * 10) / 10; return r === 0 ? 0 : r; }
+  function r2(x){ if(x == null || !isFinite(x)) return null; return Math.round(x * 100) / 100; }
+  function mean(arr){ var v = arr.filter(function(x){ return x != null && isFinite(x); }); return v.length ? v.reduce(function(a, b){ return a + b; }, 0) / v.length : null; }
+
+  // Pesate: una al giorno, weight_logs > body_logs > misure del check (L47).
+  // Restituisce { 'YYYY-MM-DD': { v, rank } }.
+  function weighInsByDay(weightLogs, bodyLogs, measurements, clock){
+    var cl = clock || LOCALE;
+    var daily = {};
+    var put = function(date, v, rank){
+      var n = v == null ? NaN : Number(v);
+      if(!date || !isFinite(n)) return;
+      if(!daily[date] || rank < daily[date].rank) daily[date] = { v: n, rank: rank };
+    };
+    (weightLogs || []).forEach(function(r){ put(r.date, r.weight_kg, 0); });
+    (bodyLogs || []).forEach(function(r){ put(r.date, r.weight_kg, 1); });
+    (measurements || []).forEach(function(m){ if(m.created_at) put(cl.dayKey(new Date(m.created_at)), m.weight_kg, 2); });
+    return daily;
+  }
+
+  // Giorni di LAVORO per giro, dal ciclo della scheda attiva: 5 con la Upper Pump, altrimenti 4.
+  function workPerGiroForCycle(cycleIds){
+    var ids = Array.isArray(cycleIds) ? cycleIds : [];
+    var mappa = ids.indexOf('upperC') !== -1
+      ? ['upperA','lowerA','recoveryUpper','upperB','lowerB','upperC','rest']
+      : ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
+    return mappa.filter(function(sid){ return !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury'; }).length;
+  }
+
+  // Settimana del mesociclo 5+1, dai soli giorni di lavoro (vedi getCycleWeekInfo nell'app).
+  //   completed  workout completati, rest/rest_injury esclusi, ordinati per data
+  //   today      'YYYY-MM-DD' che fa da oggi · asOf  se c'è, si conta fino a quel giorno
+  //   workPerGiro · deloads  date in cui è stato accettato uno scarico anticipato (Pirsi propone)
+  // Scarico anticipato: dal giorno dell'accettazione il conto riparte come se fossero già
+  // passate 5 settimane di carico — quella in corso diventa la 6 e la successiva la 1.
+  function cycleWeekInfo(o){
+    var oggi = o.asOf || o.today;
+    var sorgente = o.completed || [];
+    var completati = o.asOf ? sorgente.filter(function(w){ return w && w.date <= o.asOf; }) : sorgente;
+    var isWork = function(w){ return w && !/^recovery/i.test(w.session_type); };
+    var workCount = completati.filter(isWork).length;
+    var wpg = Math.max(1, o.workPerGiro || 1);
+    var ancora = (o.deloads || []).filter(function(d){ return d && d <= oggi; }).sort().pop() || null;
+    var conto = workCount, bordo = true;
+    if(ancora){
+      var prima = completati.filter(function(w){ return isWork(w) && w.date < ancora; }).length;
+      conto = workCount - prima + 5 * wpg;
+      bordo = workCount > prima;            // nel giorno stesso dell'accettazione niente correttivo di bordo
+    }
+    var weekIdx = 0;
+    if(conto > 0){
+      var rawWeek = Math.floor(conto / wpg) % 6;
+      var lastDate = completati.length ? completati[completati.length - 1].date : null;
+      weekIdx = (bordo && conto % wpg === 0 && lastDate === oggi) ? (rawWeek === 0 ? 5 : rawWeek - 1) : rawWeek;
+    }
+    return { weekNum: weekIdx + 1, isScarico: weekIdx === 5, workCount: conto, workPerGiro: wpg, deloadFrom: ancora };
+  }
+
+  // Reminder "check di fine blocco": blocco di 42 giorni finito e nessun check completato nelle ultime 4 settimane.
+  function blockCheckReminder(o){
+    var cl = o.clock || LOCALE;
+    if(!o.start) return null;
+    var startTs = cl.parseLocal(o.start, '00:00:00');
+    if(!isFinite(startTs)) return null;
+    var giorniDaInizio = Math.floor((o.nowTs - startTs) / 86400000);
+    if(giorniDaInizio < BLOCK_DAYS) return null;
+    var ultimoTs = null;
+    (o.checks || []).filter(function(c){ return c.status === 'completed' && c.created_at && new Date(c.created_at).getTime() <= o.nowTs; })
+      .forEach(function(c){ var t = new Date(c.created_at).getTime(); if(isFinite(t) && (ultimoTs === null || t > ultimoTs)) ultimoTs = t; });
+    var giorniDaUltimo = ultimoTs === null ? null : Math.floor((o.nowTs - ultimoTs) / 86400000);
+    if(giorniDaUltimo !== null && giorniDaUltimo < CHECK_RECENT_DAYS) return null;
+    return { giorniDaInizio: giorniDaInizio, giorniDaUltimo: giorniDaUltimo };
+  }
+
+  // ── Cosa leggere per il quadro di una settimana ──
+  // [op, colonna, valore] con op eq/gte/lte; order = colonne ascendenti. Paginato da chi esegue (L13).
+  function fetchSpec(userId, weekStart, trainStart){
+    var we = addDays(weekStart, 6);
+    var w5 = addDays(weekStart, -28);                     // peso: 5 settimane in una passata sola
+    var wFrom = (trainStart && trainStart < weekStart) ? trainStart : weekStart;
+    var u = ['eq', 'user_id', userId];
+    var q = function(label, table, select, filters, order){ return { label: label, table: table, select: select, filters: filters, order: order }; };
+    return {
+      weightLogs:   q('le pesate', 'weight_logs', 'date, weight_kg', [u, ['gte','date',w5], ['lte','date',we]], ['date','id']),
+      bodyLogs:     q('i log del corpo', 'body_logs', 'date, weight_kg', [u, ['gte','date',w5], ['lte','date',we]], ['date','id']),
+      measurements: q('le misure dei check', 'body_measurements', '*', [u], ['created_at','id']),
+      checks:       q('i check fisici', 'body_checks', 'id, status, created_at, completed_at', [u], ['created_at','id']),
+      meals:        q('i pasti', 'meals', 'date, slot, kcal, protein, carbs, fat', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),
+      suppLogs:     q('gli integratori presi', 'supplements_log', 'id, date, slot, supplement_name, supplement_codice, is_extra, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','slot','created_at']),
+      supps:        q('la libreria integratori', 'supplements', '*', [u], ['sort_order','id']),
+      catalog:      q('il catalogo integratori', 'nutrilite_catalog', '*', [], ['nome','codice']),
+      sets:         q('le serie', 'training_logs', 'date, session_id, rir_actual', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),
+      workouts:     q('gli allenamenti', 'workouts', 'date, session_type, completed', [u, ['eq','completed',true], ['gte','date',wFrom], ['lte','date',we]], ['date','id']),
+      blood:        q('gli esami', 'blood_tests', 'test_date', [u, ['lte','test_date',we]], ['test_date','id']),
+      readings:     q('le letture delle foto', 'body_check_ai', 'check_id, confidence, result, created_at', [u], ['created_at','id']),
+    };
+  }
+
+  // Calcolo puro. raw = { chiave di fetchSpec: righe | null (lettura fallita), errors: [chiavi] }.
+  // ctx = { today, nowTs, profile, target, injuryActiveNow, clock, workPerGiro, deloads }
+  function computeWeeklyPicture(raw, weekStart, ctx){
+    var c = ctx || {};
+    var cl = c.clock || LOCALE;
+    var nowTs = c.nowTs != null ? c.nowTs : Date.now();
+    var today = c.today || cl.dayKey(new Date(nowTs));
+    var profile = c.profile || {};
+    var we = addDays(weekStart, 6);
+    var isClosed = today > we;
+    // "Adesso" del quadro: fine domenica per le settimane chiuse, l'istante reale per la corrente.
+    var refTs = isClosed ? cl.parseLocal(we, '23:59:59') : nowTs;
+    var refDay = isClosed ? we : today;
+    var daysBetween = function(fromTs){ return Math.floor((refTs - fromTs) / 86400000); };
+    var inWeek = function(d){ return d >= weekStart && d <= we; };
+
+    // ── Peso: una pesata al giorno, weight_logs > body_logs > misure del check ──
+    var weight = null;
+    if(raw.weightLogs && raw.bodyLogs && raw.measurements){
+      var daily = weighInsByDay(raw.weightLogs, raw.bodyLogs, raw.measurements, cl);
+      var settimana = function(k){
+        var s = addDays(weekStart, -7 * k), e = addDays(s, 6);
+        var vals = Object.keys(daily).filter(function(d){ return d >= s && d <= e; }).map(function(d){ return daily[d].v; });
+        return { avg: mean(vals), n: vals.length };
+      };
+      var sett = [0,1,2,3].map(settimana);
+      var pts = sett.map(function(s, k){ return { x: -k, y: s.avg }; }).filter(function(p){ return p.y != null; });
+      var trend = null;
+      if(pts.length >= 3){                            // pendenza ai minimi quadrati, kg/settimana
+        var mx = mean(pts.map(function(p){ return p.x; })), my = mean(pts.map(function(p){ return p.y; }));
+        var num = pts.reduce(function(a, p){ return a + (p.x - mx) * (p.y - my); }, 0);
+        var den = pts.reduce(function(a, p){ return a + Math.pow(p.x - mx, 2); }, 0);
+        trend = den > 0 ? num / den : null;
+      }
+      var goal = profile.goal_weight_kg != null ? Number(profile.goal_weight_kg) : null;
+      var ultimoGiorno = Object.keys(daily).filter(function(d){ return d <= refDay; }).sort().pop() || null;
+      weight = {
+        weight_avg:        r1(sett[0].avg),
+        weight_n:          sett[0].n,
+        weight_delta_prev: (sett[0].avg != null && sett[1].avg != null) ? r1(sett[0].avg - sett[1].avg) : null,
+        weight_trend_4w:   r1(trend),
+        weight_target:     isFinite(goal) ? goal : null,
+        weight_last:       ultimoGiorno ? r2(daily[ultimoGiorno].v) : null,
+        weight_last_date:  ultimoGiorno,
+      };
+    }
+
+    // ── Nutrizione: l'intera giornata, come il tab Nutrition (shared/nutrizione.js) ──
+    // Media sui soli giorni con almeno un pasto; in quei giorni contano anche integratori
+    // spuntati ed extra. Un giorno con solo integratori non è un giorno registrato.
+    var nutrition = null;
+    if(raw.meals && raw.suppLogs && raw.supps && raw.catalog){
+      var built = N.buildDays({
+        meals: raw.meals.filter(function(m){ return inWeek(m.date); }),
+        suppLogs: raw.suppLogs.filter(function(r){ return inWeek(r.date); }),
+        supps: raw.supps, catalog: raw.catalog,
+      });
+      var logged = Object.keys(built.days).filter(function(k){ return built.days[k].meals.length > 0; }).sort();
+      var days = logged.map(function(k){
+        var t = N.dayTotals(built.days[k], built.ref, true);
+        var slots = {};
+        built.days[k].meals.forEach(function(m){ if(WP_MAIN_SLOTS.indexOf(m.slot) !== -1) slots[m.slot] = true; });
+        return { kcal: t.kcal, protein: t.protein, supp_kcal: t.supp.kcal, supp_protein: t.supp.protein, principali: Object.keys(slots).length };
+      });
+      var tk = Number((c.target && c.target.kcal) || profile.target_kcal) || null;
+      var tp = Number((c.target && c.target.protein) || profile.target_protein) || null;
+      var kcalAvg = mean(days.map(function(d){ return d.kcal; }));
+      var dentro = tk ? days.filter(function(d){ return d.kcal >= tk * 0.9 && d.kcal <= tk * 1.1; }).length : null;
+      var sotto  = tk ? days.filter(function(d){ return d.kcal < tk * WP_PARTIAL_KCAL_RATIO; }).length : 0;
+      var parziali = days.filter(function(d){ return d.principali < WP_MAIN_MIN; }).length;
+      nutrition = {
+        kcal_target:      tk,
+        protein_target:   tp,
+        kcal_avg:         kcalAvg == null ? null : Math.round(kcalAvg),
+        protein_avg:      days.length ? Math.round(mean(days.map(function(d){ return d.protein; }))) : null,
+        supp_kcal_avg:    days.length ? Math.round(mean(days.map(function(d){ return d.supp_kcal; }))) : null,
+        supp_protein_avg: days.length ? Math.round(mean(days.map(function(d){ return d.supp_protein; }))) : null,
+        days_logged:      days.length,
+        logged_dates:     logged,
+        adherence_kcal:   (tk && days.length) ? r2(dentro / days.length) : null,
+        // Parziale = metà o più dei giorni registrati con meno di 2 pasti principali su 3.
+        // Non si stima niente: si dichiara soltanto che il dato è parziale.
+        days_partial:     parziali,
+        partial:          !!(days.length && parziali / days.length >= WP_PARTIAL_DAYS_RATIO),
+        days_under_75:    tk ? sotto : null,
+      };
+    }
+
+    // ── Allenamento: sessioni dal calendario (workouts), serie e RIR da training_logs ──
+    var training = null;
+    var start = profile.train_start_date || null;
+    if(raw.workouts && raw.sets && (start || raw.workouts.some(function(w){ return inWeek(w.date); }) || raw.sets.length)){
+      var isWork = function(sid){ return !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury'; };
+      var uniq = function(arr){ return arr.filter(function(x, i){ return arr.indexOf(x) === i; }); };
+      var questa = raw.workouts.filter(function(w){ return inWeek(w.date); });
+      var lavoro = uniq(questa.filter(function(w){ return isWork(w.session_type); }).map(function(w){ return w.date + '|' + w.session_type; }));
+      var recuperi = uniq(questa.filter(function(w){ return /^recovery/i.test(w.session_type); }).map(function(w){ return w.date + '|' + w.session_type; }));
+      var infortunio = uniq(questa.filter(function(w){ return w.session_type === 'rest_injury'; }).map(function(w){ return w.date; }));
+      var planned = Number(profile.giorni_allenamento) || null;
+      var blockWeek = null, isDeload = null;
+      if(start && we >= start){
+        // Stessa regola di getCycleWeekInfo, valutata "a quel giorno": per la settimana
+        // corrente oggi; per una chiusa l'ultimo giorno di lavoro della settimana.
+        var completati = raw.workouts.filter(function(w){ return w.date >= start && w.session_type !== 'rest' && w.session_type !== 'rest_injury'; });
+        var ultimoLavoro = lavoro.length ? lavoro.map(function(k){ return k.split('|')[0]; }).sort().pop() : null;
+        var asOf = isClosed ? (ultimoLavoro || we) : today;
+        var info = cycleWeekInfo({ completed: completati, asOf: asOf, today: today, workPerGiro: c.workPerGiro, deloads: c.deloads });
+        blockWeek = info.weekNum;
+        isDeload = info.isScarico;
+      }
+      var rir = raw.sets.filter(function(s){ return inWeek(s.date) && s.rir_actual != null; }).map(function(s){ return Number(s.rir_actual); });
+      training = {
+        sessions_planned: planned,
+        sessions_done:    lavoro.length,
+        sessions_missed:  (isClosed && planned != null) ? Math.max(0, planned - lavoro.length) : null,
+        recovery_done:    recuperi.length,
+        block_week:       blockWeek,
+        is_deload:        isDeload,
+        volume_sets:      raw.sets.filter(function(s){ return inWeek(s.date); }).length,
+        avg_rir:          r1(mean(rir)),
+        injury_days:      infortunio.length,
+        injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
+      };
+    }
+
+    // ── Corpo: ultimo check COMPLETATO fino a fine settimana ──
+    var body = null;
+    if(raw.checks && raw.measurements){
+      var fatti = raw.checks
+        .filter(function(ch){ return ch.status === 'completed' && ch.created_at && new Date(ch.created_at).getTime() <= refTs; })
+        .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); });
+      var ultimo = fatti[fatti.length - 1] || null;
+      var prec = fatti[fatti.length - 2] || null;
+      var misure = function(ch){ return ch ? (raw.measurements.find(function(m){ return m.check_id === ch.id; }) || null) : null; };
+      var mU = misure(ultimo), mP = misure(prec);
+      var last = null;
+      if(mU){
+        last = {};
+        WP_MEASURE_KEYS.forEach(function(k){
+          if(mU[k] == null) return;
+          var v = Number(mU[k]);
+          var p = mP && mP[k] != null ? Number(mP[k]) : null;
+          last[k] = { value: v, delta: p == null ? null : r1(v - p) };
+        });
+      }
+      var rem = blockCheckReminder({ start: profile.train_start_date, nowTs: refTs, checks: fatti, clock: cl });
+      // Ultima lettura delle foto (Fase 2): quella del check più recente che ne ha una,
+      // fatta entro l'"adesso" del quadro. Lettura fallita = campi null, errore già in meta.errors.
+      var lettura = null, checkLettura = null;
+      if(raw.readings){
+        for(var i = fatti.length - 1; i >= 0 && !lettura; i--){
+          var chId = fatti[i].id;
+          var r = raw.readings.find(function(x){ return x.check_id === chId && x.created_at && new Date(x.created_at).getTime() <= refTs; });
+          if(r && r.result){ lettura = r; checkLettura = fatti[i]; }
+        }
+      }
+      body = {
+        last_check_date:   ultimo ? cl.dayKey(new Date(ultimo.created_at)) : null,
+        days_since_check:  ultimo ? daysBetween(new Date(ultimo.created_at).getTime()) : null,
+        check_due:         !!rem,
+        last_measurements: last,
+        prev_check_date:   prec ? cl.dayKey(new Date(prec.created_at)) : null,
+        ai_overall:        lettura ? lettura.result.overall : null,
+        ai_confidence:     lettura ? (lettura.result.confidence || lettura.confidence) : null,
+        ai_check_date:     checkLettura ? cl.dayKey(new Date(checkLettura.created_at)) : null,
+      };
+    }
+
+    // ── Esami ──
+    var blood = null;
+    if(raw.blood){
+      var esami = raw.blood.filter(function(b){ return b.test_date && b.test_date <= refDay; }).map(function(b){ return b.test_date; }).sort();
+      var ultimoEsame = esami[esami.length - 1] || null;
+      blood = {
+        last_test_date:  ultimoEsame,
+        days_since_test: ultimoEsame ? Math.floor((cl.parseLocal(refDay, '12:00:00') - cl.parseLocal(ultimoEsame, '12:00:00')) / 86400000) : null,
+        test_count:      esami.length,
+      };
+    }
+
+    var conDati = [
+      weight && weight.weight_n > 0,
+      nutrition && nutrition.days_logged > 0,
+      training && (training.sessions_done > 0 || training.volume_sets > 0),
+      body && body.last_check_date != null,
+      blood && blood.test_count > 0,
+    ].filter(Boolean).length;
+
+    return {
+      weight: weight, nutrition: nutrition, training: training, body: body, blood: blood,
+      meta: {
+        version:      WP_VERSION,
+        week_start:   weekStart,
+        week_end:     we,
+        is_closed:    isClosed,
+        computed_at:  new Date(nowTs).toISOString(),
+        completeness: r2(conDati / 5),
+        errors:       (raw.errors || []).slice(),
+      },
+    };
+  }
+
+  return {
+    WP_VERSION: WP_VERSION, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
+    makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
+    workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
+    fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
+  };
+})();
+if(typeof module === 'object' && module && module.exports) module.exports = ZTQuadro;
+// ⟦FINE shared/quadro.js⟧
+const WP_VERSION = ZTQuadro.WP_VERSION;
+
+function wpMonday(d){ return ZTQuadro.mondayOf(dayKey(d)); }
+function _wpR1(x){ if(x == null || !isFinite(x)) return null; const r = Math.round(x * 10) / 10; return r === 0 ? 0 : r; }   // arrotondamento della vista
+function wpAddDays(key, n){ return ZTQuadro.addDays(key, n); }
 
 // Pesate: una al giorno, weight_logs > body_logs > misure del check (L47).
 // Regola unica per il quadro e per il tab Body: il "peso attuale" è lo stesso numero ovunque.
-// Restituisce { 'YYYY-MM-DD': { v, rank } }.
-function weighInsByDay(weightLogs, bodyLogs, measurements){
-  const daily = {};
-  const put = (date, v, rank) => {
-    const n = v == null ? NaN : Number(v);
-    if(!date || !isFinite(n)) return;
-    if(!daily[date] || rank < daily[date].rank) daily[date] = { v:n, rank };
-  };
-  (weightLogs || []).forEach(r => put(r.date, r.weight_kg, 0));
-  (bodyLogs || []).forEach(r => put(r.date, r.weight_kg, 1));
-  (measurements || []).forEach(m => { if(m.created_at) put(dayKey(new Date(m.created_at)), m.weight_kg, 2); });
-  return daily;
-}
+function weighInsByDay(weightLogs, bodyLogs, measurements){ return ZTQuadro.weighInsByDay(weightLogs, bodyLogs, measurements); }
 
 // SELECT paginata: PostgREST tronca a 1000 righe (L13). mk() costruisce la query
 // già ordinata; ogni pagina passa da dbq (L22), silenziosa: l'avviso lo dà chi
@@ -7583,26 +7929,15 @@ async function _wpAll(label, mk){
 }
 
 async function _wpFetch(userId, weekStart){
-  const we = wpAddDays(weekStart, 6);
-  const w5 = wpAddDays(weekStart, -28);            // peso: 5 settimane in una passata sola
-  const start = ST.profile && ST.profile.train_start_date;
-  const wFrom = (start && start < weekStart) ? start : weekStart;
-  const Q = {
-    weightLogs:   ['le pesate',          () => supa.from('weight_logs').select('date, weight_kg').eq('user_id', userId).gte('date', w5).lte('date', we).order('date').order('id')],
-    bodyLogs:     ['i log del corpo',    () => supa.from('body_logs').select('date, weight_kg').eq('user_id', userId).gte('date', w5).lte('date', we).order('date').order('id')],
-    measurements: ['le misure dei check',() => supa.from('body_measurements').select('*').eq('user_id', userId).order('created_at').order('id')],
-    checks:       ['i check fisici',     () => supa.from('body_checks').select('id, status, created_at, completed_at').eq('user_id', userId).order('created_at').order('id')],
-    meals:        ['i pasti',            () => supa.from('meals').select('date, slot, kcal, protein, carbs, fat').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('id')],
-    suppLogs:     ['gli integratori presi', () => supa.from('supplements_log').select('id, date, slot, supplement_name, supplement_codice, is_extra, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('slot').order('created_at')],
-    supps:        ['la libreria integratori', () => supa.from('supplements').select('*').eq('user_id', userId).order('sort_order').order('id')],
-    catalog:      ['il catalogo integratori', () => supa.from('nutrilite_catalog').select('*').order('nome').order('codice')],
-    sets:         ['le serie',           () => supa.from('training_logs').select('date, session_id, rir_actual').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('id')],
-    workouts:     ['gli allenamenti',    () => supa.from('workouts').select('date, session_type, completed').eq('user_id', userId).eq('completed', true).gte('date', wFrom).lte('date', we).order('date').order('id')],
-    blood:        ['gli esami',          () => supa.from('blood_tests').select('test_date').eq('user_id', userId).lte('test_date', we).order('test_date').order('id')],
-    readings:     ['le letture delle foto', () => supa.from('body_check_ai').select('check_id, confidence, result, created_at').eq('user_id', userId).order('created_at').order('id')],
+  const spec = ZTQuadro.fetchSpec(userId, weekStart, ST.profile && ST.profile.train_start_date);
+  const esegui = (q) => () => {
+    let x = supa.from(q.table).select(q.select);
+    q.filters.forEach(([op, col, val]) => { x = x[op](col, val); });
+    q.order.forEach(col => { x = x.order(col); });
+    return x;
   };
-  const keys = Object.keys(Q);
-  const results = await Promise.all(keys.map(k => _wpAll(Q[k][0], Q[k][1])));
+  const keys = Object.keys(spec);
+  const results = await Promise.all(keys.map(k => _wpAll(spec[k].label, esegui(spec[k]))));
   const raw = { errors: [] };
   keys.forEach((k, i) => {
     // body_check_ai non ancora creata: nessuna lettura, non un errore del quadro
@@ -7613,204 +7948,14 @@ async function _wpFetch(userId, weekStart){
   return raw;
 }
 
-// Calcolo puro. raw = uscita di _wpFetch (una tabella a null = lettura fallita).
-// ctx = { today, nowTs, profile, target, injuryActiveNow }.
+// Calcolo puro (shared/quadro.js). raw = uscita di _wpFetch (una tabella a null = lettura fallita).
+// ctx = { today, nowTs, profile, target, injuryActiveNow }: ciclo della scheda e scarichi
+// accettati li aggiunge questo involucro, se il chiamante non li passa.
 function computeWeeklyPicture(raw, weekStart, ctx){
-  const c = ctx || {};
-  const today = c.today || todayKey();
-  const profile = c.profile || {};
-  const we = wpAddDays(weekStart, 6);
-  const isClosed = today > we;
-  // "Adesso" del quadro: fine domenica per le settimane chiuse, l'istante reale per la corrente.
-  const refTs = isClosed ? new Date(we + 'T23:59:59').getTime() : (c.nowTs != null ? c.nowTs : Date.now());
-  const refDay = isClosed ? we : today;
-  const daysBetween = (fromTs) => Math.floor((refTs - fromTs) / 86400000);
-  const inWeek = (d) => d >= weekStart && d <= we;
-
-  // ── Peso: una pesata al giorno, weight_logs > body_logs > misure del check ──
-  let weight = null;
-  if(raw.weightLogs && raw.bodyLogs && raw.measurements){
-    const daily = weighInsByDay(raw.weightLogs, raw.bodyLogs, raw.measurements);
-    const settimana = (k) => {                       // k = 0 questa, 1 la precedente, …
-      const s = wpAddDays(weekStart, -7 * k), e = wpAddDays(s, 6);
-      const vals = Object.keys(daily).filter(d => d >= s && d <= e).map(d => daily[d].v);
-      return { avg: _wpMean(vals), n: vals.length };
-    };
-    const sett = [0,1,2,3].map(settimana);
-    const pts = sett.map((s, k) => ({ x: -k, y: s.avg })).filter(p => p.y != null);
-    let trend = null;
-    if(pts.length >= 3){                            // pendenza ai minimi quadrati, kg/settimana
-      const mx = _wpMean(pts.map(p => p.x)), my = _wpMean(pts.map(p => p.y));
-      const num = pts.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0);
-      const den = pts.reduce((a, p) => a + (p.x - mx) ** 2, 0);
-      trend = den > 0 ? num / den : null;
-    }
-    const goal = profile.goal_weight_kg != null ? Number(profile.goal_weight_kg) : null;
-    // Ultima pesata fino all'"adesso" del quadro, dentro le 5 settimane lette.
-    // Se è troppo vecchia per dirsi "attuale" lo decide la vista, non il calcolo: qui resta il fatto.
-    const ultimoGiorno = Object.keys(daily).filter(d => d <= refDay).sort().pop() || null;
-    weight = {
-      weight_avg:        _wpR1(sett[0].avg),
-      weight_n:          sett[0].n,
-      weight_delta_prev: (sett[0].avg != null && sett[1].avg != null) ? _wpR1(sett[0].avg - sett[1].avg) : null,
-      weight_trend_4w:   _wpR1(trend),
-      weight_target:     isFinite(goal) ? goal : null,
-      weight_last:       ultimoGiorno ? _wpR2(daily[ultimoGiorno].v) : null,
-      weight_last_date:  ultimoGiorno,
-    };
-  }
-
-  // ── Nutrizione: l'intera giornata, come il tab Nutrition (shared/nutrizione.js) ──
-  // Media sui soli giorni con almeno un pasto; in quei giorni contano anche integratori
-  // spuntati ed extra. Un giorno con solo integratori non è un giorno registrato.
-  let nutrition = null;
-  if(raw.meals && raw.suppLogs && raw.supps && raw.catalog){
-    const built = ZTNutrizione.buildDays({
-      meals: raw.meals.filter(m => inWeek(m.date)),
-      suppLogs: raw.suppLogs.filter(r => inWeek(r.date)),
-      supps: raw.supps, catalog: raw.catalog,
-    });
-    const logged = Object.keys(built.days).filter(k => built.days[k].meals.length > 0).sort();
-    const days = logged.map(k => {
-      const t = ZTNutrizione.dayTotals(built.days[k], built.ref, true);
-      const principali = new Set(built.days[k].meals.map(m => m.slot).filter(sl => WP_MAIN_SLOTS.includes(sl))).size;
-      return { kcal: t.kcal, protein: t.protein, supp_kcal: t.supp.kcal, supp_protein: t.supp.protein, principali };
-    });
-    const tk = Number((c.target && c.target.kcal) || profile.target_kcal) || null;
-    const tp = Number((c.target && c.target.protein) || profile.target_protein) || null;
-    const kcalAvg = _wpMean(days.map(d => d.kcal));
-    const dentro = tk ? days.filter(d => d.kcal >= tk * 0.9 && d.kcal <= tk * 1.1).length : null;
-    const sotto  = tk ? days.filter(d => d.kcal < tk * WP_PARTIAL_KCAL_RATIO).length : 0;
-    const parziali = days.filter(d => d.principali < WP_MAIN_MIN).length;
-    nutrition = {
-      kcal_target:      tk,
-      protein_target:   tp,
-      kcal_avg:         kcalAvg == null ? null : Math.round(kcalAvg),
-      protein_avg:      days.length ? Math.round(_wpMean(days.map(d => d.protein))) : null,
-      supp_kcal_avg:    days.length ? Math.round(_wpMean(days.map(d => d.supp_kcal))) : null,
-      supp_protein_avg: days.length ? Math.round(_wpMean(days.map(d => d.supp_protein))) : null,
-      days_logged:      days.length,
-      logged_dates:     logged,
-      adherence_kcal:   (tk && days.length) ? _wpR2(dentro / days.length) : null,
-      // Parziale = metà o più dei giorni registrati con meno di 2 pasti principali su 3.
-      // Non si stima niente: si dichiara soltanto che il dato è parziale.
-      days_partial:     parziali,
-      partial:          !!(days.length && parziali / days.length >= WP_PARTIAL_DAYS_RATIO),
-      days_under_75:    tk ? sotto : null,
-    };
-  }
-
-  // ── Allenamento: sessioni dal calendario (workouts), serie e RIR da training_logs ──
-  let training = null;
-  const start = profile.train_start_date || null;
-  if(raw.workouts && raw.sets && (start || raw.workouts.some(w => inWeek(w.date)) || raw.sets.length)){
-    const isWork = (sid) => !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury';
-    const uniq = (arr) => [...new Set(arr)];
-    const settimana = raw.workouts.filter(w => inWeek(w.date));
-    const lavoro = uniq(settimana.filter(w => isWork(w.session_type)).map(w => w.date + '|' + w.session_type));
-    const recuperi = uniq(settimana.filter(w => /^recovery/i.test(w.session_type)).map(w => w.date + '|' + w.session_type));
-    const infortunio = uniq(settimana.filter(w => w.session_type === 'rest_injury').map(w => w.date));
-    const planned = Number(profile.giorni_allenamento) || null;
-    let blockWeek = null, isDeload = null;
-    if(start && we >= start){
-      // Stessa regola di getCycleWeekInfo (helper canonico), valutata "a quel giorno":
-      // per la settimana corrente oggi; per una chiusa l'ultimo giorno di lavoro della settimana.
-      const completati = raw.workouts.filter(w => w.date >= start && w.session_type !== 'rest' && w.session_type !== 'rest_injury');
-      const ultimoLavoro = lavoro.length ? lavoro.map(k => k.split('|')[0]).sort().pop() : null;
-      const asOf = isClosed ? (ultimoLavoro || we) : today;
-      const info = getCycleWeekInfo({ completed: completati, asOf });
-      blockWeek = info.weekNum;
-      isDeload = info.isScarico;
-    }
-    const rir = raw.sets.filter(s => inWeek(s.date) && s.rir_actual != null).map(s => Number(s.rir_actual));
-    training = {
-      sessions_planned: planned,
-      sessions_done:    lavoro.length,
-      sessions_missed:  (isClosed && planned != null) ? Math.max(0, planned - lavoro.length) : null,
-      recovery_done:    recuperi.length,
-      block_week:       blockWeek,
-      is_deload:        isDeload,
-      volume_sets:      raw.sets.filter(s => inWeek(s.date)).length,
-      avg_rir:          _wpR1(_wpMean(rir)),
-      injury_days:      infortunio.length,
-      injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
-    };
-  }
-
-  // ── Corpo: ultimo check COMPLETATO fino a fine settimana ──
-  let body = null;
-  if(raw.checks && raw.measurements){
-    const completati = raw.checks
-      .filter(ch => ch.status === 'completed' && ch.created_at && new Date(ch.created_at).getTime() <= refTs)
-      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    const ultimo = completati[completati.length - 1] || null;
-    const prec = completati[completati.length - 2] || null;
-    const misure = (ch) => ch ? (raw.measurements.find(m => m.check_id === ch.id) || null) : null;
-    const mU = misure(ultimo), mP = misure(prec);
-    let last = null;
-    if(mU){
-      last = {};
-      WP_MEASURE_KEYS.forEach(k => {
-        if(mU[k] == null) return;
-        const v = Number(mU[k]);
-        const p = mP && mP[k] != null ? Number(mP[k]) : null;
-        last[k] = { value: v, delta: p == null ? null : _wpR1(v - p) };
-      });
-    }
-    const rem = getBlockCheckReminder({ nowTs: refTs, checks: completati });
-    // Ultima lettura delle foto (Fase 2): quella del check più recente che ne ha una,
-    // fatta entro l'"adesso" del quadro. Lettura fallita = campi null, errore già in meta.errors.
-    let lettura = null, checkLettura = null;
-    if(raw.readings){
-      for(let i = completati.length - 1; i >= 0 && !lettura; i--){
-        const r = raw.readings.find(x => x.check_id === completati[i].id && x.created_at && new Date(x.created_at).getTime() <= refTs);
-        if(r && r.result){ lettura = r; checkLettura = completati[i]; }
-      }
-    }
-    body = {
-      last_check_date:   ultimo ? dayKey(new Date(ultimo.created_at)) : null,
-      days_since_check:  ultimo ? daysBetween(new Date(ultimo.created_at).getTime()) : null,
-      check_due:         !!rem,
-      last_measurements: last,
-      prev_check_date:   prec ? dayKey(new Date(prec.created_at)) : null,
-      ai_overall:        lettura ? lettura.result.overall : null,
-      ai_confidence:     lettura ? (lettura.result.confidence || lettura.confidence) : null,
-      ai_check_date:     checkLettura ? dayKey(new Date(checkLettura.created_at)) : null,
-    };
-  }
-
-  // ── Esami ──
-  let blood = null;
-  if(raw.blood){
-    const esami = raw.blood.filter(b => b.test_date && b.test_date <= refDay).map(b => b.test_date).sort();
-    const ultimo = esami[esami.length - 1] || null;
-    blood = {
-      last_test_date:  ultimo,
-      days_since_test: ultimo ? Math.floor((new Date(refDay + 'T12:00:00') - new Date(ultimo + 'T12:00:00')) / 86400000) : null,
-      test_count:      esami.length,
-    };
-  }
-
-  const conDati = [
-    weight && weight.weight_n > 0,
-    nutrition && nutrition.days_logged > 0,
-    training && (training.sessions_done > 0 || training.volume_sets > 0),
-    body && body.last_check_date != null,
-    blood && blood.test_count > 0,
-  ].filter(Boolean).length;
-
-  return {
-    weight, nutrition, training, body, blood,
-    meta: {
-      version:      WP_VERSION,
-      week_start:   weekStart,
-      week_end:     we,
-      is_closed:    isClosed,
-      computed_at:  new Date(c.nowTs != null ? c.nowTs : Date.now()).toISOString(),
-      completeness: _wpR2(conDati / 5),
-      errors:       (raw.errors || []).slice(),
-    },
-  };
+  const c = { ...(ctx || {}) };
+  if(c.workPerGiro == null) c.workPerGiro = ZTQuadro.workPerGiroForCycle(ST.userSessionCycle);
+  if(c.deloads == null) c.deloads = _coachDeloadDates();
+  return ZTQuadro.computeWeeklyPicture(raw, weekStart, c);
 }
 
 async function buildWeeklyPicture(weekStart, opts){
@@ -7948,6 +8093,77 @@ async function weeklyPicturesBackfill(){
   }
 }
 function _wpRerenderIfOpen(){ if(ST.page === 'home') renderHome(); }
+
+// ═══════════════════════════════════════════════════════════
+// PIRSI PROPONE — dati (Fase 3, 13 set 2026)
+// ═══════════════════════════════════════════════════════════
+// Le proposte le genera il cron del Worker il lunedì alle 6 (worker/src/coach-cron.js).
+// Se all'apertura la settimana appena chiusa non ne ha (cron fallito, o app aperta
+// prima), le genera l'app con le stesse regole (shared/coach_rules.js). Mai doppioni:
+// UNIQUE (user_id, week_start, kind) e insert che ignora i duplicati.
+// Pirsi propone, l'utente decide: qui si leggono e si scrivono solo proposte.
+const COACH_SUPPORTED_DAYS = [4, 5];      // rotazioni che esistono davvero (CLAUDE.md → Split)
+const COACH_HISTORY_WEEKS = 8;
+let _cpTableOk = true;                    // false se coach_proposals non risponde: da lì niente card né generazione
+let _cpEnsureStarted = false;
+function _cpTableError(res, cosa){
+  if(!res.error) return false;
+  const code = res.error.code || '';
+  if(code === 'PGRST205' || code === '42P01' || /coach_proposals/.test(res.error.message || '')) _cpTableOk = false;
+  console.warn('[pirsi] ' + cosa + ':', res.error.message || res.error);
+  return true;
+}
+// ST.coachProposals: righe delle ultime settimane (tutti gli stati), per la card e per le regole.
+// ST.coachDeloads: date degli scarichi anticipati accettati, lette da getCycleWeekInfo.
+async function loadCoachProposals(){
+  if(!_wpUsable() || !_cpTableOk) return ST.coachProposals || [];
+  const da = wpAddDays(wpMonday(), -7 * (COACH_HISTORY_WEEKS + 1));
+  const [res, sc] = await Promise.all([
+    dbq('leggere le proposte di ' + COACH_NAME, supa.from('coach_proposals').select('*')
+      .eq('user_id', ST.user.id).gte('week_start', da).order('week_start').order('created_at').range(0, 999), { silenzioso:true }),
+    dbq('leggere gli scarichi accettati', supa.from('coach_proposals').select('applied_at')
+      .eq('user_id', ST.user.id).eq('kind', 'deload').eq('status', 'accepted').order('applied_at').range(0, 999), { silenzioso:true }),
+  ]);
+  if(_cpTableError(res, 'lettura proposte')) return ST.coachProposals || [];
+  ST.coachProposals = res.data || [];
+  if(!sc.error) ST.coachDeloads = (sc.data || []).filter(r => r.applied_at).map(r => dayKey(new Date(r.applied_at)));
+  return ST.coachProposals;
+}
+async function ensureCoachProposals(){
+  if(_cpEnsureStarted || !_wpUsable() || !_cpTableOk) return;
+  _cpEnsureStarted = true;
+  try {
+    const ws = wpAddDays(wpMonday(), -7);                 // la settimana appena chiusa
+    await loadCoachProposals();
+    if(!_cpTableOk) return;
+    // Le proposte in attesa delle settimane prima scadono (lo fa anche il cron)
+    const vecchie = (ST.coachProposals || []).filter(p => p.status === 'pending' && p.week_start < ws);
+    if(vecchie.length){
+      const r = await dbq('segnare scadute le proposte vecchie', supa.from('coach_proposals').update({ status: 'expired' })
+        .eq('user_id', ST.user.id).eq('status', 'pending').lt('week_start', ws), { silenzioso:true });
+      if(!r.error) vecchie.forEach(p => { p.status = 'expired'; });
+    }
+    const first = _wpFirstWeek();
+    if((first && ws < first) || (ST.coachProposals || []).some(p => p.week_start === ws)){ _wpRerenderIfOpen(); return; }
+    const pic = await loadWeeklyPicture(ws, { silenzioso:true });
+    if(!pic || (pic.meta.errors || []).length) return;   // un quadro letto a metà non genera proposte
+    const hRes = await dbq('leggere lo storico per ' + COACH_NAME, supa.from('weekly_pictures').select('picture')
+      .eq('user_id', ST.user.id).gte('week_start', wpAddDays(ws, -7 * COACH_HISTORY_WEEKS)).lt('week_start', ws).order('week_start').range(0, 999), { silenzioso:true });
+    if(hRes.error) return;
+    const storia = (hRes.data || []).map(r => r.picture);
+    const proposte = ZTCoachRules.buildProposals(pic, storia, ST.profile || {}, { proposals: ST.coachProposals || [], supportedDays: COACH_SUPPORTED_DAYS });
+    if(!proposte.length) return;
+    const righe = proposte.map(p => ({ user_id: ST.user.id, week_start: ws, kind: p.kind, title: p.title, reason: p.reason, evidence: p.evidence, change: p.change, status: 'pending' }));
+    const ins = await dbq('salvare le proposte di ' + COACH_NAME, supa.from('coach_proposals')
+      .upsert(righe, { onConflict: 'user_id,week_start,kind', ignoreDuplicates: true }), { silenzioso:true });
+    if(_cpTableError(ins, 'salvataggio proposte')) return;
+    console.log('[pirsi] ' + righe.length + ' proposte generate dall\'app per la settimana ' + ws);
+    await loadCoachProposals();
+    _wpRerenderIfOpen();
+  } catch(e){
+    console.warn('[pirsi] generazione:', e);
+  }
+}
 
 // ── Formattazione: italiano, virgola decimale, segno vero ──
 function _wpNum(v, dec){
@@ -9325,35 +9541,21 @@ function getRotationCycle() {
 // (stessa forma: workout completati, rest esclusi, ordinati asc), `asOf`
 // ('YYYY-MM-DD') fa da "oggi": si contano i soli workout fino a quel giorno e il
 // correttivo di bordo guarda quel giorno. Senza opts il comportamento è identico.
+// Fase 3 (13 set 2026): il cuore sta in shared/quadro.js → cycleWeekInfo, lo stesso del
+// cron del Worker. Qui si passano ciclo della scheda e scarichi anticipati accettati
+// (Pirsi propone → deload): dal giorno dell'accettazione la settimana in corso è la 6.
 function getCycleWeekInfo(opts){
   const o = opts || {};
-  const oggi = o.asOf || todayKey();
-  const sorgente = o.completed || ST.trainAllCompleted || [];
-  const completati = o.asOf ? sorgente.filter(w => w && w.date <= o.asOf) : sorgente;
-  const workCount = completati
-    .filter(w => w && !/^recovery/i.test(w.session_type)).length;
-  // Slot di LAVORO per giro, derivati dal ciclo canonico attivo (mai hardcoded):
-  // 6gg → 4 (upperA/lowerA/upperB/lowerB) · 5 giorni → 5 (+upperC; 'rest' è
-  // nel ciclo a 7 ma non è lavoro).
-  const workPerGiro = Math.max(1, getRotationCycle()
-    .filter(sid => !/^recovery/i.test(sid) && sid !== 'rest' && sid !== 'rest_injury').length);
-  let weekIdx = 0; // default: settimana 1 (nessun workout ancora)
-  if(workCount > 0){
-    const rawWeek = Math.floor(workCount / workPerGiro) % 6;
-    // Correttivo bordo DAY-AWARE: a multiplo esatto di workPerGiro si resta
-    // sulla settimana appena completata SOLO se l'ultimo workout completato
-    // (ultimo elemento di trainAllCompleted, ordinato asc) è di OGGI — es.
-    // sabato sera dopo la Pump → ancora settimana corrente. Dal giorno dopo
-    // (riposo incluso) si passa alla settimana successiva.
-    const all = completati;
-    const lastDate = all.length ? all[all.length - 1].date : null;
-    weekIdx = (workCount % workPerGiro === 0 && lastDate === oggi)
-      ? (rawWeek === 0 ? 5 : rawWeek - 1)
-      : rawWeek;
-  }
-  // workCount/workPerGiro esposti per i consumatori (es. guardia checkpoint M2).
-  return { weekNum: weekIdx + 1, isScarico: weekIdx === 5, workCount, workPerGiro };
+  return ZTQuadro.cycleWeekInfo({
+    completed: o.completed || ST.trainAllCompleted || [],
+    asOf: o.asOf || null,
+    today: todayKey(),
+    workPerGiro: ZTQuadro.workPerGiroForCycle(ST.userSessionCycle),
+    deloads: _coachDeloadDates(),
+  });
 }
+// Date (YYYY-MM-DD) degli scarichi anticipati accettati, da coach_proposals (loadCoachProposals).
+function _coachDeloadDates(){ return (ST.coachDeloads || []).slice(); }
 
 // Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
 // NESSUNA scrittura DB, nessun campo persistito: si ricalcola ad ogni render.
@@ -13924,6 +14126,7 @@ async function loadSessionLastCompletion(opts){
 // Carica TUTTI i workout completati validi (escluso rest e rest_injury) per conteggio settimana ciclo.
 async function loadTrainingAllCompleted(opts){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainAllCompleted = []; return; }
+  if(ST.coachDeloads === undefined){ ST.coachDeloads = []; loadCoachProposals(); }   // scarichi anticipati accettati (Pirsi propone)
   try {
     let q = supa.from('workouts')
       .select('id, session_type, date')
@@ -17548,18 +17751,8 @@ function getBlockCheckReminder(opts){
   const start = ST.profile && ST.profile.train_start_date;
   if(!start) return null;                                  // senza Training non c'e' blocco
   if(!o.checks && (ST.bodyMeasurements === null || ST.bodyChecks === null)) return null;   // ancora in caricamento
-  const nowTs = o.nowTs != null ? o.nowTs : Date.now();
-  const startTs = new Date(start + 'T00:00:00').getTime();
-  if(!isFinite(startTs)) return null;
-  const giorniDaInizio = Math.floor((nowTs - startTs) / 86400000);
-  if(giorniDaInizio < BLOCK_DAYS) return null;             // blocco non ancora finito
-  // Ultimo check COMPLETATO: stessa fonte della timeline unificata (source='check').
-  const completati = (o.checks || ST.bodyChecks || []).filter(c => c.status === 'completed' && c.created_at && new Date(c.created_at).getTime() <= nowTs);
-  let ultimoTs = null;
-  completati.forEach(c => { const t = new Date(c.created_at).getTime(); if(isFinite(t) && (ultimoTs === null || t > ultimoTs)) ultimoTs = t; });
-  const giorniDaUltimo = ultimoTs === null ? null : Math.floor((nowTs - ultimoTs) / 86400000);
-  if(giorniDaUltimo !== null && giorniDaUltimo < CHECK_RECENT_DAYS) return null;   // check recente, niente riga
-  return { giorniDaInizio, giorniDaUltimo };
+  // Regola in shared/quadro.js → blockCheckReminder (la stessa del quadro e del cron)
+  return ZTQuadro.blockCheckReminder({ start, nowTs: o.nowTs != null ? o.nowTs : Date.now(), checks: o.checks || ST.bodyChecks || [] });
 }
 
 // CTA permanente del tab Body — visibile in TUTTI e tre i tab e in tutti gli stati.
