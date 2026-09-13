@@ -495,7 +495,7 @@ L'ho visto prima di eseguire, ma solo perché stavo già guardando quei file per
 
 L'ho scritta, e poi l'ho provata sulle zone già chiuse — non perché dubitassi, ma perché una modifica strutturale si prova su tutti i casi, non solo sul proprio. `Gambe e Glutei`, chiusa da dodici giorni, è tornata indietro con **164 unità dal ramo del piano** e tre righe «ancora da spostare».
 
-Quei tre file esistono davvero ai percorsi che il piano chiama vecchi. Ma non sono residui: hanno la loro riga in `biblioteca_gif`, quattro dei sette oggetti fuori piano sono **puntati da codici vivi**, e tutti servono già `public, max-age=31536000, immutable` dal cantiere 21+22. Sono vivi e a posto da settimane. Durante quella migrazione, guardando le GIF, si è deciso diverso da quanto il piano prevedeva — ed è esattamente ciò che deve poter succedere, perché [la regola che non si negozia](../CLAUDE.md#regole-cantiere-gif-riconciliazione-a-tre-fonti) dice che è la decisione umana a chiudere, non l'analisi tecnica. Quello che non è successo è che qualcuno tornasse a riscrivere il file del piano.
+Quei tre file esistono davvero ai percorsi che il piano chiama vecchi. Ma non sono residui: hanno la loro riga in `biblioteca_gif`, quattro dei sette oggetti fuori piano sono **puntati da codici vivi**, e tutti servono già `public, max-age=31536000, immutable` dal cantiere 21+22. Sono vivi e a posto da settimane. Durante quella migrazione, guardando le GIF, si è deciso diverso da quanto il piano prevedeva — ed è esattamente ciò che deve poter succedere, perché [la regola che non si negozia](MEDIA.md#regole-cantiere-gif-riconciliazione-a-tre-fonti) dice che è la decisione umana a chiudere, non l'analisi tecnica. Quello che non è successo è che qualcuno tornasse a riscrivere il file del piano.
 
 **Che cosa sarebbe costata.** La deduzione avrebbe classificato `Gambe e Glutei` come zona in migrazione e messo in movimento tre file a posto, spostandoli a percorsi che nessuno ha scelto e lasciando le loro righe a puntare altrove. Il danno non sarebbe stato la perdita di un file — la copia c'è — ma quattro codici vivi che smettono di risolvere, in una zona chiusa che nessuno stava più guardando.
 
@@ -801,7 +801,7 @@ Finché nessuno rinomina, i due nomi coincidono e tutto funziona. Alla prima rin
 **Cosa NON era.** Tre ipotesi plausibili, tutte e tre false, e vale la pena averle scritte:
 
 - **la settimana cercata a −7 giorni mentre la rotazione a 6 la sposta**: la query non usa nessuna finestra di date, cerca l'ultima data `< oggi`;
-- **la lettura limitata al mese corrente**, il difetto di `renderCalStrip` del [cantiere 24](CANTIERI.md#24-striscia-settimanale-cieca-sullo-storico--chiuso-9-agosto-2b2fe95): qui non c'è nessun filtro di mese;
+- **la lettura limitata al mese corrente**, il difetto di `renderCalStrip` del [cantiere 24](CANTIERI.md#24-striscia-settimanale-cieca-sullo-storico---chiuso-9-agosto-2b2fe95): qui non c'è nessun filtro di mese;
 - **il troncamento a 1000 righe** di [L13](#l13--postgrest-tronca-le-select-al-limite-default): falso sul codice vecchio, **proprio perché** il filtro per nome restringeva lato server. Diventava vero togliendolo — quindi la paginazione è servita lo stesso, ma come conseguenza della cura, non come causa del male.
 
 ⚠️ **Un'ipotesi già vista altrove è la più facile da confermare per somiglianza.** Il mese corrente era la spiegazione pronta: stesso modulo, stesso sintomo, già successo. Le tre si sono chiuse leggendo la query, non ragionando sul sintomo.
@@ -856,7 +856,7 @@ Il 13 settembre il brief della card peso chiedeva «i numeri coincidono con il t
 
 ⚠️ **Nessun segnale, di nuovo.** Un peso vecchio ha la stessa forma di un peso nuovo: un numero plausibile, con l'unità giusta. Nessuno lo vede sbagliato finché due schermate non lo mettono una accanto all'altra.
 
-**La regola.** Quando si scopre che un numero va letto da una fonte diversa, la correzione non è finita nella schermata che l'ha fatto scoprire: **si cercano tutti i posti che rispondono alla stessa domanda** — qui «quanto pesa adesso» — e si fanno passare da **una funzione sola** (`weighInsByDay`). Quelli che per una ragione precisa restano fuori si elencano con la ragione, non si dimenticano: il grafico Tendenza e «Ultimi log» sono il [cantiere 35](CANTIERI.md#35-tab-body-grafici-tendenza-e-ultimi-log-senza-le-pesate-rapide). È [L45](#l45--il-nome-mostrato-a-schermo-non-è-una-chiave) visto dall'altra parte: là una chiave sola mancava e lo storico si staccava, qui una fonte sola mancava e il peso si sdoppiava.
+**La regola.** Quando si scopre che un numero va letto da una fonte diversa, la correzione non è finita nella schermata che l'ha fatto scoprire: **si cercano tutti i posti che rispondono alla stessa domanda** — qui «quanto pesa adesso» — e si fanno passare da **una funzione sola** (`weighInsByDay`). Quelli che per una ragione precisa restano fuori si elencano con la ragione, non si dimenticano: il grafico Tendenza e «Ultimi log» sono il [cantiere 35](CANTIERI.md#motore-di-riallineamento-pirsi-propone---chiuso-13-settembre-2026). È [L45](#l45--il-nome-mostrato-a-schermo-non-è-una-chiave) visto dall'altra parte: là una chiave sola mancava e lo storico si staccava, qui una fonte sola mancava e il peso si sdoppiava.
 
 ---
 

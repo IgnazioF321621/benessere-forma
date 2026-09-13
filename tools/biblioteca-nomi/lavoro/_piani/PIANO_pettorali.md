@@ -6,7 +6,7 @@ Costruito replicando la logica di `pianifica.py` sugli 82 file del Mac. Aggancio
 
 Le tre decisioni prese in chat l'11 agosto sono recepite: le due `Piegamenti *ati panca` restano come sono, `panche piane` resta al plurale, il caricamento di `dip-parallele` va in coda.
 
-⚠️ **Manca la coppia leggibile dalla macchina.** Le altre zone hanno `piano_<zona>.json` + `.tsv`, che è ciò che `migra_zona.py` consuma. Qui c'è solo questo documento. **Il 15 agosto si lancia `pianifica.py "Pettorali"` prima di eseguire**: rigenera i due file e rimisura sul vivo. Se i suoi conteggi divergono da quelli qui sotto, vince lui e il piano si rilegge — la baseline si sposta anche solo perché il catalogo è cambiato → [L17](../../../docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+⚠️ **Manca la coppia leggibile dalla macchina.** Le altre zone hanno `piano_<zona>.json` + `.tsv`, che è ciò che `migra_zona.py` consuma. Qui c'è solo questo documento. **Il 15 agosto si lancia `pianifica.py "Pettorali"` prima di eseguire**: rigenera i due file e rimisura sul vivo. Se i suoi conteggi divergono da quelli qui sotto, vince lui e il piano si rilegge — la baseline si sposta anche solo perché il catalogo è cambiato → [L17](../../../../docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
 
 ---
 
@@ -91,7 +91,7 @@ Upload dell'oggetto nuovo + riga nuova. Nessuno di questi 21 slug è occupato: v
 
 **Qui il piano si ferma e passa a te.** I **22 codici del gruppo B** vanno aggiornati sul foglio con il `gif_slug` nuovo, poi si esegue il sync.
 
-⚠️ Il sync riscrive **ogni** riga presente nel foglio: dopo, verificare anche i codici toccati nei passi precedenti, non solo questi 22 → [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha).
+⚠️ Il sync riscrive **ogni** riga presente nel foglio: dopo, verificare anche i codici toccati nei passi precedenti, non solo questi 22 → [L4](../../../../docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha).
 ⚠️ Subito dopo il sync: `verifica_sync.py`, prima di ogni altra cosa.
 
 Fino a qui la vecchia catena regge: entrambi gli slug risolvono.
@@ -108,7 +108,7 @@ Per **tutti e 57** i codici della zona, non solo i 22. Tre condizioni perché un
 2. l'oggetto all'URL restituito esiste davvero;
 3. la sua **impronta è quella attesa per quel codice**.
 
-**Il 200 non basta**, e nemmeno la coerenza del DB con se stesso: il DB può tornare e l'app vedere altro → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso). La verifica usa `HEAD`, quindi non consuma egress; un esito `IGNOTO` si scioglie sul singolo codice con `--sha EX###`, che scarica quel file e basta.
+**Il 200 non basta**, e nemmeno la coerenza del DB con se stesso: il DB può tornare e l'app vedere altro → [L8](../../../../docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso). La verifica usa `HEAD`, quindi non consuma egress; un esito `IGNOTO` si scioglie sul singolo codice con `--sha EX###`, che scarica quel file e basta.
 
 Un codice che non risolve → **non si cancella niente**, si torna indietro.
 
@@ -218,7 +218,7 @@ Venti dei ventuno sono piegamenti o dip a corpo libero: è il blocco che mancava
 3. ogni oggetto del bucket della zona ha esattamente una riga che lo punta;
 4. nessun file sul Mac senza oggetto corrispondente per impronta — atteso **82 oggetti**, da 60;
 5. `stato.py` rilanciato: `biblioteca_gif` da 1.570 a **1.592** righe attese (+22 nuove del gruppo B, +22 caricamenti, −22 vecchie cancellate in fase 7);
-6. baseline dei pool rimisurata dopo il sync → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
+6. baseline dei pool rimisurata dopo il sync → [L17](../../../../docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice).
 
 ⚠️ Il punto 5 è una **previsione, non una misura**: la verifico dopo, non prima.
 
@@ -227,9 +227,9 @@ Venti dei ventuno sono piegamenti o dip a corpo libero: è il blocco che mancava
 ## Le due decisioni chiuse l'11 agosto
 
 1. **Quando si parte**: **dal 15 agosto**, come da regola sulla quota. Il piano resta valido così com'è.
-2. **I 22 caricamenti restano GIF libere, senza codice.** Entrano in `biblioteca_gif` e basta. Il popolamento del catalogo è una **fase separata, dopo la migrazione** → [L20](../../../docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). Quando si farà, i codici si allocano **al momento della scrittura**, mai in anticipo → [L6](../../../docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
+2. **I 22 caricamenti restano GIF libere, senza codice.** Entrano in `biblioteca_gif` e basta. Il popolamento del catalogo è una **fase separata, dopo la migrazione** → [L20](../../../../docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio). Quando si farà, i codici si allocano **al momento della scrittura**, mai in anticipo → [L6](../../../../docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
 
-Conseguenza sul punto 5 della verifica finale: dopo la migrazione la zona avrà **22 righe libere senza codice**, che è uno stato atteso e non un difetto. Confluiscono nel [cantiere 16](../../../docs/CANTIERI.md#16-liberi-indicizzati-senza-codice).
+Conseguenza sul punto 5 della verifica finale: dopo la migrazione la zona avrà **22 righe libere senza codice**, che è uno stato atteso e non un difetto. Confluiscono nel [cantiere 16](../../../../docs/CANTIERI.md#16-liberi-indicizzati-senza-codice).
 
 ## Voci aperte da riprendere
 

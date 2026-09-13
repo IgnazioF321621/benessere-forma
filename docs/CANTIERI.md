@@ -96,7 +96,7 @@ Da decidere quando si apre, in quest'ordine:
 ## 22. Rimettere il `cache-control` sulle GIF
 *I due si fanno insieme: si sta gia' ricaricando tutto, l'intestazione viene gratis. Aperti il 15 agosto 2026.*
 
-**La regola operativa sta in [CLAUDE.md](../CLAUDE.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente)** — qui resta solo cosa manca da fare e cosa e' stato misurato.
+**La regola operativa sta in [CLAUDE.md](MEDIA.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente)** — qui resta solo cosa manca da fare e cosa e' stato misurato.
 
 **Il vincolo vero e' lo spazio, non il traffico.** Al 15 agosto il bucket occupava **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione avrebbero portato a ~1150 MB e **sfondato il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **517 MB, il 50% del piano** (rimisurato il 13 settembre: 384,7 MB nel bucket + ~132 MB stimati per le 133 GIF attive di Mobilità). Pettorali e' poi entrata gia' ridotta (chiusa il 21 agosto): oggi resta fuori dal bucket solo Mobilita'.
 
@@ -565,7 +565,7 @@ Tre pezzi, un commit ciascuno:
 
 - **calcolo** (`16f739b`) — `buildWeeklyPicture(weekStart)` = `_wpFetch` (8 letture in parallelo, paginate, ognuna in `dbq`) + `computeWeeklyPicture` (puro, senza rete). Forma dell'oggetto e regola `null ≠ 0` in `CLAUDE.md`
 - **vista** (`5fa8667`) — card «La tua settimana» in cima alla Home e vista completa peso → nutrizione → allenamento → corpo → esami, con frecce di settimana. Screenshot dei quattro stati in `docs/screenshots/fase1/`
-- **storico** (`9bf48e1`) — tabella `weekly_pictures`, backfill di 8 settimane una volta per sessione, la corrente mai salvata. Migrazione eseguita e collaudata il 13 settembre → [cantiere 33](#33-migrazione-di-weekly_pictures-e-collaudo-dal-vivo--chiuso-13-settembre-2026)
+- **storico** (`9bf48e1`) — tabella `weekly_pictures`, backfill di 8 settimane una volta per sessione, la corrente mai salvata. Migrazione eseguita e collaudata il 13 settembre → [cantiere 33](#33-migrazione-di-weekly_pictures-e-collaudo-dal-vivo---chiuso-13-settembre-2026)
 
 **Le scelte che il brief non diceva, o diceva diversamente:**
 

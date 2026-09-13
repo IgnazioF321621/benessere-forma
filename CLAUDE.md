@@ -4,7 +4,9 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 
 **Questo file contiene le regole vigenti.** Cosa resta da fare sta in [`docs/CANTIERI.md`](docs/CANTIERI.md); perché una regola esiste sta in [`docs/LEZIONI.md`](docs/LEZIONI.md); come si nominano gli esercizi in [`docs/NOMENCLATURA.md`](docs/NOMENCLATURA.md) (allegato normativo, in vigore). Non serve leggere gli archivi per lavorare: si aprono quando servono.
 
-**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Quadro settimanale · Lettura AI dei check · Pirsi propone · Pirsi (nome e voce del coach) · Coach generatore · Audio Training · Rotazione e ciclo Training · Indice delle lezioni
+**Indice**: File e URL · Servizi · Workflow operativo · Pattern tecnici critici · Stato corrente · Bug noti aperti · Autenticazione · Design system · Navigazione · Schema Supabase · Vocabolario obiettivi · Media system · Nomenclatura v2 · Coach (Pirsi) · Training · Indice delle lezioni
+
+**Il dettaglio operativo sta in quattro allegati**, staccati da qui il 13 settembre 2026: [`docs/SCHEMA.md`](docs/SCHEMA.md) · [`docs/MEDIA.md`](docs/MEDIA.md) · [`docs/COACH.md`](docs/COACH.md) · [`docs/TRAINING.md`](docs/TRAINING.md). Le regole che devono valere sempre sono rimaste qui; là c'è come si fanno le cose.
 
 ## File e URL
 
@@ -18,7 +20,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 
 | Servizio | URL | Scopo |
 |---|---|---|
-| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF + lettura foto dei check (Gemini `gemini-3.1-flash-lite`) + cron del lunedì 06:00 Roma ([Pirsi propone](#pirsi-propone)) |
+| Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF + lettura foto dei check (Gemini `gemini-3.1-flash-lite`) + cron del lunedì 06:00 Roma ([Pirsi propone](docs/COACH.md#pirsi-propone)) |
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
 Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY` (Groq) + `GEMINI_API_KEY`. Binding: `IMAGES` (riduzione foto dei check). Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `8a9b4fc9`. Cron `0 4 * * 1` e `0 5 * * 1` (UTC): lavora solo in quello che a Roma sono le 6.
@@ -66,21 +68,21 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 **Nutrition** ✅ completo — Oggi, Integratori v3, Analisi v3, Piano v4 (Step A→F.2a). F.2b in stand-by.
 
-**Pirsi** ✅ chiuso 13 agosto — il coach ha un nome, **provvisorio e in prova**. Prompt allineati su un registro unico, stringhe visibili riscritte nei tre moduli, nome in `COACH_NAME`. Regole in [Pirsi](#pirsi--nome-e-voce-del-coach), residui aperti nel [cantiere 26](docs/CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi).
+**Pirsi** ✅ chiuso 13 agosto — il coach ha un nome, **provvisorio e in prova**. Prompt allineati su un registro unico, stringhe visibili riscritte nei tre moduli, nome in `COACH_NAME`. Regole in [Pirsi](docs/COACH.md#pirsi--nome-e-voce-del-coach), residui aperti nel [cantiere 26](docs/CANTIERI.md#26-residui-noti-dei-prompt-di-pirsi).
 
 **Training** — in sviluppo attivo, **unico utente Ignazio** (gli altri tester usano Nutrition e Body: un bug del generatore non ha impatto su terzi). Coach generatore funzionante su **725 esercizi**, split 4/5 giorni con rotazione adattiva, Recovery Day unificato, Upper Pump, audio unificato, timer recupero parallelo al form log, WS-QUEUE, infortuni multi-giorno, rientro soft.
 
-**Catalogo GIF** — **661 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Schiena e Trapezio** — **chiusa il 31 agosto su tutti e tre i lavori**: 113 oggetti, 113 righe, 110 codici, 0 righe senza oggetto e 0 oggetti senza riga. Le 18 GIF calisthenics senza codice sono diventate **EX721-EX738**, e prima di loro EX717-EX720; 3 righe restano senza codice **per decisione**, non per arretrato. **Resta una zona sola: Mobilità** (133 GIF attive, mai entrate nel bucket, più 76 ritirate che non entrano — contate il 13 settembre). **Il primo lavoro, la conferma dei nomi, è in corso dal 1 settembre**: 139 decisioni nel registro, in git dal 13 settembre. Il piano di Pettorali è stato rigenerato il 13 settembre e descrive lo stato finale: 82 slug invariati, 0 percorsi che cambiano. Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](#una-cartella-si-chiude-su-tre-lavori).
+**Catalogo GIF** — **661 `gif_slug` attivi, 0 rotti, 64 codici senza slug**. Zero slug puntati da più di un codice. Numeri sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Zone chiuse: Addominali e Core, Bicipiti e Braccia, Cardio e Conditioning, Gambe e Glutei, **Polpacci** e **Pettorali** — entrambe chiuse il 21 agosto su tutti e tre i lavori (Pettorali: 82 GIF, 82 codici, EX677-EX701 aggiunti in un colpo). **Spalle e Cuffia** — **chiusa il 23 agosto su tutti e tre i lavori**: 63 nomi confermati al pannello, file rinominati, bucket migrato con le righe doppie, EX408 consolidato in EX057, e le ultime **10 GIF senza codice diventate EX702-EX711**. Nessuna GIF della zona è più senza codice. **Tricipiti** — **chiusa il 24 agosto su tutti e tre i lavori**: 59 GIF, 59 righe, 59 codici, i quattro numeri coincidono. Tre sostituzioni di immagine decise lungo il percorso e le ultime **5 GIF senza codice diventate EX712-EX716**. **Schiena e Trapezio** — **chiusa il 31 agosto su tutti e tre i lavori**: 113 oggetti, 113 righe, 110 codici, 0 righe senza oggetto e 0 oggetti senza riga. Le 18 GIF calisthenics senza codice sono diventate **EX721-EX738**, e prima di loro EX717-EX720; 3 righe restano senza codice **per decisione**, non per arretrato. **Resta una zona sola: Mobilità** (133 GIF attive, mai entrate nel bucket, più 76 ritirate che non entrano — contate il 13 settembre). **Il primo lavoro, la conferma dei nomi, è in corso dal 1 settembre**: 139 decisioni nel registro, in git dal 13 settembre. Il piano di Pettorali è stato rigenerato il 13 settembre e descrive lo stato finale: 82 slug invariati, 0 percorsi che cambiano. Una cartella si chiude su tre lavori prima di aprire la successiva → [regola di metodo](docs/MEDIA.md#una-cartella-si-chiude-su-tre-lavori).
 
-**Pirsi propone** ✅ chiuso 13 settembre (Fase 3) — il coach propone correzioni settimanali, l'utente accetta o rimanda. Codice in `main`, Worker deployato, migrazione eseguita e Accetto provato dal vivo il 13 settembre; prima settimana vera nel [cantiere 36](docs/CANTIERI.md#36-pirsi-propone--collaudo-dal-vivo-e-prima-settimana-vera). Regole in [Pirsi propone](#pirsi-propone).
+**Pirsi propone** ✅ chiuso 13 settembre (Fase 3) — il coach propone correzioni settimanali, l'utente accetta o rimanda. Codice in `main`, Worker deployato, migrazione eseguita e Accetto provato dal vivo il 13 settembre; prima settimana vera nel [cantiere 36](docs/CANTIERI.md#36-pirsi-propone--collaudo-dal-vivo-e-prima-settimana-vera). Regole in [Pirsi propone](docs/COACH.md#pirsi-propone).
 
-**Quadro settimanale** ✅ chiuso 12 settembre — card «La tua settimana» in Home e vista completa, calcolo e storico. Dal 13 settembre il blocco Peso ha il **peso attuale** grande (ultima pesata) con media e obiettivo sotto. `weekly_pictures` creata e collaudata il 13 settembre: 8 settimane, 0 doppioni, 8/8 uguali al ricalcolo. **Dal 13 sera versione 2**: la nutrizione conta pasti + integratori + extra come il tab Nutrition, le 8 righe riscritte. Regole in [Quadro settimanale](#quadro-settimanale).
+**Quadro settimanale** ✅ chiuso 12 settembre — card «La tua settimana» in Home e vista completa, calcolo e storico. Dal 13 settembre il blocco Peso ha il **peso attuale** grande (ultima pesata) con media e obiettivo sotto. `weekly_pictures` creata e collaudata il 13 settembre: 8 settimane, 0 doppioni, 8/8 uguali al ricalcolo. **Dal 13 sera versione 2**: la nutrizione conta pasti + integratori + extra come il tab Nutrition, le 8 righe riscritte. Regole in [Quadro settimanale](docs/COACH.md#quadro-settimanale).
 
-**Body** — M2 check fisico funzionante. Dal 12 settembre la CTA «Nuovo check fisico» è **fissa nell'intestazione del tab**, visibile nei tre tab e in tutti gli stati, con reminder di fine blocco (42 giorni da `train_start_date`, nessun check completato nelle ultime 4 settimane) e **storico degli esami del sangue** in coda al tab Check. Da ri-agganciare a fine blocco Training. **Lettura delle foto dei check** ✅ dal 13 settembre: regole in [Lettura AI dei check](#lettura-ai-dei-check).
+**Body** — M2 check fisico funzionante. Dal 12 settembre la CTA «Nuovo check fisico» è **fissa nell'intestazione del tab**, visibile nei tre tab e in tutti gli stati, con reminder di fine blocco (42 giorni da `train_start_date`, nessun check completato nelle ultime 4 settimane) e **storico degli esami del sangue** in coda al tab Check. Da ri-agganciare a fine blocco Training. **Lettura delle foto dei check** ✅ dal 13 settembre: regole in [Lettura AI dei check](docs/COACH.md#lettura-ai-dei-check).
 
 **Admin** (`dashboardzona.html`) ✅ production-ready.
 
-**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, ✅ **chiusi il 16 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: al 15 agosto 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne avrebbero aggiunti 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Tutte e 8 le zone migrate sono scese**, fra il 15 e il 16 agosto. Bucket da 639 a **362 MB, 35% del piano Free** — **277 MB liberati**, e tutti gli oggetti servono `public, max-age=31536000, immutable` — **686 oggi**, perché da allora sono entrate le zone nuove, che entrano già ridotte. **Il 13 settembre il bucket pesa 384,7 MB** e `_480/` è sgomberata su tutte le zone. Con Mobilità dentro, già ridotta al caricamento, la biblioteca completa si ferma a **~517 MB, il 50% del piano**. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
+**Ricompressione a 480px + `cache-control`** — cantieri 21 e 22, ✅ **chiusi il 16 agosto**. Il ciclo egress si è azzerato il 15; il vincolo che stringe non era il traffico ma **lo spazio**: al 15 agosto 639 MB su 1024 del piano Free (62%), e Pettorali + Mobilità ne avrebbero aggiunti 514 a piena risoluzione, sfondando il limite. La regola permanente è in [Ogni GIF entra nel bucket ridotta e con la cache](docs/MEDIA.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente). **Tutte e 8 le zone migrate sono scese**, fra il 15 e il 16 agosto. Bucket da 639 a **362 MB, 35% del piano Free** — **277 MB liberati**, e tutti gli oggetti servono `public, max-age=31536000, immutable` — **686 oggi**, perché da allora sono entrate le zone nuove, che entrano già ridotte. **Il 13 settembre il bucket pesa 384,7 MB** e `_480/` è sgomberata su tutte le zone. Con Mobilità dentro, già ridotta al caricamento, la biblioteca completa si ferma a **~517 MB, il 50% del piano**. Le altre 8 in [`docs/CANTIERI.md`](docs/CANTIERI.md#21-ricomprimere-le-gif--il-cantiere-che-chiude-il-problema-storage).
 
 **Sul fronte GIF**: **Mobilità**, l'ultima zona, 133 file mai entrati nel bucket — e per regola entrano già ridotti a 480 px. Lista completa in [`docs/CANTIERI.md`](docs/CANTIERI.md).
 
@@ -117,7 +119,7 @@ Bootstrap (`setTimeout(..., 1800)`): `?test=1` → `#access_token` → `?code=` 
 - **Background**: bone `#F5F3EE` · **Accent**: evergreen `#2A7A6F`
 - **Tinte modulo**: Nutrition `#FAC775` · Training `#B5D4F4` · Body `#AFA9EC` (forte `#5E4A7A` solo checkpoint)
 - **Over-target**: `OVER_COLOR='#B45309'`
-- **"coach"** sostituisce "AI" in tutti i copy visibili UI. Dal 13 agosto 2026 il coach ha un nome: vedi [Pirsi](#pirsi--nome-e-voce-del-coach)
+- **"coach"** sostituisce "AI" in tutti i copy visibili UI. Dal 13 agosto 2026 il coach ha un nome: vedi [Pirsi](docs/COACH.md#pirsi--nome-e-voce-del-coach)
 - Training: restyling CSS vars completo (27 giugno 2026). Nutrition e Body: migrazione legacy in corso.
 
 ---
@@ -135,75 +137,12 @@ Bootstrap (`setTimeout(..., 1800)`): `?test=1` → `#access_token` → `?code=` 
 
 ## Schema Supabase
 
-### `profiles`
-PK = `id` (= `auth.users.id`).
+Tabelle, colonne e vincoli in **[`docs/SCHEMA.md`](docs/SCHEMA.md)**. Si apre prima di scrivere una query o di aggiungere un campo.
 
-Campi chiave: `first_name, last_name, age, sex (M/F/O), height_cm, weight_kg, goal_weight_kg, target_kcal/protein/carbs/fat, obiettivo (CSV 6 chiavi OBJ_ADAPT), dieta, intolleranze (text[]), activity_level, train_start_date, usa_training (bool default true), tipo_allenamento, attrezzatura (text[]), giorni_allenamento (int), durata_sessione (int), note_salute (serializza esperienza+limitazioni — no colonne dedicate), plan_generation_day (CHECK fri/sat/sun only), plan_generation_time (HH:MM), weight_tracking_mode (daily/every3/weekly/flexible)`.
+Tabelle: `profiles` · `meals` · `esercizi_catalog` · `schede_utente` · `biblioteca_gif` · `training_logs` · `weekly_plans` · `weekly_plan_meals`.
 
-⚠️ `obiettivo`/`dieta`/`intolleranze` anche in `localStorage` (`zt_prefs_<userId>`) — `applyLocalPrefs()` sovrascrive dopo ogni `applyProfile()`.
-
-### `meals`
-`id, user_id, date, time (HH:MM), slot, description` (nome autoritativo — non esiste `name` o `food_name`), `kcal numeric(6,1), protein/carbs/fat numeric(5,1), notes`.
-
-### `esercizi_catalog`
-**725 righe** (31 agosto 2026). Gap permanenti: EX107/EX151/EX170/EX528 · EX110/EX228/EX229/EX323 (consolidamenti del 6 agosto) · EX139/EX176/EX178 (fusioni del 21 agosto: stessa GIF di EX184/EX021/EX042) · **EX322** (22 agosto: nome duplicato di EX039, blocco surrogato travasato prima di eliminarla) · **EX408** (23 agosto: consolidato in EX057, stessa GIF e stessa posizione sul fianco, i gradi non si scrivono più) — **mai renumerare**. Nessun codice libero sotto il massimo. Prossimo libero: **EX739**. RLS SELECT pubblica. PK logica = `codice`.
-
-**Fonte: Google Sheet → Apps Script "ZonaTracker-Sync-Esercizi (v3)" → Supabase upsert. Mai editare Supabase direttamente. Il sync non elimina: le righe da eliminare vanno cancellate a mano nel Sheet prima del sync.**
-
-**Dopo ogni sync si lancia `verifica_sync.py`** — stana righe arenate, valori riportati indietro e catene rotte in un colpo solo, confrontando il vivo contro `docs/STATO.json`:
-
-```bash
-python3 tools/biblioteca-nomi/verifica_sync.py && python3 tools/biblioteca-nomi/stato.py
-```
-
-Tre trappole del sync, tutte già costate giri a vuoto:
-- ⚠️ **Una riga tolta dal foglio non sparisce: si arena.** Si riconosce dall'`updated_at` più vecchio dell'ultimo lotto. È l'**unico** caso in cui cancellare direttamente da Supabase è sicuro → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena)
-- ⚠️ **Il sync riporta indietro ciò che il foglio non ha.** Dopo ogni sync verificare anche i codici toccati nei passi precedenti, non solo quelli nuovi → [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha)
-- ⚠️ **Rimisurare la baseline dei pool dopo ogni sync**, non solo dopo le modifiche al codice → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice)
-
-**Colonne: 23, nell'ordine fisico della tabella** (riletto dal vivo il 20 agosto 2026):
-
-`codice, nome, pattern, attrezzo, luogo, muscoli, livello, zone_rischio, adattamento, alternativa, setup, esecuzione, errori, nota_sicurezza, updated_at, uso, surrogato_attrezzo, nota_surrogato, gruppo_target, esecuzione_surrogato, errori_surrogato, gif_slug, nome_en`
-
-- **`gif_slug` è portante**: è il primo anello della catena `gif_slug → biblioteca_gif.slug → storage_path → file`. Fino al 20 agosto mancava da questo elenco, ed è la colonna che si scrive a ogni migrazione.
-- `updated_at` la scrive il sync: serve a riconoscere le righe arenate → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena).
-- `nome_en` ⚠️ **DEPRECATA dal 19/07/2026** — non portante, non usarla per slug/filename/UI.
-
-⚠️ **Questo è l'ordine della tabella, non quello del foglio, e i due non coincidono per forza.** Non è una lista da cui costruire un TSV posizionale: prima di generarne uno, farsi dare la riga di intestazione del foglio e confrontarla → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno). Per poche celle la forma sicura non è il TSV ma l'elenco `codice · colonna · valore`.
-
-- `uso` valori: `principale / finisher / recupero / riscaldamento / mobilita / carry / skill`
-- `uso: skill` — skill ginnastica (EX570/573/574/575): **escluse dalla generazione automatica**
-- `pattern` normalizzato via `_normPattern()` (lowercase + trim)
-- `gruppo_target` vocabolario chiuso — **non dedurre da `muscoli`** (testo libero, vocabolario diverso)
-- `alternativa` contiene codici `EX###` in chiaro, nessuna FK: prima di eliminare un codice, scansionare tutti i campi testuali con regex `\bEX\d{3}\b`
-
-Regole `surrogato_attrezzo`: token puliti separati da `+` (vocabolario chiuso: `elastico, manubri, panca, sbarra, fitball, kettlebell, maniglie, trx, cavigliera, barra, bilanciere, corpo libero`). MAI testo libero, MAI alternative con "o". `manubri` sempre plurale. Congruenza obbligatoria con `nota/esecuzione/errori_surrogato`. **302 righe su 725** ne hanno uno *(rimisurato il 31 agosto)*, `elastico` in 280.
-
-⚠️ **Due modi di sbagliare il campo, entrambi silenziosi.** Un surrogato uguale all'attrezzo nativo (`attrezzo = manubri`, `surrogato = manubri`) non apre niente e in più fa passare il **filtro `luogo`**, che guarda solo se il campo è popolato: l'esercizio entra a casa senza avere una versione casalinga. Un surrogato dichiarato **senza `nota_surrogato`** è peggio: `_trainGenMapToSession` sostituisce il `setup` con la nota solo se c'è, e senza cade sul setup nativo — la scheda mostra l'attrezzo surrogato e le istruzioni dell'attrezzo vero.
-
-### `schede_utente`
-`id, user_id, blocco_n int, scheda jsonb, attiva bool`. UNIQUE PARTIAL su `(user_id) WHERE attiva=true`. I `name` nel jsonb sono snapshot alla generazione: il loader li riallinea a runtime dal catalogo via Map codice→nome — il jsonb non si riscrive mai. Fallback su `TRAINING_SESSIONS` hardcoded se nessuna scheda.
-
-### `biblioteca_gif`
-**1.601 righe** (31 agosto 2026): 661 vive, 0 rotte, 22 libere, **918 morte** (cantiere 3E). Le libere calano a ogni zona che si chiude: le ultime 18 sono le calisthenics di Schiena e Trapezio diventate EX721-EX738. Le 21 righe doppie di Spalle e Cuffia e la riga morta di EX408 sono state cancellate il 23 agosto, dopo il secondo sync e dopo aver verificato che i 53 codici della zona risolvessero tutti. Le 918 morte hanno tutte `storage_path` in una cartella legacy (`muscolazione` 665 · `stretching` 135 · `calisthenics` 118) e **nessuna è puntata da un codice**. Conteggi sempre aggiornati in [`docs/STATO.md`](docs/STATO.md). Colonne: `slug, nome_italiano, nome_originale, categoria, gruppo_muscolare, storage_path, storage_url`. `slug` = `gif_slug` del catalogo.
-
-Bucket Storage `biblioteca-gif`: **686 oggetti in 9 cartelle** (misurato 31 agosto), **3 file senza riga**, tutti e tre in Addominali e Core (`Crunch farfalla toe touch`, `Plank frontale`, `Plank su fitball`): hanno cache immutabile e impronta determinabile, nessun codice li punta, e vanno guardati col cantiere di quella zona. Le 9 cartelle: Addominali e Core · Bicipiti e Braccia · Cardio e Conditioning · Gambe e Glutei · Pettorali · Polpacci · Schiena e Trapezio · Spalle e Cuffia · Tricipiti. Cartelle legacy eliminate il 18/07/2026.
-
-**`categoria` non ha convenzione unica tra zone** — leggere sempre quale usa la zona di destinazione prima di scrivere. Pettorali → nome della zona; Schiena e Trapezio → pattern di movimento (`tirata orizzontale` · `tirata verticale` · `isolamento`), il nome della zona non compare. `storage_path` invece è sempre univoco per zona ed è il riferimento affidabile.
-
-**`Cardio e Conditioning` è una zona di capacità, non muscolare**: raccoglie gli esercizi il cui stimolo non è isolabile su un gruppo muscolare. Le altre 8 restano zone muscolari.
-
-### `training_logs`
-`id, user_id, date, session_id, exercise_name, set_number, reps, resistance, rir_actual, notes`. Stato: 912 righe, divergenza 0, doppioni 0 (bonificato 17 luglio).
-
-### `weekly_plans`
-`id, user_id, week_start, target_kcal/protein/carbs/fat, ai_reasoning, status (draft/active/archived)`. UNIQUE `(user_id, week_start)`. `plan_generation_day` CHECK: solo `'fri'/'sat'/'sun'`.
-
-### `weekly_plan_meals`
-`id, plan_id→weekly_plans CASCADE, user_id, day_of_week (1-7), slot, description, ingredients jsonb, meal_time, kcal/protein/carbs/fat, ai_explanation, sort_order`.
-
-### Altre tabelle
-`weekly_pictures (user_id+week_start UNIQUE, picture jsonb, computed_at — storico del [Quadro settimanale](#quadro-settimanale))` · `coach_proposals (user_id+week_start+kind UNIQUE, kind, title, reason, evidence jsonb, change jsonb, status pending/accepted/rejected/expired, decided_at, applied_at — RLS: l'utente legge, inserisce solo pending, aggiorna solo status/decided_at/applied_at: [Pirsi propone](#pirsi-propone))` · `body_check_ai (check_id UNIQUE, previous_check_id, model, result jsonb, confidence bassa/media/alta, created_at — RLS solo SELECT sulle proprie righe, scrive il Worker: [Lettura AI dei check](#lettura-ai-dei-check))` · `body_check_photos (check_id, pose front/right/left/back — quattro, nessun side —, storage_path nel bucket privato body-check-photos)` · `workouts (date, session_type, completed — fonte del calendario e della rotazione; rest/rest_injury inclusi)` · `blood_tests (test_date + hemoglobin, ferritin, glucose, cholesterol_tot, hdl, triglycerides, creatinine, alt, vitamin_d, vitamin_b12, tsh — nessun intervallo di riferimento a schema: etichette e unità in `BLOOD_FIELDS`, [cantiere 32](docs/CANTIERI.md#32-intervalli-di-riferimento-degli-esami-del-sangue))` · `body_checks (status in_progress/completed)` · `body_measurements (check_id)` · `body_logs (weight_kg, waist_cm, bf_pct, muscle_kg, visceral_fat, hip/chest/bicep_cm, body_age — no UNIQUE)` · `weight_logs (UNIQUE user_id+date)` · `supplements_log (UNIQUE user_id+date+supplement_name, is_extra, snapshot macro)` · `supplement_packages + supplement_package_items (UNIQUE package_id+supplement_id)` · `ai_memory (category, content, confidence, evidence_count, last_observed, active)` · `weekly_plan_acceptance (plan_meal_id→CASCADE, status, actual_meal_id→SET NULL — UNIQUE plan_meal_id)` · `nutrilite_catalog (64 prodotti, SELECT pubblica)` · `fasting_days, supplements, workout_sets`.
+⚠️ **`esercizi_catalog` si scrive dal Google Sheet, mai direttamente in Supabase.** Il sync non elimina: le righe da togliere si cancellano nel foglio prima del sync.
+⚠️ **Dopo ogni sync si lancia `verifica_sync.py`**, prima di qualunque altra cosa, e si rimisura la baseline dei pool → [L3](docs/LEZIONI.md#l3--una-riga-tolta-dal-foglio-non-sparisce-si-arena) · [L4](docs/LEZIONI.md#l4--il-sync-riporta-indietro-ciò-che-il-foglio-non-ha) · [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice)
 
 ---
 
@@ -218,202 +157,19 @@ Macro % `[carbo/prot/fat]`: dimagrimento 38/32/30 · ricomposizione 38/34/28 · 
 
 ## Media system
 
-### Flusso GIF (Worker)
-- `?code=EX###` (priorità): cerca `gif_slug` su `esercizi_catalog` → lookup `biblioteca_gif WHERE slug=gif_slug` → URL costruito su **`storage_path` letto dalla riga**, non ricavato da slug o categoria
-- Fallback se `gif_slug` NULL: vecchio `MATCH_BY_CODE` ExerciseDB (~39 esercizi storici)
-- `?name=...` (legacy): match esatto su dizionario hardcoded ~20 nomi (`MATCH_DATA`), nessuna normalizzazione
-- App: `fetchExerciseMedia(exName, exCode)` · `ensureRestGif(exName, exCode)` — cache key = `exCode || exName`
-
-**661/661 `gif_slug` risolvono, 0 rotti** (31 agosto). 64 codici senza slug → fallback ExerciseDB.
-
-⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
-⚠️ **Lo sweep completo va lanciato con concorrenza 3, non 6** (Storage risponde 429) → [L11](docs/LEZIONI.md#l11--lo-sweep-completo-va-lanciato-con-concorrenza-bassa). Vale per gli sweep che scaricano davvero: dal 7 agosto la verifica normale usa `HEAD` e non ha più questo limite → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
-
-### Regole di migrazione (bucket + `biblioteca_gif` + Sheet)
-
-**Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo **SHA-256** → [L9](docs/LEZIONI.md#l9--aggancio-per-impronta-mai-per-nome). La regola vive nello strumento: `prepara.py` aggancia file → riga → codice per SHA-256 tramite `impronte.py`; il basename di `storage_path` non entra nella classificazione.
-
-- `biblioteca_gif` si legge **live** con la chiave di servizio da `worker/.dev.vars` (mai stampata). L'export CSV è solo ripiego: invecchia a ogni migrazione.
-- Stato **`indeterminato`**: se anche un solo oggetto del bucket non ha impronta determinabile, i file senza riscontro **non** diventano `libero`. Nel dubbio la GIF vale come viva → [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto)
-- **Nessun nome entra nello strumento passando dalla chat.** Fonte unica dei nomi è il pannello di conferma, l'unico posto in cui il nome è stato scelto guardando la GIF.
-- **Un solo traslitteratore**, `nomenclatura.senza_accenti()`, usato sia da `slug()` sia da `percorso_ascii()` → [L15](docs/LEZIONI.md#l15--i-nomi-file-macos-sono-in-forma-decomposta)
-- ⚠️ Il TSV del pannello e il piano di `migra.py` non coprono le stesse righe → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe)
-
-**L'impronta si legge dall'`eTag`, il contenuto dal Mac — mai scaricando** *(dal 7 agosto 2026)* → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
-
-L'`eTag` che Storage dichiara **è l'MD5 del contenuto**: dall'`eTag` si risale al file gemello sul Mac e quindi al suo SHA-256, senza far uscire un byte dal bucket. Copertura misurata: **686 oggetti su 686** *(rimisurata il 31 agosto, 0 byte scaricati)*. È ciò che ha portato il costo di una zona da ~200 MB a 0.
-
-- **Due cache, entrambe sul contenuto**: `lavoro/_impronte/_locale.json` (percorso → md5+sha256, rinfrescata per mtime) e `lavoro/_impronte/_per_impronta.json` (`md5|bytes` → sha256). ⚠️ **Mai indicizzare sul percorso**: il cantiere rinomina, e la chiave sul percorso costava un download a ogni rinomina — 150 file scaricati due volte
-- **Le verifiche si fanno con `HEAD`**, non scaricando: `verifica_oggetto()` in `impronte.py` è il punto unico. Usata da `migra_zona.py`, `verifica_worker.py`, `fase7_cancella_vecchie.py`, `ripara_slug_in_place.py`
-- **`ignoto` blocca come `diverso`**: un'impronta non determinabile non diventa mai "a posto" per silenzio
-- **Il download è l'eccezione, si chiede a voce, e vale per un file solo**: `prepara.py --scarica`, `verifica_worker.py --sha EX###`. Mai a tappeto
-- **Ogni strumento che può scaricare stampa i byte a fine esecuzione, anche a zero** (`stampa_consumo()`). Senza quel numero, i consumi si possono solo stimare
-- In `lavoro/` restano `_esegui_gambe_e_glutei.py` e `_costruisci_gambe_e_glutei.py`, residui one-off del cantiere Gambe che scaricavano a tappeto: **disinnescati il 7 agosto**, si fermano all'avvio prima di toccare la rete. Originali in `_backup/oneoff_gambe_originali_20260807T161449/`
-- ⚠️ Fuori da `biblioteca-nomi` l'unico che scarica oggetti è `tools/auditor_nomenclatura.py`, e solo per gli slug in collisione (**oggi 0**, quindi scarica nulla). Ha `--no-hash` per spegnerlo del tutto
-
-**Ordine a righe doppie — obbligatorio quando cambia uno slug.** La catena è `esercizi_catalog.gif_slug` → `biblioteca_gif.slug` → `storage_path` → file: se i primi due divergono il Worker restituisce `missing`. Il sync del Sheet è manuale e la finestra può durare ore, quindi va coperta:
-
-1. rinomina nel bucket e aggiorna `storage_path`, slug invariato
-2. aggiungi righe con lo slug nuovo e lo stesso `storage_path`, così risolvono entrambi
-3. sincronizza il Sheet
-4. **confronta i valori vivi codice per codice contro la lista consegnata al foglio** — non contro l'esito degli strumenti → [L41](docs/LEZIONI.md#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione). Se un codice **fuori** dalla lista ha preso un valore della lista, fermarsi: la cancellazione consoliderebbe lo sfasamento invece di lasciarlo riparabile
-5. verifica tutti i codici, poi cancella le righe vecchie **una per una e solo se nessun codice le punta più**
-
-Non deve esistere un istante in cui una GIF è irraggiungibile.
-
-**Eccezione — zona senza codici**: se nessun `gif_slug` punta alla zona non esiste catena da proteggere, lo slug si aggiorna in place e non servono né righe doppie né sync. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma.
-
-**La stessa eccezione vale per la singola riga, e la domanda va posta alla riga.** «La zona ha codici» e «questa riga ha codici» non sono la stessa domanda: su Pettorali 57 codici puntano alla zona e le 2 righe del gruppo D — GIF indicizzate che nessun esercizio usa — non ne hanno nessuno. La guardia di zona resta com'è ed è giusta per l'uso di zona; per una riga sola c'è `migra_zona.py "<zona>" slug-riga --solo="<slug, nome o percorso>"`, che **rilegge vivo** chi punta a quella riga, si ferma se qualcuno la punta indicando l'ordine a righe doppie, e lavora **una riga per volta di proposito**. `--prova` non scrive.
-
-⚠️ **Il piano dice chi non aveva codici quando è stato scritto, non chi non ne ha adesso** → [L34](docs/LEZIONI.md#l34--il-piano-su-disco-non-è-il-verbale-di-ciò-che-è-stato-fatto). La verifica si rifà viva a ogni chiamata.
-
-**Rinominare i file nel bucket è cosmesi.** L'app risolve via `storage_path`: il nome del file non è ciò che rompe o aggiusta le immagini.
-
-### Ogni GIF entra nel bucket ridotta e con la cache — regola permanente
-
-**In vigore dal 15 agosto 2026.** Nessuna GIF entra nel bucket a piena risoluzione. La riduzione **fa parte della procedura di caricamento**, non è un intervento da fare dopo: fra due cantieri ci si ritroverebbe di nuovo con lo Storage pieno.
-
-**Nessun file entra nel bucket con i byte di prima.** Due casi, un comando ciascuno:
-
-```bash
-# sopra i 480 px: si ridimensiona
-tools/bin/gifsicle --resize-fit 480x480 --resize-method mix -O3 <src> -o <dst>
-# già sotto i 480 px: si riscrive la sola codifica, i pixel non si toccano
-tools/bin/gifsicle -O3 <src> -o <dst>
-```
-
-Tre proprietà, tutte obbligatorie:
-
-| | valore | dove si controlla |
-|---|---|---|
-| lato lungo | **massimo 480 px** | `max(Image.open(p).size)` |
-| byte | **diversi da quelli di prima** | `md5_nuovo != md5_bucket` |
-| `cache-control` | `public, max-age=31536000, immutable` | `metadata.cacheControl` nell'elenco |
-
-⚠️ **480 px è un tetto, non una misura: chi sta sotto non si ridimensiona.** Nel bucket 371 oggetti su 647 erano già a 360 px o meno; portarli a 480 li **ingrandirebbe**, più pesanti e più sfocati. Passano comunque per `-O3`, che cambia i byte senza toccare un pixel.
-
-⚠️ **Il perché dei byte nuovi non è il peso, è l'ETag.** *(regola dal 15 agosto 2026)* Un file ricaricato identico lascia l'ETag invariato, e la CDN può restare bloccata sull'intestazione vecchia — ma solo se quell'oggetto era in cache in quel momento, cioè **a seconda della fortuna**. Una procedura che riesce o fallisce a seconda di questo non va bene: si toglie la condizione alla radice. `ripara_cache.py` resta come rete di sicurezza, non come metodo → [L30](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)
-
-**Le guardie, uguali nei due casi.** Durata totale invariata (tolleranza 2%), fotogrammi mai in aumento, e confronto **a tempi uguali** — mai a indici uguali, perché `-O3` fonde i fotogrammi consecutivi identici e gli indici non si corrispondono più. Lo scostamento si misura e si stampa:
-
-- **riottimizzati `-O3`**: differenza massima su qualsiasi pixel **deve essere 0**. Se non lo è, lo strumento si ferma: `-O3` riscrive la codifica, non i colori.
-- **ridimensionati**: media a tempi uguali, con la mediana e il massimo della zona in fondo. Sopra 3,0 vanno guardati; oltre 5,0 lo strumento si ferma. Misurato su 85 file di Gambe e Glutei: mediana 0,53, massimo 1,17.
-
-⚠️ **`--colors` non si usa.** Deciso il 15 agosto: si ridimensiona e basta. Il solo 480 px toglie il 49% del peso del bucket; ridurre anche i colori ne toglierebbe un altro 6% o 22% in cambio di banding permanente, e il margine non serve — con la sola riduzione di dimensione la biblioteca completa sta a metà del piano Free. Su queste GIF `--colors 256` è per giunta **identico byte per byte** al solo ridimensionamento: hanno già 256 colori esatti → [L28](docs/LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte)
-
-⚠️ **gifsicle, non Pillow.** Pillow rifà i fotogrammi da capo e perde la codifica differenziale: misurato, due file su sei uscivano **più pesanti dell'originale** (+89%). gifsicle non sta sul Mac di serie e non c'è Homebrew: si compila con `bash tools/biblioteca-nomi/installa_gifsicle.sh` in `tools/bin/`, fuori da git.
-
-**Le tre fasi, in quest'ordine** — la seconda non parte se la prima non ha prodotto un piano, la terza legge il piano:
-
-```bash
-python3 tools/biblioteca-nomi/ricomprimi.py "<zona>"          # solo Mac, 0 byte
-python3 tools/biblioteca-nomi/carica_480.py "<zona>" --prova  # controlla, non scrive
-python3 tools/biblioteca-nomi/carica_480.py "<zona>"          # carica e verifica
-python3 tools/biblioteca-nomi/verifica_480.py "<zona>"        # collauda e sgombera
-python3 tools/biblioteca-nomi/ripara_cache.py "<zona>"        # solo se il collaudo si ferma
-```
-
-Il collaudo fa **due** verifiche, e la seconda non basta da sola: tutti gli oggetti del piano letti dall'elenco del bucket (impronta, dimensione, `cache-control`), **e** i codici chiesti al Worker come fa l'app. Solo la prima copre i "liberi", che nel bucket ci sono anche se nessun codice li punta.
-
-**Le righe doppie qui non servono, e non è una scorciatoia.** Quell'ordine protegge la catena quando cambia uno **slug**: qui non cambiano né lo slug, né `storage_path`, né `biblioteca_gif`, né il Sheet — **il database non si tocca affatto**. Cambiano solo i byte all'indirizzo di sempre e un'intestazione. La garanzia che serve — mai un istante con la GIF irraggiungibile — la dà il caricamento stesso, che è una sostituzione e non una cancellazione seguita da una scrittura: se fallisce, quello che c'era resta dov'era.
-
-**Il backup è la biblioteca sul Mac**, e il piano lo dimostra riga per riga: registra md5, sha256 e dimensione di ciò che sta nel bucket *ora* e il file locale da cui quei byte provengono. Prima di scrivere si ricontrolla che il bucket sia ancora in quello stato; se anche un solo oggetto è cambiato, ci si ferma senza scrivere. Un oggetto **senza gemello sul Mac non è ripristinabile e quindi non si tocca**: `ricomprimi.py` lo esclude dal piano da solo.
-
-I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome che hanno nel bucket** — così il caricamento è una corrispondenza uno a uno. La cartella sta dentro la biblioteca, quindi è già fuori da git, e `impronte.py` fa `rglob` sulla radice: le impronte nuove entrano nell'indice da sole, senza toccare `RADICI_LOCALI`.
-
-⚠️ **`_480/` è una cartella di transito, non un archivio.** A zona verificata i ricompressi si cancellano: gli originali restano sul Mac e `ricomprimi.py` li rigenera identici byte per byte (verificato, 4 su 4). Con il disco al 98% non ha senso tenerne due copie. Lo fa `verifica_480.py` da solo quando il collaudo passa; `--tieni` lo trattiene.
-
-⚠️ **Prima di cancellare si registrano le impronte nella cache per contenuto, e non è un dettaglio.** Nel bucket ci sono byte ricompressi, e una volta sgomberata `_480/` **nessun file sul Mac ha più quell'impronta**: senza registrarla, ogni strumento vedrebbe quegli oggetti come "impronta ignota", che per [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto) blocca come "diverso". `verifica_480.py` la registra, cancella, e **ricontrolla dopo** che tutti gli oggetti risolvano ancora. Misurato su Polpacci: 7 dal Mac (quelli non toccati), 12 dalla cache, 0 ignoti.
-
-**Il piano `lavoro/_480/<zona>.json` non si cancella mai**: è il registro che tiene insieme byte nuovi ed esercizio — `storage_path`, file di origine sul Mac, impronta prima e impronta dopo. È l'unico posto in cui quel legame resta scritto una volta sgomberata la cartella.
-
-⚠️ **Un oggetto ricaricato identico può continuare a servire l'intestazione vecchia.** La CDN indicizza per URL e convalida per **ETag**: se i byte non cambiano l'ETag non cambia, e la voce vecchia resta anche forzando la rivalidazione. Colpisce solo i file già sotto i 480px (ricaricati identici) che erano in cache in quel momento — misurato: **2 su 219** nelle prime tre zone. Li sblocca `ripara_cache.py`, che li riscrive con `gifsicle -O3`: **non tocca un pixel** (verificato fotogramma per fotogramma, differenza 0) ma cambia i byte, quindi la CDN è costretta a sostituire la voce → [L30](docs/LEZIONI.md#l30--la-cdn-convalida-per-etag-se-i-byte-non-cambiano-lintestazione-vecchia-resta)
-
-⚠️ **Il `cache-control` non si verifica con una HEAD.** La HEAD autenticata risponde sempre `no-cache`, qualunque cosa sia memorizzata: un caricamento perfettamente riuscito sembra fallito. Si legge da `metadata.cacheControl` nell'elenco del bucket, o dall'URL pubblico → [L29](docs/LEZIONI.md#l29--la-head-autenticata-dice-sempre-no-cache-qualunque-cosa-sia-memorizzata)
-
-**Nel bucket non ci sono solo GIF.** Misurato sul contenuto, non sul nome: **645 GIF, 1 PNG, 3 JPEG** su 647, tutti e quattro i non-GIF in Addominali e Core e tutti puntati da un codice vivo. Due dei tre JPEG **si chiamano `.gif`** e sono registrati `image/gif`: funzionano perché il browser guarda i byte → [L32](docs/LEZIONI.md#l32--lestensione-non-dice-il-formato). Gli strumenti devono reggerli, non morirci sopra:
-
-- il formato si legge **dal contenuto** (`Image.open(p).format`), mai dall'estensione
-- **PNG**: si riscrive con `optimize=True` — senza perdita per definizione, differenza 0 sui pixel
-- **JPEG e altri formati con perdita**: non si riscrivono **mai** in automatico. Ogni riscrittura sposta i pixel e su un file già compresso il ridimensionamento lo fa pure crescere. Entrano identici, dichiarati nel piano
-- il **mimetype si rilegge dall'oggetto e si rimanda uguale**, mai un valore fisso: un `image/gif` scritto nel codice riscriverebbe il tipo del PNG → [L33](docs/LEZIONI.md#l33--il-mimetype-si-rilegge-dalloggetto-non-si-scrive-fisso)
-- per un file che entra **identico** si carica **prima** e si controlla **dopo**: sondare la cache è ciò che ce lo mette → [L31](docs/LEZIONI.md#l31--per-un-file-che-entra-identico-si-carica-prima-e-si-controlla-dopo)
-
-**I nomi dei campi dicono di quale file parlano** *(dal 16 agosto 2026)*. Con la riduzione, lo stesso esercizio esiste come **due artefatti con due impronte diverse**: il file sul Mac e l'oggetto ridotto nel bucket. Un campo chiamato `sha256` non dice quale dei due, e in poche ore ha prodotto lo stesso difetto in tre punti → [L35](docs/LEZIONI.md#l35--quando-lo-stesso-difetto-ricompare-tre-volte-si-corregge-il-nome-che-lo-permette). Tre suffissi, obbligatori in ogni piano e in ogni strumento:
-
-| campo | descrive |
-|---|---|
-| `sha256_mac` | il file com'è sul Mac (piano di `pianifica.py`) |
-| `md5_bucket_ora` · `byte_bucket_ora` · `cache_bucket_ora` | ciò che nel bucket c'è **adesso** |
-| `md5_bucket_atteso` · `sha256_bucket_atteso` · `byte_bucket_atteso` | ciò che nel bucket ci **deve** essere dopo la scrittura |
-
-⚠️ **Chi verifica un oggetto del bucket usa `_bucket_atteso`, mai `sha256_mac`**: sono byte diversi per definizione, ed è il punto della regola dei 480px. Il registro del pannello (`registro_decisioni.tsv`) tiene il suo `sha256` lato Mac e non è toccato.
-
-**Le eccezioni si dichiarano nel piano**, in `eccezioni`: quale scostamento si tollera, su quale oggetto, perché e da quando. `verifica_480.py` le legge, tollera **solo** quello scostamento e controlla tutto il resto come sempre. Senza, una zona con una decisione presa a voce resterebbe bloccata per sempre.
-
-**Per una zona non ancora migrata** — oggi Mobilità — non esiste un "dopo": le GIF entrano nel bucket **già ridotte e già con l'intestazione**, al momento della migrazione. Non si carica a piena risoluzione per ricomprimere in un secondo giro. Vale anche per i file già sotto i 480 px: entrano passati per `-O3`, mai con i byte del Mac.
-
-**Procedura sicura per file Storage**: copia server-side → verifica hash → aggiorna indice → cancella vecchio. Mai invertire l'ordine.
-
-**Strada A (due codici, stessa GIF)**: seconda riga in `biblioteca_gif` con stesso `storage_path`, slug derivato dal secondo nome. Nessun file duplicato in Storage. È la soluzione quando due codici **devono** restare distinti pur condividendo l'immagine; quando invece sono lo stesso esercizio la strada è il consolidamento (cantiere 4).
-
-### Una cartella si chiude su tre lavori
-
-**Regola di metodo vincolante, dall'11 agosto 2026.** Ogni cartella della biblioteca si chiude su **tre lavori, in quest'ordine**, prima di aprire la successiva:
-
-1. **conferma dei nomi** — pannello locale, dieci alla volta, guardando la GIF
-2. **migrazione delle immagini** — bucket + `biblioteca_gif` + Sheet
-3. **popolamento del catalogo** — le GIF della zona che restano senza codice diventano righe di `esercizi_catalog`, o si decide esplicitamente che non lo diventino
-
-**Nessuna cartella nuova con lavori arretrati su quella precedente.** Il terzo lavoro non è una coda opzionale: una zona con le immagini migrate e il catalogo non popolato è una zona **aperta**, non chiusa, e non autorizza ad aprirne un'altra.
-
-Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](docs/CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](docs/CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
-
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ · ~~Schiena e Trapezio~~ **chiuse** → **Mobilità**, l'ultima.
-
-L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
-
-Non era più l'ordine per dimensione: **Spalle e Cuffia era stata anticipata** rispetto alle zone più grosse perché conteneva i gruppi più poveri del pool — deltoidi posteriori 1 candidato, anteriori 1, laterali 3. **La scommessa ha pagato a metà**: chiusa il 23 agosto, ha portato i laterali a 4 e gli anteriori a 2, ma non ha aggiunto un solo deltoide posteriore. Quel gruppo resta a 1 e va cercato altrove, verosimilmente in **Schiena e Trapezio**.
-
-### Regole cantiere GIF (riconciliazione a tre fonti)
-
-Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `biblioteca_gif` + bucket Storage · **(3)** righe `esercizi_catalog`. Output = tabella stati: `OK · MANCA_STORAGE · MANCA_CATALOGO · NOME_DIVERSO · ORFANO · GIF_ROTTA`. L'appaiamento è sempre per SHA-256, mai per nome.
-
-**La regola che non si negozia**: nessun esercizio entra in catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF. L'analisi tecnica prepara la decisione, non la sostituisce — anche quando la spiegazione tecnica torna perfettamente.
-
-**Strumenti di controllo** (sola lettura, si lanciano dalla radice del repo):
-
-| comando | quando | cosa dice |
-|---|---|---|
-| `python3 tools/biblioteca-nomi/stato.py` | dopo ogni sync e ogni migrazione | fotografa tutto in `docs/STATO.md` + `STATO.json` |
-| `python3 tools/biblioteca-nomi/verifica_sync.py` | **dopo ogni sync**, prima di ogni altra cosa | righe arenate, valori riportati indietro, catene rotte |
-| `python3 tools/biblioteca-nomi/riconcilia.py "<zona>"` | prima di migrare una zona | dove il diario del pannello e il piano divergono |
-| `python3 tools/biblioteca-nomi/collaudo_egress.py` | dopo ogni modifica a `impronte.py` | che l'impronta da `eTag` coincida con quella da download, oggetto per oggetto |
-
-**I numeri di riferimento stanno in [`docs/STATO.md`](docs/STATO.md), non qui.** Quel file si rigenera con un comando; i numeri scritti a mano in un documento invecchiano in silenzio.
-
-**Chiave unica SHA-256.** Tutti i registri del cantiere sono indicizzati per impronta, mai per nome file: il cantiere rinomina i file, e una chiave sul nome decade alla prima rinomina. Vale anche per `cantiere_96_pendente.tsv`, convertito il 7 agosto → [L12](docs/LEZIONI.md#l12--il-tsv-del-pannello-e-il-piano-di-migrapy-non-coprono-le-stesse-righe), e per le cache delle impronte, convertite lo stesso giorno → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
-
-**Il piano di `pianifica.py` è l'unica fonte di cosa si migra.** Il diario `slug_da_migrare.tsv` resta la prova che una conferma è stata salvata nell'istante in cui è stata data, ma non decide più cosa migrare: `riconcilia.py` verifica che i due coincidano prima di partire.
-
-⚠️ **Il campo `codice` dei registri scritti a mano non è affidabile**: su `cantiere_96_pendente.tsv` 22 righe su 96 puntavano a un codice diverso da quello vero. Il codice si **ricava dall'impronta** (file → riga → codice), non si crede → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno)
-
-**Guardie tecniche** (sempre attive):
-1. "1 codice per slug" — contare quanti codici puntano allo stesso `gif_slug` prima di rinomine massive
-2. SHA-256 prima di ogni rinomina massiva. ⚠️ Stana i doppioni identici, non tutti: per gli altri serve il confronto frame per frame dopo allineamento → [L7](docs/LEZIONI.md#l7--limpronta-trova-i-doppioni-identici-non-tutti-i-doppioni)
-3. Script idempotenti con timeout esteso
-4. Righe dei codici eliminati vanno cancellate a mano nel Sheet (il sync non elimina)
-5. Prima di eliminare un codice: scansione regex `\bEX\d{3}\b` su tutti i campi testuali di tutte le righe (`alternativa` non ha FK)
-6. **Allocare i codici al momento della scrittura, mai in anticipo** → [L6](docs/LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano). Vale anche **dentro i registri**: un `EX###` scritto in un TSV prima di esistere a catalogo non è una prenotazione, è una collisione che aspetta — nessuno tiene il posto, e quando il foglio assegna quel codice a qualcos'altro si scontrano. Le righe in attesa si tengono per **impronta e nome**, senza codice; `libera_prenotati.py` toglie quelli già scritti (6 liberati il 7 agosto: EX676-EX680, EX682)
-
-**I TSV da incollare nel foglio vanno consegnati CON la riga di intestazione**, dicendo di incollare dalla seconda riga in giù. Per una **riga singola** la forma più sicura non è il TSV ma l'elenco verticale `colonna → valore`, immune allo sfasamento. Prima di generare TSV posizionali, farsi dare la riga di intestazione del foglio e verificarne l'ordine → [L5](docs/LEZIONI.md#l5--un-tsv-senza-intestazione-non-è-verificabile-da-nessuno)
-
-**Prima di aprire una lista di liberi**, incrociare i nomi col catalogo e separare i due mucchi: candidati nuovi contro codici già esistenti senza `gif_slug` → [L20](docs/LEZIONI.md#l20--la-domanda-giusta-non-è-sempre-diventa-un-esercizio)
-
-**Strumenti che raccolgono lavoro manuale**: ogni conferma si salva su disco **nell'istante in cui viene data**, con `fsync`. Si collauda chiudendo la scheda e riavviando il processo **prima** di consegnarlo → [L21](docs/LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta)
-
-### Mappe muscolari
-19 esercizi storici: PNG locali in `assets/exercises/` (Wger CC BY-SA 4.0). EX031+: mancanti (cantiere futuro).
+Flusso GIF del Worker, regole di migrazione, riduzione a 480px e riconciliazione a tre fonti in **[`docs/MEDIA.md`](docs/MEDIA.md)**. Si apre prima di toccare una zona GIF.
+
+**Le regole che valgono sempre, anche senza aprire quel file:**
+
+- **Aggancio per impronta, mai per nome.** Un file si collega al suo codice confrontando lo SHA-256 → [L9](docs/LEZIONI.md#l9--aggancio-per-impronta-mai-per-nome)
+- **Nessun esercizio entra a catalogo o viene rinominato senza che Ignazio ne abbia visto la GIF.** L'analisi tecnica prepara la decisione, non la sostituisce
+- **Nessun nome entra negli strumenti passando dalla chat.** Fonte unica dei nomi è il pannello di conferma
+- **Nessuna GIF entra nel bucket a piena risoluzione**: 480px e `cache-control` immutable fanno parte del caricamento, non sono un intervento successivo
+- **Ordine a righe doppie obbligatorio quando cambia uno slug.** Non deve esistere un istante in cui una GIF è irraggiungibile. Dopo il sync, confronto codice per codice contro la lista consegnata, prima di qualunque cancellazione → [L41](docs/LEZIONI.md#l41--dopo-ogni-sync-confronto-codice-per-codice-contro-la-lista-consegnata-prima-di-qualunque-cancellazione)
+- **Una cartella si chiude su tre lavori** — nomi, immagini, catalogo — **prima di aprire la successiva.** Una zona migrata col catalogo non popolato è aperta, non chiusa
+- **Un'impronta non determinabile blocca**: `ignoto` e `indeterminato` non diventano mai "a posto" per silenzio → [L10](docs/LEZIONI.md#l10--il-ripiego-silenzioso-su-libero-è-ciò-che-ha-causato-il-difetto)
+- **Le verifiche si fanno con `HEAD`, non scaricando.** Il download è l'eccezione, si chiede a voce e vale per un file solo → [L24](docs/LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaricarlo)
+- ⚠️ **La verifica per impronta dice che la catena è integra, non che punta dove è stato deciso** → [L8](docs/LEZIONI.md#l8--che-la-catena-sia-integra-non-significa-che-punti-dove-è-stato-deciso)
 
 ---
 
@@ -425,380 +181,25 @@ Indice: 1 nome unico · 2 formula e default omessi · 3 maiuscole · 4 panche ·
 
 ---
 
-## Quadro settimanale
+## Coach — Pirsi, quadro settimanale, lettura dei check
 
-**In vigore dal 12 settembre 2026 (Fase 1).** Una fotografia della settimana lunedì→domenica, ricalcolata dai dati, **ingresso del coach delle Fasi 3-4**. Nessuna decisione e nessuna AI: raccoglie e mostra.
+Il quadro della settimana, la lettura AI delle foto dei check, le proposte del lunedì, il nome e la voce del coach: tutto in **[`docs/COACH.md`](docs/COACH.md)**.
 
-`buildWeeklyPicture(weekStart)` = `_wpFetch` (legge) + `computeWeeklyPicture` (calcola, senza rete). Forma dell'oggetto:
-
-```
-weight     { weight_avg, weight_n, weight_delta_prev, weight_trend_4w, weight_target, weight_last, weight_last_date }
-nutrition  { kcal_target, protein_target, kcal_avg, protein_avg, supp_kcal_avg, supp_protein_avg, days_logged, logged_dates, adherence_kcal, days_partial, partial, days_under_75 }
-training   { sessions_planned, sessions_done, sessions_missed, recovery_done, block_week, is_deload, volume_sets, avg_rir, injury_days, injury_active }
-body       { last_check_date, days_since_check, check_due, last_measurements{ chiave: {value, delta} }, prev_check_date, ai_overall, ai_confidence, ai_check_date }
-blood      { last_test_date, days_since_test, test_count }
-meta       { version, week_start, week_end, is_closed, computed_at, completeness (0-1, su 5 blocchi), errors[] }
-```
-
-⚠️ **`null` = non registrato, MAI zero.** Le medie senza dati sono `null`; i conteggi possono valere 0 perché sono un fatto; un blocco intero è `null` se il modulo non è in uso **o se la sua lettura è fallita** (e allora `meta.errors` lo nomina). A schermo, ogni `null` e ogni conteggio a zero si leggono «Non registrato» in grigio.
-
-- **Fonti**: peso da `weight_logs` > `body_logs` > `body_measurements`, una pesata al giorno → [L47](docs/LEZIONI.md#l47--lo-schema-dice-dove-un-dato-può-stare-le-righe-dicono-dove-sta) · pasti da `meals` · sessioni da `workouts` (come il calendario) · serie e RIR da `training_logs` · check da `body_checks` completati + `body_measurements` · esami da `blood_tests`
-- **Settimana chiusa**: «adesso» è la fine della domenica, così un ricalcolo domani dà gli stessi numeri (tranne `computed_at`)
-- **Peso attuale** *(dal 13 settembre)*: `weight_last` è l'ultima pesata fino all'«adesso» del quadro, dentro le 5 settimane lette. È «attuale» se non più vecchia di **7 giorni** rispetto a quell'adesso, altrimenti a schermo «Non registrato» e il pulsante Pesati anche nella card Home. L'etichetta di data si legge da oggi: «oggi», «ieri», «N giorni fa», oltre 7 giorni la data. Con una pesata sola nella settimana la media non si mostra. Obiettivo: «mancano X kg da perdere / da prendere», «raggiunto»
-- **Lettura delle foto** *(dal 13 settembre)*: `ai_*` = ultima lettura in `body_check_ai` del check più recente che ne ha una, **fatta entro l'adesso del quadro**. `body_check_ai` assente (`PGRST205`) = nessuna lettura, non un errore
-- **Campi aggiunti dopo il salvataggio**: le righe di `weekly_pictures` salvate prima del 13 settembre non hanno `weight_last*` né `ai_*`, e **non si riscrivono**. Per la vista `weight_last*` si ricalcola al volo; `verifica_quadro_vivo.js` confronta il resto
-- **Settimana ciclo e reminder check non si ricalcolano mai inline**: si chiamano `getCycleWeekInfo({ completed, asOf })` e `getBlockCheckReminder({ nowTs, checks })`, che senza argomenti fanno ciò che hanno sempre fatto
-- **Nutrizione = la giornata intera** *(versione 2, 13 settembre)*: pasti + integratori spuntati + extra, con la stessa somma di `dayTotals` (`shared/nutrizione.js`). Medie sui soli giorni con almeno un pasto; un giorno con solo integratori non è registrato. `supp_*_avg` = la parte degli integratori
-- **Nutrizione parziale**: metà o più dei giorni registrati con **meno di 2 pasti su 3 fra colazione, pranzo e cena**. Si etichetta, non si corregge con stime. `days_under_75` resta come dato, non decide più l'etichetta
-- **Versione**: una riga salvata con `meta.version` più vecchia di `WP_VERSION` si ricalcola e si **sovrascrive** (lettura e backfill), unica eccezione a `ignoreDuplicates`
-- **Stato**: `ST.weeklyPicture[lunedì]` per la sessione. La corrente si ricalcola a ogni apertura della Home; le chiuse si leggono da `weekly_pictures`, e se manca la riga si calcolano e si salvano
-- **`weekly_pictures`** (`user_id, week_start` UNIQUE, `picture` jsonb, RLS sulle proprie righe): backfill di 8 settimane una volta per sessione, **mai prima della settimana di nascita del profilo**, **mai la corrente**, **mai un quadro con `meta.errors`**. Migrazione in `supabase/migrations/20260912_weekly_pictures.sql`. ⚠️ `jsonb` riordina le chiavi: un quadro letto dal DB si confronta col ricalcolo **a chiavi ordinate**, mai come stringa Tabella assente (`PGRST205`) → nessun avviso, solo calcolo dal vivo
-- **Verifica**: `tools/banco/prova_quadro_calcolo.js` · `prova_quadro_vista.js` · `prova_quadro_storico.js` · `prova_quadro_peso.js` (senza rete, orologio fermo) · `verifica_quadro_vivo.js` (dati veri, sola lettura, serve `npm install jsdom @supabase/supabase-js` fuori dal repo)
+- **Il coach si chiama Pirsi**, nome provvisorio in prova. Vive in un posto solo: `const COACH_NAME` in `zona-tracker.html`, subito dopo `APP_VERSION`. **Fuori dai prompt non si scrive mai per esteso**; dentro i prompt sì, ed è voluto
+- **Pirsi propone, decide Ignazio.** Massimo 3 proposte a settimana, l'utente accetta o rimanda. Cron del lunedì alle 6 di Roma
+- ⚠️ **Se il profilo non si aggiorna, la proposta non si segna; se la proposta non si segna, il profilo torna com'era**
+- Il calcolo del quadro vive in `shared/quadro.js`, le regole di Pirsi in `shared/coach_rules.js`: **si modificano lì, mai dentro `zona-tracker.html`**
 
 ---
 
-## Lettura AI dei check
+## Training — generatore, audio, ciclo
 
-**In vigore dal 13 settembre 2026 (Fase 2).** Le foto di un check fisico lette da Gemini, confrontate col check completato subito prima. **È un suggerimento, mai un automatismo**: parte solo da un tocco, si salva, si mostra. Non cambia scheda, piano, target né niente altro.
+Regole del generatore di schede, pool e split, suoni, rotazione e mesociclo in **[`docs/TRAINING.md`](docs/TRAINING.md)**.
 
-### Circuito e chiavi
-
-Bucket privato `body-check-photos` → Worker (chiave di servizio) → Gemini. **Le foto non passano mai dall'app** e le chiavi stanno solo nei secret del Worker. Il Worker **non scrive mai nei log** il contenuto delle foto: solo stato HTTP e tipo d'errore.
-
-### `POST /vision-check`
-
-Corpo `{ user_id, check_id_current, check_id_previous }` (il precedente può mancare: primo check), header `Authorization: Bearer <token utente Supabase>`. Codice in `worker/src/vision-check.js`.
-
-1. token verificato su `/auth/v1/user` → **401** se non valido; token, `user_id` e check devono coincidere → **403**; check non completato → **409**; precedente più recente dell'attuale → **400**
-2. anti doppio tocco: **una lettura per check ogni 10 minuti** (da `body_check_ai.created_at`) più un blocco sulle richieste in volo → **429** `too-soon` / `in-progress`
-3. legge le **quattro pose** `front · right · left · back` dei due check; una posa mancante non ferma, si dichiara (`foto mancante: right` in `photo_quality.issues`, `ok = false`)
-4. riduce ogni foto a **1024 px** sul lato lungo col binding `IMAGES`; se non riesce manda l'originale e lo dice in `meta.resized`
-5. manda le misure dei due check come testo (peso, vita, fianchi, petto, % grasso, giorni fra i check, differenze) e le foto etichettate, prima il precedente poi l'attuale
-6. JSON con schema, validato; **un solo nuovo tentativo**, poi **502** `invalid-json`
-7. upsert su `body_check_ai` (una riga per check) e risposta `{ ok, reading }`
-
-Tempo massimo **60 s**. Errori di Gemini verso l'app: 429 resta 429 (`rate-limit`), il resto 502 col codice vero nel messaggio. Tabella assente → **503** `table-missing`, prima di chiamare il modello.
-
-### Schema del giudizio
-
-```
-{
-  "overall": "migliorato" | "stabile" | "peggiorato" | "primo_check",
-  "confidence": "bassa" | "media" | "alta",
-  "areas": [ { "zona": "addome|torace|spalle|braccia|schiena|gambe", "change": "più definito|uguale|meno definito|non valutabile", "note": "una frase" } ],
-  "photo_quality": { "ok": true|false, "issues": [ ... ] },
-  "summary": "2–3 frasi",
-  "suggested_focus": "una frase oppure vuoto",
-  "meta": { "prompt_version", "poses_current", "poses_previous", "days_between", "resized", "usage" }   ← aggiunto dal Worker
-}
-```
-
-`issues` a **vocabolario chiuso**, perché l'app le traduce in consigli: `luce diversa · distanza diversa · posa diversa · sfondo diverso · abbigliamento diverso · luce scarsa · foto sfocata · inquadratura parziale`, più `foto mancante: <posa>` che scrive **il Worker, non il modello**. Primo check: `overall = primo_check` e `areas = []`, altrimenti la risposta non è valida.
-
-### Prompt
-
-In `worker/src/prompts/vision-check-<data>.js`, **un file per versione**: una versione nuova è un file nuovo, e la data finisce in `meta.prompt_version`. Regole portanti:
-
-- **solo giudizio qualitativo**: mai percentuali di grasso, kg o cm stimati dalle foto
-- **nessun commento estetico** né giudizio sulla persona
-- foto non confrontabili → `confidence = bassa` e `overall = stabile`
-- **le misure prevalgono** sull'impressione visiva, e il disaccordo si dice nel `summary`
-- primo check: niente confronto, solo qualità delle foto e cosa tenere uguale la volta dopo
-
-Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-E.
-
-### Modello e costo
-
-`gemini-3.1-flash-lite`: 0,25 $/M token in ingresso, 1,50 $/M in uscita. Misurato: **coppia di check ≈ 0,29 centesimi di dollaro** (9.911 + 245 token), primo check ≈ 0,17. `gemini-2.5-flash-lite`, più economico in listino, a questa chiave risponde **404**. Osservazioni aperte nel [cantiere 34](docs/CANTIERI.md#34-lettura-delle-foto-dei-check--cosa-osservare-dopo-il-rilascio).
-
-### Nell'app
-
-- **dettaglio di un check completato** (`bcaCardHTML` in `renderBodyCheckDetail`): con lettura, card «Lettura di Pirsi» — esito, pallino di affidabilità (bassa grigio · media ambra `--warn` · alta evergreen), summary, **solo le zone diverse da `uguale` e `non valutabile`**, consiglio per le prossime 4 settimane, e con `photo_quality.ok = false` il riquadro «Per un confronto migliore la prossima volta:». Senza lettura, il pulsante in tinta Body `#5E4A7A`: «Confronta le foto con Pirsi →», o «Fai leggere le foto a Pirsi →» se non c'è un check precedente. Durante la chiamata spinner «Sto guardando le foto…» e pulsante spento
-- **nota fissa, sempre**: «Lettura indicativa basata sulle foto: contano più le misure e la tendenza del peso.»
-- **fine flusso M2**: se esiste un check con cui confrontare, proposta «Vuoi che Pirsi confronti le foto con l'ultimo check?» con Confronta / Non ora, 15 s. **Non parte da sola**
-- **quadro, blocco Corpo**: riga «Lettura foto del <data>: <esito> · <affidabilità>»
-- ⚠️ **a schermo non si scrive «AI»** (regola del design system, confermata da Ignazio per questa card): il ruolo è il coach, il nome è Pirsi
-
-**Verifica**: `node worker/test/prova_vision_check.mjs` (Worker con fetch finto) · `node tools/banco/prova_lettura_foto.js` (app, senza rete).
-
----
-
-## Pirsi propone
-
-**In vigore dal 13 settembre 2026 (Fase 3).** Ogni lunedì Pirsi legge il quadro della settimana appena chiusa e fa da 0 a 3 proposte. ⚠️ **Mai automatico: niente cambia su calorie, macro o allenamento senza un «Accetto».** Ogni proposta ha la motivazione in italiano semplice e i numeri che l'hanno generata.
-
-### Generazione
-- **Regole**: `ZTCoachRules.buildProposals(picture, history, profile, { proposals, supportedDays })` in `shared/coach_rules.js`, pura e deterministica
-- **Cron** (`worker/src/coach-cron.js`): lunedì 06:00 Roma, utenti con `usa_training` o un piano attivo, mai prima della settimana di nascita del profilo. Scadono le `pending` vecchie → quadro da `weekly_pictures` se v2, altrimenti calcolato e salvato → proposte con `ignore-duplicates`. Log in `wrangler tail`, **solo metadati, mai numeri della persona**. Prove: `COACH_CRON_FORCE=1`, `COACH_CRON_DRY=1`
-- **Ripiego nell'app** (`ensureCoachProposals`, all'apertura della Home): se la settimana chiusa non ha proposte le genera con le stesse regole. Mai con un quadro che ha `meta.errors`. Tabella assente (`PGRST205`) → nessuna card, nessun avviso
-
-### Le regole, una riga ciascuna
-| tipo | quando | cambia |
-|---|---|---|
-| `weigh_in` | meno di 2 pesate nella settimana | — |
-| `logging` | meno di 4 giorni registrati, o «parziale» | — |
-| `kcal` dimagrire | ritmo < −0,7 → +100 (e `keep` proteine) · −0,3/−0,7 → `keep` · fermo (−0,3/+0,2) 2 sett. con aderenza ≥ 70% → −150 · > +0,2 con aderenza ≥ 70% → −200, altrimenti `logging` | `target_kcal` |
-| `kcal` massa | < +0,2 per 2 sett. con aderenza ≥ 70% → +150 · > +0,5 → −100 | `target_kcal` |
-| `kcal` mantenere | fuori da ±0,3 per 2 sett. → ±100 | `target_kcal` |
-| `protein` | proteine medie < 1,6 g/kg per 2 sett. → 1,8 g/kg arrotondato a 5, **solo se alza il target** | `target_protein` |
-| `training_volume` | fatte < previste per 2 sett., niente infortuni, previste > 3 | `giorni_allenamento` −1 |
-| `deload` | RIR medio ≤ 0,5 per 2 sett., o infortunio + settimana ≥ 4 | settimana del ciclo → 6 |
-| `check` | settimana 6 senza check nelle ultime 4 sett., o ultimo check ≥ 42 giorni | — |
-| `blood_test` | nessun esame, o l'ultimo ≥ 180 giorni: «parlane con il medico» | — |
-| `keep` | nulla da proporre, o peso nel ritmo, o peso fermo con foto `migliorato` · `alta` | — |
-
-- **Ritmo del peso** = (media settimane 0-1 − media settimane 2-3) / 2, in kg/settimana. Mai una pesata sola
-- **Direzione**: `dimagrimento` → dimagrire · `ipertrofia` → massa · `ricomposizione` → dal peso obiettivo (±1 kg) · il resto → mantenere
-- **Dati sporchi** (`weigh_in` o `logging`) → niente `kcal` né `protein`
-- **Limiti**: `target_kcal` fra 1.500 e 3.500; **una correzione kcal accettata ogni 2 settimane**; `check`, `blood_test`, `training_volume`, `deload` non tornano per 4 settimane dopo una decisione
-- **Massimo 3**, in quest'ordine: qualità dei dati > calorie e proteine > allenamento > corpo ed esami
-
-### Nell'app
-- **Card «Pirsi propone»** in Home sotto «La tua settimana», solo con proposte `pending`: area, titolo, motivazione, numeri in mono, **Accetto / Non ora**, nota fissa «Pirsi propone, decidi tu. Per la salute conta il parere del tuo medico.»
-- **Accetto** → `accepted` + `decided_at` (+ `applied_at` se cambia qualcosa):
-  - `kcal`: i **quattro** `target_*` in `profiles` con le percentuali dell'obiettivo (`calcAdaptedTargets`), `applyProfile` e toast «Da domani il piano usa X kcal». Il Postino legge `ST.profile.target_*`
-  - `protein`: vale come **minimo** sopra le percentuali, i carboidrati cedono gli stessi grammi; resiste ad `applyProfile` (`_coachApplyProteinFloor`) → [L49](docs/LEZIONI.md#l49--un-numero-derivato-non-si-scrive-in-un-secondo-posto-senza-decidere-chi-vince), [cantiere 37](docs/CANTIERI.md#37-due-fonti-per-i-macro-percentuali-in-sttarget-numeri-in-profiles)
-  - `training_volume`: cambia `giorni_allenamento` **solo se la rotazione esiste** (`COACH_SUPPORTED_DAYS = [4, 5]`); altrimenti si segna la scelta e profilo e scheda restano
-  - `deload`: `applied_at` fa ripartire il conto del ciclo, la settimana in corso è la 6 (`cycleWeekInfo`, `ST.coachDeloads`)
-  - `weigh_in` → foglio pesata · `logging` → Nutrition · `check` / `blood_test` → tab Check · `keep` → niente
-- **Non ora** → `rejected`. Nel quadro, sotto la settimana, «Cosa ha proposto Pirsi» con lo stato
-- Se il profilo non si aggiorna, la proposta non si segna; se la proposta non si segna, il profilo torna com'era
-
-**Verifica**: `node tools/banco/prova_coach_rules.js` · `prova_pirsi_generazione.js` · `prova_pirsi_card.js` · `TZ=UTC node worker/test/prova_coach_cron.mjs` · dal vivo `verifica_proposte_vivo.js`, `verifica_nutrizione_quadro.js`, `TZ=UTC node worker/test/vivo_coach_cron.mjs` (in prova, niente scritto).
-
----
-
-## Pirsi — nome e voce del coach
-
-**In vigore dal 13 agosto 2026.** Il coach si chiama **Pirsi**. Il nome è **provvisorio, in fase di test**: è per questo che vive in un posto solo.
-
-### La costante
-
-```js
-const COACH_NAME = 'Pirsi';   // zona-tracker.html, subito dopo APP_VERSION
-```
-
-**Fuori dai prompt il nome non si scrive mai per esteso**: 22 usi, tutti da `COACH_NAME`. Cambiarlo è una riga.
-
-⚠️ **Nei prompt il nome è scritto per esteso, ed è voluto.** Lì il modello lo legge come testo dentro la frase d'identità, non come dato: passarlo da una variabile non darebbe nessun vantaggio e renderebbe i prompt illeggibili nel sorgente.
-
-⚠️ **L'HTML statico nel `<body>` non può leggere la costante.** Le due card dello step `s-coach` sono markup statico: `${COACH_NAME}` lì dentro finirebbe a schermo così com'è scritto. Il nome ci entra a runtime da `m1ApplyCoachNameToCards()`, chiamata da `m1GoStep` quando si apre lo step, usando i selettori `data-coach` che già esistono. **Il testo statico resta senza nome**, così prima che il JS giri non si vede niente di sbagliato. Chi aggiunge testi con il nome in HTML statico deve passare di lì o non funzionerà.
-
-### Chi parla in che persona
-
-| Chi scrive il testo | Persona | Nome |
-|---|---|---|
-| il modello (prompt) | **prima** — "ti metto", "non li tocco" | mai: non si nomina, non si firma |
-| l'app | **terza** — "Pirsi ha preparato…" | solo dove c'è un'azione per l'utente |
-| ripieghi (sostituiscono una risposta AI mancata) | **prima** | mai |
-
-**Errori e messaggi di servizio**: il nome si toglie **senza sostituirlo**, e la frase va in prima persona. `Il coach non riesce a leggere il tuo profilo` → `Non riesco a leggere il tuo profilo`.
-
-**Il nome compare solo dove Pirsi fa qualcosa per l'utente** — piano pronto, scheda preparata, obiettivo che userà. Un nome ripetuto trenta volte stanca, e finché è in prova ogni occorrenza in meno è lavoro in meno se cambia.
-
-### Cosa NON prende il nome
-
-- **Etichette di ruolo in maiuscolo**: `COACH · RIEQUILIBRIO` · `PIANIFICATO · DAL COACH` · `MEMORIA · COACH` · `Voce del coach` · `COACH · <data>` · `✨ Stima coach` · `⏳ Analisi coach…` · `🤖 Coach` (×2, sopra i cue) · la label `Coach` accanto al pallino con la Z in Progressione. Lì "coach" indica il **ruolo**, e un nome proprio in maiuscolo si legge come un marchio.
-- **La riga dei crediti** `Modello coach: GPT-OSS 120B via Groq`: uso tecnico del termine.
-- **I cue tecnici del recupero** (prompt A): bullet da tre parole letti col fiato corto tra le serie. Pirsi lì **non ha voce**, e i loro messaggi d'errore sono neutri, senza soggetto che parla — `Cue non disponibile — connessione assente.`
-
-### La parentesi di presentazione
-
-`(il tuo coach AI)` compare **esattamente 3 volte in tutta l'app**, mai due volte nella stessa schermata, e **solo in testi descrittivi** — mai nei toast, mai negli errori:
-
-1. sottotitolo dello step `s-coach` in onboarding M1 (la presentazione)
-2. card colazione e merenda, tab Piano
-3. stato vuoto della memoria, tab Piano
-
-Le ultime due esistono per chi l'onboarding non lo rifà (Ornella, Isabella): incontrerebbero il nome senza spiegazione. **Se compare più spesso diventa un tic.**
-
-### Riscrivere, non sostituire
-
-⚠️ **"il coach" è un nome comune con l'articolo, "il Pirsi" non esiste.** Ogni stringa va **riscritta per intero**: "del coach" → "di Pirsi", "al coach" → "a Pirsi", e in molti casi la frase migliore è quella che il nome non ce l'ha. Una sostituzione meccanica produce italiano rotto → [L27](docs/LEZIONI.md#l27--due-istruzioni-opposte-nello-stesso-prompt-e-il-modello-obbedisce-alla-vecchia)
-
-### Il registro nei prompt
-
-I prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio · **I** lettura delle foto dei check, nel Worker dal 13 settembre) dichiarano l'identità `Sei Pirsi, il coach…` più l'ordine di parlare in prima persona senza nominarsi né firmarsi. **F, G, H restituiscono solo JSON e non hanno identità.** I restituisce JSON anche lui, ma `summary` e `suggested_focus` si leggono a schermo: per questo ha identità e registro.
-
-**B, C, D, E (e dal 13 settembre I) condividono un paragrafo di registro identico, 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
-
-⚠️ **Gli esempi valgono più degli aggettivi.** "Amico diretto" al modello dice poco; una frase scritta come la direbbe Pirsi gli dice tutto. B, C, E hanno un **esempio di tono** dichiarato come modello di *voce e non di contenuto*, coi suoi numeri e alimenti dichiarati inventati. L'esempio di C contiene un rimprovero (cene saltate) e porta con sé una guardia esplicita: **mai attribuire all'utente mancanze che non risultano dai dati ricevuti**.
-
-⚠️ **Il "noi" non possiede il corpo dell'utente.** Ammesso solo per il lavoro fatto insieme — *ripartiamo*, *vediamo come va*, *abbiamo costruito*. Corpo, peso, risultati e progressi sono suoi e vanno al **"tuo"**, mai al "nostro". Regola presente in B e in C.
-
-**Storia dell'intervento**: `ece8d66` nome nei prompt · `264851b` registro unico · `edbb7da` prosa in E · `7cf1cb8` esempi di tono · `4e8a4b8` contraddizione tolta da E · `5089e09` stringhe Piano · `f895056` stringhe Training · `04dcb85` onboarding e presentazione.
-
----
-
-## Coach generatore — regole
-
-**Filosofia**: catalogo verificato + AI che assembla. Mai inventare esercizi. Esercizi fissi dentro il blocco (4 sett.), variazione tra blocchi.
-
-**Filtri del pool (`_trainGenFilterPool`) — guardia critica.** Tre guard in cascata, tutti obbligatori: luogo → attrezzo → livello. Se uno solo manca, ogni riga del catalogo entra nei pool in base al solo campo `uso` e la scheda si riempie di esercizi non eseguibili. **Verificare la loro presenza prima di qualunque intervento sul generatore** → [L1](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)
-
-**Criterio di ammissibilità a casa**: la riproducibilità del movimento, non il nome dell'esercizio. Un rematore alla macchina replicato con elastico è legittimo: stesso pattern, stessa posizione, resistenza equivalente. Una leg curl prona alla macchina non lo è: nulla in casa riproduce quella resistenza in quella posizione.
-
-Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **177 dei 406 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **263 delle 593 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **302 su 725** *(rimisurato il 31 agosto con `tools/baseline_pool.py`)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
-
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **725 righe, 1 settembre**): `poolPrincipali` **417** · `poolFinisher` **253** · `poolRiscaldamento` **49** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Righe ammesse dai tre filtri: **593 su 725**, di cui **263 dal ramo surrogato**.
-
-**Si rimisura con un comando, e la replica sta su disco:**
-
-```bash
-python3 tools/baseline_pool.py --gruppi
-```
-
-Il profilo lo legge dal vivo da `profiles` — anche il livello, che sta dentro `note_salute` (`Esperienza: avanzato`) come fa `_trainGenParseEsperienzaFromNote`. Sola lettura.
-
-**Cosa l'ha spostata, 1 settembre**: **11 celle del campo `uso`**, nessuna riga nuova. Alle 11 righe `deltoidi posteriori` che erano solo `finisher` o `riscaldamento` è stato aggiunto `principale`: `poolPrincipali` **406 → 417**, e **nient'altro si muove** — finisher, riscaldamento, core, Tabata, carry e ammesse restano identici, perché nessuna riga ha perso un uso e nessuna è entrata o uscita dai tre filtri. Lo scarto è **+11 e solo +11**: la verifica più pulita che la baseline abbia mai dato.
-
-**Cosa l'ha spostata, 31 agosto**: le 27 righe entrate dal 24 agosto in poi — Tricipiti (EX712-EX716), EX717-EX720 e le 18 calisthenics (EX721-EX738). Lo scarto si attribuisce blocco per blocco e la somma coincide con la misura: **+5 principali · +13 finisher · +2 riscaldamento · +25 ammesse**, carry e core fermi. Delle 18 calisthenics ne entrano **17**: l'unica fuori è **EX721 `Rematore invertito anelli`**, che cade sul filtro attrezzo perché `anelli` non è fra quelli dichiarati e la riga non ha surrogato. Tabella in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
-
-⚠️ **Un gruppo povero nuovo: il petto ha 2 candidati pescabili su 29 righe col gruppo giusto.** Le altre 27 sono `spinta orizzontale`, e `_trainGenPickIsoByGruppoTarget` scarta tutto ciò che non è `isolamento` o `core` prima di guardare il gruppo. Stesso errore di lettura dei deltoidi anteriori, su un gruppo che nessuno sospettava. Deltoidi posteriori restano **1**, laterali **4**.
-
-**Cosa l'ha spostata**: le 10 righe nuove di Spalle e Cuffia (EX702-EX711), quasi tutte a elastico o corpo libero, quindi quasi tutte ammesse a casa — **+4 principali · +3 finisher · +2 riscaldamento**. Il consolidamento di EX408 invece non l'aveva spostata: era `finisher` e `luogo = palestra` senza surrogato, e dal profilo casa non entrava in nessun pool. Se dopo una modifica i numeri divergono, qualcosa nei filtri è cambiato.
-
-**Cosa l'ha spostata**: il sync delle 50 righe del 22 agosto sera — 35 righe a cavi con surrogato `elastico` nuovo e 8 righe a corpo libero con `casa` aggiunto al `luogo`. Lo scarto torna per intero e si attribuisce riga per riga: **+21 principali** (18 dalle cavi, 3 dalle otto) · **+23 finisher** (tutte dalle cavi) · **+1 riscaldamento** (EX599 Corsa falcata lunga) · **+42 ammesse**. Delle 8 righe, tre — EX570, EX681, EX683 — hanno `uso = skill` e restano fuori da ogni pool per regola. Core e carry non si muovono.
-
-⚠️ **Questi numeri vengono da `tools/baseline_pool.py`, una replica dei filtri, non da `?schedaDebug=1`.** Il cerchio resta chiuso su sé stesso — misurare una deriva nei filtri dell'app con una copia di quegli stessi filtri — e la verità è l'app. Se i due divergono, **il sospettato è lo strumento**. Quello che è cambiato il 31 agosto è che la replica non si riscrive più a ogni misura: è **una sola, sta nel repo, e va tenuta allineata a mano quando `_trainGenFilterPool` cambia** (i punti portati sono elencati nella sua intestazione).
-
-✅ **Il dubbio del 22 agosto è chiuso, e la prova è una misura.** Quella sera due repliche diverse davano `poolFinisher` 214 contro 208 sullo stesso catalogo, e nessuna delle due esisteva più: uno scarto di poche unità non provava niente. La replica su disco, **rieseguita sul catalogo privato delle 27 righe aggiunte dal 24 agosto in poi, restituisce `698 · 401 · 240 · 47 · 1 · 568`: tutti e sei i numeri della baseline documentata**. Lo scostamento dei blocchi nuovi si attribuisce riga per riga in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
-
-⚠️ **Le 88 righe sanate il 22 agosto sono diventate tutte `finisher`, nessuna `principale`.** Da lì il salto del `poolFinisher` da 144 a **208** e il `poolPrincipali` fermo a 376. Conta perché fra quelle 88 c'erano **8 deltoidi posteriori e 12 laterali**, cioè i due gruppi più poveri — ma gli slot di isolamento obbligatorio pescano da `poolPrincipali` (`_trainGenPickIsoByGruppoTarget(pools.poolPrincipali, …)`), quindi **non li vedono**. Il gruppo che stava a 1 candidato sta ancora a 1.
-
-**Cosa ha spostato la baseline**, in due passi lo stesso giorno: le fusioni EX139/EX176/EX178 (−3 righe) hanno portato il 6 agosto da 332/130/43 a **329/129/42** su 664 righe; poi i **57 surrogati elastici** aggiunti alle righe manubri-unico hanno portato i principali a **366** e i finisher a **142**, senza aggiungere una sola riga a catalogo. Il riscaldamento non si muove: i surrogati nuovi sono tutti `uso=principale` o `finisher`.
-
-**Lo scostamento dal 6 agosto torna per intero, ed è questo il valore della misura**: −3 su `poolPrincipali` e −3 sul core sono le tre righe eliminate dalle fusioni (EX139, EX176, EX178, tutte e tre core); −1 su `poolFinisher` e −1 su `poolRiscaldamento` sono le stesse tre righe, che comparivano anche in quei due pool. **Nessuna riga persa oltre le tre volute.** Storico completo in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
-
-⚠️ Il pool core si conta come **pescabili**, non come righe ammesse: una riga `pattern = core` con `gruppo_target` vuoto passa i filtri e non può essere scelta da nessuno slot. Se i due numeri tornano a divergere, c'è una riga nuova da classificare → [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse)
-
-⚠️ **Rimisurare dopo ogni sync del Sheet**: la baseline si sposta anche quando cambia solo il catalogo → [L17](docs/LEZIONI.md#l17--la-baseline-si-sposta-anche-quando-cambia-il-catalogo-non-solo-il-codice). Storico in [`docs/CANTIERI.md`](docs/CANTIERI.md#storico-baseline-pool).
-
-**I gruppi più poveri del pool non sono nelle gambe.** Rimisurati il **1 settembre** col comando qui sopra, contando i **pescabili** e non le righe col gruppo giusto:
-
-| gruppo | pescabili | righe nel pool col gruppo |
-|---|---|---|
-| deltoidi posteriori | 12 | 12 |
-| deltoidi anteriori | **2** | 9 |
-| **petto** | **2** | **29** |
-| deltoidi laterali | 4 | 4 |
-| adduttori | 5 | 7 |
-| avambracci | 7 | 7 |
-| ischiocrurali | 7 | 20 |
-| dorsali | **0** | 49 |
-
-I deltoidi posteriori erano il caso peggiore, **a 1 candidato per mesi**, e sono usciti dalla lista il 1 settembre con 11 celle del campo `uso` — non con una zona GIF. Tre zone chiuse di fila non li avevano spostati di un'unità, perché il collo di bottiglia non era mai stato nelle immagini: a 11 delle 12 righe già ammesse mancava `principale` nel campo `uso`. Prima di aprire un cantiere per riempire un gruppo povero, **guardare il campo `uso` delle righe che quel gruppo ce l'hanno già** — racconto completo nello [storico baseline](docs/CANTIERI.md#storico-baseline-pool). **Il gruppo peggiore adesso è il petto**, e la sua causa è diversa: non il campo `uso` ma il `pattern`.
-
-⚠️ **`dorsali` è il caso limite: 49 righe nel pool, 0 pescabili.** Nessuna è `isolamento`, quindi lo slot non ne vede una — i dorsali entrano in scheda solo dai pattern di tirata, mai come isolamento. Insieme a `trapezi`, `lombari` e al dentato anteriore è il [cantiere 30](docs/CANTIERI.md#30-i-gruppi-muscolari-che-il-generatore-sa-chiedere).
-
-⚠️ **Il candidato si conta sui pescabili, non sulle righe col gruppo giusto — e per i deltoidi anteriori i due numeri differiscono di sei volte.** `_trainGenPickIsoByGruppoTarget` scarta tutto ciò che non ha `pattern` `isolamento` o `core`, prima ancora di guardare il `gruppo_target`. I deltoidi anteriori hanno **6 righe** nel `poolPrincipali` ma **1 sola pescabile**: le altre cinque — EX006, EX074, EX425, EX571, EX572 — sono `spinta verticale`, e lo slot di isolamento non le vede. Contare le righe col gruppo giusto dice 6 e fa sembrare il gruppo sano; è lo stesso errore di lettura di [L16](docs/LEZIONI.md#l16--il-pool-core-si-conta-come-pescabili-non-come-righe-ammesse), su un campo diverso.
-
-### Core: quattro funzioni, due nature
-(2 ago 2026, commit `f16e035`)
-
-| Funzione | Natura | Righe a catalogo |
-|---|---|---|
-| `core anti-estensione` | tenuta | 21 |
-| `core anti-rotazione` | tenuta | 8 |
-| `core flessione` | dinamica | 31 |
-| `core rotazione` | dinamica | 15 |
-
-Tutte con `pattern = core`. Ogni sessione ha **due slot core: uno di tenuta, uno dinamico** — il core va allenato sia nel resistere al movimento sia nel produrlo. Mappa categoria → coppia in `_TRAIN_GEN_CORE_BY_TYPE`; il core è uscito da `_TRAIN_GEN_ISO_OBBLIGATORI_BY_TYPE`, che torna solo muscolare.
-
-Upper/Push/Pull → piano trasverso (anti-rotazione + rotazione). Lower/Legs → piano sagittale (anti-estensione + flessione). Fullbody alterna.
-
-**Fallback**: se una funzione non ha candidati, si ripiega sull'altra della **stessa natura** (`_TRAIN_GEN_CORE_FALLBACK`). Mai attraversare le nature: slot vuoto è preferibile a due esercizi della stessa natura.
-
-⚠️ **`_trainGenIsIsometric` discrimina sulla funzione, non sul pattern.** La natura la dichiara il `gruppo_target`, **controllato prima delle euristiche sul nome**. Le tenute vanno a tempo, i dinamici a ripetizioni → [L19](docs/LEZIONI.md#l19--_traingenisisometric-deve-discriminare-sulla-funzione-non-sul-pattern)
-
-⚠️ Il vocabolario delle funzioni **non ha un piano frontale**: `EX111 Side bend` è flessione laterale pura ed è stato messo in `core rotazione` come casella dei dinamici sugli obliqui. Adattamento consapevole.
-
-### Indice di rotazione
-**`sessionIdx` (assoluto), non `occurrenceIdx`.** Due sessioni di categoria diversa che attingono alla stessa lista con lo stesso indice convergono sullo stesso esercizio. Slot core: `sessionIdx + rigenIdx` (`+0` e `+1` per i due slot). Tabata: `sessionIdx + rigenIdx × numero di sessioni`.
-
-**Il discrimine non è l'offset, è se le liste sono disgiunte** — i compound non manifestano il difetto perché Upper e Lower chiedono pattern diversi. Il carry conclusivo è il riferimento corretto → [L18](docs/LEZIONI.md#l18--lindice-di-rotazione-deve-essere-assoluto-non-loccorrenza-dentro-il-tipo)
-
-### Pattern minimi per sessione
-- Full Body: spinta + tirata + dom.ginocchia + dom.anca + core
-- Upper: spinta orizz + spinta vert + tirata orizz + tirata vert
-- Lower: dom.ginocchia + dom.anca + core
-
-Tirata ≥ spinta. Core sempre obbligatorio. Ordine: compound pesanti → complementari → isolamenti → core.
-
-### Split
-| Giorni | Split |
-|---|---|
-| 2 | Full Body × 2 |
-| 3 | Full Body × 3 (princ.) · Upper/Lower/Full (int/avanzato) |
-| 4 | Upper/Lower × 2 |
-| 5 | Upper/Lower DUP + Upper Pump (int/avanzato) · PPL (princ.) |
-
-⚠️ **Solo 4 e 5 giorni sono realmente supportati end-to-end.** Il generatore produce correttamente anche schede a 2 e 3 giorni e le salva in `schede_utente`, ma rotazione e rendering sono ancorati a id di sessione fissi (`upperA`/`lowerA`/`upperB`/`lowerB`/`recoveryUpper`/`recoveryLower`, più `upperC` per il 5 giorni). Una scheda a 3 giorni produce id `upper`/`lower`/`fullbody` che non combaciano con nessuna mappa: `getTrainingSession()` cade sul fallback `TRAINING_SESSIONS` hardcoded e l'utente vede la scheda d'emergenza con nomi esercizio non aggiornati — sintomo diagnostico utile. Punti da toccare per generalizzare: [cantiere 20](docs/CANTIERI.md#20-generalizzare-lo-split-a-2-e-3-giorni).
-
-Split 5gg DUP: 7 posizioni — upperA · lowerA · recoveryUpper · upperB · lowerB · upperC(Pump) · rest.
-
-### Parametri
-| Obiettivo | Reps | RIR | Recupero |
-|---|---|---|---|
-| Forza | 4-6 | 2-3 | 3 min |
-| Ipertrofia | 8-12 | 1-2 | 90-120s |
-| Ricomp/Dimagrimento | 10-15 (princ.) / ridotti (avanzato) | 1 | 60-90s |
-| Salute | 6-10 | 2 | 90-120s |
-
-RIR attivo SOLO per intermedio/avanzato.
-
-**Cautele**: `limitazioni` × `zone_rischio` → prima ADATTA (`adattamento`), poi SOSTITUISCE (`alternativa`). Alternativa accettata solo se nel Set ammissibili (unione 5 pool filtrati luogo/attrezzo/livello), altrimenti skip `alternative-not-eligible`. Vale anche per Tabata.
-
-**Finisher Tabata**: solo `dimagrimento`/`ricomposizione`, ~5 min, basso impatto, `uso=finisher`. Upper Pump: niente Tabata. 4 esercizi distinti per sessione, fissi dentro la scheda e rinnovati a ogni rigenerazione.
-
-**Isolamenti bonus**: pescano SOLO da `uso=principale`.
-
-**Generazione**: trigger a fine M1 (`saveOnboarding→generateTrainingProgram`). Fine blocco: solo dopo M2. Manuale: `rigeneraSchedaDaImpostazioni()`.
-
-**Suggerimenti progressione**: `ST.profile.unit` → kg step 2.5 / lbs step 10 (default lbs). Bande trazioni senza unità.
-
----
-
-## Audio Training
-
-- `playPrepBeep` 660Hz — ultimi 5s di ogni countdown
-- `playStopBeep` 659Hz — fine fase/lato/serie
-- `playLongBeep` 1100Hz — GO/inizio timer
-
-Pausa cambio lato iso (5s) → silenzio totale. Avvio serie a reps → silenzio. Fine recupero → solo STOP.
-
----
-
-## Rotazione e ciclo Training
-
-**Recuperi TRASPARENTI**: non avanzano il fronte, non generano debito. `computeTrainingDebt`: skip recuperi nel loop; guard `test-user-001` → `{ debt:[], target:null }`. `nextSession` dall'ultimo workout di LAVORO (filtro `!/^recovery/i`).
-
-**Il mesociclo è 5+1: sei settimane, cinque di carico e una di scarico** *(dal 24 agosto 2026, prima era 3+1)*. La tabella, uguale in `CYCLE_WEEKS` e nella card Ciclo del Programma:
-
-| Sett. | Progressione | RIR |
-|---|---|---|
-| 1 | Base | 2 / 1 |
-| 2 | +1 rep | 2 / 1 |
-| 3 | +1 set | 2 / 1 |
-| 4 | +1 rep | 1 / 1 |
-| 5 | Picco | 1 / 1 |
-| 6 | Scarico −40% vol | 3+ |
-
-⚠️ **La S3 prima dichiarava `RIR 1 / 0`, e RIR 0 è il cedimento**: contraddiceva il modale info, che promette margine in ogni settimana di carico. Ora è `2 / 1`.
-
-**`getCycleWeekInfo()`**: helper canonico UNICO per la settimana ciclo. Conta SOLO giorni di lavoro (recovery esclusi). `workPerGiro` derivato dal ciclo (6gg→4, 5gg→5). Settimana = `floor(workCount / workPerGiro) % 6`, `isScarico` = `weekIdx === 5`. **Non ricalcolare inline.**
-
-⚠️ **Il divisore del ciclo è `workPerGiro`, non 6.** Fino al 24 agosto la card Training in Home ricalcolava la settimana con `Math.floor(validWorkouts / 6) % 4` — divisore hardcoded **e** recovery contati — quindi Home e Programma potevano mostrare due numeri diversi. Ora la card chiama `getCycleWeekInfo().weekNum`: un calcolo inline della settimana è per definizione una divergenza che aspetta.
-
-**`getNextCheckpointInfo()`**: `overdue:true` solo se `isScarico` **e** `workCount >= 5*workPerGiro` **e** `daysUntil < 0`. Settimane 1-5 carico: `overdue:false` sempre. Frequenza checkpoint **42 giorni**, allineata alla durata del mesociclo: le due cadenze si muovono insieme, se una cambia cambia anche l'altra.
-
-**WS-QUEUE**: `wsWrite()` = 1 retry immediato → coda `zt_ws_pending_<userId>` in localStorage → toast discreto. Flush al boot, a ogni scrittura riuscita, al rientro in foreground. Insert idempotente al replay, cap 200 op.
-
-**Scarico**: stessi esercizi e set, SOLO carichi ridotti + RIR forzato a 3. MAI ridurre set/reps.
-
-**Infortuni multi-giorno**: periodo 1/3/7 gg o aperto in `zt_injury_<userId>`. Righe `rest_injury` materializzate una al giorno al passaggio (idempotenti). Barra in Training con data rientro e "Sto bene, riprendo".
-
-**Rientro soft**: pausa ≥10 gg → banner non bloccante. L1 (10-29 gg) −20%/RIR+1, L2 (≥30 gg) −35%/RIR+2. Solo suggerimenti, zero effetti su scheda/DB/settimana ciclo.
+- **Il mesociclo è 5+1**: sei settimane, cinque di carico e una di scarico *(dal 24 agosto 2026)*
+- **La settimana ciclo si legge SOLO da `getCycleWeekInfo()`** — vietato ricalcolarla inline: un calcolo inline è una divergenza che aspetta
+- **I recuperi sono trasparenti**: non avanzano il fronte e non generano debito
+- ⚠️ **Il divisore del ciclo è `workPerGiro`, non 6**
 
 ---
 
