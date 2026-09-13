@@ -98,7 +98,7 @@ Da decidere quando si apre, in quest'ordine:
 
 **La regola operativa sta in [CLAUDE.md](../CLAUDE.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente)** — qui resta solo cosa manca da fare e cosa e' stato misurato.
 
-**Il vincolo vero e' lo spazio, non il traffico.** Al 15 agosto il bucket occupava **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione avrebbero portato a ~1150 MB e **sfondato il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **513 MB, il 50% del piano**. Pettorali e' poi entrata gia' ridotta (chiusa il 21 agosto): oggi resta fuori dal bucket solo Mobilita'.
+**Il vincolo vero e' lo spazio, non il traffico.** Al 15 agosto il bucket occupava **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione avrebbero portato a ~1150 MB e **sfondato il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **517 MB, il 50% del piano** (rimisurato il 13 settembre: 384,7 MB nel bucket + ~132 MB stimati per le 133 GIF attive di Mobilità). Pettorali e' poi entrata gia' ridotta (chiusa il 21 agosto): oggi resta fuori dal bucket solo Mobilita'.
 
 **I numeri veri, misurati il 15 agosto** su 54 file estratti a caso e stratificati sulle 9 zone. Le stime precedenti in questo file — −82%, «tutte 1080×1080», «bucket ~115 MB» — **erano sbagliate su entrambi i fronti** e sono state tolte: il −82% era un rapporto fra aree mai misurato, e le GIF a 1080 px erano 283 su 674, non tutte → [L28](LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte).
 
