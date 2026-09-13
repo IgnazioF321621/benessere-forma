@@ -98,7 +98,7 @@ Da decidere quando si apre, in quest'ordine:
 
 **La regola operativa sta in [CLAUDE.md](../CLAUDE.md#ogni-gif-entra-nel-bucket-ridotta-e-con-la-cache--regola-permanente)** — qui resta solo cosa manca da fare e cosa e' stato misurato.
 
-**Il vincolo vero e' lo spazio, non il traffico.** Il bucket occupa **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione portano a ~1150 MB e **sfondano il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **513 MB, il 50% del piano**.
+**Il vincolo vero e' lo spazio, non il traffico.** Al 15 agosto il bucket occupava **639 MB su 1024** del piano Free (62%). Pettorali per intero (+109 MB) e Mobilita' (+405 MB) a piena risoluzione avrebbero portato a ~1150 MB e **sfondato il limite**. Con la sola riduzione a 480 px la biblioteca completa sta intorno ai **513 MB, il 50% del piano**. Pettorali e' poi entrata gia' ridotta (chiusa il 21 agosto): oggi resta fuori dal bucket solo Mobilita'.
 
 **I numeri veri, misurati il 15 agosto** su 54 file estratti a caso e stratificati sulle 9 zone. Le stime precedenti in questo file — −82%, «tutte 1080×1080», «bucket ~115 MB» — **erano sbagliate su entrambi i fronti** e sono state tolte: il −82% era un rapporto fra aree mai misurato, e le GIF a 1080 px erano 283 su 674, non tutte → [L28](LEZIONI.md#l28--una-stima-sui-pixel-non-è-una-misura-sui-byte).
 
@@ -121,12 +121,12 @@ La palette **non si tocca**: aggiunge 6 o 22 punti in cambio di banding permanen
 | Bicipiti e Braccia | 73 | 16 | 40,1 | **19,8** | ✅ 15 agosto (−51%) |
 | Cardio e Conditioning | 31 | 31 | 87,7 | **45,2** | ✅ 15 agosto (−48%) |
 | Gambe e Glutei | 169 | 85 | 201,6 | **110,6** | ✅ 15 agosto (−45%) |
-| Pettorali | 60 (+22) | 47 su 82 | 52,5 (+56,5) | **23,0 (+31,0)** | 🔄 in migrazione dal 16 agosto |
+| Pettorali | 60 (+22) | 47 su 82 | 52,5 (+56,5) | **23,0 (+31,0)** | ✅ entrata già ridotta con la migrazione, zona chiusa 21 agosto |
 | Schiena e Trapezio | 96 | 32 | 70,2 | **35,7** | ✅ 16 agosto (−49%) |
 | Spalle e Cuffia | 63 | 27 | 62,2 | **32,9** | ✅ 15 agosto (−47%) |
 | Tricipiti | 59 | 20 | 50,0 | **28,2** | ✅ 15 agosto (−44%) |
 
-**Pettorali sta fuori da questo giro.** La zona non e' ancora migrata: le sue GIF entrano nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Migrazione avviata il 16 agosto.
+**Pettorali sta fuori da questo giro.** Al 15 agosto la zona non era ancora migrata: le sue GIF sono entrate nel bucket **gia' ridotte e gia' con l'intestazione** al momento della migrazione, non ricompresse a posteriori. Migrazione avviata il 16 agosto, zona chiusa il 21 agosto.
 
 **Numeri misurati il 16 agosto** su tutti e 82 i file, non stimati: i 60 gia' nel bucket scendono da **52,5 a 23,0 MB** (−56%), i 22 mai caricati entrano a **31,0 MB** invece di 56,5 (−45%). Zona completa a **54,0 MB** contro i 109 che avrebbe occupato a piena risoluzione. Guardie: 35 riottimizzati `-O3` con differenza massima **0** su ogni pixel, 47 ridimensionati con mediana **0,61** e massimo **1,43** (limite 3,0), durata invariata su tutti.
 
