@@ -37,9 +37,6 @@ La Fase 3 non l'ha risolto, l'ha aggirato: un target proteico accettato da Pirsi
 
 Collegato: **«3 allenamenti invece di 4» non ha una scheda** ([cantiere 20](#20-generalizzare-lo-split-a-2-e-3-giorni)). Accettarla segna la scelta e basta: `giorni_allenamento` resta 4, perché con 3 la prossima rigenerazione produrrebbe la scheda d'emergenza.
 
-## 1. Test timer su workout reali
-Commit `e834320` (timer unificati timestamp-based) in osservazione. **PRIMA di qualunque altro cantiere Training.**
-
 ## 2. Cantiere 600 GIF
 65 codici senza `gif_slug`, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
 
@@ -569,6 +566,11 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## 1. Test timer su workout reali — ✅ chiuso 13 settembre 2026
+Commit `e834320` (17 luglio, timer unificati timestamp-based) era in osservazione, con la consegna di provarlo **prima di qualunque altro cantiere Training**. **Collaudato durante l'uso normale dell'app**, su workout reali: i timer funzionano e non serve nessun test aggiuntivo. Non è più la priorità del Training, e in `CLAUDE.md` il rimando non c'è.
 
 ---
 
