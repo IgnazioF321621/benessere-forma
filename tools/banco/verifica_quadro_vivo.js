@@ -34,6 +34,8 @@ const U = process.argv[2] || 'bb6fa499-1364-4d8d-8ce6-774c8e392306';   // Ignazi
     // Righe salvate prima del 13 settembre 2026: weight_last e weight_last_date non c'erano.
     // Mancano per nascita, non per errore: si confronta il resto.
     if(salvato.weight && vivo.weight && !('weight_last' in salvato.weight)){ delete vivo.weight.weight_last; delete vivo.weight.weight_last_date; senzaCampiNuovi++; }
+    // Stesso discorso per la lettura delle foto nel blocco Corpo
+    if(salvato.body && vivo.body && !('ai_overall' in salvato.body)){ delete vivo.body.ai_overall; delete vivo.body.ai_confidence; delete vivo.body.ai_check_date; }
     if(JSON.stringify(ordina(vivo)) === JSON.stringify(ordina(salvato))) uguali++;
     else console.log('  diverso:', row.week_start, JSON.stringify(salvato).length, 'vs', JSON.stringify(vivo).length, 'caratteri');
   }

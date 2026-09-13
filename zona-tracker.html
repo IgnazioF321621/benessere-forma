@@ -1380,6 +1380,33 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .wp-hero-when{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);}
 .wp-hero-line{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.45;margin-top:3px;}
 .wp-go-inline{display:inline-block;margin:10px 0 0;}
+/* Lettura delle foto del check (Fase 2, 13 set 2026) */
+.wp-ai-line{display:flex;align-items:center;gap:7px;margin-top:6px;}
+.bca-card{background:#FFFCF6;border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.bca-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.bca-title{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--t2);}
+.bca-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.bca-overall{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--t1);}
+.bca-conf{display:inline-flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--t2);}
+.bca-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block;}
+.bca-summary{font-family:'Syne',sans-serif;font-size:14px;color:var(--t1);line-height:1.55;margin:0;}
+.bca-areas{list-style:none;margin:12px 0 0;padding:0;}
+.bca-areas li{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.45;padding:8px 0;border-top:1px solid var(--b1);}
+.bca-zone{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5E4A7A;margin-right:6px;}
+.bca-focus{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.5;margin-top:12px;}
+.bca-tips{background:#EDE9F8;border-radius:12px;padding:10px 14px;margin-top:12px;font-family:'Syne',sans-serif;font-size:13px;color:#3F3155;line-height:1.5;}
+.bca-tips ul{margin:6px 0 0;padding-left:18px;}
+.bca-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);margin-top:12px;}
+.bca-btn{width:100%;padding:13px;background:#5E4A7A;color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;}
+.bca-btn:disabled{opacity:.75;cursor:default;}
+.bca-spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:bca-spin .8s linear infinite;}
+@keyframes bca-spin{to{transform:rotate(360deg);}}
+.bca-note{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--t3);line-height:1.5;margin-top:12px;padding-top:10px;border-top:1px solid var(--b1);}
+.bca-offer{position:fixed;left:12px;right:12px;bottom:calc(80px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;background:#1A1A1A;color:#fff;border-radius:16px;padding:14px 16px;z-index:9100;box-shadow:0 6px 24px rgba(0,0,0,.25);font-family:'Syne',sans-serif;font-size:14px;line-height:1.4;}
+.bca-offer-row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;}
+.bca-offer button{border:none;border-radius:999px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.bca-offer-yes{background:#AFA9EC;color:#1A1A1A;}
+.bca-offer-no{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35)!important;}
 .wp-alert{font-family:'Syne',sans-serif;font-size:13px;color:var(--err);background:var(--err-lt);border-radius:12px;padding:10px 14px;}
 .wp-loading{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);text-align:center;padding:40px 0;}
 
@@ -3734,7 +3761,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.13 · 08:12';
+const APP_VERSION = '2026.09.13 · 08:41';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -5868,6 +5895,7 @@ async function m2Complete() {
   }
   const errEl = document.getElementById('m2-err-s12');
   if(errEl) errEl.style.display = 'none';
+  const checkChiuso = ST.m2.checkId;   // serve dopo il reset, per proporre la lettura delle foto
   try {
     if(ST.m2.checkId){
       const { error } = await supa.from('body_checks').update({
@@ -5893,6 +5921,7 @@ async function m2Complete() {
     // Vai a home
     showScreen('app');
     renderOggi(); showPage('home');
+    bcaOfferAfterCheck(checkChiuso);
   } catch(e) {
     if(errEl){ errEl.style.display='block'; errEl.textContent='Errore chiusura check: '+e.message; }
   }
@@ -7166,11 +7195,14 @@ async function _wpFetch(userId, weekStart){
     sets:         ['le serie',           () => supa.from('training_logs').select('date, session_id, rir_actual').eq('user_id', userId).gte('date', weekStart).lte('date', we).order('date').order('id')],
     workouts:     ['gli allenamenti',    () => supa.from('workouts').select('date, session_type, completed').eq('user_id', userId).eq('completed', true).gte('date', wFrom).lte('date', we).order('date').order('id')],
     blood:        ['gli esami',          () => supa.from('blood_tests').select('test_date').eq('user_id', userId).lte('test_date', we).order('test_date').order('id')],
+    readings:     ['le letture delle foto', () => supa.from('body_check_ai').select('check_id, confidence, result, created_at').eq('user_id', userId).order('created_at').order('id')],
   };
   const keys = Object.keys(Q);
   const results = await Promise.all(keys.map(k => _wpAll(Q[k][0], Q[k][1])));
   const raw = { errors: [] };
   keys.forEach((k, i) => {
+    // body_check_ai non ancora creata: nessuna lettura, non un errore del quadro
+    if(k === 'readings' && results[i].error && bcaTableMissing(results[i].error)) results[i] = { data: [], error: null };
     raw[k] = results[i].error ? null : results[i].data;
     if(results[i].error) raw.errors.push(k);
   });
@@ -7311,12 +7343,24 @@ function computeWeeklyPicture(raw, weekStart, ctx){
       });
     }
     const rem = getBlockCheckReminder({ nowTs: refTs, checks: completati });
+    // Ultima lettura delle foto (Fase 2): quella del check più recente che ne ha una,
+    // fatta entro l'"adesso" del quadro. Lettura fallita = campi null, errore già in meta.errors.
+    let lettura = null, checkLettura = null;
+    if(raw.readings){
+      for(let i = completati.length - 1; i >= 0 && !lettura; i--){
+        const r = raw.readings.find(x => x.check_id === completati[i].id && x.created_at && new Date(x.created_at).getTime() <= refTs);
+        if(r && r.result){ lettura = r; checkLettura = completati[i]; }
+      }
+    }
     body = {
       last_check_date:   ultimo ? dayKey(new Date(ultimo.created_at)) : null,
       days_since_check:  ultimo ? daysBetween(new Date(ultimo.created_at).getTime()) : null,
       check_due:         !!rem,
       last_measurements: last,
       prev_check_date:   prec ? dayKey(new Date(prec.created_at)) : null,
+      ai_overall:        lettura ? lettura.result.overall : null,
+      ai_confidence:     lettura ? (lettura.result.confidence || lettura.confidence) : null,
+      ai_check_date:     checkLettura ? dayKey(new Date(checkLettura.created_at)) : null,
     };
   }
 
@@ -7714,6 +7758,10 @@ function renderQuadroView(){
   else if(!b.last_check_date) ctxCorpo = 'Nessun check fisico completato';
   else ctxCorpo = `Check del ${_wpShortDate(b.last_check_date)}${b.prev_check_date ? ` · differenze rispetto al check del ${_wpShortDate(b.prev_check_date)}` : ''}`;
   if(b.check_due) ctxCorpo += ' · È ora del check di fine blocco';
+  if(b.ai_overall){
+    const conf = BCA_CONF[b.ai_confidence] || BCA_CONF.bassa;
+    ctxCorpo += `<div class="wp-ai-line"><span class="bca-dot" style="background:${conf.col};"></span>Lettura foto del ${_wpShortDate(b.ai_check_date)}: ${(BCA_OVERALL[b.ai_overall] || b.ai_overall).toLowerCase()} · ${conf.lbl.toLowerCase()}</div>`;
+  }
   const secCorpo = sezione('#5E4A7A', 'Corpo', b.check_due ? _wpPill('Check da fare', '#EDE9F8', '#5E4A7A') : '',
     _wpStat('Ultimo check', b.days_since_check != null ? String(b.days_since_check) : null, b.days_since_check === 1 ? 'giorno fa' : 'giorni fa') +
     misura('waist_cm', 'Vita') + misura('hips_cm', 'Fianchi') + misura('chest_cm', 'Petto'),
@@ -16457,7 +16505,9 @@ async function openBodyCheckDetail(checkId){
         .order('test_date', { ascending:false }).limit(1);
       blood = (bloods && bloods[0]) || null;
     }
-    ST.bodyCheckDetail = { checkId, status: check?.status || 'completed', createdAt, notes: check?.notes || null, meas, photos, blood };
+    // Lettura delle foto già fatta, e se esiste un check con cui confrontare (decide il testo del pulsante)
+    const [ai, prevId] = await Promise.all([loadBodyCheckAI(checkId), bcaPreviousCheckId(checkId).catch(() => null)]);
+    ST.bodyCheckDetail = { checkId, status: check?.status || 'completed', createdAt, notes: check?.notes || null, meas, photos, blood, ai, hasPrevious: !!prevId };
     renderBodyCheckDetail();
   } catch(e){
     console.error('[bcd] open error:', e);
@@ -16479,6 +16529,160 @@ function openBodyCheckPhoto(url, label){
 function closeBodyCheckPhoto(){
   document.getElementById('bcd-photo-modal').style.display = 'none';
   document.getElementById('bcd-photo-modal-img').src = '';
+}
+
+// ── Lettura delle foto del check (Worker /vision-check → Gemini) ──
+// Suggerimento, mai automatico: parte solo da un tocco, si salva in body_check_ai
+// (lo scrive il Worker), l'app la mostra e basta.
+const BCA_OVERALL = { migliorato:'Migliorato', stabile:'Stabile', peggiorato:'Peggiorato', primo_check:'Primo check' };
+const BCA_CONF = { bassa:{ lbl:'Affidabilità bassa', col:'#9A968C' }, media:{ lbl:'Affidabilità media', col:'var(--warn)' }, alta:{ lbl:'Affidabilità alta', col:'#2A7A6F' } };
+const BCA_POSE = { front:'frontale', right:'di profilo destro', left:'di profilo sinistro', back:'da dietro' };
+const BCA_TIPS = {
+  'luce diversa':          'Scatta con la stessa luce: stessa stanza e stessa ora del giorno.',
+  'distanza diversa':      'Tieni il telefono alla stessa distanza, sempre a figura intera.',
+  'posa diversa':          'Ripeti la stessa posa: braccia lungo i fianchi, piedi alla larghezza delle anche.',
+  'sfondo diverso':        'Usa lo stesso sfondo, meglio una parete chiara e sgombra.',
+  'abbigliamento diverso': 'Indossa lo stesso abbigliamento del check precedente.',
+  'luce scarsa':           'Cerca una luce frontale e uniforme, senza controluce.',
+  'foto sfocata':          'Appoggia il telefono o usa il timer: foto ferme e nitide.',
+  'inquadratura parziale': 'Inquadra tutto il corpo, dalla testa ai piedi.',
+};
+function bcaTip(issue){
+  const m = /^foto mancante: (\w+)$/.exec(issue);
+  if(m) return `Scatta anche la foto ${BCA_POSE[m[1]] || m[1]}.`;
+  return BCA_TIPS[issue] || null;
+}
+function bcaTableMissing(err){ return !!err && (err.code === 'PGRST205' || err.code === '42P01'); }
+// Il check completato subito prima di questo: è quello con cui si confrontano le foto.
+async function bcaPreviousCheckId(checkId){
+  let checks = ST.bodyChecks;
+  if(!checks || !checks.some(c => c.id === checkId)){
+    const res = await dbq('leggere i check fisici', supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id), { silenzioso:true });
+    checks = res.data || [];
+  }
+  const cur = checks.find(c => c.id === checkId);
+  if(!cur) return null;
+  const prima = checks.filter(c => c.status === 'completed' && c.id !== checkId && new Date(c.created_at) < new Date(cur.created_at))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  return prima[0] ? prima[0].id : null;
+}
+async function loadBodyCheckAI(checkId){
+  const res = await dbq('leggere la lettura delle foto', supa.from('body_check_ai').select('*').eq('check_id', checkId).maybeSingle(), { silenzioso:true });
+  if(res.error) return null;      // tabella assente o lettura fallita: resta il pulsante
+  return res.data || null;
+}
+function bcaErrorMessage(status, err){
+  const kind = err && err.kind;
+  if(status === 0) return 'Connessione assente: riprova quando sei online';
+  if(kind === 'too-soon') return 'Ho appena letto queste foto: riprova tra qualche minuto';
+  if(kind === 'in-progress') return 'Sto già guardando queste foto';
+  if(status === 401) return 'Sessione scaduta: esci, rientra e riprova';
+  if(status === 403) return 'Non posso leggere questo check';
+  if(kind === 'no-photos') return 'Non trovo le foto di questo check';
+  if(kind === 'table-missing') return 'La lettura delle foto non è ancora attiva';
+  if(kind === 'timeout' || status === 504) return 'Ci ho messo troppo: riprova tra poco';
+  if(kind === 'rate-limit') return 'Troppe richieste in questo momento: riprova tra poco';
+  return 'Non sono riuscito a leggere le foto: riprova tra poco';
+}
+async function requestBodyCheckAI(checkId){
+  if(!ST.user || !checkId || ST.bodyCheckAIBusy) return;
+  ST.bodyCheckAIBusy = checkId;
+  if(ST.bodyCheckDetail && ST.bodyCheckDetail.checkId === checkId) renderBodyCheckDetail();
+  try {
+    const prevId = await bcaPreviousCheckId(checkId);
+    const { data: { session } } = await supa.auth.getSession();
+    if(!session || !session.access_token){ showToast(bcaErrorMessage(401), '⚠️', 5500); return; }
+    let r, j = null;
+    try {
+      r = await fetch(WORKER_URL + '/vision-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ user_id: ST.user.id, check_id_current: checkId, check_id_previous: prevId }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(75000) : undefined,
+      });
+      j = await r.json().catch(() => null);
+    } catch(e){
+      console.warn('[bca] rete:', e && e.name);
+      showToast(e && e.name === 'TimeoutError' ? bcaErrorMessage(504) : bcaErrorMessage(0), '⚠️', 5500);
+      return;
+    }
+    // Come Groq e supabase-js: una risposta d'errore arriva regolare, si controlla a mano (L36)
+    if(!r.ok || !j || !j.reading){
+      const err = j && j.error;
+      console.warn('[bca] lettura non riuscita:', r.status, err && err.kind);
+      showToast(bcaErrorMessage(r.status, err), '⚠️', 5500);
+      return;
+    }
+    ST.bodyCheckAI = ST.bodyCheckAI || {};
+    ST.bodyCheckAI[checkId] = j.reading;
+    if(ST.bodyCheckDetail && ST.bodyCheckDetail.checkId === checkId) ST.bodyCheckDetail.ai = j.reading;
+  } finally {
+    ST.bodyCheckAIBusy = null;
+    if(ST.bodyCheckDetail && ST.bodyCheckDetail.checkId === checkId) renderBodyCheckDetail();
+  }
+}
+function bcaCardHTML(d){
+  if(d.status !== 'completed' || !ST.user || ST.user.id === 'test-user-001') return '';
+  const nota = `<div class="bca-note">Lettura indicativa basata sulle foto: contano più le misure e la tendenza del peso.</div>`;
+  const head = `<div class="bca-head"><span class="bca-dot" style="background:#5E4A7A;"></span><span class="bca-title">Lettura di ${COACH_NAME}</span></div>`;
+  const a = d.ai;
+  if(!a || !a.result){
+    const busy = ST.bodyCheckAIBusy === d.checkId;
+    const label = d.hasPrevious === false ? `Fai leggere le foto a ${COACH_NAME} →` : `Confronta le foto con ${COACH_NAME} →`;
+    return `<div class="bca-card">${head}
+      <button class="bca-btn" onclick="requestBodyCheckAI('${d.checkId}')" ${busy || ST.bodyCheckAIBusy ? 'disabled' : ''}>
+        ${busy ? '<span class="bca-spin"></span>Sto guardando le foto…' : label}
+      </button>${nota}</div>`;
+  }
+  const res = a.result;
+  const conf = BCA_CONF[res.confidence] || BCA_CONF.bassa;
+  const aree = (res.areas || []).filter(x => x.change !== 'uguale' && x.change !== 'non valutabile');
+  const pq = res.photo_quality || {};
+  const consigli = pq.ok === false ? [...new Set((pq.issues || []).map(bcaTip).filter(Boolean))] : [];
+  let meta = '';
+  if(a.previous_check_id){
+    const prev = (ST.bodyChecks || []).find(c => c.id === a.previous_check_id);
+    const giorni = res.meta && res.meta.days_between;
+    meta = `Confronto con il check${prev ? ' del ' + fmtDate(dayKey(new Date(prev.created_at))) : ' precedente'}${giorni != null ? ' · ' + giorni + ' giorni' : ''}`;
+  } else meta = 'Primo check: niente confronto';
+  return `<div class="bca-card">${head}
+    <div class="bca-top"><span class="bca-overall">${BCA_OVERALL[res.overall] || esc(res.overall)}</span>
+      <span class="bca-conf"><span class="bca-dot" style="background:${conf.col};"></span>${conf.lbl}</span></div>
+    <p class="bca-summary">${esc(res.summary)}</p>
+    ${aree.length ? `<ul class="bca-areas">${aree.map(x => `<li><span class="bca-zone">${esc(x.zona)} · ${esc(x.change)}</span>${esc(x.note)}</li>`).join('')}</ul>` : ''}
+    ${!res.suggested_focus ? '' : res.overall === 'primo_check'
+      // Primo check: il consiglio parla già del prossimo check, un'etichetta lo ripeterebbe
+      ? `<div class="bca-focus">${esc(res.suggested_focus)}</div>`
+      : `<div class="bca-focus"><b>Nelle prossime 4 settimane:</b> ${esc(res.suggested_focus.charAt(0).toLowerCase() + res.suggested_focus.slice(1))}</div>`}
+    ${consigli.length ? `<div class="bca-tips">Per un confronto migliore la prossima volta:<ul>${consigli.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>` : ''}
+    <div class="bca-meta">${meta}</div>
+    ${nota}</div>`;
+}
+// Fine flusso M2: si propone la lettura, non la si lancia. Solo se c'è un check con cui confrontare.
+async function bcaOfferAfterCheck(checkId){
+  if(!checkId || !ST.user || ST.user.id === 'test-user-001') return;
+  let prevId = null;
+  try { prevId = await bcaPreviousCheckId(checkId); } catch(e){ return; }
+  if(!prevId) return;
+  const old = document.getElementById('bca-offer'); if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'bca-offer';
+  el.className = 'bca-offer';
+  el.innerHTML = `Vuoi che ${COACH_NAME} confronti le foto con l'ultimo check?
+    <div class="bca-offer-row">
+      <button class="bca-offer-no" onclick="bcaOfferClose()">Non ora</button>
+      <button class="bca-offer-yes" onclick="bcaOfferAccept('${checkId}')">Confronta →</button>
+    </div>`;
+  document.body.appendChild(el);
+  setTimeout(() => { if(document.getElementById('bca-offer') === el) el.remove(); }, 15000);
+}
+function bcaOfferClose(){ const el = document.getElementById('bca-offer'); if(el) el.remove(); }
+async function bcaOfferAccept(checkId){
+  bcaOfferClose();
+  ST.bodyTab = 'check';
+  showPage('body');
+  await openBodyCheckDetail(checkId);
+  if(!(ST.bodyCheckDetail && ST.bodyCheckDetail.ai)) requestBodyCheckAI(checkId);
 }
 
 function renderBodyCheckDetail(){
@@ -16583,6 +16787,8 @@ function renderBodyCheckDetail(){
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
           ${photoCell('front')}${photoCell('right')}${photoCell('left')}${photoCell('back')}
         </div>
+
+        ${bcaCardHTML(d)}
 
         ${measHTML.trim() ? `
         <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
