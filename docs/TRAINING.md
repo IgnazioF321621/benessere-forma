@@ -15,7 +15,7 @@ Staccato da [`CLAUDE.md`](../CLAUDE.md) il 13 settembre 2026, per alleggerire il
 
 Il surrogato non è un ripiego da tollerare, è il meccanismo che dà ampiezza al catalogo casalingo: **177 dei 406 esercizi** ammessi al pool principale di un profilo casa entrano da lì — quasi la metà. Su tutto il catalogo, **263 delle 593 righe** ammesse a casa passano dal ramo surrogato, e le righe con `surrogato_attrezzo` popolato sono **302 su 725** *(rimisurato il 31 agosto con `tools/baseline_pool.py`)*. Chi tocca i filtri non deve stringere il ramo surrogato per ridurre i nomi da palestra: il nome mostrato resta quello nativo, la versione casalinga vive in `nota_surrogato` → campo `setup`.
 
-**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **725 righe, 1 settembre**): `poolPrincipali` **417** · `poolFinisher` **253** · `poolRiscaldamento` **49** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Righe ammesse dai tre filtri: **593 su 725**, di cui **263 dal ramo surrogato**.
+**Baseline di riferimento** (profilo Ignazio, casa, avanzato, catalogo **725 righe, 1 settembre**; rimisurata identica il 13 settembre): `poolPrincipali` **417** · `poolFinisher` **253** · `poolRiscaldamento` **49** · pool core **64 pescabili su 64 ammessi** · `poolFinisherTabata` **25** · `poolCarry` **1**. Righe ammesse dai tre filtri: **593 su 725**, di cui **263 dal ramo surrogato**.
 
 **Si rimisura con un comando, e la replica sta su disco:**
 
