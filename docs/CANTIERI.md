@@ -2,7 +2,7 @@
 
 Lista dei lavori aperti e archivio di quelli chiusi. **Le regole tecniche vivono in `CLAUDE.md`; le lezioni apprese in `docs/LEZIONI.md`.** Qui c'è cosa resta da fare e cosa è già stato fatto.
 
-*Aggiornato: 13 settembre 2026.*
+*Aggiornato: 13 settembre 2026 (sera, Fase 3).*
 
 Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consolidamenti](#consolidamenti) · [Materiale parcheggiato](#materiale-parcheggiato) · [Storico baseline pool](#storico-baseline-pool)
 
@@ -19,10 +19,23 @@ Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consoli
 - **Nessun «rifai la lettura».** Dopo i 10 minuti il Worker accetta una lettura nuova sullo stesso check e sovrascrive la riga, ma l'app non offre il pulsante: la card, una volta fatta, resta quella. Da decidere se serve
 - **Il modello.** `gemini-2.5-flash-lite` (0,10 / 0,40 $/M, il più economico in listino) risponde **404** a questa chiave: la documentazione lo dà stabile, la chiave non lo vede. Se un giorno torna disponibile, va provato sulle stesse due coppie prima di cambiare
 
-## 35. Tab Body: grafici Tendenza e «Ultimi log» senza le pesate rapide
-*Aperto il 13 settembre 2026, dall'allineamento del peso attuale → [L48](LEZIONI.md#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda).*
+## 36. Pirsi propone — collaudo dal vivo e prima settimana vera
+*Aperto il 13 settembre 2026, a chiusura della Fase 3. Il codice è in `main` e il Worker è deployato (`8a9b4fc9`); manca ciò che solo il DB vero e un lunedì vero possono dire.*
 
-Il 13 settembre numero grande, pillola in alto e card Body in Home hanno smesso di ignorare `weight_logs` (`getWeighIns()`). **Non l'hanno fatto** il grafico del peso nel tab Tendenza e l'elenco «Ultimi log», che leggono ancora `getUnifiedBodyTimeline()` — solo `body_logs` e misure dei check. Per Ignazio la Tendenza del peso ha quindi 5 punti (1 log + 4 check) invece di 17. Lasciati fuori di proposito: «Ultimi log» ha il pulsante di cancellazione per riga, e una pesata rapida lì dentro va cancellata da `weight_logs`, che oggi quel pulsante non conosce.
+- **Migrazione da eseguire**: `supabase/migrations/20260913_coach_proposals.sql`. Fino ad allora la card non compare, l'app non genera e il cron del lunedì si ferma senza scrivere (`coach_proposals assente: migrazione non eseguita, giro fermo`). Verificato su tutti e tre i percorsi, senza errori a schermo
+- **RLS da provare col token utente**, come per `body_check_ai`: SELECT delle proprie righe, INSERT solo `pending`, UPDATE solo di `status/decided_at/applied_at` (un update di `title` deve fallire), nessun DELETE, anonimo 0
+- **Accetto dal vivo** su una proposta kcal: `profiles.target_*` aggiornati, `ST.TARGET` uguale dopo un reload, Postino con i target nuovi. Nel banco passa (`prova_pirsi_card.js`, 29 OK); dal vivo no, per la tabella assente
+- **Prima esecuzione del cron**: lunedì 14 settembre alle 06:00 di Roma (04:00 UTC). Esito da leggere con `wrangler tail` o in `coach_proposals`. La prova manuale del 13 (`wrangler dev --test-scheduled`, in prova) ha girato su 4 utenti, 0 errori, 4,8 s
+- **Tre profili senza training né pesate ricevono tre proposte a settimana** (pesati, registra i pasti, esami). Da guardare dopo due-tre settimane se diventano rumore: il raffreddamento di 4 settimane oggi vale solo per check, esami, volume e scarico, non per `weigh_in` e `logging`
+
+## 37. Due fonti per i macro: percentuali in `ST.TARGET`, numeri in `profiles`
+*Aperto il 13 settembre 2026, dall'applicazione delle proposte di Pirsi → [L49](LEZIONI.md#l49--un-numero-derivato-non-si-scrive-in-un-secondo-posto-senza-decidere-chi-vince).*
+
+`applyProfile` ricalcola `ST.TARGET` dalle kcal e dalle percentuali dell'obiettivo (`calcAdaptedTargets`) e ignora `profiles.target_protein/carbs/fat`, che invece legge il Postino. Per Ignazio e Ornella coincidono; **per Ginevra (125 contro 141 g di proteine) e Isabella (109 contro 116) no**: il tab Nutrition e il piano settimanale usano già oggi due target diversi.
+
+La Fase 3 non l'ha risolto, l'ha aggirato: un target proteico accettato da Pirsi vale come **minimo** sopra le percentuali (i carboidrati cedono gli stessi grammi), tenuto in `coach_proposals` e in `localStorage` (`zt_coach_protein_<userId>`). Da decidere quale delle due fonti comanda.
+
+Collegato: **«3 allenamenti invece di 4» non ha una scheda** ([cantiere 20](#20-generalizzare-lo-split-a-2-e-3-giorni)). Accettarla segna la scelta e basta: `giorni_allenamento` resta 4, perché con 3 la prossima rigenerazione produrrebbe la scheda d'emergenza.
 
 ## 31. Il codice esercizio dentro `training_logs`
 *Aperto il 12 settembre 2026, dalla diagnosi dei risultati della settimana precedente → [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave).*
@@ -442,6 +455,55 @@ Verificato su tutte e 6 le righe con slug che cambia: le 5 in stato `pendente` s
 Esiti dopo la correzione: **Cardio pulito** (6 su 6 già migrate, 0 da migrare) · Bicipiti e Braccia pulito · Gambe e Glutei segnala 4 righe presenti nel diario e non nel piano — segnali veri, non falsi allarmi (file consolidati o già migrati: EX609, EX221, EX229, EX015).
 
 Collaudato anche su uno scenario costruito apposta: una riga `collegato` mancante dal diario viene segnalata, una riga `indicizzato` no. Il filtro non nasconde i problemi veri.
+
+---
+
+## Motore di riallineamento «Pirsi propone» — ✅ chiuso 13 settembre 2026
+*Fase 3. Pirsi propone, l'utente approva: nessun cambiamento a calorie, macro o allenamento senza un tocco. Regole in `CLAUDE.md` → Pirsi propone.*
+
+In ordine di commit:
+
+- **Tendenza e «Ultimi log»** (`9aadb4d`) — chiude il cantiere 35. `getUnifiedBodyTimeline` segue `weighInsByDay`: dal vivo i punti del peso di Ignazio passano da **5 a 17**. La × cancella ciò che la riga mostra: `body_logs`, `weight_logs` per data, o entrambi
+- **quadro v2, la giornata intera** (`208245e`) — `dayTotals` spostata in `shared/nutrizione.js` (322 giornate di 4 utenti identiche prima/dopo). «Parziale» = metà o più dei giorni con meno di 2 pasti principali. Le 8 righe di `weekly_pictures` riscritte (backup in `~/zt-backup/`)
+- **tabella** (`8f48ef7`) — `coach_proposals`, migrazione **da eseguire** → [cantiere 36](#36-pirsi-propone--collaudo-dal-vivo-e-prima-settimana-vera)
+- **regole** (`3678e08`) — `shared/coach_rules.js`, 47 controlli su 21 scenari
+- **generazione** (`eba4e0d`) — cron del lunedì nel Worker + ripiego nell'app; il calcolo del quadro passa in `shared/quadro.js`
+- **vista** (`dd811c9`) — card «Pirsi propone», Accetto / Non ora, «Cosa ha proposto Pirsi» nel quadro. Schermate in `docs/screenshots/fase3/`
+
+**Prima/dopo delle kcal medie salvate (Ignazio):**
+
+| settimana | kcal prima | kcal dopo | proteine prima → dopo | integratori kcal | parziale |
+|---|---|---|---|---|---|
+| 13 lug | 952 | 1.039 | 38 → 57 | 88 | sì → sì |
+| 20 lug | 1.015 | 1.155 | 39 → 59 | 140 | sì → no |
+| 27 lug | 1.372 | 1.564 | 54 → 84 | 193 | sì → no |
+| 3 ago | 1.490 | 1.813 | 58 → 105 | 323 | no → no |
+| 10 ago | 960 | 1.156 | 46 → 73 | 196 | sì → no |
+| 17 ago | 908 | 1.231 | 39 → 83 | 323 | sì → no |
+| 24 ago | 658 | 851 | 29 → 59 | 193 | sì → no |
+| 31 ago | 867 | 1.135 | 42 → 77 | 268 | sì → no |
+
+**Settimana del 31 agosto, giorno per giorno**: 7 su 7 uguali al tab Nutrition (`verifica_nutrizione_quadro.js`), 1.135 kcal e 77 g su 5 giorni.
+
+**Le proposte sulla storia vera** (`verifica_proposte_vivo.js`): 10, 17, 24 e 31 agosto danno tutte `weigh_in` (1, 0, 0, 0 pesate) ed `esami` (nessuno registrato); il 24 anche `logging` (3 giorni). **Nessuna proposta sulle calorie**, come voleva il brief.
+
+**Le verifiche del calcolo spostato**: 40 quadri su 40 identici prima/dopo (4 utenti × 10 settimane), settimana del ciclo e reminder uguali; il Worker in UTC col fuso Europe/Rome ridà **8 righe su 8** di `weekly_pictures`.
+
+**Le scelte che il brief non diceva, o diceva diversamente:**
+
+- **moduli condivisi, app sempre un file solo.** `shared/nutrizione.js`, `shared/quadro.js`, `shared/coach_rules.js` sono la fonte; `tools/moduli.js` li copia in `zona-tracker.html` fra due marcatori e il pre-commit hook rifiuta una copia non allineata. Il Worker li importa diretti
+- **`buildProposals(picture, history, profile, opts)`**: il quarto argomento porta le proposte passate (una correzione kcal ogni 2 settimane) e le rotazioni esistenti
+- **il ritmo del peso** è `(media sett. 0-1 − media sett. 2-3) / 2`, calcolato dalle regole sulle medie salvate. `weight_trend_4w` del quadro resta la pendenza ai minimi quadrati e non si usa per decidere
+- **ricomposizione non ha una direzione**: la decide il peso obiettivo con 1 kg di tolleranza. Ignazio (72,1 → 68) cade su «dimagrire». Forza, longevità e mantenimento → «mantenere»
+- **massa ferma**: sotto +0,2 kg/sett per due settimane **e** aderenza ≥ 70%; con aderenza bassa `logging`, come per dimagrire
+- **dati sporchi bloccano anche le proteine**, non solo le calorie
+- **proteine solo se il target va davvero alzato**: con Ignazio a 198 g (2,7 g/kg) la regola non propone mai 130 g
+- **raffreddamento di 4 settimane** per check, esami, volume e scarico dopo una decisione: senza, «esami del sangue» tornerebbe ogni lunedì
+- **un giorno con solo integratori non è un giorno registrato**; medie e `supp_*_avg` sono sui giorni con almeno un pasto
+- **scarico anticipato** senza colonne nuove: la data di `applied_at` di un `deload` accettato fa ripartire il conto, la settimana in corso è la 6 e la successiva la 1 (`cycleWeekInfo`)
+- **accettare kcal scrive i quattro target** con le percentuali dell'obiettivo, perché `applyProfile` rifarebbe le proteine dalle kcal comunque → [cantiere 37](#37-due-fonti-per-i-macro-percentuali-in-sttarget-numeri-in-profiles)
+- **volume a 3 giorni: accettata non tocca il profilo**, la rotazione non esiste
+- **titolo della card in minuscolo, «Pirsi propone»**, non in maiuscolo mono come le altre: un nome proprio in maiuscolo si legge come un marchio (regola di Pirsi)
 
 ---
 

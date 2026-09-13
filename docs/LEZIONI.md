@@ -857,3 +857,16 @@ Il 13 settembre il brief della card peso chiedeva «i numeri coincidono con il t
 ⚠️ **Nessun segnale, di nuovo.** Un peso vecchio ha la stessa forma di un peso nuovo: un numero plausibile, con l'unità giusta. Nessuno lo vede sbagliato finché due schermate non lo mettono una accanto all'altra.
 
 **La regola.** Quando si scopre che un numero va letto da una fonte diversa, la correzione non è finita nella schermata che l'ha fatto scoprire: **si cercano tutti i posti che rispondono alla stessa domanda** — qui «quanto pesa adesso» — e si fanno passare da **una funzione sola** (`weighInsByDay`). Quelli che per una ragione precisa restano fuori si elencano con la ragione, non si dimenticano: il grafico Tendenza e «Ultimi log» sono il [cantiere 35](CANTIERI.md#35-tab-body-grafici-tendenza-e-ultimi-log-senza-le-pesate-rapide). È [L45](#l45--il-nome-mostrato-a-schermo-non-è-una-chiave) visto dall'altra parte: là una chiave sola mancava e lo storico si staccava, qui una fonte sola mancava e il peso si sdoppiava.
+
+---
+
+## L49 — Un numero derivato non si scrive in un secondo posto senza decidere chi vince
+
+**Il caso.** La Fase 3 doveva «aggiornare `profiles.target_protein`» quando Ignazio accetta una proposta sulle proteine. Leggendo `applyProfile` prima di scrivere è venuto fuori che `ST.TARGET` — i macro del tab Nutrition — **non legge** `target_protein`: li rifà ogni volta dalle kcal e dalle percentuali dell'obiettivo. `profiles.target_protein` lo legge solo il Postino. Scrivere il numero nuovo avrebbe cambiato il piano settimanale e lasciato il tab Nutrition sul valore di prima, **fino al reload successivo, e poi per sempre**.
+
+La misura sui quattro profili ha detto che lo sdoppiamento c'era già: Ginevra 125 g in profilo contro 141 dalle percentuali, Isabella 109 contro 116. Nessuna delle due schermate è sbagliata da sola; sono due risposte alla stessa domanda.
+
+⚠️ **Nessun segnale.** Il salvataggio riesce, il toast dice «fatto», il numero a schermo è plausibile. Si vede solo mettendo il piano accanto al tab Nutrition.
+
+**La regola.** Prima di scrivere un valore che l'app mostra, si cerca **chi lo calcola** e non solo dove sta salvato. Se esiste una formula che lo rifà, scrivere il numero non basta: si decide esplicitamente chi vince — qui un minimo sopra la formula — e il caso aperto si mette a cantiere ([37](CANTIERI.md#37-due-fonti-per-i-macro-percentuali-in-sttarget-numeri-in-profiles)). È [L48](#l48--quando-si-corregge-la-fonte-di-un-numero-si-cercano-tutti-i-posti-che-rispondono-alla-stessa-domanda) al contrario: là due posti leggevano fonti diverse, qui due fonti venivano scritte e lette da posti diversi.
+
