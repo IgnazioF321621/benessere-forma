@@ -640,20 +640,64 @@ Perché la regola esiste: i primi quattro giri hanno lasciato dietro i 65 codici
 
 ### Ordine delle zone rimanenti
 
-Registrato l'11 agosto. **Non è più l'ordine per dimensione.**
+Registrato l'11 agosto, stato aggiornato al 13 settembre. **Non è più l'ordine per dimensione.**
 
 | # | zona | file | nota |
 |---|---|---|---|
-| 1 | **Pettorali** | 82 | in corso — nomi confermati, migrazione dal 15 agosto |
-| 2 | **Polpacci** | 19 | la più piccola: si chiude in un giro |
-| 3 | **Spalle e Cuffia** | 63 | **anticipata** rispetto alle zone più grosse |
+| 1 | ~~Pettorali~~ | 82 | ✅ **chiusa il 21 agosto** sui tre lavori |
+| 2 | ~~Polpacci~~ | 19 | ✅ **chiusa il 21 agosto** sui tre lavori |
+| 3 | ~~Spalle e Cuffia~~ | 63 | ✅ **chiusa il 23 agosto** sui tre lavori |
 | 4 | ~~Tricipiti~~ | 59 | ✅ **chiusa il 24 agosto** sui tre lavori — 59 GIF · 59 righe · 59 codici |
-| 5 | Schiena e Trapezio | 112 | |
-| 6 | Mobilità | 215 | |
+| 5 | ~~Schiena e Trapezio~~ | 112 | ✅ **chiusa il 31 agosto** sui tre lavori |
+| 6 | **Mobilità** | 215 | l'unica ancora aperta |
 
 > **Perché Spalle e Cuffia passa avanti a Tricipiti, Schiena e Mobilità**: contiene i gruppi più poveri del pool — deltoidi posteriori **1 solo candidato**, laterali **3**, anteriori **4**. Il deltoide posteriore è slot obbligatorio in quasi ogni Upper, quindi oggi esce lo stesso esercizio blocco dopo blocco. È il cantiere che cambia davvero l'allenamento, non la zona più grossa.
 
-## Pettorali — nomi confermati, migrazione ferma al 15 agosto
+## Addominali e Core — chiusa 1 agosto
+68 righe migrate. La zona è poi stata **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori: 72 righe toccate, 11 a certezza media confermate da Ignazio.
+
+## Bicipiti e Braccia — chiusa 2 agosto
+73 righe: 68 codici vivi + 5 liberi indicizzati (→ cantiere 16). Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
+
+## Cardio e Conditioning — chiusa 2 agosto, su entrambi i lati
+
+**Immagini**: 31 righe — 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata. Zona a 39 righe e 39 oggetti.
+
+**Catalogo**: 3 codici esistenti agganciati e rinominati (EX049 · EX053 · EX114) + **28 righe nuove EX587→EX614**. Catalogo da 582 a **610 righe**.
+
+Verifica finale **31/31 via Worker**. La zona è passata da **0 a 31 codici** che puntano a una sua riga.
+
+**Perché non servì l'ordine a righe doppie.** Quando la zona fu preparata, **0 codici** puntavano a una sua riga: non c'erano catene vive da proteggere. Il popolamento del catalogo fu lavoro separato e successivo.
+
+> **Zona senza codici: slug in place, niente righe doppie.** Se nessun `gif_slug` punta alla zona non esiste la catena da proteggere: lo slug si aggiorna sulla riga esistente e non servono né la riga doppia né il sync del Sheet. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma. Primo caso: Cardio e Conditioning.
+
+### Gli otto salti parcheggiati — risolti 5 agosto
+Erano nel bucket ma non sul Mac, quindi fuori dalla conferma visiva di Cardio. Trattati come pliometria di zona muscolare secondo la **regola 10** della nomenclatura: hanno ricevuto `pattern = dominante ginocchia`, `gruppo_target = quadricipiti` e `uso`, quindi entrano nei pool.
+
+| salto | esito |
+|---|---|
+| `Pistol jump box` | **EX617** `Jumping pistol box` — doppione di `jumping-pistol-box`, adotta quella riga |
+| `Salto all indietro` | **EX618** `Salto all'indietro` |
+| `Salto monopodalico avanti` | **EX621** `Salto una gamba avanti` |
+| `Salto verticale esplosivo` | **EX622** `Salto verticale esplosivo` |
+| `Squat jump ginocchia alte` | **EX619** `Squat jump ginocchia alte` |
+| `Squat thrust` | **EX620** `Squat thrust` (`pattern = composto`) |
+| `Squat jump box` | **EX650** `Squat jump` |
+| `Salto in lungo da fermo` | GIF confermata `Salto lungo da fermo`, **nessun codice** — sta fra le 36 del pezzo 2 |
+
+I quattro rinumerati (EX615+) nascono da una collisione di codici allocati in anticipo: vedi [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
+
+## Gambe e Glutei — chiusa 5 agosto, su entrambi i lati
+
+**Immagini**: 35 righe doppie migrate e le vecchie eliminate **una per una**, con verifica via Worker nell'istante prima di ogni cancellazione. 2 catene riparate con slug in place (EX015, EX247). `biblioteca_gif` da 1.609 a 1.570 righe.
+
+**Catalogo**: 40 nomi allineati + **36 righe nuove** (30 pendenti + 6 rinumerate da EX615) + **35 righe dal pezzo 2** (10 agganci a codici esistenti e 25 esercizi nuovi EX623→EX675). Catalogo da 610 a 671 righe, poi a **667** dopo il giro dei consolidamenti.
+
+Verifica finale **602/602 via Worker**, 0 rotti. La zona non ha più GIF senza codice.
+
+## Pettorali — chiusa 21 agosto
+
+Chiusa sui tre lavori: 82 GIF, 82 codici, le 25 senza codice diventate EX677-EX701. Sotto, il piano com'era durante la migrazione.
 
 **82 nomi su 82 confermati** nel pannello l'11 agosto. Piano di migrazione pronto e approvato: [`lavoro/_piani/PIANO_pettorali.md`](../tools/biblioteca-nomi/lavoro/_piani/PIANO_pettorali.md), nel repo dall'11 agosto insieme a quello di Gambe e Glutei — un piano che vive solo sul Mac è senza backup.
 
@@ -714,48 +758,6 @@ I punti 2 e 3 sono le due voci rimaste aperte l'11 agosto; il punto 1 è il prer
 Le prime due chiudono la domanda "esiste una sesta panca?": no. Il vocabolario resta a cinque — piana, inclinata, declinata, verticale, Scott.
 
 Sul terzo: `slug` è unico su tutte e 1.570 le righe di `biblioteca_gif`, quindi la riga nuova non entra finché la vecchia non se ne va. **Sul bucket non c'è conflitto** — `Dip station.gif` e `Dip parallele.gif` sono percorsi diversi. Il vincolo è solo sull'unicità dello slug, ed è per questo che guardando i 22 caricamenti da soli non si vedeva.
-
-## Addominali e Core — chiusa 1 agosto
-68 righe migrate. La zona è poi stata **riclassificata** il 2 agosto dal vocabolario anatomico `addominali`/`obliqui` a quello funzionale a quattro valori: 72 righe toccate, 11 a certezza media confermate da Ignazio.
-
-## Bicipiti e Braccia — chiusa 2 agosto
-73 righe: 68 codici vivi + 5 liberi indicizzati (→ cantiere 16). Verifica finale 68/68 **via Worker**, con confronto dell'impronta del file effettivamente scaricato.
-
-## Cardio e Conditioning — chiusa 2 agosto, su entrambi i lati
-
-**Immagini**: 31 righe — 23 invariate · 7 rinominate nel bucket · 6 slug aggiornati **in place** · 1 caricata. Zona a 39 righe e 39 oggetti.
-
-**Catalogo**: 3 codici esistenti agganciati e rinominati (EX049 · EX053 · EX114) + **28 righe nuove EX587→EX614**. Catalogo da 582 a **610 righe**.
-
-Verifica finale **31/31 via Worker**. La zona è passata da **0 a 31 codici** che puntano a una sua riga.
-
-**Perché non servì l'ordine a righe doppie.** Quando la zona fu preparata, **0 codici** puntavano a una sua riga: non c'erano catene vive da proteggere. Il popolamento del catalogo fu lavoro separato e successivo.
-
-> **Zona senza codici: slug in place, niente righe doppie.** Se nessun `gif_slug` punta alla zona non esiste la catena da proteggere: lo slug si aggiorna sulla riga esistente e non servono né la riga doppia né il sync del Sheet. `migra_zona.py … slug` lo fa, ma **solo dopo aver verificato che i codici puntanti siano zero**; con anche un codice si ferma. Primo caso: Cardio e Conditioning.
-
-### Gli otto salti parcheggiati — risolti 5 agosto
-Erano nel bucket ma non sul Mac, quindi fuori dalla conferma visiva di Cardio. Trattati come pliometria di zona muscolare secondo la **regola 10** della nomenclatura: hanno ricevuto `pattern = dominante ginocchia`, `gruppo_target = quadricipiti` e `uso`, quindi entrano nei pool.
-
-| salto | esito |
-|---|---|
-| `Pistol jump box` | **EX617** `Jumping pistol box` — doppione di `jumping-pistol-box`, adotta quella riga |
-| `Salto all indietro` | **EX618** `Salto all'indietro` |
-| `Salto monopodalico avanti` | **EX621** `Salto una gamba avanti` |
-| `Salto verticale esplosivo` | **EX622** `Salto verticale esplosivo` |
-| `Squat jump ginocchia alte` | **EX619** `Squat jump ginocchia alte` |
-| `Squat thrust` | **EX620** `Squat thrust` (`pattern = composto`) |
-| `Squat jump box` | **EX650** `Squat jump` |
-| `Salto in lungo da fermo` | GIF confermata `Salto lungo da fermo`, **nessun codice** — sta fra le 36 del pezzo 2 |
-
-I quattro rinumerati (EX615+) nascono da una collisione di codici allocati in anticipo: vedi [L6](LEZIONI.md#l6--codici-allocati-in-anticipo-si-scontrano).
-
-## Gambe e Glutei — chiusa 5 agosto, su entrambi i lati
-
-**Immagini**: 35 righe doppie migrate e le vecchie eliminate **una per una**, con verifica via Worker nell'istante prima di ogni cancellazione. 2 catene riparate con slug in place (EX015, EX247). `biblioteca_gif` da 1.609 a 1.570 righe.
-
-**Catalogo**: 40 nomi allineati + **36 righe nuove** (30 pendenti + 6 rinumerate da EX615) + **35 righe dal pezzo 2** (10 agganci a codici esistenti e 25 esercizi nuovi EX623→EX675). Catalogo da 610 a 671 righe, poi a **667** dopo il giro dei consolidamenti.
-
-Verifica finale **602/602 via Worker**, 0 rotti. La zona non ha più GIF senza codice.
 
 ---
 
