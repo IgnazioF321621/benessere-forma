@@ -8,6 +8,7 @@ node tools/banco/prova_trazioni.js
 node tools/banco/prova_storico.js
 node tools/banco/prova_body_cta.js
 node tools/banco/prova_esami.js
+node tools/banco/prova_quadro_peso.js   # peso attuale: 0/1/3 pesate, obiettivo, tab Body
 ```
 
 ## Cosa è finto e cosa no
@@ -31,6 +32,7 @@ Se la prova che sul nuovo dà OK non dà **KO** sul vecchio, non sta misurando q
 
 ## Appigli utili
 
+- l'orologio si ferma con `boot(fixture, { now: '2026-09-13T09:00:00' })`: `new Date()` e `Date.now()` danno sempre quell'istante, le date esplicite restano vere. Serve quando la prova dipende dal giorno della settimana (`prova_quadro_peso.js`)
 - lo stato dell'app si prende con `win.eval('ST')` (le `const` di un classic script non stanno su `window`, le `function` sì)
 - un giorno di Training diventa loggabile con `ST.trainAnticipato = 'upperA'`, senza toccare rotazione e debito
 - una funzione globale si può sostituire per la durata della prova: `win.getCycleWeekInfo = () => ({ isScarico:true, … })`

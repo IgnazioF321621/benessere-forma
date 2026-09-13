@@ -45,6 +45,22 @@ atteso('peso · delta precedente', p.weight.weight_delta_prev, -0.4);
 atteso('peso · tendenza kg/sett', p.weight.weight_trend_4w, -0.5);
 atteso('peso · obiettivo', p.weight.weight_target, 68);
 
+// 2b. peso attuale (Fase 2): ultima pesata fino all'"adesso" del quadro
+atteso('peso attuale · 2 pesate + body_log stesso giorno', [p.weight.weight_last, p.weight.weight_last_date], [70.2, '2026-09-10']);
+p = calc({});
+atteso('peso attuale · nessuna pesata', [p.weight.weight_last, p.weight.weight_last_date], [null, null]);
+p = calc({ weightLogs: [ { date:'2026-09-03', weight_kg:70.5 } ] });
+atteso('peso attuale · 0 in settimana, 1 prima', [p.weight.weight_n, p.weight.weight_last, p.weight.weight_last_date], [0, 70.5, '2026-09-03']);
+p = calc({ weightLogs: [ { date:'2026-09-09', weight_kg:71.2 } ] });
+atteso('peso attuale · 1 pesata', [p.weight.weight_n, p.weight.weight_avg, p.weight.weight_last], [1, 71.2, 71.2]);
+p = calc({
+  weightLogs: [ { date:'2026-09-07', weight_kg:70 }, { date:'2026-09-09', weight_kg:70.4 }, { date:'2026-09-11', weight_kg:70.2 } ],
+  measurements: [ { check_id:'c9', created_at:'2026-09-12T05:40:00Z', weight_kg:69.95 } ],   // check di sabato: è la più recente
+});
+atteso('peso attuale · 3 pesate + check dopo', [p.weight.weight_n, p.weight.weight_last, p.weight.weight_last_date], [4, 69.95, '2026-09-12']);
+p = calc({ weightLogs: [ { date:'2026-09-11', weight_kg:70.2 }, { date:'2026-09-15', weight_kg:69 } ] }, '2026-09-20');
+atteso('peso attuale · settimana chiusa, pesata dopo esclusa', [p.weight.weight_last, p.weight.weight_last_date], [70.2, '2026-09-11']);
+
 // 3. tendenza con 2 settimane sole → null
 p = calc({ weightLogs: [ { date:'2026-09-01', weight_kg:70.5 }, { date:'2026-09-08', weight_kg:70 } ] });
 atteso('peso · tendenza con 2 settimane', p.weight.weight_trend_4w, null);

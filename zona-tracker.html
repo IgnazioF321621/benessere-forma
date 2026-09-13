@@ -1371,6 +1371,15 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .wp-delta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t2);margin-top:1px;}
 .wp-ctx{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.5;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
 .wp-go{display:block;margin:12px 0 0 auto;background:none;border:1px solid var(--b1);border-radius:999px;padding:8px 14px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--acc);cursor:pointer;}
+/* Peso attuale (Fase 2, 13 set 2026) */
+.wp-hero{grid-column:1/-1;min-width:0;}
+.wp-hero-card{padding-left:18px;margin:2px 0 12px;}
+.wp-hero-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.wp-hero-val{font-family:'JetBrains Mono',monospace;font-size:34px;font-weight:700;color:var(--t1);line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;white-space:nowrap;}
+.wp-hero-val.wp-nr{font-size:14px;font-weight:500;color:var(--t3);letter-spacing:0;line-height:38px;}
+.wp-hero-when{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);}
+.wp-hero-line{font-family:'Syne',sans-serif;font-size:13px;color:var(--t2);line-height:1.45;margin-top:3px;}
+.wp-go-inline{display:inline-block;margin:10px 0 0;}
 .wp-alert{font-family:'Syne',sans-serif;font-size:13px;color:var(--err);background:var(--err-lt);border-radius:12px;padding:10px 14px;}
 .wp-loading{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--t3);text-align:center;padding:40px 0;}
 
@@ -3725,7 +3734,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.12 · 22:28';
+const APP_VERSION = '2026.09.13 · 08:12';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -7111,6 +7120,22 @@ function _wpR1(x){ if(x == null || !isFinite(x)) return null; const r = Math.rou
 function _wpR2(x){ if(x == null || !isFinite(x)) return null; return Math.round(x * 100) / 100; }
 function _wpMean(arr){ const v = arr.filter(x => x != null && isFinite(x)); return v.length ? v.reduce((a,b)=>a+b,0) / v.length : null; }
 
+// Pesate: una al giorno, weight_logs > body_logs > misure del check (L47).
+// Regola unica per il quadro e per il tab Body: il "peso attuale" è lo stesso numero ovunque.
+// Restituisce { 'YYYY-MM-DD': { v, rank } }.
+function weighInsByDay(weightLogs, bodyLogs, measurements){
+  const daily = {};
+  const put = (date, v, rank) => {
+    const n = v == null ? NaN : Number(v);
+    if(!date || !isFinite(n)) return;
+    if(!daily[date] || rank < daily[date].rank) daily[date] = { v:n, rank };
+  };
+  (weightLogs || []).forEach(r => put(r.date, r.weight_kg, 0));
+  (bodyLogs || []).forEach(r => put(r.date, r.weight_kg, 1));
+  (measurements || []).forEach(m => { if(m.created_at) put(dayKey(new Date(m.created_at)), m.weight_kg, 2); });
+  return daily;
+}
+
 // SELECT paginata: PostgREST tronca a 1000 righe (L13). mk() costruisce la query
 // già ordinata; ogni pagina passa da dbq (L22), silenziosa: l'avviso lo dà chi
 // mostra il quadro, uno solo per tutta la lettura.
@@ -7169,15 +7194,7 @@ function computeWeeklyPicture(raw, weekStart, ctx){
   // ── Peso: una pesata al giorno, weight_logs > body_logs > misure del check ──
   let weight = null;
   if(raw.weightLogs && raw.bodyLogs && raw.measurements){
-    const daily = {};
-    const put = (date, v, rank) => {
-      const n = v == null ? NaN : Number(v);
-      if(!date || !isFinite(n)) return;
-      if(!daily[date] || rank < daily[date].rank) daily[date] = { v:n, rank };
-    };
-    raw.weightLogs.forEach(r => put(r.date, r.weight_kg, 0));
-    raw.bodyLogs.forEach(r => put(r.date, r.weight_kg, 1));
-    raw.measurements.forEach(m => { if(m.created_at) put(dayKey(new Date(m.created_at)), m.weight_kg, 2); });
+    const daily = weighInsByDay(raw.weightLogs, raw.bodyLogs, raw.measurements);
     const settimana = (k) => {                       // k = 0 questa, 1 la precedente, …
       const s = wpAddDays(weekStart, -7 * k), e = wpAddDays(s, 6);
       const vals = Object.keys(daily).filter(d => d >= s && d <= e).map(d => daily[d].v);
@@ -7193,12 +7210,17 @@ function computeWeeklyPicture(raw, weekStart, ctx){
       trend = den > 0 ? num / den : null;
     }
     const goal = profile.goal_weight_kg != null ? Number(profile.goal_weight_kg) : null;
+    // Ultima pesata fino all'"adesso" del quadro, dentro le 5 settimane lette.
+    // Se è troppo vecchia per dirsi "attuale" lo decide la vista, non il calcolo: qui resta il fatto.
+    const ultimoGiorno = Object.keys(daily).filter(d => d <= refDay).sort().pop() || null;
     weight = {
       weight_avg:        _wpR1(sett[0].avg),
       weight_n:          sett[0].n,
       weight_delta_prev: (sett[0].avg != null && sett[1].avg != null) ? _wpR1(sett[0].avg - sett[1].avg) : null,
       weight_trend_4w:   _wpR1(trend),
       weight_target:     isFinite(goal) ? goal : null,
+      weight_last:       ultimoGiorno ? _wpR2(daily[ultimoGiorno].v) : null,
+      weight_last_date:  ultimoGiorno,
     };
   }
 
@@ -7389,6 +7411,14 @@ function loadWeeklyPicture(weekStart, opts){
   const p = (async () => {
     try {
       let pic = ws < cur ? await _wpReadStored(ws) : null;
+      if(pic && pic.weight && pic.weight.weight_last === undefined){
+        // Riga salvata prima di weight_last (13 set 2026): la riga non si riscrive,
+        // i due campi nuovi si ricalcolano solo per la vista. Tutto il resto resta quello salvato.
+        const vivo = await buildWeeklyPicture(ws);
+        if(vivo && vivo.weight && !vivo.meta.errors.length){
+          pic = { ...pic, weight: { ...pic.weight, weight_last: vivo.weight.weight_last, weight_last_date: vivo.weight.weight_last_date } };
+        }
+      }
       if(!pic){
         pic = await buildWeeklyPicture(ws);
         if(pic && ws < cur) _wpSaveClosed([pic]);          // chiusa senza riga: la si salva
@@ -7471,6 +7501,52 @@ function _wpStat(label, value, unit, extra){
 }
 function _wpPill(txt, bg, fg){ return `<span class="wp-pill" style="background:${bg};color:${fg};">${txt}</span>`; }
 
+// ── Peso attuale: numero grande = ultima pesata, sotto la media e l'obiettivo ──
+// "Attuale" vuol dire non più vecchia di 7 giorni rispetto all'adesso del quadro
+// (oggi per la settimana in corso, la domenica per una chiusa). L'etichetta di data
+// invece si legge sempre da oggi: "ieri", "3 giorni fa", oltre i 7 giorni la data.
+const WP_WEIGHT_FRESH_DAYS = 7;
+function _wpDaysBetween(fromKey, toKey){ return Math.round((new Date(toKey + 'T12:00:00') - new Date(fromKey + 'T12:00:00')) / 86400000); }
+function _wpWhen(key, today){
+  const n = _wpDaysBetween(key, today);
+  if(n <= 0) return 'oggi';
+  if(n === 1) return 'ieri';
+  if(n <= WP_WEIGHT_FRESH_DAYS) return n + ' giorni fa';
+  return _wpShortDate(key);
+}
+function _wpWeightView(pic, today){
+  const w = pic.weight || {};
+  const ref = pic.meta.is_closed ? pic.meta.week_end : today;
+  const fresh = w.weight_last != null && !!w.weight_last_date && _wpDaysBetween(w.weight_last_date, ref) <= WP_WEIGHT_FRESH_DAYS;
+  let media;
+  if(!w.weight_n) media = 'Nessuna pesata questa settimana';
+  else if(w.weight_n === 1) media = '1 pesata questa settimana';                // una sola: la media non dice niente
+  else media = `Media settimana ${_wpNum(w.weight_avg, 1)} kg` + (w.weight_delta_prev != null ? ` · ${_wpSigned(w.weight_delta_prev, 1)} kg rispetto alla scorsa` : '');
+  let goal = null;
+  if(w.weight_target != null){
+    goal = `Obiettivo ${_wpNum(w.weight_target, w.weight_target % 1 ? 1 : 0)} kg`;
+    if(fresh){
+      const diff = _wpR1(w.weight_last - w.weight_target);
+      goal += diff === 0 ? ' · raggiunto' : ` · mancano ${_wpNum(Math.abs(diff), 1)} kg ${diff > 0 ? 'da perdere' : 'da prendere'}`;
+    }
+  }
+  return { fresh, value: fresh ? _wpNum(w.weight_last, 1) : null, when: fresh ? _wpWhen(w.weight_last_date, today) : null, media, goal };
+}
+function _wpWeightHeroHTML(pic, opts){
+  const o = opts || {};
+  const v = _wpWeightView(pic, todayKey());
+  const numero = v.fresh
+    ? `<div class="wp-hero-row"><div class="wp-hero-val">${v.value}<span class="wp-unit">kg</span></div><span class="wp-hero-when">${v.when}</span></div>`
+    : `<div class="wp-hero-val wp-nr">Non registrato</div>`;
+  return `<div class="wp-hero ${o.cls || ''}">
+      <div class="wp-stat-lbl">Peso attuale</div>
+      ${numero}
+      <div class="wp-hero-line">${v.media}</div>
+      ${v.goal ? `<div class="wp-hero-line">${v.goal}</div>` : ''}
+      ${!v.fresh && o.button ? `<button class="wp-go wp-go-inline" onclick="event.stopPropagation();quadroGo('peso')">Pesati →</button>` : ''}
+    </div>`;
+}
+
 // ── Card in cima alla Home ──
 function _wpHomeCardHTML(){
   if(!_wpUsable()) return '';
@@ -7484,13 +7560,14 @@ function _wpHomeCardHTML(){
     inner = `<div class="wp-mini-sub" style="margin-top:0;">Caricamento…</div>`;
   } else {
     const t = pic.training;
+    const hero = pic.weight ? _wpWeightHeroHTML(pic, { cls: 'wp-hero-card', button: true }) : '';
     const stats = [
-      mini('Peso medio', _wpNum(pic.weight && pic.weight.weight_avg, 1), 'kg'),
+      pic.weight ? '' : mini('Peso attuale', null, ''),                        // lettura fallita
       t ? mini('Sessioni', !t.sessions_done ? null : t.sessions_planned != null ? `${t.sessions_done}/${t.sessions_planned}` : String(t.sessions_done), '') : '',
       mini('Kcal medie', _wpNum(pic.nutrition && pic.nutrition.kcal_avg), ''),
     ].join('');
     const aree = Math.round((pic.meta.completeness || 0) * 5);
-    inner = `<div class="wp-mini">${stats}</div>
+    inner = `${hero}<div class="wp-mini">${stats}</div>
       <div class="wp-mini-sub">${_wpRange(cur)} · ${aree} di 5 aree con dati</div>`;
   }
   return `
@@ -7566,25 +7643,20 @@ function renderQuadroView(){
     <section class="wp-sec">
       <div class="wp-sec-head"><span class="wp-dot" style="background:${tint};"></span><span class="wp-sec-title">${titolo}</span>${pills || ''}</div>
       <div class="wp-grid">${stats}</div>
-      <div class="wp-ctx">${ctx}</div>
+      ${ctx ? `<div class="wp-ctx">${ctx}</div>` : ''}
       ${btn || ''}
     </section>`;
   const vai = (dest, label) => `<button class="wp-go" onclick="quadroGo('${dest}')">${label} →</button>`;
 
   // Peso
+  // Peso: il numero grande è l'ultima pesata; media, confronto e obiettivo nelle righe sotto
   const w = pic.weight || {};
-  let ctxPeso;
-  if(!pic.weight) ctxPeso = failed(['weightLogs','bodyLogs','measurements']) ? nonLetto : 'Nessuna pesata';
-  else if(w.weight_avg == null) ctxPeso = 'Nessuna pesata in questa settimana';
-  else if(w.weight_delta_prev != null) ctxPeso = `${_wpSigned(w.weight_delta_prev, 1)} kg rispetto alla settimana prima`;
-  else ctxPeso = 'Nessuna pesata nella settimana prima: niente confronto';
-  if(w.weight_target != null) ctxPeso += ` · obiettivo ${_wpNum(w.weight_target, 1)} kg`;
   const secPeso = sezione('#5E4A7A', 'Peso', '',
-    _wpStat('Media', _wpNum(w.weight_avg, 1), 'kg') +
+    (pic.weight ? _wpWeightHeroHTML(pic) : _wpStat('Peso attuale', null)) +
     _wpStat('Pesate', w.weight_n ? String(w.weight_n) : null, '') +
-    _wpStat('Tendenza 4 sett.', _wpSigned(w.weight_trend_4w, 1), 'kg/sett') +
-    _wpStat('Rispetto alla prec.', _wpSigned(w.weight_delta_prev, 1), 'kg'),
-    ctxPeso, vai('peso', 'Pesati'));
+    _wpStat('Tendenza 4 sett.', _wpSigned(w.weight_trend_4w, 1), 'kg/sett'),
+    pic.weight ? '' : failed(['weightLogs','bodyLogs','measurements']) ? nonLetto : 'Nessuna pesata',
+    vai('peso', 'Pesati'));
 
   // Nutrizione
   const n = pic.nutrition || {};
@@ -7818,8 +7890,7 @@ function _renderHomeCards(){
       </div>`;
   } else {
     const bData   = getLatestBodyData();
-    const tl      = getUnifiedBodyTimeline();
-    const weights = tl.filter(r => r.weight_kg != null);
+    const weights = getWeighIns();                 // pesate rapide comprese, come il tab Body
     const w       = bData.weight_kg ?? profile.weight_kg ?? null;
     const wPrev   = weights.length > 1 ? weights[1].weight_kg : null;
     let deltaHTML = '';
@@ -16127,11 +16198,13 @@ async function loadBodyLogs(){
   if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; renderBody(); }
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
   // + blood_tests (storico esami, card in coda al tab Check)
+  // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47)
   const [logsRes, measRes, checksRes] = await Promise.all([
     supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
     supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
     supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id),
     loadBloodTests(),
+    loadWeightLogs(),
   ]);
   ST.bodyLogs = logsRes.data || [];
   ST.bodyMeasurements = measRes.data || [];
@@ -16187,8 +16260,10 @@ function getLatestBodyData(){
   }
   let height_cm = pickMetric(null, 'height_cm');
   if(height_cm == null) height_cm = ST.profile?.height_cm ?? null;
+  const pesate = getWeighIns();
   return {
-    weight_kg:    pickMetric('weight_kg', 'weight_kg'),
+    weight_kg:    pesate.length ? pesate[0].weight_kg : null,       // ultima pesata, weight_logs compresi
+
     waist_cm:     pickMetric('waist_cm', 'waist_cm'),
     hip_cm:       pickMetric('hip_cm', 'hips_cm'),
     chest_cm:     pickMetric('chest_cm', 'chest_cm'),
@@ -16200,6 +16275,13 @@ function getLatestBodyData(){
     height_cm,
     _hasMeas:     meas.length > 0,
   };
+}
+
+// Pesate in memoria (weight_logs + body_logs + check), una al giorno, dalla più recente.
+// Stessa regola del quadro settimanale: il peso attuale del tab Body e della card coincidono.
+function getWeighIns(){
+  const daily = weighInsByDay(ST.weightLogs || [], ST.bodyLogs || [], ST.bodyMeasurements || []);
+  return Object.keys(daily).sort().reverse().map(d => ({ date: d, weight_kg: daily[d].v }));
 }
 
 // Timeline unificata: body_logs + body_measurements normalizzati in un unico
@@ -16857,7 +16939,7 @@ function renderBody(){
   const uTimeline = getUnifiedBodyTimeline();
 
   if(tab === 'misure'){
-    const uWeights = uTimeline.filter(r => r.weight_kg != null);
+    const uWeights = getWeighIns();                // pesate rapide comprese: stesso peso attuale del quadro
     const uWaists  = uTimeline.filter(r => r.waist_cm != null);
     const w      = uData.weight_kg ?? ST.profile?.weight_kg ?? null;
     const wPrev  = uWeights.length > 1 ? uWeights[1].weight_kg : null;
@@ -21367,7 +21449,9 @@ async function confirmWeighIn() {
   if(typeof _weightReminderResetDismiss === 'function') _weightReminderResetDismiss();
   closeWeighInSheet();
   showToast('Pesata salvata · ' + v.toFixed(1) + ' kg', '⚖️');
+  updateHeaderWeight();                                   // la pillola in alto legge anche weight_logs
   if(ST.page === 'piano') renderPianoV4();
+  else if(ST.page === 'body') renderBody();
   else if(ST.page === 'oggi') renderOggi(); // re-render banner reminder (deve sparire)
   else if(ST.page === 'home') loadWeeklyPicture(wpMonday(), { force:true }).then(_wpRerenderIfOpen); // quadro: la pesata entra subito
 }

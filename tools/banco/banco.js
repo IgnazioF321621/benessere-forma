@@ -101,6 +101,11 @@ function boot(tables, opts={}){
     virtualConsole: vc,
     pretendToBeVisual: true,
     beforeParse(win){
+      if(opts.now){
+        // Orologio fermo: new Date() e Date.now() danno sempre opts.now, le date esplicite restano vere.
+        const Real = win.Date, T = new Real(opts.now).getTime();
+        win.Date = class extends Real { constructor(...a){ if(a.length) super(...a); else super(T); } static now(){ return T; } };
+      }
       win.supabase = { createClient: () => supa };
       win.matchMedia = win.matchMedia || (()=>({matches:false, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}}));
       win.scrollTo = ()=>{};
