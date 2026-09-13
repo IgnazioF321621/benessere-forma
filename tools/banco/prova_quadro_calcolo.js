@@ -9,7 +9,7 @@ ST.user = { id:'u1' };
 ST.profile = { goal_weight_kg:68, target_kcal:2000, giorni_allenamento:4, train_start_date:'2026-08-24' };
 
 const WS = '2026-09-07';                       // lunedì
-const vuoto = { weightLogs:[], bodyLogs:[], measurements:[], checks:[], meals:[], sets:[], workouts:[], blood:[], errors:[] };
+const vuoto = { weightLogs:[], bodyLogs:[], measurements:[], checks:[], meals:[], suppLogs:[], supps:[], catalog:[], sets:[], workouts:[], blood:[], errors:[] };
 let ko = 0;
 const atteso = (nome, got, exp) => {
   const ok = JSON.stringify(got) === JSON.stringify(exp);
@@ -76,7 +76,31 @@ atteso('nutrizione · giorni', p.nutrition.days_logged, 4);
 atteso('nutrizione · kcal media', p.nutrition.kcal_avg, 1338);
 atteso('nutrizione · proteine medie', p.nutrition.protein_avg, 65);
 atteso('nutrizione · aderenza ±10%', p.nutrition.adherence_kcal, 0.25);
-atteso('nutrizione · parziale', p.nutrition.partial, true);
+atteso('nutrizione · parziale (nessun pasto principale)', p.nutrition.partial, true);
+
+// 4b. Fase 3 (Lavoro B): la giornata intera — integratori spuntati ed extra — e "parziale" sui pasti principali
+const catalogo = [ { codice:'P1', nome:'Protein', kcal:110, proteine:24, carbo:2, grassi:1, dose_die:1 },
+                   { codice:'B1', nome:'Barretta', kcal:200, proteine:15, carbo:20, grassi:7, dose_die:1 } ];
+p = calc({
+  meals: [
+    { date:'2026-09-07', slot:'colazione', kcal:300, protein:20 }, { date:'2026-09-07', slot:'pranzo', kcal:700, protein:40 }, { date:'2026-09-07', slot:'cena', kcal:600, protein:40 },
+    { date:'2026-09-08', slot:'pranzo', kcal:800, protein:50 }, { date:'2026-09-08', slot:'snack_pomeriggio', kcal:150, protein:5 },
+    { date:'2026-09-09', slot:'colazione', kcal:250, protein:15 }, { date:'2026-09-09', slot:'cena', kcal:650, protein:45 },
+  ],
+  supps: [ { id:'s1', name:'Protein', codice:'P1' } ],
+  catalog: catalogo,
+  suppLogs: [
+    { date:'2026-09-07', slot:'08:45', supplement_name:'Protein', is_extra:false },
+    { date:'2026-09-07', slot:'17:00', supplement_name:'Protein', is_extra:false },          // due slot, lo stesso prodotto conta una volta (come dayTotals)
+    { date:'2026-09-08', slot:'10:00', supplement_name:'Barretta', supplement_codice:'B1', is_extra:true, dose:1, kcal:203, proteine:15.3 },
+    { date:'2026-09-10', slot:'08:45', supplement_name:'Protein', is_extra:false },          // giorno senza pasti: non è un giorno registrato
+  ],
+});
+atteso('giornata intera · giorni registrati', [p.nutrition.days_logged, p.nutrition.logged_dates], [3, ['2026-09-07','2026-09-08','2026-09-09']]);
+atteso('giornata intera · kcal medie (1710+1153+900)/3', p.nutrition.kcal_avg, 1254);
+atteso('giornata intera · proteine medie (124+70.3+60)/3', p.nutrition.protein_avg, 85);
+atteso('giornata intera · integratori kcal/proteine medie', [p.nutrition.supp_kcal_avg, p.nutrition.supp_protein_avg], [104, 13]);
+atteso('parziale · 1 giorno su 3 con <2 principali → no', [p.nutrition.days_partial, p.nutrition.partial], [1, false]);
 
 // 5. allenamento: settimana chiusa, 3 su 4, un recupero, un infortunio
 p = calc({

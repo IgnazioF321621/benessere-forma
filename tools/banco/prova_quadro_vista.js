@@ -17,6 +17,8 @@ function scenari(win){
   const oggi = win.todayKey();
   const finoAOggi = (arr) => arr.filter(r => (r.date || r.test_date || r.created_at.slice(0,10)) <= oggi);
   const pasti = (kcal) => finoAOggi([0,1,2,3,4,5,6].map(i => ({ user_id:U, id:'m'+i, date:d(i), slot:'pranzo', kcal: kcal[i], protein: Math.round(kcal[i] / 14) })));
+  // Fase 3: "parziale" guarda i pasti principali — una giornata completa ha colazione, pranzo e cena
+  const pastiPieni = (kcal) => finoAOggi([0,1,2,3,4,5,6].flatMap(i => [['colazione',0.2],['pranzo',0.45],['cena',0.35]].map(([slot, q]) => ({ user_id:U, id:`m${i}${slot}`, date:d(i), slot, kcal: Math.round(kcal[i] * q), protein: Math.round(kcal[i] * q / 14) }))));
   const base = { user_id:U, id:'p', first_name:'Ignazio', goal_weight_kg:68, target_kcal:2300, target_protein:170, giorni_allenamento:4, created_at: iso(d(-120)) };
   const lavoro = finoAOggi([
     { date:d(-7), session_type:'upperA' }, { date:d(-6), session_type:'lowerA' }, { date:d(-4), session_type:'upperB' }, { date:d(-3), session_type:'lowerB' },
@@ -28,7 +30,7 @@ function scenari(win){
     'completi': {
       profile: { ...base, train_start_date: d(-7) },
       tables: {
-        weight_logs: pesate, body_logs: [], meals: pasti([2250,2380,2190,2310,2420,2260,2330]),
+        weight_logs: pesate, body_logs: [], meals: pastiPieni([2250,2380,2190,2310,2420,2260,2330]),
         workouts: lavoro, training_logs: serie,
         body_checks: [ { user_id:U, id:'c1', status:'completed', created_at: iso(d(-40)) }, { user_id:U, id:'c2', status:'completed', created_at: iso(d(-9)) } ],
         body_measurements: [
@@ -54,7 +56,7 @@ function scenari(win){
     },
     'check scaduto': {
       profile: { ...base, train_start_date: d(-90) },
-      tables: { weight_logs: pesate, body_logs:[], meals: pasti([2250,2380,2190,2310,2420,2260,2330]), workouts: lavoro, training_logs: serie,
+      tables: { weight_logs: pesate, body_logs:[], meals: pastiPieni([2250,2380,2190,2310,2420,2260,2330]), workouts: lavoro, training_logs: serie,
         body_checks: [ { user_id:U, id:'c1', status:'completed', created_at: iso(d(-60)) } ],
         body_measurements: [ { user_id:U, id:'bm1', check_id:'c1', created_at: iso(d(-60)), weight_kg:71.2, waist_cm:89, hips_cm:95, chest_cm:98 } ],
         blood_tests: [ { user_id:U, id:'b1', test_date: d(-60) } ] },
