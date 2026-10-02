@@ -4067,26 +4067,8 @@
    },
    {
     "permessi": [
-     "DELETE",
      "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "app_errors"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
+     "SELECT"
     ],
     "ruolo": "authenticated",
     "tabella": "app_errors"
@@ -4301,23 +4283,7 @@
     "permessi": [
      "DELETE",
      "INSERT",
-     "REFERENCES",
      "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "daily_log"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
      "UPDATE"
     ],
     "ruolo": "authenticated",
