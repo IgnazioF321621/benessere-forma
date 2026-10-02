@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
 // shared/quadro.js — il quadro settimanale, calcolo puro
 // ═══════════════════════════════════════════════════════════
-// Modulo condiviso fra l'app e il Worker. Nell'app NON si modifica a mano:
-// sta incollato dentro zona-tracker.html fra i marcatori e lo riscrive
-// `node tools/moduli.js`.
+// Modulo condiviso fra l'app e il Worker: una fonte sola, questo file.
+// La pagina lo carica con <script src="shared/quadro.js"> prima del proprio codice
+// (dal 2 ottobre 2026, Fondamenta 035, non è più copiato dentro); il Worker lo importa.
 //
 // Spostato qui dall'app il 13 settembre 2026 (Fase 3) perché il cron del lunedì
 // deve calcolare lo stesso quadro che calcola il telefono. Contiene:

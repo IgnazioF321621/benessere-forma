@@ -1,35 +1,28 @@
-// Moduli condivisi fra app e Worker: la fonte è shared/*.js, l'app ne tiene una copia
-// incollata dentro zona-tracker.html fra due marcatori (l'app resta un file solo).
-//   node tools/moduli.js            riscrive le copie nell'app
-//   node tools/moduli.js --verifica esce con 1 se una copia non coincide (pre-commit hook)
-// Il Worker invece li importa direttamente (worker/src → ../../shared).
+// Moduli condivisi fra app e Worker: la fonte è shared/*.js, UNA sola.
+// Dal 2 ottobre 2026 (Fondamenta 035, tappa 2) l'app non ne tiene più una copia incollata:
+// la pagina li carica direttamente con <script src="shared/…">, prima del proprio codice.
+// Il Worker li importa (worker/src → ../../shared). Non c'è più niente da copiare.
+//
+//   node tools/moduli.js   (anche con --verifica, come lo chiama il pre-commit hook)
+// controlla che la pagina carichi tutti i moduli, una volta sola, prima del codice dell'app,
+// e che non ci sia rimasta dentro una copia. Esce con 1 se qualcosa non torna.
 const fs = require('fs'), path = require('path');
 const REPO = path.join(__dirname, '..');
-const APP = path.join(REPO, 'zona-tracker.html');
-const MODULI = ['shared/nutrizione.js', 'shared/quadro.js', 'shared/coach_rules.js', 'shared/ritratto.js'];
-const inizio = (m) => `// ⟦MODULO ${m} — copia generata da tools/moduli.js: si modifica ${m}, non qui⟧`;
-const fine = (m) => `// ⟦FINE ${m}⟧`;
-const verifica = process.argv.includes('--verifica');
-let html = fs.readFileSync(APP, 'utf8');
-let diversi = 0, scritti = 0;
+const html = fs.readFileSync(path.join(REPO, 'zona-tracker.html'), 'utf8');
+const MODULI = fs.readdirSync(path.join(REPO, 'shared')).filter(f => f.endsWith('.js')).sort().map(f => 'shared/' + f);
+// Il codice dell'app comincia al primo <script> senza src dopo i richiami.
+const inizioApp = html.search(/<script>\s*\n\/\/ ═+\s*\n\/\/ CONFIG/);
+let ko = 0;
+const errore = (t) => { console.error('✗ ' + t); ko++; };
+if(inizioApp === -1) errore('non trovo l\'inizio del codice dell\'app in zona-tracker.html');
 for(const m of MODULI){
-  const src = path.join(REPO, m);
-  if(!fs.existsSync(src)) continue;
-  const a = html.indexOf(inizio(m)), b = html.indexOf(fine(m));
-  if(a === -1 || b === -1 || b < a){
-    console.error(`✗ ${m}: marcatori assenti in zona-tracker.html`);
-    diversi++;
-    continue;
-  }
-  const codice = fs.readFileSync(src, 'utf8').replace(/\s+$/, '');
-  const blocco = inizio(m) + '\n' + codice + '\n' + fine(m);
-  const attuale = html.slice(a, b + fine(m).length);
-  if(attuale === blocco){ console.log(`✓ ${m}`); continue; }
-  diversi++;
-  if(verifica){ console.error(`✗ ${m}: la copia in zona-tracker.html non coincide — lancia node tools/moduli.js`); continue; }
-  html = html.slice(0, a) + blocco + html.slice(b + fine(m).length);
-  scritti++;
-  console.log(`↻ ${m} copiato nell'app`);
+  const richiami = [...html.matchAll(new RegExp('<script src="' + m.replace('.', '\\.') + '(?:\\?v=[^"]*)?"></script>', 'g'))];
+  if(richiami.length !== 1){ errore(`${m}: richiamato ${richiami.length} volte dalla pagina (deve essere 1)`); continue; }
+  if(richiami[0].index > inizioApp){ errore(`${m}: richiamato dopo il codice dell'app`); continue; }
+  const nome = (fs.readFileSync(path.join(REPO, m), 'utf8').match(/^(?:var|const) (ZT\w+) = /m) || [])[1];
+  if(!nome){ errore(`${m}: non dichiara «var ZT… =» in cima, la pagina non lo vedrebbe`); continue; }
+  if(new RegExp('^(?:var|const) ' + nome + ' = ', 'm').test(html)){ errore(`${m}: ${nome} è dichiarato anche dentro zona-tracker.html (copia rimasta)`); continue; }
+  console.log(`✓ ${m} → ${nome}`);
 }
-if(!verifica && scritti) fs.writeFileSync(APP, html);
-process.exit(verifica && diversi ? 1 : 0);
+if(/⟦MODULO /.test(html)) errore('in zona-tracker.html c\'è ancora un blocco ⟦MODULO …⟧ incollato');
+process.exit(ko ? 1 : 0);

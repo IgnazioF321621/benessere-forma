@@ -10,7 +10,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 
 ## File e URL
 
-- **App**: `zona-tracker.html` (HTML + JS) più i file in `app/` *(dal 2 ottobre 2026 la pagina si divide a tappe, [Fondamenta 035]: per ora `app/stile.css`)*. **Ogni file di `app/` richiamato dalla pagina va elencato in `APP_FILES` di `sw.js`**: lo controlla `node tools/banco/prova_pagina_divisa.js`. Il banco ricompone la pagina da solo (`tools/banco/pagina.js`)
+- **App**: `zona-tracker.html` (HTML + JS) più i file in `app/` e i moduli in `shared/` *(dal 2 ottobre 2026 la pagina si divide a tappe, [Fondamenta 035]: per ora `app/stile.css` e i quattro moduli condivisi)*. **Ogni file richiamato dalla pagina va elencato in `APP_FILES` di `sw.js`**: lo controlla `node tools/banco/prova_pagina_divisa.js`. Il banco ricompone la pagina da solo (`tools/banco/pagina.js`)
 - **Admin**: `dashboardzona.html` (email-gated `ignazio.f@me.com`, read-only)
 - **URL pubblico**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Repo**: https://github.com/IgnazioF321621/benessere-forma · branch `main`
@@ -42,7 +42,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 ## Pattern tecnici critici
 
-- **Moduli condivisi app ↔ Worker**: `shared/nutrizione.js` (totali della giornata), `shared/quadro.js` (calcolo del quadro, settimana del ciclo, reminder di fine blocco, orologio Europe/Rome), `shared/coach_rules.js` (regole di Pirsi). **Si modificano lì, mai dentro `zona-tracker.html`**: `node tools/moduli.js` li copia nell'app fra i marcatori `⟦MODULO …⟧`, e il pre-commit hook rifiuta una copia non allineata. Il Worker li importa diretti. `dayTotals`, `computeWeeklyPicture`, `getCycleWeekInfo`, `getBlockCheckReminder`, `weighInsByDay` nell'app sono involucri che passano `ST`
+- **Moduli condivisi app ↔ Worker**: `shared/nutrizione.js` (totali della giornata), `shared/quadro.js` (calcolo del quadro, settimana del ciclo, reminder di fine blocco, orologio Europe/Rome), `shared/coach_rules.js` (regole di Pirsi). **Una fonte sola, `shared/`** *(dal 2 ottobre 2026, Fondamenta 035)*: la pagina li carica con `<script src="shared/…">` prima del proprio codice, il Worker li importa. Non c'è più una copia dentro `zona-tracker.html`; `node tools/moduli.js` (lo lancia anche il pre-commit) controlla che la pagina li richiami tutti, una volta, e che non ne sia rimasta una copia. **Un modulo nuovo in `shared/` va richiamato dalla pagina ed elencato in `APP_FILES` di `sw.js`.** `dayTotals`, `computeWeeklyPicture`, `getCycleWeekInfo`, `getBlockCheckReminder`, `weighInsByDay` nell'app sono involucri che passano `ST`
 - Client Supabase si chiama `supa` (non `supabase`)
 - SQL Editor gira come admin: `auth.uid()` = NULL → usare UUID espliciti
 - **Ogni tabella nuova dichiara i suoi `GRANT` nella stessa migrazione che la crea** *(dal 30 ottobre 2026 Supabase non li dà più da solo)*: senza, l'app riceve «permission denied». Di norma `authenticated` e `service_role`; `anon` solo se serve davvero a chi non è entrato. Insieme ai grant vanno sempre RLS accesa e le sue regole. Le tabelle già esistenti non cambiano

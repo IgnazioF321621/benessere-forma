@@ -5,9 +5,11 @@
 //  3) con un file «prima» la pagina ricomposta è identica byte per byte:
 //       git show <commit>:zona-tracker.html > /tmp/prima.html
 //       node tools/banco/prova_pagina_divisa.js /tmp/prima.html
+//     (vale per una tappa che sposta senza cambiare posto, come lo stile; quando il codice
+//      cambia posto nella pagina il confronto giusto è quello delle righe: vedi --righe)
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const { assembla, fileLocali, REPO } = require('./pagina');
+const { assembla, fileLocali, richiamiNonRiconosciuti, REPO } = require('./pagina');
 let ko = 0;
 const atteso = (nome, got, exp) => {
   const ok = JSON.stringify(got) === JSON.stringify(exp);
@@ -32,7 +34,7 @@ function avviaSW(){
   };
   vm.createContext(ctx); vm.runInContext(swSrc, ctx);
   return {
-    rete, archivio, chieste, staccaRete(){ inLinea = false; }, elenco: vm.runInContext('APP_FILES', ctx), cartella: vm.runInContext('APP_DIR', ctx),
+    rete, archivio, chieste, staccaRete(){ inLinea = false; }, elenco: vm.runInContext('APP_FILES', ctx), cartella: vm.runInContext('BASE', ctx),
     async installa(){ let p; ascolti.install({ waitUntil: x => { p = x; } }); await p; },
     async chiedi(url, mode){ let p = null; ascolti.fetch({ request: { url, mode: mode || 'no-cors' }, respondWith: x => { p = x; } }); return p === null ? 'non intercettata' : (await p); },
   };
@@ -44,10 +46,23 @@ function avviaSW(){
   const sw = avviaSW();
   atteso('file locali richiamati dalla pagina', locali.length > 0, true);
   atteso('esistono tutti', locali.filter(f => !fs.existsSync(path.join(REPO, f))), []);
-  atteso('tutti dentro app/', locali.filter(f => !f.startsWith('app/')), []);
-  atteso('elenco del service worker = file richiamati', sw.elenco.map(f => 'app/' + f).sort(), locali.slice().sort());
+  atteso('tutti dentro app/ o shared/', locali.filter(f => !/^(app|shared)\//.test(f)), []);
+  atteso('nessun richiamo locale scritto in una forma non riconosciuta', richiamiNonRiconosciuti(html), []);
+  atteso('elenco del service worker = file richiamati', sw.elenco.slice().sort(), locali.slice().sort());
   atteso('nessuno stile rimasto dentro la pagina', (html.match(/<style[\s>]/g) || []).length, 0);
-  atteso('la pagina si ricompone', (assembla(PAGINA).match(/<style>/g) || []).length, 1);
+  const moduli = fs.readdirSync(path.join(REPO, 'shared')).filter(f => f.endsWith('.js')).map(f => 'shared/' + f).sort();
+  atteso('tutti i moduli di shared/ richiamati dalla pagina', moduli.filter(m => !locali.includes(m)), []);
+  atteso('nessuna copia dei moduli rimasta dentro la pagina', [/⟦MODULO /.test(html), /^(?:var|const) ZT\w+ = \(/m.test(html)], [false, false]);
+  const ricomposta = assembla(PAGINA);
+  atteso('la pagina si ricompone: niente richiami locali rimasti', fileLocali(ricomposta), []);
+  // il rilascio aggiunge la coda «?v=…»: la pagina deve ricomporsi uguale
+  {
+    const os = require('os'); const tmp = path.join(os.tmpdir(), 'zt_pagina_con_coda.html');
+    fs.writeFileSync(tmp, html.replace(/((?:href|src)="(?:app|shared)\/[^"?]+)"/g, '$1?v=20261002-0949"'));
+    atteso('con la coda del rilascio la pagina ricomposta è la stessa', assembla(tmp) === ricomposta, true);
+    atteso('…e i file richiamati sono gli stessi', fileLocali(fs.readFileSync(tmp, 'utf8')), locali);
+    fs.unlinkSync(tmp);
+  }
 
   // 2) service worker
   const B = 'https://ignaziof321621.github.io';
@@ -56,13 +71,16 @@ function avviaSW(){
   atteso('installazione: salvati tutti i file', [...sw.archivio.keys()].sort(), sw.elenco.map(f => sw.cartella + f).sort());
   const f0 = sw.cartella + sw.elenco[0];
   sw.rete[f0] = 'v2';
-  atteso('in linea: versione fresca, non quella salvata', (await sw.chiedi(B + f0)).corpo, 'v2');
+  atteso('in linea: versione fresca, non quella salvata', (await sw.chiedi(B + f0 + '?v=20261002-0949')).corpo, 'v2');
   await new Promise(r => setTimeout(r, 5));
   atteso('…e l\'archivio si aggiorna', sw.archivio.get(f0).corpo, 'v2');
   atteso('Supabase non viene intercettato', await sw.chiedi('https://qxiyeiahpoiliwpqslpr.supabase.co/rest/v1/meals'), 'non intercettata');
   sw.staccaRete();
   atteso('senza rete: versione salvata', (await sw.chiedi(B + f0)).corpo, 'v2');
-  atteso('senza rete, file mai salvato: niente (non una risposta sbagliata)', await sw.chiedi(B + sw.cartella + 'inesistente.css'), undefined);
+  atteso('senza rete, chiesto con una coda diversa: lo trova lo stesso', (await sw.chiedi(B + f0 + '?v=20991231-2359')).corpo, 'v2');
+  const fCodice = sw.cartella + sw.elenco.find(f => f.endsWith('.js'));
+  atteso('senza rete: anche il codice salvato all\'installazione', (await sw.chiedi(B + fCodice + '?v=1')).corpo, 'v1 di ' + fCodice.replace(sw.cartella, ''));
+  atteso('senza rete, file mai salvato: niente (non una risposta sbagliata)', await sw.chiedi(B + sw.cartella + 'app/inesistente.css'), undefined);
   {
     const s2 = avviaSW(); s2.staccaRete(); let rotto = false;
     try { await s2.installa(); } catch(e){ rotto = true; }

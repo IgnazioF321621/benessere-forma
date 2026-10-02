@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
 // shared/ritratto.js — il ritratto unico della persona (Pirsi 020)
 // ═══════════════════════════════════════════════════════════
-// Modulo condiviso fra l'app e il Worker. Nell'app NON si modifica a mano:
-// sta incollato dentro zona-tracker.html fra i marcatori e lo riscrive
-// `node tools/moduli.js`.
+// Modulo condiviso fra l'app e il Worker: una fonte sola, questo file.
+// La pagina lo carica con <script src="shared/ritratto.js"> prima del proprio codice
+// (dal 2 ottobre 2026, Fondamenta 035, non è più copiato dentro); il Worker lo importa.
 //
 // Prima ogni chiamata del coach si costruiva da zero il suo pezzetto di «chi è»:
 // il consiglio sul pasto non sapeva dell'allenamento, la nota alla scheda non

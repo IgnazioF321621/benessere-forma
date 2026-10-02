@@ -1,15 +1,23 @@
 // Zona Tracker — Service Worker
-// Strategia: network-first per il documento HTML e per i file dell'app in app/, cache-first SOLO per la libreria JS su jsdelivr.
+// Strategia: network-first per il documento HTML e per i file dell'app (app/ e shared/), cache-first SOLO per la libreria JS su jsdelivr.
 // Le chiamate REST a *.supabase.co non vengono intercettate (default browser, sempre network).
 
 const CACHE = 'zt-v2';
 const HTML_URL = '/benessere-forma/zona-tracker.html';
-// I file in cui è divisa la pagina (Fondamenta 035). Vanno elencati TUTTI: si salvano
-// all'installazione, così l'app si apre intera anche senza rete. Un file di app/ richiamato
-// dalla pagina e assente da qui fa fallire tools/banco/prova_pagina_divisa.js.
-const APP_DIR = '/benessere-forma/app/';
+// I file in cui è divisa la pagina (Fondamenta 035): lo stile in app/, i moduli condivisi
+// col Worker in shared/. Vanno elencati TUTTI: si salvano all'installazione, così l'app si
+// apre intera anche senza rete. Un file richiamato dalla pagina e assente da qui fa fallire
+// tools/banco/prova_pagina_divisa.js.
+// Si salvano e si ritrovano per percorso, SENZA la coda «?v=…» che il rilascio mette nella
+// pagina: senza rete conta avere il file, non quale coda aveva l'indirizzo.
+const BASE = '/benessere-forma/';
+const APP_DIRS = ['app/', 'shared/'];
 const APP_FILES = [
-  'stile.css',
+  'app/stile.css',
+  'shared/nutrizione.js',
+  'shared/coach_rules.js',
+  'shared/quadro.js',
+  'shared/ritratto.js',
 ];
 
 self.addEventListener('install', event => {
@@ -18,7 +26,7 @@ self.addEventListener('install', event => {
   // senza rete perde un pezzo di una versione nuova che non si installa mai.
   event.waitUntil(
     caches.open(CACHE).then(c => Promise.all(APP_FILES.map(f =>
-      fetch(APP_DIR + f, { cache: 'no-cache' }).then(res => { if (res.ok) return c.put(APP_DIR + f, res); }).catch(() => {})
+      fetch(BASE + f, { cache: 'no-cache' }).then(res => { if (res.ok) return c.put(BASE + f, res); }).catch(() => {})
     )))
   );
 });
@@ -49,9 +57,9 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // File dell'app in app/ (stile, e poi il codice) → network-first come la pagina: sempre la
-  // versione fresca insieme alla pagina fresca, quella salvata solo senza rete.
-  if (url.origin === self.location.origin && url.pathname.startsWith(APP_DIR)) {
+  // File dell'app (stile e codice) → network-first come la pagina: sempre la versione
+  // fresca insieme alla pagina fresca, quella salvata solo senza rete.
+  if (url.origin === self.location.origin && APP_DIRS.some(d => url.pathname.startsWith(BASE + d))) {
     event.respondWith(
       fetch(event.request, { cache: 'no-cache' })
         .then(res => {
