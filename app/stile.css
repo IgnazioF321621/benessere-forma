@@ -475,6 +475,10 @@ select.inp{cursor:pointer;}
 .info-modal{background:var(--srf,#fff);border-radius:16px;padding:24px;max-width:320px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.18);}
 .info-modal h3{font-family:var(--font-sans,'Syne',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
 .info-modal p{font-family:var(--font-sans,'Syne',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
+.foglio-overlay{z-index:1700;}
+.foglio .inp{margin-bottom:16px;}
+.foglio-bottoni{display:flex;gap:8px;justify-content:flex-end;}
+.foglio-bottoni .btn{flex:1;}
 .info-modal-close{width:100%;padding:10px;border-radius:999px;border:none;background:var(--acc,#2A7A6F);color:#fff;font-weight:700;font-size:14px;cursor:pointer;}
 
 /* ── MODAL SCHEDA ESERCIZIO sezioni structured (3 maggio 2026) ── */

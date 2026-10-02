@@ -2107,7 +2107,7 @@ async function saveTrainingSet(){
     insertError = error;
   } catch(e){ insertError = {message: e.message}; }
   ST.trainSaving = false;
-  if(insertError){ alert('Errore: '+insertError.message); renderTraining(); return; }
+  if(insertError){ avvisa('Non riesco a salvare la serie: ' + insertError.message, { titolo:'Serie non salvata' }); renderTraining(); return; }
   invalidateAllExerciseNamesCache(); // nuova serie → esercizio potrebbe essere nuovo nella lista
   // Traccia inizio sessione sulla prima serie
   const prevKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(form.sessionId+'_')&&k.endsWith('_'+todayKey()));

@@ -903,7 +903,7 @@ async function saveBodyLog(){
   }
 
   ST.bodySaving = false;
-  if(error){ alert('Errore: '+error.message); renderBody(); return; }
+  if(error){ avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
 
   if(!isNaN(weight)){
     await dbq('salvare il peso', supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id));

@@ -1167,7 +1167,7 @@ function mealCardHTML(m){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
         <button class="meal-edit-btn" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
-        <button class="meal-edit-btn meal-delete-btn" onclick="if(confirm('Eliminare questo pasto?'))deleteMeal('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
+        <button class="meal-edit-btn meal-delete-btn" onclick="chiediConferma('Eliminare questo pasto?',{ok:'Elimina',pericolo:true}).then(ok=>{if(ok)deleteMeal('${ST.activeDay}','${mealId}')})" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
       </div>
     </div>`;
 
@@ -1370,14 +1370,14 @@ window.smartFreeTextChange = function(val) {
 window.smartAnalyze = async function() {
   _initSmartForm();
   const txt = (ST.smartForm.freeText || '').trim();
-  if (!txt) { alert('Scrivi qualcosa prima di analizzare'); return; }
+  if (!txt) { showToast('Scrivi qualcosa prima di analizzare', '✍️'); return; }
   if (ST.smartForm.analyzing) return;
   ST.smartForm.analyzing = true;
   renderOggi();
   try {
     const split = await estimateMealItems(txt);
     if (!split.items || split.items.length === 0) {
-      alert('Non sono riuscito a identificare ingredienti. Prova a riformulare o usa "Manuale".');
+      avvisa('Non sono riuscito a identificare ingredienti. Prova a riformulare o usa «Manuale».');
       return;
     }
     ST.smartForm.items = split.items.map((it, idx) => ({
@@ -1390,7 +1390,7 @@ window.smartAnalyze = async function() {
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    alert('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
+    avvisa('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
   } finally {
     ST.smartForm.analyzing = false;
     renderOggi();
@@ -1451,7 +1451,7 @@ window.smartRecalcRow = async function(tempId) {
   if (qtyEl) it.quantity = Math.max(0, parseFloat(qtyEl.value) || 0);
   if (unitEl) it.unit = ['g','ml','pz'].includes(unitEl.value) ? unitEl.value : 'g';
   if (!it.name || !it.name.trim() || !it.quantity || it.quantity <= 0) {
-    alert('Compila prima nome e quantità');
+    showToast('Compila prima nome e quantità', '✍️');
     return;
   }
   it.calculating = true;
@@ -1461,7 +1461,7 @@ window.smartRecalcRow = async function(tempId) {
     it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
   } catch (e) {
     console.error('Single item estimate error:', e);
-    alert('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
+    avvisa('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
   } finally {
     it.calculating = false;
     renderOggi();
@@ -1479,9 +1479,9 @@ window.smartResetForm = function() {
 // FASE 4 Edit pasto via Smart Ingredient
 window.smartOpenEdit = async function(date, mealId) {
   const day = ST.db && ST.db.days && ST.db.days[date];
-  if (!day) { alert('Giorno non trovato'); return; }
+  if (!day) { showToast('Giorno non trovato', '⚠️'); return; }
   const meal = (day.meals || []).find(m => (m.id === mealId) || (m.local_id === mealId));
-  if (!meal) { alert('Pasto non trovato'); return; }
+  if (!meal) { showToast('Pasto non trovato', '⚠️'); return; }
 
   // Pre-carica gli items se non già in memoria
   let items = meal.items || [];
@@ -1560,10 +1560,10 @@ window.toggleExtraSupp = function(extraKey) {
 
 window.smartSavePasto = async function() {
   _initSmartForm();
-  if (!_smartHasContent()) { alert('Aggiungi almeno un ingrediente'); return; }
+  if (!_smartHasContent()) { showToast('Aggiungi almeno un ingrediente', '✍️'); return; }
   const isEdit = !!ST.smartForm.editingMealId;
   const slot = isEdit ? (ST.smartForm.editingSlot || ST.logSlot) : ST.logSlot;
-  if (!slot) { alert('Seleziona uno slot pasto'); return; }
+  if (!slot) { showToast('Scegli il pasto', '✍️'); return; }
   const items = ST.smartForm.items.filter(i => i.name && i.name.trim());
   const tot = _smartTotals();
   const summary = _smartSummaryDesc();
@@ -1680,7 +1680,7 @@ window.smartSavePasto = async function() {
     saveCache();
   } catch (e) {
     console.error('Save meal error:', e);
-    alert('Errore salvataggio pasto: ' + (e.message || 'riprova'));
+    avvisa('Non riesco a salvare il pasto: ' + (e.message || 'riprova'), { titolo:'Pasto non salvato' });
   }
 };
 
@@ -3405,7 +3405,7 @@ async function pianoV4WelcomeConfirmAndOpen() {
 // e rigenera da zero. Rollback automatico se la chiamata AI fallisce.
 async function pianoV4RigeneraPiano() {
   if (ST._pianoRigeneraLoading) return;
-  if (!confirm('Vuoi rigenerare il piano di questa settimana?\nI pasti attuali verranno sostituiti.')) return;
+  if (!await chiediConferma('I pasti attuali verranno sostituiti.', { titolo:'Rigenerare il piano di questa settimana?', ok:'Rigenera' })) return;
   ST._pianoRigeneraLoading = true;
   if (ST.page === 'piano') renderPianoV4(); // mostra bottone disabilitato + "GENERAZIONE IN CORSO…"
   try {
@@ -6722,7 +6722,7 @@ function toggleCatalogItem(id) {
 }
 
 function goToCatalogStep2() {
-  if(ST.catalogSelected.length === 0) { alert('Tocca almeno un prodotto per aggiungerlo.'); return; }
+  if(ST.catalogSelected.length === 0) { showToast('Tocca almeno un prodotto per aggiungerlo', '✍️'); return; }
   // Integratori Step 2 (18 mag 2026): mode "registerExtra" salta lo step2 legacy
   // e va dritto alla schermata "Conferma Extra" fullscreen (extras = eventi
   // mordi-e-fuggi in supplements_log, niente persistenza in supplements).
@@ -6884,7 +6884,7 @@ async function importFromCatalog() {
 
   } catch(err) {
     console.error('importFromCatalog error:', err);
-    alert('Errore: ' + (err.message || 'Errore sconosciuto. Controlla la console.'));
+    avvisa('Non riesco a salvare: ' + (err.message || 'errore sconosciuto'), { titolo:'Integratori non salvati' });
     btn.disabled = false;
     btn.textContent = 'Applica modifiche →';
   }
@@ -7343,10 +7343,10 @@ function pkgEditorFlushName() {
     _pkgEditorFlushMetaPending().then(() => renderPackageEditor());
   }
 }
-function pkgEditorEditTime() {
+async function pkgEditorEditTime() {
   const e = ST.packageEditor;
   if(!e) return;
-  const newTime = prompt('Orario (HH:MM)', e.time || '08:00');
+  const newTime = await chiediTesto('Orario', { valore:e.time || '08:00', tipo:'time' });
   if(!newTime) return;
   // Validazione semplice
   if(!/^\d{1,2}:\d{2}$/.test(newTime)) { showToast('Formato HH:MM','⚠️'); return; }
@@ -7355,10 +7355,10 @@ function pkgEditorEditTime() {
   if(e.mode === 'edit' && e.packageId) _pkgEditorFlushMetaPending().then(() => renderPackageEditor());
   else renderPackageEditor();
 }
-function pkgEditorEditEmoji() {
+async function pkgEditorEditEmoji() {
   const e = ST.packageEditor;
   if(!e) return;
-  const newEmoji = prompt('Emoji (incolla o digita)', e.emoji || '📦');
+  const newEmoji = await chiediTesto('Emoji', { valore:e.emoji || '📦', testo:'Incolla o digita un\'emoji.' });
   if(newEmoji == null) return;
   const v = newEmoji.trim().slice(0, 4);
   if(!v) return;
@@ -7556,10 +7556,10 @@ function openCatalogForRegisterExtra() {
 }
 
 // ── EXTRA EDITOR: edit orario di un extra ──
-function pkgEditorEditExtraTime(supplementId) {
+async function pkgEditorEditExtraTime(supplementId) {
   const s = (ST.supps||[]).find(x => x.local_id === supplementId);
   if(!s) return;
-  const newTime = prompt('Orario (HH:MM)', s.slot || '08:00');
+  const newTime = await chiediTesto('Orario', { valore:s.slot || '08:00', tipo:'time' });
   if(!newTime) return;
   if(!/^\d{1,2}:\d{2}$/.test(newTime)) { showToast('Formato HH:MM','⚠️'); return; }
   s.slot = newTime;
@@ -7648,12 +7648,12 @@ function _cextraIsDirty() {
 }
 
 // Back button: conferma se dirty, altrimenti silent close
-function cextraBack() {
+async function cextraBack() {
   if(!ST.confirmExtra) return;
   // Se l'utente ha rimosso prodotti o modificato campi → conferma
   const hasRemoved = Object.keys(ST.confirmExtra.removeUndo || {}).length > 0;
   if(_cextraIsDirty() || hasRemoved) {
-    if(!confirm('Annullare la registrazione? Le modifiche andranno perse.')) return;
+    if(!await chiediConferma('Le modifiche andranno perse.', { titolo:'Annullare la registrazione?', ok:'Annulla registrazione', annulla:'Resta', pericolo:true })) return;
   }
   closeConfirmExtraScreen();
   // Riapri il catalogo modal (la selezione catalogSelected è preservata in ST)
@@ -7771,12 +7771,12 @@ function confirmExtraScreenAdjust(codice, field, delta) {
   }
   renderConfirmExtraScreen();
 }
-function confirmExtraScreenEditTime(codice) {
+async function confirmExtraScreenEditTime(codice) {
   const e = ST.confirmExtra;
   if(!e) return;
   const it = e.items.find(x => x.codice === codice);
   if(!it) return;
-  const v = prompt('Orario (HH:MM)', it.slot || '08:00');
+  const v = await chiediTesto('Orario', { valore:it.slot || '08:00', tipo:'time' });
   if(!v) return;
   if(!/^\d{1,2}:\d{2}$/.test(v)) { showToast('Formato HH:MM','⚠️'); return; }
   it.slot = v;
@@ -7931,7 +7931,7 @@ async function doDeleteExtraFromTimeline() {
 // ═══════════════════════════════════════════════════════════
 
 async function deleteSupp(id){
-  if(confirm('Eliminare questo integratore?')){
+  if(await chiediConferma('Eliminare questo integratore?', { ok:'Elimina', pericolo:true })){
     ST.supps=ST.supps.filter(s=>s.local_id!==id);
     await dbDeleteSupp(id);
     renderIntegratori();

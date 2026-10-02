@@ -98,8 +98,8 @@ function renderEsamiList(existing = {}) {
   }).join('');
 }
 
-function addEsameRow() {
-  const nome = prompt('Nome del parametro (es. Zinco, PCR...):');
+async function addEsameRow() {
+  const nome = await chiediTesto('Nome del parametro', { segnaposto:'es. Zinco, PCR…', ok:'Aggiungi' });
   if(!nome || !nome.trim()) return;
   const key = nome.trim().toLowerCase().replace(/\s+/g,'_');
   const container = document.getElementById('set-esami-list');

@@ -2076,7 +2076,7 @@ function updateNavVisibility() {
 window.addEventListener('resize', updateNavVisibility);
 
 async function logout() {
-  if(!confirm('Vuoi uscire?')) return;
+  if(!await chiediConferma('Vuoi uscire?', { ok:'Esci' })) return;
   await supa.auth.signOut();
   try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
   ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];

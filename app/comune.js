@@ -438,6 +438,7 @@ async function dbqAll(operazione, mk, opzioni) {
   return { data: out, error: null };
 }
 
+let _toastTimer = null;
 function showToast(msg, emoji='✅', duration) {
   const el = document.getElementById('toast');
   el.textContent = emoji + ' ' + msg;
@@ -446,5 +447,86 @@ function showToast(msg, emoji='✅', duration) {
   // Toast del postino F.1 usano ~5500ms per essere leggibili. Nessun altro
   // toast dell'app deve passare il terzo parametro: lascia il default.
   const ms = (typeof duration === 'number' && duration > 0) ? duration : 2500;
-  setTimeout(() => el.classList.remove('show'), ms);
+  // Un secondo avviso non viene piu' spento dal tempo del primo (Fondamenta 150)
+  if(_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.classList.remove('show'); _toastTimer = null; }, ms);
+}
+
+// ── CONFERME E AVVISI NELLO STILE DELL'APP (Fondamenta 150, 2 ott 2026) ──────────────────
+// Al posto di confirm(), alert() e prompt() del telefono. Tre funzioni, tutte restituiscono una
+// promessa: chiediConferma(testo, {titolo, ok, annulla, pericolo}) → true/false ·
+// chiediTesto(titolo, {valore, tipo, segnaposto, ok}) → testo o null · avvisa(testo, {titolo, ok}) → fine.
+// Un foglio solo alla volta: il secondo aspetta che il primo si chiuda. Sfondo ed Esc = annulla.
+let _foglioAperto = null;
+function _foglio(costruisci) {
+  const apri = () => new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'info-modal-overlay foglio-overlay';
+    const box = document.createElement('div');
+    box.className = 'info-modal foglio';
+    ov.appendChild(box);
+    let chiuso = false;
+    const chiudi = (valore) => {
+      if(chiuso) return; chiuso = true;
+      document.removeEventListener('keydown', suTasto);
+      ov.remove();
+      _foglioAperto = null;
+      resolve(valore);
+    };
+    const suTasto = (e) => { if(e.key === 'Escape') { e.preventDefault(); chiudi(costruisci.annullato); } };
+    ov.addEventListener('click', (e) => { if(e.target === ov) chiudi(costruisci.annullato); });
+    document.addEventListener('keydown', suTasto);
+    costruisci.riempi(box, chiudi);
+    document.body.appendChild(ov);
+    const primo = box.querySelector('input, button.foglio-ok');
+    if(primo && primo.focus) { try { primo.focus(); if(primo.select) primo.select(); } catch(e){} }
+  });
+  const p = (_foglioAperto || Promise.resolve()).then(apri, apri);
+  _foglioAperto = p;
+  return p;
+}
+function _foglioBottoni(box, chiudi, o, valoreOk) {
+  const riga = document.createElement('div');
+  riga.className = 'foglio-bottoni';
+  if(o.annulla !== false) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn btn-ghost'; b.textContent = o.annulla || 'Annulla';
+    b.onclick = () => chiudi(o.valoreAnnulla);
+    riga.appendChild(b);
+  }
+  const ok = document.createElement('button');
+  ok.type = 'button'; ok.className = 'btn foglio-ok ' + (o.pericolo ? 'btn-danger' : 'btn-primary'); ok.textContent = o.ok || 'Ok';
+  ok.onclick = () => chiudi(valoreOk());
+  riga.appendChild(ok);
+  box.appendChild(riga);
+}
+function chiediConferma(testo, opzioni) {
+  const o = opzioni || {};
+  return _foglio({ annullato:false, riempi(box, chiudi) {
+    if(o.titolo) { const h = document.createElement('h3'); h.textContent = o.titolo; box.appendChild(h); }
+    const t = document.createElement('p'); t.textContent = testo; box.appendChild(t);
+    _foglioBottoni(box, chiudi, { ...o, valoreAnnulla:false }, () => true);
+  } });
+}
+function chiediTesto(titolo, opzioni) {
+  const o = opzioni || {};
+  return _foglio({ annullato:null, riempi(box, chiudi) {
+    const h = document.createElement('h3'); h.textContent = titolo; box.appendChild(h);
+    if(o.testo) { const t = document.createElement('p'); t.textContent = o.testo; box.appendChild(t); }
+    const inp = document.createElement('input');
+    inp.className = 'inp'; inp.type = o.tipo || 'text';
+    if(o.valore != null) inp.value = o.valore;
+    if(o.segnaposto) inp.placeholder = o.segnaposto;
+    inp.addEventListener('keydown', (e) => { if(e.key === 'Enter') { e.preventDefault(); chiudi(inp.value); } });
+    box.appendChild(inp);
+    _foglioBottoni(box, chiudi, { ...o, valoreAnnulla:null }, () => inp.value);
+  } });
+}
+function avvisa(testo, opzioni) {
+  const o = opzioni || {};
+  return _foglio({ annullato:undefined, riempi(box, chiudi) {
+    if(o.titolo) { const h = document.createElement('h3'); h.textContent = o.titolo; box.appendChild(h); }
+    const t = document.createElement('p'); t.textContent = testo; box.appendChild(t);
+    _foglioBottoni(box, chiudi, { ...o, annulla:false }, () => undefined);
+  } });
 }

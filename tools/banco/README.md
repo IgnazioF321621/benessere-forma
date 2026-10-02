@@ -26,6 +26,7 @@ node tools/banco/prova_avvio_finestra.js [cartella di prima]  # all'avvio solo g
 node tools/banco/prova_rientro_leggero.js  # il rientro nell'app rilegge solo gli ultimi 7 giorni, il profilo e le serie di oggi (7 richieste invece di 14); dopo 30 minuti, a giorno cambiato o se una lettura fallisce torna completo (Fondamenta 100, tappa 5)
 node tools/banco/prova_cache_locale.js [cartella di prima]  # la copia locale salva solo gli ultimi 90 giorni e, se non entra nel tetto, 14 (Fondamenta 100, tappa 6)
 node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale: profilo non leggibile → «Non riesco a collegarmi» e Riprova, mai l'onboarding; nessuna riga → onboarding (Fondamenta 130)
+node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al posto di confirm/alert/prompt; il toast non spegne il successivo (Fondamenta 150)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
