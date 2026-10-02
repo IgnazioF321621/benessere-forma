@@ -6,7 +6,7 @@
 const fs = require('fs'), path = require('path');
 const REPO = path.join(__dirname, '..');
 const APP = path.join(REPO, 'zona-tracker.html');
-const MODULI = ['shared/nutrizione.js', 'shared/quadro.js', 'shared/coach_rules.js'];
+const MODULI = ['shared/nutrizione.js', 'shared/quadro.js', 'shared/coach_rules.js', 'shared/ritratto.js'];
 const inizio = (m) => `// ⟦MODULO ${m} — copia generata da tools/moduli.js: si modifica ${m}, non qui⟧`;
 const fine = (m) => `// ⟦FINE ${m}⟧`;
 const verifica = process.argv.includes('--verifica');

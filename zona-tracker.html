@@ -5088,6 +5088,8 @@ function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
   return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
 
+${coachRitratto()}
+
 Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
 ${attrezzoSessione ? `L'utente sta usando: ${attrezzoSessione}. Adatta i cue a questo attrezzo specifico (setup, presa, posizione, errori tipici di questo strumento).` : ''}
 Rispondi con 2-3 punti BREVISSIMI (max 8 parole ciascuno), in formato elenco. Ogni punto su una riga separata, inizia con "• " (bullet + spazio). NIENTE paragrafi. NIENTE introduzioni. NIENTE ripetizione del nome esercizio.
@@ -5190,53 +5192,9 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     carbs:   Math.max(0, ST.TARGET.carbs   - consumed.carbs),
     fat:     Math.max(0, ST.TARGET.fat     - consumed.fat),
   };
-  const p = ST.profile || {};
-
-  // Mappature leggibili
-  const OBIETTIVO_LBL = {
-    perdita_peso: 'Perdita peso',
-    dimagrimento: 'Perdita peso',
-    ricomposizione: 'Ricomposizione corporea',
-    ipertrofia: 'Ipertrofia / massa muscolare',
-    massa_muscolare: 'Ipertrofia / massa muscolare',
-    forza_performance: 'Forza & performance',
-    longevita: 'Longevità',
-    mantenimento: 'Mantenimento',
-  };
-  const ACTIVITY_LBL = {
-    sedentary: 'Sedentario',
-    light: 'Leggera',
-    lightly_active: 'Leggera',
-    moderate: 'Moderata',
-    active: 'Attiva',
-    very_active: 'Molto attiva',
-  };
-  const SEX_LBL = { M: 'uomo', F: 'donna' };
-
-  // Costruzione blocco UTENTE (solo campi presenti)
-  const userBits = [];
-  if (p.first_name) userBits.push(p.first_name);
-  if (p.sex && SEX_LBL[p.sex]) userBits.push(SEX_LBL[p.sex]);
-  if (p.age) userBits.push(`${p.age} anni`);
-  if (p.weight_kg) userBits.push(`${p.weight_kg}kg`);
-  const userLine = userBits.length ? `UTENTE: ${userBits.join(', ')}` : '';
-
-  const dietaLine = p.dieta ? `DIETA: ${p.dieta}` : '';
-
-  const intolList = Array.isArray(p.intolleranze) ? p.intolleranze.filter(Boolean) : [];
-  const intolLine = intolList.length ? `INTOLLERANZE: ${intolList.join(', ')}` : '';
-
-  // obiettivo: può essere stringa singola o lista comma-separata; prendi tutti i match
-  const obKeys = (p.obiettivo || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const obLabels = obKeys.map(k => OBIETTIVO_LBL[k]).filter(Boolean);
-  const obiettivoLine = obLabels.length ? `OBIETTIVO: ${obLabels.join(', ')}` : '';
-
-  const actKey = (p.activity_level || '').toLowerCase();
-  const attivitaLine = ACTIVITY_LBL[actKey] ? `ATTIVITÀ: ${ACTIVITY_LBL[actKey]}` : '';
-
-  const noteLine = (p.note_salute && String(p.note_salute).trim())
-    ? `NOTE SALUTE: ${String(p.note_salute).trim()}`
-    : '';
+  // Chi è la persona lo dice il ritratto unico (Pirsi 020): profilo, obiettivo, dieta,
+  // note di salute, e in più peso vero, seduta di oggi, ciclo, infortunio, settimana.
+  const ritratto = await coachRitrattoPronto();
 
   // Pasti già consumati oggi (max 3 più recenti, ordinati per ora se presente)
   let consumedBlock = '';
@@ -5318,7 +5276,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     ? `PROSSIMO PASTO: ${nextMeal} (PIANIFICAZIONE PER DOMANI MATTINA — l'utente ha completato tutti i pasti di oggi)`
     : `PROSSIMO PASTO: ${nextMeal}`;
 
-  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C).';
+  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Se oggi c\'è o c\'è stata una seduta di allenamento, o se la persona è ferma per infortunio, tienine conto nella scelta del pasto senza fare la predica.';
   const notaTomorrow = isTomorrow
     ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
     : '';
@@ -5328,7 +5286,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   const sections = [
     'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\nREGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.',
     'ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono inventati per l\'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.\n"Ti restano 780 kcal e devi ancora cenare. Branzino al forno con quinoa e spinaci, e una spremuta d\'arancia: la ferritina è bassa e la vitamina C ti aiuta ad assorbire il ferro."\nCosa fa questa voce: dice un fatto concreto prima di dare il consiglio; sceglie una cosa invece di offrirne tre; non chiude con una frase motivazionale generica.',
-    [userLine, dietaLine, intolLine, obiettivoLine, attivitaLine, noteLine].filter(Boolean).join('\n'),
+    ritratto,
     macroBlock,
     consumedBlock,
     supplementsBlock,
@@ -8006,6 +7964,245 @@ var ZTQuadro = (function(){
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTQuadro;
 // ⟦FINE shared/quadro.js⟧
+
+// Ritratto unico della persona (Pirsi 020): lo stesso blocco «CHI È» per ogni chiamata del coach.
+// ⟦MODULO shared/ritratto.js — copia generata da tools/moduli.js: si modifica shared/ritratto.js, non qui⟧
+// ═══════════════════════════════════════════════════════════
+// shared/ritratto.js — il ritratto unico della persona (Pirsi 020)
+// ═══════════════════════════════════════════════════════════
+// Modulo condiviso fra l'app e il Worker. Nell'app NON si modifica a mano:
+// sta incollato dentro zona-tracker.html fra i marcatori e lo riscrive
+// `node tools/moduli.js`.
+//
+// Prima ogni chiamata del coach si costruiva da zero il suo pezzetto di «chi è»:
+// il consiglio sul pasto non sapeva dell'allenamento, la nota alla scheda non
+// sapeva dell'infortunio. Qui c'è un posto solo che lo scrive, uguale per tutte.
+//
+// build(dati) → testo (blocco «CHI È», una riga per fatto) oppure '' se non c'è niente da dire
+//   dati.profile    riga di profiles (first_name, sex, age, height_cm, dieta, intolleranze,
+//                   obiettivo, activity_level, note_salute, goal_weight_kg, train_start_date)
+//   dati.target     { kcal, protein, carbs, fat } del giorno
+//   dati.today      'YYYY-MM-DD'
+//   dati.current    quadro della settimana in corso (shared/quadro.js) o null
+//   dati.previous   quadro della settimana scorsa o null
+//   dati.session    { state: 'da_fare' | 'in_corso' | 'fatta' | 'riposo', label } o null
+//   dati.cycle      { weekNum, isScarico } o null — SEMPRE da getCycleWeekInfo, mai ricalcolato
+//   dati.injury     { zone, endDate } o null · dati.softReturn  true se c'è il rientro graduale
+//   dati.proposals  righe di coach_proposals (kind, title, status, week_start, decided_at)
+//   dati.wellbeing  riservato al diario del giorno (Fondamenta 050): oggi sempre assente
+//
+// Funzione PURA: niente rete, niente orologio, niente stato. Regola del quadro:
+// null = non registrato, MAI zero. Un fatto che manca non produce una riga.
+var ZTRitratto = (function(){
+  'use strict';
+
+  var OBIETTIVO_LBL = {
+    perdita_peso: 'dimagrimento', dimagrimento: 'dimagrimento',
+    ricomposizione: 'ricomposizione corporea',
+    ipertrofia: 'ipertrofia (massa muscolare)', massa_muscolare: 'ipertrofia (massa muscolare)',
+    forza_performance: 'forza e performance',
+    longevita: 'longevità',
+    mantenimento: 'mantenimento',
+  };
+  var ACTIVITY_LBL = { sedentary: 'sedentaria', light: 'leggera', lightly_active: 'leggera', moderate: 'moderata', active: 'attiva', very_active: 'molto attiva' };
+  var SEX_LBL = { M: 'uomo', F: 'donna' };
+  var AI_LBL = { migliorato: 'migliorato', stabile: 'stabile', peggiorato: 'peggiorato', primo_check: 'primo check, nessun confronto' };
+  var STATO_LBL = { accepted: 'accettata', rejected: 'rimandata', expired: 'lasciata scadere', pending: 'in attesa di risposta' };
+  var GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+  var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  var MAX_PROPOSTE = 4;
+  var MAX_NOTE = 300;
+
+  function num(x){ return (x == null || x === '' || !isFinite(Number(x))) ? null : Number(x); }
+  function it(x){ return String(x).replace('.', ','); }                        // 72.1 → 72,1
+  function segno(x){ return (x > 0 ? '+' : x < 0 ? '−' : '') + it(Math.abs(x)); }
+  function mezzogiorno(key){ return new Date(key + 'T12:00:00Z'); }
+  function dataIt(key){ var d = mezzogiorno(key); return d.getUTCDate() + ' ' + MESI[d.getUTCMonth()]; }
+  function giorniFra(da, a){ return Math.round((mezzogiorno(a) - mezzogiorno(da)) / 86400000); }
+  function quando(key, today){
+    if(!today) return dataIt(key);
+    var g = giorniFra(key, today);
+    return g === 0 ? 'oggi' : g === 1 ? 'ieri' : (g > 1 && g <= 7) ? g + ' giorni fa' : dataIt(key);
+  }
+
+  // Etichette dell'obiettivo: stringa singola o lista separata da virgole.
+  function obiettivoLeggibile(str){
+    return String(str || '').split(',').map(function(s){ return OBIETTIVO_LBL[s.trim().toLowerCase()]; })
+      .filter(function(x, i, a){ return x && a.indexOf(x) === i; }).join(', ');
+  }
+
+  function rigaPersona(p){
+    var v = [];
+    if(p.first_name) v.push(String(p.first_name).trim());
+    if(SEX_LBL[p.sex]) v.push(SEX_LBL[p.sex]);
+    if(num(p.age)) v.push(num(p.age) + ' anni');
+    if(num(p.height_cm)) v.push(num(p.height_cm) + ' cm');
+    return v.length ? 'Persona: ' + v.join(', ') : null;
+  }
+
+  function rigaPeso(w, p, today){
+    var v = [];
+    if(w && w.weight_last != null && w.weight_last_date) v.push(it(w.weight_last) + ' kg (pesata di ' + quando(w.weight_last_date, today) + ')');
+    if(w && w.weight_avg != null && w.weight_n > 1) v.push('media della settimana ' + it(w.weight_avg) + ' kg');
+    if(w && w.weight_trend_4w != null) v.push('tendenza a 4 settimane ' + segno(w.weight_trend_4w) + ' kg a settimana');
+    var goal = (w && w.weight_target != null) ? w.weight_target : num(p.goal_weight_kg);
+    if(goal != null) v.push('peso obiettivo ' + it(goal) + ' kg');
+    // Senza una pesata vera il peso del profilo NON si usa: è quello dell'iscrizione.
+    return (w && w.weight_last != null) ? 'Peso: ' + v.join(' · ') : (goal != null ? 'Peso: nessuna pesata recente · peso obiettivo ' + it(goal) + ' kg' : null);
+  }
+
+  function rigaSettimana(titolo, q){
+    if(!q) return null;
+    var v = [], n = q.nutrition, t = q.training;
+    if(n && n.days_logged > 0){
+      var cibo = 'cibo registrato ' + n.days_logged + (n.days_logged === 1 ? ' giorno' : ' giorni');
+      if(n.kcal_avg != null) cibo += ', media ' + n.kcal_avg + ' kcal' + (n.kcal_target ? ' su ' + n.kcal_target : '');
+      if(n.protein_avg != null) cibo += ' e ' + n.protein_avg + ' g di proteine' + (n.protein_target ? ' su ' + n.protein_target : '');
+      if(n.partial) cibo += ' (registrazione parziale: i numeri sono più bassi del vero)';
+      v.push(cibo);
+    } else if(n){
+      v.push('cibo non registrato');
+    }
+    if(t){
+      var sed = 'sedute fatte ' + t.sessions_done + (t.sessions_planned != null ? ' su ' + t.sessions_planned + ' previste' : '');
+      if(t.avg_rir != null) sed += ', margine medio a fine serie ' + it(t.avg_rir) + ' ripetizioni';
+      if(t.injury_days > 0) sed += ', ' + t.injury_days + (t.injury_days === 1 ? ' giorno' : ' giorni') + ' di stop per infortunio';
+      v.push(sed);
+    }
+    if(q.weight && q.weight.weight_delta_prev != null) v.push('peso medio ' + segno(q.weight.weight_delta_prev) + ' kg sulla settimana prima');
+    return v.length ? titolo + ': ' + v.join('; ') : null;
+  }
+
+  function rigaOggi(d){
+    var v = [];
+    var s = d.session;
+    if(s && s.state === 'riposo') v.push('giorno di riposo');
+    else if(s && s.state === 'fatta') v.push('seduta già fatta' + (s.label ? ' (' + s.label + ')' : ''));
+    else if(s && s.state === 'in_corso') v.push('seduta in corso' + (s.label ? ' (' + s.label + ')' : ''));
+    else if(s && s.state === 'da_fare') v.push('seduta da fare' + (s.label ? ': ' + s.label : ''));
+    var c = d.cycle;
+    if(c && c.weekNum) v.push(c.isScarico ? 'settimana di scarico (la sesta del ciclo)' : 'settimana ' + c.weekNum + ' di 6 del ciclo, di carico');
+    if(!v.length) return null;
+    var giorno = d.today ? ' (' + GIORNI[mezzogiorno(d.today).getUTCDay()] + ' ' + dataIt(d.today) + ')' : '';
+    return 'Oggi' + giorno + ': ' + v.join(' · ');
+  }
+
+  function rigaInfortunio(d){
+    if(d.injury){
+      var r = 'Infortunio in corso';
+      if(d.injury.zone) r += ', zona: ' + String(d.injury.zone).trim();
+      if(d.injury.endDate) r += ', stop previsto fino al ' + dataIt(d.injury.endDate);
+      return r;
+    }
+    if(d.softReturn) return 'Rientro graduale dopo un infortunio: carichi ridotti in questi giorni';
+    return null;
+  }
+
+  function rigaCheck(q, today){
+    var b = q && q.body;
+    if(!b || !b.last_check_date) return null;
+    var r = 'Ultimo check fisico: ' + quando(b.last_check_date, today);
+    var m = b.last_measurements || {};
+    var mis = [];
+    if(m.waist_cm) mis.push('vita ' + it(m.waist_cm.value) + ' cm' + (m.waist_cm.delta != null ? ' (' + segno(m.waist_cm.delta) + ')' : ''));
+    if(m.body_fat_pct) mis.push('grasso ' + it(m.body_fat_pct.value) + '% da bilancia' + (m.body_fat_pct.delta != null ? ' (' + segno(m.body_fat_pct.delta) + ')' : ''));
+    if(mis.length) r += ', ' + mis.join(', ');
+    if(b.ai_overall && AI_LBL[b.ai_overall]) r += '; lettura delle foto: ' + AI_LBL[b.ai_overall] + (b.ai_confidence ? ' (fiducia ' + b.ai_confidence + ')' : '');
+    if(b.check_due) r += '; è ora di farne uno nuovo';
+    return r;
+  }
+
+  function rigaProposte(righe){
+    var utili = (righe || []).filter(function(r){ return r && r.title && STATO_LBL[r.status] && r.kind !== 'keep'; })
+      .sort(function(a, b){ return String(b.decided_at || b.week_start || '').localeCompare(String(a.decided_at || a.week_start || '')); })
+      .slice(0, MAX_PROPOSTE);
+    if(!utili.length) return null;
+    return 'Proposte recenti del coach: ' + utili.map(function(r){
+      return '«' + String(r.title).trim() + '» ' + STATO_LBL[r.status] + (r.week_start ? ' (settimana del ' + dataIt(r.week_start) + ')' : '');
+    }).join('; ');
+  }
+
+  function build(d){
+    d = d || {};
+    var p = d.profile || {};
+    var righe = [];
+    var push = function(x){ if(x) righe.push('- ' + x); };
+
+    push(rigaPersona(p));
+    var ob = obiettivoLeggibile(p.obiettivo);
+    var att = ACTIVITY_LBL[String(p.activity_level || '').toLowerCase()];
+    if(ob || att) push([ob ? 'Obiettivo: ' + ob : null, att ? 'attività quotidiana ' + att : null].filter(Boolean).join(' · '));
+    var intol = Array.isArray(p.intolleranze) ? p.intolleranze.filter(Boolean) : [];
+    if(p.dieta || intol.length) push([p.dieta ? 'Dieta: ' + p.dieta : null, intol.length ? 'intolleranze: ' + intol.join(', ') : null].filter(Boolean).join(' · '));
+    var note = String(p.note_salute || '').replace(/\s+/g, ' ').trim();
+    if(note) push('Note di salute scritte dalla persona: ' + (note.length > MAX_NOTE ? note.slice(0, MAX_NOTE) + '…' : note));
+    var t = d.target;
+    if(t && num(t.kcal)) push('Obiettivi del giorno: ' + Math.round(t.kcal) + ' kcal · ' + Math.round(num(t.protein) || 0) + ' g proteine · ' + Math.round(num(t.carbs) || 0) + ' g carboidrati · ' + Math.round(num(t.fat) || 0) + ' g grassi');
+    push(rigaPeso((d.current && d.current.weight) || (d.previous && d.previous.weight) || null, p, d.today));
+    push(rigaOggi(d));
+    push(rigaInfortunio(d));
+    push(rigaSettimana('Questa settimana, fin qui', d.current));
+    push(rigaSettimana('Settimana scorsa', d.previous));
+    push(rigaCheck(d.current || d.previous, d.today));
+    push(rigaProposte(d.proposals));
+
+    if(!righe.length) return '';
+    return 'CHI È — dati veri presi dall\'app. Servono a non dare consigli alla cieca: usa solo quelli che c\'entrano con la risposta, non elencarli e non commentarli uno per uno. Quello che qui non c\'è non lo sai: non inventarlo.\n' + righe.join('\n');
+  }
+
+  return { OBIETTIVO_LBL: OBIETTIVO_LBL, obiettivoLeggibile: obiettivoLeggibile, build: build };
+})();
+if(typeof module === 'object' && module && module.exports) module.exports = ZTRitratto;
+// ⟦FINE shared/ritratto.js⟧
+// Involucro: raccoglie da ST ciò che l'app ha già in memoria e lo passa al modulo.
+// Sincrono e senza rete: una parte che non è ancora caricata semplicemente non compare.
+// Mai throw — un ritratto che fallisce non deve far fallire il consiglio.
+function coachRitratto(){
+  try {
+    const p = ST.profile || {};
+    const cur = wpMonday();
+    const quadri = ST.weeklyPicture || {};
+    const usaTraining = !!p.train_start_date;
+    let injury = null, softReturn = false;
+    try { injury = getInjuryPeriod(); softReturn = !injury && !!getSoftReturn(); } catch(e){}
+    let session = null, cycle = null;
+    if(usaTraining){
+      const hd = ST.trainHomeData;
+      if(hd && !hd.notStarted && !injury){
+        const sid = (hd.inProgress || hd.doneToday) ? hd.lastSession : hd.nextSession;
+        if(/^rest/.test(sid || '')){
+          session = { state: 'riposo' };
+        } else if(sid){
+          const sess = getTrainingSession(sid) || {};
+          const label = [sess.name || sess.label, sess.type].filter(Boolean).join(', ');
+          session = { state: hd.inProgress ? 'in_corso' : hd.doneToday ? 'fatta' : 'da_fare', label };
+        }
+      }
+      if((ST.trainAllCompleted || []).length){
+        const info = getCycleWeekInfo();
+        if(info && info.weekNum) cycle = { weekNum: info.weekNum, isScarico: !!info.isScarico };
+      }
+    }
+    return ZTRitratto.build({
+      profile: p, target: ST.TARGET, today: todayKey(),
+      current: quadri[cur] || null, previous: quadri[wpAddDays(cur, -7)] || null,
+      session, cycle, injury, softReturn,
+      proposals: ST.coachProposals || [],
+    });
+  } catch(e){
+    console.warn('[ritratto]', (e && e.message) || e);
+    return '';
+  }
+}
+// Come sopra, ma prima prova a caricare i due quadri se mancano (sono in cache dopo
+// la prima apertura della Home). Per i chiamanti che possono aspettare.
+async function coachRitrattoPronto(){
+  try {
+    const cur = wpMonday();
+    await Promise.all([loadWeeklyPicture(cur), loadWeeklyPicture(wpAddDays(cur, -7))]);
+  } catch(e){}
+  return coachRitratto();
+}
 const WP_VERSION = ZTQuadro.WP_VERSION;
 
 function wpMonday(d){ return ZTQuadro.mondayOf(dayKey(d)); }
@@ -12268,6 +12465,7 @@ async function _trainGenAINote(profile, schedaMeta) {
   };
   const obiettivoLeggibile = OBJ_DISPLAY[schedaMeta.obiettivo] || schedaMeta.obiettivo || 'allenamento';
   const nomeUtente = (profile && profile.first_name) ? ` ${profile.first_name}` : '';
+  const ritratto = await coachRitrattoPronto();
 
   const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente}. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
 
@@ -12277,7 +12475,9 @@ ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alime
 "Nuovo blocco, 5 giorni a settimana. Le prime due sessioni ti sembreranno pesanti, è normale. Al check di fine blocco vediamo cosa è cambiato."
 Cosa fa questa voce: dice un fatto concreto prima di dare il consiglio; sceglie una cosa invece di offrirne tre; non chiude con una frase motivazionale generica.
 
-Dati utente:
+${ritratto}
+
+Dati della nuova scheda:
 - Obiettivo: ${obiettivoLeggibile}
 - Giorni di allenamento a settimana: ${schedaMeta.giorni}
 - Tipo di sessione: ${schedaMeta.volume === 'essenziale' ? 'essenziale (solo i fondamentali)' : 'completa (fondamentali + rifiniture)'}
@@ -12290,6 +12490,7 @@ REGOLE:
 - Il "noi" solo per il lavoro fatto insieme ("abbiamo costruito", "ripartiamo"); corpo, progressi e risultati sono dell'utente e vanno al "tuo", mai al "nostro"
 - Puoi citare i giorni a settimana
 - Promette evoluzione blocco dopo blocco grazie ai check fisici
+- Se c'è un infortunio in corso o un rientro graduale, la nota ne tiene conto: niente toni da ripartenza a tutto gas
 - Max 2-3 frasi totali
 - No elenchi puntati, no parentesi tecniche
 - VIETATO usare termini tecnici come DUP, RIR, RPE, "pattern motorio", "split"
@@ -21568,6 +21769,7 @@ const _PIANOV4_POSTINO_FALLBACK_REASONING =
 
 // Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
 async function _pianoV4GenerateReasoning(targets) {
+  const ritratto = await coachRitrattoPronto();
   const prompt =
     "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\n" +
     "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. " +
@@ -21582,6 +21784,7 @@ async function _pianoV4GenerateReasoning(targets) {
     "tre; non chiude con una frase motivazionale generica.\n" +
     "Le cene saltate dell'esempio sono inventate: NON attribuire all'utente mancanze, salti o comportamenti che " +
     "non risultano dai dati che ti ho dato. Se non hai un fatto del genere, salta quella parte e resta su quello che sai.\n\n" +
+    (ritratto ? ritratto + "\n\n" : "") +
     "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
     "Gli obiettivi NON cambiano rispetto alla settimana scorsa: kcal " + targets.kcal +
     ", proteine " + targets.protein + "g, carboidrati " + targets.carbs + "g, grassi " + targets.fat + "g.\n\n" +

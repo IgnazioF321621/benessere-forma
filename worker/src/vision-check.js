@@ -11,6 +11,7 @@ import {
   VISION_PROMPT_VERSION, VISION_SYSTEM_PROMPT, OVERALL, CONFIDENCE, ZONE, CHANGE, ISSUES,
 } from './prompts/vision-check-2026-09-13.js';
 import { entroIlLimite } from './porta.js';
+import ZTRitratto from '../../shared/ritratto.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const PHOTO_BUCKET = 'body-check-photos';
@@ -116,9 +117,17 @@ export async function handleVisionCheck(request, env, cors) {
     const setPrev = prev ? await loadSet(previousId) : null;
     if (!setCur.images.length) throw new VisionError(422, 'no-photos', 'Nessuna foto disponibile per questo check');
 
+    // 2b. L'obiettivo della persona (Pirsi 020): il Worker lo legge da sé dal profilo,
+    //     non si fida di ciò che manda il telefono. Se la lettura fallisce si prosegue senza.
+    let obiettivo = '';
+    try {
+      const prof = await sbSelect(env, `profiles?select=obiettivo&id=eq.${userId}&limit=1`);
+      obiettivo = ZTRitratto.obiettivoLeggibile(prof[0] && prof[0].obiettivo);
+    } catch (_) { /* senza obiettivo la lettura resta quella di prima */ }
+
     // 3. Prompt: misure come testo, poi le foto etichettate
     const misure = (id) => measRows.find(m => m.check_id === id) || null;
-    const parts = [{ text: userText(cur, prev, misure(currentId), prev ? misure(previousId) : null, setCur, setPrev) }];
+    const parts = [{ text: userText(cur, prev, misure(currentId), prev ? misure(previousId) : null, setCur, setPrev, obiettivo) }];
     const pushImages = (set, etichetta) => {
       for (const im of set.images) {
         parts.push({ text: `${etichetta} — posa: ${POSE_IT[im.pose]}` });
@@ -245,7 +254,7 @@ function toBase64(bytes) {
 
 const dataIt = (iso) => new Date(iso).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Rome' });
 
-function userText(cur, prev, mCur, mPrev, setCur, setPrev) {
+function userText(cur, prev, mCur, mPrev, setCur, setPrev, obiettivo) {
   const riga = (m) => {
     if (!m) return 'nessuna misura registrata';
     const v = [];
@@ -258,6 +267,7 @@ function userText(cur, prev, mCur, mPrev, setCur, setPrev) {
   };
   const pose = (set) => set.images.map(i => POSE_IT[i.pose]).join(', ') + (set.missing.length ? ` (mancano: ${set.missing.map(p => POSE_IT[p]).join(', ')})` : '');
   const righe = [];
+  if (obiettivo) righe.push(`Obiettivo dichiarato dalla persona: ${obiettivo}. Serve solo a scegliere cosa guardare nelle prossime settimane ("suggested_focus"): il giudizio sulle foto non cambia.`);
   if (!prev) {
     righe.push('PRIMO CHECK: non c\'è un check precedente con cui confrontare.');
   } else {

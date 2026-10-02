@@ -148,6 +148,21 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
 
 ---
 
+## Ritratto unico
+
+**In vigore dal 2 ottobre 2026 (Pirsi 020).** Un blocco di testo «CHI È», uguale per ogni chiamata del coach, scritto in un posto solo: `shared/ritratto.js` (`ZTRitratto.build`). Prima ogni chiamata si costruiva da zero il suo pezzetto.
+
+- **Cosa contiene**, una riga per fatto: persona · obiettivo e attività · dieta e intolleranze · note di salute · obiettivi del giorno · peso vero (ultima pesata, media, tendenza, peso obiettivo) · oggi (seduta da fare/in corso/fatta/riposo, settimana del ciclo) · infortunio o rientro graduale · settimana in corso e settimana scorsa (dal quadro) · ultimo check e lettura delle foto · ultime 4 proposte con l'esito
+- **`null` = non registrato, mai zero**, come il quadro: un fatto che manca non produce una riga. **Il peso del profilo non si usa mai**: è quello dell'iscrizione; senza pesate la riga dice «nessuna pesata recente»
+- **Nell'app**: `coachRitratto()` raccoglie da `ST` ciò che è già in memoria, senza rete e senza mai lanciare errori; `coachRitrattoPronto()` prima carica i due quadri se mancano. La settimana del ciclo arriva da `getCycleWeekInfo()`, il peso dal quadro
+- **Chi lo riceve**: consiglio sul pasto (`getAdvice`, al posto delle vecchie righe UTENTE/DIETA/…), nota alla scheda (`_trainGenAINote`), annuncio del piano (`_pianoV4GenerateReasoning`), consigli tecnici (`buildCoachPrompt`)
+- **Chi non lo riceve, per scelta**: le tre stime dei macro (sono calcoli su un alimento, il ritratto sarebbe solo rumore) e la generazione del piano settimanale (la richiesta è già a ridosso del limite di 8000 token al minuto di Groq: ~450 token in più la farebbero rifiutare)
+- **Lettura delle foto**: il Worker legge da sé l'obiettivo dal profilo e lo passa al modello, solo per scegliere cosa guardare nelle settimane dopo; il giudizio sulle foto non cambia
+- **Non ancora fatto**: il Worker non ricostruisce il ritratto intero dal token (seduta di oggi e infortunio vivono sul telefono); «come sta» aspetta il diario del giorno (Fondamenta 050), il posto è già previsto (`dati.wellbeing`)
+- **Verifica**: `tools/banco/prova_ritratto.js` (modulo da solo + app vera) · `worker/test/prova_vision_check.mjs`
+
+---
+
 ## Pirsi — nome e voce del coach
 
 **In vigore dal 13 agosto 2026.** Il coach si chiama **Pirsi**. Il nome è **provvisorio, in fase di test**: è per questo che vive in un posto solo.

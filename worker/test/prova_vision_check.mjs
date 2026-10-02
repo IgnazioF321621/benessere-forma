@@ -21,7 +21,7 @@ const buono = { overall: 'migliorato', confidence: 'alta', areas: [{ zona: 'addo
 
 function scenario(opt) {
   _azzeraPorta();
-  const o = { lettureRecenti: [], risposteGemini: [JSON.stringify(buono)], checks: null, fotoMancanti: [], salvataggi: [], geminiStatus: 200, ...opt };
+  const o = { lettureRecenti: [], obiettivo: 'ricomposizione', profiloRotto: false, risposteGemini: [JSON.stringify(buono)], checks: null, fotoMancanti: [], salvataggi: [], geminiStatus: 200, ...opt };
   const checks = o.checks || [
     { id: C_CUR, user_id: U, status: 'completed', created_at: '2026-08-02T05:38:24Z' },
     { id: C_PREV, user_id: U, status: 'completed', created_at: '2026-07-04T03:32:48Z' },
@@ -31,6 +31,7 @@ function scenario(opt) {
     const u = String(url);
     const res = (body, status = 200) => new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.includes('/auth/v1/user')) return init.headers.Authorization === 'Bearer buono' ? res({ id: U }) : res({ msg: 'bad jwt' }, 401);
+    if (u.includes('/rest/v1/profiles')) return o.profiloRotto ? res({ message: 'boom' }, 500) : res([{ obiettivo: o.obiettivo }]);
     if (u.includes('/rest/v1/body_checks')) return res(checks);
     if (u.includes('/rest/v1/body_check_ai?select=check_id')) return res(o.lettureRecenti);
     if (u.includes('/rest/v1/body_check_ai?select=')) return res([]);
@@ -133,6 +134,17 @@ s = scenario();
 const chiavi = [];
 r = await chiama(coppia, 'buono', { LIMITE_FOTO: { limit: async ({ key }) => { chiavi.push(key); return { success: false }; } } });
 atteso('binding · decide lui, chiave = persona', [r.status, r.json.error.kind, chiavi], [429, 'rate-limit', [`foto:${U}`]]);
+
+// 9. l'obiettivo della persona arriva al modello (Pirsi 020), letto dal Worker
+s = scenario({ obiettivo: 'perdita_peso' });
+r = await chiama(coppia);
+atteso('obiettivo · nel testo, etichetta leggibile', /^Obiettivo dichiarato dalla persona: dimagrimento\./.test(s.chiamateGemini[0].contents[0].parts[0].text), true);
+s = scenario({ obiettivo: null });
+r = await chiama(coppia);
+atteso('obiettivo assente · nessuna riga, lettura fatta', [r.status, /Obiettivo dichiarato/.test(s.chiamateGemini[0].contents[0].parts[0].text)], [200, false]);
+s = scenario({ profiloRotto: true });
+r = await chiama(coppia);
+atteso('profilo illeggibile · si prosegue senza', [r.status, /Obiettivo dichiarato/.test(s.chiamateGemini[0].contents[0].parts[0].text)], [200, false]);
 
 console.log(ko ? `\n${ko} KO` : '\ntutto OK');
 process.exit(ko ? 1 : 0);
