@@ -1,0 +1,22 @@
+#!/bin/bash
+# pre-commit hook di Zona Tracker — fonte nel repo: tools/hooks/pre-commit.
+# Si installa con: bash tools/hooks/installa.sh (lo copia nella cartella hooks comune a tutte le worktree).
+#
+# Dal 2 ottobre 2026 (Metodo 020) questo hook NON mette più APP_VERSION e NON fa più
+# `git add` di zona-tracker.html: con più sessioni sulla stessa cartella si portava dietro
+# i pezzi non salvati delle altre. La versione la mette solo il rilascio: tools/rilascio/versione.sh
+
+set -e
+
+TOPLEVEL=$(git rev-parse --show-toplevel)
+
+# Moduli condivisi (shared/*.js): la copia dentro l'app deve coincidere con la fonte.
+# Si controlla se è in stage l'app o un modulo. Fase 3, 13 set 2026.
+if git diff --cached --name-only | grep -qE "^(zona-tracker\.html|shared/.*\.js)$"; then
+  if [ -f "$TOPLEVEL/tools/moduli.js" ] && ! node "$TOPLEVEL/tools/moduli.js" --verifica >/dev/null; then
+    echo "✗ pre-commit: un modulo di shared/ non coincide con la copia in zona-tracker.html — lancia: node tools/moduli.js" >&2
+    exit 1
+  fi
+fi
+
+exit 0

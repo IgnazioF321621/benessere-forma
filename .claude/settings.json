@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(wrangler:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(gh release:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase functions deploy:*)"
+    ],
+    "deny": [
+      "Bash(git add -A:*)",
+      "Bash(git add --all:*)",
+      "Bash(git add .)"
+    ]
+  }
+}
