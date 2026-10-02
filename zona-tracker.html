@@ -14,9 +14,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 
-<!-- PWA Icons inline SVG as base64 -->
+<!-- Installazione sul telefono (Fondamenta 190): manifest per Android e icona PNG per iPhone (iOS non legge le SVG in apple-touch-icon) -->
+<link rel="manifest" href="manifest.webmanifest"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232A7A6F'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial Black,sans-serif' font-weight='900' font-size='46' fill='white'%3EZT%3C/text%3E%3C/svg%3E"/>
-<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%232A7A6F'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-family='Arial Black,sans-serif' font-weight='900' font-size='46' fill='white'%3EZT%3C/text%3E%3C/svg%3E"/>
+<link rel="apple-touch-icon" href="assets/icone/icona-180.png"/>
 
 <link rel="stylesheet" href="app/stile.css?v=20261002-2253"/>
 </head>
@@ -2334,6 +2335,40 @@ function enterTestMode() {
   });
 
 })();
+
+// ── AGGIUNGI ALLA SCHERMATA HOME (Fondamenta 190, 2 ottobre 2026) ──
+// Dopo il primo accesso, se l'app non e' installata, la Home mostra una volta come metterla sulla
+// schermata Home: su Android col pulsante Installa (beforeinstallprompt), su iPhone con le istruzioni.
+// «Non ora» la toglie per sempre su quel telefono (zt_installa_visto).
+let _installaEvento = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); _installaEvento = e; if(ST.page === 'home') renderHome(); });
+function appInstallata() {
+  try { if(window.navigator.standalone === true) return true; } catch(e) {}
+  try { return !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); } catch(e) { return false; }
+}
+function installaHintVisibile() {
+  if(appInstallata()) return false;
+  try { if(localStorage.getItem('zt_installa_visto')) return false; } catch(e) {}
+  return true;
+}
+function installaHintHTML() {
+  if(!installaHintVisibile()) return '';
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+  const testo = _installaEvento ? 'Installa Zona Tracker sul telefono: si apre come un\'app, anche senza rete.'
+    : ios ? 'Aggiungi Zona Tracker alla schermata Home: tocca Condividi (il quadrato con la freccia) e poi «Aggiungi alla schermata Home».'
+    : 'Aggiungi Zona Tracker alla schermata Home: dal menu del browser scegli «Installa app» o «Aggiungi a schermata Home».';
+  return `<div class="installa-hint" id="installa-hint"><div class="installa-hint-testo">${testo}</div><div class="installa-hint-azioni">${_installaEvento ? '<button class="btn btn-primary btn-sm" onclick="installaApp()">Installa</button>' : ''}<button class="btn btn-ghost btn-sm" onclick="installaHintChiudi()">Non ora</button></div></div>`;
+}
+async function installaApp() {
+  const e = _installaEvento; _installaEvento = null;
+  if(e) { try { e.prompt(); await e.userChoice; } catch(err) {} }
+  installaHintChiudi();
+}
+function installaHintChiudi() {
+  try { localStorage.setItem('zt_installa_visto', '1'); } catch(e) {}
+  const el = document.getElementById('installa-hint');
+  if(el) el.remove();
+}
 
 // ── SERVICE WORKER (network-first) e VERSIONE NUOVA (Fondamenta 140, 2 ottobre 2026) ──
 // Prima la pagina si ricaricava da sola appena arrivava un service worker nuovo, anche a meta'

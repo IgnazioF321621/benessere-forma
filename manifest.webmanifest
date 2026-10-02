@@ -1,0 +1,17 @@
+{
+  "name": "Zona Tracker",
+  "short_name": "Zona Tracker",
+  "description": "Benessere e Forma: nutrizione, allenamento e misure, con il coach.",
+  "lang": "it",
+  "start_url": "/benessere-forma/zona-tracker.html",
+  "scope": "/benessere-forma/",
+  "display": "standalone",
+  "background_color": "#F5F3EE",
+  "theme_color": "#F5F3EE",
+  "icons": [
+    { "src": "assets/icone/icona-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone/icona-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icone/icona-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icone/icona-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

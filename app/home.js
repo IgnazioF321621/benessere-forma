@@ -917,6 +917,7 @@ function _renderHomeCards(){
   // ── Inject ──
   document.getElementById('page-home').innerHTML = `
     <div class="home-v2-wrap">
+      ${typeof installaHintHTML === 'function' ? installaHintHTML() : ''}
       <div class="home-v2-header">
         <div class="home-v2-header-text">
           <div class="home-v2-date">${dateStr}</div>

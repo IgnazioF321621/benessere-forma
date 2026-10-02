@@ -30,6 +30,7 @@ node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al po
 node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 4, tutte volute (Fondamenta 180)
 node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta (Fondamenta 140)
 node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)
+node tools/banco/prova_installazione.js  # manifest, icone PNG (rigenerabili con node tools/icone/genera.js) e suggerimento «Aggiungi alla schermata Home» (Fondamenta 190)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom

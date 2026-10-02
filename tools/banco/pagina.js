@@ -25,7 +25,8 @@ function fileLocali(html){
 // Richiami a file locali scritti in una forma che qui sopra non si riconosce: resterebbero
 // fuori dalla pagina ricomposta e dall'elenco del service worker senza che nessuno se ne accorga.
 function richiamiNonRiconosciuti(html){
-  const tutti = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="(?!https?:|data:|\/\/)([^"]+)"[^>]*>/g)].map(m => m[1].split('?')[0]);
+  // Il manifest e le icone (Fondamenta 190) non entrano nella pagina ne' nell'elenco del service worker: non sono codice
+  const tutti = [...html.matchAll(/<(?:script|link)\b[^>]*\b(?:src|href)="(?!https?:|data:|\/\/)([^"]+)"[^>]*>/g)].filter(m => !/\brel="(?:manifest|icon|apple-touch-icon)"/.test(m[0])).map(m => m[1].split('?')[0]);
   const noti = new Set(fileLocali(html));
   return tutti.filter(f => !noti.has(f));
 }
