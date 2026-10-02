@@ -102,7 +102,6 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - `trainLoggedSets` si azzera al reload — badge serie spariscono dopo refresh
 - Alcuni integratori vecchi hanno macro `—` (backfill SQL pendente)
 - `body_logs` manca UNIQUE(user_id, date) — salvataggio usa insert/update manuale
-- Editor Pacchetto: emoji picker e time picker usano `prompt()` nativo (UX scadente mobile)
 - Isabella: `status=draft`, 0 meals per settimana corrente — non investigato
 - **EX576** `Piegamenti tocco ai piedi`: `alternativa` = EX576 (autoriferimento preesistente)
 - **`splitTypeFilter` di `ztTrainGenPatternPick`**: il parametro è accettato e ignorato
