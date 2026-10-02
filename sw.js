@@ -16,6 +16,7 @@ const APP_FILES = [
   'app/stile.css',
   'app/comune.js',
   'app/body.js',
+  'app/nutrition.js',
   'shared/nutrizione.js',
   'shared/coach_rules.js',
   'shared/quadro.js',
