@@ -16,6 +16,8 @@ node tools/banco/prova_storico_pasti.js  # storico oltre le 1000 righe: pasti, i
 node tools/banco/prova_errori.js         # errori dei telefoni in app_errors: dbq, errori di pagina, promesse rifiutate (Fondamenta 060)
 node tools/banco/prova_diario.js         # diario del giorno (daily_log): lettura, scrittura dei soli campi passati, valori fuori scala (Fondamenta 050)
 node tools/banco/prova_pagina_divisa.js [file di prima]  # pagina divisa in più file: file presenti, elenco del service worker, senza rete; col file di prima, identità byte per byte (Fondamenta 035)
+node tools/banco/prova_ordine_caricamento.js [--elenco]  # la pagina divisa: nessun pezzo usa al caricamento un nome dichiarato in uno script che viene dopo (serve acorn: npm install acorn)
+node tools/banco/prova_browser.js [file di prima]         # la pagina divisa in Chrome vero, servita in locale: errori al caricamento, cose comuni presenti, schermate uguali a prima
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom

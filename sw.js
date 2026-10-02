@@ -14,6 +14,7 @@ const BASE = '/benessere-forma/';
 const APP_DIRS = ['app/', 'shared/'];
 const APP_FILES = [
   'app/stile.css',
+  'app/comune.js',
   'shared/nutrizione.js',
   'shared/coach_rules.js',
   'shared/quadro.js',

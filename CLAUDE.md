@@ -10,7 +10,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 
 ## File e URL
 
-- **App**: `zona-tracker.html` (HTML + JS) più i file in `app/` e i moduli in `shared/` *(dal 2 ottobre 2026 la pagina si divide a tappe, [Fondamenta 035]: per ora `app/stile.css` e i quattro moduli condivisi)*. **Ogni file richiamato dalla pagina va elencato in `APP_FILES` di `sw.js`**: lo controlla `node tools/banco/prova_pagina_divisa.js`. Il banco ricompone la pagina da solo (`tools/banco/pagina.js`)
+- **App**: `zona-tracker.html` (HTML + JS) più i file in `app/` e i moduli in `shared/` *(dal 2 ottobre 2026 la pagina si divide a tappe, [Fondamenta 035]: per ora `app/stile.css`, `app/comune.js` — stato, date, `dbq`, avvisi — e i quattro moduli condivisi)*. **Il codice si sposta in un file a parte senza cambiare una riga**, e prima di salvare passano tre prove: `prova_pagina_divisa.js` (file ed elenco del service worker), `prova_ordine_caricamento.js` (niente usa al caricamento un nome che arriva da uno script dopo) e `prova_browser.js` (Chrome vero, in locale). **Ogni file richiamato dalla pagina va elencato in `APP_FILES` di `sw.js`**: lo controlla `node tools/banco/prova_pagina_divisa.js`. Il banco ricompone la pagina da solo (`tools/banco/pagina.js`)
 - **Admin**: `dashboardzona.html` (email-gated `ignazio.f@me.com`, read-only)
 - **URL pubblico**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Repo**: https://github.com/IgnazioF321621/benessere-forma · branch `main`
