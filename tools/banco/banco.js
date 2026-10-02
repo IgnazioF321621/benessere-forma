@@ -21,7 +21,7 @@ function makeSupaMock(tables){
     api.order = chain((col,opt)=>{ st.orders.push([col, opt && opt.ascending===false ? 'desc':'asc']); });
     api.limit = chain((n)=>{ st.limit = n; });
     api.range = chain((a,b)=>{ st.range=[a,b]; });
-    api.maybeSingle = () => { st.single = true; return run(); };
+    api.maybeSingle = () => { st.single = true; st.maybe = true; return run(); };
     api.single = () => { st.single = true; return run(); };
     api.then = (res, rej) => run().then(res, rej);
     // tables.__attesa = () => Promise: ogni risposta aspetta quella promessa (per contare le ondate di letture)
@@ -85,6 +85,8 @@ function makeSupaMock(tables){
       if(st.range) rows = rows.slice(st.range[0], st.range[1]+1);
       else if(st.limit != null) rows = rows.slice(0, st.limit);
       else rows = rows.slice(0, 1000); // PostgREST default
+      // .single() senza righe: PostgREST risponde con l'errore PGRST116, non con null (.maybeSingle() si')
+      if(st.single && !st.maybe && !rows.length) return Promise.resolve({ data:null, error:{ code:'PGRST116', message:'JSON object requested, multiple (or no) rows returned' } });
       if(st.single) return Promise.resolve({ data: rows[0] || null, error:null });
       return Promise.resolve({ data: rows, error:null });
     }

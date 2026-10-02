@@ -41,6 +41,15 @@
   <button class="closed-exit" onclick="logout()">Esci</button>
 </div>
 
+<!-- NON RIESCO A COLLEGARMI (Fondamenta 130): primo avvio senza copia locale e lettura del profilo fallita -->
+<div id="retry-screen">
+  <svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+  <div class="closed-title">Non riesco a collegarmi</div>
+  <p class="closed-text" id="retry-text">Il tuo profilo è al sicuro, ma adesso non riesco a leggerlo. Controlla la rete e riprova.</p>
+  <button class="btn btn-primary" style="margin-top:28px" onclick="riprovaAvvio()">Riprova</button>
+  <button class="closed-exit" onclick="logout()">Esci</button>
+</div>
+
 <!-- AUTH + WELCOME (M1 nuovo) -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -1774,6 +1783,16 @@ function updateTrainingNav() {
 
 // Profilo completo = onboarding già eseguito
 // Onboarding richiesto SOLO se profilo assente o nome (first_name) vuoto
+// La riga di profiles non c'e' (PostgREST: PGRST116 su .single()). Tutto il resto e' un errore di lettura.
+function profiloAssente(err) {
+  return !!(err && err.code === 'PGRST116');
+}
+async function riprovaAvvio() {
+  const b = document.querySelector('#retry-screen .btn');
+  if(b) { b.disabled = true; b.textContent = 'Riprovo…'; }
+  try { await loadAndStart(); } finally { if(b) { b.disabled = false; b.textContent = 'Riprova'; } }
+}
+
 function profileIsComplete(profile) {
   return !!(profile && profile.first_name && profile.first_name.trim());
 }
@@ -1885,6 +1904,14 @@ async function loadAndStart() {
   const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), supa.from('profiles').select('*').eq('id', ST.user.id).single()]);
   ST.ultimoCompletoAt = Date.now(); ST.ultimoCompletoGiorno = todayKey();   // tappa 5: il rientro leggero parte da qui
   const {data: profile, error: profileErr} = profRes;
+  // Fondamenta 130: «la lettura e' fallita» non e' «il profilo non esiste». Senza righe PostgREST
+  // risponde PGRST116 (profilo da creare: onboarding); ogni altro errore e' un guasto di lettura,
+  // e mandare nell'onboarding chi ha gia' un profilo lo farebbe riscrivere. Si chiede di riprovare.
+  if (profileErr && !profiloAssente(profileErr) && !(ST.profile && profileIsComplete(ST.profile))) {
+    console.warn('[avvio] profilo non letto:', profileErr.message || profileErr);
+    showScreen('retry');
+    return;
+  }
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
     applyProfile(ST.profile);
@@ -2010,6 +2037,7 @@ function showScreen(name) {
   document.getElementById('loading-overlay').classList.add('hide');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
+  document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   if(name === 'auth')       {
     document.getElementById('auth-screen').classList.add('visible');
     // Default: mostra welcome (l'utente arriva qui da bootstrap o logout)

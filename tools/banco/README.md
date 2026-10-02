@@ -25,6 +25,7 @@ node tools/banco/prova_avvio_ondate.js [cartella di prima]  # le letture di avvi
 node tools/banco/prova_avvio_finestra.js [cartella di prima]  # all'avvio solo gli ultimi 90 giorni di storico, il resto a richiesta (serie di giorni, ‹, Analisi a 3 mesi); a fine lettura lo stato e' identico a quello di prima (Fondamenta 100, tappa 4)
 node tools/banco/prova_rientro_leggero.js  # il rientro nell'app rilegge solo gli ultimi 7 giorni, il profilo e le serie di oggi (7 richieste invece di 14); dopo 30 minuti, a giorno cambiato o se una lettura fallisce torna completo (Fondamenta 100, tappa 5)
 node tools/banco/prova_cache_locale.js [cartella di prima]  # la copia locale salva solo gli ultimi 90 giorni e, se non entra nel tetto, 14 (Fondamenta 100, tappa 6)
+node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale: profilo non leggibile → «Non riesco a collegarmi» e Riprova, mai l'onboarding; nessuna riga → onboarding (Fondamenta 130)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
@@ -63,6 +64,7 @@ Se la prova che sul nuovo dà OK non dà **KO** sul vecchio, non sta misurando q
 - l'orologio si ferma con `boot(fixture, { now: '2026-09-13T09:00:00' })`: `new Date()` e `Date.now()` danno sempre quell'istante, le date esplicite restano vere. Serve quando la prova dipende dal giorno della settimana (`prova_quadro_peso.js`)
 - **le risposte si possono trattenere**: `tables.__attesa = () => promessa` fa aspettare ogni risposta del finto Supabase finché quella promessa non si risolve. Serve a contare le ondate di letture (`prova_avvio_ondate.js`): un conteggio che non dipende dalla velocità della macchina
 - **il join degli ingredienti**: `select('..., meals!inner(date)')` porta nella riga il pasto (`riga.meals = {date}`), scarta gli ingredienti senza pasto e i filtri `meals.date` guardano là, come PostgREST. `tables.__joinRotto = true` fa rispondere il join con un errore, per provare il ripiego (`prova_avvio_finestra.js`)
+- **`.single()` senza righe** risponde con l'errore `PGRST116` come PostgREST; `.maybeSingle()` risponde `null` senza errore
 - **la pagina parte da sola**, come sul telefono (il BOOTSTRAP non aspetta più, Fondamenta 100): senza sessione mostra l'accesso, con `tables.__sessione = { user:{ id, email } }` entra e carica; `opts.locale = { zt_cache: {…} }` riempie localStorage prima che parta. Una prova che avvia a mano (`loadAndStart`) e poi guarda le schermate fa prima `await avviato` (lo restituisce `boot`), altrimenti la partenza automatica le arriva sopra
 - lo stato dell'app si prende con `win.eval('ST')` (le `const` di un classic script non stanno su `window`, le `function` sì)
 - un giorno di Training diventa loggabile con `ST.trainAnticipato = 'upperA'`, senza toccare rotazione e debito
