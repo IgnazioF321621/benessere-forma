@@ -28,6 +28,7 @@ node tools/banco/prova_cache_locale.js [cartella di prima]  # la copia locale sa
 node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale: profilo non leggibile → «Non riesco a collegarmi» e Riprova, mai l'onboarding; nessuna riga → onboarding (Fondamenta 130)
 node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al posto di confirm/alert/prompt; il toast non spegne il successivo (Fondamenta 150)
 node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 4, tutte volute (Fondamenta 180)
+node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta (Fondamenta 140)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom

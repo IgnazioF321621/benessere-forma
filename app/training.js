@@ -4737,6 +4737,8 @@ function openTrainingSession(sid){
   }
 }
 function closeTrainingSession(){
+  // Fondamenta 140: una versione nuova arrivata durante l'allenamento si segnala adesso, a sessione chiusa
+  if(typeof mostraAggiornamento === 'function') setTimeout(mostraAggiornamento, 0);
   // GRAFICA L1 — Se uscita con serie in esecuzione: scarta il delta (come trainExecBack)
   // e ferma il tick. Il totalSec accumulato dalle serie completate resta in localStorage
   // e ricompare se l'utente riapre la stessa sessione oggi.

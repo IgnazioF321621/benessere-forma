@@ -1031,6 +1031,8 @@
 
 <!-- APP -->
 <div id="app">
+  <!-- Versione nuova (Fondamenta 140): si tocca per aggiornare, mai una ricarica da sola -->
+  <div id="aggiorna-banner" class="aggiorna-banner" onclick="aggiornaApp()" role="button">C'è una versione più recente: tocca per aggiornare</div>
   <div id="header">
     <div class="h-inner">
       <div class="h-left">
@@ -2305,23 +2307,47 @@ function enterTestMode() {
 
 })();
 
-// ── SERVICE WORKER (network-first, auto-update) ─────────────
+// ── SERVICE WORKER (network-first) e VERSIONE NUOVA (Fondamenta 140, 2 ottobre 2026) ──
+// Prima la pagina si ricaricava da sola appena arrivava un service worker nuovo, anche a meta'
+// allenamento, e il controllo partiva solo ogni 3 minuti (su iPhone l'app sospesa non lo faceva mai).
+// Ora: quando c'e' una versione nuova compare una striscia «tocca per aggiornare»; durante una
+// sessione di allenamento la striscia aspetta che la sessione si chiuda; il controllo si fa anche
+// ogni volta che l'app torna in primo piano.
+let _versioneNuovaPronta = false;
+function segnalaVersioneNuova() {
+  _versioneNuovaPronta = true;
+  mostraAggiornamento();
+}
+// La striscia compare solo se c'e' una versione nuova e non si sta allenando.
+function mostraAggiornamento() {
+  const el = document.getElementById('aggiorna-banner');
+  if(!el) return;
+  const inAllenamento = !!ST.trainSession;
+  el.classList.toggle('visible', _versioneNuovaPronta && !inAllenamento);
+}
+function aggiornaApp() {
+  window.location.reload();
+}
+function controllaAggiornamenti() {
+  if(!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.getRegistration().then(reg => { if(reg) reg.update(); }).catch(() => {});
+}
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/benessere-forma/sw.js', { scope: '/benessere-forma/' })
     .then(reg => {
-      // Quando il browser scarica un nuovo SW, ricarica la pagina automaticamente
+      if(reg.waiting && navigator.serviceWorker.controller) segnalaVersioneNuova();
       reg.addEventListener('updatefound', () => {
         const newWorker = reg.installing;
+        if(!newWorker) return;
         newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) segnalaVersioneNuova();
         });
       });
-      // Controlla aggiornamenti ogni 3 minuti (invece di aspettare la prossima navigazione)
+      // Controllo periodico (3 minuti) e al ritorno in primo piano
       setInterval(() => reg.update(), 3 * 60 * 1000);
     })
     .catch(() => {});
+  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') controllaAggiornamenti(); });
 }
 
 </script>

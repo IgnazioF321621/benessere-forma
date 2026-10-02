@@ -476,6 +476,8 @@ select.inp{cursor:pointer;}
 .info-modal h3{font-family:var(--font-sans,'Syne',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
 .info-modal p{font-family:var(--font-sans,'Syne',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
 .foglio-overlay{z-index:1700;}
+.aggiorna-banner{display:none;background:var(--acc);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-align:center;padding:10px 16px;cursor:pointer;letter-spacing:.3px;}
+.aggiorna-banner.visible{display:block;}
 .foglio .inp{margin-bottom:16px;}
 .foglio-bottoni{display:flex;gap:8px;justify-content:flex-end;}
 .foglio-bottoni .btn{flex:1;}
