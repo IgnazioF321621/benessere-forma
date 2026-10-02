@@ -4,6 +4,7 @@
 // errore di Gemini, check non completato, e che nessun byte delle foto finisca nei log.
 //   node worker/test/prova_vision_check.mjs
 import { handleVisionCheck, VISION_MODEL } from '../src/vision-check.js';
+import { _azzeraPorta } from '../src/porta.js';
 
 const U = '11111111-1111-4111-8111-111111111111';
 const ALTRO = '22222222-2222-4222-8222-222222222222';
@@ -19,7 +20,8 @@ const atteso = (nome, got, exp) => {
 const buono = { overall: 'migliorato', confidence: 'alta', areas: [{ zona: 'addome', change: 'più definito', note: 'x' }], photo_quality: { ok: true, issues: [] }, summary: 'Va bene.', suggested_focus: '' };
 
 function scenario(opt) {
-  const o = { risposteGemini: [JSON.stringify(buono)], checks: null, fotoMancanti: [], salvataggi: [], geminiStatus: 200, ...opt };
+  _azzeraPorta();
+  const o = { lettureRecenti: [], risposteGemini: [JSON.stringify(buono)], checks: null, fotoMancanti: [], salvataggi: [], geminiStatus: 200, ...opt };
   const checks = o.checks || [
     { id: C_CUR, user_id: U, status: 'completed', created_at: '2026-08-02T05:38:24Z' },
     { id: C_PREV, user_id: U, status: 'completed', created_at: '2026-07-04T03:32:48Z' },
@@ -30,6 +32,7 @@ function scenario(opt) {
     const res = (body, status = 200) => new Response(typeof body === 'string' ? body : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
     if (u.includes('/auth/v1/user')) return init.headers.Authorization === 'Bearer buono' ? res({ id: U }) : res({ msg: 'bad jwt' }, 401);
     if (u.includes('/rest/v1/body_checks')) return res(checks);
+    if (u.includes('/rest/v1/body_check_ai?select=check_id')) return res(o.lettureRecenti);
     if (u.includes('/rest/v1/body_check_ai?select=')) return res([]);
     if (u.includes('/rest/v1/body_check_photos')) {
       const righe = [];
@@ -50,12 +53,12 @@ function scenario(opt) {
   };
   return { o, chiamateGemini };
 }
-const chiama = async (body, token = 'buono') => {
+const chiama = async (body, token = 'buono', env = {}) => {
   const log = [];
   const orig = console.log;
   console.log = (...a) => log.push(a.join(' '));
   try {
-    const r = await handleVisionCheck(new Request('https://w/vision-check', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) }), { SUPABASE_SERVICE_ROLE_KEY: 'svc', GEMINI_API_KEY: 'gem' }, CORS);
+    const r = await handleVisionCheck(new Request('https://w/vision-check', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) }), { SUPABASE_SERVICE_ROLE_KEY: 'svc', GEMINI_API_KEY: 'gem', ...env }, CORS);
     return { status: r.status, json: await r.json(), log };
   } finally { console.log = orig; }
 };
@@ -111,6 +114,25 @@ atteso('check precedente di un altro · 403', (await chiama(coppia)).status, 403
 s = scenario({ checks: [{ id: C_CUR, user_id: U, status: 'in_progress', created_at: '2026-08-02T05:38:24Z' }, { id: C_PREV, user_id: U, status: 'completed', created_at: '2026-07-04T03:32:48Z' }] });
 atteso('check non completato · 409', [(await chiama(coppia)).status, s.chiamateGemini.length], [409, 0]);
 atteso('id non UUID · 400', (await chiama({ ...coppia, check_id_current: 'x' })).status, 400);
+
+// 8. la porta (Pirsi 010): token solo nell'intestazione, tetto al giorno, limite al minuto
+s = scenario();
+r = await chiama({ ...coppia, access_token: 'buono' }, '');
+atteso('token nel corpo · non vale più', [r.status, r.json.error.kind, s.chiamateGemini.length], [401, 'auth', 0]);
+const altri = (n) => Array.from({ length: n }, (_, i) => ({ check_id: `cccccccc-cccc-4ccc-8ccc-00000000000${i}` }));
+s = scenario({ lettureRecenti: altri(6) });
+r = await chiama(coppia);
+atteso('6 check già letti in 24 ore · 429 daily-limit', [r.status, r.json.error.kind, s.chiamateGemini.length], [429, 'daily-limit', 0]);
+s = scenario({ lettureRecenti: [...altri(5), { check_id: C_CUR }] });
+atteso('5 altri + questo stesso check · passa', (await chiama(coppia)).status, 200);
+s = scenario();
+const giri = [];
+for (let i = 0; i < 4; i++) giri.push((await chiama(coppia)).status);
+atteso('3 richieste al minuto · la quarta 429', [giri, s.chiamateGemini.length], [[200, 200, 200, 429], 3]);
+s = scenario();
+const chiavi = [];
+r = await chiama(coppia, 'buono', { LIMITE_FOTO: { limit: async ({ key }) => { chiavi.push(key); return { success: false }; } } });
+atteso('binding · decide lui, chiave = persona', [r.status, r.json.error.kind, chiavi], [429, 'rate-limit', [`foto:${U}`]]);
 
 console.log(ko ? `\n${ko} KO` : '\ntutto OK');
 process.exit(ko ? 1 : 0);

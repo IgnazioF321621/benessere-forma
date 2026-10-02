@@ -1,24 +1,29 @@
 // Cloudflare Worker — Zona Tracker AI Proxy + Exercise Media cache
 // Routes:
-//   POST /                 -> proxy Groq (compat backwards: tutto il traffico esistente)
+//   POST /                 -> proxy Groq: i testi del coach. Entra solo chi ha un token
+//                            di accesso valido, dal sito dell'app, entro i tetti (src/porta.js)
 //   GET  /exercise-media   -> lookup cache Supabase + auto-fill da ExerciseDB
 //                            params: ?name=<nome_italiano>  (20 storici)
 //                                    ?code=<EX###>          (39 nuovi, catalogo)
 //   POST /vision-check     -> lettura AI delle foto di un check fisico (Gemini, src/vision-check.js)
+//   tutto il resto         -> 404
 // Cron:
 //   lunedì 06:00 Europe/Rome -> Pirsi propone: quadro della settimana chiusa + proposte (src/coach-cron.js)
 
 import { handleVisionCheck } from './vision-check.js';
 import { handleScheduled } from './coach-cron.js';
+import { corsPer, origineRifiutata, tokenDa, personaDaToken, entroIlLimite } from './porta.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const STORAGE_BUCKET = 'exercise-media';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// Tetti della porta dei testi (Pirsi 010). La richiesta più grande dell'app è il
+// piano settimanale: circa 12.000 caratteri di domanda e 4000 token di risposta.
+const MAX_CORPO_BYTE = 64_000;       // corpo della richiesta, prima ancora di leggerlo
+const MAX_DOMANDA_CARATTERI = 24_000; // somma dei testi dei messaggi
+const MAX_MESSAGGI = 8;
+const MAX_RISPOSTA_TOKEN = 4000;     // il più alto che l'app chiede
+const RICHIESTE_AL_MINUTO = 20;      // per persona; uguale al binding in wrangler.toml
 
 // Match approvati esercizio-per-esercizio da Ignazio — lookup per NOME (20 storici).
 // Storage layout: cached_url punta a {edbId}.gif (1 GIF per exerciseId, riuso fra
@@ -256,10 +261,10 @@ const MATCH_BY_CODE = {
   'EX034': { edbId: null,       gifUrl: 'https://wger.de/media/exercise-images/454/447f3c17-405f-46e0-b138-65c2a8caaab0.png', isSurrogate: true, surrogateNote: 'Immagine illustrativa Wger (CC BY-SA 4.0) — stesso movimento: posizione a V, testa verso il basso, gomiti si piegano e risalgono.' },
 };
 
-function jsonResponse(obj, status = 200) {
+function jsonResponse(obj, status = 200, cors = {}) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS },
+    headers: { 'Content-Type': 'application/json', ...cors },
   });
 }
 
@@ -383,24 +388,19 @@ async function handleMediaLookup(env, key, match) {
   //    salta download da ExerciseDB e upload.
   const reusedExisting = await storageObjectExists(cachedUrl);
 
-  let bytesUploaded = null;
   if (!reusedExisting) {
     const gifResp = await fetch(match.gifUrl);
     if (!gifResp.ok) {
-      return jsonResponse({
-        error: 'GIF download failed',
-        gifUrl: match.gifUrl,
-        status: gifResp.status,
-      }, 502);
+      console.log(`[exercise-media] download GIF fallito: ${gifResp.status} ${match.gifUrl}`);
+      return jsonResponse({ status: 'error', error: 'GIF non disponibile' }, 502);
     }
     const gifBuffer = await gifResp.arrayBuffer();
-    bytesUploaded = gifBuffer.byteLength;
     const contentType = mediaExt === 'png' ? 'image/png' : 'image/gif';
     await uploadToStorage(env, storagePath, gifBuffer, contentType);
   }
 
   // 4) Upsert riga DB (cached_url punta sempre a {edbId}.gif)
-  const inserted = await supabaseUpsertRow(env, {
+  await supabaseUpsertRow(env, {
     exercise_name_it: key,
     exercisedb_id: match.edbId,
     cached_url: cachedUrl,
@@ -415,18 +415,11 @@ async function handleMediaLookup(env, key, match) {
     cached_url: cachedUrl,
     is_surrogate: match.isSurrogate ?? false,
     surrogate_note: match.surrogateNote ?? null,
-    exercisedb_id: match.edbId,
-    gif_size_bytes: bytesUploaded,
-    reused_existing_file: reusedExisting,
     from_cache: false,
-    db_row: inserted,
   });
 }
 
 async function handleExerciseMedia(request, env) {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS });
-  }
   if (request.method !== 'GET') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
@@ -440,7 +433,8 @@ async function handleExerciseMedia(request, env) {
   }
 
   if (!env.SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse({ error: 'SUPABASE_SERVICE_ROLE_KEY not configured' }, 500);
+    console.log('[exercise-media] chiave di servizio non configurata');
+    return jsonResponse({ status: 'error', error: 'Servizio non disponibile' }, 500);
   }
 
   try {
@@ -493,20 +487,53 @@ async function handleExerciseMedia(request, env) {
     }
     return await handleMediaLookup(env, name, match);
   } catch (e) {
-    return jsonResponse({ error: e.message }, 500);
+    // Il dettaglio (tabella, stato, testo di Supabase) resta nei log del Worker:
+    // a chi chiama non serve e non va mostrato.
+    console.log(`[exercise-media] ${e && e.message}`);
+    return jsonResponse({ status: 'error', error: 'Errore interno' }, 500);
   }
 }
 
+// Errore della porta, nella stessa forma degli errori di Groq: l'app legge `kind`.
+const errorePorta = (kind, status, message) =>
+  jsonResponse({ error: { source: 'worker', kind, status, code: null, message } }, status);
+
 async function handleGroqProxy(request, env) {
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS });
-  }
   if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return errorePorta('method', 405, 'Solo POST');
   }
 
   try {
-    const body = await request.json();
+    // 1. Chi chiama: token di accesso della persona, come /vision-check.
+    //    'session' e non 'auth': per l'app 'auth' vuol dire chiave Groq guasta.
+    if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.API_KEY) return errorePorta('config', 500, 'Servizio non configurato');
+    const token = tokenDa(request);
+    if (!token) return errorePorta('session', 401, 'Token mancante');
+    let userId;
+    try { userId = await personaDaToken(env, token); }
+    catch (_) { return errorePorta('generic', 502, 'Verifica del token non riuscita'); }
+    if (!userId) return errorePorta('session', 401, 'Token non valido o scaduto');
+
+    // 2. Quante richieste: per persona, al minuto.
+    if (!(await entroIlLimite(env.LIMITE_COACH, `coach:${userId}`, RICHIESTE_AL_MINUTO))) {
+      return errorePorta('rate-limit', 429, 'Troppe richieste in un minuto');
+    }
+
+    // 3. Quanto chiede: corpo, messaggi e risposta hanno un tetto.
+    if (Number(request.headers.get('Content-Length') || 0) > MAX_CORPO_BYTE) return errorePorta('too-large', 413, 'Richiesta troppo grande');
+    const grezzoCorpo = await request.text();
+    if (grezzoCorpo.length > MAX_CORPO_BYTE) return errorePorta('too-large', 413, 'Richiesta troppo grande');
+    let body;
+    try { body = JSON.parse(grezzoCorpo); } catch (_) { return errorePorta('bad-request', 400, 'Corpo della richiesta non leggibile'); }
+    const messages = body && body.messages;
+    if (!Array.isArray(messages) || !messages.length || messages.length > MAX_MESSAGGI
+        || messages.some(m => !m || !['user', 'system', 'assistant'].includes(m.role) || typeof m.content !== 'string' || !m.content)) {
+      return errorePorta('bad-request', 400, 'Messaggi non validi');
+    }
+    if (messages.reduce((n, m) => n + m.content.length, 0) > MAX_DOMANDA_CARATTERI) return errorePorta('too-large', 413, 'Domanda troppo lunga');
+    const chiesti = Number(body.max_tokens);
+    const maxTokens = Math.min(MAX_RISPOSTA_TOKEN, Number.isFinite(chiesti) && chiesti >= 1 ? Math.floor(chiesti) : 400);
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -515,7 +542,8 @@ async function handleGroqProxy(request, env) {
       },
       body: JSON.stringify({
         model: 'openai/gpt-oss-120b',
-        messages: body.messages,
+        // Solo ruolo e testo: nessun altro campo di chi chiama arriva a Groq.
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
         // I budget che manda l'app (150..4000) sono spazio per la RISPOSTA, tarati
         // su Llama che non ragionava. gpt-oss-120b spende token per ragionare prima
         // di rispondere e li prende dallo stesso budget: senza margine la risposta
@@ -531,7 +559,7 @@ async function handleGroqProxy(request, env) {
         // 600 copre il ragionamento misurato sul piano (567 token) e porta
         // l'ammissione a ~7588. NON e' il numero definitivo: e' un taglio prudente
         // in attesa di misurare usage su piu' generazioni e piu' profili.
-        max_completion_tokens: (body.max_tokens || 400) + 600,
+        max_completion_tokens: maxTokens + 600,
         // 'low': queste sono estrazioni strutturate, non problemi da risolvere.
         reasoning_effort: 'low',
         // I GPT-OSS non supportano reasoning_format: usano include_reasoning.
@@ -594,22 +622,38 @@ async function handleGroqProxy(request, env) {
     if (data.usage) ok.usage = data.usage;
     return jsonResponse(ok);
   } catch (error) {
+    console.log(`[coach] eccezione: ${error && error.message}`);
     return jsonResponse({
-      error: { source: 'worker', kind: 'exception', status: null, code: null, message: error.message },
+      error: { source: 'worker', kind: 'exception', status: null, code: null, message: 'Errore interno' },
     }, 500);
   }
 }
 
+// Le risposte nascono senza CORS: le intestazioni si mettono qui, una volta,
+// con l'Origin di questa richiesta.
+function conCors(risposta, cors) {
+  const r = new Response(risposta.body, risposta);
+  for (const [k, v] of Object.entries(cors)) r.headers.set(k, v);
+  return r;
+}
+
+async function instrada(request, env) {
+  const url = new URL(request.url);
+  const rotta = url.pathname === '/' ? 'coach'
+    : url.pathname === '/exercise-media' ? 'media'
+    : url.pathname === '/vision-check' ? 'vision'
+    : null;
+  if (!rotta) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Non trovato' } }, 404);
+  if (origineRifiutata(request)) return jsonResponse({ error: { source: 'worker', kind: 'forbidden', status: 403, code: null, message: 'Origine non ammessa' } }, 403);
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
+  if (rotta === 'media') return handleExerciseMedia(request, env);
+  if (rotta === 'vision') return handleVisionCheck(request, env, {});
+  return handleGroqProxy(request, env);
+}
+
 export default {
   async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === '/exercise-media') {
-      return handleExerciseMedia(request, env);
-    }
-    if (url.pathname === '/vision-check') {
-      return handleVisionCheck(request, env, CORS);
-    }
-    return handleGroqProxy(request, env);
+    return conCors(await instrada(request, env), corsPer(request));
   },
   async scheduled(event, env, ctx) {
     ctx.waitUntil(handleScheduled(event, env, ctx));

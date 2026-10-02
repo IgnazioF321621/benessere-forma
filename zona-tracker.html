@@ -5000,6 +5000,8 @@ function periodCost(range){return activeSupps().reduce((a,s)=>a+(s.price/s.doses
 // casi senza rileggere il body. I kind normalizzati dal Worker sono rate-limit,
 // auth, model-unavailable, empty-response, generic, exception; 'network' lo
 // aggiunge callAI ed e' l'UNICO caso in cui la connessione manca davvero.
+// 'session' = il Worker non riconosce chi chiama (token assente o scaduto):
+// 'auth' resta la chiave del servizio guasta, che per l'utente e' un'altra cosa.
 function _aiError(kind, messaggio, causa) {
   const e = new Error(messaggio);
   e.aiKind = kind;
@@ -5014,6 +5016,7 @@ function aiErrMsg(kind) {
   if (kind === 'rate-limit') return 'Il servizio è momentaneamente sovraccarico, riprova tra un minuto.';
   if (kind === 'auth' || kind === 'model-unavailable') return 'C\'è un problema di configurazione del servizio: riprovare non serve.';
   if (kind === 'network') return 'Connessione assente, controlla la rete.';
+  if (kind === 'session') return 'Sessione scaduta: esci, rientra e riprova.';
   return 'Riprova tra poco.';
 }
 
@@ -5024,13 +5027,22 @@ function cueErrMsg(kind) {
   if (kind === 'rate-limit') return 'Cue non disponibile — servizio sovraccarico, riprova tra poco.';
   if (kind === 'auth' || kind === 'model-unavailable') return 'Cue non disponibile — servizio non configurato.';
   if (kind === 'network') return 'Cue non disponibile — connessione assente.';
+  if (kind === 'session') return 'Cue non disponibile — sessione scaduta: esci e rientra.';
   return 'Cue non disponibile — riprova tra poco.';
 }
 
 async function callAI(prompt, maxTokens=400) {
+  // Il Worker risponde solo a chi ha una sessione valida (Pirsi 010): il token di
+  // accesso viaggia nell'intestazione, come per la lettura delle foto dei check.
+  let token = null;
+  try {
+    const res = await supa.auth.getSession();
+    token = res && res.data && res.data.session && res.data.session.access_token;
+  } catch (_) {}
+  if (!token) throw _aiError('session', 'Sessione assente');
   let r;
   try {
-    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
+    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
   } catch (e) {
     // fetch lancia solo se la richiesta non parte: qui la rete manca sul serio.
     throw _aiError('network', 'Rete non raggiungibile', e);
@@ -17540,6 +17552,7 @@ function bcaErrorMessage(status, err){
   if(kind === 'no-photos') return 'Non trovo le foto di questo check';
   if(kind === 'table-missing') return 'La lettura delle foto non è ancora attiva';
   if(kind === 'timeout' || status === 504) return 'Ci ho messo troppo: riprova tra poco';
+  if(kind === 'daily-limit') return 'Per oggi ho letto abbastanza foto: riprova domani';
   if(kind === 'rate-limit') return 'Troppe richieste in questo momento: riprova tra poco';
   return 'Non sono riuscito a leggere le foto: riprova tra poco';
 }

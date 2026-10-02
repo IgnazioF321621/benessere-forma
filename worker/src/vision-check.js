@@ -10,6 +10,7 @@
 import {
   VISION_PROMPT_VERSION, VISION_SYSTEM_PROMPT, OVERALL, CONFIDENCE, ZONE, CHANGE, ISSUES,
 } from './prompts/vision-check-2026-09-13.js';
+import { entroIlLimite } from './porta.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 const PHOTO_BUCKET = 'body-check-photos';
@@ -22,6 +23,8 @@ const POSE_IT = { front: 'fronte', right: 'profilo destro', left: 'profilo sinis
 const MAX_SIDE = 1024;                   // lato lungo delle foto mandate al modello
 const DEADLINE_MS = 60_000;              // tempo massimo di tutta la chiamata
 const MIN_INTERVAL_MS = 10 * 60_000;     // una lettura per check ogni 10 minuti
+const MAX_LETTURE_GIORNO = 6;             // check diversi letti da una persona nelle ultime 24 ore
+const LETTURE_AL_MINUTO = 3;             // richieste di lettura per persona, al minuto
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Anti doppio tocco dentro lo stesso isolate: due richieste per lo stesso check
@@ -48,7 +51,8 @@ export async function handleVisionCheck(request, env, cors) {
     const currentId = body && body.check_id_current;
     const previousId = (body && body.check_id_previous) || null;
     const auth = request.headers.get('Authorization') || '';
-    const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : (body && body.access_token) || '';
+    // Il token viaggia solo nell'intestazione: nel corpo finirebbe in ogni log che lo registra.
+    const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
     if (!token) throw new VisionError(401, 'auth', 'Token mancante');
     if (!UUID_RE.test(String(userId || '')) || !UUID_RE.test(String(currentId || '')) || (previousId && !UUID_RE.test(String(previousId)))) {
       throw new VisionError(400, 'bad-request', 'user_id, check_id_current e check_id_previous devono essere UUID');
@@ -59,6 +63,11 @@ export async function handleVisionCheck(request, env, cors) {
     const user = await supabaseUser(env, token);
     if (!user) throw new VisionError(401, 'auth', 'Token non valido o scaduto');
     if (user.id !== userId) throw new VisionError(403, 'forbidden', "Il token non appartiene a quest'utente");
+
+    // 1a. Quante richieste: per persona, al minuto (stesso meccanismo della porta dei testi)
+    if (!(await entroIlLimite(env.LIMITE_FOTO, `foto:${userId}`, LETTURE_AL_MINUTO))) {
+      throw new VisionError(429, 'rate-limit', 'Troppe richieste in un minuto');
+    }
 
     // 1b. I check esistono, sono dell'utente, sono completati, e il precedente viene prima
     const ids = previousId ? [currentId, previousId] : [currentId];
@@ -81,6 +90,13 @@ export async function handleVisionCheck(request, env, cors) {
     if (existing[0] && Date.now() - new Date(existing[0].created_at).getTime() < MIN_INTERVAL_MS) {
       const attesa = Math.ceil((MIN_INTERVAL_MS - (Date.now() - new Date(existing[0].created_at).getTime())) / 1000);
       throw new VisionError(429, 'too-soon', 'Lettura già fatta da meno di 10 minuti', { retry_after_s: attesa });
+    }
+    // 1d. Tetto al giorno: i check diversi letti nelle ultime 24 ore. Rileggere lo
+    //     stesso check non aggiunge righe (una per check): lì il freno resta quello dei 10 minuti.
+    const daIeri = new Date(Date.now() - 86_400_000).toISOString();
+    const recenti = await sbSelect(env, `body_check_ai?select=check_id&user_id=eq.${userId}&created_at=gte.${encodeURIComponent(daIeri)}&limit=${MAX_LETTURE_GIORNO + 1}`, { tableKind: true });
+    if (recenti.filter(r => r.check_id !== currentId).length >= MAX_LETTURE_GIORNO) {
+      throw new VisionError(429, 'daily-limit', 'Tetto di letture al giorno raggiunto');
     }
 
     // 2. Foto e misure dei due check

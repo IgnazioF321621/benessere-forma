@@ -21,6 +21,8 @@ node tools/banco/prova_pirsi_card.js [cartella] # card «Pirsi propone», Accett
 TZ=UTC node worker/test/prova_coach_cron.mjs # il cron del lunedì con fetch finto, in UTC come Cloudflare
 TZ=UTC node worker/test/vivo_coach_cron.mjs  # dal vivo, in prova: quadri del Worker contro quelli del telefono, giro senza scritture
 node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch finto (niente jsdom)
+node tools/banco/prova_porta_coach.js    # callAI manda il token della persona; senza sessione non chiama (Pirsi 010)
+node worker/test/prova_porta_coach.mjs   # la porta dei testi del Worker: token, sito, tetti, 404, limite per persona (Pirsi 010)
 ```
 
 ## Cosa è finto e cosa no

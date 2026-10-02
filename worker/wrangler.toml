@@ -16,3 +16,15 @@ binding = "IMAGES"
 # 04:00 d'estate (CEST) e 05:00 d'inverno (CET); il Worker lavora solo in quello che a Roma sono le 6.
 [triggers]
 crons = ["0 4 * * 1", "0 5 * * 1"]
+
+# Limite di richieste per persona (Pirsi 010). La chiave è l'id della persona.
+# Senza questi binding il Worker ripiega su un conto in memoria (src/porta.js).
+[[ratelimits]]
+name = "LIMITE_COACH"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "LIMITE_FOTO"
+namespace_id = "1002"
+simple = { limit = 3, period = 60 }
