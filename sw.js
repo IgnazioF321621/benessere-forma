@@ -18,6 +18,8 @@ const APP_FILES = [
   'app/body.js',
   'app/nutrition.js',
   'app/home.js',
+  'app/training_generatore.js',
+  'app/training.js',
   'shared/nutrizione.js',
   'shared/coach_rules.js',
   'shared/quadro.js',
