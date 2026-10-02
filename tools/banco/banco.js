@@ -24,7 +24,9 @@ function makeSupaMock(tables){
     api.maybeSingle = () => { st.single = true; return run(); };
     api.single = () => { st.single = true; return run(); };
     api.then = (res, rej) => run().then(res, rej);
-    function run(){
+    // tables.__attesa = () => Promise: ogni risposta aspetta quella promessa (per contare le ondate di letture)
+    function run(){ const r = runOra(); return tables.__attesa ? tables.__attesa().then(() => r) : r; }
+    function runOra(){
       calls.push(st);
       // tables.__assenti = ['nome']: la tabella non esiste (migrazione non eseguita) → PGRST205
       if((tables.__assenti || []).includes(table)) return Promise.resolve({ data:null, error:{ code:'PGRST205', message:`Could not find the table 'public.${table}' in the schema cache` } });

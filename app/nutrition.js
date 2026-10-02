@@ -318,23 +318,22 @@ async function loadAllDays() {
   // Pasti e ingredienti a pagine (L13), 2 ott 2026. Senza, oltre le 1000 righe
   // sparivano i pasti piu' recenti (ordine dal piu' vecchio) e un gruppo di
   // ingredienti a caso (ordine per sola posizione). Silenziose: girano all'avvio.
-  const {data:meals,   error:mealsErr}   = await dbqAll('leggere lo storico dei pasti', () => supa.from('meals')
-    .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
-    .eq('user_id', ST.user.id)
-    .order('date', {ascending:true})
-    .order('id',   {ascending:true}), {silenzioso:true});
-  // FASE 3: carica TUTTI i meal_items dell'utente
-  const {data: allItems, error: itemsErr} = await dbqAll('leggere gli ingredienti dei pasti', () => supa.from('meal_items')
-    .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order')
-    .eq('user_id', ST.user.id)
-    .order('sort_order', {ascending: true})
-    .order('id',         {ascending: true}), {silenzioso:true});
-  const itemsByMeal = {};
-  (allItems || []).forEach(it => {
-    if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
-    itemsByMeal[it.meal_id].push(it);
-  });
-  const {data:fasting, error:fastingErr} = await supa.from('fasting_days').select('date').eq('user_id', ST.user.id);
+  // Le quattro letture partono insieme (Fondamenta 100, tappa 3): pasti, ingredienti, digiuni e
+  // integratori dello storico non dipendono l'una dall'altra. Si mettono insieme solo dopo.
+  const lettureInsieme = Promise.all([
+    dbqAll('leggere lo storico dei pasti', () => supa.from('meals')
+      .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
+      .eq('user_id', ST.user.id)
+      .order('date', {ascending:true})
+      .order('id',   {ascending:true}), {silenzioso:true}),
+    // FASE 3: carica TUTTI i meal_items dell'utente
+    dbqAll('leggere gli ingredienti dei pasti', () => supa.from('meal_items')
+      .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order')
+      .eq('user_id', ST.user.id)
+      .order('sort_order', {ascending: true})
+      .order('id',         {ascending: true}), {silenzioso:true}),
+    supa.from('fasting_days').select('date').eq('user_id', ST.user.id),
+  ]);
   // supplements_log dello storico — DUE correzioni, 9 ago 2026:
   //
   // 1. is_extra=false. Mancava, quindi le righe extra finivano qui dentro e nei
@@ -365,6 +364,12 @@ async function loadAllDays() {
       if(blocco.length < BLOCCO) break;
     }
   }
+  const [{data:meals, error:mealsErr}, {data: allItems, error: itemsErr}, {data:fasting, error:fastingErr}] = await lettureInsieme;
+  const itemsByMeal = {};
+  (allItems || []).forEach(it => {
+    if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
+    itemsByMeal[it.meal_id].push(it);
+  });
 
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   // Lo stesso vale per gli ingredienti: pasti senza ingredienti sarebbero uno storico
