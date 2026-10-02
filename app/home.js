@@ -100,8 +100,20 @@ async function loadTrainingHomeData(){
 }
 
 // Home V2 (Fase D Giro 1) — sostituisce la home legacy.
-// Alias mantenuto per i 7 chiamanti storici (loadTrainingHomeData, loadBodyLogs, ecc.).
-function renderHome(){ renderHomeV2(); }
+// Alias per i chiamanti storici (loadTrainingHomeData, loadBodyLogs, ecc.). Dal 2 ottobre 2026
+// (Fondamenta 100, tappa 1) non disegna subito: prenota un disegno al prossimo fotogramma, e chi
+// lo chiede nel frattempo trova la prenotazione già fatta. All'apertura i caricamenti della Home
+// finiscono a grappolo e la disegnavano sette volte di fila; ora una per fotogramma.
+// renderHomeV2 resta il disegno vero, subito: per chi deve leggere la pagina appena disegnata
+// (le prove del banco).
+let _homePrenotato = false;
+function renderHome(){
+  if(_homePrenotato) return;
+  _homePrenotato = true;
+  const disegna = () => { _homePrenotato = false; renderHomeV2(); };
+  if(typeof requestAnimationFrame === 'function') requestAnimationFrame(disegna);
+  else setTimeout(disegna, 0);
+}
 
 // Calcola il "prossimo checkpoint" Body partendo dall'ultimo check fisico completato.
 // Frequenza checkpoint: 42 giorni (decisione "ogni 6 settimane"). Sorgente: timeline unificata

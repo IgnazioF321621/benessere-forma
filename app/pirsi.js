@@ -181,6 +181,7 @@ const COACH_SUPPORTED_DAYS = [4, 5];      // rotazioni che esistono davvero (CLA
 const COACH_HISTORY_WEEKS = 8;
 let _cpTableOk = true;                    // false se coach_proposals non risponde: da lì niente card né generazione
 let _cpEnsureStarted = false;
+let _cpLettura = null;                    // la lettura delle proposte di questa apertura: chi la chiede dopo riusa la stessa
 function _cpTableError(res, cosa){
   if(!res.error) return false;
   const code = res.error.code || '';
@@ -190,8 +191,18 @@ function _cpTableError(res, cosa){
 }
 // ST.coachProposals: righe delle ultime settimane (tutti gli stati), per la card e per le regole.
 // ST.coachDeloads: date degli scarichi anticipati accettati, lette da getCycleWeekInfo.
-async function loadCoachProposals(){
-  if(!_wpUsable() || !_cpTableOk) return ST.coachProposals || [];
+// Si legge una volta per apertura (Fondamenta 100, tappa 1): all'apertura della Home la chiedono
+// sia loadTrainingAllCompleted sia ensureCoachProposals, e sono tre richieste a lettura. Chi arriva
+// dopo riusa la lettura già fatta, finita o ancora in corso. {force:true} rilegge davvero (dopo aver
+// salvato proposte nuove). Una lettura fallita non si tiene: la richiesta successiva riprova.
+function loadCoachProposals(opts){
+  if(!_wpUsable() || !_cpTableOk) return Promise.resolve(ST.coachProposals || []);
+  if(!_cpLettura || (opts && opts.force)){
+    _cpLettura = _cpLeggi().then(ok => { if(!ok) _cpLettura = null; return ST.coachProposals || []; }, e => { _cpLettura = null; throw e; });
+  }
+  return _cpLettura;
+}
+async function _cpLeggi(){
   const da = wpAddDays(wpMonday(), -7 * (COACH_HISTORY_WEEKS + 1));
   const [res, sc, pr] = await Promise.all([
     dbq('leggere le proposte di ' + COACH_NAME, supa.from('coach_proposals').select('*')
@@ -201,7 +212,7 @@ async function loadCoachProposals(){
     dbq('leggere le proteine accettate', supa.from('coach_proposals').select('change, applied_at')
       .eq('user_id', ST.user.id).eq('kind', 'protein').eq('status', 'accepted').order('applied_at').range(0, 999), { silenzioso:true }),
   ]);
-  if(_cpTableError(res, 'lettura proposte')) return ST.coachProposals || [];
+  if(_cpTableError(res, 'lettura proposte')) return false;
   ST.coachProposals = res.data || [];
   if(!sc.error) ST.coachDeloads = (sc.data || []).filter(r => r.applied_at).map(r => dayKey(new Date(r.applied_at)));
   if(!pr.error){
@@ -210,7 +221,7 @@ async function loadCoachProposals(){
     _cpSetProteinFloor(ultima ? Number(ultima.change.target_protein.to) : null);
     if(prima !== ST.coachProteinFloor && ST.profile) applyProfile(ST.profile);   // il minimo è cambiato: TARGET si riallinea
   }
-  return ST.coachProposals;
+  return true;
 }
 async function ensureCoachProposals(){
   if(_cpEnsureStarted || !_wpUsable() || !_cpTableOk) return;
@@ -241,7 +252,7 @@ async function ensureCoachProposals(){
       .upsert(righe, { onConflict: 'user_id,week_start,kind', ignoreDuplicates: true }), { silenzioso:true });
     if(_cpTableError(ins, 'salvataggio proposte')) return;
     console.log('[pirsi] ' + righe.length + ' proposte generate dall\'app per la settimana ' + ws);
-    await loadCoachProposals();
+    await loadCoachProposals({ force:true });   // le righe appena salvate
     _wpRerenderIfOpen();
   } catch(e){
     console.warn('[pirsi] generazione:', e);
