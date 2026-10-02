@@ -22,6 +22,7 @@ const APP_FILES = [
   'app/training.js',
   'app/pirsi.js',
   'app/onboarding.js',
+  'app/impostazioni.js',
   'shared/nutrizione.js',
   'shared/coach_rules.js',
   'shared/quadro.js',
