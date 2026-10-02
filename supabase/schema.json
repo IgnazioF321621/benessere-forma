@@ -1,0 +1,6586 @@
+{
+ "progetto": "qxiyeiahpoiliwpqslpr",
+ "quando": "2026-10-02",
+ "righe": [
+  {
+   "righe": 0,
+   "tabella": "ai_memory"
+  },
+  {
+   "righe": 1601,
+   "tabella": "biblioteca_gif"
+  },
+  {
+   "righe": 0,
+   "tabella": "blood_tests"
+  },
+  {
+   "righe": 4,
+   "tabella": "body_check_ai"
+  },
+  {
+   "righe": 20,
+   "tabella": "body_check_photos"
+  },
+  {
+   "righe": 6,
+   "tabella": "body_checks"
+  },
+  {
+   "righe": 5,
+   "tabella": "body_logs"
+  },
+  {
+   "righe": 5,
+   "tabella": "body_measurements"
+  },
+  {
+   "righe": 25,
+   "tabella": "coach_proposals"
+  },
+  {
+   "righe": 725,
+   "tabella": "esercizi_catalog"
+  },
+  {
+   "righe": 57,
+   "tabella": "exercise_media"
+  },
+  {
+   "righe": 3,
+   "tabella": "fasting_days"
+  },
+  {
+   "righe": 2609,
+   "tabella": "meal_items"
+  },
+  {
+   "righe": 928,
+   "tabella": "meals"
+  },
+  {
+   "righe": 66,
+   "tabella": "nutrilite_catalog"
+  },
+  {
+   "righe": 4,
+   "tabella": "profiles"
+  },
+  {
+   "righe": 102,
+   "tabella": "schede_utente"
+  },
+  {
+   "righe": 32,
+   "tabella": "supplement_package_items"
+  },
+  {
+   "righe": 11,
+   "tabella": "supplement_packages"
+  },
+  {
+   "righe": 42,
+   "tabella": "supplements"
+  },
+  {
+   "righe": 2359,
+   "tabella": "supplements_log"
+  },
+  {
+   "righe": 1761,
+   "tabella": "training_logs"
+  },
+  {
+   "righe": 24,
+   "tabella": "training_notes"
+  },
+  {
+   "righe": 24,
+   "tabella": "weekly_pictures"
+  },
+  {
+   "righe": 0,
+   "tabella": "weekly_plan_acceptance"
+  },
+  {
+   "righe": 546,
+   "tabella": "weekly_plan_meals"
+  },
+  {
+   "righe": 40,
+   "tabella": "weekly_plans"
+  },
+  {
+   "righe": 20,
+   "tabella": "weight_logs"
+  },
+  {
+   "righe": 1757,
+   "tabella": "workout_sets"
+  },
+  {
+   "righe": 114,
+   "tabella": "workouts"
+  }
+ ],
+ "schema": {
+  "bucket": [
+   {
+    "id": "biblioteca-gif",
+    "limite_byte": null,
+    "name": "biblioteca-gif",
+    "pubblico": true,
+    "tipi_ammessi": null
+   },
+   {
+    "id": "body-check-photos",
+    "limite_byte": null,
+    "name": "body-check-photos",
+    "pubblico": false,
+    "tipi_ammessi": null
+   },
+   {
+    "id": "exercise-media",
+    "limite_byte": null,
+    "name": "exercise-media",
+    "pubblico": true,
+    "tipi_ammessi": null
+   }
+  ],
+  "colonne": [
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "ai_memory",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "ai_memory",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "category",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "ai_memory",
+    "tipo": "text"
+   },
+   {
+    "colonna": "content",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "ai_memory",
+    "tipo": "text"
+   },
+   {
+    "colonna": "confidence",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "0.50",
+    "tabella": "ai_memory",
+    "tipo": "numeric(3,2)"
+   },
+   {
+    "colonna": "evidence_count",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "1",
+    "tabella": "ai_memory",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "last_observed",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "CURRENT_DATE",
+    "tabella": "ai_memory",
+    "tipo": "date"
+   },
+   {
+    "colonna": "active",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "true",
+    "tabella": "ai_memory",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 9,
+    "predefinito": "now()",
+    "tabella": "ai_memory",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "biblioteca_gif",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "slug",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nome_italiano",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nome_originale",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "categoria",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "gruppo_muscolare",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "storage_path",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "storage_url",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "biblioteca_gif",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": "now()",
+    "tabella": "biblioteca_gif",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "blood_tests",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "test_date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "date"
+   },
+   {
+    "colonna": "hemoglobin",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "ferritin",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "glucose",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "cholesterol_tot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "hdl",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "triglycerides",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "creatinine",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(4,2)"
+   },
+   {
+    "colonna": "alt",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "vitamin_d",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "vitamin_b12",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "tsh",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 16,
+    "predefinito": "now()",
+    "tabella": "blood_tests",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "body_check_ai",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "check_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "previous_check_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "model",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "text"
+   },
+   {
+    "colonna": "result",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "confidence",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "body_check_ai",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "body_check_ai",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "body_check_photos",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "check_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "body_check_photos",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "body_check_photos",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "pose",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "body_check_photos",
+    "tipo": "text"
+   },
+   {
+    "colonna": "storage_path",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "body_check_photos",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "now()",
+    "tabella": "body_check_photos",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "body_checks",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "body_checks",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "check_type",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": "'initial'::text",
+    "tabella": "body_checks",
+    "tipo": "text"
+   },
+   {
+    "colonna": "status",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": "'in_progress'::text",
+    "tabella": "body_checks",
+    "tipo": "text"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "body_checks",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "now()",
+    "tabella": "body_checks",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "completed_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "body_checks",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "body_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "date"
+   },
+   {
+    "colonna": "weight_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "waist_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "bf_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(4,1)"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "body_logs",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "muscle_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "visceral_fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(4,1)"
+   },
+   {
+    "colonna": "hip_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "chest_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "bicep_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "numeric(4,1)"
+   },
+   {
+    "colonna": "body_age",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "body_logs",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "body_measurements",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "check_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "weight_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "height_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "waist_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "chest_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "hips_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "shoulders_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "neck_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "biceps_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "wrist_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "thigh_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "calf_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "body_fat_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(4,1)"
+   },
+   {
+    "colonna": "muscle_mass_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "visceral_fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(3,0)"
+   },
+   {
+    "colonna": "metabolic_age",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 18,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "body_water_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 19,
+    "predefinito": null,
+    "tabella": "body_measurements",
+    "tipo": "numeric(4,1)"
+   },
+   {
+    "colonna": "unit_system",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 20,
+    "predefinito": "'metric'::text",
+    "tabella": "body_measurements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 21,
+    "predefinito": "now()",
+    "tabella": "body_measurements",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "coach_proposals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "week_start",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "date"
+   },
+   {
+    "colonna": "kind",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "title",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "reason",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "evidence",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "'{}'::jsonb",
+    "tabella": "coach_proposals",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "change",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "status",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 9,
+    "predefinito": "'pending'::text",
+    "tabella": "coach_proposals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "decided_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "applied_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "coach_proposals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 12,
+    "predefinito": "now()",
+    "tabella": "coach_proposals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "codice",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nome",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "pattern",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "attrezzo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "luogo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "muscoli",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "livello",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "zone_rischio",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "adattamento",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "alternativa",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "setup",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "esecuzione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "errori",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nota_sicurezza",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "updated_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": "now()",
+    "tabella": "esercizi_catalog",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "uso",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "surrogato_attrezzo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nota_surrogato",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 18,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "gruppo_target",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 19,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "esecuzione_surrogato",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 20,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "errori_surrogato",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 21,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "gif_slug",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 22,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nome_en",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 23,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "exercise_name_it",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": null,
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "exercisedb_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "cached_url",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "status",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": "'pending'::text",
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "is_surrogate",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": "false",
+    "tabella": "exercise_media",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "surrogate_note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "source",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": "'exercisedb'::text",
+    "tabella": "exercise_media",
+    "tipo": "text"
+   },
+   {
+    "colonna": "last_updated",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "exercise_media",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "fasting_days",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "fasting_days",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "fasting_days",
+    "tipo": "date"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "meal_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "meal_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "meal_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "meal_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "meal_items",
+    "tipo": "text"
+   },
+   {
+    "colonna": "quantity",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "numeric(7,1)"
+   },
+   {
+    "colonna": "unit",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "'g'::text",
+    "tabella": "meal_items",
+    "tipo": "text"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 9,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 10,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "source",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 11,
+    "predefinito": "'manual'::text",
+    "tabella": "meal_items",
+    "tipo": "text"
+   },
+   {
+    "colonna": "sort_order",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 12,
+    "predefinito": "0",
+    "tabella": "meal_items",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 13,
+    "predefinito": "now()",
+    "tabella": "meal_items",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "meals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "date"
+   },
+   {
+    "colonna": "time",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "slot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "description",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": "now()",
+    "tabella": "meals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "a",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "bigint"
+   },
+   {
+    "colonna": "codice",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "linea",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "nome",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "categoria",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "confezione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "dose_die",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "dosi_conf",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "durata_giorni",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "vp_conf",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "vp_dose",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "prezzo_partner",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "costo_dose_partner",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "costo_mensile_partner",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": "now()",
+    "tabella": "nutrilite_catalog",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "carbo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "proteine",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 18,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "grassi",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 19,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "dose_unit",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 20,
+    "predefinito": null,
+    "tabella": "nutrilite_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "dose_multiplier",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 21,
+    "predefinito": "'1'::numeric",
+    "tabella": "nutrilite_catalog",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "first_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "last_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "age",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "sex",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "height_cm",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "weight_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "goal_weight_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "activity_level",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": "'moderate'::text",
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "target_kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": "now()",
+    "tabella": "profiles",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "updated_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": "now()",
+    "tabella": "profiles",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "cognome",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "data_nascita",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "date"
+   },
+   {
+    "colonna": "obiettivo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 18,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "dieta",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 19,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "intolleranze",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 20,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text[]"
+   },
+   {
+    "colonna": "note_salute",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 21,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "tipo_allenamento",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 22,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "giorni_allenamento",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 23,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "giorno_recupero",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 24,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "durata_sessione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 25,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "piano_ai",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 26,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "esami_sangue",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 27,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "train_start_date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 28,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "date"
+   },
+   {
+    "colonna": "m2_skipped",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 29,
+    "predefinito": "false",
+    "tabella": "profiles",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "plan_generation_day",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 30,
+    "predefinito": "'sun'::text",
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "plan_generation_time",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 31,
+    "predefinito": "'20:00'::text",
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "weight_tracking_mode",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 32,
+    "predefinito": "'flexible'::text",
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "attrezzatura",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 33,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text[]"
+   },
+   {
+    "colonna": "usa_training",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 34,
+    "predefinito": "true",
+    "tabella": "profiles",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "volume_sessione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 35,
+    "predefinito": "'completo'::text",
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "schede_utente",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "schede_utente",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "blocco_n",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": "1",
+    "tabella": "schede_utente",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "scheda",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "schede_utente",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "attiva",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "true",
+    "tabella": "schede_utente",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "now()",
+    "tabella": "schede_utente",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "supplement_package_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "package_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "supplement_package_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "supplement_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "supplement_package_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "supplement_package_items",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "sort_order",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "0",
+    "tabella": "supplement_package_items",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "now()",
+    "tabella": "supplement_package_items",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "supplement_packages",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "supplement_packages",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "supplement_packages",
+    "tipo": "text"
+   },
+   {
+    "colonna": "emoji",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": "'📦'::text",
+    "tabella": "supplement_packages",
+    "tipo": "text"
+   },
+   {
+    "colonna": "time",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "supplement_packages",
+    "tipo": "text"
+   },
+   {
+    "colonna": "sort_order",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "0",
+    "tabella": "supplement_packages",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "supplement_packages",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "supplements",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "sort_order",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "slot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "grp",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "active",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": "true",
+    "tabella": "supplements",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "numeric(6,1)"
+   },
+   {
+    "colonna": "price",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": "0",
+    "tabella": "supplements",
+    "tipo": "numeric(8,2)"
+   },
+   {
+    "colonna": "doses",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": "30",
+    "tabella": "supplements",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": "now()",
+    "tabella": "supplements",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "codice",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": null,
+    "tabella": "supplements",
+    "tipo": "text"
+   },
+   {
+    "colonna": "quantity",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": "1",
+    "tabella": "supplements",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "supplements_log",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "date"
+   },
+   {
+    "colonna": "slot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "supplement_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "taken",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": "false",
+    "tabella": "supplements_log",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "supplements_log",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "is_extra",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "false",
+    "tabella": "supplements_log",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "supplement_codice",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "dose",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "dose_unit",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": "0",
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "carbo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": "0",
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "proteine",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": "0",
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "grassi",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": "0",
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "costo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 16,
+    "predefinito": "0",
+    "tabella": "supplements_log",
+    "tipo": "numeric"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "training_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "date"
+   },
+   {
+    "colonna": "session_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "exercise_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "set_number",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "reps",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "resistance",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "rir_actual",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": "now()",
+    "tabella": "training_logs",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "band_color",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "training_notes",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "training_notes",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "exercise_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "training_notes",
+    "tipo": "text"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "training_notes",
+    "tipo": "date"
+   },
+   {
+    "colonna": "note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "training_notes",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": "now()",
+    "tabella": "training_notes",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "updated_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "training_notes",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "weekly_pictures",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "weekly_pictures",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "week_start",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "weekly_pictures",
+    "tipo": "date"
+   },
+   {
+    "colonna": "picture",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "weekly_pictures",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "computed_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "now()",
+    "tabella": "weekly_pictures",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "plan_meal_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "status",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "text"
+   },
+   {
+    "colonna": "actual_meal_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "weekly_plan_meals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "plan_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "day_of_week",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "slot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "description",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "ai_explanation",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "sort_order",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 12,
+    "predefinito": "0",
+    "tabella": "weekly_plan_meals",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 13,
+    "predefinito": "now()",
+    "tabella": "weekly_plan_meals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "ingredients",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "meal_time",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": null,
+    "tabella": "weekly_plan_meals",
+    "tipo": "text"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "weekly_plans",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "week_start",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "date"
+   },
+   {
+    "colonna": "target_kcal",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_protein",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_carbs",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "target_fat",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "ai_reasoning",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "weekly_plans",
+    "tipo": "text"
+   },
+   {
+    "colonna": "status",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 9,
+    "predefinito": "'draft'::text",
+    "tabella": "weekly_plans",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 10,
+    "predefinito": "now()",
+    "tabella": "weekly_plans",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "weight_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "weight_logs",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "weight_logs",
+    "tipo": "date"
+   },
+   {
+    "colonna": "weight_kg",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "weight_logs",
+    "tipo": "numeric(5,2)"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "now()",
+    "tabella": "weight_logs",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "workout_sets",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "workout_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "date"
+   },
+   {
+    "colonna": "session_type",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "text"
+   },
+   {
+    "colonna": "exercise_name",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "text"
+   },
+   {
+    "colonna": "set_number",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "reps",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "resistance",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "unit",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": "'kg'::text",
+    "tabella": "workout_sets",
+    "tipo": "text"
+   },
+   {
+    "colonna": "rir_actual",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": "now()",
+    "tabella": "workout_sets",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "band_color",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "workout_sets",
+    "tipo": "text"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "workouts",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "date"
+   },
+   {
+    "colonna": "session_type",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "text"
+   },
+   {
+    "colonna": "completed",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": "false",
+    "tabella": "workouts",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "duration_min",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "notes",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "workouts",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "text"
+   }
+  ],
+  "estensioni": [
+   {
+    "nome": "pg_stat_statements",
+    "schema": "extensions"
+   },
+   {
+    "nome": "pgcrypto",
+    "schema": "extensions"
+   },
+   {
+    "nome": "plpgsql",
+    "schema": "pg_catalog"
+   },
+   {
+    "nome": "supabase_vault",
+    "schema": "vault"
+   },
+   {
+    "nome": "uuid-ossp",
+    "schema": "extensions"
+   }
+  ],
+  "funzioni": [
+   {
+    "argomenti": "",
+    "definizione": "CREATE OR REPLACE FUNCTION public.rls_auto_enable()\n RETURNS event_trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\nDECLARE\n  cmd record;\nBEGIN\n  FOR cmd IN\n    SELECT *\n    FROM pg_event_trigger_ddl_commands()\n    WHERE command_tag IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')\n      AND object_type IN ('table','partitioned table')\n  LOOP\n     IF cmd.schema_name IS NOT NULL AND cmd.schema_name IN ('public') AND cmd.schema_name NOT IN ('pg_catalog','information_schema') AND cmd.schema_name NOT LIKE 'pg_toast%' AND cmd.schema_name NOT LIKE 'pg_temp%' THEN\n      BEGIN\n        EXECUTE format('alter table if exists %s enable row level security', cmd.object_identity);\n        RAISE LOG 'rls_auto_enable: enabled RLS on %', cmd.object_identity;\n      EXCEPTION\n        WHEN OTHERS THEN\n          RAISE LOG 'rls_auto_enable: failed to enable RLS on %', cmd.object_identity;\n      END;\n     ELSE\n        RAISE LOG 'rls_auto_enable: skip % (either system schema or not in enforced list: %.)', cmd.object_identity, cmd.schema_name;\n     END IF;\n  END LOOP;\nEND;\n$function$\n",
+    "nome": "rls_auto_enable"
+   },
+   {
+    "argomenti": "",
+    "definizione": "CREATE OR REPLACE FUNCTION public.set_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$function$\n",
+    "nome": "set_updated_at"
+   }
+  ],
+  "indici": [
+   {
+    "definizione": "CREATE INDEX ai_memory_user_active_idx ON public.ai_memory USING btree (user_id, active, confidence DESC)",
+    "nome": "ai_memory_user_active_idx",
+    "tabella": "ai_memory"
+   },
+   {
+    "definizione": "CREATE INDEX idx_blood_tests_user_date ON public.blood_tests USING btree (user_id, test_date DESC)",
+    "nome": "idx_blood_tests_user_date",
+    "tabella": "blood_tests"
+   },
+   {
+    "definizione": "CREATE INDEX body_check_ai_user_idx ON public.body_check_ai USING btree (user_id)",
+    "nome": "body_check_ai_user_idx",
+    "tabella": "body_check_ai"
+   },
+   {
+    "definizione": "CREATE INDEX idx_body_check_photos_check ON public.body_check_photos USING btree (check_id)",
+    "nome": "idx_body_check_photos_check",
+    "tabella": "body_check_photos"
+   },
+   {
+    "definizione": "CREATE INDEX idx_body_checks_user ON public.body_checks USING btree (user_id, created_at DESC)",
+    "nome": "idx_body_checks_user",
+    "tabella": "body_checks"
+   },
+   {
+    "definizione": "CREATE INDEX idx_body_measurements_user ON public.body_measurements USING btree (user_id, created_at DESC)",
+    "nome": "idx_body_measurements_user",
+    "tabella": "body_measurements"
+   },
+   {
+    "definizione": "CREATE INDEX coach_proposals_user_idx ON public.coach_proposals USING btree (user_id, week_start DESC)",
+    "nome": "coach_proposals_user_idx",
+    "tabella": "coach_proposals"
+   },
+   {
+    "definizione": "CREATE INDEX idx_meal_items_meal_id ON public.meal_items USING btree (meal_id)",
+    "nome": "idx_meal_items_meal_id",
+    "tabella": "meal_items"
+   },
+   {
+    "definizione": "CREATE INDEX idx_meal_items_user_id ON public.meal_items USING btree (user_id)",
+    "nome": "idx_meal_items_user_id",
+    "tabella": "meal_items"
+   },
+   {
+    "definizione": "CREATE INDEX meals_user_date ON public.meals USING btree (user_id, date)",
+    "nome": "meals_user_date",
+    "tabella": "meals"
+   },
+   {
+    "definizione": "CREATE INDEX idx_schede_utente_user ON public.schede_utente USING btree (user_id, created_at DESC)",
+    "nome": "idx_schede_utente_user",
+    "tabella": "schede_utente"
+   },
+   {
+    "definizione": "CREATE UNIQUE INDEX uq_schede_utente_una_attiva ON public.schede_utente USING btree (user_id) WHERE (attiva = true)",
+    "nome": "uq_schede_utente_una_attiva",
+    "tabella": "schede_utente"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplement_package_items_package ON public.supplement_package_items USING btree (package_id)",
+    "nome": "idx_supplement_package_items_package",
+    "tabella": "supplement_package_items"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplement_package_items_supplement ON public.supplement_package_items USING btree (supplement_id)",
+    "nome": "idx_supplement_package_items_supplement",
+    "tabella": "supplement_package_items"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplement_package_items_user ON public.supplement_package_items USING btree (user_id)",
+    "nome": "idx_supplement_package_items_user",
+    "tabella": "supplement_package_items"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplement_packages_user ON public.supplement_packages USING btree (user_id)",
+    "nome": "idx_supplement_packages_user",
+    "tabella": "supplement_packages"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplement_packages_user_sort ON public.supplement_packages USING btree (user_id, sort_order)",
+    "nome": "idx_supplement_packages_user_sort",
+    "tabella": "supplement_packages"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplements_log_date_extra ON public.supplements_log USING btree (user_id, date, is_extra)",
+    "nome": "idx_supplements_log_date_extra",
+    "tabella": "supplements_log"
+   },
+   {
+    "definizione": "CREATE INDEX idx_supplements_log_extra ON public.supplements_log USING btree (user_id, is_extra) WHERE (is_extra = true)",
+    "nome": "idx_supplements_log_extra",
+    "tabella": "supplements_log"
+   },
+   {
+    "definizione": "CREATE INDEX idx_training_notes_user_ex_date ON public.training_notes USING btree (user_id, exercise_name, date DESC)",
+    "nome": "idx_training_notes_user_ex_date",
+    "tabella": "training_notes"
+   },
+   {
+    "definizione": "CREATE INDEX weekly_plan_acceptance_user_created_idx ON public.weekly_plan_acceptance USING btree (user_id, created_at DESC)",
+    "nome": "weekly_plan_acceptance_user_created_idx",
+    "tabella": "weekly_plan_acceptance"
+   },
+   {
+    "definizione": "CREATE INDEX weekly_plan_meals_plan_day_idx ON public.weekly_plan_meals USING btree (plan_id, day_of_week, sort_order)",
+    "nome": "weekly_plan_meals_plan_day_idx",
+    "tabella": "weekly_plan_meals"
+   },
+   {
+    "definizione": "CREATE INDEX weekly_plan_meals_user_idx ON public.weekly_plan_meals USING btree (user_id)",
+    "nome": "weekly_plan_meals_user_idx",
+    "tabella": "weekly_plan_meals"
+   },
+   {
+    "definizione": "CREATE INDEX weekly_plans_user_week_idx ON public.weekly_plans USING btree (user_id, week_start DESC)",
+    "nome": "weekly_plans_user_week_idx",
+    "tabella": "weekly_plans"
+   },
+   {
+    "definizione": "CREATE INDEX weight_logs_user_date_idx ON public.weight_logs USING btree (user_id, date DESC)",
+    "nome": "weight_logs_user_date_idx",
+    "tabella": "weight_logs"
+   }
+  ],
+  "permessi": [
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "ai_memory"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "ai_memory"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "biblioteca_gif"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "biblioteca_gif"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "blood_tests"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "blood_tests"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "body_check_ai"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "body_check_ai"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "body_check_photos"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "body_check_photos"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "body_checks"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "body_checks"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "body_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "body_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "body_measurements"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "body_measurements"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "coach_proposals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "coach_proposals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "esercizi_catalog"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "esercizi_catalog"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "exercise_media"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "exercise_media"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "fasting_days"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "fasting_days"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "meal_items"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "meal_items"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "meals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "meals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "nutrilite_catalog"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "nutrilite_catalog"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "profiles"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "profiles"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "schede_utente"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "schede_utente"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "supplement_package_items"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "supplement_package_items"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "supplement_packages"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "supplement_packages"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "supplements"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "supplements"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "supplements_log"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "supplements_log"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "training_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "training_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "training_notes"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "training_notes"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "weekly_pictures"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "weekly_pictures"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "weekly_plan_acceptance"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "weekly_plan_acceptance"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "weekly_plan_meals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "weekly_plan_meals"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "weekly_plans"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "weekly_plans"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "weight_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "weight_logs"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "workout_sets"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "workout_sets"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "workouts"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "workouts"
+   }
+  ],
+  "regole": [
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_ai_memory",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "ai_memory",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_ai_memory_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "ai_memory",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_ai_memory_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "ai_memory",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_ai_memory_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "ai_memory",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_ai_memory_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "ai_memory",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "read_authenticated",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "biblioteca_gif",
+    "usando": "true"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "blood_tests_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "blood_tests",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "blood_tests_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "blood_tests",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "blood_tests_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "blood_tests",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "blood_tests_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "blood_tests",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "body_check_ai_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_check_ai",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "body_check_photos_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_check_photos",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "body_check_photos_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_check_photos",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "body_check_photos_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_check_photos",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "body_check_photos_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_check_photos",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "body_checks_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_checks",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "body_checks_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_checks",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "body_checks_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_checks",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "body_checks_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_checks",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_body_logs",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "body_logs",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_data",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_logs",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "body_measurements_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_measurements",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "body_measurements_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_measurements",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "body_measurements_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_measurements",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "body_measurements_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "body_measurements",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "((auth.uid() = user_id) AND (status = 'pending'::text) AND (decided_at IS NULL) AND (applied_at IS NULL))",
+    "nome": "coach_proposals_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "coach_proposals",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "coach_proposals_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "coach_proposals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "coach_proposals_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "coach_proposals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "esercizi_catalog_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "esercizi_catalog",
+    "usando": "true"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "exercise_media public read",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "exercise_media",
+    "usando": "true"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "true",
+    "nome": "exercise_media service insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "exercise_media",
+    "usando": null
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "exercise_media service update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "exercise_media",
+    "usando": "true"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "Users see own fasting",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "fasting_days",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "Users can delete own meal items",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "meal_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "Users can insert own meal items",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "meal_items",
+    "usando": null
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "Users can update own meal items",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "meal_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "Users can view own meal items",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "meal_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "Utente vede solo i propri pasti",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "meals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_meals",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "meals",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": "true",
+    "nome": "Catalogo inseribile da service",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "nutrilite_catalog",
+    "usando": "true"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "Catalogo leggibile da tutti",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "nutrilite_catalog",
+    "usando": "true"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "Users manage own profile",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "profiles",
+    "usando": "(auth.uid() = id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_profiles",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "profiles",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_schede",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "schede_utente",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_delete_schede",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "schede_utente",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_insert_schede",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "schede_utente",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_select_schede",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "schede_utente",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "own_update_schede",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "schede_utente",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_package_items",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_package_items",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_package_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_package_items",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_package_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_package_items",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_packages",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_packages",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_packages",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_packages",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_packages",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplement_packages",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "Users manage own supplements",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "supplements",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "Users see own supplements",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "supplements_log",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_supplements_log",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "supplements_log",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_data",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "training_logs",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_delete_training_notes",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "training_notes",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_insert_training_notes",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "training_notes",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_select_training_notes",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "training_notes",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_update_training_notes",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "training_notes",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "weekly_pictures_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_pictures",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "weekly_pictures_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_pictures",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "weekly_pictures_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_pictures",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "weekly_pictures_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_pictures",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_weekly_plan_acceptance",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_acceptance",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_weekly_plan_acceptance_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_acceptance",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plan_acceptance_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_acceptance",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_weekly_plan_acceptance_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_acceptance",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plan_acceptance_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_acceptance",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_weekly_plan_meals",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_meals",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_weekly_plan_meals_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_meals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plan_meals_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_meals",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_weekly_plan_meals_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_meals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plan_meals_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plan_meals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_weekly_plans",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plans",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_weekly_plans_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plans",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plans_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plans",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_weekly_plans_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plans",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weekly_plans_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weekly_plans",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_weight_logs",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weight_logs",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "own_weight_logs_delete",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weight_logs",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weight_logs_insert",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weight_logs",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "own_weight_logs_select",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weight_logs",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "own_weight_logs_update",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "weight_logs",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "user workout_sets",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "workout_sets",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_workouts",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "workouts",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "ALL",
+    "controllo": null,
+    "nome": "user workouts",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "public",
+    "tabella": "workouts",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "body_photos_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'body-check-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "body_photos_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'body-check-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": null,
+    "nome": "body_photos_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'body-check-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "((bucket_id = 'body-check-photos'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+    "nome": "body_photos_upload_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "public"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": null
+   }
+  ],
+  "sequenze": [
+   {
+    "increment_by": 1,
+    "nome": "nutrilite_catalog_id_seq",
+    "start_value": 1,
+    "tipo": "bigint"
+   }
+  ],
+  "tabelle": [
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "ai_memory"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "biblioteca_gif"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "blood_tests"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "body_check_ai"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "body_check_photos"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "body_checks"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "body_logs"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "body_measurements"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "coach_proposals"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "esercizi_catalog"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "exercise_media"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "fasting_days"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "meal_items"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "meals"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "nutrilite_catalog"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "profiles"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "schede_utente"
+   },
+   {
+    "commento": "Join table: quali integratori sono in quale pacchetto. UNIQUE su (package_id, supplement_id).",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "supplement_package_items"
+   },
+   {
+    "commento": "Pacchetti orari di integratori dell'utente. Es. \"Mattina\" alle 08:45.",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "supplement_packages"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "supplements"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "supplements_log"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "training_logs"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "training_notes"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "weekly_pictures"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "weekly_plan_acceptance"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "weekly_plan_meals"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "weekly_plans"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "weight_logs"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "workout_sets"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "workouts"
+   }
+  ],
+  "tipi": [],
+  "trigger": [
+   {
+    "definizione": "CREATE TRIGGER trg_training_notes_updated_at BEFORE UPDATE ON public.training_notes FOR EACH ROW EXECUTE FUNCTION set_updated_at()",
+    "nome": "trg_training_notes_updated_at",
+    "schema": "public",
+    "tabella": "training_notes"
+   }
+  ],
+  "vincoli": [
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "ai_memory_pkey",
+    "tabella": "ai_memory",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((category = ANY (ARRAY['preference'::text, 'avoidance'::text, 'context'::text, 'pattern'::text])))",
+    "nome": "ai_memory_category_check",
+    "tabella": "ai_memory",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((confidence >= 0.00) AND (confidence <= 1.00)))",
+    "nome": "ai_memory_confidence_range",
+    "tabella": "ai_memory",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "ai_memory_user_id_fkey",
+    "tabella": "ai_memory",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "biblioteca_gif_pkey",
+    "tabella": "biblioteca_gif",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (slug)",
+    "nome": "biblioteca_gif_slug_key",
+    "tabella": "biblioteca_gif",
+    "tipo": "u"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "blood_tests_pkey",
+    "tabella": "blood_tests",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "blood_tests_user_id_fkey",
+    "tabella": "blood_tests",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "body_check_ai_pkey",
+    "tabella": "body_check_ai",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (check_id)",
+    "nome": "body_check_ai_check_key",
+    "tabella": "body_check_ai",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((confidence = ANY (ARRAY['bassa'::text, 'media'::text, 'alta'::text])))",
+    "nome": "body_check_ai_confidence_check",
+    "tabella": "body_check_ai",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (check_id) REFERENCES body_checks(id) ON DELETE CASCADE",
+    "nome": "body_check_ai_check_id_fkey",
+    "tabella": "body_check_ai",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (previous_check_id) REFERENCES body_checks(id) ON DELETE SET NULL",
+    "nome": "body_check_ai_previous_check_id_fkey",
+    "tabella": "body_check_ai",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "body_check_ai_user_id_fkey",
+    "tabella": "body_check_ai",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "body_check_photos_pkey",
+    "tabella": "body_check_photos",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (check_id, pose)",
+    "nome": "body_check_photos_check_id_pose_key",
+    "tabella": "body_check_photos",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (check_id) REFERENCES body_checks(id) ON DELETE CASCADE",
+    "nome": "body_check_photos_check_id_fkey",
+    "tabella": "body_check_photos",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "body_check_photos_user_id_fkey",
+    "tabella": "body_check_photos",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "body_checks_pkey",
+    "tabella": "body_checks",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "body_checks_user_id_fkey",
+    "tabella": "body_checks",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "body_logs_pkey",
+    "tabella": "body_logs",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "body_logs_user_id_fkey",
+    "tabella": "body_logs",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "body_measurements_pkey",
+    "tabella": "body_measurements",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (check_id)",
+    "nome": "body_measurements_check_id_key",
+    "tabella": "body_measurements",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (check_id) REFERENCES body_checks(id) ON DELETE CASCADE",
+    "nome": "body_measurements_check_id_fkey",
+    "tabella": "body_measurements",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "body_measurements_user_id_fkey",
+    "tabella": "body_measurements",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "coach_proposals_pkey",
+    "tabella": "coach_proposals",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, week_start, kind)",
+    "nome": "coach_proposals_user_week_kind_key",
+    "tabella": "coach_proposals",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((kind = ANY (ARRAY['kcal'::text, 'protein'::text, 'training_volume'::text, 'deload'::text, 'check'::text, 'weigh_in'::text, 'logging'::text, 'blood_test'::text, 'keep'::text])))",
+    "nome": "coach_proposals_kind_check",
+    "tabella": "coach_proposals",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'expired'::text])))",
+    "nome": "coach_proposals_status_check",
+    "tabella": "coach_proposals",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((EXTRACT(isodow FROM week_start) = (1)::numeric))",
+    "nome": "coach_proposals_week_start_lunedi",
+    "tabella": "coach_proposals",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "coach_proposals_user_id_fkey",
+    "tabella": "coach_proposals",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (codice)",
+    "nome": "esercizi_catalog_pkey",
+    "tabella": "esercizi_catalog",
+    "tipo": "p"
+   },
+   {
+    "definizione": "PRIMARY KEY (exercise_name_it)",
+    "nome": "exercise_media_pkey",
+    "tabella": "exercise_media",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((status = ANY (ARRAY['pending'::text, 'cached'::text, 'missing'::text, 'manual'::text])))",
+    "nome": "status_valid",
+    "tabella": "exercise_media",
+    "tipo": "c"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "fasting_days_pkey",
+    "tabella": "fasting_days",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date)",
+    "nome": "fasting_days_user_id_date_key",
+    "tabella": "fasting_days",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "fasting_days_user_id_fkey",
+    "tabella": "fasting_days",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "meal_items_pkey",
+    "tabella": "meal_items",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((source = ANY (ARRAY['manual'::text, 'ai_split'::text, 'photo'::text, 'preset'::text])))",
+    "nome": "meal_items_source_check",
+    "tabella": "meal_items",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((unit = ANY (ARRAY['g'::text, 'ml'::text, 'pz'::text])))",
+    "nome": "meal_items_unit_check",
+    "tabella": "meal_items",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE",
+    "nome": "meal_items_meal_id_fkey",
+    "tabella": "meal_items",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "meal_items_user_id_fkey",
+    "tabella": "meal_items",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "meals_pkey",
+    "tabella": "meals",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "meals_user_id_fkey",
+    "tabella": "meals",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "nutrilite_catalog_pkey",
+    "tabella": "nutrilite_catalog",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (codice)",
+    "nome": "nutrilite_catalog_codice_key",
+    "tabella": "nutrilite_catalog",
+    "tipo": "u"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "profiles_pkey",
+    "tabella": "profiles",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))",
+    "nome": "profiles_plan_day_check",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))",
+    "nome": "profiles_sex_check",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((weight_tracking_mode = ANY (ARRAY['daily'::text, 'every3'::text, 'weekly'::text, 'flexible'::text])))",
+    "nome": "profiles_weight_mode_check",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "profiles_id_fkey",
+    "tabella": "profiles",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "schede_utente_pkey",
+    "tabella": "schede_utente",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "schede_utente_user_id_fkey",
+    "tabella": "schede_utente",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "supplement_package_items_pkey",
+    "tabella": "supplement_package_items",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (package_id, supplement_id)",
+    "nome": "supplement_package_items_package_id_supplement_id_key",
+    "tabella": "supplement_package_items",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (package_id) REFERENCES supplement_packages(id) ON DELETE CASCADE",
+    "nome": "supplement_package_items_package_id_fkey",
+    "tabella": "supplement_package_items",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (supplement_id) REFERENCES supplements(id) ON DELETE CASCADE",
+    "nome": "supplement_package_items_supplement_id_fkey",
+    "tabella": "supplement_package_items",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "supplement_package_items_user_id_fkey",
+    "tabella": "supplement_package_items",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "supplement_packages_pkey",
+    "tabella": "supplement_packages",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "supplement_packages_user_id_fkey",
+    "tabella": "supplement_packages",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "supplements_pkey",
+    "tabella": "supplements",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "supplements_user_id_fkey",
+    "tabella": "supplements",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "supplements_log_pkey",
+    "tabella": "supplements_log",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date, supplement_name)",
+    "nome": "supplements_log_user_date_name_key",
+    "tabella": "supplements_log",
+    "tipo": "u"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date, slot, supplement_name)",
+    "nome": "supplements_log_user_id_date_slot_supplement_name_key",
+    "tabella": "supplements_log",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "supplements_log_user_id_fkey",
+    "tabella": "supplements_log",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "training_logs_pkey",
+    "tabella": "training_logs",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "training_logs_user_id_fkey",
+    "tabella": "training_logs",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "training_notes_pkey",
+    "tabella": "training_notes",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, exercise_name, date)",
+    "nome": "training_notes_unique_per_day",
+    "tabella": "training_notes",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "training_notes_user_id_fkey",
+    "tabella": "training_notes",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "weekly_pictures_pkey",
+    "tabella": "weekly_pictures",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, week_start)",
+    "nome": "weekly_pictures_user_week_key",
+    "tabella": "weekly_pictures",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((EXTRACT(isodow FROM week_start) = (1)::numeric))",
+    "nome": "weekly_pictures_week_start_lunedi",
+    "tabella": "weekly_pictures",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "weekly_pictures_user_id_fkey",
+    "tabella": "weekly_pictures",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "weekly_plan_acceptance_pkey",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (plan_meal_id)",
+    "nome": "weekly_plan_acceptance_meal_unique",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((status = ANY (ARRAY['accepted'::text, 'substituted'::text, 'skipped'::text, 'off_plan'::text])))",
+    "nome": "weekly_plan_acceptance_status_check",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (actual_meal_id) REFERENCES meals(id) ON DELETE SET NULL",
+    "nome": "weekly_plan_acceptance_actual_meal_id_fkey",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (plan_meal_id) REFERENCES weekly_plan_meals(id) ON DELETE CASCADE",
+    "nome": "weekly_plan_acceptance_plan_meal_id_fkey",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "weekly_plan_acceptance_user_id_fkey",
+    "tabella": "weekly_plan_acceptance",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "weekly_plan_meals_pkey",
+    "tabella": "weekly_plan_meals",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK (((day_of_week >= 1) AND (day_of_week <= 7)))",
+    "nome": "weekly_plan_meals_day_check",
+    "tabella": "weekly_plan_meals",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((slot = ANY (ARRAY['colazione'::text, 'spuntino'::text, 'pranzo'::text, 'merenda'::text, 'cena'::text])))",
+    "nome": "weekly_plan_meals_slot_check",
+    "tabella": "weekly_plan_meals",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (plan_id) REFERENCES weekly_plans(id) ON DELETE CASCADE",
+    "nome": "weekly_plan_meals_plan_id_fkey",
+    "tabella": "weekly_plan_meals",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "weekly_plan_meals_user_id_fkey",
+    "tabella": "weekly_plan_meals",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "weekly_plans_pkey",
+    "tabella": "weekly_plans",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, week_start)",
+    "nome": "weekly_plans_user_week_unique",
+    "tabella": "weekly_plans",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((status = ANY (ARRAY['draft'::text, 'active'::text, 'archived'::text])))",
+    "nome": "weekly_plans_status_check",
+    "tabella": "weekly_plans",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "weekly_plans_user_id_fkey",
+    "tabella": "weekly_plans",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "weight_logs_pkey",
+    "tabella": "weight_logs",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date)",
+    "nome": "weight_logs_user_date_unique",
+    "tabella": "weight_logs",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "weight_logs_user_id_fkey",
+    "tabella": "weight_logs",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "workout_sets_pkey",
+    "tabella": "workout_sets",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "workout_sets_user_id_fkey",
+    "tabella": "workout_sets",
+    "tipo": "f"
+   },
+   {
+    "definizione": "FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE",
+    "nome": "workout_sets_workout_id_fkey",
+    "tabella": "workout_sets",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "workouts_pkey",
+    "tabella": "workouts",
+    "tipo": "p"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "workouts_user_id_fkey",
+    "tabella": "workouts",
+    "tipo": "f"
+   }
+  ],
+  "viste": []
+ }
+}
