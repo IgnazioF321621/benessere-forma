@@ -1595,17 +1595,46 @@ async function saveDailyLog(date, campi) {
 // ── LOCAL CACHE (stale-while-revalidate) ──────────────────
 const ZT_CACHE_KEY = 'zt_cache';
 
+// Copia locale (Fondamenta 100, tappa 6): localStorage ha un tetto di circa 5 MB e un salvataggio
+// che lo supera fallisce in silenzio. Si salvano solo gli ultimi CACHE_GIORNI giorni dello storico
+// (il resto si rilegge: dalla tappa 4 all'avvio servono 90 giorni) e, se anche cosi' non entra,
+// si riprova con CACHE_GIORNI_RIDOTTI. ST.cacheBytes dice quanto pesa l'ultima copia salvata.
+const CACHE_GIORNI = 90;
+const CACHE_GIORNI_RIDOTTI = 14;
+function _cacheStorico(db, giorni) {
+  const d = new Date(); d.setDate(d.getDate() - giorni);
+  const da = dayKey(d);
+  const days = {};
+  Object.keys((db && db.days) || {}).forEach(k => { if(k >= da) days[k] = db.days[k]; });
+  return { days };
+}
+function _cachePacchetto(giorni) {
+  return JSON.stringify({
+    profile: ST.profile,
+    db:      _cacheStorico(ST.db, giorni),
+    supps:   ST.supps,
+    catalog: ST.catalog,
+    TARGET:  ST.TARGET,
+    pianoAI: ST.pianoAI || null,
+  });
+}
 function saveCache() {
-  try {
-    localStorage.setItem(ZT_CACHE_KEY, JSON.stringify({
-      profile: ST.profile,
-      db:      ST.db,
-      supps:   ST.supps,
-      catalog: ST.catalog,
-      TARGET:  ST.TARGET,
-      pianoAI: ST.pianoAI || null,
-    }));
-  } catch(e) {}
+  for(const giorni of [CACHE_GIORNI, CACHE_GIORNI_RIDOTTI]) {
+    try {
+      const testo = _cachePacchetto(giorni);
+      localStorage.setItem(ZT_CACHE_KEY, testo);
+      ST.cacheBytes = testo.length * 2;   // localStorage conserva in UTF-16: due byte a carattere
+      ST.cacheGiorni = giorni;
+      return true;
+    } catch(e) {
+      console.warn('[cache] copia locale non salvata con ' + giorni + ' giorni:', e && e.name);
+    }
+  }
+  return false;
+}
+// Quanto pesa oggi la copia locale, in byte (0 se non c'e').
+function misuraCache() {
+  try { const raw = localStorage.getItem(ZT_CACHE_KEY); return raw ? raw.length * 2 : 0; } catch(e) { return 0; }
 }
 
 function loadCache() {
