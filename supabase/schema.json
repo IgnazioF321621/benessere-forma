@@ -95,7 +95,7 @@
    "tabella": "supplements_log"
   },
   {
-   "righe": 1761,
+   "righe": 1782,
    "tabella": "training_logs"
   },
   {
@@ -123,11 +123,11 @@
    "tabella": "weight_logs"
   },
   {
-   "righe": 1757,
+   "righe": 1778,
    "tabella": "workout_sets"
   },
   {
-   "righe": 114,
+   "righe": 115,
    "tabella": "workouts"
   }
  ],
@@ -5304,30 +5304,6 @@
     "usando": "true"
    },
    {
-    "comando": "INSERT",
-    "controllo": "true",
-    "nome": "exercise_media service insert",
-    "permissive": "PERMISSIVE",
-    "ruoli": [
-     "public"
-    ],
-    "schema": "public",
-    "tabella": "exercise_media",
-    "usando": null
-   },
-   {
-    "comando": "UPDATE",
-    "controllo": null,
-    "nome": "exercise_media service update",
-    "permissive": "PERMISSIVE",
-    "ruoli": [
-     "public"
-    ],
-    "schema": "public",
-    "tabella": "exercise_media",
-    "usando": "true"
-   },
-   {
     "comando": "ALL",
     "controllo": null,
     "nome": "Users see own fasting",
@@ -5410,18 +5386,6 @@
     "schema": "public",
     "tabella": "meals",
     "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
-   },
-   {
-    "comando": "ALL",
-    "controllo": "true",
-    "nome": "Catalogo inseribile da service",
-    "permissive": "PERMISSIVE",
-    "ruoli": [
-     "public"
-    ],
-    "schema": "public",
-    "tabella": "nutrilite_catalog",
-    "usando": "true"
    },
    {
     "comando": "SELECT",

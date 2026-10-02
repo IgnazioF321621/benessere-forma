@@ -18,26 +18,26 @@
 | [`coach_proposals`](#coach_proposals) | 25 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 0 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
-| [`exercise_media`](#exercise_media) | 57 | 3 | exercise_name_it | — |
+| [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
 | [`meal_items`](#meal_items) | 2609 | 4 | id | — |
 | [`meals`](#meals) | 928 | 2 | id | — |
-| [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 2 | id | codice |
+| [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 4 | 2 | id | — |
 | [`schede_utente`](#schede_utente) | 102 | 5 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 32 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 11 | 5 | id | — |
 | [`supplements`](#supplements) | 42 | 1 | id | — |
 | [`supplements_log`](#supplements_log) | 2359 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
-| [`training_logs`](#training_logs) | 1761 | 1 | id | — |
+| [`training_logs`](#training_logs) | 1782 | 1 | id | — |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 24 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
 | [`weekly_plan_meals`](#weekly_plan_meals) | 546 | 5 | id | — |
 | [`weekly_plans`](#weekly_plans) | 40 | 5 | id | user_id, week_start |
 | [`weight_logs`](#weight_logs) | 20 | 5 | id | user_id, date |
-| [`workout_sets`](#workout_sets) | 1757 | 1 | id | — |
-| [`workouts`](#workouts) | 114 | 2 | id | — |
+| [`workout_sets`](#workout_sets) | 1778 | 1 | id | — |
+| [`workouts`](#workouts) | 115 | 2 | id | — |
 
 ### `ai_memory`
 

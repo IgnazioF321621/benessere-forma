@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════
 -- Chiudere la scrittura dei cataloghi comuni (Fondamenta 040)
--- 2 ottobre 2026 — ⚠️ NON ANCORA ESEGUITA: modifica regole esistenti, aspetta l'ok di Ignazio.
+-- 2 ottobre 2026 — ESEGUITA il 2 ottobre con l'ok di Ignazio. Dopo: tools/prova_accessi.py «tutto OK».
 -- ═══════════════════════════════════════════════════════════
 -- Trovato da tools/prova_accessi.py il 2 ottobre: con la sola chiave pubblica (quella
 -- scritta nella pagina), anche senza entrare, chiunque può

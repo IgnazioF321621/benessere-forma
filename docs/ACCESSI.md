@@ -24,7 +24,7 @@ Per ogni persona vera e per chi non è entrato prova, tabella per tabella, che n
 | `nutrilite_catalog` | ❌ **chiunque, anche senza entrare, può modificare, cancellare e inserire** |
 | `exercise_media` | ❌ **chiunque, anche senza entrare, può modificare e inserire** |
 
-La correzione dei due cataloghi è pronta e **non eseguita**: [`20261002_chiudi_scrittura_cataloghi.sql`](../supabase/migrations/20261002_chiudi_scrittura_cataloghi.sql). Toglie tre regole; l'app e il Worker non le usano.
+**Corretto lo stesso giorno**, con l'ok di Ignazio: [`20261002_chiudi_scrittura_cataloghi.sql`](../supabase/migrations/20261002_chiudi_scrittura_cataloghi.sql) ha tolto le tre regole che lasciavano scrivere chiunque. Dopo: **129 prove su 129 a posto per tutti e cinque**, i due cataloghi si leggono come prima (66 e 57 righe anche senza entrare) e il servizio continua a scriverli. Le tre regole tolte restano scritte nella fotografia zero.
 
 Lettura non dimostrabile perché la tabella è vuota: `ai_memory`, `blood_tests`, `weekly_plan_acceptance` (le scritture sono provate comunque). Per `blood_tests` la prova diventa piena al primo esame registrato.
 

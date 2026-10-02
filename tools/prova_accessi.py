@@ -132,7 +132,9 @@ def sql_attore(ruolo, uid, email, altro, personali, col_cat):
             when others then insert into _esiti values ('{t}', 'cancella', '?? ' || sqlstate);
   end;
   begin
-    insert into public."{t}" select * from jsonb_populate_record(null::public."{t}", '{{}}'::jsonb);
+    -- riga di soli valori predefiniti: una colonna «sempre generata» rifiuterebbe un valore esplicito
+    -- prima ancora di arrivare alle regole di accesso, e sembrerebbe un catalogo aperto
+    insert into public."{t}" default values;
     raise exception using errcode = 'ZT001', message = 'INSERITA';
   exception when sqlstate 'ZT001' then insert into _esiti values ('{t}', 'inserisce', sqlerrm);
             when insufficient_privilege then insert into _esiti values ('{t}', 'inserisce', 'negato');
