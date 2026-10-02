@@ -14,7 +14,7 @@
 --
 -- Dopo l'esecuzione: python3 tools/prova_accessi.py deve dare «tutto OK»,
 -- poi python3 tools/schema_fotografia.py per aggiornare la fotografia.
--- Idempotente. Per tornare indietro: le tre regole sono in 20261002_fotografia_zero.sql.
+-- Idempotente. Per tornare indietro: le tre regole sono in 20261002_000_fotografia_zero.sql.
 -- ═══════════════════════════════════════════════════════════
 
 drop policy if exists "Catalogo inseribile da service" on public.nutrilite_catalog;

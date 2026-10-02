@@ -2,11 +2,12 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-02 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-30 tabelle, 353 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+31 tabelle, 361 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
 | [`ai_memory`](#ai_memory) — **non usata dal codice** | 0 | 5 | id | — |
+| [`app_errors`](#app_errors) | 0 | 2 | id | — |
 | [`biblioteca_gif`](#biblioteca_gif) | 1601 | 1 | id | slug |
 | [`blood_tests`](#blood_tests) | 0 | 4 | id | — |
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
@@ -57,6 +58,26 @@ Vincoli:
 - `ai_memory_category_check` — `CHECK ((category = ANY (ARRAY['preference'::text, 'avoidance'::text, 'context'::text, 'pattern'::text])))`
 - `ai_memory_confidence_range` — `CHECK (((confidence >= 0.00) AND (confidence <= 1.00)))`
 - `ai_memory_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `app_errors`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `created_at` | timestamp with time zone | sì | `now()` |
+| `user_id` | uuid | sì |  |
+| `app_version` | text |  |  |
+| `kind` | text | sì |  |
+| `operation` | text |  |  |
+| `message` | text | sì |  |
+| `detail` | jsonb | sì | `'{}'::jsonb` |
+
+Vincoli:
+- `app_errors_detail_len` — `CHECK ((pg_column_size(detail) <= 8192))`
+- `app_errors_kind_check` — `CHECK ((kind = ANY (ARRAY['db'::text, 'js'::text, 'promise'::text])))`
+- `app_errors_message_len` — `CHECK ((char_length(message) <= 600))`
+- `app_errors_operation_len` — `CHECK (((operation IS NULL) OR (char_length(operation) <= 200)))`
+- `app_errors_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `biblioteca_gif`
 

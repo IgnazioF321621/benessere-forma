@@ -7,6 +7,10 @@
    "tabella": "ai_memory"
   },
   {
+   "righe": 0,
+   "tabella": "app_errors"
+  },
+  {
    "righe": 1601,
    "tabella": "biblioteca_gif"
   },
@@ -237,6 +241,86 @@
     "predefinito": "now()",
     "tabella": "ai_memory",
     "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "app_errors",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": "now()",
+    "tabella": "app_errors",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "app_errors",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "app_version",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "app_errors",
+    "tipo": "text"
+   },
+   {
+    "colonna": "kind",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "app_errors",
+    "tipo": "text"
+   },
+   {
+    "colonna": "operation",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "app_errors",
+    "tipo": "text"
+   },
+   {
+    "colonna": "message",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "app_errors",
+    "tipo": "text"
+   },
+   {
+    "colonna": "detail",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "'{}'::jsonb",
+    "tabella": "app_errors",
+    "tipo": "jsonb"
    },
    {
     "colonna": "id",
@@ -3720,6 +3804,16 @@
     "tabella": "ai_memory"
    },
    {
+    "definizione": "CREATE INDEX app_errors_created_idx ON public.app_errors USING btree (created_at DESC)",
+    "nome": "app_errors_created_idx",
+    "tabella": "app_errors"
+   },
+   {
+    "definizione": "CREATE INDEX app_errors_user_idx ON public.app_errors USING btree (user_id, created_at DESC)",
+    "nome": "app_errors_user_idx",
+    "tabella": "app_errors"
+   },
+   {
     "definizione": "CREATE INDEX idx_blood_tests_user_date ON public.blood_tests USING btree (user_id, test_date DESC)",
     "nome": "idx_blood_tests_user_date",
     "tabella": "blood_tests"
@@ -3866,6 +3960,32 @@
     ],
     "ruolo": "authenticated",
     "tabella": "ai_memory"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
+    "tabella": "app_errors"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "app_errors"
    },
    {
     "permessi": [
@@ -4680,6 +4800,30 @@
     "schema": "public",
     "tabella": "ai_memory",
     "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "admin_read_all_app_errors",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "app_errors",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "app_errors_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "app_errors",
+    "usando": null
    },
    {
     "comando": "SELECT",
@@ -5805,6 +5949,12 @@
     "commento": null,
     "rls": true,
     "rls_forzata": false,
+    "tabella": "app_errors"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
     "tabella": "biblioteca_gif"
    },
    {
@@ -6008,6 +6158,42 @@
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "ai_memory_user_id_fkey",
     "tabella": "ai_memory",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "app_errors_pkey",
+    "tabella": "app_errors",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((pg_column_size(detail) <= 8192))",
+    "nome": "app_errors_detail_len",
+    "tabella": "app_errors",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((kind = ANY (ARRAY['db'::text, 'js'::text, 'promise'::text])))",
+    "nome": "app_errors_kind_check",
+    "tabella": "app_errors",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((char_length(message) <= 600))",
+    "nome": "app_errors_message_len",
+    "tabella": "app_errors",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((operation IS NULL) OR (char_length(operation) <= 200)))",
+    "nome": "app_errors_operation_len",
+    "tabella": "app_errors",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "app_errors_user_id_fkey",
+    "tabella": "app_errors",
     "tipo": "f"
    },
    {

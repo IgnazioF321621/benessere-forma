@@ -8,7 +8,8 @@ dalla Management API: niente Docker, niente password del database) e scrive:
     supabase/schema.json                             lo stesso, in forma leggibile dagli strumenti
     docs/SCHEMA_TABELLE.md                           l'elenco di tabelle e colonne, per chi scrive una query
 
-    python3 tools/schema_fotografia.py                  # scrive i due file
+    python3 tools/schema_fotografia.py                  # aggiorna schema.json e SCHEMA_TABELLE.md
+    python3 tools/schema_fotografia.py --zero           # riscrive anche la fotografia zero (solo per ripartire da capo)
     python3 tools/schema_fotografia.py --confronta      # non scrive: dice se il DB è cambiato rispetto a schema.json
 
 Non scrive niente in Supabase. Richiede la CLI `supabase` già autenticata sul Mac.
@@ -218,6 +219,7 @@ def markdown(s, oggi):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--zero', action='store_true', help='riscrive anche il file SQL della fotografia zero')
     ap.add_argument('--confronta', action='store_true', help='non scrive: confronta il DB con supabase/schema.json')
     a = ap.parse_args()
     s = fotografa()
@@ -238,16 +240,21 @@ def main():
                 print('   − ' + v[:200])
         sys.exit(1)
     oggi = date.today().isoformat()
-    file_sql = os.path.join(REPO, 'supabase', 'migrations', oggi.replace('-', '') + '_fotografia_zero.sql')
-    with open(file_sql, 'w', encoding='utf-8') as f:
-        f.write(sql(s, oggi))
+    # La fotografia zero si scrive una volta: dopo, ogni modifica è un file datato suo e la zero resta com'è.
+    # Lo «000» nel nome la tiene prima degli altri file dello stesso giorno.
+    cartella = os.path.join(REPO, 'supabase', 'migrations')
+    esistenti = sorted(f for f in os.listdir(cartella) if f.endswith('_fotografia_zero.sql'))
+    file_sql = os.path.join(cartella, esistenti[-1] if esistenti and not a.zero else oggi.replace('-', '') + '_000_fotografia_zero.sql')
+    if a.zero or not esistenti:
+        with open(file_sql, 'w', encoding='utf-8') as f:
+            f.write(sql(s, oggi))
     with open(JSON_OUT, 'w', encoding='utf-8') as f:
         json.dump({'quando': oggi, 'progetto': REF, 'schema': struttura(s), 'righe': s['righe']}, f, ensure_ascii=False, indent=1, sort_keys=True)
     with open(MD_OUT, 'w', encoding='utf-8') as f:
         f.write(markdown(s, oggi))
     print(f"{len(s['tabelle'])} tabelle · {len(s['colonne'])} colonne · {len(s['vincoli'])} vincoli · {len(s['indici'])} indici · "
           f"{len([p for p in s['regole'] if p['schema']=='public'])} regole · {len(s['funzioni'])} funzioni · {len(s['trigger'])} trigger · {len(s['bucket'])} bucket")
-    print('→', os.path.relpath(file_sql, REPO), '·', os.path.relpath(JSON_OUT, REPO), '·', os.path.relpath(MD_OUT, REPO))
+    print('→', (os.path.relpath(file_sql, REPO) + ' · ') if (a.zero or not esistenti) else '(fotografia zero non riscritta) ', os.path.relpath(JSON_OUT, REPO), '·', os.path.relpath(MD_OUT, REPO))
 
 
 if __name__ == '__main__':

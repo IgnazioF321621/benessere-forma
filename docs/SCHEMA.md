@@ -6,8 +6,8 @@ Staccato da [`CLAUDE.md`](../CLAUDE.md) il 13 settembre 2026, per alleggerire il
 
 **Lo schema vero è in git dal 2 ottobre 2026** (Fondamenta 030). Questo file tiene le regole d'uso; la struttura si legge altrove e non si riscrive a mano:
 
-- [`SCHEMA_TABELLE.md`](SCHEMA_TABELLE.md) — tutte le 30 tabelle con colonne, tipi e vincoli, generato dal database
-- [`supabase/migrations/20261002_fotografia_zero.sql`](../supabase/migrations/20261002_fotografia_zero.sql) — la «fotografia zero»: tabelle, vincoli, indici, 93 regole di accesso, funzioni, trigger, 3 bucket. **Da qui ogni modifica di struttura è un file datato in `supabase/migrations/`**
+- [`SCHEMA_TABELLE.md`](SCHEMA_TABELLE.md) — tutte le tabelle (31 dal 2 ottobre, con `app_errors`) con colonne, tipi e vincoli, generato dal database
+- [`supabase/migrations/20261002_000_fotografia_zero.sql`](../supabase/migrations/20261002_000_fotografia_zero.sql) — la «fotografia zero»: tabelle, vincoli, indici, 93 regole di accesso, funzioni, trigger, 3 bucket. **Da qui ogni modifica di struttura è un file datato in `supabase/migrations/`**
 - `python3 tools/schema_fotografia.py --confronta` dice se il database è cambiato rispetto alla fotografia; senza opzioni la rigenera
 
 **Tabelle morte** (esistono, il codice non le nomina mai — misurato il 2 ottobre su app, admin, Worker e `shared/`): `ai_memory` e `weekly_plan_acceptance`, entrambe a 0 righe. **Tabelle che qui sotto non hanno una voce** ma sono in uso: `meal_items` (ingredienti dei pasti), `training_notes`, `exercise_media` — le colonne sono in `SCHEMA_TABELLE.md`.

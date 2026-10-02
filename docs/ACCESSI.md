@@ -2,7 +2,7 @@
 
 *(dal 2 ottobre 2026 — Fondamenta 040)*
 
-La chiave scritta nella pagina è quella pubblica: **tutta la protezione dei dati sta nelle regole di accesso di ogni tabella**. Le regole sono in git ([fotografia zero](../supabase/migrations/20261002_fotografia_zero.sql)) e si provano dal vivo con un comando:
+La chiave scritta nella pagina è quella pubblica: **tutta la protezione dei dati sta nelle regole di accesso di ogni tabella**. Le regole sono in git ([fotografia zero](../supabase/migrations/20261002_000_fotografia_zero.sql)) e si provano dal vivo con un comando:
 
 ```bash
 python3 tools/prova_accessi.py
@@ -27,6 +27,8 @@ Per ogni persona vera e per chi non è entrato prova, tabella per tabella, che n
 La correzione dei due cataloghi è pronta e **non eseguita**: [`20261002_chiudi_scrittura_cataloghi.sql`](../supabase/migrations/20261002_chiudi_scrittura_cataloghi.sql). Toglie tre regole; l'app e il Worker non le usano.
 
 Lettura non dimostrabile perché la tabella è vuota: `ai_memory`, `blood_tests`, `weekly_plan_acceptance` (le scritture sono provate comunque). Per `blood_tests` la prova diventa piena al primo esame registrato.
+
+**Dopo `app_errors`** (tabella nuova dello stesso giorno, [Fondamenta 060](../supabase/migrations/20261002_app_errors.sql)): 27 tabelle personali, 125 prove a testa, le 4 in più tutte a posto. Chi è entrato inserisce solo errori a proprio nome e non li rilegge; li legge solo l'admin (la regola admin sale così a 14 tabelle).
 
 ## La regola «admin»
 
