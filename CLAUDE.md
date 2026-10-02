@@ -23,7 +23,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 | Cloudflare Worker | `zona-ai.ignazio-f.workers.dev` | Proxy Groq (openai/gpt-oss-120b) + lookup GIF + lettura foto dei check (Gemini `gemini-3.1-flash-lite`) + cron del lunedì 06:00 Roma ([Pirsi propone](docs/COACH.md#pirsi-propone)) |
 | Supabase | `qxiyeiahpoiliwpqslpr.supabase.co` | DB + Auth + Storage |
 
-Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY` (Groq) + `GEMINI_API_KEY`. Binding: `IMAGES` (riduzione foto dei check). Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `8a9b4fc9`. Cron `0 4 * * 1` e `0 5 * * 1` (UTC): lavora solo in quello che a Roma sono le 6.
+Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Secrets: `SUPABASE_SERVICE_ROLE_KEY` + `API_KEY` (Groq) + `GEMINI_API_KEY`. Binding: `IMAGES` (riduzione foto dei check). Deploy: `wrangler deploy` da `worker/` — **non** triggered da git push. Worker Version ID attuale: `7816fa9a` (2 ottobre 2026). Cron `0 4 * * 1` e `0 5 * * 1` (UTC): lavora solo in quello che a Roma sono le 6.
 
 ---
 
