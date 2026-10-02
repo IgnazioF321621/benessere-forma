@@ -10,11 +10,12 @@ set -e
 
 TOPLEVEL=$(git rev-parse --show-toplevel)
 
-# Moduli condivisi (shared/*.js): la copia dentro l'app deve coincidere con la fonte.
-# Si controlla se è in stage l'app o un modulo. Fase 3, 13 set 2026.
+# Moduli condivisi (shared/*.js): dal 2 ottobre 2026 la pagina li carica da shared/ invece di
+# copiarli dentro. tools/moduli.js controlla che la pagina richiami ogni modulo una volta sola.
+# Si controlla se è in stage l'app o un modulo.
 if git diff --cached --name-only | grep -qE "^(zona-tracker\.html|shared/.*\.js)$"; then
   if [ -f "$TOPLEVEL/tools/moduli.js" ] && ! node "$TOPLEVEL/tools/moduli.js" --verifica >/dev/null; then
-    echo "✗ pre-commit: un modulo di shared/ non coincide con la copia in zona-tracker.html — lancia: node tools/moduli.js" >&2
+    echo "✗ pre-commit: zona-tracker.html non richiama ogni modulo di shared/ una volta sola — guarda: node tools/moduli.js --verifica" >&2
     exit 1
   fi
 fi
