@@ -10,7 +10,7 @@ const REPO = path.join(__dirname, '..', '..');
 const vars = Object.fromEntries(fs.readFileSync(REPO + '/worker/.dev.vars','utf8').split('\n').filter(l=>/^[A-Z_]+=/.test(l)).map(l=>[l.split('=')[0], l.slice(l.indexOf('=')+1).trim()]));
 const URL_SB = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
 function bootVivo(file){
-  const html = fs.readFileSync(file || REPO + '/zona-tracker.html', 'utf8');
+  const html = require('./pagina').assembla(file || REPO + '/zona-tracker.html');
   const vc = new VirtualConsole(); const logs = [];
   vc.on('jsdomError', e => logs.push(['jsdomError', e.message]));
   ['error','warn'].forEach(l => vc.on(l, (...a)=>logs.push([l, a.map(String).join(' ')])));

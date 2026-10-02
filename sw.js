@@ -1,12 +1,26 @@
 // Zona Tracker — Service Worker
-// Strategia: network-first per il documento HTML, cache-first SOLO per la libreria JS su jsdelivr.
+// Strategia: network-first per il documento HTML e per i file dell'app in app/, cache-first SOLO per la libreria JS su jsdelivr.
 // Le chiamate REST a *.supabase.co non vengono intercettate (default browser, sempre network).
 
 const CACHE = 'zt-v2';
 const HTML_URL = '/benessere-forma/zona-tracker.html';
+// I file in cui è divisa la pagina (Fondamenta 035). Vanno elencati TUTTI: si salvano
+// all'installazione, così l'app si apre intera anche senza rete. Un file di app/ richiamato
+// dalla pagina e assente da qui fa fallire tools/banco/prova_pagina_divisa.js.
+const APP_DIR = '/benessere-forma/app/';
+const APP_FILES = [
+  'stile.css',
+];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
+  // Se un file non si scarica l'installazione va avanti lo stesso: meglio un'app che
+  // senza rete perde un pezzo di una versione nuova che non si installa mai.
+  event.waitUntil(
+    caches.open(CACHE).then(c => Promise.all(APP_FILES.map(f =>
+      fetch(APP_DIR + f, { cache: 'no-cache' }).then(res => { if (res.ok) return c.put(APP_DIR + f, res); }).catch(() => {})
+    )))
+  );
 });
 
 self.addEventListener('activate', event => {
@@ -31,6 +45,23 @@ self.addEventListener('fetch', event => {
           return res;
         })
         .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // File dell'app in app/ (stile, e poi il codice) → network-first come la pagina: sempre la
+  // versione fresca insieme alla pagina fresca, quella salvata solo senza rete.
+  if (url.origin === self.location.origin && url.pathname.startsWith(APP_DIR)) {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(url.pathname, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(url.pathname))
     );
     return;
   }

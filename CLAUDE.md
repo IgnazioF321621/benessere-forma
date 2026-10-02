@@ -10,7 +10,7 @@ PWA wellness single-file HTML, hostata su GitHub Pages. *(aggiornato: 13 settemb
 
 ## File e URL
 
-- **App**: `zona-tracker.html` (unico file: HTML + CSS + JS)
+- **App**: `zona-tracker.html` (HTML + JS) più i file in `app/` *(dal 2 ottobre 2026 la pagina si divide a tappe, [Fondamenta 035]: per ora `app/stile.css`)*. **Ogni file di `app/` richiamato dalla pagina va elencato in `APP_FILES` di `sw.js`**: lo controlla `node tools/banco/prova_pagina_divisa.js`. Il banco ricompone la pagina da solo (`tools/banco/pagina.js`)
 - **Admin**: `dashboardzona.html` (email-gated `ignazio.f@me.com`, read-only)
 - **URL pubblico**: https://ignaziof321621.github.io/benessere-forma/zona-tracker.html
 - **Repo**: https://github.com/IgnazioF321621/benessere-forma · branch `main`
@@ -54,7 +54,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - **`console.log` da rimuovere solo manualmente, mai con script automatici.** Il pericolo è la logica inglobata nella stessa riga del logging → [L1](docs/LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)
 - **Prima di aggiungere un alias in `GEAR_ALIASES`, verificare che il termine di destinazione esista davvero nel catalogo.** Un token vive quando qualche riga lo usa → [L2](docs/LEZIONI.md#l2--un-alias-può-puntare-a-una-parola-che-non-esiste). Stesso difetto in `APERTO_WHITELIST` (`banda` e `cavigliere` a 0 occorrenze; `corda`, 9 esercizi, non è in whitelist)
 - `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
-- Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`. Cache name: `zt-v2`
+- Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`; la pagina e i file di `app/` sono network-first (sempre freschi in linea, quelli salvati solo senza rete). Cache name: `zt-v2`
 - **`APP_VERSION` la mette solo il rilascio** *(dal 2 ottobre 2026)*: `bash tools/rilascio/versione.sh`, ora di Roma, subito prima di pubblicare. Il pre-commit non la tocca più e non fa più `git add` dell'app: controlla solo i moduli di `shared/`. La fonte dell'hook è `tools/hooks/pre-commit`, si installa con `bash tools/hooks/installa.sh`
 - **Pubblica solo la sessione «Audit e Rilascio»** *(dal 2 ottobre 2026)*: `git push` e `wrangler` chiedono conferma (`.claude/settings.json`), `git add -A` e `git add .` sono vietati. Le altre sessioni lavorano su un solo titolo, fanno commit locali aggiungendo i file **per nome**, e non pubblicano. La lista dei lavori è in Evernote, spazio «Zona-Tracker», un taccuino per titolo
 - **Paginare sempre** le SELECT su tabelle >1000 righe (es. `biblioteca_gif`): PostgREST tronca al limite default → [L13](docs/LEZIONI.md#l13--postgrest-tronca-le-select-al-limite-default)
