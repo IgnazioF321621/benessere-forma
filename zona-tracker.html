@@ -2106,7 +2106,10 @@ function enterTestMode() {
 // ═══════════════════════════════════════════════════════════
 // BOOTSTRAP
 // ═══════════════════════════════════════════════════════════
-setTimeout(async () => {
+// Parte subito (Fondamenta 100, tappa 2, 2 ottobre 2026): prima aspettava 1,8 secondi fissi di
+// splash anche coi dati già sul telefono. Lo splash resta a schermo finché showScreen non lo toglie,
+// cioè finché l'app non è pronta: dura quanto serve, non un tempo deciso a tavolino.
+(async () => {
   // Modalità anteprima onboarding (25 mag 2026, sera): `?preview=onboarding`
   // mostra l'onboarding M1 in sola anteprima per l'utente reale loggato.
   // Il flag viene letto qui UNA VOLTA e poi consumato da loadAndStart() /
@@ -2221,7 +2224,7 @@ setTimeout(async () => {
     }
   });
 
-}, 1800); // splash duration
+})();
 
 // ── SERVICE WORKER (network-first, auto-update) ─────────────
 if ('serviceWorker' in navigator) {

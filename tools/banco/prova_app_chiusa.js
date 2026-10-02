@@ -7,7 +7,7 @@ const vis = (win, id) => win.document.getElementById(id).classList.contains('vis
 (async () => {
   // 1. Un tester: loadAndStart si ferma sulla schermata di chiusura
   {
-    const { win } = boot({});
+    const { win, avviato } = boot({}); await avviato;
     const ST = win.eval('ST');
     ST.user = { id: 'u-tester', email: 'tester@example.com' };
     check('tester: isAppClosedForUser = true', win.isAppClosedForUser() === true);
@@ -19,7 +19,7 @@ const vis = (win, id) => win.document.getElementById(id).classList.contains('vis
   }
   // 2. Un tester con l'app già aperta: il rientro in primo piano la chiude
   {
-    const { win } = boot({});
+    const { win, avviato } = boot({}); await avviato;
     const ST = win.eval('ST');
     ST.user = { id: 'u-tester', email: 'tester@example.com' };
     win.showScreen('app');
@@ -29,13 +29,13 @@ const vis = (win, id) => win.document.getElementById(id).classList.contains('vis
   }
   // 3. Utente senza email (sessione anomala): chiusa
   {
-    const { win } = boot({});
+    const { win, avviato } = boot({}); await avviato;
     win.eval('ST').user = { id: 'u-x' };
     check('senza email: chiusa', win.isAppClosedForUser() === true);
   }
   // 4. Ignazio: entra, anche con maiuscole e spazi nell'email
   {
-    const { win } = boot({});
+    const { win, avviato } = boot({}); await avviato;
     const ST = win.eval('ST');
     ST.user = { id: 'u-ig', email: ' Ignazio.F@me.com ' };
     check('Ignazio: isAppClosedForUser = false', win.isAppClosedForUser() === false);
@@ -44,7 +44,7 @@ const vis = (win, id) => win.document.getElementById(id).classList.contains('vis
   }
   // 5. Dalla schermata di chiusura si torna all'accesso
   {
-    const { win } = boot({});
+    const { win, avviato } = boot({}); await avviato;
     win.eval('ST').user = { id: 'u-tester', email: 'tester@example.com' };
     win.showClosedScreen();
     win.showScreen('auth');

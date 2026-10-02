@@ -79,10 +79,11 @@ function makeSupaMock(tables){
       });
     },
     auth: {
-      getSession: async()=>({ data:{session:null}, error:null }),
+      // tables.__sessione = { user:{ id, email } }: la pagina trova una persona già entrata (il BOOTSTRAP parte da solo)
+      getSession: async()=>({ data:{session: tables.__sessione || null}, error:null }),
       onAuthStateChange: ()=>({ data:{ subscription:{ unsubscribe(){} } } }),
       signInWithOtp: async()=>({error:null}), verifyOtp: async()=>({error:null}),
-      signOut: async()=>({error:null}), getUser: async()=>({data:{user:null}}),
+      signOut: async()=>({error:null}), getUser: async()=>({data:{user: (tables.__sessione || {}).user || null}}),
     },
     storage: { from: ()=>({ createSignedUrl: async()=>({data:null}), list: async()=>({data:[]}) }) },
   };
@@ -109,6 +110,8 @@ function boot(tables, opts={}){
         win.Date = class extends Real { constructor(...a){ if(a.length) super(...a); else super(T); } static now(){ return T; } };
       }
       win.supabase = { createClient: () => supa };
+      // opts.locale = { chiave: valore }: localStorage già pieno prima che la pagina parta (la copia locale dell'app)
+      Object.entries(opts.locale || {}).forEach(([k, v]) => win.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)));
       win.matchMedia = win.matchMedia || (()=>({matches:false, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}}));
       win.scrollTo = ()=>{};
       win.AudioContext = function(){ return { createOscillator:()=>({connect(){},start(){},stop(){},frequency:{setValueAtTime(){}} }), createGain:()=>({connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}), currentTime:0, destination:{}, state:'running', resume(){} }; };
@@ -116,6 +119,9 @@ function boot(tables, opts={}){
       win.navigator.serviceWorker = undefined;
     }
   });
-  return { dom, win: dom.window, supa, logs };
+  // La pagina parte da sola (il BOOTSTRAP non aspetta più, Fondamenta 100): con tables.__sessione entra,
+  // senza mostra l'accesso. Una prova che avvia a mano (loadAndStart) e poi guarda le schermate aspetta
+  // prima `await avviato`, altrimenti la partenza automatica le arriva sopra.
+  return { dom, win: dom.window, supa, logs, avviato: new Promise(r => dom.window.setTimeout(r, 0)) };
 }
 module.exports = { boot, makeSupaMock };
