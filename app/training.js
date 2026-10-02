@@ -74,10 +74,10 @@ async function hydrateTrainingSetsFromCloud(){
     ST.trainLoggedSets = { ...ST.trainLoggedSets, ...cloudMap };
     // Hydrate workout_sets.id per consentire edit/delete by-id su righe arrivate da altri device
     try {
-      const { data: wsData } = await supa.from('workout_sets')
+      const { data: wsData } = await dbq('leggere le serie di oggi', supa.from('workout_sets')
         .select('id, exercise_name, set_number, session_type')
         .eq('user_id', ST.user.id)
-        .eq('date', today);
+        .eq('date', today), {silenzioso:true});
       (wsData || []).forEach(ws => {
         const k = `${ws.session_type}_${ws.exercise_name}_${ws.set_number}_${today}`;
         if(ST.trainLoggedSets[k]) ST.trainLoggedSets[k].setId = ws.id;
@@ -635,10 +635,10 @@ async function loadAllExerciseNamesWithLast(){
   if(ST.allExerciseNamesCache !== null) return; // gia' loaded (anche [])
   if(!ST.user || ST.user.id==='test-user-001'){ ST.allExerciseNamesCache = []; ST.trainProgLastSet = {}; return; }
   try {
-    const { data } = await supa.from('training_logs')
+    const { data } = await dbq('leggere lo storico delle serie', supa.from('training_logs')
       .select('exercise_name, reps, resistance, date')
       .eq('user_id', ST.user.id)
-      .order('date', {ascending: false});
+      .order('date', {ascending: false}));
     const seen = new Set();
     ST.trainProgLastSet = {};
     const distinct = [];
@@ -983,9 +983,6 @@ async function openDayDetail(date, exName){
   ST.trainDayLogs = data || [];
   renderTraining();
 }
-
-// Convenience: apre day-detail filtrato su un esercizio (chiamato da chart click)
-function openDayExerciseDetail(date, exName){ openDayDetail(date, exName); }
 
 function closeDayDetail(){
   ST.trainDayDetail = null;
@@ -1442,13 +1439,6 @@ async function ensureRestGif(exName, exCode) {
   }
 }
 
-// Toggle visibilita' GIF nel modal recupero (default chiuso, persistente nel countdown corrente).
-function toggleRestGif() {
-  if (!ST.trainCountdown) return;
-  ST.trainCountdown.gifOpen = !ST.trainCountdown.gifOpen;
-  renderTraining();
-}
-
 // Tick: ricalcola remaining da endTime, beep+render solo se serve
 function tickCountdown(){
   const cd = ST.trainCountdown;
@@ -1610,9 +1600,9 @@ async function markRestChosen(){
   const today = todayKey();
   try {
     // Guard doppia marcatura: un giorno è riposo scelto O infortunio, mai entrambi
-    const { data: existAny } = await supa.from('workouts')
+    const { data: existAny } = await dbq('leggere gli allenamenti di oggi', supa.from('workouts')
       .select('id, session_type').eq('user_id', ST.user.id).eq('date', today)
-      .in('session_type', ['rest','rest_injury']);
+      .in('session_type', ['rest','rest_injury']));
     const existing = (existAny || [])[0];
     if(existing){
       showToast(existing.session_type === 'rest_injury'
@@ -1652,9 +1642,9 @@ async function markRestInjury(zoneNote){
   const today = todayKey();
   try {
     // Guard doppia marcatura: un giorno è riposo scelto O infortunio, mai entrambi
-    const { data: existAny } = await supa.from('workouts')
+    const { data: existAny } = await dbq('leggere gli allenamenti di oggi', supa.from('workouts')
       .select('id, session_type').eq('user_id', ST.user.id).eq('date', today)
-      .in('session_type', ['rest','rest_injury']);
+      .in('session_type', ['rest','rest_injury']));
     const existing = (existAny || [])[0];
     if(existing){
       showToast(existing.session_type === 'rest'
@@ -1699,9 +1689,9 @@ function getInjuryPeriod(){
 // Scrittura silenziosa e idempotente della riga rest_injury di un giorno.
 // Non scrive se il giorno ha già 'rest' o 'rest_injury' (guard doppia marcatura).
 async function _injWriteDay(date, zone){
-  const { data: existing } = await supa.from('workouts')
+  const { data: existing } = await dbq('leggere gli allenamenti di oggi', supa.from('workouts')
     .select('id, session_type').eq('user_id', ST.user.id).eq('date', date)
-    .in('session_type', ['rest','rest_injury']);
+    .in('session_type', ['rest','rest_injury']));
   if(existing && existing.length) return false;
   const { error } = await supa.from('workouts').insert({
     user_id: ST.user.id, date, session_type: 'rest_injury', completed: true,
@@ -1717,8 +1707,8 @@ async function startInjuryPeriod(days){
   closeInjuryModal();
   const today = todayKey();
   try {
-    const { data: rest } = await supa.from('workouts')
-      .select('id').eq('user_id', ST.user.id).eq('date', today).eq('session_type', 'rest').maybeSingle();
+    const { data: rest } = await dbq('leggere gli allenamenti di oggi', supa.from('workouts')
+      .select('id').eq('user_id', ST.user.id).eq('date', today).eq('session_type', 'rest').maybeSingle());
     if(rest){ showToast('Oggi è già segnato come riposo scelto', '⚠️'); return; }
   } catch(e){}
   const endDate = days ? _injAddDays(today, days - 1) : null;
@@ -1776,12 +1766,12 @@ async function saveWorkoutRecord(sessionId){
   const today = todayKey();
   // Idempotente: skip se già esiste un workout per oggi+sessione
   try {
-    const { data: existing } = await supa.from('workouts')
+    const { data: existing } = await dbq('leggere gli allenamenti di oggi', supa.from('workouts')
       .select('id')
       .eq('user_id', ST.user.id)
       .eq('date', today)
       .eq('session_type', sessionId)
-      .limit(1);
+      .limit(1));
     if(existing && existing.length > 0){
       ST.trainCompletedToday[sessionId] = true;
       ST.sessionLastCompletion[sessionId] = today;
@@ -1815,13 +1805,13 @@ async function loadSessionLastCompletion(opts){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.sessionLastCompletion={}; return; }
   try {
     const today = todayKey();
-    const { data } = await supa.from('workouts')
+    const { data } = await dbq('leggere gli allenamenti completati', supa.from('workouts')
       .select('session_type, date')
       .eq('user_id', ST.user.id)
       .eq('completed', true)
       .not('session_type', 'in', '(rest,rest_injury)')
       .order('date', {ascending:false})
-      .limit(80);
+      .limit(80), {silenzioso:true});
     const map = {};
     (data||[]).forEach(w=>{
       if(!map[w.session_type] || w.date > map[w.session_type]) map[w.session_type] = w.date;
@@ -4591,16 +4581,6 @@ async function openExerciseAI(exName, sessionId) {
 
 const ACTIVATION_INTERVALS = [null, null, null];
 
-function _ensureActivationTimers(){
-  if(!Array.isArray(ST.trainActivationTimers) || ST.trainActivationTimers.length!==3){
-    ST.trainActivationTimers = [
-      { remaining:120, total:120, running:false },
-      { remaining:120, total:120, running:false },
-      { remaining:60,  total:60,  running:false },
-    ];
-  }
-}
-
 // ── Audio context condiviso (sblocco iOS) ─────────────────
 let _audioCtx = null;
 function _ensureAudioCtx(){
@@ -4632,50 +4612,6 @@ function _unlockAudio(){
   return Promise.resolve(true);
 }
 function dismissAudioBanner(){ _unlockAudio(); }
-
-function _playActivationBeep(){
-  try {
-    if(navigator.vibrate){
-      try { navigator.vibrate([300,100,300,100,300,100,300,100,300]); } catch(e){}
-    }
-    const ctx = _ensureAudioCtx();
-    if(!ctx) return;
-    const doFire = ()=>{
-      const beepDur = 0.3;
-      const gapDur = 0.15;
-      const count = 5;
-      const fire = (i)=>{
-        try {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.frequency.value = 880;
-          osc.type = 'sine';
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          const t0 = ctx.currentTime;
-          gain.gain.setValueAtTime(1.0, t0);
-          gain.gain.setValueAtTime(1.0, t0 + beepDur - 0.02);
-          gain.gain.linearRampToValueAtTime(0.0001, t0 + beepDur);
-          osc.start(t0);
-          osc.stop(t0 + beepDur + 0.01);
-        } catch(e){}
-        if(i < count - 1){
-          setTimeout(()=>fire(i+1), (beepDur + gapDur) * 1000);
-        }
-      };
-      fire(0);
-    };
-    if(ctx.state === 'suspended'){
-      ctx.resume().then(()=>{
-        ST.audioBlocked = ctx.state !== 'running';
-        if(ST.page==='training') renderTraining();
-        if(!ST.audioBlocked) doFire();
-      }).catch(()=>{ ST.audioBlocked = true; if(ST.page==='training') renderTraining(); });
-    } else {
-      doFire();
-    }
-  } catch(e){}
-}
 
 // ── WakeLock — schermo sempre acceso durante sessione ─────
 let _wakeLock = null;
@@ -5157,60 +5093,12 @@ async function confirmEditLog(k){
   renderTraining();
 }
 
-function startActivationTimer(idx){
-  _ensureActivationTimers();
-  const t = ST.trainActivationTimers[idx];
-  if(!t || t.running) return;
-  if(t.remaining <= 0) t.remaining = t.total;
-  t.running = true;
-  if(ACTIVATION_INTERVALS[idx]) clearInterval(ACTIVATION_INTERVALS[idx]);
-  ACTIVATION_INTERVALS[idx] = setInterval(()=>{
-    const tt = ST.trainActivationTimers[idx];
-    if(!tt){ clearInterval(ACTIVATION_INTERVALS[idx]); ACTIVATION_INTERVALS[idx]=null; return; }
-    tt.remaining = Math.max(0, tt.remaining - 1);
-    if(tt.remaining === 0){
-      clearInterval(ACTIVATION_INTERVALS[idx]);
-      ACTIVATION_INTERVALS[idx] = null;
-      tt.running = false;
-      if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
-      ST.trainActivation[idx] = true;
-      _playActivationBeep();
-      _activationAutoCollapse();
-      if(ST.page==='training') renderTraining();
-    } else if(ST.page==='training'){
-      const el = document.getElementById('act-timer-'+idx);
-      if(el) el.textContent = _fmtMMSS(tt.remaining);
-    }
-  }, 1000);
-  renderTraining();
-}
-
-function pauseActivationTimer(idx){
-  if(ACTIVATION_INTERVALS[idx]){ clearInterval(ACTIVATION_INTERVALS[idx]); ACTIVATION_INTERVALS[idx]=null; }
-  _ensureActivationTimers();
-  const t = ST.trainActivationTimers[idx];
-  if(t) t.running = false;
-  renderTraining();
-}
-
-function resetActivationTimer(idx){
-  if(ACTIVATION_INTERVALS[idx]){ clearInterval(ACTIVATION_INTERVALS[idx]); ACTIVATION_INTERVALS[idx]=null; }
-  _ensureActivationTimers();
-  const t = ST.trainActivationTimers[idx];
-  if(t){ t.running = false; t.remaining = t.total; }
-  renderTraining();
-}
-
 // ── Activation FLOW (countdown ibrido blocco attivazione 5 min, auto-advance) ──
 function _activationFlowClearInterval(){
   if(ST.trainActivationFlow && ST.trainActivationFlow._iv){
     clearInterval(ST.trainActivationFlow._iv);
     ST.trainActivationFlow._iv = null;
   }
-}
-function _activationFlowCurrentExercise(){
-  const idx = ST.trainActivationFlow.currentIdx;
-  return ACTIVATION_BLOCK[idx] || null;
 }
 function _activationFlowAdvance(){
   const f = ST.trainActivationFlow;
@@ -5401,14 +5289,6 @@ function _recoveryFlowClearInterval(){
     clearInterval(ST.trainRecoveryFlow._iv);
     ST.trainRecoveryFlow._iv = null;
   }
-}
-function _recoveryFlowCurrentExercise(){
-  const sel = ST.trainSession;
-  if(!sel) return null;
-  const sess = getTrainingSession(sel);
-  if(!sess || sess.type !== 'Recupero') return null;
-  const idx = ST.trainRecoveryFlow.currentIdx;
-  return sess.exercises[idx] || null;
 }
 function _stripSide(name){
   return String(name||'').replace(/\s+(dx|sx)\s*$/i, '').trim();
@@ -6095,30 +5975,6 @@ async function checkRecoverySessionDone(){
   }
 }
 
-function editActivationTimer(idx){
-  _ensureActivationTimers();
-  const t = ST.trainActivationTimers[idx];
-  if(!t || t.running) return;
-  const cur = t.remaining;
-  const mm = Math.floor(cur/60);
-  const ss = cur%60;
-  const def = mm + ':' + String(ss).padStart(2,'0');
-  const v = window.prompt('Tempo (MM:SS o secondi):', def);
-  if(v == null) return;
-  const trimmed = v.trim();
-  let secs = NaN;
-  if(/^\d+:\d{1,2}$/.test(trimmed)){
-    const parts = trimmed.split(':');
-    secs = parseInt(parts[0])*60 + parseInt(parts[1]);
-  } else if(/^\d+$/.test(trimmed)){
-    secs = parseInt(trimmed);
-  }
-  if(isNaN(secs) || secs < 0 || secs > 60*60) return;
-  t.remaining = secs;
-  if(secs > t.total) t.total = secs;
-  renderTraining();
-}
-
 function resetAllActivationTimers(){
   for(let i=0;i<3;i++){
     if(ACTIVATION_INTERVALS[i]){ clearInterval(ACTIVATION_INTERVALS[i]); ACTIVATION_INTERVALS[i]=null; }
@@ -6128,27 +5984,6 @@ function resetAllActivationTimers(){
     { remaining:120, total:120, running:false },
     { remaining:60,  total:60,  running:false },
   ];
-}
-
-function _fmtMMSS(s){
-  s = Math.max(0, s|0);
-  const m = Math.floor(s/60);
-  const r = s%60;
-  return m + ':' + String(r).padStart(2,'0');
-}
-
-function toggleActivation(idx) {
-  if(!Array.isArray(ST.trainActivation)) ST.trainActivation = [false,false,false];
-  const wasChecked = !!ST.trainActivation[idx];
-  ST.trainActivation[idx] = !wasChecked;
-  if(wasChecked){
-    if(ACTIVATION_INTERVALS[idx]){ clearInterval(ACTIVATION_INTERVALS[idx]); ACTIVATION_INTERVALS[idx]=null; }
-    _ensureActivationTimers();
-    const orig = (ACTIVATION_BLOCK[idx] && ACTIVATION_BLOCK[idx].seconds) || (idx===2 ? 60 : 120);
-    ST.trainActivationTimers[idx] = { remaining: orig, total: orig, running: false };
-  }
-  _activationAutoCollapse();
-  renderTraining();
 }
 
 function showInfoModal(key) {

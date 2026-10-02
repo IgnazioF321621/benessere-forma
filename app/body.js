@@ -22,9 +22,7 @@ function m2DetectUnit() {
 
 // Conversioni unità (DB sempre in metrico)
 function m2LbToKg(v)  { return v / 2.2046; }
-function m2KgToLb(v)  { return v * 2.2046; }
 function m2InToCm(v)  { return v * 2.54; }
-function m2CmToIn(v)  { return v / 2.54; }
 
 // Mostra una step screen, nasconde le altre, scrolla top
 function m2GoStep(stepId) {
@@ -70,13 +68,13 @@ async function m2EntryIntro() {
   m2DetectUnit();
   // Verifica se c'è un check in corso (resume cross-device)
   try {
-    const {data: inProgress} = await supa.from('body_checks')
+    const {data: inProgress} = await dbq('leggere il check in corso', supa.from('body_checks')
       .select('id, created_at')
       .eq('user_id', ST.user.id)
       .eq('status', 'in_progress')
       .order('created_at', { ascending: false })
       .limit(1)
-      .maybeSingle();
+      .maybeSingle());
     if(inProgress && inProgress.id){
       ST.m2.checkId = inProgress.id;
       showScreen('m2');
@@ -127,15 +125,15 @@ async function m2ResumeContinue() {
   // Determina step di ripartenza in base a cosa è già stato salvato
   try {
     // Foto presenti?
-    const { data: photos } = await supa.from('body_check_photos').select('pose').eq('check_id', ST.m2.checkId);
+    const { data: photos } = await dbq('leggere le foto del check', supa.from('body_check_photos').select('pose').eq('check_id', ST.m2.checkId));
     const posesDone = new Set((photos||[]).map(p => p.pose));
     ['front','right','left','back'].forEach(p => { ST.m2.photosUploaded[p] = posesDone.has(p); });
     // Misure presenti?
-    const { data: meas } = await supa.from('body_measurements').select('*').eq('check_id', ST.m2.checkId).maybeSingle();
+    const { data: meas } = await dbq('leggere le misure del check', supa.from('body_measurements').select('*').eq('check_id', ST.m2.checkId).maybeSingle());
     const hasMeas = !!(meas && meas.weight_kg);
     if(meas && meas.unit_system) ST.m2.unitSystem = meas.unit_system;
     // Esami presenti?
-    const { data: blood } = await supa.from('blood_tests').select('id').eq('user_id', ST.user.id).order('test_date', { ascending: false }).limit(1);
+    const { data: blood } = await dbq('leggere gli esami del sangue', supa.from('blood_tests').select('id').eq('user_id', ST.user.id).order('test_date', { ascending: false }).limit(1));
     const hasBlood = !!(blood && blood.length);
 
     // Heuristica step di ripartenza
@@ -167,7 +165,7 @@ async function m2ResumeDiscard() {
       const rimasti = [];
       // Foto nello Storage (best-effort: le righe contano piu' dei file)
       try {
-        const { data: photos } = await supa.from('body_check_photos').select('storage_path').eq('check_id', ST.m2.checkId);
+        const { data: photos } = await dbq('leggere le foto del checkpoint', supa.from('body_check_photos').select('storage_path').eq('check_id', ST.m2.checkId));
         if(photos && photos.length){
           const f = await dbq('cancellare le foto del checkpoint', supa.storage.from('body-check-photos').remove(photos.map(p => p.storage_path)), {silenzioso:true});
           if(f && f.error) rimasti.push('le foto');
@@ -887,11 +885,11 @@ async function saveBodyLog(){
   renderBody();
 
   // Controlla se esiste già un record per oggi
-  const { data: existing } = await supa.from('body_logs')
+  const { data: existing } = await dbq('leggere la misura di oggi', supa.from('body_logs')
     .select('id')
     .eq('user_id', ST.user.id)
     .eq('date', today)
-    .maybeSingle();
+    .maybeSingle());
 
   let error;
   if(existing?.id){
@@ -938,8 +936,8 @@ async function deleteBodyLogConfirmed(){
       // Check M2: prima cancella le foto da Storage, poi la riga body_checks
       // (ON DELETE CASCADE rimuove body_check_photos + body_measurements).
       try {
-        const { data: photos } = await supa.from('body_check_photos')
-          .select('storage_path').eq('check_id', c.checkId);
+        const { data: photos } = await dbq('leggere le foto del check', supa.from('body_check_photos')
+          .select('storage_path').eq('check_id', c.checkId));
         const paths = (photos || []).map(p => p.storage_path).filter(Boolean);
         if(paths.length){
           const { error: stErr } = await supa.storage.from('body-check-photos').remove(paths);
@@ -966,18 +964,18 @@ async function openBodyCheckDetail(checkId){
     // Misure/composizione: già in memoria da loadBodyLogs()
     const meas = (ST.bodyMeasurements || []).find(m => m.check_id === checkId) || null;
     // Stato + timestamp del check
-    const { data: check } = await supa.from('body_checks')
-      .select('id, status, created_at, notes').eq('id', checkId).maybeSingle();
+    const { data: check } = await dbq('leggere il check', supa.from('body_checks')
+      .select('id, status, created_at, notes').eq('id', checkId).maybeSingle());
     const createdAt = check?.created_at || meas?.created_at || null;
     // Foto: signed URL temporanei (1h)
-    const { data: photoRows } = await supa.from('body_check_photos')
-      .select('pose, storage_path').eq('check_id', checkId);
+    const { data: photoRows } = await dbq('leggere le foto del check', supa.from('body_check_photos')
+      .select('pose, storage_path').eq('check_id', checkId));
     const photos = { front:null, right:null, left:null, back:null };
     for(const p of (photoRows || [])){
       if(!p.storage_path) continue;
       try {
-        const { data: signed } = await supa.storage.from('body-check-photos')
-          .createSignedUrl(p.storage_path, 3600);
+        const { data: signed } = await dbq('aprire la foto del check', supa.storage.from('body-check-photos')
+          .createSignedUrl(p.storage_path, 3600));
         if(signed?.signedUrl && photos.hasOwnProperty(p.pose)) photos[p.pose] = signed.signedUrl;
       } catch(e){ console.warn('[bcd] signed url error:', p.pose, e); }
     }
@@ -987,11 +985,11 @@ async function openBodyCheckDetail(checkId){
       const cd = new Date(createdAt);
       const from = new Date(cd); from.setDate(from.getDate() - 30);
       const to   = new Date(cd); to.setDate(to.getDate() + 30);
-      const { data: bloods } = await supa.from('blood_tests')
+      const { data: bloods } = await dbq('leggere gli esami del sangue', supa.from('blood_tests')
         .select('*').eq('user_id', ST.user.id)
         .gte('test_date', from.toISOString().slice(0,10))
         .lte('test_date', to.toISOString().slice(0,10))
-        .order('test_date', { ascending:false }).limit(1);
+        .order('test_date', { ascending:false }).limit(1));
       blood = (bloods && bloods[0]) || null;
     }
     // Lettura delle foto già fatta, e se esiste un check con cui confrontare (decide il testo del pulsante)

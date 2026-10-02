@@ -38,17 +38,6 @@ function calcStreak() {
 // ═══════════════════════════════════════════════════════════
 // BADGE GIORNO PERFETTO
 // ═══════════════════════════════════════════════════════════
-function isPerfectDay(cons) {
-  const t = ST.TARGET;
-  const pctKcal    = cons.kcal / t.kcal;
-  const pctProtein = cons.protein / t.protein;
-  const pctCarbs   = cons.carbs / t.carbs;
-  const pctFat     = cons.fat / t.fat;
-  return pctKcal>=0.92 && pctKcal<=1.05 &&
-         pctProtein>=0.92 && pctProtein<=1.08 &&
-         pctCarbs>=0.90 && pctCarbs<=1.10 &&
-         pctFat>=0.85 && pctFat<=1.15;
-}
 
 // ═══════════════════════════════════════════════════════════
 // COMPUTATIONS
@@ -103,20 +92,6 @@ function suppUnitFromConfezione(confezione, linea) {
   return 'unità';
 }
 function totalMonthlyCost(){return activeSupps().reduce((a,s)=>a+suppMonthlyCost(s),0);}
-function periodCost(range){return activeSupps().reduce((a,s)=>a+(s.price/s.doses),0)*range;}
-
-// LEGACY: mantenuta per compatibilità (chiamate non ancora migrate al pattern items)
-async function estimateMacrosLegacy(desc) {
-  const txt = await callAI(`Sei un nutrizionista esperto. Analizza questo pasto e stima i macronutrienti.\n\nPasto: "${desc}"\n\nRispondi SOLO con JSON valido, niente testo extra:\n{"kcal":number,"protein":number,"carbs":number,"fat":number,"notes":"nota breve in italiano"}\n\nUsa porzioni standard adulto attivo se non specificate.`);
-  const parsed = JSON.parse(txt.replace(/```json|```/g,'').trim());
-  return {
-    kcal:    Math.max(0, Math.round((Number(parsed.kcal)    || 0) * 10) / 10),
-    protein: Math.max(0, Math.round((Number(parsed.protein) || 0) * 10) / 10),
-    carbs:   Math.max(0, Math.round((Number(parsed.carbs)   || 0) * 10) / 10),
-    fat:     Math.max(0, Math.round((Number(parsed.fat)     || 0) * 10) / 10),
-    notes:   parsed.notes || '',
-  };
-}
 
 // FASE 2: spezza un pasto in ingredienti distinti
 async function estimateMealItems(desc) {
@@ -303,23 +278,6 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   // Con 300 la risposta usciva mozzata o vuota 2 volte su 14. Il margine globale
   // del Worker (+600) non c'entra e resta dov'e': qui si muove solo questo budget.
   return await callAI(sections.join('\n\n'), 700);
-}
-
-async function loadMeals(date) {
-  const {data: meals} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
-  if (!meals || meals.length === 0) return [];
-  const mealIds = meals.map(m => m.id);
-  const {data: items} = await supa.from('meal_items')
-    .select('*')
-    .in('meal_id', mealIds)
-    .eq('user_id', ST.user.id)
-    .order('sort_order', {ascending: true});
-  const itemsByMeal = {};
-  (items || []).forEach(it => {
-    if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
-    itemsByMeal[it.meal_id].push(it);
-  });
-  return meals.map(m => ({...m, items: itemsByMeal[m.id] || []}));
 }
 
 // ── STORICO A FINESTRA (Fondamenta 100, tappa 4, 2 ott 2026) ─────────────────────────────────────
@@ -527,13 +485,13 @@ async function loadRecentDays(giorni) {
 }
 
 async function loadSupps() {
-  const {data} = await supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order');
+  const {data} = await dbq('leggere i tuoi integratori', supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order'));
   // Join col catalogo (codice, poi nome): la regola è in shared/nutrizione.js → mapSupplement
   ST.supps = (data||[]).map(s => ZTNutrizione.mapSupplement(s, ST.catalog || []));
 }
 
 async function loadCatalog() {
-  const {data} = await supa.from('nutrilite_catalog').select('*').order('nome');
+  const {data} = await dbq('leggere il catalogo degli integratori', supa.from('nutrilite_catalog').select('*').order('nome'));
   ST.catalog = data || [];
 }
 
@@ -773,11 +731,6 @@ async function dbUpdateSupp(id, changes) {
   await dbq('aggiornare l\'integratore', supa.from('supplements').update(changes).eq('id', id).eq('user_id', ST.user.id));
 }
 
-async function dbAddSupp(suppData) {
-  const {data} = await dbq('aggiungere l\'integratore', supa.from('supplements').insert({...suppData, user_id:ST.user.id}).select().single());
-  return data;
-}
-
 async function dbDeleteSupp(id) {
   await dbq('cancellare l\'integratore', supa.from('supplements').delete().eq('id', id).eq('user_id', ST.user.id));
 }
@@ -801,26 +754,6 @@ function macroBar(label,current,target,color,unit='g'){
   const pct=Math.min(100,Math.round((current/target)*100));
   const over=current>target;
   return `<div class="mbar"><div class="mbar-head"><span class="mbar-lbl">${label}</span><span class="mbar-val ${over?'over':''}">${current}${unit} / ${target}${unit}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${over?'var(--err)':color};"></div></div></div>`;
-}
-
-function progressRing(cons) {
-  const pct = Math.min(100, Math.round((cons.kcal / ST.TARGET.kcal) * 100));
-  const r=52, cx=60, cy=60, sw=8, circ=2*Math.PI*r;
-  const dash = (pct/100)*circ;
-  const color = pct>=95 && pct<=105 ? 'var(--ok)' : pct>105 ? 'var(--err)' : 'var(--acc)';
-  return `<div class="progress-ring-wrap">
-    <svg width="120" height="120" viewBox="0 0 120 120">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
-        stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${circ*0.25}"
-        stroke-linecap="round" style="transition:stroke-dasharray .6s ease"/>
-    </svg>
-    <div class="progress-ring-center">
-      <div class="ring-kcal">${cons.kcal}</div>
-      <div class="ring-lbl">kcal</div>
-      <div style="font-size:10px;color:${color};font-family:'JetBrains Mono',monospace;font-weight:700;">${pct}%</div>
-    </div>
-  </div>`;
 }
 
 function miniRing(value, target, label, color) {
@@ -1486,11 +1419,11 @@ window.smartOpenEdit = async function(date, mealId) {
   // Pre-carica gli items se non già in memoria
   let items = meal.items || [];
   if (items.length === 0) {
-    const {data: dbItems} = await supa.from('meal_items')
+    const {data: dbItems} = await dbq('leggere gli ingredienti del pasto', supa.from('meal_items')
       .select('*')
       .eq('meal_id', mealId)
       .eq('user_id', ST.user.id)
-      .order('sort_order', {ascending: true});
+      .order('sort_order', {ascending: true}));
     items = dbItems || [];
   }
 
@@ -3136,15 +3069,6 @@ function renderDayDetailScreen() {
 }
 
 // ═══════════════════════════════════════════════════════════
-function nutriSubNav(active){
-  // 18 mag 2026: Storico → Analisi (refresh tab → dashboard analitica).
-  // Accetta sia 'storico' che 'analisi' come active per retrocompat (alias gestiti da showPage).
-  if(active === 'storico') active = 'analisi';
-  return `<nav class="nutrition-subnav">${['oggi','integratori','analisi','piano'].map((id,_,arr)=>{
-    const labels={oggi:'Oggi',integratori:'Integratori',analisi:'Analisi',piano:'Piano'};
-    return `<button class="nsn-pill${active===id?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
-  }).join('')}</nav>`;
-}
 
 // ═══════════════════════════════════════════════════════════
 // PAGE: PIANO V4 — Coach Attivo (Step B.1, 20 maggio 2026)
@@ -5927,26 +5851,6 @@ async function confirmSuppSingle() {
 let _editMealId = null;
 let _editMealDayKey = null;
 
-function openEditMealModal(dayKey, mealId) {
-  const day = ST.db.days[dayKey];
-  if(!day) return;
-  const m = day.meals.find(m => m.id === mealId || m.local_id === mealId);
-  if(!m) return;
-  _editMealId = mealId;
-  _editMealDayKey = dayKey;
-  document.getElementById('em-desc').value    = m.description || '';
-  document.getElementById('em-kcal').value    = m.kcal    || 0;
-  document.getElementById('em-protein').value = m.protein || 0;
-  document.getElementById('em-carbs').value   = m.carbs   || 0;
-  document.getElementById('em-fat').value     = m.fat     || 0;
-  document.getElementById('em-notes').value   = m.notes   || '';
-  document.getElementById('em-err').style.display = 'none';
-  const btn = document.getElementById('em-save-btn');
-  btn.disabled = false; btn.textContent = 'Salva modifiche →';
-  document.getElementById('edit-meal-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('em-desc').focus(), 100);
-}
-
 function closeEditMealModal() {
   document.getElementById('edit-meal-modal').style.display = 'none';
   _editMealId = null;
@@ -6042,66 +5946,6 @@ function setLogSlot(id){
   ST.smartForm = { items:[], freeText:'', notes:'', analyzing:false, editingMealId:null, editingSlot:null, editingTime:null, editingDescription:'' };
   renderOggi();
 }
-function buildSuggestionBox() {
-  // Mappa slot app -> slot piano AI
-  const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
-  const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
-
-  // Raccoglie tutti i suggerimenti disponibili: prima dal piano AI, poi dai default
-  const pianoSuggerimenti = [];
-  if(ST.pianoAI?.giorni?.length) {
-    ST.pianoAI.giorni.forEach(g => {
-      const pasto = g[pianoSlot];
-      if(pasto?.piatto) pianoSuggerimenti.push(pasto.piatto + (pasto.ingredienti ? ' — ' + pasto.ingredienti : ''));
-    });
-  }
-  const defaultSuggerimenti = SUGGESTED[ST.logSlot] || [];
-  const tutti = [...new Set([...pianoSuggerimenti, ...defaultSuggerimenti])];
-  if(!tutti.length) return '';
-
-  // Indice corrente (ciclico)
-  if(ST.suggIdx === undefined || ST.suggSlot !== ST.logSlot) {
-    ST.suggIdx = 0;
-    ST.suggSlot = ST.logSlot;
-  }
-  const idx = ST.suggIdx % tutti.length;
-  const sugg = tutti[idx];
-  const isPiano = idx < pianoSuggerimenti.length;
-  const badge = isPiano ? `<span style="font-size:9px;background:var(--acc-lt);color:var(--acc);font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:4px;letter-spacing:.5px;">DAL PIANO</span>` : '';
-
-  return `<div style="margin-bottom:10px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">SUGGERIMENTO ${idx+1}/${tutti.length}</span>
-      <div style="display:flex;gap:6px;align-items:center;">${badge}<button class="btn btn-ghost btn-sm" onclick="nextSuggestion()" style="padding:3px 10px;font-size:10px;">↻ Cambia</button></div>
-    </div>
-    <button class="sugg-btn" onclick="useSuggestion(${idx})" style="margin:0;font-size:13px;color:var(--t1);font-weight:500;">${esc(sugg)}</button>
-  </div>`;
-}
-
-function nextSuggestion() {
-  if(ST.suggIdx === undefined) ST.suggIdx = 0;
-  ST.suggIdx = (ST.suggIdx + 1);
-  renderOggi();
-  setTimeout(() => { const ta = document.getElementById('log-text'); if(ta) ta.focus(); }, 50);
-}
-
-function useSuggestion(idx) {
-  const slotMap = {colazione:'colazione', snack_mattina:'spuntino_mattina', pranzo:'pranzo', snack_pomeriggio:'spuntino_pomeriggio', cena:'cena'};
-  const pianoSlot = slotMap[ST.logSlot] || ST.logSlot;
-  const pianoSuggerimenti = [];
-  if(ST.pianoAI?.giorni?.length) {
-    ST.pianoAI.giorni.forEach(g => {
-      const pasto = g[pianoSlot];
-      if(pasto?.piatto) pianoSuggerimenti.push(pasto.piatto + (pasto.ingredienti ? ' — ' + pasto.ingredienti : ''));
-    });
-  }
-  const tutti = [...new Set([...pianoSuggerimenti, ...(SUGGESTED[ST.logSlot]||[])])];
-  ST.logText = tutti[idx] || '';
-  renderOggi();
-  setTimeout(() => { const ta = document.getElementById('log-text'); if(ta) { ta.value = ST.logText; ta.focus(); } }, 50);
-}
-
-function setSuggestion(i){ST.logText=SUGGESTED[ST.logSlot][i];renderOggi();setTimeout(()=>{const ta=document.getElementById('log-text');if(ta){ta.value=ST.logText;ta.focus();}},10);}
 
 async function logMeal(){
   const ta=document.getElementById('log-text');
@@ -6128,7 +5972,7 @@ async function updateMealTime(dayKey, mealId, newTime){
   m.time=newTime;
   renderOggi();
   saveCache();
-  if(m.id) supa.from('meals').update({time:newTime}).eq('id',m.id).eq('user_id',ST.user.id).then(()=>{});
+  if(m.id) dbq('cambiare l\'orario del pasto', supa.from('meals').update({time:newTime}).eq('id',m.id).eq('user_id',ST.user.id), {silenzioso:true});
 }
 
 async function deleteMeal(dayKey, mealId){
@@ -6294,16 +6138,6 @@ function liveDoseUpdate(id, newDose) {
   _suppBannerUpdate();
 }
 
-function liveMultiplierUpdate(id, newMult) {
-  const s = ST.supps.find(s=>s.local_id===id);
-  if (!s) return;
-  s.dose_multiplier = Math.max(0.25, Math.min(4, parseFloat(newMult)||1));
-  const costEl = document.getElementById('supp-cost-'+id);
-  if (costEl) { const mc=suppMonthlyCost(s); costEl.innerHTML=`€ <span style="font-weight:600;color:var(--t2);">${(mc/30).toFixed(2)}</span>/oggi · <span style="font-size:9px;">${(mc/30*7).toFixed(2)}/sett · ${mc.toFixed(2)}/mese</span>`; }
-  _suppSlotUpdate(s.slot);
-  _suppBannerUpdate();
-}
-
 // ── OGGI INLINE SUPP EDITING ──────────────────────────────
 function extraLogKey(name, time) {
   return (name + '__' + time).replace(/[^a-zA-Z0-9]/g, '_');
@@ -6446,14 +6280,6 @@ function saveOggiSuppDose(id, newDose) {
     dbUpdateSupp(id, {quantity: s.dose_die});
     saveCache();
   }, 800);
-}
-
-function saveOggiSupp(id) {
-  const s = ST.supps.find(s=>s.local_id===id);
-  if (!s) return;
-  dbUpdateSupp(id, {quantity: s.dose_die, slot: s.slot});
-  saveCache();
-  showToast('Salvato','✓');
 }
 
 // ═══════════════════════════════════════════════════════════

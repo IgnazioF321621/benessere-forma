@@ -843,7 +843,7 @@ async function loadAndStart_thenM2Entry() {
   await loadTodaySuppLog();
   await hydrateTrainingSetsFromCloud();
   await loadActiveScheda(); // Mossa 3: scheda DB con fallback TRAINING_SESSIONS
-  const {data: profile} = await supa.from('profiles').select('*').eq('id', ST.user.id).single();
+  const {data: profile} = await dbq('leggere il tuo profilo', supa.from('profiles').select('*').eq('id', ST.user.id).single());
   if(profile) ST.profile = profile;
   if(ST.profile) applyProfile(ST.profile);
   saveCache();

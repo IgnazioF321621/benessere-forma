@@ -58,12 +58,12 @@ async function computeTrainHomeData(){
     }
 
     // Streak — giorni consecutivi con workout completato (a partire da oggi)
-    const { data: completedArr } = await supa.from('workouts')
+    const { data: completedArr } = await dbq('leggere gli allenamenti completati', supa.from('workouts')
       .select('date')
       .eq('user_id', ST.user.id)
       .eq('completed', true)
       .order('date', {ascending:false})
-      .limit(60);
+      .limit(60), {silenzioso:true});
     const completedDates = new Set((completedArr||[]).map(w=>w.date));
     let streak=0, check=new Date(today);
     for(let i=0;i<60;i++){

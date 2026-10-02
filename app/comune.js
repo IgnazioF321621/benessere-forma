@@ -307,7 +307,6 @@ function dayKey(d){
 }
 function todayKey(){ return dayKey(); }
 function fmtDate(k){return new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});}
-function J(x){return JSON.parse(JSON.stringify(x));}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 // Logica residua kcal/macro — formatter deterministico (separatore migliaia italiano, indipendente da ICU browser)
 function fmtNum(n){const v=Math.round(Number(n)||0);const sign=v<0?'-':'';return sign+String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}

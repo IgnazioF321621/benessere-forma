@@ -1901,7 +1901,7 @@ async function loadAndStart() {
   showScreen('loading');
   // tutto insieme col profilo: dati (catalogo, integratori, pacchetti, extra, storico completo per i
   // grafici di Analisi, serie di oggi, scheda attiva) e la riga di profiles
-  const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), supa.from('profiles').select('*').eq('id', ST.user.id).single()]);
+  const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), dbq('leggere il tuo profilo', supa.from('profiles').select('*').eq('id', ST.user.id).single(), {silenzioso:true})]);
   ST.ultimoCompletoAt = Date.now(); ST.ultimoCompletoGiorno = todayKey();   // tappa 5: il rientro leggero parte da qui
   const {data: profile, error: profileErr} = profRes;
   // Fondamenta 130: «la lettura e' fallita» non e' «il profilo non esiste». Senza righe PostgREST
@@ -1999,7 +1999,7 @@ async function refreshInBackground() {
     if(leggero) {
       const [giorniOk, , profRes] = await Promise.all([
         loadRecentDays(), hydrateTrainingSetsFromCloud(),
-        supa.from('profiles').select('*').eq('id', ST.user.id).single(),
+        dbq('leggere il tuo profilo', supa.from('profiles').select('*').eq('id', ST.user.id).single(), {silenzioso:true}),
       ]);
       // Se i giorni recenti non si sono letti, si ripiega sul rinfresco completo
       if(giorniOk) { _rinfrescoFinale(profRes); return; }
@@ -2007,7 +2007,7 @@ async function refreshInBackground() {
     // Tutto insieme col profilo (Fondamenta 100, tappa 3): catalogo, integratori, pacchetti, extra,
     // storico (finestra o completo, tappa 4), presi-oggi freschi PRIMA di renderare, serie
     // training di oggi dal cloud e scheda attiva (cross-device sync, Mossa 3).
-    const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), supa.from('profiles').select('*').eq('id', ST.user.id).single()]);
+    const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), dbq('leggere il tuo profilo', supa.from('profiles').select('*').eq('id', ST.user.id).single(), {silenzioso:true})]);
     ST.ultimoCompletoAt = Date.now();
     ST.ultimoCompletoGiorno = todayKey();
     _rinfrescoFinale(profRes);
