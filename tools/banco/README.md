@@ -14,6 +14,7 @@ node tools/banco/prova_lettura_foto.js  # lettura delle foto del check: card, pu
 node tools/banco/prova_body_tendenza.js # Tendenza e «Ultimi log» con le pesate rapide (cantiere 35)
 node tools/banco/prova_storico_pasti.js  # storico oltre le 1000 righe: pasti, ingredienti e catalogo letti a pagine (Fondamenta 010)
 node tools/banco/prova_errori.js         # errori dei telefoni in app_errors: dbq, errori di pagina, promesse rifiutate (Fondamenta 060)
+node tools/banco/prova_diario.js         # diario del giorno (daily_log): lettura, scrittura dei soli campi passati, valori fuori scala (Fondamenta 050)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom

@@ -43,6 +43,10 @@
    "tabella": "coach_proposals"
   },
   {
+   "righe": 0,
+   "tabella": "daily_log"
+  },
+  {
    "righe": 725,
    "tabella": "esercizi_catalog"
   },
@@ -1250,6 +1254,106 @@
     "pos": 12,
     "predefinito": "now()",
     "tabella": "coach_proposals",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "daily_log",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "date"
+   },
+   {
+    "colonna": "sleep_hours",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "numeric(3,1)"
+   },
+   {
+    "colonna": "energy",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "stress",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "day_type",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "daily_log",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 9,
+    "predefinito": "now()",
+    "tabella": "daily_log",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "updated_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 10,
+    "predefinito": "now()",
+    "tabella": "daily_log",
     "tipo": "timestamp with time zone"
    },
    {
@@ -4204,6 +4308,32 @@
      "UPDATE"
     ],
     "ruolo": "anon",
+    "tabella": "daily_log"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "daily_log"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "REFERENCES",
+     "SELECT",
+     "TRIGGER",
+     "TRUNCATE",
+     "UPDATE"
+    ],
+    "ruolo": "anon",
     "tabella": "esercizi_catalog"
    },
    {
@@ -5099,6 +5229,54 @@
     ],
     "schema": "public",
     "tabella": "coach_proposals",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "daily_log_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "daily_log",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "daily_log_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "daily_log",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "daily_log_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "daily_log",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "daily_log_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "daily_log",
     "usando": "(auth.uid() = user_id)"
    },
    {
@@ -6003,6 +6181,12 @@
     "commento": null,
     "rls": true,
     "rls_forzata": false,
+    "tabella": "daily_log"
+   },
+   {
+    "commento": null,
+    "rls": true,
+    "rls_forzata": false,
     "tabella": "esercizi_catalog"
    },
    {
@@ -6128,6 +6312,12 @@
   ],
   "tipi": [],
   "trigger": [
+   {
+    "definizione": "CREATE TRIGGER trg_daily_log_updated_at BEFORE UPDATE ON public.daily_log FOR EACH ROW EXECUTE FUNCTION set_updated_at()",
+    "nome": "trg_daily_log_updated_at",
+    "schema": "public",
+    "tabella": "daily_log"
+   },
    {
     "definizione": "CREATE TRIGGER trg_training_notes_updated_at BEFORE UPDATE ON public.training_notes FOR EACH ROW EXECUTE FUNCTION set_updated_at()",
     "nome": "trg_training_notes_updated_at",
@@ -6362,6 +6552,54 @@
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "coach_proposals_user_id_fkey",
     "tabella": "coach_proposals",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "daily_log_pkey",
+    "tabella": "daily_log",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date)",
+    "nome": "daily_log_user_date_key",
+    "tabella": "daily_log",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK (((day_type IS NULL) OR (day_type = ANY (ARRAY['training'::text, 'rest'::text, 'deload'::text, 'injury'::text, 'fasting'::text]))))",
+    "nome": "daily_log_day_type_check",
+    "tabella": "daily_log",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((energy IS NULL) OR ((energy >= 1) AND (energy <= 5))))",
+    "nome": "daily_log_energy_check",
+    "tabella": "daily_log",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((note IS NULL) OR (char_length(note) <= 1000)))",
+    "nome": "daily_log_note_len",
+    "tabella": "daily_log",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((sleep_hours IS NULL) OR ((sleep_hours >= (0)::numeric) AND (sleep_hours <= (24)::numeric))))",
+    "nome": "daily_log_sleep_check",
+    "tabella": "daily_log",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((stress IS NULL) OR ((stress >= 1) AND (stress <= 5))))",
+    "nome": "daily_log_stress_check",
+    "tabella": "daily_log",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "daily_log_user_id_fkey",
+    "tabella": "daily_log",
     "tipo": "f"
    },
    {

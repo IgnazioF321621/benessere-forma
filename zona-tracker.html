@@ -6252,6 +6252,84 @@ async function dbqAll(operazione, mk, opzioni) {
   return { data: out, error: null };
 }
 
+// ── Il diario del giorno: tabella daily_log (Fondamenta 050, 2 ott 2026) ──
+// Una riga per persona e per giorno con SOLO cio' che l'app non sa gia': ore di
+// sonno, energia e stress da 1 a 5, una nota, il tipo di giornata dichiarato.
+// I totali del giorno NON stanno qui: si calcolano da pasti e serie (L49).
+// Questo e' lo strato dei dati; dove si inserisce e chi lo legge lo decidono
+// le sezioni (Home 020, Pirsi 020). ST.dailyLog = { 'AAAA-MM-GG': riga }.
+const DAILY_LOG_TIPI = ['training', 'rest', 'deload', 'injury', 'fasting'];
+
+async function loadDailyLog() {
+  if (!ST.user || !ST.user.id) return ST.dailyLog || {};
+  const res = await dbqAll('leggere il diario del giorno', () => supa.from('daily_log')
+    .select('date,sleep_hours,energy,stress,day_type,note,updated_at')
+    .eq('user_id', ST.user.id)
+    .order('date', {ascending:true}), {silenzioso:true});
+  // Lettura fallita: resta quello che c'era, «non letto» non diventa «vuoto».
+  if (res.error || res.data === null) return ST.dailyLog || {};
+  const mappa = {};
+  res.data.forEach(r => { mappa[r.date] = r; });
+  ST.dailyLog = mappa;
+  return mappa;
+}
+
+function getDailyLog(date) {
+  return (ST.dailyLog && ST.dailyLog[date || todayKey()]) || null;
+}
+
+// Controlla e ripulisce i campi prima di scrivere. Un valore fuori scala non si
+// corregge in silenzio: si rifiuta, cosi' chi chiama lo dice alla persona.
+// null o stringa vuota = «cancella questo campo». Restituisce {campi} oppure {errore}.
+function _dailyLogCampi(campi) {
+  const out = {};
+  const c = campi || {};
+  const vuoto = v => v === null || v === '';
+  if ('sleep_hours' in c) {
+    if (vuoto(c.sleep_hours)) out.sleep_hours = null;
+    else {
+      const n = Number(String(c.sleep_hours).replace(',', '.'));
+      if (!isFinite(n) || n < 0 || n > 24) return { errore: 'Le ore di sonno vanno da 0 a 24' };
+      out.sleep_hours = Math.round(n * 10) / 10;
+    }
+  }
+  for (const k of ['energy', 'stress']) {
+    if (!(k in c)) continue;
+    if (vuoto(c[k])) { out[k] = null; continue; }
+    const n = Number(c[k]);
+    if (!Number.isInteger(n) || n < 1 || n > 5) return { errore: (k === 'energy' ? 'L\'energia' : 'Lo stress') + ' va da 1 a 5' };
+    out[k] = n;
+  }
+  if ('day_type' in c) {
+    if (vuoto(c.day_type)) out.day_type = null;
+    else if (!DAILY_LOG_TIPI.includes(c.day_type)) return { errore: 'Tipo di giornata non riconosciuto' };
+    else out.day_type = c.day_type;
+  }
+  if ('note' in c) {
+    const t = vuoto(c.note) ? '' : String(c.note).trim();
+    if (t.length > 1000) return { errore: 'La nota è troppo lunga (massimo 1000 caratteri)' };
+    out.note = t || null;
+  }
+  if (!Object.keys(out).length) return { errore: 'Niente da salvare' };
+  return { campi: out };
+}
+
+// Scrive SOLO i campi passati: gli altri della stessa giornata restano come sono
+// (l'upsert sulla chiave persona+giorno aggiorna le sole colonne inviate).
+async function saveDailyLog(date, campi) {
+  if (!ST.user || !ST.user.id) return { data: null, error: { message: 'Nessun utente' } };
+  const giorno = date || todayKey();
+  const v = _dailyLogCampi(campi);
+  if (v.errore) return { data: null, error: { message: v.errore } };
+  const res = await dbq('salvare il diario del giorno',
+    supa.from('daily_log').upsert(Object.assign({ user_id: ST.user.id, date: giorno }, v.campi), { onConflict: 'user_id,date' }));
+  if (res.error) return { data: null, error: res.error };
+  if (!ST.dailyLog) ST.dailyLog = {};
+  ST.dailyLog[giorno] = Object.assign({ date: giorno, sleep_hours: null, energy: null, stress: null, day_type: null, note: null },
+    ST.dailyLog[giorno] || {}, v.campi);
+  return { data: ST.dailyLog[giorno], error: null };
+}
+
 async function loadMeals(date) {
   const {data: meals} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
   if (!meals || meals.length === 0) return [];

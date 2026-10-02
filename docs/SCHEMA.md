@@ -6,7 +6,7 @@ Staccato da [`CLAUDE.md`](../CLAUDE.md) il 13 settembre 2026, per alleggerire il
 
 **Lo schema vero è in git dal 2 ottobre 2026** (Fondamenta 030). Questo file tiene le regole d'uso; la struttura si legge altrove e non si riscrive a mano:
 
-- [`SCHEMA_TABELLE.md`](SCHEMA_TABELLE.md) — tutte le tabelle (31 dal 2 ottobre, con `app_errors`) con colonne, tipi e vincoli, generato dal database
+- [`SCHEMA_TABELLE.md`](SCHEMA_TABELLE.md) — tutte le tabelle (32 dal 2 ottobre, con `app_errors` e `daily_log`) con colonne, tipi e vincoli, generato dal database
 - [`supabase/migrations/20261002_000_fotografia_zero.sql`](../supabase/migrations/20261002_000_fotografia_zero.sql) — la «fotografia zero»: tabelle, vincoli, indici, 93 regole di accesso, funzioni, trigger, 3 bucket. **Da qui ogni modifica di struttura è un file datato in `supabase/migrations/`**
 - `python3 tools/schema_fotografia.py --confronta` dice se il database è cambiato rispetto alla fotografia; senza opzioni la rigenera
 

@@ -2,7 +2,7 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-02 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-31 tabelle, 361 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+32 tabelle, 371 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -16,6 +16,7 @@
 | [`body_logs`](#body_logs) | 5 | 2 | id | — |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
 | [`coach_proposals`](#coach_proposals) | 25 | 3 | id | user_id, week_start, kind |
+| [`daily_log`](#daily_log) | 0 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 3 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
@@ -240,6 +241,29 @@ Vincoli:
 - `coach_proposals_status_check` — `CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'expired'::text])))`
 - `coach_proposals_week_start_lunedi` — `CHECK ((EXTRACT(isodow FROM week_start) = (1)::numeric))`
 - `coach_proposals_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `daily_log`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `user_id` | uuid | sì |  |
+| `date` | date | sì |  |
+| `sleep_hours` | numeric(3,1) |  |  |
+| `energy` | smallint |  |  |
+| `stress` | smallint |  |  |
+| `day_type` | text |  |  |
+| `note` | text |  |  |
+| `created_at` | timestamp with time zone | sì | `now()` |
+| `updated_at` | timestamp with time zone | sì | `now()` |
+
+Vincoli:
+- `daily_log_day_type_check` — `CHECK (((day_type IS NULL) OR (day_type = ANY (ARRAY['training'::text, 'rest'::text, 'deload'::text, 'injury'::text, 'fasting'::text]))))`
+- `daily_log_energy_check` — `CHECK (((energy IS NULL) OR ((energy >= 1) AND (energy <= 5))))`
+- `daily_log_note_len` — `CHECK (((note IS NULL) OR (char_length(note) <= 1000)))`
+- `daily_log_sleep_check` — `CHECK (((sleep_hours IS NULL) OR ((sleep_hours >= (0)::numeric) AND (sleep_hours <= (24)::numeric))))`
+- `daily_log_stress_check` — `CHECK (((stress IS NULL) OR ((stress >= 1) AND (stress <= 5))))`
+- `daily_log_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `esercizi_catalog`
 

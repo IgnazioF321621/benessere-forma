@@ -30,6 +30,8 @@ Lettura non dimostrabile perché la tabella è vuota: `ai_memory`, `blood_tests`
 
 **Dopo `app_errors`** (tabella nuova dello stesso giorno, [Fondamenta 060](../supabase/migrations/20261002_app_errors.sql)): 27 tabelle personali, 125 prove a testa, le 4 in più tutte a posto. Chi è entrato inserisce solo errori a proprio nome e non li rilegge; li legge solo l'admin (la regola admin sale così a 14 tabelle).
 
+**Dopo `daily_log`** (il diario del giorno, [Fondamenta 050](../supabase/migrations/20261002_daily_log.sql)): 28 tabelle personali, 129 prove a testa, le 4 in più tutte a posto. Ognuno legge e scrive solo le proprie giornate; **nessuna regola admin**: sonno, energia e stress non si vedono dalla dashboard.
+
 ## La regola «admin»
 
 La dashboard legge i dati di tutti grazie a una regola di **sola lettura** legata all'email dentro il gettone di accesso (`auth.jwt() ->> 'email' = 'ignazio.f@me.com'`), presente su 13 tabelle: `profiles`, `meals`, `workouts`, `body_logs`, `weight_logs`, `supplements_log`, `supplement_packages`, `supplement_package_items`, `schede_utente`, `weekly_plans`, `weekly_plan_meals`, `weekly_plan_acceptance`, `ai_memory`.
