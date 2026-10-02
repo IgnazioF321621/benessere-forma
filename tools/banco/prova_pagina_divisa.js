@@ -1,5 +1,6 @@
 // Fondamenta 035: la pagina divisa in più file resta intera.
-//  1) ogni file locale richiamato dalla pagina esiste ed è nell'elenco del service worker (e viceversa)
+//  1) ogni file locale richiamato dalla pagina esiste ed è nell'elenco del service worker (e viceversa);
+//     ogni file su disco in app/ e shared/ è richiamato (niente file orfani)
 //  2) il service worker (sw.js vero, con rete e archivio finti): salva i file all'installazione,
 //     in linea dà sempre la versione fresca, senza rete dà quella salvata, non tocca Supabase
 //  3) con un file «prima» la pagina ricomposta è identica byte per byte:
@@ -49,6 +50,9 @@ function avviaSW(){
   atteso('tutti dentro app/ o shared/', locali.filter(f => !/^(app|shared)\//.test(f)), []);
   atteso('nessun richiamo locale scritto in una forma non riconosciuta', richiamiNonRiconosciuti(html), []);
   atteso('elenco del service worker = file richiamati', sw.elenco.slice().sort(), locali.slice().sort());
+  // tappa 11 (controllo finale): un file su disco che la pagina non richiama non si salva senza rete e non serve a nessuno
+  const suDisco = ['app', 'shared'].flatMap(d => fs.readdirSync(path.join(REPO, d)).map(f => d + '/' + f)).sort();
+  atteso('ogni file su disco in app/ e shared/ è richiamato dalla pagina', suDisco.filter(f => !locali.includes(f)), []);
   atteso('nessuno stile rimasto dentro la pagina', (html.match(/<style[\s>]/g) || []).length, 0);
   const moduli = fs.readdirSync(path.join(REPO, 'shared')).filter(f => f.endsWith('.js')).map(f => 'shared/' + f).sort();
   atteso('tutti i moduli di shared/ richiamati dalla pagina', moduli.filter(m => !locali.includes(m)), []);
