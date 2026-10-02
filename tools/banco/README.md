@@ -23,6 +23,7 @@ node tools/banco/prova_avvio_home.js [cartella di prima]  # apertura della Home:
 node tools/banco/prova_avvio_subito.js [cartella di prima]  # la pagina parte da sola, senza l'attesa fissa di 1,8 s: millisecondi fino alla schermata, entrato e non (Fondamenta 100, tappa 2)
 node tools/banco/prova_avvio_ondate.js [cartella di prima]  # le letture di avvio partono insieme: ondate di risposte fino all'app e al rientro, col finto Supabase che risponde solo al via (Fondamenta 100, tappa 3)
 node tools/banco/prova_avvio_finestra.js [cartella di prima]  # all'avvio solo gli ultimi 90 giorni di storico, il resto a richiesta (serie di giorni, ‹, Analisi a 3 mesi); a fine lettura lo stato e' identico a quello di prima (Fondamenta 100, tappa 4)
+node tools/banco/prova_rientro_leggero.js  # il rientro nell'app rilegge solo gli ultimi 7 giorni, il profilo e le serie di oggi (7 richieste invece di 14); dopo 30 minuti, a giorno cambiato o se una lettura fallisce torna completo (Fondamenta 100, tappa 5)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom

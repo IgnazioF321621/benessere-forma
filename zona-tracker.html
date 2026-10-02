@@ -1854,6 +1854,7 @@ async function loadAndStart() {
   // tutto insieme col profilo: dati (catalogo, integratori, pacchetti, extra, storico completo per i
   // grafici di Analisi, serie di oggi, scheda attiva) e la riga di profiles
   const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), supa.from('profiles').select('*').eq('id', ST.user.id).single()]);
+  ST.ultimoCompletoAt = Date.now(); ST.ultimoCompletoGiorno = todayKey();   // tappa 5: il rientro leggero parte da qui
   const {data: profile, error: profileErr} = profRes;
   // Se c'è un errore di rete ma abbiamo già un profilo in ST (es. da cache parziale), usalo
   if (profileErr && !profile && ST.profile && profileIsComplete(ST.profile)) {
@@ -1929,28 +1930,47 @@ function _allineaGiornoCorrente() {
   return true;
 }
 
+// Rientro leggero (Fondamenta 100, tappa 5): se l'ultimo rinfresco COMPLETO e' di meno di 30 minuti fa
+// e il giorno non e' cambiato, si rileggono solo le cose che cambiano da un telefono all'altro in
+// poco tempo: profilo, ultimi 7 giorni di pasti/integratori/extra, serie di oggi. Catalogo, integratori,
+// pacchetti, scheda e lo storico piu' vecchio si rileggono al rinfresco completo.
+const RINFRESCO_COMPLETO_DOPO_MS = 30 * 60 * 1000;
 async function refreshInBackground() {
   // App chiusa per lavori: vale anche per chi l'aveva già aperta
   if (isAppClosedForUser()) { showClosedScreen(); return; }
   try {
+    const leggero = !!ST.ultimoCompletoAt && ST.ultimoCompletoGiorno === todayKey() && Date.now() - ST.ultimoCompletoAt < RINFRESCO_COMPLETO_DOPO_MS;
+    if(leggero) {
+      const [giorniOk, , profRes] = await Promise.all([
+        loadRecentDays(), hydrateTrainingSetsFromCloud(),
+        supa.from('profiles').select('*').eq('id', ST.user.id).single(),
+      ]);
+      // Se i giorni recenti non si sono letti, si ripiega sul rinfresco completo
+      if(giorniOk) { _rinfrescoFinale(profRes); return; }
+    }
     // Tutto insieme col profilo (Fondamenta 100, tappa 3): catalogo, integratori, pacchetti, extra,
-    // storico completo (serve ai grafici di Analisi), presi-oggi freschi PRIMA di renderare, serie
+    // storico (finestra o completo, tappa 4), presi-oggi freschi PRIMA di renderare, serie
     // training di oggi dal cloud e scheda attiva (cross-device sync, Mossa 3).
     const [, profRes] = await Promise.all([caricaDatiAvvio({ storico:true }), supa.from('profiles').select('*').eq('id', ST.user.id).single()]);
-    // Cross-device sync (Passo 2, 25 mag notte): invalida la cache piano vero.
-    // Se da un altro device è stato creato/modificato un piano weekly_plans, al
-    // prossimo render del tab Piano il loader rifà fetch. Le settimane già caricate
-    // positivamente vengono comunque ri-fetchate (coerenza > microttimizzazione).
-    ST.pianoV4RealPlanCache = {};
-    const {data: profile} = profRes;
-    if (profile) {
-      ST.profile = profile;
-      if (profileIsComplete(profile)) applyProfile(profile);
-    }
-    renderPage(ST.page);
-    saveCache();
-    ST.lastRefreshAt = Date.now();
+    ST.ultimoCompletoAt = Date.now();
+    ST.ultimoCompletoGiorno = todayKey();
+    _rinfrescoFinale(profRes);
   } catch(e) { console.warn('[refresh-bg] error:', e); }
+}
+function _rinfrescoFinale(profRes) {
+  // Cross-device sync (Passo 2, 25 mag notte): invalida la cache piano vero.
+  // Se da un altro device è stato creato/modificato un piano weekly_plans, al
+  // prossimo render del tab Piano il loader rifà fetch. Le settimane già caricate
+  // positivamente vengono comunque ri-fetchate (coerenza > microttimizzazione).
+  ST.pianoV4RealPlanCache = {};
+  const {data: profile} = profRes;
+  if (profile) {
+    ST.profile = profile;
+    if (profileIsComplete(profile)) applyProfile(profile);
+  }
+  renderPage(ST.page);
+  saveCache();
+  ST.lastRefreshAt = Date.now();
 }
 
 function showScreen(name) {

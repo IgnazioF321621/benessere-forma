@@ -57,22 +57,29 @@ async function misura(file){
   let finito = false; a.win.refreshInBackground().then(() => { finito = true; });
   r.rientro = await conta(() => finito, a.c);
   r.rientroRichieste = a.supa._calls.length - n0;
+  // rientro dopo piu' di 30 minuti (o col giorno cambiato): rinfresco completo come prima
+  a.win.eval('ST').ultimoCompletoAt = a.win.Date.now() - 31 * 60 * 1000;
+  const n1 = a.supa._calls.length;
+  finito = false; a.win.refreshInBackground().then(() => { finito = true; });
+  r.completo = await conta(() => finito, a.c);
+  r.completoRichieste = a.supa._calls.length - n1;
   r.errori = a.logs.filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length;
   return r;
 }
 
 (async () => {
   const dopo = await misura();
-  console.log(`  --  ondate fino all'app: apertura normale ${dopo.normale} · prima apertura ${dopo.prima} · rientro ${dopo.rientro} (${dopo.rientroRichieste} richieste)`);
+  console.log(`  --  ondate fino all'app: apertura normale ${dopo.normale} · prima apertura ${dopo.prima} · rientro leggero ${dopo.rientro} (${dopo.rientroRichieste} richieste) · rientro completo ${dopo.completo} (${dopo.completoRichieste} richieste)`);
   atteso('apertura normale (copia locale) · 3 ondate', dopo.normale, 3);
   atteso('prima apertura (senza copia) · 4 ondate', dopo.prima, 4);
-  atteso('rientro (rinfresco di sfondo) · 4 ondate, 14 richieste', [dopo.rientro, dopo.rientroRichieste], [4, 14]);
+  atteso('rientro leggero (meno di 30 minuti) · 2 ondate, 7 richieste', [dopo.rientro, dopo.rientroRichieste], [2, 7]);
+  atteso('rientro dopo 30 minuti · completo: 4 ondate, 14 richieste', [dopo.completo, dopo.completoRichieste], [4, 14]);
   atteso('zero errori in console', dopo.errori, 0);
   const prima = process.argv[2];
   if(prima){
     const p = await misura(path.join(prima, 'zona-tracker.html'));
     console.log(`  --  prima · apertura normale ${p.normale} · prima apertura ${p.prima} · rientro ${p.rientro} (${p.rientroRichieste} richieste)`);
-    atteso('prima · la prova distingue: più ondate, stesse richieste', [p.normale > dopo.normale, p.prima > dopo.prima, p.rientro > dopo.rientro, p.rientroRichieste], [true, true, true, dopo.rientroRichieste]);
+    atteso('prima · la prova distingue: il rientro usava più ondate e più richieste', [p.rientro > dopo.rientro, p.rientroRichieste > dopo.rientroRichieste, p.rientroRichieste], [true, true, 14]);
   } else console.log('  --  confronto con la pagina di prima saltato (nessuna cartella passata)');
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);

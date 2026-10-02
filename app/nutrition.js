@@ -363,6 +363,28 @@ function _storicoFiltro(modo, da, q, colonna) {
   return modo === 'finestra' ? q.gte(colonna, da) : (modo === 'resto' ? q.lt(colonna, da) : q);
 }
 
+// Mette pasti, digiuni e integratori presi dentro ST.db.days (che deve esistere). Un posto solo per
+// loadAllDays e per loadRecentDays: cosa vale una riga lo decide questo codice e basta.
+function _riempiGiorni(meals, itemsByMeal, fasting, suppLog) {
+  (meals||[]).forEach(m => {
+    if(!ST.db.days[m.date]) ST.db.days[m.date] = _nuovoGiorno(m.date);
+    ST.db.days[m.date].meals.push({...m, local_id: m.id, items: itemsByMeal[m.id] || []});
+  });
+  (fasting||[]).forEach(f => {
+    if(!ST.db.days[f.date]) ST.db.days[f.date] = _nuovoGiorno(f.date);
+    ST.db.days[f.date].fasting = true;
+  });
+  // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti)
+  (suppLog||[]).forEach(s => {
+    if(!ST.db.days[s.date]) ST.db.days[s.date] = _nuovoGiorno(s.date);
+    if(!ST.db.days[s.date].rawSuppLogs) ST.db.days[s.date].rawSuppLogs = [];
+    const supp = ST.supps.find(x => x.name === s.supplement_name);
+    if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
+      ST.db.days[s.date].suppsTaken.push(supp.local_id);
+    ST.db.days[s.date].rawSuppLogs.push({name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
+  });
+}
+
 async function loadAllDays(opts) {
   // Pasti e ingredienti a pagine (L13), 2 ott 2026. Senza, oltre le 1000 righe
   // sparivano i pasti piu' recenti (ordine dal piu' vecchio) e un gruppo di
@@ -454,23 +476,52 @@ async function loadAllDays(opts) {
     ST.storicoCompleto = (modo === 'completo');
     ST.storicoDa = (modo === 'completo') ? null : da;
   }
-  (meals||[]).forEach(m => {
-    if(!ST.db.days[m.date]) ST.db.days[m.date] = _nuovoGiorno(m.date);
-    ST.db.days[m.date].meals.push({...m, local_id: m.id, items: itemsByMeal[m.id] || []});
+  _riempiGiorni(meals, itemsByMeal, fasting, suppLog);
+  getDay(todayKey());
+  return true;
+}
+
+// Rientro leggero (Fondamenta 100, tappa 5): riletti solo gli ultimi `giorni` giorni (pasti, ingredienti,
+// digiuni, integratori ed extra, con una lettura sola per gli integratori). Sostituiscono i giorni
+// corrispondenti in memoria; i piu' vecchi restano come sono. Se una lettura fallisce non si tocca niente.
+const RIENTRO_GIORNI = 7;
+async function loadRecentDays(giorni) {
+  const n = giorni || RIENTRO_GIORNI;
+  const d7 = new Date(); d7.setDate(d7.getDate() - n);
+  const da = dayKey(d7);
+  const uid = ST.user.id;
+  const [mealsR, itemsR, fastR, logR] = await Promise.all([
+    dbq('leggere i pasti recenti', supa.from('meals')
+      .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
+      .eq('user_id', uid).gte('date', da)
+      .order('date', {ascending:true}).order('id', {ascending:true}), {silenzioso:true}),
+    dbq('leggere gli ingredienti recenti', supa.from('meal_items')
+      .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order,meals!inner(date)')
+      .eq('user_id', uid).gte('meals.date', da)
+      .order('sort_order', {ascending:true}).order('id', {ascending:true}), {silenzioso:true}),
+    supa.from('fasting_days').select('date').eq('user_id', uid).gte('date', da),
+    dbq('leggere gli integratori recenti', supa.from('supplements_log')
+      .select(_EXTRA_COLS + ', is_extra')
+      .eq('user_id', uid).gte('date', da)
+      .order('date', {ascending:true}).order('slot', {ascending:true}).order('created_at', {ascending:true}), {silenzioso:true}),
+  ]);
+  // Oltre 1000 righe in 7 giorni non succede; se succedesse, il limite tronca e non si tocca niente.
+  const rotte = [mealsR, itemsR, fastR, logR].some(r => r.error || r.data === null);
+  if(rotte || (logR.data || []).length >= 1000 || (itemsR.data || []).length >= 1000) return false;
+  const itemsByMeal = {};
+  itemsR.data.forEach(it => { delete it.meals; (itemsByMeal[it.meal_id] || (itemsByMeal[it.meal_id] = [])).push(it); });
+  Object.keys(ST.db.days).filter(k => k >= da).forEach(k => { delete ST.db.days[k]; });
+  const righe = logR.data;
+  _riempiGiorni(mealsR.data, itemsByMeal, fastR.data, righe.filter(r => !r.is_extra));
+  // Extra: stessa regola di loadExtrasAll, solo per questi giorni
+  if(!ST.extrasByDay) ST.extrasByDay = {};
+  Object.keys(ST.extrasByDay).filter(k => k >= da).forEach(k => { delete ST.extrasByDay[k]; });
+  const catalog = ST.catalog || [];
+  righe.filter(r => r.is_extra).forEach(r => {
+    const e = _extraDaRiga(r, catalog);
+    (ST.extrasByDay[e.date] || (ST.extrasByDay[e.date] = [])).push(e);
   });
-  (fasting||[]).forEach(f => {
-    if(!ST.db.days[f.date]) ST.db.days[f.date] = _nuovoGiorno(f.date);
-    ST.db.days[f.date].fasting = true;
-  });
-  // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti)
-  (suppLog||[]).forEach(s => {
-    if(!ST.db.days[s.date]) ST.db.days[s.date] = _nuovoGiorno(s.date);
-    if(!ST.db.days[s.date].rawSuppLogs) ST.db.days[s.date].rawSuppLogs = [];
-    const supp = ST.supps.find(x => x.name === s.supplement_name);
-    if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
-      ST.db.days[s.date].suppsTaken.push(supp.local_id);
-    ST.db.days[s.date].rawSuppLogs.push({name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
-  });
+  ST.extras = ST.extrasByDay[ST.activeDay] || [];
   getDay(todayKey());
   return true;
 }
