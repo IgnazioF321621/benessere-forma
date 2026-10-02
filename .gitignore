@@ -5,6 +5,9 @@ scripts/test-output/
 .DS_Store
 tmp_*
 
+# Cartella temporanea della CLI di Supabase (versione della CLI e progetto collegato): si rifa' da sola
+supabase/.temp/
+
 # Materiali di lavoro cantiere GIF (locali, fuori dal repo)
 Biblioteca di esercizi/
 backup/
