@@ -43,6 +43,12 @@ create trigger trg_daily_log_updated_at before update on public.daily_log
 
 alter table public.daily_log enable row level security;
 
+-- Permessi di tabella, dichiarati qui: dal 30 ottobre 2026 Supabase non li dà più da solo
+-- e senza l'app riceve «permission denied». Chi è entrato fa tutto sulle proprie righe
+-- (le regole qui sotto dicono quali); chi non è entrato (anon): niente.
+grant select, insert, update, delete on public.daily_log to authenticated;
+grant all on public.daily_log to service_role;
+
 drop policy if exists "daily_log_select_own" on public.daily_log;
 create policy "daily_log_select_own" on public.daily_log
   for select to authenticated using (auth.uid() = user_id);

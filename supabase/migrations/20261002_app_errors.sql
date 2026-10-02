@@ -35,6 +35,12 @@ create index if not exists app_errors_user_idx on public.app_errors (user_id, cr
 
 alter table public.app_errors enable row level security;
 
+-- Permessi di tabella, dichiarati qui: dal 30 ottobre 2026 Supabase non li dà più da solo
+-- e senza l'app riceve «permission denied». Chi è entrato inserisce e (solo l'admin, per
+-- la regola qui sotto) legge; niente update né delete. Chi non è entrato (anon): niente.
+grant select, insert on public.app_errors to authenticated;
+grant all on public.app_errors to service_role;
+
 drop policy if exists "app_errors_insert_own" on public.app_errors;
 create policy "app_errors_insert_own" on public.app_errors
   for insert to authenticated with check (auth.uid() = user_id);
