@@ -51,6 +51,11 @@ button:disabled{cursor:not-allowed;opacity:.45;transform:none!important;}
 /* ── SPLASH ── */
 #splash{position:fixed;inset:0;background:#2A7A6F;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .5s ease,transform .5s ease;}
 #splash.hide{opacity:0;transform:scale(1.05);pointer-events:none;}
+#closed-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:9998;padding:32px;text-align:center;}
+#closed-screen.visible{display:flex;}
+.closed-title{font-family:var(--font-sans);font-size:24px;font-weight:800;color:var(--t1);margin-top:22px;letter-spacing:-.5px;}
+.closed-text{font-family:var(--font-sans);font-size:15px;line-height:1.5;color:var(--t2);margin-top:12px;max-width:320px;}
+.closed-exit{margin-top:28px;background:none;border:none;cursor:pointer;font-family:var(--font-mono);font-size:12px;color:var(--t3);text-decoration:underline;}
 .splash-logo{animation:splashPulse 1.5s ease-in-out infinite;}
 @keyframes splashPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
 .splash-brand{font-size:11px;letter-spacing:5px;text-transform:uppercase;color:rgba(255,255,255,.6);font-family:'JetBrains Mono',monospace;margin-top:18px;}
@@ -2383,6 +2388,14 @@ body.preview-onboarding #m1-preview-banner{display:block;}
   <div class="splash-loader"><div class="splash-loader-bar"></div></div>
 </div>
 
+<!-- APP CHIUSA PER LAVORI (vedi APP_ONLY_EMAIL) -->
+<div id="closed-screen">
+  <svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+  <div class="closed-title">Zona Tracker è in aggiornamento</div>
+  <p class="closed-text">Stiamo migliorando l'app. I tuoi dati sono al sicuro: li ritrovi tutti alla riapertura.</p>
+  <button class="closed-exit" onclick="logout()">Esci</button>
+</div>
+
 <!-- AUTH + WELCOME (M1 nuovo) -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -3786,7 +3799,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.09.13 · 10:35';
+const APP_VERSION = '2026.10.02 · 06:30';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -3798,6 +3811,24 @@ const APP_VERSION = '2026.09.13 · 10:35';
 // l'identità, perché il modello lo legge come testo, non come dato.
 // ═══════════════════════════════════════════════════════════
 const COACH_NAME = 'Pirsi';
+
+// ═══════════════════════════════════════════════════════════
+// APP CHIUSA PER LAVORI — dal 2 ottobre 2026.
+// Finché qui c'è un'email, dopo l'accesso entra solo quell'utente:
+// tutti gli altri vedono la schermata «in aggiornamento».
+// null = app aperta a tutti. Non tocca i dati di nessuno.
+// ═══════════════════════════════════════════════════════════
+const APP_ONLY_EMAIL = 'ignazio.f@me.com';
+
+function isAppClosedForUser() {
+  if (!APP_ONLY_EMAIL) return false;
+  const email = (ST.user && ST.user.email || '').trim().toLowerCase();
+  return email !== APP_ONLY_EMAIL;
+}
+
+function showClosedScreen() {
+  showScreen('closed');
+}
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -6709,6 +6740,9 @@ async function m2ShouldShowEntry(profile) {
 }
 
 async function loadAndStart() {
+  // App chiusa per lavori: chi non è l'utente ammesso si ferma qui, prima di ogni lettura
+  if (isAppClosedForUser()) { showClosedScreen(); return; }
+
   // ── Modalità anteprima onboarding (?preview=onboarding) ──
   // Mostra l'onboarding M1 dall'inizio per l'utente reale loggato, in sola lettura.
   // NON tocca ST.profile reale, NON skippa M2 nello stato persistente, NON scrive
@@ -6881,6 +6915,8 @@ function _allineaGiornoCorrente() {
 }
 
 async function refreshInBackground() {
+  // App chiusa per lavori: vale anche per chi l'aveva già aperta
+  if (isAppClosedForUser()) { showClosedScreen(); return; }
   try {
     await loadCatalog();  // catalogo prima
     await loadSupps();
@@ -6916,6 +6952,7 @@ function showScreen(name) {
   document.getElementById('m2-screen').classList.remove('visible');
   document.getElementById('loading-overlay').classList.add('hide');
   document.getElementById('app').classList.remove('visible');
+  document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
   if(name === 'auth')       {
     document.getElementById('auth-screen').classList.add('visible');
     // Default: mostra welcome (l'utente arriva qui da bootstrap o logout)
