@@ -3799,7 +3799,7 @@ const DEFAULT_SLOT_TIP = 'Segui le indicazioni del prodotto';
 // ═══════════════════════════════════════════════════════════
 // VERSION (sostituita automaticamente da .git/hooks/pre-commit)
 // ═══════════════════════════════════════════════════════════
-const APP_VERSION = '2026.10.02 · 06:30';
+const APP_VERSION = '2026.10.02 · 06:37';
 
 // ═══════════════════════════════════════════════════════════
 // NOME DEL COACH — provvisorio, in prova.
@@ -6218,6 +6218,24 @@ async function dbq(operazione, chiamata, opzioni) {
   return res;
 }
 
+// Lettura a pagine: PostgREST tronca ogni SELECT a 1000 righe (L13) e non lo dice.
+// mk() costruisce la query GIA' ORDINATA su una chiave senza pari merito (in coda
+// sempre l'id o il codice): con un ordine ambiguo le pagine si sovrappongono.
+// Ogni pagina passa da dbq (L22). Un errore a meta' restituisce data:null, mai
+// un elenco parziale: chi chiama deve poter distinguere «vuoto» da «non letto».
+async function dbqAll(operazione, mk, opzioni) {
+  const BLOCCO = 1000;
+  const out = [];
+  for (let da = 0; ; da += BLOCCO) {
+    const res = await dbq(operazione, mk().range(da, da + BLOCCO - 1), opzioni);
+    if (res.error) return { data: null, error: res.error };
+    const blocco = res.data || [];
+    out.push(...blocco);
+    if (blocco.length < BLOCCO) break;
+  }
+  return { data: out, error: null };
+}
+
 async function loadMeals(date) {
   const {data: meals} = await supa.from('meals').select('*').eq('user_id', ST.user.id).eq('date', date);
   if (!meals || meals.length === 0) return [];
@@ -6236,12 +6254,20 @@ async function loadMeals(date) {
 }
 
 async function loadAllDays() {
-  const {data:meals,   error:mealsErr}   = await supa.from('meals').select('date,kcal,protein,carbs,fat,id,slot,description,notes,time').eq('user_id', ST.user.id).order('date', {ascending:true});
-  // FASE 3: carica TUTTI i meal_items dell'utente in una sola query
-  const {data: allItems} = await supa.from('meal_items')
+  // Pasti e ingredienti a pagine (L13), 2 ott 2026. Senza, oltre le 1000 righe
+  // sparivano i pasti piu' recenti (ordine dal piu' vecchio) e un gruppo di
+  // ingredienti a caso (ordine per sola posizione). Silenziose: girano all'avvio.
+  const {data:meals,   error:mealsErr}   = await dbqAll('leggere lo storico dei pasti', () => supa.from('meals')
+    .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
+    .eq('user_id', ST.user.id)
+    .order('date', {ascending:true})
+    .order('id',   {ascending:true}), {silenzioso:true});
+  // FASE 3: carica TUTTI i meal_items dell'utente
+  const {data: allItems, error: itemsErr} = await dbqAll('leggere gli ingredienti dei pasti', () => supa.from('meal_items')
     .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order')
     .eq('user_id', ST.user.id)
-    .order('sort_order', {ascending: true});
+    .order('sort_order', {ascending: true})
+    .order('id',         {ascending: true}), {silenzioso:true});
   const itemsByMeal = {};
   (allItems || []).forEach(it => {
     if (!itemsByMeal[it.meal_id]) itemsByMeal[it.meal_id] = [];
@@ -6280,7 +6306,10 @@ async function loadAllDays() {
   }
 
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
+  // Lo stesso vale per gli ingredienti: pasti senza ingredienti sarebbero uno storico
+  // falso, e sovrascriverebbero quello buono gia' in memoria.
   if (mealsErr || meals === null) return;
+  if (itemsErr || allItems === null) return;
 
   ST.db = {days:{}};
   (meals||[]).forEach(m => {
@@ -9674,9 +9703,10 @@ async function loadActiveScheda() {
     // SOLO in memoria: nessuna scrittura su schede_utente, il jsonb resta intatto.
     // Se la query catalogo fallisce → scheda usata così com'è (comportamento attuale).
     try {
-      const { data: catRows, error: catErr } = await supa
+      const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome');
+        .select('codice, nome')
+        .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
       } else if (Array.isArray(catRows)) {
@@ -10501,7 +10531,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // + risoluzione "alternativa" nelle cautele).
     let catalog = [];
     try {
-      const { data, error } = await supa.from('esercizi_catalog').select('*');
+      const { data, error } = await dbqAll('leggere il catalogo esercizi', () => supa
+        .from('esercizi_catalog').select('*').order('codice', {ascending:true}), {silenzioso:true});
       if (error) {
         console.warn('[train-gen] errore caricamento catalogo:', error.message);
         return null;
