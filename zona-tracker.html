@@ -6177,15 +6177,61 @@ async function dbq(operazione, chiamata, opzioni) {
     // Qui ci si arriva solo per un guasto di rete o un bug del client, non per
     // un errore dell'API: quelli tornano dentro res.error.
     console.error('[db] "' + operazione + '" non ha risposto:', e);
+    reportError('db', operazione, e, { senza_risposta: true });
     avvisa('Problema di connessione: ' + operazione);
     return { data: null, error: e };
   }
   if (res && res.error) {
     const msg = (res.error && (res.error.message || res.error.hint)) || String(res.error);
     console.error('[db] "' + operazione + '" fallita:', msg, res.error);
+    reportError('db', operazione, msg, { code: res.error.code || null, hint: res.error.hint || null });
     avvisa('Non riesco a ' + operazione + ': riprova');
   }
   return res;
+}
+
+// ── Gli errori dei telefoni finiscono in app_errors (Fondamenta 060, 2 ott 2026) ──
+// Senza, un'app rotta sul telefono di un tester non la vede nessuno: dbq scrive
+// solo nella console di quel telefono. Tre fonti: dbq ('db', anche quando e'
+// silenziosa), gli errori generali della pagina ('js') e le promesse rifiutate
+// e non gestite ('promise').
+// Regole: non deve MAI lanciare ne' mostrare niente; non passa da dbq (un errore
+// nel segnalare un errore non si segnala: sarebbe un giro senza fine); un errore
+// uguale si manda una volta sola per sessione, e al massimo 20 in tutto, cosi' un
+// guasto che si ripete a ogni tocco non riempie la tabella. Senza utente entrato
+// non si manda niente: la tabella accetta solo righe a proprio nome.
+const ERR_REPORT = { visti: new Set(), mandati: 0, MAX: 20 };
+function reportError(kind, operazione, errore, extra) {
+  try {
+    if (!ST || !ST.user || !ST.user.id) return;
+    if (ERR_REPORT.mandati >= ERR_REPORT.MAX) return;
+    const message = String((errore && (errore.message || errore.hint)) || errore || 'errore senza messaggio').slice(0, 500);
+    const op = operazione ? String(operazione).slice(0, 180) : null;
+    const chiave = kind + '|' + op + '|' + message;
+    if (ERR_REPORT.visti.has(chiave)) return;
+    ERR_REPORT.visti.add(chiave);
+    ERR_REPORT.mandati++;
+    const detail = Object.assign({
+      pagina: ST.page || null,
+      in_linea: (typeof navigator !== 'undefined' && 'onLine' in navigator) ? navigator.onLine : null,
+      telefono: (typeof navigator !== 'undefined' && navigator.userAgent ? navigator.userAgent : '').slice(0, 200),
+      stack: errore && errore.stack ? String(errore.stack).slice(0, 1500) : null,
+    }, extra || {});
+    Promise.resolve(supa.from('app_errors').insert({
+      user_id: ST.user.id, app_version: APP_VERSION, kind, operation: op, message, detail,
+    })).then(r => { if (r && r.error) console.warn('[errori] segnalazione non salvata:', r.error.message); })
+      .catch(e => console.warn('[errori] segnalazione non partita:', e && e.message));
+  } catch (e) { /* segnalare non deve poter rompere niente */ }
+}
+if (typeof window !== 'undefined' && window.addEventListener) {
+  window.addEventListener('error', ev => {
+    // Solo errori di codice: un'immagine o uno script che non si carica arriva qui senza ev.error ne' messaggio.
+    if (!ev || (!ev.error && !ev.message)) return;
+    reportError('js', (ev.filename ? String(ev.filename).split('/').pop() : 'pagina') + ':' + (ev.lineno || 0), ev.error || ev.message);
+  });
+  window.addEventListener('unhandledrejection', ev => {
+    reportError('promise', null, (ev && ev.reason) || 'promessa rifiutata senza motivo');
+  });
 }
 
 // Lettura a pagine: PostgREST tronca ogni SELECT a 1000 righe (L13) e non lo dice.
