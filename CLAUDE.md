@@ -31,6 +31,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 
 - **Divisione dei ruoli**: Claude chat = decisioni e brief · Claude Design = mockup · Claude Code = tutte le scritture su codice, Storage, DB, git. Nessuna sovrapposizione.
 - **Un passo alla volta**: Ignazio conferma prima di procedere. Nessuna proposta speculativa prima di aver letto DB e codice reali.
+- **Costo zero** *(Ignazio, 2 ottobre 2026)*: l'app resta nei piani gratuiti di Supabase, Cloudflare, Groq, Gemini e GitHub. Nessun lavoro può richiedere un piano a pagamento o avvicinare un limite gratuito senza una decisione esplicita di Ignazio: se succede, ci si ferma e si chiede. Sullo stesso account Supabase vivono anche altri progetti (MB21): lo spazio non è solo di Zona Tracker.
 - **Dry-run e backup** prima di ogni scrittura su Storage o DB.
 - **Resoconto obbligatorio a 6 punti** dopo ogni modifica: (1) file modificati con path esatto · (2) cosa è cambiato · (3) commit hash + branch · (4) push status su `origin/main` · (5) GitHub Pages ETA · (6) APP_VERSION.
 - **Commit message con conteggi reali misurati**, mai stimati.
