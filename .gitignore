@@ -53,3 +53,6 @@ tools/biblioteca-nomi/lavoro/_piani/*
 
 # Binari compilati per questo Mac (si rifanno con installa_gifsicle.sh)
 tools/bin/
+
+# Cache della CLI di Supabase (versione e progetto collegato): si rifanno da sole
+supabase/.temp/
