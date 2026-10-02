@@ -34,7 +34,10 @@ const base = () => ({ meals:meals.slice(), meal_items:items.slice(), fasting_day
     const { win, supa } = boot(base());
     const ST = win.eval('ST');
     ST.user = { id:U }; ST.profile = { id:U }; ST.supps = [];
+    // Dalla tappa 4 di Fondamenta 100 l'avvio legge solo gli ultimi 90 giorni: i pasti di questa prova
+    // sono tutti piu' vecchi, quindi si legge la finestra (vuota) e poi il resto, come fa l'app.
     await win.loadAllDays();
+    await win.caricaStoricoCompleto();
     const giorni = Object.keys(ST.db.days).filter(d => ST.db.days[d].meals.length);
     atteso('giorni con pasti', giorni.length, N);
     atteso('il pasto più recente c\'è', !!(ST.db.days[giorno(N - 1)] && ST.db.days[giorno(N - 1)].meals.length), true);

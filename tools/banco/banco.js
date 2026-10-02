@@ -43,7 +43,32 @@ function makeSupaMock(tables){
         return Promise.resolve({ data:null, error:null });
       }
       if(st.op !== 'select'){ return Promise.resolve({ data:[{id:'fake-id'}], error:null }); }
+      // Join come PostgREST: select('..., meals!inner(date)') porta con se' la riga del pasto
+      // (rows[i].meals = {date}) e scarta le righe senza pasto; i filtri 'meals.date' guardano li'.
+      // tables.__joinRotto = true: il join risponde con un errore (per provare il ripiego).
+      const join = /,\s*(\w+)!inner\(([^)]*)\)/.exec(String(st.cols || ''));
+      if(join){
+        if(tables.__joinRotto) return Promise.resolve({ data:null, error:{ code:'PGRST200', message:'Could not find a relationship (finto banco)' } });
+        const [, padre, campi] = join;
+        const colonne = campi.split(',').map(c => c.trim());
+        const chiave = padre === 'meals' ? 'meal_id' : padre.replace(/s$/, '') + '_id';
+        rows = rows.map(r => {
+          const p = (tables[padre] || []).find(x => String(x.id) === String(r[chiave]));
+          if(!p) return null;
+          const e = {}; colonne.forEach(c => { e[c] = p[c]; });
+          return { ...r, [padre]: e };
+        }).filter(Boolean);
+      }
+      const valore = (r, col) => col.includes('.') ? col.split('.').reduce((o, k) => (o == null ? o : o[k]), r) : r[col];
       for(const [f,col,val] of st.filters){
+        if(col.includes('.')) {
+          if(f==='gte') rows = rows.filter(r=>valore(r,col) >= val);
+          else if(f==='lt') rows = rows.filter(r=>valore(r,col) < val);
+          else if(f==='gt') rows = rows.filter(r=>valore(r,col) > val);
+          else if(f==='lte') rows = rows.filter(r=>valore(r,col) <= val);
+          else if(f==='eq') rows = rows.filter(r=>String(valore(r,col))===String(val));
+          continue;
+        }
         if(f==='eq') rows = rows.filter(r=>String(r[col])===String(val));
         else if(f==='neq') rows = rows.filter(r=>String(r[col])!==String(val));
         else if(f==='lt') rows = rows.filter(r=>r[col] < val);

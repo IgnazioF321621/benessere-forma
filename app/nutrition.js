@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════
 // STREAK
 // ═══════════════════════════════════════════════════════════
+let _streakTentativi = 0;
 function calcStreak() {
   const keys = Object.keys(ST.db.days).sort().reverse();
   let streak = 0;
@@ -23,6 +24,13 @@ function calcStreak() {
     if(day.fasting || (day.meals && day.meals.length > 0)) streak++;
     else break;
     d.setDate(d.getDate()-1);
+  }
+  // Fondamenta 100, tappa 4: se la serie arriva al bordo dello storico letto (d e' il primo giorno che
+  // non conta, e cade prima della finestra), potrebbe continuare piu' indietro: si legge il resto una
+  // volta, in sottofondo, e il numero si ricalcola. Al massimo due tentativi per sessione.
+  if(!storicoCopreDal(dayKey(d)) && _streakTentativi < 2) {
+    _streakTentativi++;
+    caricaStoricoCompleto().then(ok => { if(ok && typeof mostraStreak === 'function') mostraStreak(); });
   }
   return streak;
 }
@@ -314,25 +322,85 @@ async function loadMeals(date) {
   return meals.map(m => ({...m, items: itemsByMeal[m.id] || []}));
 }
 
-async function loadAllDays() {
+// ── STORICO A FINESTRA (Fondamenta 100, tappa 4, 2 ott 2026) ─────────────────────────────────────
+// All'avvio e al rientro si leggono solo gli ultimi STORICO_AVVIO_GIORNI giorni: oltre, lo storico
+// serve ad Analisi (3 e 6 mesi, settimane lontane), alla serie di giorni di fila e a chi sfoglia i
+// giorni con ‹. Quando serve, caricaStoricoCompleto() legge il resto UNA volta e lo aggiunge a quello
+// che c'e'. Da quel momento (ST.storicoCompleto) anche il rinfresco al rientro rilegge tutto, per
+// non buttare via quello che l'utente ha gia' aperto.
+const STORICO_AVVIO_GIORNI = 90;
+function _storicoInizioFinestra() {
+  const d = new Date();
+  d.setDate(d.getDate() - STORICO_AVVIO_GIORNI);
+  return dayKey(d);
+}
+// Primo giorno certamente in memoria: serve a chi deve sapere se un intervallo e' coperto.
+function storicoCopreDal(chiave) {
+  if(ST.storicoCompleto) return true;
+  return chiave >= (ST.storicoDa || _storicoInizioFinestra());
+}
+let _storicoRestoInCorso = null;
+function caricaStoricoCompleto() {
+  if(ST.storicoCompleto) return Promise.resolve(true);
+  if(!_storicoRestoInCorso) {
+    _storicoRestoInCorso = (async () => {
+      try {
+        const [giorniOk, extraOk] = await Promise.all([loadAllDays({ resto:true }), loadExtrasAll({ resto:true })]);
+        if(giorniOk && extraOk) ST.storicoCompleto = true;
+        return !!ST.storicoCompleto;
+      } finally { _storicoRestoInCorso = null; }
+    })();
+  }
+  return _storicoRestoInCorso;
+}
+// Modo di lettura: 'finestra' (ultimi giorni, sostituisce), 'completo' (tutto, sostituisce:
+// rinfresco dopo che il resto e' gia' stato aperto), 'resto' (solo prima della finestra, si aggiunge).
+function _storicoModo(opts) {
+  if(opts && opts.resto) return 'resto';
+  return ST.storicoCompleto ? 'completo' : 'finestra';
+}
+function _storicoFiltro(modo, da, q, colonna) {
+  return modo === 'finestra' ? q.gte(colonna, da) : (modo === 'resto' ? q.lt(colonna, da) : q);
+}
+
+async function loadAllDays(opts) {
   // Pasti e ingredienti a pagine (L13), 2 ott 2026. Senza, oltre le 1000 righe
   // sparivano i pasti piu' recenti (ordine dal piu' vecchio) e un gruppo di
   // ingredienti a caso (ordine per sola posizione). Silenziose: girano all'avvio.
   // Le quattro letture partono insieme (Fondamenta 100, tappa 3): pasti, ingredienti, digiuni e
   // integratori dello storico non dipendono l'una dall'altra. Si mettono insieme solo dopo.
-  const lettureInsieme = Promise.all([
-    dbqAll('leggere lo storico dei pasti', () => supa.from('meals')
-      .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
-      .eq('user_id', ST.user.id)
-      .order('date', {ascending:true})
-      .order('id',   {ascending:true}), {silenzioso:true}),
-    // FASE 3: carica TUTTI i meal_items dell'utente
-    dbqAll('leggere gli ingredienti dei pasti', () => supa.from('meal_items')
-      .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order')
+  const modo = _storicoModo(opts);
+  const da = _storicoInizioFinestra();
+  const _filtra = (q, colonna) => _storicoFiltro(modo, da, q, colonna);
+  const COLONNE_INGREDIENTI = 'id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order';
+  // Gli ingredienti non hanno una data: la prendono dal pasto (join). Se la lettura col join
+  // non va, si ripiega sulla vecchia lettura di tutti gli ingredienti: meglio una lettura piu'
+  // grande che uno storico senza ingredienti.
+  const leggiIngredienti = async () => {
+    if(modo !== 'completo') {
+      const r = await dbqAll('leggere gli ingredienti dei pasti', () => _filtra(supa.from('meal_items')
+        .select(COLONNE_INGREDIENTI + ',meals!inner(date)')
+        .eq('user_id', ST.user.id), 'meals.date')
+        .order('sort_order', {ascending: true})
+        .order('id',         {ascending: true}), {silenzioso:true});
+      if(!r.error) { (r.data || []).forEach(it => { delete it.meals; }); return r; }
+      console.warn('loadAllDays: ingredienti con il join non letti, ripiego sulla lettura intera');
+    }
+    return dbqAll('leggere gli ingredienti dei pasti', () => supa.from('meal_items')
+      .select(COLONNE_INGREDIENTI)
       .eq('user_id', ST.user.id)
       .order('sort_order', {ascending: true})
-      .order('id',         {ascending: true}), {silenzioso:true}),
-    supa.from('fasting_days').select('date').eq('user_id', ST.user.id),
+      .order('id',         {ascending: true}), {silenzioso:true});
+  };
+  const lettureInsieme = Promise.all([
+    dbqAll('leggere lo storico dei pasti', () => _filtra(supa.from('meals')
+      .select('date,kcal,protein,carbs,fat,id,slot,description,notes,time')
+      .eq('user_id', ST.user.id), 'date')
+      .order('date', {ascending:true})
+      .order('id',   {ascending:true}), {silenzioso:true}),
+    // FASE 3: carica i meal_items dei pasti letti (tutti, se la lettura e' completa)
+    leggiIngredienti(),
+    _filtra(supa.from('fasting_days').select('date').eq('user_id', ST.user.id), 'date'),
   ]);
   // supplements_log dello storico — DUE correzioni, 9 ago 2026:
   //
@@ -350,14 +418,14 @@ async function loadAllDays() {
   let suppErr = null;
   {
     const BLOCCO = 1000;
-    for(let da = 0; ; da += BLOCCO) {
-      const res = await supa.from('supplements_log')
+    for(let dal = 0; ; dal += BLOCCO) {
+      const res = await _filtra(supa.from('supplements_log')
         .select('date,supplement_name,slot')
         .eq('user_id', ST.user.id)
-        .eq('is_extra', false)
+        .eq('is_extra', false), 'date')
         .order('date', { ascending: true })
         .order('slot',  { ascending: true })
-        .range(da, da + BLOCCO - 1);
+        .range(dal, dal + BLOCCO - 1);
       if(res.error) { suppErr = res.error; console.warn('loadAllDays supplements_log:', res.error.message); break; }
       const blocco = res.data || [];
       suppLog.push(...blocco);
@@ -374,10 +442,18 @@ async function loadAllDays() {
   // Se la query principale fallisce non azzerare ST.db — teniamo i dati locali già presenti
   // Lo stesso vale per gli ingredienti: pasti senza ingredienti sarebbero uno storico
   // falso, e sovrascriverebbero quello buono gia' in memoria.
-  if (mealsErr || meals === null) return;
-  if (itemsErr || allItems === null) return;
+  if (mealsErr || meals === null) return false;
+  if (itemsErr || allItems === null) return false;
 
-  ST.db = {days:{}};
+  if(modo === 'resto') {
+    // Si aggiunge a quello che c'e': prima si tolgono i giorni piu' vecchi della finestra (una cache
+    // di prima li puo' avere), cosi' i pasti non si raddoppiano.
+    Object.keys(ST.db.days).filter(k => k < da).forEach(k => { delete ST.db.days[k]; });
+  } else {
+    ST.db = {days:{}};
+    ST.storicoCompleto = (modo === 'completo');
+    ST.storicoDa = (modo === 'completo') ? null : da;
+  }
   (meals||[]).forEach(m => {
     if(!ST.db.days[m.date]) ST.db.days[m.date] = _nuovoGiorno(m.date);
     ST.db.days[m.date].meals.push({...m, local_id: m.id, items: itemsByMeal[m.id] || []});
@@ -396,6 +472,7 @@ async function loadAllDays() {
     ST.db.days[s.date].rawSuppLogs.push({name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
   });
   getDay(todayKey());
+  return true;
 }
 
 async function loadSupps() {
@@ -476,21 +553,24 @@ function _extraDaRiga(r, catalog) { return ZTNutrizione.extraFromRow(r, catalog 
 // diventa impossibile per costruzione, non per guardia.
 //
 // PAGINAZIONE OBBLIGATORIA (L13): PostgREST tronca a 1000 righe.
-async function loadExtrasAll() {
-  if(!ST.user || !ST.user.id) { ST.extrasByDay = {}; ST.extras = []; return; }
+async function loadExtrasAll(opts) {
+  if(!ST.user || !ST.user.id) { ST.extrasByDay = {}; ST.extras = []; return true; }
+  // Stessa finestra di loadAllDays (Fondamenta 100, tappa 4): ultimi giorni all'avvio, il resto a richiesta.
+  const modo = _storicoModo(opts);
+  const da = _storicoInizioFinestra();
   const BLOCCO = 1000;
   const righe = [];
-  for(let da = 0; ; da += BLOCCO) {
-    const {data, error} = await supa
+  for(let da_ = 0; ; da_ += BLOCCO) {
+    const {data, error} = await _storicoFiltro(modo, da, supa
       .from('supplements_log')
       .select(_EXTRA_COLS)
       .eq('user_id', ST.user.id)
-      .eq('is_extra', true)
+      .eq('is_extra', true), 'date')
       .order('date', { ascending: true })
       .order('slot', { ascending: true })
       .order('created_at', { ascending: true })
-      .range(da, da + BLOCCO - 1);
-    if(error) { console.warn('loadExtrasAll error:', error); return; }  // archivio precedente intatto
+      .range(da_, da_ + BLOCCO - 1);
+    if(error) { console.warn('loadExtrasAll error:', error); return false; }  // archivio precedente intatto
     const blocco = data || [];
     righe.push(...blocco);
     if(blocco.length < BLOCCO) break;   // blocco non pieno = ultimo
@@ -501,8 +581,15 @@ async function loadExtrasAll() {
     const e = _extraDaRiga(r, catalog);
     (perGiorno[e.date] || (perGiorno[e.date] = [])).push(e);
   });
-  ST.extrasByDay = perGiorno;
-  ST.extras = perGiorno[ST.activeDay] || [];
+  if(modo === 'resto') {
+    if(!ST.extrasByDay) ST.extrasByDay = {};
+    Object.keys(ST.extrasByDay).filter(k => k < da).forEach(k => { delete ST.extrasByDay[k]; });
+    Object.assign(ST.extrasByDay, perGiorno);
+  } else {
+    ST.extrasByDay = perGiorno;
+  }
+  ST.extras = ST.extrasByDay[ST.activeDay] || [];
+  return true;
 }
 
 // Ricarica il solo giorno indicato e lo rinfresca dentro l'archivio. Serve dopo
@@ -1695,7 +1782,7 @@ function renderOggi(){
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
   const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
   const timebar = isToday ? `<div style="margin:-4px 0 14px;opacity:0.5;"><div style="height:3px;border-radius:3px;background:var(--s3);position:relative;overflow:visible;"><div style="height:100%;border-radius:3px;width:${dayPct}%;background:var(--acc);transition:width .5s ease;position:relative;"><span style="position:absolute;right:-1px;top:-10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;white-space:nowrap;">${nowLabel}</span></div></div></div>` : '';
-  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${idx<=0?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
+  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${(idx<=0&&ST.storicoCompleto)?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
   ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button></div>`;
 
   if(day.fasting){
@@ -2563,11 +2650,27 @@ function renderAnalisiShell() {
 }
 
 // ── RENDER: contenuto dinamico (cambia su switch finestra e nav date) ──
-function renderAnalisiContent() {
+function renderAnalisiContent(senzaAttesa) {
   if(!ST.analisi) ST.analisi = { window: 'SETTIMANA', dateOffset: 0 };
   const window = ST.analisi.window;
   const offset = ST.analisi.dateOffset || 0;
   const { start, end } = _analisiGetWindowRange(window, offset);
+  // Fondamenta 100, tappa 4: all'avvio c'e' solo lo storico recente. Se la finestra scelta (o quella
+  // di confronto, la precedente) parte prima, si legge il resto una volta e poi si disegna: mai
+  // grafici con buchi finti nel frattempo. senzaAttesa = chiamata dopo la lettura, si disegna comunque.
+  if(!senzaAttesa) {
+    const prevR = _analisiGetWindowRange(window, offset - 1);
+    const primo = dayKey(prevR.start < start ? prevR.start : start);
+    if(!storicoCopreDal(primo)) {
+      const box = document.getElementById('analisi-content');
+      if(box) box.innerHTML = '<div class="int-v3-empty-section" style="margin:16px"><div class="int-v3-empty-text">Carico lo storico\u2026</div></div>';
+      caricaStoricoCompleto().then(ok => {
+        if(!ok) { try { showToast('Non riesco a leggere tutto lo storico', '\u26a0\ufe0f', 5500); } catch(e){} }
+        if(ST.page === 'analisi') renderAnalisiContent(true);
+      });
+      return;
+    }
+  }
   const days = _analisiCollectDays(start, end);
   const agg = _analisiAggregate(days);
   const todayKey_ = todayKey();
@@ -5475,8 +5578,15 @@ function renderPianoV4() {
 // ACTIONS
 // ═══════════════════════════════════════════════════════════
 async function navDay(dir){
-  const all=Object.keys(ST.db.days).sort();
-  const idx=all.indexOf(ST.activeDay);
+  let all=Object.keys(ST.db.days).sort();
+  let idx=all.indexOf(ST.activeDay);
+  // Fondamenta 100, tappa 4: al primo giorno letto, ‹ legge il resto dello storico (una volta).
+  if(idx+dir<0 && !ST.storicoCompleto){
+    await caricaStoricoCompleto();
+    all=Object.keys(ST.db.days).sort();
+    idx=all.indexOf(ST.activeDay);
+    if(idx+dir<0){ renderOggi(); return; }   // niente di piu' vecchio: il pulsante ora e' spento
+  }
   const ni=idx+dir;
   if(ni<0||ni>=all.length) return;
   ST.activeDay=all[ni];
