@@ -36,7 +36,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - **Resoconto obbligatorio a 6 punti** dopo ogni modifica: (1) file modificati con path esatto · (2) cosa è cambiato · (3) commit hash + branch · (4) push status su `origin/main` · (5) GitHub Pages ETA · (6) APP_VERSION.
 - **Commit message con conteggi reali misurati**, mai stimati.
 - **Comunicazione**: risposte brevi, dirette, senza gergo da sviluppatore verso Ignazio (non è un developer).
-- La cartella locale sul Mac e GitHub devono restare allineate: si fanno da backup a vicenda.
+- La cartella locale sul Mac e GitHub devono restare allineate: si fanno da backup a vicenda. **La fonte è GitHub** *(dal 2 ottobre 2026 sera)*: con le sessioni nel cloud ogni sessione ha una copia sua, e il Mac è una copia come le altre, da aggiornare con `git pull` dopo ogni unione in `main`.
 
 ---
 
@@ -56,7 +56,7 @@ Worker: account `ignazio-f` (account_id `2186a57344e459853657cea6213a2c74`). Sec
 - `TRAINING_SESSIONS`/`SESSION_CYCLE` hardcoded sono fallback; gli helper `getTrainingSession`/`getAllTrainingSessions`/`getSessionCycle` leggono prima da `ST.userTrainingSessions`. ⚠️ Dentro gli helper NON usare i nomi degli helper stessi → ricorsione infinita
 - Service Worker: **MAI aggiungere `supabase` al cache-first** (causa sync bug cross-device). Cache-first solo per `cdn.jsdelivr.net`; la pagina e i file di `app/` sono network-first (sempre freschi in linea, quelli salvati solo senza rete). Cache name: `zt-v2`
 - **`APP_VERSION` la mette solo il rilascio** *(dal 2 ottobre 2026)*: `bash tools/rilascio/versione.sh`, ora di Roma, subito prima di pubblicare. Il pre-commit non la tocca più e non fa più `git add` dell'app: controlla solo i moduli di `shared/`. La fonte dell'hook è `tools/hooks/pre-commit`, si installa con `bash tools/hooks/installa.sh`
-- **Pubblica solo la sessione «REGIA [Audit/Rilascio]»** *(dal 2 ottobre 2026)*: `git push` e `wrangler` chiedono conferma (`.claude/settings.json`), `git add -A` e `git add .` sono vietati. Le altre sessioni lavorano su un solo titolo, fanno commit locali aggiungendo i file **per nome**, e non pubblicano. La lista dei lavori è in Evernote, spazio «Zona-Tracker», un taccuino per titolo
+- **Pubblica solo la sessione «REGIA [Audit/Rilascio]»** *(dal 2 ottobre 2026)*: `git push` e `wrangler` chiedono conferma (`.claude/settings.json`), `git add -A` e `git add .` sono vietati. Le altre sessioni lavorano su un solo titolo, fanno commit aggiungendo i file **per nome**, e **spingono solo sul proprio ramo** (`git push -u origin <ramo>`), mai su `main` *(dal 2 ottobre 2026 sera, con le sessioni nel cloud: un commit lasciato in locale si perde allo spegnimento del contenitore)*. Spingere su un ramo non è pubblicare: GitHub Pages pubblica solo `main`. **Solo la REGIA unisce i rami in `main`**, mette la versione e pubblica il Worker; dopo ogni unione il Mac fa `git pull`. La lista dei lavori è in Evernote, spazio «Zona-Tracker», un taccuino per titolo
 - **Paginare sempre** le SELECT su tabelle >1000 righe (es. `biblioteca_gif`): PostgREST tronca al limite default → [L13](docs/LEZIONI.md#l13--postgrest-tronca-le-select-al-limite-default)
 - Il ciclo canonico a 7 include `rest`: ogni logica che itera il ciclo deve gestire slot non loggabili (`rest`/`rest_injury`)
 - La settimana ciclo si legge SOLO da `getCycleWeekInfo()` — vietato ricalcolarla inline
