@@ -51,5 +51,8 @@ tools/biblioteca-nomi/lavoro/_piani/*
 # Backup temporanei locali
 *.bak-*
 
+# Stato locale della riga di comando di Supabase (supabase link): si rifa' da solo, non e' codice
+supabase/.temp/
+
 # Binari compilati per questo Mac (si rifanno con installa_gifsicle.sh)
 tools/bin/
