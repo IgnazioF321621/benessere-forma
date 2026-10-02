@@ -29,6 +29,7 @@ node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale:
 node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al posto di confirm/alert/prompt; il toast non spegne il successivo (Fondamenta 150)
 node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 4, tutte volute (Fondamenta 180)
 node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta (Fondamenta 140)
+node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
@@ -68,6 +69,7 @@ Se la prova che sul nuovo dà OK non dà **KO** sul vecchio, non sta misurando q
 - **le risposte si possono trattenere**: `tables.__attesa = () => promessa` fa aspettare ogni risposta del finto Supabase finché quella promessa non si risolve. Serve a contare le ondate di letture (`prova_avvio_ondate.js`): un conteggio che non dipende dalla velocità della macchina
 - **il join degli ingredienti**: `select('..., meals!inner(date)')` porta nella riga il pasto (`riga.meals = {date}`), scarta gli ingredienti senza pasto e i filtri `meals.date` guardano là, come PostgREST. `tables.__joinRotto = true` fa rispondere il join con un errore, per provare il ripiego (`prova_avvio_finestra.js`)
 - **`.single()` senza righe** risponde con l'errore `PGRST116` come PostgREST; `.maybeSingle()` risponde `null` senza errore
+- **rete e scritture**: `tables.__rete = false` fa rispondere ogni chiamata come un fetch fallito (errore senza codice); `tables.__rifiuta = { tabella:{code, message} }` fa rispondere le scritture su quella tabella con quell'errore dell'API; gli `insert` conservano le righe in tabella e un id già presente risponde `23505`
 - **la pagina parte da sola**, come sul telefono (il BOOTSTRAP non aspetta più, Fondamenta 100): senza sessione mostra l'accesso, con `tables.__sessione = { user:{ id, email } }` entra e carica; `opts.locale = { zt_cache: {…} }` riempie localStorage prima che parta. Una prova che avvia a mano (`loadAndStart`) e poi guarda le schermate fa prima `await avviato` (lo restituisce `boot`), altrimenti la partenza automatica le arriva sopra
 - lo stato dell'app si prende con `win.eval('ST')` (le `const` di un classic script non stanno su `window`, le `function` sì)
 - un giorno di Training diventa loggabile con `ST.trainAnticipato = 'upperA'`, senza toccare rotazione e debito

@@ -353,6 +353,7 @@ async function dbq(operazione, chiamata, opzioni) {
   // fermerebbe la scrittura che stiamo cercando di proteggere.
   const avvisa = (testo) => {
     if (opt.silenzioso) return;
+    if (senzaRete()) return;   // la striscia «Sei senza rete» lo dice gia' (Fondamenta 120)
     try { showToast(testo, '⚠️', 5500); } catch (e) { /* niente DOM: resta il log */ }
   };
   let res;
@@ -417,6 +418,78 @@ if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('unhandledrejection', ev => {
     reportError('promise', null, (ev && ev.reason) || 'promessa rifiutata senza motivo');
   });
+}
+
+// ── SENZA RETE: la coda delle scritture (Fondamenta 120, 2 ottobre 2026) ──────────────────────
+// Prima solo le serie di allenamento avevano una coda (WS-QUEUE, in app/training.js); un pasto, una
+// pesata o un integratore registrati senza campo si perdevano con un avviso. scriviConCoda(operazione,
+// op) prova a scrivere; se non c'e' rete (navigator.onLine) o la rete non risponde, mette l'operazione
+// in coda su localStorage (per utente) e risponde {inCoda:true}; un errore dell'API (una regola del
+// database) non va in coda: si mostra, come fa dbq. svuotaCoda() rimanda le operazioni in ordine, al
+// ritorno della rete, al rientro nell'app e dopo ogni scrittura riuscita; si ferma alla prima che
+// fallisce, cosi' l'ordine resta. Le righe hanno l'id scelto dal telefono (nuovoId): rimandare un
+// inserimento gia' arrivato risponde 23505 (riga doppia) e conta come fatto.
+function nuovoId() {
+  try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+function senzaRete() {
+  return typeof navigator !== 'undefined' && 'onLine' in navigator && navigator.onLine === false;
+}
+function _codaChiave() { return 'zt_coda_' + ((ST.user && ST.user.id) || 'anon'); }
+function _codaLeggi() { try { return JSON.parse(localStorage.getItem(_codaChiave())) || []; } catch (e) { return []; } }
+function _codaSalva(q) { try { localStorage.setItem(_codaChiave(), JSON.stringify(q)); } catch (e) {} }
+function codaInAttesa() { return _codaLeggi().length; }
+const CODA_MAX = 300;
+function _codaCostruisci(op) {
+  let q = supa.from(op.tabella);
+  if (op.tipo === 'insert') return q.insert(op.righe);
+  if (op.tipo === 'upsert') return op.onConflict ? q.upsert(op.righe, { onConflict: op.onConflict }) : q.upsert(op.righe);
+  if (op.tipo === 'delete') { q = q.delete(); (op.filtri || []).forEach(([c, v]) => { q = q.eq(c, v); }); return q; }
+  throw new Error('operazione sconosciuta: ' + op.tipo);
+}
+// supabase-js riporta un fetch fallito come errore senza codice; quelli dell'API hanno sempre un codice
+function _erroreDiRete(err) {
+  return !!err && !err.code && /fetch|network|rete|Load failed|senza risposta|non ha risposto/i.test(String(err.message || err));
+}
+function _codaAggiungi(operazione, op) {
+  const q = _codaLeggi();
+  q.push({ operazione, op, ts: Date.now() });
+  while (q.length > CODA_MAX) { const via = q.shift(); console.warn('[coda] piena, scartata la piu\' vecchia:', via.operazione); }
+  _codaSalva(q);
+  try { showToast('Salvato sul telefono: lo invio appena torna la rete', '📴', 3500); } catch (e) {}
+  try { if (typeof aggiornaStatoRete === 'function') aggiornaStatoRete(); } catch (e) {}
+}
+async function scriviConCoda(operazione, op) {
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return { data: null, error: null };
+  if (senzaRete()) { _codaAggiungi(operazione, op); return { data: null, error: null, inCoda: true }; }
+  const res = await dbq(operazione, _codaCostruisci(op), { silenzioso: true });
+  if (res.error && _erroreDiRete(res.error)) { _codaAggiungi(operazione, op); return { data: null, error: null, inCoda: true }; }
+  if (res.error) { try { showToast('Non riesco a ' + operazione + ': riprova', '⚠️', 5500); } catch (e) {} return res; }
+  svuotaCoda();   // non bloccante: se c'era qualcosa in attesa, e' il momento di mandarlo
+  return res;
+}
+let _codaInCorso = false;
+async function svuotaCoda() {
+  if (_codaInCorso || senzaRete() || !ST.user || !ST.user.id) return 0;
+  const q = _codaLeggi();
+  if (!q.length) return 0;
+  _codaInCorso = true;
+  let fatte = 0;
+  try {
+    while (q.length) {
+      const it = q[0];
+      const res = await dbq(it.operazione, _codaCostruisci(it.op), { silenzioso: true });
+      const giaArrivata = res.error && it.op.tipo === 'insert' && res.error.code === '23505';
+      if (res.error && !giaArrivata) break;
+      q.shift(); _codaSalva(q); fatte++;
+    }
+  } finally { _codaInCorso = false; }
+  if (fatte) {
+    try { showToast(fatte === 1 ? 'Inviato il salvataggio rimasto in attesa' : 'Inviati ' + fatte + ' salvataggi rimasti in attesa', '✅'); } catch (e) {}
+    try { if (typeof aggiornaStatoRete === 'function') aggiornaStatoRete(); } catch (e) {}
+  }
+  return fatte;
 }
 
 // Lettura a pagine: PostgREST tronca ogni SELECT a 1000 righe (L13) e non lo dice.

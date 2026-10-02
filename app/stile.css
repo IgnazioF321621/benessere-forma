@@ -478,6 +478,8 @@ select.inp{cursor:pointer;}
 .foglio-overlay{z-index:1700;}
 .aggiorna-banner{display:none;background:var(--acc);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-align:center;padding:10px 16px;cursor:pointer;letter-spacing:.3px;}
 .aggiorna-banner.visible{display:block;}
+.senza-rete{display:none;background:#1A1A1A;color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;padding:7px 16px;letter-spacing:.3px;}
+.senza-rete.visible{display:block;}
 .foglio .inp{margin-bottom:16px;}
 .foglio-bottoni{display:flex;gap:8px;justify-content:flex-end;}
 .foglio-bottoni .btn{flex:1;}

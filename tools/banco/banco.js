@@ -30,6 +30,8 @@ function makeSupaMock(tables){
       calls.push(st);
       // tables.__assenti = ['nome']: la tabella non esiste (migrazione non eseguita) → PGRST205
       if((tables.__assenti || []).includes(table)) return Promise.resolve({ data:null, error:{ code:'PGRST205', message:`Could not find the table 'public.${table}' in the schema cache` } });
+      // tables.__rifiuta = { tabella: { code, message } }: le scritture su quella tabella rispondono con quell'errore dell'API
+      if(st.op !== 'select' && tables.__rifiuta && tables.__rifiuta[table]) return Promise.resolve({ data:null, error:{ ...tables.__rifiuta[table] } });
       let rows = (tables[table] || []).slice();
       if(st.op === 'upsert' && st.upsertOpts.onConflict){
         // upsert vero in memoria: chiave onConflict, ignoreDuplicates rispettato
@@ -41,6 +43,16 @@ function makeSupaMock(tables){
           else if(!st.upsertOpts.ignoreDuplicates) t[i] = { ...t[i], ...row };
         });
         return Promise.resolve({ data:null, error:null });
+      }
+      // tables.__rete = false: la rete non risponde (supabase-js riporta un fetch fallito senza codice)
+      if(tables.__rete === false) return Promise.resolve({ data:null, error:{ message:'TypeError: Failed to fetch', details:'', hint:'', code:'' } });
+      if(st.op === 'insert'){
+        // le righe inserite restano in tabella; un id gia' presente risponde 23505 come Postgres
+        const t = tables[table] || (tables[table] = []);
+        const righe = Array.isArray(st.payload) ? st.payload : [st.payload];
+        if(righe.some(r => r && r.id != null && t.some(x => String(x.id) === String(r.id)))) return Promise.resolve({ data:null, error:{ code:'23505', message:'duplicate key value violates unique constraint' } });
+        righe.forEach(r => t.push({ id:'fake-' + t.length, ...r }));
+        return Promise.resolve({ data: righe.map(r => ({ id:'fake-id', ...r })), error:null });
       }
       if(st.op !== 'select'){ return Promise.resolve({ data:[{id:'fake-id'}], error:null }); }
       // Join come PostgREST: select('..., meals!inner(date)') porta con se' la riga del pasto

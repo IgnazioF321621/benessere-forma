@@ -1033,6 +1033,8 @@
 <div id="app">
   <!-- Versione nuova (Fondamenta 140): si tocca per aggiornare, mai una ricarica da sola -->
   <div id="aggiorna-banner" class="aggiorna-banner" onclick="aggiornaApp()" role="button">C'è una versione più recente: tocca per aggiornare</div>
+  <!-- Senza rete (Fondamenta 120): quando mancano la rete o ci sono salvataggi da inviare -->
+  <div id="senza-rete" class="senza-rete"></div>
   <div id="header">
     <div class="h-inner">
       <div class="h-left">
@@ -1845,6 +1847,7 @@ async function loadAndStart() {
   // WS-QUEUE: al boot post-login smaltisce le scritture workout_sets rimaste
   // in coda da sessioni precedenti (fire-and-forget, non blocca il caricamento)
   try { _wsFlushQueue(); } catch(e){}
+  try { svuotaCoda(); } catch(e){}   // Fondamenta 120: pasti, pesate e integratori rimasti in attesa
 
   let cache = loadCache();
 
@@ -2031,6 +2034,29 @@ function _rinfrescoFinale(profRes) {
   ST.lastRefreshAt = Date.now();
 }
 
+// ── Senza rete (Fondamenta 120, 2 ottobre 2026): la striscia e cosa succede quando la rete torna ──
+function aggiornaStatoRete() {
+  const el = document.getElementById('senza-rete');
+  if(!el) return;
+  const off = senzaRete();
+  const n = (ST.user && ST.user.id) ? codaInAttesa() : 0;
+  if(!off && !n) { el.classList.remove('visible'); return; }
+  const quando = ST.ultimoCompletoAt || ST.lastRefreshAt;
+  const ora = quando ? new Date(quando).toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }) : null;
+  let testo = off ? ('Sei senza rete' + (ora ? ': vedi i dati delle ' + ora : '')) : 'Rete tornata';
+  if(n) testo += ' · ' + n + (n === 1 ? ' salvataggio da inviare' : ' salvataggi da inviare');
+  el.textContent = testo;
+  el.classList.add('visible');
+}
+window.addEventListener('offline', aggiornaStatoRete);
+window.addEventListener('online', async () => {
+  aggiornaStatoRete();
+  try { await svuotaCoda(); } catch(e) {}
+  try { _wsFlushQueue(); } catch(e) {}
+  if(ST.user && ST.user.id) { try { await refreshInBackground(); } catch(e) {} }
+  aggiornaStatoRete();
+});
+
 function showScreen(name) {
   document.getElementById('splash').classList.add('hide');
   document.getElementById('auth-screen').classList.remove('visible');
@@ -2056,6 +2082,7 @@ function showScreen(name) {
   else if(name === 'app')   {
     document.getElementById('app').classList.add('visible');
     updateNavVisibility();
+    aggiornaStatoRete();
   }
   // Banner ANTEPRIMA: classe sul body settata in base al flag preview.
   // Il CSS mostra/nasconde #m1-preview-banner solo se la classe è attiva.
@@ -2296,6 +2323,7 @@ function enterTestMode() {
     // sotto: se e' passata la mezzanotte il rinfresco deve partire comunque,
     // altrimenti si resterebbe sulla giornata di ieri fino al prossimo giro.
     const giornoCambiato = _allineaGiornoCorrente();
+    try { svuotaCoda(); } catch(e) {}   // Fondamenta 120: salvataggi rimasti in attesa
     // (b) Re-fetch silenzioso con throttle 30s
     if (!giornoCambiato && Date.now() - (ST.lastRefreshAt || 0) < 30000) return;
     try {

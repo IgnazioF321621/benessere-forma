@@ -23,19 +23,19 @@ const swSrc = fs.readFileSync(path.join(REPO, 'sw.js'), 'utf8');
 
 function avviaSW(){
   const rete = {}, archivio = new Map(), ascolti = {};
-  let inLinea = true; const chieste = [];
+  let inLinea = true, lenta = false; const chieste = [];
   const risposta = (corpo, ok = true) => ({ ok, corpo, clone(){ return risposta(corpo, ok); } });
   const cache = { put: async (k, r) => { archivio.set(typeof k === 'string' ? k : new URL(k.url).pathname, r); }, };
   const ctx = {
-    URL, Promise, console,
+    URL, Promise, console, setTimeout, clearTimeout,
     self: { location: { origin: 'https://ignaziof321621.github.io' }, skipWaiting(){}, clients: { claim(){} }, addEventListener: (t, f) => { ascolti[t] = f; } },
     caches: { open: async () => cache, keys: async () => ['zt-v2'], delete: async () => true,
               match: async (k) => archivio.get(typeof k === 'string' ? k : new URL(k.url).pathname) },
-    fetch: async (r) => { const u = typeof r === 'string' ? r : new URL(r.url).pathname; chieste.push(u); if(!inLinea) throw new Error('senza rete'); return u in rete ? risposta(rete[u]) : risposta('', false); },
+    fetch: (r) => { const u = typeof r === 'string' ? r : new URL(r.url).pathname; chieste.push(u); if(lenta) return new Promise(() => {}); if(!inLinea) return Promise.reject(new Error('senza rete')); return Promise.resolve(u in rete ? risposta(rete[u]) : risposta('', false)); },
   };
   vm.createContext(ctx); vm.runInContext(swSrc, ctx);
   return {
-    rete, archivio, chieste, staccaRete(){ inLinea = false; }, elenco: vm.runInContext('APP_FILES', ctx), cartella: vm.runInContext('BASE', ctx),
+    rete, archivio, chieste, staccaRete(){ inLinea = false; }, reteLenta(){ lenta = true; vm.runInContext('ATTESA_RETE_MS = 40', ctx); }, elenco: vm.runInContext('APP_FILES', ctx), cartella: vm.runInContext('BASE', ctx),
     async installa(){ let p; ascolti.install({ waitUntil: x => { p = x; } }); await p; },
     async chiedi(url, mode){ let p = null; ascolti.fetch({ request: { url, mode: mode || 'no-cors' }, respondWith: x => { p = x; } }); return p === null ? 'non intercettata' : (await p); },
   };
@@ -85,6 +85,19 @@ function avviaSW(){
   const fCodice = sw.cartella + sw.elenco.find(f => f.endsWith('.js'));
   atteso('senza rete: anche il codice salvato all\'installazione', (await sw.chiedi(B + fCodice + '?v=1')).corpo, 'v1 di ' + fCodice.replace(sw.cartella, ''));
   atteso('senza rete, file mai salvato: niente (non una risposta sbagliata)', await sw.chiedi(B + sw.cartella + 'app/inesistente.css'), undefined);
+  // Fondamenta 120: rete lenta → entro il tempo massimo arriva la copia salvata; i caratteri si salvano
+  {
+    const s3 = avviaSW(); s3.elenco.forEach(f => { s3.rete[s3.cartella + f] = 'v1 di ' + f; }); await s3.installa();
+    s3.reteLenta();
+    const t0 = Date.now(); const r = await s3.chiedi(B + f0 + '?v=1'); const ms = Date.now() - t0;
+    atteso('rete lenta: la copia salvata entro il tempo massimo', [r.corpo, ms < 1000], ['v1 di ' + sw.elenco[0], true]);
+    const s4 = avviaSW(); s4.rete['/s/font.woff2'] = 'caratteri';
+    const prima = await s4.chiedi('https://fonts.gstatic.com/s/font.woff2'); const n = s4.chieste.length;
+    const seconda = await s4.chiedi('https://fonts.gstatic.com/s/font.woff2');
+    atteso('caratteri di Google: salvati, la seconda volta senza rete', [prima.corpo, seconda.corpo, s4.chieste.length - n], ['caratteri', 'caratteri', 0]);
+    s4.staccaRete();
+    atteso('caratteri senza rete: dalla copia', (await s4.chiedi('https://fonts.gstatic.com/s/font.woff2')).corpo, 'caratteri');
+  }
   {
     const s2 = avviaSW(); s2.staccaRete(); let rotto = false;
     try { await s2.installa(); } catch(e){ rotto = true; }

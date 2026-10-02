@@ -661,7 +661,9 @@ async function dbAddMeal(meal) {
     carbs:   Math.max(0, Math.round((Number(meal.carbs)   || 0) * 10) / 10),
     fat:     Math.max(0, Math.round((Number(meal.fat)     || 0) * 10) / 10),
   };
-  const {data, error} = await supa.from('meals').insert({
+  // L'id lo sceglie il telefono (Fondamenta 120): cosi' il pasto si puo' mettere in coda senza rete
+  const row = {
+    id: nuovoId(),
     user_id: ST.user.id,
     date: ST.activeDay,
     time: meal.time,
@@ -672,29 +674,28 @@ async function dbAddMeal(meal) {
     carbs: sanit.carbs,
     fat: sanit.fat,
     notes: meal.notes || null,
-  }).select().single();
-  if(error) throw error;
-  return data;
+  };
+  const res = await scriviConCoda('salvare il pasto', { tabella:'meals', tipo:'insert', righe:row });
+  if(res.error) throw res.error;
+  return row;
 }
 
 async function dbDeleteMeal(mealId) {
-  await dbq('cancellare il pasto', supa.from('meals').delete().eq('id', mealId).eq('user_id', ST.user.id));
+  await scriviConCoda('cancellare il pasto', { tabella:'meals', tipo:'delete', filtri:[['id', mealId], ['user_id', ST.user.id]] });
 }
 
 async function dbToggleFasting(date, on) {
-  if(on) await dbq('segnare il giorno di digiuno', supa.from('fasting_days').upsert({user_id:ST.user.id, date}, {onConflict:'user_id,date'}));
-  else   await dbq('togliere il giorno di digiuno', supa.from('fasting_days').delete().eq('user_id', ST.user.id).eq('date', date));
+  if(on) await scriviConCoda('segnare il giorno di digiuno', { tabella:'fasting_days', tipo:'upsert', righe:{ user_id:ST.user.id, date }, onConflict:'user_id,date' });
+  else   await scriviConCoda('togliere il giorno di digiuno', { tabella:'fasting_days', tipo:'delete', filtri:[['user_id', ST.user.id], ['date', date]] });
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
   // Delete prima (idempotente — funziona senza UNIQUE constraint)
-  await dbq('segnare l\'integratore come preso', supa.from('supplements_log').delete()
-    .eq('user_id', ST.user.id).eq('date', date).eq('supplement_name', suppName));
+  await scriviConCoda('segnare l\'integratore come preso', { tabella:'supplements_log', tipo:'delete', filtri:[['user_id', ST.user.id], ['date', date], ['supplement_name', suppName]] });
   if (taken) {
-    const {error} = await supa.from('supplements_log').insert(
-      {user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName}
-    );
-    if (error) throw error;
+    const res = await scriviConCoda('segnare l\'integratore come preso', { tabella:'supplements_log', tipo:'insert',
+      righe:{ id:nuovoId(), user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName } });
+    if (res.error) throw res.error;
   }
 }
 
@@ -1561,7 +1562,9 @@ window.smartSavePasto = async function() {
       showToast('Pasto aggiornato', '✏️');
     } else {
       // ── MODALITÀ NUOVO PASTO ──
-      const {data: meal, error: mealErr} = await supa.from('meals').insert({
+      // L'id lo sceglie il telefono (Fondamenta 120): pasto e ingredienti vanno in coda senza rete
+      const meal = {
+        id: nuovoId(),
         user_id: ST.user.id,
         date: ST.activeDay,
         time, slot,
@@ -1571,9 +1574,11 @@ window.smartSavePasto = async function() {
         carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
         fat: Math.max(0, Math.round(tot.fat * 10) / 10),
         notes: ST.smartForm.notes || null,
-      }).select().single();
-      if (mealErr) throw mealErr;
+      };
+      const mealRes = await scriviConCoda('salvare il pasto', { tabella:'meals', tipo:'insert', righe:meal });
+      if (mealRes.error) throw mealRes.error;
       const itemsPayload = items.map((it, idx) => ({
+        id: nuovoId(),
         meal_id: meal.id,
         user_id: ST.user.id,
         name: it.name.trim(),
@@ -1586,7 +1591,9 @@ window.smartSavePasto = async function() {
         source: it.source || 'manual',
         sort_order: idx,
       }));
-      const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
+      const itemsRes = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload }) : { data:null, error:null };
+      const savedItems = itemsPayload;
+      const itemsErr = itemsRes.error;
       if (itemsErr) {
         // Rollback meal orfano. Silenzioso perche' l'errore vero viene rilanciato
         // subito dopo e mostrato dal chiamante: due toast sarebbero rumore. Ma se

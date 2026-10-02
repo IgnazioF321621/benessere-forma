@@ -1930,7 +1930,7 @@ async function loadWeightLogs() {
     .eq('user_id', ST.user.id)
     .order('date', { ascending: false })
     .limit(1000);   // una riga al giorno: copre quasi tre anni, e la Tendenza «Tutto» le mostra tutte
-  if(error) { console.warn('loadWeightLogs error:', error); ST.weightLogs = []; return; }
+  if(error) { console.warn('loadWeightLogs error:', error); if(!ST.weightLogs) ST.weightLogs = []; return; }   // lettura fallita: restano quelle in memoria
   ST.weightLogs = data || [];
 }
 
@@ -2027,7 +2027,12 @@ async function confirmWeighIn() {
 
   const today = todayKey();
   const row = { user_id: ST.user.id, date: today, weight_kg: v };
-  const { error } = await supa.from('weight_logs').upsert(row, { onConflict: 'user_id,date' });
+  const resPesata = await scriviConCoda('salvare la pesata', { tabella:'weight_logs', tipo:'upsert', righe:row, onConflict:'user_id,date' });
+  const error = resPesata.error;
+  if(resPesata.inCoda) {
+    // Senza rete (Fondamenta 120): la pesata entra subito fra quelle in memoria, la rete la riceve dopo
+    ST.weightLogs = [{ date: today, weight_kg: v }, ...(ST.weightLogs || []).filter(w => w.date !== today)];
+  }
 
   if(error) {
     console.error('confirmWeighIn upsert error:', error);
@@ -2036,8 +2041,8 @@ async function confirmWeighIn() {
     if(ctaBtn) { ctaBtn.disabled = false; ctaBtn.textContent = 'Conferma'; }
     return;
   }
-  // Refresh cache locale → la prossima apertura card peso/sheet usa il nuovo valore
-  await loadWeightLogs();
+  // Refresh cache locale → la prossima apertura card peso/sheet usa il nuovo valore (non senza rete: resta quella in memoria)
+  if(!resPesata.inCoda) await loadWeightLogs();
   // Step D.2: reset anti-nag dismiss counter — utente si è pesato, prossimo ciclo
   // riparte da 0 (al primo dismiss futuro silenzio 48h, non 7gg/28gg).
   if(typeof _weightReminderResetDismiss === 'function') _weightReminderResetDismiss();
