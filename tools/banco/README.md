@@ -18,6 +18,7 @@ node tools/banco/prova_diario.js         # diario del giorno (daily_log): lettur
 node tools/banco/prova_pagina_divisa.js [file di prima]  # pagina divisa in più file: file presenti, elenco del service worker, senza rete; col file di prima, identità byte per byte (Fondamenta 035)
 node tools/banco/prova_ordine_caricamento.js [--elenco]  # la pagina divisa: nessun pezzo usa al caricamento un nome dichiarato in uno script che viene dopo (serve acorn: npm install acorn)
 node tools/banco/prova_browser.js [file di prima]         # la pagina divisa in Chrome vero, servita in locale: errori al caricamento, cose comuni presenti, schermate uguali a prima
+node tools/banco/conta_richieste.js                      # quante richieste a Supabase per apertura, rientro e giro dei tab, tabella per tabella (Fondamenta 045)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
