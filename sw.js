@@ -20,6 +20,7 @@ const APP_FILES = [
   'app/home.js',
   'app/training_generatore.js',
   'app/training.js',
+  'app/pirsi.js',
   'shared/nutrizione.js',
   'shared/coach_rules.js',
   'shared/quadro.js',
