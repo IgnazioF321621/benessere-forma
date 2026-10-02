@@ -4,7 +4,8 @@
 // Un file richiamato che non esiste ferma tutto: mai una pagina a metà scambiata per buona.
 const fs = require('fs'), path = require('path');
 const REPO = path.join(__dirname, '..', '..');
-const RE_STILE = /<link rel="stylesheet" href="(app\/[^"]+)"\/>/g;
+// La coda «?v=…» la mette il rilascio (tools/rilascio/versione.sh, Metodo 045): qui si ignora.
+const RE_STILE = /<link rel="stylesheet" href="(app\/[^"?]+)(?:\?v=[^"]*)?"\/>/g;
 
 function leggiLocale(rel, accanto){
   // prima accanto al file caricato (una copia «di prima» può avere i suoi), poi nel repo
