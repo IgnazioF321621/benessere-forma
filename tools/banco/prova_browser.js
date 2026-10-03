@@ -15,7 +15,9 @@ const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/M
 if(!fs.existsSync(CHROME)){ console.log('  KO  Chrome non trovato: ' + CHROME); process.exit(1); }
 const prima = process.argv[2];
 const GLOBALI = ['ST', 'dbq', 'dbqAll', 'reportError', 'showToast', 'todayKey', 'ZTNutrizione', 'ZTQuadro', 'ZTCoachRules', 'ZTRitratto', 'supa', 'APP_VERSION'];
-const SPIA = '<script>window.__err=[];window.addEventListener("error",function(e){window.__err.push(String(e.message||"risorsa non caricata: "+((e.target&&(e.target.src||e.target.href))||"?")));},true);' +
+// Informativa gia' letta su questo telefono (Fondamenta 170): la schermata di accesso resta confrontabile con quella di prima
+const PRIVACY_VERSIONE = (/const PRIVACY_VERSIONE = '([^']+)'/.exec(fs.readFileSync(path.join(REPO, 'app', 'comune.js'), 'utf8')) || [])[1] || '';
+const SPIA = '<script>try{localStorage.setItem("zt_privacy_ok",' + JSON.stringify(PRIVACY_VERSIONE) + ')}catch(e){}window.__err=[];window.addEventListener("error",function(e){window.__err.push(String(e.message||"risorsa non caricata: "+((e.target&&(e.target.src||e.target.href))||"?")));},true);' +
   'window.addEventListener("unhandledrejection",function(e){window.__err.push("promessa: "+String(e.reason&&e.reason.message||e.reason));});' +
   'setTimeout(function(){var g={};' + JSON.stringify(GLOBALI) + '.forEach(function(n){try{g[n]=eval("typeof "+n);}catch(x){g[n]="errore";}});' +
   'document.documentElement.setAttribute("data-zt",encodeURIComponent(JSON.stringify({errori:window.__err,globali:g})));},4000);</script>';

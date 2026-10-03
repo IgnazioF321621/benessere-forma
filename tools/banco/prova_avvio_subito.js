@@ -7,6 +7,8 @@
 process.env.TZ = 'Europe/Rome';
 const path = require('path');
 const { boot } = require('./banco');
+// Informativa gia' letta su questo telefono (Fondamenta 170): la prova guarda cio' che viene dopo; la schermata la prova prova_privacy.js
+const PRIVACY_OK = { zt_privacy_ok: /const PRIVACY_VERSIONE = '([^']+)'/.exec(require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'app', 'comune.js'), 'utf8'))[1] };
 const U = 'u1';
 let ko = 0;
 const atteso = (nome, got, exp) => {
@@ -25,7 +27,7 @@ const copiaLocale = { zt_cache: { profile: profilo, db:{ days:{} }, TARGET:{ kca
 function avvio(entrato, file){
   const tables = { profiles:[profilo], weekly_pictures:quadri(), coach_proposals:proposte(), daily_log:[], app_errors:[] };
   if(entrato) tables.__sessione = { user:{ id:U, email:'ignazio.f@me.com' } };
-  const b = boot(tables, { file, locale: entrato ? copiaLocale : {} });
+  const b = boot(tables, { file, locale: entrato ? { ...copiaLocale, ...PRIVACY_OK } : PRIVACY_OK });
   const t0 = Date.now();   // da qui: la pagina è caricata e i suoi script sono partiti
   const d = b.win.document;
   const quale = () => d.getElementById('app').classList.contains('visible') ? 'app'

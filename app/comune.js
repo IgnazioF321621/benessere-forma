@@ -531,6 +531,21 @@ function showToast(msg, emoji='✅', duration) {
   _toastTimer = setTimeout(() => { el.classList.remove('show'); _toastTimer = null; }, ms);
 }
 
+// ── INFORMATIVA: DOVE VANNO I DATI (Fondamenta 170, 3 ottobre 2026) ──────────────────────
+// Un testo solo, usato dalla schermata prima del primo accesso e da «Dove vanno i tuoi dati»
+// nelle Impostazioni. La bozza e la mappa dei dati stanno in docs/PRIVACY.md; questo testo lo
+// approva Ignazio. PRIVACY_VERSIONE cambia quando cambia il testo: chi l'ha gia' letto lo rilegge.
+const PRIVACY_VERSIONE = '2026-10-03';
+const PRIVACY_INFORMATIVA = [
+  ['Il tuo account e i tuoi dati', 'Email di accesso, profilo, pasti, allenamenti, pesate, misure, esami e foto dei check stanno su Supabase, in uno spazio che solo tu puoi leggere e scrivere. Chi gestisce l\'app può vedere i dati, non le foto, per assistenza e controllo.'],
+  ['I consigli del coach', 'Per darti un consiglio, l\'app manda a Groq (un servizio esterno) età, sesso, peso, obiettivo, regime alimentare, intolleranze, note di salute, pasti e allenamenti recenti. Non manda il tuo nome.'],
+  ['Le foto dei check', 'Le foto restano nel tuo spazio privato. Vanno a Gemini (un servizio esterno) solo se tocchi tu «Fai leggere le foto», e prima ti viene chiesto il consenso ogni volta che serve.'],
+  ['Cosa puoi fare', 'Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file. Per cancellare l\'account scrivi a chi gestisce l\'app: i dati, le foto e l\'accesso vengono eliminati.'],
+];
+function privacyInformativaHTML() {
+  return PRIVACY_INFORMATIVA.map(([t, p]) => '<p><b>' + esc(t) + '.</b> ' + esc(p) + '</p>').join('');
+}
+
 // ── CONFERME E AVVISI NELLO STILE DELL'APP (Fondamenta 150, 2 ott 2026) ──────────────────
 // Al posto di confirm(), alert() e prompt() del telefono. Tre funzioni, tutte restituiscono una
 // promessa: chiediConferma(testo, {titolo, ok, annulla, pericolo}) → true/false ·

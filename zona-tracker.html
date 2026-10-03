@@ -51,6 +51,14 @@
   <button class="closed-exit" onclick="logout()">Esci</button>
 </div>
 
+<!-- INFORMATIVA E CONSENSO (Fondamenta 170): prima del primo accesso, una volta per telefono -->
+<div id="privacy-screen">
+  <svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+  <div class="closed-title">Dove vanno i tuoi dati</div>
+  <div class="privacy-testo" id="privacy-testo"></div>
+  <button class="btn btn-primary" style="margin-top:24px" onclick="accettaPrivacy()">Ho capito, continuo</button>
+</div>
+
 <!-- AUTH + WELCOME (M1 nuovo) -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -2057,6 +2065,16 @@ window.addEventListener('online', async () => {
   aggiornaStatoRete();
 });
 
+// ── Informativa e consenso (Fondamenta 170, 3 ottobre 2026) ──
+// Il testo e' in app/comune.js (PRIVACY_INFORMATIVA); la scelta resta sul telefono (localStorage,
+// non nel database) e vale per questa versione del testo: se il testo cambia, si rilegge.
+function privacyAccettata() {
+  try { return localStorage.getItem('zt_privacy_ok') === PRIVACY_VERSIONE; } catch(e) { return false; }
+}
+function accettaPrivacy() {
+  try { localStorage.setItem('zt_privacy_ok', PRIVACY_VERSIONE); } catch(e) {}
+  showScreen('auth');
+}
 function showScreen(name) {
   document.getElementById('splash').classList.add('hide');
   document.getElementById('auth-screen').classList.remove('visible');
@@ -2066,6 +2084,10 @@ function showScreen(name) {
   document.getElementById('app').classList.remove('visible');
   document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
+  // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
+  if(name === 'auth' && !privacyAccettata()) name = 'privacy';
+  document.getElementById('privacy-screen').classList.toggle('visible', name === 'privacy');
+  if(name === 'privacy')    { document.getElementById('privacy-testo').innerHTML = privacyInformativaHTML(); }
   if(name === 'auth')       {
     document.getElementById('auth-screen').classList.add('visible');
     // Default: mostra welcome (l'utente arriva qui da bootstrap o logout)
