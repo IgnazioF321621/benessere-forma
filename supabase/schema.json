@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-02",
+ "quando": "2026-10-03",
  "righe": [
   {
    "righe": 0,
@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 5,
+   "righe": 6,
    "tabella": "body_logs"
   },
   {
@@ -39,7 +39,7 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 25,
+   "righe": 26,
    "tabella": "coach_proposals"
   },
   {
@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 2609,
+   "righe": 2615,
    "tabella": "meal_items"
   },
   {
-   "righe": 928,
+   "righe": 930,
    "tabella": "meals"
   },
   {
@@ -91,11 +91,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 2359,
+   "righe": 2361,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1782,
+   "righe": 1797,
    "tabella": "training_logs"
   },
   {
@@ -123,11 +123,11 @@
    "tabella": "weight_logs"
   },
   {
-   "righe": 1778,
+   "righe": 1796,
    "tabella": "workout_sets"
   },
   {
-   "righe": 115,
+   "righe": 116,
    "tabella": "workouts"
   }
  ],
@@ -3027,6 +3027,16 @@
     "tipo": "numeric"
    },
    {
+    "colonna": "supplement_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "supplements_log",
+    "tipo": "uuid"
+   },
+   {
     "colonna": "id",
     "generata": "",
     "identita": "",
@@ -3147,6 +3157,16 @@
     "tipo": "text"
    },
    {
+    "colonna": "exercise_code",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 13,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "text"
+   },
+   {
     "colonna": "id",
     "generata": "",
     "identita": "",
@@ -3215,6 +3235,16 @@
     "predefinito": "now()",
     "tabella": "training_notes",
     "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "exercise_code",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "training_notes",
+    "tipo": "text"
    },
    {
     "colonna": "id",
@@ -4008,8 +4038,23 @@
     "tabella": "supplements_log"
    },
    {
+    "definizione": "CREATE INDEX supplements_log_user_supp_idx ON public.supplements_log USING btree (user_id, supplement_id)",
+    "nome": "supplements_log_user_supp_idx",
+    "tabella": "supplements_log"
+   },
+   {
+    "definizione": "CREATE INDEX training_logs_user_code_idx ON public.training_logs USING btree (user_id, exercise_code)",
+    "nome": "training_logs_user_code_idx",
+    "tabella": "training_logs"
+   },
+   {
     "definizione": "CREATE INDEX idx_training_notes_user_ex_date ON public.training_notes USING btree (user_id, exercise_name, date DESC)",
     "nome": "idx_training_notes_user_ex_date",
+    "tabella": "training_notes"
+   },
+   {
+    "definizione": "CREATE INDEX training_notes_user_code_idx ON public.training_notes USING btree (user_id, exercise_code)",
+    "nome": "training_notes_user_code_idx",
     "tabella": "training_notes"
    },
    {
@@ -6419,6 +6464,12 @@
     "tipo": "p"
    },
    {
+    "definizione": "UNIQUE (user_id, date)",
+    "nome": "body_logs_user_date_key",
+    "tabella": "body_logs",
+    "tipo": "u"
+   },
+   {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "body_logs_user_id_fkey",
     "tabella": "body_logs",
@@ -6749,6 +6800,12 @@
     "tipo": "p"
    },
    {
+    "definizione": "UNIQUE (user_id, date, session_id, exercise_name, set_number)",
+    "nome": "training_logs_serie_key",
+    "tabella": "training_logs",
+    "tipo": "u"
+   },
+   {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "training_logs_user_id_fkey",
     "tabella": "training_logs",
@@ -6927,6 +6984,12 @@
     "nome": "workouts_pkey",
     "tabella": "workouts",
     "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date, session_type)",
+    "nome": "workouts_user_date_session_key",
+    "tabella": "workouts",
+    "tipo": "u"
    },
    {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
