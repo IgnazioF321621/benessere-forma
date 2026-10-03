@@ -113,6 +113,37 @@ async function scaricaMieiDati(){
     if(btn){ btn.disabled = false; btn.textContent = 'Scarica i miei dati'; }
   }
 }
+// ── Elimina account (Fondamenta 170, deciso da Ignazio il 3 ottobre 2026) ──
+// Dal profilo: si scrive ELIMINA, poi l'app toglie le foto col proprio permesso e chiama la
+// funzione del database elimina_mio_account (migrazione 20261003_170), che cancella l'accesso e,
+// a cascata, tutte le righe della persona. Se un passo fallisce ci si ferma e si dice cosa e'
+// successo. L'account di amministrazione non si cancella da qui.
+async function eliminaMioAccount(){
+  if(!ST.user || !ST.user.id) return;
+  if(typeof APP_ONLY_EMAIL !== 'undefined' && ST.user.email === APP_ONLY_EMAIL){ showToast('L\'account di amministrazione non si cancella da qui', '⚠️', 5500); return; }
+  const parola = await chiediTesto('Eliminare l\'account?', { segnaposto:'ELIMINA', ok:'Elimina account',
+    testo:'Dati, foto e accesso vengono eliminati per sempre. Prima puoi scaricare i tuoi dati. Per confermare scrivi ELIMINA.' });
+  if(parola === null) return;
+  if(String(parola).trim().toUpperCase() !== 'ELIMINA'){ showToast('Parola diversa: non ho cancellato niente', '⚠️'); return; }
+  const uid = ST.user.id;
+  // 1. le foto, coi permessi della persona
+  const foto = await dbqAll('leggere l\'elenco delle foto', () => supa.from('body_check_photos').select('storage_path').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+  if(foto.error){ await avvisa('Non riesco a leggere l\'elenco delle foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  const percorsi = (foto.data || []).map(f => f.storage_path).filter(Boolean);
+  if(percorsi.length){
+    const r = await dbq('cancellare le foto', supa.storage.from('body-check-photos').remove(percorsi), { silenzioso:true });
+    if(r.error){ await avvisa('Non riesco a cancellare le foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  }
+  // 2. l'accesso, e con lui tutte le righe
+  const res = await dbq('eliminare l\'account', supa.rpc('elimina_mio_account'), { silenzioso:true });
+  if(res.error){ await avvisa('Le foto sono state tolte, ma non riesco a eliminare l\'account e i dati. Scrivi a chi gestisce l\'app.', { titolo:'Account non eliminato' }); return; }
+  try { localStorage.clear(); } catch(e) {}
+  try { await supa.auth.signOut(); } catch(e) {}
+  ST.user = null; ST.profile = null; ST.db = { days:{} }; ST.supps = [];
+  closeSettingsModal();
+  showScreen('auth');
+  avvisa('Il tuo account e i tuoi dati sono stati eliminati.', { titolo:'Fatto' });
+}
 function mostraInformativa(){
   return avvisa(privacyInformativaHTML(), { titolo:'Dove vanno i tuoi dati', html:true });
 }

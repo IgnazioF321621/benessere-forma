@@ -143,7 +143,11 @@ function makeSupaMock(tables){
       signInWithOtp: async()=>({error:null}), verifyOtp: async()=>({error:null}),
       signOut: async()=>({error:null}), getUser: async()=>({data:{user: (tables.__sessione || {}).user || null}}),
     },
-    storage: { from: ()=>({ createSignedUrl: async()=>({data:null}), list: async()=>({data:[]}) }) },
+    // storage.remove e rpc registrano la chiamata in _calls (table 'storage:<bucket>' / 'rpc:<funzione>');
+    // tables.__rpc = { funzione: { data, error } } decide la risposta
+    storage: { from: (bucket)=>({ createSignedUrl: async()=>({data:null}), list: async()=>({data:[]}),
+      remove: async(paths)=>{ calls.push({ table:'storage:' + bucket, op:'remove', payload:paths, filters:[] }); return { data:paths, error:null }; } }) },
+    rpc: (fn, args) => { calls.push({ table:'rpc:' + fn, op:'rpc', payload:args || null, filters:[] }); const r = (tables.__rpc || {})[fn]; return Promise.resolve(r ? { ...r } : { data:null, error:null }); },
   };
   client._calls = calls;
   return client;

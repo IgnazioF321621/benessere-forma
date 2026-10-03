@@ -100,6 +100,34 @@ const profilo = { id:U, first_name:'Ignazio', last_name:'F', sex:'M', age:55, he
     const letture = b.supa._calls.filter(c => c.op === 'select' && c.table !== 'app_errors');
     atteso('ogni lettura filtra sulla persona', letture.every(c => c.filters.some(f => (f[1] === 'user_id' || f[1] === 'id') && f[2] === U)), true);
   }
+  // 5) elimina account dal profilo: parola sbagliata → niente; parola giusta → foto tolte, funzione chiamata, uscita
+  {
+    const nuovo = async (rpc) => {
+      const t = { profiles:[profilo], body_check_photos:[{ id:'p1', user_id:U, check_id:'c1', pose:'front', storage_path:U + '/c1/front.jpg' }, { id:'p2', user_id:U, check_id:'c1', pose:'back', storage_path:U + '/c1/back.jpg' }], __rpc: rpc || {} };
+      const b = boot(t, { now:'2026-10-03T12:00:00', locale:{ zt_cache:'x', zt_privacy_ok:'2026-10-03' } });
+      await b.avviato;
+      const ST = b.win.eval('ST'); ST.user = { id:U, email:'tester@x.it' };
+      let usciti = 0; b.supa.auth.signOut = async () => { usciti++; return { error:null }; };
+      // scrive la parola, poi chiude l'eventuale avviso che segue (altrimenti la promessa aspetta)
+      const scrivi = async (parola) => { const p = b.win.eliminaMioAccount(); await attendi(30); const inp = b.win.document.querySelector('.foglio input'); if(inp){ inp.value = parola; b.win.document.querySelector('.foglio .foglio-ok').click(); } await attendi(60); b.avviso = (b.win.document.querySelector('.foglio') || {}).textContent || ''; const ok = b.win.document.querySelector('.foglio .foglio-ok'); if(ok) ok.click(); await p; await attendi(30); };
+      const chiamate = () => b.supa._calls.filter(c => c.op === 'remove' || c.op === 'rpc').map(c => c.table + ':' + c.op);
+      return { b, ST, scrivi, chiamate, usciti: () => usciti };
+    };
+    let a = await nuovo();
+    await a.scrivi('elimino');
+    atteso('parola sbagliata · nessuna cancellazione, nessuna uscita', [a.chiamate(), a.usciti(), !!a.ST.user], [[], 0, true]);
+    await a.scrivi('elimina');
+    atteso('parola giusta · prima le foto col proprio permesso, poi la funzione, poi l\'uscita', [a.chiamate(), a.usciti(), a.ST.user, a.b.win.localStorage.getItem('zt_cache')], [['storage:body-check-photos:remove', 'rpc:elimina_mio_account:rpc'], 1, null, null]);
+    atteso('foto · tolte per percorso', a.b.supa._calls.find(c => c.op === 'remove').payload, [U + '/c1/front.jpg', U + '/c1/back.jpg']);
+    a = await nuovo({ elimina_mio_account:{ data:null, error:{ code:'PGRST202', message:'funzione non trovata' } } });
+    await a.scrivi('ELIMINA');
+    atteso('funzione assente · si avvisa, nessuna uscita', [a.usciti(), !!a.ST.user, /non riesco a eliminare/i.test(a.b.avviso)], [0, true, true]);
+    a = await nuovo(); a.ST.user = { id:U, email:'ignazio.f@me.com' };
+    await a.scrivi('ELIMINA');
+    atteso('amministrazione · non si cancella da qui', [a.chiamate(), a.usciti()], [[], 0]);
+    const informativa = a.b.win.eval('PRIVACY_INFORMATIVA').map(x => x[1]).join(' ');
+    atteso('informativa · cancellazione dalle Impostazioni, niente «non restano in Gemini»', [/cancellare l'account: dati, foto e accesso/.test(informativa), /restano nell'app di Gemini/.test(fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'body.js'), 'utf8'))], [true, false]);
+  }
   console.log(ko ? ko + ' KO' : 'tutto OK');
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

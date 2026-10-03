@@ -1,6 +1,6 @@
 # Privacy — informativa, mappa dei dati, piano «Elimina account»
 
-*Fondamenta 170, 3 ottobre 2026. Scritto in italiano semplice. La parte (a) è una bozza: la approva Ignazio. La parte (c) è solo un piano: «Elimina account» non è realizzato, perché cancella dati e lo decide Ignazio.*
+*Fondamenta 170, 3 ottobre 2026. Scritto in italiano semplice. La parte (a) è il testo approvato da Ignazio il 3 ottobre (gestori citati per nome, niente frase sui termini di Gemini). La parte (c) è il piano di «Elimina account», che Ignazio ha deciso di fare dal profilo lo stesso giorno: è realizzato come descritto in fondo.*
 
 ## (a) Bozza dell'informativa e del consenso
 
@@ -12,13 +12,13 @@
 >
 > **Le foto dei check.** Le foto restano nel tuo spazio privato. Vanno a Gemini (un servizio esterno) solo se tocchi tu «Fai leggere le foto», e prima ti viene chiesto il consenso ogni volta che serve.
 >
-> **Cosa puoi fare.** Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file. Per cancellare l'account scrivi a chi gestisce l'app: i dati, le foto e l'accesso vengono eliminati.
+> **Cosa puoi fare.** Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file e cancellare l'account: dati, foto e accesso vengono eliminati per sempre.
 
 Il consenso alle foto si chiede **alla prima lettura** (foglio «Lettura delle foto», tasti «Acconsento» e «Annulla», `consensoLetturaFoto` in `app/body.js`): se annulla, non parte niente. La risposta sì resta sul telefono (`zt_foto_ok`). Il testo:
 
-> Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure. Servono solo per il confronto e non restano nell'app di Gemini. Vuoi continuare?
+> Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure, per il confronto fra i tuoi check. Vuoi continuare?
 
-Cose da decidere con Ignazio prima di approvare: se citare i gestori per nome (Supabase Inc., Groq Inc., Google per Gemini) e dove stanno i loro server; se aggiungere un indirizzo email a cui scrivere per cancellare l'account; se la frase «non restano nell'app di Gemini» va verificata sui termini del servizio in uso (piano gratuito: va letta la pagina dei termini, non si dà per scontato).
+Deciso da Ignazio il 3 ottobre 2026: i gestori restano citati per nome (Supabase, Groq, Gemini); la cancellazione si fa dal profilo, quindi niente indirizzo email; la frase «non restano nell'app di Gemini» è tolta, perché non verificata sui termini del piano gratuito.
 
 ## (b) Mappa dei dati: quale dato va a quale servizio, da quale funzione
 
@@ -44,7 +44,7 @@ Dove il nome entrava nei testi al coach, e da dove è uscito il 3 ottobre 2026: 
 
 «Scarica i miei dati» (`raccogliMieiDati`, `scaricaMieiDati` in `app/impostazioni.js`): legge 23 tabelle coi permessi normali della persona, a pagine, e scrive un file JSON `zona-tracker-dati-<giorno>.json`. Delle foto mette solo l'elenco (pose e nome del file nel bucket), mai i byte. Una tabella che non si legge resta scritta come «non letta».
 
-## (c) Piano «Elimina account» — solo scritto, non realizzato
+## (c) «Elimina account» — piano e realizzazione (3 ottobre 2026)
 
 **Cosa cancellerebbe, in quest'ordine.**
 
@@ -61,4 +61,4 @@ Dove il nome entrava nei testi al coach, e da dove è uscito il 3 ottobre 2026: 
 
 **Piani gratuiti.** Resta tutto dentro: una strada in più del Worker non cambia i limiti, cancellare righe e foto libera spazio. Nessun servizio nuovo.
 
-**Chi decide.** Ignazio, caso per caso, finché non esiste il tasto. Fino ad allora l'informativa dice: «scrivi a chi gestisce l'app».
+**Com'è fatto.** Nelle Impostazioni, sotto «I tuoi dati», il tasto «Elimina account» (`eliminaMioAccount` in `app/impostazioni.js`): chiede di scrivere ELIMINA (una parola, non un tasto); toglie le foto dal bucket coi permessi della persona (regola `body_photos_delete_own`); chiama la funzione del database `elimina_mio_account()` (migrazione `supabase/migrations/20261003_170_elimina_mio_account.sql`, `security definer`, solo per chi è entrato e solo su se stesso: l'id lo prende da `auth.uid()`), che cancella l'utente di accesso e con lui, a cascata, tutte le righe della persona (ogni tabella ha `user_id → auth.users ON DELETE CASCADE`, verificato tabella per tabella nella fotografia dello schema) e i metadati di foto eventualmente rimasti; poi svuota il telefono (`localStorage`) ed esce. Se le foto non si leggono o non si cancellano, non cancella niente e lo dice; se la funzione fallisce, dice che le foto sono state tolte ma i dati no. L'account di amministrazione non si cancella da qui. Provato su un Postgres locale: utente, righe e metadati a zero dopo la chiamata. Lo prova `node tools/banco/prova_privacy.js`. **La migrazione la esegue la REGIA, con copia prima, insieme alle altre del 3 ottobre e prima del rilascio**: senza, il tasto risponde «non riesco a eliminare l'account».
