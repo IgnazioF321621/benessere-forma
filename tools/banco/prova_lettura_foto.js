@@ -37,6 +37,7 @@ function avvia(tables){
   const ST = b.win.eval('ST');
   ST.user = { id:U };
   ST.profile = { id:U, created_at:'2026-05-01T08:00:00Z', target_kcal:2200 };
+  b.win.localStorage.setItem('zt_foto_ok', '1');   // consenso alla lettura gia' dato (Fondamenta 170: lo prova prova_privacy.js)
   ST.bodyChecks = checks.map(({ id, status, created_at }) => ({ id, status, created_at }));
   b.supa.auth.getSession = async () => ({ data:{ session:{ access_token:'token-finto' } } });
   b.chiamate = [];
