@@ -51,8 +51,12 @@ def leggi(sql):
                        capture_output=True, text=True)
     if r.returncode != 0:
         sys.exit('✗ lettura fallita: ' + (r.stderr or r.stdout)[-400:])
-    testo = r.stdout[r.stdout.index('{'):]
-    return json.JSONDecoder().raw_decode(testo)[0]['rows']
+    # La CLI risponde con un elenco di righe ([...]) o, nelle versioni piu' vecchie, con {"rows": [...]}.
+    inizi = [i for i in (r.stdout.find('['), r.stdout.find('{')) if i >= 0]
+    if not inizi:
+        sys.exit('✗ risposta senza dati: ' + r.stdout[-400:])
+    dati = json.JSONDecoder().raw_decode(r.stdout[min(inizi):])[0]
+    return dati if isinstance(dati, list) else dati['rows']
 
 
 def fotografa():
