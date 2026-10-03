@@ -1065,7 +1065,7 @@ function bcaErrorMessage(status, err){
 // telefono (zt_foto_ok, non nel database).
 async function consensoLetturaFoto(){
   try { if(localStorage.getItem('zt_foto_ok') === '1') return true; } catch(e) {}
-  const ok = await chiediConferma('Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure. Servono solo per il confronto e non restano nell\'app di Gemini. Vuoi continuare?', { titolo:'Lettura delle foto', ok:'Acconsento' });
+  const ok = await chiediConferma('Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure, per il confronto fra i tuoi check. Vuoi continuare?', { titolo:'Lettura delle foto', ok:'Acconsento' });
   if(ok) { try { localStorage.setItem('zt_foto_ok', '1'); } catch(e) {} }
   return ok;
 }
