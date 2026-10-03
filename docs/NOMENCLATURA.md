@@ -35,7 +35,7 @@ Allegato normativo di [`CLAUDE.md`](../CLAUDE.md): **non è un archivio**, è lo
 
 **7. Codice stabile**: `EX###` mai derivato dalla zona. Gap permanenti, mai renumerare.
 
-**8. Storico**: qualunque rinomina va accompagnata da migrazione parallela su `training_logs` e `workout_sets` (indicizzano per nome testuale).
+**8. Storico**: dal 3 ottobre 2026 lo storico si lega per **codice** (`exercise_code` in `training_logs` e `training_notes`, Fondamenta 070): una rinomina non richiede più migrazioni sui log. Le sole righe ancora legate per nome sono quelle vecchie che la migrazione `20261003_070_080` ha elencato come senza codice: quelle sì, a una rinomina vanno guardate. `workout_sets` è ferma (Fondamenta 080).
 
 **9. Estensione attiva del rachide** — gli esercizi che estendono attivamente la schiena (superman, swimming, reverse hyper, iperestensioni) vanno in `Schiena e Trapezio` con `gruppo_target = lombari`, **mai in `Addominali e Core`**. Motivo: gli slot core dell'app sono anti-estensione e anti-rotazione e richiedono tenuta isometrica; un esercizio che estende attivamente la schiena in quello slot produce lo stimolo opposto a quello richiesto.
 

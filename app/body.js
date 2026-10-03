@@ -884,21 +884,9 @@ async function saveBodyLog(){
   ST.bodySaving = true;
   renderBody();
 
-  // Controlla se esiste già un record per oggi
-  const { data: existing } = await dbq('leggere la misura di oggi', supa.from('body_logs')
-    .select('id')
-    .eq('user_id', ST.user.id)
-    .eq('date', today)
-    .maybeSingle());
-
-  let error;
-  if(existing?.id){
-    const { error: updateErr } = await supa.from('body_logs').update(payload).eq('id', existing.id);
-    error = updateErr;
-  } else {
-    const { error: insertErr } = await supa.from('body_logs').insert(payload);
-    error = insertErr;
-  }
+  // Scrivi o aggiorna (Fondamenta 090): una riga per persona e per giorno, lo garantisce il vincolo
+  // body_logs_user_date_key; si toccano solo i campi compilati. Prima: lettura, poi insert o update.
+  const { error } = await dbq('salvare le misure', supa.from('body_logs').upsert(payload, { onConflict:'user_id,date' }), { silenzioso:true });
 
   ST.bodySaving = false;
   if(error){ avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }

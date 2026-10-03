@@ -150,7 +150,7 @@ var ZTQuadro = (function(){
       measurements: q('le misure dei check', 'body_measurements', '*', [u], ['created_at','id']),
       checks:       q('i check fisici', 'body_checks', 'id, status, created_at, completed_at', [u], ['created_at','id']),
       meals:        q('i pasti', 'meals', 'date, slot, kcal, protein, carbs, fat', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),
-      suppLogs:     q('gli integratori presi', 'supplements_log', 'id, date, slot, supplement_name, supplement_codice, is_extra, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','slot','created_at']),
+      suppLogs:     q('gli integratori presi', 'supplements_log', 'id, date, slot, supplement_name, supplement_id, supplement_codice, is_extra, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','slot','created_at']),
       supps:        q('la libreria integratori', 'supplements', '*', [u], ['sort_order','id']),
       catalog:      q('il catalogo integratori', 'nutrilite_catalog', '*', [], ['nome','codice']),
       sets:         q('le serie', 'training_logs', 'date, session_id, rir_actual', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),

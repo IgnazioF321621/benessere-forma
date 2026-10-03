@@ -141,8 +141,10 @@ Oggi solo 4 e 5 giorni sono supportati end-to-end (la regola e il sintomo diagno
 
 Da mettere in conto la migrazione di `session_type` nello storico `workouts`.
 
-## 31. Il codice esercizio dentro `training_logs`
+## 31. Il codice esercizio dentro `training_logs` — ✅ chiuso 3 ottobre 2026 (Fondamenta 070/080)
 *Aperto il 12 settembre 2026, dalla diagnosi dei risultati della settimana precedente → [L45](LEZIONI.md#l45--il-nome-mostrato-a-schermo-non-è-una-chiave).*
+
+**Chiuso il 3 ottobre 2026** con le note Fondamenta 070 e 080: i quattro punti qui sotto sono fatti — colonna `exercise_code` su `training_logs` **e** `training_notes` (non su `workout_sets`, che è ferma: le serie stanno in una tabella sola), scrittura del codice a ogni salvataggio, backfill nella migrazione `supabase/migrations/20261003_070_080_codice_e_tabella_unica.sql` con l'elenco delle righe che il ponte non risolve (il punto 3, L10), letture per codice e poi per nome. Il testo che segue resta come storia.
 
 `training_logs` (e `workout_sets`) registrano l'esercizio **per nome**, quello mostrato a schermo nell'istante del salvataggio. Il catalogo però rinomina, e a ogni rinomina lo storico di quell'esercizio si stacca dalla scheda di oggi.
 
@@ -503,7 +505,7 @@ Dettaglio in [L24](LEZIONI.md#l24--limpronta-di-un-oggetto-si-legge-senza-scaric
 ## 21. Wrapper errori Supabase — ✅ scritture chiuse 8 agosto
 Tre lotti, uno per sessione, mai a tappeto ([L1](LEZIONI.md#l1--uno-script-che-toglie-i-log-si-porta-via-la-logica-sulla-stessa-riga)): Nutrition 16 scritture (7 ago) · Training 3 · Body 4 (8 ago). **Scritture scoperte: 0.**
 
-**Una sola esclusione, voluta**: `_wsExec` della WS-QUEUE. Un censimento la segnala come scoperta e non lo è — tutti e quattro i chiamanti (`wsWrite` ×2 per il retry, `_wsReplayOp` ×2) leggono `res.error`. La coda è una rete più fitta di `dbq`: riprova, persiste su localStorage e riconsegna. Avvolgerla darebbe un allarme d'errore a ogni intoppo passeggero che la coda sta già gestendo da sola. La motivazione è scritta accanto alla funzione perché nessuno la "corregga".
+**Una sola esclusione, voluta** *(caduta il 3 ottobre 2026: la WS-QUEUE è uscita con Fondamenta 080)*: `_wsExec` della WS-QUEUE. Un censimento la segnala come scoperta e non lo è — tutti e quattro i chiamanti (`wsWrite` ×2 per il retry, `_wsReplayOp` ×2) leggono `res.error`. La coda è una rete più fitta di `dbq`: riprova, persiste su localStorage e riconsegna. Avvolgerla darebbe un allarme d'errore a ogni intoppo passeggero che la coda sta già gestendo da sola. La motivazione è scritta accanto alla funzione perché nessuno la "corregga".
 
 **Tre punti dove è emerso più di un avvolgimento:**
 - **Serie aggiornata** — se l'update di `training_logs` falliva, `workout_sets` veniva aggiornato lo stesso (via WS-QUEUE, affidabile) e i due archivi divergevano, mentre l'utente leggeva «Serie aggiornata». Ora il messaggio di riuscita compare solo se l'operazione è riuscita.

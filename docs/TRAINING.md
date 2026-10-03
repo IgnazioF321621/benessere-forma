@@ -167,7 +167,7 @@ Pausa cambio lato iso (5s) → silenzio totale. Avvio serie a reps → silenzio.
 
 **`getNextCheckpointInfo()`**: `overdue:true` solo se `isScarico` **e** `workCount >= 5*workPerGiro` **e** `daysUntil < 0`. Settimane 1-5 carico: `overdue:false` sempre. Frequenza checkpoint **42 giorni**, allineata alla durata del mesociclo: le due cadenze si muovono insieme, se una cambia cambia anche l'altra.
 
-**WS-QUEUE**: `wsWrite()` = 1 retry immediato → coda `zt_ws_pending_<userId>` in localStorage → toast discreto. Flush al boot, a ogni scrittura riuscita, al rientro in foreground. Insert idempotente al replay, cap 200 op.
+**Le serie si scrivono una volta, in `training_logs`** *(dal 3 ottobre 2026, Fondamenta 080)*: `scriviConCoda` con l'id scelto dal telefono e `exercise_code`; senza rete la serie aspetta nella coda unica (`zt_coda_<utente>`) e parte da sola. La WS-QUEUE (`wsWrite`, `zt_ws_pending_<userId>`, il rispecchio su `workout_sets`) non esiste più: la sua chiave vecchia viene tolta all'avvio.
 
 **Scarico**: stessi esercizi e set, SOLO carichi ridotti + RIR forzato a 3. MAI ridurre set/reps.
 

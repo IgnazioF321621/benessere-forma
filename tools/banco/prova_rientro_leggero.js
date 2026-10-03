@@ -88,13 +88,13 @@ const tabelle = (a) => a.supa._calls.filter(c => c.op === 'select').map(c => c.t
     return b;
   }
   let b = await giro();
-  atteso('refresh dopo pochi minuti · 7 richieste, niente catalogo/integratori/pacchetti/scheda', [richiesteRinfresco(b), ['nutrilite_catalog', 'supplements', 'supplement_packages', 'supplement_package_items', 'schede_utente'].filter(x => tabelle(b).includes(x))], [7, []]);
+  atteso('refresh dopo pochi minuti · 6 richieste (era 7: via workout_sets, Fondamenta 080), niente catalogo/integratori/pacchetti/scheda', [richiesteRinfresco(b), ['nutrilite_catalog', 'supplements', 'supplement_packages', 'supplement_package_items', 'schede_utente'].filter(x => tabelle(b).includes(x))], [6, []]);
   b = await giro(x => { x.ST.ultimoCompletoAt = x.win.Date.now() - 31 * 60 * 1000; });
-  atteso('refresh dopo 31 minuti · completo (14 richieste)', richiesteRinfresco(b), 14);
+  atteso('refresh dopo 31 minuti · completo (13 richieste)', richiesteRinfresco(b), 13);
   b = await giro(x => { x.ST.ultimoCompletoGiorno = giornoFa(1); });
-  atteso('refresh a giorno cambiato · completo (14 richieste)', richiesteRinfresco(b), 14);
+  atteso('refresh a giorno cambiato · completo (13 richieste)', richiesteRinfresco(b), 13);
   b = await giro(x => { delete x.ST.ultimoCompletoAt; });
-  atteso('refresh senza un completo precedente · completo (14 richieste)', richiesteRinfresco(b), 14);
+  atteso('refresh senza un completo precedente · completo (13 richieste)', richiesteRinfresco(b), 13);
   // dopo un completo si riparte da leggero
   atteso('dopo il completo il momento si aggiorna', Math.abs(b.ST.ultimoCompletoAt - b.win.Date.now()) < 60000 && b.ST.ultimoCompletoGiorno === OGGI, true);
   // lettura che fallisce: si ripiega sul completo, e i dati restano

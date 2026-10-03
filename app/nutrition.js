@@ -332,14 +332,16 @@ function _riempiGiorni(meals, itemsByMeal, fasting, suppLog) {
     if(!ST.db.days[f.date]) ST.db.days[f.date] = _nuovoGiorno(f.date);
     ST.db.days[f.date].fasting = true;
   });
-  // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti)
+  // Presenza del record = assunto; popola sia suppsTaken (per match ST.supps) sia rawSuppLogs (per tutti).
+  // La riga si lega al prodotto per supplement_id, poi per nome (Fondamenta 070): la regola e' in
+  // shared/nutrizione.js → suppForLog. Il nome mostrato e' quello di oggi del prodotto.
   (suppLog||[]).forEach(s => {
     if(!ST.db.days[s.date]) ST.db.days[s.date] = _nuovoGiorno(s.date);
     if(!ST.db.days[s.date].rawSuppLogs) ST.db.days[s.date].rawSuppLogs = [];
-    const supp = ST.supps.find(x => x.name === s.supplement_name);
+    const supp = ZTNutrizione.suppForLog(ST.supps, s);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
-    ST.db.days[s.date].rawSuppLogs.push({name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
+    ST.db.days[s.date].rawSuppLogs.push({name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
   });
 }
 
@@ -400,7 +402,7 @@ async function loadAllDays(opts) {
     const BLOCCO = 1000;
     for(let dal = 0; ; dal += BLOCCO) {
       const res = await _filtra(supa.from('supplements_log')
-        .select('date,supplement_name,slot')
+        .select('date,supplement_name,supplement_id,slot')
         .eq('user_id', ST.user.id)
         .eq('is_extra', false), 'date')
         .order('date', { ascending: true })
@@ -540,7 +542,7 @@ async function loadPackages() {
 // pre-migration con campi macro NULL → fallback DERIVATO da ST.catalog × dose
 // (rete di sicurezza, mai riscrive la riga DB → storico onesto se catalog cambia).
 // Default dose quando NULL: 1 (coerente col codice precedente, semplice e trasparente).
-const _EXTRA_COLS = 'id, date, slot, supplement_name, supplement_codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at';
+const _EXTRA_COLS = 'id, date, slot, supplement_name, supplement_id, supplement_codice, dose, dose_unit, kcal, carbo, proteine, grassi, costo, created_at';
 
 // Trasforma UNA riga supplements_log(is_extra=true) nell'oggetto usato da app e
 // totali. Estratto da loadExtras il 9 ago 2026 perché ora serve a due lettori:
@@ -690,11 +692,14 @@ async function dbToggleFasting(date, on) {
 }
 
 async function dbToggleSuppTaken(date, suppId, suppName, taken, slot) {
-  // Delete prima (idempotente — funziona senza UNIQUE constraint)
-  await scriviConCoda('segnare l\'integratore come preso', { tabella:'supplements_log', tipo:'delete', filtri:[['user_id', ST.user.id], ['date', date], ['supplement_name', suppName]] });
+  // Delete prima (idempotente): per id del prodotto o per nome, cosi' si toglie anche la riga
+  // scritta sotto un nome vecchio (Fondamenta 070). Una richiesta sola, col filtro .or().
+  const perIdONome = suppId ? [['or', _orEq('supplement_id', suppId) + ',' + _orEq('supplement_name', suppName)]] : [['supplement_name', suppName]];
+  await scriviConCoda('segnare l\'integratore come preso', { tabella:'supplements_log', tipo:'delete', filtri:[['user_id', ST.user.id], ['date', date], ...perIdONome] });
   if (taken) {
+    // supplement_id e' la chiave (la riga di `supplements`); il nome resta accanto
     const res = await scriviConCoda('segnare l\'integratore come preso', { tabella:'supplements_log', tipo:'insert',
-      righe:{ id:nuovoId(), user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName } });
+      righe:{ id:nuovoId(), user_id: ST.user.id, date, slot: slot||'', supplement_name: suppName, supplement_id: suppId || null } });
     if (res.error) throw res.error;
   }
 }
@@ -710,19 +715,20 @@ async function loadTodaySuppLog() {
   const today = todayKey();
   const {data, error} = await supa
     .from('supplements_log')
-    .select('supplement_name, slot')
+    .select('supplement_name, supplement_id, slot')
     .eq('user_id', ST.user.id)
     .eq('date', today)
     .eq('is_extra', false);
   if (error || !data) return;
   const day = getDay(today);
   day.suppsTaken = [];
+  // Per supplement_id, poi per nome (Fondamenta 070): la regola e' in shared/nutrizione.js → suppForLog
   day.rawSuppLogs = data.map(s => {
-    const supp = ST.supps.find(x => x.name === s.supplement_name);
-    return {name: s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
+    const supp = ZTNutrizione.suppForLog(ST.supps, s);
+    return {name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
   });
   data.forEach(s => {
-    const supp = ST.supps.find(x => x.name === s.supplement_name);
+    const supp = ZTNutrizione.suppForLog(ST.supps, s);
     if (supp && !day.suppsTaken.includes(supp.local_id))
       day.suppsTaken.push(supp.local_id);
   });
@@ -5839,7 +5845,7 @@ async function confirmSuppSingle() {
   await dbq('registrare l\'integratore', supa.from('supplements_log').delete()
     .eq('user_id', ST.user.id).eq('date', ST.activeDay).eq('supplement_name', name));
   const { error } = await supa.from('supplements_log').insert(
-    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name }
+    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name, supplement_codice: catItem.codice || null }
   );
   if (error) {
     console.error('[suppSingle] Errore Supabase:', error);

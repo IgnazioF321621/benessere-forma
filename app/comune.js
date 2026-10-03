@@ -421,14 +421,18 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 }
 
 // ── SENZA RETE: la coda delle scritture (Fondamenta 120, 2 ottobre 2026) ──────────────────────
-// Prima solo le serie di allenamento avevano una coda (WS-QUEUE, in app/training.js); un pasto, una
-// pesata o un integratore registrati senza campo si perdevano con un avviso. scriviConCoda(operazione,
-// op) prova a scrivere; se non c'e' rete (navigator.onLine) o la rete non risponde, mette l'operazione
+// Prima solo le serie di allenamento avevano una coda (la WS-QUEUE di app/training.js, tolta il 3 ottobre
+// con Fondamenta 080: anche le serie passano da qui); un pasto, una pesata o un integratore registrati
+// senza campo si perdevano con un avviso. scriviConCoda(operazione, op) prova a scrivere; se non c'e' rete (navigator.onLine) o la rete non risponde, mette l'operazione
 // in coda su localStorage (per utente) e risponde {inCoda:true}; un errore dell'API (una regola del
 // database) non va in coda: si mostra, come fa dbq. svuotaCoda() rimanda le operazioni in ordine, al
 // ritorno della rete, al rientro nell'app e dopo ogni scrittura riuscita; si ferma alla prima che
 // fallisce, cosi' l'ordine resta. Le righe hanno l'id scelto dal telefono (nuovoId): rimandare un
 // inserimento gia' arrivato risponde 23505 (riga doppia) e conta come fatto.
+// Un valore dentro un filtro .or() di PostgREST va fra virgolette: _orEq(colonna, valore) lo prepara.
+function _orEq(colonna, valore) {
+  return colonna + '.eq."' + String(valore).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+}
 function nuovoId() {
   try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
@@ -445,7 +449,10 @@ function _codaCostruisci(op) {
   let q = supa.from(op.tabella);
   if (op.tipo === 'insert') return q.insert(op.righe);
   if (op.tipo === 'upsert') return op.onConflict ? q.upsert(op.righe, { onConflict: op.onConflict }) : q.upsert(op.righe);
-  if (op.tipo === 'delete') { q = q.delete(); (op.filtri || []).forEach(([c, v]) => { q = q.eq(c, v); }); return q; }
+  // filtri: coppie [colonna, valore] (uguaglianza); ['or', 'a.eq.x,b.eq."y"'] e' un filtro .or() di PostgREST
+  const filtra = (q) => { (op.filtri || []).forEach(([c, v]) => { q = (c === 'or') ? q.or(v) : q.eq(c, v); }); return q; };
+  if (op.tipo === 'update') return filtra(q.update(op.righe));
+  if (op.tipo === 'delete') return filtra(q.delete());
   throw new Error('operazione sconosciuta: ' + op.tipo);
 }
 // supabase-js riporta un fetch fallito come errore senza codice; quelli dell'API hanno sempre un codice
