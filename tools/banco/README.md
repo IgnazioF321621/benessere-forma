@@ -27,6 +27,7 @@ node tools/banco/prova_rientro_leggero.js  # il rientro nell'app rilegge solo gl
 node tools/banco/prova_cache_locale.js [cartella di prima]  # la copia locale salva solo gli ultimi 90 giorni e, se non entra nel tetto, 14 (Fondamenta 100, tappa 6)
 node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale: profilo non leggibile → «Non riesco a collegarmi» e Riprova, mai l'onboarding; nessuna riga → onboarding (Fondamenta 130)
 node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al posto di confirm/alert/prompt; il toast non spegne il successivo (Fondamenta 150)
+node tools/banco/prova_cestino_pasto.js  # il cestino a scorrimento del pasto chiede conferma come quello piccolo; nessun onclick chiama deleteMeal (Fondamenta 150, dalla prova sul telefono)
 node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 4, tutte volute (Fondamenta 180)
 node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta (Fondamenta 140)
 node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)

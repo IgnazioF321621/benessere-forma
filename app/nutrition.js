@@ -1101,7 +1101,7 @@ function mealCardHTML(m){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
         <button class="meal-edit-btn" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
-        <button class="meal-edit-btn meal-delete-btn" onclick="chiediConferma('Eliminare questo pasto?',{ok:'Elimina',pericolo:true}).then(ok=>{if(ok)deleteMeal('${ST.activeDay}','${mealId}')})" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
+        <button class="meal-edit-btn meal-delete-btn" onclick="chiediEliminaPasto('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
       </div>
     </div>`;
 
@@ -1171,7 +1171,7 @@ function mealCardHTML(m){
     </div>
   </div>`;
 
-  return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="deleteMeal('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
+  return `<div class="swipe-wrap" id="sw-${mealId}"><div class="swipe-delete-btn" onclick="chiediEliminaPasto('${ST.activeDay}','${mealId}')">🗑️</div><div class="swipe-inner" id="si-${mealId}" ontouchstart="swipeStart(event,'${mealId}')" ontouchmove="swipeMove(event,'${mealId}')" ontouchend="swipeEnd(event,'${mealId}')">${inner}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5980,6 +5980,15 @@ async function updateMealTime(dayKey, mealId, newTime){
   renderOggi();
   saveCache();
   if(m.id) dbq('cambiare l\'orario del pasto', supa.from('meals').update({time:newTime}).eq('id',m.id).eq('user_id',ST.user.id), {silenzioso:true});
+}
+
+// Un posto solo per la domanda (Fondamenta 150): la fa il cestino piccolo e quello a scorrimento.
+// Se si annulla, la card scivolata torna al suo posto.
+async function chiediEliminaPasto(dayKey, mealId){
+  const ok = await chiediConferma('Eliminare questo pasto?', { ok:'Elimina', pericolo:true });
+  if(ok) { await deleteMeal(dayKey, mealId); return; }
+  const el = document.getElementById('si-' + mealId);
+  if(el) el.style.transform = 'translateX(0)';
 }
 
 async function deleteMeal(dayKey, mealId){
