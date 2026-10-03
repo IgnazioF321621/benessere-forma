@@ -62,9 +62,9 @@ var ZTRitratto = (function(){
       .filter(function(x, i, a){ return x && a.indexOf(x) === i; }).join(', ');
   }
 
+  // Senza il nome (Fondamenta 170): al coach servono sesso, età e altezza, non chi sei.
   function rigaPersona(p){
     var v = [];
-    if(p.first_name) v.push(String(p.first_name).trim());
     if(SEX_LBL[p.sex]) v.push(SEX_LBL[p.sex]);
     if(num(p.age)) v.push(num(p.age) + ' anni');
     if(num(p.height_cm)) v.push(num(p.height_cm) + ' cm');

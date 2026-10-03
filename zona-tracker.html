@@ -51,6 +51,14 @@
   <button class="closed-exit" onclick="logout()">Esci</button>
 </div>
 
+<!-- INFORMATIVA E CONSENSO (Fondamenta 170): prima del primo accesso, una volta per telefono -->
+<div id="privacy-screen">
+  <svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
+  <div class="closed-title">Dove vanno i tuoi dati</div>
+  <div class="privacy-testo" id="privacy-testo"></div>
+  <button class="btn btn-primary" style="margin-top:24px" onclick="accettaPrivacy()">Ho capito, continuo</button>
+</div>
+
 <!-- AUTH + WELCOME (M1 nuovo) -->
 <div id="auth-screen">
   <div class="auth-card">
@@ -576,7 +584,7 @@
     </div>
     <div class="onb-step" id="m2-step-label">CHECK FISICO</div>
     <div class="onb-title" id="m2-title">Il tuo check fisico</div>
-    <div class="onb-sub" id="m2-subtitle">Le foto e le misure restano private.</div>
+    <div class="onb-sub" id="m2-subtitle">Foto e misure restano nel tuo spazio privato: le foto escono solo se chiedi tu la lettura del coach.</div>
   </div>
   <div class="onb-body">
 
@@ -626,7 +634,7 @@
           <div class="m2-eyebrow">Postura</div>
           <div class="m2-rule-text">Corpo intero, piedi inclusi.<br>Braccia leggermente staccate dal busto.<br>Sfondo neutro. Telefono ad altezza vita.</div>
         </div>
-        <p class="m2-footnote">Foto private, visibili solo a te, usate per i tuoi checkpoint.</p>
+        <p class="m2-footnote">Foto nel tuo spazio privato, usate per i tuoi checkpoint. Vanno a un servizio esterno solo se chiedi tu la lettura del coach, dopo il tuo consenso.</p>
       </div>
       <div class="onb-nav">
         <button class="btn btn-primary btn-full" onclick="m2GoStep('s1')">Iniziamo →</button>
@@ -1217,6 +1225,17 @@
     <div style="margin-bottom:20px;padding:12px 14px;background:var(--s2);border-radius:8px;">
       <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:4px;">ACCOUNT</div>
       <div id="set-email" style="font-size:14px;color:var(--t1);font-family:var(--font-sans);user-select:text;-webkit-user-select:text;word-break:break-all;">—</div>
+    </div>
+    <!-- I TUOI DATI (Fondamenta 170) -->
+    <div class="onb-section" style="margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px;">I TUOI DATI</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" id="set-scarica-btn" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="scaricaMieiDati()">Scarica i miei dati</button>
+        <button type="button" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="mostraInformativa()">Dove vanno i tuoi dati</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;">Un file con pasti, allenamenti, pesate, misure, integratori e il resto. Delle foto solo l'elenco.</div>
+      <button type="button" id="set-elimina-btn" class="btn btn-ghost" style="margin-top:10px;width:100%;color:#C44434;border-color:#C44434;" onclick="eliminaMioAccount()">Elimina account</button>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Cancella dati, foto e accesso per sempre. Ti chiedo di scrivere ELIMINA prima.</div>
     </div>
 
     <!-- Sezione: Dati personali -->
@@ -2057,6 +2076,16 @@ window.addEventListener('online', async () => {
   aggiornaStatoRete();
 });
 
+// ── Informativa e consenso (Fondamenta 170, 3 ottobre 2026) ──
+// Il testo e' in app/comune.js (PRIVACY_INFORMATIVA); la scelta resta sul telefono (localStorage,
+// non nel database) e vale per questa versione del testo: se il testo cambia, si rilegge.
+function privacyAccettata() {
+  try { return localStorage.getItem('zt_privacy_ok') === PRIVACY_VERSIONE; } catch(e) { return false; }
+}
+function accettaPrivacy() {
+  try { localStorage.setItem('zt_privacy_ok', PRIVACY_VERSIONE); } catch(e) {}
+  showScreen('auth');
+}
 function showScreen(name) {
   document.getElementById('splash').classList.add('hide');
   document.getElementById('auth-screen').classList.remove('visible');
@@ -2066,6 +2095,10 @@ function showScreen(name) {
   document.getElementById('app').classList.remove('visible');
   document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
+  // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
+  if(name === 'auth' && !privacyAccettata()) name = 'privacy';
+  document.getElementById('privacy-screen').classList.toggle('visible', name === 'privacy');
+  if(name === 'privacy')    { document.getElementById('privacy-testo').innerHTML = privacyInformativaHTML(); }
   if(name === 'auth')       {
     document.getElementById('auth-screen').classList.add('visible');
     // Default: mostra welcome (l'utente arriva qui da bootstrap o logout)

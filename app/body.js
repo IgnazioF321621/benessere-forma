@@ -38,9 +38,9 @@ function m2GoStep(stepId) {
   const sub = document.getElementById('m2-subtitle');
   const title = document.getElementById('m2-title');
   const M2_HEADERS = {
-    intro:   { label:'CHECK FISICO', title:'Il tuo check fisico',   sub:'Le foto e le misure restano private.' },
+    intro:   { label:'CHECK FISICO', title:'Il tuo check fisico',   sub:'Foto e misure restano nel tuo spazio privato: le foto escono solo se chiedi tu la lettura del coach.' },
     resume:  { label:'CHECK FISICO', title:'Check in corso',         sub:'Hai un check fisico già avviato.' },
-    s0:      { label:'CHECK FISICO · FOTO',    title:'4 foto del corpo',  sub:'Le foto restano private.' },
+    s0:      { label:'CHECK FISICO · FOTO',    title:'4 foto del corpo',  sub:'Restano nel tuo spazio privato: escono solo se chiedi tu la lettura del coach.' },
     s1:      { label:'CHECK FISICO · FOTO 1/4', title:'Posa frontale',     sub:'Davanti, in posizione naturale.' },
     s2:      { label:'CHECK FISICO · FOTO 2/4', title:'Posa lato destro',  sub:'Lato destro verso la fotocamera.' },
     s3:      { label:'CHECK FISICO · FOTO 3/4', title:'Posa lato sinistro', sub:'Lato sinistro verso la fotocamera.' },
@@ -1060,8 +1060,18 @@ function bcaErrorMessage(status, err){
   if(kind === 'rate-limit') return 'Troppe richieste in questo momento: riprova tra poco';
   return 'Non sono riuscito a leggere le foto: riprova tra poco';
 }
+// Consenso prima che le foto partano verso il servizio esterno (Fondamenta 170): si chiede alla
+// prima lettura, con «Acconsento» e «Annulla»; se annulla non parte niente. La scelta resta sul
+// telefono (zt_foto_ok, non nel database).
+async function consensoLetturaFoto(){
+  try { if(localStorage.getItem('zt_foto_ok') === '1') return true; } catch(e) {}
+  const ok = await chiediConferma('Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure, per il confronto fra i tuoi check. Vuoi continuare?', { titolo:'Lettura delle foto', ok:'Acconsento' });
+  if(ok) { try { localStorage.setItem('zt_foto_ok', '1'); } catch(e) {} }
+  return ok;
+}
 async function requestBodyCheckAI(checkId){
   if(!ST.user || !checkId || ST.bodyCheckAIBusy) return;
+  if(!await consensoLetturaFoto()) return;
   ST.bodyCheckAIBusy = checkId;
   if(ST.bodyCheckDetail && ST.bodyCheckDetail.checkId === checkId) renderBodyCheckDetail();
   try {

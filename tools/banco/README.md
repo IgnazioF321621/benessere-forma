@@ -32,6 +32,7 @@ node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve d
 node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta; la versione si legge dalla pagina in rete (APP_VERSION), non solo da sw.js (Fondamenta 140)
 node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)
 node tools/banco/prova_tabella_unica.js  # una tabella sola per le serie (training_logs, id del telefono, coda unica), codice esercizio e supplement_id scritti e letti, scrivi-o-aggiorna per allenamenti e misure, vecchia WS-QUEUE tolta (Fondamenta 070/080/090)
+node tools/banco/prova_privacy.js  # informativa prima del primo accesso, consenso prima che le foto partano, niente nome nei testi al coach, «Scarica i miei dati» (Fondamenta 170)
 node tools/banco/prova_installazione.js  # manifest, icone PNG (rigenerabili con node tools/icone/genera.js) e suggerimento «Aggiungi alla schermata Home» (Fondamenta 190)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro

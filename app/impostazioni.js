@@ -70,6 +70,84 @@ function openSettingsModal() {
   document.getElementById('settings-modal').style.display = 'flex';
 }
 
+// ── Scarica i miei dati (Fondamenta 170, 3 ottobre 2026) ──
+// Legge le tabelle della persona coi suoi permessi normali (RLS), a pagine, e le mette in un
+// file JSON. Delle foto solo l'elenco (nome del file nel bucket), mai i byte. Una tabella che
+// non c'e' o non si legge resta scritta come tale, non sparisce in silenzio (L10).
+const MIEI_DATI_TABELLE = ['meals', 'meal_items', 'fasting_days', 'supplements', 'supplements_log', 'supplement_packages',
+  'supplement_package_items', 'training_logs', 'training_notes', 'workouts', 'schede_utente', 'weight_logs', 'body_logs',
+  'body_checks', 'body_measurements', 'body_check_ai', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log',
+  'weekly_plans', 'weekly_plan_meals'];
+async function raccogliMieiDati(){
+  if(!ST.user || !ST.user.id) return null;
+  const uid = ST.user.id;
+  const out = { app:'Zona Tracker', esportato_il:new Date().toISOString(), persona:{ id:uid, email:ST.user.email || null }, tabelle:{}, foto:[] };
+  const prof = await dbq('leggere il profilo', supa.from('profiles').select('*').eq('id', uid).maybeSingle(), { silenzioso:true });
+  out.tabelle.profiles = prof.error ? { non_letta:prof.error.message } : (prof.data ? [prof.data] : []);
+  for(const t of MIEI_DATI_TABELLE){
+    const r = await dbqAll('leggere ' + t, () => supa.from(t).select('*').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+    out.tabelle[t] = r.error ? { non_letta:r.error.message } : r.data;
+  }
+  const foto = await dbqAll('leggere l\'elenco delle foto', () => supa.from('body_check_photos').select('id, check_id, pose, storage_path, created_at').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+  // Solo l'elenco: nome del file nel bucket, mai i byte della foto
+  out.foto = foto.error ? { non_letta:foto.error.message } : (foto.data || []).map(f => ({ id:f.id, check_id:f.check_id, pose:f.pose, storage_path:f.storage_path, created_at:f.created_at }));
+  return out;
+}
+async function scaricaMieiDati(){
+  const btn = document.getElementById('set-scarica-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Preparo il file…'; }
+  try {
+    const dati = await raccogliMieiDati();
+    if(!dati){ showToast('Entra nell\'app per scaricare i tuoi dati', '⚠️'); return; }
+    const testo = JSON.stringify(dati, null, 2);
+    const nome = 'zona-tracker-dati-' + todayKey() + '.json';
+    const blob = new Blob([testo], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nome;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => { try { URL.revokeObjectURL(a.href); } catch(e) {} }, 2000);
+    showToast('File pronto: ' + nome);
+  } catch(e) {
+    showToast('Non riesco a preparare il file: riprova', '⚠️', 5500);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Scarica i miei dati'; }
+  }
+}
+// ── Elimina account (Fondamenta 170, deciso da Ignazio il 3 ottobre 2026) ──
+// Dal profilo: si scrive ELIMINA, poi l'app toglie le foto col proprio permesso e chiama la
+// funzione del database elimina_mio_account (migrazione 20261003_170), che cancella l'accesso e,
+// a cascata, tutte le righe della persona. Se un passo fallisce ci si ferma e si dice cosa e'
+// successo. L'account di amministrazione non si cancella da qui.
+async function eliminaMioAccount(){
+  if(!ST.user || !ST.user.id) return;
+  if(typeof APP_ONLY_EMAIL !== 'undefined' && ST.user.email === APP_ONLY_EMAIL){ showToast('L\'account di amministrazione non si cancella da qui', '⚠️', 5500); return; }
+  const parola = await chiediTesto('Eliminare l\'account?', { segnaposto:'ELIMINA', ok:'Elimina account',
+    testo:'Dati, foto e accesso vengono eliminati per sempre. Prima puoi scaricare i tuoi dati. Per confermare scrivi ELIMINA.' });
+  if(parola === null) return;
+  if(String(parola).trim().toUpperCase() !== 'ELIMINA'){ showToast('Parola diversa: non ho cancellato niente', '⚠️'); return; }
+  const uid = ST.user.id;
+  // 1. le foto, coi permessi della persona
+  const foto = await dbqAll('leggere l\'elenco delle foto', () => supa.from('body_check_photos').select('storage_path').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+  if(foto.error){ await avvisa('Non riesco a leggere l\'elenco delle foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  const percorsi = (foto.data || []).map(f => f.storage_path).filter(Boolean);
+  if(percorsi.length){
+    const r = await dbq('cancellare le foto', supa.storage.from('body-check-photos').remove(percorsi), { silenzioso:true });
+    if(r.error){ await avvisa('Non riesco a cancellare le foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  }
+  // 2. l'accesso, e con lui tutte le righe
+  const res = await dbq('eliminare l\'account', supa.rpc('elimina_mio_account'), { silenzioso:true });
+  if(res.error){ await avvisa('Le foto sono state tolte, ma non riesco a eliminare l\'account e i dati. Scrivi a chi gestisce l\'app.', { titolo:'Account non eliminato' }); return; }
+  try { localStorage.clear(); } catch(e) {}
+  try { await supa.auth.signOut(); } catch(e) {}
+  ST.user = null; ST.profile = null; ST.db = { days:{} }; ST.supps = [];
+  closeSettingsModal();
+  showScreen('auth');
+  avvisa('Il tuo account e i tuoi dati sono stati eliminati.', { titolo:'Fatto' });
+}
+function mostraInformativa(){
+  return avvisa(privacyInformativaHTML(), { titolo:'Dove vanno i tuoi dati', html:true });
+}
+
 function closeSettingsModal() {
   document.getElementById('settings-modal').style.display = 'none';
 }
