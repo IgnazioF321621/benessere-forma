@@ -620,7 +620,9 @@ function avvisa(testo, opzioni) {
   const o = opzioni || {};
   return _foglio({ annullato:undefined, riempi(box, chiudi) {
     if(o.titolo) { const h = document.createElement('h3'); h.textContent = o.titolo; box.appendChild(h); }
-    const t = document.createElement('p'); t.textContent = testo; box.appendChild(t);
+    const t = document.createElement('div'); t.className = 'foglio-testo';
+    if(o.html) t.innerHTML = testo; else t.textContent = testo;   // html:true solo per testi scritti nel codice (l'informativa)
+    box.appendChild(t);
     _foglioBottoni(box, chiudi, { ...o, annulla:false }, () => undefined);
   } });
 }

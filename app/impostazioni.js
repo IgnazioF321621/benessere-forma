@@ -70,6 +70,53 @@ function openSettingsModal() {
   document.getElementById('settings-modal').style.display = 'flex';
 }
 
+// ── Scarica i miei dati (Fondamenta 170, 3 ottobre 2026) ──
+// Legge le tabelle della persona coi suoi permessi normali (RLS), a pagine, e le mette in un
+// file JSON. Delle foto solo l'elenco (nome del file nel bucket), mai i byte. Una tabella che
+// non c'e' o non si legge resta scritta come tale, non sparisce in silenzio (L10).
+const MIEI_DATI_TABELLE = ['meals', 'meal_items', 'fasting_days', 'supplements', 'supplements_log', 'supplement_packages',
+  'supplement_package_items', 'training_logs', 'training_notes', 'workouts', 'schede_utente', 'weight_logs', 'body_logs',
+  'body_checks', 'body_measurements', 'body_check_ai', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log',
+  'weekly_plans', 'weekly_plan_meals'];
+async function raccogliMieiDati(){
+  if(!ST.user || !ST.user.id) return null;
+  const uid = ST.user.id;
+  const out = { app:'Zona Tracker', esportato_il:new Date().toISOString(), persona:{ id:uid, email:ST.user.email || null }, tabelle:{}, foto:[] };
+  const prof = await dbq('leggere il profilo', supa.from('profiles').select('*').eq('id', uid).maybeSingle(), { silenzioso:true });
+  out.tabelle.profiles = prof.error ? { non_letta:prof.error.message } : (prof.data ? [prof.data] : []);
+  for(const t of MIEI_DATI_TABELLE){
+    const r = await dbqAll('leggere ' + t, () => supa.from(t).select('*').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+    out.tabelle[t] = r.error ? { non_letta:r.error.message } : r.data;
+  }
+  const foto = await dbqAll('leggere l\'elenco delle foto', () => supa.from('body_check_photos').select('id, check_id, pose, storage_path, created_at').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
+  // Solo l'elenco: nome del file nel bucket, mai i byte della foto
+  out.foto = foto.error ? { non_letta:foto.error.message } : (foto.data || []).map(f => ({ id:f.id, check_id:f.check_id, pose:f.pose, storage_path:f.storage_path, created_at:f.created_at }));
+  return out;
+}
+async function scaricaMieiDati(){
+  const btn = document.getElementById('set-scarica-btn');
+  if(btn){ btn.disabled = true; btn.textContent = 'Preparo il file…'; }
+  try {
+    const dati = await raccogliMieiDati();
+    if(!dati){ showToast('Entra nell\'app per scaricare i tuoi dati', '⚠️'); return; }
+    const testo = JSON.stringify(dati, null, 2);
+    const nome = 'zona-tracker-dati-' + todayKey() + '.json';
+    const blob = new Blob([testo], { type:'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nome;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => { try { URL.revokeObjectURL(a.href); } catch(e) {} }, 2000);
+    showToast('File pronto: ' + nome);
+  } catch(e) {
+    showToast('Non riesco a preparare il file: riprova', '⚠️', 5500);
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = 'Scarica i miei dati'; }
+  }
+}
+function mostraInformativa(){
+  return avvisa(privacyInformativaHTML(), { titolo:'Dove vanno i tuoi dati', html:true });
+}
+
 function closeSettingsModal() {
   document.getElementById('settings-modal').style.display = 'none';
 }
