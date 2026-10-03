@@ -3,6 +3,20 @@
 const fs = require('fs');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
+// 'a.eq.x,b.eq."y, z"' → [['a','x'],['b','y, z']]: le virgole dentro le virgolette non separano
+function orPostgrest(espr){
+  const parti = []; let cur = '', inQ = false;
+  for(let i = 0; i < espr.length; i++){
+    const ch = espr[i];
+    if(ch === '\\' && inQ){ cur += espr[++i]; continue; }
+    if(ch === '"'){ inQ = !inQ; continue; }
+    if(ch === ',' && !inQ){ parti.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  parti.push(cur);
+  return parti.map(p => { const m = /^([^.]+)\.eq\.(.*)$/.exec(p.trim()); return m ? [m[1], m[2]] : [p, undefined]; });
+}
+
 function makeSupaMock(tables){
   // tables: { nomeTabella: [righe] }
   const calls = [];
@@ -18,6 +32,8 @@ function makeSupaMock(tables){
     ['eq','neq','lt','lte','gt','gte','like','ilike','is','in','contains'].forEach(f=>{
       api[f] = chain((col,val)=>{ st.filters.push([f,col,val]); });
     });
+    // .or('a.eq.x,b.eq."y"') come PostgREST: solo uguaglianze, valori fra virgolette ammessi
+    api.or = chain((espr)=>{ st.filters.push(['or', null, espr]); });
     api.order = chain((col,opt)=>{ st.orders.push([col, opt && opt.ascending===false ? 'desc':'asc']); });
     api.limit = chain((n)=>{ st.limit = n; });
     api.range = chain((a,b)=>{ st.range=[a,b]; });
@@ -81,6 +97,7 @@ function makeSupaMock(tables){
           else if(f==='eq') rows = rows.filter(r=>String(valore(r,col))===String(val));
           continue;
         }
+        if(f==='or'){ const alt = orPostgrest(val); rows = rows.filter(r => alt.some(([c, v]) => String(r[c]) === String(v))); continue; }
         if(f==='eq') rows = rows.filter(r=>String(r[col])===String(val));
         else if(f==='neq') rows = rows.filter(r=>String(r[col])!==String(val));
         else if(f==='lt') rows = rows.filter(r=>r[col] < val);

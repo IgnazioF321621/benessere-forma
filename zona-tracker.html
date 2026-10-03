@@ -1845,10 +1845,10 @@ async function loadAndStart() {
     return;
   }
 
-  // WS-QUEUE: al boot post-login smaltisce le scritture workout_sets rimaste
-  // in coda da sessioni precedenti (fire-and-forget, non blocca il caricamento)
-  try { _wsFlushQueue(); } catch(e){}
-  try { svuotaCoda(); } catch(e){}   // Fondamenta 120: pasti, pesate e integratori rimasti in attesa
+  // La vecchia coda delle serie (WS-QUEUE, fino al 3 ottobre 2026) rispecchiava su workout_sets
+  // righe gia' scritte in training_logs: cio' che vi e' rimasto non serve piu' (Fondamenta 080)
+  try { localStorage.removeItem('zt_ws_pending_' + ST.user.id); } catch(e){}
+  try { svuotaCoda(); } catch(e){}   // Fondamenta 120: pasti, pesate, integratori e serie rimasti in attesa
 
   let cache = loadCache();
 
@@ -2053,7 +2053,6 @@ window.addEventListener('offline', aggiornaStatoRete);
 window.addEventListener('online', async () => {
   aggiornaStatoRete();
   try { await svuotaCoda(); } catch(e) {}
-  try { _wsFlushQueue(); } catch(e) {}
   if(ST.user && ST.user.id) { try { await refreshInBackground(); } catch(e) {} }
   aggiornaStatoRete();
 });

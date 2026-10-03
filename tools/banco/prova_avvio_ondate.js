@@ -71,9 +71,9 @@ async function misura(file){
   const dopo = await misura();
   console.log(`  --  ondate fino all'app: apertura normale ${dopo.normale} · prima apertura ${dopo.prima} · rientro leggero ${dopo.rientro} (${dopo.rientroRichieste} richieste) · rientro completo ${dopo.completo} (${dopo.completoRichieste} richieste)`);
   atteso('apertura normale (copia locale) · 3 ondate', dopo.normale, 3);
-  atteso('prima apertura (senza copia) · 4 ondate', dopo.prima, 4);
-  atteso('rientro leggero (meno di 30 minuti) · 2 ondate, 7 richieste', [dopo.rientro, dopo.rientroRichieste], [2, 7]);
-  atteso('rientro dopo 30 minuti · completo: 4 ondate, 14 richieste', [dopo.completo, dopo.completoRichieste], [4, 14]);
+  atteso('prima apertura (senza copia) · 3 ondate (era 4: la lettura di workout_sets non c\'e\' piu\', Fondamenta 080)', dopo.prima, 3);
+  atteso('rientro leggero (meno di 30 minuti) · 1 ondata, 6 richieste', [dopo.rientro, dopo.rientroRichieste], [1, 6]);
+  atteso('rientro dopo 30 minuti · completo: 3 ondate, 13 richieste', [dopo.completo, dopo.completoRichieste], [3, 13]);
   atteso('zero errori in console', dopo.errori, 0);
   const prima = process.argv[2];
   if(prima){

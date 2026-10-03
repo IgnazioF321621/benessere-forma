@@ -50,7 +50,7 @@ async function hydrateTrainingSetsFromCloud(){
   const today = todayKey();
   try {
     const { data, error } = await supa.from('training_logs')
-      .select('session_id, exercise_name, set_number, reps, resistance, band_color, rir_actual')
+      .select('id, session_id, exercise_name, exercise_code, set_number, reps, resistance, band_color, rir_actual')
       .eq('user_id', ST.user.id)
       .eq('date', today);
     if(error) { console.warn('hydrateTrainingSets:', error.message); return; }
@@ -61,28 +61,20 @@ async function hydrateTrainingSetsFromCloud(){
     // continuino a funzionare. band_color esplicito anche, per usi futuri.
     const cloudMap = {};
     data.forEach(row => {
-      const key = `${row.session_id}_${row.exercise_name}_${row.set_number}_${today}`;
+      // Il nome e' quello di oggi a catalogo quando la riga ha il codice (Fondamenta 070)
+      const nome = _nomeDaCodice(row.exercise_code) || row.exercise_name;
+      const key = `${row.session_id}_${nome}_${row.set_number}_${today}`;
       const resistFromBand = row.band_color || null;
       cloudMap[key] = {
         reps: row.reps,
         resistance: resistFromBand != null ? resistFromBand : (row.resistance != null ? String(row.resistance) : ''),
         rir: row.rir_actual,
         band_color: resistFromBand,
+        setId: row.id,   // per modificare e cancellare per id (Fondamenta 080: una tabella sola)
       };
     });
     // Merge: cloud vince in caso di conflitto (più recente, fonte autoritativa)
     ST.trainLoggedSets = { ...ST.trainLoggedSets, ...cloudMap };
-    // Hydrate workout_sets.id per consentire edit/delete by-id su righe arrivate da altri device
-    try {
-      const { data: wsData } = await dbq('leggere le serie di oggi', supa.from('workout_sets')
-        .select('id, exercise_name, set_number, session_type')
-        .eq('user_id', ST.user.id)
-        .eq('date', today), {silenzioso:true});
-      (wsData || []).forEach(ws => {
-        const k = `${ws.session_type}_${ws.exercise_name}_${ws.set_number}_${today}`;
-        if(ST.trainLoggedSets[k]) ST.trainLoggedSets[k].setId = ws.id;
-      });
-    } catch(e){}
     // Persist su localStorage del device corrente (consistenza offline)
     try { localStorage.setItem('zt_train_sets_'+today, JSON.stringify(ST.trainLoggedSets)); } catch(e){}
     if(ST.page === 'training') renderTraining();
@@ -104,8 +96,36 @@ function _normExName(s){
     .trim().toLowerCase();
 }
 
+// ── Codice esercizio ↔ nome (Fondamenta 070, 3 ottobre 2026) ──
+// Il codice e' la chiave di training_logs e training_notes (colonna exercise_code): il nome
+// resta accanto, per leggere le righe vecchie e per chi guarda la tabella. _codiceDaNome lo
+// cerca nella sessione (nome di oggi o nome alla generazione), poi nel catalogo vivo, poi
+// negli alias storici se gia' costruiti; null se nessuno lo conosce. _nomeDaCodice da' il
+// nome di oggi a catalogo.
+function _codiceDaNome(exName, sessionId){
+  if(!exName) return null;
+  const sids = [sessionId, ST.trainSession].filter(Boolean);
+  for(const sid of sids){
+    const sess = getTrainingSession(sid);
+    const ex = sess && Array.isArray(sess.exercises)
+      ? sess.exercises.find(e => e && (e.name === exName || e.nameSnapshot === exName)) : null;
+    if(ex && ex.codice) return ex.codice;
+  }
+  const norm = _normExName(exName);
+  if(ST.catalogNomeByCodice instanceof Map){
+    for(const [codice, nome] of ST.catalogNomeByCodice) if(_normExName(nome) === norm) return codice;
+  }
+  if(ST.exAliasByNorm instanceof Map && ST.exAliasByNorm.get(norm)) return ST.exAliasByNorm.get(norm);
+  return null;
+}
+function _nomeDaCodice(codice){
+  if(!codice || !(ST.catalogNomeByCodice instanceof Map)) return null;
+  return ST.catalogNomeByCodice.get(codice) || null;
+}
+
 // ── Alias storici nome↔codice esercizio ─────────────────────
-// `training_logs` non ha una colonna col codice: la serie viene scritta col NOME
+// Le righe scritte prima del 3 ottobre 2026 non hanno il codice (lo mette la migrazione
+// 20261003_070_080, dove riesce): la serie veniva scritta col NOME
 // mostrato a schermo in quel momento. Quando il catalogo rinomina un esercizio
 // (cantiere GIF), il nome nei log vecchi non è più quello della scheda di oggi e
 // lo storico si stacca. Qui ricostruiamo il ponte nome→codice mettendo insieme
@@ -154,7 +174,8 @@ async function ensureExNameAliases(){
 
 // ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
 // Il collegamento log↔esercizio avviene in tre passaggi, dal più stretto al più largo:
-//   1. nome normalizzato (copre maiuscole, accenti, spazi)
+//   1. codice esercizio scritto nella riga (Fondamenta 070), poi nome normalizzato
+//      per le righe senza codice (copre maiuscole, accenti, spazi)
 //   2. codice esercizio, risolto via alias storici (copre le rinomine del catalogo)
 //   3. stesso esercizio in un'ALTRA sessione (copre gli esercizi spostati di sessione
 //      da una rigenerazione della scheda)
@@ -179,7 +200,7 @@ async function loadLastLoggedSets(sessionId){
     const map = {};
     const mancanti = () => (sess.exercises || []).filter(e => e && e.name && !map[e.name]);
 
-    // Legge da training_logs (storico autorevole — workout_sets è incompleto su sessioni vecchie).
+    // Legge da training_logs, la tabella unica delle serie (Fondamenta 080).
     // Esclude le serie loggate oggi così il suggerimento mostra sempre l'ULTIMA SESSIONE PRECEDENTE,
     // non quella in corso. Paginato (L13): PostgREST tronca a 1000 righe e uno storico
     // di mesi le supera. Si ferma appena tutti gli esercizi hanno il loro ultimo set.
@@ -187,7 +208,7 @@ async function loadLastLoggedSets(sessionId){
     let rows = [];
     for(let from = 0; from < MAX_ROWS; from += PAGE){
       const res = await supa.from('training_logs')
-        .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
+        .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
         .eq('user_id', ST.user.id)
         .eq('session_id', sessionId)
         .lt('date', today)
@@ -197,9 +218,9 @@ async function loadLastLoggedSets(sessionId){
       if(res.error){ console.warn('loadLastLoggedSets:', res.error.message); break; }
       const page = res.data || [];
       rows = rows.concat(page);
-      // Passaggio 1 — nome normalizzato
+      // Passaggio 1 — codice scritto nella riga, poi nome normalizzato per le righe senza
       page.forEach(row => {
-        const canon = canonByNorm.get(_normExName(row.exercise_name));
+        const canon = (row.exercise_code && canonByCodice.get(row.exercise_code)) || canonByNorm.get(_normExName(row.exercise_name));
         if(canon && !map[canon]) map[canon] = row;
       });
       if(page.length < PAGE || mancanti().length === 0) break;
@@ -231,7 +252,7 @@ async function loadLastLoggedSets(sessionId){
       const tuttiNomi = [...new Set([].concat(...[...nomiPerCanon.values()].map(s => [...s])))];
       if(tuttiNomi.length > 0 && tuttiNomi.length <= 200){
         const res2 = await supa.from('training_logs')
-          .select('exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
+          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
           .eq('user_id', ST.user.id)
           .lt('date', today)
           .order('date', { ascending: false })
@@ -242,7 +263,8 @@ async function loadLastLoggedSets(sessionId){
           const norm = _normExName(row.exercise_name);
           for(const [canon, nomi] of nomiPerCanon){
             if(map[canon]) continue;
-            const match = [...nomi].some(n => _normExName(n) === norm || n === norm);
+            const match = (row.exercise_code && canonByCodice.get(row.exercise_code) === canon)
+              || [...nomi].some(n => _normExName(n) === norm || n === norm);
             if(match) map[canon] = row;
           }
         });
@@ -274,25 +296,33 @@ async function loadTodayNotes(sessionId){
   const sess = getTrainingSession(sessionId);
   if(!sess) return;
   try {
-    const exNames = sess.exercises.map(e => e.name);
     const today = todayKey();
-    // Query 1: note di OGGI con testo completo (popola ST.trainNotes)
+    // La riga → l'esercizio di oggi: per codice, poi per nome (Fondamenta 070). Prima il filtro
+    // era sul nome (.in exercise_name) e una rinomina a catalogo staccava le note.
+    const esercizi = (sess.exercises || []).filter(e => e && e.name);
+    const perCanon = (row) => {
+      const ex = esercizi.find(e => (row.exercise_code && e.codice === row.exercise_code)
+        || e.name === row.exercise_name || e.nameSnapshot === row.exercise_name);
+      return ex ? ex.name : null;
+    };
+    // Query 1: note di OGGI con testo completo (poche righe: tutte, senza filtro sul nome)
     const todayP = supa.from('training_notes')
-      .select('id, exercise_name, note, updated_at')
+      .select('id, exercise_name, exercise_code, note, updated_at')
       .eq('user_id', ST.user.id)
-      .eq('date', today)
-      .in('exercise_name', exNames);
-    // Query 2: solo exercise_name di tutte le note PASSATE per gli esercizi della sessione
-    // (proiezione leggera: niente testo, niente date — solo conteggio client-side).
+      .eq('date', today);
+    // Query 2: solo nome e codice di tutte le note PASSATE (proiezione leggera: niente testo,
+    // niente date — solo conteggio lato app; oggi sono poche decine di righe)
     const pastP = supa.from('training_notes')
-      .select('exercise_name')
+      .select('exercise_name, exercise_code')
       .eq('user_id', ST.user.id)
       .lt('date', today)
-      .in('exercise_name', exNames);
+      .limit(1000);
     const [todayRes, pastRes] = await Promise.all([todayP, pastP]);
     if(todayRes.error){ console.warn('loadTodayNotes:', todayRes.error.message); return; }
     (todayRes.data || []).forEach(row => {
-      ST.trainNotes[row.exercise_name] = {
+      const canon = perCanon(row);
+      if(!canon) return;
+      ST.trainNotes[canon] = {
         id: row.id,
         note: row.note,
         updated_at: row.updated_at,
@@ -304,10 +334,11 @@ async function loadTodayNotes(sessionId){
     } else {
       const counts = {};
       (pastRes.data || []).forEach(row => {
-        counts[row.exercise_name] = (counts[row.exercise_name] || 0) + 1;
+        const canon = perCanon(row);
+        if(canon) counts[canon] = (counts[canon] || 0) + 1;
       });
       // Inizializza a 0 per gli esercizi senza note passate (così il render sa che il count è noto)
-      exNames.forEach(n => { ST.trainNoteHistoryCount[n] = counts[n] || 0; });
+      esercizi.forEach(e => { ST.trainNoteHistoryCount[e.name] = counts[e.name] || 0; });
     }
     ST.trainNotesLoaded[sessionId] = true;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
@@ -325,17 +356,26 @@ async function loadNoteHistory(exName){
   }
   try {
     const today = todayKey();
-    const { data, error } = await supa.from('training_notes')
-      .select('id, date, note')
+    // Per codice e per nome (Fondamenta 070): le righe vecchie hanno solo il nome, quelle
+    // nuove anche il codice, e una rinomina a catalogo non deve nascondere le prime.
+    const codice = _codiceDaNome(exName);
+    const base = () => supa.from('training_notes')
+      .select('id, date, note, exercise_name, exercise_code')
       .eq('user_id', ST.user.id)
-      .eq('exercise_name', exName)
       .lt('date', today)
       .order('date', { ascending: false })
       .limit(50); // limite di safety: 50 note passate = oltre un anno se uno scrive ogni settimana
-    if(error){ console.warn('loadNoteHistory:', error.message); return; }
-    ST.trainNotesHistory[exName] = data || [];
+    const letture = [base().eq('exercise_name', exName)];
+    if(codice) letture.push(base().eq('exercise_code', codice));
+    const esiti = await Promise.all(letture);
+    const rotta = esiti.find(r => r.error);
+    if(rotta){ console.warn('loadNoteHistory:', rotta.error.message); return; }
+    const visti = new Set(); const righe = [];
+    esiti.forEach(r => (r.data || []).forEach(n => { if(!visti.has(n.id)){ visti.add(n.id); righe.push(n); } }));
+    righe.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    ST.trainNotesHistory[exName] = righe.slice(0, 50);
     // FIX 1 — riallinea il count se serve (es. se nel frattempo qualcuno ha inserito da SQL)
-    ST.trainNoteHistoryCount[exName] = (data || []).length;
+    ST.trainNoteHistoryCount[exName] = ST.trainNotesHistory[exName].length;
     if(ST.page === 'training') renderTraining();
   } catch(e){
     console.warn('loadNoteHistory exception:', e?.message);
@@ -412,6 +452,7 @@ async function saveTrainingNote(exName){
     const payload = {
       user_id: ST.user.id,
       exercise_name: exName,
+      exercise_code: _codiceDaNome(exName),   // la chiave (Fondamenta 070); il nome resta accanto
       date: today,
       note: text,
     };
@@ -611,15 +652,22 @@ async function loadTrainingLogs(exName){
   renderTraining();
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainProgLogs=[]; renderTraining(); return; }
   // TODO: paginare quando avremo 1+ anno di dati. Limit 200 = ~33 sessioni con 6 set. OK per ora.
-  const { data } = await supa
-    .from('training_logs')
+  // Per codice e per nome (Fondamenta 070): le righe vecchie senza codice si trovano col nome,
+  // quelle con un nome vecchio col codice. Si uniscono per id.
+  const codice = _codiceDaNome(exName);
+  const base = () => supa.from('training_logs')
     .select('*')
     .eq('user_id', ST.user.id)
-    .eq('exercise_name', exName)
     .order('date', {ascending:false})
     .order('set_number', {ascending:true})
     .limit(200);
-  ST.trainProgLogs = data || [];
+  const letture = [dbq('leggere le serie dell\'esercizio', base().eq('exercise_name', exName))];
+  if(codice) letture.push(dbq('leggere le serie dell\'esercizio', base().eq('exercise_code', codice)));
+  const esiti = await Promise.all(letture);
+  const visti = new Set(); const righe = [];
+  esiti.forEach(r => (r.data || []).forEach(l => { if(!visti.has(l.id)){ visti.add(l.id); righe.push(l); } }));
+  righe.sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : ((a.set_number || 0) - (b.set_number || 0)));
+  ST.trainProgLogs = righe.slice(0, 200);
   renderTraining();
 }
 
@@ -635,19 +683,25 @@ async function loadAllExerciseNamesWithLast(){
   if(ST.allExerciseNamesCache !== null) return; // gia' loaded (anche [])
   if(!ST.user || ST.user.id==='test-user-001'){ ST.allExerciseNamesCache = []; ST.trainProgLastSet = {}; return; }
   try {
-    const { data } = await dbq('leggere lo storico delle serie', supa.from('training_logs')
-      .select('exercise_name, reps, resistance, date')
+    // A pagine (L13): la tabella unica supera le 1000 righe. Un esercizio compare una volta,
+    // per codice (Fondamenta 070), col nome di oggi a catalogo; le righe senza codice per nome.
+    const { data } = await dbqAll('leggere lo storico delle serie', () => supa.from('training_logs')
+      .select('exercise_name, exercise_code, reps, resistance, date')
       .eq('user_id', ST.user.id)
-      .order('date', {ascending: false}));
+      .order('date', {ascending: false})
+      .order('id', {ascending: true}));
     const seen = new Set();
     ST.trainProgLastSet = {};
     const distinct = [];
     (data||[]).forEach(r => {
-      if(r.exercise_name && !seen.has(r.exercise_name)){
-        seen.add(r.exercise_name);
-        distinct.push(r.exercise_name);
-        ST.trainProgLastSet[r.exercise_name] = { reps: r.reps, resistance: r.resistance, date: r.date };
-      }
+      if(!r.exercise_name) return;
+      const chiave = r.exercise_code || _normExName(r.exercise_name);
+      if(seen.has(chiave)) return;
+      seen.add(chiave);
+      const nome = _nomeDaCodice(r.exercise_code) || r.exercise_name;
+      if(ST.trainProgLastSet[nome]) return;
+      distinct.push(nome);
+      ST.trainProgLastSet[nome] = { reps: r.reps, resistance: r.resistance, date: r.date };
     });
     distinct.sort((a,b) => a.localeCompare(b, 'it'));
     ST.allExerciseNamesCache = distinct;
@@ -977,10 +1031,12 @@ async function openDayDetail(date, exName){
   ST.trainDeleteWorkoutConfirm = null;
   renderTraining();
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainDayLogs = []; renderTraining(); return; }
-  let q = supa.from('training_logs').select('*').eq('user_id', ST.user.id).eq('date', date);
-  if(exName) q = q.eq('exercise_name', exName);
-  const { data } = await q.order('exercise_name').order('set_number', {ascending:true});
-  ST.trainDayLogs = data || [];
+  const { data } = await dbq('leggere le serie del giorno', supa.from('training_logs').select('*')
+    .eq('user_id', ST.user.id).eq('date', date)
+    .order('exercise_name').order('set_number', {ascending:true}));
+  // Il filtro per esercizio guarda il codice, poi il nome (Fondamenta 070)
+  const codice = exName ? _codiceDaNome(exName) : null;
+  ST.trainDayLogs = (data || []).filter(l => !exName || l.exercise_name === exName || (codice && l.exercise_code === codice));
   renderTraining();
 }
 
@@ -1017,145 +1073,11 @@ function cancelEditLogRow(){
   renderTraining();
 }
 
-// ═══ WS-QUEUE — scritture affidabili su workout_sets ═══
-// Ogni insert/update/delete verso workout_sets passa da wsWrite(): 1 retry
-// immediato, poi coda persistente in localStorage con recupero automatico
-// (al boot e a ogni scrittura riuscita). training_logs resta la fonte primaria
-// e il flusso utente non si blocca mai: il fallimento produce solo un toast
-// discreto e l'operazione viene riconsegnata appena possibile.
-const WS_PENDING_CAP = 200;
-function _wsPendingKey(){ return 'zt_ws_pending_' + ((ST.user && ST.user.id) || 'anon'); }
-function _wsLoadPending(){
-  try { return JSON.parse(localStorage.getItem(_wsPendingKey())) || []; } catch(e){ return []; }
-}
-function _wsSavePending(q){
-  try { localStorage.setItem(_wsPendingKey(), JSON.stringify(q)); } catch(e){}
-}
-// Chiave composita di una serie: la stessa usata per riconciliare i due archivi
-function _wsKey(date, sessionType, exName, setNumber){
-  return [date, sessionType, exName, setNumber].join('|');
-}
-// Esegue una singola operazione su workout_sets. Ritorna il result supabase
-// ({ data, error }); le eccezioni di rete vengono normalizzate in { error }.
-//
-// ⚠️ QUI NON SI USA dbq(), ED E' VOLUTO. Un censimento delle chiamate senza
-// controllo d'errore segnala queste righe come scoperte: non lo sono. L'esito
-// e' controllato da TUTTI e quattro i chiamanti — wsWrite (due volte, per il
-// retry) e _wsReplayOp (due volte) — che leggono `res.error`.
-// La WS-QUEUE e' una rete piu' fitta di dbq, non piu' larga: riprova subito,
-// poi accoda su localStorage e riconsegna al boot o alla prima scrittura
-// riuscita. Avvolgere qui aggiungerebbe un toast d'errore a ogni intoppo
-// passeggero che la coda sta gia' gestendo da sola, dicendo all'utente che
-// qualcosa e' andato perso quando invece e' solo in attesa.
-async function _wsExec(op, payload){
-  try {
-    if(op === 'insert'){
-      return await supa.from('workout_sets').insert(payload).select('id').single();
-    }
-    if(op === 'update'){
-      let q = supa.from('workout_sets').update(payload.fields);
-      for(const c in payload.match) q = q.eq(c, payload.match[c]);
-      return await q;
-    }
-    if(op === 'delete'){
-      let q = supa.from('workout_sets').delete();
-      for(const c in payload.match) q = q.eq(c, payload.match[c]);
-      return await q;
-    }
-    return { error: { message: 'ws op sconosciuta: ' + op } };
-  } catch(e){
-    return { error: { message: e && e.message || 'network error' } };
-  }
-}
-function _wsEnqueue(op, payload, key){
-  const q = _wsLoadPending();
-  q.push({ op, payload, key, ts: Date.now() });
-  // Cap: oltre 200 operazioni scarta le più vecchie
-  while(q.length > WS_PENDING_CAP){
-    const dropped = q.shift();
-    console.warn('[ws-queue] cap ' + WS_PENDING_CAP + ' raggiunto, scartata op più vecchia:', dropped.op, dropped.key);
-  }
-  _wsSavePending(q);
-}
-// Scrittura con 1 retry immediato; se fallisce ancora → coda + toast discreto.
-// Ritorna il result supabase in caso di successo, null se accodata.
-async function wsWrite(op, payload, key, toastMsg){
-  if(!ST.user || ST.user.id === 'test-user-001') return null;
-  let res = await _wsExec(op, payload);
-  if(res.error) res = await _wsExec(op, payload); // 1 retry immediato
-  if(res.error){
-    _wsEnqueue(op, payload, key);
-    console.warn('[ws-queue] op accodata dopo retry fallito:', op, key, res.error.message);
-    showToast(toastMsg || 'Serie salvata, sincronizzazione in coda', '🔄', 4500);
-    return null;
-  }
-  _wsFlushQueue(); // scrittura riuscita: prova a smaltire eventuali pendenti (non bloccante)
-  return res;
-}
-// Replay di una singola op pendente. Ritorna true se l'op può uscire dalla coda.
-async function _wsReplayOp(item){
-  const { op, payload } = item;
-  if(op === 'insert'){
-    // Idempotente: verifica esistenza per chiave composita prima di inserire
-    const p = payload;
-    try {
-      const { data, error } = await supa.from('workout_sets').select('id')
-        .eq('user_id', p.user_id).eq('date', p.date).eq('session_type', p.session_type)
-        .eq('exercise_name', p.exercise_name).eq('set_number', p.set_number).limit(1);
-      if(error) return false;
-      if(data && data.length) return true; // già presente → esce dalla coda
-    } catch(e){ return false; }
-    const res = await _wsExec('insert', payload);
-    return !res.error;
-  }
-  if(op === 'update' || op === 'delete'){
-    // Riga inesistente = 0 match: non è un errore, l'op esce dalla coda
-    const res = await _wsExec(op, payload);
-    return !res.error;
-  }
-  return true; // op sconosciuta: scarta
-}
-// Svuotamento coda: chiamata al boot (post-login) e dopo ogni scrittura riuscita.
-// Per ogni chiave le op si eseguono in ordine di ts; se una fallisce, le successive
-// della stessa chiave restano in coda (ordine preservato). Un delete che segue un
-// insert pendente annulla entrambi senza toccare il DB.
-let _wsFlushing = false;
-async function _wsFlushQueue(){
-  if(_wsFlushing) return;
-  if(!ST.user || ST.user.id === 'test-user-001') return;
-  let q = _wsLoadPending();
-  if(!q.length) return;
-  _wsFlushing = true;
-  try {
-    q.sort((a,b) => (a.ts||0) - (b.ts||0));
-    // Annullamento insert+delete sulla stessa chiave (il delete è successivo)
-    const cancelled = new Set();
-    const byKey = {};
-    q.forEach((o,i) => { (byKey[o.key] = byKey[o.key] || []).push(i); });
-    for(const key in byKey){
-      const idxs = byKey[key];
-      const insIdx = idxs.find(i => q[i].op === 'insert');
-      if(insIdx !== undefined && idxs.some(i => q[i].op === 'delete' && (q[i].ts||0) >= (q[insIdx].ts||0))){
-        idxs.forEach(i => cancelled.add(i));
-      }
-    }
-    if(cancelled.size){
-      q = q.filter((_,i) => !cancelled.has(i));
-      _wsSavePending(q);
-    }
-    const remaining = [];
-    const failedKeys = new Set();
-    for(const item of q){
-      if(failedKeys.has(item.key)){ remaining.push(item); continue; }
-      let ok = false;
-      try { ok = await _wsReplayOp(item); } catch(e){ ok = false; }
-      if(!ok){ remaining.push(item); failedKeys.add(item.key); }
-    }
-    _wsSavePending(remaining);
-  } finally {
-    _wsFlushing = false;
-  }
-}
+// ── Serie: una tabella sola, training_logs (Fondamenta 080, 3 ottobre 2026) ──
+// Prima ogni serie si scriveva due volte (training_logs e workout_sets, con la WS-QUEUE a
+// riconsegnare la seconda). Ora si scrive una volta, con l'id scelto dal telefono e la coda
+// unica di scriviConCoda (Fondamenta 120): senza rete la serie aspetta e parte da sola.
+// workout_sets resta in tabella, non si legge e non si scrive piu'.
 
 async function confirmEditLogRow(){
   const e = ST.trainEditLogRow;
@@ -1168,35 +1090,17 @@ async function confirmEditLogRow(){
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
-  // Trova log originale per la composite key fallback su workout_sets e per detect trazioni
+  // Trova il log originale per riconoscere le trazioni (il carico e' il colore della banda)
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
   const isPullUp = orig && isPullUpExercise(orig.exercise_name);
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
-  const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
   const resistanceText = isPullUp ? null : (resistance || null);
-  // 1. UPDATE training_logs by id (sorgente per Progressione)
-  // Il try/catch da solo vedeva le cadute di rete ma non gli errori dell'API.
-  // Qui l'esito conta il doppio: il passo 2 aggiorna workout_sets comunque, e se
-  // questo passo fallisce in silenzio i due archivi divergono — proprio la
-  // divergenza che la bonifica del 17 luglio aveva riportato a zero.
-  const upd = await dbq('aggiornare la serie', supa.from('training_logs').update({
-    reps,
-    resistance: resistanceText,
-    band_color: bandColor,
-    rir_actual: rir,
-  }).eq('id', e.id).eq('user_id', ST.user.id));
+  // Una scrittura sola, per id, con la coda unica (Fondamenta 080): senza rete aspetta e parte da sola
+  const upd = await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
+    righe:{ reps, resistance: resistanceText, band_color: bandColor, rir_actual: rir },
+    filtri:[['id', e.id], ['user_id', ST.user.id]] });
   const updOk = !(upd && upd.error);
-  // 2. UPDATE workout_sets by composite key (training_logs.id ≠ workout_sets.id)
-  //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
-  if(orig){
-    await wsWrite('update', {
-      fields: { reps, resistance: resistInt, band_color: bandColor, rir_actual: rir },
-      match: { user_id: ST.user.id, date: orig.date, session_type: orig.session_id,
-               exercise_name: orig.exercise_name, set_number: orig.set_number },
-    }, _wsKey(orig.date, orig.session_id, orig.exercise_name, orig.set_number),
-    'Modifica salvata, sincronizzazione in coda');
-  }
   ST.trainEditLogRow = null;
   // Re-fetch logs del modal e progressione
   if(ST.trainDayDetail){
@@ -1218,24 +1122,9 @@ async function deleteSetConfirmed(){
   if(!c) return;
   ST.trainDeleteSetConfirm = null;
   if(!ST.user || ST.user.id==='test-user-001'){ renderTraining(); return; }
-  const orig = (ST.trainDayLogs || []).find(l => l.id === c.id);
-  // 1. DELETE training_logs by id
-  // Il try/catch fermava tutto sulle cadute di rete (return), ma non vedeva gli
-  // errori dell'API. Si tiene lo stesso comportamento anche per quelli: se la
-  // riga primaria non si cancella non si tocca workout_sets, altrimenti i due
-  // archivi divergerebbero — con l'aggravante che la serie resterebbe visibile
-  // in Progressione, che legge da training_logs.
-  const del = await dbq('eliminare la serie', supa.from('training_logs').delete().eq('id', c.id).eq('user_id', ST.user.id));
+  // Una cancellazione sola, per id, con la coda unica (Fondamenta 080)
+  const del = await scriviConCoda('eliminare la serie', { tabella:'training_logs', tipo:'delete', filtri:[['id', c.id], ['user_id', ST.user.id]] });
   if(del && del.error){ renderTraining(); return; }
-  // 2. DELETE workout_sets by composite key
-  //    via wsWrite: retry + coda persistente, nessun fallimento silenzioso
-  if(orig){
-    await wsWrite('delete', {
-      match: { user_id: ST.user.id, date: orig.date, session_type: orig.session_id,
-               exercise_name: orig.exercise_name, set_number: orig.set_number },
-    }, _wsKey(orig.date, orig.session_id, orig.exercise_name, orig.set_number),
-    'Eliminazione registrata, sincronizzazione in coda');
-  }
   showToast('Serie eliminata');
   invalidateAllExerciseNamesCache(); // potrebbe essere ultimo log dell'esercizio
   // Re-fetch
@@ -1609,9 +1498,10 @@ async function markRestChosen(){
         ? 'Oggi è già segnato come infortunio' : 'Riposo già segnato per oggi');
       return;
     }
-    const { error } = await supa.from('workouts').insert({
+    // Scrivi-o-niente (Fondamenta 090): il vincolo (persona, giorno, sessione) ferma il doppione
+    const { error } = await supa.from('workouts').upsert({
       user_id: ST.user.id, date: today, session_type: 'rest', completed: true, duration_min: 0
-    });
+    }, { onConflict:'user_id,date,session_type', ignoreDuplicates:true });
     if(error) throw error;
     showToast('🌙 Riposo segnato');
     loadTrainingHomeData();
@@ -1651,10 +1541,10 @@ async function markRestInjury(zoneNote){
         ? 'Oggi è già segnato come riposo scelto' : 'Riposo per infortunio già segnato per oggi');
       return;
     }
-    const { error } = await supa.from('workouts').insert({
+    const { error } = await supa.from('workouts').upsert({
       user_id: ST.user.id, date: today, session_type: 'rest_injury', completed: true, duration_min: 0,
       note: (zoneNote || '').trim() || null
-    });
+    }, { onConflict:'user_id,date,session_type', ignoreDuplicates:true });
     if(error) throw error;
     showToast('🩹 Riposo per infortunio segnato');
     loadTrainingHomeData();
@@ -1693,10 +1583,10 @@ async function _injWriteDay(date, zone){
     .select('id, session_type').eq('user_id', ST.user.id).eq('date', date)
     .in('session_type', ['rest','rest_injury']));
   if(existing && existing.length) return false;
-  const { error } = await supa.from('workouts').insert({
+  const { error } = await supa.from('workouts').upsert({
     user_id: ST.user.id, date, session_type: 'rest_injury', completed: true,
     duration_min: 0, note: (zone || '').trim() || null
-  });
+  }, { onConflict:'user_id,date,session_type', ignoreDuplicates:true });
   return !error;
 }
 // Avvio periodo dal modal: days = 1 | 3 | 7 | null (aperto, senza scadenza).
@@ -1781,14 +1671,23 @@ async function saveWorkoutRecord(sessionId){
   const durationMin = ST.trainSessionStart
     ? Math.max(1, Math.round((Date.now() - ST.trainSessionStart) / 60000))
     : null;
-  const { data, error } = await supa.from('workouts').insert({
+  // Scrivi-o-niente (Fondamenta 090): il vincolo (persona, giorno, sessione) ferma il doppione di
+  // un doppio tocco o di due telefoni; se la riga c'era gia' non la si tocca e si rilegge l'id.
+  const res = await dbq('salvare l\'allenamento', supa.from('workouts').upsert({
     user_id: ST.user.id,
     date: today,
     session_type: sessionId,
     completed: true,
     duration_min: durationMin,
-  }).select('id').single();
-  if(error){ console.warn('saveWorkoutRecord:', error.message); return null; }
+  }, { onConflict:'user_id,date,session_type', ignoreDuplicates:true }).select('id'));
+  if(res.error){ console.warn('saveWorkoutRecord:', res.error.message); return null; }
+  let wid = (res.data && res.data[0] && res.data[0].id) || null;
+  if(!wid){
+    const r2 = await dbq('leggere gli allenamenti di oggi', supa.from('workouts').select('id')
+      .eq('user_id', ST.user.id).eq('date', today).eq('session_type', sessionId).limit(1), {silenzioso:true});
+    wid = (r2.data && r2.data[0] && r2.data[0].id) || null;
+  }
+  const data = { id: wid };
   ST.trainCompletedToday[sessionId] = true;
   ST.sessionLastCompletion[sessionId] = today;
   // Svuota la cache del calendario: si ricarica al prossimo accesso a Progressione.
@@ -2081,53 +1980,31 @@ async function saveTrainingSet(){
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   ST.trainSaving = true;
   renderTraining();
-  let insertError = null;
-  try {
-    const { error } = await supa.from('training_logs').insert({
-      user_id: ST.user.id,
-      date: todayKey(),
-      session_id: form.sessionId,
-      exercise_name: form.exName,
-      set_number: form.setNum,
-      reps,
-      resistance: isPullUp ? null : (resistance||null),
-      band_color: bandColor,
-      rir_actual: rir,
-    });
-    insertError = error;
-  } catch(e){ insertError = {message: e.message}; }
+  // Una riga sola, in training_logs, con l'id scelto dal telefono e il codice esercizio
+  // (Fondamenta 070/080): senza rete va in coda e parte da sola; un errore dell'API si mostra.
+  const riga = {
+    id: nuovoId(),
+    user_id: ST.user.id,
+    date: todayKey(),
+    session_id: form.sessionId,
+    exercise_name: form.exName,
+    exercise_code: _codiceDaNome(form.exName, form.sessionId),
+    set_number: form.setNum,
+    reps,
+    resistance: isPullUp ? null : (resistance||null),
+    band_color: bandColor,
+    rir_actual: rir,
+  };
+  const esito = await scriviConCoda('salvare la serie', { tabella:'training_logs', tipo:'insert', righe:riga });
   ST.trainSaving = false;
-  if(insertError){ avvisa('Non riesco a salvare la serie: ' + insertError.message, { titolo:'Serie non salvata' }); renderTraining(); return; }
+  if(esito.error){ renderTraining(); return; }
   invalidateAllExerciseNamesCache(); // nuova serie → esercizio potrebbe essere nuovo nella lista
   // Traccia inizio sessione sulla prima serie
   const prevKeys = Object.keys(ST.trainLoggedSets).filter(k=>k.startsWith(form.sessionId+'_')&&k.endsWith('_'+todayKey()));
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
-  ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor};
+  ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id};
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
-  // Insert in workout_sets (in parallelo, non blocca il flusso) via wsWrite:
-  // retry immediato + coda persistente se fallisce — mai più perdite silenziose
-  const unitVal = (ST.profile && ST.profile.unit) || 'lbs';
-  wsWrite('insert', {
-    user_id: ST.user.id,
-    workout_id: null,
-    date: todayKey(),
-    session_type: form.sessionId,
-    exercise_name: form.exName,
-    set_number: form.setNum,
-    reps,
-    resistance: isPullUp ? null : (resistance ? parseInt(resistance)||null : null),
-    band_color: bandColor,
-    unit: unitVal,
-    rir_actual: rir,
-  }, _wsKey(todayKey(), form.sessionId, form.exName, form.setNum),
-  'Serie salvata, sincronizzazione in coda').then((res)=>{
-    const setId = res?.data?.id;
-    if(setId && ST.trainLoggedSets[key]){
-      ST.trainLoggedSets[key].setId = setId;
-      try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
-    }
-  }, ()=>{});
   const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
   const exData = currentIdx >= 0 ? sessExercises[currentIdx] : null;
@@ -4651,10 +4528,6 @@ document.addEventListener('visibilitychange', ()=>{
       if(ST.trainExecTimer && ST.trainExecTimer.running && ST.trainExecTimer._iv) _execTimerTick();
     }catch(e){}
   }
-  // WS-QUEUE: al rientro in foreground prova a smaltire le scritture workout_sets pendenti
-  if(document.visibilityState === 'visible'){
-    try{ _wsFlushQueue(); }catch(e){}
-  }
   // GRAFICA L1 — Cronometro TEMPO WORKOUT: al rientro foreground risincronizza il display
   // (iOS sospende setInterval in background; execStartedAt è in localStorage quindi il
   // calcolo da Date.now() resta corretto). Ri-arma il tick se siamo in esecuzione.
@@ -5061,34 +4934,14 @@ async function confirmEditLog(k){
   ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
-    const resistInt = isPullUp ? null : (resistance ? (parseInt(resistance) || null) : null);
-    // 1. UPDATE workout_sets (sorgente di verità per la nuova UI) — by id se disponibile,
-    //    altrimenti composite — via wsWrite: retry + coda, nessun fallimento silenzioso
+    // Una scrittura sola su training_logs, con la coda unica (Fondamenta 080): per id se la
+    // serie lo ha (scritta o riletta oggi), altrimenti per chiave (giorno, sessione, esercizio, numero)
     const setId = prev.setId;
-    await wsWrite('update', {
-      fields: { reps, resistance: resistInt, band_color: bandColor },
-      match: setId
-        ? { id: setId, user_id: ST.user.id }
-        : { user_id: ST.user.id, date, session_type: sessionId,
-            exercise_name: exName, set_number: setNum },
-    }, _wsKey(date, sessionId, exName, setNum),
-    'Modifica salvata, sincronizzazione in coda');
-    // 2. UPDATE training_logs (compat — usata da Progressione e altri viewer)
-    // Il catch vuoto qui sopra ingoiava tutto, errori di rete compresi: era il
-    // punto piu' cieco dei tre. workout_sets viene aggiornato dal passo 1 con
-    // retry e coda, quindi un fallimento silenzioso qui lascia i due archivi
-    // disallineati e la Progressione — che legge da training_logs — mostra il
-    // valore vecchio senza che niente lo dica.
-    await dbq('aggiornare la serie', supa.from('training_logs').update({
-      reps,
-      resistance: isPullUp ? null : (resistance||null),
-      band_color: bandColor,
-    })
-      .eq('user_id', ST.user.id)
-      .eq('date', date)
-      .eq('session_id', sessionId)
-      .eq('exercise_name', exName)
-      .eq('set_number', setNum));
+    const filtri = setId
+      ? [['id', setId], ['user_id', ST.user.id]]
+      : [['user_id', ST.user.id], ['date', date], ['session_id', sessionId], ['exercise_name', exName], ['set_number', setNum]];
+    await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
+      righe:{ reps, resistance: isPullUp ? null : (resistance||null), band_color: bandColor }, filtri });
   }
   ST.editLogKey = null;
   ST.editLogDraft = null;

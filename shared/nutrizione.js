@@ -27,6 +27,16 @@ var ZTNutrizione = (function(){
     }, ZERO());
   }
 
+  // La riga di supplements_log → il prodotto della libreria: per supplement_id (la chiave, Fondamenta 070),
+  // poi per nome, per le righe scritte prima del 3 ottobre 2026 o che la migrazione non ha legato.
+  // supps: righe gia' passate da mapSupplement (hanno local_id). null se nessuno corrisponde.
+  function suppForLog(supps, r){
+    var lista = supps || [];
+    var perId = r && r.supplement_id ? lista.find(function(x){ return String(x.local_id) === String(r.supplement_id); }) : null;
+    if(perId) return perId;
+    return lista.find(function(x){ return x.name === r.supplement_name; }) || null;
+  }
+
   // Una riga di `supplements` unita al catalogo (join per codice, poi per nome). Era il map di loadSupps.
   function mapSupplement(s, catalog){
     var cat = (catalog || []).find(function(c){
@@ -165,14 +175,14 @@ var ZTNutrizione = (function(){
         return;
       }
       var d = nuovo(r.date);
-      var supp = supps.find(function(x){ return x.name === r.supplement_name; });
+      var supp = suppForLog(supps, r);
       if(supp && !d.suppsTaken.includes(supp.local_id)) d.suppsTaken.push(supp.local_id);
-      d.rawSuppLogs.push({ name: r.supplement_name, time: r.slot || '', dose: parseFloat(supp && supp.dose_die) || 1 });
+      d.rawSuppLogs.push({ name: supp ? supp.name : r.supplement_name, time: r.slot || '', dose: parseFloat(supp && supp.dose_die) || 1 });
     });
     return { days: days, ref: { supps: supps, catalog: catalog, extrasByDay: extrasByDay } };
   }
 
-  return { r2: r2, mealTotals: mealTotals, mapSupplement: mapSupplement, extraFromRow: extraFromRow,
+  return { r2: r2, mealTotals: mealTotals, mapSupplement: mapSupplement, suppForLog: suppForLog, extraFromRow: extraFromRow,
     suppTotalsForIds: suppTotalsForIds, extraSuppsTotals: extraSuppsTotals, extrasTotals: extrasTotals,
     dayTotals: dayTotals, buildDays: buildDays };
 })();
