@@ -2391,10 +2391,24 @@ function mostraAggiornamento() {
 function aggiornaApp() {
   window.location.reload();
 }
-function controllaAggiornamenti() {
-  if(!('serviceWorker' in navigator)) return;
-  navigator.serviceWorker.getRegistration().then(reg => { if(reg) reg.update(); }).catch(() => {});
+// Il rilascio (tools/rilascio/versione.sh) cambia solo zona-tracker.html, non sw.js: il service
+// worker nuovo non arriva quasi mai, quindi la striscia non comparirebbe. Si confronta la versione
+// scritta nella pagina in rete con quella in uso. Senza rete, o se la pagina non si legge, niente.
+async function controllaVersioneRemota() {
+  try {
+    const r = await fetch(window.location.pathname, { cache:'no-store' });
+    if(!r || !r.ok) return;
+    const m = /const APP_VERSION = '([^']+)'/.exec(await r.text());
+    if(m && m[1] !== APP_VERSION) segnalaVersioneNuova();
+  } catch(e) { /* senza rete o pagina non letta: si riprova al prossimo giro */ }
 }
+function controllaAggiornamenti() {
+  try { if(navigator.serviceWorker && navigator.serviceWorker.getRegistration) navigator.serviceWorker.getRegistration().then(reg => { if(reg) reg.update(); }).catch(() => {}); } catch(e) {}
+  controllaVersioneRemota();
+}
+// Ogni 3 minuti e a ogni ritorno in primo piano, con o senza service worker
+setInterval(controllaAggiornamenti, 3 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') controllaAggiornamenti(); });
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/benessere-forma/sw.js', { scope: '/benessere-forma/' })
     .then(reg => {
@@ -2406,11 +2420,8 @@ if ('serviceWorker' in navigator) {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) segnalaVersioneNuova();
         });
       });
-      // Controllo periodico (3 minuti) e al ritorno in primo piano
-      setInterval(() => reg.update(), 3 * 60 * 1000);
     })
     .catch(() => {});
-  document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') controllaAggiornamenti(); });
 }
 
 </script>
