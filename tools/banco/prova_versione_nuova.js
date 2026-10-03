@@ -35,8 +35,42 @@ const attendi = (ms) => new Promise(r => setTimeout(r, ms));
   const html = fs.readFileSync('zona-tracker.html', 'utf8');
   const blocco = html.slice(html.indexOf("navigator.serviceWorker.register("));
   atteso('nel codice · statechange segnala, non ricarica', [/statechange[\s\S]{0,200}segnalaVersioneNuova/.test(blocco), /statechange[\s\S]{0,200}location\.reload/.test(blocco)], [true, false]);
-  atteso('nel codice · controllo al ritorno in primo piano', /visibilitychange[\s\S]{0,120}controllaAggiornamenti/.test(blocco), true);
-  atteso('zero errori in console', b.logs.concat(c.logs).filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length, 0);
+  atteso('nel codice · controllo al ritorno in primo piano', /visibilitychange[\s\S]{0,120}controllaAggiornamenti/.test(html.slice(html.indexOf('function controllaAggiornamenti'))), true);
+
+  // Difetto trovato dopo il rilascio (3 ott 2026): il rilascio cambia solo zona-tracker.html, sw.js no.
+  // Si legge la pagina dalla rete e si confronta APP_VERSION con quella in uso.
+  const pagina = (versione) => `<html><script>const APP_VERSION = '${versione}';<\/script></html>`;
+  async function conFetch(risposta) {
+    const e = boot({ profiles:[] }, { now:'2026-10-02T12:00:00' }); await e.avviato;
+    let chiamate = 0;
+    e.win.fetch = (url, opt) => { chiamate++; return risposta(url, opt); };
+    return { ...e, chiamate: () => chiamate, striscia: () => e.win.document.getElementById('aggiorna-banner').classList.contains('visible') };
+  }
+  const inUso = win.eval('APP_VERSION');
+  let f = await conFetch(async (url, opt) => ({ ok:true, text: async () => pagina('2099.01.01 · 00:00'), _opt:opt }));
+  let opzioni = null; const fetchOrig = f.win.fetch; f.win.fetch = (u, o) => { opzioni = o; return fetchOrig(u, o); };
+  f.win.controllaAggiornamenti(); await attendi(20);
+  atteso('versione diversa in rete, sw.js uguale · la striscia compare', [f.striscia(), f.chiamate(), opzioni && opzioni.cache], [true, 1, 'no-store']);
+  f = await conFetch(async () => ({ ok:true, text: async () => pagina(inUso) }));
+  f.win.controllaAggiornamenti(); await attendi(20);
+  atteso('stessa versione in rete · niente striscia', f.striscia(), false);
+  f = await conFetch(async () => { throw new TypeError('Failed to fetch'); });
+  f.win.controllaAggiornamenti(); await attendi(20);
+  atteso('senza rete · niente striscia, nessun errore', [f.striscia(), f.logs.filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length], [false, 0]);
+  f = await conFetch(async () => ({ ok:false, text: async () => '' }));
+  f.win.controllaAggiornamenti(); await attendi(20);
+  atteso('pagina non letta (errore del server) · niente striscia', f.striscia(), false);
+  // il ritorno in primo piano fa il controllo
+  f = await conFetch(async () => ({ ok:true, text: async () => pagina('2099.01.01 · 00:00') }));
+  Object.defineProperty(f.win.document, 'visibilityState', { get: () => 'visible', configurable:true });
+  f.win.document.dispatchEvent(new f.win.Event('visibilitychange')); await attendi(20);
+  atteso('ritorno in primo piano · controlla e segnala', [f.chiamate(), f.striscia()], [1, true]);
+  // in allenamento la striscia aspetta anche per questa via
+  f = await conFetch(async () => ({ ok:true, text: async () => pagina('2099.01.01 · 00:00') }));
+  f.win.eval('ST').trainSession = 'push';
+  f.win.controllaAggiornamenti(); await attendi(20);
+  atteso('versione nuova in allenamento · la striscia aspetta', f.striscia(), false);
+  atteso('zero errori in console', b.logs.concat(c.logs, f.logs).filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length, 0);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.log('  KO  eccezione:', e.stack || e.message); process.exit(1); });

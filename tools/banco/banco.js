@@ -153,6 +153,10 @@ function boot(tables, opts={}){
       win.supabase = { createClient: () => supa };
       // opts.locale = { chiave: valore }: localStorage già pieno prima che la pagina parta (la copia locale dell'app)
       Object.entries(opts.locale || {}).forEach(([k, v]) => win.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)));
+      // Gli intervalli della pagina (il controllo degli aggiornamenti ogni 3 minuti, Fondamenta 140) non devono
+      // tenere in vita il processo: una prova senza process.exit finirebbe solo dopo 3 minuti. Timer di Node, unref.
+      win.setInterval = (fn, ms, ...a) => { const t = setInterval(() => fn(...a), ms); if(t.unref) t.unref(); return t; };
+      win.clearInterval = (t) => clearInterval(t);
       win.matchMedia = win.matchMedia || (()=>({matches:false, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}}));
       win.scrollTo = ()=>{};
       win.AudioContext = function(){ return { createOscillator:()=>({connect(){},start(){},stop(){},frequency:{setValueAtTime(){}} }), createGain:()=>({connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}), currentTime:0, destination:{}, state:'running', resume(){} }; };
