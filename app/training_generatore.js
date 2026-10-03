@@ -3300,10 +3300,10 @@ async function _trainGenAINote(profile, schedaMeta) {
     mantenimento:      'mantenimento',
   };
   const obiettivoLeggibile = OBJ_DISPLAY[schedaMeta.obiettivo] || schedaMeta.obiettivo || 'allenamento';
-  const nomeUtente = (profile && profile.first_name) ? ` ${profile.first_name}` : '';
   const ritratto = await coachRitrattoPronto();
 
-  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente${nomeUtente}. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
+  // Senza il nome della persona (Fondamenta 170): il coach parla a «te», non serve sapere chi sei
+  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
 
 REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.
 

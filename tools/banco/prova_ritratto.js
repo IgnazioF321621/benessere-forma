@@ -34,7 +34,7 @@ const pieno = { profile:profilo, target, today:'2026-10-02', current:quadro(), p
 // ── Parte 1: il modulo ──
 let t = ZTRitratto.build(pieno);
 atteso('intestazione', t.split('\n')[0].startsWith('CHI È — dati veri presi dall\'app.'), true);
-atteso('persona', riga(t, 'Persona'), '- Persona: Ignazio, uomo, 55 anni, 178 cm');
+atteso('persona · senza il nome (Fondamenta 170)', riga(t, 'Persona'), '- Persona: uomo, 55 anni, 178 cm');
 atteso('obiettivo e attività', riga(t, 'Obiettivo:'), '- Obiettivo: ricomposizione corporea · attività quotidiana moderata');
 atteso('dieta e intolleranze', riga(t, 'Dieta'), '- Dieta: pescetariana · intolleranze: lattosio');
 atteso('note di salute su una riga', riga(t, 'Note'), '- Note di salute scritte dalla persona: Ferritina bassa. Lombari da proteggere.');
@@ -94,7 +94,7 @@ atteso('etichette obiettivo per il Worker', [ZTRitratto.obiettivoLeggibile('mass
   } else {
     const blocco = win.coachRitratto();
     atteso('app · il ritratto nasce dallo stato', [riga(blocco, 'Persona'), riga(blocco, 'Oggi'), riga(blocco, 'Peso') !== null, riga(blocco, 'Proposte') !== null],
-      ['- Persona: Ignazio, uomo, 55 anni, 178 cm', '- Oggi (venerdì 2 ottobre): seduta da fare: Upper A, Forza · settimana 3 di 6 del ciclo, di carico', true, true]);
+      ['- Persona: uomo, 55 anni, 178 cm', '- Oggi (venerdì 2 ottobre): seduta da fare: Upper A, Forza · settimana 3 di 6 del ciclo, di carico', true, true]);
     atteso('app · uguale al modulo con gli stessi dati', blocco, ZTRitratto.build({ ...pieno, previous: quadro({ meta:{ week_start:'2026-09-21' } }) }));
 
     await win.getAdvice({ kcal:900, protein:60, carbs:90, fat:30 }, 'cena');

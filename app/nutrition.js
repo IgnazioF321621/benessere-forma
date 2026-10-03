@@ -4069,12 +4069,11 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     ? intolleranzeRaw.filter(Boolean)
     : (intolleranzeRaw ? [String(intolleranzeRaw)] : []);
   const obiettivo = (profile.obiettivo || '').toString().trim();
-  const firstName = (profile.first_name || '').toString().trim();
   const age = profile.age ? Number(profile.age) : null;
   const sex = (profile.sex || '').toString().trim();
 
   const profileLines = [];
-  if (firstName) profileLines.push("- Nome: " + firstName);
+  // Niente nome della persona (Fondamenta 170): al piano servono età, sesso, regime e obiettivo
   if (age)       profileLines.push("- Età: " + age + " anni");
   if (sex)       profileLines.push("- Sesso: " + sex);
   if (dieta)     profileLines.push("- Regime alimentare: " + dieta);

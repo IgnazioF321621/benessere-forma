@@ -101,7 +101,7 @@ function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   const sessionType = sess.type || '';
   // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
   // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
-  return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Ignazio: 55 anni, ex nuotatore/pallanuotista. Lombari (iperlordosi) e ginocchia (valgismo) da proteggere. Allena con elastici a tubo.
+  return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Eta', note di salute e situazione sono nel ritratto qui sotto (senza il nome: Fondamenta 170). Allena con elastici a tubo.
 
 ${coachRitratto()}
 
@@ -109,7 +109,7 @@ Esercizio corrente: ${exName} (sessione ${sessionLabel}, ${sessionType}).
 ${attrezzoSessione ? `L'utente sta usando: ${attrezzoSessione}. Adatta i cue a questo attrezzo specifico (setup, presa, posizione, errori tipici di questo strumento).` : ''}
 Rispondi con 2-3 punti BREVISSIMI (max 8 parole ciascuno), in formato elenco. Ogni punto su una riga separata, inizia con "• " (bullet + spazio). NIENTE paragrafi. NIENTE introduzioni. NIENTE ripetizione del nome esercizio.
 
-Contenuto dei punti (scegli i 2-3 più rilevanti): cue tecnico avanzato, gestione fatica nelle ultime serie, variazione respiratoria, attenzione protezioni (lombari/ginocchia) se rilevante per questo movimento. Non ripetere info banali tipo setup o muscoli target.
+Contenuto dei punti (scegli i 2-3 più rilevanti): cue tecnico avanzato, gestione fatica nelle ultime serie, variazione respiratoria, attenzione alle protezioni indicate nelle note di salute, se rilevanti per questo movimento. Non ripetere info banali tipo setup o muscoli target.
 
 Italiano. Esempio di formato corretto:
 • Mento alla sbarra, non collo
