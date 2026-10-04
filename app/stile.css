@@ -484,7 +484,7 @@ select.inp{cursor:pointer;}
 .info-modal h3{font-family:var(--font-sans,'Syne',sans-serif);font-size:17px;font-weight:700;margin:0 0 10px;color:var(--txt,#1a1a1a);}
 .info-modal p{font-family:var(--font-sans,'Syne',sans-serif);font-size:14px;line-height:1.6;color:var(--txt-2,#5A6B65);margin:0 0 16px;}
 .foglio-overlay{z-index:1700;}
-.aggiorna-banner{display:none;background:var(--acc);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;text-align:center;padding:10px 16px;cursor:pointer;letter-spacing:.3px;}
+.aggiorna-banner{display:none;background:#FAC775;color:#1A1A1A;border-bottom:2px solid #1A1A1A;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;text-align:center;padding:12px 16px;cursor:pointer;letter-spacing:.3px;line-height:1.4;}
 .aggiorna-banner.visible{display:block;}
 .senza-rete{display:none;background:#1A1A1A;color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;padding:7px 16px;letter-spacing:.3px;}
 .senza-rete.visible{display:block;}
