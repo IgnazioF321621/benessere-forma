@@ -147,6 +147,32 @@ async function nuovo(opts){
     a.win.closeBloccoNuovoSheet();
     atteso('«Non ora» · finestra chiusa, niente cambiato', [a.win.document.getElementById('blocco-nuovo-sheet'), a.ST.bloccoNuovo, a.ST.schedaAttiva.blocco_n], [null, null, 2]);
   }
+  // 2b) «Cambia ›»: le alternative di un posto, la scelta mappata come farebbe il generatore, niente scritture
+  {
+    const a = await nuovo();
+    const bn = await a.win.preparaBloccoNuovo();
+    atteso('cambia · il dry-run porta il pool e gli attrezzi', [Array.isArray(bn.scheda._pools.poolPrincipali), bn.scheda._pools.attrezzatura.includes('sbarra'), !!bn.scheda.sessioni[0]._sp], [true, true, true]);
+    const uA = bn.scheda.sessioni.find(s => s.id === 'upperA');
+    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068'].includes(e.codice));
+    const cands = a.win.candidatiBloccoNuovo('upperA', post.codice);
+    atteso('cambia · alternative del posto: stesso gruppo, fuori chi e\' in scheda, mai fatti prima', cands.map(k => k.codice + (k.fattoPrima ? '*' : '')), ['EX068', 'EX060*'].filter(c => c.replace('*', '') !== post.codice));
+    const candTraz = a.win.candidatiBloccoNuovo('upperA', 'EX033');
+    atteso('cambia · per le trazioni: solo tirate verticali non in scheda, il gravitron ultimo e segnato casalingo', [candTraz.map(k => k.codice), candTraz.find(k => k.codice === 'EX032').surrogato], [['EX030', 'EX032'], true]);
+    const sheet = () => a.win.document.getElementById('blocco-nuovo-sheet').textContent.replace(/\s+/g, ' ');
+    atteso('finestra · ogni complementare ha «Cambia ›», i cardini no', [a.win.document.querySelectorAll('#blocco-nuovo-sheet .bn-cambia').length > 0, /Cambia/.test(sheet())], [true, true]);
+    a.win.apriCambioBloccoNuovo('upperA', post.codice);
+    atteso('finestra · aperto il cambio: «Al posto di» e le alternative', [/AL POSTO DI/.test(sheet()), /mai fatto/.test(sheet()), /Indietro/.test(sheet())], [true, true, true]);
+    const scelto = cands[0].codice;
+    const nuovoEx = a.win.cambiaEsercizioBloccoNuovo('upperA', post.codice, scelto);
+    const pos = uA.exercises.findIndex(e => e.codice === scelto);
+    atteso('cambia · sostituito nello stesso posto, con i parametri da isolamento della seduta', [pos, uA.exercises.includes(post), nuovoEx.sets, nuovoEx.reps.startsWith('12-15'), nuovoEx.sceltoDaTe], [uA.exercises.indexOf(nuovoEx), false, 3, true, true]);
+    atteso('cambia · il confronto si aggiorna e lo dice: «scelto da te»', [bn.diff.find(d => d.id === 'upperA').nuovi.find(n => n.codice === scelto).sceltoDaTe, /scelto da te/.test(sheet())], [true, true]);
+    atteso('cambia · chi e\' appena entrato non e\' piu\' un\'alternativa altrove', a.win.candidatiBloccoNuovo('upperB', 'EX062').some(k => k.codice === scelto), false);
+    atteso('cambia · ancora nessuna scrittura', a.chiamate('schede_utente', 'insert').length + a.chiamate('schede_utente', 'update').length, 0);
+    const r = await a.win.accettaBloccoNuovo();
+    const ins = a.chiamate('schede_utente', 'insert')[0];
+    atteso('accetto dopo il cambio · la riga salvata ha la scelta e niente pool o parametri dentro', [r.ok, ins.payload.scheda.sessioni[0].exercises.some(e => e.codice === scelto), '_pools' in ins.payload.scheda, '_sp' in ins.payload.scheda.sessioni[0]], [true, true, false, false]);
+  }
   // 3) «Accetto»: scheda nuova salvata, la vecchia spenta ma presente, inizio blocco = oggi
   {
     const a = await nuovo();

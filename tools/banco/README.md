@@ -34,7 +34,7 @@ node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori 
 node tools/banco/prova_tabella_unica.js  # una tabella sola per le serie (training_logs, id del telefono, coda unica), codice esercizio e supplement_id scritti e letti, scrivi-o-aggiorna per allenamenti e misure, vecchia WS-QUEUE tolta (Fondamenta 070/080/090)
 node tools/banco/prova_privacy.js  # informativa prima del primo accesso, consenso prima che le foto partano, niente nome nei testi al coach, «Scarica i miei dati» (Fondamenta 170)
 node tools/banco/prova_installazione.js  # manifest, icone PNG (rigenerabili con node tools/icone/genera.js) e suggerimento «Aggiungi alla schermata Home» (Fondamenta 190)
-node tools/banco/prova_blocco_nuovo.js   # blocco nuovo come anteprima: cardini che restano per codice, complementari nuovi o fermi nella stessa seduta (mai in due), «riparti da» fuori dallo scarico, Accetto / Non ora, scheda vecchia riaccesa se il salvataggio fallisce (Training 070)
+node tools/banco/prova_blocco_nuovo.js   # blocco nuovo come anteprima: cardini che restano per codice, complementari nuovi o fermi nella stessa seduta (mai in due), «Cambia ›» con le alternative del posto, «riparti da» fuori dallo scarico, Accetto / Non ora, scheda vecchia riaccesa se il salvataggio fallisce (Training 070)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
