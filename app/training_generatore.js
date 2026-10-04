@@ -1748,6 +1748,21 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       set.forEach(c => usatiPrima.add(c));
     });
     const usatiNuovaScheda = new Set();                  // codici già scelti nelle sedute nuove precedenti
+    // Seconda anteprima vera (4 ottobre sera): «Trazioni sbarra gravitron» proposto a casa come
+    // esercizio nuovo. Entra dal ramo surrogato (macchina → elastico) e a casa è lo stesso gesto delle
+    // trazioni già in scheda: la nota di esecuzione casalinga è identica. Due regole in più:
+    //   · il NATIVO prima del surrogato: fra i mai fatti vince chi si fa con l'attrezzo che l'utente ha;
+    //   · un SURROGATO vale come il gesto base della sua FAMIGLIA (la prima parola del nome, regola 11
+    //     della nomenclatura) + pattern: se quella famiglia è già in scheda o c'era nel blocco prima,
+    //     il surrogato non è nuovo. I nativi restano distinti per codice (presa neutra ≠ presa inversa).
+    const _famigliaKey = (ex) => {
+      const cat = (ex && ex.codice && catalogMap.get(ex.codice)) || ex;
+      const fam = String((cat && cat.nome) || '').toLowerCase().trim().split(/\s+/)[0] || '';
+      return fam ? fam + '|' + _normPattern(cat.pattern) : null;
+    };
+    const famigliePrima = new Set();                     // famiglia|pattern di tutto il blocco prima
+    primaPerSeduta.forEach(set => set.forEach(c => { const k = _famigliaKey(catalogMap.get(c)); if (k) famigliePrima.add(k); }));
+    const famiglieNuova = new Set();                     // famiglia|pattern già in una seduta nuova
 
     // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE (Regola B + DUP, 28 mag)
     // I parametri NON sono più unici per scheda: ogni sessione risolve il
@@ -1948,8 +1963,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const conPreferenza = (pool, pick) => {
         if (!cardiniDa) return pick(pool);
         const altrove = (ex) => usatiNuovaScheda.has(ex.codice);
+        const famSeduta = new Set([...usedSoFar].map(c => _famigliaKey(catalogMap.get(c))).filter(Boolean));
+        const famVista = (ex) => { const k = _famigliaKey(ex); return !!k && (famigliePrima.has(k) || famiglieNuova.has(k) || famSeduta.has(k)); };
         const livelli = [
-          pool.filter(ex => !usatiPrima.has(ex.codice) && !altrove(ex)),
+          pool.filter(ex => !ex._surrogato && !usatiPrima.has(ex.codice) && !altrove(ex)),
+          pool.filter(ex => ex._surrogato && !usatiPrima.has(ex.codice) && !altrove(ex) && !famVista(ex)),
           pool.filter(ex => primaQui.has(ex.codice) && !altrove(ex)),
           pool.filter(ex => !altrove(ex)),
           pool,
@@ -2220,7 +2238,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const carryConclusivo = _carryAssigned ? _trainGenMapCarryExercise(_carryAssigned) : null;
 
       // Quello che questa seduta ha preso non si ripresenta nelle sedute dopo (cardini compresi).
-      exercises.forEach(ex => { if (ex && ex.codice) usatiNuovaScheda.add(ex.codice); });
+      exercises.forEach(ex => { if (ex && ex.codice) { usatiNuovaScheda.add(ex.codice); const k = _famigliaKey(ex); if (k) famiglieNuova.add(k); } });
 
       return {
         splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
