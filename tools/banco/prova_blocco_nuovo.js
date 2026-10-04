@@ -24,7 +24,11 @@ const catalogo = [
   row('EX001','Panca elastico','spinta orizzontale'), row('EX002','Piegamenti','spinta orizzontale'), row('EX003','Chest press elastico','spinta orizzontale'),
   row('EX010','Military press elastico','spinta verticale'), row('EX011','Pike push-up','spinta verticale'),
   row('EX020','Rematore elastico','tirata orizzontale'), row('EX021','Rematore invertito','tirata orizzontale'), row('EX022','Rematore un braccio','tirata orizzontale'),
-  row('EX030','Lat machine elastico','tirata verticale'), row('EX031','Trazioni sbarra','tirata verticale'),
+  // tirata verticale: EX030 nativo a elastico, EX031/EX033 nativi alla sbarra (presa diversa = variante vera),
+  // EX032 gravitron: macchina con surrogato elastico, a casa e' la trazione assistita (seconda anteprima vera)
+  row('EX030','Lat machine elastico','tirata verticale'), { ...row('EX031','Trazioni sbarra','tirata verticale'), attrezzo:'sbarra' },
+  { ...row('EX032','Trazioni sbarra gravitron','tirata verticale'), attrezzo:'macchina', luogo:'casa;palestra', surrogato_attrezzo:'elastico', nota_surrogato:'Trazioni assistite con elastico alla sbarra', livello:'principiante' },
+  { ...row('EX033','Trazioni sbarra presa neutra','tirata verticale'), attrezzo:'sbarra' },
   row('EX040','Squat elastico','dominante ginocchia'), row('EX041','Affondi','dominante ginocchia'), row('EX042','Squat bulgaro','dominante ginocchia'), row('EX043','Step-up','dominante ginocchia'),
   row('EX050','Stacco rumeno elastico','dominante anca'), row('EX051','Hip thrust','dominante anca'),
   row('EX060','Alzate posteriori','isolamento','deltoidi posteriori'), row('EX061','Face pull elastico','isolamento','deltoidi posteriori'), row('EX068','Reverse fly elastico','isolamento','deltoidi posteriori'),
@@ -53,7 +57,7 @@ function fixture(opts){
   const o = opts || {};
   return {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', obiettivo:'ricomposizione', tipo_allenamento:'casa',
-      attrezzatura:['elastico'], giorni_allenamento:4, volume_sessione:'completo', note_salute:'Esperienza: avanzato',
+      attrezzatura:['elastico','sbarra'], giorni_allenamento:4, volume_sessione:'completo', note_salute:'Esperienza: avanzato',
       train_start_date: o.inizio || INIZIO }],
     schede_utente:[
       { id:'s1', user_id:U, attiva:false, blocco_n:1, scheda:{ sessioni:[] } },
@@ -116,6 +120,11 @@ async function nuovo(opts){
     // EX070/EX071 stavano in TUTTE E DUE le Upper: la prima seduta prende i due mai fatti, la seconda tiene i vecchi (niente migra, niente doppio)
     atteso('core: Upper A prende i due mai fatti, Upper B tiene i suoi di prima', [a.codici(con, 'upperA').filter(c => /^EX07/.test(c)).sort(), a.codici(con, 'upperB').filter(c => /^EX07/.test(c)).sort()], [['EX074', 'EX075'], ['EX070', 'EX071']]);
     atteso('senza cardiniDa niente preferenza: Upper A e Upper B ripetono EX070 come prima', [a.codici(senza, 'upperA').includes('EX070'), a.codici(senza, 'upperB').includes('EX070')], [true, true]);
+    // Il nativo prima del surrogato, e il surrogato vale come il gesto base della sua famiglia
+    atteso('gravitron (surrogato di «Trazioni» gia\' in scheda) non entra in nessuna seduta', tutti.includes('EX032'), false);
+    atteso('Upper A prende la variante vera di presa, nativa alla sbarra (EX033)', a.codici(con, 'upperA').includes('EX033'), true);
+    atteso('Upper B, senza altri nativi mai fatti, tiene le sue trazioni (EX031)', a.codici(con, 'upperB').includes('EX031'), true);
+    atteso('il gravitron era nel pool: senza blocco nuovo la rotazione poteva pescarlo', a.ST.user && (await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true })).sessioni.some(s => s.exercises.some(e => e.codice === 'EX032')), true);
   }
   // 2) preparaBloccoNuovo: l'anteprima, il confronto e i punti di partenza
   {
