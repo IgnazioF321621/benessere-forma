@@ -147,6 +147,8 @@ const ST = {
   sessionLastCompletion: {},        // { upperA: '2026-05-02', ... }
   trainCompletedToday: {},          // { upperA: true } — flag in-memory anti-duplica
   trainAllCompleted: [],            // tutti i workout completati validi (esclusi rest/rest_injury) — usato per calcolo settimana ciclo
+  schedaAttiva: null,               // la riga attiva di schede_utente com'è: { id, blocco_n, scheda } (loadActiveScheda)
+  bloccoNuovo: null,                // anteprima del blocco nuovo (Training 070): { loading, saving, scheda, diff, partenze, bloccoN }
   userTrainingSessions: null,       // Mossa 3 (28 mag 2026): { sessionId: sessionObj } popolato da loadActiveScheda; null = fallback TRAINING_SESSIONS hardcoded
   userSessionCycle: null,           // Mossa 3: array di session id in ordine dello split; null = fallback SESSION_CYCLE hardcoded
   trainTabataFlow: null,            // Tabata vero (28 mag sera): { active, sessionId, round, totalRounds, exIdx, phase:'work'|'rest', remaining, running, _iv, finisher }

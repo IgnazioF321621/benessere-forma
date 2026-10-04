@@ -720,11 +720,12 @@ async function loadActiveScheda() {
   // Mai throw: errore o no scheda → fallback automatico sui hardcoded.
   ST.userTrainingSessions = null;
   ST.userSessionCycle = null;
+  ST.schedaAttiva = null;
   if (!ST.user || !ST.user.id) return;
   if (ST.user.id === 'test-user-001') return; // test mode skippa, usa hardcoded
   try {
     const { data, error } = await supa.from('schede_utente')
-      .select('scheda, blocco_n')
+      .select('id, scheda, blocco_n')
       .eq('user_id', ST.user.id)
       .eq('attiva', true)
       .maybeSingle();
@@ -799,9 +800,133 @@ async function loadActiveScheda() {
     }
     ST.userTrainingSessions = sessMap;
     ST.userSessionCycle = cycle;
+    // La riga attiva com'è: serve al blocco nuovo (Training 070) per sapere da quale
+    // scheda tenere i cardini, che numero ha, e quale riga riaccendere se il salvataggio
+    // della nuova fallisce a metà.
+    ST.schedaAttiva = { id: data.id || null, blocco_n: data.blocco_n || null, scheda: data.scheda };
   } catch (e) {
     console.warn('[scheda] eccezione caricamento:', (e && e.message) || e);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BLOCCO NUOVO (Training 070, 4 ottobre 2026) — i cardini restano, i complementari ruotano
+// ═══════════════════════════════════════════════════════════
+//
+// A fine blocco la scheda nuova non si rigenera da zero: per ogni seduta restano fino a
+// DUE esercizi cardine del blocco precedente, i movimenti su cui si misura il sovraccarico
+// progressivo da un blocco all'altro (i fondamentali restano 2-4 mesocicli, ruotano gli
+// accessori: Helms, Israetel, Schoenfeld). Il resto — isolamenti, core, bonus, Tabata —
+// ruota come sempre con rigenIdx.
+//   Upper (non Pump)  → la prima SPINTA e la prima TIRATA della seduta precedente
+//   Lower / Legs      → il DOMINANTE GINOCCHIA e il DOMINANTE ANCA
+//   Full body / Push / Pull → i primi due multiarticolari
+// Il cardine si riconosce per CODICE (L45), mai per nome. Resta solo se è ancora nel pool
+// dell'utente (luogo/attrezzi/livello di oggi): se non lo è, lo slot torna alla rotazione.
+const _TRAIN_GEN_CARDINI_PATTERN = {
+  upper: [['spinta orizzontale', 'spinta verticale'], ['tirata orizzontale', 'tirata verticale']],
+  lower: [['dominante ginocchia'], ['dominante anca']],
+  legs:  [['dominante ginocchia'], ['dominante anca']],
+};
+const _TRAIN_GEN_PATTERN_COMPOUND = new Set(['spinta orizzontale', 'spinta verticale', 'tirata orizzontale', 'tirata verticale', 'dominante ginocchia', 'dominante anca']);
+
+// Id di seduta come lo costruisce il BLOCCO 10: tipo + lettera se il tipo si ripete.
+function _trainGenSessionId(splitType, occurrenceIdx, typeCount) {
+  return splitType + (typeCount > 1 ? String.fromCharCode(65 + (Number(occurrenceIdx) || 0)) : '');
+}
+
+// Map<sessionId, [codice, …]> dei cardini della scheda precedente (al massimo 2 per seduta).
+function _trainGenCardini(schedaPrecedente, catalogMap) {
+  const out = new Map();
+  const sessioni = schedaPrecedente && Array.isArray(schedaPrecedente.sessioni) ? schedaPrecedente.sessioni : [];
+  sessioni.forEach(s => {
+    if (!s || !s.id || s.type === 'Pump' || s.type === 'Recupero') return;
+    const compound = (s.exercises || [])
+      .map(e => e && e.codice && catalogMap.get(e.codice))
+      .filter(cat => cat && _TRAIN_GEN_PATTERN_COMPOUND.has(_normPattern(cat.pattern)));
+    const splitType = String(s.id).replace(/[A-Z]$/, '');
+    const famiglie = _TRAIN_GEN_CARDINI_PATTERN[splitType];
+    let scelti;
+    if (famiglie) {
+      scelti = famiglie.map(fam => compound.find(cat => fam.includes(_normPattern(cat.pattern)))).filter(Boolean);
+    } else {
+      scelti = compound.slice(0, 2);
+    }
+    const codici = [...new Set(scelti.map(c => c.codice))].slice(0, 2);
+    if (codici.length) out.set(s.id, codici);
+  });
+  return out;
+}
+
+// Punto di partenza dei cardini: l'ultima serie registrata FUORI dallo scarico, per codice
+// (la settimana di scarico ha carichi ridotti e non è un riferimento). Se un esercizio ha
+// serie solo in scarico, si prende l'ultima e lo si dice (inScarico). La settimana di ogni
+// riga si legge SOLO da getCycleWeekInfo({asOf}), mai ricalcolata.
+// Ritorna { codice: { reps, resistance, band_color, rir_actual, date, inScarico } }.
+async function _trainGenPuntiDiPartenza(codici) {
+  const out = {};
+  if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001' || !codici.length) return out;
+  const res = await dbq('leggere le ultime serie dei cardini', supa.from('training_logs')
+    .select('exercise_code, exercise_name, reps, resistance, band_color, rir_actual, date, set_number')
+    .eq('user_id', ST.user.id)
+    .in('exercise_code', codici)
+    .order('date', { ascending: false })
+    .order('set_number', { ascending: false })
+    .limit(1000), { silenzioso: true });
+  const righe = (res && res.data) || [];
+  const scarico = {};
+  const inScarico = (d) => { if (!(d in scarico)) scarico[d] = !!getCycleWeekInfo({ asOf: d }).isScarico; return scarico[d]; };
+  righe.forEach(r => {
+    if (!r || !r.exercise_code || out[r.exercise_code]) return;
+    if (!inScarico(r.date)) out[r.exercise_code] = { ...r, inScarico: false };
+  });
+  righe.forEach(r => {
+    if (!r || !r.exercise_code || out[r.exercise_code]) return;
+    out[r.exercise_code] = { ...r, inScarico: true };
+  });
+  return out;
+}
+
+// Prepara l'ANTEPRIMA del blocco nuovo: genera senza salvare (dryRun) tenendo i cardini della
+// scheda attiva, confronta seduta per seduta e legge i punti di partenza. Niente si scrive:
+// la scheda nasce solo se Ignazio tocca «Accetto» (accettaBloccoNuovo, in app/training.js).
+async function preparaBloccoNuovo() {
+  if (!ST.user || !ST.user.id) return null;
+  if (!ST.schedaAttiva || !ST.schedaAttiva.scheda) { showToast('Non trovo la scheda di adesso: riapri l\'app e riprova', '⚠️'); return null; }
+  const precedente = ST.schedaAttiva.scheda;
+  ST.bloccoNuovo = { loading: true };
+  if (typeof renderBloccoNuovoSheet === 'function') renderBloccoNuovoSheet();
+  const scheda = await generateTrainingProgram({ source: 'blocco-nuovo', force: true, dryRun: true, cardiniDa: precedente });
+  if (!scheda || !Array.isArray(scheda.sessioni) || !scheda.sessioni.length) {
+    ST.bloccoNuovo = null;
+    if (typeof closeBloccoNuovoSheet === 'function') closeBloccoNuovoSheet();
+    showToast('Non sono riuscito a preparare il blocco nuovo — riprova più tardi', '⚠️', 5500);
+    return null;
+  }
+  const nomeDi = (ex) => (ex && ex.codice && _nomeDaCodice(ex.codice)) || (ex && ex.name) || '';
+  const perId = {};
+  (precedente.sessioni || []).forEach(s => { if (s && s.id) perId[s.id] = s; });
+  const diff = scheda.sessioni.map(s => {
+    const prima = perId[s.id];
+    const codiciPrima = new Set(((prima && prima.exercises) || []).map(e => e && e.codice).filter(Boolean));
+    const codiciDopo = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
+    return {
+      id: s.id, name: s.name, type: s.type,
+      restano: (s.exercises || []).filter(e => e && e.cardine).map(e => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps })),
+      nuovi:   (s.exercises || []).filter(e => e && !e.cardine && !codiciPrima.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps })),
+      uguali:  (s.exercises || []).filter(e => e && !e.cardine && codiciPrima.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e) })),
+      escono:  ((prima && prima.exercises) || []).filter(e => e && e.codice && !codiciDopo.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e) })),
+    };
+  });
+  const codiciCardini = [...new Set(diff.flatMap(d => d.restano.map(r => r.codice)))];
+  const partenze = await _trainGenPuntiDiPartenza(codiciCardini);
+  ST.bloccoNuovo = {
+    loading: false, saving: false, scheda, diff, partenze,
+    bloccoPrima: ST.schedaAttiva.blocco_n || null,
+    bloccoN: (ST.schedaAttiva.blocco_n || 0) + 1,
+  };
+  if (typeof renderBloccoNuovoSheet === 'function') renderBloccoNuovoSheet();
+  return ST.bloccoNuovo;
 }
 
 // Helper di accesso UNIFICATI — usati ovunque al posto di TRAINING_SESSIONS[X].
@@ -1421,7 +1546,10 @@ const _ATTREZZI_CON_CARICO = new Set([
 // FUNZIONE PRINCIPALE
 // ───────────────────────────────────────────────────────────
 
-async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false, giorniOverride = null } = {}) {
+async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false, giorniOverride = null, cardiniDa = null } = {}) {
+  // cardiniDa (Training 070): la scheda del blocco precedente. Se c'è, per ogni seduta i
+  // cardini di quella scheda (_trainGenCardini) hanno la precedenza sulla rotazione nei
+  // soli slot compound; tutto il resto ruota come sempre. null = comportamento storico.
   // Try/catch globale: qualunque errore → log + return null.
   // NON deve mai bloccare il flusso chiamante (onboarding deve completare).
   //
@@ -1598,6 +1726,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     }
     const catalogMap = new Map();
     catalog.forEach(ex => { if (ex.codice) catalogMap.set(ex.codice, ex); });
+    // Cardini del blocco precedente, per id di seduta (vuota se cardiniDa è null). L'insieme di
+    // tutti i cardini tiene la rotazione lontana da loro: un cardine di Upper A non deve uscire
+    // dal giro in Upper B, dove il dedup lo toglierebbe lasciando lo slot vuoto.
+    const cardiniBySession = cardiniDa ? _trainGenCardini(cardiniDa, catalogMap) : new Map();
+    const tuttiCardini = new Set([].concat(...cardiniBySession.values()));
 
     // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE (Regola B + DUP, 28 mag)
     // I parametri NON sono più unici per scheda: ogni sessione risolve il
@@ -1786,18 +1919,30 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const compoundPicks = [];
       const compoundMissing = [];
       const patternRepeat = {};
+      // CARDINI (Training 070): i codici da tenere per questa seduta, se la scheda
+      // precedente li aveva e sono ancora nel pool di oggi. Entrano nello slot del
+      // loro pattern al posto della rotazione; chi è già entrato non si ripesca.
+      const cardiniSeduta = cardiniBySession.get(_trainGenSessionId(splitType, occurrenceIdx, typeCount)) || [];
+      const cardiniScelti = [];
       requiredPatterns.forEach((pat) => {
         const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
         // +rigenIdx = rotazione varietà per rigenerazione (si SOMMA al round-robin
         // per-tipo occurrenceIdx + al ripetitore intra-sessione r, non li sostituisce).
         const pickIdx = (Number(occurrenceIdx) || 0) + r + rigenIdx;
-        let picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
+        const cardine = cardiniSeduta
+          .filter(c => !usedSoFar.has(c) && !cardiniScelti.includes(c))
+          .map(c => pools.poolPrincipali.find(ex => ex.codice === c && _normPattern(ex.pattern) === _normPattern(pat)))
+          .find(Boolean) || null;
+        const usedPiuCardini = tuttiCardini.size ? new Set([...usedSoFar, ...tuttiCardini]) : usedSoFar;
+        let picked = cardine || _trainGenPickByPattern(pools.poolPrincipali, [pat], usedPiuCardini, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
+        if (cardine) cardiniScelti.push(cardine.codice);
         // FIX 2 — Squat corpo libero in sessione Forza: se il compound
         // 'dominante ginocchia' scelto non ha attrezzi con carico nel kit
         // utente (es. EX013 Squat corpo libero), scarta e riprova.
         // Con EX132 Goblet squat nel pool (elastico;maniglie), il secondo
         // pick garantisce un esercizio con progressione del carico.
-        if (picked && resolvedType === 'Forza' && _normPattern(pat) === 'dominante ginocchia') {
+        // Un cardine non si scarta: lo si faceva già nel blocco prima.
+        if (picked && !cardine && resolvedType === 'Forza' && _normPattern(pat) === 'dominante ginocchia') {
           const _attEx = String(picked.attrezzo || '').split(';').map(s => s.trim().toLowerCase()).filter(Boolean);
           const _haCarico = _attEx.some(a => _ATTREZZI_CON_CARICO.has(a) && attrezzaturaSet.has(a));
           if (!_haCarico) {
@@ -2044,6 +2189,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       return {
         splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
         sessionParams, category, exercises,
+        cardini: cardiniScelti,
         warmup: warmupExs,
         carry_conclusivo: carryConclusivo,
         _diag: {
@@ -2215,6 +2361,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         duration_min: null, // dismesso: niente più stima minuti (volume-based)
       };
       const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher, tipoAllen, attrezzaturaSet);
+      // CARDINI (Training 070): segnati sull'esercizio finale, per codice. Se le cautele
+      // hanno sostituito il cardine, il sostituto non lo è.
+      if (Array.isArray(s.cardini) && s.cardini.length) {
+        (mapped.exercises || []).forEach(e => { if (e && s.cardini.includes(e.codice)) e.cardine = true; });
+      }
       // WARM-UP specifico (FASE 1): campo separato come `finisher`. Sopravvive a
       // _trainGenValidateCodes (non è in exercises[]) e allo strip _diag del save.
       // Rendering demandato alla FASE 3.

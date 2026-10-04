@@ -3519,6 +3519,8 @@ function renderTraining(){
 
         ${heroHTML}
 
+        ${_renderBloccoNuovoCard(activeIsScarico)}
+
         ${_renderInjuryBar()}
 
         ${giorniHTML}
@@ -5839,6 +5841,151 @@ function resetAllActivationTimers(){
     { remaining:120, total:120, running:false },
     { remaining:60,  total:60,  running:false },
   ];
+}
+
+// ═══════════════════════════════════════════════════════════
+// BLOCCO NUOVO (Training 070, 4 ottobre 2026) — la card nel Piano, l'anteprima, «Accetto»
+// ═══════════════════════════════════════════════════════════
+// La scheda del blocco nuovo nasce in app/training_generatore.js (preparaBloccoNuovo) e qui
+// si mostra: per ogni seduta chi resta (i cardini, col punto di partenza), chi entra, chi esce.
+// Finché Ignazio non tocca «Accetto» non si scrive niente. La scheda di prima resta salvata.
+
+const BLOCCO_GIORNI_AVVISO = 35;   // da quanti giorni dall'inizio del blocco la card compare (il blocco dura 42)
+
+function _giorniDaInizioBlocco(){
+  const start = ST.profile && ST.profile.train_start_date;
+  if(!start) return null;
+  const t = new Date(start + 'T00:00:00').getTime();
+  if(!isFinite(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
+// La card compare a fine blocco: in settimana di scarico, oppure da 35 giorni dall'inizio.
+function _renderBloccoNuovoCard(isScarico){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
+  const giorni = _giorniDaInizioBlocco();
+  if(!isScarico && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
+  const n = ST.schedaAttiva.blocco_n || null;
+  const titolo = n ? `Blocco ${n + 1}` : 'Blocco nuovo';
+  const sotto = giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
+  return `
+      <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">${esc(sotto).toUpperCase()}</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${esc(titolo)}: ${esc(COACH_NAME)} lo prepara, tu decidi</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
+        <button class="btn btn-sm" onclick="preparaBloccoNuovo()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Prepara l'anteprima →</button>
+      </div>`;
+}
+
+// «riparti da …» per un cardine: l'ultima serie fuori dallo scarico (vedi _trainGenPuntiDiPartenza).
+function _testoPartenza(p, exName){
+  if(!p) return 'nessuna serie registrata: parti leggero';
+  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
+  let resist = isPullUpExercise(exName || '') ? '' : 'corpo libero';
+  const raw = (p.band_color && BAND_COLORS.includes(p.band_color)) ? p.band_color : p.resistance;
+  if(raw != null && String(raw).trim() !== ''){
+    const r = bandLabel(String(raw).trim());
+    resist = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
+  }
+  const parti = [`${p.reps} rip`];
+  if(resist) parti.push(resist);
+  if(p.rir_actual != null) parti.push(`RIR ${p.rir_actual}`);
+  return `riparti da ${parti.join(' · ')}` + (p.date ? ` (${fmtDate(p.date)}${p.inScarico ? ', in scarico' : ''})` : '');
+}
+
+function renderBloccoNuovoSheet(){
+  const bn = ST.bloccoNuovo;
+  const existing = document.getElementById('blocco-nuovo-sheet');
+  if(!bn){ if(existing) existing.remove(); return; }
+  let corpo;
+  if(bn.loading){
+    corpo = `<div class="pianov4-weighin-body"><p style="font-family:var(--font-sans);font-size:14px;color:var(--t2);margin:0 0 12px;">${esc(COACH_NAME)} sta preparando il blocco nuovo…</p></div>`;
+  } else {
+    const riga = (txt, sub, tono) => `<div style="padding:7px 0;border-bottom:1px solid var(--s2);">
+        <div style="font-size:13px;font-weight:${tono === 'resta' ? 700 : 500};font-family:var(--font-sans);color:${tono === 'esce' ? 'var(--t3)' : 'var(--t1)'};${tono === 'esce' ? 'text-decoration:line-through;' : ''}">${esc(txt)}</div>
+        ${sub ? `<div style="font-size:11px;font-family:var(--font-mono);color:${tono === 'resta' ? 'var(--acc)' : 'var(--t3)'};margin-top:2px;">${esc(sub)}</div>` : ''}
+      </div>`;
+    const sep = (lbl) => `<div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin:10px 0 2px;">${lbl}</div>`;
+    const sedute = (bn.diff || []).map(d => `
+      <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${esc(d.name)} <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">${esc((d.type || '').toUpperCase())}</span></div>
+        ${d.restano.length ? sep('RESTANO · CARDINI') + d.restano.map(r => riga(r.name, _testoPartenza(bn.partenze[r.codice], r.name), 'resta')).join('') : ''}
+        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}`, 'nuovo')).join('') : ''}
+        ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, '', 'uguale')).join('') : ''}
+        ${d.escono.length ? sep('ESCONO') + d.escono.map(r => riga(r.name, '', 'esce')).join('') : ''}
+      </div>`).join('');
+    corpo = `
+      <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:10px;">
+        <p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0 0 12px;line-height:1.45;">Se accetti: il Blocco ${bn.bloccoN} parte da Upper A, il conteggio delle settimane riparte da 1 e la scheda di adesso${bn.bloccoPrima ? ` (Blocco ${bn.bloccoPrima})` : ''} resta salvata.</p>
+        ${sedute}
+      </div>
+      <div class="pianov4-weighin-cta-wrap">
+        <button class="pianov4-weighin-cta" id="blocco-nuovo-accetto" onclick="accettaBloccoNuovo()" ${bn.saving ? 'disabled' : ''}>${bn.saving ? 'Salvo…' : `Accetto il Blocco ${bn.bloccoN}`}</button>
+        <button class="pianov4-weighin-freq-link" onclick="closeBloccoNuovoSheet()">Non ora</button>
+      </div>`;
+  }
+  const html = `<div id="blocco-nuovo-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)closeBloccoNuovoSheet()">
+    <div class="pianov4-weighin-screen">
+      <div class="pianov4-weighin-band"></div>
+      <div class="pianov4-weighin-handle"></div>
+      <div class="pianov4-weighin-header">
+        <div class="pianov4-weighin-eyebrow">${esc(COACH_NAME)} PROPONE</div>
+        <div class="pianov4-weighin-title">${bn.loading ? 'Blocco nuovo' : `Blocco ${bn.bloccoN} · anteprima`}</div>
+        <button class="pianov4-weighin-close" onclick="closeBloccoNuovoSheet()" aria-label="Chiudi">×</button>
+      </div>
+      ${corpo}
+    </div>
+  </div>`;
+  if(existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeBloccoNuovoSheet(){
+  if(ST.bloccoNuovo && ST.bloccoNuovo.saving) return;   // mentre salva non si chiude
+  ST.bloccoNuovo = null;
+  const el = document.getElementById('blocco-nuovo-sheet');
+  if(el) el.remove();
+}
+
+// «Accetto»: salva la scheda nuova (la vecchia si spegne ma resta), poi segna l'inizio del blocco
+// in train_start_date così il conteggio delle settimane riparte da 1. Se il salvataggio fallisce,
+// la scheda di prima viene riaccesa e niente cambia.
+async function accettaBloccoNuovo(){
+  const bn = ST.bloccoNuovo;
+  if(!bn || bn.loading || bn.saving || !bn.scheda || !ST.user || !ST.user.id) return;
+  bn.saving = true; renderBloccoNuovoSheet();
+  const prevId = ST.schedaAttiva && ST.schedaAttiva.id;
+  const scheda = { ...bn.scheda };
+  // La nota di Pirsi: in anteprima era saltata (dryRun); qui si chiede, con ripiego sul testo fisso.
+  try {
+    scheda.reasoning = await _trainGenAINote(ST.profile, {
+      obiettivo: scheda.obiettivo, esperienzaRaw: scheda.esperienza, livello: scheda.livello_mappato,
+      tipoAllen: scheda.tipo_allenamento, giorni: scheda.giorni_allenamento, volume: scheda.volume_sessione,
+      sessioniCount: (scheda.sessioni || []).length,
+    });
+  } catch(_){ scheda.reasoning = _TRAIN_GEN_FALLBACK_REASONING; }
+  const r = await _trainGenSaveToDB(ST.user.id, scheda);
+  if(!r || !r.ok){
+    if(prevId){
+      await dbq('riaccendere la scheda di prima', supa.from('schede_utente').update({ attiva: true }).eq('id', prevId).eq('user_id', ST.user.id), { silenzioso: true });
+    }
+    bn.saving = false; renderBloccoNuovoSheet();
+    showToast('Il blocco nuovo non è stato salvato: la scheda di adesso resta attiva', '⚠️', 5500);
+    return { ok: false, reason: (r && r.reason) || 'save-failed' };
+  }
+  const oggi = todayKey();
+  const up = await dbq('segnare l\'inizio del blocco nuovo', supa.from('profiles').update({ train_start_date: oggi }).eq('id', ST.user.id));
+  if(!up.error && ST.profile) ST.profile.train_start_date = oggi;
+  ST.bloccoNuovo = null;
+  const el = document.getElementById('blocco-nuovo-sheet'); if(el) el.remove();
+  ST.exAliasByNorm = null; ST.lastLoggedSets = {};
+  await loadActiveScheda();
+  await loadTrainingAllCompleted({ skipRender: true });
+  loadSessionLastCompletion({ skipRender: true });
+  loadTrainingHomeData();
+  renderTraining();
+  showToast(`Blocco ${r.blocco_n || bn.bloccoN} pronto: si riparte da Upper A, settimana 1`, '🏋️', 5500);
+  return r;
 }
 
 function showInfoModal(key) {
