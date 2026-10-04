@@ -1,6 +1,6 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-03 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-10-04 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
 32 tabelle, 374 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
@@ -12,10 +12,10 @@
 | [`blood_tests`](#blood_tests) | 0 | 4 | id | — |
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
 | [`body_check_photos`](#body_check_photos) | 20 | 4 | id | check_id, pose |
-| [`body_checks`](#body_checks) | 6 | 4 | id | — |
+| [`body_checks`](#body_checks) | 7 | 4 | id | — |
 | [`body_logs`](#body_logs) | 6 | 2 | id | user_id, date |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
-| [`coach_proposals`](#coach_proposals) | 26 | 3 | id | user_id, week_start, kind |
+| [`coach_proposals`](#coach_proposals) | 32 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 0 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
@@ -31,10 +31,10 @@
 | [`supplements_log`](#supplements_log) | 2361 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
 | [`training_logs`](#training_logs) | 1797 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
-| [`weekly_pictures`](#weekly_pictures) | 24 | 4 | id | user_id, week_start |
+| [`weekly_pictures`](#weekly_pictures) | 26 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
-| [`weekly_plan_meals`](#weekly_plan_meals) | 546 | 5 | id | — |
-| [`weekly_plans`](#weekly_plans) | 40 | 5 | id | user_id, week_start |
+| [`weekly_plan_meals`](#weekly_plan_meals) | 560 | 5 | id | — |
+| [`weekly_plans`](#weekly_plans) | 41 | 5 | id | user_id, week_start |
 | [`weight_logs`](#weight_logs) | 20 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
 | [`workouts`](#workouts) | 116 | 2 | id | user_id, date, session_type |
