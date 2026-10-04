@@ -35,11 +35,11 @@ Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consoli
 
 **Decisione:** `ST.TARGET` (percentuali dell'obiettivo) è la fonte di verità. `applyProfile` sincronizza automaticamente i valori calcolati nel database ogni volta che ricalcola i target.
 
-**Implementazione (commit ae91901 + 35212b5):**
+**Implementazione (commit ae91901 + 35212b5; applyProfile in background nel commit successivo):**
 - Fase 1: Migration SQL aggiunge colonne `prot_pct`, `carbo_pct`, `fat_pct` al database
 - Fase 2: `applyProfile` → async + await dbq() sincronizza i target_* calcolati nel DB
 - Fase 3: Validazione — migration eseguita, app funziona normalmente
-- Risultato: Ginevra 125g (coerente), Isabella 109g (coerente), Coach-cron leggerà valori sincronizzati
+- Risultato: **non ancora misurato sul DB.** Con l'Opzione A vince la formula, quindi i profili si allineano alle percentuali (per Ginevra ~141 g, non 125). ⚠️ La migration confronta `obiettivo` per intero: profili con più obiettivi separati da virgola o con nomi legacy sono finiti sul default mantenimento; `applyProfile` li riallinea al primo accesso.
 
 **Impatto:** Risolve lo sdoppiamento per tutti gli utenti. Il tab Nutrition e il piano settimanale usano adesso la stessa fonte di verità.
 
