@@ -36,6 +36,9 @@ const catalogo = [
   row('EX065','Ponte glutei','isolamento','glutei'), row('EX066','Leg curl elastico','isolamento','ischiocrurali'), row('EX067','Calf raise','isolamento','polpacci'),
   row('EX070','Pallof press','core','core anti-rotazione'), row('EX071','Russian twist','core','core rotazione'),
   row('EX072','Plank','core','core anti-estensione'), row('EX073','Crunch','core','core flessione'),
+  // riscaldamento: 3 cuffie (gruppo_target) e 4 mobilita' anca/glutei (per muscoli)
+  { ...row('EX080','Extrarotazioni elastico','isolamento','cuffia rotatori'), uso:'riscaldamento' }, { ...row('EX081','Face pull leggero','isolamento','cuffia rotatori'), uso:'riscaldamento' }, { ...row('EX082','Prone Y-W','isolamento','cuffia rotatori'), uso:'riscaldamento' },
+  { ...row('EX083','Slanci anca','mobilita'), uso:'riscaldamento', muscoli:'anca;glutei' }, { ...row('EX084','Affondo con rotazione','mobilita'), uso:'riscaldamento', muscoli:'anca;glutei' }, { ...row('EX085','World\'s greatest stretch','mobilita'), uso:'riscaldamento', muscoli:'anca;ischiocrurali' }, { ...row('EX086','Cerchi anca','mobilita'), uso:'riscaldamento', muscoli:'anca' },
   row('EX074','Pallof press in ginocchio','core','core anti-rotazione'), row('EX075','Woodchop elastico','core','core rotazione'),
   row('EX076','Hollow hold','core','core anti-estensione'), row('EX077','Sit-up','core','core flessione'),
 ];
@@ -43,10 +46,10 @@ const ex = (codice, extra) => ({ codice, name: catalogo.find(c => c.codice === c
 // Scheda del blocco 2 (attiva): i cardini attesi sono il primo esercizio di spinta e di tirata (Upper),
 // ginocchia e anca (Lower). EX060/EX062 sono complementari: devono ruotare.
 const schedaPrima = { obiettivo:'ricomposizione', sessioni: [
-  { id:'upperA', name:'Upper A', type:'Forza',      rir:2, exercises:[ ex('EX001'), ex('EX010'), ex('EX020'), ex('EX030'), ex('EX060',{sets:3,reps:'12-15'}), ex('EX070'), ex('EX071') ] },
-  { id:'lowerA', name:'Lower A', type:'Forza',      rir:2, exercises:[ ex('EX040'), ex('EX050'), ex('EX041'), ex('EX065'), ex('EX072'), ex('EX073') ] },
-  { id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1, exercises:[ ex('EX002'), ex('EX011'), ex('EX021'), ex('EX031'), ex('EX062'), ex('EX063'), ex('EX064'), ex('EX070'), ex('EX071') ] },
-  { id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1, exercises:[ ex('EX041'), ex('EX051'), ex('EX042'), ex('EX066'), ex('EX067'), ex('EX072'), ex('EX073') ] },
+  { id:'upperA', name:'Upper A', type:'Forza',      rir:2, warmup:[ex('EX080')], exercises:[ ex('EX001'), ex('EX010'), ex('EX020'), ex('EX030'), ex('EX060',{sets:3,reps:'12-15'}), ex('EX070'), ex('EX071') ] },
+  { id:'lowerA', name:'Lower A', type:'Forza',      rir:2, warmup:[ex('EX083'), ex('EX084')], exercises:[ ex('EX040'), ex('EX050'), ex('EX041'), ex('EX065'), ex('EX072'), ex('EX073') ] },
+  { id:'upperB', name:'Upper B', type:'Ipertrofia', rir:1, warmup:[ex('EX081')], exercises:[ ex('EX002'), ex('EX011'), ex('EX021'), ex('EX031'), ex('EX062'), ex('EX063'), ex('EX064'), ex('EX070'), ex('EX071') ] },
+  { id:'lowerB', name:'Lower B', type:'Ipertrofia', rir:1, warmup:[ex('EX084'), ex('EX085')], exercises:[ ex('EX041'), ex('EX051'), ex('EX042'), ex('EX066'), ex('EX067'), ex('EX072'), ex('EX073') ] },
 ] };
 // 24 allenamenti in 6 settimane dal 24 agosto: le ultime 4 righe (dal 28 settembre) sono la settimana di scarico.
 const workouts = [];
@@ -124,6 +127,12 @@ async function nuovo(opts){
     atteso('gravitron (surrogato di «Trazioni» gia\' in scheda) non entra in nessuna seduta', tutti.includes('EX032'), false);
     atteso('Upper A prende la variante vera di presa, nativa alla sbarra (EX033)', a.codici(con, 'upperA').includes('EX033'), true);
     atteso('Upper B, senza altri nativi mai fatti, tiene le sue trazioni (EX031)', a.codici(con, 'upperB').includes('EX031'), true);
+    // Riscaldamento: ruota col numero di schede e nel blocco nuovo preferisce chi non c'era
+    const warm = (scheda, id) => ((scheda.sessioni.find(s => s.id === id) || {}).warmup || []).map(w => w.codice);
+    atteso('riscaldamento · con cardiniDa Upper A prende la cuffia mai fatta (EX082)', warm(con, 'upperA'), ['EX082']);
+    atteso('riscaldamento · Upper B non ripete quella di Upper A', [warm(con, 'upperB').length, warm(con, 'upperB').includes('EX082')], [1, false]);
+    atteso('riscaldamento · Lower A prende la mobilita\' mai fatta (EX086) fra le sue due', warm(con, 'lowerA').includes('EX086'), true);
+    atteso('riscaldamento · senza cardiniDa ruota comunque col numero di schede (indice 0+2 → EX082, non EX080)', warm(senza, 'upperA'), ['EX082']);
     atteso('il gravitron era nel pool: senza blocco nuovo la rotazione poteva pescarlo', a.ST.user && (await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true })).sessioni.some(s => s.exercises.some(e => e.codice === 'EX032')), true);
   }
   // 2) preparaBloccoNuovo: l'anteprima, il confronto e i punti di partenza
@@ -145,7 +154,7 @@ async function nuovo(opts){
     atteso('finestra · lo scarico e\' dichiarato', /in scarico/.test(testo), true);
     atteso('ancora nessuna scrittura', a.chiamate('schede_utente', 'insert').length + a.chiamate('profiles', 'update').length, 0);
     a.win.closeBloccoNuovoSheet();
-    atteso('«Non ora» · finestra chiusa, niente cambiato', [a.win.document.getElementById('blocco-nuovo-sheet'), a.ST.bloccoNuovo, a.ST.schedaAttiva.blocco_n], [null, null, 2]);
+    atteso('«Non ora» · finestra chiusa, anteprima conservata, niente cambiato', [a.win.document.getElementById('blocco-nuovo-sheet'), !!a.ST.bloccoNuovo, a.ST.schedaAttiva.blocco_n], [null, true, 2]);
   }
   // 2b) «Cambia ›»: le alternative di un posto, la scelta mappata come farebbe il generatore, niente scritture
   {
@@ -172,6 +181,34 @@ async function nuovo(opts){
     const r = await a.win.accettaBloccoNuovo();
     const ins = a.chiamate('schede_utente', 'insert')[0];
     atteso('accetto dopo il cambio · la riga salvata ha la scelta e niente pool o parametri dentro', [r.ok, ins.payload.scheda.sessioni[0].exercises.some(e => e.codice === scelto), '_pools' in ins.payload.scheda, '_sp' in ins.payload.scheda.sessioni[0]], [true, true, false, false]);
+  }
+  // 2c) chiudere non butta l'anteprima; toccare fuori dentro «Cambia» torna indietro; «Rinnova il riscaldamento»
+  {
+    const a = await nuovo();
+    a.ST.page = 'training'; a.ST.trainTab = 'piano';
+    const bn = await a.win.preparaBloccoNuovo();
+    const uA = bn.scheda.sessioni.find(s => s.id === 'upperA');
+    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068'].includes(e.codice));
+    a.win.apriCambioBloccoNuovo('upperA', post.codice);
+    const overlay = a.win.document.getElementById('blocco-nuovo-sheet');
+    overlay.dispatchEvent(new a.win.MouseEvent('click', { bubbles:true }));
+    atteso('tocco fuori dentro «Cambia» · torna all\'anteprima, finestra aperta', [a.ST.bloccoNuovo.cambio, !!a.win.document.getElementById('blocco-nuovo-sheet'), /Accetto il Blocco 3/.test(a.win.document.getElementById('blocco-nuovo-sheet').textContent)], [null, true, true]);
+    a.win.cambiaEsercizioBloccoNuovo('upperA', post.codice, a.win.candidatiBloccoNuovo('upperA', post.codice)[0].codice);
+    a.win.closeBloccoNuovoSheet();
+    const card = a.win.document.getElementById('blocco-nuovo-card');
+    atteso('«Non ora» · l\'anteprima resta, con la scelta fatta; la card dice «Riapri»', [!!a.ST.bloccoNuovo, a.ST.bloccoNuovo.diff.find(d => d.id === 'upperA').nuovi.some(n => n.sceltoDaTe), /Riapri l'anteprima/.test(card.textContent), /Rifalla da capo/.test(card.textContent)], [true, true, true, true]);
+    a.win.renderBloccoNuovoSheet();
+    atteso('riapri · stessa anteprima, «scelto da te» ancora li\'', /scelto da te/.test(a.win.document.getElementById('blocco-nuovo-sheet').textContent), true);
+    a.win.closeBloccoNuovoSheet();
+    // Rinnova il riscaldamento della scheda attiva (blocco 2): solo il campo warmup, riletto fresco dal database
+    atteso('programma · c\'e\' «Rinnova il riscaldamento»', !!a.win.document.getElementById('rinnova-riscaldamento'), true);
+    a.win.chiediConferma = async () => true;
+    const n = await a.win.rinnovaRiscaldamento();
+    const up = a.chiamate('schede_utente', 'update').find(c => c.payload && c.payload.scheda);
+    const sA = up.payload.scheda.sessioni.find(s => s.id === 'upperA');
+    atteso('rinnova · un update sulla riga attiva, per id', [!!up, up.filters.some(f => f[1] === 'id' && f[2] === 's2')], [true, true]);
+    atteso('rinnova · il riscaldamento cambia, gli esercizi no', [n > 0, sA.warmup.map(w => w.codice), sA.exercises.map(e => e.codice)], [true, ['EX082'], schedaPrima.sessioni[0].exercises.map(e => e.codice)]);
+    atteso('rinnova · i nomi nel jsonb restano quelli di allora (riletto dal database, non dalla memoria)', 'nameSnapshot' in sA.exercises[0], false);
   }
   // 3) «Accetto»: scheda nuova salvata, la vecchia spenta ma presente, inizio blocco = oggi
   {
