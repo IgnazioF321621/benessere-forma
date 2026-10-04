@@ -141,6 +141,8 @@ A fine blocco la scheda nuova **non si rigenera da zero**: nasce come **anteprim
 - **«Accetto»** (`accettaBloccoNuovo`): chiede la nota a Pirsi (ripiego sul testo fisso), salva con `_trainGenSaveToDB` (la scheda di prima si spegne ma **resta in `schede_utente`**), poi scrive `train_start_date = oggi` così il conteggio delle settimane riparte da 1 e la rotazione da Upper A. **Se il salvataggio fallisce la riga di prima viene riaccesa per id** (`ST.schedaAttiva.id`) e il profilo non si tocca
 - `loadActiveScheda` ora tiene `ST.schedaAttiva = { id, blocco_n, scheda }`. «Rigenera scheda» in Impostazioni e `?schedaGen=1` restano come prima: rigenerano da zero, senza cardini
 
+- **Il blocco si chiama coi mesi, mai col numero** *(Ignazio, 4 ottobre 2026)*: un blocco dura 42 giorni e copre due mesi, quindi nei testi è «Blocco ottobre–novembre» (`_nomeBlocco(inizioISO)` in `app/training.js`: mese del primo giorno e mese del 42°; la scheda di prima si nomina dal suo `train_start_date`). `blocco_n` resta nel database solo come ordine e **non si mostra**: conta ogni scheda salvata, anche le rigenerazioni di prova, e a Ignazio dava «Blocco 55».
+
 Lo prova `node tools/banco/prova_blocco_nuovo.js`.
 
 **Suggerimenti progressione**: `ST.profile.unit` → kg step 2.5 / lbs step 10 (default lbs). Bande trazioni senza unità.

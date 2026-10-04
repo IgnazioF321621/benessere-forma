@@ -5860,13 +5860,24 @@ function _giorniDaInizioBlocco(){
   return Math.floor((Date.now() - t) / 86400000);
 }
 
+// Il nome del blocco nei testi: un blocco dura 6 settimane (42 giorni), quindi copre due mesi e si chiama
+// coi mesi: «Blocco ottobre–novembre». Il numero interno (blocco_n) è solo l'ordine nel database: conta
+// ogni scheda salvata, anche le rigenerazioni di prova, e non si mostra mai (Ignazio, 4 ottobre 2026).
+const _MESI_BLOCCO = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+function _nomeBlocco(inizioISO){
+  const d = new Date((inizioISO || todayKey()) + 'T12:00:00');
+  if(!isFinite(d.getTime())) return 'Blocco nuovo';
+  const fine = new Date(d.getTime() + 41 * 86400000);   // l'ultimo giorno: il 42° (giorno 0 + 41)
+  const a = _MESI_BLOCCO[d.getMonth()], b = _MESI_BLOCCO[fine.getMonth()];
+  return a === b ? `Blocco di ${a}` : `Blocco ${a}–${b}`;
+}
+
 // La card compare a fine blocco: in settimana di scarico, oppure da 35 giorni dall'inizio.
 function _renderBloccoNuovoCard(isScarico){
   if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
   const giorni = _giorniDaInizioBlocco();
   if(!isScarico && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
-  const n = ST.schedaAttiva.blocco_n || null;
-  const titolo = n ? `Blocco ${n + 1}` : 'Blocco nuovo';
+  const titolo = _nomeBlocco();
   const sotto = giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
   return `
       <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
@@ -5897,6 +5908,8 @@ function renderBloccoNuovoSheet(){
   const bn = ST.bloccoNuovo;
   const existing = document.getElementById('blocco-nuovo-sheet');
   if(!bn){ if(existing) existing.remove(); return; }
+  const nomeBlocco = _nomeBlocco();
+  const nomePrima = (ST.profile && ST.profile.train_start_date) ? _nomeBlocco(ST.profile.train_start_date) : '';
   let corpo;
   if(bn.loading){
     corpo = `<div class="pianov4-weighin-body"><p style="font-family:var(--font-sans);font-size:14px;color:var(--t2);margin:0 0 12px;">${esc(COACH_NAME)} sta preparando il blocco nuovo…</p></div>`;
@@ -5916,11 +5929,11 @@ function renderBloccoNuovoSheet(){
       </div>`).join('');
     corpo = `
       <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:10px;">
-        <p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0 0 12px;line-height:1.45;">Se accetti: il Blocco ${bn.bloccoN} parte da Upper A, il conteggio delle settimane riparte da 1 e la scheda di adesso${bn.bloccoPrima ? ` (Blocco ${bn.bloccoPrima})` : ''} resta salvata.</p>
+        <p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0 0 12px;line-height:1.45;">Se accetti: il ${nomeBlocco} parte da Upper A, il conteggio delle settimane riparte da 1 e la scheda di adesso${nomePrima ? ` (${nomePrima})` : ''} resta salvata.</p>
         ${sedute}
       </div>
       <div class="pianov4-weighin-cta-wrap">
-        <button class="pianov4-weighin-cta" id="blocco-nuovo-accetto" onclick="accettaBloccoNuovo()" ${bn.saving ? 'disabled' : ''}>${bn.saving ? 'Salvo…' : `Accetto il Blocco ${bn.bloccoN}`}</button>
+        <button class="pianov4-weighin-cta" id="blocco-nuovo-accetto" onclick="accettaBloccoNuovo()" ${bn.saving ? 'disabled' : ''}>${bn.saving ? 'Salvo…' : `Accetto il ${nomeBlocco}`}</button>
         <button class="pianov4-weighin-freq-link" onclick="closeBloccoNuovoSheet()">Non ora</button>
       </div>`;
   }
@@ -5930,7 +5943,7 @@ function renderBloccoNuovoSheet(){
       <div class="pianov4-weighin-handle"></div>
       <div class="pianov4-weighin-header">
         <div class="pianov4-weighin-eyebrow">${esc(COACH_NAME)} PROPONE</div>
-        <div class="pianov4-weighin-title">${bn.loading ? 'Blocco nuovo' : `Blocco ${bn.bloccoN} · anteprima`}</div>
+        <div class="pianov4-weighin-title">${bn.loading ? 'Blocco nuovo' : `${nomeBlocco} · anteprima`}</div>
         <button class="pianov4-weighin-close" onclick="closeBloccoNuovoSheet()" aria-label="Chiudi">×</button>
       </div>
       ${corpo}
@@ -5984,7 +5997,7 @@ async function accettaBloccoNuovo(){
   loadSessionLastCompletion({ skipRender: true });
   loadTrainingHomeData();
   renderTraining();
-  showToast(`Blocco ${r.blocco_n || bn.bloccoN} pronto: si riparte da Upper A, settimana 1`, '🏋️', 5500);
+  showToast(`${_nomeBlocco()} pronto: si riparte da Upper A, settimana 1`, '🏋️', 5500);
   return r;
 }
 

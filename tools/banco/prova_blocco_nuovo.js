@@ -140,7 +140,9 @@ async function nuovo(opts){
     atteso('punto di partenza · EX040 senza serie: assente', bn.partenze.EX040 === undefined, true);
     const sheet = a.win.document.getElementById('blocco-nuovo-sheet');
     const testo = sheet ? sheet.textContent.replace(/\s+/g, ' ') : '';
-    atteso('finestra · titolo e pulsante', [/Blocco 3 · anteprima/.test(testo), /Accetto il Blocco 3/.test(testo), /Non ora/.test(testo)], [true, true, true]);
+    const nomeOggi = a.win._nomeBlocco();
+    atteso('finestra · titolo e pulsante col nome a mesi, senza numero', [testo.includes(nomeOggi + ' · anteprima'), testo.includes('Accetto il ' + nomeOggi), /Non ora/.test(testo), /Blocco \d/.test(testo)], [true, true, true, false]);
+    atteso('nome del blocco · parte il 5 ottobre, finisce il 15 novembre', [a.win._nomeBlocco('2026-10-05'), a.win._nomeBlocco('2027-01-05'), a.win._nomeBlocco('2026-02-01'), a.win._nomeBlocco('2026-12-28')], ['Blocco ottobre–novembre', 'Blocco gennaio–febbraio', 'Blocco febbraio–marzo', 'Blocco dicembre–febbraio']);
     atteso('finestra · «riparti da 6 rip · 60 lbs · RIR 1»', /riparti da 6 rip · 60 lbs · RIR 1/.test(testo), true);
     atteso('finestra · lo scarico e\' dichiarato', /in scarico/.test(testo), true);
     atteso('ancora nessuna scrittura', a.chiamate('schede_utente', 'insert').length + a.chiamate('profiles', 'update').length, 0);
@@ -177,7 +179,8 @@ async function nuovo(opts){
     const a = await nuovo();
     a.ST.page = 'training'; a.ST.trainTab = 'piano';
     a.win.renderTraining();
-    atteso('card · a 41 giorni dall\'inizio compare, nomina il Blocco 3', /Blocco 3/.test((a.win.document.getElementById('blocco-nuovo-card') || {}).textContent || ''), true);
+    const cardTesto = (a.win.document.getElementById('blocco-nuovo-card') || {}).textContent || '';
+    atteso('card · a 41 giorni dall\'inizio compare col nome a mesi, senza numero', [cardTesto.includes(a.win._nomeBlocco()), /Blocco \d/.test(cardTesto)], [true, false]);
     const b = await nuovo({ inizio:'2026-09-28', workouts:[] });
     b.ST.page = 'training'; b.ST.trainTab = 'piano';
     b.win.renderTraining();
