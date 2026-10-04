@@ -25,13 +25,15 @@ const catalogo = [
   row('EX010','Military press elastico','spinta verticale'), row('EX011','Pike push-up','spinta verticale'),
   row('EX020','Rematore elastico','tirata orizzontale'), row('EX021','Rematore invertito','tirata orizzontale'), row('EX022','Rematore un braccio','tirata orizzontale'),
   row('EX030','Lat machine elastico','tirata verticale'), row('EX031','Trazioni sbarra','tirata verticale'),
-  row('EX040','Squat elastico','dominante ginocchia'), row('EX041','Affondi','dominante ginocchia'), row('EX042','Squat bulgaro','dominante ginocchia'),
+  row('EX040','Squat elastico','dominante ginocchia'), row('EX041','Affondi','dominante ginocchia'), row('EX042','Squat bulgaro','dominante ginocchia'), row('EX043','Step-up','dominante ginocchia'),
   row('EX050','Stacco rumeno elastico','dominante anca'), row('EX051','Hip thrust','dominante anca'),
   row('EX060','Alzate posteriori','isolamento','deltoidi posteriori'), row('EX061','Face pull elastico','isolamento','deltoidi posteriori'), row('EX068','Reverse fly elastico','isolamento','deltoidi posteriori'),
   row('EX062','Alzate laterali','isolamento','deltoidi laterali'), row('EX063','Curl elastico','isolamento','bicipiti'), row('EX064','Push down elastico','isolamento','tricipiti'),
   row('EX065','Ponte glutei','isolamento','glutei'), row('EX066','Leg curl elastico','isolamento','ischiocrurali'), row('EX067','Calf raise','isolamento','polpacci'),
   row('EX070','Pallof press','core','core anti-rotazione'), row('EX071','Russian twist','core','core rotazione'),
   row('EX072','Plank','core','core anti-estensione'), row('EX073','Crunch','core','core flessione'),
+  row('EX074','Pallof press in ginocchio','core','core anti-rotazione'), row('EX075','Woodchop elastico','core','core rotazione'),
+  row('EX076','Hollow hold','core','core anti-estensione'), row('EX077','Sit-up','core','core flessione'),
 ];
 const ex = (codice, extra) => ({ codice, name: catalogo.find(c => c.codice === codice).nome, sets:4, reps:'6-10', ...(extra || {}) });
 // Scheda del blocco 2 (attiva): i cardini attesi sono il primo esercizio di spinta e di tirata (Upper),
@@ -100,6 +102,20 @@ async function nuovo(opts){
     atteso('i complementari ruotano: il deltoide posteriore di Upper A non e\' piu\' EX060', a.codici(con, 'upperA').includes('EX060'), false);
     atteso('nessun cardine di una seduta finisce in un\'altra', a.codici(con, 'upperB').includes('EX001') || a.codici(con, 'lowerB').includes('EX040'), false);
     atteso('anteprima · nessuna scrittura', a.chiamate('schede_utente', 'insert').length + a.chiamate('schede_utente', 'update').length, 0);
+
+    // Complementari: variare e' cambiare stimolo, non giorno (seconda anteprima, 4 ottobre)
+    const sedutaDi = (scheda, codice) => scheda.sessioni.filter(s => s.exercises.some(e => e.codice === codice)).map(s => s.id);
+    const tutti = con.sessioni.flatMap(s => s.exercises.map(e => e.codice));
+    atteso('nessun esercizio in due sedute della scheda nuova', tutti.filter((c, i) => tutti.indexOf(c) !== i), []);
+    const migrati = con.sessioni.flatMap(s => s.exercises.filter(e => !e.cardine).map(e => e.codice))
+      .filter(c => sedutaDi(schedaPrima, c).length && !sedutaDi(schedaPrima, c).includes(sedutaDi(con, c)[0]));
+    atteso('nessun complementare cambia seduta rispetto al blocco prima', migrati, []);
+    atteso('dove c\'e\' un\'alternativa mai fatta, entra quella (deltoidi posteriori: non EX060)', ['EX061', 'EX068'].includes(a.codici(con, 'upperA').find(c => ['EX060', 'EX061', 'EX068'].includes(c))), true);
+    atteso('dove non c\'e\' alternativa, resta dov\'era (deltoidi laterali EX062 in Upper B)', [a.codici(con, 'upperB').includes('EX062'), a.codici(con, 'upperA').includes('EX062')], [true, false]);
+    atteso('core: ogni seduta nuova ne ha due, uno per natura, senza doppioni fra sedute', con.sessioni.map(s => s.exercises.filter(e => /^EX07/.test(e.codice)).length), [2, 2, 2, 2]);
+    // EX070/EX071 stavano in TUTTE E DUE le Upper: la prima seduta prende i due mai fatti, la seconda tiene i vecchi (niente migra, niente doppio)
+    atteso('core: Upper A prende i due mai fatti, Upper B tiene i suoi di prima', [a.codici(con, 'upperA').filter(c => /^EX07/.test(c)).sort(), a.codici(con, 'upperB').filter(c => /^EX07/.test(c)).sort()], [['EX074', 'EX075'], ['EX070', 'EX071']]);
+    atteso('senza cardiniDa niente preferenza: Upper A e Upper B ripetono EX070 come prima', [a.codici(senza, 'upperA').includes('EX070'), a.codici(senza, 'upperB').includes('EX070')], [true, true]);
   }
   // 2) preparaBloccoNuovo: l'anteprima, il confronto e i punti di partenza
   {
