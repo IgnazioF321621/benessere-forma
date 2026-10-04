@@ -1741,7 +1741,7 @@ function applyLocalPrefs() {
   } catch(e) {}
 }
 
-function applyProfile(profile) {
+async function applyProfile(profile) {
   if (profile.obiettivo) profile.obiettivo = migrateObiettivo(profile.obiettivo);
   // Carica piano_ai da profile in ST.pianoAI (eager load — disponibile anche per la timeline OGGI
   // senza dover aprire prima il tab Piano). Cache localStorage tenuta come fallback offline.
@@ -1767,6 +1767,26 @@ function applyProfile(profile) {
     pCarbo:  adapted.pCarbo,
     pFat:    adapted.pFat,
   };
+  
+  // CANTIERE 37: Sincronizza profiles.target_* nel DB (Opzione A: ST.TARGET autoritario)
+  // Fondamenta 037, 4 ottobre 2026. Quando l'app ricalcola ST.TARGET dalle percentuali,
+  // aggiorna il DB così che coach-cron (Postino) legga valori coerenti per le proposte.
+  if (profile.id && ST.user?.id && !profile.local) {
+    try {
+      await dbq('PATCH', '/profiles?id=eq.' + profile.id, {
+        target_protein: adapted.protein,
+        target_carbs:   adapted.carbs,
+        target_fat:     adapted.fat,
+        prot_pct:       adapted.pProt,
+        carbo_pct:      adapted.pCarbo,
+        fat_pct:        adapted.pFat,
+      });
+    } catch (e) {
+      console.warn('[applyProfile] Non posso sincronizzare macro nel DB:', e.message);
+      // Non è fatale — l'app funziona ugualmente, ma coach-cron leggerà valori stale
+    }
+  }
+  
   _coachApplyProteinFloor(ST.TARGET);   // proteine accettate da Pirsi: un minimo, i carboidrati cedono la differenza
   applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
