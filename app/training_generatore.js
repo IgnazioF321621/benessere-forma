@@ -959,6 +959,36 @@ function cambiaEsercizioBloccoNuovo(sid, codice, nuovoCodice) {
   return nuovo;
 }
 
+// «Rinnova il riscaldamento» (4 ottobre sera): per il blocco già accettato, Pirsi sceglie un
+// riscaldamento nuovo per ogni seduta e riscrive SOLO quel campo della riga attiva. Esercizi, serie,
+// cardini e tutto il resto restano com'erano: la riga si rilegge fresca dal database prima di
+// toccarla (il jsonb in memoria ha i nomi riallineati, e il jsonb non si riscrive mai per quelli).
+async function rinnovaRiscaldamento() {
+  if (!ST.user || !ST.user.id || !ST.schedaAttiva || !ST.schedaAttiva.id || !ST.schedaAttiva.scheda) { showToast('Non trovo la scheda di adesso: riapri l\'app e riprova', '⚠️'); return null; }
+  const ok = await chiediConferma(COACH_NAME + ' sceglie un riscaldamento nuovo per ogni seduta della scheda di adesso. Esercizi, serie e cardini non cambiano.', { titolo: 'Rinnovare il riscaldamento?', ok: 'Rinnova', annulla: 'Lascia così' });
+  if (!ok) return null;
+  const gen = await generateTrainingProgram({ source: 'rinnova-riscaldamento', force: true, dryRun: true, cardiniDa: ST.schedaAttiva.scheda });
+  if (!gen || !Array.isArray(gen.sessioni)) { showToast('Non sono riuscito a preparare il riscaldamento — riprova più tardi', '⚠️', 5500); return null; }
+  const fresca = await dbq('rileggere la scheda attiva', supa.from('schede_utente').select('scheda').eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id).single());
+  if (fresca.error || !fresca.data || !fresca.data.scheda) return null;
+  const scheda = fresca.data.scheda;
+  let cambiate = 0;
+  (scheda.sessioni || []).forEach(s => {
+    const g = s && gen.sessioni.find(x => x.id === s.id);
+    if (!g) return;
+    const nuovo = Array.isArray(g.warmup) ? g.warmup : [];
+    const prima = Array.isArray(s.warmup) ? s.warmup : [];
+    if (JSON.stringify(nuovo.map(w => w.codice)) !== JSON.stringify(prima.map(w => w.codice))) cambiate++;
+    if (nuovo.length) s.warmup = nuovo; else delete s.warmup;
+  });
+  const up = await dbq('salvare il riscaldamento nuovo', supa.from('schede_utente').update({ scheda }).eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id));
+  if (up.error) return null;
+  await loadActiveScheda();
+  if (ST.page === 'training') renderTraining();
+  showToast(cambiate ? `Riscaldamento rinnovato in ${cambiate} sedute` : 'Il riscaldamento era già il più nuovo possibile', '🔥', 5500);
+  return cambiate;
+}
+
 // Prepara l'ANTEPRIMA del blocco nuovo: genera senza salvare (dryRun) tenendo i cardini della
 // scheda attiva, confronta seduta per seduta e legge i punti di partenza. Niente si scrive:
 // la scheda nasce solo se Ignazio tocca «Accetto» (accettaBloccoNuovo, in app/training.js).
@@ -1821,6 +1851,16 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const famigliePrima = new Set();                     // famiglia|pattern di tutto il blocco prima
     primaPerSeduta.forEach(set => set.forEach(c => { const k = _famigliaKey(catalogMap.get(c)); if (k) famigliePrima.add(k); }));
     const famiglieNuova = new Set();                     // famiglia|pattern già in una seduta nuova
+    // Riscaldamento (4 ottobre sera, «è lo stesso da tre mesi»): ruotava solo fra Upper A e B, senza
+    // rigenIdx. Ora ruota col numero di schede e, nel blocco nuovo, preferisce chi nel blocco prima
+    // non c'era e chi non è già entrato in un'altra seduta nuova; se non c'è altro, il giro di sempre.
+    const warmupPrima = new Set(((cardiniDa && cardiniDa.sessioni) || []).flatMap(s => (s && Array.isArray(s.warmup) ? s.warmup : []).map(w => w && w.codice).filter(Boolean)));
+    const warmupNuova = new Set();
+    const conPreferenzaWarm = (pool, pick) => {
+      const libero = (pool || []).filter(ex => !warmupNuova.has(ex.codice));
+      if (cardiniDa) { const r = pick(libero.filter(ex => !warmupPrima.has(ex.codice))); if (r) return r; }
+      return pick(libero) || pick(pool);
+    };
 
     // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE (Regola B + DUP, 28 mag)
     // I parametri NON sono più unici per scheda: ogni sessione risolve il
@@ -2256,7 +2296,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
                            : 'fullbody';
       if (_macroSessione === 'upper') {
         // FASE 1: cuffia dei rotatori (prehab spalla). Pescata per gruppo_target.
-        const _cuffia = _trainGenPickWarmup(pools.poolRiscaldamento, 'cuffia rotatori', occurrenceIdx);
+        const _cuffia = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmup(p, 'cuffia rotatori', occurrenceIdx + rigenIdx));
         if (_cuffia) {
           const _w = _trainGenMapWarmupExercise(_cuffia);
           if (_w) warmupExs.push(_w);
@@ -2272,7 +2312,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         const _LOWER_WARM_MUSCLES = ['anca', 'glutei', 'adduttori', 'ischiocrurali', 'flessori', 'quadricipiti'];
         const _usedW = new Set();
         for (let _k = 0; _k < 2; _k++) {
-          const _exW = _trainGenPickWarmupByMuscle(pools.poolRiscaldamento, _LOWER_WARM_MUSCLES, occurrenceIdx + _k, _usedW);
+          const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupByMuscle(p, _LOWER_WARM_MUSCLES, occurrenceIdx + _k + rigenIdx, _usedW));
           if (!_exW) break;
           _usedW.add(_exW.codice);
           const _w = _trainGenMapWarmupExercise(_exW);
@@ -2295,6 +2335,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const _carryAssigned = carryBySessionIdx.get(sessionIdx) || null;
       const carryConclusivo = _carryAssigned ? _trainGenMapCarryExercise(_carryAssigned) : null;
 
+      warmupExs.forEach(w => { if (w && w.codice) warmupNuova.add(w.codice); });
       // Quello che questa seduta ha preso non si ripresenta nelle sedute dopo (cardini compresi).
       exercises.forEach(ex => { if (ex && ex.codice) { usatiNuovaScheda.add(ex.codice); const k = _famigliaKey(ex); if (k) famiglieNuova.add(k); } });
 
