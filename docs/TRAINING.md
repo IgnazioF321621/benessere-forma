@@ -130,6 +130,18 @@ RIR attivo SOLO per intermedio/avanzato.
 
 **Generazione**: trigger a fine M1 (`saveOnboarding→generateTrainingProgram`). Fine blocco: solo dopo M2. Manuale: `rigeneraSchedaDaImpostazioni()`.
 
+### Blocco nuovo — i cardini restano, i complementari ruotano
+*(Training 070, 4 ottobre 2026)*
+
+A fine blocco la scheda nuova **non si rigenera da zero**: nasce come **anteprima** che si vede e si accetta. Nel tab Programma, in settimana di scarico o da 35 giorni dall'inizio del blocco (`BLOCCO_GIORNI_AVVISO`), compare la card «Blocco N+1: Pirsi lo prepara, tu decidi» → `preparaBloccoNuovo()` (in `app/training_generatore.js`) genera in `dryRun` passando `cardiniDa: ST.schedaAttiva.scheda` e apre la finestra `renderBloccoNuovoSheet()` (in `app/training.js`): per ogni seduta **restano** i cardini col «riparti da …», **nuovi**, **come prima**, **escono**. Finché non si tocca «Accetto» non si scrive niente; «Non ora» chiude.
+
+- **Cardini** (`_trainGenCardini`, al massimo 2 per seduta, per **codice**): Upper (non Pump) → la prima **spinta** e la prima **tirata** della seduta precedente; Lower/Legs → **dominante ginocchia** e **dominante anca**; altri split → i primi due multiarticolari. Sono i movimenti su cui si misura il sovraccarico progressivo da un blocco all'altro (i fondamentali restano 2-4 mesocicli, ruotano gli accessori). Un cardine entra nello slot del suo pattern al posto della rotazione **solo se è ancora nel pool di oggi**; la rotazione degli altri slot compound tiene fuori tutti i cardini (`tuttiCardini`), così un cardine di Upper A non esce dal giro in Upper B. L'esercizio finale porta `cardine: true` nel jsonb. Isolamenti, core, bonus, riscaldamento, carry e Tabata ruotano come sempre con `rigenIdx`
+- **Punto di partenza** (`_trainGenPuntiDiPartenza`): per ogni cardine l'ultima serie registrata **fuori dallo scarico** (la settimana di ogni riga si legge da `getCycleWeekInfo({asOf})`, mai ricalcolata); se ha serie solo in scarico si prende l'ultima e lo si dice («in scarico»)
+- **«Accetto»** (`accettaBloccoNuovo`): chiede la nota a Pirsi (ripiego sul testo fisso), salva con `_trainGenSaveToDB` (la scheda di prima si spegne ma **resta in `schede_utente`**), poi scrive `train_start_date = oggi` così il conteggio delle settimane riparte da 1 e la rotazione da Upper A. **Se il salvataggio fallisce la riga di prima viene riaccesa per id** (`ST.schedaAttiva.id`) e il profilo non si tocca
+- `loadActiveScheda` ora tiene `ST.schedaAttiva = { id, blocco_n, scheda }`. «Rigenera scheda» in Impostazioni e `?schedaGen=1` restano come prima: rigenerano da zero, senza cardini
+
+Lo prova `node tools/banco/prova_blocco_nuovo.js`.
+
 **Suggerimenti progressione**: `ST.profile.unit` → kg step 2.5 / lbs step 10 (default lbs). Bande trazioni senza unità.
 
 ---

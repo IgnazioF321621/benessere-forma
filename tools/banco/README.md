@@ -34,6 +34,7 @@ node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori 
 node tools/banco/prova_tabella_unica.js  # una tabella sola per le serie (training_logs, id del telefono, coda unica), codice esercizio e supplement_id scritti e letti, scrivi-o-aggiorna per allenamenti e misure, vecchia WS-QUEUE tolta (Fondamenta 070/080/090)
 node tools/banco/prova_privacy.js  # informativa prima del primo accesso, consenso prima che le foto partano, niente nome nei testi al coach, «Scarica i miei dati» (Fondamenta 170)
 node tools/banco/prova_installazione.js  # manifest, icone PNG (rigenerabili con node tools/icone/genera.js) e suggerimento «Aggiungi alla schermata Home» (Fondamenta 190)
+node tools/banco/prova_blocco_nuovo.js   # blocco nuovo come anteprima: cardini che restano per codice, complementari che ruotano, «riparti da» fuori dallo scarico, Accetto / Non ora, scheda vecchia riaccesa se il salvataggio fallisce (Training 070)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
 node tools/banco/prova_coach_rules.js    # regole di Pirsi: 47 controlli su scenari, niente jsdom
@@ -73,6 +74,7 @@ Se la prova che sul nuovo dà OK non dà **KO** sul vecchio, non sta misurando q
 - **le risposte si possono trattenere**: `tables.__attesa = () => promessa` fa aspettare ogni risposta del finto Supabase finché quella promessa non si risolve. Serve a contare le ondate di letture (`prova_avvio_ondate.js`): un conteggio che non dipende dalla velocità della macchina
 - **il join degli ingredienti**: `select('..., meals!inner(date)')` porta nella riga il pasto (`riga.meals = {date}`), scarta gli ingredienti senza pasto e i filtri `meals.date` guardano là, come PostgREST. `tables.__joinRotto = true` fa rispondere il join con un errore, per provare il ripiego (`prova_avvio_finestra.js`)
 - **`.single()` senza righe** risponde con l'errore `PGRST116` come PostgREST; `.maybeSingle()` risponde `null` senza errore
+- **`select('id', { count:'exact', head:true })`** risponde con `count` (le righe che passano i filtri) e, con `head`, senza righe: così `rigenIdx` e `blocco_n` del generatore contano davvero (`prova_blocco_nuovo.js`)
 - **il filtro `.or('a.eq.x,b.eq."y"')`** come PostgREST: solo uguaglianze, i valori fra virgolette possono contenere virgole (`prova_tabella_unica.js`)
 - **rete e scritture**: `tables.__rete = false` fa rispondere ogni chiamata come un fetch fallito (errore senza codice); `tables.__rifiuta = { tabella:{code, message} }` fa rispondere le scritture su quella tabella con quell'errore dell'API; gli `insert` conservano le righe in tabella e un id già presente risponde `23505`
 - **gli intervalli della pagina** (`setInterval`) sono timer di Node senza presa sul processo (`unref`): una prova senza `process.exit` finisce quando ha finito, non dopo 3 minuti
