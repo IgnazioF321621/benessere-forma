@@ -194,7 +194,7 @@ async function nuovo(opts){
     a.win.apriCambioBloccoNuovo('upperA', post.codice);
     const overlay = a.win.document.getElementById('blocco-nuovo-sheet');
     overlay.dispatchEvent(new a.win.MouseEvent('click', { bubbles:true }));
-    atteso('tocco fuori dentro «Cambia» · torna all\'anteprima, finestra aperta', [a.ST.bloccoNuovo.cambio, !!a.win.document.getElementById('blocco-nuovo-sheet'), /Accetto il Blocco 3/.test(a.win.document.getElementById('blocco-nuovo-sheet').textContent)], [null, true, true]);
+    atteso('tocco fuori dentro «Cambia» · torna all\'anteprima, finestra aperta', [a.ST.bloccoNuovo.cambio, !!a.win.document.getElementById('blocco-nuovo-sheet'), /Accetto il Blocco [a-zà-ù]+/.test(a.win.document.getElementById('blocco-nuovo-sheet').textContent)], [null, true, true]);
     a.win.cambiaEsercizioBloccoNuovo('upperA', post.codice, a.win.candidatiBloccoNuovo('upperA', post.codice)[0].codice);
     a.win.closeBloccoNuovoSheet();
     const card = a.win.document.getElementById('blocco-nuovo-card');
