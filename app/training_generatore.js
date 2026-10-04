@@ -1731,6 +1731,23 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     // dal giro in Upper B, dove il dedup lo toglierebbe lasciando lo slot vuoto.
     const cardiniBySession = cardiniDa ? _trainGenCardini(cardiniDa, catalogMap) : new Map();
     const tuttiCardini = new Set([].concat(...cardiniBySession.values()));
+    // COMPLEMENTARI del blocco nuovo (4 ottobre 2026, dopo la prima anteprima vera): variare
+    // vuol dire cambiare stimolo, non giorno. La rotazione «a giro» faceva scorrere ogni casella
+    // di un posto, così Upper A riceveva l'esercizio che aveva Upper B. Con cardiniDa ogni slot
+    // complementare sceglie in quest'ordine: (1) un esercizio che nel blocco prima non c'era in
+    // nessuna seduta · (2) se non ne esistono, quello che QUESTA seduta aveva già (resta dov'era,
+    // non cambia giorno) · (3) uno non ancora preso da un'altra seduta della scheda nuova ·
+    // (4) per ultimo, anche un doppione, piuttosto che lasciare lo slot vuoto.
+    // Un esercizio compare in due sedute solo se il catalogo non offre altro.
+    const usatiPrima = new Set();                        // tutti i codici del blocco prima
+    const primaPerSeduta = new Map();                    // id seduta → Set codici di allora
+    ((cardiniDa && cardiniDa.sessioni) || []).forEach(s => {
+      if (!s || !s.id) return;
+      const set = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
+      primaPerSeduta.set(s.id, set);
+      set.forEach(c => usatiPrima.add(c));
+    });
+    const usatiNuovaScheda = new Set();                  // codici già scelti nelle sedute nuove precedenti
 
     // BLOCCO 4 — DETERMINAZIONE PARAMETRI SESSIONE (Regola B + DUP, 28 mag)
     // I parametri NON sono più unici per scheda: ogni sessione risolve il
@@ -1922,8 +1939,24 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // CARDINI (Training 070): i codici da tenere per questa seduta, se la scheda
       // precedente li aveva e sono ancora nel pool di oggi. Entrano nello slot del
       // loro pattern al posto della rotazione; chi è già entrato non si ripesca.
-      const cardiniSeduta = cardiniBySession.get(_trainGenSessionId(splitType, occurrenceIdx, typeCount)) || [];
+      const sessionIdPrev = _trainGenSessionId(splitType, occurrenceIdx, typeCount);
+      const cardiniSeduta = cardiniBySession.get(sessionIdPrev) || [];
       const cardiniScelti = [];
+      // Preferenza per i complementari (vedi sopra): si prova il picker su un pool via via più
+      // largo. Senza cardiniDa è il picker nudo, come sempre.
+      const primaQui = primaPerSeduta.get(sessionIdPrev) || new Set();
+      const conPreferenza = (pool, pick) => {
+        if (!cardiniDa) return pick(pool);
+        const altrove = (ex) => usatiNuovaScheda.has(ex.codice);
+        const livelli = [
+          pool.filter(ex => !usatiPrima.has(ex.codice) && !altrove(ex)),
+          pool.filter(ex => primaQui.has(ex.codice) && !altrove(ex)),
+          pool.filter(ex => !altrove(ex)),
+          pool,
+        ];
+        for (const p of livelli) { const r = p.length ? pick(p) : null; if (r) return r; }
+        return null;
+      };
       requiredPatterns.forEach((pat) => {
         const r = patternRepeat[pat] || 0; patternRepeat[pat] = r + 1;
         // +rigenIdx = rotazione varietà per rigenerazione (si SOMMA al round-robin
@@ -1934,7 +1967,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           .map(c => pools.poolPrincipali.find(ex => ex.codice === c && _normPattern(ex.pattern) === _normPattern(pat)))
           .find(Boolean) || null;
         const usedPiuCardini = tuttiCardini.size ? new Set([...usedSoFar, ...tuttiCardini]) : usedSoFar;
-        let picked = cardine || _trainGenPickByPattern(pools.poolPrincipali, [pat], usedPiuCardini, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni);
+        let picked = cardine || conPreferenza(pools.poolPrincipali, p => _trainGenPickByPattern(p, [pat], usedPiuCardini, pickIdx, `${sessionLabel} pat=${pat}#${r}`, limitazioni));
         if (cardine) cardiniScelti.push(cardine.codice);
         // FIX 2 — Squat corpo libero in sessione Forza: se il compound
         // 'dominante ginocchia' scelto non ha attrezzi con carico nel kit
@@ -1947,7 +1980,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           const _haCarico = _attEx.some(a => _ATTREZZI_CON_CARICO.has(a) && attrezzaturaSet.has(a));
           if (!_haCarico) {
             usedSoFar.add(picked.codice);
-            picked = _trainGenPickByPattern(pools.poolPrincipali, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r} retry`, limitazioni);
+            picked = conPreferenza(pools.poolPrincipali, p => _trainGenPickByPattern(p, [pat], usedSoFar, pickIdx, `${sessionLabel} pat=${pat}#${r} retry`, limitazioni));
           }
         }
         if (picked) { usedSoFar.add(picked.codice); compoundPicks.push(picked); }
@@ -2008,7 +2041,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         .sort((a, b) => (_TRAIN_GEN_ISO_CRITICALITY[b] || 0) - (_TRAIN_GEN_ISO_CRITICALITY[a] || 0));
       const muscularPicks = [];
       muscularSorted.forEach(gt => {
-        const picked = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, gt, usedSoFar, occurrenceIdx + rigenIdx, sessionLabel);
+        const picked = conPreferenza(pools.poolPrincipali, p => _trainGenPickIsoByGruppoTarget(p, gt, usedSoFar, occurrenceIdx + rigenIdx, sessionLabel));
         if (picked) { usedSoFar.add(picked.codice); muscularPicks.push({ ex: picked, gruppoTarget: gt }); }
       });
       // Pesca DUE core fissi di NATURA DIVERSA (2 ago): una tenuta + un dinamico.
@@ -2030,12 +2063,12 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // della STESSA natura. Ritorna { ex, gruppoTarget } oppure null.
       const _pickCore = (target, rotIdx, natura) => {
         if (!target) return null;
-        let ex = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, target, usedSoFar, rotIdx, sessionLabel);
+        let ex = conPreferenza(pools.poolPrincipali, p => _trainGenPickIsoByGruppoTarget(p, target, usedSoFar, rotIdx, sessionLabel));
         let gt = target;
         if (!ex) {
           const alt = _TRAIN_GEN_CORE_FALLBACK[target];
           if (alt) {
-            ex = _trainGenPickIsoByGruppoTarget(pools.poolPrincipali, alt, usedSoFar, rotIdx, sessionLabel);
+            ex = conPreferenza(pools.poolPrincipali, p => _trainGenPickIsoByGruppoTarget(p, alt, usedSoFar, rotIdx, sessionLabel));
             gt = ex ? alt : target;
           }
         }
@@ -2091,7 +2124,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
             const gts = _gtOf(ex);
             return gts.some(g => gruppiAmmessi.has(g)) && !gts.some(g => gruppiPresenti.has(g));
           });
-          const bonus = _trainGenPickByPattern(cand, ['isolamento'], usedSoFar, occurrenceIdx + rigenIdx);
+          const bonus = conPreferenza(cand, p => _trainGenPickByPattern(p, ['isolamento'], usedSoFar, occurrenceIdx + rigenIdx));
           if (!bonus) break;
           usedSoFar.add(bonus.codice);
           _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
@@ -2104,7 +2137,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
             const gts = _gtOf(ex);
             return gts.includes(coreTarget) && !gts.some(g => gruppiPresenti.has(g));
           });
-          const bonus = _trainGenPickByPattern(cand, ['core'], usedSoFar, occurrenceIdx + rigenIdx);
+          const bonus = conPreferenza(cand, p => _trainGenPickByPattern(p, ['core'], usedSoFar, occurrenceIdx + rigenIdx));
           if (bonus) {
             usedSoFar.add(bonus.codice);
             _gtOf(bonus).forEach(g => gruppiPresenti.add(g));
@@ -2113,7 +2146,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         }
         // Tier 3 — compound complementari coerenti con la macro
         while (exercises.length < softMax) {
-          const bonus = _trainGenPickByPattern(pools.poolPrincipali, compoundAmmessi, usedSoFar, occurrenceIdx + rigenIdx);
+          const bonus = conPreferenza(pools.poolPrincipali, p => _trainGenPickByPattern(p, compoundAmmessi, usedSoFar, occurrenceIdx + rigenIdx));
           if (!bonus) break;
           usedSoFar.add(bonus.codice);
           exercises.push(bonus); bonusPicks.push({ ex: bonus, tier: 'compound' });
@@ -2185,6 +2218,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // vuoto → nessuna cautela da applicare in FASE 2 (come per il warm-up).
       const _carryAssigned = carryBySessionIdx.get(sessionIdx) || null;
       const carryConclusivo = _carryAssigned ? _trainGenMapCarryExercise(_carryAssigned) : null;
+
+      // Quello che questa seduta ha preso non si ripresenta nelle sedute dopo (cardini compresi).
+      exercises.forEach(ex => { if (ex && ex.codice) usatiNuovaScheda.add(ex.codice); });
 
       return {
         splitType, sessionIdx, occurrenceIdx, resolvedType, isDup,
