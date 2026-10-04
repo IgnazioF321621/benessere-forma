@@ -24,7 +24,9 @@ function makeSupaMock(tables){
     const st = { table, op, filters: [], orders: [], limit: null, single:false };
     const api = {};
     const chain = (fn) => (...a) => { fn(...a); return api; };
-    api.select = chain((cols)=>{ st.cols = cols; });
+    // select('id', { count:'exact', head:true }) come PostgREST: la risposta porta `count` (righe che
+    // passano i filtri, prima di range/limit) e con head niente righe. Senza count, come prima.
+    api.select = chain((cols, opts)=>{ st.cols = cols; st.count = !!(opts && opts.count); st.head = !!(opts && opts.head); });
     api.insert = chain((p)=>{ st.payload = p; });
     api.update = chain((p)=>{ st.payload = p; });
     api.delete = chain(()=>{});
@@ -111,9 +113,11 @@ function makeSupaMock(tables){
         const [col,dir] = st.orders[i];
         rows.sort((a,b)=>{ const x=a[col], y=b[col]; if(x===y) return 0; return (x>y?1:-1)*(dir==='desc'?-1:1); });
       }
+      const totale = rows.length;
       if(st.range) rows = rows.slice(st.range[0], st.range[1]+1);
       else if(st.limit != null) rows = rows.slice(0, st.limit);
       else rows = rows.slice(0, 1000); // PostgREST default
+      if(st.count) return Promise.resolve({ data: st.head ? null : rows, error:null, count: totale });
       // .single() senza righe: PostgREST risponde con l'errore PGRST116, non con null (.maybeSingle() si')
       if(st.single && !st.maybe && !rows.length) return Promise.resolve({ data:null, error:{ code:'PGRST116', message:'JSON object requested, multiple (or no) rows returned' } });
       if(st.single) return Promise.resolve({ data: rows[0] || null, error:null });
