@@ -3521,6 +3521,8 @@ function renderTraining(){
 
         ${_renderBloccoNuovoCard(activeIsScarico)}
 
+        ${_renderRiscaldamentoLink()}
+
         ${_renderInjuryBar()}
 
         ${giorniHTML}
@@ -5879,13 +5881,26 @@ function _renderBloccoNuovoCard(isScarico){
   if(!isScarico && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
   const titolo = _nomeBlocco();
   const sotto = giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
+  const bn = ST.bloccoNuovo;
+  // Un'anteprima già preparata (chiusa con «Non ora», la X o toccando fuori) non si perde: si riapre,
+  // con le scelte «Cambia» fatte fin lì; «Rifalla da capo» la ricalcola.
+  const pulsanti = (bn && !bn.loading && bn.scheda)
+    ? `<button class="btn btn-sm" onclick="renderBloccoNuovoSheet()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Riapri l'anteprima →</button>
+       <button class="btn btn-sm" onclick="preparaBloccoNuovo()" style="background:none;color:var(--acc);border:1px solid var(--s3);border-radius:10px;padding:10px 12px;font-family:var(--font-sans);font-weight:700;font-size:13px;cursor:pointer;margin-left:8px;">Rifalla da capo</button>`
+    : `<button class="btn btn-sm" onclick="preparaBloccoNuovo()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Prepara l'anteprima →</button>`;
   return `
       <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">${esc(sotto).toUpperCase()}</div>
         <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${esc(titolo)}: ${esc(COACH_NAME)} lo prepara, tu decidi</div>
         <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
-        <button class="btn btn-sm" onclick="preparaBloccoNuovo()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Prepara l'anteprima →</button>
+        ${pulsanti}
       </div>`;
+}
+
+// «Rinnova il riscaldamento ›»: per la scheda attiva, senza toccare il resto (rinnovaRiscaldamento).
+function _renderRiscaldamentoLink(){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
+  return `<div id="rinnova-riscaldamento" onclick="rinnovaRiscaldamento()" style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);cursor:pointer;text-align:right;margin-top:-10px;">Rinnova il riscaldamento ›</div>`;
 }
 
 // «riparti da …» per un cardine: l'ultima serie fuori dallo scarico (vedi _trainGenPuntiDiPartenza).
@@ -5962,7 +5977,7 @@ function renderBloccoNuovoSheet(){
       </div>`;
     }
   }
-  const html = `<div id="blocco-nuovo-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)closeBloccoNuovoSheet()">
+  const html = `<div id="blocco-nuovo-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this){(ST.bloccoNuovo&&ST.bloccoNuovo.cambio)?chiudiCambioBloccoNuovo():closeBloccoNuovoSheet();}">
     <div class="pianov4-weighin-screen">
       <div class="pianov4-weighin-band"></div>
       <div class="pianov4-weighin-handle"></div>
@@ -5989,11 +6004,15 @@ function chiudiCambioBloccoNuovo(){
   renderBloccoNuovoSheet();
 }
 
+// Chiudere la finestra (X, «Non ora», tocco fuori) non butta l'anteprima: resta in ST.bloccoNuovo e la
+// card del Programma la riapre. Si butta solo con «Rifalla da capo» o accettandola.
 function closeBloccoNuovoSheet(){
   if(ST.bloccoNuovo && ST.bloccoNuovo.saving) return;   // mentre salva non si chiude
-  ST.bloccoNuovo = null;
+  if(ST.bloccoNuovo && ST.bloccoNuovo.loading) ST.bloccoNuovo = null;
+  if(ST.bloccoNuovo) ST.bloccoNuovo.cambio = null;
   const el = document.getElementById('blocco-nuovo-sheet');
   if(el) el.remove();
+  if(ST.page === 'training' && !ST.trainSession) renderTraining();
 }
 
 // «Accetto»: salva la scheda nuova (la vecchia si spegne ma resta), poi segna l'inizio del blocco
