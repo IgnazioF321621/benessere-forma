@@ -5914,17 +5914,41 @@ function renderBloccoNuovoSheet(){
   if(bn.loading){
     corpo = `<div class="pianov4-weighin-body"><p style="font-family:var(--font-sans);font-size:14px;color:var(--t2);margin:0 0 12px;">${esc(COACH_NAME)} sta preparando il blocco nuovo…</p></div>`;
   } else {
-    const riga = (txt, sub, tono) => `<div style="padding:7px 0;border-bottom:1px solid var(--s2);">
-        <div style="font-size:13px;font-weight:${tono === 'resta' ? 700 : 500};font-family:var(--font-sans);color:${tono === 'esce' ? 'var(--t3)' : 'var(--t1)'};${tono === 'esce' ? 'text-decoration:line-through;' : ''}">${esc(txt)}</div>
-        ${sub ? `<div style="font-size:11px;font-family:var(--font-mono);color:${tono === 'resta' ? 'var(--acc)' : 'var(--t3)'};margin-top:2px;">${esc(sub)}</div>` : ''}
+    const riga = (txt, sub, tono, cambia) => `<div style="padding:7px 0;border-bottom:1px solid var(--s2);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:${tono === 'resta' ? 700 : 500};font-family:var(--font-sans);color:${tono === 'esce' ? 'var(--t3)' : 'var(--t1)'};${tono === 'esce' ? 'text-decoration:line-through;' : ''}">${esc(txt)}</div>
+          ${sub ? `<div style="font-size:11px;font-family:var(--font-mono);color:${tono === 'resta' ? 'var(--acc)' : 'var(--t3)'};margin-top:2px;">${esc(sub)}</div>` : ''}
+        </div>
+        ${cambia ? `<button class="bn-cambia" onclick="apriCambioBloccoNuovo('${cambia.sid}','${cambia.codice}')" style="flex-shrink:0;background:none;border:1px solid var(--s3);border-radius:8px;padding:5px 9px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--acc);cursor:pointer;">Cambia ›</button>` : ''}
       </div>`;
     const sep = (lbl) => `<div style="font-size:9px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin:10px 0 2px;">${lbl}</div>`;
+    // «Cambia ›» aperto su uno slot: al posto delle sedute, le alternative di quel posto
+    if(bn.cambio){
+      const c = bn.cambio;
+      const cands = candidatiBloccoNuovo(c.sid, c.codice);
+      const nomeAttuale = _nomeDaCodice(c.codice) || c.codice;
+      const vociCand = cands.length ? cands.map(k => `
+        <div onclick="cambiaEsercizioBloccoNuovo('${c.sid}','${c.codice}','${k.codice}')" style="padding:9px 0;border-bottom:1px solid var(--s2);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="min-width:0;">
+            <div style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t1);">${esc(k.nome)}</div>
+            <div style="font-size:10px;font-family:var(--font-mono);color:var(--t3);margin-top:2px;">${esc([k.attrezzo, k.surrogato ? 'versione casalinga' : null, k.livello].filter(Boolean).join(' · '))}${k.fattoPrima ? ' · <span style="color:var(--t2);">fatto nel blocco prima</span>' : ' · <span style="color:var(--acc);">mai fatto</span>'}</div>
+          </div>
+          <span style="font-size:15px;color:var(--t3);">›</span>
+        </div>`).join('') : `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Con i tuoi attrezzi non c'è un'altra alternativa per questo posto.</p>`;
+      corpo = `
+      <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:10px;">
+        <div onclick="chiudiCambioBloccoNuovo()" style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);cursor:pointer;margin-bottom:10px;">‹ Indietro</div>
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:2px;">AL POSTO DI</div>
+        <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:10px;">${esc(nomeAttuale)}</div>
+        ${vociCand}
+      </div>`;
+    } else {
     const sedute = (bn.diff || []).map(d => `
       <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${esc(d.name)} <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);">${esc((d.type || '').toUpperCase())}</span></div>
         ${d.restano.length ? sep('RESTANO · CARDINI') + d.restano.map(r => riga(r.name, _testoPartenza(bn.partenze[r.codice], r.name), 'resta')).join('') : ''}
-        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}`, 'nuovo')).join('') : ''}
-        ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, '', 'uguale')).join('') : ''}
+        ${d.nuovi.length ? sep('NUOVI') + d.nuovi.map(r => riga(r.name, `${r.sets} × ${r.reps}${r.sceltoDaTe ? ' · scelto da te' : ''}`, 'nuovo', { sid: d.id, codice: r.codice })).join('') : ''}
+        ${d.uguali.length ? sep('COME PRIMA') + d.uguali.map(r => riga(r.name, r.sceltoDaTe ? 'scelto da te' : '', 'uguale', { sid: d.id, codice: r.codice })).join('') : ''}
         ${d.escono.length ? sep('ESCONO') + d.escono.map(r => riga(r.name, '', 'esce')).join('') : ''}
       </div>`).join('');
     corpo = `
@@ -5936,6 +5960,7 @@ function renderBloccoNuovoSheet(){
         <button class="pianov4-weighin-cta" id="blocco-nuovo-accetto" onclick="accettaBloccoNuovo()" ${bn.saving ? 'disabled' : ''}>${bn.saving ? 'Salvo…' : `Accetto il ${nomeBlocco}`}</button>
         <button class="pianov4-weighin-freq-link" onclick="closeBloccoNuovoSheet()">Non ora</button>
       </div>`;
+    }
   }
   const html = `<div id="blocco-nuovo-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)closeBloccoNuovoSheet()">
     <div class="pianov4-weighin-screen">
@@ -5951,6 +5976,17 @@ function renderBloccoNuovoSheet(){
   </div>`;
   if(existing) existing.remove();
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function apriCambioBloccoNuovo(sid, codice){
+  if(!ST.bloccoNuovo || ST.bloccoNuovo.saving) return;
+  ST.bloccoNuovo.cambio = { sid, codice };
+  renderBloccoNuovoSheet();
+}
+function chiudiCambioBloccoNuovo(){
+  if(!ST.bloccoNuovo) return;
+  ST.bloccoNuovo.cambio = null;
+  renderBloccoNuovoSheet();
 }
 
 function closeBloccoNuovoSheet(){

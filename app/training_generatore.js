@@ -887,6 +887,78 @@ async function _trainGenPuntiDiPartenza(codici) {
   return out;
 }
 
+// Confronto seduta per seduta fra la scheda nuova e quella di prima: chi resta (cardini), chi entra,
+// chi è come prima, chi esce, e chi ha scelto Ignazio col «Cambia ›» (sceltoDaTe).
+function _diffBloccoNuovo(scheda, precedente) {
+  const nomeDi = (ex) => (ex && ex.codice && _nomeDaCodice(ex.codice)) || (ex && ex.name) || '';
+  const perId = {};
+  ((precedente && precedente.sessioni) || []).forEach(s => { if (s && s.id) perId[s.id] = s; });
+  const voce = (e) => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps, sceltoDaTe: !!e.sceltoDaTe });
+  return (scheda.sessioni || []).map(s => {
+    const prima = perId[s.id];
+    const codiciPrima = new Set(((prima && prima.exercises) || []).map(e => e && e.codice).filter(Boolean));
+    const codiciDopo = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
+    return {
+      id: s.id, name: s.name, type: s.type,
+      restano: (s.exercises || []).filter(e => e && e.cardine).map(voce),
+      nuovi:   (s.exercises || []).filter(e => e && !e.cardine && !codiciPrima.has(e.codice)).map(voce),
+      uguali:  (s.exercises || []).filter(e => e && !e.cardine && codiciPrima.has(e.codice)).map(voce),
+      escono:  ((prima && prima.exercises) || []).filter(e => e && e.codice && !codiciDopo.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e) })),
+    };
+  });
+}
+
+// «Cambia ›» (4 ottobre 2026, sera): la difficoltà di un esercizio non è nel nome ma in leva, carico,
+// lunghezza del muscolo, stabilità, regolabilità — variabili che il catalogo oggi non ha. Finché non le
+// ha, il giudizio resta alla persona: per ogni complementare l'anteprima mostra le alternative dello
+// stesso posto e lascia scegliere. Le alternative: stesso schema di movimento per i multiarticolari,
+// stesso gruppo bersaglio per isolamenti e core; fuori quelle già in scheda. Prima i nativi (chi si fa
+// con l'attrezzo che l'utente ha), poi i mai fatti nel blocco prima, poi per codice.
+function candidatiBloccoNuovo(sid, codice) {
+  const bn = ST.bloccoNuovo;
+  if (!bn || !bn.scheda || !bn.scheda._pools) return [];
+  const pool = bn.scheda._pools.poolPrincipali || [];
+  const attuale = pool.find(ex => ex.codice === codice);
+  if (!attuale) return [];
+  const gt = (ex) => String(ex.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  const pat = _normPattern(attuale.pattern);
+  const perGruppo = pat === 'isolamento' || pat === 'core';
+  const gtAttuale = gt(attuale);
+  const inScheda = new Set((bn.scheda.sessioni || []).flatMap(s => (s.exercises || []).map(e => e.codice)));
+  const prima = new Set((((ST.schedaAttiva && ST.schedaAttiva.scheda) || {}).sessioni || []).flatMap(s => (s.exercises || []).map(e => e.codice)));
+  const livelloN = (ex) => { const l = String(ex.livello || '').toLowerCase(); return /avanzato/.test(l) ? 3 : /intermedio/.test(l) ? 2 : /principiante/.test(l) ? 1 : 0; };
+  return pool
+    .filter(ex => ex.codice !== codice && !inScheda.has(ex.codice))
+    .filter(ex => perGruppo ? (_normPattern(ex.pattern) === pat && gt(ex).some(g => gtAttuale.includes(g))) : _normPattern(ex.pattern) === pat)
+    .map(ex => ({ codice: ex.codice, nome: ex.nome, attrezzo: ex._surrogato ? (ex.surrogato_attrezzo || ex.attrezzo) : ex.attrezzo, surrogato: !!ex._surrogato, livello: ex.livello || '', livelloN: livelloN(ex), fattoPrima: prima.has(ex.codice) }))
+    .sort((a, b) => (a.surrogato - b.surrogato) || (a.fattoPrima - b.fattoPrima) || String(a.codice).localeCompare(String(b.codice)));
+}
+
+// Sostituisce nell'anteprima l'esercizio `codice` della seduta `sid` con `nuovoCodice`, mappato con le
+// stesse regole del generatore (parametri della seduta, cautele, attrezzo mostrato). Niente si scrive.
+// Ritorna l'esercizio nuovo, o null con un toast se le cautele lo scartano.
+function cambiaEsercizioBloccoNuovo(sid, codice, nuovoCodice) {
+  const bn = ST.bloccoNuovo;
+  if (!bn || !bn.scheda || !bn.scheda._pools) return null;
+  const sess = (bn.scheda.sessioni || []).find(s => s.id === sid);
+  const idx = sess ? sess.exercises.findIndex(e => e.codice === codice) : -1;
+  const cat = (bn.scheda._pools.poolPrincipali || []).find(ex => ex.codice === nuovoCodice);
+  if (idx === -1 || !cat || !sess._sp) return null;
+  const catalogMap = new Map((bn.scheda._pools.poolPrincipali || []).map(ex => [ex.codice, ex]));
+  const w = _trainGenApplyCautions([cat], bn.scheda._pools.limitazioni || [], catalogMap, new Set(catalogMap.keys()));
+  if (!w.length) { showToast('Questo esercizio non va d\'accordo con le tue limitazioni', '⚠️', 5500); return null; }
+  const meta = { id: sess.id, name: sess.name, type: sess.type, rir: sess.rir, label: sess.label, rest: sess.rest, duration_min: null };
+  const mapped = _trainGenMapToSession(w, meta, sess._sp, null, bn.scheda.tipo_allenamento, new Set(bn.scheda._pools.attrezzatura || []));
+  const nuovo = mapped.exercises[0];
+  if (!nuovo) return null;
+  nuovo.sceltoDaTe = true;
+  sess.exercises[idx] = nuovo;
+  bn.diff = _diffBloccoNuovo(bn.scheda, ST.schedaAttiva && ST.schedaAttiva.scheda);
+  bn.cambio = null;
+  if (typeof renderBloccoNuovoSheet === 'function') renderBloccoNuovoSheet();
+  return nuovo;
+}
+
 // Prepara l'ANTEPRIMA del blocco nuovo: genera senza salvare (dryRun) tenendo i cardini della
 // scheda attiva, confronta seduta per seduta e legge i punti di partenza. Niente si scrive:
 // la scheda nasce solo se Ignazio tocca «Accetto» (accettaBloccoNuovo, in app/training.js).
@@ -903,21 +975,7 @@ async function preparaBloccoNuovo() {
     showToast('Non sono riuscito a preparare il blocco nuovo — riprova più tardi', '⚠️', 5500);
     return null;
   }
-  const nomeDi = (ex) => (ex && ex.codice && _nomeDaCodice(ex.codice)) || (ex && ex.name) || '';
-  const perId = {};
-  (precedente.sessioni || []).forEach(s => { if (s && s.id) perId[s.id] = s; });
-  const diff = scheda.sessioni.map(s => {
-    const prima = perId[s.id];
-    const codiciPrima = new Set(((prima && prima.exercises) || []).map(e => e && e.codice).filter(Boolean));
-    const codiciDopo = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
-    return {
-      id: s.id, name: s.name, type: s.type,
-      restano: (s.exercises || []).filter(e => e && e.cardine).map(e => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps })),
-      nuovi:   (s.exercises || []).filter(e => e && !e.cardine && !codiciPrima.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e), sets: e.sets, reps: e.reps })),
-      uguali:  (s.exercises || []).filter(e => e && !e.cardine && codiciPrima.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e) })),
-      escono:  ((prima && prima.exercises) || []).filter(e => e && e.codice && !codiciDopo.has(e.codice)).map(e => ({ codice: e.codice, name: nomeDi(e) })),
-    };
-  });
+  const diff = _diffBloccoNuovo(scheda, precedente);
   const codiciCardini = [...new Set(diff.flatMap(d => d.restano.map(r => r.codice)))];
   const partenze = await _trainGenPuntiDiPartenza(codiciCardini);
   ST.bloccoNuovo = {
@@ -2431,6 +2489,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // _diag (Regola A): iso obbligatori pescati/tagliati + bonus. Solo per
       // diagnostica (ztSchedaWhy); STRIPPATO prima del save DB (_trainGenSaveToDB).
       mapped._diag = s._diag || null;
+      // Parametri di seduta (compound/iso/iso_isometrico): servono al «Cambia ›» per mappare
+      // un'alternativa con le stesse regole. Strippati dal save come _diag.
+      mapped._sp = sp;
       return mapped;
     });
 
@@ -2481,6 +2542,9 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // Diagnostica: attrezzi dichiarati senza riscontro a catalogo. Come
       // sessioni[]._diag, STRIPPATO da _trainGenSaveToDB → non sporca il jsonb.
       _diagGear: pools.attrezziInerti || [],
+      // Solo in dryRun (anteprima del blocco nuovo): il pool dell'utente e gli attrezzi normalizzati,
+      // per il «Cambia ›» che propone le alternative di uno slot. Strippato dal save come _diagGear.
+      _pools: dryRun ? { poolPrincipali: pools.poolPrincipali, attrezzatura: Array.from(attrezzaturaSet), limitazioni } : undefined,
     };
 
 
@@ -3622,9 +3686,9 @@ async function _trainGenSaveToDB(userId, scheda) {
     // Strip _diag (diagnostica Regola A) dalle sessioni + _diagGear (attrezzi
     // inerti) dalla radice prima del save: restano nel valore di ritorno
     // (ztSchedaWhy) ma NON sporcano il jsonb in DB.
-    const { _diagGear, ...schedaNoGear } = (scheda || {});
+    const { _diagGear, _pools, ...schedaNoGear } = (scheda || {});
     const schedaClean = (scheda && Array.isArray(scheda.sessioni))
-      ? { ...schedaNoGear, sessioni: scheda.sessioni.map(({ _diag, ...rest }) => rest) }
+      ? { ...schedaNoGear, sessioni: scheda.sessioni.map(({ _diag, _sp, ...rest }) => rest) }
       : schedaNoGear;
     const payload = {
       user_id: userId,
