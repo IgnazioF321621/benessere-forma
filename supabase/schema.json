@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 906,
+   "righe": 910,
    "tabella": "meal_items"
   },
   {
-   "righe": 332,
+   "righe": 333,
    "tabella": "meals"
   },
   {
@@ -95,7 +95,7 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1416,
+   "righe": 1428,
    "tabella": "supplements_log"
   },
   {
@@ -157,6 +157,15 @@
     "name": "exercise-media",
     "pubblico": true,
     "tipi_ammessi": null
+   },
+   {
+    "id": "segnalazioni",
+    "limite_byte": 1048576,
+    "name": "segnalazioni",
+    "pubblico": false,
+    "tipi_ammessi": [
+     "image/jpeg"
+    ]
    }
   ],
   "colonne": [
@@ -2706,6 +2715,16 @@
     "identita": "",
     "non_nullo": false,
     "pos": 11,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "immagine",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 12,
     "predefinito": null,
     "tabella": "segnalazioni",
     "tipo": "text"
@@ -6281,6 +6300,54 @@
     "permissive": "PERMISSIVE",
     "ruoli": [
      "public"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": null
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "segnalazioni_img_cancella",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'segnalazioni'::text) AND (((auth.uid())::text = (storage.foldername(name))[1]) OR ((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)))"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "segnalazioni_img_leggi",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'segnalazioni'::text) AND (((auth.uid())::text = (storage.foldername(name))[1]) OR ((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)))"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "((bucket_id = 'segnalazioni'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+    "nome": "segnalazioni_img_rifai",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "storage",
+    "tabella": "objects",
+    "usando": "((bucket_id = 'segnalazioni'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "((bucket_id = 'segnalazioni'::text) AND ((auth.uid())::text = (storage.foldername(name))[1]))",
+    "nome": "segnalazioni_img_scrivi",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
     ],
     "schema": "storage",
     "tabella": "objects",

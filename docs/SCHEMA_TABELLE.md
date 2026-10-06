@@ -2,7 +2,7 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-06 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-33 tabelle, 388 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+33 tabelle, 389 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -20,8 +20,8 @@
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
-| [`meal_items`](#meal_items) | 906 | 4 | id | — |
-| [`meals`](#meals) | 332 | 2 | id | — |
+| [`meal_items`](#meal_items) | 910 | 4 | id | — |
+| [`meals`](#meals) | 333 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
@@ -29,7 +29,7 @@
 | [`supplement_package_items`](#supplement_package_items) | 22 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 25 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1416 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`supplements_log`](#supplements_log) | 1428 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
 | [`training_logs`](#training_logs) | 1822 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 12 | 4 | id | user_id, week_start |
@@ -469,6 +469,7 @@ Vincoli:
 | `letta_il` | timestamp with time zone |  |  |
 | `risolta_il` | timestamp with time zone |  |  |
 | `risposta` | text |  |  |
+| `immagine` | text |  |  |
 
 Vincoli:
 - `segnalazioni_motivo_check` — `CHECK ((motivo = ANY (ARRAY['non_funziona'::text, 'non_capisco'::text, 'idea'::text])))`
