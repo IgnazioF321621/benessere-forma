@@ -27,11 +27,11 @@
    "tabella": "body_check_photos"
   },
   {
-   "righe": 7,
+   "righe": 6,
    "tabella": "body_checks"
   },
   {
-   "righe": 6,
+   "righe": 2,
    "tabella": "body_logs"
   },
   {
@@ -39,7 +39,7 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 32,
+   "righe": 9,
    "tabella": "coach_proposals"
   },
   {
@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 2615,
+   "righe": 904,
    "tabella": "meal_items"
   },
   {
-   "righe": 930,
+   "righe": 331,
    "tabella": "meals"
   },
   {
@@ -71,27 +71,27 @@
    "tabella": "nutrilite_catalog"
   },
   {
-   "righe": 4,
+   "righe": 1,
    "tabella": "profiles"
   },
   {
-   "righe": 102,
+   "righe": 55,
    "tabella": "schede_utente"
   },
   {
-   "righe": 32,
+   "righe": 22,
    "tabella": "supplement_package_items"
   },
   {
-   "righe": 11,
+   "righe": 6,
    "tabella": "supplement_packages"
   },
   {
-   "righe": 42,
+   "righe": 25,
    "tabella": "supplements"
   },
   {
-   "righe": 2361,
+   "righe": 1415,
    "tabella": "supplements_log"
   },
   {
@@ -103,7 +103,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 26,
+   "righe": 11,
    "tabella": "weekly_pictures"
   },
   {
@@ -111,15 +111,15 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 560,
+   "righe": 238,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 41,
+   "righe": 17,
    "tabella": "weekly_plans"
   },
   {
-   "righe": 20,
+   "righe": 14,
    "tabella": "weight_logs"
   },
   {
@@ -2505,6 +2505,36 @@
     "predefinito": "'completo'::text",
     "tabella": "profiles",
     "tipo": "text"
+   },
+   {
+    "colonna": "prot_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 36,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "carbo_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 37,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
+   },
+   {
+    "colonna": "fat_pct",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 38,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "numeric(5,1)"
    },
    {
     "colonna": "id",

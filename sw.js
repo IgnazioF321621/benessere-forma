@@ -15,6 +15,10 @@ const APP_DIRS = ['app/', 'shared/'];
 const APP_FILES = [
   'app/stile.css',
   'app/comune.js',
+  'shared/nutrizione.js',
+  'shared/coach_rules.js',
+  'shared/quadro.js',
+  'shared/ritratto.js',
   'app/body.js',
   'app/nutrition.js',
   'app/home.js',
@@ -23,10 +27,6 @@ const APP_FILES = [
   'app/pirsi.js',
   'app/onboarding.js',
   'app/impostazioni.js',
-  'shared/nutrizione.js',
-  'shared/coach_rules.js',
-  'shared/quadro.js',
-  'shared/ritratto.js',
 ];
 
 // Rete prima, ma non all'infinito (Fondamenta 120, 2 ottobre 2026): con rete debole la pagina e i file

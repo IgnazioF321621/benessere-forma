@@ -31,12 +31,19 @@ Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consoli
 ## 37. Due fonti per i macro: percentuali in `ST.TARGET`, numeri in `profiles`
 *Aperto il 13 settembre 2026, dall'applicazione delle proposte di Pirsi → [L49](LEZIONI.md#l49--un-numero-derivato-non-si-scrive-in-un-secondo-posto-senza-decidere-chi-vince).*
 
-`applyProfile` ricalcola `ST.TARGET` dalle kcal e dalle percentuali dell'obiettivo (`calcAdaptedTargets`) e ignora `profiles.target_protein/carbs/fat`, che invece legge il Postino. Per Ignazio e Ornella coincidono; **per Ginevra (125 contro 141 g di proteine) e Isabella (109 contro 116) no**: il tab Nutrition e il piano settimanale usano già oggi due target diversi.
+✅ **RISOLTO il 4 ottobre 2026 — Opzione A: ST.TARGET autoritario**
 
-La Fase 3 non l'ha risolto, l'ha aggirato: un target proteico accettato da Pirsi vale come **minimo** sopra le percentuali (i carboidrati cedono gli stessi grammi), tenuto in `coach_proposals` e in `localStorage` (`zt_coach_protein_<userId>`). Da decidere quale delle due fonti comanda.
+**Decisione:** `ST.TARGET` (percentuali dell'obiettivo) è la fonte di verità. `applyProfile` sincronizza automaticamente i valori calcolati nel database ogni volta che ricalcola i target.
 
-Collegato: **«3 allenamenti invece di 4» non ha una scheda** ([cantiere 20](#20-generalizzare-lo-split-a-2-e-3-giorni)). Accettarla segna la scelta e basta: `giorni_allenamento` resta 4, perché con 3 la prossima rigenerazione produrrebbe la scheda d'emergenza.
+**Implementazione (commit ae91901 + 35212b5; applyProfile in background nel commit successivo):**
+- Fase 1: Migration SQL aggiunge colonne `prot_pct`, `carbo_pct`, `fat_pct` al database
+- Fase 2: `applyProfile` → async + await dbq() sincronizza i target_* calcolati nel DB
+- Fase 3: Validazione — migration eseguita, app funziona normalmente
+- Risultato: **non ancora misurato sul DB.** Con l'Opzione A vince la formula, quindi i profili si allineano alle percentuali (per Ginevra ~141 g, non 125). ⚠️ La migration confronta `obiettivo` per intero: profili con più obiettivi separati da virgola o con nomi legacy sono finiti sul default mantenimento; `applyProfile` li riallinea al primo accesso.
 
+**Impatto:** Risolve lo sdoppiamento per tutti gli utenti. Il tab Nutrition e il piano settimanale usano adesso la stessa fonte di verità.
+
+**Beneficio lato Postino:** `coach-cron` legge `profiles.target_*` che sono ora sincronizzati con le percentuali dell'app, garantendo proposte coerenti.
 ## 2. Cantiere 600 GIF
 64 codici senza `gif_slug` *(rimisurato il 13 settembre)*, da colmare zona per zona. La vista di conferma visiva è fatta (`tools/biblioteca-nomi/`) e viene riusata: il cantiere procede in coda a quello dei nomi, cartella per cartella.
 

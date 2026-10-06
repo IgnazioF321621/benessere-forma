@@ -1,4 +1,6 @@
 #!/bin/bash
+# ⚠️ SUPERATO dal 4 ottobre 2026: usare tools/cambia_chiave_servizio.sh.
+#    Questo script riscrive .dev.vars da capo e cancella API_KEY.
 # Setup sicuro della SUPABASE_SERVICE_ROLE_KEY:
 #   - input silenzioso (no echo, no shell history)
 #   - scrittura .dev.vars chmod 600
