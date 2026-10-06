@@ -2391,7 +2391,7 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 
 /* ── «Segnala» (Fondamenta 220, 6 ottobre 2026): il piccolo insetto, sempre nello stesso angolo di ogni schermata e foglio.
    Sopra tutti i fogli dell'app (il più alto è a 2100), sotto il toast (9000) e le schermate intere (9998). Copiato da MB21 (nota Pagine 009). */
-.segnala-bottone{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:8px;z-index:2500;width:34px;height:34px;border-radius:50%;border:1px solid var(--b1);background:var(--s1);color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 2px 8px rgba(16,21,31,.14);opacity:.88;}
+.segnala-bottone{position:fixed;top:calc(env(safe-area-inset-top) + 8px);right:8px;z-index:2500;width:34px;height:34px;border-radius:50%;border:1px solid var(--b1);background:var(--s1);color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 2px 8px rgba(var(--nero-rgb),.14);opacity:.88;}
 .segnala-bottone[hidden]{display:none;}
 .segnala-bottone svg{width:19px;height:19px;display:block;}
 /* L'insetto non copre niente: quello che stava nell'angolo si sposta a sinistra (regola di Ignazio). La pillola del peso e l'avatar della Home,
@@ -2403,7 +2403,7 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 /* Il foglio della segnalazione: sopra ogni altro foglio, compresi quelli di conferma (1700) */
 .sg-overlay{z-index:2400;}
 .sg-motivi{display:flex;gap:8px;margin:4px 0 14px;}
-.sg-motivi .btn{flex:1;padding:11px 6px;letter-spacing:.3px;text-transform:none;font-family:'Syne',sans-serif;font-size:13px;}
-.sg-motivi .btn.scelto{background:var(--acc);color:#fff;border-color:var(--acc);}
+.sg-motivi .btn{flex:1;padding:11px 6px;letter-spacing:.3px;text-transform:none;font-family:var(--font-sans);font-size:13px;}
+.sg-motivi .btn.scelto{background:var(--acc);color:var(--bianco);border-color:var(--acc);}
 .sg-testo{min-height:92px;resize:vertical;}
-.sg-dove{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--t3);line-height:1.5;margin:0 0 14px;}
+.sg-dove{font-family:var(--font-mono);font-size:11px;color:var(--t3);line-height:1.5;margin:0 0 14px;}
