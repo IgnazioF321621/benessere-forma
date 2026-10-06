@@ -1,8 +1,8 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-04 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-10-06 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-32 tabelle, 377 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+33 tabelle, 388 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -15,29 +15,30 @@
 | [`body_checks`](#body_checks) | 6 | 4 | id | — |
 | [`body_logs`](#body_logs) | 2 | 2 | id | user_id, date |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
-| [`coach_proposals`](#coach_proposals) | 9 | 3 | id | user_id, week_start, kind |
+| [`coach_proposals`](#coach_proposals) | 11 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 0 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
-| [`meal_items`](#meal_items) | 904 | 4 | id | — |
-| [`meals`](#meals) | 331 | 2 | id | — |
+| [`meal_items`](#meal_items) | 906 | 4 | id | — |
+| [`meals`](#meals) | 332 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
+| [`segnalazioni`](#segnalazioni) | 0 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 22 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 25 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1415 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
-| [`training_logs`](#training_logs) | 1797 | 1 | id | user_id, date, session_id, exercise_name, set_number |
+| [`supplements_log`](#supplements_log) | 1416 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`training_logs`](#training_logs) | 1822 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
-| [`weekly_pictures`](#weekly_pictures) | 11 | 4 | id | user_id, week_start |
+| [`weekly_pictures`](#weekly_pictures) | 12 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
 | [`weekly_plan_meals`](#weekly_plan_meals) | 238 | 5 | id | — |
 | [`weekly_plans`](#weekly_plans) | 17 | 5 | id | user_id, week_start |
-| [`weight_logs`](#weight_logs) | 14 | 5 | id | user_id, date |
+| [`weight_logs`](#weight_logs) | 15 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
-| [`workouts`](#workouts) | 116 | 2 | id | user_id, date, session_type |
+| [`workouts`](#workouts) | 117 | 2 | id | user_id, date, session_type |
 
 ### `ai_memory`
 
@@ -452,6 +453,27 @@ Vincoli:
 
 Vincoli:
 - `schede_utente_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `segnalazioni`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `user_id` | uuid | sì |  |
+| `dove` | jsonb | sì | `'{}'::jsonb` |
+| `motivo` | text | sì |  |
+| `testo` | text |  |  |
+| `versione` | text |  |  |
+| `telefono` | text |  |  |
+| `creata_il` | timestamp with time zone | sì | `now()` |
+| `letta_il` | timestamp with time zone |  |  |
+| `risolta_il` | timestamp with time zone |  |  |
+| `risposta` | text |  |  |
+
+Vincoli:
+- `segnalazioni_motivo_check` — `CHECK ((motivo = ANY (ARRAY['non_funziona'::text, 'non_capisco'::text, 'idea'::text])))`
+- `segnalazioni_testo_len` — `CHECK (((testo IS NULL) OR (char_length(testo) <= 1000)))`
+- `segnalazioni_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `supplement_package_items`
 

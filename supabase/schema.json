@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-04",
+ "quando": "2026-10-06",
  "righe": [
   {
    "righe": 0,
@@ -39,7 +39,7 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 9,
+   "righe": 11,
    "tabella": "coach_proposals"
   },
   {
@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 904,
+   "righe": 906,
    "tabella": "meal_items"
   },
   {
-   "righe": 331,
+   "righe": 332,
    "tabella": "meals"
   },
   {
@@ -79,6 +79,10 @@
    "tabella": "schede_utente"
   },
   {
+   "righe": 0,
+   "tabella": "segnalazioni"
+  },
+  {
    "righe": 22,
    "tabella": "supplement_package_items"
   },
@@ -91,11 +95,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1415,
+   "righe": 1416,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1797,
+   "righe": 1822,
    "tabella": "training_logs"
   },
   {
@@ -103,7 +107,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 11,
+   "righe": 12,
    "tabella": "weekly_pictures"
   },
   {
@@ -119,7 +123,7 @@
    "tabella": "weekly_plans"
   },
   {
-   "righe": 14,
+   "righe": 15,
    "tabella": "weight_logs"
   },
   {
@@ -127,7 +131,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 116,
+   "righe": 117,
    "tabella": "workouts"
   }
  ],
@@ -2603,6 +2607,116 @@
     "non_nullo": true,
     "pos": 1,
     "predefinito": "gen_random_uuid()",
+    "tabella": "segnalazioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "dove",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": "'{}'::jsonb",
+    "tabella": "segnalazioni",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "motivo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "testo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "versione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "telefono",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "creata_il",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "segnalazioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "letta_il",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "risolta_il",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "risposta",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 11,
+    "predefinito": null,
+    "tabella": "segnalazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
     "tabella": "supplement_package_items",
     "tipo": "uuid"
    },
@@ -4038,6 +4152,16 @@
     "tabella": "schede_utente"
    },
    {
+    "definizione": "CREATE INDEX segnalazioni_aperte_idx ON public.segnalazioni USING btree (creata_il DESC) WHERE (risolta_il IS NULL)",
+    "nome": "segnalazioni_aperte_idx",
+    "tabella": "segnalazioni"
+   },
+   {
+    "definizione": "CREATE INDEX segnalazioni_user_idx ON public.segnalazioni USING btree (user_id, creata_il DESC)",
+    "nome": "segnalazioni_user_idx",
+    "tabella": "segnalazioni"
+   },
+   {
     "definizione": "CREATE INDEX idx_supplement_package_items_package ON public.supplement_package_items USING btree (package_id)",
     "nome": "idx_supplement_package_items_package",
     "tabella": "supplement_package_items"
@@ -4576,6 +4700,15 @@
     ],
     "ruolo": "authenticated",
     "tabella": "schede_utente"
+   },
+   {
+    "permessi": [
+     "INSERT",
+     "SELECT",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "segnalazioni"
    },
    {
     "permessi": [
@@ -5530,6 +5663,42 @@
     "usando": "(auth.uid() = user_id)"
    },
    {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "segnalazioni_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "segnalazioni",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "segnalazioni_select_own_or_admin",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "segnalazioni",
+    "usando": "((auth.uid() = user_id) OR ((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text))"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)",
+    "nome": "segnalazioni_update_admin",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "segnalazioni",
+    "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
     "comando": "SELECT",
     "controllo": null,
     "nome": "admin_read_all_package_items",
@@ -6242,6 +6411,12 @@
     "tabella": "schede_utente"
    },
    {
+    "commento": "Fondamenta 220: le segnalazioni dal tasto «Segnala» (dove, motivo, testo, versione, telefono); letta_il/risolta_il/risposta dall'amministratore",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "segnalazioni"
+   },
+   {
     "commento": "Join table: quali integratori sono in quale pacchetto. UNIQUE su (package_id, supplement_id).",
     "rls": true,
     "rls_forzata": false,
@@ -6748,6 +6923,30 @@
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "schede_utente_user_id_fkey",
     "tabella": "schede_utente",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "segnalazioni_pkey",
+    "tabella": "segnalazioni",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((motivo = ANY (ARRAY['non_funziona'::text, 'non_capisco'::text, 'idea'::text])))",
+    "nome": "segnalazioni_motivo_check",
+    "tabella": "segnalazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((testo IS NULL) OR (char_length(testo) <= 1000)))",
+    "nome": "segnalazioni_testo_len",
+    "tabella": "segnalazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "segnalazioni_user_id_fkey",
+    "tabella": "segnalazioni",
     "tipo": "f"
    },
    {
