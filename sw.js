@@ -27,6 +27,7 @@ const APP_FILES = [
   'app/pirsi.js',
   'app/onboarding.js',
   'app/impostazioni.js',
+  'app/segnala.js',
 ];
 
 // Rete prima, ma non all'infinito (Fondamenta 120, 2 ottobre 2026): con rete debole la pagina e i file

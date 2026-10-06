@@ -1149,6 +1149,8 @@
 
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
+<!-- «Segnala» (Fondamenta 220): il piccolo insetto, si accende quando si è dentro l'app (showScreen) -->
+<button id="segnala" class="segnala-bottone" hidden aria-label="Segnala" title="Segnala" onclick="foglioSegnala()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.6a4.4 4.4 0 0 1 4.4 4.4v2.6a4.4 4.4 0 0 1-8.8 0V13A4.4 4.4 0 0 1 12 8.6z"/><path d="M12 8.6v11.4M9.3 8.8a2.7 2.7 0 0 1 5.4 0"/><path d="m8.8 6.4 1.2 1.6M15.2 6.4 14 8M4.6 11.2l3.1.9M19.4 11.2l-3.1.9M4.6 17.6l3.1-1.3M19.4 17.6l-3.1-1.3M7.6 13.6l-3 .3M16.4 13.6l3 .3"/></svg></button>
 
 <!-- PACKAGE EDITOR — fullscreen overlay (Integratori v3, 16 mag 2026) -->
 <div id="package-editor-overlay" class="pkg-editor-overlay"></div>
@@ -1523,6 +1525,7 @@ function showClosedScreen() {
 <script src="app/pirsi.js?v=20261006-0728"></script>
 <script src="app/onboarding.js?v=20261006-0728"></script>
 <script src="app/impostazioni.js?v=20261006-0728"></script>
+<script src="app/segnala.js"></script>
 <script>
 // Onboarding: calcolo del fabbisogno (TDEE) con la soglia minima di calorie, M1 (benvenuto, accesso, 7 passi): spostato in app/onboarding.js (Fondamenta 035, tappa 9).
 
@@ -2110,6 +2113,8 @@ function showScreen(name) {
   document.getElementById('loading-overlay').classList.add('hide');
   document.getElementById('app').classList.remove('visible');
   document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
+  // «Segnala» (Fondamenta 220): l'insetto si vede solo dentro l'app, mai sull'accesso, sull'onboarding o sulle schermate di attesa
+  const segnala = document.getElementById('segnala'); if(segnala) segnala.hidden = name !== 'app';
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
   if(name === 'auth' && !privacyAccettata()) name = 'privacy';
@@ -2228,6 +2233,56 @@ function versionFooter(){
 
 // Training, la sessione: recuperi, serie loggate, note, progressione, WS-QUEUE, cronometro, infortunio, rientro soft, renderTraining: spostato in app/training.js (Fondamenta 035, tappa 7).
 // Esami del sangue, log Body, dettaglio check, lettura AI, Tendenza e renderBody: spostato in app/body.js (Fondamenta 035, tappa 4).
+
+// ── «Segnala» (Fondamenta 220, Ignazio 6 ottobre 2026) ── da ogni schermata e foglio: «Cosa non va, o cosa proponi?», tre scelte e un testo.
+// Copiato da MB21 (nota Pagine 009). L'app aggiunge da sola dove era la persona (`doveSono`: il tab, la sezione, i fogli aperti dal
+// primo all'ultimo), la versione e il telefono. Si salva in `segnalazioni` (app/segnala.js per le regole pure); poi «Grazie, l'abbiamo
+// ricevuta». Senza rete: «Non inviata», non va in coda (una segnalazione si rifà a mano). Mai la parola «errore». Il foglio è fatto
+// come quelli di Fondamenta 150 (stesse classi) ma non si mette in fila: si apre sopra qualunque altro foglio, anche una conferma.
+const SG_FOGLI = '.weight-modal, .info-modal-overlay, .m2-modal-photo-overlay, .pkg-editor-overlay, .cextra-overlay, .daydetail-overlay, .pianov4-day-overlay, .rest-modal-overlay';
+function doveSono() {
+  const visibile = (el) => { try { return getComputedStyle(el).display !== 'none'; } catch(e) { return true; } };
+  const fogli = [...document.querySelectorAll(SG_FOGLI)].filter(f => !f.classList.contains('sg-overlay') && visibile(f))
+    .map(f => { const t = f.querySelector('h1, h2, h3, h4, .lbl, [class*="title"], [class*="titolo"], span[style*="font-weight:800"], [class*="header"] span, [class*="header"] b'); return t ? t.textContent : ''; });
+  let sezione = '';
+  if(ST.page === 'body') sezione = ST.bodyTab || '';
+  else if(ST.page === 'training' && ST.trainSession) sezione = 'Sessione in corso';
+  return ZTSegnala.doveDa({ pagina: ST.page, sezione, fogli });
+}
+function foglioSegnala() {
+  if(document.getElementById('sg-foglio') || !ST.user) return;
+  const S = ZTSegnala, dove = doveSono();
+  const ov = document.createElement('div');
+  ov.className = 'info-modal-overlay foglio-overlay sg-overlay'; ov.id = 'sg-foglio';
+  ov.innerHTML = `<div class="info-modal foglio"><h3>Cosa non va, o cosa proponi?</h3>
+    <div class="sg-motivi">${S.MOTIVI.map(([k, n]) => `<button type="button" class="btn btn-ghost" data-motivo="${k}">${esc(n)}</button>`).join('')}</div>
+    <textarea id="sg-testo" class="inp sg-testo" maxlength="${S.MAX_TESTO}" placeholder="Scrivi qui, anche due parole"></textarea>
+    <div class="sg-dove">Dove sei: ${esc(S.descrizioneDove(dove) || 'nell\'app')} · versione ${esc(APP_VERSION)}</div>
+    <div class="foglio-bottoni"><button type="button" class="btn btn-ghost" id="sg-no">Annulla</button><button type="button" class="btn btn-primary" id="sg-si" disabled>Invia</button></div></div>`;
+  let motivo = null;
+  const chiudi = () => { document.removeEventListener('keydown', suTasto); ov.remove(); };
+  const suTasto = (e) => { if(e.key === 'Escape') { e.preventDefault(); chiudi(); } };
+  ov.addEventListener('click', (e) => { if(e.target === ov) chiudi(); });
+  document.addEventListener('keydown', suTasto);
+  ov.querySelector('#sg-no').onclick = chiudi;
+  ov.querySelectorAll('[data-motivo]').forEach(b => b.onclick = () => {
+    motivo = b.dataset.motivo;
+    ov.querySelectorAll('[data-motivo]').forEach(x => x.classList.toggle('scelto', x === b));
+    ov.querySelector('#sg-si').disabled = false;
+  });
+  ov.querySelector('#sg-si').onclick = async () => {
+    const standalone = !!(window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
+    const riga = S.riga({ userId: ST.user.id, motivo, testo: ov.querySelector('#sg-testo').value, dove, versione: APP_VERSION, telefono: S.telefonoDa(navigator.userAgent, standalone) });
+    if(!riga) return;
+    ov.querySelector('#sg-si').disabled = true;
+    const { error } = await dbq('segnalazione', supa.from('segnalazioni').insert(riga), { silenzioso:true });
+    if(error) { ov.querySelector('#sg-si').disabled = false; return showToast('Non inviata: controlla la connessione e riprova.', '📡'); }
+    chiudi();
+    showToast('Grazie, l\'abbiamo ricevuta', '🙏');
+  };
+  document.body.appendChild(ov);
+  const primo = ov.querySelector('[data-motivo]'); if(primo && primo.focus) { try { primo.focus(); } catch(e){} }
+}
 
 function renderPage(id){
   if(id==='home') renderHome();

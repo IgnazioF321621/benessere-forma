@@ -14,7 +14,7 @@ const { REPO, fileLocali } = require('./pagina');
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 if(!fs.existsSync(CHROME)){ console.log('  KO  Chrome non trovato: ' + CHROME); process.exit(1); }
 const prima = process.argv[2];
-const GLOBALI = ['ST', 'dbq', 'dbqAll', 'reportError', 'showToast', 'todayKey', 'ZTNutrizione', 'ZTQuadro', 'ZTCoachRules', 'ZTRitratto', 'supa', 'APP_VERSION'];
+const GLOBALI = ['ST', 'dbq', 'dbqAll', 'reportError', 'showToast', 'todayKey', 'ZTNutrizione', 'ZTQuadro', 'ZTCoachRules', 'ZTRitratto', 'ZTSegnala', 'foglioSegnala', 'supa', 'APP_VERSION'];
 // Informativa gia' letta su questo telefono (Fondamenta 170): la schermata di accesso resta confrontabile con quella di prima
 const PRIVACY_VERSIONE = (/const PRIVACY_VERSIONE = '([^']+)'/.exec(fs.readFileSync(path.join(REPO, 'app', 'comune.js'), 'utf8')) || [])[1] || '';
 const SPIA = '<script>try{localStorage.setItem("zt_privacy_ok",' + JSON.stringify(PRIVACY_VERSIONE) + ')}catch(e){}window.__err=[];window.addEventListener("error",function(e){window.__err.push(String(e.message||"risorsa non caricata: "+((e.target&&(e.target.src||e.target.href))||"?")));},true);' +
