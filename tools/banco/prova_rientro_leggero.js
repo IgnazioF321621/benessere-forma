@@ -25,7 +25,10 @@ function dati() {
     log.push({ user_id:U, id:'s' + data, date:data, slot:'08:00', supplement_name:'Omega', is_extra:false });
     if(n % 3 === 0) log.push({ user_id:U, id:'e' + data, date:data, slot:'16:00', supplement_name:'Barretta', dose:1, dose_unit:'pz', kcal:150, carbo:15, proteine:10, grassi:5, costo:1, created_at:data + 'T16:00:00Z', is_extra:true });
   }
-  return { meals, meal_items:items, fasting_days:[], supplements_log:log, supplements:[], esercizi_catalog:[], nutrilite_catalog:[], profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true }], training_logs:[], workout_sets:[] };
+  return { meals, meal_items:items, fasting_days:[], supplements_log:log, supplements:[], esercizi_catalog:[], nutrilite_catalog:[], profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true,
+    // target gia' allineati a quelli che l'app calcola (1900 kcal, mantenimento 40/30/30): cosi' applyProfile
+    // non li riscrive a ogni rientro (cantiere 37) e il conteggio delle richieste resta quello del rinfresco
+    target_protein:143, target_carbs:190, target_fat:63, prot_pct:30, carbo_pct:40, fat_pct:30 }], training_logs:[], workout_sets:[] };
 }
 const stabile = (v) => Array.isArray(v) ? v.map(stabile) : (v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map(k => [k, stabile(v[k])])) : v);
 const recenti = (o, da) => stabile(Object.fromEntries(Object.keys(o).filter(k => k >= da).sort().map(k => [k, o[k]])));

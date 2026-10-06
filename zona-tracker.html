@@ -1767,26 +1767,23 @@ function applyProfile(profile) {
     pCarbo:  adapted.pCarbo,
     pFat:    adapted.pFat,
   };
-  
-  // CANTIERE 37: Sincronizza profiles.target_* nel DB (Opzione A: ST.TARGET autoritario)
-  // Fondamenta 037, 4 ottobre 2026. Quando l'app ricalcola ST.TARGET dalle percentuali,
-  // aggiorna il DB così che coach-cron (Postino) legga valori coerenti per le proposte.
-  // In background: non si attende la rete, il resto di applyProfile parte subito.
-  if (profile.id && ST.user?.id && !profile.local) {
-    Promise.resolve().then(() => dbq('PATCH', '/profiles?id=eq.' + profile.id, {
-      target_protein: adapted.protein,
-      target_carbs:   adapted.carbs,
-      target_fat:     adapted.fat,
-      prot_pct:       adapted.pProt,
-      carbo_pct:      adapted.pCarbo,
-      fat_pct:        adapted.pFat,
-    })).catch(e => {
-      // Non è fatale — l'app funziona ugualmente, ma coach-cron leggerà valori stale
-      console.warn('[applyProfile] Non posso sincronizzare macro nel DB:', e && e.message);
-    });
-  }
-  
+
   _coachApplyProteinFloor(ST.TARGET);   // proteine accettate da Pirsi: un minimo, i carboidrati cedono la differenza
+  // Cantiere 37 (4 ottobre 2026, Opzione A: ST.TARGET e' la fonte): i target che l'app ha appena
+  // calcolato finiscono anche in profiles.target_* e *_pct, cosi' il cron del lunedi' legge gli stessi
+  // numeri. Si scrive dopo il minimo proteico (e' il valore che l'app usa davvero), solo se qualcosa
+  // e' cambiato (applyProfile parte a ogni avvio e rientro: non si manda una richiesta a vuoto),
+  // in sfondo e senza avviso: se fallisce l'app va avanti lo stesso.
+  if (profile.id && ST.user?.id) {
+    const t = ST.TARGET;
+    const nuovi = { target_protein: t.protein, target_carbs: t.carbs, target_fat: t.fat,
+                    prot_pct: t.pProt, carbo_pct: t.pCarbo, fat_pct: t.pFat };
+    const cambiati = Object.keys(nuovi).some(k => Number(profile[k]) !== Number(nuovi[k]));
+    if (cambiati) {
+      Object.assign(profile, nuovi);
+      dbq('salvo i target del profilo', supa.from('profiles').update(nuovi).eq('id', profile.id), { silenzioso: true });
+    }
+  }
   applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
   updateHeaderWeight();
