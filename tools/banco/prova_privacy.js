@@ -119,6 +119,25 @@ const profilo = { id:U, first_name:'Ignazio', last_name:'F', sex:'M', age:55, he
     await a.scrivi('elimina');
     atteso('parola giusta · prima le foto col proprio permesso, poi la funzione, poi l\'uscita', [a.chiamate(), a.usciti(), a.ST.user, a.b.win.localStorage.getItem('zt_cache')], [['storage:body-check-photos:remove', 'rpc:elimina_mio_account:rpc'], 1, null, null]);
     atteso('foto · tolte per percorso', a.b.supa._calls.find(c => c.op === 'remove').payload, [U + '/c1/front.jpg', U + '/c1/back.jpg']);
+    // gli screenshot di «Invia Feedback» (Fondamenta 230) sono nella cartella della persona e se ne vanno con lei
+    {
+      const t = { profiles:[profilo], body_check_photos:[], __storage:{ segnalazioni:[U + '/s1.jpg', U + '/s2.jpg', 'altra-persona/s3.jpg'] } };
+      const b = boot(t, { now:'2026-10-03T12:00:00', locale:{ zt_cache:'x', zt_privacy_ok:'2026-10-03' } });
+      await b.avviato;
+      b.win.eval('ST').user = { id:U, email:'tester@x.it' };
+      b.supa.auth.signOut = async () => ({ error:null });
+      b.win.eliminaMioAccount(); await attendi(30);
+      const inp = b.win.document.querySelector('.foglio input'); inp.value = 'ELIMINA'; b.win.document.querySelector('.foglio .foglio-ok').click(); await attendi(60);
+      const rim = b.supa._calls.filter(c => c.op === 'remove' || c.op === 'rpc').map(c => c.table + ':' + c.op);
+      atteso('screenshot di feedback · tolti dalla cartella della persona, mai quelli di un altro, poi la funzione', [rim, b.supa._calls.find(c => c.table === 'storage:segnalazioni' && c.op === 'remove').payload, t.__storage.segnalazioni], [['storage:segnalazioni:remove', 'rpc:elimina_mio_account:rpc'], [U + '/s1.jpg', U + '/s2.jpg'], ['altra-persona/s3.jpg']]);
+      const t2 = { profiles:[profilo], body_check_photos:[], __storage:{ segnalazioni:[U + '/s1.jpg'] }, __rifiuta:{ 'storage:segnalazioni':{ code:'403', message:'no' } } };
+      const b2 = boot(t2, { now:'2026-10-03T12:00:00', locale:{ zt_cache:'x', zt_privacy_ok:'2026-10-03' } });
+      await b2.avviato;
+      b2.win.eval('ST').user = { id:U, email:'tester@x.it' };
+      b2.win.eliminaMioAccount(); await attendi(30);
+      const inp2 = b2.win.document.querySelector('.foglio input'); inp2.value = 'ELIMINA'; b2.win.document.querySelector('.foglio .foglio-ok').click(); await attendi(60);
+      atteso('screenshot non letti · si avvisa, l\'account resta (nessuna chiamata alla funzione)', [b2.supa._calls.filter(c => c.op === 'rpc').length, !!b2.win.eval('ST').user], [0, true]);
+    }
     a = await nuovo({ elimina_mio_account:{ data:null, error:{ code:'PGRST202', message:'funzione non trovata' } } });
     await a.scrivi('ELIMINA');
     atteso('funzione assente · si avvisa, nessuna uscita', [a.usciti(), !!a.ST.user, /non riesco a eliminare/i.test(a.b.avviso)], [0, true, true]);

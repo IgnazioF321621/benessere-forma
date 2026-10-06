@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Chi può leggere e toccare cosa, tabella per tabella — prova dal vivo (Fondamenta 040).
 
-Per ogni persona vera del database e per chi non è entrato, prova sul database vero che:
+Per ogni persona vera del database, per una persona finta che non ha righe e per chi non è entrato, prova sul database vero che:
   - non LEGGE le righe di un altro            (conteggio delle righe altrui = 0)
   - non MODIFICA e non CANCELLA righe altrui  (righe toccate = 0)
   - non INSERISCE righe a nome di un altro    (rifiutato dalle regole di accesso)
   - chi non è entrato non vede niente dei dati delle persone
   - i cataloghi comuni non si possono scrivere dall'app
-  - le foto del bucket privato si vedono solo dalla propria cartella
+  - i file dei bucket privati (foto dei check, screenshot di «Invia Feedback») si vedono e si scrivono solo nella propria cartella
 
 NIENTE RESTA SCRITTO. Ogni persona è provata dentro una transazione che finisce con
 ROLLBACK, e in più ogni tentativo di scrittura è annullato subito, uno per uno, da un
@@ -31,7 +31,13 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = 'qxiyeiahpoiliwpqslpr'
-BUCKET_PRIVATO = 'body-check-photos'
+# Bucket privati con una cartella per persona (nome della cartella = id della persona). Un bucket che non esiste ancora
+# (migrazione non eseguita) si salta e si dice.
+BUCKET_PRIVATI = ['body-check-photos', 'segnalazioni']
+# La persona finta: un id che non è in auth.users e un'email che non è dell'amministratore. Per le regole è una persona entrata
+# come un'altra, con zero righe sue: tutte le righe che esistono sono «di un altro». Così la prova funziona anche con una persona
+# sola nel database (dopo la pulizia dei tester) e la lettura di righe altrui è dimostrata davvero, non a vuoto.
+PERSONA_FINTA = {'id': '00000000-0000-4000-8000-0000000000aa', 'email': 'estranea@prova.invalid'}
 # Cataloghi comuni: nessun proprietario, l'app li legge soltanto. Si scrivono dal foglio o dal Worker (chiave di servizio).
 # True = leggibile anche da chi non è entrato (deciso: nomi di esercizi e prodotti non sono dati personali).
 CATALOGHI = {'esercizi_catalog': True, 'nutrilite_catalog': True, 'exercise_media': True, 'biblioteca_gif': False}
@@ -69,7 +75,7 @@ def colonne_cataloghi():
     return {r['t']: r['c'] for r in righe}
 
 
-def sql_attore(ruolo, uid, email, altro, personali, col_cat):
+def sql_attore(ruolo, uid, email, altro, personali, col_cat, buckets):
     """Una transazione sola: prende ruolo e identità, prova tutto, restituisce gli esiti, ROLLBACK."""
     claims = json.dumps({'sub': uid, 'role': ruolo, 'email': email} if uid else {'role': ruolo})
     b = []
@@ -104,6 +110,8 @@ def sql_attore(ruolo, uid, email, altro, personali, col_cat):
     raise exception using errcode = 'ZT001', message = 'INSERITA';
   exception when sqlstate 'ZT001' then insert into _esiti values ('{t}', 'inserisce', sqlerrm);
             when insufficient_privilege then insert into _esiti values ('{t}', 'inserisce', 'negato');
+            -- l'id usato può non essere in auth.users: arrivare al vincolo vuol dire aver passato le regole di accesso (si controllano prima)
+            when foreign_key_violation then insert into _esiti values ('{t}', 'inserisce', 'aperto');
             when others then insert into _esiti values ('{t}', 'inserisce', '?? ' || sqlstate);
   end;""")
     for t in CATALOGHI:
@@ -142,12 +150,22 @@ def sql_attore(ruolo, uid, email, altro, personali, col_cat):
             when others then insert into _esiti values ('{t}', 'inserisce', 'aperto');
   end;""")
     cartella = f"and (storage.foldername(name))[1] <> ''{uid}''" if uid else ''
-    b.append(f"""
+    for bk in buckets:
+        etichetta = 'bucket ' + bk
+        b.append(f"""
   begin
-    execute 'select count(*) from storage.objects where bucket_id = ''{BUCKET_PRIVATO}'' {cartella}' into n;
-    insert into _esiti values ('foto dei check (bucket)', 'legge', n::text);
-  exception when insufficient_privilege then insert into _esiti values ('foto dei check (bucket)', 'legge', 'negato');
-            when others then insert into _esiti values ('foto dei check (bucket)', 'legge', '?? ' || sqlstate);
+    execute 'select count(*) from storage.objects where bucket_id = ''{bk}'' {cartella}' into n;
+    insert into _esiti values ('{etichetta}', 'legge', n::text);
+  exception when insufficient_privilege then insert into _esiti values ('{etichetta}', 'legge', 'negato');
+            when others then insert into _esiti values ('{etichetta}', 'legge', '?? ' || sqlstate);
+  end;
+  begin
+    -- un file nella cartella di un altro: le regole del bucket devono rifiutarlo (la cancellazione diretta in storage.objects la blocca Supabase da sé, non si prova)
+    insert into storage.objects (bucket_id, name) values ('{bk}', '{altro}/prova-accessi.jpg');
+    raise exception using errcode = 'ZT001', message = 'INSERITA';
+  exception when sqlstate 'ZT001' then insert into _esiti values ('{etichetta}', 'inserisce', sqlerrm);
+            when insufficient_privilege then insert into _esiti values ('{etichetta}', 'inserisce', 'negato');
+            when others then insert into _esiti values ('{etichetta}', 'inserisce', '?? ' || sqlstate);
   end;""")
     return f"""begin;
 create temp table _esiti (tabella text, prova text, esito text) on commit drop;
@@ -175,26 +193,35 @@ def main():
     # Chi è «admin» per le regole, e su quali tabelle: lo si legge dalle regole stesse, non lo si suppone.
     regole_admin = leggi("""select tablename t, qual from pg_policies where schemaname='public' and cmd='SELECT' and qual like '%auth.jwt()%email%'""")
     tab_admin = {r['t'] for r in regole_admin}
+    # Dove la regola dice che l'amministratore può anche aggiornare (letta_il, risolta_il, risposta di segnalazioni): è dichiarato, non è un buco.
+    tab_admin_aggiorna = {r['t'] for r in leggi("""select tablename t from pg_policies where schemaname='public' and cmd in ('UPDATE','ALL') and qual like '%auth.jwt()%email%'""")}
+    presenti = {r['id'] for r in leggi("select id from storage.buckets")}
+    buckets = [b for b in BUCKET_PRIVATI if b in presenti]
+    mancanti = [b for b in BUCKET_PRIVATI if b not in presenti]
     email_admin = {u['email'] for u in utenti if any(("'" + u['email'] + "'") in r['qual'] for r in regole_admin)}
     # Quante righe NON sue esistono per ognuno: una lettura a 0 dove non c'è niente da vedere non prova niente.
     conta = ' union all '.join(f"""select '{t}' t, "{c}"::text u, count(*) n from public."{t}" group by 2""" for t, c in personali.items())
     per_tabella = {}
     for r in leggi(conta):
         per_tabella.setdefault(r['t'], {})[r['u']] = r['n']
-    foto_per_cartella = {r['u']: r['n'] for r in leggi(f"select (storage.foldername(name))[1] u, count(*) n from storage.objects where bucket_id='{BUCKET_PRIVATO}' group by 1")}
+    foto_per_cartella = {r['u']: r['n'] for r in leggi(f"select (storage.foldername(name))[1] u, count(*) n from storage.objects where bucket_id='{BUCKET_PRIVATI[0]}' group by 1")}
 
     print(f"{len(personali)} tabelle con i dati delle persone · {len(CATALOGHI)} cataloghi · {len(utenti)} account · admin per le regole: {len(email_admin)} · tabelle con regola admin: {len(tab_admin)}")
+    if mancanti:
+        print('bucket non ancora creato (migrazione non eseguita), saltato: ' + ', '.join(mancanti))
     if ignote:
         print('⚠️ tabelle senza proprietario e non dichiarate come catalogo (da guardare): ' + ', '.join(ignote))
 
     attori = [('persona ' + str(i + 1) + (' (admin)' if u['email'] in email_admin else ''), 'authenticated', u) for i, u in enumerate(utenti)]
+    attori.append(('persona finta (estranea)', 'authenticated', PERSONA_FINTA))
     attori.append(('non entrato', 'anon', None))
+    ids = [u['id'] for u in utenti] + [PERSONA_FINTA['id']]
     col_cat = colonne_cataloghi()
     ko, grezzi, vuote = [], {}, set()
     for nome, ruolo, u in attori:
         uid = u['id'] if u else None
-        altro = next(x['id'] for x in utenti if x['id'] != uid)
-        esiti = leggi(sql_attore(ruolo, uid, u['email'] if u else None, altro, personali, col_cat))
+        altro = next(x for x in ids if x != uid)
+        esiti = leggi(sql_attore(ruolo, uid, u['email'] if u else None, altro, personali, col_cat, buckets))
         grezzi[nome] = esiti
         admin = bool(u and u['email'] in email_admin)
         problemi = []
@@ -204,9 +231,9 @@ def main():
             if esito.startswith('??'):
                 problemi.append(f'{t}: {prova} non determinabile ({esito})')
             elif prova == 'legge':
-                if t.startswith('foto'):
+                if t.startswith('bucket'):
                     if esito not in ('0', 'negato'):
-                        problemi.append(f'{t}: vede {esito} foto non sue')
+                        problemi.append(f'{t}: vede {esito} file non suoi')
                 elif catalogo:
                     atteso_visibile = ruolo == 'authenticated' or CATALOGHI[t]
                     if not atteso_visibile and esito not in ('0', 'negato'):
@@ -216,7 +243,9 @@ def main():
                 elif esito not in ('0', 'negato'):
                     problemi.append(f'{t}: LEGGE {esito} righe non sue')
             elif prova in ('modifica', 'cancella'):
-                if esito not in ('0', 'negato'):
+                if prova == 'modifica' and admin and t in tab_admin_aggiorna:
+                    pass                                      # l'admin aggiorna qui per regola dichiarata (segnalazioni: letta, risolta, risposta)
+                elif esito not in ('0', 'negato'):
                     problemi.append(f"{t}: può {'MODIFICARE' if prova == 'modifica' else 'CANCELLARE'} {esito} righe {'del catalogo' if catalogo else 'non sue'}")
             elif prova == 'inserisce':
                 if esito != 'negato':
@@ -234,7 +263,7 @@ def main():
     if vuote:
         print(f"\nlettura non dimostrabile, tabella vuota ({len(vuote)}): " + ', '.join(sorted(vuote)) + ' — scritture provate comunque')
     con_foto = [u for u in foto_per_cartella if foto_per_cartella[u]]
-    print(f"foto nel bucket privato: {sum(foto_per_cartella.values())} in {len(con_foto)} cartelle")
+    print(f"foto nel bucket privato {BUCKET_PRIVATI[0]}: {sum(foto_per_cartella.values())} in {len(con_foto)} cartelle")
     if a.json:
         with open(a.json, 'w', encoding='utf-8') as f:
             json.dump({'esiti': grezzi, 'ko': ko}, f, ensure_ascii=False, indent=1)

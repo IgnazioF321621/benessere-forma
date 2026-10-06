@@ -130,9 +130,17 @@ async function eliminaMioAccount(){
   const foto = await dbqAll('leggere l\'elenco delle foto', () => supa.from('body_check_photos').select('storage_path').eq('user_id', uid).order('id', { ascending:true }), { silenzioso:true });
   if(foto.error){ await avvisa('Non riesco a leggere l\'elenco delle foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
   const percorsi = (foto.data || []).map(f => f.storage_path).filter(Boolean);
+  // gli screenshot di «Invia Feedback» (Fondamenta 230): la cartella della persona nel bucket privato, letta prima di togliere qualsiasi cosa
+  const screenshot = await dbq('leggere gli screenshot inviati', supa.storage.from('segnalazioni').list(uid, { limit:1000 }), { silenzioso:true });
+  if(screenshot.error){ await avvisa('Non riesco a leggere gli screenshot che hai inviato: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  const percorsiScreenshot = (screenshot.data || []).filter(f => f && f.name).map(f => uid + '/' + f.name);
   if(percorsi.length){
     const r = await dbq('cancellare le foto', supa.storage.from('body-check-photos').remove(percorsi), { silenzioso:true });
     if(r.error){ await avvisa('Non riesco a cancellare le foto: non ho cancellato niente. Riprova.', { titolo:'Account non eliminato' }); return; }
+  }
+  if(percorsiScreenshot.length){
+    const r = await dbq('cancellare gli screenshot', supa.storage.from('segnalazioni').remove(percorsiScreenshot), { silenzioso:true });
+    if(r.error){ await avvisa('Non riesco a cancellare gli screenshot: le foto sono state tolte, ma l\'account c\'è ancora. Riprova.', { titolo:'Account non eliminato' }); return; }
   }
   // 2. l'accesso, e con lui tutte le righe
   const res = await dbq('eliminare l\'account', supa.rpc('elimina_mio_account'), { silenzioso:true });
