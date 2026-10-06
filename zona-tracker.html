@@ -1149,8 +1149,8 @@
 
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
-<!-- «Segnala» (Fondamenta 220): il piccolo insetto, si accende quando si è dentro l'app (showScreen) -->
-<button id="segnala" class="segnala-bottone" hidden aria-label="Segnala" title="Segnala" onclick="foglioSegnala()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.6a4.4 4.4 0 0 1 4.4 4.4v2.6a4.4 4.4 0 0 1-8.8 0V13A4.4 4.4 0 0 1 12 8.6z"/><path d="M12 8.6v11.4M9.3 8.8a2.7 2.7 0 0 1 5.4 0"/><path d="m8.8 6.4 1.2 1.6M15.2 6.4 14 8M4.6 11.2l3.1.9M19.4 11.2l-3.1.9M4.6 17.6l3.1-1.3M19.4 17.6l-3.1-1.3M7.6 13.6l-3 .3M16.4 13.6l3 .3"/></svg></button>
+<!-- «Invia Feedback» (Fondamenta 220 e 230): il piccolo insetto, si accende quando si è dentro l'app (showScreen) -->
+<button id="segnala" class="segnala-bottone" hidden aria-label="Invia Feedback" title="Invia Feedback" onclick="foglioSegnala()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.6a4.4 4.4 0 0 1 4.4 4.4v2.6a4.4 4.4 0 0 1-8.8 0V13A4.4 4.4 0 0 1 12 8.6z"/><path d="M12 8.6v11.4M9.3 8.8a2.7 2.7 0 0 1 5.4 0"/><path d="m8.8 6.4 1.2 1.6M15.2 6.4 14 8M4.6 11.2l3.1.9M19.4 11.2l-3.1.9M4.6 17.6l3.1-1.3M19.4 17.6l-3.1-1.3M7.6 13.6l-3 .3M16.4 13.6l3 .3"/></svg></button>
 
 <!-- PACKAGE EDITOR — fullscreen overlay (Integratori v3, 16 mag 2026) -->
 <div id="package-editor-overlay" class="pkg-editor-overlay"></div>
@@ -2115,6 +2115,7 @@ function showScreen(name) {
   document.getElementById('closed-screen').classList.toggle('visible', name === 'closed');
   // «Segnala» (Fondamenta 220): l'insetto si vede solo dentro l'app, mai sull'accesso, sull'onboarding o sulle schermate di attesa
   const segnala = document.getElementById('segnala'); if(segnala) segnala.hidden = name !== 'app';
+  if(name === 'app') seguiFogli();
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
   if(name === 'auth' && !privacyAccettata()) name = 'privacy';
@@ -2234,33 +2235,63 @@ function versionFooter(){
 // Training, la sessione: recuperi, serie loggate, note, progressione, WS-QUEUE, cronometro, infortunio, rientro soft, renderTraining: spostato in app/training.js (Fondamenta 035, tappa 7).
 // Esami del sangue, log Body, dettaglio check, lettura AI, Tendenza e renderBody: spostato in app/body.js (Fondamenta 035, tappa 4).
 
-// ── «Segnala» (Fondamenta 220, Ignazio 6 ottobre 2026) ── da ogni schermata e foglio: «Cosa non va, o cosa proponi?», tre scelte e un testo.
-// Copiato da MB21 (nota Pagine 009). L'app aggiunge da sola dove era la persona (`doveSono`: il tab, la sezione, i fogli aperti dal
+// ── «Invia Feedback» (Fondamenta 220 e 230, Ignazio 6 ottobre 2026) ── il tasto si chiamava «Segnala»; nel codice i nomi restano (segnala.js,
+// #segnala, foglioSegnala): conta quello che si legge. Da ogni schermata e foglio: tre scelte, un testo e, se si vuole, uno screenshot.
+// Copiato da MB21 (note Pagine 009 e 014). L'app aggiunge da sola dove era la persona (`doveSono`: il tab, la sezione, i fogli aperti dal
 // primo all'ultimo), la versione e il telefono. Si salva in `segnalazioni` (app/segnala.js per le regole pure); poi «Grazie, l'abbiamo
 // ricevuta». Senza rete: «Non inviata», non va in coda (una segnalazione si rifà a mano). Mai la parola «errore». Il foglio è fatto
 // come quelli di Fondamenta 150 (stesse classi) ma non si mette in fila: si apre sopra qualunque altro foglio, anche una conferma.
-const SG_FOGLI = '.weight-modal, .info-modal-overlay, .m2-modal-photo-overlay, .pkg-editor-overlay, .cextra-overlay, .daydetail-overlay, .pianov4-day-overlay, .rest-modal-overlay';
-function doveSono() {
+// L'insetto sta in basso a destra, sopra la barra dei tab; con un foglio aperto sale in alto a destra, sull'ombra scura (`seguiFogli`).
+const SG_FOGLI = '.weight-modal, .info-modal-overlay, .m2-modal-photo-overlay, .pkg-editor-overlay, .cextra-overlay, .daydetail-overlay, .daydetail-menu-overlay, .pianov4-day-overlay, .pianov4-subst-overlay, .pianov4-weighin-overlay, .pianov4-welcome-overlay, .weight-freq-overlay, .rest-modal-overlay';
+// I fogli aperti adesso, escluso quello di «Invia Feedback»: un foglio c'è se è nella pagina e non è nascosto
+function fogliAperti() {
   const visibile = (el) => { try { return getComputedStyle(el).display !== 'none'; } catch(e) { return true; } };
-  const fogli = [...document.querySelectorAll(SG_FOGLI)].filter(f => !f.classList.contains('sg-overlay') && visibile(f))
+  return [...document.querySelectorAll(SG_FOGLI)].filter(f => !f.classList.contains('sg-overlay') && visibile(f));
+}
+function doveSono() {
+  const fogli = fogliAperti()
     .map(f => { const t = f.querySelector('h1, h2, h3, h4, .lbl, [class*="title"], [class*="titolo"], span[style*="font-weight:800"], [class*="header"] span, [class*="header"] b'); return t ? t.textContent : ''; });
   let sezione = '';
   if(ST.page === 'body') sezione = ST.bodyTab || '';
   else if(ST.page === 'training' && ST.trainSession) sezione = 'Sessione in corso';
   return ZTSegnala.doveDa({ pagina: ST.page, sezione, fogli });
 }
+// Con un foglio aperto l'insetto sale in alto a destra, sull'ombra scura, così non copre «Salva», «Invia» e le scelte in fondo al foglio.
+// Si guarda il corpo della pagina: i fogli si aggiungono, si tolgono e (quelli fissi) si accendono con lo stile; al massimo una volta ogni 30 millisecondi.
+let _sgOsserva = null;
+function seguiFogli() {
+  const sg = document.getElementById('segnala');
+  if(!sg || _sgOsserva || typeof MutationObserver === 'undefined') return;
+  let prenotato = false;
+  const aggiorna = () => { prenotato = false; sg.classList.toggle('in-foglio', fogliAperti().length > 0); };
+  // niente requestAnimationFrame: la Home conta i suoi fotogrammi prenotati (Fondamenta 100) e questo non è un suo disegno
+  _sgOsserva = new MutationObserver(() => { if(prenotato) return; prenotato = true; setTimeout(aggiorna, 30); });
+  _sgOsserva.observe(document.body, { childList:true, subtree:true, attributes:true, attributeFilter:['style', 'class'] });
+  aggiorna();
+}
 function foglioSegnala() {
   if(document.getElementById('sg-foglio') || !ST.user) return;
   const S = ZTSegnala, dove = doveSono();
   const ov = document.createElement('div');
   ov.className = 'info-modal-overlay foglio-overlay sg-overlay'; ov.id = 'sg-foglio';
-  ov.innerHTML = `<div class="info-modal foglio"><h3>Cosa non va, o cosa proponi?</h3>
+  ov.innerHTML = `<div class="info-modal foglio"><h3>Invia Feedback</h3>
     <div class="sg-motivi">${S.MOTIVI.map(([k, n]) => `<button type="button" class="btn btn-ghost" data-motivo="${k}">${esc(n)}</button>`).join('')}</div>
     <textarea id="sg-testo" class="inp sg-testo" maxlength="${S.MAX_TESTO}" placeholder="Scrivi qui, anche due parole"></textarea>
+    <div class="sg-allega"><label id="sg-allega" class="btn btn-ghost">Allega lo screenshot<input type="file" id="sg-file" accept="image/*" hidden></label>
+      <div id="sg-anteprima" hidden><img alt="Lo screenshot allegato"><button type="button" class="btn btn-ghost" id="sg-togli">Togli</button></div></div>
     <div class="sg-dove">Dove sei: ${esc(S.descrizioneDove(dove) || 'nell\'app')} · versione ${esc(APP_VERSION)}</div>
     <div class="foglio-bottoni"><button type="button" class="btn btn-ghost" id="sg-no">Annulla</button><button type="button" class="btn btn-primary" id="sg-si" disabled>Invia</button></div></div>`;
   let motivo = null;
-  const chiudi = () => { document.removeEventListener('keydown', suTasto); ov.remove(); };
+  let immagine = null;   // lo screenshot ridotto, pronto da caricare
+  let idSegnalazione = null;   // scelto al primo «Invia» e tenuto per i tentativi dopo: lo stesso file si riscrive, non se ne accumulano
+  const fileInput = ov.querySelector('#sg-file'), etichetta = ov.querySelector('#sg-allega'), anteprima = ov.querySelector('#sg-anteprima'), img = anteprima.querySelector('img');
+  const liberaAnteprima = () => { if(img.src && img.src.startsWith('blob:')) { try { URL.revokeObjectURL(img.src); } catch(e){} } img.removeAttribute('src'); };
+  const mostraAnteprima = () => {
+    liberaAnteprima();
+    if(immagine) { try { img.src = URL.createObjectURL(immagine); } catch(e){} }
+    anteprima.hidden = !immagine; etichetta.hidden = !!immagine;
+  };
+  const chiudi = () => { document.removeEventListener('keydown', suTasto); liberaAnteprima(); ov.remove(); };
   const suTasto = (e) => { if(e.key === 'Escape') { e.preventDefault(); chiudi(); } };
   ov.addEventListener('click', (e) => { if(e.target === ov) chiudi(); });
   document.addEventListener('keydown', suTasto);
@@ -2270,18 +2301,59 @@ function foglioSegnala() {
     ov.querySelectorAll('[data-motivo]').forEach(x => x.classList.toggle('scelto', x === b));
     ov.querySelector('#sg-si').disabled = false;
   });
+  // Lo screenshot: la persona lo sceglie dalle foto, l'app lo riduce subito (riduciScreenshot) e mostra l'anteprima con «Togli»
+  fileInput.onchange = async () => {
+    const f = fileInput.files[0]; fileInput.value = '';
+    if(!f) return;
+    try { immagine = await riduciScreenshot(f); } catch(e) { return showToast(e.message || 'Non riesco a leggere questa immagine', '🖼️'); }
+    mostraAnteprima();
+  };
+  ov.querySelector('#sg-togli').onclick = () => { immagine = null; mostraAnteprima(); };
   ov.querySelector('#sg-si').onclick = async () => {
+    if(!motivo) return;
     const standalone = !!(window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
-    const riga = S.riga({ userId: ST.user.id, motivo, testo: ov.querySelector('#sg-testo').value, dove, versione: APP_VERSION, telefono: S.telefonoDa(navigator.userAgent, standalone) });
-    if(!riga) return;
-    ov.querySelector('#sg-si').disabled = true;
+    // l'id lo sceglie l'app, così lo screenshot si carica PRIMA della riga con lo stesso nome (la persona non può aggiornare la riga dopo)
+    if(!idSegnalazione) idSegnalazione = S.nuovoId(n => crypto.getRandomValues(new Uint8Array(n)));
+    const bottone = ov.querySelector('#sg-si');
+    const nonInviata = () => { bottone.disabled = false; return showToast('Non inviata: controlla la connessione e riprova.', '📡'); };
+    bottone.disabled = true;
+    let percorso = null;
+    if(immagine) {
+      percorso = S.percorsoImmagine(ST.user.id, idSegnalazione);
+      const su = await dbq('screenshot della segnalazione', supa.storage.from(S.BUCKET).upload(percorso, immagine, { contentType:'image/jpeg', upsert:true }), { silenzioso:true });
+      if(su.error) return nonInviata();
+    }
+    const riga = S.riga({ id: idSegnalazione, userId: ST.user.id, motivo, testo: ov.querySelector('#sg-testo').value, dove, versione: APP_VERSION, telefono: S.telefonoDa(navigator.userAgent, standalone), immagine: percorso });
+    if(!riga) return nonInviata();
     const { error } = await dbq('segnalazione', supa.from('segnalazioni').insert(riga), { silenzioso:true });
-    if(error) { ov.querySelector('#sg-si').disabled = false; return showToast('Non inviata: controlla la connessione e riprova.', '📡'); }
+    if(error) {
+      // nessuna riga a metà: il file appena caricato si toglie (se la rete è caduta il tentativo può non riuscire; il prossimo Invia lo riscrive, stesso nome)
+      if(percorso) { try { await dbq('togliere lo screenshot', supa.storage.from(S.BUCKET).remove([percorso]), { silenzioso:true }); } catch(e){} }
+      return nonInviata();
+    }
     chiudi();
     showToast('Grazie, l\'abbiamo ricevuta', '🙏');
   };
   document.body.appendChild(ov);
   const primo = ov.querySelector('[data-motivo]'); if(primo && primo.focus) { try { primo.focus(); } catch(e){} }
+}
+// Lo screenshot ridotto sul telefono prima di caricarlo: lato lungo al massimo MAX_LATO (misuraRidotta in segnala.js), JPEG QUALITA.
+// Da 2-4 MB a circa 200 KB: lo spazio dei file su Supabase è contato (piano gratuito, insieme a MB21). Safari converte da solo le HEIC dell'iPhone.
+function riduciScreenshot(file) {
+  const S = ZTSegnala, non = 'Non riesco a leggere questa immagine';
+  return new Promise((ok, no) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const { w, h } = S.misuraRidotta(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok(b) : no(new Error(non)), 'image/jpeg', S.QUALITA);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error(non)); };
+    img.src = url;
+  });
 }
 
 function renderPage(id){

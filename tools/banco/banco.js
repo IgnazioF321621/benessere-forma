@@ -147,10 +147,31 @@ function makeSupaMock(tables){
       signInWithOtp: async()=>({error:null}), verifyOtp: async()=>({error:null}),
       signOut: async()=>({error:null}), getUser: async()=>({data:{user: (tables.__sessione || {}).user || null}}),
     },
-    // storage.remove e rpc registrano la chiamata in _calls (table 'storage:<bucket>' / 'rpc:<funzione>');
+    // storage.upload, storage.remove e rpc registrano la chiamata in _calls (table 'storage:<bucket>' / 'rpc:<funzione>');
+    // tables.__storage = { bucket:['<cartella>/<file>', …] } sono i file presenti: list(cartella) li elenca, upload li aggiunge, remove li toglie;
+    // tables.__rete = false fa fallire upload e remove come un fetch fallito; tables.__rifiuta = { 'storage:<bucket>':{code, message} } li rifiuta con quell'errore;
     // tables.__rpc = { funzione: { data, error } } decide la risposta
-    storage: { from: (bucket)=>({ createSignedUrl: async()=>({data:null}), list: async()=>({data:[]}),
-      remove: async(paths)=>{ calls.push({ table:'storage:' + bucket, op:'remove', payload:paths, filters:[] }); return { data:paths, error:null }; } }) },
+    storage: { from: (bucket)=>{
+      const nome = 'storage:' + bucket;
+      const presenti = () => { const st = tables.__storage || (tables.__storage = {}); return st[bucket] || (st[bucket] = []); };
+      const guasto = () => tables.__rete === false ? { message:'TypeError: Failed to fetch' } : ((tables.__rifiuta || {})[nome] ? { ...tables.__rifiuta[nome] } : null);
+      return {
+        createSignedUrl: async()=>({data:null}),
+        list: async(cartella)=>({ data: presenti().filter(f => f.startsWith(cartella + '/')).map(f => ({ name: f.slice(cartella.length + 1) })), error:null }),
+        upload: async(percorso, corpo, opzioni)=>{
+          calls.push({ table:nome, op:'upload', payload:{ percorso, tipo: corpo && corpo.type, byte: corpo && corpo.size, opzioni: opzioni || {} }, filters:[] });
+          const e = guasto(); if(e) return { data:null, error:e };
+          if(!presenti().includes(percorso)) presenti().push(percorso);
+          return { data:{ path:percorso }, error:null };
+        },
+        remove: async(paths)=>{
+          calls.push({ table:nome, op:'remove', payload:paths, filters:[] });
+          const e = guasto(); if(e) return { data:null, error:e };
+          tables.__storage = tables.__storage || {}; tables.__storage[bucket] = presenti().filter(f => !paths.includes(f));
+          return { data:paths, error:null };
+        },
+      };
+    } },
     rpc: (fn, args) => { calls.push({ table:'rpc:' + fn, op:'rpc', payload:args || null, filters:[] }); const r = (tables.__rpc || {})[fn]; return Promise.resolve(r ? { ...r } : { data:null, error:null }); },
   };
   client._calls = calls;
