@@ -126,6 +126,8 @@ Bootstrap (parte subito al caricamento, *dal 2 ottobre 2026, Fondamenta 100: pri
 
 ## Design system
 
+Nomi, valori e regole in **[`docs/STILE.md`](docs/STILE.md)** *(dal 6 ottobre 2026, Stile 010)*. **In `app/stile.css` ogni colore e carattere ha un nome in `:root`: fuori da `:root` non si scrive mai un colore a mano** (le trasparenze con i canali, `rgba(var(--acc-rgb),.25)`). Lo controlla `node tools/banco/prova_stile.js`; con lo stile di prima accanto prova anche, in Chrome vero, che l'aspetto non è cambiato.
+
 - **Font**: Syne (titoli/prose) + JetBrains Mono (numeri/label). **MAI Manrope** sulle schermate nuove
 - **Background**: bone `#F5F3EE` · **Accent**: evergreen `#2A7A6F`
 - **Tinte modulo**: Nutrition `#FAC775` · Training `#B5D4F4` · Body `#AFA9EC` (forte `#5E4A7A` solo checkpoint)
