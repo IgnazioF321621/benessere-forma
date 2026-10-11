@@ -718,6 +718,7 @@ select.inp{cursor:pointer;}
   padding:6px 8px;
   border-radius:6px;
   align-self:flex-end;
+  margin-right:36px; /* Fondamenta 240: lascia l'angolo all'insetto «Invia Feedback», che col recupero aperto sale in alto a destra */
 }
 .rest-hero-skip:hover{color:var(--acc);background:var(--acc-lt);}
 /* GIF hero recupero: ingrandita verticalmente (26 mag 2026, micro-fix post-2A).
@@ -895,7 +896,7 @@ select.inp{cursor:pointer;}
 .train-exec-header{
   display:flex; align-items:center; justify-content:space-between;
   gap:12px;
-  padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;
+  padding:calc(env(safe-area-inset-top) + 14px) 50px 12px 18px; /* Fondamenta 240: a destra l'angolo è dell'insetto «Invia Feedback» */
   border-bottom:1px solid var(--b1);
 }
 .train-exec-eyebrow{
@@ -2400,6 +2401,8 @@ body.preview-onboarding #m1-preview-banner{display:block;}
    In basso a destra, sopra la barra dei tab (sul telefono la barra è alta 58 px e sta in basso: l'insetto sta 14 px sopra, più la zona sicura dell'iPhone; sul computer i tab stanno in alto),
    su tutte le pagine: in alto a destra copriva le foto e i tasti «+». Con un foglio aperto (.in-foglio, messa da seguiFogli) sale in alto
    a destra, sull'ombra scura: lì nei fogli non c'è nessun tasto, e in basso copriva «Salva», «Invia» e le scelte.
+   Dove un foglio ha un tasto in quell'angolo si sposta il tasto, non l'insetto (Fondamenta 240, 11 ottobre 2026: «Salta ⏭» del recupero
+   fra le serie, .rest-hero-skip; «‹ Indietro» della serie in corso, .train-exec-header).
    Sopra tutti i fogli dell'app (il più alto è a 2100), sotto il toast (9000) e le schermate intere (9998). */
 .segnala-bottone{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 16px);right:8px;z-index:2500;width:34px;height:34px;border-radius:50%;border:1px solid var(--b1);background:var(--s1);color:var(--t2);display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;box-shadow:0 2px 8px rgba(var(--nero-rgb),.14);opacity:.88;}
 @media(max-width:768px){.segnala-bottone{bottom:calc(env(safe-area-inset-bottom) + 72px);}}

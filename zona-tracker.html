@@ -2242,7 +2242,9 @@ function versionFooter(){
 // ricevuta». Senza rete: «Non inviata», non va in coda (una segnalazione si rifà a mano). Mai la parola «errore». Il foglio è fatto
 // come quelli di Fondamenta 150 (stesse classi) ma non si mette in fila: si apre sopra qualunque altro foglio, anche una conferma.
 // L'insetto sta in basso a destra, sopra la barra dei tab; con un foglio aperto sale in alto a destra, sull'ombra scura (`seguiFogli`).
-const SG_FOGLI = '.weight-modal, .info-modal-overlay, .m2-modal-photo-overlay, .pkg-editor-overlay, .cextra-overlay, .daydetail-overlay, .daydetail-menu-overlay, .pianov4-day-overlay, .pianov4-subst-overlay, .pianov4-weighin-overlay, .pianov4-welcome-overlay, .weight-freq-overlay, .rest-modal-overlay';
+// Della seduta di allenamento contano il recupero fra le serie (.rest-modal-overlay) e la serie in corso (.train-exec-overlay, Fondamenta 240):
+// lì «Salta ⏭» e «‹ Indietro» stanno spostati a sinistra, per lasciare l'angolo all'insetto.
+const SG_FOGLI = '.weight-modal, .info-modal-overlay, .m2-modal-photo-overlay, .pkg-editor-overlay, .cextra-overlay, .daydetail-overlay, .daydetail-menu-overlay, .pianov4-day-overlay, .pianov4-subst-overlay, .pianov4-weighin-overlay, .pianov4-welcome-overlay, .weight-freq-overlay, .rest-modal-overlay, .train-exec-overlay';
 // I fogli aperti adesso, escluso quello di «Invia Feedback»: un foglio c'è se è nella pagina e non è nascosto
 function fogliAperti() {
   const visibile = (el) => { try { return getComputedStyle(el).display !== 'none'; } catch(e) { return true; } };
@@ -2250,7 +2252,7 @@ function fogliAperti() {
 }
 function doveSono() {
   const fogli = fogliAperti()
-    .map(f => { const t = f.querySelector('h1, h2, h3, h4, .lbl, [class*="title"], [class*="titolo"], span[style*="font-weight:800"], [class*="header"] span, [class*="header"] b'); return t ? t.textContent : ''; });
+    .map(f => { const t = f.querySelector('h1, h2, h3, h4, .lbl, [class*="title"], [class*="titolo"], span[style*="font-weight:800"], [class*="header"] span, [class*="header"] b, .rest-hero-cd-label, .train-exec-eyebrow'); return t ? t.textContent : ''; });
   let sezione = '';
   if(ST.page === 'body') sezione = ST.bodyTab || '';
   else if(ST.page === 'training' && ST.trainSession) sezione = 'Sessione in corso';
