@@ -1,13 +1,13 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-06 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-10-11 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-33 tabelle, 389 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+33 tabelle, 391 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
 | [`ai_memory`](#ai_memory) — **non usata dal codice** | 0 | 5 | id | — |
-| [`app_errors`](#app_errors) | 0 | 2 | id | — |
+| [`app_errors`](#app_errors) | 8 | 2 | id | — |
 | [`biblioteca_gif`](#biblioteca_gif) | 1601 | 1 | id | slug |
 | [`blood_tests`](#blood_tests) | 0 | 4 | id | — |
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
@@ -20,25 +20,25 @@
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
-| [`meal_items`](#meal_items) | 910 | 4 | id | — |
-| [`meals`](#meals) | 333 | 2 | id | — |
+| [`meal_items`](#meal_items) | 947 | 4 | id | — |
+| [`meals`](#meals) | 344 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
-| [`segnalazioni`](#segnalazioni) | 0 | 3 | id | — |
+| [`segnalazioni`](#segnalazioni) | 13 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 22 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 25 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1428 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
-| [`training_logs`](#training_logs) | 1822 | 1 | id | user_id, date, session_id, exercise_name, set_number |
+| [`supplements_log`](#supplements_log) | 1491 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`training_logs`](#training_logs) | 1882 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 12 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
-| [`weekly_plan_meals`](#weekly_plan_meals) | 238 | 5 | id | — |
-| [`weekly_plans`](#weekly_plans) | 17 | 5 | id | user_id, week_start |
-| [`weight_logs`](#weight_logs) | 15 | 5 | id | user_id, date |
+| [`weekly_plan_meals`](#weekly_plan_meals) | 252 | 5 | id | — |
+| [`weekly_plans`](#weekly_plans) | 18 | 5 | id | user_id, week_start |
+| [`weight_logs`](#weight_logs) | 16 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
-| [`workouts`](#workouts) | 117 | 2 | id | user_id, date, session_type |
+| [`workouts`](#workouts) | 121 | 2 | id | user_id, date, session_type |
 
 ### `ai_memory`
 
@@ -293,6 +293,11 @@ Vincoli:
 | `errori_surrogato` | text |  |  |
 | `gif_slug` | text |  |  |
 | `nome_en` | text |  |  |
+| `unilaterale` | text |  |  |
+| `progressione` | text |  |  |
+
+Vincoli:
+- `esercizi_catalog_unilaterale_chk` — `CHECK (((unilaterale IS NULL) OR (unilaterale = ANY (ARRAY['si'::text, 'alternato'::text, 'no'::text]))))`
 
 ### `exercise_media`
 

@@ -1,13 +1,13 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-06",
+ "quando": "2026-10-11",
  "righe": [
   {
    "righe": 0,
    "tabella": "ai_memory"
   },
   {
-   "righe": 0,
+   "righe": 8,
    "tabella": "app_errors"
   },
   {
@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 910,
+   "righe": 947,
    "tabella": "meal_items"
   },
   {
-   "righe": 333,
+   "righe": 344,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 0,
+   "righe": 13,
    "tabella": "segnalazioni"
   },
   {
@@ -95,11 +95,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1428,
+   "righe": 1491,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1822,
+   "righe": 1882,
    "tabella": "training_logs"
   },
   {
@@ -115,15 +115,15 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 238,
+   "righe": 252,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 17,
+   "righe": 18,
    "tabella": "weekly_plans"
   },
   {
-   "righe": 15,
+   "righe": 16,
    "tabella": "weight_logs"
   },
   {
@@ -131,7 +131,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 117,
+   "righe": 121,
    "tabella": "workouts"
   }
  ],
@@ -1595,6 +1595,26 @@
     "identita": "",
     "non_nullo": false,
     "pos": 23,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "unilaterale",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 24,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "progressione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 25,
     "predefinito": null,
     "tabella": "esercizi_catalog",
     "tipo": "text"
@@ -6865,6 +6885,12 @@
     "nome": "esercizi_catalog_pkey",
     "tabella": "esercizi_catalog",
     "tipo": "p"
+   },
+   {
+    "definizione": "CHECK (((unilaterale IS NULL) OR (unilaterale = ANY (ARRAY['si'::text, 'alternato'::text, 'no'::text]))))",
+    "nome": "esercizi_catalog_unilaterale_chk",
+    "tabella": "esercizi_catalog",
+    "tipo": "c"
    },
    {
     "definizione": "PRIMARY KEY (exercise_name_it)",
