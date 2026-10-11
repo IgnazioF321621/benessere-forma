@@ -160,6 +160,13 @@ Lo prova `node tools/banco/prova_blocco_nuovo.js`.
 
 Pausa cambio lato iso (5s) → silenzio totale. Avvio serie a reps → silenzio. Fine recupero → solo STOP.
 
+**Ondata 1 (11 ottobre 2026, note 020 · 030 · 290 · 300 · 340)**:
+- **Serie a ripetizioni = silenzio davvero** (030): `openTrainExec` non avvia più il conto nascosto lungo quanto il minimo delle ripetizioni, che allo zero suonava lo STOP con vibrazione. Il cronometro di esecuzione parte solo per gli esercizi a tempo, da «▶ Avvia»
+- **3-2-1 sulla tenuta** (300): `_execTimerTick` fa un `playPrepBeep` a 3, 2 e 1 secondi (`t.prep`, una volta per secondo, mai in raffica al rientro). Il recupero aveva già i tic a 5-4-3-2-1
+- **Audio dopo un vocale** (340): iPhone lascia il contesto `interrupted` e `resume()` non basta. Al rientro in primo piano `_riattivaAudio()` lo rifà da capo e riarma lo sblocco al primo tocco (`_armaSbloccoGesto`). **A schermo spento l'app non può suonare** (240): servono le notifiche, Pirsi 170
+- **Ripetizioni e RIR con memoria** (020): la scelta vive in `ST.trainLogDraft` (`{reps, rir}`), azzerata a ogni `openLogModal` (con la durata del picker per gli esercizi a tempo) e dopo il salvataggio; le due tendine hanno una fonte sola, `_tlRepsSelect` / `_tlRirSelect`, usata dalla card esercizio e dalla finestra di recupero
+- **Recupero anche fra un esercizio e l'altro** (290): dopo l'ultima serie di un esercizio, se la sessione non è finita, `saveTrainingSet` avvia `startTrainingCountdown(getRestSec(sessione, esercizio finito), prossimo, sessione, {traEsercizi:true, daEx})`: la finestra mostra GIF e consigli del **prossimo** («Prossimo esercizio · recupero …»), «APPENA FATTA» resta dell'esercizio finito. Quando la sessione è completa un recupero ancora in corso si spegne
+
 ---
 
 ## Rotazione e ciclo Training
