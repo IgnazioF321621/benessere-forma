@@ -330,6 +330,91 @@ var ZTCoachRules = (function(){
     });
   }
 
-  return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals };
+  // ── La variante più facile (Training 330, 11 ottobre 2026) ──────────────────
+  // Quando la progressione dice «variante più facile» il coach deve dire QUALE esercizio
+  // e come si fa. La scelta è una regola pura sulle righe del catalogo, senza rete:
+  //   1. le «alternativa» scritte a catalogo (codici EX###, mai sé stesso), nell'ordine in cui
+  //      sono scritte, se la persona le può fare (luogo e attrezzi);
+  //   2. altrimenti un esercizio dello stesso schema di movimento (per isolamenti e core anche
+  //      stesso gruppo bersaglio), di livello più basso, che la persona può fare, fuori dalla scheda;
+  //      prima i livelli più bassi, poi per codice, così la scelta è sempre la stessa.
+  // Chi può fare cosa: le stesse regole del generatore (luogo con alias aperto↔libero, bypass del
+  // surrogato a casa; a casa un attrezzo nativo posseduto o tutti quelli del surrogato; all'aperto
+  // la lista dei portatili; in palestra tutto).
+  var VF_LIVELLI = { principiante: 1, intermedio: 2, avanzato: 3 };
+  var VF_APERTO = ['corpo_libero', 'elastico', 'banda', 'sbarra', 'cavigliere', 'trx'];
+  var VF_RIGA_MAX = 140;
+
+  function vfNorm(s){ return String(s || '').toLowerCase().trim(); }
+  function vfAttrezzo(s){ return vfNorm(s).replace(/\s+/g, '_'); }
+  function vfLista(s, sep){ return vfNorm(s).split(sep).map(function(x){ return x.trim(); }).filter(Boolean); }
+  function vfLivello(ex){ var l = vfNorm(ex && ex.livello); return VF_LIVELLI[l] || (/avanz/.test(l) ? 3 : /interm/.test(l) ? 2 : /princ/.test(l) ? 1 : 0); }
+
+  // true se la persona può fare l'esercizio con il suo luogo e i suoi attrezzi.
+  function puoFare(ex, opts){
+    var luogo = vfNorm(opts && opts.tipoAllen) || 'casa';
+    var alias = luogo === 'aperto' ? 'libero' : luogo === 'libero' ? 'aperto' : null;
+    var attrezzi = {};
+    ((opts && opts.attrezzatura) || []).forEach(function(a){ attrezzi[vfAttrezzo(a)] = true; });
+    var luoghi = vfLista(ex.luogo, ';');
+    var surrogati = vfLista(ex.surrogato_attrezzo, '+').map(vfAttrezzo);
+    var luogoOk = !luoghi.length || luoghi.indexOf('qualsiasi') !== -1 || luoghi.indexOf(luogo) !== -1
+      || (alias && luoghi.indexOf(alias) !== -1) || (luogo === 'casa' && surrogati.length > 0);
+    if(!luogoOk) return false;
+    var nativi = vfLista(vfAttrezzo(ex.attrezzo), ';');
+    if(luogo === 'palestra') return true;
+    if(luogo === 'casa'){
+      if(nativi.some(function(a){ return attrezzi[a]; })) return true;
+      return surrogati.length > 0 && surrogati.every(function(a){ return attrezzi[a]; });
+    }
+    return nativi.some(function(a){ return VF_APERTO.indexOf(a) !== -1; });
+  }
+
+  // Le due righe «come si fa»: la prima frase del setup e la prima dell'esecuzione del catalogo.
+  function comeSiFa(ex){
+    var prima = function(t){
+      var s = String(t || '').replace(/\s+/g, ' ').trim();
+      if(!s) return '';
+      var m = s.match(/^(.+?[.!?])(\s|$)/);
+      s = m ? m[1] : s;
+      return s.length > VF_RIGA_MAX ? s.slice(0, VF_RIGA_MAX - 1).replace(/\s+\S*$/, '') + '…' : s;
+    };
+    return [prima(ex && ex.setup), prima(ex && ex.esecuzione)].filter(Boolean);
+  }
+
+  // attuale: riga di catalogo dell'esercizio in corso · catalogo: righe fra cui scegliere (anche
+  // tutte) · opts: { tipoAllen, attrezzatura, inScheda: [codici] }. → { codice, nome, come, via } | null
+  function varianteFacile(attuale, catalogo, opts){
+    if(!attuale || !attuale.codice) return null;
+    var righe = (catalogo || []).filter(function(ex){ return ex && ex.codice && ex.codice !== attuale.codice; });
+    var perCodice = {};
+    righe.forEach(function(ex){ perCodice[ex.codice] = ex; });
+    var o = opts || {};
+    var inScheda = {};
+    (o.inScheda || []).forEach(function(c){ inScheda[c] = true; });
+    var esito = function(ex, via){ return { codice: ex.codice, nome: ex.nome || ex.codice, come: comeSiFa(ex), via: via }; };
+
+    var scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []);
+    for(var i = 0; i < scritte.length; i++){
+      var alt = perCodice[scritte[i]];
+      if(alt && alt.codice !== attuale.codice && puoFare(alt, o)) return esito(alt, 'alternativa');
+    }
+
+    var pat = vfNorm(attuale.pattern);
+    if(!pat) return null;
+    var perGruppo = pat === 'isolamento' || pat === 'core';
+    var gruppi = vfLista(attuale.gruppo_target, ';');
+    var livAttuale = vfLivello(attuale) || 2;
+    var cand = righe.filter(function(ex){
+      if(inScheda[ex.codice] || vfNorm(ex.pattern) !== pat) return false;
+      if(perGruppo && !vfLista(ex.gruppo_target, ';').some(function(g){ return gruppi.indexOf(g) !== -1; })) return false;
+      var l = vfLivello(ex);
+      return l > 0 && l < livAttuale && puoFare(ex, o);
+    }).sort(function(a, b){ return (vfLivello(a) - vfLivello(b)) || String(a.codice).localeCompare(String(b.codice)); });
+    return cand.length ? esito(cand[0], 'livello') : null;
+  }
+
+  return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
+    varianteFacile: varianteFacile, comeSiFa: comeSiFa, puoFare: puoFare };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;

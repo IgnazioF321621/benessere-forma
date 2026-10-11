@@ -3117,7 +3117,7 @@ function renderTraining(){
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
             ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
-            ${suggestion?`<div class="ex-suggestion">${suggestion}</div>`:''}
+            ${suggestion?`<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
             <div class="ex-action-row">
@@ -3936,7 +3936,7 @@ function renderTraining(){
       // (getProgressionLive: suggerimento deterministico se presente, fallback altrimenti).
       const sugg = (typeof getProgressionLive === 'function') ? getProgressionLive(cd.exName, cd.sessionId) : '';
       const nextHTML = sugg
-        ? `<span class="rest-card-value mono">${esc(sugg)}</span>`
+        ? `<span class="rest-card-value mono">${varianteFacileHTML(cd.exName, cd.sessionId, sugg)}</span>`
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
 
       // GIF: SEMPRE VISIBILE accanto al countdown (no più toggle). Placeholder se manca.
