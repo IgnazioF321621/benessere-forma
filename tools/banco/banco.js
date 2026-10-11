@@ -36,6 +36,9 @@ function makeSupaMock(tables){
     });
     // .or('a.eq.x,b.eq."y"') come PostgREST: solo uguaglianze, valori fra virgolette ammessi
     api.or = chain((espr)=>{ st.filters.push(['or', null, espr]); });
+    // .not(col, 'in', '(a,b)') e .not(col, 'ilike', 'recovery%') come PostgREST (la lettura della card
+    // Training li usa: prima il banco non li conosceva e la lettura falliva in silenzio, Home 030)
+    api.not = chain((col, op, val)=>{ st.filters.push(['not', col, { op, val }]); });
     api.order = chain((col,opt)=>{ st.orders.push([col, opt && opt.ascending===false ? 'desc':'asc']); });
     api.limit = chain((n)=>{ st.limit = n; });
     api.range = chain((a,b)=>{ st.range=[a,b]; });
@@ -91,6 +94,14 @@ function makeSupaMock(tables){
       }
       const valore = (r, col) => col.includes('.') ? col.split('.').reduce((o, k) => (o == null ? o : o[k]), r) : r[col];
       for(const [f,col,val] of st.filters){
+        if(f==='not'){
+          const op = val && val.op, v = val && val.val;
+          if(op==='in'){ const lista = String(v).replace(/^\(|\)$/g,'').split(',').map(x=>x.trim().replace(/^"|"$/g,'')); rows = rows.filter(r=>!lista.includes(String(r[col]))); }
+          else if(op==='ilike'||op==='like'){ const re = new RegExp('^'+String(v).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/%/g,'.*')+'$', op==='ilike'?'i':''); rows = rows.filter(r=>!re.test(String(r[col]==null?'':r[col]))); }
+          else if(op==='eq'){ rows = rows.filter(r=>String(r[col])!==String(v)); }
+          else if(op==='is'){ rows = rows.filter(r=>r[col]!==v); }
+          continue;
+        }
         if(col.includes('.')) {
           if(f==='gte') rows = rows.filter(r=>valore(r,col) >= val);
           else if(f==='lt') rows = rows.filter(r=>valore(r,col) < val);
