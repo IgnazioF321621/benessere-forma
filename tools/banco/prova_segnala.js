@@ -129,6 +129,23 @@ async function nuovo(conSessione) {
   atteso('una conferma è un foglio · l\'insetto sale', a.insetto().classList.contains('in-foglio'), true);
   [...a.d.querySelectorAll('.foglio-overlay button')].find(x => x.textContent === 'Annulla').click(); await pcs; await fotogramma();
   atteso('conferma chiusa · l\'insetto torna in basso', a.insetto().classList.contains('in-foglio'), false);
+  // Fondamenta 240 (segnalazione di Ignazio del 7 ottobre, «sopra la scritta salta»): in allenamento il recupero fra le serie e la serie
+  // in corso sono fogli, l'insetto sale, e «Salta ⏭» / «‹ Indietro» si spostano a sinistra per lasciargli l'angolo
+  const SG = a.win.eval('SG_FOGLI').split(',').map(s => s.trim());
+  atteso('seduta · il recupero fra le serie e la serie in corso sono fogli che fanno salire l\'insetto', [SG.includes('.rest-modal-overlay'), SG.includes('.train-exec-overlay')], [true, true]);
+  const finto = (html) => { const w = a.d.createElement('div'); w.innerHTML = html; const el = w.firstElementChild; a.d.body.appendChild(el); return el; };
+  const recupero = finto('<div class="rest-modal-overlay"><div class="rest-modal-container"><div class="rest-hero"><div class="rest-hero-right"><button class="rest-hero-skip">Salta ⏭</button><span class="rest-hero-cd-label">Recupero · 1:30</span></div></div></div></div>');
+  await fotogramma();
+  atteso('recupero aperto · l\'insetto sale e «dove sei» dice il recupero', [a.insetto().classList.contains('in-foglio'), a.win.doveSono().fogli], [true, ['Recupero · 1:30']]);
+  recupero.remove(); await fotogramma();
+  atteso('recupero chiuso · l\'insetto torna in basso', a.insetto().classList.contains('in-foglio'), false);
+  const serie = finto('<div class="train-exec-overlay"><div class="train-exec-container"><div class="train-exec-header"><div class="train-exec-eyebrow"><span class="train-exec-eyebrow-dot"></span><span>SERIE 2 / 4 · IN CORSO</span></div><button class="train-exec-back">‹ Indietro</button></div></div></div>');
+  await fotogramma();
+  atteso('serie in corso · l\'insetto sale e «dove sei» dice la serie', [a.insetto().classList.contains('in-foglio'), a.win.doveSono().fogli], [true, ['SERIE 2 / 4 · IN CORSO']]);
+  serie.remove(); await fotogramma();
+  atteso('serie chiusa · l\'insetto torna in basso', a.insetto().classList.contains('in-foglio'), false);
+  atteso('stile · «Salta ⏭» si sposta a sinistra di 36 px (l\'area sicura del recupero è della sessione Training, non di qui)', /margin-right:36px/.test(regola('.rest-hero-skip')), true);
+  atteso('stile · la serie in corso lascia 50 px a destra nell\'intestazione («‹ Indietro» non sta più nell\'angolo)', /padding:calc\(env\(safe-area-inset-top\) \+ 14px\) 50px 12px 18px/.test(regola('.train-exec-header')), true);
   a.win.foglioSegnala(); await fotogramma();
   atteso('il foglio del feedback da solo non fa salire l\'insetto', [!!a.foglio(), a.insetto().classList.contains('in-foglio')], [true, false]);
   atteso('il foglio si chiama «Invia Feedback»; «Cosa non va, o cosa proponi?» non compare più', [a.foglio().querySelector('h3').textContent, a.foglio().textContent.includes('Cosa non va'), /segnala/i.test(a.foglio().textContent)], ['Invia Feedback', false, false]);
