@@ -1,8 +1,9 @@
 // Ondata 1, Sessione A (Training, 11 ottobre 2026): serie a ripetizioni in silenzio (030), ripetizioni e RIR
 // con memoria (020), 3-2-1 sul cronometro della tenuta (300), audio «interrotto» rifatto al rientro (340),
-// recupero anche fra un esercizio e l'altro (290). La 270 (finestre alte quanto lo schermo vero) sta in app/stile.css.
+// recupero anche fra un esercizio e l'altro (290), finestre della seduta alte quanto lo schermo vero (270, app/stile.css).
 //   node tools/banco/prova_training_ondata1.js
 process.env.TZ = 'Europe/Rome';
+const fs = require('fs'), path = require('path');
 const { boot } = require('./banco');
 const U = 'u1', OGGI = '2026-10-11';
 let ko = 0;
@@ -115,6 +116,15 @@ async function nuovo(){
     atteso('340 · al rientro il contesto viene rifatto e lo sblocco al tocco è riarmato', [creati, a.win.eval('_audioCtx.state'), a.win.eval('_audioGestureUnlocked')], [2, 'running', false]);
     await a.win._riattivaAudio();
     atteso('340 · con l\'audio che corre non si rifà niente', creati, 2);
+  }
+  // 270 · le finestre della seduta misurano lo schermo vero (dvh, con ripiego) e rispettano l'area sicura
+  {
+    const css = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'stile.css'), 'utf8');
+    const blocco = (sel) => { const i = css.indexOf('\n' + sel + '{'); return i === -1 ? '' : css.slice(i, css.indexOf('}', i)); };
+    const rm = blocco('.rest-modal-container'), ex = blocco('.train-exec-overlay');
+    atteso('270 · .rest-modal-container: max-height 100vh poi 100dvh, area sicura in basso', [/max-height:\s*100vh/.test(rm), /max-height:\s*100dvh/.test(rm), /padding-bottom:\s*env\(safe-area-inset-bottom\)/.test(rm), rm.indexOf('100vh') < rm.indexOf('100dvh')], [true, true, true, true]);
+    atteso('270 · .train-exec-overlay: height 100vh poi 100dvh', [/height:\s*100vh/.test(ex), /height:\s*100dvh/.test(ex), ex.indexOf('100vh') < ex.indexOf('100dvh')], [true, true, true]);
+    atteso('270 · nessun colore scritto a mano nelle righe aggiunte', /#[0-9a-fA-F]{3,6}|rgb\(/.test(rm.split('Training 270')[1] || '') || /#[0-9a-fA-F]{3,6}|rgb\(/.test(ex.split('Training 270')[1] || ''), false);
   }
   console.log(ko ? ko + ' KO' : 'tutto OK');
   process.exit(ko ? 1 : 0);

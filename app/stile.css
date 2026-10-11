@@ -541,7 +541,11 @@ select.inp{cursor:pointer;}
 .rest-modal-container{
   background:var(--bianco);
   width:100%;max-width:560px;
+  /* Training 270 (11 ott 2026): su iPhone 100vh conta anche la barra di Safari e l'ultima riga
+     finiva sotto; 100dvh è lo schermo che si vede davvero (vh resta per i browser vecchi). */
   max-height:100vh;
+  max-height:100dvh;
+  padding-bottom:env(safe-area-inset-bottom);
   display:flex;flex-direction:column;
   overflow:hidden;
 }
@@ -873,6 +877,9 @@ select.inp{cursor:pointer;}
    Niente setup/esecuzione/errori/coach (quelli vivono nel recupero). */
 .train-exec-overlay{
   position:fixed; inset:0;
+  /* Training 270: altezza dello schermo che si vede davvero (vedi .rest-modal-container) */
+  height:100vh;
+  height:100dvh;
   background:var(--bg);
   z-index:1050; /* sopra rest-modal-overlay 1001, sotto modal scheda 1100 */
   display:flex; align-items:stretch; justify-content:center;
