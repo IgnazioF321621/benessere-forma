@@ -1247,7 +1247,7 @@ function playLongBeep(){
 }
 
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
-function startTrainingCountdown(seconds, exName, sessionId){
+function startTrainingCountdown(seconds, exName, sessionId, opts){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
   const endTime = Date.now() + seconds * 1000;
   const _gifExDef = findExercise(exName, sessionId);
@@ -1263,6 +1263,10 @@ function startTrainingCountdown(seconds, exName, sessionId){
     exCode: _gifCode,         // codice catalogo (EX###) per lookup GIF via ?code=
     sessionId,                // sessione corrente (per buildCoachPrompt)
     gifOpen: false,           // toggle GIF esecuzione nel modal recupero (default chiuso)
+    // Recupero FRA DUE ESERCIZI (Training 290, 11 ottobre 2026): exName è il PROSSIMO esercizio
+    // (GIF e consigli servono a prepararlo), daEx quello appena finito (per «APPENA FATTA»).
+    traEsercizi: !!(opts && opts.traEsercizi),
+    daEx: (opts && opts.daEx) || null,
   };
   // Se recupero ≤5 sec, non emettere prep beep (sarebbero immediati e confusi dopo il GO beep)
   if(seconds <= 5){
@@ -2004,6 +2008,7 @@ async function saveTrainingSet(){
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id};
+  ST.trainLogDraft = null;
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
   const currentIdx = sessExercises.findIndex(ex => ex.name === form.exName);
@@ -2046,6 +2051,9 @@ async function saveTrainingSet(){
     if(sessionComplete){
       // Non chiudere automaticamente: l'utente deve poter fare il Tabata finale
       // prima di uscire. Il bottone "Completa sessione" nella schermata chiude manualmente.
+      // Un recupero ancora in corso (verso un esercizio che nel frattempo è stato fatto) si spegne.
+      if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+      ST.trainCountdown = null;
       ST.trainLogOpen = null;
       ST.trainExecOpen = null;
       renderTraining();
@@ -2080,6 +2088,10 @@ async function saveTrainingSet(){
         const el = document.getElementById(cardId);
         if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
+      // Recupero anche FRA un esercizio e l'altro (Training 290): prima il conto partiva solo fra
+      // due serie dello stesso esercizio. Durata = il recupero dell'esercizio appena finito;
+      // la finestra mostra GIF e consigli del PROSSIMO, così lo si prepara.
+      startTrainingCountdown(getRestSec(form.sessionId, exData), nextEx.name, form.sessionId, { traEsercizi:true, daEx: form.exName });
     }
     return;
   }
@@ -3032,32 +3044,11 @@ function renderTraining(){
             <div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimed ? 'DURATA (sec)' : 'REPS'}</label>
-                <select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);">
-                  <option value="" disabled selected>—</option>
-                  ${(()=>{
-                    if(isTimed){
-                      // Range temporale: stesso range del picker esecuzione (min-10 → max+15, step 5)
-                      let opts = '';
-                      const lo2 = Math.max(5, (parsedReps.min||10) - 10);
-                      const hi2 = (parsedReps.max||parsedReps.min||10) + 15;
-                      for(let s=lo2; s<=hi2; s+=5) opts += `<option value="${s}">${s}</option>`;
-                      return opts;
-                    } else {
-                      // Range reps: 0-30, step 1
-                      return Array.from({length:31}, (_,i)=>`<option value="${i}">${i}</option>`).join('');
-                    }
-                  })()}
-                </select>
+                ${_tlRepsSelect(isTimed, parsedReps)}
               </div>
               ${!isTimed ? `<div style="flex:1;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                <select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);">
-                  <option value="">—</option>
-                  <option value="0">0</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                </select>
+                ${_tlRirSelect()}
               </div>` : ''}
             </div>
             ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
@@ -3936,7 +3927,7 @@ function renderTraining(){
 
       // APPENA FATTA — ultima serie loggata oggi per (sessionId, exName).
       // FIX 2 (26 mag sera): font Mono uniforme con PROSSIMA (entrambi sono numerici/sigle).
-      const lastSet = getLastLoggedSetLabel(cd.sessionId, cd.exName);
+      const lastSet = getLastLoggedSetLabel(cd.sessionId, cd.traEsercizi ? (cd.daEx || cd.exName) : cd.exName);
       const lastSetHTML = lastSet
         ? `<span class="rest-card-value mono">${esc(lastSet)}</span>`
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
@@ -3985,7 +3976,7 @@ function renderTraining(){
             <div class="rest-hero-right">
               <button class="rest-hero-skip" onclick="skipCountdown()">Salta ⏭</button>
               ${gifHTML}
-              <span class="rest-hero-cd-label">Recupero · ${totalDisplay}</span>
+              <span class="rest-hero-cd-label">${cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
             </div>
           </div>
           <div class="rest-modal-body">
@@ -4008,30 +3999,11 @@ function renderTraining(){
                   <div style="display:flex;gap:8px;margin-bottom:10px;">
                     <div style="flex:1;">
                       <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimedM ? 'DURATA (sec)' : 'REPS'}</label>
-                      <select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);">
-                        <option value="" disabled selected>—</option>
-                        ${(()=>{
-                          if(isTimedM){
-                            let opts = '';
-                            const lo2 = Math.max(5,(parsedRepsM.min||10)-10);
-                            const hi2 = (parsedRepsM.max||parsedRepsM.min||10)+15;
-                            for(let sv=lo2;sv<=hi2;sv+=5) opts+=`<option value="${sv}">${sv}</option>`;
-                            return opts;
-                          } else {
-                            return Array.from({length:31},(_,i)=>`<option value="${i}">${i}</option>`).join('');
-                          }
-                        })()}
-                      </select>
+                      ${_tlRepsSelect(isTimedM, parsedRepsM)}
                     </div>
                     ${!isTimedM ? `<div style="flex:1;">
                       <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                      <select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);">
-                        <option value="">—</option>
-                        <option value="0">0</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                      </select>
+                      ${_tlRirSelect()}
                     </div>` : ''}
                   </div>
                   ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
@@ -4473,11 +4445,29 @@ function _ensureAudioCtx(){
   } catch(e){ _audioCtx = null; }
   return _audioCtx;
 }
+// Dopo un messaggio vocale o una telefonata iPhone lascia il contesto audio «interrupted»: il
+// risveglio non basta e i bip restano muti (Training 340). Qui si butta il contesto e se ne fa
+// uno nuovo, e si riarma lo sblocco al primo tocco (iOS lo pretende dopo un gesto).
+function _riattivaAudio(){
+  const ctx = _audioCtx;
+  if(!ctx) return Promise.resolve(false);
+  const rifai = () => {
+    try{ if(ctx.close) ctx.close().catch(()=>{}); }catch(e){}
+    _audioCtx = null;
+    _ensureAudioCtx();
+    _audioGestureUnlocked = false;
+    _armaSbloccoGesto();
+    return false;
+  };
+  if(ctx.state === 'running') return Promise.resolve(true);
+  if(ctx.state === 'interrupted' || ctx.state === 'closed') return Promise.resolve(rifai());
+  return _unlockAudio().then(ok => ok ? true : (ctx.state === 'running' ? true : rifai())).catch(rifai);
+}
 function _unlockAudio(){
   const ctx = _ensureAudioCtx();
   if(!ctx) return Promise.resolve(false);
   const wasBlocked = ST.audioBlocked;
-  if(ctx.state === 'suspended'){
+  if(ctx.state === 'suspended' || ctx.state === 'interrupted'){
     return ctx.resume().then(()=>{
       const blocked = ctx.state !== 'running';
       ST.audioBlocked = blocked;
@@ -4513,9 +4503,10 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible' && ST.trainSession && _wakeLock === null){
     requestWakeLock();
   }
-  // Resume AudioContext quando torna in foreground (iOS lo sospende in background)
+  // Audio al rientro in primo piano: risveglio, e se iOS lo ha lasciato «interrupted» (vocale,
+  // telefonata) contesto nuovo + sblocco al primo tocco (Training 340).
   if(document.visibilityState === 'visible' && _audioCtx){
-    _unlockAudio();
+    _riattivaAudio();
   }
   // Countdown recupero: forza tick al rientro per ricalcolare remaining e beepare se scaduto in background
   if(document.visibilityState === 'visible' && ST.trainCountdown){
@@ -4556,6 +4547,12 @@ function _onFirstGesture(){
   document.removeEventListener('touchend', _onFirstGesture, true);
   document.removeEventListener('mousedown', _onFirstGesture, true);
   document.removeEventListener('keydown', _onFirstGesture, true);
+}
+function _armaSbloccoGesto(){
+  document.addEventListener('touchstart', _onFirstGesture, true);
+  document.addEventListener('touchend', _onFirstGesture, true);
+  document.addEventListener('mousedown', _onFirstGesture, true);
+  document.addEventListener('keydown', _onFirstGesture, true);
 }
 document.addEventListener('touchstart', _onFirstGesture, true);
 document.addEventListener('touchend', _onFirstGesture, true);
@@ -4745,6 +4742,12 @@ function _execTimerTick(){
     return;
   }
   // ── Countdown principale (targetSec → 0) ──
+  // 3-2-1 prima dello STOP (Training 300): un tic per secondo, una volta sola per secondo
+  // (t.prep), mai in raffica al rientro da sfondo (solo il secondo corrente).
+  if(secondChanged && remaining >= 1 && remaining <= 3){
+    t.prep = t.prep || {};
+    if(!t.prep[remaining]){ t.prep[remaining] = true; try{ playPrepBeep(); }catch(e){} }
+  }
   const done = remaining <= 0;
   // Beep una sola volta quando si arriva a 0 (idempotente anche al rientro da background)
   if(done && !t.beeped){
@@ -4806,10 +4809,10 @@ function openTrainExec(sessionId, exName, setNum){
   workTimeStartExec(sessionId);
   workTimeStartTick(sessionId);
   renderTraining();
-  // Cronometro di tenuta avviato solo su esercizi NON isometrici (per isometrici parte da execTimerLaunch)
-  if(!_isTimed && _pr){
-    execTimerStart(_pr.min || 0);
-  }
+  // Serie a ripetizioni: SILENZIO (Training 030, 11 ottobre 2026). Prima partiva qui un conto
+  // nascosto lungo quanto il minimo delle ripetizioni, che allo zero suonava lo STOP con
+  // vibrazione senza niente a schermo (e due volte negli esercizi per lato). Il cronometro di
+  // tenuta parte solo per gli esercizi a tempo, da execTimerLaunch.
 }
 
 // Chiamato dal pulsante "▶ Avvia" nella schermata isometrica picker.
@@ -4868,6 +4871,37 @@ function trainExecBack(){
   renderTraining();
 }
 
+// ── Le tendine di ripetizioni e RIR (Training 020) ─────────
+// Una fonte sola per la card esercizio e la finestra di recupero: il valore scelto vive in
+// ST.trainLogDraft e torna selezionato a ogni ridisegno. Per gli esercizi a tempo la prima
+// tendina è la durata (stesso intervallo del picker di esecuzione: min-10 → max+15, passo 5).
+function _tlRepsSelect(isTimed, parsedReps){
+  const d = ST.trainLogDraft || {};
+  const cur = d.reps != null ? String(d.reps) : '';
+  const opt = (v) => `<option value="${v}" ${String(v) === cur ? 'selected' : ''}>${v}</option>`;
+  let opts = '';
+  if(isTimed){
+    const lo2 = Math.max(5, ((parsedReps && parsedReps.min) || 10) - 10);
+    const hi2 = ((parsedReps && (parsedReps.max || parsedReps.min)) || 10) + 15;
+    for(let s = lo2; s <= hi2; s += 5) opts += opt(s);
+  } else {
+    for(let i = 0; i <= 30; i++) opts += opt(i);
+  }
+  return `<select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);" onchange="ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{reps:this.value});">
+                  <option value="" disabled ${cur === '' ? 'selected' : ''}>—</option>
+                  ${opts}
+                </select>`;
+}
+function _tlRirSelect(){
+  const d = ST.trainLogDraft || {};
+  const cur = d.rir != null ? String(d.rir) : '';
+  const opt = (v) => `<option value="${v}" ${String(v) === cur ? 'selected' : ''}>${v}</option>`;
+  return `<select id="tl-rir" class="picker-select" style="border:1.5px solid var(--s2);" onchange="ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{rir:this.value});">
+                  <option value="" ${cur === '' ? 'selected' : ''}>—</option>
+                  ${['0','1','2','3'].map(opt).join('')}
+                </select>`;
+}
+
 // ── Apertura modal log serie ───────────────────────────────
 function openLogModal(sessionId, exName, setNum, opts){
   const today = todayKey();
@@ -4891,6 +4925,9 @@ function openLogModal(sessionId, exName, setNum, opts){
     ST.trainLogBandColor = null;
   }
   ST.trainLogOpen = { sessionId, exName, setNum };
+  // Bozza di ripetizioni e RIR (Training 020): le tendine si ridisegnano quando arrivano il
+  // consiglio del coach o la GIF e quando il recupero finisce; senza bozza tornavano vuote.
+  ST.trainLogDraft = { reps: (opts && opts.timedTarget) ? String(opts.timedTarget) : '', rir: '' };
   _unlockAudio();
   renderTraining();
   setTimeout(()=>{
