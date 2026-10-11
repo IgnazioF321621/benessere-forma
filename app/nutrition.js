@@ -757,90 +757,7 @@ async function updateSuppSlotTime(oldTime, newTime, idsStr) {
 // ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
-function macroBar(label,current,target,color,unit='g'){
-  const pct=Math.min(100,Math.round((current/target)*100));
-  const over=current>target;
-  return `<div class="mbar"><div class="mbar-head"><span class="mbar-lbl">${label}</span><span class="mbar-val ${over?'over':''}">${current}${unit} / ${target}${unit}</span></div><div class="mbar-track"><div class="mbar-fill" style="width:${pct}%;background:${over?'var(--err)':color};"></div></div></div>`;
-}
-
-function miniRing(value, target, label, color) {
-  const r=22, cx=26, cy=26, sw=5, circ=2*Math.PI*r;
-  const pct = target > 0 ? Math.min(100, Math.round((value/target)*100)) : 0;
-  const dash = (pct/100)*circ;
-  const over = value > target;
-  const ringColor = over ? 'var(--err)' : color;
-  const valColor = over ? 'var(--err)' : 'var(--t1)';
-  return `<div class="sum-cell">
-    <div style="position:relative;width:52px;height:52px;flex-shrink:0;">
-      <svg width="52" height="52" viewBox="0 0 52 52" style="transform:rotate(-90deg)">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${ringColor}" stroke-width="${sw}"
-          stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round"
-          style="transition:stroke-dasharray .6s ease"/>
-      </svg>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0px;">
-        <span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:${valColor};line-height:1.1;">${value}</span>
-        <span style="font-size:7px;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1;">kcal</span>
-      </div>
-    </div>
-    <div class="sum-lbl">${label}</div>
-  </div>`;
-}
-
-function targetRing(consumed, target) {
-  const r=26, cx=30, cy=30, sw=6, circ=2*Math.PI*r;
-  const pct = target > 0 ? Math.min(100, Math.round((consumed/target)*100)) : 0;
-  const dash = (pct/100)*circ;
-  const over = consumed > target;
-  const color = pct>=95 && pct<=105 ? 'var(--ok)' : over ? 'var(--err)' : pct>=70 ? 'var(--warn)' : 'var(--acc)';
-  const rem = Math.max(0, target - consumed);
-  const remColor = over ? 'var(--err)' : 'var(--t3)';
-  return `<div class="sum-cell" style="flex:1.3;">
-    <div style="position:relative;width:60px;height:60px;flex-shrink:0;">
-      <svg width="60" height="60" viewBox="0 0 60 60" style="transform:rotate(-90deg)">
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--s3)" stroke-width="${sw}"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
-          stroke-dasharray="${dash} ${circ-dash}" stroke-linecap="round"
-          style="transition:stroke-dasharray .6s ease"/>
-      </svg>
-      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;">
-        <span style="font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${color};line-height:1;">${consumed}</span>
-        <span style="font-size:6px;color:var(--t3);font-family:'JetBrains Mono',monospace;line-height:1.4;">kcal tot</span>
-      </div>
-    </div>
-    <div class="sum-lbl" style="font-size:11px;">rimangono <span style="color:${remColor};font-weight:700;">${rem}</span></div>
-  </div>`;
-}
-
-function zonaBalance(cons) {
-  const tot = cons.protein + cons.carbs + cons.fat;
-  if(tot < 5) return '';
-  const kcalP = cons.protein * 4;
-  const kcalC = cons.carbs   * 4;
-  const kcalF = cons.fat     * 9;
-  const totKcal = kcalP + kcalC + kcalF || 1;
-  const pP = Math.round(kcalP / totKcal * 100);
-  const pC = Math.round(kcalC / totKcal * 100);
-  const pF = Math.round(kcalF / totKcal * 100);
-  const okP = pP >= 25 && pP <= 35;
-  const okC = pC >= 35 && pC <= 45;
-  const okF = pF >= 25 && pF <= 35;
-  const allOk = okP && okC && okF;
-  const dot = ok => `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${ok?'var(--ok)':'var(--warn)'};margin-right:3px;vertical-align:middle;"></span>`;
-  const legend = `<div style="margin-top:6px;font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">
-    <span style="margin-right:10px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:3px;vertical-align:middle;"></span>In Zona</span>
-    <span><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:3px;vertical-align:middle;"></span>Out Zona</span>
-  </div>`;
-  return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--b1);flex-wrap:wrap;">
-    <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;">Zona 40·30·30</span>
-    <div style="display:flex;gap:10px;">
-      <span style="font-size:11px;font-family:'JetBrains Mono',monospace;">${dot(okP)}<span style="color:var(--prot);">P ${pP}%</span></span>
-      <span style="font-size:11px;font-family:'JetBrains Mono',monospace;">${dot(okC)}<span style="color:var(--carb);">C ${pC}%</span></span>
-      <span style="font-size:11px;font-family:'JetBrains Mono',monospace;">${dot(okF)}<span style="color:var(--fat);">G ${pF}%</span></span>
-    </div>
-    <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${allOk?'var(--ok)':'var(--warn)'};font-weight:700;margin-left:auto;">${allOk?'✅ In Zona':'⚠️ Fuori Zona'}</span>
-  </div>${legend}`;
-}
+// (macroBar, miniRing, targetRing e zonaBalance, gli anelli e le barre vecchie, sono usciti con Nutrition 010: li usava solo il ramo digiuno)
 
 // ── OGGI V3 helpers ─────────────────────────────────────────
 // Pasto pianificato del coach per ST.activeDay. Source-of-truth: weekly_plan_meals
@@ -1784,9 +1701,9 @@ function renderOggi(){
 
   if(day.fasting){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
-    // Grafici macro integratori assunti (sempre visibile)
-    const remFasting = Math.max(0, ST.TARGET.kcal - sTot.kcal);
-    html+=`<div class="card card-green"><div class="sum-grid" style="grid-template-columns:1.3fr 1fr 1fr;margin-bottom:12px;">${targetRing(sTot.kcal,ST.TARGET.kcal)}${miniRing(0,ST.TARGET.kcal,'Pasti','var(--carb)')}${miniRing(sTot.kcal,ST.TARGET.kcal,'Integrazione','var(--acc2)')}</div>${macroBar('Carboidrati',sTot.carbs,ST.TARGET.carbs,'var(--carb)')}${macroBar('Proteine',sTot.protein,ST.TARGET.protein,'var(--prot)')}${macroBar('Grassi',sTot.fat,ST.TARGET.fat,'var(--fat)')}${zonaBalance(sTot)}</div>`;
+    // I totali del giorno (integratori ed extra: i pasti in digiuno non ci sono) con l'anello nuovo, lo stesso del giorno normale.
+    // Nutrition 010 (11 ottobre 2026): qui si leggeva `sTot`, che non esiste, e la pagina non si disegnava più.
+    html += heroCard(cons);
     // Integratori visibili anche in digiuno
     const actSupps=suppsDelGiorno(day);
     const suppSlots=[...new Set(actSupps.map(s=>s.slot))].sort();

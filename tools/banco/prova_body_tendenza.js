@@ -65,14 +65,22 @@ const tabelle = {
   atteso('Ultimi log · prime 3 righe', righe.slice(0, 3), ['dom 13 set 72.1 kg ×', 'sab 12 set 72.2 kg ×', 'ven 11 set 72 kg ×']);
   atteso('Ultimi log · check dell\'8 set col suo peso', righe.find(r => /8 set/.test(r) && /check/.test(r)), 'mar 8 set ✓ check 72.35 kg 86 cm → ×');
 
-  // Cancellazione di una pesata rapida: weight_logs per data, niente body_logs
+  // Cancellazione di una pesata rapida: weight_logs per data, niente body_logs.
+  // Body 010: si tocca il × che lo schermo ha scritto davvero (prima il banco passava un id vuoto a mano, e lo schermo scriveva «null»)
   const prima = supa._calls.length;
   const riga = tl.find(r => r.date === '2026-09-12');
   if(!riga){ atteso('pesata rapida del 12 set nella timeline', false, true); console.log(`\n${ko} KO`); process.exit(1); }
-  win.confirmDeleteBodyLog('log', riga.id || '', '', riga.date);
+  const rigaDom = box ? [...box.children].slice(1).find(r => /12 set/.test(testo(r.innerHTML))) : null;
+  const xBtn = rigaDom && rigaDom.querySelector('button[title="Elimina"]');
+  atteso('× della pesata rapida · l\'onclick non porta la parola «null»', xBtn ? /'null'/.test(xBtn.getAttribute('onclick')) : null, false);
+  xBtn.click();
+  atteso('× · la conferma ha la data e nessun id di body_logs', [ST.bodyDeleteConfirm.date, ST.bodyDeleteConfirm.id], ['2026-09-12', null]);
   await win.deleteBodyLogConfirmed();
   const cancellazioni = supa._calls.slice(prima).filter(c => c.op === 'delete').map(c => [c.table, c.filters.map(f => f[1] + '=' + f[2]).join('&')]);
   atteso('× su una pesata rapida', cancellazioni, [['weight_logs', 'user_id=u1&date=2026-09-12']]);
+  win.confirmDeleteBodyLog('log', 'null', '', '2026-09-11');
+  atteso('un id scritto «null» vale come assente', ST.bodyDeleteConfirm.id, null);
+  ST.bodyDeleteConfirm = null;
   // Cancellazione del 4 settembre: body_logs e pesata rapida insieme
   const prima2 = supa._calls.length;
   const riga4 = tl.find(r => r.date === '2026-09-04' && r.source === 'log');
