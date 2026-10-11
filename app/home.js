@@ -10,6 +10,20 @@
 
 // Calcola e setta ST.trainHomeData dalla rotazione REALE (ultimo workout valido → nextSession su getSessionCycle()).
 // NON tocca il DOM: il chiamante decide cosa ri-renderizzare quando il dato è pronto (Home tile o badge OGGI tab Programma).
+// Home 030 (11 ottobre 2026): tre stati distinti — «sto caricando» (ST.trainHomeData ancora null),
+// «non riesco a leggere» ({errore:true}: la lettura è fallita, non si finge un programma mai iniziato)
+// e «davvero non iniziato» (la lettura ha risposto e non c'è nessun allenamento). «In corso» si legge
+// dalle SERIE registrate oggi (ST.trainLoggedSets), non da una riga di workouts che l'app non scrive mai.
+function _serieOggiPerSessione(){
+  const today = todayKey();
+  const out = {};
+  Object.keys(ST.trainLoggedSets || {}).forEach(k => {
+    if(!k.endsWith('_' + today)) return;
+    const sid = k.split('_')[0];
+    if(sid) out[sid] = (out[sid] || 0) + 1;
+  });
+  return out;
+}
 async function computeTrainHomeData(){
   if(!ST.user || ST.user.id==='test-user-001'){
     ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
@@ -29,8 +43,16 @@ async function computeTrainHomeData(){
     const lastAny = (lastArr && lastArr[0]) || null; // più recente, anche recupero
     const lastWorkout = (lastArr || []).find(w => !/^recovery/i.test(w.session_type)) || null; // ultimo di LAVORO
 
+    // «In corso»: una sessione con serie registrate oggi e non ancora chiusa oggi (o la sessione aperta adesso).
+    const completateOggi = new Set((lastArr || []).filter(w => w.date === today && w.completed === true).map(w => w.session_type));
+    const serieOggi = _serieOggiPerSessione();
+    const sidInCorso = (ST.trainSession && !/^recovery|^rest/i.test(ST.trainSession) && !completateOggi.has(ST.trainSession) && ST.trainSession)
+      || Object.keys(serieOggi).find(sid => !completateOggi.has(sid)) || null;
+
     if(!lastWorkout){
-      ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+      // Nessun allenamento completato: «davvero non iniziato», oppure la prima sessione è in corso adesso.
+      ST.trainHomeData = { notStarted: !sidInCorso, lastDate:null, lastSession: sidInCorso, nextSession: sidInCorso || 'upperA', streak:0, doneToday:false,
+        inProgress: !!sidInCorso, serieOggi: sidInCorso ? serieOggi[sidInCorso] || 0 : 0 };
       return;
     }
 
@@ -73,22 +95,46 @@ async function computeTrainHomeData(){
       else break;
     }
 
-    const doneToday   = !!lastAny && lastAny.date === today && lastAny.completed === true;
-    const inProgress  = !!lastAny && lastAny.date === today && lastAny.completed === false;
+    const inProgress  = !!sidInCorso;
+    const doneToday   = !inProgress && !!lastAny && lastAny.date === today && lastAny.completed === true;
 
     ST.trainHomeData = {
       notStarted: false,
-      lastDate: (lastAny || lastWorkout).date,
-      lastSession: (lastAny || lastWorkout).session_type,
+      lastDate: inProgress ? today : (lastAny || lastWorkout).date,
+      lastSession: inProgress ? sidInCorso : (lastAny || lastWorkout).session_type,
       nextSession,
       streak,
       doneToday,
       inProgress,
+      serieOggi: inProgress ? (serieOggi[sidInCorso] || 0) : 0,
     };
   } catch(e){
     console.warn('loadTrainingHomeData:', e.message);
-    ST.trainHomeData = { notStarted: true, lastDate:null, lastSession:null, nextSession:'upperA', streak:0, doneToday:false, inProgress:false };
+    // Lettura fallita: lo si dice, non si finge un programma mai iniziato. nextSession null tiene
+    // fermi il debito (computeTrainingDebt) e il ritratto di Pirsi, che leggono da qui.
+    ST.trainHomeData = { errore: true, notStarted:false, lastDate:null, lastSession:null, nextSession:null, streak:0, doneToday:false, inProgress:false };
   }
+}
+
+// Dalla card Training si entra DIRETTAMENTE nella seduta giusta (Home 030): prima apriva il tab e
+// servivano tre tocchi per la prima serie. Un giorno di riposo o uno stato senza seduta apre il tab.
+function apriSessioneDallaHome(sid){
+  showPage('training');
+  if(sid && !/^rest/.test(sid) && typeof openTrainingSession === 'function' && getTrainingSession(sid)) openTrainingSession(sid);
+}
+
+// Lo stato del giorno in chiaro per la card Training: infortunio, rientro graduale, scarico, riposo.
+function _statoGiornoTraining(hd){
+  const parti = [];
+  let inj = null, sr = null;
+  try { inj = (typeof getInjuryPeriod === 'function') ? getInjuryPeriod() : null; } catch(e){}
+  try { sr = (!inj && typeof getSoftReturn === 'function') ? getSoftReturn() : null; } catch(e){}
+  if(inj) parti.push(inj.endDate ? `INFORTUNIO FINO A ${fmtDate(inj.endDate).toUpperCase()}` : 'INFORTUNIO IN CORSO');
+  else if(sr) parti.push('RIENTRO GRADUALE');
+  else if(hd && !hd.errore && !hd.doneToday && !hd.inProgress && /^rest/.test(hd.nextSession || '')) parti.push('OGGI RIPOSO');
+  try { if((ST.trainAllCompleted || []).length && getCycleWeekInfo().isScarico) parti.push('SETTIMANA DI SCARICO'); } catch(e){}
+  if(hd && hd.streak >= 2) parti.push(`${hd.streak} GIORNI DI FILA`);
+  return parti.join(' · ');
 }
 
 // Wrapper storico: calcola la rotazione e aggiorna la Home (tile Training).
@@ -792,35 +838,55 @@ function _renderHomeCards(){
     // dal numero mostrato in Programma.
     const cycleWeek = getCycleWeekInfo().weekNum;
     const weekStr = `SETTIMANA ${cycleWeek} / 6`;
-    let sessName, weekEyebrow;
-    if(!hd || hd.notStarted){
+    // Home 030: stati distinti (sto caricando · non riesco a leggere · non iniziato · in corso ·
+    // completata · prossima), ingresso diretto nella seduta, stato del giorno in chiaro, giorni di fila.
+    let sessName, weekEyebrow, tocco = "showPage('training')", stato = '';
+    if(hd === null || hd === undefined){
+      sessName = 'Sto caricando…';
+      weekEyebrow = 'ALLENAMENTI';
+    } else if(hd.errore){
+      sessName = 'Non riesco a leggere gli allenamenti';
+      weekEyebrow = 'TOCCA PER RIPROVARE';
+      tocco = 'loadTrainingHomeData()';
+    } else if(hd.notStarted){
       const firstSess = getTrainingSession('upperA');
       sessName = `Sessione ${firstSess.name}`;
       weekEyebrow = `INIZIA IL PROGRAMMA · ${weekStr}`;
+      tocco = "apriSessioneDallaHome('upperA')";
+      stato = _statoGiornoTraining(hd);
+    } else if(hd.inProgress){
+      const sessObj = getTrainingSession(hd.lastSession) || getTrainingSession('upperA');
+      sessName = `Sessione ${sessObj.name}`;
+      weekEyebrow = `IN CORSO · ${hd.serieOggi ? hd.serieOggi + (hd.serieOggi === 1 ? ' SERIE FATTA · ' : ' SERIE FATTE · ') : ''}${weekStr}`;
+      tocco = `apriSessioneDallaHome('${hd.lastSession}')`;
+      stato = _statoGiornoTraining(hd);
     } else if(hd.doneToday){
       const completedSess = getTrainingSession(hd.lastSession) || getTrainingSession('upperA');
       const nextSessObj   = getTrainingSession(hd.nextSession) || getTrainingSession('upperA');
       sessName = `Sessione ${completedSess.name}`;
       weekEyebrow = `COMPLETATA · ${weekStr} · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
-    } else if(hd.inProgress){
-      const sessObj = getTrainingSession(hd.lastSession) || getTrainingSession('upperA');
-      sessName = `Sessione ${sessObj.name}`;
-      weekEyebrow = `SESSIONE IN CORSO · ${weekStr}`;
+      stato = _statoGiornoTraining(hd);
     } else {
-      const nextSessObj = getTrainingSession(hd.nextSession) || getTrainingSession('upperA');
+      // La seduta giusta: il debito più vecchio se c'è, altrimenti la prossima della rotazione.
+      const target = (typeof computeTrainingDebt === 'function' ? computeTrainingDebt().target : null) || hd.nextSession;
+      const isRest = /^rest/.test(target || '');
+      const nextSessObj = getTrainingSession(target) || getTrainingSession('upperA');
       // FASE B.1 — mappa adattiva: con scheda 5gg nextSession può essere 'upperC'/'rest'
       // (non presenti in SESSION_DAY_NUM 6gg) → _rotationDayMap dà il numero corretto.
-      const nextDayN    = _rotationDayMap()[hd.nextSession] || '?';
-      sessName    = `Sessione ${nextSessObj.name}`;
-      weekEyebrow = `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()} · ${weekStr}`;
+      const nextDayN    = _rotationDayMap()[target] || '?';
+      sessName    = isRest ? 'Oggi riposo' : `Sessione ${nextSessObj.name}`;
+      weekEyebrow = isRest ? `RIPOSO COMPLETO · ${weekStr}` : `GIORNO ${nextDayN} · ${(nextSessObj.type||'').toUpperCase()} · ${weekStr}`;
+      if(!isRest) tocco = `apriSessioneDallaHome('${target}')`;
+      stato = _statoGiornoTraining(hd);
     }
     trainingCard = `
-      <div class="home-v2-card" onclick="showPage('training')">
+      <div class="home-v2-card" id="home-card-training" onclick="${tocco}">
         <span class="home-v2-card-dot" style="background:var(--mod-training);"></span>
         <div class="home-v2-train-flex">
           <div class="home-v2-card-title">Training</div>
           <div class="home-v2-train-name">${esc(sessName)}</div>
           <div class="home-v2-train-sub">${esc(weekEyebrow)}</div>
+          ${stato ? `<div class="home-v2-train-sub" id="home-card-training-stato" style="color:var(--acc);">${esc(stato)}</div>` : ''}
         </div>
         <span class="home-v2-card-arrow">›</span>
       </div>`;
