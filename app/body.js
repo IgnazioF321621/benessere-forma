@@ -900,7 +900,11 @@ async function saveBodyLog(){
 
 // ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
 function confirmDeleteBodyLog(kind, id, checkId, date){
-  ST.bodyDeleteConfirm = { kind, id, checkId: checkId || null, date };
+  // Body 010 (11 ottobre 2026): una pesata rapida non ha una riga body_logs (id null). Lo schermo scriveva «null» come
+  // testo e si provava a cancellare da body_logs con quel valore: il database rifiutava e la pesata restava. Un id vuoto
+  // o «null» vale come assente: si cancella solo la pesata, per data.
+  const idVero = id && id !== 'null' && id !== 'undefined' ? id : null;
+  ST.bodyDeleteConfirm = { kind, id: idVero, checkId: checkId || null, date };
   renderBody();
 }
 
@@ -1830,7 +1834,7 @@ function renderBody(){
               ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
               ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
               ${isCheck ? `<span style="color:var(--t3);font-size:13px;">→</span>` : ''}
-              <button onclick="event.stopPropagation();confirmDeleteBodyLog('${isCheck ? 'check' : 'log'}','${l.id}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
+              <button onclick="event.stopPropagation();confirmDeleteBodyLog('${isCheck ? 'check' : 'log'}','${l.id || ''}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
             </div>
           </div>`;
         }).join('')}
