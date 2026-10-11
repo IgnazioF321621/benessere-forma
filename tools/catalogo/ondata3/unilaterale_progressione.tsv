@@ -1,0 +1,726 @@
+﻿codice	nome	unilaterale	progressione
+EX001	Chest press	no	elastico più duro
+EX002	Distensioni manubri panca piana	no	carico
+EX003	Piegamenti	no	variante più difficile
+EX004	Croci cavi alti	no	carico
+EX005	Curl bilanciere panca Scott seduto	no	carico
+EX006	Lento avanti bilanciere	no	carico
+EX007	Curl bilanciere arm blaster	no	carico
+EX008	Trazioni sbarra	no	carico in mano
+EX009	Lat machine frontale	no	carico
+EX010	Curl hammer manubri alternato panca verticale	alternato	carico
+EX011	Rematore bilanciere presa larga busto flesso	no	carico
+EX012	Curl un braccio cavo basso in piedi	si	carico
+EX013	Squat corpo libero	no	variante più difficile
+EX014	Curl hammer manubri panca inclinata	no	carico
+EX015	Affondo sul posto	si	elastico più duro
+EX016	Leg press orizzontale macchina	no	carico
+EX017	Hip thrust bilanciere panca	no	carico
+EX018	Stacco rumeno bilanciere	no	carico
+EX019	Ponte glutei	no	variante più difficile
+EX020	Curl inverso manubri	no	carico
+EX021	Plank avambracci	no	tenuta più lunga
+EX022	Dead bug	alternato	tenuta più lunga
+EX023	Pallof press con elastico	si	tenuta più lunga
+EX024	Curl bilanciere	no	carico
+EX025	Curl spider bilanciere panca inclinata	no	carico
+EX026	Pushdown corda cavo	no	carico
+EX027	French press bilanciere panca piana	no	carico
+EX028	Calf raise	no	più ripetizioni
+EX029	Cat-cow (mobilita colonna)	no	tenuta più lunga
+EX030	Band pull-apart (attivazione scapole)	no	elastico più duro
+EX031	Mountain climber controllato	alternato	più ripetizioni
+EX032	Hollow hold	no	tenuta più lunga
+EX033	Step-up al ritmo	si	ritmo più lento
+EX034	Piegamenti a V	no	variante più difficile
+EX035	Single-leg glute bridge	si	ritmo più lento
+EX036	Bird dog	alternato	tenuta più lunga
+EX037	Plank laterale avambraccio	si	tenuta più lunga
+EX038	Affondo camminato	alternato	ritmo più lento
+EX039	Affondo indietro manubri	si	carico
+EX040	Squat wall sit	no	variante più difficile
+EX041	Step-up alto su panca	si	ritmo più lento
+EX042	Plank rollout fitball	no	tenuta più lunga
+EX043	Leg curl su fitball (hamstring curl supino)	no	più ripetizioni
+EX044	Hip thrust su fitball	no	variante più difficile
+EX045	Squat wall fitball	no	variante più difficile
+EX046	Stir the pot (anti-rotazione su fitball)	no	più ripetizioni
+EX047	Squat bulgaro corpo libero	si	ritmo più lento
+EX048	Jumping jack low-impact	no	più ripetizioni
+EX049	Skip ginocchia alte	alternato	più ripetizioni
+EX050	Skater laterale senza salto	alternato	più ripetizioni
+EX051	Squat veloci a corpo libero	no	più ripetizioni
+EX052	Affondi alternati a ritmo	alternato	più ripetizioni
+EX053	Boxe pugni alternati	alternato	più ripetizioni
+EX054	Burpee modificato low-impact	no	più ripetizioni
+EX055	Alzate laterali manubri	no	carico
+EX056	Curl spider bilanciere panca piana	no	carico
+EX057	Alzate laterali fianco manubrio panca inclinata	no	carico
+EX058	Tirate al viso corda cavo alto	no	elastico più duro
+EX059	Croci inverse manubri busto flesso	no	carico
+EX060	Curl hammer manubri alternato	alternato	carico
+EX061	Curl alternato manubri panca Scott	alternato	carico
+EX062	Kickback manubri busto flesso	si	carico
+EX063	Dip panca piedi a terra	no	variante più difficile
+EX064	Leg curl	no	elastico più duro
+EX065	Calf raise manubrio panca piana su step seduto	no	carico
+EX066	Calf raise su step una gamba	si	più ripetizioni
+EX067	Abduzione laterale anca	no	elastico più duro
+EX068	Kickback gluteo in quadrupedia	si	elastico più duro
+EX069	Wrist curl da seduto	no	carico
+EX070	Scrollate bilanciere presa stretta	no	carico
+EX071	Distensioni manubri panca inclinata	no	carico
+EX072	Dip station	no	elastico più duro
+EX073	Distensioni manubri sdraiato a terra	no	carico
+EX074	Lento Arnold manubri	no	carico
+EX075	Push press bilanciere	no	carico
+EX076	Rematore manubri panca piana	no	elastico più duro
+EX077	Rematore invertito TRX	no	variante più difficile
+EX078	Renegade row	alternato	carico
+EX079	Trazioni sbarra presa inversa	no	carico in mano
+EX080	Pullup hold	no	elastico più duro
+EX081	Squat bilanciere frontale	no	carico
+EX082	Squat cosacco	si	carico
+EX083	Squat pistol corpo libero	si	ritmo più lento
+EX084	Kettlebell swing	no	carico
+EX085	Good morning a corpo libero	no	variante più difficile
+EX086	Stacco da terra sumo bilanciere	no	carico
+EX087	Stacco rumeno staggered stance	no	carico
+EX088	Camminata manubri	no	tenuta più lunga
+EX089	Suitcase carry	si	tenuta più lunga
+EX090	Overhead walk	no	carico
+EX091	Turkish get-up	si	carico
+EX092	Curl alternato manubri	alternato	carico
+EX093	Estensioni manubrio un braccio dietro nuca in piedi	si	carico
+EX094	Prone Y-W raise	no	carico
+EX095	Leg curl macchina prona una gamba	si	carico
+EX096	Nordic curl panca romana	no	più ripetizioni
+EX097	Leg extension macchina entrambe le gambe	no	carico
+EX098	Croci manubri panca inclinata	no	carico
+EX099	Pullover manubrio bacino allineato panca piana	no	carico
+EX100	Alzate frontali manubri	no	carico
+EX101	Extrarotazione cavo	no	carico
+EX102	Wood chop	si	carico
+EX103	Russian twist	alternato	più ripetizioni
+EX104	Croci cavi medi traiettoria alta	no	carico
+EX105	Hollow rock	no	tenuta più lunga
+EX106	Scissor kicks	no	più ripetizioni
+EX108	Windshield wipers	alternato	più ripetizioni
+EX109	Plank shoulder taps	no	tenuta più lunga
+EX111	Side bend	si	carico
+EX112	Box jump	no	più ripetizioni
+EX113	Broad jump	no	più ripetizioni
+EX114	Corsa calciata sul posto	alternato	più ripetizioni
+EX115	Lateral shuffle	no	più ripetizioni
+EX116	Combo boxe (gancio-montante)	alternato	più ripetizioni
+EX117	World s greatest stretch	si	tenuta più lunga
+EX118	Inchworm	no	tenuta più lunga
+EX119	Slanci gamba laterali	si	tenuta più lunga
+EX120	Affondo con rotazione	si	tenuta più lunga
+EX121	Riscaldamento spalle (circonduzioni)	no	tenuta più lunga
+EX122	Halo	no	tenuta più lunga
+EX123	Thread the needle	si	tenuta più lunga
+EX124	Rotazione toracica (T-spine)	no	tenuta più lunga
+EX125	Child s pose	no	tenuta più lunga
+EX126	Stretch flessori anca in ginocchio	si	tenuta più lunga
+EX127	Stretch ischiocrurali seduto	si	tenuta più lunga
+EX128	Stretch petto al muro	no	tenuta più lunga
+EX129	Foam roll ischiocrurali	si	tenuta più lunga
+EX130	Foam roll bandelletta IT	si	tenuta più lunga
+EX131	Passive hang	no	tenuta più lunga
+EX132	Goblet squat	no	carico
+EX133	Crunch bicicletta gambe tese 45 gradi	alternato	più ripetizioni
+EX134	Crunch bicicletta	alternato	più ripetizioni
+EX135	Crunch obliquo rotazione	no	più ripetizioni
+EX136	Crunch sforbiciata ampia	alternato	più ripetizioni
+EX137	Crunch obliquo tocco caviglie	alternato	più ripetizioni
+EX138	Crunch braccia tese gambe 45 gradi	no	più ripetizioni
+EX140	Crunch cavo alto in ginocchio	no	carico
+EX141	Crunch cavo alto	no	carico
+EX142	Crunch machine seduto	no	carico
+EX143	Crunch braccia tese dietro	no	più ripetizioni
+EX144	Crunch con peso	no	carico
+EX145	Crunch mani al petto gambe 90 gradi	no	più ripetizioni
+EX146	Crunch mani al petto	no	più ripetizioni
+EX147	Crunch mani dietro testa gambe 90 gradi	no	più ripetizioni
+EX148	Crunch toe touch gambe verticali	no	più ripetizioni
+EX149	Crunch sforbiciata mani sotto glutei	alternato	più ripetizioni
+EX150	Crunch inverso doppio step	no	più ripetizioni
+EX152	Crunch inverso gambe tese panca piana	no	più ripetizioni
+EX153	Sollevamento gambe tese power tower	no	più ripetizioni
+EX154	Crunch inverso gambe tese panca declinata	no	più ripetizioni
+EX155	Crunch inverso seduto panca piana	no	più ripetizioni
+EX156	Crunch isometrico barchetta	no	tenuta più lunga
+EX157	Crunch laterale sul fianco	no	più ripetizioni
+EX158	Crunch mani dietro testa	no	più ripetizioni
+EX159	Crunch obliquo sul fianco gambe flesse	no	più ripetizioni
+EX160	Crunch farfalla gomiti-ginocchia	no	più ripetizioni
+EX161	Crunch flessione ginocchia	no	più ripetizioni
+EX162	Crunch obliquo gamba accavallata	no	più ripetizioni
+EX163	Croci cavi bassi	no	carico
+EX164	Dragon flag panca piana	no	più ripetizioni
+EX165	Flessione laterale busto cavo basso	si	carico
+EX166	Flessione laterale busto fitball	si	più ripetizioni
+EX167	Flessione laterale busto panca romana	si	più ripetizioni
+EX168	Crunch forbice seduto panca piana	alternato	più ripetizioni
+EX169	Sollevamento gambe piegate in sospensione	no	tenuta più lunga
+EX171	Mountain climber	alternato	più ripetizioni
+EX172	Mountain climber incrociato	no	più ripetizioni
+EX173	Plank pike fitball	no	tenuta più lunga
+EX174	Plank spider	no	tenuta più lunga
+EX175	Plank avambracci avanti-indietro	no	tenuta più lunga
+EX177	Plank laterale crunch obliquo	si	tenuta più lunga
+EX179	Rollout bilanciere	no	carico
+EX180	Rollout ab wheel in ginocchio	no	più ripetizioni
+EX181	Rollout bilanciere in ginocchio	no	carico
+EX182	Rotazione diagonale busto cavo alto	si	carico
+EX183	Sit-up con peso	no	carico
+EX184	Sit-up farfalla	no	più ripetizioni
+EX185	Sit-up fitball	no	più ripetizioni
+EX186	Sit-up mani alla nuca panca declinata	no	più ripetizioni
+EX187	Sit-up mani alla nuca	no	più ripetizioni
+EX188	Sit-up mani alla fronte	no	più ripetizioni
+EX189	Sit-up a libro gambe tese	no	più ripetizioni
+EX190	Sollevamento gambe tese	no	più ripetizioni
+EX191	V-sit sforbiciata	alternato	più ripetizioni
+EX192	V-sit tuck up	no	più ripetizioni
+EX193	Crunch inverso gambe cavo basso	no	carico
+EX194	V-up fitball	no	più ripetizioni
+EX195	Abduzione macchina spinta posteriore	no	carico
+EX196	Abduzione macchina seduto	no	carico
+EX197	Abduzione appoggio in piedi	no	più ripetizioni
+EX198	Abduzione una gamba cavo	si	carico
+EX199	Abduzione una gamba macchina spinta laterale	si	carico
+EX200	Adduzione macchina seduto	no	carico
+EX201	Adduzione anca decubito laterale piede in appoggio	si	più ripetizioni
+EX202	Adduzione anca cavo	si	carico
+EX203	Adduzione una gamba macchina in piedi	si	carico
+EX204	Affondo avanti bilanciere	si	carico
+EX205	Affondo avanti manubri	si	carico
+EX206	Affondo avanti parziale manubri	si	carico
+EX207	Croci cavi medi in piedi	no	carico
+EX208	Affondo incrociato indietro bilanciere	no	carico
+EX209	Affondo indietro bilanciere	si	carico
+EX210	Affondo laterale bilanciere	si	carico
+EX211	Affondo laterale manubri	si	carico
+EX212	Jumping pliometrico manubri	no	carico
+EX213	Affondo multipower	si	carico
+EX214	Affondo bilanciere sul posto	si	carico
+EX215	Calf raise su gradino	no	più ripetizioni
+EX216	Calf raise leg press orizzontale	no	carico
+EX217	Donkey kick mani a terra	si	più ripetizioni
+EX218	Donkey kick avambracci a terra	si	più ripetizioni
+EX219	Donkey kick macchina	si	carico
+EX220	Donkey kick tesa panca	si	più ripetizioni
+EX221	Estensione anca elastico	si	elastico più duro
+EX222	Curl spider manubri panca inclinata	no	carico
+EX223	Estensione anca cavo busto flesso	si	carico
+EX224	Estensione anca cavo	si	carico
+EX225	Estensione anca glute machine	si	carico
+EX226	Estensione anca macchina	si	carico
+EX227	Estensione anca elastico busto flesso	si	elastico più duro
+EX230	Girata al petto bilanciere	no	carico
+EX231	Good morning bilanciere	no	carico
+EX232	Good morning manubrio	no	carico
+EX233	Hip thrust corpo libero panca	no	più ripetizioni
+EX234	Hip thrust multipower panca	no	carico
+EX235	Hip thrust bilanciere piedi su panca	no	carico
+EX236	Hip thrust talloni elevati	no	più ripetizioni
+EX237	Hip thrust una gamba panca	si	più ripetizioni
+EX238	Iperestensione inversa panca romana	no	più ripetizioni
+EX239	Leg curl cavo sdraiato	no	carico
+EX240	Leg curl macchina prona entrambe le gambe	no	carico
+EX241	Leg curl macchina seduto	no	carico
+EX242	Leg curl macchina prese anteriori seduto	no	carico
+EX243	Leg curl macchina prese laterali seduto	no	carico
+EX244	Leg curl cavo basso	no	carico
+EX245	Leg curl macchina in piedi	si	carico
+EX246	Leg curl macchina supporto coscia	no	carico
+EX247	Leg curl una gamba macchina ginocchio rialzato	si	carico
+EX248	Leg extension macchina una gamba	si	carico
+EX249	Leg press 45 gradi	no	carico
+EX250	Leg press 45 gradi una gamba	si	carico
+EX251	Ponte glutei piedi su panca	no	variante più difficile
+EX252	Ponte glutei gambe tese piedi su panca	no	variante più difficile
+EX253	Ponte glutei manubrio	no	carico
+EX254	Ponte glutei frog pump	no	variante più difficile
+EX255	Ponte glutei una gamba piede posteriore panca	si	ritmo più lento
+EX256	Ponte glutei una gamba tesa allineata corpo libero	si	ritmo più lento
+EX257	Ponte glutei una gamba verticale corpo libero	si	ritmo più lento
+EX258	Squat cavo basso	no	carico
+EX259	Squat cavi bassi	no	carico
+EX260	Squat multipower	no	carico
+EX261	Squat hack machine	no	carico
+EX262	Squat inverso hack machine	no	carico
+EX263	Squat bilanciere	no	carico
+EX264	Squat bilanciere al rack	no	carico
+EX265	Squat bilanciere landmine	no	carico
+EX266	Squat sumo bilanciere	no	carico
+EX267	Squat manubri	no	carico
+EX268	Squat pliometrico manubri	no	più ripetizioni
+EX269	Squat bulgaro bilanciere	si	carico
+EX270	Squat bulgaro manubri	si	carico
+EX271	Curl bilanciere EZ	no	carico
+EX272	Squat pistol manubrio	si	carico
+EX273	Squat profondo bilanciere	no	carico
+EX274	Squat manubri seduto su panca	no	carico
+EX275	Squat sumo corpo libero braccia distese	no	variante più difficile
+EX276	Squat sumo corpo libero mani al petto	no	variante più difficile
+EX277	Squat sumo bilanciere frontale	no	carico
+EX278	Squat sumo manubrio	no	carico
+EX279	Stacco gambe tese multipower	no	carico
+EX280	Stacco gambe tese bilanciere	no	carico
+EX281	Stacco gambe tese manubri	no	carico
+EX282	Stacco da terra bilanciere	no	carico
+EX283	Stacco da terra manubri	no	carico
+EX284	Stacco da terra trap bar	no	variante più difficile
+EX285	Stacco da terra macchina presa neutra	no	carico
+EX286	Stacco rumeno manubri	no	carico
+EX287	Stacco rumeno una gamba palla medica	si	carico
+EX288	Stacco rumeno una gamba multipower	si	carico
+EX289	Stacco rumeno una gamba bilanciere	si	carico
+EX290	Stacco rumeno una gamba kettlebell	si	carico
+EX291	Stacco rumeno una gamba manubri	si	carico
+EX292	Step-up bilanciere	si	carico
+EX293	Step-up cavo basso	si	carico
+EX294	Curl bilanciere EZ panca Scott seduto	no	carico
+EX295	Curl bilanciere EZ panca Scott in piedi	no	carico
+EX296	Curl bilanciere EZ presa inversa	no	carico
+EX297	Curl bilanciere EZ presa larga	no	carico
+EX298	Curl bilanciere EZ presa stretta	no	carico
+EX299	Curl bilanciere EZ seduto	no	carico
+EX300	Curl croce cavi alti	no	carico
+EX301	Curl croci cavi bassi panca inclinata	no	carico
+EX302	Curl barra cavo panca piana	no	carico
+EX303	Curl cavo barra EZ	no	carico
+EX304	Curl cavo basso barra EZ	no	carico
+EX305	Curl squat cavo basso	no	carico
+EX306	Curl cavo basso panca inclinata	no	carico
+EX307	Curl cavo basso panca Scott	no	carico
+EX308	Curl hammer corda cavo basso	no	carico
+EX309	Curl macchina panca Scott	no	carico
+EX310	Curl hammer macchina panca Scott	no	carico
+EX311	Curl macchina	no	carico
+EX312	Curl Zottman manubri seduto	no	carico
+EX313	Curl diagonale manubri	no	carico
+EX314	Curl manubri in piedi	no	carico
+EX315	Curl rotazione manubri panca inclinata	no	carico
+EX316	Curl presa inversa manubri	no	carico
+EX317	Curl hammer manubri arm blaster	no	carico
+EX318	Curl hammer panca Scott	no	carico
+EX319	Croci cavi medi presa prona	no	carico
+EX320	Curl manubri panca verticale	no	carico
+EX321	Curl hammer manubri	no	carico
+EX324	Curl un braccio cavo alto	si	carico
+EX325	Curl un braccio dietro schiena cavo basso	si	carico
+EX326	Curl un braccio panca Scott cavo basso	si	carico
+EX327	Curl concentrato un braccio cavo basso	si	carico
+EX328	Curl hammer un braccio corda cavo	si	carico
+EX329	Curl un braccio corpo libero seduto	si	più ripetizioni
+EX330	Curl hammer manubri un braccio panca verticale	si	carico
+EX331	Curl un braccio manubrio panca inclinata	si	carico
+EX332	Curl un braccio manubrio panca Scott seduto	si	carico
+EX333	Curl un braccio manubrio panca Scott in piedi	si	carico
+EX334	Curl hammer manubri un braccio in piedi	si	carico
+EX335	Curl hammer manubri un braccio panca Scott	si	carico
+EX336	Curl concentrato un braccio manubrio	si	carico
+EX337	Flessione polsi bilanciere dietro schiena	no	carico
+EX338	Flessione polsi bilanciere appoggio su panca	no	carico
+EX339	Flessione polsi inversa bilanciere in ginocchio su panca	no	carico
+EX340	Flessione hammer polso un braccio seduto	si	carico
+EX341	Flessione dita pinza a molla	no	più ripetizioni
+EX342	Flessione estensione polsi rullino	no	più ripetizioni
+EX343	Flessione polsi manubri panca piana	no	carico
+EX344	Flessione polsi inversa bilanciere seduto	no	carico
+EX345	Flessione polsi inversa manubri seduto	no	carico
+EX346	Flessione radiale polso manubrio	no	carico
+EX347	Flessione polso disco	no	carico
+EX348	Flessione polso manubrio	no	carico
+EX349	Curl spider bilanciere seduto	no	carico
+EX350	Croci cavi bassi panca declinata	no	carico
+EX351	Croci cavi bassi panca inclinata	no	carico
+EX352	Croci cavi bassi panca piana	no	carico
+EX353	Croci macchina seduto	no	carico
+EX354	Croci manubri panca piana	no	carico
+EX355	Croci cavi bassi un braccio panca declinata	si	carico
+EX356	Dip assistiti macchina	no	carico
+EX357	Dip station sovraccarico	no	variante più difficile
+EX358	Distensioni alternate manubri panca piana	alternato	carico
+EX359	Distensioni bilanciere panca declinata	no	carico
+EX360	Distensioni bilanciere panca inclinata	no	carico
+EX361	Distensioni bilanciere panca piana	no	carico
+EX362	Distensioni bilanciere piedi sollevati panca piana	no	carico
+EX363	Distensioni bilanciere presa larga panca piana	no	carico
+EX364	Distensioni cavi panca inclinata	no	carico
+EX365	Distensioni cavi bassi panca piana	no	carico
+EX366	Distensioni cavi panca verticale	no	carico
+EX367	Distensioni macchina seduto	no	carico
+EX368	Distensioni manubri presa stretta panca piana	no	carico
+EX369	Distensioni multipower panca declinata	no	carico
+EX370	Distensioni multipower panca inclinata	no	carico
+EX371	Distensioni multipower panca piana	no	carico
+EX372	Distensioni multipower presa larga panca piana	no	carico
+EX373	Distensioni orizzontali macchina seduto	no	carico
+EX374	Distensioni macchina articolata panca piana	no	carico
+EX375	Distensioni manubri un braccio panca piana	si	carico
+EX376	Distensioni orizzontali macchina presa neutra seduto	no	carico
+EX377	Piegamenti archer	si	ritmo più lento
+EX378	Piegamenti assistiti elastico	no	elastico più duro
+EX379	Piegamenti declinati panca	no	variante più difficile
+EX380	Piegamenti deficit rialzo	no	variante più difficile
+EX381	Piegamenti facilitati ginocchia	no	variante più difficile
+EX382	Piegamenti inclinati box	no	variante più difficile
+EX383	Piegamenti inclinati panca	no	variante più difficile
+EX384	Piegamenti mani larghe	no	variante più difficile
+EX385	Piegamenti mani neutre step	no	variante più difficile
+EX386	Piegamenti deficit dip station	no	variante più difficile
+EX387	Piegamenti pliometrici mani	no	variante più difficile
+EX388	Piegamenti deficit un braccio palla medica	si	carico
+EX389	Pullover bilanciere panca piana	no	carico
+EX390	Pullover macchina seduto	no	carico
+EX391	Alzate frontali alternate manubri	alternato	carico
+EX392	Pullover manubrio bacino declinato panca piana	no	carico
+EX393	Pullover manubrio fitball	no	carico
+EX394	Alzate frontali barra cavo basso	no	carico
+EX395	Alzate frontali bilanciere	no	carico
+EX396	Alzate frontali diagonali manubri	no	carico
+EX397	Alzate frontali incrociate cavi bassi	no	carico
+EX398	Alzate frontali manubri panca verticale	no	carico
+EX399	Alzate frontali manubri prono panca inclinata	no	carico
+EX400	Alzate frontali un braccio cavo basso	si	carico
+EX401	Alzate frontali un manubrio mani unite	no	carico
+EX402	Alzate laterali discesa frontale manubri	no	carico
+EX403	Alzate laterali incrociate cavi bassi	no	carico
+EX404	Alzate laterali macchina a leve seduto	no	carico
+EX405	Alzate laterali macchina appoggio gomito seduto	no	carico
+EX406	Alzate laterali manubri panca piana	no	carico
+EX407	Alzate laterali manubri prono panca inclinata	no	carico
+EX409	Alzate laterali un braccio cavo basso	si	carico
+EX410	Alzate laterali un braccio manubrio gomito 90 gradi	si	carico
+EX411	Alzate laterali un braccio cavo basso inclinazione laterale	si	carico
+EX412	Alzate laterali un braccio manubrio	si	carico
+EX413	Alzate laterali un braccio manubrio inclinazione laterale	si	carico
+EX414	Alzate multi-angolo manubri	no	carico
+EX415	Distensioni landmine in ginocchio	no	carico
+EX416	Intrarotazione cavo	no	carico
+EX417	Lento Arnold manubri panca verticale	no	carico
+EX418	Lento avanti alternato manubri	alternato	carico
+EX419	Lento avanti bilanciere rack panca piana	no	carico
+EX420	Lento avanti bilanciere rack	no	carico
+EX421	Lento avanti bilanciere seduto a terra	no	carico
+EX422	Lento avanti cavi bassi	no	carico
+EX423	Lento avanti macchina a dischi seduto	no	carico
+EX424	Lento avanti macchina pacco pesi seduto	no	carico
+EX425	Lento avanti manubri	no	carico
+EX426	Lento avanti manubri panca verticale	no	carico
+EX427	Lento avanti multipower	no	carico
+EX428	Lento avanti multipower seduto	no	carico
+EX429	Lento avanti bilanciere pin press	no	carico
+EX430	Lento avanti un braccio manubrio	si	carico
+EX431	Lento dietro bilanciere	no	carico
+EX432	Lento dietro bilanciere seduto	no	carico
+EX433	Lento dietro multipower seduto	no	carico
+EX434	Push jerk bilanciere	no	carico
+EX435	Croci inverse cavi alti	no	carico
+EX436	Croci inverse cavi bassi busto flesso	no	carico
+EX437	Croci inverse cavi alti prono panca piana	no	carico
+EX438	Croci inverse elastico	no	elastico più duro
+EX439	Croci inverse macchina seduto	no	carico
+EX440	Croci inverse manubri prono panca inclinata	no	elastico più duro
+EX441	Croci inverse manubri seduto	no	carico
+EX442	Estensione dorsale mani alla nuca a terra	no	più ripetizioni
+EX443	Estensione dorsale macchina	no	carico
+EX444	Estensione dorsale panca piana	no	più ripetizioni
+EX445	Estensione dorsale panca romana	no	più ripetizioni
+EX446	Estensione dorsale con disco panca romana	no	più ripetizioni
+EX447	Estensione dorsale con manubrio panca romana	no	più ripetizioni
+EX448	Superman	no	tenuta più lunga
+EX449	Lat machine V-bar	no	carico
+EX450	Lat machine cavi incrociati in ginocchio	no	carico
+EX451	Lat machine dietro barra dritta	no	carico
+EX452	Lat machine dietro macchina	no	carico
+EX453	Lat machine frontale presa inversa larga	no	carico
+EX454	Lat machine frontale presa stretta	no	carico
+EX455	Lat machine macchina a leve	no	carico
+EX456	Lat machine un braccio maniglia	si	carico
+EX457	Lat pulldown barra cavo alto	no	carico
+EX458	Lat pulldown corda cavo alto	no	elastico più duro
+EX459	Pullover corda cavo basso panca piana	no	elastico più duro
+EX460	Rematore V-bar cavo medio panca piana	no	carico
+EX461	Rematore barra cavo basso	no	carico
+EX462	Rematore barra cavo medio panca inclinata	no	elastico più duro
+EX463	Rematore barra cavo basso presa larga seduto	no	carico
+EX464	Rematore bilanciere Yates	no	carico
+EX465	Rematore bilanciere presa inversa	no	carico
+EX466	Rematore bilanciere	no	carico
+EX467	Rematore bilanciere panca inclinata	no	elastico più duro
+EX468	Tirate al mento corda cavo alto inginocchiato	no	elastico più duro
+EX469	Rematore corda cavo panca piana	no	elastico più duro
+EX470	Rematore elastico busto flesso	no	elastico più duro
+EX471	Rematore invertito multipower	no	carico
+EX472	Rematore landmine busto flesso	no	carico
+EX473	Rematore landmine presa larga busto flesso	no	carico
+EX474	Rematore landmine un braccio presa neutra busto flesso	si	carico
+EX475	Rematore landmine un braccio presa prona busto flesso	si	carico
+EX476	Rematore macchina a dischi presa inversa	no	carico
+EX477	Rematore macchina a leve presa neutra seduto	no	carico
+EX478	Rematore macchina a leve presa prona seduto	no	carico
+EX479	Rematore macchina pacco pesi presa inversa seduto	no	carico
+EX480	Rematore cavo medio V-bar	no	carico
+EX481	Rematore manubri busto flesso	no	carico
+EX482	Rematore manubri presa inversa panca inclinata	no	elastico più duro
+EX483	Rematore manubrio un braccio busto flesso	si	carico
+EX484	Rematore manubrio un braccio appoggio su panca inclinata	si	elastico più duro
+EX485	Rematore manubrio un braccio appoggio su panca piana	si	elastico più duro
+EX486	Rematore multipower presa inversa busto flesso	no	carico
+EX487	Scrollate barra cavo basso	no	carico
+EX488	Scrollate barra cavo basso presa stretta	no	carico
+EX489	Scrollate bilanciere dietro la schiena	no	carico
+EX490	Scrollate macchina a leve	no	carico
+EX491	Scrollate manubri	no	carico
+EX492	Scrollate manubri panca inclinata	no	elastico più duro
+EX493	Scrollate manubri supino panca inclinata	no	elastico più duro
+EX494	Scrollate multipower dietro la schiena	no	carico
+EX495	Tirate al mento barra cavo basso	no	carico
+EX496	Tirate al mento bilanciere EZ	no	carico
+EX497	Tirate al mento bilanciere	no	carico
+EX498	Tirate al mento bilanciere presa larga	no	carico
+EX499	Tirate al mento manubri	no	carico
+EX500	Tirate al viso cavi alti incrociati	no	elastico più duro
+EX501	Tirate al viso manubri busto flesso	no	carico
+EX502	Tirate verticali cavi alti incrociati	no	carico
+EX503	Tirate verticali elastico in ginocchio	no	elastico più duro
+EX504	Tirate verticali un braccio cavo alto in ginocchio	si	carico
+EX505	Trazioni sbarra assistite elastico	no	meno assistenza
+EX506	Trazioni sbarra dietro nuca	no	carico in mano
+EX507	Trazioni sbarra eccentriche	no	carico in mano
+EX508	Trazioni sbarra gravitron in ginocchio	no	meno assistenza
+EX509	Trazioni sbarra gravitron	no	meno assistenza
+EX510	Trazioni sbarra presa neutra	no	carico in mano
+EX511	Trazioni sbarra presa inversa stretta	no	carico in mano
+EX512	Trazioni sbarra zavorrate	no	carico in mano
+EX513	Dip macchina seduto	no	carico
+EX514	Dip panca piedi rialzati	no	variante più difficile
+EX515	Distensioni bilanciere presa stretta supino panca piana	no	carico
+EX516	Estensioni bilanciere EZ dietro nuca in piedi	no	carico
+EX517	Estensioni bilanciere EZ dietro nuca seduto	no	carico
+EX518	Estensioni corda cavo alto busto flesso	no	carico
+EX519	Estensioni corda cavo basso dietro nuca	no	carico
+EX520	Estensioni macchina seduto	no	carico
+EX521	Estensioni macchina panca Scott	no	carico
+EX522	Estensioni cavo alto un braccio traverso	si	carico
+EX523	Estensioni cavo basso un braccio dietro nuca	si	carico
+EX524	Estensioni manubrio dietro nuca in piedi	no	carico
+EX525	Estensioni manubrio dietro nuca seduto	no	carico
+EX526	Estensioni manubrio un braccio dietro nuca seduto	si	carico
+EX527	French press sbarra cavo basso panca inclinata	no	carico
+EX529	French press bilanciere EZ panca inclinata	no	carico
+EX530	French press bilanciere presa inversa panca piana	no	carico
+EX531	French press manubrio panca piana	no	carico
+EX532	French press manubri presa neutra panca piana	no	carico
+EX533	French press manubri supino a terra	no	carico
+EX534	French press manubrio panca inclinata	no	carico
+EX535	French press manubrio traverso panca piana	no	carico
+EX536	French press manubrio un braccio panca piana	si	carico
+EX537	French press manubrio un braccio traverso panca piana	si	carico
+EX538	French press sbarra cavo panca piana	no	carico
+EX539	Kickback cavo un braccio presa inversa busto flesso	si	carico
+EX540	Kickback cavo un braccio busto flesso	si	carico
+EX541	Kickback cavo busto flesso	si	carico
+EX542	Kickback manubrio un braccio busto flesso	si	carico
+EX543	Kickback manubrio un braccio busto flesso appoggio panca	si	carico
+EX544	Kickback manubrio un braccio busto flesso seduto	si	carico
+EX545	Piegamenti diamante	no	variante più difficile
+EX546	Piegamenti diamante ginocchia a terra	no	variante più difficile
+EX547	Piegamenti al muro	no	variante più difficile
+EX548	Piegamenti sfinge	no	più ripetizioni
+EX549	Pushdown barra sagomata cavo	no	carico
+EX550	Pushdown barra sagomata cavo presa inversa	no	carico
+EX551	Pushdown elastico	no	elastico più duro
+EX552	Pushdown cavo un braccio presa inversa	si	carico
+EX553	Pushdown cavo un braccio in ginocchio	si	carico
+EX554	Pushdown cavo un braccio	si	carico
+EX555	Calf raise macchina	no	carico
+EX556	Calf raise panca piana cavo	no	carico
+EX557	Calf raise una gamba	si	più ripetizioni
+EX558	Calf raise macchina carico basso	no	carico
+EX559	Calf raise macchina selettore	no	carico
+EX560	Calf raise manubri su step	no	carico
+EX561	Calf raise in squat	no	più ripetizioni
+EX562	Calf raise inverso multipower su step	no	carico
+EX563	Calf raise leg press 45 gradi	no	carico
+EX564	Calf raise multipower	no	carico
+EX565	Calf raise macchina dischi seduto	no	carico
+EX566	Donkey calf raise panca piana	no	più ripetizioni
+EX567	Calf raise su scalini	no	più ripetizioni
+EX568	Donkey calf raise partner panca piana	no	più ripetizioni
+EX569	Alzate laterali un braccio asciugamano parete	si	più ripetizioni
+EX570	Camminata verticale	no	variante più difficile
+EX571	Piegamenti pike deficit sedie	no	variante più difficile
+EX572	Piegamenti pike panca piana	no	variante più difficile
+EX573	Piegamenti verticale	no	variante più difficile
+EX574	Trazioni sbarra a corpo capovolto	no	variante più difficile
+EX575	Human flag	no	variante più difficile
+EX576	Piegamenti tocco ai piedi	no	più ripetizioni
+EX577	Piegamenti tocco incrociato	no	variante più difficile
+EX578	Dip a terra	no	variante più difficile
+EX579	Dip su box	no	variante più difficile
+EX580	Dip su sedia	no	variante più difficile
+EX581	Estensioni tricipiti multipower	no	carico
+EX582	Piegamenti estensione tricipiti	no	variante più difficile
+EX583	Piegamenti maniglie basse	no	variante più difficile
+EX584	Piegamenti presa stretta ginocchia a terra	no	variante più difficile
+EX585	Piegamenti presa stretta palla medica	no	carico
+EX586	Curl hammer manubri panca verticale	no	carico
+EX587	Battle rope onde alternate	alternato	più ripetizioni
+EX588	Boxe diretto al sacco	alternato	più ripetizioni
+EX589	Boxe diretto alternato	alternato	più ripetizioni
+EX590	Boxe footwork	alternato	più ripetizioni
+EX591	Boxe gancio	alternato	più ripetizioni
+EX592	Boxe jab	alternato	più ripetizioni
+EX593	Burpee	no	più ripetizioni
+EX594	Burpee navy seal	no	più ripetizioni
+EX595	Calcio circolare sacco	si	più ripetizioni
+EX596	Camminata bear crawl	alternato	più ripetizioni
+EX597	Corsa X con conetti	alternato	più ripetizioni
+EX598	Corsa all'indietro	alternato	più ripetizioni
+EX599	Corsa falcata lunga	alternato	più ripetizioni
+EX600	Corsa laterale scaletta agilità	alternato	più ripetizioni
+EX601	Corsa passi corti	alternato	più ripetizioni
+EX602	Corsa resistenza con elastico	alternato	più ripetizioni
+EX603	Corsa scaletta agilità	alternato	più ripetizioni
+EX604	Corsa sforbiciata	alternato	più ripetizioni
+EX605	Corsa sul posto	alternato	più ripetizioni
+EX606	Corsa zigzag con conetti	alternato	più ripetizioni
+EX607	Jumping jack	no	più ripetizioni
+EX608	Jumping rimbalzato	no	più ripetizioni
+EX609	Salti laterali rapidi	no	più ripetizioni
+EX610	Salto con la corda	no	più ripetizioni
+EX611	Skip con calcio	alternato	più ripetizioni
+EX612	Skip power	alternato	più ripetizioni
+EX613	Skip sul posto	alternato	più ripetizioni
+EX614	Spostamento laterale con tocco a terra	alternato	più ripetizioni
+EX615	Adduzione anca decubito laterale gamba tesa	si	più ripetizioni
+EX616	Affondo avanti alternato	alternato	ritmo più lento
+EX617	Jumping pistol box	si	ritmo più lento
+EX618	Salto all'indietro	no	variante più difficile
+EX619	Squat jump ginocchia alte	no	variante più difficile
+EX620	Squat thrust	no	variante più difficile
+EX621	Salto una gamba avanti	si	ritmo più lento
+EX622	Salto verticale esplosivo	no	variante più difficile
+EX623	Leg curl macchina prona	no	carico
+EX624	Leg curl macchina in piedi una gamba	si	carico
+EX625	Abduzione clamshell decubito laterale	si	più ripetizioni
+EX626	Abduzione clamshell elastico decubito laterale	si	elastico più duro
+EX627	Abduzione anca decubito laterale	si	più ripetizioni
+EX628	Abduzione fire hydrant elastico quadrupedia	no	elastico più duro
+EX629	Abduzione fire hydrant quadrupedia	no	più ripetizioni
+EX630	Leg curl cavo in piedi una gamba	si	carico
+EX631	Affondo inverso con knee drive	alternato	ritmo più lento
+EX632	Affondo inverso Bosu con knee drive	alternato	ritmo più lento
+EX633	Affondo maniglie elastico sul posto	si	elastico più duro
+EX634	Leg extension macchina	no	carico
+EX635	Affondo camminato con knee drive	alternato	ritmo più lento
+EX636	Jumping split lunge	no	variante più difficile
+EX637	Affondo laterale alternato	alternato	ritmo più lento
+EX638	Camminata laterale elastico	no	tenuta più lunga
+EX639	Donkey kick elastico quadrupedia	si	elastico più duro
+EX640	Stacco rumeno una gamba maniglie elastico	si	elastico più duro
+EX641	Hip thrust elastico in ginocchio	no	elastico più duro
+EX642	Leg press alternato barra elastico supino	alternato	elastico più duro
+EX643	Pistol squat su box	si	ritmo più lento
+EX644	Reverse hyper elastico panca piana	no	elastico più duro
+EX645	Squat goblet kettlebell banda	no	carico
+EX646	Squat barra elastico	no	elastico più duro
+EX647	Squat calcio laterale	si	ritmo più lento
+EX648	Affondo barra elastico sul posto	si	elastico più duro
+EX649	Squat elastico braccia alte	no	elastico più duro
+EX650	Squat jump	no	variante più difficile
+EX651	Squat wall ball palla medica	no	carico
+EX652	Stacco rumeno una gamba	si	ritmo più lento
+EX653	Step up manubri con curl bicipiti	si	carico
+EX654	Swing elastico maniglie	no	elastico più duro
+EX655	Squat wall sit inclinazione alternata	alternato	ritmo più lento
+EX656	Affondo profondo una gamba	si	ritmo più lento
+EX657	Hip thrust bilanciere una gamba	si	carico
+EX658	Hip thrust una gamba panca spinta esplosiva	si	ritmo più lento
+EX659	Estensione anca elastico knee drive	alternato	elastico più duro
+EX660	Estensione anca in piedi appoggio bilanciere	si	più ripetizioni
+EX661	Abduzione anca elastico seduto panca	si	elastico più duro
+EX662	Squat pistol TRX	si	ritmo più lento
+EX663	Squat pistol assistito	si	ritmo più lento
+EX664	Squat pistol kettlebell	si	carico
+EX665	Squat hawaiano	si	ritmo più lento
+EX666	Squat shrimp	si	ritmo più lento
+EX667	Squat skater una gamba	si	ritmo più lento
+EX668	Squat sissy in ginocchio	no	più ripetizioni
+EX669	Squat seduto su step	no	variante più difficile
+EX670	Squat torsione ginocchio alto	no	variante più difficile
+EX671	Camminata squat	alternato	ritmo più lento
+EX672	Jumping box una gamba	si	ritmo più lento
+EX673	Jumping box	no	variante più difficile
+EX674	Salto lungo da fermo	no	variante più difficile
+EX675	Squat pistol seduto su box	si	ritmo più lento
+EX676	Calf raise cavo basso dietro	no	carico
+EX677	Adduzione un braccio elastico in piedi	si	elastico più duro
+EX678	Chest press elastico inclinato	no	elastico più duro
+EX679	Croci TRX	no	più ripetizioni
+EX680	Dip anelli	no	variante più difficile
+EX681	Dip parallele coreano	no	variante più difficile
+EX682	Dip parallele ginniche	no	variante più difficile
+EX683	Dip parallele impossible	no	variante più difficile
+EX684	Dip sedie	no	variante più difficile
+EX685	Lancio al petto palla medica al muro	no	più ripetizioni
+EX686	Piegamenti archer braccio rialzato	si	ritmo più lento
+EX687	Piegamenti declinati fitball	no	variante più difficile
+EX688	Piegamenti deficit kettlebell	no	carico
+EX689	Piegamenti deficit slancio panche piane	no	variante più difficile
+EX690	Piegamenti disco sovraccarico	no	carico
+EX691	Piegamenti fitball	no	variante più difficile
+EX692	Piegamenti gamba sollevata	si	ritmo più lento
+EX693	Piegamenti indù	no	variante più difficile
+EX694	Piegamenti mani incrociate	no	variante più difficile
+EX695	Piegamenti planche	no	variante più difficile
+EX696	Piegamenti pliometrici tocco petto	no	variante più difficile
+EX697	Piegamenti sui pugni	no	variante più difficile
+EX698	Piegamenti sulle dita	no	variante più difficile
+EX699	Piegamenti TRX	no	variante più difficile
+EX700	Piegamenti un braccio	si	ritmo più lento
+EX701	Piegamenti un braccio palla medica	si	carico
+EX702	Alzate diagonali inclinate elastico	no	elastico più duro
+EX703	Alzate diagonali un braccio elastico gomito 90 gradi	si	elastico più duro
+EX704	Alzate laterali isometriche	no	tenuta più lunga
+EX705	Incroci braccia	no	più ripetizioni
+EX706	Lento avanti elastico seduto	no	elastico più duro
+EX707	Lento avanti isometrico	no	variante più difficile
+EX708	Lento dietro barra elastico	no	elastico più duro
+EX709	Lento dietro un braccio elastico	si	elastico più duro
+EX710	Squat con lancio palla un braccio	si	carico
+EX711	Squat croce di ferro manubri	no	carico
+EX712	Estensione tricipiti elastico busto flesso	no	elastico più duro
+EX713	French press elastico in piedi	no	elastico più duro
+EX714	French press elastico panca piana	no	elastico più duro
+EX715	Pushdown cavi in piedi	no	carico
+EX716	Piegamenti mani ruotate all'indietro	no	variante più difficile
+EX717	Estensione spalla elastico	no	elastico più duro
+EX718	Lancio slam palla medica	no	più ripetizioni
+EX719	Piegamenti cobra prono	no	tenuta più lunga
+EX720	Swimming prono	no	più ripetizioni
+EX721	Rematore invertito anelli	no	variante più difficile
+EX722	Rematore invertito sotto tavolo	no	variante più difficile
+EX723	Rematore alla porta	no	variante più difficile
+EX724	Trazioni sbarra scapolare	no	più ripetizioni
+EX725	Piegamenti scapolari	no	più ripetizioni
+EX726	Trazioni Muscle up	no	carico in mano
+EX727	Trazioni sbarra L-sit	no	carico in mano
+EX728	Trazioni sbarra rotazione	no	carico in mano
+EX729	Trazioni sbarra oscillazione giro completo	no	carico in mano
+EX730	Front lever pulldown parallele	no	variante più difficile
+EX731	Back lever parallele	no	variante più difficile
+EX732	Trazioni sbarra con salto	no	carico in mano
+EX733	Trazioni sbarra isometriche	no	carico in mano
+EX734	Trazioni sbarra parziale presa stretta	no	carico in mano
+EX735	Trazioni sbarra presa neutra stretta	no	carico in mano
+EX736	Trazioni sbarra assistite asciugamano un braccio	si	meno assistenza
+EX737	Trazioni sbarra arciere	no	carico in mano
+EX738	Trazioni sbarra alternate alla spalla	alternato	carico in mano

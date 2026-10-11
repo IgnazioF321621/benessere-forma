@@ -1,0 +1,22 @@
+codice → EX647
+nome → Squat calcio laterale
+nome_en → 
+pattern → dominante ginocchia
+gruppo_target → quadricipiti
+attrezzo → corpo libero
+luogo → casa;libero;palestra
+muscoli → quadricipiti;glutei;adduttori;core
+livello → intermedio
+uso → principale;riscaldamento
+zone_rischio → ginocchia;anca;equilibrio
+adattamento → equilibrio: riduci l ampiezza dell apertura laterale e non cercare il tocco; anca: limita l estensione della gamba laterale
+alternativa → EX637
+setup → In piedi, piedi a larghezza anche, braccia libere, spazio laterale sufficiente per estendere una gamba
+esecuzione → Scendi in accosciata piegando una gamba e distendendo l altra di lato, piede a terra;Nel punto basso porta la mano verso il piede della gamba d'appoggio, busto fermo (non ruota);Spingi dal tallone della gamba piegata per risalire;Alterna il lato a ogni ripetizione ← cambia
+errori → Tallone della gamba piegata che si stacca;Schiena arrotondata per arrivare con la mano al piede d'appoggio: si scende meno e si tocca più in alto;Ginocchio della gamba piegata che cede verso l interno;Ampiezza laterale cercata oltre la mobilita d anca disponibile;Busto che ruota verso la gamba tesa invece di restare fermo ← cambia
+nota_sicurezza → Il tocco del piede d'appoggio e la conseguenza della discesa, non il suo obiettivo: se per arrivarci la schiena si arrotonda, si scende meno e si tocca piu in alto ← cambia
+surrogato_attrezzo → 
+nota_surrogato → 
+esecuzione_surrogato → 
+errori_surrogato → 
+gif_slug → squat-calcio-laterale
