@@ -442,3 +442,135 @@ async function rejectCoachProposal(id){
     _cpSetBusy(id, null);
   }
 }
+
+// ═══════════════════════════════════════════════════════════
+// La variante più facile (Training 330, 11 ottobre 2026)
+// ═══════════════════════════════════════════════════════════
+// La progressione (computeNextSetSuggestion) dice «variante più facile» quando a corpo
+// libero le ripetizioni restano sotto il range. Da sola la frase non basta: qui il coach
+// dice QUALE esercizio (nome e codice, apribile con la GIF) e in due righe come si fa.
+// La scelta è la regola pura ZTCoachRules.varianteFacile sulle righe del catalogo; qui si
+// leggono le righe (poche: l'esercizio, le sue alternative scritte, lo stesso schema di
+// movimento), si tiene il risultato per la seduta e si disegna. Senza rete non si legge:
+// resta la frase di prima, e si riprova quando la rete torna.
+const VF_FRASE = 'variante più facile';
+const VF_COLONNE = 'codice, nome, pattern, gruppo_target, livello, attrezzo, surrogato_attrezzo, luogo, alternativa, setup, esecuzione';
+
+function _vfKey(exName, sessionId){ return `${sessionId}_${exName}`; }
+function _vfStato(){ ST.variantiFacili = ST.variantiFacili || {}; return ST.variantiFacili; }
+
+// Trova (o avvia la ricerca di) la variante per l'esercizio della seduta. Non lancia mai.
+// → { stato: 'in-corso' | 'pronta' | 'nessuna' | 'senza-rete' | 'errore', variante? }
+function varianteFacilePer(exName, sessionId){
+  const key = _vfKey(exName, sessionId);
+  const st = _vfStato();
+  // 'errore' è definitivo per la seduta (non si martella il catalogo a ogni disegno); 'senza-rete' si riprova.
+  if(st[key] && st[key].stato !== 'senza-rete') return st[key];
+  if(typeof senzaRete === 'function' && senzaRete()){ st[key] = { stato: 'senza-rete' }; return st[key]; }
+  st[key] = { stato: 'in-corso' };
+  _vfCerca(exName, sessionId, key).catch(e => {
+    console.warn('[variante facile]', (e && e.message) || e);
+    _vfFine(key, { stato: 'errore' });
+  });
+  return st[key];
+}
+// Chiude la ricerca e ridisegna la seduta, così la card e il recupero mostrano l'esito.
+function _vfFine(key, esito){
+  _vfStato()[key] = esito;
+  if(ST.page === 'training' && typeof renderTraining === 'function') renderTraining();
+}
+
+async function _vfCerca(exName, sessionId, key){
+  const ex = (typeof findExercise === 'function') ? findExercise(exName, sessionId) : null;
+  const codice = ex && ex.codice;
+  if(!codice || !ST.user || !ST.user.id){ _vfFine(key, { stato: 'nessuna' }); return; }
+  const r1 = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(VF_COLONNE).eq('codice', codice).limit(1), { silenzioso: true });
+  if(r1.error){ _vfFine(key, { stato: 'errore' }); return; }
+  const attuale = (r1.data || [])[0];
+  if(!attuale){ _vfFine(key, { stato: 'nessuna' }); return; }
+  const scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []).filter(c => c !== codice);
+  const letture = [];
+  if(scritte.length) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).in('codice', scritte));
+  if(attuale.pattern) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).eq('pattern', attuale.pattern).neq('codice', codice).order('codice', { ascending: true }).range(0, 999));
+  const esiti = await Promise.all(letture.map(q => dbq('leggere le alternative a catalogo', q, { silenzioso: true })));
+  if(esiti.some(r => r.error)){ _vfFine(key, { stato: 'errore' }); return; }
+  const righe = [].concat(...esiti.map(r => r.data || []));
+  const p = ST.profile || {};
+  const sess = (typeof getTrainingSession === 'function') ? getTrainingSession(sessionId) : null;
+  const inScheda = (sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean);
+  const scelta = ZTCoachRules.varianteFacile(attuale, righe, {
+    tipoAllen: p.tipo_allenamento || 'casa',
+    attrezzatura: Array.isArray(p.attrezzatura) && p.attrezzatura.length ? p.attrezzatura : ['elastico', 'corpo_libero'],
+    inScheda,
+  });
+  _vfFine(key, scelta ? { stato: 'pronta', variante: scelta, exName, sessionId } : { stato: 'nessuna' });
+}
+
+// Il testo del suggerimento, con la variante se c'è. Chi disegna passa il suggerimento di
+// getProgressionLive e riceve HTML già protetto. Se la frase non c'è, il testo torna com'è.
+function varianteFacileHTML(exName, sessionId, sugg){
+  const testo = String(sugg || '');
+  if(!testo.includes(VF_FRASE)) return esc(testo);
+  const v = varianteFacilePer(exName, sessionId);
+  const key = _vfKey(exName, sessionId);
+  if(v.stato === 'pronta'){
+    const nome = `${esc(v.variante.nome)} <span style="font-family:var(--font-mono);font-weight:400;color:var(--t3);">${esc(v.variante.codice)}</span>`;
+    return esc(testo).replace(VF_FRASE, `${VF_FRASE}: <a href="#" onclick="event.preventDefault();event.stopPropagation();apriVarianteFacile('${esc(key)}')" style="color:inherit;font-weight:700;text-decoration:underline;">${nome} ›</a>`);
+  }
+  const nota = v.stato === 'senza-rete' ? 'quale te lo dico quando torna la rete' : v.stato === 'in-corso' ? 'cerco quale…' : null;
+  if(nota) return esc(testo).replace(VF_FRASE, `${VF_FRASE} <span style="color:var(--t3);">(${nota})</span>`);
+  return esc(testo);
+}
+
+// Il foglio della variante: nome, codice, come si fa in due righe, la GIF.
+function apriVarianteFacile(key){
+  const v = _vfStato()[key];
+  if(!v || v.stato !== 'pronta') return;
+  ST.varianteFacileAperta = key;
+  ST.exerciseGifCache = ST.exerciseGifCache || {};
+  if(!ST.exerciseGifCache[v.variante.codice]){
+    ST.exerciseGifCache[v.variante.codice] = { url: null, status: 'loading' };
+    fetchExerciseMedia(v.variante.nome, v.variante.codice).then(m => {
+      ST.exerciseGifCache[v.variante.codice] = { url: m.cached_url || null, status: m.status || 'missing' };
+      if(ST.varianteFacileAperta === key) renderVarianteFacileSheet();
+    });
+  }
+  renderVarianteFacileSheet();
+}
+function chiudiVarianteFacile(){
+  ST.varianteFacileAperta = null;
+  const el = document.getElementById('variante-facile-sheet');
+  if(el) el.remove();
+}
+function renderVarianteFacileSheet(){
+  const key = ST.varianteFacileAperta;
+  const v = key && _vfStato()[key];
+  const existing = document.getElementById('variante-facile-sheet');
+  if(existing) existing.remove();
+  if(!v || v.stato !== 'pronta') return;
+  const gif = ST.exerciseGifCache[v.variante.codice];
+  const gifHTML = (gif && gif.status === 'cached' && gif.url)
+    ? `<img src="${gif.url}" alt="Esecuzione ${esc(v.variante.nome)}" class="rest-hero-gif">`
+    : `<div class="rest-hero-gif-placeholder">${gif && gif.status === 'loading' ? 'Caricamento…' : 'Anteprima non disponibile'}</div>`;
+  const come = v.variante.come.length
+    ? v.variante.come.map(r => `<p style="font-family:var(--font-sans);font-size:14px;color:var(--t1);margin:0 0 8px;line-height:1.45;">${esc(r)}</p>`).join('')
+    : `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);margin:0;">Per questo esercizio il catalogo non ha ancora la descrizione.</p>`;
+  const html = `<div id="variante-facile-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)chiudiVarianteFacile()">
+    <div class="pianov4-weighin-screen">
+      <div class="pianov4-weighin-band"></div>
+      <div class="pianov4-weighin-handle"></div>
+      <div class="pianov4-weighin-header">
+        <div class="pianov4-weighin-eyebrow">${esc(COACH_NAME)} · AL POSTO DI ${esc(v.exName)}</div>
+        <div class="pianov4-weighin-title">${esc(v.variante.nome)} <span style="font-family:var(--font-mono);font-size:12px;font-weight:400;color:var(--t3);">${esc(v.variante.codice)}</span></div>
+        <button class="pianov4-weighin-close" onclick="chiudiVarianteFacile()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:10px;">
+        ${gifHTML}
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin:12px 0 6px;">COME SI FA</div>
+        ${come}
+        <p style="font-family:var(--font-sans);font-size:12px;color:var(--t3);margin:10px 0 0;">Vale per la prossima serie di oggi: la scheda non cambia.</p>
+      </div>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}

@@ -33,6 +33,7 @@ node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per
 node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)
 node tools/banco/prova_tabella_unica.js  # una tabella sola per le serie (training_logs, id del telefono, coda unica), codice esercizio e supplement_id scritti e letti, scrivi-o-aggiorna per allenamenti e misure, vecchia WS-QUEUE tolta (Fondamenta 070/080/090)
 node tools/banco/prova_privacy.js  # informativa prima del primo accesso, consenso prima che le foto partano, niente nome nei testi al coach, «Scarica i miei dati» (Fondamenta 170)
+node tools/banco/prova_variante_facile.js   # Training 330: «variante più facile» nomina l'esercizio (nome, codice, GIF, come si fa): regola pura, card, recupero, senza rete
 node tools/banco/prova_training_ondata1.js  # Ondata 1 Training: serie a ripetizioni in silenzio, 3-2-1 sulla tenuta, ripetizioni e RIR con memoria, recupero fra un esercizio e l'altro, audio rifatto dopo un vocale (note 020 030 290 300 340)
 node tools/banco/prova_home_030.js  # card Training in Home: sto caricando, non riesco a leggere, non iniziato, in corso (dalle serie di oggi), completata, prossima, ingresso diretto nella seduta, stato del giorno e giorni di fila (Home 030)
 node tools/banco/prova_installazione.js  # manifest, icone PNG (rigenerabili con node tools/icone/genera.js) e suggerimento «Aggiungi alla schermata Home» (Fondamenta 190)
