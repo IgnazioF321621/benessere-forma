@@ -68,6 +68,21 @@ function activeSupps(){return ST.supps.filter(s=>s.active);}
 //
 // Solo per la VISTA. La registrazione (renderSuppSheet, rsPrendiTutto) resta
 // sui soli attivi: un sospeso non si puo' spuntare di nuovo.
+// Il prodotto di una riga di supplements_log (rawSuppLogs): per id (risolto al caricamento con suppForLog: id, poi nome) e,
+// per le righe della copia locale vecchia senza id, per nome, preferendo la riga attiva. Mai per orario.
+function _suppDelLog(log){
+  const lista = ST.supps || [];
+  if(log && log.id != null) return lista.find(s => s.local_id === log.id) || null;
+  return lista.find(s => s.active && s.name === log.name) || lista.find(s => s.name === log.name) || null;
+}
+// Una riga è «coperta» dal suo gruppo (e non va mostrata anche come extra) se il suo prodotto è tra i presi del giorno.
+// Difetto del 12 ottobre 2026 (Rilascio 35): si confrontava il nome (che può prendere una riga inattiva omonima) e l'orario
+// della riga con lo slot attuale del prodotto, che cambia dopo (updateSuppSlotTime) senza toccare le righe già scritte:
+// «All Plant Protein» compariva nel gruppo e di nuovo come extra. I veri extra, con un nome fuori dalla libreria, restano extra.
+function _logCoperto(log, presi){
+  const supp = _suppDelLog(log);
+  return !!(supp && (presi || []).includes(supp.local_id));
+}
 function suppsDelGiorno(day){
   const presi = (day && day.suppsTaken) || [];
   return (ST.supps||[]).filter(s => s.active || presi.includes(s.local_id));
@@ -327,7 +342,7 @@ function _riempiGiorni(meals, itemsByMeal, fasting, suppLog) {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
-    ST.db.days[s.date].rawSuppLogs.push({name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
+    ST.db.days[s.date].rawSuppLogs.push({id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
   });
 }
 
@@ -711,7 +726,7 @@ async function loadTodaySuppLog() {
   // Per supplement_id, poi per nome (Fondamenta 070): la regola e' in shared/nutrizione.js → suppForLog
   day.rawSuppLogs = data.map(s => {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
-    return {name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
+    return {id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
   });
   data.forEach(s => {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
@@ -737,6 +752,15 @@ async function updateSuppSlotTime(oldTime, newTime, idsStr) {
   ST.supps.forEach(s => { if(ids.includes(String(s.local_id))) s.slot = newTime; });
   // Aggiorna Supabase per tutti gli integratori coinvolti
   await Promise.all(ids.map(id => dbUpdateSupp(id, {slot: newTime})));
+  // Le righe di OGGI già registrate per quei prodotti seguono l'orario nuovo (12 ottobre 2026): prima restavano all'orario
+  // vecchio, e un confronto sull'orario le mostrava come extra. Solo oggi, solo le righe di gruppo (non gli extra), e in
+  // memoria lo stesso; se la scrittura non passa la timeline non cambia comunque, perché non guarda più l'orario.
+  const oggi = todayKey(), giorno = getDay(oggi);
+  (giorno.rawSuppLogs || []).forEach(l => { if(l.id != null && ids.includes(String(l.id))) l.time = newTime; });
+  if((giorno.rawSuppLogs || []).some(l => l.id != null && ids.includes(String(l.id))))
+    await dbq('spostare l\'orario delle righe di oggi', supa.from('supplements_log').update({ slot: newTime })
+      .eq('user_id', ST.user.id).eq('date', oggi).eq('is_extra', false).in('supplement_id', ids), { silenzioso:true });
+  saveCache();
   renderOggi();
 }
 
@@ -1780,8 +1804,8 @@ function renderOggi(){
       if(ss.some(s => taken.includes(s.local_id))) tlSuppEvents.push({ type:'supp', time:t, supps:ss });
     });
     (day.rawSuppLogs || []).forEach(log => {
-      const supp = ST.supps.find(s => s.name === log.name);
-      const coveredByGroup = supp && log.time === (supp.slot || '');
+      const supp = _suppDelLog(log);
+      const coveredByGroup = _logCoperto(log, taken);
       if(!coveredByGroup){
         const catItem = (ST.catalog || []).find(c => c.nome === log.name);
         tlSuppEvents.push({ type:'supp_log', time:(log.time || '00:00'), log, supp, catItem });
@@ -2895,8 +2919,7 @@ function renderDayDetailScreen() {
   }
   // Raw supp logs (extra integratori legacy)
   rawLogs.forEach(log => {
-    const supp = (ST.supps || []).find(s => s.name === log.name);
-    const coveredByGroup = supp && log.time === (supp.slot || '');
+    const coveredByGroup = _logCoperto(log, taken);
     if(!coveredByGroup) {
       events.push({
         type: 'supp_log',
