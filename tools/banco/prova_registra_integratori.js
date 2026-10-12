@@ -46,7 +46,7 @@ const t = {
   // il foglio si apre dal tasto di Oggi
   bottone(d.getElementById('page-oggi'), '+ Registra integratori').click(); await attendi(5);
   atteso('il foglio si apre, a elenco: due pacchetti in ordine di orario più «Altri integratori», niente «Come vuoi registrare?»', [d.getElementById('supp-sheet').style.display, [...foglio().querySelectorAll('[data-gruppo]')].map(g => g.dataset.gruppo), /Come vuoi registrare|Gruppo.*Singolo/.test(testo(foglio()))], ['flex', ['pA', 'pB', 'altri'], false]);
-  atteso('Pack Mami · tre righe (il sospeso non c\'è), «Prendi tutto», la dose doppia si legge', [[...gruppo('pA').querySelectorAll('[data-supp]')].map(r => r.dataset.supp), !!bottone(gruppo('pA'), 'Prendi tutto'), testo(riga('s2'))], [['s1', 's2', 's3'], true, 'Fibre× 2 ⋯']);
+  atteso('Pack Mami · tre righe da prendere più il sospeso in coda, in grigio; «Prendi tutto»; la dose doppia si legge', [[...gruppo('pA').querySelectorAll('[data-supp]')].map(r => r.dataset.supp + (r.classList.contains('sospeso') ? ':sospeso' : '')), !!bottone(gruppo('pA'), 'Prendi tutto'), testo(riga('s2'))], [['s1', 's2', 's3', 's6:sospeso'], true, 'Fibre× 2 ⋯']);
   atteso('nessun gruppo scritto a mano: il titolo è il nome del pacchetto, con l\'orario', testo(gruppo('pA').querySelector('.rs-gruppo-nome')), 'Pack Mami06:30');
 
   // 1 · una spunta: si registra subito, con l'id del prodotto, senza «Conferma»
@@ -87,16 +87,14 @@ const t = {
   bottone(gruppo('pA'), 'Ferro').click(); await attendi(20);
   atteso('Sostituisci · Ferro registrato, Fibre saltato solo oggi, pacchetti intatti', [presi(), win.getDay(OGGI).suppsSaltati, scritture().slice(-1), t.supplement_package_items.length, riga('s5').classList.contains('on')], [['s1', 's3', 's5'], ['s2'], ['insert:s5'], 6, true]);
 
-  // 7 · Sospendi e Riattiva
+  // 7 · Sospendi e Riattiva (dal 12 ottobre il sospeso resta nel suo pacchetto, in grigio, con «Riattiva» sulla riga; la prova completa è prova_registra_sospendi.js)
   riga('s3').querySelector('.rs-spunta').click(); await attendi(20);   // prima lo tolgo, così la sospensione è di un prodotto non preso
   riga('s3').querySelector('.rs-piu').click(); await attendi(5); bottone(gruppo('pA'), 'Sospendi').click(); await attendi(20);
   const sospesoDB = supa._calls.filter(c => c.table === 'supplements' && c.op === 'update').map(c => [c.payload.active, c.filters.find(f => f[1] === 'id')[2]]);
-  atteso('Sospendi · Omega 3 sparisce dalle righe, scritto sospeso nel database, la riga «Sospesi: 2» compare', [!riga('s3'), sospesoDB, testo(foglio().querySelector('.rs-sospesi'))], [true, [[false, 's3']], 'Sospesi: 2 ▾']);
-  foglio().querySelector('.rs-sospesi').click(); await attendi(5);
-  const sospesiNomi = [...foglio().querySelectorAll('.rs-sospeso span')].map(x => x.textContent);
-  atteso('Sospesi aperti · Magnesio e Omega 3, ognuno con «Riattiva»', [sospesiNomi, foglio().querySelectorAll('.rs-sospeso button').length], [['Omega 3', 'Magnesio'], 2]);
-  foglio().querySelectorAll('.rs-sospeso button')[0].click(); await attendi(20);
-  atteso('Riattiva · Omega 3 torna nel Pack Mami, da prendere', [!!riga('s3'), riga('s3') && riga('s3').classList.contains('on'), testo(foglio().querySelector('.rs-sospesi'))], [true, false, 'Sospesi: 1 ▴']);
+  atteso('Sospendi · Omega 3 resta nel Pack Mami in grigio con «sospeso» e «Riattiva», scritto sospeso nel database', [riga('s3').classList.contains('sospeso'), testo(riga('s3')), sospesoDB], [true, 'Omega 3sospesoRiattiva', [[false, 's3']]]);
+  atteso('Sospendi · anche Magnesio, sospeso da prima, sta nel suo pacchetto con «Riattiva»', [!!riga('s6'), riga('s6') && riga('s6').classList.contains('sospeso'), !!foglio().querySelector('.rs-sospesi')], [true, true, false]);
+  bottone(riga('s3'), 'Riattiva').click(); await attendi(20);
+  atteso('Riattiva · Omega 3 torna da prendere nel Pack Mami, scritto attivo', [riga('s3').classList.contains('sospeso'), riga('s3').classList.contains('on'), !!riga('s3').querySelector('.rs-spunta:not(.vuota)'), sospesoDB.length + 1 === supa._calls.filter(c => c.table === 'supplements' && c.op === 'update').length], [false, false, true, true]);
 
   // 8 · senza rete: la spunta va in coda e si registra al ritorno della rete
   t.__rete = false;

@@ -5539,28 +5539,32 @@ async function toggleSuppTaken(localId, name){
 // tutti presi; un pacchetto tutto preso si ripiega in una riga «N/N ✓» che si riapre con un tocco. Il «⋯» di ogni riga:
 // «Non oggi» (saltato solo oggi, sul telefono: day.suppsSaltati, nella copia locale), «Sostituisci con…» (solo per oggi:
 // si registra l'altro prodotto e questo si salta; il pacchetto non cambia, per quello c'è l'editor dei pacchetti) e
-// «Sospendi» (toggleSuppActive: sparisce finché non si riattiva dalla riga «Sospesi» in fondo). Gli integratori attivi
-// fuori da ogni pacchetto stanno sotto «Altri integratori». Qui i gruppi sono i pacchetti veri: niente gruppo scritto
+// «Sospendi» (via dalla giornata finché non si riattiva: la riga RESTA nel suo pacchetto, in grigio, con «Riattiva» sulla
+// stessa riga, e un avviso con «Annulla» rimedia a un tocco sbagliato sul posto — difetto di Ignazio del 12 ottobre 2026;
+// la scrittura passa da scriviConCoda, quindi vale anche senza rete). Gli integratori fuori da ogni pacchetto stanno sotto
+// «Altri integratori». Qui i gruppi sono i pacchetti veri: niente gruppo scritto
 // a mano (Nutrition 120). «+ Un altro prodotto» apre il catalogo (openCatalogForRegisterExtra), come prima.
 // ═══════════════════════════════════════════════════════════
 function openSuppSheet() {
   const ss = ST.suppSheet;
-  ss.menu = null; ss.sostituisci = null; ss.aperti = {}; ss.sospesiAperti = false;
+  ss.menu = null; ss.sostituisci = null; ss.aperti = {};
   document.getElementById('supp-sheet').style.display = 'flex';
   renderSuppSheet();
 }
 function closeSuppSheet() {
   document.getElementById('supp-sheet').style.display = 'none';
 }
-// I gruppi del foglio: i pacchetti, con i soli prodotti attivi, in ordine di orario; poi «Altri integratori» (attivi, fuori da ogni pacchetto)
+// I gruppi del foglio: i pacchetti in ordine di orario, ognuno coi prodotti attivi (`supps`) e, in coda, i sospesi (`sospesi`, in grigio
+// con «Riattiva»); poi «Altri integratori» per chi è fuori da ogni pacchetto
 function rsGruppi() {
   const inPkg = _suppIdsInAnyPackage();
-  const gruppi = (ST.packages || []).map(p => ({
-    id: String(p.id), nome: p.name || 'Pacchetto', emoji: p.emoji || '📦', ora: p.time || '',
-    supps: (p.items || []).map(it => it.supplement).filter(s => s && s.active),
-  })).filter(g => g.supps.length).sort((a, b) => (a.ora || '99').localeCompare(b.ora || '99'));
-  const altri = (ST.supps || []).filter(s => s.active && !inPkg.has(s.local_id)).sort((a, b) => (a.slot || '').localeCompare(b.slot || ''));
-  if (altri.length) gruppi.push({ id: 'altri', nome: 'Altri integratori', emoji: '🌿', ora: '', supps: altri });
+  const ordina = (lista) => lista.sort((a, b) => (a.slot || '').localeCompare(b.slot || ''));
+  const gruppi = (ST.packages || []).map(p => {
+    const prodotti = (p.items || []).map(it => it.supplement).filter(Boolean);
+    return { id: String(p.id), nome: p.name || 'Pacchetto', emoji: p.emoji || '📦', ora: p.time || '', supps: prodotti.filter(s => s.active), sospesi: prodotti.filter(s => !s.active) };
+  }).filter(g => g.supps.length || g.sospesi.length).sort((a, b) => (a.ora || '99').localeCompare(b.ora || '99'));
+  const fuori = (ST.supps || []).filter(s => !inPkg.has(s.local_id));
+  if (fuori.length) gruppi.push({ id: 'altri', nome: 'Altri integratori', emoji: '🌿', ora: '', supps: ordina(fuori.filter(s => s.active)), sospesi: ordina(fuori.filter(s => !s.active)) });
   return gruppi;
 }
 const rsGruppo = (id) => rsGruppi().find(g => g.id === String(id));
@@ -5569,7 +5573,6 @@ const rsSaltati = (day) => { if (!Array.isArray(day.suppsSaltati)) day.suppsSalt
 function renderSuppSheet() {
   const ss = ST.suppSheet, day = getDay(ST.activeDay), presi = day.suppsTaken || [], saltati = rsSaltati(day);
   const gruppi = rsGruppi();
-  const sospesi = (ST.supps || []).filter(s => !s.active);
   const oggi = ST.activeDay === todayKey();
   let html = `<div class="rs-testa">
     <div><div class="rs-titolo">🌿 Registra integratori</div><div class="rs-sotto">${esc(fmtDate(ST.activeDay))}${oggi ? ' · oggi' : ''}</div></div>
@@ -5603,6 +5606,7 @@ function renderSuppSheet() {
           ${on ? '' : `<button onclick="rsNonOggi('${esc(id)}')">${saltato ? 'Rimetti oggi' : 'Non oggi'}</button>`}
           <button onclick="rsSostituisci('${esc(id)}')">Sostituisci con…</button>
           <button onclick="rsSospendi('${esc(id)}')">Sospendi</button>
+          <div class="rs-menu-nota">Sospendi: toglie il prodotto dalla tua giornata finché non lo riattivi. Resta qui, in grigio.</div>
         </div>`;
       }
       if (ss.sostituisci === id) {
@@ -5614,12 +5618,11 @@ function renderSuppSheet() {
         </div>`;
       }
     });
+    g.sospesi.forEach(s => {
+      html += `<div class="rs-riga sospeso" data-supp="${esc(s.local_id)}"><span class="rs-spunta vuota"></span><div class="rs-nome">${esc(s.name)}<span class="rs-tag">sospeso</span></div><button class="rs-riattiva" onclick="rsRiattiva('${esc(s.local_id)}')">Riattiva</button></div>`;
+    });
     html += `</div>`;
   });
-  if (sospesi.length) {
-    html += `<button class="rs-sospesi" onclick="rsSospesi()">Sospesi: ${sospesi.length} ${ss.sospesiAperti ? '▴' : '▾'}</button>`;
-    if (ss.sospesiAperti) html += sospesi.map(s => `<div class="rs-sospeso"><span>${esc(s.name)}</span><button class="rs-scelta" onclick="rsRiattiva('${esc(s.local_id)}')">Riattiva</button></div>`).join('');
-  }
   html += `<button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="openCatalogForRegisterExtra()">+ Un altro prodotto</button>
     <button class="btn btn-ghost btn-full" style="margin-top:6px;" onclick="closeSuppSheet()">Chiudi</button>`;
   document.getElementById('supp-sheet-body').innerHTML = html;
@@ -5688,9 +5691,41 @@ function rsSostituisciDaCatalogo(id) {
   ST.suppSheet.sostituisci = null; saveCache();
   openCatalogForRegisterExtra();   // chiude il foglio e apre il catalogo: il prodotto scelto si registra come extra
 }
-async function rsSospendi(id) { ST.suppSheet.menu = null; await toggleSuppActive(id); renderSuppSheet(); }
-async function rsRiattiva(id) { await toggleSuppActive(id); renderSuppSheet(); }
-function rsSospesi() { ST.suppSheet.sospesiAperti = !ST.suppSheet.sospesiAperti; renderSuppSheet(); }
+// Sospeso o riattivato: subito a schermo, poi la scrittura con la coda (senza rete parte al ritorno della rete); Oggi e Integratori si ridisegnano
+async function rsImpostaAttivo(id, attivo) {
+  const s = (ST.supps || []).find(x => x.local_id === id);
+  if (!s || s.active === attivo) return;
+  s.active = attivo;
+  renderSuppSheet();
+  await scriviConCoda(attivo ? 'riattivare l\'integratore' : 'sospendere l\'integratore', { tabella:'supplements', tipo:'update', righe:{ active: attivo }, filtri:[['id', id], ['user_id', ST.user.id]] });
+  if (ST.page === 'oggi') renderOggi();
+  if (ST.page === 'integratori') renderIntegratori();
+  saveCache();
+  renderSuppSheet();
+}
+async function rsSospendi(id) {
+  const s = (ST.supps || []).find(x => x.local_id === id); if (!s) return;
+  ST.suppSheet.menu = null;
+  await rsImpostaAttivo(id, false);
+  rsAvviso(`${s.name} sospeso: non è più nella tua giornata`, () => rsRiattiva(id));
+}
+async function rsRiattiva(id) {
+  const s = (ST.supps || []).find(x => x.local_id === id); if (!s) return;
+  rsAvvisoVia();
+  await rsImpostaAttivo(id, true);
+  showToast(`${s.name} torna nella tua giornata`, '✅');
+}
+// L'avviso con «Annulla» (come quello dell'editor dei pacchetti): resta 6 secondi, un tocco su Annulla rimedia
+function rsAvvisoVia() { const v = document.getElementById('rs-avviso'); if (v) { clearTimeout(v._timer); v.remove(); } }
+function rsAvviso(testo, annulla) {
+  rsAvvisoVia();
+  const el = document.createElement('div');
+  el.id = 'rs-avviso'; el.className = 'rs-avviso';
+  el.innerHTML = `<span>${esc(testo)}</span><button type="button">Annulla</button>`;
+  el.querySelector('button').onclick = () => { rsAvvisoVia(); annulla(); };
+  el._timer = setTimeout(rsAvvisoVia, 6000);
+  document.body.appendChild(el);
+}
 
 async function deleteSuppLog(name, time) {
   const { error } = await supa.from('supplements_log').delete()
