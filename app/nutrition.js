@@ -66,7 +66,7 @@ function activeSupps(){return ST.supps.filter(s=>s.active);}
 // e' cancellare la registrazione (e' vera) ma continuare a mostrarla, con
 // l'etichetta SOSPESO. Il giorno dopo, non essendo piu' registrato, sparisce da se'.
 //
-// Solo per la VISTA. La registrazione (renderSuppSheet, confirmSuppGroup) resta
+// Solo per la VISTA. La registrazione (renderSuppSheet, rsPrendiTutto) resta
 // sui soli attivi: un sospeso non si puo' spuntare di nuovo.
 function suppsDelGiorno(day){
   const presi = (day && day.suppsTaken) || [];
@@ -76,20 +76,6 @@ function suppMonthlyCost(s){
   const multiplier = s.dose_multiplier != null ? parseFloat(s.dose_multiplier) : 1;
   const doseDie    = s.dose_die        != null ? parseFloat(s.dose_die)        : 1;
   return (s.price&&s.doses) ? (s.price/s.doses)*doseDie*multiplier*30 : 0;
-}
-function suppUnitFromConfezione(confezione, linea) {
-  if (!confezione) return 'unità';
-  const c = confezione.toLowerCase();
-  if (c.includes('stick')) return 'stick';
-  if (c.includes('compressa') || c.includes('compresse') || c.includes('cpr')) return 'cpr';
-  if (c.includes('capsula') || c.includes('capsule') || c.includes('cps')) return 'cps';
-  if (c.includes('bustina') || c.includes('bustine')) return 'bustine';
-  if (c.includes('barretta') || c.includes('barrette')) return 'barrette';
-  if (c.includes('tavoletta') || c.includes('tavolette')) return 'tavolette';
-  if (c.includes('lattina') || c.includes('lattine')) return 'lattine';
-  if (c.includes('porzione') || c.includes('porzioni')) return 'porzioni';
-  if ((c.includes('cucchiaio') || c.includes(' g')) && (linea||'').toLowerCase().includes('prote')) return 'cucchiai';
-  return 'unità';
 }
 function totalMonthlyCost(){return activeSupps().reduce((a,s)=>a+suppMonthlyCost(s),0);}
 
@@ -5523,171 +5509,165 @@ async function toggleSuppTaken(localId, name){
 }
 
 // ═══════════════════════════════════════════════════════════
-// SUPP SHEET
-// ══════════════════════════════���════════════════════════════
+// REGISTRA INTEGRATORI — il foglio (Nutrition 210 + 190 + 120, 11 ottobre 2026, deciso con Ignazio)
+// Un elenco solo: i pacchetti uno sotto l'altro (nome, orario, «Prendi tutto») e sotto ogni pacchetto le righe dei
+// prodotti con la spunta. La spunta registra subito (toggleSuppTaken → scriviConCoda: senza rete va in coda), senza
+// «Conferma»; toccata di nuovo toglie. «Prendi tutto» segna i mancanti del pacchetto e diventa «Togli tutto» quando sono
+// tutti presi; un pacchetto tutto preso si ripiega in una riga «N/N ✓» che si riapre con un tocco. Il «⋯» di ogni riga:
+// «Non oggi» (saltato solo oggi, sul telefono: day.suppsSaltati, nella copia locale), «Sostituisci con…» (solo per oggi:
+// si registra l'altro prodotto e questo si salta; il pacchetto non cambia, per quello c'è l'editor dei pacchetti) e
+// «Sospendi» (toggleSuppActive: sparisce finché non si riattiva dalla riga «Sospesi» in fondo). Gli integratori attivi
+// fuori da ogni pacchetto stanno sotto «Altri integratori». Qui i gruppi sono i pacchetti veri: niente gruppo scritto
+// a mano (Nutrition 120). «+ Un altro prodotto» apre il catalogo (openCatalogForRegisterExtra), come prima.
+// ═══════════════════════════════════════════════════════════
 function openSuppSheet() {
   const ss = ST.suppSheet;
-  ss.mode = null; ss.selGroup = null; ss.singleQuery = ''; ss.singleSelId = null;
-  ss.singleDose = 1; ss.singleUnit = 'cps';
-  ss.singleTime = new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  ss.menu = null; ss.sostituisci = null; ss.aperti = {}; ss.sospesiAperti = false;
   document.getElementById('supp-sheet').style.display = 'flex';
   renderSuppSheet();
 }
 function closeSuppSheet() {
   document.getElementById('supp-sheet').style.display = 'none';
 }
-function setSuppSheetMode(mode) {
-  ST.suppSheet.mode = mode;
-  ST.suppSheet.selGroup = null;
-  renderSuppSheet();
+// I gruppi del foglio: i pacchetti, con i soli prodotti attivi, in ordine di orario; poi «Altri integratori» (attivi, fuori da ogni pacchetto)
+function rsGruppi() {
+  const inPkg = _suppIdsInAnyPackage();
+  const gruppi = (ST.packages || []).map(p => ({
+    id: String(p.id), nome: p.name || 'Pacchetto', emoji: p.emoji || '📦', ora: p.time || '',
+    supps: (p.items || []).map(it => it.supplement).filter(s => s && s.active),
+  })).filter(g => g.supps.length).sort((a, b) => (a.ora || '99').localeCompare(b.ora || '99'));
+  const altri = (ST.supps || []).filter(s => s.active && !inPkg.has(s.local_id)).sort((a, b) => (a.slot || '').localeCompare(b.slot || ''));
+  if (altri.length) gruppi.push({ id: 'altri', nome: 'Altri integratori', emoji: '🌿', ora: '', supps: altri });
+  return gruppi;
 }
-function setSuppSheetGroup(slot) {
-  ST.suppSheet.selGroup = ST.suppSheet.selGroup === slot ? null : slot;
-  renderSuppSheet();
-}
+const rsGruppo = (id) => rsGruppi().find(g => g.id === String(id));
+// I prodotti saltati «solo oggi»: stanno nel giorno, quindi nella copia locale del telefono (non nel database)
+const rsSaltati = (day) => { if (!Array.isArray(day.suppsSaltati)) day.suppsSaltati = []; return day.suppsSaltati; };
 function renderSuppSheet() {
-  const ss = ST.suppSheet;
-  const actSupps = activeSupps();
-  const day = getDay(ST.activeDay);
-  const taken = day.suppsTaken || [];
-
-  // Build groups same way as renderOggi
-  const shakeSupps = actSupps.filter(s => s.grp === 'Shake Mami');
-  const otherSupps = actSupps.filter(s => s.grp !== 'Shake Mami');
-  const otherSlots = [...new Set(otherSupps.map(s => s.slot))].sort();
-  const groups = [];
-  if (shakeSupps.length) groups.push({ slot: '06:30', supps: shakeSupps });
-  otherSlots.forEach(sl => groups.push({ slot: sl, supps: otherSupps.filter(s => s.slot === sl) }));
-
-  const allSlots = [...new Set(actSupps.map(x => x.slot))].sort();
-
-  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-    <div>
-      <div style="font-size:16px;font-weight:800;color:var(--t1);">🌿 Registra integratori</div>
-      <div style="font-size:12px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:2px;">Come vuoi registrare?</div>
-    </div>
-    <button onclick="closeSuppSheet()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--t3);line-height:1;">×</button>
-  </div>
-  <div class="ss-mode-grid">
-    <div class="ss-mode-card${ss.mode==='gruppo'?' active':''}" onclick="setSuppSheetMode('gruppo')">
-      <div class="ss-mc-icon">🗂️</div>
-      <div class="ss-mc-title">Gruppo</div>
-      <div class="ss-mc-sub">Slot preconfigurato</div>
-    </div>
-    <div class="ss-mode-card" onclick="openCatalogForRegisterExtra()">
-      <div class="ss-mc-icon">💊</div>
-      <div class="ss-mc-title">Singolo</div>
-      <div class="ss-mc-sub">Fuori schema</div>
-    </div>
+  const ss = ST.suppSheet, day = getDay(ST.activeDay), presi = day.suppsTaken || [], saltati = rsSaltati(day);
+  const gruppi = rsGruppi();
+  const sospesi = (ST.supps || []).filter(s => !s.active);
+  const oggi = ST.activeDay === todayKey();
+  let html = `<div class="rs-testa">
+    <div><div class="rs-titolo">🌿 Registra integratori</div><div class="rs-sotto">${esc(fmtDate(ST.activeDay))}${oggi ? ' · oggi' : ''}</div></div>
+    <button class="rs-chiudi" onclick="closeSuppSheet()" aria-label="Chiudi">×</button>
   </div>`;
-
-  if (ss.mode === 'gruppo') {
-    html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Seleziona gruppo</div>`;
-    const pendingGroups = groups.filter(g => g.supps.filter(s => taken.includes(s.local_id)).length === 0);
-    if (!groups.length) {
-      html += `<p style="font-size:13px;color:var(--t3);text-align:center;padding:20px 0;">Nessun integratore attivo.</p>`;
-    } else if (!pendingGroups.length) {
-      html += `<p style="font-size:13px;color:var(--t3);text-align:center;padding:20px 0;">Tutti i gruppi di oggi sono già stati registrati.</p>`;
-    } else {
-      pendingGroups.forEach(g => {
-        const slotIdx = allSlots.indexOf(g.slot);
-        const slotColor = SLOT_COLOR_MAP[g.slot] || SLOT_PAL[slotIdx >= 0 ? slotIdx % SLOT_PAL.length : 0];
-        const label = suppGroupLabel(g.supps);
-        const active = ss.selGroup === g.slot;
-        html += `<div class="ss-group-item${active ? ' active' : ''}" onclick="setSuppSheetGroup('${g.slot}')">
-          <div class="ss-group-dot" style="background:${slotColor};"></div>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:700;color:var(--t1);">${esc(label === 'INTEGRATORI' ? g.slot : label)}</div>
-            <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${g.slot} · ${g.supps.length} prodotti</div>
-          </div>
-          ${active ? '<span style="color:#2A7A6F;font-size:18px;">✓</span>' : ''}
-        </div>`;
-      });
+  if (!gruppi.length) html += `<p class="rs-vuoto">Nessun integratore attivo.<br><button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="closeSuppSheet();showPage('integratori')">Configura gli integratori</button></p>`;
+  gruppi.forEach(g => {
+    const daPrendere = g.supps.filter(s => !presi.includes(s.local_id) && !saltati.includes(s.local_id));
+    const presiN = g.supps.filter(s => presi.includes(s.local_id)).length;
+    const completo = daPrendere.length === 0 && presiN > 0;
+    const ripiegato = completo && !ss.aperti[g.id];
+    const titolo = `<span class="rs-gruppo-emoji">${esc(g.emoji)}</span><span class="rs-gruppo-nome">${esc(g.nome)}${g.ora ? `<span class="rs-gruppo-ora">${esc(g.ora)}</span>` : ''}</span>`;
+    if (ripiegato) {
+      html += `<div class="rs-gruppo fatto" data-gruppo="${esc(g.id)}"><div class="rs-gruppo-testa" onclick="rsApri('${esc(g.id)}')">${titolo}<span class="rs-conto">${presiN}/${g.supps.length} ✓</span></div></div>`;
+      return;
     }
-    const canConfirm = ss.selGroup !== null && pendingGroups.some(g => g.slot === ss.selGroup);
-    html += `<button class="btn btn-primary btn-full" style="margin-top:14px;" ${canConfirm?'':'disabled'} onclick="confirmSuppGroup()">Conferma registrazione →</button>`;
-  }
-
-  if (ss.mode === 'singolo') {
-    html += `<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">Cerca prodotto</div>
-    <input class="inp inp-sm" id="ss-single-q" dir="ltr" placeholder="Nome prodotto..." autocomplete="off"
-      oninput="ST.suppSheet.singleQuery=this.value;updateSingleResults()" style="margin-bottom:10px;"/>
-    <div id="ss-single-results"></div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <div style="flex:1;"><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Dose</div>
-        <input class="inp inp-sm" type="number" min="0.5" step="0.5" value="${ss.singleDose}" oninput="ST.suppSheet.singleDose=+this.value" style="width:100%;"/></div>
-      <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Unità</div>
-        <select class="inp inp-sm" data-role="unit" onchange="ST.suppSheet.singleUnit=this.value">${['cps','g','ml','bustina','barretta'].map(u=>`<option value="${u}"${u===ss.singleUnit?' selected':''}>${u}</option>`).join('')}</select></div>
-      <div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:4px;">Orario</div>
-        <input class="inp inp-sm" type="time" value="${ss.singleTime}" onchange="ST.suppSheet.singleTime=this.value" style="width:80px;"/></div>
-    </div>`;
-    const canConfirmSingle = ss.singleSelId != null;
-    html += `<button id="ss-confirm-single" class="btn btn-primary btn-full" style="margin-top:2px;" ${canConfirmSingle?'':'disabled'} onclick="confirmSuppSingle()">Conferma registrazione →</button>`;
-  }
-
-  html += `<button class="btn btn-ghost btn-full" style="margin-top:10px;" onclick="closeSuppSheet()">Annulla</button>`;
-  document.getElementById('supp-sheet-body').innerHTML = html;
-  if (ss.mode === 'singolo') {
-    updateSingleResults();
-    setTimeout(() => document.getElementById('ss-single-q')?.focus(), 50);
-  }
-}
-
-function singleUnitFromCatItem(catItem) {
-  const raw = suppUnitFromConfezione(catItem?.confezione, catItem?.linea);
-  const norm = { bustine: 'bustina', barrette: 'barretta', cpr: 'cps', tavolette: 'barretta', tavoletta: 'barretta' };
-  const mapped = norm[raw] || raw;
-  const opts = ['cps', 'g', 'ml', 'bustina', 'barretta'];
-  return opts.includes(mapped) ? mapped : 'cps';
-}
-
-function selectSingleProduct(id) {
-  const ss = ST.suppSheet;
-  if (ss.singleSelId === id) { ss.singleSelId = null; }
-  else {
-    ss.singleSelId = id;
-    const catItem = (ST.catalog || []).find(c => c.id === id);
-    if (catItem) {
-      ss.singleUnit = singleUnitFromCatItem(catItem);
-    }
-  }
-  updateSingleResults();
-  // Aggiorna il select unità nel DOM senza re-render completo
-  const unitSel = document.querySelector('#supp-sheet-body select[data-role="unit"]');
-  if (unitSel) unitSel.value = ss.singleUnit;
-}
-
-function updateSingleResults() {
-  const ss = ST.suppSheet;
-  const q = (ss.singleQuery || '').toLowerCase();
-  const results = (ST.catalog || []).filter(c => !q || (c.nome||'').toLowerCase().includes(q)).slice(0, 8);
-  let html = '';
-  if (results.length) {
-    html += `<div style="max-height:180px;overflow-y:auto;border:1px solid var(--b2);border-radius:8px;margin-bottom:12px;">`;
-    results.forEach(c => {
-      const sel = ss.singleSelId === c.id;
-      html += `<div onclick="selectSingleProduct(${c.id})" style="padding:8px 12px;cursor:pointer;background:${sel?'#E6F4F1':'transparent'};border-bottom:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:13px;color:var(--t1);">${esc(c.nome||'')}</span>
-        <span style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;">${c.kcal||0} kcal</span>
+    const tasto = daPrendere.length
+      ? `<button class="rs-tutto" onclick="rsPrendiTutto('${esc(g.id)}')">Prendi tutto</button>`
+      : presiN ? `<button class="rs-tutto togli" onclick="rsTogliTutto('${esc(g.id)}')">Togli tutto</button>` : '';
+    html += `<div class="rs-gruppo" data-gruppo="${esc(g.id)}"><div class="rs-gruppo-testa"${completo ? ` onclick="rsApri('${esc(g.id)}')"` : ''}>${titolo}${completo ? `<span class="rs-conto">${presiN}/${g.supps.length} ✓</span>` : ''}${tasto}</div>`;
+    g.supps.forEach(s => {
+      const id = s.local_id, on = presi.includes(id), saltato = !on && saltati.includes(id);
+      const dose = parseFloat(s.dose_die) || 1;
+      html += `<div class="rs-riga${on ? ' on' : ''}${saltato ? ' saltato' : ''}" data-supp="${esc(id)}">
+        <button class="rs-spunta" onclick="rsSpunta('${esc(id)}')" aria-label="${on ? 'Togli' : 'Segna'} ${esc(s.name)}">${on ? '✓' : ''}</button>
+        <div class="rs-nome" onclick="rsSpunta('${esc(id)}')">${esc(s.name)}${dose !== 1 ? `<span class="rs-dose">× ${dose}</span>` : ''}${saltato ? '<span class="rs-tag">non oggi</span>' : ''}</div>
+        <button class="rs-piu" onclick="rsMenu('${esc(id)}')" aria-label="Altro su ${esc(s.name)}">⋯</button>
       </div>`;
+      if (ss.menu === id) {
+        html += `<div class="rs-menu">
+          ${on ? '' : `<button onclick="rsNonOggi('${esc(id)}')">${saltato ? 'Rimetti oggi' : 'Non oggi'}</button>`}
+          <button onclick="rsSostituisci('${esc(id)}')">Sostituisci con…</button>
+          <button onclick="rsSospendi('${esc(id)}')">Sospendi</button>
+        </div>`;
+      }
+      if (ss.sostituisci === id) {
+        const altri = (ST.supps || []).filter(x => x.active && x.local_id !== id && !presi.includes(x.local_id));
+        html += `<div class="rs-lista"><div class="rs-lista-titolo">Al posto di ${esc(s.name)}, solo oggi:</div>
+          ${altri.map(x => `<button class="rs-scelta" onclick="rsSostituisciCon('${esc(id)}','${esc(x.local_id)}')">${esc(x.name)}</button>`).join('')}
+          <button class="rs-scelta" onclick="rsSostituisciDaCatalogo('${esc(id)}')">Cerca nel catalogo…</button>
+          <button class="rs-scelta annulla" onclick="rsSostituisci(null)">Annulla</button>
+        </div>`;
+      }
     });
     html += `</div>`;
-  } else if (q) {
-    html = `<p style="font-size:12px;color:var(--t3);margin-bottom:12px;">Nessun risultato.</p>`;
+  });
+  if (sospesi.length) {
+    html += `<button class="rs-sospesi" onclick="rsSospesi()">Sospesi: ${sospesi.length} ${ss.sospesiAperti ? '▴' : '▾'}</button>`;
+    if (ss.sospesiAperti) html += sospesi.map(s => `<div class="rs-sospeso"><span>${esc(s.name)}</span><button class="rs-scelta" onclick="rsRiattiva('${esc(s.local_id)}')">Riattiva</button></div>`).join('');
   }
-  const el = document.getElementById('ss-single-results');
-  if (el) el.innerHTML = html;
-  const btn = document.getElementById('ss-confirm-single');
-  if (btn) btn.disabled = ss.singleSelId == null;
+  html += `<button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="openCatalogForRegisterExtra()">+ Un altro prodotto</button>
+    <button class="btn btn-ghost btn-full" style="margin-top:6px;" onclick="closeSuppSheet()">Chiudi</button>`;
+  document.getElementById('supp-sheet-body').innerHTML = html;
 }
-
-async function refreshTimeline() {
-  if (ST.activeDay === todayKey()) {
-    await loadTodaySuppLog();
-  }
-  renderOggi();
-  saveCache();
+// La spunta: segna o toglie subito (toggleSuppTaken scrive con la coda e ridisegna Oggi); il foglio si ridisegna prima e dopo la rete
+async function rsSpunta(id) {
+  const s = (ST.supps || []).find(x => x.local_id === id);
+  if (!s) return;
+  const saltati = rsSaltati(getDay(ST.activeDay));
+  const i = saltati.indexOf(id); if (i >= 0) saltati.splice(i, 1);
+  const p = toggleSuppTaken(id, s.name);
+  renderSuppSheet();
+  await p;
+  renderSuppSheet();
 }
+async function rsPrendiTutto(gid) {
+  const g = rsGruppo(gid); if (!g) return;
+  const day = getDay(ST.activeDay), saltati = rsSaltati(day);
+  const da = g.supps.filter(s => !day.suppsTaken.includes(s.local_id) && !saltati.includes(s.local_id));
+  if (!da.length) return;
+  da.forEach(s => day.suppsTaken.push(s.local_id));
+  renderSuppSheet();
+  await Promise.all(da.map(s => dbToggleSuppTaken(ST.activeDay, s.local_id, s.name, true, s.slot || '')));
+  renderOggi(); saveCache(); renderSuppSheet();
+  showToast(`${g.nome}: ${da.length === 1 ? '1 prodotto registrato' : da.length + ' prodotti registrati'}`, '✅');
+}
+async function rsTogliTutto(gid) {
+  const g = rsGruppo(gid); if (!g) return;
+  const day = getDay(ST.activeDay);
+  const presi = g.supps.filter(s => day.suppsTaken.includes(s.local_id));
+  if (!presi.length) return;
+  presi.forEach(s => {
+    const i = day.suppsTaken.indexOf(s.local_id); if (i >= 0) day.suppsTaken.splice(i, 1);
+    day.rawSuppLogs = (day.rawSuppLogs || []).filter(l => l.name !== s.name);
+  });
+  renderSuppSheet();
+  await Promise.all(presi.map(s => dbToggleSuppTaken(ST.activeDay, s.local_id, s.name, false, s.slot || '')));
+  renderOggi(); saveCache(); renderSuppSheet();
+  showToast(`${g.nome}: tolto`, '↩️');
+}
+function rsApri(gid) { ST.suppSheet.aperti[gid] = !ST.suppSheet.aperti[gid]; renderSuppSheet(); }
+function rsMenu(id) { const ss = ST.suppSheet; ss.menu = ss.menu === id ? null : id; ss.sostituisci = null; renderSuppSheet(); }
+function rsNonOggi(id) {
+  const saltati = rsSaltati(getDay(ST.activeDay));
+  const i = saltati.indexOf(id); if (i >= 0) saltati.splice(i, 1); else saltati.push(id);
+  ST.suppSheet.menu = null; saveCache(); renderSuppSheet();
+}
+function rsSostituisci(id) { const ss = ST.suppSheet; ss.sostituisci = id; ss.menu = null; renderSuppSheet(); }
+// Solo per oggi: il prodotto scelto si registra, quello sostituito si salta; il pacchetto non cambia
+async function rsSostituisciCon(id, nuovoId) {
+  const vecchio = (ST.supps || []).find(x => x.local_id === id), nuovo = (ST.supps || []).find(x => x.local_id === nuovoId);
+  if (!vecchio || !nuovo) return;
+  const day = getDay(ST.activeDay), saltati = rsSaltati(day);
+  if (!saltati.includes(id)) saltati.push(id);
+  ST.suppSheet.sostituisci = null;
+  if (day.suppsTaken.includes(nuovoId)) { saveCache(); renderSuppSheet(); return; }
+  const p = toggleSuppTaken(nuovoId, nuovo.name);
+  renderSuppSheet();
+  await p;
+  renderSuppSheet();
+  showToast(`${nuovo.name} al posto di ${vecchio.name}, solo oggi`, '🔁');
+}
+function rsSostituisciDaCatalogo(id) {
+  const saltati = rsSaltati(getDay(ST.activeDay));
+  if (!saltati.includes(id)) saltati.push(id);
+  ST.suppSheet.sostituisci = null; saveCache();
+  openCatalogForRegisterExtra();   // chiude il foglio e apre il catalogo: il prodotto scelto si registra come extra
+}
+async function rsSospendi(id) { ST.suppSheet.menu = null; await toggleSuppActive(id); renderSuppSheet(); }
+async function rsRiattiva(id) { await toggleSuppActive(id); renderSuppSheet(); }
+function rsSospesi() { ST.suppSheet.sospesiAperti = !ST.suppSheet.sospesiAperti; renderSuppSheet(); }
 
 async function deleteSuppLog(name, time) {
   const { error } = await supa.from('supplements_log').delete()
@@ -5719,59 +5699,6 @@ async function deleteSuppGroup(slot) {
   renderOggi();
   saveCache();
   showToast('Gruppo rimosso');
-}
-
-async function confirmSuppGroup() {
-  const ss = ST.suppSheet;
-  if (!ss.selGroup) return;
-  const actSupps = activeSupps();
-  const shakeSupps = actSupps.filter(s => s.grp === 'Shake Mami');
-  const otherSupps = actSupps.filter(s => s.grp !== 'Shake Mami');
-  let groupSupps;
-  if (ss.selGroup === '06:30' && shakeSupps.length) groupSupps = shakeSupps;
-  else groupSupps = otherSupps.filter(s => s.slot === ss.selGroup);
-  const day = getDay(ST.activeDay);
-  const promises = [];
-  for (const s of groupSupps) {
-    if (!day.suppsTaken.includes(s.local_id)) {
-      day.suppsTaken.push(s.local_id);
-      promises.push(dbToggleSuppTaken(ST.activeDay, s.local_id, s.name, true, s.slot || ''));
-    }
-  }
-  try {
-    await Promise.all(promises);
-  } catch(e) {
-    showToast('Errore Supabase: ' + (e?.message || e));
-    return;
-  }
-  closeSuppSheet();
-  await refreshTimeline();
-  showToast(`Gruppo registrato (${groupSupps.length} prodotti)`);
-}
-
-async function confirmSuppSingle() {
-  const ss = ST.suppSheet;
-  if (ss.singleSelId == null) return;
-  const catItem = (ST.catalog || []).find(c => c.id === ss.singleSelId);
-  if (!catItem) return;
-  const name = catItem.nome || '';
-  const time = ss.singleTime || new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-
-  // Delete prima per evitare duplicati (nessuna UNIQUE constraint richiesta)
-  await dbq('registrare l\'integratore', supa.from('supplements_log').delete()
-    .eq('user_id', ST.user.id).eq('date', ST.activeDay).eq('supplement_name', name));
-  const { error } = await supa.from('supplements_log').insert(
-    { user_id: ST.user.id, date: ST.activeDay, slot: time, supplement_name: name, supplement_codice: catItem.codice || null }
-  );
-  if (error) {
-    console.error('[suppSingle] Errore Supabase:', error);
-    showToast('Errore salvataggio — riprova');
-    return;
-  }
-
-  closeSuppSheet();
-  await refreshTimeline();
-  showToast(`${name} registrato`);
 }
 
 // ════════════════════��════════════════════════════��═════════
