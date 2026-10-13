@@ -1697,6 +1697,204 @@ function _renderInjuryBar(){
     </div>`;
 }
 
+// ═══ «CAMBIA PER OGGI» (Training 160, 14 ottobre 2026) ═══
+// Attrezzo occupato, un movimento che dà fastidio, o la «variante più facile» del coach (330): si
+// sostituisce l'esercizio SOLO PER OGGI, nella seduta in memoria, e la scheda non cambia. Le serie
+// si salvano sotto l'esercizio scelto, col suo codice; «Ultima volta» e Progressione lo seguono da sé.
+// Il cambio vive sul telefono (zt_cambi_oggi_<utente>_<giorno>: domani non c'è più) e si riapplica
+// dopo ogni lettura della scheda (applicaCambiOggi da loadActiveScheda). L'esercizio nuovo si costruisce
+// dalla riga di catalogo come fa il generatore (_trainGenTestiEsercizio, _trainGenPickEq), coi parametri
+// della seduta (serie rimaste, ripetizioni, recupero). I candidati: l'alternativa scritta a catalogo,
+// la variante più facile, poi lo stesso schema di movimento (stesso gruppo per isolamenti e core) fra
+// gli esercizi che la persona può fare (ZTCoachRules.puoFare), mai uno già in seduta.
+const CO_COLONNE = 'codice, nome, pattern, gruppo_target, livello, attrezzo, surrogato_attrezzo, luogo, uso, alternativa, setup, esecuzione, errori, nota_sicurezza, adattamento, nota_surrogato, zone_rischio, muscoli, unilaterale, progressione';
+const CO_MAX = 6;
+function _coKey(){ return `zt_cambi_oggi_${(ST.user && ST.user.id) || 'anon'}_${todayKey()}`; }
+function _coLoad(){ try { return JSON.parse(localStorage.getItem(_coKey())) || {}; } catch(e){ return {}; } }
+function _coSave(m){ try { if(Object.keys(m).some(sid => Object.keys(m[sid] || {}).length)) localStorage.setItem(_coKey(), JSON.stringify(m)); else localStorage.removeItem(_coKey()); } catch(e){} }
+function _coNorm(s){ return String(s || '').toLowerCase().trim().replace(/[\s_]+/g, '_'); }
+function _coOpzioni(){
+  const p = ST.profile || {};
+  return { tipoAllen: p.tipo_allenamento || 'casa', attrezzatura: (Array.isArray(p.attrezzatura) && p.attrezzatura.length) ? p.attrezzatura : ['elastico', 'corpo_libero'] };
+}
+function _coSerieOggi(sid, exName){
+  const t = todayKey();
+  return Object.keys(ST.trainLoggedSets || {}).filter(k => k.startsWith(`${sid}_${exName}_`) && k.endsWith(`_${t}`)).length;
+}
+// Rimette in memoria i cambi di oggi (dopo la lettura della scheda) e toglie quelli di un altro giorno.
+function applicaCambiOggi(){
+  const sess = ST.userTrainingSessions;
+  if(!sess) return;
+  const mappa = _coLoad();
+  Object.keys(sess).forEach(sid => {
+    const s = sess[sid];
+    if(!s || !Array.isArray(s.exercises)) return;
+    const cambi = mappa[sid] || {};
+    s.exercises = s.exercises.map(ex => {
+      if(!ex) return ex;
+      const origCod = ex.oggiAlPostoDi ? ex.oggiAlPostoDi.codice : ex.codice;
+      const c = origCod && cambi[origCod];
+      if(c && c.scelto) return c.scelto;                       // il cambio di oggi
+      if(ex.oggiAlPostoDi && ex._originaleOggi) return ex._originaleOggi;   // un cambio di un altro giorno
+      return ex;
+    });
+  });
+}
+function apriCambioOggi(sid, exName){
+  ST.cambioOggi = { sid, exName, stato: 'in-corso', candidati: [] };
+  renderTraining();
+  _coCerca(sid, exName).catch(e => { console.warn('[cambia per oggi]', (e && e.message) || e); if(ST.cambioOggi) { ST.cambioOggi.stato = 'errore'; renderTraining(); } });
+}
+function chiudiCambioOggi(){ ST.cambioOggi = null; renderTraining(); }
+async function _coCerca(sid, exName){
+  const ex = findExercise(exName, sid);
+  const codice = ex && ex.codice;
+  const st = ST.cambioOggi;
+  if(!st || !codice){ if(st){ st.stato = 'nessuno'; renderTraining(); } return; }
+  if(typeof senzaRete === 'function' && senzaRete()){ st.stato = 'senza-rete'; renderTraining(); return; }
+  const r1 = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1), { silenzioso: true });
+  if(r1.error){ st.stato = 'errore'; renderTraining(); return; }
+  const attuale = (r1.data || [])[0];
+  if(!attuale){ st.stato = 'nessuno'; renderTraining(); return; }
+  const scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []).filter(c => c !== codice);
+  const letture = [];
+  if(scritte.length) letture.push(supa.from('esercizi_catalog').select(CO_COLONNE).in('codice', scritte));
+  if(attuale.pattern) letture.push(supa.from('esercizi_catalog').select(CO_COLONNE).eq('pattern', attuale.pattern).neq('codice', codice).order('codice', { ascending: true }).range(0, 999));
+  const esiti = await Promise.all(letture.map(q => dbq('leggere le alternative a catalogo', q, { silenzioso: true })));
+  if(esiti.some(r => r.error)){ st.stato = 'errore'; renderTraining(); return; }
+  const righe = []; const visti = new Set();
+  [].concat(...esiti.map(r => r.data || [])).forEach(r => { if(r && r.codice && !visti.has(r.codice)){ visti.add(r.codice); righe.push(r); } });
+  const o = _coOpzioni();
+  const sess = getTrainingSession(sid);
+  const inSeduta = new Set((sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean));
+  const pat = String(attuale.pattern || '').toLowerCase().trim();
+  const perGruppo = pat === 'isolamento' || pat === 'core';
+  const gruppi = String(attuale.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  const facile = ZTCoachRules.varianteFacile(attuale, righe, { ...o, inScheda: [...inSeduta] });
+  const cand = righe.filter(r => !inSeduta.has(r.codice) && ZTCoachRules.puoFare(r, o))
+    .filter(r => scritte.includes(r.codice) || (String(r.pattern || '').toLowerCase().trim() === pat
+      && (!perGruppo || String(r.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).some(g => gruppi.includes(g)))))
+    .map(r => ({ riga: r, alternativa: scritte.includes(r.codice), piuFacile: !!(facile && facile.codice === r.codice) }))
+    .sort((a, b) => (b.alternativa - a.alternativa) || (b.piuFacile - a.piuFacile) || String(a.riga.codice).localeCompare(String(b.riga.codice)))
+    .slice(0, CO_MAX);
+  if(ST.cambioOggi !== st) return;   // nel frattempo chiuso o riaperto
+  st.candidati = cand; st.stato = cand.length ? 'pronto' : 'nessuno';
+  renderTraining();
+}
+// L'esercizio di oggi costruito dalla riga di catalogo, con i parametri di quello che sostituisce.
+function _coCostruisci(riga0, orig){
+  const riga = _trainGenPulisciRiga({ ...riga0 });
+  const o = _coOpzioni();
+  const attrezzi = new Set(o.attrezzatura.map(_coNorm));
+  const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
+  const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
+  const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
+  const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
+  const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  const cautionNote = (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
+  const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });
+  const perLato = String(riga.unilaterale || '').trim().toLowerCase() === 'si';
+  const baseReps = String(orig.reps || '8-12').replace(/\s+per lato$/i, '');
+  const originale = orig._originaleOggi || orig;
+  const fatte = _coSerieOggi(ST.trainSession || '', orig.name);
+  const nuovo = {
+    codice: riga.codice, name: riga.nome,
+    sets: Math.max(1, (Number(orig.sets) || 3) - fatte),
+    reps: baseReps + (perLato ? ' per lato' : ''),
+    eq: _trainGenPickEq(riga, isSurrogato, o.tipoAllen, attrezzi, !!orig.iso),
+    setup: testi.setup, execution: testi.execution, commonErrors: testi.commonErrors, muscles: testi.muscles,
+    oggiAlPostoDi: { codice: originale.codice, name: originale.name },
+    _originaleOggi: originale,
+  };
+  if(testi.alert) nuovo.alert = testi.alert;
+  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });
+  if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
+  if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
+  if(isSurrogato) nuovo.isSurrogato = true;
+  return nuovo;
+}
+// Sostituisce per oggi `exName` della seduta `sid` con l'esercizio `codice`: dai candidati del foglio,
+// oppure letto a catalogo (dalla variante facile del coach, Training 330).
+async function cambiaPerOggi(sid, exName, codice){
+  const sess = getTrainingSession(sid);
+  const orig = findExercise(exName, sid);
+  if(!sess || !orig || !codice) return;
+  let riga = ((ST.cambioOggi && ST.cambioOggi.candidati) || []).map(c => c.riga).find(r => r.codice === codice) || null;
+  if(!riga){
+    const r = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1));
+    riga = (r.data || [])[0] || null;
+    if(!riga) return;
+  }
+  const nuovo = _coCostruisci(riga, orig);
+  const idx = sess.exercises.findIndex(e => e && e.name === exName);
+  if(idx === -1) return;
+  sess.exercises[idx] = nuovo;
+  const mappa = _coLoad();
+  mappa[sid] = mappa[sid] || {};
+  mappa[sid][nuovo.oggiAlPostoDi.codice] = { scelto: nuovo };
+  _coSave(mappa);
+  ST.cambioOggi = null;
+  if(ST.trainLogOpen && ST.trainLogOpen.exName === exName) ST.trainLogOpen = null;
+  if(ST.trainExecOpen && ST.trainExecOpen.exName === exName) ST.trainExecOpen = null;
+  if(ST.aiSuggestions) delete ST.aiSuggestions[`${sid}_${exName}`];
+  showToast(`Oggi ${nuovo.name} al posto di ${nuovo.oggiAlPostoDi.name}`, '🔁', 3500);
+  renderTraining();
+  loadLastLoggedSets(sid);      // «Ultima volta» e obiettivo anche per l'esercizio scelto
+  if(typeof ensureRestGif === 'function') ensureRestGif(nuovo.name, nuovo.codice);
+}
+// «Torna a …»: solo finché nessuna serie è stata salvata sotto l'esercizio scelto.
+function annullaCambioOggi(sid, exName){
+  const sess = getTrainingSession(sid);
+  const ex = findExercise(exName, sid);
+  if(!sess || !ex || !ex.oggiAlPostoDi || !ex._originaleOggi) return;
+  if(_coSerieOggi(sid, exName) > 0){ showToast(`Hai già serie salvate sotto ${ex.name}: oggi resta`, '🔁', 4000); return; }
+  const idx = sess.exercises.findIndex(e => e === ex);
+  if(idx === -1) return;
+  sess.exercises[idx] = ex._originaleOggi;
+  const mappa = _coLoad();
+  if(mappa[sid]) { delete mappa[sid][ex.oggiAlPostoDi.codice]; if(!Object.keys(mappa[sid]).length) delete mappa[sid]; }
+  _coSave(mappa);
+  renderTraining();
+  loadLastLoggedSets(sid);
+}
+function _renderCambioOggiSheet(){
+  const st = ST.cambioOggi;
+  if(!st) return '';
+  const esc1 = (s) => esc(s).replace(/'/g, "\\'");
+  let corpo = '';
+  if(st.stato === 'in-corso') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Cerco le alternative a catalogo…</p>`;
+  else if(st.stato === 'senza-rete') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Senza rete non riesco a leggere il catalogo: riprova quando torna.</p>`;
+  else if(st.stato === 'errore') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Il catalogo non ha risposto. Riprova fra poco.</p>`;
+  else if(st.stato === 'nessuno') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Per questo esercizio il catalogo non ha alternative che puoi fare con quello che hai.</p>`;
+  else corpo = st.candidati.map(c => {
+    const r = c.riga;
+    const tag = c.alternativa ? 'alternativa del catalogo' : c.piuFacile ? 'più facile' : (r.livello || '');
+    const attrezzo = String(r.attrezzo || '').split(';')[0].trim();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--s2);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);">${esc(r.nome)} <span style="font-family:var(--font-mono);font-size:11px;font-weight:400;color:var(--t3);">${esc(r.codice)}</span></div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px;">${esc([attrezzo, tag].filter(Boolean).join(' · '))}</div>
+      </div>
+      <button class="co-scegli" onclick="cambiaPerOggi('${esc1(st.sid)}','${esc1(st.exName)}','${esc1(r.codice)}')" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Scegli</button>
+    </div>`;
+  }).join('');
+  return `<div id="cambio-oggi-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)chiudiCambioOggi()">
+    <div class="pianov4-weighin-screen">
+      <div class="pianov4-weighin-band"></div>
+      <div class="pianov4-weighin-handle"></div>
+      <div class="pianov4-weighin-header">
+        <div class="pianov4-weighin-eyebrow">CAMBIA PER OGGI</div>
+        <div class="pianov4-weighin-title">Al posto di ${esc(st.exName)}</div>
+        <button class="pianov4-weighin-close" onclick="chiudiCambioOggi()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:6px;">
+        ${corpo}
+        <p style="font-family:var(--font-sans);font-size:12px;color:var(--t3);margin:12px 0 0;">Vale solo per oggi: la scheda non cambia. Le serie si salvano sotto l'esercizio che scegli.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
 // ═══ PAUSA PROGRAMMATA (Training 350, 13 ottobre 2026) ═══
 // Vacanza, viaggio, lavoro: un periodo con le date, dichiarato anche in anticipo, che non è un
 // infortunio. Vive nel profilo (pausa_inizio, pausa_fine, pausa_motivo: migrazione 20261013_350) così
@@ -3391,11 +3589,13 @@ function renderTraining(){
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
             ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
+            ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
             ${suggestion?`<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
             <div class="ex-action-row">
               <span class="ex-progress${allDone?' done':''}">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</span>
+              ${(!allDone && !isOpen) ? `<button class="ex-cambia-oggi" onclick="event.stopPropagation();apriCambioOggi('${sel}','${safeName}')" style="background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;cursor:pointer;padding:4px 6px;margin-left:auto;">Cambia per oggi ›</button>` : ''}
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
@@ -4610,7 +4810,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal();
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal() + _renderCambioOggiSheet();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach

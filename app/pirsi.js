@@ -707,6 +707,7 @@ function renderVarianteFacileSheet(){
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin:12px 0 6px;">COME SI FA</div>
         ${come}
         <p style="font-family:var(--font-sans);font-size:12px;color:var(--t3);margin:10px 0 0;">Vale per la prossima serie di oggi: la scheda non cambia.</p>
+        ${(typeof cambiaPerOggi === 'function') ? `<button id="vf-cambia-oggi" onclick="chiudiVarianteFacile();cambiaPerOggi('${esc(v.sessionId)}','${esc(v.exName).replace(/'/g, "\\'")}','${esc(v.variante.codice)}')" style="width:100%;margin-top:14px;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Faccio questa oggi: le serie vanno sotto ${esc(v.variante.nome)}</button>` : ''}
       </div>
     </div>
   </div>`;

@@ -838,6 +838,8 @@ async function loadActiveScheda() {
     }
     ST.userTrainingSessions = sessMap;
     ST.userSessionCycle = cycle;
+    // «Cambia per oggi» (Training 160): gli esercizi sostituiti oggi tornano al loro posto in memoria
+    if (typeof applicaCambiOggi === 'function') applicaCambiOggi();
     // La riga attiva com'è: serve al blocco nuovo (Training 070) per sapere da quale
     // scheda tenere i cardini, che numero ha, e quale riga riaccendere se il salvataggio
     // della nuova fallisce a metà.
