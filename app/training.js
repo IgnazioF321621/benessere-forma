@@ -2443,11 +2443,142 @@ function _prossimaDaCompilare(exName, sessionId, primaSerie){
 }
 
 async function completeSession(sessionId){
-  await saveWorkoutRecord(sessionId);
-  showToast('Sessione completata! 💪');
+  const wid = await saveWorkoutRecord(sessionId);
   loadTrainingHomeData();
+  // Il riepilogo di fine allenamento (Training 060): serie fatte, tempo, confronto con la volta
+  // prima, record, «com'è andata?». Si prepara PRIMA di chiudere la seduta (le serie di oggi e
+  // «Ultima volta» stanno in memoria finché la seduta è aperta).
+  await apriRiepilogoSessione(sessionId, wid);
   ST.trainSession = null;
   renderTraining();
+}
+
+// ═══ RIEPILOGO DI FINE ALLENAMENTO (Training 060, 14 ottobre 2026) ═══
+// «Completa sessione» salvava una riga e diceva «Sessione completata!»: nessun resoconto, nessuna
+// domanda. Ora: serie fatte su previste, tempo, esercizio per esercizio il confronto con la volta
+// prima (la misura di ogni esercizio: carico, banda, secondi, ripetizioni, come in Progressione) e
+// i record (il meglio di sempre, letto una volta da training_logs per codice), una domanda
+// «com'è andata?» (facile · giusta · dura) con nota libera che va sulla riga dell'allenamento
+// (workouts.sensazione, migrazione 20261014_060; workouts.note), poi tre passi: il pasto dopo
+// l'allenamento, la pesata, la Home. Durante la seduta la pillola di una serie che supera l'ultima
+// volta porta un ▲ (_serieSupera).
+const SENSAZIONI = [['facile', 'Facile'], ['giusta', 'Giusta'], ['dura', 'Dura']];
+// Confronto fra due serie sulla misura dell'esercizio: 1 se a supera b, -1 se sotto, 0 pari.
+function _confrontaSerie(exName, a, b, misura){
+  if(!a || !b) return 0;
+  const m = misura || progMisura(exName, [a, b]);
+  const va = m.valore(a), vb = m.valore(b);
+  if(va !== vb) return va > vb ? 1 : -1;
+  const ra = Number(a.reps) || 0, rb = Number(b.reps) || 0;
+  return ra === rb ? 0 : (ra > rb ? 1 : -1);
+}
+// La serie salvata oggi (voce di ST.trainLoggedSets) supera l'ultima serie della volta prima?
+function _serieSupera(exName, d){
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  if(!d || !last) return false;
+  const oggi = { reps: d.reps, resistance: d.resistance, band_color: d.band_color || ((d.resistance && BAND_COLORS.includes(String(d.resistance))) ? String(d.resistance) : null) };
+  return _confrontaSerie(exName, oggi, last) > 0;
+}
+async function apriRiepilogoSessione(sid, wid){
+  const sess = getTrainingSession(sid);
+  if(!sess) return;
+  const today = todayKey();
+  const esercizi = (sess.exercises || []).filter(e => e && e.name);
+  const codici = esercizi.map(e => e.codice).filter(Boolean);
+  // Le serie di oggi, esercizio per esercizio, nella forma delle righe di training_logs
+  const oggiPer = {};
+  Object.keys(ST.trainLoggedSets || {}).forEach(k => {
+    if(!k.startsWith(`${sid}_`) || !k.endsWith(`_${today}`)) return;
+    const d = ST.trainLoggedSets[k];
+    const parts = k.split('_'); const exName = parts.slice(1, parts.length - 2).join('_');
+    (oggiPer[exName] = oggiPer[exName] || []).push({ reps: d.reps, resistance: d.resistance, band_color: d.band_color || ((d.resistance && BAND_COLORS.includes(String(d.resistance))) ? String(d.resistance) : null) });
+  });
+  // Lo storico per codice (prima di oggi): la volta prima e il meglio di sempre. Una lettura, a pagine.
+  let storico = [];
+  if(codici.length && ST.user && ST.user.id !== 'test-user-001'){
+    const r = await dbqAll('leggere lo storico delle serie', () => supa.from('training_logs')
+      .select('exercise_code, date, reps, resistance, band_color')
+      .eq('user_id', ST.user.id).in('exercise_code', codici).lt('date', today)
+      .order('date', { ascending: false }), { silenzioso: true });
+    storico = r.data || [];
+  }
+  const righe = esercizi.map(e => {
+    const oggi = oggiPer[e.name] || [];
+    const prec = storico.filter(l => l.exercise_code === e.codice);
+    const misura = progMisura(e.name, [...oggi, ...prec]);
+    const bestOggi = bestSetOfDay(oggi, misura);
+    const ultimaData = prec.length ? prec.map(l => l.date).sort().pop() : null;
+    const bestPrima = ultimaData ? bestSetOfDay(prec.filter(l => l.date === ultimaData), misura) : null;
+    const bestSempre = prec.length ? bestSetOfDay(prec, misura) : null;
+    const fatte = oggi.length, previste = Number(e.sets) || 0;
+    const esito = !bestOggi ? 'saltato' : !bestPrima ? 'nuovo' : (['giu', 'pari', 'su'][_confrontaSerie(e.name, bestOggi, bestPrima, misura) + 1]);
+    const record = !!(bestOggi && bestSempre && _confrontaSerie(e.name, bestOggi, bestSempre, misura) > 0);
+    const t = (l) => l ? (misura.tipo === 'banda' ? misura.testo(misura.valore(l)) : `${misura.valore(l)}${misura.unit ? ' ' + misura.unit : ''}`) + (misura.tipo === 'carico' || misura.tipo === 'banda' ? ` × ${l.reps}` : '') : '—';
+    return { name: e.name, codice: e.codice, fatte, previste, esito, record, oggi: t(bestOggi), prima: t(bestPrima) };
+  });
+  const fatte = righe.reduce((a, r) => a + r.fatte, 0), previste = righe.reduce((a, r) => a + r.previste, 0);
+  const minuti = ST.trainSessionStart ? Math.max(1, Math.round((Date.now() - ST.trainSessionStart) / 60000)) : null;
+  const lavoroSec = (typeof workTimeCurrent === 'function') ? workTimeCurrent(sid) : 0;
+  ST.trainRiepilogo = { sid, wid: wid || null, nome: sess.name, fatte, previste, minuti, lavoroSec, righe, record: righe.filter(r => r.record).length, sensazione: null, nota: '', salvata: false };
+}
+function _riepilogoScegli(v){ if(ST.trainRiepilogo){ ST.trainRiepilogo.sensazione = v; renderTraining(); } }
+// Salva com'è andata (se detto) sulla riga dell'allenamento, con la coda senza rete, e chiude.
+async function _riepilogoSalva(){
+  const r = ST.trainRiepilogo;
+  if(!r || r.salvata) return;
+  r.salvata = true;
+  const nota = (document.getElementById('riepilogo-nota')?.value || r.nota || '').trim();
+  if(r.wid && ST.user && ST.user.id !== 'test-user-001' && (r.sensazione || nota)){
+    const righe = {};
+    if(r.sensazione) righe.sensazione = r.sensazione;
+    if(nota) righe.note = nota;
+    await scriviConCoda('salvare com\'è andata', { tabella: 'workouts', tipo: 'update', righe, filtri: [['id', r.wid], ['user_id', ST.user.id]] });
+  }
+}
+async function chiudiRiepilogo(dove){
+  await _riepilogoSalva();
+  ST.trainRiepilogo = null;
+  if(dove === 'pasto'){ showPage('oggi'); if(typeof openMealLogForm === 'function'){ openMealLogForm(); if(typeof renderOggi === 'function') renderOggi(); } return; }
+  if(dove === 'pesata'){ if(typeof openWeighInSheet === 'function') openWeighInSheet(); else showPage('body'); return; }
+  if(dove === 'home'){ showPage('home'); return; }
+  renderTraining();
+}
+function _renderRiepilogoSessione(){
+  const r = ST.trainRiepilogo;
+  if(!r) return '';
+  const tempo = r.minuti != null ? `${r.minuti} min` : (r.lavoroSec ? `${Math.round(r.lavoroSec / 60)} min di lavoro` : '—');
+  const segno = { su: '↑', pari: '=', giu: '↓', nuovo: '★', saltato: '—' };
+  const colore = { su: 'var(--acc)', pari: 'var(--t3)', giu: 'var(--err)', nuovo: 'var(--acc)', saltato: 'var(--t3)' };
+  const righe = r.righe.map(x => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s2);">
+      <span style="width:18px;text-align:center;font-family:var(--font-mono);font-weight:800;color:${colore[x.esito]};">${segno[x.esito]}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nomeCortoConTag(x.name))}${x.record ? ' <span class="riepilogo-record" style="font-family:var(--font-mono);font-size:10px;color:var(--acc);font-weight:800;">🏆 RECORD</span>' : ''}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--t3);">${x.fatte}/${x.previste} serie · oggi ${esc(x.oggi)}${x.esito !== 'nuovo' && x.esito !== 'saltato' ? ` · prima ${esc(x.prima)}` : x.esito === 'nuovo' ? ' · prima volta' : ''}</div>
+      </div>
+    </div>`).join('');
+  const chip = (v, lbl) => `<button type="button" class="riepilogo-sens" onclick="_riepilogoScegli('${v}')" style="flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid ${r.sensazione === v ? 'var(--acc)' : 'var(--s2)'};background:${r.sensazione === v ? 'var(--acc)' : 'var(--s1)'};color:${r.sensazione === v ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;">${lbl}</button>`;
+  const btn = (dove, lbl, pieno) => `<button type="button" onclick="chiudiRiepilogo('${dove}')" style="width:100%;padding:13px;border-radius:12px;border:${pieno ? 'none' : '1.5px solid var(--s3)'};background:${pieno ? 'var(--acc)' : 'var(--s1)'};color:${pieno ? '#fff' : 'var(--acc)'};font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">${lbl}</button>`;
+  return `<div id="riepilogo-sessione" class="info-modal-overlay" style="z-index:1200;align-items:flex-end;" onclick="if(event.target===this)chiudiRiepilogo()">
+    <div class="pianov4-weighin-screen" style="max-height:92vh;overflow-y:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));">
+      <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:4px;">SESSIONE COMPLETATA 💪</div>
+      <div style="font-size:20px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:12px;">${esc(r.nome)}</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">SERIE</div><div id="riepilogo-serie" style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--t1);">${r.fatte} / ${r.previste}</div></div>
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">TEMPO</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--t1);">${esc(tempo)}</div></div>
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">RECORD</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:${r.record ? 'var(--acc)' : 'var(--t3)'};">${r.record || '—'}</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:2px;">RISPETTO ALLA VOLTA PRIMA</div>
+      ${righe}
+      <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin:16px 0 8px;">Com'è andata?</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">${SENSAZIONI.map(([v, l]) => chip(v, l)).join('')}</div>
+      <textarea id="riepilogo-nota" class="inp" rows="2" placeholder="Una nota, se vuoi (facoltativa)" oninput="if(ST.trainRiepilogo)ST.trainRiepilogo.nota=this.value;" style="width:100%;box-sizing:border-box;font-family:var(--font-sans);font-size:14px;">${esc(r.nota || '')}</textarea>
+      <div style="margin-top:14px;">
+        ${btn('pasto', 'Registra il pasto dopo l\'allenamento', true)}
+        ${btn('pesata', 'Pesati', false)}
+        ${btn('home', 'Torna alla Home', false)}
+      </div>
+    </div>
+  </div>`;
 }
 
 async function deleteWorkout(id, date){
@@ -3535,7 +3666,7 @@ function renderTraining(){
           const resistTxt = badgeResist
             ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
             : '';
-          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
+          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}${_serieSupera(e.name, d) ? ' <span class="ex-set-pill-su" title="Meglio dell\'ultima volta">▲</span>' : ''}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
         }).join('');
         // GRAFICA L2 — pill VUOTE per le serie ancora da fare (S{n+1} … S{tot})
         const emptyBadges = (!allDone && e.sets > loggedKeys.length)
@@ -4852,7 +4983,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal() + _renderCambioOggiSheet();
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal() + _renderCambioOggiSheet() + _renderRiepilogoSessione();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach
