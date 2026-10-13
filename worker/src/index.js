@@ -6,11 +6,14 @@
 //                            params: ?name=<nome_italiano>  (20 storici)
 //                                    ?code=<EX###>          (39 nuovi, catalogo)
 //   POST /vision-check     -> lettura AI delle foto di un check fisico (Gemini, src/vision-check.js)
+//   POST /fitdays-report   -> il coach legge il report della bilancia Fitdays (Gemini, src/fitdays.js):
+//                            il file non si conserva, la lettura torna all'app e basta
 //   tutto il resto         -> 404
 // Cron:
 //   lunedì 06:00 Europe/Rome -> Pirsi propone: quadro della settimana chiusa + proposte (src/coach-cron.js)
 
 import { handleVisionCheck } from './vision-check.js';
+import { handleFitdays } from './fitdays.js';
 import { handleScheduled } from './coach-cron.js';
 import { corsPer, origineRifiutata, tokenDa, personaDaToken, entroIlLimite } from './porta.js';
 
@@ -656,12 +659,14 @@ async function instrada(request, env) {
   const rotta = url.pathname === '/' ? 'coach'
     : url.pathname === '/exercise-media' ? 'media'
     : url.pathname === '/vision-check' ? 'vision'
+    : url.pathname === '/fitdays-report' ? 'fitdays'
     : null;
   if (!rotta) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Non trovato' } }, 404);
   if (origineRifiutata(request)) return jsonResponse({ error: { source: 'worker', kind: 'forbidden', status: 403, code: null, message: 'Origine non ammessa' } }, 403);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204 });
   if (rotta === 'media') return handleExerciseMedia(request, env);
   if (rotta === 'vision') return handleVisionCheck(request, env, {});
+  if (rotta === 'fitdays') return handleFitdays(request, env, {});
   return handleGroqProxy(request, env);
 }
 
