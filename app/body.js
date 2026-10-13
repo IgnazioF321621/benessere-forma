@@ -582,12 +582,12 @@ async function m2ShouldShowEntry(profile) {
   if(ST.user && ST.user.id === 'test-user-001') return false;
   if(profile.m2_skipped === true) return false;
   try {
-    const { data, error } = await supa.from('body_checks')
+    const { data, error } = await dbq('leggere lo stato del check', supa.from('body_checks')
       .select('id, status')
       .eq('user_id', ST.user.id)
       .or('status.eq.completed,status.eq.in_progress')
       .limit(1)
-      .maybeSingle();
+      .maybeSingle(), { silenzioso:true });
     if(error){ console.warn('[m2] entry check error:', error); return false; }
     if(data && data.status === 'completed') return false;
     // Anche se in_progress, mostriamo M2 entry (sarà m2EntryIntro() a routare a resume)
@@ -632,10 +632,11 @@ async function loadBloodTests(){
     .limit(200);
   if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
     console.warn('[blood] storico non caricato:', res.error.message);
-    ST.bloodTests = [];
-    return;
+    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];   // Body 110: quello che c'era resta; «non caricato» lo dice il ritorno
+    return false;
   }
   ST.bloodTests = res.data || [];
+  return true;
 }
 
 // Card "Esami del sangue" — storico in sola lettura, sotto la sezione Check.
@@ -691,22 +692,31 @@ function toggleBloodTest(id){
   renderBody();
 }
 
+// Body 110 (13 ottobre 2026): «non caricato» non è «vuoto». Le letture passano da dbq; se una fallisce
+// resta in memoria quello che c'era (anche dalla copia locale) e ST.bodyLetturaFallita lo dice: il tab
+// mostra «Non riesco a leggere i dati del corpo» con Riprova invece di «Nessun dato», e la Home resta
+// in attesa invece di dire «primo check da fare». Un avviso solo, non tre.
 async function loadBodyLogs(){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
-  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; renderBody(); }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; ST.bodyLetturaFallita=false; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  const prima = { logs: ST.bodyLogs, meas: ST.bodyMeasurements, checks: ST.bodyChecks };
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; ST.bodyLetturaFallita=false; renderBody(); }
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
   // + blood_tests (storico esami, card in coda al tab Check)
   // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47)
-  const [logsRes, measRes, checksRes] = await Promise.all([
-    supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
-    supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
-    supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id),
+  const [logsRes, measRes, checksRes, bloodOk, pesateOk] = await Promise.all([
+    dbq('leggere le misure del corpo', supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90), { silenzioso:true }),
+    dbq('leggere le misure dei check', supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90), { silenzioso:true }),
+    dbq('leggere i check fisici', supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id), { silenzioso:true }),
     loadBloodTests(),
     loadWeightLogs(),
   ]);
-  ST.bodyLogs = logsRes.data || [];
-  ST.bodyMeasurements = measRes.data || [];
-  ST.bodyChecks = checksRes.data || [];
+  const tieni = (res, vecchio) => res.error ? (Array.isArray(vecchio) ? vecchio : null) : (res.data || []);
+  ST.bodyLogs = tieni(logsRes, prima.logs);
+  ST.bodyMeasurements = tieni(measRes, prima.meas);
+  ST.bodyChecks = tieni(checksRes, prima.checks);
+  if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];
+  ST.bodyLetturaFallita = !!(logsRes.error || measRes.error || checksRes.error) || bloodOk === false || pesateOk === false;
+  if(ST.bodyLetturaFallita && !senzaRete()) showToast('Non riesco a leggere i dati del corpo', '⚠️', 5500);
   updateHeaderWeight();
   if(ST.page==='body') renderBody();
   else if(ST.page==='home') renderHome();
@@ -970,7 +980,7 @@ async function deleteBodyLogConfirmed(){
           if(stErr) console.warn('[body-delete] storage remove (best-effort):', stErr);
         }
       } catch(stEx){ console.warn('[body-delete] storage remove exception (best-effort):', stEx); }
-      const { error } = await supa.from('body_checks').delete().eq('id', c.checkId);
+      const { error } = await dbq('eliminare il check fisico', supa.from('body_checks').delete().eq('id', c.checkId).eq('user_id', ST.user.id), { silenzioso:true });
       if(error) throw error;
     }
     await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
@@ -1656,8 +1666,15 @@ function renderBody(){
 
   let body = '';
 
+  // Body 110: senza dati in memoria si distingue «sto leggendo» da «non sono riuscito a leggere»;
+  // con dati vecchi in memoria e una rilettura fallita, una striscia lo dice e offre Riprova.
+  const avvisoLettura = ST.bodyLetturaFallita
+    ? `<div style="margin:0 0 12px;padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-sans);color:var(--t2);display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Dati del corpo non aggiornati: l'ultima lettura non è riuscita${senzaRete() ? ' (sei senza rete)' : ''}.</span><button onclick="loadBodyLogs()" style="background:none;border:1px solid var(--b1);border-radius:var(--r);padding:4px 10px;font-size:12px;font-family:var(--font-mono);color:var(--t1);cursor:pointer;">Riprova</button></div>`
+    : '';
   if(ST.bodyLogs === null || ST.bodyMeasurements === null){
-    body = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+    body = ST.bodyLetturaFallita
+      ? `<div style="padding:40px 20px;text-align:center;"><div style="color:var(--t2);font-size:13px;font-family:var(--font-sans);line-height:1.6;margin-bottom:14px;">Non riesco a leggere i dati del corpo${senzaRete() ? ': sei senza rete' : ''}.<br>Quello che hai salvato è al sicuro.</div><button class="btn btn-primary" onclick="loadBodyLogs()">Riprova</button></div>`
+      : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
     document.getElementById('page-body').innerHTML = navHTML + body;
     return;
   }
@@ -1968,7 +1985,7 @@ function renderBody(){
     </div>`;
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + body + versionFooter() + bodyDeleteConfirmHTML;
+  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + avvisoLettura + body + versionFooter() + bodyDeleteConfirmHTML;
 }
 
 // ─── STEP D.1 (22 mag 2026): Modal pesata "Pesati ora" ───
@@ -1985,8 +2002,9 @@ async function loadWeightLogs() {
     .eq('user_id', ST.user.id)
     .order('date', { ascending: false })
     .limit(1000);   // una riga al giorno: copre quasi tre anni, e la Tendenza «Tutto» le mostra tutte
-  if(error) { console.warn('loadWeightLogs error:', error); if(!ST.weightLogs) ST.weightLogs = []; return; }   // lettura fallita: restano quelle in memoria
+  if(error) { console.warn('loadWeightLogs error:', error); if(!ST.weightLogs) ST.weightLogs = []; return false; }   // lettura fallita: restano quelle in memoria
   ST.weightLogs = data || [];
+  return true;
 }
 
 function _weighInDefaultValue() {
