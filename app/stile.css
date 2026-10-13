@@ -1360,6 +1360,8 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .home-v2-body-weight{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--t1);line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .home-v2-body-unit{font-family:var(--font-mono);font-size:12px;color:var(--t3);}
 .home-v2-body-delta{font-family:var(--font-mono);font-size:13px;font-weight:700;margin-left:4px;}
+.home-v2-body-peso{display:inline-flex;align-items:baseline;gap:5px;padding:0;background:none;border:none;cursor:pointer;}
+.home-v2-body-pesata{display:inline-block;margin-top:8px;padding:5px 10px;border:1px solid var(--mod-body);border-radius:20px;background:var(--body-velo);color:var(--mod-body-forte);font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer;}
 .home-v2-body-sub,.home-v2-train-sub{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.25em;line-height:1.4;color:var(--t3);text-transform:uppercase;margin-top:8px;}
 .home-v2-train-name{font-family:var(--font-sans);font-size:18px;font-weight:700;color:var(--t1);line-height:1.25;}
 .home-v2-nutr-extra{margin-top:14px;padding-top:10px;border-top:1px solid var(--s3);display:flex;flex-direction:column;gap:8px;}

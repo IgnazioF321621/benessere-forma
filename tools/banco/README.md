@@ -47,6 +47,7 @@ node tools/banco/prova_come_stai.js  # Home 020: «Come stai oggi», sonno/energ
 node tools/banco/prova_prossima_azione.js  # Home 010: «Prossima azione», sette regole per ora e per ciò che è fatto, il pulsante apre seduta, check, pesata o form del pasto
 node tools/banco/prova_da_fare_oggi.js  # Home 060: «Anche da fare oggi» sotto Prossima azione: integratori passati non presi, pesata, pasti delle fasce passate, check; ogni voce apre il suo passo
 node tools/banco/prova_card_nutrition.js  # Home 040: card Nutrition: piatto del piano per il prossimo pranzo o cena con «Registra» già compilato, «Ultimo pasto N h fa»; il piano dalla Home si chiede al massimo una volta al giorno
+node tools/banco/prova_card_body.js  # Home 050: card Body: peso da getWeighIns con la virgola, variazione «da domenica», tocco sul peso = Pesati ora, «+ pesata di oggi», check in parole semplici
 node tools/banco/prova_stile.js [stile di prima]  # Stile 010: nessun colore a mano fuori da :root, caratteri per nome; con lo stile di prima, regole uguali coi nomi risolti e 15 schermate in Chrome vero con stessi pixel e stesso stile calcolato (FOTO=cartella tiene le foto)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro

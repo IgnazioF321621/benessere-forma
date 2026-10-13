@@ -949,6 +949,17 @@ function apriPastoDalPiano(slot){
   renderOggi();
 }
 
+// Card Body (Home 050): il peso con la virgola come nel quadro, e la variazione detta rispetto a quando.
+function _kgVirgola(n){ return (Math.round(Number(n) * 10) / 10).toFixed(1).replace('.', ','); }
+function _daQuando(data){
+  const oggi = new Date(todayKey() + 'T12:00:00'), d = new Date(data + 'T12:00:00');
+  const giorni = Math.round((oggi - d) / 86400000);
+  if(giorni === 1) return 'da ieri';
+  if(giorni >= 2 && giorni <= 6) return 'da ' + ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'][d.getDay()];
+  const g = d.getDate();
+  return (g === 8 || g === 11 ? "dall'" : 'dal ') + g + ' ' + ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][d.getMonth()];
+}
+
 function renderHomeV2(){
   // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
   if(ST.homeView === 'quadro' && _wpUsable()){
@@ -1112,7 +1123,7 @@ function _renderHomeCards(){
       </div>`;
   }
 
-  // ── Card Body (riusa getLatestBodyData + getUnifiedBodyTimeline) ──
+  // ── Card Body (peso da getWeighIns, Home 050) ──
   let bodyCard;
   const loadingBody = ST.bodyLogs === null || ST.bodyMeasurements === null;
   if(loadingBody){
@@ -1127,54 +1138,49 @@ function _renderHomeCards(){
         <span class="home-v2-card-arrow">›</span>
       </div>`;
   } else {
-    const bData   = getLatestBodyData();
-    const weights = getWeighIns();                 // pesate rapide comprese, come il tab Body
-    const w       = bData.weight_kg ?? profile.weight_kg ?? null;
-    const wPrev   = weights.length > 1 ? weights[1].weight_kg : null;
+    // Home 050 (13 ottobre 2026): il peso attuale è l'ultima pesata di getWeighIns (pesate rapide
+    // comprese), come il quadro e il tab Body (L48) — prima veniva da getLatestBodyData, che non le vede.
+    const weights = getWeighIns();
+    const ultima  = weights[0] || null;
+    const w       = ultima ? Number(ultima.weight_kg) : (profile.weight_kg != null ? Number(profile.weight_kg) : null);
+    const prec    = weights.length > 1 ? weights[1] : null;
     let deltaHTML = '';
-    if(w != null && wPrev != null){
-      const diff = (w - wPrev);
+    if(ultima && prec){
+      const diff = w - Number(prec.weight_kg);
       const absD = Math.abs(diff);
-      // Colore delta in base alla direzione obiettivo (goal_weight_kg vs weight_kg).
-      // - goal < attuale - 1 → vuole dimagrire → ↓ = verde, ↑ = rosso
-      // - goal > attuale + 1 → vuole ingrassare → ↑ = verde, ↓ = rosso
-      // - |goal - attuale| <= 1 → mantenimento → qualsiasi delta = grigio neutro
+      // Colore secondo la direzione dell'obiettivo (goal_weight_kg): verso l'obiettivo = accento,
+      // lontano = errore; mantenimento, obiettivo assente o variazione nulla = neutro.
       const goal = Number(profile.goal_weight_kg);
-      const curr = Number(w);
-      let color;
-      if(absD < 0.05){
-        color = 'var(--t3)';
-      } else if(!isFinite(goal) || !isFinite(curr) || Math.abs(goal - curr) <= 1){
-        // Mantenimento o obiettivo non impostato → neutro
-        color = 'var(--t3)';
-      } else if(goal < curr){
-        // Vuole dimagrire
-        color = diff < 0 ? '#2A7A6F' : '#B84C2A';
-      } else {
-        // Vuole ingrassare
-        color = diff > 0 ? '#2A7A6F' : '#B84C2A';
+      let color = 'var(--t3)';
+      if(absD >= 0.05 && isFinite(goal) && Math.abs(goal - w) > 1){
+        const versoObiettivo = goal < w ? diff < 0 : diff > 0;
+        color = versoObiettivo ? 'var(--acc)' : 'var(--err)';
       }
-      const arrow = absD < 0.05 ? '' : (diff > 0 ? '↑' : '↓');
-      const sign  = diff > 0 ? '+' : '';
-      deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow ? arrow + ' ' : ''}${sign}${diff.toFixed(1)}</span>`;
+      const arrow = absD < 0.05 ? '' : (diff > 0 ? '↑ ' : '↓ ');
+      const sign  = absD < 0.05 ? '' : (diff > 0 ? '+' : '−');
+      deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow}${sign}${_kgVirgola(absD)} kg ${_daQuando(prec.date)}</span>`;
     }
+    const pesataOggi = !!(ultima && ultima.date === today);
     const cp = getNextCheckpointInfo();
     let cpLabel;
-    if(!cp.hasCheck) cpLabel = 'PRIMO CHECKPOINT DA FARE';
-    else if(cp.overdue) cpLabel = 'CHECKPOINT IN RITARDO';
-    else if(cp.daysUntil === 0) cpLabel = 'CHECKPOINT OGGI';
-    else if(cp.daysUntil < 0 && !cp.overdue) cpLabel = 'CHECKPOINT A FINE MESOCICLO';
-    else cpLabel = `CHECKPOINT TRA ${cp.daysUntil} GIORN${cp.daysUntil === 1 ? 'O' : 'I'}`;
+    if(!cp.hasCheck) cpLabel = 'Primo check fisico da fare';
+    else if(cp.overdue) cpLabel = 'Check fisico in ritardo';
+    else if(cp.daysUntil === 0) cpLabel = 'Check fisico oggi';
+    else if(cp.daysUntil < 0) cpLabel = 'Check fisico a fine blocco';
+    else cpLabel = `Prossimo check fisico tra ${cp.daysUntil} giorn${cp.daysUntil === 1 ? 'o' : 'i'}`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
         <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
         <div class="home-v2-body-flex">
           <div class="home-v2-card-title">Body</div>
           <div class="home-v2-body-line">
-            <span class="home-v2-body-weight">${w != null ? w : '—'}</span>
-            ${w != null ? '<span class="home-v2-body-unit">kg</span>' : ''}
+            <button class="home-v2-body-peso" onclick="event.stopPropagation();openWeighInSheet()" aria-label="Pesati ora">
+              <span class="home-v2-body-weight">${w != null ? _kgVirgola(w) : '—'}</span>
+              ${w != null ? '<span class="home-v2-body-unit">kg</span>' : ''}
+            </button>
             ${deltaHTML}
           </div>
+          ${pesataOggi ? '' : '<button class="home-v2-body-pesata" onclick="event.stopPropagation();openWeighInSheet()">+ pesata di oggi</button>'}
           <div class="home-v2-body-sub">${cpLabel}</div>
         </div>
         <span class="home-v2-card-arrow">›</span>
