@@ -855,9 +855,24 @@ function getUnifiedBodyTimeline(){
   return out;
 }
 
+// Body 020: il giorno del modulo delle misure. Mai nel futuro.
+function bodyLogSetDate(v){
+  const today = todayKey();
+  const d = String(v || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today){ showToast('Scegli un giorno fino a oggi', '⚠️'); ST.bodyLogDate = today; renderBody(); return; }
+  ST.bodyLogDate = d;
+  renderBody();
+}
+
+// «Misure col metro e bilancia» (Body 020, 13 ottobre 2026). Una sola tabella per le pesate: il peso
+// scritto qui va in weight_logs, la stessa riga di «Pesati ora» (prima andava in body_logs, e se quel
+// giorno c'era già una pesata rapida vinceva quella e il numero appena scritto non si vedeva da nessuna
+// parte). Metro e bilancia smart restano in body_logs. La data è quella scelta nel modulo.
 async function saveBodyLog(){
   if(!ST.user) return;
   const today = todayKey();
+  const dataScelta = (document.getElementById('bl-date')?.value || ST.bodyLogDate || today).slice(0, 10);
+  const giorno = (/^\d{4}-\d{2}-\d{2}$/.test(dataScelta) && dataScelta <= today) ? dataScelta : today;
   const weight   = parseFloat(document.getElementById('bl-weight')?.value);
   const waist    = parseFloat(document.getElementById('bl-waist')?.value);
   const bf       = parseFloat(document.getElementById('bl-bf')?.value);
@@ -869,8 +884,7 @@ async function saveBodyLog(){
   const bodyAge  = parseInt(document.getElementById('bl-bodyage')?.value);
   const notes    = document.getElementById('bl-notes')?.value?.trim();
 
-  const payload = { user_id: ST.user.id, date: today };
-  if(!isNaN(weight))   payload.weight_kg    = weight;
+  const payload = { user_id: ST.user.id, date: giorno };
   if(!isNaN(waist))    payload.waist_cm     = waist;
   if(!isNaN(bf))       payload.bf_pct       = bf;
   if(!isNaN(muscle))   payload.muscle_kg    = muscle;
@@ -881,21 +895,41 @@ async function saveBodyLog(){
   if(!isNaN(bodyAge))  payload.body_age     = bodyAge;
   if(notes)            payload.notes        = notes;
 
+  const haMisure = Object.keys(payload).length > 2;
+  if(isNaN(weight) && !haMisure){ showToast('Scrivi almeno un numero', '⚠️'); return; }
+
   ST.bodySaving = true;
   renderBody();
 
+  // Il peso: la pesata di quel giorno, come «Pesati ora» (senza rete va in coda e vale subito in memoria)
+  if(!isNaN(weight)){
+    const res = await scriviConCoda('salvare la pesata', { tabella:'weight_logs', tipo:'upsert', righe:{ user_id: ST.user.id, date: giorno, weight_kg: weight }, onConflict:'user_id,date' });
+    if(res.error){ ST.bodySaving = false; avvisa('Non riesco a salvare: ' + res.error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
+    if(res.inCoda) ST.weightLogs = [{ date: giorno, weight_kg: weight }, ...(ST.weightLogs || []).filter(q => q.date !== giorno)].sort((a, b) => a.date < b.date ? 1 : -1);
+    // Il profilo prende il peso solo se è la pesata più recente: una misura vecchia non riscrive l'oggi
+    const ultima = (ST.weightLogs || []).map(q => q.date).sort().pop();
+    if(!ultima || giorno >= ultima){
+      await dbq('salvare il peso', supa.from('profiles').update({ weight_kg: weight, updated_at: new Date().toISOString() }).eq('id', ST.user.id), { silenzioso:true });
+      if(ST.profile) ST.profile.weight_kg = weight;
+    }
+  }
+
   // Scrivi o aggiorna (Fondamenta 090): una riga per persona e per giorno, lo garantisce il vincolo
-  // body_logs_user_date_key; si toccano solo i campi compilati. Prima: lettura, poi insert o update.
-  const { error } = await dbq('salvare le misure', supa.from('body_logs').upsert(payload, { onConflict:'user_id,date' }), { silenzioso:true });
+  // body_logs_user_date_key; si toccano solo i campi compilati.
+  if(haMisure){
+    const { error } = await dbq('salvare le misure', supa.from('body_logs').upsert(payload, { onConflict:'user_id,date' }), { silenzioso:true });
+    if(error){ ST.bodySaving = false; avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
+  }
 
   ST.bodySaving = false;
-  if(error){ avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
-
-  if(!isNaN(weight)){
-    await dbq('salvare il peso', supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id));
-    if(ST.profile) ST.profile.weight_kg = weight;
-  }
+  showToast('Misure salvate · ' + fmtDate(giorno), '✅', 4000);
   await loadBodyLogs();
+  // Senza rete la pesata in coda non è ancora sul server: resta in memoria anche dopo la rilettura
+  if(!isNaN(weight) && senzaRete() && !(ST.weightLogs || []).some(q => q.date === giorno)){
+    ST.weightLogs = [{ date: giorno, weight_kg: weight }, ...(ST.weightLogs || [])].sort((a, b) => a.date < b.date ? 1 : -1);
+    updateHeaderWeight();
+    if(ST.page === 'body') renderBody();
+  }
 }
 
 // ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
@@ -1618,8 +1652,13 @@ function renderBody(){
   }
 
   const today    = todayKey();
-  const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il form "Log misure"
-  const todayLog = logs.find(l => l.date === today) || {};
+  const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il modulo delle misure
+  // Body 020: il modulo «Misure col metro e bilancia» ha una data (oggi di base, mai nel futuro);
+  // si pre-popola con le misure di quel giorno e con la pesata di quel giorno (weight_logs).
+  const giornoLog = (ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today;
+  const pesataGiorno = (ST.weightLogs || []).find(q => q.date === giornoLog) || null;
+  const todayLog = { ...(logs.find(l => l.date === giornoLog) || {}) };
+  if(todayLog.weight_kg == null && pesataGiorno && pesataGiorno.weight_kg != null) todayLog.weight_kg = pesataGiorno.weight_kg;
   // Dati unificati body_logs + body_measurements
   const uData     = getLatestBodyData();
   const uTimeline = getUnifiedBodyTimeline();
@@ -1738,7 +1777,11 @@ function renderBody(){
       })()}
 
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
-        <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Log misure — ${fmtDate(today)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Misure col metro e bilancia</div>
+          <input id="bl-date" type="date" value="${giornoLog}" max="${today}" onchange="bodyLogSetDate(this.value)" aria-label="Giorno delle misure"
+            style="padding:6px 8px;border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);outline:none;">
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
           <div>
             <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Peso (kg)</label>

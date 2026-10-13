@@ -155,7 +155,9 @@ async function nuovo(opts){
     a.input('bl-weight', '72.1');
     await a.win.saveBodyLog();
     const bl = a.scritture('body_logs');
-    atteso('misure · upsert su (persona, giorno), una riga sola aggiornata', [bl.map(c => c.op), bl[0].upsertOpts.onConflict, a.t.body_logs.length, a.t.body_logs[0].weight_kg, a.t.body_logs[0].waist_cm], [['upsert', 'upsert'], 'user_id,date', 1, 72.1, 81]);
+    // Dal 13 ottobre 2026 (Body 020) il peso del modulo va in weight_logs, la tabella delle pesate: body_logs tiene il metro
+    atteso('misure · upsert su (persona, giorno), una riga sola aggiornata', [bl.map(c => c.op), bl[0].upsertOpts.onConflict, a.t.body_logs.length, a.t.body_logs[0].weight_kg ?? null, a.t.body_logs[0].waist_cm], [['upsert', 'upsert'], 'user_id,date', 1, null, 81]);
+    atteso('misure · il peso sta nella tabella delle pesate, una riga per giorno (Body 020)', (a.t.weight_logs || []).map(r => r.weight_kg), [72.1]);
   }
   // 7) la vecchia coda delle serie (WS-QUEUE) sparisce all'avvio
   {
