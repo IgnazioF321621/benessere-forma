@@ -1,6 +1,7 @@
 // Funzioni dichiarate e mai chiamate (Fondamenta 180): stampa quante sono e quali. Si lancia dalla radice del repo.
 //   node tools/banco/funzioni_morte.js
-// Restano per scelta: loadDailyLog, getDailyLog, saveDailyLog (il diario del giorno, Fondamenta 050, usato da prova_diario.js) e misuraCache (si chiama dalla console).
+// Restano per scelta: saveDailyLog (il diario del giorno, Fondamenta 050, usato da prova_diario.js; dal 13 ottobre 2026 la Home scrive
+// «Come stai oggi» con scriviConCoda, Home 020) e misuraCache (si chiama dalla console).
 // Funzioni dichiarate (function nome / async function nome / window.nome = ) e numero di occorrenze del nome in tutti i file dell'app
 const fs=require('fs');
 const files=['zona-tracker.html',...fs.readdirSync('app').map(f=>'app/'+f),...fs.readdirSync('shared').map(f=>'shared/'+f),'sw.js'];

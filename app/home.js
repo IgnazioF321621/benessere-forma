@@ -730,6 +730,95 @@ function renderQuadroView(){
   return head + alert + secPeso + secNutr + secTrain + secCorpo + secEsami + _cpHistoryHTML(ws);
 }
 
+// ── «Come stai oggi» (Home 020, 13 ottobre 2026) ──
+// In cima alla Home: ore di sonno, energia e stress con la rotellina del telefono
+// (un <select>: su iPhone apre la rotellina da solo), più una nota facoltativa.
+// Si salva al momento della scelta (L21), un campo alla volta, nel diario del giorno
+// (daily_log, Fondamenta 050): gli stessi controlli del salvataggio del diario
+// (_dailyLogCampi), ma scritto con scriviConCoda: senza rete la scelta resta in coda.
+// Con i tre valori la card si chiude su una riga; «Modifica» la riapre, «Fatto» la richiude.
+const CS_SONNO = Array.from({ length: 19 }, (_, i) => 3 + i * 0.5);   // 3 … 12 h, a mezz'ora
+const CS_SCALA = [1, 2, 3, 4, 5];
+let _csLettoIl = null;      // giorno per cui il diario è stato chiesto (si richiede a giorno cambiato)
+
+function _csOre(n) { return String(n).replace('.', ',') + ' h'; }
+
+// Il diario si legge una volta per giorno, la prima volta che si disegna la Home.
+// Lettura fallita: la card resta vuota ma funziona (si scrive solo il campo scelto).
+function _csCarica() {
+  const oggi = todayKey();
+  if (_csLettoIl === oggi || !ST.user || !ST.user.id || typeof loadDailyLog !== 'function') return;
+  _csLettoIl = oggi;
+  loadDailyLog().then(() => { if (ST.page === 'home') renderHome(); }).catch(() => {});
+}
+
+function _csSelect(campo, valori, attuale, etichetta) {
+  const opz = [`<option value=""${attuale == null ? ' selected' : ''}>—</option>`]
+    .concat(valori.map(v => `<option value="${v}"${attuale != null && Number(attuale) === v ? ' selected' : ''}>${campo === 'sleep_hours' ? _csOre(v) : v}</option>`));
+  return `
+        <label class="cs-campo">
+          <span class="cs-etichetta">${etichetta}</span>
+          <select class="picker-select cs-select" aria-label="${etichetta}" onchange="comeStaiScegli('${campo}', this.value)">${opz.join('')}</select>
+        </label>`;
+}
+
+function _comeStaiHTML() {
+  if (!ST.user || !ST.user.id) return '';
+  _csCarica();
+  const oggi = todayKey();
+  const g = (typeof getDailyLog === 'function' && getDailyLog(oggi)) || {};
+  const pieni = g.sleep_hours != null && g.energy != null && g.stress != null;
+  if (pieni && ST.comeStaiAperta !== oggi) {
+    const nota = g.note ? `<div class="cs-riga-nota">${esc(g.note)}</div>` : '';
+    return `
+    <div class="cs-card cs-chiusa">
+      <div class="cs-riga">
+        <div>
+          <div class="cs-titolo">Come stai oggi</div>
+          <div class="cs-riassunto">Sonno ${_csOre(Number(g.sleep_hours))} · Energia ${g.energy} · Stress ${g.stress}</div>
+          ${nota}
+        </div>
+        <button class="cs-link" onclick="comeStaiApri()">Modifica</button>
+      </div>
+    </div>`;
+  }
+  return `
+    <div class="cs-card">
+      <div class="cs-testa">
+        <span class="cs-titolo">Come stai oggi</span>
+        ${pieni ? '<button class="cs-link" onclick="comeStaiChiudi()">Fatto</button>' : ''}
+      </div>
+      <div class="cs-campi">
+        ${_csSelect('sleep_hours', CS_SONNO, g.sleep_hours, 'Sonno')}
+        ${_csSelect('energy', CS_SCALA, g.energy, 'Energia')}
+        ${_csSelect('stress', CS_SCALA, g.stress, 'Stress')}
+      </div>
+      <textarea class="cs-nota" rows="1" maxlength="1000" placeholder="Una nota, se vuoi" aria-label="Nota" onchange="comeStaiScegli('note', this.value)">${esc(g.note || '')}</textarea>
+    </div>`;
+}
+
+async function comeStaiScegli(campo, valore) {
+  if (!ST.user || !ST.user.id) return;
+  const v = _dailyLogCampi({ [campo]: valore });
+  if (v.errore) { showToast(v.errore, '⚠️'); return; }
+  const oggi = todayKey();
+  if (!ST.dailyLog) ST.dailyLog = {};
+  const prima = ST.dailyLog[oggi] ? Object.assign({}, ST.dailyLog[oggi]) : null;
+  ST.dailyLog[oggi] = Object.assign({ date: oggi, sleep_hours: null, energy: null, stress: null, day_type: null, note: null }, prima || {}, v.campi);
+  ST.comeStaiAperta = oggi;      // resta aperta finché non si tocca «Fatto»
+  renderHome();
+  const res = await scriviConCoda('salvare come stai oggi', {
+    tabella: 'daily_log', tipo: 'upsert', onConflict: 'user_id,date',
+    righe: [Object.assign({ user_id: ST.user.id, date: oggi }, v.campi)],
+  });
+  if (res && res.error) {           // rifiutato dal database: la scelta torna com'era
+    if (prima) ST.dailyLog[oggi] = prima; else delete ST.dailyLog[oggi];
+    renderHome();
+  }
+}
+function comeStaiApri() { ST.comeStaiAperta = todayKey(); renderHome(); }
+function comeStaiChiudi() { ST.comeStaiAperta = null; renderHome(); }
+
 function renderHomeV2(){
   // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
   if(ST.homeView === 'quadro' && _wpUsable()){
@@ -991,6 +1080,7 @@ function _renderHomeCards(){
         </div>
         <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
       </div>
+      ${_comeStaiHTML()}
       ${_wpHomeCardHTML()}
       ${_cpHomeCardHTML()}
       ${nutritionCard}

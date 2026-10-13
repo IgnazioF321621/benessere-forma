@@ -28,7 +28,7 @@ node tools/banco/prova_cache_locale.js [cartella di prima]  # la copia locale sa
 node tools/banco/prova_avvio_senza_profilo.js  # primo avvio senza copia locale: profilo non leggibile → «Non riesco a collegarmi» e Riprova, mai l'onboarding; nessuna riga → onboarding (Fondamenta 130)
 node tools/banco/prova_conferme.js  # chiediConferma, chiediTesto e avvisa al posto di confirm/alert/prompt; il toast non spegne il successivo (Fondamenta 150)
 node tools/banco/prova_cestino_pasto.js  # il cestino a scorrimento del pasto chiede conferma come quello piccolo; nessun onclick chiama deleteMeal (Fondamenta 150, dalla prova sul telefono)
-node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 4, tutte volute (Fondamenta 180)
+node tools/banco/funzioni_morte.js  # funzioni dichiarate e mai chiamate: deve dare 2, tutte volute (Fondamenta 180; erano 4 fino a Home 020)
 node tools/banco/prova_versione_nuova.js  # versione nuova: striscia «tocca per aggiornare», mai ricarica da sola, in allenamento aspetta; la versione si legge dalla pagina in rete (APP_VERSION), non solo da sw.js (Fondamenta 140)
 node tools/banco/prova_senza_rete.js  # senza rete: pasti, digiuni, integratori presi e pesate in coda, inviati al ritorno della rete; striscia «Sei senza rete»; errore dell'API non in coda (Fondamenta 120)
 node tools/banco/prova_tabella_unica.js  # una tabella sola per le serie (training_logs, id del telefono, coda unica), codice esercizio e supplement_id scritti e letti, scrivi-o-aggiorna per allenamenti e misure, vecchia WS-QUEUE tolta (Fondamenta 070/080/090)
@@ -43,6 +43,7 @@ node tools/banco/prova_registra_integratori.js  # «Registra integratori» a ele
 node tools/banco/prova_oggi_integratore_doppio.js  # un integratore preso compare una volta sola in Oggi e nel dettaglio del giorno: la riga è coperta dal gruppo se il suo prodotto (id, poi nome) è tra i presi, mai per orario; i veri extra restano extra (difetto del 12 ottobre 2026)
 node tools/banco/prova_registra_sospendi.js  # «Sospendi» per sbaglio si rimedia sul posto: il sospeso resta nel suo pacchetto in grigio con «Riattiva», avviso con «Annulla», riga che spiega, senza rete in coda (12 ottobre 2026)
 node tools/banco/prova_detox.js          # «Giorno Detox»: la pagina Oggi si ridisegna col digiuno (anello nuovo coi totali del giorno), si riapre dopo un ricaricamento, si toglie; niente `sTot` (Nutrition 010)
+node tools/banco/prova_come_stai.js  # Home 020: «Come stai oggi», sonno/energia/stress con la rotellina e nota, salvati subito un campo alla volta, in coda senza rete, tornano com'erano se rifiutati
 node tools/banco/prova_stile.js [stile di prima]  # Stile 010: nessun colore a mano fuori da :root, caratteri per nome; con lo stile di prima, regole uguali coi nomi risolti e 15 schermate in Chrome vero con stessi pixel e stesso stile calcolato (FOTO=cartella tiene le foto)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro
