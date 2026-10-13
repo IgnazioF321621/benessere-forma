@@ -41,6 +41,38 @@ function findExercise(exName, sessionId){
   return sess.exercises.find(e => e.name === exName) || null;
 }
 
+// ── Per lato e via di progressione (Training 280 e 320, 13 ottobre 2026) ──
+// Le due colonne del catalogo (`unilaterale`: si · alternato · no; `progressione`: carico ·
+// elastico più duro · meno assistenza · carico in mano · ritmo più lento · variante più difficile ·
+// più ripetizioni · tenuta più lunga) stanno nel jsonb delle schede generate dal 13 ottobre; per le
+// schede di prima si leggono dal catalogo per codice (ST.catalogInfoByCodice, letto da loadActiveScheda).
+function _exInfoCatalogo(ex){
+  const info = (ex && ex.codice && ST.catalogInfoByCodice instanceof Map) ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  return {
+    unilaterale:  (ex && ex.unilaterale)  || (info && info.unilaterale)  || null,
+    progressione: (ex && ex.progressione) || (info && info.progressione) || null,
+  };
+}
+// «Per lato» = ripetizioni (o secondi) contate un lato alla volta: lo dice la prescrizione
+// («8-12 per lato») oppure il catalogo (`unilaterale = si`). `alternato` conta i lati insieme.
+function _exPerLato(ex, parsed){
+  if(!ex) return false;
+  const pr = parsed || ((ex.reps && typeof parseRepsRange === 'function') ? parseRepsRange(ex.reps) : null);
+  if(pr && pr.perLato) return true;
+  return _exInfoCatalogo(ex).unilaterale === 'si';
+}
+function _exProgressione(ex){ return _exInfoCatalogo(ex).progressione; }
+// Il testo delle ripetizioni di una serie salvata: «8r», oppure «8 dx · 7 sx» se la serie ha i due
+// lati (riga di training_logs con reps_dx/reps_sx, o voce di ST.trainLoggedSets con repsDx/repsSx).
+function _repsTesto(d, suffisso){
+  if(!d) return '';
+  const suf = (suffisso == null) ? 'r' : suffisso;
+  const dx = (d.repsDx != null) ? d.repsDx : d.reps_dx;
+  const sx = (d.repsSx != null) ? d.repsSx : d.reps_sx;
+  if(dx != null && sx != null && String(dx) !== '' && String(sx) !== '') return `${dx} dx · ${sx} sx`;
+  return (d.reps != null && String(d.reps).trim() !== '') ? `${d.reps}${suf}` : '';
+}
+
 // ── Hydration cross-device delle serie loggate OGGI ─────────
 // Ricarica ST.trainLoggedSets da training_logs (Supabase) per evitare che le serie
 // loggate da un altro device non compaiano localmente finché non si rilogga manualmente.
@@ -50,7 +82,7 @@ async function hydrateTrainingSetsFromCloud(){
   const today = todayKey();
   try {
     const { data, error } = await supa.from('training_logs')
-      .select('id, session_id, exercise_name, exercise_code, set_number, reps, resistance, band_color, rir_actual')
+      .select('id, session_id, exercise_name, exercise_code, set_number, reps, resistance, band_color, rir_actual, reps_dx, reps_sx')
       .eq('user_id', ST.user.id)
       .eq('date', today);
     if(error) { console.warn('hydrateTrainingSets:', error.message); return; }
@@ -65,13 +97,17 @@ async function hydrateTrainingSetsFromCloud(){
       const nome = _nomeDaCodice(row.exercise_code) || row.exercise_name;
       const key = `${row.session_id}_${nome}_${row.set_number}_${today}`;
       const resistFromBand = row.band_color || null;
-      cloudMap[key] = {
+      const voce = {
         reps: row.reps,
         resistance: resistFromBand != null ? resistFromBand : (row.resistance != null ? String(row.resistance) : ''),
         rir: row.rir_actual,
         band_color: resistFromBand,
         setId: row.id,   // per modificare e cancellare per id (Fondamenta 080: una tabella sola)
       };
+      // I due lati, se la serie li ha (Training 280)
+      if(row.reps_dx != null) voce.repsDx = row.reps_dx;
+      if(row.reps_sx != null) voce.repsSx = row.reps_sx;
+      cloudMap[key] = voce;
     });
     // Merge: cloud vince in caso di conflitto (più recente, fonte autoritativa)
     ST.trainLoggedSets = { ...ST.trainLoggedSets, ...cloudMap };
@@ -208,7 +244,7 @@ async function loadLastLoggedSets(sessionId){
     let rows = [];
     for(let from = 0; from < MAX_ROWS; from += PAGE){
       const res = await supa.from('training_logs')
-        .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
+        .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
         .eq('user_id', ST.user.id)
         .eq('session_id', sessionId)
         .lt('date', today)
@@ -252,7 +288,7 @@ async function loadLastLoggedSets(sessionId){
       const tuttiNomi = [...new Set([].concat(...[...nomiPerCanon.values()].map(s => [...s])))];
       if(tuttiNomi.length > 0 && tuttiNomi.length <= 200){
         const res2 = await supa.from('training_logs')
-          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
+          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
           .eq('user_id', ST.user.id)
           .lt('date', today)
           .order('date', { ascending: false })
@@ -570,7 +606,8 @@ function getLastLoggedSetLabel(sessionId, exName){
     resistTxt = /^\d+$/.test(r) ? `${r} ${unitLbl}` : r;
   }
   const parts = [`S${bestSet}`];
-  if(d.reps !== undefined && d.reps !== null && String(d.reps).trim() !== '') parts.push(`${d.reps}r`);
+  const repsTxt = _repsTesto(d);            // «8r» oppure «8 dx · 7 sx» (Training 280)
+  if(repsTxt) parts.push(repsTxt);
   if(resistTxt) parts.push(resistTxt);
   if(d.rir !== undefined && d.rir !== null && String(d.rir).trim() !== '') parts.push(`RIR ${d.rir}`);
   return parts.join(' · ');
@@ -628,7 +665,11 @@ function getProgressionSuggestion(exName, sessionId){
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-    return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    const ultima = `${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    // L'obiettivo di oggi parte dall'ultima seduta (Training 040): prima cosa fare, poi com'è andata
+    const o = obiettivoPrimaSerie(exName, sessionId);
+    if(o && o.testo) return `🎯 Oggi ${o.testo} · ultima volta ${ultima}`;
+    return `💡 Ultima volta: ${ultima}`;
   }
   // Nessuna serie loggata + nessuno storico → punto di partenza generico,
   // COERENTE col tipo di esercizio (B4 fix):
@@ -1064,6 +1105,8 @@ function editLogRow(id){
     resistance: isPullUp ? (log.band_color || '') : (log.resistance || ''),
     rir: log.rir_actual != null ? String(log.rir_actual) : '',
   };
+  // Per lato (Training 280): si correggono i due lati
+  if(log.reps_dx != null && log.reps_sx != null){ ST.trainEditLogRow.reps = String(log.reps_dx); ST.trainEditLogRow.repsSx = String(log.reps_sx); }
   renderTraining();
   setTimeout(()=>document.getElementById('elr-reps')?.focus(), 50);
 }
@@ -1085,10 +1128,16 @@ async function confirmEditLogRow(){
   const repsEl = document.getElementById('elr-reps');
   const resistEl = document.getElementById('elr-resist');
   const rirEl = document.getElementById('elr-rir');
-  const reps = parseInt(repsEl?.value) || 0;
+  const repsSxEl = document.getElementById('elr-reps-sx');
+  let reps = parseInt(repsEl?.value) || 0;
   const resistance = (resistEl?.value || '').toString().trim();
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
+  // Per lato (Training 280): due numeri, in `reps` il più debole
+  const perLato = !!repsSxEl;
+  const repsDx = perLato ? reps : null;
+  const repsSx = perLato ? (parseInt(repsSxEl.value) || 0) : null;
+  if(perLato){ if(!repsSx){ repsSxEl.focus(); return; } reps = Math.min(repsDx, repsSx); }
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
   // Trova il log originale per riconoscere le trazioni (il carico e' il colore della banda)
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
@@ -1097,8 +1146,9 @@ async function confirmEditLogRow(){
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   const resistanceText = isPullUp ? null : (resistance || null);
   // Una scrittura sola, per id, con la coda unica (Fondamenta 080): senza rete aspetta e parte da sola
-  const upd = await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
-    righe:{ reps, resistance: resistanceText, band_color: bandColor, rir_actual: rir },
+  const righe = { reps, resistance: resistanceText, band_color: bandColor, rir_actual: rir };
+  if(perLato){ righe.reps_dx = repsDx; righe.reps_sx = repsSx; }
+  const upd = await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update', righe,
     filtri:[['id', e.id], ['user_id', ST.user.id]] });
   const updOk = !(upd && upd.error);
   ST.trainEditLogRow = null;
@@ -1647,6 +1697,143 @@ function _renderInjuryBar(){
     </div>`;
 }
 
+// ═══ PAUSA PROGRAMMATA (Training 350, 13 ottobre 2026) ═══
+// Vacanza, viaggio, lavoro: un periodo con le date, dichiarato anche in anticipo, che non è un
+// infortunio. Vive nel profilo (pausa_inizio, pausa_fine, pausa_motivo: migrazione 20261013_350) così
+// lo vedono tutti e due i telefoni e il cron del lunedì. Decisioni di Ignazio (13 ottobre 2026):
+// un periodo con le date (fine anche aperta) · il blocco si congela (il conteggio va ad allenamenti,
+// fermandosi non avanza; i giorni di pausa non contano per la card dei 35 giorni né per il check dei
+// 42) e oltre 3 settimane al rientro si propone il blocco nuovo · Pirsi lo sa (pause_days nel quadro).
+// Durante la pausa: nessun debito (computeTrainingDebt), la striscia in Training, «Rientro anticipato».
+// La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
+const PAUSA_BLOCCO_NUOVO_GIORNI = 21;     // oltre tre settimane fermo, al rientro conviene un blocco pulito
+const PAUSA_RIENTRO_GIORNI = 14;          // per quanti giorni dopo il rientro la proposta resta
+const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['altro', 'Altro']];
+function getPausa(){
+  if(!ST.profile || typeof ZTQuadro === 'undefined') return null;
+  return ZTQuadro.pausaInfo(ST.profile, todayKey());
+}
+function _pausaFmt(d){ return new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }); }
+function _pausaMotivoTesto(m){ const v = PAUSA_MOTIVI.find(x => x[0] === m); return v ? v[1].toLowerCase() : null; }
+// Il foglio: date e motivo. `ST.pausaModal` = { inizio, fine, aperta, motivo }
+function apriPausa(){
+  const pz = getPausa();
+  const oggi = todayKey();
+  ST.pausaModal = pz && (pz.attiva || pz.futura)
+    ? { inizio: pz.inizio, fine: pz.fine || '', aperta: !pz.fine, motivo: pz.motivo || 'vacanza' }
+    : { inizio: oggi, fine: '', aperta: false, motivo: 'vacanza' };
+  renderTraining();
+  setTimeout(() => document.getElementById('pausa-inizio')?.focus(), 50);
+}
+function chiudiPausa(){ ST.pausaModal = null; renderTraining(); }
+// Scrive le tre colonne nel profilo (una riga, per id) e aggiorna la copia in memoria e quella locale.
+async function _pausaScrivi(valori, cosa){
+  if(!ST.user || ST.user.id === 'test-user-001'){ Object.assign(ST.profile, valori); return true; }
+  const r = await dbq(cosa, supa.from('profiles').update(valori).eq('id', ST.user.id));
+  if(r.error) return false;
+  Object.assign(ST.profile, valori);
+  try { if(typeof saveCache === 'function') saveCache(); } catch(e){}
+  return true;
+}
+async function salvaPausa(){
+  const m = ST.pausaModal;
+  if(!m) return;
+  const inizio = (document.getElementById('pausa-inizio')?.value || m.inizio || '').trim();
+  const aperta = !!document.getElementById('pausa-aperta')?.checked;
+  const fine = aperta ? '' : (document.getElementById('pausa-fine')?.value || '').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(inizio)){ showToast('Scegli il giorno in cui parti', '📅'); return; }
+  if(!aperta && !/^\d{4}-\d{2}-\d{2}$/.test(fine)){ showToast('Scegli il giorno in cui torni, o «non lo so ancora»', '📅'); return; }
+  if(fine && fine < inizio){ showToast('Il ritorno viene prima della partenza', '📅'); return; }
+  const ok = await _pausaScrivi({ pausa_inizio: inizio, pausa_fine: fine || null, pausa_motivo: m.motivo || null }, 'salvare la pausa');
+  if(!ok) return;
+  ST.pausaModal = null;
+  showToast(fine ? `✈️ Pausa dal ${_pausaFmt(inizio)} al ${_pausaFmt(fine)}` : `✈️ Pausa dal ${_pausaFmt(inizio)}, fine da decidere`, '', 3500);
+  loadTrainingHomeData();
+  renderTraining();
+}
+// «Rientro anticipato»: la pausa finisce ieri, oggi si conta già come giorno normale. Una pausa che
+// doveva iniziare oggi o più avanti si toglie del tutto.
+async function terminaPausa(){
+  const pz = getPausa();
+  if(!pz) return;
+  const oggi = todayKey();
+  const ieri = _injAddDays(oggi, -1);
+  const valori = (pz.inizio >= oggi) ? { pausa_inizio: null, pausa_fine: null, pausa_motivo: null } : { pausa_fine: ieri };
+  const ok = await _pausaScrivi(valori, 'chiudere la pausa');
+  if(!ok) return;
+  showToast(pz.inizio >= oggi ? 'Pausa tolta' : 'Bentornato! Si riparte da oggi 💪', '', 3000);
+  loadTrainingHomeData();
+  renderTraining();
+}
+// La striscia in Training (pattern della barra infortunio): in pausa, oppure pausa dichiarata per dopo.
+function _renderPausaBar(){
+  const pz = getPausa();
+  if(!pz || !(pz.attiva || pz.futura)) return '';
+  const motivo = _pausaMotivoTesto(pz.motivo);
+  const quando = pz.attiva
+    ? (pz.fine ? `In pausa fino al ${_pausaFmt(pz.fine)}` : 'In pausa, fine da decidere')
+    : (pz.fine ? `Pausa dal ${_pausaFmt(pz.inizio)} al ${_pausaFmt(pz.fine)}` : `Pausa dal ${_pausaFmt(pz.inizio)}, fine da decidere`);
+  const sotto = pz.attiva ? 'Nessun debito di sedute, il blocco è fermo: riprendi da dove eri.' : 'Dichiarata: in quei giorni niente debito e niente proposte di Pirsi sull\'allenamento.';
+  return `
+    <div id="pausa-bar" style="background:var(--s1);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:3px;">✈️ PAUSA${motivo ? ' · ' + esc(motivo.toUpperCase()) : ''}</div>
+        <div style="font-size:13px;color:var(--t1);font-family:var(--font-sans);">${esc(quando)}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:2px;">${sotto}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button onclick="apriPausa()" style="background:none;color:var(--acc);border:1px solid var(--s3);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Modifica</button>
+        <button onclick="terminaPausa()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">${pz.attiva ? 'Rientro anticipato' : 'Togli'}</button>
+      </div>
+    </div>`;
+}
+// La card fra i riposi extra: apre il foglio.
+function _renderPausaCard(){
+  const pz = getPausa();
+  const stato = pz && pz.attiva ? 'In corso' : pz && pz.futura ? 'Dichiarata' : null;
+  return `
+            <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">✈️ Pausa programmata${stato ? ` <span style="font-size:11px;color:var(--acc);font-family:var(--font-mono);">· ${stato}</span>` : ''}</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro: dici le date e l'app ti aspetta. Niente debito, blocco fermo, rientro graduale al ritorno.</div>
+              </div>
+              <button onclick="apriPausa();" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">${stato ? 'Modifica' : 'Imposta'}</button>
+            </div>`;
+}
+function _renderPausaModal(){
+  const m = ST.pausaModal;
+  if(!m) return '';
+  const chip = (v, lbl) => `<button type="button" onclick="ST.pausaModal.motivo='${v}';renderTraining();" style="padding:8px 12px;border-radius:999px;border:1.5px solid ${m.motivo === v ? 'var(--acc)' : 'var(--s2)'};background:${m.motivo === v ? 'var(--acc)' : 'var(--s1)'};color:${m.motivo === v ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${lbl}</button>`;
+  return `
+    <div id="pausa-modal" class="weight-modal" style="z-index:1100;" onclick="if(event.target===this)chiudiPausa()">
+      <div class="weight-modal-inner">
+        <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:6px;">✈️ PAUSA PROGRAMMATA</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:14px;">Quando sei via?</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;">
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">PARTO IL</label>
+            <input id="pausa-inizio" class="inp" type="date" value="${esc(m.inizio || '')}" onchange="ST.pausaModal.inizio=this.value;"/>
+          </div>
+          <div style="flex:1;${m.aperta ? 'opacity:.45;' : ''}">
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">TORNO IL</label>
+            <input id="pausa-fine" class="inp" type="date" value="${esc(m.fine || '')}" ${m.aperta ? 'disabled' : ''} onchange="ST.pausaModal.fine=this.value;"/>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);font-family:var(--font-sans);margin-bottom:14px;cursor:pointer;">
+          <input id="pausa-aperta" type="checkbox" ${m.aperta ? 'checked' : ''} onchange="ST.pausaModal.aperta=this.checked;ST.pausaModal.inizio=document.getElementById('pausa-inizio').value;ST.pausaModal.fine=document.getElementById('pausa-fine').value;renderTraining();"/>
+          Non lo so ancora (la chiudo io al ritorno)
+        </label>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">PERCHÉ</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${PAUSA_MOTIVI.map(([v, l]) => chip(v, l)).join('')}</div>
+        <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">In quei giorni: niente debito di sedute, il blocco resta fermo dove sei, Pirsi non propone cambi all'allenamento. Al ritorno ti propongo il rientro graduale; se stai via più di tre settimane, anche un blocco nuovo.</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="salvaPausa()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salva la pausa</button>
+          <button onclick="chiudiPausa()" style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 async function saveWorkoutRecord(sessionId){
   if(!ST.user || ST.user.id==='test-user-001') return;
   const today = todayKey();
@@ -1805,7 +1992,9 @@ async function maybeProposeSoftReturn(sid){
     if(gap < SOFT_RETURN_MIN_DAYS) return;
     const sr = _srLoad();
     if(sr && sr.decidedFor === last) return; // scelta già presa per QUESTA pausa
-    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last };
+    const pz = getPausa();   // tornato da una pausa dichiarata: il banner lo dice (Training 350)
+    const daPausa = (pz && pz.finita && pz.giorniDalRientro <= 3) ? pz.giorniTotali : null;
+    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last, daPausa };
     if(ST.page === 'training' && ST.trainSession === sid) renderTraining();
   } catch(e){}
 }
@@ -1848,16 +2037,20 @@ function _softReturnRowText(exName){
   return `riduci di ~${pct}% il carico dell'ultima volta`;
 }
 
-function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor}){
+// Con `struttura:true` (Training 040) restituisce { testo, reps, resistance, bandColor, rir, via }: gli stessi
+// numeri del testo, per compilare il registro della serie dopo. Una regola sola per PROSSIMA e per
+// l'obiettivo della prima serie di oggi (obiettivoPrimaSerie), che è la «prossima» dopo l'ultima
+// serie della seduta precedente.
+function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor, struttura}){
   if(!exData || !sess) return '';
   if(sess.type === 'Recupero') return ''; // Active Recovery: nessuna progressione di carico
   const parsed = parseRepsRange(exData.reps);
   if(!parsed || parsed.min === parsed.max) return ''; // formato non gestito o valore singolo
   const repsMin = parsed.min, repsMax = parsed.max;
   const isTimed = parsed.kind === 'seconds';
-  // Esercizi unilaterali (parsed.perLato): ogni suggerimento mostra "per lato".
-  // Una riga sola → copre tutti i rami (elastici, corpo libero, isometrici).
-  const unitLbl = (isTimed ? 'sec' : 'reps') + (parsed.perLato ? ' per lato' : '');
+  // Esercizi per lato (prescrizione «per lato» o catalogo `unilaterale = si`, Training 280):
+  // ogni suggerimento mostra "per lato". Una riga sola → copre tutti i rami.
+  const unitLbl = (isTimed ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
   // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
   // elastici/corpo libero, isometrici) — override su sess.rir, Pump incluso.
@@ -1879,6 +2072,17 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
   const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
+  // fine(prossima, …parti): il testo come sempre e, con struttura, anche i numeri della prossima serie
+  const fine = (prossima, ...parts) => {
+    const testo = out(...parts);
+    if(!struttura) return testo;
+    return { testo, reps: prossima.reps, resistance: (prossima.resistance != null) ? prossima.resistance : null,
+      bandColor: prossima.bandColor || null, rir: targetRIR, via, setNum: nextSetNum };
+  };
+  // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
+  // coach non dice più «aumenta il carico» a chi un carico non ce l'ha, ma nomina la via scritta a
+  // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
+  const via = _exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico');
 
   if(isPullUpExercise(exName)){
     // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.
@@ -1894,23 +2098,23 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
-      if(targetRIR === 0) return out(bandTxt, `mantieni ${repsDone} reps`);
-      return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
+      if(targetRIR === 0) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `mantieni ${repsDone} reps`);
+      return fine({ bandColor: cur, reps: clampReps(repsDone - 1) }, bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
     }
     // 2) tetto + RIR ≥ target → un gradino più duro.
     //    Su Corpo libero (idx 0) non esiste niente di più duro: si sale di reps,
     //    oltre il tetto del range, perché la banda non è più una leva disponibile.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
-      if(curIdx === 0) return out(bandTxt, `sali a ${repsDone + 1} reps`);
-      return out(`${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
+      if(curIdx === 0) return fine({ bandColor: cur, reps: repsDone + 1 }, bandTxt, `sali a ${repsDone + 1} reps`);
+      return fine({ bandColor: harder || 'Gialla', reps: repsMin }, `${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
     }
     // 3) sotto range → un gradino più facile. Su Viola (ultimo idx) non esiste
     //    niente di più facile: si resta su Viola.
-    if(repsDone < repsMin) return out(`${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
+    if(repsDone < repsMin) return fine({ bandColor: easier || 'Viola', reps: repsMin }, `${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
     // 4) RIR > target (facile) → stesso gradino, alza reps verso il tetto
-    if(rirVal != null && rirVal > targetRIR) return out(bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
+    if(rirVal != null && rirVal > targetRIR) return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
     // 5) default (RIR = target o non riportato) → stesso gradino, +1 rep
-    return out(bandTxt, `${clampReps(repsDone + 1)} reps`);
+    return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `${clampReps(repsDone + 1)} reps`);
   }
 
   // Ramo ELASTICI / corpo libero — resistenza nell'unità dell'utente
@@ -1926,20 +2130,86 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
   //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
   if(rirVal === 0 && repsDone >= repsMin){
-    if(targetRIR === 0) return out(loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
-    return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+    if(targetRIR === 0) return fine({ resistance: resistInt, reps: repsDone }, loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
+    return fine({ resistance: resistInt, reps: clampReps(repsDone - step) }, loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
   }
-  // 2) tetto + RIR ≥ target → +1 step di carico (10 lbs / 2.5 kg), riparti da repsMin
-  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusStep), `riparti da ${repsMin} ${unitLbl}`);
+  // 2) tetto + RIR ≥ target → un passo avanti sulla via dell'esercizio (Training 320).
+  //    carico: +1 passo (10 lbs / 2.5 kg) e si riparte dal minimo. più ripetizioni / tenuta più lunga:
+  //    si sale oltre il tetto. ritmo più lento: stessa resistenza, discesa in 3 secondi (il tempo sotto
+  //    tensione cresce senza carico: Schoenfeld 2015, Wilk 2021), dal minimo. carico in mano: a corpo
+  //    libero si prende un peso (un passo), con un peso già in mano si sale di un passo. elastico più
+  //    duro: un passo in su. variante più difficile e meno assistenza: si nomina la via, dal minimo.
+  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
+    const dalMinimo = `riparti da ${repsMin} ${unitLbl}`;
+    switch(via){
+      case 'più ripetizioni':
+      case 'tenuta più lunga':        return fine({ resistance: resistInt, reps: repsDone + step }, loadTxt(resistInt), via, `sali a ${repsDone + step} ${unitLbl}`);
+      case 'ritmo più lento':         return fine({ resistance: resistInt, reps: repsMin }, loadTxt(resistInt), 'ritmo più lento: 3 sec in discesa', dalMinimo);
+      case 'variante più difficile':  return fine({ resistance: resistInt, reps: repsMin }, 'variante più difficile', dalMinimo);
+      case 'meno assistenza':         return fine({ resistance: resistInt, reps: repsMin }, 'meno assistenza', dalMinimo);
+      case 'carico in mano':          return fine({ resistance: resistInt > 0 ? plusStep : loadStep, reps: repsMin }, resistInt > 0 ? loadTxt(plusStep) : `carico in mano: ${loadStep} ${loadUnit}`, dalMinimo);
+      case 'elastico più duro':       return fine({ resistance: plusStep, reps: repsMin }, `elastico più duro: ${plusStep} ${loadUnit}`, dalMinimo);
+      default:                        return fine({ resistance: plusStep, reps: repsMin }, loadTxt(plusStep), dalMinimo);
+    }
+  }
   // 3) sotto range → -1 step di carico (o variante più facile se già a corpo libero)
   if(repsDone < repsMin){
-    if(resistInt <= 0) return out('variante più facile', `punta a ${repsMin} ${unitLbl}`);
-    return out(loadTxt(minusStep), `punta a ${repsMin} ${unitLbl}`);
+    if(resistInt <= 0) return fine({ resistance: 0, reps: repsMin }, 'variante più facile', `punta a ${repsMin} ${unitLbl}`);
+    return fine({ resistance: minusStep, reps: repsMin }, loadTxt(minusStep), `punta a ${repsMin} ${unitLbl}`);
   }
   // 4) RIR > target (facile) → stessa resistenza, alza verso il tetto
-  if(rirVal != null && rirVal > targetRIR) return out(loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
+  if(rirVal != null && rirVal > targetRIR) return fine({ resistance: resistInt, reps: clampReps(repsDone + step) }, loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
   // 5) default (RIR = target o non riportato) → stessa resistenza, +step
-  return out(loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
+  return fine({ resistance: resistInt, reps: clampReps(repsDone + step) }, loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
+}
+
+// ── L'obiettivo di oggi parte dall'ultima seduta (Training 040, 13 ottobre 2026) ──
+// La regola «sali quando arrivi in cima» valeva solo fra una serie e la successiva della stessa
+// seduta: alla prima serie l'app diceva solo «Ultima volta …». Ora la prima serie di oggi è la
+// «prossima» dopo l'ultima serie della seduta precedente (stessa regola, computeNextSetSuggestion con
+// setNum 0): stesso carico e una ripetizione in più, un passo avanti sulla via dell'esercizio se
+// l'ultima volta era in cima con margine, un passo indietro se era sotto il minimo. In settimana di
+// scarico e nel rientro graduale valgono le riduzioni delle righe SCARICO e RIENTRO (−20 lbs / −5 kg,
+// banda più facile; −20% o −35%), dal minimo delle ripetizioni.
+// → { testo, reps, resistance, bandColor, rir, via, nota: 'scarico' | 'rientro' | null } oppure null
+function obiettivoPrimaSerie(exName, sessionId){
+  const exData = findExercise(exName, sessionId);
+  const sess = getTrainingSession(sessionId);
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  if(!exData || !sess || !last) return null;
+  const parsed = parseRepsRange(exData.reps);
+  if(!parsed || parsed.min === parsed.max) return null;
+  const isPullUp = isPullUpExercise(exName);
+  const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
+    : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
+  const o = computeNextSetSuggestion({ sessionId, exName, setNum: 0, reps: last.reps,
+    resistance: isPullUp ? '' : last.resistance, rir: last.rir_actual, exData, sess, bandColor: lastBand, struttura: true });
+  if(!o) return null;
+  o.nota = null;
+  const unitKg = ST.profile && ST.profile.unit === 'kg';
+  const unitLbl = (parsed.kind === 'seconds' ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
+  const lastV = parseFloat(last.resistance) || 0;
+  const bandaFacile = () => lastBand ? BAND_COLORS[Math.min(BAND_COLORS.length - 1, BAND_COLORS.indexOf(lastBand) + 1)] : null;
+  const sr = getSoftReturn();
+  if(getCycleWeekInfo().isScarico){
+    o.nota = 'scarico'; o.reps = parsed.min;
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = Math.max(0, lastV - (unitKg ? 5 : 20));
+  } else if(sr){
+    o.nota = 'rientro'; o.reps = parsed.min;
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = lastV > 0 ? softReturnLoad(lastV) : 0;
+  }
+  if(o.nota){
+    const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
+      : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : 'corpo libero');
+    o.testo = `S1: ${carico} · ${o.reps} ${unitLbl} · RIR ${o.rir} (${o.nota})`;
+  }
+  return o;
+}
+// La prossima serie da compilare nel registro: per la prima serie di oggi l'obiettivo dall'ultima
+// seduta, per le altre la PROSSIMA calcolata al salvataggio della serie prima (ST.trainProssima).
+function _prossimaDaCompilare(exName, sessionId, primaSerie){
+  if(primaSerie) return obiettivoPrimaSerie(exName, sessionId);
+  return (ST.trainProssima && ST.trainProssima[`${sessionId}_${exName}`]) || null;
 }
 
 async function completeSession(sessionId){
@@ -1963,7 +2233,21 @@ async function saveTrainingSet(){
   if(!form) return;
   const repsEl = document.getElementById('tl-reps');
   const rirEl = document.getElementById('tl-rir');
-  const reps = parseInt(repsEl?.value)||0;
+  let reps = parseInt(repsEl?.value)||0;
+  // Per lato (Training 280): due numeri, destro e sinistro. In `reps` resta il lato più debole,
+  // perché è su quello che si misura la progressione (il lato forte non trascina l'altro);
+  // i due valori veri vanno in reps_dx e reps_sx.
+  const exDef0 = findExercise(form.exName, form.sessionId);
+  const parsed0 = (exDef0 && exDef0.reps) ? parseRepsRange(exDef0.reps) : null;
+  const perLato = !!(exDef0 && _exPerLato(exDef0, parsed0) && !(parsed0 && parsed0.kind === 'seconds') && !exDef0.isTimed);
+  const repsSxEl = perLato ? document.getElementById('tl-reps-sx') : null;
+  const repsSx = perLato ? (parseInt(repsSxEl?.value) || 0) : null;
+  const repsDx = perLato ? reps : null;
+  if(perLato){
+    if(!repsDx){ repsEl?.focus(); return; }
+    if(!repsSx){ repsSxEl?.focus(); return; }
+    reps = Math.min(repsDx, repsSx);
+  }
   // BLOCCO 3 — Trazioni: resistance NULL nel DB, band_color = colore scelto; ST.trainLoggedSets memorizza il colore
   // come stringa nel campo resistance (compat con getLastLoggedSetLabel + render badge).
   const isPullUp = isPullUpExercise(form.exName);
@@ -1991,6 +2275,7 @@ async function saveTrainingSet(){
     band_color: bandColor,
     rir_actual: rir,
   };
+  if(perLato){ riga.reps_dx = repsDx; riga.reps_sx = repsSx; }
   const esito = await scriviConCoda('salvare la serie', { tabella:'training_logs', tipo:'insert', righe:riga });
   ST.trainSaving = false;
   if(esito.error){ renderTraining(); return; }
@@ -2000,6 +2285,7 @@ async function saveTrainingSet(){
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id};
+  if(perLato){ ST.trainLoggedSets[key].repsDx = repsDx; ST.trainLoggedSets[key].repsSx = repsSx; }
   ST.trainLogDraft = null;
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
@@ -2038,6 +2324,7 @@ async function saveTrainingSet(){
     // Ultima serie dell'esercizio → niente rest countdown, niente "PROSSIMA"
     // inesistente.
     if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
+    if(ST.trainProssima) delete ST.trainProssima[sKey];
     loadTrainingHomeData();
 
     if(sessionComplete){
@@ -2092,8 +2379,11 @@ async function saveTrainingSet(){
   const sugg = computeNextSetSuggestion({
     sessionId: form.sessionId, exName: form.exName, setNum: form.setNum,
     reps, resistance, rir, exData, sess: sessObj, bandColor, // bandColor null per non-trazione
+    struttura: true,                                        // anche i numeri: compilano il registro della prossima (Training 040)
   });
-  if(sugg) ST.aiSuggestions[sKey] = sugg; else if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
+  ST.trainProssima = ST.trainProssima || {};
+  if(sugg){ ST.aiSuggestions[sKey] = sugg.testo; ST.trainProssima[sKey] = sugg; }
+  else { if(ST.aiSuggestions) delete ST.aiSuggestions[sKey]; delete ST.trainProssima[sKey]; }
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -2950,7 +3240,7 @@ function renderTraining(){
       const softReturnBanner = srPrompt ? `
         <div style="background:var(--s1);border:1px solid ${RIENTRO_BLU};border-radius:14px;padding:14px 16px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${RIENTRO_BLU};letter-spacing:.06em;margin-bottom:6px;">RIENTRO</div>
-          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Sei stato fermo ${srPrompt.gapDays} giorni — ripartiamo più leggeri?</div>
+          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">${srPrompt.daPausa ? `Bentornato: ${srPrompt.daPausa} giorni di pausa, ${srPrompt.gapDays} senza allenarti` : `Sei stato fermo ${srPrompt.gapDays} giorni`} — ripartiamo più leggeri?</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="softReturnAccept()" style="flex:1;min-width:150px;background:${RIENTRO_BLU};color:#fff;border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Rientro soft (consigliato)</button>
             <button onclick="softReturnDecline()" style="flex:1;min-width:120px;background:var(--s2);color:var(--t1);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Continua normale</button>
@@ -3001,7 +3291,8 @@ function renderTraining(){
             return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
               <span style="font-size:10px;color:var(--acc);font-weight:700;">S${sn}</span>
               <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
-              <span style="font-size:10px;color:var(--t3);">r</span>
+              <span style="font-size:10px;color:var(--t3);">${dr.repsSx != null ? 'dx' : 'r'}</span>
+              ${dr.repsSx != null ? `<input id="el-reps-sx" type="number" min="1" max="30" value="${dr.repsSx||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.repsSx=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;"><span style="font-size:10px;color:var(--t3);">sx</span>` : ''}
               <input id="el-resist" type="number" min="0" max="999" value="${dr.resistance||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="width:46px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
               <span style="font-size:9px;color:var(--t3);">${unitLbl}</span>
               <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:var(--acc);color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
@@ -3014,7 +3305,7 @@ function renderTraining(){
           const resistTxt = badgeResist
             ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
             : '';
-          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${d.reps}r${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
+          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
         }).join('');
         // GRAFICA L2 — pill VUOTE per le serie ancora da fare (S{n+1} … S{tot})
         const emptyBadges = (!allDone && e.sets > loggedKeys.length)
@@ -3033,16 +3324,7 @@ function renderTraining(){
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-              <div style="flex:1;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimed ? 'DURATA (sec)' : 'REPS'}</label>
-                ${_tlRepsSelect(isTimed, parsedReps)}
-              </div>
-              ${!isTimed ? `<div style="flex:1;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                ${_tlRirSelect()}
-              </div>` : ''}
-            </div>
+            ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps))}
             ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
               <div style="margin-bottom:6px;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
@@ -3440,7 +3722,7 @@ function renderTraining(){
         </div>
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">2</div>
-          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → aumenta il carico</div>
+          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → un passo avanti: il coach ti dice quale (carico, ritmo più lento, più ripetizioni, variante più difficile…)</div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">3</div>
@@ -3508,6 +3790,8 @@ function renderTraining(){
 
         ${_renderInjuryBar()}
 
+        ${_renderPausaBar()}
+
         ${giorniHTML}
 
         ${cicloHTML}
@@ -3531,6 +3815,7 @@ function renderTraining(){
               </div>
               <button onclick="openInjuryModal();" style="flex-shrink:0;background:var(--err);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
+            ${_renderPausaCard()}
           </div>
         </div>
 
@@ -3989,16 +4274,7 @@ function renderTraining(){
                 const nextSetM = formLO.setNum;
                 return `<div style="padding:12px 0 4px;">
                   <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
-                  <div style="display:flex;gap:8px;margin-bottom:10px;">
-                    <div style="flex:1;">
-                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimedM ? 'DURATA (sec)' : 'REPS'}</label>
-                      ${_tlRepsSelect(isTimedM, parsedRepsM)}
-                    </div>
-                    ${!isTimedM ? `<div style="flex:1;">
-                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                      ${_tlRirSelect()}
-                    </div>` : ''}
-                  </div>
+                  ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM))}
                   ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
                     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
                     <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
@@ -4108,6 +4384,7 @@ function renderTraining(){
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
           ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
           ${gifBlock}
+          ${!isTimed ? (()=>{ const s0 = getProgressionLive(ex2.exName, ex2.sessionId); return s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : ''; })() : ''}
           ${isTimed ? (ex2.timedReady ? `
             <div style="text-align:center;margin-top:18px;">
               ${ex2.perLato ? `<div style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;color:${ex2.isoPhase==='pause'?'#D97706':ex2.isoPhase==='B'?'var(--acc)':'var(--t2)'};">${ex2.isoPhase==='pause'?'CAMBIO POSIZIONE':ex2.isoPhase==='B'?'LATO DX':'LATO SX'}</div>` : ''}
@@ -4177,7 +4454,8 @@ function renderTraining(){
               : `<input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">`;
             return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
               <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
+              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':editD.repsSx != null ? 'dx' : 'reps'}">
+              ${editD.repsSx != null ? `<input id="elr-reps-sx" type="number" min="0" max="120" value="${editD.repsSx}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.repsSx=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="sx">` : ''}
               ${resistInput}
               <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
               <button onclick="confirmEditLogRow();" style="background:var(--acc);color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
@@ -4188,10 +4466,13 @@ function renderTraining(){
           const resistLabel = isPullUpEx
             ? (l.band_color ? bandLabel(l.band_color) : '')
             : (l.resistance ? l.resistance + ' lbs' : '');
-          const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${resistLabel?' · '+resistLabel:''}`;
+          // Per lato (Training 280): «8 dx · 7 sx» al posto del numero solo
+          const dueLati = (l.reps_dx != null && l.reps_sx != null);
+          const repsTxt = dueLati ? `${l.reps_dx} dx · ${l.reps_sx} sx` : `${l.reps} ${repsLbl}`;
+          const lblShort = `S${l.set_number} ${dueLati ? repsTxt : l.reps + repsLbl}${resistLabel?' · '+resistLabel:''}`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
             <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} ${repsLbl}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${repsTxt}</span>
             ${resistLabel?`<span style="font-size:12px;color:var(--t2);font-family:var(${isPullUpEx?'--font-sans':'--font-mono'});">${resistLabel}</span>`:''}
             ${l.rir_actual!=null?`<span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
             <button onclick="editLogRow('${l.id}');" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Modifica">✏️</button>
@@ -4329,7 +4610,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML;
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach
@@ -4777,7 +5058,7 @@ function openTrainExec(sessionId, exName, setNum){
   const _isTimed = _pr && _pr.kind === 'seconds';
   // Per isometrici: picker target, valore iniziale = repsMin (default 20 se non specificato).
   const _timedTarget = _isTimed ? (_pr.min || 20) : null;
-  ST.trainExecOpen = { sessionId, exName, codice: _exDef?.codice || null, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: !!(_pr && _pr.perLato), isoPhase: 'A' };
+  ST.trainExecOpen = { sessionId, exName, codice: _exDef?.codice || null, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: _isTimed ? _exPerLato(_exDef, _pr) : !!(_pr && _pr.perLato), isoPhase: 'A' };
   _unlockAudio();
   ensureRestGif(exName, _exDef?.codice || null);
   // GRAFICA L1 — Avvia cronometro TEMPO WORKOUT per questa serie
@@ -4850,9 +5131,13 @@ function trainExecBack(){
 // Una fonte sola per la card esercizio e la finestra di recupero: il valore scelto vive in
 // ST.trainLogDraft e torna selezionato a ogni ridisegno. Per gli esercizi a tempo la prima
 // tendina è la durata (stesso intervallo del picker di esecuzione: min-10 → max+15, passo 5).
-function _tlRepsSelect(isTimed, parsedReps){
+// Negli esercizi per lato (Training 280) le ripetizioni sono due: `lato` = 'sx' disegna la seconda
+// tendina (#tl-reps-sx, bozza `repsSx`); scegliere il destro riempie il sinistro se è ancora vuoto,
+// così quando i due lati sono uguali basta un tocco.
+function _tlRepsSelect(isTimed, parsedReps, lato){
   const d = ST.trainLogDraft || {};
-  const cur = d.reps != null ? String(d.reps) : '';
+  const sx = lato === 'sx';
+  const cur = sx ? (d.repsSx != null ? String(d.repsSx) : '') : (d.reps != null ? String(d.reps) : '');
   const opt = (v) => `<option value="${v}" ${String(v) === cur ? 'selected' : ''}>${v}</option>`;
   let opts = '';
   if(isTimed){
@@ -4862,10 +5147,32 @@ function _tlRepsSelect(isTimed, parsedReps){
   } else {
     for(let i = 0; i <= 30; i++) opts += opt(i);
   }
-  return `<select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);" onchange="ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{reps:this.value});">
+  const onchange = sx
+    ? "ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{repsSx:this.value});"
+    : "ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{reps:this.value});var _sx=document.getElementById('tl-reps-sx');if(_sx&&!_sx.value){_sx.value=this.value;ST.trainLogDraft.repsSx=this.value;}";
+  return `<select id="${sx ? 'tl-reps-sx' : 'tl-reps'}" class="picker-select" style="border:1.5px solid var(--acc);" onchange="${onchange}">
                   <option value="" disabled ${cur === '' ? 'selected' : ''}>—</option>
                   ${opts}
                 </select>`;
+}
+// La riga del registro: ripetizioni (o durata) e RIR; per lato, due tendine DX e SX (Training 280).
+function _tlRigaRepsRir(isTimed, parsedReps, perLato){
+  const lbl = (t) => `<label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${t}</label>`;
+  const dueLati = perLato && !isTimed;
+  return `<div style="display:flex;gap:8px;margin-bottom:10px;">
+              <div style="flex:1;">
+                ${lbl(isTimed ? 'DURATA (sec)' : dueLati ? 'REPS DX' : 'REPS')}
+                ${_tlRepsSelect(isTimed, parsedReps)}
+              </div>
+              ${dueLati ? `<div style="flex:1;">
+                ${lbl('REPS SX')}
+                ${_tlRepsSelect(isTimed, parsedReps, 'sx')}
+              </div>` : ''}
+              ${!isTimed ? `<div style="flex:1;">
+                ${lbl('RIR')}
+                ${_tlRirSelect()}
+              </div>` : ''}
+            </div>`;
 }
 function _tlRirSelect(){
   const d = ST.trainLogDraft || {};
@@ -4903,6 +5210,27 @@ function openLogModal(sessionId, exName, setNum, opts){
   // Bozza di ripetizioni e RIR (Training 020): le tendine si ridisegnano quando arrivano il
   // consiglio del coach o la GIF e quando il recupero finisce; senza bozza tornavano vuote.
   ST.trainLogDraft = { reps: (opts && opts.timedTarget) ? String(opts.timedTarget) : '', rir: '' };
+  // Per lato (Training 280): anche il lato sinistro, finché l'esercizio è a ripetizioni
+  const exPL = findExercise(exName, sessionId);
+  const prPL = (exPL && exPL.reps) ? parseRepsRange(exPL.reps) : null;
+  const dueLati = !!(exPL && _exPerLato(exPL, prPL) && !(prPL && prPL.kind === 'seconds') && !exPL.isTimed);
+  if(dueLati) ST.trainLogDraft.repsSx = '';
+  // Carico e ripetizioni già compilati (Training 040): alla prima serie l'obiettivo dall'ultima
+  // seduta, dopo la PROSSIMA appena calcolata. Il RIR resta da dire: è com'è andata, non un obiettivo.
+  // Per le tenute la durata l'ha già scelta il picker (opts.timedTarget).
+  const prossima = _prossimaDaCompilare(exName, sessionId, !lastKey);
+  if(prossima && !(opts && opts.timedTarget)){
+    if(isPullUpExercise(exName)){
+      if(prossima.bandColor && BAND_COLORS.includes(prossima.bandColor)) ST.trainLogBandColor = prossima.bandColor;
+    } else if(prossima.resistance != null){
+      const v = Math.round(Number(prossima.resistance) / 10) * 10;   // la tendina va di 10 in 10
+      if(RESIST_VALUES.includes(v)) ST.trainLogResist = v;
+    }
+    if(prossima.reps != null && prossima.reps > 0){
+      ST.trainLogDraft.reps = String(prossima.reps);
+      if(dueLati) ST.trainLogDraft.repsSx = String(prossima.reps);
+    }
+  }
   _unlockAudio();
   renderTraining();
   setTimeout(()=>{
@@ -4922,6 +5250,8 @@ function editLog(k){
   if(!d) return;
   ST.editLogKey = k;
   ST.editLogDraft = { reps: d.reps||'', resistance: d.resistance||'' };
+  // Per lato (Training 280): si correggono i due lati, non il minimo
+  if(d.repsDx != null && d.repsSx != null){ ST.editLogDraft.reps = d.repsDx; ST.editLogDraft.repsSx = d.repsSx; }
   renderTraining();
   setTimeout(()=>document.getElementById('el-reps')?.focus(), 50);
 }
@@ -4932,11 +5262,17 @@ function cancelEditLog(){
 }
 async function confirmEditLog(k){
   const repsEl = document.getElementById('el-reps');
+  const repsSxEl = document.getElementById('el-reps-sx');
   const resistEl = document.getElementById('el-resist');
-  const reps = parseInt(repsEl?.value) || 0;
+  let reps = parseInt(repsEl?.value) || 0;
   const resistance = (resistEl?.value || '').toString().trim();
   if(!reps){ repsEl?.focus(); return; }
   const prev = ST.trainLoggedSets[k] || {};
+  // Per lato (Training 280): due numeri, in `reps` il più debole
+  const perLato = !!repsSxEl;
+  const repsDx = perLato ? reps : null;
+  const repsSx = perLato ? (parseInt(repsSxEl.value) || 0) : null;
+  if(perLato){ if(!repsSx){ repsSxEl.focus(); return; } reps = Math.min(repsDx, repsSx); }
   // [sessionId, exName, setNum, date]
   const parts = k.split('_');
   const date = parts[parts.length-1];
@@ -4948,6 +5284,7 @@ async function confirmEditLog(k){
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
+  if(perLato){ ST.trainLoggedSets[k].repsDx = repsDx; ST.trainLoggedSets[k].repsSx = repsSx; }
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
     // Una scrittura sola su training_logs, con la coda unica (Fondamenta 080): per id se la
@@ -4956,8 +5293,9 @@ async function confirmEditLog(k){
     const filtri = setId
       ? [['id', setId], ['user_id', ST.user.id]]
       : [['user_id', ST.user.id], ['date', date], ['session_id', sessionId], ['exercise_name', exName], ['set_number', setNum]];
-    await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
-      righe:{ reps, resistance: isPullUp ? null : (resistance||null), band_color: bandColor }, filtri });
+    const righe = { reps, resistance: isPullUp ? null : (resistance||null), band_color: bandColor };
+    if(perLato){ righe.reps_dx = repsDx; righe.reps_sx = repsSx; }
+    await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update', righe, filtri });
   }
   ST.editLogKey = null;
   ST.editLogDraft = null;
@@ -5871,7 +6209,18 @@ function _giorniDaInizioBlocco(){
   if(!start) return null;
   const t = new Date(start + 'T00:00:00').getTime();
   if(!isFinite(t)) return null;
-  return Math.floor((Date.now() - t) / 86400000);
+  // I giorni di pausa programmata non contano: il blocco è fermo (Training 350)
+  const pausa = (typeof ZTQuadro !== 'undefined') ? ZTQuadro.pausaGiorniNel(ST.profile, start, todayKey()) : 0;
+  return Math.floor((Date.now() - t) / 86400000) - pausa;
+}
+// Dopo una pausa di più di tre settimane si propone il blocco nuovo (decisione di Ignazio, 13 ottobre
+// 2026): forza e massa reggono 2-3 settimane di stop, oltre conviene ripartire con un ciclo pulito.
+function _pausaLungaAppenaFinita(){
+  const pz = getPausa();
+  if(!pz || !pz.finita || !(pz.giorniTotali > PAUSA_BLOCCO_NUOVO_GIORNI)) return null;
+  if(pz.giorniDalRientro > PAUSA_RIENTRO_GIORNI) return null;
+  if(ST.profile && ST.profile.train_start_date && ST.profile.train_start_date > pz.fine) return null;   // un blocco nuovo è già partito
+  return pz;
 }
 
 // Il nome del blocco nei testi: un blocco dura 6 settimane (42 giorni), quindi copre due mesi e si chiama
@@ -5890,9 +6239,11 @@ function _nomeBlocco(inizioISO){
 function _renderBloccoNuovoCard(isScarico){
   if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
   const giorni = _giorniDaInizioBlocco();
-  if(!isScarico && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
+  const dopoPausa = _pausaLungaAppenaFinita();
+  if(!isScarico && !dopoPausa && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
   const titolo = _nomeBlocco();
-  const sotto = giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
+  const sotto = dopoPausa ? `rientro dopo ${dopoPausa.giorniTotali} giorni di pausa`
+    : giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
   const bn = ST.bloccoNuovo;
   // Un'anteprima già preparata (chiusa con «Non ora», la X o toccando fuori) non si perde: si riapre,
   // con le scelte «Cambia» fatte fin lì; «Rifalla da capo» la ricalcola.
@@ -5904,7 +6255,7 @@ function _renderBloccoNuovoCard(isScarico){
       <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">${esc(sotto).toUpperCase()}</div>
         <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${esc(titolo)}: ${esc(COACH_NAME)} lo prepara, tu decidi</div>
-        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${dopoPausa ? 'Dopo più di tre settimane fermo conviene ripartire con un blocco pulito invece di riprendere a metà. ' : ''}Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
         ${pulsanti}
       </div>`;
 }

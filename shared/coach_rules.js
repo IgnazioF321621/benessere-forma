@@ -254,7 +254,9 @@ var ZTCoachRules = (function(){
 
     // ══ 3. Allenamento ══
     var t1 = sett(1) && sett(1).training;
-    var senzaInfortunio = function(x){ return x && !x.injury_active && !(x.injury_days > 0); };
+    // Una settimana con infortunio o con giorni di pausa programmata (Training 350) non dice niente
+    // sul volume che la persona regge: non si propone «meno giorni» guardandola.
+    var senzaInfortunio = function(x){ return x && !x.injury_active && !(x.injury_days > 0) && !(x.pause_days > 0); };
     if(t && t1 && t.sessions_planned != null && t.sessions_planned > 3 && t1.sessions_planned != null &&
        t.sessions_done < t.sessions_planned && t1.sessions_done < t1.sessions_planned &&
        senzaInfortunio(t) && senzaInfortunio(t1) && !decisaDaPoco('training_volume', RAFFREDDAMENTO_SETT, true)){
