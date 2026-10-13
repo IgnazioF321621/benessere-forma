@@ -19,6 +19,7 @@ const APP_FILES = [
   'shared/coach_rules.js',
   'shared/quadro.js',
   'shared/ritratto.js',
+  'shared/fitdays.js',
   'app/body.js',
   'app/nutrition.js',
   'app/home.js',
