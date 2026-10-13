@@ -665,7 +665,11 @@ function getProgressionSuggestion(exName, sessionId){
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-    return `💡 Ultima volta: ${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    const ultima = `${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    // L'obiettivo di oggi parte dall'ultima seduta (Training 040): prima cosa fare, poi com'è andata
+    const o = obiettivoPrimaSerie(exName, sessionId);
+    if(o && o.testo) return `🎯 Oggi ${o.testo} · ultima volta ${ultima}`;
+    return `💡 Ultima volta: ${ultima}`;
   }
   // Nessuna serie loggata + nessuno storico → punto di partenza generico,
   // COERENTE col tipo di esercizio (B4 fix):
@@ -1902,7 +1906,11 @@ function _softReturnRowText(exName){
   return `riduci di ~${pct}% il carico dell'ultima volta`;
 }
 
-function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor}){
+// Con `struttura:true` (Training 040) restituisce { testo, reps, resistance, bandColor, rir, via }: gli stessi
+// numeri del testo, per compilare il registro della serie dopo. Una regola sola per PROSSIMA e per
+// l'obiettivo della prima serie di oggi (obiettivoPrimaSerie), che è la «prossima» dopo l'ultima
+// serie della seduta precedente.
+function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor, struttura}){
   if(!exData || !sess) return '';
   if(sess.type === 'Recupero') return ''; // Active Recovery: nessuna progressione di carico
   const parsed = parseRepsRange(exData.reps);
@@ -1933,6 +1941,13 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
   const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
+  // fine(prossima, …parti): il testo come sempre e, con struttura, anche i numeri della prossima serie
+  const fine = (prossima, ...parts) => {
+    const testo = out(...parts);
+    if(!struttura) return testo;
+    return { testo, reps: prossima.reps, resistance: (prossima.resistance != null) ? prossima.resistance : null,
+      bandColor: prossima.bandColor || null, rir: targetRIR, via, setNum: nextSetNum };
+  };
   // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
   // coach non dice più «aumenta il carico» a chi un carico non ce l'ha, ma nomina la via scritta a
   // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
@@ -1952,23 +1967,23 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
-      if(targetRIR === 0) return out(bandTxt, `mantieni ${repsDone} reps`);
-      return out(bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
+      if(targetRIR === 0) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `mantieni ${repsDone} reps`);
+      return fine({ bandColor: cur, reps: clampReps(repsDone - 1) }, bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
     }
     // 2) tetto + RIR ≥ target → un gradino più duro.
     //    Su Corpo libero (idx 0) non esiste niente di più duro: si sale di reps,
     //    oltre il tetto del range, perché la banda non è più una leva disponibile.
     if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
-      if(curIdx === 0) return out(bandTxt, `sali a ${repsDone + 1} reps`);
-      return out(`${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
+      if(curIdx === 0) return fine({ bandColor: cur, reps: repsDone + 1 }, bandTxt, `sali a ${repsDone + 1} reps`);
+      return fine({ bandColor: harder || 'Gialla', reps: repsMin }, `${harder ? bandPhrase(harder) : 'banda Gialla'} (più dura)`, `riparti da ${repsMin} reps`);
     }
     // 3) sotto range → un gradino più facile. Su Viola (ultimo idx) non esiste
     //    niente di più facile: si resta su Viola.
-    if(repsDone < repsMin) return out(`${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
+    if(repsDone < repsMin) return fine({ bandColor: easier || 'Viola', reps: repsMin }, `${bandPhrase(easier || 'Viola')} (più aiuto)`, `punta a ${repsMin} reps`);
     // 4) RIR > target (facile) → stesso gradino, alza reps verso il tetto
-    if(rirVal != null && rirVal > targetRIR) return out(bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
+    if(rirVal != null && rirVal > targetRIR) return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `sali a ${clampReps(repsDone + 1)} reps`);
     // 5) default (RIR = target o non riportato) → stesso gradino, +1 rep
-    return out(bandTxt, `${clampReps(repsDone + 1)} reps`);
+    return fine({ bandColor: cur, reps: clampReps(repsDone + 1) }, bandTxt, `${clampReps(repsDone + 1)} reps`);
   }
 
   // Ramo ELASTICI / corpo libero — resistenza nell'unità dell'utente
@@ -1984,8 +1999,8 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
   //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
   if(rirVal === 0 && repsDone >= repsMin){
-    if(targetRIR === 0) return out(loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
-    return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+    if(targetRIR === 0) return fine({ resistance: resistInt, reps: repsDone }, loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
+    return fine({ resistance: resistInt, reps: clampReps(repsDone - step) }, loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
   }
   // 2) tetto + RIR ≥ target → un passo avanti sulla via dell'esercizio (Training 320).
   //    carico: +1 passo (10 lbs / 2.5 kg) e si riparte dal minimo. più ripetizioni / tenuta più lunga:
@@ -1997,24 +2012,73 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     const dalMinimo = `riparti da ${repsMin} ${unitLbl}`;
     switch(via){
       case 'più ripetizioni':
-      case 'tenuta più lunga':        return out(loadTxt(resistInt), via, `sali a ${repsDone + step} ${unitLbl}`);
-      case 'ritmo più lento':         return out(loadTxt(resistInt), 'ritmo più lento: 3 sec in discesa', dalMinimo);
-      case 'variante più difficile':  return out('variante più difficile', dalMinimo);
-      case 'meno assistenza':         return out('meno assistenza', dalMinimo);
-      case 'carico in mano':          return out(resistInt > 0 ? loadTxt(plusStep) : `carico in mano: ${loadStep} ${loadUnit}`, dalMinimo);
-      case 'elastico più duro':       return out(`elastico più duro: ${plusStep} ${loadUnit}`, dalMinimo);
-      default:                        return out(loadTxt(plusStep), dalMinimo);
+      case 'tenuta più lunga':        return fine({ resistance: resistInt, reps: repsDone + step }, loadTxt(resistInt), via, `sali a ${repsDone + step} ${unitLbl}`);
+      case 'ritmo più lento':         return fine({ resistance: resistInt, reps: repsMin }, loadTxt(resistInt), 'ritmo più lento: 3 sec in discesa', dalMinimo);
+      case 'variante più difficile':  return fine({ resistance: resistInt, reps: repsMin }, 'variante più difficile', dalMinimo);
+      case 'meno assistenza':         return fine({ resistance: resistInt, reps: repsMin }, 'meno assistenza', dalMinimo);
+      case 'carico in mano':          return fine({ resistance: resistInt > 0 ? plusStep : loadStep, reps: repsMin }, resistInt > 0 ? loadTxt(plusStep) : `carico in mano: ${loadStep} ${loadUnit}`, dalMinimo);
+      case 'elastico più duro':       return fine({ resistance: plusStep, reps: repsMin }, `elastico più duro: ${plusStep} ${loadUnit}`, dalMinimo);
+      default:                        return fine({ resistance: plusStep, reps: repsMin }, loadTxt(plusStep), dalMinimo);
     }
   }
   // 3) sotto range → -1 step di carico (o variante più facile se già a corpo libero)
   if(repsDone < repsMin){
-    if(resistInt <= 0) return out('variante più facile', `punta a ${repsMin} ${unitLbl}`);
-    return out(loadTxt(minusStep), `punta a ${repsMin} ${unitLbl}`);
+    if(resistInt <= 0) return fine({ resistance: 0, reps: repsMin }, 'variante più facile', `punta a ${repsMin} ${unitLbl}`);
+    return fine({ resistance: minusStep, reps: repsMin }, loadTxt(minusStep), `punta a ${repsMin} ${unitLbl}`);
   }
   // 4) RIR > target (facile) → stessa resistenza, alza verso il tetto
-  if(rirVal != null && rirVal > targetRIR) return out(loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
+  if(rirVal != null && rirVal > targetRIR) return fine({ resistance: resistInt, reps: clampReps(repsDone + step) }, loadTxt(resistInt), `sali a ${clampReps(repsDone + step)} ${unitLbl}`);
   // 5) default (RIR = target o non riportato) → stessa resistenza, +step
-  return out(loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
+  return fine({ resistance: resistInt, reps: clampReps(repsDone + step) }, loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
+}
+
+// ── L'obiettivo di oggi parte dall'ultima seduta (Training 040, 13 ottobre 2026) ──
+// La regola «sali quando arrivi in cima» valeva solo fra una serie e la successiva della stessa
+// seduta: alla prima serie l'app diceva solo «Ultima volta …». Ora la prima serie di oggi è la
+// «prossima» dopo l'ultima serie della seduta precedente (stessa regola, computeNextSetSuggestion con
+// setNum 0): stesso carico e una ripetizione in più, un passo avanti sulla via dell'esercizio se
+// l'ultima volta era in cima con margine, un passo indietro se era sotto il minimo. In settimana di
+// scarico e nel rientro graduale valgono le riduzioni delle righe SCARICO e RIENTRO (−20 lbs / −5 kg,
+// banda più facile; −20% o −35%), dal minimo delle ripetizioni.
+// → { testo, reps, resistance, bandColor, rir, via, nota: 'scarico' | 'rientro' | null } oppure null
+function obiettivoPrimaSerie(exName, sessionId){
+  const exData = findExercise(exName, sessionId);
+  const sess = getTrainingSession(sessionId);
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  if(!exData || !sess || !last) return null;
+  const parsed = parseRepsRange(exData.reps);
+  if(!parsed || parsed.min === parsed.max) return null;
+  const isPullUp = isPullUpExercise(exName);
+  const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
+    : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
+  const o = computeNextSetSuggestion({ sessionId, exName, setNum: 0, reps: last.reps,
+    resistance: isPullUp ? '' : last.resistance, rir: last.rir_actual, exData, sess, bandColor: lastBand, struttura: true });
+  if(!o) return null;
+  o.nota = null;
+  const unitKg = ST.profile && ST.profile.unit === 'kg';
+  const unitLbl = (parsed.kind === 'seconds' ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
+  const lastV = parseFloat(last.resistance) || 0;
+  const bandaFacile = () => lastBand ? BAND_COLORS[Math.min(BAND_COLORS.length - 1, BAND_COLORS.indexOf(lastBand) + 1)] : null;
+  const sr = getSoftReturn();
+  if(getCycleWeekInfo().isScarico){
+    o.nota = 'scarico'; o.reps = parsed.min;
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = Math.max(0, lastV - (unitKg ? 5 : 20));
+  } else if(sr){
+    o.nota = 'rientro'; o.reps = parsed.min;
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = lastV > 0 ? softReturnLoad(lastV) : 0;
+  }
+  if(o.nota){
+    const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
+      : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : 'corpo libero');
+    o.testo = `S1: ${carico} · ${o.reps} ${unitLbl} · RIR ${o.rir} (${o.nota})`;
+  }
+  return o;
+}
+// La prossima serie da compilare nel registro: per la prima serie di oggi l'obiettivo dall'ultima
+// seduta, per le altre la PROSSIMA calcolata al salvataggio della serie prima (ST.trainProssima).
+function _prossimaDaCompilare(exName, sessionId, primaSerie){
+  if(primaSerie) return obiettivoPrimaSerie(exName, sessionId);
+  return (ST.trainProssima && ST.trainProssima[`${sessionId}_${exName}`]) || null;
 }
 
 async function completeSession(sessionId){
@@ -2129,6 +2193,7 @@ async function saveTrainingSet(){
     // Ultima serie dell'esercizio → niente rest countdown, niente "PROSSIMA"
     // inesistente.
     if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
+    if(ST.trainProssima) delete ST.trainProssima[sKey];
     loadTrainingHomeData();
 
     if(sessionComplete){
@@ -2183,8 +2248,11 @@ async function saveTrainingSet(){
   const sugg = computeNextSetSuggestion({
     sessionId: form.sessionId, exName: form.exName, setNum: form.setNum,
     reps, resistance, rir, exData, sess: sessObj, bandColor, // bandColor null per non-trazione
+    struttura: true,                                        // anche i numeri: compilano il registro della prossima (Training 040)
   });
-  if(sugg) ST.aiSuggestions[sKey] = sugg; else if(ST.aiSuggestions) delete ST.aiSuggestions[sKey];
+  ST.trainProssima = ST.trainProssima || {};
+  if(sugg){ ST.aiSuggestions[sKey] = sugg.testo; ST.trainProssima[sKey] = sugg; }
+  else { if(ST.aiSuggestions) delete ST.aiSuggestions[sKey]; delete ST.trainProssima[sKey]; }
   renderTraining();
   loadTrainingHomeData(); // aggiorna tile Home in background
 }
@@ -4179,6 +4247,7 @@ function renderTraining(){
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
           ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
           ${gifBlock}
+          ${!isTimed ? (()=>{ const s0 = getProgressionLive(ex2.exName, ex2.sessionId); return s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : ''; })() : ''}
           ${isTimed ? (ex2.timedReady ? `
             <div style="text-align:center;margin-top:18px;">
               ${ex2.perLato ? `<div style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;color:${ex2.isoPhase==='pause'?'#D97706':ex2.isoPhase==='B'?'var(--acc)':'var(--t2)'};">${ex2.isoPhase==='pause'?'CAMBIO POSIZIONE':ex2.isoPhase==='B'?'LATO DX':'LATO SX'}</div>` : ''}
@@ -5027,7 +5096,24 @@ function openLogModal(sessionId, exName, setNum, opts){
   // Per lato (Training 280): anche il lato sinistro, finché l'esercizio è a ripetizioni
   const exPL = findExercise(exName, sessionId);
   const prPL = (exPL && exPL.reps) ? parseRepsRange(exPL.reps) : null;
-  if(exPL && _exPerLato(exPL, prPL) && !(prPL && prPL.kind === 'seconds') && !exPL.isTimed) ST.trainLogDraft.repsSx = '';
+  const dueLati = !!(exPL && _exPerLato(exPL, prPL) && !(prPL && prPL.kind === 'seconds') && !exPL.isTimed);
+  if(dueLati) ST.trainLogDraft.repsSx = '';
+  // Carico e ripetizioni già compilati (Training 040): alla prima serie l'obiettivo dall'ultima
+  // seduta, dopo la PROSSIMA appena calcolata. Il RIR resta da dire: è com'è andata, non un obiettivo.
+  // Per le tenute la durata l'ha già scelta il picker (opts.timedTarget).
+  const prossima = _prossimaDaCompilare(exName, sessionId, !lastKey);
+  if(prossima && !(opts && opts.timedTarget)){
+    if(isPullUpExercise(exName)){
+      if(prossima.bandColor && BAND_COLORS.includes(prossima.bandColor)) ST.trainLogBandColor = prossima.bandColor;
+    } else if(prossima.resistance != null){
+      const v = Math.round(Number(prossima.resistance) / 10) * 10;   // la tendina va di 10 in 10
+      if(RESIST_VALUES.includes(v)) ST.trainLogResist = v;
+    }
+    if(prossima.reps != null && prossima.reps > 0){
+      ST.trainLogDraft.reps = String(prossima.reps);
+      if(dueLati) ST.trainLogDraft.repsSx = String(prossima.reps);
+    }
+  }
   _unlockAudio();
   renderTraining();
   setTimeout(()=>{

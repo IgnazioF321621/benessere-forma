@@ -128,8 +128,8 @@ async function nuovo(o){
   {
     const a = await nuovo();
     await a.win.loadLastLoggedSets('upperA');
-    atteso('280 · «Ultima volta» dice i due lati', a.win.getProgressionSuggestion('Squat calcio laterale', 'upperA'), '💡 Ultima volta: 9 dx · 7 sx · corpo libero · RIR 1');
-    atteso('280 · per la panca com\'era', a.win.getProgressionSuggestion('Panca elastico', 'upperA'), '💡 Ultima volta: 8r · 20 lbs · RIR 2');
+    atteso('280 · «ultima volta» dice i due lati (e l\'obiettivo di oggi, Training 040, giudica il lato debole: 7 è sotto il minimo)', a.win.getProgressionSuggestion('Squat calcio laterale', 'upperA'), '🎯 Oggi S1: variante più facile · punta a 8 reps per lato · RIR 2 · ultima volta 9 dx · 7 sx · corpo libero · RIR 1');
+    atteso('280 · per la panca com\'era, con l\'obiettivo davanti', a.win.getProgressionSuggestion('Panca elastico', 'upperA'), '🎯 Oggi S1: 20 lbs · 9 reps · RIR 2 · ultima volta 8r · 20 lbs · RIR 2');
     a.win.openDayDetail(IERI);
     await new Promise(r => setTimeout(r, 20));
     const giorno = testo(a.doc.body.innerHTML);
