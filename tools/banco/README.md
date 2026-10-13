@@ -56,6 +56,7 @@ node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch fint
 node tools/banco/prova_ritratto.js        # ritratto unico: il modulo da solo, poi le chiamate del coach nell'app vera (Pirsi 020)
 node tools/banco/prova_pirsi_voce.js      # Pirsi 040: una sola identità e un solo registro (ZTCoachRules.voce), attrezzi dal profilo nel ritratto, Home senza «a digiuno», Worker con la stessa voce
 node tools/banco/prova_pirsi_annuncio.js  # Pirsi 050: l'annuncio del piano sa se è il primo, se i numeri restano o cambiano (di quanto e perché); ripiego per caso; il postino passa il contesto
+node tools/banco/prova_pirsi_accetto_pasti.js  # Pirsi 060: dopo «Accetto» su calorie o proteine, «Rifaccio pranzi e cene?»: pasti rifatti coi numeri nuovi, ripristino se il coach tace, avviso vero senza piano o con «Lascia così»
 node tools/banco/prova_porta_coach.js    # callAI manda il token della persona; senza sessione non chiama (Pirsi 010)
 node worker/test/prova_porta_coach.mjs   # la porta dei testi del Worker: token, sito, tetti, 404, limite per persona (Pirsi 010)
 ```

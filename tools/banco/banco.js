@@ -75,6 +75,16 @@ function makeSupaMock(tables){
         righe.forEach(r => t.push({ id:'fake-' + t.length, ...r }));
         return Promise.resolve({ data: righe.map(r => ({ id:'fake-id', ...r })), error:null });
       }
+      if(st.op === 'delete'){
+        // delete vero in memoria (dal 13 ottobre 2026, Pirsi 060): le righe che passano i filtri eq escono dalla
+        // tabella, sul posto, cosi' una lettura dopo non le trova piu' (prima restavano, e un controllo
+        // «nessun pasto gia' presente» dopo un delete falliva solo nel banco: lezione L39)
+        const t = tables[table] || [];
+        const eqs = st.filters.filter(f => f[0] === 'eq' && !String(f[1]).includes('.'));
+        const via = t.filter(r => eqs.every(([, c, v]) => String(r[c]) === String(v)));
+        via.forEach(r => t.splice(t.indexOf(r), 1));
+        return Promise.resolve({ data: via, error:null });
+      }
       if(st.op !== 'select'){ return Promise.resolve({ data:[{id:'fake-id'}], error:null }); }
       // Join come PostgREST: select('..., meals!inner(date)') porta con se' la riga del pasto
       // (rows[i].meals = {date}) e scarta le righe senza pasto; i filtri 'meals.date' guardano li'.

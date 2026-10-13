@@ -3836,10 +3836,16 @@ const _PIANOV4_POSTINO_FALLBACK_REASONING =
 // che toccano calorie o proteine, e il ritmo del peso dal quadro della settimana che si chiude.
 const _ANNUNCIO_PROPOSTE_GIORNI = 14;
 function _pianoV4TargetsDaPiano(r){ return { kcal:r.target_kcal, protein:r.target_protein, carbs:r.target_carbs, fat:r.target_fat }; }
-async function _pianoV4ContestoAnnuncio(weekStart, targets) {
+// base (facoltativa): i target con cui confrontare, al posto dell'ultimo piano letto dal database
+// (Pirsi 060: quando si rifanno i pasti di un piano, il «prima» sono i numeri vecchi di quel piano).
+async function _pianoV4ContestoAnnuncio(weekStart, targets, base) {
   const ctx = { caso:'primo', precedente:null, diff:null, proposte:[], peso:null };
   try {
-    if (weekStart && ST.user && ST.user.id) {
+    if (base && base.kcal != null) {
+      ctx.precedente = { kcal:base.kcal, protein:base.protein, carbs:base.carbs, fat:base.fat, week_start:weekStart || null };
+      ctx.diff = _pianoV4WelcomeComputeDiff({ target_kcal:targets.kcal, target_protein:targets.protein, target_carbs:targets.carbs, target_fat:targets.fat }, ctx.precedente);
+      ctx.caso = ctx.diff.anyDiff ? 'cambiati' : 'invariati';
+    } else if (weekStart && ST.user && ST.user.id) {
       // Niente «minore di» nel filtro: si leggono gli ultimi piani e si sceglie qui il primo prima di questa settimana
       const r = await dbq('leggere i piani delle settimane prima', supa.from('weekly_plans')
         .select('week_start, target_kcal, target_protein, target_carbs, target_fat')
