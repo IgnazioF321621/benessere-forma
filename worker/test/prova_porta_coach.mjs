@@ -4,7 +4,7 @@
 // sconosciuti danno 404, ogni persona ha un limite al minuto, e gli errori
 // non portano fuori dettagli interni.
 //   node worker/test/prova_porta_coach.mjs
-import worker from '../src/index.js';
+import worker, { _impostaTempoMaxGroq } from '../src/index.js';
 import { _azzeraPorta } from '../src/porta.js';
 
 const SITO = 'https://ignaziof321621.github.io';
@@ -158,5 +158,21 @@ atteso('GIF · nome senza match, invariato', [r.status, r.json.status], [200, 'm
 r = await chiama({ path: '/exercise-media?name=x', method: 'GET', token: null, origin: 'https://sito-altrui.example' });
 atteso('GIF · altro sito 403', r.status, 403);
 
+// Pirsi 090: Groq resta appeso → 504 kind 'timeout' entro il tempo massimo, niente dettagli interni.
+{
+  scenario();
+  const fetchBase = globalThis.fetch;
+  globalThis.fetch = (url, init = {}) => String(url).includes('api.groq.com')
+    ? new Promise((_, rej) => init.signal.addEventListener('abort', () => rej(init.signal.reason)))
+    : fetchBase(url, init);
+  _impostaTempoMaxGroq(40);
+  const t0 = Date.now();
+  const vivo = setInterval(() => {}, 20);   // il timer di AbortSignal.timeout non tiene vivo Node: questo sì
+  const r = await chiama();
+  clearInterval(vivo);
+  _impostaTempoMaxGroq(60_000);
+  atteso('groq appeso · 504 timeout entro il tempo massimo', [r.status, r.json && r.json.error.kind, r.json && r.json.error.source, Date.now() - t0 < 2000], [504, 'timeout', 'worker', true]);
+  atteso('groq appeso · il messaggio dice i secondi, niente stack', [r.json && r.json.error.message, /stack|Error:/.test(r.testo)], ['Il coach non ha risposto entro 0 secondi', false]);
+}
 console.log(ko ? `\n${ko} KO` : '\ntutto OK');
 process.exit(ko ? 1 : 0);

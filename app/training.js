@@ -1287,17 +1287,9 @@ async function ensureRestCue(exName, sessionId) {
   const eqSessione = (ST.exerciseAIOpen?.exName === exName ? ST.exerciseAIOpen?.eq : null)
     || (ST.trainExecOpen?.exName === exName ? ST.trainExecOpen?.eq : null)
     || '';
-  const prompt = buildCoachPrompt(exName, sessionId, eqSessione);
-  try {
-    const text = await callAI(prompt, 200);
-    const content = (text || '').trim()
-      .replace(/^["'`]|["'`]$/g, '')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-    ST.aiCue[key] = content || '<em style="color:var(--t3);">(nessun cue disponibile)</em>';
-  } catch(e) {
-    ST.aiCue[key] = '<em style="color:#B84C2A;">' + cueErrMsg(e.aiKind) + '</em>';
-  }
+  // Pirsi 090: il cue pulito arriva da cuePer (app/pirsi.js); un errore non si tiene in ST.aiCue,
+  // sta in ST.aiCueErrori e si riprova alla prossima apertura.
+  await cuePer(exName, sessionId, eqSessione);
   // Re-render solo se l'utente e' ancora sul modal di recupero per QUESTO esercizio
   if (ST.page === 'training' && ST.trainCountdown && ST.trainCountdown.exName === exName) {
     renderTraining();
@@ -3900,7 +3892,8 @@ function renderTraining(){
       const ex = findExercise(cd.exName, cd.sessionId);
       const cueKey = `${cd.sessionId}_${cd.exName}`;
       const cueContent = ST.aiCue[cueKey];
-      const cueLoading = !cueContent;
+      const cueErrore = !cueContent && ST.aiCueErrori && ST.aiCueErrori[cueKey] ? ST.aiCueErrori[cueKey].msg : null;
+      const cueLoading = !cueContent && !cueErrore;
 
       // Color shift ultimi 10 sec — preservato dal vecchio comportamento.
       // Base: var(--acc) #2A7A6F (42,122,111). Vira verso terracotta (184,76,42) negli ultimi 10s.
@@ -4045,7 +4038,9 @@ function renderTraining(){
               <div class="rest-coach-card-eyebrow">🤖 Coach</div>
               ${cueLoading
                 ? `<div class="rest-coach-card-loading">Genero un cue avanzato per te…</div>`
-                : `<div class="rest-coach-card-content">${String(cueContent || '').replace(/\n/g, '<br>')}</div>`
+                : cueErrore
+                  ? `<div class="rest-coach-card-content"><em style="color:#B84C2A;">${esc(cueErrore)}</em></div>`
+                  : `<div class="rest-coach-card-content">${String(cueContent || '').replace(/\n/g, '<br>')}</div>`
               }
             </div>
 
@@ -4403,32 +4398,12 @@ async function openExerciseAI(exName, sessionId) {
     renderTraining();
   });
 
-  const cacheKey = `${sessionId}_${exName}`;
-
-  // Fast-path: cue gia in cache (es. da rest modal precedente o riapertura)
-  if (ST.aiCue[cacheKey]) {
-    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: ST.aiCue[cacheKey], loading: false };
-    renderTraining();
-    return;
-  }
-
+  // Pirsi 090: cue pulito e condiviso col recupero (cuePer in app/pirsi.js); se in memoria o salvato
+  // sul telefono arriva subito, un errore si mostra ma non si tiene e la riapertura riprova.
   const eqSessione = ST.exerciseAIOpen?.eq || '';
-  const prompt = buildCoachPrompt(exName, sessionId, eqSessione);
-
-  try {
-    const text = await callAI(prompt, 200);
-    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    const content = (text || '').trim()
-      .replace(/^["'`]|["'`]$/g, '')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n/g, '<br>');
-    ST.aiCue[cacheKey] = content;  // cache per riuso (rest modal, riapertura)
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content, loading: false };
-  } catch(e) {
-    if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
-    ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: cueErrMsg(e.aiKind), loading: false };
-  }
+  const r = await cuePer(exName, sessionId, eqSessione);
+  if (!ST.exerciseAIOpen || ST.exerciseAIOpen.exName !== exName) return;
+  ST.exerciseAIOpen = { ...ST.exerciseAIOpen, content: r.html || esc(r.errore || ''), loading: false, errore: !r.html };
   renderTraining();
 }
 

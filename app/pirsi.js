@@ -32,6 +32,7 @@ function aiErrMsg(kind) {
   if (kind === 'auth' || kind === 'model-unavailable') return 'C\'è un problema di configurazione del servizio: riprovare non serve.';
   if (kind === 'network') return 'Connessione assente, controlla la rete.';
   if (kind === 'session') return 'Sessione scaduta: esci, rientra e riprova.';
+  if (kind === 'timeout') return 'Ci ho messo troppo: riprova.';
   return 'Riprova tra poco.';
 }
 
@@ -43,9 +44,16 @@ function cueErrMsg(kind) {
   if (kind === 'auth' || kind === 'model-unavailable') return 'Cue non disponibile — servizio non configurato.';
   if (kind === 'network') return 'Cue non disponibile — connessione assente.';
   if (kind === 'session') return 'Cue non disponibile — sessione scaduta: esci e rientra.';
+  if (kind === 'timeout') return 'Cue non disponibile — ci ho messo troppo, riprova.';
   return 'Cue non disponibile — riprova tra poco.';
 }
 
+// Tempo massimo alle risposte di testo (Pirsi 090, 13 ottobre 2026): prima il pulsante girava
+// all'infinito se il servizio restava appeso (la lettura foto il suo tempo ce l'aveva già).
+// 'lungo' per i 14 pasti (budget ≥ 2000 token), 'breve' per tutto il resto. Scaduto il tempo
+// l'errore è 'timeout': «Ci ho messo troppo: riprova». Un oggetto e non due costanti, così
+// il banco lo accorcia senza riscrivere la funzione.
+const AI_TEMPO_MAX_MS = { breve: 40000, lungo: 90000 };
 async function callAI(prompt, maxTokens=400) {
   // Il Worker risponde solo a chi ha una sessione valida (Pirsi 010): il token di
   // accesso viaggia nell'intestazione, come per la lettura delle foto dei check.
@@ -55,13 +63,19 @@ async function callAI(prompt, maxTokens=400) {
     token = res && res.data && res.data.session && res.data.session.access_token;
   } catch (_) {}
   if (!token) throw _aiError('session', 'Sessione assente');
+  const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  const tempo = maxTokens >= 2000 ? AI_TEMPO_MAX_MS.lungo : AI_TEMPO_MAX_MS.breve;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), tempo) : null;
   let r;
   try {
-    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
+    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens}), signal: ctrl ? ctrl.signal : undefined});
   } catch (e) {
+    if (timer) clearTimeout(timer);
+    if (ctrl && ctrl.signal.aborted) throw _aiError('timeout', 'Il coach non ha risposto in tempo', e);
     // fetch lancia solo se la richiesta non parte: qui la rete manca sul serio.
     throw _aiError('network', 'Rete non raggiungibile', e);
   }
+  if (timer) clearTimeout(timer);
   if (!r.ok) {
     // Il Worker manda {error:{source,kind,status,code,message}}. Se il body e'
     // illeggibile o non ha quella forma si ripiega su 'generic': gestire il
@@ -77,6 +91,66 @@ async function callAI(prompt, maxTokens=400) {
   }
   const d = await r.json();
   return d.content?.[0]?.text || '';
+}
+// ── I cue tecnici: puliti, tenuti se buoni, mai tenuti se sbagliati (Pirsi 090, 13 ottobre 2026) ──
+// Prima: il messaggio d'errore finiva in ST.aiCue al posto del cue e non si riprovava più fino al
+// ricaricamento; i cue buoni vivevano solo in memoria e ogni seduta li rigenerava; il testo del
+// modello entrava nella pagina senza pulizia. Ora: cuePer(...) è l'unica porta (recupero e foglio
+// dell'esercizio): esc() prima di tutto, poi solo grassetto e a capo; il cue buono si salva sul
+// telefono per CUE_GIORNI (zt_cue_<utente>); l'errore sta in ST.aiCueErrori e si riprova alla
+// prossima richiesta, non prima di CUE_RIPROVA_MS.
+const CUE_GIORNI = 30;
+const CUE_RIPROVA_MS = 15000;
+const CUE_MAX_SALVATI = 200;
+function cuePulito(text) {
+  return esc(String(text || '').trim().replace(/^["'`]|["'`]$/g, ''))
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+function _cueChiave() { return 'zt_cue_' + ((ST.user && ST.user.id) || 'anon'); }
+function _cueLeggiTutti() { try { return JSON.parse(localStorage.getItem(_cueChiave()) || '{}') || {}; } catch (e) { return {}; } }
+function cueSalvato(key) {
+  const v = _cueLeggiTutti()[key];
+  return (v && v.t && (Date.now() - (v.at || 0)) < CUE_GIORNI * 86400000) ? v.t : null;
+}
+function cueSalva(key, html) {
+  try {
+    const m = _cueLeggiTutti();
+    m[key] = { t: html, at: Date.now() };
+    const chiavi = Object.keys(m).sort((a, b) => (m[a].at || 0) - (m[b].at || 0));
+    while (chiavi.length > CUE_MAX_SALVATI) delete m[chiavi.shift()];
+    localStorage.setItem(_cueChiave(), JSON.stringify(m));
+  } catch (e) {}
+}
+// → { html, errore:null } oppure { html:null, errore:'messaggio' }. Mai throw. Una chiamata alla volta per chiave.
+async function cuePer(exName, sessionId, eq) {
+  const key = `${sessionId}_${exName}`;
+  if (ST.aiCue[key]) return { html: ST.aiCue[key], errore: null };
+  const salvato = cueSalvato(key);
+  if (salvato) { ST.aiCue[key] = salvato; return { html: salvato, errore: null }; }
+  ST.aiCueErrori = ST.aiCueErrori || {};
+  ST.aiCueInCorso = ST.aiCueInCorso || {};
+  const ultimo = ST.aiCueErrori[key];
+  if (ultimo && Date.now() - ultimo.at < CUE_RIPROVA_MS) return { html: null, errore: ultimo.msg };
+  if (ST.aiCueInCorso[key]) return ST.aiCueInCorso[key];
+  const p = (async () => {
+    try {
+      const html = cuePulito(await callAI(buildCoachPrompt(exName, sessionId, eq || ''), 200));
+      if (!html) throw _aiError('empty-response', 'Cue vuoto');
+      ST.aiCue[key] = html;
+      cueSalva(key, html);
+      delete ST.aiCueErrori[key];
+      return { html, errore: null };
+    } catch (e) {
+      const msg = cueErrMsg(e && e.aiKind);
+      ST.aiCueErrori[key] = { at: Date.now(), msg, kind: (e && e.aiKind) || 'generic' };
+      return { html: null, errore: msg };
+    } finally {
+      delete ST.aiCueInCorso[key];
+    }
+  })();
+  ST.aiCueInCorso[key] = p;
+  return p;
 }
 // fetchExerciseMedia — query Worker per cache/lookup GIF esecuzione esercizio.
 // Ritorna {status, cached_url?, is_surrogate?, surrogate_note?, ...} oppure
