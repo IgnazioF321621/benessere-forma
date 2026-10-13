@@ -751,7 +751,7 @@ async function loadActiveScheda() {
     try {
       const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome, unilaterale, progressione')
+        .select('codice, nome, unilaterale, progressione, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio')
         .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
@@ -770,7 +770,30 @@ async function loadActiveScheda() {
         });
         ST.catalogNomeByCodice = nomeByCodice;           // riusata dagli alias nome↔codice
         ST.catalogInfoByCodice = infoByCodice;
-        const remapEx = (ex) => {
+        // Anche i TESTI (13 ottobre 2026): setup, esecuzione, errori, muscoli e nota di sicurezza nel
+        // jsonb sono una fotografia della generazione; una correzione del catalogo (EX647, lo stesso
+        // giorno) non arrivava mai alla scheda in uso. Qui si riscrivono in memoria con la stessa
+        // funzione del generatore (_trainGenTestiEsercizio), così il risultato è quello di una scheda
+        // rigenerata oggi. Campo vuoto a catalogo → resta lo snapshot. Nessuna scrittura su schede_utente.
+        const rigaByCodice = new Map();
+        catRows.forEach(r => { if (r && r.codice) rigaByCodice.set(r.codice, _trainGenPulisciRiga({ ...r })); });
+        // La cautela (adattamento) entra nell'alert solo se le limitazioni della persona toccano le
+        // zone a rischio dell'esercizio: la stessa regola di _trainGenApplyCautions.
+        const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [])
+          .map(l => String(l).toLowerCase().trim()).filter(Boolean));
+        const cautela = (riga) => {
+          const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+          return (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
+        };
+        const remapTesti = (ex, riga, conAlert) => {
+          const t = _trainGenTestiEsercizio(riga, { isSurrogato: !!ex.isSurrogato, cautionNote: cautela(riga) });
+          if (t.setup.length)        ex.setup = t.setup;
+          if (t.execution.length)    ex.execution = t.execution;
+          if (t.commonErrors.length) ex.commonErrors = t.commonErrors;
+          if (t.muscles.length)      ex.muscles = t.muscles;
+          if (conAlert && t.alert)   ex.alert = t.alert;
+        };
+        const remapEx = (ex, conAlert) => {
           if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
           const nome = nomeByCodice.get(ex.codice);
           if (nome == null) {                            // codice non a catalogo → tieni snapshot
@@ -784,13 +807,17 @@ async function loadActiveScheda() {
             if (!ex.nameSnapshot) ex.nameSnapshot = ex.name;
             ex.name = nome;                              // riallinea al nome attuale
           }
+          const riga = rigaByCodice.get(ex.codice);
+          if (riga) remapTesti(ex, riga, conAlert);
         };
+        // Riscaldamento e carry non hanno l'alert nel loro formato (_trainGenMapWarmupExercise,
+        // _trainGenMapCarryExercise): per loro si riallineano solo i quattro elenchi.
         sessioniArr.forEach(s => {
           if (!s) return;
-          if (Array.isArray(s.warmup)) s.warmup.forEach(remapEx);
-          if (Array.isArray(s.exercises)) s.exercises.forEach(remapEx);
-          if (s.carry_conclusivo) remapEx(s.carry_conclusivo);
-          if (s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(remapEx);
+          if (Array.isArray(s.warmup)) s.warmup.forEach(ex => remapEx(ex, false));
+          if (Array.isArray(s.exercises)) s.exercises.forEach(ex => remapEx(ex, true));
+          if (s.carry_conclusivo) remapEx(s.carry_conclusivo, false);
+          if (s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(ex => remapEx(ex, true));
         });
       }
     } catch (e) {
@@ -1825,10 +1852,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       }
       catalog = data || [];
       // Pulizia automatica testi (accenti, "anche:", maiuscola) — una volta sola
-      const _txtFields = ['adattamento','nota_sicurezza','setup','esecuzione','errori','nota_surrogato'];
-      catalog.forEach(ex => {
-        _txtFields.forEach(f => { if(ex[f]) ex[f] = _cleanCatalogText(ex[f]); });
-      });
+      catalog.forEach(_trainGenPulisciRiga);
     } catch (e) {
       console.warn('[train-gen] eccezione caricamento catalogo:', e);
       return null;
@@ -3479,6 +3503,37 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap, ammissibili)
   return output;
 }
 
+// I TESTI dell'esercizio dalla riga di catalogo (setup, esecuzione, errori, muscoli, alert): una funzione
+// sola, usata dal generatore quando crea l'oggetto e da loadActiveScheda quando riallinea in memoria
+// una scheda già salvata (13 ottobre 2026: il jsonb congelava i testi alla generazione, e una
+// correzione del catalogo non arrivava mai alle schede in uso). Stesso formato: elenchi spezzati sui
+// «;», col surrogato la nota_surrogato al posto del setup, alert = nota_sicurezza · cautionNote
+// (l'adattamento, se le limitazioni della persona toccano le zone a rischio). Testi vuoti → campi vuoti.
+function _trainGenTestiEsercizio(cat, opts) {
+  const o = opts || {};
+  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  const notaSurrogato = (o.isSurrogato && cat.nota_surrogato) ? String(cat.nota_surrogato).trim() : '';
+  const notaSicurezza = String(cat.nota_sicurezza || '').trim();
+  const cautionNote = o.cautionNote ? String(o.cautionNote).trim() : '';
+  const alertParts = [];
+  if (notaSicurezza) alertParts.push(notaSicurezza);
+  if (cautionNote)   alertParts.push(cautionNote);
+  return {
+    setup:        (o.isSurrogato && notaSurrogato) ? splitField(notaSurrogato) : splitField(cat.setup),
+    execution:    splitField(cat.esecuzione),
+    commonErrors: splitField(cat.errori),
+    muscles:      splitField(cat.muscoli),
+    alert:        alertParts.length ? alertParts.join(' · ') : null,
+  };
+}
+// La pulizia dei testi del catalogo (accenti, «anche:», maiuscola) che il generatore fa una volta sola
+// dopo la lettura: la stessa per il riallineamento.
+const _TRAIN_GEN_TXT_FIELDS = ['adattamento','nota_sicurezza','setup','esecuzione','errori','nota_surrogato'];
+function _trainGenPulisciRiga(ex) {
+  _TRAIN_GEN_TXT_FIELDS.forEach(f => { if (ex && ex[f]) ex[f] = _cleanCatalogText(ex[f]); });
+  return ex;
+}
+
 function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, tipoAllen, attrezzaturaSet) {
   // Mapping al formato TRAINING_SESSIONS:
   //   sessione top-level: { id, name, type, rir, label, rest, exercises[],
@@ -3506,23 +3561,11 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
   const exercises = (wrappers || []).map(w => {
     const cat = w.ex;
     const isSurrogato = !!cat._surrogato;
-    const cautionNote = w.cautionNote ? String(w.cautionNote).trim() : '';
-    const notaSicurezza = String(cat.nota_sicurezza || '').trim();
-    // Nota surrogato: propagata SOLO se l'esercizio è stato matchato come
-    // surrogato da _trainGenFilterPool (flag _surrogato sul wrapper).
-    // Spiega all'utente "come farlo a casa" con gli attrezzi che ha.
-    // (29 mag) NON va più nell'alert né in un campo separato: SOSTITUISCE il
-    // setup nativo (vedi sotto), così non compare duplicata.
-    const notaSurrogato = (isSurrogato && cat.nota_surrogato)
-      ? String(cat.nota_surrogato).trim() : '';
-
-    // Alert combinato (separatore ' · '):
-    //   nota_sicurezza intrinseca + cautionNote (se cautele zone_rischio).
-    // Vuoti omessi. Se tutti vuoti → alert omesso dal JSON.
-    const alertParts = [];
-    if (notaSicurezza) alertParts.push(notaSicurezza);
-    if (cautionNote)   alertParts.push(cautionNote);
-    const alert = alertParts.length ? alertParts.join(' · ') : null;
+    // Testi dalla riga di catalogo (_trainGenTestiEsercizio): col surrogato (flag _surrogato dal pool)
+    // la nota_surrogato SOSTITUISCE il setup nativo (29 mag: non va più nell'alert); alert =
+    // nota_sicurezza · cautionNote (se cautele zone_rischio), omesso se vuoto.
+    const testi = _trainGenTestiEsercizio(cat, { isSurrogato, cautionNote: w.cautionNote });
+    const alert = testi.alert;
 
     // Regola B (28 mag) + Fix 1 (29 mag): parametri PER-ESERCIZIO (compound vs
     // iso vs iso_isometrico), non più unici di sessione. Compound 4 serie, iso 3.
@@ -3550,12 +3593,10 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
       // eq mostrato nella card Training: UN solo attrezzo scelto da _trainGenPickEq
       // in base all'ambiente e alla dotazione utente (no più lista grezza del catalogo).
       eq: _trainGenPickEq(cat, isSurrogato, tipoAllen || 'casa', attrezzaturaSet || new Set(), !!iso),
-      // Surrogato: la nota_surrogato SOSTITUISCE il setup nativo (il setup del
-      // catalogo descrive la versione palestra → fuorviante per chi usa l'elastico).
-      setup:        (isSurrogato && notaSurrogato) ? splitField(notaSurrogato) : splitField(cat.setup),
-      execution:    splitField(cat.esecuzione),
-      commonErrors: splitField(cat.errori),
-      muscles:      splitField(cat.muscoli),
+      setup:        testi.setup,
+      execution:    testi.execution,
+      commonErrors: testi.commonErrors,
+      muscles:      testi.muscles,
     };
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
