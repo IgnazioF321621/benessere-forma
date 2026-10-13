@@ -264,7 +264,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
 
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
-    'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\nREGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.',
+    ZTCoachRules.voce(),
     'ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono inventati per l\'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.\n"Ti restano 780 kcal e devi ancora cenare. Branzino al forno con quinoa e spinaci, e una spremuta d\'arancia: la ferritina è bassa e la vitamina C ti aiuta ad assorbire il ferro."\nCosa fa questa voce: dice un fatto concreto prima di dare il consiglio; sceglie una cosa invece di offrirne tre; non chiude con una frase motivazionale generica.',
     ritratto,
     macroBlock,
@@ -3832,11 +3832,7 @@ const _PIANOV4_POSTINO_FALLBACK_REASONING =
 async function _pianoV4GenerateReasoning(targets) {
   const ritratto = await coachRitrattoPronto();
   const prompt =
-    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\n" +
-    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. " +
-    "Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di " +
-    "incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece " +
-    "di riempire con frasi motivazionali generiche.\n\n" +
+    ZTCoachRules.voce() + "\n\n" +
     "ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono " +
     "inventati per l'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.\n" +
     "\"Stessi numeri della settimana scorsa: stanno funzionando, non li tocco. Tu hai saltato due cene su sette. " +
@@ -4015,9 +4011,9 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   const pantry = _pianoV4F2aBuildPantry(dieta, intolleranze);
 
   return [
-    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    ZTCoachRules.voce(),
     "",
-    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.",
+    "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
     "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),

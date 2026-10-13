@@ -37,6 +37,12 @@ var ZTRitratto = (function(){
   };
   var ACTIVITY_LBL = { sedentary: 'sedentaria', light: 'leggera', lightly_active: 'leggera', moderate: 'moderata', active: 'attiva', very_active: 'molto attiva' };
   var SEX_LBL = { M: 'uomo', F: 'donna' };
+  var LUOGO_LBL = { casa: 'a casa', palestra: 'in palestra', aperto: 'all\'aperto', libero: 'all\'aperto' };
+  // Gli slug dell'onboarding (data-gear) e i due di ripiego del generatore.
+  var ATTREZZO_LBL = { elastici_tubo: 'elastici a tubo', elastico: 'elastici', manubri: 'manubri', bilanciere: 'bilanciere e dischi',
+    kettlebell: 'kettlebell', panca: 'panca', sbarra: 'sbarra per trazioni', fitball: 'fitball', trx: 'TRX o anelli',
+    maniglie: 'maniglie per gli elastici', barra_corta: 'barra corta per gli elastici', barra_lunga: 'barra lunga per gli elastici',
+    cavigliere: 'cavigliere', corpo_libero: 'corpo libero' };
   var AI_LBL = { migliorato: 'migliorato', stabile: 'stabile', peggiorato: 'peggiorato', primo_check: 'primo check, nessun confronto' };
   var STATO_LBL = { accepted: 'accettata', rejected: 'rimandata', expired: 'lasciata scadere', pending: 'in attesa di risposta' };
   var GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
@@ -69,6 +75,16 @@ var ZTRitratto = (function(){
     if(num(p.age)) v.push(num(p.age) + ' anni');
     if(num(p.height_cm)) v.push(num(p.height_cm) + ' cm');
     return v.length ? 'Persona: ' + v.join(', ') : null;
+  }
+
+  // Dove si allena e con cosa (Pirsi 040): prima «elastici a tubo» era scritto fisso nel prompt dei cue.
+  function rigaAllenamento(p){
+    var luogo = LUOGO_LBL[String(p.tipo_allenamento || '').toLowerCase()];
+    var att = (Array.isArray(p.attrezzatura) ? p.attrezzatura : []).filter(Boolean)
+      .map(function(s){ s = String(s).toLowerCase(); return ATTREZZO_LBL[s] || s.replace(/_/g, ' '); })
+      .filter(function(x, i, a){ return a.indexOf(x) === i; });
+    if(!luogo && !att.length) return null;
+    return 'Allenamento' + (luogo ? ' ' + luogo : '') + (att.length ? ' · attrezzi: ' + att.join(', ') : '');
   }
 
   function rigaPeso(w, p, today){
@@ -165,6 +181,7 @@ var ZTRitratto = (function(){
     if(ob || att) push([ob ? 'Obiettivo: ' + ob : null, att ? 'attività quotidiana ' + att : null].filter(Boolean).join(' · '));
     var intol = Array.isArray(p.intolleranze) ? p.intolleranze.filter(Boolean) : [];
     if(p.dieta || intol.length) push([p.dieta ? 'Dieta: ' + p.dieta : null, intol.length ? 'intolleranze: ' + intol.join(', ') : null].filter(Boolean).join(' · '));
+    push(rigaAllenamento(p));
     var note = String(p.note_salute || '').replace(/\s+/g, ' ').trim();
     if(note) push('Note di salute scritte dalla persona: ' + (note.length > MAX_NOTE ? note.slice(0, MAX_NOTE) + '…' : note));
     var t = d.target;

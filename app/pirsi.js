@@ -101,7 +101,8 @@ function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   const sessionType = sess.type || '';
   // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
   // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
-  return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Eta', note di salute e situazione sono nel ritratto qui sotto (senza il nome: Fondamenta 170). Allena con elastici a tubo.
+  // Identità in un posto solo (Pirsi 040): età, note di salute, luogo e attrezzi stanno nel ritratto, non qui.
+  return `${ZTCoachRules.voce({ registro:false })}
 
 ${coachRitratto()}
 

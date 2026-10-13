@@ -175,7 +175,7 @@ const COACH_NAME = 'Pirsi';   // zona-tracker.html, subito dopo APP_VERSION
 
 **Fuori dai prompt il nome non si scrive mai per esteso**: 22 usi, tutti da `COACH_NAME`. Cambiarlo è una riga.
 
-⚠️ **Nei prompt il nome è scritto per esteso, ed è voluto.** Lì il modello lo legge come testo dentro la frase d'identità, non come dato: passarlo da una variabile non darebbe nessun vantaggio e renderebbe i prompt illeggibili nel sorgente.
+⚠️ **Nei prompt il nome è scritto per esteso, ed è voluto.** Lì il modello lo legge come testo dentro la frase d'identità, non come dato: passarlo da una variabile non darebbe nessun vantaggio e renderebbe i prompt illeggibili nel sorgente. **Dal 13 ottobre 2026 (Pirsi 040) la frase d'identità sta in un posto solo**, `ZTCoachRules.voce()` in `shared/coach_rules.js`: «Sei Pirsi» è scritto lì e in nessun altro file.
 
 ⚠️ **L'HTML statico nel `<body>` non può leggere la costante.** Le due card dello step `s-coach` sono markup statico: `${COACH_NAME}` lì dentro finirebbe a schermo così com'è scritto. Il nome ci entra a runtime da `m1ApplyCoachNameToCards()`, chiamata da `m1GoStep` quando si apre lo step, usando i selettori `data-coach` che già esistono. **Il testo statico resta senza nome**, così prima che il JS giri non si vede niente di sbagliato. Chi aggiunge testi con il nome in HTML statico deve passare di lì o non funzionerà.
 
@@ -213,9 +213,13 @@ Le ultime due esistono per chi l'onboarding non lo rifà (Ornella, Isabella): in
 
 ### Il registro nei prompt
 
-I prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio · **I** lettura delle foto dei check, nel Worker dal 13 settembre) dichiarano l'identità `Sei Pirsi, il coach…` più l'ordine di parlare in prima persona senza nominarsi né firmarsi. **F, G, H restituiscono solo JSON e non hanno identità.** I restituisce JSON anche lui, ma `summary` e `suggested_focus` si leggono a schermo: per questo ha identità e registro.
+**Una sola identità e un solo registro, in un posto solo** *(dal 13 ottobre 2026, Pirsi 040)*: `ZTCoachRules.voce()` in `shared/coach_rules.js` restituisce la frase d'identità («Sei Pirsi, il coach di Zona Tracker: segui la stessa persona nell'allenamento, nel cibo e in come sta», prima persona, del tu, mai nominarsi né firmarsi) seguita dal registro; `voce({ registro:false })` dà la sola identità. Prima ogni prompt si presentava a modo suo («coach di forza e ipertrofia», «coach nutrizionale esperto in dieta a Zona 40-30-30», «coach nutrizionale di Zona Tracker»…): il «40-30-30» contraddiceva i macro per obiettivo, e il registro era copiato a mano in cinque posti. Lo controlla `node tools/banco/prova_pirsi_voce.js`, che cerca anche «Sei Pirsi» fuori dal modulo.
 
-**B, C, D, E (e dal 13 settembre I) condividono un paragrafo di registro identico, 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
+I prompt che parlano all'utente (**A** cue · **B** nota scheda · **C** annuncio piano · **D** 14 pasti · **E** riequilibrio · **I** lettura delle foto dei check, nel Worker dal 13 settembre) iniziano tutti con `voce()`; A con la sola identità. **F, G, H restituiscono solo JSON e non hanno identità.** I restituisce JSON anche lui, ma `summary` e `suggested_focus` si leggono a schermo: per questo ha identità e registro. **Il Worker importa `shared/coach_rules.js` anche per questo**: se la voce cambia, va ripubblicato.
+
+**Il registro è un paragrafo di 377 caratteri**, messo vicino all'identità e non in fondo tra le regole di formato: amico diretto e schietto · dati buoni detti senza enfasi · dati cattivi col fatto prima e la spinta dopo · sempre concreto sui numeri veri invece che frasi motivazionali generiche.
+
+**Niente della persona nei prompt**: età, note di salute, luogo e attrezzi arrivano dal [ritratto](#ritratto-unico), che dal 13 ottobre ha la riga «Allenamento a casa · attrezzi: elastici a tubo, manubri» presa da `tipo_allenamento` e `attrezzatura` del profilo. Prima il prompt dei cue diceva fisso «Allena con elastici a tubo», e sarebbe arrivato uguale a chiunque. Nello stesso giro la Home ha smesso di dire «Sessione X a digiuno»: il profilo non sa a che ora ci si allena.
 
 ⚠️ **Gli esempi valgono più degli aggettivi.** "Amico diretto" al modello dice poco; una frase scritta come la direbbe Pirsi gli dice tutto. B, C, E hanno un **esempio di tono** dichiarato come modello di *voce e non di contenuto*, coi suoi numeri e alimenti dichiarati inventati. L'esempio di C contiene un rimprovero (cene saltate) e porta con sé una guardia esplicita: **mai attribuire all'utente mancanze che non risultano dai dati ricevuti**.
 
