@@ -230,7 +230,8 @@ function getProssimaAzioneSimple(){
       const sess = getTrainingSession(sid) || getTrainingSession('upperA');
       return {
         titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
-        dettaglio: `Sessione ${sess.name} a digiuno. Si parte con 5 minuti di preparazione.`,
+        // Senza «a digiuno» (Pirsi 040): era scritto fisso, e il profilo non sa a che ora ci si allena.
+        dettaglio: `Sessione ${sess.name}. Si parte con 5 minuti di preparazione.`,
         nextHint: getPostWorkoutHint(),
       };
     }

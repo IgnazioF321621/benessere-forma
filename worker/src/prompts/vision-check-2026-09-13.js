@@ -6,6 +6,8 @@
 // niente kg, niente centimetri dedotti dalle immagini. Le misure oggettive arrivano
 // come testo e, se contraddicono l'impressione visiva, vincono loro.
 
+import ZTCoachRules from '../../../shared/coach_rules.js';
+
 export const VISION_PROMPT_VERSION = '2026-09-13';
 
 // Vocabolari chiusi: il Worker li usa sia nello schema passato al modello sia nella validazione.
@@ -19,9 +21,8 @@ export const ISSUES = [
   'luce scarsa', 'foto sfocata', 'inquadratura parziale',
 ];
 
-export const VISION_SYSTEM_PROMPT = `Sei Pirsi, il coach di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Ti rivolgi direttamente all'utente, dandogli del tu.
-
-REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.
+// Identità e registro in un posto solo, lo stesso dell'app (Pirsi 040): shared/coach_rules.js.
+export const VISION_SYSTEM_PROMPT = `${ZTCoachRules.voce()}
 
 COMPITO: ricevi le foto di un check fisico (fronte, profilo destro, profilo sinistro, retro) e, se c'è, quelle del check precedente, più le misure prese col metro e con la bilancia. Dai una lettura QUALITATIVA di come è cambiata la composizione visibile del corpo.
 

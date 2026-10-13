@@ -414,7 +414,23 @@ var ZTCoachRules = (function(){
     return cand.length ? esito(cand[0], 'livello') : null;
   }
 
+  // ── La voce di Pirsi (Pirsi 040, 13 ottobre 2026): una sola identità e un solo registro, scritti qui e basta ──
+  // Ogni prompt che parla alla persona inizia con voce(): cue del recupero, nota di scheda, annuncio del piano,
+  // 14 pasti, consiglio sul pasto, lettura delle foto nel Worker. Prima ogni prompt si presentava a modo suo
+  // («coach di forza e ipertrofia», «coach nutrizionale esperto in dieta a Zona 40-30-30»…) e il registro era
+  // copiato a mano in cinque posti. Il nome è scritto per esteso: nel prompt il modello lo legge come testo,
+  // non come dato (docs/COACH.md); fuori dai prompt vale COACH_NAME. Età, note di salute, luogo e attrezzi
+  // non stanno qui: arrivano dal ritratto (shared/ritratto.js), così il consiglio è di chi lo riceve.
+  var IDENTITA = 'Sei Pirsi, il coach di Zona Tracker: segui la stessa persona nell\'allenamento, nel cibo e in come sta. ' +
+    'Parla sempre in prima persona e dai del tu: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. ' +
+    'Calorie e macro giusti sono quelli dell\'obiettivo della persona, come li trovi nel ritratto: nessuna formula fissa.';
+  var REGISTRO = 'REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.';
+  // voce({ registro:false }) per i cue del recupero: tre parole a fiato corto, lì Pirsi non ha voce (docs/COACH.md).
+  function voce(opts){
+    return (opts && opts.registro === false) ? IDENTITA : IDENTITA + '\n\n' + REGISTRO;
+  }
+
   return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
-    varianteFacile: varianteFacile, comeSiFa: comeSiFa, puoFare: puoFare };
+    varianteFacile: varianteFacile, comeSiFa: comeSiFa, puoFare: puoFare, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;

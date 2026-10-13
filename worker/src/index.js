@@ -498,6 +498,11 @@ async function handleExerciseMedia(request, env) {
 const errorePorta = (kind, status, message) =>
   jsonResponse({ error: { source: 'worker', kind, status, code: null, message } }, status);
 
+// Tempo massimo alla risposta di Groq (Pirsi 090): scaduto, l'app riceve kind 'timeout' e dice
+// «ci ho messo troppo, riprova» invece di aspettare per sempre. _impostaTempoMaxGroq serve alle prove.
+let TEMPO_MAX_GROQ_MS = 60_000;
+export function _impostaTempoMaxGroq(ms) { TEMPO_MAX_GROQ_MS = ms; }
+
 async function handleGroqProxy(request, env) {
   if (request.method !== 'POST') {
     return errorePorta('method', 405, 'Solo POST');
@@ -534,8 +539,11 @@ async function handleGroqProxy(request, env) {
     const chiesti = Number(body.max_tokens);
     const maxTokens = Math.min(MAX_RISPOSTA_TOKEN, Number.isFinite(chiesti) && chiesti >= 1 ? Math.floor(chiesti) : 400);
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    let response;
+    try {
+      response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(TEMPO_MAX_GROQ_MS),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${env.API_KEY}`,
@@ -567,7 +575,13 @@ async function handleGroqProxy(request, env) {
         include_reasoning: false,
         temperature: 0.3,
       }),
-    });
+      });
+    } catch (e) {
+      if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+        return errorePorta('timeout', 504, `Il coach non ha risposto entro ${Math.round(TEMPO_MAX_GROQ_MS / 1000)} secondi`);
+      }
+      throw e;
+    }
     // Groq non lancia eccezioni: un 429, una chiave revocata o un modello dismesso
     // tornano come risposta regolare. Senza questo controllo il body senza 'choices'
     // diventava testo vuoto con HTTP 200, e il fallimento esplodeva lontano dalla

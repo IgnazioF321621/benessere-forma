@@ -32,6 +32,7 @@ function aiErrMsg(kind) {
   if (kind === 'auth' || kind === 'model-unavailable') return 'C\'è un problema di configurazione del servizio: riprovare non serve.';
   if (kind === 'network') return 'Connessione assente, controlla la rete.';
   if (kind === 'session') return 'Sessione scaduta: esci, rientra e riprova.';
+  if (kind === 'timeout') return 'Ci ho messo troppo: riprova.';
   return 'Riprova tra poco.';
 }
 
@@ -43,9 +44,16 @@ function cueErrMsg(kind) {
   if (kind === 'auth' || kind === 'model-unavailable') return 'Cue non disponibile — servizio non configurato.';
   if (kind === 'network') return 'Cue non disponibile — connessione assente.';
   if (kind === 'session') return 'Cue non disponibile — sessione scaduta: esci e rientra.';
+  if (kind === 'timeout') return 'Cue non disponibile — ci ho messo troppo, riprova.';
   return 'Cue non disponibile — riprova tra poco.';
 }
 
+// Tempo massimo alle risposte di testo (Pirsi 090, 13 ottobre 2026): prima il pulsante girava
+// all'infinito se il servizio restava appeso (la lettura foto il suo tempo ce l'aveva già).
+// 'lungo' per i 14 pasti (budget ≥ 2000 token), 'breve' per tutto il resto. Scaduto il tempo
+// l'errore è 'timeout': «Ci ho messo troppo: riprova». Un oggetto e non due costanti, così
+// il banco lo accorcia senza riscrivere la funzione.
+const AI_TEMPO_MAX_MS = { breve: 40000, lungo: 90000 };
 async function callAI(prompt, maxTokens=400) {
   // Il Worker risponde solo a chi ha una sessione valida (Pirsi 010): il token di
   // accesso viaggia nell'intestazione, come per la lettura delle foto dei check.
@@ -55,13 +63,19 @@ async function callAI(prompt, maxTokens=400) {
     token = res && res.data && res.data.session && res.data.session.access_token;
   } catch (_) {}
   if (!token) throw _aiError('session', 'Sessione assente');
+  const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  const tempo = maxTokens >= 2000 ? AI_TEMPO_MAX_MS.lungo : AI_TEMPO_MAX_MS.breve;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), tempo) : null;
   let r;
   try {
-    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens})});
+    r = await fetch(WORKER_URL, {method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({messages:[{role:'user',content:prompt}],max_tokens:maxTokens}), signal: ctrl ? ctrl.signal : undefined});
   } catch (e) {
+    if (timer) clearTimeout(timer);
+    if (ctrl && ctrl.signal.aborted) throw _aiError('timeout', 'Il coach non ha risposto in tempo', e);
     // fetch lancia solo se la richiesta non parte: qui la rete manca sul serio.
     throw _aiError('network', 'Rete non raggiungibile', e);
   }
+  if (timer) clearTimeout(timer);
   if (!r.ok) {
     // Il Worker manda {error:{source,kind,status,code,message}}. Se il body e'
     // illeggibile o non ha quella forma si ripiega su 'generic': gestire il
@@ -77,6 +91,66 @@ async function callAI(prompt, maxTokens=400) {
   }
   const d = await r.json();
   return d.content?.[0]?.text || '';
+}
+// ── I cue tecnici: puliti, tenuti se buoni, mai tenuti se sbagliati (Pirsi 090, 13 ottobre 2026) ──
+// Prima: il messaggio d'errore finiva in ST.aiCue al posto del cue e non si riprovava più fino al
+// ricaricamento; i cue buoni vivevano solo in memoria e ogni seduta li rigenerava; il testo del
+// modello entrava nella pagina senza pulizia. Ora: cuePer(...) è l'unica porta (recupero e foglio
+// dell'esercizio): esc() prima di tutto, poi solo grassetto e a capo; il cue buono si salva sul
+// telefono per CUE_GIORNI (zt_cue_<utente>); l'errore sta in ST.aiCueErrori e si riprova alla
+// prossima richiesta, non prima di CUE_RIPROVA_MS.
+const CUE_GIORNI = 30;
+const CUE_RIPROVA_MS = 15000;
+const CUE_MAX_SALVATI = 200;
+function cuePulito(text) {
+  return esc(String(text || '').trim().replace(/^["'`]|["'`]$/g, ''))
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+function _cueChiave() { return 'zt_cue_' + ((ST.user && ST.user.id) || 'anon'); }
+function _cueLeggiTutti() { try { return JSON.parse(localStorage.getItem(_cueChiave()) || '{}') || {}; } catch (e) { return {}; } }
+function cueSalvato(key) {
+  const v = _cueLeggiTutti()[key];
+  return (v && v.t && (Date.now() - (v.at || 0)) < CUE_GIORNI * 86400000) ? v.t : null;
+}
+function cueSalva(key, html) {
+  try {
+    const m = _cueLeggiTutti();
+    m[key] = { t: html, at: Date.now() };
+    const chiavi = Object.keys(m).sort((a, b) => (m[a].at || 0) - (m[b].at || 0));
+    while (chiavi.length > CUE_MAX_SALVATI) delete m[chiavi.shift()];
+    localStorage.setItem(_cueChiave(), JSON.stringify(m));
+  } catch (e) {}
+}
+// → { html, errore:null } oppure { html:null, errore:'messaggio' }. Mai throw. Una chiamata alla volta per chiave.
+async function cuePer(exName, sessionId, eq) {
+  const key = `${sessionId}_${exName}`;
+  if (ST.aiCue[key]) return { html: ST.aiCue[key], errore: null };
+  const salvato = cueSalvato(key);
+  if (salvato) { ST.aiCue[key] = salvato; return { html: salvato, errore: null }; }
+  ST.aiCueErrori = ST.aiCueErrori || {};
+  ST.aiCueInCorso = ST.aiCueInCorso || {};
+  const ultimo = ST.aiCueErrori[key];
+  if (ultimo && Date.now() - ultimo.at < CUE_RIPROVA_MS) return { html: null, errore: ultimo.msg };
+  if (ST.aiCueInCorso[key]) return ST.aiCueInCorso[key];
+  const p = (async () => {
+    try {
+      const html = cuePulito(await callAI(buildCoachPrompt(exName, sessionId, eq || ''), 200));
+      if (!html) throw _aiError('empty-response', 'Cue vuoto');
+      ST.aiCue[key] = html;
+      cueSalva(key, html);
+      delete ST.aiCueErrori[key];
+      return { html, errore: null };
+    } catch (e) {
+      const msg = cueErrMsg(e && e.aiKind);
+      ST.aiCueErrori[key] = { at: Date.now(), msg, kind: (e && e.aiKind) || 'generic' };
+      return { html: null, errore: msg };
+    } finally {
+      delete ST.aiCueInCorso[key];
+    }
+  })();
+  ST.aiCueInCorso[key] = p;
+  return p;
 }
 // fetchExerciseMedia — query Worker per cache/lookup GIF esecuzione esercizio.
 // Ritorna {status, cached_url?, is_surrogate?, surrogate_note?, ...} oppure
@@ -101,7 +175,8 @@ function buildCoachPrompt(exName, sessionId, attrezzoSessione) {
   const sessionType = sess.type || '';
   // FIX 3 (26 mag sera): cue molto più conciso, formato bullet brevi per essere
   // leggibili a colpo d'occhio durante il recupero (era paragrafo lungo).
-  return `Sei Pirsi, il coach di forza e ipertrofia. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Eta', note di salute e situazione sono nel ritratto qui sotto (senza il nome: Fondamenta 170). Allena con elastici a tubo.
+  // Identità in un posto solo (Pirsi 040): età, note di salute, luogo e attrezzi stanno nel ritratto, non qui.
+  return `${ZTCoachRules.voce({ registro:false })}
 
 ${coachRitratto()}
 
@@ -390,7 +465,7 @@ async function acceptCoachProposal(id){
       if(!prima) return;
       if(!(await _cpMark(p, 'accepted', true))){ await _cpRollbackProfile(prima); return; }
       _cpApplyLocal(updates);
-      showToast(`Da domani il piano usa ${fmtNum(updates.target_kcal)} kcal`, '✅', 4500);
+      vai = () => pirsiPastiConNumeriNuovi(updates, `Da domani il piano usa ${fmtNum(updates.target_kcal)} kcal`);
     } else if(p.kind === 'protein' && ch.target_protein){
       const g = Number(ch.target_protein.to);
       const updates = _cpTargetsFor(Number((ST.profile && ST.profile.target_kcal) || (ST.TARGET && ST.TARGET.kcal)), g);
@@ -399,7 +474,7 @@ async function acceptCoachProposal(id){
       if(!(await _cpMark(p, 'accepted', true))){ await _cpRollbackProfile(prima); return; }
       _cpSetProteinFloor(g);
       _cpApplyLocal(updates);
-      showToast(`Proteine a ${fmtNum(updates.target_protein)} g: da domani il piano le usa`, '✅', 4500);
+      vai = () => pirsiPastiConNumeriNuovi(updates, `Proteine a ${fmtNum(updates.target_protein)} g: da domani il piano le usa`);
     } else if(p.kind === 'training_volume' && ch.giorni_allenamento){
       const to = Number(ch.giorni_allenamento.to);
       if(COACH_SUPPORTED_DAYS.includes(to)){
@@ -431,6 +506,69 @@ async function acceptCoachProposal(id){
     _cpSetBusy(id, null);
   }
   if(vai) vai();
+}
+// ── «Accetto» sulle calorie non ritocca i pasti già pianificati (Pirsi 060, 13 ottobre 2026) ──
+// La proposta arriva il lunedì alle 6; il piano della settimana è nato la domenica coi numeri vecchi.
+// Prima l'avviso diceva «Da domani il piano usa X kcal» e aggiornava profilo e target del giorno,
+// non i 14 pasti già scritti. Ora: se un piano da oggi in poi esiste, si chiede «Rifaccio pranzi
+// e cene coi numeri nuovi?»; con il sì i pasti si rifanno (i vecchi tornano se il coach non
+// risponde), e la riga del piano prende i target nuovi e un annuncio che dice il cambio. Senza
+// piano, o con «Lascia così», l'avviso dice il vero. Scelta B della nota Pirsi 060.
+function _ppTargets(updates){
+  return { kcal: Number(updates.target_kcal), protein: Number(updates.target_protein), carbs: Number(updates.target_carbs), fat: Number(updates.target_fat) };
+}
+// I piani che i numeri nuovi riguardano: questa settimana e, se c'è già, la prossima.
+async function _ppPianiDaRifare(){
+  if(!ST.user || !ST.user.id) return [];
+  const da = wpMonday();
+  const r = await dbq('leggere i piani da rifare', supa.from('weekly_plans')
+    .select('id, week_start, status, target_kcal, target_protein, target_carbs, target_fat')
+    .eq('user_id', ST.user.id).order('week_start', { ascending:false }).limit(4), { silenzioso:true });
+  if(!r || r.error || !Array.isArray(r.data)) return [];
+  return r.data.filter(p => p.week_start >= da && p.status !== 'archived').sort((a, b) => a.week_start < b.week_start ? -1 : 1);
+}
+// Rifà pranzi e cene di un piano coi target nuovi. true se è andata; i pasti di prima tornano se no.
+async function _ppRifaiPiano(piano, t){
+  const vecchi = await dbq('leggere i pasti del piano', supa.from('weekly_plan_meals').select('*').eq('plan_id', piano.id), { silenzioso:true });
+  if(!vecchi || vecchi.error) return false;
+  const righeVecchie = Array.isArray(vecchi.data) ? vecchi.data : [];
+  if(righeVecchie.length){
+    const del = await dbq('togliere i pasti di prima', supa.from('weekly_plan_meals').delete().eq('plan_id', piano.id).eq('user_id', ST.user.id), { silenzioso:true });
+    if(!del || del.error) return false;
+  }
+  const esito = await _pianoV4GenerateAndInsertMeals(piano.id, ST.profile, t, {});
+  if(!esito || !esito.ok){
+    // i pasti di prima tornano com'erano (stessi id: una doppia scrittura risponde 23505 e conta come fatta)
+    if(righeVecchie.length) await dbq('rimettere i pasti di prima', supa.from('weekly_plan_meals').insert(righeVecchie), { silenzioso:true });
+    return false;
+  }
+  let annuncio = null;
+  // il «prima» dell'annuncio sono i numeri vecchi di questo stesso piano
+  const prima = { kcal: piano.target_kcal, protein: piano.target_protein, carbs: piano.target_carbs, fat: piano.target_fat };
+  try { annuncio = await _pianoV4GenerateReasoning(t, await _pianoV4ContestoAnnuncio(piano.week_start, t, prima)); } catch(e){}
+  const up = { target_kcal: t.kcal, target_protein: t.protein, target_carbs: t.carbs, target_fat: t.fat };
+  if(annuncio) up.ai_reasoning = annuncio;
+  await dbq('aggiornare i numeri del piano', supa.from('weekly_plans').update(up).eq('id', piano.id).eq('user_id', ST.user.id), { silenzioso:true });
+  if(ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[piano.week_start];
+  if(ST.pianoV4WelcomeOverlay && ST.pianoV4WelcomeOverlay.draft && ST.pianoV4WelcomeOverlay.draft.id === piano.id) closePianoV4WelcomeOverlay();
+  return true;
+}
+async function pirsiPastiConNumeriNuovi(updates, fraseSenzaPiano){
+  const t = _ppTargets(updates);
+  let piani = [];
+  try { piani = await _ppPianiDaRifare(); } catch(e){ piani = []; }
+  if(!piani.length){ showToast(fraseSenzaPiano, '✅', 4500); return; }
+  const ok = await chiediConferma('Il piano di questa settimana è nato coi numeri di prima. Rifaccio pranzi e cene con quelli nuovi?',
+    { titolo:'Pasti già pianificati', ok:'Rifai i pasti', annulla:'Lascia così' });
+  if(!ok){ showToast(`Numeri nuovi salvati. I pasti già pianificati restano com'erano`, '✅', 5000); return; }
+  showToast('Sto rifacendo pranzi e cene…', '⏳', 4000);
+  let fatti = 0;
+  for(const piano of piani){
+    try { if(await _ppRifaiPiano(piano, t)) fatti++; } catch(e){ console.warn('[pirsi] rifare i pasti:', e); }
+  }
+  if(fatti) showToast(`Pranzi e cene rifatti con ${fmtNum(t.kcal)} kcal e ${fmtNum(t.protein)} g di proteine`, '✅', 5500);
+  else showToast('Non sono riuscito a rifare i pasti: quelli di prima restano. Riprova dal Piano con «Rigenera»', '⚠️', 6000);
+  if(ST.page === 'piano'){ try { await _pianoV4LoadRealPlanForWeek(wpMonday()); renderPianoV4(); } catch(e){} }
 }
 async function rejectCoachProposal(id){
   const p = (ST.coachProposals || []).find(x => x.id === id);

@@ -264,7 +264,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
 
   // Compose prompt: header + sezioni non vuote separate da blank line
   const sections = [
-    'Sei Pirsi, il coach nutrizionale, esperto in dieta a Zona (40-30-30). Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\nREGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.',
+    ZTCoachRules.voce(),
     'ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono inventati per l\'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.\n"Ti restano 780 kcal e devi ancora cenare. Branzino al forno con quinoa e spinaci, e una spremuta d\'arancia: la ferritina è bassa e la vitamina C ti aiuta ad assorbire il ferro."\nCosa fa questa voce: dice un fatto concreto prima di dare il consiglio; sceglie una cosa invece di offrirne tre; non chiude con una frase motivazionale generica.',
     ritratto,
     macroBlock,
@@ -3159,8 +3159,9 @@ async function _pianoV4LoadDraftPlan() {
 
 // Confronto target draft vs ST.TARGET. Ritorna {anyDiff, kcal, protein, carbs, fat}
 // dove ogni macro ha {oldVal, newVal, delta, dir: 'up'|'down'|'same'}.
-function _pianoV4WelcomeComputeDiff(draft) {
-  const cur = ST.TARGET || { kcal:1900, protein:143, carbs:190, fat:63 };
+// base: con cosa confrontare (default ST.TARGET). Pirsi 050 lo usa con i target del piano prima.
+function _pianoV4WelcomeComputeDiff(draft, base) {
+  const cur = base || ST.TARGET || { kcal:1900, protein:143, carbs:190, fat:63 };
   function diff(oldV, newV) {
     const o = Math.round(Number(oldV) || 0);
     const n = Math.round(Number(newV) || 0);
@@ -3822,46 +3823,138 @@ async function _pianoV4ComputePostinoStatus(opts) {
   return out;
 }
 
-// Fallback fisso usato se callAI() fallisce o ritorna stringa vuota.
-// Tono coerente con la voce del coach (variante OBIETTIVI INVARIATI).
+// Ripiego fisso usato se callAI() fallisce o ritorna stringa vuota (variante OBIETTIVI INVARIATI).
+// Dal 13 ottobre 2026 (Pirsi 050) il ripiego segue il caso: _pianoV4AnnuncioRipiego.
 const _PIANOV4_POSTINO_FALLBACK_REASONING =
   "Stessi numeri della settimana scorsa: stanno funzionando, non li tocco. " +
   "Quello che cambia le cose adesso è chiudere la settimana intera, un pasto alla volta.";
 
-// Genera ai_reasoning via Worker Groq. Mai throw — fallback robusto se errore.
-async function _pianoV4GenerateReasoning(targets) {
+// ── L'annuncio del piano sa cosa è successo prima (Pirsi 050, 13 ottobre 2026) ──
+// Prima diceva fisso «stanno funzionando, non li tocco»: falso al primo piano di una persona nuova,
+// dopo una proposta di Pirsi accettata, o col peso fermo. Tre casi: primo · invariati · cambiati (di quanto).
+// Il contesto: i target dell'ultimo piano prima di questo, le proposte accettate negli ultimi 14 giorni
+// che toccano calorie o proteine, e il ritmo del peso dal quadro della settimana che si chiude.
+const _ANNUNCIO_PROPOSTE_GIORNI = 14;
+function _pianoV4TargetsDaPiano(r){ return { kcal:r.target_kcal, protein:r.target_protein, carbs:r.target_carbs, fat:r.target_fat }; }
+// base (facoltativa): i target con cui confrontare, al posto dell'ultimo piano letto dal database
+// (Pirsi 060: quando si rifanno i pasti di un piano, il «prima» sono i numeri vecchi di quel piano).
+async function _pianoV4ContestoAnnuncio(weekStart, targets, base) {
+  const ctx = { caso:'primo', precedente:null, diff:null, proposte:[], peso:null };
+  try {
+    if (base && base.kcal != null) {
+      ctx.precedente = { kcal:base.kcal, protein:base.protein, carbs:base.carbs, fat:base.fat, week_start:weekStart || null };
+      ctx.diff = _pianoV4WelcomeComputeDiff({ target_kcal:targets.kcal, target_protein:targets.protein, target_carbs:targets.carbs, target_fat:targets.fat }, ctx.precedente);
+      ctx.caso = ctx.diff.anyDiff ? 'cambiati' : 'invariati';
+    } else if (weekStart && ST.user && ST.user.id) {
+      // Niente «minore di» nel filtro: si leggono gli ultimi piani e si sceglie qui il primo prima di questa settimana
+      const r = await dbq('leggere i piani delle settimane prima', supa.from('weekly_plans')
+        .select('week_start, target_kcal, target_protein, target_carbs, target_fat')
+        .eq('user_id', ST.user.id).order('week_start', { ascending:false }).limit(8), { silenzioso:true });
+      const prima = (r && !r.error && Array.isArray(r.data)) ? r.data.find(x => x.week_start < weekStart) : null;
+      if (prima) {
+        ctx.precedente = _pianoV4TargetsDaPiano(prima);
+        ctx.precedente.week_start = prima.week_start;
+        ctx.diff = _pianoV4WelcomeComputeDiff({ target_kcal:targets.kcal, target_protein:targets.protein, target_carbs:targets.carbs, target_fat:targets.fat }, ctx.precedente);
+        ctx.caso = ctx.diff.anyDiff ? 'cambiati' : 'invariati';
+      }
+    }
+    const limite = Date.now() - _ANNUNCIO_PROPOSTE_GIORNI * 86400000;
+    ctx.proposte = (ST.coachProposals || []).filter(p => p && p.status === 'accepted' && (p.kind === 'kcal' || p.kind === 'protein')
+      && p.decided_at && new Date(p.decided_at).getTime() >= limite).map(p => ({ kind:p.kind, title:p.title, change:p.change || null }));
+    const q = ST.weeklyPicture && weekStart ? (ST.weeklyPicture[wpAddDays(weekStart, -7)] || null) : null;
+    if (q && q.weight && (q.weight.weight_delta_prev != null || q.weight.weight_trend_4w != null)) {
+      ctx.peso = { delta: q.weight.weight_delta_prev != null ? q.weight.weight_delta_prev : null, trend: q.weight.weight_trend_4w != null ? q.weight.weight_trend_4w : null };
+    }
+  } catch (e) { console.warn('[postino] contesto annuncio:', e); }
+  return ctx;
+}
+function _annKg(v){ return (v > 0 ? '+' : v < 0 ? '−' : '') + String(Math.abs(Math.round(v * 10) / 10)).replace('.', ','); }
+function _annNumeri(t){ return 'kcal ' + t.kcal + ', proteine ' + t.protein + 'g, carboidrati ' + t.carbs + 'g, grassi ' + t.fat + 'g'; }
+function _annCambi(diff){
+  const nomi = { kcal:['kcal', ''], protein:['proteine', 'g'], carbs:['carboidrati', 'g'], fat:['grassi', 'g'] };
+  return Object.keys(nomi).filter(k => diff[k] && diff[k].dir !== 'same')
+    .map(k => nomi[k][0] + ' da ' + diff[k].oldVal + ' a ' + diff[k].newVal + nomi[k][1] + ' (' + (diff[k].delta > 0 ? '+' : '−') + diff[k].absDelta + nomi[k][1] + ')');
+}
+function _annPerche(ctx){
+  if (ctx.proposte && ctx.proposte.length) return 'Perché: ' + ctx.proposte.map(p => 'proposta accettata «' + p.title + '»').join('; ') + '.';
+  return 'Perché: gli obiettivi sono cambiati nelle impostazioni o nel profilo, non per una proposta di Pirsi.';
+}
+function _annPeso(ctx){
+  if (!ctx.peso) return '';
+  const v = [];
+  if (ctx.peso.delta != null) v.push('peso medio ' + _annKg(ctx.peso.delta) + ' kg sulla settimana prima');
+  if (ctx.peso.trend != null) v.push('tendenza a 4 settimane ' + _annKg(ctx.peso.trend) + ' kg a settimana');
+  return 'Ritmo del peso: ' + v.join(', ') + '.';
+}
+// Le righe del prompt che dipendono dal caso (dopo il ritratto, prima delle regole di forma).
+function _pianoV4AnnuncioRighe(targets, ctx) {
+  const peso = _annPeso(ctx);
+  if (ctx.caso === 'cambiati') {
+    return "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
+      "Gli obiettivi CAMBIANO rispetto al piano prima: " + _annCambi(ctx.diff).join(', ') + ". Ora valgono: " + _annNumeri(targets) + ". " +
+      _annPerche(ctx) + (peso ? ' ' + peso : '') + "\n\n" +
+      "Di' chiaro cosa cambia e di quanto, e il perché se lo sai. NON dire che i numeri restano uguali e NON dire «non li tocco».";
+  }
+  if (ctx.caso === 'invariati') {
+    return "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
+      "Gli obiettivi NON cambiano rispetto al piano prima: " + _annNumeri(targets) + "." + (peso ? ' ' + peso : '') + "\n\n" +
+      "Di' che restano fermi e perché, col ritmo del peso che hai: se va nella direzione dell'obiettivo stanno funzionando; " +
+      "se è fermo o va dall'altra parte, o non ce l'hai, li tieni fermi per avere una settimana in più di dati, senza dire che funzionano.";
+  }
+  return "Stai annunciando all'utente il suo PRIMO piano della settimana: non c'è un piano prima con cui confrontarlo. " +
+    "Obiettivi: " + _annNumeri(targets) + "." + (peso ? ' ' + peso : '') + "\n\n" +
+    "Presentali come punto di partenza da provare per una settimana. NON dire che «stanno funzionando» né che «non li tocchi»: non c'è ancora niente da confermare.";
+}
+// L'esempio di tono segue il caso: un esempio che dice «non li tocco» a un primo piano o a un cambio
+// farebbe obbedire il modello all'esempio e non ai dati (lezione L27).
+function _pianoV4AnnuncioEsempio(ctx) {
+  if (ctx.caso === 'cambiati') return 'Scendiamo a 2.100 kcal, cento in meno del piano prima: il peso è fermo da tre settimane. Tu hai saltato due cene su sette. Se questa settimana le chiudi tutte, fra sette giorni vediamo se il taglio basta.';
+  if (ctx.caso === 'invariati') return 'Stessi numeri della settimana scorsa: stanno funzionando, non li tocco. Tu hai saltato due cene su sette. Se questa settimana le chiudi tutte, la prossima si aggiustano i carichi.';
+  return 'Si parte da 2.200 kcal e 165 g di proteine al giorno. Una settimana così, registrando tutto: poi guardiamo i numeri veri e aggiustiamo.';
+}
+// Il ripiego, se la chiamata al coach fallisce: una frase vera per ogni caso.
+function _pianoV4AnnuncioRipiego(targets, ctx) {
+  if (!ctx || ctx.caso === 'invariati') return _PIANOV4_POSTINO_FALLBACK_REASONING;
+  if (ctx.caso === 'cambiati') {
+    const d = ctx.diff;
+    const parti = [];
+    if (d.kcal.dir !== 'same') parti.push(fmtNum(targets.kcal) + ' kcal al giorno (' + (d.kcal.delta > 0 ? '+' : '−') + fmtNum(d.kcal.absDelta) + ' rispetto al piano prima)');
+    if (d.protein.dir !== 'same') parti.push(fmtNum(targets.protein) + ' g di proteine (' + (d.protein.delta > 0 ? '+' : '−') + fmtNum(d.protein.absDelta) + ')');
+    if (!parti.length) parti.push(fmtNum(targets.kcal) + ' kcal al giorno, con carboidrati e grassi ridistribuiti');
+    const perche = ctx.proposte && ctx.proposte.length ? ' Come deciso con «' + ctx.proposte[0].title + '».' : '';
+    return 'Da questa settimana ' + parti.join(' e ') + '.' + perche + ' Il resto resta com\'era: chiudi la settimana intera, un pasto alla volta.';
+  }
+  return 'Primo piano: ' + fmtNum(targets.kcal) + ' kcal e ' + fmtNum(targets.protein) + ' g di proteine al giorno, da provare per una settimana. Poi guardiamo i numeri veri e si aggiusta.';
+}
+
+// Genera ai_reasoning via Worker Groq. Mai throw — ripiego robusto se errore.
+// ctx: da _pianoV4ContestoAnnuncio; se manca si calcola qui per la settimana prossima.
+async function _pianoV4GenerateReasoning(targets, ctx) {
+  if (!ctx) ctx = await _pianoV4ContestoAnnuncio(wpAddDays(wpMonday(), 7), targets);
   const ritratto = await coachRitrattoPronto();
   const prompt =
-    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.\n\n" +
-    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. " +
-    "Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di " +
-    "incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece " +
-    "di riempire con frasi motivazionali generiche.\n\n" +
+    ZTCoachRules.voce() + "\n\n" +
     "ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono " +
     "inventati per l'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.\n" +
-    "\"Stessi numeri della settimana scorsa: stanno funzionando, non li tocco. Tu hai saltato due cene su sette. " +
-    "Se questa settimana le chiudi tutte, la prossima si aggiustano i carichi.\"\n" +
+    "\"" + _pianoV4AnnuncioEsempio(ctx) + "\"\n" +
     "Cosa fa questa voce: dice un fatto concreto prima di dare il consiglio; sceglie una cosa invece di offrirne " +
     "tre; non chiude con una frase motivazionale generica.\n" +
     "Le cene saltate dell'esempio sono inventate: NON attribuire all'utente mancanze, salti o comportamenti che " +
     "non risultano dai dati che ti ho dato. Se non hai un fatto del genere, salta quella parte e resta su quello che sai.\n\n" +
     (ritratto ? ritratto + "\n\n" : "") +
-    "Stai annunciando all'utente il piano della settimana che sta per iniziare. " +
-    "Gli obiettivi NON cambiano rispetto alla settimana scorsa: kcal " + targets.kcal +
-    ", proteine " + targets.protein + "g, carboidrati " + targets.carbs + "g, grassi " + targets.fat + "g.\n\n" +
+    _pianoV4AnnuncioRighe(targets, ctx) + "\n\n" +
     "Scrivi 2-3 frasi in italiano, prosa diretta. Il \"noi\" solo per il lavoro fatto insieme " +
     "(\"ripartiamo\", \"vediamo come va\"): il corpo, il peso, i risultati e i progressi sono dell'utente e vanno " +
     "al \"tuo\", mai al \"nostro\". NIENTE preamboli, NIENTE elenchi puntati, NIENTE numeri ripetuti uno per uno. " +
-    "Concentra il messaggio sull'idea che gli obiettivi " +
-    "restano fermi perché stanno funzionando, e che ora conta la costanza.";
+    "Chiudi su quello che conta adesso: la costanza nel seguire il piano.";
   try {
     const txt = await callAI(prompt, 200);
     const clean = (txt || '').trim();
-    if (!clean) return _PIANOV4_POSTINO_FALLBACK_REASONING;
+    if (!clean) return _pianoV4AnnuncioRipiego(targets, ctx);
     return clean;
   } catch (e) {
     console.warn('[postino] callAI error, using fallback:', e);
-    return _PIANOV4_POSTINO_FALLBACK_REASONING;
+    return _pianoV4AnnuncioRipiego(targets, ctx);
   }
 }
 
@@ -4015,9 +4108,9 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   const pantry = _pianoV4F2aBuildPantry(dieta, intolleranze);
 
   return [
-    "Sei Pirsi, il coach nutrizionale di Zona Tracker. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo. Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    ZTCoachRules.voce(),
     "",
-    "REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.",
+    "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
     "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),
@@ -4281,7 +4374,7 @@ async function _pianoV4MaybePostino(opts) {
         return status;
       }
     }
-    const reasoning = await _pianoV4GenerateReasoning(status.targets);
+    const reasoning = await _pianoV4GenerateReasoning(status.targets, await _pianoV4ContestoAnnuncio(status.weekStart, status.targets));
 
     const payload = {
       user_id: ST.user.id,

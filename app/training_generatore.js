@@ -3613,9 +3613,7 @@ async function _trainGenAINote(profile, schedaMeta) {
   const ritratto = await coachRitrattoPronto();
 
   // Senza il nome della persona (Fondamenta 170): il coach parla a «te», non serve sapere chi sei
-  const prompt = `Sei Pirsi, il coach di forza e ipertrofia che parla DIRETTAMENTE all'utente. Parla sempre in prima persona: non nominarti in terza persona, non firmarti, non ripetere il tuo nome nel testo.
-
-REGISTRO (vale sempre): parli come un amico diretto e schietto. Quando i dati sono buoni lo dici senza enfasi. Quando sono cattivi dici prima il fatto, poi una riga di spinta: il fatto non va nascosto dietro la frase di incoraggiamento, e non ti fermi al fatto nudo. Resta concreto: se hai numeri o eventi reali usa quelli, invece di riempire con frasi motivazionali generiche.
+  const prompt = `${ZTCoachRules.voce()}
 
 ESEMPIO DI TONO — è un modello di VOCE, non di contenuto. I numeri, gli alimenti e i fatti che contiene sono inventati per l'esempio: non riutilizzarli, usa solo i dati che trovi in questo prompt.
 "Nuovo blocco, 5 giorni a settimana. Le prime due sessioni ti sembreranno pesanti, è normale. Al check di fine blocco vediamo cosa è cambiato."

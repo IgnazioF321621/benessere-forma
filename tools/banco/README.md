@@ -54,6 +54,14 @@ TZ=UTC node worker/test/prova_coach_cron.mjs # il cron del lunedì con fetch fin
 TZ=UTC node worker/test/vivo_coach_cron.mjs  # dal vivo, in prova: quadri del Worker contro quelli del telefono, giro senza scritture
 node worker/test/prova_vision_check.mjs # il Worker /vision-check con fetch finto (niente jsdom)
 node tools/banco/prova_ritratto.js        # ritratto unico: il modulo da solo, poi le chiamate del coach nell'app vera (Pirsi 020)
+node tools/banco/prova_pirsi_voce.js      # Pirsi 040: una sola identità e un solo registro (ZTCoachRules.voce), attrezzi dal profilo nel ritratto, Home senza «a digiuno», Worker con la stessa voce
+node tools/banco/prova_pirsi_annuncio.js  # Pirsi 050: l'annuncio del piano sa se è il primo, se i numeri restano o cambiano (di quanto e perché); ripiego per caso; il postino passa il contesto
+node tools/banco/prova_pirsi_accetto_pasti.js  # Pirsi 060: dopo «Accetto» su calorie o proteine, «Rifaccio pranzi e cene?»: pasti rifatti coi numeri nuovi, ripristino se il coach tace, avviso vero senza piano o con «Lascia così»
+node tools/banco/prova_pirsi_tempo.js      # Pirsi 090: tempo massimo in callAI (timeout), cue puliti, errore non tenuto e riprovato, cue buoni salvati sul telefono per 30 giorni
+node tools/banco/prova_body_misure.js     # Body 020: «Misure col metro e bilancia» con la data (mai nel futuro), peso in weight_logs come «Pesati ora», metro e bilancia smart in body_logs, profilo solo se è la pesata più recente
+node tools/banco/prova_body_percentuale.js # Body 030: la barra «% completato» conta solo il movimento verso l'obiettivo (0% se ci si allontana), in Misure e in Tendenza
+node tools/banco/prova_body_lettura.js    # Body 110: «non caricato» non è «vuoto»: letture da dbq, «Non riesco a leggere» con Riprova, dati vecchi tenuti con la striscia, Home in attesa, cancellazione del check da dbq
+node tools/banco/prova_body_direzione.js  # Body 070: «bene» e «male» secondo l'obiettivo (direzioneBuona) in Misure e Tendenza; obiettivo vita dal profilo, mai scritto nel codice
 node tools/banco/prova_porta_coach.js    # callAI manda il token della persona; senza sessione non chiama (Pirsi 010)
 node worker/test/prova_porta_coach.mjs   # la porta dei testi del Worker: token, sito, tetti, 404, limite per persona (Pirsi 010)
 ```

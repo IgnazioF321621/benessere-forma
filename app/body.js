@@ -582,12 +582,12 @@ async function m2ShouldShowEntry(profile) {
   if(ST.user && ST.user.id === 'test-user-001') return false;
   if(profile.m2_skipped === true) return false;
   try {
-    const { data, error } = await supa.from('body_checks')
+    const { data, error } = await dbq('leggere lo stato del check', supa.from('body_checks')
       .select('id, status')
       .eq('user_id', ST.user.id)
       .or('status.eq.completed,status.eq.in_progress')
       .limit(1)
-      .maybeSingle();
+      .maybeSingle(), { silenzioso:true });
     if(error){ console.warn('[m2] entry check error:', error); return false; }
     if(data && data.status === 'completed') return false;
     // Anche se in_progress, mostriamo M2 entry (sarà m2EntryIntro() a routare a resume)
@@ -632,10 +632,11 @@ async function loadBloodTests(){
     .limit(200);
   if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
     console.warn('[blood] storico non caricato:', res.error.message);
-    ST.bloodTests = [];
-    return;
+    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];   // Body 110: quello che c'era resta; «non caricato» lo dice il ritorno
+    return false;
   }
   ST.bloodTests = res.data || [];
+  return true;
 }
 
 // Card "Esami del sangue" — storico in sola lettura, sotto la sezione Check.
@@ -691,22 +692,31 @@ function toggleBloodTest(id){
   renderBody();
 }
 
+// Body 110 (13 ottobre 2026): «non caricato» non è «vuoto». Le letture passano da dbq; se una fallisce
+// resta in memoria quello che c'era (anche dalla copia locale) e ST.bodyLetturaFallita lo dice: il tab
+// mostra «Non riesco a leggere i dati del corpo» con Riprova invece di «Nessun dato», e la Home resta
+// in attesa invece di dire «primo check da fare». Un avviso solo, non tre.
 async function loadBodyLogs(){
-  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
-  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; renderBody(); }
+  if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; ST.bodyLetturaFallita=false; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
+  const prima = { logs: ST.bodyLogs, meas: ST.bodyMeasurements, checks: ST.bodyChecks };
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; ST.bodyLetturaFallita=false; renderBody(); }
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
   // + blood_tests (storico esami, card in coda al tab Check)
   // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47)
-  const [logsRes, measRes, checksRes] = await Promise.all([
-    supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90),
-    supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90),
-    supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id),
+  const [logsRes, measRes, checksRes, bloodOk, pesateOk] = await Promise.all([
+    dbq('leggere le misure del corpo', supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90), { silenzioso:true }),
+    dbq('leggere le misure dei check', supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90), { silenzioso:true }),
+    dbq('leggere i check fisici', supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id), { silenzioso:true }),
     loadBloodTests(),
     loadWeightLogs(),
   ]);
-  ST.bodyLogs = logsRes.data || [];
-  ST.bodyMeasurements = measRes.data || [];
-  ST.bodyChecks = checksRes.data || [];
+  const tieni = (res, vecchio) => res.error ? (Array.isArray(vecchio) ? vecchio : null) : (res.data || []);
+  ST.bodyLogs = tieni(logsRes, prima.logs);
+  ST.bodyMeasurements = tieni(measRes, prima.meas);
+  ST.bodyChecks = tieni(checksRes, prima.checks);
+  if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];
+  ST.bodyLetturaFallita = !!(logsRes.error || measRes.error || checksRes.error) || bloodOk === false || pesateOk === false;
+  if(ST.bodyLetturaFallita && !senzaRete()) showToast('Non riesco a leggere i dati del corpo', '⚠️', 5500);
   updateHeaderWeight();
   if(ST.page==='body') renderBody();
   else if(ST.page==='home') renderHome();
@@ -855,9 +865,24 @@ function getUnifiedBodyTimeline(){
   return out;
 }
 
+// Body 020: il giorno del modulo delle misure. Mai nel futuro.
+function bodyLogSetDate(v){
+  const today = todayKey();
+  const d = String(v || '').slice(0, 10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || d > today){ showToast('Scegli un giorno fino a oggi', '⚠️'); ST.bodyLogDate = today; renderBody(); return; }
+  ST.bodyLogDate = d;
+  renderBody();
+}
+
+// «Misure col metro e bilancia» (Body 020, 13 ottobre 2026). Una sola tabella per le pesate: il peso
+// scritto qui va in weight_logs, la stessa riga di «Pesati ora» (prima andava in body_logs, e se quel
+// giorno c'era già una pesata rapida vinceva quella e il numero appena scritto non si vedeva da nessuna
+// parte). Metro e bilancia smart restano in body_logs. La data è quella scelta nel modulo.
 async function saveBodyLog(){
   if(!ST.user) return;
   const today = todayKey();
+  const dataScelta = (document.getElementById('bl-date')?.value || ST.bodyLogDate || today).slice(0, 10);
+  const giorno = (/^\d{4}-\d{2}-\d{2}$/.test(dataScelta) && dataScelta <= today) ? dataScelta : today;
   const weight   = parseFloat(document.getElementById('bl-weight')?.value);
   const waist    = parseFloat(document.getElementById('bl-waist')?.value);
   const bf       = parseFloat(document.getElementById('bl-bf')?.value);
@@ -869,8 +894,7 @@ async function saveBodyLog(){
   const bodyAge  = parseInt(document.getElementById('bl-bodyage')?.value);
   const notes    = document.getElementById('bl-notes')?.value?.trim();
 
-  const payload = { user_id: ST.user.id, date: today };
-  if(!isNaN(weight))   payload.weight_kg    = weight;
+  const payload = { user_id: ST.user.id, date: giorno };
   if(!isNaN(waist))    payload.waist_cm     = waist;
   if(!isNaN(bf))       payload.bf_pct       = bf;
   if(!isNaN(muscle))   payload.muscle_kg    = muscle;
@@ -881,21 +905,41 @@ async function saveBodyLog(){
   if(!isNaN(bodyAge))  payload.body_age     = bodyAge;
   if(notes)            payload.notes        = notes;
 
+  const haMisure = Object.keys(payload).length > 2;
+  if(isNaN(weight) && !haMisure){ showToast('Scrivi almeno un numero', '⚠️'); return; }
+
   ST.bodySaving = true;
   renderBody();
 
+  // Il peso: la pesata di quel giorno, come «Pesati ora» (senza rete va in coda e vale subito in memoria)
+  if(!isNaN(weight)){
+    const res = await scriviConCoda('salvare la pesata', { tabella:'weight_logs', tipo:'upsert', righe:{ user_id: ST.user.id, date: giorno, weight_kg: weight }, onConflict:'user_id,date' });
+    if(res.error){ ST.bodySaving = false; avvisa('Non riesco a salvare: ' + res.error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
+    if(res.inCoda) ST.weightLogs = [{ date: giorno, weight_kg: weight }, ...(ST.weightLogs || []).filter(q => q.date !== giorno)].sort((a, b) => a.date < b.date ? 1 : -1);
+    // Il profilo prende il peso solo se è la pesata più recente: una misura vecchia non riscrive l'oggi
+    const ultima = (ST.weightLogs || []).map(q => q.date).sort().pop();
+    if(!ultima || giorno >= ultima){
+      await dbq('salvare il peso', supa.from('profiles').update({ weight_kg: weight, updated_at: new Date().toISOString() }).eq('id', ST.user.id), { silenzioso:true });
+      if(ST.profile) ST.profile.weight_kg = weight;
+    }
+  }
+
   // Scrivi o aggiorna (Fondamenta 090): una riga per persona e per giorno, lo garantisce il vincolo
-  // body_logs_user_date_key; si toccano solo i campi compilati. Prima: lettura, poi insert o update.
-  const { error } = await dbq('salvare le misure', supa.from('body_logs').upsert(payload, { onConflict:'user_id,date' }), { silenzioso:true });
+  // body_logs_user_date_key; si toccano solo i campi compilati.
+  if(haMisure){
+    const { error } = await dbq('salvare le misure', supa.from('body_logs').upsert(payload, { onConflict:'user_id,date' }), { silenzioso:true });
+    if(error){ ST.bodySaving = false; avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
+  }
 
   ST.bodySaving = false;
-  if(error){ avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
-
-  if(!isNaN(weight)){
-    await dbq('salvare il peso', supa.from('profiles').update({weight_kg: weight, updated_at: new Date().toISOString()}).eq('id', ST.user.id));
-    if(ST.profile) ST.profile.weight_kg = weight;
-  }
+  showToast('Misure salvate · ' + fmtDate(giorno), '✅', 4000);
   await loadBodyLogs();
+  // Senza rete la pesata in coda non è ancora sul server: resta in memoria anche dopo la rilettura
+  if(!isNaN(weight) && senzaRete() && !(ST.weightLogs || []).some(q => q.date === giorno)){
+    ST.weightLogs = [{ date: giorno, weight_kg: weight }, ...(ST.weightLogs || [])].sort((a, b) => a.date < b.date ? 1 : -1);
+    updateHeaderWeight();
+    if(ST.page === 'body') renderBody();
+  }
 }
 
 // ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
@@ -936,7 +980,7 @@ async function deleteBodyLogConfirmed(){
           if(stErr) console.warn('[body-delete] storage remove (best-effort):', stErr);
         }
       } catch(stEx){ console.warn('[body-delete] storage remove exception (best-effort):', stEx); }
-      const { error } = await supa.from('body_checks').delete().eq('id', c.checkId);
+      const { error } = await dbq('eliminare il check fisico', supa.from('body_checks').delete().eq('id', c.checkId).eq('user_id', ST.user.id), { silenzioso:true });
       if(error) throw error;
     }
     await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
@@ -1327,6 +1371,55 @@ function sparklineSVG(values, color){
   </svg>`;
 }
 // Formatta un valore metrica: 1 decimale, rimuove .0
+// ── «Bene» e «male» secondo l'obiettivo della persona (Body 070, 13 ottobre 2026) ──
+// Prima: in Misure il peso che saliva era sempre rosso; in Tendenza il controllo sull'obiettivo falliva
+// con più chiavi o chiavi vecchie; petto e fianchi che crescevano erano sempre «male», anche in
+// ipertrofia. Una regola sola, qui, per Misure e Tendenza (la card in Home ne usa una uguale per il peso).
+//   direzionePeso(profilo, pesoAttuale) → 'dimagrire' | 'massa' | 'neutra'
+//     dal peso obiettivo se c'è (oltre 1 kg di distanza), altrimenti dall'obiettivo scritto nel profilo.
+//   direzioneBuona(metrica, delta, profilo, pesoAttuale) → 'bene' | 'male' | 'neutra'
+//     metrica: peso · vita · fianchi · petto · bicipite · bf · grassa · magra · viscerale · bmi
+function direzionePeso(profilo, pesoAttuale){
+  const p = profilo || ST.profile || {};
+  const goal = Number(p.goal_weight_kg), w = Number(pesoAttuale);
+  if(isFinite(goal) && goal > 0 && isFinite(w) && w > 0 && Math.abs(goal - w) > 1) return goal < w ? 'dimagrire' : 'massa';
+  const chiavi = String(p.obiettivo || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const ha = (k) => chiavi.includes(k);
+  if(ha('dimagrimento') || ha('perdita_peso')) return 'dimagrire';
+  if(ha('ipertrofia') || ha('massa_muscolare') || ha('forza_performance')) return 'massa';
+  return 'neutra';
+}
+function direzioneBuona(metrica, delta, profilo, pesoAttuale){
+  const d = Number(delta);
+  if(!isFinite(d) || Math.abs(d) < 0.05) return 'neutra';
+  const su = d > 0;
+  const verso = direzionePeso(profilo, pesoAttuale);
+  const scende = (ok) => (ok === !su) ? 'bene' : 'male';     // ok=true: scendere è bene
+  switch(metrica){
+    case 'peso': case 'bmi':
+      return verso === 'dimagrire' ? scende(true) : verso === 'massa' ? scende(false) : 'neutra';
+    case 'bf': case 'grassa': case 'viscerale': return scende(true);     // salute: giù è sempre bene
+    case 'magra': return scende(false);                                   // massa magra: su è sempre bene
+    case 'vita': return verso === 'massa' ? 'neutra' : scende(true);
+    case 'fianchi': case 'petto': case 'bicipite':
+      return verso === 'massa' ? scende(false) : verso === 'dimagrire' ? (metrica === 'bicipite' ? 'neutra' : scende(true)) : 'neutra';
+    default: return 'neutra';
+  }
+}
+function coloreDirezione(esito){ return esito === 'bene' ? '#2A7A6F' : esito === 'male' ? '#B84C2A' : 'var(--t3)'; }
+
+// Body 030 (13 ottobre 2026): quanto manca all'obiettivo si conta solo nella direzione giusta.
+// Partendo da 72 con obiettivo 68, a 74 non è «50% completato»: è 0%. Lo usano Misure e Tendenza.
+function percentualeVersoObiettivo(partenza, attuale, obiettivo){
+  if([partenza, attuale, obiettivo].some(x => x == null || x === '')) return 0;
+  const p = Number(partenza), a = Number(attuale), o = Number(obiettivo);
+  if(![p, a, o].every(x => isFinite(x))) return 0;
+  const totale = Math.abs(p - o);
+  if(totale === 0) return a === o ? 100 : 0;
+  const fatto = (a - p) * (o > p ? 1 : -1);
+  return Math.max(0, Math.min(100, Math.round(fatto / totale * 100)));
+}
+
 function fmtMetric(v){
   if(v == null || isNaN(v)) return '—';
   const r = Math.round(v * 10) / 10;
@@ -1373,7 +1466,8 @@ function renderBodyTrend(){
 
   // timeline filtrata per le card metriche, in ordine cronologico ASC
   const filtered = filterTimelineByRange(timeline, range).slice().sort((a,b) => a._ts - b._ts);
-  const isGainObj = ['ipertrofia','forza_performance'].includes(ST.profile?.obiettivo);
+  const versoPeso = direzionePeso(ST.profile, uData.weight_kg ?? ST.profile?.weight_kg);   // Body 070: una regola sola
+  const isGainObj = versoPeso === 'massa';
 
   // ══ SEZIONE 1 — Progresso vs obiettivo ══
   let sec1 = '';
@@ -1399,8 +1493,7 @@ function renderBodyTrend(){
       if(w != null && goalW != null){
         const wPts = timeline.filter(r => r.weight_kg != null);
         const startW = wPts.length ? wPts[wPts.length-1].weight_kg : w;
-        const total = Math.abs(startW - goalW);
-        const done  = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+        const done  = percentualeVersoObiettivo(startW, w, goalW);   // Body 030: solo nella direzione giusta
         barHTML = `<div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;margin-top:10px;">
           <div style="height:100%;width:${done}%;background:#854F0B;border-radius:var(--r-pill);"></div>
         </div>
@@ -1439,15 +1532,15 @@ function renderBodyTrend(){
   {
     const H = uData.height_cm ?? ST.profile?.height_cm ?? null;
     const metricDefs = [
-      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, goodDown: !isGainObj, precise: true },
-      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  goodDown: true, precise: true },
-      { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    goodDown: true },
-      { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, goodDown: false },
-      { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   goodDown: true },
-      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    goodDown: true, precise: true },
-      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  goodDown: true, precise: true },
-      { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, goodDown: true },
-      { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, goodDown: true },
+      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, metrica:'peso', precise: true },
+      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  metrica:'vita', precise: true },
+      { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    metrica:'bf' },
+      { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, metrica:'magra' },
+      { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   metrica:'grassa' },
+      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    metrica:'fianchi', precise: true },
+      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  metrica:'petto', precise: true },
+      { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, metrica:'viscerale' },
+      { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, metrica:'bmi' },
     ];
     const cards = metricDefs.map(def => {
       const fmt = def.precise ? fmtMeasure : fmtMetric;
@@ -1464,11 +1557,7 @@ function renderBodyTrend(){
       }
       const init = vals[0];
       const delta = curr - init;
-      let deltaCol = 'var(--t3)';
-      if(Math.abs(delta) >= 0.05){
-        const good = def.goodDown ? (delta < 0) : (delta > 0);
-        deltaCol = good ? '#2A7A6F' : '#B84C2A';
-      }
+      const deltaCol = coloreDirezione(direzioneBuona(def.metrica, delta, ST.profile, uData.weight_kg));   // Body 070
       const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
       const suffix = trendRangeSuffix(range, pts[0].date);
       const deltaTxt = Math.abs(delta) < 0.05
@@ -1510,24 +1599,20 @@ function renderBodyTrend(){
       const lean = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(1-m.body_fat_pct/100) : null;
       const fat  = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(m.body_fat_pct/100) : null;
       const cmpDefs = [
-        { name:'Peso',            unit:'kg', get: m => m.weight_kg,      goodDown: !isGainObj },
-        { name:'Vita',            unit:'cm', get: m => m.waist_cm,       goodDown: true },
-        { name:'Fianchi',         unit:'cm', get: m => m.hips_cm,        goodDown: true },
-        { name:'Petto',           unit:'cm', get: m => m.chest_cm,       goodDown: true },
-        { name:'BF%',             unit:'%',  get: m => m.body_fat_pct,   goodDown: true },
-        { name:'Massa magra',     unit:'kg', get: lean,                  goodDown: false },
-        { name:'Massa grassa',    unit:'kg', get: fat,                   goodDown: true },
-        { name:'Grasso viscerale',unit:'',   get: m => m.visceral_fat,   goodDown: true },
+        { name:'Peso',            unit:'kg', get: m => m.weight_kg,      metrica:'peso' },
+        { name:'Vita',            unit:'cm', get: m => m.waist_cm,       metrica:'vita' },
+        { name:'Fianchi',         unit:'cm', get: m => m.hips_cm,        metrica:'fianchi' },
+        { name:'Petto',           unit:'cm', get: m => m.chest_cm,       metrica:'petto' },
+        { name:'BF%',             unit:'%',  get: m => m.body_fat_pct,   metrica:'bf' },
+        { name:'Massa magra',     unit:'kg', get: lean,                  metrica:'magra' },
+        { name:'Massa grassa',    unit:'kg', get: fat,                   metrica:'grassa' },
+        { name:'Grasso viscerale',unit:'',   get: m => m.visceral_fat,   metrica:'viscerale' },
       ];
       const rows = cmpDefs.map(def => {
         const a = def.get(first), b = def.get(last);
         if(a == null || b == null) return '';
         const delta = b - a;
-        let col = 'var(--t3)';
-        if(Math.abs(delta) >= 0.05){
-          const good = def.goodDown ? (delta < 0) : (delta > 0);
-          col = good ? '#2A7A6F' : '#B84C2A';
-        }
+        const col = coloreDirezione(direzioneBuona(def.metrica, delta, ST.profile, uData.weight_kg));   // Body 070
         const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
         const deltaTxt = Math.abs(delta) < 0.05 ? '±0' : `${sign}${fmtMetric(Math.abs(delta))} ${def.unit}`;
         return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--s2);">
@@ -1611,15 +1696,27 @@ function renderBody(){
 
   let body = '';
 
+  // Body 110: senza dati in memoria si distingue «sto leggendo» da «non sono riuscito a leggere»;
+  // con dati vecchi in memoria e una rilettura fallita, una striscia lo dice e offre Riprova.
+  const avvisoLettura = ST.bodyLetturaFallita
+    ? `<div style="margin:0 0 12px;padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-sans);color:var(--t2);display:flex;justify-content:space-between;align-items:center;gap:8px;"><span>Dati del corpo non aggiornati: l'ultima lettura non è riuscita${senzaRete() ? ' (sei senza rete)' : ''}.</span><button onclick="loadBodyLogs()" style="background:none;border:1px solid var(--b1);border-radius:var(--r);padding:4px 10px;font-size:12px;font-family:var(--font-mono);color:var(--t1);cursor:pointer;">Riprova</button></div>`
+    : '';
   if(ST.bodyLogs === null || ST.bodyMeasurements === null){
-    body = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
+    body = ST.bodyLetturaFallita
+      ? `<div style="padding:40px 20px;text-align:center;"><div style="color:var(--t2);font-size:13px;font-family:var(--font-sans);line-height:1.6;margin-bottom:14px;">Non riesco a leggere i dati del corpo${senzaRete() ? ': sei senza rete' : ''}.<br>Quello che hai salvato è al sicuro.</div><button class="btn btn-primary" onclick="loadBodyLogs()">Riprova</button></div>`
+      : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento...</div>`;
     document.getElementById('page-body').innerHTML = navHTML + body;
     return;
   }
 
   const today    = todayKey();
-  const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il form "Log misure"
-  const todayLog = logs.find(l => l.date === today) || {};
+  const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il modulo delle misure
+  // Body 020: il modulo «Misure col metro e bilancia» ha una data (oggi di base, mai nel futuro);
+  // si pre-popola con le misure di quel giorno e con la pesata di quel giorno (weight_logs).
+  const giornoLog = (ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today;
+  const pesataGiorno = (ST.weightLogs || []).find(q => q.date === giornoLog) || null;
+  const todayLog = { ...(logs.find(l => l.date === giornoLog) || {}) };
+  if(todayLog.weight_kg == null && pesataGiorno && pesataGiorno.weight_kg != null) todayLog.weight_kg = pesataGiorno.weight_kg;
   // Dati unificati body_logs + body_measurements
   const uData     = getLatestBodyData();
   const uTimeline = getUnifiedBodyTimeline();
@@ -1637,15 +1734,14 @@ function renderBody(){
     let wTrend = '';
     if(w && wPrev){
       const diff = (w - wPrev).toFixed(1);
-      const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+      const col  = coloreDirezione(direzioneBuona('peso', w - wPrev, ST.profile, w));   // Body 070
       wTrend = `<span style="font-size:12px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:6px;">${diff > 0 ? '+' : ''}${diff}</span>`;
     }
 
     let wProgressHTML = '';
     if(w && goalW){
       const startW = uWeights.length ? uWeights[uWeights.length-1].weight_kg : w;
-      const total  = Math.abs(startW - goalW);
-      const done   = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+      const done   = percentualeVersoObiettivo(startW, w, goalW);   // Body 030: solo nella direzione giusta
       const dir    = goalW < w ? '▼' : '▲';
       wProgressHTML = `
         <div style="margin-bottom:14px;">
@@ -1660,28 +1756,31 @@ function renderBody(){
         </div>`;
     }
 
+    // Body 070: l'obiettivo vita «89 → 85» era scritto fisso nel codice (i numeri di Ignazio, visti da chiunque).
+    // Ora: obiettivo vita dal profilo se c'è (goal_waist_cm, facoltativo), partenza dalla prima misura;
+    // senza obiettivo solo valore e variazione, colorata secondo l'obiettivo della persona.
     let waistProgressHTML = '';
     if(waist){
-      const waistGoal  = 85;
-      const waistStart = 89;
-      const total      = waistStart - waistGoal;
-      const done       = total > 0 ? Math.max(0, Math.min(100, Math.round((waistStart - waist) / total * 100))) : 0;
+      const waistGoal  = Number(ST.profile?.goal_waist_cm);
+      const waistStart = uWaists.length ? uWaists[uWaists.length-1].waist_cm : waist;
+      const conObiettivo = isFinite(waistGoal) && waistGoal > 0;
+      const done       = conObiettivo ? percentualeVersoObiettivo(waistStart, waist, waistGoal) : 0;
       let waistTrend = '';
       if(waistP){
         const diff = (waist - waistP).toFixed(1);
-        const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+        const col  = coloreDirezione(direzioneBuona('vita', waist - waistP, ST.profile, w));
         waistTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
       }
       waistProgressHTML = `
         <div style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Vita — obiettivo &lt; ${waistGoal} cm</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${conObiettivo ? `Vita — obiettivo ${waistGoal < waistStart ? '&lt;' : '&gt;'} ${waistGoal} cm` : 'Vita'}</span>
             <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:#854F0B;">${waist} cm${waistTrend}</span>
           </div>
-          <div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
-            <div style="height:100%;width:${done}%;background:${waist<=waistGoal?'#2A7A6F':'#854F0B'};border-radius:var(--r-pill);"></div>
+          ${conObiettivo ? `<div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
+            <div style="height:100%;width:${done}%;background:${done >= 100 ? '#2A7A6F' : '#854F0B'};border-radius:var(--r-pill);"></div>
           </div>
-          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato (89 → 85 cm)</div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato (${waistStart} → ${waistGoal} cm)</div>` : ''}
         </div>`;
     }
 
@@ -1738,7 +1837,11 @@ function renderBody(){
       })()}
 
       <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
-        <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Log misure — ${fmtDate(today)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
+          <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Misure col metro e bilancia</div>
+          <input id="bl-date" type="date" value="${giornoLog}" max="${today}" onchange="bodyLogSetDate(this.value)" aria-label="Giorno delle misure"
+            style="padding:6px 8px;border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);outline:none;">
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
           <div>
             <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Peso (kg)</label>
@@ -1915,7 +2018,7 @@ function renderBody(){
     </div>`;
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + body + versionFooter() + bodyDeleteConfirmHTML;
+  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + avvisoLettura + body + versionFooter() + bodyDeleteConfirmHTML;
 }
 
 // ─── STEP D.1 (22 mag 2026): Modal pesata "Pesati ora" ───
@@ -1932,8 +2035,9 @@ async function loadWeightLogs() {
     .eq('user_id', ST.user.id)
     .order('date', { ascending: false })
     .limit(1000);   // una riga al giorno: copre quasi tre anni, e la Tendenza «Tutto» le mostra tutte
-  if(error) { console.warn('loadWeightLogs error:', error); if(!ST.weightLogs) ST.weightLogs = []; return; }   // lettura fallita: restano quelle in memoria
+  if(error) { console.warn('loadWeightLogs error:', error); if(!ST.weightLogs) ST.weightLogs = []; return false; }   // lettura fallita: restano quelle in memoria
   ST.weightLogs = data || [];
+  return true;
 }
 
 function _weighInDefaultValue() {
