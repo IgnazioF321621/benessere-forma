@@ -1361,6 +1361,18 @@ function sparklineSVG(values, color){
   </svg>`;
 }
 // Formatta un valore metrica: 1 decimale, rimuove .0
+// Body 030 (13 ottobre 2026): quanto manca all'obiettivo si conta solo nella direzione giusta.
+// Partendo da 72 con obiettivo 68, a 74 non è «50% completato»: è 0%. Lo usano Misure e Tendenza.
+function percentualeVersoObiettivo(partenza, attuale, obiettivo){
+  if([partenza, attuale, obiettivo].some(x => x == null || x === '')) return 0;
+  const p = Number(partenza), a = Number(attuale), o = Number(obiettivo);
+  if(![p, a, o].every(x => isFinite(x))) return 0;
+  const totale = Math.abs(p - o);
+  if(totale === 0) return a === o ? 100 : 0;
+  const fatto = (a - p) * (o > p ? 1 : -1);
+  return Math.max(0, Math.min(100, Math.round(fatto / totale * 100)));
+}
+
 function fmtMetric(v){
   if(v == null || isNaN(v)) return '—';
   const r = Math.round(v * 10) / 10;
@@ -1433,8 +1445,7 @@ function renderBodyTrend(){
       if(w != null && goalW != null){
         const wPts = timeline.filter(r => r.weight_kg != null);
         const startW = wPts.length ? wPts[wPts.length-1].weight_kg : w;
-        const total = Math.abs(startW - goalW);
-        const done  = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+        const done  = percentualeVersoObiettivo(startW, w, goalW);   // Body 030: solo nella direzione giusta
         barHTML = `<div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;margin-top:10px;">
           <div style="height:100%;width:${done}%;background:#854F0B;border-radius:var(--r-pill);"></div>
         </div>
@@ -1683,8 +1694,7 @@ function renderBody(){
     let wProgressHTML = '';
     if(w && goalW){
       const startW = uWeights.length ? uWeights[uWeights.length-1].weight_kg : w;
-      const total  = Math.abs(startW - goalW);
-      const done   = total > 0 ? Math.min(100, Math.round(Math.abs(startW - w) / total * 100)) : 0;
+      const done   = percentualeVersoObiettivo(startW, w, goalW);   // Body 030: solo nella direzione giusta
       const dir    = goalW < w ? '▼' : '▲';
       wProgressHTML = `
         <div style="margin-bottom:14px;">

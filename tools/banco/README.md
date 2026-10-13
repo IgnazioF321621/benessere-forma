@@ -59,6 +59,7 @@ node tools/banco/prova_pirsi_annuncio.js  # Pirsi 050: l'annuncio del piano sa s
 node tools/banco/prova_pirsi_accetto_pasti.js  # Pirsi 060: dopo «Accetto» su calorie o proteine, «Rifaccio pranzi e cene?»: pasti rifatti coi numeri nuovi, ripristino se il coach tace, avviso vero senza piano o con «Lascia così»
 node tools/banco/prova_pirsi_tempo.js      # Pirsi 090: tempo massimo in callAI (timeout), cue puliti, errore non tenuto e riprovato, cue buoni salvati sul telefono per 30 giorni
 node tools/banco/prova_body_misure.js     # Body 020: «Misure col metro e bilancia» con la data (mai nel futuro), peso in weight_logs come «Pesati ora», metro e bilancia smart in body_logs, profilo solo se è la pesata più recente
+node tools/banco/prova_body_percentuale.js # Body 030: la barra «% completato» conta solo il movimento verso l'obiettivo (0% se ci si allontana), in Misure e in Tendenza
 node tools/banco/prova_porta_coach.js    # callAI manda il token della persona; senza sessione non chiama (Pirsi 010)
 node worker/test/prova_porta_coach.mjs   # la porta dei testi del Worker: token, sito, tetti, 404, limite per persona (Pirsi 010)
 ```
