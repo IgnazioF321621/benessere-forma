@@ -1371,6 +1371,43 @@ function sparklineSVG(values, color){
   </svg>`;
 }
 // Formatta un valore metrica: 1 decimale, rimuove .0
+// ── «Bene» e «male» secondo l'obiettivo della persona (Body 070, 13 ottobre 2026) ──
+// Prima: in Misure il peso che saliva era sempre rosso; in Tendenza il controllo sull'obiettivo falliva
+// con più chiavi o chiavi vecchie; petto e fianchi che crescevano erano sempre «male», anche in
+// ipertrofia. Una regola sola, qui, per Misure e Tendenza (la card in Home ne usa una uguale per il peso).
+//   direzionePeso(profilo, pesoAttuale) → 'dimagrire' | 'massa' | 'neutra'
+//     dal peso obiettivo se c'è (oltre 1 kg di distanza), altrimenti dall'obiettivo scritto nel profilo.
+//   direzioneBuona(metrica, delta, profilo, pesoAttuale) → 'bene' | 'male' | 'neutra'
+//     metrica: peso · vita · fianchi · petto · bicipite · bf · grassa · magra · viscerale · bmi
+function direzionePeso(profilo, pesoAttuale){
+  const p = profilo || ST.profile || {};
+  const goal = Number(p.goal_weight_kg), w = Number(pesoAttuale);
+  if(isFinite(goal) && goal > 0 && isFinite(w) && w > 0 && Math.abs(goal - w) > 1) return goal < w ? 'dimagrire' : 'massa';
+  const chiavi = String(p.obiettivo || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  const ha = (k) => chiavi.includes(k);
+  if(ha('dimagrimento') || ha('perdita_peso')) return 'dimagrire';
+  if(ha('ipertrofia') || ha('massa_muscolare') || ha('forza_performance')) return 'massa';
+  return 'neutra';
+}
+function direzioneBuona(metrica, delta, profilo, pesoAttuale){
+  const d = Number(delta);
+  if(!isFinite(d) || Math.abs(d) < 0.05) return 'neutra';
+  const su = d > 0;
+  const verso = direzionePeso(profilo, pesoAttuale);
+  const scende = (ok) => (ok === !su) ? 'bene' : 'male';     // ok=true: scendere è bene
+  switch(metrica){
+    case 'peso': case 'bmi':
+      return verso === 'dimagrire' ? scende(true) : verso === 'massa' ? scende(false) : 'neutra';
+    case 'bf': case 'grassa': case 'viscerale': return scende(true);     // salute: giù è sempre bene
+    case 'magra': return scende(false);                                   // massa magra: su è sempre bene
+    case 'vita': return verso === 'massa' ? 'neutra' : scende(true);
+    case 'fianchi': case 'petto': case 'bicipite':
+      return verso === 'massa' ? scende(false) : verso === 'dimagrire' ? (metrica === 'bicipite' ? 'neutra' : scende(true)) : 'neutra';
+    default: return 'neutra';
+  }
+}
+function coloreDirezione(esito){ return esito === 'bene' ? '#2A7A6F' : esito === 'male' ? '#B84C2A' : 'var(--t3)'; }
+
 // Body 030 (13 ottobre 2026): quanto manca all'obiettivo si conta solo nella direzione giusta.
 // Partendo da 72 con obiettivo 68, a 74 non è «50% completato»: è 0%. Lo usano Misure e Tendenza.
 function percentualeVersoObiettivo(partenza, attuale, obiettivo){
@@ -1429,7 +1466,8 @@ function renderBodyTrend(){
 
   // timeline filtrata per le card metriche, in ordine cronologico ASC
   const filtered = filterTimelineByRange(timeline, range).slice().sort((a,b) => a._ts - b._ts);
-  const isGainObj = ['ipertrofia','forza_performance'].includes(ST.profile?.obiettivo);
+  const versoPeso = direzionePeso(ST.profile, uData.weight_kg ?? ST.profile?.weight_kg);   // Body 070: una regola sola
+  const isGainObj = versoPeso === 'massa';
 
   // ══ SEZIONE 1 — Progresso vs obiettivo ══
   let sec1 = '';
@@ -1494,15 +1532,15 @@ function renderBodyTrend(){
   {
     const H = uData.height_cm ?? ST.profile?.height_cm ?? null;
     const metricDefs = [
-      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, goodDown: !isGainObj, precise: true },
-      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  goodDown: true, precise: true },
-      { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    goodDown: true },
-      { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, goodDown: false },
-      { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   goodDown: true },
-      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    goodDown: true, precise: true },
-      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  goodDown: true, precise: true },
-      { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, goodDown: true },
-      { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, goodDown: true },
+      { name:'Peso',            unit:'kg', col:'#854F0B', get: r => r.weight_kg, metrica:'peso', precise: true },
+      { name:'Vita',            unit:'cm', col:'#854F0B', get: r => r.waist_cm,  metrica:'vita', precise: true },
+      { name:'BF%',             unit:'%',  col:'#854F0B', get: r => r.bf_pct,    metrica:'bf' },
+      { name:'Massa magra',     unit:'kg', col:'#2A7A6F', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(1-r.bf_pct/100) : null, metrica:'magra' },
+      { name:'Massa grassa',    unit:'kg', col:'#854F0B', get: r => (r.weight_kg!=null && r.bf_pct!=null) ? r.weight_kg*(r.bf_pct/100) : null,   metrica:'grassa' },
+      { name:'Fianchi',         unit:'cm', col:'#854F0B', get: r => r.hip_cm,    metrica:'fianchi', precise: true },
+      { name:'Petto',           unit:'cm', col:'#854F0B', get: r => r.chest_cm,  metrica:'petto', precise: true },
+      { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, metrica:'viscerale' },
+      { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, metrica:'bmi' },
     ];
     const cards = metricDefs.map(def => {
       const fmt = def.precise ? fmtMeasure : fmtMetric;
@@ -1519,11 +1557,7 @@ function renderBodyTrend(){
       }
       const init = vals[0];
       const delta = curr - init;
-      let deltaCol = 'var(--t3)';
-      if(Math.abs(delta) >= 0.05){
-        const good = def.goodDown ? (delta < 0) : (delta > 0);
-        deltaCol = good ? '#2A7A6F' : '#B84C2A';
-      }
+      const deltaCol = coloreDirezione(direzioneBuona(def.metrica, delta, ST.profile, uData.weight_kg));   // Body 070
       const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
       const suffix = trendRangeSuffix(range, pts[0].date);
       const deltaTxt = Math.abs(delta) < 0.05
@@ -1565,24 +1599,20 @@ function renderBodyTrend(){
       const lean = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(1-m.body_fat_pct/100) : null;
       const fat  = m => (m.weight_kg!=null && m.body_fat_pct!=null) ? m.weight_kg*(m.body_fat_pct/100) : null;
       const cmpDefs = [
-        { name:'Peso',            unit:'kg', get: m => m.weight_kg,      goodDown: !isGainObj },
-        { name:'Vita',            unit:'cm', get: m => m.waist_cm,       goodDown: true },
-        { name:'Fianchi',         unit:'cm', get: m => m.hips_cm,        goodDown: true },
-        { name:'Petto',           unit:'cm', get: m => m.chest_cm,       goodDown: true },
-        { name:'BF%',             unit:'%',  get: m => m.body_fat_pct,   goodDown: true },
-        { name:'Massa magra',     unit:'kg', get: lean,                  goodDown: false },
-        { name:'Massa grassa',    unit:'kg', get: fat,                   goodDown: true },
-        { name:'Grasso viscerale',unit:'',   get: m => m.visceral_fat,   goodDown: true },
+        { name:'Peso',            unit:'kg', get: m => m.weight_kg,      metrica:'peso' },
+        { name:'Vita',            unit:'cm', get: m => m.waist_cm,       metrica:'vita' },
+        { name:'Fianchi',         unit:'cm', get: m => m.hips_cm,        metrica:'fianchi' },
+        { name:'Petto',           unit:'cm', get: m => m.chest_cm,       metrica:'petto' },
+        { name:'BF%',             unit:'%',  get: m => m.body_fat_pct,   metrica:'bf' },
+        { name:'Massa magra',     unit:'kg', get: lean,                  metrica:'magra' },
+        { name:'Massa grassa',    unit:'kg', get: fat,                   metrica:'grassa' },
+        { name:'Grasso viscerale',unit:'',   get: m => m.visceral_fat,   metrica:'viscerale' },
       ];
       const rows = cmpDefs.map(def => {
         const a = def.get(first), b = def.get(last);
         if(a == null || b == null) return '';
         const delta = b - a;
-        let col = 'var(--t3)';
-        if(Math.abs(delta) >= 0.05){
-          const good = def.goodDown ? (delta < 0) : (delta > 0);
-          col = good ? '#2A7A6F' : '#B84C2A';
-        }
+        const col = coloreDirezione(direzioneBuona(def.metrica, delta, ST.profile, uData.weight_kg));   // Body 070
         const sign = delta > 0 ? '+' : delta < 0 ? '−' : '';
         const deltaTxt = Math.abs(delta) < 0.05 ? '±0' : `${sign}${fmtMetric(Math.abs(delta))} ${def.unit}`;
         return `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--s2);">
@@ -1704,7 +1734,7 @@ function renderBody(){
     let wTrend = '';
     if(w && wPrev){
       const diff = (w - wPrev).toFixed(1);
-      const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+      const col  = coloreDirezione(direzioneBuona('peso', w - wPrev, ST.profile, w));   // Body 070
       wTrend = `<span style="font-size:12px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:6px;">${diff > 0 ? '+' : ''}${diff}</span>`;
     }
 
@@ -1726,28 +1756,31 @@ function renderBody(){
         </div>`;
     }
 
+    // Body 070: l'obiettivo vita «89 → 85» era scritto fisso nel codice (i numeri di Ignazio, visti da chiunque).
+    // Ora: obiettivo vita dal profilo se c'è (goal_waist_cm, facoltativo), partenza dalla prima misura;
+    // senza obiettivo solo valore e variazione, colorata secondo l'obiettivo della persona.
     let waistProgressHTML = '';
     if(waist){
-      const waistGoal  = 85;
-      const waistStart = 89;
-      const total      = waistStart - waistGoal;
-      const done       = total > 0 ? Math.max(0, Math.min(100, Math.round((waistStart - waist) / total * 100))) : 0;
+      const waistGoal  = Number(ST.profile?.goal_waist_cm);
+      const waistStart = uWaists.length ? uWaists[uWaists.length-1].waist_cm : waist;
+      const conObiettivo = isFinite(waistGoal) && waistGoal > 0;
+      const done       = conObiettivo ? percentualeVersoObiettivo(waistStart, waist, waistGoal) : 0;
       let waistTrend = '';
       if(waistP){
         const diff = (waist - waistP).toFixed(1);
-        const col  = diff > 0 ? '#B84C2A' : '#2A7A6F';
+        const col  = coloreDirezione(direzioneBuona('vita', waist - waistP, ST.profile, w));
         waistTrend = `<span style="font-size:11px;font-family:var(--font-mono);font-weight:700;color:${col};margin-left:4px;">${diff > 0 ? '+' : ''}${diff}</span>`;
       }
       waistProgressHTML = `
         <div style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">Vita — obiettivo &lt; ${waistGoal} cm</span>
+            <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${conObiettivo ? `Vita — obiettivo ${waistGoal < waistStart ? '&lt;' : '&gt;'} ${waistGoal} cm` : 'Vita'}</span>
             <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:#854F0B;">${waist} cm${waistTrend}</span>
           </div>
-          <div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
-            <div style="height:100%;width:${done}%;background:${waist<=waistGoal?'#2A7A6F':'#854F0B'};border-radius:var(--r-pill);"></div>
+          ${conObiettivo ? `<div style="height:7px;background:var(--s2);border-radius:var(--r-pill);overflow:hidden;">
+            <div style="height:100%;width:${done}%;background:${done >= 100 ? '#2A7A6F' : '#854F0B'};border-radius:var(--r-pill);"></div>
           </div>
-          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato (89 → 85 cm)</div>
+          <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-top:3px;">${done}% completato (${waistStart} → ${waistGoal} cm)</div>` : ''}
         </div>`;
     }
 
