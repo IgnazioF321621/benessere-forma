@@ -72,8 +72,12 @@ function makeSupaMock(tables){
         const t = tables[table] || (tables[table] = []);
         const righe = Array.isArray(st.payload) ? st.payload : [st.payload];
         if(righe.some(r => r && r.id != null && t.some(x => String(x.id) === String(r.id)))) return Promise.resolve({ data:null, error:{ code:'23505', message:'duplicate key value violates unique constraint' } });
-        righe.forEach(r => t.push({ id:'fake-' + t.length, ...r }));
-        return Promise.resolve({ data: righe.map(r => ({ id:'fake-id', ...r })), error:null });
+        // la risposta porta le stesse righe salvate, con lo stesso id (prima rispondeva 'fake-id' e salvava 'fake-N':
+        // un piano creato senza id dal telefono non ritrovava i suoi pasti solo nel banco, lezione L39; Nutrition 080)
+        const salvate = righe.map(r => ({ id:'fake-' + t.length + righe.indexOf(r), ...r }));
+        salvate.forEach(r => t.push(r));
+        // .insert(...).select().single() risponde l'oggetto, non la lista (come PostgREST): il postino legge data.id
+        return Promise.resolve({ data: st.single ? (salvate[0] || null) : salvate, error:null });
       }
       if(st.op === 'delete'){
         // delete vero in memoria (dal 13 ottobre 2026, Pirsi 060): le righe che passano i filtri eq escono dalla

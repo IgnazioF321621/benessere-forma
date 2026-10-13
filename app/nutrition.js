@@ -3429,15 +3429,31 @@ async function pianoV4WelcomeConfirmAndOpen() {
 // Pulsante "RIGENERA PIANO →" nel tab Piano v4.
 // Bypassa skip-day E skip-existing: cancella il piano esistente per questa week_start
 // e rigenera da zero. Rollback automatico se la chiamata AI fallisce.
+// Nutrition 080: lavora sulla settimana MOSTRATA nel tab (prima diceva «di questa settimana» e creava quella prossima).
+// Settimana corrente: i pasti da oggi a domenica (i giorni passati non si rifanno); settimana futura: tutti e 7;
+// settimana passata: niente. Senza piano la domanda e' «Preparare il piano?», con piano «Rigenerare il piano?».
+function _pianoV4RichiestaSettimanaMostrata(){
+  const offset = ST.pianoV4WeekOffset || 0;
+  const weekStart = _pianoV4WeekStartIsoForOffset(offset);
+  const corrente = weekStart === _pianoV4SettimanaDiOggiIso();
+  return { offset, weekStart, corrente, passata: weekStart < _pianoV4SettimanaDiOggiIso(), daGiorno: corrente ? _pianoV4OggiIso() : 1 };
+}
 async function pianoV4RigeneraPiano() {
   if (ST._pianoRigeneraLoading) return;
-  if (!await chiediConferma('I pasti attuali verranno sostituiti.', { titolo:'Rigenerare il piano di questa settimana?', ok:'Rigenera' })) return;
+  const r = _pianoV4RichiestaSettimanaMostrata();
+  if (r.passata) { showToast('Quella settimana è passata: il piano si prepara da oggi in avanti', 'ℹ️', 5500); return; }
+  const cosa = r.corrente ? (r.daGiorno > 1 ? 'da oggi a domenica' : 'di questa settimana') : 'della prossima settimana';
+  const haPiano = _pianoV4HasRealPlanForWeek(r.offset);
+  const ok = haPiano
+    ? await chiediConferma('I pasti ' + cosa + ' verranno sostituiti' + (r.corrente && r.daGiorno > 1 ? ' (quelli dei giorni passati non si rifanno).' : '.'), { titolo:'Rigenerare il piano ' + cosa + '?', ok:'Rigenera' })
+    : await chiediConferma(COACH_NAME + ' prepara pranzi e cene ' + cosa + ' coi tuoi obiettivi di oggi.', { titolo:'Preparare il piano ' + cosa + '?', ok:'Prepara' });
+  if (!ok) return;
   ST._pianoRigeneraLoading = true;
   if (ST.page === 'piano') renderPianoV4(); // mostra bottone disabilitato + "GENERAZIONE IN CORSO…"
   try {
-    await _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true });
-    // Invalida cache per la settimana corrente così il re-render legge i nuovi dati
-    const weekIso = _pianoV4WeekStartIsoForOffset(ST.pianoV4WeekOffset || 0);
+    await _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true, weekStart: r.weekStart, daGiorno: r.daGiorno });
+    // Invalida cache per la settimana mostrata così il re-render legge i nuovi dati
+    const weekIso = r.weekStart;
     if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[weekIso];
     await _pianoV4LoadRealPlanForWeek(weekIso);
   } catch (e) {
@@ -3877,14 +3893,22 @@ function _pianoV4NextWeekStartIso() {
 //   'skip-no-targets',// target_kcal/protein/carbs/fat null o 0
 //   'skip-existing',  // già una riga per (user_id, week_start)
 // }
+// Nutrition 080 (Ondata 5, 13 ottobre 2026): la settimana si puo' chiedere in chiaro (opts.weekStart, lunedi' ISO) e con il
+// primo giorno da pianificare (opts.daGiorno, 1=lunedi' .. 7=domenica): e' la strada di «Prepara il piano da oggi a domenica»
+// e di «Rigenera» sulla settimana mostrata. Con la settimana in chiaro il guard del giorno non c'e': la persona l'ha chiesto.
+// Il lunedi' ISO della settimana che contiene oggi, e il giorno ISO di oggi (1..7)
+function _pianoV4OggiIso(){ const d = new Date(); return ((d.getDay() + 6) % 7) + 1; }
+function _pianoV4SettimanaDiOggiIso(){ return _pianoV4WeekStartIsoForDate(todayKey()); }
 async function _pianoV4ComputePostinoStatus(opts) {
   opts = opts || {};
   const force    = !!opts.force;    // ?genera=1 bypassa solo il guard "giorno"
   const forceAll = !!opts.forceAll; // ?forceGenera=1 / pulsante Rigenera: bypassa giorno E anti-doppione
+  const settimanaChiesta = (opts.weekStart && /^\d{4}-\d{2}-\d{2}$/.test(opts.weekStart)) ? opts.weekStart : null;
   const out = {
     when: new Date().toISOString(),
     force: force,
     forceAll: forceAll,
+    daGiorno: Math.min(7, Math.max(1, Number(opts.daGiorno) || 1)),
     user_id: (ST.user && ST.user.id) || null,
     profilePlanDay: null,
     todayDow: null,
@@ -3924,13 +3948,14 @@ async function _pianoV4ComputePostinoStatus(opts) {
   out.nextDayDow = (out.planDow + 1) % 7;
   out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
 
-  if (!force && !forceAll && !out.dayMatch) {
+  if (!force && !forceAll && !settimanaChiesta && !out.dayMatch) {
     out.decision = 'skip-day';
     return out;
   }
 
-  // 2) week_start
-  out.weekStart = _pianoV4NextWeekStartIso();
+  // 2) week_start: quella chiesta, altrimenti la settimana che sta per iniziare
+  out.weekStart = settimanaChiesta || _pianoV4NextWeekStartIso();
+  if (out.weekStart < _pianoV4SettimanaDiOggiIso()) { out.decision = 'skip-past-week'; return out; }
 
   // 3) Anti-doppione (CRITICO, vale ANCHE in modalità force)
   try {
@@ -4243,7 +4268,11 @@ function _pianoV4F2aBuildPantry(dieta, intolleranze) {
   return lines.join("\n");
 }
 
-function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
+const _PIANOV4_GIORNI_IT = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+// daGiorno (Nutrition 080): primo giorno ISO da pianificare; 1 = la settimana intera, com'era
+function _pianoV4F2aBuildPrompt(profile, targets, perMeal, daGiorno) {
+  daGiorno = Math.min(7, Math.max(1, Number(daGiorno) || 1));
+  const nGiorni = 8 - daGiorno;
   const dieta = (profile.dieta || '').toString().trim();
   const intolleranzeRaw = profile.intolleranze;
   const intolleranze = Array.isArray(intolleranzeRaw)
@@ -4272,7 +4301,8 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   return [
     ZTCoachRules.voce(),
     "",
-    "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    daGiorno === 1 ? "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare."
+                   : "Genera " + (nGiorni * 2) + " pasti (" + nGiorni + " PRANZI + " + nGiorni + " CENE) per i giorni che restano di questa settimana, da " + _PIANOV4_GIORNI_IT[daGiorno] + " a domenica (giorni " + daGiorno + ".." + "7).",
     "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),
@@ -4289,7 +4319,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "3. PRUDENZA. Se per rispettare i vincoli un piatto risulta difficile, scegli un piatto PIÙ SEMPLICE con ingredienti sicuramente presenti nella DISPENSA AMMESSA sopra. MAI inventare per forzare la consegna.",
     "4. DUBBIO = NO. Se hai il minimo dubbio che un ingrediente sia ammesso → NON usarlo. Pesca dalla DISPENSA AMMESSA.",
     "5. INTOLLERANZE: precedenza assoluta. Nessun ingrediente delle intolleranze/esclusioni può comparire, nemmeno in tracce o come condimento.",
-    "6. VARIETÀ PIENA SUI 7 GIORNI. Tutti e 14 i pasti devono essere DIVERSI tra loro nel piatto principale. NESSUNA ripetizione identica tra giorni diversi. Sono ammesse variazioni sullo stesso ingrediente base (es. salmone al forno vs salmone in padella vs salmone marinato), ma non lo stesso identico piatto due volte. ATTENZIONE PARTICOLARE AL GIORNO 7: spesso si tende a ripetere piatti dei giorni precedenti — non farlo, il giorno 7 deve avere pranzo e cena unici come tutti gli altri.",
+    "6. VARIETÀ PIENA SUI " + nGiorni + " GIORNI. Tutti e " + (nGiorni * 2) + " i pasti devono essere DIVERSI tra loro nel piatto principale. NESSUNA ripetizione identica tra giorni diversi. Sono ammesse variazioni sullo stesso ingrediente base (es. salmone al forno vs salmone in padella vs salmone marinato), ma non lo stesso identico piatto due volte. ATTENZIONE PARTICOLARE AL GIORNO 7: spesso si tende a ripetere piatti dei giorni precedenti — non farlo, il giorno 7 deve avere pranzo e cena unici come tutti gli altri.",
     "7. CUCINA ITALIANA, piatti realistici e semplici da preparare a casa.",
     "8. BERSAGLI MACRO: le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
     "9. description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali con nomi corretti e riconoscibili (es. \"Pasta integrale al pesto di basilico con pomodorini e fiocchi di mandorle\").",
@@ -4309,10 +4339,10 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "Rispondi SOLO con JSON valido, nessun preambolo, nessun testo extra, nessun blocco ```. Schema:",
     "{\"meals\":[{\"day\":1,\"slot\":\"pranzo\",\"time\":\"13:00\",\"description\":\"...\",\"ingredients\":[\"Ingrediente1 100g\",\"Ingrediente2 70g (peso secco)\",\"Ingrediente3 10g\"],\"kcal\":N,\"protein\":N,\"carbs\":N,\"fat\":N,\"explanation\":\"...\"}, ...]}",
     "",
-    "- day: 1=lunedì .. 7=domenica (ISO)",
+    "- day: " + daGiorno + "=" + _PIANOV4_GIORNI_IT[daGiorno] + " .. 7=domenica (ISO)" + (daGiorno > 1 ? " — SOLO i giorni da " + daGiorno + " a 7, nessun giorno prima" : ""),
     "- slot: \"pranzo\" oppure \"cena\" (esattamente queste due stringhe)",
     "- time: \"13:00\" per i pranzi, \"20:00\" per le cene (sempre esattamente queste due stringhe)",
-    "- 14 oggetti totali: 1 pranzo + 1 cena per ognuno dei 7 giorni",
+    "- " + (nGiorni * 2) + " oggetti totali: 1 pranzo + 1 cena per ognuno dei " + nGiorni + " giorni",
     "- ingredients: array di 3-5 stringhe, formato 'NomeIngrediente NUMEROg', dosi coerenti coi macro",
     "- kcal/protein/carbs/fat: numeri interi",
     "",
@@ -4323,7 +4353,9 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
 // Helper: parse + validazione robusta della risposta AI.
 // Ritorna { ok:true, meals:[...] } oppure { ok:false, reason:'...' }.
 // MAI throw — sempre risposta strutturata.
-function _pianoV4F2aParseAndValidate(text) {
+function _pianoV4F2aParseAndValidate(text, daGiorno) {
+  daGiorno = Math.min(7, Math.max(1, Number(daGiorno) || 1));
+  const nPasti = (8 - daGiorno) * 2;
   if (!text || typeof text !== 'string') return { ok: false, reason: 'empty-response' };
   const cleaned = text.replace(/```json|```/g, '').trim();
   let parsed;
@@ -4335,18 +4367,18 @@ function _pianoV4F2aParseAndValidate(text) {
   if (!parsed || !Array.isArray(parsed.meals)) {
     return { ok: false, reason: 'missing-meals-array' };
   }
-  if (parsed.meals.length < 14) {
+  if (parsed.meals.length < nPasti) {
     return { ok: false, reason: 'too-few-meals', count: parsed.meals.length };
   }
-  // Prendiamo i primi 14 nel caso ne ritorni di più (paranoia)
-  const meals = parsed.meals.slice(0, 14);
+  // Prendiamo i primi N nel caso ne ritorni di più (paranoia)
+  const meals = parsed.meals.slice(0, nPasti);
   const validSlots = { pranzo: true, cena: true };
   const seen = {}; // chiave "day-slot" → bool, per garantire 7+7 e niente duplicati
   for (let i = 0; i < meals.length; i++) {
     const m = meals[i];
     if (!m || typeof m !== 'object') return { ok: false, reason: 'meal-not-object', idx: i };
     const day = Number(m.day);
-    if (!Number.isInteger(day) || day < 1 || day > 7) return { ok: false, reason: 'bad-day', idx: i, day: m.day };
+    if (!Number.isInteger(day) || day < daGiorno || day > 7) return { ok: false, reason: 'bad-day', idx: i, day: m.day };
     const slot = String(m.slot || '').toLowerCase();
     if (!validSlots[slot]) return { ok: false, reason: 'bad-slot', idx: i, slot: m.slot };
     if (!m.description || typeof m.description !== 'string' || !m.description.trim()) {
@@ -4383,8 +4415,8 @@ function _pianoV4F2aParseAndValidate(text) {
     if (seen[key]) return { ok: false, reason: 'duplicate-day-slot', idx: i, key: key };
     seen[key] = true;
   }
-  // Verifica copertura completa: tutti i 14 slot (7 giorni × 2 slot) devono esserci
-  for (let d = 1; d <= 7; d++) {
+  // Verifica copertura completa: tutti gli slot dei giorni chiesti (2 per giorno) devono esserci
+  for (let d = daGiorno; d <= 7; d++) {
     if (!seen[d + '-pranzo']) return { ok: false, reason: 'missing-lunch', day: d };
     if (!seen[d + '-cena'])   return { ok: false, reason: 'missing-dinner', day: d };
   }
@@ -4419,7 +4451,7 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
     const perMeal = _pianoV4F2aTargets(targets);
 
     // Prompt + chiamata AI
-    const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal);
+    const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal, opts.daGiorno);
     let text = '';
     try {
       text = await callAI(prompt, 4000);
@@ -4433,7 +4465,7 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
     // comunque per garantire il log di fallimento in ogni caso.
     let v;
     try {
-      v = _pianoV4F2aParseAndValidate(text);
+      v = _pianoV4F2aParseAndValidate(text, opts.daGiorno);
     } catch (e) {
       console.warn('[postino-meals] validation exception:', e);
       return { ok: false, reason: 'validation-exception', error: (e && e.message) || String(e) };
@@ -4505,6 +4537,7 @@ async function _pianoV4MaybePostino(opts) {
           'skip-no-profile': 'Non riesco a leggere il tuo profilo — riprova',
           'skip-day':        'Genero i piani nel giorno che hai scelto',
           'skip-existing':   'Hai già un piano per questa settimana',
+          'skip-past-week':  'Quella settimana è passata: il piano si prepara da oggi in avanti',
           'skip-no-targets': 'Mi servono i tuoi obiettivi per generare un piano',
         }[status.decision] || 'Qualcosa è andato storto — riprova';
         showToast(msg, 'ℹ️', 5500);
@@ -4575,7 +4608,7 @@ async function _pianoV4MaybePostino(opts) {
     }
 
     status.createdDraft = data;
-    if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
+    if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato il tuo piano ' + (status.daGiorno > 1 ? 'da oggi a domenica' : 'per la settimana del ' + _pianoV4IsoToItDate(status.weekStart)) + ' 📋', '✅', 5500);
 
     // ── F.2a: generazione pasti figli pranzo+cena (Opzione A: no rollback su errore) ──
     // SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (siamo arrivati
@@ -4585,7 +4618,7 @@ async function _pianoV4MaybePostino(opts) {
     // notizia principale, deve essere leggibile senza accavallarsi col precedente.
     const planId = (data && data.id) || null;
     if (planId) {
-      const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
+      const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug, daGiorno: status.daGiorno });
       status.mealsResult = mealsResult;
       if (mealsResult.ok) {
         if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
@@ -5337,7 +5370,7 @@ function renderPianoV4DemoBanner(isRealPlan) {
   if (isRealPlan) return '';
   return `<div class="pianov4-demo-banner">
     <div class="pianov4-demo-banner-label">ESEMPIO DIMOSTRATIVO</div>
-    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio, per mostrarti come funzionerà il piano di ${COACH_NAME}. Il tuo piano personalizzato arriverà domenica sera.</div>
+    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio, per mostrarti come funzionerà il piano di ${COACH_NAME}. Il tuo piano personalizzato arriva domenica sera, oppure adesso con «Prepara il piano» qui sopra.</div>
   </div>`;
 }
 
@@ -5550,12 +5583,18 @@ function renderPianoV4() {
       ? 'Piano pronto · pranzi e cene per tutti i 7 giorni.'
       : `Piano pronto · pranzi e cene per ${realDaysCount} ${realDaysCount === 1 ? 'giorno' : 'giorni'}.`;
   } else if (offset === 0) {
-    statusHint = 'Il tuo primo piano arriverà domenica sera.';
+    statusHint = 'Nessun piano per questa settimana: puoi prepararlo adesso, da oggi a domenica.';   // Nutrition 080
   } else if (offset < 0) {
     statusHint = 'Settimana archiviata · nessun piano registrato.';
   } else {
-    statusHint = 'Piano in arrivo · sarà generato domenica sera.';
+    statusHint = 'Piano in arrivo · sarà generato domenica sera, o adesso se vuoi.';
   }
+  // Nutrition 080: il pulsante dice cosa fa sulla settimana mostrata; su una settimana passata non c'e'
+  const richiesta = _pianoV4RichiestaSettimanaMostrata();
+  const rigeneraLbl = ST._pianoRigeneraLoading ? 'GENERAZIONE IN CORSO…'
+    : hasRealPlan ? 'RIGENERA PIANO →'
+    : (richiesta.corrente && richiesta.daGiorno > 1) ? 'PREPARA IL PIANO DA OGGI A DOMENICA →'
+    : 'PREPARA IL PIANO →';
   const badgeCls = hasRealPlan ? 'pianov4-status-badge' : 'pianov4-status-badge pianov4-status-badge-empty';
   const counterValue = hasRealPlan ? realDaysCount : 0;
   const statusCard = `
@@ -5574,9 +5613,7 @@ function renderPianoV4() {
         }).join('')}
       </div>
       <p class="pianov4-status-hint">${statusHint}</p>
-      <button class="pianov4-rigenera-btn" onclick="pianoV4RigeneraPiano()" ${ST._pianoRigeneraLoading ? 'disabled' : ''}>
-        ${ST._pianoRigeneraLoading ? 'GENERAZIONE IN CORSO…' : 'RIGENERA PIANO →'}
-      </button>
+      ${richiesta.passata ? '' : `<button class="pianov4-rigenera-btn" onclick="pianoV4RigeneraPiano()" ${ST._pianoRigeneraLoading ? 'disabled' : ''}>${rigeneraLbl}</button>`}
     </div>`;
 
   // ── 7 card giorno (Step C.1: tap → openPianoV4DayOverlay con dayOfWeek 1-7 ISO) ──
