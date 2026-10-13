@@ -727,7 +727,7 @@ async function loadAllExerciseNamesWithLast(){
     // A pagine (L13): la tabella unica supera le 1000 righe. Un esercizio compare una volta,
     // per codice (Fondamenta 070), col nome di oggi a catalogo; le righe senza codice per nome.
     const { data } = await dbqAll('leggere lo storico delle serie', () => supa.from('training_logs')
-      .select('exercise_name, exercise_code, reps, resistance, date')
+      .select('exercise_name, exercise_code, reps, resistance, band_color, date')
       .eq('user_id', ST.user.id)
       .order('date', {ascending: false})
       .order('id', {ascending: true}));
@@ -742,7 +742,7 @@ async function loadAllExerciseNamesWithLast(){
       const nome = _nomeDaCodice(r.exercise_code) || r.exercise_name;
       if(ST.trainProgLastSet[nome]) return;
       distinct.push(nome);
-      ST.trainProgLastSet[nome] = { reps: r.reps, resistance: r.resistance, date: r.date };
+      ST.trainProgLastSet[nome] = { reps: r.reps, resistance: r.band_color || r.resistance, date: r.date };
     });
     distinct.sort((a,b) => a.localeCompare(b, 'it'));
     ST.allExerciseNamesCache = distinct;
@@ -839,43 +839,51 @@ function renderCalStrip(workouts){
 // GRAFICO PROGRESSIONE — renderProgChart
 // ─────────────────────────────────────────────────────────────
 
-function renderProgChart(points, byDate, selEx){
-  const chartType = ST.trainProgChart || 'carico';
+function renderProgChart(points, byDate, selEx, misura){
+  const m = misura || progMisura(selEx, [].concat(...Object.values(byDate || {})));
+  // il 1RM ha senso solo con un carico: per gli altri la chip non c'è e si torna alla misura
+  const chartType = (ST.trainProgChart === '1rm' && m.tipo !== 'carico') ? 'carico' : (ST.trainProgChart || 'carico');
   if(points.length === 0){
     return `<div style="padding:32px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessuna sessione</div>`;
   }
 
-  // ── Calcolo valori per modalità ──
+  // ── Calcolo valori per modalità (Training 100: la misura dell'esercizio, unità dal profilo) ──
+  const U = m.unit.toUpperCase();
   let values, unitLabel, metaLabel;
   if(chartType === 'carico'){
-    values = points.map(p => p.resist);
-    unitLabel = 'LBS'; metaLabel = 'CARICO';
+    values = points.map(p => p.v);
+    unitLabel = U; metaLabel = m.label;
   } else if(chartType === '1rm'){
-    values = points.map(p => p.resist > 0 ? Math.round(p.resist * (1 + p.reps / 30)) : 0);
-    unitLabel = 'LBS'; metaLabel = '1RM STIMATO';
+    values = points.map(p => p.v > 0 ? Math.round(p.v * (1 + p.reps / 30)) : 0);
+    unitLabel = U; metaLabel = '1RM STIMATO';
   } else if(chartType === 'volume'){
+    // carico: kg×reps; banda, corpo libero e tenute: ripetizioni (o secondi) totali del giorno
     values = points.map(p => {
       const dayLogs = byDate[p.date] || [];
-      return dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0) * (parseInt(l.resistance)||0), 0);
+      return m.tipo === 'carico'
+        ? dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0) * (parseFloat(l.resistance)||0), 0)
+        : dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0), 0);
     });
-    unitLabel = 'LBS×REPS'; metaLabel = 'VOLUME';
+    unitLabel = m.tipo === 'carico' ? `${U}×REPS` : (m.tipo === 'sec' ? 'SEC' : 'REPS'); metaLabel = 'VOLUME';
   } else {
     // 'zone' — stacked bar
     return _renderZoneChart(points, byDate, selEx);
   }
+  const aBande = chartType === 'carico' && m.tipo === 'banda';
 
   const W = 340, H = 200;
   const padL = 32, padR = 16, padT = 28, padB = 32;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
   const maxV = Math.max(...values, 1);
-  const yMax = Math.ceil(maxV * 1.1 / 50) * 50 || 1;
+  const passo = aBande ? 1 : _progPasso(maxV * 1.1);
+  const yMax = aBande ? m.max : (Math.ceil(maxV * 1.1 / passo) * passo || 1);
 
-  // Asse Y — 4 tick
-  const yTicks = [0, Math.round(yMax/3), Math.round(yMax*2/3), yMax];
+  // Asse Y — 4 tick (a bande: i cinque gradini, col nome)
+  const yTicks = aBande ? [0, 1, 2, 3, 4] : [0, Math.round(yMax/3), Math.round(yMax*2/3), yMax];
   const tickLines = yTicks.map(t => {
     const y = padT + chartH - (t/yMax)*chartH;
-    const lbl = t >= 1000 ? (t/1000).toFixed(1)+'k' : t;
+    const lbl = aBande ? m.testo(t).slice(0, 5) : (t >= 1000 ? (t/1000).toFixed(1)+'k' : t);
     return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#E5E7EB" stroke-width="0.5"/>
       <text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${lbl}</text>`;
   }).join('');
@@ -897,7 +905,7 @@ function renderProgChart(points, byDate, selEx){
     const isLast = i === n-1;
     const r = isLast ? 6 : 4;
     const showLabel = (i % labelEvery === 0) || isLast;
-    const lastValLabel = isLast ? `<text x="${d.x.toFixed(1)}" y="${(d.y-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono,monospace">${d.v}</text>` : '';
+    const lastValLabel = isLast ? `<text x="${d.x.toFixed(1)}" y="${(d.y-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono,monospace">${aBande ? m.testo(d.v) : d.v}</text>` : '';
     return `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${r}" fill="${isLast?'var(--acc)':'#fff'}" stroke="var(--acc)" stroke-width="1.5"/>
       <rect x="${(d.x-14).toFixed(1)}" y="${(d.y-14).toFixed(1)}" width="28" height="28" fill="transparent" style="cursor:pointer" onclick="openDayDetail('${d.date}')"></rect>
       ${lastValLabel}
@@ -905,7 +913,7 @@ function renderProgChart(points, byDate, selEx){
   }).join('');
 
   const lastVal = values[n-1] || 0;
-  const metaTop = `<text x="${padL}" y="${padT-8}" font-size="9" fill="#9A9388" font-weight="700" font-family="JetBrains Mono,monospace" text-transform="uppercase">${metaLabel} · <tspan fill="var(--acc)" font-size="11">${lastVal}</tspan> ${unitLabel}</text>`;
+  const metaTop = `<text x="${padL}" y="${padT-8}" font-size="9" fill="#9A9388" font-weight="700" font-family="JetBrains Mono,monospace" text-transform="uppercase">${metaLabel} · <tspan fill="var(--acc)" font-size="11">${aBande ? m.testo(lastVal) : lastVal}</tspan> ${unitLabel}</text>`;
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;">
     <defs>
@@ -1029,13 +1037,37 @@ function isTimedExerciseByName(exName){
   return !!(p && p.kind === 'seconds');
 }
 
-// "Best set of day": peso desc → reps/tempo desc come tiebreaker.
-// Input: array di training_logs per UN giorno + UN esercizio.
-function bestSetOfDay(logs){
+// ── La misura della Progressione (Training 100, 14 ottobre 2026) ──
+// Il grafico guardava solo il carico in numeri: trazioni a banda, corpo libero e tenute davano una
+// linea piatta a zero, e «lbs» era fisso anche per chi usa i kg. Ogni esercizio si misura con la sua
+// grandezza: carico (unità dal profilo) per chi un carico ce l'ha, gradino di banda per le trazioni
+// (lo decide solo isPullUpExercise), secondi per le tenute, ripetizioni per il corpo libero.
+// → { tipo: 'carico'|'banda'|'sec'|'reps', unit, label, valore(log), testo(v), max? }
+function progMisura(exName, logs){
+  const unitLbl = (ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs';
+  if(isPullUpExercise(exName)){
+    // la scala: Viola (più aiuto) = 0 … Corpo libero (nessun aiuto) = 4; salire = banda più dura
+    const idx = (l) => { const b = (l.band_color && BAND_COLORS.includes(l.band_color)) ? l.band_color : (BAND_COLORS.includes(String(l.resistance || '')) ? String(l.resistance) : null); return b ? BAND_COLORS.indexOf(b) : -1; };
+    return { tipo:'banda', unit:'', label:'ASSISTENZA', max: BAND_COLORS.length - 1,
+      valore: (l) => { const i = idx(l); return i < 0 ? 0 : (BAND_COLORS.length - 1 - i); },
+      testo: (v) => bandLabel(BAND_COLORS[BAND_COLORS.length - 1 - Math.max(0, Math.min(BAND_COLORS.length - 1, Math.round(v)))]) };
+  }
+  const found = findExInAllSessions(exName);
+  const pr = (found && found.ex && found.ex.reps) ? parseRepsRange(found.ex.reps) : null;
+  if((pr && pr.kind === 'seconds') || (found && found.ex && found.ex.isTimed)) return { tipo:'sec', unit:'sec', label:'TENUTA', valore: (l) => Number(l.reps) || 0, testo: (v) => String(v) };
+  if(!(logs || []).some(l => (parseFloat(l.resistance) || 0) > 0)) return { tipo:'reps', unit:'reps', label:'RIPETIZIONI', valore: (l) => Number(l.reps) || 0, testo: (v) => String(v) };
+  return { tipo:'carico', unit: unitLbl, label:'CARICO', valore: (l) => parseFloat(l.resistance) || 0, testo: (v) => String(v) };
+}
+// Il passo «bello» dell'asse: 2, 5, 10 o 50 a seconda della grandezza.
+function _progPasso(maxV){ return maxV <= 10 ? 2 : maxV <= 40 ? 5 : maxV <= 150 ? 10 : 50; }
+
+// "Best set of day": la misura dell'esercizio desc → reps/tempo desc come tiebreaker.
+// Input: array di training_logs per UN giorno + UN esercizio, e la misura (senza: il carico, come prima).
+function bestSetOfDay(logs, misura){
   if(!logs || !logs.length) return null;
+  const val = misura ? misura.valore : ((l) => parseInt(l.resistance) || 0);
   return logs.reduce((best, l) => {
-    const lW = parseInt(l.resistance) || 0;
-    const bW = parseInt(best.resistance) || 0;
+    const lW = val(l), bW = val(best);
     if(lW > bW) return l;
     if(lW < bW) return best;
     return ((l.reps||0) > (best.reps||0)) ? l : best;
@@ -4053,7 +4085,7 @@ function renderTraining(){
     const renderExRow = (name) => {
       const isSel = name === selEx;
       const last = ST.trainProgLastSet[name];
-      const lastMeta = last ? `${last.reps} reps · ${last.resistance||'—'}` : '';
+      const lastMeta = last ? `${last.reps} reps · ${last.resistance ? (/^\d/.test(String(last.resistance)) ? `${last.resistance} ${(ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs'}` : bandLabel(String(last.resistance))) : 'corpo libero'}` : '';
       return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:48px;background:${isSel?'var(--acc-lt,rgba(42,122,111,.08))':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};">
         ${isSel?`<span style="width:6px;height:6px;border-radius:50%;background:var(--acc);flex-shrink:0;"></span>`:`<span style="width:6px;flex-shrink:0;"></span>`}
         <span style="flex:1;min-width:0;">
@@ -4064,7 +4096,8 @@ function renderTraining(){
       </div>`;
     };
 
-    const sessionOrder = ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower'];
+    // Le sedute della scheda vera, nell'ordine dello split (col quinto giorno, Upper Pump, se c'è), poi i recuperi
+    const sessionOrder = [...new Set([...(Array.isArray(ST.userSessionCycle) && ST.userSessionCycle.length ? ST.userSessionCycle : ['upperA','upperB','lowerA','lowerB']), 'recoveryUpper', 'recoveryLower'])];
     const programGroups = sessionOrder.map(sid => {
       const sess = getTrainingSession(sid);
       if(!sess?.exercises) return null;
@@ -4145,50 +4178,59 @@ function renderTraining(){
       contentHTML = `<div class="prog-empty">
         <div style="font-size:28px;margin-bottom:12px;">📋</div>
         <div style="font-size:14px;font-weight:600;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">Nessuna sessione registrata</div>
-        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere il grafico</div>
+        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Registra le serie durante l'allenamento: il grafico si costruisce da lì</div>
       </div>`;
     } else {
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
       const dates = Object.keys(byDate).sort();
+      // La misura dell'esercizio (Training 100): carico, banda, secondi o ripetizioni
+      const misura = progMisura(selEx, ST.trainProgLogs);
       const points = dates.map(date => {
-        const best = bestSetOfDay(byDate[date]);
+        const best = bestSetOfDay(byDate[date], misura);
         return {
           date,
           dateShort: shortDate(date),
           reps: best?.reps || 0,
-          resist: parseInt(best?.resistance) || 0,
+          resist: parseFloat(best?.resistance) || 0,
+          v: best ? misura.valore(best) : 0,
         };
       });
 
-      // 4 chip grafico — usa classi CSS
-      const activeChart = ST.trainProgChart || 'carico';
+      // chip grafico — usa classi CSS; il 1RM solo con un carico
+      const activeChart = (ST.trainProgChart === '1rm' && misura.tipo !== 'carico') ? 'carico' : (ST.trainProgChart || 'carico');
+      const chipMisura = { carico:'Carico', banda:'Banda', sec:'Tenuta', reps:'Ripetizioni' }[misura.tipo];
       const chartChips = [
-        ['carico','Carico'],
-        ['1rm','1RM Stimato'],
+        ['carico', chipMisura],
+        ...(misura.tipo === 'carico' ? [['1rm','1RM Stimato']] : []),
         ['volume','Volume Totale'],
         ['zone','Zone'],
       ].map(([v,lbl]) =>
         `<button class="prog-chip${activeChart===v?' active':''}" onclick="ST.trainProgChart='${v}';renderTraining();">${lbl}</button>`
       ).join('');
 
-      const chartSvg = renderProgChart(points, byDate, selEx);
+      const chartSvg = renderProgChart(points, byDate, selEx, misura);
 
-      // Stat cards 2×2 — usa classi CSS
-      const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
+      // Stat cards 2×2 — usa classi CSS. La misura dell'esercizio, l'unità dal profilo
+      const u = misura.unit;
+      const bestV = points.reduce((m,p) => p.v > m ? p.v : m, 0);
       const best1rm = points.reduce((m,p) => {
         const v = p.resist > 0 ? Math.round(p.resist * (1 + p.reps/30)) : 0;
         return v > m ? v : m;
       }, 0);
+      const ultimaV = points.length ? points[points.length - 1].v : 0;
       const sessioni = points.length;
+      const conUnita = (v) => misura.tipo === 'banda' ? misura.testo(v) : `${v}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}`;
       let trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">—</div>`;
+      let diffTrend = null;
       if(points.length >= 4){
-        const last2 = points.slice(-2).map(p=>p.resist);
-        const prev2 = points.slice(-4,-2).map(p=>p.resist);
-        const diff = Math.round(((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2));
-        if(diff > 0)      trendHTML = `<div class="prog-stat-value" style="color:var(--ok,#16A34A);">↑ +${diff}<span class="prog-stat-unit">lbs</span></div>`;
-        else if(diff < 0) trendHTML = `<div class="prog-stat-value" style="color:var(--err,#DC2626);">↓ ${diff}<span class="prog-stat-unit">lbs</span></div>`;
+        const last2 = points.slice(-2).map(p=>p.v);
+        const prev2 = points.slice(-4,-2).map(p=>p.v);
+        diffTrend = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
+        const diff = Math.round(diffTrend * 10) / 10;
+        if(diff > 0)      trendHTML = `<div class="prog-stat-value" style="color:var(--ok,#16A34A);">↑ +${diff}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}</div>`;
+        else if(diff < 0) trendHTML = `<div class="prog-stat-value" style="color:var(--err,#DC2626);">↓ ${diff}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}</div>`;
         else              trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">→ stabile</div>`;
       } else if(points.length >= 2){
         trendHTML = `<div style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">≥4 sessioni per trend</div>`;
@@ -4196,12 +4238,13 @@ function renderTraining(){
 
       const statCards2x2 = `<div class="prog-stat-grid">
         <div class="prog-stat-card">
-          <div class="prog-stat-label">BEST PESO</div>
-          <div class="prog-stat-value">${bestPeso||'—'}${bestPeso?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+          <div class="prog-stat-label">BEST ${misura.label}</div>
+          <div class="prog-stat-value">${(bestV || misura.tipo === 'banda') ? conUnita(bestV) : '—'}</div>
         </div>
         <div class="prog-stat-card">
-          <div class="prog-stat-label">1RM STIM.</div>
-          <div class="prog-stat-value">${best1rm||'—'}${best1rm?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+          ${misura.tipo === 'carico'
+            ? `<div class="prog-stat-label">1RM STIM.</div><div class="prog-stat-value">${best1rm||'—'}${best1rm?`<span class="prog-stat-unit">${u}</span>`:''}</div>`
+            : `<div class="prog-stat-label">ULTIMA</div><div class="prog-stat-value">${conUnita(ultimaV)}</div>`}
         </div>
         <div class="prog-stat-card">
           <div class="prog-stat-label">SESSIONI</div>
@@ -4213,17 +4256,16 @@ function renderTraining(){
         </div>
       </div>`;
 
-      // Coach insight deterministico
-      let insightText = 'Logga almeno 3 sessioni per vedere un\'analisi della tua progressione.';
-      if(points.length >= 4){
-        const last2 = points.slice(-2).map(p=>p.resist);
-        const prev2 = points.slice(-4,-2).map(p=>p.resist);
-        const diff = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
-        if(diff > 0) insightText = 'Nelle ultime sessioni stai aumentando il carico. Sei in progressione — continua così.';
-        else if(diff < 0) insightText = 'Il carico è leggermente calato. Verifica recupero e qualità del sonno.';
-        else insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
+      // Coach insight deterministico, sulla misura dell'esercizio
+      const cosa = { carico:'il carico', banda:'la banda', sec:'la tenuta', reps:'le ripetizioni' }[misura.tipo];
+      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda:'Quando arrivi in cima alle ripetizioni, prova la banda più dura.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
+      let insightText = 'Registra almeno 3 sessioni per vedere un\'analisi della tua progressione.';
+      if(diffTrend != null){
+        if(diffTrend > 0) insightText = misura.tipo === 'banda' ? 'Nelle ultime sessioni usi meno assistenza. Sei in progressione — continua così.' : `Nelle ultime sessioni ${cosa === 'le ripetizioni' ? 'le ripetizioni salgono' : cosa + ' sale'}. Sei in progressione — continua così.`;
+        else if(diffTrend < 0) insightText = misura.tipo === 'banda' ? 'Serve più assistenza di prima. Verifica recupero e qualità del sonno.' : `${cosa.charAt(0).toUpperCase() + cosa.slice(1)} ${cosa === 'le ripetizioni' ? 'sono calate' : 'è calato'} un po\'. Verifica recupero e qualità del sonno.`;
+        else insightText = `${cosa.charAt(0).toUpperCase() + cosa.slice(1)} ${cosa === 'le ripetizioni' ? 'sono stabili' : 'è stabile'}. ${passoAvanti}`;
       } else if(points.length >= 3){
-        insightText = 'Buon inizio. Logga ancora qualche sessione per vedere il trend completo.';
+        insightText = 'Buon inizio. Registra ancora qualche sessione per vedere il trend completo.';
       }
 
       const coachInsight = `<div class="prog-coach-card">
