@@ -879,6 +879,13 @@ async function saveBodyLog(){
     if(error){ ST.bodySaving = false; avvisa('Non riesco a salvare: ' + error.message, { titolo:'Misure non salvate' }); renderBody(); return; }
   }
 
+  // Body 150: la lettura completa del report Fitdays di quel giorno (22 indicatori) si salva a parte
+  const L = ST.fitdaysLettura;
+  if(L && L.date === giorno){
+    const res = await scriviConCoda('salvare la lettura del report', { tabella:'fitdays_letture', tipo:'upsert', righe:{ user_id: ST.user.id, date: giorno, model: (L.meta && L.meta.model) || null, prompt_version: (L.meta && L.meta.prompt_version) || null, result: { valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo, note: L.note, meta: L.meta, letto_il: L.letto_il } }, onConflict:'user_id,date' });
+    if(!res.error) ST.fitdaysLettura = null;
+  }
+
   ST.bodySaving = false;
   showToast('Misure salvate · ' + fmtDate(giorno), '✅', 4000);
   await loadBodyLogs();
@@ -1064,6 +1071,117 @@ async function consensoLetturaFoto(){
   const ok = await chiediConferma('Per leggere il check, le foto del tuo corpo vengono mandate a Gemini, un servizio esterno, insieme alle misure, per il confronto fra i tuoi check. Vuoi continuare?', { titolo:'Lettura delle foto', ok:'Acconsento' });
   if(ok) { try { localStorage.setItem('zt_foto_ok', '1'); } catch(e) {} }
   return ok;
+}
+
+// ── Il report Fitdays letto dal coach (Body 150, 13 ottobre 2026; Worker /fitdays-report → Gemini) ──
+// La bilancia Fitdays non parla con l'app: dopo la pesata la persona sceglie lo screenshot (o il PDF) del
+// report, il coach lo legge e compila le caselle del modulo «Misure col metro e bilancia» (peso, grasso %,
+// massa muscolare, grasso viscerale, età corporea: quelle che Body aveva già). La persona controlla e tocca
+// «Salva misure»: solo allora si scrive, e la lettura completa dei 22 indicatori va in fitdays_letture,
+// una riga per giorno. Il file non si conserva da nessuna parte. Il vocabolario sta in shared/fitdays.js.
+const FITDAYS_LATO_MAX = 2400;   // lato lungo dello screenshot mandato al coach: il report è alto e stretto, a 1200 i numeri non si leggono più
+const FITDAYS_QUALITA = 0.85;
+const FITDAYS_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+async function consensoLetturaReport(){
+  try { if(localStorage.getItem('zt_report_ok') === '1') return true; } catch(e) {}
+  const ok = await chiediConferma('Per leggere il report, l\'immagine (o il PDF) che scegli viene mandata a Gemini, un servizio esterno. Nessun altro tuo dato parte con lei e il file non viene conservato. Vuoi continuare?', { titolo:'Lettura del report Fitdays', ok:'Acconsento' });
+  if(ok) { try { localStorage.setItem('zt_report_ok', '1'); } catch(e) {} }
+  return ok;
+}
+// Il file pronto per il Worker: { mime, base64 }. Un'immagine si riduce sul telefono (lato lungo FITDAYS_LATO_MAX, JPEG);
+// un PDF parte com'è.
+async function fitdaysPreparaFile(file){
+  const base64Di = (blob) => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(new Error('Non riesco a leggere questo file')); r.readAsDataURL(blob); });
+  if(file.type === 'application/pdf') return { mime:'application/pdf', base64: await base64Di(file) };
+  const ridotto = await new Promise((ok, no) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const lato = Math.max(img.naturalWidth, img.naturalHeight);
+      const k = lato > FITDAYS_LATO_MAX ? FITDAYS_LATO_MAX / lato : 1;
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? ok(b) : no(new Error('Non riesco a leggere questa immagine')), 'image/jpeg', FITDAYS_QUALITA);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error('Non riesco a leggere questa immagine')); };
+    img.src = url;
+  });
+  return { mime:'image/jpeg', base64: await base64Di(ridotto) };
+}
+function fitdaysErrorMessage(status, err){
+  const kind = err && err.kind;
+  if(status === 0) return 'Connessione assente: riprova quando sei online';
+  if(status === 401) return 'Sessione scaduta: esci, rientra e riprova';
+  if(kind === 'bad-file') return 'Scegli lo screenshot o il PDF del report Fitdays';
+  if(kind === 'too-large') return 'Il file è troppo grande: prova con uno screenshot';
+  if(kind === 'timeout' || status === 504) return 'Ci ho messo troppo: riprova tra poco';
+  if(kind === 'rate-limit') return 'Troppe letture in questo momento: riprova tra un minuto';
+  return 'Non sono riuscito a leggere il report: riprova tra poco';
+}
+// Dal tasto «Leggi il report Fitdays»: parte solo da un tocco, mai da sola.
+async function leggiReportFitdays(input){
+  const file = input && input.files && input.files[0];
+  if(input) input.value = '';
+  if(!file || !ST.user || ST.fitdaysBusy) return;
+  if(!FITDAYS_MIME.includes(file.type)){ showToast('Scegli lo screenshot o il PDF del report Fitdays', '⚠️', 5500); return; }
+  if(!await consensoLetturaReport()) return;
+  ST.fitdaysBusy = true; renderBody();
+  try {
+    let pronto;
+    try { pronto = await fitdaysPreparaFile(file); } catch(e){ showToast(e && e.message || 'Non riesco a leggere questo file', '⚠️', 5500); return; }
+    const { data: { session } } = await supa.auth.getSession();
+    if(!session || !session.access_token){ showToast(fitdaysErrorMessage(401), '⚠️', 5500); return; }
+    let r, j = null;
+    try {
+      r = await fetch(WORKER_URL + '/fitdays-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ user_id: ST.user.id, mime: pronto.mime, data: pronto.base64 }),
+        signal: AbortSignal.timeout ? AbortSignal.timeout(75000) : undefined,
+      });
+      j = await r.json().catch(() => null);
+    } catch(e){
+      console.warn('[fitdays] rete:', e && e.name);
+      showToast(e && e.name === 'TimeoutError' ? fitdaysErrorMessage(504) : fitdaysErrorMessage(0), '⚠️', 5500);
+      return;
+    }
+    // Come Groq e supabase-js: una risposta d'errore arriva regolare, si controlla a mano (L36)
+    if(!r.ok || !j || !j.lettura){
+      const err = j && j.error;
+      console.warn('[fitdays] lettura non riuscita:', r.status, err && err.kind);
+      showToast(fitdaysErrorMessage(r.status, err), '⚠️', 5500);
+      return;
+    }
+    const L = j.lettura;
+    if(!L.riconosciuto || !L.letti){ showToast('Non mi sembra un report Fitdays: scegli lo screenshot della tabella degli indicatori', '⚠️', 6500); return; }
+    const today = todayKey();
+    // Il giorno del report, se c'è e non è nel futuro; altrimenti quello scelto nel modulo
+    const giorno = (L.data_report && L.data_report <= today) ? L.data_report : ((ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today);
+    ST.bodyLogDate = giorno;
+    ST.fitdaysLettura = { date: giorno, valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo || null, note: L.note || '', meta: L.meta || null, letto_il: new Date().toISOString() };
+    ST.bodyAdvOpen = true;
+    showToast(`Report letto: ${L.letti} indicatori · controlla e salva`, '✅', 4000);
+  } finally {
+    ST.fitdaysBusy = false;
+    renderBody();
+  }
+}
+function fitdaysTogli(){ ST.fitdaysLettura = null; renderBody(); }
+// La card sotto le caselle: cosa ha letto il coach, tutti i 22 indicatori, e il tasto per toglierla.
+function fitdaysCardHTML(L){
+  if(!L) return '';
+  const F = ZTFitdays;
+  const righe = F.CAMPI.map(c => `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--s2);font-size:11px;font-family:var(--font-mono);"><span style="color:var(--t3);">${esc(c.label)}</span><span style="color:${L.valori[c.chiave] == null ? 'var(--t3)' : 'var(--t1)'};font-weight:700;">${esc(F.mostra(c, L.valori[c.chiave]))}</span></div>`).join('');
+  const quando = L.data_ora_testo ? ` · ${esc(L.data_ora_testo)}` : '';
+  return `<div id="fitdays-card" style="background:var(--s2);border-radius:var(--r);padding:10px 12px;margin-top:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Report Fitdays letto da ${COACH_NAME}${quando}</div>
+      <button onclick="fitdaysTogli()" style="font-size:11px;color:var(--t3);background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-mono);">Togli</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">${L.letti} indicatori su ${F.CAMPI.length}. Peso, grasso, massa muscolare, grasso viscerale ed età corporea sono già nelle caselle: controlla e tocca «Salva misure».${L.note ? ' ' + esc(L.note) : ''}</div>
+    <details><summary style="font-size:11px;color:#854F0B;font-family:var(--font-mono);font-weight:700;cursor:pointer;">Tutti gli indicatori</summary><div style="margin-top:6px;">${righe}</div></details>
+  </div>`;
 }
 async function requestBodyCheckAI(checkId){
   if(!ST.user || !checkId || ST.bodyCheckAIBusy) return;
@@ -1665,6 +1783,9 @@ function renderBody(){
   const pesataGiorno = (ST.weightLogs || []).find(q => q.date === giornoLog) || null;
   const todayLog = { ...(logs.find(l => l.date === giornoLog) || {}) };
   if(todayLog.weight_kg == null && pesataGiorno && pesataGiorno.weight_kg != null) todayLog.weight_kg = pesataGiorno.weight_kg;
+  // Body 150: il report Fitdays appena letto compila le caselle di quel giorno (la persona può ancora correggerle)
+  const fitdaysLettura = (ST.fitdaysLettura && ST.fitdaysLettura.date === giornoLog) ? ST.fitdaysLettura : null;
+  if(fitdaysLettura) Object.assign(todayLog, ZTFitdays.inCaselle(fitdaysLettura.valori));
   // Dati unificati body_logs + body_measurements
   const uData     = getLatestBodyData();
   const uTimeline = getUnifiedBodyTimeline();
@@ -1790,6 +1911,11 @@ function renderBody(){
           <input id="bl-date" type="date" value="${giornoLog}" max="${today}" onchange="bodyLogSetDate(this.value)" aria-label="Giorno delle misure"
             style="padding:6px 8px;border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);outline:none;">
         </div>
+        ${ST.user && ST.user.id !== 'test-user-001' ? `
+        <label style="display:block;width:100%;padding:10px;margin-bottom:12px;background:var(--s2);border:1px dashed #854F0B;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);color:#854F0B;text-align:center;cursor:${ST.fitdaysBusy ? 'default' : 'pointer'};${ST.fitdaysBusy ? 'opacity:.6;' : ''}">
+          ${ST.fitdaysBusy ? 'Sto leggendo il report…' : `Leggi il report Fitdays con ${COACH_NAME} →`}
+          <input id="bl-fitdays-file" type="file" accept="image/*,application/pdf" onchange="leggiReportFitdays(this)" ${ST.fitdaysBusy ? 'disabled' : ''} style="display:none;">
+        </label>` : ''}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
           <div>
             <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Peso (kg)</label>
@@ -1862,6 +1988,7 @@ function renderBody(){
           <input id="bl-notes" type="hidden" value="${esc(todayLog.notes||'')}">
         </div>`}
 
+        ${fitdaysCardHTML(fitdaysLettura)}
         <button onclick="saveBodyLog();" ${ST.bodySaving?'disabled':''}
           style="width:100%;padding:12px;margin-top:10px;background:#854F0B;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:${ST.bodySaving?'default':'pointer'};${ST.bodySaving?'opacity:.6;':''}">
           ${ST.bodySaving ? 'Salvataggio...' : 'Salva misure'}
