@@ -165,21 +165,52 @@ async function estimateMacros(desc) {
     items: split.items,
   };
 }
-async function getAdvice(consumed, nextMeal, isTomorrow = false) {
-  const rem = {
-    kcal:    Math.max(0, ST.TARGET.kcal    - consumed.kcal),
-    protein: Math.max(0, ST.TARGET.protein - consumed.protein),
-    carbs:   Math.max(0, ST.TARGET.carbs   - consumed.carbs),
-    fat:     Math.max(0, ST.TARGET.fat     - consumed.fat),
-  };
+// Nutrition 060 (Ondata 5, 13 ottobre 2026): la seduta di DOMANI, dalla rotazione gia' letta per la Home (ST.trainHomeData,
+// nessuna lettura in piu'): se oggi la seduta e' fatta o in corso, domani viene la prossima; altrimenti quella dopo la prossima
+// nell'ordine canonico del ciclo. In pausa o con un infortunio non si dice niente (il ritratto lo dice gia').
+// Ritorna { state:'riposo'|'da_fare', label } oppure null. Serve al consiglio sul pasto («hai la seduta domani: carboidrati a cena»).
+function sedutaDomani(){
+  try {
+    if (!hasTraining()) return null;
+    const hd = ST.trainHomeData;
+    if (!hd || hd.errore || hd.notStarted) return null;
+    if (typeof getInjuryPeriod === 'function' && getInjuryPeriod()) return null;
+    if (typeof getPausa === 'function') { const pa = getPausa(); if (pa && (pa.attiva || (pa.futura && pa.inizio === _giornoAccanto(todayKey(), 1)))) return null; }
+    let sid = hd.nextSession;
+    if (!(hd.doneToday || hd.inProgress) && sid) {
+      const cycle = getRotationCycle();
+      const i = cycle.indexOf(sid);
+      sid = i >= 0 ? cycle[(i + 1) % cycle.length] : null;
+    }
+    if (!sid) return null;
+    if (/^rest/.test(sid)) return { state:'riposo', label:'' };
+    const sess = getTrainingSession(sid) || {};
+    return { state:'da_fare', label:[sess.name || sess.label, sess.type].filter(Boolean).join(', ') };
+  } catch (e) { return null; }
+}
+// La riga per il coach: una frase, mai una predica
+function _rigaDomani(){
+  const d = sedutaDomani();
+  if (!d) return '';
+  return d.state === 'riposo' ? 'DOMANI: giorno di riposo dall\'allenamento' : `DOMANI: seduta da fare${d.label ? ' (' + d.label + ')' : ''}`;
+}
+// Il bilancio del giorno con il segno (Nutrition 060, difetto a): prima, sforato, al coach arrivava «0 rimaste»
+function _rigaBilancio(nome, target, consumato, unita){
+  const diff = Math.round((Number(target) || 0) - (Number(consumato) || 0));
+  return diff >= 0 ? `- ${nome}: ${diff}${unita} rimaste` : `- ${nome}: OLTRE l'obiettivo di ${-diff}${unita}`;
+}
+// giorno: la data che la persona ha davanti (Nutrition 060, difetto b: i totali erano del giorno aperto, i pasti di oggi)
+async function getAdvice(consumed, nextMeal, isTomorrow = false, giorno) {
+  giorno = giorno || todayKey();
+  const eOggi = giorno === todayKey();
   // Chi è la persona lo dice il ritratto unico (Pirsi 020): profilo, obiettivo, dieta,
   // note di salute, e in più peso vero, seduta di oggi, ciclo, infortunio, settimana.
   const ritratto = await coachRitrattoPronto();
 
-  // Pasti già consumati oggi (max 3 più recenti, ordinati per ora se presente)
+  // Pasti già consumati nel giorno guardato (max 3 più recenti, ordinati per ora se presente)
   let consumedBlock = '';
   try {
-    const day = getDay(todayKey());
+    const day = getDay(giorno);
     const meals = (day && day.meals) ? day.meals.slice() : [];
     meals.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
     const recent = meals.slice(-3);
@@ -189,7 +220,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
         const desc = (m.description || '').toString().trim();
         return desc ? `- ${slot}: ${desc}` : `- ${slot}`;
       }).join('\n');
-      consumedBlock = `PASTI GIÀ CONSUMATI OGGI:\n${lines}`;
+      consumedBlock = `PASTI GIÀ CONSUMATI ${eOggi ? 'OGGI' : 'IN QUEL GIORNO'}:\n${lines}`;
     }
   } catch (e) { /* fallback silenzioso */ }
 
@@ -201,11 +232,11 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   // Blocco opzionale: omesso se nessun integratore assunto oggi.
   let supplementsBlock = '';
   try {
-    const day = getDay(todayKey());
+    const day = getDay(giorno);
     const lines = [];
-    // 1) ST.extras (snapshot DB con fallback catalog applicato in loadExtras)
-    (ST.extras || []).forEach(x => {
-      if(x.date && x.date !== todayKey()) return; // safety
+    // 1) gli extra del giorno guardato (snapshot DB con fallback catalog applicato in loadExtras)
+    (((ST.extrasByDay || {})[giorno]) || ST.extras || []).forEach(x => {
+      if(x.date && x.date !== giorno) return; // safety
       const name = (x.name || '').trim() || 'Integratore';
       const kcal = Math.round(Number(x.kcal) || 0);
       const p = Math.round(Number(x.proteine) || 0);
@@ -246,17 +277,18 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     }
   } catch (e) { /* fallback silenzioso */ }
 
-  const macroBlock = `MACRO RIMANENTI OGGI:
-- Calorie: ${rem.kcal} kcal
-- Proteine: ${rem.protein}g
-- Carboidrati: ${rem.carbs}g
-- Grassi: ${rem.fat}g`;
+  const macroBlock = `BILANCIO ${eOggi ? 'DI OGGI' : 'DEL GIORNO GUARDATO (' + giorno + ', un giorno passato)'} RISPETTO ALL'OBIETTIVO:
+${_rigaBilancio('Calorie', ST.TARGET.kcal, consumed.kcal, ' kcal')}
+${_rigaBilancio('Proteine', ST.TARGET.protein, consumed.protein, 'g')}
+${_rigaBilancio('Carboidrati', ST.TARGET.carbs, consumed.carbs, 'g')}
+${_rigaBilancio('Grassi', ST.TARGET.fat, consumed.fat, 'g')}`;
+  const domaniLine = eOggi ? _rigaDomani() : '';
 
   const prossimoPastoLine = isTomorrow
     ? `PROSSIMO PASTO: ${nextMeal} (PIANIFICAZIONE PER DOMANI MATTINA — l'utente ha completato tutti i pasti di oggi)`
     : `PROSSIMO PASTO: ${nextMeal}`;
 
-  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Se oggi c\'è o c\'è stata una seduta di allenamento, o se la persona è ferma per infortunio, tienine conto nella scelta del pasto senza fare la predica.';
+  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Se oggi c\'è o c\'è stata una seduta di allenamento, se ce n\'è una domani, o se la persona è ferma per infortunio, tienine conto nella scelta del pasto senza fare la predica. Se è OLTRE l\'obiettivo, dillo con il numero e proponi un pasto leggero, non «0 rimaste».';
   const notaTomorrow = isTomorrow
     ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
     : '';
@@ -270,6 +302,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     macroBlock,
     consumedBlock,
     supplementsBlock,
+    domaniLine,
     prossimoPastoLine,
     istruzioniLine,
   ].filter(Boolean);
@@ -1578,6 +1611,7 @@ window.smartSavePasto = async function() {
     }
     ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false, editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
     ST.logOpen = false;
+    ST.advice = ''; ST.adviceOk = false;   // Nutrition 060: il consiglio era per il pasto che ora e' registrato
     renderOggi();
     saveCache();
   } catch (e) {
@@ -2071,6 +2105,9 @@ function renderOggi(){
       ? `Pianifica colazione di domani →`
       : `Analizza & suggerisci →`;
 
+    // Nutrition 060 (difetto d): con la giornata in linea il pulsante resta («Un consiglio comunque»), e sotto il consiglio
+    // c'e' «Registra questo» (il testo entra nel form del pasto da analizzare). Il consiglio sparisce quando si registra un pasto (difetto c).
+    const registraBtn = (ST.advice && ST.adviceOk && !ST.advLoading) ? `<button class="oggi-v3-coach-registra" onclick="registraConsiglio()">Registra questo →</button>` : '';
     if(silentMode && !ST.advice){
       html += `<div class="oggi-v3-coach-card">
         <div class="oggi-v3-coach-head">
@@ -2081,6 +2118,7 @@ function renderOggi(){
           <span style="color:var(--acc);font-weight:700;">✓</span>
           <span>Tutto in linea col piano</span>
         </div>
+        <button class="oggi-v3-coach-cta" onclick="fetchAdvice()">${ST.advLoading ? '⏳ Analisi coach…' : 'Un consiglio comunque →'}</button>
       </div>`;
     } else {
       html += `<div class="oggi-v3-coach-card">
@@ -2090,6 +2128,7 @@ function renderOggi(){
         </div>
         <div class="oggi-v3-coach-title">${esc(nextLabel)}</div>
         ${ST.advice ? `<div class="oggi-v3-coach-text">${esc(ST.advice)}</div>` : ''}
+        ${registraBtn}
         <button class="oggi-v3-coach-cta" onclick="fetchAdvice()">${ST.advLoading ? '⏳ Analisi coach…' : adviceCtaLbl}</button>
       </div>`;
     }
@@ -6125,6 +6164,7 @@ async function deleteMeal(dayKey, mealId){
   const d=ST.db.days[dayKey];
   if(!d) return;
   d.meals=d.meals.filter(m=>m.id!==mealId && m.local_id!==mealId);
+  ST.advice=''; ST.adviceOk=false;   // Nutrition 060: la giornata e' cambiata, il consiglio di prima non vale piu'
   await dbDeleteMeal(mealId);
   renderOggi();saveCache();
 }
@@ -6136,10 +6176,22 @@ async function fetchAdvice(){
   // isTomorrow=true SOLO se il sistema ha calcolato "domani" E l'utente non ha override-ato la select
   const isTomorrow = !!ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride;
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
-  ST.advLoading=true;ST.advice='';renderOggi();
-  try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
-  catch(e){console.warn('[advice] errore AI:', e); ST.advice='Non sono riuscito a preparare il consiglio. '+aiErrMsg(e.aiKind);}
+  ST.advLoading=true;ST.advice='';ST.adviceOk=false;renderOggi();
+  try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow, ST.activeDay); ST.adviceOk=!!ST.advice;}
+  catch(e){console.warn('[advice] errore AI:', e); ST.advice='Non sono riuscito a preparare il consiglio. '+aiErrMsg(e.aiKind); ST.adviceOk=false;}
   ST.advLoading=false;renderOggi();
+}
+// «Registra questo» (Nutrition 060): il consiglio del coach entra nel form del pasto come testo da analizzare,
+// sulla fascia del prossimo pasto; la persona lo rilegge, «Analizza» stima i numeri e poi «Salva pasto».
+function registraConsiglio(){
+  if (!ST.advice || !ST.adviceOk) return;
+  _initSmartForm();
+  ST.logOpen = true;
+  if (ST.nextSlot) ST.logSlot = ST.nextSlot;
+  ST.logTime = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+  ST.smartForm = { items:[], freeText:ST.advice, notes:'', analyzing:false, editingMealId:null, editingSlot:null, editingTime:null, editingDescription:'' };
+  renderOggi();
+  setTimeout(() => { const el = document.getElementById('registra-pasto-form'); if (el && el.scrollIntoView) el.scrollIntoView({ block:'start', behavior:'smooth' }); }, 100);
 }
 
 // Sospendi / Riprendi un integratore. Ricollegata alla UI il 9 ago 2026: la

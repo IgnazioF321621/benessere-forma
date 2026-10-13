@@ -2501,3 +2501,5 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .soliti-chip:active{transform:scale(.98);}
 .soliti-nome{font-size:12px;font-weight:600;color:var(--t1);max-width:176px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .soliti-sotto{font-size:10px;font-family:var(--font-mono);color:var(--acc);}
+/* Nutrition 060 — «Registra questo» sotto il consiglio del coach */
+.oggi-v3-coach-registra{width:100%;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--acc);background:transparent;color:var(--acc);border-radius:10px;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;}
