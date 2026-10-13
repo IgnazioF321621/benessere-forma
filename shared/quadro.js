@@ -120,13 +120,47 @@ var ZTQuadro = (function(){
     return { weekNum: weekIdx + 1, isScarico: weekIdx === 5, workCount: conto, workPerGiro: wpg, deloadFrom: ancora };
   }
 
+  // ── Pausa programmata (Training 350, 13 ottobre 2026) ──
+  // Vacanza, viaggio, lavoro: non un infortunio. Sta nel profilo, così la vedono tutti e due i telefoni
+  // e il cron del lunedì: pausa_inizio e pausa_fine ('YYYY-MM-DD'; fine vuota = aperta), pausa_motivo.
+  // pausaInfo(profile, today) → null se non c'è una pausa, altrimenti
+  //   { inizio, fine, motivo, attiva, futura, finita, giorniTotali (null se aperta), giorniFatti, giorniDalRientro }
+  var giorniTra = function(a, b){ return Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400000); };
+  function pausaInfo(profile, today){
+    var p = profile || {};
+    var inizio = p.pausa_inizio || null, fine = p.pausa_fine || null;
+    if(!inizio || !today) return null;
+    if(fine && fine < inizio) fine = inizio;
+    var attiva = inizio <= today && (!fine || today <= fine);
+    var futura = inizio > today;
+    var finita = !!fine && fine < today;
+    var giorniTotali = fine ? giorniTra(inizio, fine) + 1 : null;
+    return {
+      inizio: inizio, fine: fine, motivo: p.pausa_motivo || null,
+      attiva: attiva, futura: futura, finita: finita,
+      giorniTotali: giorniTotali,
+      giorniFatti: attiva ? giorniTra(inizio, today) + 1 : (finita ? giorniTotali : 0),
+      giorniDalRientro: finita ? giorniTra(fine, today) : null,
+    };
+  }
+  // Quanti giorni di pausa cadono in [da, a] (estremi compresi); una pausa aperta arriva fino ad `a`.
+  function pausaGiorniNel(profile, da, a){
+    var p = profile || {};
+    if(!p.pausa_inizio || !da || !a || a < da) return 0;
+    var inizio = p.pausa_inizio > da ? p.pausa_inizio : da;
+    var fine = (p.pausa_fine && p.pausa_fine < a) ? p.pausa_fine : a;
+    if(fine < inizio) return 0;
+    return giorniTra(inizio, fine) + 1;
+  }
+
   // Reminder "check di fine blocco": blocco di 42 giorni finito e nessun check completato nelle ultime 4 settimane.
+  // o.pauseDays: i giorni di pausa programmata dall'inizio del blocco (Training 350) non contano: il blocco è fermo.
   function blockCheckReminder(o){
     var cl = o.clock || LOCALE;
     if(!o.start) return null;
     var startTs = cl.parseLocal(o.start, '00:00:00');
     if(!isFinite(startTs)) return null;
-    var giorniDaInizio = Math.floor((o.nowTs - startTs) / 86400000);
+    var giorniDaInizio = Math.floor((o.nowTs - startTs) / 86400000) - (Number(o.pauseDays) || 0);
     if(giorniDaInizio < BLOCK_DAYS) return null;
     var ultimoTs = null;
     (o.checks || []).filter(function(c){ return c.status === 'completed' && c.created_at && new Date(c.created_at).getTime() <= o.nowTs; })
@@ -259,6 +293,9 @@ var ZTQuadro = (function(){
       var recuperi = uniq(questa.filter(function(w){ return /^recovery/i.test(w.session_type); }).map(function(w){ return w.date + '|' + w.session_type; }));
       var infortunio = uniq(questa.filter(function(w){ return w.session_type === 'rest_injury'; }).map(function(w){ return w.date; }));
       var planned = Number(profile.giorni_allenamento) || null;
+      // Pausa programmata (Training 350): i giorni della settimana in pausa. Con una pausa di mezzo le
+      // sedute «mancate» non si contano: non è una settimana andata male, è una settimana dichiarata.
+      var pausaGg = pausaGiorniNel(profile, weekStart, we);
       var blockWeek = null, isDeload = null;
       if(start && we >= start){
         // Stessa regola di getCycleWeekInfo, valutata "a quel giorno": per la settimana
@@ -274,7 +311,7 @@ var ZTQuadro = (function(){
       training = {
         sessions_planned: planned,
         sessions_done:    lavoro.length,
-        sessions_missed:  (isClosed && planned != null) ? Math.max(0, planned - lavoro.length) : null,
+        sessions_missed:  (isClosed && planned != null && !pausaGg) ? Math.max(0, planned - lavoro.length) : null,
         recovery_done:    recuperi.length,
         block_week:       blockWeek,
         is_deload:        isDeload,
@@ -282,6 +319,7 @@ var ZTQuadro = (function(){
         avg_rir:          r1(mean(rir)),
         injury_days:      infortunio.length,
         injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
+        pause_days:       pausaGg,
       };
     }
 
@@ -305,7 +343,8 @@ var ZTQuadro = (function(){
           last[k] = { value: v, delta: p == null ? null : r1(v - p) };
         });
       }
-      var rem = blockCheckReminder({ start: profile.train_start_date, nowTs: refTs, checks: fatti, clock: cl });
+      var rem = blockCheckReminder({ start: profile.train_start_date, nowTs: refTs, checks: fatti, clock: cl,
+        pauseDays: profile.train_start_date ? pausaGiorniNel(profile, profile.train_start_date, refDay) : 0 });
       // Ultima lettura delle foto (Fase 2): quella del check più recente che ne ha una,
       // fatta entro l'"adesso" del quadro. Lettura fallita = campi null, errore già in meta.errors.
       var lettura = null, checkLettura = null;
@@ -366,6 +405,7 @@ var ZTQuadro = (function(){
     WP_VERSION: WP_VERSION, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
+    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
   };
 })();

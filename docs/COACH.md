@@ -14,7 +14,7 @@ Staccato da [`CLAUDE.md`](../CLAUDE.md) il 13 settembre 2026, per alleggerire il
 ```
 weight     { weight_avg, weight_n, weight_delta_prev, weight_trend_4w, weight_target, weight_last, weight_last_date }
 nutrition  { kcal_target, protein_target, kcal_avg, protein_avg, supp_kcal_avg, supp_protein_avg, days_logged, logged_dates, adherence_kcal, days_partial, partial, days_under_75 }
-training   { sessions_planned, sessions_done, sessions_missed, recovery_done, block_week, is_deload, volume_sets, avg_rir, injury_days, injury_active }
+training   { sessions_planned, sessions_done, sessions_missed, recovery_done, block_week, is_deload, volume_sets, avg_rir, injury_days, injury_active, pause_days }   ← pause_days (Training 350): giorni della settimana in pausa programmata; con una pausa di mezzo sessions_missed è null e Pirsi non propone «meno giorni»
 body       { last_check_date, days_since_check, check_due, last_measurements{ chiave: {value, delta} }, prev_check_date, ai_overall, ai_confidence, ai_check_date }
 blood      { last_test_date, days_since_test, test_count }
 meta       { version, week_start, week_end, is_closed, computed_at, completeness (0-1, su 5 blocchi), errors[] }

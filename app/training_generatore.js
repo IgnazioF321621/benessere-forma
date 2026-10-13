@@ -1117,6 +1117,10 @@ function _coachDeloadDates(){ return (ST.coachDeloads || []).slice(); }
 // Ritorna { debt:[sid,...], target:sid } — "solo giro corrente", i recuperi non vanno mai in debito.
 function computeTrainingDebt(){
   if(!ST.user || ST.user.id === 'test-user-001') return { debt: [], target: null };
+  // Pausa programmata (Training 350): dichiarata in anticipo, niente da recuperare. Alla fine si riparte
+  // dalla prossima seduta della rotazione, non da un debito accumulato stando via.
+  const pausa = (typeof getPausa === 'function') ? getPausa() : null;
+  if(pausa && pausa.attiva) return { debt: [], target: ST.trainHomeData?.nextSession || null };
   const cycle = getRotationCycle(); // ordine canonico 6 giorni (recuperi inclusi); i recuperi restano esclusi dal debito via isRecoverySid
   const len = cycle.length;
   const all = ST.trainAllCompleted || [];

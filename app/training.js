@@ -1705,6 +1705,143 @@ function _renderInjuryBar(){
     </div>`;
 }
 
+// ═══ PAUSA PROGRAMMATA (Training 350, 13 ottobre 2026) ═══
+// Vacanza, viaggio, lavoro: un periodo con le date, dichiarato anche in anticipo, che non è un
+// infortunio. Vive nel profilo (pausa_inizio, pausa_fine, pausa_motivo: migrazione 20261013_350) così
+// lo vedono tutti e due i telefoni e il cron del lunedì. Decisioni di Ignazio (13 ottobre 2026):
+// un periodo con le date (fine anche aperta) · il blocco si congela (il conteggio va ad allenamenti,
+// fermandosi non avanza; i giorni di pausa non contano per la card dei 35 giorni né per il check dei
+// 42) e oltre 3 settimane al rientro si propone il blocco nuovo · Pirsi lo sa (pause_days nel quadro).
+// Durante la pausa: nessun debito (computeTrainingDebt), la striscia in Training, «Rientro anticipato».
+// La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
+const PAUSA_BLOCCO_NUOVO_GIORNI = 21;     // oltre tre settimane fermo, al rientro conviene un blocco pulito
+const PAUSA_RIENTRO_GIORNI = 14;          // per quanti giorni dopo il rientro la proposta resta
+const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['altro', 'Altro']];
+function getPausa(){
+  if(!ST.profile || typeof ZTQuadro === 'undefined') return null;
+  return ZTQuadro.pausaInfo(ST.profile, todayKey());
+}
+function _pausaFmt(d){ return new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }); }
+function _pausaMotivoTesto(m){ const v = PAUSA_MOTIVI.find(x => x[0] === m); return v ? v[1].toLowerCase() : null; }
+// Il foglio: date e motivo. `ST.pausaModal` = { inizio, fine, aperta, motivo }
+function apriPausa(){
+  const pz = getPausa();
+  const oggi = todayKey();
+  ST.pausaModal = pz && (pz.attiva || pz.futura)
+    ? { inizio: pz.inizio, fine: pz.fine || '', aperta: !pz.fine, motivo: pz.motivo || 'vacanza' }
+    : { inizio: oggi, fine: '', aperta: false, motivo: 'vacanza' };
+  renderTraining();
+  setTimeout(() => document.getElementById('pausa-inizio')?.focus(), 50);
+}
+function chiudiPausa(){ ST.pausaModal = null; renderTraining(); }
+// Scrive le tre colonne nel profilo (una riga, per id) e aggiorna la copia in memoria e quella locale.
+async function _pausaScrivi(valori, cosa){
+  if(!ST.user || ST.user.id === 'test-user-001'){ Object.assign(ST.profile, valori); return true; }
+  const r = await dbq(cosa, supa.from('profiles').update(valori).eq('id', ST.user.id));
+  if(r.error) return false;
+  Object.assign(ST.profile, valori);
+  try { if(typeof saveCache === 'function') saveCache(); } catch(e){}
+  return true;
+}
+async function salvaPausa(){
+  const m = ST.pausaModal;
+  if(!m) return;
+  const inizio = (document.getElementById('pausa-inizio')?.value || m.inizio || '').trim();
+  const aperta = !!document.getElementById('pausa-aperta')?.checked;
+  const fine = aperta ? '' : (document.getElementById('pausa-fine')?.value || '').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(inizio)){ showToast('Scegli il giorno in cui parti', '📅'); return; }
+  if(!aperta && !/^\d{4}-\d{2}-\d{2}$/.test(fine)){ showToast('Scegli il giorno in cui torni, o «non lo so ancora»', '📅'); return; }
+  if(fine && fine < inizio){ showToast('Il ritorno viene prima della partenza', '📅'); return; }
+  const ok = await _pausaScrivi({ pausa_inizio: inizio, pausa_fine: fine || null, pausa_motivo: m.motivo || null }, 'salvare la pausa');
+  if(!ok) return;
+  ST.pausaModal = null;
+  showToast(fine ? `✈️ Pausa dal ${_pausaFmt(inizio)} al ${_pausaFmt(fine)}` : `✈️ Pausa dal ${_pausaFmt(inizio)}, fine da decidere`, '', 3500);
+  loadTrainingHomeData();
+  renderTraining();
+}
+// «Rientro anticipato»: la pausa finisce ieri, oggi si conta già come giorno normale. Una pausa che
+// doveva iniziare oggi o più avanti si toglie del tutto.
+async function terminaPausa(){
+  const pz = getPausa();
+  if(!pz) return;
+  const oggi = todayKey();
+  const ieri = _injAddDays(oggi, -1);
+  const valori = (pz.inizio >= oggi) ? { pausa_inizio: null, pausa_fine: null, pausa_motivo: null } : { pausa_fine: ieri };
+  const ok = await _pausaScrivi(valori, 'chiudere la pausa');
+  if(!ok) return;
+  showToast(pz.inizio >= oggi ? 'Pausa tolta' : 'Bentornato! Si riparte da oggi 💪', '', 3000);
+  loadTrainingHomeData();
+  renderTraining();
+}
+// La striscia in Training (pattern della barra infortunio): in pausa, oppure pausa dichiarata per dopo.
+function _renderPausaBar(){
+  const pz = getPausa();
+  if(!pz || !(pz.attiva || pz.futura)) return '';
+  const motivo = _pausaMotivoTesto(pz.motivo);
+  const quando = pz.attiva
+    ? (pz.fine ? `In pausa fino al ${_pausaFmt(pz.fine)}` : 'In pausa, fine da decidere')
+    : (pz.fine ? `Pausa dal ${_pausaFmt(pz.inizio)} al ${_pausaFmt(pz.fine)}` : `Pausa dal ${_pausaFmt(pz.inizio)}, fine da decidere`);
+  const sotto = pz.attiva ? 'Nessun debito di sedute, il blocco è fermo: riprendi da dove eri.' : 'Dichiarata: in quei giorni niente debito e niente proposte di Pirsi sull\'allenamento.';
+  return `
+    <div id="pausa-bar" style="background:var(--s1);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:3px;">✈️ PAUSA${motivo ? ' · ' + esc(motivo.toUpperCase()) : ''}</div>
+        <div style="font-size:13px;color:var(--t1);font-family:var(--font-sans);">${esc(quando)}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:2px;">${sotto}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button onclick="apriPausa()" style="background:none;color:var(--acc);border:1px solid var(--s3);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Modifica</button>
+        <button onclick="terminaPausa()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">${pz.attiva ? 'Rientro anticipato' : 'Togli'}</button>
+      </div>
+    </div>`;
+}
+// La card fra i riposi extra: apre il foglio.
+function _renderPausaCard(){
+  const pz = getPausa();
+  const stato = pz && pz.attiva ? 'In corso' : pz && pz.futura ? 'Dichiarata' : null;
+  return `
+            <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">✈️ Pausa programmata${stato ? ` <span style="font-size:11px;color:var(--acc);font-family:var(--font-mono);">· ${stato}</span>` : ''}</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro: dici le date e l'app ti aspetta. Niente debito, blocco fermo, rientro graduale al ritorno.</div>
+              </div>
+              <button onclick="apriPausa();" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">${stato ? 'Modifica' : 'Imposta'}</button>
+            </div>`;
+}
+function _renderPausaModal(){
+  const m = ST.pausaModal;
+  if(!m) return '';
+  const chip = (v, lbl) => `<button type="button" onclick="ST.pausaModal.motivo='${v}';renderTraining();" style="padding:8px 12px;border-radius:999px;border:1.5px solid ${m.motivo === v ? 'var(--acc)' : 'var(--s2)'};background:${m.motivo === v ? 'var(--acc)' : 'var(--s1)'};color:${m.motivo === v ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${lbl}</button>`;
+  return `
+    <div id="pausa-modal" class="weight-modal" style="z-index:1100;" onclick="if(event.target===this)chiudiPausa()">
+      <div class="weight-modal-inner">
+        <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:6px;">✈️ PAUSA PROGRAMMATA</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:14px;">Quando sei via?</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div style="flex:1;">
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">PARTO IL</label>
+            <input id="pausa-inizio" class="inp" type="date" value="${esc(m.inizio || '')}" onchange="ST.pausaModal.inizio=this.value;"/>
+          </div>
+          <div style="flex:1;${m.aperta ? 'opacity:.45;' : ''}">
+            <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">TORNO IL</label>
+            <input id="pausa-fine" class="inp" type="date" value="${esc(m.fine || '')}" ${m.aperta ? 'disabled' : ''} onchange="ST.pausaModal.fine=this.value;"/>
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);font-family:var(--font-sans);margin-bottom:14px;cursor:pointer;">
+          <input id="pausa-aperta" type="checkbox" ${m.aperta ? 'checked' : ''} onchange="ST.pausaModal.aperta=this.checked;ST.pausaModal.inizio=document.getElementById('pausa-inizio').value;ST.pausaModal.fine=document.getElementById('pausa-fine').value;renderTraining();"/>
+          Non lo so ancora (la chiudo io al ritorno)
+        </label>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">PERCHÉ</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${PAUSA_MOTIVI.map(([v, l]) => chip(v, l)).join('')}</div>
+        <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">In quei giorni: niente debito di sedute, il blocco resta fermo dove sei, Pirsi non propone cambi all'allenamento. Al ritorno ti propongo il rientro graduale; se stai via più di tre settimane, anche un blocco nuovo.</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="salvaPausa()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salva la pausa</button>
+          <button onclick="chiudiPausa()" style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 async function saveWorkoutRecord(sessionId){
   if(!ST.user || ST.user.id==='test-user-001') return;
   const today = todayKey();
@@ -1863,7 +2000,9 @@ async function maybeProposeSoftReturn(sid){
     if(gap < SOFT_RETURN_MIN_DAYS) return;
     const sr = _srLoad();
     if(sr && sr.decidedFor === last) return; // scelta già presa per QUESTA pausa
-    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last };
+    const pz = getPausa();   // tornato da una pausa dichiarata: il banner lo dice (Training 350)
+    const daPausa = (pz && pz.finita && pz.giorniDalRientro <= 3) ? pz.giorniTotali : null;
+    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last, daPausa };
     if(ST.page === 'training' && ST.trainSession === sid) renderTraining();
   } catch(e){}
 }
@@ -3109,7 +3248,7 @@ function renderTraining(){
       const softReturnBanner = srPrompt ? `
         <div style="background:var(--s1);border:1px solid ${RIENTRO_BLU};border-radius:14px;padding:14px 16px;margin-bottom:14px;">
           <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${RIENTRO_BLU};letter-spacing:.06em;margin-bottom:6px;">RIENTRO</div>
-          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">Sei stato fermo ${srPrompt.gapDays} giorni — ripartiamo più leggeri?</div>
+          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">${srPrompt.daPausa ? `Bentornato: ${srPrompt.daPausa} giorni di pausa, ${srPrompt.gapDays} senza allenarti` : `Sei stato fermo ${srPrompt.gapDays} giorni`} — ripartiamo più leggeri?</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button onclick="softReturnAccept()" style="flex:1;min-width:150px;background:${RIENTRO_BLU};color:#fff;border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Rientro soft (consigliato)</button>
             <button onclick="softReturnDecline()" style="flex:1;min-width:120px;background:var(--s2);color:var(--t1);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Continua normale</button>
@@ -3659,6 +3798,8 @@ function renderTraining(){
 
         ${_renderInjuryBar()}
 
+        ${_renderPausaBar()}
+
         ${giorniHTML}
 
         ${cicloHTML}
@@ -3682,6 +3823,7 @@ function renderTraining(){
               </div>
               <button onclick="openInjuryModal();" style="flex-shrink:0;background:var(--err);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">Segna oggi</button>
             </div>
+            ${_renderPausaCard()}
           </div>
         </div>
 
@@ -4473,7 +4615,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML;
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach
@@ -6092,7 +6234,18 @@ function _giorniDaInizioBlocco(){
   if(!start) return null;
   const t = new Date(start + 'T00:00:00').getTime();
   if(!isFinite(t)) return null;
-  return Math.floor((Date.now() - t) / 86400000);
+  // I giorni di pausa programmata non contano: il blocco è fermo (Training 350)
+  const pausa = (typeof ZTQuadro !== 'undefined') ? ZTQuadro.pausaGiorniNel(ST.profile, start, todayKey()) : 0;
+  return Math.floor((Date.now() - t) / 86400000) - pausa;
+}
+// Dopo una pausa di più di tre settimane si propone il blocco nuovo (decisione di Ignazio, 13 ottobre
+// 2026): forza e massa reggono 2-3 settimane di stop, oltre conviene ripartire con un ciclo pulito.
+function _pausaLungaAppenaFinita(){
+  const pz = getPausa();
+  if(!pz || !pz.finita || !(pz.giorniTotali > PAUSA_BLOCCO_NUOVO_GIORNI)) return null;
+  if(pz.giorniDalRientro > PAUSA_RIENTRO_GIORNI) return null;
+  if(ST.profile && ST.profile.train_start_date && ST.profile.train_start_date > pz.fine) return null;   // un blocco nuovo è già partito
+  return pz;
 }
 
 // Il nome del blocco nei testi: un blocco dura 6 settimane (42 giorni), quindi copre due mesi e si chiama
@@ -6111,9 +6264,11 @@ function _nomeBlocco(inizioISO){
 function _renderBloccoNuovoCard(isScarico){
   if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
   const giorni = _giorniDaInizioBlocco();
-  if(!isScarico && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
+  const dopoPausa = _pausaLungaAppenaFinita();
+  if(!isScarico && !dopoPausa && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
   const titolo = _nomeBlocco();
-  const sotto = giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
+  const sotto = dopoPausa ? `rientro dopo ${dopoPausa.giorniTotali} giorni di pausa`
+    : giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
   const bn = ST.bloccoNuovo;
   // Un'anteprima già preparata (chiusa con «Non ora», la X o toccando fuori) non si perde: si riapre,
   // con le scelte «Cambia» fatte fin lì; «Rifalla da capo» la ricalcola.
@@ -6125,7 +6280,7 @@ function _renderBloccoNuovoCard(isScarico){
       <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">${esc(sotto).toUpperCase()}</div>
         <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${esc(titolo)}: ${esc(COACH_NAME)} lo prepara, tu decidi</div>
-        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${dopoPausa ? 'Dopo più di tre settimane fermo conviene ripartire con un blocco pulito invece di riprendere a metà. ' : ''}Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
         ${pulsanti}
       </div>`;
 }

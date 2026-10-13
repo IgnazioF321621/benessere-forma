@@ -114,7 +114,7 @@ export async function runWeeklyCoach(env, opts) {
   const esito = { week_start: ws, dry, utenti: [], errori: 0 };
 
   const [profili, piani] = await Promise.all([
-    rest(env, 'profiles?select=id,obiettivo,goal_weight_kg,weight_kg,target_kcal,target_protein,target_carbs,target_fat,giorni_allenamento,train_start_date,usa_training,created_at&order=id.asc'),
+    rest(env, 'profiles?select=id,obiettivo,goal_weight_kg,weight_kg,target_kcal,target_protein,target_carbs,target_fat,giorni_allenamento,train_start_date,usa_training,created_at,pausa_inizio,pausa_fine&order=id.asc'),
     rest(env, 'weekly_plans?select=user_id&status=eq.active'),
   ]);
   const conPiano = new Set((piani || []).map((p) => p.user_id));
