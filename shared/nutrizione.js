@@ -182,8 +182,40 @@ var ZTNutrizione = (function(){
     return { days: days, ref: { supps: supps, catalog: catalog, extrasByDay: extrasByDay } };
   }
 
+  // ── «In Zona» e «Giorno perfetto»: una regola sola (Nutrition 020, Ondata 4, 13 ottobre 2026) ──
+  // Prima Oggi giudicava su 40/30/30 fisso con 5 punti di margine e Analisi sulle percentuali dell'obiettivo con 2:
+  // lo stesso giorno era «Nella Zona» in Oggi e «Quasi» in Analisi, e con ipertrofia (40/35/25) centrare il target
+  // cadeva sul bordo. Il trofeo scattava con le proporzioni giuste e piu' di 800 kcal, anche con 900 su 2300.
+  // Scelta di Ignazio (13 ottobre 2026): percentuali dell'obiettivo, entro 3 punti «in», entro 6 «quasi»;
+  // Giorno perfetto = Nella Zona e calorie entro il 10% dell'obiettivo. Chi mostra un giudizio passa da qui.
+  var ZONA_PUNTI_IN = 3, ZONA_PUNTI_QUASI = 6, PERFETTO_SCARTO_KCAL = 0.10;
+  // Le percentuali di carboidrati, proteine e grassi sulle calorie dei macro (arrotondate, come a schermo)
+  function percentualiMacro(cons){
+    var kC = (Number(cons && cons.carbs) || 0) * 4, kP = (Number(cons && cons.protein) || 0) * 4, kF = (Number(cons && cons.fat) || 0) * 9;
+    var totK = kC + kP + kF;
+    if(totK <= 0) return { pC:0, pP:0, pF:0, totK:0 };
+    return { pC: Math.round(kC / totK * 100), pP: Math.round(kP / totK * 100), pF: Math.round(kF / totK * 100), totK: totK };
+  }
+  // → 'unset' (meno di 5 g di macro: niente da giudicare) | 'in' | 'near' | 'out'
+  function statoZona(cons, target){
+    var tot = (Number(cons && cons.protein) || 0) + (Number(cons && cons.carbs) || 0) + (Number(cons && cons.fat) || 0);
+    if(tot < 5) return 'unset';
+    var p = percentualiMacro(cons);
+    var tPC = Number(target && target.pCarbo) || 40, tPP = Number(target && target.pProt) || 30, tPF = Number(target && target.pFat) || 30;
+    var scarto = Math.max(Math.abs(p.pC - tPC), Math.abs(p.pP - tPP), Math.abs(p.pF - tPF));
+    return scarto <= ZONA_PUNTI_IN ? 'in' : (scarto <= ZONA_PUNTI_QUASI ? 'near' : 'out');
+  }
+  // Nella Zona e calorie vicine all'obiettivo (entro il 10%)
+  function giornoPerfetto(cons, target){
+    var tk = Number(target && target.kcal) || 0;
+    if(tk <= 0 || statoZona(cons, target) !== 'in') return false;
+    return Math.abs((Number(cons && cons.kcal) || 0) - tk) <= tk * PERFETTO_SCARTO_KCAL;
+  }
+
   return { r2: r2, mealTotals: mealTotals, mapSupplement: mapSupplement, suppForLog: suppForLog, extraFromRow: extraFromRow,
     suppTotalsForIds: suppTotalsForIds, extraSuppsTotals: extraSuppsTotals, extrasTotals: extrasTotals,
-    dayTotals: dayTotals, buildDays: buildDays };
+    dayTotals: dayTotals, buildDays: buildDays,
+    ZONA_PUNTI_IN: ZONA_PUNTI_IN, ZONA_PUNTI_QUASI: ZONA_PUNTI_QUASI, PERFETTO_SCARTO_KCAL: PERFETTO_SCARTO_KCAL,
+    percentualiMacro: percentualiMacro, statoZona: statoZona, giornoPerfetto: giornoPerfetto };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTNutrizione;

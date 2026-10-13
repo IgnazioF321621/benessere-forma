@@ -881,19 +881,9 @@ function heroCard(cons) {
   const overKcal = isOverTarget(cons.kcal, target.kcal);
   const consPct  = overKcal ? 100 : (target.kcal > 0 ? Math.max(0, Math.min(100, Math.round((cons.kcal / target.kcal) * 100))) : 0);
 
-  // ── Zona check (3 stati: in / quasi / fuori — fascia ±5% / ±10%) ──
-  const tot = cons.protein + cons.carbs + cons.fat;
-  let pC = 0, pP = 0, pF = 0, zonaState = 'unset';
-  if (tot >= 5) {
-    const kP = cons.protein * 4, kC = cons.carbs * 4, kFat = cons.fat * 9;
-    const totK = kP + kC + kFat || 1;
-    pP = Math.round(kP / totK * 100);
-    pC = Math.round(kC / totK * 100);
-    pF = Math.round(kFat / totK * 100);
-    const inZ   = (pC >= 35 && pC <= 45) && (pP >= 25 && pP <= 35) && (pF >= 25 && pF <= 35);
-    const nearZ = (pC >= 30 && pC <= 50) && (pP >= 20 && pP <= 40) && (pF >= 20 && pF <= 40);
-    zonaState = inZ ? 'in' : (nearZ ? 'near' : 'out');
-  }
+  // ── Zona check: la regola e' una sola, in shared/nutrizione.js (Nutrition 020) ──
+  const zonaState = ZTNutrizione.statoZona(cons, target);
+  const { pC, pP, pF } = ZTNutrizione.percentualiMacro(cons);
 
   // ── Ring color: over → terracotta; in zona → evergreen; quasi → ambra; fuori → terracotta ──
   const ringColor = overKcal ? '#B84C2A'
@@ -1017,8 +1007,7 @@ function mealCardHTML(m){
   const totK=kC+kP+kF;
   let zonaBadge = '';
   if(totK>=10){
-    const pC=kC/totK*100, pP=kP/totK*100, pF=kF/totK*100;
-    const inZona=(pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+    const inZona = ZTNutrizione.statoZona(m, ST.TARGET) === 'in';   // Nutrition 020: la stessa regola della giornata
     const bg=inZona?'#E6F4F2':'#FDECEA';
     const col=inZona?'#2A7A6F':'#B84C2A';
     const lbl=inZona?'In Zona':'Fuori Zona';
@@ -1729,16 +1718,11 @@ function renderOggi(){
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
   const nowH = new Date();
   const nowHour = nowH.getHours();
-  const zonaOk = (()=>{
-    const tot2=cons.protein+cons.carbs+cons.fat;
-    if(tot2<5) return false;
-    const kP=cons.protein*4,kC=cons.carbs*4,kF=cons.fat*9;
-    const totK=kP+kC+kF||1;
-    const pP=Math.round(kP/totK*100),pC=Math.round(kC/totK*100),pF=Math.round(kF/totK*100);
-    return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
-  })();
-  const perfect = isToday && nowHour >= 21 && zonaOk && cons.kcal > 800;
-  const qualifies = zonaOk && cons.kcal > 800;
+  // Nutrition 020: «Nella Zona» e «Giorno perfetto» con la regola unica di shared/nutrizione.js
+  // (prima il trofeo scattava con le proporzioni giuste e piu' di 800 kcal, anche con 900 su 2300)
+  const zonaOk = ZTNutrizione.statoZona(cons, ST.TARGET) === 'in';
+  const qualifies = ZTNutrizione.giornoPerfetto(cons, ST.TARGET);
+  const perfect = isToday && nowHour >= 21 && qualifies;
   if ((perfect || (!isToday && qualifies)) && !day.giornoPerfetto) { day.giornoPerfetto = true; saveCache(); }
   const showPerfetto = perfect || !!day.giornoPerfetto;
 
@@ -2294,24 +2278,15 @@ function _analisiGetWindowLabel(window, offset, start, end) {
 }
 
 // ── HELPER: status zona per chiave giorno ──
-// Tolleranza: ±2% in zona, ±5% quasi zona. Target dinamici dal profilo.
+// Tolleranza: quella di shared/nutrizione.js (Nutrition 020: 3 punti in zona, 6 quasi), sulle percentuali dell'obiettivo.
 function _zoneStatusForDayKey(key) {
   const dayData = ST.db.days && ST.db.days[key];
   if(!dayData || dayData.fasting) return 'noData';
   const cons = dayTotals(dayData);
   const tot = cons.protein + cons.carbs + cons.fat;
   if(tot < 5 || cons.kcal < 50) return 'noData';
-  const tPC = ST.TARGET.pCarbo || 40;
-  const tPP = ST.TARGET.pProt  || 30;
-  const tPF = ST.TARGET.pFat   || 30;
-  const kP = cons.protein * 4, kC = cons.carbs * 4, kF = cons.fat * 9;
-  const totK = kP + kC + kF || 1;
-  const pP = Math.round(kP / totK * 100);
-  const pC = Math.round(kC / totK * 100);
-  const pF = Math.round(kF / totK * 100);
-  const inZ   = Math.abs(pC - tPC) <= 2 && Math.abs(pP - tPP) <= 2 && Math.abs(pF - tPF) <= 2;
-  const nearZ = Math.abs(pC - tPC) <= 5 && Math.abs(pP - tPP) <= 5 && Math.abs(pF - tPF) <= 5;
-  return inZ ? 'inZone' : (nearZ ? 'almostZone' : 'outOfZone');
+  const stato = ZTNutrizione.statoZona(cons, ST.TARGET);
+  return stato === 'in' ? 'inZone' : (stato === 'near' ? 'almostZone' : (stato === 'out' ? 'outOfZone' : 'noData'));
 }
 
 // ── HELPER: itera giorni del range, ritorna array di {date, key, dayData, totals, status, mealsN, extrasN} ──
@@ -2881,7 +2856,7 @@ function renderDayDetailScreen() {
     : status === 'outOfZone'  ? 'out-of-zone'
     : 'no-data';
   const statusPill = `<span class="daydetail-summary-pill ${statusClass}"><span class="dot"></span>${statusLabel}</span>`;
-  const targetStr = `<span class="daydetail-summary-target">${tPC} · ${tPP} · ${tPF} ±2%</span>`;
+  const targetStr = `<span class="daydetail-summary-target">${tPC} · ${tPP} · ${tPF} ±${ZTNutrizione.ZONA_PUNTI_IN}</span>`;
 
   // Kcal summary
   const targetKcal = ST.TARGET.kcal || 2000;
