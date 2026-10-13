@@ -877,6 +877,78 @@ async function comeStaiScegli(campo, valore) {
 function comeStaiApri() { ST.comeStaiAperta = todayKey(); renderHome(); }
 function comeStaiChiudi() { ST.comeStaiAperta = null; renderHome(); }
 
+// Card Nutrition, ciò che le altre parti della Home non dicono (Home 040, 13 ottobre 2026,
+// scelta di Ignazio): il piatto del piano per il prossimo pranzo o cena non ancora registrato,
+// con «Registra» che apre il form già compilato, e «Ultimo pasto N h fa» dopo 5 ore.
+// Pasti e integratori da fare restano in «Prossima azione» e «Anche da fare oggi».
+const NUTR_ORE_SENZA_PASTO = 5;
+function _nutrProssimoDalPiano(){
+  const h = new Date().getHours();
+  const slot = h < 15 ? 'pranzo' : (h < 22 ? 'cena' : null);
+  if(!slot) return null;
+  const pasti = (getDay(todayKey()).meals || []);
+  if(pasti.some(m => m.slot === slot)) return null;
+  const p = _nutrPianoDiOggi(slot);
+  if(!p || !(p.piatto || p.ingredienti)) return null;
+  return { slot, piatto: p.piatto || p.ingredienti, descrizione: p.ingredienti || p.piatto };
+}
+// Il piano di OGGI (non del giorno sfogliato nel tab Nutrition) dalla copia in memoria del Piano.
+// Se manca, la Home lo chiede al massimo una volta al giorno: il caricatore del Piano richiede da
+// capo ogni volta che il piano non c'è, e la Home si ridisegna spesso (registri, costo zero).
+let _nutrPianoChiestoIl = null;
+function _nutrPianoDiOggi(slot){
+  if(typeof _pianoV4GetCachedPlanWeek !== 'function' || typeof _pianoV4WeekStartIsoForDate !== 'function') return null;
+  if(!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return null;
+  const oggi = todayKey();
+  const settimana = _pianoV4WeekStartIsoForDate(oggi);
+  const voce = _pianoV4GetCachedPlanWeek(settimana);
+  if(!voce){
+    if(_nutrPianoChiestoIl !== oggi && typeof _pianoV4LoadRealPlanForWeek === 'function'){
+      _nutrPianoChiestoIl = oggi;
+      Promise.resolve(_pianoV4LoadRealPlanForWeek(settimana)).then(() => { if(ST.page === 'home') renderHome(); }).catch(() => {});
+    }
+    return null;
+  }
+  if(voce.state !== 'loaded' || !voce.plan) return null;
+  const dow = ((new Date(oggi + 'T12:00:00').getDay() + 6) % 7) + 1;   // 1=lunedì … 7=domenica
+  const m = ((voce.mealsByDay && voce.mealsByDay[dow]) || []).find(x => x.slot === slot);
+  if(!m) return null;
+  return { piatto: m.name || '', ingredienti: Array.isArray(m.ingredients) ? m.ingredients.join(', ') : '' };
+}
+function _nutrOreDallUltimo(){
+  const now = new Date(), h = now.getHours();
+  if(h < 8 || h >= 22) return null;
+  const ore = (getDay(todayKey()).meals || []).map(m => String(m.time || '')).filter(t => /^\d\d:\d\d/.test(t)).sort();
+  if(!ore.length) return null;
+  const [hh, mm] = ore[ore.length - 1].split(':').map(Number);
+  const diff = Math.floor((now.getHours() * 60 + now.getMinutes() - (hh * 60 + mm)) / 60);
+  return diff >= NUTR_ORE_SENZA_PASTO ? diff : null;
+}
+function _nutrExtraHTML(){
+  const righe = [];
+  const pp = _nutrProssimoDalPiano();
+  if(pp) righe.push(`
+          <div class="home-v2-nutr-riga">
+            <span><span class="home-v2-nutr-eb">${pp.slot === 'pranzo' ? 'Pranzo' : 'Cena'} dal piano</span> ${esc(pp.piatto)}</span>
+            <button class="home-v2-nutr-btn" onclick="event.stopPropagation();apriPastoDalPiano('${pp.slot}')">Registra</button>
+          </div>`);
+  const ore = _nutrOreDallUltimo();
+  if(ore != null) righe.push(`
+          <div class="home-v2-nutr-riga"><span class="home-v2-nutr-avviso">Ultimo pasto ${ore} h fa</span></div>`);
+  return righe.length ? `<div class="home-v2-nutr-extra">${righe.join('')}</div>` : '';
+}
+// Apre il form del pasto già compilato col piatto del piano, come «REGISTRA ›» nel tab Nutrition.
+function apriPastoDalPiano(slot){
+  const pp = _nutrProssimoDalPiano();
+  if(!pp || pp.slot !== slot) { showPage('oggi'); return; }
+  showPage('oggi');
+  const info = (typeof MEAL_SLOTS !== 'undefined' && MEAL_SLOTS.find(x => x.id === slot)) || {};
+  ST.logOpen = true; ST.logSlot = slot; ST.logTime = info.time || ST.logTime;
+  ST.smartForm = { items: [], freeText: pp.descrizione || '', notes: '', analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
+  renderOggi();
+}
+
 function renderHomeV2(){
   // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
   if(ST.homeView === 'quadro' && _wpUsable()){
@@ -969,6 +1041,7 @@ function _renderHomeCards(){
             </div>
           </div>
         </div>
+        ${_nutrExtraHTML()}
       </div>
       <span class="home-v2-card-arrow">›</span>
     </div>`;
