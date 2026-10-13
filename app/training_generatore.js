@@ -751,14 +751,25 @@ async function loadActiveScheda() {
     try {
       const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome')
+        .select('codice, nome, unilaterale, progressione')
         .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
       } else if (Array.isArray(catRows)) {
         const nomeByCodice = new Map();
-        catRows.forEach(r => { if (r && r.codice) nomeByCodice.set(r.codice, r.nome); });
+        // `unilaterale` e `progressione` per codice (Training 280 e 320): servono alle schede
+        // generate prima del 13 ottobre 2026, che nel jsonb non le hanno. Solo in memoria.
+        const infoByCodice = new Map();
+        catRows.forEach(r => {
+          if (!r || !r.codice) return;
+          nomeByCodice.set(r.codice, r.nome);
+          if (r.unilaterale || r.progressione) infoByCodice.set(r.codice, {
+            unilaterale:  r.unilaterale  ? String(r.unilaterale).trim().toLowerCase()  : null,
+            progressione: r.progressione ? String(r.progressione).trim().toLowerCase() : null,
+          });
+        });
         ST.catalogNomeByCodice = nomeByCodice;           // riusata dagli alias nome↔codice
+        ST.catalogInfoByCodice = infoByCodice;
         const remapEx = (ex) => {
           if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
           const nome = nomeByCodice.get(ex.codice);
@@ -1528,6 +1539,16 @@ const _TRAIN_GEN_SOFT_MAX = 6;
 // NB: il box PROSSIMA consuma parseRepsRange().perLato (vedi computeNextSetSuggestion),
 // quindi anche le righe già "per lato" del fallback TRAINING_SESSIONS sono coperte.
 const _TRAIN_GEN_UNILATERAL = ['EX015','EX033','EX035','EX038','EX039','EX041','EX047','EX066','EX062','EX067','EX068'];
+// Dal 13 ottobre 2026 (Training 280, Catalogo 040) la verità sta nel catalogo: la colonna
+// `unilaterale` vale `si` (un lato per volta: ripetizioni per lato), `alternato` (i lati si
+// alternano dentro la serie: si contano insieme) o `no`. La lista fissa resta solo per le righe
+// che la colonna non ce l'hanno (catalogo non ancora sincronizzato).
+function _trainGenUnilaterale(cat) {
+  if (!cat) return false;
+  const u = String(cat.unilaterale || '').trim().toLowerCase();
+  if (u) return u === 'si';
+  return _TRAIN_GEN_UNILATERAL.includes(cat.codice);
+}
 
 // Split sessioni per giorni × esperienza (PARTE 5).
 // I "nomi visibili" (Full Body A/B, Upper A/B, ...) li calcola
@@ -3510,7 +3531,7 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
     const reps = (exParams.durationBased
       ? `${exParams.reps_min}-${exParams.reps_max} sec`
       : `${exParams.reps_min}-${exParams.reps_max}`)
-      + (_TRAIN_GEN_UNILATERAL.includes(cat.codice) ? ' per lato' : '');
+      + (_trainGenUnilaterale(cat) ? ' per lato' : '');
 
     // iso flag = recupero corto in getRestSec(). Vero per OGNI esercizio che
     // NON usa i parametri compound (isolamento, mobilita, core, isometrico):
@@ -3534,6 +3555,11 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
     };
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
+    // Le due colonne del catalogo (Training 280 e 320) viaggiano nel jsonb, così la seduta non
+    // deve rileggere il catalogo: `unilaterale` decide il registro a due numeri, `progressione`
+    // la via che il coach nomina in cima alle ripetizioni (carico · ritmo più lento · …).
+    if (cat.unilaterale)  exObj.unilaterale  = String(cat.unilaterale).trim().toLowerCase();
+    if (cat.progressione) exObj.progressione = String(cat.progressione).trim().toLowerCase();
     // isSurrogato serve ancora per `eq` (mostra surrogato_attrezzo) e
     // tracciabilità. La nota_surrogato non è più un campo separato: è il setup.
     if (isSurrogato) exObj.isSurrogato = true;

@@ -41,6 +41,38 @@ function findExercise(exName, sessionId){
   return sess.exercises.find(e => e.name === exName) || null;
 }
 
+// ── Per lato e via di progressione (Training 280 e 320, 13 ottobre 2026) ──
+// Le due colonne del catalogo (`unilaterale`: si · alternato · no; `progressione`: carico ·
+// elastico più duro · meno assistenza · carico in mano · ritmo più lento · variante più difficile ·
+// più ripetizioni · tenuta più lunga) stanno nel jsonb delle schede generate dal 13 ottobre; per le
+// schede di prima si leggono dal catalogo per codice (ST.catalogInfoByCodice, letto da loadActiveScheda).
+function _exInfoCatalogo(ex){
+  const info = (ex && ex.codice && ST.catalogInfoByCodice instanceof Map) ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  return {
+    unilaterale:  (ex && ex.unilaterale)  || (info && info.unilaterale)  || null,
+    progressione: (ex && ex.progressione) || (info && info.progressione) || null,
+  };
+}
+// «Per lato» = ripetizioni (o secondi) contate un lato alla volta: lo dice la prescrizione
+// («8-12 per lato») oppure il catalogo (`unilaterale = si`). `alternato` conta i lati insieme.
+function _exPerLato(ex, parsed){
+  if(!ex) return false;
+  const pr = parsed || ((ex.reps && typeof parseRepsRange === 'function') ? parseRepsRange(ex.reps) : null);
+  if(pr && pr.perLato) return true;
+  return _exInfoCatalogo(ex).unilaterale === 'si';
+}
+function _exProgressione(ex){ return _exInfoCatalogo(ex).progressione; }
+// Il testo delle ripetizioni di una serie salvata: «8r», oppure «8 dx · 7 sx» se la serie ha i due
+// lati (riga di training_logs con reps_dx/reps_sx, o voce di ST.trainLoggedSets con repsDx/repsSx).
+function _repsTesto(d, suffisso){
+  if(!d) return '';
+  const suf = (suffisso == null) ? 'r' : suffisso;
+  const dx = (d.repsDx != null) ? d.repsDx : d.reps_dx;
+  const sx = (d.repsSx != null) ? d.repsSx : d.reps_sx;
+  if(dx != null && sx != null && String(dx) !== '' && String(sx) !== '') return `${dx} dx · ${sx} sx`;
+  return (d.reps != null && String(d.reps).trim() !== '') ? `${d.reps}${suf}` : '';
+}
+
 // ── Hydration cross-device delle serie loggate OGGI ─────────
 // Ricarica ST.trainLoggedSets da training_logs (Supabase) per evitare che le serie
 // loggate da un altro device non compaiano localmente finché non si rilogga manualmente.
@@ -50,7 +82,7 @@ async function hydrateTrainingSetsFromCloud(){
   const today = todayKey();
   try {
     const { data, error } = await supa.from('training_logs')
-      .select('id, session_id, exercise_name, exercise_code, set_number, reps, resistance, band_color, rir_actual')
+      .select('id, session_id, exercise_name, exercise_code, set_number, reps, resistance, band_color, rir_actual, reps_dx, reps_sx')
       .eq('user_id', ST.user.id)
       .eq('date', today);
     if(error) { console.warn('hydrateTrainingSets:', error.message); return; }
@@ -65,13 +97,17 @@ async function hydrateTrainingSetsFromCloud(){
       const nome = _nomeDaCodice(row.exercise_code) || row.exercise_name;
       const key = `${row.session_id}_${nome}_${row.set_number}_${today}`;
       const resistFromBand = row.band_color || null;
-      cloudMap[key] = {
+      const voce = {
         reps: row.reps,
         resistance: resistFromBand != null ? resistFromBand : (row.resistance != null ? String(row.resistance) : ''),
         rir: row.rir_actual,
         band_color: resistFromBand,
         setId: row.id,   // per modificare e cancellare per id (Fondamenta 080: una tabella sola)
       };
+      // I due lati, se la serie li ha (Training 280)
+      if(row.reps_dx != null) voce.repsDx = row.reps_dx;
+      if(row.reps_sx != null) voce.repsSx = row.reps_sx;
+      cloudMap[key] = voce;
     });
     // Merge: cloud vince in caso di conflitto (più recente, fonte autoritativa)
     ST.trainLoggedSets = { ...ST.trainLoggedSets, ...cloudMap };
@@ -208,7 +244,7 @@ async function loadLastLoggedSets(sessionId){
     let rows = [];
     for(let from = 0; from < MAX_ROWS; from += PAGE){
       const res = await supa.from('training_logs')
-        .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
+        .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
         .eq('user_id', ST.user.id)
         .eq('session_id', sessionId)
         .lt('date', today)
@@ -252,7 +288,7 @@ async function loadLastLoggedSets(sessionId){
       const tuttiNomi = [...new Set([].concat(...[...nomiPerCanon.values()].map(s => [...s])))];
       if(tuttiNomi.length > 0 && tuttiNomi.length <= 200){
         const res2 = await supa.from('training_logs')
-          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number')
+          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
           .eq('user_id', ST.user.id)
           .lt('date', today)
           .order('date', { ascending: false })
@@ -570,7 +606,8 @@ function getLastLoggedSetLabel(sessionId, exName){
     resistTxt = /^\d+$/.test(r) ? `${r} ${unitLbl}` : r;
   }
   const parts = [`S${bestSet}`];
-  if(d.reps !== undefined && d.reps !== null && String(d.reps).trim() !== '') parts.push(`${d.reps}r`);
+  const repsTxt = _repsTesto(d);            // «8r» oppure «8 dx · 7 sx» (Training 280)
+  if(repsTxt) parts.push(repsTxt);
   if(resistTxt) parts.push(resistTxt);
   if(d.rir !== undefined && d.rir !== null && String(d.rir).trim() !== '') parts.push(`RIR ${d.rir}`);
   return parts.join(' · ');
@@ -628,7 +665,7 @@ function getProgressionSuggestion(exName, sessionId){
       resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
     }
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-    return `💡 Ultima volta: ${last.reps}r${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    return `💡 Ultima volta: ${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
   }
   // Nessuna serie loggata + nessuno storico → punto di partenza generico,
   // COERENTE col tipo di esercizio (B4 fix):
@@ -1064,6 +1101,8 @@ function editLogRow(id){
     resistance: isPullUp ? (log.band_color || '') : (log.resistance || ''),
     rir: log.rir_actual != null ? String(log.rir_actual) : '',
   };
+  // Per lato (Training 280): si correggono i due lati
+  if(log.reps_dx != null && log.reps_sx != null){ ST.trainEditLogRow.reps = String(log.reps_dx); ST.trainEditLogRow.repsSx = String(log.reps_sx); }
   renderTraining();
   setTimeout(()=>document.getElementById('elr-reps')?.focus(), 50);
 }
@@ -1085,10 +1124,16 @@ async function confirmEditLogRow(){
   const repsEl = document.getElementById('elr-reps');
   const resistEl = document.getElementById('elr-resist');
   const rirEl = document.getElementById('elr-rir');
-  const reps = parseInt(repsEl?.value) || 0;
+  const repsSxEl = document.getElementById('elr-reps-sx');
+  let reps = parseInt(repsEl?.value) || 0;
   const resistance = (resistEl?.value || '').toString().trim();
   const rir = (rirEl && rirEl.value !== '' && rirEl.value != null) ? parseInt(rirEl.value, 10) : null;
   if(!reps){ repsEl?.focus(); return; }
+  // Per lato (Training 280): due numeri, in `reps` il più debole
+  const perLato = !!repsSxEl;
+  const repsDx = perLato ? reps : null;
+  const repsSx = perLato ? (parseInt(repsSxEl.value) || 0) : null;
+  if(perLato){ if(!repsSx){ repsSxEl.focus(); return; } reps = Math.min(repsDx, repsSx); }
   if(!ST.user || ST.user.id==='test-user-001'){ ST.trainEditLogRow = null; renderTraining(); return; }
   // Trova il log originale per riconoscere le trazioni (il carico e' il colore della banda)
   const orig = (ST.trainDayLogs || []).find(l => l.id === e.id);
@@ -1097,8 +1142,9 @@ async function confirmEditLogRow(){
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   const resistanceText = isPullUp ? null : (resistance || null);
   // Una scrittura sola, per id, con la coda unica (Fondamenta 080): senza rete aspetta e parte da sola
-  const upd = await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
-    righe:{ reps, resistance: resistanceText, band_color: bandColor, rir_actual: rir },
+  const righe = { reps, resistance: resistanceText, band_color: bandColor, rir_actual: rir };
+  if(perLato){ righe.reps_dx = repsDx; righe.reps_sx = repsSx; }
+  const upd = await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update', righe,
     filtri:[['id', e.id], ['user_id', ST.user.id]] });
   const updOk = !(upd && upd.error);
   ST.trainEditLogRow = null;
@@ -1863,9 +1909,9 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   if(!parsed || parsed.min === parsed.max) return ''; // formato non gestito o valore singolo
   const repsMin = parsed.min, repsMax = parsed.max;
   const isTimed = parsed.kind === 'seconds';
-  // Esercizi unilaterali (parsed.perLato): ogni suggerimento mostra "per lato".
-  // Una riga sola → copre tutti i rami (elastici, corpo libero, isometrici).
-  const unitLbl = (isTimed ? 'sec' : 'reps') + (parsed.perLato ? ' per lato' : '');
+  // Esercizi per lato (prescrizione «per lato» o catalogo `unilaterale = si`, Training 280):
+  // ogni suggerimento mostra "per lato". Una riga sola → copre tutti i rami.
+  const unitLbl = (isTimed ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
   // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
   // elastici/corpo libero, isometrici) — override su sess.rir, Pump incluso.
@@ -1887,6 +1933,10 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
   const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
+  // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
+  // coach non dice più «aumenta il carico» a chi un carico non ce l'ha, ma nomina la via scritta a
+  // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
+  const via = _exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico');
 
   if(isPullUpExercise(exName)){
     // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.
@@ -1937,8 +1987,25 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     if(targetRIR === 0) return out(loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
     return out(loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
   }
-  // 2) tetto + RIR ≥ target → +1 step di carico (10 lbs / 2.5 kg), riparti da repsMin
-  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR) return out(loadTxt(plusStep), `riparti da ${repsMin} ${unitLbl}`);
+  // 2) tetto + RIR ≥ target → un passo avanti sulla via dell'esercizio (Training 320).
+  //    carico: +1 passo (10 lbs / 2.5 kg) e si riparte dal minimo. più ripetizioni / tenuta più lunga:
+  //    si sale oltre il tetto. ritmo più lento: stessa resistenza, discesa in 3 secondi (il tempo sotto
+  //    tensione cresce senza carico: Schoenfeld 2015, Wilk 2021), dal minimo. carico in mano: a corpo
+  //    libero si prende un peso (un passo), con un peso già in mano si sale di un passo. elastico più
+  //    duro: un passo in su. variante più difficile e meno assistenza: si nomina la via, dal minimo.
+  if(repsDone >= repsMax && rirVal != null && rirVal >= targetRIR){
+    const dalMinimo = `riparti da ${repsMin} ${unitLbl}`;
+    switch(via){
+      case 'più ripetizioni':
+      case 'tenuta più lunga':        return out(loadTxt(resistInt), via, `sali a ${repsDone + step} ${unitLbl}`);
+      case 'ritmo più lento':         return out(loadTxt(resistInt), 'ritmo più lento: 3 sec in discesa', dalMinimo);
+      case 'variante più difficile':  return out('variante più difficile', dalMinimo);
+      case 'meno assistenza':         return out('meno assistenza', dalMinimo);
+      case 'carico in mano':          return out(resistInt > 0 ? loadTxt(plusStep) : `carico in mano: ${loadStep} ${loadUnit}`, dalMinimo);
+      case 'elastico più duro':       return out(`elastico più duro: ${plusStep} ${loadUnit}`, dalMinimo);
+      default:                        return out(loadTxt(plusStep), dalMinimo);
+    }
+  }
   // 3) sotto range → -1 step di carico (o variante più facile se già a corpo libero)
   if(repsDone < repsMin){
     if(resistInt <= 0) return out('variante più facile', `punta a ${repsMin} ${unitLbl}`);
@@ -1971,7 +2038,21 @@ async function saveTrainingSet(){
   if(!form) return;
   const repsEl = document.getElementById('tl-reps');
   const rirEl = document.getElementById('tl-rir');
-  const reps = parseInt(repsEl?.value)||0;
+  let reps = parseInt(repsEl?.value)||0;
+  // Per lato (Training 280): due numeri, destro e sinistro. In `reps` resta il lato più debole,
+  // perché è su quello che si misura la progressione (il lato forte non trascina l'altro);
+  // i due valori veri vanno in reps_dx e reps_sx.
+  const exDef0 = findExercise(form.exName, form.sessionId);
+  const parsed0 = (exDef0 && exDef0.reps) ? parseRepsRange(exDef0.reps) : null;
+  const perLato = !!(exDef0 && _exPerLato(exDef0, parsed0) && !(parsed0 && parsed0.kind === 'seconds') && !exDef0.isTimed);
+  const repsSxEl = perLato ? document.getElementById('tl-reps-sx') : null;
+  const repsSx = perLato ? (parseInt(repsSxEl?.value) || 0) : null;
+  const repsDx = perLato ? reps : null;
+  if(perLato){
+    if(!repsDx){ repsEl?.focus(); return; }
+    if(!repsSx){ repsSxEl?.focus(); return; }
+    reps = Math.min(repsDx, repsSx);
+  }
   // BLOCCO 3 — Trazioni: resistance NULL nel DB, band_color = colore scelto; ST.trainLoggedSets memorizza il colore
   // come stringa nel campo resistance (compat con getLastLoggedSetLabel + render badge).
   const isPullUp = isPullUpExercise(form.exName);
@@ -1999,6 +2080,7 @@ async function saveTrainingSet(){
     band_color: bandColor,
     rir_actual: rir,
   };
+  if(perLato){ riga.reps_dx = repsDx; riga.reps_sx = repsSx; }
   const esito = await scriviConCoda('salvare la serie', { tabella:'training_logs', tipo:'insert', righe:riga });
   ST.trainSaving = false;
   if(esito.error){ renderTraining(); return; }
@@ -2008,6 +2090,7 @@ async function saveTrainingSet(){
   if(!ST.trainSessionStart && prevKeys.length === 0) ST.trainSessionStart = Date.now();
   const key = `${form.sessionId}_${form.exName}_${form.setNum}_${todayKey()}`;
   ST.trainLoggedSets[key] = {reps, resistance, rir, band_color: bandColor, setId: riga.id};
+  if(perLato){ ST.trainLoggedSets[key].repsDx = repsDx; ST.trainLoggedSets[key].repsSx = repsSx; }
   ST.trainLogDraft = null;
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   const sessExercises = getTrainingSession(form.sessionId)?.exercises || [];
@@ -3009,7 +3092,8 @@ function renderTraining(){
             return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--acc-lt);border:1.5px solid var(--acc);padding:3px 6px;border-radius:8px;font-family:var(--font-mono);">
               <span style="font-size:10px;color:var(--acc);font-weight:700;">S${sn}</span>
               <input id="el-reps" type="number" min="1" max="30" value="${dr.reps||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.reps=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
-              <span style="font-size:10px;color:var(--t3);">r</span>
+              <span style="font-size:10px;color:var(--t3);">${dr.repsSx != null ? 'dx' : 'r'}</span>
+              ${dr.repsSx != null ? `<input id="el-reps-sx" type="number" min="1" max="30" value="${dr.repsSx||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.repsSx=this.value;" style="width:38px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;"><span style="font-size:10px;color:var(--t3);">sx</span>` : ''}
               <input id="el-resist" type="number" min="0" max="999" value="${dr.resistance||''}" oninput="if(ST.editLogDraft)ST.editLogDraft.resistance=this.value;" style="width:46px;padding:2px 4px;border:1px solid var(--s2);border-radius:5px;font-size:11px;font-family:var(--font-mono);text-align:center;">
               <span style="font-size:9px;color:var(--t3);">${unitLbl}</span>
               <button onclick="event.stopPropagation();confirmEditLog('${k.replace(/'/g,"\\'")}');" style="background:var(--acc);color:#fff;border:none;border-radius:5px;width:20px;height:20px;line-height:1;cursor:pointer;font-size:11px;font-weight:700;">✓</button>
@@ -3022,7 +3106,7 @@ function renderTraining(){
           const resistTxt = badgeResist
             ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
             : '';
-          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${d.reps}r${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
+          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
         }).join('');
         // GRAFICA L2 — pill VUOTE per le serie ancora da fare (S{n+1} … S{tot})
         const emptyBadges = (!allDone && e.sets > loggedKeys.length)
@@ -3041,16 +3125,7 @@ function renderTraining(){
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-              <div style="flex:1;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimed ? 'DURATA (sec)' : 'REPS'}</label>
-                ${_tlRepsSelect(isTimed, parsedReps)}
-              </div>
-              ${!isTimed ? `<div style="flex:1;">
-                <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                ${_tlRirSelect()}
-              </div>` : ''}
-            </div>
+            ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps))}
             ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
               <div style="margin-bottom:6px;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
@@ -3448,7 +3523,7 @@ function renderTraining(){
         </div>
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">2</div>
-          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → aumenta il carico</div>
+          <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.4;">Quando raggiungi il <strong>limite reps</strong> di una fascia con quel RIR → un passo avanti: il coach ti dice quale (carico, ritmo più lento, più ripetizioni, variante più difficile…)</div>
         </div>
         <div style="display:flex;align-items:flex-start;gap:10px;">
           <div style="width:22px;height:22px;border-radius:50%;background:var(--acc-lt);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:800;color:var(--acc);font-family:var(--font-mono);">3</div>
@@ -3996,16 +4071,7 @@ function renderTraining(){
                 const nextSetM = formLO.setNum;
                 return `<div style="padding:12px 0 4px;">
                   <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
-                  <div style="display:flex;gap:8px;margin-bottom:10px;">
-                    <div style="flex:1;">
-                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${isTimedM ? 'DURATA (sec)' : 'REPS'}</label>
-                      ${_tlRepsSelect(isTimedM, parsedRepsM)}
-                    </div>
-                    ${!isTimedM ? `<div style="flex:1;">
-                      <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">RIR</label>
-                      ${_tlRirSelect()}
-                    </div>` : ''}
-                  </div>
+                  ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM))}
                   ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
                     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
                     <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
@@ -4182,7 +4248,8 @@ function renderTraining(){
               : `<input id="elr-resist" type="number" min="0" max="999" value="${editD.resistance}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.resistance=this.value;" style="width:60px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="lbs">`;
             return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--s2);flex-wrap:wrap;">
               <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':'reps'}">
+              <input id="elr-reps" type="number" min="0" max="120" value="${editD.reps}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.reps=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="${isTimed?'sec':editD.repsSx != null ? 'dx' : 'reps'}">
+              ${editD.repsSx != null ? `<input id="elr-reps-sx" type="number" min="0" max="120" value="${editD.repsSx}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.repsSx=this.value;" style="width:54px;padding:4px 6px;border:1.5px solid var(--acc);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="sx">` : ''}
               ${resistInput}
               <input id="elr-rir" type="number" min="0" max="5" value="${editD.rir}" oninput="if(ST.trainEditLogRow)ST.trainEditLogRow.rir=this.value;" style="width:46px;padding:4px 6px;border:1.5px solid var(--s2);border-radius:6px;font-size:12px;font-family:var(--font-mono);text-align:center;" placeholder="RIR">
               <button onclick="confirmEditLogRow();" style="background:var(--acc);color:#fff;border:none;border-radius:6px;width:26px;height:26px;line-height:1;cursor:pointer;font-size:13px;font-weight:700;margin-left:auto;">✓</button>
@@ -4193,10 +4260,13 @@ function renderTraining(){
           const resistLabel = isPullUpEx
             ? (l.band_color ? bandLabel(l.band_color) : '')
             : (l.resistance ? l.resistance + ' lbs' : '');
-          const lblShort = `S${l.set_number} ${l.reps}${repsLbl}${resistLabel?' · '+resistLabel:''}`;
+          // Per lato (Training 280): «8 dx · 7 sx» al posto del numero solo
+          const dueLati = (l.reps_dx != null && l.reps_sx != null);
+          const repsTxt = dueLati ? `${l.reps_dx} dx · ${l.reps_sx} sx` : `${l.reps} ${repsLbl}`;
+          const lblShort = `S${l.set_number} ${dueLati ? repsTxt : l.reps + repsLbl}${resistLabel?' · '+resistLabel:''}`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--s2);">
             <span style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);min-width:22px;">S${l.set_number}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${l.reps} ${repsLbl}</span>
+            <span style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-mono);">${repsTxt}</span>
             ${resistLabel?`<span style="font-size:12px;color:var(--t2);font-family:var(${isPullUpEx?'--font-sans':'--font-mono'});">${resistLabel}</span>`:''}
             ${l.rir_actual!=null?`<span style="font-size:10px;color:var(--t3);font-family:var(--font-mono);">RIR ${l.rir_actual}</span>`:''}
             <button onclick="editLogRow('${l.id}');" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;" title="Modifica">✏️</button>
@@ -4802,7 +4872,7 @@ function openTrainExec(sessionId, exName, setNum){
   const _isTimed = _pr && _pr.kind === 'seconds';
   // Per isometrici: picker target, valore iniziale = repsMin (default 20 se non specificato).
   const _timedTarget = _isTimed ? (_pr.min || 20) : null;
-  ST.trainExecOpen = { sessionId, exName, codice: _exDef?.codice || null, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: !!(_pr && _pr.perLato), isoPhase: 'A' };
+  ST.trainExecOpen = { sessionId, exName, codice: _exDef?.codice || null, setNum, isTimed: _isTimed, timedTarget: _timedTarget, timedReady: false, perLato: _isTimed ? _exPerLato(_exDef, _pr) : !!(_pr && _pr.perLato), isoPhase: 'A' };
   _unlockAudio();
   ensureRestGif(exName, _exDef?.codice || null);
   // GRAFICA L1 — Avvia cronometro TEMPO WORKOUT per questa serie
@@ -4875,9 +4945,13 @@ function trainExecBack(){
 // Una fonte sola per la card esercizio e la finestra di recupero: il valore scelto vive in
 // ST.trainLogDraft e torna selezionato a ogni ridisegno. Per gli esercizi a tempo la prima
 // tendina è la durata (stesso intervallo del picker di esecuzione: min-10 → max+15, passo 5).
-function _tlRepsSelect(isTimed, parsedReps){
+// Negli esercizi per lato (Training 280) le ripetizioni sono due: `lato` = 'sx' disegna la seconda
+// tendina (#tl-reps-sx, bozza `repsSx`); scegliere il destro riempie il sinistro se è ancora vuoto,
+// così quando i due lati sono uguali basta un tocco.
+function _tlRepsSelect(isTimed, parsedReps, lato){
   const d = ST.trainLogDraft || {};
-  const cur = d.reps != null ? String(d.reps) : '';
+  const sx = lato === 'sx';
+  const cur = sx ? (d.repsSx != null ? String(d.repsSx) : '') : (d.reps != null ? String(d.reps) : '');
   const opt = (v) => `<option value="${v}" ${String(v) === cur ? 'selected' : ''}>${v}</option>`;
   let opts = '';
   if(isTimed){
@@ -4887,10 +4961,32 @@ function _tlRepsSelect(isTimed, parsedReps){
   } else {
     for(let i = 0; i <= 30; i++) opts += opt(i);
   }
-  return `<select id="tl-reps" class="picker-select" style="border:1.5px solid var(--acc);" onchange="ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{reps:this.value});">
+  const onchange = sx
+    ? "ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{repsSx:this.value});"
+    : "ST.trainLogDraft=Object.assign(ST.trainLogDraft||{},{reps:this.value});var _sx=document.getElementById('tl-reps-sx');if(_sx&&!_sx.value){_sx.value=this.value;ST.trainLogDraft.repsSx=this.value;}";
+  return `<select id="${sx ? 'tl-reps-sx' : 'tl-reps'}" class="picker-select" style="border:1.5px solid var(--acc);" onchange="${onchange}">
                   <option value="" disabled ${cur === '' ? 'selected' : ''}>—</option>
                   ${opts}
                 </select>`;
+}
+// La riga del registro: ripetizioni (o durata) e RIR; per lato, due tendine DX e SX (Training 280).
+function _tlRigaRepsRir(isTimed, parsedReps, perLato){
+  const lbl = (t) => `<label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${t}</label>`;
+  const dueLati = perLato && !isTimed;
+  return `<div style="display:flex;gap:8px;margin-bottom:10px;">
+              <div style="flex:1;">
+                ${lbl(isTimed ? 'DURATA (sec)' : dueLati ? 'REPS DX' : 'REPS')}
+                ${_tlRepsSelect(isTimed, parsedReps)}
+              </div>
+              ${dueLati ? `<div style="flex:1;">
+                ${lbl('REPS SX')}
+                ${_tlRepsSelect(isTimed, parsedReps, 'sx')}
+              </div>` : ''}
+              ${!isTimed ? `<div style="flex:1;">
+                ${lbl('RIR')}
+                ${_tlRirSelect()}
+              </div>` : ''}
+            </div>`;
 }
 function _tlRirSelect(){
   const d = ST.trainLogDraft || {};
@@ -4928,6 +5024,10 @@ function openLogModal(sessionId, exName, setNum, opts){
   // Bozza di ripetizioni e RIR (Training 020): le tendine si ridisegnano quando arrivano il
   // consiglio del coach o la GIF e quando il recupero finisce; senza bozza tornavano vuote.
   ST.trainLogDraft = { reps: (opts && opts.timedTarget) ? String(opts.timedTarget) : '', rir: '' };
+  // Per lato (Training 280): anche il lato sinistro, finché l'esercizio è a ripetizioni
+  const exPL = findExercise(exName, sessionId);
+  const prPL = (exPL && exPL.reps) ? parseRepsRange(exPL.reps) : null;
+  if(exPL && _exPerLato(exPL, prPL) && !(prPL && prPL.kind === 'seconds') && !exPL.isTimed) ST.trainLogDraft.repsSx = '';
   _unlockAudio();
   renderTraining();
   setTimeout(()=>{
@@ -4947,6 +5047,8 @@ function editLog(k){
   if(!d) return;
   ST.editLogKey = k;
   ST.editLogDraft = { reps: d.reps||'', resistance: d.resistance||'' };
+  // Per lato (Training 280): si correggono i due lati, non il minimo
+  if(d.repsDx != null && d.repsSx != null){ ST.editLogDraft.reps = d.repsDx; ST.editLogDraft.repsSx = d.repsSx; }
   renderTraining();
   setTimeout(()=>document.getElementById('el-reps')?.focus(), 50);
 }
@@ -4957,11 +5059,17 @@ function cancelEditLog(){
 }
 async function confirmEditLog(k){
   const repsEl = document.getElementById('el-reps');
+  const repsSxEl = document.getElementById('el-reps-sx');
   const resistEl = document.getElementById('el-resist');
-  const reps = parseInt(repsEl?.value) || 0;
+  let reps = parseInt(repsEl?.value) || 0;
   const resistance = (resistEl?.value || '').toString().trim();
   if(!reps){ repsEl?.focus(); return; }
   const prev = ST.trainLoggedSets[k] || {};
+  // Per lato (Training 280): due numeri, in `reps` il più debole
+  const perLato = !!repsSxEl;
+  const repsDx = perLato ? reps : null;
+  const repsSx = perLato ? (parseInt(repsSxEl.value) || 0) : null;
+  if(perLato){ if(!repsSx){ repsSxEl.focus(); return; } reps = Math.min(repsDx, repsSx); }
   // [sessionId, exName, setNum, date]
   const parts = k.split('_');
   const date = parts[parts.length-1];
@@ -4973,6 +5081,7 @@ async function confirmEditLog(k){
   const bandColor = isPullUp ? (BAND_COLORS.includes(resistance) ? resistance : null) : null;
   if(isPullUp && !bandColor){ showToast('Scegli il livello di assistenza','⚠️'); return; }
   ST.trainLoggedSets[k] = { ...prev, reps, resistance, band_color: bandColor };
+  if(perLato){ ST.trainLoggedSets[k].repsDx = repsDx; ST.trainLoggedSets[k].repsSx = repsSx; }
   try { localStorage.setItem('zt_train_sets_'+todayKey(), JSON.stringify(ST.trainLoggedSets)); } catch(e){}
   if(ST.user && ST.user.id !== 'test-user-001'){
     // Una scrittura sola su training_logs, con la coda unica (Fondamenta 080): per id se la
@@ -4981,8 +5090,9 @@ async function confirmEditLog(k){
     const filtri = setId
       ? [['id', setId], ['user_id', ST.user.id]]
       : [['user_id', ST.user.id], ['date', date], ['session_id', sessionId], ['exercise_name', exName], ['set_number', setNum]];
-    await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update',
-      righe:{ reps, resistance: isPullUp ? null : (resistance||null), band_color: bandColor }, filtri });
+    const righe = { reps, resistance: isPullUp ? null : (resistance||null), band_color: bandColor };
+    if(perLato){ righe.reps_dx = repsDx; righe.reps_sx = repsSx; }
+    await scriviConCoda('aggiornare la serie', { tabella:'training_logs', tipo:'update', righe, filtri });
   }
   ST.editLogKey = null;
   ST.editLogDraft = null;
