@@ -383,7 +383,7 @@ async function loadAllDays(opts) {
       .order('id',   {ascending:true}), {silenzioso:true}),
     // FASE 3: carica i meal_items dei pasti letti (tutti, se la lettura e' completa)
     leggiIngredienti(),
-    _filtra(supa.from('fasting_days').select('date').eq('user_id', ST.user.id), 'date'),
+    dbq('leggere i giorni di digiuno', _filtra(supa.from('fasting_days').select('date').eq('user_id', ST.user.id), 'date'), {silenzioso:true}),
   ]);
   // supplements_log dello storico — DUE correzioni, 9 ago 2026:
   //
@@ -402,14 +402,14 @@ async function loadAllDays(opts) {
   {
     const BLOCCO = 1000;
     for(let dal = 0; ; dal += BLOCCO) {
-      const res = await _filtra(supa.from('supplements_log')
+      const res = await dbq('leggere lo storico degli integratori', _filtra(supa.from('supplements_log')
         .select('date,supplement_name,supplement_id,slot')
         .eq('user_id', ST.user.id)
         .eq('is_extra', false), 'date')
         .order('date', { ascending: true })
         .order('slot',  { ascending: true })
-        .range(dal, dal + BLOCCO - 1);
-      if(res.error) { suppErr = res.error; console.warn('loadAllDays supplements_log:', res.error.message); break; }
+        .range(dal, dal + BLOCCO - 1), {silenzioso:true});
+      if(res.error) { suppErr = res.error; break; }
       const blocco = res.data || [];
       suppLog.push(...blocco);
       if(blocco.length < BLOCCO) break;
@@ -427,6 +427,10 @@ async function loadAllDays(opts) {
   // falso, e sovrascriverebbero quello buono gia' in memoria.
   if (mealsErr || meals === null) return false;
   if (itemsErr || allItems === null) return false;
+  // Nutrition 140: anche digiuni e integratori presi fanno parte dello storico. Senza, i giorni
+  // tornerebbero senza digiuno e senza spunte, sopra quelli buoni gia' in memoria.
+  if (fastingErr || fasting === null) return false;
+  if (suppErr) return false;
 
   if(modo === 'resto') {
     // Si aggiunge a quello che c'e': prima si tolgono i giorni piu' vecchi della finestra (una cache
@@ -460,7 +464,7 @@ async function loadRecentDays(giorni) {
       .select('id,meal_id,name,quantity,unit,kcal,protein,carbs,fat,source,sort_order,meals!inner(date)')
       .eq('user_id', uid).gte('meals.date', da)
       .order('sort_order', {ascending:true}).order('id', {ascending:true}), {silenzioso:true}),
-    supa.from('fasting_days').select('date').eq('user_id', uid).gte('date', da),
+    dbq('leggere i giorni di digiuno recenti', supa.from('fasting_days').select('date').eq('user_id', uid).gte('date', da), {silenzioso:true}),
     dbq('leggere gli integratori recenti', supa.from('supplements_log')
       .select(_EXTRA_COLS + ', is_extra')
       .eq('user_id', uid).gte('date', da)
@@ -487,15 +491,22 @@ async function loadRecentDays(giorni) {
   return true;
 }
 
+// Nutrition 140 (Ondata 4, 13 ottobre 2026): una lettura fallita non svuota l'elenco che c'è già. Prima
+// integratori, catalogo e pacchetti diventavano una lista vuota e le calorie degli integratori sparivano dal
+// totale senza avviso. Ora chi legge dice se ha letto (vero/falso), e in caso di errore lascia tutto com'era.
 async function loadSupps() {
-  const {data} = await dbq('leggere i tuoi integratori', supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order'));
+  const {data, error} = await dbq('leggere i tuoi integratori', supa.from('supplements').select('*').eq('user_id', ST.user.id).order('sort_order'));
+  if(error || !data) { if(!ST.supps) ST.supps = []; return false; }
   // Join col catalogo (codice, poi nome): la regola è in shared/nutrizione.js → mapSupplement
-  ST.supps = (data||[]).map(s => ZTNutrizione.mapSupplement(s, ST.catalog || []));
+  ST.supps = data.map(s => ZTNutrizione.mapSupplement(s, ST.catalog || []));
+  return true;
 }
 
 async function loadCatalog() {
-  const {data} = await dbq('leggere il catalogo degli integratori', supa.from('nutrilite_catalog').select('*').order('nome'));
-  ST.catalog = data || [];
+  const {data, error} = await dbq('leggere il catalogo degli integratori', supa.from('nutrilite_catalog').select('*').order('nome'));
+  if(error || !data) { if(!ST.catalog) ST.catalog = []; return false; }
+  ST.catalog = data;
+  return true;
 }
 
 // ── PACKAGES (Integratori v3, 16 mag 2026) ────────────────────────────
@@ -506,15 +517,17 @@ async function loadCatalog() {
 // (ignazio.f@me.com) di vedere TUTTE le righe via RLS — il client deve SEMPRE
 // filtrare per user_id corrente per evitare di renderizzare pacchetti di altri tester.
 async function loadPackages() {
-  ST.packages = []; // reset per evitare accumulo su re-fetch
-  if(!ST.user || !ST.user.id) return;
+  if(!ST.user || !ST.user.id) { ST.packages = []; return false; }
   const uid = ST.user.id;
   const [pkRes, itRes] = await Promise.all([
-    supa.from('supplement_packages').select('*').eq('user_id', uid).order('sort_order'),
-    supa.from('supplement_package_items').select('*').eq('user_id', uid).order('sort_order'),
+    dbq('leggere i tuoi pacchetti di integratori', supa.from('supplement_packages').select('*').eq('user_id', uid).order('sort_order')),
+    dbq('leggere il contenuto dei pacchetti', supa.from('supplement_package_items').select('*').eq('user_id', uid).order('sort_order')),
   ]);
-  const packs = pkRes.data || [];
-  const items = itRes.data || [];
+  // Nutrition 140: se una delle due letture non va, i pacchetti che c'erano restano
+  if(pkRes.error || itRes.error || !pkRes.data || !itRes.data) { if(!ST.packages) ST.packages = []; return false; }
+  ST.packages = []; // reset per evitare accumulo su re-fetch
+  const packs = pkRes.data;
+  const items = itRes.data;
   // Index supps by id per join veloce
   const suppById = {};
   (ST.supps || []).forEach(s => { suppById[s.local_id] = s; });
@@ -535,6 +548,7 @@ async function loadPackages() {
     ...p,
     items: (itemsByPkg[p.id] || []).sort((a,b) => (a.sort_order||0) - (b.sort_order||0)),
   }));
+  return true;
 }
 
 // ── EXTRAS (Integratori Step 2, 18 mag 2026; fallback macro Step D.3 22 mag 2026) ──
@@ -573,7 +587,7 @@ async function loadExtrasAll(opts) {
   const BLOCCO = 1000;
   const righe = [];
   for(let da_ = 0; ; da_ += BLOCCO) {
-    const {data, error} = await _storicoFiltro(modo, da, supa
+    const {data, error} = await dbq('leggere lo storico degli integratori extra', _storicoFiltro(modo, da, supa
       .from('supplements_log')
       .select(_EXTRA_COLS)
       .eq('user_id', ST.user.id)
@@ -581,8 +595,8 @@ async function loadExtrasAll(opts) {
       .order('date', { ascending: true })
       .order('slot', { ascending: true })
       .order('created_at', { ascending: true })
-      .range(da_, da_ + BLOCCO - 1);
-    if(error) { console.warn('loadExtrasAll error:', error); return false; }  // archivio precedente intatto
+      .range(da_, da_ + BLOCCO - 1), {silenzioso:true});
+    if(error) return false;  // archivio precedente intatto (Nutrition 140: l'errore lo scrive dbq)
     const blocco = data || [];
     righe.push(...blocco);
     if(blocco.length < BLOCCO) break;   // blocco non pieno = ultimo
@@ -610,15 +624,15 @@ async function loadExtrasAll(opts) {
 async function loadExtras(targetDate) {
   if(!ST.user || !ST.user.id) { ST.extras = []; return; }
   const d = targetDate || todayKey();
-  const {data, error} = await supa
+  const {data, error} = await dbq('leggere gli integratori extra del giorno', supa
     .from('supplements_log')
     .select(_EXTRA_COLS)
     .eq('user_id', ST.user.id)
     .eq('date', d)
     .eq('is_extra', true)
     .order('slot', { ascending: true })
-    .order('created_at', { ascending: true });
-  if(error) { console.warn('loadExtras error:', error); return; }  // niente da riscrivere
+    .order('created_at', { ascending: true }), {silenzioso:true});
+  if(error) return;  // niente da riscrivere
   const catalog = ST.catalog || [];
   if(!ST.extrasByDay) ST.extrasByDay = {};
   ST.extrasByDay[d] = (data || []).map(r => _extraDaRiga(r, catalog));
@@ -714,12 +728,12 @@ async function loadTodaySuppLog() {
   // qualsiasi slot di config). Causa principale del triplo conteggio visivo
   // diagnosticato il 22 mag (vedi DIAGNOSTICA_TRIPLO_CONTEGGIO_REPORT.md).
   const today = todayKey();
-  const {data, error} = await supa
+  const {data, error} = await dbq('leggere gli integratori presi oggi', supa
     .from('supplements_log')
     .select('supplement_name, supplement_id, slot')
     .eq('user_id', ST.user.id)
     .eq('date', today)
-    .eq('is_extra', false);
+    .eq('is_extra', false), {silenzioso:true});
   if (error || !data) return;
   const day = getDay(today);
   day.suppsTaken = [];
@@ -867,19 +881,9 @@ function heroCard(cons) {
   const overKcal = isOverTarget(cons.kcal, target.kcal);
   const consPct  = overKcal ? 100 : (target.kcal > 0 ? Math.max(0, Math.min(100, Math.round((cons.kcal / target.kcal) * 100))) : 0);
 
-  // ── Zona check (3 stati: in / quasi / fuori — fascia ±5% / ±10%) ──
-  const tot = cons.protein + cons.carbs + cons.fat;
-  let pC = 0, pP = 0, pF = 0, zonaState = 'unset';
-  if (tot >= 5) {
-    const kP = cons.protein * 4, kC = cons.carbs * 4, kFat = cons.fat * 9;
-    const totK = kP + kC + kFat || 1;
-    pP = Math.round(kP / totK * 100);
-    pC = Math.round(kC / totK * 100);
-    pF = Math.round(kFat / totK * 100);
-    const inZ   = (pC >= 35 && pC <= 45) && (pP >= 25 && pP <= 35) && (pF >= 25 && pF <= 35);
-    const nearZ = (pC >= 30 && pC <= 50) && (pP >= 20 && pP <= 40) && (pF >= 20 && pF <= 40);
-    zonaState = inZ ? 'in' : (nearZ ? 'near' : 'out');
-  }
+  // ── Zona check: la regola e' una sola, in shared/nutrizione.js (Nutrition 020) ──
+  const zonaState = ZTNutrizione.statoZona(cons, target);
+  const { pC, pP, pF } = ZTNutrizione.percentualiMacro(cons);
 
   // ── Ring color: over → terracotta; in zona → evergreen; quasi → ambra; fuori → terracotta ──
   const ringColor = overKcal ? '#B84C2A'
@@ -1003,8 +1007,7 @@ function mealCardHTML(m){
   const totK=kC+kP+kF;
   let zonaBadge = '';
   if(totK>=10){
-    const pC=kC/totK*100, pP=kP/totK*100, pF=kF/totK*100;
-    const inZona=(pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
+    const inZona = ZTNutrizione.statoZona(m, ST.TARGET) === 'in';   // Nutrition 020: la stessa regola della giornata
     const bg=inZona?'#E6F4F2':'#FDECEA';
     const col=inZona?'#2A7A6F':'#B84C2A';
     const lbl=inZona?'In Zona':'Fuori Zona';
@@ -1446,7 +1449,21 @@ window.smartSavePasto = async function() {
     if (isEdit) {
       // ── MODALITÀ EDIT ──
       const mealId = ST.smartForm.editingMealId;
-      const {error: updErr} = await supa.from('meals').update({
+      // Nutrition 140: prima si cancellavano gli ingredienti e poi si reinserivano: se il secondo passo non
+      // andava, il pasto restava senza ingredienti. Ora l'ordine e' il contrario — entrano i nuovi (con l'id
+      // scelto dal telefono), si aggiorna il pasto, escono i vecchi per id — e ogni passo passa dalla coda:
+      // senza rete si rimanda tutto in ordine. Se un passo non va, quelli gia' fatti si annullano.
+      const day = ST.db.days[ST.activeDay];
+      const pastoPrima = day ? (day.meals || []).find(m => m.id === mealId || m.local_id === mealId) : null;
+      // Gli id degli ingredienti di prima si leggono dal database prima di scrivere (sola lettura): la memoria puo'
+      // averli parziali o senza id (copia locale vecchia), e allora i vecchi resterebbero accanto ai nuovi, doppi.
+      // Senza rete si usa la memoria, ma solo se e' completa (ogni ingrediente col suo id); altrimenti ci si ferma.
+      const inMemoria = (pastoPrima && Array.isArray(pastoPrima.items)) ? pastoPrima.items : null;
+      let vecchiIds = (inMemoria || []).map(it => it.id).filter(Boolean);
+      const lettura = await dbq('leggere gli ingredienti di prima', supa.from('meal_items').select('id').eq('meal_id', mealId).eq('user_id', ST.user.id), {silenzioso:true});
+      if (!lettura.error && lettura.data) vecchiIds = lettura.data.map(x => x.id);
+      else if (!inMemoria || vecchiIds.length !== inMemoria.length) throw new Error('non riesco a leggere gli ingredienti di prima: riprova con la rete');
+      const testata = {
         time, slot,
         description: summary,
         kcal: Math.max(0, Math.round(tot.kcal * 10) / 10),
@@ -1454,12 +1471,9 @@ window.smartSavePasto = async function() {
         carbs: Math.max(0, Math.round(tot.carbs * 10) / 10),
         fat: Math.max(0, Math.round(tot.fat * 10) / 10),
         notes: ST.smartForm.notes || null,
-      }).eq('id', mealId).eq('user_id', ST.user.id);
-      if (updErr) throw updErr;
-      const {error: delErr} = await supa.from('meal_items')
-        .delete().eq('meal_id', mealId).eq('user_id', ST.user.id);
-      if (delErr) throw delErr;
+      };
       const itemsPayload = items.map((it, idx) => ({
+        id: nuovoId(),
         meal_id: mealId,
         user_id: ST.user.id,
         name: it.name.trim(),
@@ -1472,10 +1486,25 @@ window.smartSavePasto = async function() {
         source: it.source || 'manual',
         sort_order: idx,
       }));
-      const {data: savedItems, error: itemsErr} = await supa.from('meal_items').insert(itemsPayload).select();
-      if (itemsErr) throw itemsErr;
+      const togliNuovi = () => itemsPayload.length ? scriviConCoda('annullare gli ingredienti nuovi', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', mealId], ['user_id', ST.user.id], ['or', itemsPayload.map(it => _orEq('id', it.id)).join(',')]] }) : Promise.resolve({error:null});
+      const ins = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload }) : { error:null };
+      if (ins.error) throw ins.error;
+      const upd = await scriviConCoda('aggiornare il pasto', { tabella:'meals', tipo:'update', righe:testata, filtri:[['id', mealId], ['user_id', ST.user.id]] });
+      if (upd.error) { await togliNuovi(); throw upd.error; }
+      if (vecchiIds.length) {
+        const del = await scriviConCoda('togliere gli ingredienti di prima', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', mealId], ['user_id', ST.user.id], ['or', vecchiIds.map(id => _orEq('id', id)).join(',')]] });
+        if (del.error) {
+          // si torna indietro: via i nuovi, testata com'era. Se anche questo non va, resta scritto in console
+          await togliNuovi();
+          if (pastoPrima) {
+            const rb = await scriviConCoda('rimettere il pasto com\'era', { tabella:'meals', tipo:'update', righe:{ time:pastoPrima.time, slot:pastoPrima.slot, description:pastoPrima.description, kcal:pastoPrima.kcal, protein:pastoPrima.protein, carbs:pastoPrima.carbs, fat:pastoPrima.fat, notes:pastoPrima.notes || null }, filtri:[['id', mealId], ['user_id', ST.user.id]] });
+            if (rb && rb.error) console.error('[db] ROLLBACK FALLITO: il pasto', mealId, 'ha la testata nuova e gli ingredienti di prima');
+          }
+          throw del.error;
+        }
+      }
+      const savedItems = itemsPayload;
       // Aggiorna stato locale
-      const day = ST.db.days[ST.activeDay];
       if (day) {
         const idx = (day.meals || []).findIndex(m => m.id === mealId || m.local_id === mealId);
         if (idx >= 0) {
@@ -1680,9 +1709,8 @@ function renderOggi(){
   // Include pasti + integratori standard + integratori extra
   const cons=dayTotals(day);
   const rem=Math.max(0,ST.TARGET.kcal-cons.kcal);
-  const allDays=Object.keys(ST.db.days).sort();
-  const idx=allDays.indexOf(ST.activeDay);
   const isToday=ST.activeDay===todayKey();
+  const primoGiorno=_primoGiornoConDati();   // Nutrition 100: ‹ si spegne solo sul primo giorno con dati, a storico letto
   const bySlot={};MEAL_SLOTS.forEach(s=>{bySlot[s.id]=meals.filter(m=>m.slot===s.id);});
   const actSupps=suppsDelGiorno(day);
   const shakeSupps=actSupps.filter(s=>s.grp==='Shake Mami');
@@ -1690,23 +1718,18 @@ function renderOggi(){
   const otherSlots=[...new Set(otherSupps.map(s=>s.slot))].sort();
   const nowH = new Date();
   const nowHour = nowH.getHours();
-  const zonaOk = (()=>{
-    const tot2=cons.protein+cons.carbs+cons.fat;
-    if(tot2<5) return false;
-    const kP=cons.protein*4,kC=cons.carbs*4,kF=cons.fat*9;
-    const totK=kP+kC+kF||1;
-    const pP=Math.round(kP/totK*100),pC=Math.round(kC/totK*100),pF=Math.round(kF/totK*100);
-    return (pC>=35&&pC<=45)&&(pP>=25&&pP<=35)&&(pF>=25&&pF<=35);
-  })();
-  const perfect = isToday && nowHour >= 21 && zonaOk && cons.kcal > 800;
-  const qualifies = zonaOk && cons.kcal > 800;
+  // Nutrition 020: «Nella Zona» e «Giorno perfetto» con la regola unica di shared/nutrizione.js
+  // (prima il trofeo scattava con le proporzioni giuste e piu' di 800 kcal, anche con 900 su 2300)
+  const zonaOk = ZTNutrizione.statoZona(cons, ST.TARGET) === 'in';
+  const qualifies = ZTNutrizione.giornoPerfetto(cons, ST.TARGET);
+  const perfect = isToday && nowHour >= 21 && qualifies;
   if ((perfect || (!isToday && qualifies)) && !day.giornoPerfetto) { day.giornoPerfetto = true; saveCache(); }
   const showPerfetto = perfect || !!day.giornoPerfetto;
 
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
   const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
   const timebar = isToday ? `<div style="margin:-4px 0 14px;opacity:0.5;"><div style="height:3px;border-radius:3px;background:var(--s3);position:relative;overflow:visible;"><div style="height:100%;border-radius:3px;width:${dayPct}%;background:var(--acc);transition:width .5s ease;position:relative;"><span style="position:absolute;right:-1px;top:-10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;white-space:nowrap;">${nowLabel}</span></div></div></div>` : '';
-  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${(idx<=0&&ST.storicoCompleto)?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
+  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${(ST.activeDay<=primoGiorno&&ST.storicoCompleto)?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
   ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button></div>`;
 
   if(day.fasting){
@@ -2255,24 +2278,15 @@ function _analisiGetWindowLabel(window, offset, start, end) {
 }
 
 // ── HELPER: status zona per chiave giorno ──
-// Tolleranza: ±2% in zona, ±5% quasi zona. Target dinamici dal profilo.
+// Tolleranza: quella di shared/nutrizione.js (Nutrition 020: 3 punti in zona, 6 quasi), sulle percentuali dell'obiettivo.
 function _zoneStatusForDayKey(key) {
   const dayData = ST.db.days && ST.db.days[key];
   if(!dayData || dayData.fasting) return 'noData';
   const cons = dayTotals(dayData);
   const tot = cons.protein + cons.carbs + cons.fat;
   if(tot < 5 || cons.kcal < 50) return 'noData';
-  const tPC = ST.TARGET.pCarbo || 40;
-  const tPP = ST.TARGET.pProt  || 30;
-  const tPF = ST.TARGET.pFat   || 30;
-  const kP = cons.protein * 4, kC = cons.carbs * 4, kF = cons.fat * 9;
-  const totK = kP + kC + kF || 1;
-  const pP = Math.round(kP / totK * 100);
-  const pC = Math.round(kC / totK * 100);
-  const pF = Math.round(kF / totK * 100);
-  const inZ   = Math.abs(pC - tPC) <= 2 && Math.abs(pP - tPP) <= 2 && Math.abs(pF - tPF) <= 2;
-  const nearZ = Math.abs(pC - tPC) <= 5 && Math.abs(pP - tPP) <= 5 && Math.abs(pF - tPF) <= 5;
-  return inZ ? 'inZone' : (nearZ ? 'almostZone' : 'outOfZone');
+  const stato = ZTNutrizione.statoZona(cons, ST.TARGET);
+  return stato === 'in' ? 'inZone' : (stato === 'near' ? 'almostZone' : (stato === 'out' ? 'outOfZone' : 'noData'));
 }
 
 // ── HELPER: itera giorni del range, ritorna array di {date, key, dayData, totals, status, mealsN, extrasN} ──
@@ -2461,6 +2475,7 @@ function _analisiRenderHeatmap(daysData, kind) {
   if(daysData.length === 0) {
     return '<div class="analisi-v3-empty-text">Nessun dato</div>';
   }
+  const oggi = todayKey();
   const cellHTML = (d, showLabel) => {
     const cls = d.status === 'inZone' ? 'in-zone'
       : d.status === 'almostZone' ? 'almost-zone'
@@ -2468,7 +2483,8 @@ function _analisiRenderHeatmap(daysData, kind) {
       : 'no-data';
     const todayCls = d.isToday ? ' today' : '';
     const dn = new Date(d.key + 'T12:00:00').getDate();
-    const click = (d.status === 'noData' && !d.dayData) ? '' : `onclick="openDayDetailScreen('${d.key}')"`;
+    // Nutrition 100: anche un giorno senza dati si apre (per tornarci e registrare); solo il futuro no
+    const click = d.key > oggi ? '' : `onclick="openDayDetailScreen('${d.key}')"`;
     return `<div class="analisi-v3-heatmap-cell ${cls}${todayCls}" ${click}>${showLabel ? dn : ''}</div>`;
   };
 
@@ -2840,7 +2856,7 @@ function renderDayDetailScreen() {
     : status === 'outOfZone'  ? 'out-of-zone'
     : 'no-data';
   const statusPill = `<span class="daydetail-summary-pill ${statusClass}"><span class="dot"></span>${statusLabel}</span>`;
-  const targetStr = `<span class="daydetail-summary-target">${tPC} · ${tPP} · ${tPF} ±2%</span>`;
+  const targetStr = `<span class="daydetail-summary-target">${tPC} · ${tPP} · ${tPF} ±${ZTNutrizione.ZONA_PUNTI_IN}</span>`;
 
   // Kcal summary
   const targetKcal = ST.TARGET.kcal || 2000;
@@ -5583,19 +5599,24 @@ function renderPianoV4() {
 // ═══════════════════════════════════════════════════════════
 // ACTIONS
 // ═══════════════════════════════════════════════════════════
+// Nutrition 100 (Ondata 4, 13 ottobre 2026): le frecce di Oggi vanno giorno per giorno, anche su un giorno
+// rimasto vuoto. Prima saltavano solo fra i giorni con dati: ieri senza pasti non si poteva riaprire.
+// Indietro non oltre il primo giorno con dati (prima, se serve, si legge il resto dello storico: una volta);
+// avanti non oltre oggi. Un giorno vuoto aperto con le frecce non conta come «giorno con dati».
+function _giornoAccanto(key, dir){ const d = new Date(key + 'T12:00:00'); d.setDate(d.getDate() + dir); return dayKey(d); }
+function _giornoHaDati(d){ return !!(d && ((d.meals && d.meals.length) || d.fasting || (d.suppsTaken && d.suppsTaken.length) || (d.rawSuppLogs && d.rawSuppLogs.length))); }
+function _primoGiornoConDati(){
+  const giorni = Object.keys(ST.db.days).filter(k => _giornoHaDati(ST.db.days[k]));
+  const extra = Object.keys(ST.extrasByDay || {}).filter(k => (ST.extrasByDay[k] || []).length);
+  return giorni.concat(extra).sort()[0] || todayKey();
+}
 async function navDay(dir){
-  let all=Object.keys(ST.db.days).sort();
-  let idx=all.indexOf(ST.activeDay);
-  // Fondamenta 100, tappa 4: al primo giorno letto, ‹ legge il resto dello storico (una volta).
-  if(idx+dir<0 && !ST.storicoCompleto){
-    await caricaStoricoCompleto();
-    all=Object.keys(ST.db.days).sort();
-    idx=all.indexOf(ST.activeDay);
-    if(idx+dir<0){ renderOggi(); return; }   // niente di piu' vecchio: il pulsante ora e' spento
-  }
-  const ni=idx+dir;
-  if(ni<0||ni>=all.length) return;
-  ST.activeDay=all[ni];
+  const ni = _giornoAccanto(ST.activeDay, dir);
+  if(ni > todayKey()) return;
+  // Fondamenta 100, tappa 4: oltre il primo giorno letto, ‹ legge il resto dello storico (una volta).
+  if(dir < 0 && !ST.storicoCompleto && !storicoCopreDal(ni)) await caricaStoricoCompleto();
+  if(ni < _primoGiornoConDati()){ renderOggi(); return; }   // niente di piu' vecchio: il pulsante ora e' spento
+  ST.activeDay=ni;
   ST.advice='';
   renderOggi();                          // subito, senza aspettare la rete
   // Gli extra si caricano per un giorno solo: cambiando giorno vanno ripresi,
@@ -5979,7 +6000,8 @@ async function updateMealTime(dayKey, mealId, newTime){
   m.time=newTime;
   renderOggi();
   saveCache();
-  if(m.id) dbq('cambiare l\'orario del pasto', supa.from('meals').update({time:newTime}).eq('id',m.id).eq('user_id',ST.user.id), {silenzioso:true});
+  // Nutrition 140: dalla coda, come le altre scritture del giorno: senza rete si rimanda, un errore dell'API avvisa
+  if(m.id) scriviConCoda('cambiare l\'orario del pasto', { tabella:'meals', tipo:'update', righe:{ time:newTime }, filtri:[['id', m.id], ['user_id', ST.user.id]] });
 }
 
 // Un posto solo per la domanda (Fondamenta 150): la fa il cestino piccolo e quello a scorrimento.

@@ -46,10 +46,16 @@ function openSettingsModal() {
   // Popola campi base
   document.getElementById('set-fname').value = p.first_name || '';
   document.getElementById('set-lname').value = p.last_name || '';
-  document.getElementById('set-weight').value = p.weight_kg || '';
+  // Body 020 / Nutrition 040: il peso si cambia solo da «Pesati ora»; qui si legge e basta
+  const pesoInp = document.getElementById('set-weight');
+  const pesate = (typeof getWeighIns === 'function') ? getWeighIns() : [];
+  pesoInp.value = (pesate[0] && pesate[0].weight_kg != null) ? pesate[0].weight_kg : (p.weight_kg || '');
+  pesoInp.disabled = true;
+  _notaImpostazioni(pesoInp, 'set-weight-nota', 'Si cambia da «Pesati ora»');
   document.getElementById('set-goal-weight').value = p.goal_weight_kg || '';
   selectSetObiettivo(migrateObiettivo(p.obiettivo || '').split(',')[0] || 'dimagrimento');
   document.getElementById('set-activity').value = p.activity_level || 'moderate';
+  _bottoneRicalcolo();
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
@@ -68,6 +74,53 @@ function openSettingsModal() {
   const btn = document.getElementById('set-save-btn');
   btn.disabled = false; btn.textContent = 'Salva impostazioni →';
   document.getElementById('settings-modal').style.display = 'flex';
+}
+
+// Riga di spiegazione sotto un campo delle Impostazioni (una sola, riusata alle aperture dopo)
+function _notaImpostazioni(dopo, id, testo) {
+  let n = document.getElementById(id);
+  if(!n) { n = document.createElement('div'); n.id = id; n.style.cssText = 'font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;'; dopo.parentElement.appendChild(n); }
+  n.textContent = testo;
+}
+// Il pulsante «Ricalcola le calorie», sotto il livello di attività: dice quante kcal si usano oggi
+function _bottoneRicalcolo() {
+  const sel = document.getElementById('set-activity');
+  if(!sel) return;
+  let b = document.getElementById('set-ricalcola');
+  if(!b) {
+    b = document.createElement('button'); b.type = 'button'; b.id = 'set-ricalcola'; b.className = 'btn btn-ghost btn-sm';
+    b.style.cssText = 'margin-top:8px;width:100%;'; b.onclick = ricalcolaCalorie;
+    sel.parentElement.appendChild(b);
+  }
+  b.textContent = `Ricalcola le calorie dal fabbisogno · oggi ${fmtNum(ST.TARGET.kcal)} kcal`;
+}
+// Nutrition 030 e 040: l'unico posto in cui le calorie si rifanno dal fabbisogno, su scelta della persona e coi numeri
+// in chiaro (fabbisogno, obiettivo e suo deficit o surplus, calorie di oggi). Niente si scrive finché non dice sì.
+async function ricalcolaCalorie() {
+  const p = ST.profile || {};
+  const pesate = (typeof getWeighIns === 'function') ? getWeighIns() : [];
+  const peso = (pesate[0] && pesate[0].weight_kg != null) ? Number(pesate[0].weight_kg) : Number(p.weight_kg);
+  if(!peso) { await avvisa('Senza un peso non si calcola il fabbisogno: pesati prima da «Pesati ora».', { titolo:'Manca il peso' }); return; }
+  const activity = document.getElementById('set-activity')?.value || p.activity_level || 'moderate';
+  const obiettivo = document.getElementById('set-obiettivo')?.value || (p.obiettivo || '').split(',')[0] || 'mantenimento';
+  const age = p.age || ageFromDob(p.data_nascita) || 35;
+  const r = calcTDEE(p.sex || 'M', age, p.height_cm || 175, peso, activity, obiettivo);
+  const etichetta = (typeof OBJ_ADAPT !== 'undefined' && OBJ_ADAPT[obiettivo] && OBJ_ADAPT[obiettivo].label) || obiettivo;
+  const attivita = document.getElementById('set-activity')?.selectedOptions?.[0]?.textContent || activity;
+  const passo = r.delta === 0 ? 'al fabbisogno pieno' : `${r.delta > 0 ? '+' : '−'}${Math.abs(r.delta)} kcal`;
+  const testo = `Fabbisogno stimato: ${fmtNum(r.tdee)} kcal al giorno (${peso} kg, ${String(attivita).toLowerCase()}). ${etichetta}: ${passo} → ${fmtNum(r.target)} kcal. Oggi usi ${fmtNum(ST.TARGET.kcal)} kcal.`;
+  const ok = await chiediConferma(testo, { titolo:'Ricalcolare le calorie?', ok:`Usa ${fmtNum(r.target)} kcal`, annulla:'Lascia com\'è' });
+  if(!ok) return;
+  const righe = { target_kcal:r.target, target_protein:r.protein, target_carbs:r.carbs, target_fat:r.fat, activity_level:activity, updated_at:new Date().toISOString() };
+  const res = await dbq('aggiornare le calorie', supa.from('profiles').update(righe).eq('id', ST.user.id));
+  if(res.error) return;
+  Object.assign(ST.profile, righe);
+  ST.TARGET = { kcal:r.target, protein:r.protein, carbs:r.carbs, fat:r.fat };
+  applyProfile(ST.profile);
+  saveCache();
+  _bottoneRicalcolo();
+  showToast(`Da ora il piano usa ${fmtNum(r.target)} kcal`, '✅', 4500);
+  checkLowKcalAndWarn(r.target, p.sex);
 }
 
 // ── Scarica i miei dati (Fondamenta 170, 3 ottobre 2026) ──
@@ -273,18 +326,14 @@ async function _saveSettingsExecute(goalChanged) {
   const fname = document.getElementById('set-fname').value.trim();
   btn.disabled = true; btn.textContent = 'Salvataggio...';
 
-  const weight = parseFloat(document.getElementById('set-weight').value) || ST.profile?.weight_kg;
   const goalW  = parseFloat(document.getElementById('set-goal-weight').value) || ST.profile?.goal_weight_kg;
   const activity = document.getElementById('set-activity').value;
 
-  // Ricalcola TDEE se peso o attività è cambiato
-  const p = ST.profile || {};
-  let targets = { kcal: ST.TARGET.kcal, protein: ST.TARGET.protein, carbs: ST.TARGET.carbs, fat: ST.TARGET.fat };
-  if(weight && (weight !== p.weight_kg || activity !== p.activity_level)) {
-    const age = p.age || ageFromDob(p.data_nascita);
-    const r = calcTDEE(p.sex || 'M', age || 35, p.height_cm || 175, weight, activity);
-    targets = { kcal: r.target, protein: r.protein, carbs: r.carbs, fat: r.fat };
-  }
+  // Nutrition 040 (Ondata 4, 13 ottobre 2026): salvare le impostazioni non riscrive più le calorie. Prima un peso o
+  // un'attività diversi rifacevano i target da zero (fabbisogno −300, macro 40/30/30), cancellando senza avviso una
+  // correzione di Pirsi accettata. Ora i target cambiano solo con «Ricalcola le calorie» (scelta esplicita, coi numeri
+  // in chiaro) o con un «Accetto» a Pirsi. Il peso si salva solo da «Pesati ora».
+  const targets = { kcal: ST.TARGET.kcal, protein: ST.TARGET.protein, carbs: ST.TARGET.carbs, fat: ST.TARGET.fat };
 
   // Raccoglie esami del sangue
   const esami = {};
@@ -306,7 +355,6 @@ async function _saveSettingsExecute(goalChanged) {
   const updates = {
     first_name:    fname,
     last_name:     document.getElementById('set-lname').value.trim(),
-    weight_kg:     weight,
     goal_weight_kg: goalW,
     activity_level: activity,
     obiettivo:     document.getElementById('set-obiettivo').value,

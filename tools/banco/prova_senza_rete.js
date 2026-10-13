@@ -49,8 +49,8 @@ async function nuovo() {
     atteso('integratore preso senza rete · in memoria subito, 4 in coda (tolgo + metto)', [a.win.getDay(OGGI).suppsTaken, a.coda().length], [['s1'], 4]);
     a.ST.weighInSheet = { value:'72.3' };
     await a.win.confirmWeighIn();
-    atteso('pesata senza rete · fra le pesate in memoria, 5 in coda', [(a.ST.weightLogs || []).map(w => w.date + ' ' + w.weight_kg), a.coda().length], [[OGGI + ' 72.3'], 5]);
-    atteso('striscia · conta i salvataggi da inviare', a.striscia(), 'Sei senza rete: vedi i dati delle 12:00 · 5 salvataggi da inviare');
+    atteso('pesata senza rete · fra le pesate in memoria, 6 in coda (pesata e peso del profilo: Body 020)', [(a.ST.weightLogs || []).map(w => w.date + ' ' + w.weight_kg), a.coda().length], [[OGGI + ' 72.3'], 6]);
+    atteso('striscia · conta i salvataggi da inviare', a.striscia(), 'Sei senza rete: vedi i dati delle 12:00 · 6 salvataggi da inviare');
     // una lettura fallita senza rete non fa comparire un avviso: lo dice gia' la striscia
     a.t.__rete = false;
     a.win.document.getElementById('toast').textContent = '';
@@ -60,7 +60,7 @@ async function nuovo() {
     // la rete torna: la coda parte da sola, in ordine
     a.rete(true);
     for(let i = 0; i < 100 && a.coda().length; i++) await attendi(10);
-    atteso('rete tornata · coda inviata in ordine', a.scritture().slice(0, 5), ['fasting_days:upsert', 'meals:insert', 'supplements_log:delete', 'supplements_log:insert', 'weight_logs:upsert']);
+    atteso('rete tornata · coda inviata in ordine', a.scritture().slice(0, 6), ['fasting_days:upsert', 'meals:insert', 'supplements_log:delete', 'supplements_log:insert', 'weight_logs:upsert', 'profiles:update']);
     atteso('rete tornata · coda vuota, il pasto e la pesata sono in tabella', [a.coda().length, a.t.meals.some(m => m.id === pasto.id), a.t.weight_logs.length], [0, true, 1]);
     await attendi(30);
     atteso('rete tornata · striscia sparita', a.striscia(), '');
