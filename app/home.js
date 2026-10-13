@@ -207,52 +207,76 @@ function getPostWorkoutHint(){
   return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena leggera + proteine" };
 }
 
-// Logica semplice "PROSSIMA AZIONE" — 4 regole in ordine di priorità (Giro 1).
-// Niente AI, niente chiamate di rete. Sostituita da una logica più ricca in Giro 2.
+// «Prossima azione» (Home 010, 13 ottobre 2026): la guida della giornata, a un tocco.
+// Sette regole in ordine (decise con Ignazio il 13 ottobre), vince la prima che vale.
+// Ognuna dice cosa fare e, se c'è un passo da aprire, porta un pulsante (azione + arg) che
+// prossimaAzioneVai apre: la seduta, il check, la pesata, il form del pasto. Niente rete.
+//  1 seduta iniziata e non chiusa · 2 check di fine blocco dovuto · 3 pesata dovuta, fino alle 11
+//  4 seduta prevista oggi e non fatta · 5 pasto della fascia non registrato (colazione 6-10,
+//  pranzo 12-15, cena 19-22) · 6 giorno di riposo · 7 tutto fatto
+const PA_FASCE = [
+  { slot:'colazione', da:6,  a:10, nome:'la colazione' },
+  { slot:'pranzo',    da:12, a:15, nome:'il pranzo' },
+  { slot:'cena',      da:19, a:22, nome:'la cena' },
+];
 function getProssimaAzioneSimple(){
-  // 1. Body checkpoint scaduto (solo se almeno un check è stato fatto e sono passati > 28 giorni).
-  //    "Nessun check ancora" non scatta qui — il primo check è parte di M2 nell'onboarding.
-  const cp = getNextCheckpointInfo();
-  if(cp.hasCheck && cp.overdue){
-    return {
-      titolo: "È ora del check fisico",
-      dettaglio: "Aggiorna foto, misure ed esami. Ci aiuta a calibrare il piano.",
-      nextHint: null,
-    };
-  }
-
-  // 2. Workout previsto oggi e non ancora completato (esclude recovery e rest).
+  const h = new Date().getHours();
   const hd = ST.trainHomeData;
-  if(hasTraining() && hd && !hd.doneToday){
-    const sid = hd.inProgress ? hd.lastSession : hd.nextSession;
-    const isRecovery = sid === 'recoveryUpper' || sid === 'recoveryLower' || sid === 'rest';
-    if(!isRecovery){
-      const sess = getTrainingSession(sid) || getTrainingSession('upperA');
-      return {
-        titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
-        dettaglio: `Sessione ${sess.name} a digiuno. Si parte con 5 minuti di preparazione.`,
-        nextHint: getPostWorkoutHint(),
-      };
+  const tr = hasTraining() && hd && !hd.errore;
+  const nomeSeduta = (sid) => { const s = getTrainingSession(sid); return s ? s.name : 'la seduta'; };
+
+  // 1. Seduta iniziata e non chiusa
+  if(tr && hd.inProgress && hd.lastSession){
+    return { titolo: `Riprendi ${nomeSeduta(hd.lastSession)}`, dettaglio: 'La seduta è iniziata e non è ancora chiusa.',
+      nextHint: null, azione: 'seduta', arg: hd.lastSession, pulsante: 'Riprendi' };
+  }
+  // 2. Check di fine blocco dovuto (o check periodico scaduto)
+  let rem = null, cp = null;
+  try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
+  try { cp = getNextCheckpointInfo(); } catch(e){}
+  if(rem || (cp && cp.hasCheck && cp.overdue)){
+    return { titolo: 'È ora del check', dettaglio: 'Foto, misure ed esami: servono a calibrare il piano.',
+      nextHint: null, azione: 'check', pulsante: 'Apri il check' };
+  }
+  // 3. Pesata dovuta, al mattino (frequenza scelta dalla persona; le pesate devono essere già lette)
+  let pesata = false;
+  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  if(pesata){
+    return { titolo: 'Pesati', dettaglio: 'Al mattino, prima di colazione: è il numero più fedele.',
+      nextHint: null, azione: 'pesata', pulsante: 'Pesati' };
+  }
+  // 4. Seduta prevista oggi e non fatta (non nei giorni di riposo)
+  const riposo = tr && !hd.doneToday && /^rest/.test(hd.nextSession || '');
+  if(tr && !hd.doneToday && hd.nextSession && !riposo){
+    return { titolo: `È ora di ${nomeSeduta(hd.nextSession)}`, dettaglio: 'Si parte con 5 minuti di preparazione.',
+      nextHint: getPostWorkoutHint(), azione: 'seduta', arg: hd.nextSession, pulsante: 'Inizia' };
+  }
+  // 5. Pasto della fascia oraria non ancora registrato
+  const fascia = PA_FASCE.find(f => h >= f.da && h < f.a);
+  if(fascia){
+    const pasti = (getDay(todayKey()).meals || []);
+    if(!pasti.some(m => m.slot === fascia.slot)){
+      return { titolo: `Registra ${fascia.nome}`, dettaglio: 'Così i macro di oggi restano giusti.',
+        nextHint: null, azione: 'pasto', arg: fascia.slot, pulsante: 'Registra' };
     }
   }
-
-  // 3. Pasti registrati oggi < 3 e ora >= 12:00 → ricorda il pranzo.
-  const day = getDay(todayKey());
-  const mealsCount = (day.meals || []).length;
-  if(mealsCount < 3 && new Date().getHours() >= 12){
-    return {
-      titolo: "Hai mangiato a pranzo?",
-      dettaglio: "Registra il pasto per tenere traccia dei macro.",
-      nextHint: null,
-    };
+  // 6. Giorno di riposo
+  if(riposo){
+    return { titolo: 'Oggi riposo', dettaglio: 'Il recupero fa parte del programma.', nextHint: null };
   }
+  // 7. Tutto fatto
+  return { titolo: 'Giornata in ordine', dettaglio: 'Per ora hai fatto quello che serviva.', nextHint: null };
+}
 
-  // 4. Default fallback.
-  return {
-    titolo: "Buona giornata",
-    dettaglio: "Apri un modulo per iniziare.",
-    nextHint: null,
-  };
+// Il pulsante di «Prossima azione»: apre il passo giusto.
+function prossimaAzioneVai(azione, arg){
+  if(azione === 'seduta'){ apriSessioneDallaHome(arg); return; }
+  if(azione === 'check'){ ST.bodyTab = 'check'; showPage('body'); if(typeof m2EntryIntro === 'function') m2EntryIntro(); return; }
+  if(azione === 'pesata'){ if(typeof openWeighInSheet === 'function') openWeighInSheet(); return; }
+  if(azione === 'pasto'){
+    showPage('oggi');
+    if(typeof openMealLogForm === 'function'){ openMealLogForm(); ST.logSlot = arg; renderOggi(); }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1066,6 +1090,7 @@ function _renderHomeCards(){
       </div>
       <div class="home-v2-action-title">${esc(azione.titolo)}</div>
       <div class="home-v2-action-detail">${esc(azione.dettaglio)}</div>
+      ${azione.azione ? `<button class="home-v2-action-btn" onclick="prossimaAzioneVai('${azione.azione}'${azione.arg ? `, '${esc(azione.arg)}'` : ''})">${esc(azione.pulsante)} →</button>` : ''}
       ${nextHintHTML}
     </div>`;
 
