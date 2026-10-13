@@ -1466,7 +1466,14 @@ window.smartSavePasto = async function() {
       // senza rete si rimanda tutto in ordine. Se un passo non va, quelli gia' fatti si annullano.
       const day = ST.db.days[ST.activeDay];
       const pastoPrima = day ? (day.meals || []).find(m => m.id === mealId || m.local_id === mealId) : null;
-      const vecchiIds = ((pastoPrima && pastoPrima.items) || []).map(it => it.id).filter(Boolean);
+      // Gli id degli ingredienti di prima si leggono dal database prima di scrivere (sola lettura): la memoria puo'
+      // averli parziali o senza id (copia locale vecchia), e allora i vecchi resterebbero accanto ai nuovi, doppi.
+      // Senza rete si usa la memoria, ma solo se e' completa (ogni ingrediente col suo id); altrimenti ci si ferma.
+      const inMemoria = (pastoPrima && Array.isArray(pastoPrima.items)) ? pastoPrima.items : null;
+      let vecchiIds = (inMemoria || []).map(it => it.id).filter(Boolean);
+      const lettura = await dbq('leggere gli ingredienti di prima', supa.from('meal_items').select('id').eq('meal_id', mealId).eq('user_id', ST.user.id), {silenzioso:true});
+      if (!lettura.error && lettura.data) vecchiIds = lettura.data.map(x => x.id);
+      else if (!inMemoria || vecchiIds.length !== inMemoria.length) throw new Error('non riesco a leggere gli ingredienti di prima: riprova con la rete');
       const testata = {
         time, slot,
         description: summary,

@@ -66,20 +66,32 @@ function checkLowKcalAndWarn(targetKcal, sex) {
   return false;
 }
 
-function calcTDEE(sex, age, height, weight, activity) {
+// Nutrition 030 (Ondata 4, 13 ottobre 2026): il punto di partenza delle calorie dipende dall'obiettivo (scelta di
+// Ignazio del 13 ottobre). Prima si toglievano 300 kcal a tutti, anche a chi vuole crescere. Senza obiettivo si resta
+// sui −300 di prima. Le percentuali dei macro sono quelle dell'obiettivo (OBJ_ADAPT), le stesse del tab Nutrition.
+const DELTA_OBIETTIVO = { dimagrimento:-300, ricomposizione:-200, ipertrofia:200, forza_performance:100, longevita:0, mantenimento:0 };
+function deltaPerObiettivo(obiettivo) {
+  const primo = String(obiettivo || '').split(',')[0].trim();
+  const chiave = (typeof migrateObiettivo === 'function' && primo) ? migrateObiettivo(primo) : primo;
+  return Object.prototype.hasOwnProperty.call(DELTA_OBIETTIVO, chiave) ? DELTA_OBIETTIVO[chiave] : -300;
+}
+function calcTDEE(sex, age, height, weight, activity, obiettivo) {
   // Mifflin-St Jeor
   let bmr = sex==='M'
     ? 10*weight + 6.25*height - 5*age + 5
     : 10*weight + 6.25*height - 5*age - 161;
   const tdee = Math.round(bmr * (ACTIVITY_MULT[activity] || 1.55));
-  // Per perdita peso: -300 kcal dal TDEE
-  const target = tdee - 300;
+  const delta = deltaPerObiettivo(obiettivo);
+  const target = tdee + delta;
+  const obArr = String(obiettivo || '').split(',').map(x => x.trim()).filter(Boolean);
+  const a = (typeof calcAdaptedTargets === 'function') ? calcAdaptedTargets(obArr, target) : null;
   return {
     tdee,
+    delta,
     target,
-    protein: Math.round((target * 0.30) / 4),
-    carbs:   Math.round((target * 0.40) / 4),
-    fat:     Math.round((target * 0.30) / 9),
+    protein: a ? a.protein : Math.round((target * 0.30) / 4),
+    carbs:   a ? a.carbs   : Math.round((target * 0.40) / 4),
+    fat:     a ? a.fat     : Math.round((target * 0.30) / 9),
   };
 }
 
@@ -733,7 +745,7 @@ async function saveOnboarding(opts) {
   const sexForTDEE = d.sesso === 'M' ? 'M' : 'F';
   const sexForDB   = d.sesso || 'M';
   const activity   = d.attivita || 'moderate';
-  const r = calcTDEE(sexForTDEE, d.eta, d.altezza, d.peso_attuale, activity);
+  const r = calcTDEE(sexForTDEE, d.eta, d.altezza, d.peso_attuale, activity, (d.obiettivi && d.obiettivi[0]) || null);   // Nutrition 030: deficit o surplus secondo l'obiettivo
 
   const ctaBtn = document.getElementById('m1-final-cta');
   if(ctaBtn) { ctaBtn.disabled = true; ctaBtn.textContent = 'Salvataggio…'; }
@@ -813,7 +825,7 @@ async function saveOnboarding(opts) {
     if(ctaBtn) { ctaBtn.disabled = false; ctaBtn.textContent = 'Inizia il check fisico →'; }
     return;
   }
-  await saveWeightEntry(d.peso_attuale);
+  // Il peso e' gia' nel profilo appena scritto (weight_kg): la vecchia saveWeightEntry non c'e' piu' (Body 020, 13 ottobre 2026)
 
   // Fix B (24 mag 2026): guard-rail calorie minime. Mostra avviso modale
   // se target_kcal calcolato è sotto la soglia di sicurezza (per sesso).

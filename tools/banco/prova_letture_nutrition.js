@@ -106,6 +106,32 @@ const OGGI = '2026-10-13';
   atteso('testata rifiutata · la persona lo sa (foglio «Pasto non salvato»)', /Pasto non salvato/.test(d.body.textContent), true);
   t.__rifiuta = null;
 
+  // 7 · richiesta della Regia (13 ottobre): gli id dei vecchi ingredienti si leggono dal database prima di scrivere,
+  // perche' la memoria puo' averli parziali o senza id (copia locale vecchia): altrimenti i vecchi restano, doppi
+  t.__rifiuta = null; t.__rete = true;
+  t.meal_items.length = 0;
+  t.meal_items.push({ id:'h1', user_id:U, meal_id:'m1', name:'riso', quantity:100, unit:'g', kcal:350, protein:7, carbs:75, fat:1, source:'manual', sort_order:0 },
+                    { id:'h2', user_id:U, meal_id:'m1', name:'olio', quantity:10, unit:'g', kcal:90, protein:0, carbs:0, fat:10, source:'manual', sort_order:1 });
+  win.getDay(OGGI).meals[0].items = [{ name:'riso', quantity:100, unit:'g', kcal:350 }];   // in memoria: un solo ingrediente, senza id
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  ST.smartForm.items = [{ tempId:3, name:'pasta', quantity:90, unit:'g', kcal:320, protein:11, carbs:65, fat:1, source:'manual' }];
+  const n3 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const lettura = supa._calls.slice(n3).find(c => c.table === 'meal_items' && c.op === 'select');
+  const passi3 = supa._calls.slice(n3).filter(c => c.op !== 'select' && c.table !== 'app_errors').map(c => c.table + ':' + c.op);
+  const del3 = supa._calls.slice(n3).find(c => c.table === 'meal_items' && c.op === 'delete');
+  const or3 = del3 ? ((del3.filters.find(f => f[0] === 'or') || [])[2] || '') : '';
+  atteso('memoria incompleta · si leggono gli id dal database (h1, h2) e si tolgono quelli, prima di scrivere', [!!lettura, lettura && supa._calls.indexOf(lettura) < supa._calls.indexOf(supa._calls.slice(n3).find(c => c.op === 'insert')), passi3, /"?h1"?/.test(or3), /"?h2"?/.test(or3)], [true, true, ['meal_items:insert', 'meals:update', 'meal_items:delete'], true, true]);
+  // senza rete e con la memoria incompleta ci si ferma: niente scritto, la persona lo sa
+  win.getDay(OGGI).meals[0].items = [{ name:'pasta', quantity:90, unit:'g', kcal:320 }];
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  ST.smartForm.items = [{ tempId:4, name:'farro', quantity:90, unit:'g', kcal:300, protein:10, carbs:60, fat:2, source:'manual' }];
+  t.__rete = false;
+  const n4 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  atteso('senza rete e memoria incompleta · nessuna scrittura, niente in coda, «Pasto non salvato»', [supa._calls.slice(n4).filter(c => c.op !== 'select' && c.table !== 'app_errors').length, coda().length, /Pasto non salvato/.test(d.body.textContent), win.getDay(OGGI).meals[0].items[0].name], [0, 0, true, 'pasta']);
+  t.__rete = true;
+
   atteso('zero errori in console', errori(), []);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);

@@ -1055,7 +1055,7 @@
         <div class="h-goal" id="h-goal"></div>
       </div>
       <div class="h-right">
-        <button class="h-weight-btn" onclick="openWeightModal()">⚖️ <span id="h-weight">—</span> kg</button>
+        <button class="h-weight-btn" onclick="openWeighInSheet()" title="Pesati ora">⚖️ <span id="h-weight">—</span> kg</button>
         <div style="display:flex;gap:4px;">
           <button class="h-logout" onclick="openSettingsModal()" title="Impostazioni" style="font-size:18px;">⚙️</button>
           <button class="h-logout" onclick="logout()" title="Esci">⎋</button>
@@ -1159,23 +1159,7 @@
 <div id="confirm-extra-screen" class="cextra-overlay"></div>
 
 <!-- WEIGHT MODAL -->
-<div id="weight-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeWeightModal()">
-  <div class="weight-modal-inner">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-      <span class="lbl" style="margin:0;">⚖️ Aggiorna peso</span>
-      <button onclick="closeWeightModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--t3);">×</button>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <input id="weight-inp" class="inp" type="number" placeholder="Es. 82.5" step="0.1" min="40" max="200" style="flex:1;"/>
-      <button class="btn btn-primary" onclick="saveWeight()">Salva</button>
-    </div>
-    <div id="weight-chart-wrap" style="margin-top:16px;display:none;">
-      <div class="lbl">Andamento peso</div>
-      <div class="weight-chart" id="weight-chart"></div>
-      <div id="weight-goal-bar" style="margin-top:8px;"></div>
-    </div>
-  </div>
-</div>
+<!-- La vecchia finestra «Aggiorna peso» non c'è più (Body 020 / Nutrition 040, 13 ottobre 2026): il peso si registra solo da «Pesati ora» -->
 
 <!-- INJURY MODAL (riposo per infortunio) -->
 <div id="injury-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeInjuryModal()">
@@ -1723,29 +1707,26 @@ function saveLocalPrefs() {
   } catch(e) {}
 }
 
-function applyLocalPrefs() {
+// Nutrition 030, punto 3 (Ondata 4, 13 ottobre 2026): il database comanda, il telefono tiene solo una copia.
+// Prima obiettivo, dieta e intolleranze salvati sul telefono vincevano sul profilo a ogni avvio, e ricalcolavano i
+// target: due telefoni della stessa persona potevano mostrare numeri diversi. Ora riempiono solo i campi che il
+// profilo non ha; l'unità di misura resta del telefono (non sta nel database). Si chiama PRIMA del calcolo dei target.
+function applyLocalPrefs(profile) {
   try {
+    const p = profile || ST.profile;
     const raw = localStorage.getItem(prefsKey());
-    if (!raw) return;
+    if (!raw || !p) return;
     const prefs = JSON.parse(raw);
-    if (prefs.obiettivo)    ST.profile.obiettivo    = migrateObiettivo(prefs.obiettivo);
-    if (prefs.dieta)        ST.profile.dieta        = prefs.dieta;
-    if (prefs.intolleranze) ST.profile.intolleranze = prefs.intolleranze;
-    if (prefs.unit)         ST.profile.unit         = prefs.unit;
-    // Ricalcola TARGET con il vero obiettivo locale
-    const obArr = (prefs.obiettivo || '').split(',').filter(Boolean);
-    const a = calcAdaptedTargets(obArr, ST.TARGET.kcal);
-    ST.TARGET.protein = a.protein;
-    ST.TARGET.carbs   = a.carbs;
-    ST.TARGET.fat     = a.fat;
-    ST.TARGET.pProt   = a.pProt;
-    ST.TARGET.pCarbo  = a.pCarbo;
-    ST.TARGET.pFat    = a.pFat;
+    if (prefs.unit) p.unit = prefs.unit;
+    if (!p.obiettivo && prefs.obiettivo) p.obiettivo = migrateObiettivo(prefs.obiettivo);
+    if (!p.dieta && prefs.dieta) p.dieta = prefs.dieta;
+    if (!(p.intolleranze && p.intolleranze.length) && prefs.intolleranze) p.intolleranze = prefs.intolleranze;
   } catch(e) {}
 }
 
 function applyProfile(profile) {
   if (profile.obiettivo) profile.obiettivo = migrateObiettivo(profile.obiettivo);
+  applyLocalPrefs(profile);   // Nutrition 030: prima dei target, e solo per i campi che il profilo non ha
   // Carica piano_ai da profile in ST.pianoAI (eager load — disponibile anche per la timeline OGGI
   // senza dover aprire prima il tab Piano). Cache localStorage tenuta come fallback offline.
   if (profile.piano_ai && !ST.pianoAI) {
@@ -1787,7 +1768,6 @@ function applyProfile(profile) {
       dbq('salvo i target del profilo', supa.from('profiles').update(nuovi).eq('id', profile.id), { silenzioso: true });
     }
   }
-  applyLocalPrefs();
   document.getElementById('h-greeting').textContent = 'Ciao, ' + (profile.first_name || '');
   updateHeaderWeight();
   if(profile.goal_weight_kg && profile.weight_kg) {

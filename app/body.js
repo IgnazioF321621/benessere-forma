@@ -518,62 +518,10 @@ async function m2Complete() {
 // ═══════════════════════════════════════════════════════════
 // WEIGHT
 // ═══════════════════════════════════════════════════════════
-async function saveWeightEntry(kg) {
-  // store weight in profile
-  await dbq('salvare il peso', supa.from('profiles').update({weight_kg:kg, updated_at:new Date().toISOString()}).eq('id', ST.user.id));
-if(ST.profile) ST.profile.weight_kg = kg;
-const el = document.getElementById('h-weight'); if(el) el.textContent = kg;
-}
-
-async function saveWeight() {
-  const v = parseFloat(document.getElementById('weight-inp').value);
-  if(!v || v<30 || v>300) return;
-  await saveWeightEntry(v);
-  // recalculate targets
-  let recalcTarget = null;
-  let recalcSex = null;
-  if(ST.profile) {
-    const r = calcTDEE(ST.profile.sex||'M', ST.profile.age||35, ST.profile.height_cm||175, v, ST.profile.activity_level||'moderate');
-    await dbq('aggiornare gli obiettivi nutrizionali', supa.from('profiles').update({target_kcal:r.target, target_protein:r.protein, target_carbs:r.carbs, target_fat:r.fat, updated_at:new Date().toISOString()}).eq('id', ST.user.id));
-    ST.TARGET = {kcal:r.target, protein:r.protein, carbs:r.carbs, fat:r.fat};
-    ST.profile.weight_kg = v;
-    recalcTarget = r.target;
-    recalcSex = ST.profile.sex || 'M';
-  }
-  closeWeightModal();
-  renderPage(ST.page);
-  // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo peso.
-  // Mostrato DOPO renderPage per non interferire con il render della pagina.
-  if(recalcTarget != null) checkLowKcalAndWarn(recalcTarget, recalcSex);
-}
-
-function openWeightModal() {
-  const latestW = getLatestBodyData().weight_kg ?? ST.profile?.weight_kg ?? '';
-  document.getElementById('weight-inp').value = latestW;
-  document.getElementById('weight-modal').style.display = 'flex';
-  renderWeightChart();
-}
-function closeWeightModal() { document.getElementById('weight-modal').style.display='none'; }
-
-async function renderWeightChart() {
-  // simple: show goal vs current
-  const wrap = document.getElementById('weight-chart-wrap');
-  const goal = ST.profile?.goal_weight_kg;
-  const curr = getLatestBodyData().weight_kg ?? ST.profile?.weight_kg;
-  if(!goal || !curr) { wrap.style.display='none'; return; }
-  wrap.style.display='block';
-  const diff = curr - goal;
-  const pct  = Math.min(100, Math.max(0, Math.round((1 - Math.abs(diff)/Math.max(curr,goal))*100)));
-  document.getElementById('weight-goal-bar').innerHTML = `
-    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-      <span style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;">Attuale: ${curr}kg</span>
-      <span style="font-size:11px;color:var(--acc);font-family:'JetBrains Mono',monospace;">Obiettivo: ${goal}kg</span>
-    </div>
-    <div style="height:6px;border-radius:3px;background:var(--s3);overflow:hidden;">
-      <div style="height:100%;border-radius:3px;width:${pct}%;background:${diff>0?'var(--warn)':'var(--acc)'};transition:width .6s ease;"></div>
-    </div>
-    <div style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;text-align:center;">${diff>0?'▼ '+diff.toFixed(1)+'kg da perdere':'✅ Obiettivo raggiunto!'}</div>`;
-}
+// Body 020 / Nutrition 040 (Ondata 4, 13 ottobre 2026): la finestra «Aggiorna peso» della pillola in alto non c'è più.
+// Scriveva il peso solo nel profilo (niente pesata in storico) e RICALCOLAVA le calorie da zero, cancellando senza
+// avviso una correzione di Pirsi accettata. Ora la pillola apre «Pesati ora» (openWeighInSheet), che salva la pesata,
+// aggiorna il peso del profilo e non tocca le calorie: quelle cambiano solo con una scelta esplicita.
 
 // M1 completo + M2 non skippato + nessun body_check completed → ritorna true
 // In test mode skippa sempre M2.
@@ -2043,6 +1991,10 @@ async function confirmWeighIn() {
     if(ctaBtn) { ctaBtn.disabled = false; ctaBtn.textContent = 'Conferma'; }
     return;
   }
+  // Body 020: la pesata aggiorna anche il peso del profilo, che leggono coach e generatore (era di mesi fa). E basta:
+  // le calorie non si toccano (Nutrition 040).
+  scriviConCoda('aggiornare il peso nel profilo', { tabella:'profiles', tipo:'update', righe:{ weight_kg:v, updated_at:new Date().toISOString() }, filtri:[['id', ST.user.id]] });
+  if(ST.profile) ST.profile.weight_kg = v;
   // Refresh cache locale → la prossima apertura card peso/sheet usa il nuovo valore (non senza rete: resta quella in memoria)
   if(!resPesata.inCoda) await loadWeightLogs();
   // Step D.2: reset anti-nag dismiss counter — utente si è pesato, prossimo ciclo

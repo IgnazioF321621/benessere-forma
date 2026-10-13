@@ -110,20 +110,20 @@ async function nuovo(conSessione) {
   atteso('Invia · la riga dice dove, la versione e il telefono', [riga.dove, riga.versione === a.win.eval('APP_VERSION'), typeof riga.telefono === 'string' && riga.telefono.length > 0], [{ pagina:'home' }, true, true]);
   atteso('Invia · foglio chiuso, «Grazie, l\'abbiamo ricevuta»', [!!a.foglio(), a.toast()], [false, '🙏 Grazie, l\'abbiamo ricevuta']);
 
-  // sopra un altro foglio: la pesata, dal tab Body
+  // sopra un altro foglio: «Pesati ora», dal tab Body (dal 13 ottobre 2026 la pillola apre questo foglio: Body 020)
   a.win.showPage('body'); a.ST.bodyTab = 'misure';
-  a.d.getElementById('weight-modal').style.display = 'flex';
+  await a.win.openWeighInSheet(); await attendi(5);
   a.win.foglioSegnala(); await attendi(5);
-  atteso('sopra la pesata · il foglio si apre lo stesso e sa in che foglio eri', [!!a.foglio(), a.foglio().querySelector('.sg-dove').textContent.split(' · versione')[0]], [true, 'Dove sei: Body › misure › ⚖️ Aggiorna peso']);
+  atteso('sopra la pesata · il foglio si apre lo stesso e sa in che foglio eri', [!!a.foglio(), a.foglio().querySelector('.sg-dove').textContent.split(' · versione')[0]], [true, 'Dove sei: Body › misure › Pesati ora']);
   a.motivo('non_capisco').click(); a.invia().click(); await attendi(20);
-  atteso('sopra la pesata · la riga salvata porta il foglio aperto e la sezione', [a.t.segnalazioni.length, a.t.segnalazioni[1].dove], [2, { pagina:'body', sezione:'misure', fogli:['⚖️ Aggiorna peso'] }]);
-  a.d.getElementById('weight-modal').style.display = 'none';
+  atteso('sopra la pesata · la riga salvata porta il foglio aperto e la sezione', [a.t.segnalazioni.length, a.t.segnalazioni[1].dove], [2, { pagina:'body', sezione:'misure', fogli:['Pesati ora'] }]);
+  a.win.closeWeighInSheet(); await attendi(260);
 
   // l'insetto segue i fogli: con un foglio aperto sale (.in-foglio), chiuso il foglio torna in basso; il foglio del feedback da solo non lo fa salire
   const fotogramma = () => attendi(60);
-  a.d.getElementById('weight-modal').style.display = 'flex'; await fotogramma();
+  await a.win.openWeighInSheet(); await fotogramma();
   atteso('foglio aperto (la pesata) · l\'insetto sale in alto a destra', a.insetto().classList.contains('in-foglio'), true);
-  a.d.getElementById('weight-modal').style.display = 'none'; await fotogramma();
+  a.win.closeWeighInSheet(); await attendi(260); await fotogramma();
   atteso('foglio chiuso · l\'insetto torna in basso', a.insetto().classList.contains('in-foglio'), false);
   const pcs = a.win.chiediConferma('Eliminare questo pasto?'); await fotogramma();
   atteso('una conferma è un foglio · l\'insetto sale', a.insetto().classList.contains('in-foglio'), true);
