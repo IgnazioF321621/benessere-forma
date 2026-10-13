@@ -103,6 +103,37 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
 
 ---
 
+## Lettura del report Fitdays
+
+**Body 150, 13 ottobre 2026 (strada A, decisa da Ignazio).** La bilancia Fitdays non parla con l'app (niente Apple Health, Shortcuts, app a pagamento o client non ufficiali): dopo la pesata la persona fa lo **screenshot o il PDF del report** e lo dà al coach, che lo trascrive con Gemini. **Il file non si conserva da nessuna parte**: non in un bucket, non nel database, non nei log del Worker.
+
+### Nell'app
+
+- nel modulo «Misure col metro e bilancia» del tab Body, sotto il titolo, il tasto **«Leggi il report Fitdays con Pirsi →»** apre la scelta del file (`image/*,application/pdf`); `leggiReportFitdays` in `app/body.js`. **Parte solo da un tocco**
+- prima che il file parta, il consenso `consensoLetturaReport` («Acconsento»/«Annulla», `zt_report_ok` sul telefono, come `zt_foto_ok` per le foto): se annulla non parte niente
+- un'immagine si riduce sul telefono a **2400 px** sul lato lungo (`fitdaysPreparaFile`, JPEG 0,85: il report è alto e stretto, a 1200 px i numeri non si leggono più); un PDF parte com'è. Al Worker vanno solo `user_id`, `mime` e il file in base64, col token nell'intestazione: **nessun nome, nessun dato del profilo**
+- la lettura **compila le caselle che Body aveva già** — peso, grasso %, massa muscolare, grasso viscerale, età corporea (`ZTFitdays.inCaselle`) — e porta il modulo al **giorno stampato sul report** (se non è nel futuro); sotto le caselle la card «Report Fitdays letto da Pirsi» con tutti i 22 indicatori e «Togli». **La persona controlla e tocca «Salva misure»**: solo allora si scrive (scelta di Ignazio): peso in `weight_logs`, bilancia in `body_logs`, come prima, e la **lettura completa in `fitdays_letture`** (una riga per persona e giorno, `scriviConCoda` con upsert su `user_id,date`)
+- errori detti con parole (`fitdaysErrorMessage`); un file che non è immagine o PDF si rifiuta prima di chiedere; un'immagine che non è un report Fitdays non compila niente («Non mi sembra un report Fitdays»)
+
+### `POST /fitdays-report`
+
+Corpo `{ user_id, mime, data }` (base64; JPEG, PNG, WebP o PDF; corpo fino a 8 MB), header `Authorization: Bearer <token utente Supabase>`. Codice in `worker/src/fitdays.js`, prompt in `worker/src/prompts/fitdays-<data>.js` (un file per versione, la data in `meta.prompt_version`).
+
+1. token verificato (`personaDaToken`, la stessa porta dei testi) → **401**; `user_id` diverso dal token → **403**; file non ammesso → **415** `bad-file`; troppo grande → **413**
+2. **3 letture al minuto** per persona (binding `LIMITE_FOTO`, chiave `fitdays:<id>`) → **429** `rate-limit`
+3. Gemini `gemini-3.1-flash-lite` con schema JSON, temperatura 0; **un solo nuovo tentativo**, poi **502** `invalid-json`; tempo massimo **60 s** → **504** `timeout`
+4. risposta `{ ok, lettura: { riconosciuto, data_ora_testo, data_report, valori, letti, note, meta } }`. **Non scrive niente**: la lettura la salva l'app
+
+Il prompt **non ha la voce di Pirsi né il ritratto**: è un lavoro di trascrizione, non un testo per la persona. Dice al modello di non leggere né ripetere il nickname stampato sul report.
+
+### I 22 indicatori
+
+Vocabolario in **`shared/fitdays.js`** (`ZTFitdays.CAMPI`: chiave, etichetta del report, nostra etichetta, unità, limiti di buon senso), una fonte per app e Worker. Un numero fuori dai limiti è una lettura sbagliata e diventa `null`, mai un dato. **«Perdita di grasso» nel report Fitdays è il peso senza il grasso** (peso − massa grassa): da noi è `massa_magra_kg`. Le due voci a parole (livello di obesità, tipo di corpo) restano testo. Il BMR (`bmr_kcal`) resta nella lettura: usarlo per il fabbisogno è una decisione a parte.
+
+**Verifica**: `node worker/test/prova_fitdays.mjs` (Worker con fetch finto) · `node tools/banco/prova_body_fitdays.js` (app, senza rete). Migrazione `supabase/migrations/20261013_150_fitdays_letture.sql` (GRANT + RLS: la persona legge, scrive e cancella le sue), da eseguire al rilascio con copia di sicurezza, poi rifotografare lo schema.
+
+---
+
 ## Pirsi propone
 
 **In vigore dal 13 settembre 2026 (Fase 3).** Ogni lunedì Pirsi legge il quadro della settimana appena chiusa e fa da 0 a 3 proposte. ⚠️ **Mai automatico: niente cambia su calorie, macro o allenamento senza un «Accetto».** Ogni proposta ha la motivazione in italiano semplice e i numeri che l'hanno generata.
