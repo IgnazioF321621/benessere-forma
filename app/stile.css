@@ -1360,15 +1360,43 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .home-v2-body-weight{font-family:var(--font-mono);font-size:26px;font-weight:700;color:var(--t1);line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
 .home-v2-body-unit{font-family:var(--font-mono);font-size:12px;color:var(--t3);}
 .home-v2-body-delta{font-family:var(--font-mono);font-size:13px;font-weight:700;margin-left:4px;}
+.home-v2-body-peso{display:inline-flex;align-items:baseline;gap:5px;padding:0;background:none;border:none;cursor:pointer;}
+.home-v2-body-pesata{display:inline-block;margin-top:8px;padding:5px 10px;border:1px solid var(--mod-body);border-radius:20px;background:var(--body-velo);color:var(--mod-body-forte);font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;cursor:pointer;}
 .home-v2-body-sub,.home-v2-train-sub{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.25em;line-height:1.4;color:var(--t3);text-transform:uppercase;margin-top:8px;}
 .home-v2-train-name{font-family:var(--font-sans);font-size:18px;font-weight:700;color:var(--t1);line-height:1.25;}
+.home-v2-nutr-extra{margin-top:14px;padding-top:10px;border-top:1px solid var(--s3);display:flex;flex-direction:column;gap:8px;}
+.home-v2-nutr-riga{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-sans);font-size:14px;color:var(--t1);line-height:1.35;}
+.home-v2-nutr-eb{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);margin-right:4px;}
+.home-v2-nutr-btn{flex-shrink:0;padding:7px 12px;border:1px solid var(--acc);border-radius:10px;background:var(--acc-lt);color:var(--acc);font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;}
+.home-v2-nutr-avviso{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--over);}
 .home-v2-action{background:var(--carta);border:1px solid var(--b1);border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(var(--nero-rgb),.04);margin-top:2px;}
 .home-v2-action-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;color:var(--acc);margin-bottom:12px;}
 .home-v2-action-title{font-family:var(--font-sans);font-size:18px;font-weight:700;color:var(--t1);line-height:1.3;}
 .home-v2-action-detail{font-family:var(--font-sans);font-size:14px;color:var(--t2);line-height:1.5;margin-top:8px;}
+.home-v2-action-btn{display:inline-block;margin-top:14px;padding:11px 18px;border:none;border-radius:12px;background:var(--acc);color:var(--bianco);font-family:var(--font-sans);font-size:15px;font-weight:600;cursor:pointer;}
+.home-v2-dafare{margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
+.home-v2-dafare-eb{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.25em;line-height:1.4;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
+.home-v2-dafare-voce{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;background:none;border:none;border-bottom:1px solid var(--s3);cursor:pointer;font-family:var(--font-sans);font-size:14px;color:var(--t1);text-align:left;}
+.home-v2-dafare-voce:last-child{border-bottom:none;}
+.home-v2-dafare-freccia{color:var(--t3);font-size:18px;line-height:1;}
 .home-v2-action-next{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--b1);}
 .home-v2-action-next-eb{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.25em;line-height:1.4;text-transform:uppercase;color:var(--t3);}
 .home-v2-action-next-chip{font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;color:var(--acc);background:var(--acc-lt);border:1px solid rgba(var(--acc-rgb),.22);border-radius:999px;padding:5px 11px;}
+
+/* ── COME STAI OGGI — Home 020 (13 ott 2026): sonno, energia, stress con la rotellina, nota ── */
+.cs-card{background:var(--carta);border:1px solid var(--b1);border-radius:16px;padding:16px 14px;box-shadow:0 1px 3px rgba(var(--nero-rgb),.04);}
+.cs-testa{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cs-titolo{font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.18em;line-height:1.3;text-transform:uppercase;color:var(--t2);}
+.cs-campi{display:flex;gap:8px;}
+.cs-campo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+.cs-etichetta{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);text-align:center;}
+.cs-select{border:1px solid var(--b1);background:var(--s2);}
+.cs-nota{width:100%;margin-top:10px;padding:9px 10px;border:1px solid var(--b1);border-radius:8px;background:var(--s2);color:var(--t1);font-family:var(--font-sans);font-size:16px;line-height:1.4;resize:none;}
+.cs-nota::placeholder{color:var(--t3);}
+.cs-riga{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.cs-riassunto{font-family:var(--font-sans);font-size:15px;color:var(--t1);margin-top:6px;}
+.cs-riga-nota{font-family:var(--font-sans);font-size:13px;color:var(--t2);margin-top:4px;}
+.cs-link{flex-shrink:0;background:none;border:none;padding:4px 0;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);}
 
 /* ── QUADRO SETTIMANALE — Fase 1 (12 set 2026) ─────────────── */
 .wp-mini{display:flex;gap:14px;padding-left:18px;flex-wrap:wrap;}

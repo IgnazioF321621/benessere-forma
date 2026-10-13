@@ -76,8 +76,8 @@ async function blocchi(win, nome){
   atteso('pillola peso in alto', win.document.getElementById('h-weight').textContent, '72.1');
   ST.page = 'home'; ST.homeView = null; win.renderHomeV2();
   const cardBody = [...win.document.querySelectorAll('#page-home .home-v2-card')].find(c => /Body/.test(c.querySelector('.home-v2-card-title').textContent));
-  atteso('card Body in Home', cardBody.querySelector('.home-v2-body-weight').textContent, '72.1');
-  atteso('card Body · delta rispetto alla pesata prima', testo(cardBody.querySelector('.home-v2-body-delta').innerHTML), '↑ +0.1');
+  atteso('card Body in Home', cardBody.querySelector('.home-v2-body-weight').textContent, '72,1');   // con la virgola come il quadro (Home 050)
+  atteso('card Body · delta rispetto alla pesata prima', testo(cardBody.querySelector('.home-v2-body-delta').innerHTML), '↑ +0,1 kg da venerdì');   // detto rispetto a quando (Home 050)
 
   // 2. una pesata sola, senza obiettivo: la media non si mostra
   ({ win } = avvia({ weight_logs: [ wl('2026-09-03', 70.3), wl('2026-09-10', 70.0) ] }, {}));

@@ -207,53 +207,110 @@ function getPostWorkoutHint(){
   return { eyebrow: "DOPO L'ALLENAMENTO", chip: "cena leggera + proteine" };
 }
 
-// Logica semplice "PROSSIMA AZIONE" — 4 regole in ordine di priorità (Giro 1).
-// Niente AI, niente chiamate di rete. Sostituita da una logica più ricca in Giro 2.
+// «Prossima azione» (Home 010, 13 ottobre 2026): la guida della giornata, a un tocco.
+// Sette regole in ordine (decise con Ignazio il 13 ottobre), vince la prima che vale.
+// Ognuna dice cosa fare e, se c'è un passo da aprire, porta un pulsante (azione + arg) che
+// prossimaAzioneVai apre: la seduta, il check, la pesata, il form del pasto. Niente rete.
+//  1 seduta iniziata e non chiusa · 2 check di fine blocco dovuto · 3 pesata dovuta, fino alle 11
+//  4 seduta prevista oggi e non fatta · 5 pasto della fascia non registrato (colazione 6-10,
+//  pranzo 12-15, cena 19-22) · 6 giorno di riposo · 7 tutto fatto
+const PA_FASCE = [
+  { slot:'colazione', da:6,  a:10, nome:'la colazione' },
+  { slot:'pranzo',    da:12, a:15, nome:'il pranzo' },
+  { slot:'cena',      da:19, a:22, nome:'la cena' },
+];
 function getProssimaAzioneSimple(){
-  // 1. Body checkpoint scaduto (solo se almeno un check è stato fatto e sono passati > 28 giorni).
-  //    "Nessun check ancora" non scatta qui — il primo check è parte di M2 nell'onboarding.
-  const cp = getNextCheckpointInfo();
-  if(cp.hasCheck && cp.overdue){
-    return {
-      titolo: "È ora del check fisico",
-      dettaglio: "Aggiorna foto, misure ed esami. Ci aiuta a calibrare il piano.",
-      nextHint: null,
-    };
-  }
-
-  // 2. Workout previsto oggi e non ancora completato (esclude recovery e rest).
+  const h = new Date().getHours();
   const hd = ST.trainHomeData;
-  if(hasTraining() && hd && !hd.doneToday){
-    const sid = hd.inProgress ? hd.lastSession : hd.nextSession;
-    const isRecovery = sid === 'recoveryUpper' || sid === 'recoveryLower' || sid === 'rest';
-    if(!isRecovery){
-      const sess = getTrainingSession(sid) || getTrainingSession('upperA');
-      return {
-        titolo: hd.inProgress ? "Riprendi il workout" : "È ora del workout",
-        // Senza «a digiuno» (Pirsi 040): era scritto fisso, e il profilo non sa a che ora ci si allena.
-        dettaglio: `Sessione ${sess.name}. Si parte con 5 minuti di preparazione.`,
-        nextHint: getPostWorkoutHint(),
-      };
+  const tr = hasTraining() && hd && !hd.errore;
+  const nomeSeduta = (sid) => { const s = getTrainingSession(sid); return s ? s.name : 'la seduta'; };
+
+  // 1. Seduta iniziata e non chiusa
+  if(tr && hd.inProgress && hd.lastSession){
+    return { titolo: `Riprendi ${nomeSeduta(hd.lastSession)}`, dettaglio: 'La seduta è iniziata e non è ancora chiusa.',
+      nextHint: null, azione: 'seduta', arg: hd.lastSession, pulsante: 'Riprendi' };
+  }
+  // 2. Check di fine blocco dovuto (o check periodico scaduto)
+  let rem = null, cp = null;
+  try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
+  try { cp = getNextCheckpointInfo(); } catch(e){}
+  if(rem || (cp && cp.hasCheck && cp.overdue)){
+    return { titolo: 'È ora del check', dettaglio: 'Foto, misure ed esami: servono a calibrare il piano.',
+      nextHint: null, azione: 'check', pulsante: 'Apri il check' };
+  }
+  // 3. Pesata dovuta, al mattino (frequenza scelta dalla persona; le pesate devono essere già lette)
+  let pesata = false;
+  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  if(pesata){
+    return { titolo: 'Pesati', dettaglio: 'Al mattino, prima di colazione: è il numero più fedele.',
+      nextHint: null, azione: 'pesata', pulsante: 'Pesati' };
+  }
+  // 4. Seduta prevista oggi e non fatta (non nei giorni di riposo)
+  const riposo = tr && !hd.doneToday && /^rest/.test(hd.nextSession || '');
+  if(tr && !hd.doneToday && hd.nextSession && !riposo){
+    return { titolo: `È ora di ${nomeSeduta(hd.nextSession)}`, dettaglio: 'Si parte con 5 minuti di preparazione.',
+      nextHint: getPostWorkoutHint(), azione: 'seduta', arg: hd.nextSession, pulsante: 'Inizia' };
+  }
+  // 5. Pasto della fascia oraria non ancora registrato
+  const fascia = PA_FASCE.find(f => h >= f.da && h < f.a);
+  if(fascia){
+    const pasti = (getDay(todayKey()).meals || []);
+    if(!pasti.some(m => m.slot === fascia.slot)){
+      return { titolo: `Registra ${fascia.nome}`, dettaglio: 'Così i macro di oggi restano giusti.',
+        nextHint: null, azione: 'pasto', arg: fascia.slot, pulsante: 'Registra' };
     }
   }
-
-  // 3. Pasti registrati oggi < 3 e ora >= 12:00 → ricorda il pranzo.
-  const day = getDay(todayKey());
-  const mealsCount = (day.meals || []).length;
-  if(mealsCount < 3 && new Date().getHours() >= 12){
-    return {
-      titolo: "Hai mangiato a pranzo?",
-      dettaglio: "Registra il pasto per tenere traccia dei macro.",
-      nextHint: null,
-    };
+  // 6. Giorno di riposo
+  if(riposo){
+    return { titolo: 'Oggi riposo', dettaglio: 'Il recupero fa parte del programma.', nextHint: null };
   }
+  // 7. Tutto fatto
+  return { titolo: 'Giornata in ordine', dettaglio: 'Per ora hai fatto quello che serviva.', nextHint: null };
+}
 
-  // 4. Default fallback.
-  return {
-    titolo: "Buona giornata",
-    dettaglio: "Apri un modulo per iniziare.",
-    nextHint: null,
-  };
+// «Anche da fare oggi» (Home 060, 13 ottobre 2026): sotto «Prossima azione», le altre cose
+// rimaste indietro per orario, ognuna apre il suo passo. Voci decise con Ignazio il 13 ottobre:
+// integratori con l'orario passato e non presi · pesata dovuta (fino alle 11) · pasti delle
+// fasce già passate non registrati · check di fine blocco. La scorta resta fuori finché il suo
+// calcolo non è giusto (Nutrition 110). La voce già mostrata come «Prossima azione» non si ripete.
+function getDaFareOggi(principale){
+  const now = new Date(), h = now.getHours();
+  const ora = String(h).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const voci = [];
+  const day = getDay(todayKey());
+  // integratori: un gruppo per orario, solo gli attivi con l'orario già passato e non presi
+  const presi = (day && day.suppsTaken) || [];
+  const perOra = {};
+  (ST.supps || []).filter(x => x.active && x.slot && /^\d\d:\d\d$/.test(x.slot) && x.slot <= ora && !presi.includes(x.local_id))
+    .forEach(x => { perOra[x.slot] = (perOra[x.slot] || 0) + 1; });
+  Object.keys(perOra).sort().forEach(t => voci.push({ etichetta: `Integratori delle ${t}: ${perOra[t]} da segnare`, azione: 'integratori', arg: t }));
+  // pesata
+  let pesata = false;
+  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  if(pesata) voci.push({ etichetta: 'Pesata', azione: 'pesata' });
+  // pasti delle fasce già passate
+  const pasti = (day && day.meals) || [];
+  PA_FASCE.filter(f => h >= f.a && !pasti.some(m => m.slot === f.slot))
+    .forEach(f => voci.push({ etichetta: `${f.nome.replace(/^(la|il) /, '').replace(/^./, c => c.toUpperCase())} non registrat${f.slot === 'pranzo' ? 'o' : 'a'}`, azione: 'pasto', arg: f.slot }));
+  // check di fine blocco
+  let rem = null, cp = null;
+  try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
+  try { cp = getNextCheckpointInfo(); } catch(e){}
+  if(rem || (cp && cp.hasCheck && cp.overdue)) voci.push({ etichetta: 'Check di fine blocco', azione: 'check' });
+  const p = principale || {};
+  return voci.filter(v => !(v.azione === p.azione && (v.arg || null) === (p.arg || null)));
+}
+
+// Il pulsante di «Prossima azione»: apre il passo giusto.
+function prossimaAzioneVai(azione, arg){
+  if(azione === 'seduta'){ apriSessioneDallaHome(arg); return; }
+  if(azione === 'check'){ ST.bodyTab = 'check'; showPage('body'); if(typeof m2EntryIntro === 'function') m2EntryIntro(); return; }
+  if(azione === 'pesata'){ if(typeof openWeighInSheet === 'function') openWeighInSheet(); return; }
+  if(azione === 'integratori'){ showPage('oggi'); if(typeof openSuppSheet === 'function') openSuppSheet(); return; }
+  if(azione === 'pasto'){
+    showPage('oggi');
+    if(typeof openMealLogForm === 'function'){ openMealLogForm(); ST.logSlot = arg; renderOggi(); }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -731,6 +788,178 @@ function renderQuadroView(){
   return head + alert + secPeso + secNutr + secTrain + secCorpo + secEsami + _cpHistoryHTML(ws);
 }
 
+// ── «Come stai oggi» (Home 020, 13 ottobre 2026) ──
+// In cima alla Home: ore di sonno, energia e stress con la rotellina del telefono
+// (un <select>: su iPhone apre la rotellina da solo), più una nota facoltativa.
+// Si salva al momento della scelta (L21), un campo alla volta, nel diario del giorno
+// (daily_log, Fondamenta 050): gli stessi controlli del salvataggio del diario
+// (_dailyLogCampi), ma scritto con scriviConCoda: senza rete la scelta resta in coda.
+// Con i tre valori la card si chiude su una riga; «Modifica» la riapre, «Fatto» la richiude.
+const CS_SONNO = Array.from({ length: 19 }, (_, i) => 3 + i * 0.5);   // 3 … 12 h, a mezz'ora
+const CS_SCALA = [1, 2, 3, 4, 5];
+let _csLettoIl = null;      // giorno per cui il diario è stato chiesto (si richiede a giorno cambiato)
+
+function _csOre(n) { return String(n).replace('.', ',') + ' h'; }
+
+// Il diario si legge una volta per giorno, la prima volta che si disegna la Home.
+// Lettura fallita: la card resta vuota ma funziona (si scrive solo il campo scelto).
+function _csCarica() {
+  const oggi = todayKey();
+  if (_csLettoIl === oggi || !ST.user || !ST.user.id || typeof loadDailyLog !== 'function') return;
+  _csLettoIl = oggi;
+  loadDailyLog().then(() => { if (ST.page === 'home') renderHome(); }).catch(() => {});
+}
+
+function _csSelect(campo, valori, attuale, etichetta) {
+  const opz = [`<option value=""${attuale == null ? ' selected' : ''}>—</option>`]
+    .concat(valori.map(v => `<option value="${v}"${attuale != null && Number(attuale) === v ? ' selected' : ''}>${campo === 'sleep_hours' ? _csOre(v) : v}</option>`));
+  return `
+        <label class="cs-campo">
+          <span class="cs-etichetta">${etichetta}</span>
+          <select class="picker-select cs-select" aria-label="${etichetta}" onchange="comeStaiScegli('${campo}', this.value)">${opz.join('')}</select>
+        </label>`;
+}
+
+function _comeStaiHTML() {
+  if (!ST.user || !ST.user.id) return '';
+  _csCarica();
+  const oggi = todayKey();
+  const g = (typeof getDailyLog === 'function' && getDailyLog(oggi)) || {};
+  const pieni = g.sleep_hours != null && g.energy != null && g.stress != null;
+  if (pieni && ST.comeStaiAperta !== oggi) {
+    const nota = g.note ? `<div class="cs-riga-nota">${esc(g.note)}</div>` : '';
+    return `
+    <div class="cs-card cs-chiusa">
+      <div class="cs-riga">
+        <div>
+          <div class="cs-titolo">Come stai oggi</div>
+          <div class="cs-riassunto">Sonno ${_csOre(Number(g.sleep_hours))} · Energia ${g.energy} · Stress ${g.stress}</div>
+          ${nota}
+        </div>
+        <button class="cs-link" onclick="comeStaiApri()">Modifica</button>
+      </div>
+    </div>`;
+  }
+  return `
+    <div class="cs-card">
+      <div class="cs-testa">
+        <span class="cs-titolo">Come stai oggi</span>
+        ${pieni ? '<button class="cs-link" onclick="comeStaiChiudi()">Fatto</button>' : ''}
+      </div>
+      <div class="cs-campi">
+        ${_csSelect('sleep_hours', CS_SONNO, g.sleep_hours, 'Sonno')}
+        ${_csSelect('energy', CS_SCALA, g.energy, 'Energia')}
+        ${_csSelect('stress', CS_SCALA, g.stress, 'Stress')}
+      </div>
+      <textarea class="cs-nota" rows="1" maxlength="1000" placeholder="Una nota, se vuoi" aria-label="Nota" onchange="comeStaiScegli('note', this.value)">${esc(g.note || '')}</textarea>
+    </div>`;
+}
+
+async function comeStaiScegli(campo, valore) {
+  if (!ST.user || !ST.user.id) return;
+  const v = _dailyLogCampi({ [campo]: valore });
+  if (v.errore) { showToast(v.errore, '⚠️'); return; }
+  const oggi = todayKey();
+  if (!ST.dailyLog) ST.dailyLog = {};
+  const prima = ST.dailyLog[oggi] ? Object.assign({}, ST.dailyLog[oggi]) : null;
+  ST.dailyLog[oggi] = Object.assign({ date: oggi, sleep_hours: null, energy: null, stress: null, day_type: null, note: null }, prima || {}, v.campi);
+  ST.comeStaiAperta = oggi;      // resta aperta finché non si tocca «Fatto»
+  renderHome();
+  const res = await scriviConCoda('salvare come stai oggi', {
+    tabella: 'daily_log', tipo: 'upsert', onConflict: 'user_id,date',
+    righe: [Object.assign({ user_id: ST.user.id, date: oggi }, v.campi)],
+  });
+  if (res && res.error) {           // rifiutato dal database: la scelta torna com'era
+    if (prima) ST.dailyLog[oggi] = prima; else delete ST.dailyLog[oggi];
+    renderHome();
+  }
+}
+function comeStaiApri() { ST.comeStaiAperta = todayKey(); renderHome(); }
+function comeStaiChiudi() { ST.comeStaiAperta = null; renderHome(); }
+
+// Card Nutrition, ciò che le altre parti della Home non dicono (Home 040, 13 ottobre 2026,
+// scelta di Ignazio): il piatto del piano per il prossimo pranzo o cena non ancora registrato,
+// con «Registra» che apre il form già compilato, e «Ultimo pasto N h fa» dopo 5 ore.
+// Pasti e integratori da fare restano in «Prossima azione» e «Anche da fare oggi».
+const NUTR_ORE_SENZA_PASTO = 5;
+function _nutrProssimoDalPiano(){
+  const h = new Date().getHours();
+  const slot = h < 15 ? 'pranzo' : (h < 22 ? 'cena' : null);
+  if(!slot) return null;
+  const pasti = (getDay(todayKey()).meals || []);
+  if(pasti.some(m => m.slot === slot)) return null;
+  const p = _nutrPianoDiOggi(slot);
+  if(!p || !(p.piatto || p.ingredienti)) return null;
+  return { slot, piatto: p.piatto || p.ingredienti, descrizione: p.ingredienti || p.piatto };
+}
+// Il piano di OGGI (non del giorno sfogliato nel tab Nutrition) dalla copia in memoria del Piano.
+// Se manca, la Home lo chiede al massimo una volta al giorno: il caricatore del Piano richiede da
+// capo ogni volta che il piano non c'è, e la Home si ridisegna spesso (registri, costo zero).
+let _nutrPianoChiestoIl = null;
+function _nutrPianoDiOggi(slot){
+  if(typeof _pianoV4GetCachedPlanWeek !== 'function' || typeof _pianoV4WeekStartIsoForDate !== 'function') return null;
+  if(!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return null;
+  const oggi = todayKey();
+  const settimana = _pianoV4WeekStartIsoForDate(oggi);
+  const voce = _pianoV4GetCachedPlanWeek(settimana);
+  if(!voce){
+    if(_nutrPianoChiestoIl !== oggi && typeof _pianoV4LoadRealPlanForWeek === 'function'){
+      _nutrPianoChiestoIl = oggi;
+      Promise.resolve(_pianoV4LoadRealPlanForWeek(settimana)).then(() => { if(ST.page === 'home') renderHome(); }).catch(() => {});
+    }
+    return null;
+  }
+  if(voce.state !== 'loaded' || !voce.plan) return null;
+  const dow = ((new Date(oggi + 'T12:00:00').getDay() + 6) % 7) + 1;   // 1=lunedì … 7=domenica
+  const m = ((voce.mealsByDay && voce.mealsByDay[dow]) || []).find(x => x.slot === slot);
+  if(!m) return null;
+  return { piatto: m.name || '', ingredienti: Array.isArray(m.ingredients) ? m.ingredients.join(', ') : '' };
+}
+function _nutrOreDallUltimo(){
+  const now = new Date(), h = now.getHours();
+  if(h < 8 || h >= 22) return null;
+  const ore = (getDay(todayKey()).meals || []).map(m => String(m.time || '')).filter(t => /^\d\d:\d\d/.test(t)).sort();
+  if(!ore.length) return null;
+  const [hh, mm] = ore[ore.length - 1].split(':').map(Number);
+  const diff = Math.floor((now.getHours() * 60 + now.getMinutes() - (hh * 60 + mm)) / 60);
+  return diff >= NUTR_ORE_SENZA_PASTO ? diff : null;
+}
+function _nutrExtraHTML(){
+  const righe = [];
+  const pp = _nutrProssimoDalPiano();
+  if(pp) righe.push(`
+          <div class="home-v2-nutr-riga">
+            <span><span class="home-v2-nutr-eb">${pp.slot === 'pranzo' ? 'Pranzo' : 'Cena'} dal piano</span> ${esc(pp.piatto)}</span>
+            <button class="home-v2-nutr-btn" onclick="event.stopPropagation();apriPastoDalPiano('${pp.slot}')">Registra</button>
+          </div>`);
+  const ore = _nutrOreDallUltimo();
+  if(ore != null) righe.push(`
+          <div class="home-v2-nutr-riga"><span class="home-v2-nutr-avviso">Ultimo pasto ${ore} h fa</span></div>`);
+  return righe.length ? `<div class="home-v2-nutr-extra">${righe.join('')}</div>` : '';
+}
+// Apre il form del pasto già compilato col piatto del piano, come «REGISTRA ›» nel tab Nutrition.
+function apriPastoDalPiano(slot){
+  const pp = _nutrProssimoDalPiano();
+  if(!pp || pp.slot !== slot) { showPage('oggi'); return; }
+  showPage('oggi');
+  const info = (typeof MEAL_SLOTS !== 'undefined' && MEAL_SLOTS.find(x => x.id === slot)) || {};
+  ST.logOpen = true; ST.logSlot = slot; ST.logTime = info.time || ST.logTime;
+  ST.smartForm = { items: [], freeText: pp.descrizione || '', notes: '', analyzing: false,
+    editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
+  renderOggi();
+}
+
+// Card Body (Home 050): il peso con la virgola come nel quadro, e la variazione detta rispetto a quando.
+function _kgVirgola(n){ return (Math.round(Number(n) * 10) / 10).toFixed(1).replace('.', ','); }
+function _daQuando(data){
+  const oggi = new Date(todayKey() + 'T12:00:00'), d = new Date(data + 'T12:00:00');
+  const giorni = Math.round((oggi - d) / 86400000);
+  if(giorni === 1) return 'da ieri';
+  if(giorni >= 2 && giorni <= 6) return 'da ' + ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'][d.getDay()];
+  const g = d.getDate();
+  return (g === 8 || g === 11 ? "dall'" : 'dal ') + g + ' ' + ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][d.getMonth()];
+}
+
 function renderHomeV2(){
   // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
   if(ST.homeView === 'quadro' && _wpUsable()){
@@ -823,6 +1052,7 @@ function _renderHomeCards(){
             </div>
           </div>
         </div>
+        ${_nutrExtraHTML()}
       </div>
       <span class="home-v2-card-arrow">›</span>
     </div>`;
@@ -893,7 +1123,7 @@ function _renderHomeCards(){
       </div>`;
   }
 
-  // ── Card Body (riusa getLatestBodyData + getUnifiedBodyTimeline) ──
+  // ── Card Body (peso da getWeighIns, Home 050) ──
   let bodyCard;
   const loadingBody = ST.bodyLogs === null || ST.bodyMeasurements === null;
   if(loadingBody){
@@ -908,54 +1138,49 @@ function _renderHomeCards(){
         <span class="home-v2-card-arrow">›</span>
       </div>`;
   } else {
-    const bData   = getLatestBodyData();
-    const weights = getWeighIns();                 // pesate rapide comprese, come il tab Body
-    const w       = bData.weight_kg ?? profile.weight_kg ?? null;
-    const wPrev   = weights.length > 1 ? weights[1].weight_kg : null;
+    // Home 050 (13 ottobre 2026): il peso attuale è l'ultima pesata di getWeighIns (pesate rapide
+    // comprese), come il quadro e il tab Body (L48) — prima veniva da getLatestBodyData, che non le vede.
+    const weights = getWeighIns();
+    const ultima  = weights[0] || null;
+    const w       = ultima ? Number(ultima.weight_kg) : (profile.weight_kg != null ? Number(profile.weight_kg) : null);
+    const prec    = weights.length > 1 ? weights[1] : null;
     let deltaHTML = '';
-    if(w != null && wPrev != null){
-      const diff = (w - wPrev);
+    if(ultima && prec){
+      const diff = w - Number(prec.weight_kg);
       const absD = Math.abs(diff);
-      // Colore delta in base alla direzione obiettivo (goal_weight_kg vs weight_kg).
-      // - goal < attuale - 1 → vuole dimagrire → ↓ = verde, ↑ = rosso
-      // - goal > attuale + 1 → vuole ingrassare → ↑ = verde, ↓ = rosso
-      // - |goal - attuale| <= 1 → mantenimento → qualsiasi delta = grigio neutro
+      // Colore secondo la direzione dell'obiettivo (goal_weight_kg): verso l'obiettivo = accento,
+      // lontano = errore; mantenimento, obiettivo assente o variazione nulla = neutro.
       const goal = Number(profile.goal_weight_kg);
-      const curr = Number(w);
-      let color;
-      if(absD < 0.05){
-        color = 'var(--t3)';
-      } else if(!isFinite(goal) || !isFinite(curr) || Math.abs(goal - curr) <= 1){
-        // Mantenimento o obiettivo non impostato → neutro
-        color = 'var(--t3)';
-      } else if(goal < curr){
-        // Vuole dimagrire
-        color = diff < 0 ? '#2A7A6F' : '#B84C2A';
-      } else {
-        // Vuole ingrassare
-        color = diff > 0 ? '#2A7A6F' : '#B84C2A';
+      let color = 'var(--t3)';
+      if(absD >= 0.05 && isFinite(goal) && Math.abs(goal - w) > 1){
+        const versoObiettivo = goal < w ? diff < 0 : diff > 0;
+        color = versoObiettivo ? 'var(--acc)' : 'var(--err)';
       }
-      const arrow = absD < 0.05 ? '' : (diff > 0 ? '↑' : '↓');
-      const sign  = diff > 0 ? '+' : '';
-      deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow ? arrow + ' ' : ''}${sign}${diff.toFixed(1)}</span>`;
+      const arrow = absD < 0.05 ? '' : (diff > 0 ? '↑ ' : '↓ ');
+      const sign  = absD < 0.05 ? '' : (diff > 0 ? '+' : '−');
+      deltaHTML = `<span class="home-v2-body-delta" style="color:${color};">${arrow}${sign}${_kgVirgola(absD)} kg ${_daQuando(prec.date)}</span>`;
     }
+    const pesataOggi = !!(ultima && ultima.date === today);
     const cp = getNextCheckpointInfo();
     let cpLabel;
-    if(!cp.hasCheck) cpLabel = 'PRIMO CHECKPOINT DA FARE';
-    else if(cp.overdue) cpLabel = 'CHECKPOINT IN RITARDO';
-    else if(cp.daysUntil === 0) cpLabel = 'CHECKPOINT OGGI';
-    else if(cp.daysUntil < 0 && !cp.overdue) cpLabel = 'CHECKPOINT A FINE MESOCICLO';
-    else cpLabel = `CHECKPOINT TRA ${cp.daysUntil} GIORN${cp.daysUntil === 1 ? 'O' : 'I'}`;
+    if(!cp.hasCheck) cpLabel = 'Primo check fisico da fare';
+    else if(cp.overdue) cpLabel = 'Check fisico in ritardo';
+    else if(cp.daysUntil === 0) cpLabel = 'Check fisico oggi';
+    else if(cp.daysUntil < 0) cpLabel = 'Check fisico a fine blocco';
+    else cpLabel = `Prossimo check fisico tra ${cp.daysUntil} giorn${cp.daysUntil === 1 ? 'o' : 'i'}`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
         <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
         <div class="home-v2-body-flex">
           <div class="home-v2-card-title">Body</div>
           <div class="home-v2-body-line">
-            <span class="home-v2-body-weight">${w != null ? w : '—'}</span>
-            ${w != null ? '<span class="home-v2-body-unit">kg</span>' : ''}
+            <button class="home-v2-body-peso" onclick="event.stopPropagation();openWeighInSheet()" aria-label="Pesati ora">
+              <span class="home-v2-body-weight">${w != null ? _kgVirgola(w) : '—'}</span>
+              ${w != null ? '<span class="home-v2-body-unit">kg</span>' : ''}
+            </button>
             ${deltaHTML}
           </div>
+          ${pesataOggi ? '' : '<button class="home-v2-body-pesata" onclick="event.stopPropagation();openWeighInSheet()">+ pesata di oggi</button>'}
           <div class="home-v2-body-sub">${cpLabel}</div>
         </div>
         <span class="home-v2-card-arrow">›</span>
@@ -970,6 +1195,12 @@ function _renderHomeCards(){
           <span class="home-v2-action-next-eb">${esc(azione.nextHint.eyebrow)}</span>
           <span class="home-v2-action-next-chip">${esc(azione.nextHint.chip)}</span>
         </div>` : '';
+  const daFare = getDaFareOggi(azione);
+  const daFareHTML = daFare.length ? `
+      <div class="home-v2-dafare">
+        <div class="home-v2-dafare-eb">Anche da fare oggi</div>
+        ${daFare.map(v => `<button class="home-v2-dafare-voce" onclick="prossimaAzioneVai('${v.azione}'${v.arg ? `, '${esc(v.arg)}'` : ''})"><span>${esc(v.etichetta)}</span><span class="home-v2-dafare-freccia">›</span></button>`).join('')}
+      </div>` : '';
   const actionPanel = `
     <div class="home-v2-action">
       <div class="home-v2-action-head">
@@ -978,6 +1209,8 @@ function _renderHomeCards(){
       </div>
       <div class="home-v2-action-title">${esc(azione.titolo)}</div>
       <div class="home-v2-action-detail">${esc(azione.dettaglio)}</div>
+      ${azione.azione ? `<button class="home-v2-action-btn" onclick="prossimaAzioneVai('${azione.azione}'${azione.arg ? `, '${esc(azione.arg)}'` : ''})">${esc(azione.pulsante)} →</button>` : ''}
+      ${daFareHTML}
       ${nextHintHTML}
     </div>`;
 
@@ -992,6 +1225,7 @@ function _renderHomeCards(){
         </div>
         <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
       </div>
+      ${_comeStaiHTML()}
       ${_wpHomeCardHTML()}
       ${_cpHomeCardHTML()}
       ${nutritionCard}
