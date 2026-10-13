@@ -1927,6 +1927,42 @@ function _renderCambioOggiSheet(){
   </div>`;
 }
 
+// ═══ SERIE A SETTIMANA PER MUSCOLO (Training 110, 14 ottobre 2026) ═══
+// Il conto che fa il generatore (volumeContoMinimi), mostrato nel Programma: per ogni gruppo le serie
+// a settimana della scheda in uso contro il minimo dell'obiettivo. Per le schede salvate prima del 14
+// ottobre pattern e gruppo bersaglio arrivano dal catalogo (ST.catalogInfoByCodice).
+function _volumeScheda(){
+  const sess = Object.values(getAllTrainingSessions() || {});
+  const obiettivo = (ST.schedaAttiva && ST.schedaAttiva.scheda && ST.schedaAttiva.scheda.obiettivo) || (ST.profile && ST.profile.obiettivo) || '';
+  const riga = (ex) => (ex && ex.codice && ST.catalogInfoByCodice instanceof Map) ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  return volumeContoMinimi(sess, obiettivo, riga);
+}
+function _renderVolumeCard(){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
+  const righe = _volumeScheda();
+  if(!righe.some(r => r.serie > 0)) return '';
+  const sotto = righe.filter(r => r.sotto).length;
+  const aperto = !!ST.trainVolumeOpen;
+  const riga = (r) => `<div class="volume-riga" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--s2);">
+      <span style="flex:1;font-family:var(--font-sans);font-size:13px;color:var(--t1);text-transform:capitalize;">${esc(r.gruppo)}</span>
+      <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:${r.sotto ? 'var(--err)' : 'var(--acc)'};">${r.serie} / ${r.minimo}</span>
+      <span style="width:16px;text-align:center;font-size:12px;color:${r.sotto ? 'var(--err)' : 'var(--acc)'};">${r.sotto ? '▼' : '✓'}</span>
+    </div>`;
+  return `
+      <div id="volume-card" style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div onclick="ST.trainVolumeOpen=!ST.trainVolumeOpen;renderTraining();" style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;">
+          <div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);">Serie a settimana per muscolo</div>
+            <div style="font-size:11px;font-family:var(--font-mono);color:${sotto ? 'var(--err)' : 'var(--t3)'};margin-top:2px;">${sotto ? `${sotto} ${sotto === 1 ? 'muscolo sotto il minimo' : 'muscoli sotto il minimo'}` : 'tutti i muscoli al minimo o sopra'}</div>
+          </div>
+          <span style="font-size:14px;color:var(--t3);transform:rotate(${aperto ? '180deg' : '0deg'});transition:transform .15s;">▾</span>
+        </div>
+        ${aperto ? `<div style="margin-top:10px;">${righe.map(riga).join('')}
+          <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;margin-top:8px;">Il minimo dipende dal tuo obiettivo (circa 10 serie a settimana per crescere, 6-8 per mantenere). Un multiarticolare conta per intero sul muscolo principale e a metà su quelli che aiutano. Il blocco nuovo riempie da solo quello che manca: prima una serie in più, poi un esercizio.</div>
+        </div>` : ''}
+      </div>`;
+}
+
 // ═══ PAUSA PROGRAMMATA (Training 350, 13 ottobre 2026) ═══
 // Vacanza, viaggio, lavoro: un periodo con le date, dichiarato anche in anticipo, che non è un
 // infortunio. Vive nel profilo (pausa_inizio, pausa_fine, pausa_motivo: migrazione 20261013_350) così
@@ -4158,6 +4194,8 @@ function renderTraining(){
         ${giorniHTML}
 
         ${cicloHTML}
+
+        ${_renderVolumeCard()}
 
         ${comeCresciHTML}
 

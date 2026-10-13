@@ -88,6 +88,7 @@ export async function pictureFor(env, profile, ws, ctx, dry, forceCompute) {
   const picture = ZTQuadro.computeWeeklyPicture(raw, ws, {
     today: ctx.today, nowTs: ctx.nowTs, clock: ctx.clock, profile, target: null, injuryActiveNow: false,
     workPerGiro: ZTQuadro.workPerGiroForCycle(sessioni.map((s) => s && s.id).filter(Boolean)),
+    sessioni,   // Training 110: le serie previste della settimana (volume_planned)
     deloads: (deloads || []).map((d) => ctx.clock.dayKey(new Date(d.applied_at))),
   });
   if (picture.meta.errors.length) return { picture, source: 'errori' };

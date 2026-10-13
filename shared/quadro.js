@@ -153,6 +153,18 @@ var ZTQuadro = (function(){
     return giorniTra(inizio, fine) + 1;
   }
 
+  // Le serie previste in una settimana dalla scheda (Training 110): la somma delle serie delle sedute
+  // di lavoro (i recuperi non contano). Chi calcola il quadro le passa in ctx.sessioni; senza, null.
+  function serieSettimanaliPreviste(sessioni){
+    if(!Array.isArray(sessioni) || !sessioni.length) return null;
+    var tot = 0;
+    sessioni.forEach(function(s){
+      if(!s || s.type === 'Recupero' || s.type === 'Riposo' || /^recovery/i.test(s.id || '')) return;
+      (s.exercises || []).forEach(function(ex){ tot += Number(ex && ex.sets) || 0; });
+    });
+    return tot;
+  }
+
   // Reminder "check di fine blocco": blocco di 42 giorni finito e nessun check completato nelle ultime 4 settimane.
   // o.pauseDays: i giorni di pausa programmata dall'inizio del blocco (Training 350) non contano: il blocco è fermo.
   function blockCheckReminder(o){
@@ -316,6 +328,7 @@ var ZTQuadro = (function(){
         block_week:       blockWeek,
         is_deload:        isDeload,
         volume_sets:      raw.sets.filter(function(s){ return inWeek(s.date); }).length,
+        volume_planned:   serieSettimanaliPreviste(c.sessioni),
         avg_rir:          r1(mean(rir)),
         injury_days:      infortunio.length,
         injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
@@ -405,7 +418,7 @@ var ZTQuadro = (function(){
     WP_VERSION: WP_VERSION, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
-    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel,
+    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, serieSettimanaliPreviste: serieSettimanaliPreviste,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
   };
 })();
