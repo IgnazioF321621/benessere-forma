@@ -82,7 +82,8 @@ atteso('il Worker importa la voce dal modulo condiviso', /import ZTCoachRules fr
   atteso('app · 14 pasti: la voce c\'è e il compito segue', pasti ? [pasti.startsWith(R.voce()), /Genera 14 pasti/.test(pasti), /40-30-30/.test(pasti)] : 'funzione assente', [true, true, false]);
 
   const azione = win.getProssimaAzioneSimple();
-  atteso('home · «È ora del workout» senza «a digiuno»', [azione.titolo, azione.dettaglio], ['È ora del workout', 'Sessione Upper A. Si parte con 5 minuti di preparazione.']);
+  // Dopo l'unione con Home 010 («Prossima azione» riscritta) il titolo nomina la seduta; resta vero che non dice «a digiuno».
+  atteso('home · «È ora di …» senza «a digiuno»', [azione.titolo, azione.dettaglio, /a digiuno/.test(azione.titolo + ' ' + azione.dettaglio)], ['È ora di Upper A', 'Si parte con 5 minuti di preparazione.', false]);
 
   const { VISION_SYSTEM_PROMPT } = await import(path.join(radice, 'worker/src/prompts/vision-check-2026-09-13.js'));
   atteso('worker · la lettura delle foto inizia con la stessa voce', [VISION_SYSTEM_PROMPT.startsWith(R.voce()), /COMPITO: ricevi le foto/.test(VISION_SYSTEM_PROMPT)], [true, true]);
