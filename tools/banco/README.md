@@ -45,6 +45,7 @@ node tools/banco/prova_registra_sospendi.js  # «Sospendi» per sbaglio si rimed
 node tools/banco/prova_detox.js          # «Giorno Detox»: la pagina Oggi si ridisegna col digiuno (anello nuovo coi totali del giorno), si riapre dopo un ricaricamento, si toglie; niente `sTot` (Nutrition 010)
 node tools/banco/prova_come_stai.js  # Home 020: «Come stai oggi», sonno/energia/stress con la rotellina e nota, salvati subito un campo alla volta, in coda senza rete, tornano com'erano se rifiutati
 node tools/banco/prova_prossima_azione.js  # Home 010: «Prossima azione», sette regole per ora e per ciò che è fatto, il pulsante apre seduta, check, pesata o form del pasto
+node tools/banco/prova_da_fare_oggi.js  # Home 060: «Anche da fare oggi» sotto Prossima azione: integratori passati non presi, pesata, pasti delle fasce passate, check; ogni voce apre il suo passo
 node tools/banco/prova_stile.js [stile di prima]  # Stile 010: nessun colore a mano fuori da :root, caratteri per nome; con lo stile di prima, regole uguali coi nomi risolti e 15 schermate in Chrome vero con stessi pixel e stesso stile calcolato (FOTO=cartella tiene le foto)
 node tools/banco/prova_ripristino.js <cartella della copia>  # dal vivo: l'app sulla copia di sicurezza contro l'app sul database (Fondamenta 020)
 node tools/banco/verifica_nutrizione_quadro.js [lunedì]  # dal vivo: giorno per giorno, tab Nutrition contro quadro

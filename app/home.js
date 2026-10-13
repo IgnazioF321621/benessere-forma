@@ -268,11 +268,45 @@ function getProssimaAzioneSimple(){
   return { titolo: 'Giornata in ordine', dettaglio: 'Per ora hai fatto quello che serviva.', nextHint: null };
 }
 
+// «Anche da fare oggi» (Home 060, 13 ottobre 2026): sotto «Prossima azione», le altre cose
+// rimaste indietro per orario, ognuna apre il suo passo. Voci decise con Ignazio il 13 ottobre:
+// integratori con l'orario passato e non presi · pesata dovuta (fino alle 11) · pasti delle
+// fasce già passate non registrati · check di fine blocco. La scorta resta fuori finché il suo
+// calcolo non è giusto (Nutrition 110). La voce già mostrata come «Prossima azione» non si ripete.
+function getDaFareOggi(principale){
+  const now = new Date(), h = now.getHours();
+  const ora = String(h).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const voci = [];
+  const day = getDay(todayKey());
+  // integratori: un gruppo per orario, solo gli attivi con l'orario già passato e non presi
+  const presi = (day && day.suppsTaken) || [];
+  const perOra = {};
+  (ST.supps || []).filter(x => x.active && x.slot && /^\d\d:\d\d$/.test(x.slot) && x.slot <= ora && !presi.includes(x.local_id))
+    .forEach(x => { perOra[x.slot] = (perOra[x.slot] || 0) + 1; });
+  Object.keys(perOra).sort().forEach(t => voci.push({ etichetta: `Integratori delle ${t}: ${perOra[t]} da segnare`, azione: 'integratori', arg: t }));
+  // pesata
+  let pesata = false;
+  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  if(pesata) voci.push({ etichetta: 'Pesata', azione: 'pesata' });
+  // pasti delle fasce già passate
+  const pasti = (day && day.meals) || [];
+  PA_FASCE.filter(f => h >= f.a && !pasti.some(m => m.slot === f.slot))
+    .forEach(f => voci.push({ etichetta: `${f.nome.replace(/^(la|il) /, '').replace(/^./, c => c.toUpperCase())} non registrat${f.slot === 'pranzo' ? 'o' : 'a'}`, azione: 'pasto', arg: f.slot }));
+  // check di fine blocco
+  let rem = null, cp = null;
+  try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
+  try { cp = getNextCheckpointInfo(); } catch(e){}
+  if(rem || (cp && cp.hasCheck && cp.overdue)) voci.push({ etichetta: 'Check di fine blocco', azione: 'check' });
+  const p = principale || {};
+  return voci.filter(v => !(v.azione === p.azione && (v.arg || null) === (p.arg || null)));
+}
+
 // Il pulsante di «Prossima azione»: apre il passo giusto.
 function prossimaAzioneVai(azione, arg){
   if(azione === 'seduta'){ apriSessioneDallaHome(arg); return; }
   if(azione === 'check'){ ST.bodyTab = 'check'; showPage('body'); if(typeof m2EntryIntro === 'function') m2EntryIntro(); return; }
   if(azione === 'pesata'){ if(typeof openWeighInSheet === 'function') openWeighInSheet(); return; }
+  if(azione === 'integratori'){ showPage('oggi'); if(typeof openSuppSheet === 'function') openSuppSheet(); return; }
   if(azione === 'pasto'){
     showPage('oggi');
     if(typeof openMealLogForm === 'function'){ openMealLogForm(); ST.logSlot = arg; renderOggi(); }
@@ -1082,6 +1116,12 @@ function _renderHomeCards(){
           <span class="home-v2-action-next-eb">${esc(azione.nextHint.eyebrow)}</span>
           <span class="home-v2-action-next-chip">${esc(azione.nextHint.chip)}</span>
         </div>` : '';
+  const daFare = getDaFareOggi(azione);
+  const daFareHTML = daFare.length ? `
+      <div class="home-v2-dafare">
+        <div class="home-v2-dafare-eb">Anche da fare oggi</div>
+        ${daFare.map(v => `<button class="home-v2-dafare-voce" onclick="prossimaAzioneVai('${v.azione}'${v.arg ? `, '${esc(v.arg)}'` : ''})"><span>${esc(v.etichetta)}</span><span class="home-v2-dafare-freccia">›</span></button>`).join('')}
+      </div>` : '';
   const actionPanel = `
     <div class="home-v2-action">
       <div class="home-v2-action-head">
@@ -1091,6 +1131,7 @@ function _renderHomeCards(){
       <div class="home-v2-action-title">${esc(azione.titolo)}</div>
       <div class="home-v2-action-detail">${esc(azione.dettaglio)}</div>
       ${azione.azione ? `<button class="home-v2-action-btn" onclick="prossimaAzioneVai('${azione.azione}'${azione.arg ? `, '${esc(azione.arg)}'` : ''})">${esc(azione.pulsante)} →</button>` : ''}
+      ${daFareHTML}
       ${nextHintHTML}
     </div>`;
 
