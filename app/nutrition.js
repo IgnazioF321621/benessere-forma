@@ -1586,6 +1586,112 @@ window.smartSavePasto = async function() {
   }
 };
 
+// ═══════════════════════════════════════════════════════════
+// Nutrition 050 — «I tuoi soliti» (Ondata 5, 13 ottobre 2026)
+// I pasti che la persona ripete, per fascia, presi dai giorni gia' in memoria (ST.db.days: gli ultimi 90 giorni
+// all'avvio, tutto lo storico se e' stato aperto). La chiave e' la descrizione del pasto, normalizzata; il modello e'
+// l'ultima volta che l'ha mangiato (ingredienti e numeri di allora). Prima quelli visti piu' volte, poi i piu' recenti,
+// al massimo SOLITI_MAX. Un tocco lo registra con gli stessi numeri, senza passare dal coach: niente stima, niente richiesta.
+// Stessa cosa per gli integratori fuori pacchetto (extraSoliti, dalle righe extra gia' lette in ST.extrasByDay).
+// ═══════════════════════════════════════════════════════════
+const SOLITI_MAX = 5;
+function _solitoChiave(testo){ return String(testo || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+// Ordina per volte (decrescente), poi per ultima volta (la piu' recente prima); taglia a SOLITI_MAX
+function _solitiOrdina(conto){
+  return Object.values(conto).sort((a, b) => (b.volte - a.volte) || (a.ultimo < b.ultimo ? 1 : a.ultimo > b.ultimo ? -1 : 0)).slice(0, SOLITI_MAX);
+}
+// days = ST.db.days (giorno → {meals}); slot = la fascia del form. Ritorna [{chiave, descrizione, volte, ultimo, kcal, protein, carbs, fat, items}]
+function pastiSoliti(days, slot){
+  const conto = {};
+  Object.keys(days || {}).forEach(k => {
+    ((days[k] && days[k].meals) || []).forEach(m => {
+      if (m.slot !== slot) return;
+      const chiave = _solitoChiave(m.description);
+      if (!chiave) return;
+      const e = conto[chiave] || (conto[chiave] = { chiave, volte:0, ultimo:'', ultimaOra:'', descrizione:'', kcal:0, protein:0, carbs:0, fat:0, items:[] });
+      e.volte++;
+      const quando = k + ' ' + (m.time || '');
+      if (quando < e.ultimo + ' ' + e.ultimaOra) return;
+      e.ultimo = k; e.ultimaOra = m.time || '';
+      e.descrizione = m.description || '';
+      e.kcal = Number(m.kcal) || 0; e.protein = Number(m.protein) || 0; e.carbs = Number(m.carbs) || 0; e.fat = Number(m.fat) || 0;
+      // gli ingredienti dell'ultima volta; un pasto vecchio senza ingredienti diventa un ingrediente solo, come in smartOpenEdit
+      const its = (m.items || []).filter(it => it && it.name);
+      e.items = its.length ? its.map(it => ({ name:it.name, quantity:Number(it.quantity) || 0, unit:it.unit || 'g', kcal:Number(it.kcal) || 0, protein:Number(it.protein) || 0, carbs:Number(it.carbs) || 0, fat:Number(it.fat) || 0, source:it.source || 'manual' }))
+                          : [{ name:e.descrizione || 'Pasto', quantity:0, unit:'g', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+    });
+  });
+  return _solitiOrdina(conto).map(e => { const { ultimaOra, ...resto } = e; return resto; });
+}
+// Gli integratori extra ripetuti: chiave il codice del catalogo, altrimenti il nome. Il modello e' l'ultima riga (dose e numeri di allora).
+function extraSoliti(extrasByDay){
+  const conto = {};
+  Object.keys(extrasByDay || {}).forEach(k => {
+    (extrasByDay[k] || []).forEach(x => {
+      const chiave = _solitoChiave(x.codice || x.name);
+      if (!chiave) return;
+      const e = conto[chiave] || (conto[chiave] = { chiave, volte:0, ultimo:'', modello:null });
+      e.volte++;
+      if (k < e.ultimo) return;
+      e.ultimo = k;
+      e.modello = { name:x.name || '', codice:x.codice || null, dose:x.dose != null ? Number(x.dose) : null, dose_unit:x.dose_unit || null, kcal:Number(x.kcal) || 0, carbo:Number(x.carbo) || 0, proteine:Number(x.proteine) || 0, grassi:Number(x.grassi) || 0, costo:Number(x.costo) || 0 };
+    });
+  });
+  return _solitiOrdina(conto);
+}
+let _solitoInCorso = false;
+// Un tocco su un solito: gli ingredienti dell'ultima volta entrano nel form e si salva subito con la stessa strada di «Salva pasto»
+// (smartSavePasto: id scelto dal telefono, coda senza rete, ritorno indietro se gli ingredienti non entrano).
+window.registraSolito = async function(idx){
+  const sol = (ST._soliti || [])[idx];
+  if (!sol || _solitoInCorso) return;
+  _initSmartForm();
+  if (ST.smartForm.editingMealId) return;
+  _solitoInCorso = true;
+  try {
+    ST.smartForm.items = sol.items.map((it, i) => ({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.freeText = '';
+    await smartSavePasto();
+  } finally { _solitoInCorso = false; }
+};
+// La fila dei soliti nel form del pasto (vuota se non c'e' niente da ripetere o se si sta modificando un pasto)
+function _solitiHTML(slot){
+  ST._soliti = pastiSoliti(ST.db && ST.db.days, slot);
+  if (!ST._soliti.length) return '';
+  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
+  return `<div class="soliti" id="soliti-pasti"><div class="soliti-titolo">I tuoi soliti · ${esc(slotInfo ? slotInfo.label : '')}</div><div class="soliti-fila">${ST._soliti.map((x, i) =>
+    `<button class="soliti-chip" onclick="registraSolito(${i})" title="Registra con gli stessi numeri"><span class="soliti-nome">${esc(x.descrizione)}</span><span class="soliti-sotto">${fmtNum(Math.round(x.kcal))} kcal${x.volte > 1 ? ' · ' + x.volte + '×' : ''}</span></button>`).join('')}</div></div>`;
+}
+// Un tocco su un extra solito: la riga entra in supplements_log con l'id del telefono (coda senza rete), orario adesso, sul giorno aperto
+window.registraExtraSolito = async function(idx){
+  const sol = (ST._extraSoliti || [])[idx];
+  if (!sol || !sol.modello || _solitoInCorso) return;
+  _solitoInCorso = true;
+  try {
+    const giorno = ST.activeDay || todayKey();
+    const ora = new Date();
+    const m = sol.modello;
+    const riga = { id:nuovoId(), user_id:ST.user.id, date:giorno, slot:String(ora.getHours()).padStart(2,'0') + ':' + String(ora.getMinutes()).padStart(2,'0'),
+      supplement_name:m.name, supplement_codice:m.codice, is_extra:true, dose:m.dose, dose_unit:m.dose_unit,
+      kcal:m.kcal, carbo:m.carbo, proteine:m.proteine, grassi:m.grassi, costo:m.costo };
+    const res = await scriviConCoda('registrare l\'integratore extra', { tabella:'supplements_log', tipo:'insert', righe:riga });
+    if (res.error) return;
+    if (!ST.extrasByDay) ST.extrasByDay = {};
+    (ST.extrasByDay[giorno] || (ST.extrasByDay[giorno] = [])).push(_extraDaRiga(riga, ST.catalog));
+    ST.extras = ST.extrasByDay[ST.activeDay] || [];
+    showToast(m.name + ' registrato', '🌿');
+    saveCache();
+    renderSuppSheet();
+    if (ST.page === 'oggi') renderOggi();
+  } finally { _solitoInCorso = false; }
+};
+function _extraSolitiHTML(){
+  ST._extraSoliti = extraSoliti(ST.extrasByDay);
+  if (!ST._extraSoliti.length) return '';
+  return `<div class="soliti" id="soliti-extra"><div class="soliti-titolo">I tuoi soliti fuori pacchetto</div><div class="soliti-fila">${ST._extraSoliti.map((x, i) =>
+    `<button class="soliti-chip" onclick="registraExtraSolito(${i})" title="Registra come l'ultima volta"><span class="soliti-nome">${esc(x.modello.name)}</span><span class="soliti-sotto">${x.modello.dose != null ? esc(String(x.modello.dose) + ' ' + (x.modello.dose_unit || '')) : ''}${x.volte > 1 ? ' · ' + x.volte + '×' : ''}</span></button>`).join('')}</div></div>`;
+}
+
 // Renderer del form Smart Ingredient — funzione pura, ritorna HTML.
 // I handler `smart*` chiamano renderOggi() per aggiornare il DOM.
 function renderRegistraPasto() {
@@ -1690,6 +1796,7 @@ function renderRegistraPasto() {
         <button onclick="smartAnalyze()" ${analyzing?'disabled':''} style="flex:1;padding:10px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:13px;font-weight:500;cursor:pointer;">${analyzing?'Analizzo...':'✨ Analizza'}</button>
         <button onclick="smartAddEmptyRow()" style="flex:1;padding:10px;background:transparent;color:var(--t1);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:13px;cursor:pointer;">+ Manuale</button>
       </div>
+      ${(!isEditing && !hasItems) ? _solitiHTML(slot) : ''}
     </div>
     ${itemsCard}
     ${totalsCard}
@@ -5737,6 +5844,7 @@ function renderSuppSheet() {
     });
     html += `</div>`;
   });
+  html += _extraSolitiHTML();
   html += `<button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="openCatalogForRegisterExtra()">+ Un altro prodotto</button>
     <button class="btn btn-ghost btn-full" style="margin-top:6px;" onclick="closeSuppSheet()">Chiudi</button>`;
   document.getElementById('supp-sheet-body').innerHTML = html;
