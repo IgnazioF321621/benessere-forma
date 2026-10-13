@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-11",
+ "quando": "2026-10-13",
  "righe": [
   {
    "righe": 0,
@@ -39,7 +39,7 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 11,
+   "righe": 12,
    "tabella": "coach_proposals"
   },
   {
@@ -59,11 +59,11 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 947,
+   "righe": 951,
    "tabella": "meal_items"
   },
   {
-   "righe": 344,
+   "righe": 345,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 13,
+   "righe": 16,
    "tabella": "segnalazioni"
   },
   {
@@ -91,15 +91,15 @@
    "tabella": "supplement_packages"
   },
   {
-   "righe": 25,
+   "righe": 24,
    "tabella": "supplements"
   },
   {
-   "righe": 1491,
+   "righe": 1503,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1882,
+   "righe": 1922,
    "tabella": "training_logs"
   },
   {
@@ -107,7 +107,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 12,
+   "righe": 13,
    "tabella": "weekly_pictures"
   },
   {
@@ -123,7 +123,7 @@
    "tabella": "weekly_plans"
   },
   {
-   "righe": 16,
+   "righe": 17,
    "tabella": "weight_logs"
   },
   {
@@ -131,7 +131,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 121,
+   "righe": 122,
    "tabella": "workouts"
   }
  ],
@@ -2570,6 +2570,36 @@
     "tipo": "numeric(5,1)"
    },
    {
+    "colonna": "pausa_inizio",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 39,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "date"
+   },
+   {
+    "colonna": "pausa_fine",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 40,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "date"
+   },
+   {
+    "colonna": "pausa_motivo",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 41,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
     "colonna": "id",
     "generata": "",
     "identita": "",
@@ -3348,6 +3378,26 @@
     "predefinito": null,
     "tabella": "training_logs",
     "tipo": "text"
+   },
+   {
+    "colonna": "reps_dx",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 14,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "integer"
+   },
+   {
+    "colonna": "reps_sx",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 15,
+    "predefinito": null,
+    "tabella": "training_logs",
+    "tipo": "integer"
    },
    {
     "colonna": "id",
@@ -6983,6 +7033,12 @@
     "tipo": "p"
    },
    {
+    "definizione": "CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))",
+    "nome": "profiles_pausa_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
     "definizione": "CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))",
     "nome": "profiles_plan_day_check",
     "tabella": "profiles",
@@ -7131,6 +7187,12 @@
     "nome": "training_logs_serie_key",
     "tabella": "training_logs",
     "tipo": "u"
+   },
+   {
+    "definizione": "CHECK ((((reps_dx IS NULL) AND (reps_sx IS NULL)) OR ((reps_dx >= 0) AND (reps_sx >= 0))))",
+    "nome": "training_logs_reps_lati_chk",
+    "tabella": "training_logs",
+    "tipo": "c"
    },
    {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
