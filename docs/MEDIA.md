@@ -201,7 +201,7 @@ Per ogni zona confrontare: **(1)** file `.gif` sul Mac · **(2)** righe `bibliot
 **Strumenti che raccolgono lavoro manuale**: ogni conferma si salva su disco **nell'istante in cui viene data**, con `fsync`. Si collauda chiudendo la scheda e riavviando il processo **prima** di consegnarlo → [L21](LEZIONI.md#l21--uno-strumento-che-raccoglie-lavoro-manuale-salva-nellistante-della-scelta)
 
 ### Mappe muscolari
-19 esercizi storici: PNG locali in `assets/exercises/` (Wger CC BY-SA 4.0). EX031+: mancanti (cantiere futuro). **Dal 14 ottobre 2026 (Training 400) le mappe dei muscoli (`*-muscoli.png`) non si mostrano più**: nella scheda dell'esercizio c'è solo la GIF, a tutta larghezza; restano le foto di esecuzione (`*-esecuzione*.png`) come ripiego senza GIF. I 19 file `*-muscoli.png` (circa 0,98 MB) non sono più richiamati da niente: si cancellano solo con l'ok di Ignazio.
+19 esercizi storici: PNG locali in `assets/exercises/` (Wger CC BY-SA 4.0). EX031+: mancanti (cantiere futuro). **Dal 14 ottobre 2026 (Training 400) le mappe dei muscoli (`*-muscoli.png`) non si mostrano più**: nella scheda dell'esercizio c'è solo la GIF, a tutta larghezza; restano le foto di esecuzione (`*-esecuzione*.png`) come ripiego senza GIF. I 19 file `*-muscoli.png` (981.227 byte) sono stati tolti lo stesso giorno, con l'ok di Ignazio: nessuno li richiamava più.
 
 ---
 
