@@ -73,7 +73,7 @@ async function nuovo(o){
   {
     const a = await nuovo();
     const info = a.ST.catalogInfoByCodice;
-    atteso('0 · loadActiveScheda tiene unilaterale e progressione per codice', [info.get('EX647'), info.get('EX600')], [{ unilaterale:'si', progressione:'ritmo più lento', pattern:null, gruppo_target:null }, undefined]);
+    atteso('0 · loadActiveScheda tiene unilaterale e progressione per codice', [info.get('EX647'), info.get('EX600')], [{ unilaterale:'si', progressione:'ritmo più lento', pattern:null, gruppo_target:null, spiegazione:null }, undefined]);
     const ex = (n) => a.win.findExercise(n, 'upperA');
     atteso('0 · per lato: dal catalogo (EX647), dalla prescrizione (Affondi), dal jsonb (EX500); non la panca né alternato/no',
       ['Squat calcio laterale', 'Affondi', 'Step-up alto', 'Panca elastico', 'Curl elastico', 'Rematore elastico'].map(n => a.win._exPerLato(ex(n))), [true, true, true, false, false, false]);
