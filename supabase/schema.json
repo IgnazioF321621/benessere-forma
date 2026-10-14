@@ -4585,19 +4585,6 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "ai_memory"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "ai_memory"
    },
@@ -4619,34 +4606,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "biblioteca_gif"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "biblioteca_gif"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "blood_tests"
    },
    {
     "permessi": [
@@ -4671,34 +4632,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "body_check_ai"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "body_check_ai"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "body_check_photos"
    },
    {
     "permessi": [
@@ -4723,34 +4658,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "body_checks"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "body_checks"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "body_logs"
    },
    {
     "permessi": [
@@ -4775,33 +4684,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "body_measurements"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "body_measurements"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "coach_proposals"
    },
    {
     "permessi": [
@@ -4827,13 +4711,7 @@
    },
    {
     "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
+     "SELECT"
     ],
     "ruolo": "anon",
     "tabella": "esercizi_catalog"
@@ -4853,13 +4731,7 @@
    },
    {
     "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
+     "SELECT"
     ],
     "ruolo": "anon",
     "tabella": "exercise_media"
@@ -4876,19 +4748,6 @@
     ],
     "ruolo": "authenticated",
     "tabella": "exercise_media"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "fasting_days"
    },
    {
     "permessi": [
@@ -4923,34 +4782,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "meal_items"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "meal_items"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "meals"
    },
    {
     "permessi": [
@@ -4967,13 +4800,7 @@
    },
    {
     "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
+     "SELECT"
     ],
     "ruolo": "anon",
     "tabella": "nutrilite_catalog"
@@ -4990,19 +4817,6 @@
     ],
     "ruolo": "authenticated",
     "tabella": "nutrilite_catalog"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "profiles"
    },
    {
     "permessi": [
@@ -5037,19 +4851,6 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "schede_utente"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "schede_utente"
    },
@@ -5072,34 +4873,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "supplement_package_items"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "supplement_package_items"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "supplement_packages"
    },
    {
     "permessi": [
@@ -5124,34 +4899,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "supplements"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "supplements"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "supplements_log"
    },
    {
     "permessi": [
@@ -5176,34 +4925,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "training_logs"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "training_logs"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "training_notes"
    },
    {
     "permessi": [
@@ -5228,34 +4951,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "weekly_pictures"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "weekly_pictures"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "weekly_plan_acceptance"
    },
    {
     "permessi": [
@@ -5280,34 +4977,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "weekly_plan_meals"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "weekly_plan_meals"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "weekly_plans"
    },
    {
     "permessi": [
@@ -5332,19 +5003,6 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "weight_logs"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "weight_logs"
    },
@@ -5358,34 +5016,8 @@
      "TRUNCATE",
      "UPDATE"
     ],
-    "ruolo": "anon",
-    "tabella": "workout_sets"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
     "ruolo": "authenticated",
     "tabella": "workout_sets"
-   },
-   {
-    "permessi": [
-     "DELETE",
-     "INSERT",
-     "REFERENCES",
-     "SELECT",
-     "TRIGGER",
-     "TRUNCATE",
-     "UPDATE"
-    ],
-    "ruolo": "anon",
-    "tabella": "workouts"
    },
    {
     "permessi": [
