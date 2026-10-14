@@ -816,6 +816,8 @@ const CS_SCALA = [1, 2, 3, 4, 5];
 let _csLettoIl = null;      // giorno per cui il diario è stato chiesto (si richiede a giorno cambiato)
 
 function _csOre(n) { return String(n).replace('.', ',') + ' h'; }
+// «4 · buona» nella rotellina, «4 buona» nella riga chiusa (Home 160): le parole da diarioParola.
+function _csLivello(campo, v, sep) { const w = diarioParola(campo, v); return w ? v + sep + w : String(v); }
 
 // Il diario si legge una volta per giorno, la prima volta che si disegna la Home.
 // Lettura fallita: la card resta vuota ma funziona (si scrive solo il campo scelto).
@@ -828,11 +830,19 @@ function _csCarica() {
 
 function _csSelect(campo, valori, attuale, etichetta) {
   const opz = [`<option value=""${attuale == null ? ' selected' : ''}>—</option>`]
-    .concat(valori.map(v => `<option value="${v}"${attuale != null && Number(attuale) === v ? ' selected' : ''}>${campo === 'sleep_hours' ? _csOre(v) : v}</option>`));
+    .concat(valori.map(v => `<option value="${v}"${attuale != null && Number(attuale) === v ? ' selected' : ''}>${campo === 'sleep_hours' ? _csOre(v) : _csLivello(campo, v, ' · ')}</option>`));
+  // Nel riquadro il numero e sotto la parola (Home 160: «5 · al limite» a 16 px non ci sta in un terzo
+  // di riga, e sotto i 16 px l'iPhone ingrandisce la pagina al tocco); la rotellina vera sta sopra, invisibile.
+  const vuoto = attuale == null || attuale === '';
+  const numero = vuoto ? '—' : (campo === 'sleep_hours' ? _csOre(Number(attuale)) : String(attuale));
+  const parola = vuoto ? '' : diarioParola(campo, attuale);
   return `
         <label class="cs-campo">
           <span class="cs-etichetta">${etichetta}</span>
-          <select class="picker-select cs-select" aria-label="${etichetta}" onchange="comeStaiScegli('${campo}', this.value)">${opz.join('')}</select>
+          <span class="cs-valore">
+            <span class="cs-numero">${numero}</span>${parola ? `<span class="cs-parola">${parola}</span>` : ''}
+            <select class="cs-select" aria-label="${etichetta}" onchange="comeStaiScegli('${campo}', this.value)">${opz.join('')}</select>
+          </span>
         </label>`;
 }
 
@@ -849,7 +859,7 @@ function _comeStaiHTML() {
       <div class="cs-riga">
         <div>
           <div class="cs-titolo">Come stai oggi</div>
-          <div class="cs-riassunto">Sonno ${_csOre(Number(g.sleep_hours))} · Energia ${g.energy} · Stress ${g.stress}</div>
+          <div class="cs-riassunto">Sonno ${_csOre(Number(g.sleep_hours))} · Energia ${_csLivello('energy', g.energy, ' ')} · Stress ${_csLivello('stress', g.stress, ' ')}</div>
           ${nota}
         </div>
         <button class="cs-link" onclick="comeStaiApri()">Modifica</button>
