@@ -461,6 +461,7 @@ async function m2SaveBloodTests() {
   try {
     const { error } = await supa.from('blood_tests').insert(payload);
     if(error) throw error;
+    ST.bloodTests = null;          // Metodo 220: lo storico nelle Impostazioni si rilegge alla prossima apertura
     m2GoStep('s12');
   } catch(e) {
     if(errEl){ errEl.style.display='block'; errEl.textContent='Errore salvataggio esami: '+e.message; }
@@ -587,7 +588,8 @@ async function loadBloodTests(){
   return true;
 }
 
-// Card "Esami del sangue" — storico in sola lettura, sotto la sezione Check.
+// Card "Esami del sangue" — storico in sola lettura. Dal 14 ottobre 2026 (Metodo 220) non sta più in coda al tab
+// Check: è nelle Impostazioni, pagina «Salute ed esami del sangue» (_setEsamiStorico).
 // Nessuna interpretazione: i valori si leggono, non si giudicano (l'analisi del
 // coach arriva in Fase 4).
 function _bloodHistoryHTML(){
@@ -630,14 +632,18 @@ function _bloodHistoryHTML(){
   }).join('');
   const altri = rows.length > BLOOD_VISIBLE_DEFAULT
     ? `<div style="text-align:center;margin-top:10px;">
-        <button onclick="ST.bloodShowAll=${tutti ? 'false' : 'true'};renderBody();" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#5E4A7A;font-family:var(--font-sans);padding:4px;">${tutti ? 'Mostra meno' : `Mostra altri ${rows.length - BLOOD_VISIBLE_DEFAULT} →`}</button>
+        <button onclick="ST.bloodShowAll=${tutti ? 'false' : 'true'};_bloodRidisegna();" style="background:none;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#5E4A7A;font-family:var(--font-sans);padding:4px;">${tutti ? 'Mostra meno' : `Mostra altri ${rows.length - BLOOD_VISIBLE_DEFAULT} →`}</button>
       </div>` : '';
   return card(righe + altri);
 }
 
 function toggleBloodTest(id){
   ST.bloodOpenId = (ST.bloodOpenId === id) ? null : id;
-  renderBody();
+  _bloodRidisegna();
+}
+// Dal 14 ottobre 2026 (Metodo 220) lo storico sta nelle Impostazioni, «Salute ed esami del sangue»: si ridisegna lì.
+function _bloodRidisegna(){
+  if(typeof _setEsamiStorico === 'function') _setEsamiStorico();
 }
 
 // Body 110 (13 ottobre 2026): «non caricato» non è «vuoto». Le letture passano da dbq; se una fallisce
@@ -647,23 +653,22 @@ function toggleBloodTest(id){
 async function loadBodyLogs(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bodyLogs=[]; ST.bodyMeasurements=[]; ST.bodyChecks=[]; ST.bloodTests=[]; ST.bodyLetturaFallita=false; if(ST.page==='body') renderBody(); else if(ST.page==='home') renderHome(); return; }
   const prima = { logs: ST.bodyLogs, meas: ST.bodyMeasurements, checks: ST.bodyChecks };
-  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bloodTests=null; ST.bodyLetturaFallita=false; renderBody(); }
+  if(ST.page==='body'){ ST.bodyLogs=null; ST.bodyMeasurements=null; ST.bodyChecks=null; ST.bodyLetturaFallita=false; renderBody(); }
   // Carica in parallelo body_logs (log peso veloci) + body_measurements (check M2) + body_checks (id+status)
-  // + blood_tests (storico esami, card in coda al tab Check)
-  // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47)
-  const [logsRes, measRes, checksRes, bloodOk, pesateOk] = await Promise.all([
+  // + weight_logs: le pesate rapide fanno parte del "peso attuale" (weighInsByDay, L47).
+  // blood_tests non più da qui (Metodo 220, 14 ottobre 2026): lo storico sta nelle Impostazioni e si legge aprendo
+  // «Salute ed esami del sangue» (_setEsamiStorico), una richiesta in meno a ogni apertura di Home e Body.
+  const [logsRes, measRes, checksRes, pesateOk] = await Promise.all([
     dbq('leggere le misure del corpo', supa.from('body_logs').select('*').eq('user_id', ST.user.id).order('date', {ascending:false}).limit(90), { silenzioso:true }),
     dbq('leggere le misure dei check', supa.from('body_measurements').select('*').eq('user_id', ST.user.id).order('created_at', {ascending:false}).limit(90), { silenzioso:true }),
     dbq('leggere i check fisici', supa.from('body_checks').select('id, status, created_at').eq('user_id', ST.user.id), { silenzioso:true }),
-    loadBloodTests(),
     loadWeightLogs(),
   ]);
   const tieni = (res, vecchio) => res.error ? (Array.isArray(vecchio) ? vecchio : null) : (res.data || []);
   ST.bodyLogs = tieni(logsRes, prima.logs);
   ST.bodyMeasurements = tieni(measRes, prima.meas);
   ST.bodyChecks = tieni(checksRes, prima.checks);
-  if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];
-  ST.bodyLetturaFallita = !!(logsRes.error || measRes.error || checksRes.error) || bloodOk === false || pesateOk === false;
+  ST.bodyLetturaFallita = !!(logsRes.error || measRes.error || checksRes.error) || pesateOk === false;
   if(ST.bodyLetturaFallita && !senzaRete()) showToast('Non riesco a leggere i dati del corpo', '⚠️', 5500);
   updateHeaderWeight();
   if(ST.page==='body') renderBody();
@@ -2176,8 +2181,7 @@ function renderBody(){
             <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);margin-bottom:20px;">Registra il tuo primo check periodico<br>per seguire i progressi nel tempo.</div>
             <button onclick="m2EntryIntro();" style="width:100%;padding:14px;background:#2A7A6F;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Nuovo check fisico →</button>
           </div>
-        </div>
-        <div style="padding:0 16px 16px;">${_bloodHistoryHTML()}</div>`;
+        </div>`;
     } else {
       const checkRows = completedChecks.map(c => {
         const meas = (ST.bodyMeasurements || []).find(m => m.check_id === c.id) || {};
@@ -2205,7 +2209,6 @@ function renderBody(){
       body = `
         <div style="padding:16px;">
           ${checkRows}
-          ${_bloodHistoryHTML()}
         </div>`;
     }
 

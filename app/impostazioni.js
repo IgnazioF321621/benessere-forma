@@ -38,7 +38,73 @@ function selectSetObiettivo(val) {
   });
 }
 
+// ── Impostazioni a livelli (Metodo 220, 14 ottobre 2026, scelte di Ignazio) ──
+// Un elenco di voci («Tutti i giorni» e «Altro»); ogni voce apre la sua pagina col suo «Salva», che torna
+// all'elenco. Il salvataggio resta uno solo (saveSettings): i campi delle altre pagine sono quelli già
+// salvati, perché tornare indietro senza salvare li rimette come nel profilo (_setPopola).
+const SET_PAGINE = {
+  obiettivo:   { titolo:'Il tuo obiettivo', salva:true },
+  cibo:        { titolo:'Cibo', salva:true },
+  allenamento: { titolo:'Allenamento', salva:true },
+  salute:      { titolo:'Salute ed esami del sangue', salva:true },
+  profilo:     { titolo:'Profilo e account', salva:true },
+  dati:        { titolo:'I tuoi dati e privacy', salva:false },
+  crediti:     { titolo:'Crediti', salva:false },
+};
+function setVai(pagina) {
+  const conf = SET_PAGINE[pagina];
+  const nome = conf ? pagina : 'elenco';
+  ST.setPagina = nome;
+  document.querySelectorAll('#settings-modal .set-pagina').forEach(el => { el.hidden = el.dataset.pagina !== nome; });
+  const tit = document.getElementById('set-titolo'); if(tit) tit.textContent = conf ? conf.titolo : 'Impostazioni';
+  const ind = document.getElementById('set-indietro'); if(ind) ind.hidden = !conf;
+  const piede = document.getElementById('set-piede'); if(piede) piede.hidden = !(conf && conf.salva);
+  const err = document.getElementById('set-err'); if(err) err.style.display = 'none';
+  if(nome === 'elenco') _setRiassunti();
+  if(nome === 'salute') _setEsamiStorico();
+  const inner = document.querySelector('#settings-modal .set-foglio'); if(inner) inner.scrollTop = 0;
+}
+// Indietro senza salvare: i campi tornano come nel profilo, così un «Salva» in un'altra pagina non porta con sé
+// una modifica lasciata a metà.
+function setIndietro() { _setPopola(); setVai('elenco'); }
+
+// La riga sotto ogni voce: come è impostata adesso, letta dalle fonti (profilo, calorie in uso, pausa, orari).
+function _setRiassunti() {
+  const p = ST.profile || {};
+  const metti = (id, t) => { const el = document.getElementById(id); if(el) el.textContent = t; };
+  const ob = migrateObiettivo(p.obiettivo || '').split(',')[0];
+  const obLabel = (typeof OBJ_ADAPT !== 'undefined' && OBJ_ADAPT[ob] && OBJ_ADAPT[ob].label) || 'Da scegliere';
+  metti('set-sotto-obiettivo', obLabel + (p.goal_weight_kg ? ` · ${String(p.goal_weight_kg).replace('.', ',')} kg` : ''));
+  const dieta = { onnivoro:'onnivoro', pescetariano:'pescetariano', vegetariano:'vegetariano', vegano:'vegano' }[p.dieta || 'onnivoro'] || p.dieta;
+  const intol = (p.intolleranze || []).length;
+  metti('set-sotto-cibo', `${fmtNum(ST.TARGET.kcal)} kcal · ${dieta}${intol ? ` · ${intol} intolleranz${intol === 1 ? 'a' : 'e'}` : ''}`);
+  metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'}`);
+  const esami = Object.keys(p.esami_sangue || {}).filter(k => !/_label$|_data$/.test(k)).length;
+  metti('set-sotto-salute', esami ? `${esami} valor${esami === 1 ? 'e' : 'i'} degli esami` : (p.note_salute ? 'Note sulla salute' : 'Note ed esami'));
+  metti('set-sotto-profilo', [p.first_name, p.last_name].filter(Boolean).join(' ') || ((ST.user && ST.user.email) || ''));
+  metti('set-sotto-dati', 'Scarica, dove vanno, elimina account');
+  if(typeof _aggiornaPausaImpostazioni === 'function') _aggiornaPausaImpostazioni();   // la pausa (Metodo 210)
+  if(typeof _aggiornaCsaImpostazioni === 'function') _aggiornaCsaImpostazioni();       // «Come stai adesso?» (Home 170)
+}
+// Lo storico degli esami del sangue (blood_tests), spostato qui dal tab Body (Metodo 220): stessa card, stessa fonte.
+// Si legge solo qui, la prima volta che la pagina si apre (e di nuovo dopo un check con gli esami).
+function _setEsamiStorico() {
+  const el = document.getElementById('set-esami-storico');
+  if(el && typeof _bloodHistoryHTML === 'function') el.innerHTML = _bloodHistoryHTML();
+  if(ST.bloodTests == null && !ST.bloodInLettura && typeof loadBloodTests === 'function') {
+    ST.bloodInLettura = true;
+    loadBloodTests().finally(() => { ST.bloodInLettura = false; if(ST.setPagina === 'salute') _setEsamiStorico(); });
+  }
+}
+
 function openSettingsModal() {
+  _setPopola();
+  document.getElementById('settings-modal').style.display = 'flex';
+  setVai('elenco');
+}
+
+// Riempie i campi dal profilo (all'apertura e tornando indietro senza salvare).
+function _setPopola() {
   const p = ST.profile || {};
   // Email utente loggato (read-only, per debug cross-device)
   const emailEl = document.getElementById('set-email');
@@ -59,8 +125,6 @@ function openSettingsModal() {
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
-  if(typeof _aggiornaPausaImpostazioni === 'function') _aggiornaPausaImpostazioni();   // la pausa (Metodo 210)
-  if(typeof _aggiornaCsaImpostazioni === 'function') _aggiornaCsaImpostazioni();       // «Come stai adesso?» (Home 170)
   const giorniSel = document.getElementById('set-giorni-allenamento');
   if(giorniSel) giorniSel.value = String(p.giorni_allenamento || 4);
   const unitSel = document.getElementById('set-unit');
@@ -74,8 +138,7 @@ function openSettingsModal() {
   renderEsamiList(p.esami_sangue || {});
   document.getElementById('set-err').style.display = 'none';
   const btn = document.getElementById('set-save-btn');
-  btn.disabled = false; btn.textContent = 'Salva impostazioni →';
-  document.getElementById('settings-modal').style.display = 'flex';
+  btn.disabled = false; btn.textContent = 'Salva';
 }
 
 // Riga di spiegazione sotto un campo delle Impostazioni (una sola, riusata alle aperture dopo)
@@ -85,14 +148,15 @@ function _notaImpostazioni(dopo, id, testo) {
   n.textContent = testo;
 }
 // Il pulsante «Ricalcola le calorie», sotto il livello di attività: dice quante kcal si usano oggi
+// Dal 14 ottobre 2026 (Metodo 220) sta nella pagina Cibo, in cima: il livello di attività resta in «Il tuo obiettivo».
 function _bottoneRicalcolo() {
-  const sel = document.getElementById('set-activity');
-  if(!sel) return;
+  const box = document.getElementById('set-calorie-box') || (document.getElementById('set-activity') || {}).parentElement;
+  if(!box) return;
   let b = document.getElementById('set-ricalcola');
   if(!b) {
     b = document.createElement('button'); b.type = 'button'; b.id = 'set-ricalcola'; b.className = 'btn btn-ghost btn-sm';
     b.style.cssText = 'margin-top:8px;width:100%;'; b.onclick = ricalcolaCalorie;
-    sel.parentElement.appendChild(b);
+    box.appendChild(b);
   }
   b.textContent = `Ricalcola le calorie dal fabbisogno · oggi ${fmtNum(ST.TARGET.kcal)} kcal`;
 }
@@ -375,7 +439,7 @@ async function _saveSettingsExecute(goalChanged) {
   const {error} = await supa.from('profiles').update(updates).eq('id', ST.user.id);
   if(error) {
     errEl.style.display='block'; errEl.textContent='Errore: '+error.message;
-    btn.disabled=false; btn.textContent='Salva impostazioni →'; return;
+    btn.disabled=false; btn.textContent='Salva'; return;
   }
 
   // Salva train_start_date separatamente (colonna potrebbe non esistere ancora)
@@ -396,7 +460,9 @@ async function _saveSettingsExecute(goalChanged) {
   ST.TARGET = targets;
   applyProfile(ST.profile);
   saveCache();
-  closeSettingsModal();
+  btn.disabled = false; btn.textContent = 'Salva';
+  setVai('elenco');            // Metodo 220: «Salva» torna all'elenco, aggiornato
+  showToast('Salvato', '✅');
   renderPage(ST.page);
   // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo da impostazioni.
   // Mostrato DOPO closeSettingsModal + renderPage per essere visibile senza

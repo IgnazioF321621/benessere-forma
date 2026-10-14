@@ -1201,45 +1201,59 @@
 
 <!-- SETTINGS MODAL -->
 <div id="settings-modal" class="weight-modal" style="display:none;" onclick="if(event.target===this)closeSettingsModal()">
-  <div class="weight-modal-inner" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <span style="font-size:16px;font-weight:800;color:var(--t1);">⚙️ Impostazioni profilo</span>
-      <button onclick="closeSettingsModal()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--t3);">×</button>
+  <!-- Impostazioni a livelli (Metodo 220, 14 ottobre 2026, scelte di Ignazio): un elenco di voci, «Tutti i giorni» e
+       «Altro»; ogni voce apre la sua pagina col suo «Salva». I campi e i loro id restano quelli di prima: il salvataggio
+       è uno solo (saveSettings) e i calcoli stanno alle loro fonti (pausa, peso, calorie). -->
+  <div class="weight-modal-inner set-foglio" style="max-width:520px;width:100%;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;">
+    <div class="set-testa">
+      <button type="button" id="set-indietro" class="set-indietro" onclick="setIndietro()" hidden>‹ Impostazioni</button>
+      <span id="set-titolo" class="set-titolo">Impostazioni</span>
+      <button type="button" class="set-chiudi" onclick="closeSettingsModal()" aria-label="Chiudi">×</button>
     </div>
 
-    <!-- Account utente loggato -->
-    <div style="margin-bottom:20px;padding:12px 14px;background:var(--s2);border-radius:8px;">
-      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:4px;">ACCOUNT</div>
-      <div id="set-email" style="font-size:14px;color:var(--t1);font-family:var(--font-sans);user-select:text;-webkit-user-select:text;word-break:break-all;">—</div>
-    </div>
-    <!-- I TUOI DATI (Fondamenta 170) -->
-    <div class="onb-section" style="margin-bottom:14px;">
-      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;margin-bottom:8px;">I TUOI DATI</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button type="button" id="set-scarica-btn" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="scaricaMieiDati()">Scarica i miei dati</button>
-        <button type="button" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="mostraInformativa()">Dove vanno i tuoi dati</button>
+    <div class="set-pagina" data-pagina="elenco">
+      <div class="set-gruppo">Tutti i giorni</div>
+      <div class="set-elenco">
+      <button type="button" class="set-voce" data-voce="obiettivo" onclick="setVai('obiettivo')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Il tuo obiettivo</span><span class="set-voce-sotto" id="set-sotto-obiettivo"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="cibo" onclick="setVai('cibo')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Cibo</span><span class="set-voce-sotto" id="set-sotto-cibo"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="allenamento" onclick="setVai('allenamento')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Allenamento</span><span class="set-voce-sotto" id="set-sotto-allenamento"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="pausa" onclick="apriPausa()">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Pausa</span><span class="set-voce-sotto" id="set-pausa-stato">Nessuna pausa in programma</span></span><span class="set-voce-azione" id="set-pausa-btn">Imposta ›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="come-stai" onclick="apriOrariComeStaiAdesso()">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Come stai adesso?</span><span class="set-voce-sotto" id="set-csa-stato">11:00 · 15:00 · 19:00</span></span><span class="set-voce-azione" id="set-csa-btn">Cambia ›</span>
+      </button>
       </div>
-      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;">È la copia completa dei tuoi dati (pasti, allenamenti, pesate, misure, integratori e il resto), da conservare: un file .json che si apre con un editor di testo, non pensato per essere letto come una tabella. Delle foto solo l'elenco.</div>
-      <button type="button" id="set-elimina-btn" class="btn btn-ghost" style="margin-top:10px;width:100%;color:#C44434;border-color:#C44434;" onclick="eliminaMioAccount()">Elimina account</button>
-      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Cancella dati, foto e accesso per sempre. Ti chiedo di scrivere ELIMINA prima.</div>
+      <div class="set-gruppo">Altro</div>
+      <div class="set-elenco">
+      <button type="button" class="set-voce" data-voce="salute" onclick="setVai('salute')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Salute ed esami del sangue</span><span class="set-voce-sotto" id="set-sotto-salute"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="profilo" onclick="setVai('profilo')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Profilo e account</span><span class="set-voce-sotto" id="set-sotto-profilo"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="dati" onclick="setVai('dati')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">I tuoi dati e privacy</span><span class="set-voce-sotto" id="set-sotto-dati"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="set-voce" data-voce="crediti" onclick="setVai('crediti')">
+        <span class="set-voce-testo"><span class="set-voce-titolo">Crediti</span><span class="set-voce-sotto"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
+      </button>
+      </div>
+      <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:18px;color:var(--err);">Esci dall'account</button>
     </div>
 
-    <!-- Sezione: Dati personali -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Dati personali</div>
-      <div class="onb-grid" style="margin-bottom:10px;">
-        <div class="onb-field"><label>Nome</label><input id="set-fname" class="inp inp-sm" placeholder="Nome"/></div>
-        <div class="onb-field"><label>Cognome</label><input id="set-lname" class="inp inp-sm" placeholder="Cognome"/></div>
-      </div>
-      <div class="onb-grid">
-        <div class="onb-field"><label>Peso attuale (kg)</label><input id="set-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 75"/></div>
+    <div class="set-pagina" data-pagina="obiettivo" hidden>
+      <div class="onb-grid" style="margin-bottom:14px;">
+        <div class="onb-field"><label>Peso di oggi (kg)</label><input id="set-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 75"/></div>
         <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="set-goal-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 70"/></div>
-      </div>
-    </div>
-
-    <!-- Sezione: Obiettivo & attività -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Obiettivo & attività</div>
+      </div><div style="margin-bottom:20px;">
+      
       <div style="margin-bottom:10px;">
         <label style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:1px;display:block;margin-bottom:8px;">OBIETTIVO</label>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="set-obiettivo-grid">
@@ -1262,10 +1276,11 @@
         </select>
       </div>
     </div>
+    </div>
 
-    <!-- Sezione: Dieta & intolleranze -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Dieta & intolleranze</div>
+    <div class="set-pagina" data-pagina="cibo" hidden>
+      <div style="margin-bottom:20px;">
+      <div id="set-calorie-box" class="set-calorie"></div>
       <div class="onb-field" style="margin-bottom:12px;"><label>Tipo di dieta</label>
         <select id="set-dieta" class="inp inp-sm">
           <option value="onnivoro">Onnivoro</option>
@@ -1286,36 +1301,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Sezione: Note salute -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Note salute & sintomi</div>
-      <textarea id="set-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, affaticamento cronico, sonnolenza post-prandiale..."></textarea>
     </div>
 
-    <!-- Sezione: Pausa (Metodo 210): una pausa sola per allenamento, cibo e pesate -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Mi fermo per un periodo</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="set-pausa-stato" style="flex:1;font-size:13px;color:var(--t1);font-family:var(--font-sans);line-height:1.4;">Nessuna pausa in programma</div>
-        <button type="button" id="set-pausa-btn" class="btn btn-ghost btn-sm" onclick="apriPausa()">Imposta ›</button>
-      </div>
-      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Vacanza, viaggio, lavoro: date, motivo e cosa fermare (allenamento, cibo, pesate). Niente debiti né promemoria finché sei via.</div>
-    </div>
-
-    <!-- Sezione: «Come stai adesso?» (Home 170): gli orari stanno solo qui -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Come stai adesso?</div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div id="set-csa-stato" style="flex:1;font-size:13px;color:var(--t1);font-family:var(--font-sans);line-height:1.4;">11:00 · 15:00 · 19:00</div>
-        <button type="button" id="set-csa-btn" class="btn btn-ghost btn-sm" onclick="apriOrariComeStaiAdesso()">Cambia ›</button>
-      </div>
-      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Fino a 3 volte al giorno, solo con l'app aperta: energia, stress e se hai dormito ancora. Mai in pausa né durante l'allenamento.</div>
-    </div>
-
-    <!-- Sezione: Training -->
-    <div style="margin-bottom:20px;">
-      <div class="lbl">Training</div>
+    <div class="set-pagina" data-pagina="allenamento" hidden>
+      <div style="margin-bottom:20px;">
+      
       <div class="onb-field">
         <label>Data inizio programma</label>
         <input id="set-train-start" class="inp inp-sm" type="date" placeholder="YYYY-MM-DD"/>
@@ -1344,17 +1334,47 @@
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Etichetta visualizzata sul carico nel log serie. Le scale degli elastici restano in lbs.</div>
       </div>
     </div>
+    </div>
 
-    <!-- Sezione: Esami del sangue -->
-    <div style="margin-bottom:24px;">
-      <div class="lbl">Esami del sangue recenti</div>
+    <div class="set-pagina" data-pagina="salute" hidden>
+      <div style="margin-bottom:20px;">
+      <div class="lbl">Note sulla salute</div>
+      <textarea id="set-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, affaticamento cronico, sonnolenza post-prandiale..."></textarea>
+    </div><div style="margin-bottom:24px;">
+      <div class="lbl">Valori degli esami</div>
       <p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;line-height:1.6;">Inserisci i valori degli ultimi esami: servono a personalizzare piano alimentare e integratori.</p>
       <div id="set-esami-list"></div>
       <button class="btn btn-ghost btn-sm" onclick="addEsameRow()" style="margin-top:8px;">+ Aggiungi valore</button>
+    </div><div id="set-esami-storico"></div>
     </div>
 
-    <!-- Sezione: Crediti & attribuzioni (collassabile) -->
-    <div class="settings-credits">
+    <div class="set-pagina" data-pagina="profilo" hidden>
+      <div class="onb-grid" style="margin-bottom:14px;">
+        <div class="onb-field"><label>Nome</label><input id="set-fname" class="inp inp-sm" placeholder="Nome"/></div>
+        <div class="onb-field"><label>Cognome</label><input id="set-lname" class="inp inp-sm" placeholder="Cognome"/></div>
+      </div>
+      <div class="set-account">
+        <div class="set-account-etichetta">Email dell'account</div>
+        <div id="set-email" class="set-account-email">—</div>
+      </div>
+      <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:14px;color:var(--err);">Esci dall'account</button>
+    </div>
+
+    <div class="set-pagina" data-pagina="dati" hidden>
+      <div class="onb-section" style="margin-bottom:14px;">
+      
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" id="set-scarica-btn" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="scaricaMieiDati()">Scarica i miei dati</button>
+        <button type="button" class="btn btn-ghost" style="flex:1;min-width:150px;" onclick="mostraInformativa()">Dove vanno i tuoi dati</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;">È la copia completa dei tuoi dati (pasti, allenamenti, pesate, misure, integratori e il resto), da conservare: un file .json che si apre con un editor di testo, non pensato per essere letto come una tabella. Delle foto solo l'elenco.</div>
+      <button type="button" id="set-elimina-btn" class="btn btn-ghost" style="margin-top:10px;width:100%;color:#C44434;border-color:#C44434;" onclick="eliminaMioAccount()">Elimina account</button>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Cancella dati, foto e accesso per sempre. Ti chiedo di scrivere ELIMINA prima.</div>
+    </div>
+    </div>
+
+    <div class="set-pagina" data-pagina="crediti" hidden>
+      <div class="settings-credits expanded">
       <button type="button" class="settings-credits-toggle" onclick="this.parentElement.classList.toggle('expanded')">
         <span>Crediti & attribuzioni</span>
         <span class="chevron">▸</span>
@@ -1368,11 +1388,13 @@
         </ul>
       </div>
     </div>
+    </div>
 
-    <!-- Errore e salva -->
-    <div id="set-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:10px;"></div>
-    <button id="set-save-btn" class="btn btn-primary btn-full" onclick="saveSettings()">Salva impostazioni →</button>
-    <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:10px;color:var(--err);">Esci dall'account</button>
+    <!-- Errore e salva: solo nelle pagine con dei campi -->
+    <div id="set-piede" class="set-piede" hidden>
+      <div id="set-err" style="color:var(--err);font-size:12px;font-family:'JetBrains Mono',monospace;display:none;margin-bottom:10px;"></div>
+      <button id="set-save-btn" class="btn btn-primary btn-full" onclick="saveSettings()">Salva</button>
+    </div>
   </div>
 </div>
 

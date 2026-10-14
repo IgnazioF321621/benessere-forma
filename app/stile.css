@@ -1009,6 +1009,30 @@ select.inp{cursor:pointer;}
 .modal-ai-section h4{color:var(--acc);}
 .modal-ai-section .ai-loading{font-size:13px;color:var(--t3);font-style:italic;font-family:var(--font-sans);}
 /* ── Settings modal — sezione Crediti collassabile (6 maggio 2026) ── */
+/* Impostazioni a livelli (Metodo 220): elenco di voci e pagine */
+.set-testa{display:flex;align-items:center;gap:8px;margin-bottom:16px;min-height:32px;padding-right:44px;position:relative;}
+.set-titolo{flex:1;min-width:0;font-family:var(--font-sans);font-size:17px;font-weight:800;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.set-indietro{flex-shrink:0;background:none;border:none;padding:4px 0;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--acc);}
+.set-testa:has(.set-indietro:not([hidden])){flex-wrap:wrap;}
+.set-indietro:not([hidden])+.set-titolo{flex-basis:100%;margin-top:4px;white-space:normal;}
+.set-chiudi{position:absolute;right:0;top:0;background:none;border:none;cursor:pointer;font-size:24px;line-height:1;color:var(--t3);padding:4px 8px;}
+.set-gruppo{margin:6px 0 8px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
+.set-elenco{background:var(--carta);border:1px solid var(--b1);border-radius:12px;overflow:hidden;margin-bottom:18px;}
+.set-voce{display:flex;align-items:center;gap:10px;width:100%;padding:13px 14px;background:none;border:none;border-top:1px solid var(--b1);text-align:left;cursor:pointer;color:var(--t1);}
+.set-voce:first-child{border-top:none;}
+.set-voce:active{background:var(--s2);}
+.set-voce-testo{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.set-voce-titolo{font-family:var(--font-sans);font-size:15px;font-weight:600;color:var(--t1);}
+.set-voce-sotto{font-family:var(--font-sans);font-size:12px;line-height:1.35;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.set-voce-sotto:empty{display:none;}
+.set-voce-freccia{flex-shrink:0;font-size:20px;line-height:1;color:var(--t3);}
+.set-voce-azione{flex-shrink:0;font-family:var(--font-mono);font-size:11px;font-weight:600;color:var(--acc);}
+.set-pagina[hidden],.set-piede[hidden]{display:none;}
+.set-piede{position:sticky;bottom:0;margin:16px -4px 0;padding:12px 4px 4px;background:var(--s1);}
+.set-calorie{margin-bottom:16px;}
+.set-account{padding:12px 14px;background:var(--s2);border-radius:8px;}
+.set-account-etichetta{margin-bottom:4px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
+.set-account-email{font-family:var(--font-sans);font-size:14px;color:var(--t1);user-select:text;-webkit-user-select:text;word-break:break-all;}
 .settings-credits{
   margin-bottom:20px;
   border:1px solid var(--b2);
