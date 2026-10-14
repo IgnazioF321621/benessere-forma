@@ -79,11 +79,15 @@
    "tabella": "profiles"
   },
   {
+   "righe": 0,
+   "tabella": "rilevazioni"
+  },
+  {
    "righe": 55,
    "tabella": "schede_utente"
   },
   {
-   "righe": 17,
+   "righe": 18,
    "tabella": "segnalazioni"
   },
   {
@@ -2694,6 +2698,116 @@
     "tipo": "text[]"
    },
    {
+    "colonna": "come_stai_orari",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 43,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "smallint[]"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "rilevazioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "rilevata_il",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": "now()",
+    "tabella": "rilevazioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "giorno",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "date"
+   },
+   {
+    "colonna": "orario",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "energy",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "stress",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 7,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "riposino_min",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "note",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "rilevazioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 10,
+    "predefinito": "now()",
+    "tabella": "rilevazioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
     "colonna": "id",
     "generata": "",
     "identita": "",
@@ -4345,6 +4459,11 @@
     "tabella": "meals"
    },
    {
+    "definizione": "CREATE INDEX rilevazioni_user_giorno_idx ON public.rilevazioni USING btree (user_id, giorno)",
+    "nome": "rilevazioni_user_giorno_idx",
+    "tabella": "rilevazioni"
+   },
+   {
     "definizione": "CREATE INDEX idx_schede_utente_user ON public.schede_utente USING btree (user_id, created_at DESC)",
     "nome": "idx_schede_utente_user",
     "tabella": "schede_utente"
@@ -4887,6 +5006,16 @@
     ],
     "ruolo": "authenticated",
     "tabella": "profiles"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "SELECT",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "rilevazioni"
    },
    {
     "permessi": [
@@ -5864,6 +5993,54 @@
     "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
    },
    {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "rilevazioni_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "rilevazioni",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "rilevazioni_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "rilevazioni",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "rilevazioni_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "rilevazioni",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "rilevazioni_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "rilevazioni",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
     "comando": "SELECT",
     "controllo": null,
     "nome": "admin_read_all_schede",
@@ -6720,6 +6897,12 @@
     "tabella": "profiles"
    },
    {
+    "commento": "Come stai adesso? (Home 170): energia, stress e riposino a orari fissi, più volte al giorno. Separata da daily_log.",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "rilevazioni"
+   },
+   {
     "commento": null,
     "rls": true,
     "rls_forzata": false,
@@ -7235,6 +7418,12 @@
     "tipo": "p"
    },
    {
+    "definizione": "CHECK (((come_stai_orari IS NULL) OR ((COALESCE(array_length(come_stai_orari, 1), 0) <= 3) AND (0 <= ALL (come_stai_orari)) AND (23 >= ALL (come_stai_orari)))))",
+    "nome": "profiles_come_stai_orari_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
     "definizione": "CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))",
     "nome": "profiles_pausa_chk",
     "tabella": "profiles",
@@ -7268,6 +7457,48 @@
     "definizione": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "profiles_id_fkey",
     "tabella": "profiles",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "rilevazioni_pkey",
+    "tabella": "rilevazioni",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK (((energy IS NULL) OR ((energy >= 1) AND (energy <= 5))))",
+    "nome": "rilevazioni_energy_check",
+    "tabella": "rilevazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((note IS NULL) OR (char_length(note) <= 1000)))",
+    "nome": "rilevazioni_note_len",
+    "tabella": "rilevazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((orario IS NULL) OR ((orario >= 0) AND (orario <= 23))))",
+    "nome": "rilevazioni_orario_check",
+    "tabella": "rilevazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((riposino_min IS NULL) OR ((riposino_min >= 0) AND (riposino_min <= 600))))",
+    "nome": "rilevazioni_riposino_check",
+    "tabella": "rilevazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((stress IS NULL) OR ((stress >= 1) AND (stress <= 5))))",
+    "nome": "rilevazioni_stress_check",
+    "tabella": "rilevazioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "rilevazioni_user_id_fkey",
+    "tabella": "rilevazioni",
     "tipo": "f"
    },
    {

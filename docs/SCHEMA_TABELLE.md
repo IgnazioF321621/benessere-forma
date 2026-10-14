@@ -2,7 +2,7 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-14 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-34 tabelle, 406 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+35 tabelle, 417 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -25,8 +25,9 @@
 | [`meals`](#meals) | 348 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
+| [`rilevazioni`](#rilevazioni) | 0 | 4 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
-| [`segnalazioni`](#segnalazioni) | 17 | 3 | id | — |
+| [`segnalazioni`](#segnalazioni) | 18 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 24 | 1 | id | — |
@@ -459,14 +460,39 @@ Vincoli:
 | `pausa_fine` | date |  |  |
 | `pausa_motivo` | text |  |  |
 | `pausa_moduli` | text[] |  |  |
+| `come_stai_orari` | smallint[] |  |  |
 
 Vincoli:
+- `profiles_come_stai_orari_chk` — `CHECK (((come_stai_orari IS NULL) OR ((COALESCE(array_length(come_stai_orari, 1), 0) <= 3) AND (0 <= ALL (come_stai_orari)) AND (23 >= ALL (come_stai_orari)))))`
 - `profiles_pausa_chk` — `CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))`
 - `profiles_pausa_moduli_chk` — `CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))`
 - `profiles_plan_day_check` — `CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))`
 - `profiles_sex_check` — `CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))`
 - `profiles_weight_mode_check` — `CHECK ((weight_tracking_mode = ANY (ARRAY['daily'::text, 'every3'::text, 'weekly'::text, 'flexible'::text])))`
 - `profiles_id_fkey` — `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `rilevazioni`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `user_id` | uuid | sì |  |
+| `rilevata_il` | timestamp with time zone | sì | `now()` |
+| `giorno` | date | sì |  |
+| `orario` | smallint |  |  |
+| `energy` | smallint |  |  |
+| `stress` | smallint |  |  |
+| `riposino_min` | smallint |  |  |
+| `note` | text |  |  |
+| `created_at` | timestamp with time zone | sì | `now()` |
+
+Vincoli:
+- `rilevazioni_energy_check` — `CHECK (((energy IS NULL) OR ((energy >= 1) AND (energy <= 5))))`
+- `rilevazioni_note_len` — `CHECK (((note IS NULL) OR (char_length(note) <= 1000)))`
+- `rilevazioni_orario_check` — `CHECK (((orario IS NULL) OR ((orario >= 0) AND (orario <= 23))))`
+- `rilevazioni_riposino_check` — `CHECK (((riposino_min IS NULL) OR ((riposino_min >= 0) AND (riposino_min <= 600))))`
+- `rilevazioni_stress_check` — `CHECK (((stress IS NULL) OR ((stress >= 1) AND (stress <= 5))))`
+- `rilevazioni_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `schede_utente`
 
