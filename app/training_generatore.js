@@ -751,7 +751,7 @@ async function loadActiveScheda() {
     try {
       const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome, unilaterale, progressione, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio')
+        .select('codice, nome, unilaterale, progressione, pattern, gruppo_target, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio')
         .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
@@ -763,9 +763,11 @@ async function loadActiveScheda() {
         catRows.forEach(r => {
           if (!r || !r.codice) return;
           nomeByCodice.set(r.codice, r.nome);
-          if (r.unilaterale || r.progressione) infoByCodice.set(r.codice, {
+          if (r.unilaterale || r.progressione || r.pattern || r.gruppo_target) infoByCodice.set(r.codice, {
             unilaterale:  r.unilaterale  ? String(r.unilaterale).trim().toLowerCase()  : null,
             progressione: r.progressione ? String(r.progressione).trim().toLowerCase() : null,
+            pattern:      r.pattern      ? String(r.pattern).trim()      : null,   // Training 110: il conto delle serie per muscolo
+            gruppo_target: r.gruppo_target ? String(r.gruppo_target).trim() : null,
           });
         });
         ST.catalogNomeByCodice = nomeByCodice;           // riusata dagli alias nome↔codice
@@ -838,6 +840,8 @@ async function loadActiveScheda() {
     }
     ST.userTrainingSessions = sessMap;
     ST.userSessionCycle = cycle;
+    // «Cambia per oggi» (Training 160): gli esercizi sostituiti oggi tornano al loro posto in memoria
+    if (typeof applicaCambiOggi === 'function') applicaCambiOggi();
     // La riga attiva com'è: serve al blocco nuovo (Training 070) per sapere da quale
     // scheda tenere i cardini, che numero ha, e quale riga riaccendere se il salvataggio
     // della nuova fallisce a metà.
@@ -1462,6 +1466,138 @@ const _TRAIN_GEN_COMPOUND_COVERAGE = {
   'dominante ginocchia':['quadricipiti', 'glutei'],
   'dominante anca':     ['glutei', 'ischiocrurali', 'lombari'],
 };
+
+// ── Volume per muscolo (Training 110, 14 ottobre 2026) ──
+// La letteratura mette intorno a 10 serie a settimana per muscolo la base per crescere (Schoenfeld
+// 2017; Baz-Valle 2022: 12-20 la dose che rende di più) e 6-8 il minimo per mantenere. Prima il
+// generatore non contava niente: bicipiti e tricipiti «coperti» dalle spinte e dalle tirate, braccia
+// senza lavoro diretto nei 4 giorni, spalle laterali e polpacci a 3-6 serie. Ora si contano le serie
+// a settimana per gruppo e, decisione di Ignazio (14 ottobre 2026): sotto il minimo prima UNA SERIE IN
+// PIÙ agli isolamenti di quel gruppo già in scheda, poi UN esercizio in più nella seduta giusta,
+// anche oltre il tetto dei 6 (_trainGenRiempiVolume). Le serie si contano così: isolamento e core
+// per intero sul gruppo bersaglio; un multiarticolare per intero sul motore principale e a metà sui
+// secondari (_VOL_COMPOUND_CREDITO: la spinta orizzontale conta 1 sul petto, 0,5 su tricipiti e
+// deltoidi anteriori). Le sedute di recupero non contano.
+const _VOL_GRUPPI = ['petto', 'dorsali', 'deltoidi laterali', 'deltoidi posteriori', 'bicipiti', 'tricipiti', 'quadricipiti', 'ischiocrurali', 'glutei', 'polpacci'];
+const _VOL_MINIMI_PER_OBIETTIVO = { ipertrofia: 10, ricomposizione: 10, forza_performance: 8, dimagrimento: 8, mantenimento: 6, longevita: 6 };
+const _VOL_COMPOUND_CREDITO = {
+  'spinta orizzontale': { petto: 1, tricipiti: 0.5, 'deltoidi anteriori': 0.5 },
+  'spinta verticale':   { 'deltoidi anteriori': 1, tricipiti: 0.5, 'deltoidi laterali': 0.5 },
+  'tirata orizzontale': { dorsali: 1, bicipiti: 0.5, 'deltoidi posteriori': 0.5 },
+  'tirata verticale':   { dorsali: 1, bicipiti: 0.5 },
+  'dominante ginocchia': { quadricipiti: 1, glutei: 0.5 },
+  'dominante anca':     { glutei: 1, ischiocrurali: 1 },
+};
+function volumeMinimi(obiettivo) {
+  const o = (typeof migrateObiettivo === 'function') ? migrateObiettivo(String(obiettivo || '').split(',')[0].trim()) : String(obiettivo || '').trim();
+  const m = _VOL_MINIMI_PER_OBIETTIVO[o] != null ? _VOL_MINIMI_PER_OBIETTIVO[o] : 8;
+  const out = {}; _VOL_GRUPPI.forEach(g => { out[g] = m; }); return out;
+}
+// Le serie a settimana per gruppo da una lista di sedute ({id, type, exercises:[{sets, pattern, gruppo_target}]}).
+// `riga(ex)` dà pattern e gruppo_target a chi non li porta (le schede salvate prima del 14 ottobre: dal catalogo).
+function volumeSettimanale(sessioni, riga) {
+  const tot = {};
+  const add = (g, n) => { tot[g] = (tot[g] || 0) + n; };
+  const gts = (s) => String(s || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  (sessioni || []).forEach(s => {
+    if (!s || s.type === 'Recupero' || s.type === 'Riposo' || /^recovery/i.test(s.id || '')) return;
+    (s.exercises || []).forEach(ex => {
+      if (!ex) return;
+      const info = (riga && riga(ex)) || {};
+      const pattern = _normPattern(ex.pattern || info.pattern);
+      const gruppi = gts(ex.gruppo_target || info.gruppo_target);
+      const sets = Number(ex.sets) || 0;
+      if (!sets) return;
+      const credito = _VOL_COMPOUND_CREDITO[pattern];
+      if (credito) Object.keys(credito).forEach(g => add(g, sets * credito[g]));
+      else gruppi.forEach(g => add(g, sets));
+    });
+  });
+  Object.keys(tot).forEach(g => { tot[g] = Math.round(tot[g] * 2) / 2; });
+  return tot;
+}
+// Il conto rispetto ai minimi: [{gruppo, serie, minimo, sotto}] per i gruppi seguiti.
+function volumeContoMinimi(sessioni, obiettivo, riga) {
+  const v = volumeSettimanale(sessioni, riga);
+  const min = volumeMinimi(obiettivo);
+  return _VOL_GRUPPI.map(g => ({ gruppo: g, serie: v[g] || 0, minimo: min[g], sotto: (v[g] || 0) < min[g] }));
+}
+// Dentro il generatore, sulle sedute grezze (righe di catalogo + parametri di seduta): riempie i
+// gruppi sotto il minimo. Scrive su ogni seduta `setsExtra` {codice: 1} e `perVolume` {codice: gruppo},
+// che il mapper traduce in serie in più e nell'esercizio aggiunto. Ritorna il diario delle mosse.
+// `prima` è la scheda del blocco precedente (cardiniDa): le regole del blocco nuovo valgono anche qui:
+// mai un esercizio in due sedute della scheda nuova; se nel blocco prima quel gruppo aveva un
+// isolamento in una seduta, l'esercizio in più va in QUELLA seduta e, potendo, è QUELLO (resta
+// dov'era); altrimenti uno mai fatto nel blocco prima, nella seduta della macro giusta con meno esercizi.
+function _trainGenRiempiVolume(sessioni, obiettivo, pools, usati, rigenIdx, prima) {
+  const diario = [];
+  if (!Array.isArray(sessioni) || !sessioni.length) return diario;
+  const lavoro = sessioni.filter(s => s && s.resolvedType !== 'Recupero' && Array.isArray(s.exercises));
+  const gts = (ex) => String(ex.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  // La seduta del blocco prima che corrisponde a una seduta grezza: stesso tipo di split, stessa occorrenza
+  const primaSessioni = (prima && Array.isArray(prima.sessioni)) ? prima.sessioni : [];
+  const primaDi = (s) => primaSessioni.filter(p => p && typeof p.id === 'string' && p.id.indexOf(s.splitType) === 0)[Number(s.occurrenceIdx) || 0] || null;
+  const codiciPrima = new Set(primaSessioni.flatMap(p => (p && p.exercises || []).map(e => e && e.codice).filter(Boolean)));
+  const inScheda = () => new Set(lavoro.flatMap(s => s.exercises.map(e => e.codice)));
+  const conta = () => volumeSettimanale(lavoro.map(s => ({ id: '', type: s.resolvedType, exercises: s.exercises.map(ex => ({
+    pattern: ex.pattern, gruppo_target: ex.gruppo_target,
+    sets: (Number((_trainGenGetExerciseParams(ex, s.sessionParams || {}) || {}).sets) || 0) + (((s.setsExtra || {})[ex.codice]) || 0),
+  })) })));
+  const minimi = volumeMinimi(obiettivo);
+  const macroDi = (s) => (s.splitType === 'lower' || s.splitType === 'legs') ? 'lower' : (s.splitType === 'upper' || s.splitType === 'push' || s.splitType === 'pull') ? 'upper' : 'fullbody';
+  const macroGruppo = (g) => ['quadricipiti', 'ischiocrurali', 'glutei', 'polpacci'].includes(g) ? 'lower' : 'upper';
+  _VOL_GRUPPI.forEach(g => {
+    let v = conta()[g] || 0;
+    if (v >= minimi[g]) return;
+    // (1) una serie in più agli isolamenti di questo gruppo già in scheda, al massimo +1 ciascuno
+    for (const s of lavoro) {
+      if (v >= minimi[g]) break;
+      for (const ex of s.exercises) {
+        if (v >= minimi[g]) break;
+        if (_normPattern(ex.pattern) !== 'isolamento' || !gts(ex).includes(g)) continue;
+        s.setsExtra = s.setsExtra || {};
+        if (s.setsExtra[ex.codice]) continue;
+        s.setsExtra[ex.codice] = 1; v += 1;
+        diario.push(`${g}: +1 serie a ${ex.codice}`);
+      }
+    }
+    if (v >= minimi[g]) return;
+    // (2) UN esercizio di isolamento per il gruppo, mai già in un'altra seduta della scheda nuova.
+    //     Se nel blocco prima il gruppo aveva un isolamento in una seduta: quella seduta e, potendo,
+    //     quell'esercizio (resta dov'era); altrimenti la seduta della macro giusta con meno esercizi
+    //     e un esercizio mai fatto nel blocco prima, poi uno qualsiasi non ancora in scheda.
+    const isolamenti = (pools.poolPrincipali || []).filter(e => _normPattern(e.pattern) === 'isolamento' && gts(e).includes(g));
+    const giaInScheda = inScheda();
+    const liberi = isolamenti.filter(e => !giaInScheda.has(e.codice) && !(usati && usati.has(e.codice)));
+    if (!liberi.length) { diario.push(`${g}: sotto il minimo (${v}/${minimi[g]}), nessun altro isolamento a catalogo`); return; }
+    // La seduta: quella che nel blocco prima aveva un isolamento di questo gruppo, altrimenti la più corta.
+    // L'esercizio, con l'ordine dei complementari del blocco nuovo: uno mai fatto nel blocco prima;
+    // se non c'è, quello che questa seduta aveva già (resta dov'era); per ultimo uno qualsiasi libero.
+    let s = null, era = null;
+    for (const cand of lavoro) {
+      if (macroDi(cand) !== macroGruppo(g) && macroDi(cand) !== 'fullbody') continue;
+      const p = primaDi(cand);
+      const e0 = p ? (p.exercises || []).find(e => e && e.codice && isolamenti.some(i => i.codice === e.codice)) : null;
+      if (!e0) continue;
+      s = cand; era = e0; break;
+    }
+    if (!s) s = lavoro.filter(c => macroDi(c) === macroGruppo(g) || macroDi(c) === 'fullbody').sort((a, b) => a.exercises.length - b.exercises.length)[0] || null;
+    if (!s) return;
+    const used = new Set(s.exercises.map(e => e.codice));
+    const idx = (Number(s.occurrenceIdx) || 0) + (Number(rigenIdx) || 0);
+    const maiFatti = liberi.filter(e => !codiciPrima.has(e.codice));
+    let ex = maiFatti.length ? _trainGenPickIsoByGruppoTarget(maiFatti, g, used, idx, `volume ${g}`) : null;
+    if (!ex && era) ex = liberi.find(e => e.codice === era.codice) || null;
+    if (!ex) ex = _trainGenPickIsoByGruppoTarget(liberi, g, used, idx, `volume ${g}`);
+    if (!ex) { diario.push(`${g}: sotto il minimo (${v}/${minimi[g]}), nessun isolamento disponibile`); return; }
+    s.exercises.push(ex);
+    s.perVolume = s.perVolume || {}; s.perVolume[ex.codice] = g;
+    if (usati) usati.add(ex.codice);
+    if (s._diag && Array.isArray(s._diag.bonus)) s._diag.bonus.push(`${ex.codice}:volume`);
+    diario.push(`${g}: +${ex.codice} in ${s.splitType}#${s.occurrenceIdx}`);
+  });
+  return diario;
+}
 
 // Criticità isolamenti per il TAGLIO PER TEMPO (Regola A): peso più BASSO =
 // MENO critico = rimosso PRIMA. Vincoli documentati dall'utente:
@@ -2455,6 +2591,11 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     //   2. isolamento + mobilita
     //   3. core in coda
     //   Sub-sort per codice (stabile, coerente con pickByPattern).
+    // VOLUME PER MUSCOLO (Training 110): sotto il minimo dell'obiettivo prima una serie in più agli
+    // isolamenti già in scheda, poi un esercizio in più (vedi _trainGenRiempiVolume).
+    const volumeDiario = _trainGenRiempiVolume(sessioniRaw, obiettivo, pools, usatiNuovaScheda, rigenIdx, cardiniDa);
+    if (volumeDiario.length && typeof window !== 'undefined' && window._trainGenDebug) console.log('[train-gen] volume per muscolo:', volumeDiario);
+
     const sessioniProcessate = sessioniRaw.map(s => {
       const cautelati = _trainGenApplyCautions(s.exercises, limitazioni, catalogMap, ammissibiliSet);
       // Dedup post-sostituzioni: l'alternativa di un esercizio potrebbe
@@ -2561,6 +2702,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
         label: s.resolvedType === 'Pump' ? 'Upper Pump — Pump' : (letter ? `${displayName} ${letter} — ${sessType}` : `${displayName} — ${sessType}`),
         rest:  restText,
         duration_min: null, // dismesso: niente più stima minuti (volume-based)
+        setsExtra: s.setsExtra || null,   // Training 110: una serie in più per il volume, per codice
+        perVolume: s.perVolume || null,   // Training 110: esercizio aggiunto per il volume, per codice → gruppo
       };
       const mapped = _trainGenMapToSession(s.exercises, sessionMeta, sp, s.finisher, tipoAllen, attrezzaturaSet);
       // CARDINI (Training 070): segnati sull'esercizio finale, per codice. Se le cautele
@@ -3572,7 +3715,9 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
     // iso_isometrico → reps in secondi ("30-45 sec") così il reader nasconde la
     // pill RIR e il logger passa a durata (parseRepsRange kind='seconds').
     const exParams = _trainGenGetExerciseParams(cat, sessionParams) || {};
-    const sets = exParams.sets;
+    // Training 110: una serie in più se il volume del gruppo era sotto il minimo
+    const serieInPiu = ((sessionMeta.setsExtra || {})[cat.codice]) || 0;
+    const sets = (Number(exParams.sets) || 0) + serieInPiu;
     // Esercizi unilaterali → " per lato" in coda alle reps (sia range secondi
     // che range reps), così il volume è esplicito. parseRepsRange lo riconosce.
     const reps = (exParams.durationBased
@@ -3600,6 +3745,12 @@ function _trainGenMapToSession(wrappers, sessionMeta, sessionParams, finisher, t
     };
     if (iso)         exObj.iso = true;
     if (alert)       exObj.alert = alert;
+    // Schema di movimento e gruppo bersaglio nel jsonb (Training 110): così il conto delle serie
+    // per muscolo si fa dalla scheda, senza rileggere il catalogo
+    if (cat.pattern)       exObj.pattern = String(cat.pattern).trim();
+    if (cat.gruppo_target) exObj.gruppo_target = String(cat.gruppo_target).trim();
+    if (serieInPiu) exObj.serieInPiu = serieInPiu;
+    if ((sessionMeta.perVolume || {})[cat.codice]) exObj.perVolume = sessionMeta.perVolume[cat.codice];
     // Le due colonne del catalogo (Training 280 e 320) viaggiano nel jsonb, così la seduta non
     // deve rileggere il catalogo: `unilaterale` decide il registro a due numeri, `progressione`
     // la via che il coach nomina in cima alle ripetizioni (carico · ritmo più lento · …).

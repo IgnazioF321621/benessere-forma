@@ -727,7 +727,7 @@ async function loadAllExerciseNamesWithLast(){
     // A pagine (L13): la tabella unica supera le 1000 righe. Un esercizio compare una volta,
     // per codice (Fondamenta 070), col nome di oggi a catalogo; le righe senza codice per nome.
     const { data } = await dbqAll('leggere lo storico delle serie', () => supa.from('training_logs')
-      .select('exercise_name, exercise_code, reps, resistance, date')
+      .select('exercise_name, exercise_code, reps, resistance, band_color, date')
       .eq('user_id', ST.user.id)
       .order('date', {ascending: false})
       .order('id', {ascending: true}));
@@ -742,7 +742,7 @@ async function loadAllExerciseNamesWithLast(){
       const nome = _nomeDaCodice(r.exercise_code) || r.exercise_name;
       if(ST.trainProgLastSet[nome]) return;
       distinct.push(nome);
-      ST.trainProgLastSet[nome] = { reps: r.reps, resistance: r.resistance, date: r.date };
+      ST.trainProgLastSet[nome] = { reps: r.reps, resistance: r.band_color || r.resistance, date: r.date };
     });
     distinct.sort((a,b) => a.localeCompare(b, 'it'));
     ST.allExerciseNamesCache = distinct;
@@ -839,43 +839,51 @@ function renderCalStrip(workouts){
 // GRAFICO PROGRESSIONE — renderProgChart
 // ─────────────────────────────────────────────────────────────
 
-function renderProgChart(points, byDate, selEx){
-  const chartType = ST.trainProgChart || 'carico';
+function renderProgChart(points, byDate, selEx, misura){
+  const m = misura || progMisura(selEx, [].concat(...Object.values(byDate || {})));
+  // il 1RM ha senso solo con un carico: per gli altri la chip non c'è e si torna alla misura
+  const chartType = (ST.trainProgChart === '1rm' && m.tipo !== 'carico') ? 'carico' : (ST.trainProgChart || 'carico');
   if(points.length === 0){
     return `<div style="padding:32px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Nessuna sessione</div>`;
   }
 
-  // ── Calcolo valori per modalità ──
+  // ── Calcolo valori per modalità (Training 100: la misura dell'esercizio, unità dal profilo) ──
+  const U = m.unit.toUpperCase();
   let values, unitLabel, metaLabel;
   if(chartType === 'carico'){
-    values = points.map(p => p.resist);
-    unitLabel = 'LBS'; metaLabel = 'CARICO';
+    values = points.map(p => p.v);
+    unitLabel = U; metaLabel = m.label;
   } else if(chartType === '1rm'){
-    values = points.map(p => p.resist > 0 ? Math.round(p.resist * (1 + p.reps / 30)) : 0);
-    unitLabel = 'LBS'; metaLabel = '1RM STIMATO';
+    values = points.map(p => p.v > 0 ? Math.round(p.v * (1 + p.reps / 30)) : 0);
+    unitLabel = U; metaLabel = '1RM STIMATO';
   } else if(chartType === 'volume'){
+    // carico: kg×reps; banda, corpo libero e tenute: ripetizioni (o secondi) totali del giorno
     values = points.map(p => {
       const dayLogs = byDate[p.date] || [];
-      return dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0) * (parseInt(l.resistance)||0), 0);
+      return m.tipo === 'carico'
+        ? dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0) * (parseFloat(l.resistance)||0), 0)
+        : dayLogs.reduce((s,l) => s + (parseInt(l.reps)||0), 0);
     });
-    unitLabel = 'LBS×REPS'; metaLabel = 'VOLUME';
+    unitLabel = m.tipo === 'carico' ? `${U}×REPS` : (m.tipo === 'sec' ? 'SEC' : 'REPS'); metaLabel = 'VOLUME';
   } else {
     // 'zone' — stacked bar
     return _renderZoneChart(points, byDate, selEx);
   }
+  const aBande = chartType === 'carico' && m.tipo === 'banda';
 
   const W = 340, H = 200;
   const padL = 32, padR = 16, padT = 28, padB = 32;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
   const maxV = Math.max(...values, 1);
-  const yMax = Math.ceil(maxV * 1.1 / 50) * 50 || 1;
+  const passo = aBande ? 1 : _progPasso(maxV * 1.1);
+  const yMax = aBande ? m.max : (Math.ceil(maxV * 1.1 / passo) * passo || 1);
 
-  // Asse Y — 4 tick
-  const yTicks = [0, Math.round(yMax/3), Math.round(yMax*2/3), yMax];
+  // Asse Y — 4 tick (a bande: i cinque gradini, col nome)
+  const yTicks = aBande ? [0, 1, 2, 3, 4] : [0, Math.round(yMax/3), Math.round(yMax*2/3), yMax];
   const tickLines = yTicks.map(t => {
     const y = padT + chartH - (t/yMax)*chartH;
-    const lbl = t >= 1000 ? (t/1000).toFixed(1)+'k' : t;
+    const lbl = aBande ? m.testo(t).slice(0, 5) : (t >= 1000 ? (t/1000).toFixed(1)+'k' : t);
     return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#E5E7EB" stroke-width="0.5"/>
       <text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#9A9388" font-family="JetBrains Mono,monospace">${lbl}</text>`;
   }).join('');
@@ -897,7 +905,7 @@ function renderProgChart(points, byDate, selEx){
     const isLast = i === n-1;
     const r = isLast ? 6 : 4;
     const showLabel = (i % labelEvery === 0) || isLast;
-    const lastValLabel = isLast ? `<text x="${d.x.toFixed(1)}" y="${(d.y-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono,monospace">${d.v}</text>` : '';
+    const lastValLabel = isLast ? `<text x="${d.x.toFixed(1)}" y="${(d.y-10).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="700" font-family="JetBrains Mono,monospace">${aBande ? m.testo(d.v) : d.v}</text>` : '';
     return `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="${r}" fill="${isLast?'var(--acc)':'#fff'}" stroke="var(--acc)" stroke-width="1.5"/>
       <rect x="${(d.x-14).toFixed(1)}" y="${(d.y-14).toFixed(1)}" width="28" height="28" fill="transparent" style="cursor:pointer" onclick="openDayDetail('${d.date}')"></rect>
       ${lastValLabel}
@@ -905,7 +913,7 @@ function renderProgChart(points, byDate, selEx){
   }).join('');
 
   const lastVal = values[n-1] || 0;
-  const metaTop = `<text x="${padL}" y="${padT-8}" font-size="9" fill="#9A9388" font-weight="700" font-family="JetBrains Mono,monospace" text-transform="uppercase">${metaLabel} · <tspan fill="var(--acc)" font-size="11">${lastVal}</tspan> ${unitLabel}</text>`;
+  const metaTop = `<text x="${padL}" y="${padT-8}" font-size="9" fill="#9A9388" font-weight="700" font-family="JetBrains Mono,monospace" text-transform="uppercase">${metaLabel} · <tspan fill="var(--acc)" font-size="11">${aBande ? m.testo(lastVal) : lastVal}</tspan> ${unitLabel}</text>`;
 
   return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;overflow:visible;">
     <defs>
@@ -1029,13 +1037,37 @@ function isTimedExerciseByName(exName){
   return !!(p && p.kind === 'seconds');
 }
 
-// "Best set of day": peso desc → reps/tempo desc come tiebreaker.
-// Input: array di training_logs per UN giorno + UN esercizio.
-function bestSetOfDay(logs){
+// ── La misura della Progressione (Training 100, 14 ottobre 2026) ──
+// Il grafico guardava solo il carico in numeri: trazioni a banda, corpo libero e tenute davano una
+// linea piatta a zero, e «lbs» era fisso anche per chi usa i kg. Ogni esercizio si misura con la sua
+// grandezza: carico (unità dal profilo) per chi un carico ce l'ha, gradino di banda per le trazioni
+// (lo decide solo isPullUpExercise), secondi per le tenute, ripetizioni per il corpo libero.
+// → { tipo: 'carico'|'banda'|'sec'|'reps', unit, label, valore(log), testo(v), max? }
+function progMisura(exName, logs){
+  const unitLbl = (ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs';
+  if(isPullUpExercise(exName)){
+    // la scala: Viola (più aiuto) = 0 … Corpo libero (nessun aiuto) = 4; salire = banda più dura
+    const idx = (l) => { const b = (l.band_color && BAND_COLORS.includes(l.band_color)) ? l.band_color : (BAND_COLORS.includes(String(l.resistance || '')) ? String(l.resistance) : null); return b ? BAND_COLORS.indexOf(b) : -1; };
+    return { tipo:'banda', unit:'', label:'ASSISTENZA', max: BAND_COLORS.length - 1,
+      valore: (l) => { const i = idx(l); return i < 0 ? 0 : (BAND_COLORS.length - 1 - i); },
+      testo: (v) => bandLabel(BAND_COLORS[BAND_COLORS.length - 1 - Math.max(0, Math.min(BAND_COLORS.length - 1, Math.round(v)))]) };
+  }
+  const found = findExInAllSessions(exName);
+  const pr = (found && found.ex && found.ex.reps) ? parseRepsRange(found.ex.reps) : null;
+  if((pr && pr.kind === 'seconds') || (found && found.ex && found.ex.isTimed)) return { tipo:'sec', unit:'sec', label:'TENUTA', valore: (l) => Number(l.reps) || 0, testo: (v) => String(v) };
+  if(!(logs || []).some(l => (parseFloat(l.resistance) || 0) > 0)) return { tipo:'reps', unit:'reps', label:'RIPETIZIONI', valore: (l) => Number(l.reps) || 0, testo: (v) => String(v) };
+  return { tipo:'carico', unit: unitLbl, label:'CARICO', valore: (l) => parseFloat(l.resistance) || 0, testo: (v) => String(v) };
+}
+// Il passo «bello» dell'asse: 2, 5, 10 o 50 a seconda della grandezza.
+function _progPasso(maxV){ return maxV <= 10 ? 2 : maxV <= 40 ? 5 : maxV <= 150 ? 10 : 50; }
+
+// "Best set of day": la misura dell'esercizio desc → reps/tempo desc come tiebreaker.
+// Input: array di training_logs per UN giorno + UN esercizio, e la misura (senza: il carico, come prima).
+function bestSetOfDay(logs, misura){
   if(!logs || !logs.length) return null;
+  const val = misura ? misura.valore : ((l) => parseInt(l.resistance) || 0);
   return logs.reduce((best, l) => {
-    const lW = parseInt(l.resistance) || 0;
-    const bW = parseInt(best.resistance) || 0;
+    const lW = val(l), bW = val(best);
     if(lW > bW) return l;
     if(lW < bW) return best;
     return ((l.reps||0) > (best.reps||0)) ? l : best;
@@ -1697,6 +1729,240 @@ function _renderInjuryBar(){
     </div>`;
 }
 
+// ═══ «CAMBIA PER OGGI» (Training 160, 14 ottobre 2026) ═══
+// Attrezzo occupato, un movimento che dà fastidio, o la «variante più facile» del coach (330): si
+// sostituisce l'esercizio SOLO PER OGGI, nella seduta in memoria, e la scheda non cambia. Le serie
+// si salvano sotto l'esercizio scelto, col suo codice; «Ultima volta» e Progressione lo seguono da sé.
+// Il cambio vive sul telefono (zt_cambi_oggi_<utente>_<giorno>: domani non c'è più) e si riapplica
+// dopo ogni lettura della scheda (applicaCambiOggi da loadActiveScheda). L'esercizio nuovo si costruisce
+// dalla riga di catalogo come fa il generatore (_trainGenTestiEsercizio, _trainGenPickEq), coi parametri
+// della seduta (serie rimaste, ripetizioni, recupero). I candidati: l'alternativa scritta a catalogo,
+// la variante più facile, poi lo stesso schema di movimento (stesso gruppo per isolamenti e core) fra
+// gli esercizi che la persona può fare (ZTCoachRules.puoFare), mai uno già in seduta.
+const CO_COLONNE = 'codice, nome, pattern, gruppo_target, livello, attrezzo, surrogato_attrezzo, luogo, uso, alternativa, setup, esecuzione, errori, nota_sicurezza, adattamento, nota_surrogato, zone_rischio, muscoli, unilaterale, progressione';
+const CO_MAX = 6;
+function _coKey(){ return `zt_cambi_oggi_${(ST.user && ST.user.id) || 'anon'}_${todayKey()}`; }
+function _coLoad(){ try { return JSON.parse(localStorage.getItem(_coKey())) || {}; } catch(e){ return {}; } }
+function _coSave(m){ try { if(Object.keys(m).some(sid => Object.keys(m[sid] || {}).length)) localStorage.setItem(_coKey(), JSON.stringify(m)); else localStorage.removeItem(_coKey()); } catch(e){} }
+function _coNorm(s){ return String(s || '').toLowerCase().trim().replace(/[\s_]+/g, '_'); }
+function _coOpzioni(){
+  const p = ST.profile || {};
+  return { tipoAllen: p.tipo_allenamento || 'casa', attrezzatura: (Array.isArray(p.attrezzatura) && p.attrezzatura.length) ? p.attrezzatura : ['elastico', 'corpo_libero'] };
+}
+function _coSerieOggi(sid, exName){
+  const t = todayKey();
+  return Object.keys(ST.trainLoggedSets || {}).filter(k => k.startsWith(`${sid}_${exName}_`) && k.endsWith(`_${t}`)).length;
+}
+// Rimette in memoria i cambi di oggi (dopo la lettura della scheda) e toglie quelli di un altro giorno.
+function applicaCambiOggi(){
+  const sess = ST.userTrainingSessions;
+  if(!sess) return;
+  const mappa = _coLoad();
+  Object.keys(sess).forEach(sid => {
+    const s = sess[sid];
+    if(!s || !Array.isArray(s.exercises)) return;
+    const cambi = mappa[sid] || {};
+    s.exercises = s.exercises.map(ex => {
+      if(!ex) return ex;
+      const origCod = ex.oggiAlPostoDi ? ex.oggiAlPostoDi.codice : ex.codice;
+      const c = origCod && cambi[origCod];
+      if(c && c.scelto) return c.scelto;                       // il cambio di oggi
+      if(ex.oggiAlPostoDi && ex._originaleOggi) return ex._originaleOggi;   // un cambio di un altro giorno
+      return ex;
+    });
+  });
+}
+function apriCambioOggi(sid, exName){
+  ST.cambioOggi = { sid, exName, stato: 'in-corso', candidati: [] };
+  renderTraining();
+  _coCerca(sid, exName).catch(e => { console.warn('[cambia per oggi]', (e && e.message) || e); if(ST.cambioOggi) { ST.cambioOggi.stato = 'errore'; renderTraining(); } });
+}
+function chiudiCambioOggi(){ ST.cambioOggi = null; renderTraining(); }
+async function _coCerca(sid, exName){
+  const ex = findExercise(exName, sid);
+  const codice = ex && ex.codice;
+  const st = ST.cambioOggi;
+  if(!st || !codice){ if(st){ st.stato = 'nessuno'; renderTraining(); } return; }
+  if(typeof senzaRete === 'function' && senzaRete()){ st.stato = 'senza-rete'; renderTraining(); return; }
+  const r1 = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1), { silenzioso: true });
+  if(r1.error){ st.stato = 'errore'; renderTraining(); return; }
+  const attuale = (r1.data || [])[0];
+  if(!attuale){ st.stato = 'nessuno'; renderTraining(); return; }
+  const scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []).filter(c => c !== codice);
+  const letture = [];
+  if(scritte.length) letture.push(supa.from('esercizi_catalog').select(CO_COLONNE).in('codice', scritte));
+  if(attuale.pattern) letture.push(supa.from('esercizi_catalog').select(CO_COLONNE).eq('pattern', attuale.pattern).neq('codice', codice).order('codice', { ascending: true }).range(0, 999));
+  const esiti = await Promise.all(letture.map(q => dbq('leggere le alternative a catalogo', q, { silenzioso: true })));
+  if(esiti.some(r => r.error)){ st.stato = 'errore'; renderTraining(); return; }
+  const righe = []; const visti = new Set();
+  [].concat(...esiti.map(r => r.data || [])).forEach(r => { if(r && r.codice && !visti.has(r.codice)){ visti.add(r.codice); righe.push(r); } });
+  const o = _coOpzioni();
+  const sess = getTrainingSession(sid);
+  const inSeduta = new Set((sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean));
+  const pat = String(attuale.pattern || '').toLowerCase().trim();
+  const perGruppo = pat === 'isolamento' || pat === 'core';
+  const gruppi = String(attuale.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  const facile = ZTCoachRules.varianteFacile(attuale, righe, { ...o, inScheda: [...inSeduta] });
+  const cand = righe.filter(r => !inSeduta.has(r.codice) && ZTCoachRules.puoFare(r, o))
+    .filter(r => scritte.includes(r.codice) || (String(r.pattern || '').toLowerCase().trim() === pat
+      && (!perGruppo || String(r.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).some(g => gruppi.includes(g)))))
+    .map(r => ({ riga: r, alternativa: scritte.includes(r.codice), piuFacile: !!(facile && facile.codice === r.codice) }))
+    .sort((a, b) => (b.alternativa - a.alternativa) || (b.piuFacile - a.piuFacile) || String(a.riga.codice).localeCompare(String(b.riga.codice)))
+    .slice(0, CO_MAX);
+  if(ST.cambioOggi !== st) return;   // nel frattempo chiuso o riaperto
+  st.candidati = cand; st.stato = cand.length ? 'pronto' : 'nessuno';
+  renderTraining();
+}
+// L'esercizio di oggi costruito dalla riga di catalogo, con i parametri di quello che sostituisce.
+function _coCostruisci(riga0, orig){
+  const riga = _trainGenPulisciRiga({ ...riga0 });
+  const o = _coOpzioni();
+  const attrezzi = new Set(o.attrezzatura.map(_coNorm));
+  const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
+  const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
+  const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
+  const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
+  const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
+  const cautionNote = (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
+  const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });
+  const perLato = String(riga.unilaterale || '').trim().toLowerCase() === 'si';
+  const baseReps = String(orig.reps || '8-12').replace(/\s+per lato$/i, '');
+  const originale = orig._originaleOggi || orig;
+  const fatte = _coSerieOggi(ST.trainSession || '', orig.name);
+  const nuovo = {
+    codice: riga.codice, name: riga.nome,
+    sets: Math.max(1, (Number(orig.sets) || 3) - fatte),
+    reps: baseReps + (perLato ? ' per lato' : ''),
+    eq: _trainGenPickEq(riga, isSurrogato, o.tipoAllen, attrezzi, !!orig.iso),
+    setup: testi.setup, execution: testi.execution, commonErrors: testi.commonErrors, muscles: testi.muscles,
+    oggiAlPostoDi: { codice: originale.codice, name: originale.name },
+    _originaleOggi: originale,
+  };
+  if(testi.alert) nuovo.alert = testi.alert;
+  ['iso', 'rir', 'rest_sec', 'isTimed', 'durationBased', 'cardine'].forEach(k => { if(orig[k] !== undefined) nuovo[k] = orig[k]; });
+  if(riga.unilaterale)  nuovo.unilaterale  = String(riga.unilaterale).trim().toLowerCase();
+  if(riga.progressione) nuovo.progressione = String(riga.progressione).trim().toLowerCase();
+  if(isSurrogato) nuovo.isSurrogato = true;
+  return nuovo;
+}
+// Sostituisce per oggi `exName` della seduta `sid` con l'esercizio `codice`: dai candidati del foglio,
+// oppure letto a catalogo (dalla variante facile del coach, Training 330).
+async function cambiaPerOggi(sid, exName, codice){
+  const sess = getTrainingSession(sid);
+  const orig = findExercise(exName, sid);
+  if(!sess || !orig || !codice) return;
+  let riga = ((ST.cambioOggi && ST.cambioOggi.candidati) || []).map(c => c.riga).find(r => r.codice === codice) || null;
+  if(!riga){
+    const r = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1));
+    riga = (r.data || [])[0] || null;
+    if(!riga) return;
+  }
+  const nuovo = _coCostruisci(riga, orig);
+  const idx = sess.exercises.findIndex(e => e && e.name === exName);
+  if(idx === -1) return;
+  sess.exercises[idx] = nuovo;
+  const mappa = _coLoad();
+  mappa[sid] = mappa[sid] || {};
+  mappa[sid][nuovo.oggiAlPostoDi.codice] = { scelto: nuovo };
+  _coSave(mappa);
+  ST.cambioOggi = null;
+  if(ST.trainLogOpen && ST.trainLogOpen.exName === exName) ST.trainLogOpen = null;
+  if(ST.trainExecOpen && ST.trainExecOpen.exName === exName) ST.trainExecOpen = null;
+  if(ST.aiSuggestions) delete ST.aiSuggestions[`${sid}_${exName}`];
+  showToast(`Oggi ${nuovo.name} al posto di ${nuovo.oggiAlPostoDi.name}`, '🔁', 3500);
+  renderTraining();
+  loadLastLoggedSets(sid);      // «Ultima volta» e obiettivo anche per l'esercizio scelto
+  if(typeof ensureRestGif === 'function') ensureRestGif(nuovo.name, nuovo.codice);
+}
+// «Torna a …»: solo finché nessuna serie è stata salvata sotto l'esercizio scelto.
+function annullaCambioOggi(sid, exName){
+  const sess = getTrainingSession(sid);
+  const ex = findExercise(exName, sid);
+  if(!sess || !ex || !ex.oggiAlPostoDi || !ex._originaleOggi) return;
+  if(_coSerieOggi(sid, exName) > 0){ showToast(`Hai già serie salvate sotto ${ex.name}: oggi resta`, '🔁', 4000); return; }
+  const idx = sess.exercises.findIndex(e => e === ex);
+  if(idx === -1) return;
+  sess.exercises[idx] = ex._originaleOggi;
+  const mappa = _coLoad();
+  if(mappa[sid]) { delete mappa[sid][ex.oggiAlPostoDi.codice]; if(!Object.keys(mappa[sid]).length) delete mappa[sid]; }
+  _coSave(mappa);
+  renderTraining();
+  loadLastLoggedSets(sid);
+}
+function _renderCambioOggiSheet(){
+  const st = ST.cambioOggi;
+  if(!st) return '';
+  const esc1 = (s) => esc(s).replace(/'/g, "\\'");
+  let corpo = '';
+  if(st.stato === 'in-corso') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Cerco le alternative a catalogo…</p>`;
+  else if(st.stato === 'senza-rete') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Senza rete non riesco a leggere il catalogo: riprova quando torna.</p>`;
+  else if(st.stato === 'errore') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Il catalogo non ha risposto. Riprova fra poco.</p>`;
+  else if(st.stato === 'nessuno') corpo = `<p style="font-family:var(--font-sans);font-size:13px;color:var(--t2);">Per questo esercizio il catalogo non ha alternative che puoi fare con quello che hai.</p>`;
+  else corpo = st.candidati.map(c => {
+    const r = c.riga;
+    const tag = c.alternativa ? 'alternativa del catalogo' : c.piuFacile ? 'più facile' : (r.livello || '');
+    const attrezzo = String(r.attrezzo || '').split(';')[0].trim();
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--s2);">
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);">${esc(r.nome)} <span style="font-family:var(--font-mono);font-size:11px;font-weight:400;color:var(--t3);">${esc(r.codice)}</span></div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;margin-top:2px;">${esc([attrezzo, tag].filter(Boolean).join(' · '))}</div>
+      </div>
+      <button class="co-scegli" onclick="cambiaPerOggi('${esc1(st.sid)}','${esc1(st.exName)}','${esc1(r.codice)}')" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Scegli</button>
+    </div>`;
+  }).join('');
+  return `<div id="cambio-oggi-sheet" class="pianov4-weighin-overlay" onclick="if(event.target===this)chiudiCambioOggi()">
+    <div class="pianov4-weighin-screen">
+      <div class="pianov4-weighin-band"></div>
+      <div class="pianov4-weighin-handle"></div>
+      <div class="pianov4-weighin-header">
+        <div class="pianov4-weighin-eyebrow">CAMBIA PER OGGI</div>
+        <div class="pianov4-weighin-title">Al posto di ${esc(st.exName)}</div>
+        <button class="pianov4-weighin-close" onclick="chiudiCambioOggi()" aria-label="Chiudi">×</button>
+      </div>
+      <div class="pianov4-weighin-body" style="max-height:60vh;overflow-y:auto;padding-top:6px;">
+        ${corpo}
+        <p style="font-family:var(--font-sans);font-size:12px;color:var(--t3);margin:12px 0 0;">Vale solo per oggi: la scheda non cambia. Le serie si salvano sotto l'esercizio che scegli.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══ SERIE A SETTIMANA PER MUSCOLO (Training 110, 14 ottobre 2026) ═══
+// Il conto che fa il generatore (volumeContoMinimi), mostrato nel Programma: per ogni gruppo le serie
+// a settimana della scheda in uso contro il minimo dell'obiettivo. Per le schede salvate prima del 14
+// ottobre pattern e gruppo bersaglio arrivano dal catalogo (ST.catalogInfoByCodice).
+function _volumeScheda(){
+  const sess = Object.values(getAllTrainingSessions() || {});
+  const obiettivo = (ST.schedaAttiva && ST.schedaAttiva.scheda && ST.schedaAttiva.scheda.obiettivo) || (ST.profile && ST.profile.obiettivo) || '';
+  const riga = (ex) => (ex && ex.codice && ST.catalogInfoByCodice instanceof Map) ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  return volumeContoMinimi(sess, obiettivo, riga);
+}
+function _renderVolumeCard(){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
+  const righe = _volumeScheda();
+  if(!righe.some(r => r.serie > 0)) return '';
+  const sotto = righe.filter(r => r.sotto).length;
+  const aperto = !!ST.trainVolumeOpen;
+  const riga = (r) => `<div class="volume-riga" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--s2);">
+      <span style="flex:1;font-family:var(--font-sans);font-size:13px;color:var(--t1);text-transform:capitalize;">${esc(r.gruppo)}</span>
+      <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:${r.sotto ? 'var(--err)' : 'var(--acc)'};">${r.serie} / ${r.minimo}</span>
+      <span style="width:16px;text-align:center;font-size:12px;color:${r.sotto ? 'var(--err)' : 'var(--acc)'};">${r.sotto ? '▼' : '✓'}</span>
+    </div>`;
+  return `
+      <div id="volume-card" style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div onclick="ST.trainVolumeOpen=!ST.trainVolumeOpen;renderTraining();" style="display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;">
+          <div>
+            <div style="font-size:14px;font-weight:700;font-family:var(--font-sans);color:var(--t1);">Serie a settimana per muscolo</div>
+            <div style="font-size:11px;font-family:var(--font-mono);color:${sotto ? 'var(--err)' : 'var(--t3)'};margin-top:2px;">${sotto ? `${sotto} ${sotto === 1 ? 'muscolo sotto il minimo' : 'muscoli sotto il minimo'}` : 'tutti i muscoli al minimo o sopra'}</div>
+          </div>
+          <span style="font-size:14px;color:var(--t3);transform:rotate(${aperto ? '180deg' : '0deg'});transition:transform .15s;">▾</span>
+        </div>
+        ${aperto ? `<div style="margin-top:10px;">${righe.map(riga).join('')}
+          <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;margin-top:8px;">Il minimo dipende dal tuo obiettivo (circa 10 serie a settimana per crescere, 6-8 per mantenere). Un multiarticolare conta per intero sul muscolo principale e a metà su quelli che aiutano. Il blocco nuovo riempie da solo quello che manca: prima una serie in più, poi un esercizio.</div>
+        </div>` : ''}
+      </div>`;
+}
+
 // ═══ PAUSA PROGRAMMATA (Training 350, 13 ottobre 2026) ═══
 // Vacanza, viaggio, lavoro: un periodo con le date, dichiarato anche in anticipo, che non è un
 // infortunio. Vive nel profilo (pausa_inizio, pausa_fine, pausa_motivo: migrazione 20261013_350) così
@@ -2213,11 +2479,142 @@ function _prossimaDaCompilare(exName, sessionId, primaSerie){
 }
 
 async function completeSession(sessionId){
-  await saveWorkoutRecord(sessionId);
-  showToast('Sessione completata! 💪');
+  const wid = await saveWorkoutRecord(sessionId);
   loadTrainingHomeData();
+  // Il riepilogo di fine allenamento (Training 060): serie fatte, tempo, confronto con la volta
+  // prima, record, «com'è andata?». Si prepara PRIMA di chiudere la seduta (le serie di oggi e
+  // «Ultima volta» stanno in memoria finché la seduta è aperta).
+  await apriRiepilogoSessione(sessionId, wid);
   ST.trainSession = null;
   renderTraining();
+}
+
+// ═══ RIEPILOGO DI FINE ALLENAMENTO (Training 060, 14 ottobre 2026) ═══
+// «Completa sessione» salvava una riga e diceva «Sessione completata!»: nessun resoconto, nessuna
+// domanda. Ora: serie fatte su previste, tempo, esercizio per esercizio il confronto con la volta
+// prima (la misura di ogni esercizio: carico, banda, secondi, ripetizioni, come in Progressione) e
+// i record (il meglio di sempre, letto una volta da training_logs per codice), una domanda
+// «com'è andata?» (facile · giusta · dura) con nota libera che va sulla riga dell'allenamento
+// (workouts.sensazione, migrazione 20261014_060; workouts.note), poi tre passi: il pasto dopo
+// l'allenamento, la pesata, la Home. Durante la seduta la pillola di una serie che supera l'ultima
+// volta porta un ▲ (_serieSupera).
+const SENSAZIONI = [['facile', 'Facile'], ['giusta', 'Giusta'], ['dura', 'Dura']];
+// Confronto fra due serie sulla misura dell'esercizio: 1 se a supera b, -1 se sotto, 0 pari.
+function _confrontaSerie(exName, a, b, misura){
+  if(!a || !b) return 0;
+  const m = misura || progMisura(exName, [a, b]);
+  const va = m.valore(a), vb = m.valore(b);
+  if(va !== vb) return va > vb ? 1 : -1;
+  const ra = Number(a.reps) || 0, rb = Number(b.reps) || 0;
+  return ra === rb ? 0 : (ra > rb ? 1 : -1);
+}
+// La serie salvata oggi (voce di ST.trainLoggedSets) supera l'ultima serie della volta prima?
+function _serieSupera(exName, d){
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  if(!d || !last) return false;
+  const oggi = { reps: d.reps, resistance: d.resistance, band_color: d.band_color || ((d.resistance && BAND_COLORS.includes(String(d.resistance))) ? String(d.resistance) : null) };
+  return _confrontaSerie(exName, oggi, last) > 0;
+}
+async function apriRiepilogoSessione(sid, wid){
+  const sess = getTrainingSession(sid);
+  if(!sess) return;
+  const today = todayKey();
+  const esercizi = (sess.exercises || []).filter(e => e && e.name);
+  const codici = esercizi.map(e => e.codice).filter(Boolean);
+  // Le serie di oggi, esercizio per esercizio, nella forma delle righe di training_logs
+  const oggiPer = {};
+  Object.keys(ST.trainLoggedSets || {}).forEach(k => {
+    if(!k.startsWith(`${sid}_`) || !k.endsWith(`_${today}`)) return;
+    const d = ST.trainLoggedSets[k];
+    const parts = k.split('_'); const exName = parts.slice(1, parts.length - 2).join('_');
+    (oggiPer[exName] = oggiPer[exName] || []).push({ reps: d.reps, resistance: d.resistance, band_color: d.band_color || ((d.resistance && BAND_COLORS.includes(String(d.resistance))) ? String(d.resistance) : null) });
+  });
+  // Lo storico per codice (prima di oggi): la volta prima e il meglio di sempre. Una lettura, a pagine.
+  let storico = [];
+  if(codici.length && ST.user && ST.user.id !== 'test-user-001'){
+    const r = await dbqAll('leggere lo storico delle serie', () => supa.from('training_logs')
+      .select('exercise_code, date, reps, resistance, band_color')
+      .eq('user_id', ST.user.id).in('exercise_code', codici).lt('date', today)
+      .order('date', { ascending: false }), { silenzioso: true });
+    storico = r.data || [];
+  }
+  const righe = esercizi.map(e => {
+    const oggi = oggiPer[e.name] || [];
+    const prec = storico.filter(l => l.exercise_code === e.codice);
+    const misura = progMisura(e.name, [...oggi, ...prec]);
+    const bestOggi = bestSetOfDay(oggi, misura);
+    const ultimaData = prec.length ? prec.map(l => l.date).sort().pop() : null;
+    const bestPrima = ultimaData ? bestSetOfDay(prec.filter(l => l.date === ultimaData), misura) : null;
+    const bestSempre = prec.length ? bestSetOfDay(prec, misura) : null;
+    const fatte = oggi.length, previste = Number(e.sets) || 0;
+    const esito = !bestOggi ? 'saltato' : !bestPrima ? 'nuovo' : (['giu', 'pari', 'su'][_confrontaSerie(e.name, bestOggi, bestPrima, misura) + 1]);
+    const record = !!(bestOggi && bestSempre && _confrontaSerie(e.name, bestOggi, bestSempre, misura) > 0);
+    const t = (l) => l ? (misura.tipo === 'banda' ? misura.testo(misura.valore(l)) : `${misura.valore(l)}${misura.unit ? ' ' + misura.unit : ''}`) + (misura.tipo === 'carico' || misura.tipo === 'banda' ? ` × ${l.reps}` : '') : '—';
+    return { name: e.name, codice: e.codice, fatte, previste, esito, record, oggi: t(bestOggi), prima: t(bestPrima) };
+  });
+  const fatte = righe.reduce((a, r) => a + r.fatte, 0), previste = righe.reduce((a, r) => a + r.previste, 0);
+  const minuti = ST.trainSessionStart ? Math.max(1, Math.round((Date.now() - ST.trainSessionStart) / 60000)) : null;
+  const lavoroSec = (typeof workTimeCurrent === 'function') ? workTimeCurrent(sid) : 0;
+  ST.trainRiepilogo = { sid, wid: wid || null, nome: sess.name, fatte, previste, minuti, lavoroSec, righe, record: righe.filter(r => r.record).length, sensazione: null, nota: '', salvata: false };
+}
+function _riepilogoScegli(v){ if(ST.trainRiepilogo){ ST.trainRiepilogo.sensazione = v; renderTraining(); } }
+// Salva com'è andata (se detto) sulla riga dell'allenamento, con la coda senza rete, e chiude.
+async function _riepilogoSalva(){
+  const r = ST.trainRiepilogo;
+  if(!r || r.salvata) return;
+  r.salvata = true;
+  const nota = (document.getElementById('riepilogo-nota')?.value || r.nota || '').trim();
+  if(r.wid && ST.user && ST.user.id !== 'test-user-001' && (r.sensazione || nota)){
+    const righe = {};
+    if(r.sensazione) righe.sensazione = r.sensazione;
+    if(nota) righe.note = nota;
+    await scriviConCoda('salvare com\'è andata', { tabella: 'workouts', tipo: 'update', righe, filtri: [['id', r.wid], ['user_id', ST.user.id]] });
+  }
+}
+async function chiudiRiepilogo(dove){
+  await _riepilogoSalva();
+  ST.trainRiepilogo = null;
+  if(dove === 'pasto'){ showPage('oggi'); if(typeof openMealLogForm === 'function'){ openMealLogForm(); if(typeof renderOggi === 'function') renderOggi(); } return; }
+  if(dove === 'pesata'){ if(typeof openWeighInSheet === 'function') openWeighInSheet(); else showPage('body'); return; }
+  if(dove === 'home'){ showPage('home'); return; }
+  renderTraining();
+}
+function _renderRiepilogoSessione(){
+  const r = ST.trainRiepilogo;
+  if(!r) return '';
+  const tempo = r.minuti != null ? `${r.minuti} min` : (r.lavoroSec ? `${Math.round(r.lavoroSec / 60)} min di lavoro` : '—');
+  const segno = { su: '↑', pari: '=', giu: '↓', nuovo: '★', saltato: '—' };
+  const colore = { su: 'var(--acc)', pari: 'var(--t3)', giu: 'var(--err)', nuovo: 'var(--acc)', saltato: 'var(--t3)' };
+  const righe = r.righe.map(x => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--s2);">
+      <span style="width:18px;text-align:center;font-family:var(--font-mono);font-weight:800;color:${colore[x.esito]};">${segno[x.esito]}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(nomeCortoConTag(x.name))}${x.record ? ' <span class="riepilogo-record" style="font-family:var(--font-mono);font-size:10px;color:var(--acc);font-weight:800;">🏆 RECORD</span>' : ''}</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--t3);">${x.fatte}/${x.previste} serie · oggi ${esc(x.oggi)}${x.esito !== 'nuovo' && x.esito !== 'saltato' ? ` · prima ${esc(x.prima)}` : x.esito === 'nuovo' ? ' · prima volta' : ''}</div>
+      </div>
+    </div>`).join('');
+  const chip = (v, lbl) => `<button type="button" class="riepilogo-sens" onclick="_riepilogoScegli('${v}')" style="flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid ${r.sensazione === v ? 'var(--acc)' : 'var(--s2)'};background:${r.sensazione === v ? 'var(--acc)' : 'var(--s1)'};color:${r.sensazione === v ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;">${lbl}</button>`;
+  const btn = (dove, lbl, pieno) => `<button type="button" onclick="chiudiRiepilogo('${dove}')" style="width:100%;padding:13px;border-radius:12px;border:${pieno ? 'none' : '1.5px solid var(--s3)'};background:${pieno ? 'var(--acc)' : 'var(--s1)'};color:${pieno ? '#fff' : 'var(--acc)'};font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;">${lbl}</button>`;
+  return `<div id="riepilogo-sessione" class="info-modal-overlay" style="z-index:1200;align-items:flex-end;" onclick="if(event.target===this)chiudiRiepilogo()">
+    <div class="pianov4-weighin-screen" style="max-height:92vh;overflow-y:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));">
+      <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:4px;">SESSIONE COMPLETATA 💪</div>
+      <div style="font-size:20px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:12px;">${esc(r.nome)}</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;">
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">SERIE</div><div id="riepilogo-serie" style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--t1);">${r.fatte} / ${r.previste}</div></div>
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">TEMPO</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:var(--t1);">${esc(tempo)}</div></div>
+        <div style="flex:1;background:var(--s1);border-radius:12px;padding:10px;text-align:center;"><div style="font-family:var(--font-mono);font-size:10px;color:var(--t3);letter-spacing:.06em;">RECORD</div><div style="font-family:var(--font-mono);font-size:18px;font-weight:800;color:${r.record ? 'var(--acc)' : 'var(--t3)'};">${r.record || '—'}</div></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:2px;">RISPETTO ALLA VOLTA PRIMA</div>
+      ${righe}
+      <div style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin:16px 0 8px;">Com'è andata?</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">${SENSAZIONI.map(([v, l]) => chip(v, l)).join('')}</div>
+      <textarea id="riepilogo-nota" class="inp" rows="2" placeholder="Una nota, se vuoi (facoltativa)" oninput="if(ST.trainRiepilogo)ST.trainRiepilogo.nota=this.value;" style="width:100%;box-sizing:border-box;font-family:var(--font-sans);font-size:14px;">${esc(r.nota || '')}</textarea>
+      <div style="margin-top:14px;">
+        ${btn('pasto', 'Registra il pasto dopo l\'allenamento', true)}
+        ${btn('pesata', 'Pesati', false)}
+        ${btn('home', 'Torna alla Home', false)}
+      </div>
+    </div>
+  </div>`;
 }
 
 async function deleteWorkout(id, date){
@@ -3305,7 +3702,7 @@ function renderTraining(){
           const resistTxt = badgeResist
             ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
             : '';
-          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
+          return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}${_serieSupera(e.name, d) ? ' <span class="ex-set-pill-su" title="Meglio dell\'ultima volta">▲</span>' : ''}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
         }).join('');
         // GRAFICA L2 — pill VUOTE per le serie ancora da fare (S{n+1} … S{tot})
         const emptyBadges = (!allDone && e.sets > loggedKeys.length)
@@ -3391,11 +3788,13 @@ function renderTraining(){
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
             ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
+            ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
             ${suggestion?`<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
             <div class="ex-action-row">
               <span class="ex-progress${allDone?' done':''}">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</span>
+              ${(!allDone && !isOpen) ? `<button class="ex-cambia-oggi" onclick="event.stopPropagation();apriCambioOggi('${sel}','${safeName}')" style="background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;cursor:pointer;padding:4px 6px;margin-left:auto;">Cambia per oggi ›</button>` : ''}
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
@@ -3796,6 +4195,8 @@ function renderTraining(){
 
         ${cicloHTML}
 
+        ${_renderVolumeCard()}
+
         ${comeCresciHTML}
 
         <div>
@@ -3853,7 +4254,7 @@ function renderTraining(){
     const renderExRow = (name) => {
       const isSel = name === selEx;
       const last = ST.trainProgLastSet[name];
-      const lastMeta = last ? `${last.reps} reps · ${last.resistance||'—'}` : '';
+      const lastMeta = last ? `${last.reps} reps · ${last.resistance ? (/^\d/.test(String(last.resistance)) ? `${last.resistance} ${(ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs'}` : bandLabel(String(last.resistance))) : 'corpo libero'}` : '';
       return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:48px;background:${isSel?'var(--acc-lt,rgba(42,122,111,.08))':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};">
         ${isSel?`<span style="width:6px;height:6px;border-radius:50%;background:var(--acc);flex-shrink:0;"></span>`:`<span style="width:6px;flex-shrink:0;"></span>`}
         <span style="flex:1;min-width:0;">
@@ -3864,7 +4265,8 @@ function renderTraining(){
       </div>`;
     };
 
-    const sessionOrder = ['upperA','upperB','lowerA','lowerB','recoveryUpper','recoveryLower'];
+    // Le sedute della scheda vera, nell'ordine dello split (col quinto giorno, Upper Pump, se c'è), poi i recuperi
+    const sessionOrder = [...new Set([...(Array.isArray(ST.userSessionCycle) && ST.userSessionCycle.length ? ST.userSessionCycle : ['upperA','upperB','lowerA','lowerB']), 'recoveryUpper', 'recoveryLower'])];
     const programGroups = sessionOrder.map(sid => {
       const sess = getTrainingSession(sid);
       if(!sess?.exercises) return null;
@@ -3945,50 +4347,59 @@ function renderTraining(){
       contentHTML = `<div class="prog-empty">
         <div style="font-size:28px;margin-bottom:12px;">📋</div>
         <div style="font-size:14px;font-weight:600;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">Nessuna sessione registrata</div>
-        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Logga le serie dalla tab Sessione per vedere il grafico</div>
+        <div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Registra le serie durante l'allenamento: il grafico si costruisce da lì</div>
       </div>`;
     } else {
       const byDate = ST.trainProgLogs.reduce((acc,log)=>{
         (acc[log.date]=acc[log.date]||[]).push(log); return acc;
       }, {});
       const dates = Object.keys(byDate).sort();
+      // La misura dell'esercizio (Training 100): carico, banda, secondi o ripetizioni
+      const misura = progMisura(selEx, ST.trainProgLogs);
       const points = dates.map(date => {
-        const best = bestSetOfDay(byDate[date]);
+        const best = bestSetOfDay(byDate[date], misura);
         return {
           date,
           dateShort: shortDate(date),
           reps: best?.reps || 0,
-          resist: parseInt(best?.resistance) || 0,
+          resist: parseFloat(best?.resistance) || 0,
+          v: best ? misura.valore(best) : 0,
         };
       });
 
-      // 4 chip grafico — usa classi CSS
-      const activeChart = ST.trainProgChart || 'carico';
+      // chip grafico — usa classi CSS; il 1RM solo con un carico
+      const activeChart = (ST.trainProgChart === '1rm' && misura.tipo !== 'carico') ? 'carico' : (ST.trainProgChart || 'carico');
+      const chipMisura = { carico:'Carico', banda:'Banda', sec:'Tenuta', reps:'Ripetizioni' }[misura.tipo];
       const chartChips = [
-        ['carico','Carico'],
-        ['1rm','1RM Stimato'],
+        ['carico', chipMisura],
+        ...(misura.tipo === 'carico' ? [['1rm','1RM Stimato']] : []),
         ['volume','Volume Totale'],
         ['zone','Zone'],
       ].map(([v,lbl]) =>
         `<button class="prog-chip${activeChart===v?' active':''}" onclick="ST.trainProgChart='${v}';renderTraining();">${lbl}</button>`
       ).join('');
 
-      const chartSvg = renderProgChart(points, byDate, selEx);
+      const chartSvg = renderProgChart(points, byDate, selEx, misura);
 
-      // Stat cards 2×2 — usa classi CSS
-      const bestPeso = points.reduce((m,p) => p.resist > m ? p.resist : m, 0);
+      // Stat cards 2×2 — usa classi CSS. La misura dell'esercizio, l'unità dal profilo
+      const u = misura.unit;
+      const bestV = points.reduce((m,p) => p.v > m ? p.v : m, 0);
       const best1rm = points.reduce((m,p) => {
         const v = p.resist > 0 ? Math.round(p.resist * (1 + p.reps/30)) : 0;
         return v > m ? v : m;
       }, 0);
+      const ultimaV = points.length ? points[points.length - 1].v : 0;
       const sessioni = points.length;
+      const conUnita = (v) => misura.tipo === 'banda' ? misura.testo(v) : `${v}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}`;
       let trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">—</div>`;
+      let diffTrend = null;
       if(points.length >= 4){
-        const last2 = points.slice(-2).map(p=>p.resist);
-        const prev2 = points.slice(-4,-2).map(p=>p.resist);
-        const diff = Math.round(((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2));
-        if(diff > 0)      trendHTML = `<div class="prog-stat-value" style="color:var(--ok,#16A34A);">↑ +${diff}<span class="prog-stat-unit">lbs</span></div>`;
-        else if(diff < 0) trendHTML = `<div class="prog-stat-value" style="color:var(--err,#DC2626);">↓ ${diff}<span class="prog-stat-unit">lbs</span></div>`;
+        const last2 = points.slice(-2).map(p=>p.v);
+        const prev2 = points.slice(-4,-2).map(p=>p.v);
+        diffTrend = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
+        const diff = Math.round(diffTrend * 10) / 10;
+        if(diff > 0)      trendHTML = `<div class="prog-stat-value" style="color:var(--ok,#16A34A);">↑ +${diff}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}</div>`;
+        else if(diff < 0) trendHTML = `<div class="prog-stat-value" style="color:var(--err,#DC2626);">↓ ${diff}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}</div>`;
         else              trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">→ stabile</div>`;
       } else if(points.length >= 2){
         trendHTML = `<div style="font-size:11px;font-family:var(--font-mono);color:var(--t3);">≥4 sessioni per trend</div>`;
@@ -3996,12 +4407,13 @@ function renderTraining(){
 
       const statCards2x2 = `<div class="prog-stat-grid">
         <div class="prog-stat-card">
-          <div class="prog-stat-label">BEST PESO</div>
-          <div class="prog-stat-value">${bestPeso||'—'}${bestPeso?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+          <div class="prog-stat-label">BEST ${misura.label}</div>
+          <div class="prog-stat-value">${(bestV || misura.tipo === 'banda') ? conUnita(bestV) : '—'}</div>
         </div>
         <div class="prog-stat-card">
-          <div class="prog-stat-label">1RM STIM.</div>
-          <div class="prog-stat-value">${best1rm||'—'}${best1rm?`<span class="prog-stat-unit">lbs</span>`:''}</div>
+          ${misura.tipo === 'carico'
+            ? `<div class="prog-stat-label">1RM STIM.</div><div class="prog-stat-value">${best1rm||'—'}${best1rm?`<span class="prog-stat-unit">${u}</span>`:''}</div>`
+            : `<div class="prog-stat-label">ULTIMA</div><div class="prog-stat-value">${conUnita(ultimaV)}</div>`}
         </div>
         <div class="prog-stat-card">
           <div class="prog-stat-label">SESSIONI</div>
@@ -4013,17 +4425,16 @@ function renderTraining(){
         </div>
       </div>`;
 
-      // Coach insight deterministico
-      let insightText = 'Logga almeno 3 sessioni per vedere un\'analisi della tua progressione.';
-      if(points.length >= 4){
-        const last2 = points.slice(-2).map(p=>p.resist);
-        const prev2 = points.slice(-4,-2).map(p=>p.resist);
-        const diff = ((last2[0]+last2[1])/2) - ((prev2[0]+prev2[1])/2);
-        if(diff > 0) insightText = 'Nelle ultime sessioni stai aumentando il carico. Sei in progressione — continua così.';
-        else if(diff < 0) insightText = 'Il carico è leggermente calato. Verifica recupero e qualità del sonno.';
-        else insightText = 'Il carico è stabile. Valuta un piccolo incremento nella prossima sessione.';
+      // Coach insight deterministico, sulla misura dell'esercizio
+      const cosa = { carico:'il carico', banda:'la banda', sec:'la tenuta', reps:'le ripetizioni' }[misura.tipo];
+      const passoAvanti = { carico:'Valuta un piccolo incremento nella prossima sessione.', banda:'Quando arrivi in cima alle ripetizioni, prova la banda più dura.', sec:'Quando arrivi in cima, allunga la tenuta di 5 secondi.', reps:'Quando arrivi in cima, segui la via che il coach nomina in seduta.' }[misura.tipo];
+      let insightText = 'Registra almeno 3 sessioni per vedere un\'analisi della tua progressione.';
+      if(diffTrend != null){
+        if(diffTrend > 0) insightText = misura.tipo === 'banda' ? 'Nelle ultime sessioni usi meno assistenza. Sei in progressione — continua così.' : `Nelle ultime sessioni ${cosa === 'le ripetizioni' ? 'le ripetizioni salgono' : cosa + ' sale'}. Sei in progressione — continua così.`;
+        else if(diffTrend < 0) insightText = misura.tipo === 'banda' ? 'Serve più assistenza di prima. Verifica recupero e qualità del sonno.' : `${cosa.charAt(0).toUpperCase() + cosa.slice(1)} ${cosa === 'le ripetizioni' ? 'sono calate' : 'è calato'} un po\'. Verifica recupero e qualità del sonno.`;
+        else insightText = `${cosa.charAt(0).toUpperCase() + cosa.slice(1)} ${cosa === 'le ripetizioni' ? 'sono stabili' : 'è stabile'}. ${passoAvanti}`;
       } else if(points.length >= 3){
-        insightText = 'Buon inizio. Logga ancora qualche sessione per vedere il trend completo.';
+        insightText = 'Buon inizio. Registra ancora qualche sessione per vedere il trend completo.';
       }
 
       const coachInsight = `<div class="prog-coach-card">
@@ -4610,7 +5021,7 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal();
+  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderPausaModal() + _renderCambioOggiSheet() + _renderRiepilogoSessione();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach

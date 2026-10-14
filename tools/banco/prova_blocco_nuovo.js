@@ -31,7 +31,8 @@ const catalogo = [
   { ...row('EX033','Trazioni sbarra presa neutra','tirata verticale'), attrezzo:'sbarra' },
   row('EX040','Squat elastico','dominante ginocchia'), row('EX041','Affondi','dominante ginocchia'), row('EX042','Squat bulgaro','dominante ginocchia'), row('EX043','Step-up','dominante ginocchia'),
   row('EX050','Stacco rumeno elastico','dominante anca'), row('EX051','Hip thrust','dominante anca'),
-  row('EX060','Alzate posteriori','isolamento','deltoidi posteriori'), row('EX061','Face pull elastico','isolamento','deltoidi posteriori'), row('EX068','Reverse fly elastico','isolamento','deltoidi posteriori'),
+  // quattro deltoidi posteriori: dal 14 ottobre 2026 (Training 110) il volume ne prende uno in più, e «Cambia ›» deve avere ancora un mai fatto
+  row('EX060','Alzate posteriori','isolamento','deltoidi posteriori'), row('EX061','Face pull elastico','isolamento','deltoidi posteriori'), row('EX068','Reverse fly elastico','isolamento','deltoidi posteriori'), row('EX069','Band pull-apart','isolamento','deltoidi posteriori'),
   row('EX062','Alzate laterali','isolamento','deltoidi laterali'), row('EX063','Curl elastico','isolamento','bicipiti'), row('EX064','Push down elastico','isolamento','tricipiti'),
   row('EX065','Ponte glutei','isolamento','glutei'), row('EX066','Leg curl elastico','isolamento','ischiocrurali'), row('EX067','Calf raise','isolamento','polpacci'),
   row('EX070','Pallof press','core','core anti-rotazione'), row('EX071','Russian twist','core','core rotazione'),
@@ -117,7 +118,7 @@ async function nuovo(opts){
     const migrati = con.sessioni.flatMap(s => s.exercises.filter(e => !e.cardine).map(e => e.codice))
       .filter(c => sedutaDi(schedaPrima, c).length && !sedutaDi(schedaPrima, c).includes(sedutaDi(con, c)[0]));
     atteso('nessun complementare cambia seduta rispetto al blocco prima', migrati, []);
-    atteso('dove c\'e\' un\'alternativa mai fatta, entra quella (deltoidi posteriori: non EX060)', ['EX061', 'EX068'].includes(a.codici(con, 'upperA').find(c => ['EX060', 'EX061', 'EX068'].includes(c))), true);
+    atteso('dove c\'e\' un\'alternativa mai fatta, entra quella (deltoidi posteriori: non EX060)', ['EX061', 'EX068', 'EX069'].includes(a.codici(con, 'upperA').find(c => ['EX060', 'EX061', 'EX068', 'EX069'].includes(c))), true);
     atteso('dove non c\'e\' alternativa, resta dov\'era (deltoidi laterali EX062 in Upper B)', [a.codici(con, 'upperB').includes('EX062'), a.codici(con, 'upperA').includes('EX062')], [true, false]);
     atteso('core: ogni seduta nuova ne ha due, uno per natura, senza doppioni fra sedute', con.sessioni.map(s => s.exercises.filter(e => /^EX07/.test(e.codice)).length), [2, 2, 2, 2]);
     // EX070/EX071 stavano in TUTTE E DUE le Upper: la prima seduta prende i due mai fatti, la seconda tiene i vecchi (niente migra, niente doppio)
@@ -164,9 +165,11 @@ async function nuovo(opts){
     const bn = await a.win.preparaBloccoNuovo();
     atteso('cambia · il dry-run porta il pool e gli attrezzi', [Array.isArray(bn.scheda._pools.poolPrincipali), bn.scheda._pools.attrezzatura.includes('sbarra'), !!bn.scheda.sessioni[0]._sp], [true, true, true]);
     const uA = bn.scheda.sessioni.find(s => s.id === 'upperA');
-    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068'].includes(e.codice));
+    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068', 'EX069'].includes(e.codice));
     const cands = a.win.candidatiBloccoNuovo('upperA', post.codice);
-    atteso('cambia · alternative del posto: stesso gruppo, fuori chi e\' in scheda, mai fatti prima', cands.map(k => k.codice + (k.fattoPrima ? '*' : '')), ['EX068', 'EX060*'].filter(c => c.replace('*', '') !== post.codice));
+    // (Training 110: il volume ha gia' preso uno dei mai fatti; resta almeno un mai fatto, poi EX060 che era nel blocco prima)
+    const inSchedaCod = new Set(a.ST.bloccoNuovo.scheda.sessioni.flatMap(s => s.exercises.map(e => e.codice)));
+    atteso('cambia · alternative del posto: stesso gruppo, fuori chi e\' in scheda, prima i mai fatti poi EX060 fatto prima', [cands.length >= 2, cands.slice(0, -1).every(k => !k.fattoPrima && !inSchedaCod.has(k.codice)), cands[cands.length - 1].codice + '*'], [true, true, 'EX060*']);
     const candTraz = a.win.candidatiBloccoNuovo('upperA', 'EX033');
     atteso('cambia · per le trazioni: solo tirate verticali non in scheda, il gravitron ultimo e segnato casalingo', [candTraz.map(k => k.codice), candTraz.find(k => k.codice === 'EX032').surrogato], [['EX030', 'EX032'], true]);
     const sheet = () => a.win.document.getElementById('blocco-nuovo-sheet').textContent.replace(/\s+/g, ' ');
@@ -190,7 +193,7 @@ async function nuovo(opts){
     a.ST.page = 'training'; a.ST.trainTab = 'piano';
     const bn = await a.win.preparaBloccoNuovo();
     const uA = bn.scheda.sessioni.find(s => s.id === 'upperA');
-    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068'].includes(e.codice));
+    const post = uA.exercises.find(e => ['EX060', 'EX061', 'EX068', 'EX069'].includes(e.codice));
     a.win.apriCambioBloccoNuovo('upperA', post.codice);
     const overlay = a.win.document.getElementById('blocco-nuovo-sheet');
     overlay.dispatchEvent(new a.win.MouseEvent('click', { bubbles:true }));
