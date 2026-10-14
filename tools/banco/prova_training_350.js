@@ -115,9 +115,9 @@ async function nuovo(o){
     atteso('app · getPausa null', a.win.getPausa(), null);
     // il foglio: date, «non lo so ancora», motivo, salva
     a.win.apriPausa();
-    atteso('foglio · si apre con oggi come partenza', [!!a.doc.getElementById('pausa-modal'), a.doc.getElementById('pausa-inizio').value, a.doc.getElementById('pausa-aperta').checked], [true, OGGI, false]);
+    atteso('foglio · si apre con oggi come partenza', [!!a.doc.getElementById('pausa-modal'), a.doc.getElementById('pausa-inizio').value, a.doc.getElementById('pausa-aperta').getAttribute('aria-checked')], [true, OGGI, 'false']);
     a.doc.getElementById('pausa-inizio').value = '2026-10-20'; a.doc.getElementById('pausa-fine').value = '2026-10-30';
-    a.ST.pausaModal.motivo = 'viaggio';
+    a.ST.pausaModal.motivi = ['viaggio'];
     await a.win.salvaPausa();
     atteso('foglio · scrive le tre colonne nel profilo, una riga per id', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:'2026-10-30', pausa_motivo:'viaggio', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
     atteso('foglio · il profilo in memoria è aggiornato e il foglio chiuso', [a.ST.profile.pausa_inizio, a.ST.profile.pausa_fine, !!a.ST.pausaModal], ['2026-10-20', '2026-10-30', false]);
@@ -132,7 +132,7 @@ async function nuovo(o){
     await a.win.salvaPausa();
     atteso('foglio · ritorno prima della partenza: niente scrittura, foglio ancora aperto', [a.scritture().length - n, !!a.ST.pausaModal], [0, true]);
     // aperta
-    a.doc.getElementById('pausa-fine').value = ''; a.doc.getElementById('pausa-aperta').checked = true;
+    a.doc.getElementById('pausa-fine').value = ''; a.doc.getElementById('pausa-aperta').click();
     await a.win.salvaPausa();
     atteso('foglio · «non lo so ancora»: fine nulla', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:null, pausa_motivo:'vacanza', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
   }

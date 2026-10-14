@@ -2002,16 +2002,28 @@ function _aggiornaPausaImpostazioni(){
   if(btn){ const pz = getPausa(); btn.textContent = (pz && (pz.attiva || pz.futura)) ? 'Modifica ›' : 'Imposta ›'; }
 }
 function _pausaFmt(d){ return new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }); }
-function _pausaMotivoTesto(m){ const v = PAUSA_MOTIVI.find(x => x[0] === m); return v ? v[1].toLowerCase() : null; }
+// I motivi (Metodo 210, correzione del 14 ottobre: Ignazio vuole poterne scegliere più d'uno, «viaggio e
+// lavoro»): nella stessa colonna di testo pausa_motivo, codici separati da virgola («viaggio,lavoro»); una
+// riga di prima con un motivo solo si legge uguale.
+function _pausaMotivi(testo){
+  const validi = PAUSA_MOTIVI.map(([k]) => k);
+  return String(testo || '').split(',').map(x => x.trim().toLowerCase()).filter(x => validi.includes(x));
+}
+function _pausaMotivoTesto(m){
+  const nomi = _pausaMotivi(m).map(k => PAUSA_MOTIVI.find(x => x[0] === k)[1].toLowerCase());
+  if(!nomi.length) return null;
+  return nomi.length === 1 ? nomi[0] : nomi.slice(0, -1).join(', ') + ' e ' + nomi[nomi.length - 1];
+}
 // Il foglio: date e motivo. `ST.pausaModal` = { inizio, fine, aperta, motivo }
 // Il foglio vive sul body, non dentro la pagina Training: si apre anche dalle Impostazioni (Metodo 210).
 function apriPausa(){
   const pz = getPausa();
   const oggi = todayKey();
   const tutti = { allenamento: true, cibo: true, pesate: true };
+  const motiviPrima = pz ? _pausaMotivi(pz.motivo) : [];
   ST.pausaModal = pz && (pz.attiva || pz.futura)
-    ? { inizio: pz.inizio, fine: pz.fine || '', aperta: !pz.fine, motivo: pz.motivo || 'vacanza', moduli: Object.assign({}, tutti, pz.moduli || {}) }
-    : { inizio: oggi, fine: '', aperta: false, motivo: 'vacanza', moduli: tutti };
+    ? { inizio: pz.inizio, fine: pz.fine || '', aperta: !pz.fine, motivi: motiviPrima.length ? motiviPrima : ['vacanza'], moduli: Object.assign({}, tutti, pz.moduli || {}) }
+    : { inizio: oggi, fine: '', aperta: false, motivi: ['vacanza'], moduli: tutti };
   renderPausaModal();
   setTimeout(() => document.getElementById('pausa-inizio')?.focus(), 50);
 }
@@ -2037,14 +2049,15 @@ async function salvaPausa(){
   const m = ST.pausaModal;
   if(!m) return;
   const inizio = (document.getElementById('pausa-inizio')?.value || m.inizio || '').trim();
-  const aperta = !!document.getElementById('pausa-aperta')?.checked;
+  const aperta = !!m.aperta;
   const fine = aperta ? '' : (document.getElementById('pausa-fine')?.value || '').trim();
   if(!/^\d{4}-\d{2}-\d{2}$/.test(inizio)){ showToast('Scegli il giorno in cui parti', '📅'); return; }
   if(!aperta && !/^\d{4}-\d{2}-\d{2}$/.test(fine)){ showToast('Scegli il giorno in cui torni, o «non lo so ancora»', '📅'); return; }
   if(fine && fine < inizio){ showToast('Il ritorno viene prima della partenza', '📅'); return; }
   const moduli = PAUSA_MODULI_ETICHETTE.map(([k]) => k).filter(k => m.moduli && m.moduli[k]);
   if(!moduli.length){ showToast('Scegli almeno una cosa da fermare', '✈️'); return; }
-  const ok = await _pausaScrivi({ pausa_inizio: inizio, pausa_fine: fine || null, pausa_motivo: m.motivo || null, pausa_moduli: moduli }, 'salvare la pausa');
+  const motivi = PAUSA_MOTIVI.map(([k]) => k).filter(k => (m.motivi || []).includes(k));
+  const ok = await _pausaScrivi({ pausa_inizio: inizio, pausa_fine: fine || null, pausa_motivo: motivi.length ? motivi.join(',') : null, pausa_moduli: moduli }, 'salvare la pausa');
   if(!ok) return;
   ST.pausaModal = null;
   showToast(fine ? `✈️ Pausa dal ${_pausaFmt(inizio)} al ${_pausaFmt(fine)}` : `✈️ Pausa dal ${_pausaFmt(inizio)}, fine da decidere`, '', 3500);
@@ -2106,16 +2119,50 @@ function renderPausaModal(){
   const html = _renderPausaModal();
   if(html) document.body.insertAdjacentHTML('beforeend', html);
 }
-function _pausaModalToggle(k, acceso){ if(ST.pausaModal && ST.pausaModal.moduli){ ST.pausaModal.moduli[k] = !!acceso; } }
+// Un tocco sull'interruttore: si ferma ↔ va avanti (le date scritte restano: vivono in ST.pausaModal)
+function _pausaModalToggle(k){
+  if(!ST.pausaModal || !ST.pausaModal.moduli) return;
+  _pausaModalLeggiDate();
+  ST.pausaModal.moduli[k] = !ST.pausaModal.moduli[k];
+  renderPausaModal();
+}
+// Un tocco su un motivo: entra o esce dall'elenco (più motivi insieme)
+function _pausaModalMotivo(v){
+  if(!ST.pausaModal) return;
+  _pausaModalLeggiDate();
+  const m = ST.pausaModal; m.motivi = Array.isArray(m.motivi) ? m.motivi : [];
+  m.motivi = m.motivi.includes(v) ? m.motivi.filter(x => x !== v) : m.motivi.concat([v]);
+  renderPausaModal();
+}
+// «Non lo so ancora»: la casella nativa non si vede (il foglio di stile spoglia ogni input: appearance:none),
+// quindi è un interruttore disegnato, come quelli dei moduli
+function _pausaModalAperta(){
+  if(!ST.pausaModal) return;
+  _pausaModalLeggiDate();
+  ST.pausaModal.aperta = !ST.pausaModal.aperta;
+  renderPausaModal();
+}
+function _pausaModalLeggiDate(){
+  const i = document.getElementById('pausa-inizio'), f = document.getElementById('pausa-fine');
+  if(i) ST.pausaModal.inizio = i.value;
+  if(f && !f.disabled) ST.pausaModal.fine = f.value;
+}
 function _renderPausaModal(){
   const m = ST.pausaModal;
   if(!m) return '';
-  const chip = (v, lbl) => `<button type="button" onclick="ST.pausaModal.motivo='${v}';renderPausaModal();" style="padding:8px 12px;border-radius:999px;border:1.5px solid ${m.motivo === v ? 'var(--acc)' : 'var(--s2)'};background:${m.motivo === v ? 'var(--acc)' : 'var(--s1)'};color:${m.motivo === v ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${lbl}</button>`;
+  const motivi = Array.isArray(m.motivi) ? m.motivi : [];
+  const chip = (v, lbl) => { const on = motivi.includes(v); return `<button type="button" class="pausa-motivo${on ? ' on' : ''}" data-motivo="${v}" aria-pressed="${on}" onclick="_pausaModalMotivo('${v}')" style="padding:9px 14px;border-radius:999px;border:1.5px solid ${on ? 'var(--acc)' : 'var(--s2)'};background:${on ? 'var(--acc)' : 'var(--s1)'};color:${on ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${on ? '✓ ' : ''}${lbl}</button>`; };
   const descr = { allenamento: 'niente debito di sedute, blocco fermo, rientro graduale', cibo: 'niente promemoria dei pasti, la serie dei giorni di fila non si spezza, Pirsi non taglia le calorie', pesate: 'niente promemoria della pesata né del check di fine blocco' };
-  const interruttori = PAUSA_MODULI_ETICHETTE.map(([k, l]) => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--s2);cursor:pointer;">
-          <input class="pausa-modulo" data-modulo="${k}" type="checkbox" ${m.moduli && m.moduli[k] ? 'checked' : ''} onchange="_pausaModalToggle('${k}', this.checked)"/>
-          <span style="flex:1;"><span style="display:block;font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);">${l}</span><span style="display:block;font-family:var(--font-sans);font-size:11px;color:var(--t3);line-height:1.35;">${descr[k]}</span></span>
-        </label>`).join('');
+  // Interruttori veri, grandi, con lo stato scritto: «si ferma» / «va avanti». Un tocco su tutta la riga.
+  const interruttori = PAUSA_MODULI_ETICHETTE.map(([k, l]) => { const on = !!(m.moduli && m.moduli[k]); return `<button type="button" class="pausa-modulo" data-modulo="${k}" role="switch" aria-checked="${on}" onclick="_pausaModalToggle('${k}')" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 0;border:none;border-bottom:1px solid var(--s2);background:none;text-align:left;cursor:pointer;">
+          <span style="flex:1;min-width:0;">
+            <span style="display:block;font-family:var(--font-sans);font-size:15px;font-weight:700;color:var(--t1);">${l} <span class="pausa-stato" style="font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:${on ? 'var(--acc)' : 'var(--t3)'};">· ${on ? 'SI FERMA' : 'VA AVANTI'}</span></span>
+            <span style="display:block;font-family:var(--font-sans);font-size:11px;color:var(--t3);line-height:1.35;margin-top:2px;">${descr[k]}</span>
+          </span>
+          <span aria-hidden="true" style="flex-shrink:0;width:50px;height:30px;border-radius:999px;background:${on ? 'var(--acc)' : 'var(--s3)'};position:relative;transition:background .15s;">
+            <span style="position:absolute;top:3px;left:${on ? '23px' : '3px'};width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .15s;"></span>
+          </span>
+        </button>`; }).join('');
   return `
     <div id="pausa-modal" class="weight-modal" style="z-index:1100;" onclick="if(event.target===this)chiudiPausa()">
       <div class="weight-modal-inner" style="max-height:92vh;overflow-y:auto;">
@@ -2131,13 +2178,13 @@ function _renderPausaModal(){
             <input id="pausa-fine" class="inp" type="date" value="${esc(m.fine || '')}" ${m.aperta ? 'disabled' : ''} onchange="ST.pausaModal.fine=this.value;"/>
           </div>
         </div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);font-family:var(--font-sans);margin-bottom:14px;cursor:pointer;">
-          <input id="pausa-aperta" type="checkbox" ${m.aperta ? 'checked' : ''} onchange="ST.pausaModal.aperta=this.checked;ST.pausaModal.inizio=document.getElementById('pausa-inizio').value;ST.pausaModal.fine=document.getElementById('pausa-fine').value;renderPausaModal();"/>
-          Non lo so ancora (la chiudo io al ritorno)
-        </label>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">PERCHÉ</div>
+        <button type="button" id="pausa-aperta" role="switch" aria-checked="${m.aperta ? 'true' : 'false'}" onclick="_pausaModalAperta()" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px 0 12px;border:none;background:none;text-align:left;cursor:pointer;margin-bottom:6px;">
+          <span aria-hidden="true" style="flex-shrink:0;width:22px;height:22px;border-radius:7px;border:2px solid ${m.aperta ? 'var(--acc)' : 'var(--s3)'};background:${m.aperta ? 'var(--acc)' : 'var(--s1)'};color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;">${m.aperta ? '✓' : ''}</span>
+          <span style="font-size:13px;color:var(--t1);font-family:var(--font-sans);">Non lo so ancora (la chiudo io al ritorno)</span>
+        </button>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:6px;">PERCHÉ <span style="font-weight:400;">· anche più di uno</span></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${PAUSA_MOTIVI.map(([v, l]) => chip(v, l)).join('')}</div>
-        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:2px;">COSA FERMO</div>
+        <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:2px;">COSA FERMO <span style="font-weight:400;">· tocca per cambiare</span></div>
         <div style="margin-bottom:14px;">${interruttori}</div>
         <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">Al ritorno dall'allenamento ti propongo il rientro graduale; se stai via più di tre settimane, anche un blocco nuovo.</div>
         <div style="display:flex;gap:8px;">
