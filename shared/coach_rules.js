@@ -24,12 +24,18 @@
 var ZTCoachRules = (function(){
   'use strict';
 
-  var RULES_VERSION = '2026-09-13';
+  var RULES_VERSION = '2026-10-14';   // Pirsi 080: regole incrociate cibo · allenamento · corpo
   var KCAL_MIN = 1500, KCAL_MAX = 3500;
   var MAX_PROPOSTE = 3;
   var ADERENZA_MIN = 0.7;           // 70% dei giorni registrati dentro il target ±10%
   var RAFFREDDAMENTO_SETT = 4;      // check, esami, volume, scarico: non si ripropongono prima di 4 settimane
-  var ORDINE = { weigh_in: 0, logging: 1, kcal: 10, protein: 11, keep: 12, training_volume: 20, deload: 21, check: 30, blood_test: 31 };
+  var ORDINE = { weigh_in: 0, logging: 1, kcal: 10, protein: 11, keep: 12, eat_first: 19, training_volume: 20, deload: 21, check: 30, blood_test: 31 };
+  var PESATE_CONSIGLIATE = 3;       // «pesati almeno 3 volte»: sotto 3 lo si ricorda, sotto 2 non si decide niente sulle calorie
+  var PESATE_MIN = 2;
+  var FATICA_DURE_MIN = 0.5;        // metà o più delle sedute dette «dure» (Training 060)
+  var KCAL_SOTTO_RATIO = 0.9;       // calorie medie sotto il 90% dell'obiettivo = «mangi poco»
+  var VITA_CALO_CM = 1;             // vita giù di almeno 1 cm (medie di 2 settimane contro le 2 prima)
+  var GRASSO_CALO_PCT = 0.5;        // grasso % giù di almeno mezzo punto, stessa regola
   var GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
 
   // ── numeri in italiano: virgola decimale, punto delle migliaia, segno vero ──
@@ -86,15 +92,17 @@ var ZTCoachRules = (function(){
     var pesoAttuale = w ? (w.weight_last != null ? w.weight_last : w.weight_avg) : null;
 
     // ══ 1. Qualità dei dati: se scatta, niente proposte su calorie e proteine ══
+    // Titolo e soglia allineati (Pirsi 080): sotto 3 pesate lo si ricorda, sotto 2 non si decide niente sulle calorie.
     var datiSporchi = false;
-    if(w && (w.weight_n || 0) < 2){
-      datiSporchi = true;
+    if(w && (w.weight_n || 0) < PESATE_CONSIGLIATE){
+      var poche = (w.weight_n || 0) < PESATE_MIN;
+      if(poche) datiSporchi = true;
       aggiungi({
         kind: 'weigh_in',
         title: 'Pesati almeno 3 volte a settimana',
-        reason: 'Pesati almeno 3 volte a settimana, al mattino: senza pesate non posso guidarti. Questa settimana ' +
-          (w.weight_n ? 'ne ho vista una sola.' : 'non ne ho vista nessuna.'),
-        evidence: { numeri: [ { label: 'Pesate della settimana', value: String(w.weight_n || 0) }, { label: 'Minimo per decidere', value: '2' } ],
+        reason: 'Pesati almeno 3 volte a settimana, al mattino: ' + (poche ? 'senza pesate non posso guidarti.' : 'con più pesate il ritmo del peso è più sicuro.') + ' Questa settimana ' +
+          (w.weight_n === 2 ? 'ne ho viste due.' : w.weight_n ? 'ne ho vista una sola.' : 'non ne ho vista nessuna.'),
+        evidence: { numeri: [ { label: 'Pesate della settimana', value: String(w.weight_n || 0) }, { label: 'Minimo per decidere', value: String(PESATE_MIN) } ],
           weight_n: w.weight_n || 0 },
         change: null,
       });
@@ -145,6 +153,12 @@ var ZTCoachRules = (function(){
       if(tk == null || !isFinite(tk)) return;
       var to = Math.max(KCAL_MIN, Math.min(KCAL_MAX, tk + delta));
       if(to === tk) return;                                  // al limite: non c'è niente da proporre
+      var fermo = fermaKcal(delta);
+      if(fermo){                                             // Pirsi 080: il contesto vince sul peso
+        aggiungi({ kind: 'keep', title: 'Non cambio le calorie', reason: fermo,
+          evidence: { numeri: numeriPeso().concat(numeriContesto()), dati: Object.assign(datiPeso(), { contesto: datiContesto() }) }, change: null });
+        return;
+      }
       if(decisaDaPoco('kcal', 1, true)){                    // una correzione ogni 2 settimane
         aggiungi({ kind: 'keep', title: 'Non cambio le calorie', reason: 'Le calorie le abbiamo cambiate la settimana scorsa: prima di toccarle di nuovo aspetto di vederne l\'effetto.',
           evidence: { numeri: numeriPeso(), dati: datiPeso() }, change: null });
@@ -160,6 +174,48 @@ var ZTCoachRules = (function(){
     };
     var attesa = null;              // il peso chiede una correzione, ma non ancora per due settimane
     var fotoMigliorate = !!(b && b.ai_overall === 'migliorato' && b.ai_confidence === 'alta');
+
+    // ══ Pirsi 080: il contesto che le calorie devono guardare prima di muoversi ══
+    // Scarico: le calorie non si toccano. Infortunio: nessun taglio. Fatica alta con calorie sotto
+    // l'obiettivo: prima mangia (niente taglio, niente scarico). Peso fermo ma vita o grasso % in calo:
+    // stai ricomponendo, non taglio. Ogni fatto che manca (null) non scatta.
+    var scarico = !!(t && t.is_deload);
+    var infortunio = !!(t && (t.injury_active || t.injury_days > 0));
+    var feel = t && t.feel;
+    var seduteDure = !!(feel && feel.n >= 2 && feel.dura / feel.n >= FATICA_DURE_MIN);
+    var rirCedimento = !!(t && t.avg_rir != null && t.avg_rir <= 0.5);
+    var fatica = seduteDure || rirCedimento;
+    var pocheCalorie = !!(n && tk && n.kcal_avg != null && n.days_logged >= 4 && n.kcal_avg < tk * KCAL_SOTTO_RATIO);
+    var mangiaPrima = fatica && pocheCalorie;
+    // vita e grasso %: medie di 2 settimane contro le 2 prima, come il ritmo del peso
+    var mediaDi = function(k, campo){ var p = sett(k); return p && p.body && p.body[campo] != null ? p.body[campo] : null; };
+    var calo = function(campo){
+      var a = media([mediaDi(0, campo), mediaDi(1, campo)]), c = media([mediaDi(2, campo), mediaDi(3, campo)]);
+      return a == null || c == null ? null : r2(a - c);
+    };
+    var caloVita = calo('waist_avg'), caloGrasso = calo('bf_avg');
+    // anche il metro del check: ultimo check nella settimana chiusa, vita giù rispetto al check prima
+    var vitaCheck = (b && b.last_measurements && b.last_measurements.waist_cm && b.last_check_date && b.last_check_date >= ws) ? b.last_measurements.waist_cm.delta : null;
+    var ricomponi = (caloVita != null && caloVita <= -VITA_CALO_CM) || (caloGrasso != null && caloGrasso <= -GRASSO_CALO_PCT) || (vitaCheck != null && vitaCheck <= -VITA_CALO_CM);
+    var numeriContesto = function(){
+      var righe = [];
+      if(feel) righe.push({ label: 'Sedute dure', value: feel.dura + ' / ' + feel.n });
+      if(t && t.avg_rir != null) righe.push({ label: 'RIR medio', value: num(t.avg_rir, 1) });
+      if(n && n.kcal_avg != null) righe.push({ label: 'Kcal medie', value: num(n.kcal_avg) + (tk ? ' / ' + num(tk) : '') });
+      if(caloVita != null) righe.push({ label: 'Vita, 2 sett. contro le 2 prima', value: segno(caloVita, 1) + ' cm' });
+      if(caloGrasso != null) righe.push({ label: 'Grasso %, 2 sett. contro le 2 prima', value: segno(caloGrasso, 1) + ' punti' });
+      if(vitaCheck != null) righe.push({ label: 'Vita al check', value: segno(vitaCheck, 1) + ' cm' });
+      return righe;
+    };
+    var datiContesto = function(){ return { scarico: scarico, infortunio: infortunio, fatica: fatica, sedute_dure: feel ? [feel.dura, feel.n] : null, poche_calorie: pocheCalorie, calo_vita: caloVita, calo_grasso: caloGrasso, vita_check: vitaCheck, ricomposizione: ricomponi }; };
+    // Vale per ogni correzione delle calorie: torna il motivo per cui NON si tocca, o null se si può.
+    var fermaKcal = function(delta){
+      if(scarico) return 'Questa è una settimana di scarico: le calorie non si toccano, il peso in scarico non dice niente di affidabile.';
+      if(delta < 0 && infortunio) return 'Hai un infortunio in corso: non taglio le calorie, il corpo deve riparare.';
+      if(delta < 0 && mangiaPrima) return 'Le sedute ti pesano (' + (seduteDure ? feel.dura + ' su ' + feel.n + ' dette «dure»' : 'RIR medio ' + num(t.avg_rir, 1)) + ') e mangi sotto l\'obiettivo (' + num(n.kcal_avg) + ' kcal su ' + num(tk) + '): prima mangia, non taglio.';
+      if(delta < 0 && ricomponi) return 'Il peso è fermo ma ' + (caloVita != null && caloVita <= -VITA_CALO_CM ? 'la vita scende (' + segno(caloVita, 1) + ' cm)' : caloGrasso != null && caloGrasso <= -GRASSO_CALO_PCT ? 'il grasso scende (' + segno(caloGrasso, 1) + ' punti)' : 'la vita al check scende (' + segno(vitaCheck, 1) + ' cm)') + ': stai ricomponendo, non taglio le calorie.';
+      return null;
+    };
     var keepFoto = function(){
       aggiungi({ kind: 'keep', title: 'Non cambio nulla',
         reason: 'Peso fermo ma foto migliorate: probabile ricomposizione, non cambio nulla. Il ritmo è ' + segno(r0, 2) + ' kg a settimana e la lettura delle foto del ' + (b.ai_check_date || '') + ' dice «migliorato» con affidabilità alta.',
@@ -254,6 +310,12 @@ var ZTCoachRules = (function(){
 
     // ══ 3. Allenamento ══
     var t1 = sett(1) && sett(1).training;
+    // Pirsi 080: fatica alta e calorie sotto l'obiettivo → prima mangia, poi (se serve) lo scarico
+    if(mangiaPrima && !scarico){
+      aggiungi({ kind: 'eat_first', title: 'Prima mangia, poi lo scarico',
+        reason: 'Le sedute ti pesano (' + (seduteDure ? feel.dura + ' su ' + feel.n + ' dette «dure»' : 'RIR medio ' + num(t.avg_rir, 1)) + ') ma mangi sotto l\'obiettivo: ' + num(n.kcal_avg) + ' kcal al giorno su ' + num(tk) + '. Prima di scaricare, mangia quello che hai come obiettivo per una settimana: la fatica spesso è fame.',
+        evidence: { numeri: numeriContesto(), dati: datiContesto() }, change: null });
+    }
     // Una settimana con infortunio o con giorni di pausa programmata (Training 350) non dice niente
     // sul volume che la persona regge: non si propone «meno giorni» guardandola.
     var senzaInfortunio = function(x){ return x && !x.injury_active && !(x.injury_days > 0) && !(x.pause_days > 0); };
@@ -271,7 +333,7 @@ var ZTCoachRules = (function(){
         change: { giorni_allenamento: { from: t.sessions_planned, to: nuoviGiorni } },
       });
     }
-    if(t && !t.is_deload && t.block_week !== 6 && !decisaDaPoco('deload', RAFFREDDAMENTO_SETT, true)){
+    if(t && !t.is_deload && t.block_week !== 6 && !mangiaPrima && !decisaDaPoco('deload', RAFFREDDAMENTO_SETT, true)){
       var rirBasso = t.avg_rir != null && t.avg_rir <= 0.5 && t1 && t1.avg_rir != null && t1.avg_rir <= 0.5;
       var infortunioTardi = !!t.injury_active && t.block_week != null && t.block_week >= 4;
       if(rirBasso || infortunioTardi){
