@@ -1,5 +1,5 @@
 {
- "quando": "2026-10-13T06:16:46",
+ "quando": "2026-10-14T15:34:13",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -711,8 +711,8 @@
   },
   {
    "codice": "EX121",
-   "nome": "Riscaldamento spalle (circonduzioni)",
-   "gif_slug": null,
+   "nome": "Arm circles",
+   "gif_slug": "arm-circles",
    "livello": "principiante"
   },
   {
@@ -724,13 +724,13 @@
   {
    "codice": "EX123",
    "nome": "Thread the needle",
-   "gif_slug": null,
+   "gif_slug": "thread-the-needle",
    "livello": "principiante"
   },
   {
    "codice": "EX124",
-   "nome": "Rotazione toracica (T-spine)",
-   "gif_slug": null,
+   "nome": "Quadruped thoracic rotation",
+   "gif_slug": "quadruped-thoracic-rotation",
    "livello": "principiante"
   },
   {
@@ -741,14 +741,14 @@
   },
   {
    "codice": "EX126",
-   "nome": "Stretch flessori anca in ginocchio",
-   "gif_slug": null,
+   "nome": "Low lunge hip flexor stretch",
+   "gif_slug": "low-lunge-hip-flexor-stretch",
    "livello": "principiante"
   },
   {
    "codice": "EX127",
-   "nome": "Stretch ischiocrurali seduto",
-   "gif_slug": null,
+   "nome": "Seated single-leg toe reach",
+   "gif_slug": "seated-single-leg-toe-reach",
    "livello": "principiante"
   },
   {
@@ -759,20 +759,20 @@
   },
   {
    "codice": "EX129",
-   "nome": "Foam roll ischiocrurali",
-   "gif_slug": null,
+   "nome": "Foam roller hamstrings",
+   "gif_slug": "foam-roller-hamstrings",
    "livello": "principiante"
   },
   {
    "codice": "EX130",
-   "nome": "Foam roll bandelletta IT",
-   "gif_slug": null,
+   "nome": "Foam roller IT band",
+   "gif_slug": "foam-roller-it-band",
    "livello": "principiante"
   },
   {
    "codice": "EX131",
-   "nome": "Passive hang",
-   "gif_slug": null,
+   "nome": "Dead hang",
+   "gif_slug": "dead-hang",
    "livello": "principiante"
   },
   {
@@ -4350,14 +4350,608 @@
    "nome": "Trazioni sbarra alternate alla spalla",
    "gif_slug": "trazioni-sbarra-alternate-alla-spalla",
    "livello": "avanzato"
+  },
+  {
+   "codice": "EX739",
+   "nome": "Arm swing chest opener",
+   "gif_slug": "arm-swing-chest-opener",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX740",
+   "nome": "Behind-back shoulder stretch",
+   "gif_slug": "behind-back-shoulder-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX741",
+   "nome": "Bench lat stretch",
+   "gif_slug": "bench-lat-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX742",
+   "nome": "Bow pose",
+   "gif_slug": "bow-pose",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX743",
+   "nome": "Bow pose setup",
+   "gif_slug": "bow-pose-setup",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX744",
+   "nome": "Butterfly stretch",
+   "gif_slug": "butterfly-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX745",
+   "nome": "Clasped-hands chest opener",
+   "gif_slug": "clasped-hands-chest-opener",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX746",
+   "nome": "Cobra pose",
+   "gif_slug": "cobra-pose",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX747",
+   "nome": "Codman pendulum",
+   "gif_slug": "codman-pendulum",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX748",
+   "nome": "Corner chest stretch",
+   "gif_slug": "corner-chest-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX749",
+   "nome": "Cow face pose",
+   "gif_slug": "cow-face-pose",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX750",
+   "nome": "Cross-arm triceps stretch",
+   "gif_slug": "cross-arm-triceps-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX751",
+   "nome": "Cross-body shoulder stretch",
+   "gif_slug": "cross-body-shoulder-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX752",
+   "nome": "Crossed-leg forward fold",
+   "gif_slug": "crossed-leg-forward-fold",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX753",
+   "nome": "Deep squat shoulder stretch",
+   "gif_slug": "deep-squat-shoulder-stretch",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX754",
+   "nome": "Dip position stretch",
+   "gif_slug": "dip-position-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX755",
+   "nome": "Doorway chest stretch",
+   "gif_slug": "doorway-chest-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX756",
+   "nome": "Figure 4",
+   "gif_slug": "figure-4",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX757",
+   "nome": "Fish pose",
+   "gif_slug": "fish-pose",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX758",
+   "nome": "Foam roller adductors",
+   "gif_slug": "foam-roller-adductors",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX759",
+   "nome": "Foam roller calves",
+   "gif_slug": "foam-roller-calves",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX760",
+   "nome": "Foam roller chest",
+   "gif_slug": "foam-roller-chest",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX761",
+   "nome": "Foam roller chest stretch",
+   "gif_slug": "foam-roller-chest-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX762",
+   "nome": "Foam roller glutes",
+   "gif_slug": "foam-roller-glutes",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX763",
+   "nome": "Foam roller lats",
+   "gif_slug": "foam-roller-lats",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX764",
+   "nome": "Foam roller plantar fascia",
+   "gif_slug": "foam-roller-plantar-fascia",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX765",
+   "nome": "Foam roller posterior shoulder",
+   "gif_slug": "foam-roller-posterior-shoulder",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX766",
+   "nome": "Foam roller quads",
+   "gif_slug": "foam-roller-quads",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX767",
+   "nome": "Foam roller rhomboids",
+   "gif_slug": "foam-roller-rhomboids",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX768",
+   "nome": "Foam roller thoracic extension",
+   "gif_slug": "foam-roller-thoracic-extension",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX769",
+   "nome": "Foam roller upper back",
+   "gif_slug": "foam-roller-upper-back",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX770",
+   "nome": "Foam roller wall slide",
+   "gif_slug": "foam-roller-wall-slide",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX771",
+   "nome": "Half sphinx pose",
+   "gif_slug": "half-sphinx-pose",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX772",
+   "nome": "Half-kneeling hip flexor stretch",
+   "gif_slug": "half-kneeling-hip-flexor-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX773",
+   "nome": "Half-kneeling quad stretch",
+   "gif_slug": "half-kneeling-quad-stretch",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX774",
+   "nome": "Happy baby pose",
+   "gif_slug": "happy-baby-pose",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX775",
+   "nome": "High doorway chest stretch",
+   "gif_slug": "high-doorway-chest-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX776",
+   "nome": "Hip switches 90:90",
+   "gif_slug": "hip-switches-90-90",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX777",
+   "nome": "Knee to chest",
+   "gif_slug": "knee-to-chest",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX778",
+   "nome": "Kneeling adductor stretch",
+   "gif_slug": "kneeling-adductor-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX779",
+   "nome": "Lying hamstring stretch",
+   "gif_slug": "lying-hamstring-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX780",
+   "nome": "Lying spinal twist",
+   "gif_slug": "lying-spinal-twist",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX781",
+   "nome": "Open book",
+   "gif_slug": "open-book",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX782",
+   "nome": "Overhead toe touch",
+   "gif_slug": "overhead-toe-touch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX783",
+   "nome": "Overhead triceps stretch",
+   "gif_slug": "overhead-triceps-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX784",
+   "nome": "Prayer stretch",
+   "gif_slug": "prayer-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX785",
+   "nome": "Quadruped quad stretch",
+   "gif_slug": "quadruped-quad-stretch",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX786",
+   "nome": "Quadruped wrist stretch",
+   "gif_slug": "quadruped-wrist-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX787",
+   "nome": "Reverse plank calf hold",
+   "gif_slug": "reverse-plank-calf-hold",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX788",
+   "nome": "Reverse prayer wrist stretch",
+   "gif_slug": "reverse-prayer-wrist-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX789",
+   "nome": "Rocking frog",
+   "gif_slug": "rocking-frog",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX790",
+   "nome": "Rolling like a ball",
+   "gif_slug": "rolling-like-a-ball",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX791",
+   "nome": "Runner's calf stretch",
+   "gif_slug": "runner-s-calf-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX792",
+   "nome": "Scapular protraction and retraction",
+   "gif_slug": "scapular-protraction-and-retraction",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX793",
+   "nome": "Seated ankle circles",
+   "gif_slug": "seated-ankle-circles",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX794",
+   "nome": "Seated figure 4",
+   "gif_slug": "seated-figure-4",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX795",
+   "nome": "Seated overhead shoulder mobility",
+   "gif_slug": "seated-overhead-shoulder-mobility",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX796",
+   "nome": "Seated piriformis stretch",
+   "gif_slug": "seated-piriformis-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX797",
+   "nome": "Seated scapular retraction",
+   "gif_slug": "seated-scapular-retraction",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX798",
+   "nome": "Seated straddle",
+   "gif_slug": "seated-straddle",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX799",
+   "nome": "Seated straddle side reach",
+   "gif_slug": "seated-straddle-side-reach",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX800",
+   "nome": "Seated straddle stretch",
+   "gif_slug": "seated-straddle-stretch",
+   "livello": "intermedio"
+  },
+  {
+   "codice": "EX801",
+   "nome": "Seated straddle toe reach",
+   "gif_slug": "seated-straddle-toe-reach",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX802",
+   "nome": "Seated toe touch setup",
+   "gif_slug": "seated-toe-touch-setup",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX803",
+   "nome": "Seated twist toe touch",
+   "gif_slug": "seated-twist-toe-touch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX804",
+   "nome": "Side bend hand behind head",
+   "gif_slug": "side-bend-hand-behind-head",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX805",
+   "nome": "Side lunge stretch",
+   "gif_slug": "side-lunge-stretch",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX806",
+   "nome": "Single arm circles",
+   "gif_slug": "single-arm-circles",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX807",
+   "nome": "Sphinx pose",
+   "gif_slug": "sphinx-pose",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX808",
+   "nome": "Staggered calf stretch",
+   "gif_slug": "staggered-calf-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX809",
+   "nome": "Stair calf drop",
+   "gif_slug": "stair-calf-drop",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX810",
+   "nome": "Standing floor touch",
+   "gif_slug": "standing-floor-touch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX811",
+   "nome": "Standing hamstring stretch",
+   "gif_slug": "standing-hamstring-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX812",
+   "nome": "Standing knee to chest",
+   "gif_slug": "standing-knee-to-chest",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX813",
+   "nome": "Standing overhead chest stretch",
+   "gif_slug": "standing-overhead-chest-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX814",
+   "nome": "Standing quad stretch",
+   "gif_slug": "standing-quad-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX815",
+   "nome": "Standing shin stretch",
+   "gif_slug": "standing-shin-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX816",
+   "nome": "Standing shoulder external rotation",
+   "gif_slug": "standing-shoulder-external-rotation",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX817",
+   "nome": "Standing shoulder internal rotation",
+   "gif_slug": "standing-shoulder-internal-rotation",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX818",
+   "nome": "Standing side bend",
+   "gif_slug": "standing-side-bend",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX819",
+   "nome": "Standing side reach stretch",
+   "gif_slug": "standing-side-reach-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX820",
+   "nome": "Standing toe raises",
+   "gif_slug": "standing-toe-raises",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX821",
+   "nome": "Standing toe touch",
+   "gif_slug": "standing-toe-touch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX822",
+   "nome": "Standing torso rotation",
+   "gif_slug": "standing-torso-rotation",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX823",
+   "nome": "Step Achilles stretch",
+   "gif_slug": "step-achilles-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX824",
+   "nome": "Step calf drop",
+   "gif_slug": "step-calf-drop",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX825",
+   "nome": "Stick pass-through",
+   "gif_slug": "stick-pass-through",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX826",
+   "nome": "Sumo squat stretch",
+   "gif_slug": "sumo-squat-stretch",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX827",
+   "nome": "Supine straddle",
+   "gif_slug": "supine-straddle",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX828",
+   "nome": "Towel shoulder stretch",
+   "gif_slug": "towel-shoulder-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX829",
+   "nome": "Upper back stretch",
+   "gif_slug": "upper-back-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX830",
+   "nome": "Wall arm raises",
+   "gif_slug": "wall-arm-raises",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX831",
+   "nome": "Wall lean calf stretch",
+   "gif_slug": "wall-lean-calf-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX832",
+   "nome": "Wall shin stretch",
+   "gif_slug": "wall-shin-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX833",
+   "nome": "Wall snow angel",
+   "gif_slug": "wall-snow-angel",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX834",
+   "nome": "Wall toe calf stretch",
+   "gif_slug": "wall-toe-calf-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX835",
+   "nome": "Wide-leg forward fold",
+   "gif_slug": "wide-leg-forward-fold",
+   "livello": "principiante;intermedio"
+  },
+  {
+   "codice": "EX836",
+   "nome": "Windmill stretch",
+   "gif_slug": "windmill-stretch",
+   "livello": "principiante"
+  },
+  {
+   "codice": "EX837",
+   "nome": "Wrist circles",
+   "gif_slug": "wrist-circles",
+   "livello": "principiante"
   }
  ],
  "catalogo": {
-  "righe": 725,
-  "ultimo_sync": "2026-10-13T04:15:55.925000+00:00",
+  "righe": 824,
+  "ultimo_sync": "2026-10-14T13:33:24.295000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
-  "prossimo_codice_libero": "EX739",
+  "prossimo_codice_libero": "EX838",
   "gap_permanenti": [
    "EX107",
    "EX110",
@@ -4373,8 +4967,8 @@
    "EX408",
    "EX528"
   ],
-  "con_gif_slug": 661,
-  "senza_gif_slug": 64,
+  "con_gif_slug": 768,
+  "senza_gif_slug": 56,
   "codici_senza_gif_slug": [
    "EX001",
    "EX023",
@@ -4423,17 +5017,9 @@
    "EX118",
    "EX119",
    "EX120",
-   "EX121",
    "EX122",
-   "EX123",
-   "EX124",
    "EX125",
-   "EX126",
-   "EX127",
    "EX128",
-   "EX129",
-   "EX130",
-   "EX131",
    "EX132",
    "EX240",
    "EX241",
@@ -4452,34 +5038,38 @@
    "finisher;recupero": 1,
    "principale;recupero": 2,
    "principale;finisher;riscaldamento": 3,
-   "riscaldamento": 23,
+   "riscaldamento": 56,
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
-   "recupero;mobilita": 8,
+   "recupero;mobilita": 74,
    "finisher;riscaldamento": 5,
    "principale;riscaldamento": 17,
    "skill": 16
   },
   "per_livello": {
-   "intermedio": 265,
-   "principiante": 177,
+   "intermedio": 267,
+   "principiante": 258,
    "avanzato": 73,
    "intermedio;avanzato": 45,
-   "principiante;intermedio": 138,
+   "principiante;intermedio": 154,
    "principiante;intermedio;avanzato": 25,
    "(vuoto)": 2
   }
  },
  "biblioteca_gif": {
-  "righe": 1601,
-  "slug_distinti": 1601,
-  "viva": 661,
+  "righe": 1715,
+  "slug_distinti": 1715,
+  "viva": 768,
   "rotta": 0,
-  "libera": 22,
+  "libera": 29,
   "morta": 918,
   "elenco_rotte": [],
   "elenco_libere": [
+   "arm-hug-stretch",
+   "band-ankle-eversion",
+   "band-calf-stretch",
+   "band-tibialis-posterior-stretch",
    "bird-dog",
    "croci-inverse-elastico-alla-barra-busto-flesso",
    "croci-inverse-elastico-busto-flesso",
@@ -4489,6 +5079,7 @@
    "curl-bilanciere-presa-larga",
    "curl-bilanciere-presa-stretta",
    "curl-manubri-panca-inclinata",
+   "double-leg-stretch",
    "estensione-anca-bilanciere",
    "flessione-laterale-cavo-basso",
    "lancio-rotazionale-palla-medica-al-muro",
@@ -4500,12 +5091,14 @@
    "plank-laterale-dip",
    "plank-scivolamento-avanti",
    "retroversione-bacino-da-supino",
+   "stick-shoulder-stretch",
    "tirate-elastico-in-ginocchio",
-   "torsione-busto-gomiti-alti-in-piedi"
+   "torsione-busto-gomiti-alti-in-piedi",
+   "vacuum-addominale"
   ]
  },
  "bucket": {
-  "oggetti": 686,
+  "oggetti": 800,
   "per_zona": {
    "Addominali e Core": 77,
    "Bicipiti e Braccia": 73,
@@ -4515,7 +5108,8 @@
    "Polpacci": 19,
    "Schiena e Trapezio": 113,
    "Spalle e Cuffia": 63,
-   "Tricipiti": 59
+   "Tricipiti": 59,
+   "Mobilita e Stretching": 114
   },
   "file_senza_riga": [
    "Addominali e Core/Crunch farfalla toe touch (Butterfly Toe-Touch Crunch).gif",

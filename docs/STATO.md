@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-10-13 alle 06:16.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-10-14 alle 15:34.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -12,12 +12,12 @@
 
 | | valore | nota |
 |---|---|---|
-| Righe totali | 725 |  |
-| Ultimo sync | 2026-10-13 04:15 | istante in cui il foglio ha riscritto le righe |
+| Righe totali | 824 |  |
+| Ultimo sync | 2026-10-14 13:33 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
-| Prossimo codice libero | EX739 | da allocare al momento della scrittura, mai in anticipo |
-| Codici con GIF | 661 |  |
-| Codici senza GIF | 64 | cantiere 2 |
+| Prossimo codice libero | EX838 | da allocare al momento della scrittura, mai in anticipo |
+| Codici con GIF | 768 |  |
+| Codici senza GIF | 56 | cantiere 2 |
 | Catene rotte | 0 | gif_slug che non trova riga in biblioteca_gif |
 | Slug su più codici | 0 | guardia "1 codice per slug" |
 
@@ -27,9 +27,9 @@ Codici bruciati, **mai renumerare**: EX107, EX110, EX139, EX151, EX170, EX176, E
 
 ### Ripartizione
 
-**Per uso**: carry 2 · carry;finisher 2 · finisher 149 · finisher;recupero 1 · finisher;riscaldamento 5 · principale 340 · principale;finisher 149 · principale;finisher;recupero 3 · principale;finisher;riscaldamento 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 8 · riscaldamento 23 · riscaldamento;finisher 2 · skill 16
+**Per uso**: carry 2 · carry;finisher 2 · finisher 149 · finisher;recupero 1 · finisher;riscaldamento 5 · principale 340 · principale;finisher 149 · principale;finisher;recupero 3 · principale;finisher;riscaldamento 3 · principale;recupero 2 · principale;riscaldamento 17 · recupero 3 · recupero;mobilita 74 · riscaldamento 56 · riscaldamento;finisher 2 · skill 16
 
-**Per livello**: (vuoto) 2 · avanzato 73 · intermedio 265 · intermedio;avanzato 45 · principiante 177 · principiante;intermedio 138 · principiante;intermedio;avanzato 25
+**Per livello**: (vuoto) 2 · avanzato 73 · intermedio 267 · intermedio;avanzato 45 · principiante 258 · principiante;intermedio 154 · principiante;intermedio;avanzato 25
 
 ## Indice delle GIF (`biblioteca_gif`)
 
@@ -37,11 +37,11 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 
 | casella | righe | cosa significa |
 |---|---|---|
-| **Viva** | 661 | un codice la punta e il file c'è — è ciò che l'app mostra |
+| **Viva** | 768 | un codice la punta e il file c'è — è ciò che l'app mostra |
 | **Rotta** | 0 | un codice la punta ma il file non c'è — **l'app mostra `missing`** |
-| **Libera** | 22 | la GIF c'è ma nessun codice la usa — cantiere 16 |
+| **Libera** | 29 | la GIF c'è ma nessun codice la usa — cantiere 16 |
 | **Morta** | 918 | nessun codice e nessun file — cantiere 3E |
-| TOTALE | 1601 | |
+| TOTALE | 1715 | |
 
 ## Bucket Storage (`biblioteca-gif`)
 
@@ -51,12 +51,13 @@ Ogni riga sta in una di quattro caselle, secondo due domande: la punta un codice
 | Bicipiti e Braccia | 73 |
 | Cardio e Conditioning | 31 |
 | Gambe e Glutei | 169 |
+| Mobilita e Stretching | 114 |
 | Pettorali | 82 |
 | Polpacci | 19 |
 | Schiena e Trapezio | 113 |
 | Spalle e Cuffia | 63 |
 | Tricipiti | 59 |
-| **TOTALE** | **686** |
+| **TOTALE** | **800** |
 
 File nel bucket che nessuna riga indicizza: **3**
 

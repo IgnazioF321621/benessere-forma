@@ -336,6 +336,12 @@ def main():
 
     voci = []
     t0 = time.time()
+    # Da quale originale e' stata fatta ogni copia gia' in _480/, secondo il piano
+    # precedente. Serve a non riusare una copia fatta da un ALTRO file.
+    p_prec = PIANI / ('%s.json' % zona.lower().replace(' ', '-'))
+    origine_prec = ({v['storage_path']: v.get('sha256_mac') for v in
+                     json.loads(p_prec.read_text(encoding='utf-8')).get('voci', [])}
+                    if p_prec.exists() else {})
     print('%-50s %7s %7s %6s  %s' % ('file', 'prima', 'dopo', 'ris.', 'esito'))
     for u in sorted(unita, key=lambda x: x['dest']):
         sp = u['dest']
@@ -370,6 +376,14 @@ def main():
         else:
             azione = 'ricompresso' if ridimensiona else 'riottimizzato'
         rifare = args.rifai or not dst.exists()
+        # Una copia gia' in _480/ si riusa SOLO se il piano precedente dice che
+        # viene da questo stesso originale, per impronta. Il 14 ottobre 2026 su
+        # Mobilita' una copia fatta dal doppione escluso e' stata riusata per il
+        # file tenuto, perche' i due avevano lo stesso nome di destinazione, ed
+        # e' finita nel bucket. Senza impronta registrata, si rifa'.
+        sha_mac = md5_sha(src)[1]
+        if not rifare and origine_prec.get(sp) != sha_mac:
+            rifare = True
 
         if rifare:
             e = ricomprimi_file(src, dst, ridimensiona, formato)
@@ -417,7 +431,7 @@ def main():
             'storage_path': sp,
             'storage_path_attuale': u['attuale'],
             'percorso_cambia': u['attuale'] != sp,
-            'origine_mac': str(src),
+            'origine_mac': str(src), 'sha256_mac': sha_mac,
             'lato_prima': lato, 'lato_dopo': lato_n,
             'fotogrammi': fotogrammi, 'fotogrammi_dopo': fotogrammi_n,
             'durata_ms': durata, 'durata_ms_dopo': durata_n,

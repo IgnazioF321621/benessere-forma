@@ -157,7 +157,7 @@ I file ridotti stanno in `Biblioteca di esercizi/_480/<Zona>/`, con **il nome ch
 
 Perché la regola esiste: i primi quattro giri hanno lasciato dietro di sé i 65 codici senza `gif_slug` del [cantiere 2](CANTIERI.md#2-cantiere-600-gif) e le 46 righe libere del [cantiere 16](CANTIERI.md#16-liberi-indicizzati-senza-codice). Sono arretrati nati dall'aver aperto la cartella dopo prima di aver chiuso quella prima.
 
-**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ · ~~Schiena e Trapezio~~ **chiuse** → **Mobilità**, l'ultima.
+**Ordine delle zone rimanenti** *(registrato l'11 agosto, aggiornato il 21 sera)*: ~~Polpacci~~ · ~~Pettorali~~ · ~~Spalle e Cuffia~~ · ~~Tricipiti~~ · ~~Schiena e Trapezio~~ · ~~Mobilità~~ **chiuse**. **Mobilità chiusa il 14 ottobre 2026 su tutti e tre i lavori**: 114 GIF nel bucket a 480 px, 107 diventate esercizi (8 codici esistenti che hanno preso la GIF e i nuovi EX739-EX837), 6 escluse da Ignazio e Vacuum addominale restano immagini senza codice. Dettaglio in `tools/catalogo/mobilita/LEGGIMI.md`. Non resta nessuna zona da aprire.
 
 L'arretrato di Pettorali è saldato: le 25 GIF senza codice sono diventate EX677-EX701, tutte con i 14 campi portanti compilati.
 

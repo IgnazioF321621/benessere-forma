@@ -89,6 +89,9 @@
   .esito{font-size:12.5px;font-family:ui-monospace,monospace}
   .ok{color:var(--evergreen)} .ko{color:var(--over)}
   .avviso{font-size:12.5px;color:var(--over);margin-top:8px}
+  .scelta{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .riga.esclusa{opacity:.45}
+  .gruppo{display:inline-block;font-size:12.5px;font-weight:700;color:#fff;background:var(--over);border-radius:6px;padding:3px 9px;margin-bottom:8px}
   .nota{font-size:12.5px;color:var(--muted);margin-top:6px}
 
   details{margin-top:26px;border:1px solid var(--line);border-radius:12px;background:var(--card);
@@ -260,6 +263,21 @@ function disegnaRiga(r){
      degli oggetti che stanno solo nel bucket, scaricati e verificati per impronta. */
   const src = r.src || `/gif/${encodeURIComponent(r.cartella)}/${encodeURIComponent(r.file)}`;
   const pop = r.popolazione ? `<span class="badge b-pop">${esc(r.popolazione)}</span> ` : '';
+  const gruppo = r.gruppo ? `<div class="gruppo">${esc(r.gruppo.replace(/^\d · /,''))}</div>` : '';
+  const doppione = r.gruppo && /oppion/.test(r.gruppo);
+  const dest = r.gruppo && /Da spostare · /.test(r.gruppo) ? r.gruppo.split(' · ').pop() : null;
+  const STATO = {tieni:'✓ la tieni: entra', escludi:'✓ esclusa: non entra',
+                 sposta:'✓ esce da Mobilità: la prende ' + (dest||''), resta:'✓ resta in Mobilità'};
+  const tastiSposta = dest ? `<div class="scelta" id="c${r.i}">
+      <button class="${r.scelta==='sposta'?'primary':'ghost'}" data-s="sposta" onclick="scegli(${r.i},'sposta','da spostare in ${esc(dest)}')">Sposta in ${esc(dest)}</button>
+      <button class="${r.scelta==='resta'?'primary':'ghost'}" data-s="resta" onclick="scegli(${r.i},'resta','resta in Mobilità')">Resta in Mobilità</button>
+      <span class="stat">${STATO[r.scelta] || 'scegli guardando la GIF'}</span>
+    </div>` : '';
+  const tasti = doppione ? `<div class="scelta" id="c${r.i}">
+      <button class="${r.scelta==='tieni'?'primary':'ghost'}" data-s="tieni" onclick="scegli(${r.i},'tieni')">Tieni</button>
+      <button class="${r.scelta==='escludi'?'primary':'ghost'}" data-s="escludi" onclick="scegli(${r.i},'escludi')">Escludi</button>
+      <span class="stat">${STATO[r.scelta] || 'scegli guardando la GIF'}</span>
+    </div>` : '';
   const daBucket = r.fonte_immagine === 'bucket'
     ? `<div class="avviso">Nessun file sul Mac: immagine scaricata dal bucket (${esc((r.storage_paths||[])[0]||'')}). Si rinomina in migrazione, non sul disco.</div>` : '';
   const fuoriSede = r.popolazione === 'salti'
@@ -268,9 +286,10 @@ function disegnaRiga(r){
     ? `<div class="nota">Mai caricata nel bucket: in migrazione è un caricamento, non una rinomina.</div>` : '';
 
   return `
-  <div class="riga ${r.decisione?'decisa':''}" id="r${r.i}">
+  <div class="riga ${r.decisione?'decisa':''} ${(r.scelta==='escludi'||r.scelta==='sposta')?'esclusa':''}" id="r${r.i}">
     <img class="gif" loading="lazy" src="${src}" alt="">
     <div>
+      ${gruppo}${tasti}${tastiSposta}
       <div class="campo">
         ${pop}<span class="badge b-${r.stato_binario}">${r.stato_binario}</span>
         ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
@@ -284,6 +303,13 @@ function disegnaRiga(r){
         ${chips.join('')}
         ${sugg}${guarda}
       </div>
+      <div class="campo">
+        <div class="lab">spiegazione in italiano — 5-10 parole, si legge sotto il nome</div>
+        <input type="text" id="x${r.i}" value="${esc(r.spiegazione ?? r.spiegazione_proposta ?? '')}" oninput="contaParole(${r.i})">
+        <span class="stat" id="w${r.i}">${parole(r.spiegazione ?? r.spiegazione_proposta ?? '')}</span>
+        ${r.spiegazione_proposta && r.spiegazione && r.spiegazione!==r.spiegazione_proposta
+          ? `<div class="sugg"><span class="et">proposta</span><button class="sg" data-v="${esc(r.spiegazione_proposta)}" onclick="usaSpieg(${r.i},this.dataset.v)">${esc(r.spiegazione_proposta)}</button></div>` : ''}
+      </div>
       <div class="campo"><div class="lab">slug</div><div class="val slug" id="s${r.i}">${esc(slugify(valore))||'—'}</div></div>
       ${avviso}${cond}${gem}${daBucket}${fuoriSede}${mai}
       <div class="azioni">
@@ -295,6 +321,23 @@ function disegnaRiga(r){
 }
 
 function riga(i){ return DATI.righe.find(r=>r.i===i); }
+
+async function scegli(i, s, motivo){
+  const r = riga(i), box = document.getElementById('c'+i);
+  try{
+    await chiama('/api/scelta', {zona:zona.value, sha256:r.sha256, scelta:s, motivo});
+    r.scelta = s;
+    box.querySelectorAll('button').forEach(b=>b.className = (b.dataset.s===s ? 'primary' : 'ghost'));
+    box.querySelector('.stat').textContent = {tieni:'✓ la tieni: entra', escludi:'✓ esclusa: non entra',
+      sposta:'✓ esce da Mobilità', resta:'✓ resta in Mobilità'}[s];
+    document.getElementById('r'+i).classList.toggle('esclusa', s==='escludi' || s==='sposta');
+  }catch(err){ box.querySelector('.stat').textContent = 'NON salvata: '+err.message+' — riprova'; }
+}
+
+function parole(s){ const n = String(s||'').trim().split(/\s+/).filter(Boolean).length;
+  return n ? `${n} parole${n<5||n>10?' · tra 5 e 10':''}` : ''; }
+function contaParole(i){ document.getElementById('w'+i).textContent = parole(document.getElementById('x'+i).value); }
+function usaSpieg(i,v){ const x = document.getElementById('x'+i); x.value = v; contaParole(i); x.focus(); }
 
 function usa(i,v){
   const inp = document.getElementById('n'+i);
@@ -326,13 +369,15 @@ async function conferma(i){
   const nome = inp.value.trim();
   if(!nome){ e.className='esito ko'; e.textContent='nome vuoto: non salvo'; return; }
   e.className='esito'; e.textContent='salvo…';
-  const payload = {zona:zona.value, sha256:r.sha256, nome};
+  const x = document.getElementById('x'+i);
+  const payload = {zona:zona.value, sha256:r.sha256, nome, spiegazione: x ? x.value.trim() : ''};
   inVolo.set(r.sha256, payload);
   try{
     const res = await chiama('/api/decidi', payload);
     inVolo.delete(r.sha256);
     e.className='esito ok'; e.textContent='✓ salvata su disco';
     document.getElementById('r'+i).classList.add('decisa');
+    r.spiegazione = payload.spiegazione || r.spiegazione;
     disco.textContent = `${res.decise} su ${DATI.righe.length} salvate su disco`;
     r.decisione = {quando:'adesso', nome_confermato:nome, origine:'—'};
     DATI.decise = res.decise;

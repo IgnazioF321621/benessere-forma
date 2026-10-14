@@ -12,6 +12,8 @@ Allegato normativo di [`CLAUDE.md`](../CLAUDE.md): **non è un archivio**, è lo
 
 **1. Nome unico.** Catalogo con un solo nome per esercizio. `nome_en` deprecata. Il nome è in italiano se l'italiano è il termine di sala; se il termine di sala è inglese resta inglese (`plank · crunch · hip thrust · face pull · pistol · jump squat · front squat · lat machine`).
 
+**Eccezione Mobilità e stretching** *(decisione di Ignazio, 14 ottobre 2026)*: il nome è **inglese breve** (il termine con cui l'esercizio si trova), e sotto il nome l'app mostra una **riga in italiano di 5-10 parole** che dice cosa si fa, dalla colonna `spiegazione` di `esercizi_catalog` (migrazione `20261014_010`). Vale solo per `pattern = mobilita`. Nome e riga si confermano nel pannello guardando la GIF.
+
 **2. Formula**: `[Movimento] [Attrezzo] [Variante] [Posizione]` — preposizioni rimosse, default omessi. Attrezzo = ciò che si impugna: al cavo l'attrezzo è l'attacco (corda, maniglia…), non il cavo.
 
 **Default omessi** — si scrivono solo quando l'esercizio si scosta dal default. Valgono su tutte le zone:

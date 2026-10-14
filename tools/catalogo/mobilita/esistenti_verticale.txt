@@ -1,0 +1,52 @@
+# Gli 8 esercizi gia a catalogo che prendono la GIF di Mobilita
+# Per ogni codice: colonna -> valore nuovo (in fondo al foglio la colonna nuova «spiegazione").
+
+EX121  (oggi: Riscaldamento spalle (circonduzioni))
+   nome           -> Arm circles
+   setup          -> In piedi, braccia aperte all'altezza delle spalle
+   esecuzione     -> Disegna cerchi con le braccia tese;Parti piccolo e allarga piano;Cambia senso a metà serie
+   gif_slug       -> arm-circles
+   progressione   -> più ripetizioni
+   spiegazione    -> In piedi, braccia aperte che disegnano cerchi
+
+EX123  (oggi: Thread the needle)
+   esecuzione     -> Fai passare un braccio sotto il corpo ruotando;Torna aprendo il braccio verso il soffitto;Lo sguardo segue la mano;Finisci le ripetizioni e cambia lato
+   gif_slug       -> thread-the-needle
+   progressione   -> più ripetizioni
+   spiegazione    -> A quattro zampe, braccio sotto il corpo poi verso l'alto
+
+EX124  (oggi: Rotazione toracica (T-spine))
+   nome           -> Quadruped thoracic rotation
+   setup          -> In quadrupedia, mani sotto le spalle e ginocchia sotto le anche
+   esecuzione     -> Porta un braccio verso il soffitto ruotando il busto;Lo sguardo segue la mano;Torna con la mano a terra;Finisci le ripetizioni e cambia lato
+   gif_slug       -> quadruped-thoracic-rotation
+   unilaterale    -> si
+   progressione   -> più ripetizioni
+   spiegazione    -> A quattro zampe, braccio che si apre verso il soffitto
+
+EX126  (oggi: Stretch flessori anca in ginocchio)
+   nome           -> Low lunge hip flexor stretch
+   gif_slug       -> low-lunge-hip-flexor-stretch
+   spiegazione    -> Affondo profondo, ginocchio dietro a terra, bacino giù
+
+EX127  (oggi: Stretch ischiocrurali seduto)
+   nome           -> Seated single-leg toe reach
+   setup          -> Seduto a gambe distese, poi piega una gamba con il piede a terra
+   esecuzione     -> Allunga le mani verso il piede della gamba tesa;Schiena lunga, piegati dalle anche;Tieni la posizione respirando lentamente;Cambia gamba
+   gif_slug       -> seated-single-leg-toe-reach
+   spiegazione    -> Seduto, una gamba tesa, mano alla punta del piede
+
+EX129  (oggi: Foam roll ischiocrurali)
+   nome           -> Foam roller hamstrings
+   gif_slug       -> foam-roller-hamstrings
+   spiegazione    -> Rullo sotto la coscia dietro, bacino sollevato, scorrere avanti e indietro
+
+EX130  (oggi: Foam roll bandelletta IT)
+   nome           -> Foam roller IT band
+   gif_slug       -> foam-roller-it-band
+   spiegazione    -> Sul fianco, rullo sotto l'esterno coscia, scorrere avanti e indietro
+
+EX131  (oggi: Passive hang)
+   nome           -> Dead hang
+   gif_slug       -> dead-hang
+   spiegazione    -> Appeso alla sbarra, braccia tese, corpo rilassato

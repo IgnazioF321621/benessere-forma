@@ -53,6 +53,14 @@ BACKUP = BASE / 'backup'
 
 REGISTRO = ESITI / 'registro_decisioni.tsv'
 BOZZE = ESITI / 'bozze.tsv'
+# Mobilita' e stretching (decisione di Ignazio, 14 ottobre 2026): nome inglese breve
+# piu' una riga in italiano di 5-10 parole. La riga ha un registro suo, append-only
+# come quello dei nomi: il registro dei nomi non cambia forma.
+SPIEGAZIONI = ESITI / 'spiegazioni_brevi.tsv'
+# Doppioni: Ignazio sceglie quale GIF tenere e quale escludere (14 ottobre 2026).
+# Registro append-only come gli altri: vale l'ultima scelta per impronta.
+SCELTE = ESITI / 'mobilita_scelte.tsv'
+CRITERIO_DAL = '2026-10-14'   # nome inglese breve + spiegazione: da qui una decisione e' definitiva
 MIGRARE = ESITI / 'slug_da_migrare.tsv'
 LOG = ESITI / 'log_rinomine.tsv'
 
@@ -71,6 +79,8 @@ SUGGERIMENTI = BASE / 'suggerimenti_nomi.json'
 COL_REGISTRO = ['quando', 'zona', 'sha256', 'nome_vecchio', 'nome_confermato', 'slug',
                 'stato_binario', 'origine', 'slug_applicabile', 'codice', 'nome_catalogo']
 COL_BOZZE = ['quando', 'zona', 'sha256', 'nome_vecchio', 'testo']
+COL_SCELTE = ['quando', 'zona', 'sha256', 'file', 'scelta', 'motivo']
+COL_SPIEGAZIONI = ['quando', 'zona', 'sha256', 'nome_confermato', 'spiegazione']
 COL_MIGRARE = ['quando', 'zona', 'codice', 'nome_catalogo', 'slug_vecchio', 'slug_nuovo',
                'nome_file_nuovo', 'sha256']
 COL_LOG = ['quando', 'zona', 'da', 'a', 'sha256', 'esito', 'dettaglio']
@@ -311,7 +321,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                           ('rinominato', 'gia con quel nome')}
             trad = leggi_traduzioni(dati['zona'])
             sugg = leggi_suggerimenti()
+            spieg = stato_corrente(SPIEGAZIONI)
+            scelte = stato_corrente(SCELTE)
+            # L'immagine si cerca col nome che il file ha ADESSO: dopo «Rinomina i file
+            # sul Mac» il nome della preparazione non c'e' piu' e la GIF spariva dalla
+            # pagina (14 ottobre 2026, 52 righe su 133). Ultimo nome dal log, se esiste.
+            cartella = GIF_ROOT / dati['zona']
+            sul_disco = ({nfc(x) for x in os.listdir(cartella) if x.lower().endswith('.gif')}
+                         if cartella.is_dir() else set())
+            ultimo_nome = {x['sha256']: x['a'] for x in leggi_tsv(LOG)
+                           if x.get('esito') in ('rinominato', 'gia con quel nome') and x.get('sha256')}
             for r in dati['righe']:
+                ora_nome = ultimo_nome.get(r['sha256'])
+                if nfc(r['file']) not in sul_disco and ora_nome and nfc(ora_nome) in sul_disco:
+                    r['file'] = nfc(ora_nome)
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')
                 r['rinominato'] = r['sha256'] in rinominati
@@ -320,6 +343,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 v = sugg.get(r['sha256']) or {}
                 r['suggerimenti'] = v.get('suggerimenti') or []
                 r['da_guardare'] = v.get('da_guardare')
+                r['spiegazione_proposta'] = v.get('spiegazione')
+                r['spiegazione'] = (spieg.get(r['sha256']) or {}).get('spiegazione')
+                r['gruppo'] = v.get('gruppo')
+                r['scelta'] = (scelte.get(r['sha256']) or {}).get('scelta')
+                # Decisa col criterio nuovo (dal 14 ottobre 2026): niente piu' suggerimenti,
+                # restano solo le note che chiedono ancora una scelta (doppione, da spostare)
+                if r['decisione'] and r['decisione'].get('quando', '') >= CRITERIO_DAL:
+                    r['suggerimenti'] = []
+                    g = re.sub(r'(Proposta nuova|Nome già giusto)[^.]*\.\s*', '', r['da_guardare'] or '')
+                    r['da_guardare'] = g.strip() or None
+            # doppioni uno accanto all'altro, poi le GIF da spostare per zona, poi il resto
+            dati['righe'].sort(key=lambda r: (r.get('gruppo') or '9', nfc(r['file']).lower()))
             dati['decise'] = sum(1 for r in dati['righe'] if r['decisione'])
             dati['rinominate'] = sum(1 for r in dati['righe'] if r['rinominato'])
             return self._send(dati)
@@ -410,6 +445,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return self.lavoro3_decidi(body)
             if path == '/api/tre-fonti/decidi':
                 return self.tre_fonti_decidi(body)
+            if path == '/api/scelta':
+                return self.scelta(body)
             if path == '/api/bozza':
                 return self.bozza(body)
             if path in ('/api/rinomina/prova', '/api/rinomina/applica'):
@@ -422,6 +459,24 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return self._send({'ok': False,
                                'error': '%s: %s' % (type(ex).__name__, ex),
                                'traccia': traccia.splitlines()[-3:]}, status=500)
+
+    # -- Doppioni: «Tieni» / «Escludi», su disco nell'istante della scelta --
+    def scelta(self, body):
+        f = LAVORO / (body.get('zona', '') + '.json')
+        if not f.exists():
+            return self._send({'error': 'zona non preparata'}, status=404)
+        dati = json.loads(f.read_text(encoding='utf-8'))
+        r = {x['sha256']: x for x in dati['righe']}.get(body.get('sha256'))
+        if not r:
+            return self._send({'error': 'riga sconosciuta'}, status=404)
+        s = body.get('scelta')
+        if s not in ('tieni', 'escludi', 'sposta', 'resta'):
+            return self._send({'error': 'scelta non valida'}, status=400)
+        appendi(SCELTE, COL_SCELTE, [{'quando': ora(), 'zona': dati['zona'], 'sha256': r['sha256'],
+                                      'file': r['file'], 'scelta': s,
+                                      'motivo': body.get('motivo') or 'doppione'}])
+        print('  scelta: %s -> %s' % (r['file'][:44], s))
+        return self._send({'ok': True, 'scelta': s})
 
     # -- Lavoro 3: una scelta arrivata e' una scelta su disco, subito ------
     def lavoro3_decidi(self, body):
@@ -519,6 +574,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # La pagina puo' rispedire la stessa conferma (sendBeacon di riserva quando
         # la scheda si chiude prima della risposta). Un doppione identico non
         # aggiunge nulla: lo scarto, ma rispondo ok, perche' il dato E' su disco.
+        # la riga in italiano si salva per prima e da sola: anche quando il nome
+        # e' lo stesso di prima, una riga nuova non deve andare persa
+        spiegazione = nfc(body.get('spiegazione') or '').strip()
+        if spiegazione and (stato_corrente(SPIEGAZIONI).get(r['sha256']) or {}).get('spiegazione') != spiegazione:
+            appendi(SPIEGAZIONI, COL_SPIEGAZIONI, [{
+                'quando': ora(), 'zona': dati['zona'], 'sha256': r['sha256'],
+                'nome_confermato': nome, 'spiegazione': spiegazione}])
+
         ultima = stato_corrente(REGISTRO).get(r['sha256'])
         if ultima and ultima.get('nome_confermato') == nome:
             decise = len([1 for x in dati['righe'] if x['sha256'] in stato_corrente(REGISTRO)])
