@@ -230,7 +230,8 @@ function boot(tables, opts={}){
       win.clearInterval = (t) => clearInterval(t);
       win.matchMedia = win.matchMedia || (()=>({matches:false, addListener(){}, removeListener(){}, addEventListener(){}, removeEventListener(){}}));
       win.scrollTo = ()=>{};
-      win.AudioContext = function(){ return { createOscillator:()=>({connect(){},start(){},stop(){},frequency:{setValueAtTime(){}} }), createGain:()=>({connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}), currentTime:0, destination:{}, state:'running', resume(){} }; };
+      // resume() e close() restituiscono una promessa e cambiano lo stato, come il contesto vero (Training 380)
+      win.AudioContext = function(){ const c = { createOscillator:()=>({connect(){},start(){},stop(){},frequency:{setValueAtTime(){}} }), createGain:()=>({connect(){},gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}}}), currentTime:0, destination:{}, state:'running', resume(){ if(c.state !== 'closed') c.state = 'running'; return Promise.resolve(); }, close(){ c.state = 'closed'; return Promise.resolve(); } }; return c; };
       win.webkitAudioContext = win.AudioContext;
       win.navigator.serviceWorker = undefined;
     }

@@ -1270,11 +1270,23 @@ function playPrepBeep(){
 
 // Beep di stop — segnala fine round/fase (sine 659Hz, ~730ms, gain 0.85)
 // + vibrazione [400].
+// Un bip che non può suonare adesso (iPhone: contesto «interrupted» dopo un'altra app, o sbloccato solo da
+// un tocco) non si perde: resta in sospeso e suona al primo tocco o appena il contesto torna a correre
+// (Training 380). La vibrazione parte comunque.
+let _beepInSospeso = false;
+function _suonaInSospeso(){
+  if(!_beepInSospeso) return;
+  const ctx = _audioCtx;
+  if(!ctx || ctx.state !== 'running') return;
+  _beepInSospeso = false;
+  playStopBeep();
+}
 function playStopBeep(){
   try {
     if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} }
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
+    if(ctx.state === 'interrupted' || ctx.state === 'closed'){ _beepInSospeso = true; _riattivaAudio().then(_suonaInSospeso).catch(()=>{}); return; }
     const fire = ()=>{
       try {
         const osc = ctx.createOscillator();
@@ -1442,7 +1454,7 @@ function tickCountdown(){
       playPrepBeep();
     }
     cd.seconds = remaining;
-    if(remaining <= 0) cd.done = true;
+    if(remaining <= 0){ cd.done = true; cd.ridotto = false; }   // finito: il foglio torna anche se era ridotto
     if (cd.done) {
       renderTraining(); // full re-render per done state (PRONTO!)
     } else {
@@ -1450,7 +1462,7 @@ function tickCountdown(){
       // Critico per preservare l'animazione della GIF: un full re-render ad ogni
       // secondo ricrea l'<img class="rest-hero-gif"> dal DOM resettando la GIF al
       // frame 1, facendola sembrare statica. Selector .rest-hero-cd-num (BLOCCO 2A).
-      const numEl  = document.querySelector('.rest-hero-cd-num');
+      const numEl  = document.querySelector('.rest-hero-cd-num') || document.querySelector('.rest-striscia-num');
       const ringEl = document.querySelector('.rest-ring-fill');
       if (numEl) {
         const fmtTime = (sec) => sec >= 60
@@ -1486,6 +1498,31 @@ function skipCountdown(){
   ST.trainCountdown = null;
   renderTraining();
   scrollToActiveExercise();
+}
+// Il foglio del recupero si riduce a una striscia in cima alla seduta (Training 370): il tempo continua,
+// il bip arriva lo stesso, un tocco riapre il foglio; «Salta» resta l'unico che lo spegne.
+function riduciCountdown(){
+  if(!ST.trainCountdown) return;
+  ST.trainCountdown.ridotto = true;
+  renderTraining();
+  scrollToActiveExercise();
+}
+function apriCountdown(){
+  if(!ST.trainCountdown) return;
+  ST.trainCountdown.ridotto = false;
+  renderTraining();
+}
+function _renderRestStriscia(){
+  const cd = ST.trainCountdown;
+  if(!cd || !cd.ridotto || cd.done) return '';
+  const fmt = (sec) => sec >= 60 ? `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}` : String(sec);
+  return `<div id="rest-striscia" style="position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;background:var(--acc);color:#fff;border-radius:12px;padding:10px 12px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);">
+      <button onclick="apriCountdown()" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:none;color:inherit;text-align:left;cursor:pointer;padding:0;">
+        <span class="rest-striscia-num" style="font-family:var(--font-mono);font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;">${fmt(cd.seconds)}</span>
+        <span style="min-width:0;"><span style="display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;opacity:.85;">${cd.traEsercizi ? 'PROSSIMO ESERCIZIO · RECUPERO' : 'RECUPERO'}</span><span style="display:block;font-family:var(--font-sans);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cd.exName)} · tocca per aprire</span></span>
+      </button>
+      <button onclick="skipCountdown()" style="flex-shrink:0;background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salta</button>
+    </div>`;
 }
 
 // Scrolla al centro la card del primo esercizio non completato della sessione corrente
@@ -3879,6 +3916,7 @@ function renderTraining(){
               <div class="ex-meta-row">
                 ${(s.rir!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${s.rir}</span>`:''}
                 <span class="ex-rest">rec ${restCompact}</span>
+                ${_exInfoCatalogo(e).unilaterale === 'alternato' ? `<span class="ex-rest ex-alternato" title="Esercizio alternato">1 rip = dx + sx</span>` : ''}
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
@@ -3952,6 +3990,7 @@ function renderTraining(){
             I tuoi giorni
           </button>
           ${audioBanner}
+          ${_renderRestStriscia()}
           ${heroBlock}
 
           ${softReturnBanner}
@@ -4650,7 +4689,11 @@ function renderTraining(){
   }
 
   let countdownHTML = '';
-  if(ST.trainCountdown){
+  // Foglio ridotto (Training 370, scelta di Ignazio del 14 ottobre 2026): niente foglio, la striscia in
+  // cima alla seduta tiene il tempo; il foglio torna da solo quando il recupero finisce (PRONTO!)
+  if(ST.trainCountdown && ST.trainCountdown.ridotto && !ST.trainCountdown.done){
+    countdownHTML = '';
+  } else if(ST.trainCountdown){
     const cd = ST.trainCountdown;
     if(cd.done){
       // PRONTO! state — design system evergreen (BLOCCO 2A, 26 mag 2026)
@@ -4759,6 +4802,7 @@ function renderTraining(){
             </div>
             <div class="rest-hero-right">
               <button class="rest-hero-skip" onclick="skipCountdown()">Salta ⏭</button>
+              <button class="rest-hero-riduci" onclick="riduciCountdown()" aria-label="Riduci il foglio" title="Riduci: il tempo continua" style="display:block;margin:6px 0 0 auto;background:none;border:1px solid var(--s3);border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--t2);cursor:pointer;">⌄ riduci</button>
               ${gifHTML}
               <span class="rest-hero-cd-label">${cd.traEsercizi ? 'Prossimo esercizio · recupero ' : 'Recupero · '}${totalDisplay}</span>
             </div>
@@ -4803,13 +4847,17 @@ function renderTraining(){
                   k.startsWith(`${cd.sessionId}_${cd.exName}_`) && k.endsWith(`_${todayKey()}`)
                 );
                 const savedN2 = savedKeys2.length;
+                // Fra due esercizi (Training 370): la serie appena fatta è di QUELLO PRIMA, e lo si dice col
+                // nome, così non sembra una serie delle trazioni che stanno per cominciare
+                const nomeFatto = cd.traEsercizi && cd.daEx ? nomeCortoConTag(cd.daEx) : '';
+                const nomeProssimo = cd.traEsercizi ? nomeCortoConTag(cd.exName) : '';
                 return `<div class="rest-row-cards">
                   <div class="rest-card">
-                    <span class="rest-card-eyebrow" ${savedN2 > 0 ? 'style="color:var(--acc);"' : ''}>${savedN2 > 0 ? `Serie ${savedN2} salvata ✓` : 'APPENA FATTA'}</span>
+                    <span class="rest-card-eyebrow" ${savedN2 > 0 ? 'style="color:var(--acc);"' : ''}>${savedN2 > 0 ? `Serie ${savedN2} salvata ✓` : (nomeFatto ? `FATTO · ${nomeFatto}` : 'APPENA FATTA')}</span>
                     ${lastSetHTML}
                   </div>
                   <div class="rest-card rest-card--next">
-                    <span class="rest-card-eyebrow">PROSSIMA</span>
+                    <span class="rest-card-eyebrow">${nomeProssimo ? `PRIMA SERIE · ${nomeProssimo}` : 'PROSSIMA'}</span>
                     ${nextHTML}
                   </div>
                 </div>`;
@@ -4864,6 +4912,8 @@ function renderTraining(){
     const tot = exDef?.sets || '?';
     // Badge: reps + RIR (riusa la convenzione della card sessione)
     const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(exDef.reps)}</span>` : '';
+    // Alternato (Training 360): una ripetizione è destra + sinistra, lo si dice sotto il nome
+    const altBadge = (exDef && _exInfoCatalogo(exDef).unilaterale === 'alternato') ? `<span class="train-exec-badge ex-alternato">1 rip = dx + sx</span>` : '';
     const rirVal = sessDef.rir;
     // RIR nascosto per esercizi temporali (iso:true con reps in secondi) — coerente con renderTraining
     const parsedReps = exDef?.reps ? (typeof parseRepsRange === 'function' ? parseRepsRange(exDef.reps) : null) : null;
@@ -4888,7 +4938,7 @@ function renderTraining(){
         </div>
         <div class="train-exec-body">
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
-          ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
+          ${(repsBadge || rirBadge || altBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}${altBadge}</div>` : ''}
           ${gifBlock}
           ${!isTimed ? (()=>{ const s0 = getProgressionLive(ex2.exName, ex2.sessionId); return s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : ''; })() : ''}
           ${isTimed ? (ex2.timedReady ? `
@@ -5267,12 +5317,12 @@ document.addEventListener('visibilitychange', ()=>{
   }
   // Audio al rientro in primo piano: risveglio, e se iOS lo ha lasciato «interrupted» (vocale,
   // telefonata) contesto nuovo + sblocco al primo tocco (Training 340).
-  if(document.visibilityState === 'visible' && _audioCtx){
-    _riattivaAudio();
-  }
-  // Countdown recupero: forza tick al rientro per ricalcolare remaining e beepare se scaduto in background
-  if(document.visibilityState === 'visible' && ST.trainCountdown){
-    tickCountdown();
+  // Al rientro (Training 380): PRIMA si rimette in piedi l'audio, POI il tick del recupero ricalcola
+  // il tempo sull'ora vera e, se è scaduto mentre si era altrove, fa suonare subito il bip; se iOS non
+  // lascia suonare senza un tocco, il bip resta in sospeso e parte al primo tocco (la vibrazione subito).
+  if(document.visibilityState === 'visible'){
+    const poi = () => { if(ST.trainCountdown) tickCountdown(); _suonaInSospeso(); };
+    if(_audioCtx) _riattivaAudio().then(poi).catch(poi); else poi();
   }
   // Flow timestamp-based (attivazione/recupero/tabata/warm-up/exec timer): forza un tick
   // al rientro per ricalcolare da endTime e recuperare in silenzio le fasi saltate in background
@@ -5304,7 +5354,7 @@ let _audioGestureUnlocked = false;
 function _onFirstGesture(){
   if(_audioGestureUnlocked) return;
   _audioGestureUnlocked = true;
-  _unlockAudio();
+  _unlockAudio().then(_suonaInSospeso).catch(()=>{});   // il bip rimasto in sospeso (Training 380)
   document.removeEventListener('touchstart', _onFirstGesture, true);
   document.removeEventListener('touchend', _onFirstGesture, true);
   document.removeEventListener('mousedown', _onFirstGesture, true);
