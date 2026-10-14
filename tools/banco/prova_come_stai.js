@@ -66,7 +66,7 @@ async function home(righe, opts){
     b.win.comeStaiChiudi(); await attendi(30); b.win.renderHomeV2();
     c2 = b.card();
     atteso('«Fatto»: una riga sola con i tre valori e la nota', [c2.classList.contains('cs-chiusa'), testo(c2.querySelector('.cs-riassunto')), testo(c2.querySelector('.cs-riga-nota'))],
-      [true, 'Sonno 7,5 h · Energia 4 · Stress 2', 'dormito male']);
+      [true, 'Sonno 7,5 h · Energia 4 buona · Stress 2 sereno', 'dormito male']);
     b.win.comeStaiApri(); await attendi(30); b.win.renderHomeV2();
     atteso('«Modifica» la riapre con i valori', [b.card().classList.contains('cs-chiusa'), b.select('energy').value, b.select('stress').value], [false, '4', '2']);
     b.win.comeStaiScegli('energy', ''); await attendi(20);
@@ -79,7 +79,7 @@ async function home(righe, opts){
     const b = await home([{ id:'d1', user_id:U, date:OGGI, sleep_hours:6, energy:3, stress:4, day_type:null, note:null },
                           { id:'d0', user_id:U, date:'2026-10-12', sleep_hours:8, energy:5, stress:1 }]);
     await b.disegna(); await attendi(30); b.win.renderHomeV2();
-    atteso('compilato: riga «Sonno 6 h · Energia 3 · Stress 4»', [b.card() && b.card().classList.contains('cs-chiusa'), testo(b.card() && b.card().querySelector('.cs-riassunto'))], [true, 'Sonno 6 h · Energia 3 · Stress 4']);
+    atteso('compilato: riga «Sonno 6 h · Energia 3 normale · Stress 4 teso»', [b.card() && b.card().classList.contains('cs-chiusa'), testo(b.card() && b.card().querySelector('.cs-riassunto'))], [true, 'Sonno 6 h · Energia 3 normale · Stress 4 teso']);
   }
   // 4) senza rete la scelta resta in coda e si vede; rifiutata dal database torna com'era
   {

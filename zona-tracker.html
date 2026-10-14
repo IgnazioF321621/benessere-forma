@@ -1547,6 +1547,18 @@ function showClosedScreen() {
 // le sezioni (Home 020, Pirsi 020). ST.dailyLog = { 'AAAA-MM-GG': riga }.
 const DAILY_LOG_TIPI = ['training', 'rest', 'deload', 'injury', 'fasting'];
 
+// Cosa vuol dire ogni livello (Home 160, 14 ottobre 2026, parole scelte da Ignazio).
+// Un posto solo: Home, Pirsi e Body le leggono da qui con diarioParola. Il numero
+// salvato in daily_log non cambia. Il sonno non ha parole: le ore bastano.
+const DIARIO_PAROLE = {
+  energy: { 1: 'scarica', 2: 'bassa', 3: 'normale', 4: 'buona', 5: 'al top' },
+  stress: { 1: 'calmo', 2: 'sereno', 3: 'normale', 4: 'teso', 5: 'al limite' },
+};
+function diarioParola(campo, valore) {
+  const p = DIARIO_PAROLE[campo];
+  return (p && valore != null && p[Number(valore)]) || '';
+}
+
 async function loadDailyLog() {
   if (!ST.user || !ST.user.id) return ST.dailyLog || {};
   const res = await dbqAll('leggere il diario del giorno', () => supa.from('daily_log')
