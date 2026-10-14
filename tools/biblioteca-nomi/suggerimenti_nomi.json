@@ -186,9 +186,8 @@
     "Allungamento spalle con asciugamano",
     "Cow face pose con asciugamano"
    ],
-   "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». DOPPIONE di «Cow face pose» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena",
-   "gruppo": "1 · Doppioni · Cow face pose ⇄ Towel shoulder stretch"
+   "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». Non è un doppione di «Cow face pose»: qui c'è l'asciugamano (verificato a grandezza piena).",
+   "spiegazione": "Asciugamano tra le mani, una sopra e una dietro"
   },
   "9b12689108adde507a894d27f4e22bde9b419ab2c7c0e1ba8f0aae807ffc23dd": {
    "da": "cow face pose arms",
@@ -197,9 +196,8 @@
     "Allungamento spalle cow face pose",
     "Allungamento spalle mani in presa dietro la schiena"
    ],
-   "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». DOPPIONE di «Towel shoulder stretch» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena",
-   "gruppo": "1 · Doppioni · Cow face pose ⇄ Towel shoulder stretch"
+   "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». Non è un doppione di «Towel shoulder stretch»: qui c'è la presa senza asciugamano (verificato a grandezza piena).",
+   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena"
   },
   "2774818a0409e5fee7083bffc8625ea18210178ac413fb6604c4fde1ea556980": {
    "da": "dead hang (o passive pull-up hang)",
@@ -865,9 +863,9 @@
     "Tocco punte braccia in alto",
     "Toccare le dita dei piedi incrociato in piedi"
    ],
-   "da_guardare": "DOPPIONE di «tocco-delle-dita-in-piedi» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
+   "da_guardare": " FORSE DOPPIONE di «tocco-delle-dita-in-piedi»: stesso disegno, ma in alcuni momenti la posizione è diversa. Guardale animate: se una va verso il piede opposto, sono due esercizi.",
    "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
-   "gruppo": "1 · Doppioni · standing cross toe touch (o standing diagonal toe touch stretch) ⇄ tocco-delle-dita-in-piedi"
+   "gruppo": "1 · Forse doppioni · standing cross toe touch ⇄ tocco-delle-dita-in-piedi"
   },
   "839b45215540666c17b15aef8cc4e1d56ab2a9ff86591dcfea3c02a85e9d4323": {
    "da": "standing forward bend (o Uttanasana)",
@@ -1314,9 +1312,9 @@
     "Overhead toe touch",
     "Tocco punte braccia in alto"
    ],
-   "da_guardare": "DOPPIONE di «standing cross toe touch (o standing diagonal toe touch stretch)» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
+   "da_guardare": " FORSE DOPPIONE di «standing cross toe touch (o standing diagonal toe touch stretch)»: stesso disegno, ma in alcuni momenti la posizione è diversa. Guardale animate: se una va verso il piede opposto, sono due esercizi.",
    "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
-   "gruppo": "1 · Doppioni · standing cross toe touch (o standing diagonal toe touch stretch) ⇄ tocco-delle-dita-in-piedi"
+   "gruppo": "1 · Forse doppioni · standing cross toe touch ⇄ tocco-delle-dita-in-piedi"
   }
  },
  "aggiornato": "2026-10-14: proposte dopo aver guardato le GIF (ZT-Catalogo e Gif)",
