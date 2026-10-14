@@ -2316,6 +2316,7 @@ function foglioSegnala() {
     <div class="sg-motivi">${S.MOTIVI.map(([k, n]) => `<button type="button" class="btn btn-ghost" data-motivo="${k}">${esc(n)}</button>`).join('')}</div>
     <textarea id="sg-testo" class="inp sg-testo" maxlength="${S.MAX_TESTO}" placeholder="Scrivi qui, anche due parole"></textarea>
     <div class="sg-allega"><label id="sg-allega" class="btn btn-ghost">Allega lo screenshot<input type="file" id="sg-file" accept="image/*" hidden></label>
+      <div id="sg-incolla" class="sg-incolla" contenteditable="true" role="textbox" aria-label="Incolla qui lo screenshot" data-vuoto="oppure tieni premuto qui e scegli Incolla"></div>
       <div id="sg-anteprima" hidden><img alt="Lo screenshot allegato"><button type="button" class="btn btn-ghost" id="sg-togli">Togli</button></div></div>
     <div class="sg-dove">Dove sei: ${esc(S.descrizioneDove(dove) || 'nell\'app')} · versione ${esc(APP_VERSION)}</div>
     <div class="foglio-bottoni"><button type="button" class="btn btn-ghost" id="sg-no">Annulla</button><button type="button" class="btn btn-primary" id="sg-si" disabled>Invia</button></div></div>`;
@@ -2323,16 +2324,39 @@ function foglioSegnala() {
   let immagine = null;   // lo screenshot ridotto, pronto da caricare
   let idSegnalazione = null;   // scelto al primo «Invia» e tenuto per i tentativi dopo: lo stesso file si riscrive, non se ne accumulano
   const fileInput = ov.querySelector('#sg-file'), etichetta = ov.querySelector('#sg-allega'), anteprima = ov.querySelector('#sg-anteprima'), img = anteprima.querySelector('img');
+  const zonaIncolla = ov.querySelector('#sg-incolla');
   const liberaAnteprima = () => { if(img.src && img.src.startsWith('blob:')) { try { URL.revokeObjectURL(img.src); } catch(e){} } img.removeAttribute('src'); };
   const mostraAnteprima = () => {
     liberaAnteprima();
     if(immagine) { try { img.src = URL.createObjectURL(immagine); } catch(e){} }
-    anteprima.hidden = !immagine; etichetta.hidden = !!immagine;
+    anteprima.hidden = !immagine; etichetta.hidden = !!immagine; zonaIncolla.hidden = !!immagine;
   };
-  const chiudi = () => { document.removeEventListener('keydown', suTasto); liberaAnteprima(); ov.remove(); };
+  // Un'immagine che arriva (dalle foto o incollata): ridotta subito, poi l'anteprima. Se ce n'era già una, quella nuova la sostituisce e lo si dice.
+  const allega = async (f) => {
+    const cera = !!immagine;
+    let ridotta;
+    try { ridotta = await riduciScreenshot(f); } catch(e) { return showToast(e.message || 'Non riesco a leggere questa immagine', '🖼️'); }
+    immagine = ridotta;
+    mostraAnteprima();
+    if(cera) showToast('Screenshot sostituito', '🖼️');
+  };
+  // Fondamenta 240: lo screenshot si può anche INCOLLARE. Cmd/Ctrl+V ovunque nel foglio (anche nel testo); su iPhone e Android «Incolla»
+  // col tocco lungo nella zona apposta (Safari offre «Incolla» per un'immagine solo in una zona modificabile, non nel campo di testo).
+  // Incollando del solo testo non cambia niente; un file che non è un'immagine si ignora e lo si dice.
+  const suIncolla = (e) => {
+    const { immagine: f, altroFile } = ZTSegnala.immagineDaAppunti(e.clipboardData);
+    if(f) { e.preventDefault(); allega(f); return; }
+    if(altroFile) { e.preventDefault(); showToast('Qui si allega solo un\'immagine', '🖼️'); return; }
+    if(e.target === zonaIncolla || zonaIncolla.contains(e.target)) e.preventDefault();   // nella zona il testo non entra
+  };
+  // la zona non tiene niente di scritto: è solo il posto dove tenere premuto
+  zonaIncolla.addEventListener('input', () => { zonaIncolla.textContent = ''; });
+  zonaIncolla.addEventListener('keydown', (e) => { if(e.key.length === 1 && !e.metaKey && !e.ctrlKey) e.preventDefault(); });
+  const chiudi = () => { document.removeEventListener('keydown', suTasto); document.removeEventListener('paste', suIncolla); liberaAnteprima(); ov.remove(); };
   const suTasto = (e) => { if(e.key === 'Escape') { e.preventDefault(); chiudi(); } };
   ov.addEventListener('click', (e) => { if(e.target === ov) chiudi(); });
   document.addEventListener('keydown', suTasto);
+  document.addEventListener('paste', suIncolla);
   ov.querySelector('#sg-no').onclick = chiudi;
   ov.querySelectorAll('[data-motivo]').forEach(b => b.onclick = () => {
     motivo = b.dataset.motivo;
@@ -2343,8 +2367,7 @@ function foglioSegnala() {
   fileInput.onchange = async () => {
     const f = fileInput.files[0]; fileInput.value = '';
     if(!f) return;
-    try { immagine = await riduciScreenshot(f); } catch(e) { return showToast(e.message || 'Non riesco a leggere questa immagine', '🖼️'); }
-    mostraAnteprima();
+    await allega(f);
   };
   ov.querySelector('#sg-togli').onclick = () => { immagine = null; mostraAnteprima(); };
   ov.querySelector('#sg-si').onclick = async () => {

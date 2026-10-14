@@ -3,7 +3,8 @@
 // nel banco: l'insetto compare dopo l'accesso e non prima, si chiama «Invia Feedback», segue i fogli, il foglio si apre anche sopra
 // un altro foglio (e sopra una conferma), «Invia» è spento senza motivo, la riga salvata ha dove/versione/telefono, lo screenshot
 // ridotto si carica prima della riga nel bucket privato e si toglie se la riga non parte, senza rete «Non inviata» e niente in coda,
-// mai la parola «errore».
+// mai la parola «errore». Dal 14 ottobre 2026 (Fondamenta 240) lo screenshot si può anche incollare: Cmd/Ctrl+V nel foglio o «Incolla»
+// col tocco lungo nella zona apposta; testo e file che non sono immagini non cambiano niente.
 //   node tools/banco/prova_segnala.js
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs');
@@ -51,6 +52,14 @@ atteso('id nuovo · uuid v4 (versione 4, variante 8-b), ogni volta diverso', [fi
 atteso('riga con screenshot · l\'id scelto prima e il percorso; senza, nessuno dei due campi',
   [S.riga({ id:'i1', userId: U, motivo:'idea', immagine:'u1/i1.jpg' }), 'id' in S.riga({ userId: U, motivo:'idea' }), 'immagine' in S.riga({ userId: U, motivo:'idea' })],
   [{ user_id:U, motivo:'idea', testo:null, dove:{}, versione:null, telefono:null, id:'i1', immagine:'u1/i1.jpg' }, false, false]);
+// Fondamenta 240 — l'immagine dentro quello che si incolla
+const fileFinto = (nome, type) => ({ name: nome, type });
+atteso('incolla · un file immagine → quello; più file → la prima immagine; solo testo → niente; un PDF → «altro file»',
+  [S.immagineDaAppunti({ files:[fileFinto('a.png', 'image/png')] }).immagine.name, S.immagineDaAppunti({ files:[fileFinto('x.pdf', 'application/pdf'), fileFinto('b.jpg', 'image/jpeg')] }).immagine.name,
+   S.immagineDaAppunti({ files:[], items:[{ kind:'string', type:'text/plain' }] }), S.immagineDaAppunti({ files:[fileFinto('x.pdf', 'application/pdf')] }), S.immagineDaAppunti(null)],
+  ['a.png', 'b.jpg', {}, { altroFile:true }, {}]);
+atteso('incolla · senza la lista dei file si guardano le voci di tipo file (Android, Chrome vecchi)',
+  S.immagineDaAppunti({ items:[{ kind:'string', type:'text/plain' }, { kind:'file', type:'image/png', getAsFile:() => fileFinto('c.png', 'image/png') }] }).immagine.name, 'c.png');
 
 // ── 2. l'app vera ──
 async function nuovo(conSessione) {
@@ -203,6 +212,34 @@ async function nuovo(conSessione) {
   atteso('senza rete · «Non inviata», nessuna riga, niente in coda, foglio aperto', [a.toast(), righeSg().length - nRighe2, a.win.localStorage.getItem('zt_coda_' + U), !!a.foglio()], ['📡 Non inviata: controlla la connessione e riprova.', 0, null, true]);
   atteso('senza rete · nessuna riga a metà: il caricamento non è riuscito, la riga non è stata scritta', [(a.t.__storage.segnalazioni || []).filter(f => f.endsWith('.jpg')).length, righeSg().length - nRighe2], [2, 0]);
   a.t.__rete = undefined; a.foglio().querySelector('#sg-no').click();
+
+  // Fondamenta 240 — lo screenshot si può anche incollare: Cmd/Ctrl+V nel foglio (anche nel testo) o «Incolla» col tocco lungo nella zona apposta
+  const incolla = async (dove, dati) => { const e = new a.win.Event('paste', { bubbles:true, cancelable:true }); Object.defineProperty(e, 'clipboardData', { value:dati }); dove.dispatchEvent(e); await attendi(10); return e.defaultPrevented; };
+  const appunti = (...file) => ({ files:file, items:file.map(f => ({ kind:'file', type:f.type, getAsFile:() => f })), getData:() => '' });
+  const soloTesto = { files:[], items:[{ kind:'string', type:'text/plain' }], getData:() => 'ciao' };
+  const zona = () => a.foglio().querySelector('#sg-incolla');
+  a.win.foglioSegnala(); await fotogramma();
+  atteso('incolla · c\'è la zona «oppure tieni premuto qui e scegli Incolla», modificabile, vuota', [!!zona(), zona().getAttribute('contenteditable'), zona().dataset.vuoto, zona().textContent, zona().hidden], [true, 'true', 'oppure tieni premuto qui e scegli Incolla', '', false]);
+  const r0 = riduzioni;
+  atteso('incolla del solo testo nel campo · niente allegato, il testo entra come sempre', [await incolla(a.foglio().querySelector('#sg-testo'), soloTesto), riduzioni - r0, anteprima().hidden], [false, 0, true]);
+  atteso('incolla di un PDF · ignorato, «Qui si allega solo un\'immagine»', [await incolla(zona(), appunti(new a.win.File(['x'], 'doc.pdf', { type:'application/pdf' }))), riduzioni - r0, a.toast(), anteprima().hidden], [true, 0, '🖼️ Qui si allega solo un\'immagine', true]);
+  atteso('incolla di un\'immagine nella zona · ridotta, anteprima con «Togli», «Allega» e la zona spariscono', [await incolla(zona(), appunti(new a.win.File(['x'], 'incollata.png', { type:'image/png' }))), riduzioni - r0, anteprima().hidden, etichetta().hidden, zona().hidden], [true, 1, false, true, true]);
+  atteso('incolla di un\'altra immagine col testo in mano (Cmd+V) · la sostituisce e lo dice', [await incolla(a.foglio().querySelector('#sg-testo'), appunti(new a.win.File(['y'], 'seconda.png', { type:'image/png' }))), riduzioni - r0, a.toast(), anteprima().hidden], [true, 2, '🖼️ Screenshot sostituito', false]);
+  anteprima().querySelector('#sg-togli').click();
+  atteso('«Togli» · torna la zona per incollare', [zona().hidden, etichetta().hidden], [false, false]);
+  zona().textContent = 'abc'; zona().dispatchEvent(new a.win.Event('input', { bubbles:true }));
+  atteso('nella zona non si scrive · quello che entra si toglie subito', zona().textContent, '');
+  await incolla(a.d.body, appunti(new a.win.File(['x'], 'dalla-pagina.png', { type:'image/png' })));
+  atteso('Cmd+V col fuoco fuori dai campi · l\'immagine entra lo stesso', [riduzioni - r0, anteprima().hidden], [3, false]);
+  a.motivo('idea').click();
+  const righeI = righeSg().length;
+  a.invia().click(); await attendi(30);
+  const ordineI = a.supa._calls.filter(c => (c.op === 'upload') || (c.table === 'segnalazioni' && c.op === 'insert')).map(c => c.op).slice(-2);
+  const rigaI = righeSg()[righeI] || {};
+  atteso('Invia con lo screenshot incollato · il file nel bucket PRIMA della riga, a <persona>/<id>.jpg', [ordineI, rigaI.immagine === U + '/' + rigaI.id + '.jpg', (a.t.__storage.segnalazioni || []).includes(rigaI.immagine), !!a.foglio()], [['upload', 'insert'], true, true, false]);
+  const r1 = riduzioni;
+  await incolla(a.d.body, appunti(new a.win.File(['x'], 'dopo.png', { type:'image/png' })));
+  atteso('foglio chiuso · incollare nella pagina non fa più niente', riduzioni - r1, 0);
 
   // sopra una conferma (Fondamenta 150): non si mette in fila, si apre subito
   const pc = a.win.chiediConferma('Eliminare questo pasto?'); await attendi(5);

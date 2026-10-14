@@ -2531,6 +2531,12 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .sg-allega #sg-anteprima{display:flex;align-items:center;gap:12px;}
 .sg-allega #sg-anteprima img{height:56px;width:auto;max-width:96px;object-fit:cover;border-radius:8px;border:1px solid var(--b1);}
 .sg-allega label[hidden],.sg-allega #sg-anteprima[hidden]{display:none;}
+/* Fondamenta 240 — la zona dove tenere premuto e scegliere «Incolla»: non tiene testo, mostra solo il suo invito */
+.sg-allega{flex-wrap:wrap;}
+.sg-incolla{flex:1;min-width:140px;min-height:40px;padding:9px 10px;border:1px dashed var(--b2);border-radius:var(--r-md);font-size:12px;line-height:1.35;color:var(--t3);caret-color:transparent;outline:none;cursor:text;-webkit-user-select:text;user-select:text;box-sizing:border-box;}
+.sg-incolla:empty::before{content:attr(data-vuoto);}
+.sg-incolla:focus{border-color:var(--acc);}
+.sg-incolla[hidden]{display:none;}
 .sg-dove{font-family:var(--font-mono);font-size:11px;color:var(--t3);line-height:1.5;margin:0 0 14px;}
 
 /* ── «Registra integratori» (Nutrition 210 · 190 · 120, 11 ottobre 2026, deciso con Ignazio): il foglio a elenco.

@@ -66,7 +66,20 @@
     if (immagine) r.immagine = immagine;
     return r;
   }
-  const api = { MOTIVI, MAX_TESTO, MAX_LATO, QUALITA, BUCKET, NOMI_PAGINE, nomeMotivo, nomePagina, doveDa, descrizioneDove, telefonoDa, misuraRidotta, percorsoImmagine, nuovoId, riga };
+  // Fondamenta 240 (14 ottobre 2026): l'immagine dentro quello che si incolla. `dati` = clipboardData dell'evento paste: prima i file
+  // (Safari, Chrome), poi le voci di tipo file (Chrome vecchi, Android). Ritorna { immagine } col primo file image/*, { altroFile:true }
+  // se c'erano file ma nessuna immagine (un PDF), {} se c'era solo testo: allora l'incolla resta quello di sempre.
+  function immagineDaAppunti(dati) {
+    if (!dati) return {};
+    const eImmagine = (f) => !!(f && /^image\//i.test(f.type || ''));
+    const file = Array.from(dati.files || []);
+    const daVoci = Array.from(dati.items || []).filter(it => it && it.kind === 'file').map(it => { try { return it.getAsFile(); } catch (e) { return null; } }).filter(Boolean);
+    const tutti = file.length ? file : daVoci;
+    const immagine = tutti.find(eImmagine);
+    if (immagine) return { immagine };
+    return tutti.length ? { altroFile: true } : {};
+  }
+  const api = { MOTIVI, MAX_TESTO, MAX_LATO, QUALITA, BUCKET, NOMI_PAGINE, nomeMotivo, nomePagina, doveDa, descrizioneDove, telefonoDa, misuraRidotta, percorsoImmagine, nuovoId, riga, immagineDaAppunti };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else radice.ZTSegnala = api;
 })(this);
