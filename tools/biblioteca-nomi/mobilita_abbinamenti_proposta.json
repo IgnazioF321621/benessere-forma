@@ -1,0 +1,120 @@
+{
+ "nota": "Codici a catalogo senza GIF che potrebbero avere una GIF di Mobilità. Proposta di ZT-Catalogo e Gif, 14 ottobre 2026: decide Ignazio guardando la GIF.",
+ "voci": [
+  {
+   "codice": "EX123",
+   "nome": "Thread the needle",
+   "attrezzo": "corpo libero",
+   "setup": "In quadrupedia",
+   "esecuzione": "Fai passare un braccio sotto il corpo ruotando;Torna aprendo verso l alto;Alterna",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Thread the needle"
+   ]
+  },
+  {
+   "codice": "EX126",
+   "nome": "Stretch flessori anca in ginocchio",
+   "attrezzo": "corpo libero",
+   "setup": "In affondo basso, ginocchio dietro a terra",
+   "esecuzione": "Spingi il bacino in avanti;Senti l allungo davanti all anca;Cambia lato",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Half-kneeling hip flexor stretch",
+    "Low lunge hip flexor stretch"
+   ]
+  },
+  {
+   "codice": "EX127",
+   "nome": "Stretch ischiocrurali seduto",
+   "attrezzo": "corpo libero",
+   "setup": "Seduto, una gamba tesa",
+   "esecuzione": "Inclina il busto avanti tenendo la schiena lunga;Tieni la posizione;Cambia gamba",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Seated single-leg toe reach"
+   ]
+  },
+  {
+   "codice": "EX128",
+   "nome": "Stretch petto al muro",
+   "attrezzo": "corpo libero",
+   "setup": "In piedi accanto a un muro, avambraccio appoggiato",
+   "esecuzione": "Ruota il busto lontano dal braccio;Senti l allungo del petto;Cambia lato",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Doorway chest stretch",
+    "High doorway chest stretch",
+    "Corner chest stretch"
+   ]
+  },
+  {
+   "codice": "EX129",
+   "nome": "Foam roll ischiocrurali",
+   "attrezzo": "foam roller",
+   "setup": "Seduto con il foam roller sotto la coscia posteriore",
+   "esecuzione": "Rotola lentamente dal ginocchio al gluteo;Fermati sui punti tesi;Respira",
+   "uso": "recupero",
+   "candidati": [
+    "Foam roller hamstrings"
+   ]
+  },
+  {
+   "codice": "EX130",
+   "nome": "Foam roll bandelletta IT",
+   "attrezzo": "foam roller",
+   "setup": "Sul fianco con foam roller sotto la coscia laterale",
+   "esecuzione": "Rotola lento lungo il lato della coscia;Fermati sui punti tesi;Cambia lato",
+   "uso": "recupero",
+   "candidati": [
+    "Foam roller IT band"
+   ]
+  },
+  {
+   "codice": "EX131",
+   "nome": "Passive hang",
+   "attrezzo": "sbarra",
+   "setup": "Appeso alla sbarra a braccia tese",
+   "esecuzione": "Rilassa il corpo lasciando allungare la colonna;Respira;Scendi controllato",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Dead hang"
+   ]
+  },
+  {
+   "codice": "EX121",
+   "nome": "Riscaldamento spalle (circonduzioni)",
+   "attrezzo": "corpo libero",
+   "setup": "In piedi, braccia lungo i fianchi",
+   "esecuzione": "Circonduzioni ampie avanti e indietro;Aumenta gradualmente il raggio;Movimento fluido",
+   "uso": "riscaldamento",
+   "candidati": [
+    "Arm circles",
+    "Single arm circles"
+   ]
+  },
+  {
+   "codice": "EX124",
+   "nome": "Rotazione toracica (T-spine)",
+   "attrezzo": "corpo libero",
+   "setup": "In quadrupedia, una mano dietro la testa",
+   "esecuzione": "Ruota il gomito verso l alto aprendo il torace;Torna controllato;Alterna",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Quadruped thoracic rotation",
+    "Open book"
+   ]
+  },
+  {
+   "codice": "EX125",
+   "nome": "Child s pose",
+   "attrezzo": "corpo libero",
+   "setup": "Seduto sui talloni",
+   "esecuzione": "Allunga le braccia avanti abbassando il petto;Respira lento;Rilassa",
+   "uso": "recupero;mobilita",
+   "candidati": [
+    "Prayer stretch"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,126 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobilità · righe di catalogo</title>
+<style>
+  body { font: 15px -apple-system, sans-serif; background: #F5F3EE; margin: 16px; color: #222 }
+  h2 { margin: 0 0 6px }
+  .barra { position: sticky; top: 0; background: #F5F3EE; padding: 8px 0; z-index: 2; border-bottom: 1px solid #ddd }
+  .barra button { margin-right: 6px }
+  .v { background: #fff; border-radius: 10px; padding: 14px; margin: 16px 0; display: flex; gap: 16px; flex-wrap: wrap }
+  .v.fatta { opacity: .55 } .v.fatta:hover { opacity: 1 }
+  .v img { width: 300px; height: 300px; object-fit: contain; border: 1px solid #ddd; background: #fff; flex: none }
+  .campi { flex: 1; min-width: 320px }
+  .nome { font-size: 18px; font-weight: 700 } .sp { color: #2A7A6F; margin: 2px 0 8px }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 7px; border-radius: 9px; background: #eee; margin-left: 6px }
+  .tag.es { background: #B5D4F4 } .tag.nu { background: #FAC775 }
+  .dubbio { background: #fdecd2; border-left: 4px solid #B45309; padding: 6px 8px; margin: 6px 0 }
+  label { display: block; font-size: 12px; color: #555; margin-top: 6px }
+  label.cambia { color: #B45309; font-weight: 600 }
+  .prima { font-size: 12px; color: #999; text-decoration: line-through }
+  input, textarea, select { width: 100%; box-sizing: border-box; font: 14px -apple-system, sans-serif; padding: 4px 6px; border: 1px solid #ccc; border-radius: 5px }
+  textarea { resize: vertical }
+  .riga2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px }
+  .tasti { margin-top: 10px }
+  button { font-size: 15px; padding: 6px 12px; border-radius: 6px; border: 1px solid #2A7A6F; background: #fff; cursor: pointer }
+  button.si { background: #2A7A6F; color: #fff }
+  button.no { border-color: #B45309; color: #B45309 }
+  button.sel { outline: 3px solid #222 }
+  .esito { margin-left: 8px; font-weight: 600 }
+</style>
+<div class="barra">
+  <h2>Mobilità · righe di catalogo</h2>
+  <span id="conto"></span>
+  <button onclick="filtro='tutte';disegna()">Tutte</button>
+  <button onclick="filtro='da_fare';disegna()">Da fare</button>
+  <button onclick="filtro='dubbi';disegna()">Con un dubbio</button>
+</div>
+<p>Per ogni GIF: leggi la riga, correggi se serve, poi <b>Va bene</b>. Nome e riga in italiano non si cambiano qui (vengono dal pannello).
+  <b>Da rivedere</b> con una nota se vuoi che la sistemi io; <b>Non entra</b> se la GIF non deve diventare un esercizio.</p>
+<div id="lista"></div>
+<script>
+const CAMPI = [['setup','Posizione di partenza',2],['esecuzione','Esecuzione (un passo per riga)',4],
+  ['errori','Errori (uno per riga)',3],['nota_sicurezza','Nota di sicurezza',2],
+  ['adattamento','Adattamento',2]];
+const PICCOLI = [['muscoli','Muscoli'],['attrezzo','Attrezzo'],['luogo','Luogo'],
+  ['zone_rischio','Zone a rischio'],['livello','Livello'],['alternativa','Alternativa (codice)']];
+const SCELTE = {uso:['riscaldamento','recupero;mobilita','recupero'],
+  unilaterale:['no','si','alternato'], progressione:['tenuta più lunga','più ripetizioni','ritmo più lento','variante più difficile']};
+const NOMI = {va_bene:'Va bene', da_rivedere:'Da rivedere', non_entra:'Non entra'};
+let dati = [], filtro = 'da_fare';
+// Vista semplice (decisione di Ignazio, 14 ottobre): solo le GIF con un dubbio, GIF + nome + dubbio
+// e due pulsanti. I testi li ricontrolla ZT-Catalogo e Gif. La vista completa: /catalogo?tutto
+const SEMPLICE = !location.search.includes('tutto');
+function semplice(v, i) {
+  const r = v.riga, es = v.esito;
+  return `<div class="v ${es ? 'fatta' : ''}" id="v${i}"><img loading="lazy" src="/gif/${encodeURIComponent(v.file_nome)}">
+  <div class="campi"><div class="nome">${e(r.nome)}${es ? `<span class="esito">· ${es.decisione === 'non_entra' ? 'Non entra' : 'Entra'}</span>` : ''}</div>
+   <div class="sp">${e(r.spiegazione)}</div><div class="dubbio">${e(v.dubbio)}</div>
+   <label>Nota per me (facoltativa)</label><input class="nota" value="${e(es ? es.nota : '')}">
+   <div class="tasti">
+    <button class="si ${es && es.decisione === 'va_bene' ? 'sel' : ''}" onclick="decidi(${i},'va_bene')">Entra</button>
+    <button class="no ${es && es.decisione === 'non_entra' ? 'sel' : ''}" onclick="decidi(${i},'non_entra')">Non entra</button>
+   </div></div></div>`;
+}
+const e = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function lab(v, k, t) {
+  const c = (v.cambia || []).includes(k);
+  const p = c && v.prima ? `<div class="prima">${e(v.prima[k])}</div>` : '';
+  return `<label class="${c ? 'cambia' : ''}">${t}${c ? ' · cambia' : ''}</label>${p}`;
+}
+function scheda(v, i) {
+  const r = v.riga, es = v.esito;
+  let h = `<div class="v ${es ? 'fatta' : ''}" id="v${i}"><img loading="lazy" src="/gif/${encodeURIComponent(v.file_nome)}">
+  <div class="campi"><div class="nome">${e(r.nome)}
+   ${v.codice ? `<span class="tag es">${v.codice} · già a catalogo</span>` : '<span class="tag nu">esercizio nuovo</span>'}
+   ${es ? `<span class="esito">· ${NOMI[es.decisione]}</span>` : ''}</div>
+   <div class="sp">${e(r.spiegazione)}</div>
+   ${v.dubbio ? `<div class="dubbio">Dubbio: ${e(v.dubbio)}</div>` : ''}`;
+  for (const [k, t, n] of CAMPI) {
+    const val = ['esecuzione', 'errori'].includes(k) ? String(r[k] || '').split(';').join('\n') : (r[k] || '');
+    h += lab(v, k, t) + `<textarea rows="${n}" data-k="${k}">${e(val)}</textarea>`;
+  }
+  h += '<div class="riga2">';
+  for (const [k, ops] of Object.entries(SCELTE)) {
+    const o = ops.includes(r[k]) ? ops : [r[k], ...ops];
+    h += `<div>${lab(v, k, k === 'uso' ? 'Uso' : k === 'unilaterale' ? 'Per lato' : 'Progressione')}<select data-k="${k}">` +
+      o.map(x => `<option ${x === r[k] ? 'selected' : ''}>${e(x)}</option>`).join('') + '</select></div>';
+  }
+  for (const [k, t] of PICCOLI) h += `<div>${lab(v, k, t)}<input data-k="${k}" value="${e(r[k])}"></div>`;
+  h += `</div><label>Nota per me (facoltativa)</label><input class="nota" value="${e(es ? es.nota : '')}">
+   <div class="tasti">
+    <button class="si ${es && es.decisione === 'va_bene' ? 'sel' : ''}" onclick="decidi(${i},'va_bene')">Va bene</button>
+    <button class="${es && es.decisione === 'da_rivedere' ? 'sel' : ''}" onclick="decidi(${i},'da_rivedere')">Da rivedere</button>
+    <button class="no ${es && es.decisione === 'non_entra' ? 'sel' : ''}" onclick="decidi(${i},'non_entra')">Non entra</button>
+   </div></div></div>`;
+  return h;
+}
+function disegna() {
+  if (SEMPLICE) {
+    const d = dati.map((v, i) => [v, i]).filter(([v]) => v.dubbio);
+    document.querySelector('.barra').innerHTML = `<h2>Mobilità · le GIF con un dubbio</h2>${d.filter(([v]) => v.esito).length} di ${d.length} decise`;
+    document.querySelector('p').textContent = 'Guarda la GIF e leggi il dubbio, poi Entra o Non entra. La scelta si salva subito.';
+    document.getElementById('lista').innerHTML = d.map(([v, i]) => semplice(v, i)).join('');
+    return;
+  }
+  const fatte = dati.filter(v => v.esito).length;
+  document.getElementById('conto').textContent = `${fatte} di ${dati.length} decise · `;
+  document.getElementById('lista').innerHTML = dati.map((v, i) =>
+    (filtro === 'tutte' || (filtro === 'da_fare' && !v.esito) || (filtro === 'dubbi' && v.dubbio)) ? scheda(v, i) : '').join('');
+}
+async function decidi(i, d) {
+  const box = document.getElementById('v' + i), riga = {};
+  box.querySelectorAll('[data-k]').forEach(x => riga[x.dataset.k] = x.value);
+  const nota = box.querySelector('.nota').value;
+  if (d === 'da_rivedere' && !nota.trim()) { alert('Scrivi nella nota cosa non va.'); return; }
+  const r = await fetch('/api/riga', {method: 'POST', body: JSON.stringify({sha256: dati[i].sha256, decisione: d, nota, riga})});
+  if (!r.ok) { alert(await r.text()); return; }
+  await carica();
+}
+async function carica() {
+  const y = window.scrollY;
+  dati = (await (await fetch('/api/bozze')).json()).voci;
+  disegna(); window.scrollTo(0, y);
+}
+carica();
+</script>
