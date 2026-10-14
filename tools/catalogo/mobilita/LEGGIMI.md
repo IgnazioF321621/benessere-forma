@@ -19,3 +19,6 @@ Come si è deciso: abbinamenti e righe in `tools/biblioteca-nomi/abbina.py` (pag
 
 ## Cosa cambia nell'app
 33 esercizi nuovi hanno `uso = riscaldamento` (solo movimenti dinamici): il riscaldamento Lower pesca per muscolo a rotazione sul codice, quindi le schede nuove possono proporne alcuni. Gli altri 66 sono `recupero;mobilita`, che oggi il generatore non usa. La riga `spiegazione` sotto il nome va mostrata dall'app: Training 390.
+
+## Fatto, 14 ottobre 2026
+Migrazione eseguita dalla Regia; copia di sicurezza `~/zt-backup/dati/2026-10-14_1525` (35 tabelle, valida); Ignazio ha incollato le 99 righe e il blocco EX121-EX131 (`blocco_EX121_EX131.tsv`, 11 righe: EX122, EX125, EX128 riscritte identiche) e lanciato il sync: 824 esercizi. `verifica_sync.py`: tutto a posto, 768 slug vivi, 0 catene rotte, 0 slug condivisi. Confronto codice per codice di tutti i campi delle 824 righe contro la lista consegnata: 0 differenze. Baseline (profilo Ignazio, casa): poolRiscaldamento 81.
