@@ -60,6 +60,7 @@ function openSettingsModal() {
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
   if(typeof _aggiornaPausaImpostazioni === 'function') _aggiornaPausaImpostazioni();   // la pausa (Metodo 210)
+  if(typeof _aggiornaCsaImpostazioni === 'function') _aggiornaCsaImpostazioni();       // «Come stai adesso?» (Home 170)
   const giorniSel = document.getElementById('set-giorni-allenamento');
   if(giorniSel) giorniSel.value = String(p.giorni_allenamento || 4);
   const unitSel = document.getElementById('set-unit');
@@ -130,7 +131,7 @@ async function ricalcolaCalorie() {
 // non c'e' o non si legge resta scritta come tale, non sparisce in silenzio (L10).
 const MIEI_DATI_TABELLE = ['meals', 'meal_items', 'fasting_days', 'supplements', 'supplements_log', 'supplement_packages',
   'supplement_package_items', 'training_logs', 'training_notes', 'workouts', 'schede_utente', 'weight_logs', 'body_logs',
-  'body_checks', 'body_measurements', 'body_check_ai', 'fitdays_letture', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log',
+  'body_checks', 'body_measurements', 'body_check_ai', 'fitdays_letture', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log', 'rilevazioni',
   'weekly_plans', 'weekly_plan_meals'];
 async function raccogliMieiDati(){
   if(!ST.user || !ST.user.id) return null;

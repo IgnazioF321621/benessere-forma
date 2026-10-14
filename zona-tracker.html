@@ -1303,6 +1303,16 @@
       <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Vacanza, viaggio, lavoro: date, motivo e cosa fermare (allenamento, cibo, pesate). Niente debiti né promemoria finché sei via.</div>
     </div>
 
+    <!-- Sezione: «Come stai adesso?» (Home 170): gli orari stanno solo qui -->
+    <div style="margin-bottom:20px;">
+      <div class="lbl">Come stai adesso?</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div id="set-csa-stato" style="flex:1;font-size:13px;color:var(--t1);font-family:var(--font-sans);line-height:1.4;">11:00 · 15:00 · 19:00</div>
+        <button type="button" id="set-csa-btn" class="btn btn-ghost btn-sm" onclick="apriOrariComeStaiAdesso()">Cambia ›</button>
+      </div>
+      <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Fino a 3 volte al giorno, solo con l'app aperta: energia, stress e se hai dormito ancora. Mai in pausa né durante l'allenamento.</div>
+    </div>
+
     <!-- Sezione: Training -->
     <div style="margin-bottom:20px;">
       <div class="lbl">Training</div>
@@ -2119,6 +2129,7 @@ function showScreen(name) {
   // «Segnala» (Fondamenta 220): l'insetto si vede solo dentro l'app, mai sull'accesso, sull'onboarding o sulle schermate di attesa
   const segnala = document.getElementById('segnala'); if(segnala) segnala.hidden = name !== 'app';
   if(name === 'app') seguiFogli();
+  if(name === 'app' && typeof comeStaiAdessoControlla === 'function') setTimeout(comeStaiAdessoControlla, 1500);   // Home 170
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
   if(name === 'auth' && !privacyAccettata()) name = 'privacy';

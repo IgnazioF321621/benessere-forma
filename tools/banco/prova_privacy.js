@@ -93,7 +93,7 @@ const profilo = { id:U, first_name:'Ignazio', last_name:'F', sex:'M', age:55, he
     const ST = b.win.eval('ST'); ST.user = { id:U, email:'ignazio.f@me.com' };
     const dati = await b.win.raccogliMieiDati();
     const tabelle = Object.keys(dati.tabelle).sort();
-    atteso('tabelle nel file (24)', tabelle, ['blood_tests', 'body_checks', 'body_check_ai', 'body_logs', 'body_measurements', 'coach_proposals', 'daily_log', 'fasting_days', 'fitdays_letture', 'meal_items', 'meals', 'profiles', 'schede_utente', 'supplement_package_items', 'supplement_packages', 'supplements', 'supplements_log', 'training_logs', 'training_notes', 'weekly_pictures', 'weekly_plan_meals', 'weekly_plans', 'weight_logs', 'workouts'].sort());
+    atteso('tabelle nel file (25)', tabelle, ['blood_tests', 'body_checks', 'body_check_ai', 'body_logs', 'body_measurements', 'coach_proposals', 'daily_log', 'fasting_days', 'fitdays_letture', 'meal_items', 'meals', 'profiles', 'rilevazioni', 'schede_utente', 'supplement_package_items', 'supplement_packages', 'supplements', 'supplements_log', 'training_logs', 'training_notes', 'weekly_pictures', 'weekly_plan_meals', 'weekly_plans', 'weight_logs', 'workouts'].sort());
     atteso('solo le righe della persona', [dati.tabelle.meals.map(m => m.id), dati.tabelle.profiles.length, dati.tabelle.training_logs[0].reps, dati.tabelle.weight_logs[0].weight_kg], [['m1'], 1, 8, 72]);
     atteso('foto · solo l\'elenco, mai i byte', [dati.foto.length, dati.foto[0].storage_path, 'bytes' in dati.foto[0]], [1, 'u1/c1/front.jpg', false]);
     atteso('tabella assente · scritta come non letta', typeof dati.tabelle.daily_log.non_letta, 'string');

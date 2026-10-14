@@ -1402,6 +1402,22 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .cs-riassunto{font-family:var(--font-sans);font-size:15px;color:var(--t1);margin-top:6px;}
 .cs-riga-nota{font-family:var(--font-sans);font-size:13px;color:var(--t2);margin-top:4px;}
 .cs-link{flex-shrink:0;background:none;border:none;padding:4px 0;cursor:pointer;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);}
+/* «Come stai adesso?» (Home 170): il foglio a orari fissi */
+.csa-overlay{z-index:1700;}
+.csa-foglio h3{margin-bottom:4px;}
+.csa-sotto{margin:0 0 14px;font-family:var(--font-sans);font-size:14px;line-height:1.4;color:var(--t2);}
+.csa-gruppo{margin-bottom:14px;text-align:left;}
+.csa-etichetta{margin-bottom:6px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
+.csa-scala{display:flex;gap:6px;}
+.csa-riposino{flex-wrap:wrap;}
+.csa-livello,.csa-scelta{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px 2px;border:1px solid var(--b1);border-radius:8px;background:var(--s2);color:var(--t1);cursor:pointer;}
+.csa-scelta{flex:1 0 auto;padding:9px 10px;font-family:var(--font-sans);font-size:13px;}
+.csa-numero{font-family:var(--font-mono);font-size:16px;font-weight:700;line-height:1.2;}
+.csa-parola{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-sans);font-size:10px;line-height:1.3;color:var(--t2);}
+.csa-livello[aria-checked="true"],.csa-scelta[aria-checked="true"]{border-color:var(--acc);background:rgba(var(--acc-rgb),.12);color:var(--acc);}
+.csa-livello[aria-checked="true"] .csa-parola{color:var(--acc);}
+.csa-nota{width:100%;margin:0 0 14px;padding:9px 10px;border:1px solid var(--b1);border-radius:8px;background:var(--s2);color:var(--t1);font-family:var(--font-sans);font-size:16px;line-height:1.4;resize:none;box-sizing:border-box;}
+.csa-nota::placeholder{color:var(--t3);}
 
 /* ── QUADRO SETTIMANALE — Fase 1 (12 set 2026) ─────────────── */
 .wp-mini{display:flex;gap:14px;padding-left:18px;flex-wrap:wrap;}

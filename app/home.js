@@ -903,6 +903,196 @@ async function comeStaiScegli(campo, valore) {
 function comeStaiApri() { ST.comeStaiAperta = todayKey(); renderHome(); }
 function comeStaiChiudi() { ST.comeStaiAperta = null; renderHome(); }
 
+// ── «Come stai adesso?» (Home 170, 14 ottobre 2026, scelte di Ignazio) ──
+// Un foglio che compare a orari fissi (di base 11 · 15 · 19, massimo 3, si cambiano nelle Impostazioni)
+// e chiede «Come vanno a quest'ora i tuoi livelli di:» energia e stress (con le parole di Home 160)
+// e «Hai dormito ulteriormente?». Solo con l'app aperta: all'orario o al primo ingresso dopo.
+// Non legge dal database: decide dall'ora del telefono e dalla copia locale di oggi (zt_csa_<utente>),
+// quindi nessuna richiesta all'apertura. Un orario mostrato non torna, risposto o no («Non ora»):
+// se ne sono passati più d'uno compare solo l'ultimo. Mai in pausa (Metodo 210, qualunque modulo)
+// né con una seduta di allenamento aperta, mai sopra un altro foglio.
+// Una riga in `rilevazioni` (migrazione 20261014_170) solo alla risposta, con scriviConCoda e l'id del
+// telefono. Non tocca daily_log, giorni di fila, quadro, proposte di Pirsi.
+const CSA_ORARI_BASE = [11, 15, 19];
+const CSA_MAX_ORARI = 3;
+const CSA_RIPOSINO = [[0, 'No'], [15, '15 min'], [30, '30 min'], [60, '1 h'], [120, '2 h o più']];
+
+// Gli orari della persona: un posto solo, per il foglio e per le Impostazioni.
+// profiles.come_stai_orari: array di ore 0-23; vuoto = spento; assente = quelli di base.
+function comeStaiAdessoOrari() {
+  const p = (ST.profile && ST.profile.come_stai_orari);
+  const lista = Array.isArray(p) ? p : CSA_ORARI_BASE;
+  return [...new Set(lista.map(Number).filter(h => Number.isInteger(h) && h >= 0 && h <= 23))].sort((a, b) => a - b).slice(0, CSA_MAX_ORARI);
+}
+function _csaOra(h) { return String(h).padStart(2, '0') + ':00'; }
+
+function _csaChiave() { return 'zt_csa_' + ((ST.user && ST.user.id) || 'anon'); }
+// La copia locale di oggi: orari già mostrati e risposte date. Un altro giorno = vuota.
+function _csaStato() {
+  const oggi = todayKey();
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(_csaChiave()) || 'null'); } catch(e) {}
+  if (!s || s.giorno !== oggi) s = { giorno: oggi, mostrati: [], risposte: [] };
+  return s;
+}
+function _csaSalvaStato(s) { try { localStorage.setItem(_csaChiave(), JSON.stringify(s)); } catch(e) {} }
+
+// L'orario da chiedere adesso, o null. Puro sullo stato: lo usano il controllo e le prove.
+function comeStaiAdessoDovuto() {
+  if (!ST.user || !ST.user.id || !ST.profile) return null;
+  if (ST.trainSession) return null;
+  const pz = (typeof getPausa === 'function') ? getPausa() : null;
+  if (pz && pz.attiva) return null;
+  const h = new Date().getHours();
+  const passati = comeStaiAdessoOrari().filter(o => o <= h);
+  if (!passati.length) return null;
+  const ultimo = passati[passati.length - 1];
+  return _csaStato().mostrati.includes(ultimo) ? null : ultimo;
+}
+
+function _csaFoglioAperto() {
+  if (document.querySelector('.csa-overlay')) return true;
+  if (typeof _foglioAperto !== 'undefined' && _foglioAperto) return true;
+  if (typeof SG_FOGLI === 'undefined') return false;
+  return [...document.querySelectorAll(SG_FOGLI)].some(el => el.style.display !== 'none' && !el.hidden && el.getClientRects().length);
+}
+
+// Chiamata all'ingresso nell'app, al ritorno in primo piano e una volta al minuto.
+function comeStaiAdessoControlla() {
+  const app = document.getElementById('app');
+  if (!app || !app.classList.contains('visible') || document.visibilityState === 'hidden') return;
+  const orario = comeStaiAdessoDovuto();
+  if (orario == null || _csaFoglioAperto()) return;
+  const s = _csaStato();
+  s.mostrati.push(orario);       // mostrato una volta: non torna fino al prossimo orario
+  _csaSalvaStato(s);
+  apriComeStaiAdesso(orario);
+}
+
+// Il foglio sta su un piano suo, fuori dalla fila di _foglio: compare da solo, e una conferma chiesta
+// dalla persona non deve aspettare dietro di lui. Sfondo ed Esc = «Non ora».
+function _csaFoglio(riempi) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div');
+    ov.className = 'info-modal-overlay csa-overlay';
+    const box = document.createElement('div');
+    box.className = 'info-modal foglio';
+    ov.appendChild(box);
+    let chiuso = false;
+    const chiudi = (v) => { if (chiuso) return; chiuso = true; document.removeEventListener('keydown', suTasto); ov.remove(); resolve(v); };
+    const suTasto = (e) => { if (e.key === 'Escape') { e.preventDefault(); chiudi(null); } };
+    ov.addEventListener('click', (e) => { if (e.target === ov) chiudi(null); });
+    document.addEventListener('keydown', suTasto);
+    riempi(box, chiudi);
+    document.body.appendChild(ov);
+  });
+}
+
+function apriComeStaiAdesso(orario) {
+  const scelta = { energy: null, stress: null, riposino_min: null };
+  return _csaFoglio(function riempi(box, chiudi) {
+    box.classList.add('csa-foglio');
+    box.innerHTML = `
+      <h3>Come stai adesso?</h3>
+      <p class="csa-sotto">Come vanno a quest'ora i tuoi livelli di:</p>
+      ${['energy', 'stress'].map(campo => `
+      <div class="csa-gruppo">
+        <div class="csa-etichetta">${campo === 'energy' ? 'Energia' : 'Stress'}</div>
+        <div class="csa-scala" role="radiogroup" aria-label="${campo === 'energy' ? 'Energia' : 'Stress'}">
+          ${[1, 2, 3, 4, 5].map(v => `<button type="button" class="csa-livello" role="radio" aria-checked="false" data-campo="${campo}" data-valore="${v}"><span class="csa-numero">${v}</span><span class="csa-parola">${diarioParola(campo, v)}</span></button>`).join('')}
+        </div>
+      </div>`).join('')}
+      <div class="csa-gruppo">
+        <div class="csa-etichetta">Hai dormito ulteriormente?</div>
+        <div class="csa-scala csa-riposino" role="radiogroup" aria-label="Hai dormito ulteriormente?">
+          ${CSA_RIPOSINO.map(([v, t]) => `<button type="button" class="csa-scelta" role="radio" aria-checked="false" data-campo="riposino_min" data-valore="${v}">${t}</button>`).join('')}
+        </div>
+      </div>
+      <textarea class="csa-nota" rows="1" maxlength="1000" placeholder="Una nota, se vuoi" aria-label="Nota"></textarea>
+      <div class="foglio-bottoni">
+        <button type="button" class="btn btn-ghost csa-non-ora">Non ora</button>
+        <button type="button" class="btn btn-primary csa-salva" disabled>Salva</button>
+      </div>`;
+    const salva = box.querySelector('.csa-salva');
+    box.querySelectorAll('[data-campo]').forEach(b => b.addEventListener('click', () => {
+      const campo = b.dataset.campo;
+      scelta[campo] = Number(b.dataset.valore);
+      box.querySelectorAll(`[data-campo="${campo}"]`).forEach(x => x.setAttribute('aria-checked', String(x === b)));
+      salva.disabled = scelta.energy == null || scelta.stress == null;
+    }));
+    box.querySelector('.csa-non-ora').onclick = () => chiudi(null);
+    salva.onclick = () => {
+      const nota = box.querySelector('.csa-nota').value.trim();
+      chiudi(Object.assign({}, scelta, { note: nota || null }));
+    };
+  }).then(r => r ? salvaComeStaiAdesso(orario, r) : null);
+}
+
+async function salvaComeStaiAdesso(orario, r) {
+  if (!ST.user || !ST.user.id) return null;
+  const riga = { id: nuovoId(), user_id: ST.user.id, rilevata_il: new Date().toISOString(), giorno: todayKey(), orario: orario == null ? null : orario,
+    energy: r.energy, stress: r.stress, riposino_min: r.riposino_min, note: r.note ? String(r.note).slice(0, 1000) : null };
+  const s = _csaStato();
+  s.risposte.push({ orario: riga.orario, energy: riga.energy, stress: riga.stress, riposino_min: riga.riposino_min });
+  _csaSalvaStato(s);
+  const res = await scriviConCoda('salvare come stai adesso', { tabella: 'rilevazioni', tipo: 'insert', righe: [riga] });
+  if (res && res.error) return res;
+  showToast('Segnato, grazie', '✅');
+  return res;
+}
+
+// Impostazioni: la riga «Come stai adesso» e il foglio degli orari. Un posto solo per il campo
+// (le Impostazioni saranno ridisegnate, Metodo 220: si sposta questo, non si copia).
+function _csaRiassunto() {
+  const o = comeStaiAdessoOrari();
+  return o.length ? o.map(_csaOra).join(' · ') : 'Spento';
+}
+function _aggiornaCsaImpostazioni() {
+  const el = document.getElementById('set-csa-stato');
+  if (el) el.textContent = _csaRiassunto();
+}
+function apriOrariComeStaiAdesso() {
+  const attuali = comeStaiAdessoOrari();
+  const ore = Array.from({ length: 24 }, (_, h) => h);
+  return _foglio({ annullato: null, riempi(box, chiudi) {
+    box.innerHTML = `
+      <h3>Come stai adesso?</h3>
+      <p class="csa-sotto">Quando chiederlo, fino a ${CSA_MAX_ORARI} volte al giorno. «—» toglie un orario.</p>
+      <div class="cs-campi">
+        ${Array.from({ length: CSA_MAX_ORARI }, (_, i) => `
+        <label class="cs-campo">
+          <span class="cs-etichetta">${i + 1}°</span>
+          <select class="picker-select cs-select-orario" aria-label="Orario ${i + 1}">
+            <option value=""${attuali[i] == null ? ' selected' : ''}>—</option>
+            ${ore.map(h => `<option value="${h}"${attuali[i] === h ? ' selected' : ''}>${_csaOra(h)}</option>`).join('')}
+          </select>
+        </label>`).join('')}
+      </div>
+      <div class="foglio-bottoni">
+        <button type="button" class="btn btn-ghost csa-annulla">Annulla</button>
+        <button type="button" class="btn btn-primary foglio-ok">Salva</button>
+      </div>`;
+    box.querySelector('.csa-annulla').onclick = () => chiudi(null);
+    box.querySelector('.foglio-ok').onclick = () => chiudi([...box.querySelectorAll('.cs-select-orario')].map(s => s.value));
+  } }).then(v => v ? salvaOrariComeStaiAdesso(v) : null);
+}
+async function salvaOrariComeStaiAdesso(valori) {
+  const orari = [...new Set((valori || []).filter(v => v !== '' && v != null).map(Number).filter(h => Number.isInteger(h) && h >= 0 && h <= 23))].sort((a, b) => a - b).slice(0, CSA_MAX_ORARI);
+  if (!ST.user || !ST.profile) return false;
+  if (ST.user.id !== 'test-user-001') {
+    const r = await dbq('salvare gli orari di «Come stai adesso»', supa.from('profiles').update({ come_stai_orari: orari }).eq('id', ST.user.id));
+    if (r.error) return false;
+  }
+  ST.profile.come_stai_orari = orari;
+  try { if (typeof saveCache === 'function') saveCache(); } catch(e) {}
+  _aggiornaCsaImpostazioni();
+  showToast(orari.length ? 'Orari salvati: ' + _csaRiassunto() : '«Come stai adesso» spento', '✅');
+  return true;
+}
+
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(comeStaiAdessoControlla, 800); });
+setInterval(() => { try { comeStaiAdessoControlla(); } catch(e) {} }, 60 * 1000);
+
 // Card Nutrition, ciò che le altre parti della Home non dicono (Home 040, 13 ottobre 2026,
 // scelta di Ignazio): il piatto del piano per il prossimo pranzo o cena non ancora registrato,
 // con «Registra» che apre il form già compilato, e «Ultimo pasto N h fa» dopo 5 ore.
