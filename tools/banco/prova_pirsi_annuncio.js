@@ -26,7 +26,10 @@ function avvia(tables, extra){
   ST.coachProposals = [];
   b.supa.auth.getSession = async () => ({ data:{ session:{ access_token:'token-finto' } } });
   const prompts = [];
-  win.fetch = async (url, opts) => { prompts.push(JSON.parse(opts.body).messages[0].content); return { ok:true, status:200, json: async () => ({ content:[{ type:'text', text:'TESTO DEL COACH' }] }) }; };
+  // al prompt dei 14 pasti il coach finto risponde i 14 pasti (dal 13 ottobre 2026, Nutrition 080, il finto insert risponde
+  // l'id vero della riga e il postino arriva davvero al passo dei pasti: prima lo saltava in silenzio, lezione L39)
+  const pasti14 = () => { const meals = []; for (let d = 1; d <= 7; d++) ['pranzo', 'cena'].forEach(slot => meals.push({ day:d, slot, time: slot === 'pranzo' ? '13:00' : '20:00', description:'Piatto ' + slot + ' ' + d, ingredients:['Riso 80g', 'Pollo 150g', 'Olio 10g'], kcal:600, protein:40, carbs:60, fat:15, explanation:'Lo scelgo io per te.' })); return JSON.stringify({ meals }); };
+  win.fetch = async (url, opts) => { const prompt = JSON.parse(opts.body).messages[0].content; prompts.push(prompt); return { ok:true, status:200, json: async () => ({ content:[{ type:'text', text: /- day: 1=/.test(prompt) ? pasti14() : 'TESTO DEL COACH' }] }) }; };
   return { ...b, win, ST, prompts };
 }
 const dopo = (t, marker) => t.slice(t.indexOf(marker));   // le righe del caso stanno dopo il ritratto

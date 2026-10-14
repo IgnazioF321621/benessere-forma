@@ -104,7 +104,7 @@ atteso('etichette obiettivo per il Worker', [ZTRitratto.obiettivoLeggibile('mass
     const nomi = ['consiglio sul pasto', 'nota alla scheda', 'annuncio del piano', 'cue tecnico'];
     atteso('app · quattro chiamate, tutte col ritratto identico', prompts.map(p => p.includes(blocco)), [true, true, true, true]);
     atteso('app · una volta sola per chiamata', prompts.map(p => p.split('CHI È —').length - 1), [1, 1, 1, 1]);
-    atteso('consiglio sul pasto · sa della seduta e resta coi macro rimanenti', [/seduta da fare: Upper A/.test(prompts[0]), /MACRO RIMANENTI OGGI:\n- Calorie: 1300 kcal/.test(prompts[0]), /PROSSIMO PASTO: cena/.test(prompts[0])], [true, true, true]);
+    atteso('consiglio sul pasto · sa della seduta e resta col bilancio del giorno (titolo nuovo: Nutrition 060)', [/seduta da fare: Upper A/.test(prompts[0]), /BILANCIO DI OGGI RISPETTO ALL'OBIETTIVO:\n- Calorie: 1300 kcal rimaste/.test(prompts[0]), /PROSSIMO PASTO: cena/.test(prompts[0])], [true, true, true]);
     atteso('consiglio sul pasto · niente vecchie righe UTENTE/DIETA, niente peso del profilo', [/^UTENTE:|^DIETA:|^ATTIVITÀ:/m.test(prompts[0]), /80 ?kg/.test(prompts[0])], [false, false]);
     atteso('nota alla scheda · dati della scheda ancora presenti', /Dati della nuova scheda:\n- Obiettivo: ricomposizione\n- Giorni di allenamento a settimana: 4/.test(prompts[1]), true);
     atteso('annuncio del piano · numeri ancora presenti', /kcal 2200, proteine 165g/.test(prompts[2]), true);
@@ -122,7 +122,7 @@ atteso('etichette obiettivo per il Worker', [ZTRitratto.obiettivoLeggibile('mass
     ST.weeklyPicture = {}; ST.coachProposals = []; ST.trainHomeData = null; ST.profile = { id:'u1' }; ST.trainAllCompleted = [];
     prompts = [];
     const r = await win.getAdvice({ kcal:0, protein:0, carbs:0, fat:0 }, 'colazione');
-    atteso('stato quasi vuoto · il consiglio parte lo stesso', [r, /MACRO RIMANENTI OGGI/.test(prompts[0])], ['ok', true]);
+    atteso('stato quasi vuoto · il consiglio parte lo stesso', [r, /BILANCIO DI OGGI RISPETTO ALL'OBIETTIVO/.test(prompts[0])], ['ok', true]);
   }
   // jsdom non ha il service worker: quell'errore c'è da sempre e non c'entra.
   atteso('errori in console', b.logs.filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])), []);

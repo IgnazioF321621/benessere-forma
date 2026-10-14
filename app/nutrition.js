@@ -165,21 +165,52 @@ async function estimateMacros(desc) {
     items: split.items,
   };
 }
-async function getAdvice(consumed, nextMeal, isTomorrow = false) {
-  const rem = {
-    kcal:    Math.max(0, ST.TARGET.kcal    - consumed.kcal),
-    protein: Math.max(0, ST.TARGET.protein - consumed.protein),
-    carbs:   Math.max(0, ST.TARGET.carbs   - consumed.carbs),
-    fat:     Math.max(0, ST.TARGET.fat     - consumed.fat),
-  };
+// Nutrition 060 (Ondata 5, 13 ottobre 2026): la seduta di DOMANI, dalla rotazione gia' letta per la Home (ST.trainHomeData,
+// nessuna lettura in piu'): se oggi la seduta e' fatta o in corso, domani viene la prossima; altrimenti quella dopo la prossima
+// nell'ordine canonico del ciclo. In pausa o con un infortunio non si dice niente (il ritratto lo dice gia').
+// Ritorna { state:'riposo'|'da_fare', label } oppure null. Serve al consiglio sul pasto («hai la seduta domani: carboidrati a cena»).
+function sedutaDomani(){
+  try {
+    if (!hasTraining()) return null;
+    const hd = ST.trainHomeData;
+    if (!hd || hd.errore || hd.notStarted) return null;
+    if (typeof getInjuryPeriod === 'function' && getInjuryPeriod()) return null;
+    if (typeof getPausa === 'function') { const pa = getPausa(); if (pa && (pa.attiva || (pa.futura && pa.inizio === _giornoAccanto(todayKey(), 1)))) return null; }
+    let sid = hd.nextSession;
+    if (!(hd.doneToday || hd.inProgress) && sid) {
+      const cycle = getRotationCycle();
+      const i = cycle.indexOf(sid);
+      sid = i >= 0 ? cycle[(i + 1) % cycle.length] : null;
+    }
+    if (!sid) return null;
+    if (/^rest/.test(sid)) return { state:'riposo', label:'' };
+    const sess = getTrainingSession(sid) || {};
+    return { state:'da_fare', label:[sess.name || sess.label, sess.type].filter(Boolean).join(', ') };
+  } catch (e) { return null; }
+}
+// La riga per il coach: una frase, mai una predica
+function _rigaDomani(){
+  const d = sedutaDomani();
+  if (!d) return '';
+  return d.state === 'riposo' ? 'DOMANI: giorno di riposo dall\'allenamento' : `DOMANI: seduta da fare${d.label ? ' (' + d.label + ')' : ''}`;
+}
+// Il bilancio del giorno con il segno (Nutrition 060, difetto a): prima, sforato, al coach arrivava «0 rimaste»
+function _rigaBilancio(nome, target, consumato, unita){
+  const diff = Math.round((Number(target) || 0) - (Number(consumato) || 0));
+  return diff >= 0 ? `- ${nome}: ${diff}${unita} rimaste` : `- ${nome}: OLTRE l'obiettivo di ${-diff}${unita}`;
+}
+// giorno: la data che la persona ha davanti (Nutrition 060, difetto b: i totali erano del giorno aperto, i pasti di oggi)
+async function getAdvice(consumed, nextMeal, isTomorrow = false, giorno) {
+  giorno = giorno || todayKey();
+  const eOggi = giorno === todayKey();
   // Chi è la persona lo dice il ritratto unico (Pirsi 020): profilo, obiettivo, dieta,
   // note di salute, e in più peso vero, seduta di oggi, ciclo, infortunio, settimana.
   const ritratto = await coachRitrattoPronto();
 
-  // Pasti già consumati oggi (max 3 più recenti, ordinati per ora se presente)
+  // Pasti già consumati nel giorno guardato (max 3 più recenti, ordinati per ora se presente)
   let consumedBlock = '';
   try {
-    const day = getDay(todayKey());
+    const day = getDay(giorno);
     const meals = (day && day.meals) ? day.meals.slice() : [];
     meals.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
     const recent = meals.slice(-3);
@@ -189,7 +220,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
         const desc = (m.description || '').toString().trim();
         return desc ? `- ${slot}: ${desc}` : `- ${slot}`;
       }).join('\n');
-      consumedBlock = `PASTI GIÀ CONSUMATI OGGI:\n${lines}`;
+      consumedBlock = `PASTI GIÀ CONSUMATI ${eOggi ? 'OGGI' : 'IN QUEL GIORNO'}:\n${lines}`;
     }
   } catch (e) { /* fallback silenzioso */ }
 
@@ -201,11 +232,11 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
   // Blocco opzionale: omesso se nessun integratore assunto oggi.
   let supplementsBlock = '';
   try {
-    const day = getDay(todayKey());
+    const day = getDay(giorno);
     const lines = [];
-    // 1) ST.extras (snapshot DB con fallback catalog applicato in loadExtras)
-    (ST.extras || []).forEach(x => {
-      if(x.date && x.date !== todayKey()) return; // safety
+    // 1) gli extra del giorno guardato (snapshot DB con fallback catalog applicato in loadExtras)
+    (((ST.extrasByDay || {})[giorno]) || ST.extras || []).forEach(x => {
+      if(x.date && x.date !== giorno) return; // safety
       const name = (x.name || '').trim() || 'Integratore';
       const kcal = Math.round(Number(x.kcal) || 0);
       const p = Math.round(Number(x.proteine) || 0);
@@ -246,17 +277,18 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     }
   } catch (e) { /* fallback silenzioso */ }
 
-  const macroBlock = `MACRO RIMANENTI OGGI:
-- Calorie: ${rem.kcal} kcal
-- Proteine: ${rem.protein}g
-- Carboidrati: ${rem.carbs}g
-- Grassi: ${rem.fat}g`;
+  const macroBlock = `BILANCIO ${eOggi ? 'DI OGGI' : 'DEL GIORNO GUARDATO (' + giorno + ', un giorno passato)'} RISPETTO ALL'OBIETTIVO:
+${_rigaBilancio('Calorie', ST.TARGET.kcal, consumed.kcal, ' kcal')}
+${_rigaBilancio('Proteine', ST.TARGET.protein, consumed.protein, 'g')}
+${_rigaBilancio('Carboidrati', ST.TARGET.carbs, consumed.carbs, 'g')}
+${_rigaBilancio('Grassi', ST.TARGET.fat, consumed.fat, 'g')}`;
+  const domaniLine = eOggi ? _rigaDomani() : '';
 
   const prossimoPastoLine = isTomorrow
     ? `PROSSIMO PASTO: ${nextMeal} (PIANIFICAZIONE PER DOMANI MATTINA — l'utente ha completato tutti i pasti di oggi)`
     : `PROSSIMO PASTO: ${nextMeal}`;
 
-  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Se oggi c\'è o c\'è stata una seduta di allenamento, o se la persona è ferma per infortunio, tienine conto nella scelta del pasto senza fare la predica.';
+  const istruzioniBase = 'Fornisci UN SOLO suggerimento, concreto e motivato, rispettando rigorosamente dieta e intolleranze. Evita ripetizioni con i pasti già consumati. Se ha già assunto integratori (es. shake o barrette proteiche), tieni conto dell\'apporto: non raccomandare proteine extra se già coperte. Se ci sono note salute, considera alimenti utili (es. ferritina bassa → ferro + vitamina C). Se oggi c\'è o c\'è stata una seduta di allenamento, se ce n\'è una domani, o se la persona è ferma per infortunio, tienine conto nella scelta del pasto senza fare la predica. Se è OLTRE l\'obiettivo, dillo con il numero e proponi un pasto leggero, non «0 rimaste».';
   const notaTomorrow = isTomorrow
     ? ' Considera il riposo notturno e prepara una colazione che riavvii bene il metabolismo.'
     : '';
@@ -270,6 +302,7 @@ async function getAdvice(consumed, nextMeal, isTomorrow = false) {
     macroBlock,
     consumedBlock,
     supplementsBlock,
+    domaniLine,
     prossimoPastoLine,
     istruzioniLine,
   ].filter(Boolean);
@@ -1578,6 +1611,7 @@ window.smartSavePasto = async function() {
     }
     ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false, editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
     ST.logOpen = false;
+    ST.advice = ''; ST.adviceOk = false;   // Nutrition 060: il consiglio era per il pasto che ora e' registrato
     renderOggi();
     saveCache();
   } catch (e) {
@@ -1585,6 +1619,112 @@ window.smartSavePasto = async function() {
     avvisa('Non riesco a salvare il pasto: ' + (e.message || 'riprova'), { titolo:'Pasto non salvato' });
   }
 };
+
+// ═══════════════════════════════════════════════════════════
+// Nutrition 050 — «I tuoi soliti» (Ondata 5, 13 ottobre 2026)
+// I pasti che la persona ripete, per fascia, presi dai giorni gia' in memoria (ST.db.days: gli ultimi 90 giorni
+// all'avvio, tutto lo storico se e' stato aperto). La chiave e' la descrizione del pasto, normalizzata; il modello e'
+// l'ultima volta che l'ha mangiato (ingredienti e numeri di allora). Prima quelli visti piu' volte, poi i piu' recenti,
+// al massimo SOLITI_MAX. Un tocco lo registra con gli stessi numeri, senza passare dal coach: niente stima, niente richiesta.
+// Stessa cosa per gli integratori fuori pacchetto (extraSoliti, dalle righe extra gia' lette in ST.extrasByDay).
+// ═══════════════════════════════════════════════════════════
+const SOLITI_MAX = 5;
+function _solitoChiave(testo){ return String(testo || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+// Ordina per volte (decrescente), poi per ultima volta (la piu' recente prima); taglia a SOLITI_MAX
+function _solitiOrdina(conto){
+  return Object.values(conto).sort((a, b) => (b.volte - a.volte) || (a.ultimo < b.ultimo ? 1 : a.ultimo > b.ultimo ? -1 : 0)).slice(0, SOLITI_MAX);
+}
+// days = ST.db.days (giorno → {meals}); slot = la fascia del form. Ritorna [{chiave, descrizione, volte, ultimo, kcal, protein, carbs, fat, items}]
+function pastiSoliti(days, slot){
+  const conto = {};
+  Object.keys(days || {}).forEach(k => {
+    ((days[k] && days[k].meals) || []).forEach(m => {
+      if (m.slot !== slot) return;
+      const chiave = _solitoChiave(m.description);
+      if (!chiave) return;
+      const e = conto[chiave] || (conto[chiave] = { chiave, volte:0, ultimo:'', ultimaOra:'', descrizione:'', kcal:0, protein:0, carbs:0, fat:0, items:[] });
+      e.volte++;
+      const quando = k + ' ' + (m.time || '');
+      if (quando < e.ultimo + ' ' + e.ultimaOra) return;
+      e.ultimo = k; e.ultimaOra = m.time || '';
+      e.descrizione = m.description || '';
+      e.kcal = Number(m.kcal) || 0; e.protein = Number(m.protein) || 0; e.carbs = Number(m.carbs) || 0; e.fat = Number(m.fat) || 0;
+      // gli ingredienti dell'ultima volta; un pasto vecchio senza ingredienti diventa un ingrediente solo, come in smartOpenEdit
+      const its = (m.items || []).filter(it => it && it.name);
+      e.items = its.length ? its.map(it => ({ name:it.name, quantity:Number(it.quantity) || 0, unit:it.unit || 'g', kcal:Number(it.kcal) || 0, protein:Number(it.protein) || 0, carbs:Number(it.carbs) || 0, fat:Number(it.fat) || 0, source:it.source || 'manual' }))
+                          : [{ name:e.descrizione || 'Pasto', quantity:0, unit:'g', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+    });
+  });
+  return _solitiOrdina(conto).map(e => { const { ultimaOra, ...resto } = e; return resto; });
+}
+// Gli integratori extra ripetuti: chiave il codice del catalogo, altrimenti il nome. Il modello e' l'ultima riga (dose e numeri di allora).
+function extraSoliti(extrasByDay){
+  const conto = {};
+  Object.keys(extrasByDay || {}).forEach(k => {
+    (extrasByDay[k] || []).forEach(x => {
+      const chiave = _solitoChiave(x.codice || x.name);
+      if (!chiave) return;
+      const e = conto[chiave] || (conto[chiave] = { chiave, volte:0, ultimo:'', modello:null });
+      e.volte++;
+      if (k < e.ultimo) return;
+      e.ultimo = k;
+      e.modello = { name:x.name || '', codice:x.codice || null, dose:x.dose != null ? Number(x.dose) : null, dose_unit:x.dose_unit || null, kcal:Number(x.kcal) || 0, carbo:Number(x.carbo) || 0, proteine:Number(x.proteine) || 0, grassi:Number(x.grassi) || 0, costo:Number(x.costo) || 0 };
+    });
+  });
+  return _solitiOrdina(conto);
+}
+let _solitoInCorso = false;
+// Un tocco su un solito: gli ingredienti dell'ultima volta entrano nel form e si salva subito con la stessa strada di «Salva pasto»
+// (smartSavePasto: id scelto dal telefono, coda senza rete, ritorno indietro se gli ingredienti non entrano).
+window.registraSolito = async function(idx){
+  const sol = (ST._soliti || [])[idx];
+  if (!sol || _solitoInCorso) return;
+  _initSmartForm();
+  if (ST.smartForm.editingMealId) return;
+  _solitoInCorso = true;
+  try {
+    ST.smartForm.items = sol.items.map((it, i) => ({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.freeText = '';
+    await smartSavePasto();
+  } finally { _solitoInCorso = false; }
+};
+// La fila dei soliti nel form del pasto (vuota se non c'e' niente da ripetere o se si sta modificando un pasto)
+function _solitiHTML(slot){
+  ST._soliti = pastiSoliti(ST.db && ST.db.days, slot);
+  if (!ST._soliti.length) return '';
+  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
+  return `<div class="soliti" id="soliti-pasti"><div class="soliti-titolo">I tuoi soliti · ${esc(slotInfo ? slotInfo.label : '')}</div><div class="soliti-fila">${ST._soliti.map((x, i) =>
+    `<button class="soliti-chip" onclick="registraSolito(${i})" title="Registra con gli stessi numeri"><span class="soliti-nome">${esc(x.descrizione)}</span><span class="soliti-sotto">${fmtNum(Math.round(x.kcal))} kcal${x.volte > 1 ? ' · ' + x.volte + '×' : ''}</span></button>`).join('')}</div></div>`;
+}
+// Un tocco su un extra solito: la riga entra in supplements_log con l'id del telefono (coda senza rete), orario adesso, sul giorno aperto
+window.registraExtraSolito = async function(idx){
+  const sol = (ST._extraSoliti || [])[idx];
+  if (!sol || !sol.modello || _solitoInCorso) return;
+  _solitoInCorso = true;
+  try {
+    const giorno = ST.activeDay || todayKey();
+    const ora = new Date();
+    const m = sol.modello;
+    const riga = { id:nuovoId(), user_id:ST.user.id, date:giorno, slot:String(ora.getHours()).padStart(2,'0') + ':' + String(ora.getMinutes()).padStart(2,'0'),
+      supplement_name:m.name, supplement_codice:m.codice, is_extra:true, dose:m.dose, dose_unit:m.dose_unit,
+      kcal:m.kcal, carbo:m.carbo, proteine:m.proteine, grassi:m.grassi, costo:m.costo };
+    const res = await scriviConCoda('registrare l\'integratore extra', { tabella:'supplements_log', tipo:'insert', righe:riga });
+    if (res.error) return;
+    if (!ST.extrasByDay) ST.extrasByDay = {};
+    (ST.extrasByDay[giorno] || (ST.extrasByDay[giorno] = [])).push(_extraDaRiga(riga, ST.catalog));
+    ST.extras = ST.extrasByDay[ST.activeDay] || [];
+    showToast(m.name + ' registrato', '🌿');
+    saveCache();
+    renderSuppSheet();
+    if (ST.page === 'oggi') renderOggi();
+  } finally { _solitoInCorso = false; }
+};
+function _extraSolitiHTML(){
+  ST._extraSoliti = extraSoliti(ST.extrasByDay);
+  if (!ST._extraSoliti.length) return '';
+  return `<div class="soliti" id="soliti-extra"><div class="soliti-titolo">I tuoi soliti fuori pacchetto</div><div class="soliti-fila">${ST._extraSoliti.map((x, i) =>
+    `<button class="soliti-chip" onclick="registraExtraSolito(${i})" title="Registra come l'ultima volta"><span class="soliti-nome">${esc(x.modello.name)}</span><span class="soliti-sotto">${x.modello.dose != null ? esc(String(x.modello.dose) + ' ' + (x.modello.dose_unit || '')) : ''}${x.volte > 1 ? ' · ' + x.volte + '×' : ''}</span></button>`).join('')}</div></div>`;
+}
 
 // Renderer del form Smart Ingredient — funzione pura, ritorna HTML.
 // I handler `smart*` chiamano renderOggi() per aggiornare il DOM.
@@ -1690,6 +1830,7 @@ function renderRegistraPasto() {
         <button onclick="smartAnalyze()" ${analyzing?'disabled':''} style="flex:1;padding:10px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:13px;font-weight:500;cursor:pointer;">${analyzing?'Analizzo...':'✨ Analizza'}</button>
         <button onclick="smartAddEmptyRow()" style="flex:1;padding:10px;background:transparent;color:var(--t1);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:13px;cursor:pointer;">+ Manuale</button>
       </div>
+      ${(!isEditing && !hasItems) ? _solitiHTML(slot) : ''}
     </div>
     ${itemsCard}
     ${totalsCard}
@@ -1964,6 +2105,9 @@ function renderOggi(){
       ? `Pianifica colazione di domani →`
       : `Analizza & suggerisci →`;
 
+    // Nutrition 060 (difetto d): con la giornata in linea il pulsante resta («Un consiglio comunque»), e sotto il consiglio
+    // c'e' «Registra questo» (il testo entra nel form del pasto da analizzare). Il consiglio sparisce quando si registra un pasto (difetto c).
+    const registraBtn = (ST.advice && ST.adviceOk && !ST.advLoading) ? `<button class="oggi-v3-coach-registra" onclick="registraConsiglio()">Registra questo →</button>` : '';
     if(silentMode && !ST.advice){
       html += `<div class="oggi-v3-coach-card">
         <div class="oggi-v3-coach-head">
@@ -1974,6 +2118,7 @@ function renderOggi(){
           <span style="color:var(--acc);font-weight:700;">✓</span>
           <span>Tutto in linea col piano</span>
         </div>
+        <button class="oggi-v3-coach-cta" onclick="fetchAdvice()">${ST.advLoading ? '⏳ Analisi coach…' : 'Un consiglio comunque →'}</button>
       </div>`;
     } else {
       html += `<div class="oggi-v3-coach-card">
@@ -1983,6 +2128,7 @@ function renderOggi(){
         </div>
         <div class="oggi-v3-coach-title">${esc(nextLabel)}</div>
         ${ST.advice ? `<div class="oggi-v3-coach-text">${esc(ST.advice)}</div>` : ''}
+        ${registraBtn}
         <button class="oggi-v3-coach-cta" onclick="fetchAdvice()">${ST.advLoading ? '⏳ Analisi coach…' : adviceCtaLbl}</button>
       </div>`;
     }
@@ -3283,15 +3429,31 @@ async function pianoV4WelcomeConfirmAndOpen() {
 // Pulsante "RIGENERA PIANO →" nel tab Piano v4.
 // Bypassa skip-day E skip-existing: cancella il piano esistente per questa week_start
 // e rigenera da zero. Rollback automatico se la chiamata AI fallisce.
+// Nutrition 080: lavora sulla settimana MOSTRATA nel tab (prima diceva «di questa settimana» e creava quella prossima).
+// Settimana corrente: i pasti da oggi a domenica (i giorni passati non si rifanno); settimana futura: tutti e 7;
+// settimana passata: niente. Senza piano la domanda e' «Preparare il piano?», con piano «Rigenerare il piano?».
+function _pianoV4RichiestaSettimanaMostrata(){
+  const offset = ST.pianoV4WeekOffset || 0;
+  const weekStart = _pianoV4WeekStartIsoForOffset(offset);
+  const corrente = weekStart === _pianoV4SettimanaDiOggiIso();
+  return { offset, weekStart, corrente, passata: weekStart < _pianoV4SettimanaDiOggiIso(), daGiorno: corrente ? _pianoV4OggiIso() : 1 };
+}
 async function pianoV4RigeneraPiano() {
   if (ST._pianoRigeneraLoading) return;
-  if (!await chiediConferma('I pasti attuali verranno sostituiti.', { titolo:'Rigenerare il piano di questa settimana?', ok:'Rigenera' })) return;
+  const r = _pianoV4RichiestaSettimanaMostrata();
+  if (r.passata) { showToast('Quella settimana è passata: il piano si prepara da oggi in avanti', 'ℹ️', 5500); return; }
+  const cosa = r.corrente ? (r.daGiorno > 1 ? 'da oggi a domenica' : 'di questa settimana') : 'della prossima settimana';
+  const haPiano = _pianoV4HasRealPlanForWeek(r.offset);
+  const ok = haPiano
+    ? await chiediConferma('I pasti ' + cosa + ' verranno sostituiti' + (r.corrente && r.daGiorno > 1 ? ' (quelli dei giorni passati non si rifanno).' : '.'), { titolo:'Rigenerare il piano ' + cosa + '?', ok:'Rigenera' })
+    : await chiediConferma(COACH_NAME + ' prepara pranzi e cene ' + cosa + ' coi tuoi obiettivi di oggi.', { titolo:'Preparare il piano ' + cosa + '?', ok:'Prepara' });
+  if (!ok) return;
   ST._pianoRigeneraLoading = true;
   if (ST.page === 'piano') renderPianoV4(); // mostra bottone disabilitato + "GENERAZIONE IN CORSO…"
   try {
-    await _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true });
-    // Invalida cache per la settimana corrente così il re-render legge i nuovi dati
-    const weekIso = _pianoV4WeekStartIsoForOffset(ST.pianoV4WeekOffset || 0);
+    await _pianoV4MaybePostino({ forceAll: true, toastOnSkip: true, weekStart: r.weekStart, daGiorno: r.daGiorno });
+    // Invalida cache per la settimana mostrata così il re-render legge i nuovi dati
+    const weekIso = r.weekStart;
     if (ST.pianoV4RealPlanCache) delete ST.pianoV4RealPlanCache[weekIso];
     await _pianoV4LoadRealPlanForWeek(weekIso);
   } catch (e) {
@@ -3731,14 +3893,22 @@ function _pianoV4NextWeekStartIso() {
 //   'skip-no-targets',// target_kcal/protein/carbs/fat null o 0
 //   'skip-existing',  // già una riga per (user_id, week_start)
 // }
+// Nutrition 080 (Ondata 5, 13 ottobre 2026): la settimana si puo' chiedere in chiaro (opts.weekStart, lunedi' ISO) e con il
+// primo giorno da pianificare (opts.daGiorno, 1=lunedi' .. 7=domenica): e' la strada di «Prepara il piano da oggi a domenica»
+// e di «Rigenera» sulla settimana mostrata. Con la settimana in chiaro il guard del giorno non c'e': la persona l'ha chiesto.
+// Il lunedi' ISO della settimana che contiene oggi, e il giorno ISO di oggi (1..7)
+function _pianoV4OggiIso(){ const d = new Date(); return ((d.getDay() + 6) % 7) + 1; }
+function _pianoV4SettimanaDiOggiIso(){ return _pianoV4WeekStartIsoForDate(todayKey()); }
 async function _pianoV4ComputePostinoStatus(opts) {
   opts = opts || {};
   const force    = !!opts.force;    // ?genera=1 bypassa solo il guard "giorno"
   const forceAll = !!opts.forceAll; // ?forceGenera=1 / pulsante Rigenera: bypassa giorno E anti-doppione
+  const settimanaChiesta = (opts.weekStart && /^\d{4}-\d{2}-\d{2}$/.test(opts.weekStart)) ? opts.weekStart : null;
   const out = {
     when: new Date().toISOString(),
     force: force,
     forceAll: forceAll,
+    daGiorno: Math.min(7, Math.max(1, Number(opts.daGiorno) || 1)),
     user_id: (ST.user && ST.user.id) || null,
     profilePlanDay: null,
     todayDow: null,
@@ -3778,13 +3948,14 @@ async function _pianoV4ComputePostinoStatus(opts) {
   out.nextDayDow = (out.planDow + 1) % 7;
   out.dayMatch = (out.todayDow === out.planDow) || (out.todayDow === out.nextDayDow);
 
-  if (!force && !forceAll && !out.dayMatch) {
+  if (!force && !forceAll && !settimanaChiesta && !out.dayMatch) {
     out.decision = 'skip-day';
     return out;
   }
 
-  // 2) week_start
-  out.weekStart = _pianoV4NextWeekStartIso();
+  // 2) week_start: quella chiesta, altrimenti la settimana che sta per iniziare
+  out.weekStart = settimanaChiesta || _pianoV4NextWeekStartIso();
+  if (out.weekStart < _pianoV4SettimanaDiOggiIso()) { out.decision = 'skip-past-week'; return out; }
 
   // 3) Anti-doppione (CRITICO, vale ANCHE in modalità force)
   try {
@@ -4097,7 +4268,11 @@ function _pianoV4F2aBuildPantry(dieta, intolleranze) {
   return lines.join("\n");
 }
 
-function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
+const _PIANOV4_GIORNI_IT = ['', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+// daGiorno (Nutrition 080): primo giorno ISO da pianificare; 1 = la settimana intera, com'era
+function _pianoV4F2aBuildPrompt(profile, targets, perMeal, daGiorno) {
+  daGiorno = Math.min(7, Math.max(1, Number(daGiorno) || 1));
+  const nGiorni = 8 - daGiorno;
   const dieta = (profile.dieta || '').toString().trim();
   const intolleranzeRaw = profile.intolleranze;
   const intolleranze = Array.isArray(intolleranzeRaw)
@@ -4126,7 +4301,8 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
   return [
     ZTCoachRules.voce(),
     "",
-    "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare.",
+    daGiorno === 1 ? "Genera 14 pasti (7 PRANZI + 7 CENE) per la settimana che sta per iniziare."
+                   : "Genera " + (nGiorni * 2) + " pasti (" + nGiorni + " PRANZI + " + nGiorni + " CENE) per i giorni che restano di questa settimana, da " + _PIANOV4_GIORNI_IT[daGiorno] + " a domenica (giorni " + daGiorno + ".." + "7).",
     "",
     "PROFILO UTENTE:",
     profileLines.join("\n"),
@@ -4143,7 +4319,7 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "3. PRUDENZA. Se per rispettare i vincoli un piatto risulta difficile, scegli un piatto PIÙ SEMPLICE con ingredienti sicuramente presenti nella DISPENSA AMMESSA sopra. MAI inventare per forzare la consegna.",
     "4. DUBBIO = NO. Se hai il minimo dubbio che un ingrediente sia ammesso → NON usarlo. Pesca dalla DISPENSA AMMESSA.",
     "5. INTOLLERANZE: precedenza assoluta. Nessun ingrediente delle intolleranze/esclusioni può comparire, nemmeno in tracce o come condimento.",
-    "6. VARIETÀ PIENA SUI 7 GIORNI. Tutti e 14 i pasti devono essere DIVERSI tra loro nel piatto principale. NESSUNA ripetizione identica tra giorni diversi. Sono ammesse variazioni sullo stesso ingrediente base (es. salmone al forno vs salmone in padella vs salmone marinato), ma non lo stesso identico piatto due volte. ATTENZIONE PARTICOLARE AL GIORNO 7: spesso si tende a ripetere piatti dei giorni precedenti — non farlo, il giorno 7 deve avere pranzo e cena unici come tutti gli altri.",
+    "6. VARIETÀ PIENA SUI " + nGiorni + " GIORNI. Tutti e " + (nGiorni * 2) + " i pasti devono essere DIVERSI tra loro nel piatto principale. NESSUNA ripetizione identica tra giorni diversi. Sono ammesse variazioni sullo stesso ingrediente base (es. salmone al forno vs salmone in padella vs salmone marinato), ma non lo stesso identico piatto due volte. ATTENZIONE PARTICOLARE AL GIORNO 7: spesso si tende a ripetere piatti dei giorni precedenti — non farlo, il giorno 7 deve avere pranzo e cena unici come tutti gli altri.",
     "7. CUCINA ITALIANA, piatti realistici e semplici da preparare a casa.",
     "8. BERSAGLI MACRO: le kcal/macro per pasto devono avvicinarsi ai bersagli sopra (oscillazioni ragionevoli ammesse).",
     "9. description: 1 frase concisa che descrive il piatto e i suoi ingredienti principali con nomi corretti e riconoscibili (es. \"Pasta integrale al pesto di basilico con pomodorini e fiocchi di mandorle\").",
@@ -4163,10 +4339,10 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
     "Rispondi SOLO con JSON valido, nessun preambolo, nessun testo extra, nessun blocco ```. Schema:",
     "{\"meals\":[{\"day\":1,\"slot\":\"pranzo\",\"time\":\"13:00\",\"description\":\"...\",\"ingredients\":[\"Ingrediente1 100g\",\"Ingrediente2 70g (peso secco)\",\"Ingrediente3 10g\"],\"kcal\":N,\"protein\":N,\"carbs\":N,\"fat\":N,\"explanation\":\"...\"}, ...]}",
     "",
-    "- day: 1=lunedì .. 7=domenica (ISO)",
+    "- day: " + daGiorno + "=" + _PIANOV4_GIORNI_IT[daGiorno] + " .. 7=domenica (ISO)" + (daGiorno > 1 ? " — SOLO i giorni da " + daGiorno + " a 7, nessun giorno prima" : ""),
     "- slot: \"pranzo\" oppure \"cena\" (esattamente queste due stringhe)",
     "- time: \"13:00\" per i pranzi, \"20:00\" per le cene (sempre esattamente queste due stringhe)",
-    "- 14 oggetti totali: 1 pranzo + 1 cena per ognuno dei 7 giorni",
+    "- " + (nGiorni * 2) + " oggetti totali: 1 pranzo + 1 cena per ognuno dei " + nGiorni + " giorni",
     "- ingredients: array di 3-5 stringhe, formato 'NomeIngrediente NUMEROg', dosi coerenti coi macro",
     "- kcal/protein/carbs/fat: numeri interi",
     "",
@@ -4177,7 +4353,9 @@ function _pianoV4F2aBuildPrompt(profile, targets, perMeal) {
 // Helper: parse + validazione robusta della risposta AI.
 // Ritorna { ok:true, meals:[...] } oppure { ok:false, reason:'...' }.
 // MAI throw — sempre risposta strutturata.
-function _pianoV4F2aParseAndValidate(text) {
+function _pianoV4F2aParseAndValidate(text, daGiorno) {
+  daGiorno = Math.min(7, Math.max(1, Number(daGiorno) || 1));
+  const nPasti = (8 - daGiorno) * 2;
   if (!text || typeof text !== 'string') return { ok: false, reason: 'empty-response' };
   const cleaned = text.replace(/```json|```/g, '').trim();
   let parsed;
@@ -4189,18 +4367,18 @@ function _pianoV4F2aParseAndValidate(text) {
   if (!parsed || !Array.isArray(parsed.meals)) {
     return { ok: false, reason: 'missing-meals-array' };
   }
-  if (parsed.meals.length < 14) {
+  if (parsed.meals.length < nPasti) {
     return { ok: false, reason: 'too-few-meals', count: parsed.meals.length };
   }
-  // Prendiamo i primi 14 nel caso ne ritorni di più (paranoia)
-  const meals = parsed.meals.slice(0, 14);
+  // Prendiamo i primi N nel caso ne ritorni di più (paranoia)
+  const meals = parsed.meals.slice(0, nPasti);
   const validSlots = { pranzo: true, cena: true };
   const seen = {}; // chiave "day-slot" → bool, per garantire 7+7 e niente duplicati
   for (let i = 0; i < meals.length; i++) {
     const m = meals[i];
     if (!m || typeof m !== 'object') return { ok: false, reason: 'meal-not-object', idx: i };
     const day = Number(m.day);
-    if (!Number.isInteger(day) || day < 1 || day > 7) return { ok: false, reason: 'bad-day', idx: i, day: m.day };
+    if (!Number.isInteger(day) || day < daGiorno || day > 7) return { ok: false, reason: 'bad-day', idx: i, day: m.day };
     const slot = String(m.slot || '').toLowerCase();
     if (!validSlots[slot]) return { ok: false, reason: 'bad-slot', idx: i, slot: m.slot };
     if (!m.description || typeof m.description !== 'string' || !m.description.trim()) {
@@ -4237,8 +4415,8 @@ function _pianoV4F2aParseAndValidate(text) {
     if (seen[key]) return { ok: false, reason: 'duplicate-day-slot', idx: i, key: key };
     seen[key] = true;
   }
-  // Verifica copertura completa: tutti i 14 slot (7 giorni × 2 slot) devono esserci
-  for (let d = 1; d <= 7; d++) {
+  // Verifica copertura completa: tutti gli slot dei giorni chiesti (2 per giorno) devono esserci
+  for (let d = daGiorno; d <= 7; d++) {
     if (!seen[d + '-pranzo']) return { ok: false, reason: 'missing-lunch', day: d };
     if (!seen[d + '-cena'])   return { ok: false, reason: 'missing-dinner', day: d };
   }
@@ -4273,7 +4451,7 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
     const perMeal = _pianoV4F2aTargets(targets);
 
     // Prompt + chiamata AI
-    const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal);
+    const prompt = _pianoV4F2aBuildPrompt(profile, targets, perMeal, opts.daGiorno);
     let text = '';
     try {
       text = await callAI(prompt, 4000);
@@ -4287,7 +4465,7 @@ async function _pianoV4GenerateAndInsertMeals(planId, profile, targets, opts) {
     // comunque per garantire il log di fallimento in ogni caso.
     let v;
     try {
-      v = _pianoV4F2aParseAndValidate(text);
+      v = _pianoV4F2aParseAndValidate(text, opts.daGiorno);
     } catch (e) {
       console.warn('[postino-meals] validation exception:', e);
       return { ok: false, reason: 'validation-exception', error: (e && e.message) || String(e) };
@@ -4359,6 +4537,7 @@ async function _pianoV4MaybePostino(opts) {
           'skip-no-profile': 'Non riesco a leggere il tuo profilo — riprova',
           'skip-day':        'Genero i piani nel giorno che hai scelto',
           'skip-existing':   'Hai già un piano per questa settimana',
+          'skip-past-week':  'Quella settimana è passata: il piano si prepara da oggi in avanti',
           'skip-no-targets': 'Mi servono i tuoi obiettivi per generare un piano',
         }[status.decision] || 'Qualcosa è andato storto — riprova';
         showToast(msg, 'ℹ️', 5500);
@@ -4429,7 +4608,7 @@ async function _pianoV4MaybePostino(opts) {
     }
 
     status.createdDraft = data;
-    if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato il tuo piano per la settimana del ' + _pianoV4IsoToItDate(status.weekStart) + ' 📋', '✅', 5500);
+    if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato il tuo piano ' + (status.daGiorno > 1 ? 'da oggi a domenica' : 'per la settimana del ' + _pianoV4IsoToItDate(status.weekStart)) + ' 📋', '✅', 5500);
 
     // ── F.2a: generazione pasti figli pranzo+cena (Opzione A: no rollback su errore) ──
     // SOLO se la riga-madre è stata appena creata in QUESTA esecuzione (siamo arrivati
@@ -4439,7 +4618,7 @@ async function _pianoV4MaybePostino(opts) {
     // notizia principale, deve essere leggibile senza accavallarsi col precedente.
     const planId = (data && data.id) || null;
     if (planId) {
-      const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug });
+      const mealsResult = await _pianoV4GenerateAndInsertMeals(planId, ST.profile, status.targets, { debug: debug, daGiorno: status.daGiorno });
       status.mealsResult = mealsResult;
       if (mealsResult.ok) {
         if (opts.toastOnSkip) showToast(COACH_NAME + ' ha preparato pranzi e cene della settimana 🍽️', '✅', 7500);
@@ -5191,7 +5370,7 @@ function renderPianoV4DemoBanner(isRealPlan) {
   if (isRealPlan) return '';
   return `<div class="pianov4-demo-banner">
     <div class="pianov4-demo-banner-label">ESEMPIO DIMOSTRATIVO</div>
-    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio, per mostrarti come funzionerà il piano di ${COACH_NAME}. Il tuo piano personalizzato arriverà domenica sera.</div>
+    <div class="pianov4-demo-banner-text">Questi sono pasti di esempio, per mostrarti come funzionerà il piano di ${COACH_NAME}. Il tuo piano personalizzato arriva domenica sera, oppure adesso con «Prepara il piano» qui sopra.</div>
   </div>`;
 }
 
@@ -5404,12 +5583,18 @@ function renderPianoV4() {
       ? 'Piano pronto · pranzi e cene per tutti i 7 giorni.'
       : `Piano pronto · pranzi e cene per ${realDaysCount} ${realDaysCount === 1 ? 'giorno' : 'giorni'}.`;
   } else if (offset === 0) {
-    statusHint = 'Il tuo primo piano arriverà domenica sera.';
+    statusHint = 'Nessun piano per questa settimana: puoi prepararlo adesso, da oggi a domenica.';   // Nutrition 080
   } else if (offset < 0) {
     statusHint = 'Settimana archiviata · nessun piano registrato.';
   } else {
-    statusHint = 'Piano in arrivo · sarà generato domenica sera.';
+    statusHint = 'Piano in arrivo · sarà generato domenica sera, o adesso se vuoi.';
   }
+  // Nutrition 080: il pulsante dice cosa fa sulla settimana mostrata; su una settimana passata non c'e'
+  const richiesta = _pianoV4RichiestaSettimanaMostrata();
+  const rigeneraLbl = ST._pianoRigeneraLoading ? 'GENERAZIONE IN CORSO…'
+    : hasRealPlan ? 'RIGENERA PIANO →'
+    : (richiesta.corrente && richiesta.daGiorno > 1) ? 'PREPARA IL PIANO DA OGGI A DOMENICA →'
+    : 'PREPARA IL PIANO →';
   const badgeCls = hasRealPlan ? 'pianov4-status-badge' : 'pianov4-status-badge pianov4-status-badge-empty';
   const counterValue = hasRealPlan ? realDaysCount : 0;
   const statusCard = `
@@ -5428,9 +5613,7 @@ function renderPianoV4() {
         }).join('')}
       </div>
       <p class="pianov4-status-hint">${statusHint}</p>
-      <button class="pianov4-rigenera-btn" onclick="pianoV4RigeneraPiano()" ${ST._pianoRigeneraLoading ? 'disabled' : ''}>
-        ${ST._pianoRigeneraLoading ? 'GENERAZIONE IN CORSO…' : 'RIGENERA PIANO →'}
-      </button>
+      ${richiesta.passata ? '' : `<button class="pianov4-rigenera-btn" onclick="pianoV4RigeneraPiano()" ${ST._pianoRigeneraLoading ? 'disabled' : ''}>${rigeneraLbl}</button>`}
     </div>`;
 
   // ── 7 card giorno (Step C.1: tap → openPianoV4DayOverlay con dayOfWeek 1-7 ISO) ──
@@ -5737,6 +5920,7 @@ function renderSuppSheet() {
     });
     html += `</div>`;
   });
+  html += _extraSolitiHTML();
   html += `<button class="btn btn-ghost btn-full" style="margin-top:12px;" onclick="openCatalogForRegisterExtra()">+ Un altro prodotto</button>
     <button class="btn btn-ghost btn-full" style="margin-top:6px;" onclick="closeSuppSheet()">Chiudi</button>`;
   document.getElementById('supp-sheet-body').innerHTML = html;
@@ -6017,6 +6201,7 @@ async function deleteMeal(dayKey, mealId){
   const d=ST.db.days[dayKey];
   if(!d) return;
   d.meals=d.meals.filter(m=>m.id!==mealId && m.local_id!==mealId);
+  ST.advice=''; ST.adviceOk=false;   // Nutrition 060: la giornata e' cambiata, il consiglio di prima non vale piu'
   await dbDeleteMeal(mealId);
   renderOggi();saveCache();
 }
@@ -6028,10 +6213,22 @@ async function fetchAdvice(){
   // isTomorrow=true SOLO se il sistema ha calcolato "domani" E l'utente non ha override-ato la select
   const isTomorrow = !!ST.nextSlotIsTomorrow && !ST.nextSlotUserOverride;
   const nextMealLabel = MEAL_SLOTS.find(s=>s.id===ST.nextSlot)?.label || ST.nextSlot;
-  ST.advLoading=true;ST.advice='';renderOggi();
-  try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow);}
-  catch(e){console.warn('[advice] errore AI:', e); ST.advice='Non sono riuscito a preparare il consiglio. '+aiErrMsg(e.aiKind);}
+  ST.advLoading=true;ST.advice='';ST.adviceOk=false;renderOggi();
+  try{ST.advice=await getAdvice(cons, nextMealLabel, isTomorrow, ST.activeDay); ST.adviceOk=!!ST.advice;}
+  catch(e){console.warn('[advice] errore AI:', e); ST.advice='Non sono riuscito a preparare il consiglio. '+aiErrMsg(e.aiKind); ST.adviceOk=false;}
   ST.advLoading=false;renderOggi();
+}
+// «Registra questo» (Nutrition 060): il consiglio del coach entra nel form del pasto come testo da analizzare,
+// sulla fascia del prossimo pasto; la persona lo rilegge, «Analizza» stima i numeri e poi «Salva pasto».
+function registraConsiglio(){
+  if (!ST.advice || !ST.adviceOk) return;
+  _initSmartForm();
+  ST.logOpen = true;
+  if (ST.nextSlot) ST.logSlot = ST.nextSlot;
+  ST.logTime = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
+  ST.smartForm = { items:[], freeText:ST.advice, notes:'', analyzing:false, editingMealId:null, editingSlot:null, editingTime:null, editingDescription:'' };
+  renderOggi();
+  setTimeout(() => { const el = document.getElementById('registra-pasto-form'); if (el && el.scrollIntoView) el.scrollIntoView({ block:'start', behavior:'smooth' }); }, 100);
 }
 
 // Sospendi / Riprendi un integratore. Ricollegata alla UI il 9 ago 2026: la
