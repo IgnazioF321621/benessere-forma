@@ -265,10 +265,18 @@ function disegnaRiga(r){
   const pop = r.popolazione ? `<span class="badge b-pop">${esc(r.popolazione)}</span> ` : '';
   const gruppo = r.gruppo ? `<div class="gruppo">${esc(r.gruppo.replace(/^\d · /,''))}</div>` : '';
   const doppione = r.gruppo && /oppion/.test(r.gruppo);
+  const dest = r.gruppo && /Da spostare · /.test(r.gruppo) ? r.gruppo.split(' · ').pop() : null;
+  const STATO = {tieni:'✓ la tieni: entra', escludi:'✓ esclusa: non entra',
+                 sposta:'✓ esce da Mobilità: la prende ' + (dest||''), resta:'✓ resta in Mobilità'};
+  const tastiSposta = dest ? `<div class="scelta" id="c${r.i}">
+      <button class="${r.scelta==='sposta'?'primary':'ghost'}" data-s="sposta" onclick="scegli(${r.i},'sposta','da spostare in ${esc(dest)}')">Sposta in ${esc(dest)}</button>
+      <button class="${r.scelta==='resta'?'primary':'ghost'}" data-s="resta" onclick="scegli(${r.i},'resta','resta in Mobilità')">Resta in Mobilità</button>
+      <span class="stat">${STATO[r.scelta] || 'scegli guardando la GIF'}</span>
+    </div>` : '';
   const tasti = doppione ? `<div class="scelta" id="c${r.i}">
-      <button class="${r.scelta==='tieni'?'primary':'ghost'}" onclick="scegli(${r.i},'tieni')">Tieni</button>
-      <button class="${r.scelta==='escludi'?'primary':'ghost'}" onclick="scegli(${r.i},'escludi')">Escludi</button>
-      <span class="stat">${r.scelta==='tieni'?'✓ la tieni: entra':r.scelta==='escludi'?'✓ esclusa: non entra':'scegli guardando la GIF'}</span>
+      <button class="${r.scelta==='tieni'?'primary':'ghost'}" data-s="tieni" onclick="scegli(${r.i},'tieni')">Tieni</button>
+      <button class="${r.scelta==='escludi'?'primary':'ghost'}" data-s="escludi" onclick="scegli(${r.i},'escludi')">Escludi</button>
+      <span class="stat">${STATO[r.scelta] || 'scegli guardando la GIF'}</span>
     </div>` : '';
   const daBucket = r.fonte_immagine === 'bucket'
     ? `<div class="avviso">Nessun file sul Mac: immagine scaricata dal bucket (${esc((r.storage_paths||[])[0]||'')}). Si rinomina in migrazione, non sul disco.</div>` : '';
@@ -278,10 +286,10 @@ function disegnaRiga(r){
     ? `<div class="nota">Mai caricata nel bucket: in migrazione è un caricamento, non una rinomina.</div>` : '';
 
   return `
-  <div class="riga ${r.decisione?'decisa':''} ${r.scelta==='escludi'?'esclusa':''}" id="r${r.i}">
+  <div class="riga ${r.decisione?'decisa':''} ${(r.scelta==='escludi'||r.scelta==='sposta')?'esclusa':''}" id="r${r.i}">
     <img class="gif" loading="lazy" src="${src}" alt="">
     <div>
-      ${gruppo}${tasti}
+      ${gruppo}${tasti}${tastiSposta}
       <div class="campo">
         ${pop}<span class="badge b-${r.stato_binario}">${r.stato_binario}</span>
         ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
@@ -314,14 +322,15 @@ function disegnaRiga(r){
 
 function riga(i){ return DATI.righe.find(r=>r.i===i); }
 
-async function scegli(i, s){
+async function scegli(i, s, motivo){
   const r = riga(i), box = document.getElementById('c'+i);
   try{
-    await chiama('/api/scelta', {zona:zona.value, sha256:r.sha256, scelta:s});
+    await chiama('/api/scelta', {zona:zona.value, sha256:r.sha256, scelta:s, motivo});
     r.scelta = s;
-    box.querySelectorAll('button').forEach(b=>b.className = (b.textContent.toLowerCase()===s ? 'primary' : 'ghost'));
-    box.querySelector('.stat').textContent = s==='tieni' ? '✓ la tieni: entra' : '✓ esclusa: non entra';
-    document.getElementById('r'+i).classList.toggle('esclusa', s==='escludi');
+    box.querySelectorAll('button').forEach(b=>b.className = (b.dataset.s===s ? 'primary' : 'ghost'));
+    box.querySelector('.stat').textContent = {tieni:'✓ la tieni: entra', escludi:'✓ esclusa: non entra',
+      sposta:'✓ esce da Mobilità', resta:'✓ resta in Mobilità'}[s];
+    document.getElementById('r'+i).classList.toggle('esclusa', s==='escludi' || s==='sposta');
   }catch(err){ box.querySelector('.stat').textContent = 'NON salvata: '+err.message+' — riprova'; }
 }
 

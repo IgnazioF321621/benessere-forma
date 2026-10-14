@@ -470,10 +470,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not r:
             return self._send({'error': 'riga sconosciuta'}, status=404)
         s = body.get('scelta')
-        if s not in ('tieni', 'escludi'):
+        if s not in ('tieni', 'escludi', 'sposta', 'resta'):
             return self._send({'error': 'scelta non valida'}, status=400)
         appendi(SCELTE, COL_SCELTE, [{'quando': ora(), 'zona': dati['zona'], 'sha256': r['sha256'],
-                                      'file': r['file'], 'scelta': s, 'motivo': 'doppione'}])
+                                      'file': r['file'], 'scelta': s,
+                                      'motivo': body.get('motivo') or 'doppione'}])
         print('  scelta: %s -> %s' % (r['file'][:44], s))
         return self._send({'ok': True, 'scelta': s})
 

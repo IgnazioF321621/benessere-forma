@@ -863,9 +863,8 @@
     "Tocco punte braccia in alto",
     "Toccare le dita dei piedi incrociato in piedi"
    ],
-   "da_guardare": " FORSE DOPPIONE di «tocco-delle-dita-in-piedi»: stesso disegno, ma in alcuni momenti la posizione è diversa. Guardale animate: se una va verso il piede opposto, sono due esercizi.",
    "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
-   "gruppo": "1 · Forse doppioni · standing cross toe touch ⇄ tocco-delle-dita-in-piedi"
+   "da_guardare": "Non è un doppione di «tocco-delle-dita-in-piedi» (Ignazio, 14 ottobre)."
   },
   "839b45215540666c17b15aef8cc4e1d56ab2a9ff86591dcfea3c02a85e9d4323": {
    "da": "standing forward bend (o Uttanasana)",
@@ -1309,12 +1308,12 @@
   "9ae9349684f8abc21b9d12cff4ee5d48c70a32abed3aaeb7e1bf2acd8551d9ef": {
    "da": "tocco-delle-dita-in-piedi",
    "suggerimenti": [
+    "Standing floor touch",
     "Overhead toe touch",
     "Tocco punte braccia in alto"
    ],
-   "da_guardare": " FORSE DOPPIONE di «standing cross toe touch (o standing diagonal toe touch stretch)»: stesso disegno, ma in alcuni momenti la posizione è diversa. Guardale animate: se una va verso il piede opposto, sono due esercizi.",
-   "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
-   "gruppo": "1 · Forse doppioni · standing cross toe touch ⇄ tocco-delle-dita-in-piedi"
+   "spiegazione": "In piedi, braccia in alto, poi mani al pavimento davanti",
+   "da_guardare": "Non è un doppione di «standing cross toe touch» (Ignazio, 14 ottobre): qui le mani vanno al pavimento davanti."
   }
  },
  "aggiornato": "2026-10-14: proposte dopo aver guardato le GIF (ZT-Catalogo e Gif)",
