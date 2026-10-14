@@ -59,6 +59,7 @@ function openSettingsModal() {
   document.getElementById('set-dieta').value = p.dieta || 'onnivoro';
   document.getElementById('set-note-salute').value = p.note_salute || '';
   document.getElementById('set-train-start').value = p.train_start_date || '';
+  if(typeof _aggiornaPausaImpostazioni === 'function') _aggiornaPausaImpostazioni();   // la pausa (Metodo 210)
   const giorniSel = document.getElementById('set-giorni-allenamento');
   if(giorniSel) giorniSel.value = String(p.giorni_allenamento || 4);
   const unitSel = document.getElementById('set-unit');

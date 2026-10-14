@@ -94,7 +94,8 @@ var ZTCoachRules = (function(){
     // ══ 1. Qualità dei dati: se scatta, niente proposte su calorie e proteine ══
     // Titolo e soglia allineati (Pirsi 080): sotto 3 pesate lo si ricorda, sotto 2 non si decide niente sulle calorie.
     var datiSporchi = false;
-    if(w && (w.weight_n || 0) < PESATE_CONSIGLIATE){
+    // Metodo 210: in una settimana con la pausa delle pesate o del cibo non si chiede di più
+    if(w && (w.weight_n || 0) < PESATE_CONSIGLIATE && !(w.pause_days > 0)){
       var poche = (w.weight_n || 0) < PESATE_MIN;
       if(poche) datiSporchi = true;
       aggiungi({
@@ -107,7 +108,7 @@ var ZTCoachRules = (function(){
         change: null,
       });
     }
-    if(n && (n.days_logged < 4 || n.partial)){
+    if(n && (n.days_logged < 4 || n.partial) && !(n.pause_days > 0)){
       datiSporchi = true;
       var registrati = n.logged_dates || [];
       var mancanti = [0,1,2,3,4,5,6].filter(function(i){ return registrati.indexOf(addDays(ws, i)) === -1; }).map(function(i){ return GIORNI[i]; });
@@ -212,6 +213,7 @@ var ZTCoachRules = (function(){
     var fermaKcal = function(delta){
       if(scarico) return 'Questa è una settimana di scarico: le calorie non si toccano, il peso in scarico non dice niente di affidabile.';
       if(delta < 0 && infortunio) return 'Hai un infortunio in corso: non taglio le calorie, il corpo deve riparare.';
+      if(delta < 0 && n && n.pause_days > 0) return 'Sei in pausa anche col cibo (' + n.pause_days + (n.pause_days === 1 ? ' giorno' : ' giorni') + ' questa settimana): non taglio le calorie su una settimana così.';
       if(delta < 0 && mangiaPrima) return 'Le sedute ti pesano (' + (seduteDure ? feel.dura + ' su ' + feel.n + ' dette «dure»' : 'RIR medio ' + num(t.avg_rir, 1)) + ') e mangi sotto l\'obiettivo (' + num(n.kcal_avg) + ' kcal su ' + num(tk) + '): prima mangia, non taglio.';
       if(delta < 0 && ricomponi) return 'Il peso è fermo ma ' + (caloVita != null && caloVita <= -VITA_CALO_CM ? 'la vita scende (' + segno(caloVita, 1) + ' cm)' : caloGrasso != null && caloGrasso <= -GRASSO_CALO_PCT ? 'il grasso scende (' + segno(caloGrasso, 1) + ' punti)' : 'la vita al check scende (' + segno(vitaCheck, 1) + ' cm)') + ': stai ricomponendo, non taglio le calorie.';
       return null;

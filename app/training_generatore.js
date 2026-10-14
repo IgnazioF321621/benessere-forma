@@ -1151,7 +1151,7 @@ function computeTrainingDebt(){
   // Pausa programmata (Training 350): dichiarata in anticipo, niente da recuperare. Alla fine si riparte
   // dalla prossima seduta della rotazione, non da un debito accumulato stando via.
   const pausa = (typeof getPausa === 'function') ? getPausa() : null;
-  if(pausa && pausa.attiva) return { debt: [], target: ST.trainHomeData?.nextSession || null };
+  if(pausa && pausa.attiva && pausa.moduli.allenamento) return { debt: [], target: ST.trainHomeData?.nextSession || null };
   const cycle = getRotationCycle(); // ordine canonico 6 giorni (recuperi inclusi); i recuperi restano esclusi dal debito via isRecoverySid
   const len = cycle.length;
   const all = ST.trainAllCompleted || [];

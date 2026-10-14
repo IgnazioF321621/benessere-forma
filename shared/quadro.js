@@ -126,6 +126,21 @@ var ZTQuadro = (function(){
   // pausaInfo(profile, today) → null se non c'è una pausa, altrimenti
   //   { inizio, fine, motivo, attiva, futura, finita, giorniTotali (null se aperta), giorniFatti, giorniDalRientro }
   var giorniTra = function(a, b){ return Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400000); };
+  // Una pausa sola per tutti i moduli (Metodo 210, decisione di Ignazio del 14 ottobre 2026): tre
+  // interruttori, tutti accesi se il profilo non dice altro (profiles.pausa_moduli, text[]):
+  //   allenamento  niente debito, blocco fermo, rientro graduale (Training 350)
+  //   cibo         niente promemoria dei pasti né «giorno vuoto», la serie dei giorni di fila non si
+  //                spezza, Pirsi non propone tagli di calorie
+  //   pesate       si fermano il promemoria della pesata e quello del check di fine blocco
+  var PAUSA_MODULI = ['allenamento', 'cibo', 'pesate'];
+  function pausaModuli(profile){
+    var p = profile || {};
+    var lista = Array.isArray(p.pausa_moduli) ? p.pausa_moduli.map(function(m){ return String(m || '').trim().toLowerCase(); }) : null;
+    var tutti = !lista || !lista.length;
+    var out = {};
+    PAUSA_MODULI.forEach(function(m){ out[m] = tutti || lista.indexOf(m) !== -1; });
+    return out;
+  }
   function pausaInfo(profile, today){
     var p = profile || {};
     var inizio = p.pausa_inizio || null, fine = p.pausa_fine || null;
@@ -136,17 +151,26 @@ var ZTQuadro = (function(){
     var finita = !!fine && fine < today;
     var giorniTotali = fine ? giorniTra(inizio, fine) + 1 : null;
     return {
-      inizio: inizio, fine: fine, motivo: p.pausa_motivo || null,
+      inizio: inizio, fine: fine, motivo: p.pausa_motivo || null, moduli: pausaModuli(p),
       attiva: attiva, futura: futura, finita: finita,
       giorniTotali: giorniTotali,
       giorniFatti: attiva ? giorniTra(inizio, today) + 1 : (finita ? giorniTotali : 0),
       giorniDalRientro: finita ? giorniTra(fine, today) : null,
     };
   }
+  // La pausa vale per `giorno` e per quel modulo? (senza modulo: la pausa in sé)
+  function pausaAttivaIl(profile, giorno, modulo){
+    var p = profile || {};
+    if(!p.pausa_inizio || !giorno) return false;
+    if(modulo && !pausaModuli(p)[modulo]) return false;
+    return p.pausa_inizio <= giorno && (!p.pausa_fine || giorno <= p.pausa_fine);
+  }
   // Quanti giorni di pausa cadono in [da, a] (estremi compresi); una pausa aperta arriva fino ad `a`.
-  function pausaGiorniNel(profile, da, a){
+  // Con `modulo` ('allenamento' · 'cibo' · 'pesate'): 0 se quel modulo non è in pausa.
+  function pausaGiorniNel(profile, da, a, modulo){
     var p = profile || {};
     if(!p.pausa_inizio || !da || !a || a < da) return 0;
+    if(modulo && !pausaModuli(p)[modulo]) return 0;
     var inizio = p.pausa_inizio > da ? p.pausa_inizio : da;
     var fine = (p.pausa_fine && p.pausa_fine < a) ? p.pausa_fine : a;
     if(fine < inizio) return 0;
@@ -252,6 +276,7 @@ var ZTQuadro = (function(){
         weight_target:     isFinite(goal) ? goal : null,
         weight_last:       ultimoGiorno ? r2(daily[ultimoGiorno].v) : null,
         weight_last_date:  ultimoGiorno,
+        pause_days:        pausaGiorniNel(profile, weekStart, we, 'pesate'),   // Metodo 210: in pausa niente «pesati di più»
       };
     }
 
@@ -293,6 +318,7 @@ var ZTQuadro = (function(){
         days_partial:     parziali,
         partial:          !!(days.length && parziali / days.length >= WP_PARTIAL_DAYS_RATIO),
         days_under_75:    tk ? sotto : null,
+        pause_days:       pausaGiorniNel(profile, weekStart, we, 'cibo'),      // Metodo 210: in pausa niente «registra tutto» né tagli
       };
     }
 
@@ -309,7 +335,7 @@ var ZTQuadro = (function(){
       var planned = Number(profile.giorni_allenamento) || null;
       // Pausa programmata (Training 350): i giorni della settimana in pausa. Con una pausa di mezzo le
       // sedute «mancate» non si contano: non è una settimana andata male, è una settimana dichiarata.
-      var pausaGg = pausaGiorniNel(profile, weekStart, we);
+      var pausaGg = pausaGiorniNel(profile, weekStart, we, 'allenamento');
       var blockWeek = null, isDeload = null;
       if(start && we >= start){
         // Stessa regola di getCycleWeekInfo, valutata "a quel giorno": per la settimana
@@ -375,7 +401,7 @@ var ZTQuadro = (function(){
         });
       }
       var rem = blockCheckReminder({ start: profile.train_start_date, nowTs: refTs, checks: fatti, clock: cl,
-        pauseDays: profile.train_start_date ? pausaGiorniNel(profile, profile.train_start_date, refDay) : 0 });
+        pauseDays: profile.train_start_date ? pausaGiorniNel(profile, profile.train_start_date, refDay, 'allenamento') : 0 });
       // Ultima lettura delle foto (Fase 2): quella del check più recente che ne ha una,
       // fatta entro l'"adesso" del quadro. Lettura fallita = campi null, errore già in meta.errors.
       var lettura = null, checkLettura = null;
@@ -442,7 +468,8 @@ var ZTQuadro = (function(){
     WP_VERSION: WP_VERSION, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
-    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, serieSettimanaliPreviste: serieSettimanaliPreviste,
+    pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, PAUSA_MODULI: PAUSA_MODULI,
+    serieSettimanaliPreviste: serieSettimanaliPreviste,
     fetchSpec: fetchSpec, computeWeeklyPicture: computeWeeklyPicture,
   };
 })();

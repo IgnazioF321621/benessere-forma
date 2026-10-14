@@ -110,7 +110,7 @@ async function nuovo(o){
   // 1 · senza pausa: la card «Imposta», il debito c'è, niente striscia
   {
     const a = await nuovo();
-    atteso('app · la card fra i riposi extra, da impostare', [/Pausa programmata/.test(a.pagina()), /Imposta/.test(a.pagina()), !!a.doc.getElementById('pausa-bar')], [true, true, false]);
+    atteso('app · la card fra i riposi extra, da impostare', [/Mi fermo per un periodo/.test(a.pagina()), /Imposta/.test(a.pagina()), !!a.doc.getElementById('pausa-bar')], [true, true, false]);
     atteso('app · senza pausa lowerA è in debito', a.win.computeTrainingDebt().debt, ['lowerA']);
     atteso('app · getPausa null', a.win.getPausa(), null);
     // il foglio: date, «non lo so ancora», motivo, salva
@@ -119,12 +119,12 @@ async function nuovo(o){
     a.doc.getElementById('pausa-inizio').value = '2026-10-20'; a.doc.getElementById('pausa-fine').value = '2026-10-30';
     a.ST.pausaModal.motivo = 'viaggio';
     await a.win.salvaPausa();
-    atteso('foglio · scrive le tre colonne nel profilo, una riga per id', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:'2026-10-30', pausa_motivo:'viaggio' });
+    atteso('foglio · scrive le tre colonne nel profilo, una riga per id', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:'2026-10-30', pausa_motivo:'viaggio', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
     atteso('foglio · il profilo in memoria è aggiornato e il foglio chiuso', [a.ST.profile.pausa_inizio, a.ST.profile.pausa_fine, !!a.ST.pausaModal], ['2026-10-20', '2026-10-30', false]);
     atteso('striscia · pausa dichiarata per dopo, con «Togli»', [/PAUSA · VIAGGIO/.test(a.pagina()), /Pausa dal 20 ottobre al 30 ottobre/.test(a.pagina()), /Togli/.test(a.pagina())], [true, true, true]);
     atteso('app · una pausa futura non toglie il debito di oggi', a.win.computeTrainingDebt().debt, ['lowerA']);
     await a.win.terminaPausa();
-    atteso('striscia · «Togli» su una pausa futura la cancella', [a.scritture().pop(), !!a.doc.getElementById('pausa-bar')], [{ pausa_inizio:null, pausa_fine:null, pausa_motivo:null }, false]);
+    atteso('striscia · «Togli» su una pausa futura la cancella', [a.scritture().pop(), !!a.doc.getElementById('pausa-bar')], [{ pausa_inizio:null, pausa_fine:null, pausa_motivo:null, pausa_moduli:null }, false]);
     // fine prima dell'inizio: non si salva
     a.win.apriPausa();
     a.doc.getElementById('pausa-inizio').value = '2026-10-20'; a.doc.getElementById('pausa-fine').value = '2026-10-10';
@@ -134,7 +134,7 @@ async function nuovo(o){
     // aperta
     a.doc.getElementById('pausa-fine').value = ''; a.doc.getElementById('pausa-aperta').checked = true;
     await a.win.salvaPausa();
-    atteso('foglio · «non lo so ancora»: fine nulla', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:null, pausa_motivo:'vacanza' });
+    atteso('foglio · «non lo so ancora»: fine nulla', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:null, pausa_motivo:'vacanza', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
   }
   // 2 · in pausa: striscia, niente debito, «Rientro anticipato» chiude a ieri
   {

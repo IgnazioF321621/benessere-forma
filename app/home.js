@@ -129,7 +129,10 @@ function _statoGiornoTraining(hd){
   let inj = null, sr = null;
   try { inj = (typeof getInjuryPeriod === 'function') ? getInjuryPeriod() : null; } catch(e){}
   try { sr = (!inj && typeof getSoftReturn === 'function') ? getSoftReturn() : null; } catch(e){}
-  if(inj) parti.push(inj.endDate ? `INFORTUNIO FINO A ${fmtDate(inj.endDate).toUpperCase()}` : 'INFORTUNIO IN CORSO');
+  // la pausa dell'allenamento (Metodo 210): la regola è una, in shared/quadro.js via pausaAttivaPer
+  let pausaAll = false; try { pausaAll = (typeof pausaAttivaPer === 'function') && pausaAttivaPer('allenamento'); } catch(e){}
+  if(pausaAll){ const pz = getPausa(); parti.push(pz && pz.fine ? `IN PAUSA FINO A ${fmtDate(pz.fine).toUpperCase()}` : 'IN PAUSA'); }
+  else if(inj) parti.push(inj.endDate ? `INFORTUNIO FINO A ${fmtDate(inj.endDate).toUpperCase()}` : 'INFORTUNIO IN CORSO');
   else if(sr) parti.push('RIENTRO GRADUALE');
   else if(hd && !hd.errore && !hd.doneToday && !hd.inProgress && /^rest/.test(hd.nextSession || '')) parti.push('OGGI RIPOSO');
   try { if((ST.trainAllCompleted || []).length && getCycleWeekInfo().isScarico) parti.push('SETTIMANA DI SCARICO'); } catch(e){}
@@ -224,6 +227,13 @@ function getProssimaAzioneSimple(){
   const hd = ST.trainHomeData;
   const tr = hasTraining() && hd && !hd.errore;
   const nomeSeduta = (sid) => { const s = getTrainingSession(sid); return s ? s.name : 'la seduta'; };
+  // La pausa (Metodo 210): ogni modulo fermo toglie la sua voce; con tutti e tre fermi lo dice e basta
+  const inPausa = (m) => { try { return (typeof pausaAttivaPer === 'function') && pausaAttivaPer(m); } catch(e){ return false; } };
+  const pausaAll = inPausa('allenamento'), pausaCibo = inPausa('cibo'), pausaPesate = inPausa('pesate');
+  if(pausaAll && pausaCibo && pausaPesate && !(tr && hd.inProgress && hd.lastSession)){
+    const pz = getPausa();
+    return { titolo: 'Sei in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: l'app ti aspetta, senza promemoria.` : 'L\'app ti aspetta, senza promemoria. La chiudi tu quando torni.', nextHint: null };
+  }
 
   // 1. Seduta iniziata e non chiusa
   if(tr && hd.inProgress && hd.lastSession){
@@ -234,25 +244,25 @@ function getProssimaAzioneSimple(){
   let rem = null, cp = null;
   try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
   try { cp = getNextCheckpointInfo(); } catch(e){}
-  if(rem || (cp && cp.hasCheck && cp.overdue)){
+  if(!pausaPesate && (rem || (cp && cp.hasCheck && cp.overdue))){
     return { titolo: 'È ora del check', dettaglio: 'Foto, misure ed esami: servono a calibrare il piano.',
       nextHint: null, azione: 'check', pulsante: 'Apri il check' };
   }
   // 3. Pesata dovuta, al mattino (frequenza scelta dalla persona; le pesate devono essere già lette)
   let pesata = false;
-  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  try { pesata = !pausaPesate && h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
   if(pesata){
     return { titolo: 'Pesati', dettaglio: 'Al mattino, prima di colazione: è il numero più fedele.',
       nextHint: null, azione: 'pesata', pulsante: 'Pesati' };
   }
-  // 4. Seduta prevista oggi e non fatta (non nei giorni di riposo)
+  // 4. Seduta prevista oggi e non fatta (non nei giorni di riposo, non in pausa)
   const riposo = tr && !hd.doneToday && /^rest/.test(hd.nextSession || '');
-  if(tr && !hd.doneToday && hd.nextSession && !riposo){
+  if(tr && !pausaAll && !hd.doneToday && hd.nextSession && !riposo){
     return { titolo: `È ora di ${nomeSeduta(hd.nextSession)}`, dettaglio: 'Si parte con 5 minuti di preparazione.',
       nextHint: getPostWorkoutHint(), azione: 'seduta', arg: hd.nextSession, pulsante: 'Inizia' };
   }
-  // 5. Pasto della fascia oraria non ancora registrato
-  const fascia = PA_FASCE.find(f => h >= f.da && h < f.a);
+  // 5. Pasto della fascia oraria non ancora registrato (non in pausa col cibo)
+  const fascia = pausaCibo ? null : PA_FASCE.find(f => h >= f.da && h < f.a);
   if(fascia){
     const pasti = (getDay(todayKey()).meals || []);
     if(!pasti.some(m => m.slot === fascia.slot)){
@@ -260,7 +270,11 @@ function getProssimaAzioneSimple(){
         nextHint: null, azione: 'pasto', arg: fascia.slot, pulsante: 'Registra' };
     }
   }
-  // 6. Giorno di riposo
+  // 6. Giorno di riposo, o allenamento in pausa
+  if(pausaAll && !(tr && hd.doneToday)){
+    const pz = getPausa();
+    return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: niente debito, riprendi da dove eri.` : 'Niente debito: riprendi da dove eri quando torni.', nextHint: null };
+  }
   if(riposo){
     return { titolo: 'Oggi riposo', dettaglio: 'Il recupero fa parte del programma.', nextHint: null };
   }
@@ -284,19 +298,21 @@ function getDaFareOggi(principale){
   (ST.supps || []).filter(x => x.active && x.slot && /^\d\d:\d\d$/.test(x.slot) && x.slot <= ora && !presi.includes(x.local_id))
     .forEach(x => { perOra[x.slot] = (perOra[x.slot] || 0) + 1; });
   Object.keys(perOra).sort().forEach(t => voci.push({ etichetta: `Integratori delle ${t}: ${perOra[t]} da segnare`, azione: 'integratori', arg: t }));
+  // la pausa (Metodo 210): niente pesata né pasti se quei moduli sono fermi
+  const inPausa = (m) => { try { return (typeof pausaAttivaPer === 'function') && pausaAttivaPer(m); } catch(e){ return false; } };
   // pesata
   let pesata = false;
-  try { pesata = h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
+  try { pesata = !inPausa('pesate') && h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}
   if(pesata) voci.push({ etichetta: 'Pesata', azione: 'pesata' });
   // pasti delle fasce già passate
   const pasti = (day && day.meals) || [];
-  PA_FASCE.filter(f => h >= f.a && !pasti.some(m => m.slot === f.slot))
+  (inPausa('cibo') ? [] : PA_FASCE).filter(f => h >= f.a && !pasti.some(m => m.slot === f.slot))
     .forEach(f => voci.push({ etichetta: `${f.nome.replace(/^(la|il) /, '').replace(/^./, c => c.toUpperCase())} non registrat${f.slot === 'pranzo' ? 'o' : 'a'}`, azione: 'pasto', arg: f.slot }));
   // check di fine blocco
   let rem = null, cp = null;
   try { rem = (typeof getBlockCheckReminder === 'function') ? getBlockCheckReminder() : null; } catch(e){}
   try { cp = getNextCheckpointInfo(); } catch(e){}
-  if(rem || (cp && cp.hasCheck && cp.overdue)) voci.push({ etichetta: 'Check di fine blocco', azione: 'check' });
+  if(!inPausa('pesate') && (rem || (cp && cp.hasCheck && cp.overdue))) voci.push({ etichetta: 'Check di fine blocco', azione: 'check' });
   const p = principale || {};
   return voci.filter(v => !(v.azione === p.azione && (v.arg || null) === (p.arg || null)));
 }

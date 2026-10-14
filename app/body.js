@@ -1720,8 +1720,13 @@ function getBlockCheckReminder(opts){
   const start = ST.profile && ST.profile.train_start_date;
   if(!start) return null;                                  // senza Training non c'e' blocco
   if(!o.checks && (ST.bodyMeasurements === null || ST.bodyChecks === null)) return null;   // ancora in caricamento
-  // Regola in shared/quadro.js → blockCheckReminder (la stessa del quadro e del cron)
-  return ZTQuadro.blockCheckReminder({ start, nowTs: o.nowTs != null ? o.nowTs : Date.now(), checks: o.checks || ST.bodyChecks || [] });
+  // Pesate e misure in pausa (Metodo 210): il promemoria tace
+  try { if(typeof pausaAttivaPer === 'function' && pausaAttivaPer('pesate')) return null; } catch(e){}
+  // Regola in shared/quadro.js → blockCheckReminder (la stessa del quadro e del cron); i giorni di pausa
+  // dell'allenamento non contano (il blocco è fermo, Training 350)
+  const oggi = (typeof todayKey === 'function') ? todayKey() : null;
+  const pauseDays = (oggi && ST.profile) ? ZTQuadro.pausaGiorniNel(ST.profile, start, oggi, 'allenamento') : 0;
+  return ZTQuadro.blockCheckReminder({ start, nowTs: o.nowTs != null ? o.nowTs : Date.now(), checks: o.checks || ST.bodyChecks || [], pauseDays });
 }
 
 // CTA permanente del tab Body — visibile in TUTTI e tre i tab e in tutti gli stati.
@@ -2341,6 +2346,8 @@ function _weightReminderShouldShow() {
   //  - modalità tracking definita (anche flexible è valida)
   //  - giorni dall'ultima pesata ≥ soglia modalità (o null = mai pesato)
   //  - NON siamo nella finestra di silenzio post-dismiss
+  //  - le pesate NON sono in pausa (Metodo 210)
+  try { if(typeof pausaAttivaPer === 'function' && pausaAttivaPer('pesate')) return false; } catch(e){}
   if(_weightReminderInSilencePeriod()) return false;
   const mode = _weightReminderGetMode();
   const threshold = WEIGHT_FREQ_THRESHOLDS[mode];

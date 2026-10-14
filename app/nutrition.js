@@ -14,14 +14,16 @@
 // ═══════════════════════════════════════════════════════════
 let _streakTentativi = 0;
 function calcStreak() {
-  const keys = Object.keys(ST.db.days).sort().reverse();
+  // Un giorno in pausa col cibo (Metodo 210) non spezza la serie e non la allunga: si salta.
+  // La regola della pausa è una sola, in shared/quadro.js (pausaAttivaIl).
+  const inPausaCibo = (k) => { try { return (typeof ZTQuadro !== 'undefined') && ZTQuadro.pausaAttivaIl(ST.profile, k, 'cibo'); } catch(e){ return false; } };
   let streak = 0;
   let d = new Date();
-  for(let i=0; i<keys.length; i++) {
+  for(let i = 0; i < 400; i++) {
     const expected = dayKey(d);
-    if(keys[i] !== expected) break;
-    const day = ST.db.days[keys[i]];
-    if(day.fasting || (day.meals && day.meals.length > 0)) streak++;
+    const day = ST.db.days[expected];
+    if(day && (day.fasting || (day.meals && day.meals.length > 0))) streak++;
+    else if(inPausaCibo(expected)) { /* in pausa: né conta né spezza */ }
     else break;
     d.setDate(d.getDate()-1);
   }
