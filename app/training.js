@@ -3151,6 +3151,59 @@ function workTimeStopTick(){
   }
 }
 
+// ── Training 390 (14 ottobre 2026): la riga in italiano sotto il nome, e le immagini del Blocco Attivazione ──
+// Per Mobilità e stretching il nome è inglese e breve; sotto va una riga in italiano di 5-10 parole, la colonna
+// `spiegazione` del catalogo. Fonte sola: quella dell'esercizio (jsonb della scheda, riallineato al catalogo da
+// loadActiveScheda) e, per gli esercizi scritti nell'app col loro codice (Recovery Day), ST.catalogInfoByCodice.
+function spiegazioneEsercizio(ex){
+  if(!ex) return '';
+  if(ex.spiegazione && String(ex.spiegazione).trim()) return String(ex.spiegazione).trim();
+  const info = ex.codice && ST.catalogInfoByCodice && ST.catalogInfoByCodice.get ? ST.catalogInfoByCodice.get(ex.codice) : null;
+  return (info && info.spiegazione) ? String(info.spiegazione).trim() : '';
+}
+function _rigaSpiegazione(ex, size){
+  const t = spiegazioneEsercizio(ex);
+  return t ? `<div class="ex-spiegazione" style="font-size:${size||11}px;color:var(--t3);font-family:var(--font-sans);font-weight:400;line-height:1.3;margin-top:2px;">${esc(t)}</div>` : '';
+}
+
+// Le GIF del Blocco Attivazione: il blocco è fisso (ACTIVATION_BLOCK) e non viene dal catalogo. Il Vacuum ha
+// solo lo slug della biblioteca (nessuna riga di catalogo): l'indirizzo si costruisce da `storage_path` letto
+// dalla sua riga di biblioteca_gif, come fa il Worker, mai ricavato dallo slug. Il Cat-Cow passa dal Worker col
+// codice. Si leggono una volta, la prima volta che il blocco si vede; lo slug trovato resta sul telefono.
+const GIF_SLUG_CHIAVE = 'zt_gif_slug_';
+function _chiaveGifAttivazione(a){ return a.gif_slug ? 'slug:' + a.gif_slug : (a.codice || ''); }
+function gifAttivazione(a){
+  if(!a) return null;
+  const k = _chiaveGifAttivazione(a);
+  const g = k && ST.attivazioneGif ? ST.attivazioneGif[k] : null;
+  return g && g.url ? g.url : null;
+}
+async function _leggiGifPerSlug(slug){
+  try { const u = localStorage.getItem(GIF_SLUG_CHIAVE + slug); if(u) return { url:u, status:'cached' }; } catch(e) {}
+  const { data, error } = await dbq('leggere la GIF del blocco attivazione', supa
+    .from('biblioteca_gif').select('storage_path').eq('slug', slug).maybeSingle(), { silenzioso:true });
+  if(error) return { url:null, status:'error' };
+  if(!data || !data.storage_path) return { url:null, status:'missing' };
+  const url = `${SUPABASE_URL}/storage/v1/object/public/biblioteca-gif/${data.storage_path}`;
+  try { localStorage.setItem(GIF_SLUG_CHIAVE + slug, url); } catch(e) {}
+  return { url, status:'cached' };
+}
+function preparaGifAttivazione(){
+  if(!ST.attivazioneGif) ST.attivazioneGif = {};
+  ACTIVATION_BLOCK.forEach(a => {
+    const k = _chiaveGifAttivazione(a);
+    if(!k || ST.attivazioneGif[k]) return;
+    ST.attivazioneGif[k] = { url:null, status:'loading' };
+    const lettura = a.gif_slug
+      ? _leggiGifPerSlug(a.gif_slug)
+      : fetchExerciseMedia(a.name, a.codice).then(m => ({ url: (m && m.cached_url) || null, status: (m && m.status) || 'missing' }));
+    lettura.catch(() => ({ url:null, status:'error' })).then(r => {
+      ST.attivazioneGif[k] = r;
+      if(r.url && ST.page === 'training') renderTraining();
+    });
+  });
+}
+
 // ── Renderer dedicato per il Blocco Attivazione (countdown ibrido 5 min, valido per tutte le sessioni) ──
 function _renderActivationSection(){
   if(!ST.trainActivationFlow) ST.trainActivationFlow = { active:false, currentIdx:0, remaining:0, running:false, _iv:null };
@@ -3165,6 +3218,7 @@ function _renderActivationSection(){
         <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">tocca per riaprire ▾</span>
       </div>`;
   }
+  preparaGifAttivazione();   // Training 390: una volta sola, poi dalla memoria
   const flow = ST.trainActivationFlow;
   const exs = ACTIVATION_BLOCK;
   const totalSecAll = exs.reduce((a,e)=>a+(e.seconds||0),0);
@@ -3191,6 +3245,7 @@ function _renderActivationSection(){
           <span style="font-size:10px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">Attivazione</span>
         </div>
         <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${nomeCortoConTag(cur.name)}</div>
+        ${gifAttivazione(cur) ? `<img class="att-gif" src="${esc(gifAttivazione(cur))}" alt="${esc(cur.name)}" style="display:block;width:100%;max-height:220px;object-fit:contain;background:var(--s1);border-radius:10px;margin-bottom:14px;">` : ''}
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
           <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -3240,8 +3295,11 @@ function _renderActivationSection(){
     const bg = isCurrent ? '#FFF7E0' : (isDone ? '#F0F6FA' : 'var(--s1)');
     const border = isCurrent ? '2px solid #C4880A' : '1px solid var(--s2)';
     const nameStyle = isDone ? 'text-decoration:line-through;color:var(--t3);' : (isCurrent ? 'color:#1A1A1A;font-weight:700;' : 'color:var(--t1);');
+    const gif = gifAttivazione(a);
+    const mini = gif ? `<img class="att-gif-mini" src="${esc(gif)}" alt="" loading="lazy" style="width:44px;height:44px;object-fit:cover;border-radius:6px;background:var(--s1);flex-shrink:0;">` : '';
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
+        ${mini}
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;${nameStyle}">${nomeCortoConTag(a.name)}</div>
         </div>
@@ -3313,7 +3371,7 @@ function _renderWarmupSection(s){
       : isWork ? WARMUP_WORK_SEC : WARMUP_REST_SEC;
     const pct = dur ? Math.round((dur - f.remaining)/dur*100) : 0;
     const titleLine = isWork
-      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}</div>`
+      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}${_rigaSpiegazione(cur, 13)}</div>`
       : `<div style="font-size:18px;font-weight:700;color:#1A1A1A;line-height:1.25;margin-bottom:14px;">${next ? 'Prossimo: ' + esc(next.name) : 'Cambia posizione'}</div>`;
     const playPauseBtn = f.running
       ? `<button onclick="warmupFlowPause()" title="Pausa" style="background:${accentFinal};color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
@@ -3370,8 +3428,9 @@ function _renderWarmupSection(s){
       : '';
     return `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
-        <div style="flex:1;min-width:0;display:flex;align-items:center;gap:2px;">
-          <span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:2px;"><span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}</div>
+          ${_rigaSpiegazione(w)}
         </div>
         <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">60s</div>
       </div>`;
@@ -3484,7 +3543,7 @@ function _renderRecoverySection(s, sel){
           <span style="font-size:10px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;font-weight:700;text-transform:uppercase;">${cur.block||''}</span>
           ${sideBadge}
         </div>
-        <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${nomeCortoConTag(cur.name)}</div>
+        <div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${nomeCortoConTag(cur.name)}${_rigaSpiegazione(cur, 13)}</div>
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px;">
           <div style="font-size:46px;font-weight:800;font-family:var(--font-mono);color:var(--acc);line-height:1;flex-shrink:0;">${mm}:${ss}</div>
           <div style="display:flex;gap:8px;flex-shrink:0;">
@@ -3580,6 +3639,7 @@ function _renderRecoverySection(s, sel){
           ${checkBox}
           <div style="flex:1;min-width:0;cursor:pointer;" onclick="openExerciseAI('${safeName}','${sel}','','')">
             <div style="font-size:13px;${nameStyle}">${nomeCortoConTag(e.name)}${sideBadge}</div>
+            ${_rigaSpiegazione(e)}
           </div>
           <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${e.duration_sec}s</div>
         </div>`;
@@ -5156,6 +5216,7 @@ function renderTraining(){
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:8px;">
           <div>
             <strong style="font-size:17px;display:block;line-height:1.25;">${esc(w.name)}</strong>
+            ${_rigaSpiegazione(w, 13)}
             <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">Riscaldamento${w.eq ? ' · ' + esc(w.eq) : ''}</div>
           </div>
           <button onclick="closeWarmupInfo()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>

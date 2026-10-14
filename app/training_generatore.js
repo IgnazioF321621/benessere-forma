@@ -9,10 +9,14 @@
 // avanti nella pagina (lo controlla tools/banco/prova_ordine_caricamento.js).
 
 // ── Training data ───────────────────────────────────────────
+// Le immagini del blocco (Training 390, 14 ottobre 2026): il Vacuum addominale ha la GIF di Mobilità
+// «Stomach vacuum», che resta un'immagine della biblioteca e NON una riga di catalogo (decisione di Ignazio:
+// non deve finire due volte nel riscaldamento), quindi si cerca per `gif_slug`; il Cat-Cow usa la GIF di
+// EX029 quando ci sarà (oggi non c'è). La Respirazione diaframmatica per ora non ha immagine.
 const ACTIVATION_BLOCK = [
   { name:'Respirazione diaframmatica 360°', duration:'2 min', seconds:120 },
-  { name:'Vacuum addominale',               duration:'2 min', seconds:120 },
-  { name:'Cat-Cow + rotazione toracica',    duration:'1 min', seconds:60  },
+  { name:'Vacuum addominale',               duration:'2 min', seconds:120, gif_slug:'vacuum-addominale' },
+  { name:'Cat-Cow + rotazione toracica',    duration:'1 min', seconds:60,  codice:'EX029' },
 ];
 const EXERCISE_MEDIA = {
   // ── UPPER A ──
@@ -607,12 +611,15 @@ const TRAINING_SESSIONS = {
         muscles:['colonna toracica','scapole','romboidi'],
         execution:['In quadrupedia','Infila il braccio sinistro sotto al destro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
         commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
-      { name:'Rotazione toracica seduto dx', codice:'EX124', duration_sec:30, block:'Colonna toracica e spalle', side:'dx',
+      // Senza codice dal 14 ottobre 2026 (Training 390, scelta di Ignazio): EX124 a catalogo è diventato
+      // «Quadruped thoracic rotation», a quattro zampe, un gesto diverso con la sua GIF. Qui resta la rotazione
+      // da seduto, senza GIF finché non se ne trova una (ZT-Catalogo e Gif) e senza riga in italiano.
+      { name:'Rotazione toracica seduto dx', duration_sec:30, block:'Colonna toracica e spalle', side:'dx',
         muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano sinistra sul ginocchio destro, destra dietro la schiena','Ruota dolcemente verso destra'],
         commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
-      { name:'Rotazione toracica seduto sx', codice:'EX124', duration_sec:30, block:'Colonna toracica e spalle', side:'sx',
+      { name:'Rotazione toracica seduto sx', duration_sec:30, block:'Colonna toracica e spalle', side:'sx',
         muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano destra sul ginocchio sinistro, sinistra dietro la schiena','Ruota dolcemente verso sinistra'],
@@ -751,7 +758,7 @@ async function loadActiveScheda() {
     try {
       const { data: catRows, error: catErr } = await dbqAll('leggere i nomi del catalogo esercizi', () => supa
         .from('esercizi_catalog')
-        .select('codice, nome, unilaterale, progressione, pattern, gruppo_target, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio')
+        .select('codice, nome, unilaterale, progressione, pattern, gruppo_target, setup, esecuzione, errori, nota_sicurezza, adattamento, muscoli, nota_surrogato, zone_rischio, spiegazione')
         .order('codice', {ascending:true}), {silenzioso:true});
       if (catErr) {
         console.warn('[scheda] catalogo non caricato, nomi snapshot mantenuti:', catErr.message);
@@ -763,11 +770,14 @@ async function loadActiveScheda() {
         catRows.forEach(r => {
           if (!r || !r.codice) return;
           nomeByCodice.set(r.codice, r.nome);
-          if (r.unilaterale || r.progressione || r.pattern || r.gruppo_target) infoByCodice.set(r.codice, {
+          if (r.unilaterale || r.progressione || r.pattern || r.gruppo_target || r.spiegazione) infoByCodice.set(r.codice, {
             unilaterale:  r.unilaterale  ? String(r.unilaterale).trim().toLowerCase()  : null,
             progressione: r.progressione ? String(r.progressione).trim().toLowerCase() : null,
             pattern:      r.pattern      ? String(r.pattern).trim()      : null,   // Training 110: il conto delle serie per muscolo
             gruppo_target: r.gruppo_target ? String(r.gruppo_target).trim() : null,
+            // Training 390: la riga in italiano sotto il nome inglese (Mobilità e stretching). Serve anche agli
+            // esercizi scritti nell'app col loro codice (Recovery Day), che non passano dal jsonb.
+            spiegazione:  r.spiegazione  ? String(r.spiegazione).trim()  : null,
           });
         });
         ST.catalogNomeByCodice = nomeByCodice;           // riusata dagli alias nome↔codice
@@ -794,6 +804,7 @@ async function loadActiveScheda() {
           if (t.commonErrors.length) ex.commonErrors = t.commonErrors;
           if (t.muscles.length)      ex.muscles = t.muscles;
           if (conAlert && t.alert)   ex.alert = t.alert;
+          if (riga.spiegazione && String(riga.spiegazione).trim()) ex.spiegazione = String(riga.spiegazione).trim();   // Training 390
         };
         const remapEx = (ex, conAlert) => {
           if (!ex || !ex.codice) return;                 // no codice → tieni snapshot
@@ -3354,6 +3365,7 @@ function _trainGenMapWarmupExercise(cat) {
     execution:    splitField(cat.esecuzione),
     commonErrors: splitField(cat.errori),
     muscles:      splitField(cat.muscoli),
+    spiegazione:  String(cat.spiegazione || '').trim() || null,   // Training 390: riga in italiano sotto il nome
     note:         'Riscaldamento · carico leggero, mai a cedimento',
     warmup:       true,         // marker: item di warm-up, non esercizio di lavoro
   };
