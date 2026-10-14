@@ -1,8 +1,8 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-13 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-10-14 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-33 tabelle, 396 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+34 tabelle, 405 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -16,21 +16,22 @@
 | [`body_logs`](#body_logs) | 2 | 2 | id | user_id, date |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
 | [`coach_proposals`](#coach_proposals) | 12 | 3 | id | user_id, week_start, kind |
-| [`daily_log`](#daily_log) | 0 | 4 | id | user_id, date |
+| [`daily_log`](#daily_log) | 2 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
-| [`meal_items`](#meal_items) | 951 | 4 | id | — |
-| [`meals`](#meals) | 345 | 2 | id | — |
+| [`fitdays_letture`](#fitdays_letture) | 0 | 4 | id | user_id, date |
+| [`meal_items`](#meal_items) | 961 | 4 | id | — |
+| [`meals`](#meals) | 348 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
-| [`segnalazioni`](#segnalazioni) | 16 | 3 | id | — |
-| [`supplement_package_items`](#supplement_package_items) | 22 | 5 | id | package_id, supplement_id |
+| [`segnalazioni`](#segnalazioni) | 17 | 3 | id | — |
+| [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 24 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1503 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
-| [`training_logs`](#training_logs) | 1922 | 1 | id | user_id, date, session_id, exercise_name, set_number |
+| [`supplements_log`](#supplements_log) | 1518 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`training_logs`](#training_logs) | 1928 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 13 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
@@ -38,7 +39,7 @@
 | [`weekly_plans`](#weekly_plans) | 18 | 5 | id | user_id, week_start |
 | [`weight_logs`](#weight_logs) | 17 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
-| [`workouts`](#workouts) | 122 | 2 | id | user_id, date, session_type |
+| [`workouts`](#workouts) | 123 | 2 | id | user_id, date, session_type |
 
 ### `ai_memory`
 
@@ -325,6 +326,22 @@ Vincoli:
 
 Vincoli:
 - `fasting_days_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `fitdays_letture`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `user_id` | uuid | sì |  |
+| `date` | date | sì |  |
+| `model` | text |  |  |
+| `prompt_version` | text |  |  |
+| `result` | jsonb | sì |  |
+| `created_at` | timestamp with time zone | sì | `now()` |
+| `updated_at` | timestamp with time zone | sì | `now()` |
+
+Vincoli:
+- `fitdays_letture_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `meal_items`
 
@@ -734,6 +751,8 @@ Vincoli:
 | `notes` | text |  |  |
 | `created_at` | timestamp with time zone |  | `now()` |
 | `note` | text |  |  |
+| `sensazione` | text |  |  |
 
 Vincoli:
+- `workouts_sensazione_chk` — `CHECK (((sensazione IS NULL) OR (sensazione = ANY (ARRAY['facile'::text, 'giusta'::text, 'dura'::text]))))`
 - `workouts_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`

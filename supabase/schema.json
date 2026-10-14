@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-13",
+ "quando": "2026-10-14",
  "righe": [
   {
    "righe": 0,
@@ -43,7 +43,7 @@
    "tabella": "coach_proposals"
   },
   {
-   "righe": 0,
+   "righe": 2,
    "tabella": "daily_log"
   },
   {
@@ -59,11 +59,15 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 951,
+   "righe": 0,
+   "tabella": "fitdays_letture"
+  },
+  {
+   "righe": 961,
    "tabella": "meal_items"
   },
   {
-   "righe": 345,
+   "righe": 348,
    "tabella": "meals"
   },
   {
@@ -79,11 +83,11 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 16,
+   "righe": 17,
    "tabella": "segnalazioni"
   },
   {
-   "righe": 22,
+   "righe": 20,
    "tabella": "supplement_package_items"
   },
   {
@@ -95,11 +99,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1503,
+   "righe": 1518,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1922,
+   "righe": 1928,
    "tabella": "training_logs"
   },
   {
@@ -131,7 +135,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 122,
+   "righe": 123,
    "tabella": "workouts"
   }
  ],
@@ -1728,6 +1732,86 @@
     "predefinito": null,
     "tabella": "fasting_days",
     "tipo": "date"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "fitdays_letture",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "fitdays_letture",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "fitdays_letture",
+    "tipo": "date"
+   },
+   {
+    "colonna": "model",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "fitdays_letture",
+    "tipo": "text"
+   },
+   {
+    "colonna": "prompt_version",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "fitdays_letture",
+    "tipo": "text"
+   },
+   {
+    "colonna": "result",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "fitdays_letture",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "fitdays_letture",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "updated_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 8,
+    "predefinito": "now()",
+    "tabella": "fitdays_letture",
+    "tipo": "timestamp with time zone"
    },
    {
     "colonna": "id",
@@ -4128,6 +4212,16 @@
     "predefinito": null,
     "tabella": "workouts",
     "tipo": "text"
+   },
+   {
+    "colonna": "sensazione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 10,
+    "predefinito": null,
+    "tabella": "workouts",
+    "tipo": "text"
    }
   ],
   "estensioni": [
@@ -4157,6 +4251,11 @@
     "argomenti": "",
     "definizione": "CREATE OR REPLACE FUNCTION public.elimina_mio_account()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  uid uuid := auth.uid();\nbegin\n  if uid is null then\n    raise exception 'Nessuna persona entrata';\n  end if;\n  -- tutto il resto cade col cascade\n  delete from auth.users where id = uid;\nend;\n$function$\n",
     "nome": "elimina_mio_account"
+   },
+   {
+    "argomenti": "",
+    "definizione": "CREATE OR REPLACE FUNCTION public.fitdays_letture_tocca()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  new.updated_at = now();\n  return new;\nend;\n$function$\n",
+    "nome": "fitdays_letture_tocca"
    },
    {
     "argomenti": "",
@@ -4214,6 +4313,11 @@
     "definizione": "CREATE INDEX coach_proposals_user_idx ON public.coach_proposals USING btree (user_id, week_start DESC)",
     "nome": "coach_proposals_user_idx",
     "tabella": "coach_proposals"
+   },
+   {
+    "definizione": "CREATE INDEX fitdays_letture_user_idx ON public.fitdays_letture USING btree (user_id, date DESC)",
+    "nome": "fitdays_letture_user_idx",
+    "tabella": "fitdays_letture"
    },
    {
     "definizione": "CREATE INDEX idx_meal_items_meal_id ON public.meal_items USING btree (meal_id)",
@@ -4659,6 +4763,16 @@
     ],
     "ruolo": "authenticated",
     "tabella": "fasting_days"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "SELECT",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "fitdays_letture"
    },
    {
     "permessi": [
@@ -5581,6 +5695,54 @@
     ],
     "schema": "public",
     "tabella": "fasting_days",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "fitdays_letture_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "fitdays_letture",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "fitdays_letture_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "fitdays_letture",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "fitdays_letture_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "fitdays_letture",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "fitdays_letture_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "fitdays_letture",
     "usando": "(auth.uid() = user_id)"
    },
    {
@@ -6518,6 +6680,12 @@
     "tabella": "fasting_days"
    },
    {
+    "commento": "Body 150: la lettura completa del report Fitdays (22 indicatori in result), una per persona e per giorno; le caselle di Body restano in weight_logs e body_logs",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "fitdays_letture"
+   },
+   {
     "commento": null,
     "rls": true,
     "rls_forzata": false,
@@ -6639,6 +6807,12 @@
     "nome": "trg_daily_log_updated_at",
     "schema": "public",
     "tabella": "daily_log"
+   },
+   {
+    "definizione": "CREATE TRIGGER fitdays_letture_tocca BEFORE UPDATE ON public.fitdays_letture FOR EACH ROW EXECUTE FUNCTION fitdays_letture_tocca()",
+    "nome": "fitdays_letture_tocca",
+    "schema": "public",
+    "tabella": "fitdays_letture"
    },
    {
     "definizione": "CREATE TRIGGER trg_training_notes_updated_at BEFORE UPDATE ON public.training_notes FOR EACH ROW EXECUTE FUNCTION set_updated_at()",
@@ -6970,6 +7144,24 @@
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "fasting_days_user_id_fkey",
     "tabella": "fasting_days",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "fitdays_letture_pkey",
+    "tabella": "fitdays_letture",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, date)",
+    "nome": "fitdays_letture_user_date_key",
+    "tabella": "fitdays_letture",
+    "tipo": "u"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "fitdays_letture_user_id_fkey",
+    "tabella": "fitdays_letture",
     "tipo": "f"
    },
    {
@@ -7379,6 +7571,12 @@
     "nome": "workouts_user_date_session_key",
     "tabella": "workouts",
     "tipo": "u"
+   },
+   {
+    "definizione": "CHECK (((sensazione IS NULL) OR (sensazione = ANY (ARRAY['facile'::text, 'giusta'::text, 'dura'::text]))))",
+    "nome": "workouts_sensazione_chk",
+    "tabella": "workouts",
+    "tipo": "c"
    },
    {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
