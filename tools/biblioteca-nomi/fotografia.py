@@ -33,7 +33,8 @@ REPO = BASE.parent.parent
 # Le 9 zone del bucket. Cartelle legacy eliminate il 18/07/2026.
 ZONE = ['Addominali e Core', 'Bicipiti e Braccia', 'Cardio e Conditioning',
         'Gambe e Glutei', 'Pettorali', 'Polpacci', 'Schiena e Trapezio',
-        'Spalle e Cuffia', 'Tricipiti']
+        'Spalle e Cuffia', 'Tricipiti',
+        'Mobilita e Stretching']   # caricata il 14 ottobre 2026, ultima zona
 
 # Campi del catalogo su cui una regressione del sync fa danno visibile.
 # nome     -> cambia cio' che l'utente legge e rompe lo storico (indicizzato per nome)
