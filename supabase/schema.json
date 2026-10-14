@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 2,
+   "righe": 3,
    "tabella": "body_logs"
   },
   {
@@ -59,7 +59,7 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 0,
+   "righe": 1,
    "tabella": "fitdays_letture"
   },
   {
@@ -99,7 +99,7 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1518,
+   "righe": 1519,
    "tabella": "supplements_log"
   },
   {
@@ -127,7 +127,7 @@
    "tabella": "weekly_plans"
   },
   {
-   "righe": 17,
+   "righe": 18,
    "tabella": "weight_logs"
   },
   {
@@ -2682,6 +2682,16 @@
     "predefinito": null,
     "tabella": "profiles",
     "tipo": "text"
+   },
+   {
+    "colonna": "pausa_moduli",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 42,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text[]"
    },
    {
     "colonna": "id",
@@ -7227,6 +7237,12 @@
    {
     "definizione": "CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))",
     "nome": "profiles_pausa_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))",
+    "nome": "profiles_pausa_moduli_chk",
     "tabella": "profiles",
     "tipo": "c"
    },

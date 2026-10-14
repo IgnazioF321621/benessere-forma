@@ -2,7 +2,7 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-14 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-34 tabelle, 405 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+34 tabelle, 406 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -13,14 +13,14 @@
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
 | [`body_check_photos`](#body_check_photos) | 20 | 4 | id | check_id, pose |
 | [`body_checks`](#body_checks) | 6 | 4 | id | — |
-| [`body_logs`](#body_logs) | 2 | 2 | id | user_id, date |
+| [`body_logs`](#body_logs) | 3 | 2 | id | user_id, date |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
 | [`coach_proposals`](#coach_proposals) | 12 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 2 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
-| [`fitdays_letture`](#fitdays_letture) | 0 | 4 | id | user_id, date |
+| [`fitdays_letture`](#fitdays_letture) | 1 | 4 | id | user_id, date |
 | [`meal_items`](#meal_items) | 961 | 4 | id | — |
 | [`meals`](#meals) | 348 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
@@ -30,14 +30,14 @@
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 24 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1518 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`supplements_log`](#supplements_log) | 1519 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
 | [`training_logs`](#training_logs) | 1928 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 13 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
 | [`weekly_plan_meals`](#weekly_plan_meals) | 252 | 5 | id | — |
 | [`weekly_plans`](#weekly_plans) | 18 | 5 | id | user_id, week_start |
-| [`weight_logs`](#weight_logs) | 17 | 5 | id | user_id, date |
+| [`weight_logs`](#weight_logs) | 18 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
 | [`workouts`](#workouts) | 123 | 2 | id | user_id, date, session_type |
 
@@ -458,9 +458,11 @@ Vincoli:
 | `pausa_inizio` | date |  |  |
 | `pausa_fine` | date |  |  |
 | `pausa_motivo` | text |  |  |
+| `pausa_moduli` | text[] |  |  |
 
 Vincoli:
 - `profiles_pausa_chk` — `CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))`
+- `profiles_pausa_moduli_chk` — `CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))`
 - `profiles_plan_day_check` — `CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))`
 - `profiles_sex_check` — `CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))`
 - `profiles_weight_mode_check` — `CHECK ((weight_tracking_mode = ANY (ARRAY['daily'::text, 'every3'::text, 'weekly'::text, 'flexible'::text])))`
