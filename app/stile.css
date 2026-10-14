@@ -1418,6 +1418,34 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .csa-livello[aria-checked="true"] .csa-parola{color:var(--acc);}
 .csa-nota{width:100%;margin:0 0 14px;padding:9px 10px;border:1px solid var(--b1);border-radius:8px;background:var(--s2);color:var(--t1);font-family:var(--font-sans);font-size:16px;line-height:1.4;resize:none;box-sizing:border-box;}
 .csa-nota::placeholder{color:var(--t3);}
+/* Tab Energia del Body (Home 170 passo 2): andamento di energia, stress, sonno e riposini */
+.en-pagina{padding:12px 16px 0;}
+.en-periodi{display:flex;gap:6px;margin-bottom:12px;}
+.en-card{background:var(--carta);border:1px solid var(--b1);border-radius:16px;padding:14px;margin-bottom:12px;}
+.en-titolo{margin-bottom:10px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
+.en-riga{display:flex;flex-wrap:wrap;gap:4px 12px;padding:6px 0;border-top:1px solid var(--b1);font-family:var(--font-sans);font-size:14px;color:var(--t1);}
+.en-titolo+.en-riga{border-top:none;}
+.en-momento{min-width:52px;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--t2);}
+.en-ripo{color:var(--t2);font-size:13px;}
+.en-verso{margin-top:8px;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--acc);}
+.en-grafico{width:100%;height:auto;display:block;}
+.en-griglia{stroke:var(--b1);stroke-width:1;}
+.en-asse{font-family:var(--font-mono);font-size:9px;fill:var(--t3);}
+.en-linea{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.en-linea.en-energy{stroke:var(--acc);}
+.en-linea.en-stress{stroke:var(--err);stroke-dasharray:4 3;}
+.en-punto.en-energy{fill:var(--acc);}
+.en-punto.en-stress{fill:var(--err);}
+.en-legenda{display:flex;align-items:center;gap:6px;margin-top:6px;font-family:var(--font-sans);font-size:12px;color:var(--t2);}
+.en-chiave{display:inline-block;width:14px;height:0;border-top:2px solid var(--acc);margin-left:8px;}
+.en-chiave:first-child{margin-left:0;}
+.en-chiave.en-stress{border-top:2px dashed var(--err);}
+.en-sotto{margin-top:10px;font-family:var(--font-sans);font-size:13px;color:var(--t1);}
+.en-tabella{display:grid;gap:6px 8px;align-items:center;font-family:var(--font-mono);font-size:13px;color:var(--t1);text-align:center;}
+.en-voce{text-align:left;font-family:var(--font-sans);color:var(--t2);}
+.en-vuoto{padding:28px 8px;text-align:center;font-family:var(--font-sans);font-size:14px;line-height:1.5;color:var(--t2);}
+.en-nota{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;padding:10px 12px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;font-family:var(--font-sans);font-size:12px;color:var(--t2);}
+.en-riprova{background:none;border:1px solid var(--b1);border-radius:8px;padding:4px 10px;font-family:var(--font-mono);font-size:12px;color:var(--t1);cursor:pointer;}
 
 /* ── QUADRO SETTIMANALE — Fase 1 (12 set 2026) ─────────────── */
 .wp-mini{display:flex;gap:14px;padding-left:18px;flex-wrap:wrap;}

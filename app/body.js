@@ -1753,6 +1753,141 @@ function _bodyCheckCtaHTML(){
   return `<div style="margin:12px 16px 0;display:flex;justify-content:flex-end;">${btn(false)}</div>`;
 }
 
+// ── Tab Energia: l'andamento di energia, stress, sonno e riposini (Home 170 passo 2, 14 ottobre 2026) ──
+// Scelte di Ignazio: nel tab Body, linee come la Tendenza, il valore del mattino di «Come stai oggi»
+// (daily_log) come primo punto di ogni giorno, poi le rilevazioni di «Come stai adesso?».
+// Si legge dal database solo qui: rilevazioni del periodo, una volta al giorno per periodo
+// (ST.rilevazioni), più il diario se la Home non l'ha ancora letto. Le parole sono quelle di Home 160.
+const ENERGIA_PERIODI = { settimana: 7, mese: 30 };
+
+function _enAdd(k, d) { const x = new Date(k + 'T12:00:00'); x.setDate(x.getDate() + d); return dayKey(x); }
+function _enMedia(a) { return a.length ? a.reduce((s, v) => s + v, 0) / a.length : null; }
+function _enVirgola(n, dec) { return n == null ? '—' : (Math.round(n * 10 ** dec) / 10 ** dec).toFixed(dec).replace('.', ','); }
+function _enOraDi(r) { return r.orario != null ? Number(r.orario) : new Date(r.rilevata_il).getHours(); }
+
+// Il calcolo, puro: righe di rilevazioni, mappa del diario (giorno → riga), giorni del periodo, oggi.
+// Restituisce i giorni (medie), i punti di oggi con la direzione e la media per momento della giornata.
+function andamentoComeStai(righe, diario, giorni, oggi) {
+  const dal = _enAdd(oggi, -(giorni - 1));
+  const perGiorno = {};
+  for (let i = 0; i < giorni; i++) perGiorno[_enAdd(dal, i)] = [];
+  Object.keys(perGiorno).forEach(g => {
+    const d = diario && diario[g];
+    if (d && (d.energy != null || d.stress != null)) perGiorno[g].push({ momento: 'mattino', ordine: -1, energy: d.energy, stress: d.stress, riposino_min: null });
+  });
+  (righe || []).filter(r => perGiorno[r.giorno]).forEach(r => {
+    perGiorno[r.giorno].push({ momento: _enOraDi(r), ordine: new Date(r.rilevata_il).getTime(), energy: r.energy, stress: r.stress, riposino_min: r.riposino_min });
+  });
+  const num = v => v == null ? null : Number(v);
+  const giorniOut = Object.keys(perGiorno).sort().map(g => {
+    const p = perGiorno[g].sort((a, b) => a.ordine - b.ordine);
+    const ripo = p.filter(x => Number(x.riposino_min) > 0);
+    const d = diario && diario[g];
+    return { giorno: g, punti: p.length,
+      energy: _enMedia(p.map(x => num(x.energy)).filter(v => v != null)),
+      stress: _enMedia(p.map(x => num(x.stress)).filter(v => v != null)),
+      sonno: d && d.sleep_hours != null ? Number(d.sleep_hours) : null,
+      riposini: ripo.length, riposinoMin: ripo.reduce((s, x) => s + Number(x.riposino_min), 0) };
+  });
+  const puntiOggi = (perGiorno[oggi] || []).map(x => ({ momento: x.momento, energy: num(x.energy), stress: num(x.stress), riposino_min: num(x.riposino_min) }));
+  const verso = (campo) => {
+    const v = puntiOggi.map(x => x[campo]).filter(x => x != null);
+    if (v.length < 2) return null;
+    const d = v[v.length - 1] - v[0];
+    return d < 0 ? 'cala' : d > 0 ? 'sale' : 'stabile';
+  };
+  // Nell'arco della giornata, sul periodo: media per momento (mattino, poi le ore)
+  const momenti = {};
+  Object.values(perGiorno).flat().forEach(x => {
+    const k = String(x.momento);
+    (momenti[k] = momenti[k] || { momento: x.momento, energy: [], stress: [] });
+    if (x.energy != null) momenti[k].energy.push(Number(x.energy));
+    if (x.stress != null) momenti[k].stress.push(Number(x.stress));
+  });
+  const nellaGiornata = Object.values(momenti)
+    .sort((a, b) => (a.momento === 'mattino' ? -1 : a.momento) - (b.momento === 'mattino' ? -1 : b.momento))
+    .map(m => ({ momento: m.momento, energy: _enMedia(m.energy), stress: _enMedia(m.stress), volte: Math.max(m.energy.length, m.stress.length) }));
+  const sonni = giorniOut.map(g => g.sonno).filter(v => v != null);
+  return { giorni: giorniOut, oggi: { punti: puntiOggi, energia: verso('energy'), stress: verso('stress') }, nellaGiornata,
+    sonnoMedio: _enMedia(sonni), riposini: giorniOut.reduce((s, g) => s + g.riposini, 0), riposinoMin: giorniOut.reduce((s, g) => s + g.riposinoMin, 0),
+    vuoto: giorniOut.every(g => !g.punti && g.sonno == null) };
+}
+
+// Lettura: una volta al giorno per periodo (il mese copre anche la settimana).
+async function caricaRilevazioni(giorni) {
+  if (!ST.user || !ST.user.id) return;
+  const oggi = todayKey(), dal = _enAdd(oggi, -(giorni - 1));
+  const r = ST.rilevazioni;
+  if (r && r.letto === oggi && r.dal <= dal) return;
+  if (ST.rilevazioniInLettura) return;
+  ST.rilevazioniInLettura = true;
+  try {
+    const [res] = await Promise.all([
+      dbqAll('leggere come sei stato', () => supa.from('rilevazioni').select('id,rilevata_il,giorno,orario,energy,stress,riposino_min,note')
+        .eq('user_id', ST.user.id).gte('giorno', dal).order('rilevata_il', { ascending: true }), { silenzioso: true }),
+      ST.dailyLog ? null : (typeof loadDailyLog === 'function' ? loadDailyLog() : null),
+    ]);
+    // Fallita: si segna letta lo stesso (niente giro di riletture a ogni disegno); «Riprova» la richiede.
+    ST.rilevazioni = res.error ? { letto: oggi, dal, righe: (r && r.righe) || [], fallita: true } : { letto: oggi, dal, righe: res.data || [] };
+  } finally { ST.rilevazioniInLettura = false; }
+  if (ST.page === 'body' && ST.bodyTab === 'energia') renderBody();
+}
+
+function _enMomento(m) { return m === 'mattino' ? 'mattino' : String(m).padStart(2, '0'); }
+function _enGrafico(giorni) {
+  const n = giorni.length, W = 300, H = 120, sx = 18, dx = 14, top = 8, bot = 18;
+  const x = i => sx + (n > 1 ? i * (W - sx - dx) / (n - 1) : (W - sx - dx) / 2);
+  const y = v => top + (5 - v) * (H - top - bot) / 4;
+  const linea = (campo) => {
+    const tratti = []; let t = [];
+    giorni.forEach((g, i) => { if (g[campo] == null) { if (t.length) tratti.push(t); t = []; } else t.push([x(i), y(g[campo])]); });
+    if (t.length) tratti.push(t);
+    return tratti.map(tr => tr.length > 1 ? `<polyline class="en-linea en-${campo}" points="${tr.map(p => p.map(c => c.toFixed(1)).join(',')).join(' ')}"/>` : '').join('')
+      + giorni.map((g, i) => g[campo] == null ? '' : `<circle class="en-punto en-${campo}" cx="${x(i).toFixed(1)}" cy="${y(g[campo]).toFixed(1)}" r="2.5"/>`).join('');
+  };
+  const griglia = [1, 2, 3, 4, 5].map(v => `<line class="en-griglia" x1="${sx}" x2="${W - dx}" y1="${y(v)}" y2="${y(v)}"/><text class="en-asse" x="2" y="${y(v) + 3}">${v}</text>`).join('');
+  const passo = n > 10 ? 7 : 1;
+  const etichette = giorni.map((g, i) => (i % passo === 0 || i === n - 1) && (passo === 1 || n - 1 - i >= 3 || i === n - 1)
+    ? `<text class="en-asse" x="${x(i).toFixed(1)}" y="${H - 4}" text-anchor="middle">${passo === 1 ? new Date(g.giorno + 'T12:00:00').toLocaleDateString('it-IT', { weekday: 'short' }).slice(0, 3) : Number(g.giorno.slice(8))}</text>` : '').join('');
+  return `<svg class="en-grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Energia e stress, media di ogni giorno">${griglia}${linea('stress')}${linea('energy')}${etichette}</svg>`;
+}
+
+function renderBodyEnergia() {
+  const periodo = ENERGIA_PERIODI[ST.energiaPeriodo] ? ST.energiaPeriodo : 'settimana';
+  const giorni = ENERGIA_PERIODI[periodo];
+  caricaRilevazioni(giorni);
+  const sel = `<div class="en-periodi">${Object.keys(ENERGIA_PERIODI).map(p => `<button class="nsn-pill${p === periodo ? ' active' : ''}" onclick="ST.energiaPeriodo='${p}';renderBody();">${p === 'settimana' ? 'Settimana' : 'Mese'}</button>`).join('')}</div>`;
+  if (!ST.rilevazioni) return `<div class="en-pagina">${sel}<div class="en-vuoto">Caricamento…</div></div>`;
+  const a = andamentoComeStai(ST.rilevazioni.righe, ST.dailyLog || {}, giorni, todayKey());
+  const avviso = ST.rilevazioni.fallita ? `<div class="en-nota"><span>Non sono riuscito a leggere le ultime risposte${senzaRete() ? ': sei senza rete' : ''}.</span><button class="en-riprova" onclick="ST.rilevazioni.letto=null;renderBody();">Riprova</button></div>` : '';
+  if (a.vuoto) return `<div class="en-pagina">${sel}${avviso}<div class="en-vuoto">Ancora niente da mostrare. Rispondi a «Come stai oggi» e a «Come stai adesso?»: qui vedrai come cambiano energia e stress nella giornata e nei giorni.</div></div>`;
+  const parola = { cala: '↘ cala', sale: '↗ sale', stabile: '→ stabile' };
+  const oggiHTML = a.oggi.punti.length ? `
+    <div class="en-card">
+      <div class="en-titolo">Oggi</div>
+      ${a.oggi.punti.map(p => `<div class="en-riga"><span class="en-momento">${_enMomento(p.momento)}</span><span>Energia ${p.energy != null ? p.energy + ' ' + diarioParola('energy', p.energy) : '—'}</span><span>Stress ${p.stress != null ? p.stress + ' ' + diarioParola('stress', p.stress) : '—'}</span>${p.riposino_min > 0 ? `<span class="en-ripo">riposino ${_enDurata(p.riposino_min)}</span>` : ''}</div>`).join('')}
+      ${a.oggi.energia || a.oggi.stress ? `<div class="en-verso">${a.oggi.energia ? `Energia ${parola[a.oggi.energia]}` : ''}${a.oggi.energia && a.oggi.stress ? ' · ' : ''}${a.oggi.stress ? `Stress ${parola[a.oggi.stress]}` : ''}</div>` : ''}
+    </div>` : '';
+  const giornata = a.nellaGiornata.length > 1 ? `
+    <div class="en-card">
+      <div class="en-titolo">Nella giornata · media ${periodo === 'settimana' ? 'della settimana' : 'del mese'}</div>
+      <div class="en-tabella" style="grid-template-columns:auto repeat(${a.nellaGiornata.length},1fr);">
+        <span></span>${a.nellaGiornata.map(m => `<span class="en-momento">${_enMomento(m.momento)}</span>`).join('')}
+        <span class="en-voce">Energia</span>${a.nellaGiornata.map(m => `<span>${_enVirgola(m.energy, 1)}</span>`).join('')}
+        <span class="en-voce">Stress</span>${a.nellaGiornata.map(m => `<span>${_enVirgola(m.stress, 1)}</span>`).join('')}
+      </div>
+    </div>` : '';
+  return `<div class="en-pagina">${sel}${avviso}${oggiHTML}
+    <div class="en-card">
+      <div class="en-titolo">${periodo === 'settimana' ? 'Ultimi 7 giorni' : 'Ultimi 30 giorni'}</div>
+      ${_enGrafico(a.giorni)}
+      <div class="en-legenda"><span class="en-chiave en-energy"></span>Energia <span class="en-chiave en-stress"></span>Stress</div>
+      <div class="en-sotto">Sonno medio ${a.sonnoMedio != null ? _enVirgola(a.sonnoMedio, 1) + ' h' : '—'} · Riposini ${a.riposini}${a.riposini ? ' (' + _enDurata(a.riposinoMin) + ')' : ''}</div>
+    </div>${giornata}
+  </div>`;
+}
+function _enDurata(min) { const h = Math.floor(min / 60), m = min % 60; return h ? (m ? `${h} h ${m}` : `${h} h`) : `${m} min`; }
+
 function renderBody(){
   if(ST.bodyTab === 'composizione') ST.bodyTab = 'misure';
   const tab = ST.bodyTab || 'misure';
@@ -1760,6 +1895,7 @@ function renderBody(){
     { id:'misure',   label:'Misure' },
     { id:'tendenza', label:'Tendenza' },
     { id:'check',    label:'Check' },
+    { id:'energia',  label:'Energia' },
   ];
   const navHTML = `<nav class="nutrition-subnav">
     ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
@@ -2075,6 +2211,8 @@ function renderBody(){
 
   } else if(tab === 'tendenza'){
     body = renderBodyTrend();
+  } else if(tab === 'energia'){
+    body = renderBodyEnergia();
   }
 
   // Mini-modal conferma elimina log Body (pattern info-modal, come Training)

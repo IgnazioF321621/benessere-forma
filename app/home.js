@@ -1035,6 +1035,7 @@ async function salvaComeStaiAdesso(orario, r) {
   const s = _csaStato();
   s.risposte.push({ orario: riga.orario, energy: riga.energy, stress: riga.stress, riposino_min: riga.riposino_min });
   _csaSalvaStato(s);
+  if (ST.rilevazioni && ST.rilevazioni.righe) ST.rilevazioni.righe.push(riga);   // il tab Energia la vede subito
   const res = await scriviConCoda('salvare come stai adesso', { tabella: 'rilevazioni', tipo: 'insert', righe: [riga] });
   if (res && res.error) return res;
   showToast('Segnato, grazie', '✅');
