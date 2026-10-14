@@ -14,6 +14,7 @@ const atteso = (nome, got, exp) => {
   console.log((ok ? '  OK  ' : '  KO  ') + nome.padEnd(58), JSON.stringify(got), ok ? '' : '≠ atteso ' + JSON.stringify(exp));
 };
 const testo = (html) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const attendi = (ms) => new Promise(r => setTimeout(r, ms));
 const wl = (date, kg) => ({ user_id:U, id:'wl-' + date, date, weight_kg:kg });
 const pesate = [
   ['2026-08-20', 72.9], ['2026-08-23', 72.7], ['2026-08-26', 72.8], ['2026-08-29', 72.5], ['2026-09-01', 72.6],
@@ -58,9 +59,9 @@ const tabelle = {
   const pic = await win.buildWeeklyPicture(ws);
   atteso('media settimana grafico = quadro', [mediaGrafico, settimana.length], [pic.weight.weight_avg, pic.weight.weight_n]);
 
-  // «Ultimi log» (tab Misure): le pesate rapide con la data
-  ST.bodyTab = 'misure'; win.renderBody();
-  const box = [...win.document.querySelectorAll('#page-body div')].find(d => d.firstElementChild && d.firstElementChild.textContent === 'Ultimi log');
+  // «Ultimi log»: le pesate rapide con la data. Dal 14 ottobre 2026 (Body 170) stanno nelle Impostazioni › Salute
+  win.openSettingsModal(); win.setVai('salute');
+  const box = [...win.document.querySelectorAll('#set-ultimi-log div')].find(d => d.firstElementChild && d.firstElementChild.textContent === 'Ultimi log');
   const righe = box ? [...box.children].slice(1).map(r => testo(r.innerHTML)) : [];
   atteso('Ultimi log · prime 3 righe', righe.slice(0, 3), ['dom 13 set 72.1 kg ×', 'sab 12 set 72.2 kg ×', 'ven 11 set 72 kg ×']);
   atteso('Ultimi log · check dell\'8 set col suo peso', righe.find(r => /8 set/.test(r) && /check/.test(r)), 'mar 8 set ✓ check 72.35 kg 86 cm → ×');
@@ -73,19 +74,22 @@ const tabelle = {
   const rigaDom = box ? [...box.children].slice(1).find(r => /12 set/.test(testo(r.innerHTML))) : null;
   const xBtn = rigaDom && rigaDom.querySelector('button[title="Elimina"]');
   atteso('× della pesata rapida · l\'onclick non porta la parola «null»', xBtn ? /'null'/.test(xBtn.getAttribute('onclick')) : null, false);
-  xBtn.click();
-  atteso('× · la conferma ha la data e nessun id di body_logs', [ST.bodyDeleteConfirm.date, ST.bodyDeleteConfirm.id], ['2026-09-12', null]);
-  await win.deleteBodyLogConfirmed();
+  // Body 170: la conferma è il foglio dell'app; «Elimina» cancella
+  const conferma = () => win.document.querySelector('.foglio-overlay .foglio-ok');
+  xBtn.click(); await attendi(10);
+  atteso('× · il foglio di conferma con la data', [!!conferma(), /12 set/.test(testo(win.document.querySelector('.foglio-overlay p').innerHTML))], [true, true]);
+  conferma().click(); await attendi(40);
   const cancellazioni = supa._calls.slice(prima).filter(c => c.op === 'delete').map(c => [c.table, c.filters.map(f => f[1] + '=' + f[2]).join('&')]);
   atteso('× su una pesata rapida', cancellazioni, [['weight_logs', 'user_id=u1&date=2026-09-12']]);
-  win.confirmDeleteBodyLog('log', 'null', '', '2026-09-11');
-  atteso('un id scritto «null» vale come assente', ST.bodyDeleteConfirm.id, null);
-  ST.bodyDeleteConfirm = null;
+  const prima1 = supa._calls.length;
+  win.confirmDeleteBodyLog('log', 'null', '', '2026-09-11'); await attendi(10);
+  conferma().click(); await attendi(40);
+  atteso('un id scritto «null» vale come assente: solo la pesata, per data', supa._calls.slice(prima1).filter(c => c.op === 'delete').map(c => c.table), ['weight_logs']);
   // Cancellazione del 4 settembre: body_logs e pesata rapida insieme
   const prima2 = supa._calls.length;
   const riga4 = tl.find(r => r.date === '2026-09-04' && r.source === 'log');
-  win.confirmDeleteBodyLog('log', riga4.id || '', '', riga4.date);
-  await win.deleteBodyLogConfirmed();
+  win.confirmDeleteBodyLog('log', riga4.id || '', '', riga4.date); await attendi(10);
+  conferma().click(); await attendi(40);
   const canc2 = supa._calls.slice(prima2).filter(c => c.op === 'delete').map(c => c.table);
   atteso('× sul 4 set · body_logs e weight_logs', canc2, ['body_logs', 'weight_logs']);
 

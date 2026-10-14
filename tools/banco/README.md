@@ -70,6 +70,7 @@ node tools/banco/prova_come_stai_parole.js  # Home 160: una parola per ogni live
 node tools/banco/prova_come_stai_adesso.js  # Home 170: «Come stai adesso?» a orari fissi (max 3), energia, stress e riposino in rilevazioni, mai in pausa né in allenamento, nessuna lettura all'avvio, orari nelle Impostazioni
 node tools/banco/prova_energia_body.js  # Home 170 passo 2: tab Energia del Body, linee di energia e stress, mattino di «Come stai oggi» come primo punto, media per momento, sonno e riposini; una lettura solo aprendo il tab
 node tools/banco/prova_impostazioni_livelli.js  # Metodo 220: Impostazioni a livelli, elenco di voci con la riga di come sono impostate, una pagina e un Salva per voce, indietro senza salvare; esami del sangue letti solo in «Salute»
+node tools/banco/prova_ultimi_log.js  # Body 170: «Ultimi log» da Body › Misure alle Impostazioni › Salute, con dettaglio dei check e × col foglio di conferma; nessuna lettura in più
 node tools/banco/prova_prossima_azione.js  # Home 010: «Prossima azione», sette regole per ora e per ciò che è fatto, il pulsante apre seduta, check, pesata o form del pasto
 node tools/banco/prova_da_fare_oggi.js  # Home 060: «Anche da fare oggi» sotto Prossima azione: integratori passati non presi, pesata, pasti delle fasce passate, check; ogni voce apre il suo passo
 node tools/banco/prova_card_nutrition.js  # Home 040: card Nutrition: piatto del piano per il prossimo pranzo o cena con «Registra» già compilato, «Ultimo pasto N h fa»; il piano dalla Home si chiede al massimo una volta al giorno

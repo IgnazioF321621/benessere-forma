@@ -902,14 +902,54 @@ async function saveBodyLog(){
   }
 }
 
+// «Ultimi log»: le ultime 8 registrazioni del corpo (pesate, misure, check), dalla timeline unificata
+// (getUnifiedBodyTimeline → weighInsByDay per il peso, L48). Dal 14 ottobre 2026 (Body 170) non sta più
+// in Body › Misure: è nelle Impostazioni, «Salute ed esami del sangue» (_setUltimiLog). Nessuna lettura
+// in più: i dati sono quelli già in memoria da loadBodyLogs. Tocco su un check = dettaglio, × = elimina.
+function _ultimiLogHTML(){
+  const uTimeline = getUnifiedBodyTimeline();
+  if(!uTimeline.length) return '';
+  return `
+      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
+        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Ultimi log</div>
+        ${uTimeline.slice(0,8).map(l => {
+          const isCheck = l.source === 'check';
+          const rowOpen = isCheck ? ` onclick="openBodyCheckDetail('${l.check_id}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);cursor:pointer;"` : ` style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);"`;
+          return `
+          <div${rowOpen}>
+            <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);display:flex;align-items:center;gap:6px;">
+              ${fmtDate(l.date)}
+              ${isCheck ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
+            </div>
+            <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;align-items:center;">
+              ${(l.weight_kg ?? l.check_weight_kg) ? `<span>${l.weight_kg ?? l.check_weight_kg} kg</span>` : ''}
+              ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
+              ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
+              ${isCheck ? `<span style="color:var(--t3);font-size:13px;">→</span>` : ''}
+              <button onclick="event.stopPropagation();confirmDeleteBodyLog('${isCheck ? 'check' : 'log'}','${l.id || ''}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+}
+
 // ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
 function confirmDeleteBodyLog(kind, id, checkId, date){
   // Body 010 (11 ottobre 2026): una pesata rapida non ha una riga body_logs (id null). Lo schermo scriveva «null» come
   // testo e si provava a cancellare da body_logs con quel valore: il database rifiutava e la pesata restava. Un id vuoto
   // o «null» vale come assente: si cancella solo la pesata, per data.
   const idVero = id && id !== 'null' && id !== 'undefined' ? id : null;
-  ST.bodyDeleteConfirm = { kind, id: idVero, checkId: checkId || null, date };
-  renderBody();
+  // Body 170: la conferma è il foglio dell'app (chiediConferma), così vale anche dalle Impostazioni, dove la
+  // finestrella disegnata dentro il tab Body non si vedeva.
+  const isCheck = kind === 'check';
+  const msg = isCheck
+    ? `Eliminare il check fisico del ${fmtDate(date)}? Verranno rimossi: peso, misure, composizione e le 4 foto associate. L'operazione è definitiva.`
+    : `Eliminare il log peso del ${fmtDate(date)}? L'operazione è definitiva.`;
+  return chiediConferma(msg, { titolo: isCheck ? 'Elimina check fisico' : 'Elimina log peso', ok:'Elimina', pericolo:true }).then(ok => {
+    if(!ok) return false;
+    ST.bodyDeleteConfirm = { kind, id: idVero, checkId: checkId || null, date };
+    return deleteBodyLogConfirmed();
+  });
 }
 
 async function deleteBodyLogConfirmed(){
@@ -944,6 +984,7 @@ async function deleteBodyLogConfirmed(){
       if(error) throw error;
     }
     await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
+    if(typeof _setUltimiLog === 'function') _setUltimiLog();   // Body 170: la lista nelle Impostazioni
     showToast(c.kind === 'log' ? 'Log eliminato' : 'Check fisico eliminato', '✅', 4000);
   } catch(e){
     console.error('[body-delete] error:', e);
@@ -2141,28 +2182,6 @@ function renderBody(){
         </button>
       </div>
 
-      ${uTimeline.length > 0 ? `
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow);">
-        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:10px;">Ultimi log</div>
-        ${uTimeline.slice(0,8).map(l => {
-          const isCheck = l.source === 'check';
-          const rowOpen = isCheck ? ` onclick="openBodyCheckDetail('${l.check_id}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);cursor:pointer;"` : ` style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--s2);"`;
-          return `
-          <div${rowOpen}>
-            <div style="font-size:12px;color:var(--t3);font-family:var(--font-mono);display:flex;align-items:center;gap:6px;">
-              ${fmtDate(l.date)}
-              ${isCheck ? `<span style="font-size:9px;font-family:var(--font-mono);color:#2A7A6F;text-transform:uppercase;letter-spacing:.5px;border:1px solid #2A7A6F;border-radius:3px;padding:1px 4px;">✓ check</span>` : ''}
-            </div>
-            <div style="font-size:12px;font-family:var(--font-mono);color:var(--t1);display:flex;gap:10px;align-items:center;">
-              ${(l.weight_kg ?? l.check_weight_kg) ? `<span>${l.weight_kg ?? l.check_weight_kg} kg</span>` : ''}
-              ${l.waist_cm  ? `<span>${l.waist_cm} cm</span>`  : ''}
-              ${l.bf_pct    ? `<span>BF ${l.bf_pct}%</span>`   : ''}
-              ${isCheck ? `<span style="color:var(--t3);font-size:13px;">→</span>` : ''}
-              <button onclick="event.stopPropagation();confirmDeleteBodyLog('${isCheck ? 'check' : 'log'}','${l.id || ''}','${l.check_id || ''}','${l.date}')" title="Elimina" style="background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--t3);padding:0 2px;">×</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : ''}
     `;
 
   } else if(tab === 'check'){
@@ -2218,28 +2237,7 @@ function renderBody(){
     body = renderBodyEnergia();
   }
 
-  // Mini-modal conferma elimina log Body (pattern info-modal, come Training)
-  let bodyDeleteConfirmHTML = '';
-  if(ST.bodyDeleteConfirm){
-    const c = ST.bodyDeleteConfirm;
-    const isCheck = c.kind === 'check';
-    const title = isCheck ? 'Elimina check fisico' : 'Elimina log peso';
-    const msg = isCheck
-      ? `Eliminare il check fisico del ${fmtDate(c.date)}? Verranno rimossi: peso, misure, composizione e le 4 foto associate. L'operazione è definitiva.`
-      : `Eliminare il log peso del ${fmtDate(c.date)}? L'operazione è definitiva.`;
-    bodyDeleteConfirmHTML = `<div class="info-modal-overlay" style="z-index:1200;" onclick="ST.bodyDeleteConfirm=null;renderBody()">
-      <div class="info-modal" style="max-width:320px;text-align:center;" onclick="event.stopPropagation()">
-        <div style="font-size:15px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">${title}</div>
-        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:18px;">${msg}</div>
-        <div style="display:flex;gap:8px;">
-          <button onclick="ST.bodyDeleteConfirm=null;renderBody();" style="flex:1;padding:10px;background:var(--s2);color:var(--t2);border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
-          <button onclick="deleteBodyLogConfirmed();" style="flex:1;padding:10px;background:#B84C2A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Elimina</button>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + avvisoLettura + body + versionFooter() + bodyDeleteConfirmHTML;
+  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + avvisoLettura + body + versionFooter();
 }
 
 // ─── STEP D.1 (22 mag 2026): Modal pesata "Pesati ora" ───
