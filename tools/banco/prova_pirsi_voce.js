@@ -45,7 +45,7 @@ const conIdentita = sorgenti.filter(f => /Sei Pirsi/.test(leggi(f)));
 atteso('«Sei Pirsi» scritto solo in shared/coach_rules.js', conIdentita, []);
 const conRegistro = sorgenti.filter(f => /REGISTRO \(vale sempre\)/.test(leggi(f)));
 atteso('il registro scritto solo in shared/coach_rules.js', conRegistro, []);
-atteso('chi usa la voce: cue, scheda, nutrition (3), Worker', ['app/pirsi.js', 'app/training_generatore.js', 'app/nutrition.js', 'worker/src/prompts/vision-check-2026-09-13.js'].map(f => (leggi(f).match(/ZTCoachRules\.voce\(/g) || []).length), [1, 1, 3, 1]);
+atteso('chi usa la voce: cue e «Perché?» (Pirsi 120), scheda, nutrition (3), Worker', ['app/pirsi.js', 'app/training_generatore.js', 'app/nutrition.js', 'worker/src/prompts/vision-check-2026-09-13.js'].map(f => (leggi(f).match(/ZTCoachRules\.voce\(/g) || []).length), [2, 1, 3, 1]);
 atteso('nessun prompt dice «40-30-30» (restano solo i pasti di esempio del Piano)', (leggi('app/nutrition.js').match(/40-30-30/g) || []).every((_, i, a) => a.length === 3) && !/Zona \(40-30-30\)/.test(leggi('app/nutrition.js')), true);
 atteso('il prompt dei cue non ha più «Allena con elastici a tubo»', /Allena con elastici/.test(leggi('app/pirsi.js')), false);
 atteso('la Home non dice più «a digiuno»', /Sessione \$\{sess\.name\} a digiuno/.test(leggi('app/home.js')), false);

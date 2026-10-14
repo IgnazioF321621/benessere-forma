@@ -192,7 +192,8 @@ var ZTQuadro = (function(){
     var q = function(label, table, select, filters, order){ return { label: label, table: table, select: select, filters: filters, order: order }; };
     return {
       weightLogs:   q('le pesate', 'weight_logs', 'date, weight_kg', [u, ['gte','date',w5], ['lte','date',we]], ['date','id']),
-      bodyLogs:     q('i log del corpo', 'body_logs', 'date, weight_kg', [u, ['gte','date',w5], ['lte','date',we]], ['date','id']),
+      // Pirsi 080: vita e grasso % dalla bilancia e dal metro (anche dal report Fitdays, Body 150) entrano nel quadro
+      bodyLogs:     q('i log del corpo', 'body_logs', 'date, weight_kg, waist_cm, bf_pct', [u, ['gte','date',w5], ['lte','date',we]], ['date','id']),
       measurements: q('le misure dei check', 'body_measurements', '*', [u], ['created_at','id']),
       checks:       q('i check fisici', 'body_checks', 'id, status, created_at, completed_at', [u], ['created_at','id']),
       meals:        q('i pasti', 'meals', 'date, slot, kcal, protein, carbs, fat', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),
@@ -200,7 +201,8 @@ var ZTQuadro = (function(){
       supps:        q('la libreria integratori', 'supplements', '*', [u], ['sort_order','id']),
       catalog:      q('il catalogo integratori', 'nutrilite_catalog', '*', [], ['nome','codice']),
       sets:         q('le serie', 'training_logs', 'date, session_id, rir_actual', [u, ['gte','date',weekStart], ['lte','date',we]], ['date','id']),
-      workouts:     q('gli allenamenti', 'workouts', 'date, session_type, completed', [u, ['eq','completed',true], ['gte','date',wFrom], ['lte','date',we]], ['date','id']),
+      // Pirsi 080: «com'è andata» la seduta (Training 060, colonna sensazione: migrazione 20261014_060)
+      workouts:     q('gli allenamenti', 'workouts', 'date, session_type, completed, sensazione', [u, ['eq','completed',true], ['gte','date',wFrom], ['lte','date',we]], ['date','id']),
       blood:        q('gli esami', 'blood_tests', 'test_date', [u, ['lte','test_date',we]], ['test_date','id']),
       readings:     q('le letture delle foto', 'body_check_ai', 'check_id, confidence, result, created_at', [u], ['created_at','id']),
     };
@@ -320,6 +322,11 @@ var ZTQuadro = (function(){
         isDeload = info.isScarico;
       }
       var rir = raw.sets.filter(function(s){ return inWeek(s.date) && s.rir_actual != null; }).map(function(s){ return Number(s.rir_actual); });
+      // Com'è andata (Training 060): quante sedute di lavoro la persona ha detto facili, giuste, dure.
+      // Null = nessuna seduta con la risposta, mai zero (come il resto del quadro).
+      var feel = { facile: 0, giusta: 0, dura: 0, n: 0 };
+      questa.filter(function(w){ return isWork(w.session_type) && w.sensazione && feel.hasOwnProperty(w.sensazione); })
+        .forEach(function(w){ feel[w.sensazione]++; feel.n++; });
       training = {
         sessions_planned: planned,
         sessions_done:    lavoro.length,
@@ -333,7 +340,18 @@ var ZTQuadro = (function(){
         injury_days:      infortunio.length,
         injury_active:    infortunio.length > 0 || (!isClosed && !!c.injuryActiveNow),
         pause_days:       pausaGg,
+        feel:             feel.n ? feel : null,
       };
+    }
+
+    // ── Metro e bilancia della settimana (body_logs, anche dal report Fitdays): vita e grasso % medi ──
+    // Servono a Pirsi 080 («peso fermo ma vita in calo»): si confrontano fra settimane come il peso.
+    var metro = null;
+    if(raw.bodyLogs){
+      var righeSett = raw.bodyLogs.filter(function(l){ return inWeek(l.date); });
+      var vite = righeSett.filter(function(l){ return l.waist_cm != null && isFinite(Number(l.waist_cm)); }).map(function(l){ return Number(l.waist_cm); });
+      var grassi = righeSett.filter(function(l){ return l.bf_pct != null && isFinite(Number(l.bf_pct)); }).map(function(l){ return Number(l.bf_pct); });
+      if(vite.length || grassi.length) metro = { waist_avg: r1(mean(vite)), waist_n: vite.length, bf_avg: r1(mean(grassi)), bf_n: grassi.length };
     }
 
     // ── Corpo: ultimo check COMPLETATO fino a fine settimana ──
@@ -369,6 +387,10 @@ var ZTQuadro = (function(){
         }
       }
       body = {
+        waist_avg:         metro ? metro.waist_avg : null,
+        waist_n:           metro ? metro.waist_n : 0,
+        bf_avg:            metro ? metro.bf_avg : null,
+        bf_n:              metro ? metro.bf_n : 0,
         last_check_date:   ultimo ? cl.dayKey(new Date(ultimo.created_at)) : null,
         days_since_check:  ultimo ? daysBetween(new Date(ultimo.created_at).getTime()) : null,
         check_due:         !!rem,
@@ -379,6 +401,8 @@ var ZTQuadro = (function(){
         ai_check_date:     checkLettura ? cl.dayKey(new Date(checkLettura.created_at)) : null,
       };
     }
+
+    if(!body && metro) body = { waist_avg: metro.waist_avg, waist_n: metro.waist_n, bf_avg: metro.bf_avg, bf_n: metro.bf_n, last_check_date: null, days_since_check: null, check_due: false, last_measurements: null, prev_check_date: null, ai_overall: null, ai_confidence: null, ai_check_date: null };
 
     // ── Esami ──
     var blood = null;

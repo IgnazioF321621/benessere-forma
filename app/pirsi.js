@@ -366,10 +366,10 @@ function _cpTargetsFor(kcal, proteinFloor){
   return { target_kcal: x.kcal, target_protein: x.protein, target_carbs: x.carbs, target_fat: x.fat };
 }
 
-const _CP_ORDINE = { weigh_in: 0, logging: 1, kcal: 10, protein: 11, keep: 12, training_volume: 20, deload: 21, check: 30, blood_test: 31 };
+const _CP_ORDINE = { weigh_in: 0, logging: 1, kcal: 10, protein: 11, keep: 12, eat_first: 19, training_volume: 20, deload: 21, check: 30, blood_test: 31 };
 const _CP_AREA = {
   weigh_in: ['Peso', '#5E4A7A'], logging: ['Nutrizione', '#FAC775'], kcal: ['Nutrizione', '#FAC775'], protein: ['Nutrizione', '#FAC775'],
-  keep: ['Settimana', 'var(--acc)'], training_volume: ['Allenamento', '#B5D4F4'], deload: ['Allenamento', '#B5D4F4'],
+  keep: ['Settimana', 'var(--acc)'], eat_first: ['Allenamento', '#B5D4F4'], training_volume: ['Allenamento', '#B5D4F4'], deload: ['Allenamento', '#B5D4F4'],
   check: ['Corpo', '#5E4A7A'], blood_test: ['Esami', '#AFA9EC'],
 };
 const _CP_STATO = { pending: ['In attesa', '#FFF3DC', '#854F0B'], accepted: ['Accettata', '#E6F4F2', '#235F56'], rejected: ['Non ora', '#F0EDE6', '#555047'], expired: ['Scaduta', '#F0EDE6', '#9A9388'] };
@@ -396,6 +396,7 @@ function _cpHomeCardHTML(){
       <div class="cp-title">${esc(p.title)}</div>
       <div class="cp-reason">${esc(p.reason)}</div>
       ${_cpNumsHTML(p)}
+      ${_cpPercheHTML(p)}
       <div class="cp-actions">
         <button class="cp-yes" ${off} onclick="acceptCoachProposal('${esc(p.id)}')">${busy[p.id] === 'yes' ? 'Un momento…' : 'Accetto'}</button>
         <button class="cp-no" ${off} onclick="rejectCoachProposal('${esc(p.id)}')">Non ora</button>
@@ -421,6 +422,71 @@ function _cpHistoryHTML(ws){
       return `<li><div class="cp-hist-top"><span class="cp-hist-title">${esc(p.title)}</span>${_wpPill(lbl, bg, fg)}</div><div class="cp-reason">${esc(p.reason)}</div></li>`;
     }).join('')}</ul>
   </section>`;
+}
+// ── «Perché?» su ogni proposta (Pirsi 120, 14 ottobre 2026) ──
+// Il coach spiega la proposta con i soli numeri già salvati con lei (evidence.numeri e change): racconta,
+// non decide. Parte da un tocco, una chiamata per proposta; la spiegazione resta sul telefono
+// (zt_perche_<utente>) così riaprire la Home non la richiede di nuovo. Nessun nome della persona.
+const PERCHE_MAX = 60;
+function _percheChiave(){ return 'zt_perche_' + (ST.user && ST.user.id || ''); }
+function _percheSalvati(){ try { return JSON.parse(localStorage.getItem(_percheChiave()) || '{}') || {}; } catch(e){ return {}; } }
+function _percheSalva(id, testo){
+  const m = _percheSalvati();
+  m[id] = { t: testo, at: Date.now() };
+  const chiavi = Object.keys(m).sort((a, b) => m[a].at - m[b].at);
+  while(chiavi.length > PERCHE_MAX) delete m[chiavi.shift()];
+  try { localStorage.setItem(_percheChiave(), JSON.stringify(m)); } catch(e) {}
+}
+function _percheDi(id){ const s = (ST.cpPerche || {})[id]; if(s) return s; const m = _percheSalvati()[id]; return m ? m.t : null; }
+// Il testo al coach: la proposta com'è, i numeri com'erano, cosa cambia con «Accetto». Niente altro.
+function _perchePrompt(p){
+  const righe = (p.evidence && Array.isArray(p.evidence.numeri)) ? p.evidence.numeri : [];
+  const ch = p.change || {};
+  const cambi = Object.keys(ch).map(k => {
+    const c = ch[k] || {};
+    const nome = k === 'target_kcal' ? 'calorie al giorno' : k === 'target_protein' ? 'proteine al giorno (g)' : k === 'giorni_allenamento' ? 'allenamenti a settimana' : k === 'cycle_week' ? 'settimana del ciclo' : k;
+    return `${nome}: da ${c.from != null ? c.from : '—'} a ${c.to != null ? c.to : '—'}`;
+  });
+  return `${ZTCoachRules.voce()}
+
+La persona ha toccato «Perché?» sotto una tua proposta del lunedì. Spiegale in 3 o 4 frasi su cosa si basa e cosa succede se accetta.
+Usa SOLO i numeri qui sotto: non inventarne altri, non aggiungere consigli, non cambiare la proposta. Se un numero manca, non lo nominare.
+
+PROPOSTA: ${p.title}
+MOTIVO GIÀ DETTO: ${p.reason}
+NUMERI:
+${righe.length ? righe.map(r => `- ${r.label}: ${r.value}`).join('\n') : '- (nessun numero salvato)'}
+SE ACCETTA: ${cambi.length ? cambi.join('; ') : 'non cambia nessun numero'}
+
+Rispondi solo con la spiegazione, senza titoli e senza elenchi.`;
+}
+function _cpPercheHTML(p){
+  const busy = (ST.cpPercheBusy || {})[p.id];
+  const testo = _percheDi(p.id);
+  const aperto = (ST.cpPercheAperto || {})[p.id];
+  if(testo && aperto) return `<div class="cp-why-text">${esc(testo)}</div>`;
+  return `<button class="cp-why" ${busy ? 'disabled' : ''} onclick="spiegaProposta('${esc(p.id)}')">${busy ? 'Ci penso…' : 'Perché?'}</button>`;
+}
+async function spiegaProposta(id){
+  const p = (ST.coachProposals || []).find(x => x.id === id);
+  if(!p) return;
+  ST.cpPercheAperto = ST.cpPercheAperto || {};
+  if(_percheDi(id)){ ST.cpPercheAperto[id] = true; _cpRerender(); return; }
+  if((ST.cpPercheBusy || {})[id]) return;
+  ST.cpPercheBusy = ST.cpPercheBusy || {}; ST.cpPercheBusy[id] = true; _cpRerender();
+  try {
+    const testo = String(await callAI(_perchePrompt(p), 300) || '').trim();
+    if(!testo) throw _aiError('empty', 'Risposta vuota');
+    ST.cpPerche = ST.cpPerche || {}; ST.cpPerche[id] = testo;
+    _percheSalva(id, testo);
+    ST.cpPercheAperto[id] = true;
+  } catch(e){
+    console.warn('[pirsi] perché:', e && e.aiKind, e && e.message);
+    showToast('Non riesco a spiegartelo ora. ' + aiErrMsg(e && e.aiKind), '⚠️', 5500);
+  } finally {
+    delete ST.cpPercheBusy[id];
+    _cpRerender();
+  }
 }
 function _cpRerender(){ if(ST.page === 'home') renderHome(); }
 function _cpSetBusy(id, v){ ST.cpBusy = ST.cpBusy || {}; if(v) ST.cpBusy[id] = v; else delete ST.cpBusy[id]; _cpRerender(); }
@@ -495,7 +561,7 @@ async function acceptCoachProposal(id){
     } else {
       if(!(await _cpMark(p, 'accepted', false))) return;
       if(p.kind === 'weigh_in') vai = () => openWeighInSheet();
-      else if(p.kind === 'logging') vai = () => showPage('oggi');
+      else if(p.kind === 'logging' || p.kind === 'eat_first') vai = () => showPage('oggi');
       else if(p.kind === 'check' || p.kind === 'blood_test') vai = () => { ST.bodyTab = 'check'; showPage('body'); };
       else showToast('Bene, questa settimana non cambio nulla', '✅', 4000);
     }
