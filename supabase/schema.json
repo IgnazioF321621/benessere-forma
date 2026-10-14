@@ -11,7 +11,7 @@
    "tabella": "app_errors"
   },
   {
-   "righe": 1601,
+   "righe": 1715,
    "tabella": "biblioteca_gif"
   },
   {
@@ -47,7 +47,7 @@
    "tabella": "daily_log"
   },
   {
-   "righe": 725,
+   "righe": 824,
    "tabella": "esercizi_catalog"
   },
   {
@@ -63,11 +63,11 @@
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 961,
+   "righe": 965,
    "tabella": "meal_items"
   },
   {
-   "righe": 348,
+   "righe": 349,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 0,
+   "righe": 2,
    "tabella": "rilevazioni"
   },
   {
@@ -87,7 +87,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 18,
+   "righe": 20,
    "tabella": "segnalazioni"
   },
   {
@@ -103,7 +103,7 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1519,
+   "righe": 1533,
    "tabella": "supplements_log"
   },
   {
@@ -1623,6 +1623,16 @@
     "identita": "",
     "non_nullo": false,
     "pos": 25,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "spiegazione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 26,
     "predefinito": null,
     "tabella": "esercizi_catalog",
     "tipo": "text"

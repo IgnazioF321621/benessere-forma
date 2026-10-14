@@ -2,13 +2,13 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-14 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-35 tabelle, 417 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+35 tabelle, 418 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
 | [`ai_memory`](#ai_memory) — **non usata dal codice** | 0 | 5 | id | — |
 | [`app_errors`](#app_errors) | 8 | 2 | id | — |
-| [`biblioteca_gif`](#biblioteca_gif) | 1601 | 1 | id | slug |
+| [`biblioteca_gif`](#biblioteca_gif) | 1715 | 1 | id | slug |
 | [`blood_tests`](#blood_tests) | 0 | 4 | id | — |
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
 | [`body_check_photos`](#body_check_photos) | 20 | 4 | id | check_id, pose |
@@ -17,21 +17,21 @@
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
 | [`coach_proposals`](#coach_proposals) | 12 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 2 | 4 | id | user_id, date |
-| [`esercizi_catalog`](#esercizi_catalog) | 725 | 1 | codice | — |
+| [`esercizi_catalog`](#esercizi_catalog) | 824 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
 | [`fitdays_letture`](#fitdays_letture) | 1 | 4 | id | user_id, date |
-| [`meal_items`](#meal_items) | 961 | 4 | id | — |
-| [`meals`](#meals) | 348 | 2 | id | — |
+| [`meal_items`](#meal_items) | 965 | 4 | id | — |
+| [`meals`](#meals) | 349 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
-| [`rilevazioni`](#rilevazioni) | 0 | 4 | id | — |
+| [`rilevazioni`](#rilevazioni) | 2 | 4 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
-| [`segnalazioni`](#segnalazioni) | 18 | 3 | id | — |
+| [`segnalazioni`](#segnalazioni) | 20 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 24 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1519 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`supplements_log`](#supplements_log) | 1533 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
 | [`training_logs`](#training_logs) | 1928 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 13 | 4 | id | user_id, week_start |
@@ -297,6 +297,7 @@ Vincoli:
 | `nome_en` | text |  |  |
 | `unilaterale` | text |  |  |
 | `progressione` | text |  |  |
+| `spiegazione` | text |  |  |
 
 Vincoli:
 - `esercizi_catalog_unilaterale_chk` — `CHECK (((unilaterale IS NULL) OR (unilaterale = ANY (ARRAY['si'::text, 'alternato'::text, 'no'::text]))))`
