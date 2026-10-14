@@ -115,7 +115,7 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
 ### Le regole, una riga ciascuna
 | tipo | quando | cambia |
 |---|---|---|
-| `weigh_in` | meno di 2 pesate nella settimana | — |
+| `weigh_in` | meno di 3 pesate nella settimana (lo ricorda); **sotto 2** vale come dati sporchi *(Pirsi 080: titolo e soglia allineati)* | — |
 | `logging` | meno di 4 giorni registrati, o «parziale» | — |
 | `kcal` dimagrire | ritmo < −0,7 → +100 (e `keep` proteine) · −0,3/−0,7 → `keep` · fermo (−0,3/+0,2) 2 sett. con aderenza ≥ 70% → −150 · > +0,2 con aderenza ≥ 70% → −200, altrimenti `logging` | `target_kcal` |
 | `kcal` massa | < +0,2 per 2 sett. con aderenza ≥ 70% → +150 · > +0,5 → −100 | `target_kcal` |
@@ -125,11 +125,13 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
 | `deload` | RIR medio ≤ 0,5 per 2 sett., o infortunio + settimana ≥ 4 | settimana del ciclo → 6 |
 | `check` | settimana 6 senza check nelle ultime 4 sett., o ultimo check ≥ 42 giorni | — |
 | `blood_test` | nessun esame, o l'ultimo ≥ 180 giorni: «parlane con il medico» | — |
-| `keep` | nulla da proporre, o peso nel ritmo, o peso fermo con foto `migliorato` · `alta` | — |
+| `eat_first` | **fatica alta** (sedute dette «dure» ≥ metà, o RIR medio ≤ 0,5) **e calorie medie < 90% dell'obiettivo** con ≥ 4 giorni registrati: «Prima mangia, poi lo scarico»; quella settimana niente `deload` e niente taglio *(Pirsi 080)* | — |
+| `keep` | nulla da proporre, o peso nel ritmo, o peso fermo con foto `migliorato` · `alta`; **oppure il contesto ferma le calorie** *(Pirsi 080, 14 ottobre 2026, le quattro regole scelte da Ignazio)*: settimana di **scarico** → le calorie non si toccano, né giù né su · **infortunio** in corso o nella settimana → nessun taglio · **fatica alta con calorie sotto l'obiettivo** → prima mangia, nessun taglio · **peso fermo ma vita o grasso % in calo** (medie di 2 settimane contro le 2 prima: vita −1 cm, grasso −0,5 punti, o vita al check della settimana −1 cm) → stai ricomponendo, nessun taglio. Un'aggiunta di calorie passa sempre, tranne in scarico | — |
 
 - **Ritmo del peso** = (media settimane 0-1 − media settimane 2-3) / 2, in kg/settimana. Mai una pesata sola
 - **Direzione**: `dimagrimento` → dimagrire · `ipertrofia` → massa · `ricomposizione` → dal peso obiettivo (±1 kg) · il resto → mantenere
-- **Dati sporchi** (`weigh_in` o `logging`) → niente `kcal` né `protein`
+- **Dati sporchi** (`weigh_in` sotto 2 pesate, o `logging`) → niente `kcal` né `protein`
+- **Il contesto arriva dal quadro** *(Pirsi 080)*: `training.feel` = quante sedute di lavoro la persona ha detto facili, giuste, dure (`workouts.sensazione`, Training 060, migrazione `20261014_060`: **va eseguita prima**, la lettura del quadro chiede la colonna); `body.waist_avg` e `body.bf_avg` = vita e grasso % medi della settimana da `body_logs` (metro, bilancia smart, report Fitdays). Un fatto che manca è `null` e non fa scattare niente. Le letture Fitdays complete (`fitdays_letture`) non si leggono: bastano le caselle di `body_logs`. Ogni proposta fermata dal contesto porta in `evidence.dati.contesto` i fatti che l'hanno fermata
 - **Limiti**: `target_kcal` fra 1.500 e 3.500; **una correzione kcal accettata ogni 2 settimane**; `check`, `blood_test`, `training_volume`, `deload` non tornano per 4 settimane dopo una decisione
 - **Massimo 3**, in quest'ordine: qualità dei dati > calorie e proteine > allenamento > corpo ed esami
 
@@ -142,10 +144,11 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
   - `deload`: `applied_at` fa ripartire il conto del ciclo, la settimana in corso è la 6 (`cycleWeekInfo`, `ST.coachDeloads`)
   - `weigh_in` → foglio pesata · `logging` → Nutrition · `check` / `blood_test` → tab Check · `keep` → niente
 - **«Accetto» su calorie o proteine e i pasti già pianificati** *(dal 13 ottobre 2026, Pirsi 060, scelta B della nota)*: la proposta arriva il lunedì alle 6, il piano della settimana è nato la domenica coi numeri vecchi. Dopo l'aggiornamento di profilo e target, `pirsiPastiConNumeriNuovi` in `app/pirsi.js` legge i piani da questa settimana in poi (`weekly_plans`, al massimo 4 righe, la prossima compresa se c'è già): **senza piano** l'avviso resta «Da domani il piano usa X kcal», che lì è vero; **con un piano** chiede «Il piano di questa settimana è nato coi numeri di prima. Rifaccio pranzi e cene con quelli nuovi?» (Rifai i pasti / Lascia così). Col sì, per ogni piano: i pasti di prima si leggono e si tolgono, `_pianoV4GenerateAndInsertMeals` ne scrive 14 nuovi coi target nuovi, la riga del piano prende i target e un annuncio «cambiati» (`_pianoV4ContestoAnnuncio` con base = i numeri vecchi del piano stesso), la cache del Piano si svuota e l'overlay di benvenuto di quel piano si chiude. **Se il coach non risponde, i pasti di prima tornano con gli stessi id** e la riga del piano non si tocca. Col no: «Numeri nuovi salvati. I pasti già pianificati restano com'erano». Lo prova `node tools/banco/prova_pirsi_accetto_pasti.js`
+- **«Perché?»** *(Pirsi 120, 14 ottobre 2026)*: sotto i numeri di ogni proposta in attesa, il tasto chiede al coach di spiegarla in 3-4 frasi **usando solo i numeri salvati con la proposta** (`evidence.numeri`) e cosa cambia con «Accetto» (`change`): `spiegaProposta` in `app/pirsi.js`, prompt `_perchePrompt` con `ZTCoachRules.voce()`, **mai il nome della persona**, una chiamata per tocco. La spiegazione compare sotto i numeri (`.cp-why-text`) e resta sul telefono (`zt_perche_<utente>`, al massimo 60): riaprire la Home non la richiede. Se il coach tace, un avviso e il tasto resta. Il coach racconta, non decide: i numeri restano quelli delle regole. `eat_first` accettata porta a Nutrition, come `logging`
 - **Non ora** → `rejected`. Nel quadro, sotto la settimana, «Cosa ha proposto Pirsi» con lo stato
 - Se il profilo non si aggiorna, la proposta non si segna; se la proposta non si segna, il profilo torna com'era
 
-**Verifica**: `node tools/banco/prova_coach_rules.js` · `prova_pirsi_generazione.js` · `prova_pirsi_card.js` · `TZ=UTC node worker/test/prova_coach_cron.mjs` · dal vivo `verifica_proposte_vivo.js`, `verifica_nutrizione_quadro.js`, `TZ=UTC node worker/test/vivo_coach_cron.mjs` (in prova, niente scritto).
+**Verifica**: `node tools/banco/prova_coach_rules.js` · `prova_pirsi_080.js` (regole incrociate e quadro con feel, vita, grasso) · `prova_pirsi_perche.js` («Perché?») · `prova_pirsi_generazione.js` · `prova_pirsi_card.js` · `TZ=UTC node worker/test/prova_coach_cron.mjs` · dal vivo `verifica_proposte_vivo.js`, `verifica_nutrizione_quadro.js`, `TZ=UTC node worker/test/vivo_coach_cron.mjs` (in prova, niente scritto).
 
 ---
 
