@@ -284,6 +284,13 @@ function disegnaRiga(r){
         ${chips.join('')}
         ${sugg}${guarda}
       </div>
+      <div class="campo">
+        <div class="lab">spiegazione in italiano — 5-10 parole, si legge sotto il nome</div>
+        <input type="text" id="x${r.i}" value="${esc(r.spiegazione ?? r.spiegazione_proposta ?? '')}" oninput="contaParole(${r.i})">
+        <span class="stat" id="w${r.i}">${parole(r.spiegazione ?? r.spiegazione_proposta ?? '')}</span>
+        ${r.spiegazione_proposta && r.spiegazione && r.spiegazione!==r.spiegazione_proposta
+          ? `<div class="sugg"><span class="et">proposta</span><button class="sg" data-v="${esc(r.spiegazione_proposta)}" onclick="usaSpieg(${r.i},this.dataset.v)">${esc(r.spiegazione_proposta)}</button></div>` : ''}
+      </div>
       <div class="campo"><div class="lab">slug</div><div class="val slug" id="s${r.i}">${esc(slugify(valore))||'—'}</div></div>
       ${avviso}${cond}${gem}${daBucket}${fuoriSede}${mai}
       <div class="azioni">
@@ -295,6 +302,11 @@ function disegnaRiga(r){
 }
 
 function riga(i){ return DATI.righe.find(r=>r.i===i); }
+
+function parole(s){ const n = String(s||'').trim().split(/\s+/).filter(Boolean).length;
+  return n ? `${n} parole${n<5||n>10?' · tra 5 e 10':''}` : ''; }
+function contaParole(i){ document.getElementById('w'+i).textContent = parole(document.getElementById('x'+i).value); }
+function usaSpieg(i,v){ const x = document.getElementById('x'+i); x.value = v; contaParole(i); x.focus(); }
 
 function usa(i,v){
   const inp = document.getElementById('n'+i);
@@ -326,13 +338,15 @@ async function conferma(i){
   const nome = inp.value.trim();
   if(!nome){ e.className='esito ko'; e.textContent='nome vuoto: non salvo'; return; }
   e.className='esito'; e.textContent='salvo…';
-  const payload = {zona:zona.value, sha256:r.sha256, nome};
+  const x = document.getElementById('x'+i);
+  const payload = {zona:zona.value, sha256:r.sha256, nome, spiegazione: x ? x.value.trim() : ''};
   inVolo.set(r.sha256, payload);
   try{
     const res = await chiama('/api/decidi', payload);
     inVolo.delete(r.sha256);
     e.className='esito ok'; e.textContent='✓ salvata su disco';
     document.getElementById('r'+i).classList.add('decisa');
+    r.spiegazione = payload.spiegazione || r.spiegazione;
     disco.textContent = `${res.decise} su ${DATI.righe.length} salvate su disco`;
     r.decisione = {quando:'adesso', nome_confermato:nome, origine:'—'};
     DATI.decise = res.decise;

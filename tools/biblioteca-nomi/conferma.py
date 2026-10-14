@@ -53,6 +53,10 @@ BACKUP = BASE / 'backup'
 
 REGISTRO = ESITI / 'registro_decisioni.tsv'
 BOZZE = ESITI / 'bozze.tsv'
+# Mobilita' e stretching (decisione di Ignazio, 14 ottobre 2026): nome inglese breve
+# piu' una riga in italiano di 5-10 parole. La riga ha un registro suo, append-only
+# come quello dei nomi: il registro dei nomi non cambia forma.
+SPIEGAZIONI = ESITI / 'spiegazioni_brevi.tsv'
 MIGRARE = ESITI / 'slug_da_migrare.tsv'
 LOG = ESITI / 'log_rinomine.tsv'
 
@@ -71,6 +75,7 @@ SUGGERIMENTI = BASE / 'suggerimenti_nomi.json'
 COL_REGISTRO = ['quando', 'zona', 'sha256', 'nome_vecchio', 'nome_confermato', 'slug',
                 'stato_binario', 'origine', 'slug_applicabile', 'codice', 'nome_catalogo']
 COL_BOZZE = ['quando', 'zona', 'sha256', 'nome_vecchio', 'testo']
+COL_SPIEGAZIONI = ['quando', 'zona', 'sha256', 'nome_confermato', 'spiegazione']
 COL_MIGRARE = ['quando', 'zona', 'codice', 'nome_catalogo', 'slug_vecchio', 'slug_nuovo',
                'nome_file_nuovo', 'sha256']
 COL_LOG = ['quando', 'zona', 'da', 'a', 'sha256', 'esito', 'dettaglio']
@@ -311,6 +316,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                           ('rinominato', 'gia con quel nome')}
             trad = leggi_traduzioni(dati['zona'])
             sugg = leggi_suggerimenti()
+            spieg = stato_corrente(SPIEGAZIONI)
             for r in dati['righe']:
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')
@@ -320,6 +326,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 v = sugg.get(r['sha256']) or {}
                 r['suggerimenti'] = v.get('suggerimenti') or []
                 r['da_guardare'] = v.get('da_guardare')
+                r['spiegazione_proposta'] = v.get('spiegazione')
+                r['spiegazione'] = (spieg.get(r['sha256']) or {}).get('spiegazione')
             dati['decise'] = sum(1 for r in dati['righe'] if r['decisione'])
             dati['rinominate'] = sum(1 for r in dati['righe'] if r['rinominato'])
             return self._send(dati)
@@ -519,6 +527,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         # La pagina puo' rispedire la stessa conferma (sendBeacon di riserva quando
         # la scheda si chiude prima della risposta). Un doppione identico non
         # aggiunge nulla: lo scarto, ma rispondo ok, perche' il dato E' su disco.
+        # la riga in italiano si salva per prima e da sola: anche quando il nome
+        # e' lo stesso di prima, una riga nuova non deve andare persa
+        spiegazione = nfc(body.get('spiegazione') or '').strip()
+        if spiegazione and (stato_corrente(SPIEGAZIONI).get(r['sha256']) or {}).get('spiegazione') != spiegazione:
+            appendi(SPIEGAZIONI, COL_SPIEGAZIONI, [{
+                'quando': ora(), 'zona': dati['zona'], 'sha256': r['sha256'],
+                'nome_confermato': nome, 'spiegazione': spiegazione}])
+
         ultima = stato_corrente(REGISTRO).get(r['sha256'])
         if ultima and ultima.get('nome_confermato') == nome:
             decise = len([1 for x in dati['righe'] if x['sha256'] in stato_corrente(REGISTRO)])
