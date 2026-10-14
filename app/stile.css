@@ -1030,6 +1030,7 @@ select.inp{cursor:pointer;}
 .set-pagina[hidden],.set-piede[hidden]{display:none;}
 .set-piede{position:sticky;bottom:0;margin:16px -4px 0;padding:12px 4px 4px;background:var(--s1);}
 .set-calorie{margin-bottom:16px;}
+#set-ultimi-log:not(:empty){margin-top:14px;}
 .set-account{padding:12px 14px;background:var(--s2);border-radius:8px;}
 .set-account-etichetta{margin-bottom:4px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
 .set-account-email{font-family:var(--font-sans);font-size:14px;color:var(--t1);user-select:text;-webkit-user-select:text;word-break:break-all;}
