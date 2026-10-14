@@ -317,7 +317,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
             trad = leggi_traduzioni(dati['zona'])
             sugg = leggi_suggerimenti()
             spieg = stato_corrente(SPIEGAZIONI)
+            # L'immagine si cerca col nome che il file ha ADESSO: dopo «Rinomina i file
+            # sul Mac» il nome della preparazione non c'e' piu' e la GIF spariva dalla
+            # pagina (14 ottobre 2026, 52 righe su 133). Ultimo nome dal log, se esiste.
+            cartella = GIF_ROOT / dati['zona']
+            sul_disco = ({nfc(x) for x in os.listdir(cartella) if x.lower().endswith('.gif')}
+                         if cartella.is_dir() else set())
+            ultimo_nome = {x['sha256']: x['a'] for x in leggi_tsv(LOG)
+                           if x.get('esito') in ('rinominato', 'gia con quel nome') and x.get('sha256')}
             for r in dati['righe']:
+                ora_nome = ultimo_nome.get(r['sha256'])
+                if nfc(r['file']) not in sul_disco and ora_nome and nfc(ora_nome) in sul_disco:
+                    r['file'] = nfc(ora_nome)
                 r['decisione'] = decise.get(r['sha256'])
                 r['bozza'] = (bozze.get(r['sha256']) or {}).get('testo')
                 r['rinominato'] = r['sha256'] in rinominati
