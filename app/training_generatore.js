@@ -18,94 +18,75 @@ const ACTIVATION_BLOCK = [
   { name:'Vacuum addominale',               duration:'2 min', seconds:120, gif_slug:'vacuum-addominale' },
   { name:'Cat-Cow + rotazione toracica',    duration:'1 min', seconds:60,  codice:'EX029' },
 ];
+// Dal 14 ottobre 2026 (Training 400, richiesta di Ignazio) qui restano solo le vecchie foto di esecuzione
+// (Wger), ripiego quando un esercizio storico non ha la GIF: l'immagine dei muscoli non c'è più, la GIF
+// i muscoli li mostra già.
 const EXERCISE_MEDIA = {
   // ── UPPER A ──
   'Trazioni': {
-    muscleImg: 'assets/exercises/trazioni-sbarra-muscoli.png',
     executionImg: 'assets/exercises/trazioni-sbarra-esecuzione.png'
   },
   'Chest press in piedi con elastico': {
-    // FALLBACK: file 'chest-press-in-piedi-muscoli.png' non disponibile;
-    // riuso 'chest-press-orizzontale-muscoli.png' (stessi muscoli target).
-    muscleImg: 'assets/exercises/chest-press-orizzontale-muscoli.png',
     executionImg: null  // immagine esecuzione non trovata su Wger
   },
   'Shoulder press in piedi con elastico': {
-    muscleImg: 'assets/exercises/shoulder-press-in-piedi-muscoli.png',
     executionImg: 'assets/exercises/shoulder-press-in-piedi-esecuzione.png'
   },
   'Row in piedi con elastico': {
-    muscleImg: 'assets/exercises/row-in-piedi-muscoli.png',
     executionImg: null  // immagine esecuzione non trovata su Wger
   },
   'Face pull con elastico': {
-    muscleImg: 'assets/exercises/face-pull-muscoli.png',
     executionImg: null  // immagine esecuzione non trovata su Wger
   },
 
   // ── UPPER B ──
   'Inverted row con elastico': {
-    muscleImg: 'assets/exercises/inverted-row-elastico-muscoli.png',
     executionImg: null
   },
   'Chest press inclinata su panca': {
-    muscleImg: 'assets/exercises/chest-press-inclinata-muscoli.png',
     executionImg: ['assets/exercises/chest-press-inclinata-esecuzione-1.png','assets/exercises/chest-press-inclinata-esecuzione-2.png']
   },
   'Lateral raise con elastico': {
-    muscleImg: 'assets/exercises/lateral-raise-muscoli.png',
     executionImg: ['assets/exercises/lateral-raise-esecuzione-1.png','assets/exercises/lateral-raise-esecuzione-2.png']
   },
   'Row inclinato in piedi busto 45°': {
-    muscleImg: 'assets/exercises/row-inclinato-muscoli.png',
     executionImg: ['assets/exercises/row-inclinato-esecuzione-1.png','assets/exercises/row-inclinato-esecuzione-2.png']
   },
   'Curl bicipiti con elastico': {
-    muscleImg: 'assets/exercises/curl-bicipiti-muscoli.png',
     executionImg: ['assets/exercises/curl-bicipiti-esecuzione-1.png','assets/exercises/curl-bicipiti-esecuzione-2.png']
   },
   'Tricipiti overhead con elastico': {
-    muscleImg: 'assets/exercises/tricipiti-overhead-muscoli.png',
     executionImg: 'assets/exercises/tricipiti-overhead-esecuzione.png'
   },
 
   // ── LOWER A ──
   'Bulgarian split squat con elastico': {
-    muscleImg: 'assets/exercises/bulgarian-split-squat-muscoli.png',
     executionImg: null  // immagine esecuzione non trovata su Wger
   },
   'Romanian deadlift con elastico': {
-    muscleImg: 'assets/exercises/romanian-deadlift-muscoli.png',
     executionImg: null
   },
   'Hip thrust con elastico': {
-    muscleImg: 'assets/exercises/hip-thrust-muscoli.png',
     executionImg: null
   },
   'Glute bridge isometrico con cavigliera': {
-    muscleImg: 'assets/exercises/glute-bridge-muscoli.png',
     executionImg: null
   },
 
   // ── LOWER B ──
   'Squat con elastico e talloni rialzati': {
-    muscleImg: 'assets/exercises/squat-talloni-rialzati-muscoli.png',
     executionImg: 'assets/exercises/squat-talloni-rialzati-esecuzione.png'
   },
   'Single leg Romanian deadlift con elastico': {
-    muscleImg: 'assets/exercises/single-leg-rdl-muscoli.png',
     executionImg: null
   },
   'Hip thrust con elastico TUT alto': {
-    muscleImg: 'assets/exercises/hip-thrust-muscoli.png',  // riusa stesso muscle map di Hip thrust con elastico
     executionImg: null
   },
   'Leg curl con elastico sulla fitball': {
-    muscleImg: 'assets/exercises/leg-curl-muscoli.png',
     executionImg: 'assets/exercises/leg-curl-esecuzione.png'
   },
   'Calf raise con elastico': {
-    muscleImg: 'assets/exercises/calf-raise-muscoli.png',
     executionImg: 'assets/exercises/calf-raise-esecuzione.png'
   }
 };
@@ -540,74 +521,60 @@ const TRAINING_SESSIONS = {
     exercises:[
       // Blocco 1 — Anche e bacino
       { name:'Hip CARs dx', duration_sec:45, block:'Anche e bacino', side:'dx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['anche','glutei','flessori'],
         execution:['In quadrupedia o appoggio','Solleva ginocchio destro lateralmente','Disegna cerchi ampi e controllati'],
         commonErrors:['Velocità eccessiva','Compensare con il bacino','Range parziale'] },
       { name:'Hip CARs sx', duration_sec:45, block:'Anche e bacino', side:'sx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['anche','glutei','flessori'],
         execution:['In quadrupedia o appoggio','Solleva ginocchio sinistro lateralmente','Disegna cerchi ampi e controllati'],
         commonErrors:['Velocità eccessiva','Compensare con il bacino','Range parziale'] },
       { name:'90/90 hip switch', duration_sec:60, block:'Anche e bacino',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['anche','glutei','adduttori'],
         execution:['Seduto con gambe in 90/90 (una avanti, una di lato)','Alterna ruotando entrambe le ginocchia lato per lato','Mantieni il busto eretto'],
         commonErrors:['Curvare la schiena','Ginocchia che si sollevano','Velocità troppo elevata'] },
       { name:'Affondo basso con rotazione dx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'dx',
-        muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['flessori','glutei','colonna toracica'],
         execution:['Affondo profondo gamba destra avanti','Mano sinistra a terra interna al piede','Ruota braccio destro verso il cielo aprendo il petto'],
         commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
       { name:'Affondo basso con rotazione sx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'sx',
-        muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['flessori','glutei','colonna toracica'],
         execution:['Affondo profondo gamba sinistra avanti','Mano destra a terra interna al piede','Ruota braccio sinistro verso il cielo aprendo il petto'],
         commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
       { name:'Cossack squat alternati', codice:'EX082', duration_sec:60, block:'Anche e bacino',
-        muscleImg:'assets/exercises/squat-talloni-rialzati-muscoli.png',
         muscles:['adduttori','glutei','quadricipiti'],
         execution:['Gambe larghe, mani in preghiera davanti',"Piega una gamba spingendo i glutei indietro, l'altra dritta",'Alterna lato per lato'],
         commonErrors:['Tallone che si solleva sul lato piegato','Schiena curva','Velocità eccessiva'] },
       // Blocco 2 — Glutei e lombari
       { name:'Pigeon pose dx', duration_sec:60, block:'Glutei e lombari', side:'dx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['glutei','piriforme'],
         execution:['Da quadrupedia, porta il ginocchio destro in avanti angolato','Gamba sinistra distesa indietro','Adagia il busto in avanti respirando'],
         commonErrors:['Bacino sbilanciato','Forzare la rotazione','Spalle che salgono'] },
       { name:'Pigeon pose sx', duration_sec:60, block:'Glutei e lombari', side:'sx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['glutei','piriforme'],
         execution:['Da quadrupedia, porta il ginocchio sinistro in avanti angolato','Gamba destra distesa indietro','Adagia il busto in avanti respirando'],
         commonErrors:['Bacino sbilanciato','Forzare la rotazione','Spalle che salgono'] },
       { name:'Figura 4 supino dx', duration_sec:45, block:'Glutei e lombari', side:'dx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['glutei','piriforme'],
         execution:['Supino, ginocchia piegate','Caviglia destra sul ginocchio sinistro','Tira la coscia sinistra verso di te'],
         commonErrors:['Sollevare la spalla destra dal pavimento','Curvare la schiena','Trattenere il respiro'] },
       { name:'Figura 4 supino sx', duration_sec:45, block:'Glutei e lombari', side:'sx',
-        muscleImg:'assets/exercises/hip-thrust-muscoli.png',
         muscles:['glutei','piriforme'],
         execution:['Supino, ginocchia piegate','Caviglia sinistra sul ginocchio destro','Tira la coscia destra verso di te'],
         commonErrors:['Sollevare la spalla sinistra dal pavimento','Curvare la schiena','Trattenere il respiro'] },
       { name:'Knee-to-chest doppia', duration_sec:30, block:'Glutei e lombari',
-        muscleImg:null,
         muscles:['lombari','glutei'],
         execution:['Supino, abbraccia entrambe le ginocchia al petto','Lascia che la lombare si appiattisca','Respira lentamente'],
         commonErrors:['Sollevare la testa','Forzare oltre comfort','Spalle che si bloccano'] },
       // Blocco 3 — Colonna toracica e spalle
       { name:'Apertura toracica supina (candeliere)', duration_sec:60, block:'Colonna toracica e spalle',
-        muscleImg:'assets/exercises/chest-press-orizzontale-muscoli.png',
         muscles:['petto','deltoidi anteriori','colonna toracica'],
         execution:['Sdraiato supino, braccia a 90° a candeliere','Lascia cadere le braccia verso il pavimento','Respira nel petto aperto'],
         commonErrors:['Forzare le braccia oltre il range','Iperestendere la lombare','Trattenere il respiro'] },
       { name:'Thread the needle dx', codice:'EX123', duration_sec:45, block:'Colonna toracica e spalle', side:'dx',
-        muscleImg:'assets/exercises/row-inclinato-muscoli.png',
         muscles:['colonna toracica','scapole','romboidi'],
         execution:['In quadrupedia','Infila il braccio destro sotto al sinistro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
         commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
       { name:'Thread the needle sx', codice:'EX123', duration_sec:45, block:'Colonna toracica e spalle', side:'sx',
-        muscleImg:'assets/exercises/row-inclinato-muscoli.png',
         muscles:['colonna toracica','scapole','romboidi'],
         execution:['In quadrupedia','Infila il braccio sinistro sotto al destro ruotando il busto','Spalla e tempia a terra, respira nella rotazione'],
         commonErrors:['Bacino che si sposta','Forzare con la spinta','Ruotare solo dalla spalla'] },
@@ -615,64 +582,52 @@ const TRAINING_SESSIONS = {
       // «Quadruped thoracic rotation», a quattro zampe, un gesto diverso con la sua GIF. Qui resta la rotazione
       // da seduto, senza GIF finché non se ne trova una (ZT-Catalogo e Gif) e senza riga in italiano.
       { name:'Rotazione toracica seduto dx', duration_sec:30, block:'Colonna toracica e spalle', side:'dx',
-        muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano sinistra sul ginocchio destro, destra dietro la schiena','Ruota dolcemente verso destra'],
         commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
       { name:'Rotazione toracica seduto sx', duration_sec:30, block:'Colonna toracica e spalle', side:'sx',
-        muscleImg:null,
         muscles:['colonna toracica','obliqui'],
         execution:['Seduto a gambe incrociate','Mano destra sul ginocchio sinistro, sinistra dietro la schiena','Ruota dolcemente verso sinistra'],
         commonErrors:['Curvare la schiena','Spingere troppo con le mani','Ruotare con il bacino'] },
       { name:'Scapular pull-ups a vuoto', duration_sec:45, block:'Colonna toracica e spalle',
-        muscleImg:'assets/exercises/trazioni-sbarra-muscoli.png',
         muscles:['scapole','romboidi','trapezio medio'],
         execution:['In piedi, braccia alzate sopra la testa','Tira le scapole giù e indietro come per le trazioni','Tieni 2 sec poi rilascia'],
         commonErrors:['Piegare i gomiti','Spalle che salgono','Compensare con la lombare'] },
       // Blocco 4 — Catena posteriore gambe
       { name:'Stretching femorali seduto', duration_sec:60, block:'Catena posteriore gambe',
-        muscleImg:'assets/exercises/romanian-deadlift-muscoli.png',
         muscles:['femorali'],
         execution:['Seduto, gambe distese davanti',"Inclina il busto in avanti dall'anca",'Allunga le mani verso le punte mantenendo schiena dritta'],
         commonErrors:['Curvare la schiena','Forzare le mani sui piedi','Trattenere il respiro'] },
       { name:'Couch stretch dx', duration_sec:60, block:'Catena posteriore gambe', side:'dx',
-        muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['quadricipiti','psoas'],
         execution:['Ginocchio destro a terra contro un muro o divano','Piede destro contro la parete, gamba sinistra in affondo','Bacino in retroversione, busto eretto'],
         commonErrors:['Iperestendere la lombare','Bacino non in retroversione','Tallone anteriore che si solleva'] },
       { name:'Couch stretch sx', duration_sec:60, block:'Catena posteriore gambe', side:'sx',
-        muscleImg:'assets/exercises/bulgarian-split-squat-muscoli.png',
         muscles:['quadricipiti','psoas'],
         execution:['Ginocchio sinistro a terra contro un muro o divano','Piede sinistro contro la parete, gamba destra in affondo','Bacino in retroversione, busto eretto'],
         commonErrors:['Iperestendere la lombare','Bacino non in retroversione','Tallone anteriore che si solleva'] },
       { name:'Stretching polpaccio gamba dritta dx', duration_sec:30, block:'Catena posteriore gambe', side:'dx',
-        muscleImg:'assets/exercises/calf-raise-muscoli.png',
         muscles:['gastrocnemio'],
         execution:['Affondo gamba destra dietro, ginocchio dritto','Tallone a terra, busto eretto','Spingi anche in avanti per aumentare lo stretch'],
         commonErrors:['Tallone che si solleva','Ginocchio piegato','Compensare con la lombare'] },
       { name:'Stretching polpaccio gamba dritta sx', duration_sec:30, block:'Catena posteriore gambe', side:'sx',
-        muscleImg:'assets/exercises/calf-raise-muscoli.png',
         muscles:['gastrocnemio'],
         execution:['Affondo gamba sinistra dietro, ginocchio dritto','Tallone a terra, busto eretto','Spingi anche in avanti per aumentare lo stretch'],
         commonErrors:['Tallone che si solleva','Ginocchio piegato','Compensare con la lombare'] },
       // Blocco 5 — Integrazione e respiro
       { name:'Cat-Cow', codice:'EX029', duration_sec:60, block:'Integrazione e respiro',
-        muscleImg:null,
         muscles:['colonna vertebrale','addominali'],
         execution:['In quadrupedia','Inspira incurvando la schiena verso il basso (cow)',"Espira inarcando verso l'alto (cat)"],
         commonErrors:['Movimenti a scatti','Range parziale','Tempo di respiro non sincronizzato'] },
       { name:"World's greatest stretch dx", duration_sec:60, block:'Integrazione e respiro', side:'dx',
-        muscleImg:null,
         muscles:['flessori','colonna toracica','femorali'],
         execution:['Affondo gamba destra avanti, mani a terra ai lati del piede','Mano sinistra a terra, ruota braccio destro al cielo','Distendi la gamba destra per stiramento femorali'],
         commonErrors:['Movimento troppo veloce',"Schiena curva durante l'estensione",'Trattenere il respiro'] },
       { name:"World's greatest stretch sx", duration_sec:60, block:'Integrazione e respiro', side:'sx',
-        muscleImg:null,
         muscles:['flessori','colonna toracica','femorali'],
         execution:['Affondo gamba sinistra avanti, mani a terra ai lati del piede','Mano destra a terra, ruota braccio sinistro al cielo','Distendi la gamba sinistra per stiramento femorali'],
         commonErrors:['Movimento troppo veloce',"Schiena curva durante l'estensione",'Trattenere il respiro'] },
       { name:'Savasana con respirazione profonda', duration_sec:60, block:'Integrazione e respiro',
-        muscleImg:null,
         muscles:['tutto il corpo'],
         execution:["Supino, braccia ai lati, palmi rivolti verso l'alto",'Respira profondamente nel diaframma','Rilassa ogni parte del corpo, dalle dita dei piedi alla testa'],
         commonErrors:['Tensioni residue alle spalle o mascella','Mente troppo attiva','Tempo troppo breve per rilassarsi'] }

@@ -4666,19 +4666,10 @@ function renderTraining(){
     const fallbackExec = gifSrc ? null : ai.executionImg;
     const fallbackIsArray = Array.isArray(fallbackExec) && fallbackExec.length > 0;
     const fallbackIsString = typeof fallbackExec === 'string' && fallbackExec;
-    const hasMuscle = !!ai.muscleImg;
 
-    // Cella destra (priorità: GIF > skeleton > PNG single > nulla).
-    // Il fallback array multi-frame Wger usa un layout dedicato sotto.
-    let rightCellHtml = '';
-    if (gifSrc) {
-      rightCellHtml = `<img src="${gifSrc}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>`;
-    } else if (execLoading) {
-      rightCellHtml = `<div class="ex-media-img ex-media-skeleton" aria-label="Caricamento esecuzione"></div>`;
-    } else if (fallbackIsString) {
-      rightCellHtml = `<img src="${fallbackExec}" alt="Esecuzione" class="ex-media-img" onerror="this.style.display='none'"/>`;
-    }
-
+    // Training 400 (14 ottobre 2026, Ignazio): niente più immagine dei muscoli accanto alla GIF, che i muscoli
+    // li mostra già; la GIF prende tutta la larghezza. Priorità: GIF > attesa > vecchia foto di esecuzione >
+    // riquadro «Immagine non ancora disponibile» (scelta di Ignazio: mai un buco).
     let mediaHtml = '';
     if (!gifSrc && !execLoading && fallbackIsArray) {
       const FRAME_LABELS = ['1. Posizione iniziale','2. Posizione finale','3. Variante'];
@@ -4688,15 +4679,15 @@ function renderTraining(){
           <img src="${src}" alt="Esecuzione frame ${i+1}" class="ex-media-img" onerror="this.style.display='none'"/>
         </div>
       `).join('');
-      mediaHtml = `
-        ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" style="margin-bottom:12px;" onerror="this.style.display='none'"/>` : ''}
-        <div style="display:flex;flex-direction:row;gap:8px;margin-bottom:16px;">${cells}</div>`;
-    } else if (hasMuscle || rightCellHtml) {
-      const onlyOne = !hasMuscle || !rightCellHtml; // true se solo una delle due celle
-      mediaHtml = `<div class="ex-media-grid${onlyOne?' single':''}">
-        ${hasMuscle ? `<img src="${ai.muscleImg}" alt="Muscoli coinvolti" class="ex-media-img" onerror="this.style.display='none'"/>` : ''}
-        ${rightCellHtml}
-      </div>`;
+      mediaHtml = `<div style="display:flex;flex-direction:row;gap:8px;margin-bottom:16px;">${cells}</div>`;
+    } else if (gifSrc) {
+      mediaHtml = `<img src="${gifSrc}" alt="Esecuzione ${esc(ai.exName)}" class="ex-media-gif" onerror="this.outerHTML='<div class=&quot;ex-media-gif ex-media-vuoto&quot;>Immagine non ancora disponibile</div>'"/>`;
+    } else if (execLoading) {
+      mediaHtml = `<div class="ex-media-gif ex-media-skeleton" aria-label="Caricamento esecuzione"></div>`;
+    } else if (fallbackIsString) {
+      mediaHtml = `<img src="${fallbackExec}" alt="Esecuzione ${esc(ai.exName)}" class="ex-media-gif" onerror="this.outerHTML='<div class=&quot;ex-media-gif ex-media-vuoto&quot;>Immagine non ancora disponibile</div>'"/>`;
+    } else {
+      mediaHtml = `<div class="ex-media-gif ex-media-vuoto">Immagine non ancora disponibile</div>`;
     }
 
     // Banner surrogato — solo quando la GIF Worker e' in pagina E e' marcata surrogata
@@ -5237,11 +5228,6 @@ async function openExerciseAI(exName, sessionId) {
   const sess = getTrainingSession(sessionId);
   const ex = findExercise(exName, sessionId);
   const media = EXERCISE_MEDIA[exName] || {};
-  // Priorità: ex.muscleImg (esplicito su esercizi recovery G3/G6, può essere null intenzionale)
-  // Fallback: EXERCISE_MEDIA[exName].muscleImg (esercizi training Upper/Lower legacy senza campo)
-  const muscleImgResolved = (ex && Object.prototype.hasOwnProperty.call(ex, 'muscleImg'))
-    ? ex.muscleImg  // può essere stringa path OPPURE null esplicito (no fallback)
-    : (media.muscleImg || null);
   // Stato base (loading): mostra subito tutti i campi statici, AI + media in caricamento
   const baseAi = {
     exName,
@@ -5258,7 +5244,6 @@ async function openExerciseAI(exName, sessionId) {
     commonErrors: ex?.commonErrors || [],
     muscles: ex?.muscles || [],
     alert: ex?.alert || null,
-    muscleImg: muscleImgResolved,
     executionImg: media.executionImg || null,  // fallback Wger PNG
     // ── GIF esecuzione da Worker (fetch parallelo) ──
     executionGif: null,

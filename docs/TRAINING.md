@@ -153,6 +153,10 @@ A fine blocco la scheda nuova **non si rigenera da zero**: nasce come **anteprim
 
 Lo prova `node tools/banco/prova_blocco_nuovo.js`.
 
+### La scheda dell'esercizio: solo la GIF (Training 400, 14 ottobre 2026)
+
+- **Niente più immagine dei muscoli accanto alla GIF** *(richiesta di Ignazio: la GIF i muscoli li mostra già in rosso)*: `muscleImg` non esiste più, né in `EXERCISE_MEDIA` né nelle sedute scritte nell'app (Recovery Day). Nella scheda (`openExerciseAI`) la GIF prende tutta la larghezza (`.ex-media-gif`). Ordine: GIF › riquadro che si carica › vecchia foto di esecuzione Wger (solo esercizi storici) › riquadro **«Immagine non ancora disponibile»** della stessa misura (scelta di Ignazio: mai un buco; anche se la GIF non si carica). Il foglio del recupero e la schermata di esecuzione mostravano già solo la GIF; il riscaldamento e l'anteprima del Programma non hanno immagini. Lo prova `node tools/banco/prova_gif_grande_400.js`
+
 ### Mobilità e stretching nell'app (Training 390, 14 ottobre 2026)
 
 - **La riga in italiano sotto il nome**: per Mobilità e stretching il nome è inglese e breve (eccezione scritta in NOMENCLATURA), sotto c'è la colonna `spiegazione` del catalogo, 5-10 parole. Viaggia nel jsonb del riscaldamento (`_trainGenMapWarmupExercise`), `loadActiveScheda` la riallinea dal catalogo come i testi e la tiene per codice in `ST.catalogInfoByCodice` per gli esercizi scritti nell'app (Recovery Day). Si legge solo con `spiegazioneEsercizio(ex)` e si disegna con `_rigaSpiegazione`: lista e riquadro del riscaldamento, scheda «come si esegue» del riscaldamento, lista e riquadro del Recovery Day. Nessuna migrazione: la colonna c'è dal 14 ottobre (`20261014_010`)
