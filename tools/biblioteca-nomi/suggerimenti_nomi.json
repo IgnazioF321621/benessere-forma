@@ -13,7 +13,8 @@
     "Retrazione addominale sdraiato"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Addominali e Core (decidiamo insieme). Proposta nuova (nome inglese breve + spiegazione): clicca il primo suggerimento.",
-   "spiegazione": "Supino, ginocchia piegate, pancia risucchiata dentro"
+   "spiegazione": "Supino, ginocchia piegate, pancia risucchiata dentro",
+   "gruppo": "2 · Da spostare · Addominali e Core"
   },
   "b931ce8e6c0d4c9a7d07190bad00628ba4bb2de9403b982df51b7b64c1ba8b0f": {
    "da": "allungamento-inverso-assistito-petto-e-spalla",
@@ -23,7 +24,8 @@
     "Allungamento petto e spalle inverso assistito"
    ],
    "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». DOPPIONE di «Allungamento inverso petto-spalle mani appoggiate» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Accosciato, braccia distese su un rialzo, petto giù"
+   "spiegazione": "Accosciato, braccia distese su un rialzo, petto giù",
+   "gruppo": "1 · Doppioni · Allungamento inverso petto-spalle mani appoggiate ⇄ Deep squat shoulder stretch"
   },
   "4371d6233723c523da3c0508d20fe7e2b12eb09d560d50292f21fb9a33f25934": {
    "da": "alternating shoulder flexion (o alternating front arm raises)",
@@ -103,7 +105,8 @@
     "Extrarotazione al cavo in piedi a 90 gradi"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "In piedi, gomito alto, avambraccio che ruota verso l'alto"
+   "spiegazione": "In piedi, gomito alto, avambraccio che ruota verso l'alto",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "f6d4c78da5a11842ebdeedf6edfdc9ca87c0ad847dd6653c598a084fb8e9b392": {
    "da": "cable standing 90-degree shoulder internal rotation",
@@ -113,7 +116,8 @@
     "Intrarotazione al cavo in piedi a 90 gradi"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "In piedi, gomito alto, avambraccio che ruota in avanti"
+   "spiegazione": "In piedi, gomito alto, avambraccio che ruota in avanti",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "a2552ce3692f7f5325661c192308197e1445a34dd43a2f89b30b90d968438fdd": {
    "da": "chest hugs (o arm hug stretch)",
@@ -183,7 +187,8 @@
     "Cow face pose con asciugamano"
    ],
    "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». DOPPIONE di «Cow face pose» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena"
+   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena",
+   "gruppo": "1 · Doppioni · Cow face pose ⇄ Towel shoulder stretch"
   },
   "9b12689108adde507a894d27f4e22bde9b419ab2c7c0e1ba8f0aae807ffc23dd": {
    "da": "cow face pose arms",
@@ -193,7 +198,8 @@
     "Allungamento spalle mani in presa dietro la schiena"
    ],
    "da_guardare": "Nome già giusto: manca solo la spiegazione, premi «Aggiorna la decisione». DOPPIONE di «Towel shoulder stretch» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena"
+   "spiegazione": "Una mano dietro la testa, l'altra dietro la schiena",
+   "gruppo": "1 · Doppioni · Cow face pose ⇄ Towel shoulder stretch"
   },
   "2774818a0409e5fee7083bffc8625ea18210178ac413fb6604c4fde1ea556980": {
    "da": "dead hang (o passive pull-up hang)",
@@ -213,7 +219,8 @@
     "Allungamento petto e spalle in accosciata"
    ],
    "da_guardare": "Proposta nuova (nome inglese breve + spiegazione): clicca il primo suggerimento. DOPPIONE di «Deep squat shoulder stretch» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Accosciato, braccia distese su un rialzo, petto giù"
+   "spiegazione": "Accosciato, braccia distese su un rialzo, petto giù",
+   "gruppo": "1 · Doppioni · Allungamento inverso petto-spalle mani appoggiate ⇄ Deep squat shoulder stretch"
   },
   "14d614dc5834a79a43a8fff648657f39ab91cc6138fd56415421e9cb8cb9db8c": {
    "da": "doorway chest stretch (o wall pec stretch)",
@@ -433,7 +440,8 @@
     "Extrarotazione spalla al cavo in ginocchio"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "Un ginocchio a terra, gomito alto, cavo che ruota indietro"
+   "spiegazione": "Un ginocchio a terra, gomito alto, cavo che ruota indietro",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "8029060e35b7efed93fd40b484b68faea9d296f7de9c8cf2ffc9cbcf38f98495": {
    "da": "happy baby pose",
@@ -463,7 +471,8 @@
     "Extrarotazione con manubrio alla panca inclinata"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "Gomito sullo schienale inclinato, manubrio che ruota in alto"
+   "spiegazione": "Gomito sullo schienale inclinato, manubrio che ruota in alto",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "1b1df2e8189675f0439424b7995f5fe9e784e025753a8668b0762506d3114ee5": {
    "da": "kneeling hip flexor stretch",
@@ -573,7 +582,8 @@
     "Extrarotazione d'anca prono con elastico"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Gambe e Glutei (decidiamo insieme). Guarda se la gamba ruota verso l'esterno: se piega e basta, non è una rotazione.",
-   "spiegazione": "Prono, ginocchio piegato, cavo alla caviglia che ruota"
+   "spiegazione": "Prono, ginocchio piegato, cavo alla caviglia che ruota",
+   "gruppo": "2 · Da spostare · Gambe e Glutei"
   },
   "6e4af6b6caf9e97b6f0b5302f0b98667c35b088d6fab21771ee2489ffdee670c": {
    "da": "quadruped wrist extension stretch (o palms-up wrist stretch)",
@@ -593,7 +603,8 @@
     "Sollevamento braccio e gamba opposti in quadrupedia"
    ],
    "da_guardare": "DOPPIONE di «Bird dog» di Addominali e Core: deciso il 14 ottobre, NON entra.",
-   "spiegazione": "A quattro zampe, braccio e gamba opposti distesi"
+   "spiegazione": "A quattro zampe, braccio e gamba opposti distesi",
+   "gruppo": "1 · Doppioni · Bird dog (già nell'app, in Addominali e Core)"
   },
   "f767124d0f8997e3271d055cf996272528802856e6d479b4ae1f26ff25895a04": {
    "da": "quadrupedia : allungamento (variante Child's Pose o Quadruped hold)",
@@ -652,7 +663,8 @@
     "Intrarotazione spalla al cavo da seduto"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "Seduto a terra, gomito al fianco, maniglia verso la pancia"
+   "spiegazione": "Seduto a terra, gomito al fianco, maniglia verso la pancia",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "d0c88a7d24f4a90f8a0afeaf10fd9a776ce3a98ef59c466b82842b73b2f5bdb9": {
    "da": "seated figure 4 stretch (o seated glute stretch)",
@@ -701,7 +713,8 @@
     "Extrarotazione d'anca con elastico da seduto"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Gambe e Glutei (decidiamo insieme). Confronta con «seated resistance band hip internal rotation», la gemella.",
-   "spiegazione": "Seduto, elastico alla caviglia, piede che va verso l'interno"
+   "spiegazione": "Seduto, elastico alla caviglia, piede che va verso l'interno",
+   "gruppo": "2 · Da spostare · Gambe e Glutei"
   },
   "e1d76a90a62c0b132181d310bc6a591fe92e95d2fdcfdd6f7a3126cb6a4e929f": {
    "da": "seated resistance band hip internal rotation",
@@ -711,7 +724,8 @@
     "Intrarotazione d'anca con elastico da seduto"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Gambe e Glutei (decidiamo insieme). Confronta con «seated resistance band hip external rotation», la gemella.",
-   "spiegazione": "Seduto, elastico alla caviglia, piede che va verso l'esterno"
+   "spiegazione": "Seduto, elastico alla caviglia, piede che va verso l'esterno",
+   "gruppo": "2 · Da spostare · Gambe e Glutei"
   },
   "07ddc393f6b99c88cc6aba6c7e7fa8e502cf1e7fa82d48b23a191307cb2d8d31": {
    "da": "seated scapular retraction",
@@ -769,7 +783,8 @@
     "Alzata per deltoide posteriore su un fianco con manubrio"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per il deltoide posteriore, il gruppo più povero del catalogo: forse va in Spalle e Cuffia.",
-   "spiegazione": "Sul fianco, manubrio che sale verso il soffitto"
+   "spiegazione": "Sul fianco, manubrio che sale verso il soffitto",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "8db96235f6744c3b4d9d5f97fa04639a5aeb9a79bede07555093daaa8ee1e032": {
    "da": "side-lying dumbbell shoulder external rotation",
@@ -779,7 +794,8 @@
     "Extrarotazione con manubrio su un fianco"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). È un esercizio di FORZA per la cuffia: forse va in Spalle e Cuffia.",
-   "spiegazione": "Sul fianco, gomito al fianco, manubrio che ruota in alto"
+   "spiegazione": "Sul fianco, gomito al fianco, manubrio che ruota in alto",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "de01da6793fd300a7559b9e4913169c1f0fe5748b7860df355a9eb34436f844d": {
    "da": "side-lying thoracic rotation (o open book stretch)",
@@ -828,7 +844,8 @@
     "Extrarotazione di spalla al cavo"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). IDENTICA alla GIF di EX101 «Extrarotazione cavo», già nell'app: non entra.",
-   "spiegazione": "In piedi, gomito al fianco, maniglia che va in fuori"
+   "spiegazione": "In piedi, gomito al fianco, maniglia che va in fuori",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "a31bd9178027300532d9448b650803f788e75dad5993f710976e95e1170bcac1": {
    "da": "standing cable shoulder internal rotation",
@@ -838,7 +855,8 @@
     "Intrarotazione al cavo in piedi"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). Quasi identica alla GIF di EX416 «Intrarotazione cavo», già nell'app: probabilmente non entra.",
-   "spiegazione": "In piedi, gomito al fianco, maniglia verso la pancia"
+   "spiegazione": "In piedi, gomito al fianco, maniglia verso la pancia",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "d510d24562d808c711660d61d1f597284b678aab6036e9138bec7d8d9e38773a": {
    "da": "standing cross toe touch (o standing diagonal toe touch stretch)",
@@ -848,7 +866,8 @@
     "Toccare le dita dei piedi incrociato in piedi"
    ],
    "da_guardare": "DOPPIONE di «tocco-delle-dita-in-piedi» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi"
+   "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
+   "gruppo": "1 · Doppioni · standing cross toe touch (o standing diagonal toe touch stretch) ⇄ tocco-delle-dita-in-piedi"
   },
   "839b45215540666c17b15aef8cc4e1d56ab2a9ff86591dcfea3c02a85e9d4323": {
    "da": "standing forward bend (o Uttanasana)",
@@ -906,7 +925,8 @@
     "Extrarotazione con elastico in piedi"
    ],
    "spiegazione": "Gomiti al fianco, elastico tra le mani che si allarga",
-   "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). "
+   "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Spalle e Cuffia (decidiamo insieme). ",
+   "gruppo": "2 · Da spostare · Spalle e Cuffia"
   },
   "2184bf12929f8f75a2dc9edbc065ea1b77feb8f22a0f9847d8b8ae35b699d07e": {
    "da": "standing rhomboid stretch",
@@ -963,7 +983,8 @@
     "Sollevamenti delle punte in piedi"
    ],
    "spiegazione": "In piedi, punte dei piedi che si sollevano",
-   "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Polpacci (decidiamo insieme). "
+   "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Polpacci (decidiamo insieme). ",
+   "gruppo": "2 · Da spostare · Polpacci"
   },
   "ab15b6f3666c7e6539bf69149adf465e03ee000d992b04365cf6bcec847a51a7": {
    "da": "standing torso rotation (o standing trunk rotation)",
@@ -1052,7 +1073,8 @@
     "Allungamento lombari superman hold"
    ],
    "da_guardare": "⏸ ASPETTA, non confermare: forse va spostata in Schiena e Trapezio (decidiamo insieme). Molto simile alla GIF di EX448 «Superman», già nell'app: controlla se è la stessa.",
-   "spiegazione": "Prono, braccia e gambe sollevate da terra"
+   "spiegazione": "Prono, braccia e gambe sollevate da terra",
+   "gruppo": "2 · Da spostare · Schiena e Trapezio"
   },
   "dff81c84a6cd7214bda7f72c039982cd1e06cb65814293c4ed931cd5f8f36689": {
    "da": "wall calf stretch (o forearms-to-wall calf stretch)",
@@ -1129,7 +1151,8 @@
     "Allungamento polpaccio e ischiocrurali una gamba seduto"
    ],
    "da_guardare": "Proposta nuova (nome inglese breve + spiegazione): clicca il primo suggerimento. DOPPIONE di «Seated single-leg toe reach» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Seduto, una gamba tesa, mano alla punta del piede"
+   "spiegazione": "Seduto, una gamba tesa, mano alla punta del piede",
+   "gruppo": "1 · Doppioni · Seated single-leg calf and hamstring stretch ⇄ Seated single-leg toe reach"
   },
   "17d5ad33798e0700449453d3b3024b9269ecd2eedd195cecefca066368d2bf87": {
    "da": "seated calf stretch (o seated dorsiflexion hold)",
@@ -1137,7 +1160,8 @@
     "Seated single-leg toe reach"
    ],
    "da_guardare": "Proposta nuova (nome inglese breve + spiegazione): clicca il primo suggerimento. DOPPIONE di «Seated single-leg calf and hamstring stretch» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Seduto, una gamba tesa, mano alla punta del piede"
+   "spiegazione": "Seduto, una gamba tesa, mano alla punta del piede",
+   "gruppo": "1 · Doppioni · Seated single-leg calf and hamstring stretch ⇄ Seated single-leg toe reach"
   },
   "4f193a087be555629676a2c9cd96107531b5319e7e14f17fe4a0b62932872699": {
    "da": "runner's calf stretch (o downward dog calf variation)",
@@ -1146,7 +1170,8 @@
     "Allungamento polpaccio mani a terra"
    ],
    "da_guardare": "DOPPIONE di «Runner's calf stretch» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Mani a terra, gamba dietro tesa, tallone giù"
+   "spiegazione": "Mani a terra, gamba dietro tesa, tallone giù",
+   "gruppo": "1 · Doppioni · Runner's calf stretch ⇄ runner's calf stretch (o downward dog calf variation)"
   },
   "45839f9a1dfc920868bcf085e6c1a7b8f31b22bb9d1326070fd5653d16eb52f9": {
    "da": "runner's calf stretch (o downward dog variation)",
@@ -1154,7 +1179,8 @@
     "Runner's calf stretch"
    ],
    "da_guardare": "Proposta nuova (nome inglese breve + spiegazione): clicca il primo suggerimento. DOPPIONE di «runner's calf stretch (o downward dog calf variation)» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Mani a terra, gamba dietro tesa, tallone giù"
+   "spiegazione": "Mani a terra, gamba dietro tesa, tallone giù",
+   "gruppo": "1 · Doppioni · Runner's calf stretch ⇄ runner's calf stretch (o downward dog calf variation)"
   },
   "f5e84c0081908b17811b299dca5d016ad4dfbb5f8d4d8db743839a2ec24757eb": {
    "da": "sphinx pose (o half frog pose : seal stretch)",
@@ -1289,7 +1315,8 @@
     "Tocco punte braccia in alto"
    ],
    "da_guardare": "DOPPIONE di «standing cross toe touch (o standing diagonal toe touch stretch)» (stessa animazione, misurata): ne entra una sola, decidiamo quale.",
-   "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi"
+   "spiegazione": "Braccia in alto, poi busto giù a toccare i piedi",
+   "gruppo": "1 · Doppioni · standing cross toe touch (o standing diagonal toe touch stretch) ⇄ tocco-delle-dita-in-piedi"
   }
  },
  "aggiornato": "2026-10-14: proposte dopo aver guardato le GIF (ZT-Catalogo e Gif)",

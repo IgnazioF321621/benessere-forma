@@ -57,6 +57,7 @@ BOZZE = ESITI / 'bozze.tsv'
 # piu' una riga in italiano di 5-10 parole. La riga ha un registro suo, append-only
 # come quello dei nomi: il registro dei nomi non cambia forma.
 SPIEGAZIONI = ESITI / 'spiegazioni_brevi.tsv'
+CRITERIO_DAL = '2026-10-14'   # nome inglese breve + spiegazione: da qui una decisione e' definitiva
 MIGRARE = ESITI / 'slug_da_migrare.tsv'
 LOG = ESITI / 'log_rinomine.tsv'
 
@@ -339,6 +340,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 r['da_guardare'] = v.get('da_guardare')
                 r['spiegazione_proposta'] = v.get('spiegazione')
                 r['spiegazione'] = (spieg.get(r['sha256']) or {}).get('spiegazione')
+                r['gruppo'] = v.get('gruppo')
+                # Decisa col criterio nuovo (dal 14 ottobre 2026): niente piu' suggerimenti,
+                # restano solo le note che chiedono ancora una scelta (doppione, da spostare)
+                if r['decisione'] and r['decisione'].get('quando', '') >= CRITERIO_DAL:
+                    r['suggerimenti'] = []
+                    g = re.sub(r'(Proposta nuova|Nome già giusto)[^.]*\.\s*', '', r['da_guardare'] or '')
+                    r['da_guardare'] = g.strip() or None
+            # doppioni uno accanto all'altro, poi le GIF da spostare per zona, poi il resto
+            dati['righe'].sort(key=lambda r: (r.get('gruppo') or '9', nfc(r['file']).lower()))
             dati['decise'] = sum(1 for r in dati['righe'] if r['decisione'])
             dati['rinominate'] = sum(1 for r in dati['righe'] if r['rinominato'])
             return self._send(dati)

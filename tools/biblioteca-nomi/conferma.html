@@ -89,6 +89,7 @@
   .esito{font-size:12.5px;font-family:ui-monospace,monospace}
   .ok{color:var(--evergreen)} .ko{color:var(--over)}
   .avviso{font-size:12.5px;color:var(--over);margin-top:8px}
+  .gruppo{display:inline-block;font-size:12.5px;font-weight:700;color:#fff;background:var(--over);border-radius:6px;padding:3px 9px;margin-bottom:8px}
   .nota{font-size:12.5px;color:var(--muted);margin-top:6px}
 
   details{margin-top:26px;border:1px solid var(--line);border-radius:12px;background:var(--card);
@@ -260,6 +261,7 @@ function disegnaRiga(r){
      degli oggetti che stanno solo nel bucket, scaricati e verificati per impronta. */
   const src = r.src || `/gif/${encodeURIComponent(r.cartella)}/${encodeURIComponent(r.file)}`;
   const pop = r.popolazione ? `<span class="badge b-pop">${esc(r.popolazione)}</span> ` : '';
+  const gruppo = r.gruppo ? `<div class="gruppo">${esc(r.gruppo.replace(/^\d · /,''))}</div>` : '';
   const daBucket = r.fonte_immagine === 'bucket'
     ? `<div class="avviso">Nessun file sul Mac: immagine scaricata dal bucket (${esc((r.storage_paths||[])[0]||'')}). Si rinomina in migrazione, non sul disco.</div>` : '';
   const fuoriSede = r.popolazione === 'salti'
@@ -271,6 +273,7 @@ function disegnaRiga(r){
   <div class="riga ${r.decisione?'decisa':''}" id="r${r.i}">
     <img class="gif" loading="lazy" src="${src}" alt="">
     <div>
+      ${gruppo}
       <div class="campo">
         ${pop}<span class="badge b-${r.stato_binario}">${r.stato_binario}</span>
         ${cat?`<span class="stat"> ${esc(cat.codice)}</span>`:''}
