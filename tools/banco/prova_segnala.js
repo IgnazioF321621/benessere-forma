@@ -219,7 +219,7 @@ async function nuovo(conSessione) {
   const soloTesto = { files:[], items:[{ kind:'string', type:'text/plain' }], getData:() => 'ciao' };
   const zona = () => a.foglio().querySelector('#sg-incolla');
   a.win.foglioSegnala(); await fotogramma();
-  atteso('incolla · c\'è la zona «oppure tieni premuto qui e scegli Incolla», modificabile, vuota', [!!zona(), zona().getAttribute('contenteditable'), zona().dataset.vuoto, zona().textContent, zona().hidden], [true, 'true', 'oppure tieni premuto qui e scegli Incolla', '', false]);
+  atteso('incolla · c\'è la zona «oppure tocca qui e scegli Incolla», modificabile, vuota, scritta a 16 px (sotto, Safari dell\'iPhone ingrandisce la pagina)', [!!zona(), zona().getAttribute('contenteditable'), zona().dataset.vuoto, zona().textContent, zona().hidden, /\.sg-incolla\{[^}]*font-size:16px/.test(require('fs').readFileSync(path.join(REPO, 'app', 'stile.css'), 'utf8'))], [true, 'true', 'oppure tocca qui e scegli Incolla', '', false, true]);
   const r0 = riduzioni;
   atteso('incolla del solo testo nel campo · niente allegato, il testo entra come sempre', [await incolla(a.foglio().querySelector('#sg-testo'), soloTesto), riduzioni - r0, anteprima().hidden], [false, 0, true]);
   atteso('incolla di un PDF · ignorato, «Qui si allega solo un\'immagine»', [await incolla(zona(), appunti(new a.win.File(['x'], 'doc.pdf', { type:'application/pdf' }))), riduzioni - r0, a.toast(), anteprima().hidden], [true, 0, '🖼️ Qui si allega solo un\'immagine', true]);
