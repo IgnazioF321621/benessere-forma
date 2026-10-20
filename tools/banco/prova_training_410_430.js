@@ -154,6 +154,33 @@ async function nuovo(){
     atteso('EX120 · le due righe dx/sx leggono il testo del catalogo', [rec.length, rec.every(e => (e.execution || []).some(x => /Ruota il busto verso la gamba avanti/.test(x)))], [2, true]);
     atteso('EX120 · niente più «mano a terra» né il nome cambiato', [/a terra interna al piede|Mano (destra|sinistra) a terra/.test(tutto), rec.map(e => e.name)], [false, ['Affondo basso con rotazione dx', 'Affondo basso con rotazione sx']]);
   }
+  // 420 · la traccia del recupero: un <audio> solo, coi tic e il bip dentro; mentre suona il tick tace
+  for(const parte of [true, false]){
+    const a = await nuovo();
+    const fatti = [];
+    a.win.Audio = class { constructor(){ this.src = ''; this.paused = true; this.ended = false; this._l = {}; }
+      addEventListener(e, f){ this._l[e] = f; }
+      play(){ fatti.push('play'); this.paused = false; return parte ? Promise.resolve() : Promise.reject(new Error('NotAllowedError')); }
+      pause(){ fatti.push('pause'); this.paused = true; } };
+    a.win.URL.createObjectURL = () => 'blob:traccia'; a.win.URL.revokeObjectURL = () => {};   // jsdom non li ha
+    const conta = (nome) => { let n = 0; const orig = a.win[nome]; a.win[nome] = () => { n++; }; return () => { a.win[nome] = orig; return n; }; };
+    const tic = conta('playPrepBeep'), stop = conta('playStopBeep');
+    await a.salva('Piegamenti diamante', 1, 6, 2, 0);
+    const cd = a.ST.trainCountdown;
+    atteso(`420 · ${parte ? 'la traccia parte' : 'la traccia rifiutata'}: cd.traccia = ${parte}`, [!!cd, cd && !!cd.traccia, fatti.includes('play')], [true, parte, true]);
+    cd.endTime = a.win.Date.now() + 4500; a.win.tickCountdown();
+    cd.endTime = a.win.Date.now() - 100; a.win.tickCountdown();
+    atteso(`420 · ${parte ? 'con la traccia il tick non suona tic né bip' : 'senza traccia i tic e il bip di sempre'}`, [tic() > 0, stop()], [!parte, parte ? 0 : 1]);
+  }
+  {
+    const a = await nuovo();
+    const fatti = [];
+    a.win.Audio = class { constructor(){ this.ended = false; } addEventListener(){} play(){ fatti.push('play'); return Promise.resolve(); } pause(){ fatti.push('pause'); } };
+    await a.salva('Piegamenti diamante', 1, 6, 2, 0);
+    a.win.skipCountdown();
+    atteso('420 · «Salta» prima della fine ferma la traccia', fatti[fatti.length - 1], 'pause');
+    atteso('420 · la traccia dura il recupero più il bip: 90 s → 8000 campioni al secondo per 90,8 s', a.win._tracciaWav(90).size, 44 + Math.round(8000 * 90.8) * 2);
+  }
   // caricoTesto: un posto solo per il carico a parole
   {
     const a = await nuovo();
