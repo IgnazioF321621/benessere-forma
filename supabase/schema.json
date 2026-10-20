@@ -1,13 +1,13 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-14",
+ "quando": "2026-10-20",
  "righe": [
   {
    "righe": 0,
    "tabella": "ai_memory"
   },
   {
-   "righe": 8,
+   "righe": 10,
    "tabella": "app_errors"
   },
   {
@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 3,
+   "righe": 4,
    "tabella": "body_logs"
   },
   {
@@ -39,11 +39,11 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 12,
+   "righe": 14,
    "tabella": "coach_proposals"
   },
   {
-   "righe": 2,
+   "righe": 4,
    "tabella": "daily_log"
   },
   {
@@ -59,15 +59,15 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 1,
+   "righe": 2,
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 965,
+   "righe": 984,
    "tabella": "meal_items"
   },
   {
-   "righe": 349,
+   "righe": 354,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 2,
+   "righe": 4,
    "tabella": "rilevazioni"
   },
   {
@@ -87,7 +87,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 20,
+   "righe": 25,
    "tabella": "segnalazioni"
   },
   {
@@ -103,11 +103,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1533,
+   "righe": 1566,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1928,
+   "righe": 1947,
    "tabella": "training_logs"
   },
   {
@@ -115,7 +115,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 13,
+   "righe": 14,
    "tabella": "weekly_pictures"
   },
   {
@@ -123,15 +123,15 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 252,
+   "righe": 266,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 18,
+   "righe": 19,
    "tabella": "weekly_plans"
   },
   {
-   "righe": 18,
+   "righe": 19,
    "tabella": "weight_logs"
   },
   {
@@ -139,7 +139,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 123,
+   "righe": 124,
    "tabella": "workouts"
   }
  ],
@@ -1633,6 +1633,16 @@
     "identita": "",
     "non_nullo": false,
     "pos": 26,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
+    "colonna": "variante_difficile",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 27,
     "predefinito": null,
     "tabella": "esercizi_catalog",
     "tipo": "text"
