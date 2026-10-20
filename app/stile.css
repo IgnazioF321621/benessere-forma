@@ -760,6 +760,8 @@ div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-a
   gap:10px;
   margin:0 0 14px;
 }
+/* Fra due esercizi (Training 410): solo la prima serie di quello che arriva, a tutta larghezza */
+.rest-row-cards--una{grid-template-columns:1fr;}
 .rest-card{
   background:var(--s1);
   border:1px solid var(--b1);

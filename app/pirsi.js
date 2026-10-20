@@ -657,22 +657,26 @@ async function rejectCoachProposal(id){
 // leggono le righe (poche: l'esercizio, le sue alternative scritte, lo stesso schema di
 // movimento), si tiene il risultato per la seduta e si disegna. Senza rete non si legge:
 // resta la frase di prima, e si riprova quando la rete torna.
+// Training 430 (20 ottobre 2026): lo stesso per «variante più difficile» (verso 'difficile', regola
+// ZTCoachRules.varianteDifficile). Le due ricerche hanno chiavi diverse; la più facile tiene quella di prima.
 const VF_FRASE = 'variante più facile';
+const VD_FRASE = 'variante più difficile';
 const VF_COLONNE = 'codice, nome, pattern, gruppo_target, livello, attrezzo, surrogato_attrezzo, luogo, alternativa, setup, esecuzione';
 
-function _vfKey(exName, sessionId){ return `${sessionId}_${exName}`; }
+function _vfKey(exName, sessionId, verso){ return `${sessionId}_${exName}${verso === 'difficile' ? '_su' : ''}`; }
 function _vfStato(){ ST.variantiFacili = ST.variantiFacili || {}; return ST.variantiFacili; }
 
 // Trova (o avvia la ricerca di) la variante per l'esercizio della seduta. Non lancia mai.
+// verso: 'facile' (di norma) o 'difficile'.
 // → { stato: 'in-corso' | 'pronta' | 'nessuna' | 'senza-rete' | 'errore', variante? }
-function varianteFacilePer(exName, sessionId){
-  const key = _vfKey(exName, sessionId);
+function varianteFacilePer(exName, sessionId, verso){
+  const key = _vfKey(exName, sessionId, verso);
   const st = _vfStato();
   // 'errore' è definitivo per la seduta (non si martella il catalogo a ogni disegno); 'senza-rete' si riprova.
   if(st[key] && st[key].stato !== 'senza-rete') return st[key];
   if(typeof senzaRete === 'function' && senzaRete()){ st[key] = { stato: 'senza-rete' }; return st[key]; }
   st[key] = { stato: 'in-corso' };
-  _vfCerca(exName, sessionId, key).catch(e => {
+  _vfCerca(exName, sessionId, key, verso).catch(e => {
     console.warn('[variante facile]', (e && e.message) || e);
     _vfFine(key, { stato: 'errore' });
   });
@@ -684,25 +688,32 @@ function _vfFine(key, esito){
   if(ST.page === 'training' && typeof renderTraining === 'function') renderTraining();
 }
 
-async function _vfCerca(exName, sessionId, key){
+async function _vfCerca(exName, sessionId, key, verso){
+  const su = verso === 'difficile';
+  if(su) await null;   // parte durante il disegno della seduta: l'esito ridisegna solo dopo, mai dentro
   const ex = (typeof findExercise === 'function') ? findExercise(exName, sessionId) : null;
   const codice = ex && ex.codice;
   if(!codice || !ST.user || !ST.user.id){ _vfFine(key, { stato: 'nessuna' }); return; }
-  const r1 = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(VF_COLONNE).eq('codice', codice).limit(1), { silenzioso: true });
+  // Per la più difficile la riga intera: legge anche `variante_difficile` quando il foglio la avrà, e
+  // intanto non si rompe se la colonna non c'è ancora.
+  const r1 = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(su ? '*' : VF_COLONNE).eq('codice', codice).limit(1), { silenzioso: true });
   if(r1.error){ _vfFine(key, { stato: 'errore' }); return; }
   const attuale = (r1.data || [])[0];
   if(!attuale){ _vfFine(key, { stato: 'nessuna' }); return; }
-  const scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []).filter(c => c !== codice);
+  const scritte = (String(attuale.alternativa || '') + ' ' + (su ? String(attuale.variante_difficile || '') : '')).match(/\bEX\d{3}\b/g) || [];
+  const daLeggere = scritte.filter(c => c !== codice);
   const letture = [];
-  if(scritte.length) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).in('codice', scritte));
+  if(daLeggere.length) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).in('codice', daLeggere));
   if(attuale.pattern) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).eq('pattern', attuale.pattern).neq('codice', codice).order('codice', { ascending: true }).range(0, 999));
+  // il gradino sopra rimanda spesso a questo nella sua «alternativa»
+  if(su) letture.push(supa.from('esercizi_catalog').select(VF_COLONNE).ilike('alternativa', `%${codice}%`).neq('codice', codice).range(0, 999));
   const esiti = await Promise.all(letture.map(q => dbq('leggere le alternative a catalogo', q, { silenzioso: true })));
   if(esiti.some(r => r.error)){ _vfFine(key, { stato: 'errore' }); return; }
   const righe = [].concat(...esiti.map(r => r.data || []));
   const p = ST.profile || {};
   const sess = (typeof getTrainingSession === 'function') ? getTrainingSession(sessionId) : null;
   const inScheda = (sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean);
-  const scelta = ZTCoachRules.varianteFacile(attuale, righe, {
+  const scelta = ZTCoachRules[su ? 'varianteDifficile' : 'varianteFacile'](attuale, righe, {
     tipoAllen: p.tipo_allenamento || 'casa',
     attrezzatura: Array.isArray(p.attrezzatura) && p.attrezzatura.length ? p.attrezzatura : ['elastico', 'corpo_libero'],
     inScheda,
@@ -714,16 +725,29 @@ async function _vfCerca(exName, sessionId, key){
 // getProgressionLive e riceve HTML già protetto. Se la frase non c'è, il testo torna com'è.
 function varianteFacileHTML(exName, sessionId, sugg){
   const testo = String(sugg || '');
-  if(!testo.includes(VF_FRASE)) return esc(testo);
-  const v = varianteFacilePer(exName, sessionId);
-  const key = _vfKey(exName, sessionId);
+  // «nessuna variante più difficile nel catalogo» è già la risposta (computeNextSetSuggestion): non si cerca
+  const verso = testo.includes(VF_FRASE) ? 'facile' : (testo.includes(VD_FRASE) && !testo.includes('nessuna ' + VD_FRASE)) ? 'difficile' : null;
+  if(!verso) return esc(testo);
+  const frase = verso === 'difficile' ? VD_FRASE : VF_FRASE;
+  const v = varianteFacilePer(exName, sessionId, verso);
+  const key = _vfKey(exName, sessionId, verso);
   if(v.stato === 'pronta'){
     const nome = `${esc(v.variante.nome)} <span style="font-family:var(--font-mono);font-weight:400;color:var(--t3);">${esc(v.variante.codice)}</span>`;
-    return esc(testo).replace(VF_FRASE, `${VF_FRASE}: <a href="#" onclick="event.preventDefault();event.stopPropagation();apriVarianteFacile('${esc(key)}')" style="color:inherit;font-weight:700;text-decoration:underline;">${nome} ›</a>`);
+    return esc(testo).replace(frase, `${frase}: <a href="#" onclick="event.preventDefault();event.stopPropagation();apriVarianteFacile('${esc(key)}')" style="color:inherit;font-weight:700;text-decoration:underline;">${nome} ›</a>`);
   }
-  const nota = v.stato === 'senza-rete' ? 'quale te lo dico quando torna la rete' : v.stato === 'in-corso' ? 'cerco quale…' : null;
-  if(nota) return esc(testo).replace(VF_FRASE, `${VF_FRASE} <span style="color:var(--t3);">(${nota})</span>`);
+  // Senza una più difficile nel catalogo non resta una frase vuota (Training 430): si dice, e si sale di ripetizioni.
+  // (Di norma lo dice già computeNextSetSuggestion; questo vale se la ricerca è finita dopo il calcolo.)
+  const nota = v.stato === 'senza-rete' ? 'quale te lo dico quando torna la rete' : v.stato === 'in-corso' ? 'cerco quale…'
+    : (verso === 'difficile' && v.stato === 'nessuna') ? 'nel catalogo non c\'è: resta su questo e sali di ripetizioni' : null;
+  if(nota) return esc(testo).replace(frase, `${frase} <span style="color:var(--t3);">(${nota})</span>`);
   return esc(testo);
+}
+
+// Avvia per tempo la ricerca della più difficile per gli esercizi che hanno quella via, così quando
+// la serie si salva la PROSSIMA sa già se c'è (Training 430). Non fa niente se è già partita.
+function preparaVarianteDifficile(exName, sessionId, ex){
+  if(typeof _exProgressione !== 'function' || _exProgressione(ex) !== VD_FRASE) return;
+  varianteFacilePer(exName, sessionId, 'difficile');
 }
 
 // Il foglio della variante: nome, codice, come si fa in due righe, la GIF.

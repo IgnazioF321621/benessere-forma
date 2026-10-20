@@ -480,6 +480,49 @@ var ZTCoachRules = (function(){
     return cand.length ? esito(cand[0], 'livello') : null;
   }
 
+  // ── La variante più difficile (Training 430, 20 ottobre 2026) ───────────────
+  // Quando la via di progressione è «variante più difficile» il coach dice QUALE. Il catalogo non ha
+  // ancora una colonna per questo (chiesta a ZT-Catalogo, scelta di Ignazio): finché non c'è vale una
+  // regola, sempre nella stessa famiglia (la prima parola del nome, Nomenclatura regola 11) e di livello
+  // più alto, fra gli esercizi che la persona può fare e che non sono già nella seduta:
+  //   0. la colonna `variante_difficile` (codice EX###) quando il foglio la scrive: vince lei;
+  //   1. le «alternativa» scritte nella riga, se più difficili;
+  //   2. le righe che hanno questo esercizio come «alternativa» (il gradino sopra rimanda a quello sotto);
+  //   3. lo stesso schema di movimento, il livello subito sopra, poi per codice.
+  // → { codice, nome, come, via } | null (nessuna: il coach lo dice e resta su più ripetizioni)
+  function vfFamiglia(ex){ return vfNorm(ex && ex.nome).split(/\s+/)[0] || ''; }
+  function varianteDifficile(attuale, catalogo, opts){
+    if(!attuale || !attuale.codice) return null;
+    var righe = (catalogo || []).filter(function(ex){ return ex && ex.codice && ex.codice !== attuale.codice; });
+    var perCodice = {};
+    righe.forEach(function(ex){ perCodice[ex.codice] = ex; });
+    var o = opts || {};
+    var inScheda = {};
+    (o.inScheda || []).forEach(function(c){ inScheda[c] = true; });
+    var esito = function(ex, via){ return { codice: ex.codice, nome: ex.nome || ex.codice, come: comeSiFa(ex), via: via }; };
+    var codici = function(s){ return String(s || '').match(/\bEX\d{3}\b/g) || []; };
+
+    var scelta = codici(attuale.variante_difficile)[0];
+    if(scelta && perCodice[scelta] && puoFare(perCodice[scelta], o)) return esito(perCodice[scelta], 'foglio');
+
+    var fam = vfFamiglia(attuale);
+    var livAttuale = vfLivello(attuale) || 2;
+    var buona = function(ex){ return !inScheda[ex.codice] && vfFamiglia(ex) === fam && vfLivello(ex) > livAttuale && puoFare(ex, o); };
+    var ordina = function(a, b){ return (vfLivello(a) - vfLivello(b)) || String(a.codice).localeCompare(String(b.codice)); };
+
+    var scritte = codici(attuale.alternativa);
+    for(var i = 0; i < scritte.length; i++){
+      var alt = perCodice[scritte[i]];
+      if(alt && buona(alt)) return esito(alt, 'alternativa');
+    }
+    var rimandi = righe.filter(function(ex){ return codici(ex.alternativa).indexOf(attuale.codice) !== -1 && buona(ex); }).sort(ordina);
+    if(rimandi.length) return esito(rimandi[0], 'rimando');
+    var pat = vfNorm(attuale.pattern);
+    if(!pat) return null;
+    var cand = righe.filter(function(ex){ return vfNorm(ex.pattern) === pat && buona(ex); }).sort(ordina);
+    return cand.length ? esito(cand[0], 'livello') : null;
+  }
+
   // ── La voce di Pirsi (Pirsi 040, 13 ottobre 2026): una sola identità e un solo registro, scritti qui e basta ──
   // Ogni prompt che parla alla persona inizia con voce(): cue del recupero, nota di scheda, annuncio del piano,
   // 14 pasti, consiglio sul pasto, lettura delle foto nel Worker. Prima ogni prompt si presentava a modo suo
@@ -497,6 +540,6 @@ var ZTCoachRules = (function(){
   }
 
   return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
-    varianteFacile: varianteFacile, comeSiFa: comeSiFa, puoFare: puoFare, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
+    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;
