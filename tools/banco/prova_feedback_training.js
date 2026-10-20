@@ -58,7 +58,8 @@ async function nuovo(){
     const cd = a.ST.trainCountdown;
     atteso('370 · recupero fra due esercizi, verso le trazioni', [!!cd, cd && cd.traEsercizi, cd && cd.exName, cd && cd.daEx], [true, true, 'Trazioni sbarra assistite', 'Panca elastico']);
     const foglio = a.pagina();
-    atteso('370 · «FATTO · Panca elastico» con la serie, e «PRIMA SERIE · Trazioni» accanto', [/FATTO · Panca elastico S1 · 6r · 90 lbs · RIR 2/.test(foglio), /PRIMA SERIE · Trazioni sbarra assistite/.test(foglio), /APPENA FATTA/.test(foglio)], [true, true, false]);
+    // Training 410 (scelta di Ignazio): la serie della Panca non serve più, resta solo il riquadro delle trazioni, largo
+    atteso('410 · niente «FATTO · Panca elastico», solo «PRIMA SERIE · Trazioni», a tutta larghezza', [/FATTO|Panca elastico S1|APPENA FATTA/.test(foglio), /PRIMA SERIE · Trazioni sbarra assistite/.test(foglio), a.doc.querySelectorAll('.rest-row-cards--una .rest-card').length], [false, true, 1]);
     // la striscia: il foglio si riduce, il tempo continua
     atteso('370 · il foglio ha «riduci»', !!a.doc.querySelector('.rest-hero-riduci'), true);
     a.win.riduciCountdown();

@@ -575,6 +575,18 @@ function parseRepsRange(repsStr){
   return null;
 }
 
+// ── Il carico di una serie, a parole (Training 430, 20 ottobre 2026) ──
+// Un posto solo per «30 lbs», «banda Nera» e — carico zero — «corpo libero»: prima a corpo libero
+// si leggeva «0 lbs». Vuoto se la serie non ha carico scritto. Unità dal profilo.
+function caricoTesto(raw){
+  if(raw === undefined || raw === null || String(raw).trim() === '') return '';
+  const r = bandLabel(String(raw).trim());
+  if(/[a-zA-Z]/.test(r)) return r;
+  const v = parseFloat(r);
+  if(!(v > 0)) return 'corpo libero';
+  return `${r} ${(ST.profile && ST.profile.unit) || 'lbs'}`;
+}
+
 // ── "APPENA FATTA" label (sync, legge ST.trainLoggedSets) ────
 // Trova l'ultima serie loggata OGGI per (sessionId, exName) e la formatta come
 // "S3 · 6r · 30 lbs · RIR 2". Usata nella schermata recupero (BLOCCO 2A, 26 mag 2026).
@@ -597,14 +609,8 @@ function getLastLoggedSetLabel(sessionId, exName){
   }
   if(!bestKey) return null;
   const d = ST.trainLoggedSets[bestKey] || {};
-  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
   // BLOCCO 3 — Trazioni: preferisci band_color se presente. Altrimenti resistance numerica/testuale.
-  let resistTxt = '';
-  const raw = (d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance;
-  if(raw !== undefined && raw !== null && String(raw).trim() !== ''){
-    const r = bandLabel(String(raw).trim());
-    resistTxt = /^\d+$/.test(r) ? `${r} ${unitLbl}` : r;
-  }
+  const resistTxt = caricoTesto((d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance);
   const parts = [`S${bestSet}`];
   const repsTxt = _repsTesto(d);            // «8r» oppure «8 dx · 7 sx» (Training 280)
   if(repsTxt) parts.push(repsTxt);
@@ -657,13 +663,8 @@ function getProgressionSuggestion(exName, sessionId){
   // Se c'è storico (ultima volta su un'altra data) → mostra come ripartenza
   const last = ST.lastLoggedSets[exName];
   if(last){
-    const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-    let resistTxt = isPullUp ? '' : 'corpo libero';
     const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
-    if(lastResist != null && String(lastResist).trim() !== ''){
-      const r = bandLabel(String(lastResist).trim());
-      resistTxt = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
-    }
+    const resistTxt = caricoTesto(lastResist) || (isPullUp ? '' : 'corpo libero');
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
     const ultima = `${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
     // L'obiettivo di oggi parte dall'ultima seduta (Training 040): prima cosa fare, poi com'è andata
@@ -1340,6 +1341,87 @@ function playLongBeep(){
   } catch(e){}
 }
 
+// ── La traccia del recupero (Training 420, 20 ottobre 2026, prova chiesta da Ignazio) ──
+// Su iPhone, appena si passa a un'altra app, il contesto Web Audio va «interrupted» e i bip del conto non
+// suonano. Un elemento <audio> che sta già suonando invece continua (misurato nel simulatore iOS 27.1, in
+// Safari: la traccia è arrivata in fondo mentre la pagina era nascosta). Quindi all'inizio del recupero
+// parte UNA traccia sola, costruita qui: silenzio fino a 5 secondi dalla fine, i 5 tic (come playPrepBeep)
+// e il bip di stop (come playStopBeep), con la durata del recupero. Mentre la traccia suona, il tick non
+// suona i suoi bip (niente doppioni); se non parte, restano i bip di prima. Limiti, detti a Ignazio: con
+// l'app aggiunta alla Home non è garantito, e la traccia mette in pausa la musica di un'altra app.
+const TRACCIA_SR = 8000;
+let _traccia = null, _tracciaUrl = null, _tracciaSbloccata = false;
+function _tracciaWav(secondi, senzaToni){
+  const fine = secondi + 0.8, n = Math.round(TRACCIA_SR * fine);
+  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const s = (o, t) => { for(let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  s(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, TRACCIA_SR, true); v.setUint32(28, TRACCIA_SR * 2, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, n * 2, true);
+  // [inizio in secondi, durata, frequenza, volume]: i 5 tic e il bip di stop
+  const toni = [];
+  if(!senzaToni){
+    for(let k = 5; k >= 1; k--) if(secondi - k >= 0) toni.push([secondi - k, 0.08, 600, 0.35]);
+    toni.push([secondi, 0.72, 659, 0.85]);
+  }
+  toni.forEach(([t0, dur, f, g]) => {
+    const a = Math.round(t0 * TRACCIA_SR), b = Math.min(n, a + Math.round(dur * TRACCIA_SR));
+    for(let i = a; i < b; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * f * (i - a) / TRACCIA_SR) * g * 32767), true);
+  });
+  return new Blob([buf], { type: 'audio/wav' });
+}
+function _elementoTraccia(){
+  if(_traccia) return _traccia;
+  if(typeof Audio === 'undefined') return null;
+  try { _traccia = new Audio(); _traccia.preload = 'auto'; } catch(e){ _traccia = null; return null; }
+  // fermata da fuori (una telefonata, i comandi della schermata bloccata): tornano i bip del tick
+  _traccia.addEventListener('pause', () => { if(!_traccia.ended && ST.trainCountdown) ST.trainCountdown.traccia = false; });
+  return _traccia;
+}
+function fermaTracciaRecupero(){
+  if(_traccia){ try { _traccia.pause(); } catch(e){} }
+  if(_tracciaUrl){ try { URL.revokeObjectURL(_tracciaUrl); } catch(e){} _tracciaUrl = null; }
+  if(ST.trainCountdown) ST.trainCountdown.traccia = false;
+}
+function avviaTracciaRecupero(secondi){
+  fermaTracciaRecupero();
+  const el = _elementoTraccia();
+  if(!el || !(secondi > 5) || typeof URL === 'undefined' || !URL.createObjectURL) return;
+  const cd = ST.trainCountdown;
+  try {
+    _tracciaUrl = URL.createObjectURL(_tracciaWav(secondi));
+    el.src = _tracciaUrl;
+    const p = el.play();
+    if(p && p.then) p.then(() => {
+      _tracciaSbloccata = true;
+      // il conto è ancora quello per cui è partita: da qui i bip li fa la traccia
+      if(ST.trainCountdown && ST.trainCountdown === cd) cd.traccia = true;
+      if('mediaSession' in navigator && typeof MediaMetadata !== 'undefined'){
+        try { navigator.mediaSession.metadata = new MediaMetadata({ title: 'Recupero', artist: cd ? cd.exName : '' }); } catch(e){}
+      }
+    }).catch(() => { if(cd) cd.traccia = false; });
+  } catch(e){ if(cd) cd.traccia = false; }
+}
+// iPhone suona un <audio> da programma solo se quello stesso elemento è già partito con un tocco. Il recupero
+// parte dopo il salvataggio (dopo un'attesa di rete): per questo, durante una seduta, il primo tocco fa
+// partire l'elemento con un attimo di silenzio. Fuori dalla seduta no: metterebbe in pausa la musica per niente.
+function _sbloccaTraccia(){
+  if(_tracciaSbloccata || !ST.trainSession) return;
+  const el = _elementoTraccia();
+  if(!el || (ST.trainCountdown && ST.trainCountdown.traccia)) return;
+  try {
+    fermaTracciaRecupero();
+    _tracciaUrl = URL.createObjectURL(_tracciaWav(0, true));   // 0,8 secondi di silenzio
+    el.src = _tracciaUrl;
+    const p = el.play();
+    if(p && p.then) p.then(() => { _tracciaSbloccata = true; }).catch(() => {});
+  } catch(e){}
+}
+if(typeof document !== 'undefined'){
+  document.addEventListener('touchend', _sbloccaTraccia, true);
+  document.addEventListener('click', _sbloccaTraccia, true);
+}
+
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
 function startTrainingCountdown(seconds, exName, sessionId, opts){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
@@ -1366,6 +1448,7 @@ function startTrainingCountdown(seconds, exName, sessionId, opts){
   if(seconds <= 5){
     for(let s = 1; s <= 5; s++) ST.trainCountdown.prepBeeped[s] = true;
   }
+  avviaTracciaRecupero(seconds);     // Training 420: i bip anche fuori dall'app, se iPhone lo lascia fare
   ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
   ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
   ensureRestGif(exName, _gifCode);   // pre-fetch GIF; usa ?code= se disponibile
@@ -1429,7 +1512,9 @@ function tickCountdown(){
   // Triplo beep finale alla scadenza (idempotente: anche se utente torna in app dopo)
   if(remaining <= 0 && !cd.beeped){
     cd.beeped = true;
-    playStopBeep();
+    // con la traccia che suona il bip è già nella traccia (Training 420): qui solo la vibrazione
+    if(cd.traccia){ if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} } }
+    else playStopBeep();
     setTimeout(()=>{
       if(ST.trainCountdown && ST.trainCountdown.beeped){
         setTimeout(()=>{
@@ -1451,7 +1536,7 @@ function tickCountdown(){
     // Prep beep normale: 1 tic alla transizione in 5,4,3,2,1 (idempotente via cd.prepBeeped)
     if(remaining >= 1 && remaining <= 5 && !cd.prepBeeped[remaining]){
       cd.prepBeeped[remaining] = true;
-      playPrepBeep();
+      if(!cd.traccia) playPrepBeep();
     }
     cd.seconds = remaining;
     if(remaining <= 0){ cd.done = true; cd.ridotto = false; }   // finito: il foglio torna anche se era ridotto
@@ -1495,6 +1580,8 @@ function tickCountdown(){
 
 function skipCountdown(){
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+  // A tempo scaduto la traccia ha già suonato tutto: si ferma solo se si salta prima (Training 420)
+  if(!(ST.trainCountdown && ST.trainCountdown.done)) fermaTracciaRecupero();
   ST.trainCountdown = null;
   renderTraining();
   scrollToActiveExercise();
@@ -2543,7 +2630,14 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
       case 'più ripetizioni':
       case 'tenuta più lunga':        return fine({ resistance: resistInt, reps: repsDone + step }, loadTxt(resistInt), via, `sali a ${repsDone + step} ${unitLbl}`);
       case 'ritmo più lento':         return fine({ resistance: resistInt, reps: repsMin }, loadTxt(resistInt), 'ritmo più lento: 3 sec in discesa', dalMinimo);
-      case 'variante più difficile':  return fine({ resistance: resistInt, reps: repsMin }, 'variante più difficile', dalMinimo);
+      case 'variante più difficile': {
+        // Training 430: se il catalogo non ha una più difficile (ricerca già fatta, preparaVarianteDifficile)
+        // lo si dice e si resta sull'esercizio salendo di ripetizioni; altrimenti la frase, che il disegno
+        // completa col nome (varianteFacileHTML).
+        const vd = (typeof _vfStato === 'function') ? _vfStato()[_vfKey(exName, sessionId, 'difficile')] : null;
+        if(vd && vd.stato === 'nessuna') return fine({ resistance: resistInt, reps: repsDone + step }, loadTxt(resistInt), 'nessuna variante più difficile nel catalogo', `sali a ${repsDone + step} ${unitLbl}`);
+        return fine({ resistance: resistInt, reps: repsMin }, 'variante più difficile', dalMinimo);
+      }
       case 'meno assistenza':         return fine({ resistance: resistInt, reps: repsMin }, 'meno assistenza', dalMinimo);
       case 'carico in mano':          return fine({ resistance: resistInt > 0 ? plusStep : loadStep, reps: repsMin }, resistInt > 0 ? loadTxt(plusStep) : `carico in mano: ${loadStep} ${loadUnit}`, dalMinimo);
       case 'elastico più duro':       return fine({ resistance: plusStep, reps: repsMin }, `elastico più duro: ${plusStep} ${loadUnit}`, dalMinimo);
@@ -2681,7 +2775,7 @@ async function apriRiepilogoSessione(sid, wid){
     const fatte = oggi.length, previste = Number(e.sets) || 0;
     const esito = !bestOggi ? 'saltato' : !bestPrima ? 'nuovo' : (['giu', 'pari', 'su'][_confrontaSerie(e.name, bestOggi, bestPrima, misura) + 1]);
     const record = !!(bestOggi && bestSempre && _confrontaSerie(e.name, bestOggi, bestSempre, misura) > 0);
-    const t = (l) => l ? (misura.tipo === 'banda' ? misura.testo(misura.valore(l)) : `${misura.valore(l)}${misura.unit ? ' ' + misura.unit : ''}`) + (misura.tipo === 'carico' || misura.tipo === 'banda' ? ` × ${l.reps}` : '') : '—';
+    const t = (l) => l ? (misura.tipo === 'banda' ? misura.testo(misura.valore(l)) : (misura.tipo === 'carico' && !(misura.valore(l) > 0)) ? 'corpo libero' : `${misura.valore(l)}${misura.unit ? ' ' + misura.unit : ''}`) + (misura.tipo === 'carico' || misura.tipo === 'banda' ? ` × ${l.reps}` : '') : '—';
     return { name: e.name, codice: e.codice, fatte, previste, esito, record, oggi: t(bestOggi), prima: t(bestPrima) };
   });
   const fatte = righe.reduce((a, r) => a + r.fatte, 0), previste = righe.reduce((a, r) => a + r.previste, 0);
@@ -2861,6 +2955,7 @@ async function saveTrainingSet(){
       // prima di uscire. Il bottone "Completa sessione" nella schermata chiude manualmente.
       // Un recupero ancora in corso (verso un esercizio che nel frattempo è stato fatto) si spegne.
       if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+      fermaTracciaRecupero();
       ST.trainCountdown = null;
       ST.trainLogOpen = null;
       ST.trainExecOpen = null;
@@ -3889,11 +3984,9 @@ function renderTraining(){
             </span>`;
           }
           // BLOCCO 3 — Trazioni: badge mostra colore banda al posto di "N lbs"
-          const badgeResist = bandLabel((d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance);
+          const badgeResist = caricoTesto((d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance);
           // GRAFICA L2 — pill PIENA evergreen, testo bianco, ✏️ inline
-          const resistTxt = badgeResist
-            ? ' · ' + badgeResist + (/^\d+$/.test(String(badgeResist)) ? ' ' + unitLbl : '')
-            : '';
+          const resistTxt = badgeResist ? ' · ' + badgeResist : '';
           return `<span class="ex-set-pill-done"><span class="ex-set-pill-label">S${sn}</span> ${_repsTesto(d)}${resistTxt}${_serieSupera(e.name, d) ? ' <span class="ex-set-pill-su" title="Meglio dell\'ultima volta">▲</span>' : ''}<button class="ex-set-pill-edit" onclick="event.stopPropagation();editLog('${k.replace(/'/g,"\\'")}');" title="Modifica">✏️</button></span>`;
         }).join('');
         // GRAFICA L2 — pill VUOTE per le serie ancora da fare (S{n+1} … S{tot})
@@ -3937,6 +4030,8 @@ function renderTraining(){
         const restLabel = restSecToText(getRestSec(sel, e));
         // FIX PROGRESSIONE (27 mag 2026) — Fonte unica: getProgressionLive
         // (suggerimento deterministico se presente, altrimenti fallback iniziale).
+        // Training 430: chi progredisce con la «variante più difficile» la cerca subito, non a fine serie
+        if(typeof preparaVarianteDifficile === 'function') preparaVarianteDifficile(e.name, sel, e);
         const suggestion = getProgressionLive(e.name, sel);
         const muscles = (e.muscles && e.muscles.length) ? e.muscles.join(' · ') : '';
         // GRAFICA L2 (27 mag 2026) — Restyling card allineato al mockup approvato.
@@ -4448,7 +4543,7 @@ function renderTraining(){
     const renderExRow = (name) => {
       const isSel = name === selEx;
       const last = ST.trainProgLastSet[name];
-      const lastMeta = last ? `${last.reps} reps · ${last.resistance ? (/^\d/.test(String(last.resistance)) ? `${last.resistance} ${(ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs'}` : bandLabel(String(last.resistance))) : 'corpo libero'}` : '';
+      const lastMeta = last ? `${last.reps} reps · ${caricoTesto(last.resistance) || 'corpo libero'}` : '';
       return `<div onclick="selectProgEx('${escapeAttr(name)}');" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:48px;background:${isSel?'var(--acc-lt,rgba(42,122,111,.08))':'transparent'};border-left:3px solid ${isSel?'var(--acc)':'transparent'};">
         ${isSel?`<span style="width:6px;height:6px;border-radius:50%;background:var(--acc);flex-shrink:0;"></span>`:`<span style="width:6px;flex-shrink:0;"></span>`}
         <span style="flex:1;min-width:0;">
@@ -4584,7 +4679,7 @@ function renderTraining(){
       }, 0);
       const ultimaV = points.length ? points[points.length - 1].v : 0;
       const sessioni = points.length;
-      const conUnita = (v) => misura.tipo === 'banda' ? misura.testo(v) : `${v}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}`;
+      const conUnita = (v) => misura.tipo === 'banda' ? misura.testo(v) : (misura.tipo === 'carico' && !(v > 0)) ? 'corpo libero' : `${v}${u ? `<span class="prog-stat-unit">${u}</span>` : ''}`;
       let trendHTML = `<div class="prog-stat-value" style="color:var(--t3);">—</div>`;
       let diffTrend = null;
       if(points.length >= 4){
@@ -4805,7 +4900,7 @@ function renderTraining(){
 
       // APPENA FATTA — ultima serie loggata oggi per (sessionId, exName).
       // FIX 2 (26 mag sera): font Mono uniforme con PROSSIMA (entrambi sono numerici/sigle).
-      const lastSet = getLastLoggedSetLabel(cd.sessionId, cd.traEsercizi ? (cd.daEx || cd.exName) : cd.exName);
+      const lastSet = cd.traEsercizi ? '' : getLastLoggedSetLabel(cd.sessionId, cd.exName);
       const lastSetHTML = lastSet
         ? `<span class="rest-card-value mono">${esc(lastSet)}</span>`
         : `<span class="rest-card-value mono" style="color:var(--t3);">—</span>`;
@@ -4898,17 +4993,24 @@ function renderTraining(){
                   k.startsWith(`${cd.sessionId}_${cd.exName}_`) && k.endsWith(`_${todayKey()}`)
                 );
                 const savedN2 = savedKeys2.length;
-                // Fra due esercizi (Training 370): la serie appena fatta è di QUELLO PRIMA, e lo si dice col
-                // nome, così non sembra una serie delle trazioni che stanno per cominciare
-                const nomeFatto = cd.traEsercizi && cd.daEx ? nomeCortoConTag(cd.daEx) : '';
-                const nomeProssimo = cd.traEsercizi ? nomeCortoConTag(cd.exName) : '';
+                // Fra due esercizi (Training 410, scelta di Ignazio): la serie appena fatta è dell'esercizio
+                // PRIMA e non serve; resta un riquadro solo, largo, con la prima serie di quello che arriva
+                // (dentro c'è già «ultima volta»). Fra due serie dello stesso esercizio «Serie n salvata» resta.
+                if(cd.traEsercizi){
+                  return `<div class="rest-row-cards rest-row-cards--una">
+                  <div class="rest-card rest-card--next">
+                    <span class="rest-card-eyebrow">PRIMA SERIE · ${nomeCortoConTag(cd.exName)}</span>
+                    ${nextHTML}
+                  </div>
+                </div>`;
+                }
                 return `<div class="rest-row-cards">
                   <div class="rest-card">
-                    <span class="rest-card-eyebrow" ${savedN2 > 0 ? 'style="color:var(--acc);"' : ''}>${savedN2 > 0 ? `Serie ${savedN2} salvata ✓` : (nomeFatto ? `FATTO · ${nomeFatto}` : 'APPENA FATTA')}</span>
+                    <span class="rest-card-eyebrow" ${savedN2 > 0 ? 'style="color:var(--acc);"' : ''}>${savedN2 > 0 ? `Serie ${savedN2} salvata ✓` : 'APPENA FATTA'}</span>
                     ${lastSetHTML}
                   </div>
                   <div class="rest-card rest-card--next">
-                    <span class="rest-card-eyebrow">${nomeProssimo ? `PRIMA SERIE · ${nomeProssimo}` : 'PROSSIMA'}</span>
+                    <span class="rest-card-eyebrow">PROSSIMA</span>
                     ${nextHTML}
                   </div>
                 </div>`;
@@ -5072,7 +5174,7 @@ function renderTraining(){
           // BLOCCO 3 — Trazioni: mostra colore banda al posto di "X lbs"
           const resistLabel = isPullUpEx
             ? (l.band_color ? bandLabel(l.band_color) : '')
-            : (l.resistance ? l.resistance + ' lbs' : '');
+            : caricoTesto(l.resistance);
           // Per lato (Training 280): «8 dx · 7 sx» al posto del numero solo
           const dueLati = (l.reps_dx != null && l.reps_sx != null);
           const repsTxt = dueLati ? `${l.reps_dx} dx · ${l.reps_sx} sx` : `${l.reps} ${repsLbl}`;
@@ -5516,6 +5618,7 @@ function closeTrainingSession(){
   ST.warmupInfoOpen = null;        // chiudi scheda warm-up se aperta
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
+  fermaTracciaRecupero();
   ST.trainCountdown = null;
   // BLOCCO 2B: chiusura schermata esecuzione se aperta (cleanup per uscita session)
   ST.trainExecOpen = null;
@@ -6871,13 +6974,8 @@ function _renderRiscaldamentoLink(){
 // «riparti da …» per un cardine: l'ultima serie fuori dallo scarico (vedi _trainGenPuntiDiPartenza).
 function _testoPartenza(p, exName){
   if(!p) return 'nessuna serie registrata: parti leggero';
-  const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-  let resist = isPullUpExercise(exName || '') ? '' : 'corpo libero';
   const raw = (p.band_color && BAND_COLORS.includes(p.band_color)) ? p.band_color : p.resistance;
-  if(raw != null && String(raw).trim() !== ''){
-    const r = bandLabel(String(raw).trim());
-    resist = /[a-zA-Z]/.test(r) ? r : `${r} ${unitLbl}`;
-  }
+  const resist = caricoTesto(raw) || (isPullUpExercise(exName || '') ? '' : 'corpo libero');
   const parti = [`${p.reps} rip`];
   if(resist) parti.push(resist);
   if(p.rir_actual != null) parti.push(`RIR ${p.rir_actual}`);

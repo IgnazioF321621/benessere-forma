@@ -532,14 +532,12 @@ const TRAINING_SESSIONS = {
         muscles:['anche','glutei','adduttori'],
         execution:['Seduto con gambe in 90/90 (una avanti, una di lato)','Alterna ruotando entrambe le ginocchia lato per lato','Mantieni il busto eretto'],
         commonErrors:['Curvare la schiena','Ginocchia che si sollevano','Velocità troppo elevata'] },
+      // EX120: niente testi qui (20 ottobre 2026). La copia di prima era il World's greatest stretch, con la mano
+      // a terra; i testi giusti, riscritti sulla GIF, arrivano dal catalogo in loadActiveScheda.
       { name:'Affondo basso con rotazione dx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'dx',
-        muscles:['flessori','glutei','colonna toracica'],
-        execution:['Affondo profondo gamba destra avanti','Mano sinistra a terra interna al piede','Ruota braccio destro verso il cielo aprendo il petto'],
-        commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
+        muscles:['flessori','glutei','colonna toracica'] },
       { name:'Affondo basso con rotazione sx', codice:'EX120', duration_sec:45, block:'Anche e bacino', side:'sx',
-        muscles:['flessori','glutei','colonna toracica'],
-        execution:['Affondo profondo gamba sinistra avanti','Mano destra a terra interna al piede','Ruota braccio sinistro verso il cielo aprendo il petto'],
-        commonErrors:['Tallone posteriore che si solleva','Iperestendere la lombare','Ginocchio anteriore oltre la punta'] },
+        muscles:['flessori','glutei','colonna toracica'] },
       { name:'Cossack squat alternati', codice:'EX082', duration_sec:60, block:'Anche e bacino',
         muscles:['adduttori','glutei','quadricipiti'],
         execution:['Gambe larghe, mani in preghiera davanti',"Piega una gamba spingendo i glutei indietro, l'altra dritta",'Alterna lato per lato'],
@@ -786,6 +784,14 @@ async function loadActiveScheda() {
           if (Array.isArray(s.exercises)) s.exercises.forEach(ex => remapEx(ex, true));
           if (s.carry_conclusivo) remapEx(s.carry_conclusivo, false);
           if (s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(ex => remapEx(ex, true));
+        });
+        // Il Recovery Day è scritto nell'app (TRAINING_SESSIONS.recoveryUpper, condiviso con recoveryLower):
+        // per le righe col codice i testi vengono dal catalogo, come per la scheda (20 ottobre 2026, feedback
+        // «Affondo con rotazione»: EX120 aveva una copia locale col testo del World's greatest stretch). Il nome
+        // con dx/sx resta quello dell'app: il «fatto» del recupero si segna per nome.
+        (TRAINING_SESSIONS.recoveryUpper.exercises || []).forEach(ex => {
+          const riga = ex && ex.codice ? rigaByCodice.get(ex.codice) : null;
+          if (riga) remapTesti(ex, riga, false);
         });
       }
     } catch (e) {
