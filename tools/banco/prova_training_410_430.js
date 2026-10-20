@@ -67,7 +67,10 @@ function fixture(){
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', train_start_date:'2026-10-05', tipo_allenamento:'casa', attrezzatura:['elastico', 'corpo_libero'] }],
     schede_utente:[{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(scheda)) }],
     esercizi_catalog: CAT.filter(x => /^Piegamenti/.test(x.nome) || x.codice === 'EX001').map(x => ({ ...x,
-      progressione: ['EX545', 'EX582'].includes(x.codice) ? 'variante più difficile' : 'carico', unilaterale:'no' })),
+      progressione: ['EX545', 'EX582'].includes(x.codice) ? 'variante più difficile' : 'carico', unilaterale:'no' }))
+      // Recovery Day: EX120 col testo riscritto sulla GIF (finto, riconoscibile)
+      .concat([{ codice:'EX120', nome:'Affondo basso con rotazione', pattern:'mobilita', livello:'principiante', attrezzo:'corpo libero', luogo:'casa',
+        setup:'In affondo basso, ginocchio dietro a terra.', esecuzione:'Porta le mani al petto. Ruota il busto verso la gamba avanti.', errori:'Ginocchio avanti che cade dentro.' }]),
     training_logs:[], training_notes:[], workouts:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[],
     supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[],
   };
@@ -142,6 +145,14 @@ async function nuovo(){
       atteso('410 · un riquadro solo, «PRIMA SERIE · Piegamenti diamante», largo', [r.length, !!a.doc.querySelector('.rest-row-cards--una'), /^PRIMA SERIE · Piegamenti diamante/.test(r[0] || '')], [1, true, true]);
       atteso('410 · nel foglio niente «FATTO», «APPENA FATTA» né la serie della Chest press', /FATTO|APPENA FATTA|30 lbs/.test(foglio), false);
     }
+  }
+  // Recovery Day: EX120 prende i testi dal catalogo, non più la copia del World's greatest stretch
+  {
+    const a = await nuovo();
+    const rec = a.win.eval('TRAINING_SESSIONS.recoveryUpper.exercises').filter(e => e.codice === 'EX120');
+    const tutto = rec.map(e => JSON.stringify([e.setup, e.execution, e.commonErrors])).join(' ');
+    atteso('EX120 · le due righe dx/sx leggono il testo del catalogo', [rec.length, rec.every(e => (e.execution || []).some(x => /Ruota il busto verso la gamba avanti/.test(x)))], [2, true]);
+    atteso('EX120 · niente più «mano a terra» né il nome cambiato', [/a terra interna al piede|Mano (destra|sinistra) a terra/.test(tutto), rec.map(e => e.name)], [false, ['Affondo basso con rotazione dx', 'Affondo basso con rotazione sx']]);
   }
   // caricoTesto: un posto solo per il carico a parole
   {
