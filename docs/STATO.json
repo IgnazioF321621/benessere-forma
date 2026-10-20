@@ -1,5 +1,5 @@
 {
- "quando": "2026-10-14T15:34:13",
+ "quando": "2026-10-20T16:15:08",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -687,7 +687,7 @@
   },
   {
    "codice": "EX117",
-   "nome": "World s greatest stretch",
+   "nome": "Lunge to hamstring stretch",
    "gif_slug": null,
    "livello": "principiante"
   },
@@ -4948,7 +4948,7 @@
  ],
  "catalogo": {
   "righe": 824,
-  "ultimo_sync": "2026-10-14T13:33:24.295000+00:00",
+  "ultimo_sync": "2026-10-20T14:13:55.428000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX838",
