@@ -17,11 +17,11 @@ const atteso = (nome, got, exp) => {
 const testo = (html) => String(html).replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const scheda = { sessioni: [ { id:'upperA', name:'Upper A', type:'Forza', rir:2, rest:'3 min', exercises:[
-  { codice:'EX001', name:'Panca elastico', sets:3, reps:'6-10', rest_sec:120 },          // ultima volta 8 · 40 lbs · RIR 1 → oggi 40 lbs · 9
+  { codice:'EX001', name:'Panca elastico', sets:3, reps:'6-10', rest_sec:120 },          // ultima volta 8 · 40 lbs · RIR 2 → oggi 40 lbs · 9
   { codice:'EX002', name:'Chest press elastico', sets:3, reps:'6-10', rest_sec:120 },    // ultima volta 10 · 40 lbs · RIR 2 (in cima, margine) → 50 lbs · 6
   { codice:'EX003', name:'Rematore elastico', sets:3, reps:'6-10', rest_sec:90 },        // ultima volta 5 · 40 lbs → sotto il minimo → 30 lbs · 6
   { codice:'EX008', name:'Trazioni sbarra assistite', sets:3, reps:'6-10', rest_sec:120 }, // ultima volta 10 · Rossa · RIR 2 → Gialla · 6
-  { codice:'EX647', name:'Squat calcio laterale', sets:3, reps:'8-12', rest_sec:90 },    // per lato: 9 dx · 8 sx → oggi 9 per lato (dal lato debole), entrambe le tendine
+  { codice:'EX647', name:'Squat calcio laterale', sets:3, reps:'8-12', rest_sec:90 },    // per lato: 9 dx · 8 sx a RIR 1 (obiettivo 2) → oggi si resta a 8 per lato (lato debole, Training 460)
   { codice:'EX600', name:'Curl elastico', sets:3, reps:'10-15', rest_sec:60 },           // mai fatto → «Inizia con», niente compilato
   { codice:'EX072', name:'Plank', sets:2, reps:'20-40 sec', iso:true, durationBased:true, isTimed:true, rest_sec:60 },
 ] } ] };
@@ -42,7 +42,7 @@ function fixture(o){
     schede_utente:[{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(scheda)) }],
     esercizi_catalog: catalogo.map(c => ({ ...c })),
     training_logs:[
-      log('t1', 'Panca elastico', 'EX001', 2, 7, '40', 2), log('t2', 'Panca elastico', 'EX001', 3, 8, '40', 1),
+      log('t1', 'Panca elastico', 'EX001', 2, 7, '40', 2), log('t2', 'Panca elastico', 'EX001', 3, 8, '40', 2),
       log('t3', 'Chest press elastico', 'EX002', 3, 10, '40', 2),
       log('t4', 'Rematore elastico', 'EX003', 3, 5, '40', 1),
       log('t5', 'Trazioni sbarra assistite', 'EX008', 3, 10, null, 2, { band_color:'Rossa' }),
@@ -74,11 +74,11 @@ async function nuovo(o){
   // 1 · la card dice cosa fare oggi, poi com'è andata l'ultima volta
   {
     const a = await nuovo();
-    atteso('card · stesso carico, una ripetizione in più', /🎯 Oggi S1: 40 lbs · 9 reps · RIR 2 · ultima volta 8r · 40 lbs · RIR 1/.test(a.riga('Panca elastico')), true);
+    atteso('card · stesso carico, una ripetizione in più', /🎯 Oggi S1: 40 lbs · 9 reps · RIR 2 · ultima volta 8r · 40 lbs · RIR 2/.test(a.riga('Panca elastico')), true);
     atteso('card · in cima con margine: un passo di carico, dal minimo', /🎯 Oggi S1: 50 lbs · riparti da 6 reps · RIR 2 · ultima volta 10r · 40 lbs · RIR 2/.test(a.riga('Chest press elastico')), true);
     atteso('card · sotto il minimo: un passo indietro', /🎯 Oggi S1: 30 lbs · punta a 6 reps · RIR 2/.test(a.riga('Rematore elastico')), true);
     atteso('card · trazioni in cima: banda più dura', /🎯 Oggi S1: banda Gialla \(più dura\) · riparti da 6 reps · RIR 2 · ultima volta 10r · Rossa · RIR 2/.test(a.riga('Trazioni sbarra assistite')), true);
-    atteso('card · per lato: dal lato debole, «per lato»', /🎯 Oggi S1: corpo libero · 9 reps per lato · RIR 2 · ultima volta 9 dx · 8 sx/.test(a.riga('Squat calcio laterale')), true);
+    atteso('card · per lato: dal lato debole, «per lato»; a RIR 1 sotto l\'obiettivo si resta (460)', /🎯 Oggi S1: corpo libero · resta a 8 reps per lato · RIR 2 · ultima volta 9 dx · 8 sx/.test(a.riga('Squat calcio laterale')), true);
     atteso('card · mai fatto: «Inizia con» come prima', /💡 Inizia con 10 reps/.test(a.riga('Curl elastico')), true);
     const o = a.win.obiettivoPrimaSerie('Panca elastico', 'upperA');
     atteso('obiettivo · i numeri dietro al testo', [o.reps, o.resistance, o.bandColor, o.rir, o.nota, o.setNum], [9, 40, null, 2, null, 1]);
@@ -103,7 +103,7 @@ async function nuovo(o){
     atteso('registro trazioni · la banda più dura è già scelta, 6 ripetizioni', [a.ST.trainLogBandColor, a.doc.getElementById('tl-reps').value], ['Gialla', '6']);
     a.ST.trainLogOpen = null;
     a.win.openLogModal('upperA', 'Squat calcio laterale', 1);
-    atteso('registro per lato · tutte e due le tendine a 9', [a.doc.getElementById('tl-reps').value, a.doc.getElementById('tl-reps-sx').value], ['9', '9']);
+    atteso('registro per lato · tutte e due le tendine a 8 (si resta: RIR 1 sotto l\'obiettivo, 460)', [a.doc.getElementById('tl-reps').value, a.doc.getElementById('tl-reps-sx').value], ['8', '8']);
     a.ST.trainLogOpen = null;
     a.win.openLogModal('upperA', 'Curl elastico', 1);
     atteso('registro mai fatto · vuoto come prima', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist, a.ST.trainLogDraft], ['', null, { reps:'', rir:'' }]);

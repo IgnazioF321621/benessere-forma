@@ -1341,87 +1341,6 @@ function playLongBeep(){
   } catch(e){}
 }
 
-// ── La traccia del recupero (Training 420, 20 ottobre 2026, prova chiesta da Ignazio) ──
-// Su iPhone, appena si passa a un'altra app, il contesto Web Audio va «interrupted» e i bip del conto non
-// suonano. Un elemento <audio> che sta già suonando invece continua (misurato nel simulatore iOS 27.1, in
-// Safari: la traccia è arrivata in fondo mentre la pagina era nascosta). Quindi all'inizio del recupero
-// parte UNA traccia sola, costruita qui: silenzio fino a 5 secondi dalla fine, i 5 tic (come playPrepBeep)
-// e il bip di stop (come playStopBeep), con la durata del recupero. Mentre la traccia suona, il tick non
-// suona i suoi bip (niente doppioni); se non parte, restano i bip di prima. Limiti, detti a Ignazio: con
-// l'app aggiunta alla Home non è garantito, e la traccia mette in pausa la musica di un'altra app.
-const TRACCIA_SR = 8000;
-let _traccia = null, _tracciaUrl = null, _tracciaSbloccata = false;
-function _tracciaWav(secondi, senzaToni){
-  const fine = secondi + 0.8, n = Math.round(TRACCIA_SR * fine);
-  const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
-  const s = (o, t) => { for(let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
-  s(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, TRACCIA_SR, true); v.setUint32(28, TRACCIA_SR * 2, true);
-  v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, 'data'); v.setUint32(40, n * 2, true);
-  // [inizio in secondi, durata, frequenza, volume]: i 5 tic e il bip di stop
-  const toni = [];
-  if(!senzaToni){
-    for(let k = 5; k >= 1; k--) if(secondi - k >= 0) toni.push([secondi - k, 0.08, 600, 0.35]);
-    toni.push([secondi, 0.72, 659, 0.85]);
-  }
-  toni.forEach(([t0, dur, f, g]) => {
-    const a = Math.round(t0 * TRACCIA_SR), b = Math.min(n, a + Math.round(dur * TRACCIA_SR));
-    for(let i = a; i < b; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(2 * Math.PI * f * (i - a) / TRACCIA_SR) * g * 32767), true);
-  });
-  return new Blob([buf], { type: 'audio/wav' });
-}
-function _elementoTraccia(){
-  if(_traccia) return _traccia;
-  if(typeof Audio === 'undefined') return null;
-  try { _traccia = new Audio(); _traccia.preload = 'auto'; } catch(e){ _traccia = null; return null; }
-  // fermata da fuori (una telefonata, i comandi della schermata bloccata): tornano i bip del tick
-  _traccia.addEventListener('pause', () => { if(!_traccia.ended && ST.trainCountdown) ST.trainCountdown.traccia = false; });
-  return _traccia;
-}
-function fermaTracciaRecupero(){
-  if(_traccia){ try { _traccia.pause(); } catch(e){} }
-  if(_tracciaUrl){ try { URL.revokeObjectURL(_tracciaUrl); } catch(e){} _tracciaUrl = null; }
-  if(ST.trainCountdown) ST.trainCountdown.traccia = false;
-}
-function avviaTracciaRecupero(secondi){
-  fermaTracciaRecupero();
-  const el = _elementoTraccia();
-  if(!el || !(secondi > 5) || typeof URL === 'undefined' || !URL.createObjectURL) return;
-  const cd = ST.trainCountdown;
-  try {
-    _tracciaUrl = URL.createObjectURL(_tracciaWav(secondi));
-    el.src = _tracciaUrl;
-    const p = el.play();
-    if(p && p.then) p.then(() => {
-      _tracciaSbloccata = true;
-      // il conto è ancora quello per cui è partita: da qui i bip li fa la traccia
-      if(ST.trainCountdown && ST.trainCountdown === cd) cd.traccia = true;
-      if('mediaSession' in navigator && typeof MediaMetadata !== 'undefined'){
-        try { navigator.mediaSession.metadata = new MediaMetadata({ title: 'Recupero', artist: cd ? cd.exName : '' }); } catch(e){}
-      }
-    }).catch(() => { if(cd) cd.traccia = false; });
-  } catch(e){ if(cd) cd.traccia = false; }
-}
-// iPhone suona un <audio> da programma solo se quello stesso elemento è già partito con un tocco. Il recupero
-// parte dopo il salvataggio (dopo un'attesa di rete): per questo, durante una seduta, il primo tocco fa
-// partire l'elemento con un attimo di silenzio. Fuori dalla seduta no: metterebbe in pausa la musica per niente.
-function _sbloccaTraccia(){
-  if(_tracciaSbloccata || !ST.trainSession) return;
-  const el = _elementoTraccia();
-  if(!el || (ST.trainCountdown && ST.trainCountdown.traccia)) return;
-  try {
-    fermaTracciaRecupero();
-    _tracciaUrl = URL.createObjectURL(_tracciaWav(0, true));   // 0,8 secondi di silenzio
-    el.src = _tracciaUrl;
-    const p = el.play();
-    if(p && p.then) p.then(() => { _tracciaSbloccata = true; }).catch(() => {});
-  } catch(e){}
-}
-if(typeof document !== 'undefined'){
-  document.addEventListener('touchend', _sbloccaTraccia, true);
-  document.addEventListener('click', _sbloccaTraccia, true);
-}
-
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
 function startTrainingCountdown(seconds, exName, sessionId, opts){
   if(ST._countdownInterval) clearInterval(ST._countdownInterval);
@@ -1448,7 +1367,6 @@ function startTrainingCountdown(seconds, exName, sessionId, opts){
   if(seconds <= 5){
     for(let s = 1; s <= 5; s++) ST.trainCountdown.prepBeeped[s] = true;
   }
-  avviaTracciaRecupero(seconds);     // Training 420: i bip anche fuori dall'app, se iPhone lo lascia fare
   ST._countdownInterval = setInterval(tickCountdown, 250); // tick 4x/sec, update surgical
   ensureRestCue(exName, sessionId);  // genera cue AI in background (no-op se gia in cache)
   ensureRestGif(exName, _gifCode);   // pre-fetch GIF; usa ?code= se disponibile
@@ -1512,9 +1430,7 @@ function tickCountdown(){
   // Triplo beep finale alla scadenza (idempotente: anche se utente torna in app dopo)
   if(remaining <= 0 && !cd.beeped){
     cd.beeped = true;
-    // con la traccia che suona il bip è già nella traccia (Training 420): qui solo la vibrazione
-    if(cd.traccia){ if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} } }
-    else playStopBeep();
+    playStopBeep();
     setTimeout(()=>{
       if(ST.trainCountdown && ST.trainCountdown.beeped){
         setTimeout(()=>{
@@ -1536,7 +1452,7 @@ function tickCountdown(){
     // Prep beep normale: 1 tic alla transizione in 5,4,3,2,1 (idempotente via cd.prepBeeped)
     if(remaining >= 1 && remaining <= 5 && !cd.prepBeeped[remaining]){
       cd.prepBeeped[remaining] = true;
-      if(!cd.traccia) playPrepBeep();
+      playPrepBeep();
     }
     cd.seconds = remaining;
     if(remaining <= 0){ cd.done = true; cd.ridotto = false; }   // finito: il foglio torna anche se era ridotto
@@ -1580,8 +1496,6 @@ function tickCountdown(){
 
 function skipCountdown(){
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
-  // A tempo scaduto la traccia ha già suonato tutto: si ferma solo se si salta prima (Training 420)
-  if(!(ST.trainCountdown && ST.trainCountdown.done)) fermaTracciaRecupero();
   ST.trainCountdown = null;
   renderTraining();
   scrollToActiveExercise();
@@ -2522,6 +2436,14 @@ function _softReturnRowText(exName){
   return `riduci di ~${pct}% il carico dell'ultima volta`;
 }
 
+// Il RIR obiettivo di un esercizio (Training 460, 22 ottobre 2026): quello scritto sull'esercizio dal
+// generatore (gli isolamenti possono averne uno diverso dalla seduta: Leg curl RIR 1 in una Lower Forza
+// a RIR 2), altrimenti quello della seduta. Fonte sola per la PROSSIMA e per la pillola della card.
+function rirObiettivo(ex, sess){
+  if(ex && ex.rir != null && ex.rir !== '' && isFinite(Number(ex.rir))) return Number(ex.rir);
+  return (sess && sess.rir != null && sess.rir !== '') ? Number(sess.rir) : null;
+}
+
 // Con `struttura:true` (Training 040) restituisce { testo, reps, resistance, bandColor, rir, via }: gli stessi
 // numeri del testo, per compilare il registro della serie dopo. Una regola sola per PROSSIMA e per
 // l'obiettivo della prima serie di oggi (obiettivoPrimaSerie), che è la «prossima» dopo l'ultima
@@ -2538,9 +2460,10 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const unitLbl = (isTimed ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
   // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
-  // elastici/corpo libero, isometrici) — override su sess.rir, Pump incluso.
-  // Settimane 1-3: comportamento invariato (sess.rir o default 2).
-  let targetRIR = getCycleWeekInfo().isScarico ? 3 : ((sess.rir != null) ? sess.rir : 2);
+  // elastici/corpo libero, isometrici) — override sul RIR obiettivo, Pump incluso.
+  // Fuori dallo scarico: il RIR obiettivo dell'esercizio (rirObiettivo, Training 460), o 2.
+  const _rirEx = rirObiettivo(exData, sess);
+  let targetRIR = getCycleWeekInfo().isScarico ? 3 : ((_rirEx != null) ? _rirEx : 2);
   // RIENTRO SOFT attivo: RIR consigliato +1 (L1) / +2 (L2) su tutti i rami.
   // Solo suggerimenti — il carico ridotto vive nella riga RIENTRO del primo set
   // (niente riduzione qui: comporrebbe il −% a ogni serie loggata).
@@ -2586,6 +2509,9 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
       if(targetRIR === 0) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `mantieni ${repsDone} reps`);
       return fine({ bandColor: cur, reps: clampReps(repsDone - 1) }, bandTxt, `scendi a ${clampReps(repsDone - 1)} reps`);
     }
+    // 1b) meno margine dell'obiettivo (RIR fatto < RIR obiettivo) ma nel range → stesso gradino, stesse
+    //     ripetizioni: niente passo avanti né banda più dura (Training 460)
+    if(rirVal != null && rirVal < targetRIR && repsDone >= repsMin) return fine({ bandColor: cur, reps: clampReps(repsDone) }, bandTxt, `resta a ${clampReps(repsDone)} reps`);
     // 2) tetto + RIR ≥ target → un gradino più duro.
     //    Su Corpo libero (idx 0) non esiste niente di più duro: si sale di reps,
     //    oltre il tetto del range, perché la banda non è più una leva disponibile.
@@ -2617,6 +2543,14 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   if(rirVal === 0 && repsDone >= repsMin){
     if(targetRIR === 0) return fine({ resistance: resistInt, reps: repsDone }, loadTxt(resistInt), `mantieni ${repsDone} ${unitLbl}`);
     return fine({ resistance: resistInt, reps: clampReps(repsDone - step) }, loadTxt(resistInt), `scendi a ${clampReps(repsDone - step)} ${unitLbl}`);
+  }
+  // 1b) meno margine dell'obiettivo (RIR fatto < RIR obiettivo dell'esercizio, es. RIR 1 con obiettivo 2) ma
+  //     nel range → stessa resistenza e stesse ripetizioni: niente aumenti, niente via di progressione, mai
+  //     «variante più difficile» (Training 460, segnalazione di Ignazio: dopo RIR 1 gli chiedeva una
+  //     ripetizione in più a RIR 2). La variante più difficile resta solo per il punto 2: tetto e RIR ≥ obiettivo.
+  if(rirVal != null && rirVal < targetRIR && repsDone >= repsMin){
+    const r = clampReps(repsDone);
+    return fine({ resistance: resistInt, reps: r }, loadTxt(resistInt), `resta a ${r} ${unitLbl}`);
   }
   // 2) tetto + RIR ≥ target → un passo avanti sulla via dell'esercizio (Training 320).
   //    carico: +1 passo (10 lbs / 2.5 kg) e si riparte dal minimo. più ripetizioni / tenuta più lunga:
@@ -2955,7 +2889,6 @@ async function saveTrainingSet(){
       // prima di uscire. Il bottone "Completa sessione" nella schermata chiude manualmente.
       // Un recupero ancora in corso (verso un esercizio che nel frattempo è stato fatto) si spegne.
       if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
-      fermaTracciaRecupero();
       ST.trainCountdown = null;
       ST.trainLogOpen = null;
       ST.trainExecOpen = null;
@@ -3775,7 +3708,8 @@ function _renderSessionPreview(s, sel){
   } else {
     exHTML = (s.exercises||[]).map((e,i)=>{
       const isTimed = !!(e.isTimed || (typeof parseRepsRange === 'function' && parseRepsRange(e.reps)?.kind === 'seconds'));
-      const rirPart  = (s.rir != null && !isTimed) ? ` · RIR ${s.rir}` : '';
+      const rirEx    = rirObiettivo(e, s);   // l'obiettivo dell'esercizio, non quello della seduta (Training 460)
+      const rirPart  = (rirEx != null && !isTimed) ? ` · RIR ${rirEx}` : '';
       const restVal  = e.rest_sec ? restSecToText(e.rest_sec) : s.rest;
       const restPart = restVal ? ` · rec ${restVal}` : '';
       const setupSec = (Array.isArray(e.setup) && e.setup.length) ? `<div class="modal-section"><h4>Setup</h4><ul class="modal-list">${e.setup.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
@@ -4069,7 +4003,7 @@ function renderTraining(){
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
-                ${(s.rir!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${s.rir}</span>`:''}
+                ${(rirObiettivo(e, s)!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${rirObiettivo(e, s)}</span>`:''}
                 <span class="ex-rest">rec ${restCompact}</span>
                 ${_exInfoCatalogo(e).unilaterale === 'alternato' ? `<span class="ex-rest ex-alternato" title="Esercizio alternato">1 rip = dx + sx</span>` : ''}
               </div>
@@ -5618,7 +5552,6 @@ function closeTrainingSession(){
   ST.warmupInfoOpen = null;        // chiudi scheda warm-up se aperta
   // Stop countdown recupero se attivo (no timer orfano in background)
   if(ST._countdownInterval){ clearInterval(ST._countdownInterval); ST._countdownInterval = null; }
-  fermaTracciaRecupero();
   ST.trainCountdown = null;
   // BLOCCO 2B: chiusura schermata esecuzione se aperta (cleanup per uscita session)
   ST.trainExecOpen = null;
