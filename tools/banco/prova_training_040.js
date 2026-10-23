@@ -1,9 +1,9 @@
 // Training 040 (Ondata 4, Sessione H, 13 ottobre 2026): l'obiettivo di oggi parte dall'ultima seduta.
-// La prima serie di oggi è la «prossima» dopo l'ultima serie della seduta precedente (una regola sola,
-// computeNextSetSuggestion): stesso carico e una ripetizione in più, un passo avanti sulla via se
-// l'ultima volta era in cima con margine, un passo indietro se sotto il minimo; in scarico e nel rientro
-// le riduzioni delle righe SCARICO e RIENTRO. Carico e ripetizioni già compilati nel registro (prima serie
-// dall'obiettivo, le altre dalla PROSSIMA), obiettivo sotto la GIF, un tocco su «Salva».
+// Dal Training 440 (23 ottobre 2026, scelta di Ignazio) la prima serie di oggi è la serie PIÙ FORTE
+// dell'ultima seduta, ripetuta uguale (carico più alto e, a quel carico, le ripetizioni migliori; una
+// regola sola, computeNextSetSuggestion con primaSerie); si sale dalle serie dopo. Sotto il minimo un passo
+// indietro; in scarico e nel rientro le riduzioni delle righe SCARICO e RIENTRO. Carico e ripetizioni già
+// compilati nel registro (prima serie dall'obiettivo, le altre dalla PROSSIMA), obiettivo sotto la GIF.
 //   node tools/banco/prova_training_040.js
 process.env.TZ = 'Europe/Rome';
 const { boot } = require('./banco');
@@ -17,11 +17,11 @@ const atteso = (nome, got, exp) => {
 const testo = (html) => String(html).replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 
 const scheda = { sessioni: [ { id:'upperA', name:'Upper A', type:'Forza', rir:2, rest:'3 min', exercises:[
-  { codice:'EX001', name:'Panca elastico', sets:3, reps:'6-10', rest_sec:120 },          // ultima volta 8 · 40 lbs · RIR 2 → oggi 40 lbs · 9
-  { codice:'EX002', name:'Chest press elastico', sets:3, reps:'6-10', rest_sec:120 },    // ultima volta 10 · 40 lbs · RIR 2 (in cima, margine) → 50 lbs · 6
+  { codice:'EX001', name:'Panca elastico', sets:3, reps:'6-10', rest_sec:120 },          // ultima volta 9×30, 8×40, 7×40 → oggi la più forte, 40 lbs · 8
+  { codice:'EX002', name:'Chest press elastico', sets:3, reps:'6-10', rest_sec:120 },    // ultima volta 10 · 40 lbs · RIR 2 → oggi 40 · 10 uguale, poi 50 · 6
   { codice:'EX003', name:'Rematore elastico', sets:3, reps:'6-10', rest_sec:90 },        // ultima volta 5 · 40 lbs → sotto il minimo → 30 lbs · 6
-  { codice:'EX008', name:'Trazioni sbarra assistite', sets:3, reps:'6-10', rest_sec:120 }, // ultima volta 10 · Rossa · RIR 2 → Gialla · 6
-  { codice:'EX647', name:'Squat calcio laterale', sets:3, reps:'8-12', rest_sec:90 },    // per lato: 9 dx · 8 sx a RIR 1 (obiettivo 2) → oggi si resta a 8 per lato (lato debole, Training 460)
+  { codice:'EX008', name:'Trazioni sbarra assistite', sets:3, reps:'6-10', rest_sec:120 }, // ultima volta 10 · Rossa · RIR 2 → oggi Rossa · 10 uguale
+  { codice:'EX647', name:'Squat calcio laterale', sets:3, reps:'8-12', rest_sec:90 },    // per lato: 9 dx · 8 sx → oggi 8 per lato (lato debole), uguale
   { codice:'EX600', name:'Curl elastico', sets:3, reps:'10-15', rest_sec:60 },           // mai fatto → «Inizia con», niente compilato
   { codice:'EX072', name:'Plank', sets:2, reps:'20-40 sec', iso:true, durationBased:true, isTimed:true, rest_sec:60 },
 ] } ] };
@@ -42,7 +42,7 @@ function fixture(o){
     schede_utente:[{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(scheda)) }],
     esercizi_catalog: catalogo.map(c => ({ ...c })),
     training_logs:[
-      log('t1', 'Panca elastico', 'EX001', 2, 7, '40', 2), log('t2', 'Panca elastico', 'EX001', 3, 8, '40', 2),
+      log('t0', 'Panca elastico', 'EX001', 1, 9, '30', 2), log('t1', 'Panca elastico', 'EX001', 2, 8, '40', 2), log('t2', 'Panca elastico', 'EX001', 3, 7, '40', 2),
       log('t3', 'Chest press elastico', 'EX002', 3, 10, '40', 2),
       log('t4', 'Rematore elastico', 'EX003', 3, 5, '40', 1),
       log('t5', 'Trazioni sbarra assistite', 'EX008', 3, 10, null, 2, { band_color:'Rossa' }),
@@ -74,36 +74,42 @@ async function nuovo(o){
   // 1 · la card dice cosa fare oggi, poi com'è andata l'ultima volta
   {
     const a = await nuovo();
-    atteso('card · stesso carico, una ripetizione in più', /🎯 Oggi S1: 40 lbs · 9 reps · RIR 2 · ultima volta 8r · 40 lbs · RIR 2/.test(a.riga('Panca elastico')), true);
-    atteso('card · in cima con margine: un passo di carico, dal minimo', /🎯 Oggi S1: 50 lbs · riparti da 6 reps · RIR 2 · ultima volta 10r · 40 lbs · RIR 2/.test(a.riga('Chest press elastico')), true);
+    atteso('440 · card · la serie più forte dell\'ultima volta, uguale (40×8, non 30×9 né l\'ultima 40×7)', /🎯 Oggi S1: 40 lbs · 8 reps · RIR 2 · ultima volta 8r · 40 lbs · RIR 2/.test(a.riga('Panca elastico')), true);
+    atteso('440 · card · in cima con margine: alla prima serie uguale, si sale dopo', /🎯 Oggi S1: 40 lbs · 10 reps · RIR 2 · ultima volta 10r · 40 lbs · RIR 2/.test(a.riga('Chest press elastico')), true);
     atteso('card · sotto il minimo: un passo indietro', /🎯 Oggi S1: 30 lbs · punta a 6 reps · RIR 2/.test(a.riga('Rematore elastico')), true);
-    atteso('card · trazioni in cima: banda più dura', /🎯 Oggi S1: banda Gialla \(più dura\) · riparti da 6 reps · RIR 2 · ultima volta 10r · Rossa · RIR 2/.test(a.riga('Trazioni sbarra assistite')), true);
-    atteso('card · per lato: dal lato debole, «per lato»; a RIR 1 sotto l\'obiettivo si resta (460)', /🎯 Oggi S1: corpo libero · resta a 8 reps per lato · RIR 2 · ultima volta 9 dx · 8 sx/.test(a.riga('Squat calcio laterale')), true);
+    atteso('440 · card · trazioni: la stessa banda e le stesse ripetizioni', /🎯 Oggi S1: banda Rossa · 10 reps · RIR 2 · ultima volta 10r · Rossa · RIR 2/.test(a.riga('Trazioni sbarra assistite')), true);
+    atteso('440 · card · per lato: dal lato debole, uguale', /🎯 Oggi S1: corpo libero · 8 reps per lato · RIR 2 · ultima volta 9 dx · 8 sx/.test(a.riga('Squat calcio laterale')), true);
     atteso('card · mai fatto: «Inizia con» come prima', /💡 Inizia con 10 reps/.test(a.riga('Curl elastico')), true);
     const o = a.win.obiettivoPrimaSerie('Panca elastico', 'upperA');
-    atteso('obiettivo · i numeri dietro al testo', [o.reps, o.resistance, o.bandColor, o.rir, o.nota, o.setNum], [9, 40, null, 2, null, 1]);
+    atteso('obiettivo · i numeri dietro al testo', [o.reps, o.resistance, o.bandColor, o.rir, o.nota, o.setNum], [8, 40, null, 2, null, 1]);
   }
   // 2 · il registro è già compilato: un tocco su «Salva»
   {
     const a = await nuovo();
     a.win.openLogModal('upperA', 'Panca elastico', 1);
-    atteso('registro S1 · ripetizioni e carico compilati, RIR da dire', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist, a.doc.getElementById('tl-resist').value, a.doc.getElementById('tl-rir').value], ['9', 40, '40', '']);
+    atteso('registro S1 · ripetizioni e carico compilati, RIR da dire', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist, a.doc.getElementById('tl-resist').value, a.doc.getElementById('tl-rir').value], ['8', 40, '40', '']);
     a.scegli('tl-rir', '2');
     await a.win.saveTrainingSet();
     const r = a.t.training_logs[a.t.training_logs.length - 1];
-    atteso('registro S1 · salvata com\'era compilata', [r.exercise_code, r.set_number, r.reps, r.resistance, r.rir_actual], ['EX001', 1, 9, '40', 2]);
-    atteso('registro · la PROSSIMA tiene anche i numeri', [a.ST.aiSuggestions['upperA_Panca elastico'], a.ST.trainProssima['upperA_Panca elastico'].reps, a.ST.trainProssima['upperA_Panca elastico'].resistance], ['S2: 40 lbs · 10 reps · RIR 2', 10, 40]);
+    atteso('registro S1 · salvata com\'era compilata', [r.exercise_code, r.set_number, r.reps, r.resistance, r.rir_actual], ['EX001', 1, 8, '40', 2]);
+    atteso('registro · la PROSSIMA tiene anche i numeri: dalla seconda si sale', [a.ST.aiSuggestions['upperA_Panca elastico'], a.ST.trainProssima['upperA_Panca elastico'].reps, a.ST.trainProssima['upperA_Panca elastico'].resistance], ['S2: 40 lbs · 9 reps · RIR 2', 9, 40]);
     a.win.openLogModal('upperA', 'Panca elastico', 2);
-    atteso('registro S2 · compilato dalla PROSSIMA', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist], ['10', 40]);
+    atteso('registro S2 · compilato dalla PROSSIMA', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist], ['9', 40]);
     a.scegli('tl-rir', '2'); await a.win.saveTrainingSet();
     a.win.openLogModal('upperA', 'Panca elastico', 3);
-    atteso('registro S3 · in cima con margine: 50 lbs dal minimo', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist], ['6', 50]);
+    atteso('registro S3 · una ripetizione in più ancora', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist], ['10', 40]);
+    a.ST.trainLogOpen = null;
+    // Chest press: la prima uguale (40×10, in cima con margine), la seconda un passo di carico dal minimo
+    a.win.openLogModal('upperA', 'Chest press elastico', 1);
+    atteso('440 · registro chest press S1 · 40×10 uguale all\'ultima volta', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist], ['10', 40]);
+    a.scegli('tl-rir', '2'); await a.win.saveTrainingSet();
+    atteso('440 · chest press S2 · in cima con margine: 50 lbs dal minimo', [a.ST.trainProssima['upperA_Chest press elastico'].reps, a.ST.trainProssima['upperA_Chest press elastico'].resistance], [6, 50]);
     a.ST.trainLogOpen = null;
     a.win.openLogModal('upperA', 'Trazioni sbarra assistite', 1);
-    atteso('registro trazioni · la banda più dura è già scelta, 6 ripetizioni', [a.ST.trainLogBandColor, a.doc.getElementById('tl-reps').value], ['Gialla', '6']);
+    atteso('440 · registro trazioni · la stessa banda dell\'ultima volta, 10 ripetizioni', [a.ST.trainLogBandColor, a.doc.getElementById('tl-reps').value], ['Rossa', '10']);
     a.ST.trainLogOpen = null;
     a.win.openLogModal('upperA', 'Squat calcio laterale', 1);
-    atteso('registro per lato · tutte e due le tendine a 8 (si resta: RIR 1 sotto l\'obiettivo, 460)', [a.doc.getElementById('tl-reps').value, a.doc.getElementById('tl-reps-sx').value], ['8', '8']);
+    atteso('registro per lato · tutte e due le tendine a 8', [a.doc.getElementById('tl-reps').value, a.doc.getElementById('tl-reps-sx').value], ['8', '8']);
     a.ST.trainLogOpen = null;
     a.win.openLogModal('upperA', 'Curl elastico', 1);
     atteso('registro mai fatto · vuoto come prima', [a.doc.getElementById('tl-reps').value, a.ST.trainLogResist, a.ST.trainLogDraft], ['', null, { reps:'', rir:'' }]);
@@ -116,7 +122,7 @@ async function nuovo(o){
     const a = await nuovo();
     a.win.openTrainExec('upperA', 'Panca elastico', 1);
     const exec = testo(a.doc.querySelector('.train-exec-overlay').innerHTML);
-    atteso('esecuzione · l\'obiettivo di oggi sta sotto la GIF', /🎯 Oggi S1: 40 lbs · 9 reps · RIR 2/.test(exec), true);
+    atteso('esecuzione · l\'obiettivo di oggi sta sotto la GIF', /🎯 Oggi S1: 40 lbs · 8 reps · RIR 2/.test(exec), true);
     a.win.trainExecBack();
   }
   // 4 · settimana di scarico: −20 lbs dal minimo, banda più facile; rientro graduale: −20%
