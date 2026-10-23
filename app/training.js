@@ -208,6 +208,14 @@ async function ensureExNameAliases(){
   return byNorm;
 }
 
+// Le righe arrivano per data dal più recente: la pagina finisce con la data `D` della sua ultima riga.
+// Un esercizio la cui ultima seduta è proprio `D` può avere altre serie sulla pagina dopo (Training 440).
+// map: esercizio → prima riga trovata (la sua ultima seduta) · page: la pagina appena letta.
+function _dataAperta(map, page){
+  const fondo = page && page.length ? page[page.length - 1].date : null;
+  return !!fondo && Object.values(map).some(r => r && r.date === fondo);
+}
+
 // ── Cache ultime serie loggate per sessione (chiamata su openTrainingSession) ──
 // Il collegamento log↔esercizio avviene in tre passaggi, dal più stretto al più largo:
 //   1. codice esercizio scritto nella riga (Fondamenta 070), poi nome normalizzato
@@ -266,7 +274,11 @@ async function loadLastLoggedSets(sessionId){
         const canon = (row.exercise_code && canonByCodice.get(row.exercise_code)) || canonByNorm.get(_normExName(row.exercise_name));
         if(canon) assegna(canon, row);
       });
-      if(page.length < PAGE || mancanti().length === 0) break;
+      if(page.length < PAGE) break;
+      // Ci si ferma quando tutti hanno il loro ultimo set E l'ultima seduta di ognuno è finita: se una data
+      // continua sulla pagina dopo, le serie con set_number basso (spesso le più pesanti) sono là, e la
+      // prima serie di oggi sceglie fra tutte (Training 440, rilievo della revisione del Rilascio 51).
+      if(mancanti().length === 0 && !_dataAperta(map, page)) break;
     }
 
     // Passaggio 2 — codice: risolve le rinomine del catalogo (il log ha il nome vecchio).
@@ -295,23 +307,31 @@ async function loadLastLoggedSets(sessionId){
       });
       const tuttiNomi = [...new Set([].concat(...[...nomiPerCanon.values()].map(s => [...s])))];
       if(tuttiNomi.length > 0 && tuttiNomi.length <= 200){
-        const res2 = await supa.from('training_logs')
-          .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
-          .eq('user_id', ST.user.id)
-          .lt('date', today)
-          .order('date', { ascending: false })
-          .order('set_number', { ascending: false })
-          .limit(1000);
-        if(res2.error) console.warn('loadLastLoggedSets (altre sessioni):', res2.error.message);
-        (res2.data || []).forEach(row => {
-          const norm = _normExName(row.exercise_name);
-          for(const [canon, nomi] of nomiPerCanon){
-            if(map[canon] && map[canon].date !== row.date) continue;
-            const match = (row.exercise_code && canonByCodice.get(row.exercise_code) === canon)
-              || [...nomi].some(n => _normExName(n) === norm || n === norm);
-            if(match) assegna(canon, row);
-          }
-        });
+        // Una pagina per cercare, come prima; altre pagine solo per finire la data di un esercizio trovato
+        // che continua oltre il bordo (Training 440, rilievo della revisione del Rilascio 51).
+        for(let from = 0; from < MAX_ROWS; from += PAGE){
+          const res2 = await supa.from('training_logs')
+            .select('exercise_name, exercise_code, reps, resistance, band_color, rir_actual, date, set_number, reps_dx, reps_sx')
+            .eq('user_id', ST.user.id)
+            .lt('date', today)
+            .order('date', { ascending: false })
+            .order('set_number', { ascending: false })
+            .range(from, from + PAGE - 1);
+          if(res2.error){ console.warn('loadLastLoggedSets (altre sessioni):', res2.error.message); break; }
+          const page2 = res2.data || [];
+          page2.forEach(row => {
+            const norm = _normExName(row.exercise_name);
+            for(const [canon, nomi] of nomiPerCanon){
+              if(map[canon] && map[canon].date !== row.date) continue;
+              const match = (row.exercise_code && canonByCodice.get(row.exercise_code) === canon)
+                || [...nomi].some(n => _normExName(n) === norm || n === norm);
+              if(match) assegna(canon, row);
+            }
+          });
+          const trovati = {};
+          nomiPerCanon.forEach((_, canon) => { if(map[canon]) trovati[canon] = map[canon]; });
+          if(page2.length < PAGE || !_dataAperta(trovati, page2)) break;
+        }
       }
     }
 
@@ -1252,8 +1272,10 @@ async function deleteWorkoutConfirmed(){
 // Un tono sul contesto condiviso, per tutti i timer (recupero, attivazione, riscaldamento, tenute, Tabata).
 // Training 470: prima i tic e il bip lungo suonavano anche su un contesto «interrupted» (iPhone, dopo
 // un'altra app o con la musica ripartita), cioè nel vuoto, per sempre. Ora: in corsa suona; sospeso si
-// riprende e poi suona; interrotto o chiuso si rifà il contesto (_riattivaAudio) e, se torna a correre,
-// suona lì. `sospeso` (solo il bip di stop) lo tiene da parte per il primo tocco (Training 380).
+// riprende e poi suona; interrotto o chiuso si rifà il contesto (_riattivaAudio, che prova subito a
+// riprenderlo) e, se il telefono lo lascia correre senza un tocco, suona lì; se no quel tic si perde e i
+// successivi suonano dopo il primo tocco. `sospeso` (solo il bip di stop) non si perde: aspetta il primo
+// tocco (Training 380).
 // tono = [frequenza, volume, tenuta fino a, fine rampa, stop] in secondi dall'inizio.
 function _suonaTono(tono, sospeso){
   const [freq, vol, tieni, rampa, ferma] = tono;
@@ -5354,13 +5376,21 @@ function _ensureAudioCtx(){
 function _riattivaAudio(){
   const ctx = _audioCtx;
   if(!ctx) return Promise.resolve(false);
+  // Contesto nuovo, e subito un tentativo di riprenderlo (revisione del Rilascio 51): prima rifai() diceva
+  // sempre «no» e il bip che scopriva l'interruzione si perdeva anche quando il telefono avrebbe lasciato
+  // suonare. Se iPhone vuole un tocco, la ripresa non riesce: si resta in attesa del primo tocco, come prima.
   const rifai = () => {
     try{ if(ctx.close) ctx.close().catch(()=>{}); }catch(e){}
     _audioCtx = null;
-    _ensureAudioCtx();
+    const nuovo = _ensureAudioCtx();
     _audioGestureUnlocked = false;
     _armaSbloccoGesto();
-    return false;
+    if(!nuovo || typeof nuovo.resume !== 'function') return false;
+    if(nuovo.state === 'running') return true;
+    _sessioneAudioAmbiente();
+    try {
+      return Promise.resolve(nuovo.resume()).then(() => nuovo.state === 'running', () => false);
+    } catch(e){ return false; }
   };
   if(ctx.state === 'running') return Promise.resolve(true);
   if(ctx.state === 'interrupted' || ctx.state === 'closed') return Promise.resolve(rifai());

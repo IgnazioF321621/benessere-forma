@@ -35,17 +35,21 @@ async function nuovo(){
   const sessione = { type:'auto' };
   Object.defineProperty(W.navigator, 'audioSession', { value: sessione, configurable:true });
   const contesti = [];
+  // come iPhone (revisione del Rilascio 51): un contesto rifatto parte «suspended»; `senzaTocco` dice se il
+  // telefono lo lascia riprendere senza un tocco. Il primo contesto parte in corsa, come dopo lo sblocco.
+  const telefono = { senzaTocco: true, tocco: false };
   W.AudioContext = function(){
-    const c = { suoni:0, nato:sessione.type, currentTime:0, destination:{}, state:'running',
+    const c = { suoni:0, nato:sessione.type, currentTime:0, destination:{}, state: contesti.length ? 'suspended' : 'running',
       createOscillator(){ return { connect(){}, start(){ c.suoni++; }, stop(){}, frequency:{} }; },
       createGain(){ return { connect(){}, gain:{ setValueAtTime(){}, linearRampToValueAtTime(){} } }; },
-      resume(){ c.ripresa = sessione.type; if(c.state !== 'closed') c.state = 'running'; return Promise.resolve(); },
+      resume(){ c.ripresa = sessione.type; if(c.state !== 'closed' && (telefono.senzaTocco || telefono.tocco)) c.state = 'running'; return Promise.resolve(); },
       close(){ c.state = 'closed'; return Promise.resolve(); } };
     contesti.push(c); return c;
   };
+  W.addEventListener('touchend', () => { telefono.tocco = true; }, true);   // sulla finestra: prima dello sblocco dell'app
   W.webkitAudioContext = W.AudioContext;
   W.eval('_audioCtx = null');
-  return { ...b, W, sessione, contesti };
+  return { ...b, W, sessione, contesti, telefono };
 }
 
 (async () => {
@@ -65,11 +69,23 @@ async function nuovo(){
     const a = await nuovo();
     a.W.playPrepBeep();
     a.contesti[0].state = 'interrupted';
-    a.W.playPrepBeep(); a.W.playLongBeep();
+    a.W.playPrepBeep();
     await aspetta();
     atteso('contesto interrotto: i bip non suonano nel vuoto, il contesto si rifà', [a.contesti[0].suoni, a.contesti.length], [1, 2]);
-    // il contesto nuovo parte sospeso finché iOS non vede un tocco: al tocco si riprende e i bip tornano
-    a.contesti[1].state = 'suspended';
+    // revisione del Rilascio 51: se il telefono lascia riprendere senza tocco, il tic che ha scoperto
+    // l'interruzione (uno solo, nessun altro bip dopo) suona sul contesto nuovo; prima rifai() diceva sempre
+    // «no» e quel tic si perdeva
+    atteso('il contesto nuovo si riprende subito e il tic che ha scoperto l\'interruzione suona lì', [a.contesti[1].state, a.contesti[1].suoni], ['running', 1]);
+  }
+  {
+    // se invece iPhone vuole un tocco: quel tic si perde, i successivi suonano dopo il primo tocco
+    const a = await nuovo();
+    a.telefono.senzaTocco = false;
+    a.W.playPrepBeep();
+    a.contesti[0].state = 'interrupted';
+    a.W.playPrepBeep();
+    await aspetta();
+    atteso('senza un tocco: contesto nuovo sospeso, nessun suono nel vuoto', [a.contesti.length, a.contesti[1].state, a.contesti[1].suoni], [2, 'suspended', 0]);
     a.W.document.dispatchEvent(new a.W.Event('touchend'));
     await aspetta();
     a.W.playPrepBeep();
@@ -79,11 +95,12 @@ async function nuovo(){
   {
     // il bip di stop su contesto interrotto resta in sospeso e suona appena il contesto riparte (380, invariato)
     const a = await nuovo();
+    a.telefono.senzaTocco = false;
     a.W.playPrepBeep();
     a.contesti[0].state = 'interrupted';
     a.W.playStopBeep();
     await aspetta();
-    a.contesti[1].state = 'suspended';
+    atteso('bip di stop su contesto interrotto, senza tocco: resta in sospeso', [a.W.eval('_beepInSospeso'), a.contesti[1].suoni], [true, 0]);
     a.W.document.dispatchEvent(new a.W.Event('touchend'));
     await aspetta(40);
     atteso('bip di stop in sospeso: suona al primo tocco sul contesto nuovo', a.contesti[1].suoni, 1);
