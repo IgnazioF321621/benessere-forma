@@ -84,7 +84,10 @@ function avvia(localStorageDiPrima){
   atteso('due richieste insieme · una chiamata, stesso cue', [n, a1.html, a2.html], [1, 'cue', 'cue']);
 
   // ── 4. la seduta dopo: il cue salvato si usa senza chiamare il coach; dopo 30 giorni no ──
-  const ls = { ['zt_cue_' + U]: JSON.stringify({ [KEY]: { t:'cue di ieri', at: Date.now() - 86400000 }, [`${SESS}_Vecchio`]: { t:'cue vecchio', at: Date.now() - 40 * 86400000 } }) };
+  // L'orologio della pagina è fermo al 13 ottobre (avvia, opts.now): le date dei cue si contano da lì,
+  // non dall'orologio di Node, altrimenti la prova cambia esito col passare dei giorni.
+  const ORA_PAGINA = new Date('2026-10-13T09:00:00').getTime();
+  const ls = { ['zt_cue_' + U]: JSON.stringify({ [KEY]: { t:'cue di ieri', at: ORA_PAGINA - 86400000 }, [`${SESS}_Vecchio`]: { t:'cue vecchio', at: ORA_PAGINA - 40 * 86400000 } }) };
   b = avvia(ls);
   b.risposta = async () => ({ ok:true, status:200, json: async () => ({ content:[{ type:'text', text:'nuovo' }] }) });
   await b.win.ensureRestCue(EX, SESS);
