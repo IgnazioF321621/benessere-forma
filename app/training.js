@@ -234,6 +234,13 @@ async function loadLastLoggedSets(sessionId){
       if(e.codice) canonByCodice.set(e.codice, e.name);
     });
     const map = {};
+    // Tutte le serie dell'ultima seduta di ogni esercizio, non solo l'ultima (Training 440): la prima
+    // serie di oggi riparte dalla più forte (obiettivoPrimaSerie). Stesso esercizio, stessa data.
+    const serie = {};
+    const assegna = (canon, row) => {
+      if(!map[canon]){ map[canon] = row; serie[canon] = [row]; return; }
+      if(serie[canon] && map[canon].date === row.date && !serie[canon].includes(row)) serie[canon].push(row);
+    };
     const mancanti = () => (sess.exercises || []).filter(e => e && e.name && !map[e.name]);
 
     // Legge da training_logs, la tabella unica delle serie (Fondamenta 080).
@@ -257,7 +264,7 @@ async function loadLastLoggedSets(sessionId){
       // Passaggio 1 — codice scritto nella riga, poi nome normalizzato per le righe senza
       page.forEach(row => {
         const canon = (row.exercise_code && canonByCodice.get(row.exercise_code)) || canonByNorm.get(_normExName(row.exercise_name));
-        if(canon && !map[canon]) map[canon] = row;
+        if(canon) assegna(canon, row);
       });
       if(page.length < PAGE || mancanti().length === 0) break;
     }
@@ -265,11 +272,12 @@ async function loadLastLoggedSets(sessionId){
     // Passaggio 2 — codice: risolve le rinomine del catalogo (il log ha il nome vecchio).
     if(mancanti().length > 0 && canonByCodice.size > 0){
       const byNorm = await ensureExNameAliases();
+      const daTrovare = new Set(mancanti().map(e => e.name));
       rows.forEach(row => {
         const codice = byNorm.get(_normExName(row.exercise_name));
         if(!codice) return;
         const canon = canonByCodice.get(codice);
-        if(canon && !map[canon]) map[canon] = row;   // rows è già in ordine data desc
+        if(canon && daTrovare.has(canon)) assegna(canon, row);   // rows è già in ordine data desc
       });
     }
 
@@ -298,16 +306,17 @@ async function loadLastLoggedSets(sessionId){
         (res2.data || []).forEach(row => {
           const norm = _normExName(row.exercise_name);
           for(const [canon, nomi] of nomiPerCanon){
-            if(map[canon]) continue;
+            if(map[canon] && map[canon].date !== row.date) continue;
             const match = (row.exercise_code && canonByCodice.get(row.exercise_code) === canon)
               || [...nomi].some(n => _normExName(n) === norm || n === norm);
-            if(match) map[canon] = row;
+            if(match) assegna(canon, row);
           }
         });
       }
     }
 
     ST.lastLoggedSets = map;
+    ST.lastSessionSets = serie;
     if(ST.page === 'training' && ST.trainSession === sessionId) renderTraining();
   } catch(e){
     console.warn('loadLastLoggedSets error:', e?.message);
@@ -660,8 +669,9 @@ function getProgressionSuggestion(exName, sessionId){
     k.startsWith(prefix) && k.endsWith(suffix)
   );
   if(anyLoggedToday) return '';
-  // Se c'è storico (ultima volta su un'altra data) → mostra come ripartenza
-  const last = ST.lastLoggedSets[exName];
+  // Se c'è storico (ultima volta su un'altra data) → mostra come ripartenza. «Ultima volta» è la serie più
+  // forte di quella seduta, la stessa da cui riparte l'obiettivo (Training 440)
+  const last = serieDaRipetere(exName, sessionId);
   if(last){
     const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
     const resistTxt = caricoTesto(lastResist) || (isPullUp ? '' : 'corpo libero');
@@ -2425,12 +2435,12 @@ function softReturnLoad(v){
   return Math.max(0, Math.round((v * factor) / step) * step);
 }
 // Testo riga RIENTRO sul primo set: valore concreto se c'è l'ultima sessione.
-function _softReturnRowText(exName){
+function _softReturnRowText(exName, sessionId){
   const sr = getSoftReturn();
   if(!sr) return '';
   const pct = sr.level === 2 ? 35 : 20;
   const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
-  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  const last = serieDaRipetere(exName, sessionId);   // il carico più alto dell'ultima volta, come l'obiettivo (Training 440)
   const v = (last && last.resistance != null && last.resistance !== '') ? parseFloat(last.resistance) : null;
   if(v > 0) return `riparti da ~${softReturnLoad(v)} ${unitLbl} (−${pct}% di ${v})`;
   return `riduci di ~${pct}% il carico dell'ultima volta`;
@@ -2448,7 +2458,7 @@ function rirObiettivo(ex, sess){
 // numeri del testo, per compilare il registro della serie dopo. Una regola sola per PROSSIMA e per
 // l'obiettivo della prima serie di oggi (obiettivoPrimaSerie), che è la «prossima» dopo l'ultima
 // serie della seduta precedente.
-function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor, struttura}){
+function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, rir, exData, sess, bandColor, struttura, primaSerie}){
   if(!exData || !sess) return '';
   if(sess.type === 'Recupero') return ''; // Active Recovery: nessuna progressione di carico
   const parsed = parseRepsRange(exData.reps);
@@ -2503,6 +2513,8 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
     const harder = (curIdx > 0) ? BAND_COLORS[curIdx-1] : null;                       // verso Corpo libero
     const easier = (curIdx >= 0 && curIdx < BAND_COLORS.length-1) ? BAND_COLORS[curIdx+1] : null;
     const bandTxt = cur ? bandPhrase(cur) : 'stessa banda';
+    // 0) prima serie di oggi (Training 440): la più forte dell'ultima seduta, uguale (serieDaRipetere)
+    if(primaSerie && repsDone >= repsMin) return fine({ bandColor: cur, reps: repsDone }, bandTxt, `${repsDone} reps`);
     // 1) cedimento (RIR 0) ma reps nel range → stesso gradino, -1 rep
     //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
     if(rirVal === 0 && repsDone >= repsMin){
@@ -2538,6 +2550,10 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const loadTxt = (v) => v <= 0 ? 'corpo libero' : `${v} ${loadUnit}`;
   const plusStep  = Math.min(250, resistInt + loadStep);
   const minusStep = Math.max(0, resistInt - loadStep);
+  // 0) prima serie di oggi (Training 440, scelta di Ignazio: «inizi con l'ultimo peso massimo, uguale, e poi
+  //    andare a crescere»): la serie più forte dell'ultima seduta (serieDaRipetere), stesso carico e stesse
+  //    ripetizioni; si sale dalle serie dopo, con le regole qui sotto. Sotto il minimo vale il punto 3.
+  if(primaSerie && repsDone >= repsMin) return fine({ resistance: resistInt, reps: repsDone }, loadTxt(resistInt), `${repsDone} ${unitLbl}`);
   // 1) cedimento (RIR 0) ma reps nel range → stessa resistenza, -step
   //    Eccezione: se RIR 0 è il target della sessione (es. Pump) → mantieni, non scendere
   if(rirVal === 0 && repsDone >= repsMin){
@@ -2589,19 +2605,33 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   return fine({ resistance: resistInt, reps: clampReps(repsDone + step) }, loadTxt(resistInt), `${clampReps(repsDone + step)} ${unitLbl}`);
 }
 
-// ── L'obiettivo di oggi parte dall'ultima seduta (Training 040, 13 ottobre 2026) ──
-// La regola «sali quando arrivi in cima» valeva solo fra una serie e la successiva della stessa
-// seduta: alla prima serie l'app diceva solo «Ultima volta …». Ora la prima serie di oggi è la
-// «prossima» dopo l'ultima serie della seduta precedente (stessa regola, computeNextSetSuggestion con
-// setNum 0): stesso carico e una ripetizione in più, un passo avanti sulla via dell'esercizio se
-// l'ultima volta era in cima con margine, un passo indietro se era sotto il minimo. In settimana di
-// scarico e nel rientro graduale valgono le riduzioni delle righe SCARICO e RIENTRO (−20 lbs / −5 kg,
-// banda più facile; −20% o −35%), dal minimo delle ripetizioni.
+// ── La serie da cui riparte la prima di oggi (Training 440, 23 ottobre 2026, scelta di Ignazio) ──
+// La più forte dell'ultima seduta dell'esercizio: la misura più alta (carico, banda più dura, secondi o
+// ripetizioni: progMisura) e, a quella misura, le ripetizioni migliori. Es. Reverse hyper del 22 ottobre
+// 90×6, 100×4, 100×5, 100×6 → 100×6. Si sceglie fra le serie nel range; se nessuna lo è, la più forte
+// comunque (poi la regola fa il passo indietro del punto 3). Senza le serie della seduta, l'ultima serie.
+function serieDaRipetere(exName, sessionId){
+  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  if(!last) return null;
+  const tutte = (ST.lastSessionSets && ST.lastSessionSets[exName] && ST.lastSessionSets[exName].length) ? ST.lastSessionSets[exName] : [last];
+  const exData = findExercise(exName, sessionId);
+  const parsed = exData ? parseRepsRange(exData.reps) : null;
+  const nelRange = parsed ? tutte.filter(l => (Number(l.reps) || 0) >= parsed.min) : [];
+  return bestSetOfDay(nelRange.length ? nelRange : tutte, progMisura(exName, tutte)) || last;
+}
+
+// ── L'obiettivo di oggi parte dall'ultima seduta (Training 040, 13 ottobre 2026; Training 440) ──
+// La prima serie di oggi la decide computeNextSetSuggestion (setNum 0, primaSerie) sulla serie più forte
+// dell'ultima seduta (serieDaRipetere): dal 23 ottobre 2026 si ripete UGUALE, stesso carico e stesse
+// ripetizioni, e si sale dalle serie dopo (prima: una ripetizione in più o un passo avanti già alla prima).
+// Sotto il minimo resta il passo indietro. In settimana di scarico e nel rientro graduale (dopo una pausa o
+// giorni lontani) valgono le riduzioni delle righe SCARICO e RIENTRO (−20 lbs / −5 kg, banda più facile;
+// −20% o −35%), dal minimo delle ripetizioni.
 // → { testo, reps, resistance, bandColor, rir, via, nota: 'scarico' | 'rientro' | null } oppure null
 function obiettivoPrimaSerie(exName, sessionId){
   const exData = findExercise(exName, sessionId);
   const sess = getTrainingSession(sessionId);
-  const last = ST.lastLoggedSets && ST.lastLoggedSets[exName];
+  const last = serieDaRipetere(exName, sessionId);
   if(!exData || !sess || !last) return null;
   const parsed = parseRepsRange(exData.reps);
   if(!parsed || parsed.min === parsed.max) return null;
@@ -2609,7 +2639,7 @@ function obiettivoPrimaSerie(exName, sessionId){
   const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
     : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
   const o = computeNextSetSuggestion({ sessionId, exName, setNum: 0, reps: last.reps,
-    resistance: isPullUp ? '' : last.resistance, rir: last.rir_actual, exData, sess, bandColor: lastBand, struttura: true });
+    resistance: isPullUp ? '' : last.resistance, rir: last.rir_actual, exData, sess, bandColor: lastBand, struttura: true, primaSerie: true });
   if(!o) return null;
   o.nota = null;
   const unitKg = ST.profile && ST.profile.unit === 'kg';
@@ -4009,7 +4039,7 @@ function renderTraining(){
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
-            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
+            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name, sel)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
             ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
             ${suggestion?`<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`:''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
