@@ -1239,34 +1239,45 @@ async function deleteWorkoutConfirmed(){
   if(ST.trainProgEx) loadTrainingLogs(ST.trainProgEx);
 }
 
-// Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1.
-// Tono basso/dolce: sine 600Hz, 80ms, gain 0.35.
-function playPrepBeep(){
+// Un tono sul contesto condiviso, per tutti i timer (recupero, attivazione, riscaldamento, tenute, Tabata).
+// Training 470: prima i tic e il bip lungo suonavano anche su un contesto «interrupted» (iPhone, dopo
+// un'altra app o con la musica ripartita), cioè nel vuoto, per sempre. Ora: in corsa suona; sospeso si
+// riprende e poi suona; interrotto o chiuso si rifà il contesto (_riattivaAudio) e, se torna a correre,
+// suona lì. `sospeso` (solo il bip di stop) lo tiene da parte per il primo tocco (Training 380).
+// tono = [frequenza, volume, tenuta fino a, fine rampa, stop] in secondi dall'inizio.
+function _suonaTono(tono, sospeso){
+  const [freq, vol, tieni, rampa, ferma] = tono;
+  const fire = (ctx)=>{
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const t0 = ctx.currentTime;
+      gain.gain.setValueAtTime(vol, t0);
+      gain.gain.setValueAtTime(vol, t0 + tieni);
+      gain.gain.linearRampToValueAtTime(0.0001, t0 + rampa);
+      osc.start(t0);
+      osc.stop(t0 + ferma);
+    } catch(e){}
+  };
   try {
     const ctx = _ensureAudioCtx();
     if(!ctx) return;
-    const fire = ()=>{
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 600;
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t0 = ctx.currentTime;
-        gain.gain.setValueAtTime(0.35, t0);
-        gain.gain.setValueAtTime(0.35, t0 + 0.06);
-        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.08);
-        osc.start(t0);
-        osc.stop(t0 + 0.09);
-      } catch(e){}
-    };
-    if(ctx.state === 'suspended'){
-      ctx.resume().then(fire).catch(()=>{});
-    } else {
-      fire();
-    }
+    if(ctx.state === 'running'){ fire(ctx); return; }
+    if(ctx.state === 'suspended'){ _sessioneAudioAmbiente(); ctx.resume().then(() => fire(ctx)).catch(()=>{}); return; }
+    // interrupted o closed
+    if(sospeso){ _beepInSospeso = true; _riattivaAudio().then(_suonaInSospeso).catch(()=>{}); return; }
+    _riattivaAudio().then(ok => { const c = _audioCtx; if(ok && c && c.state === 'running') fire(c); }).catch(()=>{});
   } catch(e){}
+}
+
+// Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1.
+// Tono basso/dolce: sine 600Hz, 80ms, gain 0.35.
+function playPrepBeep(){
+  _suonaTono([600, 0.35, 0.06, 0.08, 0.09]);
 }
 
 // Beep di stop — segnala fine round/fase (sine 659Hz, ~730ms, gain 0.85)
@@ -1283,62 +1294,15 @@ function _suonaInSospeso(){
   playStopBeep();
 }
 function playStopBeep(){
-  try {
-    if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} }
-    const ctx = _ensureAudioCtx();
-    if(!ctx) return;
-    if(ctx.state === 'interrupted' || ctx.state === 'closed'){ _beepInSospeso = true; _riattivaAudio().then(_suonaInSospeso).catch(()=>{}); return; }
-    const fire = ()=>{
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 659;
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t0 = ctx.currentTime;
-        gain.gain.setValueAtTime(0.85, t0);
-        gain.gain.setValueAtTime(0.85, t0 + 0.68);
-        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.72);
-        osc.start(t0);
-        osc.stop(t0 + 0.73);
-      } catch(e){}
-    };
-    if(ctx.state === 'suspended'){ ctx.resume().then(fire).catch(()=>{}); } else { fire(); }
-  } catch(e){}
+  if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} }
+  _suonaTono([659, 0.85, 0.68, 0.72, 0.73], true);
 }
 
 // Bip lungo — segnala la (ri)partenza di un esercizio.
 // Tono singolo 1100Hz sine ~640ms, gain 0.8 + vibrazione [400].
 function playLongBeep(){
-  try {
-    if(navigator.vibrate){
-      try { navigator.vibrate([400]); } catch(e){}
-    }
-    const ctx = _ensureAudioCtx();
-    if(!ctx) return;
-    const fire = ()=>{
-      try {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.frequency.value = 1100;
-        osc.type = 'sine';
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        const t0 = ctx.currentTime;
-        gain.gain.setValueAtTime(0.8, t0);
-        gain.gain.setValueAtTime(0.8, t0 + 0.60);
-        gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.64);
-        osc.start(t0);
-        osc.stop(t0 + 0.66);
-      } catch(e){}
-    };
-    if(ctx.state === 'suspended'){
-      ctx.resume().then(fire).catch(()=>{});
-    } else {
-      fire();
-    }
-  } catch(e){}
+  if(navigator.vibrate){ try{ navigator.vibrate([400]); }catch(e){} }
+  _suonaTono([1100, 0.8, 0.60, 0.64, 0.66]);
 }
 
 // Countdown recupero timestamp-based — continua in background, ricalcola al rientro
@@ -5329,9 +5293,24 @@ async function openExerciseAI(exName, sessionId) {
 const ACTIVATION_INTERVALS = [null, null, null];
 
 // ── Audio context condiviso (sblocco iOS) ─────────────────
+// La sessione audio della pagina è «ambient» (Training 470, 23 ottobre 2026): i bip suonano SOPRA la musica
+// della persona invece di prenderle il posto. Con la sessione di default iPhone, al primo resume() (il tocco
+// su «Fine serie»), fermava la musica dell'altra app; quando la musica ripartiva, il contesto della pagina
+// restava «interrupted» e i bip non suonavano più. Si imposta prima di creare o riprendere il contesto;
+// dove navigator.audioSession non c'è (Safari prima della 16.4, Chrome) non cambia niente. Il prezzo,
+// detto a Ignazio: con «ambient» i bip seguono il tasto silenzioso dell'iPhone. Mai un elemento <audio>
+// né la Media Session (Training 450).
+function _sessioneAudioAmbiente(){
+  try {
+    const s = navigator.audioSession;
+    if(s && s.type !== 'ambient') s.type = 'ambient';
+  } catch(e){}
+}
+_sessioneAudioAmbiente();
 let _audioCtx = null;
 function _ensureAudioCtx(){
   if(_audioCtx) return _audioCtx;
+  _sessioneAudioAmbiente();
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if(!Ctx) return null;
@@ -5360,6 +5339,7 @@ function _riattivaAudio(){
 function _unlockAudio(){
   const ctx = _ensureAudioCtx();
   if(!ctx) return Promise.resolve(false);
+  _sessioneAudioAmbiente();   // prima di ogni resume (Training 470)
   const wasBlocked = ST.audioBlocked;
   if(ctx.state === 'suspended' || ctx.state === 'interrupted'){
     return ctx.resume().then(()=>{
