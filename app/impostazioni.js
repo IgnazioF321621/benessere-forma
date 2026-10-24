@@ -78,7 +78,9 @@ function _setRiassunti() {
   const dieta = { onnivoro:'onnivoro', pescetariano:'pescetariano', vegetariano:'vegetariano', vegano:'vegano' }[p.dieta || 'onnivoro'] || p.dieta;
   const intol = (p.intolleranze || []).length;
   metti('set-sotto-cibo', `${fmtNum(ST.TARGET.kcal)} kcal · ${dieta}${intol ? ` · ${intol} intolleranz${intol === 1 ? 'a' : 'e'}` : ''}`);
-  metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'}`);
+  const tabata = (typeof tabataModo === 'function') ? tabataModo() : 'spento';
+  const tabataTesto = { spento:'Tabata spento', coda:'Tabata in fondo', giorni:'Tabata in certi giorni', a_parte:'Tabata a parte' }[tabata];
+  metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'} · ${tabataTesto}`);
   const esami = Object.keys(p.esami_sangue || {}).filter(k => !/_label$|_data$/.test(k)).length;
   metti('set-sotto-salute', esami ? `${esami} valor${esami === 1 ? 'e' : 'i'} degli esami` : (p.note_salute ? 'Note sulla salute' : 'Note ed esami'));
   metti('set-sotto-profilo', [p.first_name, p.last_name].filter(Boolean).join(' ') || ((ST.user && ST.user.email) || ''));
@@ -144,6 +146,10 @@ function _setPopola() {
   if(giorniSel) giorniSel.value = String(p.giorni_allenamento || 4);
   const unitSel = document.getElementById('set-unit');
   if(unitSel) unitSel.value = p.unit || 'lbs';
+  const tabataSel = document.getElementById('set-tabata');
+  if(tabataSel) tabataSel.value = (typeof tabataModo === 'function') ? tabataModo() : 'spento';
+  SET_TABATA_GIORNI = (p.tabata_giorni || []).map(Number).filter(g => g >= 1 && g <= 7);
+  _setTabataGiorni();
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -294,6 +300,21 @@ function closeSettingsModal() {
   document.getElementById('settings-modal').style.display = 'none';
 }
 
+// Il Tabata (Training 490): spento di default; i giorni (1 = lunedì … 7 = domenica) si vedono solo con «solo in certi giorni».
+let SET_TABATA_GIORNI = [];
+function _setTabataGiorni() {
+  const modo = (document.getElementById('set-tabata') || {}).value;
+  const box = document.getElementById('set-tabata-giorni');
+  if(box) box.style.display = modo === 'giorni' ? 'flex' : 'none';
+  document.querySelectorAll('#set-tabata-giorni [data-giorno]').forEach(b => b.classList.toggle('active', SET_TABATA_GIORNI.includes(Number(b.dataset.giorno))));
+}
+function toggleSetTabataGiorno(g) {
+  const i = SET_TABATA_GIORNI.indexOf(g);
+  if(i < 0) SET_TABATA_GIORNI.push(g); else SET_TABATA_GIORNI.splice(i, 1);
+  SET_TABATA_GIORNI.sort((a, b) => a - b);
+  _setTabataGiorni();
+}
+
 function toggleSetIntol(val) {
   const i = SET_INTOL.indexOf(val);
   if(i < 0) SET_INTOL.push(val); else SET_INTOL.splice(i, 1);
@@ -345,6 +366,8 @@ async function saveSettings() {
   const btn = document.getElementById('set-save-btn');
   const fname = document.getElementById('set-fname').value.trim();
   if(!fname) { errEl.style.display='block'; errEl.textContent='Il nome è obbligatorio.'; return; }
+  const tabataSel = document.getElementById('set-tabata');
+  if(tabataSel && tabataSel.value === 'giorni' && !SET_TABATA_GIORNI.length) { errEl.style.display='block'; errEl.textContent='Per il Tabata scegli almeno un giorno, oppure un\'altra voce.'; return; }
   errEl.style.display = 'none';
 
   // ── Check cambio obiettivo (Fix A2) ─────────────────────────
@@ -461,6 +484,19 @@ async function _saveSettingsExecute(goalChanged) {
   const trainStartVal = document.getElementById('set-train-start').value || null;
   const { error: tsErr } = await supa.from('profiles').update({ train_start_date: trainStartVal }).eq('id', ST.user.id);
   if(!tsErr && ST.profile) ST.profile.train_start_date = trainStartVal;
+
+  // Il Tabata (Training 490), come train_start_date in una scrittura a parte e solo se è cambiato: finché la
+  // colonna non c'è (migrazione 20261024_490) il resto delle Impostazioni si salva lo stesso.
+  const tabataSel = document.getElementById('set-tabata');
+  if(tabataSel && ST.profile) {
+    const tabata = TABATA_MODI.includes(tabataSel.value) ? tabataSel.value : 'spento';
+    const tabata_giorni = tabata === 'giorni' ? [...SET_TABATA_GIORNI] : null;
+    const giorniPrima = (ST.profile.tabata_giorni && ST.profile.tabata_giorni.length) ? ST.profile.tabata_giorni.map(Number) : null;
+    if(tabata !== tabataModo() || JSON.stringify(tabata_giorni) !== JSON.stringify(giorniPrima)) {
+      const r = await dbq('salvare la scelta del Tabata', supa.from('profiles').update({ tabata, tabata_giorni }).eq('id', ST.user.id));
+      if(!r.error) { ST.profile.tabata = tabata; ST.profile.tabata_giorni = tabata_giorni; }
+    }
+  }
 
   // Unità peso/carico — salvata solo in localStorage prefs
   const unitVal = document.getElementById('set-unit')?.value || 'lbs';

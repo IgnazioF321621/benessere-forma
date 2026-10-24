@@ -4106,7 +4106,7 @@ function renderTraining(){
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
-          ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0) ? (() => {
+          ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0 && tabataInCoda()) ? (() => {
             const fin = s.finisher;
             const durMin = Math.round(fin.totalRounds ? fin.totalRounds*(fin.work_sec+fin.rest_sec)/60 : fin.round*(fin.work_sec+fin.rest_sec)/60);
             const exList = fin.exercises.map((e,i)=>`<li style="padding:4px 0;">${i+1}. ${e.name}</li>`).join('');
@@ -4426,6 +4426,10 @@ function renderTraining(){
         ${_renderBloccoNuovoCard(activeIsScarico)}
 
         ${_renderRiscaldamentoLink()}
+
+        ${_renderSerieForzaCard()}
+
+        ${_renderTabataAParte()}
 
         ${_renderInjuryBar()}
 
@@ -6532,10 +6536,40 @@ function _tabataFlowTick(){
   }
   renderTraining();
 }
-function tabataFlowStart(){
-  // Avvio: la sessione corrente (ST.trainSession) deve avere un finisher.
-  const sess = getTrainingSession(ST.trainSession);
-  if(!sess || !sess.finisher || !sess.finisher.exercises || sess.finisher.exercises.length === 0){
+// ── Il Tabata acceso o spento (Training 490, 24 ottobre 2026, scelte di Ignazio) ──
+// «Non l'ho mai fatto, le sedute sono già lunghe»: il Tabata è SPENTO di default e si riaccende nelle
+// Impostazioni › Allenamento (profiles.tabata, migrazione 20261024_490): `coda` in fondo a ogni seduta,
+// `giorni` in fondo solo nei giorni della settimana scelti (profiles.tabata_giorni, 1 = lunedì … 7 =
+// domenica), `a_parte` un tasto nel Programma per farlo quando si vuole, fuori dalla seduta. Solo il timer,
+// come sempre: non si salva niente, non conta come seduta e non crea debito. Il finisher resta nel jsonb
+// delle schede: quando è spento si ignora.
+const TABATA_MODI = ['spento', 'coda', 'giorni', 'a_parte'];
+function tabataModo(){
+  const m = ST.profile && ST.profile.tabata;
+  return TABATA_MODI.includes(m) ? m : 'spento';
+}
+function _tabataGiornoISO(key){ const d = new Date((key || todayKey()) + 'T12:00:00'); return ((d.getDay() + 6) % 7) + 1; }
+// In fondo alla seduta di quel giorno (oggi se manca)?
+function tabataInCoda(key){
+  const m = tabataModo();
+  if(m === 'coda') return true;
+  if(m === 'giorni') return ((ST.profile && ST.profile.tabata_giorni) || []).map(Number).includes(_tabataGiornoISO(key));
+  return false;
+}
+// Il Tabata «a parte»: i 4 esercizi di una seduta della scheda che ce l'ha, a rotazione col giorno della settimana.
+function tabataAParte(key){
+  if(tabataModo() !== 'a_parte') return null;
+  const conFinisher = Object.values(getAllTrainingSessions() || {}).filter(s => s && s.finisher && Array.isArray(s.finisher.exercises) && s.finisher.exercises.length);
+  if(!conFinisher.length) return null;
+  return conFinisher[(_tabataGiornoISO(key) - 1) % conFinisher.length].finisher;
+}
+
+function tabataFlowStart(origine){
+  // Avvio: in coda, la sessione corrente (ST.trainSession) deve avere un finisher e il Tabata acceso per oggi;
+  // «a parte» (Training 490) usa tabataAParte().
+  const sess = origine === 'a_parte' ? null : getTrainingSession(ST.trainSession);
+  const finisher = origine === 'a_parte' ? tabataAParte() : (sess && tabataInCoda() ? sess.finisher : null);
+  if(!finisher || !finisher.exercises || finisher.exercises.length === 0){
     showToast('Nessun finisher Tabata in questa sessione', 'ℹ️');
     return;
   }
@@ -6547,13 +6581,13 @@ function tabataFlowStart(){
   try { _unlockAudio(); } catch(e) {}
   ST.trainTabataFlow = {
     active: true,
-    sessionId: ST.trainSession,
-    finisher: sess.finisher,
-    totalRounds: sess.finisher.round || 8,
+    sessionId: sess ? ST.trainSession : null,
+    finisher,
+    totalRounds: finisher.round || 8,
     round: 1,
     phase: 'work',
-    remaining: sess.finisher.work_sec || 20,
-    endTime: Date.now() + (sess.finisher.work_sec || 20) * 1000,
+    remaining: finisher.work_sec || 20,
+    endTime: Date.now() + (finisher.work_sec || 20) * 1000,
     prepBeeped: {},
     running: true,
     _iv: setInterval(_tabataFlowTick, 250),
@@ -6943,6 +6977,38 @@ function _renderBloccoNuovoCard(isScarico){
 function _renderRiscaldamentoLink(){
   if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
   return `<div id="rinnova-riscaldamento" onclick="rinnovaRiscaldamento()" style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);cursor:pointer;text-align:right;margin-top:-10px;">Rinnova il riscaldamento ›</div>`;
+}
+
+// «3 serie nella forza» (Training 490): finché la scheda attiva ha multiarticolari di forza con più serie
+// del nuovo numero, una card propone il passaggio (accorciaSerieForza); dopo, sparisce da sola.
+function _renderSerieForzaCard(){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda || typeof serieForzaDaTogliere !== 'function') return '';
+  const cambi = serieForzaDaTogliere(ST.schedaAttiva.scheda);
+  if(!cambi.length) return '';
+  const minuti = Math.round(cambi.reduce((t, c) => t + c.sec, 0) / 60);
+  const sedute = [...new Set(cambi.map(c => c.sid))].map(sid => { const s = getTrainingSession(sid); return (s && s.name) || sid; });
+  return `
+      <div id="serie-forza-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">SEDUTE DI FORZA PIÙ CORTE</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${cambi[0].a} serie invece di ${cambi[0].da}, stessi recuperi</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${esc(sedute.join(' e '))}: circa ${minuti} minuti in meno a settimana. Per la forza bastano tre serie pesanti; addominali, isolamenti e sedute di ipertrofia restano come sono.</div>
+        <button class="btn btn-sm" onclick="accorciaSerieForza()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Passa a ${cambi[0].a} serie →</button>
+      </div>`;
+}
+
+// Il Tabata «a parte» (Training 490): solo se scelto nelle Impostazioni; il timer è quello di sempre.
+function _renderTabataAParte(){
+  const fin = tabataAParte();
+  if(!fin) return '';
+  const durMin = Math.round(fin.round * (fin.work_sec + fin.rest_sec) / 60);
+  const exList = fin.exercises.map((e, i) => `<li style="padding:4px 0;">${i + 1}. ${esc(e.name)}</li>`).join('');
+  return `
+      <div id="tabata-a-parte" style="padding:14px;border-radius:12px;background:var(--s1);border:1px solid var(--s2);">
+        <div style="font-size:10px;font-weight:700;color:var(--t2);font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 TABATA A PARTE · ~${durMin} MIN</div>
+        <div style="font-size:14px;color:var(--t2);font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati. Quando vuoi, fuori dalla seduta: non conta come allenamento.</div>
+        <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:var(--t2);font-family:var(--font-sans);list-style:none;">${exList}</ul>
+        <button onclick="tabataFlowStart('a_parte');" style="width:100%;padding:12px;background:var(--err);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">▶ Start Tabata</button>
+      </div>`;
 }
 
 // «riparti da …» per un cardine: l'ultima serie fuori dallo scarico (vedi _trainGenPuntiDiPartenza).
