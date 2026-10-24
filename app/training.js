@@ -1832,7 +1832,8 @@ async function _coCerca(sid, exName){
   [].concat(...esiti.map(r => r.data || [])).forEach(r => { if(r && r.codice && !visti.has(r.codice)){ visti.add(r.codice); righe.push(r); } });
   const o = _coOpzioni();
   const sess = getTrainingSession(sid);
-  const inSeduta = new Set((sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean));
+  // con chi è nel riscaldamento della seduta (Training 480): lo stesso codice non torna fra gli esercizi di lavoro
+  const inSeduta = new Set([...(sess && sess.exercises ? sess.exercises : []), ...(sess && Array.isArray(sess.warmup) ? sess.warmup : [])].map(e => e && e.codice).filter(Boolean));
   const pat = String(attuale.pattern || '').toLowerCase().trim();
   const perGruppo = pat === 'isolamento' || pat === 'core';
   const gruppi = String(attuale.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);

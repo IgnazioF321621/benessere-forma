@@ -939,6 +939,9 @@ function candidatiBloccoNuovo(sid, codice) {
   const perGruppo = pat === 'isolamento' || pat === 'core';
   const gtAttuale = gt(attuale);
   const inScheda = new Set((bn.scheda.sessioni || []).flatMap(s => (s.exercises || []).map(e => e.codice)));
+  // Training 480: nemmeno chi è nel riscaldamento di questa seduta
+  const seduta = (bn.scheda.sessioni || []).find(s => s.id === sid);
+  ((seduta && seduta.warmup) || []).forEach(w => { if (w && w.codice) inScheda.add(w.codice); });
   const prima = new Set((((ST.schedaAttiva && ST.schedaAttiva.scheda) || {}).sessioni || []).flatMap(s => (s.exercises || []).map(e => e.codice)));
   const livelloN = (ex) => { const l = String(ex.livello || '').toLowerCase(); return /avanzato/.test(l) ? 3 : /intermedio/.test(l) ? 2 : /principiante/.test(l) ? 1 : 0; };
   return pool
@@ -1557,10 +1560,13 @@ function _trainGenRiempiVolume(sessioni, obiettivo, pools, usati, rigenIdx, prim
     if (!s) return;
     const used = new Set(s.exercises.map(e => e.codice));
     const idx = (Number(s.occurrenceIdx) || 0) + (Number(rigenIdx) || 0);
-    const maiFatti = liberi.filter(e => !codiciPrima.has(e.codice));
+    // Training 480: chi è nel riscaldamento di questa seduta non ci torna come esercizio di lavoro
+    const nelRisc = new Set((s.warmup || []).map(w => w && w.codice).filter(Boolean));
+    const liberiQui = liberi.filter(e => !nelRisc.has(e.codice));
+    const maiFatti = liberiQui.filter(e => !codiciPrima.has(e.codice));
     let ex = maiFatti.length ? _trainGenPickIsoByGruppoTarget(maiFatti, g, used, idx, `volume ${g}`) : null;
-    if (!ex && era) ex = liberi.find(e => e.codice === era.codice) || null;
-    if (!ex) ex = _trainGenPickIsoByGruppoTarget(liberi, g, used, idx, `volume ${g}`);
+    if (!ex && era) ex = liberiQui.find(e => e.codice === era.codice) || null;
+    if (!ex) ex = _trainGenPickIsoByGruppoTarget(liberiQui, g, used, idx, `volume ${g}`);
     if (!ex) { diario.push(`${g}: sotto il minimo (${v}/${minimi[g]}), nessun isolamento disponibile`); return; }
     s.exercises.push(ex);
     s.perVolume = s.perVolume || {}; s.perVolume[ex.codice] = g;
@@ -2451,7 +2457,28 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const _macroSessione = (splitType === 'lower' || splitType === 'legs') ? 'lower'
                            : (splitType === 'upper' || splitType === 'push' || splitType === 'pull') ? 'upper'
                            : 'fullbody';
-      if (_macroSessione === 'upper') {
+      // Training 480 (24 ottobre 2026, scelte di Ignazio): UNO PER ZONA, e la zona la dice la
+      // colonna `zona` del catalogo (scritta dal foglio, mai dedotta dal nome). Upper: colonna
+      // toracica, scapole, spalle, polsi; Lower: anche, ginocchia, caviglie; dal centro verso fuori.
+      // Solo corpo libero ed elastico: i quattro al cavo hanno zona vuota nel catalogo. Una riga con
+      // due zone ne copre una sola per seduta, e lo stesso codice non va nel riscaldamento e poi fra
+      // gli esercizi di lavoro dello stesso giorno (anche qui sotto, nel volume, in «Cambia ›» del
+      // blocco nuovo e in «Cambia per oggi»). Una zona senza
+      // righe resta vuota (avviso). Finché nessuna riga del pool ha `zona` (colonna non ancora nel
+      // foglio) vale la regola di prima, qui sotto.
+      const _zoneSeduta = _TRAIN_GEN_WARM_ZONE[_macroSessione] || [];
+      if (_zoneSeduta.length && pools.poolRiscaldamento.some(ex => _trainGenZone(ex).length)) {
+        const _usedW = new Set(exercises.map(ex => ex && ex.codice).filter(Boolean));
+        // «Rinnova il riscaldamento» scrive solo il riscaldamento: quel giorno si fanno gli esercizi della scheda in uso
+        if (source === 'rinnova-riscaldamento') (primaPerSeduta.get(sessionIdPrev) || []).forEach(c => _usedW.add(c));
+        _zoneSeduta.forEach(zona => {
+          const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupByZona(p, zona, occurrenceIdx + rigenIdx, _usedW));
+          if (!_exW) { console.warn(`[train-gen] ${sessionLabel}: nessun riscaldamento per la zona «${zona}» nel poolRiscaldamento`); return; }
+          _usedW.add(_exW.codice);
+          const _w = _trainGenMapWarmupExercise(_exW);
+          if (_w) warmupExs.push(_w);
+        });
+      } else if (_macroSessione === 'upper') {
         // FASE 1: cuffia dei rotatori (prehab spalla). Pescata per gruppo_target.
         const _cuffia = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmup(p, 'cuffia rotatori', occurrenceIdx + rigenIdx));
         if (_cuffia) {
@@ -2479,10 +2506,8 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           console.warn(`[train-gen] ${sessionLabel}: nessun warm-up Lower (mobilità anca/glutei) disponibile nel poolRiscaldamento`);
         }
       }
-      // NB FASE 3 (scope confermato): solo warm-up Lower aggiunto. Il completamento
-      // del warm-up Upper (circonduzioni spalle + band pull-apart, oltre alla cuffia)
-      // e i recuperi G3/G6 (riempimento da uso='recupero;mobilita') restano per fasi
-      // successive. Il RENDERING in app di warmup/carry_conclusivo è una fase a sé.
+      // NB FASE 3: il completamento del warm-up Upper è arrivato con le zone (Training 480);
+      // i recuperi G3/G6 (riempimento da uso='recupero;mobilita') restano per fasi successive.
 
       // CARRY CONCLUSIVO (FASE 2): se questa sessione è tra quelle assegnate,
       // mappa il carry. Campo separato, non passa per cautele/ordering/validate,
@@ -3373,6 +3398,34 @@ function _trainGenPickWarmupByMuscle(pool, muscleKeywords, sessionIndex, usedWar
     const musc = String(ex.muscoli || '').toLowerCase();
     return kws.some(k => musc.includes(k));
   });
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
+}
+
+// Training 480 — le zone del riscaldamento specifico, nell'ordine in cui si fanno (dal centro
+// verso fuori). Vocabolario chiuso della colonna `zona` di esercizi_catalog (migrazione
+// 20261024_480): spalle · scapole · colonna toracica · polsi · anche · caviglie · ginocchia.
+const _TRAIN_GEN_WARM_ZONE = {
+  upper: ['colonna toracica', 'scapole', 'spalle', 'polsi'],
+  lower: ['anche', 'ginocchia', 'caviglie'],
+};
+
+// Le zone di una riga di catalogo (lista ';', minuscolo). [] se la colonna manca o è vuota.
+function _trainGenZone(ex) {
+  return String((ex && ex.zona) || '').toLowerCase().split(';').map(s => s.trim()).filter(Boolean);
+}
+
+// _trainGenPickWarmupByZona — pesca UN esercizio dal poolRiscaldamento che ha `zona` fra le sue
+// zone, round-robin sul codice via sessionIndex (A diversa da B), evitando chi è già nel
+// riscaldamento della seduta (usedWarmup). null se la zona non ha righe (no crash).
+function _trainGenPickWarmupByZona(pool, zona, sessionIndex, usedWarmup) {
+  if (!Array.isArray(pool) || pool.length === 0) return null;
+  const z = String(zona || '').toLowerCase().trim();
+  if (!z) return null;
+  const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
+  const candidates = pool.filter(ex => !used.has(ex.codice) && _trainGenZone(ex).includes(z));
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
   const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
