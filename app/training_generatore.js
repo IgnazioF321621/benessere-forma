@@ -1003,6 +1003,57 @@ async function rinnovaRiscaldamento() {
   return cambiate;
 }
 
+// Training 490 (24 ottobre 2026, scelta di Ignazio: «subito, senza compensare»): nelle sedute di forza i
+// multiarticolari passano a _DUP_COMPOUND_FORZA.sets serie anche nella scheda già accettata. Quali: le sedute
+// di tipo Forza di una scheda che non è forza_performance, gli esercizi che non sono isolamenti, core o
+// tenute, con più serie di quelle. Isolamenti, core, recuperi e sedute di ipertrofia non cambiano.
+// Ritorna [{ sid, codice, name, da, a, sec }]: `sec` è il tempo che si risparmia (serie tolte × esecuzione
+// e recupero, con la stessa stima del budget del generatore).
+function serieForzaDaTogliere(scheda) {
+  if (!scheda || !Array.isArray(scheda.sessioni)) return [];
+  if (String(scheda.obiettivo || '').split(',')[0].trim() === 'forza_performance') return [];
+  const a = _DUP_COMPOUND_FORZA.sets;
+  const out = [];
+  scheda.sessioni.forEach(s => {
+    if (!s || s.type !== 'Forza' || !Array.isArray(s.exercises)) return;
+    s.exercises.forEach(ex => {
+      if (!ex || ex.iso || ex.durationBased || ex.warmup) return;
+      const da = Number(ex.sets) || 0;
+      if (da <= a) return;
+      const rest = Number(ex.rest_sec) || _DUP_COMPOUND_FORZA.rest_sec;
+      out.push({ sid: s.id, codice: ex.codice || null, name: ex.name, da, a, sec: (da - a) * (_TRAIN_GEN_TIME_BUDGET.set_execution_sec + rest) });
+    });
+  });
+  return out;
+}
+
+// «3 serie nella forza ›» nel Programma: riscrive SOLO `sets` di quegli esercizi nella riga attiva, riletta
+// fresca dal database come in rinnovaRiscaldamento (il jsonb in memoria ha i nomi riallineati).
+async function accorciaSerieForza() {
+  if (!ST.user || !ST.user.id || !ST.schedaAttiva || !ST.schedaAttiva.id) { showToast('Non trovo la scheda di adesso: riapri l\'app e riprova', '⚠️'); return null; }
+  const fresca = await dbq('rileggere la scheda attiva', supa.from('schede_utente').select('scheda').eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id).single());
+  if (fresca.error || !fresca.data || !fresca.data.scheda) return null;
+  const scheda = fresca.data.scheda;
+  const cambi = serieForzaDaTogliere(scheda);
+  if (!cambi.length) { showToast('Le sedute di forza hanno già 3 serie', 'ℹ️'); return 0; }
+  const minuti = Math.round(cambi.reduce((t, c) => t + c.sec, 0) / 60);
+  const sedute = [...new Set(cambi.map(c => c.sid))].map(sid => { const s = scheda.sessioni.find(x => x.id === sid); return (s && s.name) || sid; });
+  const ok = await chiediConferma(`Nelle sedute di forza (${sedute.join(' e ')}) ${cambi.length} esercizi passano da ${cambi[0].da} a ${cambi[0].a} serie, con gli stessi recuperi: circa ${minuti} minuti in meno a settimana. Addominali, isolamenti e sedute di ipertrofia restano come sono.`, { titolo: 'Una serie in meno nella forza?', ok: 'Sì, 3 serie', annulla: 'Lascia così' });
+  if (!ok) return null;
+  const a = _DUP_COMPOUND_FORZA.sets;
+  cambi.forEach(c => {
+    const s = scheda.sessioni.find(x => x.id === c.sid);
+    const ex = s && s.exercises.find(e => e && (c.codice ? e.codice === c.codice : e.name === c.name));
+    if (ex) ex.sets = a;
+  });
+  const up = await dbq('salvare le serie della forza', supa.from('schede_utente').update({ scheda }).eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id));
+  if (up.error) return null;
+  await loadActiveScheda();
+  if (ST.page === 'training') renderTraining();
+  showToast(`Sedute di forza: ${a} serie per esercizio`, '✅', 5500);
+  return cambi.length;
+}
+
 // Prepara l'ANTEPRIMA del blocco nuovo: genera senza salvare (dryRun) tenendo i cardini della
 // scheda attiva, confronta seduta per seduta e legge i punti di partenza. Niente si scrive:
 // la scheda nasce solo se Ignazio tocca «Accetto» (accettaBloccoNuovo, in app/training.js).
@@ -1201,13 +1252,18 @@ const _TRAIN_GEN_EXPERIENCE_MAP = {
 // ipertrofia-like (ipertrofia/ricomposizione/dimagrimento) per intermedi e
 // avanzati con split a sessioni DUPLICATE (Upper×2, Lower×2, Push×2, ...).
 // Numeri fissi da regola utente:
-//   Forza      → 4 serie 4-6 reps, RIR 2, rest 180s
+//   Forza      → 3 serie 4-6 reps, RIR 2, rest 180s (erano 4 fino al 24 ottobre 2026, Training 490)
 //   Ipertrofia → 3 serie 8-12 reps, RIR 1, rest 90s (Blocco B, vedi sotto)
 // Blocco B 31 mag — compound ipertrofia 3 serie (Schoenfeld dose-response: il
 // grosso dello stimolo è nelle prime 3 serie, la 4ª ha resa marginale calante su
 // avanzato vicino al cedimento; recupera ~8 min/seduta senza perdere esercizi).
-// La FORZA resta 4 serie (accumulo di pratica sul gesto pesante).
-const _DUP_COMPOUND_FORZA      = { sets:4, reps_min:4, reps_max:6,  rir:2, rest_sec:180, type:'Forza' };
+// Training 490 (24 ottobre 2026, scelta di Ignazio: «le sedute di forza sono troppo lunghe, non arrivo
+// agli addominali») — anche la FORZA passa a 3 serie, recuperi invariati: per la forza bastano poche
+// serie pesanti (NSCA: 2-6 serie da ≤6 ripetizioni, 2-5 min di recupero; Androulakis-Korakakis 2020,
+// dose minima; Ralston 2017: fra volumi medi e alti la differenza è piccola), e la massa la decide il
+// volume settimanale per muscolo, che _trainGenRiempiVolume tiene sopra i minimi. forza_performance
+// resta a 4: lì la forza è l'obiettivo di ogni seduta.
+const _DUP_COMPOUND_FORZA      = { sets:3, reps_min:4, reps_max:6,  rir:2, rest_sec:180, type:'Forza' };
 const _DUP_COMPOUND_IPERTROFIA = { sets:3, reps_min:8, reps_max:12, rir:1, rest_sec:90,  type:'Ipertrofia' };
 
 // Parametri sessione per obiettivo × esperienza (Regola B, 28 mag 2026).
@@ -1564,6 +1620,12 @@ function _trainGenRiempiVolume(sessioni, obiettivo, pools, usati, rigenIdx, prim
     if (!ex) { diario.push(`${g}: sotto il minimo (${v}/${minimi[g]}), nessun isolamento disponibile`); return; }
     s.exercises.push(ex);
     s.perVolume = s.perVolume || {}; s.perVolume[ex.codice] = g;
+    // Training 490: con 3 serie nella forza un esercizio in più può non bastare (bicipiti e tricipiti a 9 su
+    // 10): anche lui prende al massimo una serie in più, la stessa regola del passo (1)
+    if ((conta()[g] || 0) < minimi[g]) {
+      s.setsExtra = s.setsExtra || {}; s.setsExtra[ex.codice] = 1;
+      diario.push(`${g}: +1 serie a ${ex.codice}`);
+    }
     if (usati) usati.add(ex.codice);
     if (s._diag && Array.isArray(s._diag.bonus)) s._diag.bonus.push(`${ex.codice}:volume`);
     diario.push(`${g}: +${ex.codice} in ${s.splitType}#${s.occurrenceIdx}`);
@@ -3038,7 +3100,8 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
 // DORMIENTE (29 mag): non più chiamata dal generatore — il riempimento bonus
 // ora è cap-by-count (soft-max) e gated dal volume Essenziale/Completo, non
 // dai minuti. Tenuta come riferimento; rimuovere in cleanup futuro con
-// _trainGenExerciseTimeCost e _TRAIN_GEN_TIME_BUDGET (usati solo qui).
+// _trainGenExerciseTimeCost. _TRAIN_GEN_TIME_BUDGET.set_execution_sec serve anche alla stima dei
+// minuti risparmiati in serieForzaDaTogliere (Training 490): quella resta.
 function _trainGenComputeMaxExercises(durata_min, params, addFinisher) {
   // Formula tempo: tempo_disp / tempo_per_esercizio, clampato min..max.
   //   tempo_disp = durata_min*60 - warmup - (finisher?:0) - buffer
