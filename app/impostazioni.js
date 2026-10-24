@@ -488,13 +488,15 @@ async function _saveSettingsExecute(goalChanged) {
   // Il Tabata (Training 490), come train_start_date in una scrittura a parte e solo se è cambiato: finché la
   // colonna non c'è (migrazione 20261024_490) il resto delle Impostazioni si salva lo stesso.
   const tabataSel = document.getElementById('set-tabata');
+  let tabataNonSalvato = false;
   if(tabataSel && ST.profile) {
     const tabata = TABATA_MODI.includes(tabataSel.value) ? tabataSel.value : 'spento';
     const tabata_giorni = tabata === 'giorni' ? [...SET_TABATA_GIORNI] : null;
     const giorniPrima = (ST.profile.tabata_giorni && ST.profile.tabata_giorni.length) ? ST.profile.tabata_giorni.map(Number) : null;
     if(tabata !== tabataModo() || JSON.stringify(tabata_giorni) !== JSON.stringify(giorniPrima)) {
-      const r = await dbq('salvare la scelta del Tabata', supa.from('profiles').update({ tabata, tabata_giorni }).eq('id', ST.user.id));
+      const r = await dbq('salvare la scelta del Tabata', supa.from('profiles').update({ tabata, tabata_giorni }).eq('id', ST.user.id), { silenzioso:true });
       if(!r.error) { ST.profile.tabata = tabata; ST.profile.tabata_giorni = tabata_giorni; }
+      else tabataNonSalvato = true;
     }
   }
 
@@ -513,7 +515,9 @@ async function _saveSettingsExecute(goalChanged) {
   saveCache();
   btn.disabled = false; btn.textContent = 'Salva';
   setVai('elenco');            // Metodo 220: «Salva» torna all'elenco, aggiornato
-  showToast('Salvato', '✅');
+  // mai «Salvato» se la scelta del Tabata non è passata (revisione di 480+490): un messaggio solo, chiaro
+  if(tabataNonSalvato) showToast('Salvato tutto tranne il Tabata: riprova più tardi', '⚠️', 5500);
+  else showToast('Salvato', '✅');
   renderPage(ST.page);
   // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo da impostazioni.
   // Mostrato DOPO closeSettingsModal + renderPage per essere visibile senza

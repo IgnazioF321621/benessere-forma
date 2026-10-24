@@ -73,6 +73,7 @@ async function nuovo(o){
     esercizi_catalog: cat.map(r => ({ ...r })),
     training_logs:[], training_notes:[], workouts:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[],
     supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[],
+    ...(o.veri ? { __veri:['schede_utente'] } : {}),   // copie in lettura e update salvati, come il database vero
   };
   const b = boot(t, { now: (o.oggi || SABATO) + 'T07:00:00' });
   await b.avviato;
@@ -191,6 +192,66 @@ async function nuovo(o){
     atteso('4 · nelle sedute di forza ogni multiarticolare ha 3 serie e 3 minuti di recupero', [forza.length > 0, multi.length > 0, [...new Set(multi.map(e => e.sets + '×' + e.rest_sec))]], [true, true, ['3×180']]);
     atteso('4 · e la scheda nuova non chiede più di accorciare', a.W.serieForzaDaTogliere(gen).length, 0);
     atteso('4 · il Tabata resta nel jsonb (si riaccende senza rigenerare)', gen.sessioni.filter(s => /^(upper|lower)/.test(s.id)).every(s => s.finisher && s.finisher.exercises.length === 4), true);
+  }
+  // ── 5 · i rilievi della revisione di 480+490 (24 ottobre 2026 sera) ──
+  {
+    // il Tabata «a parte» tiene acceso lo schermo da sé, lo richiede al rientro e lo lascia alla fine
+    const a = await nuovo({ tabata:'a_parte' });
+    const lock = { richieste:0, rilasci:0, ultimo:null };
+    Object.defineProperty(a.W.navigator, 'wakeLock', { configurable:true, value: { request: async () => {
+      lock.richieste++;
+      const l = { _cb:null, addEventListener(ev, cb){ if(ev === 'release') this._cb = cb; }, async release(){ lock.rilasci++; if(this._cb) this._cb(); } };
+      lock.ultimo = l; return l;
+    } } });
+    a.programma();
+    a.W.tabataFlowStart('a_parte'); await aspetta();
+    atteso('5 · Tabata «a parte»: chiede lo schermo acceso senza una seduta aperta', [a.ST.trainSession, lock.richieste], [null, 1]);
+    if(lock.ultimo && lock.ultimo._cb) lock.ultimo._cb();          // il telefono lo toglie (app in secondo piano)
+    a.d.dispatchEvent(new a.W.Event('visibilitychange')); await aspetta();
+    atteso('5 · al rientro in primo piano lo richiede di nuovo', lock.richieste, 2);
+    a.W.tabataFlowEnd(); await aspetta();
+    atteso('5 · finito il Tabata lo lascia (nessuna seduta aperta)', lock.rilasci, 1);
+  }
+  {
+    // «Passa a 3 serie» con un «Cambia per oggi» attivo su un multiarticolare di forza
+    const a = await nuovo({ veri:true });
+    await a.W.cambiaPerOggi('upperA', 'Trazioni sbarra assistite elastico', 'EX079');
+    const sost = () => a.W.getTrainingSession('upperA').exercises.find(e => e.codice === 'EX079');
+    atteso('5 · il cambio di oggi: EX079 al posto di EX505, 4 serie', [sost() && sost().sets, sost() && sost().oggiAlPostoDi.codice], [4, 'EX505']);
+    a.W.chiediConferma = async () => true;
+    await a.W.accorciaSerieForza();
+    atteso('5 · dopo «Passa a 3 serie» anche il sostituto ha 3 serie e la card sparisce', [sost() && sost().sets, !!a.programma().querySelector('#serie-forza-card')], [3, false]);
+    a.W.annullaCambioOggi('upperA', 'Trazioni sbarra presa inversa');
+    const torna = a.W.getTrainingSession('upperA').exercises.find(e => e.codice === 'EX505');
+    atteso('5 · «Torna a …» rimette EX505 con 3 serie', torna && torna.sets, 3);
+  }
+  {
+    // su un secondo telefono la scheda è già a 3 serie, ma il cambio di oggi di questo telefono ne ha 4
+    const a = await nuovo({ veri:true });
+    await a.W.cambiaPerOggi('upperA', 'Trazioni sbarra assistite elastico', 'EX079');
+    a.t.schede_utente[0].scheda.sessioni.forEach(s => { if(s.type === 'Forza') s.exercises.forEach(e => { if(!e.iso && !e.durationBased) e.sets = 3; }); });
+    a.W.chiediConferma = async () => true;
+    const n = await a.W.accorciaSerieForza();
+    const sost = a.W.getTrainingSession('upperA').exercises.find(e => e.codice === 'EX079');
+    atteso('5 · già fatto altrove: niente scritture, il sostituto si allinea a 3 e la card sparisce', [n, a.scritture('schede_utente').length, sost && sost.sets, !!a.programma().querySelector('#serie-forza-card')], [0, 0, 3, false]);
+  }
+  {
+    // prima della migrazione la scelta del Tabata non si salva: allora il messaggio non dice «Salvato»
+    const a = await nuovo();
+    const brindisi = [];
+    const vero = a.W.showToast; a.W.showToast = (msg, ico, ms) => { brindisi.push(msg); return vero(msg, ico, ms); };
+    const from = a.supa.from.bind(a.supa);
+    // la colonna non c'è ancora: solo la scrittura del Tabata risponde 42703, il resto passa
+    a.supa.from = (tab) => {
+      const q = from(tab);
+      if(tab !== 'profiles') return q;
+      return { select: (...x) => q.select(...x), upsert: (...x) => q.upsert(...x), insert: (...x) => q.insert(...x),
+        update: (p) => (p && 'tabata' in p) ? { eq: () => Promise.resolve({ data:null, error:{ code:'42703', message:'column "tabata" does not exist' } }) } : q.update(p) };
+    };
+    a.W.openSettingsModal(); a.W.setVai('allenamento');
+    a.d.getElementById('set-tabata').value = 'coda'; a.W._setTabataGiorni();
+    await a.W.saveSettings(); await aspetta();
+    atteso('5 · Tabata non salvato: niente «Salvato», un messaggio solo che lo dice', [brindisi.includes('Salvato'), brindisi.filter(m => /tranne il Tabata/.test(m)).length, a.ST.profile.tabata], [false, 1, undefined]);
   }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);

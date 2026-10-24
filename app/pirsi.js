@@ -713,10 +713,12 @@ async function _vfCerca(exName, sessionId, key, verso){
   const p = ST.profile || {};
   const sess = (typeof getTrainingSession === 'function') ? getTrainingSession(sessionId) : null;
   const inScheda = (sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean);
+  // il riscaldamento di oggi non si propone mai: lo stesso codice non va nel riscaldamento e poi nel lavoro (Training 480, revisione)
+  const escludi = (sess && Array.isArray(sess.warmup) ? sess.warmup : []).map(e => e && e.codice).filter(Boolean);
   const scelta = ZTCoachRules[su ? 'varianteDifficile' : 'varianteFacile'](attuale, righe, {
     tipoAllen: p.tipo_allenamento || 'casa',
     attrezzatura: Array.isArray(p.attrezzatura) && p.attrezzatura.length ? p.attrezzatura : ['elastico', 'corpo_libero'],
-    inScheda,
+    inScheda, escludi,
   });
   _vfFine(key, scelta ? { stato: 'pronta', variante: scelta, exName, sessionId } : { stato: 'nessuna' });
 }

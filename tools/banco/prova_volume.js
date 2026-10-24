@@ -76,6 +76,20 @@ function fixture(){
   atteso('generatore · la diagnostica dice chi è entrato per il volume', sessioni.some(s => s._diag && (s._diag.bonus || []).some(x => /:volume$/.test(x))), true);
   atteso('generatore · chi entra per il volume non è in nessun\'altra seduta', aggiunti.every(a => tutti.filter(e => e.codice === a.codice).length === 1), true);
   atteso('generatore · una serie in più al massimo per esercizio, un esercizio al massimo per gruppo', [inPiu.every(e => e.serieInPiu === 1), new Set(aggiunti.map(e => e.perVolume)).size === aggiunti.length], [true, true]);
+  // ── «Cambia ›» nell'anteprima del blocco nuovo tiene la serie in più e il «per il volume» (revisione di 480+490) ──
+  {
+    await b.win.preparaBloccoNuovo();
+    const bn = b.win.eval('ST.bloccoNuovo');
+    const cand = [];
+    (bn.scheda.sessioni || []).forEach(s => (s.exercises || []).forEach(e => { if(e.serieInPiu || e.perVolume) { const alt = b.win.candidatiBloccoNuovo(s.id, e.codice); if(alt.length) cand.push({ s, e, alt }); } }));
+    atteso('anteprima · c\'è un esercizio con la serie in più (o entrato per il volume) che si può cambiare', cand.length > 0, true);
+    if(cand.length) {
+      const { s, e, alt } = cand[0];
+      const nuovo = b.win.cambiaEsercizioBloccoNuovo(s.id, e.codice, alt[0].codice);
+      atteso('anteprima · «Cambia ›»: il sostituto ha le stesse serie, la stessa serie in più e lo stesso «per il volume»', nuovo && [nuovo.sets, nuovo.serieInPiu || 0, nuovo.perVolume || null], [e.sets, e.serieInPiu || 0, e.perVolume || null]);
+    }
+    b.win.closeBloccoNuovoSheet && b.win.closeBloccoNuovoSheet();
+  }
   // ── il quadro della settimana: serie previste ──
   const vuoto = { weightLogs:[], bodyLogs:[], measurements:[], checks:[], meals:[], suppLogs:[], supps:[], catalog:[], sets:[], workouts:[], blood:[], errors:[] };
   const ctx = { today:OGGI, nowTs:new Date(OGGI + 'T12:00:00').getTime(), profile:{ giorni_allenamento:4, train_start_date:'2026-10-05' }, target:null, workPerGiro:4, deloads:[] };

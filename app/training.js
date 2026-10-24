@@ -1909,6 +1909,29 @@ async function cambiaPerOggi(sid, exName, codice){
   loadLastLoggedSets(sid);      // «Ultima volta» e obiettivo anche per l'esercizio scelto
   if(typeof ensureRestGif === 'function') ensureRestGif(nuovo.name, nuovo.codice);
 }
+// I cambi di oggi seguono le serie della scheda salvata (revisione di 480+490: dopo «Passa a 3 serie» il
+// sostituto restava a 4 per tutto il giorno, e «Torna a …» rimetteva l'originale a 4). Il sostituto tiene
+// le serie già fatte prima del cambio: 3 − fatte, almeno 1.
+function _coAllineaAllaScheda(scheda){
+  const mappa = _coLoad();
+  let cambiato = false;
+  Object.keys(mappa).forEach(sid => {
+    const s = ((scheda && scheda.sessioni) || []).find(x => x && x.id === sid);
+    Object.keys(mappa[sid] || {}).forEach(cod => {
+      const c = mappa[sid][cod];
+      const vero = s && (s.exercises || []).find(e => e && e.codice === cod);
+      if(!c || !c.scelto || !vero || !c.scelto._originaleOggi) return;
+      const prima = Number(c.scelto._originaleOggi.sets) || 0, ora = Number(vero.sets) || 0;
+      if(!ora || prima === ora) return;
+      const fatte = Math.max(0, prima - (Number(c.scelto.sets) || 0));
+      c.scelto.sets = Math.max(1, ora - fatte);
+      c.scelto._originaleOggi.sets = ora;
+      cambiato = true;
+    });
+  });
+  if(cambiato) _coSave(mappa);
+  return cambiato;
+}
 // «Torna a …»: solo finché nessuna serie è stata salvata sotto l'esercizio scelto.
 function annullaCambioOggi(sid, exName){
   const sess = getTrainingSession(sid);
@@ -3477,7 +3500,7 @@ function _renderWarmupSection(s){
           <div style="display:flex;align-items:center;gap:2px;"><span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}</div>
           ${_rigaSpiegazione(w)}
         </div>
-        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">60s</div>
+        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${_warmupPerLato(w) ? `${WARMUP_ISO_SIDE_SEC}s per lato` : '60s'}</div>
       </div>`;
   }).join('');
 
@@ -5439,7 +5462,8 @@ async function releaseWakeLock(){
   } catch(e){}
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible' && ST.trainSession && _wakeLock === null){
+  // anche col Tabata «a parte», che corre senza una seduta aperta (revisione di 480+490)
+  if(document.visibilityState === 'visible' && (ST.trainSession || (ST.trainTabataFlow && ST.trainTabataFlow.active)) && _wakeLock === null){
     requestWakeLock();
   }
   // Audio al rientro in primo piano: risveglio, e se iOS lo ha lasciato «interrupted» (vocale,
@@ -6579,6 +6603,7 @@ function tabataFlowStart(origine){
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   _tabataFlowClearInterval();
   try { _unlockAudio(); } catch(e) {}
+  if(!sess) requestWakeLock();   // «a parte»: nessuna seduta ha acceso lo schermo
   ST.trainTabataFlow = {
     active: true,
     sessionId: sess ? ST.trainSession : null,
@@ -6623,10 +6648,16 @@ function tabataFlowSkip(){
   f.remaining = 0;
   _tabataFlowAdvance();
 }
+// Il Tabata «a parte» tiene acceso lo schermo da sé (la seduta lo fa in openTrainingSession) e lo
+// lascia alla fine, se nel frattempo non si è aperta una seduta.
+function _tabataLasciaSchermo(){
+  if(!ST.trainSession) releaseWakeLock();
+}
 function tabataFlowEnd(){
   // Termina manualmente prima della fine
   _tabataFlowClearInterval();
   ST.trainTabataFlow = null;
+  _tabataLasciaSchermo();
   renderTraining();
 }
 function _tabataFlowEndCompleted(){
@@ -6635,6 +6666,7 @@ function _tabataFlowEndCompleted(){
   try { if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]); } catch(e) {}
   showToast('Tabata completato! 💪', '🔥');
   ST.trainTabataFlow = null;
+  _tabataLasciaSchermo();
   renderTraining();
 }
 
@@ -6666,14 +6698,19 @@ function _warmupFlowNextItem(){
   if(ni >= f.items.length) return null;
   return f.items[ni];
 }
+// Una voce del riscaldamento a tempo per lato («30 sec per lato»: il generatore la scrive così per chi è
+// unilaterale = si, revisione di 480+490).
+function _warmupPerLato(w){
+  const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
+  return !!(pr && pr.kind === 'seconds' && pr.perLato);
+}
 // Inizializza isoPhase per l'item corrente se è perLato.
 // Chiamata all'avvio del flow e ad ogni avanzamento idx.
 function _warmupFlowInitIsoPhase(){
   const f = ST.trainWarmupFlow;
   if(!f) return;
   const cur = _warmupFlowCurrentItem();
-  const pr = (cur && cur.reps && typeof parseRepsRange === 'function') ? parseRepsRange(cur.reps) : null;
-  if(pr && pr.kind === 'seconds' && pr.perLato){
+  if(_warmupPerLato(cur)){
     f.isoPhase = 'A';
     f.remaining = WARMUP_ISO_SIDE_SEC;
   } else {

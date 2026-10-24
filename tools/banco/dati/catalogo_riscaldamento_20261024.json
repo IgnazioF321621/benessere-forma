@@ -1,5 +1,15 @@
 {
   "cosa": "Righe vere di esercizi_catalog lette il 24 ottobre 2026 (sola lettura, Training 480): le 83 con uso che contiene «riscald» e le 5 di recupero candidate a polsi e caviglie (EX784 EX786 EX788 EX823 EX834). Senza testi lunghi: servono solo i campi che usano i filtri del generatore e la riga in italiano.",
+  "unilaterale": {
+    "nota": "colonna unilaterale delle 83 righe con uso=riscaldamento, letta il 24 ottobre 2026 sera (revisione di 480+490); le altre 47 sono «no»",
+    "si": ["EX117", "EX119", "EX120", "EX625", "EX626", "EX627", "EX647", "EX652", "EX656", "EX661", "EX747", "EX781", "EX786", "EX803", "EX804", "EX806", "EX812", "EX816", "EX817", "EX818", "EX819", "EX822", "EX823", "EX834"],
+    "alternato": ["EX590", "EX597", "EX598", "EX599", "EX600", "EX601", "EX603", "EX604", "EX605", "EX606", "EX611", "EX613", "EX637", "EX659", "EX776", "EX830", "EX836"]
+  },
+  "nota_surrogato": {
+    "nota": "le due righe della cuffia al cavo, a casa con l'elastico (revisione di 480+490), lette il 24 ottobre 2026 sera",
+    "EX101": "Extrarotazione resa con elastico ancorato all'altezza del gomito, gomito al fianco, apertura verso l'esterno.",
+    "EX416": "Elastico ancorato all'altezza del gomito al posto della puleggia, gomito aderente al fianco"
+  },
   "colonne": ["codice", "nome", "pattern", "gruppo_target", "attrezzo", "luogo", "muscoli", "livello", "uso", "surrogato_attrezzo", "spiegazione"],
   "righe": [
     ["EX058", "Tirate al viso corda cavo alto", "isolamento", "deltoidi posteriori", "corda", "casa;palestra", "deltoide posteriore;trapezio medio;romboidi;cuffia dei rotatori", "principiante;intermedio", "principale;finisher;riscaldamento", "elastico", ""],

@@ -850,13 +850,19 @@ function _trainGenSessionId(splitType, occurrenceIdx, typeCount) {
 }
 
 // Map<sessionId, [codice, …]> dei cardini della scheda precedente (al massimo 2 per seduta).
+// Il codice dell'esercizio della scheda, anche quando oggi in memoria c'è il sostituto di «Cambia per oggi»
+// (applicaCambiOggi cambia gli oggetti della seduta sul posto; l'originale sta in oggiAlPostoDi). Revisione di 480+490.
+function _codiceVero(e) {
+  return (e && e.oggiAlPostoDi && e.oggiAlPostoDi.codice) || (e && e.codice) || null;
+}
+
 function _trainGenCardini(schedaPrecedente, catalogMap) {
   const out = new Map();
   const sessioni = schedaPrecedente && Array.isArray(schedaPrecedente.sessioni) ? schedaPrecedente.sessioni : [];
   sessioni.forEach(s => {
     if (!s || !s.id || s.type === 'Pump' || s.type === 'Recupero') return;
     const compound = (s.exercises || [])
-      .map(e => e && e.codice && catalogMap.get(e.codice))
+      .map(e => _codiceVero(e) && catalogMap.get(_codiceVero(e)))
       .filter(cat => cat && _TRAIN_GEN_PATTERN_COMPOUND.has(_normPattern(cat.pattern)));
     const splitType = String(s.id).replace(/[A-Z]$/, '');
     const famiglie = _TRAIN_GEN_CARDINI_PATTERN[splitType];
@@ -965,6 +971,11 @@ function cambiaEsercizioBloccoNuovo(sid, codice, nuovoCodice) {
   const w = _trainGenApplyCautions([cat], bn.scheda._pools.limitazioni || [], catalogMap, new Set(catalogMap.keys()));
   if (!w.length) { showToast('Questo esercizio non va d\'accordo con le tue limitazioni', '⚠️', 5500); return null; }
   const meta = { id: sess.id, name: sess.name, type: sess.type, rir: sess.rir, label: sess.label, rest: sess.rest, duration_min: null };
+  // La serie in più e il «per il volume» passano al sostituto (stesso gruppo bersaglio, vedi candidatiBloccoNuovo):
+  // senza, il muscolo tornava sotto il minimo con un tocco (revisione di 480+490).
+  const vecchio = sess.exercises[idx];
+  if (vecchio && vecchio.serieInPiu) meta.setsExtra = { [nuovoCodice]: vecchio.serieInPiu };
+  if (vecchio && vecchio.perVolume) meta.perVolume = { [nuovoCodice]: vecchio.perVolume };
   const mapped = _trainGenMapToSession(w, meta, sess._sp, null, bn.scheda.tipo_allenamento, new Set(bn.scheda._pools.attrezzatura || []));
   const nuovo = mapped.exercises[0];
   if (!nuovo) return null;
@@ -984,11 +995,13 @@ async function rinnovaRiscaldamento() {
   if (!ST.user || !ST.user.id || !ST.schedaAttiva || !ST.schedaAttiva.id || !ST.schedaAttiva.scheda) { showToast('Non trovo la scheda di adesso: riapri l\'app e riprova', '⚠️'); return null; }
   const ok = await chiediConferma(COACH_NAME + ' sceglie un riscaldamento nuovo per ogni seduta della scheda di adesso. Esercizi, serie e cardini non cambiano.', { titolo: 'Rinnovare il riscaldamento?', ok: 'Rinnova', annulla: 'Lascia così' });
   if (!ok) return null;
-  const gen = await generateTrainingProgram({ source: 'rinnova-riscaldamento', force: true, dryRun: true, cardiniDa: ST.schedaAttiva.scheda });
-  if (!gen || !Array.isArray(gen.sessioni)) { showToast('Non sono riuscito a preparare il riscaldamento — riprova più tardi', '⚠️', 5500); return null; }
+  // La riga si rilegge PRIMA di generare (revisione di 480+490): in memoria una seduta può avere il
+  // sostituto di «Cambia per oggi» al posto dell'esercizio vero, e il riscaldamento deve evitare quello vero.
   const fresca = await dbq('rileggere la scheda attiva', supa.from('schede_utente').select('scheda').eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id).single());
   if (fresca.error || !fresca.data || !fresca.data.scheda) return null;
   const scheda = fresca.data.scheda;
+  const gen = await generateTrainingProgram({ source: 'rinnova-riscaldamento', force: true, dryRun: true, cardiniDa: JSON.parse(JSON.stringify(scheda)) });
+  if (!gen || !Array.isArray(gen.sessioni)) { showToast('Non sono riuscito a preparare il riscaldamento — riprova più tardi', '⚠️', 5500); return null; }
   let cambiate = 0;
   (scheda.sessioni || []).forEach(s => {
     const g = s && gen.sessioni.find(x => x.id === s.id);
@@ -1038,7 +1051,14 @@ async function accorciaSerieForza() {
   if (fresca.error || !fresca.data || !fresca.data.scheda) return null;
   const scheda = fresca.data.scheda;
   const cambi = serieForzaDaTogliere(scheda);
-  if (!cambi.length) { showToast('Le sedute di forza hanno già 3 serie', 'ℹ️'); return 0; }
+  if (!cambi.length) {
+    // già fatto (anche da un altro telefono): si allinea la memoria e i cambi di oggi, e la card sparisce
+    if (typeof _coAllineaAllaScheda === 'function') _coAllineaAllaScheda(scheda);
+    await loadActiveScheda();
+    if (ST.page === 'training') renderTraining();
+    showToast('Le sedute di forza hanno già 3 serie', 'ℹ️');
+    return 0;
+  }
   const minuti = Math.round(cambi.reduce((t, c) => t + c.sec, 0) / 60);
   const sedute = [...new Set(cambi.map(c => c.sid))].map(sid => { const s = scheda.sessioni.find(x => x.id === sid); return (s && s.name) || sid; });
   const ok = await chiediConferma(`Nelle sedute di forza (${sedute.join(' e ')}) ${cambi.length} esercizi passano da ${cambi[0].da} a ${cambi[0].a} serie, con gli stessi recuperi: circa ${minuti} minuti in meno a settimana. Addominali, isolamenti e sedute di ipertrofia restano come sono.`, { titolo: 'Una serie in meno nella forza?', ok: 'Sì, 3 serie', annulla: 'Lascia così' });
@@ -1051,6 +1071,8 @@ async function accorciaSerieForza() {
   });
   const up = await dbq('salvare le serie della forza', supa.from('schede_utente').update({ scheda }).eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id));
   if (up.error) return null;
+  // un «Cambia per oggi» su uno di questi esercizi segue anche lui le 3 serie (revisione di 480+490)
+  if (typeof _coAllineaAllaScheda === 'function') _coAllineaAllaScheda(scheda);
   await loadActiveScheda();
   if (ST.page === 'training') renderTraining();
   showToast(`Sedute di forza: ${a} serie per esercizio`, '✅', 5500);
@@ -2056,7 +2078,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
     const primaPerSeduta = new Map();                    // id seduta → Set codici di allora
     ((cardiniDa && cardiniDa.sessioni) || []).forEach(s => {
       if (!s || !s.id) return;
-      const set = new Set((s.exercises || []).map(e => e && e.codice).filter(Boolean));
+      const set = new Set((s.exercises || []).map(_codiceVero).filter(Boolean));
       primaPerSeduta.set(s.id, set);
       set.forEach(c => usatiPrima.add(c));
     });
@@ -2519,23 +2541,24 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const _macroSessione = (splitType === 'lower' || splitType === 'legs') ? 'lower'
                            : (splitType === 'upper' || splitType === 'push' || splitType === 'pull') ? 'upper'
                            : 'fullbody';
-      // Training 480 (24 ottobre 2026, scelte di Ignazio): UNO PER ZONA, e la zona la dice la
-      // colonna `zona` del catalogo (scritta dal foglio, mai dedotta dal nome). Upper: colonna
-      // toracica, scapole, spalle, polsi; Lower: anche, ginocchia, caviglie; dal centro verso fuori.
-      // Solo corpo libero ed elastico: i quattro al cavo hanno zona vuota nel catalogo. Una riga con
-      // due zone ne copre una sola per seduta, e lo stesso codice non va nel riscaldamento e poi fra
-      // gli esercizi di lavoro dello stesso giorno (anche qui sotto, nel volume, in «Cambia ›» del
-      // blocco nuovo e in «Cambia per oggi»). Una zona senza
+      // Training 480 (24 ottobre 2026, scelte di Ignazio): UNA VOCE PER ZONA, e la zona la dice la
+      // colonna `zona` del catalogo (scritta dal foglio, mai dedotta dal nome); le voci della seduta
+      // stanno in _TRAIN_GEN_WARM_VOCI (dopo la revisione: 2 minuti leggeri in testa e la cuffia con
+      // l'elastico al posto di «spalle» nell'Upper). Solo corpo libero ed elastico: i quattro al cavo
+      // hanno zona vuota nel catalogo (la cuffia si pesca per gruppo_target, a casa col surrogato
+      // elastico). Una riga con due zone ne copre una sola per seduta, e lo stesso codice non va nel
+      // riscaldamento e poi fra gli esercizi di lavoro dello stesso giorno (anche nel volume, in
+      // «Cambia ›» del blocco nuovo, in «Cambia per oggi» e nella variante del coach). Una voce senza
       // righe resta vuota (avviso). Finché nessuna riga del pool ha `zona` (colonna non ancora nel
       // foglio) vale la regola di prima, qui sotto.
-      const _zoneSeduta = _TRAIN_GEN_WARM_ZONE[_macroSessione] || [];
-      if (_zoneSeduta.length && pools.poolRiscaldamento.some(ex => _trainGenZone(ex).length)) {
+      const _vociSeduta = _TRAIN_GEN_WARM_VOCI[_macroSessione] || [];
+      if (_vociSeduta.length && pools.poolRiscaldamento.some(ex => _trainGenZone(ex).length)) {
         const _usedW = new Set(exercises.map(ex => ex && ex.codice).filter(Boolean));
         // «Rinnova il riscaldamento» scrive solo il riscaldamento: quel giorno si fanno gli esercizi della scheda in uso
         if (source === 'rinnova-riscaldamento') (primaPerSeduta.get(sessionIdPrev) || []).forEach(c => _usedW.add(c));
-        _zoneSeduta.forEach(zona => {
-          const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupByZona(p, zona, occurrenceIdx + rigenIdx, _usedW));
-          if (!_exW) { console.warn(`[train-gen] ${sessionLabel}: nessun riscaldamento per la zona «${zona}» nel poolRiscaldamento`); return; }
+        _vociSeduta.forEach(voce => {
+          const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupVoce(p, voce, occurrenceIdx + rigenIdx, _usedW));
+          if (!_exW) { console.warn(`[train-gen] ${sessionLabel}: nessun riscaldamento per la voce ${JSON.stringify(voce)} nel poolRiscaldamento`); return; }
           _usedW.add(_exW.codice);
           const _w = _trainGenMapWarmupExercise(_exW);
           if (_w) warmupExs.push(_w);
@@ -3403,20 +3426,28 @@ function _trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIn
 // 1 min/esercizio + 10 s di pausa), che leggerà session.warmup[].
 function _trainGenMapWarmupExercise(cat) {
   if (!cat) return null;
-  const splitField = (s) => String(s || '').split(';').map(x => x.trim()).filter(Boolean);
+  // Revisione di 480+490: chi si fa un lato alla volta (unilaterale = si: allungamenti del polpaccio e del
+  // polso, cerchi con un braccio) ha 30 secondi per lato col cambio lato nel flusso, non 60 su un lato solo
+  // (e un allungamento fermo sotto i 30-60 s per muscolo non toglie forza: Kay e Blazevich 2012).
+  const perLato = String(cat.unilaterale || '').toLowerCase().trim() === 'si';
+  // E chi entra col surrogato (la cuffia al cavo, a casa con l'elastico) mostra l'attrezzo e la nota del
+  // surrogato, con le stesse regole degli esercizi di lavoro; loadActiveScheda le rispetta (isSurrogato).
+  const surr = !!cat._surrogato;
+  const t = _trainGenTestiEsercizio(cat, { isSurrogato: surr });
   return {
     codice:       cat.codice,
     name:         cat.nome,
-    eq:           String(cat.attrezzo || '').trim(),
+    eq:           (surr && cat.surrogato_attrezzo) ? String(cat.surrogato_attrezzo).trim() : String(cat.attrezzo || '').trim(),
     sets:         2,            // brief FASE 1: 1-2 serie → default 2
-    reps:         '15-20',      // carico leggero, alte reps, mai a cedimento
-    setup:        splitField(cat.setup),
-    execution:    splitField(cat.esecuzione),
-    commonErrors: splitField(cat.errori),
-    muscles:      splitField(cat.muscoli),
+    reps:         perLato ? '30 sec per lato' : '15-20',   // carico leggero, alte reps, mai a cedimento
+    setup:        t.setup,
+    execution:    t.execution,
+    commonErrors: t.commonErrors,
+    muscles:      t.muscles,
     spiegazione:  String(cat.spiegazione || '').trim() || null,   // Training 390: riga in italiano sotto il nome
     note:         'Riscaldamento · carico leggero, mai a cedimento',
     warmup:       true,         // marker: item di warm-up, non esercizio di lavoro
+    ...(surr ? { isSurrogato: true } : {}),
   };
 }
 
@@ -3467,13 +3498,33 @@ function _trainGenPickWarmupByMuscle(pool, muscleKeywords, sessionIndex, usedWar
   return candidates[idx];
 }
 
-// Training 480 — le zone del riscaldamento specifico, nell'ordine in cui si fanno (dal centro
-// verso fuori). Vocabolario chiuso della colonna `zona` di esercizi_catalog (migrazione
-// 20261024_480): spalle · scapole · colonna toracica · polsi · anche · caviglie · ginocchia.
-const _TRAIN_GEN_WARM_ZONE = {
-  upper: ['colonna toracica', 'scapole', 'spalle', 'polsi'],
-  lower: ['anche', 'ginocchia', 'caviglie'],
+// Training 480 — le voci del riscaldamento specifico, nell'ordine in cui si fanno. Dopo la revisione di
+// 480+490 (24 ottobre 2026, scelte di Ignazio coi pulsanti):
+//   · in testa DUE voci leggere che alzano battito e temperatura (pattern cardio_metabolico fra le righe
+//     con uso=riscaldamento: corsa sul posto, skip…): la parte generale che il Blocco Attivazione non fa;
+//   · poi le zone, dal centro verso fuori (vocabolario chiuso della colonna `zona` di esercizi_catalog,
+//     migrazione 20261024_480: spalle · scapole · colonna toracica · polsi · anche · caviglie · ginocchia);
+//   · nell'Upper la cuffia AL POSTO di «spalle»: rotazione esterna o interna contro resistenza, per
+//     gruppo_target (EX101 / EX416, a casa con l'elastico), il cuore del programma di Andersson 2017.
+// Una voce è { pattern } o { zona } o { gruppo }.
+const _TRAIN_GEN_WARM_VOCI = {
+  upper: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'colonna toracica' }, { zona:'scapole' }, { gruppo:'cuffia rotatori' }, { zona:'polsi' }],
+  lower: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'anche' }, { zona:'ginocchia' }, { zona:'caviglie' }],
 };
+
+// Una voce del riscaldamento → la riga che la copre (null se non ce n'è): zona, gruppo_target o pattern.
+function _trainGenPickWarmupVoce(pool, voce, sessionIndex, usedWarmup) {
+  if (!voce) return null;
+  if (voce.zona) return _trainGenPickWarmupByZona(pool, voce.zona, sessionIndex, usedWarmup);
+  if (voce.gruppo) return _trainGenPickWarmup(pool, voce.gruppo, sessionIndex, usedWarmup);
+  if (!voce.pattern || !Array.isArray(pool)) return null;
+  const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
+  const candidates = pool.filter(ex => !used.has(ex.codice) && _normPattern(ex.pattern) === voce.pattern);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
+  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
+  return candidates[idx];
+}
 
 // Le zone di una riga di catalogo (lista ';', minuscolo). [] se la colonna manca o è vuota.
 function _trainGenZone(ex) {
