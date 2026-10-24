@@ -1338,11 +1338,82 @@ window.smartUpdateField = function(tempId, field, value) {
   _initSmartForm();
   const it = ST.smartForm.items.find(i => i.tempId === tempId);
   if (!it) return;
-  if (field === 'quantity') value = Math.max(0, parseFloat(value) || 0);
+  if (field === 'quantity') { _smartImpostaQta(it, value); return; }
   if (field === 'unit' && !['g','ml','pz'].includes(value)) value = 'g';
   it[field] = value;
   // No renderOggi su ogni keystroke per non perdere il focus dell'input
 };
+
+// ── Nutrition 220 (24 ottobre 2026): quantità e porzione si cambiano a vista, i valori seguono in proporzione ──
+// Prima la quantità stava dentro l'ingrediente chiuso e cambiarla non cambiava niente finché non si toccava «Stima
+// coach». Ora ogni ingrediente ha la quantità sempre in vista con − e +, e calorie e macro si ricalcolano subito con
+// ZTNutrizione.valoriPerQuantita (la proporzione delle tabelle di composizione): il coach serve solo a stimare un
+// ingrediente nuovo. _base sono i valori com'erano quando si è cominciato a cambiare: si scala sempre da lì, così
+// tanti − e + di fila non accumulano arrotondamenti. Un ingrediente senza quantità (0) con dei valori si scala con
+// la porzione (_f); un ingrediente vuoto prende la quantità e basta, e i valori li stima il coach.
+function _smartBase(it) {
+  if (!it._base) it._base = { quantity: Number(it.quantity) || 0, kcal: Number(it.kcal) || 0, protein: Number(it.protein) || 0, carbs: Number(it.carbs) || 0, fat: Number(it.fat) || 0 };
+  return it._base;
+}
+function _smartImpostaQta(it, value) {
+  const q = Math.max(0, Math.round((parseFloat(String(value).replace(',', '.')) || 0) * 10) / 10);
+  const base = _smartBase(it);
+  const v = base.kcal > 0 || base.protein > 0 || base.carbs > 0 || base.fat > 0 ? ZTNutrizione.valoriPerQuantita(base, q) : null;
+  it.quantity = q;
+  if (v) Object.assign(it, v);
+  else it._base = null;   // niente da cui partire: la base si prende al prossimo cambio, coi valori del coach
+}
+function _smartPasso(it) { return it.unit === 'pz' ? 0.5 : 10; }
+// Aggiorna a schermo i numeri della riga e del totale senza ridisegnare: il campo che si sta scrivendo resta attivo
+function _smartAggiornaNumeri(it) {
+  const k = document.querySelector(`[data-row-kcal="${it.tempId}"]`);
+  if (k) k.textContent = it.kcal > 0 ? `${it.kcal} kcal` : 'da compilare';
+  const tot = _smartTotals();
+  ['kcal', 'carbs', 'protein', 'fat'].forEach(c => {
+    const el = document.querySelector(`[data-smart-tot="${c}"]`);
+    if (el) el.textContent = tot[c] + (c === 'kcal' ? ' kcal' : 'g');
+  });
+  (ST.smartForm.items || []).forEach(x => { const m = document.querySelector(`[data-row-macro="${x.tempId}"]`); if (m) m.innerHTML = _smartMacroChips(x); });
+}
+window.smartQtaScrivi = function(tempId, value) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  _smartImpostaQta(it, value);
+  _smartAggiornaNumeri(it);
+};
+window.smartQtaPasso = function(tempId, verso) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  const passo = _smartPasso(it);
+  // dal valore fuori passo si va al passo vicino (125 g e + → 130), mai sotto lo zero
+  const q = Number(it.quantity) || 0;
+  const nuova = verso > 0 ? Math.floor(q / passo + 1e-9) * passo + passo : Math.ceil(q / passo - 1e-9) * passo - passo;
+  _smartImpostaQta(it, Math.max(0, nuova));
+  renderOggi();
+};
+// La porzione dell'intero pasto («ne ho mangiato metà»): tutte le quantità per lo stesso numero, rispetto a com'era
+// il pasto quando si è aperto (1). Le correzioni fatte a un ingrediente restano, scalate con le altre.
+const SMART_PORZIONI = [[0.5, '½'], [0.75, '¾'], [1, '1'], [1.5, '1½'], [2, '2']];
+window.smartPorzione = function(f) {
+  _initSmartForm();
+  const prima = Number(ST.smartForm.porzione) || 1;
+  const rel = f / prima;
+  ST.smartForm.items.forEach(it => {
+    const base = _smartBase(it);
+    if (base.quantity > 0) _smartImpostaQta(it, (Number(it.quantity) || 0) * rel);
+    else { it._f = (Number(it._f) || 1) * rel; Object.assign(it, ZTNutrizione.scalaValori(base, it._f)); }
+  });
+  ST.smartForm.porzione = f;
+  renderOggi();
+};
+function _smartMacroChips(it) {
+  if (!(it.kcal > 0) || it.calculating) return '';
+  return `<span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
+            <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
+            <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>`;
+}
 
 window.smartRecalcRow = async function(tempId) {
   _initSmartForm();
@@ -1364,6 +1435,7 @@ window.smartRecalcRow = async function(tempId) {
   try {
     const m = await estimateSingleItem(it.name.trim(), it.quantity, it.unit);
     it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
+    it._base = null; it._f = null;   // Nutrition 220: la stima nuova è la base da cui si scala
   } catch (e) {
     console.error('Single item estimate error:', e);
     avvisa('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
@@ -1399,12 +1471,13 @@ window.smartOpenEdit = async function(date, mealId) {
     items = dbItems || [];
   }
 
-  // Pasto monolitico legacy: crea 1 item dalla descrizione
+  // Pasto monolitico legacy: crea 1 item dalla descrizione. Nutrition 220: vale «1 porzione» (1 pz), così − e +
+  // vanno di mezza porzione e calorie e macro seguono; prima era quantità 0 e la quantità non voleva dire niente
   if (items.length === 0) {
     items = [{
       id: 'legacy_' + mealId,
       name: meal.description || 'Pasto',
-      quantity: 0, unit: 'g',
+      quantity: 1, unit: 'pz',
       kcal: meal.kcal || 0, protein: meal.protein || 0, carbs: meal.carbs || 0, fat: meal.fat || 0,
       source: 'manual', sort_order: 0,
     }];
@@ -1431,9 +1504,13 @@ window.smartOpenEdit = async function(date, mealId) {
     editingSlot: meal.slot,
     editingTime: meal.time || null,
     editingDescription: meal.description || '',
+    editingDate: date,
+    porzione: 1,
   };
 
   ST.logSlot = meal.slot;
+  // Nutrition 220: il campo orario mostra l'ora del pasto; prima mostrava l'ultima scelta (o adesso) e la salvava sopra
+  if (meal.time) ST.logTime = String(meal.time).slice(0, 5);
   ST.logOpen = true;
   renderOggi();
 
@@ -1488,7 +1565,7 @@ window.smartSavePasto = async function() {
       // andava, il pasto restava senza ingredienti. Ora l'ordine e' il contrario — entrano i nuovi (con l'id
       // scelto dal telefono), si aggiorna il pasto, escono i vecchi per id — e ogni passo passa dalla coda:
       // senza rete si rimanda tutto in ordine. Se un passo non va, quelli gia' fatti si annullano.
-      const day = ST.db.days[ST.activeDay];
+      const day = ST.db.days[ST.smartForm.editingDate || ST.activeDay];   // Nutrition 220: anche se nel frattempo si è cambiato giorno
       const pastoPrima = day ? (day.meals || []).find(m => m.id === mealId || m.local_id === mealId) : null;
       // Gli id degli ingredienti di prima si leggono dal database prima di scrivere (sola lettura): la memoria puo'
       // averli parziali o senza id (copia locale vecchia), e allora i vecchi resterebbero accanto ai nuovi, doppi.
@@ -1748,14 +1825,21 @@ function renderRegistraPasto() {
     const headerName = it.name || '(nuovo ingrediente)';
     const headerKcal = it.calculating ? '...' : (calcd ? `${it.kcal} kcal` : 'da compilare');
     const headerKcalColor = calcd ? 'var(--t2)' : 'var(--t3)';
-    const qtyDisplay = (it.quantity && it.unit) ? `<span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);flex-shrink:0;margin-left:6px;">${it.quantity}${it.unit}</span>` : '';
+    // Nutrition 220: la quantità è sempre in vista, con − e +; il campo è a 16 px perché l'iPhone non ingrandisca la pagina
+    const qtyRow = `
+      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+        <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',-1)" aria-label="Meno">−</button>
+        <input data-row-qty="${it.tempId}" class="smart-qta-inp" type="text" inputmode="decimal" value="${it.quantity ? String(it.quantity).replace('.', ',') : ''}" placeholder="0" aria-label="Quantità di ${esc(it.name||'ingrediente')}" oninput="smartQtaScrivi('${it.tempId}',this.value)" onchange="renderOggi()" />
+        <span style="font-size:13px;color:var(--t2);font-family:var(--font-mono);min-width:22px;">${it.unit === 'pz' ? (it._existingId && String(it._existingId).startsWith('legacy_') ? 'porz.' : 'pz') : (it.unit || 'g')}</span>
+        <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',1)" aria-label="Più">+</button>
+        <div data-row-macro="${it.tempId}" style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;margin-left:auto;justify-content:flex-end;">${_smartMacroChips(it)}</div>
+      </div>`;
 
     const expandedBlock = expanded ? `
       <div style="margin-top:10px;padding-top:10px;border-top:0.5px dashed var(--s3);">
         <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <input data-row-name="${it.tempId}" value="${esc(it.name||'')}" placeholder="Alimento" onchange="smartUpdateField('${it.tempId}','name',this.value)" style="flex:2;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;min-width:0;" />
-          <input data-row-qty="${it.tempId}" type="number" step="0.1" value="${it.quantity || ''}" placeholder="Qtà" onchange="smartUpdateField('${it.tempId}','quantity',this.value)" style="width:64px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;text-align:right;" />
-          <select data-row-unit="${it.tempId}" onchange="smartUpdateField('${it.tempId}','unit',this.value)" style="width:52px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:12px;">
+          <input data-row-name="${it.tempId}" value="${esc(it.name||'')}" placeholder="Alimento" onchange="smartUpdateField('${it.tempId}','name',this.value)" style="flex:2;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;min-width:0;" />
+          <select data-row-unit="${it.tempId}" onchange="smartUpdateField('${it.tempId}','unit',this.value);renderOggi()" style="width:60px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;">
             <option value="g" ${it.unit==='g'?'selected':''}>g</option>
             <option value="ml" ${it.unit==='ml'?'selected':''}>ml</option>
             <option value="pz" ${it.unit==='pz'?'selected':''}>pz</option>
@@ -1763,11 +1847,7 @@ function renderRegistraPasto() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima coach'}</button>
-          ${calcd && !it.calculating ? `<div style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;">
-            <span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
-            <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
-            <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>
-          </div>` : ''}
+          <span style="font-size:10px;color:var(--t3);">${calcd ? 'cambiando la quantità i valori seguono da soli' : 'scrivi nome e quantità, poi la stima'}</span>
         </div>
       </div>` : '';
 
@@ -1777,13 +1857,13 @@ function renderRegistraPasto() {
           <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
             <span style="color:var(--t3);font-size:10px;${arrowStyle}">▶</span>
             <span style="font-size:13px;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(headerName)}</span>
-            ${qtyDisplay}
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            <span style="font-size:11px;font-family:var(--font-mono);color:${headerKcalColor};">${headerKcal}</span>
+            <span data-row-kcal="${it.tempId}" style="font-size:11px;font-family:var(--font-mono);color:${headerKcalColor};">${headerKcal}</span>
             <button onclick="event.stopPropagation();smartRemoveRow('${it.tempId}')" style="width:22px;height:22px;padding:0;background:transparent;border:none;cursor:pointer;color:var(--t3);font-size:16px;">×</button>
           </div>
         </div>
+        ${qtyRow}
         ${expandedBlock}
       </div>`;
   }).join('');
@@ -1793,17 +1873,25 @@ function renderRegistraPasto() {
     <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
         <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Totale pasto</span>
-        <span style="font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--t1);">${tot.kcal} kcal</span>
+        <span data-smart-tot="kcal" style="font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--t1);">${tot.kcal} kcal</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
-        <div style="background:var(--carb-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#854F0B;text-transform:uppercase;font-weight:700;">Carbo</div><div style="font-size:14px;font-family:var(--font-mono);color:#854F0B;">${tot.carbs}g</div></div>
-        <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
-        <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
+        <div style="background:var(--carb-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#854F0B;text-transform:uppercase;font-weight:700;">Carbo</div><div data-smart-tot="carbs" style="font-size:14px;font-family:var(--font-mono);color:#854F0B;">${tot.carbs}g</div></div>
+        <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div data-smart-tot="protein" style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
+        <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div data-smart-tot="fat" style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
       </div>
       <button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>
     </div>` : '';
 
   const toggleAllBtn = items.length > 1 ? `<button onclick="smartToggleAll()" style="background:transparent;border:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;">${anyExpanded?'Collassa tutti':'Espandi tutti'}</button>` : '';
+
+  // Nutrition 220: «quanto ne hai mangiato?», tutto il pasto per ½, ¾, 1, 1½, 2 (rispetto a com'era quando si è aperto)
+  const porzione = Number(ST.smartForm.porzione) || 1;
+  const porzioniHtml = items.some(i => i.kcal > 0) ? `
+      <div style="margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:6px;">Quanto ne hai mangiato?</div>
+        <div class="smart-porzioni" role="group" aria-label="Porzione del pasto">${SMART_PORZIONI.map(([f, lbl]) => `<button class="smart-porz ${Math.abs(f - porzione) < 1e-9 ? 'on' : ''}" aria-pressed="${Math.abs(f - porzione) < 1e-9}" onclick="smartPorzione(${f})">${lbl}</button>`).join('')}</div>
+      </div>` : '';
 
   const itemsCard = hasItems ? `
     <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
@@ -1811,6 +1899,7 @@ function renderRegistraPasto() {
         <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Ingredienti (${items.length})</span>
         ${toggleAllBtn}
       </div>
+      ${porzioniHtml}
       ${rowsHtml}
       <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
     </div>` : '';
@@ -6148,6 +6237,8 @@ function swipeEnd(e, id) {
 
 function setLogSlot(id){
   ST.logSlot = id;
+  // Nutrition 220: mentre si modifica un pasto la fascia cambia e basta; prima il tocco svuotava il form e la modifica si perdeva
+  if (ST.smartForm && ST.smartForm.editingMealId) { ST.smartForm.editingSlot = id; renderOggi(); return; }
   // Aggiorna ST.logTime all'orario standard dello slot scelto (es. Cena → "20:00").
   // Nota: openLogFromPlanned() NON chiama setLogSlot — setta ST.logSlot/ST.logTime
   // direttamente con il valore pianificato, quindi qui non c'è rischio di sovrascriverlo.

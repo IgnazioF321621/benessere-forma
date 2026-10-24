@@ -2591,3 +2591,11 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .soliti-sotto{font-size:10px;font-family:var(--font-mono);color:var(--acc);}
 /* Nutrition 060 — «Registra questo» sotto il consiglio del coach */
 .oggi-v3-coach-registra{width:100%;margin:8px 0 2px;padding:9px 12px;border:1px solid var(--acc);background:transparent;color:var(--acc);border-radius:10px;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;}
+/* Nutrition 220 — quantità sempre in vista con − e +, porzione dell'intero pasto (campi a 16 px: l'iPhone non ingrandisce) */
+.smart-qta-btn{width:36px;height:36px;flex-shrink:0;padding:0;border:0.5px solid var(--s3);background:var(--s1);color:var(--t1);border-radius:var(--r-sm);font-size:18px;line-height:1;cursor:pointer;}
+.smart-qta-btn:active{background:var(--s3);}
+.smart-qta-inp{width:64px;height:36px;padding:0 6px;border:0.5px solid var(--s3);border-radius:var(--r-sm);background:var(--s1);color:var(--t1);font-family:var(--font-mono);font-size:16px;text-align:center;box-sizing:border-box;}
+.smart-qta-inp:focus{border-color:var(--acc);outline:none;}
+.smart-porzioni{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.smart-porz{height:36px;border:0.5px solid var(--s3);background:var(--s2);color:var(--t1);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;cursor:pointer;}
+.smart-porz.on{background:var(--acc);border-color:var(--acc);color:var(--bianco);}
