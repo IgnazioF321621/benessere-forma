@@ -1,6 +1,6 @@
 # Stato — fotografia automatica
 
-*Generato da `tools/biblioteca-nomi/stato.py` il 2026-10-24 alle 19:24.* Sola lettura: nessuna modifica a database, Storage o Sheet.
+*Generato da `tools/biblioteca-nomi/stato.py` il 2026-10-25 alle 22:07.* Sola lettura: nessuna modifica a database, Storage o Sheet.
 
 **Non si aggiorna da solo.** Va rilanciato dopo ogni sync del Sheet e dopo ogni migrazione di zona — sono i due momenti in cui questi numeri si spostano.
 
@@ -13,7 +13,7 @@
 | | valore | nota |
 |---|---|---|
 | Righe totali | 824 |  |
-| Ultimo sync | 2026-10-24 17:23 | istante in cui il foglio ha riscritto le righe |
+| Ultimo sync | 2026-10-25 21:06 | istante in cui il foglio ha riscritto le righe |
 | Righe arenate | 0 | nessuna: foglio e database allineati |
 | Prossimo codice libero | EX838 | da allocare al momento della scrittura, mai in anticipo |
 | Codici con GIF | 768 |  |
