@@ -89,6 +89,17 @@ function makeSupaMock(tables){
         via.forEach(r => t.splice(t.indexOf(r), 1));
         return Promise.resolve({ data: via, error:null });
       }
+      // tables.__veri = ['tabella']: quella tabella si comporta come il database vero (revisione di 480+490):
+      // gli update scrivono nelle righe che passano i filtri eq, e le letture (sotto) danno copie, non gli
+      // oggetti che l'app poi cambia in memoria
+      const vera = (tables.__veri || []).includes(table);
+      if(vera && st.op === 'update'){
+        const t = tables[table] || [];
+        const eqs = st.filters.filter(f => f[0] === 'eq' && !String(f[1]).includes('.'));
+        const scritte = t.filter(r => eqs.every(([, c, v]) => String(r[c]) === String(v)));
+        scritte.forEach(r => Object.assign(r, JSON.parse(JSON.stringify(st.payload || {}))));
+        return Promise.resolve({ data: scritte.map(r => JSON.parse(JSON.stringify(r))), error:null });
+      }
       if(st.op !== 'select'){ return Promise.resolve({ data:[{id:'fake-id'}], error:null }); }
       // Join come PostgREST: select('..., meals!inner(date)') porta con se' la riga del pasto
       // (rows[i].meals = {date}) e scarta le righe senza pasto; i filtri 'meals.date' guardano li'.
@@ -138,6 +149,7 @@ function makeSupaMock(tables){
         const [col,dir] = st.orders[i];
         rows.sort((a,b)=>{ const x=a[col], y=b[col]; if(x===y) return 0; return (x>y?1:-1)*(dir==='desc'?-1:1); });
       }
+      if(vera) rows = rows.map(r => JSON.parse(JSON.stringify(r)));   // __veri: letture in copia
       const totale = rows.length;
       if(st.range) rows = rows.slice(st.range[0], st.range[1]+1);
       else if(st.limit != null) rows = rows.slice(0, st.limit);

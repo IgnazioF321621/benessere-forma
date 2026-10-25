@@ -1804,6 +1804,11 @@ function applicaCambiOggi(){
       if(ex.oggiAlPostoDi && ex._originaleOggi) return ex._originaleOggi;   // un cambio di un altro giorno
       return ex;
     });
+    // Il cambio vive su un telefono solo (terza revisione di 480+490): fatto su questo, mentre «Rinnova il
+    // riscaldamento» su un altro metteva lo stesso esercizio nel riscaldamento. Vince la scelta della persona:
+    // la voce del riscaldamento resta fuori per oggi, in memoria. Mai lo stesso codice nei due posti lo stesso giorno.
+    const lavoro = new Set(s.exercises.map(e => e && e.codice).filter(Boolean));
+    if(Array.isArray(s.warmup) && s.warmup.some(w => w && lavoro.has(w.codice))) s.warmup = s.warmup.filter(w => !(w && lavoro.has(w.codice)));
   });
 }
 function apriCambioOggi(sid, exName){
@@ -1832,7 +1837,8 @@ async function _coCerca(sid, exName){
   [].concat(...esiti.map(r => r.data || [])).forEach(r => { if(r && r.codice && !visti.has(r.codice)){ visti.add(r.codice); righe.push(r); } });
   const o = _coOpzioni();
   const sess = getTrainingSession(sid);
-  const inSeduta = new Set((sess && sess.exercises ? sess.exercises : []).map(e => e && e.codice).filter(Boolean));
+  // con chi è nel riscaldamento della seduta (Training 480): lo stesso codice non torna fra gli esercizi di lavoro
+  const inSeduta = new Set([...(sess && sess.exercises ? sess.exercises : []), ...(sess && Array.isArray(sess.warmup) ? sess.warmup : [])].map(e => e && e.codice).filter(Boolean));
   const pat = String(attuale.pattern || '').toLowerCase().trim();
   const perGruppo = pat === 'isolamento' || pat === 'core';
   const gruppi = String(attuale.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
@@ -1855,9 +1861,8 @@ function _coCostruisci(riga0, orig){
   const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
   const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
   const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
-  const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
-  const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
-  const cautionNote = (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
+  const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
+  const cautionNote = (_trainGenConflitto(riga, limitazioni).length && riga.adattamento) ? String(riga.adattamento).trim() : '';
   const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });
   const perLato = String(riga.unilaterale || '').trim().toLowerCase() === 'si';
   const baseReps = String(orig.reps || '8-12').replace(/\s+per lato$/i, '');
@@ -1885,6 +1890,10 @@ async function cambiaPerOggi(sid, exName, codice){
   const sess = getTrainingSession(sid);
   const orig = findExercise(exName, sid);
   if(!sess || !orig || !codice) return;
+  // chi è nel riscaldamento di oggi non va anche nel lavoro (Training 480): la variante del coach può essere stata
+  // cercata prima di un «Rinnova il riscaldamento»
+  const inRiscaldamento = (sess.warmup || []).find(w => w && w.codice === codice);
+  if(inRiscaldamento){ showToast(`${inRiscaldamento.name} è già nel riscaldamento di oggi: scegline un altro`, '🔁', 4000); return; }
   let riga = ((ST.cambioOggi && ST.cambioOggi.candidati) || []).map(c => c.riga).find(r => r.codice === codice) || null;
   if(!riga){
     const r = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1));
@@ -1907,6 +1916,29 @@ async function cambiaPerOggi(sid, exName, codice){
   renderTraining();
   loadLastLoggedSets(sid);      // «Ultima volta» e obiettivo anche per l'esercizio scelto
   if(typeof ensureRestGif === 'function') ensureRestGif(nuovo.name, nuovo.codice);
+}
+// I cambi di oggi seguono le serie della scheda salvata (revisione di 480+490: dopo «Passa a 3 serie» il
+// sostituto restava a 4 per tutto il giorno, e «Torna a …» rimetteva l'originale a 4). Il sostituto tiene
+// le serie già fatte prima del cambio: 3 − fatte, almeno 1.
+function _coAllineaAllaScheda(scheda){
+  const mappa = _coLoad();
+  let cambiato = false;
+  Object.keys(mappa).forEach(sid => {
+    const s = ((scheda && scheda.sessioni) || []).find(x => x && x.id === sid);
+    Object.keys(mappa[sid] || {}).forEach(cod => {
+      const c = mappa[sid][cod];
+      const vero = s && (s.exercises || []).find(e => e && e.codice === cod);
+      if(!c || !c.scelto || !vero || !c.scelto._originaleOggi) return;
+      const prima = Number(c.scelto._originaleOggi.sets) || 0, ora = Number(vero.sets) || 0;
+      if(!ora || prima === ora) return;
+      const fatte = Math.max(0, prima - (Number(c.scelto.sets) || 0));
+      c.scelto.sets = Math.max(1, ora - fatte);
+      c.scelto._originaleOggi.sets = ora;
+      cambiato = true;
+    });
+  });
+  if(cambiato) _coSave(mappa);
+  return cambiato;
 }
 // «Torna a …»: solo finché nessuna serie è stata salvata sotto l'esercizio scelto.
 function annullaCambioOggi(sid, exName){
@@ -3209,6 +3241,11 @@ function _rigaSpiegazione(ex, size){
   const t = spiegazioneEsercizio(ex);
   return t ? `<div class="ex-spiegazione" style="font-size:${size||11}px;color:var(--t3);font-family:var(--font-sans);font-weight:400;line-height:1.3;margin-top:2px;">${esc(t)}</div>` : '';
 }
+// L'adattamento per le zone a rischio della persona, sotto il nome di una voce del riscaldamento (revisione di
+// 480+490: Ignazio ha ginocchia e lombare nelle limitazioni; il generatore lo mette in `alert`, come per il lavoro)
+function _rigaAdattamento(ex){
+  return (ex && ex.alert) ? `<div class="ex-adattamento" style="font-size:11px;color:var(--t2);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:3px;">⚠ ${esc(ex.alert)}</div>` : '';
+}
 
 // Le GIF del Blocco Attivazione: il blocco è fisso (ACTIVATION_BLOCK) e non viene dal catalogo. Il Vacuum ha
 // solo lo slug della biblioteca (nessuna riga di catalogo): l'indirizzo si costruisce da `storage_path` letto
@@ -3412,10 +3449,10 @@ function _renderWarmupSection(s){
     const ss = String(f.remaining % 60).padStart(2,'0');
     const dur = _isIsoPause ? WARMUP_ISO_PAUSE_SEC
       : (isWork && f.isoPhase) ? WARMUP_ISO_SIDE_SEC
-      : isWork ? WARMUP_WORK_SEC : WARMUP_REST_SEC;
+      : isWork ? _warmupDurata(cur) : WARMUP_REST_SEC;
     const pct = dur ? Math.round((dur - f.remaining)/dur*100) : 0;
     const titleLine = isWork
-      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}${_rigaSpiegazione(cur, 13)}</div>`
+      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}${_rigaSpiegazione(cur, 13)}${_rigaAdattamento(cur)}</div>`
       : `<div style="font-size:18px;font-weight:700;color:#1A1A1A;line-height:1.25;margin-bottom:14px;">${next ? 'Prossimo: ' + esc(next.name) : 'Cambia posizione'}</div>`;
     const playPauseBtn = f.running
       ? `<button onclick="warmupFlowPause()" title="Pausa" style="background:${accentFinal};color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
@@ -3446,7 +3483,7 @@ function _renderWarmupSection(s){
     const startAction = otherRunning ? '' : 'onclick="warmupFlowStart()"';
     heroHtml = `
       <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${items.length} esercizi · 1 min ciascuno</div>
+        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${items.length} esercizi · ${_warmupMinuti(_warmupDurataTotale(items))} in tutto</div>
         <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">Riscaldamento specifico</div>
         <button ${startAction} ${otherRunning?'disabled':''} style="${startBtnStyle}">▶ Start riscaldamento</button>
         ${otherRunning?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Un altro blocco è in corso</div>':''}
@@ -3474,9 +3511,9 @@ function _renderWarmupSection(s){
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:2px;"><span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}</div>
-          ${_rigaSpiegazione(w)}
+          ${_rigaSpiegazione(w)}${_rigaAdattamento(w)}
         </div>
-        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">60s</div>
+        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${_warmupPerLato(w) ? `${WARMUP_ISO_SIDE_SEC}s per lato` : `${_warmupDurata(w)}s`}</div>
       </div>`;
   }).join('');
 
@@ -3487,7 +3524,7 @@ function _renderWarmupSection(s){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         <span style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-sans);">Riscaldamento specifico</span>
       </div>
-      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">1 min a esercizio · 10s per cambiare posizione</div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">${items.every(w => !_warmupPerLato(w) && _warmupDurata(w) === WARMUP_WORK_SEC) ? '1 min a esercizio' : 'Il tempo di ogni voce è accanto al nome'} · 10s per cambiare posizione</div>
       ${heroHtml}
       ${itemsHtml}
     </div>`;
@@ -4105,7 +4142,7 @@ function renderTraining(){
 
           <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
           ${exerciseCards}
-          ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0) ? (() => {
+          ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0 && tabataInCoda()) ? (() => {
             const fin = s.finisher;
             const durMin = Math.round(fin.totalRounds ? fin.totalRounds*(fin.work_sec+fin.rest_sec)/60 : fin.round*(fin.work_sec+fin.rest_sec)/60);
             const exList = fin.exercises.map((e,i)=>`<li style="padding:4px 0;">${i+1}. ${e.name}</li>`).join('');
@@ -4425,6 +4462,10 @@ function renderTraining(){
         ${_renderBloccoNuovoCard(activeIsScarico)}
 
         ${_renderRiscaldamentoLink()}
+
+        ${_renderSerieForzaCard()}
+
+        ${_renderTabataAParte()}
 
         ${_renderInjuryBar()}
 
@@ -5264,6 +5305,7 @@ function renderTraining(){
           </div>
           <button onclick="closeWarmupInfo()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
+        ${w.alert ? `<div class="modal-alert">${esc(w.alert)}</div>` : ''}
         ${setupList}${execList}${errList}${muscList}
         ${anySection ? '' : `<div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Nessun dettaglio disponibile per questo esercizio.</div>`}
       </div>
@@ -5434,7 +5476,8 @@ async function releaseWakeLock(){
   } catch(e){}
 }
 document.addEventListener('visibilitychange', ()=>{
-  if(document.visibilityState === 'visible' && ST.trainSession && _wakeLock === null){
+  // anche col Tabata «a parte», che corre senza una seduta aperta (revisione di 480+490)
+  if(document.visibilityState === 'visible' && (ST.trainSession || (ST.trainTabataFlow && ST.trainTabataFlow.active)) && _wakeLock === null){
     requestWakeLock();
   }
   // Audio al rientro in primo piano: risveglio, e se iOS lo ha lasciato «interrupted» (vocale,
@@ -6531,10 +6574,40 @@ function _tabataFlowTick(){
   }
   renderTraining();
 }
-function tabataFlowStart(){
-  // Avvio: la sessione corrente (ST.trainSession) deve avere un finisher.
-  const sess = getTrainingSession(ST.trainSession);
-  if(!sess || !sess.finisher || !sess.finisher.exercises || sess.finisher.exercises.length === 0){
+// ── Il Tabata acceso o spento (Training 490, 24 ottobre 2026, scelte di Ignazio) ──
+// «Non l'ho mai fatto, le sedute sono già lunghe»: il Tabata è SPENTO di default e si riaccende nelle
+// Impostazioni › Allenamento (profiles.tabata, migrazione 20261024_490): `coda` in fondo a ogni seduta,
+// `giorni` in fondo solo nei giorni della settimana scelti (profiles.tabata_giorni, 1 = lunedì … 7 =
+// domenica), `a_parte` un tasto nel Programma per farlo quando si vuole, fuori dalla seduta. Solo il timer,
+// come sempre: non si salva niente, non conta come seduta e non crea debito. Il finisher resta nel jsonb
+// delle schede: quando è spento si ignora.
+const TABATA_MODI = ['spento', 'coda', 'giorni', 'a_parte'];
+function tabataModo(){
+  const m = ST.profile && ST.profile.tabata;
+  return TABATA_MODI.includes(m) ? m : 'spento';
+}
+function _tabataGiornoISO(key){ const d = new Date((key || todayKey()) + 'T12:00:00'); return ((d.getDay() + 6) % 7) + 1; }
+// In fondo alla seduta di quel giorno (oggi se manca)?
+function tabataInCoda(key){
+  const m = tabataModo();
+  if(m === 'coda') return true;
+  if(m === 'giorni') return ((ST.profile && ST.profile.tabata_giorni) || []).map(Number).includes(_tabataGiornoISO(key));
+  return false;
+}
+// Il Tabata «a parte»: i 4 esercizi di una seduta della scheda che ce l'ha, a rotazione col giorno della settimana.
+function tabataAParte(key){
+  if(tabataModo() !== 'a_parte') return null;
+  const conFinisher = Object.values(getAllTrainingSessions() || {}).filter(s => s && s.finisher && Array.isArray(s.finisher.exercises) && s.finisher.exercises.length);
+  if(!conFinisher.length) return null;
+  return conFinisher[(_tabataGiornoISO(key) - 1) % conFinisher.length].finisher;
+}
+
+function tabataFlowStart(origine){
+  // Avvio: in coda, la sessione corrente (ST.trainSession) deve avere un finisher e il Tabata acceso per oggi;
+  // «a parte» (Training 490) usa tabataAParte().
+  const sess = origine === 'a_parte' ? null : getTrainingSession(ST.trainSession);
+  const finisher = origine === 'a_parte' ? tabataAParte() : (sess && tabataInCoda() ? sess.finisher : null);
+  if(!finisher || !finisher.exercises || finisher.exercises.length === 0){
     showToast('Nessun finisher Tabata in questa sessione', 'ℹ️');
     return;
   }
@@ -6544,15 +6617,16 @@ function tabataFlowStart(){
   if(ST.trainWarmupFlow && ST.trainWarmupFlow.running) return;
   _tabataFlowClearInterval();
   try { _unlockAudio(); } catch(e) {}
+  if(!sess) requestWakeLock();   // «a parte»: nessuna seduta ha acceso lo schermo
   ST.trainTabataFlow = {
     active: true,
-    sessionId: ST.trainSession,
-    finisher: sess.finisher,
-    totalRounds: sess.finisher.round || 8,
+    sessionId: sess ? ST.trainSession : null,
+    finisher,
+    totalRounds: finisher.round || 8,
     round: 1,
     phase: 'work',
-    remaining: sess.finisher.work_sec || 20,
-    endTime: Date.now() + (sess.finisher.work_sec || 20) * 1000,
+    remaining: finisher.work_sec || 20,
+    endTime: Date.now() + (finisher.work_sec || 20) * 1000,
     prepBeeped: {},
     running: true,
     _iv: setInterval(_tabataFlowTick, 250),
@@ -6588,10 +6662,16 @@ function tabataFlowSkip(){
   f.remaining = 0;
   _tabataFlowAdvance();
 }
+// Il Tabata «a parte» tiene acceso lo schermo da sé (la seduta lo fa in openTrainingSession) e lo
+// lascia alla fine, se nel frattempo non si è aperta una seduta.
+function _tabataLasciaSchermo(){
+  if(!ST.trainSession) releaseWakeLock();
+}
 function tabataFlowEnd(){
   // Termina manualmente prima della fine
   _tabataFlowClearInterval();
   ST.trainTabataFlow = null;
+  _tabataLasciaSchermo();
   renderTraining();
 }
 function _tabataFlowEndCompleted(){
@@ -6600,6 +6680,7 @@ function _tabataFlowEndCompleted(){
   try { if(navigator.vibrate) navigator.vibrate([300,100,300,100,500]); } catch(e) {}
   showToast('Tabata completato! 💪', '🔥');
   ST.trainTabataFlow = null;
+  _tabataLasciaSchermo();
   renderTraining();
 }
 
@@ -6631,19 +6712,43 @@ function _warmupFlowNextItem(){
   if(ni >= f.items.length) return null;
   return f.items[ni];
 }
+// Una voce del riscaldamento a tempo per lato («30 sec per lato»: il generatore la scrive così per chi è
+// unilaterale = si, revisione di 480+490).
+function _warmupPerLato(w){
+  const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
+  return !!(pr && pr.kind === 'seconds' && pr.perLato);
+}
+// La durata di una voce non per lato: «30 sec» per gli allungamenti fermi (il generatore la scrive così per le
+// righe di recupero entrate nel riscaldamento: sotto i 60 s per muscolo la forza non cala, Kay e Blazevich 2012),
+// 1 minuto per tutto il resto.
+function _warmupDurata(w){
+  const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
+  return (pr && pr.kind === 'seconds' && !pr.perLato && pr.min > 0) ? Math.min(pr.min, WARMUP_WORK_SEC) : WARMUP_WORK_SEC;
+}
+// Quanto dura tutto il riscaldamento, in secondi, con lo stesso conto del flusso (_warmupFlowAdvance): ogni voce col
+// suo tempo (per lato: i due lati e i 5 secondi per cambiare), 10 secondi fra una voce e l'altra, niente pausa dopo
+// l'ultima. La card lo scrive al posto di «1 min ciascuno» (terza revisione di 480+490: le voci da 30 s ci sono).
+function _warmupDurataTotale(items){
+  const voci = (items || []).filter(Boolean);
+  if(!voci.length) return 0;
+  return voci.reduce((t, w) => t + (_warmupPerLato(w) ? 2 * WARMUP_ISO_SIDE_SEC + WARMUP_ISO_PAUSE_SEC : _warmupDurata(w)), 0) + (voci.length - 1) * WARMUP_REST_SEC;
+}
+function _warmupMinuti(sec){
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`;
+}
 // Inizializza isoPhase per l'item corrente se è perLato.
 // Chiamata all'avvio del flow e ad ogni avanzamento idx.
 function _warmupFlowInitIsoPhase(){
   const f = ST.trainWarmupFlow;
   if(!f) return;
   const cur = _warmupFlowCurrentItem();
-  const pr = (cur && cur.reps && typeof parseRepsRange === 'function') ? parseRepsRange(cur.reps) : null;
-  if(pr && pr.kind === 'seconds' && pr.perLato){
+  if(_warmupPerLato(cur)){
     f.isoPhase = 'A';
     f.remaining = WARMUP_ISO_SIDE_SEC;
   } else {
     f.isoPhase = null;
-    f.remaining = WARMUP_WORK_SEC;
+    f.remaining = _warmupDurata(cur);
   }
 }
 
@@ -6942,6 +7047,38 @@ function _renderBloccoNuovoCard(isScarico){
 function _renderRiscaldamentoLink(){
   if(!ST.schedaAttiva || !ST.schedaAttiva.scheda) return '';
   return `<div id="rinnova-riscaldamento" onclick="rinnovaRiscaldamento()" style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);cursor:pointer;text-align:right;margin-top:-10px;">Rinnova il riscaldamento ›</div>`;
+}
+
+// «3 serie nella forza» (Training 490): finché la scheda attiva ha multiarticolari di forza con più serie
+// del nuovo numero, una card propone il passaggio (accorciaSerieForza); dopo, sparisce da sola.
+function _renderSerieForzaCard(){
+  if(!ST.schedaAttiva || !ST.schedaAttiva.scheda || typeof serieForzaDaTogliere !== 'function') return '';
+  const cambi = serieForzaDaTogliere(ST.schedaAttiva.scheda);
+  if(!cambi.length) return '';
+  const minuti = Math.round(cambi.reduce((t, c) => t + c.sec, 0) / 60);
+  const sedute = [...new Set(cambi.map(c => c.sid))].map(sid => { const s = getTrainingSession(sid); return (s && s.name) || sid; });
+  return `
+      <div id="serie-forza-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">SEDUTE DI FORZA PIÙ CORTE</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${cambi[0].a} serie invece di ${cambi[0].da}, stessi recuperi</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${esc(sedute.join(' e '))}: circa ${minuti} minuti in meno a settimana. Per la forza bastano tre serie pesanti; addominali, isolamenti e sedute di ipertrofia restano come sono.</div>
+        <button class="btn btn-sm" onclick="accorciaSerieForza()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-family:var(--font-sans);font-weight:700;font-size:14px;cursor:pointer;">Passa a ${cambi[0].a} serie →</button>
+      </div>`;
+}
+
+// Il Tabata «a parte» (Training 490): solo se scelto nelle Impostazioni; il timer è quello di sempre.
+function _renderTabataAParte(){
+  const fin = tabataAParte();
+  if(!fin) return '';
+  const durMin = Math.round(fin.round * (fin.work_sec + fin.rest_sec) / 60);
+  const exList = fin.exercises.map((e, i) => `<li style="padding:4px 0;">${i + 1}. ${esc(e.name)}</li>`).join('');
+  return `
+      <div id="tabata-a-parte" style="padding:14px;border-radius:12px;background:var(--s1);border:1px solid var(--s2);">
+        <div style="font-size:10px;font-weight:700;color:var(--t2);font-family:var(--font-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;">🔥 TABATA A PARTE · ~${durMin} MIN</div>
+        <div style="font-size:14px;color:var(--t2);font-family:var(--font-sans);margin-bottom:4px;">${fin.round} round · ${fin.work_sec}s lavoro / ${fin.rest_sec}s recupero · 4 esercizi alternati. Quando vuoi, fuori dalla seduta: non conta come allenamento.</div>
+        <ul style="margin:8px 0 12px 0;padding-left:16px;font-size:13px;color:var(--t2);font-family:var(--font-sans);list-style:none;">${exList}</ul>
+        <button onclick="tabataFlowStart('a_parte');" style="width:100%;padding:12px;background:var(--err);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">▶ Start Tabata</button>
+      </div>`;
 }
 
 // «riparti da …» per un cardine: l'ultima serie fuori dallo scarico (vedi _trainGenPuntiDiPartenza).

@@ -47,7 +47,7 @@ const ESAMI = [{ id:'b1', user_id:U, test_date:'2026-09-01', ferritin:80, vitami
   const sotto = (v) => testo(d.querySelector(`#settings-modal .set-voce[data-voce="${v}"] .set-voce-sotto`));
   const lblOb = W.eval('OBJ_ADAPT').dimagrimento.label;
   atteso('ogni voce dice com\'è impostata', [sotto('obiettivo'), sotto('cibo'), sotto('allenamento'), sotto('pausa'), sotto('come-stai'), sotto('profilo')],
-    [`${lblOb} · 68 kg`, `${W.fmtNum(ST.TARGET.kcal)} kcal · onnivoro · 1 intolleranza`, '4 giorni a settimana · kg', 'Nessuna pausa in programma', '11:00 · 15:00 · 19:00', 'Ignazio Fiorito']);
+    [`${lblOb} · 68 kg`, `${W.fmtNum(ST.TARGET.kcal)} kcal · onnivoro · 1 intolleranza`, '4 giorni a settimana · kg · Tabata spento', 'Nessuna pausa in programma', '11:00 · 15:00 · 19:00', 'Ignazio Fiorito']);
 
   // 3) una pagina: titolo, indietro, Salva; il resto nascosto
   W.setVai('obiettivo');
@@ -55,7 +55,7 @@ const ESAMI = [{ id:'b1', user_id:U, test_date:'2026-09-01', ferritin:80, vitami
   const pag = (n) => d.querySelector(`#settings-modal .set-pagina[data-pagina="${n}"]`);
   atteso('dentro: obiettivo, peso obiettivo, attività, peso di oggi', [!!pag('obiettivo').querySelector('#set-obiettivo-grid'), !!pag('obiettivo').querySelector('#set-goal-weight'), !!pag('obiettivo').querySelector('#set-activity'), pag('obiettivo').querySelector('#set-weight').disabled], [true, true, true, true]);
   atteso('in Cibo: le calorie col Ricalcola, dieta, intolleranze', [!!pag('cibo').querySelector('#set-ricalcola'), !!pag('cibo').querySelector('#set-dieta'), !!pag('cibo').querySelector('#set-intol-pills')], [true, true, true]);
-  atteso('in Allenamento: giorni, inizio, rigenera, unità', ['#set-giorni-allenamento', '#set-train-start', '#set-rigenera-btn', '#set-unit'].map(q => !!pag('allenamento').querySelector(q)), [true, true, true, true]);
+  atteso('in Allenamento: giorni, inizio, rigenera, unità, Tabata (Training 490)', ['#set-giorni-allenamento', '#set-train-start', '#set-rigenera-btn', '#set-unit', '#set-tabata'].map(q => !!pag('allenamento').querySelector(q)), [true, true, true, true, true]);
   atteso('in Profilo: nome, cognome, email, esci', [!!pag('profilo').querySelector('#set-fname'), !!pag('profilo').querySelector('#set-lname'), testo(pag('profilo').querySelector('#set-email')), /Esci/.test(testo(pag('profilo')))], [true, true, 'ignazio.f@me.com', true]);
   atteso('in I tuoi dati: scarica, dove vanno, elimina', ['#set-scarica-btn', '#set-elimina-btn'].map(q => !!pag('dati').querySelector(q)).concat(/Dove vanno/.test(testo(pag('dati')))), [true, true, true]);
 

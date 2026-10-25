@@ -1333,6 +1333,25 @@
         </select>
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Etichetta visualizzata sul carico nel log serie. Le scale degli elastici restano in lbs.</div>
       </div>
+      <div class="onb-field" style="margin-top:10px;">
+        <label>Tabata</label>
+        <select id="set-tabata" class="inp inp-sm" onchange="_setTabataGiorni()">
+          <option value="spento">Spento</option>
+          <option value="coda">In fondo a ogni seduta</option>
+          <option value="giorni">In fondo alla seduta, solo in certi giorni</option>
+          <option value="a_parte">A parte, quando vuoi</option>
+        </select>
+        <div id="set-tabata-giorni" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px;">
+          <button class="onb-pill" type="button" data-giorno="1" onclick="toggleSetTabataGiorno(1)">Lun</button>
+          <button class="onb-pill" type="button" data-giorno="2" onclick="toggleSetTabataGiorno(2)">Mar</button>
+          <button class="onb-pill" type="button" data-giorno="3" onclick="toggleSetTabataGiorno(3)">Mer</button>
+          <button class="onb-pill" type="button" data-giorno="4" onclick="toggleSetTabataGiorno(4)">Gio</button>
+          <button class="onb-pill" type="button" data-giorno="5" onclick="toggleSetTabataGiorno(5)">Ven</button>
+          <button class="onb-pill" type="button" data-giorno="6" onclick="toggleSetTabataGiorno(6)">Sab</button>
+          <button class="onb-pill" type="button" data-giorno="7" onclick="toggleSetTabataGiorno(7)">Dom</button>
+        </div>
+        <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">4 minuti: 20 secondi di lavoro e 10 di pausa per 8 giri. «A parte» è un tasto nel Programma, fuori dalla seduta: non conta come allenamento.</div>
+      </div>
     </div>
     </div>
 

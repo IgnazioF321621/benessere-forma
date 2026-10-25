@@ -449,7 +449,7 @@ var ZTCoachRules = (function(){
   }
 
   // attuale: riga di catalogo dell'esercizio in corso · catalogo: righe fra cui scegliere (anche
-  // tutte) · opts: { tipoAllen, attrezzatura, inScheda: [codici] }. → { codice, nome, come, via } | null
+  // tutte) · opts: { tipoAllen, attrezzatura, inScheda: [codici], escludi: [codici] }. → { codice, nome, come, via } | null
   function varianteFacile(attuale, catalogo, opts){
     if(!attuale || !attuale.codice) return null;
     var righe = (catalogo || []).filter(function(ex){ return ex && ex.codice && ex.codice !== attuale.codice; });
@@ -458,12 +458,16 @@ var ZTCoachRules = (function(){
     var o = opts || {};
     var inScheda = {};
     (o.inScheda || []).forEach(function(c){ inScheda[c] = true; });
+    // `escludi` (revisione di 480+490): codici che non si propongono mai, nemmeno come alternativa scritta:
+    // il riscaldamento di oggi, perché lo stesso codice non va nel riscaldamento e poi nel lavoro
+    var escludi = {};
+    (o.escludi || []).forEach(function(c){ escludi[c] = true; });
     var esito = function(ex, via){ return { codice: ex.codice, nome: ex.nome || ex.codice, come: comeSiFa(ex), via: via }; };
 
     var scritte = (String(attuale.alternativa || '').match(/\bEX\d{3}\b/g) || []);
     for(var i = 0; i < scritte.length; i++){
       var alt = perCodice[scritte[i]];
-      if(alt && alt.codice !== attuale.codice && puoFare(alt, o)) return esito(alt, 'alternativa');
+      if(alt && alt.codice !== attuale.codice && !escludi[alt.codice] && puoFare(alt, o)) return esito(alt, 'alternativa');
     }
 
     var pat = vfNorm(attuale.pattern);
@@ -472,7 +476,7 @@ var ZTCoachRules = (function(){
     var gruppi = vfLista(attuale.gruppo_target, ';');
     var livAttuale = vfLivello(attuale) || 2;
     var cand = righe.filter(function(ex){
-      if(inScheda[ex.codice] || vfNorm(ex.pattern) !== pat) return false;
+      if(inScheda[ex.codice] || escludi[ex.codice] || vfNorm(ex.pattern) !== pat) return false;
       if(perGruppo && !vfLista(ex.gruppo_target, ';').some(function(g){ return gruppi.indexOf(g) !== -1; })) return false;
       var l = vfLivello(ex);
       return l > 0 && l < livAttuale && puoFare(ex, o);
@@ -503,11 +507,13 @@ var ZTCoachRules = (function(){
     var codici = function(s){ return String(s || '').match(/\bEX\d{3}\b/g) || []; };
 
     var scelta = codici(attuale.variante_difficile)[0];
-    if(scelta && perCodice[scelta] && puoFare(perCodice[scelta], o)) return esito(perCodice[scelta], 'foglio');
+    var escludi = {};
+    (o.escludi || []).forEach(function(c){ escludi[c] = true; });   // come in varianteFacile
+    if(scelta && perCodice[scelta] && !escludi[scelta] && puoFare(perCodice[scelta], o)) return esito(perCodice[scelta], 'foglio');
 
     var fam = vfFamiglia(attuale);
     var livAttuale = vfLivello(attuale) || 2;
-    var buona = function(ex){ return !inScheda[ex.codice] && vfFamiglia(ex) === fam && vfLivello(ex) > livAttuale && puoFare(ex, o); };
+    var buona = function(ex){ return !inScheda[ex.codice] && !escludi[ex.codice] && vfFamiglia(ex) === fam && vfLivello(ex) > livAttuale && puoFare(ex, o); };
     var ordina = function(a, b){ return (vfLivello(a) - vfLivello(b)) || String(a.codice).localeCompare(String(b.codice)); };
 
     var scritte = codici(attuale.alternativa);
