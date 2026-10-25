@@ -1,13 +1,13 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-20",
+ "quando": "2026-10-25",
  "righe": [
   {
    "righe": 0,
    "tabella": "ai_memory"
   },
   {
-   "righe": 10,
+   "righe": 11,
    "tabella": "app_errors"
   },
   {
@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 4,
+   "righe": 5,
    "tabella": "body_logs"
   },
   {
@@ -43,7 +43,7 @@
    "tabella": "coach_proposals"
   },
   {
-   "righe": 4,
+   "righe": 8,
    "tabella": "daily_log"
   },
   {
@@ -59,15 +59,15 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 2,
+   "righe": 3,
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 984,
+   "righe": 1009,
    "tabella": "meal_items"
   },
   {
-   "righe": 354,
+   "righe": 362,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 4,
+   "righe": 7,
    "tabella": "rilevazioni"
   },
   {
@@ -87,7 +87,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 25,
+   "righe": 32,
    "tabella": "segnalazioni"
   },
   {
@@ -103,11 +103,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1566,
+   "righe": 1599,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1947,
+   "righe": 1983,
    "tabella": "training_logs"
   },
   {
@@ -123,15 +123,15 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 266,
+   "righe": 280,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 19,
+   "righe": 20,
    "tabella": "weekly_plans"
   },
   {
-   "righe": 19,
+   "righe": 20,
    "tabella": "weight_logs"
   },
   {
@@ -139,7 +139,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 124,
+   "righe": 127,
    "tabella": "workouts"
   }
  ],
@@ -1648,6 +1648,16 @@
     "tipo": "text"
    },
    {
+    "colonna": "zona",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 28,
+    "predefinito": null,
+    "tabella": "esercizi_catalog",
+    "tipo": "text"
+   },
+   {
     "colonna": "exercise_name_it",
     "generata": "",
     "identita": "",
@@ -1885,7 +1895,7 @@
     "pos": 5,
     "predefinito": "0",
     "tabella": "meal_items",
-    "tipo": "numeric(7,1)"
+    "tipo": "numeric(8,2)"
    },
    {
     "colonna": "unit",
