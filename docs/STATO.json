@@ -1,5 +1,5 @@
 {
- "quando": "2026-10-20T16:15:08",
+ "quando": "2026-10-25T22:07:36",
  "_catalogo_righe": [
   {
    "codice": "EX001",
@@ -4948,7 +4948,7 @@
  ],
  "catalogo": {
   "righe": 824,
-  "ultimo_sync": "2026-10-20T14:13:55.428000+00:00",
+  "ultimo_sync": "2026-10-25T21:06:52.994000+00:00",
   "righe_arenate": [],
   "righe_senza_data": [],
   "prossimo_codice_libero": "EX838",
@@ -5042,10 +5042,11 @@
    "carry;finisher": 2,
    "carry": 2,
    "riscaldamento;finisher": 2,
-   "recupero;mobilita": 74,
+   "recupero;mobilita": 69,
    "finisher;riscaldamento": 5,
    "principale;riscaldamento": 17,
-   "skill": 16
+   "skill": 16,
+   "recupero;mobilita;riscaldamento": 5
   },
   "per_livello": {
    "intermedio": 267,
