@@ -215,9 +215,10 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   atteso('¾ porzione · si salva 0,75 pz e 225 kcal; riaperto, + porta a 1 = 300 (prima 0,8 e 750)', [righeP, p3.quantity, p3.kcal], [[[0.75, 'pz', 225]], 1, 300]);
   // 10b · pasto a zero e quantità riscritta: totale, «Salva pasto» e porzioni ricompaiono senza ridisegnare
   win.smartQtaPasso(p3.tempId, -1); win.smartQtaPasso(p3.tempId, -1);
-  const salvaAZero = salvaVisibile();
+  const totaleVisibile = () => { const t = d.querySelector('[data-smart-tot="kcal"]'); const box = t && t.closest('[data-smart-vis]'); return !!t && (!box || box.style.display !== 'none'); };
+  const totaleAZero = totaleVisibile(), salvaAZero = salvaVisibile();
   scrivi(p3, '1');
-  atteso('a zero e riscritto · Salva sparisce a 0 e torna scrivendo 1 (300 kcal), porzioni anche', [salvaAZero, p3.kcal, salvaVisibile(), porzioniVisibili()], [false, 300, true, true]);
+  atteso('a zero e riscritto · il totale sparisce a 0 (Salva nella card resta) e torna scrivendo 1 (300 kcal), porzioni anche', [totaleAZero, salvaAZero, p3.kcal, totaleVisibile(), salvaVisibile(), porzioniVisibili()], [false, true, 300, true, true, true]);
   win.smartResetForm();
   // 10c · unità cambiata e campo svuotato: l'unità resta quella scelta (m1 è salvato dalla sezione 5: riso 40 g 140, pollo 70 g 128,3)
   await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
@@ -290,6 +291,33 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   scrivi(r0, String(q0r));
   atteso('a zero, poi g → pz → g · riscrivendo la quantità i valori tornano (non 0 kcal)', [r0.quantity, r0.unit, r0.kcal, !!r0._daStimare], [q0r, 'g', k0r, false]);
   win.smartResetForm();
+
+  // 10i · seconda revisione della card: Annulla e Salva sempre in vista, Analizza che finisce dopo Modifica,
+  // la fascia nella card, niente scorrimento per eliminare in modifica
+  const visibile = (el) => { for (let e = el; e; e = e.parentElement) if (e.style && e.style.display === 'none') return false; return !!el; };
+  const bottone = (sel, txt) => [...d.querySelectorAll(sel + ' button')].find(b => b.textContent.trim() === txt);
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  ST.smartForm.items.forEach(it => { while (it.quantity > 0) win.smartQtaPasso(it.tempId, -1); });
+  atteso('tutto a zero · Annulla e «Salva modifiche» restano in vista (prima sparivano col totale)', [visibile(bottone('#sw-m1', 'Annulla')), visibile(bottone('#sw-m1', 'Salva modifiche'))], [true, true]);
+  win.smartResetForm();
+  // Analizza parte da un pasto nuovo; prima che risponda si apre Modifica su m1: la stima non entra in m1
+  win.openMealLogForm(); win.smartFreeTextChange('pizza');
+  let rispondiA; win.estimateMealItems = () => new Promise(r => { rispondiA = r; });
+  const analisi = win.smartAnalyze(); await attendi(5);
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  rispondiA({ items:[{ name:'pizza', quantity:1, unit:'pz', kcal:800, protein:30, carbs:100, fat:25 }] }); await analisi; await attendi(5);
+  atteso('Analizza finita dopo Modifica · m1 resta riso e pollo, niente pizza', [ST.smartForm.editingMealId, ST.smartForm.items.map(i => i.name).sort()], ['m1', ['pollo', 'riso']]);
+  // la fascia si cambia nella card e si salva
+  const sel = d.querySelector('#sw-m1 select[data-smart-fascia]');
+  sel.value = 'cena'; sel.dispatchEvent(new win.Event('change', { bubbles:true })); await attendi(5);
+  // scorrere per eliminare non sposta la card in modifica
+  win.swipeStart({ touches:[{ clientX:300, clientY:10 }] }, 'm1');
+  win.swipeMove({ touches:[{ clientX:220, clientY:12 }], preventDefault(){} }, 'm1');
+  const spostata = (d.getElementById('si-m1') || {}).style ? d.getElementById('si-m1').style.transform : null;
+  const n5 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const updF = supa._calls.slice(n5).find(c => c.table === 'meals' && c.op === 'update');
+  atteso('fascia nella card · scelta cena e salvata; la card in modifica non scorre', [!!sel, updF && updF.payload.slot, spostata || ''], [true, 'cena', '']);
 
   atteso('zero errori in console', errori(), []);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');

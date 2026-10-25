@@ -1107,8 +1107,13 @@ function mealCardHTML(m){
   const parti = inModifica ? _smartEditorParti(true) : null;
   const bodyExpanded = inModifica ? `
     <div data-smart-form-root="1" style="padding:0 13px 13px;border-top:0.5px solid var(--s3);">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t3);">Fascia
+        <select data-smart-fascia onchange="setLogSlot(this.value)" style="flex:1;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;background:var(--s1);color:var(--t1);">
+          ${MEAL_SLOTS.map(sl => `<option value="${sl.id}" ${(ST.smartForm.editingSlot || m.slot) === sl.id ? 'selected' : ''}>${sl.icon} ${sl.label}</option>`).join('')}
+        </select>
+      </label>
       ${parti.itemsCard || `<button onclick="smartAddEmptyRow()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:13px;cursor:pointer;">+ Aggiungi ingrediente</button>`}
-      ${parti.totalsCard || `<button onclick="smartResetForm()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:13px;cursor:pointer;">Annulla</button>`}
+      ${parti.totalsCard}
     </div>` : isExpanded ? `
     <div style="padding:0 13px 13px;border-top:0.5px solid var(--s3);margin-top:0;">
       ${m.description?`<p style="font-size:14px;color:var(--t1);line-height:1.4;margin:10px 0 6px;font-weight:500;">${esc(m.description)}</p>`:''}
@@ -1284,10 +1289,14 @@ window.smartAnalyze = async function() {
   const txt = (ST.smartForm.freeText || '').trim();
   if (!txt) { showToast('Scrivi qualcosa prima di analizzare', '✍️'); return; }
   if (ST.smartForm.analyzing) return;
-  ST.smartForm.analyzing = true;
+  // Nutrition 230: la risposta torna al modulo da cui è partita; se intanto se n'è aperto un altro (Modifica su una
+  // card) si lascia, così gli ingredienti stimati non entrano nel pasto aperto e «Salva modifiche» non lo sovrascrive
+  const modulo = ST.smartForm;
+  modulo.analyzing = true;
   renderOggi();
   try {
     const split = await estimateMealItems(txt);
+    if (ST.smartForm !== modulo) return;
     if (!split.items || split.items.length === 0) {
       avvisa('Non sono riuscito a identificare ingredienti. Prova a riformulare o usa «Manuale».');
       return;
@@ -1303,9 +1312,9 @@ window.smartAnalyze = async function() {
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    avvisa('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
+    if (ST.smartForm === modulo) avvisa('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
   } finally {
-    ST.smartForm.analyzing = false;
+    modulo.analyzing = false;
     renderOggi();
   }
 };
@@ -1949,10 +1958,14 @@ function _smartEditorParti(inCard) {
         <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div data-smart-tot="protein" style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
         <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div data-smart-tot="fat" style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
       </div>
-      ${inCard ? `<div style="display:flex;gap:8px;">
-        <button onclick="smartResetForm()" style="flex:1;padding:12px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;cursor:pointer;">Annulla</button>
-        <button onclick="smartSavePasto()" style="flex:2;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva modifiche</button>
-      </div>` : `<button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>`}
+      ${inCard ? '' : `<button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>`}
+    </div>` : '';
+  // Nutrition 230: nella card Annulla e Salva modifiche restano sempre in vista, anche con un pasto da 0 kcal (tè, acqua)
+  // o con tutto portato a zero: stanno fuori dal riquadro del totale, che si nasconde
+  const azioniCard = inCard ? `
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button onclick="smartResetForm()" style="flex:1;padding:12px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;cursor:pointer;">Annulla</button>
+      <button onclick="smartSavePasto()" style="flex:2;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva modifiche</button>
     </div>` : '';
 
   const toggleAllBtn = items.length > 1 ? `<button onclick="smartToggleAll()" style="background:transparent;border:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;">${anyExpanded?'Collassa tutti':'Espandi tutti'}</button>` : '';
@@ -1975,7 +1988,7 @@ function _smartEditorParti(inCard) {
       ${rowsHtml}
       <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
     </div>` : '';
-  return { itemsCard, totalsCard, hasItems };
+  return { itemsCard, totalsCard: totalsCard + azioniCard, hasItems };
 }
 
 function renderRegistraPasto() {
@@ -6287,6 +6300,7 @@ async function saveEditMeal() {
 // ═══════════════════════════════════════════════════════════
 const _swipe = {};
 function swipeStart(e, id) {
+  if (ST.smartForm && ST.smartForm.editingMealId === id) return;   // Nutrition 230: in modifica si scrive nei campi, non si elimina
   const t = e.touches[0];
   _swipe[id] = { x: t.clientX, y: t.clientY, active: true };
 }
