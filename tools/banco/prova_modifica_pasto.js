@@ -52,10 +52,14 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
 
   // 1 · la matita apre il pasto: quantità in vista senza aprire l'ingrediente, orario del pasto
   ST.logTime = '09:15';   // l'ultima scelta fatta per un altro pasto
+  const modificaPrima = !!d.querySelector('#sw-m1 button.meal-modifica[aria-label="Modifica pasto"]');
   await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
   const riso = voce('riso'), pollo = voce('pollo');
   atteso('apertura · ingredienti chiusi ma quantità in vista per tutti e due', [riso.expanded, !!d.querySelector(`[data-row-qty="${riso.tempId}"]`), d.querySelector(`[data-row-qty="${pollo.tempId}"]`) && d.querySelector(`[data-row-qty="${pollo.tempId}"]`).value], [false, true, '120']);
-  atteso('apertura · campo orario con l\'ora del pasto (13:00), non l\'ultima scelta', d.getElementById('log-time') && d.getElementById('log-time').value, '13:00');
+  const oraCard = (id) => { const e = d.querySelector(`#sw-${id} input[type=time]`); return e ? e.value : null; };
+  atteso('apertura (Nutrition 230) · la modifica è dentro la card del pasto, il modulo in cima resta chiuso', [!!d.querySelector('#sw-m1 [data-row-qty]'), d.querySelectorAll('[data-row-qty]').length, ST.logOpen, !!d.querySelector('.oggi-v3-cta-row')], [true, 2, false, true]);
+  atteso('apertura · nella card l\'ora del pasto (13:00), non l\'ultima scelta', oraCard('m1'), '13:00');
+  atteso('apertura · al posto della matita un bottone «Modifica», e in modifica non c\'è più', [modificaPrima, !d.querySelector('#sw-m1 .meal-modifica'), /Salva modifiche/.test(d.querySelector('#sw-m1').textContent), /Annulla/.test(d.querySelector('#sw-m1').textContent)], [true, true, true, true]);
   atteso('apertura · campo quantità a 16 px (l\'iPhone non ingrandisce)', /\.smart-qta-inp\{[^}]*font-size:16px/.test(require('fs').readFileSync(__dirname + '/../../app/stile.css', 'utf8')), true);
 
   // 2 · scrivo 160 g di riso: calorie e macro subito, il totale a schermo cambia senza ridisegnare, niente coach
@@ -101,14 +105,14 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   ST.logTime = '13:00';
   await win.smartOpenEdit(IERI, 'm2'); await attendi(5);
   const pizza = voce('pizza margherita');
-  atteso('pasto vecchio · un ingrediente da 1 porzione con i valori del pasto', [ST.smartForm.items.length, pizza.quantity, pizza.unit, pizza.kcal, d.getElementById('log-time').value], [1, 1, 'pz', 800, '20:30']);
+  atteso('pasto vecchio · un ingrediente da 1 porzione con i valori del pasto', [ST.smartForm.items.length, pizza.quantity, pizza.unit, pizza.kcal, oraCard('m2')], [1, 1, 'pz', 800, '20:30']);
   win.smartPorzione(0.5);
   atteso('pasto vecchio · ½ porzione = 400 kcal, 20 P, 45 C, 15 G', [pizza.quantity, pizza.kcal, pizza.protein, pizza.carbs, pizza.fat], [0.5, 400, 20, 45, 15]);
   win.smartQtaPasso(pizza.tempId, 1);
   atteso('pasto vecchio · + va di mezza porzione (1 = 800 kcal)', [pizza.quantity, pizza.kcal], [1, 800]);
   win.smartQtaPasso(pizza.tempId, -1);
   win.setLogSlot('snack_pomeriggio');
-  atteso('cambio fascia mentre modifico · il form resta, la fascia nuova va salvata, l\'orario resta', [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.smartForm.editingSlot, d.getElementById('log-time').value], ['m2', 1, 'snack_pomeriggio', '20:30']);
+  atteso('cambio fascia mentre modifico · il form resta, la fascia nuova va salvata, l\'orario resta', [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.smartForm.editingSlot, oraCard('m2')], ['m2', 1, 'snack_pomeriggio', '20:30']);
 
   // 7 · senza rete: tutto in coda, a schermo subito; al ritorno si scrive
   t.__rete = false;
@@ -251,6 +255,16 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   win.smartPorzione(1);
   atteso('stima durante un cambio · 5 g = 45 kcal, poi porzione 1 = 10 g e 90 (prima 180)', [durante, [ol.quantity, ol.kcal]], [[5, 45], [10, 90]]);
   win.smartResetForm();
+
+  // 10f · Annulla nella card chiude la modifica; «+ Registra pasto» mentre si modifica apre un pasto nuovo, vuoto
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const annulla = [...d.querySelectorAll('#sw-m1 button')].find(b => b.textContent.trim() === 'Annulla');
+  annulla.dispatchEvent(new win.MouseEvent('click', { bubbles:true })); await attendi(5);
+  const dopoAnnulla = [ST.smartForm.editingMealId, d.querySelectorAll('[data-row-qty]').length, !!d.querySelector('#sw-m1 .meal-modifica')];
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  win.openMealLogForm(); await attendi(5);
+  atteso('Annulla nella card chiude la modifica; «+ Registra pasto» apre un pasto nuovo e vuoto', [dopoAnnulla, [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.logOpen, !!d.querySelector('#sw-m1 [data-row-qty]')]], [[null, 0, true], [null, 0, true, false]]);
+  win.smartResetForm(); ST.logOpen = false;
 
   atteso('zero errori in console', errori(), []);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');

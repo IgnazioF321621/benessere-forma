@@ -878,6 +878,7 @@ function _pianoV4WeekStartIsoForDate(dateStr) {
 // Apre il form "Registra pasto" da CTA primario — resetta ST.logTime all'ora attuale
 // (no memoria sessione: l'apertura precedente non deve influenzare la nuova).
 window.openMealLogForm = function(){
+  if (ST.smartForm && ST.smartForm.editingMealId) ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false, editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
   ST.logTime = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
   ST.logOpen = true;
   renderOggi();
@@ -1034,7 +1035,8 @@ function mealCardHTML(m){
   const slotInfo = MEAL_SLOTS.find(s=>s.id===m.slot)||MEAL_SLOTS[0];
   const ss = SLOT_STYLE[m.slot] || { color:'var(--acc)', light:'var(--acc-lt)' };
   const items = m.items || [];
-  const isExpanded = !!(ST.mealExpanded && ST.mealExpanded[mealId]);
+  const inModifica = !!(ST.smartForm && ST.smartForm.editingMealId && (ST.smartForm.editingMealId === m.id || ST.smartForm.editingMealId === m.local_id));
+  const isExpanded = inModifica || !!(ST.mealExpanded && ST.mealExpanded[mealId]);
   const arrowRot = isExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
 
   // Calcolo "In Zona / Fuori Zona"
@@ -1060,9 +1062,9 @@ function mealCardHTML(m){
         <span style="font-size:14px;flex-shrink:0;">${slotInfo.icon}</span>
         <div style="min-width:0;flex:1;">
           <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${ss.color};">${slotInfo.label}</div>
-          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:4px;" onclick="event.stopPropagation()">
-            <input type="time" value="${m.time?m.time.slice(0,5):''}" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" onclick="event.stopPropagation()" title="Modifica orario" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;padding:0;" />
-            <span>· ${itemCountLbl}</span>
+          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;flex-wrap:wrap;gap:0 4px;" onclick="event.stopPropagation()">
+            <input type="time" value="${m.time?m.time.slice(0,5):''}" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" onclick="event.stopPropagation()" title="Modifica orario" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;flex-shrink:0;padding:0;" />
+            <span style="white-space:nowrap;">· ${itemCountLbl}</span>
           </div>
         </div>
       </div>
@@ -1070,8 +1072,8 @@ function mealCardHTML(m){
         <div style="font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--t1);line-height:1;">${m.kcal}</div>
         <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">kcal</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
-        <button class="meal-edit-btn" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+        ${inModifica ? '' : `<button class="meal-edit-btn meal-modifica" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" aria-label="Modifica pasto">Modifica</button>`}
         <button class="meal-edit-btn meal-delete-btn" onclick="chiediEliminaPasto('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
       </div>
     </div>`;
@@ -1101,8 +1103,13 @@ function mealCardHTML(m){
       </div>`;
   }).join('');
 
-  // Corpo espanso
-  const bodyExpanded = isExpanded ? `
+  // Corpo espanso; Nutrition 230: in modifica le righe degli ingredienti si cambiano qui, dentro la card
+  const parti = inModifica ? _smartEditorParti(true) : null;
+  const bodyExpanded = inModifica ? `
+    <div data-smart-form-root="1" style="padding:0 13px 13px;border-top:0.5px solid var(--s3);">
+      ${parti.itemsCard || `<button onclick="smartAddEmptyRow()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:13px;cursor:pointer;">+ Aggiungi ingrediente</button>`}
+      ${parti.totalsCard || `<button onclick="smartResetForm()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:13px;cursor:pointer;">Annulla</button>`}
+    </div>` : isExpanded ? `
     <div style="padding:0 13px 13px;border-top:0.5px solid var(--s3);margin-top:0;">
       ${m.description?`<p style="font-size:14px;color:var(--t1);line-height:1.4;margin:10px 0 6px;font-weight:500;">${esc(m.description)}</p>`:''}
       ${m.notes?`<p style="font-size:12px;font-style:italic;color:var(--t3);margin:0 0 10px;line-height:1.45;">${esc(m.notes)}</p>`:''}
@@ -1493,7 +1500,16 @@ window.smartResetForm = function() {
 };
 
 // FASE 4 Edit pasto via Smart Ingredient
+// Nutrition 230: se l'apertura si ferma, la persona lo legge (prima: «niente di niente») e l'errore si segnala
 window.smartOpenEdit = async function(date, mealId) {
+  try { await _smartApriModifica(date, mealId); }
+  catch (e) {
+    console.error('Apertura modifica pasto:', e);
+    reportError('js', 'aprire la modifica del pasto', e);
+    avvisa('Non riesco ad aprire il pasto per modificarlo. ' + String((e && e.message) || e || ''));
+  }
+};
+async function _smartApriModifica(date, mealId) {
   const day = ST.db && ST.db.days && ST.db.days[date];
   if (!day) { showToast('Giorno non trovato', '⚠️'); return; }
   const meal = (day.meals || []).find(m => (m.id === mealId) || (m.local_id === mealId));
@@ -1547,17 +1563,14 @@ window.smartOpenEdit = async function(date, mealId) {
     porzione: 1,
   };
 
-  ST.logSlot = meal.slot;
-  // Nutrition 220: il campo orario mostra l'ora del pasto; prima mostrava l'ultima scelta (o adesso) e la salvava sopra
-  if (meal.time) ST.logTime = String(meal.time).slice(0, 5);
-  ST.logOpen = true;
+  // Nutrition 230: la modifica si fa nella card del pasto (l'orario resta quello del pasto, si cambia nella card);
+  // il modulo in cima resta per i pasti nuovi e si chiude
+  ST.logOpen = false;
+  ST.activeDay = date;   // la card del pasto sta nella timeline del suo giorno
+  if (!ST.mealExpanded) ST.mealExpanded = {};
+  ST.mealExpanded[meal.id || meal.local_id] = true;
   renderOggi();
-
-  setTimeout(() => {
-    const formEl = document.getElementById('registra-pasto-form');
-    if (formEl && formEl.scrollIntoView) formEl.scrollIntoView({behavior:'smooth', block:'start'});
-  }, 100);
-};
+}
 
 // FASE 3 Timeline doppio collasso
 window.toggleMealCard = function(mealId) {
@@ -1589,9 +1602,15 @@ window.smartSavePasto = async function() {
   const tot = _smartTotals();
   const summary = _smartSummaryDesc();
   const time = (() => {
+    // Nutrition 230: in modifica l'orario è quello del pasto, che si cambia nella card (updateMealTime)
+    if (isEdit) {
+      const g = ST.db && ST.db.days && ST.db.days[ST.smartForm.editingDate || ST.activeDay];
+      const p0 = g ? (g.meals || []).find(m => m.id === ST.smartForm.editingMealId || m.local_id === ST.smartForm.editingMealId) : null;
+      if (p0 && p0.time) return String(p0.time).slice(0, 5);
+      if (ST.smartForm.editingTime) return String(ST.smartForm.editingTime).slice(0, 5);
+    }
     const inputEl = document.getElementById('log-time');
     if (inputEl && inputEl.value) return inputEl.value;
-    if (isEdit && ST.smartForm.editingTime) return ST.smartForm.editingTime;
     const now = new Date();
     return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   })();
@@ -1848,12 +1867,10 @@ function _extraSolitiHTML(){
 
 // Renderer del form Smart Ingredient — funzione pura, ritorna HTML.
 // I handler `smart*` chiamano renderOggi() per aggiornare il DOM.
-function renderRegistraPasto() {
+// Nutrition 230: ingredienti, porzione e totale del pasto in lavorazione. Una fonte sola per il modulo in cima (pasto
+// nuovo) e per la card del pasto nella timeline (modifica sul posto, scelta di Ignazio del 25 ottobre 2026).
+function _smartEditorParti(inCard) {
   _initSmartForm();
-  const slot = ST.logSlot;
-  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
-  const slotLabel = slotInfo ? `${slotInfo.icon} ${slotInfo.label}` : 'Seleziona slot';
-  const analyzing = ST.smartForm.analyzing;
   const items = ST.smartForm.items;
   const tot = _smartTotals();
   const hasItems = items.length > 0;
@@ -1868,12 +1885,12 @@ function renderRegistraPasto() {
     const headerKcalColor = calcd ? 'var(--t2)' : 'var(--t3)';
     // Nutrition 220: la quantità è sempre in vista, con − e +; il campo è a 16 px perché l'iPhone non ingrandisca la pagina
     const qtyRow = `
-      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;">
         <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',-1)" aria-label="Meno">−</button>
         <input data-row-qty="${it.tempId}" class="smart-qta-inp" type="text" inputmode="decimal" value="${it.quantity ? String(it.quantity).replace('.', ',') : ''}" placeholder="0" aria-label="Quantità di ${esc(it.name||'ingrediente')}" oninput="smartQtaScrivi('${it.tempId}',this.value)" />
         <span style="font-size:13px;color:var(--t2);font-family:var(--font-mono);min-width:22px;">${it.unit === 'pz' ? (it._porz ? 'porz.' : 'pz') : (it.unit || 'g')}</span>
         <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',1)" aria-label="Più">+</button>
-        <div data-row-macro="${it.tempId}" style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;margin-left:auto;justify-content:flex-end;">${_smartMacroChips(it)}</div>
+        <div data-row-macro="${it.tempId}" style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);white-space:nowrap;margin-left:auto;justify-content:flex-end;">${_smartMacroChips(it)}</div>
       </div>`;
 
     const expandedBlock = expanded ? `
@@ -1921,7 +1938,10 @@ function renderRegistraPasto() {
         <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div data-smart-tot="protein" style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
         <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div data-smart-tot="fat" style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
       </div>
-      <button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>
+      ${inCard ? `<div style="display:flex;gap:8px;">
+        <button onclick="smartResetForm()" style="flex:1;padding:12px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;cursor:pointer;">Annulla</button>
+        <button onclick="smartSavePasto()" style="flex:2;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva modifiche</button>
+      </div>` : `<button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>`}
     </div>` : '';
 
   const toggleAllBtn = items.length > 1 ? `<button onclick="smartToggleAll()" style="background:transparent;border:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;">${anyExpanded?'Collassa tutti':'Espandi tutti'}</button>` : '';
@@ -1944,7 +1964,16 @@ function renderRegistraPasto() {
       ${rowsHtml}
       <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
     </div>` : '';
+  return { itemsCard, totalsCard, hasItems };
+}
 
+function renderRegistraPasto() {
+  _initSmartForm();
+  const slot = ST.logSlot;
+  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
+  const slotLabel = slotInfo ? `${slotInfo.icon} ${slotInfo.label}` : 'Seleziona slot';
+  const analyzing = ST.smartForm.analyzing;
+  const { itemsCard, totalsCard, hasItems } = _smartEditorParti(false);
   const isEditing = !!ST.smartForm.editingMealId;
 
   return `
