@@ -1,0 +1,11 @@
+{
+  "nota": "Righe vere di esercizi_catalog lette il 25 ottobre 2026 (sola lettura) per la terza revisione di 480+490: zone a rischio scritte al singolare o con un sinonimo («polso», «gomito», «anca», «lombari», «pressione») contro i tasti delle limitazioni («polsi», «gomiti», «anche», «lombare», «ipertensione»). Conteggi nel catalogo quel giorno, zona per zona: spalle 358, lombare 311, ginocchia 183, polsi 94, gomito 86, cervicale 80, caviglie 64, polso 59, gomiti 55, equilibrio 49, lombari 32, anca 30, spalla 6, anche 2, caviglia 1, pressione 1.",
+  "colonne": ["codice", "nome", "pattern", "zone_rischio", "adattamento", "alternativa"],
+  "righe": [
+    ["EX005", "Curl bilanciere panca Scott seduto", "isolamento", "gomito;polso", "gomito: riduci il range e il carico se fastidio; evita di bloccare l'articolazione a fine movimento.", null],
+    ["EX007", "Curl bilanciere arm blaster", "isolamento", "gomito;polso", "gomito: riduci il range e il carico se fastidio; evita di bloccare l'articolazione a fine movimento.", null],
+    ["EX067", "Abduzione laterale anca", "isolamento", "anca", "anca: movimento puro in abduzione, non portare la gamba oltre i 45°; bacino stabile senza inclinarsi", "EX068"],
+    ["EX119", "Slanci gamba laterali", "mobilita", "anca", "anca: inizia con range ridotto, aumenta gradualmente; se senti pinzamento all'anca riduci l'altezza dello slancio", "EX126"],
+    ["EX574", "Trazioni sbarra a corpo capovolto", "flessione", "cervicale;lombari;pressione", "pressione: se avverti pulsazioni alla testa o vertigini interrompi subito e scendi lentamente", "EX150"]
+  ]
+}

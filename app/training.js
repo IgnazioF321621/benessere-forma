@@ -1804,6 +1804,11 @@ function applicaCambiOggi(){
       if(ex.oggiAlPostoDi && ex._originaleOggi) return ex._originaleOggi;   // un cambio di un altro giorno
       return ex;
     });
+    // Il cambio vive su un telefono solo (terza revisione di 480+490): fatto su questo, mentre «Rinnova il
+    // riscaldamento» su un altro metteva lo stesso esercizio nel riscaldamento. Vince la scelta della persona:
+    // la voce del riscaldamento resta fuori per oggi, in memoria. Mai lo stesso codice nei due posti lo stesso giorno.
+    const lavoro = new Set(s.exercises.map(e => e && e.codice).filter(Boolean));
+    if(Array.isArray(s.warmup) && s.warmup.some(w => w && lavoro.has(w.codice))) s.warmup = s.warmup.filter(w => !(w && lavoro.has(w.codice)));
   });
 }
 function apriCambioOggi(sid, exName){
@@ -1856,9 +1861,8 @@ function _coCostruisci(riga0, orig){
   const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
   const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
   const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
-  const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
-  const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
-  const cautionNote = (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
+  const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
+  const cautionNote = (_trainGenConflitto(riga, limitazioni).length && riga.adattamento) ? String(riga.adattamento).trim() : '';
   const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });
   const perLato = String(riga.unilaterale || '').trim().toLowerCase() === 'si';
   const baseReps = String(orig.reps || '8-12').replace(/\s+per lato$/i, '');
@@ -1886,6 +1890,10 @@ async function cambiaPerOggi(sid, exName, codice){
   const sess = getTrainingSession(sid);
   const orig = findExercise(exName, sid);
   if(!sess || !orig || !codice) return;
+  // chi è nel riscaldamento di oggi non va anche nel lavoro (Training 480): la variante del coach può essere stata
+  // cercata prima di un «Rinnova il riscaldamento»
+  const inRiscaldamento = (sess.warmup || []).find(w => w && w.codice === codice);
+  if(inRiscaldamento){ showToast(`${inRiscaldamento.name} è già nel riscaldamento di oggi: scegline un altro`, '🔁', 4000); return; }
   let riga = ((ST.cambioOggi && ST.cambioOggi.candidati) || []).map(c => c.riga).find(r => r.codice === codice) || null;
   if(!riga){
     const r = await dbq('leggere l\'esercizio a catalogo', supa.from('esercizi_catalog').select(CO_COLONNE).eq('codice', codice).limit(1));
@@ -3475,7 +3483,7 @@ function _renderWarmupSection(s){
     const startAction = otherRunning ? '' : 'onclick="warmupFlowStart()"';
     heroHtml = `
       <div style="background:var(--acc-lt);border:2px solid var(--acc);border-radius:14px;padding:20px;margin-bottom:16px;text-align:center;">
-        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${items.length} esercizi · 1 min ciascuno</div>
+        <div style="font-size:11px;color:var(--acc);font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase;font-weight:700;">${items.length} esercizi · ${_warmupMinuti(_warmupDurataTotale(items))} in tutto</div>
         <div style="font-size:20px;font-weight:700;color:#1A1A1A;margin-bottom:16px;">Riscaldamento specifico</div>
         <button ${startAction} ${otherRunning?'disabled':''} style="${startBtnStyle}">▶ Start riscaldamento</button>
         ${otherRunning?'<div style="font-size:10px;color:var(--t3);margin-top:8px;font-family:var(--font-mono);">Un altro blocco è in corso</div>':''}
@@ -3516,7 +3524,7 @@ function _renderWarmupSection(s){
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
         <span style="font-size:13px;font-weight:700;color:var(--acc);font-family:var(--font-sans);">Riscaldamento specifico</span>
       </div>
-      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">1 min a esercizio · 10s per cambiare posizione</div>
+      <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);letter-spacing:.04em;margin-bottom:10px;">${items.every(w => !_warmupPerLato(w) && _warmupDurata(w) === WARMUP_WORK_SEC) ? '1 min a esercizio' : 'Il tempo di ogni voce è accanto al nome'} · 10s per cambiare posizione</div>
       ${heroHtml}
       ${itemsHtml}
     </div>`;
@@ -6716,6 +6724,18 @@ function _warmupPerLato(w){
 function _warmupDurata(w){
   const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
   return (pr && pr.kind === 'seconds' && !pr.perLato && pr.min > 0) ? Math.min(pr.min, WARMUP_WORK_SEC) : WARMUP_WORK_SEC;
+}
+// Quanto dura tutto il riscaldamento, in secondi, con lo stesso conto del flusso (_warmupFlowAdvance): ogni voce col
+// suo tempo (per lato: i due lati e i 5 secondi per cambiare), 10 secondi fra una voce e l'altra, niente pausa dopo
+// l'ultima. La card lo scrive al posto di «1 min ciascuno» (terza revisione di 480+490: le voci da 30 s ci sono).
+function _warmupDurataTotale(items){
+  const voci = (items || []).filter(Boolean);
+  if(!voci.length) return 0;
+  return voci.reduce((t, w) => t + (_warmupPerLato(w) ? 2 * WARMUP_ISO_SIDE_SEC + WARMUP_ISO_PAUSE_SEC : _warmupDurata(w)), 0) + (voci.length - 1) * WARMUP_REST_SEC;
+}
+function _warmupMinuti(sec){
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`;
 }
 // Inizializza isoPhase per l'item corrente se è perLato.
 // Chiamata all'avvio del flow e ad ogni avanzamento idx.

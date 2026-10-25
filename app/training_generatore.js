@@ -743,13 +743,9 @@ async function loadActiveScheda() {
         const rigaByCodice = new Map();
         catRows.forEach(r => { if (r && r.codice) rigaByCodice.set(r.codice, _trainGenPulisciRiga({ ...r })); });
         // La cautela (adattamento) entra nell'alert solo se le limitazioni della persona toccano le
-        // zone a rischio dell'esercizio: la stessa regola di _trainGenApplyCautions.
-        const limSet = new Set((_trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [])
-          .map(l => String(l).toLowerCase().trim()).filter(Boolean));
-        const cautela = (riga) => {
-          const zone = String(riga.zone_rischio || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
-          return (zone.some(z => limSet.has(z)) && riga.adattamento) ? String(riga.adattamento).trim() : '';
-        };
+        // zone a rischio dell'esercizio: la stessa regola di _trainGenApplyCautions (_trainGenConflitto).
+        const limitazioniProfilo = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
+        const cautela = (riga) => (_trainGenConflitto(riga, limitazioniProfilo).length && riga.adattamento) ? String(riga.adattamento).trim() : '';
         const remapTesti = (ex, riga, conAlert) => {
           const t = _trainGenTestiEsercizio(riga, { isSurrogato: !!ex.isSurrogato, cautionNote: cautela(riga) });
           if (t.setup.length)        ex.setup = t.setup;
@@ -815,6 +811,11 @@ async function loadActiveScheda() {
     ST.userSessionCycle = cycle;
     // «Cambia per oggi» (Training 160): gli esercizi sostituiti oggi tornano al loro posto in memoria
     if (typeof applicaCambiOggi === 'function') applicaCambiOggi();
+    // La variante del coach si cerca senza chi è nel riscaldamento della seduta (Training 480): se il riscaldamento
+    // è cambiato («Rinnova», su questo telefono o su un altro) le ricerche di prima si rifanno.
+    const firmaRiscaldamento = JSON.stringify(cycle.map(id => (sessMap[id].warmup || []).map(w => w && w.codice)));
+    if (ST.firmaRiscaldamento !== undefined && ST.firmaRiscaldamento !== firmaRiscaldamento) ST.variantiFacili = {};
+    ST.firmaRiscaldamento = firmaRiscaldamento;
     // La riga attiva com'è: serve al blocco nuovo (Training 070) per sapere da quale
     // scheda tenere i cardini, che numero ha, e quale riga riaccendere se il salvataggio
     // della nuova fallisce a metà.
@@ -3237,12 +3238,8 @@ function _trainGenPickByPattern(pool, patternOptions, usedSoFar, sessionIndex, d
   // gestirà comunque adatta → sostituisci → skip. Quindi questa è una
   // PREFERENZA, non un filtro che può lasciare un pattern scoperto.
   let pickPool = candidates;
-  const _limSet = new Set((Array.isArray(limitazioni) ? limitazioni : [])
-    .map(l => String(l).toLowerCase().trim()).filter(Boolean));
-  if (_limSet.size > 0) {
-    const _haConflitto = (ex) => String(ex.zone_rischio || '').toLowerCase()
-      .split(';').map(z => z.trim()).filter(Boolean)
-      .some(z => _limSet.has(z));
+  if ((Array.isArray(limitazioni) ? limitazioni : []).some(l => _zonaCorpo(l))) {
+    const _haConflitto = (ex) => _trainGenConflitto(ex, limitazioni).length > 0;
     const _safe = candidates.filter(ex => !_haConflitto(ex));
     if (_safe.length > 0) {
       pickPool = _safe;
@@ -3540,11 +3537,39 @@ function _trainGenZone(ex) {
   return String((ex && ex.zona) || '').toLowerCase().split(';').map(s => s.trim()).filter(Boolean);
 }
 
-// Le zone a rischio di una riga che toccano le limitazioni della persona ([] se nessuna).
+// Le zone del corpo si scrivono in più modi (terza revisione di 480+490: EX693 ha «lombari» fra le zone a rischio e
+// il tasto delle limitazioni dice «lombare»; nel catalogo anche «anca» 30 righe contro il tasto «anche», «gomito» 86
+// e «polso» 59 contro «gomiti» e «polsi»). _zonaCorpo porta singolari, plurali e sinonimi alla parola del tasto
+// (data-lim in zona-tracker.html); le altre (equilibrio, core, ischiocrurali…) restano come sono.
+const _ZONE_CORPO = {
+  lombari:'lombare', lombo:'lombare', lombi:'lombare', 'schiena bassa':'lombare', 'schiena lombare':'lombare', 'zona lombare':'lombare',
+  cervicali:'cervicale', collo:'cervicale', 'schiena cervicale':'cervicale',
+  spalla:'spalle', gomito:'gomiti', polso:'polsi', anca:'anche', ginocchio:'ginocchia', caviglia:'caviglie',
+  pressione:'ipertensione', 'pressione alta':'ipertensione',
+};
+function _zonaCorpo(z) {
+  const s = String(z || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  return _ZONE_CORPO[s] || s;
+}
+
+// Le zone a rischio di una riga che toccano le limitazioni della persona ([] se nessuna), con la parola del tasto.
+// Ogni confronto fra zone a rischio e limitazioni passa da qui: generatore, cautele, scheda in uso, «Cambia per oggi».
 function _trainGenConflitto(ex, limitazioni) {
-  const lim = new Set((Array.isArray(limitazioni) ? limitazioni : []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
+  const lim = new Set((Array.isArray(limitazioni) ? limitazioni : []).map(l => _zonaCorpo(l)).filter(Boolean));
   if (!lim.size) return [];
-  return String((ex && ex.zone_rischio) || '').toLowerCase().split(';').map(s => s.trim()).filter(z => z && lim.has(z));
+  return [...new Set(String((ex && ex.zone_rischio) || '').split(';').map(z => _zonaCorpo(z)).filter(z => z && lim.has(z)))];
+}
+
+// Vero se l'adattamento della riga ha un tratto per ognuna di queste zone, nel formato del catalogo «zona: …»
+// («ginocchia: limita la corsa a una marcia sul posto», «lombari: riduci l'estensione…», anche «anca e ginocchia: …»).
+// Si guarda solo prima dei due punti: nel testo «anche» è anche una congiunzione.
+function _trainGenAdattamentoCopre(ex, zone) {
+  const nominate = new Set();
+  String((ex && ex.adattamento) || '').split(/[.;]\s+|;/).forEach(tratto => {
+    const i = tratto.indexOf(':');
+    if (i > 0) tratto.slice(0, i).split(/,|\/|\be\b/).forEach(z => nominate.add(_zonaCorpo(z)));
+  });
+  return (zone || []).every(z => nominate.has(z));
 }
 
 // _trainGenPickWarmupVoce — UNA riga per una voce del riscaldamento (zona, gruppo_target o pattern), a rotazione
@@ -3552,7 +3577,9 @@ function _trainGenConflitto(ex, limitazioni) {
 // Le cautele come per il lavoro (revisione di 480+490: Ignazio ha «lombare, ginocchia» nelle limitazioni, e corse
 // e skip hanno tutte «ginocchia» fra le zone a rischio): prima le righe senza conflitto (la preferenza sicurezza di
 // _trainGenPickByPattern); se non ce ne sono, quelle con un adattamento scritto, che la voce porta come avviso
-// (_trainGenMapWarmupExercise); una riga in conflitto senza adattamento non entra.
+// (_trainGenMapWarmupExercise); una riga in conflitto senza adattamento non entra. Terza revisione: l'adattamento
+// deve parlare di ogni zona in conflitto (EX604 «Corsa sforbiciata» ha «ginocchia» fra le zone a rischio e
+// l'adattamento solo per ischiocrurali e anca: per chi ha le ginocchia non dice niente, e non entra).
 function _trainGenPickWarmupVoce(pool, voce, sessionIndex, usedWarmup, limitazioni, soloSicure) {
   if (!voce || !Array.isArray(pool) || pool.length === 0) return null;
   const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
@@ -3563,7 +3590,7 @@ function _trainGenPickWarmupVoce(pool, voce, sessionIndex, usedWarmup, limitazio
     : voce.pattern ? (ex => _normPattern(ex.pattern) === voce.pattern) : null;
   if (!copre) return null;
   let candidates = pool.filter(ex => !used.has(ex.codice) && copre(ex))
-    .filter(ex => !_trainGenConflitto(ex, limitazioni).length || String(ex.adattamento || '').trim());
+    .filter(ex => { const c = _trainGenConflitto(ex, limitazioni); return !c.length || _trainGenAdattamentoCopre(ex, c); });
   const sicure = candidates.filter(ex => !_trainGenConflitto(ex, limitazioni).length);
   if (sicure.length || soloSicure) candidates = sicure;
   if (candidates.length === 0) return null;
@@ -3732,22 +3759,14 @@ function _trainGenApplyCautions(exercises, limitazioni, catalogMap, ammissibili)
   // Caso edge alternativa→alternativa: protezione anti-loop via parametro
   // depth (1 al primo tentativo, 0 sull'alternativa: nessuna ulteriore
   // sostituzione, solo adatta-o-skip).
-  const limSet = new Set(
-    (Array.isArray(limitazioni) ? limitazioni : [])
-      .map(l => String(l).toLowerCase().trim())
-      .filter(Boolean)
-  );
-
-  const getConflitto = (ex) => {
-    const zone = String(ex.zone_rischio || '').toLowerCase()
-      .split(';').map(s => s.trim()).filter(Boolean);
-    return zone.filter(z => limSet.has(z));
-  };
+  // Singolari, plurali e sinonimi delle zone («lombari» e «lombare», «anca» e «anche»): _trainGenConflitto
+  const conLimitazioni = (Array.isArray(limitazioni) ? limitazioni : []).some(l => _zonaCorpo(l));
+  const getConflitto = (ex) => _trainGenConflitto(ex, limitazioni);
 
   // Risolve un singolo esercizio.
   // depth=1 al primo tentativo (può sostituire), depth=0 sull'alternativa.
   const resolve = (ex, depth) => {
-    if (limSet.size === 0) return { kind:'keep', ex };
+    if (!conLimitazioni) return { kind:'keep', ex };
     const conflict = getConflitto(ex);
     if (conflict.length === 0) return { kind:'keep', ex };
 

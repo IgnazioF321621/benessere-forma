@@ -55,7 +55,14 @@ vere.forEach(r => { if(dati.nota_surrogato[r.codice]) r.nota_surrogato = dati.no
 const cautele = JSON.parse(fs.readFileSync(path.join(__dirname, 'dati/catalogo_riscaldamento_cautele_20261024.json'), 'utf8')).righe;
 vere.forEach(r => { if(cautele[r.codice]) { r.zone_rischio = cautele[r.codice][0]; r.adattamento = cautele[r.codice][1]; } });
 const LIMITAZIONI = ['lombare', 'ginocchia'];
-const conflitto = (r) => String(r.zone_rischio || '').split(';').map(s => s.trim()).some(z => LIMITAZIONI.includes(z));
+// le zone con la parola del tasto delle limitazioni (terza revisione: EX693 ha «lombari», il tasto dice «lombare»)
+const SINONIMI = { lombari:'lombare', 'schiena bassa':'lombare', anca:'anche', ginocchio:'ginocchia', spalla:'spalle', polso:'polsi', caviglia:'caviglie', gomito:'gomiti', collo:'cervicale' };
+const zn = (z) => { const s = String(z || '').toLowerCase().trim(); return SINONIMI[s] || s; };
+const zoneInConflitto = (r, lim) => [...new Set(String(r.zone_rischio || '').split(';').map(zn).filter(z => (lim || LIMITAZIONI).includes(z)))];
+const conflitto = (r) => zoneInConflitto(r).length > 0;
+// l'adattamento ha un tratto «zona: …» per ogni zona in conflitto
+const etichette = (r) => String(r.adattamento || '').split(/[.;]\s+|;/).filter(t => t.includes(':')).flatMap(t => t.slice(0, t.indexOf(':')).split(/,|\be\b/).map(zn));
+const coperto = (r) => zoneInConflitto(r).every(z => etichette(r).includes(z));
 const catalogoSenzaZone = [...principali, ...vere];
 // dopo il sync: la zona di ogni riga, e «riscaldamento» in uso per le candidate che entrano
 const conZone = () => catalogoSenzaZone.map(c => {
@@ -128,7 +135,7 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     // le righe che Ignazio può fare a casa, zona per zona (lo stesso filtro del generatore)
     const pool = a.win._trainGenFilterPool(conZone(), { tipoAllen:'casa', attrezzatura:a.ST.profile.attrezzatura, livello:'avanzato' }).poolRiscaldamento;
     // le righe possibili per una voce con le cautele: prima chi non tocca lombare e ginocchia, se no chi ha l'adattamento
-    const cand = (voce) => { const tutte = pool.filter(r => copre(r, voce) && (!conflitto(r) || r.adattamento)); const sicure = tutte.filter(r => !conflitto(r)); return (sicure.length ? sicure : tutte).map(r => r.codice); };
+    const cand = (voce) => { const tutte = pool.filter(r => copre(r, voce) && (!conflitto(r) || coperto(r))); const sicure = tutte.filter(r => !conflitto(r)); return (sicure.length ? sicure : tutte).map(r => r.codice); };
     const vociTutte = gen.sessioni.flatMap(s => (s.warmup || []).map((w, i) => ({ s, w, voce: (/^upper/.test(s.id) ? VOCI.upper : VOCI.lower)[i] })));
     atteso('1 · cautele: chi tocca lombare o ginocchia entra solo se la sua voce non ha righe sicure', vociTutte.filter(({ w, voce }) => conflitto(rigaDi(w.codice)) && pool.some(r => copre(r, voce) && !conflitto(r))).map(({ s, w }) => s.id + ':' + w.codice), []);
     // (il testo arriva ripulito da _cleanCatalogText: maiuscola e accenti; si confronta senza)
@@ -198,7 +205,10 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     a.ST.page = 'training'; a.ST.trainSession = 'upperA'; a.ST.trainAnticipato = 'upperA'; a.ST.lastLoggedSets = {}; a.ST.aiCue = a.ST.aiCue || {};
     a.win.renderTraining();
     const pg = a.win.document.getElementById('page-training').textContent.replace(/\s+/g, ' ');
-    atteso('3 · in Training la card dice «6 esercizi · 1 min ciascuno»', /6 esercizi · 1 min ciascuno/.test(pg), true);
+    // terza revisione: il totale vero, non «1 min ciascuno» (ci sono voci da 30 s e per lato)
+    const conTotale = typeof a.win._warmupDurataTotale === 'function';   // (sul codice di prima non c'è: KO, non un errore)
+    const tot = conTotale ? a.win._warmupMinuti(a.win._warmupDurataTotale(a.win.getTrainingSession('upperA').warmup)) : '?';
+    atteso('3 · in Training la card dice «6 esercizi · … in tutto», col tempo vero', [conTotale && new RegExp('6 esercizi · ' + tot + ' in tutto').test(pg), /1 min ciascuno/.test(pg)], [true, false]);
     // la regola promessa a Ignazio: lo stesso codice non va nel riscaldamento e poi nella seduta dello stesso giorno
     atteso('3 · nessun esercizio di lavoro della scheda in uso finisce nel riscaldamento della sua seduta (EX669 in Lower A)', dopo.flatMap(s => s.warmup.filter(w => s.exercises.some(e => e.codice === w.codice)).map(w => s.id + ':' + w.codice)), []);
   }
@@ -316,6 +326,117 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     const gen = await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
     const upper = gen.sessioni.filter(s => /^upper/.test(s.id));
     atteso('6 · senza elastico: 6 voci nell\'Upper, la quinta è una voce «spalle»', upper.map(s => [s.warmup.length, zoneDi(s.warmup[4] && s.warmup[4].codice).includes('spalle')]), upper.map(() => [6, true]));
+  }
+  // 7 · la terza revisione di 480+490 (25 ottobre 2026)
+  const sin = JSON.parse(fs.readFileSync(path.join(__dirname, 'dati/catalogo_zone_sinonimi_20261025.json'), 'utf8'));
+  const righeSin = sin.righe.map(r => { const o = { ...base }; sin.colonne.forEach((h, i) => o[h] = r[i]); return o; });
+  const sinDi = (c) => righeSin.find(r => r.codice === c);
+  {
+    const a = await nuovo(conZone());
+    const parole = ['lombari', 'Lombare', 'schiena bassa', 'anca', 'ginocchio', 'spalla', 'polso', 'caviglia', 'gomito', 'collo', 'pressione', 'equilibrio'];
+    const zonaCorpo = a.win._zonaCorpo || (p => p);   // (sul codice di prima non c'è: KO, non un errore)
+    atteso('7 · una parola sola per zona: singolari, plurali e sinonimi diventano la parola del tasto', parole.map(p => zonaCorpo(p)),
+      ['lombare', 'lombare', 'lombare', 'anche', 'ginocchia', 'spalle', 'polsi', 'caviglie', 'gomiti', 'cervicale', 'ipertensione', 'equilibrio']);
+    const ex693 = conZone().find(r => r.codice === 'EX693');
+    atteso('7 · EX693 Piegamenti indù («spalle;polsi;lombari») tocca la schiena di Ignazio, scritta «lombare» o «lombari»', [a.win._trainGenConflitto(ex693, ['lombare', 'ginocchia']), a.win._trainGenConflitto(ex693, ['lombari', 'ginocchia'])], [['lombare'], ['lombare']]);
+    atteso('7 · righe vere: «polso», «gomito», «anca», «pressione» incontrano i tasti polsi, gomiti, anche, ipertensione', [a.win._trainGenConflitto(sinDi('EX005'), ['polsi']), a.win._trainGenConflitto(sinDi('EX007'), ['gomiti']), a.win._trainGenConflitto(sinDi('EX067'), ['anche']), a.win._trainGenConflitto(sinDi('EX574'), ['ipertensione', 'lombare'])],
+      [['polsi'], ['gomiti'], ['anche'], ['lombare', 'ipertensione']]);
+    // le cautele del lavoro: con «anche» l'abduzione dell'anca entra con il suo adattamento, non come se niente fosse
+    const map = new Map(righeSin.map(r => [r.codice, r]));
+    const w = a.win._trainGenApplyCautions([sinDi('EX067'), sinDi('EX005')], ['anche', 'gomiti'], map, null);
+    atteso('7 · nel lavoro (_trainGenApplyCautions) «anca» e «gomito» si adattano con «anche» e «gomiti»', w.map(x => [x.ex.codice, x.action, !!x.cautionNote]), [['EX067', 'adapt', true], ['EX005', 'adapt', true]]);
+    // la preferenza sicurezza dei principali: fra EX693 e una riga pulita dello stesso schema, con «lombare» vince la pulita
+    const pulita = { ...ex693, codice:'EX999', nome:'Piegamenti senza rischio', zone_rischio:'spalle' };
+    atteso('7 · _trainGenPickByPattern con «lombare» non sceglie EX693 («lombari») se c\'è una riga pulita', [0, 1, 2, 3].map(i => a.win._trainGenPickByPattern([ex693, pulita], [ex693.pattern], new Set(), i, '', ['lombare', 'ginocchia']).codice), ['EX999', 'EX999', 'EX999', 'EX999']);
+    // «Cambia per oggi»: l'esercizio costruito dalla riga porta l'avviso
+    const nuovoOggi = a.win._coCostruisci(ex693, { codice:'EX002', name:'Piegamenti', sets:3, reps:'8-12' });
+    atteso('7 · «Cambia per oggi» su EX693 porta l\'avviso per la schiena', /estensione finale della schiena/i.test(nuovoOggi.alert || ''), true);
+  }
+  {
+    // il riscaldamento di Ignazio su 10 rotazioni, col generatore e con «Rinnova»: ogni voce che tocca le sue limitazioni
+    // ha l'avviso, e l'avviso parla di ognuna delle zone toccate; EX693 mai senza avviso
+    const senzaAvviso = [], fuoriTema = [], visti = new Set();
+    for (let n = 0; n < 10; n++) {
+      for (const lim of ['lombare, ginocchia', 'lombari, ginocchia']) {
+        const a = await nuovo(conZone(), { altreSchede: n, veri: true });
+        a.ST.profile.note_salute = 'ferritina bassa · Esperienza: avanzato · Limitazioni: ' + lim;
+        const gen = await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
+        a.win.chiediConferma = async () => true;
+        await a.win.rinnovaRiscaldamento();
+        const sedute = [...gen.sessioni, ...Object.values(a.win.eval('ST.userTrainingSessions'))];
+        sedute.forEach(s => (s.warmup || []).forEach(w => {
+          const r = rigaDi(w.codice); visti.add(w.codice);
+          if (conflitto(r) && !w.alert) senzaAvviso.push(lim + ' ' + s.id + ':' + w.codice);
+          if (conflitto(r) && !coperto(r)) fuoriTema.push(lim + ' ' + s.id + ':' + w.codice);
+        }));
+      }
+    }
+    atteso('7 · 10 rotazioni × «lombare»/«lombari» × generatore e «Rinnova»: nessuna voce in conflitto senza avviso', senzaAvviso, []);
+    atteso('7 · e l\'avviso parla di ogni zona toccata (mai EX604, EX599, EX647, EX670, EX649 per Ignazio)', [fuoriTema, ['EX604', 'EX599', 'EX647', 'EX670', 'EX649'].filter(c => visti.has(c))], [[], []]);
+  }
+  {
+    // la scheda in uso col riscaldamento di prima, senza avviso: alla lettura EX693 prende l'avviso dal profilo
+    const a = await nuovo(conZone(), { veri: true });
+    a.t.schede_utente.find(r => r.id === 's1').scheda.sessioni[0].warmup = [wu('EX693')];
+    await a.win.loadActiveScheda();
+    const w = a.win.getTrainingSession('upperA').warmup[0];
+    atteso('7 · la scheda in uso: EX693 nel riscaldamento prende l\'avviso alla lettura (loadActiveScheda)', [w.codice, /estensione finale della schiena/i.test(w.alert || '')], ['EX693', true]);
+  }
+  {
+    // un «Cambia per oggi» fatto su questo telefono, e su un altro «Rinnova» mette lo stesso esercizio nel riscaldamento
+    const a = await nuovo(conZone(), { veri: true });
+    await a.win.cambiaPerOggi('lowerA', 'Squat seduto su step', 'EX647');
+    a.t.schede_utente.find(r => r.id === 's1').scheda.sessioni[1].warmup = [wu('EX599'), wu('EX647'), wu('EX793')];
+    await a.win.loadActiveScheda();
+    const lA = a.win.getTrainingSession('lowerA');
+    atteso('7 · cambio di oggi qui e «Rinnova» altrove: vince il cambio, e la voce doppia resta fuori dal riscaldamento di oggi', [lA.exercises.map(e => e.codice).includes('EX647'), lA.warmup.map(w => w.codice)], [true, ['EX599', 'EX793']]);
+    atteso('7 · solo in memoria: la riga del database non si tocca', a.supa._calls.filter(c => c.table === 'schede_utente' && c.op !== 'select').length, 0);
+    // e un cambio verso chi è nel riscaldamento di oggi non si fa (la variante del coach cercata prima di un «Rinnova»)
+    let avviso = '';
+    a.win.showToast = (t) => { avviso = t; };
+    await a.win.cambiaPerOggi('lowerA', 'Squat elastico', 'EX793');
+    atteso('7 · «Faccio questa oggi» verso un esercizio del riscaldamento di oggi: niente cambio, e lo dice', [lA.exercises.map(e => e.codice).includes('EX793'), /già nel riscaldamento di oggi/.test(avviso)], [false, true]);
+  }
+  {
+    // la variante del coach già cercata si rifà quando il riscaldamento cambia
+    const a = await nuovo(conZone(), { veri: true });
+    a.ST.variantiFacili = { 'lowerA_Squat seduto su step_su': { stato:'pronta', variante:{ codice:'EX647' } } };
+    await a.win.loadActiveScheda();
+    const restaSenzaCambi = Object.keys(a.ST.variantiFacili).length;
+    a.win.chiediConferma = async () => true;
+    await a.win.rinnovaRiscaldamento();
+    atteso('7 · ST.variantiFacili resta se il riscaldamento è lo stesso, si azzera dopo «Rinnova»', [restaSenzaCambi, Object.keys(a.win.eval('ST.variantiFacili') || {}).length], [1, 0]);
+  }
+  {
+    // la card: il tempo vero, e niente «1 min a esercizio» quando ci sono voci da 30 s
+    const a = await nuovo(conZone());
+    const lA = a.win.getTrainingSession('lowerA');
+    lA.warmup = [{ codice:'EX823', name:'Step Achilles stretch', sets:2, reps:'30 sec per lato', warmup:true }, { codice:'EX793', name:'Seated ankle circles', sets:2, reps:'15-20', warmup:true },
+      { codice:'EX784', name:'Prayer stretch', sets:2, reps:'30 sec', warmup:true }];
+    a.ST.page = 'training'; a.ST.trainSession = 'lowerA'; a.ST.trainAnticipato = 'lowerA'; a.ST.lastLoggedSets = {}; a.ST.aiCue = a.ST.aiCue || {};
+    a.win.renderTraining();
+    const pg = a.win.document.getElementById('page-training').textContent.replace(/\s+/g, ' ');
+    // 30 + 5 + 30 per lato, 60, 30, e 10 secondi fra le voci: 175 secondi
+    atteso('7 · card: «3 esercizi · 2 min 55 s in tutto» e il tempo di ogni voce nella lista', [/3 esercizi · 2 min 55 s in tutto/.test(pg), /1 min ciascuno|1 min a esercizio/.test(pg), /Il tempo di ogni voce è accanto al nome/.test(pg)], [true, false, true]);
+  }
+  {
+    // i minuti dei documenti, sulle rotazioni del generatore e di «Rinnova» col profilo di Ignazio
+    const sec = (w, a) => a.win._warmupDurataTotale ? a.win._warmupDurataTotale(w) : 0;
+    const dur = { upper:[], lower:[], upperSpec:[], lowerSpec:[] };
+    for (let n = 0; n < 10; n++) {
+      const a = await nuovo(conZone(), { altreSchede: n, veri: true });
+      const gen = await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
+      a.win.chiediConferma = async () => true;
+      await a.win.rinnovaRiscaldamento();
+      [...gen.sessioni, ...Object.values(a.win.eval('ST.userTrainingSessions'))].forEach(s => {
+        const k = /^upper/.test(s.id) ? 'upper' : /^lower/.test(s.id) ? 'lower' : null;
+        if (!k || !(s.warmup || []).length) return;
+        dur[k].push(sec(s.warmup, a)); dur[k + 'Spec'].push(sec(s.warmup.slice(2), a));
+      });
+    }
+    const mm = (x) => `${Math.floor(x / 60)}'${String(x % 60).padStart(2, '0')}"`;
+    const fascia = (v) => mm(Math.min(...v)) + '–' + mm(Math.max(...v));
+    console.log(`  info  minuti (10 rotazioni): Upper ${fascia(dur.upper)} (specifica ${fascia(dur.upperSpec)}) · Lower ${fascia(dur.lower)} (specifica ${fascia(dur.lowerSpec)})`);
   }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
