@@ -212,7 +212,25 @@ var ZTNutrizione = (function(){
     return Math.abs((Number(cons && cons.kcal) || 0) - tk) <= tk * PERFETTO_SCARTO_KCAL;
   }
 
-  return { r2: r2, mealTotals: mealTotals, mapSupplement: mapSupplement, suppForLog: suppForLog, extraFromRow: extraFromRow,
+  // ── Quantità cambiata: i valori in proporzione (Nutrition 220, 24 ottobre 2026) ──
+  // Calorie e macro di un alimento crescono in proporzione alla quantità mangiata: è il modo in cui le tabelle di
+  // composizione (CREA, USDA FoodData Central) e l'etichetta (Reg. UE 1169/2011) li danno, per 100 g o per porzione.
+  // Quindi cambiare la quantità non chiede una stima nuova al coach: valori × quantità nuova / quantità di partenza.
+  // base = { quantity, kcal, protein, carbs, fat } com'erano prima di cambiare; arrotondato al decimo come il form.
+  function r1(x){ return Math.round(x * 10) / 10; }
+  function scalaValori(base, fattore){
+    var f = Math.max(0, Number(fattore) || 0);
+    return { kcal: r1((Number(base && base.kcal) || 0) * f), protein: r1((Number(base && base.protein) || 0) * f),
+             carbs: r1((Number(base && base.carbs) || 0) * f), fat: r1((Number(base && base.fat) || 0) * f) };
+  }
+  // → i valori per la quantità nuova, oppure null se la base non ha una quantità da cui partire (allora decide il coach)
+  function valoriPerQuantita(base, quantita){
+    var q0 = Number(base && base.quantity) || 0;
+    if(q0 <= 0) return null;
+    return scalaValori(base, (Number(quantita) || 0) / q0);
+  }
+
+  return { r2: r2, scalaValori: scalaValori, valoriPerQuantita: valoriPerQuantita, mealTotals: mealTotals, mapSupplement: mapSupplement, suppForLog: suppForLog, extraFromRow: extraFromRow,
     suppTotalsForIds: suppTotalsForIds, extraSuppsTotals: extraSuppsTotals, extrasTotals: extrasTotals,
     dayTotals: dayTotals, buildDays: buildDays,
     ZONA_PUNTI_IN: ZONA_PUNTI_IN, ZONA_PUNTI_QUASI: ZONA_PUNTI_QUASI, PERFETTO_SCARTO_KCAL: PERFETTO_SCARTO_KCAL,

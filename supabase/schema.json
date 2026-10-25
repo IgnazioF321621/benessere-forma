@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-24",
+ "quando": "2026-10-25",
  "righe": [
   {
    "righe": 0,
@@ -43,7 +43,7 @@
    "tabella": "coach_proposals"
   },
   {
-   "righe": 7,
+   "righe": 8,
    "tabella": "daily_log"
   },
   {
@@ -63,11 +63,11 @@
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1005,
+   "righe": 1009,
    "tabella": "meal_items"
   },
   {
-   "righe": 361,
+   "righe": 362,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 6,
+   "righe": 7,
    "tabella": "rilevazioni"
   },
   {
@@ -123,11 +123,11 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 266,
+   "righe": 280,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 19,
+   "righe": 20,
    "tabella": "weekly_plans"
   },
   {
@@ -139,7 +139,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 126,
+   "righe": 127,
    "tabella": "workouts"
   }
  ],
@@ -1895,7 +1895,7 @@
     "pos": 5,
     "predefinito": "0",
     "tabella": "meal_items",
-    "tipo": "numeric(7,1)"
+    "tipo": "numeric(8,2)"
    },
    {
     "colonna": "unit",

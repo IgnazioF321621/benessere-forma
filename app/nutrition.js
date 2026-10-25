@@ -878,6 +878,7 @@ function _pianoV4WeekStartIsoForDate(dateStr) {
 // Apre il form "Registra pasto" da CTA primario — resetta ST.logTime all'ora attuale
 // (no memoria sessione: l'apertura precedente non deve influenzare la nuova).
 window.openMealLogForm = function(){
+  if (ST.smartForm && ST.smartForm.editingMealId) ST.smartForm = { items: [], freeText: '', notes: '', analyzing: false, editingMealId: null, editingSlot: null, editingTime: null, editingDescription: '' };
   ST.logTime = new Date().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
   ST.logOpen = true;
   renderOggi();
@@ -1034,7 +1035,8 @@ function mealCardHTML(m){
   const slotInfo = MEAL_SLOTS.find(s=>s.id===m.slot)||MEAL_SLOTS[0];
   const ss = SLOT_STYLE[m.slot] || { color:'var(--acc)', light:'var(--acc-lt)' };
   const items = m.items || [];
-  const isExpanded = !!(ST.mealExpanded && ST.mealExpanded[mealId]);
+  const inModifica = !!(ST.smartForm && ST.smartForm.editingMealId && (ST.smartForm.editingMealId === m.id || ST.smartForm.editingMealId === m.local_id));
+  const isExpanded = inModifica || !!(ST.mealExpanded && ST.mealExpanded[mealId]);
   const arrowRot = isExpanded ? 'transform:rotate(90deg);display:inline-block;' : '';
 
   // Calcolo "In Zona / Fuori Zona"
@@ -1060,9 +1062,9 @@ function mealCardHTML(m){
         <span style="font-size:14px;flex-shrink:0;">${slotInfo.icon}</span>
         <div style="min-width:0;flex:1;">
           <div style="font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:${ss.color};">${slotInfo.label}</div>
-          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:4px;" onclick="event.stopPropagation()">
-            <input type="time" value="${m.time?m.time.slice(0,5):''}" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" onclick="event.stopPropagation()" title="Modifica orario" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;padding:0;" />
-            <span>· ${itemCountLbl}</span>
+          <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;flex-wrap:wrap;gap:0 4px;" onclick="event.stopPropagation()">
+            <input type="time" value="${m.time?m.time.slice(0,5):''}" onchange="updateMealTime('${ST.activeDay}','${mealId}',this.value)" onclick="event.stopPropagation()" title="Modifica orario" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;border:none;background:none;cursor:pointer;width:60px;flex-shrink:0;padding:0;" />
+            <span style="white-space:nowrap;">· ${itemCountLbl}</span>
           </div>
         </div>
       </div>
@@ -1070,8 +1072,8 @@ function mealCardHTML(m){
         <div style="font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--t1);line-height:1;">${m.kcal}</div>
         <div style="font-size:9px;color:var(--t3);font-family:'JetBrains Mono',monospace;">kcal</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;" onclick="event.stopPropagation()">
-        <button class="meal-edit-btn" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" title="Modifica" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;">✏️</button>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+        ${inModifica ? '' : `<button class="meal-edit-btn meal-modifica" onclick="event.stopPropagation(); smartOpenEdit('${ST.activeDay}','${mealId}')" aria-label="Modifica pasto">Modifica</button>`}
         <button class="meal-edit-btn meal-delete-btn" onclick="chiediEliminaPasto('${ST.activeDay}','${mealId}')" title="Elimina" style="font-size:14px;padding:0;background:none;border:none;cursor:pointer;opacity:0.5;">🗑️</button>
       </div>
     </div>`;
@@ -1101,8 +1103,18 @@ function mealCardHTML(m){
       </div>`;
   }).join('');
 
-  // Corpo espanso
-  const bodyExpanded = isExpanded ? `
+  // Corpo espanso; Nutrition 230: in modifica le righe degli ingredienti si cambiano qui, dentro la card
+  const parti = inModifica ? _smartEditorParti(true) : null;
+  const bodyExpanded = inModifica ? `
+    <div data-smart-form-root="1" style="padding:0 13px 13px;border-top:0.5px solid var(--s3);">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--t3);">Fascia
+        <select data-smart-fascia onchange="setLogSlot(this.value)" style="flex:1;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;background:var(--s1);color:var(--t1);">
+          ${MEAL_SLOTS.map(sl => `<option value="${sl.id}" ${(ST.smartForm.editingSlot || m.slot) === sl.id ? 'selected' : ''}>${sl.icon} ${sl.label}</option>`).join('')}
+        </select>
+      </label>
+      ${parti.itemsCard || `<button onclick="smartAddEmptyRow()" style="width:100%;padding:10px;margin-top:10px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:13px;cursor:pointer;">+ Aggiungi ingrediente</button>`}
+      ${parti.totalsCard}
+    </div>` : isExpanded ? `
     <div style="padding:0 13px 13px;border-top:0.5px solid var(--s3);margin-top:0;">
       ${m.description?`<p style="font-size:14px;color:var(--t1);line-height:1.4;margin:10px 0 6px;font-weight:500;">${esc(m.description)}</p>`:''}
       ${m.notes?`<p style="font-size:12px;font-style:italic;color:var(--t3);margin:0 0 10px;line-height:1.45;">${esc(m.notes)}</p>`:''}
@@ -1277,10 +1289,14 @@ window.smartAnalyze = async function() {
   const txt = (ST.smartForm.freeText || '').trim();
   if (!txt) { showToast('Scrivi qualcosa prima di analizzare', '✍️'); return; }
   if (ST.smartForm.analyzing) return;
-  ST.smartForm.analyzing = true;
+  // Nutrition 230: la risposta torna al modulo da cui è partita; se intanto se n'è aperto un altro (Modifica su una
+  // card) si lascia, così gli ingredienti stimati non entrano nel pasto aperto e «Salva modifiche» non lo sovrascrive
+  const modulo = ST.smartForm;
+  modulo.analyzing = true;
   renderOggi();
   try {
     const split = await estimateMealItems(txt);
+    if (ST.smartForm !== modulo) return;
     if (!split.items || split.items.length === 0) {
       avvisa('Non sono riuscito a identificare ingredienti. Prova a riformulare o usa «Manuale».');
       return;
@@ -1290,14 +1306,15 @@ window.smartAnalyze = async function() {
       name: it.name, quantity: it.quantity, unit: it.unit,
       kcal: it.kcal, protein: it.protein, carbs: it.carbs, fat: it.fat,
       expanded: false, calculating: false, sortOrder: idx, source: 'ai_split',
-    }));
+    })).map(_smartNormalizza);
+    ST.smartForm.porzione = 1;   // ingredienti nuovi, interi: la porzione scelta prima non vale più
     ST.smartForm.notes = split.notes || '';
     ST.smartForm.freeText = '';
   } catch (e) {
     console.error('Analyze error:', e);
-    avvisa('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
+    if (ST.smartForm === modulo) avvisa('Non sono riuscito ad analizzare il pasto. ' + aiErrMsg(e.aiKind));
   } finally {
-    ST.smartForm.analyzing = false;
+    modulo.analyzing = false;
     renderOggi();
   }
 };
@@ -1317,6 +1334,7 @@ window.smartAddEmptyRow = function() {
 window.smartRemoveRow = function(tempId) {
   _initSmartForm();
   ST.smartForm.items = ST.smartForm.items.filter(i => i.tempId !== tempId);
+  if (!ST.smartForm.items.length) ST.smartForm.porzione = 1;
   renderOggi();
 };
 
@@ -1338,11 +1356,114 @@ window.smartUpdateField = function(tempId, field, value) {
   _initSmartForm();
   const it = ST.smartForm.items.find(i => i.tempId === tempId);
   if (!it) return;
-  if (field === 'quantity') value = Math.max(0, parseFloat(value) || 0);
+  if (field === 'quantity') { _smartImpostaQta(it, value); return; }
   if (field === 'unit' && !['g','ml','pz'].includes(value)) value = 'g';
+  // Nutrition 220: cambiando l'unità i valori non si convertono da soli (da grammi a pezzi serve il peso del pezzo,
+  // che le tabelle CREA danno alimento per alimento): finché il coach non li stima, la quantità cambia e i valori no
+  // Nutrition 230: la base dell'unità di partenza si tiene (_baseUnita); tornando a quell'unità i valori seguono di nuovo
+  if (field === 'unit' && value !== it.unit) {
+    // la base, non i valori a schermo: un ingrediente portato a 0 con − ha valori 0 ma la base c'è ancora
+    const b0 = it._base || (_smartHaValori(it) ? _smartBase(it) : null);
+    if (!it._daStimare && b0 && _smartHaValori(b0)) it._baseUnita = { unit: it.unit, porz: !!it._porz, base: Object.assign({}, b0) };
+    if (it._baseUnita && value === it._baseUnita.unit) {
+      it.unit = value; it._porz = it._baseUnita.porz; it._base = it._baseUnita.base;
+      it._baseUnita = null; it._daStimare = false; it._v1 = null;
+      _smartImpostaQta(it, it.quantity);   // il numero a schermo, nell'unità a schermo
+      return;
+    }
+    it._base = null; it._q1 = null; it._v1 = null; it._porz = false; it._daStimare = !!it._baseUnita;
+  }
   it[field] = value;
   // No renderOggi su ogni keystroke per non perdere il focus dell'input
 };
+
+// ── Nutrition 220 (24 ottobre 2026): quantità e porzione si cambiano a vista, i valori seguono in proporzione ──
+// Prima la quantità stava dentro l'ingrediente chiuso e cambiarla non cambiava niente finché non si toccava «Stima
+// coach». Ora ogni ingrediente ha la quantità sempre in vista con − e +, e calorie e macro si ricalcolano subito con
+// ZTNutrizione.valoriPerQuantita (la proporzione delle tabelle di composizione): il coach serve solo a stimare un
+// ingrediente nuovo. _base sono i valori com'erano quando si è cominciato a cambiare: si scala sempre da lì, così
+// tanti − e + di fila non accumulano arrotondamenti; _q1 è la quantità a porzione 1, da cui si calcola ogni porzione.
+// Un ingrediente con dei valori e senza quantità (i pasti vecchi, 75 righe di aprile-maggio 2026) vale «1 porzione»,
+// come l'etichetta per porzione del Reg. UE 1169/2011 (art. 33); un ingrediente vuoto prende la quantità e basta.
+function _smartHaValori(x) { return Number(x.kcal) > 0 || Number(x.protein) > 0 || Number(x.carbs) > 0 || Number(x.fat) > 0; }
+function _smartNormalizza(it) {
+  if (!(Number(it.quantity) > 0) && _smartHaValori(it)) { it.quantity = 1; it.unit = 'pz'; it._porz = true; }
+  return it;
+}
+function _smartLeggiQta(value) { return Math.max(0, parseFloat(String(value == null ? '' : value).replace(',', '.')) || 0); }
+function _smartArrotonda(q, unit) { const p = unit === 'pz' ? 100 : 10; return Math.round(q * p) / p; }
+function _smartBase(it) {
+  if (!it._base) it._base = { quantity: Number(it.quantity) || 0, kcal: Number(it.kcal) || 0, protein: Number(it.protein) || 0, carbs: Number(it.carbs) || 0, fat: Number(it.fat) || 0 };
+  return it._base;
+}
+// La quantità q (esatta) e i valori in proporzione dalla base; la base con dei valori non si azzera mai
+function _smartScala(it, q) {
+  const base = _smartBase(it);
+  it.quantity = _smartArrotonda(q, it.unit);
+  if (!_smartHaValori(base)) { it._base = null; return; }   // niente da cui partire: i valori li stima il coach
+  if (it._daStimare) return;
+  const v = ZTNutrizione.valoriPerQuantita(base, q);
+  if (v) Object.assign(it, v);
+}
+function _smartImpostaQta(it, value) {
+  const q = _smartLeggiQta(value);
+  _smartScala(it, q);
+  it._q1 = q / (Number(ST.smartForm && ST.smartForm.porzione) || 1);
+}
+function _smartPasso(it) { return it.unit === 'pz' ? 0.5 : 10; }
+// Aggiorna a schermo i numeri della riga e del totale senza ridisegnare: il campo che si sta scrivendo resta attivo
+function _smartAggiornaNumeri(it) {
+  const k = document.querySelector(`[data-row-kcal="${it.tempId}"]`);
+  if (k) k.textContent = it.kcal > 0 ? `${it.kcal} kcal` : 'da compilare';
+  const tot = _smartTotals();
+  ['kcal', 'carbs', 'protein', 'fat'].forEach(c => {
+    const el = document.querySelector(`[data-smart-tot="${c}"]`);
+    if (el) el.textContent = tot[c] + (c === 'kcal' ? ' kcal' : 'g');
+  });
+  // Nutrition 230: un ingrediente riportato sopra zero fa ricomparire totale, «Salva pasto» e porzioni
+  const vis = (ST.smartForm.items || []).some(i => i.kcal > 0) ? '' : 'none';
+  document.querySelectorAll('[data-smart-vis]').forEach(el => { el.style.display = vis; });
+  (ST.smartForm.items || []).forEach(x => { const m = document.querySelector(`[data-row-macro="${x.tempId}"]`); if (m) m.innerHTML = _smartMacroChips(x); });
+}
+window.smartQtaScrivi = function(tempId, value) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  _smartImpostaQta(it, value);
+  _smartAggiornaNumeri(it);
+};
+window.smartQtaPasso = function(tempId, verso) {
+  _initSmartForm();
+  const it = ST.smartForm.items.find(i => i.tempId === tempId);
+  if (!it) return;
+  const passo = _smartPasso(it);
+  // dal valore fuori passo si va al passo vicino (125 g e + → 130), mai sotto lo zero
+  const q = Number(it.quantity) || 0;
+  const nuova = verso > 0 ? Math.floor(q / passo + 1e-9) * passo + passo : Math.ceil(q / passo - 1e-9) * passo - passo;
+  _smartImpostaQta(it, Math.max(0, nuova));
+  renderOggi();
+};
+// La porzione dell'intero pasto («ne ho mangiato metà»): tutte le quantità per lo stesso numero, rispetto a com'era
+// il pasto quando si è aperto (1). Le correzioni fatte a un ingrediente restano, scalate con le altre (_q1).
+const SMART_PORZIONI = [[0.5, '½'], [0.75, '¾'], [1, '1'], [1.5, '1½'], [2, '2']];
+window.smartPorzione = function(f) {
+  _initSmartForm();
+  const prima = Number(ST.smartForm.porzione) || 1;
+  ST.smartForm.items.forEach(it => {
+    if (it._q1 == null) it._q1 = (Number(it.quantity) || 0) / prima;
+    // con l'unità cambiata e i valori da stimare la porzione vale lo stesso: quantità e valori per lo stesso fattore
+    if (it._daStimare) { if (!it._v1) it._v1 = ZTNutrizione.scalaValori(it, 1 / prima); Object.assign(it, ZTNutrizione.scalaValori(it._v1, f)); }
+    _smartScala(it, it._q1 * f);   // sempre dalla quantità a porzione 1: ¾ e poi 1 torna esatto
+  });
+  ST.smartForm.porzione = f;
+  renderOggi();
+};
+function _smartMacroChips(it) {
+  if (!(it.kcal > 0) || it.calculating) return '';
+  return `<span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
+            <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
+            <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>`;
+}
 
 window.smartRecalcRow = async function(tempId) {
   _initSmartForm();
@@ -1353,8 +1474,9 @@ window.smartRecalcRow = async function(tempId) {
   const qtyEl = document.querySelector(`[data-row-qty="${tempId}"]`);
   const unitEl = document.querySelector(`[data-row-unit="${tempId}"]`);
   if (nameEl) it.name = nameEl.value;
-  if (qtyEl) it.quantity = Math.max(0, parseFloat(qtyEl.value) || 0);
+  if (qtyEl) it.quantity = _smartArrotonda(_smartLeggiQta(qtyEl.value), it.unit);   // 1,5 è un pezzo e mezzo, non 1
   if (unitEl) it.unit = ['g','ml','pz'].includes(unitEl.value) ? unitEl.value : 'g';
+  it._q1 = it.quantity / (Number(ST.smartForm.porzione) || 1);
   if (!it.name || !it.name.trim() || !it.quantity || it.quantity <= 0) {
     showToast('Compila prima nome e quantità', '✍️');
     return;
@@ -1362,8 +1484,15 @@ window.smartRecalcRow = async function(tempId) {
   it.calculating = true;
   renderOggi();
   try {
-    const m = await estimateSingleItem(it.name.trim(), it.quantity, it.unit);
+    const chiesta = { quantity: it.quantity, unit: it.unit };
+    const m = await estimateSingleItem(it.name.trim(), chiesta.quantity, chiesta.unit);
+    if (it.unit !== chiesta.unit) { showToast('L\'unità è cambiata: tocca di nuovo Stima coach', '✍️'); return; }
+    // Nutrition 230: la stima vale per la quantità chiesta; se intanto quantità o porzione sono cambiate si scala lì
+    const adesso = it._q1 != null ? it._q1 * (Number(ST.smartForm.porzione) || 1) : it.quantity;
+    it._base = { quantity: chiesta.quantity, kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat };
     it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
+    it._daStimare = false; it._baseUnita = null; it._v1 = null;   // Nutrition 220: la stima nuova è la base da cui si scala
+    _smartImpostaQta(it, Math.abs(adesso - chiesta.quantity) < 1e-9 ? chiesta.quantity : adesso);
   } catch (e) {
     console.error('Single item estimate error:', e);
     avvisa('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
@@ -1382,7 +1511,16 @@ window.smartResetForm = function() {
 };
 
 // FASE 4 Edit pasto via Smart Ingredient
+// Nutrition 230: se l'apertura si ferma, la persona lo legge (prima: «niente di niente») e l'errore si segnala
 window.smartOpenEdit = async function(date, mealId) {
+  try { await _smartApriModifica(date, mealId); }
+  catch (e) {
+    console.error('Apertura modifica pasto:', e);
+    reportError('js', 'aprire la modifica del pasto', e);
+    avvisa('Non riesco ad aprire il pasto per modificarlo. ' + String((e && e.message) || e || ''));
+  }
+};
+async function _smartApriModifica(date, mealId) {
   const day = ST.db && ST.db.days && ST.db.days[date];
   if (!day) { showToast('Giorno non trovato', '⚠️'); return; }
   const meal = (day.meals || []).find(m => (m.id === mealId) || (m.local_id === mealId));
@@ -1399,12 +1537,13 @@ window.smartOpenEdit = async function(date, mealId) {
     items = dbItems || [];
   }
 
-  // Pasto monolitico legacy: crea 1 item dalla descrizione
+  // Pasto monolitico legacy: crea 1 item dalla descrizione. Nutrition 220: vale «1 porzione» (1 pz), così − e +
+  // vanno di mezza porzione e calorie e macro seguono; prima era quantità 0 e la quantità non voleva dire niente
   if (items.length === 0) {
     items = [{
       id: 'legacy_' + mealId,
       name: meal.description || 'Pasto',
-      quantity: 0, unit: 'g',
+      quantity: 1, unit: 'pz',
       kcal: meal.kcal || 0, protein: meal.protein || 0, carbs: meal.carbs || 0, fat: meal.fat || 0,
       source: 'manual', sort_order: 0,
     }];
@@ -1421,9 +1560,9 @@ window.smartOpenEdit = async function(date, mealId) {
       protein: Number(it.protein) || 0,
       carbs: Number(it.carbs) || 0,
       fat: Number(it.fat) || 0,
-      expanded: false, calculating: false,
+      expanded: false, calculating: false, _porz: String(it.id || '').startsWith('legacy_'),
       sortOrder: idx, source: it.source || 'manual',
-    })),
+    })).map(_smartNormalizza),
     freeText: '',
     notes: meal.notes || '',
     analyzing: false,
@@ -1431,17 +1570,18 @@ window.smartOpenEdit = async function(date, mealId) {
     editingSlot: meal.slot,
     editingTime: meal.time || null,
     editingDescription: meal.description || '',
+    editingDate: date,
+    porzione: 1,
   };
 
-  ST.logSlot = meal.slot;
-  ST.logOpen = true;
+  // Nutrition 230: la modifica si fa nella card del pasto (l'orario resta quello del pasto, si cambia nella card);
+  // il modulo in cima resta per i pasti nuovi e si chiude
+  ST.logOpen = false;
+  ST.activeDay = date;   // la card del pasto sta nella timeline del suo giorno
+  if (!ST.mealExpanded) ST.mealExpanded = {};
+  ST.mealExpanded[meal.id || meal.local_id] = true;
   renderOggi();
-
-  setTimeout(() => {
-    const formEl = document.getElementById('registra-pasto-form');
-    if (formEl && formEl.scrollIntoView) formEl.scrollIntoView({behavior:'smooth', block:'start'});
-  }, 100);
-};
+}
 
 // FASE 3 Timeline doppio collasso
 window.toggleMealCard = function(mealId) {
@@ -1466,6 +1606,15 @@ window.toggleExtraSupp = function(extraKey) {
 window.smartSavePasto = async function() {
   _initSmartForm();
   if (!_smartHasContent()) { showToast('Aggiungi almeno un ingrediente', '✍️'); return; }
+  // Nutrition 230: si salvano solo gli ingredienti con un nome; uno senza nome ma con dei valori entrava nel totale del
+  // pasto e spariva dalle righe (testata 500 kcal, righe 280). Si chiede, non si toglie in silenzio
+  const senzaNome = ST.smartForm.items.filter(i => !(i.name && i.name.trim()) && _smartHaValori(i));
+  if (senzaNome.length) {
+    senzaNome.forEach(i => { i.expanded = true; });
+    renderOggi();
+    avvisa(`Un ingrediente da ${senzaNome[0].kcal} kcal non ha il nome: scrivilo, oppure toglilo con ×.`, { titolo:'Manca un nome' });
+    return;
+  }
   const isEdit = !!ST.smartForm.editingMealId;
   const slot = isEdit ? (ST.smartForm.editingSlot || ST.logSlot) : ST.logSlot;
   if (!slot) { showToast('Scegli il pasto', '✍️'); return; }
@@ -1473,9 +1622,15 @@ window.smartSavePasto = async function() {
   const tot = _smartTotals();
   const summary = _smartSummaryDesc();
   const time = (() => {
+    // Nutrition 230: in modifica l'orario è quello del pasto, che si cambia nella card (updateMealTime)
+    if (isEdit) {
+      const g = ST.db && ST.db.days && ST.db.days[ST.smartForm.editingDate || ST.activeDay];
+      const p0 = g ? (g.meals || []).find(m => m.id === ST.smartForm.editingMealId || m.local_id === ST.smartForm.editingMealId) : null;
+      if (p0 && p0.time) return String(p0.time).slice(0, 5);
+      if (ST.smartForm.editingTime) return String(ST.smartForm.editingTime).slice(0, 5);
+    }
     const inputEl = document.getElementById('log-time');
     if (inputEl && inputEl.value) return inputEl.value;
-    if (isEdit && ST.smartForm.editingTime) return ST.smartForm.editingTime;
     const now = new Date();
     return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   })();
@@ -1488,7 +1643,7 @@ window.smartSavePasto = async function() {
       // andava, il pasto restava senza ingredienti. Ora l'ordine e' il contrario — entrano i nuovi (con l'id
       // scelto dal telefono), si aggiorna il pasto, escono i vecchi per id — e ogni passo passa dalla coda:
       // senza rete si rimanda tutto in ordine. Se un passo non va, quelli gia' fatti si annullano.
-      const day = ST.db.days[ST.activeDay];
+      const day = ST.db.days[ST.smartForm.editingDate || ST.activeDay];   // Nutrition 220: anche se nel frattempo si è cambiato giorno
       const pastoPrima = day ? (day.meals || []).find(m => m.id === mealId || m.local_id === mealId) : null;
       // Gli id degli ingredienti di prima si leggono dal database prima di scrivere (sola lettura): la memoria puo'
       // averli parziali o senza id (copia locale vecchia), e allora i vecchi resterebbero accanto ai nuovi, doppi.
@@ -1512,7 +1667,7 @@ window.smartSavePasto = async function() {
         meal_id: mealId,
         user_id: ST.user.id,
         name: it.name.trim(),
-        quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
+        quantity: Math.max(0, _smartArrotonda(Number(it.quantity) || 0, it.unit)),   // pz al centesimo: ¾ = 0,75
         unit: it.unit || 'g',
         kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
         protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
@@ -1579,7 +1734,7 @@ window.smartSavePasto = async function() {
         meal_id: meal.id,
         user_id: ST.user.id,
         name: it.name.trim(),
-        quantity: Math.max(0, Math.round((Number(it.quantity)||0) * 10) / 10),
+        quantity: Math.max(0, _smartArrotonda(Number(it.quantity) || 0, it.unit)),   // pz al centesimo: ¾ = 0,75
         unit: it.unit || 'g',
         kcal: Math.max(0, Math.round((Number(it.kcal)||0) * 10) / 10),
         protein: Math.max(0, Math.round((Number(it.protein)||0) * 10) / 10),
@@ -1654,7 +1809,8 @@ function pastiSoliti(days, slot){
       // gli ingredienti dell'ultima volta; un pasto vecchio senza ingredienti diventa un ingrediente solo, come in smartOpenEdit
       const its = (m.items || []).filter(it => it && it.name);
       e.items = its.length ? its.map(it => ({ name:it.name, quantity:Number(it.quantity) || 0, unit:it.unit || 'g', kcal:Number(it.kcal) || 0, protein:Number(it.protein) || 0, carbs:Number(it.carbs) || 0, fat:Number(it.fat) || 0, source:it.source || 'manual' }))
-                          : [{ name:e.descrizione || 'Pasto', quantity:0, unit:'g', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+                          : [{ name:e.descrizione || 'Pasto', quantity:1, unit:'pz', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+      e.items.forEach(it => { if (!(it.quantity > 0) && _smartHaValori(it)) { it.quantity = 1; it.unit = 'pz'; } });   // Nutrition 220: 1 porzione, non 0 g
     });
   });
   return _solitiOrdina(conto).map(e => { const { ultimaOra, ...resto } = e; return resto; });
@@ -1685,7 +1841,8 @@ window.registraSolito = async function(idx){
   if (ST.smartForm.editingMealId) return;
   _solitoInCorso = true;
   try {
-    ST.smartForm.items = sol.items.map((it, i) => ({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.items = sol.items.map((it, i) => _smartNormalizza({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.porzione = 1;
     ST.smartForm.freeText = '';
     await smartSavePasto();
   } finally { _solitoInCorso = false; }
@@ -1730,12 +1887,10 @@ function _extraSolitiHTML(){
 
 // Renderer del form Smart Ingredient — funzione pura, ritorna HTML.
 // I handler `smart*` chiamano renderOggi() per aggiornare il DOM.
-function renderRegistraPasto() {
+// Nutrition 230: ingredienti, porzione e totale del pasto in lavorazione. Una fonte sola per il modulo in cima (pasto
+// nuovo) e per la card del pasto nella timeline (modifica sul posto, scelta di Ignazio del 25 ottobre 2026).
+function _smartEditorParti(inCard) {
   _initSmartForm();
-  const slot = ST.logSlot;
-  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
-  const slotLabel = slotInfo ? `${slotInfo.icon} ${slotInfo.label}` : 'Seleziona slot';
-  const analyzing = ST.smartForm.analyzing;
   const items = ST.smartForm.items;
   const tot = _smartTotals();
   const hasItems = items.length > 0;
@@ -1748,14 +1903,21 @@ function renderRegistraPasto() {
     const headerName = it.name || '(nuovo ingrediente)';
     const headerKcal = it.calculating ? '...' : (calcd ? `${it.kcal} kcal` : 'da compilare');
     const headerKcalColor = calcd ? 'var(--t2)' : 'var(--t3)';
-    const qtyDisplay = (it.quantity && it.unit) ? `<span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);flex-shrink:0;margin-left:6px;">${it.quantity}${it.unit}</span>` : '';
+    // Nutrition 220: la quantità è sempre in vista, con − e +; il campo è a 16 px perché l'iPhone non ingrandisca la pagina
+    const qtyRow = `
+      <div onclick="event.stopPropagation()" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;">
+        <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',-1)" aria-label="Meno">−</button>
+        <input data-row-qty="${it.tempId}" class="smart-qta-inp" type="text" inputmode="decimal" value="${it.quantity ? String(it.quantity).replace('.', ',') : ''}" placeholder="0" aria-label="Quantità di ${esc(it.name||'ingrediente')}" oninput="smartQtaScrivi('${it.tempId}',this.value)" />
+        <span style="font-size:13px;color:var(--t2);font-family:var(--font-mono);min-width:22px;">${it.unit === 'pz' ? (it._porz ? 'porz.' : 'pz') : (it.unit || 'g')}</span>
+        <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',1)" aria-label="Più">+</button>
+        <div data-row-macro="${it.tempId}" style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);white-space:nowrap;margin-left:auto;justify-content:flex-end;">${_smartMacroChips(it)}</div>
+      </div>`;
 
     const expandedBlock = expanded ? `
       <div style="margin-top:10px;padding-top:10px;border-top:0.5px dashed var(--s3);">
         <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <input data-row-name="${it.tempId}" value="${esc(it.name||'')}" placeholder="Alimento" onchange="smartUpdateField('${it.tempId}','name',this.value)" style="flex:2;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;min-width:0;" />
-          <input data-row-qty="${it.tempId}" type="number" step="0.1" value="${it.quantity || ''}" placeholder="Qtà" onchange="smartUpdateField('${it.tempId}','quantity',this.value)" style="width:64px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:13px;text-align:right;" />
-          <select data-row-unit="${it.tempId}" onchange="smartUpdateField('${it.tempId}','unit',this.value)" style="width:52px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:12px;">
+          <input data-row-name="${it.tempId}" value="${esc(it.name||'')}" placeholder="Alimento" onchange="smartUpdateField('${it.tempId}','name',this.value)" style="flex:2;padding:6px 8px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;min-width:0;" />
+          <select data-row-unit="${it.tempId}" onchange="smartUpdateField('${it.tempId}','unit',this.value);renderOggi()" style="width:60px;padding:6px;border:0.5px solid var(--s3);border-radius:6px;font-size:16px;">
             <option value="g" ${it.unit==='g'?'selected':''}>g</option>
             <option value="ml" ${it.unit==='ml'?'selected':''}>ml</option>
             <option value="pz" ${it.unit==='pz'?'selected':''}>pz</option>
@@ -1763,11 +1925,7 @@ function renderRegistraPasto() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima coach'}</button>
-          ${calcd && !it.calculating ? `<div style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;">
-            <span style="background:var(--carb-lt);color:#854F0B;padding:2px 6px;border-radius:4px;">${it.carbs}g C</span>
-            <span style="background:var(--prot-lt);color:#3B6D11;padding:2px 6px;border-radius:4px;">${it.protein}g P</span>
-            <span style="background:var(--fat-lt);color:#993C1D;padding:2px 6px;border-radius:4px;">${it.fat}g G</span>
-          </div>` : ''}
+          <span style="font-size:10px;color:var(--t3);">${it._daStimare ? 'unità cambiata: tocca Stima coach per i valori nuovi' : calcd ? 'cambiando la quantità i valori seguono da soli' : 'scrivi nome e quantità, poi la stima'}</span>
         </div>
       </div>` : '';
 
@@ -1777,33 +1935,48 @@ function renderRegistraPasto() {
           <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
             <span style="color:var(--t3);font-size:10px;${arrowStyle}">▶</span>
             <span style="font-size:13px;font-weight:500;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(headerName)}</span>
-            ${qtyDisplay}
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            <span style="font-size:11px;font-family:var(--font-mono);color:${headerKcalColor};">${headerKcal}</span>
+            <span data-row-kcal="${it.tempId}" style="font-size:11px;font-family:var(--font-mono);color:${headerKcalColor};">${headerKcal}</span>
             <button onclick="event.stopPropagation();smartRemoveRow('${it.tempId}')" style="width:22px;height:22px;padding:0;background:transparent;border:none;cursor:pointer;color:var(--t3);font-size:16px;">×</button>
           </div>
         </div>
+        ${qtyRow}
         ${expandedBlock}
       </div>`;
   }).join('');
 
   const showTotals = hasItems && items.some(i => i.kcal > 0);
-  const totalsCard = showTotals ? `
-    <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
+  const totalsCard = hasItems ? `
+    <div data-smart-vis style="${showTotals ? '' : 'display:none;'}background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
         <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Totale pasto</span>
-        <span style="font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--t1);">${tot.kcal} kcal</span>
+        <span data-smart-tot="kcal" style="font-size:22px;font-weight:600;font-family:var(--font-mono);color:var(--t1);">${tot.kcal} kcal</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
-        <div style="background:var(--carb-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#854F0B;text-transform:uppercase;font-weight:700;">Carbo</div><div style="font-size:14px;font-family:var(--font-mono);color:#854F0B;">${tot.carbs}g</div></div>
-        <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
-        <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
+        <div style="background:var(--carb-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#854F0B;text-transform:uppercase;font-weight:700;">Carbo</div><div data-smart-tot="carbs" style="font-size:14px;font-family:var(--font-mono);color:#854F0B;">${tot.carbs}g</div></div>
+        <div style="background:var(--prot-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#3B6D11;text-transform:uppercase;font-weight:700;">Prot</div><div data-smart-tot="protein" style="font-size:14px;font-family:var(--font-mono);color:#3B6D11;">${tot.protein}g</div></div>
+        <div style="background:var(--fat-lt);border-radius:6px;padding:8px;text-align:center;"><div style="font-size:9px;color:#993C1D;text-transform:uppercase;font-weight:700;">Grassi</div><div data-smart-tot="fat" style="font-size:14px;font-family:var(--font-mono);color:#993C1D;">${tot.fat}g</div></div>
       </div>
-      <button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>
+      ${inCard ? '' : `<button onclick="smartSavePasto()" style="width:100%;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva pasto →</button>`}
+    </div>` : '';
+  // Nutrition 230: nella card Annulla e Salva modifiche restano sempre in vista, anche con un pasto da 0 kcal (tè, acqua)
+  // o con tutto portato a zero: stanno fuori dal riquadro del totale, che si nasconde
+  const azioniCard = inCard ? `
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button onclick="smartResetForm()" style="flex:1;padding:12px;background:transparent;color:var(--t2);border:0.5px solid var(--s3);border-radius:var(--r-md);font-size:14px;cursor:pointer;">Annulla</button>
+      <button onclick="smartSavePasto()" style="flex:2;padding:12px;background:var(--acc);color:white;border:none;border-radius:var(--r-md);font-size:14px;font-weight:500;cursor:pointer;">Salva modifiche</button>
     </div>` : '';
 
   const toggleAllBtn = items.length > 1 ? `<button onclick="smartToggleAll()" style="background:transparent;border:none;font-size:11px;color:var(--t2);cursor:pointer;padding:0;">${anyExpanded?'Collassa tutti':'Espandi tutti'}</button>` : '';
+
+  // Nutrition 220: «quanto ne hai mangiato?», tutto il pasto per ½, ¾, 1, 1½, 2 (rispetto a com'era quando si è aperto)
+  const porzione = Number(ST.smartForm.porzione) || 1;
+  const porzioniHtml = hasItems ? `
+      <div data-smart-vis style="${showTotals ? '' : 'display:none;'}margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--t3);margin-bottom:6px;">Quanto ne hai mangiato?</div>
+        <div class="smart-porzioni" role="group" aria-label="Porzione del pasto">${SMART_PORZIONI.map(([f, lbl]) => `<button class="smart-porz ${Math.abs(f - porzione) < 1e-9 ? 'on' : ''}" aria-pressed="${Math.abs(f - porzione) < 1e-9}" onclick="smartPorzione(${f})">${lbl}</button>`).join('')}</div>
+      </div>` : '';
 
   const itemsCard = hasItems ? `
     <div style="background:var(--s1);border:0.5px solid var(--s3);border-radius:var(--r-lg);padding:14px;margin-top:10px;">
@@ -1811,10 +1984,20 @@ function renderRegistraPasto() {
         <span style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--t2);">Ingredienti (${items.length})</span>
         ${toggleAllBtn}
       </div>
+      ${porzioniHtml}
       ${rowsHtml}
       <button onclick="smartAddEmptyRow()" style="width:100%;padding:8px;background:transparent;color:var(--t2);border:0.5px dashed var(--s3);border-radius:6px;font-size:12px;cursor:pointer;margin-top:4px;">+ Aggiungi ingrediente</button>
     </div>` : '';
+  return { itemsCard, totalsCard: totalsCard + azioniCard, hasItems };
+}
 
+function renderRegistraPasto() {
+  _initSmartForm();
+  const slot = ST.logSlot;
+  const slotInfo = MEAL_SLOTS.find(s => s.id === slot);
+  const slotLabel = slotInfo ? `${slotInfo.icon} ${slotInfo.label}` : 'Seleziona slot';
+  const analyzing = ST.smartForm.analyzing;
+  const { itemsCard, totalsCard, hasItems } = _smartEditorParti(false);
   const isEditing = !!ST.smartForm.editingMealId;
 
   return `
@@ -6117,6 +6300,7 @@ async function saveEditMeal() {
 // ═══════════════════════════════════════════════════════════
 const _swipe = {};
 function swipeStart(e, id) {
+  if (ST.smartForm && ST.smartForm.editingMealId === id) return;   // Nutrition 230: in modifica si scrive nei campi, non si elimina
   const t = e.touches[0];
   _swipe[id] = { x: t.clientX, y: t.clientY, active: true };
 }
@@ -6148,6 +6332,8 @@ function swipeEnd(e, id) {
 
 function setLogSlot(id){
   ST.logSlot = id;
+  // Nutrition 220: mentre si modifica un pasto la fascia cambia e basta; prima il tocco svuotava il form e la modifica si perdeva
+  if (ST.smartForm && ST.smartForm.editingMealId) { ST.smartForm.editingSlot = id; renderOggi(); return; }
   // Aggiorna ST.logTime all'orario standard dello slot scelto (es. Cena → "20:00").
   // Nota: openLogFromPlanned() NON chiama setLogSlot — setta ST.logSlot/ST.logTime
   // direttamente con il valore pianificato, quindi qui non c'è rischio di sovrascriverlo.

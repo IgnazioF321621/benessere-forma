@@ -1,6 +1,6 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-24 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-10-25 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
 35 tabelle, 420 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
@@ -16,16 +16,16 @@
 | [`body_logs`](#body_logs) | 5 | 2 | id | user_id, date |
 | [`body_measurements`](#body_measurements) | 5 | 4 | id | check_id |
 | [`coach_proposals`](#coach_proposals) | 14 | 3 | id | user_id, week_start, kind |
-| [`daily_log`](#daily_log) | 7 | 4 | id | user_id, date |
+| [`daily_log`](#daily_log) | 8 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 824 | 1 | codice | — |
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
 | [`fitdays_letture`](#fitdays_letture) | 3 | 4 | id | user_id, date |
-| [`meal_items`](#meal_items) | 1005 | 4 | id | — |
-| [`meals`](#meals) | 361 | 2 | id | — |
+| [`meal_items`](#meal_items) | 1009 | 4 | id | — |
+| [`meals`](#meals) | 362 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
-| [`rilevazioni`](#rilevazioni) | 6 | 4 | id | — |
+| [`rilevazioni`](#rilevazioni) | 7 | 4 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
 | [`segnalazioni`](#segnalazioni) | 32 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
@@ -36,11 +36,11 @@
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 14 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
-| [`weekly_plan_meals`](#weekly_plan_meals) | 266 | 5 | id | — |
-| [`weekly_plans`](#weekly_plans) | 19 | 5 | id | user_id, week_start |
+| [`weekly_plan_meals`](#weekly_plan_meals) | 280 | 5 | id | — |
+| [`weekly_plans`](#weekly_plans) | 20 | 5 | id | user_id, week_start |
 | [`weight_logs`](#weight_logs) | 20 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
-| [`workouts`](#workouts) | 126 | 2 | id | user_id, date, session_type |
+| [`workouts`](#workouts) | 127 | 2 | id | user_id, date, session_type |
 
 ### `ai_memory`
 
@@ -355,7 +355,7 @@ Vincoli:
 | `meal_id` | uuid | sì |  |
 | `user_id` | uuid | sì |  |
 | `name` | text | sì |  |
-| `quantity` | numeric(7,1) | sì | `0` |
+| `quantity` | numeric(8,2) | sì | `0` |
 | `unit` | text | sì | `'g'::text` |
 | `kcal` | numeric(6,1) | sì | `0` |
 | `protein` | numeric(5,1) | sì | `0` |
