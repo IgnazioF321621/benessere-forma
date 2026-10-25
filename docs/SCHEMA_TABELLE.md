@@ -2,12 +2,12 @@
 
 *Generato da `tools/schema_fotografia.py` il 2026-10-25 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-35 tabelle, 420 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+35 tabelle, 422 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
 | [`ai_memory`](#ai_memory) — **non usata dal codice** | 0 | 5 | id | — |
-| [`app_errors`](#app_errors) | 11 | 2 | id | — |
+| [`app_errors`](#app_errors) | 12 | 2 | id | — |
 | [`biblioteca_gif`](#biblioteca_gif) | 1715 | 1 | id | slug |
 | [`blood_tests`](#blood_tests) | 0 | 4 | id | — |
 | [`body_check_ai`](#body_check_ai) | 4 | 1 | id | check_id |
@@ -21,11 +21,11 @@
 | [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
 | [`fitdays_letture`](#fitdays_letture) | 3 | 4 | id | user_id, date |
-| [`meal_items`](#meal_items) | 1009 | 4 | id | — |
-| [`meals`](#meals) | 362 | 2 | id | — |
+| [`meal_items`](#meal_items) | 1025 | 4 | id | — |
+| [`meals`](#meals) | 366 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | — |
-| [`rilevazioni`](#rilevazioni) | 7 | 4 | id | — |
+| [`rilevazioni`](#rilevazioni) | 8 | 4 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
 | [`segnalazioni`](#segnalazioni) | 32 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
@@ -464,6 +464,8 @@ Vincoli:
 | `pausa_motivo` | text |  |  |
 | `pausa_moduli` | text[] |  |  |
 | `come_stai_orari` | smallint[] |  |  |
+| `tabata` | text |  |  |
+| `tabata_giorni` | smallint[] |  |  |
 
 Vincoli:
 - `profiles_come_stai_orari_chk` — `CHECK (((come_stai_orari IS NULL) OR ((COALESCE(array_length(come_stai_orari, 1), 0) <= 3) AND (0 <= ALL (come_stai_orari)) AND (23 >= ALL (come_stai_orari)))))`
@@ -471,6 +473,8 @@ Vincoli:
 - `profiles_pausa_moduli_chk` — `CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))`
 - `profiles_plan_day_check` — `CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))`
 - `profiles_sex_check` — `CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))`
+- `profiles_tabata_chk` — `CHECK (((tabata IS NULL) OR (tabata = ANY (ARRAY['spento'::text, 'coda'::text, 'giorni'::text, 'a_parte'::text]))))`
+- `profiles_tabata_giorni_chk` — `CHECK (((tabata_giorni IS NULL) OR (tabata_giorni <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint])))`
 - `profiles_weight_mode_check` — `CHECK ((weight_tracking_mode = ANY (ARRAY['daily'::text, 'every3'::text, 'weekly'::text, 'flexible'::text])))`
 - `profiles_id_fkey` — `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE`
 

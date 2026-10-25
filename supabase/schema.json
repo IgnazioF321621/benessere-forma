@@ -7,7 +7,7 @@
    "tabella": "ai_memory"
   },
   {
-   "righe": 11,
+   "righe": 12,
    "tabella": "app_errors"
   },
   {
@@ -63,11 +63,11 @@
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1009,
+   "righe": 1025,
    "tabella": "meal_items"
   },
   {
-   "righe": 362,
+   "righe": 366,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 7,
+   "righe": 8,
    "tabella": "rilevazioni"
   },
   {
@@ -2733,6 +2733,26 @@
     "identita": "",
     "non_nullo": false,
     "pos": 43,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "smallint[]"
+   },
+   {
+    "colonna": "tabata",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 44,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "tabata_giorni",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 45,
     "predefinito": null,
     "tabella": "profiles",
     "tipo": "smallint[]"
@@ -7106,6 +7126,18 @@
    {
     "definizione": "CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))",
     "nome": "profiles_sex_check",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((tabata IS NULL) OR (tabata = ANY (ARRAY['spento'::text, 'coda'::text, 'giorni'::text, 'a_parte'::text]))))",
+    "nome": "profiles_tabata_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((tabata_giorni IS NULL) OR (tabata_giorni <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint])))",
+    "nome": "profiles_tabata_giorni_chk",
     "tabella": "profiles",
     "tipo": "c"
    },
