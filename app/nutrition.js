@@ -1290,7 +1290,8 @@ window.smartAnalyze = async function() {
       name: it.name, quantity: it.quantity, unit: it.unit,
       kcal: it.kcal, protein: it.protein, carbs: it.carbs, fat: it.fat,
       expanded: false, calculating: false, sortOrder: idx, source: 'ai_split',
-    }));
+    })).map(_smartNormalizza);
+    ST.smartForm.porzione = 1;   // ingredienti nuovi, interi: la porzione scelta prima non vale più
     ST.smartForm.notes = split.notes || '';
     ST.smartForm.freeText = '';
   } catch (e) {
@@ -1317,6 +1318,7 @@ window.smartAddEmptyRow = function() {
 window.smartRemoveRow = function(tempId) {
   _initSmartForm();
   ST.smartForm.items = ST.smartForm.items.filter(i => i.tempId !== tempId);
+  if (!ST.smartForm.items.length) ST.smartForm.porzione = 1;
   renderOggi();
 };
 
@@ -1340,6 +1342,9 @@ window.smartUpdateField = function(tempId, field, value) {
   if (!it) return;
   if (field === 'quantity') { _smartImpostaQta(it, value); return; }
   if (field === 'unit' && !['g','ml','pz'].includes(value)) value = 'g';
+  // Nutrition 220: cambiando l'unità i valori non si convertono da soli (da grammi a pezzi serve il peso del pezzo,
+  // che le tabelle CREA danno alimento per alimento): finché il coach non li stima, la quantità cambia e i valori no
+  if (field === 'unit' && value !== it.unit) { it._base = null; it._q1 = null; it._porz = false; it._daStimare = _smartHaValori(it); }
   it[field] = value;
   // No renderOggi su ogni keystroke per non perdere il focus dell'input
 };
@@ -1349,19 +1354,34 @@ window.smartUpdateField = function(tempId, field, value) {
 // coach». Ora ogni ingrediente ha la quantità sempre in vista con − e +, e calorie e macro si ricalcolano subito con
 // ZTNutrizione.valoriPerQuantita (la proporzione delle tabelle di composizione): il coach serve solo a stimare un
 // ingrediente nuovo. _base sono i valori com'erano quando si è cominciato a cambiare: si scala sempre da lì, così
-// tanti − e + di fila non accumulano arrotondamenti. Un ingrediente senza quantità (0) con dei valori si scala con
-// la porzione (_f); un ingrediente vuoto prende la quantità e basta, e i valori li stima il coach.
+// tanti − e + di fila non accumulano arrotondamenti; _q1 è la quantità a porzione 1, da cui si calcola ogni porzione.
+// Un ingrediente con dei valori e senza quantità (i pasti vecchi, 75 righe di aprile-maggio 2026) vale «1 porzione»,
+// come l'etichetta per porzione del Reg. UE 1169/2011 (art. 33); un ingrediente vuoto prende la quantità e basta.
+function _smartHaValori(x) { return Number(x.kcal) > 0 || Number(x.protein) > 0 || Number(x.carbs) > 0 || Number(x.fat) > 0; }
+function _smartNormalizza(it) {
+  if (!(Number(it.quantity) > 0) && _smartHaValori(it)) { it.quantity = 1; it.unit = 'pz'; it._porz = true; }
+  return it;
+}
+function _smartLeggiQta(value) { return Math.max(0, parseFloat(String(value == null ? '' : value).replace(',', '.')) || 0); }
+function _smartArrotonda(q, unit) { const p = unit === 'pz' ? 100 : 10; return Math.round(q * p) / p; }
 function _smartBase(it) {
   if (!it._base) it._base = { quantity: Number(it.quantity) || 0, kcal: Number(it.kcal) || 0, protein: Number(it.protein) || 0, carbs: Number(it.carbs) || 0, fat: Number(it.fat) || 0 };
   return it._base;
 }
-function _smartImpostaQta(it, value) {
-  const q = Math.max(0, Math.round((parseFloat(String(value).replace(',', '.')) || 0) * 10) / 10);
+// La quantità q (esatta) e i valori in proporzione dalla base; la base con dei valori non si azzera mai
+function _smartScala(it, q) {
+  _smartNormalizza(it);
   const base = _smartBase(it);
-  const v = base.kcal > 0 || base.protein > 0 || base.carbs > 0 || base.fat > 0 ? ZTNutrizione.valoriPerQuantita(base, q) : null;
-  it.quantity = q;
+  it.quantity = _smartArrotonda(q, it.unit);
+  if (!_smartHaValori(base)) { it._base = null; return; }   // niente da cui partire: i valori li stima il coach
+  if (it._daStimare) return;
+  const v = ZTNutrizione.valoriPerQuantita(base, q);
   if (v) Object.assign(it, v);
-  else it._base = null;   // niente da cui partire: la base si prende al prossimo cambio, coi valori del coach
+}
+function _smartImpostaQta(it, value) {
+  const q = _smartLeggiQta(value);
+  _smartScala(it, q);
+  it._q1 = q / (Number(ST.smartForm && ST.smartForm.porzione) || 1);
 }
 function _smartPasso(it) { return it.unit === 'pz' ? 0.5 : 10; }
 // Aggiorna a schermo i numeri della riga e del totale senza ridisegnare: il campo che si sta scrivendo resta attivo
@@ -1394,16 +1414,15 @@ window.smartQtaPasso = function(tempId, verso) {
   renderOggi();
 };
 // La porzione dell'intero pasto («ne ho mangiato metà»): tutte le quantità per lo stesso numero, rispetto a com'era
-// il pasto quando si è aperto (1). Le correzioni fatte a un ingrediente restano, scalate con le altre.
+// il pasto quando si è aperto (1). Le correzioni fatte a un ingrediente restano, scalate con le altre (_q1).
 const SMART_PORZIONI = [[0.5, '½'], [0.75, '¾'], [1, '1'], [1.5, '1½'], [2, '2']];
 window.smartPorzione = function(f) {
   _initSmartForm();
   const prima = Number(ST.smartForm.porzione) || 1;
-  const rel = f / prima;
   ST.smartForm.items.forEach(it => {
-    const base = _smartBase(it);
-    if (base.quantity > 0) _smartImpostaQta(it, (Number(it.quantity) || 0) * rel);
-    else { it._f = (Number(it._f) || 1) * rel; Object.assign(it, ZTNutrizione.scalaValori(base, it._f)); }
+    _smartNormalizza(it);
+    if (it._q1 == null) it._q1 = (Number(it.quantity) || 0) / prima;
+    _smartScala(it, it._q1 * f);   // sempre dalla quantità a porzione 1: ¾ e poi 1 torna esatto
   });
   ST.smartForm.porzione = f;
   renderOggi();
@@ -1424,7 +1443,7 @@ window.smartRecalcRow = async function(tempId) {
   const qtyEl = document.querySelector(`[data-row-qty="${tempId}"]`);
   const unitEl = document.querySelector(`[data-row-unit="${tempId}"]`);
   if (nameEl) it.name = nameEl.value;
-  if (qtyEl) it.quantity = Math.max(0, parseFloat(qtyEl.value) || 0);
+  if (qtyEl) it.quantity = _smartArrotonda(_smartLeggiQta(qtyEl.value), it.unit);   // 1,5 è un pezzo e mezzo, non 1
   if (unitEl) it.unit = ['g','ml','pz'].includes(unitEl.value) ? unitEl.value : 'g';
   if (!it.name || !it.name.trim() || !it.quantity || it.quantity <= 0) {
     showToast('Compila prima nome e quantità', '✍️');
@@ -1435,7 +1454,7 @@ window.smartRecalcRow = async function(tempId) {
   try {
     const m = await estimateSingleItem(it.name.trim(), it.quantity, it.unit);
     it.kcal = m.kcal; it.protein = m.protein; it.carbs = m.carbs; it.fat = m.fat;
-    it._base = null; it._f = null;   // Nutrition 220: la stima nuova è la base da cui si scala
+    it._base = null; it._q1 = null; it._daStimare = false;   // Nutrition 220: la stima nuova è la base da cui si scala
   } catch (e) {
     console.error('Single item estimate error:', e);
     avvisa('Non sono riuscito a stimare l\'ingrediente. ' + aiErrMsg(e.aiKind));
@@ -1494,9 +1513,9 @@ window.smartOpenEdit = async function(date, mealId) {
       protein: Number(it.protein) || 0,
       carbs: Number(it.carbs) || 0,
       fat: Number(it.fat) || 0,
-      expanded: false, calculating: false,
+      expanded: false, calculating: false, _porz: String(it.id || '').startsWith('legacy_'),
       sortOrder: idx, source: it.source || 'manual',
-    })),
+    })).map(_smartNormalizza),
     freeText: '',
     notes: meal.notes || '',
     analyzing: false,
@@ -1731,7 +1750,8 @@ function pastiSoliti(days, slot){
       // gli ingredienti dell'ultima volta; un pasto vecchio senza ingredienti diventa un ingrediente solo, come in smartOpenEdit
       const its = (m.items || []).filter(it => it && it.name);
       e.items = its.length ? its.map(it => ({ name:it.name, quantity:Number(it.quantity) || 0, unit:it.unit || 'g', kcal:Number(it.kcal) || 0, protein:Number(it.protein) || 0, carbs:Number(it.carbs) || 0, fat:Number(it.fat) || 0, source:it.source || 'manual' }))
-                          : [{ name:e.descrizione || 'Pasto', quantity:0, unit:'g', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+                          : [{ name:e.descrizione || 'Pasto', quantity:1, unit:'pz', kcal:e.kcal, protein:e.protein, carbs:e.carbs, fat:e.fat, source:'manual' }];
+      e.items.forEach(it => { if (!(it.quantity > 0) && _smartHaValori(it)) { it.quantity = 1; it.unit = 'pz'; } });   // Nutrition 220: 1 porzione, non 0 g
     });
   });
   return _solitiOrdina(conto).map(e => { const { ultimaOra, ...resto } = e; return resto; });
@@ -1762,7 +1782,8 @@ window.registraSolito = async function(idx){
   if (ST.smartForm.editingMealId) return;
   _solitoInCorso = true;
   try {
-    ST.smartForm.items = sol.items.map((it, i) => ({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.items = sol.items.map((it, i) => _smartNormalizza({ tempId:_newItemId(), ...it, expanded:false, calculating:false, sortOrder:i }));
+    ST.smartForm.porzione = 1;
     ST.smartForm.freeText = '';
     await smartSavePasto();
   } finally { _solitoInCorso = false; }
@@ -1829,8 +1850,8 @@ function renderRegistraPasto() {
     const qtyRow = `
       <div onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:6px;margin-top:8px;">
         <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',-1)" aria-label="Meno">−</button>
-        <input data-row-qty="${it.tempId}" class="smart-qta-inp" type="text" inputmode="decimal" value="${it.quantity ? String(it.quantity).replace('.', ',') : ''}" placeholder="0" aria-label="Quantità di ${esc(it.name||'ingrediente')}" oninput="smartQtaScrivi('${it.tempId}',this.value)" onchange="renderOggi()" />
-        <span style="font-size:13px;color:var(--t2);font-family:var(--font-mono);min-width:22px;">${it.unit === 'pz' ? (it._existingId && String(it._existingId).startsWith('legacy_') ? 'porz.' : 'pz') : (it.unit || 'g')}</span>
+        <input data-row-qty="${it.tempId}" class="smart-qta-inp" type="text" inputmode="decimal" value="${it.quantity ? String(it.quantity).replace('.', ',') : ''}" placeholder="0" aria-label="Quantità di ${esc(it.name||'ingrediente')}" oninput="smartQtaScrivi('${it.tempId}',this.value)" />
+        <span style="font-size:13px;color:var(--t2);font-family:var(--font-mono);min-width:22px;">${it.unit === 'pz' ? (it._porz ? 'porz.' : 'pz') : (it.unit || 'g')}</span>
         <button class="smart-qta-btn" onclick="smartQtaPasso('${it.tempId}',1)" aria-label="Più">+</button>
         <div data-row-macro="${it.tempId}" style="display:flex;gap:4px;font-size:10px;font-family:var(--font-mono);flex-wrap:wrap;margin-left:auto;justify-content:flex-end;">${_smartMacroChips(it)}</div>
       </div>`;
@@ -1847,7 +1868,7 @@ function renderRegistraPasto() {
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
           <button onclick="smartRecalcRow('${it.tempId}')" ${it.calculating?'disabled':''} style="padding:5px 10px;background:var(--acc-lt);color:var(--acc);border:0.5px solid var(--acc);border-radius:6px;font-size:11px;cursor:pointer;">${it.calculating?'Calcolo...':'✨ Stima coach'}</button>
-          <span style="font-size:10px;color:var(--t3);">${calcd ? 'cambiando la quantità i valori seguono da soli' : 'scrivi nome e quantità, poi la stima'}</span>
+          <span style="font-size:10px;color:var(--t3);">${it._daStimare ? 'unità cambiata: tocca Stima coach per i valori nuovi' : calcd ? 'cambiando la quantità i valori seguono da soli' : 'scrivi nome e quantità, poi la stima'}</span>
         </div>
       </div>` : '';
 

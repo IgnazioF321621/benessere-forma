@@ -28,9 +28,12 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   const t = {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true }],
     meals:[{ user_id:U, id:'m1', date:OGGI, slot:'pranzo', kcal:500, protein:20, carbs:60, fat:15, description:'riso · pollo', notes:'', time:'13:00:00' },
-           { user_id:U, id:'m2', date:IERI, slot:'cena', kcal:800, protein:40, carbs:90, fat:30, description:'pizza margherita', notes:'', time:'20:30:00' }],
+           { user_id:U, id:'m2', date:IERI, slot:'cena', kcal:800, protein:40, carbs:90, fat:30, description:'pizza margherita', notes:'', time:'20:30:00' },
+           { user_id:U, id:'m3', date:'2026-10-22', slot:'snack_mattina', kcal:300, protein:10, carbs:60, fat:2, description:'pasta', notes:'', time:'17:00:00' }],
     meal_items:[{ id:'g1', user_id:U, meal_id:'m1', name:'riso', quantity:80, unit:'g', kcal:280, protein:6, carbs:60, fat:1, source:'manual', sort_order:0 },
-                { id:'g2', user_id:U, meal_id:'m1', name:'pollo', quantity:120, unit:'g', kcal:220, protein:14, carbs:0, fat:14, source:'manual', sort_order:1 }],
+                { id:'g2', user_id:U, meal_id:'m1', name:'pollo', quantity:120, unit:'g', kcal:220, protein:14, carbs:0, fat:14, source:'manual', sort_order:1 },
+                // come le 75 righe vere di aprile-maggio 2026: quantità 0 e calorie scritte
+                { id:'g3', user_id:U, meal_id:'m3', name:'pasta', quantity:0, unit:'g', kcal:300, protein:10, carbs:60, fat:2, source:'manual', sort_order:0 }],
   };
   const b = boot(t, { now:OGGI + 'T15:00:00' });
   await b.avviato;
@@ -131,6 +134,65 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   await win.smartRecalcRow(nuovo.tempId); await attendi(5);
   win.smartQtaPasso(nuovo.tempId, 1);
   atteso('ingrediente nuovo · stima del coach una volta, poi 20 g = 180 kcal da soli', [chiamateCoach, nuovo.quantity, nuovo.kcal, nuovo.fat], [1, 20, 180, 20]);
+  win.smartResetForm();
+
+  // 9 · revisione del 25 ottobre 2026: i sei difetti trovati, uno per uno
+  const scrivi = (it, txt) => { const c = d.querySelector(`[data-row-qty="${it.tempId}"]`); let v = ''; for (const ch of txt) { v += ch; c.value = v; c.dispatchEvent(new win.Event('input', { bubbles:true })); } return c; };
+  // 9a · ingrediente da 0 g con 300 kcal: vale 1 porzione, una cifra per volta non moltiplica
+  await win.smartOpenEdit('2026-10-22', 'm3'); await attendi(5);
+  const pasta = voce('pasta');
+  atteso('0 g e 300 kcal · si apre come 1 porzione', [pasta.quantity, pasta.unit, testo(`[data-row-qty="${pasta.tempId}"] + span`)], [1, 'pz', 'porz.']);
+  scrivi(pasta, '1'); const k1 = pasta.kcal;
+  scrivi(pasta, '1,5'); const k15 = pasta.kcal;
+  scrivi(pasta, '02'); const k2 = pasta.kcal;
+  atteso('0 g e 300 kcal · «1» = 300, «1,5» = 450, «0» e poi «02» = 600 (prima 45.000)', [k1, k15, k2, pasta.quantity], [300, 450, 600, 2]);
+  win.smartQtaPasso(pasta.tempId, 1);
+  atteso('0 g e 300 kcal · + di fila va di mezza porzione (2½ = 750)', [pasta.quantity, pasta.kcal], [2.5, 750]);
+  atteso('soliti · la riga da 0 g e il pasto vecchio si ripetono come 1 porzione', [win.pastiSoliti(ST.db.days, 'snack_mattina')[0].items.map(x => [x.quantity, x.unit, x.kcal])], [[[1, 'pz', 300]]]);
+  win.smartResetForm();
+  // 9b · porzione: si calcola sempre dalla quantità a porzione 1
+  await win.smartOpenEdit('2026-10-22', 'm3'); await attendi(5);
+  const p2 = voce('pasta');
+  win.smartPorzione(0.75); const tre4 = [p2.quantity, p2.kcal];
+  win.smartPorzione(1); const uno = [p2.quantity, p2.kcal];
+  win.smartPorzione(1.5); const unoemezzo = [p2.quantity, p2.kcal];
+  win.smartPorzione(0.75); win.smartPorzione(2); const due = [p2.quantity, p2.kcal];
+  atteso('porzione · ¾ = 0,75 e 225, poi 1 = 1 e 300, 1½ = 450, ¾ e poi 2 = 600 (prima 0,8 · 1,1 · 880)', [tre4, uno, unoemezzo, due], [[0.75, 225], [1, 300], [1.5, 450], [2, 600]]);
+  // 9c · Stima coach legge la virgola
+  let chiesto = null;
+  win.estimateSingleItem = async (nome, q, u) => { chiesto = [nome, q, u]; return { kcal:450, protein:15, carbs:90, fat:3 }; };
+  p2.expanded = true; win.renderOggi(); await attendi(5);
+  win.smartPorzione(1.5); p2.expanded = true; win.renderOggi(); await attendi(5);
+  await win.smartRecalcRow(p2.tempId); await attendi(5);
+  atteso('Stima coach · «1,5» va al coach come 1,5 pz, non 1', [chiesto, p2.quantity], [['pasta', 1.5, 'pz'], 1.5]);
+  win.smartPorzione(0.5);
+  atteso('Stima coach · poi ½ dalla stima nuova (1,5 pz = 450 → 0,5 pz = 150)', [p2.quantity, p2.kcal], [0.5, 150]);
+  win.smartResetForm();
+  // 9d · il campo quantità non ridisegna quando perde il fuoco: il tocco su «Salva pasto» arriva
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const r2 = voce('riso');
+  const campoR = scrivi(r2, '100');
+  const salva = d.querySelector('button[onclick="smartSavePasto()"]');
+  campoR.dispatchEvent(new win.Event('change', { bubbles:true }));
+  atteso('campo quantità · uscendo dal campo il bottone Salva resta lo stesso (il primo tocco non si perde)', [!!salva && d.contains(salva), r2.kcal], [true, 350]);
+  // 9e · Analizza dopo ½: la porzione torna a 1
+  win.smartPorzione(0.5);
+  win.estimateMealItems = async () => ({ items:[{ name:'riso', quantity:100, unit:'g', kcal:350, protein:7, carbs:77, fat:1 }] });
+  win.smartFreeTextChange('riso 100 g');
+  await win.smartAnalyze(); await attendi(5);
+  const r3 = voce('riso');
+  atteso('Analizza dopo ½ · porzione di nuovo 1, bottone 1 acceso', [ST.smartForm.porzione, testo('.smart-porz.on')], [1, '1']);
+  win.smartPorzione(0.5);
+  atteso('Analizza dopo ½ · poi ½ dimezza davvero (50 g, 175 kcal)', [r3.quantity, r3.kcal], [50, 175]);
+  win.smartPorzione(1);
+  // 9f · cambio unità: i valori non si convertono da soli, li stima il coach
+  win.smartUpdateField(r3.tempId, 'unit', 'pz'); r3.expanded = true; win.renderOggi(); await attendi(5);
+  scrivi(r3, '2');
+  atteso('cambio unità · 100 g → 2 pz: i valori restano (350, non 7), la nota chiede la stima', [r3.quantity, r3.unit, r3.kcal, /unità cambiata/.test(d.getElementById('page-oggi').textContent)], [2, 'pz', 350, true]);
+  win.estimateSingleItem = async () => ({ kcal:100, protein:2, carbs:22, fat:0 });
+  await win.smartRecalcRow(r3.tempId); await attendi(5);
+  win.smartQtaPasso(r3.tempId, 1);
+  atteso('cambio unità · dopo la stima la proporzione riparte (2 pz = 100 → 2½ = 125)', [r3.quantity, r3.kcal], [2.5, 125]);
   win.smartResetForm();
 
   atteso('zero errori in console', errori(), []);

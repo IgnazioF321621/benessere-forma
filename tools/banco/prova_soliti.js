@@ -67,7 +67,7 @@ const t = {
   atteso('cena · niente da ripetere', win.pastiSoliti(ST.db.days, 'cena'), []);
   const tanti = {}; for (let i = 0; i < 9; i++) tanti['2026-09-0' + (i + 1)] = { meals:[{ slot:'cena', description:'Cena ' + i, kcal:100, items:[] }] };
   atteso('al massimo 5 voci, le piu\' recenti', win.pastiSoliti(tanti, 'cena').map(x => x.descrizione), ['Cena 8', 'Cena 7', 'Cena 6', 'Cena 5', 'Cena 4']);
-  atteso('pasto vecchio senza ingredienti → un ingrediente solo con i numeri del pasto', win.pastiSoliti({ a:{ meals:[{ slot:'cena', description:'Pizza', kcal:800, protein:30, carbs:100, fat:25, items:[] }] } }, 'cena')[0].items, [{ name:'Pizza', quantity:0, unit:'g', kcal:800, protein:30, carbs:100, fat:25, source:'manual' }]);
+  atteso('pasto vecchio senza ingredienti → un ingrediente solo, 1 porzione, con i numeri del pasto', win.pastiSoliti({ a:{ meals:[{ slot:'cena', description:'Pizza', kcal:800, protein:30, carbs:100, fat:25, items:[] }] } }, 'cena')[0].items, [{ name:'Pizza', quantity:1, unit:'pz', kcal:800, protein:30, carbs:100, fat:25, source:'manual' }]);
   const ex = win.extraSoliti(ST.extrasByDay);
   atteso('extra · Caffè verde 2 volte (modello: l\'ultima, dose 2), poi Melatonina', ex.map(x => [x.modello.name, x.volte, x.modello.dose]), [['Caffè verde', 2, 2], ['Melatonina', 1, 1]]);
 
