@@ -776,11 +776,12 @@ async function loadActiveScheda() {
           const riga = rigaByCodice.get(ex.codice);
           if (riga) remapTesti(ex, riga, conAlert);
         };
-        // Riscaldamento e carry non hanno l'alert nel loro formato (_trainGenMapWarmupExercise,
-        // _trainGenMapCarryExercise): per loro si riallineano solo i quattro elenchi.
+        // Il carry non ha l'alert nel suo formato (_trainGenMapCarryExercise): si riallineano solo i quattro
+        // elenchi. Il riscaldamento sì, dalla revisione di 480+490 (_trainGenMapWarmupExercise porta l'adattamento
+        // per le limitazioni della persona): l'avviso segue il profilo come per il lavoro.
         sessioniArr.forEach(s => {
           if (!s) return;
-          if (Array.isArray(s.warmup)) s.warmup.forEach(ex => remapEx(ex, false));
+          if (Array.isArray(s.warmup)) s.warmup.forEach(ex => remapEx(ex, true));
           if (Array.isArray(s.exercises)) s.exercises.forEach(ex => remapEx(ex, true));
           if (s.carry_conclusivo) remapEx(s.carry_conclusivo, false);
           if (s.finisher && Array.isArray(s.finisher.exercises)) s.finisher.exercises.forEach(ex => remapEx(ex, true));
@@ -1000,7 +1001,10 @@ async function rinnovaRiscaldamento() {
   const fresca = await dbq('rileggere la scheda attiva', supa.from('schede_utente').select('scheda').eq('id', ST.schedaAttiva.id).eq('user_id', ST.user.id).single());
   if (fresca.error || !fresca.data || !fresca.data.scheda) return null;
   const scheda = fresca.data.scheda;
-  const gen = await generateTrainingProgram({ source: 'rinnova-riscaldamento', force: true, dryRun: true, cardiniDa: JSON.parse(JSON.stringify(scheda)) });
+  // …e anche il sostituto che oggi è in memoria al posto suo: nessuno dei due va nel riscaldamento della seduta
+  const lavoroOggi = {};
+  Object.values(ST.userTrainingSessions || {}).forEach(s => { if (s && s.id) lavoroOggi[s.id] = (s.exercises || []).map(e => e && e.codice).filter(Boolean); });
+  const gen = await generateTrainingProgram({ source: 'rinnova-riscaldamento', force: true, dryRun: true, cardiniDa: JSON.parse(JSON.stringify(scheda)), lavoroOggi });
   if (!gen || !Array.isArray(gen.sessioni)) { showToast('Non sono riuscito a preparare il riscaldamento — riprova più tardi', '⚠️', 5500); return null; }
   let cambiate = 0;
   (scheda.sessioni || []).forEach(s => {
@@ -1884,10 +1888,12 @@ const _ATTREZZI_CON_CARICO = new Set([
 // FUNZIONE PRINCIPALE
 // ───────────────────────────────────────────────────────────
 
-async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false, giorniOverride = null, cardiniDa = null } = {}) {
+async function generateTrainingProgram({ source = 'onboarding', force = false, dryRun = false, giorniOverride = null, cardiniDa = null, lavoroOggi = null } = {}) {
   // cardiniDa (Training 070): la scheda del blocco precedente. Se c'è, per ogni seduta i
   // cardini di quella scheda (_trainGenCardini) hanno la precedenza sulla rotazione nei
   // soli slot compound; tutto il resto ruota come sempre. null = comportamento storico.
+  // lavoroOggi (revisione di 480+490, solo per «Rinnova il riscaldamento»): { idSeduta: [codici] } degli
+  // esercizi di lavoro di oggi in memoria, sostituti di «Cambia per oggi» compresi: il riscaldamento li salta.
   // Try/catch globale: qualunque errore → log + return null.
   // NON deve mai bloccare il flusso chiamante (onboarding deve completare).
   //
@@ -2531,12 +2537,12 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       // _TRAIN_GEN_BONUS_BY_MACRO e del blocco bonus). Carico leggero, 1-2 serie,
       // mai a cedimento. Pescata da poolRiscaldamento (uso='riscaldamento'), NON
       // dal poolPrincipali → non collide con la selezione esercizi né con i bonus.
-      // Campo SEPARATO `warmup` (come `finisher`): NON passa per cautele/ordering
-      // né per _trainGenValidateCodes, e sopravvive allo strip _diag del save.
-      // RENDERING in app demandato alla FASE 3.
-      // NB design: la cuffia EX101 ha zone_rischio vuoto → nessuna cautela da
-      // applicare in FASE 1. Quando il warm-up crescerà (FASE 3) si valuterà se
-      // far passare anche il warm-up per _trainGenApplyCautions.
+      // Campo SEPARATO `warmup` (come `finisher`): NON passa per ordering né per
+      // _trainGenValidateCodes, e sopravvive allo strip _diag del save.
+      // Le cautele sì, dalla revisione di 480+490 (24 ottobre 2026): oggi tutte le righe di
+      // riscaldamento hanno zone_rischio (anche EX101: «spalle») e corse e skip hanno «ginocchia»;
+      // _trainGenPickWarmupVoce preferisce chi non tocca le limitazioni, e chi le tocca entra solo
+      // con l'adattamento scritto, che _trainGenMapWarmupExercise mette nell'avviso.
       const warmupExs = [];
       const _macroSessione = (splitType === 'lower' || splitType === 'legs') ? 'lower'
                            : (splitType === 'upper' || splitType === 'push' || splitType === 'pull') ? 'upper'
@@ -2554,20 +2560,29 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
       const _vociSeduta = _TRAIN_GEN_WARM_VOCI[_macroSessione] || [];
       if (_vociSeduta.length && pools.poolRiscaldamento.some(ex => _trainGenZone(ex).length)) {
         const _usedW = new Set(exercises.map(ex => ex && ex.codice).filter(Boolean));
-        // «Rinnova il riscaldamento» scrive solo il riscaldamento: quel giorno si fanno gli esercizi della scheda in uso
-        if (source === 'rinnova-riscaldamento') (primaPerSeduta.get(sessionIdPrev) || []).forEach(c => _usedW.add(c));
+        // «Rinnova il riscaldamento» scrive solo il riscaldamento: quel giorno si fanno gli esercizi della scheda in uso,
+        // quelli della riga riletta e, se oggi c'è un «Cambia per oggi», anche il sostituto (lavoroOggi: revisione di 480+490)
+        if (source === 'rinnova-riscaldamento') {
+          (primaPerSeduta.get(sessionIdPrev) || []).forEach(c => _usedW.add(c));
+          ((lavoroOggi && lavoroOggi[sessionIdPrev]) || []).forEach(c => _usedW.add(c));
+        }
         _vociSeduta.forEach(voce => {
-          const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupVoce(p, voce, occurrenceIdx + rigenIdx, _usedW));
+          // Prima una riga sicura, anche se è già in un'altra seduta o nel blocco prima (la sicurezza viene prima
+          // della varietà); solo se la voce non ne ha, una con l'adattamento. Il ripiego solo se la voce non ha
+          // nessuna riga nel pool (non quando le sue righe c'erano nel blocco prima).
+          const _pickVoce = (v) => conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupVoce(p, v, occurrenceIdx + rigenIdx, _usedW, limitazioni, true))
+            || conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupVoce(p, v, occurrenceIdx + rigenIdx, _usedW, limitazioni, false));
+          const _exW = _pickVoce(voce) || (voce.ripiego ? _pickVoce(voce.ripiego) : null);
           if (!_exW) { console.warn(`[train-gen] ${sessionLabel}: nessun riscaldamento per la voce ${JSON.stringify(voce)} nel poolRiscaldamento`); return; }
           _usedW.add(_exW.codice);
-          const _w = _trainGenMapWarmupExercise(_exW);
+          const _w = _trainGenMapWarmupExercise(_exW, limitazioni);
           if (_w) warmupExs.push(_w);
         });
       } else if (_macroSessione === 'upper') {
         // FASE 1: cuffia dei rotatori (prehab spalla). Pescata per gruppo_target.
         const _cuffia = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmup(p, 'cuffia rotatori', occurrenceIdx + rigenIdx));
         if (_cuffia) {
-          const _w = _trainGenMapWarmupExercise(_cuffia);
+          const _w = _trainGenMapWarmupExercise(_cuffia, limitazioni);
           if (_w) warmupExs.push(_w);
         } else {
           console.warn(`[train-gen] ${sessionLabel}: cuffia rotatori non disponibile nel poolRiscaldamento (warm-up Upper senza prehab cuffia)`);
@@ -2584,7 +2599,7 @@ async function generateTrainingProgram({ source = 'onboarding', force = false, d
           const _exW = conPreferenzaWarm(pools.poolRiscaldamento, p => _trainGenPickWarmupByMuscle(p, _LOWER_WARM_MUSCLES, occurrenceIdx + _k + rigenIdx, _usedW));
           if (!_exW) break;
           _usedW.add(_exW.codice);
-          const _w = _trainGenMapWarmupExercise(_exW);
+          const _w = _trainGenMapWarmupExercise(_exW, limitazioni);
           if (_w) warmupExs.push(_w);
         }
         if (warmupExs.length === 0) {
@@ -3424,22 +3439,28 @@ function _trainGenPickIsoByGruppoTarget(pool, gruppoTarget, usedSoFar, sessionIn
 // _cleanCatalogText in BLOCCO 3). Carico leggero / alte reps / mai a cedimento:
 // è prehab, non lavoro. Il RENDERING in app è demandato alla FASE 3 (countdown
 // 1 min/esercizio + 10 s di pausa), che leggerà session.warmup[].
-function _trainGenMapWarmupExercise(cat) {
+function _trainGenMapWarmupExercise(cat, limitazioni) {
   if (!cat) return null;
   // Revisione di 480+490: chi si fa un lato alla volta (unilaterale = si: allungamenti del polpaccio e del
   // polso, cerchi con un braccio) ha 30 secondi per lato col cambio lato nel flusso, non 60 su un lato solo
   // (e un allungamento fermo sotto i 30-60 s per muscolo non toglie forza: Kay e Blazevich 2012).
   const perLato = String(cat.unilaterale || '').toLowerCase().trim() === 'si';
+  // Le righe di recupero entrate nel riscaldamento (uso con «recupero»: gli allungamenti fermi di polsi e polpacci)
+  // durano 30 secondi anche quando si fanno coi due lati insieme: mai 60 sullo stesso muscolo prima dei pesi.
+  const fermo = String(cat.uso || '').toLowerCase().split(';').map(s => s.trim()).includes('recupero');
   // E chi entra col surrogato (la cuffia al cavo, a casa con l'elastico) mostra l'attrezzo e la nota del
   // surrogato, con le stesse regole degli esercizi di lavoro; loadActiveScheda le rispetta (isSurrogato).
+  // Con un conflitto fra le zone a rischio e le limitazioni della persona l'adattamento del catalogo va
+  // nell'avviso (`alert`), come per il lavoro: «ginocchia: limita la corsa a una marcia sul posto».
   const surr = !!cat._surrogato;
-  const t = _trainGenTestiEsercizio(cat, { isSurrogato: surr });
+  const cautionNote = (_trainGenConflitto(cat, limitazioni).length && cat.adattamento) ? String(cat.adattamento).trim() : '';
+  const t = _trainGenTestiEsercizio(cat, { isSurrogato: surr, cautionNote });
   return {
     codice:       cat.codice,
     name:         cat.nome,
     eq:           (surr && cat.surrogato_attrezzo) ? String(cat.surrogato_attrezzo).trim() : String(cat.attrezzo || '').trim(),
     sets:         2,            // brief FASE 1: 1-2 serie → default 2
-    reps:         perLato ? '30 sec per lato' : '15-20',   // carico leggero, alte reps, mai a cedimento
+    reps:         perLato ? '30 sec per lato' : fermo ? '30 sec' : '15-20',   // carico leggero, alte reps, mai a cedimento
     setup:        t.setup,
     execution:    t.execution,
     commonErrors: t.commonErrors,
@@ -3448,6 +3469,7 @@ function _trainGenMapWarmupExercise(cat) {
     note:         'Riscaldamento · carico leggero, mai a cedimento',
     warmup:       true,         // marker: item di warm-up, non esercizio di lavoro
     ...(surr ? { isSurrogato: true } : {}),
+    ...(t.alert ? { alert: t.alert } : {}),
   };
 }
 
@@ -3508,38 +3530,42 @@ function _trainGenPickWarmupByMuscle(pool, muscleKeywords, sessionIndex, usedWar
 //     gruppo_target (EX101 / EX416, a casa con l'elastico), il cuore del programma di Andersson 2017.
 // Una voce è { pattern } o { zona } o { gruppo }.
 const _TRAIN_GEN_WARM_VOCI = {
-  upper: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'colonna toracica' }, { zona:'scapole' }, { gruppo:'cuffia rotatori' }, { zona:'polsi' }],
+  // la cuffia, senza elastico né cavo, ripiega su una voce «spalle» a corpo libero (rotazioni, cerchi)
+  upper: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'colonna toracica' }, { zona:'scapole' }, { gruppo:'cuffia rotatori', ripiego:{ zona:'spalle' } }, { zona:'polsi' }],
   lower: [{ pattern:'cardio_metabolico' }, { pattern:'cardio_metabolico' }, { zona:'anche' }, { zona:'ginocchia' }, { zona:'caviglie' }],
 };
-
-// Una voce del riscaldamento → la riga che la copre (null se non ce n'è): zona, gruppo_target o pattern.
-function _trainGenPickWarmupVoce(pool, voce, sessionIndex, usedWarmup) {
-  if (!voce) return null;
-  if (voce.zona) return _trainGenPickWarmupByZona(pool, voce.zona, sessionIndex, usedWarmup);
-  if (voce.gruppo) return _trainGenPickWarmup(pool, voce.gruppo, sessionIndex, usedWarmup);
-  if (!voce.pattern || !Array.isArray(pool)) return null;
-  const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
-  const candidates = pool.filter(ex => !used.has(ex.codice) && _normPattern(ex.pattern) === voce.pattern);
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
-  const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;
-  return candidates[idx];
-}
 
 // Le zone di una riga di catalogo (lista ';', minuscolo). [] se la colonna manca o è vuota.
 function _trainGenZone(ex) {
   return String((ex && ex.zona) || '').toLowerCase().split(';').map(s => s.trim()).filter(Boolean);
 }
 
-// _trainGenPickWarmupByZona — pesca UN esercizio dal poolRiscaldamento che ha `zona` fra le sue
-// zone, round-robin sul codice via sessionIndex (A diversa da B), evitando chi è già nel
-// riscaldamento della seduta (usedWarmup). null se la zona non ha righe (no crash).
-function _trainGenPickWarmupByZona(pool, zona, sessionIndex, usedWarmup) {
-  if (!Array.isArray(pool) || pool.length === 0) return null;
-  const z = String(zona || '').toLowerCase().trim();
-  if (!z) return null;
+// Le zone a rischio di una riga che toccano le limitazioni della persona ([] se nessuna).
+function _trainGenConflitto(ex, limitazioni) {
+  const lim = new Set((Array.isArray(limitazioni) ? limitazioni : []).map(l => String(l).toLowerCase().trim()).filter(Boolean));
+  if (!lim.size) return [];
+  return String((ex && ex.zone_rischio) || '').toLowerCase().split(';').map(s => s.trim()).filter(z => z && lim.has(z));
+}
+
+// _trainGenPickWarmupVoce — UNA riga per una voce del riscaldamento (zona, gruppo_target o pattern), a rotazione
+// sul codice via sessionIndex (A diversa da B), evitando chi è già nella seduta (usedWarmup). null se non ce n'è.
+// Le cautele come per il lavoro (revisione di 480+490: Ignazio ha «lombare, ginocchia» nelle limitazioni, e corse
+// e skip hanno tutte «ginocchia» fra le zone a rischio): prima le righe senza conflitto (la preferenza sicurezza di
+// _trainGenPickByPattern); se non ce ne sono, quelle con un adattamento scritto, che la voce porta come avviso
+// (_trainGenMapWarmupExercise); una riga in conflitto senza adattamento non entra.
+function _trainGenPickWarmupVoce(pool, voce, sessionIndex, usedWarmup, limitazioni, soloSicure) {
+  if (!voce || !Array.isArray(pool) || pool.length === 0) return null;
   const used = (usedWarmup instanceof Set) ? usedWarmup : new Set(usedWarmup || []);
-  const candidates = pool.filter(ex => !used.has(ex.codice) && _trainGenZone(ex).includes(z));
+  const zona = String(voce.zona || '').toLowerCase().trim();
+  const gruppo = String(voce.gruppo || '').toLowerCase().trim();
+  const copre = zona ? (ex => _trainGenZone(ex).includes(zona))
+    : gruppo ? (ex => String(ex.gruppo_target || '').toLowerCase().split(';').map(s => s.trim()).includes(gruppo))
+    : voce.pattern ? (ex => _normPattern(ex.pattern) === voce.pattern) : null;
+  if (!copre) return null;
+  let candidates = pool.filter(ex => !used.has(ex.codice) && copre(ex))
+    .filter(ex => !_trainGenConflitto(ex, limitazioni).length || String(ex.adattamento || '').trim());
+  const sicure = candidates.filter(ex => !_trainGenConflitto(ex, limitazioni).length);
+  if (sicure.length || soloSicure) candidates = sicure;
   if (candidates.length === 0) return null;
   candidates.sort((a, b) => String(a.codice || '').localeCompare(String(b.codice || '')));
   const idx = ((Number(sessionIndex) || 0) % candidates.length + candidates.length) % candidates.length;

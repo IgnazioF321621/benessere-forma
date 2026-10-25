@@ -76,7 +76,8 @@ async function nuovo(o){
     atteso('surrogato · nota di sicurezza vuota a catalogo: resta l\'alert di prima', a.ex('Panca piana bilanciere').alert, 'Nota panca');
     atteso('campi vuoti a catalogo · resta lo snapshot', [a.ex('Stacco rumeno').setup, a.ex('Stacco rumeno').execution, a.ex('Stacco rumeno').alert], [['Setup vecchio'], ['Esecuzione vecchia'], 'Nota vecchia']);
     atteso('codice sparito dal catalogo · resta lo snapshot', a.ex('Esercizio sparito').execution, ['Resta']);
-    atteso('riscaldamento · elenchi nuovi, niente alert (non è nel suo formato)', [a.sess.warmup[0].setup, a.sess.warmup[0].muscles, 'alert' in a.sess.warmup[0]], [['Nuovo setup'], ['anca', 'glutei'], false]);
+    // dalla revisione di 480+490 il riscaldamento ha l'avviso come il lavoro (nota di sicurezza e adattamento per le limitazioni)
+    atteso('riscaldamento · elenchi nuovi e l\'avviso dal catalogo, come il lavoro', [a.sess.warmup[0].setup, a.sess.warmup[0].muscles, a.sess.warmup[0].alert], [['Nuovo setup'], ['anca', 'glutei'], 'Nota warmup']);
     atteso('carry · elenchi nuovi, niente alert', [a.sess.carry_conclusivo.execution, 'alert' in a.sess.carry_conclusivo], [['Cammina'], false]);
     atteso('finisher · testi e alert nuovi', [a.sess.finisher.exercises[0].commonErrors, a.sess.finisher.exercises[0].alert], [['Bacino che cade'], 'Nuova nota plank']);
     atteso('una lettura sola del catalogo in loadActiveScheda, coi campi dei testi', a.supa._calls.filter(c => c.table === 'esercizi_catalog').map(c => /setup, esecuzione, errori, nota_sicurezza/.test(c.cols)), [true]);

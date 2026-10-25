@@ -3233,6 +3233,11 @@ function _rigaSpiegazione(ex, size){
   const t = spiegazioneEsercizio(ex);
   return t ? `<div class="ex-spiegazione" style="font-size:${size||11}px;color:var(--t3);font-family:var(--font-sans);font-weight:400;line-height:1.3;margin-top:2px;">${esc(t)}</div>` : '';
 }
+// L'adattamento per le zone a rischio della persona, sotto il nome di una voce del riscaldamento (revisione di
+// 480+490: Ignazio ha ginocchia e lombare nelle limitazioni; il generatore lo mette in `alert`, come per il lavoro)
+function _rigaAdattamento(ex){
+  return (ex && ex.alert) ? `<div class="ex-adattamento" style="font-size:11px;color:var(--t2);font-family:var(--font-sans);font-weight:600;line-height:1.3;margin-top:3px;">⚠ ${esc(ex.alert)}</div>` : '';
+}
 
 // Le GIF del Blocco Attivazione: il blocco è fisso (ACTIVATION_BLOCK) e non viene dal catalogo. Il Vacuum ha
 // solo lo slug della biblioteca (nessuna riga di catalogo): l'indirizzo si costruisce da `storage_path` letto
@@ -3436,10 +3441,10 @@ function _renderWarmupSection(s){
     const ss = String(f.remaining % 60).padStart(2,'0');
     const dur = _isIsoPause ? WARMUP_ISO_PAUSE_SEC
       : (isWork && f.isoPhase) ? WARMUP_ISO_SIDE_SEC
-      : isWork ? WARMUP_WORK_SEC : WARMUP_REST_SEC;
+      : isWork ? _warmupDurata(cur) : WARMUP_REST_SEC;
     const pct = dur ? Math.round((dur - f.remaining)/dur*100) : 0;
     const titleLine = isWork
-      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}${_rigaSpiegazione(cur, 13)}</div>`
+      ? `<div style="font-size:22px;font-weight:700;color:#1A1A1A;line-height:1.2;margin-bottom:14px;">${esc(cur ? cur.name : '')}${_rigaSpiegazione(cur, 13)}${_rigaAdattamento(cur)}</div>`
       : `<div style="font-size:18px;font-weight:700;color:#1A1A1A;line-height:1.25;margin-bottom:14px;">${next ? 'Prossimo: ' + esc(next.name) : 'Cambia posizione'}</div>`;
     const playPauseBtn = f.running
       ? `<button onclick="warmupFlowPause()" title="Pausa" style="background:${accentFinal};color:#fff;border:none;border-radius:10px;width:52px;height:52px;cursor:pointer;font-size:20px;font-weight:700;">⏸</button>`
@@ -3498,9 +3503,9 @@ function _renderWarmupSection(s){
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:${bg};border:${border};border-radius:8px;margin-bottom:6px;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:2px;"><span style="font-size:13px;${nameStyle}">${esc(w.name)}${eq}</span>${infoIcon}</div>
-          ${_rigaSpiegazione(w)}
+          ${_rigaSpiegazione(w)}${_rigaAdattamento(w)}
         </div>
-        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${_warmupPerLato(w) ? `${WARMUP_ISO_SIDE_SEC}s per lato` : '60s'}</div>
+        <div style="font-size:11px;font-family:var(--font-mono);color:${isCurrent ? '#C4880A' : 'var(--t2)'};font-weight:700;flex-shrink:0;">${_warmupPerLato(w) ? `${WARMUP_ISO_SIDE_SEC}s per lato` : `${_warmupDurata(w)}s`}</div>
       </div>`;
   }).join('');
 
@@ -5292,6 +5297,7 @@ function renderTraining(){
           </div>
           <button onclick="closeWarmupInfo()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
+        ${w.alert ? `<div class="modal-alert">${esc(w.alert)}</div>` : ''}
         ${setupList}${execList}${errList}${muscList}
         ${anySection ? '' : `<div style="font-size:13px;color:var(--t3);font-family:var(--font-sans);">Nessun dettaglio disponibile per questo esercizio.</div>`}
       </div>
@@ -6704,6 +6710,13 @@ function _warmupPerLato(w){
   const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
   return !!(pr && pr.kind === 'seconds' && pr.perLato);
 }
+// La durata di una voce non per lato: «30 sec» per gli allungamenti fermi (il generatore la scrive così per le
+// righe di recupero entrate nel riscaldamento: sotto i 60 s per muscolo la forza non cala, Kay e Blazevich 2012),
+// 1 minuto per tutto il resto.
+function _warmupDurata(w){
+  const pr = (w && w.reps && typeof parseRepsRange === 'function') ? parseRepsRange(w.reps) : null;
+  return (pr && pr.kind === 'seconds' && !pr.perLato && pr.min > 0) ? Math.min(pr.min, WARMUP_WORK_SEC) : WARMUP_WORK_SEC;
+}
 // Inizializza isoPhase per l'item corrente se è perLato.
 // Chiamata all'avvio del flow e ad ogni avanzamento idx.
 function _warmupFlowInitIsoPhase(){
@@ -6715,7 +6728,7 @@ function _warmupFlowInitIsoPhase(){
     f.remaining = WARMUP_ISO_SIDE_SEC;
   } else {
     f.isoPhase = null;
-    f.remaining = WARMUP_WORK_SEC;
+    f.remaining = _warmupDurata(cur);
   }
 }
 

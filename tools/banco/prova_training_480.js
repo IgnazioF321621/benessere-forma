@@ -51,6 +51,11 @@ const vere = dati.righe.map(r => { const o = { ...base }; dati.colonne.forEach((
 // la colonna unilaterale, letta a parte (revisione di 480+490): «si» = un lato alla volta
 vere.forEach(r => { r.unilaterale = dati.unilaterale.si.includes(r.codice) ? 'si' : dati.unilaterale.alternato.includes(r.codice) ? 'alternato' : 'no'; });
 vere.forEach(r => { if(dati.nota_surrogato[r.codice]) r.nota_surrogato = dati.nota_surrogato[r.codice]; });
+// zone a rischio e adattamenti veri (seconda revisione: Ignazio ha «lombare, ginocchia» nelle limitazioni)
+const cautele = JSON.parse(fs.readFileSync(path.join(__dirname, 'dati/catalogo_riscaldamento_cautele_20261024.json'), 'utf8')).righe;
+vere.forEach(r => { if(cautele[r.codice]) { r.zone_rischio = cautele[r.codice][0]; r.adattamento = cautele[r.codice][1]; } });
+const LIMITAZIONI = ['lombare', 'ginocchia'];
+const conflitto = (r) => String(r.zone_rischio || '').split(';').map(s => s.trim()).some(z => LIMITAZIONI.includes(z));
 const catalogoSenzaZone = [...principali, ...vere];
 // dopo il sync: la zona di ogni riga, e «riscaldamento» in uso per le candidate che entrano
 const conZone = () => catalogoSenzaZone.map(c => {
@@ -78,7 +83,7 @@ async function nuovo(catalogo, o){
   const t = {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', obiettivo:'ricomposizione', tipo_allenamento:'casa',
       attrezzatura:['elastico','barra','sbarra','panca','fitball','corpo libero','corda doppia','cavigliere'], giorni_allenamento:4,
-      volume_sessione:'completo', note_salute:'Esperienza: avanzato', train_start_date:'2026-10-04' }],
+      volume_sessione:'completo', note_salute:'ferritina bassa · Esperienza: avanzato · Limitazioni: lombare, ginocchia', train_start_date:'2026-10-04' }],
     schede_utente:[...vecchie, { id:'s1', user_id:U, attiva:true, blocco_n:55, scheda: JSON.parse(JSON.stringify(schedaInUso)) }],
     esercizi_catalog: catalogo,
     training_logs:[], training_notes:[], workouts:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[],
@@ -122,7 +127,15 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     const lower = gen.sessioni.filter(s => /^lower/.test(s.id));
     // le righe che Ignazio può fare a casa, zona per zona (lo stesso filtro del generatore)
     const pool = a.win._trainGenFilterPool(conZone(), { tipoAllen:'casa', attrezzatura:a.ST.profile.attrezzatura, livello:'avanzato' }).poolRiscaldamento;
-    const cand = (voce) => pool.filter(r => copre(r, voce)).map(r => r.codice);
+    // le righe possibili per una voce con le cautele: prima chi non tocca lombare e ginocchia, se no chi ha l'adattamento
+    const cand = (voce) => { const tutte = pool.filter(r => copre(r, voce) && (!conflitto(r) || r.adattamento)); const sicure = tutte.filter(r => !conflitto(r)); return (sicure.length ? sicure : tutte).map(r => r.codice); };
+    const vociTutte = gen.sessioni.flatMap(s => (s.warmup || []).map((w, i) => ({ s, w, voce: (/^upper/.test(s.id) ? VOCI.upper : VOCI.lower)[i] })));
+    atteso('1 · cautele: chi tocca lombare o ginocchia entra solo se la sua voce non ha righe sicure', vociTutte.filter(({ w, voce }) => conflitto(rigaDi(w.codice)) && pool.some(r => copre(r, voce) && !conflitto(r))).map(({ s, w }) => s.id + ':' + w.codice), []);
+    // (il testo arriva ripulito da _cleanCatalogText: maiuscola e accenti; si confronta senza)
+    const piano = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+    atteso('1 · e porta l\'adattamento del catalogo nell\'avviso (corse e skip: «ginocchia: …»)', vociTutte.filter(({ w }) => conflitto(rigaDi(w.codice)) && !piano(w.alert).includes(piano(rigaDi(w.codice).adattamento).slice(-30))).map(({ s, w }) => s.id + ':' + w.codice), []);
+    // corse e skip hanno tutte «ginocchia» fra le zone a rischio: nessuna è sicura, ognuna arriva col suo adattamento
+    atteso('1 · le due voci leggere arrivano tutte con l\'adattamento nell\'avviso', gen.sessioni.flatMap(s => (s.warmup || []).slice(0, 2).map(w => !!w.alert)), gen.sessioni.flatMap(() => [true, true]));
     atteso('1 · ogni voce ha almeno una riga che Ignazio può fare a casa', [...new Set([...VOCI.upper, ...VOCI.lower])].filter(v => !cand(v).length), []);
     atteso('1 · Upper: due voci leggere, poi colonna toracica, scapole, la cuffia con l\'elastico, polsi', upper.map(s => vociCoperte(s, VOCI.upper)), upper.map(() => VOCI.upper));
     atteso('1 · Lower: due voci leggere, poi anche, ginocchia, caviglie', lower.map(s => vociCoperte(s, VOCI.lower)), lower.map(() => VOCI.lower));
@@ -133,12 +146,21 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     atteso('1 · mai due volte la stessa riga nella stessa seduta', gen.sessioni.every(s => new Set((s.warmup || []).map(w => w.codice)).size === (s.warmup || []).length), true);
     atteso('1 · e mai un esercizio di lavoro della seduta anche nel suo riscaldamento', gen.sessioni.flatMap(s => (s.warmup || []).filter(w => s.exercises.some(e => e.codice === w.codice)).map(w => s.id + ':' + w.codice)), []);
     // A e B: per ogni zona con più di una riga possibile, la B non ripete la A
-    const ripetute = (sedute, voci) => voci.filter((v, i) => cand(v).length > 1 && sedute[0].warmup[i] && sedute[1].warmup[i] && sedute[0].warmup[i].codice === sedute[1].warmup[i].codice);
-    atteso('1 · A e B: voce per voce esercizi diversi, dove la voce ha più di una riga', [ripetute(upper, VOCI.upper), ripetute(lower, VOCI.lower)], [[], []]);
+    // ripetere è giusto solo se per quella voce non resta un'altra riga possibile, fuori da quelle già usate in A e B
+    // (riscaldamento e lavoro: lo stesso codice non va nel riscaldamento e nel lavoro della stessa seduta)
+    const ripetute = (sedute, voci) => voci.filter((v, i) => {
+      const a = sedute[0].warmup[i], b = sedute[1].warmup[i];
+      if (!a || !b || a.codice !== b.codice) return false;
+      const usate = new Set([...sedute[0].warmup, ...sedute[1].warmup, ...sedute[0].exercises, ...sedute[1].exercises].map(w => w.codice));
+      return cand(v).some(c => !usate.has(c));
+    });
+    atteso('1 · A e B: voce per voce esercizi diversi, quando la voce ha ancora una riga libera', [ripetute(upper, VOCI.upper), ripetute(lower, VOCI.lower)], [[], []]);
     atteso('1 · ogni voce porta la sua riga in italiano quando il catalogo ce l\'ha', gen.sessioni.flatMap(s => s.warmup || []).filter(w => { const r = catalogoSenzaZone.find(x => x.codice === w.codice); return r.spiegazione && w.spiegazione !== r.spiegazione; }).map(w => w.codice), []);
     // revisione: chi si fa un lato alla volta ha 30 secondi per lato (il flusso cambia lato), gli altri 1 minuto
     const voci = gen.sessioni.flatMap(s => s.warmup || []);
-    atteso('1 · tempi: «30 sec per lato» chi è unilaterale = si, 15-20 leggero gli altri; mai a cedimento', voci.filter(w => (w.reps === '30 sec per lato') !== (rigaDi(w.codice).unilaterale === 'si')).map(w => w.codice + ' ' + w.reps), []);
+    // e gli allungamenti fermi (righe di recupero entrate nel riscaldamento) 30 secondi anche coi due lati insieme
+    const atteseReps = (w) => { const r = conZone().find(x => x.codice === w.codice) || {}; return r.unilaterale === 'si' ? '30 sec per lato' : String(r.uso || '').split(';').includes('recupero') ? '30 sec' : '15-20'; };
+    atteso('1 · tempi: «30 sec per lato» chi è unilaterale = si, «30 sec» gli allungamenti fermi, 15-20 leggero gli altri', voci.filter(w => w.reps !== atteseReps(w)).map(w => w.codice + ' ' + w.reps), []);
     atteso('1 · e almeno una voce per lato c\'è davvero (allungamenti del polpaccio, cerchi con un braccio…)', voci.some(w => w.reps === '30 sec per lato'), true);
     atteso('1 · dryRun: nessuna scrittura su schede_utente', a.supa._calls.filter(c => c.table === 'schede_utente' && c.op !== 'select').length, 0);
   }
@@ -240,14 +262,60 @@ const vociCoperte = (s, voci) => s.warmup.map((w, i) => copre(rigaDi(w.codice), 
     // gli esercizi per lato hanno 30 secondi per lato nel flusso, col cambio lato
     const a = await nuovo(conZone());
     const lA = a.win.getTrainingSession('lowerA');
-    lA.warmup = [{ codice:'EX823', name:'Step Achilles stretch', sets:2, reps:'30 sec per lato', warmup:true }, { codice:'EX793', name:'Seated ankle circles', sets:2, reps:'15-20', warmup:true }];
+    lA.warmup = [{ codice:'EX823', name:'Step Achilles stretch', sets:2, reps:'30 sec per lato', warmup:true }, { codice:'EX793', name:'Seated ankle circles', sets:2, reps:'15-20', warmup:true },
+      { codice:'EX784', name:'Prayer stretch', sets:2, reps:'30 sec', warmup:true }];
     a.ST.page = 'training'; a.ST.trainSession = 'lowerA'; a.ST.trainAnticipato = 'lowerA'; a.ST.lastLoggedSets = {}; a.ST.aiCue = a.ST.aiCue || {};
     a.win.renderTraining();
     const pg = a.win.document.getElementById('page-training').textContent.replace(/\s+/g, ' ');
-    atteso('5 · nella lista: «30s per lato» per l\'allungamento del polpaccio, 60s per gli altri', [/Step Achilles stretch.{0,80}30s per lato/.test(pg), /Seated ankle circles.{0,80}60s/.test(pg)], [true, true]);
+    atteso('5 · nella lista: «30s per lato» per il polpaccio, 30s per l\'allungamento dei polsi, 60s per gli altri', [/Step Achilles stretch.{0,80}30s per lato/.test(pg), /Seated ankle circles.{0,80}60s/.test(pg), /Prayer stretch.{0,80}30s/.test(pg)], [true, true, true]);
     a.win.warmupFlowStart();
     atteso('5 · il flusso parte dal lato sinistro, 30 secondi', [a.ST.trainWarmupFlow.isoPhase, a.ST.trainWarmupFlow.remaining], ['A', 30]);
     a.win.warmupFlowEnd();
+    a.ST.trainWarmupFlow = null;
+    lA.warmup = [lA.warmup[2]];
+    a.win.warmupFlowStart();
+    atteso('5 · l\'allungamento fermo coi due lati insieme dura 30 secondi, senza cambio lato', [a.ST.trainWarmupFlow.isoPhase, a.ST.trainWarmupFlow.remaining], [null, 30]);
+    a.win.warmupFlowEnd();
+  }
+  // 6 · la seconda revisione di 480+490
+  {
+    // «Cambia per oggi» con un sostituto che è anche di riscaldamento (zona ginocchia), poi «Rinnova»: né il sostituto né
+    // l'originale nel riscaldamento di Lower A, con ogni rotazione
+    const doppi = [];
+    for (const sost of ['EX637', 'EX647', 'EX649', 'EX656']) {
+      for (let n = 0; n < 4; n++) {
+        const a = await nuovo(conZone(), { altreSchede: n, veri: true });
+        await a.win.cambiaPerOggi('lowerA', 'Squat elastico', sost);
+        a.win.chiediConferma = async () => true;
+        await a.win.rinnovaRiscaldamento();
+        const lA = a.win.getTrainingSession('lowerA');
+        const lavoro = (lA.exercises || []).map(e => e.codice);
+        (lA.warmup || []).forEach(w => { if (lavoro.includes(w.codice) || w.codice === 'EX040') doppi.push(sost + '/' + n + ':' + w.codice); });
+      }
+    }
+    atteso('6 · sostituto di oggi (EX637, EX647, EX649, EX656) e «Rinnova»: mai lo stesso codice nel riscaldamento e nel lavoro', doppi, []);
+  }
+  {
+    // nella seduta l'adattamento si vede sotto la voce del riscaldamento e nella scheda «come si esegue»
+    const a = await nuovo(conZone());
+    const gen = await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
+    const lA = a.win.getTrainingSession('lowerA');
+    lA.warmup = gen.sessioni.find(s => s.id === 'lowerA').warmup;
+    a.ST.page = 'training'; a.ST.trainSession = 'lowerA'; a.ST.trainAnticipato = 'lowerA'; a.ST.lastLoggedSets = {}; a.ST.aiCue = a.ST.aiCue || {};
+    a.win.renderTraining();
+    const righe = [...a.win.document.querySelectorAll('.ex-adattamento')].map(e => e.textContent);
+    atteso('6 · nella lista del riscaldamento c\'è l\'adattamento per le voci in conflitto', [righe.length >= 2, righe.every(t => /^⚠ /.test(t))], [true, true]);
+    a.win.openWarmupInfo(0);
+    atteso('6 · e nella scheda «come si esegue» della prima voce', !!a.win.document.querySelector('.info-modal .modal-alert'), true);
+    a.win.closeWarmupInfo();
+  }
+  {
+    // a casa senza elastico la cuffia non c'è: la voce ripiega su «spalle» a corpo libero, invece di restare vuota
+    const a = await nuovo(conZone());
+    a.ST.profile.attrezzatura = ['corpo libero', 'sbarra', 'panca'];
+    const gen = await a.win.generateTrainingProgram({ source:'prova', force:true, dryRun:true });
+    const upper = gen.sessioni.filter(s => /^upper/.test(s.id));
+    atteso('6 · senza elastico: 6 voci nell\'Upper, la quinta è una voce «spalle»', upper.map(s => [s.warmup.length, zoneDi(s.warmup[4] && s.warmup[4].codice).includes('spalle')]), upper.map(() => [6, true]));
   }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
