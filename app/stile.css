@@ -2599,3 +2599,6 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 .smart-porzioni{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
 .smart-porz{height:36px;border:0.5px solid var(--s3);background:var(--s2);color:var(--t1);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:14px;cursor:pointer;}
 .smart-porz.on{background:var(--acc);border-color:var(--acc);color:var(--bianco);}
+/* Nutrition 230: «Modifica» sul pasto, un bottone vero grande come un dito (44 pt), al posto della matita da 16 px */
+button.meal-edit-btn.meal-modifica{min-height:44px;min-width:44px;padding:0 12px;border:1px solid var(--acc);border-radius:var(--r-pill);background:var(--s1);color:var(--acc);font-family:var(--font-sans);font-size:12px;font-weight:600;cursor:pointer;align-self:center;}
+button.meal-edit-btn.meal-modifica:active{background:var(--acc-lt);}

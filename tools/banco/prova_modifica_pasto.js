@@ -3,7 +3,7 @@
 // pasto vecchio senza ingredienti diventava un ingrediente con quantità 0; il campo orario mostrava l'ora di adesso e la
 // salvava sopra quella del pasto; toccare la fascia mentre si modificava svuotava il form. Qui: quantità in vista, valori
 // in proporzione subito e senza coach, porzione dell'intero pasto, pasti vecchi e giorni passati, orario e fascia tenuti,
-// senza rete in coda.
+// senza rete in coda. Sezioni 9 e 10: le due revisioni (Nutrition 220 corretta e Nutrition 230, casi rari).
 //   node tools/banco/prova_modifica_pasto.js
 process.env.TZ = 'Europe/Rome';
 const { boot } = require('./banco');
@@ -52,10 +52,14 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
 
   // 1 · la matita apre il pasto: quantità in vista senza aprire l'ingrediente, orario del pasto
   ST.logTime = '09:15';   // l'ultima scelta fatta per un altro pasto
+  const modificaPrima = !!d.querySelector('#sw-m1 button.meal-modifica[aria-label="Modifica pasto"]');
   await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
   const riso = voce('riso'), pollo = voce('pollo');
   atteso('apertura · ingredienti chiusi ma quantità in vista per tutti e due', [riso.expanded, !!d.querySelector(`[data-row-qty="${riso.tempId}"]`), d.querySelector(`[data-row-qty="${pollo.tempId}"]`) && d.querySelector(`[data-row-qty="${pollo.tempId}"]`).value], [false, true, '120']);
-  atteso('apertura · campo orario con l\'ora del pasto (13:00), non l\'ultima scelta', d.getElementById('log-time') && d.getElementById('log-time').value, '13:00');
+  const oraCard = (id) => { const e = d.querySelector(`#sw-${id} input[type=time]`); return e ? e.value : null; };
+  atteso('apertura (Nutrition 230) · la modifica è dentro la card del pasto, il modulo in cima resta chiuso', [!!d.querySelector('#sw-m1 [data-row-qty]'), d.querySelectorAll('[data-row-qty]').length, ST.logOpen, !!d.querySelector('.oggi-v3-cta-row')], [true, 2, false, true]);
+  atteso('apertura · nella card l\'ora del pasto (13:00), non l\'ultima scelta', oraCard('m1'), '13:00');
+  atteso('apertura · al posto della matita un bottone «Modifica», e in modifica non c\'è più', [modificaPrima, !d.querySelector('#sw-m1 .meal-modifica'), /Salva modifiche/.test(d.querySelector('#sw-m1').textContent), /Annulla/.test(d.querySelector('#sw-m1').textContent)], [true, true, true, true]);
   atteso('apertura · campo quantità a 16 px (l\'iPhone non ingrandisce)', /\.smart-qta-inp\{[^}]*font-size:16px/.test(require('fs').readFileSync(__dirname + '/../../app/stile.css', 'utf8')), true);
 
   // 2 · scrivo 160 g di riso: calorie e macro subito, il totale a schermo cambia senza ridisegnare, niente coach
@@ -101,14 +105,14 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   ST.logTime = '13:00';
   await win.smartOpenEdit(IERI, 'm2'); await attendi(5);
   const pizza = voce('pizza margherita');
-  atteso('pasto vecchio · un ingrediente da 1 porzione con i valori del pasto', [ST.smartForm.items.length, pizza.quantity, pizza.unit, pizza.kcal, d.getElementById('log-time').value], [1, 1, 'pz', 800, '20:30']);
+  atteso('pasto vecchio · un ingrediente da 1 porzione con i valori del pasto', [ST.smartForm.items.length, pizza.quantity, pizza.unit, pizza.kcal, oraCard('m2')], [1, 1, 'pz', 800, '20:30']);
   win.smartPorzione(0.5);
   atteso('pasto vecchio · ½ porzione = 400 kcal, 20 P, 45 C, 15 G', [pizza.quantity, pizza.kcal, pizza.protein, pizza.carbs, pizza.fat], [0.5, 400, 20, 45, 15]);
   win.smartQtaPasso(pizza.tempId, 1);
   atteso('pasto vecchio · + va di mezza porzione (1 = 800 kcal)', [pizza.quantity, pizza.kcal], [1, 800]);
   win.smartQtaPasso(pizza.tempId, -1);
   win.setLogSlot('snack_pomeriggio');
-  atteso('cambio fascia mentre modifico · il form resta, la fascia nuova va salvata, l\'orario resta', [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.smartForm.editingSlot, d.getElementById('log-time').value], ['m2', 1, 'snack_pomeriggio', '20:30']);
+  atteso('cambio fascia mentre modifico · il form resta, la fascia nuova va salvata, l\'orario resta', [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.smartForm.editingSlot, oraCard('m2')], ['m2', 1, 'snack_pomeriggio', '20:30']);
 
   // 7 · senza rete: tutto in coda, a schermo subito; al ritorno si scrive
   t.__rete = false;
@@ -194,6 +198,126 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   win.smartQtaPasso(r3.tempId, 1);
   atteso('cambio unità · dopo la stima la proporzione riparte (2 pz = 100 → 2½ = 125)', [r3.quantity, r3.kcal], [2.5, 125]);
   win.smartResetForm();
+
+  // 10 · Nutrition 230 (25 ottobre 2026): i casi rari della revisione bis
+  const salvaVisibile = () => { const b = d.querySelector('button[onclick="smartSavePasto()"]'); const box = b && b.closest('[data-smart-vis]'); return !!b && (!box || box.style.display !== 'none'); };
+  const porzioniVisibili = () => { const g = d.querySelector('.smart-porzioni'); const box = g && g.closest('[data-smart-vis]'); return !!g && (!box || box.style.display !== 'none'); };
+  // 10a · ¾ di una porzione si salva 0,75 (non 0,8 con le calorie di 0,75) e riaprendo 1 porzione vale ancora 300
+  await win.smartOpenEdit('2026-10-22', 'm3'); await attendi(5);
+  win.smartPorzione(0.75);
+  const n3 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const insP = supa._calls.slice(n3).find(c => c.table === 'meal_items' && c.op === 'insert');
+  const righeP = insP ? [].concat(insP.payload).map(r => [r.quantity, r.unit, r.kcal]) : null;
+  await win.smartOpenEdit('2026-10-22', 'm3'); await attendi(5);
+  const p3 = voce('pasta');
+  win.smartQtaPasso(p3.tempId, 1);
+  atteso('¾ porzione · si salva 0,75 pz e 225 kcal; riaperto, + porta a 1 = 300 (prima 0,8 e 750)', [righeP, p3.quantity, p3.kcal], [[[0.75, 'pz', 225]], 1, 300]);
+  // 10b · pasto a zero e quantità riscritta: totale, «Salva pasto» e porzioni ricompaiono senza ridisegnare
+  win.smartQtaPasso(p3.tempId, -1); win.smartQtaPasso(p3.tempId, -1);
+  const totaleVisibile = () => { const t = d.querySelector('[data-smart-tot="kcal"]'); const box = t && t.closest('[data-smart-vis]'); return !!t && (!box || box.style.display !== 'none'); };
+  const totaleAZero = totaleVisibile(), salvaAZero = salvaVisibile();
+  scrivi(p3, '1');
+  atteso('a zero e riscritto · il totale sparisce a 0 (Salva nella card resta) e torna scrivendo 1 (300 kcal), porzioni anche', [totaleAZero, salvaAZero, p3.kcal, totaleVisibile(), salvaVisibile(), porzioniVisibili()], [false, true, 300, true, true, true]);
+  win.smartResetForm();
+  // 10c · unità cambiata e campo svuotato: l'unità resta quella scelta (m1 è salvato dalla sezione 5: riso 40 g 140, pollo 70 g 128,3)
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  let rs = voce('riso'), pl = voce('pollo');
+  win.smartUpdateField(rs.tempId, 'unit', 'ml');
+  const cv = d.querySelector(`[data-row-qty="${rs.tempId}"]`); cv.value = ''; cv.dispatchEvent(new win.Event('input', { bubbles:true }));   // cancellato col tasto indietro
+  scrivi(rs, '350');
+  atteso('unità cambiata e campo svuotato · resta ml, i valori fermi (non 350 pz)', [rs.quantity, rs.unit, rs.kcal, !!rs._porz], [350, 'ml', 140, false]);
+  win.smartResetForm();
+  // 10d · unità cambiata: la porzione dimezza lo stesso, e tornando all'unità di prima i valori seguono di nuovo
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  rs = voce('riso'); pl = voce('pollo');
+  win.smartUpdateField(rs.tempId, 'unit', 'pz'); scrivi(rs, '2');
+  win.smartPorzione(0.5);
+  atteso('unità cambiata · ½ dimezza anche l\'ingrediente da stimare (1 pz, 70 kcal) e il pollo (35 g, 64,2)', [rs.quantity, rs.kcal, pl.quantity, pl.kcal], [1, 70, 35, 64.2]);
+  win.smartResetForm();
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  rs = voce('riso');
+  win.smartUpdateField(rs.tempId, 'unit', 'pz'); win.smartUpdateField(rs.tempId, 'unit', 'g'); win.renderOggi(); await attendi(5);
+  scrivi(rs, '100');
+  atteso('g → pz → g · 100 g = 350 kcal, niente stima da chiedere', [rs.quantity, rs.unit, rs.kcal, !!rs._daStimare], [100, 'g', 350, false]);
+  win.smartResetForm();
+  // 10e · porzione cambiata mentre il coach stima: la stima vale per 10 g e si scala ai 5 g di adesso
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  win.smartAddEmptyRow();
+  const ol = ST.smartForm.items[ST.smartForm.items.length - 1];
+  d.querySelector(`[data-row-name="${ol.tempId}"]`).value = 'olio'; win.smartUpdateField(ol.tempId, 'name', 'olio');
+  scrivi(ol, '10');
+  let rispondi;
+  win.estimateSingleItem = () => new Promise(r => { rispondi = r; });
+  const inCorso = win.smartRecalcRow(ol.tempId); await attendi(5);
+  win.smartPorzione(0.5);
+  rispondi({ kcal:90, protein:0, carbs:0, fat:10 }); await inCorso; await attendi(5);
+  const durante = [ol.quantity, ol.kcal];
+  win.smartPorzione(1);
+  atteso('stima durante un cambio · 5 g = 45 kcal, poi porzione 1 = 10 g e 90 (prima 180)', [durante, [ol.quantity, ol.kcal]], [[5, 45], [10, 90]]);
+  win.smartResetForm();
+
+  // 10f · Annulla nella card chiude la modifica; «+ Registra pasto» mentre si modifica apre un pasto nuovo, vuoto
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const annulla = [...d.querySelectorAll('#sw-m1 button')].find(b => b.textContent.trim() === 'Annulla');
+  annulla.dispatchEvent(new win.MouseEvent('click', { bubbles:true })); await attendi(5);
+  const dopoAnnulla = [ST.smartForm.editingMealId, d.querySelectorAll('[data-row-qty]').length, !!d.querySelector('#sw-m1 .meal-modifica')];
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  win.openMealLogForm(); await attendi(5);
+  atteso('Annulla nella card chiude la modifica; «+ Registra pasto» apre un pasto nuovo e vuoto', [dopoAnnulla, [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.logOpen, !!d.querySelector('#sw-m1 [data-row-qty]')]], [[null, 0, true], [null, 0, true, false]]);
+  win.smartResetForm(); ST.logOpen = false;
+
+  // 10g · revisione di Nutrition 230: un ingrediente senza nome ma con valori non si salva in silenzio, si chiede
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const avvisi = []; const avvisaVero = win.avvisa; win.avvisa = async (t) => { avvisi.push(t); };
+  const pl2 = voce('pollo'); pl2.name = '';
+  const n4 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const scritteSenzaNome = supa._calls.slice(n4).filter(c => c.op !== 'select').length;
+  atteso('senza nome · non salva, lo chiede e apre la riga per scriverlo', [scritteSenzaNome, avvisi.length, /non ha il nome/.test(avvisi[0] || ''), pl2.expanded, ST.smartForm.editingMealId], [0, 1, true, true, 'm1']);
+  pl2.name = 'pollo';
+  await win.smartSavePasto(); await attendi(5);
+  const updT = supa._calls.slice(n4).find(c => c.table === 'meals' && c.op === 'update');
+  const insT = supa._calls.slice(n4).find(c => c.table === 'meal_items' && c.op === 'insert');
+  const sommaRighe = insT ? Math.round([].concat(insT.payload).reduce((a, r) => a + r.kcal, 0) * 10) / 10 : null;
+  atteso('col nome · si salva, e la testata è la somma delle righe salvate', [!!updT, updT && updT.payload.kcal, sommaRighe], [true, sommaRighe, updT && updT.payload.kcal]);
+  win.avvisa = avvisaVero;
+  // 10h · portato a 0 con − e poi g → pz → g: la base resta, 40 g tornano a 140 kcal
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const r0 = voce('riso');
+  const q0r = r0.quantity, k0r = r0.kcal;
+  while (r0.quantity > 0) win.smartQtaPasso(r0.tempId, -1);
+  win.smartUpdateField(r0.tempId, 'unit', 'pz'); win.smartUpdateField(r0.tempId, 'unit', 'g'); win.renderOggi(); await attendi(5);
+  scrivi(r0, String(q0r));
+  atteso('a zero, poi g → pz → g · riscrivendo la quantità i valori tornano (non 0 kcal)', [r0.quantity, r0.unit, r0.kcal, !!r0._daStimare], [q0r, 'g', k0r, false]);
+  win.smartResetForm();
+
+  // 10i · seconda revisione della card: Annulla e Salva sempre in vista, Analizza che finisce dopo Modifica,
+  // la fascia nella card, niente scorrimento per eliminare in modifica
+  const visibile = (el) => { for (let e = el; e; e = e.parentElement) if (e.style && e.style.display === 'none') return false; return !!el; };
+  const bottone = (sel, txt) => [...d.querySelectorAll(sel + ' button')].find(b => b.textContent.trim() === txt);
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  ST.smartForm.items.forEach(it => { while (it.quantity > 0) win.smartQtaPasso(it.tempId, -1); });
+  atteso('tutto a zero · Annulla e «Salva modifiche» restano in vista (prima sparivano col totale)', [visibile(bottone('#sw-m1', 'Annulla')), visibile(bottone('#sw-m1', 'Salva modifiche'))], [true, true]);
+  win.smartResetForm();
+  // Analizza parte da un pasto nuovo; prima che risponda si apre Modifica su m1: la stima non entra in m1
+  win.openMealLogForm(); win.smartFreeTextChange('pizza');
+  let rispondiA; win.estimateMealItems = () => new Promise(r => { rispondiA = r; });
+  const analisi = win.smartAnalyze(); await attendi(5);
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  rispondiA({ items:[{ name:'pizza', quantity:1, unit:'pz', kcal:800, protein:30, carbs:100, fat:25 }] }); await analisi; await attendi(5);
+  atteso('Analizza finita dopo Modifica · m1 resta riso e pollo, niente pizza', [ST.smartForm.editingMealId, ST.smartForm.items.map(i => i.name).sort()], ['m1', ['pollo', 'riso']]);
+  // la fascia si cambia nella card e si salva
+  const sel = d.querySelector('#sw-m1 select[data-smart-fascia]');
+  sel.value = 'cena'; sel.dispatchEvent(new win.Event('change', { bubbles:true })); await attendi(5);
+  // scorrere per eliminare non sposta la card in modifica
+  win.swipeStart({ touches:[{ clientX:300, clientY:10 }] }, 'm1');
+  win.swipeMove({ touches:[{ clientX:220, clientY:12 }], preventDefault(){} }, 'm1');
+  const spostata = (d.getElementById('si-m1') || {}).style ? d.getElementById('si-m1').style.transform : null;
+  const n5 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const updF = supa._calls.slice(n5).find(c => c.table === 'meals' && c.op === 'update');
+  atteso('fascia nella card · scelta cena e salvata; la card in modifica non scorre', [!!sel, updF && updF.payload.slot, spostata || ''], [true, 'cena', '']);
 
   atteso('zero errori in console', errori(), []);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
