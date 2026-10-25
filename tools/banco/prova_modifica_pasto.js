@@ -266,6 +266,31 @@ atteso('pura · porzione ½ e fattore negativo = zero', [Z.scalaValori({ kcal:50
   atteso('Annulla nella card chiude la modifica; «+ Registra pasto» apre un pasto nuovo e vuoto', [dopoAnnulla, [ST.smartForm.editingMealId, ST.smartForm.items.length, ST.logOpen, !!d.querySelector('#sw-m1 [data-row-qty]')]], [[null, 0, true], [null, 0, true, false]]);
   win.smartResetForm(); ST.logOpen = false;
 
+  // 10g · revisione di Nutrition 230: un ingrediente senza nome ma con valori non si salva in silenzio, si chiede
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const avvisi = []; const avvisaVero = win.avvisa; win.avvisa = async (t) => { avvisi.push(t); };
+  const pl2 = voce('pollo'); pl2.name = '';
+  const n4 = supa._calls.length;
+  await win.smartSavePasto(); await attendi(5);
+  const scritteSenzaNome = supa._calls.slice(n4).filter(c => c.op !== 'select').length;
+  atteso('senza nome · non salva, lo chiede e apre la riga per scriverlo', [scritteSenzaNome, avvisi.length, /non ha il nome/.test(avvisi[0] || ''), pl2.expanded, ST.smartForm.editingMealId], [0, 1, true, true, 'm1']);
+  pl2.name = 'pollo';
+  await win.smartSavePasto(); await attendi(5);
+  const updT = supa._calls.slice(n4).find(c => c.table === 'meals' && c.op === 'update');
+  const insT = supa._calls.slice(n4).find(c => c.table === 'meal_items' && c.op === 'insert');
+  const sommaRighe = insT ? Math.round([].concat(insT.payload).reduce((a, r) => a + r.kcal, 0) * 10) / 10 : null;
+  atteso('col nome · si salva, e la testata è la somma delle righe salvate', [!!updT, updT && updT.payload.kcal, sommaRighe], [true, sommaRighe, updT && updT.payload.kcal]);
+  win.avvisa = avvisaVero;
+  // 10h · portato a 0 con − e poi g → pz → g: la base resta, 40 g tornano a 140 kcal
+  await win.smartOpenEdit(OGGI, 'm1'); await attendi(5);
+  const r0 = voce('riso');
+  const q0r = r0.quantity, k0r = r0.kcal;
+  while (r0.quantity > 0) win.smartQtaPasso(r0.tempId, -1);
+  win.smartUpdateField(r0.tempId, 'unit', 'pz'); win.smartUpdateField(r0.tempId, 'unit', 'g'); win.renderOggi(); await attendi(5);
+  scrivi(r0, String(q0r));
+  atteso('a zero, poi g → pz → g · riscrivendo la quantità i valori tornano (non 0 kcal)', [r0.quantity, r0.unit, r0.kcal, !!r0._daStimare], [q0r, 'g', k0r, false]);
+  win.smartResetForm();
+
   atteso('zero errori in console', errori(), []);
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);

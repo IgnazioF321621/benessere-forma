@@ -1353,7 +1353,9 @@ window.smartUpdateField = function(tempId, field, value) {
   // che le tabelle CREA danno alimento per alimento): finché il coach non li stima, la quantità cambia e i valori no
   // Nutrition 230: la base dell'unità di partenza si tiene (_baseUnita); tornando a quell'unità i valori seguono di nuovo
   if (field === 'unit' && value !== it.unit) {
-    if (!it._daStimare && _smartHaValori(it)) it._baseUnita = { unit: it.unit, porz: !!it._porz, base: Object.assign({}, _smartBase(it)) };
+    // la base, non i valori a schermo: un ingrediente portato a 0 con − ha valori 0 ma la base c'è ancora
+    const b0 = it._base || (_smartHaValori(it) ? _smartBase(it) : null);
+    if (!it._daStimare && b0 && _smartHaValori(b0)) it._baseUnita = { unit: it.unit, porz: !!it._porz, base: Object.assign({}, b0) };
     if (it._baseUnita && value === it._baseUnita.unit) {
       it.unit = value; it._porz = it._baseUnita.porz; it._base = it._baseUnita.base;
       it._baseUnita = null; it._daStimare = false; it._v1 = null;
@@ -1595,6 +1597,15 @@ window.toggleExtraSupp = function(extraKey) {
 window.smartSavePasto = async function() {
   _initSmartForm();
   if (!_smartHasContent()) { showToast('Aggiungi almeno un ingrediente', '✍️'); return; }
+  // Nutrition 230: si salvano solo gli ingredienti con un nome; uno senza nome ma con dei valori entrava nel totale del
+  // pasto e spariva dalle righe (testata 500 kcal, righe 280). Si chiede, non si toglie in silenzio
+  const senzaNome = ST.smartForm.items.filter(i => !(i.name && i.name.trim()) && _smartHaValori(i));
+  if (senzaNome.length) {
+    senzaNome.forEach(i => { i.expanded = true; });
+    renderOggi();
+    avvisa(`Un ingrediente da ${senzaNome[0].kcal} kcal non ha il nome: scrivilo, oppure toglilo con ×.`, { titolo:'Manca un nome' });
+    return;
+  }
   const isEdit = !!ST.smartForm.editingMealId;
   const slot = isEdit ? (ST.smartForm.editingSlot || ST.logSlot) : ST.logSlot;
   if (!slot) { showToast('Scegli il pasto', '✍️'); return; }
