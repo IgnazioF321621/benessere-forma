@@ -888,7 +888,7 @@ async function saveBodyLog(){
   const L = ST.fitdaysLettura;
   if(L && L.date === giorno){
     const res = await scriviConCoda('salvare la lettura del report', { tabella:'fitdays_letture', tipo:'upsert', righe:{ user_id: ST.user.id, date: giorno, model: (L.meta && L.meta.model) || null, prompt_version: (L.meta && L.meta.prompt_version) || null, result: { valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo, note: L.note, meta: L.meta, letto_il: L.letto_il } }, onConflict:'user_id,date' });
-    if(!res.error) ST.fitdaysLettura = null;
+    if(!res.error) fitdaysDimentica();
   }
 
   ST.bodySaving = false;
@@ -1206,6 +1206,7 @@ async function leggiReportFitdays(input){
     const giorno = (L.data_report && L.data_report <= today) ? L.data_report : ((ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today);
     ST.bodyLogDate = giorno;
     ST.fitdaysLettura = { date: giorno, valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo || null, note: L.note || '', meta: L.meta || null, letto_il: new Date().toISOString() };
+    fitdaysRicorda(ST.fitdaysLettura);
     ST.bodyAdvOpen = true;
     showToast(`Report letto: ${L.letti} indicatori · controlla e salva`, '✅', 4000);
   } finally {
@@ -1213,7 +1214,36 @@ async function leggiReportFitdays(input){
     renderBody();
   }
 }
-function fitdaysTogli(){ ST.fitdaysLettura = null; renderBody(); }
+function fitdaysTogli(){ fitdaysDimentica(); renderBody(); }
+
+// Body 180 (27 ottobre 2026): la lettura resta sul telefono finché non è salvata. Quel giorno il report era
+// stato letto e le caselle compilate, ma «Salva misure» non era arrivato al server: la lettura viveva solo in
+// memoria, un ricaricamento della pagina la portava via, e Nutrition diceva «4 giorni dall'ultima pesata».
+// Ora zt_fitdays_lettura_<utente> si scrive alla lettura, si toglie a «Salva misure» riuscito o a «Togli»;
+// al ritorno la card e le caselle sono di nuovo lì, e Home e Nutrition ricordano di salvarla.
+function _fitdaysChiave(){ return 'zt_fitdays_lettura_' + ((ST.user && ST.user.id) || 'anon'); }
+function fitdaysRicorda(L){ try { localStorage.setItem(_fitdaysChiave(), JSON.stringify(L)); } catch(e){} }
+function fitdaysDimentica(){ ST.fitdaysLettura = null; try { localStorage.removeItem(_fitdaysChiave()); } catch(e){} }
+// La lettura non ancora salvata: in memoria o, dopo un ricaricamento, dal telefono (e torna in memoria)
+function fitdaysInSospeso(){
+  if(ST.fitdaysLettura) return ST.fitdaysLettura;
+  if(!ST.user || !ST.user.id) return null;
+  try {
+    const L = JSON.parse(localStorage.getItem(_fitdaysChiave()) || 'null');
+    if(!L || !L.date || !L.valori) return null;
+    ST.fitdaysLettura = L;
+    return L;
+  } catch(e){ return null; }
+}
+// Il report letto e non salvato, se per quel giorno non c'è ancora una pesata: lo usano il promemoria di
+// Nutrition e la «Prossima azione» della Home
+function _fitdaysDaSalvare(){
+  const L = fitdaysInSospeso();
+  if(!L) return null;
+  let pesate = [];
+  try { pesate = getWeighIns(); } catch(e){ pesate = []; }
+  return pesate.some(p => p.date === L.date) ? null : L;
+}
 // La card sotto le caselle: cosa ha letto il coach, tutti i 22 indicatori, e il tasto per toglierla.
 function fitdaysCardHTML(L){
   if(!L) return '';
@@ -1966,6 +1996,9 @@ function renderBody(){
   const logs     = ST.bodyLogs;                  // body_logs grezzi — usato solo per pre-popolare il modulo delle misure
   // Body 020: il modulo «Misure col metro e bilancia» ha una data (oggi di base, mai nel futuro);
   // si pre-popola con le misure di quel giorno e con la pesata di quel giorno (weight_logs).
+  // Body 180: la lettura del report non ancora salvata torna dopo un ricaricamento, col suo giorno
+  const sospesa = fitdaysInSospeso();
+  if(sospesa && !ST.bodyLogDate && sospesa.date <= today){ ST.bodyLogDate = sospesa.date; ST.bodyAdvOpen = true; }
   const giornoLog = (ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today;
   const pesataGiorno = (ST.weightLogs || []).find(q => q.date === giornoLog) || null;
   const todayLog = { ...(logs.find(l => l.date === giornoLog) || {}) };
@@ -2455,11 +2488,13 @@ function _weightReminderGetMode() {
 }
 
 function _weightReminderDaysSinceLast() {
-  // Conta giorni di differenza tra oggi e l'ultima riga weight_logs (ST.weightLogs[0]).
-  // Se null/vuoto → null (= "mai pesato" → soglia considerata sempre superata)
-  const wl = ST.weightLogs;
-  if(!wl || wl.length === 0) return null;
-  const lastDateStr = wl[0].date; // YYYY-MM-DD
+  // Giorni fra oggi e l'ultima pesata di weighInsByDay: weight_logs > body_logs > misure del check
+  // (L47/L48). Fino al 27 ottobre 2026 (Body 180) contava solo weight_logs: una pesata entrata con le
+  // misure o col check non esisteva per il promemoria. Niente in memoria → null (= «mai pesato»).
+  let pesate = [];
+  try { pesate = getWeighIns(); } catch(e) { pesate = []; }
+  if(!pesate.length) return null;
+  const lastDateStr = pesate[0].date; // YYYY-MM-DD, la più recente
   if(!lastDateStr) return null;
   const last = new Date(lastDateStr + 'T00:00:00');
   const today = new Date();
@@ -2488,6 +2523,7 @@ function _weightReminderShouldShow() {
   //  - le pesate NON sono in pausa (Metodo 210)
   try { if(typeof pausaAttivaPer === 'function' && pausaAttivaPer('pesate')) return false; } catch(e){}
   if(_weightReminderInSilencePeriod()) return false;
+  if(_fitdaysDaSalvare()) return true;   // Body 180: il report letto e non salvato, a qualunque soglia
   const mode = _weightReminderGetMode();
   const threshold = WEIGHT_FREQ_THRESHOLDS[mode];
   const days = _weightReminderDaysSinceLast();
@@ -2519,12 +2555,19 @@ function renderWeightReminderBannerOggi() {
   // timeline pasti. Mai chiamato fuori da renderOggi (banner SOLO tab Oggi).
   if(!_weightReminderShouldShow()) return '';
   const days = _weightReminderDaysSinceLast();
-  let text;
-  if(days === null) {
+  const daSalvare = _fitdaysDaSalvare();
+  let text, cta;
+  if(daSalvare) {
+    // Body 180: il report Fitdays è letto ma «Salva misure» non è arrivato: si va a salvarlo, non a pesarsi di nuovo
+    text = `Il report Fitdays del ${fmtDate(daSalvare.date)} è letto ma non ancora salvato: controlla le misure e tocca «Salva misure».`;
+    cta = `<button class="weight-reminder-cta" onclick="ST.bodyTab='misure';showPage('body')">Salva misure</button>`;
+  } else if(days === null) {
     text = 'Non hai ancora registrato una pesata. Vuoi farlo ora per iniziare il trend?';
+    cta = `<button class="weight-reminder-cta" onclick="openWeighInSheet()">Pesati ora</button>`;
   } else {
     const giorni = days === 1 ? 'giorno' : 'giorni';
     text = `Sono passati ${days} ${giorni} dall'ultima pesata. Vuoi aggiornare il trend?`;
+    cta = `<button class="weight-reminder-cta" onclick="openWeighInSheet()">Pesati ora</button>`;
   }
   return `<div class="weight-reminder-banner" role="status" aria-live="polite">
     <span class="weight-reminder-icon" aria-hidden="true">⚖️</span>
@@ -2532,7 +2575,7 @@ function renderWeightReminderBannerOggi() {
       <p class="weight-reminder-text">${esc(text)}</p>
     </div>
     <div class="weight-reminder-actions">
-      <button class="weight-reminder-cta" onclick="openWeighInSheet()">Pesati ora</button>
+      ${cta}
       <button class="weight-reminder-dismiss" onclick="dismissWeightReminder()">Più tardi</button>
     </div>
   </div>`;
