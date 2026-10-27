@@ -1205,8 +1205,9 @@ async function leggiReportFitdays(input){
     // Il giorno del report, se c'è e non è nel futuro; altrimenti quello scelto nel modulo
     const giorno = (L.data_report && L.data_report <= today) ? L.data_report : ((ST.bodyLogDate && ST.bodyLogDate <= today) ? ST.bodyLogDate : today);
     ST.bodyLogDate = giorno;
-    ST.fitdaysLettura = { date: giorno, valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo || null, note: L.note || '', meta: L.meta || null, letto_il: new Date().toISOString() };
+    ST.fitdaysLettura = { user_id: ST.user.id, date: giorno, valori: L.valori, letti: L.letti, data_ora_testo: L.data_ora_testo || null, note: L.note || '', meta: L.meta || null, letto_il: new Date().toISOString() };
     fitdaysRicorda(ST.fitdaysLettura);
+    ST.fitdaysLettura.fresca = true;   // appena letta qui: resta anche se quel giorno ha già una pesata
     ST.bodyAdvOpen = true;
     showToast(`Report letto: ${L.letti} indicatori · controlla e salva`, '✅', 4000);
   } finally {
@@ -1221,19 +1222,41 @@ function fitdaysTogli(){ fitdaysDimentica(); renderBody(); }
 // memoria, un ricaricamento della pagina la portava via, e Nutrition diceva «4 giorni dall'ultima pesata».
 // Ora zt_fitdays_lettura_<utente> si scrive alla lettura, si toglie a «Salva misure» riuscito o a «Togli»;
 // al ritorno la card e le caselle sono di nuovo lì, e Home e Nutrition ricordano di salvarla.
+const FITDAYS_SOSPESA_GIORNI = 7;   // una lettura più vecchia non si rimette: la persona si è pesata altrove o ha lasciato perdere
 function _fitdaysChiave(){ return 'zt_fitdays_lettura_' + ((ST.user && ST.user.id) || 'anon'); }
 function fitdaysRicorda(L){ try { localStorage.setItem(_fitdaysChiave(), JSON.stringify(L)); } catch(e){} }
 function fitdaysDimentica(){ ST.fitdaysLettura = null; try { localStorage.removeItem(_fitdaysChiave()); } catch(e){} }
-// La lettura non ancora salvata: in memoria o, dopo un ricaricamento, dal telefono (e torna in memoria)
+// Una lettura ben formata e di chi è entrato: giorno valido, valori un oggetto, user_id il suo
+function _fitdaysMia(L){
+  return !!(L && typeof L === 'object' && ST.user && L.user_id === ST.user.id
+    && typeof L.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(L.date) && !isNaN(new Date(L.date + 'T00:00:00').getTime())
+    && L.valori && typeof L.valori === 'object' && !Array.isArray(L.valori));
+}
+// Superata: quel giorno ha già una pesata (arrivata da un altro telefono, da «Pesati ora», da un check)
+// oppure il report è vecchio di più di FITDAYS_SOSPESA_GIORNI giorni o nel futuro
+function _fitdaysSuperata(L){
+  let pesate = [];
+  try { pesate = getWeighIns(); } catch(e){ pesate = []; }
+  if(pesate.some(p => p.date === L.date)) return true;
+  const oggi = todayKey();
+  const giorni = Math.round((new Date(oggi + 'T00:00:00') - new Date(L.date + 'T00:00:00')) / 86400000);
+  return giorni < 0 || giorni > FITDAYS_SOSPESA_GIORNI;
+}
+// La lettura non ancora salvata: in memoria o, dopo un ricaricamento, dal telefono (e torna in memoria).
+// Quella di chi è uscito, una illeggibile o una superata si tolgono; quella appena letta qui resta.
 function fitdaysInSospeso(){
-  if(ST.fitdaysLettura) return ST.fitdaysLettura;
   if(!ST.user || !ST.user.id) return null;
-  try {
-    const L = JSON.parse(localStorage.getItem(_fitdaysChiave()) || 'null');
-    if(!L || !L.date || !L.valori) return null;
-    ST.fitdaysLettura = L;
-    return L;
-  } catch(e){ return null; }
+  let L = ST.fitdaysLettura;
+  if(L && !_fitdaysMia(L)){ ST.fitdaysLettura = null; L = null; }
+  if(L && (L.fresca || !_fitdaysSuperata(L))) return L;
+  if(L){ fitdaysDimentica(); return null; }
+  let grezzo = null;
+  try { grezzo = localStorage.getItem(_fitdaysChiave()); } catch(e){ grezzo = null; }
+  if(!grezzo) return null;
+  try { L = JSON.parse(grezzo); } catch(e){ L = null; }
+  if(!_fitdaysMia(L) || _fitdaysSuperata(L)){ fitdaysDimentica(); return null; }   // illeggibile, di un altro, superata: via
+  ST.fitdaysLettura = L;
+  return L;
 }
 // Il report letto e non salvato, se per quel giorno non c'è ancora una pesata: lo usano il promemoria di
 // Nutrition e la «Prossima azione» della Home

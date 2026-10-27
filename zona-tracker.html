@@ -2220,6 +2220,7 @@ async function logout() {
   try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
   ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];
   ST.pianoV4RealPlanCache = {}; // Passo 2: pulisci cache piano vero per non leaktare cross-user
+  ST.fitdaysLettura = null; ST.bodyLogDate = null;   // Body 180: il report letto da chi esce non passa a chi entra
   showScreen('auth');
 }
 

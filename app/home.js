@@ -250,7 +250,7 @@ function getProssimaAzioneSimple(){
   }
   // 2b. Report Fitdays letto e non salvato (Body 180): viene prima della pesata, a qualunque ora
   let daSalvare = null;
-  try { daSalvare = (!pausaPesate && typeof _fitdaysDaSalvare === 'function') ? _fitdaysDaSalvare() : null; } catch(e){}
+  try { daSalvare = (!pausaPesate && Array.isArray(ST.weightLogs) && ST.bodyLogs != null && typeof _fitdaysDaSalvare === 'function') ? _fitdaysDaSalvare() : null; } catch(e){}
   if(daSalvare){
     return { titolo: 'Salva il report Fitdays', dettaglio: `L'hai letto il ${fmtDate(daSalvare.date)}: le misure sono nelle caselle, manca «Salva misure».`,
       nextHint: null, azione: 'misure', pulsante: 'Salva misure' };
@@ -309,7 +309,7 @@ function getDaFareOggi(principale){
   const inPausa = (m) => { try { return (typeof pausaAttivaPer === 'function') && pausaAttivaPer(m); } catch(e){ return false; } };
   // report Fitdays letto e non salvato (Body 180), poi la pesata
   let daSalvare = null;
-  try { daSalvare = (!inPausa('pesate') && typeof _fitdaysDaSalvare === 'function') ? _fitdaysDaSalvare() : null; } catch(e){}
+  try { daSalvare = (!inPausa('pesate') && Array.isArray(ST.weightLogs) && ST.bodyLogs != null && typeof _fitdaysDaSalvare === 'function') ? _fitdaysDaSalvare() : null; } catch(e){}
   if(daSalvare) voci.push({ etichetta: 'Report Fitdays da salvare', azione: 'misure' });
   let pesata = false;
   try { pesata = !daSalvare && !inPausa('pesate') && h < 11 && Array.isArray(ST.weightLogs) && typeof _weightReminderShouldShow === 'function' && _weightReminderShouldShow(); } catch(e){}

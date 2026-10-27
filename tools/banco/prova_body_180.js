@@ -4,6 +4,9 @@
 //   2. La lettura del report resta sul telefono (zt_fitdays_lettura_<utente>) finché «Salva misure» non riesce:
 //      dopo un ricaricamento la card e le caselle tornano, col giorno del report; Nutrition dice «letto ma non
 //      ancora salvato» con «Salva misure», la Home lo mette come Prossima azione; «Salva misure» e «Togli» la tolgono.
+//   3. Non torna, e si toglie, se è superata (quel giorno ha già una pesata, o ha più di 7 giorni), di un altro
+//      utente o illeggibile; quella appena letta resta anche con la pesata già fatta; il logout non la passa a chi
+//      entra; la Home non la nomina prima di aver letto le pesate.
 //   Orologio: martedì 27 ottobre 2026, 22:00, pesate ogni 3 giorni, ultima pesata il 23.
 //   node tools/banco/prova_body_180.js
 process.env.TZ = 'Europe/Rome';
@@ -102,11 +105,52 @@ const voci = (b) => b.win.getDaFareOggi(b.win.getProssimaAzioneSimple()).map(v =
   atteso('togli · prima: ricordata', !!b.win.localStorage.getItem(CHIAVE), true);
   b.win.fitdaysTogli();
   atteso('togli · dopo: niente sul telefono, niente in memoria, caselle vuote', [b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null, campo(b, 'bl-bf').value], [null, null, '']);
-  b = avvia({ page:'oggi', ls, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.6 } ] });
+  // la pesata del 27 è arrivata per un'altra strada («Pesati ora», un altro telefono): la lettura ricordata
+  // non si rimette, si toglie dal telefono, e il modulo mostra il peso del server, non quello del report
+  b = avvia({ page:'oggi', ls, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.3 } ] });
   await b.win.loadBodyLogs(); b.win.renderOggi();
-  atteso('pesata del 27 già salvata · nessuna striscia, nessuna azione sul report', [!!banner(b), azione(b)[1] === 'misure'], [false, false]);
+  atteso('pesata del 27 già salvata · nessuna striscia, nessuna azione, lettura tolta dal telefono', [!!banner(b), azione(b)[1] === 'misure', b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null], [false, false, null, null]);
+  b.ST.page = 'body'; b.win.renderBody();
+  atteso('pesata del 27 già salvata · il modulo resta a oggi col peso del server, niente card', [campo(b, 'bl-date').value, campo(b, 'bl-weight').value, !!campo(b, 'fitdays-card')], [OGGI, '70.3', false]);
+  // la lettura appena fatta in questa apertura resta anche se quel giorno ha già una pesata (si legge il report
+  // per le altre caselle), ma non chiede di salvarla
+  b = avvia({ ls:{ zt_report_ok:'1' }, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.3 } ] });
+  await b.win.loadBodyLogs();
+  await b.win.leggiReportFitdays({ files:[file(b)] }); await attendi(30);
+  atteso('letta ora con la pesata già fatta · card e caselle ci sono, nessun promemoria', [!!campo(b, 'fitdays-card'), campo(b, 'bl-bf').value, b.win._fitdaysDaSalvare(), azione(b)[1] === 'misure'], [true, '13.8', null, false]);
 
-  // 6. in silenzio («Più tardi») o con le pesate in pausa il promemoria tace anche per il report
+  // 6. una lettura vecchia, di un altro utente o illeggibile non torna, e si toglie dal telefono
+  const vecchia = { ...JSON.parse(ls[CHIAVE]), date:'2026-10-15' };
+  b = avvia({ page:'oggi', ls:{ zt_report_ok:'1', [CHIAVE]: JSON.stringify(vecchia) } });
+  await b.win.loadBodyLogs(); b.win.renderOggi();
+  atteso('report del 15 ottobre (12 giorni) · non torna, tolto, striscia dei 4 giorni', [b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null, /4 giorni/.test(testo(banner(b)))], [null, null, true]);
+  const altrui = { ...JSON.parse(ls[CHIAVE]), user_id:'u9' };
+  b = avvia({ page:'oggi', ls:{ [CHIAVE]: JSON.stringify(altrui) } });
+  await b.win.loadBodyLogs(); b.win.renderOggi();
+  atteso('lettura di un altro utente sotto la mia chiave · non torna, tolta', [b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null, azione(b)[1] === 'misure'], [null, null, false]);
+  for(const rotta of ['{rotto', JSON.stringify({ ...vecchia, date:OGGI, valori:'x' }), JSON.stringify({ ...vecchia, date:'boh' }), JSON.stringify({ ...vecchia, date:OGGI, valori:[1] })]){
+    b = avvia({ page:'oggi', ls:{ [CHIAVE]: rotta } });
+    await b.win.loadBodyLogs(); b.win.renderOggi(); b.ST.page = 'body'; b.win.renderBody();
+    atteso('lettura illeggibile · tolta, niente si rompe: ' + rotta.slice(0, 24), [b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null, /4 giorni/.test(testo(banner(b))), !!campo(b, 'fitdays-card'), b.logs.filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length], [null, null, true, false, 0]);
+  }
+
+  // 7. A legge il report ed esce; B entra senza ricaricare: niente di A in memoria, la chiave di A resta a A
+  b = avvia({ ls });
+  await b.win.loadBodyLogs(); b.win.renderBody();
+  atteso('A · card e promemoria', [!!campo(b, 'fitdays-card'), azione(b)[1]], [true, 'misure']);
+  b.win.chiediConferma = async () => true;
+  await b.win.logout();
+  b.ST.user = { id:'u2' }; b.ST.profile = { id:'u2', weight_tracking_mode:'every3', created_at:'2026-05-01T08:00:00Z' };
+  b.ST.page = 'body'; b.win.renderBody();
+  atteso('B · niente lettura, caselle vuote, nessuna azione; la chiave di A è ancora sua', [b.win.fitdaysInSospeso(), b.ST.fitdaysLettura || null, campo(b, 'bl-weight').value, campo(b, 'bl-date').value, azione(b)[1] === 'misure', !!b.win.localStorage.getItem(CHIAVE)], [null, null, '', OGGI, false, true]);
+
+  // 8. la Home non dice «Salva il report» prima di aver letto le pesate
+  b = avvia({ page:'home', ls });
+  atteso('pesate non ancora lette · nessuna azione sul report', [b.ST.weightLogs, azione(b)[1] === 'misure', voci(b).includes('Report Fitdays da salvare')], [null, false, false]);
+  await b.win.loadBodyLogs();
+  atteso('pesate lette · «Salva il report Fitdays»', azione(b)[1], 'misure');
+
+  // 9. in silenzio («Più tardi») il promemoria tace anche per il report
   b = avvia({ page:'oggi', ls:{ ...ls, zt_weight_reminder_dismiss_count:'1', zt_weight_reminder_dismissed_at: String(Date.now()) } });
   await b.win.loadBodyLogs(); b.win.renderOggi();
   atteso('«Più tardi» di poco fa · niente striscia', !!banner(b), false);
