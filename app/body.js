@@ -1232,12 +1232,23 @@ function _fitdaysMia(L){
     && typeof L.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(L.date) && !isNaN(new Date(L.date + 'T00:00:00').getTime())
     && L.valori && typeof L.valori === 'object' && !Array.isArray(L.valori));
 }
-// Superata: quel giorno ha già una pesata (arrivata da un altro telefono, da «Pesati ora», da un check)
-// oppure il report è vecchio di più di FITDAYS_SOSPESA_GIORNI giorni o nel futuro
+// Superata: le misure del report di quel giorno sono già salvate (una riga body_logs con almeno una delle
+// caselle della bilancia; se il report aveva solo il peso, basta una pesata di quel giorno), oppure il
+// report è vecchio di più di FITDAYS_SOSPESA_GIORNI giorni o nel futuro. La sola pesata non basta: «Salva
+// misure» scrive prima il peso e poi le misure, e se le misure non partono (senza rete, errore del server)
+// o se «Pesati ora» è venuto prima del report, le caselle della bilancia non sono ancora da nessuna parte.
 function _fitdaysSuperata(L){
-  let pesate = [];
-  try { pesate = getWeighIns(); } catch(e){ pesate = []; }
-  if(pesate.some(p => p.date === L.date)) return true;
+  let caselle = {};
+  try { caselle = ZTFitdays.inCaselle(L.valori) || {}; } catch(e){ caselle = {}; }
+  const misure = Object.keys(caselle).filter(k => k !== 'weight_kg');
+  if(misure.length){
+    const riga = (ST.bodyLogs || []).find(r => r && r.date === L.date);
+    if(riga && misure.some(k => riga[k] != null)) return true;
+  } else {
+    let pesate = [];
+    try { pesate = getWeighIns(); } catch(e){ pesate = []; }
+    if(pesate.some(p => p.date === L.date)) return true;
+  }
   const oggi = todayKey();
   const giorni = Math.round((new Date(oggi + 'T00:00:00') - new Date(L.date + 'T00:00:00')) / 86400000);
   return giorni < 0 || giorni > FITDAYS_SOSPESA_GIORNI;
@@ -1258,14 +1269,12 @@ function fitdaysInSospeso(){
   ST.fitdaysLettura = L;
   return L;
 }
-// Il report letto e non salvato, se per quel giorno non c'è ancora una pesata: lo usano il promemoria di
-// Nutrition e la «Prossima azione» della Home
+// Il report letto le cui misure non sono ancora salvate (anche con la pesata già fatta): lo usano il
+// promemoria di Nutrition e la «Prossima azione» della Home
 function _fitdaysDaSalvare(){
   const L = fitdaysInSospeso();
   if(!L) return null;
-  let pesate = [];
-  try { pesate = getWeighIns(); } catch(e){ pesate = []; }
-  return pesate.some(p => p.date === L.date) ? null : L;
+  return _fitdaysSuperata(L) ? null : L;
 }
 // La card sotto le caselle: cosa ha letto il coach, tutti i 22 indicatori, e il tasto per toglierla.
 function fitdaysCardHTML(L){
@@ -2028,7 +2037,13 @@ function renderBody(){
   if(todayLog.weight_kg == null && pesataGiorno && pesataGiorno.weight_kg != null) todayLog.weight_kg = pesataGiorno.weight_kg;
   // Body 150: il report Fitdays appena letto compila le caselle di quel giorno (la persona può ancora correggerle)
   const fitdaysLettura = (ST.fitdaysLettura && ST.fitdaysLettura.date === giornoLog) ? ST.fitdaysLettura : null;
-  if(fitdaysLettura) Object.assign(todayLog, ZTFitdays.inCaselle(fitdaysLettura.valori));
+  if(fitdaysLettura){
+    const caselle = ZTFitdays.inCaselle(fitdaysLettura.valori);
+    // appena letto: le caselle prendono il report (la persona corregge); rimesso dopo un ricaricamento (Body 180):
+    // solo le caselle vuote, quello che intanto è arrivato sul server (il peso di «Pesati ora») resta
+    if(fitdaysLettura.fresca) Object.assign(todayLog, caselle);
+    else Object.keys(caselle).forEach(k => { if(todayLog[k] == null) todayLog[k] = caselle[k]; });
+  }
   // Dati unificati body_logs + body_measurements
   const uData     = getLatestBodyData();
   const uTimeline = getUnifiedBodyTimeline();
@@ -2546,6 +2561,7 @@ function _weightReminderShouldShow() {
   //  - le pesate NON sono in pausa (Metodo 210)
   try { if(typeof pausaAttivaPer === 'function' && pausaAttivaPer('pesate')) return false; } catch(e){}
   if(_weightReminderInSilencePeriod()) return false;
+  if(!Array.isArray(ST.weightLogs)) return false;   // pesate non ancora lette: niente striscia che lampeggia
   if(_fitdaysDaSalvare()) return true;   // Body 180: il report letto e non salvato, a qualunque soglia
   const mode = _weightReminderGetMode();
   const threshold = WEIGHT_FREQ_THRESHOLDS[mode];

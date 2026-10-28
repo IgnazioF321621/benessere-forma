@@ -4,9 +4,10 @@
 //   2. La lettura del report resta sul telefono (zt_fitdays_lettura_<utente>) finché «Salva misure» non riesce:
 //      dopo un ricaricamento la card e le caselle tornano, col giorno del report; Nutrition dice «letto ma non
 //      ancora salvato» con «Salva misure», la Home lo mette come Prossima azione; «Salva misure» e «Togli» la tolgono.
-//   3. Non torna, e si toglie, se è superata (quel giorno ha già una pesata, o ha più di 7 giorni), di un altro
-//      utente o illeggibile; quella appena letta resta anche con la pesata già fatta; il logout non la passa a chi
-//      entra; la Home non la nomina prima di aver letto le pesate.
+//   3. Non torna, e si toglie, se è superata (le misure della bilancia di quel giorno sono già in body_logs: la
+//      sola pesata non basta, o ha più di 7 giorni), di un altro utente o illeggibile; rimessa, non copre il peso
+//      già sul server; «Salva misure» con le misure rifiutate non la perde; il logout non la passa a chi entra;
+//      Home e Nutrition non la nominano prima di aver letto le pesate.
 //   Orologio: martedì 27 ottobre 2026, 22:00, pesate ogni 3 giorni, ultima pesata il 23.
 //   node tools/banco/prova_body_180.js
 process.env.TZ = 'Europe/Rome';
@@ -105,19 +106,48 @@ const voci = (b) => b.win.getDaFareOggi(b.win.getProssimaAzioneSimple()).map(v =
   atteso('togli · prima: ricordata', !!b.win.localStorage.getItem(CHIAVE), true);
   b.win.fitdaysTogli();
   atteso('togli · dopo: niente sul telefono, niente in memoria, caselle vuote', [b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null, campo(b, 'bl-bf').value], [null, null, '']);
-  // la pesata del 27 è arrivata per un'altra strada («Pesati ora», un altro telefono): la lettura ricordata
-  // non si rimette, si toglie dal telefono, e il modulo mostra il peso del server, non quello del report
+  // «Pesati ora» al mattino, poi il report dello stesso giorno, ricaricamento prima di «Salva misure»: la sola
+  // pesata non basta, le misure della bilancia non sono da nessuna parte: la lettura torna, chiede di essere
+  // salvata, e il peso del server (70,3) non viene coperto da quello del report (70,6)
   b = avvia({ page:'oggi', ls, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.3 } ] });
   await b.win.loadBodyLogs(); b.win.renderOggi();
-  atteso('pesata del 27 già salvata · nessuna striscia, nessuna azione, lettura tolta dal telefono', [!!banner(b), azione(b)[1] === 'misure', b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null], [false, false, null, null]);
+  atteso('pesata del 27 fatta, misure no · striscia «letto ma non ancora salvato», azione, lettura tenuta', [/letto ma non ancora salvato/.test(testo(banner(b))), azione(b)[1], !!b.win.localStorage.getItem(CHIAVE)], [true, 'misure', true]);
   b.ST.page = 'body'; b.win.renderBody();
-  atteso('pesata del 27 già salvata · il modulo resta a oggi col peso del server, niente card', [campo(b, 'bl-date').value, campo(b, 'bl-weight').value, !!campo(b, 'fitdays-card')], [OGGI, '70.3', false]);
-  // la lettura appena fatta in questa apertura resta anche se quel giorno ha già una pesata (si legge il report
-  // per le altre caselle), ma non chiede di salvarla
+  atteso('pesata del 27 fatta, misure no · modulo al 27, peso del server, grasso dal report, card', [campo(b, 'bl-date').value, campo(b, 'bl-weight').value, campo(b, 'bl-bf').value, !!campo(b, 'fitdays-card')], [OGGI, '70.3', '13.8', true]);
+  // le misure della bilancia del 27 sono già salvate (body_logs con grasso %): il report è superato e si toglie
+  b = avvia({ page:'oggi', ls, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.3 } ], body_logs:[ { user_id:U, id:'bl3', date:OGGI, bf_pct:13.8, muscle_kg:56.9 } ] });
+  await b.win.loadBodyLogs(); b.win.renderOggi();
+  atteso('misure del 27 già salvate · nessuna striscia, nessuna azione, lettura tolta dal telefono', [!!banner(b), azione(b)[1] === 'misure', b.win.localStorage.getItem(CHIAVE), b.ST.fitdaysLettura || null], [false, false, null, null]);
+  b.ST.page = 'body'; b.win.renderBody();
+  atteso('misure del 27 già salvate · il modulo a oggi coi valori del server, niente card', [campo(b, 'bl-date').value, campo(b, 'bl-weight').value, campo(b, 'bl-bf').value, !!campo(b, 'fitdays-card')], [OGGI, '70.3', '13.8', false]);
+  // un report con il solo peso: basta la pesata di quel giorno
+  const soloPeso = { ...JSON.parse(ls[CHIAVE]), valori:{ peso_kg: 70.6, bmi: 23.9 }, letti: 2 };
+  b = avvia({ page:'oggi', ls:{ [CHIAVE]: JSON.stringify(soloPeso) }, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.6 } ] });
+  await b.win.loadBodyLogs(); b.win.renderOggi();
+  atteso('report col solo peso e pesata del 27 fatta · superato, tolto', [!!banner(b), b.win.localStorage.getItem(CHIAVE)], [false, null]);
+  // la lettura appena fatta in questa apertura, con la pesata già fatta: le caselle prendono il report e si chiede di salvarla
   b = avvia({ ls:{ zt_report_ok:'1' }, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.3 } ] });
   await b.win.loadBodyLogs();
   await b.win.leggiReportFitdays({ files:[file(b)] }); await attendi(30);
-  atteso('letta ora con la pesata già fatta · card e caselle ci sono, nessun promemoria', [!!campo(b, 'fitdays-card'), campo(b, 'bl-bf').value, b.win._fitdaysDaSalvare(), azione(b)[1] === 'misure'], [true, '13.8', null, false]);
+  atteso('letta ora con la pesata già fatta · card, caselle dal report, promemoria di salvarla', [!!campo(b, 'fitdays-card'), campo(b, 'bl-weight').value, campo(b, 'bl-bf').value, !!b.win._fitdaysDaSalvare(), azione(b)[1]], [true, '70.6', '13.8', true, 'misure']);
+
+  // 5b. «Salva misure» senza rete sulle misure: il peso va in coda, le misure no («Misure non salvate»), e dopo
+  //     un ricaricamento, con il peso ormai sul server, la lettura è ancora lì: non si perde nulla in silenzio
+  b = avvia({ ls });
+  await b.win.loadBodyLogs(); b.win.renderBody();
+  b.tabelle.__rifiuta = { body_logs:{ code:'500', message:'server in difficoltà' } };
+  b.win.avvisa = async () => {};
+  await b.win.saveBodyLog(); await attendi(30);
+  atteso('misure rifiutate · il peso è scritto, la lettura resta sul telefono', [b.supa._calls.some(c => c.table === 'weight_logs' && c.op === 'upsert' && c.payload.date === OGGI), b.supa._calls.some(c => c.table === 'fitdays_letture'), !!b.win.localStorage.getItem(CHIAVE)], [true, false, true]);
+  b = avvia({ page:'oggi', ls, weight_logs:[ { user_id:U, id:'wl2', date:OGGI, weight_kg:70.6 } ] });
+  await b.win.loadBodyLogs(); b.win.renderOggi();
+  atteso('ricaricata col peso sul server · la lettura torna e chiede di essere salvata', [/letto ma non ancora salvato/.test(testo(banner(b))), azione(b)[1], !!b.win.localStorage.getItem(CHIAVE)], [true, 'misure', true]);
+  b.ST.page = 'body'; b.win.renderBody();
+  delete b.tabelle.__rifiuta;
+  const primaDi = b.supa._calls.length;
+  await b.win.saveBodyLog(); await attendi(30);
+  const dopo = b.supa._calls.slice(primaDi);
+  atteso('ora le misure partono · body_logs e fitdays_letture del 27, lettura tolta', [dopo.some(c => c.table === 'body_logs' && c.op === 'upsert' && c.payload.date === OGGI && c.payload.bf_pct === 13.8), dopo.some(c => c.table === 'fitdays_letture' && c.op === 'upsert'), b.win.localStorage.getItem(CHIAVE)], [true, true, null]);
 
   // 6. una lettura vecchia, di un altro utente o illeggibile non torna, e si toglie dal telefono
   const vecchia = { ...JSON.parse(ls[CHIAVE]), date:'2026-10-15' };
