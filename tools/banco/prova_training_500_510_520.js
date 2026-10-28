@@ -7,6 +7,9 @@
 //   520 · «non si capisce se ogni lato vale come una ripetizione o sinistro più destro vale una ripetizione»
 //         (Russian twist, alternato): «per lato» sul bersaglio, nel registro e nei suggerimenti.
 //   residuo (a) · «Cambia per oggi» non guardava le limitazioni della persona.
+// Revisione della Regia (28 ottobre 2026): a corpo libero anche con un appoggio nell'attrezzo (sbarra, fitball, panca,
+// trx, box, «corpo libero;panca»), righe vere in tools/banco/dati/catalogo_attrezzi_appoggio_20261028.json; un
+// alternato a tempo (EX191 V-sit sforbiciata, nella Lower A di Ignazio) non è «per lato»: il tempo è uno solo.
 // Dati come quelli veri di Ignazio: Pallof EX023 («20-40 sec», elastico, unilaterale si, tenuta più lunga) il 12
 // ottobre salvato senza carico, il 5 a 10 lbs; Russian twist EX103 (alternato, «12-15», 0 scritto); Calf raise una
 // gamba EX557 (si, corpo libero, carico mai scritto).
@@ -31,7 +34,11 @@ const scheda = { sessioni: [ { id:'upperA', name:'Upper A', type:'Forza', rir:2,
   { codice:'EX103', name:'Russian twist', sets:3, reps:'12-15', rest_sec:75, eq:'corpo libero' },
   { codice:'EX557', name:'Calf raise una gamba', sets:3, reps:'12-15', rest_sec:60, eq:'corpo libero' },
   { codice:'EX156', name:'Crunch isometrico barchetta', sets:3, reps:'20-40 sec', iso:true, durationBased:true, isTimed:true, rest_sec:60, eq:'corpo libero' },
+  { codice:'EX131', name:'Dead hang', sets:3, reps:'20-40 sec', iso:true, durationBased:true, isTimed:true, rest_sec:60, eq:'sbarra' },
+  { codice:'EX566', name:'Donkey calf raise panca piana', sets:3, reps:'12-15', rest_sec:60, eq:'corpo libero;panca' },
+  { codice:'EX191', name:'V-sit sforbiciata', sets:3, reps:'20-40 sec', iso:true, durationBased:true, isTimed:true, rest_sec:60, eq:'corpo libero' },
 ] } ] };
+const APPOGGI = require('./dati/catalogo_attrezzi_appoggio_20261028.json');
 const riga = (codice, nome, extra) => ({ codice, nome, pattern:'core', gruppo_target:'obliqui', livello:'intermedio', attrezzo:'corpo libero', luogo:'casa', setup:'', esecuzione:'', errori:'', nota_sicurezza:'', muscoli:'obliqui', unilaterale:'no', progressione:'più ripetizioni', zone_rischio:'nessuna', adattamento:'', ...(extra || {}) });
 const catalogo = [
   riga('EX001', 'Panca elastico', { pattern:'spinta orizzontale', gruppo_target:'pettorali', attrezzo:'elastico', progressione:'carico' }),
@@ -40,6 +47,9 @@ const catalogo = [
   riga('EX103', 'Russian twist', { unilaterale:'alternato', zone_rischio:'lombare;cervicale', adattamento:'piedi a terra per facilitare, sollevati per intensificare', alternativa:'EX108' }),
   riga('EX557', 'Calf raise una gamba', { pattern:'isolamento', gruppo_target:'polpacci', unilaterale:'si' }),
   riga('EX156', 'Crunch isometrico barchetta', { gruppo_target:'addome', progressione:'tenuta più lunga' }),
+  riga('EX131', 'Dead hang', { pattern:'isometria', gruppo_target:'presa', attrezzo:'sbarra', surrogato_attrezzo:'elastico', progressione:'tenuta più lunga' }),
+  riga('EX566', 'Donkey calf raise panca piana', { pattern:'isolamento', gruppo_target:'polpacci', attrezzo:'corpo libero;panca' }),
+  riga('EX191', 'V-sit sforbiciata', { gruppo_target:'addome', unilaterale:'alternato', zone_rischio:'lombare', adattamento:'lombare: mantieni l\'equilibrio sulle ischiatiche senza cedere' }),
   // le possibili sostitute del Russian twist per oggi, con le limitazioni di Ignazio (lombare, ginocchia)
   riga('EX108', 'Crunch obliquo', { zone_rischio:'cervicale', adattamento:'cervicale: non tirare il collo' }),                       // alternativa scritta, nessun conflitto
   riga('EX110', 'Piegamenti laterali elastico', { attrezzo:'elastico', zone_rischio:'lombare', adattamento:'lombare: riduci l\'ampiezza e resta dritto' }),   // conflitto, adattamento sulla zona → entra con l'avviso
@@ -61,6 +71,9 @@ function fixture(o){
       log('r1', PRIMA, 'Russian twist', 'EX103', 1, 12, '0', 2), log('r2', PRIMA, 'Russian twist', 'EX103', 2, 12, '0', 2),
       log('c1', PRIMA, 'Calf raise una gamba', 'EX557', 1, 12, null, 2),
       log('b1', PRIMA, 'Panca elastico', 'EX001', 1, 8, '40', 2),
+      log('h1', PRIMA, 'Dead hang', 'EX131', 1, 30, null, null), log('h2', PRIMA, 'Dead hang', 'EX131', 2, 35, null, null),
+      log('d1', PRIMA, 'Donkey calf raise panca piana', 'EX566', 1, 12, null, 2),
+      log('v1', PRIMA, 'V-sit sforbiciata', 'EX191', 1, 30, '0', null),
     ],
     training_notes:[], workouts:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[],
     supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[],
@@ -164,6 +177,23 @@ async function nuovo(o){
     atteso('510 · tenuta, prima serie: il registro apre con 10 lbs (prima «—») e 30 secondi', [a.ST.trainLogResist, a.doc.getElementById('tl-reps') && a.doc.getElementById('tl-reps').value], [10, '30']);
     atteso('510 · …e la tendina del carico lo mostra', a.doc.getElementById('tl-resist') && a.doc.getElementById('tl-resist').value, '10');
   }
+  {
+    // revisione della Regia: chi è a corpo libero lo è anche con un appoggio (righe vere del 28 ottobre)
+    const a = await nuovo();
+    const W = a.W;
+    const carico = ['EX023', 'EX648'];   // elastico, barra (con l'elastico)
+    const sbagliate = APPOGGI.righe.filter(r => W._exACorpoLibero({ eq: r[2] }) === carico.includes(r[0])).map(r => r[0] + ' ' + r[2]);
+    atteso(`510 · ${APPOGGI.righe.length} righe vere: a corpo libero con sbarra, fitball, panca, panca romana, trx, box e «corpo libero;panca»; elastico e barra no`, sbagliate, []);
+    atteso('510 · con il surrogato e le parole del generatore: «elastico» e «elastico+panca» sono un carico, «corpo_libero» e niente no', [W._exACorpoLibero({ eq:'elastico' }), W._exACorpoLibero({ eq:'elastico+panca' }), W._exACorpoLibero({ eq:'corpo_libero' }), W._exACorpoLibero({ eq:'' }), W._exACorpoLibero({})], [false, false, true, true, true]);
+    atteso('510 · maniglie dei piegamenti e sacco della boxe non sono un carico; cavo, manubri, kettlebell sì', [W._exACorpoLibero({ eq:'maniglie' }), W._exACorpoLibero({ eq:'sacco' }), W._exACorpoLibero({ eq:'cavo basso;corda' }), W._exACorpoLibero({ eq:'manubri' }), W._exACorpoLibero({ eq:'kettlebell' })], [true, true, false, false, false]);
+    // Dead hang alla sbarra, carico mai scritto: resta «corpo libero» e il registro lo compila con 0 (prima della
+    // revisione diceva solo «35 sec» e il null si trascinava)
+    atteso('510 · Dead hang (sbarra, tenuta): «corpo libero · 35 sec» come prima del 510', /Oggi S1: corpo libero · 35 sec · RIR 2 · ultima volta 35 sec · corpo libero/.test(a.card('Dead hang')), true);
+    W.openLogModal('upperA', 'Dead hang', 1, { timedTarget: 35 });
+    atteso('510 · Dead hang: il registro apre con 0 (corpo libero), non con «—»', a.ST.trainLogResist, 0);
+    a.ST.trainLogOpen = null;
+    atteso('510 · Donkey calf raise («corpo libero;panca»): «corpo libero · 12 reps»', /Oggi S1: corpo libero · 12 reps · RIR 2/.test(a.card('Donkey calf raise panca piana')), true);
+  }
 
   // ── 520 · per lato, scritto sul bersaglio ──
   {
@@ -193,6 +223,21 @@ async function nuovo(o){
     a.ST.trainLogOpen = null;
     a.W.openTrainExec('upperA', 'Pallof press con elastico', 1);
     atteso('520 · schermata della tenuta: «DURATA TARGET PER LATO (sec)»', /DURATA TARGET PER LATO \(sec\)/.test(testo(a.doc.querySelector('.train-exec-overlay').innerHTML)), true);
+    a.W.trainExecBack();
+  }
+  {
+    // revisione della Regia: un alternato a tempo (V-sit sforbiciata, Lower A di Ignazio) ha un tempo solo, come il timer
+    const a = await nuovo();
+    const c = a.card('V-sit sforbiciata');
+    atteso('520 · V-sit sforbiciata (alternato a tempo): «3 × 20-40 sec», senza «per lato»', [/3 × 20-40 sec/.test(c), /per lato/.test(c)], [true, false]);
+    atteso('520 · V-sit: obiettivo e ultima volta in secondi, senza «per lato»', /Oggi S1: corpo libero · 30 sec · RIR 2 · ultima volta 30 sec · corpo libero/.test(c), true);
+    a.W.openLogModal('upperA', 'V-sit sforbiciata', 1, { timedTarget: 30 });
+    const reg = testo(a.doc.getElementById('page-training').innerHTML);
+    atteso('520 · V-sit: registro «DURATA (sec)», non «PER LATO»', [/DURATA \(sec\)/.test(reg), /DURATA PER LATO/.test(reg)], [true, false]);
+    a.ST.trainLogOpen = null;
+    a.W.openTrainExec('upperA', 'V-sit sforbiciata', 1);
+    const ex = testo(a.doc.querySelector('.train-exec-overlay').innerHTML);
+    atteso('520 · V-sit: schermata «DURATA TARGET (sec)», un blocco solo come il timer', [/DURATA TARGET \(sec\)/.test(ex), /per lato|PER LATO|LATO SX/.test(ex), a.ST.trainExecOpen.perLato], [true, false, false]);
     a.W.trainExecBack();
   }
 

@@ -62,18 +62,33 @@ function _exPerLato(ex, parsed){
   return _exInfoCatalogo(ex).unilaterale === 'si';
 }
 function _exProgressione(ex){ return _exInfoCatalogo(ex).progressione; }
-// A corpo libero: l'attrezzo della seduta (`eq`) dice solo «corpo libero», o non dice niente (schede vecchie). Lì un
-// carico non scritto vale «corpo libero»; con un attrezzo (elastico, barra, panca…) resta da scrivere (Training 510).
+// Gli attrezzi che sono un carico (Training 510, revisione della Regia del 28 ottobre 2026): con uno di questi
+// nell'attrezzo della seduta (`eq`) un carico non scritto resta da scrivere. Tutto il resto è un appoggio o niente
+// (corpo libero, panca, sbarra, fitball, trx, box, anelli, sedia, maniglie dei piegamenti, sacco della boxe…): lì il
+// carico non scritto vale «corpo libero», come prima. Prima di questa revisione contava solo «corpo libero» scritto
+// così, e Dead hang (sbarra) o Squat wall fitball perdevano il loro «corpo libero». Parole del catalogo del 28 ottobre
+// (tools/banco/dati/catalogo_attrezzi_appoggio_20261028.json); una parola nuova vale come appoggio, cioè come prima.
+const _ATTREZZI_CARICO = ['elastico', 'manubri', 'bilanciere', 'kettlebell', 'macchina', 'multipower', 'cavo', 'cavi',
+  'cavo basso', 'cavo alto', 'corda', 'palla medica', 'disco', 'barra', 'trap bar', 'rullino', 'pinza a molla'];
+// A corpo libero: nell'attrezzo della seduta nessun carico (diviso su «;», «+» e «,»: il riscaldamento scrive
+// «corpo libero;panca» intero, il surrogato «elastico+panca»), o nessun attrezzo (schede vecchie).
 function _exACorpoLibero(ex){
-  const eq = String((ex && ex.eq) || '').toLowerCase().trim();
-  return !eq || eq.split('+').every(a => /^corpo[ _]libero$/.test(a.trim()));
+  const parole = String((ex && ex.eq) || '').toLowerCase().split(/[;+,]/).map(a => a.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return !parole.some(a => _ATTREZZI_CARICO.includes(a));
 }
 // Le ripetizioni si contano per lato (Training 520, 26 ottobre 2026; Ignazio: «non si capisce se ogni lato vale come
 // una ripetizione o sinistro più destro vale una ripetizione»): negli esercizi un lato alla volta (`si`) e negli
 // alternati. Nell'alternato il conto resta quello del 360 (una ripetizione = destra + sinistra), detto con le parole
 // delle guide: «12 per lato» = 12 a destra e 12 a sinistra. Serve solo alle parole: le due tendine DX/SX e i due
-// tempi restano dei soli `si` (_exPerLato).
-function _contaPerLato(ex, parsed){ return _exPerLato(ex, parsed) || _exInfoCatalogo(ex).unilaterale === 'alternato'; }
+// tempi restano dei soli `si` (_exPerLato). Un alternato a tempo no (revisione della Regia: EX191 V-sit sforbiciata,
+// «20-40 sec» nella Lower A di Ignazio; anche Dead bug e Bird dog): il tempo è uno solo, come il timer, che fa un
+// blocco unico.
+function _contaPerLato(ex, parsed){
+  if(_exPerLato(ex, parsed)) return true;
+  if(_exInfoCatalogo(ex).unilaterale !== 'alternato') return false;
+  const pr = parsed || ((ex && ex.reps && typeof parseRepsRange === 'function') ? parseRepsRange(ex.reps) : null);
+  return !((pr && pr.kind === 'seconds') || (ex && ex.isTimed));
+}
 // Il bersaglio a parole: «12-15 per lato», «20-40 sec per lato»; com'è scritto se l'esercizio non conta per lato.
 function _bersaglioReps(ex){
   const r = String((ex && ex.reps) || '').trim();
