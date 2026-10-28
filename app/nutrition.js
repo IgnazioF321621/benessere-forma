@@ -179,10 +179,15 @@ function sedutaDomani(){
     if (typeof getInjuryPeriod === 'function' && getInjuryPeriod()) return null;
     if (typeof getPausa === 'function') { const pa = getPausa(); if (pa && (pa.attiva || (pa.futura && pa.inizio === _giornoAccanto(todayKey(), 1)))) return null; }
     let sid = hd.nextSession;
-    if (!(hd.doneToday || hd.inProgress) && sid) {
-      const cycle = getRotationCycle();
-      const i = cycle.indexOf(sid);
-      sid = i >= 0 ? cycle[(i + 1) % cycle.length] : null;
+    const cycle = getRotationCycle();
+    const dopo = (s) => { const i = cycle.indexOf(s); return i >= 0 ? cycle[(i + 1) % cycle.length] : null; };
+    if (hd.inProgress && hd.lastSession) {
+      // Seduta in corso (revisione del Training 530): la riga non è ancora completata, quindi hd.nextSession può essere
+      // proprio la seduta di oggi. Domani viene quella dopo la seduta in corso; un recupero fuori turno non sposta la
+      // rotazione (computeTrainHomeData), e allora resta la proposta di oggi.
+      if (!/^recovery/i.test(hd.lastSession) || hd.lastSession === sid) sid = dopo(hd.lastSession);
+    } else if (!hd.doneToday && sid) {
+      sid = dopo(sid);
     }
     if (!sid) return null;
     if (/^rest/.test(sid)) return { state:'riposo', label:'' };
