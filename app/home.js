@@ -37,7 +37,9 @@ async function computeTrainHomeData(){
       .eq('user_id', ST.user.id)
       .not('session_type', 'in', '(rest,rest_injury)');
     if(ST.profile && ST.profile.train_start_date) qLast = qLast.gte('date', ST.profile.train_start_date);
-    qLast = qLast.order('date', {ascending:false}).limit(10);
+    // a parità di giorno la più recente prima (revisione della Regia del 530): Lower A e Recovery Upper dello stesso giorno
+    // tornavano in ordine casuale, e la proposta poteva cambiare a ogni apertura
+    qLast = qLast.order('date', {ascending:false}).order('created_at', {ascending:false}).limit(10);
     const { data: lastArr, error: lastErr } = await qLast;
     if(lastErr) throw lastErr;
     const lastAny = (lastArr && lastArr[0]) || null; // più recente, anche recupero
