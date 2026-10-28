@@ -111,7 +111,7 @@ async function computeTrainHomeData(){
   } catch(e){
     console.warn('loadTrainingHomeData:', e.message);
     // Lettura fallita: lo si dice, non si finge un programma mai iniziato. nextSession null tiene
-    // fermi il debito (computeTrainingDebt) e il ritratto di Pirsi, che leggono da qui.
+    // ferme la seduta proposta (sedutaProposta) e il ritratto di Pirsi, che leggono da qui.
     ST.trainHomeData = { errore: true, notStarted:false, lastDate:null, lastSession:null, nextSession:null, streak:0, doneToday:false, inProgress:false };
   }
 }
@@ -280,7 +280,7 @@ function getProssimaAzioneSimple(){
   // 6. Giorno di riposo, o allenamento in pausa
   if(pausaAll && !(tr && hd.doneToday)){
     const pz = getPausa();
-    return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: niente debito, riprendi da dove eri.` : 'Niente debito: riprendi da dove eri quando torni.', nextHint: null };
+    return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: riprendi da dove eri.` : 'Riprendi da dove eri quando torni.', nextHint: null };
   }
   if(riposo){
     return { titolo: 'Oggi riposo', dettaglio: 'Il recupero fa parte del programma.', nextHint: null };
@@ -1326,8 +1326,8 @@ function _renderHomeCards(){
       weekEyebrow = `COMPLETATA · ${weekStr} · PROSSIMA: ${nextSessObj.name.toUpperCase()}`;
       stato = _statoGiornoTraining(hd);
     } else {
-      // La seduta giusta: il debito più vecchio se c'è, altrimenti la prossima della rotazione.
-      const target = (typeof computeTrainingDebt === 'function' ? computeTrainingDebt().target : null) || hd.nextSession;
+      // La seduta proposta è una sola, la stessa di «Prossima azione»: la prossima della rotazione (Training 530).
+      const target = hd.nextSession;
       const isRest = /^rest/.test(target || '');
       const nextSessObj = getTrainingSession(target) || getTrainingSession('upperA');
       // FASE B.1 — mappa adattiva: con scheda 5gg nextSession può essere 'upperC'/'rest'

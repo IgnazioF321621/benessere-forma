@@ -1612,7 +1612,7 @@ function scrollToActiveExercise(){
 // l'intera classe di difetto invece di spostarne il confine di qualche giorno:
 // niente piu' logica sui bordi, e niente chiamata di rete a ogni tocco di freccia.
 // E' lo stesso criterio che loadTrainingAllCompleted usa da sempre — il motivo per
-// cui rotazione, streak e debito hanno sempre visto giusto mentre la striscia no.
+// cui rotazione e streak hanno sempre visto giusto mentre la striscia no.
 //
 // Non prende piu' anno e mese. Gli ultimi due chiamanti che li passavano erano le
 // frecce del calendario mensile, rimosse col cantiere 25.
@@ -1720,7 +1720,7 @@ async function markRestInjury(zoneNote){
 // ═══ INFORTUNIO MULTI-GIORNO (17 lug 2026) ═══
 // Periodo con durata prevista in localStorage (zt_injury_<userId>), giorni
 // materializzati UNO AL GIORNO al passaggio come righe workouts 'rest_injury'
-// idempotenti: calendario, debito e settimana ciclo continuano a leggere le
+// idempotenti: calendario, rotazione e settimana ciclo continuano a leggere le
 // stesse righe di sempre (zero consumatori da toccare) e la storia resta
 // visibile cross-device. Nessuna riga scritta in anticipo.
 function _injKey(){ return 'zt_injury_' + ((ST.user && ST.user.id) || 'anon'); }
@@ -2092,7 +2092,7 @@ function _renderVolumeCard(){
 // un periodo con le date (fine anche aperta) · il blocco si congela (il conteggio va ad allenamenti,
 // fermandosi non avanza; i giorni di pausa non contano per la card dei 35 giorni né per il check dei
 // 42) e oltre 3 settimane al rientro si propone il blocco nuovo · Pirsi lo sa (pause_days nel quadro).
-// Durante la pausa: nessun debito (computeTrainingDebt), la striscia in Training, «Rientro anticipato».
+// Durante la pausa: la striscia in Training, «Rientro anticipato»; si riparte dalla prossima della rotazione.
 // La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
 const PAUSA_BLOCCO_NUOVO_GIORNI = 21;     // oltre tre settimane fermo, al rientro conviene un blocco pulito
 const PAUSA_RIENTRO_GIORNI = 14;          // per quanti giorni dopo il rientro la proposta resta
@@ -2206,7 +2206,7 @@ function _renderPausaBar(){
   const quando = pz.attiva
     ? (pz.fine ? `In pausa fino al ${_pausaFmt(pz.fine)}` : 'In pausa, fine da decidere')
     : (pz.fine ? `Pausa dal ${_pausaFmt(pz.inizio)} al ${_pausaFmt(pz.fine)}` : `Pausa dal ${_pausaFmt(pz.inizio)}, fine da decidere`);
-  const sotto = pz.attiva ? 'Nessun debito di sedute, il blocco è fermo: riprendi da dove eri.' : 'Dichiarata: in quei giorni niente debito e niente proposte di Pirsi sull\'allenamento.';
+  const sotto = pz.attiva ? 'Il blocco è fermo: riprendi da dove eri.' : 'Dichiarata: in quei giorni il blocco è fermo e Pirsi non propone niente sull\'allenamento.';
   return `
     <div id="pausa-bar" style="background:var(--s1);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:180px;">
@@ -2228,7 +2228,7 @@ function _renderPausaCard(){
             <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">✈️ Mi fermo per un periodo${stato ? ` <span style="font-size:11px;color:var(--acc);font-family:var(--font-mono);">· ${stato}</span>` : ''}</div>
-                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro: dici le date e scegli cosa fermare (allenamento, cibo, pesate). L'app ti aspetta, senza debiti né promemoria.</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro: dici le date e scegli cosa fermare (allenamento, cibo, pesate). L'app ti aspetta, senza promemoria.</div>
               </div>
               <button onclick="apriPausa();" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">${stato ? 'Modifica' : 'Imposta'}</button>
             </div>`;
@@ -2274,7 +2274,7 @@ function _renderPausaModal(){
   if(!m) return '';
   const motivi = Array.isArray(m.motivi) ? m.motivi : [];
   const chip = (v, lbl) => { const on = motivi.includes(v); return `<button type="button" class="pausa-motivo${on ? ' on' : ''}" data-motivo="${v}" aria-pressed="${on}" onclick="_pausaModalMotivo('${v}')" style="padding:9px 14px;border-radius:999px;border:1.5px solid ${on ? 'var(--acc)' : 'var(--s2)'};background:${on ? 'var(--acc)' : 'var(--s1)'};color:${on ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${on ? '✓ ' : ''}${lbl}</button>`; };
-  const descr = { allenamento: 'niente debito di sedute, blocco fermo, rientro graduale', cibo: 'niente promemoria dei pasti, la serie dei giorni di fila non si spezza, Pirsi non taglia le calorie', pesate: 'niente promemoria della pesata né del check di fine blocco' };
+  const descr = { allenamento: 'blocco fermo, rientro graduale', cibo: 'niente promemoria dei pasti, la serie dei giorni di fila non si spezza, Pirsi non taglia le calorie', pesate: 'niente promemoria della pesata né del check di fine blocco' };
   // Interruttori veri, grandi, con lo stato scritto: «si ferma» / «va avanti». Un tocco su tutta la riga.
   const interruttori = PAUSA_MODULI_ETICHETTE.map(([k, l]) => { const on = !!(m.moduli && m.moduli[k]); return `<button type="button" class="pausa-modulo" data-modulo="${k}" role="switch" aria-checked="${on}" onclick="_pausaModalToggle('${k}')" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 0;border:none;border-bottom:1px solid var(--s2);background:none;text-align:left;cursor:pointer;">
           <span style="flex:1;min-width:0;">
@@ -3799,89 +3799,6 @@ function _renderRecoverySection(s, sel){
   return heroHtml + listHtml;
 }
 
-// Passo 3 — render ANTEPRIMA sola lettura di una sessione (giorno futuro non ancora attivo).
-// Percorso SEPARATO dal dettaglio loggabile: nessun log, nessun controllo serie/attivazione/finisher.
-// Riusa le classi di presentazione del modal scheda esercizio (.modal-section/.modal-list/.modal-params/.modal-alert).
-function _renderSessionPreview(s, sel){
-  const backLabel = 'I tuoi giorni'; // pillola Sessione rimossa: la sessione si apre sempre da Programma
-  const isRec = s.rir === null;
-  const typeBadge = isRec
-    ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
-    : `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">${s.type.toUpperCase()}${s.rir!=null?' · RIR '+s.rir:''}</span>`;
-
-  let exHTML;
-  if(s.type === 'Recupero'){
-    // Recupero in anteprima: elenco esercizi sola lettura (nome + eventuale durata), senza i controlli del flow.
-    exHTML = (s.exercises||[]).map((e,i)=>{
-      const dur = e.duration_sec ? `${e.duration_sec}s` : (e.reps || '');
-      const sideTag = e.side ? ` · ${e.side}` : '';
-      return `
-        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <span style="font-size:14px;font-weight:600;font-family:var(--font-sans);color:var(--t1);"><span style="color:var(--t3);font-family:var(--font-mono);margin-right:6px;">${i+1}</span>${nomeCortoConTag(e.name)}${sideTag}</span>
-          ${dur ? `<span style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);flex-shrink:0;">${dur}</span>` : ''}
-        </div>`;
-    }).join('');
-    exHTML = `<div style="display:flex;flex-direction:column;gap:8px;">${exHTML}</div>`;
-  } else {
-    exHTML = (s.exercises||[]).map((e,i)=>{
-      const isTimed = !!(e.isTimed || (typeof parseRepsRange === 'function' && parseRepsRange(e.reps)?.kind === 'seconds'));
-      const rirEx    = rirObiettivo(e, s);   // l'obiettivo dell'esercizio, non quello della seduta (Training 460)
-      const rirPart  = (rirEx != null && !isTimed) ? ` · RIR ${rirEx}` : '';
-      const restVal  = e.rest_sec ? restSecToText(e.rest_sec) : s.rest;
-      const restPart = restVal ? ` · rec ${restVal}` : '';
-      const setupSec = (Array.isArray(e.setup) && e.setup.length) ? `<div class="modal-section"><h4>Setup</h4><ul class="modal-list">${e.setup.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
-      const execSec  = (Array.isArray(e.execution) && e.execution.length) ? `<div class="modal-section"><h4>Esecuzione</h4><ol class="modal-list">${e.execution.map(x=>`<li>${x}</li>`).join('')}</ol></div>` : '';
-      const errSec   = (Array.isArray(e.commonErrors) && e.commonErrors.length) ? `<div class="modal-section"><h4>Errori comuni da evitare</h4><ul class="modal-list">${e.commonErrors.map(x=>`<li>${x}</li>`).join('')}</ul></div>` : '';
-      const muscSec  = (Array.isArray(e.muscles) && e.muscles.length) ? `<div class="modal-section"><h4>Muscoli</h4><p>${e.muscles.join(' · ')}</p></div>` : '';
-      const alertSec = e.alert ? `<div class="modal-alert">${e.alert}</div>` : '';
-      return `
-        <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px;">
-          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
-            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);color:var(--t3);">${i+1}</span>
-            <span style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.2;">${nomeCortoConTag(e.name)}</span>
-          </div>
-          ${e.eq ? `<div style="font-size:11px;font-family:var(--font-mono);color:var(--t3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">${e.eq}</div>` : `<div style="height:6px;"></div>`}
-          <div class="modal-params" style="margin-bottom:14px;">${e.sets} × ${e.reps}${rirPart}${restPart}</div>
-          ${setupSec}
-          ${execSec}
-          ${errSec}
-          ${muscSec}
-          ${alertSec}
-        </div>`;
-    }).join('');
-  }
-
-  return `
-    <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));">
-      <button onclick="closeTrainingSession();"
-        style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
-        ${backLabel}
-      </button>
-
-      <div onclick="allenaQuestoOggi('${sel}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
-        <div style="min-width:0;">
-          <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">ANTEPRIMA</div>
-          <div style="font-size:17px;font-weight:800;font-family:var(--font-sans);color:#fff;line-height:1.15;">Allena questo oggi</div>
-          <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">Sblocca ${s.name} e registra le serie su oggi</div>
-        </div>
-        <div style="font-size:22px;color:rgba(255,255,255,.9);flex-shrink:0;line-height:1;">›</div>
-      </div>
-
-      <div style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:8px;">ANTEPRIMA · SOLA LETTURA</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-          <span style="font-size:22px;font-weight:800;font-family:var(--font-sans);color:var(--t1);line-height:1.15;">${s.name}</span>
-          ${typeBadge}
-        </div>
-        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;">Questo giorno arriva più avanti nella rotazione. Puoi vedere gli esercizi; per loggarli, anticipalo con <strong>Allena questo oggi</strong>.</div>
-      </div>
-
-      <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI · SOLA LETTURA · PRESCRIZIONE</div>
-      ${exHTML}
-    </div>`;
-}
-
 // ── Nome esercizio: accorcia a runtime + deriva tag modalità ────────────────
 // Il catalogo mantiene i nomi completi (es. "Stacco rumeno unilaterale con
 // manubri"); a video mostriamo la versione corta + un tag modalità derivato.
@@ -3952,11 +3869,7 @@ function renderTraining(){
     const sel = ST.trainSession;
       // ── Dettaglio sessione ──────────────────────────────────
       const s = getTrainingSession(sel);
-      // Passo 3 — gate ANTEPRIMA: giorno non attivo → percorso sola lettura SEPARATO (il loggabile resta byte-stabile).
-      const preview = !isActiveDay(sel);
-      if(preview){
-        body = _renderSessionPreview(s, sel);
-      } else {
+      // Ogni seduta si apre pronta da registrare (Training 530, scelta di Ignazio): niente più anteprima.
       const isRecovery = s.rir === null;
       // Settimana del mesociclo: in SCARICO (sett. 6) badge dedicato + riga
       // carico leggero sul primo set di ogni esercizio (solo display, jsonb intatto).
@@ -4226,7 +4139,6 @@ function renderTraining(){
             ✓ Completa sessione
           </button>` : ''}
         </div>`;
-      }
 
   } else if(subnav === 'piano'){
     // ── Piano tab ───────────────────────────────────────────
@@ -4260,10 +4172,8 @@ function renderTraining(){
     const SALVIA = '#6FA99B';                            // verde salvia (stessa famiglia evergreen) — Ipertrofia / scarico
     const oggiBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.08em;color:#fff;background:var(--acc);padding:2px 6px;border-radius:999px;flex-shrink:0;">PROSSIMO</span>`;
 
-    // ── Passo 4 · DEBITO (allenamenti saltati per anticipo) — calcolato dallo storico, niente DB ──
-    const { debt: trainDebt, target: debtTarget } = computeTrainingDebt();
-    const debtSet = new Set(trainDebt);
-    const debtBadge = `<span style="font-size:8px;font-weight:800;font-family:var(--font-mono);letter-spacing:.04em;color:#fff;background:var(--err);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">DA RECUPERARE</span>`;
+    // ── La seduta proposta (Training 530): una sola, la prossima della rotazione; niente sedute «da recuperare» ──
+    const prossimaSid = sedutaProposta();
 
     // ── 1 · HERO settimana ──────────────────────────────────
     const heroSegs = [0,1,2,3,4,5].map(i=>{
@@ -4294,17 +4204,14 @@ function renderTraining(){
     const dayCards = workoutDays.map(d=>{
       const isIper = d.desc === 'Ipertrofia';
       const accentCol = isIper ? SALVIA : 'var(--acc)';
-      // Stato card — priorità: FATTO oggi > DA RECUPERARE (debito) > OGGI (target) > FUTURO neutro
+      // Stato card — priorità: FATTO oggi > PROSSIMO (la seduta proposta) > neutro
       const lastDate = ST.sessionLastCompletion ? ST.sessionLastCompletion[d.session] : null;
       const doneToday = lastDate === todayKey();
       let leftBorder = accentCol, cardOpacity = '1', stateBadge = '';
       if(doneToday){
         cardOpacity = '.72';
         stateBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(lastDate)}</span>`;
-      } else if(debtSet.has(d.session)){
-        leftBorder = 'var(--err)';
-        stateBadge = debtBadge;
-      } else if(d.session === debtTarget){
+      } else if(d.session === prossimaSid){
         stateBadge = oggiBadge;
       }
       return `
@@ -4322,7 +4229,7 @@ function renderTraining(){
 
     const recoveryDays = DAY_SPLIT.filter(d => d.session.startsWith('recovery'));
     const recoveryRows = recoveryDays.map(d=>{
-      const isToday = d.session === debtTarget;
+      const isToday = d.session === prossimaSid;
       return `
         <div onclick="openTrainingSession('${d.session}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
           <span style="font-size:13px;font-weight:600;font-family:var(--font-sans);color:var(--t2);display:flex;align-items:center;gap:7px;">
@@ -4342,8 +4249,7 @@ function renderTraining(){
       const dt = ld === todayKey();
       let lb = acCol, op = '1', sb = '';
       if(dt){ op='.72'; sb=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(ld)}</span>`; }
-      else if(debtSet.has(sid)){ lb='var(--err)'; sb=debtBadge; }
-      else if(sid===debtTarget){ sb=oggiBadge; }
+      else if(sid===prossimaSid){ sb=oggiBadge; }
       return `<div onclick="openTrainingSession('${sid}')" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid ${lb};border-radius:10px;padding:12px 13px;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;opacity:${op};"><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;"><span style="font-size:15px;font-weight:800;font-family:var(--font-sans);color:var(--t1);">${lbl}</span>${sb}</div><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;"><span style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:${acCol};text-transform:uppercase;">● ${dsc}</span><span style="font-size:15px;color:var(--t3);line-height:1;flex-shrink:0;">›</span></div></div>`;
     };
     const _mkSep = (lbl, cnt) => {
@@ -4360,15 +4266,14 @@ function renderTraining(){
       const recDt = recLd === todayKey();
       let recBadge = '';
       if(recDt) recBadge = `<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(recLd)}</span>`;
-      else if(recSess?.session === debtTarget) recBadge = oggiBadge;
+      else if(recSess?.session === prossimaSid) recBadge = oggiBadge;
       const cSessObj = getTrainingSession('upperC');
       const cLbl = cSessObj?.name || 'Upper C';
       const cLd = ST.sessionLastCompletion ? ST.sessionLastCompletion['upperC'] : null;
       const cDt = cLd === todayKey();
       let cLb = SALVIA, cOp = '1', cBadge = '';
       if(cDt){ cOp='.72'; cBadge=`<span style="font-size:8px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;color:var(--acc);background:var(--acc-lt);padding:2px 6px;border-radius:999px;flex-shrink:0;white-space:nowrap;">✓ ${fmtDate(cLd)}</span>`; }
-      else if(debtSet.has('upperC')){ cLb='var(--err)'; cBadge=debtBadge; }
-      else if('upperC'===debtTarget){ cBadge=oggiBadge; }
+      else if('upperC'===prossimaSid){ cBadge=oggiBadge; }
       const recSessId = recSess ? recSess.session : 'recoveryUpper';
       giorniHTML = `<div>
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:3px;">
@@ -4494,8 +4399,8 @@ function renderTraining(){
         </div>
       </div>`;
 
-    // ── Scorciatoia "Allenamento di oggi" — punta al target (debito più vecchio se presente, altrimenti rotazione) ──
-    const todayTargetSid = debtTarget || 'upperA';
+    // ── Scorciatoia "Prossimo allenamento" — la seduta proposta, la stessa della Home (Training 530) ──
+    const todayTargetSid = prossimaSid || 'upperA';
     const todayTargetSess = getTrainingSession(todayTargetSid);
     const todayTargetName = todayTargetSess?.name || 'Allenamento';
     const todayTargetMeta = todayTargetSess
@@ -5606,29 +5511,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Helpers apertura/chiusura sessione Training ────────────
-// Passo 3 — un giorno è ATTIVO (loggabile oggi) se ha serie loggate oggi, è stato completato oggi,
-// è stato anticipato in questa sessione app, o è il "today" debito-aware (Passo 4).
-function isActiveDay(sid){
-  if(!sid) return false;
-  const tk = todayKey();
-  if(Object.keys(ST.trainLoggedSets || {}).some(k => k.startsWith(sid+'_') && k.endsWith('_'+tk))) return true;
-  if((ST.sessionLastCompletion || {})[sid] === tk) return true;
-  if(sid === ST.trainAnticipato) return true;
-  // Passo 4 — "today" debito-aware: target = debito più vecchio se presente, altrimenti rotazione (nextSession).
-  // I giorni in debito (DA RECUPERARE) sono loggabili direttamente; un futuro neutro resta in anteprima.
-  const { debt, target } = computeTrainingDebt();
-  if(sid === target) return true;          // ≡ sid===nextSession quando non c'è debito (nessuna regressione)
-  if(debt.includes(sid)) return true;
-  return false;
-}
-
-// Passo 3 — sblocca il giorno in anteprima: lo rende attivo/loggabile (anticipo in memoria, no DB).
-function allenaQuestoOggi(sid){
-  ST.trainAnticipato = sid;
-  if(ST.trainSession === sid){ renderTraining(); }
-  else { openTrainingSession(sid); }
-}
-
 function openTrainingSession(sid){
   ST.trainSession = sid;
   _hydrateActivation(sid); // ripristina flag fatto + collasso del Blocco Attivazione (per sessione+giorno)
@@ -5661,7 +5543,6 @@ function closeTrainingSession(){
   execTimerStop(); // ferma il cronometro di tenuta (no interval orfano)
   workTimeStopTick();
   ST.trainSession = null;
-  ST.trainAnticipato = null; // Passo 3: l'anticipo dura finché la sessione è aperta; dopo il primo log il giorno resta attivo via "serie oggi"
   ST.trainActivation = [false,false,false];
   ST.trainActivationCollapsed = false; // reset in memoria; lo stato salvato in localStorage sopravvive (ri-idratato alla riapertura)
   ST.trainLogOpen = null;
@@ -6645,7 +6526,7 @@ function _tabataFlowTick(){
 // Impostazioni › Allenamento (profiles.tabata, migrazione 20261024_490): `coda` in fondo a ogni seduta,
 // `giorni` in fondo solo nei giorni della settimana scelti (profiles.tabata_giorni, 1 = lunedì … 7 =
 // domenica), `a_parte` un tasto nel Programma per farlo quando si vuole, fuori dalla seduta. Solo il timer,
-// come sempre: non si salva niente, non conta come seduta e non crea debito. Il finisher resta nel jsonb
+// come sempre: non si salva niente, non conta come seduta e non sposta la rotazione. Il finisher resta nel jsonb
 // delle schede: quando è spento si ignora.
 const TABATA_MODI = ['spento', 'coda', 'giorni', 'a_parte'];
 function tabataModo(){
@@ -7027,7 +6908,7 @@ async function checkRecoverySessionDone(){
     // async indipendenti né doppio render. computeTrainHomeData è DOM-free (no renderHome: nessun
     // flicker della Home off-screen mentre si è in Training).
     await computeTrainHomeData();                          // ST.trainHomeData fresco (nextSession)
-    await loadTrainingAllCompleted({ skipRender: true });  // storico completo per computeTrainingDebt + settimana ciclo
+    await loadTrainingAllCompleted({ skipRender: true });  // storico completo per la settimana ciclo
     await loadSessionLastCompletion({ skipRender: true });  // ultimo completamento + trainCompletedToday
     if(ST.page === 'training') renderTraining();
   }

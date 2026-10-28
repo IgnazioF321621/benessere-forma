@@ -91,7 +91,7 @@ async function nuovo(o){
     atteso('Home · lo stato del giorno della card Training dice «in pausa fino a»', /IN PAUSA FINO A/.test(a.win._statoGiornoTraining(a.ST.trainHomeData)), true);
     atteso('Nutrition · la serie dei giorni di fila non si spezza sul giorno vuoto in pausa (oggi, ieri vuoto, l\'altro ieri, 3 giorni fa → 3)', a.win.calcStreak(), 3);
     atteso('Body · mai pesato ma promemoria pesata zitto; check dei 42 giorni zitto', [a.win._weightReminderShouldShow(), a.win.getBlockCheckReminder()], [false, null]);
-    atteso('Training · nessun debito', a.win.computeTrainingDebt().debt, []);
+    atteso('Training · in pausa la seduta proposta è la prossima della rotazione (Training 530: il debito non c\'è più)', a.win.sedutaProposta(), (a.ST.trainHomeData && a.ST.trainHomeData.nextSession) || null);
     a.win.openSettingsModal();
     atteso('Impostazioni · la riga dice la pausa coi moduli, il tasto dice Modifica', [a.doc.getElementById('set-pausa-stato').textContent, a.doc.getElementById('set-pausa-btn').textContent], [`Dal ${a.win._pausaFmt(add(OGGI, -2))} al ${a.win._pausaFmt(add(OGGI, 5))} (vacanza) · allenamento, cibo, pesate e misure`, 'Modifica ›']);
   }

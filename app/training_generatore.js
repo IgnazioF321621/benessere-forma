@@ -2,7 +2,7 @@
 // app/training_generatore.js — Training, la scheda e il generatore (Fondamenta 035, tappa 7, 2 ottobre 2026)
 // ═══════════════════════════════════════
 // I dati di base (blocco attivazione, media degli esercizi, sessioni di fallback), la lettura della scheda
-// utente da schede_utente, il ciclo e il debito, il coach che genera le schede con la sua diagnostica.
+// utente da schede_utente, il ciclo e la seduta proposta, il coach che genera le schede con la sua diagnostica.
 // Spostati qui da zona-tracker.html senza cambiare una riga.
 // La pagina lo carica DOPO app/home.js e PRIMA di app/training.js: qui al caricamento si dichiarano solo
 // costanti scritte per esteso e si collega il Recovery Day unico, niente che usi un nome scritto più
@@ -1147,7 +1147,7 @@ function getSessionCycle() {
 // Opzione A (fix 30 mag) — ORDINE CANONICO della rotazione a 6 giorni (G1..G6), derivato da SESSION_DAY_NUM.
 // Perché serve: la scheda generata NON contiene i recuperi (G3/G6), quindi getSessionCycle() su scheda attiva
 // ritorna solo i 4 giorni di lavoro → completando un recupero indexOf=-1 → "prossimo" sbagliato (fallback a upperA).
-// "I tuoi giorni" mostra comunque la rotazione 6-day di DAY_SPLIT: il calcolo di "prossimo" e del debito DEVE
+// "I tuoi giorni" mostra comunque la rotazione 6-day di DAY_SPLIT: il calcolo di "prossimo" DEVE
 // seguire QUESTA sequenza (così REC↑/G3 → UP B/G4). getSessionCycle() resta la fonte dei CONTENUTI (getTrainingSession),
 // NON della rotazione.
 // FASE B.1 — mappa giorno→numero ADATTIVA alla scheda attiva. Se la scheda
@@ -1196,55 +1196,13 @@ function getCycleWeekInfo(opts){
 // Date (YYYY-MM-DD) degli scarichi anticipati accettati, da coach_proposals (loadCoachProposals).
 function _coachDeloadDates(){ return (ST.coachDeloads || []).slice(); }
 
-// Passo 4 — DEBITO allenamenti: derivato dallo storico (ST.trainAllCompleted, sincronizzato su tutti i device).
-// NESSUNA scrittura DB, nessun campo persistito: si ricalcola ad ogni render.
-// Ritorna { debt:[sid,...], target:sid } — "solo giro corrente", i recuperi non vanno mai in debito.
-function computeTrainingDebt(){
-  if(!ST.user || ST.user.id === 'test-user-001') return { debt: [], target: null };
-  // Pausa programmata (Training 350): dichiarata in anticipo, niente da recuperare. Alla fine si riparte
-  // dalla prossima seduta della rotazione, non da un debito accumulato stando via.
-  const pausa = (typeof getPausa === 'function') ? getPausa() : null;
-  if(pausa && pausa.attiva && pausa.moduli.allenamento) return { debt: [], target: ST.trainHomeData?.nextSession || null };
-  const cycle = getRotationCycle(); // ordine canonico 6 giorni (recuperi inclusi); i recuperi restano esclusi dal debito via isRecoverySid
-  const len = cycle.length;
-  const all = ST.trainAllCompleted || [];
-  const debt = new Set();
-  const isRecoverySid = (sid) => {
-    const ss = getTrainingSession(sid);
-    // FASE B.1 — escludi dal debito anche il riposo: 'rest' è nel ciclo a 7
-    // (G7) ma saltarlo NON deve generare debito, come i recuperi attivi.
-    return (ss && (ss.type === 'Recupero' || ss.type === 'Riposo'))
-      || /^recovery/i.test(sid) || sid === 'rest' || sid === 'rest_injury';
-  };
-  let pos = -1; // indice ciclo del "fronte" raggiunto
-  for(const w of all){
-    if(isRecoverySid(w.session_type)) continue; // recupero trasparente alla rotazione
-    const Wi = cycle.indexOf(w.session_type);
-    if(Wi === -1) continue;                 // tipo non nel ciclo → ignora
-    if(pos === -1){ pos = Wi; continue; }    // primo workout valido = fronte iniziale
-    // Recupero del debito: questo tipo era in debito → azzeralo e avanza il fronte.
-    if(debt.has(w.session_type)){ debt.delete(w.session_type); pos = Wi; continue; }
-    const forward = (Wi - pos + len) % len;
-    if(forward === 1 || forward === 0){
-      pos = Wi;                              // sequenziale o stesso tipo ripetuto
-    } else {                                 // forward >= 2 → salto in avanti
-      for(let step = 1; step < forward; step++){
-        const sidJ = cycle[(pos + step) % len];
-        if(!isRecoverySid(sidJ)) debt.add(sidJ);
-      }
-      pos = Wi;
-    }
-  }
-  let target;
-  if(debt.size > 0){
-    // debito più vecchio = indice ciclo più basso tra i membri
-    target = [...debt].reduce((best, sid) =>
-      cycle.indexOf(sid) < cycle.indexOf(best) ? sid : best);
-  } else {
-    target = ST.trainHomeData?.nextSession || null;
-  }
-  return { debt: [...debt], target };
-}
+// La seduta proposta (Training 530, 28 ottobre 2026; Ignazio: «Dobbiamo togliere la questione dei debiti, decido io
+// cosa fare»): una sola, la prossima della rotazione dopo l'ultima fatta (ST.trainHomeData.nextSession, da
+// computeTrainHomeData), per la card della Home, «Prossima azione», «I tuoi giorni» e «Prossimo allenamento» nel tab
+// Training. Nessuna seduta «dovuta» né «da recuperare»: prima computeTrainingDebt proponeva la più vecchia saltata, e la
+// card della Home diceva «Lower B» mentre «Prossima azione» diceva «Recovery Day». Ogni seduta si apre già pronta da
+// registrare (scelta di Ignazio coi pulsanti: niente più anteprima con «Allena questo oggi»).
+function sedutaProposta(){ return (ST.trainHomeData && ST.trainHomeData.nextSession) || null; }
 
 // ═══════════════════════════════════════════════════════════
 // TRAINING — COACH GENERATORE SCHEDE (Step 2 — 28 mag 2026)

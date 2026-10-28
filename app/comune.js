@@ -63,7 +63,6 @@ const ST = {
   suppSheet: { mode: null, selGroup: null, singleQuery: '', singleSelId: null, singleDose: 1, singleUnit: 'cps', singleTime: '' },
   trainTab: null,
   trainSession: null,
-  trainAnticipato: null,            // Passo 3: giorno futuro "anticipato" a oggi (in memoria, no DB) — reset in closeTrainingSession
   trainLogOpen: null,
   // BLOCCO 2B (26 mag 2026) — Schermata ESECUZIONE inserita tra "+S{n}" e logger.
   // Quando attiva mostra GIF grande + nome esercizio + badge reps/RIR + bottone
@@ -234,7 +233,7 @@ const ST = {
 const SESSION_DAY_NUM = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, recoveryLower:6 };
 // FASE B.1 — Ciclo 7 giorni per la scheda a 5 giorni di lavoro (intermedio/avanzato con Upper Pump):
 // G1 upperA · G2 lowerA · G3 recoveryUpper · G4 upperB · G5 lowerB · G6 upperC (Pump) · G7 rest
-// (riposo esplicito nel ciclo, escluso dal debito come i recuperi — vedi isRecoverySid in computeTrainingDebt).
+// (riposo esplicito nel ciclo: computeTrainHomeData lo propone solo il giorno stesso dell'ultimo workout).
 const SESSION_DAY_NUM_5 = { upperA:1, lowerA:2, recoveryUpper:3, upperB:4, lowerB:5, upperC:6, rest:7 };
 const SESSION_CYCLE = ['upperA','lowerA','recoveryUpper','upperB','lowerB','recoveryLower'];
 

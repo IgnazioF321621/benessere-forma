@@ -2,7 +2,8 @@
 // Decisioni di Ignazio: un periodo con le date (fine anche aperta) · il blocco si congela, oltre tre
 // settimane al rientro si propone il blocco nuovo · Pirsi lo sa. La pausa sta nel profilo.
 // Parte 1: la regola pura (shared/quadro.js) e Pirsi (shared/coach_rules.js), senza jsdom.
-// Parte 2: l'app vera: card, foglio con le date, striscia, niente debito, blocco fermo, rientro.
+// Parte 2: l'app vera: card, foglio con le date, striscia, blocco fermo, rientro. Dal Training 530 (28 ottobre 2026)
+// il debito non esiste più: la seduta proposta è la prossima della rotazione, in pausa e fuori.
 //   node tools/banco/prova_training_350.js
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs'), path = require('path');
@@ -83,7 +84,7 @@ function fixture(o){
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', giorni_allenamento:4, train_start_date: o.inizio || '2026-10-05', pausa_inizio: o.pausa_inizio || null, pausa_fine: o.pausa_fine || null, pausa_motivo: o.pausa_motivo || null }],
     schede_utente:[{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(scheda)) }],
     esercizi_catalog:[{ codice:'EX001', nome:'Panca elastico' }, { codice:'EX040', nome:'Squat elastico' }, { codice:'EX002', nome:'Piegamenti' }, { codice:'EX041', nome:'Affondi' }],
-    // upperA fatta, poi upperB saltando lowerA: senza pausa è un debito
+    // upperA fatta, poi upperB saltando lowerA: fino al Training 530 era un debito, ora si propone lowerB
     workouts: o.workouts || [ { id:'w1', user_id:U, session_type:'upperA', date:'2026-10-06', completed:true }, { id:'w2', user_id:U, session_type:'upperB', date:'2026-10-08', completed:true } ],
     training_logs: o.training_logs || [],
     training_notes:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[],
@@ -107,11 +108,12 @@ async function nuovo(o){
   return { ...b, ST, t, doc, pagina, scritture };
 }
 (async () => {
-  // 1 · senza pausa: la card «Imposta», il debito c'è, niente striscia
+  // 1 · senza pausa: la card «Imposta», niente striscia, la seduta proposta è la prossima della rotazione
   {
     const a = await nuovo();
     atteso('app · la card fra i riposi extra, da impostare', [/Mi fermo per un periodo/.test(a.pagina()), /Imposta/.test(a.pagina()), !!a.doc.getElementById('pausa-bar')], [true, true, false]);
-    atteso('app · senza pausa lowerA è in debito', a.win.computeTrainingDebt().debt, ['lowerA']);
+    await a.win.computeTrainHomeData(); a.win.renderTraining();
+    atteso('app · Training 530: dopo upperA e upperB (lowerA saltata) si propone lowerB, niente «da recuperare»', [a.win.sedutaProposta(), /DA RECUPERARE/i.test(a.pagina())], ['lowerB', false]);
     atteso('app · getPausa null', a.win.getPausa(), null);
     // il foglio: date, «non lo so ancora», motivo, salva
     a.win.apriPausa();
@@ -122,7 +124,7 @@ async function nuovo(o){
     atteso('foglio · scrive le tre colonne nel profilo, una riga per id', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:'2026-10-30', pausa_motivo:'viaggio', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
     atteso('foglio · il profilo in memoria è aggiornato e il foglio chiuso', [a.ST.profile.pausa_inizio, a.ST.profile.pausa_fine, !!a.ST.pausaModal], ['2026-10-20', '2026-10-30', false]);
     atteso('striscia · pausa dichiarata per dopo, con «Togli»', [/PAUSA · VIAGGIO/.test(a.pagina()), /Pausa dal 20 ottobre al 30 ottobre/.test(a.pagina()), /Togli/.test(a.pagina())], [true, true, true]);
-    atteso('app · una pausa futura non toglie il debito di oggi', a.win.computeTrainingDebt().debt, ['lowerA']);
+    atteso('app · una pausa futura non cambia la seduta proposta', a.win.sedutaProposta(), 'lowerB');
     await a.win.terminaPausa();
     atteso('striscia · «Togli» su una pausa futura la cancella', [a.scritture().pop(), !!a.doc.getElementById('pausa-bar')], [{ pausa_inizio:null, pausa_fine:null, pausa_motivo:null, pausa_moduli:null }, false]);
     // fine prima dell'inizio: non si salva
@@ -136,13 +138,13 @@ async function nuovo(o){
     await a.win.salvaPausa();
     atteso('foglio · «non lo so ancora»: fine nulla', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:null, pausa_motivo:'vacanza', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
   }
-  // 2 · in pausa: striscia, niente debito, «Rientro anticipato» chiude a ieri
+  // 2 · in pausa: striscia, niente «da recuperare», «Rientro anticipato» chiude a ieri
   {
     const a = await nuovo({ pausa_inizio:'2026-10-10', pausa_fine:'2026-10-20', pausa_motivo:'vacanza' });
     atteso('in pausa · la striscia dice fino a quando, con «Rientro anticipato»', [/In pausa fino al 20 ottobre/.test(a.pagina()), /Rientro anticipato/.test(a.pagina()), /PAUSA · VACANZA/.test(a.pagina())], [true, true, true]);
-    atteso('in pausa · nessun debito', a.win.computeTrainingDebt().debt, []);
+    atteso('in pausa · nessuna seduta «da recuperare»', /DA RECUPERARE|da recuperare|debit/i.test(a.pagina()), false);
     await a.win.terminaPausa();
-    atteso('in pausa · «Rientro anticipato»: la pausa finisce ieri, oggi conta', [a.scritture().pop(), a.win.getPausa().finita, a.win.computeTrainingDebt().debt], [{ pausa_fine:'2026-10-12' }, true, ['lowerA']]);
+    atteso('in pausa · «Rientro anticipato»: la pausa finisce ieri, oggi conta', [a.scritture().pop(), a.win.getPausa().finita], [{ pausa_fine:'2026-10-12' }, true]);
   }
   // 3 · il blocco è fermo: i giorni di pausa non contano per la card dei 35 giorni
   {
