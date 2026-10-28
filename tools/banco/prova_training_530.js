@@ -6,6 +6,9 @@
 // registrare (scelta di Ignazio coi pulsanti: niente più anteprima con «Allena questo oggi»).
 // Le sedute sono quelle vere di Ignazio dal 5 al 27 ottobre 2026 (workouts, sola lettura): il 26 Upper A dopo Upper B
 // del 23 salta Lower B, il 27 Lower A.
+// Revisione della Regia: un recupero fatto fuori turno non sposta la rotazione (i recuperi sono trasparenti), nella
+// scheda a 5 giorni e in quella a 6; nel giorno di riposo «Prossimo allenamento» non apre il riposo come seduta; con
+// una seduta in corso «domani» è quella dopo, non la seduta di oggi.
 //   node tools/banco/prova_training_530.js
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs');
@@ -23,22 +26,28 @@ const VERE = [['2026-10-05','upperA'], ['2026-10-07','lowerA'], ['2026-10-08','r
   ['2026-10-12','upperA'], ['2026-10-13','lowerA'], ['2026-10-20','upperA'], ['2026-10-22','lowerA'], ['2026-10-23','upperB'], ['2026-10-25','rest'],
   ['2026-10-26','upperA'], ['2026-10-27','lowerA']];
 const PAROLE = /debit|da recuperare|saltat[ae] (la|una) seduta|sedute saltate/i;
-function fixture(sedute){
+// la scheda a 5 giorni (con la Upper Pump): il ciclo a 7, upperA lowerA recoveryUpper upperB lowerB upperC rest
+const SCHEDA5 = { sessioni: ['upperA', 'lowerA', 'upperB', 'lowerB', 'upperC'].map(id => ({ id, name: id, type: 'Forza', rir: 2, exercises: [ { codice:'EX001', name:'Panca elastico', sets:3, reps:'6-10' } ] })) };
+function fixture(sedute, o){
+  o = o || {};
   return {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', train_start_date:'2026-10-05', obiettivo:'ricomposizione' }],
-    schede_utente:[], esercizi_catalog:[],
+    schede_utente: o.scheda ? [{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(o.scheda)) }] : [], esercizi_catalog:[],
     workouts: sedute.map(([date, s]) => ({ id:'w' + date + s, user_id:U, date, session_type:s, completed:true })),
     training_logs:[], training_notes:[], body_logs:[], weight_logs:[], body_measurements:[], body_checks:[], meals:[], meal_items:[], fasting_days:[],
     daily_log:[], app_errors:[], supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[], weekly_pictures:[], blood_tests:[], body_check_ai:[],
   };
 }
-async function nuovo(sedute){
-  const t = fixture(sedute || VERE);
+async function nuovo(sedute, o){
+  o = o || {};
+  const t = fixture(sedute || VERE, o);
   const b = boot(t, { now: OGGI + 'T12:30:00' });
   await b.avviato;
   const W = b.win, ST = W.eval('ST');
   ST.user = { id:U, email:'ignazio.f@me.com' }; ST.profile = t.profiles[0]; ST.catalog = []; ST.activeDay = OGGI;
   W.applyProfile(ST.profile);
+  if(o.scheda) await W.loadActiveScheda();
+  if(o.serieOggi) ST.trainLoggedSets = Object.fromEntries(o.serieOggi.map((sid, i) => [`${sid}_Esercizio_${i + 1}_${OGGI}`, { reps: 8 }]));
   await W.computeTrainHomeData();
   await W.loadTrainingAllCompleted({ skipRender:true });
   await W.loadSessionLastCompletion({ skipRender:true });
@@ -97,6 +106,39 @@ async function nuovo(sedute){
     const b = await nuovo([...VERE.slice(0, -1)]);                  // fino a Upper A del 26: la prossima è Lower A
     const cb = b.home(), pb = b.W.getProssimaAzioneSimple();
     atteso('saltata · dopo Upper A del 26 (Lower B saltata): card e Prossima azione dicono Lower A', [cb.tocco, pb.arg], ["apriSessioneDallaHome('lowerA')", 'lowerA']);
+  }
+  // 5 · revisione della Regia: un recupero fuori turno non sposta la rotazione
+  {
+    const prossima = async (sedute, o) => (await nuovo(sedute, o)).ST.trainHomeData.nextSession;
+    const cinque = [['2026-10-20','upperA'], ['2026-10-21','lowerA'], ['2026-10-22','recoveryUpper'], ['2026-10-23','upperB']];
+    atteso('5 giorni · dopo Upper B la proposta è Lower B', await prossima(cinque, { scheda: SCHEDA5 }), 'lowerB');
+    atteso('5 giorni · il Recovery fatto dopo Upper B (fuori turno) non riporta a Upper B: resta Lower B', await prossima([...cinque, ['2026-10-24','recoveryUpper']], { scheda: SCHEDA5 }), 'lowerB');
+    const sei = [['2026-10-20','upperA'], ['2026-10-21','lowerA']];
+    atteso('6 giorni · dopo Lower A viene il Recovery Upper', await prossima(sei), 'recoveryUpper');
+    atteso('6 giorni · il Recovery Lower fatto quando capita non porta a Upper A: resta il Recovery Upper', await prossima([...sei, ['2026-10-22','recoveryLower']]), 'recoveryUpper');
+    atteso('nel turno · il Recovery Upper subito dopo Lower A conta: poi Upper B', await prossima([...sei, ['2026-10-22','recoveryUpper']]), 'upperB');
+    atteso('nel turno · il Recovery Lower subito dopo Lower B conta: poi Upper A', await prossima([...sei, ['2026-10-22','recoveryUpper'], ['2026-10-23','upperB'], ['2026-10-24','lowerB'], ['2026-10-25','recoveryLower']]), 'upperA');
+    atteso('nel turno · uno fuori turno dopo quello giusto non toglie il primo: poi Upper B', await prossima([...sei, ['2026-10-22','recoveryUpper'], ['2026-10-23','recoveryLower']]), 'upperB');
+  }
+  // 6 · giorno di riposo: «Prossimo allenamento» non apre il riposo come seduta, come la card della Home
+  {
+    const a = await nuovo([['2026-10-22','upperA'], ['2026-10-23','lowerA'], ['2026-10-24','recoveryUpper'], ['2026-10-25','upperB'], ['2026-10-26','lowerB'], [OGGI,'upperC']], { scheda: SCHEDA5 });
+    atteso('riposo · fatta la Pump oggi, la prossima è il riposo', [a.ST.trainHomeData.doneToday, a.W.sedutaProposta()], [true, 'rest']);
+    const pg = a.programma();
+    const apreRiposo = [...pg.querySelectorAll('[onclick]')].some(el => /openTrainingSession\('rest'\)/.test(el.getAttribute('onclick')));
+    atteso('riposo · nel tab Training niente apre il riposo come seduta da registrare, e lo dice', [apreRiposo, /Oggi riposo/.test(testo(pg.innerHTML))], [false, true]);
+    atteso('riposo · la card della Home non apre il riposo', /apriSessioneDallaHome\('rest'\)/.test(a.home().tocco || ''), false);
+  }
+  // 7 · la seduta di domani con una seduta in corso (consiglio sul pasto)
+  {
+    const fino23 = VERE.slice(0, VERE.findIndex(([d]) => d === '2026-10-25'));   // fino a Upper B del 23: la prossima è Lower B
+    const a = await nuovo(fino23, { serieOggi: ['lowerB'] });
+    const nome = (sid) => a.W.getTrainingSession(sid).name;
+    atteso('domani · in corso Lower B (la proposta): domani il Recovery Lower, non di nuovo Lower B', [a.ST.trainHomeData.inProgress, (a.W.sedutaDomani() || {}).label.startsWith(nome('recoveryLower'))], [true, true]);
+    const b = await nuovo(fino23, { serieOggi: ['upperA'] });
+    atteso('domani · in corso Upper A fuori turno: domani Lower A, la seduta dopo quella di oggi', (b.W.sedutaDomani() || {}).label.startsWith(b.W.getTrainingSession('lowerA').name), true);
+    const c = await nuovo(fino23);
+    atteso('domani · senza seduta in corso: oggi Lower B, domani il Recovery Lower (come prima)', (c.W.sedutaDomani() || {}).label.startsWith(c.W.getTrainingSession('recoveryLower').name), true);
   }
   // 4 · nessun testo con «debito» o «da recuperare»: nelle pagine e nel codice (fuori dai commenti)
   {

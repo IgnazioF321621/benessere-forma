@@ -4402,7 +4402,9 @@ function renderTraining(){
     // ── Scorciatoia "Prossimo allenamento" — la seduta proposta, la stessa della Home (Training 530) ──
     const todayTargetSid = prossimaSid || 'upperA';
     const todayTargetSess = getTrainingSession(todayTargetSid);
-    const todayTargetName = todayTargetSess?.name || 'Allenamento';
+    // giorno di riposo: si dice e non si apre come seduta da registrare, come la card della Home (revisione del 530)
+    const riposoOggi = /^rest/.test(todayTargetSid);
+    const todayTargetName = riposoOggi ? 'Oggi riposo' : (todayTargetSess?.name || 'Allenamento');
     const todayTargetMeta = todayTargetSess
       ? (todayTargetSess.type === 'Recupero'
           ? `${(todayTargetSess.exercises || []).length} esercizi · ~25 min`
@@ -4411,13 +4413,13 @@ function renderTraining(){
             : `RIR ${todayTargetSess.rir} · ${(todayTargetSess.exercises || []).length} esercizi`)
       : '';
     const shortcutHTML = `
-      <div onclick="openTrainingSession('${todayTargetSid}')" style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div ${riposoOggi ? '' : `onclick="openTrainingSession('${todayTargetSid}')" `}style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div style="min-width:0;">
           <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);letter-spacing:.08em;color:rgba(255,255,255,.75);margin-bottom:4px;">PROSSIMO ALLENAMENTO</div>
           <div style="font-size:18px;font-weight:800;font-family:var(--font-sans);color:#fff;line-height:1.15;">${todayTargetName}</div>
-          <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">${todayTargetMeta}</div>
+          <div style="font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,.85);margin-top:3px;">${riposoOggi ? 'Il recupero fa parte del programma.' : todayTargetMeta}</div>
         </div>
-        <div style="font-size:22px;color:rgba(255,255,255,.9);flex-shrink:0;line-height:1;">›</div>
+        ${riposoOggi ? '' : `<div style="font-size:22px;color:rgba(255,255,255,.9);flex-shrink:0;line-height:1;">›</div>`}
       </div>`;
 
     body = `

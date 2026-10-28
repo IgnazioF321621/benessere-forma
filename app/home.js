@@ -58,13 +58,19 @@ async function computeTrainHomeData(){
 
     // nextSession: cicla sull'ORDINE CANONICO 6 giorni (getRotationCycle), NON sull'array della scheda.
     // La scheda non contiene i recuperi → con getSessionCycle un recupero darebbe indexOf=-1 → fallback errato a upperA.
-    // Marcatore di posizione nel ciclo = workout più recente il cui session_type
-    // è PRESENTE nel ciclo canonico, recovery INCLUSI (lastArr è già desc e già
-    // esclude rest/rest_injury): completato recoveryUpper (G3) il prossimo è
-    // upperB (G4), non di nuovo il recovery. lastWorkout (solo LAVORO) resta la
-    // fonte per gli altri usi; fallback a lastWorkout se nulla matcha il ciclo.
+    // Marcatore di posizione nel ciclo = l'ultima seduta di LAVORO che sta nel ciclo (lastArr è già desc e già esclude
+    // rest/rest_injury). Un recupero conta come posizione solo se è lo slot subito dopo di lei: completato
+    // recoveryUpper (G3) dopo lowerA il prossimo è upperB (G4), non di nuovo il recovery. Un recupero fuori turno no
+    // (revisione della Regia del Training 530, ora che ogni seduta si apre pronta): nella scheda a 5 giorni il Recovery
+    // dopo Upper B riportava la proposta a Upper B, e in quella a 6 il recoveryLower fatto quando capita portava a
+    // Upper A saltando il resto. I recuperi sono trasparenti: non avanzano il fronte.
     const cycle = getRotationCycle();
-    const lastInCycle = (lastArr || []).find(w => cycle.includes(w.session_type)) || lastWorkout;
+    const eRecupero = (w) => /^recovery/i.test(w.session_type);
+    const lavoro = (lastArr || []).find(w => !eRecupero(w) && cycle.includes(w.session_type)) || lastWorkout;
+    const idxLavoro = cycle.indexOf(lavoro.session_type);
+    const recuperoNelTurno = idxLavoro >= 0 ? (lastArr || []).slice(0, (lastArr || []).indexOf(lavoro))
+      .find(w => eRecupero(w) && cycle.indexOf(w.session_type) === (idxLavoro + 1) % cycle.length) : null;
+    const lastInCycle = recuperoNelTurno || lavoro;
     const lastIdx = cycle.indexOf(lastInCycle.session_type);
     let nextSession = lastIdx >= 0 ? cycle[(lastIdx + 1) % cycle.length] : (cycle[0] || 'upperA');
     // Slot 'rest' (ciclo a 7): proposto SOLO il giorno stesso dell'ultimo workout
