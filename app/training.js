@@ -62,6 +62,30 @@ function _exPerLato(ex, parsed){
   return _exInfoCatalogo(ex).unilaterale === 'si';
 }
 function _exProgressione(ex){ return _exInfoCatalogo(ex).progressione; }
+// A corpo libero: l'attrezzo della seduta (`eq`) dice solo «corpo libero», o non dice niente (schede vecchie). Lì un
+// carico non scritto vale «corpo libero»; con un attrezzo (elastico, barra, panca…) resta da scrivere (Training 510).
+function _exACorpoLibero(ex){
+  const eq = String((ex && ex.eq) || '').toLowerCase().trim();
+  return !eq || eq.split('+').every(a => /^corpo[ _]libero$/.test(a.trim()));
+}
+// Le ripetizioni si contano per lato (Training 520, 26 ottobre 2026; Ignazio: «non si capisce se ogni lato vale come
+// una ripetizione o sinistro più destro vale una ripetizione»): negli esercizi un lato alla volta (`si`) e negli
+// alternati. Nell'alternato il conto resta quello del 360 (una ripetizione = destra + sinistra), detto con le parole
+// delle guide: «12 per lato» = 12 a destra e 12 a sinistra. Serve solo alle parole: le due tendine DX/SX e i due
+// tempi restano dei soli `si` (_exPerLato).
+function _contaPerLato(ex, parsed){ return _exPerLato(ex, parsed) || _exInfoCatalogo(ex).unilaterale === 'alternato'; }
+// Il bersaglio a parole: «12-15 per lato», «20-40 sec per lato»; com'è scritto se l'esercizio non conta per lato.
+function _bersaglioReps(ex){
+  const r = String((ex && ex.reps) || '').trim();
+  if(!r || /per lato/i.test(r) || !_contaPerLato(ex)) return r;
+  return `${r} per lato`;
+}
+// Il suffisso delle ripetizioni di una serie salvata: «8r», «30 sec» per le tenute, «12 per lato» dove si conta per lato.
+function _repsSuffisso(ex){
+  const pr = (ex && ex.reps && typeof parseRepsRange === 'function') ? parseRepsRange(ex.reps) : null;
+  const perLato = !!ex && _contaPerLato(ex, pr);
+  return (pr && pr.kind === 'seconds' ? ' sec' : (perLato ? '' : 'r')) + (perLato ? ' per lato' : '');
+}
 // Il testo delle ripetizioni di una serie salvata: «8r», oppure «8 dx · 7 sx» se la serie ha i due
 // lati (riga di training_logs con reps_dx/reps_sx, o voce di ST.trainLoggedSets con repsDx/repsSx).
 function _repsTesto(d, suffisso){
@@ -641,7 +665,7 @@ function getLastLoggedSetLabel(sessionId, exName){
   // BLOCCO 3 — Trazioni: preferisci band_color se presente. Altrimenti resistance numerica/testuale.
   const resistTxt = caricoTesto((d.band_color && BAND_COLORS.includes(d.band_color)) ? d.band_color : d.resistance);
   const parts = [`S${bestSet}`];
-  const repsTxt = _repsTesto(d);            // «8r» oppure «8 dx · 7 sx» (Training 280)
+  const repsTxt = _repsTesto(d, _repsSuffisso(findExercise(exName, sessionId)));   // «8r», «8 dx · 7 sx» (280), «30 sec», «12 per lato» (520)
   if(repsTxt) parts.push(repsTxt);
   if(resistTxt) parts.push(resistTxt);
   if(d.rir !== undefined && d.rir !== null && String(d.rir).trim() !== '') parts.push(`RIR ${d.rir}`);
@@ -694,9 +718,12 @@ function getProgressionSuggestion(exName, sessionId){
   const last = serieDaRipetere(exName, sessionId);
   if(last){
     const lastResist = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color : last.resistance;
-    const resistTxt = caricoTesto(lastResist) || (isPullUp ? '' : 'corpo libero');
+    // con un attrezzo, un carico mai scritto non si legge «corpo libero» (Training 510); secondi per le tenute e
+    // «per lato» dove si conta per lato (Training 520)
+    const resistTxt = caricoTesto(lastResist) || ((isPullUp || !_exACorpoLibero(ex)) ? '' : 'corpo libero');
     const rirTxt = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
-    const ultima = `${_repsTesto(last) || (last.reps + 'r')}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
+    const suf = _repsSuffisso(ex);
+    const ultima = `${_repsTesto(last, suf) || (last.reps + suf)}${resistTxt?' · '+resistTxt:''}${rirTxt}`;
     // L'obiettivo di oggi parte dall'ultima seduta (Training 040): prima cosa fare, poi com'è andata
     const o = obiettivoPrimaSerie(exName, sessionId);
     if(o && o.testo) return `🎯 Oggi ${o.testo} · ultima volta ${ultima}`;
@@ -711,9 +738,10 @@ function getProgressionSuggestion(exName, sessionId){
   const parsed = parseRepsRange(ex.reps);
   const firstNum = (String(ex.reps || '').match(/(\d+)/) || [])[1];
   const startN = parsed ? parsed.min : (firstNum ? parseInt(firstNum, 10) : 8);
+  const perLatoTxt = _contaPerLato(ex, parsed) ? ' per lato' : '';
   if(isPullUp) return `💡 Inizia con ${startN} reps · banda Viola`;
-  if(parsed && parsed.kind === 'seconds') return `💡 Inizia con ${startN} sec di tenuta`;
-  return `💡 Inizia con ${startN} reps`;
+  if(parsed && parsed.kind === 'seconds') return `💡 Inizia con ${startN} sec di tenuta${perLatoTxt}`;
+  return `💡 Inizia con ${startN} reps${perLatoTxt}`;
 }
 
 async function loadTrainingLogs(exName){
@@ -1306,10 +1334,17 @@ function _suonaTono(tono, sospeso){
   } catch(e){}
 }
 
-// Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1.
-// Tono basso/dolce: sine 600Hz, 80ms, gain 0.35.
+// Prep beep — singolo "tic" preparatorio per i secondi 5,4,3,2,1 (recupero) e 3,2,1 (tenute, flussi).
+// Training 500 (26 ottobre 2026, due segnalazioni di Ignazio sul Rilascio 55: «non funziona il bip degli ultimi
+// cinque secondi», nel recupero e nella serie a tempo): dal 470 la sessione è «ambient» e i suoni vanno SOPRA la
+// musica invece di fermarla. Il tic di prima (600 Hz, volume 0,35, 90 ms) era il più basso e il più corto dei tre,
+// su una frequenza dove l'altoparlante del telefono rende poco e la musica ha più energia: sotto la musica spariva,
+// mentre lo stop e il bip lungo (volume 0,8-0,85, più di mezzo secondo) si sentivano. Ora 2000 Hz, dove l'orecchio
+// è più sensibile (ISO 226:2003), volume 0,8 come gli altri due e 150 ms: sotto i 200 ms un suono si sente più
+// piano quanto più è corto (Zwicker e Fastl, Psychoacoustics, 3ª ed. 2007). Resta corto e acuto: non si confonde
+// col bip lungo della partenza (1100 Hz) né con lo stop (659 Hz).
 function playPrepBeep(){
-  _suonaTono([600, 0.35, 0.06, 0.08, 0.09]);
+  _suonaTono([2000, 0.8, 0.13, 0.15, 0.16]);
 }
 
 // Beep di stop — segnala fine round/fase (sine 659Hz, ~730ms, gain 0.85)
@@ -1843,11 +1878,17 @@ async function _coCerca(sid, exName){
   const perGruppo = pat === 'isolamento' || pat === 'core';
   const gruppi = String(attuale.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).filter(Boolean);
   const facile = ZTCoachRules.varianteFacile(attuale, righe, { ...o, inScheda: [...inSeduta] });
+  // Le limitazioni della persona (residuo della revisione del Rilascio 55: qui non si guardavano). Come nel
+  // riscaldamento: una riga che carica una zona delle limitazioni entra solo se il suo adattamento parla di quella
+  // zona, e arriva con l'avviso (_coCostruisci); a parità, prima quelle senza conflitto. Un confronto solo: _trainGenConflitto.
+  const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
+  const conflitto = (r) => _trainGenConflitto(r, limitazioni);
   const cand = righe.filter(r => !inSeduta.has(r.codice) && ZTCoachRules.puoFare(r, o))
+    .filter(r => { const c = conflitto(r); return !c.length || _trainGenAdattamentoCopre(r, c); })
     .filter(r => scritte.includes(r.codice) || (String(r.pattern || '').toLowerCase().trim() === pat
       && (!perGruppo || String(r.gruppo_target || '').toLowerCase().split(';').map(x => x.trim()).some(g => gruppi.includes(g)))))
-    .map(r => ({ riga: r, alternativa: scritte.includes(r.codice), piuFacile: !!(facile && facile.codice === r.codice) }))
-    .sort((a, b) => (b.alternativa - a.alternativa) || (b.piuFacile - a.piuFacile) || String(a.riga.codice).localeCompare(String(b.riga.codice)))
+    .map(r => ({ riga: r, alternativa: scritte.includes(r.codice), piuFacile: !!(facile && facile.codice === r.codice), pulita: !conflitto(r).length }))
+    .sort((a, b) => (b.alternativa - a.alternativa) || (b.piuFacile - a.piuFacile) || (b.pulita - a.pulita) || String(a.riga.codice).localeCompare(String(b.riga.codice)))
     .slice(0, CO_MAX);
   if(ST.cambioOggi !== st) return;   // nel frattempo chiuso o riaperto
   st.candidati = cand; st.stato = cand.length ? 'pronto' : 'nessuno';
@@ -2483,9 +2524,9 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   if(!parsed || parsed.min === parsed.max) return ''; // formato non gestito o valore singolo
   const repsMin = parsed.min, repsMax = parsed.max;
   const isTimed = parsed.kind === 'seconds';
-  // Esercizi per lato (prescrizione «per lato» o catalogo `unilaterale = si`, Training 280):
-  // ogni suggerimento mostra "per lato". Una riga sola → copre tutti i rami.
-  const unitLbl = (isTimed ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
+  // Esercizi per lato (prescrizione «per lato» o catalogo `unilaterale = si`, Training 280; anche gli alternati,
+  // Training 520): ogni suggerimento mostra "per lato". Una riga sola → copre tutti i rami.
+  const unitLbl = (isTimed ? 'sec' : 'reps') + (_contaPerLato(exData, parsed) ? ' per lato' : '');
   const step = isTimed ? 5 : 1; // +5 sec o +1 rep
   // Settimana 4 (SCARICO): RIR target forzato a 3 su TUTTI i rami (trazioni,
   // elastici/corpo libero, isometrici) — override sul RIR obiettivo, Pump incluso.
@@ -2503,16 +2544,22 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const repsDone = Number(reps) || 0;
   const rirVal = (rir == null || rir === '') ? null : Number(rir);
   const head = `S${nextSetNum}:`;
+  // Un carico non scritto su un esercizio con un attrezzo non è «corpo libero» (Training 510, Pallof con l'elastico:
+  // la serie salvata senza carico tornava la volta dopo come «corpo libero»). Lì il suggerimento non nomina il carico
+  // e il registro resta su «—»; a corpo libero (_exACorpoLibero) il carico non scritto vale 0, come prima.
+  const caricoScritto = !(resistance == null || String(resistance).trim() === '') || _exACorpoLibero(exData);
   const clampReps = (n) => Math.max(repsMin, Math.min(repsMax, n));
   // Suggerimento = sigla "SN:" + pezzi separati da " · " (punto medio, coerente
   // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
-  const out = (...parts) => `${head} ${[...parts, `RIR ${targetRIR}`].join(' · ')}`;
+  const out = (...parts) => `${head} ${[...parts.filter(Boolean), `RIR ${targetRIR}`].join(' · ')}`;
   // fine(prossima, …parti): il testo come sempre e, con struttura, anche i numeri della prossima serie
+  // (un carico mai scritto resta null: il registro non lo compila con uno 0, Training 510)
   const fine = (prossima, ...parts) => {
     const testo = out(...parts);
     if(!struttura) return testo;
-    return { testo, reps: prossima.reps, resistance: (prossima.resistance != null) ? prossima.resistance : null,
+    const res = (prossima.resistance == null || (!caricoScritto && !(prossima.resistance > 0))) ? null : prossima.resistance;
+    return { testo, reps: prossima.reps, resistance: res,
       bandColor: prossima.bandColor || null, rir: targetRIR, via, setNum: nextSetNum };
   };
   // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
@@ -2564,8 +2611,8 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // etichetta e passo dei suggerimenti.
   const loadUnit = (ST.profile && ST.profile.unit === 'kg') ? 'kg' : 'lbs';
   const loadStep = loadUnit === 'kg' ? 2.5 : 10;
-  const resistInt = (resistance == null || resistance === '') ? 0 : (parseFloat(resistance) || 0);
-  const loadTxt = (v) => v <= 0 ? 'corpo libero' : `${v} ${loadUnit}`;
+  const resistInt = caricoScritto ? (parseFloat(resistance) || 0) : 0;
+  const loadTxt = (v) => v <= 0 ? (caricoScritto ? 'corpo libero' : '') : `${v} ${loadUnit}`;
   const plusStep  = Math.min(250, resistInt + loadStep);
   const minusStep = Math.max(0, resistInt - loadStep);
   // 0) prima serie di oggi (Training 440, scelta di Ignazio: «inizi con l'ultimo peso massimo, uguale, e poi
@@ -2661,21 +2708,23 @@ function obiettivoPrimaSerie(exName, sessionId){
   if(!o) return null;
   o.nota = null;
   const unitKg = ST.profile && ST.profile.unit === 'kg';
-  const unitLbl = (parsed.kind === 'seconds' ? 'sec' : 'reps') + (_exPerLato(exData, parsed) ? ' per lato' : '');
+  const unitLbl = (parsed.kind === 'seconds' ? 'sec' : 'reps') + (_contaPerLato(exData, parsed) ? ' per lato' : '');
   const lastV = parseFloat(last.resistance) || 0;
+  // un carico mai scritto resta da scrivere, non diventa «corpo libero» (Training 510)
+  const caricoNoto = !(last.resistance == null || String(last.resistance).trim() === '') || _exACorpoLibero(exData);
   const bandaFacile = () => lastBand ? BAND_COLORS[Math.min(BAND_COLORS.length - 1, BAND_COLORS.indexOf(lastBand) + 1)] : null;
   const sr = getSoftReturn();
   if(getCycleWeekInfo().isScarico){
     o.nota = 'scarico'; o.reps = parsed.min;
-    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = Math.max(0, lastV - (unitKg ? 5 : 20));
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = caricoNoto ? Math.max(0, lastV - (unitKg ? 5 : 20)) : null;
   } else if(sr){
     o.nota = 'rientro'; o.reps = parsed.min;
-    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = lastV > 0 ? softReturnLoad(lastV) : 0;
+    if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = caricoNoto ? (lastV > 0 ? softReturnLoad(lastV) : 0) : null;
   }
   if(o.nota){
     const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
-      : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : 'corpo libero');
-    o.testo = `S1: ${carico} · ${o.reps} ${unitLbl} · RIR ${o.rir} (${o.nota})`;
+      : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : o.resistance == null ? '' : 'corpo libero');
+    o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
   }
   return o;
 }
@@ -3993,7 +4042,7 @@ function renderTraining(){
         const logForm = isOpen ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--s2);">
             <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:8px;">SERIE ${nextSet}</div>
-            ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps))}
+            ${_tlRigaRepsRir(isTimed, parsedReps, _exPerLato(e, parsedReps), _contaPerLato(e, parsedReps))}
             ${isPullUpExercise(e.name) ? bandPickerHTML(6) : `
               <div style="margin-bottom:6px;">
                 <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl})</label>
@@ -4051,14 +4100,13 @@ function renderTraining(){
                 <span class="ex-num-box ${numBoxClass}">${numBoxContent}</span>
                 <h3 class="ex-title">${nomeCortoConTag(e.name)}</h3>
                 <span class="ex-info-icon">ⓘ</span>
-                <span class="ex-params-top">${e.sets} × ${e.reps}</span>
+                <span class="ex-params-top">${e.sets} × ${esc(_bersaglioReps(e))}</span>
               </div>
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
                 ${(rirObiettivo(e, s)!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${rirObiettivo(e, s)}</span>`:''}
                 <span class="ex-rest">rec ${restCompact}</span>
-                ${_exInfoCatalogo(e).unilaterale === 'alternato' ? `<span class="ex-rest ex-alternato" title="Esercizio alternato">1 rip = dx + sx</span>` : ''}
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
@@ -4961,7 +5009,7 @@ function renderTraining(){
                 const nextSetM = formLO.setNum;
                 return `<div style="padding:12px 0 4px;">
                   <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
-                  ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM))}
+                  ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM), _contaPerLato(ex, parsedRepsM))}
                   ${isPullUpM ? bandPickerHTML(10) : `<div style="margin-bottom:10px;">
                     <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:4px;">CARICO (${unitLbl2})</label>
                     <select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);" style="border:1.5px solid var(--s2);">
@@ -5054,10 +5102,9 @@ function renderTraining(){
     const exDef = findExercise(ex2.exName, ex2.sessionId);
     const sessDef = getTrainingSession(ex2.sessionId) || {};
     const tot = exDef?.sets || '?';
-    // Badge: reps + RIR (riusa la convenzione della card sessione)
-    const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(exDef.reps)}</span>` : '';
-    // Alternato (Training 360): una ripetizione è destra + sinistra, lo si dice sotto il nome
-    const altBadge = (exDef && _exInfoCatalogo(exDef).unilaterale === 'alternato') ? `<span class="train-exec-badge ex-alternato">1 rip = dx + sx</span>` : '';
+    // Badge: reps + RIR (riusa la convenzione della card sessione). «per lato» sul bersaglio negli esercizi un lato
+    // alla volta e negli alternati (Training 520: prima l'alternato aveva un secondo badge «1 rip = dx + sx»)
+    const repsBadge = exDef?.reps ? `<span class="train-exec-badge">${esc(_bersaglioReps(exDef))}</span>` : '';
     const rirVal = sessDef.rir;
     // RIR nascosto per esercizi temporali (iso:true con reps in secondi) — coerente con renderTraining
     const parsedReps = exDef?.reps ? (typeof parseRepsRange === 'function' ? parseRepsRange(exDef.reps) : null) : null;
@@ -5082,18 +5129,18 @@ function renderTraining(){
         </div>
         <div class="train-exec-body">
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
-          ${(repsBadge || rirBadge || altBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}${altBadge}</div>` : ''}
+          ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
           ${gifBlock}
           ${!isTimed ? (()=>{ const s0 = getProgressionLive(ex2.exName, ex2.sessionId); return s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : ''; })() : ''}
           ${isTimed ? (ex2.timedReady ? `
             <div style="text-align:center;margin-top:18px;">
               ${ex2.perLato ? `<div style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;color:${ex2.isoPhase==='pause'?'#D97706':ex2.isoPhase==='B'?'var(--acc)':'var(--t2)'};">${ex2.isoPhase==='pause'?'CAMBIO POSIZIONE':ex2.isoPhase==='B'?'LATO DX':'LATO SX'}</div>` : ''}
               <div id="exec-hold-timer" style="font-size:54px;font-weight:800;font-family:var(--font-mono);color:${ex2.perLato&&ex2.isoPhase==='pause'?'#D97706':'var(--t1)'};line-height:1;font-variant-numeric:tabular-nums;">${String(Math.floor((ex2.timedTarget||0)/60)).padStart(2,'0')}:${String((ex2.timedTarget||0)%60).padStart(2,'0')}</div>
-              <div id="exec-hold-sub" style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:6px;">${ex2.perLato&&ex2.isoPhase==='pause'?'preparati per il lato dx':`obiettivo ${ex2.timedTarget} sec`}</div>
+              <div id="exec-hold-sub" style="font-size:12px;color:var(--t3);font-family:var(--font-mono);margin-top:6px;">${ex2.perLato&&ex2.isoPhase==='pause'?'preparati per il lato dx':`obiettivo ${ex2.timedTarget} sec${ex2.perLato ? ' per lato' : ''}`}</div>
             </div>` : `
             <div style="margin-top:20px;padding:0 8px;">
               ${(()=>{const sugg2=getProgressionLive(ex2.exName,ex2.sessionId); return sugg2?`<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-bottom:12px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(sugg2)}</div>`:''})()}
-              <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-bottom:8px;letter-spacing:.06em;">DURATA TARGET (sec)</div>
+              <div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);text-align:center;margin-bottom:8px;letter-spacing:.06em;">${ex2.perLato ? 'DURATA TARGET PER LATO (sec)' : 'DURATA TARGET (sec)'}</div>
               <div style="overflow-x:auto;display:flex;gap:6px;padding:4px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="exec-timed-picker">
                 ${(()=>{
                   const lo = Math.max(10, (parsedReps.min||20) - 5);
@@ -5877,12 +5924,13 @@ function _tlRepsSelect(isTimed, parsedReps, lato){
                 </select>`;
 }
 // La riga del registro: ripetizioni (o durata) e RIR; per lato, due tendine DX e SX (Training 280).
-function _tlRigaRepsRir(isTimed, parsedReps, perLato){
+// contaPerLato (Training 520): un numero solo ma contato per lato (alternati, tenute un lato alla volta) → «PER LATO»
+function _tlRigaRepsRir(isTimed, parsedReps, perLato, contaPerLato){
   const lbl = (t) => `<label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);display:block;margin-bottom:3px;">${t}</label>`;
   const dueLati = perLato && !isTimed;
   return `<div style="display:flex;gap:8px;margin-bottom:10px;">
               <div style="flex:1;">
-                ${lbl(isTimed ? 'DURATA (sec)' : dueLati ? 'REPS DX' : 'REPS')}
+                ${lbl(isTimed ? (contaPerLato ? 'DURATA PER LATO (sec)' : 'DURATA (sec)') : dueLati ? 'REPS DX' : contaPerLato ? 'REPS PER LATO' : 'REPS')}
                 ${_tlRepsSelect(isTimed, parsedReps)}
               </div>
               ${dueLati ? `<div style="flex:1;">
@@ -5938,15 +5986,18 @@ function openLogModal(sessionId, exName, setNum, opts){
   if(dueLati) ST.trainLogDraft.repsSx = '';
   // Carico e ripetizioni già compilati (Training 040): alla prima serie l'obiettivo dall'ultima
   // seduta, dopo la PROSSIMA appena calcolata. Il RIR resta da dire: è com'è andata, non un obiettivo.
-  // Per le tenute la durata l'ha già scelta il picker (opts.timedTarget).
+  // Per le tenute la durata l'ha già scelta il picker (opts.timedTarget), il carico no: si compila come per le
+  // ripetizioni (Training 510, Pallof con l'elastico: il registro apriva su «—» e la serie si salvava senza carico).
   const prossima = _prossimaDaCompilare(exName, sessionId, !lastKey);
-  if(prossima && !(opts && opts.timedTarget)){
+  if(prossima){
     if(isPullUpExercise(exName)){
       if(prossima.bandColor && BAND_COLORS.includes(prossima.bandColor)) ST.trainLogBandColor = prossima.bandColor;
     } else if(prossima.resistance != null){
       const v = Math.round(Number(prossima.resistance) / 10) * 10;   // la tendina va di 10 in 10
       if(RESIST_VALUES.includes(v)) ST.trainLogResist = v;
     }
+  }
+  if(prossima && !(opts && opts.timedTarget)){
     if(prossima.reps != null && prossima.reps > 0){
       ST.trainLogDraft.reps = String(prossima.reps);
       if(dueLati) ST.trainLogDraft.repsSx = String(prossima.reps);

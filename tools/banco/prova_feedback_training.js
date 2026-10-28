@@ -4,6 +4,7 @@
 //   380 · dopo un'altra app il bip non suonava: al rientro prima l'audio poi il tick; un bip che non può
 //         suonare resta in sospeso e parte al primo tocco
 //   360 · gli esercizi «alternato» (Crunch sforbiciata) dicono come si conta: 1 rip = dx + sx
+//         (dal Training 520, 27 ottobre 2026, lo dicono sul bersaglio: «12-20 per lato», niente secondo badge)
 //   node tools/banco/prova_feedback_training.js
 process.env.TZ = 'Europe/Rome';
 const { boot } = require('./banco');
@@ -108,12 +109,12 @@ async function nuovo(){
     await new Promise(r => setTimeout(r, 20));
     atteso('380 · al primo tocco il contesto riparte e il bip in sospeso suona', [a.win.eval('_audioCtx.state'), a.win.eval('_beepInSospeso')], ['running', false]);
   }
-  // 360 · l'alternato dice come si conta
+  // 360 · l'alternato dice come si conta (Training 520: «per lato» sul bersaglio, al posto di «1 rip = dx + sx»)
   {
     const a = await nuovo();
-    atteso('360 · la card del Crunch sforbiciata dice «1 rip = dx + sx», la panca no', [/1 rip = dx \+ sx/.test(testo(a.doc.getElementById('excard-Crunch_sforbiciata_ampia').innerHTML)), /1 rip = dx \+ sx/.test(testo(a.doc.getElementById('excard-Panca_elastico').innerHTML))], [true, false]);
+    atteso('360 · la card del Crunch sforbiciata dice «2 × 12-20 per lato», la panca no', [/2 × 12-20 per lato/.test(testo(a.doc.getElementById('excard-Crunch_sforbiciata_ampia').innerHTML)), /per lato/.test(testo(a.doc.getElementById('excard-Panca_elastico').innerHTML))], [true, false]);
     a.win.openTrainExec('upperA', 'Crunch sforbiciata ampia', 1);
-    atteso('360 · anche nella schermata di esecuzione', /1 rip = dx \+ sx/.test(testo(a.doc.querySelector('.train-exec-overlay').innerHTML)), true);
+    atteso('360 · anche nella schermata di esecuzione', /12-20 per lato/.test(testo(a.doc.querySelector('.train-exec-overlay').innerHTML)), true);
     a.win.trainExecBack();
     a.win.openLogModal('upperA', 'Crunch sforbiciata ampia', 1);
     atteso('360 · alternato: una tendina sola (le due DX/SX sono per «si»)', !!a.doc.getElementById('tl-reps-sx'), false);
