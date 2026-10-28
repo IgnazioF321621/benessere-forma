@@ -33,7 +33,7 @@ function fixture(sedute, o){
   return {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', train_start_date:'2026-10-05', obiettivo:'ricomposizione' }],
     schede_utente: o.scheda ? [{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(o.scheda)) }] : [], esercizi_catalog:[],
-    workouts: sedute.map(([date, s]) => ({ id:'w' + date + s, user_id:U, date, session_type:s, completed:true })),
+    workouts: sedute.map(([date, s, ora]) => ({ id:'w' + date + s, user_id:U, date, session_type:s, completed:true, created_at: `${date}T${ora || '07:00:00'}+00:00` })),
     training_logs:[], training_notes:[], body_logs:[], weight_logs:[], body_measurements:[], body_checks:[], meals:[], meal_items:[], fasting_days:[],
     daily_log:[], app_errors:[], supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[], weekly_pictures:[], blood_tests:[], body_check_ai:[],
   };
@@ -119,6 +119,10 @@ async function nuovo(sedute, o){
     atteso('nel turno · il Recovery Upper subito dopo Lower A conta: poi Upper B', await prossima([...sei, ['2026-10-22','recoveryUpper']]), 'upperB');
     atteso('nel turno · il Recovery Lower subito dopo Lower B conta: poi Upper A', await prossima([...sei, ['2026-10-22','recoveryUpper'], ['2026-10-23','upperB'], ['2026-10-24','lowerB'], ['2026-10-25','recoveryLower']]), 'upperA');
     atteso('nel turno · uno fuori turno dopo quello giusto non toglie il primo: poi Upper B', await prossima([...sei, ['2026-10-22','recoveryUpper'], ['2026-10-23','recoveryLower']]), 'upperB');
+    // lo stesso giorno: Lower A alle 7 e Recovery Upper alle 8, scritte nell'ordine in cui sono state fatte (la lettura per
+    // sola data le lascia così, Lower A davanti); con l'ora di creazione il Recovery è il più recente e conta
+    atteso('stesso giorno · Lower A e poi Recovery Upper il 22: la proposta è Upper B, sempre', await prossima([['2026-10-20','upperA'], ['2026-10-22','lowerA','07:00:00'], ['2026-10-22','recoveryUpper','08:00:00']]), 'upperB');
+    atteso('stesso giorno · Upper B alle 7 e Lower B alle 9 il 23 (righe nell\'ordine in cui sono state fatte): poi il Recovery Lower', await prossima([['2026-10-20','upperA'], ['2026-10-21','lowerA'], ['2026-10-22','recoveryUpper'], ['2026-10-23','upperB','07:00:00'], ['2026-10-23','lowerB','09:00:00']]), 'recoveryLower');
   }
   // 6 · giorno di riposo: «Prossimo allenamento» non apre il riposo come seduta, come la card della Home
   {
