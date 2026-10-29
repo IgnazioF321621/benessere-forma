@@ -377,6 +377,54 @@ header`);
       }
     }
   } finally { fs.rmSync(radiceB, { recursive:true, force:true }); }
+
+  // ── 6. Giro 1 delle Impostazioni: l'elenco e le pagine interne a veste accesa, l'elenco a veste spenta ──
+  const radiceI = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-i-'));
+  fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceI, 'stile.css'));
+  const pagI = {};
+  for(const v5 of [false, true]){
+    const b = await apri({ locale:{ zt_v5: v5 ? '1' : '0' }, now:OGGI + 'T09:30:00' });
+    const W = b.win;
+    W.openSettingsModal(); await attendi(200);
+    pagI[v5 ? 'set_elenco' : 'set_spenta'] = fotografa(W);
+    if(v5) for(const pg of ['obiettivo', 'cibo', 'allenamento', 'salute', 'profilo', 'dati', 'crediti']){ W.setVai(pg); await attendi(120); pagI['set_' + pg] = fotografa(W); }
+    W.close();
+  }
+  const MISURA_I = MISURA_T.replace("const r={header", `const r={sTesta:g('#settings-modal .set-testa','backgroundColor'),sTitolo:g('#settings-modal .set-titolo','fontSize'),
+quadratini:[...document.querySelectorAll('#settings-modal .set-voce')].filter(vis).map(e=>getComputedStyle(e,'::before').backgroundColor),
+testiI:testi('#settings-modal .set-testa,#settings-modal .set-pagina:not([hidden]),#settings-modal .set-piede:not([hidden])').filter(x=>x.c<4.5),
+tastiI:alti('#settings-modal .set-testa button,#settings-modal .set-pagina:not([hidden]) button,#settings-modal .set-piede:not([hidden]) button').filter(x=>x.h<44),
+nTastiI:alti('#settings-modal .set-testa button,#settings-modal .set-pagina:not([hidden]) button,#settings-modal .set-piede:not([hidden]) button').length,
+header`);
+  for(const [n, h] of Object.entries(pagI)){
+    fs.writeFileSync(path.join(radiceI, n + '.html'), h.replace('</body>', MISURA_I + '</body>'));
+    fs.writeFileSync(path.join(radiceI, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:844px"></iframe>`);
+  }
+  const misuraI = async (n) => { const m = (await chromeT(['--window-size=390,844', '--dump-dom', 'file://' + path.join(radiceI, n + '.html')])).match(/data-misura="([^"]*)"/);
+    return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
+  try {
+    const sp = await misuraI('set_spenta'), el = await misuraI('set_elenco');
+    atteso('Impostazioni: Chrome ha risposto (elenco spento e acceso)', [!!sp, !!el], [true, true]);
+    if(sp && el){
+      atteso('Impostazioni spente: la testata di prima (senza fondo), titolo a 17 px', [sp.sTesta, sp.sTitolo], ['rgba(0, 0, 0, 0)', '17px']);
+      atteso('Impostazioni accese: testata evergreen (#2A7A6F) e titolo a 24 px', [el.sTesta, el.sTitolo], ['rgb(42, 122, 111)', '24px']);
+      atteso('Impostazioni accese: il quadratino del colore della zona su ogni voce (Obiettivo, Cibo, Allenamento, Come stai)', el.quadratini.slice(0, 5), ['rgb(42, 122, 111)', 'rgb(163, 95, 0)', 'rgb(46, 109, 164)', 'rgb(85, 80, 71)', 'rgb(106, 85, 160)']);
+    }
+    for(const n of ['set_elenco', 'set_obiettivo', 'set_cibo', 'set_allenamento', 'set_salute', 'set_profilo', 'set_dati', 'set_crediti']){
+      const m = n === 'set_elenco' ? el : await misuraI(n);
+      if(!m){ atteso(`Impostazioni ${n}: Chrome ha risposto`, false, true); continue; }
+      atteso(`Impostazioni ${n.slice(4)}: ogni testo della testata e della pagina almeno 4,5:1`, m.testiI, []);
+      atteso(`Impostazioni ${n.slice(4)}: ogni tasto alto almeno 44 px (${m.nTastiI} tasti)`, m.tastiI, []);
+    }
+    if(process.env.FOTO){
+      fs.mkdirSync(process.env.FOTO, { recursive:true });
+      for(const n of ['set_spenta', 'set_elenco', 'set_obiettivo', 'set_crediti']){
+        const f = path.join(process.env.FOTO, `${n}_390.png`);
+        await chromeT(['--window-size=600,844', '--screenshot=' + f, 'file://' + path.join(radiceI, '_' + n + '.html')]);
+        console.log('  foto  ' + f);
+      }
+    }
+  } finally { fs.rmSync(radiceI, { recursive:true, force:true }); }
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })();
