@@ -214,7 +214,8 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     }
     W.close();
   }
-  // contrasto (con l'opacità, sul fondo vero) di ogni testo delle testate blu e del registro; altezza dei tasti; ordine delle domande
+  // contrasto (con l'opacità, sul fondo vero) di ogni testo delle testate blu e del registro; altezza dei tasti; ordine delle domande.
+  // Fuori dal conto, come vuole la regola WCAG: i tasti spenti (disabled) e le emoji, che si disegnano con i loro colori e non con quello del testo
   const MISURA_T = `<script>addEventListener('load',()=>setTimeout(()=>{
 const rgb=c=>{const m=c.match(/rgba?\\(([^)]+)\\)/);if(!m)return null;const v=m[1].split(',').map(Number);return {r:v[0],g:v[1],b:v[2],a:v.length>3?v[3]:1};};
 const lum=c=>{const f=x=>{x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
@@ -222,7 +223,7 @@ const fondo=e=>{let x=e;while(x){const c=rgb(getComputedStyle(x).backgroundColor
 const opac=e=>{let o=1,x=e;while(x){o*=parseFloat(getComputedStyle(x).opacity);x=x.parentElement;}return o;};
 const contrasto=e=>{const c=rgb(getComputedStyle(e).color),f=fondo(e),al=c.a*opac(e),m={r:c.r*al+f.r*(1-al),g:c.g*al+f.g*(1-al),b:c.b*al+f.b*(1-al)};const a=lum(m),b=lum(f);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
 const vis=e=>e.offsetParent!==null||getComputedStyle(e).position==='fixed';
-const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100}));
+const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)&&!e.closest('button:disabled')&&!/^[\\p{Extended_Pictographic}\\uFE0F\\s]+$/u.test(e.textContent)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100}));
 const alti=s=>[...document.querySelectorAll(s)].filter(vis).map(e=>({t:(e.getAttribute('aria-label')||e.textContent).trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)}));
 const g=(s,p)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[p]:null;};
 const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
@@ -266,6 +267,63 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       }
     }
   } finally { fs.rmSync(radiceT, { recursive:true, force:true }); }
+
+  // ── 4. Giro 1 di Nutrition, il tab Oggi: dentro e oltre l'obiettivo a veste accesa, a veste spenta; l'intestazione nelle altre pagine ──
+  const radiceN = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-n-'));
+  fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceN, 'stile.css'));
+  const pagN = {};
+  for(const [nome, v5, scenario] of [['oggi_spenta', false, 'base'], ['oggi', true, 'base'], ['oggi_oltre', true, 'su']]){
+    const b = await apri({ scenario, locale: v5 ? { zt_v5:'1' } : {} });
+    const W = b.win;
+    W.showPage('oggi'); await attendi(300);
+    pagN[nome] = fotografa(W);
+    if(nome === 'oggi'){
+      W.showPage('body'); await attendi(200); pagN.body_dopo_oggi = fotografa(W);
+      const ST = W.eval('ST'); W.callAI = async () => ''; W.cuePer = async () => '';
+      ST.trainTab = 'piano'; W.showPage('training'); ST.trainAnticipato = 'upperA'; W.openTrainingSession('upperA'); await attendi(300);
+      W.showPage('body'); await attendi(200); pagN.body_dopo_seduta = fotografa(W);
+    }
+    W.close();
+  }
+  const MISURA_N = MISURA_T.replace("const r={header", `const r={nTesta:g('.n5-testa','backgroundColor'),vecchiaTesta:!!document.querySelector('.oggi-v3-header'),
+sezioniN:[...document.querySelectorAll('#page-oggi .sez5 > span:first-child')].map(e=>e.textContent.trim()),
+testiN:testi('.n5-testa,#page-oggi .sez5,#page-oggi .oggi-v3-hero-card,#page-oggi .oggi-v3-cta-row,#page-oggi .oggi-v3-timeline-card,#page-oggi .oggi-v3-coach-card').filter(x=>x.c<4.5),
+tastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .oggi-v3-coach-cta').filter(x=>x.h<44),
+nTastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .oggi-v3-coach-cta').length,
+oltre:(()=>{const e=document.querySelector('#page-oggi .oggi-v3-donut-num');return e?{over:e.classList.contains('over'),colore:getComputedStyle(e).color,c:Math.round(contrasto(e)*100)/100}:null;})(),
+linguetteTesta:[...document.querySelectorAll('.n5-testa .t5-seg button')].map(e=>e.textContent.trim()),
+header`);
+  for(const [n, h] of Object.entries(pagN)){
+    fs.writeFileSync(path.join(radiceN, n + '.html'), h.replace('</body>', MISURA_N + '</body>'));
+    fs.writeFileSync(path.join(radiceN, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:1500px"></iframe>`);
+  }
+  const misuraN = async (n) => { const m = (await chromeT(['--window-size=390,1500', '--dump-dom', 'file://' + path.join(radiceN, n + '.html')])).match(/data-misura="([^"]*)"/);
+    return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
+  try {
+    const ns = await misuraN('oggi_spenta'), na = await misuraN('oggi'), no = await misuraN('oggi_oltre'), bo = await misuraN('body_dopo_oggi'), bs = await misuraN('body_dopo_seduta');
+    atteso('Nutrition: Chrome ha risposto per le cinque pagine', [!!ns, !!na, !!no, !!bo, !!bs], [true, true, true, true, true]);
+    if(ns && na && no && bo && bs){
+      atteso('Nutrition spenta: la testata di prima, niente testata nuova né titoli nuovi', [ns.vecchiaTesta, ns.nTesta, ns.sezioniN, ns.header !== 'none'], [true, null, [], true]);
+      atteso('Nutrition accesa: testata della zona (#A35F00) al posto dell\'intestazione dell\'app', [na.nTesta, na.header, na.vecchiaTesta], ['rgb(163, 95, 0)', 'none', false]);
+      atteso('Nutrition accesa: le quattro schede nella testata', na.linguetteTesta, ['Oggi', 'Integratori', 'Analisi', 'Piano']);
+      atteso('Nutrition accesa: i titoli di sezione nell\'HTML, nell\'ordine', na.sezioniN, ['Il giorno', 'Timeline di oggi', 'Coach · riequilibrio']);
+      for(const [nome, m] of [['dentro l\'obiettivo', na], ['oltre l\'obiettivo', no]]){
+        atteso(`Nutrition, ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiN, []);
+        atteso(`Nutrition, ${nome}: ogni tasto alto almeno 44 px (${m.nTastiN} tasti)`, m.tastiN, []);
+      }
+      atteso('Nutrition oltre l\'obiettivo: il numero delle kcal nel colore «oltre», leggibile', [no.oltre && no.oltre.over, no.oltre && no.oltre.c >= 4.5], [true, true]);
+      atteso('dopo Nutrition, nel tab Body l\'intestazione dell\'app c\'è', bo.header !== 'none', true);
+      atteso('dopo la Seduta, nel tab Body l\'intestazione dell\'app c\'è (la regola vale solo con il Training davanti)', bs.header !== 'none', true);
+    }
+    if(process.env.FOTO){
+      fs.mkdirSync(process.env.FOTO, { recursive:true });
+      for(const n of ['oggi_spenta', 'oggi', 'oggi_oltre']){
+        const f = path.join(process.env.FOTO, `nutrition_${n}_390.png`);
+        await chromeT(['--window-size=600,1500', '--screenshot=' + f, 'file://' + path.join(radiceN, '_' + n + '.html')]);
+        console.log('  foto  ' + f);
+      }
+    }
+  } finally { fs.rmSync(radiceN, { recursive:true, force:true }); }
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })();

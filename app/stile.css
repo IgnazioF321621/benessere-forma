@@ -2731,7 +2731,7 @@ html.v5 .wp5 .wp-go-inline{margin:0;}
 /* ── Giro 1 del Training, la Seduta (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_seduta/) ──
    La testata e i titoli di sezione li disegna training.js solo con html.v5 (_testaSedutaV5, _registroV5); qui l'aspetto. */
 /* la testata della seduta prende il posto dell'intestazione dell'app (i suoi tasti sono dentro la testata) */
-html.v5 body:has(.t5-testa) #header{display:none;}
+html.v5 body:has(#page-training.active .t5-testa) #header{display:none;}   /* solo con la seduta davanti: le altre pagine tengono l'intestazione */
 html.v5 #page-training:has(.t5-testa){padding-top:0;}
 html.v5 .t5-seduta{padding-top:0!important;}
 html.v5 .t5-testa{margin:0 -32px 6px;padding:calc(env(safe-area-inset-top) + 12px) 32px 18px;background:var(--z-training);color:var(--z-testo);border-radius:0 0 26px 26px;}
@@ -2800,3 +2800,61 @@ html.v5 .tl5-salva{flex:1;min-height:52px;border:0;border-radius:16px;background
 html.v5 .tl5-salva:disabled{background:var(--b2);cursor:default;}
 html.v5 .tl5-chiudi{width:58px;min-height:52px;border:0;border-radius:16px;background:var(--s3);color:var(--t2);font-size:18px;cursor:pointer;}
 html.v5 .rest-coach-card{border-radius:14px;}
+
+/* ── Giro 1 di Nutrition, il tab Oggi (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_nutrition/) ──
+   La testata e i titoli di sezione li disegna nutrition.js solo con html.v5 (testaV5 in renderOggi); qui l'aspetto.
+   I tasti della testata (.t5-su, .t5-dx, .t5-chip, .t5-tondo, .t5-titolo, .t5-seg) sono quelli della Seduta. */
+html.v5 body:has(#page-oggi.active .n5-testa) #header{display:none;}
+html.v5 #page-oggi:has(.n5-testa){padding-top:0;}
+html.v5 .n5-testa{margin:0 -16px 6px;padding:calc(env(safe-area-inset-top) + 12px) 16px 18px;background:var(--z-nutrition);color:var(--z-testo);border-radius:0 0 26px 26px;}
+html.v5 .n5-sopra{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+html.v5 .n5-testa .t5-titolo{margin-top:4px;}
+html.v5 .n5-testa .t5-seg button.on{color:var(--z-nutrition-scuro);}
+html.v5 .n5-testa .t5-seg{margin-top:12px;}
+html.v5 .n5-testa .day-nav{margin:0;color:var(--z-testo);}
+html.v5 .n5-testa :is(.day-date,.day-today){color:var(--z-testo);}
+html.v5 .n5-testa .day-nav .btn{min-width:44px;min-height:44px;border:0;border-radius:12px;background:rgba(var(--bianco-rgb),.18);color:var(--z-testo);font-size:18px;}
+html.v5 .n5-testa .day-nav .btn:disabled{opacity:.45;}
+html.v5 .n5-testa .n5-detox{display:flex;justify-content:flex-end;margin-top:10px;}
+html.v5 .n5-testa .n5-detox .btn{min-height:44px;border:0;border-radius:999px;background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);}
+html.v5 .n5-testa .n5-detox .btn-danger{background:var(--bianco);color:var(--err);}
+/* la riga dell'ora dentro la testata: la barretta in bianco */
+html.v5 .n5-testa > div[style*="opacity:0.5"]{opacity:1!important;margin:8px 0 0!important;}
+html.v5 .n5-testa > div[style*="opacity:0.5"] div{background:rgba(var(--bianco-rgb),.3)!important;}
+html.v5 .n5-testa > div[style*="opacity:0.5"] div div{background:var(--z-testo)!important;}
+html.v5 .n5-testa > div[style*="opacity:0.5"] span{color:var(--z-testo)!important;}
+/* il giorno: un gruppo bianco; anello e riassunto affiancati, i tre macro in una riga con i separatori */
+html.v5 #page-oggi .oggi-v3-hero-card{border:0;border-radius:14px;box-shadow:none;background:var(--s1);}
+html.v5 #page-oggi .oggi-v3-macro-card{border:0;border-radius:0;box-shadow:none;border-left:1px solid var(--s3);}
+html.v5 #page-oggi .oggi-v3-macro-card:first-child{border-left:0;}
+/* un tasto principale largo nel colore della zona, il secondo grigio chiaro sotto */
+html.v5 #page-oggi .oggi-v3-cta-row{flex-direction:column;gap:8px;}
+html.v5 #page-oggi .oggi-v3-cta{width:100%;min-height:48px;}
+html.v5 #page-oggi .oggi-v3-cta-primary{min-height:52px;border:0;border-radius:16px;background:var(--z-nutrition);color:var(--z-testo);font-size:17px;}
+html.v5 #page-oggi .oggi-v3-cta-secondary{border:0;border-radius:14px;background:var(--s3);color:var(--t1);}
+/* la timeline e il coach: gruppi bianchi con il titolo fuori (il titolo di dentro si nasconde), tasti da 44 px */
+html.v5 #page-oggi :is(.oggi-v3-timeline-head,.oggi-v3-coach-head){display:none;}
+html.v5 #page-oggi .oggi-v3-timeline-card{border:0;border-radius:14px;box-shadow:none;background:var(--s1);}
+html.v5 #page-oggi .oggi-v3-coach-card{border-radius:14px;box-shadow:none;}
+html.v5 #page-oggi .meal-delete-btn{min-width:44px;min-height:44px;}
+html.v5 #page-oggi .oggi-v3-coach-cta{min-height:44px;}
+html.v5 #page-oggi .oggi-v3-donut-row{flex-direction:row;gap:16px;}
+html.v5 #page-oggi .oggi-v3-donut-wrap{width:128px;height:128px;flex-shrink:0;}
+html.v5 #page-oggi .oggi-v3-donut-num{font-size:30px;}
+html.v5 #page-oggi :is(.oggi-v3-donut-num.medium,.oggi-v3-donut-num.small){font-size:26px;}
+html.v5 #page-oggi .oggi-v3-donut-summary{flex:1;text-align:left;color:var(--t2);}
+/* l'orario del pasto: a 16 px (veste) non deve finire sopra le kcal */
+html.v5 #page-oggi .meal-card-v2 input[type=time]{width:62px!important;min-width:62px;padding:0;}
+html.v5 #page-oggi .meal-card-v2 input[type=time]::-webkit-calendar-picker-indicator{display:none;}
+html.v5 #page-oggi .meal-card-v2 div:has(> input[type=time]){display:flex;flex-wrap:wrap;align-items:center;column-gap:4px;}
+html.v5 #page-oggi .oggi-v3-donut-label{white-space:nowrap;font-size:9px;}
+/* la riga del pasto va a capo: in alto orario, nome e kcal, sotto «Modifica» e il cestino a destra */
+html.v5 #page-oggi .meal-card-v2 div[onclick^="toggleMealCard"]{flex-wrap:wrap;row-gap:6px;}
+html.v5 #page-oggi .meal-card-v2 div[onclick^="toggleMealCard"] > div:last-child{margin-left:auto;}
+html.v5 #page-oggi .meal-card-v2 div[onclick^="toggleMealCard"] > div:first-child{min-width:170px!important;}
+/* le scritte grigie chiare (--t3, 3,0:1 sul bianco) diventano --t2; i colori dei macro e della zona nella versione scura
+   leggibile sul chiaro (--macro-c per il giallo dei carboidrati); l'ora sulla barretta con il suo fondo */
+html.v5 #page-oggi :is(.oggi-v3-donut-label,.oggi-v3-macro-value-unit,.oggi-v3-macro-sub,.oggi-v3-timeline-sub,.oggi-v3-zona-stats,.meal-delete-btn,[style*="color:var(--t3)"]){color:var(--t2)!important;}
+html.v5 #page-oggi .oggi-v3-zona-stats span{opacity:1!important;}
+html.v5 #page-oggi [style*="color:#C4880A"]{color:var(--macro-c)!important;}
+html.v5 .n5-testa > div[style*="opacity:0.5"] span{padding:0 4px;border-radius:4px;background:var(--z-nutrition);}

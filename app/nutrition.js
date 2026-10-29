@@ -2060,8 +2060,13 @@ function renderOggi(){
   const dayPct = Math.round(((nowH.getHours()*60 + nowH.getMinutes()) / 1440) * 100);
   const nowLabel = nowH.getHours().toString().padStart(2,'0')+':'+nowH.getMinutes().toString().padStart(2,'0');
   const timebar = isToday ? `<div style="margin:-4px 0 14px;opacity:0.5;"><div style="height:3px;border-radius:3px;background:var(--s3);position:relative;overflow:visible;"><div style="height:100%;border-radius:3px;width:${dayPct}%;background:var(--acc);transition:width .5s ease;position:relative;"><span style="position:absolute;right:-1px;top:-10px;font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--acc);font-weight:700;white-space:nowrap;">${nowLabel}</span></div></div></div>` : '';
-  let html=`<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${(ST.activeDay<=primoGiorno&&ST.storicoCompleto)?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>
-  ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;"><button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button></div>`;
+  // La veste nuova, Giro 1 di Nutrition (schizzo approvato da Ignazio il 29/10/2026): con html.v5 il giorno, «Giorno detox» e le schede
+  // stanno nella testata della zona (sotto, renderOggi la disegna al posto di v3Header); a veste spenta l'HTML è quello di prima.
+  const v5 = document.documentElement.classList.contains('v5');
+  const navGiorno = `<div class="day-nav"><button class="btn btn-ghost btn-sm" onclick="navDay(-1)" ${(ST.activeDay<=primoGiorno&&ST.storicoCompleto)?'disabled':''}>‹</button><div><div class="day-date">${fmtDate(ST.activeDay)}</div>${isToday?'<div class="day-today">● OGGI</div>':''}</div><button class="btn btn-ghost btn-sm" onclick="navDay(1)" ${isToday?'disabled':''}>›</button></div>`;
+  const detoxBtn = `<button class="btn btn-sm ${day.fasting?'btn-danger':'btn-ghost'}" onclick="toggleFasting()">${day.fasting?'⚡ Digiuno attivo':'Giorno Detox'}</button>`;
+  let html = v5 ? '' : `${navGiorno}
+  ${timebar}<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">${detoxBtn}</div>`;
 
   if(day.fasting){
     html+=`<div class="fast-screen"><div class="fast-icon">⚡</div><p style="font-size:16px;font-family:'JetBrains Mono',monospace;color:var(--err);margin-bottom:8px;">Giorno di recupero — Digiuno</p><p style="font-size:13px;color:var(--t2);">Acqua, tè, caffè senza zucchero.</p></div>`;
@@ -2374,6 +2379,25 @@ function renderOggi(){
         return `<button class="oggi-v3-pill${id==='oggi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
       }).join('')}
     </div>`;
+  const testaV5 = `
+    <div class="n5-testa">
+      <div class="t5-su"><span class="n5-sopra">${dateEb}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <h1 class="t5-titolo">Nutrition</h1>
+      ${navGiorno}
+      ${timebar}
+      <div class="n5-detox">${detoxBtn}</div>
+      <nav class="t5-seg">${['oggi','integratori','analisi','piano'].map(id => {
+        const labels = { oggi:'Oggi', integratori:'Integratori', analisi:'Analisi', piano:'Piano' };
+        return `<button class="${id === 'oggi' ? 'on' : ''}" onclick="showPage('${id}')">${labels[id]}</button>`;
+      }).join('')}</nav>
+    </div>`;
+  // i titoli di sezione fuori dai riquadri: «Il giorno» sopra l'anello, «Timeline di oggi» sopra i pasti (il suo titolo dentro si nasconde)
+  if(v5){
+    html = html.replace('<div class="oggi-v3-hero-card">', `<h2 class="sez5"><span>Il giorno</span><span class="sez5-dx">su ${fmtNum(ST.TARGET.kcal)} kcal</span></h2><div class="oggi-v3-hero-card">`);
+    const conto = (html.match(/<span class="oggi-v3-timeline-eb">([^<]*)<\/span>/) || [])[1];
+    html = html.replace('<div class="oggi-v3-timeline-card">', `<h2 class="sez5"><span>Timeline di oggi</span>${conto ? `<span class="sez5-dx">${conto}</span>` : ''}</h2><div class="oggi-v3-timeline-card">`);
+    html = html.replace(/<div class="oggi-v3-coach-card">/, '<h2 class="sez5"><span>Coach · riequilibrio</span><span class="sez5-dx">prossimo pasto</span></h2><div class="oggi-v3-coach-card">');
+  }
 
   // Integratori Step 2 (18 mag 2026): modal conferma elimina extra (tap su card extra timeline)
   if(ST.pkgExtraDeleteConfirm) {
@@ -2393,7 +2417,7 @@ function renderOggi(){
     </div>`;
   }
 
-  document.getElementById('page-oggi').innerHTML = v3Header + html + versionFooter();
+  document.getElementById('page-oggi').innerHTML = (v5 ? testaV5 : v3Header) + html + versionFooter();
   const ta = document.getElementById('log-text');
   if(ta){ ta.value = ST.logText; ta.addEventListener('input', e => { ST.logText = e.target.value; }); }
 }
