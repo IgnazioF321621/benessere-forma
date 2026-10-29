@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home · i widget</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Home ispirata ai widget Apple (anelli, barre, cerchi a batteria): schizzo prima/dopo, niente codice dell'app.
+   Prima = la Home vera a veste accesa (banco, 390 px, dati di prova del 4 ottobre). Dopo = gli stessi dati, disegnati come widget.
+   Colori: i nomi di app/stile.css, nessun nero. */
+:root {
+  --font-sans: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC; --b1: #DDD9D0;
+  --t1: #1A1A1A; --t2: #555047; --t3: #9A9388; --acc: #2A7A6F; --acc-lt: #E6F4F2; --bianco: #FFFFFF; --over: #B45309; --err: #B84C2A;
+  --z-home: #2A7A6F; --z-nutrition: #A35F00; --z-training: #2E6DA4; --z-body: #6A55A0; --z-testo: #FFFFFF;
+  --z-home-velo: #E6F4F2; --z-home-scuro: #1F5C53; --z-nutrition-velo: #FDF1DA; --z-training-velo: #EAF2FB; --z-body-velo: #EFEDFA;
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { width: 1240px; margin: 0 auto; padding: 24px 16px 40px; }
+h1.tit { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; margin: 0 0 14px; max-width: 920px; }
+.tre { display: grid; grid-template-columns: 390px 390px 1fr; gap: 24px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13.5px; line-height: 1.5; }
+.note h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.note ol, .note ul { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 0 0 7px; }
+.note code { font: 600 12px var(--font-mono); }
+
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; }
+.testa { background: var(--z-home); color: var(--z-testo); padding: 18px 16px 20px; border-radius: 0 0 26px 26px; display: flex; align-items: center; gap: 12px; }
+.testa .cresce { flex: 1; }
+.data { font: 600 11px var(--font-mono); letter-spacing: .14em; }
+.saluto { font-size: 24px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font: 700 13px var(--font-mono); }
+.corpo { padding: 0 16px 18px; }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; }
+.sez span { font-weight: 600; }
+.card { background: var(--s1); border-radius: 18px; padding: 16px; }
+
+/* 1 · anelli del giorno */
+.anelli { display: flex; align-items: center; gap: 16px; }
+.anelli svg { width: 132px; height: 132px; flex: none; }
+.valori { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.valori div { line-height: 1.1; }
+.valori b { font: 700 22px var(--font-mono); letter-spacing: -.5px; }
+.valori b small { font-size: 13px; font-weight: 600; }
+.valori span { display: block; font: 600 11px var(--font-mono); letter-spacing: .06em; color: var(--t2); margin-top: 2px; text-transform: uppercase; }
+
+/* 2 · la settimana a barre */
+.barre { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 130px; position: relative; padding-top: 18px; }
+.fascia { position: absolute; left: 0; right: 0; background: var(--z-nutrition-velo); border-top: 1px dashed var(--z-nutrition); }
+.barra { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.barra i { display: block; width: 100%; max-width: 30px; border-radius: 8px 8px 4px 4px; background: var(--z-nutrition); }
+.barra em { position: absolute; font: 700 13px var(--font-mono); font-style: normal; color: var(--over); }
+.giorni { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 6px; text-align: center; font: 600 12px var(--font-mono); color: var(--t2); }
+.giorni .oggi { font-weight: 800; color: var(--t1); }
+.parola { display: flex; align-items: baseline; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--s3); }
+.parola b { font: 800 28px var(--font-sans); color: var(--over); letter-spacing: -.5px; }
+.parola span { font: 600 12px var(--font-mono); color: var(--t2); text-align: right; line-height: 1.5; }
+
+/* 3 · i cerchi a batteria */
+.batterie { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.batterie svg { width: 68px; height: 68px; display: block; margin: 0 auto; }
+.batterie b { display: block; font: 700 17px var(--font-mono); margin-top: 6px; }
+.batterie span { display: block; font: 600 10px var(--font-mono); letter-spacing: .04em; color: var(--t2); margin-top: 2px; line-height: 1.3; }
+
+/* il resto della Home, invariato (in breve) */
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.gruppo > :first-child { border-top: 0; }
+.riga .cresce { flex: 1; } .riga small { display: block; font-size: 12px; color: var(--t2); margin-top: 2px; }
+.chev { color: var(--t2); font-size: 20px; }
+.inizia { display: block; width: 100%; min-height: 52px; border: 0; border-radius: 16px; background: var(--acc); color: #fff; font: 700 17px var(--font-sans); }
+.peso { font: 700 15px var(--font-mono); color: var(--z-body); }
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; min-width: 72px; }
+.tab svg { width: 22px; height: 22px; } .tab div.on { color: var(--z-home-scuro); background: var(--z-home-velo); }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">La Home come i widget dell'iPhone</h1>
+  <p class="intro">A sinistra la Home vera di oggi con la veste A, fotografata dal banco a 390 px con i dati di prova (domenica 4 ottobre, alle 9:30). A destra lo schizzo: in cima tre widget nello stile degli anelli Attività, delle barre della settimana e dei cerchi a batteria. I numeri sono gli stessi dei dati di prova. Solo dati che l'app ha già, nessuna lettura nuova, nessuna scrittura.</p>
+  <div class="tre">
+    <div class="prima"><div class="col-tit">Prima · Home a veste accesa</div><img src="prima_home_390.png" alt="La Home di oggi"></div>
+    <div>
+      <div class="col-tit">Dopo · schizzo</div>
+      <div class="tel">
+        <div class="testa"><div class="cresce"><div class="data">DOMENICA 4 OTTOBRE</div><div class="saluto">Buongiorno, Ignazio</div></div><div class="avatar">I</div></div>
+        <div class="corpo">
+
+          <div class="sez">Oggi</div>
+          <div class="card">
+            <div class="anelli">
+              <svg viewBox="0 0 132 132" aria-hidden="true">
+                <g fill="none" stroke-linecap="round" transform="rotate(-90 66 66)">
+                  <circle cx="66" cy="66" r="58" stroke="#FDF1DA" stroke-width="13"/>
+                  <circle cx="66" cy="66" r="58" stroke="#A35F00" stroke-width="13" stroke-dasharray="171.3 364.4"/>
+                  <circle cx="66" cy="66" r="42" stroke="#E6F4F2" stroke-width="13"/>
+                  <circle cx="66" cy="66" r="42" stroke="#2A7A6F" stroke-width="13" stroke-dasharray="94.4 263.9"/>
+                  <circle cx="66" cy="66" r="26" stroke="#EAF2FB" stroke-width="13"/>
+                  <circle cx="66" cy="66" r="26" stroke="#2E6DA4" stroke-width="13" stroke-dasharray="0.1 163.4"/>
+                </g>
+              </svg>
+              <div class="valori">
+                <div><b style="color:var(--z-nutrition)">1.070<small>/2.300</small></b><span>kcal · 47%</span></div>
+                <div><b style="color:var(--acc)">70<small>/196 g</small></b><span>proteine · 36%</span></div>
+                <div><b style="color:var(--z-training)">0<small>/9 serie</small></b><span>Lower A · da fare</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sez">La tua settimana <span>28 set – 4 ott</span></div>
+          <div class="card">
+            <div class="barre">
+              <div class="fascia" style="bottom:calc((100% - 18px) * 0.75);height:calc((100% - 18px) * 0.167)"></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:60%"></i><em style="bottom:62%">!</em></div>
+              <div class="barra"><i style="height:39%;opacity:.55"></i></div>
+            </div>
+            <div class="giorni"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span class="oggi">D</span></div>
+            <div class="parola"><b>Sotto</b><span>media 1.567 kcal<br>fascia 2.070–2.530</span></div>
+          </div>
+
+          <div class="sez">I tuoi obiettivi della settimana</div>
+          <div class="card">
+            <div class="batterie">
+              <div>
+                <svg viewBox="0 0 68 68" aria-hidden="true"><g transform="rotate(-90 34 34)" fill="none" stroke-width="7" stroke-linecap="round"><circle cx="34" cy="34" r="29" stroke="#EAF2FB"/><circle cx="34" cy="34" r="29" stroke="#2E6DA4" stroke-dasharray="45.5 182.2"/></g><text x="34" y="40" text-anchor="middle" font-size="18">🏋️</text></svg>
+                <b style="color:var(--z-training)">1/4</b><span>Allenamenti</span>
+              </div>
+              <div>
+                <svg viewBox="0 0 68 68" aria-hidden="true"><g transform="rotate(-90 34 34)" fill="none" stroke-width="7" stroke-linecap="round"><circle cx="34" cy="34" r="29" stroke="#EFEDFA"/><circle cx="34" cy="34" r="29" stroke="#6A55A0" stroke-dasharray="104.1 182.2"/></g><text x="34" y="40" text-anchor="middle" font-size="18">⚖️</text></svg>
+                <b style="color:var(--z-body)">4/7</b><span>Pesate</span>
+              </div>
+              <div>
+                <svg viewBox="0 0 68 68" aria-hidden="true"><g transform="rotate(-90 34 34)" fill="none" stroke-width="7" stroke-linecap="round"><circle cx="34" cy="34" r="29" stroke="#FDF1DA"/></g><text x="34" y="40" text-anchor="middle" font-size="18">🎯</text></svg>
+                <b style="color:var(--z-nutrition)">0/7</b><span>Giorni in<br>obiettivo</span>
+              </div>
+              <div>
+                <svg viewBox="0 0 68 68" aria-hidden="true"><g transform="rotate(-90 34 34)" fill="none" stroke-width="7" stroke-linecap="round"><circle cx="34" cy="34" r="29" stroke="#E6F4F2"/><circle cx="34" cy="34" r="29" stroke="#2A7A6F" stroke-dasharray="156.2 182.2"/></g><text x="34" y="40" text-anchor="middle" font-size="18">💊</text></svg>
+                <b style="color:var(--acc)">86%</b><span>Integratori<br>presi</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sez">Adesso <span>09:30</span></div>
+          <div class="gruppo">
+            <div class="riga" style="flex-direction:column;align-items:stretch;gap:4px;padding:16px 14px"><b style="font-size:20px">È ora di Lower A</b><small style="font-size:14px;margin:0 0 10px">Si parte con 5 minuti di preparazione.</small><button class="inizia">Inizia →</button></div>
+            <div class="riga"><span class="cresce">Integratori delle 08:00: 1 da segnare</span><span class="chev">›</span></div>
+          </div>
+
+          <div class="sez">Body</div>
+          <div class="gruppo">
+            <div class="riga"><span class="cresce">Peso<small>Primo check fisico da fare</small></span><span class="peso">74,0 kg</span><span class="chev">›</span></div>
+          </div>
+
+          <div class="sez">Più sotto, come oggi</div>
+          <div class="gruppo">
+            <div class="riga"><span class="cresce">Come stai oggi · Pirsi propone</span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="tab">
+          <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/></svg>Home</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 20A7 7 0 0 1 4 13c0-5 7-11 7-11s7 6 7 11a7 7 0 0 1-7 7z"/><path d="M11 20V9"/></svg>Nutrition</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Training</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="7" r="3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Body</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <h3>Cosa cambia e perché</h3>
+      <ol>
+        <li><b>Gli anelli del giorno, in cima.</b> Tre anelli uno dentro l'altro:
+          <ul>
+            <li>fuori, le calorie (ambra);</li>
+            <li>in mezzo, le proteine (verde);</li>
+            <li>dentro, le serie della seduta di oggi (blu).</li>
+          </ul>
+          Accanto, gli stessi tre numeri grandi nel loro colore. Nel giorno di riposo l'anello dentro è grigio pieno, con scritto «riposo».</li>
+        <li><b>La settimana a barre.</b> Sette barre, una per giorno, alte quanto le calorie rispetto all'obiettivo. La fascia chiara è il «giorno in obiettivo» (dal 90% al 110%). Il «!» ambra segna i giorni fuori fascia, e oggi è in grassetto. Sotto, una parola sola: «In linea», «Sopra» o «Sotto». Il peso qui non si ripete.</li>
+        <li><b>Quattro cerchi a batteria per la settimana:</b>
+          <ul>
+            <li>allenamenti fatti su previsti;</li>
+            <li>pesate su 7;</li>
+            <li>giorni in obiettivo su 7;</li>
+            <li>integratori presi.</li>
+          </ul></li>
+        <li><b>Sotto, la Home di oggi:</b> Adesso, Body come una riga col peso, Come stai, Pirsi. I riquadri Nutrition e Training non servono più, perché li fanno gli anelli. La settimana a righe la sostituiscono le barre e i cerchi.</li>
+      </ol>
+      <h3>Da dove vengono i numeri (nessuna lettura nuova)</h3>
+      <ul>
+        <li><b>Anelli:</b>
+          <ul>
+            <li>calorie e proteine di oggi da <code>dayTotals</code>, obiettivi da <code>ST.TARGET</code>;</li>
+            <li>serie fatte dalle serie di oggi (<code>ST.trainLoggedSets</code>), serie previste dalla seduta proposta (<code>sedutaProposta()</code>).</li>
+          </ul></li>
+        <li><b>Barre:</b> le calorie di ogni giorno dello storico già in memoria.</li>
+        <li><b>La parola:</b> la media della settimana del quadro (<code>kcal_avg</code>) confrontata con la stessa fascia 90–110% che il quadro usa già per «giorno in obiettivo»: sotto il 90% è «Sotto», sopra il 110% è «Sopra». Non è una regola nuova, ma la parola oggi non esiste: va scritta.</li>
+        <li><b>Cerchi:</b>
+          <ul>
+            <li>allenamenti dal quadro (<code>sessions_done</code> / <code>sessions_planned</code>);</li>
+            <li>pesate dal quadro (<code>weight_n</code>);</li>
+            <li>giorni in obiettivo dal quadro (giorni nella fascia);</li>
+            <li>integratori presi contati sui presi già letti (<code>suppsTaken</code>) contro quelli del giorno (<code>suppsDelGiorno</code>). Questo è l'unico conto nuovo: un semplice rapporto, da confermare.</li>
+          </ul></li>
+      </ul>
+      <h3>Decisioni per Ignazio</h3>
+      <ol>
+        <li>Il riquadro Body resta come una riga col peso, oppure il peso va in un quinto cerchio?</li>
+        <li>Toccando un anello si apre la sua pagina (Nutrition o la seduta)? È quello che fanno oggi i riquadri.</li>
+        <li>Coi dati di prova la settimana è tutta sotto la fascia, quindi tutti i giorni hanno il «!». Va bene, o il «!» solo sotto il 75%? Il quadro usa già il 75% per «giorni troppo scarsi».</li>
+      </ol>
+    </div>
+  </div>
+</div>
+</body>
+</html>
