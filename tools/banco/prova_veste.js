@@ -70,24 +70,24 @@ function fotografa(win){
 (async () => {
   // ── 1. l'interruttore ──
   { const b = await apri({});
-    atteso('di partenza spenta: niente classe v5, niente chiave sul telefono', [classe(b), chiave(b)], [false, null]);
+    atteso('spenta solo se il telefono lo ricorda (zt_v5 = 0, messo dal banco)', [classe(b), chiave(b)], [false, '0']);
     b.win.openSettingsModal(); b.win.setVai('crediti');
     const sw = b.win.document.getElementById('set-veste');
     atteso('Impostazioni › Crediti: l\'interruttore c\'è ed è spento', [!!sw, sw && sw.getAttribute('role'), sw && sw.getAttribute('aria-checked')], [true, 'switch', 'false']);
     sw.click();
-    atteso('tocco: si accende, classe e chiave, l\'interruttore dice acceso', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [true, '1', 'true']);
+    atteso('tocco: si accende, classe e chiave, l\'interruttore dice acceso', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [true, null, 'true']);
     sw.click();
-    atteso('secondo tocco: si spegne, la chiave va via', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [false, null, 'false']);
+    atteso('secondo tocco: si spegne e lo ricorda (zt_v5 = 0)', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [false, '0', 'false']);
     b.win.close(); }
   { const b = await apri({ locale:{ zt_v5:'1' } });
-    atteso('con la chiave sul telefono parte accesa', classe(b), true);
+    atteso('accesa per tutti: senza lo spegnimento parte accesa (anche col vecchio zt_v5 = 1)', classe(b), true);
     b.win.close(); }
   { const b = await apri({ url:'https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?test=0&v5=1&da=link#sezione' });
-    atteso('?v5=1 la accende e la ricorda', [classe(b), chiave(b)], [true, '1']);
+    atteso('?v5=1 la accende (toglie lo spegnimento)', [classe(b), chiave(b)], [true, null]);
     atteso('letto, ?v5 esce dall\'indirizzo e gli altri parametri e il # restano', [b.win.location.search, b.win.location.hash], ['?test=0&da=link', '#sezione']);
     b.win.close(); }
   { const b = await apri({ url:'https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?v5=0', locale:{ zt_v5:'1' } });
-    atteso('?v5=0 la spegne e toglie la chiave', [classe(b), chiave(b)], [false, null]);
+    atteso('?v5=0 la spegne e lo ricorda', [classe(b), chiave(b)], [false, '0']);
     b.win.close(); }
 
   // ── 2. in Chrome vero, la Home a 390 px: spenta e accesa ──

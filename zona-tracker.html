@@ -20,9 +20,9 @@
 <link rel="apple-touch-icon" href="assets/icone/icona-180.png"/>
 
 <link rel="stylesheet" href="app/stile.css?v=20261029-1749"/>
-<!-- La veste nuova, Giro 1 (Passo 0, Ignazio 29/10/2026): html.v5 la accende, spenta l'app è quella di prima. Si accende con ?v5=1 (?v5=0 la spegne)
-     o dall'interruttore in Impostazioni › Crediti, e resta sul telefono (zt_v5); letto, ?v5 esce dall'indirizzo (gli altri parametri, ?code= e #access_token compresi, restano), così una ricarica non la riaccende. Qui, prima del disegno, così la pagina non cambia veste sotto gli occhi -->
-<script>(function(){try{var q=new URLSearchParams(location.search).get('v5');if(q==='1')localStorage.setItem('zt_v5','1');if(q==='0')localStorage.removeItem('zt_v5');if(q!==null){var u=new URL(location.href);u.searchParams.delete('v5');history.replaceState(history.state,'',u.pathname+u.search+u.hash);}if(localStorage.getItem('zt_v5')==='1')document.documentElement.classList.add('v5');}catch(e){}})();</script>
+<!-- La veste nuova, Giro 1 (Passo 0, Ignazio 29/10/2026): html.v5 la accende. Dal 29/10/2026 sera è accesa per tutti (Ignazio): la spegne solo
+     zt_v5 = '0' sul telefono, messo da ?v5=0 o dall'interruttore in Impostazioni › Crediti; ?v5=1 la riaccende; letto, ?v5 esce dall'indirizzo (gli altri parametri, ?code= e #access_token compresi, restano), così una ricarica non la riaccende. Qui, prima del disegno, così la pagina non cambia veste sotto gli occhi -->
+<script>(function(){try{var q=new URLSearchParams(location.search).get('v5');if(q==='1')localStorage.removeItem('zt_v5');if(q==='0')localStorage.setItem('zt_v5','0');if(q!==null){var u=new URL(location.href);u.searchParams.delete('v5');history.replaceState(history.state,'',u.pathname+u.search+u.hash);}if(localStorage.getItem('zt_v5')!=='0')document.documentElement.classList.add('v5');}catch(e){}})();</script>
 </head>
 <body>
 
