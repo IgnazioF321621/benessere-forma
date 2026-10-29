@@ -278,10 +278,10 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     W.showPage('oggi'); await attendi(300);
     pagN[nome] = fotografa(W);
     if(nome === 'oggi'){
-      W.showPage('body'); await attendi(200); pagN.body_dopo_oggi = fotografa(W);
+      W.showPage('integratori'); await attendi(200); pagN.body_dopo_oggi = fotografa(W);   // Integratori non ha ancora la testata nuova: l'intestazione dell'app deve esserci
       const ST = W.eval('ST'); W.callAI = async () => ''; W.cuePer = async () => '';
       ST.trainTab = 'piano'; W.showPage('training'); ST.trainAnticipato = 'upperA'; W.openTrainingSession('upperA'); await attendi(300);
-      W.showPage('body'); await attendi(200); pagN.body_dopo_seduta = fotografa(W);
+      W.showPage('integratori'); await attendi(200); pagN.body_dopo_seduta = fotografa(W);
     }
     W.close();
   }
@@ -312,8 +312,8 @@ header`);
         atteso(`Nutrition, ${nome}: ogni tasto alto almeno 44 px (${m.nTastiN} tasti)`, m.tastiN, []);
       }
       atteso('Nutrition oltre l\'obiettivo: il numero delle kcal nel colore «oltre», leggibile', [no.oltre && no.oltre.over, no.oltre && no.oltre.c >= 4.5], [true, true]);
-      atteso('dopo Nutrition, nel tab Body l\'intestazione dell\'app c\'è', bo.header !== 'none', true);
-      atteso('dopo la Seduta, nel tab Body l\'intestazione dell\'app c\'è (la regola vale solo con il Training davanti)', bs.header !== 'none', true);
+      atteso('dopo il tab Oggi, in Integratori (senza testata nuova) l\'intestazione dell\'app c\'è', bo.header !== 'none', true);
+      atteso('con una seduta aperta, in Integratori l\'intestazione dell\'app c\'è (la regola vale solo con il Training davanti)', bs.header !== 'none', true);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
@@ -324,6 +324,59 @@ header`);
       }
     }
   } finally { fs.rmSync(radiceN, { recursive:true, force:true }); }
+
+  // ── 5. Giro 1 del Body: le quattro schede a veste accesa, Misure a veste spenta; l'intestazione nelle altre pagine ──
+  const radiceB = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-b-'));
+  fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceB, 'stile.css'));
+  const pagB = {};
+  for(const v5 of [false, true]){
+    const b = await apri({ locale:{ zt_v5: v5 ? '1' : '0' }, now:OGGI + 'T09:30:00' });   // alle 9:30 «Come stai adesso?» non si apre
+    const W = b.win, ST = W.eval('ST');
+    for(const tab of (v5 ? ['misure', 'tendenza', 'check', 'energia'] : ['misure'])){
+      ST.bodyTab = tab; W.showPage('body'); await attendi(300);
+      pagB[(v5 ? 'body_' : 'body_spenta_') + tab] = fotografa(W);
+    }
+    if(v5){ W.showPage('training'); await attendi(200); pagB.training_dopo_body = fotografa(W); }
+    W.close();
+  }
+  const MISURA_B = MISURA_T.replace("const r={header", `const r={bTesta:g('.b5-testa','backgroundColor'),vecchieLinguette:!!document.querySelector('#page-body .nutrition-subnav'),
+sezioniB:[...document.querySelectorAll('#page-body .sez5')].map(e=>e.textContent.trim()),
+schedeB:[...document.querySelectorAll('.b5-testa .t5-seg button')].map(e=>e.textContent.trim()),
+cta:(()=>{const e=document.querySelector('#page-body .b5-cta');return e?{fondo:getComputedStyle(e).backgroundColor,h:Math.round(e.getBoundingClientRect().height),largo:e.getBoundingClientRect().width>300}:null;})(),
+testiB:testi('.b5-testa,#page-body .sez5,#page-body .b5-cta,#page-body .b5-peso,#page-body .b5-misure,#page-body .trend-card').filter(x=>x.c<4.5),
+tastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-salva,#page-body .b5-misure button').filter(x=>x.h<44),
+nTastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-salva,#page-body .b5-misure button').length,
+header`);
+  for(const [n, h] of Object.entries(pagB)){
+    fs.writeFileSync(path.join(radiceB, n + '.html'), h.replace('</body>', MISURA_B + '</body>'));
+    fs.writeFileSync(path.join(radiceB, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:1600px"></iframe>`);
+  }
+  const misuraB = async (n) => { const m = (await chromeT(['--window-size=390,1600', '--dump-dom', 'file://' + path.join(radiceB, n + '.html')])).match(/data-misura="([^"]*)"/);
+    return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
+  try {
+    const bs = await misuraB('body_spenta_misure'), bm = await misuraB('body_misure'), bt = await misuraB('body_tendenza'), bc = await misuraB('body_check'), be = await misuraB('body_energia'), tb = await misuraB('training_dopo_body');
+    atteso('Body: Chrome ha risposto per le sei pagine', [bs, bm, bt, bc, be, tb].map(x => !!x), [true, true, true, true, true, true]);
+    if(bs && bm && bt && bc && be && tb){
+      atteso('Body spento: le linguette di prima, niente testata né titoli nuovi', [bs.vecchieLinguette, bs.bTesta, bs.sezioniB, bs.header !== 'none'], [true, null, [], true]);
+      for(const [nome, m] of [['Misure', bm], ['Tendenza', bt], ['Check', bc], ['Energia', be]]){
+        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, quattro schede dentro`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length], ['rgb(106, 85, 160)', 'none', false, 4]);
+        atteso(`Body ${nome}: «Nuovo check fisico» largo nel viola della zona, alto almeno 44 px`, m.cta && [m.cta.fondo, m.cta.h >= 44, m.cta.largo], ['rgb(106, 85, 160)', true, true]);
+        atteso(`Body ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiB, []);
+        atteso(`Body ${nome}: ogni tasto alto almeno 44 px (${m.nTastiB} tasti)`, m.tastiB, []);
+      }
+      atteso('Body Misure: i titoli di sezione nell\'HTML, nell\'ordine', bm.sezioniB, ['Il peso', 'Misure col metro e bilancia']);
+      atteso('Body Tendenza: i titoli di sezione nell\'HTML, nell\'ordine', bt.sezioniB, ['Progresso verso l\'obiettivo', 'Evoluzione del corpo']);
+      atteso('dopo il Body, nel Training (Programma) l\'intestazione dell\'app c\'è', tb.header !== 'none', true);
+    }
+    if(process.env.FOTO){
+      fs.mkdirSync(process.env.FOTO, { recursive:true });
+      for(const n of ['body_spenta_misure', 'body_misure', 'body_tendenza', 'body_check', 'body_energia']){
+        const f = path.join(process.env.FOTO, `${n}_390.png`);
+        await chromeT(['--window-size=600,1600', '--screenshot=' + f, 'file://' + path.join(radiceB, '_' + n + '.html')]);
+        console.log('  foto  ' + f);
+      }
+    }
+  } finally { fs.rmSync(radiceB, { recursive:true, force:true }); }
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })();

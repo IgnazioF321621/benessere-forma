@@ -2856,5 +2856,25 @@ html.v5 #page-oggi .meal-card-v2 div[onclick^="toggleMealCard"] > div:first-chil
    leggibile sul chiaro (--macro-c per il giallo dei carboidrati); l'ora sulla barretta con il suo fondo */
 html.v5 #page-oggi :is(.oggi-v3-donut-label,.oggi-v3-macro-value-unit,.oggi-v3-macro-sub,.oggi-v3-timeline-sub,.oggi-v3-zona-stats,.meal-delete-btn,[style*="color:var(--t3)"]){color:var(--t2)!important;}
 html.v5 #page-oggi .oggi-v3-zona-stats span{opacity:1!important;}
-html.v5 #page-oggi [style*="color:#C4880A"]{color:var(--macro-c)!important;}
+html.v5 #page-oggi [style*="C4880A"]{color:var(--macro-c)!important;}
 html.v5 .n5-testa > div[style*="opacity:0.5"] span{padding:0 4px;border-radius:4px;background:var(--z-nutrition);}
+
+/* ── Giro 1 del Body (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_body/) ──
+   La testata e i titoli di sezione li disegna body.js solo con html.v5 (_testaBodyV5); qui l'aspetto, con i tasti della Seduta (.t5-*). */
+html.v5 body:has(#page-body.active .b5-testa) #header{display:none;}
+html.v5 #page-body:has(.b5-testa){padding-top:0;}
+html.v5 .b5-testa{margin:0 -16px 6px;padding:calc(env(safe-area-inset-top) + 12px) 16px 18px;background:var(--z-body);color:var(--z-testo);border-radius:0 0 26px 26px;}
+html.v5 .b5-testa .t5-titolo{margin-top:4px;}
+html.v5 .b5-testa .t5-seg button.on{color:var(--z-body-scuro);}
+/* «Nuovo check fisico»: il tasto principale largo, nel viola della zona */
+html.v5 #page-body div:has(> .b5-cta){display:block!important;margin:10px 0 0!important;}
+html.v5 #page-body .b5-cta{display:block;width:100%;min-height:52px;border-radius:16px!important;background:var(--z-body)!important;color:var(--z-testo)!important;font-size:17px!important;}
+/* il peso e le misure: gruppi bianchi senza bordo, le scritte grigie chiare in --t2, «Salva misure» largo nella zona */
+html.v5 #page-body :is(.b5-peso,.b5-misure){border:0!important;border-radius:14px!important;box-shadow:none!important;}
+html.v5 #page-body [style*="color:var(--t3)"]{color:var(--t2)!important;}
+html.v5 #page-body .b5-misure-titolo{font-size:15px!important;font-weight:400!important;}
+html.v5 #page-body .b5-salva{min-height:52px;border-radius:16px!important;background:var(--z-body)!important;font-size:17px!important;}
+html.v5 #page-body .b5-misure button:not(.b5-salva){min-height:44px;}
+html.v5 #page-body .b5-misure label[style*="dashed"]{min-height:44px;display:flex!important;align-items:center;justify-content:center;}
+html.v5 #page-body .trend-card{border:0;box-shadow:none;border-radius:14px;}
+html.v5 #page-body .sez5:first-of-type{margin-top:18px;}
