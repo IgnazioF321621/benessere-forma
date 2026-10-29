@@ -2639,7 +2639,7 @@ html.v5 #page-home{padding-top:0;}
 html.v5 .home-v2-wrap{padding-top:0;gap:12px;flex-direction:row;flex-wrap:wrap;align-items:stretch;}
 html.v5 .home-v2-wrap > *{width:100%;}
 html.v5 .home-v2-header{align-items:center;width:calc(100% + 32px);margin:0 -16px 6px;padding:calc(env(safe-area-inset-top) + 18px) 16px 22px;background:var(--z-home);border-radius:0 0 26px 26px;}
-html.v5 .home-v2-date{color:var(--z-testo);opacity:.85;margin-bottom:6px;}
+html.v5 .home-v2-date{color:var(--z-testo);margin-bottom:6px;}
 html.v5 .home-v2-greeting{color:var(--z-testo);font-size:28px;}
 html.v5 .home-v2-avatar{background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);}
 html.v5 :is(.cs-card,.cp-card,.home-v2-action,.home-v2-card){background:var(--s1);border:0;border-radius:14px;box-shadow:none;}
@@ -2648,7 +2648,7 @@ html.v5 .home-v2-card[onclick*="showPage('oggi')"]{background:var(--z-nutrition)
 html.v5 #home-card-training{background:var(--z-training);}
 html.v5 .home-v2-card[onclick*="showPage('body')"]{background:var(--z-body);}
 html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) .home-v2-card-dot{display:none;}
-html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) .home-v2-card-title{padding-left:0;opacity:.9;}
+html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) .home-v2-card-title{padding-left:0;}
 /* sul fondo pieno il testo di base è bianco: titoli, etichette, numeri neutri (anche quelli col colore scritto nell'HTML, var(--t1) e var(--t3)) */
 html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) :is(.home-v2-card-title,.home-v2-card-arrow,.home-v2-donut-sub,.home-v2-macro-label,.home-v2-macro-unit,.home-v2-nutr-riga,.home-v2-nutr-eb,.home-v2-train-name,.home-v2-train-sub,.home-v2-body-weight,.home-v2-body-unit,.home-v2-body-sub){color:var(--z-testo)!important;}
 html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) :is([style*="color:var(--t1)"],[style*="color:var(--t3)"]){color:var(--z-testo)!important;}

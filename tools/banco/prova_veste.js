@@ -109,9 +109,11 @@ function fotografa(win){
 const rgb=c=>{const m=c.match(/rgba?\\(([^)]+)\\)/);if(!m)return null;const v=m[1].split(',').map(Number);return {r:v[0],g:v[1],b:v[2],a:v.length>3?v[3]:1};};
 const lum=c=>{const f=x=>{x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
 const fondo=e=>{let bg={r:255,g:255,b:255,a:0},x=e;while(x){const c=rgb(getComputedStyle(x).backgroundColor);if(c&&c.a>0.5)return c;x=x.parentElement;}return {r:245,g:243,b:238,a:1};};
-const contrasto=e=>{const a=lum(rgb(getComputedStyle(e).color)),b=lum(fondo(e));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
+// il colore come arriva all'occhio: la sua trasparenza per l'opacità dell'elemento e di tutti gli antenati, mescolato col fondo
+const opac=e=>{let o=1,x=e;while(x){o*=parseFloat(getComputedStyle(x).opacity);x=x.parentElement;}return o;};
+const contrasto=e=>{const c=rgb(getComputedStyle(e).color),f=fondo(e),al=c.a*opac(e),m={r:c.r*al+f.r*(1-al),g:c.g*al+f.g*(1-al),b:c.b*al+f.b*(1-al)};const a=lum(m),b=lum(f);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
 const W='.home-v2-card[onclick*="showPage(\\'oggi\\')"],#home-card-training,.home-v2-card[onclick*="showPage(\\'body\\')"]';
-const testi=[...document.querySelectorAll(W)].flatMap(c=>[...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null);
+const testi=[...document.querySelectorAll(W+',.home-v2-header')].flatMap(c=>[...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null);
 const tutti=testi.map(e=>({t:e.textContent.trim().slice(0,30),c:Math.round(contrasto(e)*100)/100}));
 const di=s=>{const e=document.querySelector(s);return e&&e.offsetParent!==null?Math.round(contrasto(e)*100)/100:null;};
 const r={barra:g('#bottom-nav','display'),nav:g('#nav','display'),testa:g('.home-v2-header','backgroundColor'),nutr:g('.home-v2-card[onclick*="showPage(\\'oggi\\')"]','backgroundColor'),
@@ -151,7 +153,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso(`accesa: nessun campo sotto i 16 px (spenta: ${s.campi})`, a.campi, 0);
       atteso('accesa: l\'insetto del feedback sopra la barra (72 px dal fondo)', a.insetto, '72px');
       for(const [nome, m] of [['dentro l\'obiettivo', a], ['oltre l\'obiettivo, peso su', su], ['peso giù', giu]])
-        atteso(`accesa, ${nome}: ogni testo dei riquadri pieni almeno 4,5:1 (${m.testi} testi)`, m.peggiori, []);
+        atteso(`accesa, ${nome}: ogni testo della testata e dei riquadri pieni almeno 4,5:1 (con l'opacità) (${m.testi} testi)`, m.peggiori, []);
       atteso('pesata mancante: «+ pesata di oggi» leggibile (≥ 4,5:1)', su.pesata >= 4.5, true);
       atteso('pasto suggerito: «Registra» leggibile (≥ 4,5:1)', su.registra >= 4.5, true);
       atteso('oltre l\'obiettivo: kcal nel colore «oltre» (--over), leggibile', [su.oltreColore, su.oltre >= 4.5], ['rgb(180, 83, 9)', true]);
