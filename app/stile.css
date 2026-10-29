@@ -2878,3 +2878,33 @@ html.v5 #page-body .b5-misure button:not(.b5-salva){min-height:44px;}
 html.v5 #page-body .b5-misure label[style*="dashed"]{min-height:44px;display:flex!important;align-items:center;justify-content:center;}
 html.v5 #page-body .trend-card{border:0;box-shadow:none;border-radius:14px;}
 html.v5 #page-body .sez5:first-of-type{margin-top:18px;}
+
+/* ── Giro 1 delle Impostazioni (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_impostazioni/) ──
+   Solo stile, l'HTML della finestra è quello di prima. Le Impostazioni non sono una zona: la testata è nell'evergreen della Home. */
+html.v5 #settings-modal .set-foglio{padding-top:0;background:var(--bg);}
+html.v5 #settings-modal .set-testa{display:grid;grid-template-columns:1fr 44px;grid-template-areas:"indietro chiudi" "titolo titolo";align-items:center;gap:2px 8px;margin:0 -20px 6px;padding:12px 20px 18px;background:var(--z-home);border-radius:0 0 26px 26px;min-height:0;}
+html.v5 #settings-modal .set-indietro{grid-area:indietro;justify-self:start;min-height:44px;color:var(--z-testo);font-size:15px;font-weight:700;}
+html.v5 #settings-modal .set-titolo{grid-area:titolo;margin:0!important;color:var(--z-testo);font-size:24px;letter-spacing:-.5px;white-space:normal;}
+html.v5 #settings-modal .set-chiudi{grid-area:chiudi;position:static;width:44px;height:44px;border-radius:50%;background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);font-size:22px;padding:0;}
+/* l'elenco come le Impostazioni dell'iPhone: gruppi bianchi, titoli in --t2, un quadratino del colore della zona per voce */
+html.v5 #settings-modal .set-gruppo{margin:22px 4px 8px;font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--t2);}
+html.v5 #settings-modal .set-elenco{background:var(--s1);border:0;border-radius:14px;}
+html.v5 #settings-modal .set-voce{min-height:56px;gap:12px;border-top-color:var(--s3);}
+html.v5 #settings-modal .set-voce::before{content:'' / '';flex-shrink:0;width:30px;height:30px;border-radius:8px;background:var(--t2);}
+html.v5 #settings-modal .set-voce[data-voce="obiettivo"]::before{background:var(--z-home);}
+html.v5 #settings-modal .set-voce[data-voce="cibo"]::before{background:var(--z-nutrition);}
+html.v5 #settings-modal .set-voce[data-voce="allenamento"]::before{background:var(--z-training);}
+html.v5 #settings-modal .set-voce:is([data-voce="come-stai"],[data-voce="salute"])::before{background:var(--z-body);}
+html.v5 #settings-modal .set-voce-freccia{color:var(--t2);}
+html.v5 #settings-modal .set-voce-azione{font-size:13px;}
+/* «Esci dall'account»: tasto largo bianco con la scritta rossa */
+html.v5 #settings-modal button[onclick="logout()"]{min-height:48px;margin-top:22px!important;border:1px solid var(--b1);border-radius:14px;background:var(--s1);font-family:var(--font-sans);font-size:15px;font-weight:700;letter-spacing:0;text-transform:none;}
+/* le pagine interne: etichette in --t2, scelte alte 44 px, «Salva» largo */
+html.v5 #settings-modal .set-pagina label{color:var(--t2)!important;}
+html.v5 #settings-modal .set-obj-pill{min-height:44px;border-radius:12px!important;font-size:13px!important;}
+html.v5 #settings-modal .set-piede{background:var(--bg);}
+html.v5 #settings-modal #set-save-btn{min-height:52px;border-radius:16px;font-size:17px;}
+/* le pagine interne: le scritte grigie chiare (--t3, 2,7:1 sul fondo) in --t2, «Elimina account» nel rosso scuro, ogni tasto almeno 44 px */
+html.v5 #settings-modal .set-pagina :is([style*="color:var(--t3)"],[style*="color: var(--t3)"],.lbl,.set-account-etichetta,.settings-credits-content,.settings-credits-content ul,.settings-credits-toggle .chevron){color:var(--t2)!important;}
+html.v5 #settings-modal #set-elimina-btn{color:var(--err-scuro)!important;border-color:var(--err-scuro)!important;}
+html.v5 #settings-modal .set-pagina button:not(.set-voce){min-height:44px;min-width:44px;}
