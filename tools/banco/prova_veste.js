@@ -100,7 +100,10 @@ function fotografa(win){
   const pagine = {};
   for(const sc of ['base', 'su', 'giu']){
     const b = await apri({ scenario:sc });
-    if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; b.win.renderHomeV2(); }
+    if(sc === 'base') pagine.spenta = fotografa(b.win);
+    if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; }
+    // accesa: la classe come la mette lo script in testa, poi la Home ridisegnata (la settimana a righe la disegna home.js)
+    b.win.document.documentElement.classList.add('v5'); b.win.renderHomeV2();
     pagine[sc] = fotografa(b.win);
     b.win.close();
   }
@@ -123,7 +126,11 @@ campi:[...document.querySelectorAll('input:not([type=checkbox]):not([type=radio]
 trainW:(document.querySelector('#home-card-training')||{}).offsetWidth||0,riga:(document.querySelector('.home-v2-wrap')||{}).offsetWidth||0,largo:document.documentElement.scrollWidth,finestra:window.innerWidth,
 testi:tutti.length,peggiori:tutti.filter(x=>x.c<4.5),pesata:di('.home-v2-body-pesata'),registra:di('.home-v2-nutr-btn'),oltre:di('.home-v2-donut-num[style*="B45309"]'),
 macroOltre:document.querySelectorAll('.home-v2-macro-value[style*="B45309"]').length,macroOltreC:di('.home-v2-macro-value[style*="B45309"]'),delta:di('.home-v2-body-delta'),
-deltaColore:g('.home-v2-body-delta','color'),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
+deltaColore:g('.home-v2-body-delta','color'),
+ordine:['.home-v2-header','.home-v2-action','.home-v2-card[onclick*="showPage(\\'oggi\\')"]','#home-card-training','.cs-card','.cp-card','.wp5'].map(x=>{const e=document.querySelector(x);return e?Math.round(e.getBoundingClientRect().top):null;}),
+wp5:document.querySelectorAll('.wp5-riga').length,freccia:di('.wp5-freccia'),wpVecchia:!!document.querySelector('.wp-hero-card'),
+etichette:[...document.querySelectorAll('.home-v2-action-head span:first-child,.cs-titolo,.cp-title-main,.wp5-sez')].map(e=>{const p=e.matches('.home-v2-action-head span:first-child')?'::after':null;const c=rgb(getComputedStyle(e,p).color),f=fondo(e);const a=lum(c),b=lum(f);return {t:(p?getComputedStyle(e,p).content:e.textContent).trim().slice(0,24),c:Math.round((Math.max(a,b)+.05)/(Math.min(a,b)+.05)*100)/100};}),
+righe5:[...document.querySelectorAll('.wp5-riga *:not(.wp5-freccia)')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
 document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));</script>`;
   const scrivi = (nome, html, v5) => {
     let h = html.replace('</body>', MISURA + '</body>');
@@ -132,7 +139,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     // a 390 px dentro un riquadro: Chrome senza testa non scende sotto i 500 px di finestra
     fs.writeFileSync(path.join(radice, '_' + nome + '.html'), `<!doctype html><body style="margin:0"><iframe src="${nome}.html" style="border:0;width:390px;height:2400px"></iframe>`);
   };
-  scrivi('spenta', pagine.base, false); scrivi('accesa', pagine.base, true); scrivi('accesa_su', pagine.su, true); scrivi('accesa_giu', pagine.giu, true);
+  scrivi('spenta', pagine.spenta, false); scrivi('accesa', pagine.base, false); scrivi('accesa_su', pagine.su, false); scrivi('accesa_giu', pagine.giu, false);
   const chrome = (args) => new Promise(ok => execFile(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...args],
     { maxBuffer: 64 * 1024 * 1024, timeout: 90000 }, (err, out) => ok(String(out || ''))));
   const misura = async (nome) => {
@@ -163,6 +170,15 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('peso che sale via dall\'obiettivo: rosso (--err), leggibile', [su.deltaColore, su.delta >= 4.5], ['rgb(184, 76, 42)', true]);
       atteso('peso che scende verso l\'obiettivo: verde (--acc), leggibile', [giu.deltaColore, giu.delta >= 4.5], ['rgb(42, 122, 111)', true]);
       atteso('«Ultimo pasto N h fa» nel colore «oltre», leggibile', su.avviso >= 4.5, true);
+      // Giro 1 della Home: l'ordine nuovo e la settimana a righe
+      const crescente = (v) => v.every(x => x != null) && v.every((x, i) => !i || x > v[i - 1]);
+      atteso('giro 1, ordine: testata · Adesso · Nutrition · Training · Come stai · Pirsi · settimana', crescente(a.ordine), true);
+      atteso('giro 1, spenta: l\'ordine di prima (Come stai sopra la prossima azione) e la settimana a card', [s.ordine[4] < s.ordine[1], s.wp5, s.wpVecchia], [true, 0, true]);
+      atteso('giro 1, accesa: la settimana a righe (peso, obiettivo, sessioni, kcal), la card di prima no', [a.wp5, a.wpVecchia], [4, false]);
+      atteso('giro 1, accesa: i titoli di sezione (Adesso, Come stai, Pirsi, settimana) almeno 4,5:1', a.etichette.filter(x => x.c < 4.5), []);
+      atteso('giro 1, accesa: titoli di sezione con le parole giuste', a.etichette.map(x => x.t.replace(/"/g, '').toUpperCase().split(/\s+/).slice(0, 2).join(' ')).sort(), ['ADESSO', 'COME STAI', 'LA TUA', 'PIRSI PROPONE']);
+      atteso('giro 1, accesa: la freccia della settimana è un segno, non un testo: almeno 3:1', a.freccia >= 3, true);
+      atteso(`giro 1, accesa: ogni testo della settimana a righe almeno 4,5:1 (${a.righe5.length} testi)`, a.righe5.filter(x => x.c < 4.5), []);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });

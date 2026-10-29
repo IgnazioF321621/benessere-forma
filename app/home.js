@@ -639,6 +639,7 @@ function _wpHomeCardHTML(){
   if(!_wpUsable()) return '';
   const cur = wpMonday();
   const pic = ST.weeklyPicture && ST.weeklyPicture[cur];
+  if(document.documentElement.classList.contains('v5')) return _wpHomeRigheV5(cur, pic);
   const mini = (label, value, unit) => `<div class="wp-mini-stat"><div class="wp-mini-lbl">${label}</div>${value == null
     ? '<div class="wp-mini-val wp-nr">Non registrato</div>'
     : `<div class="wp-mini-val">${value}${unit ? `<span class="wp-unit">${unit}</span>` : ''}</div>`}</div>`;
@@ -665,6 +666,35 @@ function _wpHomeCardHTML(){
         ${inner}
       </div>
       <span class="home-v2-card-arrow">›</span>
+    </div>`;
+}
+
+// La veste nuova, Giro 1 della Home (schizzo approvato da Ignazio il 29/10/2026): con html.v5 la settimana è un elenco a righe,
+// nome a sinistra e valore a destra, in fondo alla Home. Gli stessi dati della card qui sopra (_wpWeightView, pic.training,
+// pic.nutrition, pic.meta), nessuna lettura nuova; il tocco apre il quadro come prima.
+function _wpHomeRigheV5(cur, pic){
+  const riga = (nome, valore, sotto, dopo) => `<div class="wp5-riga"><span class="wp5-nome">${nome}${sotto ? `<small>${sotto}</small>` : ''}</span><span class="wp5-val">${valore}</span>${dopo || ''}</div>`;
+  const nr = '<span class="wp-nr">Non registrato</span>';
+  let righe;
+  if(!pic){
+    righe = riga('Caricamento…', '', '');
+  } else {
+    const t = pic.training;
+    const v = pic.weight ? _wpWeightView(pic, todayKey()) : null;
+    const pesati = v && !v.fresh ? `<button class="wp-go wp-go-inline" onclick="event.stopPropagation();quadroGo('peso')">Pesati →</button>` : '';
+    const [obiettivo, ...resto] = v && v.goal ? v.goal.split(' · ') : [];
+    const aree = Math.round((pic.meta.completeness || 0) * 5);
+    righe = [
+      riga('Peso attuale', v && v.fresh ? `${v.value} kg` : nr, v ? (v.fresh ? `${v.when} · ${v.media}` : v.media) : '', pesati + '<span class="wp5-freccia">›</span>'),
+      obiettivo ? riga('Obiettivo', obiettivo.replace(/^Obiettivo /, ''), resto.join(' · ')) : '',
+      t ? riga('Sessioni', !t.sessions_done ? nr : t.sessions_planned != null ? `${t.sessions_done}/${t.sessions_planned}` : String(t.sessions_done), '') : '',
+      riga('Kcal medie', _wpNum(pic.nutrition && pic.nutrition.kcal_avg) || nr, `${aree} di 5 aree con dati`),
+    ].join('');
+  }
+  return `
+    <div class="wp5" onclick="openQuadro()">
+      <div class="wp5-sez">La tua settimana <span>${_wpRange(cur)}</span></div>
+      <div class="wp5-gruppo">${righe}</div>
     </div>`;
 }
 

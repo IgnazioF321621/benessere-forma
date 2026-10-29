@@ -76,6 +76,7 @@ function vesteNuova() {
   document.documentElement.classList.toggle('v5', on);
   try { if(on) localStorage.setItem('zt_v5', '1'); else localStorage.removeItem('zt_v5'); } catch(e) {}
   _setVeste();
+  if(ST.page === 'home' && typeof renderHome === 'function') renderHome();   // la settimana cambia disegno con la veste (Giro 1 della Home)
 }
 // Indietro senza salvare: i campi tornano come nel profilo, così un «Salva» in un'altra pagina non porta con sé
 // una modifica lasciata a metà.
