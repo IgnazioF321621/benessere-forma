@@ -32,6 +32,10 @@ body{color:var(--t1);font-family:var(--font-sans);-webkit-font-smoothing:antiali
   --prio-gialla:#8A9A2A;--surrogato:#FFF8E0;--surrogato-bordo:#F5E2A3;--surrogato-testo:#8A6500;--allerta:#FFF4E5;--allerta-testo:#7A3A1A;--anteprima:#FFF7E0;--anteprima-bordo:#E8D8A8;
   /* Body */
   --mod-body-forte:#5E4A7A;--body-velo:#EDE9F8;--body-testo:#3F3155;
+  /* La veste nuova, Giro 1 (Passo 0, scelta A di Ignazio del 29/10/2026): li usa solo html.v5. Pieno con il bianco sopra (≥ 5:1), velo e scuro per la barra e le scritte di zona */
+  --z-home:#2A7A6F;--z-nutrition:#A35F00;--z-training:#2E6DA4;--z-body:#6A55A0;--z-testo:#FFFFFF;
+  --z-home-velo:#E6F4F2;--z-nutrition-velo:#FDF1DA;--z-training-velo:#EAF2FB;--z-body-velo:#EFEDFA;
+  --z-home-scuro:#1F5C53;--z-nutrition-scuro:#7A4000;--z-training-scuro:#1F4F7A;--z-body-scuro:#4A3A78;
   /* Canali per le trasparenze: rgba(var(--acc-rgb),.25) */
   --nero-rgb:0,0,0;--bianco-rgb:255,255,255;--ombra-rgb:20,15,5;--t1-rgb:26,26,26;--bg-rgb:245,243,238;--acc-rgb:42,122,111;--err-rgb:184,76,42;--warn-rgb:196,136,10;--ambra-rgb:217,119,6;--arancio-rgb:255,165,0;--mod-nutrition-rgb:250,199,117;--saltato-rgb:139,111,111;--badge-testo-rgb:122,64,0;
 }
@@ -2602,3 +2606,62 @@ body.preview-onboarding #m1-preview-banner{display:block;}
 /* Nutrition 230: «Modifica» sul pasto, un bottone vero grande come un dito (44 pt), al posto della matita da 16 px */
 button.meal-edit-btn.meal-modifica{min-height:44px;min-width:44px;padding:0 12px;border:1px solid var(--acc);border-radius:var(--r-pill);background:var(--s1);color:var(--acc);font-family:var(--font-sans);font-size:12px;font-weight:600;cursor:pointer;align-self:center;}
 button.meal-edit-btn.meal-modifica:active{background:var(--acc-lt);}
+
+/* ── La veste nuova, Giro 1 (Passo 0, scelte di Ignazio del 29/10/2026: veste A, campi a 16 px, barra in basso) ──
+   Tutto sotto html.v5, l'interruttore (?v5=1 o Impostazioni › Crediti, ricordato in zt_v5): spenta, l'app è quella di prima.
+   Solo l'aspetto: cosa fa la pagina, i tasti e i passaggi restano quelli di adesso. Disegno in docs/prototipi/passo0/. */
+/* la barra in basso a ogni larghezza; la voce aperta prende il velo e la scritta scura della sua zona, le altre in --t2 */
+html.v5 #nav{display:none!important;}
+html.v5 #bottom-nav{display:flex!important;border-top-color:var(--s3);border-radius:22px 22px 0 0;}
+html.v5 #main{padding-bottom:calc(env(safe-area-inset-bottom) + 120px);}
+html.v5 #bottom-nav .nav-btn{color:var(--t2);}
+html.v5 #bottom-nav .bn-label{font-family:var(--font-sans);font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'home'"]{color:var(--z-home-scuro);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'home'"] .bn-pill{background:var(--z-home-velo);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'oggi'"]{color:var(--z-nutrition-scuro);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'oggi'"] .bn-pill{background:var(--z-nutrition-velo);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'training'"]{color:var(--z-training-scuro);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'training'"] .bn-pill{background:var(--z-training-velo);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'body'"]{color:var(--z-body-scuro);}
+html.v5 #bottom-nav .nav-btn.active[onclick*="'body'"] .bn-pill{background:var(--z-body-velo);}
+/* l'insetto del feedback resta sopra la barra anche dove prima la barra non c'era (schermo largo) */
+html.v5 .segnala-bottone:not(.in-foglio){bottom:calc(env(safe-area-inset-bottom) + 72px);}
+
+/* campi di testo a 16 px: sotto i 16 px Safari su iPhone ingrandisce la pagina al tocco. I campi più grandi restano come sono:
+   il ripiego vale solo dove non c'è un'altra regola (:where, peso zero), le classi piccole misurate il 29/10 si alzano una per una,
+   e le misure scritte dentro l'HTML (style="font-size:10px…15px") anche */
+:where(html.v5) :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]),select,textarea){font-size:16px;}
+html.v5 :is(.inp,.inp-sm,.supp-name-inp,.supp-slot-inp,.supp-note-inp,.macro-cell-inp,.meal-time-inp,.supp-grp-inp,.m1-field-textarea,.pkg-item-stepper input,.cextra-stepper input){font-size:16px;}
+html.v5 :is(input,select,textarea):is([style*="font-size:10px"],[style*="font-size:11px"],[style*="font-size:12px"],[style*="font-size:13px"],[style*="font-size:14px"],[style*="font-size:15px"],[style*="font-size: 10px"],[style*="font-size: 11px"],[style*="font-size: 12px"],[style*="font-size: 13px"],[style*="font-size: 14px"],[style*="font-size: 15px"]){font-size:16px!important;}
+
+/* Home: la testata della zona Home, i gruppi bianchi, Nutrition · Training · Body come riquadri pieni del colore della zona */
+html.v5 #page-home{padding-top:0;}
+html.v5 .home-v2-wrap{padding-top:0;gap:12px;flex-direction:row;flex-wrap:wrap;align-items:stretch;}
+html.v5 .home-v2-wrap > *{width:100%;}
+html.v5 .home-v2-header{align-items:center;width:calc(100% + 32px);margin:0 -16px 6px;padding:calc(env(safe-area-inset-top) + 18px) 16px 22px;background:var(--z-home);border-radius:0 0 26px 26px;}
+html.v5 .home-v2-date{color:var(--z-testo);opacity:.85;margin-bottom:6px;}
+html.v5 .home-v2-greeting{color:var(--z-testo);font-size:28px;}
+html.v5 .home-v2-avatar{background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);}
+html.v5 :is(.cs-card,.cp-card,.home-v2-action,.home-v2-card){background:var(--s1);border:0;border-radius:14px;box-shadow:none;}
+html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]){border-radius:18px;}
+html.v5 .home-v2-card[onclick*="showPage('oggi')"]{background:var(--z-nutrition);}
+html.v5 #home-card-training{background:var(--z-training);}
+html.v5 .home-v2-card[onclick*="showPage('body')"]{background:var(--z-body);}
+html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) *{color:var(--z-testo)!important;}
+html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) .home-v2-card-dot{display:none;}
+html.v5 :is(.home-v2-card[onclick*="showPage('oggi')"],#home-card-training,.home-v2-card[onclick*="showPage('body')"]) .home-v2-card-title{padding-left:0;opacity:.9;}
+html.v5 .home-v2-card[onclick*="showPage('oggi')"] .home-v2-donut-svg circle{stroke:rgba(var(--bianco-rgb),.3);}
+html.v5 .home-v2-card[onclick*="showPage('oggi')"] .home-v2-donut-svg circle + circle{stroke:var(--z-testo);}
+/* Training e Body affiancati, come due widget piccoli (solo quando ci sono tutti e due) */
+html.v5 #home-card-training:has(+ .home-v2-card[onclick*="showPage('body')"]),html.v5 #home-card-training + .home-v2-card[onclick*="showPage('body')"]{width:calc(50% - 6px);align-items:flex-start;padding:16px 12px 16px 14px;}
+html.v5 #home-card-training + .home-v2-card[onclick*="showPage('body')"] .home-v2-body-line{flex-wrap:wrap;}
+
+/* l'interruttore della veste, in Impostazioni › Crediti: si vede sempre, anche a veste spenta */
+.set-veste{width:100%;display:flex;align-items:center;gap:12px;padding:14px 0;margin-bottom:12px;border:none;border-bottom:1px solid var(--s3);background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);color:var(--t1);}
+.set-veste-testo{flex:1;min-width:0;}
+.set-veste-testo b{display:block;font-size:15px;font-weight:700;}
+.set-veste-testo small{display:block;font-size:12px;color:var(--t2);margin-top:2px;}
+.set-veste-int{flex-shrink:0;position:relative;width:46px;height:28px;border-radius:999px;background:var(--b1);transition:background .2s;}
+.set-veste-int::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--bianco);box-shadow:0 1px 3px rgba(var(--nero-rgb),.2);transition:transform .2s;}
+.set-veste[aria-checked="true"] .set-veste-int{background:var(--acc);}
+.set-veste[aria-checked="true"] .set-veste-int::after{transform:translateX(18px);}

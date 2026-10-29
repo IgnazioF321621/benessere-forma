@@ -72,13 +72,20 @@ if(!prima){
 const vecchio = fs.readFileSync(prima, 'utf8');
 const P = dividi(vecchio);
 const piatto = (d) => canonico(risolvi(d.fuori, Object.fromEntries(Object.entries(d.nomi).map(([k, v]) => [k, risolvi(v, d.nomi)]))));
-const a = piatto(P), b = piatto(N);
+// la veste nuova (Giro 1): le sue regole stanno tutte sotto html.v5, e l'interruttore in .set-veste. A veste spenta non valgono:
+// si tolgono dallo stile nuovo, e quello che resta deve dire lo stesso di prima, regola per regola
+const VESTE = /(^|[}])\s*[^{}@]*(html\.v5|\.set-veste)[^{}]*\{[^{}]*\}/g;
+const senzaVeste = (d) => { let f = d.fuori, g; do { g = f; f = f.replace(VESTE, '$1'); } while(f !== g); return { ...d, fuori: f }; };
+const regoleVeste = (N.fuori.match(VESTE) || []).length;
+const a = piatto(P), b = piatto(senzaVeste(N));
 const primoDiverso = (x, y) => { let i = 0; while(i < x.length && x[i] === y[i]) i++; return i; };
 const k = primoDiverso(a, b);
 atteso(`ogni regola, coi nomi risolti, uguale a prima (${a.length} caratteri)`, a === b, a === b ? '' : `\n      prima: …${a.slice(k - 80, k + 60)}\n      ora:   …${b.slice(k - 80, k + 60)}`);
 const cambiati = Object.keys(P.nomi).filter(n => canonico(P.nomi[n]) !== canonico(N.nomi[n] || ''));
 atteso('i nomi di prima ci sono ancora tutti, con lo stesso valore', cambiati.length === 0, cambiati.join(' '));
-const rotto = { ...N, nomi: { ...N.nomi, 'carta': '#FFFCF7' } };
+const fuoriVeste = (senzaVeste(N).fuori.match(/html\.v5|set-veste/g) || []).length;
+atteso(`la veste nuova sta tutta sotto html.v5 e .set-veste (${regoleVeste} regole messe da parte, nessuna rimasta fuori)`, fuoriVeste === 0, `${fuoriVeste} rimaste`);
+const rotto = { ...senzaVeste(N), nomi: { ...N.nomi, 'carta': '#FFFCF7' } };
 atteso('controprova: con --carta cambiata di un punto il confronto se ne accorge', piatto(rotto) !== a);
 
 // ── 3. in Chrome vero: le schermate dell'app con lo stile di prima e con il nuovo ──
@@ -166,9 +173,10 @@ async function schermate(){
   }
   return out;
 }
+// l'interruttore della veste (#set-veste, in Impostazioni › Crediti) è l'unico pezzo nuovo che c'è anche a veste spenta: resta fuori dal confronto
 const SPIA = `<script>addEventListener('load',()=>setTimeout(()=>{const h=(s)=>{let x=2166136261;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x=Math.imul(x,16777619);}return (x>>>0).toString(36);};
 document.getAnimations().forEach(a=>{try{a.finish();}catch(e){a.pause();a.currentTime=0;}});
-const els=[...document.querySelectorAll('body *')];const righe=els.map(e=>{let s='';for(const p of [null,'::before','::after']){const c=getComputedStyle(e,p);for(let i=0;i<c.length;i++)if(!c[i].startsWith('--'))s+=c[i]+':'+c.getPropertyValue(c[i])+';';}return h(s);});
+const els=[...document.querySelectorAll('body *')].filter(e=>!e.closest('#set-veste'));const righe=els.map(e=>{let s='';for(const p of [null,'::before','::after']){const c=getComputedStyle(e,p);for(let i=0;i<c.length;i++)if(!c[i].startsWith('--'))s+=c[i]+':'+c.getPropertyValue(c[i])+';';}return h(s);});
 const nomi=els.map(e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+(typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\\s+/).join('.'):''));
 document.documentElement.setAttribute('data-stile',JSON.stringify({n:els.length,h:righe,d:nomi}));},300));</script>`;
 

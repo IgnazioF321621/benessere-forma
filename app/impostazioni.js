@@ -62,7 +62,20 @@ function setVai(pagina) {
   const err = document.getElementById('set-err'); if(err) err.style.display = 'none';
   if(nome === 'elenco') _setRiassunti();
   if(nome === 'salute') { _setUltimiLog(); _setEsamiStorico(); }
+  if(nome === 'crediti') _setVeste();
   const inner = document.querySelector('#settings-modal .set-foglio'); if(inner) inner.scrollTop = 0;
+}
+// La veste nuova (Giro 1, Passo 0): l'interruttore in Crediti. Cambia solo la classe html.v5 e la chiave sul telefono zt_v5,
+// la stessa che legge lo script in testa alla pagina; niente si salva nel profilo.
+function _setVeste() {
+  const b = document.getElementById('set-veste');
+  if(b) b.setAttribute('aria-checked', document.documentElement.classList.contains('v5') ? 'true' : 'false');
+}
+function vesteNuova() {
+  const on = !document.documentElement.classList.contains('v5');
+  document.documentElement.classList.toggle('v5', on);
+  try { if(on) localStorage.setItem('zt_v5', '1'); else localStorage.removeItem('zt_v5'); } catch(e) {}
+  _setVeste();
 }
 // Indietro senza salvare: i campi tornano come nel profilo, così un «Salva» in un'altra pagina non porta con sé
 // una modifica lasciata a metà.
