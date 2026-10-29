@@ -2027,6 +2027,19 @@ function renderRegistraPasto() {
   `;
 }
 
+// La testata di Nutrition nella veste nuova (Giro 1): i tasti dell'intestazione (tastiTestaV5), la data, il titolo,
+// quello che la pagina mette in testata (`dentro`: in Oggi il giorno e «Giorno detox») e le quattro schede.
+function _testaNutritionV5(attiva, sopra, dentro){
+  const labels = { oggi:'Oggi', integratori:'Integratori', analisi:'Analisi', piano:'Piano' };
+  return `
+    <div class="n5-testa">
+      <div class="t5-su"><span class="n5-sopra">${sopra}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <h1 class="t5-titolo">Nutrition</h1>
+      ${dentro || ''}
+      <nav class="t5-seg">${Object.keys(labels).map(id => `<button class="${id === attiva ? 'on' : ''}" onclick="showPage('${id}')">${labels[id]}</button>`).join('')}</nav>
+    </div>`;
+}
+
 function renderOggi(){
   // Preselezione intelligente del prossimo pasto (rispetta override manuale)
   if(!ST.nextSlotUserOverride){
@@ -2379,18 +2392,10 @@ function renderOggi(){
         return `<button class="oggi-v3-pill${id==='oggi'?' active':''}" onclick="showPage('${id}')">${labels[id]}</button>`;
       }).join('')}
     </div>`;
-  const testaV5 = `
-    <div class="n5-testa">
-      <div class="t5-su"><span class="n5-sopra">${dateEb}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
-      <h1 class="t5-titolo">Nutrition</h1>
+  const testaV5 = _testaNutritionV5('oggi', dateEb, `
       ${navGiorno}
       ${timebar}
-      <div class="n5-detox">${detoxBtn}</div>
-      <nav class="t5-seg">${['oggi','integratori','analisi','piano'].map(id => {
-        const labels = { oggi:'Oggi', integratori:'Integratori', analisi:'Analisi', piano:'Piano' };
-        return `<button class="${id === 'oggi' ? 'on' : ''}" onclick="showPage('${id}')">${labels[id]}</button>`;
-      }).join('')}</nav>
-    </div>`;
+      <div class="n5-detox">${detoxBtn}</div>`);
   // i titoli di sezione fuori dai riquadri: «Il giorno» sopra l'anello, «Timeline di oggi» sopra i pasti (il suo titolo dentro si nasconde)
   if(v5){
     html = html.replace('<div class="oggi-v3-hero-card">', `<h2 class="sez5"><span>Il giorno</span><span class="sez5-dx">su ${fmtNum(ST.TARGET.kcal)} kcal</span></h2><div class="oggi-v3-hero-card">`);
@@ -2471,6 +2476,10 @@ function renderIntegratori(){
       }).join('')}
     </div>
     <div class="int-v3-scope-note">GESTORE PACCHETTI E EXTRA · LA REGISTRAZIONE VIVE IN OGGI</div>`;
+  // veste nuova: la testata della zona al posto di quella di prima (la nota resta, sotto)
+  const testa = document.documentElement.classList.contains('v5')
+    ? _testaNutritionV5('integratori', dateEb) + '<div class="int-v3-scope-note">GESTORE PACCHETTI E EXTRA · LA REGISTRAZIONE VIVE IN OGGI</div>'
+    : v3Header;
 
   // ── Sezione "I miei pacchetti" ──
   const pkgs = ST.packages || [];
@@ -2576,7 +2585,7 @@ function renderIntegratori(){
   </button>`;
   extrasHTML += `</section>`;
 
-  document.getElementById('page-integratori').innerHTML = v3Header + pkgsHTML + extrasHTML + versionFooter();
+  document.getElementById('page-integratori').innerHTML = testa + pkgsHTML + extrasHTML + versionFooter();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2946,7 +2955,8 @@ function renderAnalisiShell() {
     `<button class="analisi-v3-window-pill${ST.analisi.window===w?' active':''}" onclick="setAnalisiWindow('${w}')">${winLabels[w].toUpperCase()}</button>`
   ).join('')}</div>`;
 
-  document.getElementById('page-analisi').innerHTML = v3Header + winBar + `<div id="analisi-content"></div>` + versionFooter();
+  const testa = document.documentElement.classList.contains('v5') ? _testaNutritionV5('analisi', dateEb) : v3Header;   // veste nuova
+  document.getElementById('page-analisi').innerHTML = testa + winBar + `<div id="analisi-content"></div>` + versionFooter();
 }
 
 // ── RENDER: contenuto dinamico (cambia su switch finestra e nav date) ──
@@ -5989,7 +5999,8 @@ function renderPianoV4() {
       </div>
     </div>`;
 
-  document.getElementById('page-piano').innerHTML = v3Header + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
+  const testa = document.documentElement.classList.contains('v5') ? _testaNutritionV5('piano', dateEb) : v3Header;   // veste nuova
+  document.getElementById('page-piano').innerHTML = testa + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
 }
 
 

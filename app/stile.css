@@ -2908,3 +2908,25 @@ html.v5 #settings-modal #set-save-btn{min-height:52px;border-radius:16px;font-si
 html.v5 #settings-modal .set-pagina :is([style*="color:var(--t3)"],[style*="color: var(--t3)"],.lbl,.set-account-etichetta,.settings-credits-content,.settings-credits-content ul,.settings-credits-toggle .chevron){color:var(--t2)!important;}
 html.v5 #settings-modal #set-elimina-btn{color:var(--err-scuro)!important;border-color:var(--err-scuro)!important;}
 html.v5 #settings-modal .set-pagina button:not(.set-voce){min-height:44px;min-width:44px;}
+
+/* ── Le pagine rimaste di Nutrition: Integratori, Analisi, Piano (29/10/2026, Ignazio: «le regole già approvate», senza schizzo) ──
+   La testata la disegna _testaNutritionV5 in nutrition.js solo con html.v5; qui l'aspetto, lo stesso del tab Oggi. */
+html.v5 body:has(:is(#page-integratori,#page-analisi,#page-piano).active .n5-testa) #header{display:none;}
+html.v5 :is(#page-integratori,#page-analisi,#page-piano):has(.n5-testa){padding-top:0;}
+html.v5 :is(#page-integratori,#page-analisi,#page-piano) :is([style*="color:var(--t3)"],[style*="color: var(--t3)"]){color:var(--t2)!important;}
+html.v5 :is(#page-integratori,#page-analisi,#page-piano) button{min-height:44px;}
+
+/* ── Il Training fuori dalla seduta: Programma e Progressione con la testata blu della zona (_testaTrainingV5) ── */
+html.v5 #page-training:has(.t5-pagina){padding-top:0;}
+html.v5 .t5-testa.t5-pagina{margin:0 -16px 6px;padding-left:16px;padding-right:16px;}
+html.v5 #page-training:has(.t5-pagina) :is([style*="color:var(--t3)"],[style*="color: var(--t3)"]){color:var(--t2)!important;}
+html.v5 #page-training:has(.t5-pagina) button{min-height:44px;}
+/* le scritte grigie chiare (--t3, da 2,6 a 3,1:1) delle tre pagine di Nutrition, misurate il 29/10 da prova_veste, in --t2 */
+html.v5 :is(#page-integratori,#page-analisi,#page-piano) :is(.int-v3-scope-note,.int-v3-section-eb,.int-v3-section-count,.int-v3-empty-text,.analisi-v3-window-pill:not(.active),.analisi-v3-nav-eb,.analisi-v3-stat-eb,.analisi-v3-stat-sub,.analisi-v3-section-eb,.analisi-v3-macro-bar-sub,.leg-item,.sep,.pianov4-day-date,.pianov4-day-empty-text,.pianov4-memory-see-all,.pianov4-profile-label,.pianov4-status-badge-empty,.pianov4-status-count-total,.pianov4-status-label,.pianov4-weight-mode,.pianov4-weight-spark-empty,.pianov4-weight-unit){color:var(--t2)!important;}
+html.v5 #page-piano .pianov4-memory-eyebrow{color:var(--badge-testo)!important;}
+html.v5 #page-integratori .int-v3-cta-tag{opacity:1;}
+html.v5 #page-integratori .int-v3-cta.primary .int-v3-cta-tag{color:var(--bianco)!important;}
+/* Programma: le scritte bianche velate sul verde pieno in bianco pieno, il verde salvia dell'Ipertrofia nel verde scuro, «Segna oggi» su --t2 */
+html.v5 #page-training:has(.t5-pagina) :is([style*="255,255,255,.7)"],[style*="255,255,255,.75)"],[style*="255,255,255,.85)"],[style*="255,255,255,.9)"]){color:var(--z-testo)!important;}
+html.v5 #page-training:has(.t5-pagina) span[style*="6FA99B;text-transform"]{color:var(--acc-scuro)!important;}
+html.v5 #page-training:has(.t5-pagina) button[onclick="markRestChosen();"]{background:var(--t2)!important;}
