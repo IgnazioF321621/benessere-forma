@@ -1694,8 +1694,9 @@ function renderBodyTrend(){
         }
         complHTML = `<div style="font-size:12px;color:var(--t2);font-family:var(--font-mono);margin-top:12px;padding-top:10px;border-top:1px solid var(--s2);">${txt}</div>`;
       }
-      sec1 = `<div class="trend-card">
-        <div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Progresso verso l'obiettivo</div>
+      const v5 = document.documentElement.classList.contains('v5');   // veste nuova: il titolo fuori dal riquadro
+      sec1 = `${v5 ? '<h2 class="sez5">Progresso verso l\'obiettivo</h2>' : ''}<div class="trend-card">
+        ${v5 ? '' : `<div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:8px;">Progresso verso l'obiettivo</div>`}
         ${heroLine}${targetLine}${barHTML}${complHTML}
       </div>`;
     }
@@ -1745,7 +1746,7 @@ function renderBodyTrend(){
       </div>`;
     }).filter(Boolean).join('');
     if(cards){
-      sec2 = `<div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin:4px 0 10px;">Evoluzione del corpo</div>
+      sec2 = `${document.documentElement.classList.contains('v5') ? '<h2 class="sez5">Evoluzione del corpo</h2>' : `<div style="font-size:13px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin:4px 0 10px;">Evoluzione del corpo</div>`}
         <div class="trend-metric-grid">${cards}</div>`;
     }
   }
@@ -1845,7 +1846,8 @@ function getBlockCheckReminder(opts){
 function _bodyCheckCtaHTML(){
   const inCorso = (ST.bodyChecks || []).some(c => c.status === 'in_progress');
   const label = inCorso ? 'Riprendi check fisico →' : 'Nuovo check fisico →';
-  const btn = (full) => `<button onclick="m2EntryIntro();" style="${full ? 'width:100%;margin-top:10px;' : ''}padding:10px 16px;background:#5E4A7A;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;white-space:nowrap;">${label}</button>`;
+  const v5 = document.documentElement.classList.contains('v5');
+  const btn = (full) => `<button${v5 ? ' class="b5-cta"' : ''} onclick="m2EntryIntro();" style="${full ? 'width:100%;margin-top:10px;' : ''}padding:10px 16px;background:#5E4A7A;color:#fff;border:none;border-radius:var(--r);font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;white-space:nowrap;">${label}</button>`;
   const rem = getBlockCheckReminder();
   if(rem){
     const quando = rem.giorniDaUltimo === null
@@ -1859,6 +1861,18 @@ function _bodyCheckCtaHTML(){
     </div>`;
   }
   return `<div style="margin:12px 16px 0;display:flex;justify-content:flex-end;">${btn(false)}</div>`;
+}
+// La testata del Body nella tinta della zona (veste nuova, Giro 1): i tasti dell'intestazione (tastiTestaV5), la data, il titolo
+// e le quattro schede, con gli stessi tocchi delle linguette di prima.
+function _testaBodyV5(tab, tabs){
+  const oggi = new Date();
+  const data = `${['DOM','LUN','MAR','MER','GIO','VEN','SAB'][oggi.getDay()]} ${oggi.getDate()} ${['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'][oggi.getMonth()]}`;
+  return `
+    <div class="b5-testa">
+      <div class="t5-su"><span class="n5-sopra">${data}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <h1 class="t5-titolo">Body</h1>
+      <nav class="t5-seg">${tabs.map(t => `<button class="${tab === t.id ? 'on' : ''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}</nav>
+    </div>`;
 }
 
 // ── Tab Energia: l'andamento di energia, stress, sonno e riposini (Home 170 passo 2, 14 ottobre 2026) ──
@@ -2005,7 +2019,10 @@ function renderBody(){
     { id:'check',    label:'Check' },
     { id:'energia',  label:'Energia' },
   ];
-  const navHTML = `<nav class="nutrition-subnav">
+  // La veste nuova, Giro 1 del Body (schizzo approvato da Ignazio il 29/10/2026): con html.v5 le schede stanno nella testata della zona
+  // (_testaBodyV5) e le sezioni hanno i titoli fuori dai riquadri; a veste spenta l'HTML è quello di prima.
+  const v5 = document.documentElement.classList.contains('v5');
+  const navHTML = v5 ? _testaBodyV5(tab, tabs) : `<nav class="nutrition-subnav">
     ${tabs.map(t=>`<button class="nsn-pill${tab===t.id?' active':''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}
   </nav>`;
 
@@ -2114,8 +2131,8 @@ function renderBody(){
     const fv  = (val, def='') => val != null ? val : def;
     const adv = ST.bodyAdvOpen;
 
-    body = `
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+    body = `${v5 ? '<h2 class="sez5">Il peso</h2>' : ''}
+      <div class="b5-peso" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
         <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:12px;">
           <span style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${w ?? '—'}</span>
           ${w ? `<span style="font-size:13px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
@@ -2163,9 +2180,10 @@ function renderBody(){
         </div>`;
       })()}
 
-      <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
+      ${v5 ? '<h2 class="sez5">Misure col metro e bilancia</h2>' : ''}
+      <div class="b5-misure" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
-          <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">Misure col metro e bilancia</div>
+          <div class="b5-misure-titolo" style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${v5 ? 'Giorno' : 'Misure col metro e bilancia'}</div>
           <input id="bl-date" type="date" value="${giornoLog}" max="${today}" onchange="bodyLogSetDate(this.value)" aria-label="Giorno delle misure"
             style="padding:6px 8px;border:1px solid var(--b1);border-radius:var(--r);font-size:12px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);outline:none;">
         </div>
@@ -2247,7 +2265,7 @@ function renderBody(){
         </div>`}
 
         ${fitdaysCardHTML(fitdaysLettura)}
-        <button onclick="saveBodyLog();" ${ST.bodySaving?'disabled':''}
+        <button class="b5-salva" onclick="saveBodyLog();" ${ST.bodySaving?'disabled':''}
           style="width:100%;padding:12px;margin-top:10px;background:#854F0B;color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:${ST.bodySaving?'default':'pointer'};${ST.bodySaving?'opacity:.6;':''}">
           ${ST.bodySaving ? 'Salvataggio...' : 'Salva misure'}
         </button>
