@@ -83,6 +83,15 @@ Erano scritti a mano dentro le regole. I valori sono **identici a prima**, uno p
 
 `--nero-rgb` (ombre e veli) · `--bianco-rgb` (testi e veli sull'accento) · `--ombra-rgb` `20,15,5` (ombre calde di Nutrition) · `--t1-rgb` · `--bg-rgb` · `--acc-rgb` · `--err-rgb` · `--warn-rgb` · `--ambra-rgb` · `--arancio-rgb` · `--mod-nutrition-rgb` · `--saltato-rgb` · `--badge-testo-rgb`.
 
+## La veste nuova (Giro 1, dal 29 ottobre 2026)
+
+Scelte di Ignazio sul Passo 0 (tavola in `docs/prototipi/passo0/` sul ramo `claude/giro1-seduta-disegno`, con il disegno della Seduta in `docs/prototipi/giro1_seduta/`): **veste A**, colori pieni con le scritte bianche; **campi di testo a 16 px**; si costruisce dietro un interruttore, una pagina alla volta.
+
+- **L'interruttore è la classe `v5` su `<html>`.** La mette lo script in testa a `zona-tracker.html` se sul telefono c'è `zt_v5 = 1`; `?v5=1` nell'indirizzo la accende e la ricorda, `?v5=0` la spegne; in Impostazioni › Crediti c'è «Veste nuova» (`vesteNuova()`). Spenta, l'app è quella di prima al pixel.
+- **Ogni regola della veste comincia con `html.v5`** (l'interruttore delle Impostazioni con `.set-veste`). `prova_stile.js` le mette da parte e vuole tutto il resto uguale a prima; `prova_veste.js` prova l'interruttore e, in Chrome, la Home accesa (`FOTO=` tiene le foto a 390 px).
+- **Colori di zona**: `--z-home` `#2A7A6F` · `--z-nutrition` `#A35F00` · `--z-training` `#2E6DA4` · `--z-body` `#6A55A0`, con `--z-testo` bianco sopra (contrasto da 5,01:1 a 6,14:1). Per la voce accesa della barra e le scritte di zona su fondo chiaro: `--z-…-velo` e `--z-…-scuro` (da 6,85:1 a 8,38:1). Le tinte `--mod-*` restano dove sono.
+- **Cosa fa oggi la veste**: barra in basso a ogni larghezza, con la voce aperta nel colore della sua zona e le altre in `--t2`; insetto del feedback sopra la barra; campi a 16 px (il ripiego vale solo dove non c'è un'altra regola, le classi piccole misurate il 29/10 si alzano una per una, e anche le misure scritte nell'HTML da 10 a 15 px); la Home con la testata della zona Home, i gruppi bianchi e Nutrition · Training · Body come riquadri pieni.
+
 ## Quasi doppioni: decisioni per il cambio di grafica
 
 Dare i nomi non ha cambiato niente, quindi anche i colori quasi uguali sono rimasti due. Sono candidati a diventare uno solo nel cambio di grafica (Stile 020), **con una decisione di Ignazio**, perché lì l'aspetto cambia davvero, anche se di poco:

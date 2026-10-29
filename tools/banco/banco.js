@@ -224,7 +224,7 @@ function boot(tables, opts={}){
   const supa = makeSupaMock(tables);
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',
-    url: 'https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?test=0',
+    url: opts.url || 'https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?test=0',
     virtualConsole: vc,
     pretendToBeVisual: true,
     beforeParse(win){
