@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 1 · Nutrition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 1 · Nutrition, il tab Oggi: schizzo prima/dopo, niente codice dell'app. Prima = la pagina vera a veste A accesa
+   (banco, 390 px); dopo = stessi dati e tasti con le regole di pagina di Home e Seduta. Colori: i nomi di app/stile.css. */
+:root {
+  --font-sans: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC; --b1: #DDD9D0;
+  --t1: #1A1A1A; --t2: #555047; --t3: #9A9388; --acc: #2A7A6F; --acc-lt: #E6F4F2; --bianco: #FFFFFF;
+  --carb: #C4880A; --prot: #2A7A6F; --fat: #B84C2A; --err: #B84C2A; --err-lt: #FCEEE9; --crema: #FDF7E8; --ocra: #8B6B1E;
+  --z-nutrition: #A35F00; --z-nutrition-velo: #FDF1DA; --z-nutrition-scuro: #7A4000; --z-testo: #FFFFFF;
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { width: 1240px; margin: 0 auto; padding: 24px 16px 40px; }
+h1.tit { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; margin: 0 0 14px; max-width: 900px; }
+.tre { display: grid; grid-template-columns: 390px 390px 1fr; gap: 24px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13.5px; line-height: 1.5; }
+.note h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.note ol { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 0 0 8px; }
+.n { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); margin-left: 6px; vertical-align: middle; flex: none; }
+
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; }
+.testa { background: var(--z-nutrition); color: var(--z-testo); padding: 12px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 6px; }
+.dx { display: flex; gap: 6px; align-items: center; }
+.chip { min-height: 44px; display: inline-flex; align-items: center; padding: 0 9px; border-radius: 999px; background: rgba(255,255,255,.2); font: 700 12px var(--font-mono); white-space: nowrap; }
+.tondo { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.2); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.titolo { font-size: 24px; font-weight: 800; letter-spacing: -.5px; margin: 4px 0 12px; }
+.giorno { display: flex; align-items: center; gap: 8px; }
+.giorno .fr { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.giorno .c { flex: 1; text-align: center; font-weight: 700; font-size: 15px; }
+.giorno .c small { display: block; font: 600 11px var(--font-mono); letter-spacing: .08em; }
+.detox { margin-top: 10px; display: flex; justify-content: flex-end; }
+.seg { display: flex; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.18); margin-top: 12px; }
+.seg span { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 13px; font-weight: 700; }
+.seg span.on { background: var(--bianco); color: var(--z-nutrition-scuro); }
+.corpo { padding: 0 16px 18px; }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; align-items: center; }
+.sez span { font-weight: 600; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > :first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; font-size: 12px; color: var(--t2); margin-top: 2px; }
+.chev { color: var(--t3); font-size: 20px; line-height: 1; }
+
+/* il giorno: anello, consumate, zona, macro in una riga */
+.cal { padding: 16px 14px 14px; display: flex; align-items: center; gap: 16px; }
+.anello { width: 112px; height: 112px; border-radius: 50%; border: 10px solid var(--s3); border-top-color: var(--err); border-right-color: var(--err); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 24px var(--font-mono); } .anello small { font: 600 9px var(--font-mono); letter-spacing: .1em; color: var(--t2); }
+.cal .dati { flex: 1; font-size: 13px; color: var(--t2); line-height: 1.5; }
+.cal .dati b { color: var(--t1); font-family: var(--font-mono); }
+.zona { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 3px 9px; border-radius: 8px; background: var(--err-lt); color: var(--err); font: 700 11px var(--font-mono); letter-spacing: .08em; }
+.macro { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--s3); }
+.macro div { padding: 10px 12px 12px; border-left: 1px solid var(--s3); }
+.macro div:first-child { border-left: 0; }
+.macro em { font: 700 10px var(--font-mono); letter-spacing: .1em; font-style: normal; }
+.macro b { display: block; font: 700 22px var(--font-mono); margin-top: 2px; } .macro b small { font-size: 11px; font-weight: 600; color: var(--t2); }
+.macro span { font: 600 11px var(--font-mono); color: var(--t2); }
+.macro i { display: block; height: 4px; border-radius: 4px; background: var(--s3); margin-top: 6px; overflow: hidden; }
+.macro i::after { content: ''; display: block; height: 100%; width: var(--p); background: var(--c); }
+.principale { display: block; width: 100%; min-height: 52px; border: 0; border-radius: 16px; background: var(--z-nutrition); color: var(--z-testo); font: 700 17px var(--font-sans); margin-top: 16px; }
+.secondario { display: block; width: 100%; min-height: 48px; border: 0; border-radius: 14px; background: var(--s3); color: var(--t1); font: 700 15px var(--font-sans); margin-top: 8px; }
+/* timeline a righe */
+.ora { font: 700 13px var(--font-mono); color: var(--t2); width: 44px; flex: none; }
+.past b { display: block; font-size: 15px; } .past em { font: 700 10px var(--font-mono); letter-spacing: .1em; font-style: normal; }
+.kcal { font: 700 15px var(--font-mono); } .kcal small { font-size: 10px; font-weight: 600; color: var(--t2); }
+.mod { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--acc); color: var(--acc); background: var(--s1); font: 700 13px var(--font-sans); display: inline-flex; align-items: center; }
+.cest { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--t2); font-size: 16px; }
+/* coach */
+.coach { background: var(--crema); }
+.coach b { font-size: 16px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; min-width: 72px; }
+.tab svg { width: 22px; height: 22px; } .tab div.on { color: var(--z-nutrition-scuro); background: var(--z-nutrition-velo); }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 1 · Nutrition, il tab Oggi</h1>
+  <p class="intro">A sinistra la pagina vera con la veste A accesa, fotografata dal banco a 390 px: la barra in basso c'è già, il resto è com'era. A destra lo schizzo con le regole di pagina della Home e della Seduta. Stessi dati, stessi tasti, stessi passaggi; nessuna logica nuova. I numeri gialli sono cose da snellire nel giro 2, segnate ma non fatte.</p>
+  <div class="note" style="max-width:900px;margin:0 0 24px">
+    <h3>Cosa cambia e perché</h3>
+    <ol>
+      <li><b>La testata della zona Nutrition</b> (#A35F00, scritte bianche) prende il posto di «Benessere &amp; Forma · Ciao, Ignazio», come nella Seduta: dentro i tasti di quella intestazione (fuoco, peso, Impostazioni, Esci), la data, il titolo a 24 px, il giorno con ‹ ›, «Giorno detox» e le quattro schede Oggi · Integratori · Analisi · Piano.</li>
+      <li><b>Il giorno in un gruppo solo</b>: l'anello con le calorie rimaste, consumate e obiettivo accanto, la zona, e i tre macro in una riga con la loro barretta.</li>
+      <li><b>Un tasto principale largo</b>, «+ Registra pasto», nel colore della zona; «+ Registra integratori» è il secondo tasto, grigio chiaro, sotto.</li>
+      <li><b>La timeline a righe</b> con il titolo di sezione fuori dal riquadro: ora, pasto, kcal, «Modifica» e il cestino alti 44 px.</li>
+      <li><b>Il coach in fondo</b>, come una riga con la freccia: «Cena · 20:00 · Analizza e suggerisci».</li>
+    </ol>
+  </div>
+  <div class="tre">
+    <div class="prima"><div class="col-tit">Prima · veste A accesa</div><img src="prima_oggi_390.png" alt="Il tab Oggi a veste accesa"></div>
+    <div>
+      <div class="col-tit">Dopo · schizzo</div>
+      <div class="tel">
+        <div class="testa">
+          <div class="su"><span class="sopra">Dom 4 ott · oggi</span>
+            <div class="dx"><span class="chip">🔥 21</span><span class="chip">⚖ 74 kg</span><span class="tondo">⚙</span><span class="tondo">⎋</span><i class="n">3</i></div></div>
+          <div class="titolo">Nutrition</div>
+          <div class="giorno"><span class="fr">‹</span><span class="c">dom 4 ott<small>OGGI · 18:00</small></span><span class="fr">›</span></div>
+          <div class="detox"><span class="chip">Giorno detox</span><i class="n">4</i></div>
+          <div class="seg"><span class="on">Oggi</span><span>Integratori</span><span>Analisi</span><span>Piano</span></div>
+        </div>
+        <div class="corpo">
+          <div class="sez">Il giorno <span>su 2.300 kcal</span><i class="n">1</i></div>
+          <div class="gruppo">
+            <div class="cal"><div class="anello"><b>1.230</b><small>RIMASTE</small></div>
+              <div class="dati"><b>1.070</b> consumate<br>su <b>2.300</b> di obiettivo<br><span class="zona">● FUORI ZONA · 46·27·27 / 38·34·28</span></div></div>
+            <div class="macro">
+              <div style="--c:var(--carb);--p:55%"><em style="color:var(--carb)">CARB</em><b>99<small> g</small></b><span>rimasti · 120/219 g</span><i></i></div>
+              <div style="--c:var(--prot);--p:36%"><em style="color:var(--prot)">PROT</em><b>126<small> g</small></b><span>rimasti · 70/196 g</span><i></i></div>
+              <div style="--c:var(--fat);--p:44%"><em style="color:var(--fat)">FAT</em><b>40<small> g</small></b><span>rimasti · 32/72 g</span><i></i></div>
+            </div>
+          </div>
+          <button class="principale">+ Registra pasto</button>
+          <button class="secondario">+ Registra integratori</button>
+
+          <div class="sez">Timeline di oggi <span>2 / 2</span><i class="n">2</i></div>
+          <div class="gruppo">
+            <div class="riga"><span class="ora">08:00</span><span class="cresce past"><em style="color:var(--carb)">COLAZIONE</em><b>☕ pasto monolitico</b></span><span class="kcal">420<small> kcal</small></span><span class="mod">Modifica</span><span class="cest">🗑</span></div>
+            <div class="riga"><span class="ora">13:00</span><span class="cresce past"><em style="color:var(--prot)">PRANZO</em><b>🥗 pasto monolitico</b></span><span class="kcal">650<small> kcal</small></span><span class="mod">Modifica</span><span class="cest">🗑</span></div>
+          </div>
+
+          <div class="sez">Coach · riequilibrio <span>prossimo pasto</span></div>
+          <div class="gruppo">
+            <div class="riga coach"><span class="cresce"><b>Cena · 20:00</b><small>Analizza e suggerisci</small></span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="tab">
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/><path d="M9 21V13h6v8"/></svg>Home</div>
+          <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 20A7 7 0 0 1 4 13c0-5 7-11 7-11s7 6 7 11a7 7 0 0 1-7 7z"/></svg>Nutrition</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Training</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="7" r="3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Body</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <h3>Da snellire nel giro 2</h3>
+      <ol>
+        <li>Il giorno dice le calorie tre volte (rimaste, consumate, obiettivo) e i macro due (rimasti e «120/219 g»): basta una lettura.</li>
+        <li>«Pasti · pacchetti · extra · in ordine cronologico» e «pasto monolitico» sono parole da sviluppatore: si possono togliere o dire meglio.</li>
+        <li>L'intestazione con fuoco, peso, Impostazioni ed Esci si ripete in ogni pagina: forse basta in Home.</li>
+        <li>«Giorno detox» è un interruttore che si usa di rado: può stare dentro il Piano o nelle Impostazioni.</li>
+      </ol>
+      <h3>Quando si costruisce</h3>
+      Tutto dietro html.v5, come Home e Seduta: a veste spenta il tab resta identico al pixel. Il colore c'è già (--z-nutrition). La testata e i titoli di sezione vanno nell'HTML di nutrition.js solo a veste accesa, come per la Seduta; il resto con lo stile.
+    </div>
+  </div>
+</div>
+</body>
+</html>

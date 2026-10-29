@@ -5860,27 +5860,19 @@ function _tlRirSelect(){
 }
 
 // ── La veste nuova, Giro 1 del Training (schizzo approvato da Ignazio il 29/10/2026), solo con html.v5 ──
-// La testata della seduta nel blu della zona: il ritorno, il fuoco, il peso, le Impostazioni ed Esci (i tasti
-// dell'intestazione dell'app, che a veste accesa qui si nasconde: fuoco e peso si leggono da lì, dove l'app li tiene aggiornati),
+// La testata della seduta nel blu della zona: il ritorno, i tasti dell'intestazione dell'app (tastiTestaV5, in comune.js),
 // il tipo, il nome, serie e tempo (#train-work-display, lo stesso che il cronometro aggiorna), Programma · Progressione.
 function _testaSedutaV5(s, sel, subnav, tabs){
   const today = todayKey();
   const totalSets = (s.exercises || []).reduce((acc, ex) => acc + (Number(ex.sets) || 0), 0);
   const doneSets = Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(sel + '_') && k.endsWith('_' + today)).length;
   const pct = totalSets > 0 ? Math.min(100, Math.round((doneSets / totalSets) * 100)) : 0;
-  const fuoco = document.getElementById('h-streak');
-  const peso = document.getElementById('h-weight');
   const tipo = [s.type ? s.type.toUpperCase() : '', s.rir != null ? 'RIR ' + s.rir : ''].filter(Boolean).join(' · ');
   return `
     <div class="t5-testa">
       <div class="t5-su">
         <button class="t5-indietro" onclick="closeTrainingSession();">‹ I tuoi giorni</button>
-        <div class="t5-dx">
-          ${fuoco && fuoco.style.display !== 'none' ? `<span class="t5-chip">${esc(fuoco.textContent)}</span>` : ''}
-          <button class="t5-chip" onclick="openWeighInSheet()" aria-label="Pesati ora">⚖ ${esc(peso ? peso.textContent : '—')} kg</button>
-          <button class="t5-tondo" onclick="openSettingsModal()" aria-label="Impostazioni">⚙</button>
-          <button class="t5-tondo" onclick="logout()" aria-label="Esci">⎋</button>
-        </div>
+        <div class="t5-dx">${tastiTestaV5()}</div>
       </div>
       <div class="t5-sopra">Oggi${tipo ? ' · ' + tipo : ''}${s.rir != null ? ' <span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>' : ''}</div>
       <h1 class="t5-titolo">${esc(s.name)}</h1>
