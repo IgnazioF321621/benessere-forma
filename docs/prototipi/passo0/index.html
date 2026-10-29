@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passo 0 · La veste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Passo 0 «la veste di tutta l'app»: una tavola sola. Home prima/dopo, le 4 testate in due proposte, le regole comuni.
+   Niente codice dell'app: è un disegno. I colori di oggi hanno i nomi di app/stile.css; quelli nuovi sono la proposta. */
+:root {
+  --font-sans: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  /* di oggi (app/stile.css) */
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC;
+  --b1: #DDD9D0; --t1: #1A1A1A; --t2: #555047; --t3: #9A9388;
+  --acc: #2A7A6F; --acc-lt: #E6F4F2;
+  --mod-nutrition: #FAC775; --mod-training: #B5D4F4; --mod-body: #AFA9EC;
+  --bianco: #FFFFFF;
+  /* proposta A: colori pieni, scritte bianche */
+  --za-home: #2A7A6F; --za-nutrition: #A35F00; --za-training: #2E6DA4; --za-body: #6A55A0;
+  /* proposta B: tinte chiare, scritte scure (la Home è nuova: l'evergreen schiarito) */
+  --zb-home: #A8D8CF; --zb-nutrition: #FAC775; --zb-training: #B5D4F4; --zb-body: #AFA9EC;
+  /* veli chiari (fondini, voce accesa della barra) e scuri (scritte di zona su fondo chiaro) */
+  --zv-home: #E6F4F2; --zv-nutrition: #FDF1DA; --zv-training: #EAF2FB; --zv-body: #EFEDFA;
+  --zs-home: #1F5C53; --zs-nutrition: #7A4000; --zs-training: #1F4F7A; --zs-body: #4A3A78;
+  /* la tavola */
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+/* la proposta scelta in cima alla pagina: A di partenza, B col tasto */
+body { --z-home: var(--za-home); --z-nutrition: var(--za-nutrition); --z-training: var(--za-training); --z-body: var(--za-body); --zt: var(--bianco); --zt-velo: rgba(255,255,255,.2); }
+body.vB { --z-home: var(--zb-home); --z-nutrition: var(--zb-nutrition); --z-training: var(--zb-training); --z-body: var(--zb-body); --zt: var(--t1); --zt-velo: rgba(26,26,26,.08); }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { max-width: 1260px; margin: 0 auto; padding: 24px 16px 60px; }
+h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; max-width: 900px; margin: 0 0 14px; }
+.scelta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 26px; font-size: 13px; color: var(--t2); }
+.scelta button { font: 600 13px var(--font-sans); border: 1px solid var(--b1); background: var(--s1); color: var(--t1); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.scelta button.on { background: var(--t1); color: var(--bianco); border-color: var(--t1); }
+section.parte { margin: 0 0 46px; }
+section.parte > h2 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+section.parte > h2 span { font: 600 12px var(--font-mono); color: var(--t3); letter-spacing: .06em; margin-right: 8px; }
+section.parte > p { color: var(--t2); font-size: 13px; margin: 0 0 14px; max-width: 900px; line-height: 1.5; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.tre { display: grid; grid-template-columns: 390px 390px minmax(220px, 1fr); gap: 22px; align-items: start; }
+.prima img { width: 390px; display: block; border-radius: 28px; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13px; line-height: 1.45; }
+.note h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; }
+.note ol, .note ul { margin: 0 0 10px; padding-left: 20px; }
+.note li { margin: 0 0 6px; }
+.n2 { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); vertical-align: middle; flex: none; margin-left: 4px; }
+code { font: 600 12px var(--font-mono); background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 5px; }
+
+/* ── il telefono ── */
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); }
+.testa { background: var(--zc); color: var(--zt); padding: 14px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 34px; }
+.dx { display: flex; gap: 8px; align-items: center; }
+.tondo { width: 34px; height: 34px; border-radius: 50%; background: var(--zt-velo); color: inherit; display: flex; align-items: center; justify-content: center; font: 700 13px var(--font-mono); }
+.tondo svg { width: 17px; height: 17px; }
+.chip { font: 700 12px var(--font-mono); background: var(--zt-velo); border-radius: 999px; padding: 6px 10px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .08em; opacity: .85; margin-top: 8px; text-transform: uppercase; }
+.testa h1 { font-size: 28px; font-weight: 800; margin: 2px 0 0; line-height: 1.1; }
+.testa .sotto { font-size: 13px; opacity: .9; margin-top: 4px; }
+.corpo { padding: 6px 16px 18px; }
+.gr-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 18px 4px 7px; display: flex; align-items: center; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > .riga:first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.riga .val { font: 600 14px var(--font-mono); color: var(--t2); }
+.chev { color: var(--t3); font-size: 18px; line-height: 1; }
+.qd { width: 30px; height: 30px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--zt); }
+.qd svg { width: 16px; height: 16px; }
+
+/* widget della Home: riquadri pieni del colore della zona, come «Oggi» di MB21 */
+.widget { background: var(--zc); color: var(--zt); border-radius: 18px; padding: 14px 16px; position: relative; }
+.widget .w-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 6px; opacity: .95; }
+.widget .w-tit svg { width: 14px; height: 14px; }
+.widget .grande { font: 700 34px var(--font-mono); line-height: 1.05; margin-top: 6px; }
+.widget .grande small { font-size: 14px; font-weight: 600; opacity: .85; }
+.widget .w-sotto { font-size: 13px; opacity: .9; margin-top: 3px; }
+.widget .w-chip { display: inline-block; font: 700 11px var(--font-mono); background: var(--zt-velo); border-radius: 999px; padding: 4px 9px; margin-top: 8px; }
+.widget .freccia { position: absolute; right: 14px; top: 14px; opacity: .8; font-size: 18px; }
+.coppia { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.macro { display: flex; gap: 14px; margin-top: 8px; font: 600 12px var(--font-mono); }
+.macro b { display: block; font-size: 17px; }
+.anello { position: absolute; right: 16px; bottom: 14px; width: 62px; height: 62px; border-radius: 50%; border: 7px solid var(--zt-velo); border-top-color: var(--zt); border-right-color: var(--zt); }
+.tre-voti { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px 4px; }
+.tre-voti div { background: var(--s2); border-radius: 12px; text-align: center; padding: 8px 0 10px; }
+.tre-voti small { display: block; font: 700 10px var(--font-mono); letter-spacing: .08em; color: var(--t3); }
+.tre-voti b { font: 700 22px var(--font-mono); color: var(--t3); }
+.nota-campo { margin: 8px 14px 14px; background: var(--s2); border-radius: 12px; padding: 12px 14px; color: var(--t3); font-size: 16px; }
+.btn { font: 700 15px var(--font-sans); border: 0; border-radius: 14px; padding: 12px 18px; }
+.btn.pieno { background: var(--acc); color: var(--bianco); }
+.btn.pieno.zona { background: var(--zc); color: var(--zt); }
+.btn.vuoto { background: var(--s2); color: var(--t1); }
+.prop { padding: 12px 14px; border-top: 1px solid var(--s3); }
+.prop:first-child { border-top: 0; }
+.prop .et { font: 700 10px var(--font-mono); letter-spacing: .08em; color: var(--t3); display: flex; align-items: center; gap: 6px; }
+.prop .et i { width: 8px; height: 8px; border-radius: 50%; background: var(--zc); }
+.prop b { display: block; font-size: 15px; margin: 4px 0 3px; }
+.prop p { margin: 0; font-size: 13px; color: var(--t2); line-height: 1.4; }
+.prop .due { display: flex; gap: 8px; margin-top: 10px; }
+.prop .due .btn { flex: 1; padding: 10px 0; font-size: 14px; }
+
+/* barra in basso */
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; min-width: 72px; }
+.tab svg { width: 21px; height: 21px; }
+.tab div.on-home { color: var(--zs-home); background: var(--zv-home); }
+.tab div.on-nutrition { color: var(--zs-nutrition); background: var(--zv-nutrition); }
+.tab div.on-training { color: var(--zs-training); background: var(--zv-training); }
+.tab div.on-body { color: var(--zs-body); background: var(--zv-body); }
+
+/* parte 2: le testate */
+.quattro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 8px; }
+.mini { background: var(--bg); border-radius: 22px; overflow: hidden; box-shadow: 0 1px 0 var(--b1), 0 6px 18px rgba(0,0,0,.06); }
+.mini .testa { padding: 12px 14px 16px; border-radius: 0 0 22px 22px; }
+.mini .testa h1 { font-size: 24px; }
+.mini .seg { display: flex; background: var(--zt-velo); border-radius: 10px; padding: 3px; margin-top: 12px; }
+.mini .seg span { flex: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; border-radius: 8px; }
+.mini .seg span.on { background: var(--bianco); color: var(--zs, var(--t1)); }
+.mini .dopo { padding: 10px 14px 14px; font: 600 11px var(--font-mono); color: var(--t2); line-height: 1.6; }
+.mini .dopo b { color: var(--t1); }
+.fila-tit { font: 800 15px var(--font-sans); margin: 18px 0 10px; }
+.fila-tit small { font: 600 12px var(--font-mono); color: var(--t3); margin-left: 8px; }
+.nomi { background: var(--s1); border-radius: 14px; padding: 12px 16px; font: 600 12px var(--font-mono); line-height: 1.8; color: var(--t2); overflow-x: auto; }
+.nomi b { color: var(--t1); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid rgba(0,0,0,.1); }
+
+/* parte 3: le regole */
+.regole { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 18px; }
+.regola { background: var(--s1); border-radius: 18px; padding: 16px; }
+.regola h3 { margin: 0 0 4px; font-size: 15px; font-weight: 800; }
+.regola > p { margin: 0 0 12px; font-size: 13px; color: var(--t2); line-height: 1.45; }
+.regola .fondo { background: var(--bg); border-radius: 14px; padding: 12px; }
+.misure { font: 600 11px var(--font-mono); color: var(--t3); margin-top: 10px; line-height: 1.6; }
+.card-es { background: var(--s1); border-radius: 18px; padding: 14px 16px; box-shadow: 0 1px 0 var(--b1); }
+.card-es .w-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--t2); }
+.card-es b { display: block; font-size: 17px; margin: 4px 0 2px; }
+.card-es p { margin: 0; color: var(--t2); font-size: 13px; }
+.campo { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 12px 14px; color: var(--t3); margin-top: 4px; }
+.campo.f15 { font-size: 15px; } .campo.f16 { font-size: 16px; }
+.campo.fuoco { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-lt); color: var(--t1); }
+.etich { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 10px 2px 0; }
+.aperta { margin-top: 12px; border: 1px dashed var(--nota-bordo); background: var(--nota); color: var(--nota-testo); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+
+@media (max-width: 1100px) {
+  .tre { grid-template-columns: 1fr; justify-items: center; }
+  .note { max-width: 390px; }
+  .quattro { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 420px) {
+  .prima img, .tel { width: 100%; }
+  .quattro { grid-template-columns: 1fr; }
+  .regole { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Passo 0 · la veste di tutta l'app</h1>
+  <p class="intro">Una tavola sola per decidere l'aspetto di tutta l'app prima di toccare le pagine: la Home prima e dopo, le testate delle quattro zone in due proposte e le regole comuni.
+    Cambia solo l'aspetto, non cosa fa la pagina. I numeri gialli <span class="n2" style="margin:0">1</span> segnano le cose da snellire nel giro 2: segnate, non fatte.</p>
+  <div class="scelta">Proposta mostrata nella Home qui sotto:
+    <button class="on" data-v="A">A · colori pieni, scritte bianche</button>
+    <button data-v="B">B · tinte chiare di oggi, scritte scure</button>
+  </div>
+
+  <!-- ═══ 1 · la Home ═══ -->
+  <section class="parte">
+    <h2><span>1 DI 3</span>La Home, prima e dopo</h2>
+    <p>A sinistra la Home vera, fotografata a 390 px con dati di prova (il 4 ottobre, sera). A destra la stessa Home vestita: testata della zona Home, riquadri a colori come i widget dell'iPhone, elenchi a righe, barra in basso.
+      I contenuti, l'ordine e i tasti sono quelli di oggi.</p>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="oggi_home.png" alt="La Home com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel">
+          <div class="testa" style="--zc:var(--z-home)">
+            <div class="su"><span class="sopra" style="margin:0">Domenica 4 ottobre</span>
+              <div class="dx"><span class="tondo" aria-label="Invia Feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M9 7a3 3 0 0 1 6 0M4 12h3M17 12h3M5 18l2.5-1.5M19 18l-2.5-1.5M5 6l2.5 2M19 6l-2.5 2"/></svg></span><span class="tondo">I</span></div></div>
+            <h1>Buonasera, Ignazio</h1>
+          </div>
+          <div class="corpo">
+            <div class="gr-tit">Come stai oggi</div>
+            <div class="gruppo">
+              <div class="tre-voti"><div><small>SONNO</small><b>–</b></div><div><small>ENERGIA</small><b>–</b></div><div><small>STRESS</small><b>–</b></div></div>
+              <div class="nota-campo">Una nota, se vuoi</div>
+            </div>
+
+            <div class="gr-tit">La tua settimana · 28 set – 4 ott</div>
+            <div class="gruppo">
+              <div class="riga"><span class="cresce">Peso attuale<small>media 73,9 kg · +0,3 kg sulla scorsa</small></span><span class="val" style="color:var(--t1);font-size:17px">74,0 kg</span><span class="chev">›</span></div>
+              <div class="riga"><span class="cresce">Obiettivo<small>mancano 4,0 kg</small></span><span class="val">70 kg</span><span class="chev">›</span></div>
+              <div class="riga"><span class="cresce">Sessioni</span><span class="val">1 / 4</span><span class="chev">›</span></div>
+              <div class="riga"><span class="cresce">Kcal medie <span class="n2">1</span></span><span class="val">1.567</span><span class="chev">›</span></div>
+            </div>
+
+            <div class="gr-tit">Pirsi propone · 21 – 27 set <span class="n2">2</span></div>
+            <div class="gruppo">
+              <div class="prop" style="--zc:var(--z-training)"><span class="et"><i></i>ALLENAMENTI</span><b>3 allenamenti a settimana invece di 4</b>
+                <p>Nelle ultime due settimane ne hai fatte 0 e 0 su 4, senza infortuni di mezzo.</p>
+                <div class="due"><button class="btn pieno">Accetto</button><button class="btn vuoto">Non ora</button></div></div>
+              <div class="prop" style="--zc:var(--z-body)"><span class="et"><i></i>ESAMI</span><b>Esami del sangue</b>
+                <p>Non hai ancora registrato esami del sangue: parlane con il medico.</p>
+                <div class="due"><button class="btn pieno">Accetto</button><button class="btn vuoto">Non ora</button></div></div>
+            </div>
+
+            <div class="gr-tit">Le tue zone</div>
+            <div class="widget" style="--zc:var(--z-nutrition)">
+              <div class="w-tit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>NUTRITION</div>
+              <div class="grande">1.230 <small>kcal rimaste</small></div>
+              <div class="macro"><span>CARB<b>99 g</b></span><span>PROT<b>126 g</b></span><span>FAT<b>40 g</b></span></div>
+              <div class="w-sotto">Ultimo pasto 5 h fa</div>
+              <div class="anello"></div>
+            </div>
+            <div class="coppia">
+              <div class="widget" style="--zc:var(--z-training)">
+                <div class="w-tit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>TRAINING</div>
+                <div style="font-size:18px;font-weight:800;margin-top:8px;line-height:1.15">Lower A</div>
+                <div class="w-sotto">Giorno 2 · Forza</div>
+                <span class="w-chip">settimana 1 di 6</span>
+              </div>
+              <div class="widget" style="--zc:var(--z-body)">
+                <div class="w-tit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>BODY</div>
+                <div class="grande" style="font-size:28px">74,0 <small>kg</small></div>
+                <div class="w-sotto">↑ +0,1 da venerdì</div>
+                <span class="w-chip">check da fare <span class="n2" style="margin-left:2px">3</span></span>
+              </div>
+            </div>
+
+            <div class="gr-tit">Prossima azione · 18:00 <span class="n2">4</span></div>
+            <div class="gruppo">
+              <div class="riga"><span class="qd" style="background:var(--z-training)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
+                <span class="cresce"><b>È ora di Lower A</b><small>Si parte con 5 minuti di preparazione</small></span><button class="btn pieno" style="padding:9px 14px;font-size:14px">Inizia</button></div>
+              <div class="riga"><span class="cresce">Integratori delle 08:00<small>1 da segnare</small></span><span class="chev">›</span></div>
+              <div class="riga"><span class="cresce">Dopo l'allenamento</span><span class="val" style="color:var(--zs-home)">cena zona</span><span class="chev">›</span></div>
+            </div>
+          </div>
+          <div class="tab">
+            <div class="on-home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa cambia nell'aspetto</h3>
+        <ul>
+          <li>La data e il saluto vanno nella testata della zona Home, con l'insetto del feedback e l'iniziale (le Impostazioni) in alto a destra.</li>
+          <li>«La tua settimana» e «Prossima azione» diventano elenchi a righe: nome a sinistra, valore a destra, freccia.</li>
+          <li>Nutrition, Training e Body diventano riquadri pieni del colore della loro zona, come i widget dell'iPhone e «Oggi» di MB21.</li>
+          <li>Le proposte di Pirsi stanno in un gruppo solo, con il pallino del colore della zona di cui parlano.</li>
+          <li>La barra in basso compare anche in Home.</li>
+        </ul>
+        <h3>Da snellire nel giro 2</h3>
+        <ol>
+          <li>«La tua settimana» ripete il peso che c'è già nel riquadro Body.</li>
+          <li>Le proposte di Pirsi hanno testi lunghi e un «Perché?» ciascuna: una riga e il resto al tocco.</li>
+          <li>«Primo check fisico da fare» potrebbe essere un promemoria di «Prossima azione».</li>
+          <li>«Prossima azione» oggi è in fondo: forse va in cima, è la cosa da fare adesso.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2 · le testate ═══ -->
+  <section class="parte">
+    <h2><span>2 DI 3</span>Le quattro testate</h2>
+    <p>Ogni pagina comincia con la testata della sua zona: in alto il ritorno (o niente, nelle pagine della barra), il feedback; sotto un sopratitolo, il titolo e, se servono, le schede della pagina. Contrasti misurati con la formula WCAG fra scritta e fondo: il minimo per il testo è 4,5:1.</p>
+
+    <div class="fila-tit">A · colori pieni, scritte bianche <small>come MB21</small></div>
+    <div class="quattro">
+      <div class="mini"><div class="testa" style="--zc:var(--za-home);--zt:var(--bianco);--zt-velo:rgba(255,255,255,.2);--zs:var(--zs-home)"><div class="su"><span class="sopra" style="margin:0">Domenica 4 ottobre</span><span class="tondo">I</span></div><h1>Buonasera</h1></div>
+        <div class="dopo"><b>--z-home: #2A7A6F</b><br>l'evergreen di oggi (--acc)<br>bianco sopra: 5,11:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--za-nutrition);--zt:var(--bianco);--zt-velo:rgba(255,255,255,.2);--zs:var(--zs-nutrition)"><div class="su"><span class="sopra" style="margin:0">Oggi · 1.230 rimaste</span><span class="tondo">‹</span></div><h1>Nutrition</h1><div class="seg"><span class="on">Oggi</span><span>Integr.</span><span>Analisi</span><span>Piano</span></div></div>
+        <div class="dopo"><b>--z-nutrition: #A35F00</b><br>ambra scura: con l'ambra chiara il bianco non si legge<br>bianco sopra: 5,01:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--za-training);--zt:var(--bianco);--zt-velo:rgba(255,255,255,.2);--zs:var(--zs-training)"><div class="su"><span class="sopra" style="margin:0">Settimana 1 di 6</span><span class="tondo">‹</span></div><h1>Training</h1><div class="seg"><span class="on">Programma</span><span>Progressione</span></div></div>
+        <div class="dopo"><b>--z-training: #2E6DA4</b><br>blu pieno<br>bianco sopra: 5,47:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--za-body);--zt:var(--bianco);--zt-velo:rgba(255,255,255,.2);--zs:var(--zs-body)"><div class="su"><span class="sopra" style="margin:0">74,0 kg · oggi</span><span class="tondo">‹</span></div><h1>Body</h1><div class="seg"><span class="on">Misure</span><span>Tendenza</span><span>Check</span></div></div>
+        <div class="dopo"><b>--z-body: #6A55A0</b><br>viola pieno (il --mod-body-forte #5E4A7A resta ai checkpoint)<br>bianco sopra: 6,14:1</div></div>
+    </div>
+
+    <div class="fila-tit">B · tinte chiare di oggi, scritte scure <small>l'aspetto di adesso, più forte</small></div>
+    <div class="quattro">
+      <div class="mini"><div class="testa" style="--zc:var(--zb-home);--zt:var(--t1);--zt-velo:rgba(26,26,26,.08);--zs:var(--zs-home)"><div class="su"><span class="sopra" style="margin:0">Domenica 4 ottobre</span><span class="tondo">I</span></div><h1>Buonasera</h1></div>
+        <div class="dopo"><b>--z-home: #A8D8CF</b><br>proposta nuova: l'evergreen schiarito<br>#1A1A1A sopra: 11,1:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--zb-nutrition);--zt:var(--t1);--zt-velo:rgba(26,26,26,.08);--zs:var(--zs-nutrition)"><div class="su"><span class="sopra" style="margin:0">Oggi · 1.230 rimaste</span><span class="tondo">‹</span></div><h1>Nutrition</h1><div class="seg"><span class="on">Oggi</span><span>Integr.</span><span>Analisi</span><span>Piano</span></div></div>
+        <div class="dopo"><b>--z-nutrition: #FAC775</b><br>= --mod-nutrition di oggi<br>#1A1A1A sopra: 11,2:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--zb-training);--zt:var(--t1);--zt-velo:rgba(26,26,26,.08);--zs:var(--zs-training)"><div class="su"><span class="sopra" style="margin:0">Settimana 1 di 6</span><span class="tondo">‹</span></div><h1>Training</h1><div class="seg"><span class="on">Programma</span><span>Progressione</span></div></div>
+        <div class="dopo"><b>--z-training: #B5D4F4</b><br>= --mod-training di oggi<br>#1A1A1A sopra: 11,3:1</div></div>
+      <div class="mini"><div class="testa" style="--zc:var(--zb-body);--zt:var(--t1);--zt-velo:rgba(26,26,26,.08);--zs:var(--zs-body)"><div class="su"><span class="sopra" style="margin:0">74,0 kg · oggi</span><span class="tondo">‹</span></div><h1>Body</h1><div class="seg"><span class="on">Misure</span><span>Tendenza</span><span>Check</span></div></div>
+        <div class="dopo"><b>--z-body: #AFA9EC</b><br>= --mod-body di oggi<br>#1A1A1A sopra: 8,05:1</div></div>
+    </div>
+
+    <div class="fila-tit">I nomi da mettere in <code>:root</code></div>
+    <div class="nomi">
+      <b>/* il colore di zona: testate, riquadri della Home, tasto principale della zona */</b><br>
+      --z-home · --z-nutrition · --z-training · --z-body &nbsp;→ A: <span class="sw" style="background:#2A7A6F"></span>#2A7A6F <span class="sw" style="background:#A35F00"></span>#A35F00 <span class="sw" style="background:#2E6DA4"></span>#2E6DA4 <span class="sw" style="background:#6A55A0"></span>#6A55A0 &nbsp;· B: <span class="sw" style="background:#A8D8CF"></span>#A8D8CF <span class="sw" style="background:#FAC775"></span>#FAC775 <span class="sw" style="background:#B5D4F4"></span>#B5D4F4 <span class="sw" style="background:#AFA9EC"></span>#AFA9EC<br>
+      --z-testo &nbsp;→ A: #FFFFFF · B: #1A1A1A (= --t1)<br>
+      <b>/* uguali in A e in B */</b><br>
+      --z-home-velo · --z-nutrition-velo · --z-training-velo · --z-body-velo &nbsp;→ <span class="sw" style="background:#E6F4F2"></span>#E6F4F2 <span class="sw" style="background:#FDF1DA"></span>#FDF1DA <span class="sw" style="background:#EAF2FB"></span>#EAF2FB <span class="sw" style="background:#EFEDFA"></span>#EFEDFA &nbsp;(fondino della voce accesa nella barra, pallini, suggerimenti)<br>
+      --z-home-scuro · --z-nutrition-scuro · --z-training-scuro · --z-body-scuro &nbsp;→ <span class="sw" style="background:#1F5C53"></span>#1F5C53 <span class="sw" style="background:#7A4000"></span>#7A4000 <span class="sw" style="background:#1F4F7A"></span>#1F4F7A <span class="sw" style="background:#4A3A78"></span>#4A3A78 &nbsp;(scritte di zona su fondo chiaro: sul loro velo da 6,85:1 a 8,38:1)<br>
+      <b>/* restano come sono */</b> --acc, --mod-nutrition, --mod-training, --mod-body, --mod-body-forte e tutti gli altri nomi di app/stile.css
+    </div>
+  </section>
+
+  <!-- ═══ 3 · le regole comuni ═══ -->
+  <section class="parte">
+    <h2><span>3 DI 3</span>Le regole comuni, una volta sola</h2>
+    <p>Valgono per tutte le pagine. Le misure sono quelle del disegno; con il sì diventano nomi in <code>app/stile.css</code> e una riga in <code>docs/STILE.md</code>.</p>
+    <div class="regole">
+      <div class="regola">
+        <h3>Barra in basso</h3>
+        <p>Quattro voci, sempre le stesse: Home · Nutrition · Training · Body. Quella aperta prende il velo e la scritta scura della sua zona; le altre restano grigie. Nelle pagine fuori dalla barra (Impostazioni, fogli) resta accesa la zona da cui si arriva.</p>
+        <div class="fondo" style="padding:0;overflow:hidden;border-radius:14px">
+          <div class="tab" style="border-radius:0">
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div class="on-nutrition"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+        <div class="misure">voce spenta: --t2 #555047 (il grigio --t3 sul bianco fa solo 3,0:1) · accesa: --z-…-scuro su --z-…-velo · icona 21 px, scritta 11 px · fondo bianco, angoli 22 px in alto · l'insetto del feedback sta sopra la barra, come oggi</div>
+      </div>
+
+      <div class="regola">
+        <h3>Elenchi a righe</h3>
+        <p>Come le Impostazioni dell'iPhone: gruppi bianchi con angoli tondi, il titolo del gruppo sopra in maiuscoletto, righe alte almeno 48 px.</p>
+        <div class="fondo">
+          <div class="gr-tit" style="margin-top:0">Titolo del gruppo</div>
+          <div class="gruppo">
+            <div class="riga"><span class="cresce">Riga semplice</span><span class="chev">›</span></div>
+            <div class="riga"><span class="cresce">Con un valore a destra</span><span class="val">74,0 kg</span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--za-training);color:var(--bianco)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span><span class="cresce">Con un quadratino di zona<small>e una riga di sotto</small></span><span class="chev">›</span></div>
+          </div>
+        </div>
+        <div class="misure">titolo: mono 11 px --t2 · riga: Syne 15 px · sotto: 12 px --t2 · valore: mono 14 px --t2 · separatore 1 px --s3 · freccia --t3 · angoli 14 px</div>
+      </div>
+
+      <div class="regola">
+        <h3>Card</h3>
+        <p>Due sole: il riquadro di zona pieno (solo in Home, uno per zona) e la card bianca per tutto il resto. Niente bordi colorati, niente ombre forti.</p>
+        <div class="fondo" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="widget" style="--zc:var(--z-training)"><div class="w-tit">TRAINING</div><div style="font-weight:800;margin-top:6px">Lower A</div><div class="w-sotto">Giorno 2</div></div>
+          <div class="card-es"><div class="w-tit">CARD BIANCA</div><b>Titolo</b><p>Una riga di testo.</p></div>
+        </div>
+        <div class="misure">riquadro: --z-… pieno, --z-testo, angoli 18 px · card: --s1, angoli 18 px, filo --b1 sotto</div>
+      </div>
+
+      <div class="regola">
+        <h3>Tasto principale</h3>
+        <p>Uno per schermata, a tutta larghezza in fondo quando è l'azione della pagina («Salva serie», «Fine serie»). Nella pagina di una zona prende il colore della zona; altrove l'evergreen. Il secondo tasto è grigio chiaro.</p>
+        <div class="fondo" style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn pieno zona" style="--zc:var(--z-training);flex:1.5;white-space:nowrap">Salva serie →</button>
+          <button class="btn pieno" style="flex:1">Accetto</button>
+          <button class="btn vuoto" style="flex:1">Non ora</button>
+        </div>
+        <div class="misure">Syne 700 15–18 px · alto almeno 48 px · angoli 14–16 px · mai due tasti pieni affiancati</div>
+      </div>
+
+      <div class="regola">
+        <h3>Campi</h3>
+        <p>Etichetta sopra in maiuscoletto, campo bianco con filo, al tocco il filo evergreen e un alone chiaro. I numeri in mono.</p>
+        <div class="fondo">
+          <div class="etich">Testo a 15 px (oggi, per esempio la nota del check: <code>.m1-field-textarea</code>)</div>
+          <div class="campo f15">Scrivi una nota</div>
+          <div class="etich">Testo a 16 px</div>
+          <div class="campo f16 fuoco">Scrivi una nota</div>
+        </div>
+        <div class="aperta"><b>Decisione aperta di Ignazio.</b> Su iPhone, quando si tocca un campo con il testo sotto i 16 px, Safari ingrandisce la pagina e poi la lascia ingrandita. Con tutti i campi a 16 px non succede più. Il costo: testo un po' più grande dentro i campi, solo lì.</div>
+      </div>
+    </div>
+  </section>
+</div>
+<script>
+const scegli = v => {
+  document.querySelectorAll('.scelta button').forEach(x => x.classList.toggle('on', x.dataset.v === v));
+  document.body.classList.toggle('vB', v === 'B');
+};
+document.querySelectorAll('.scelta button').forEach(b => b.addEventListener('click', () => scegli(b.dataset.v)));
+if (location.hash === '#B') scegli('B');
+</script>
+</body>
+</html>
