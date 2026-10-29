@@ -2727,3 +2727,76 @@ html.v5 .wp5-val{font-family:var(--font-mono);font-size:14px;font-weight:600;col
 html.v5 .wp5-riga:first-child .wp5-val{font-size:17px;color:var(--t1);}
 html.v5 .wp5-freccia{color:var(--t3);font-size:20px;line-height:1;}
 html.v5 .wp5 .wp-go-inline{margin:0;}
+
+/* ── Giro 1 del Training, la Seduta (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_seduta/) ──
+   La testata e i titoli di sezione li disegna training.js solo con html.v5 (_testaSedutaV5, _registroV5); qui l'aspetto. */
+/* la testata della seduta prende il posto dell'intestazione dell'app (i suoi tasti sono dentro la testata) */
+html.v5 body:has(.t5-testa) #header{display:none;}
+html.v5 #page-training:has(.t5-testa){padding-top:0;}
+html.v5 .t5-seduta{padding-top:0!important;}
+html.v5 .t5-testa{margin:0 -32px 6px;padding:calc(env(safe-area-inset-top) + 12px) 32px 18px;background:var(--z-training);color:var(--z-testo);border-radius:0 0 26px 26px;}
+html.v5 .t5-su{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;}
+html.v5 .t5-indietro{min-height:44px;white-space:nowrap;padding:0;border:0;background:none;color:var(--z-testo);font-family:var(--font-sans);font-size:15px;font-weight:700;cursor:pointer;}
+html.v5 .t5-dx{display:flex;align-items:center;gap:6px;}
+html.v5 .t5-chip{min-height:44px;padding:0 9px;white-space:nowrap;border:0;border-radius:999px;background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);font-family:var(--font-mono);font-size:12px;font-weight:700;display:inline-flex;align-items:center;cursor:pointer;}
+html.v5 .t5-tondo{width:44px;height:44px;border:0;border-radius:50%;background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);font-size:17px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+html.v5 .t5-sopra{margin-top:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+html.v5 .t5-sopra .info-icon{background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);border-color:transparent;}
+html.v5 .t5-titolo{margin:4px 0 12px;font-family:var(--font-sans);font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1.1;}
+html.v5 .t5-dati{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+html.v5 .t5-dati > div{background:rgba(var(--bianco-rgb),.14);border-radius:12px;padding:8px 10px;}
+html.v5 .t5-dati b{display:block;font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--z-testo)!important;font-variant-numeric:tabular-nums;}
+html.v5 .t5-dati small{font-family:var(--font-sans);font-size:12px;}
+html.v5 .t5-barra{height:6px;margin:12px 0 14px;border-radius:999px;background:rgba(var(--bianco-rgb),.25);overflow:hidden;}
+html.v5 .t5-barra i{display:block;height:100%;background:var(--z-testo);border-radius:999px;transition:width .35s ease;}
+html.v5 .t5-seg{display:flex;padding:4px;border-radius:12px;background:rgba(var(--bianco-rgb),.18);}
+html.v5 .t5-seg button{flex:1;min-height:44px;border:0;border-radius:9px;background:none;color:var(--z-testo);font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;}
+html.v5 .t5-seg button.on{background:var(--bianco);color:var(--z-training-scuro);}
+/* il Blocco Attivazione: un gruppo bianco come gli altri */
+html.v5 .att5{border-radius:14px!important;box-shadow:none!important;}
+/* gli esercizi: righe di un gruppo bianco, il numero tondo, «Inizia» nel blu della zona */
+html.v5 .t5-seduta .exercise-card{margin:0;border:0;border-top:1px solid var(--s3);border-radius:0;box-shadow:none;background:var(--s1);}
+html.v5 .t5-seduta .sez5 + .exercise-card{border-top:0;border-radius:14px 14px 0 0;}
+html.v5 .t5-seduta .exercise-card:not(:has(+ .exercise-card)){border-radius:0 0 14px 14px;margin-bottom:18px;}
+html.v5 .t5-seduta .sez5 + .exercise-card:not(:has(+ .exercise-card)){border-radius:14px;}
+html.v5 .t5-seduta .ex-num-box{border:0;border-radius:50%;background:var(--z-training-velo);color:var(--z-training-scuro);}
+html.v5 .t5-seduta .ex-suggestion{display:inline-block;padding:4px 8px;border-radius:8px;background:var(--z-training-velo);color:var(--z-training-scuro);}
+html.v5 .t5-seduta .ex-add-set-btn{min-height:44px;white-space:nowrap;padding-left:16px;padding-right:16px;border-radius:999px;background:var(--z-training);color:var(--z-testo);}
+html.v5 .t5-seduta .ex-cambia-oggi{min-height:44px;color:var(--z-training-scuro)!important;}
+html.v5 .t5-seduta .ex-rir-pill{background:var(--z-training-velo);color:var(--z-training-scuro);}
+/* la serie in corso: la testata blu con il pallino «in corso», il nome e le pillole; «Fine serie» nel blu */
+html.v5 .train-exec-header{background:var(--z-training);border-bottom:0;}
+html.v5 :is(.train-exec-eyebrow,.train-exec-back){color:var(--z-testo);}
+html.v5 .train-exec-back{min-height:44px;}
+html.v5 .train-exec-eyebrow-dot{background:var(--z-testo);box-shadow:0 0 0 3px rgba(var(--bianco-rgb),.25);}
+html.v5 .train-exec-body{justify-content:flex-start;gap:0;padding-top:0;}
+html.v5 .train-exec-body > * + *{margin-top:18px;}
+html.v5 .train-exec-body > .train-exec-badges{margin-top:0;}
+html.v5 :is(.train-exec-ex-name,.train-exec-badges){align-self:stretch;margin-left:-20px;margin-right:-20px;padding:0 20px;background:var(--z-training);color:var(--z-testo);text-align:left;justify-content:flex-start;}
+html.v5 .train-exec-ex-name{padding-top:6px;font-size:24px;letter-spacing:-.5px;}
+html.v5 .train-exec-badges{padding-top:10px;padding-bottom:22px;border-radius:0 0 26px 26px;}
+html.v5 .train-exec-badge{background:rgba(var(--bianco-rgb),.2);color:var(--z-testo);}
+html.v5 .train-exec-finish-btn{min-height:52px;border-radius:16px;background:var(--z-training);color:var(--z-testo);}
+/* il recupero nella testata blu: l'anello bianco, «Salta» e «riduci» */
+html.v5 .rest-hero{background:var(--z-training);border-bottom:0;border-radius:0 0 26px 26px;}
+html.v5 .rest-ring-track{stroke:rgba(var(--bianco-rgb),.3);}
+html.v5 .rest-ring-fill{stroke:var(--z-testo)!important;}
+html.v5 :is(.rest-hero-cd-label,.rest-hero-skip){color:var(--z-testo);}
+/* il numero: bianco; negli ultimi 10 secondi l'app lo scalda verso il rosso (colore scritto nell'HTML, rgb(…)): resta quel colore, su una pastiglia bianca */
+html.v5 .rest-hero-cd-num[style*="var(--acc)"]{color:var(--z-testo)!important;}
+html.v5 .rest-hero-cd-num[style*="rgb("]{padding:2px 8px;border-radius:10px;background:var(--bianco);}
+html.v5 .rest-hero-skip{min-height:44px;}
+html.v5 .rest-hero-riduci{min-height:32px;background:rgba(var(--bianco-rgb),.2)!important;color:var(--z-testo)!important;border-color:transparent!important;}
+html.v5 .rest-hero-gif-placeholder{background:rgba(var(--bianco-rgb),.14);color:var(--z-testo);}
+/* il registro: tre domande numerate, campi bianchi, «Salva serie» a tutta larghezza nel blu */
+html.v5 .tl5-registro .sez5{margin:4px 2px 0;}
+html.v5 .tl5-domanda{margin:16px 2px 7px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);}
+html.v5 .tl5-campi{display:flex;gap:8px;}
+html.v5 .tl5-registro .picker-select{min-height:52px;border:1.5px solid var(--b1)!important;border-radius:14px;background:var(--s1);font-size:22px;}
+html.v5 .tl5-registro .picker-select:focus{border-color:var(--z-training)!important;}
+html.v5 .tl5-aiuto{margin:6px 2px 0;font-family:var(--font-sans);font-size:12px;color:var(--t2);}
+html.v5 .tl5-tasti{display:flex;gap:10px;margin-top:16px;}
+html.v5 .tl5-salva{flex:1;min-height:52px;border:0;border-radius:16px;background:var(--z-training);color:var(--z-testo);font-family:var(--font-sans);font-size:17px;font-weight:700;cursor:pointer;}
+html.v5 .tl5-salva:disabled{background:var(--b2);cursor:default;}
+html.v5 .tl5-chiudi{width:58px;min-height:52px;border:0;border-radius:16px;background:var(--s3);color:var(--t2);font-size:18px;cursor:pointer;}
+html.v5 .rest-coach-card{border-radius:14px;}

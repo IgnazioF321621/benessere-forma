@@ -3454,7 +3454,7 @@ function _renderActivationSection(){
 
   // ── Wrapper card ──
   return `
-    <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div class="att5" style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${allDone?'#2A7A6F':'var(--acc)'}" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
         <span style="font-size:13px;font-weight:700;color:${allDone?'#2A7A6F':'var(--acc)'};font-family:var(--font-sans);">Blocco Attivazione — ${totMin} min</span>
@@ -4100,23 +4100,29 @@ function renderTraining(){
           </div>`;
       }
 
+      // La veste nuova, Giro 1 del Training (schizzo della Seduta approvato da Ignazio il 29/10/2026): con html.v5 la seduta
+      // comincia con la testata della zona Training (_testaSedutaV5) e ha i titoli di sezione veri; i dati e i tasti sono questi.
+      const v5 = !isRecoverySession && document.documentElement.classList.contains('v5');
+      if(v5) heroBlock = _testaSedutaV5(s, sel, subnav, tabs);
       body = `
-        <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));">
-          <button onclick="closeTrainingSession();"
+        <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));"${v5 ? ' class="t5-seduta"' : ''}>
+          ${v5 ? '' : `<button onclick="closeTrainingSession();"
             style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--t2);font-size:13px;font-family:var(--font-sans);font-weight:600;padding:0;margin-bottom:16px;">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
             I tuoi giorni
-          </button>
+          </button>`}
+          ${v5 ? heroBlock : ''}
           ${audioBanner}
           ${_renderRestStriscia()}
-          ${heroBlock}
+          ${v5 ? '' : heroBlock}
 
           ${softReturnBanner}
+          ${v5 ? '<h2 class="sez5">Prima di iniziare</h2>' : ''}
           ${activationSection}
 
           ${warmupSection}
 
-          <div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>
+          ${v5 ? `<h2 class="sez5">Esercizi · ${s.exercises.length}</h2>` : `<div style="font-size:12px;font-weight:700;color:var(--t3);font-family:var(--font-mono);letter-spacing:.06em;margin-bottom:12px;">ESERCIZI</div>`}
           ${exerciseCards}
           ${(s.finisher && s.finisher.exercises && s.finisher.exercises.length > 0 && tabataInCoda()) ? (() => {
             const fin = s.finisher;
@@ -4929,6 +4935,7 @@ function renderTraining(){
                   `<option value="${v}" ${ST.trainLogResist === v ? 'selected' : ''}>${v}</option>`
                 ).join('');
                 const nextSetM = formLO.setNum;
+                if(document.documentElement.classList.contains('v5')) return _registroV5(ex, nextSetM, isTimedM, parsedRepsM, isPullUpM, unitLbl2, resistOptionsM);
                 return `<div style="padding:12px 0 4px;">
                   <div style="font-size:11px;font-weight:700;color:var(--acc);font-family:var(--font-mono);margin-bottom:10px;letter-spacing:.08em;">REGISTRA SERIE ${nextSetM}</div>
                   ${_tlRigaRepsRir(isTimedM, parsedRepsM, _exPerLato(ex, parsedRepsM), _contaPerLato(ex, parsedRepsM))}
@@ -5281,7 +5288,8 @@ function renderTraining(){
     </div>`;
   }
 
-  document.getElementById('page-training').innerHTML = navHTML + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderCambioOggiSheet() + _renderRiepilogoSessione();
+  const navSopra = body.includes('class="t5-testa"') ? '' : navHTML;   // veste nuova: le linguette stanno nella testata
+  document.getElementById('page-training').innerHTML = navSopra + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderCambioOggiSheet() + _renderRiepilogoSessione();
 }
 
 // openExerciseAI — apre modal scheda esercizio con sezioni structured + AI Coach
@@ -5849,6 +5857,66 @@ function _tlRirSelect(){
                   <option value="" ${cur === '' ? 'selected' : ''}>—</option>
                   ${['0','1','2','3'].map(opt).join('')}
                 </select>`;
+}
+
+// ── La veste nuova, Giro 1 del Training (schizzo approvato da Ignazio il 29/10/2026), solo con html.v5 ──
+// La testata della seduta nel blu della zona: il ritorno, il fuoco, il peso, le Impostazioni ed Esci (i tasti
+// dell'intestazione dell'app, che a veste accesa qui si nasconde: fuoco e peso si leggono da lì, dove l'app li tiene aggiornati),
+// il tipo, il nome, serie e tempo (#train-work-display, lo stesso che il cronometro aggiorna), Programma · Progressione.
+function _testaSedutaV5(s, sel, subnav, tabs){
+  const today = todayKey();
+  const totalSets = (s.exercises || []).reduce((acc, ex) => acc + (Number(ex.sets) || 0), 0);
+  const doneSets = Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(sel + '_') && k.endsWith('_' + today)).length;
+  const pct = totalSets > 0 ? Math.min(100, Math.round((doneSets / totalSets) * 100)) : 0;
+  const fuoco = document.getElementById('h-streak');
+  const peso = document.getElementById('h-weight');
+  const tipo = [s.type ? s.type.toUpperCase() : '', s.rir != null ? 'RIR ' + s.rir : ''].filter(Boolean).join(' · ');
+  return `
+    <div class="t5-testa">
+      <div class="t5-su">
+        <button class="t5-indietro" onclick="closeTrainingSession();">‹ I tuoi giorni</button>
+        <div class="t5-dx">
+          ${fuoco && fuoco.style.display !== 'none' ? `<span class="t5-chip">${esc(fuoco.textContent)}</span>` : ''}
+          <button class="t5-chip" onclick="openWeighInSheet()" aria-label="Pesati ora">⚖ ${esc(peso ? peso.textContent : '—')} kg</button>
+          <button class="t5-tondo" onclick="openSettingsModal()" aria-label="Impostazioni">⚙</button>
+          <button class="t5-tondo" onclick="logout()" aria-label="Esci">⎋</button>
+        </div>
+      </div>
+      <div class="t5-sopra">Oggi${tipo ? ' · ' + tipo : ''}${s.rir != null ? ' <span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>' : ''}</div>
+      <h1 class="t5-titolo">${esc(s.name)}</h1>
+      <div class="t5-dati">
+        <div><b>${doneSets}/${totalSets}</b><small>serie</small></div>
+        <div><b id="train-work-display">${workTimeFormat(workTimeCurrent(sel))}</b><small>tempo</small></div>
+        <div><b>${(s.exercises || []).length}</b><small>esercizi</small></div>
+      </div>
+      <div class="t5-barra"><i style="width:${pct}%"></i></div>
+      <nav class="t5-seg">${tabs.map(t => `<button class="${subnav === t.id ? 'on' : ''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}</nav>
+    </div>`;
+}
+// Il registro della serie nel recupero come tre domande numerate, una sotto l'altra: ripetizioni, carico, RIR.
+// Le tendine sono quelle di sempre (_tlRepsSelect, _tlRirSelect, bandPickerHTML, #tl-resist), «Salva» e ✕ anche.
+function _registroV5(ex, setNum, isTimed, parsedReps, isPullUp, unitLbl, resistOptions){
+  const perLato = _exPerLato(ex, parsedReps), contaPerLato = _contaPerLato(ex, parsedReps);
+  const dueLati = perLato && !isTimed;
+  const domanda = (n, t) => `<div class="tl5-domanda">${n} · ${t}</div>`;
+  let n = 0;
+  const reps = domanda(++n, isTimed ? (contaPerLato ? 'Quanto è durata, per lato? (sec)' : 'Quanto è durata? (sec)') : dueLati ? 'Quante ripetizioni? (destro · sinistro)' : contaPerLato ? 'Quante ripetizioni per lato?' : 'Quante ripetizioni?')
+    + `<div class="tl5-campi">${_tlRepsSelect(isTimed, parsedReps)}${dueLati ? _tlRepsSelect(isTimed, parsedReps, 'sx') : ''}</div>`;
+  const carico = domanda(++n, isPullUp ? 'Con quale banda?' : `Con quanto? (${unitLbl})`)
+    + (isPullUp ? bandPickerHTML(10) : `<select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);">
+        <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
+        ${resistOptions}
+      </select>
+      <div class="tl5-aiuto">lbs indicativi · scarto ±15% per gli elastici a tubo</div>`);
+  const rir = isTimed ? '' : domanda(++n, 'Quante ne avevi ancora? (RIR)') + _tlRirSelect();
+  return `<div class="tl5-registro">
+      <h2 class="sez5">Registra serie ${setNum}</h2>
+      ${reps}${carico}${rir}
+      <div class="tl5-tasti">
+        <button id="tl-save-btn" class="tl5-salva" onclick="saveTrainingSet();" ${ST.trainSaving ? 'disabled' : ''}>${ST.trainSaving ? '…' : 'Salva serie →'}</button>
+        <button class="tl5-chiudi" onclick="ST.trainLogOpen=null;renderTraining();" aria-label="Chiudi senza salvare">✕</button>
+      </div>
+    </div>`;
 }
 
 // ── Apertura modal log serie ───────────────────────────────
