@@ -194,6 +194,78 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       }
     }
   } finally { fs.rmSync(radice, { recursive:true, force:true }); }
+
+  // ── 3. Giro 1 del Training, la Seduta: elenco, serie in corso, recupero con il registro (veste accesa) e la seduta a veste spenta ──
+  const radiceT = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-t-'));
+  fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceT, 'stile.css'));
+  const momenti = {};
+  for(const v5 of [false, true]){
+    const b = await apri({ locale: v5 ? { zt_v5:'1' } : {} });
+    const W = b.win, ST = W.eval('ST');
+    W.callAI = async () => ''; W.cuePer = async () => '';
+    ST.trainTab = 'piano'; W.showPage('training'); await attendi(200);
+    ST.trainAnticipato = 'upperA'; W.openTrainingSession('upperA'); await attendi(500);
+    momenti[v5 ? 'seduta' : 'seduta_spenta'] = fotografa(W);
+    if(v5){
+      W.openTrainExec('upperA', 'Panca elastico', 1); await attendi(300);
+      momenti.serie = fotografa(W);
+      W.trainExecFinishSet(); await attendi(500);
+      momenti.registro = fotografa(W);
+    }
+    W.close();
+  }
+  // contrasto (con l'opacità, sul fondo vero) di ogni testo delle testate blu e del registro; altezza dei tasti; ordine delle domande
+  const MISURA_T = `<script>addEventListener('load',()=>setTimeout(()=>{
+const rgb=c=>{const m=c.match(/rgba?\\(([^)]+)\\)/);if(!m)return null;const v=m[1].split(',').map(Number);return {r:v[0],g:v[1],b:v[2],a:v.length>3?v[3]:1};};
+const lum=c=>{const f=x=>{x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
+const fondo=e=>{let x=e;while(x){const c=rgb(getComputedStyle(x).backgroundColor);if(c&&c.a>0.5)return c;x=x.parentElement;}return {r:245,g:243,b:238,a:1};};
+const opac=e=>{let o=1,x=e;while(x){o*=parseFloat(getComputedStyle(x).opacity);x=x.parentElement;}return o;};
+const contrasto=e=>{const c=rgb(getComputedStyle(e).color),f=fondo(e),al=c.a*opac(e),m={r:c.r*al+f.r*(1-al),g:c.g*al+f.g*(1-al),b:c.b*al+f.b*(1-al)};const a=lum(m),b=lum(f);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
+const vis=e=>e.offsetParent!==null||getComputedStyle(e).position==='fixed';
+const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100}));
+const alti=s=>[...document.querySelectorAll(s)].filter(vis).map(e=>({t:(e.getAttribute('aria-label')||e.textContent).trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)}));
+const g=(s,p)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[p]:null;};
+const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
+cronometro:document.querySelectorAll('#train-work-display').length,linguetteSopra:!!document.querySelector('.nutrition-subnav'),vecchioEsercizi:[...document.querySelectorAll('#page-training div')].some(d=>d.textContent.trim()==='ESERCIZI'),
+sezioni:[...document.querySelectorAll('#page-training .sez5')].map(e=>e.textContent.trim()),
+testi:testi('.t5-testa,.train-exec-header,.train-exec-ex-name,.train-exec-badges,.rest-hero,.tl5-registro').filter(x=>x.c<4.5),
+tasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi').filter(x=>x.h<44),
+nTasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi').length,
+domande:[...document.querySelectorAll('.tl5-domanda')].map(e=>e.textContent.trim()),tendine:['tl-reps','tl-resist','tl-rir'].map(i=>!!document.getElementById(i))};
+document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));</script>`;
+  for(const [n, h] of Object.entries(momenti)){
+    fs.writeFileSync(path.join(radiceT, n + '.html'), h.replace('</body>', MISURA_T + '</body>'));
+    fs.writeFileSync(path.join(radiceT, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:${n === 'seduta' || n === 'seduta_spenta' ? 1750 : 844}px"></iframe>`);
+  }
+  const chromeT = (args) => new Promise(ok => execFile(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...args],
+    { maxBuffer: 64 * 1024 * 1024, timeout: 90000 }, (err, out) => ok(String(out || ''))));
+  const misuraT = async (n) => { const m = (await chromeT(['--window-size=390,1750', '--dump-dom', 'file://' + path.join(radiceT, n + '.html')])).match(/data-misura="([^"]*)"/);
+    return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
+  try {
+    const sp = await misuraT('seduta_spenta'), se = await misuraT('seduta'), sr = await misuraT('serie'), rg = await misuraT('registro');
+    atteso('seduta: Chrome ha risposto per i quattro momenti', [!!sp, !!se, !!sr, !!rg], [true, true, true, true]);
+    if(sp && se && sr && rg){
+      atteso('seduta spenta: niente testata nuova, l\'intestazione dell\'app, le linguette in alto, «ESERCIZI» di prima', [sp.testa, sp.header !== 'none', sp.linguetteSopra, sp.vecchioEsercizi, sp.sezioni], [null, true, true, true, []]);
+      atteso('seduta accesa: testata della zona Training (#2E6DA4) al posto dell\'intestazione dell\'app', [se.testa, se.header], ['rgb(46, 109, 164)', 'none']);
+      atteso('seduta accesa: le linguette dentro la testata, un cronometro solo', [se.linguetteSopra, se.cronometro], [false, 1]);
+      atteso('seduta accesa: i titoli di sezione nell\'HTML, nell\'ordine', se.sezioni, ['Prima di iniziare', 'Esercizi · 2']);
+      atteso('serie in corso e recupero: le testate nel blu della zona', [sr.serieTesta, rg.recupero], ['rgb(46, 109, 164)', 'rgb(46, 109, 164)']);
+      for(const [nome, m] of [['seduta', se], ['serie in corso', sr], ['recupero e registro', rg]]){
+        atteso(`${nome}: ogni testo della testata (e del registro) almeno 4,5:1`, m.testi, []);
+        atteso(`${nome}: ogni tasto alto almeno 44 px (${m.nTasti} tasti)`, m.tasti, []);
+      }
+      atteso('registro: tre domande numerate, nell\'ordine dello schizzo', rg.domande, ['1 · Quante ripetizioni?', '2 · Con quanto? (lbs)', '3 · Quante ne avevi ancora? (RIR)']);
+      atteso('registro: le tendine di sempre (#tl-reps, #tl-resist, #tl-rir)', rg.tendine, [true, true, true]);
+    }
+    if(process.env.FOTO){
+      fs.mkdirSync(process.env.FOTO, { recursive:true });
+      for(const n of Object.keys(momenti)){
+        const f = path.join(process.env.FOTO, `training_${n}_390.png`);
+        await chromeT(['--window-size=600,1750', '--screenshot=' + f, 'file://' + path.join(radiceT, '_' + n + '.html')]);
+        console.log('  foto  ' + f);
+      }
+    }
+  } finally { fs.rmSync(radiceT, { recursive:true, force:true }); }
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })();
