@@ -223,7 +223,7 @@ const fondo=e=>{let x=e;while(x){const c=rgb(getComputedStyle(x).backgroundColor
 const opac=e=>{let o=1,x=e;while(x){o*=parseFloat(getComputedStyle(x).opacity);x=x.parentElement;}return o;};
 const contrasto=e=>{const c=rgb(getComputedStyle(e).color),f=fondo(e),al=c.a*opac(e),m={r:c.r*al+f.r*(1-al),g:c.g*al+f.g*(1-al),b:c.b*al+f.b*(1-al)};const a=lum(m),b=lum(f);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
 const vis=e=>e.offsetParent!==null||getComputedStyle(e).position==='fixed';
-const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)&&!e.closest('button:disabled')&&!/^[\\p{Extended_Pictographic}\\uFE0F\\s]+$/u.test(e.textContent)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100}));
+const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)&&!e.closest('button:disabled')&&!/^[\\p{Extended_Pictographic}\\uFE0F\\s]+$/u.test(e.textContent)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100,k:(typeof e.className==='string'?e.className:'')||e.tagName}));
 const alti=s=>[...document.querySelectorAll(s)].filter(vis).map(e=>({t:(e.getAttribute('aria-label')||e.textContent).trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)}));
 const g=(s,p)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[p]:null;};
 const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
@@ -312,8 +312,8 @@ header`);
         atteso(`Nutrition, ${nome}: ogni tasto alto almeno 44 px (${m.nTastiN} tasti)`, m.tastiN, []);
       }
       atteso('Nutrition oltre l\'obiettivo: il numero delle kcal nel colore «oltre», leggibile', [no.oltre && no.oltre.over, no.oltre && no.oltre.c >= 4.5], [true, true]);
-      atteso('dopo il tab Oggi, in Integratori (senza testata nuova) l\'intestazione dell\'app c\'è', bo.header !== 'none', true);
-      atteso('con una seduta aperta, in Integratori l\'intestazione dell\'app c\'è (la regola vale solo con il Training davanti)', bs.header !== 'none', true);
+      atteso('dopo il tab Oggi, in Integratori l\'intestazione dell\'app è nascosta perché c\'è la sua testata', [bo.header, bo.nTesta], ['none', 'rgb(163, 95, 0)']);
+      atteso('con una seduta aperta, in Integratori si vede la testata di Nutrition, non quella della seduta', [bs.header, bs.nTesta], ['none', 'rgb(163, 95, 0)']);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
@@ -366,7 +366,7 @@ header`);
       }
       atteso('Body Misure: i titoli di sezione nell\'HTML, nell\'ordine', bm.sezioniB, ['Il peso', 'Misure col metro e bilancia']);
       atteso('Body Tendenza: i titoli di sezione nell\'HTML, nell\'ordine', bt.sezioniB, ['Progresso verso l\'obiettivo', 'Evoluzione del corpo']);
-      atteso('dopo il Body, nel Training (Programma) l\'intestazione dell\'app c\'è', tb.header !== 'none', true);
+      atteso('dopo il Body, il Training (Programma) ha la sua testata blu', [tb.header, tb.testa], ['none', 'rgb(46, 109, 164)']);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
@@ -425,6 +425,55 @@ header`);
       }
     }
   } finally { fs.rmSync(radiceI, { recursive:true, force:true }); }
+
+  // ── 7. Le pagine rimaste: Nutrition › Integratori, Analisi, Piano; Training › Programma e Progressione (fuori dalla seduta) ──
+  const radiceR = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-r-'));
+  fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceR, 'stile.css'));
+  const pagR = {};
+  for(const v5 of [false, true]){
+    const b = await apri({ locale:{ zt_v5: v5 ? '1' : '0' }, now:OGGI + 'T09:30:00' });
+    const W = b.win, ST = W.eval('ST');
+    for(const pg of ['integratori', 'analisi', 'piano']){
+      W.showPage(pg); await attendi(400);
+      const benvenuto = W.document.getElementById('pianov4-welcome-overlay'); if(benvenuto) benvenuto.remove();
+      pagR[(v5 ? '' : 'spenta_') + pg] = fotografa(W);
+    }
+    for(const tab of ['piano', 'progressione']){ ST.trainTab = tab; W.showPage('training'); await attendi(400); pagR[(v5 ? '' : 'spenta_') + 'training_' + tab] = fotografa(W); }
+    W.close();
+  }
+  const MISURA_R = MISURA_T.replace("const r={header", `const r={pag:(document.querySelector('.page.active')||{}).id,
+zTesta:g('.page.active .n5-testa, .page.active .t5-pagina','backgroundColor'),
+on:(document.querySelector('.page.active .t5-seg button.on')||{}).textContent,
+vecchia:!!document.querySelector('.page.active :is(.oggi-v3-header,.nutrition-subnav)'),
+testiR:testi('.page.active').filter(x=>x.c<4.5),
+tastiR:alti('.page.active button').filter(x=>x.h<44),nTastiR:alti('.page.active button').length,
+header`);
+  for(const [n, h] of Object.entries(pagR)){
+    fs.writeFileSync(path.join(radiceR, n + '.html'), h.replace('</body>', MISURA_R + '</body>'));
+    fs.writeFileSync(path.join(radiceR, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:1700px"></iframe>`);
+  }
+  const misuraR = async (n) => { const m = (await chromeT(['--window-size=390,1700', '--dump-dom', 'file://' + path.join(radiceR, n + '.html')])).match(/data-misura="([^"]*)"/);
+    return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
+  try {
+    const attese = { integratori:['rgb(163, 95, 0)', 'Integratori'], analisi:['rgb(163, 95, 0)', 'Analisi'], piano:['rgb(163, 95, 0)', 'Piano'],
+      training_piano:['rgb(46, 109, 164)', 'Programma'], training_progressione:['rgb(46, 109, 164)', 'Progressione'] };
+    for(const [n, [colore, scheda]] of Object.entries(attese)){
+      const sp = await misuraR('spenta_' + n), m = await misuraR(n);
+      if(!sp || !m){ atteso(`${n}: Chrome ha risposto`, false, true); continue; }
+      atteso(`${n} spenta: la testata e le linguette di prima, l'intestazione dell'app`, [sp.zTesta, sp.vecchia, sp.header !== 'none'], [null, true, true]);
+      atteso(`${n} accesa: testata della zona al posto dell'intestazione, scheda «${scheda}» accesa`, [m.zTesta, m.header, m.vecchia, (m.on || '').trim()], [colore, 'none', false, scheda]);
+      atteso(`${n} accesa: ogni testo della pagina almeno 4,5:1`, m.testiR, []);
+      atteso(`${n} accesa: ogni tasto della pagina alto almeno 44 px (${m.nTastiR} tasti)`, m.tastiR, []);
+    }
+    if(process.env.FOTO){
+      fs.mkdirSync(process.env.FOTO, { recursive:true });
+      for(const n of Object.keys(attese)){
+        const f = path.join(process.env.FOTO, `${n}_390.png`);
+        await chromeT(['--window-size=600,1700', '--screenshot=' + f, 'file://' + path.join(radiceR, '_' + n + '.html')]);
+        console.log('  foto  ' + f);
+      }
+    }
+  } finally { fs.rmSync(radiceR, { recursive:true, force:true }); }
   console.log(ko ? `\n${ko} KO` : '\ntutto OK');
   process.exit(ko ? 1 : 0);
 })();

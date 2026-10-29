@@ -5288,7 +5288,9 @@ function renderTraining(){
     </div>`;
   }
 
-  const navSopra = body.includes('class="t5-testa"') ? '' : navHTML;   // veste nuova: le linguette stanno nella testata
+  // veste nuova: con la seduta aperta le linguette stanno nella sua testata; fuori dalla seduta (Programma, Progressione)
+  // c'è la testata della zona Training con le stesse linguette (_testaTrainingV5)
+  const navSopra = body.includes('class="t5-testa"') ? '' : (document.documentElement.classList.contains('v5') ? _testaTrainingV5(subnav, tabs) : navHTML);
   document.getElementById('page-training').innerHTML = navSopra + body + versionFooter() + modalHTML + countdownHTML + execHTML + dayDetailHTML + deleteSetConfirmHTML + deleteWorkoutConfirmHTML + tabataHTML + warmupInfoHTML + _renderCambioOggiSheet() + _renderRiepilogoSessione();
 }
 
@@ -5882,6 +5884,18 @@ function _testaSedutaV5(s, sel, subnav, tabs){
         <div><b>${(s.exercises || []).length}</b><small>esercizi</small></div>
       </div>
       <div class="t5-barra"><i style="width:${pct}%"></i></div>
+      <nav class="t5-seg">${tabs.map(t => `<button class="${subnav === t.id ? 'on' : ''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}</nav>
+    </div>`;
+}
+// La testata del Training fuori dalla seduta (Programma e Progressione): i tasti dell'intestazione, la data, il titolo e le
+// due linguette con gli stessi tocchi di prima.
+function _testaTrainingV5(subnav, tabs){
+  const oggi = new Date();
+  const data = `${['DOM','LUN','MAR','MER','GIO','VEN','SAB'][oggi.getDay()]} ${oggi.getDate()} ${['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'][oggi.getMonth()]}`;
+  return `
+    <div class="t5-testa t5-pagina">
+      <div class="t5-su"><span class="n5-sopra">${data}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <h1 class="t5-titolo">Training</h1>
       <nav class="t5-seg">${tabs.map(t => `<button class="${subnav === t.id ? 'on' : ''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}</nav>
     </div>`;
 }
