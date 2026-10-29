@@ -37,7 +37,7 @@ function tabelle(scenario = 'base'){
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, sesso:'M', eta:45, altezza_cm:178, weight_kg:74, goal_weight_kg:70, obiettivo:'ricomposizione',
       target_kcal:2300, target_protein:170, target_carbs:220, target_fat:75, giorni_allenamento:4, tipo_allenamento:'casa', attrezzatura:['elastico'],
       train_start_date:'2026-09-21', usa_training:true, created_at:'2026-05-01T08:00:00Z' }],
-    meals, meal_items:[], weight_logs:pesi, supplements_log:[], fasting_days:[], daily_log:[], app_errors:[], supplements:[], nutrilite_catalog:[],
+    meals, meal_items:[], weight_logs:pesi, supplements_log:[], fasting_days:[], daily_log: scenario === 'giu' ? [{ id:'d0', user_id:U, date:OGGI, sleep_hours:7, energy:4, stress:2 }] : [], app_errors:[], supplements:[], nutrilite_catalog:[],
     esercizi_catalog:catalogo, schede_utente:[{ id:'sc1', user_id:U, attiva:true, blocco_n:1, scheda:{ obiettivo:'ricomposizione', sessioni:[
       { id:'upperA', name:'Upper A', type:'Forza', rir:2, warmup:[], exercises:['EX001','EX020'].map(ex) },
       { id:'lowerA', name:'Lower A', type:'Forza', rir:2, warmup:[], exercises:['EX040','EX050'].map(ex) }] } }],
@@ -100,7 +100,11 @@ function fotografa(win){
   const pagine = {};
   for(const sc of ['base', 'su', 'giu']){
     const b = await apri({ scenario:sc });
-    if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; b.win.renderHomeV2(); }
+    if(sc === 'base') pagine.spenta = fotografa(b.win);
+    if(sc === 'giu') b.win.eval('ST').comeStaiAperta = OGGI;   // Come stai compilato e ancora aperto: c'è «Fatto»
+    if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; }
+    // accesa: la classe come la mette lo script in testa, poi la Home ridisegnata (la settimana a righe la disegna home.js)
+    b.win.document.documentElement.classList.add('v5'); b.win.renderHomeV2();
     pagine[sc] = fotografa(b.win);
     b.win.close();
   }
@@ -109,9 +113,11 @@ function fotografa(win){
 const rgb=c=>{const m=c.match(/rgba?\\(([^)]+)\\)/);if(!m)return null;const v=m[1].split(',').map(Number);return {r:v[0],g:v[1],b:v[2],a:v.length>3?v[3]:1};};
 const lum=c=>{const f=x=>{x/=255;return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);};return .2126*f(c.r)+.7152*f(c.g)+.0722*f(c.b);};
 const fondo=e=>{let bg={r:255,g:255,b:255,a:0},x=e;while(x){const c=rgb(getComputedStyle(x).backgroundColor);if(c&&c.a>0.5)return c;x=x.parentElement;}return {r:245,g:243,b:238,a:1};};
-const contrasto=e=>{const a=lum(rgb(getComputedStyle(e).color)),b=lum(fondo(e));return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
+// il colore come arriva all'occhio: la sua trasparenza per l'opacità dell'elemento e di tutti gli antenati, mescolato col fondo
+const opac=e=>{let o=1,x=e;while(x){o*=parseFloat(getComputedStyle(x).opacity);x=x.parentElement;}return o;};
+const contrasto=e=>{const c=rgb(getComputedStyle(e).color),f=fondo(e),al=c.a*opac(e),m={r:c.r*al+f.r*(1-al),g:c.g*al+f.g*(1-al),b:c.b*al+f.b*(1-al)};const a=lum(m),b=lum(f);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
 const W='.home-v2-card[onclick*="showPage(\\'oggi\\')"],#home-card-training,.home-v2-card[onclick*="showPage(\\'body\\')"]';
-const testi=[...document.querySelectorAll(W)].flatMap(c=>[...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null);
+const testi=[...document.querySelectorAll(W+',.home-v2-header')].flatMap(c=>[...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null);
 const tutti=testi.map(e=>({t:e.textContent.trim().slice(0,30),c:Math.round(contrasto(e)*100)/100}));
 const di=s=>{const e=document.querySelector(s);return e&&e.offsetParent!==null?Math.round(contrasto(e)*100)/100:null;};
 const r={barra:g('#bottom-nav','display'),nav:g('#nav','display'),testa:g('.home-v2-header','backgroundColor'),nutr:g('.home-v2-card[onclick*="showPage(\\'oggi\\')"]','backgroundColor'),
@@ -121,7 +127,13 @@ campi:[...document.querySelectorAll('input:not([type=checkbox]):not([type=radio]
 trainW:(document.querySelector('#home-card-training')||{}).offsetWidth||0,riga:(document.querySelector('.home-v2-wrap')||{}).offsetWidth||0,largo:document.documentElement.scrollWidth,finestra:window.innerWidth,
 testi:tutti.length,peggiori:tutti.filter(x=>x.c<4.5),pesata:di('.home-v2-body-pesata'),registra:di('.home-v2-nutr-btn'),oltre:di('.home-v2-donut-num[style*="B45309"]'),
 macroOltre:document.querySelectorAll('.home-v2-macro-value[style*="B45309"]').length,macroOltreC:di('.home-v2-macro-value[style*="B45309"]'),delta:di('.home-v2-body-delta'),
-deltaColore:g('.home-v2-body-delta','color'),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
+deltaColore:g('.home-v2-body-delta','color'),
+ordine:(()=>{const tutti=[...document.querySelectorAll('*')];return ['.home-v2-header','.sez5','.home-v2-action','.home-v2-card[onclick*="showPage(\\'oggi\\')"]','#home-card-training','.cs-card','.cp-card','.wp5'].map(x=>{const e=document.querySelector(x);return e?tutti.indexOf(e):null;});})(),
+sez5:[...document.querySelectorAll('.sez5 > span:first-child')].map(e=>e.textContent.trim()),
+testaAzione:g('.home-v2-action-head','display'),fatto:(()=>{const e=[...document.querySelectorAll('.cs-link')].find(x=>/Fatto/.test(x.textContent));return e?Math.round(e.getBoundingClientRect().height):null;})(),
+wp5:document.querySelectorAll('.wp5-riga').length,freccia:di('.wp5-freccia'),wpVecchia:!!document.querySelector('.wp-hero-card'),
+etichette:[...document.querySelectorAll('.sez5 span,.cp-head > *,.wp5-sez,.wp5-sez span')].map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),
+righe5:[...document.querySelectorAll('.wp5-riga *:not(.wp5-freccia)')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
 document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));</script>`;
   const scrivi = (nome, html, v5) => {
     let h = html.replace('</body>', MISURA + '</body>');
@@ -130,7 +142,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     // a 390 px dentro un riquadro: Chrome senza testa non scende sotto i 500 px di finestra
     fs.writeFileSync(path.join(radice, '_' + nome + '.html'), `<!doctype html><body style="margin:0"><iframe src="${nome}.html" style="border:0;width:390px;height:2400px"></iframe>`);
   };
-  scrivi('spenta', pagine.base, false); scrivi('accesa', pagine.base, true); scrivi('accesa_su', pagine.su, true); scrivi('accesa_giu', pagine.giu, true);
+  scrivi('spenta', pagine.spenta, false); scrivi('accesa', pagine.base, false); scrivi('accesa_su', pagine.su, false); scrivi('accesa_giu', pagine.giu, false);
   const chrome = (args) => new Promise(ok => execFile(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...args],
     { maxBuffer: 64 * 1024 * 1024, timeout: 90000 }, (err, out) => ok(String(out || ''))));
   const misura = async (nome) => {
@@ -151,7 +163,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso(`accesa: nessun campo sotto i 16 px (spenta: ${s.campi})`, a.campi, 0);
       atteso('accesa: l\'insetto del feedback sopra la barra (72 px dal fondo)', a.insetto, '72px');
       for(const [nome, m] of [['dentro l\'obiettivo', a], ['oltre l\'obiettivo, peso su', su], ['peso giù', giu]])
-        atteso(`accesa, ${nome}: ogni testo dei riquadri pieni almeno 4,5:1 (${m.testi} testi)`, m.peggiori, []);
+        atteso(`accesa, ${nome}: ogni testo della testata e dei riquadri pieni almeno 4,5:1 (con l'opacità) (${m.testi} testi)`, m.peggiori, []);
       atteso('pesata mancante: «+ pesata di oggi» leggibile (≥ 4,5:1)', su.pesata >= 4.5, true);
       atteso('pasto suggerito: «Registra» leggibile (≥ 4,5:1)', su.registra >= 4.5, true);
       atteso('oltre l\'obiettivo: kcal nel colore «oltre» (--over), leggibile', [su.oltreColore, su.oltre >= 4.5], ['rgb(180, 83, 9)', true]);
@@ -161,6 +173,17 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('peso che sale via dall\'obiettivo: rosso (--err), leggibile', [su.deltaColore, su.delta >= 4.5], ['rgb(184, 76, 42)', true]);
       atteso('peso che scende verso l\'obiettivo: verde (--acc), leggibile', [giu.deltaColore, giu.delta >= 4.5], ['rgb(42, 122, 111)', true]);
       atteso('«Ultimo pasto N h fa» nel colore «oltre», leggibile', su.avviso >= 4.5, true);
+      // Giro 1 della Home: l'ordine nuovo e la settimana a righe
+      const crescente = (v) => v.every(x => x != null) && v.every((x, i) => !i || x > v[i - 1]);
+      atteso('giro 1, ordine nel DOM (quello che leggono tastiera e VoiceOver): testata · Adesso · Nutrition · Training · Come stai · Pirsi · settimana', crescente(a.ordine), true);
+      atteso('giro 1, spenta: l\'ordine di prima (Come stai prima della prossima azione), niente titoli nuovi, la settimana a card', [s.ordine[5] < s.ordine[2], s.ordine[1], s.wp5, s.wpVecchia], [true, null, 0, true]);
+      atteso('giro 1, accesa: i titoli di sezione scritti nell\'HTML', a.sez5, ['Adesso', 'Le tue zone', 'Come stai oggi']);
+      atteso('giro 1, accesa: «PROSSIMA AZIONE» dentro il riquadro non c\'è più (non si legge due volte)', a.testaAzione, 'none');
+      atteso('giro 1, accesa: la settimana a righe (peso, obiettivo, sessioni, kcal), la card di prima no', [a.wp5, a.wpVecchia], [4, false]);
+      atteso(`giro 1, accesa: ogni pezzo dei titoli di sezione (${a.etichette.length}, anche le date e l'ora) almeno 4,5:1`, a.etichette.filter(x => x.c < 4.5), []);
+      atteso('giro 1, Come stai compilato: «Fatto» alto almeno 44 px', giu.fatto >= 44, true);
+      atteso('giro 1, accesa: la freccia della settimana è un segno, non un testo: almeno 3:1', a.freccia >= 3, true);
+      atteso(`giro 1, accesa: ogni testo della settimana a righe almeno 4,5:1 (${a.righe5.length} testi)`, a.righe5.filter(x => x.c < 4.5), []);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });

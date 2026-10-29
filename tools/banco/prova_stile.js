@@ -77,7 +77,7 @@ const piatto = (d) => canonico(risolvi(d.fuori, Object.fromEntries(Object.entrie
 const VESTE = /(^|[}])\s*[^{}@]*(html\.v5|\.set-veste)[^{}]*\{[^{}]*\}/g;
 const senzaVeste = (d) => { let f = d.fuori, g; do { g = f; f = f.replace(VESTE, '$1'); } while(f !== g); return { ...d, fuori: f }; };
 const regoleVeste = (N.fuori.match(VESTE) || []).length;
-const a = piatto(P), b = piatto(senzaVeste(N));
+const a = piatto(senzaVeste(P)), b = piatto(senzaVeste(N));   // anche dallo stile di prima, se la veste c'era già
 const primoDiverso = (x, y) => { let i = 0; while(i < x.length && x[i] === y[i]) i++; return i; };
 const k = primoDiverso(a, b);
 atteso(`ogni regola, coi nomi risolti, uguale a prima (${a.length} caratteri)`, a === b, a === b ? '' : `\n      prima: …${a.slice(k - 80, k + 60)}\n      ora:   …${b.slice(k - 80, k + 60)}`);

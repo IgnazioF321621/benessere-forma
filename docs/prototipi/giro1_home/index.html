@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 1 · Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 1 · Home: schizzo prima/dopo, niente codice dell'app. Prima = la Home vera a veste A accesa (banco, 390 px);
+   dopo = stessi dati e stessi tasti, cambiano ordine, gerarchia, spazi e tipografia. Colori: i nomi di app/stile.css. */
+:root {
+  --font-sans: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC; --b1: #DDD9D0;
+  --t1: #1A1A1A; --t2: #555047; --t3: #9A9388; --acc: #2A7A6F; --acc-lt: #E6F4F2; --bianco: #FFFFFF;
+  --over: #B45309; --err: #B84C2A; --body-velo: #EDE9F8; --mod-body-forte: #5E4A7A; --mod-nutrition: #FAC775; --mod-training: #B5D4F4; --mod-body: #AFA9EC;
+  --z-home: #2A7A6F; --z-nutrition: #A35F00; --z-training: #2E6DA4; --z-body: #6A55A0; --z-testo: #FFFFFF;
+  --z-home-velo: #E6F4F2; --z-home-scuro: #1F5C53;
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { width: 1240px; margin: 0 auto; padding: 24px 16px 40px; }
+h1.tit { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; margin: 0 0 18px; max-width: 900px; }
+.tre { display: grid; grid-template-columns: 390px 390px 1fr; gap: 24px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13.5px; line-height: 1.5; }
+.note h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.note ol { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 0 0 8px; }
+.n { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); margin-left: 6px; vertical-align: middle; }
+
+/* il telefono */
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; }
+.testa { background: var(--z-home); color: var(--z-testo); padding: 18px 16px 20px; border-radius: 0 0 26px 26px; display: flex; align-items: center; gap: 12px; }
+.testa .cresce { flex: 1; }
+.data { font: 600 11px var(--font-mono); letter-spacing: .14em; }
+.saluto { font-size: 24px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font: 700 13px var(--font-mono); }
+.corpo { padding: 0 16px 18px; }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; align-items: center; }
+.sez span { font-weight: 600; color: var(--t3); letter-spacing: .06em; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > :first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; font-size: 12px; color: var(--t2); margin-top: 2px; }
+.val { font: 600 14px var(--font-mono); color: var(--t2); }
+.chev { color: var(--t3); font-size: 20px; line-height: 1; }
+
+/* adesso: la prossima azione in cima */
+.adesso { padding: 16px 14px 14px; }
+.adesso b { display: block; font-size: 20px; font-weight: 800; }
+.adesso p { margin: 4px 0 12px; font-size: 14px; color: var(--t2); }
+.inizia { display: block; width: 100%; border: 0; border-radius: 14px; background: var(--acc); color: var(--bianco); font: 700 16px var(--font-sans); padding: 13px 0; }
+.chip { font: 700 11px var(--font-mono); letter-spacing: .06em; color: var(--acc); background: var(--acc-lt); border-radius: 999px; padding: 4px 10px; }
+
+/* le zone */
+.widget { background: var(--zc); color: var(--z-testo); border-radius: 18px; padding: 14px 16px; position: relative; }
+.w-tit { font: 700 11px var(--font-mono); letter-spacing: .12em; }
+.w-freccia { position: absolute; right: 14px; top: 12px; font-size: 20px; }
+.nutr { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.anello { width: 84px; height: 84px; border-radius: 50%; border: 7px solid rgba(255,255,255,.3); border-top-color: #fff; border-right-color: #fff; border-bottom-color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 19px var(--font-mono); } .anello small { font: 600 10px var(--font-mono); }
+.macro { flex: 1; display: grid; grid-template-columns: auto 1fr; row-gap: 4px; font: 600 11px var(--font-mono); letter-spacing: .08em; align-items: baseline; }
+.macro b { font: 700 19px var(--font-mono); text-align: right; letter-spacing: 0; }
+.macro b small { font-size: 11px; font-weight: 600; }
+.pastiglia { display: inline-block; margin-top: 10px; padding: 2px 8px; border-radius: 7px; background: var(--bianco); color: var(--over); font: 600 11px var(--font-mono); letter-spacing: .06em; }
+.coppia { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.coppia .widget { min-height: 132px; }
+.nome { font-size: 18px; font-weight: 800; margin-top: 8px; line-height: 1.15; }
+.sotto { font: 600 10px var(--font-mono); letter-spacing: .1em; margin-top: 6px; line-height: 1.5; }
+.peso { font: 700 28px var(--font-mono); margin-top: 6px; } .peso small { font-size: 13px; }
+.delta { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 7px; background: var(--bianco); color: var(--err); font: 700 12px var(--font-mono); }
+
+/* come stai: una riga sola */
+.voti { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 14px 0; }
+.voti div { background: var(--s2); border-radius: 12px; padding: 7px 0 8px; text-align: center; }
+.voti small { display: block; font: 600 10px var(--font-mono); letter-spacing: .12em; color: var(--t2); }
+.voti b { font: 700 18px var(--font-mono); color: var(--t3); }
+.nota { margin: 8px 14px 14px; background: var(--s2); border-radius: 12px; padding: 11px 12px; color: var(--t3); font-size: 16px; }
+
+/* Pirsi: le proposte come righe di un elenco */
+.prop { padding: 14px; border-top: 1px solid var(--s3); }
+.et { font: 700 10px var(--font-mono); letter-spacing: .12em; color: var(--t2); display: flex; align-items: center; gap: 6px; }
+.et i { width: 8px; height: 8px; border-radius: 50%; }
+.prop b { display: block; font-size: 16px; font-weight: 700; margin: 5px 0 4px; }
+.prop p { margin: 0; font-size: 13px; color: var(--t2); line-height: 1.45; }
+.num { display: flex; justify-content: space-between; background: var(--s2); border-radius: 10px; padding: 7px 10px; margin-top: 8px; font: 600 11px var(--font-mono); color: var(--t2); }
+.num b { display: inline; font: 700 11px var(--font-mono); margin: 0; color: var(--t1); }
+.tasti { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.tasti .perche { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--acc); margin-right: auto; }
+.tasti button { border-radius: 12px; font: 700 14px var(--font-sans); padding: 9px 16px; }
+.si { background: var(--acc); color: var(--bianco); border: 0; } .no { background: var(--s1); color: var(--t1); border: 1px solid var(--b1); }
+.piede { font-size: 12px; color: var(--t3); padding: 0 14px 14px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; min-width: 72px; }
+.tab svg { width: 22px; height: 22px; } .tab div.on { color: var(--z-home-scuro); background: var(--z-home-velo); }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 1 · la Home</h1>
+  <p class="intro">A sinistra la Home vera di oggi con la veste A accesa, fotografata dal banco a 390 px. A destra lo schizzo: gli stessi dati, gli stessi tasti e gli stessi passaggi. Cambiano l'ordine, la gerarchia, gli spazi e i caratteri. Nessuna logica nuova e nessun dato in più. I numeri gialli rimandano alle note.</p>
+  <div class="tre">
+    <div class="prima"><div class="col-tit">Prima · veste A accesa</div><img src="prima_home_accesa.png" alt="La Home a veste accesa"></div>
+    <div>
+      <div class="col-tit">Dopo · schizzo</div>
+      <div class="tel">
+        <div class="testa"><div class="cresce"><div class="data">DOMENICA 4 OTTOBRE</div><div class="saluto">Buonasera, Ignazio</div></div><div class="avatar">I</div></div>
+        <div class="corpo">
+          <div class="sez">Adesso <span>18:00</span><i class="n">1</i></div>
+          <div class="gruppo">
+            <div class="adesso"><b>È ora di Upper A</b><p>Si parte con 5 minuti di preparazione.</p><button class="inizia">Inizia →</button></div>
+            <div class="riga"><span class="cresce">Colazione non registrata<small>anche da fare oggi</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="cresce">Dopo l'allenamento</span><span class="chip">CENA ZONA</span></div>
+          </div>
+
+          <div class="sez">Le tue zone<i class="n">2</i></div>
+          <div class="widget" style="--zc:var(--z-nutrition)"><div class="w-tit">NUTRITION</div><span class="w-freccia">›</span>
+            <div class="nutr"><div class="anello"><b>1.650</b><small>rimaste</small></div>
+              <div class="macro"><span>CARB</span><b>149<small> g</small></b><span>PROT</span><b>154<small> g</small></b><span>FAT</span><b>52<small> g</small></b></div></div>
+            <span class="pastiglia">Ultimo pasto 5 h fa</span></div>
+          <div class="coppia">
+            <div class="widget" style="--zc:var(--z-training)"><div class="w-tit">TRAINING</div><span class="w-freccia">›</span><div class="nome">Sessione Upper A</div><div class="sotto">INIZIA IL PROGRAMMA<br>SETTIMANA 1 / 6</div></div>
+            <div class="widget" style="--zc:var(--z-body)"><div class="w-tit">BODY</div><span class="w-freccia">›</span><div class="peso">74,0 <small>kg</small></div><span class="delta">↑ +0,1 kg da venerdì</span><div class="sotto">PRIMO CHECK DA FARE</div></div>
+          </div>
+
+          <div class="sez">Come stai oggi<i class="n">3</i></div>
+          <div class="gruppo">
+            <div class="voti"><div><small>SONNO</small><b>–</b></div><div><small>ENERGIA</small><b>–</b></div><div><small>STRESS</small><b>–</b></div></div>
+            <div class="nota">Una nota, se vuoi</div>
+          </div>
+
+          <div class="sez">Pirsi propone <span>21 – 27 set</span><i class="n">4</i></div>
+          <div class="gruppo">
+            <div class="prop" style="border-top:0"><span class="et"><i style="background:var(--mod-nutrition)"></i>NUTRIZIONE</span><b>Registra tutti i pasti</b>
+              <p>Registra colazione, pranzo e cena: in 7 giorni su 7 ne mancano almeno due, e con giornate a metà le calorie sembrano più basse di quelle vere.</p>
+              <div class="num"><span>Giorni registrati</span><b>7 / 7</b></div><div class="num" style="margin-top:4px"><span>Giorni con meno di 2 pasti su 3</span><b>7</b></div>
+              <div class="tasti"><span class="perche">PERCHÉ?</span><button class="no">Non ora</button><button class="si">Accetto</button></div></div>
+            <div class="prop"><span class="et"><i style="background:var(--mod-training)"></i>ALLENAMENTO</span><b>3 allenamenti a settimana invece di 4</b>
+              <p>Meglio 3 fatte che 4 previste: nelle ultime due settimane ne hai fatte 0 e 0 su 4, senza infortuni di mezzo. La scheda a 3 giorni non c'è ancora: per ora tieni la tua e fanne 3.</p>
+              <div class="num"><span>Sessioni fatte</span><b>0 / 4 · sett. prima 0 / 4</b></div>
+              <div class="tasti"><span class="perche">PERCHÉ?</span><button class="no">Non ora</button><button class="si">Accetto</button></div></div>
+            <div class="prop"><span class="et"><i style="background:var(--mod-body)"></i>ESAMI</span><b>Esami del sangue</b>
+              <p>Non hai ancora registrato esami del sangue: parlane con il medico.</p>
+              <div class="num"><span>Ultimi esami</span><b>nessuno registrato</b></div>
+              <div class="tasti"><span class="perche">PERCHÉ?</span><button class="no">Non ora</button><button class="si">Accetto</button></div></div>
+            <div class="piede">Pirsi propone, decidi tu. Per la salute conta il parere del tuo medico.</div>
+          </div>
+
+          <div class="sez">La tua settimana <span>28 set – 4 ott</span><i class="n">5</i></div>
+          <div class="gruppo">
+            <div class="riga"><span class="cresce">Peso attuale<small>media 73,9 kg · +0,3 kg sulla scorsa</small></span><span class="val" style="color:var(--t1);font-size:17px">74,0 kg</span><span class="chev">›</span></div>
+            <div class="riga"><span class="cresce">Obiettivo<small>mancano 4,0 kg da perdere</small></span><span class="val">70 kg</span></div>
+            <div class="riga"><span class="cresce">Sessioni</span><span class="val">non registrato</span></div>
+            <div class="riga"><span class="cresce">Kcal medie<small>2 di 5 aree con dati</small></span><span class="val">650</span></div>
+          </div>
+        </div>
+        <div class="tab">
+          <div class="on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/></svg>Home</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M11 20A7 7 0 0 1 4 13c0-5 7-11 7-11s7 6 7 11a7 7 0 0 1-7 7z"/><path d="M11 20V9"/></svg>Nutrition</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Training</div>
+          <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="7" r="3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>Body</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <h3>Cosa cambia e perché</h3>
+      <ol>
+        <li><b>«Adesso» in cima.</b> La prossima azione oggi è in fondo, sotto tutto il resto. È la cosa da fare in questo momento, quindi apre la pagina, con «Inizia» a tutta larghezza. Sotto, a righe, quello che c'è ancora da fare oggi e il pasto dopo l'allenamento.<span class="n">1</span></li>
+        <li><b>Le zone subito dopo.</b> Nutrition, Training e Body sono il quadro del giorno. Ognuno ha un titolo solo e i numeri allineati. Training e Body restano affiancati.<span class="n">2</span></li>
+        <li><b>«Come stai oggi» più basso.</b> Tre caselle più sottili e la nota sotto: stessi campi, metà dell'altezza.<span class="n">3</span></li>
+        <li><b>Pirsi come elenco.</b> Il titolo esce dal riquadro e diventa un titolo di sezione, come gli altri. Ogni proposta è una riga dell'elenco. «Perché?», «Non ora» e «Accetto» stanno su una riga sola, con «Accetto» a destra. I testi restano interi.<span class="n">4</span></li>
+        <li><b>«La tua settimana» in fondo, a righe.</b> È un riassunto, si guarda dopo. Peso, obiettivo, sessioni e kcal diventano righe con il valore a destra. Il tocco apre il quadro, come oggi.<span class="n">5</span></li>
+      </ol>
+      <h3>Le regole di tutta la pagina</h3>
+      Un solo tipo di titolo di sezione (mono 11 px, maiuscolo, fuori dai riquadri). 8 px fra le cose della stessa sezione, 22 px fra una sezione e l'altra. Saluto a 24 px invece di 30, con la testata più bassa. Si costruisce dietro html.v5. I punti 1–4 si fanno con il solo stile: l'ordine con <i>order</i> dei riquadri, senza toccare home.js. Il punto 5, la settimana a righe, ha bisogno di un pezzo di HTML diverso, solo a veste accesa: gli stessi dati della card di oggi, nessuna lettura nuova.
+    </div>
+  </div>
+</div>
+</body>
+</html>
