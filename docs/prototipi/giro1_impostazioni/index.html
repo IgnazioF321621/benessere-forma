@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 1 · Impostazioni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 1 · Impostazioni, elenco e pagine: schizzo prima/dopo, niente codice dell'app. Prima = la pagina vera a veste A accesa
+   (banco, 390 px); dopo = stessi dati e tasti con le regole di pagina di Home e Seduta. Colori: i nomi di app/stile.css. */
+:root {
+  --font-sans: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC; --b1: #DDD9D0;
+  --t1: #1A1A1A; --t2: #555047; --t3: #9A9388; --acc: #2A7A6F; --acc-lt: #E6F4F2; --bianco: #FFFFFF;
+  --carb: #C4880A; --prot: #2A7A6F; --fat: #B84C2A; --err: #B84C2A; --err-lt: #FCEEE9; --crema: #FDF7E8; --ocra: #8B6B1E;
+  --z-home: #2A7A6F; --z-nutrition: #2A7A6F; --z-nutrition-velo: #E6F4F2; --z-nutrition-scuro: #1F5C53; --qz-n: #A35F00; --qz-t: #2E6DA4; --qz-b: #6A55A0; --qz-g: #555047; --z-testo: #FFFFFF;
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { width: 1240px; margin: 0 auto; padding: 24px 16px 40px; }
+h1.tit { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; margin: 0 0 14px; max-width: 900px; }
+.tre { display: grid; grid-template-columns: 390px 390px 1fr; gap: 24px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13.5px; line-height: 1.5; }
+.note h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.note ol { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 0 0 8px; }
+.n { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); margin-left: 6px; vertical-align: middle; flex: none; }
+
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; }
+.testa { background: var(--z-nutrition); color: var(--z-testo); padding: 12px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 44px; gap: 6px; }
+.dx { display: flex; gap: 6px; align-items: center; }
+.chip { min-height: 44px; display: inline-flex; align-items: center; padding: 0 9px; border-radius: 999px; background: rgba(255,255,255,.2); font: 700 12px var(--font-mono); white-space: nowrap; }
+.tondo { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.2); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.titolo { font-size: 24px; font-weight: 800; letter-spacing: -.5px; margin: 4px 0 12px; }
+.giorno { display: flex; align-items: center; gap: 8px; }
+.giorno .fr { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.giorno .c { flex: 1; text-align: center; font-weight: 700; font-size: 15px; }
+.giorno .c small { display: block; font: 600 11px var(--font-mono); letter-spacing: .08em; }
+.detox { margin-top: 10px; display: flex; justify-content: flex-end; }
+.seg { display: flex; padding: 4px; border-radius: 12px; background: rgba(255,255,255,.18); margin-top: 12px; }
+.seg span { flex: 1; min-height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 9px; font-size: 13px; font-weight: 700; }
+.seg span.on { background: var(--bianco); color: var(--z-nutrition-scuro); }
+.corpo { padding: 0 16px 18px; }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; align-items: center; }
+.sez span { font-weight: 600; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > :first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; font-size: 12px; color: var(--t2); margin-top: 2px; }
+.chev { color: var(--t3); font-size: 20px; line-height: 1; }
+
+/* il giorno: anello, consumate, zona, macro in una riga */
+.cal { padding: 16px 14px 14px; display: flex; align-items: center; gap: 16px; }
+.anello { width: 112px; height: 112px; border-radius: 50%; border: 10px solid var(--s3); border-top-color: var(--err); border-right-color: var(--err); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 24px var(--font-mono); } .anello small { font: 600 9px var(--font-mono); letter-spacing: .1em; color: var(--t2); }
+.cal .dati { flex: 1; font-size: 13px; color: var(--t2); line-height: 1.5; }
+.cal .dati b { color: var(--t1); font-family: var(--font-mono); }
+.zona { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 3px 9px; border-radius: 8px; background: var(--err-lt); color: var(--err); font: 700 11px var(--font-mono); letter-spacing: .08em; }
+.macro { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--s3); }
+.macro div { padding: 10px 12px 12px; border-left: 1px solid var(--s3); }
+.macro div:first-child { border-left: 0; }
+.macro em { font: 700 10px var(--font-mono); letter-spacing: .1em; font-style: normal; }
+.macro b { display: block; font: 700 22px var(--font-mono); margin-top: 2px; } .macro b small { font-size: 11px; font-weight: 600; color: var(--t2); }
+.macro span { font: 600 11px var(--font-mono); color: var(--t2); }
+.macro i { display: block; height: 4px; border-radius: 4px; background: var(--s3); margin-top: 6px; overflow: hidden; }
+.macro i::after { content: ''; display: block; height: 100%; width: var(--p); background: var(--c); }
+.principale { display: block; width: 100%; min-height: 52px; border: 0; border-radius: 16px; background: var(--z-nutrition); color: var(--z-testo); font: 700 17px var(--font-sans); margin-top: 16px; }
+.secondario { display: block; width: 100%; min-height: 48px; border: 0; border-radius: 14px; background: var(--s3); color: var(--t1); font: 700 15px var(--font-sans); margin-top: 8px; }
+/* timeline a righe */
+.ora { font: 700 13px var(--font-mono); color: var(--t2); width: 44px; flex: none; }
+.past b { display: block; font-size: 15px; } .past em { font: 700 10px var(--font-mono); letter-spacing: .1em; font-style: normal; }
+.kcal { font: 700 15px var(--font-mono); } .kcal small { font-size: 10px; font-weight: 600; color: var(--t2); }
+.mod { min-height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--acc); color: var(--acc); background: var(--s1); font: 700 13px var(--font-sans); display: inline-flex; align-items: center; }
+.cest { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--t2); font-size: 16px; }
+/* coach */
+.coach { background: var(--crema); }
+.coach b { font-size: 16px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; min-width: 72px; }
+.tab svg { width: 22px; height: 22px; } .tab div.on { color: var(--z-nutrition-scuro); background: var(--z-nutrition-velo); }
+.peso { padding: 16px 14px 12px; }
+.peso .num { display: flex; align-items: baseline; gap: 8px; }
+.peso .num b { font: 700 40px var(--font-mono); } .peso .num small { font: 600 14px var(--font-mono); color: var(--t2); }
+.delta { padding: 1px 7px; border-radius: 7px; background: var(--err-lt); color: var(--err); font: 700 13px var(--font-mono); }
+.peso .quando { margin-left: auto; font: 600 12px var(--font-mono); color: var(--t2); }
+.barra { height: 6px; border-radius: 999px; background: var(--s3); margin: 10px 0 4px; }
+.campi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px 14px; border-top: 1px solid var(--s3); }
+.campi label { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--t2); display: block; margin-bottom: 6px; }
+.campo { min-height: 48px; border: 1px solid var(--b1); border-radius: 12px; padding: 0 12px; display: flex; align-items: center; font: 600 16px var(--font-mono); }
+.campo.vuoto { color: var(--t3); }
+.data { font: 600 15px var(--font-mono); border: 1px solid var(--b1); border-radius: 10px; padding: 8px 10px; }
+.zona-link { color: var(--z-body-scuro); font-weight: 700; }
+.foglio-tel { background: rgba(0,0,0,.35); padding-top: 64px; }
+.sheet { background: var(--bg); border-radius: 26px 26px 0 0; overflow: hidden; }
+.qd { width: 30px; height: 30px; border-radius: 8px; flex: none; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
+.val { font: 600 13px var(--font-mono); color: var(--acc); }
+.esci { display: block; width: 100%; min-height: 48px; border: 1px solid var(--b1); border-radius: 14px; background: var(--s1); color: var(--err); font: 700 15px var(--font-sans); margin-top: 22px; }
+.fld label { display: block; font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 6px; }
+.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.chips span { min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center; border: 1px solid var(--b1); border-radius: 12px; background: var(--s1); font-size: 13px; font-weight: 600; padding: 4px; }
+.chips span.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+.aiuto { font-size: 12px; color: var(--t2); margin: 6px 2px 0; }
+.due-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.principale.verde { background: var(--acc); }
+.x { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 1 · Impostazioni</h1>
+  <p class="intro">A sinistra la finestra vera con la veste A accesa (banco, 390 px): l'elenco e una pagina interna, «Il tuo obiettivo». A destra lo schizzo con le regole di Home, Seduta, Nutrition e Body. Stessi dati, stessi tasti, stessi passaggi; nessuna logica nuova. Le Impostazioni non sono una zona: prendono l'evergreen dell'app, che è anche il colore della Home, da cui si aprono.</p>
+  <div class="note" style="max-width:900px;margin:0 0 24px">
+    <h3>Cosa cambia e perché</h3>
+    <ol>
+      <li><b>La testata evergreen</b> (#2A7A6F, scritte bianche, 5,11:1) in cima al foglio: il titolo a 24 px e la ✕ da 44 px. Nelle pagine interne dentro c'è anche «‹ Impostazioni».</li>
+      <li><b>L'elenco come le Impostazioni dell'iPhone</b>: gruppi bianchi (oggi sono crema), titoli di sezione fuori in --t2. Ogni voce ha un quadratino del colore della sua zona: Obiettivo e Cibo, Allenamento, Salute nel viola del Body. Le voci di tutta l'app restano grigie.</li>
+      <li><b>«Esci dall'account»</b> diventa un tasto largo bianco con la scritta rossa, staccato dall'elenco.</li>
+      <li><b>Nelle pagine interne</b> le etichette sono in --t2, i campi a 16 px, le scelte a griglia alte 44 px, «Salva» a tutta larghezza in evergreen.</li>
+    </ol>
+  </div>
+  <div class="tre">
+    <div class="prima"><div class="col-tit">Prima · elenco</div><img src="prima_elenco_390.png" alt="L'elenco delle Impostazioni a veste accesa"></div>
+    <div>
+      <div class="col-tit">Dopo · elenco</div>
+      <div class="tel foglio-tel"><div class="sheet">
+        <div class="testa">
+          <div class="su"><span></span><span class="x">✕</span></div>
+          <div class="titolo" style="margin-bottom:2px">Impostazioni</div>
+        </div>
+        <div class="corpo">
+          <div class="sez">Tutti i giorni</div>
+          <div class="gruppo">
+            <div class="riga"><span class="qd" style="background:var(--z-home)">◎</span><span class="cresce">Il tuo obiettivo<small>Ricomposizione · 70 kg</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-n)">🍽</span><span class="cresce">Cibo<small>2.300 kcal · onnivoro</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-t)">⚡</span><span class="cresce">Allenamento<small>4 giorni a settimana · lbs · Tabata spento</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-g)">⏸</span><span class="cresce">Pausa<small>Nessuna pausa in programma</small></span><span class="val">Imposta ›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-b)">☀</span><span class="cresce">Come stai adesso?<small>11:00 · 15:00 · 19:00</small></span><span class="val">Cambia ›</span></div>
+          </div>
+          <div class="sez">Altro<i class="n">1</i></div>
+          <div class="gruppo">
+            <div class="riga"><span class="qd" style="background:var(--qz-b)">✚</span><span class="cresce">Salute ed esami del sangue<small>Note ed esami</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-g)">👤</span><span class="cresce">Profilo e account<small>Ignazio</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-g)">🔒</span><span class="cresce">I tuoi dati e privacy<small>Scarica, dove vanno, elimina account</small></span><span class="chev">›</span></div>
+            <div class="riga"><span class="qd" style="background:var(--qz-g)">ℹ</span><span class="cresce">Crediti</span><span class="chev">›</span></div>
+          </div>
+          <button class="esci">Esci dall'account</button>
+        </div>
+      </div></div>
+    </div>
+    <div class="note">
+      <h3>Da snellire nel giro 2</h3>
+      <ol>
+        <li>«Veste nuova» in Crediti: ora la veste è accesa per tutti, l'interruttore serve solo a spegnerla. Si può togliere quando la veste di prima non serve più.</li>
+        <li>In «Il tuo obiettivo» il campo «Peso di oggi» è spento («Si cambia da Pesati ora»): basta il valore scritto, senza il campo.</li>
+      </ol>
+      <h3>Quando si costruisce</h3>
+      Tutto dietro html.v5: a veste spenta la finestra resta identica al pixel. La testata va nell'HTML della finestra solo a veste accesa (zona-tracker.html e impostazioni.js, setVai cambia il titolo come oggi); quadratini, gruppi, «Esci» e pagine interne con lo stile. Nessun salvataggio toccato.
+    </div>
+  </div>
+  <div class="tre" style="margin-top:34px">
+    <div class="prima"><div class="col-tit">Prima · una pagina interna</div><img src="prima_obiettivo_390.png" alt="Il tuo obiettivo a veste accesa"></div>
+    <div>
+      <div class="col-tit">Dopo · una pagina interna</div>
+      <div class="tel foglio-tel"><div class="sheet">
+        <div class="testa">
+          <div class="su"><span class="sopra" style="font-family:var(--font-sans);text-transform:none;letter-spacing:0;font-size:15px">‹ Impostazioni</span><span class="x">✕</span></div>
+          <div class="titolo" style="margin-bottom:2px">Il tuo obiettivo</div>
+        </div>
+        <div class="corpo">
+          <div class="due-col fld" style="margin-top:22px">
+            <div><label>Peso di oggi (kg) <i class="n">2</i></label><div class="campo vuoto">es. 75</div></div>
+            <div><label>Peso obiettivo (kg)</label><div class="campo vuoto" style="background:var(--s1)">es. 70</div></div>
+          </div>
+          <div class="aiuto">Il peso di oggi si cambia da «Pesati ora».</div>
+          <div class="sez">Obiettivo</div>
+          <div class="chips"><span>Dimagrimento</span><span class="on">Ricomposizione</span><span>Ipertrofia</span><span>Forza &amp; Performance</span><span>Longevità</span><span>Mantenimento</span></div>
+          <div class="sez">Livello attività</div>
+          <div class="campo" style="background:var(--s1);font-family:var(--font-sans)">Sedentario</div>
+          <button class="principale verde">Salva</button>
+        </div>
+      </div></div>
+    </div>
+    <div></div>
+  </div>
+</div>
+</body>
+</html>
