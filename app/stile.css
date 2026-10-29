@@ -2856,5 +2856,5 @@ html.v5 #page-oggi .meal-card-v2 div[onclick^="toggleMealCard"] > div:first-chil
    leggibile sul chiaro (--macro-c per il giallo dei carboidrati); l'ora sulla barretta con il suo fondo */
 html.v5 #page-oggi :is(.oggi-v3-donut-label,.oggi-v3-macro-value-unit,.oggi-v3-macro-sub,.oggi-v3-timeline-sub,.oggi-v3-zona-stats,.meal-delete-btn,[style*="color:var(--t3)"]){color:var(--t2)!important;}
 html.v5 #page-oggi .oggi-v3-zona-stats span{opacity:1!important;}
-html.v5 #page-oggi [style*="color:#C4880A"]{color:var(--macro-c)!important;}
+html.v5 #page-oggi [style*="C4880A"]{color:var(--macro-c)!important;}
 html.v5 .n5-testa > div[style*="opacity:0.5"] span{padding:0 4px;border-radius:4px;background:var(--z-nutrition);}
