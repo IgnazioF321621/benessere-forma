@@ -85,7 +85,7 @@ Erano scritti a mano dentro le regole. I valori sono **identici a prima**, uno p
 
 ## La veste nuova (Giro 1, dal 29 ottobre 2026)
 
-Scelte di Ignazio sul Passo 0 (tavola in [`docs/prototipi/passo0/`](prototipi/passo0/index.html)): **veste A**, colori pieni con le scritte bianche; **campi di testo a 16 px**; si costruisce dietro un interruttore, una pagina alla volta.
+Scelte di Ignazio sul Passo 0 (tavola in `docs/prototipi/passo0/` sul ramo `claude/giro1-seduta-disegno`, con il disegno della Seduta in `docs/prototipi/giro1_seduta/`): **veste A**, colori pieni con le scritte bianche; **campi di testo a 16 px**; si costruisce dietro un interruttore, una pagina alla volta.
 
 - **L'interruttore è la classe `v5` su `<html>`.** La mette lo script in testa a `zona-tracker.html` se sul telefono c'è `zt_v5 = 1`; `?v5=1` nell'indirizzo la accende e la ricorda, `?v5=0` la spegne; in Impostazioni › Crediti c'è «Veste nuova» (`vesteNuova()`). Spenta, l'app è quella di prima al pixel.
 - **Ogni regola della veste comincia con `html.v5`** (l'interruttore delle Impostazioni con `.set-veste`). `prova_stile.js` le mette da parte e vuole tutto il resto uguale a prima; `prova_veste.js` prova l'interruttore e, in Chrome, la Home accesa (`FOTO=` tiene le foto a 390 px).
