@@ -23,6 +23,7 @@ var ZTQuadro = (function(){
 
   var WP_VERSION = 2;
   var WP_PARTIAL_KCAL_RATIO = 0.75;   // days_under_75: un giorno sotto il 75% del target (dato, non etichetta)
+  var WP_FASCIA = [0.9, 1.1];         // un giorno è «in obiettivo» con le kcal fra il 90% e il 110% del target
   var WP_PARTIAL_DAYS_RATIO = 0.5;    // metà o più dei giorni registrati con meno di 2 pasti principali → "parziale"
   var WP_MAIN_SLOTS = ['colazione', 'pranzo', 'cena'];
   var WP_MAIN_MIN = 2;                // un giorno con meno di 2 pasti principali su 3 è un giorno parziale
@@ -300,8 +301,8 @@ var ZTQuadro = (function(){
       var tk = Number((c.target && c.target.kcal) || profile.target_kcal) || null;
       var tp = Number((c.target && c.target.protein) || profile.target_protein) || null;
       var kcalAvg = mean(days.map(function(d){ return d.kcal; }));
-      var dentro = tk ? days.filter(function(d){ return d.kcal >= tk * 0.9 && d.kcal <= tk * 1.1; }).length : null;
-      var sotto  = tk ? days.filter(function(d){ return d.kcal < tk * WP_PARTIAL_KCAL_RATIO; }).length : 0;
+      var dentro = tk ? days.filter(function(d){ return inFascia(d.kcal, tk); }).length : null;
+      var sotto  = tk ? days.filter(function(d){ return giornoScarso(d.kcal, tk); }).length : 0;
       var parziali = days.filter(function(d){ return d.principali < WP_MAIN_MIN; }).length;
       nutrition = {
         kcal_target:      tk,
@@ -464,8 +465,21 @@ var ZTQuadro = (function(){
     };
   }
 
+  // ── La fascia delle calorie, una regola sola (la usano il quadro e i widget della Home) ──
+  // inFascia: le kcal di un giorno (o la media) dentro il 90–110% del target. giornoScarso: sotto il 75% (days_under_75).
+  // parolaSettimana: la media della settimana rispetto alla stessa fascia, in una parola («In linea», «Sopra», «Sotto»);
+  // null senza target o senza media.
+  function inFascia(kcal, target){ return target > 0 && kcal >= target * WP_FASCIA[0] && kcal <= target * WP_FASCIA[1]; }
+  function giornoScarso(kcal, target){ return target > 0 && kcal < target * WP_PARTIAL_KCAL_RATIO; }
+  function parolaSettimana(kcalAvg, target){
+    if(!(target > 0) || kcalAvg == null || !isFinite(kcalAvg)) return null;
+    if(kcalAvg < target * WP_FASCIA[0]) return 'Sotto';
+    if(kcalAvg > target * WP_FASCIA[1]) return 'Sopra';
+    return 'In linea';
+  }
+
   return {
-    WP_VERSION: WP_VERSION, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
+    WP_VERSION: WP_VERSION, WP_FASCIA: WP_FASCIA, inFascia: inFascia, giornoScarso: giornoScarso, parolaSettimana: parolaSettimana, WP_MAIN_SLOTS: WP_MAIN_SLOTS, BLOCK_DAYS: BLOCK_DAYS, CHECK_RECENT_DAYS: CHECK_RECENT_DAYS,
     makeClock: makeClock, addDays: addDays, mondayOf: mondayOf, weighInsByDay: weighInsByDay,
     workPerGiroForCycle: workPerGiroForCycle, cycleWeekInfo: cycleWeekInfo, blockCheckReminder: blockCheckReminder,
     pausaInfo: pausaInfo, pausaGiorniNel: pausaGiorniNel, pausaModuli: pausaModuli, pausaAttivaIl: pausaAttivaIl, PAUSA_MODULI: PAUSA_MODULI,

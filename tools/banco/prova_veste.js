@@ -106,6 +106,10 @@ function fotografa(win){
     // accesa: la classe come la mette lo script in testa, poi la Home ridisegnata (la settimana a righe la disegna home.js)
     b.win.document.documentElement.classList.add('v5'); b.win.renderHomeV2();
     pagine[sc] = fotografa(b.win);
+    if(sc === 'base'){   // lo stesso giorno, con la seduta proposta «riposo»: l'anello dentro grigio pieno
+      const hd = b.win.eval('ST').trainHomeData;
+      if(hd){ const prima = { ...hd }; Object.assign(hd, { nextSession:'rest', notStarted:false, inProgress:false, doneToday:false }); b.win.renderHomeV2(); pagine.riposo = fotografa(b.win); Object.assign(hd, prima); }
+    }
     b.win.close();
   }
   // contrasto WCAG di ogni testo dei tre riquadri pieni, col fondo vero (il primo antenato con un fondo non trasparente)
@@ -128,8 +132,16 @@ trainW:(document.querySelector('#home-card-training')||{}).offsetWidth||0,riga:(
 testi:tutti.length,peggiori:tutti.filter(x=>x.c<4.5),pesata:di('.home-v2-body-pesata'),registra:di('.home-v2-nutr-btn'),oltre:di('.home-v2-donut-num[style*="B45309"]'),
 macroOltre:document.querySelectorAll('.home-v2-macro-value[style*="B45309"]').length,macroOltreC:di('.home-v2-macro-value[style*="B45309"]'),delta:di('.home-v2-body-delta'),
 deltaColore:g('.home-v2-body-delta','color'),
-ordine:(()=>{const tutti=[...document.querySelectorAll('*')];return ['.home-v2-header','.sez5','.home-v2-action','.home-v2-card[onclick*="showPage(\\'oggi\\')"]','#home-card-training','.cs-card','.cp-card','.wp5'].map(x=>{const e=document.querySelector(x);return e?tutti.indexOf(e):null;});})(),
+ordine:(()=>{const tutti=[...document.querySelectorAll('*')];return ['.home-v2-header','.w5-anelli','.w5-settimana','.w5-cerchi','.home-v2-action','.w5-gruppo','.cs-card','.cp-card'].map(x=>{const e=document.querySelector(x);return e?tutti.indexOf(e):null;});})(),
 sez5:[...document.querySelectorAll('.sez5 > span:first-child')].map(e=>e.textContent.trim()),
+valori:[...document.querySelectorAll('.w5-valore')].map(e=>e.textContent.replace(/\\s+/g,' ').trim()),kcalColore:g('.w5-valore b','color'),
+archi:[...document.querySelectorAll('.w5-anelli .w5-arco')].map(e=>e.getAttribute('class').replace('w5-arco ','')),
+barre:document.querySelectorAll('.w5-barra').length,esclamativi:document.querySelectorAll('.w5-barra em').length,parola:(document.querySelector('.w5-parola b')||{}).textContent||null,
+cerchi:[...document.querySelectorAll('.w5-cerchio b')].map(e=>e.textContent.trim()),
+testiW:[...document.querySelectorAll('.w5-card,.w5-gruppo')].flatMap(c=>[...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null&&!/^[\\p{Extended_Pictographic}\\uFE0F\\s]+$/u.test(e.textContent)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})).filter(x=>x.c<4.5),
+tastiW:[...document.querySelectorAll('.w5-card button,.w5-gruppo button')].filter(e=>e.offsetParent!==null).map(e=>({t:e.textContent.trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)})).filter(x=>x.h<44),
+pesataW:(()=>{const e=[...document.querySelectorAll('.w5-azione')].find(x=>/Pesata/.test(x.textContent));return e?{c:Math.round(contrasto(e)*100)/100,h:Math.round(e.getBoundingClientRect().height)}:null;})(),
+registraW:di('.w5-card .home-v2-nutr-btn'),avvisoW:di('.w5-card .home-v2-nutr-avviso'),
 testaAzione:g('.home-v2-action-head','display'),fatto:(()=>{const e=[...document.querySelectorAll('.cs-link')].find(x=>/Fatto/.test(x.textContent));return e?Math.round(e.getBoundingClientRect().height):null;})(),
 wp5:document.querySelectorAll('.wp5-riga').length,freccia:di('.wp5-freccia'),wpVecchia:!!document.querySelector('.wp-hero-card'),
 etichette:[...document.querySelectorAll('.sez5 span,.cp-head > *,.wp5-sez,.wp5-sez span')].map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),
@@ -142,7 +154,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     // a 390 px dentro un riquadro: Chrome senza testa non scende sotto i 500 px di finestra
     fs.writeFileSync(path.join(radice, '_' + nome + '.html'), `<!doctype html><body style="margin:0"><iframe src="${nome}.html" style="border:0;width:390px;height:2400px"></iframe>`);
   };
-  scrivi('spenta', pagine.spenta, false); scrivi('accesa', pagine.base, false); scrivi('accesa_su', pagine.su, false); scrivi('accesa_giu', pagine.giu, false);
+  scrivi('spenta', pagine.spenta, false); scrivi('accesa', pagine.base, false); scrivi('accesa_su', pagine.su, false); scrivi('accesa_giu', pagine.giu, false); if(pagine.riposo) scrivi('accesa_riposo', pagine.riposo, false);
   const chrome = (args) => new Promise(ok => execFile(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...args],
     { maxBuffer: 64 * 1024 * 1024, timeout: 90000 }, (err, out) => ok(String(out || ''))));
   const misura = async (nome) => {
@@ -150,44 +162,43 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null;
   };
   try {
-    const s = await misura('spenta'), a = await misura('accesa'), su = await misura('accesa_su'), giu = await misura('accesa_giu');
+    const s = await misura('spenta'), a = await misura('accesa'), su = await misura('accesa_su'), giu = await misura('accesa_giu'), rip = pagine.riposo ? await misura('accesa_riposo') : null;
     atteso('Chrome ha risposto per le quattro pagine', [!!s, !!a, !!su, !!giu], [true, true, true, true]);
     if(s && a && su && giu){
       atteso('spenta: niente testata colorata (la Home di prima)', s.testa, 'rgba(0, 0, 0, 0)');
       atteso('accesa: la barra in basso c\'è, quella in alto no', [a.barra, a.nav], ['flex', 'none']);
       atteso('accesa: testata della zona Home (--z-home #2A7A6F)', a.testa, 'rgb(42, 122, 111)');
-      atteso('accesa: riquadri Nutrition, Training, Body nei colori pieni delle zone', [a.nutr, a.train, a.body], ['rgb(163, 95, 0)', 'rgb(46, 109, 164)', 'rgb(106, 85, 160)']);
+      atteso('widget: i tre anelli del giorno, con le kcal e le proteine già mangiate', [a.archi.includes('w5-kcal'), a.archi.includes('w5-prot'), a.valori.length], [true, true, 3]);
       atteso('accesa: voce aperta della barra nello scuro di Home, le altre in --t2', [a.voce, a.spenta], ['rgb(31, 92, 83)', 'rgb(85, 80, 71)']);
-      atteso('accesa: Training e Body affiancati (metà riga ciascuno)', a.trainW > a.riga * 0.4 && a.trainW < a.riga * 0.55, true);
       atteso('accesa: nessuno scorrimento in orizzontale', a.largo <= a.finestra, true);
       atteso(`accesa: nessun campo sotto i 16 px (spenta: ${s.campi})`, a.campi, 0);
       atteso('accesa: l\'insetto del feedback sopra la barra (72 px dal fondo)', a.insetto, '72px');
-      for(const [nome, m] of [['dentro l\'obiettivo', a], ['oltre l\'obiettivo, peso su', su], ['peso giù', giu]])
-        atteso(`accesa, ${nome}: ogni testo della testata e dei riquadri pieni almeno 4,5:1 (con l'opacità) (${m.testi} testi)`, m.peggiori, []);
-      atteso('pesata mancante: «+ pesata di oggi» leggibile (≥ 4,5:1)', su.pesata >= 4.5, true);
-      atteso('pasto suggerito: «Registra» leggibile (≥ 4,5:1)', su.registra >= 4.5, true);
-      atteso('oltre l\'obiettivo: kcal nel colore «oltre» (--over), leggibile', [su.oltreColore, su.oltre >= 4.5], ['rgb(180, 83, 9)', true]);
-      atteso('oltre l\'obiettivo: i macro oltre nel colore «oltre», leggibili', [su.macroOltre > 0, su.macroOltreC >= 4.5], [true, true]);
-      atteso('oltre l\'obiettivo: l\'anello pieno diventa tratteggiato', su.anello, '5px, 4px');
-      atteso('dentro l\'obiettivo: il numero delle kcal resta bianco, l\'anello non è tratteggiato', [a.oltreColore, a.anello !== '5px, 4px'], ['rgb(255, 255, 255)', true]);
+      for(const [nome, m] of [['dentro l\'obiettivo', a], ['oltre l\'obiettivo, peso su', su], ['peso giù', giu]]){
+        atteso(`widget, ${nome}: ogni testo dei widget e della riga Body almeno 4,5:1`, m.testiW, []);
+        atteso(`widget, ${nome}: ogni tasto dei widget alto almeno 44 px`, m.tastiW, []);
+      }
+      atteso('widget: la settimana ha 7 barre e la parola della media', [a.barre, ['In linea', 'Sopra', 'Sotto'].includes(a.parola)], [7, true]);
+      atteso('widget: il «!» sui giorni finiti sotto il 75% (da lunedì a sabato a 650 kcal su 2.300)', a.esclamativi, 6);
+      atteso('widget: quattro cerchi (allenamenti, pesate, giorni in obiettivo, integratori)', a.cerchi.length, 4);
+      atteso('widget, oltre l\'obiettivo: il numero delle kcal nel colore «oltre», e la parola «oltre»', [su.kcalColore, /oltre/.test(su.valori[0])], ['rgb(180, 83, 9)', true]);
+      atteso('widget, dentro l\'obiettivo: il numero delle kcal nell\'ambra della zona', a.kcalColore, 'rgb(163, 95, 0)');
+      atteso('widget: senza pesata di oggi c\'è «+ Pesata di oggi», leggibile e alto almeno 44 px', su.pesataW && [su.pesataW.c >= 4.5, su.pesataW.h >= 44], [true, true]);
+      atteso('widget: il pasto dal piano («Registra») resta, leggibile', su.registraW >= 4.5, true);
+      atteso('widget: «Ultimo pasto N h fa» resta, leggibile', su.avvisoW >= 4.5, true);
       atteso('peso che sale via dall\'obiettivo: rosso (--err), leggibile', [su.deltaColore, su.delta >= 4.5], ['rgb(184, 76, 42)', true]);
       atteso('peso che scende verso l\'obiettivo: verde (--acc), leggibile', [giu.deltaColore, giu.delta >= 4.5], ['rgb(42, 122, 111)', true]);
-      atteso('«Ultimo pasto N h fa» nel colore «oltre», leggibile', su.avviso >= 4.5, true);
-      // Giro 1 della Home: l'ordine nuovo e la settimana a righe
+      atteso('widget, giorno di riposo: l\'anello dentro grigio pieno e la parola «riposo»', rip && [rip.archi.includes('w5-riposo'), rip.valori.some(v => /riposo/.test(v))], [true, true]);
       const crescente = (v) => v.every(x => x != null) && v.every((x, i) => !i || x > v[i - 1]);
-      atteso('giro 1, ordine nel DOM (quello che leggono tastiera e VoiceOver): testata · Adesso · Nutrition · Training · Come stai · Pirsi · settimana', crescente(a.ordine), true);
-      atteso('giro 1, spenta: l\'ordine di prima (Come stai prima della prossima azione), niente titoli nuovi, la settimana a card', [s.ordine[5] < s.ordine[2], s.ordine[1], s.wp5, s.wpVecchia], [true, null, 0, true]);
-      atteso('giro 1, accesa: i titoli di sezione scritti nell\'HTML', a.sez5, ['Adesso', 'Le tue zone', 'Come stai oggi']);
-      atteso('giro 1, accesa: «PROSSIMA AZIONE» dentro il riquadro non c\'è più (non si legge due volte)', a.testaAzione, 'none');
-      atteso('giro 1, accesa: la settimana a righe (peso, obiettivo, sessioni, kcal), la card di prima no', [a.wp5, a.wpVecchia], [4, false]);
-      atteso(`giro 1, accesa: ogni pezzo dei titoli di sezione (${a.etichette.length}, anche le date e l'ora) almeno 4,5:1`, a.etichette.filter(x => x.c < 4.5), []);
+      atteso('widget, ordine nel DOM: testata · anelli · settimana · cerchi · Adesso · Body · Come stai · Pirsi', crescente(a.ordine), true);
+      atteso('spenta: l\'ordine di prima (Come stai prima della prossima azione), niente widget', [s.ordine[6] < s.ordine[4], s.ordine[1], s.barre], [true, null, 0]);
+      atteso('accesa: i titoli di sezione scritti nell\'HTML', a.sez5, ['Oggi', 'La tua settimana', 'I tuoi obiettivi della settimana', 'Adesso', 'Body', 'Come stai oggi']);
+      atteso('accesa: «PROSSIMA AZIONE» dentro il riquadro non c\'è più (non si legge due volte)', a.testaAzione, 'none');
+      atteso(`accesa: ogni pezzo dei titoli di sezione (${a.etichette.length}, anche le date e l'ora) almeno 4,5:1`, a.etichette.filter(x => x.c < 4.5), []);
       atteso('giro 1, Come stai compilato: «Fatto» alto almeno 44 px', giu.fatto >= 44, true);
-      atteso('giro 1, accesa: la freccia della settimana è un segno, non un testo: almeno 3:1', a.freccia >= 3, true);
-      atteso(`giro 1, accesa: ogni testo della settimana a righe almeno 4,5:1 (${a.righe5.length} testi)`, a.righe5.filter(x => x.c < 4.5), []);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
-      for(const n of ['spenta', 'accesa', 'accesa_su', 'accesa_giu']){
+      for(const n of ['spenta', 'accesa', 'accesa_su', 'accesa_giu', 'accesa_riposo']){
         const f = path.join(process.env.FOTO, `home_${n}_390.png`);
         await chrome(['--window-size=600,2400', '--screenshot=' + f, 'file://' + path.join(radice, '_' + n + '.html')]);
         console.log('  foto  ' + f);
