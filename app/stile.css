@@ -2930,3 +2930,57 @@ html.v5 #page-integratori .int-v3-cta.primary .int-v3-cta-tag{color:var(--bianco
 html.v5 #page-training:has(.t5-pagina) :is([style*="255,255,255,.7)"],[style*="255,255,255,.75)"],[style*="255,255,255,.85)"],[style*="255,255,255,.9)"]){color:var(--z-testo)!important;}
 html.v5 #page-training:has(.t5-pagina) span[style*="6FA99B;text-transform"]{color:var(--acc-scuro)!important;}
 html.v5 #page-training:has(.t5-pagina) button[onclick="markRestChosen();"]{background:var(--t2)!important;}
+/* ── La Home come i widget dell'iPhone (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/home_widget/) ──
+   L'HTML lo disegna home.js solo con html.v5 (_anelliV5, _barreSettimanaV5, _cerchiSettimanaV5, la riga del Body); qui l'aspetto. */
+html.v5 .w5-card{background:var(--s1);border-radius:18px;padding:16px;}
+html.v5 :is(.w5-binario,.w5-arco){fill:none;}
+html.v5 .w5-arco{stroke-linecap:round;}
+html.v5 .w5-binario.w5-kcal{stroke:var(--z-nutrition-velo);} html.v5 .w5-arco.w5-kcal{stroke:var(--z-nutrition);}
+html.v5 .w5-binario.w5-prot{stroke:var(--z-home-velo);} html.v5 .w5-arco.w5-prot{stroke:var(--z-home);}
+html.v5 .w5-binario.w5-serie{stroke:var(--z-training-velo);} html.v5 .w5-arco.w5-serie{stroke:var(--z-training);}
+html.v5 .w5-binario.w5-peso{stroke:var(--z-body-velo);} html.v5 .w5-arco.w5-peso{stroke:var(--z-body);}
+html.v5 .w5-binario.w5-riposo{stroke:var(--s3);} html.v5 .w5-arco.w5-riposo{stroke:var(--b2);stroke-linecap:butt;}
+/* gli anelli del giorno, i tre numeri accanto (ognuno apre la sua pagina) */
+html.v5 .w5-anelli{display:flex;align-items:center;gap:14px;}
+html.v5 .w5-anelli svg{width:132px;height:132px;flex-shrink:0;}
+html.v5 .w5-valori{flex:1;min-width:0;display:flex;flex-direction:column;}
+html.v5 .w5-valore{display:block;width:100%;min-height:44px;padding:3px 0;border:0;background:none;text-align:left;cursor:pointer;line-height:1.1;}
+html.v5 .w5-valore b{font-family:var(--font-mono);font-size:22px;font-weight:700;letter-spacing:-.5px;}
+html.v5 .w5-valore b small{font-size:13px;font-weight:600;}
+html.v5 .w5-valore span{display:block;margin-top:2px;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);}
+html.v5 :is(.w5-num-kcal){color:var(--z-nutrition);}
+html.v5 :is(.w5-num-prot){color:var(--z-home);}
+html.v5 :is(.w5-num-serie){color:var(--z-training);}
+html.v5 :is(.w5-num-peso){color:var(--z-body);}
+html.v5 .w5-num-oltre{color:var(--over);}
+html.v5 .w5-card .home-v2-nutr-extra{margin-top:12px;padding-top:10px;border-top:1px solid var(--s3);}
+html.v5 .w5-card .home-v2-nutr-btn{min-height:44px;}
+html.v5 .w5-card .home-v2-nutr-eb{color:var(--t2);}
+html.v5 .w5-azione{border-top:1px solid var(--s3);font-weight:700;color:var(--z-body-scuro);}
+/* la settimana a barre: la fascia del giorno in obiettivo, il «!» sotto il 75%, la parola della media */
+html.v5 .w5-settimana{cursor:pointer;}
+html.v5 .w5-barre{position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:112px;margin-top:18px;}
+html.v5 .w5-fascia{position:absolute;left:0;right:0;background:var(--z-nutrition-velo);border-top:1px dashed var(--z-nutrition);}
+html.v5 .w5-barra{position:relative;display:flex;align-items:flex-end;justify-content:center;height:100%;}
+html.v5 .w5-barra i{display:block;width:100%;max-width:30px;border-radius:8px 8px 4px 4px;background:var(--z-nutrition);}
+html.v5 .w5-barra.oggi i{opacity:.55;}
+html.v5 .w5-barra em{position:absolute;left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:13px;font-weight:700;font-style:normal;color:var(--over);}
+html.v5 .w5-giorni{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:6px;text-align:center;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--t2);}
+html.v5 .w5-giorni .oggi{font-weight:800;color:var(--t1);}
+html.v5 .w5-parola{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--s3);}
+html.v5 .w5-parola b{font-family:var(--font-sans);font-size:28px;font-weight:800;letter-spacing:-.5px;}
+html.v5 .w5-parola b.w5-fuori{color:var(--over);} html.v5 .w5-parola b.w5-in-linea{color:var(--z-home);}
+html.v5 .w5-parola span{font-family:var(--font-mono);font-size:12px;font-weight:600;line-height:1.5;color:var(--t2);text-align:right;}
+/* i quattro cerchi a batteria */
+html.v5 .w5-cerchi{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;}
+html.v5 .w5-cerchio svg{display:block;width:68px;height:68px;margin:0 auto;}
+html.v5 .w5-cerchio b{display:block;margin-top:6px;font-family:var(--font-mono);font-size:17px;font-weight:700;}
+html.v5 .w5-cerchio span{display:block;margin-top:2px;font-family:var(--font-mono);font-size:10px;font-weight:600;line-height:1.3;color:var(--t2);}
+/* la riga del Body */
+html.v5 .w5-gruppo{background:var(--s1);border-radius:14px;overflow:hidden;}
+html.v5 .w5-riga{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px;border:0;background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);font-size:15px;color:var(--t1);}
+html.v5 .w5-riga-testo{flex:1;min-width:0;}
+html.v5 .w5-riga small{display:block;margin-top:2px;font-size:12px;color:var(--t2);}
+html.v5 .w5-riga-val{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--z-body);text-align:right;}
+html.v5 .w5-riga-val small [style*="color:var(--t3)"]{color:var(--t2)!important;}
+html.v5 .w5-freccia{font-size:20px;color:var(--t2);}

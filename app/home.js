@@ -1226,6 +1226,98 @@ function _daQuando(data){
   return (g === 8 || g === 11 ? "dall'" : 'dal ') + g + ' ' + ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][d.getMonth()];
 }
 
+// ── La Home come i widget dell'iPhone (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/home_widget/), solo con html.v5 ──
+// Solo dati già in memoria: dayTotals e ST.TARGET (anelli), lo storico dei giorni (barre), il quadro della settimana (parola e cerchi),
+// le serie di oggi e i presi. Nessuna lettura e nessuna scrittura nuove.
+
+// Un anello in SVG: la parte piena è la quota (0…1), il resto è il binario. Le classi danno i colori (app/stile.css).
+function _w5Anello(r, quota, classe, spessore){
+  const C = 2 * Math.PI * r, q = Math.max(0, Math.min(1, quota || 0));
+  return `<circle class="w5-binario ${classe}" cx="50%" cy="50%" r="${r}" stroke-width="${spessore}"/>`
+    + (q > 0 ? `<circle class="w5-arco ${classe}" cx="50%" cy="50%" r="${r}" stroke-width="${spessore}" stroke-dasharray="${(C * q).toFixed(1)} ${C.toFixed(1)}"/>` : '');
+}
+// L'anello delle serie dagli stessi stati della card Training: la seduta in corso o fatta oggi, se no quella proposta.
+// Riposo e Recovery Day: anello grigio pieno. Il tocco è quello della card (apre la seduta).
+function _anelloSerieV5(hd, tocco){
+  if(hd === null || hd === undefined) return { testo:'sto caricando', tocco };
+  if(hd.errore) return { testo:'non riesco a leggere', tocco };
+  const sid = (hd.inProgress || hd.doneToday) ? hd.lastSession : (hd.notStarted ? 'upperA' : hd.nextSession);
+  if(!sid || /^rest/.test(sid)) return { riposo:true, testo:'riposo', tocco };
+  if(/^recovery/i.test(sid)) return { riposo:true, testo:'recupero', tocco };
+  const sess = getTrainingSession(sid);
+  if(!sess) return { testo:'—', tocco };
+  const tot = (sess.exercises || []).reduce((a, e) => a + (Number(e.sets) || 0), 0);
+  const oggi = todayKey();
+  const fatte = Object.keys(ST.trainLoggedSets || {}).filter(k => k.startsWith(sid + '_') && k.endsWith('_' + oggi)).length;
+  return { fatte, tot, nome: sess.name, tocco };
+}
+function _anelliV5(cons, target, an){
+  const kq = target.kcal ? cons.kcal / target.kcal : 0, pq = target.protein ? cons.protein / target.protein : 0;
+  const sq = an.riposo ? 1 : (an.tot ? (an.fatte || 0) / an.tot : 0);
+  const pct = (q) => `${Math.round(q * 100)}%`;
+  const oltre = target.kcal > 0 && cons.kcal > target.kcal;   // oltre l'obiettivo: il numero nel colore «oltre», come la card di prima
+  const serie = an.riposo
+    ? `<b class="w5-num-serie">${an.testo}</b><span>allenamento · oggi</span>`
+    : an.tot != null
+      ? `<b class="w5-num-serie">${an.fatte}<small>/${an.tot} serie</small></b><span>${esc(an.nome)} · ${an.fatte >= an.tot ? 'fatta' : an.fatte ? 'in corso' : 'da fare'}</span>`
+      : `<b class="w5-num-serie">—</b><span>allenamento · ${an.testo}</span>`;
+  return `<div class="w5-card"><div class="w5-anelli">
+      <svg viewBox="0 0 132 132" aria-hidden="true"><g transform="rotate(-90 66 66)">
+        ${_w5Anello(58, kq, 'w5-kcal', 13)}${_w5Anello(42, pq, 'w5-prot', 13)}${_w5Anello(26, sq, an.riposo ? 'w5-riposo' : 'w5-serie', 13)}
+      </g></svg>
+      <div class="w5-valori">
+        <button class="w5-valore" onclick="showPage('oggi')"><b class="${oltre ? 'w5-num-oltre' : 'w5-num-kcal'}">${fmtNum(Math.round(cons.kcal))}<small>/${fmtNum(target.kcal)}</small></b><span>kcal · ${oltre ? 'oltre · ' : ''}${pct(kq)}</span></button>
+        <button class="w5-valore" onclick="showPage('oggi')"><b class="w5-num-prot">${fmtNum(Math.round(cons.protein))}<small>/${fmtNum(target.protein)} g</small></b><span>proteine · ${pct(pq)}</span></button>
+        <button class="w5-valore" onclick="${an.tocco}">${serie}</button>
+      </div>
+    </div>${_nutrExtraHTML()}</div>`;
+}
+// La settimana a barre: le kcal di ogni giorno registrato (da lunedì a oggi) rispetto all'obiettivo, la fascia del giorno in obiettivo,
+// il «!» sotto il 75% (giornoScarso, solo nei giorni finiti), sotto la parola della media del quadro (parolaSettimana). Il tocco apre il quadro.
+function _barreSettimanaV5(target){
+  const lun = wpMonday(), oggi = todayKey(), tk = target.kcal, MAX = 1.2;
+  const GIORNI = ['L','M','M','G','V','S','D'];
+  const barre = GIORNI.map((g, i) => {
+    const k = wpAddDays(lun, i), dd = getDay(k);
+    const kc = k <= oggi && dd && (dd.meals || []).length ? dayTotals(dd).kcal : null;
+    const h = kc == null ? 0 : Math.min(kc / tk, MAX) / MAX * 100;
+    const scarso = kc != null && k < oggi && ZTQuadro.giornoScarso(kc, tk);
+    return `<div class="w5-barra${k === oggi ? ' oggi' : ''}" aria-label="${g} ${kc == null ? 'niente registrato' : fmtNum(Math.round(kc)) + ' kcal'}">${kc != null ? `<i style="height:${h.toFixed(1)}%"></i>` : ''}${scarso ? `<em style="bottom:${(h + 2).toFixed(1)}%">!</em>` : ''}</div>`;
+  }).join('');
+  const pic = ST.weeklyPicture && ST.weeklyPicture[lun];
+  const n = pic && pic.nutrition;
+  const parola = n ? ZTQuadro.parolaSettimana(n.kcal_avg, n.kcal_target || tk) : null;
+  const fa = ZTQuadro.WP_FASCIA;
+  return `<div class="w5-card w5-settimana" onclick="openQuadro()">
+      <div class="w5-barre"><div class="w5-fascia" style="bottom:${(fa[0] / MAX * 100).toFixed(1)}%;height:${((fa[1] - fa[0]) / MAX * 100).toFixed(1)}%"></div>${barre}</div>
+      <div class="w5-giorni">${GIORNI.map((g, i) => `<span${wpAddDays(lun, i) === oggi ? ' class="oggi"' : ''}>${g}</span>`).join('')}</div>
+      ${parola ? `<div class="w5-parola"><b class="${parola === 'In linea' ? 'w5-in-linea' : 'w5-fuori'}">${parola}</b><span>media ${fmtNum(n.kcal_avg)} kcal<br>fascia ${fmtNum(Math.round(tk * fa[0]))}–${fmtNum(Math.round(tk * fa[1]))}</span></div>` : ''}
+    </div>`;
+}
+// I quattro cerchi della settimana: allenamenti, pesate e giorni in obiettivo dal quadro; integratori presi sui giorni da lunedì a oggi
+// (presi / integratori del giorno, gli stessi di suppsDelGiorno).
+function _cerchiSettimanaV5(){
+  const lun = wpMonday(), oggi = todayKey();
+  const pic = ST.weeklyPicture && ST.weeklyPicture[lun];
+  const t = pic && pic.training, w = pic && pic.weight, n = pic && pic.nutrition;
+  let presi = 0, previsti = 0;
+  for(let i = 0; i < 7; i++){
+    const k = wpAddDays(lun, i); if(k > oggi) break;
+    const dd = getDay(k), del = suppsDelGiorno(dd), pr = (dd && dd.suppsTaken) || [];
+    previsti += del.length; presi += del.filter(s => pr.includes(s.local_id)).length;
+  }
+  const dentro = n && n.adherence_kcal != null ? Math.round(n.adherence_kcal * n.days_logged) : null;
+  const cerchi = [
+    { cl:'w5-serie', ico:'🏋️', lbl:'Allenamenti', q: t && t.sessions_planned ? t.sessions_done / t.sessions_planned : 0, v: t ? `${t.sessions_done}/${t.sessions_planned != null ? t.sessions_planned : '—'}` : '—' },
+    { cl:'w5-peso',  ico:'⚖️', lbl:'Pesate',      q: w ? (w.weight_n || 0) / 7 : 0, v: w ? `${w.weight_n || 0}/7` : '—' },
+    { cl:'w5-kcal',  ico:'🎯', lbl:'Giorni in obiettivo', q: dentro != null ? dentro / 7 : 0, v: dentro != null ? `${dentro}/7` : '—' },
+    { cl:'w5-prot',  ico:'💊', lbl:'Integratori presi', q: previsti ? presi / previsti : 0, v: previsti ? `${Math.round(presi / previsti * 100)}%` : '—' },
+  ];
+  return `<div class="w5-card w5-cerchi">${cerchi.map(c => `<div class="w5-cerchio">
+      <svg viewBox="0 0 68 68" aria-hidden="true"><g transform="rotate(-90 34 34)">${_w5Anello(29, c.q, c.cl, 7)}</g><text x="34" y="40" text-anchor="middle" font-size="18">${c.ico}</text></svg>
+      <b class="w5-num-${c.cl.slice(3)}">${c.v}</b><span>${c.lbl}</span></div>`).join('')}</div>`;
+}
+
 function renderHomeV2(){
   // Quadro settimanale aperto: la Home mostra la vista completa al posto delle card.
   if(ST.homeView === 'quadro' && _wpUsable()){
@@ -1328,6 +1420,7 @@ function _renderHomeCards(){
   // Nessun "totale assoluto" definito — si mostra la posizione nel ciclo corrente (N / 6).
   // Richiede ST.trainAllCompleted (caricato in showPage('home')).
   let trainingCard = '';
+  let anelloSerie = { testo:'nessun allenamento', tocco:"showPage('training')" };   // veste nuova: l'anello delle serie
   if(hasTraining()){
     const hd = ST.trainHomeData;
     // Fonte unica: getCycleWeekInfo() — il calcolo inline precedente aveva il
@@ -1376,6 +1469,7 @@ function _renderHomeCards(){
       if(!isRest) tocco = `apriSessioneDallaHome('${target}')`;
       stato = _statoGiornoTraining(hd);
     }
+    anelloSerie = _anelloSerieV5(hd, tocco);
     trainingCard = `
       <div class="home-v2-card" id="home-card-training" onclick="${tocco}">
         <span class="home-v2-card-dot" style="background:var(--mod-training);"></span>
@@ -1390,9 +1484,10 @@ function _renderHomeCards(){
   }
 
   // ── Card Body (peso da getWeighIns, Home 050) ──
-  let bodyCard;
+  let bodyCard, bodyRigaV5;   // veste nuova: il Body è una riga col peso (scelta di Ignazio, Home widget)
   const loadingBody = ST.bodyLogs === null || ST.bodyMeasurements === null;
   if(loadingBody){
+    bodyRigaV5 = `<div class="w5-gruppo"><button class="w5-riga" onclick="showPage('body')"><span class="w5-riga-testo">Peso<small>Caricamento…</small></span><span class="w5-freccia">›</span></button></div>`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
         <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
@@ -1434,6 +1529,7 @@ function _renderHomeCards(){
     else if(cp.daysUntil === 0) cpLabel = 'Check fisico oggi';
     else if(cp.daysUntil < 0) cpLabel = 'Check fisico a fine blocco';
     else cpLabel = `Prossimo check fisico tra ${cp.daysUntil} giorn${cp.daysUntil === 1 ? 'o' : 'i'}`;
+    bodyRigaV5 = `<div class="w5-gruppo"><button class="w5-riga" onclick="showPage('body')"><span class="w5-riga-testo">Peso<small>${cpLabel}</small></span><span class="w5-riga-val">${w != null ? `${_kgVirgola(w)} kg` : '—'}${deltaHTML ? `<small>${deltaHTML}</small>` : ''}</span><span class="w5-freccia">›</span></button>${pesataOggi ? '' : '<button class="w5-riga w5-azione" onclick="openWeighInSheet()">+ Pesata di oggi</button>'}</div>`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
         <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
@@ -1498,16 +1594,19 @@ function _renderHomeCards(){
     document.getElementById('page-home').innerHTML = `
     <div class="home-v2-wrap">
       ${testaHome}
+      ${sez('Oggi')}
+      ${_anelliV5(cons, target, anelloSerie)}
+      ${sez('La tua settimana', _wpRange(wpMonday()))}
+      ${_barreSettimanaV5(target)}
+      ${sez('I tuoi obiettivi della settimana')}
+      ${_cerchiSettimanaV5()}
       ${sez('Adesso', oraStr)}
       ${actionPanel}
-      ${sez('Le tue zone')}
-      ${nutritionCard}
-      ${trainingCard}
-      ${bodyCard}
+      ${sez('Body')}
+      ${bodyRigaV5}
       ${sez('Come stai oggi')}
       ${_comeStaiHTML()}
       ${_cpHomeCardHTML()}
-      ${_wpHomeCardHTML()}
       ${versionFooter()}
     </div>
   `;
