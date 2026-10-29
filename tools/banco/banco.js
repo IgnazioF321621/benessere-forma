@@ -235,6 +235,8 @@ function boot(tables, opts={}){
       }
       win.supabase = { createClient: () => supa };
       // opts.locale = { chiave: valore }: localStorage già pieno prima che la pagina parta (la copia locale dell'app)
+      // La veste nuova è accesa per tutti (29/10/2026): il banco parte a veste spenta, come le prove scritte prima; chi la vuole passa zt_v5:'1'
+      if(!opts.locale || !('zt_v5' in opts.locale)) win.localStorage.setItem('zt_v5', '0');
       Object.entries(opts.locale || {}).forEach(([k, v]) => win.localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)));
       // Gli intervalli della pagina (il controllo degli aggiornamenti ogni 3 minuti, Fondamenta 140) non devono
       // tenere in vita il processo: una prova senza process.exit finirebbe solo dopo 3 minuti. Timer di Node, unref.

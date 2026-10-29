@@ -74,7 +74,7 @@ function _setVeste() {
 function vesteNuova() {
   const on = !document.documentElement.classList.contains('v5');
   document.documentElement.classList.toggle('v5', on);
-  try { if(on) localStorage.setItem('zt_v5', '1'); else localStorage.removeItem('zt_v5'); } catch(e) {}
+  try { if(on) localStorage.removeItem('zt_v5'); else localStorage.setItem('zt_v5', '0'); } catch(e) {}   // accesa per tutti dal 29/10/2026: si ricorda solo lo spegnimento
   _setVeste();
   if(ST.page === 'home' && typeof renderHome === 'function') renderHome();   // la settimana cambia disegno con la veste (Giro 1 della Home)
 }
