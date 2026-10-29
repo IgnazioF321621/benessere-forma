@@ -2680,25 +2680,16 @@ html.v5 #home-card-training + .home-v2-card[onclick*="showPage('body')"] .home-v
 /* ── Giro 1 della Home (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_home/): stessi dati e stessi tasti,
    cambiano ordine, gerarchia, spazi e caratteri. Adesso · Le tue zone · Come stai oggi · Pirsi propone · La tua settimana ── */
 html.v5 .home-v2-wrap{gap:10px;}
-html.v5 .home-v2-header{order:0;padding-top:calc(env(safe-area-inset-top) + 16px);padding-bottom:18px;}
+html.v5 .home-v2-header{padding-top:calc(env(safe-area-inset-top) + 16px);padding-bottom:18px;}
 html.v5 .home-v2-greeting{font-size:24px;letter-spacing:-.5px;}
-html.v5 .home-v2-action{order:1;}
-html.v5 .home-v2-card[onclick*="showPage('oggi')"]{order:2;}
-html.v5 #home-card-training{order:3;}
-html.v5 .home-v2-card[onclick*="showPage('body')"]{order:4;}
-html.v5 .cs-card{order:5;}
-html.v5 .cp-card{order:6;}
-html.v5 .wp5{order:7;}
-html.v5 .home-v2-wrap > div:not([class]){order:8;}
-/* un solo titolo di sezione, fuori dai riquadri: mono 11 px maiuscolo, 22 px sopra */
-html.v5 :is(.home-v2-action,.home-v2-card[onclick*="showPage('oggi')"],.cs-card,.cp-card){position:relative;margin-top:32px;}
-html.v5 :is(.home-v2-action-head,.cs-testa,.cp-head){position:absolute;top:-24px;left:4px;right:4px;margin:0;}
-html.v5 :is(.home-v2-action-head,.cs-titolo,.cp-title-main,.cp-week){font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.3;text-transform:uppercase;color:var(--t2);}
-html.v5 .cp-week{font-weight:600;color:var(--t3);}
-html.v5 .home-v2-action-head span:first-child{font-size:0;letter-spacing:0;}
-html.v5 .home-v2-action-head span:first-child::after{content:'Adesso';font-size:11px;letter-spacing:.1em;}
-html.v5 .home-v2-action-head span:last-child{color:var(--t3);font-weight:600;}
-html.v5 .home-v2-card[onclick*="showPage('oggi')"]::before{content:'Le tue zone';position:absolute;top:-24px;left:4px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.3;text-transform:uppercase;color:var(--t2);}
+/* un solo titolo di sezione, fuori dai riquadri: mono 11 px maiuscolo in --t2. Adesso, Le tue zone e Come stai oggi li scrive home.js
+   (h2.sez5, nell'ordine in cui si leggono); il titolo di Pirsi è quello della sua card, portato sopra il riquadro */
+html.v5 .sez5{display:flex;justify-content:space-between;align-items:baseline;margin:14px 4px -2px;}
+html.v5 :is(.sez5,.cp-title-main,.cp-week,.wp5-sez){font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.3;text-transform:uppercase;color:var(--t2);}
+html.v5 :is(.sez5-dx,.cp-week,.wp5-sez span){font-weight:600;}
+html.v5 :is(.home-v2-action-head,.cs-titolo){display:none;}
+html.v5 .cp-card{position:relative;margin-top:32px;}
+html.v5 .cp-head{position:absolute;top:-24px;left:4px;right:4px;margin:0;}
 /* Adesso: titolo grande, «Inizia» a tutta larghezza, sotto le righe del da fare */
 html.v5 .home-v2-action{padding:16px 14px 4px;}
 html.v5 .home-v2-action-title{font-size:20px;font-weight:800;}
@@ -2710,7 +2701,9 @@ html.v5 .home-v2-action-next{min-height:48px;justify-content:space-between;}
 html.v5 :is(.home-v2-dafare-eb,.home-v2-action-next-eb){color:var(--t2);}
 html.v5 .home-v2-dafare-eb{margin:0;padding-top:12px;}
 /* Come stai oggi: le tre caselle più basse */
-html.v5 .cs-card{padding:12px 14px 14px;}
+html.v5 .cs-card{padding:8px 14px 14px;}
+html.v5 .cs-testa{justify-content:flex-end;margin-bottom:4px;}
+html.v5 .cs-link{min-height:44px;min-width:44px;padding:0 4px;}
 html.v5 .cs-valore{min-height:38px;padding:3px 4px;border-radius:12px;}
 html.v5 .cs-nota{margin-top:8px;border-radius:12px;}
 /* Pirsi: ogni proposta una riga dell'elenco, «Perché?» a sinistra, «Non ora» e «Accetto» a destra */
@@ -2719,13 +2712,12 @@ html.v5 .cp-item{display:flex;flex-wrap:wrap;align-items:center;border-top-color
 html.v5 .cp-item > *{width:100%;}
 html.v5 .cp-item > .cp-why{width:auto;margin:10px auto 0 0;}
 html.v5 .cp-item > .cp-actions{width:auto;margin-top:10px;flex-direction:row-reverse;}
-html.v5 .cp-item > .cp-why-text{order:1;}
+html.v5 .cp-item > .cp-why-text + .cp-actions{margin-left:auto;}
 html.v5 :is(.cp-yes,.cp-no){flex:none;padding:9px 16px;border-radius:12px;}
 html.v5 .cp-note{border-top-color:var(--s3);}
 /* La tua settimana: un elenco a righe in fondo (l'HTML a righe lo disegna home.js solo con la veste accesa) */
-html.v5 .wp5{margin-top:22px;cursor:pointer;}
-html.v5 .wp5-sez{display:flex;justify-content:space-between;margin:0 4px 8px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.1em;line-height:1.3;text-transform:uppercase;color:var(--t2);}
-html.v5 .wp5-sez span{font-weight:600;color:var(--t3);}
+html.v5 .wp5{margin-top:14px;cursor:pointer;}
+html.v5 .wp5-sez{display:flex;justify-content:space-between;margin:0 4px 8px;}
 html.v5 .wp5-gruppo{background:var(--s1);border-radius:14px;overflow:hidden;}
 html.v5 .wp5-riga{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;min-height:48px;padding:12px 14px;border-top:1px solid var(--s3);font-family:var(--font-sans);font-size:15px;color:var(--t1);}
 html.v5 .wp5-riga:first-child{border-top:0;}
@@ -2734,4 +2726,4 @@ html.v5 .wp5-nome small{display:block;margin-top:2px;font-size:12px;color:var(--
 html.v5 .wp5-val{font-family:var(--font-mono);font-size:14px;font-weight:600;color:var(--t2);}
 html.v5 .wp5-riga:first-child .wp5-val{font-size:17px;color:var(--t1);}
 html.v5 .wp5-freccia{color:var(--t3);font-size:20px;line-height:1;}
-html.v5 .wp5 .wp-go-inline{order:1;margin:0;}
+html.v5 .wp5 .wp-go-inline{margin:0;}

@@ -37,7 +37,7 @@ function tabelle(scenario = 'base'){
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, sesso:'M', eta:45, altezza_cm:178, weight_kg:74, goal_weight_kg:70, obiettivo:'ricomposizione',
       target_kcal:2300, target_protein:170, target_carbs:220, target_fat:75, giorni_allenamento:4, tipo_allenamento:'casa', attrezzatura:['elastico'],
       train_start_date:'2026-09-21', usa_training:true, created_at:'2026-05-01T08:00:00Z' }],
-    meals, meal_items:[], weight_logs:pesi, supplements_log:[], fasting_days:[], daily_log:[], app_errors:[], supplements:[], nutrilite_catalog:[],
+    meals, meal_items:[], weight_logs:pesi, supplements_log:[], fasting_days:[], daily_log: scenario === 'giu' ? [{ id:'d0', user_id:U, date:OGGI, sleep_hours:7, energy:4, stress:2 }] : [], app_errors:[], supplements:[], nutrilite_catalog:[],
     esercizi_catalog:catalogo, schede_utente:[{ id:'sc1', user_id:U, attiva:true, blocco_n:1, scheda:{ obiettivo:'ricomposizione', sessioni:[
       { id:'upperA', name:'Upper A', type:'Forza', rir:2, warmup:[], exercises:['EX001','EX020'].map(ex) },
       { id:'lowerA', name:'Lower A', type:'Forza', rir:2, warmup:[], exercises:['EX040','EX050'].map(ex) }] } }],
@@ -101,6 +101,7 @@ function fotografa(win){
   for(const sc of ['base', 'su', 'giu']){
     const b = await apri({ scenario:sc });
     if(sc === 'base') pagine.spenta = fotografa(b.win);
+    if(sc === 'giu') b.win.eval('ST').comeStaiAperta = OGGI;   // Come stai compilato e ancora aperto: c'è «Fatto»
     if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; }
     // accesa: la classe come la mette lo script in testa, poi la Home ridisegnata (la settimana a righe la disegna home.js)
     b.win.document.documentElement.classList.add('v5'); b.win.renderHomeV2();
@@ -127,9 +128,11 @@ trainW:(document.querySelector('#home-card-training')||{}).offsetWidth||0,riga:(
 testi:tutti.length,peggiori:tutti.filter(x=>x.c<4.5),pesata:di('.home-v2-body-pesata'),registra:di('.home-v2-nutr-btn'),oltre:di('.home-v2-donut-num[style*="B45309"]'),
 macroOltre:document.querySelectorAll('.home-v2-macro-value[style*="B45309"]').length,macroOltreC:di('.home-v2-macro-value[style*="B45309"]'),delta:di('.home-v2-body-delta'),
 deltaColore:g('.home-v2-body-delta','color'),
-ordine:['.home-v2-header','.home-v2-action','.home-v2-card[onclick*="showPage(\\'oggi\\')"]','#home-card-training','.cs-card','.cp-card','.wp5'].map(x=>{const e=document.querySelector(x);return e?Math.round(e.getBoundingClientRect().top):null;}),
+ordine:(()=>{const tutti=[...document.querySelectorAll('*')];return ['.home-v2-header','.sez5','.home-v2-action','.home-v2-card[onclick*="showPage(\\'oggi\\')"]','#home-card-training','.cs-card','.cp-card','.wp5'].map(x=>{const e=document.querySelector(x);return e?tutti.indexOf(e):null;});})(),
+sez5:[...document.querySelectorAll('.sez5 > span:first-child')].map(e=>e.textContent.trim()),
+testaAzione:g('.home-v2-action-head','display'),fatto:(()=>{const e=[...document.querySelectorAll('.cs-link')].find(x=>/Fatto/.test(x.textContent));return e?Math.round(e.getBoundingClientRect().height):null;})(),
 wp5:document.querySelectorAll('.wp5-riga').length,freccia:di('.wp5-freccia'),wpVecchia:!!document.querySelector('.wp-hero-card'),
-etichette:[...document.querySelectorAll('.home-v2-action-head span:first-child,.cs-titolo,.cp-title-main,.wp5-sez')].map(e=>{const p=e.matches('.home-v2-action-head span:first-child')?'::after':null;const c=rgb(getComputedStyle(e,p).color),f=fondo(e);const a=lum(c),b=lum(f);return {t:(p?getComputedStyle(e,p).content:e.textContent).trim().slice(0,24),c:Math.round((Math.max(a,b)+.05)/(Math.min(a,b)+.05)*100)/100};}),
+etichette:[...document.querySelectorAll('.sez5 span,.cp-head > *,.wp5-sez,.wp5-sez span')].map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),
 righe5:[...document.querySelectorAll('.wp5-riga *:not(.wp5-freccia)')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
 document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));</script>`;
   const scrivi = (nome, html, v5) => {
@@ -172,11 +175,13 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('«Ultimo pasto N h fa» nel colore «oltre», leggibile', su.avviso >= 4.5, true);
       // Giro 1 della Home: l'ordine nuovo e la settimana a righe
       const crescente = (v) => v.every(x => x != null) && v.every((x, i) => !i || x > v[i - 1]);
-      atteso('giro 1, ordine: testata · Adesso · Nutrition · Training · Come stai · Pirsi · settimana', crescente(a.ordine), true);
-      atteso('giro 1, spenta: l\'ordine di prima (Come stai sopra la prossima azione) e la settimana a card', [s.ordine[4] < s.ordine[1], s.wp5, s.wpVecchia], [true, 0, true]);
+      atteso('giro 1, ordine nel DOM (quello che leggono tastiera e VoiceOver): testata · Adesso · Nutrition · Training · Come stai · Pirsi · settimana', crescente(a.ordine), true);
+      atteso('giro 1, spenta: l\'ordine di prima (Come stai prima della prossima azione), niente titoli nuovi, la settimana a card', [s.ordine[5] < s.ordine[2], s.ordine[1], s.wp5, s.wpVecchia], [true, null, 0, true]);
+      atteso('giro 1, accesa: i titoli di sezione scritti nell\'HTML', a.sez5, ['Adesso', 'Le tue zone', 'Come stai oggi']);
+      atteso('giro 1, accesa: «PROSSIMA AZIONE» dentro il riquadro non c\'è più (non si legge due volte)', a.testaAzione, 'none');
       atteso('giro 1, accesa: la settimana a righe (peso, obiettivo, sessioni, kcal), la card di prima no', [a.wp5, a.wpVecchia], [4, false]);
-      atteso('giro 1, accesa: i titoli di sezione (Adesso, Come stai, Pirsi, settimana) almeno 4,5:1', a.etichette.filter(x => x.c < 4.5), []);
-      atteso('giro 1, accesa: titoli di sezione con le parole giuste', a.etichette.map(x => x.t.replace(/"/g, '').toUpperCase().split(/\s+/).slice(0, 2).join(' ')).sort(), ['ADESSO', 'COME STAI', 'LA TUA', 'PIRSI PROPONE']);
+      atteso(`giro 1, accesa: ogni pezzo dei titoli di sezione (${a.etichette.length}, anche le date e l'ora) almeno 4,5:1`, a.etichette.filter(x => x.c < 4.5), []);
+      atteso('giro 1, Come stai compilato: «Fatto» alto almeno 44 px', giu.fatto >= 44, true);
       atteso('giro 1, accesa: la freccia della settimana è un segno, non un testo: almeno 3:1', a.freccia >= 3, true);
       atteso(`giro 1, accesa: ogni testo della settimana a righe almeno 4,5:1 (${a.righe5.length} testi)`, a.righe5.filter(x => x.c < 4.5), []);
     }

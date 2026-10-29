@@ -693,7 +693,7 @@ function _wpHomeRigheV5(cur, pic){
   }
   return `
     <div class="wp5" onclick="openQuadro()">
-      <div class="wp5-sez">La tua settimana <span>${_wpRange(cur)}</span></div>
+      <h2 class="wp5-sez">La tua settimana <span>${_wpRange(cur)}</span></h2>
       <div class="wp5-gruppo">${righe}</div>
     </div>`;
 }
@@ -1481,8 +1481,7 @@ function _renderHomeCards(){
     </div>`;
 
   // ── Inject ──
-  document.getElementById('page-home').innerHTML = `
-    <div class="home-v2-wrap">
+  const testaHome = `
       ${typeof installaHintHTML === 'function' ? installaHintHTML() : ''}
       <div class="home-v2-header">
         <div class="home-v2-header-text">
@@ -1490,7 +1489,33 @@ function _renderHomeCards(){
           <div class="home-v2-greeting">${esc(greeting)}</div>
         </div>
         <button class="home-v2-avatar" onclick="openSettingsModal()" title="Impostazioni profilo">${esc(initials)}</button>
-      </div>
+      </div>`;
+  // La veste nuova, Giro 1 della Home (schizzo approvato da Ignazio il 29/10/2026): con html.v5 le stesse card in un altro ordine,
+  // con i titoli di sezione scritti qui, fuori dai riquadri, così tastiera e lettore di schermo leggono quello che si vede.
+  // Adesso · Le tue zone · Come stai oggi · Pirsi propone · La tua settimana. A veste spenta l'HTML è quello di prima.
+  if(document.documentElement.classList.contains('v5')){
+    const sez = (titolo, destra) => `<h2 class="sez5"><span>${titolo}</span>${destra ? `<span class="sez5-dx">${destra}</span>` : ''}</h2>`;
+    document.getElementById('page-home').innerHTML = `
+    <div class="home-v2-wrap">
+      ${testaHome}
+      ${sez('Adesso', oraStr)}
+      ${actionPanel}
+      ${sez('Le tue zone')}
+      ${nutritionCard}
+      ${trainingCard}
+      ${bodyCard}
+      ${sez('Come stai oggi')}
+      ${_comeStaiHTML()}
+      ${_cpHomeCardHTML()}
+      ${_wpHomeCardHTML()}
+      ${versionFooter()}
+    </div>
+  `;
+    return;
+  }
+  document.getElementById('page-home').innerHTML = `
+    <div class="home-v2-wrap">
+      ${testaHome}
       ${_comeStaiHTML()}
       ${_wpHomeCardHTML()}
       ${_cpHomeCardHTML()}
