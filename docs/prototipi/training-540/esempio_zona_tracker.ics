@@ -12,13 +12,13 @@ UID:zt-wrromv-2026-10-30@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261030T063000Z
 DTEND:20261030T073000Z
-SUMMARY:Upper B · Zona Tracker
+SUMMARY:[Workout] Upper B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper B fra 15 minuti
+DESCRIPTION:[Workout] Upper B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -26,13 +26,13 @@ UID:zt-wrromv-2026-11-02@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261102T063000Z
 DTEND:20261102T073000Z
-SUMMARY:Lower B · Zona Tracker
+SUMMARY:[Workout] Lower B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower B fra 15 minuti
+DESCRIPTION:[Workout] Lower B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -40,13 +40,13 @@ UID:zt-wrromv-2026-11-03@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261103T063000Z
 DTEND:20261103T073000Z
-SUMMARY:Upper A · Zona Tracker
+SUMMARY:[Workout] Upper A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper A fra 15 minuti
+DESCRIPTION:[Workout] Upper A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -54,13 +54,13 @@ UID:zt-wrromv-2026-11-05@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261105T063000Z
 DTEND:20261105T073000Z
-SUMMARY:Lower A · Zona Tracker
+SUMMARY:[Workout] Lower A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower A fra 15 minuti
+DESCRIPTION:[Workout] Lower A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -68,13 +68,13 @@ UID:zt-wrromv-2026-11-06@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261106T063000Z
 DTEND:20261106T073000Z
-SUMMARY:Upper B · Zona Tracker
+SUMMARY:[Workout] Upper B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper B fra 15 minuti
+DESCRIPTION:[Workout] Upper B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -82,13 +82,13 @@ UID:zt-wrromv-2026-11-09@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261109T063000Z
 DTEND:20261109T073000Z
-SUMMARY:Lower B · Zona Tracker
+SUMMARY:[Workout] Lower B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower B fra 15 minuti
+DESCRIPTION:[Workout] Lower B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -96,13 +96,13 @@ UID:zt-wrromv-2026-11-10@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261110T063000Z
 DTEND:20261110T073000Z
-SUMMARY:Upper A · Zona Tracker
+SUMMARY:[Workout] Upper A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper A fra 15 minuti
+DESCRIPTION:[Workout] Upper A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -110,13 +110,13 @@ UID:zt-wrromv-2026-11-12@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261112T063000Z
 DTEND:20261112T073000Z
-SUMMARY:Lower A · Zona Tracker
+SUMMARY:[Workout] Lower A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower A fra 15 minuti
+DESCRIPTION:[Workout] Lower A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -124,13 +124,13 @@ UID:zt-wrromv-2026-11-13@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261113T063000Z
 DTEND:20261113T073000Z
-SUMMARY:Upper B · Zona Tracker
+SUMMARY:[Workout] Upper B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper B fra 15 minuti
+DESCRIPTION:[Workout] Upper B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -138,13 +138,13 @@ UID:zt-wrromv-2026-11-16@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261116T063000Z
 DTEND:20261116T073000Z
-SUMMARY:Lower B · Zona Tracker
+SUMMARY:[Workout] Lower B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower B fra 15 minuti
+DESCRIPTION:[Workout] Lower B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -152,13 +152,13 @@ UID:zt-wrromv-2026-11-17@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261117T063000Z
 DTEND:20261117T073000Z
-SUMMARY:Upper A · Zona Tracker
+SUMMARY:[Workout] Upper A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper A fra 15 minuti
+DESCRIPTION:[Workout] Upper A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -166,13 +166,13 @@ UID:zt-wrromv-2026-11-19@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261119T063000Z
 DTEND:20261119T073000Z
-SUMMARY:Lower A · Zona Tracker
+SUMMARY:[Workout] Lower A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower A fra 15 minuti
+DESCRIPTION:[Workout] Lower A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -180,13 +180,13 @@ UID:zt-wrromv-2026-11-20@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261120T063000Z
 DTEND:20261120T073000Z
-SUMMARY:Upper B · Zona Tracker
+SUMMARY:[Workout] Upper B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper B fra 15 minuti
+DESCRIPTION:[Workout] Upper B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -194,13 +194,13 @@ UID:zt-wrromv-2026-11-23@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261123T063000Z
 DTEND:20261123T073000Z
-SUMMARY:Lower B · Zona Tracker
+SUMMARY:[Workout] Lower B
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower B fra 15 minuti
+DESCRIPTION:[Workout] Lower B fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -208,13 +208,13 @@ UID:zt-wrromv-2026-11-24@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261124T063000Z
 DTEND:20261124T073000Z
-SUMMARY:Upper A · Zona Tracker
+SUMMARY:[Workout] Upper A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Upper A fra 15 minuti
+DESCRIPTION:[Workout] Upper A fra 15 minuti
 END:VALARM
 END:VEVENT
 BEGIN:VEVENT
@@ -222,13 +222,13 @@ UID:zt-wrromv-2026-11-26@zona-tracker
 DTSTAMP:20261030T100000Z
 DTSTART:20261126T063000Z
 DTEND:20261126T073000Z
-SUMMARY:Lower A · Zona Tracker
+SUMMARY:[Workout] Lower A
 DESCRIPTION:La seduta di oggi secondo la tua rotazione. Apri Zona Tracker p
  er iniziare.
 BEGIN:VALARM
 TRIGGER:-PT15M
 ACTION:DISPLAY
-DESCRIPTION:Lower A fra 15 minuti
+DESCRIPTION:[Workout] Lower A fra 15 minuti
 END:VALARM
 END:VEVENT
 END:VCALENDAR

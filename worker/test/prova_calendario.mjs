@@ -79,9 +79,9 @@ mondo();
 let r = await chiama('/calendario?t=' + T1);
 let piatte = spiega(r.testo);
 atteso('calendario · 200, text/calendar, senza cache lunga', [r.status, r.tipo, r.cache], [200, 'text/calendar; charset=utf-8', 'private, max-age=0, must-revalidate']);
-atteso('calendario · 16 sedute nelle 4 settimane, tutte di lavoro, nessun recupero', [eventi(r.testo).length, piatte.filter((x) => x.startsWith('SUMMARY')).every((x) => /(Upper|Lower) [AB] · Zona Tracker$/.test(x))], [16, true]);
-atteso('calendario · la prima è giovedì 29 Upper B alle 07:30 di Roma (06:30 UTC), un\'ora, avviso 15 minuti prima', [piatte.find((x) => x.startsWith('DTSTART')), piatte.find((x) => x.startsWith('DTEND')), piatte.find((x) => x.startsWith('SUMMARY')), piatte.includes('TRIGGER:-PT15M')], ['DTSTART:20261029T063000Z', 'DTEND:20261029T073000Z', 'SUMMARY:Upper B · Zona Tracker', true]);
-atteso('calendario · poi Lower B venerdì, Upper A lunedì 2, Lower A martedì 3', piatte.filter((x) => x.startsWith('SUMMARY')).slice(1, 4).map((x) => x.slice(8, 15)), ['Lower B', 'Upper A', 'Lower A']);
+atteso('calendario · 16 sedute nelle 4 settimane, tutte di lavoro, nessun recupero', [eventi(r.testo).length, piatte.filter((x) => x.startsWith('SUMMARY')).every((x) => /^SUMMARY:\[Workout\] (Upper|Lower) [AB]$/.test(x))], [16, true]);
+atteso('calendario · la prima è giovedì 29 Upper B alle 07:30 di Roma (06:30 UTC), un\'ora, avviso 15 minuti prima', [piatte.find((x) => x.startsWith('DTSTART')), piatte.find((x) => x.startsWith('DTEND')), piatte.find((x) => x.startsWith('SUMMARY')), piatte.includes('TRIGGER:-PT15M')], ['DTSTART:20261029T063000Z', 'DTEND:20261029T073000Z', 'SUMMARY:[Workout] Upper B', true]);
+atteso('calendario · poi Lower B venerdì, Upper A lunedì 2, Lower A martedì 3', piatte.filter((x) => x.startsWith('SUMMARY')).slice(1, 4).map((x) => x.replace('SUMMARY:[Workout] ', '')), ['Lower B', 'Upper A', 'Lower A']);
 atteso('calendario · il nome del calendario e il fuso', [piatte.includes('X-WR-CALNAME:Zona Tracker'), piatte.includes('X-WR-TIMEZONE:Europe/Rome')], [true, true]);
 atteso('letture · profilo per token, poi scheda attiva e ultimi 10 allenamenti della persona, con la chiave di servizio', letture.map((l) => l.table), ['profiles', 'schede_utente', 'workouts']);
 atteso('letture · il profilo si cerca per token, gli allenamenti senza i riposi, dall\'inizio del blocco, i più recenti prima', [letture[0].query.includes('calendario_token=eq.' + T1), letture[2].query.includes('session_type=not.in.(rest,rest_injury)'), letture[2].query.includes('date=gte.2026-10-05'), letture[2].query.includes('order=date.desc,created_at.desc'), letture.every((l) => l.apikey === 'svc-segreta')], [true, true, true, true, true]);
@@ -111,7 +111,7 @@ r = await chiama('/calendario?t=' + T1);
 atteso('pausa · i giorni in pausa restano vuoti e si riprende da dove si era (12 sedute)', [eventi(r.testo).length, spiega(r.testo).filter((x) => x.startsWith('DTSTART')).slice(1, 3)], [12, ['DTSTART:20261030T063000Z', 'DTSTART:20261109T063000Z']]);
 mondo({ workouts: [...VERE, w('2026-10-28', 'upperB', '08:00:00')] });
 r = await chiama('/calendario?t=' + T1);
-atteso('fuori programma · Upper B fatta oggi (mercoledì, non scelto): giovedì viene Lower B', spiega(r.testo).find((x) => x.startsWith('SUMMARY')), 'SUMMARY:Lower B · Zona Tracker');
+atteso('fuori programma · Upper B fatta oggi (mercoledì, non scelto): giovedì viene Lower B', spiega(r.testo).find((x) => x.startsWith('SUMMARY')), 'SUMMARY:[Workout] Lower B');
 
 // 5 · guasti: REST rotto, chiave assente
 mondo({ rotto: 'workouts' });

@@ -40,6 +40,7 @@ var ZTRotazione = (function(){
   var DURATA_MIN = 60;                       // ogni seduta nel calendario dura un'ora
   var AVVISO_MIN = 15;                       // l'avviso, prima della seduta
   var TZ = 'Europe/Rome';
+  var PREFISSO = '[Workout] ';               // davanti al nome della seduta nel Calendario
   var ORARIO_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
   function eRecupero(sid){ return /^recovery/i.test(String(sid || '')); }
@@ -147,6 +148,7 @@ var ZTRotazione = (function(){
   // ics({ eventi: [{ date, sid }], nomi: { sid: nome }, orario: 'HH:MM', chiave, adesso, durataMin, avvisoMin, timeZone })
   // Gli orari vanno in UTC, calcolati giorno per giorno con l'ora di Roma: giusti anche a cavallo del cambio dell'ora.
   // L'UID è stabile per giorno e persona (una seduta che cambia nome resta lo stesso evento, non un doppione).
+  // Il titolo dell'evento è «[Workout] Upper B» (scelta di Ignazio, 30 ottobre 2026): un prefisso fisso e il nome della seduta.
   function ics(o){
     o = o || {};
     var tz = o.timeZone || TZ, clock = Q.makeClock(tz);
@@ -164,9 +166,9 @@ var ZTRotazione = (function(){
         'DTSTAMP:' + stamp,
         'DTSTART:' + dataIcs(inizio),
         'DTEND:' + dataIcs(fine),
-        'SUMMARY:' + scappa(nome + ' · Zona Tracker'),
+        'SUMMARY:' + scappa(PREFISSO + nome),
         'DESCRIPTION:' + scappa('La seduta di oggi secondo la tua rotazione. Apri Zona Tracker per iniziare.'),
-        'BEGIN:VALARM', 'TRIGGER:-PT' + avviso + 'M', 'ACTION:DISPLAY', 'DESCRIPTION:' + scappa(nome + ' fra ' + avviso + ' minuti'), 'END:VALARM',
+        'BEGIN:VALARM', 'TRIGGER:-PT' + avviso + 'M', 'ACTION:DISPLAY', 'DESCRIPTION:' + scappa(PREFISSO + nome + ' fra ' + avviso + ' minuti'), 'END:VALARM',
         'END:VEVENT');
     });
     righe.push('END:VCALENDAR');
@@ -193,7 +195,7 @@ var ZTRotazione = (function(){
 
   return {
     CICLO_6: CICLO_6, CICLO_7: CICLO_7, GIORNI_PARTENZA: GIORNI_PARTENZA, ORARIO_PARTENZA: ORARIO_PARTENZA,
-    SETTIMANE: SETTIMANE, DURATA_MIN: DURATA_MIN, AVVISO_MIN: AVVISO_MIN, TZ: TZ,
+    SETTIMANE: SETTIMANE, DURATA_MIN: DURATA_MIN, AVVISO_MIN: AVVISO_MIN, TZ: TZ, PREFISSO: PREFISSO,
     eRecupero: eRecupero, eRiposo: eRiposo, eLavoro: eLavoro, cicloPer: cicloPer, giornoSettimana: giornoSettimana,
     giorniScelti: giorniScelti, orarioValido: orarioValido,
     posizione: posizione, prossima: prossima, sedutePreviste: sedutePreviste, ics: ics,
