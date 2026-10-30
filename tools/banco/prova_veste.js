@@ -1,6 +1,6 @@
 // La veste nuova, Giro 1 (Passo 0, scelte di Ignazio del 29/10/2026): l'interruttore html.v5.
 // Spento (il default) la pagina non ha la classe e l'aspetto è quello di prima (lo misura prova_stile.js in Chrome, pixel per pixel);
-// acceso con ?v5=1 o dalle Impostazioni › Crediti, la classe c'è, resta sul telefono (zt_v5) e in Chrome vero la barra sta in basso,
+// acceso con ?v5=1 (l'interruttore delle Impostazioni è uscito il 30 ottobre 2026, giro 2), la classe c'è, resta sul telefono (zt_v5) e in Chrome vero la barra sta in basso,
 // la testata della Home è del colore della zona Home, i riquadri di Nutrition, Training e Body dei loro colori e i campi a 16 px.
 //   node tools/banco/prova_veste.js
 //   FOTO=/una/cartella node tools/banco/prova_veste.js     # tiene le foto della Home a 390 px, spenta e accesa
@@ -48,6 +48,7 @@ function tabelle(scenario = 'base'){
 async function apri(opts){
   const t = tabelle(opts.scenario); t.__sessione = { user:{ id:U, email:'ignazio.f@me.com' } };
   if(opts.logs) t.training_logs.push(...opts.logs);   // serie di una seduta passata (giro 2: «Come l'ultima volta»)
+  if(opts.proposte) t.coach_proposals = opts.proposte;   // proposte di Pirsi in attesa (giro 2: una riga per proposta)
   const b = boot(t, { now:OGGI + 'T18:00:00', ...opts, locale:{ zt_privacy_ok:'x', zt_installa_visto:'1', ...(opts.locale || {}) } });
   await b.avviato;
   for(let i = 0; i < 500 && !b.win.document.getElementById('app').classList.contains('visible'); i++) await attendi(10);
@@ -57,6 +58,18 @@ async function apri(opts){
   b.win.showPage('home'); await attendi(150); b.win.renderHomeV2();
   return b;
 }
+// tre proposte vere di Pirsi, scritte dalle sue regole (come in prova_pirsi_card): stallo del peso, RIR troppo basso, check vecchio
+const WS = add(OGGI, -13);   // la settimana appena chiusa (lunedì 21 settembre): quella di cui l'app genera le proposte, così non ne aggiunge
+const proposteDiPirsi = (() => {
+  const R = require(path.join(REPO, 'shared', 'coach_rules.js'));
+  const q = (k, w, o = {}) => ({ weight:{ weight_avg:w, weight_last:w, weight_n:4 }, nutrition:{ kcal_avg:2300, protein_avg:170, days_logged:7, logged_dates:[0, 1, 2, 3, 4, 5, 6].map(i => add(add(WS, -7 * k), i)), adherence_kcal:0.86, days_partial:0, partial:false },
+    training:{ sessions_planned:4, sessions_done:4, block_week:3, is_deload:false, avg_rir:1.5, injury_days:0, injury_active:false, ...(o.training || {}) },
+    body:{ days_since_check:o.check || 20 }, blood:{ test_count:1, days_since_test:30 }, meta:{ version:2, week_start:add(WS, -7 * k) } });
+  const profilo = { obiettivo:'dimagrimento', goal_weight_kg:68, target_kcal:2324, target_protein:198, target_carbs:221, target_fat:72, giorni_allenamento:4 };
+  const stallo = [75.0, 75.1, 75.0, 75.1, 75.0];
+  const tre = R.buildProposals(q(0, stallo[0], { training:{ avg_rir:0.3, sessions_done:3 }, check:50 }), stallo.slice(1).map((w, k) => q(k + 1, w, { training:{ avg_rir:0.4, sessions_done:3 } })), profilo);
+  return tre.map((p, i) => ({ id:'cp' + i, user_id:U, week_start:WS, kind:p.kind, title:p.title, reason:p.reason, evidence:p.evidence, change:p.change, status:'pending', created_at:WS + 'T04:00:05Z' }));
+})();
 const classe = (b) => b.win.document.documentElement.classList.contains('v5');
 const chiave = (b) => b.win.localStorage.getItem('zt_v5');
 // la pagina com'è, senza codice, con lo stile vero accanto: è lei che Chrome misura e fotografa
@@ -73,12 +86,13 @@ function fotografa(win){
   { const b = await apri({});
     atteso('spenta solo se il telefono lo ricorda (zt_v5 = 0, messo dal banco)', [classe(b), chiave(b)], [false, '0']);
     b.win.openSettingsModal(); b.win.setVai('crediti');
-    const sw = b.win.document.getElementById('set-veste');
-    atteso('Impostazioni › Crediti: l\'interruttore c\'è ed è spento', [!!sw, sw && sw.getAttribute('role'), sw && sw.getAttribute('aria-checked')], [true, 'switch', 'false']);
-    sw.click();
-    atteso('tocco: si accende, classe e chiave, l\'interruttore dice acceso', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [true, null, 'true']);
-    sw.click();
-    atteso('secondo tocco: si spegne e lo ricorda (zt_v5 = 0)', [classe(b), chiave(b), sw.getAttribute('aria-checked')], [false, '0', 'false']);
+    const d = b.win.document;
+    atteso('giro 2: in Impostazioni niente interruttore «Veste nuova» e niente pagina Crediti (setVai(\'crediti\') torna all\'elenco)',
+      [!!d.getElementById('set-veste'), !!d.querySelector('.set-voce[data-voce="crediti"]'), !!d.querySelector('.set-pagina[data-pagina="crediti"]'), !!d.querySelector('.settings-credits'), typeof b.win.vesteNuova, b.win.eval('ST').setPagina],
+      [false, false, false, false, 'undefined', 'elenco']);
+    b.win.setVai('obiettivo');
+    const riga = d.querySelector('.set-peso-riga');
+    atteso('veste spenta: il campo «Peso di oggi» spento c\'è, la riga nuova sta nascosta (hidden)', [!d.getElementById('set-weight-campo').hidden, d.getElementById('set-weight').disabled, riga.hidden, [...riga.children].map(e => e.textContent.replace(/\s+/g, ' ').trim())], [true, true, true, ['Peso di oggiSi cambia da «Pesati ora»', '74,0 kg', '›']]);
     b.win.close(); }
   { const b = await apri({ locale:{ zt_v5:'1' } });
     atteso('accesa per tutti: senza lo spegnimento parte accesa (anche col vecchio zt_v5 = 1)', classe(b), true);
@@ -100,12 +114,25 @@ function fotografa(win){
   // la Home li prende dal Piano e dall'ora, qui si danno già pronti (cambia solo cosa c'è da disegnare, non come)
   const pagine = {};
   for(const sc of ['base', 'su', 'giu']){
-    const b = await apri({ scenario:sc });
+    const b = await apri({ scenario:sc, proposte: sc === 'base' ? proposteDiPirsi : undefined });
     if(sc === 'base') pagine.spenta = fotografa(b.win);
     if(sc === 'giu') b.win.eval('ST').comeStaiAperta = OGGI;   // Come stai compilato e ancora aperto: c'è «Fatto»
     if(sc !== 'base'){ b.win._nutrProssimoDalPiano = () => ({ slot:'cena', piatto:'Salmone e patate', descrizione:'Salmone e patate' }); b.win._nutrOreDallUltimo = () => 5; }
     // accesa: la classe come la mette lo script in testa, poi la Home ridisegnata (la settimana a righe la disegna home.js)
     b.win.document.documentElement.classList.add('v5'); b.win.renderHomeV2();
+    if(sc === 'base'){   // giro 2, Pirsi a righe: una aperta alla volta, il tocco apre l'altra e chiude la prima, il tocco sull'aperta chiude tutto
+      const D = b.win.document, ST2 = b.win.eval('ST');
+      const aperte = () => [...D.querySelectorAll('.cp-item.cp5-aperta')].map(e => e.dataset.cp);
+      const ids = [...D.querySelectorAll('.cp-item')].map(e => e.dataset.cp);
+      atteso('Pirsi a veste accesa: tre proposte, tre righe, aperta la prima', [ids.length, aperte(), D.querySelectorAll('.cp5-riga').length, D.querySelectorAll('.cp5-corpo .cp-actions button').length], [3, [ids[0]], 3, 2]);
+      D.querySelector(`.cp-item[data-cp="${ids[1]}"] .cp5-riga`).click(); b.win.renderHomeV2();
+      atteso('tocco sulla seconda: si apre lei, la prima si chiude', [aperte(), D.querySelector(`.cp-item[data-cp="${ids[1]}"] .cp5-riga`).getAttribute('aria-expanded')], [[ids[1]], 'true']);
+      D.querySelector(`.cp-item[data-cp="${ids[1]}"] .cp5-riga`).click(); b.win.renderHomeV2();
+      atteso('tocco sull\'aperta: tutte chiuse, i tasti Accetto e Non ora spariscono', [aperte(), D.querySelectorAll('.cp-actions').length], [[], 0]);
+      ST2.cpAperta = ids[0]; ST2.coachProposals = ST2.coachProposals.filter(p => p.id !== ids[0]); b.win.renderHomeV2();
+      atteso('la proposta aperta decisa (sparisce): si apre la prima rimasta, il titolo dice 2', [aperte(), D.querySelector('.cp-title-main').textContent], [[ids[1]], 'Pirsi propone · 2']);
+      ST2.coachProposals = proposteDiPirsi.map(p => ({ ...p })); ST2.cpAperta = undefined; b.win.renderHomeV2();
+    }
     pagine[sc] = fotografa(b.win);
     if(sc === 'base'){   // lo stesso giorno, con la seduta proposta «riposo»: l'anello dentro grigio pieno
       const hd = b.win.eval('ST').trainHomeData;
@@ -143,7 +170,14 @@ testiW:[...document.querySelectorAll('.w5-card,.w5-gruppo')].flatMap(c=>[...c.qu
 tastiW:[...document.querySelectorAll('.w5-card button,.w5-gruppo button')].filter(e=>e.offsetParent!==null).map(e=>({t:e.textContent.trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)})).filter(x=>x.h<44),
 pesataW:(()=>{const e=[...document.querySelectorAll('.w5-azione')].find(x=>/Pesata/.test(x.textContent));return e?{c:Math.round(contrasto(e)*100)/100,h:Math.round(e.getBoundingClientRect().height)}:null;})(),
 registraW:di('.w5-card .home-v2-nutr-btn'),avvisoW:di('.w5-card .home-v2-nutr-avviso'),
-testaAzione:g('.home-v2-action-head','display'),fatto:(()=>{const e=[...document.querySelectorAll('.cs-link')].find(x=>/Fatto/.test(x.textContent));return e?Math.round(e.getBoundingClientRect().height):null;})(),
+testaAzione:g('.home-v2-action-head','display'),
+dafare:[...document.querySelectorAll('.home-v2-dafare-voce')].map(e=>({t:e.firstElementChild.textContent.trim().slice(0,30),h:Math.round(e.getBoundingClientRect().height),pt:!!e.querySelector('.home-v2-dafare-pt')})),
+bodyTesto:(document.querySelector('.w5-riga .w5-riga-testo')||{}).textContent||null,
+cp5:{righe:document.querySelectorAll('.cp-item').length,aperte:document.querySelectorAll('.cp5-aperta').length,testa:(document.querySelector('.cp-title-main')||{}).textContent||null,velo:g('.cp5-aperta','backgroundColor'),
+tasti:[...document.querySelectorAll('.cp-card button')].filter(e=>e.offsetParent!==null).map(e=>({t:e.textContent.trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)})).filter(x=>x.h<44),
+testi:[...document.querySelectorAll('.cp-card *')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&e.offsetParent!==null).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})).filter(x=>x.c<4.5),
+areaH:(()=>{const e=document.querySelector('.cp5-area');return e?Math.round(parseFloat(getComputedStyle(e).fontSize)):null;})()},
+fatto:(()=>{const e=[...document.querySelectorAll('.cs-link')].find(x=>/Fatto/.test(x.textContent));return e?Math.round(e.getBoundingClientRect().height):null;})(),
 wp5:document.querySelectorAll('.wp5-riga').length,freccia:di('.wp5-freccia'),wpVecchia:!!document.querySelector('.wp-hero-card'),
 etichette:[...document.querySelectorAll('.sez5 span,.cp-head > *,.wp5-sez,.wp5-sez span')].map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),
 righe5:[...document.querySelectorAll('.wp5-riga *:not(.wp5-freccia)')].filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100})),avviso:di('.home-v2-nutr-avviso'),oltreColore:g('.home-v2-donut-num','color'),anello:g('.home-v2-donut-svg circle + circle','strokeDasharray')};
@@ -196,6 +230,15 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('accesa: «PROSSIMA AZIONE» dentro il riquadro non c\'è più (non si legge due volte)', a.testaAzione, 'none');
       atteso(`accesa: ogni pezzo dei titoli di sezione (${a.etichette.length}, anche le date e l'ora) almeno 4,5:1`, a.etichette.filter(x => x.c < 4.5), []);
       atteso('giro 1, Come stai compilato: «Fatto» alto almeno 44 px', giu.fatto >= 44, true);
+      // giro 2 (30 ottobre 2026): il check fisico in Adesso come riga «da fare» col puntino del Body, la riga Body col peso e basta
+      atteso('giro 2, accesa: «Primo check fisico da fare» è una riga da fare in Adesso, col puntino, alta almeno 44 px', a.dafare.filter(x => /check/.test(x.t)).map(x => [x.t, x.pt, x.h >= 44]), [['Primo check fisico da fare', true, true]]);
+      atteso('giro 2, accesa: la riga Body dice solo «Peso»', a.bodyTesto, 'Peso');
+      atteso('giro 2, spenta: nessuna riga del check in più (la Home di prima)', s.dafare.filter(x => /check/.test(x.t)), []);
+      // giro 2: Pirsi a righe, una aperta sul velo della zona Home, tutto leggibile e toccabile
+      atteso('giro 2, accesa: Pirsi, tre righe e una aperta, titolo col numero, velo della zona Home (#E6F4F2)', [a.cp5.righe, a.cp5.aperte, a.cp5.testa, a.cp5.velo], [3, 1, 'Pirsi propone · 3', 'rgb(230, 244, 242)']);
+      atteso('giro 2, accesa: ogni testo della card di Pirsi almeno 4,5:1', a.cp5.testi, []);
+      atteso('giro 2, accesa: ogni tasto della card di Pirsi (righe, Perché?, Accetto, Non ora) alto almeno 44 px', a.cp5.tasti, []);
+      atteso('giro 2, spenta: la card di Pirsi di prima, tre proposte aperte, nessuna riga', [s.cp5.righe, s.cp5.aperte, s.cp5.testa], [3, 0, 'Pirsi propone']);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
@@ -455,11 +498,13 @@ header`);
     const W = b.win;
     W.openSettingsModal(); await attendi(200);
     pagI[v5 ? 'set_elenco' : 'set_spenta'] = fotografa(W);
-    if(v5) for(const pg of ['obiettivo', 'cibo', 'allenamento', 'salute', 'profilo', 'dati', 'crediti']){ W.setVai(pg); await attendi(120); pagI['set_' + pg] = fotografa(W); }
+    if(v5) for(const pg of ['obiettivo', 'cibo', 'allenamento', 'salute', 'profilo', 'dati']){ W.setVai(pg); await attendi(120); pagI['set_' + pg] = fotografa(W); }
     W.close();
   }
   const MISURA_I = MISURA_T.replace("const r={header", `const r={sTesta:g('#settings-modal .set-testa','backgroundColor'),sTitolo:g('#settings-modal .set-titolo','fontSize'),
 quadratini:[...document.querySelectorAll('#settings-modal .set-voce')].filter(vis).map(e=>getComputedStyle(e,'::before').backgroundColor),
+voci:[...document.querySelectorAll('#settings-modal .set-voce')].map(e=>e.dataset.voce),
+pesoCampo:g('#set-weight-campo','display'),pesoRiga:g('.set-peso-riga','display'),pesoVal:(document.getElementById('set-peso-val')||{}).textContent||null,pesoRigaH:(()=>{const e=document.querySelector('.set-peso-riga');return e?Math.round(e.getBoundingClientRect().height):null;})(),
 testiI:testi('#settings-modal .set-testa,#settings-modal .set-pagina:not([hidden]),#settings-modal .set-piede:not([hidden])').filter(x=>x.c<4.5),
 tastiI:alti('#settings-modal .set-testa button,#settings-modal .set-pagina:not([hidden]) button,#settings-modal .set-piede:not([hidden]) button').filter(x=>x.h<44),
 nTastiI:alti('#settings-modal .set-testa button,#settings-modal .set-pagina:not([hidden]) button,#settings-modal .set-piede:not([hidden]) button').length,
@@ -478,15 +523,17 @@ header`);
       atteso('Impostazioni accese: testata evergreen (#2A7A6F) e titolo a 24 px', [el.sTesta, el.sTitolo], ['rgb(42, 122, 111)', '24px']);
       atteso('Impostazioni accese: il quadratino del colore della zona su ogni voce (Obiettivo, Cibo, Allenamento, Come stai)', el.quadratini.slice(0, 5), ['rgb(42, 122, 111)', 'rgb(163, 95, 0)', 'rgb(46, 109, 164)', 'rgb(85, 80, 71)', 'rgb(106, 85, 160)']);
     }
-    for(const n of ['set_elenco', 'set_obiettivo', 'set_cibo', 'set_allenamento', 'set_salute', 'set_profilo', 'set_dati', 'set_crediti']){
+    if(el) atteso('giro 2, Impostazioni accese: le voci dell\'elenco senza Crediti', el.voci, ['obiettivo', 'cibo', 'allenamento', 'pausa', 'come-stai', 'salute', 'profilo', 'dati']);
+    for(const n of ['set_elenco', 'set_obiettivo', 'set_cibo', 'set_allenamento', 'set_salute', 'set_profilo', 'set_dati']){
       const m = n === 'set_elenco' ? el : await misuraI(n);
       if(!m){ atteso(`Impostazioni ${n}: Chrome ha risposto`, false, true); continue; }
+      if(n === 'set_obiettivo') atteso('giro 2, Il tuo obiettivo acceso: il campo spento del peso sparisce, al suo posto la riga «Peso di oggi · 74,0 kg», alta almeno 44 px', [m.pesoCampo, m.pesoRiga, m.pesoVal, m.pesoRigaH >= 44], ['none', 'flex', '74,0 kg', true]);
       atteso(`Impostazioni ${n.slice(4)}: ogni testo della testata e della pagina almeno 4,5:1`, m.testiI, []);
       atteso(`Impostazioni ${n.slice(4)}: ogni tasto alto almeno 44 px (${m.nTastiI} tasti)`, m.tastiI, []);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
-      for(const n of ['set_spenta', 'set_elenco', 'set_obiettivo', 'set_crediti']){
+      for(const n of ['set_spenta', 'set_elenco', 'set_obiettivo']){
         const f = path.join(process.env.FOTO, `${n}_390.png`);
         await chromeT(['--window-size=600,844', '--screenshot=' + f, 'file://' + path.join(radiceI, '_' + n + '.html')]);
         console.log('  foto  ' + f);

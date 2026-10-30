@@ -1244,16 +1244,15 @@
       <button type="button" class="set-voce" data-voce="dati" onclick="setVai('dati')">
         <span class="set-voce-testo"><span class="set-voce-titolo">I tuoi dati e privacy</span><span class="set-voce-sotto" id="set-sotto-dati"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
       </button>
-      <button type="button" class="set-voce" data-voce="crediti" onclick="setVai('crediti')">
-        <span class="set-voce-testo"><span class="set-voce-titolo">Crediti</span><span class="set-voce-sotto"></span></span><span class="set-voce-freccia" aria-hidden="true">›</span>
-      </button>
       </div>
       <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:18px;color:var(--err);">Esci dall'account</button>
     </div>
 
     <div class="set-pagina" data-pagina="obiettivo" hidden>
       <div class="onb-grid" style="margin-bottom:14px;">
-        <div class="onb-field"><label>Peso di oggi (kg)</label><input id="set-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 75"/></div>
+        <div class="onb-field" id="set-weight-campo"><label>Peso di oggi (kg)</label><input id="set-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 75"/></div>
+        <!-- Giro 2 (30 ottobre 2026): a veste accesa il peso è una riga che dice il valore e apre «Pesati ora»; il campo spento sopra resta per la veste di prima -->
+        <button type="button" class="set-peso-riga" hidden onclick="openWeighInSheet()"><span class="set-peso-testo">Peso di oggi<small>Si cambia da «Pesati ora»</small></span><span class="set-peso-val" id="set-peso-val">—</span><span class="set-voce-freccia" aria-hidden="true">›</span></button>
         <div class="onb-field"><label>Peso obiettivo (kg)</label><input id="set-goal-weight" class="inp inp-sm" type="number" step="0.1" placeholder="es. 70"/></div>
       </div><div style="margin-bottom:20px;">
       
@@ -1417,27 +1416,6 @@
       <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;">È la copia completa dei tuoi dati (pasti, allenamenti, pesate, misure, integratori e il resto), da conservare: un file .json che si apre con un editor di testo, non pensato per essere letto come una tabella. Delle foto solo l'elenco.</div>
       <button type="button" id="set-elimina-btn" class="btn btn-ghost" style="margin-top:10px;width:100%;color:#C44434;border-color:#C44434;" onclick="eliminaMioAccount()">Elimina account</button>
       <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">Cancella dati, foto e accesso per sempre. Ti chiedo di scrivere ELIMINA prima.</div>
-    </div>
-    </div>
-
-    <div class="set-pagina" data-pagina="crediti" hidden>
-      <button type="button" id="set-veste" class="set-veste" role="switch" aria-checked="false" onclick="vesteNuova()">
-        <span class="set-veste-testo"><b>Veste nuova</b><small>In prova: i colori delle zone, la Home nuova e la barra in basso</small></span>
-        <span class="set-veste-int" aria-hidden="true"></span>
-      </button>
-      <div class="settings-credits expanded">
-      <button type="button" class="settings-credits-toggle" onclick="this.parentElement.classList.toggle('expanded')">
-        <span>Crediti & attribuzioni</span>
-        <span class="chevron">▸</span>
-      </button>
-      <div class="settings-credits-content">
-        <ul>
-          <li>Animazioni esecuzione: <a href="https://exercisedb.dev" target="_blank" rel="noopener">ExerciseDB</a> (open source)</li>
-          <li>Mappe muscolari: <a href="https://wger.de" target="_blank" rel="noopener">Wger.de</a> — Licenza <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a></li>
-          <li>Modello coach: GPT-OSS 120B via <a href="https://groq.com" target="_blank" rel="noopener">Groq</a> · <a href="https://workers.cloudflare.com" target="_blank" rel="noopener">Cloudflare Workers</a></li>
-          <li>Database: <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a></li>
-        </ul>
-      </div>
     </div>
     </div>
 

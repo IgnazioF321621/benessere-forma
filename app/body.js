@@ -2467,6 +2467,7 @@ async function confirmWeighIn() {
   closeWeighInSheet();
   showToast('Pesata salvata · ' + v.toFixed(1) + ' kg', '⚖️');
   updateHeaderWeight();                                   // la pillola in alto legge anche weight_logs
+  if(typeof _setPesoRiga === 'function') _setPesoRiga();   // la riga «Peso di oggi» delle Impostazioni, se sono aperte (giro 2)
   if(ST.page === 'piano') renderPianoV4();
   else if(ST.page === 'body') renderBody();
   else if(ST.page === 'oggi') renderOggi(); // re-render banner reminder (deve sparire)

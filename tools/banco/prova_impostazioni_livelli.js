@@ -43,7 +43,7 @@ const ESAMI = [{ id:'b1', user_id:U, test_date:'2026-09-01', ferritin:80, vitami
   atteso('si apre sull\'elenco', [visibili(), testo(d.getElementById('set-titolo')), d.getElementById('set-indietro').hidden, d.getElementById('set-piede').hidden], [['elenco'], 'Impostazioni', true, true]);
   atteso('due gruppi', [...d.querySelectorAll('#settings-modal .set-gruppo')].map(testo), ['Tutti i giorni', 'Altro']);
   atteso('le voci, in ordine', [...d.querySelectorAll('#settings-modal .set-voce-titolo')].map(testo),
-    ['Il tuo obiettivo', 'Cibo', 'Allenamento', 'Pausa', 'Come stai adesso?', 'Salute ed esami del sangue', 'Profilo e account', 'I tuoi dati e privacy', 'Crediti']);
+    ['Il tuo obiettivo', 'Cibo', 'Allenamento', 'Pausa', 'Come stai adesso?', 'Salute ed esami del sangue', 'Profilo e account', 'I tuoi dati e privacy']);
   const sotto = (v) => testo(d.querySelector(`#settings-modal .set-voce[data-voce="${v}"] .set-voce-sotto`));
   const lblOb = W.eval('OBJ_ADAPT').dimagrimento.label;
   atteso('ogni voce dice com\'è impostata', [sotto('obiettivo'), sotto('cibo'), sotto('allenamento'), sotto('pausa'), sotto('come-stai'), sotto('profilo')],
@@ -70,7 +70,7 @@ const ESAMI = [{ id:'b1', user_id:U, test_date:'2026-09-01', ferritin:80, vitami
   W.setIndietro();
   atteso('indietro senza Salva: il nome torna com\'era', [visibili(), d.getElementById('set-fname').value], [['elenco'], 'Ignazio']);
   W.setVai('crediti');
-  atteso('Crediti: niente Salva, aperti', [d.getElementById('set-piede').hidden, pag('crediti').querySelector('.settings-credits').classList.contains('expanded')], [true, true]);
+  atteso('Crediti non esiste più (giro 2, 30 ottobre 2026): si torna all\'elenco', [visibili(), !!d.querySelector('.set-voce[data-voce="crediti"]')], [['elenco'], false]);
 
   // 6) Salute: lo storico degli esami, letto solo qui e una volta
   const s1 = sangue();

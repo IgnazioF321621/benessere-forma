@@ -72,7 +72,7 @@ if(!prima){
 const vecchio = fs.readFileSync(prima, 'utf8');
 const P = dividi(vecchio);
 const piatto = (d) => canonico(risolvi(d.fuori, Object.fromEntries(Object.entries(d.nomi).map(([k, v]) => [k, risolvi(v, d.nomi)]))));
-// la veste nuova (Giro 1): le sue regole stanno tutte sotto html.v5, e l'interruttore in .set-veste. A veste spenta non valgono:
+// la veste nuova (Giro 1): le sue regole stanno tutte sotto html.v5 (.set-veste era l'interruttore, uscito il 30 ottobre 2026: resta qui per confrontare gli stili di prima). A veste spenta non valgono:
 // si tolgono dallo stile nuovo, e quello che resta deve dire lo stesso di prima, regola per regola
 const VESTE = /(^|[}])\s*[^{}@]*(html\.v5|\.set-veste)[^{}]*\{[^{}]*\}/g;
 const senzaVeste = (d) => { let f = d.fuori, g; do { g = f; f = f.replace(VESTE, '$1'); } while(f !== g); return { ...d, fuori: f }; };
@@ -173,7 +173,7 @@ async function schermate(){
   }
   return out;
 }
-// l'interruttore della veste (#set-veste, in Impostazioni › Crediti) è l'unico pezzo nuovo che c'è anche a veste spenta: resta fuori dal confronto
+// l'interruttore della veste (#set-veste) stava anche a veste spenta: fuori dal confronto (uscito il 30 ottobre 2026, la riga resta per gli stili di prima)
 const SPIA = `<script>addEventListener('load',()=>setTimeout(()=>{const h=(s)=>{let x=2166136261;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x=Math.imul(x,16777619);}return (x>>>0).toString(36);};
 document.getAnimations().forEach(a=>{try{a.finish();}catch(e){a.pause();a.currentTime=0;}});
 const els=[...document.querySelectorAll('body *')].filter(e=>!e.closest('#set-veste'));const righe=els.map(e=>{let s='';for(const p of [null,'::before','::after']){const c=getComputedStyle(e,p);for(let i=0;i<c.length;i++)if(!c[i].startsWith('--'))s+=c[i]+':'+c.getPropertyValue(c[i])+';';}return h(s);});
