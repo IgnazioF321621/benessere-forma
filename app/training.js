@@ -2750,6 +2750,66 @@ function _prossimaDaCompilare(exName, sessionId, primaSerie){
   return (ST.trainProssima && ST.trainProssima[`${sessionId}_${exName}`]) || null;
 }
 
+// ── Giro 2 della Seduta (30 ottobre 2026; Ignazio: «ancora mi compare l'ultima volta e la prima che devo fare») ──
+// A veste accesa i numeri della prima serie di oggi stanno in UNA riga, uguale nell'elenco e nella serie in corso.
+// Gli stessi numeri di sempre (obiettivoPrimaSerie, serieDaRipetere): qui si decide solo come scriverli.
+// → { grande: '40 lbs × 10', piccolo: 'come l'ultima volta' | '+5 lbs rispetto all'ultima volta' | 'si parte da qui',
+//     testo: la riga dell'elenco, ultima: 'Ultima volta · 40 lbs × 10 · RIR 2' quando i numeri cambiano (si legge al tocco), uguale }
+function _rigaNumeriTesto(o, last, ex, isPullUp){
+  const parsed = ex ? parseRepsRange(ex.reps) : null;
+  const timed = !!(parsed && parsed.kind === 'seconds');
+  const perLato = (ex && _contaPerLato(ex, parsed)) ? ' per lato' : '';
+  const unit = (ST.profile && ST.profile.unit) || 'lbs';
+  const num = (v) => String(v).replace('.', ',');
+  const carico = (res, band) => isPullUp ? (band ? bandPhrase(band) : '') : caricoTesto(res);
+  const coppia = (res, band, reps) => {
+    const c = carico(res, band);
+    if(c) return `${c} × ${reps}${timed ? ' sec' : ''}${perLato}`;
+    return timed ? `${reps} sec di tenuta${perLato}` : `${reps} ripetizioni${perLato}`;
+  };
+  if(!last){
+    const primo = (String((ex && ex.reps) || '').match(/(\d+)/) || [])[1];
+    const n = parsed ? parsed.min : (primo ? parseInt(primo, 10) : 8);
+    const grande = isPullUp ? `${bandPhrase('Viola')} × ${n}` : (timed ? `${n} sec di tenuta${perLato}` : `${n} ripetizioni${perLato}`);
+    return { grande, piccolo:'si parte da qui', testo:`Si parte da ${grande}`, ultima:null, uguale:false };
+  }
+  const lastBand = (last.band_color && BAND_COLORS.includes(last.band_color)) ? last.band_color
+    : (isPullUp && BAND_COLORS.includes(String(last.resistance || ''))) ? String(last.resistance) : null;
+  const lastRes = isPullUp ? null : last.resistance;
+  const ultima = coppia(lastRes, lastBand, last.reps);
+  const ultimaRir = (last.rir_actual != null) ? ` · RIR ${last.rir_actual}` : '';
+  if(!o) return { grande:ultima, piccolo:'l\'ultima volta', testo:`L'ultima volta · ${ultima}${ultimaRir}`, ultima:null, uguale:false };
+  const oggi = coppia(isPullUp ? null : o.resistance, o.bandColor, o.reps);
+  const diff = [];
+  if(isPullUp){
+    if(o.bandColor && lastBand && o.bandColor !== lastBand) diff.push(BAND_COLORS.indexOf(o.bandColor) < BAND_COLORS.indexOf(lastBand) ? 'banda più dura' : 'banda più facile');
+  } else {
+    const a = parseFloat(o.resistance), b = parseFloat(lastRes);
+    if(o.resistance != null && !isNaN(a) && !isNaN(b) && a !== b) diff.push(`${a > b ? '+' : '−'}${num(Math.abs(a - b))} ${unit}`);
+  }
+  const dr = (Number(o.reps) || 0) - (Number(last.reps) || 0);
+  if(dr) diff.push(`${dr > 0 ? '+' : '−'}${Math.abs(dr)} ${timed ? 'sec' : (Math.abs(dr) === 1 ? 'ripetizione' : 'ripetizioni')}`);
+  const uguale = diff.length === 0;
+  const piccolo = uguale ? 'come l\'ultima volta' : `${o.nota ? o.nota + ', ' : ''}${diff.join(', ')} rispetto all'ultima volta`;
+  return { grande:oggi, piccolo, testo: uguale ? `Come l'ultima volta · ${oggi}` : `${oggi} · ${piccolo}`,
+    ultima: uguale ? null : `Ultima volta · ${ultima}${ultimaRir}`, uguale };
+}
+function rigaNumeriV5(exName, sessionId){
+  const ex = findExercise(exName, sessionId);
+  if(!ex) return null;
+  return _rigaNumeriTesto(obiettivoPrimaSerie(exName, sessionId), serieDaRipetere(exName, sessionId), ex, isPullUpExercise(exName));
+}
+// La riga nell'elenco della seduta: ferma se i numeri sono quelli dell'ultima volta, un tasto (‹›) che apre i numeri
+// dell'ultima volta quando cambiano (scelta di Ignazio del 30/10: solo la differenza, il resto al tocco).
+function _rigaNumeriHTML(exName, sessionId){
+  const r = rigaNumeriV5(exName, sessionId);
+  if(!r) return '';
+  if(!r.ultima) return `<div class="ex5-riga">${esc(r.testo)}</div>`;
+  const k = `${sessionId}_${exName}`, sk = k.replace(/'/g, "\\'");
+  const aperta = ST.ex5Ultima === k;
+  return `<button class="ex5-riga ex5-tocca" aria-expanded="${aperta}" onclick="event.stopPropagation();ST.ex5Ultima=ST.ex5Ultima==='${sk}'?null:'${sk}';renderTraining();">${esc(r.testo)} ${aperta ? '‹' : '›'}</button>${aperta ? `<div class="ex5-ultima">${esc(r.ultima)}</div>` : ''}`;
+}
+
 async function completeSession(sessionId){
   const wid = await saveWorkoutRecord(sessionId);
   loadTrainingHomeData();
@@ -3373,6 +3433,22 @@ function _renderActivationSection(){
   // Mutual exclusion: bottone start disabled se recovery flow running
   const recoveryRunning = !!(ST.trainRecoveryFlow && ST.trainRecoveryFlow.running);
 
+  // Giro 2 della Seduta (30 ottobre 2026), solo con html.v5: prima di partire il Blocco Attivazione è UNA riga con «Inizia»;
+  // i suoi esercizi si leggono al tocco (ST.att5Aperto) o quando il blocco parte. Partito o finito, il blocco è quello di sempre.
+  if(document.documentElement.classList.contains('v5') && !flow.active && !allDone){
+    const aperto = !!ST.att5Aperto;
+    const lista = aperto ? exs.map((a, idx) => `<div class="att5-voce${ST.trainActivation[idx] ? ' fatta' : ''}"><span>${nomeCortoConTag(a.name)}</span><span class="att5-sec">${a.seconds}s</span></div>`).join('') : '';
+    return `
+    <div class="att5 att5-riga">
+      <div class="att5-su">
+        <span class="att5-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
+        <button class="att5-testo" aria-expanded="${aperto}" onclick="ST.att5Aperto=!ST.att5Aperto;renderTraining();"><b>Blocco Attivazione</b><small>${exs.length} esercizi · ${totMin} min${doneCount ? ` · ${doneCount} fatti` : ''} · ${aperto ? 'nascondi' : 'vedi'} l'elenco</small></button>
+        ${recoveryRunning ? `<span class="att5-attesa">recupero in corso</span>` : `<button class="att5-inizia" onclick="activationFlowStart()">Inizia</button>`}
+      </div>
+      ${lista}
+    </div>`;
+  }
+
   // ── Hero card (3 stati) ──
   let heroHtml;
   if(flow.active && flow.currentIdx < exs.length){
@@ -3905,6 +3981,10 @@ function renderTraining(){
 
       const today = todayKey();
       const isRecoverySession = s.type === 'Recupero';
+      // Giro 2 della Seduta (30 ottobre 2026), solo con html.v5: «Inizia» su ogni riga ma evidenziato sul prossimo esercizio
+      // (il primo con serie ancora da fare), i numeri in una riga, «Cambia per oggi» e la nota nel tasto ⋯
+      const v5Seduta = !isRecoverySession && document.documentElement.classList.contains('v5');
+      const primoDaFare = v5Seduta ? s.exercises.findIndex(e => Object.keys(ST.trainLoggedSets).filter(k => k.startsWith(`${sel}_${e.name}_`) && k.endsWith(`_${today}`)).length < e.sets) : -1;
       const exerciseCards = isRecoverySession ? _renderRecoverySection(s, sel) : s.exercises.map((e, exIdx)=>{
         const safeName = e.name.replace(/'/g,"\\'");
         const exNum = exIdx + 1; // numero progressivo 1, 2, 3 …
@@ -4020,6 +4100,20 @@ function renderTraining(){
         const cardClasses = ['exercise-card'];
         if(allDone) cardClasses.push('done');
         if(isOpen) cardClasses.push('logging');
+        if(v5Seduta && exIdx === primoDaFare) cardClasses.push('ex5-prossimo');
+        // il RIR della seduta sta in testata (giro 2): sulla riga resta solo se l'esercizio ne ha uno suo (Training 460)
+        const rirRiga = rirObiettivo(e, s);
+        const mostraRir = rirRiga != null && !isTimed && (!v5Seduta || rirRiga !== s.rir);
+        const safeSel = String(sel).replace(/'/g, "\\'");
+        const menu5 = (v5Seduta && ST.ex5Menu === e.name) ? `
+            <div class="ex5-menu" role="menu">
+              ${!allDone ? `<button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;apriCambioOggi('${safeSel}','${safeName}')">Cambia per oggi</button>` : ''}
+              <button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;openNoteEditor('${safeName}')">Aggiungi una nota</button>
+              <button role="menuitem" onclick="event.stopPropagation();ST.ex5Menu=null;openExerciseAI('${safeName}','${safeSel}')">Scheda dell'esercizio</button>
+            </div>` : '';
+        const piu5 = (v5Seduta && !isOpen) ? `<button class="ex5-piu" aria-label="Altro" aria-expanded="${ST.ex5Menu === e.name}" onclick="event.stopPropagation();ST.ex5Menu=ST.ex5Menu==='${safeName}'?null:'${safeName}';renderTraining();">⋯</button>` : '';
+        // la nota: a veste accesa il blocco si vede solo se c'è (o si sta scrivendo), «Aggiungi una nota» sta nel ⋯
+        const notaHTML = (v5Seduta && !ST.trainNotes[e.name] && ST.trainNoteEditing !== e.name) ? '' : _renderTrainNoteBlock(e.name);
         return `
           <div class="${cardClasses.join(' ')}" id="excard-${e.name.replace(/[^a-zA-Z0-9]/g,'_')}">
             <!-- HEADER cliccabile (apre modal scheda esercizio) -->
@@ -4033,26 +4127,28 @@ function renderTraining(){
               ${equipmentUpper ? `<div class="ex-equipment-eyebrow">${equipmentUpper}</div>` : ''}
               ${muscles?`<div class="ex-muscles">${muscles}</div>`:''}
               <div class="ex-meta-row">
-                ${(rirObiettivo(e, s)!=null && !isTimed)?`<span class="ex-rir-pill">RIR ${rirObiettivo(e, s)}</span>`:''}
+                ${mostraRir?`<span class="ex-rir-pill">RIR ${rirRiga}</span>`:''}
                 <span class="ex-rest">rec ${restCompact}</span>
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
             ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name, sel)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
             ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
-            ${suggestion?`<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`:''}
+            ${suggestion ? ((v5Seduta && loggedKeys.length === 0) ? _rigaNumeriHTML(e.name, sel) : `<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`) : ''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
             <!-- ACTION ROW: progress + bottone +S{n} o badge DONE -->
             <div class="ex-action-row">
               <span class="ex-progress${allDone?' done':''}">${loggedKeys.length}/${e.sets} serie${allDone?' ✓':''}</span>
-              ${(!allDone && !isOpen) ? `<button class="ex-cambia-oggi" onclick="event.stopPropagation();apriCambioOggi('${sel}','${safeName}')" style="background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;cursor:pointer;padding:4px 6px;margin-left:auto;">Cambia per oggi ›</button>` : ''}
+              ${(!allDone && !isOpen && !v5Seduta) ? `<button class="ex-cambia-oggi" onclick="event.stopPropagation();apriCambioOggi('${sel}','${safeName}')" style="background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;cursor:pointer;padding:4px 6px;margin-left:auto;">Cambia per oggi ›</button>` : ''}
+              ${piu5}
               ${allDone
                 ? `<span class="ex-done-badge">✓ DONE</span>`
                 : !isOpen
                   ? `<button class="ex-add-set-btn" onclick="openTrainExec('${sel}','${safeName}',${nextSet});">▶ Inizia S${nextSet}</button>`
                   : ''}
             </div>
-            ${_renderTrainNoteBlock(e.name)}
+            ${menu5}
+            ${notaHTML}
             ${logForm}
           </div>`;
       }).join('');
@@ -4102,7 +4198,7 @@ function renderTraining(){
 
       // La veste nuova, Giro 1 del Training (schizzo della Seduta approvato da Ignazio il 29/10/2026): con html.v5 la seduta
       // comincia con la testata della zona Training (_testaSedutaV5) e ha i titoli di sezione veri; i dati e i tasti sono questi.
-      const v5 = !isRecoverySession && document.documentElement.classList.contains('v5');
+      const v5 = v5Seduta;
       if(v5) heroBlock = _testaSedutaV5(s, sel, subnav, tabs);
       body = `
         <div style="padding:16px 16px calc(96px + env(safe-area-inset-bottom));"${v5 ? ' class="t5-seduta"' : ''}>
@@ -4767,6 +4863,7 @@ function renderTraining(){
             <strong style="font-size:17px;display:block;line-height:1.25;">${nomeCortoConTag(ai.exName)}${attrezzoTagHtml(ai.eq)}</strong>
             ${ai.sessionLabel ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;">${ai.sessionLabel}</div>` : ''}
             ${ai.isSurrogato ? `<div class="ex-surrogato-note" style="margin-top:6px;">⚠ Versione adattata · ${(ai.surrogatoEq||'').toUpperCase()}</div>` : ''}
+            ${(document.documentElement.classList.contains('v5') && !isPullUpExercise(ai.exName)) ? `<div class="ex5-nota-carico">Carichi in ${(ST.profile && ST.profile.unit) || 'lbs'} indicativi · scarto ±15% per gli elastici a tubo</div>` : ''}
           </div>
           <button onclick="ST.exerciseAIOpen=null;renderTraining()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--t3);line-height:1;flex-shrink:0;">✕</button>
         </div>
@@ -5044,23 +5141,32 @@ function renderTraining(){
     const gifEntry2 = ST.exerciseGifCache[cacheKey2];
     const hasGif2 = gifEntry2 && gifEntry2.status === 'cached' && gifEntry2.url;
     const gifLoading2 = gifEntry2 && gifEntry2.status === 'loading';
+    // Giro 2 della Seduta (30 ottobre 2026), solo con html.v5: il RIR nella riga sopra il nome, niente pillole; i numeri di oggi
+    // in una riga (rigaNumeriV5, la stessa dell'elenco) e, senza GIF, grandi al posto del riquadro grigio (scelta di Ignazio)
+    const v5e = document.documentElement.classList.contains('v5');
+    const r5 = (v5e && !isTimed) ? (ex2.setNum === 1 ? rigaNumeriV5(ex2.exName, ex2.sessionId) : null) : null;
+    const s0 = !isTimed ? getProgressionLive(ex2.exName, ex2.sessionId) : '';
+    const numeri5 = (cls) => r5 ? `<div class="te5-numeri ${cls}"><b>${esc(r5.grande)}</b><span>${esc(r5.piccolo)}</span></div>`
+      : s0 ? `<div class="te5-numeri ${cls}"><b>${esc(s0)}</b></div>` : '';
     const gifBlock = hasGif2
       ? `<img src="${gifEntry2.url}" alt="Esecuzione ${esc(ex2.exName)}" class="train-exec-gif">`
-      : `<div class="train-exec-gif-placeholder">${gifLoading2 ? 'Caricamento esecuzione…' : 'Anteprima non disponibile'}</div>`;
+      : v5e
+        ? `${numeri5('te5-grande')}<div class="te5-senza-gif">${gifLoading2 ? 'Carico l\'immagine…' : 'Immagine non ancora pronta per questo esercizio'}</div>`
+        : `<div class="train-exec-gif-placeholder">${gifLoading2 ? 'Caricamento esecuzione…' : 'Anteprima non disponibile'}</div>`;
     execHTML = `<div class="train-exec-overlay">
       <div class="train-exec-container">
         <div class="train-exec-header">
           <div class="train-exec-eyebrow">
             <span class="train-exec-eyebrow-dot"></span>
-            <span>SERIE ${ex2.setNum} / ${tot} · IN CORSO</span>
+            <span>SERIE ${ex2.setNum} ${v5e ? 'DI' : '/'} ${tot}${v5e ? ((rirVal != null && !isTimed) ? ` · RIR ${rirVal}` : '') : ' · IN CORSO'}</span>
           </div>
           <button class="train-exec-back" onclick="trainExecBack()" aria-label="Indietro">‹ Indietro</button>
         </div>
         <div class="train-exec-body">
           <div class="train-exec-ex-name">${esc(ex2.exName)}</div>
-          ${(repsBadge || rirBadge) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
+          ${(!v5e && (repsBadge || rirBadge)) ? `<div class="train-exec-badges">${repsBadge}${rirBadge}</div>` : ''}
           ${gifBlock}
-          ${!isTimed ? (()=>{ const s0 = getProgressionLive(ex2.exName, ex2.sessionId); return s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : ''; })() : ''}
+          ${v5e ? (hasGif2 ? numeri5('') : '') : (s0 ? `<div style="font-size:12px;color:var(--acc);font-family:var(--font-mono);text-align:center;margin-top:14px;padding:8px 12px;background:var(--s1);border-radius:8px;">${esc(s0)}</div>` : '')}
           ${isTimed ? (ex2.timedReady ? `
             <div style="text-align:center;margin-top:18px;">
               ${ex2.perLato ? `<div style="font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.1em;margin-bottom:8px;color:${ex2.isoPhase==='pause'?'#D97706':ex2.isoPhase==='B'?'var(--acc)':'var(--t2)'};">${ex2.isoPhase==='pause'?'CAMBIO POSIZIONE':ex2.isoPhase==='B'?'LATO DX':'LATO SX'}</div>` : ''}
@@ -5912,15 +6018,15 @@ function _registroV5(ex, setNum, isTimed, parsedReps, isPullUp, unitLbl, resistO
     + (isPullUp ? bandPickerHTML(10) : `<select id="tl-resist" class="picker-select" onchange="ST.trainLogResist = this.value === '' ? null : parseInt(this.value, 10);">
         <option value="" disabled ${ST.trainLogResist == null ? 'selected' : ''}>—</option>
         ${resistOptions}
-      </select>
-      <div class="tl5-aiuto">lbs indicativi · scarto ±15% per gli elastici a tubo</div>`);
+      </select>`);
+  // (giro 2, 30 ottobre 2026: la frase sugli elastici indicativi non sta più sotto il carico a ogni serie, ma nel foglio dell'esercizio)
   const rir = isTimed ? '' : domanda(++n, 'Quante ne avevi ancora? (RIR)') + _tlRirSelect();
   return `<div class="tl5-registro">
       <h2 class="sez5">Registra serie ${setNum}</h2>
       ${reps}${carico}${rir}
       <div class="tl5-tasti">
         <button id="tl-save-btn" class="tl5-salva" onclick="saveTrainingSet();" ${ST.trainSaving ? 'disabled' : ''}>${ST.trainSaving ? '…' : 'Salva serie →'}</button>
-        <button class="tl5-chiudi" onclick="ST.trainLogOpen=null;renderTraining();" aria-label="Chiudi senza salvare">✕</button>
+        <button class="tl5-chiudi" onclick="ST.trainLogOpen=null;renderTraining();">Chiudi senza salvare</button>
       </div>
     </div>`;
 }
