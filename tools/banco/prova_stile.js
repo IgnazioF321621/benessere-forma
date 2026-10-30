@@ -73,8 +73,11 @@ const vecchio = fs.readFileSync(prima, 'utf8');
 const P = dividi(vecchio);
 const piatto = (d) => canonico(risolvi(d.fuori, Object.fromEntries(Object.entries(d.nomi).map(([k, v]) => [k, risolvi(v, d.nomi)]))));
 // la veste nuova (Giro 1): le sue regole stanno tutte sotto html.v5 (.set-veste era l'interruttore, uscito il 30 ottobre 2026: resta qui per confrontare gli stili di prima). A veste spenta non valgono:
-// si tolgono dallo stile nuovo, e quello che resta deve dire lo stesso di prima, regola per regola
-const VESTE = /(^|[}])\s*[^{}@]*(html\.v5|\.set-veste)[^{}]*\{[^{}]*\}/g;
+// si tolgono dallo stile nuovo, e quello che resta deve dire lo stesso di prima, regola per regola.
+// Stessa sorte per le regole tolte apposta (30 ottobre 2026: la pagina Crediti, .settings-credits*, e .ex-media-img della riserva
+// ExerciseDB/Wger uscita con Media 300): si mettono da parte
+// anche nello stile di prima, così il confronto parla solo di ciò che deve restare uguale
+const VESTE = /(^|[}])\s*[^{}@]*(html\.v5|\.set-veste|\.settings-credits|\.ex-media-img)[^{}]*\{[^{}]*\}/g;
 const senzaVeste = (d) => { let f = d.fuori, g; do { g = f; f = f.replace(VESTE, '$1'); } while(f !== g); return { ...d, fuori: f }; };
 const regoleVeste = (N.fuori.match(VESTE) || []).length;
 const a = piatto(senzaVeste(P)), b = piatto(senzaVeste(N));   // anche dallo stile di prima, se la veste c'era già
@@ -84,7 +87,7 @@ atteso(`ogni regola, coi nomi risolti, uguale a prima (${a.length} caratteri)`, 
 const cambiati = Object.keys(P.nomi).filter(n => canonico(P.nomi[n]) !== canonico(N.nomi[n] || ''));
 atteso('i nomi di prima ci sono ancora tutti, con lo stesso valore', cambiati.length === 0, cambiati.join(' '));
 const fuoriVeste = (senzaVeste(N).fuori.match(/html\.v5|set-veste/g) || []).length;
-atteso(`la veste nuova sta tutta sotto html.v5 e .set-veste (${regoleVeste} regole messe da parte, nessuna rimasta fuori)`, fuoriVeste === 0, `${fuoriVeste} rimaste`);
+atteso(`la veste nuova sta tutta sotto html.v5 (${regoleVeste} regole messe da parte con quelle tolte apposta, nessuna rimasta fuori)`, fuoriVeste === 0, `${fuoriVeste} rimaste`);
 const rotto = { ...senzaVeste(N), nomi: { ...N.nomi, 'carta': '#FFFCF7' } };
 atteso('controprova: con --carta cambiata di un punto il confronto se ne accorge', piatto(rotto) !== a);
 
