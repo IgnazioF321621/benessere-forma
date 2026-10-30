@@ -2800,6 +2800,51 @@ html.v5 .tl5-salva{flex:1;min-height:52px;border:0;border-radius:16px;background
 html.v5 .tl5-salva:disabled{background:var(--b2);cursor:default;}
 html.v5 .tl5-chiudi{width:58px;min-height:52px;border:0;border-radius:16px;background:var(--s3);color:var(--t2);font-size:18px;cursor:pointer;}
 html.v5 .rest-coach-card{border-radius:14px;}
+/* ── Giro 2 della Seduta (schizzo approvato da Ignazio il 30/10/2026, docs/prototipi/giro2_seduta/): meno testo, una riga per i
+   numeri, la GIF grande. Le righe, il tasto ⋯, il Blocco Attivazione in una riga e i numeri della serie li disegna training.js
+   solo con html.v5 (_rigaNumeriHTML, rigaNumeriV5); qui l'aspetto. */
+html.v5 .t5-seduta .ex-info-icon{display:none;}   /* la scheda dell'esercizio sta nel ⋯; il nome resta toccabile */
+html.v5 .t5-seduta .ex5-riga{display:inline-block;margin-top:8px;padding:5px 8px;border:0;border-radius:8px;background:var(--z-training-velo);color:var(--z-training-scuro);font-family:var(--font-mono);font-size:12px;font-weight:600;line-height:1.35;text-align:left;}
+html.v5 .t5-seduta button.ex5-riga{min-height:44px;cursor:pointer;}
+html.v5 .t5-seduta .ex5-ultima{margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--t2);}
+html.v5 .t5-seduta .ex5-piu{width:44px;height:44px;margin-left:auto;border:0;border-radius:50%;background:none;color:var(--t2);font-size:20px;font-weight:700;line-height:1;cursor:pointer;}
+html.v5 .t5-seduta .ex5-menu{display:flex;flex-direction:column;margin:0 0 10px 40px;border:1px solid var(--b1);border-radius:14px;background:var(--s1);box-shadow:0 8px 24px rgba(var(--nero-rgb),.12);overflow:hidden;}
+html.v5 .t5-seduta .ex5-menu button{min-height:48px;padding:0 16px;border:0;border-top:1px solid var(--s3);background:none;color:var(--t1);font-family:var(--font-sans);font-size:15px;font-weight:600;text-align:left;cursor:pointer;}
+html.v5 .t5-seduta .ex5-menu button:first-child{border-top:0;}
+/* «Inizia» su ogni riga, leggero; pieno e la riga velata sul prossimo esercizio */
+html.v5 .t5-seduta .ex-add-set-btn{background:var(--s1);color:var(--z-training-scuro);box-shadow:inset 0 0 0 1.5px var(--z-training);}
+html.v5 .t5-seduta .ex5-prossimo{background:var(--z-training-velo);}
+html.v5 .t5-seduta .ex5-prossimo .ex-add-set-btn{background:var(--z-training);color:var(--z-testo);box-shadow:none;}
+html.v5 .t5-seduta .ex5-prossimo .ex5-riga{background:var(--bianco);}
+html.v5 .t5-seduta .ex5-prossimo .ex-num-box{background:var(--z-training);color:var(--z-testo);}
+/* il Blocco Attivazione prima di partire: una riga, «Inizia», l'elenco al tocco */
+html.v5 .att5-riga{padding:0!important;margin-bottom:20px;background:var(--s1);}
+html.v5 .att5-su{display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 14px;}
+html.v5 .att5-ico{width:32px;height:32px;flex:none;border-radius:9px;background:var(--z-training);color:var(--z-testo);display:inline-flex;align-items:center;justify-content:center;}
+html.v5 .att5-testo{flex:1;min-width:0;min-height:44px;padding:0;border:0;background:none;color:var(--t1);text-align:left;cursor:pointer;}
+html.v5 .att5-testo b{display:block;font-family:var(--font-sans);font-size:16px;font-weight:700;}
+html.v5 .att5-testo small{display:block;margin-top:2px;font-family:var(--font-sans);font-size:12px;color:var(--t2);}
+html.v5 .att5-inizia{min-height:44px;padding:0 16px;border:0;border-radius:999px;background:var(--z-training);color:var(--z-testo);font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;}
+html.v5 .att5-attesa{font-family:var(--font-mono);font-size:11px;color:var(--t2);}
+html.v5 .att5-voce{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:0 14px 0 58px;border-top:1px solid var(--s3);font-size:15px;}
+html.v5 .att5-voce.fatta span:first-child{color:var(--t2);text-decoration:line-through;}
+html.v5 .att5-sec{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--t2);}
+/* la serie in corso: niente pillole (il RIR è nella riga sopra il nome), la GIF a tutta larghezza, i numeri in una riga;
+   senza GIF i numeri grandi e una riga che dice che l'immagine manca */
+html.v5 .train-exec-ex-name{padding-bottom:22px;border-radius:0 0 26px 26px;}
+html.v5 .train-exec-gif{max-width:none;max-height:58vh;border-radius:18px;}
+html.v5 .te5-numeri{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:14px;background:var(--s1);}
+html.v5 .te5-numeri b{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--t1);white-space:nowrap;}
+html.v5 .te5-numeri span{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--t2);text-align:right;}
+html.v5 .te5-numeri.te5-grande{padding:22px 16px;}
+html.v5 .te5-numeri.te5-grande b{font-size:30px;}
+html.v5 .te5-senza-gif{display:flex;align-items:center;gap:8px;width:100%;font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--t2);}
+html.v5 .te5-senza-gif::before{content:'';width:8px;height:8px;flex:none;border-radius:2px;background:var(--b1);}
+/* il registro: «Salva serie» a tutta larghezza e sotto, scritto, «Chiudi senza salvare» */
+html.v5 .tl5-tasti{flex-direction:column;gap:6px;}
+html.v5 .tl5-chiudi{width:100%;min-height:44px;border-radius:12px;background:none;color:var(--t2);font-family:var(--font-sans);font-size:14px;font-weight:600;}
+/* il foglio dell'esercizio: la frase sui carichi indicativi degli elastici sta qui, una volta */
+html.v5 .ex5-nota-carico{margin-top:6px;font-family:var(--font-sans);font-size:12px;color:var(--t2);}
 
 /* ── Giro 1 di Nutrition, il tab Oggi (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_nutrition/) ──
    La testata e i titoli di sezione li disegna nutrition.js solo con html.v5 (testaV5 in renderOggi); qui l'aspetto.

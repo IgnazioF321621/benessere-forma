@@ -47,6 +47,7 @@ function tabelle(scenario = 'base'){
 }
 async function apri(opts){
   const t = tabelle(opts.scenario); t.__sessione = { user:{ id:U, email:'ignazio.f@me.com' } };
+  if(opts.logs) t.training_logs.push(...opts.logs);   // serie di una seduta passata (giro 2: «Come l'ultima volta»)
   const b = boot(t, { now:OGGI + 'T18:00:00', ...opts, locale:{ zt_privacy_ok:'x', zt_installa_visto:'1', ...(opts.locale || {}) } });
   await b.avviato;
   for(let i = 0; i < 500 && !b.win.document.getElementById('app').classList.contains('visible'); i++) await attendi(10);
@@ -209,17 +210,42 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
   // ── 3. Giro 1 del Training, la Seduta: elenco, serie in corso, recupero con il registro (veste accesa) e la seduta a veste spenta ──
   const radiceT = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-t-'));
   fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceT, 'stile.css'));
-  const momenti = {};
+  const momenti = {}, unita = {};
+  // l'ultima volta (due giorni fa) Panca elastico: 40 lbs × 10 RIR 2, poi 40 × 9 RIR 1 → oggi si riparte dalla più forte, uguale
+  const logs = [{ id:'t1', user_id:U, session_id:'upperA', date:add(OGGI, -2), exercise_name:'Panca elastico', exercise_code:'EX001', set_number:1, reps:10, resistance:'40', rir_actual:2 },
+    { id:'t2', user_id:U, session_id:'upperA', date:add(OGGI, -2), exercise_name:'Panca elastico', exercise_code:'EX001', set_number:2, reps:9, resistance:'40', rir_actual:1 }];
   for(const v5 of [false, true]){
-    const b = await apri({ locale: v5 ? { zt_v5:'1' } : {} });
+    const b = await apri({ locale: v5 ? { zt_v5:'1' } : {}, logs });
     const W = b.win, ST = W.eval('ST');
     W.callAI = async () => ''; W.cuePer = async () => '';
     ST.trainTab = 'piano'; W.showPage('training'); await attendi(200);
     ST.trainAnticipato = 'upperA'; W.openTrainingSession('upperA'); await attendi(500);
     momenti[v5 ? 'seduta' : 'seduta_spenta'] = fotografa(W);
     if(v5){
+      // giro 2: il ⋯ apre le tre voci; il foglio dell'esercizio ha la frase sui carichi indicativi
+      ST.ex5Menu = 'Rematore elastico'; W.renderTraining(); await attendi(100);
+      momenti.seduta_menu = fotografa(W);
+      ST.ex5Menu = null;
+      ST.exerciseAIOpen = { exName:'Panca elastico', sessionId:'upperA', setup:[], execution:[], commonErrors:[], muscles:[], content:'', loading:false, executionLoading:false }; W.renderTraining(); await attendi(100);
+      unita.foglio = (W.document.querySelector('.ex5-nota-carico') || {}).textContent || null;
+      ST.exerciseAIOpen = null; W.renderTraining(); await attendi(100);
+      // la riga dei numeri, caso per caso (la regola che scrive, non quella che decide: i numeri qui sono dati)
+      const ex = W.findExercise('Panca elastico', 'upperA'), last = { resistance:'40', reps:10, rir_actual:2 };
+      const riga = (o, l, pullUp) => W._rigaNumeriTesto(o, l, ex, !!pullUp);
+      unita.uguale = riga({ resistance:40, reps:10 }, last);
+      unita.sale = riga({ resistance:45, reps:10 }, last);
+      unita.scende = riga({ resistance:30, reps:8, nota:'scarico' }, last);
+      unita.ripetizione = riga({ resistance:40, reps:11 }, last).testo;
+      unita.banda = riga({ bandColor:'Nera', reps:8 }, { band_color:'Viola', reps:8, rir_actual:2 }, true).testo;
+      unita.prima = riga(null, null).testo;
+      unita.senzaObiettivo = riga(null, last).testo;
       W.openTrainExec('upperA', 'Panca elastico', 1); await attendi(300);
       momenti.serie = fotografa(W);
+      // con la GIF (un pixel, ma c'è): la GIF grande e sotto la stessa riga dei numeri
+      ST.exerciseGifCache.EX001 = ST.exerciseGifCache['Panca elastico'] = { status:'cached', url:'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=' };
+      W.renderTraining(); await attendi(200);
+      momenti.serie_gif = fotografa(W);
+      delete ST.exerciseGifCache.EX001; delete ST.exerciseGifCache['Panca elastico'];
       W.trainExecFinishSet(); await attendi(500);
       momenti.registro = fotografa(W);
     }
@@ -240,14 +266,23 @@ const g=(s,p)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[p
 const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
 cronometro:document.querySelectorAll('#train-work-display').length,linguetteSopra:!!document.querySelector('.nutrition-subnav'),vecchioEsercizi:[...document.querySelectorAll('#page-training div')].some(d=>d.textContent.trim()==='ESERCIZI'),
 sezioni:[...document.querySelectorAll('#page-training .sez5')].map(e=>e.textContent.trim()),
-testi:testi('.t5-testa,.train-exec-header,.train-exec-ex-name,.train-exec-badges,.rest-hero,.tl5-registro').filter(x=>x.c<4.5),
-tasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi').filter(x=>x.h<44),
-nTasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi').length,
+testi:testi('.t5-testa,.train-exec-header,.train-exec-ex-name,.train-exec-badges,.rest-hero,.tl5-registro,.t5-seduta .ex5-riga,.t5-seduta .ex5-menu,.att5-riga,.te5-numeri,.te5-senza-gif').filter(x=>x.c<4.5),
+tasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi,.ex5-piu,.ex5-menu button,button.ex5-riga,.att5-inizia,.att5-testo').filter(x=>x.h<44),
+nTasti:alti('.t5-testa button,.t5-seduta .ex-add-set-btn,.train-exec-back,.train-exec-finish-btn,.rest-hero-skip,.tl5-salva,.tl5-chiudi,.ex5-piu,.ex5-menu button,button.ex5-riga,.att5-inizia,.att5-testo').length,
+righe:[...document.querySelectorAll('.t5-seduta .ex5-riga')].map(e=>e.textContent.trim()),rirPillole:document.querySelectorAll('#page-training .ex-rir-pill').length,
+cambia:[...document.querySelectorAll('.ex-cambia-oggi')].filter(vis).length,inizia:[...document.querySelectorAll('#page-training .ex-add-set-btn')].map(e=>e.textContent.trim()),
+prossimo:[...document.querySelectorAll('#page-training .exercise-card')].map(c=>c.classList.contains('ex5-prossimo')),piu:document.querySelectorAll('.ex5-piu').length,
+attivazione:{righe:document.querySelectorAll('.att5-riga').length,voci:document.querySelectorAll('.att5-voce').length,tasti:[...document.querySelectorAll('.att5 button')].map(b=>b.textContent.trim().replace(/\\s+/g,' ').slice(0,20))},
+menu:[...document.querySelectorAll('.ex5-menu button')].map(e=>e.textContent.trim()),
+placeholder:!!document.querySelector('.train-exec-gif-placeholder'),badges:document.querySelectorAll('.train-exec-badge').length,eyebrow:((document.querySelector('.train-exec-eyebrow')||{}).textContent||'').trim().replace(/\\s+/g,' '),
+numeri:(e=>e?[e.querySelector('b').textContent.trim(),((e.querySelector('span')||{}).textContent||'').trim(),e.classList.contains('te5-grande')]:null)(document.querySelector('.te5-numeri')),
+senzaGif:((document.querySelector('.te5-senza-gif')||{}).textContent||'').trim()||null,gifAlta:(e=>e?Math.round(e.getBoundingClientRect().height):0)(document.querySelector('.train-exec-gif')),
+aiuto:!!document.querySelector('.tl5-aiuto'),chiudi:((document.querySelector('.tl5-chiudi')||{}).textContent||'').trim()||null,
 domande:[...document.querySelectorAll('.tl5-domanda')].map(e=>e.textContent.trim()),tendine:['tl-reps','tl-resist','tl-rir'].map(i=>!!document.getElementById(i))};
 document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));</script>`;
   for(const [n, h] of Object.entries(momenti)){
     fs.writeFileSync(path.join(radiceT, n + '.html'), h.replace('</body>', MISURA_T + '</body>'));
-    fs.writeFileSync(path.join(radiceT, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:${n === 'seduta' || n === 'seduta_spenta' ? 1750 : 844}px"></iframe>`);
+    fs.writeFileSync(path.join(radiceT, '_' + n + '.html'), `<!doctype html><body style="margin:0"><iframe src="${n}.html" style="border:0;width:390px;height:${n.startsWith('seduta') ? 1750 : 844}px"></iframe>`);
   }
   const chromeT = (args) => new Promise(ok => execFile(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=6000', ...args],
     { maxBuffer: 64 * 1024 * 1024, timeout: 90000 }, (err, out) => ok(String(out || ''))));
@@ -255,8 +290,30 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
   try {
     const sp = await misuraT('seduta_spenta'), se = await misuraT('seduta'), sr = await misuraT('serie'), rg = await misuraT('registro');
-    atteso('seduta: Chrome ha risposto per i quattro momenti', [!!sp, !!se, !!sr, !!rg], [true, true, true, true]);
-    if(sp && se && sr && rg){
+    const sm = await misuraT('seduta_menu'), sg = await misuraT('serie_gif');
+    atteso('seduta: Chrome ha risposto per i sei momenti', [!!sp, !!se, !!sr, !!rg, !!sm, !!sg], [true, true, true, true, true, true]);
+    if(sp && se && sr && rg && sm && sg){
+      // giro 2 (30 ottobre 2026): una riga per i numeri, il RIR solo in testata, ⋯ al posto di «Cambia per oggi» e «+ Nota»,
+      // «Inizia» su ogni riga ed evidenziato sul prossimo, l'attivazione in una riga; a veste spenta tutto com'era
+      atteso('seduta spenta: niente righe nuove, «Cambia per oggi» su ogni esercizio, l\'attivazione di prima', [sp.righe, sp.cambia, sp.piu, sp.attivazione.righe, sp.rirPillole], [[], 2, 0, 0, 2]);
+      atteso('seduta accesa: i numeri di oggi in UNA riga («Come l\'ultima volta» se uguali, «Si parte da» la prima volta)', se.righe, ['Come l\'ultima volta · 40 lbs × 10', 'Si parte da 8 ripetizioni']);
+      atteso('seduta accesa: il RIR della seduta solo in testata, «Cambia per oggi» non più sulle righe', [se.rirPillole, se.cambia], [0, 0]);
+      atteso('seduta accesa: «Inizia» su ogni riga, evidenziato sul prossimo esercizio, un ⋯ per riga', [se.inizia, se.prossimo, se.piu], [['▶ Inizia S1', '▶ Inizia S1'], [true, false], 2]);
+      atteso('seduta accesa: il Blocco Attivazione è una riga con «Inizia», l\'elenco chiuso', [se.attivazione.righe, se.attivazione.voci, se.attivazione.tasti.some(t => t === 'Inizia'), se.attivazione.tasti.some(t => /Start/.test(t))], [1, 0, true, false]);
+      atteso('seduta accesa: il ⋯ apre tre voci', sm.menu, ['Cambia per oggi', 'Aggiungi una nota', 'Scheda dell\'esercizio']);
+      atteso('la riga dei numeri: uguale, sale, scende (scarico), una ripetizione in più, la banda, la prima volta, senza obiettivo',
+        [unita.uguale.testo, unita.uguale.ultima, unita.sale.testo, unita.sale.ultima, unita.scende.testo, unita.ripetizione, unita.banda, unita.prima, unita.senzaObiettivo],
+        ['Come l\'ultima volta · 40 lbs × 10', null, '45 lbs × 10 · +5 lbs rispetto all\'ultima volta', 'Ultima volta · 40 lbs × 10 · RIR 2', '30 lbs × 8 · scarico, −10 lbs, −2 ripetizioni rispetto all\'ultima volta',
+          '40 lbs × 11 · +1 ripetizione rispetto all\'ultima volta', 'banda Nera × 8 · banda più dura rispetto all\'ultima volta', 'Si parte da 8 ripetizioni', 'L\'ultima volta · 40 lbs × 10 · RIR 2']);
+      atteso('la serie in corso e la grande della serie dicono la stessa cosa', [unita.uguale.grande, unita.uguale.piccolo, unita.sale.piccolo], ['40 lbs × 10', 'come l\'ultima volta', '+5 lbs rispetto all\'ultima volta']);
+      atteso('serie in corso senza GIF: niente riquadro grigio, i numeri grandi e «Immagine non ancora pronta»', [sr.placeholder, sr.numeri, sr.senzaGif], [false, ['40 lbs × 10', 'come l\'ultima volta', true], 'Immagine non ancora pronta per questo esercizio']);
+      atteso('serie in corso: il RIR nella riga sopra il nome, niente pillole', [sr.eyebrow, sr.badges], ['SERIE 1 DI 3 · RIR 2', 0]);
+      atteso('serie in corso con la GIF: la GIF alta almeno 300 px e sotto la riga dei numeri, non grande', [sg.gifAlta >= 300, sg.numeri, sg.senzaGif], [true, ['40 lbs × 10', 'come l\'ultima volta', false], null]);
+      atteso('registro: niente frase sugli elastici, «Chiudi senza salvare» scritto; la frase sta nel foglio dell\'esercizio', [rg.aiuto, rg.chiudi, unita.foglio], [false, 'Chiudi senza salvare', 'Carichi in lbs indicativi · scarto ±15% per gli elastici a tubo']);
+      for(const [nome, m] of [['seduta con il menu', sm], ['serie con la GIF', sg]]){
+        atteso(`${nome}: ogni testo almeno 4,5:1`, m.testi, []);
+        atteso(`${nome}: ogni tasto alto almeno 44 px (${m.nTasti} tasti)`, m.tasti, []);
+      }
       atteso('seduta spenta: niente testata nuova, l\'intestazione dell\'app, le linguette in alto, «ESERCIZI» di prima', [sp.testa, sp.header !== 'none', sp.linguetteSopra, sp.vecchioEsercizi, sp.sezioni], [null, true, true, true, []]);
       atteso('seduta accesa: testata della zona Training (#2E6DA4) al posto dell\'intestazione dell\'app', [se.testa, se.header], ['rgb(46, 109, 164)', 'none']);
       atteso('seduta accesa: le linguette dentro la testata, un cronometro solo', [se.linguetteSopra, se.cronometro], [false, 1]);
