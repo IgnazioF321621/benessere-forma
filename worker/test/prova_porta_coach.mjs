@@ -2,7 +2,7 @@
 // Supabase Auth e Groq. Copre Pirsi 010: chi non ha un token valido non entra,
 // i siti altrui non entrano, domanda e risposta hanno un tetto, gli indirizzi
 // sconosciuti danno 404, ogni persona ha un limite al minuto, e gli errori
-// non portano fuori dettagli interni.
+// non portano fuori dettagli interni. Le GIF: solo le nostre (Media 300).
 //   node worker/test/prova_porta_coach.mjs
 import worker, { _impostaTempoMaxGroq } from '../src/index.js';
 import { _azzeraPorta } from '../src/porta.js';
@@ -153,10 +153,47 @@ scenario();
 r = await chiama({ path: '/exercise-media?name=Trazioni%20alla%20sbarra', method: 'GET', token: null });
 atteso('GIF · errore senza dettagli', [r.status, r.json, /segreta|relation|Supabase/.test(r.testo)], [500, { status: 'error', error: 'Errore interno' }, false]);
 atteso('GIF · il dettaglio resta nei log', r.log.some(l => /Supabase select failed/.test(l)), true);
-r = await chiama({ path: '/exercise-media?name=Inesistente', method: 'GET', token: null });
-atteso('GIF · nome senza match, invariato', [r.status, r.json.status], [200, 'missing']);
 r = await chiama({ path: '/exercise-media?name=x', method: 'GET', token: null, origin: 'https://sito-altrui.example' });
 atteso('GIF · altro sito 403', r.status, 403);
+
+// Media 300: solo le GIF nostre. Con la GIF in biblioteca il suo indirizzo; senza, «missing» e cached_url nullo;
+// mai una chiamata fuori da Supabase (ExerciseDB, Wger), mai un indirizzo di terzi nella risposta.
+{
+  scenario();
+  const chiamate = [];
+  const CATALOGO = { EX001: 'trazioni-presa-prona', EX034: null, EX035: 'slug-senza-riga' };
+  globalThis.fetch = async (url) => {
+    const u = String(url); chiamate.push(u);
+    const res = (body) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    if (u.includes('/rest/v1/esercizi_catalog')) {
+      const q = new URL(u).searchParams;
+      const codice = (q.get('codice') || '').replace(/^eq\./, '');
+      const nome = (q.get('nome') || '').replace(/^eq\./, '');
+      if (nome === 'Trazioni presa prona') return res([{ gif_slug: 'trazioni-presa-prona' }]);
+      if (nome === 'Panca & manubri (piana), 30*') return res([{ gif_slug: 'trazioni-presa-prona' }]);
+      return res(codice in CATALOGO ? [{ gif_slug: CATALOGO[codice] }] : []);
+    }
+    if (u.includes('/rest/v1/biblioteca_gif')) return res(u.includes('trazioni-presa-prona') ? [{ slug: 'trazioni-presa-prona', storage_path: 'Schiena/trazioni-presa-prona.gif' }] : []);
+    throw new Error('fetch non previsto: ' + u);
+  };
+  const terzi = (t) => /exercisedb|wger/i.test(t);
+  r = await chiama({ path: '/exercise-media?code=EX001', method: 'GET', token: null });
+  atteso('GIF · codice con GIF: indirizzo della biblioteca', [r.status, r.json.status, r.json.source, r.json.cached_url],
+    [200, 'cached', 'biblioteca', 'https://qxiyeiahpoiliwpqslpr.supabase.co/storage/v1/object/public/biblioteca-gif/Schiena/trazioni-presa-prona.gif']);
+  r = await chiama({ path: '/exercise-media?code=EX034', method: 'GET', token: null });
+  atteso('GIF · EX034 (era Wger): niente immagine', [r.status, r.json.status, r.json.cached_url, terzi(r.testo)], [200, 'missing', null, false]);
+  r = await chiama({ path: '/exercise-media?code=EX098', method: 'GET', token: null });
+  atteso('GIF · EX098 (era ExerciseDB): niente immagine', [r.status, r.json.status, r.json.cached_url, terzi(r.testo)], [200, 'missing', null, false]);
+  r = await chiama({ path: '/exercise-media?name=Trazioni%20presa%20prona', method: 'GET', token: null });
+  atteso('GIF · per nome del catalogo: la stessa GIF', [r.status, r.json.status, r.json.source], [200, 'cached', 'biblioteca']);
+  r = await chiama({ path: '/exercise-media?name=Trazioni%20alla%20sbarra', method: 'GET', token: null });
+  atteso('GIF · nome storico (era ExerciseDB): niente immagine', [r.status, r.json.status, r.json.cached_url, terzi(r.testo)], [200, 'missing', null, false]);
+  r = await chiama({ path: '/exercise-media?code=EX035', method: 'GET', token: null });
+  atteso('GIF · slug senza riga in biblioteca: niente immagine', [r.status, r.json.status, r.json.cached_url], [200, 'missing', null]);
+  r = await chiama({ path: '/exercise-media?name=' + encodeURIComponent('Panca & manubri (piana), 30*'), method: 'GET', token: null });
+  atteso('GIF · nome con & , ( * : arriva intero al filtro', [r.status, r.json.status], [200, 'cached']);
+  atteso('GIF · nessuna chiamata fuori da Supabase', chiamate.filter(u => !u.startsWith('https://qxiyeiahpoiliwpqslpr.supabase.co/rest/v1/')), []);
+}
 
 // Pirsi 090: Groq resta appeso → 504 kind 'timeout' entro il tempo massimo, niente dettagli interni.
 {

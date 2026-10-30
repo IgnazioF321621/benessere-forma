@@ -168,7 +168,7 @@ Lo prova `node tools/banco/prova_blocco_nuovo.js`.
 
 ### La scheda dell'esercizio: solo la GIF (Training 400, 14 ottobre 2026)
 
-- **Niente più immagine dei muscoli accanto alla GIF** *(richiesta di Ignazio: la GIF i muscoli li mostra già in rosso)*: `muscleImg` non esiste più, né in `EXERCISE_MEDIA` né nelle sedute scritte nell'app (Recovery Day). Nella scheda (`openExerciseAI`) la GIF prende tutta la larghezza (`.ex-media-gif`). Ordine: GIF › riquadro che si carica › vecchia foto di esecuzione Wger (solo esercizi storici) › riquadro **«Immagine non ancora disponibile»** della stessa misura (scelta di Ignazio: mai un buco; anche se la GIF non si carica). Il foglio del recupero e la schermata di esecuzione mostravano già solo la GIF; il riscaldamento e l'anteprima del Programma non hanno immagini. Lo prova `node tools/banco/prova_gif_grande_400.js`
+- **Niente più immagine dei muscoli accanto alla GIF** *(richiesta di Ignazio: la GIF i muscoli li mostra già in rosso)*: `muscleImg` non esiste più, né in `EXERCISE_MEDIA` né nelle sedute scritte nell'app (Recovery Day). Nella scheda (`openExerciseAI`) la GIF prende tutta la larghezza (`.ex-media-gif`). Ordine: GIF › riquadro che si carica › riquadro **«Immagine non ancora disponibile»** della stessa misura (scelta di Ignazio: mai un buco; anche se la GIF non si carica). Dal 30 ottobre 2026 (Media 300) niente più ripiego sulle vecchie foto Wger: solo GIF nostre. Il foglio del recupero e la schermata di esecuzione mostravano già solo la GIF; il riscaldamento e l'anteprima del Programma non hanno immagini. Lo prova `node tools/banco/prova_gif_grande_400.js`
 
 ### Mobilità e stretching nell'app (Training 390, 14 ottobre 2026)
 

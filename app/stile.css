@@ -523,7 +523,6 @@ select.inp{cursor:pointer;}
 div.ex-media-gif{aspect-ratio:1/1;max-height:none;}
 div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;
   font-family:var(--font-mono);font-size:12px;color:var(--t3);letter-spacing:.04em;aspect-ratio:4/3;}
-.ex-media-img{width:100%;height:240px;object-fit:contain;background:var(--grigio-1);border-radius:8px;display:block;}
 .ex-media-skeleton{
   background:linear-gradient(90deg,var(--grigio-3) 0%,var(--grigio-1) 50%,var(--grigio-3) 100%);
   background-size:200% 100%;
