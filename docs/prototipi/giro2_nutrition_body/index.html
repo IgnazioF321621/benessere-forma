@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 2 · Nutrition e Body</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 2 «snellire», Nutrition e Body: disegno prima/dopo, niente codice dell'app.
+   A sinistra la pagina vera di oggi (fotografata dal banco a 390 px), a destra la proposta, a margine cosa snellire nel giro 2. */
+:root {
+  --font-sans: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC;
+  --b1: #DDD9D0; --t1: #1A1A1A; --t2: #555047; --t3: #9A9388;
+  --acc: #2A7A6F;
+  --mod-training: #B5D4F4;          /* la tinta Training di sempre */
+  --z-training: #2E6DA4;            /* proposta: il colore pieno della zona Training (bianco sopra: contrasto 5,4:1) */
+  --z-training-scuro: #1F4F7A;
+  --training-velo: #EAF2FB;
+  --bianco: #FFFFFF;
+  --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+  --pagina: #E4E1DA;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { max-width: 1240px; margin: 0 auto; padding: 24px 16px 60px; }
+h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; max-width: 860px; margin: 0 0 14px; }
+.scelta-vecchia { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 22px; font-size: 13px; color: var(--t2); }
+.scelta button { font: 600 13px var(--font-sans); border: 1px solid var(--b1); background: var(--s1); color: var(--t1); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.scelta button.on { background: var(--t1); color: var(--bianco); border-color: var(--t1); }
+
+.momento { margin: 0 0 40px; }
+.momento > h2 { font-size: 18px; font-weight: 800; margin: 0 0 12px; }
+.momento > h2 span { font: 600 12px var(--font-mono); color: var(--t3); letter-spacing: .06em; margin-right: 8px; }
+.tre { display: grid; grid-template-columns: 390px 390px minmax(220px, 1fr); gap: 22px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); background: var(--bg); }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13px; line-height: 1.45; }
+.note h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; }
+.note ol { margin: 0; padding-left: 20px; }
+.note li { margin: 0 0 7px; }
+.note .resta { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--nota-bordo); }
+
+/* ── il telefono della proposta ── */
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; position: relative; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); }
+.tel.alto { min-height: 844px; display: flex; flex-direction: column; }
+.testa { background: var(--z-training); color: var(--bianco); padding: 14px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 34px; }
+.ind { font: 700 16px var(--font-sans); color: inherit; background: none; border: 0; padding: 0; }
+.dx { display: flex; gap: 8px; align-items: center; }
+.chip { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); color: inherit; border-radius: 999px; padding: 6px 10px; }
+.fb { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255,255,255,.2); color: inherit; display: flex; align-items: center; justify-content: center; }
+.fb svg { width: 17px; height: 17px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .08em; opacity: .85; margin-top: 10px; margin-bottom: 4px; }
+.testa h1 { font-size: 24px; font-weight: 800; margin: 2px 0 12px; line-height: 1.1; letter-spacing: -.5px; }
+.dati { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dati div { background: rgba(255,255,255,.14); border-radius: 12px; padding: 8px 10px; }
+.dati b { display: block; font: 700 20px var(--font-mono); }
+.dati small { font-size: 11px; opacity: .85; }
+.barra { height: 6px; border-radius: 999px; background: rgba(255,255,255,.25); margin: 12px 0 14px; overflow: hidden; }
+.barra i { display: block; height: 100%; width: 4%; background: var(--bianco); border-radius: 999px; }
+.seg { display: flex; background: rgba(255,255,255,.18); border-radius: 12px; padding: 4px; }
+.seg span { flex: 1; text-align: center; font-weight: 700; font-size: 14px; padding: 8px 0; border-radius: 9px; }
+.seg span.on { background: var(--bianco); color: var(--z-training); }
+
+.corpo { padding: 6px 16px 20px; flex: 1; }
+.gr-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > .riga:first-child, .gruppo > .es:first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.riga .mono { font: 600 13px var(--font-mono); color: var(--t3); }
+.chev { color: var(--t3); font-size: 18px; }
+.ico { width: 32px; height: 32px; border-radius: 9px; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex: none; }
+.ico svg { width: 15px; height: 15px; }
+.rientra { padding-left: 58px; }
+.pill { font: 700 13px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 999px; padding: 8px 14px; }
+
+.es { display: flex; gap: 12px; padding: 13px 14px; border-top: 1px solid var(--s3); align-items: flex-start; }
+.num { width: 28px; height: 28px; border-radius: 50%; background: var(--training-velo); color: var(--z-training-scuro); font: 700 13px var(--font-mono); display: flex; align-items: center; justify-content: center; flex: none; margin-top: 1px; }
+.es-c { flex: 1; min-width: 0; }
+.es-c b { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.es-c b .i { font: 600 11px var(--font-mono); color: var(--t3); border: 1px solid var(--b1); border-radius: 50%; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; }
+.es-c .param { font: 600 12px var(--font-mono); color: var(--t2); margin-top: 3px; }
+.es-c .sugg { display: inline-block; font: 600 12px var(--font-mono); color: var(--z-training-scuro); background: var(--training-velo); border-radius: 8px; padding: 4px 8px; margin-top: 7px; }
+.pallini { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
+.pallini i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--mod-training); }
+.pallini i.fatta { background: var(--z-training); border-color: var(--z-training); }
+.pallini span { font: 600 12px var(--font-mono); color: var(--t3); margin-left: 4px; }
+.azioni { display: flex; gap: 16px; margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--z-training); }
+.via { flex: none; align-self: center; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex-direction: column; font: 700 10px var(--font-mono); gap: 1px; }
+.via svg { width: 14px; height: 14px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; }
+.tab svg { width: 21px; height: 21px; }
+.tab div.on { color: var(--z-training-scuro); background: var(--training-velo); }
+
+/* serie in corso */
+.testa.grande { border-radius: 0 0 30px 30px; padding-bottom: 22px; }
+.vivo { display: inline-flex; align-items: center; gap: 7px; }
+.vivo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--bianco); box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.chips { display: flex; gap: 8px; }
+.chips span { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); border-radius: 999px; padding: 6px 11px; }
+.gif { background: var(--s2); border-radius: 18px; height: 230px; display: flex; align-items: center; justify-content: center; font: 600 11px var(--font-mono); letter-spacing: .08em; color: var(--t3); margin-top: 16px; }
+.piede { padding: 12px 16px 26px; }
+.grosso { width: 100%; font: 700 18px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 16px; padding: 17px 0; }
+
+/* recupero e registro */
+.rec { display: flex; align-items: center; gap: 18px; margin-top: 8px; }
+.anello { width: 128px; height: 128px; border-radius: 50%; border: 8px solid rgba(255,255,255,.3); border-top-color: var(--bianco); border-right-color: var(--bianco); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 32px var(--font-mono); }
+.anello small { font: 700 10px var(--font-mono); letter-spacing: .08em; opacity: .85; }
+.mini-gif { flex: 1; height: 104px; border-radius: 14px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; font: 600 10px var(--font-mono); letter-spacing: .06em; opacity: .9; text-align: center; padding: 6px; }
+.domanda { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 16px 4px 7px; }
+.campo { background: var(--s1); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+.campo b { font: 700 26px var(--font-mono); }
+.campo small { color: var(--t3); font-size: 12px; }
+.campo.attivo { box-shadow: inset 0 0 0 2px var(--z-training); }
+.aiuto { font-size: 12px; color: var(--t3); margin: 6px 4px 0; }
+.coach { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
+.coach .ico { background: var(--acc); }
+.coach p { margin: 2px 0 0; font-size: 14px; line-height: 1.4; }
+.coach b { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--acc); }
+.due { display: flex; gap: 10px; margin-top: 16px; }
+.due .grosso { flex: 1; }
+.annulla { width: 58px; border: 0; border-radius: 16px; background: var(--s3); color: var(--t2); font-size: 20px; }
+
+
+/* il segno a margine: un numero che rimanda alla nota del giro 2 */
+.n2 { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); vertical-align: middle; flex: none; }
+.testa .n2 { margin-left: 4px; }
+
+@media (max-width: 1100px) {
+  .tre { grid-template-columns: 1fr; justify-items: center; }
+  .note { max-width: 390px; }
+}
+@media (max-width: 420px) {
+  .prima img, .tel { width: 100%; }
+}
+
+
+/* ── giro 2, Home e Impostazioni: le cose nuove (la zona Home è verde: --acc) ── */
+:root { --z-home: #2A7A6F; --z-home-velo: #E6F4F2; --z-home-scuro: #1F5C53; --mod-nutrition: #A35F00; --mod-body: #6A55A0; }
+.prima img { height: auto; }
+.testa.verde { background: var(--z-home); }
+.testa.verde .seg span.on { color: var(--z-home-scuro); }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; }
+.gruppo .riga b { font-weight: 700; }
+.riga .pt { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.riga .ok { font: 700 13px var(--font-sans); color: var(--bianco); background: var(--z-home); border: 0; border-radius: 999px; padding: 9px 14px; min-height: 40px; }
+.riga .no { font: 700 13px var(--font-sans); color: var(--t2); background: var(--s2); border: 0; border-radius: 999px; padding: 9px 12px; min-height: 40px; }
+.aperta { background: var(--z-home-velo); }
+.aperta .cresce small { color: var(--t2); font-size: 13px; line-height: 1.4; margin-top: 6px; }
+.aperta .nums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: 8px; font: 600 12px var(--font-mono); color: var(--t2); }
+.aperta .nums span:nth-child(odd) { white-space: nowrap; }
+.aperta .nums span:nth-child(even) { color: var(--t1); text-align: right; }
+.aperta .perche { display: inline-block; margin-top: 8px; font: 700 12px var(--font-mono); letter-spacing: .06em; color: var(--z-home-scuro); text-transform: uppercase; }
+.aperta .due { margin-top: 12px; }
+.aperta .due .ok, .aperta .due .no { flex: 1; min-height: 44px; }
+.adesso { background: var(--s1); border-radius: 14px; padding: 16px; }
+.adesso h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+.adesso p { margin: 4px 0 12px; color: var(--t2); font-size: 14px; }
+.adesso .grosso { background: var(--z-home); padding: 14px 0; font-size: 16px; }
+.adesso .dopo { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--s3); font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--t2); text-transform: uppercase; }
+.adesso .dopo .chipv { background: var(--z-home-velo); color: var(--z-home-scuro); border-radius: 999px; padding: 6px 10px; text-transform: none; letter-spacing: 0; font-weight: 700; }
+.adesso .dafare { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--t1); }
+.adesso .dafare .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--mod-body); flex: none; }
+.w5 { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; font-size: 15px; }
+.w5 .cresce b { display: block; font-weight: 700; }
+.w5 .cresce small { color: var(--t2); font-size: 12px; }
+.w5 .val { font: 700 16px var(--font-mono); text-align: right; }
+.w5 .val small { display: block; font-size: 11px; color: var(--mod-nutrition); font-weight: 600; }
+.ellissi { color: var(--t2); font-size: 13px; text-align: center; padding: 10px; }
+.testa.set { background: var(--z-home); border-radius: 0 0 26px 26px; }
+.campo.spento { background: var(--s2); color: var(--t2); }
+.campo .cresce small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.sw { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--s1); border-radius: 14px; padding: 14px 16px; min-height: 60px; }
+.sw b { display: block; font-size: 16px; }
+.sw small { color: var(--t2); font-size: 12px; line-height: 1.4; }
+.sw .int { width: 50px; height: 30px; border-radius: 999px; background: var(--b1); position: relative; flex: none; }
+.sw .int::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--bianco); }
+.sw .int.on { background: var(--z-home); } .sw .int.on::after { left: 23px; }
+.fatto { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--acc); color: var(--bianco); font: 700 10px var(--font-mono); vertical-align: middle; }
+.decidi { background: var(--s1); border: 1px solid var(--b1); border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.45; max-width: 900px; margin: 0 0 26px; }
+.decidi h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.decidi ol { margin: 0; padding-left: 20px; }
+.decidi li { margin: 0 0 7px; }
+.due-tel { display: grid; gap: 22px; }
+
+/* ── giro 2, Nutrition e Body ── */
+:root { --z-nutrition: #A35F00; --z-nutrition-velo: #FDF1DA; --z-nutrition-scuro: #7A4000; --z-body: #6A55A0; --z-body-velo: #EFEDFA; --z-body-scuro: #4A3A78; --over: #B45309; }
+.testa.ambra { background: var(--z-nutrition); } .testa.ambra .seg span.on { color: var(--z-nutrition-scuro); }
+.testa.viola { background: var(--z-body); } .testa.viola .seg span.on { color: var(--z-body-scuro); }
+.testa .su .sopra { margin: 0; }
+.nav-g { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 6px; }
+.nav-g .fb { width: 40px; height: 40px; }
+.nav-g .giorno { text-align: center; font: 600 14px var(--font-mono); }
+.nav-g .giorno small { display: block; font: 700 10px var(--font-mono); letter-spacing: .1em; opacity: .85; margin-top: 2px; }
+.ora { position: relative; height: 3px; background: rgba(255,255,255,.25); border-radius: 999px; margin: 6px 0 14px; }
+.ora i { position: absolute; left: 0; top: 0; height: 100%; width: 75%; background: var(--bianco); border-radius: 999px; }
+.ora b { position: absolute; left: 75%; top: 6px; transform: translateX(-50%); font: 700 9px var(--font-mono); }
+.card { background: var(--s1); border-radius: 14px; padding: 14px; }
+.giorno-c { display: flex; align-items: center; gap: 16px; }
+.anello-n { width: 118px; height: 118px; border-radius: 50%; border: 9px solid var(--s3); border-top-color: var(--z-nutrition); border-right-color: var(--z-nutrition); flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.anello-n b { font: 700 28px var(--font-mono); letter-spacing: -.5px; }
+.anello-n small { font: 700 9px var(--font-mono); letter-spacing: .1em; color: var(--t2); }
+.giorno-c .lato { flex: 1; font-size: 13px; color: var(--t2); line-height: 1.45; }
+.giorno-c .lato b { color: var(--t1); font: 700 14px var(--font-mono); }
+.zona { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; background: #FBE9E4; border-radius: 10px; padding: 9px 12px; font: 700 11px var(--font-mono); letter-spacing: .08em; color: #B84C2A; }
+.zona span:last-child { color: var(--t2); font-weight: 600; letter-spacing: 0; }
+.macro { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.macro div { border-left: 1px solid var(--s3); padding-left: 10px; } .macro div:first-child { border-left: 0; padding-left: 0; }
+.macro .et { font: 700 10px var(--font-mono); letter-spacing: .1em; color: var(--t2); }
+.macro .et::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; background: var(--pt); }
+.macro b { display: block; font: 700 24px var(--font-mono); margin: 3px 0 1px; } .macro b small { font-size: 12px; color: var(--t2); margin-left: 2px; }
+.macro .sotto { font: 600 11px var(--font-mono); color: var(--t2); }
+.macro .bar { height: 4px; border-radius: 999px; background: var(--s3); margin-top: 7px; overflow: hidden; } .macro .bar i { display: block; height: 100%; width: 32%; background: var(--pt); }
+.grosso.ambra { background: var(--z-nutrition); font-size: 16px; padding: 14px 0; border-radius: 14px; margin-top: 14px; }
+.ghost { width: 100%; font: 700 15px var(--font-sans); background: var(--s2); color: var(--t1); border: 0; border-radius: 14px; padding: 13px 0; margin-top: 8px; }
+.riga .ora-r { font: 600 12px var(--font-mono); color: var(--t2); width: 44px; flex: none; }
+.riga .kcal { font: 700 15px var(--font-mono); } .riga .kcal small { display: inline; font-size: 11px; color: var(--t2); margin-left: 2px; }
+.coach-n { background: var(--z-nutrition-velo); border-radius: 14px; padding: 14px; }
+.coach-n b { font-size: 17px; font-weight: 800; } .coach-n .lnk { display: block; margin-top: 8px; font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--z-nutrition-scuro); }
+/* Body */
+.peso-c { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.peso-c .grande { font: 700 38px var(--font-mono); letter-spacing: -1px; line-height: 1; } .peso-c .grande small { font-size: 15px; color: var(--t2); margin-left: 3px; letter-spacing: 0; }
+.peso-c .delta { font: 700 13px var(--font-mono); color: var(--over); margin-left: 8px; }
+.peso-c .pesati { font: 700 13px var(--font-sans); color: var(--bianco); background: var(--z-body); border: 0; border-radius: 999px; padding: 10px 14px; min-height: 40px; }
+.obj { display: flex; justify-content: space-between; margin-top: 12px; font: 600 12px var(--font-mono); color: var(--t2); } .obj b { color: var(--z-nutrition-scuro); }
+.prog { height: 5px; border-radius: 999px; background: var(--s3); margin-top: 8px; } .prog i { display: block; height: 100%; width: 2%; background: var(--z-body); border-radius: 999px; }
+.campo .mono { font: 600 15px var(--font-mono); background: var(--s2); border-radius: 10px; padding: 8px 12px; }
+.tratt { border: 1px dashed var(--z-nutrition); color: var(--z-nutrition-scuro); background: var(--s1); border-radius: 12px; padding: 12px; text-align: center; font-weight: 700; font-size: 14px; margin-top: 10px; }
+.ind-c { font: 700 12px var(--font-mono); color: var(--z-nutrition-scuro); margin: 12px 4px 0; }
+.grosso.viola { background: var(--z-body); font-size: 16px; padding: 14px 0; border-radius: 14px; margin-top: 14px; }
+.vuoto { background: var(--s1); border-radius: 14px; padding: 26px 18px; text-align: center; margin-top: 14px; }
+.vuoto .tondo { width: 48px; height: 48px; border-radius: 50%; background: var(--z-body-velo); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.vuoto h4 { margin: 0 0 6px; font-size: 17px; font-weight: 800; } .vuoto p { margin: 0 0 14px; color: var(--t2); font-size: 13px; line-height: 1.45; }
+.vuoto .grosso.viola { margin-top: 0; }
+.sottile { display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin-top: 10px; padding: 0 14px; background: var(--s1); border-radius: 14px; font-size: 14px; color: var(--t1); }
+.sottile .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--z-body); flex: none; margin-right: 10px; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 2 · Nutrition e Body, snelliti</h1>
+  <p class="intro">A sinistra le pagine vere di oggi (banco, 390 px, veste accesa, dati di prova del 4 ottobre: un pranzo da 650 kcal, pesata di oggi 74,0 kg, nessun check fisico fatto), a destra lo schizzo snellito. I tondi gialli <span class="n2">1</span> rimandano alle note del giro 1 (<code>giro2_note.md</code>): quattro di Nutrition, quattro di Body. I dati e le regole non cambiano: <code>dayTotals</code> e <code>weighInsByDay</code> restano la fonte dei numeri.</p>
+
+  <!-- 1 · Nutrition, Oggi -->
+  <section class="momento">
+    <h2><span>1 DI 3</span>Nutrition · Oggi: un numero per cosa, la testata leggera, la timeline in parole</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_1_nutrition.png" alt="Nutrition Oggi com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel" id="tel-nutrition">
+          <div class="testa ambra">
+            <div class="su"><span class="sopra">Dom 4 ott</span><span class="n2">3</span></div>
+            <h1 style="margin-bottom:4px">Nutrition</h1>
+            <div class="nav-g"><button class="fb">‹</button><div class="giorno">dom 4 ott<small>● OGGI</small></div><button class="fb" style="opacity:.5">›</button></div>
+            <div class="ora"><i></i><b>18:00</b></div>
+            <div class="seg"><span class="on">Oggi</span><span>Integratori</span><span>Analisi</span><span>Piano</span></div>
+          </div>
+          <div class="corpo">
+            <div class="sez"><span>Il giorno</span><span>Obiettivo 2.300 kcal <span class="n2">1</span></span></div>
+            <div class="card">
+              <div class="giorno-c">
+                <div class="anello-n"><b>1.650</b><small>KCAL RIMASTE</small></div>
+                <div class="lato">Hai mangiato <b>650 kcal</b>, un pasto.<br>Prossimo: cena alle 20:00.</div>
+              </div>
+              <div class="zona"><span>● Fuori zona</span><span>45 · 27 · 29 su 38 · 34 · 28</span></div>
+              <div class="macro">
+                <div style="--pt:#C9A227"><div class="et">CARB</div><b>149<small>g</small></b><div class="sotto">rimasti</div><div class="bar"><i></i></div></div>
+                <div style="--pt:#2A7A6F"><div class="et">PROT</div><b>154<small>g</small></b><div class="sotto">rimasti</div><div class="bar"><i style="width:21%"></i></div></div>
+                <div style="--pt:#B84C2A"><div class="et">FAT</div><b>52<small>g</small></b><div class="sotto">rimasti</div><div class="bar"><i style="width:28%"></i></div></div>
+              </div>
+            </div>
+            <button class="grosso ambra">+ Registra pasto</button>
+            <button class="ghost">+ Registra integratori</button>
+            <div class="sez"><span>Oggi · 1 pasto <span class="n2">2</span></span><span>650 kcal</span></div>
+            <div class="gruppo">
+              <div class="riga"><span class="ora-r">13:00</span><span class="cresce"><b>Pranzo</b><small>Pasto intero, senza ingredienti</small></span><span class="kcal">650<small>kcal</small></span><span class="chev">›</span></div>
+            </div>
+            <div class="sez"><span>Prossimo pasto</span><span>Pirsi</span></div>
+            <div class="coach-n"><b>Cena · 20:00</b><span class="lnk">Analizza e suggerisci →</span></div>
+            <div class="ellissi" style="font-size:12px">«Giorno detox» <span class="n2">4</span> non sta più qui: è una riga del tab Piano (o di Impostazioni › Cibo)</div>
+          </div>
+          <div class="tab">
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div class="on" style="color:var(--z-nutrition-scuro);background:var(--z-nutrition-velo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li><b>Un numero per cosa.</b> Le calorie: il cerchio dice le <b>rimaste</b> (1.650), il titolo della sezione dice l'obiettivo (2.300), la frase accanto dice quante ne hai mangiate e quanti pasti. Niente più «650 consumate · su 2.300 obiettivo» ripetuto sotto. I macro: solo i grammi <b>rimasti</b> con la barra; la riga «70/219 g» sparisce. (Scelta alternativa: il cerchio dice le <b>mangiate</b>, 650 su 2.300, e i macro «mangiati».)</li>
+          <li><b>La timeline parla italiano.</b> Via «PASTI · PACCHETTI · EXTRA · IN ORDINE CRONOLOGICO» e via «pasto monolitico»: il titolo dice «Oggi · 1 pasto» e le kcal del giorno; ogni pasto è una riga (ora, nome, kcal), il tocco apre la modifica, il cestino sta dentro la modifica. «Pasto intero, senza ingredienti» solo quando è così.</li>
+          <li><b>La testata leggera.</b> Fuoco (giorni di fila), peso, ⚙ e ↻ escono dalle testate di Nutrition, Training e Body: i giorni di fila e il peso sono già nei widget della Home, ⚙ è l'avatar della Home, l'aggiornamento parte da solo al rientro. Resta la data in piccolo, il titolo, il giorno con le frecce e l'ora, i quattro tab.</li>
+          <li><b>«Giorno detox»</b> esce dalla testata: è una riga del tab Piano (il giorno della settimana che si decide di tenere leggero), oppure di Impostazioni › Cibo. Si usa di rado, non merita il posto in alto.</li>
+        </ol>
+        <div class="resta">Restano uguali: «+ Registra pasto» e «+ Registra integratori», la pillola «Fuori zona», il riquadro del prossimo pasto con «Analizza e suggerisci».</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Body, Misure -->
+  <section class="momento">
+    <h2><span>2 DI 3</span>Body · Misure: il peso una volta, un tasto largo solo</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_2_body_misure.png" alt="Body Misure com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel" id="tel-body">
+          <div class="testa viola">
+            <div class="su"><span class="sopra">Dom 4 ott</span><span class="n2">1</span></div>
+            <h1 style="margin-bottom:12px">Body</h1>
+            <div class="seg"><span class="on">Misure</span><span>Tendenza</span><span>Check</span><span>Energia</span></div>
+          </div>
+          <div class="corpo">
+            <div class="sottile"><span style="display:flex;align-items:center"><span class="pt"></span>Primo check fisico da fare</span><span class="chev">›</span> <span class="n2">3</span></div>
+            <div class="sez"><span>Il peso</span><span>dom 4 ott</span></div>
+            <div class="card">
+              <div class="peso-c"><div><span class="grande">74,0<small>kg</small></span><span class="delta">+0,1</span> <span class="n2">2</span></div><button class="pesati">Pesati ora</button></div>
+              <div class="obj"><span>Obiettivo 70 kg</span><b>4,0 kg al target</b></div>
+              <div class="prog"><i></i></div>
+            </div>
+            <div class="sez"><span>Misure col metro</span></div>
+            <div class="gruppo">
+              <div class="riga"><span class="cresce">Giorno</span><span class="mono" style="color:var(--t1);background:var(--s2);border-radius:10px;padding:8px 12px">04/10/2026</span></div>
+              <div class="riga"><span class="cresce">Vita (cm)</span><span class="mono" style="background:var(--s2);border-radius:10px;padding:8px 12px">es. 89</span></div>
+              <div class="riga"><span class="cresce" style="color:var(--z-nutrition-scuro);font-weight:700;font-size:13px">▾ Campi avanzati (bilancia smart + metro)</span></div>
+            </div>
+            <div class="tratt">Leggi il report Fitdays con Pirsi →</div>
+            <button class="grosso viola">Salva misure</button>
+          </div>
+          <div class="tab">
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div class="on" style="color:var(--z-body-scuro);background:var(--z-body-velo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li><b>La testata leggera</b>, come in Nutrition (nota 3 di là): data, titolo e i quattro tab.</li>
+          <li><b>Il peso una volta sola</b>: il numero grande, con la variazione e il tasto «Pesati ora» accanto (oggi quel tasto non c'è nel tab, si passa dalla Home). Il campo «Peso (kg)» del modulo delle misure sparisce: il peso si scrive dalla pesata, le misure sono le misure. La pillola in testata è già uscita con la nota 1. (Scelta alternativa: il campo resta ma vuoto, per chi pesa e misura insieme.)</li>
+          <li><b>Un tasto largo solo</b>: resta «Salva misure», in fondo al modulo. Il «Nuovo check fisico» viola largo in cima ai tre tab diventa una <b>riga sottile</b> col puntino del Body, e c'è solo quando c'è da farlo (primo check, in ritardo, oggi), come in Home. Chi vuole il check fuori tempo lo trova nel tab Check. (Scelta alternativa: niente riga, il check vive solo nel tab Check e in Home.)</li>
+        </ol>
+        <div class="resta">In Tendenza il peso è scritto due volte nello stesso tab (74 kg in «Progresso» e in «Evoluzione del corpo»): se si vuole, il secondo diventa solo il grafico con la variazione. Non è nelle note: lo segnalo.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Body, Check vuoto -->
+  <section class="momento">
+    <h2><span>3 DI 3</span>Body · Check senza check fatti: un tasto, non due</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_3_body_check.png" alt="Body Check com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel" id="tel-check">
+          <div class="testa viola">
+            <div class="su"><span class="sopra">Dom 4 ott</span></div>
+            <h1 style="margin-bottom:12px">Body</h1>
+            <div class="seg"><span>Misure</span><span>Tendenza</span><span class="on">Check</span><span>Energia</span></div>
+          </div>
+          <div class="corpo">
+            <div class="vuoto">
+              <div class="tondo">🧍</div>
+              <h4>Nessun check fisico ancora</h4>
+              <p>Foto, misure ed esami ogni sei settimane: servono a Pirsi per calibrare il piano.</p>
+              <button class="grosso viola">Nuovo check fisico → <span class="n2" style="background:var(--bianco)">4</span></button>
+            </div>
+            <div class="ellissi" style="font-size:12px">Con dei check fatti: l'elenco dei check, il prossimo in cima, e lo storico degli esami del sangue come oggi</div>
+          </div>
+          <div class="tab">
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div class="on" style="color:var(--z-body-scuro);background:var(--z-body-velo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol start="4">
+          <li><b>Un tasto solo</b>: senza il «Nuovo check fisico» largo in testata (nota 3), il riquadro vuoto tiene il suo tasto, nel viola del Body e non in verde. Il riquadro sale in alto invece di stare a metà schermo. Il testo dice a cosa serve il check.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <div class="decidi">
+    <h3>Quattro cose da decidere, Ignazio</h3>
+    <ol>
+      <li><b>Le calorie e i macro</b>: un numero solo, ma quale? Le <b>rimaste</b> (come nello schizzo) o le <b>mangiate</b> su obiettivo?</li>
+      <li><b>La testata di Nutrition, Training e Body</b>: via fuoco, peso, ⚙ e ↻ (restano in Home), oppure tenere qualcosa, e cosa?</li>
+      <li><b>Il check fisico nel tab Body</b>: riga sottile solo quando è da fare (come nello schizzo), o niente riga e il check vive solo nel tab Check e in Home?</li>
+      <li><b>Il campo «Peso (kg)» nelle misure</b>: via (il peso si scrive da «Pesati ora»), o resta vuoto?</li>
+    </ol>
+    <p style="margin:8px 0 0">«Giorno detox»: nel tab Piano o in Impostazioni › Cibo? Se non hai preferenza, Piano.</p>
+  </div>
+
+  <section class="note" style="max-width:900px">
+    <h3>Quando si costruisce</h3>
+    Tutto dietro <code>html.v5</code>: a veste spenta Nutrition e Body restano identici al pixel. I numeri vengono dalle stesse funzioni di oggi (<code>dayTotals</code> per il giorno, <code>weighInsByDay</code> per il peso, <code>getNextCheckpointInfo</code> per il check): cambia cosa si mostra, non come si calcola. Nessuna lettura o scrittura nuova. La testata leggera tocca anche il Training fuori dalla seduta (stessa testata).
+  </section>
+</div>
+</body>
+</html>
