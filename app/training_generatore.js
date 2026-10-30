@@ -18,78 +18,8 @@ const ACTIVATION_BLOCK = [
   { name:'Vacuum addominale',               duration:'2 min', seconds:120, gif_slug:'vacuum-addominale' },
   { name:'Cat-Cow + rotazione toracica',    duration:'1 min', seconds:60,  codice:'EX029' },
 ];
-// Dal 14 ottobre 2026 (Training 400, richiesta di Ignazio) qui restano solo le vecchie foto di esecuzione
-// (Wger), ripiego quando un esercizio storico non ha la GIF: l'immagine dei muscoli non c'è più, la GIF
-// i muscoli li mostra già.
-const EXERCISE_MEDIA = {
-  // ── UPPER A ──
-  'Trazioni': {
-    executionImg: 'assets/exercises/trazioni-sbarra-esecuzione.png'
-  },
-  'Chest press in piedi con elastico': {
-    executionImg: null  // immagine esecuzione non trovata su Wger
-  },
-  'Shoulder press in piedi con elastico': {
-    executionImg: 'assets/exercises/shoulder-press-in-piedi-esecuzione.png'
-  },
-  'Row in piedi con elastico': {
-    executionImg: null  // immagine esecuzione non trovata su Wger
-  },
-  'Face pull con elastico': {
-    executionImg: null  // immagine esecuzione non trovata su Wger
-  },
-
-  // ── UPPER B ──
-  'Inverted row con elastico': {
-    executionImg: null
-  },
-  'Chest press inclinata su panca': {
-    executionImg: ['assets/exercises/chest-press-inclinata-esecuzione-1.png','assets/exercises/chest-press-inclinata-esecuzione-2.png']
-  },
-  'Lateral raise con elastico': {
-    executionImg: ['assets/exercises/lateral-raise-esecuzione-1.png','assets/exercises/lateral-raise-esecuzione-2.png']
-  },
-  'Row inclinato in piedi busto 45°': {
-    executionImg: ['assets/exercises/row-inclinato-esecuzione-1.png','assets/exercises/row-inclinato-esecuzione-2.png']
-  },
-  'Curl bicipiti con elastico': {
-    executionImg: ['assets/exercises/curl-bicipiti-esecuzione-1.png','assets/exercises/curl-bicipiti-esecuzione-2.png']
-  },
-  'Tricipiti overhead con elastico': {
-    executionImg: 'assets/exercises/tricipiti-overhead-esecuzione.png'
-  },
-
-  // ── LOWER A ──
-  'Bulgarian split squat con elastico': {
-    executionImg: null  // immagine esecuzione non trovata su Wger
-  },
-  'Romanian deadlift con elastico': {
-    executionImg: null
-  },
-  'Hip thrust con elastico': {
-    executionImg: null
-  },
-  'Glute bridge isometrico con cavigliera': {
-    executionImg: null
-  },
-
-  // ── LOWER B ──
-  'Squat con elastico e talloni rialzati': {
-    executionImg: 'assets/exercises/squat-talloni-rialzati-esecuzione.png'
-  },
-  'Single leg Romanian deadlift con elastico': {
-    executionImg: null
-  },
-  'Hip thrust con elastico TUT alto': {
-    executionImg: null
-  },
-  'Leg curl con elastico sulla fitball': {
-    executionImg: 'assets/exercises/leg-curl-esecuzione.png'
-  },
-  'Calf raise con elastico': {
-    executionImg: 'assets/exercises/calf-raise-esecuzione.png'
-  }
-};
+// Media 300 (30 ottobre 2026, Ignazio: «Ho le GIF mie»): la tabella con le vecchie foto di
+// esecuzione Wger non c'è più. Un esercizio senza GIF nostra mostra «Immagine non ancora disponibile».
 
 const TRAINING_SESSIONS = {
   upperA:{

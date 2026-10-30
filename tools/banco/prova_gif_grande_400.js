@@ -1,6 +1,7 @@
 // Training 400 (14 ottobre 2026, richiesta di Ignazio): nella scheda dell'esercizio niente più immagine dei
 // muscoli accanto alla GIF (la GIF i muscoli li mostra già in rosso), la GIF a tutta larghezza; senza GIF il
-// riquadro «Immagine non ancora disponibile» (scelta di Ignazio), mai un buco.
+// riquadro «Immagine non ancora disponibile» (scelta di Ignazio), mai un buco. Dal 30 ottobre 2026 (Media 300)
+// niente più ripiego sulle vecchie foto Wger.
 //   node tools/banco/prova_gif_grande_400.js
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs');
@@ -64,11 +65,20 @@ async function nuovo(media){
     await a.arriva();
     atteso('Hip CARs aveva la vecchia mappa dei muscoli: ora il riquadro, non la mappa', [a.scheda_().querySelectorAll('img').length, !!a.scheda_().querySelector('.ex-media-vuoto')], [0, true]);
   }
+  {
+    // Media 300 (30 ottobre 2026): «Trazioni» aveva la vecchia foto Wger come ripiego; ora solo le GIF nostre
+    const a = await nuovo({ status:'missing', cached_url:null });
+    a.win.openExerciseAI('Trazioni', 'upperA');
+    await a.arriva();
+    atteso('Trazioni senza GIF (aveva la foto Wger): il riquadro, nessuna immagine', [a.scheda_().querySelectorAll('img').length, !!a.scheda_().querySelector('.ex-media-vuoto')], [0, true]);
+  }
   // nessun file dell'app richiama più le immagini dei muscoli
   const radice = path.join(__dirname, '../..');
   const sorgenti = ['zona-tracker.html', 'sw.js', ...fs.readdirSync(path.join(radice, 'app')).map(f => 'app/' + f), ...fs.readdirSync(path.join(radice, 'shared')).map(f => 'shared/' + f)];
   const chi = sorgenti.filter(f => /-muscoli\.png|muscleImg/.test(fs.readFileSync(path.join(radice, f), 'utf8')));
   atteso('nessun file dell\'app nomina muscleImg o *-muscoli.png', chi, []);
+  const terzi = sorgenti.filter(f => /assets\/exercises|executionImg|EXERCISE_MEDIA|wger\.de\/media|static\.exercisedb/.test(fs.readFileSync(path.join(radice, f), 'utf8')));
+  atteso('nessun file dell\'app richiama le foto Wger o le GIF di ExerciseDB', terzi, []);
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });
