@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 2 · Seduta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 2 «snellire», la Seduta di allenamento: disegno prima/dopo, niente codice dell'app.
+   A sinistra la pagina vera di oggi (fotografata dal banco a 390 px), a destra la proposta, a margine cosa snellire nel giro 2. */
+:root {
+  --font-sans: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC;
+  --b1: #DDD9D0; --t1: #1A1A1A; --t2: #555047; --t3: #9A9388;
+  --acc: #2A7A6F;
+  --mod-training: #B5D4F4;          /* la tinta Training di sempre */
+  --z-training: #2E6DA4;            /* proposta: il colore pieno della zona Training (bianco sopra: contrasto 5,4:1) */
+  --z-training-scuro: #1F4F7A;
+  --training-velo: #EAF2FB;
+  --bianco: #FFFFFF;
+  --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+  --pagina: #E4E1DA;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { max-width: 1240px; margin: 0 auto; padding: 24px 16px 60px; }
+h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; max-width: 860px; margin: 0 0 14px; }
+.scelta-vecchia { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 22px; font-size: 13px; color: var(--t2); }
+.scelta button { font: 600 13px var(--font-sans); border: 1px solid var(--b1); background: var(--s1); color: var(--t1); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.scelta button.on { background: var(--t1); color: var(--bianco); border-color: var(--t1); }
+
+.momento { margin: 0 0 40px; }
+.momento > h2 { font-size: 18px; font-weight: 800; margin: 0 0 12px; }
+.momento > h2 span { font: 600 12px var(--font-mono); color: var(--t3); letter-spacing: .06em; margin-right: 8px; }
+.tre { display: grid; grid-template-columns: 390px 390px minmax(220px, 1fr); gap: 22px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); background: var(--bg); }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13px; line-height: 1.45; }
+.note h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; }
+.note ol { margin: 0; padding-left: 20px; }
+.note li { margin: 0 0 7px; }
+.note .resta { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--nota-bordo); }
+
+/* ── il telefono della proposta ── */
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; position: relative; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); }
+.tel.alto { min-height: 844px; display: flex; flex-direction: column; }
+.testa { background: var(--z-training); color: var(--bianco); padding: 14px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 34px; }
+.ind { font: 700 16px var(--font-sans); color: inherit; background: none; border: 0; padding: 0; }
+.dx { display: flex; gap: 8px; align-items: center; }
+.chip { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); color: inherit; border-radius: 999px; padding: 6px 10px; }
+.fb { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255,255,255,.2); color: inherit; display: flex; align-items: center; justify-content: center; }
+.fb svg { width: 17px; height: 17px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .08em; opacity: .85; margin-top: 10px; margin-bottom: 4px; }
+.testa h1 { font-size: 24px; font-weight: 800; margin: 2px 0 12px; line-height: 1.1; letter-spacing: -.5px; }
+.dati { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dati div { background: rgba(255,255,255,.14); border-radius: 12px; padding: 8px 10px; }
+.dati b { display: block; font: 700 20px var(--font-mono); }
+.dati small { font-size: 11px; opacity: .85; }
+.barra { height: 6px; border-radius: 999px; background: rgba(255,255,255,.25); margin: 12px 0 14px; overflow: hidden; }
+.barra i { display: block; height: 100%; width: 4%; background: var(--bianco); border-radius: 999px; }
+.seg { display: flex; background: rgba(255,255,255,.18); border-radius: 12px; padding: 4px; }
+.seg span { flex: 1; text-align: center; font-weight: 700; font-size: 14px; padding: 8px 0; border-radius: 9px; }
+.seg span.on { background: var(--bianco); color: var(--z-training); }
+
+.corpo { padding: 6px 16px 20px; flex: 1; }
+.gr-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > .riga:first-child, .gruppo > .es:first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.riga .mono { font: 600 13px var(--font-mono); color: var(--t3); }
+.chev { color: var(--t3); font-size: 18px; }
+.ico { width: 32px; height: 32px; border-radius: 9px; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex: none; }
+.ico svg { width: 15px; height: 15px; }
+.rientra { padding-left: 58px; }
+.pill { font: 700 13px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 999px; padding: 8px 14px; }
+
+.es { display: flex; gap: 12px; padding: 13px 14px; border-top: 1px solid var(--s3); align-items: flex-start; }
+.num { width: 28px; height: 28px; border-radius: 50%; background: var(--training-velo); color: var(--z-training-scuro); font: 700 13px var(--font-mono); display: flex; align-items: center; justify-content: center; flex: none; margin-top: 1px; }
+.es-c { flex: 1; min-width: 0; }
+.es-c b { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.es-c b .i { font: 600 11px var(--font-mono); color: var(--t3); border: 1px solid var(--b1); border-radius: 50%; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; }
+.es-c .param { font: 600 12px var(--font-mono); color: var(--t2); margin-top: 3px; }
+.es-c .sugg { display: inline-block; font: 600 12px var(--font-mono); color: var(--z-training-scuro); background: var(--training-velo); border-radius: 8px; padding: 4px 8px; margin-top: 7px; }
+.pallini { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
+.pallini i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--mod-training); }
+.pallini i.fatta { background: var(--z-training); border-color: var(--z-training); }
+.pallini span { font: 600 12px var(--font-mono); color: var(--t3); margin-left: 4px; }
+.azioni { display: flex; gap: 16px; margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--z-training); }
+.via { flex: none; align-self: center; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex-direction: column; font: 700 10px var(--font-mono); gap: 1px; }
+.via svg { width: 14px; height: 14px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; }
+.tab svg { width: 21px; height: 21px; }
+.tab div.on { color: var(--z-training-scuro); background: var(--training-velo); }
+
+/* serie in corso */
+.testa.grande { border-radius: 0 0 30px 30px; padding-bottom: 22px; }
+.vivo { display: inline-flex; align-items: center; gap: 7px; }
+.vivo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--bianco); box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.chips { display: flex; gap: 8px; }
+.chips span { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); border-radius: 999px; padding: 6px 11px; }
+.gif { background: var(--s2); border-radius: 18px; height: 230px; display: flex; align-items: center; justify-content: center; font: 600 11px var(--font-mono); letter-spacing: .08em; color: var(--t3); margin-top: 16px; }
+.piede { padding: 12px 16px 26px; }
+.grosso { width: 100%; font: 700 18px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 16px; padding: 17px 0; }
+
+/* recupero e registro */
+.rec { display: flex; align-items: center; gap: 18px; margin-top: 8px; }
+.anello { width: 128px; height: 128px; border-radius: 50%; border: 8px solid rgba(255,255,255,.3); border-top-color: var(--bianco); border-right-color: var(--bianco); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 32px var(--font-mono); }
+.anello small { font: 700 10px var(--font-mono); letter-spacing: .08em; opacity: .85; }
+.mini-gif { flex: 1; height: 104px; border-radius: 14px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; font: 600 10px var(--font-mono); letter-spacing: .06em; opacity: .9; text-align: center; padding: 6px; }
+.domanda { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 16px 4px 7px; }
+.campo { background: var(--s1); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+.campo b { font: 700 26px var(--font-mono); }
+.campo small { color: var(--t3); font-size: 12px; }
+.campo.attivo { box-shadow: inset 0 0 0 2px var(--z-training); }
+.aiuto { font-size: 12px; color: var(--t3); margin: 6px 4px 0; }
+.coach { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
+.coach .ico { background: var(--acc); }
+.coach p { margin: 2px 0 0; font-size: 14px; line-height: 1.4; }
+.coach b { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--acc); }
+.due { display: flex; gap: 10px; margin-top: 16px; }
+.due .grosso { flex: 1; }
+.annulla { width: 58px; border: 0; border-radius: 16px; background: var(--s3); color: var(--t2); font-size: 20px; }
+
+
+/* il segno a margine: un numero che rimanda alla nota del giro 2 */
+.n2 { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); vertical-align: middle; flex: none; }
+.testa .n2 { margin-left: 4px; }
+
+@media (max-width: 1100px) {
+  .tre { grid-template-columns: 1fr; justify-items: center; }
+  .note { max-width: 390px; }
+}
+@media (max-width: 420px) {
+  .prima img, .tel { width: 100%; }
+}
+
+/* ── giro 2: le cose nuove ── */
+.prima img { height: auto; }
+.cosa { font: 600 13px var(--font-mono); color: var(--z-training-scuro); margin-top: 6px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.cosa em { font-style: normal; color: var(--t2); font-weight: 600; }
+.cosa .su { min-height: 0; color: var(--z-training-scuro); }
+.puntini3 { flex: none; align-self: center; width: 44px; height: 44px; border-radius: 50%; border: 0; background: none; color: var(--t2); font: 700 20px var(--font-sans); letter-spacing: 1px; }
+.es.prossimo { background: var(--training-velo); }
+.es.prossimo .via { width: auto; height: 44px; padding: 0 16px; border-radius: 999px; flex-direction: row; gap: 6px; font: 700 14px var(--font-sans); }
+.es .tocca { color: var(--t3); font-size: 20px; align-self: center; }
+.attiv { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.attiv .cresce { flex: 1; }
+.attiv small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.menu { margin: 0 14px 12px 54px; background: var(--s1); border: 1px solid var(--b1); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.12); overflow: hidden; }
+.menu div { padding: 13px 16px; min-height: 44px; font-size: 15px; font-weight: 600; border-top: 1px solid var(--s3); color: var(--t1); }
+.menu div:first-child { border-top: 0; }
+.gif.piena { height: 420px; background: var(--s1); color: var(--t2); flex-direction: column; gap: 8px; border: 2px dashed var(--b1); text-align: center; padding: 20px; }
+.gif.piena b { font: 700 15px var(--font-sans); letter-spacing: 0; color: var(--t1); }
+.oggi-una { margin-top: 14px; background: var(--s1); border-radius: 14px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.oggi-una b { font: 700 22px var(--font-mono); color: var(--t1); white-space: nowrap; }
+.oggi-una span { font: 600 13px var(--font-mono); color: var(--t2); text-align: right; }
+.senza-gif { margin-top: 14px; font: 600 12px var(--font-mono); color: var(--t2); display: flex; align-items: center; gap: 8px; }
+.senza-gif::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--b1); }
+.non-salvare { display: block; width: 100%; margin-top: 6px; background: none; border: 0; color: var(--t2); font: 600 14px var(--font-sans); min-height: 44px; }
+.casi { display: grid; gap: 8px; }
+.caso { background: var(--s1); border-radius: 12px; padding: 10px 14px; }
+.caso small { display: block; font: 700 10px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin-bottom: 4px; }
+.caso .cosa { margin-top: 0; }
+.decidi { background: var(--s1); border: 1px solid var(--b1); border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.45; max-width: 900px; margin: 0 0 26px; }
+.decidi h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.decidi ol { margin: 0; padding-left: 20px; }
+.decidi li { margin: 0 0 7px; }
+.fatto { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--acc); color: var(--bianco); font: 700 10px var(--font-mono); vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 2 · Training, la Seduta snellita</h1>
+  <p class="intro">A sinistra la Seduta vera di oggi (banco, 390 px, veste accesa, dati di prova del 4 ottobre), a destra lo schizzo snellito. Ignazio, 30 ottobre: «ancora mi compare l'ultima volta e la prima che devo fare». E il 27: «durante l'esercizio non si può stare a leggere, si può guardare un'immagine». Quindi: <b>meno parole, una riga sola per i numeri, la GIF grande</b>. I tondi verdi <span class="fatto">1</span> rimandano alle 8 note del giro 1. Le regole dell'allenamento non cambiano: gli stessi numeri, scritti una volta sola.</p>
+
+  <div class="note" style="max-width:900px;margin:0 0 18px">
+    <h3>La riga dei numeri: una sola, sempre</h3>
+    <div class="casi">
+      <div class="caso"><small>Oggi uguale all'ultima volta</small><div class="cosa">Come l'ultima volta · 40 lbs × 10</div></div>
+      <div class="caso"><small>Oggi si sale (il carico o le ripetizioni)</small><div class="cosa">45 lbs × 10 <em>· +5 lbs rispetto all'ultima volta</em></div></div>
+      <div class="caso"><small>Oggi si scende (scarico, rientro)</small><div class="cosa">30 lbs × 8 <em>· scarico, −10 lbs rispetto all'ultima volta</em></div></div>
+      <div class="caso"><small>Mai fatto prima</small><div class="cosa">Si parte da 8 ripetizioni</div></div>
+    </div>
+    <p style="margin:10px 0 0">Il RIR non si ripete qui: è nella testata, una volta per tutta la seduta. Oggi le due righe («Oggi S1: 40 lbs · 10 reps · RIR 2 · ultima volta 10r · 40 lbs · RIR 2» e «Inizia con 8 reps») diventano questa sola, uguale nell'elenco e nella serie in corso.</p>
+  </div>
+
+  <!-- 1 · la seduta -->
+  <section class="momento">
+    <h2><span>1 DI 3</span>La seduta, prima di iniziare</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_1_seduta.png" alt="La seduta com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel">
+          <div class="testa">
+            <div class="su"><button class="ind">‹ I tuoi giorni</button>
+              <div class="dx"><span class="chip">🔥 21</span><span class="chip">⚖ 74 kg</span><button class="fb" aria-label="Impostazioni">⚙</button><button class="fb" aria-label="Esci">⎋</button></div></div>
+            <div class="sopra">OGGI · FORZA · RIR 2 PER TUTTA LA SEDUTA <span class="fatto">1</span></div>
+            <h1>Upper A</h1>
+            <div class="dati"><div><b>0/18</b><small>serie</small></div><div><b>00'00''</b><small>tempo</small></div><div><b>6</b><small>esercizi</small></div></div>
+            <div class="barra"><i></i></div>
+            <div class="seg"><span class="on">Programma</span><span>Progressione</span></div>
+          </div>
+          <div class="corpo">
+            <div class="gr-tit">Prima di iniziare</div>
+            <div class="gruppo">
+              <div class="attiv"><span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></span>
+                <div class="cresce"><b>Blocco Attivazione</b><small>3 esercizi · 5 min · l'elenco si apre al tocco</small></div><button class="pill">Inizia</button> <span class="fatto">2</span></div>
+            </div>
+            <div class="gr-tit">Esercizi · 6</div>
+            <div class="gruppo">
+              <div class="es prossimo"><span class="num">1</span><div class="es-c"><b>Panca elastico</b>
+                <div class="param">3 × 8-12 · rec 2:00</div>
+                <div class="cosa">Come l'ultima volta · 40 lbs × 10 <span class="fatto">3</span></div>
+                <div class="pallini"><i></i><i></i><i></i><span>0/3</span></div></div>
+                <button class="via"><svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M7 4l13 8-13 8z"/></svg>Inizia</button></div>
+              <div class="es"><span class="num">2</span><div class="es-c"><b>Military press elastico</b>
+                <div class="param">3 × 8-12 · rec 2:00</div>
+                <div class="cosa">Si parte da 8 ripetizioni</div>
+                <div class="pallini"><i></i><i></i><i></i><span>0/3</span></div></div>
+                <button class="puntini3" aria-label="Altro">⋯</button></div>
+              <div class="menu"><div>Cambia per oggi</div><div>Aggiungi una nota</div><div>Scheda dell'esercizio</div></div>
+              <div class="es"><span class="num">3</span><div class="es-c"><b>Rematore elastico</b>
+                <div class="param">3 × 8-12 · rec 2:00</div>
+                <div class="cosa">Si parte da 8 ripetizioni</div>
+                <div class="pallini"><i></i><i></i><i></i><span>0/3</span></div></div>
+                <button class="puntini3" aria-label="Altro">⋯</button> <span class="fatto" style="align-self:center">4</span></div>
+              <div class="es"><span class="num">4</span><div class="es-c"><b>Lat machine elastico</b>
+                <div class="param">3 × 8-12 · rec 2:00</div>
+                <div class="cosa">Si parte da 8 ripetizioni</div>
+                <div class="pallini"><i></i><i></i><i></i><span>0/3</span></div></div>
+                <button class="puntini3" aria-label="Altro">⋯</button></div>
+              <div class="riga"><span class="cresce" style="color:var(--t2);font-size:13px">… Alzate posteriori, Pallof press: uguali</span></div>
+            </div>
+          </div>
+          <div class="tab">
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li>«RIR 2» resta solo in testata, non più su ogni esercizio.</li>
+          <li>L'attivazione è una riga sola con «Inizia»: i suoi 3 esercizi si vedono quando parte (o al tocco), non due volte nella pagina.</li>
+          <li>«Oggi S1: …» e «Inizia con 8 reps» diventano la stessa riga, scritta allo stesso modo (vedi sopra).</li>
+          <li>«Cambia per oggi» e «+ Aggiungi nota» escono dalle righe: stanno nel tasto ⋯ (aperto qui sul n. 2), con la scheda dell'esercizio. Il tasto «Inizia» resta solo sul prossimo esercizio, evidenziato; gli altri si aprono toccando la riga.</li>
+        </ol>
+        <div class="resta">Da 6 righe di testo per esercizio a 3. La pagina si accorcia di circa metà.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · la serie in corso -->
+  <section class="momento">
+    <h2><span>2 DI 3</span>La serie in corso</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_2_serie.png" alt="La serie in corso com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta · con la GIF</div>
+        <div class="tel alto">
+          <div class="testa grande">
+            <div class="su"><button class="ind">‹ Indietro</button><div class="dx"></div></div>
+            <div class="sopra vivo">SERIE 1 DI 3 · RIR 2</div>
+            <h1>Panca elastico</h1>
+          </div>
+          <div class="corpo">
+            <div class="gif piena"><b>La GIF, a tutta larghezza</b>circa 360 × 420 px: metà schermo e oltre, si guarda senza leggere</div>
+            <div class="oggi-una"><b>40 lbs × 10</b><span>come<br>l'ultima volta</span></div>
+          </div>
+          <div class="piede"><button class="grosso">Fine serie</button></div>
+        </div>
+        <div class="col-tit" style="margin-top:22px">Proposta · senza GIF <span class="fatto">5</span></div>
+        <div class="tel">
+          <div class="testa grande">
+            <div class="su"><button class="ind">‹ Indietro</button><div class="dx"></div></div>
+            <div class="sopra vivo">SERIE 1 DI 3 · RIR 2</div>
+            <h1>Panca elastico</h1>
+          </div>
+          <div class="corpo">
+            <div class="oggi-una" style="padding:22px 16px"><b style="font-size:30px;white-space:nowrap">40 lbs × 10</b><span>come<br>l'ultima volta</span></div>
+            <div class="senza-gif">Immagine non ancora pronta per questo esercizio</div>
+          </div>
+          <div class="piede"><button class="grosso">Fine serie</button></div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li value="5">Senza GIF niente riquadro grigio a mezzo schermo: al suo posto i numeri di oggi, grandi, e una riga piccola che dice che l'immagine manca.</li>
+          <li value="6">Con la GIF, la GIF prende lo spazio: è la cosa da guardare mentre si fa la serie. Sotto, una riga sola coi numeri (vedi in alto).</li>
+        </ol>
+        <div class="resta">«8-12» e «RIR 2» in due bolle diventano «RIR 2» nella riga sopra il nome: il numero di ripetizioni è già nella riga dei numeri.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · recupero e registro della serie -->
+  <section class="momento">
+    <h2><span>3 DI 3</span>Il recupero e il registro della serie</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_3_registro.png" alt="Recupero e registro com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel alto">
+          <div class="testa grande">
+            <div class="su"><span class="chip">⌄ riduci</span>
+              <div class="dx"><button class="ind" style="font-size:14px">Salta ›</button></div></div>
+            <div class="rec">
+              <div class="anello"><b>2:00</b><small>RECUPERO</small></div>
+              <div class="mini-gif">GIF dell'esercizio</div>
+            </div>
+          </div>
+          <div class="corpo">
+            <div class="gr-tit" style="margin-top:14px">Panca elastico · serie 1</div>
+            <div class="domanda">1 · Quante ripetizioni?</div>
+            <div class="campo attivo"><b>10</b><small>reps</small></div>
+            <div class="domanda">2 · Con quanto?</div>
+            <div class="campo"><b>40</b><small>lbs</small></div>
+            <div class="domanda">3 · Quante ne avevi ancora? (RIR)</div>
+            <div class="campo"><b>–</b><small>facoltativo</small></div>
+            <div class="due"><button class="grosso">Salva serie →</button></div>
+            <button class="non-salvare">Chiudi senza salvare</button> <span class="fatto">8</span>
+            <div class="gr-tit">Il coach</div>
+            <div class="gruppo">
+              <div class="coach"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16v10H9l-5 4z"/></svg></span>
+                <div><b>PIRSI</b><p>Genero un cue avanzato per te…</p></div></div>
+              <div class="riga"><span class="cresce">Scheda completa <small>qui anche: lbs indicativi, scarto ±15% per gli elastici a tubo</small></span><span class="chev">›</span> <span class="fatto">7</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li value="7">La frase sugli elastici non compare più sotto il carico a ogni serie: va nella scheda dell'esercizio, dove si legge una volta.</li>
+          <li value="8">La ✕ senza nome accanto a «Salva serie» diventa «Chiudi senza salvare», scritto, sotto il tasto. «Salva serie» prende tutta la larghezza.</li>
+        </ol>
+        <div class="resta">Le tre domande, i valori già compilati e il coach restano come sono.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="decidi">
+    <h3>Tre cose da decidere, Ignazio</h3>
+    <ol>
+      <li><b>«Inizia» solo sul prossimo esercizio</b>, e gli altri si aprono toccando la riga? Oppure «Inizia» resta su ogni riga, piccolo.</li>
+      <li><b>Quando si sale o si scende</b>, la riga dice la differenza («+5 lbs rispetto all'ultima volta»). Basta così, o vuoi vedere anche i numeri dell'ultima volta al tocco?</li>
+      <li><b>Senza GIF</b>: i numeri grandi al posto del riquadro grigio (come qui), oppure niente del tutto?</li>
+    </ol>
+  </div>
+
+  <section class="note" style="max-width:900px">
+    <h3>Quando si costruisce</h3>
+    Tutto dietro <code>html.v5</code>: a veste spenta la Seduta resta identica al pixel. I numeri restano quelli di oggi: l'obiettivo della prima serie e la serie dell'ultima volta vengono dalle stesse funzioni (<code>obiettivoPrimaSerie</code>, <code>serieDaRipetere</code>); cambia solo come si scrivono, in una riga. Nessuna regola di allenamento toccata, nessuna lettura o scrittura nuova.
+  </section>
+</div>
+</body>
+</html>
