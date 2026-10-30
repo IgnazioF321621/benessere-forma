@@ -1,13 +1,13 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-25",
+ "quando": "2026-10-30",
  "righe": [
   {
    "righe": 0,
    "tabella": "ai_memory"
   },
   {
-   "righe": 12,
+   "righe": 13,
    "tabella": "app_errors"
   },
   {
@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 5,
+   "righe": 6,
    "tabella": "body_logs"
   },
   {
@@ -39,11 +39,11 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 14,
+   "righe": 15,
    "tabella": "coach_proposals"
   },
   {
-   "righe": 8,
+   "righe": 11,
    "tabella": "daily_log"
   },
   {
@@ -59,15 +59,15 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 3,
+   "righe": 4,
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1025,
+   "righe": 1069,
    "tabella": "meal_items"
   },
   {
-   "righe": 366,
+   "righe": 379,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,7 @@
    "tabella": "profiles"
   },
   {
-   "righe": 8,
+   "righe": 16,
    "tabella": "rilevazioni"
   },
   {
@@ -87,7 +87,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 32,
+   "righe": 40,
    "tabella": "segnalazioni"
   },
   {
@@ -103,11 +103,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1599,
+   "righe": 1642,
    "tabella": "supplements_log"
   },
   {
-   "righe": 1983,
+   "righe": 2061,
    "tabella": "training_logs"
   },
   {
@@ -115,7 +115,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 14,
+   "righe": 15,
    "tabella": "weekly_pictures"
   },
   {
@@ -131,7 +131,7 @@
    "tabella": "weekly_plans"
   },
   {
-   "righe": 20,
+   "righe": 21,
    "tabella": "weight_logs"
   },
   {
@@ -139,7 +139,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 127,
+   "righe": 131,
    "tabella": "workouts"
   }
  ],
@@ -2756,6 +2756,36 @@
     "predefinito": null,
     "tabella": "profiles",
     "tipo": "smallint[]"
+   },
+   {
+    "colonna": "train_orario",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 46,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text"
+   },
+   {
+    "colonna": "train_giorni",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 47,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "smallint[]"
+   },
+   {
+    "colonna": "calendario_token",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 48,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "uuid"
    },
    {
     "colonna": "id",
@@ -7100,6 +7130,12 @@
     "tipo": "p"
    },
    {
+    "definizione": "UNIQUE (calendario_token)",
+    "nome": "profiles_calendario_token_key",
+    "tabella": "profiles",
+    "tipo": "u"
+   },
+   {
     "definizione": "CHECK (((come_stai_orari IS NULL) OR ((COALESCE(array_length(come_stai_orari, 1), 0) <= 3) AND (0 <= ALL (come_stai_orari)) AND (23 >= ALL (come_stai_orari)))))",
     "nome": "profiles_come_stai_orari_chk",
     "tabella": "profiles",
@@ -7138,6 +7174,18 @@
    {
     "definizione": "CHECK (((tabata_giorni IS NULL) OR (tabata_giorni <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint])))",
     "nome": "profiles_tabata_giorni_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((train_giorni IS NULL) OR (train_giorni <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint])))",
+    "nome": "profiles_train_giorni_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((train_orario IS NULL) OR (train_orario ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)))",
+    "nome": "profiles_train_orario_chk",
     "tabella": "profiles",
     "tipo": "c"
    },
