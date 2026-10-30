@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Training 540 · Le sedute nel Calendario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Training 540 · le sedute nel Calendario dell'iPhone: la pagina costruita (Impostazioni › Allenamento, 390 px, Chrome vero)
+   e il calendario che riceve l'iPhone. Niente codice dell'app. Colori: i nomi di app/stile.css. */
+:root {
+  --font-sans: 'Syne', sans-serif; --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC; --b1: #DDD9D0;
+  --t1: #1A1A1A; --t2: #555047; --t3: #9A9388; --acc: #2A7A6F; --acc-lt: #E6F4F2; --bianco: #FFFFFF;
+  --pagina: #E4E1DA; --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { width: 1240px; max-width: 100%; margin: 0 auto; padding: 24px 16px 40px; }
+h1.tit { font-size: 24px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; margin: 0 0 14px; max-width: 900px; }
+.due { display: grid; grid-template-columns: 390px 1fr; gap: 24px; align-items: start; }
+@media (max-width: 860px) { .due { grid-template-columns: 1fr; } }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.costruita img { width: 390px; max-width: 100%; display: block; border-radius: 28px; }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13.5px; line-height: 1.5; }
+.note h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.note ol, .note ul { margin: 0 0 12px; padding-left: 20px; } .note li { margin: 0 0 8px; }
+.note + .note { margin-top: 16px; }
+/* l'evento come lo mostra il Calendario dell'iPhone */
+.evento { background: var(--s1); border-radius: 14px; padding: 12px 14px; margin: 10px 0 14px; border-left: 4px solid var(--acc); color: var(--t1); }
+.evento b { display: block; font-size: 15px; } .evento span { display: block; font: 600 12px var(--font-mono); color: var(--t2); margin-top: 3px; }
+.ics { background: var(--s1); border: 1px solid var(--b1); border-radius: 12px; padding: 12px 14px; font: 11.5px/1.5 var(--font-mono); color: var(--t1); overflow-x: auto; white-space: pre; margin: 0; }
+.ics i { color: var(--t3); font-style: normal; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Training 540 · Le sedute nel Calendario dell'iPhone</h1>
+  <p class="intro">Ignazio: «collegare i passi che ci sono già (workout) impostando un orario direttamente sul calendario Apple», e «solo sedute vere». A sinistra la pagina costruita, Impostazioni › Allenamento a 390 px (Chrome vero, con giorni, ora e collegamento già salvati). A destra cosa vede nel Calendario e il file che l'iPhone riceve dal Worker.</p>
+  <div class="due">
+    <div class="costruita">
+      <div class="col-tit">Costruita · Impostazioni › Allenamento · 390 px</div>
+      <img src="impostazioni_390.png" alt="Impostazioni › Allenamento con i sette giorni, l'ora e i tasti Aggiungi al Calendario e Rinnova il collegamento">
+    </div>
+    <div>
+      <div class="note">
+        <h3>Cosa fa la persona</h3>
+        <ol>
+          <li>Sceglie i giorni (la partenza, lun-mar-gio-ven, è già segnata) e l'ora, poi <b>Salva</b>. In quei giorni l'app propone sempre una seduta di lavoro: Upper o Lower, mai un recupero.</li>
+          <li>Tocca <b>Aggiungi al Calendario</b>: l'iPhone chiede di iscriversi al calendario «Zona Tracker» e poi lo rilegge da solo, ogni qualche ora. L'app non scrive niente nel Calendario.</li>
+          <li>Se un giorno si allena fuori programma, le sedute dopo si spostano da sole. Nei giorni di pausa il calendario resta vuoto. <b>Rinnova il collegamento</b> spegne il vecchio indirizzo.</li>
+        </ol>
+        <h3>Cosa vede nel Calendario, giovedì 29 ottobre</h3>
+        <div class="evento"><b>Upper B · Zona Tracker</b><span>07:30 – 08:30 · avviso 15 minuti prima</span></div>
+        <h3>Perché un orario fisso</h3>
+        <ul>
+          <li>Decidere prima <i>quando</i> si fa una cosa aumenta molto la probabilità di farla (intenzioni di attuazione: Gollwitzer e Sheeran 2006, 94 studi).</li>
+          <li>Ripetere il gesto nello stesso momento è ciò che lo rende un'abitudine (Lally e colleghi 2010).</li>
+          <li>Solo sedute vere nei giorni scelti: così ogni muscolo si allena due volte a settimana (Schoenfeld 2016).</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3>Il file che riceve l'iPhone (le sedute vere, oggi 30 ottobre, lun-mar-gio-ven alle 07:30)</h3>
+<pre class="ics">BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Zona Tracker//Sedute//IT
+METHOD:PUBLISH
+X-WR-CALNAME:Zona Tracker
+X-WR-TIMEZONE:Europe/Rome
+REFRESH-INTERVAL;VALUE=DURATION:PT4H
+BEGIN:VEVENT
+UID:zt-wrromv-2026-10-30@zona-tracker
+DTSTART:20261030T063000Z      <i>← le 07:30 di Roma, in ora solare</i>
+DTEND:20261030T073000Z
+SUMMARY:Upper B · Zona Tracker
+BEGIN:VALARM
+TRIGGER:-PT15M
+ACTION:DISPLAY
+DESCRIPTION:Upper B fra 15 minuti
+END:VALARM
+END:VEVENT
+<i>… poi Lower B lunedì 2, Upper A martedì 3, Lower A giovedì 5, Upper B venerdì 6: 16 sedute in 4 settimane</i>
+END:VCALENDAR</pre>
+        <p style="margin:10px 0 0;">Il file intero è accanto a questa pagina: <code>esempio_zona_tracker.ics</code>.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
