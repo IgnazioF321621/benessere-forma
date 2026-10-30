@@ -1043,42 +1043,6 @@ div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-a
 .set-account{padding:12px 14px;background:var(--s2);border-radius:8px;}
 .set-account-etichetta{margin-bottom:4px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);}
 .set-account-email{font-family:var(--font-sans);font-size:14px;color:var(--t1);user-select:text;-webkit-user-select:text;word-break:break-all;}
-.settings-credits{
-  margin-bottom:20px;
-  border:1px solid var(--b2);
-  border-radius:8px;
-  overflow:hidden;
-}
-.settings-credits-toggle{
-  width:100%;padding:12px 14px;
-  background:var(--s1);border:none;
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:13px;color:var(--t2);font-family:var(--font-sans);font-weight:600;
-  cursor:pointer;text-align:left;
-}
-.settings-credits-toggle .chevron{
-  font-size:11px;color:var(--t3);
-  transition:transform .2s ease;
-  display:inline-block;
-}
-.settings-credits.expanded .settings-credits-toggle .chevron{
-  transform:rotate(90deg);
-}
-.settings-credits-content{
-  display:none;
-  padding:12px 14px;
-  background:var(--bianco);
-  border-top:1px solid var(--b2);
-}
-.settings-credits.expanded .settings-credits-content{display:block;}
-.settings-credits-content ul{
-  list-style:none;padding:0;margin:0;
-  font-size:12px;line-height:1.8;color:var(--t3);font-family:var(--font-sans);
-}
-.settings-credits-content a{
-  color:var(--acc);text-decoration:none;
-}
-.settings-credits-content a:hover{text-decoration:underline;}
 
 /* ── EXERCISE CARD nuovo layout (3 maggio 2026) ── */
 .exercise-card{background:var(--s1);border-radius:var(--r-md);padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(var(--nero-rgb),.06);border:1px solid transparent;transition:border-color .15s ease, box-shadow .15s ease;}
@@ -2667,15 +2631,6 @@ html.v5 .home-v2-card[onclick*="showPage('oggi')"] .home-v2-donut-svg circle[str
 html.v5 #home-card-training:has(+ .home-v2-card[onclick*="showPage('body')"]),html.v5 #home-card-training + .home-v2-card[onclick*="showPage('body')"]{width:calc(50% - 6px);align-items:flex-start;padding:16px 12px 16px 14px;}
 html.v5 #home-card-training + .home-v2-card[onclick*="showPage('body')"] .home-v2-body-line{flex-wrap:wrap;}
 
-/* l'interruttore della veste, in Impostazioni › Crediti: si vede sempre, anche a veste spenta */
-.set-veste{width:100%;display:flex;align-items:center;gap:12px;padding:14px 0;margin-bottom:12px;border:none;border-bottom:1px solid var(--s3);background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);color:var(--t1);}
-.set-veste-testo{flex:1;min-width:0;}
-.set-veste-testo b{display:block;font-size:15px;font-weight:700;}
-.set-veste-testo small{display:block;font-size:12px;color:var(--t2);margin-top:2px;}
-.set-veste-int{flex-shrink:0;position:relative;width:46px;height:28px;border-radius:999px;background:var(--b1);transition:background .2s;}
-.set-veste-int::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--bianco);box-shadow:0 1px 3px rgba(var(--nero-rgb),.2);transition:transform .2s;}
-.set-veste[aria-checked="true"] .set-veste-int{background:var(--acc);}
-.set-veste[aria-checked="true"] .set-veste-int::after{transform:translateX(18px);}
 
 /* ── Giro 1 della Home (schizzo approvato da Ignazio il 29/10/2026, docs/prototipi/giro1_home/): stessi dati e stessi tasti,
    cambiano ordine, gerarchia, spazi e caratteri. Adesso · Le tue zone · Come stai oggi · Pirsi propone · La tua settimana ── */
@@ -2706,15 +2661,35 @@ html.v5 .cs-testa{justify-content:flex-end;margin-bottom:4px;}
 html.v5 .cs-link{min-height:44px;min-width:44px;padding:0 4px;}
 html.v5 .cs-valore{min-height:38px;padding:3px 4px;border-radius:12px;}
 html.v5 .cs-nota{margin-top:8px;border-radius:12px;}
-/* Pirsi: ogni proposta una riga dell'elenco, «Perché?» a sinistra, «Non ora» e «Accetto» a destra */
-html.v5 .cp-card{padding:2px 14px 12px;}
-html.v5 .cp-item{display:flex;flex-wrap:wrap;align-items:center;border-top-color:var(--s3);}
-html.v5 .cp-item > *{width:100%;}
-html.v5 .cp-item > .cp-why{width:auto;margin:10px auto 0 0;}
-html.v5 .cp-item > .cp-actions{width:auto;margin-top:10px;flex-direction:row-reverse;}
-html.v5 .cp-item > .cp-why-text + .cp-actions{margin-left:auto;}
-html.v5 :is(.cp-yes,.cp-no){flex:none;padding:9px 16px;border-radius:12px;}
-html.v5 .cp-note{border-top-color:var(--s3);}
+/* Pirsi, giro 2 (30 ottobre 2026): ogni proposta una riga (puntino della zona, titolo, freccia), una sola aperta alla volta
+   su un velo della zona Home, con motivo, numeri, «Perché?», Accetto e Non ora a tutta larghezza */
+html.v5 .cp-card{padding:2px 0 12px;}
+html.v5 .cp-item{padding:0;border-top-color:var(--s3);}
+html.v5 .cp-head + .cp-item{border-top:none;}
+html.v5 .cp-item.cp5-aperta{background:var(--z-home-velo);}
+html.v5 .cp5-riga{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 14px;border:0;background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);color:var(--t1);}
+html.v5 .cp5-riga .wp-dot{flex-shrink:0;}
+html.v5 .cp5-riga .cp-title{flex:1;min-width:0;font-size:15px;}
+html.v5 .cp5-area{display:block;margin-top:2px;font-family:var(--font-mono);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);}
+html.v5 .cp5-chev{font-size:18px;line-height:1;color:var(--t2);}
+html.v5 .cp5-corpo{padding:0 14px 14px 36px;}
+html.v5 .cp5-corpo .cp-reason{margin-top:0;color:var(--t1);}
+html.v5 .cp5-corpo .cp-nums{background:var(--s1);}
+html.v5 .cp5-corpo .cp-num{font-size:11px;}
+html.v5 .cp5-corpo .cp-num span:first-child{color:var(--t2);}
+html.v5 .cp5-corpo .cp-why{min-height:44px;color:var(--z-home-scuro);}
+html.v5 .cp5-corpo .cp-actions{margin-top:8px;}
+html.v5 :is(.cp-yes,.cp-no){min-height:44px;border-radius:12px;}
+html.v5 .cp-no{background:var(--s1);border-color:var(--s1);color:var(--t1);}
+html.v5 .cp-note{margin:0 14px;border-top-color:var(--s3);color:var(--t2);}
+/* Adesso: il check fisico come riga «da fare», col puntino del Body */
+html.v5 .home-v2-dafare-pt{display:inline-block;width:8px;height:8px;margin-right:8px;border-radius:50%;vertical-align:middle;}
+/* Impostazioni › Il tuo obiettivo: il peso di oggi è una riga che dice il valore e apre «Pesati ora»; il campo spento di prima sparisce */
+html.v5 #set-weight-campo{display:none;}
+html.v5 .set-peso-riga[hidden]{grid-column:1 / -1;display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 0;border:0;border-bottom:1px solid var(--s3);background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);font-size:15px;color:var(--t1);}
+html.v5 .set-peso-testo{flex:1;min-width:0;}
+html.v5 .set-peso-testo small{display:block;margin-top:2px;font-size:12px;color:var(--t2);}
+html.v5 .set-peso-val{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--t1);}
 /* La tua settimana: un elenco a righe in fondo (l'HTML a righe lo disegna home.js solo con la veste accesa) */
 html.v5 .wp5{margin-top:14px;cursor:pointer;}
 html.v5 .wp5-sez{display:flex;justify-content:space-between;margin:0 4px 8px;}

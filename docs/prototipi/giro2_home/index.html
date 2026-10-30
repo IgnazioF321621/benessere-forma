@@ -341,17 +341,29 @@ h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
   </section>
 
   <div class="decidi">
-    <h3>Tre cose da decidere, Ignazio</h3>
+    <h3>Le quattro scelte di Ignazio (30 ottobre 2026)</h3>
     <ol>
-      <li><b>Pirsi</b>: una proposta aperta alla volta (come qui), o tutte chiuse e si apre un foglio al tocco?</li>
-      <li><b>Il check fisico in «Adesso»</b>: va bene come riga «da fare» sotto il tasto, oppure preferisci che resti nella riga Body ma solo quando è da fare?</li>
-      <li><b>L'interruttore della veste</b>: A (rinominato «Grafica di prima») o B (tolto)?</li>
+      <li><b>Pirsi</b>: una proposta aperta alla volta, in pagina.</li>
+      <li><b>Il check fisico</b>: in «Adesso», fra le cose da fare, solo quando c'è da farlo.</li>
+      <li><b>L'interruttore della veste</b>: tolto dalle Impostazioni. La veste di prima resta nel codice e si riaccende da <code>?v5=0</code>.</li>
+      <li><b>Crediti</b>: la pagina «Crediti &amp; attribuzioni» esce del tutto (la riserva ExerciseDB/Wger la toglie un'altra sessione dal Worker e dal Training).</li>
     </ol>
   </div>
 
+  <!-- costruita -->
+  <section class="momento">
+    <h2><span>COSTRUITA</span>Home e Impostazioni vere, a veste accesa (banco, 390 px)</h2>
+    <p class="intro">Fotografie delle pagine costruite, non più disegno: stessi dati di prova del 4 ottobre (tre proposte vere di Pirsi per la settimana appena chiusa, nessun check fisico fatto, pesata di oggi 74,0 kg). Tutto dietro <code>html.v5</code>: a veste spenta Home e Impostazioni sono identiche al pixel a prima, salvo che l'interruttore e Crediti non ci sono più.</p>
+    <div class="tre" style="grid-template-columns:repeat(auto-fill,390px)">
+      <div class="prima"><div class="col-tit">La Home: il check in «Adesso», Body col peso, Pirsi a righe</div><img src="costruita_1_home.png" alt="La Home costruita"></div>
+      <div class="prima"><div class="col-tit">Il tuo obiettivo: «Peso di oggi» è una riga</div><img src="costruita_2_obiettivo.png" alt="Il tuo obiettivo costruito"></div>
+      <div class="prima"><div class="col-tit">L'elenco delle Impostazioni, senza Crediti</div><img src="costruita_3_elenco.png" alt="L'elenco delle Impostazioni costruito"></div>
+    </div>
+  </section>
+
   <section class="note" style="max-width:900px">
     <h3>Quando si costruisce</h3>
-    Tutto dietro <code>html.v5</code> (a veste spenta Home e Impostazioni restano identiche al pixel), tranne l'interruttore stesso, che per natura sta fuori. Pirsi: cambia solo come si mostra la proposta, non cosa propone né cosa scrive «Accetto» (<code>shared/coach_rules.js</code> non si tocca). Il check: la stessa <code>getNextCheckpointInfo()</code>, letta in «Adesso» invece che nella riga Body. Nessuna lettura o scrittura nuova.
+    Tutto dietro <code>html.v5</code> (a veste spenta Home e Impostazioni restano identiche al pixel), tranne l'interruttore e Crediti, che sono usciti dalla pagina per tutti. Pirsi: cambia solo come si mostra la proposta, non cosa propone né cosa scrive «Accetto» (<code>shared/coach_rules.js</code> non si tocca). Il check: la stessa <code>getNextCheckpointInfo()</code>, letta in «Adesso» invece che nella riga Body. Nessuna lettura o scrittura nuova.
   </section>
 </div>
 </body>

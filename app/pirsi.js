@@ -383,11 +383,53 @@ function _cpNumsHTML(p){
   if(!righe.length) return '';
   return `<div class="cp-nums">${righe.map(r => `<div class="cp-num"><span>${esc(r.label)}</span><span>${esc(r.value)}</span></div>`).join('')}</div>`;
 }
+// Giro 2 (30 ottobre 2026, veste accesa): ogni proposta è una riga (puntino della zona e titolo), una sola aperta alla volta
+// con motivo, numeri, «Perché?», Accetto e Non ora. Si apre la prima; un tocco su un'altra la apre e chiude quella di prima,
+// un tocco sulla riga aperta la chiude. ST.cpAperta: l'id aperto, '' = tutte chiuse, undefined = la prima.
+function cpApri(id){
+  ST.cpAperta = (ST.cpAperta === id) ? '' : id;
+  if(typeof renderHome === 'function') renderHome();
+}
+function _cpApertaId(lista){
+  if(ST.cpAperta === '') return null;
+  if(lista.some(p => p.id === ST.cpAperta)) return ST.cpAperta;
+  return lista[0] ? lista[0].id : null;
+}
 function _cpHomeCardHTML(){
   const lista = _cpPending();
   if(!lista.length) return '';
   const busy = ST.cpBusy || {};
   const ws = lista[0].week_start;
+  if(document.documentElement.classList.contains('v5')){
+    const apertaId = _cpApertaId(lista);
+    const items = lista.map(p => {
+      const [area, tinta] = _CP_AREA[p.kind] || ['Settimana', 'var(--acc)'];
+      const off = busy[p.id] ? 'disabled' : '';
+      const aperta = p.id === apertaId;
+      return `<div class="cp-item${aperta ? ' cp5-aperta' : ''}" data-cp="${esc(p.id)}">
+      <button class="cp5-riga" aria-expanded="${aperta ? 'true' : 'false'}" onclick="cpApri('${esc(p.id)}')">
+        <span class="wp-dot" style="background:${tinta};" aria-hidden="true"></span>
+        <span class="cp-title">${esc(p.title)}<span class="cp5-area">${area}</span></span>
+        <span class="cp5-chev" aria-hidden="true">${aperta ? '⌃' : '⌄'}</span>
+      </button>
+      ${aperta ? `<div class="cp5-corpo">
+        <div class="cp-reason">${esc(p.reason)}</div>
+        ${_cpNumsHTML(p)}
+        ${_cpPercheHTML(p)}
+        <div class="cp-actions">
+          <button class="cp-yes" ${off} onclick="acceptCoachProposal('${esc(p.id)}')">${busy[p.id] === 'yes' ? 'Un momento…' : 'Accetto'}</button>
+          <button class="cp-no" ${off} onclick="rejectCoachProposal('${esc(p.id)}')">Non ora</button>
+        </div>
+      </div>` : ''}
+    </div>`;
+    }).join('');
+    return `
+    <div class="cp-card cp5">
+      <div class="cp-head"><div class="cp-title-main">${COACH_NAME} propone · ${lista.length}</div><div class="cp-week">${_wpRange(ws)}</div></div>
+      ${items}
+      <div class="cp-note">${COACH_NAME} propone, decidi tu. Per la salute conta il parere del tuo medico.</div>
+    </div>`;
+  }
   const items = lista.map(p => {
     const [area, tinta] = _CP_AREA[p.kind] || ['Settimana', 'var(--acc)'];
     const off = busy[p.id] ? 'disabled' : '';

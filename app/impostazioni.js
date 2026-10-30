@@ -49,7 +49,6 @@ const SET_PAGINE = {
   salute:      { titolo:'Salute ed esami del sangue', salva:true },
   profilo:     { titolo:'Profilo e account', salva:true },
   dati:        { titolo:'I tuoi dati e privacy', salva:false },
-  crediti:     { titolo:'Crediti', salva:false },
 };
 function setVai(pagina) {
   const conf = SET_PAGINE[pagina];
@@ -62,22 +61,11 @@ function setVai(pagina) {
   const err = document.getElementById('set-err'); if(err) err.style.display = 'none';
   if(nome === 'elenco') _setRiassunti();
   if(nome === 'salute') { _setUltimiLog(); _setEsamiStorico(); }
-  if(nome === 'crediti') _setVeste();
   const inner = document.querySelector('#settings-modal .set-foglio'); if(inner) inner.scrollTop = 0;
 }
-// La veste nuova (Giro 1, Passo 0): l'interruttore in Crediti. Cambia solo la classe html.v5 e la chiave sul telefono zt_v5,
-// la stessa che legge lo script in testa alla pagina; niente si salva nel profilo.
-function _setVeste() {
-  const b = document.getElementById('set-veste');
-  if(b) b.setAttribute('aria-checked', document.documentElement.classList.contains('v5') ? 'true' : 'false');
-}
-function vesteNuova() {
-  const on = !document.documentElement.classList.contains('v5');
-  document.documentElement.classList.toggle('v5', on);
-  try { if(on) localStorage.removeItem('zt_v5'); else localStorage.setItem('zt_v5', '0'); } catch(e) {}   // accesa per tutti dal 29/10/2026: si ricorda solo lo spegnimento
-  _setVeste();
-  if(ST.page === 'home' && typeof renderHome === 'function') renderHome();   // la settimana cambia disegno con la veste (Giro 1 della Home)
-}
+// La veste nuova (Giro 1) è accesa per tutti dal 29 ottobre 2026: la classe html.v5 la mette lo script in testa alla pagina,
+// si spegne solo da ?v5=0 (chiave zt_v5 sul telefono). L'interruttore «Veste nuova» e la pagina Crediti sono usciti dalle Impostazioni
+// il 30 ottobre 2026 (giro 2, scelta di Ignazio).
 // Indietro senza salvare: i campi tornano come nel profilo, così un «Salva» in un'altra pagina non porta con sé
 // una modifica lasciata a metà.
 function setIndietro() { _setPopola(); setVai('elenco'); }
@@ -149,6 +137,7 @@ function _setPopola() {
   pesoInp.value = (pesate[0] && pesate[0].weight_kg != null) ? pesate[0].weight_kg : (p.weight_kg || '');
   pesoInp.disabled = true;
   _notaImpostazioni(pesoInp, 'set-weight-nota', 'Si cambia da «Pesati ora»');
+  _setPesoRiga(pesate, p);
   document.getElementById('set-goal-weight').value = p.goal_weight_kg || '';
   selectSetObiettivo(migrateObiettivo(p.obiettivo || '').split(',')[0] || 'dimagrimento');
   document.getElementById('set-activity').value = p.activity_level || 'moderate';
@@ -184,6 +173,14 @@ function _setPopola() {
 }
 
 // Riga di spiegazione sotto un campo delle Impostazioni (una sola, riusata alle aperture dopo)
+// Giro 2 (30 ottobre 2026): a veste accesa il peso di oggi è una riga che dice il valore (ultima pesata, come il campo) e apre «Pesati ora»
+function _setPesoRiga(pesate, p) {
+  const el = document.getElementById('set-peso-val'); if(!el) return;
+  if(!pesate) pesate = (typeof getWeighIns === 'function') ? getWeighIns() : [];
+  if(!p) p = ST.profile || {};
+  const kg = (pesate[0] && pesate[0].weight_kg != null) ? pesate[0].weight_kg : p.weight_kg;
+  el.textContent = (kg != null && kg !== '') ? `${String(Number(kg).toFixed(1)).replace('.', ',')} kg` : '—';
+}
 function _notaImpostazioni(dopo, id, testo) {
   let n = document.getElementById(id);
   if(!n) { n = document.createElement('div'); n.id = id; n.style.cssText = 'font-size:11px;color:var(--t3);font-family:var(--font-mono);margin-top:4px;'; dopo.parentElement.appendChild(n); }

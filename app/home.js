@@ -313,6 +313,18 @@ function getDaFareOggi(principale){
   return voci.filter(v => !(v.azione === p.azione && (v.arg || null) === (p.arg || null)));
 }
 
+// Il check fisico come cosa da fare (giro 2, veste accesa): il testo della riga, o null se non c'è niente da fare.
+// Legge la stessa getNextCheckpointInfo della card Body; in pausa pesate tace.
+function checkDaFareV5(){
+  try { if(typeof pausaAttivaPer === 'function' && pausaAttivaPer('pesate')) return null; } catch(e){}
+  let cp = null;
+  try { cp = getNextCheckpointInfo(); } catch(e){ return null; }
+  if(!cp || cp.loading) return null;
+  if(!cp.hasCheck) return 'Primo check fisico da fare';
+  if(cp.overdue) return 'Check fisico in ritardo';
+  if(cp.daysUntil === 0) return 'Check fisico oggi';
+  return null;
+}
 // Il pulsante di «Prossima azione»: apre il passo giusto.
 function prossimaAzioneVai(azione, arg){
   if(azione === 'seduta'){ apriSessioneDallaHome(arg); return; }
@@ -1507,7 +1519,8 @@ function _renderHomeCards(){
     else if(cp.daysUntil === 0) cpLabel = 'Check fisico oggi';
     else if(cp.daysUntil < 0) cpLabel = 'Check fisico a fine blocco';
     else cpLabel = `Prossimo check fisico tra ${cp.daysUntil} giorn${cp.daysUntil === 1 ? 'o' : 'i'}`;
-    bodyRigaV5 = `<div class="w5-gruppo"><button class="w5-riga" onclick="showPage('body')"><span class="w5-riga-testo">Peso<small>${cpLabel}</small></span><span class="w5-riga-val">${w != null ? `${_kgVirgola(w)} kg` : '—'}${deltaHTML ? `<small>${deltaHTML}</small>` : ''}</span><span class="w5-freccia">›</span></button>${pesataOggi ? '' : '<button class="w5-riga w5-azione" onclick="openWeighInSheet()">+ Pesata di oggi</button>'}</div>`;
+    // giro 2 (30 ottobre 2026): il check fisico non sta più sotto il peso, è una riga «da fare» in Adesso (checkDaFareV5); qui resta il peso
+    bodyRigaV5 = `<div class="w5-gruppo"><button class="w5-riga" onclick="showPage('body')"><span class="w5-riga-testo">Peso</span><span class="w5-riga-val">${w != null ? `${_kgVirgola(w)} kg` : '—'}${deltaHTML ? `<small>${deltaHTML}</small>` : ''}</span><span class="w5-freccia">›</span></button>${pesataOggi ? '' : '<button class="w5-riga w5-azione" onclick="openWeighInSheet()">+ Pesata di oggi</button>'}</div>`;
     bodyCard = `
       <div class="home-v2-card" onclick="showPage('body')">
         <span class="home-v2-card-dot" style="background:var(--mod-body);"></span>
@@ -1536,10 +1549,16 @@ function _renderHomeCards(){
           <span class="home-v2-action-next-chip">${esc(azione.nextHint.chip)}</span>
         </div>` : '';
   const daFare = getDaFareOggi(azione);
+  // giro 2 (30 ottobre 2026, veste accesa): il check fisico è una cosa da fare, non un dato del corpo. Entra qui, col puntino del Body,
+  // solo quando c'è da farlo (primo check · in ritardo · oggi); «prossimo check tra N giorni» non si scrive più. Stessa getNextCheckpointInfo.
+  if(document.documentElement.classList.contains('v5') && !daFare.some(v => v.azione === 'check') && azione.azione !== 'check'){
+    const r = checkDaFareV5();
+    if(r) daFare.push({ etichetta: r, azione: 'check', tinta: 'var(--z-body)' });
+  }
   const daFareHTML = daFare.length ? `
       <div class="home-v2-dafare">
         <div class="home-v2-dafare-eb">Anche da fare oggi</div>
-        ${daFare.map(v => `<button class="home-v2-dafare-voce" onclick="prossimaAzioneVai('${v.azione}'${v.arg ? `, '${esc(v.arg)}'` : ''})"><span>${esc(v.etichetta)}</span><span class="home-v2-dafare-freccia">›</span></button>`).join('')}
+        ${daFare.map(v => `<button class="home-v2-dafare-voce" onclick="prossimaAzioneVai('${v.azione}'${v.arg ? `, '${esc(v.arg)}'` : ''})"><span>${v.tinta ? `<span class="home-v2-dafare-pt" style="background:${v.tinta};"></span>` : ''}${esc(v.etichetta)}</span><span class="home-v2-dafare-freccia">›</span></button>`).join('')}
       </div>` : '';
   const actionPanel = `
     <div class="home-v2-action">
