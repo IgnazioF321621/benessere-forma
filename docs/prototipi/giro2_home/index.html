@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giro 2 · Home e Impostazioni</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Giro 2 «snellire», la Home e le Impostazioni: disegno prima/dopo, niente codice dell'app.
+   A sinistra la pagina vera di oggi (fotografata dal banco a 390 px), a destra la proposta, a margine cosa snellire nel giro 2. */
+:root {
+  --font-sans: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --bg: #F5F3EE; --s1: #FFFFFF; --s2: #F0EDE6; --s3: #E8E4DC;
+  --b1: #DDD9D0; --t1: #1A1A1A; --t2: #555047; --t3: #9A9388;
+  --acc: #2A7A6F;
+  --mod-training: #B5D4F4;          /* la tinta Training di sempre */
+  --z-training: #2E6DA4;            /* proposta: il colore pieno della zona Training (bianco sopra: contrasto 5,4:1) */
+  --z-training-scuro: #1F4F7A;
+  --training-velo: #EAF2FB;
+  --bianco: #FFFFFF;
+  --nota: #FFF4C2; --nota-bordo: #E3C24A; --nota-testo: #5C4A00;
+  --pagina: #E4E1DA;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--pagina); color: var(--t1); font-family: var(--font-sans); }
+.foglio { max-width: 1240px; margin: 0 auto; padding: 24px 16px 60px; }
+h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
+.intro { color: var(--t2); font-size: 14px; line-height: 1.5; max-width: 860px; margin: 0 0 14px; }
+.scelta-vecchia { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 22px; font-size: 13px; color: var(--t2); }
+.scelta button { font: 600 13px var(--font-sans); border: 1px solid var(--b1); background: var(--s1); color: var(--t1); border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+.scelta button.on { background: var(--t1); color: var(--bianco); border-color: var(--t1); }
+
+.momento { margin: 0 0 40px; }
+.momento > h2 { font-size: 18px; font-weight: 800; margin: 0 0 12px; }
+.momento > h2 span { font: 600 12px var(--font-mono); color: var(--t3); letter-spacing: .06em; margin-right: 8px; }
+.tre { display: grid; grid-template-columns: 390px 390px minmax(220px, 1fr); gap: 22px; align-items: start; }
+.col-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 0 0 8px; }
+.prima img { width: 390px; display: block; border-radius: 28px; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); background: var(--bg); }
+.note { background: var(--nota); border: 1px solid var(--nota-bordo); border-radius: 14px; padding: 14px 16px; color: var(--nota-testo); font-size: 13px; line-height: 1.45; }
+.note h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; }
+.note ol { margin: 0; padding-left: 20px; }
+.note li { margin: 0 0 7px; }
+.note .resta { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--nota-bordo); }
+
+/* ── il telefono della proposta ── */
+.tel { width: 390px; background: var(--bg); border-radius: 28px; overflow: hidden; position: relative; box-shadow: 0 1px 0 var(--b1), 0 8px 24px rgba(0,0,0,.08); }
+.tel.alto { min-height: 844px; display: flex; flex-direction: column; }
+.testa { background: var(--z-training); color: var(--bianco); padding: 14px 16px 18px; border-radius: 0 0 26px 26px; }
+.su { display: flex; justify-content: space-between; align-items: center; min-height: 34px; }
+.ind { font: 700 16px var(--font-sans); color: inherit; background: none; border: 0; padding: 0; }
+.dx { display: flex; gap: 8px; align-items: center; }
+.chip { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); color: inherit; border-radius: 999px; padding: 6px 10px; }
+.fb { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255,255,255,.2); color: inherit; display: flex; align-items: center; justify-content: center; }
+.fb svg { width: 17px; height: 17px; }
+.sopra { font: 700 11px var(--font-mono); letter-spacing: .08em; opacity: .85; margin-top: 10px; margin-bottom: 4px; }
+.testa h1 { font-size: 24px; font-weight: 800; margin: 2px 0 12px; line-height: 1.1; letter-spacing: -.5px; }
+.dati { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.dati div { background: rgba(255,255,255,.14); border-radius: 12px; padding: 8px 10px; }
+.dati b { display: block; font: 700 20px var(--font-mono); }
+.dati small { font-size: 11px; opacity: .85; }
+.barra { height: 6px; border-radius: 999px; background: rgba(255,255,255,.25); margin: 12px 0 14px; overflow: hidden; }
+.barra i { display: block; height: 100%; width: 4%; background: var(--bianco); border-radius: 999px; }
+.seg { display: flex; background: rgba(255,255,255,.18); border-radius: 12px; padding: 4px; }
+.seg span { flex: 1; text-align: center; font-weight: 700; font-size: 14px; padding: 8px 0; border-radius: 9px; }
+.seg span.on { background: var(--bianco); color: var(--z-training); }
+
+.corpo { padding: 6px 16px 20px; flex: 1; }
+.gr-tit { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; }
+.gruppo { background: var(--s1); border-radius: 14px; overflow: hidden; }
+.riga { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 48px; border-top: 1px solid var(--s3); font-size: 15px; }
+.gruppo > .riga:first-child, .gruppo > .es:first-child { border-top: 0; }
+.riga .cresce { flex: 1; min-width: 0; }
+.riga small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.riga .mono { font: 600 13px var(--font-mono); color: var(--t3); }
+.chev { color: var(--t3); font-size: 18px; }
+.ico { width: 32px; height: 32px; border-radius: 9px; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex: none; }
+.ico svg { width: 15px; height: 15px; }
+.rientra { padding-left: 58px; }
+.pill { font: 700 13px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 999px; padding: 8px 14px; }
+
+.es { display: flex; gap: 12px; padding: 13px 14px; border-top: 1px solid var(--s3); align-items: flex-start; }
+.num { width: 28px; height: 28px; border-radius: 50%; background: var(--training-velo); color: var(--z-training-scuro); font: 700 13px var(--font-mono); display: flex; align-items: center; justify-content: center; flex: none; margin-top: 1px; }
+.es-c { flex: 1; min-width: 0; }
+.es-c b { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.es-c b .i { font: 600 11px var(--font-mono); color: var(--t3); border: 1px solid var(--b1); border-radius: 50%; width: 17px; height: 17px; display: inline-flex; align-items: center; justify-content: center; }
+.es-c .param { font: 600 12px var(--font-mono); color: var(--t2); margin-top: 3px; }
+.es-c .sugg { display: inline-block; font: 600 12px var(--font-mono); color: var(--z-training-scuro); background: var(--training-velo); border-radius: 8px; padding: 4px 8px; margin-top: 7px; }
+.pallini { display: flex; align-items: center; gap: 6px; margin-top: 9px; }
+.pallini i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--mod-training); }
+.pallini i.fatta { background: var(--z-training); border-color: var(--z-training); }
+.pallini span { font: 600 12px var(--font-mono); color: var(--t3); margin-left: 4px; }
+.azioni { display: flex; gap: 16px; margin-top: 9px; font-size: 13px; font-weight: 600; color: var(--z-training); }
+.via { flex: none; align-self: center; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--z-training); color: var(--bianco); display: flex; align-items: center; justify-content: center; flex-direction: column; font: 700 10px var(--font-mono); gap: 1px; }
+.via svg { width: 14px; height: 14px; }
+
+.tab { display: flex; justify-content: space-around; background: var(--s1); border-top: 1px solid var(--s3); padding: 8px 6px 18px; border-radius: 22px 22px 0 0; }
+.tab div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--t2); padding: 6px 12px; border-radius: 12px; }
+.tab svg { width: 21px; height: 21px; }
+.tab div.on { color: var(--z-training-scuro); background: var(--training-velo); }
+
+/* serie in corso */
+.testa.grande { border-radius: 0 0 30px 30px; padding-bottom: 22px; }
+.vivo { display: inline-flex; align-items: center; gap: 7px; }
+.vivo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--bianco); box-shadow: 0 0 0 4px rgba(255,255,255,.25); }
+.chips { display: flex; gap: 8px; }
+.chips span { font: 700 12px var(--font-mono); background: rgba(255,255,255,.2); border-radius: 999px; padding: 6px 11px; }
+.gif { background: var(--s2); border-radius: 18px; height: 230px; display: flex; align-items: center; justify-content: center; font: 600 11px var(--font-mono); letter-spacing: .08em; color: var(--t3); margin-top: 16px; }
+.piede { padding: 12px 16px 26px; }
+.grosso { width: 100%; font: 700 18px var(--font-sans); background: var(--z-training); color: var(--bianco); border: 0; border-radius: 16px; padding: 17px 0; }
+
+/* recupero e registro */
+.rec { display: flex; align-items: center; gap: 18px; margin-top: 8px; }
+.anello { width: 128px; height: 128px; border-radius: 50%; border: 8px solid rgba(255,255,255,.3); border-top-color: var(--bianco); border-right-color: var(--bianco); display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.anello b { font: 700 32px var(--font-mono); }
+.anello small { font: 700 10px var(--font-mono); letter-spacing: .08em; opacity: .85; }
+.mini-gif { flex: 1; height: 104px; border-radius: 14px; background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center; font: 600 10px var(--font-mono); letter-spacing: .06em; opacity: .9; text-align: center; padding: 6px; }
+.domanda { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 16px 4px 7px; }
+.campo { background: var(--s1); border-radius: 14px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+.campo b { font: 700 26px var(--font-mono); }
+.campo small { color: var(--t3); font-size: 12px; }
+.campo.attivo { box-shadow: inset 0 0 0 2px var(--z-training); }
+.aiuto { font-size: 12px; color: var(--t3); margin: 6px 4px 0; }
+.coach { display: flex; gap: 12px; padding: 12px 14px; align-items: flex-start; }
+.coach .ico { background: var(--acc); }
+.coach p { margin: 2px 0 0; font-size: 14px; line-height: 1.4; }
+.coach b { font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--acc); }
+.due { display: flex; gap: 10px; margin-top: 16px; }
+.due .grosso { flex: 1; }
+.annulla { width: 58px; border: 0; border-radius: 16px; background: var(--s3); color: var(--t2); font-size: 20px; }
+
+
+/* il segno a margine: un numero che rimanda alla nota del giro 2 */
+.n2 { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--nota-bordo); color: var(--nota-testo); font: 700 10px var(--font-mono); vertical-align: middle; flex: none; }
+.testa .n2 { margin-left: 4px; }
+
+@media (max-width: 1100px) {
+  .tre { grid-template-columns: 1fr; justify-items: center; }
+  .note { max-width: 390px; }
+}
+@media (max-width: 420px) {
+  .prima img, .tel { width: 100%; }
+}
+
+
+/* ── giro 2, Home e Impostazioni: le cose nuove (la zona Home è verde: --acc) ── */
+:root { --z-home: #2A7A6F; --z-home-velo: #E6F4F2; --z-home-scuro: #1F5C53; --mod-nutrition: #A35F00; --mod-body: #6A55A0; }
+.prima img { height: auto; }
+.testa.verde { background: var(--z-home); }
+.testa.verde .seg span.on { color: var(--z-home-scuro); }
+.sez { font: 700 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); margin: 22px 4px 8px; display: flex; justify-content: space-between; }
+.gruppo .riga b { font-weight: 700; }
+.riga .pt { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.riga .ok { font: 700 13px var(--font-sans); color: var(--bianco); background: var(--z-home); border: 0; border-radius: 999px; padding: 9px 14px; min-height: 40px; }
+.riga .no { font: 700 13px var(--font-sans); color: var(--t2); background: var(--s2); border: 0; border-radius: 999px; padding: 9px 12px; min-height: 40px; }
+.aperta { background: var(--z-home-velo); }
+.aperta .cresce small { color: var(--t2); font-size: 13px; line-height: 1.4; margin-top: 6px; }
+.aperta .nums { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin-top: 8px; font: 600 12px var(--font-mono); color: var(--t2); }
+.aperta .nums span:nth-child(odd) { white-space: nowrap; }
+.aperta .nums span:nth-child(even) { color: var(--t1); text-align: right; }
+.aperta .perche { display: inline-block; margin-top: 8px; font: 700 12px var(--font-mono); letter-spacing: .06em; color: var(--z-home-scuro); text-transform: uppercase; }
+.aperta .due { margin-top: 12px; }
+.aperta .due .ok, .aperta .due .no { flex: 1; min-height: 44px; }
+.adesso { background: var(--s1); border-radius: 14px; padding: 16px; }
+.adesso h3 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+.adesso p { margin: 4px 0 12px; color: var(--t2); font-size: 14px; }
+.adesso .grosso { background: var(--z-home); padding: 14px 0; font-size: 16px; }
+.adesso .dopo { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--s3); font: 700 11px var(--font-mono); letter-spacing: .08em; color: var(--t2); text-transform: uppercase; }
+.adesso .dopo .chipv { background: var(--z-home-velo); color: var(--z-home-scuro); border-radius: 999px; padding: 6px 10px; text-transform: none; letter-spacing: 0; font-weight: 700; }
+.adesso .dafare { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 8px; min-height: 44px; font-size: 14px; font-weight: 600; color: var(--t1); }
+.adesso .dafare .pt { width: 8px; height: 8px; border-radius: 50%; background: var(--mod-body); flex: none; }
+.w5 { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 56px; font-size: 15px; }
+.w5 .cresce b { display: block; font-weight: 700; }
+.w5 .cresce small { color: var(--t2); font-size: 12px; }
+.w5 .val { font: 700 16px var(--font-mono); text-align: right; }
+.w5 .val small { display: block; font-size: 11px; color: var(--mod-nutrition); font-weight: 600; }
+.ellissi { color: var(--t2); font-size: 13px; text-align: center; padding: 10px; }
+.testa.set { background: var(--z-home); border-radius: 0 0 26px 26px; }
+.campo.spento { background: var(--s2); color: var(--t2); }
+.campo .cresce small { display: block; color: var(--t2); font-size: 12px; margin-top: 2px; }
+.sw { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--s1); border-radius: 14px; padding: 14px 16px; min-height: 60px; }
+.sw b { display: block; font-size: 16px; }
+.sw small { color: var(--t2); font-size: 12px; line-height: 1.4; }
+.sw .int { width: 50px; height: 30px; border-radius: 999px; background: var(--b1); position: relative; flex: none; }
+.sw .int::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--bianco); }
+.sw .int.on { background: var(--z-home); } .sw .int.on::after { left: 23px; }
+.fatto { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--acc); color: var(--bianco); font: 700 10px var(--font-mono); vertical-align: middle; }
+.decidi { background: var(--s1); border: 1px solid var(--b1); border-radius: 14px; padding: 14px 16px; font-size: 14px; line-height: 1.45; max-width: 900px; margin: 0 0 26px; }
+.decidi h3 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+.decidi ol { margin: 0; padding-left: 20px; }
+.decidi li { margin: 0 0 7px; }
+.due-tel { display: grid; gap: 22px; }
+</style>
+</head>
+<body>
+<div class="foglio">
+  <h1 class="tit">Giro 2 · Home e Impostazioni, snellite</h1>
+  <p class="intro">A sinistra le pagine vere di oggi (banco, 390 px, veste accesa, dati di prova del 4 ottobre: tre proposte di Pirsi, nessun check fisico fatto), a destra lo schizzo snellito. I tondi verdi <span class="fatto">1</span> rimandano alle note del giro 1 (<code>giro2_note.md</code>): tre della Home, due delle Impostazioni.</p>
+
+  <div class="note" style="max-width:900px;margin:0 0 18px">
+    <h3>Cosa resta delle tre note della Home, dopo i widget</h3>
+    <ol>
+      <li><b>«La tua settimana» ripete il peso</b> — <b>già risolta</b>: con i widget la settimana è fatta di barre (calorie) e il peso sta in un posto solo, la riga Body. Non c'è niente da fare.</li>
+      <li><b>I testi di Pirsi lunghi</b> — resta tutta: oggi ogni proposta è titolo + motivo di tre righe + tabella dei numeri + «Perché?» + due tasti. Tre proposte sono una schermata e mezza.</li>
+      <li><b>«Primo check fisico da fare»</b> — resta: è una riga piccola sotto «Peso», nella riga Body, dove nessuno la vede. È una cosa da fare, non un dato del corpo.</li>
+    </ol>
+  </div>
+
+  <!-- 1 · la Home -->
+  <section class="momento">
+    <h2><span>1 DI 3</span>La Home: Pirsi in una riga, il check fra le cose da fare</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi (dalla sezione Adesso in giù)</div><img src="prima_1_home.png" alt="La Home com'è oggi" style="object-fit:cover;object-position:0 -960px;height:1100px"></div>
+      <div>
+        <div class="col-tit">Proposta (dalla sezione Adesso in giù)</div>
+        <div class="tel">
+          <div class="corpo" style="padding-top:14px">
+            <div class="sez"><span>Adesso</span><span>09:30</span></div>
+            <div class="adesso">
+              <h3>È ora di Lower A</h3>
+              <p>Si parte con 5 minuti di preparazione.</p>
+              <button class="grosso">Inizia →</button>
+              <div class="dopo"><span>Dopo l'allenamento</span><span class="chipv">Colazione Zona</span></div>
+              <div class="dafare"><span class="pt"></span><span class="cresce">Primo check fisico da fare</span><span class="chev">›</span> <span class="fatto">3</span></div>
+            </div>
+            <div class="sez"><span>Body</span></div>
+            <div class="gruppo">
+              <div class="w5"><span class="cresce"><b>Peso</b></span><span class="val">74,0 kg<small>↑ +0,1 kg da venerdì</small></span><span class="chev">›</span></div>
+            </div>
+            <div class="sez"><span>Come stai oggi</span></div>
+            <div class="ellissi">… sonno, energia, stress: uguale a oggi</div>
+            <div class="sez"><span>Pirsi propone · 3</span><span>28 set – 4 ott</span></div>
+            <div class="gruppo">
+              <div class="riga aperta" style="align-items:flex-start">
+                <span class="pt" style="background:var(--mod-nutrition);margin-top:7px"></span>
+                <div class="cresce"><b>Da 2.324 a 2.174 kcal al giorno</b>
+                  <small style="display:block">Da due settimane il peso è fermo e hai centrato il target nel 86% dei giorni: tolgo 150 kcal.</small>
+                  <div class="nums"><span>Ritmo peso</span><span>0,00 kg/sett</span><span>Medie peso, 4 sett.</span><span>75,0 · 75,1 · 75,0 · 75,1</span><span>Giorni nel target</span><span>86%</span></div>
+                  <span class="perche">Perché? ›</span>
+                  <div class="due"><button class="ok">Accetto</button><button class="no">Non ora</button></div>
+                </div>
+                <span class="chev" style="margin-top:4px">⌃</span> <span class="fatto">2</span>
+              </div>
+              <div class="riga"><span class="pt" style="background:var(--z-home)"></span><span class="cresce"><b>3 allenamenti a settimana invece di 4</b></span><span class="chev">⌄</span></div>
+              <div class="riga"><span class="pt" style="background:var(--z-home)"></span><span class="cresce"><b>Scarico da questa settimana</b></span><span class="chev">⌄</span></div>
+            </div>
+            <div class="ellissi" style="font-size:12px">Pirsi propone, decidi tu. Per la salute conta il parere del tuo medico.</div>
+          </div>
+          <div class="tab">
+            <div class="on" style="color:var(--z-home-scuro);background:var(--z-home-velo)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 10l8-6 8 6v10h-5v-6H9v6H4z"/></svg>Home</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19l7-7"/></svg>Nutrition</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/></svg>Training</div>
+            <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="6" r="3"/><path d="M6 21v-6a6 6 0 0 1 12 0v6"/></svg>Body</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol start="2">
+          <li><b>Pirsi in una riga per proposta</b>: il puntino dell'area e il titolo. Si apre una proposta alla volta, al tocco: lì ci sono il motivo, i numeri, «Perché?», Accetto e Non ora, uguali a oggi. Tre proposte chiuse sono tre righe, non una schermata e mezza. Il titolo dice quante sono.</li>
+          <li><b>Il check fisico va in «Adesso»</b>, come riga «da fare» sotto il tasto, col puntino viola del Body; si tocca e si apre il tab Body. Compare solo quando c'è qualcosa da fare (primo check, check in ritardo, check oggi): «prossimo check tra 23 giorni» non si scrive più. La riga Body resta col peso e la variazione.</li>
+        </ol>
+        <div class="resta">Sopra «Adesso» non cambia niente: anelli, settimana a barre e i quattro cerchi sono di tre giorni fa.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Impostazioni, Il tuo obiettivo -->
+  <section class="momento">
+    <h2><span>2 DI 3</span>Impostazioni · Il tuo obiettivo</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_2_obiettivo.png" alt="Il tuo obiettivo com'è oggi"></div>
+      <div>
+        <div class="col-tit">Proposta</div>
+        <div class="tel">
+          <div class="testa set">
+            <div class="su"><button class="ind">‹ Impostazioni</button><div class="dx"><button class="fb" aria-label="Chiudi">✕</button></div></div>
+            <h1>Il tuo obiettivo</h1>
+          </div>
+          <div class="corpo">
+            <div class="gruppo" style="margin-top:14px">
+              <div class="riga"><span class="cresce">Peso di oggi<small>Si cambia da «Pesati ora»</small></span><span class="mono" style="color:var(--t1);font-size:15px">74,0 kg</span><span class="chev">›</span> <span class="fatto">2</span></div>
+            </div>
+            <div class="domanda">Peso obiettivo (kg)</div>
+            <div class="campo"><b>70</b><small>kg</small></div>
+            <div class="domanda">Obiettivo</div>
+            <div class="ellissi" style="text-align:left;padding:0 4px">… le sei scelte, il livello di attività e «Salva»: uguali a oggi</div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol start="2">
+          <li>Il campo «Peso di oggi» spento, con la nota sotto, diventa una riga che <b>dice il valore</b> e, al tocco, apre «Pesati ora» (lo stesso foglio del tab Body). Resta un campo solo da compilare: il peso obiettivo.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · Impostazioni, Crediti -->
+  <section class="momento">
+    <h2><span>3 DI 3</span>Impostazioni · Crediti, l'interruttore della veste</h2>
+    <div class="tre">
+      <div class="prima"><div class="col-tit">Oggi</div><img src="prima_3_crediti.png" alt="Crediti com'è oggi"></div>
+      <div class="due-tel">
+        <div>
+          <div class="col-tit">Proposta A · si rinomina</div>
+          <div class="tel">
+            <div class="testa set">
+              <div class="su"><button class="ind">‹ Impostazioni</button><div class="dx"><button class="fb" aria-label="Chiudi">✕</button></div></div>
+              <h1>Crediti</h1>
+            </div>
+            <div class="corpo">
+              <div class="sw" style="margin-top:14px"><span><b>Grafica di prima</b><small>Se qualcosa non ti torna nella veste nuova, riaccendi quella di prima. Si può ritogliere quando vuoi.</small></span><span class="int"></span> <span class="fatto">1</span></div>
+              <div class="ellissi" style="font-size:12px">Crediti &amp; attribuzioni: uguali a oggi</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="col-tit">Proposta B · si toglie</div>
+          <div class="tel">
+            <div class="testa set">
+              <div class="su"><button class="ind">‹ Impostazioni</button><div class="dx"><button class="fb" aria-label="Chiudi">✕</button></div></div>
+              <h1>Crediti</h1>
+            </div>
+            <div class="corpo">
+              <div class="ellissi" style="font-size:12px;margin-top:14px">Solo Crediti &amp; attribuzioni. La veste di prima resta raggiungibile dall'indirizzo (<code>?v5=0</code>) finché non si decide di toglierla dal codice.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="note">
+        <h3>Cosa si toglie</h3>
+        <ol>
+          <li>«Veste nuova» è acceso per tutti dal Rilascio 63: l'interruttore oggi serve solo a spegnerla, ma dice il contrario. <b>A</b>: si rinomina «Grafica di prima», spento di norma, e dice a cosa serve. <b>B</b>: si toglie dalle Impostazioni e basta.</li>
+        </ol>
+        <div class="resta">In entrambi i casi la veste di prima resta nel codice (prova_stile la misura ancora): toglierla dal codice è una decisione a parte.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="decidi">
+    <h3>Tre cose da decidere, Ignazio</h3>
+    <ol>
+      <li><b>Pirsi</b>: una proposta aperta alla volta (come qui), o tutte chiuse e si apre un foglio al tocco?</li>
+      <li><b>Il check fisico in «Adesso»</b>: va bene come riga «da fare» sotto il tasto, oppure preferisci che resti nella riga Body ma solo quando è da fare?</li>
+      <li><b>L'interruttore della veste</b>: A (rinominato «Grafica di prima») o B (tolto)?</li>
+    </ol>
+  </div>
+
+  <section class="note" style="max-width:900px">
+    <h3>Quando si costruisce</h3>
+    Tutto dietro <code>html.v5</code> (a veste spenta Home e Impostazioni restano identiche al pixel), tranne l'interruttore stesso, che per natura sta fuori. Pirsi: cambia solo come si mostra la proposta, non cosa propone né cosa scrive «Accetto» (<code>shared/coach_rules.js</code> non si tocca). Il check: la stessa <code>getNextCheckpointInfo()</code>, letta in «Adesso» invece che nella riga Body. Nessuna lettura o scrittura nuova.
+  </section>
+</div>
+</body>
+</html>
