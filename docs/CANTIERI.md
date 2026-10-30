@@ -10,6 +10,10 @@ Indice: [Cantieri aperti](#cantieri-aperti) · [Zone GIF](#zone-gif) · [Consoli
 
 # Cantieri aperti
 
+## 38. L'infortunio nel profilo (dal Training 540, 30 ottobre 2026)
+
+L'infortunio vive solo sul telefono (`zt_injury_<utente>` in localStorage, giorni `rest_injury` scritti uno al giorno). Il calendario dell'iPhone (Training 540) lo scrive il Worker, che legge il profilo e gli allenamenti: **di un infortunio non sa niente** e continua a proporre le sedute nei giorni scelti. Per ora le Impostazioni lo dicono («se sei infortunato il calendario non lo sa»); la strada giusta è portare l'infortunio nel profilo, come la pausa (Training 350: `pausa_inizio`, `pausa_fine`), così lo vedono tutti e due i telefoni, il Worker e il cron di Pirsi. Lavoro a parte: colonne, migrazione, `getInjuryPeriod` che legge dal profilo, `sedutePreviste` che salta i giorni.
+
 ## 34. Lettura delle foto dei check — cosa osservare dopo il rilascio
 *Aperto il 13 settembre 2026, a chiusura della Fase 2. Niente di rotto: sono misure che servono l'uso vero.*
 

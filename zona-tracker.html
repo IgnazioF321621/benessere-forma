@@ -1355,6 +1355,31 @@
         </div>
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">4 minuti: 20 secondi di lavoro e 10 di pausa per 8 giri. «A parte» è un tasto nel Programma, fuori dalla seduta: non conta come allenamento.</div>
       </div>
+      <!-- Training 540: le sedute nel Calendario dell'iPhone. Giorni e ora stanno nel profilo (train_giorni, train_orario);
+           il calendario a cui iscriversi lo scrive il Worker (/calendario?t=<calendario_token>). Nei giorni scelti solo
+           sedute di lavoro (Ignazio: «solo sedute vere»). -->
+      <div class="onb-field" style="margin-top:10px;">
+        <label>Le sedute nel Calendario</label>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:8px;">Scegli i giorni e l'ora: la seduta del giorno compare nel Calendario dell'iPhone, con l'avviso 15 minuti prima. In quei giorni l'app propone sempre una seduta di lavoro.</div>
+        <div id="set-train-giorni" style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button class="onb-pill" type="button" data-giorno="1" onclick="toggleSetTrainGiorno(1)">Lun</button>
+          <button class="onb-pill" type="button" data-giorno="2" onclick="toggleSetTrainGiorno(2)">Mar</button>
+          <button class="onb-pill" type="button" data-giorno="3" onclick="toggleSetTrainGiorno(3)">Mer</button>
+          <button class="onb-pill" type="button" data-giorno="4" onclick="toggleSetTrainGiorno(4)">Gio</button>
+          <button class="onb-pill" type="button" data-giorno="5" onclick="toggleSetTrainGiorno(5)">Ven</button>
+          <button class="onb-pill" type="button" data-giorno="6" onclick="toggleSetTrainGiorno(6)">Sab</button>
+          <button class="onb-pill" type="button" data-giorno="7" onclick="toggleSetTrainGiorno(7)">Dom</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+          <span style="font-size:13px;color:var(--t2);font-family:var(--font-sans);">Alle</span>
+          <input id="set-train-orario" class="inp inp-sm" type="time" step="300" style="width:auto;flex:0 0 auto;">
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+          <button class="btn btn-sm" id="set-cal-btn" type="button" onclick="collegaCalendario()">Aggiungi al Calendario</button>
+          <button class="btn btn-ghost btn-sm" id="set-cal-rinnova" type="button" onclick="rinnovaCalendario()">Rinnova il collegamento</button>
+        </div>
+        <div id="set-cal-nota" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;"></div>
+      </div>
     </div>
     </div>
 
@@ -1429,6 +1454,7 @@
 <script src="shared/nutrizione.js?v=20261029-2112"></script>
 <script src="shared/coach_rules.js?v=20261029-2112"></script>
 <script src="shared/quadro.js?v=20261029-2112"></script>
+<script src="shared/rotazione.js?v=20261029-2112"></script>
 <script src="shared/ritratto.js?v=20261029-2112"></script>
 <script src="shared/fitdays.js?v=20261029-2112"></script>
 <script>

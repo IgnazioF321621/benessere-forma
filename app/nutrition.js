@@ -178,6 +178,18 @@ function sedutaDomani(){
     if (!hd || hd.errore || hd.notStarted) return null;
     if (typeof getInjuryPeriod === 'function' && getInjuryPeriod()) return null;
     if (typeof getPausa === 'function') { const pa = getPausa(); if (pa && (pa.attiva || (pa.futura && pa.inizio === _giornoAccanto(todayKey(), 1)))) return null; }
+    // Coi giorni scelti (Training 540, «solo sedute vere»): domani è la seduta prevista per domani dalla stessa regola del
+    // calendario (sedutePreviste: oggi la seduta fatta o in corso, poi una di lavoro per ogni giorno scelto); un giorno
+    // non scelto è un giorno di riposo. Senza giorni scelti, la regola qui sotto.
+    const giorniScelti = ZTRotazione.giorniScelti(ST.profile && ST.profile.train_giorni);
+    if (giorniScelti) {
+      const domani = _giornoAccanto(todayKey(), 1);
+      const prevista = ZTRotazione.sedutePreviste({ allenamenti: hd.ultimi || [], ciclo: getRotationCycle(), oggi: todayKey(), giorni: giorniScelti, settimane: 1,
+        profile: ST.profile, fattaOggi: hd.inProgress ? hd.lastSession : null }).find(e => e.date === domani);
+      if (!prevista) return { state:'riposo', label:'' };
+      const sd = getTrainingSession(prevista.sid) || {};
+      return { state:'da_fare', label:[sd.name || sd.label, sd.type].filter(Boolean).join(', ') };
+    }
     let sid = hd.nextSession;
     const cycle = getRotationCycle();
     const dopo = (s) => { const i = cycle.indexOf(s); return i >= 0 ? cycle[(i + 1) % cycle.length] : null; };

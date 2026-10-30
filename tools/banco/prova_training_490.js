@@ -143,7 +143,7 @@ async function nuovo(o){
     await a.W.saveSettings(); await aspetta();
     const up = a.scritture('profiles').filter(c => c.payload && 'tabata' in c.payload);
     atteso('2 · col sabato e il mercoledì: una scrittura a parte, solo coi due campi', [up.length, up[0] && Object.keys(up[0].payload).sort(), up[0] && up[0].payload], [1, ['tabata', 'tabata_giorni'], { tabata:'giorni', tabata_giorni:[3, 6] }]);
-    atteso('2 · il profilo in memoria segue, e l\'elenco lo dice', [a.ST.profile.tabata, a.W.tabataInCoda(SABATO), testo(a.d.querySelector('#settings-modal .set-voce[data-voce="allenamento"] .set-voce-sotto'))], ['giorni', true, '4 giorni a settimana · lbs · Tabata in certi giorni']);
+    atteso('2 · il profilo in memoria segue, e l\'elenco lo dice', [a.ST.profile.tabata, a.W.tabataInCoda(SABATO), testo(a.d.querySelector('#settings-modal .set-voce[data-voce="allenamento"] .set-voce-sotto'))], ['giorni', true, '4 giorni a settimana · lbs · Tabata in certi giorni · sedute alle 07:00']);   // «sedute alle»: dal Training 540 il primo «Salva» scrive anche giorni e ora delle sedute
     a.W.setVai('allenamento'); a.d.getElementById('set-tabata').value = 'spento'; a.W._setTabataGiorni();
     await a.W.saveSettings(); await aspetta();
     const up2 = a.scritture('profiles').filter(c => c.payload && 'tabata' in c.payload).slice(-1)[0];

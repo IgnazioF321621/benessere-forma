@@ -1161,8 +1161,9 @@ function _rotationDayMap() {
   return SESSION_DAY_NUM;
 }
 function getRotationCycle() {
-  const map = _rotationDayMap();
-  return Object.keys(map).sort((a, b) => map[a] - map[b]);
+  // L'ordine canonico sta in shared/rotazione.js (Training 540): lo stesso del Worker che scrive il calendario.
+  // _rotationDayMap resta per il numero del giorno («GIORNO 4») nella card della Home.
+  return ZTRotazione.cicloPer(ST.userSessionCycle);
 }
 
 // Settimana del mesociclo 5+1 (1..6) derivata dallo storico completato.
