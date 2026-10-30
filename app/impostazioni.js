@@ -94,7 +94,7 @@ function _setRiassunti() {
   metti('set-sotto-cibo', `${fmtNum(ST.TARGET.kcal)} kcal · ${dieta}${intol ? ` · ${intol} intolleranz${intol === 1 ? 'a' : 'e'}` : ''}`);
   const tabata = (typeof tabataModo === 'function') ? tabataModo() : 'spento';
   const tabataTesto = { spento:'Tabata spento', coda:'Tabata in fondo', giorni:'Tabata in certi giorni', a_parte:'Tabata a parte' }[tabata];
-  metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'} · ${tabataTesto}`);
+  metti('set-sotto-allenamento', `${p.giorni_allenamento || 4} giorni a settimana · ${p.unit || 'lbs'} · ${tabataTesto}${calendarioPronto() ? ` · sedute alle ${p.train_orario}` : ''}`);
   const esami = Object.keys(p.esami_sangue || {}).filter(k => !/_label$|_data$/.test(k)).length;
   metti('set-sotto-salute', esami ? `${esami} valor${esami === 1 ? 'e' : 'i'} degli esami` : (p.note_salute ? 'Note sulla salute' : 'Note ed esami'));
   metti('set-sotto-profilo', [p.first_name, p.last_name].filter(Boolean).join(' ') || ((ST.user && ST.user.email) || ''));
@@ -164,6 +164,13 @@ function _setPopola() {
   if(tabataSel) tabataSel.value = (typeof tabataModo === 'function') ? tabataModo() : 'spento';
   SET_TABATA_GIORNI = (p.tabata_giorni || []).map(Number).filter(g => g >= 1 && g <= 7);
   _setTabataGiorni();
+  // Le sedute nel Calendario (Training 540): la partenza, lun-mar-gio-ven alle 7, si vede qui e si scrive al primo «Salva»;
+  // chi ha tolto tutti i giorni (train_giorni = []) li ritrova vuoti, non la partenza
+  const orarioEl = document.getElementById('set-train-orario');
+  if(orarioEl) orarioEl.value = ZTRotazione.orarioValido(p.train_orario) || ZTRotazione.ORARIO_PARTENZA;
+  SET_TRAIN_GIORNI = p.train_giorni == null ? ZTRotazione.GIORNI_PARTENZA.slice() : (ZTRotazione.giorniScelti(p.train_giorni) || []);
+  _setTrainGiorni();
+  _setCalendarioStato();
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -329,6 +336,78 @@ function toggleSetTabataGiorno(g) {
   _setTabataGiorni();
 }
 
+// ── Le sedute nel Calendario (Training 540, 30 ottobre 2026) ──
+// Ignazio: «collegare i passi che ci sono già (workout) impostando un orario direttamente sul calendario Apple».
+// I giorni scelti (1 = lunedì … 7 = domenica) e l'ora vivono nel profilo (train_giorni, train_orario, migrazione
+// 20261030_540); il calendario a cui iscriversi lo scrive il Worker (GET /calendario?t=<calendario_token>) con la stessa
+// regola del telefono (shared/rotazione.js). L'app non scrive mai nel Calendario: l'iPhone legge il feed da solo, ogni
+// qualche ora. Il token è un uuid scelto dall'app, rigenerabile («Rinnova il collegamento»: il vecchio indirizzo muore).
+let SET_TRAIN_GIORNI = [];
+function _setTrainGiorni() {
+  document.querySelectorAll('#set-train-giorni [data-giorno]').forEach(b => b.classList.toggle('active', SET_TRAIN_GIORNI.includes(Number(b.dataset.giorno))));
+}
+function toggleSetTrainGiorno(g) {
+  const i = SET_TRAIN_GIORNI.indexOf(g);
+  if(i < 0) SET_TRAIN_GIORNI.push(g); else SET_TRAIN_GIORNI.splice(i, 1);
+  SET_TRAIN_GIORNI.sort((a, b) => a - b);
+  _setTrainGiorni();
+}
+// Pronto = giorni e ora SALVATI nel profilo: il Worker legge il profilo, non il foglio aperto
+function calendarioPronto() {
+  const p = ST.profile || {};
+  return !!(ZTRotazione.orarioValido(p.train_orario) && ZTRotazione.giorniScelti(p.train_giorni));
+}
+function urlCalendario(token) { return 'webcal://' + new URL(WORKER_URL).host + '/calendario?t=' + encodeURIComponent(token); }
+function _setCalendarioStato() {
+  const btn = document.getElementById('set-cal-btn'), rin = document.getElementById('set-cal-rinnova'), nota = document.getElementById('set-cal-nota');
+  const pronto = calendarioPronto(), token = (ST.profile || {}).calendario_token;
+  if(btn) btn.disabled = !pronto;
+  if(rin) rin.style.display = token ? '' : 'none';
+  if(nota) nota.textContent = !pronto
+    ? 'Scegli i giorni e l\'ora, poi «Salva»: il tasto si accende.'
+    : (token
+      ? 'Collegato. L\'iPhone rilegge il calendario da solo ogni qualche ora: se un giorno ti alleni fuori programma, le sedute dopo si spostano da sole. Se sei infortunato il calendario non lo sa. «Rinnova» spegne il collegamento vecchio.'
+      : 'Tocca «Aggiungi al Calendario»: l\'iPhone ti chiede di iscriverti al calendario «Zona Tracker», poi lo rilegge da solo ogni qualche ora. Se sei infortunato il calendario non lo sa.');
+}
+// Un uuid vero (la colonna è uuid e il Worker accetta solo quello); senza crypto niente collegamento
+function _tokenCalendario() {
+  try {
+    if(typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    if(typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+      const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+      return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+    }
+  } catch(e) {}
+  return null;
+}
+async function _scriviTokenCalendario() {
+  const token = _tokenCalendario();
+  if(!token || !ST.user || !ST.profile) return null;
+  const r = await dbq('collegare il calendario', supa.from('profiles').update({ calendario_token: token }).eq('id', ST.user.id), { silenzioso:true });
+  if(r.error) return null;
+  ST.profile.calendario_token = token;
+  saveCache();
+  return token;
+}
+async function collegaCalendario() {
+  if(!calendarioPronto()) { showToast('Prima scegli i giorni e l\'ora, poi «Salva»', 'ℹ️', 4000); return; }
+  const token = ST.profile.calendario_token || await _scriviTokenCalendario();
+  if(!token) { showToast('Non riesco a collegare il calendario adesso: riprova più tardi', '⚠️', 5500); return; }
+  _setCalendarioStato();
+  apriCalendario(urlCalendario(token));
+}
+async function rinnovaCalendario() {
+  const ok = await chiediConferma('Il calendario già aggiunto all\'iPhone smette di aggiornarsi: dovrai toglierlo e aggiungerlo di nuovo.', { titolo:'Rinnovare il collegamento?', ok:'Rinnova', annulla:'Lascia così' });
+  if(!ok) return;
+  const token = await _scriviTokenCalendario();
+  if(!token) { showToast('Non riesco a rinnovare adesso: riprova più tardi', '⚠️', 5500); return; }
+  _setCalendarioStato();
+  showToast('Collegamento rinnovato: aggiungi di nuovo il calendario', '✅', 4000);
+}
+// A parte, così il banco può leggere l'indirizzo senza aprirlo
+function apriCalendario(url) { location.href = url; }
+
 function toggleSetIntol(val) {
   const i = SET_INTOL.indexOf(val);
   if(i < 0) SET_INTOL.push(val); else SET_INTOL.splice(i, 1);
@@ -382,6 +461,8 @@ async function saveSettings() {
   if(!fname) { errEl.style.display='block'; errEl.textContent='Il nome è obbligatorio.'; return; }
   const tabataSel = document.getElementById('set-tabata');
   if(tabataSel && tabataSel.value === 'giorni' && !SET_TABATA_GIORNI.length) { errEl.style.display='block'; errEl.textContent='Per il Tabata scegli almeno un giorno, oppure un\'altra voce.'; return; }
+  const orarioScelto = document.getElementById('set-train-orario');
+  if(orarioScelto && orarioScelto.value && !ZTRotazione.orarioValido(orarioScelto.value)) { errEl.style.display='block'; errEl.textContent='L\'ora delle sedute non è giusta: scrivila come 07:30.'; return; }
   errEl.style.display = 'none';
 
   // ── Check cambio obiettivo (Fix A2) ─────────────────────────
@@ -514,6 +595,24 @@ async function _saveSettingsExecute(goalChanged) {
     }
   }
 
+  // Le sedute nel Calendario (Training 540): giorni e ora in una scrittura a parte, solo se cambiano; la prima volta si
+  // scrive la partenza che la persona ha visto (lun-mar-gio-ven alle 7). Finché la colonna non c'è (migrazione
+  // 20261030_540) il resto delle Impostazioni si salva lo stesso.
+  let calendarioNonSalvato = false;
+  const orarioCal = document.getElementById('set-train-orario');
+  if(orarioCal && ST.profile) {
+    const train_orario = ZTRotazione.orarioValido(orarioCal.value) || null;
+    const train_giorni = [...SET_TRAIN_GIORNI];
+    const primaO = ST.profile.train_orario || null;
+    const primaG = ST.profile.train_giorni == null ? null : JSON.stringify(ZTRotazione.giorniScelti(ST.profile.train_giorni) || []);
+    if(train_orario !== primaO || JSON.stringify(train_giorni) !== primaG) {
+      const r = await dbq('salvare i giorni e l\'ora delle sedute', supa.from('profiles').update({ train_orario, train_giorni }).eq('id', ST.user.id), { silenzioso:true });
+      if(!r.error) { ST.profile.train_orario = train_orario; ST.profile.train_giorni = train_giorni; }
+      else calendarioNonSalvato = true;
+    }
+    _setCalendarioStato();   // il tasto si accende (o si spegne) subito, senza riaprire
+  }
+
   // Unità peso/carico — salvata solo in localStorage prefs
   const unitVal = document.getElementById('set-unit')?.value || 'lbs';
   if(ST.profile) ST.profile.unit = unitVal;
@@ -529,8 +628,9 @@ async function _saveSettingsExecute(goalChanged) {
   saveCache();
   btn.disabled = false; btn.textContent = 'Salva';
   setVai('elenco');            // Metodo 220: «Salva» torna all'elenco, aggiornato
-  // mai «Salvato» se la scelta del Tabata non è passata (revisione di 480+490): un messaggio solo, chiaro
-  if(tabataNonSalvato) showToast('Salvato tutto tranne il Tabata: riprova più tardi', '⚠️', 5500);
+  // mai «Salvato» se la scelta del Tabata o del calendario non è passata (revisione di 480+490): un messaggio solo, chiaro
+  const nonSalvati = [tabataNonSalvato && 'il Tabata', calendarioNonSalvato && 'i giorni delle sedute'].filter(Boolean);
+  if(nonSalvati.length) showToast(`Salvato tutto tranne ${nonSalvati.join(' e ')}: riprova più tardi`, '⚠️', 5500);
   else showToast('Salvato', '✅');
   renderPage(ST.page);
   // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo da impostazioni.

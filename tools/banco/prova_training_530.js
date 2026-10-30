@@ -9,6 +9,9 @@
 // Revisione della Regia: un recupero fatto fuori turno non sposta la rotazione (i recuperi sono trasparenti), nella
 // scheda a 5 giorni e in quella a 6; nel giorno di riposo «Prossimo allenamento» non apre il riposo come seduta; con
 // una seduta in corso «domani» è quella dopo, non la seduta di oggi.
+// Training 540 (30 ottobre 2026, Ignazio: «solo sedute vere»): coi giorni scelti nel profilo (train_giorni) la proposta nei
+// giorni scelti salta i recuperi e il riposo; fuori dai giorni scelti, o senza, il 530 resta com'è. La regola sta in
+// shared/rotazione.js, una sola per il telefono e per il calendario dell'iPhone.
 //   node tools/banco/prova_training_530.js
 process.env.TZ = 'Europe/Rome';
 const fs = require('fs');
@@ -31,7 +34,7 @@ const SCHEDA5 = { sessioni: ['upperA', 'lowerA', 'upperB', 'lowerB', 'upperC'].m
 function fixture(sedute, o){
   o = o || {};
   return {
-    profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', train_start_date:'2026-10-05', obiettivo:'ricomposizione' }],
+    profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, unit:'lbs', train_start_date:'2026-10-05', obiettivo:'ricomposizione', ...(o.giorni ? { train_giorni: o.giorni, train_orario: '07:30' } : {}) }],
     schede_utente: o.scheda ? [{ id:'s1', user_id:U, attiva:true, blocco_n:3, scheda: JSON.parse(JSON.stringify(o.scheda)) }] : [], esercizi_catalog:[],
     workouts: sedute.map(([date, s, ora]) => ({ id:'w' + date + s, user_id:U, date, session_type:s, completed:true, created_at: `${date}T${ora || '07:00:00'}+00:00` })),
     training_logs:[], training_notes:[], body_logs:[], weight_logs:[], body_measurements:[], body_checks:[], meals:[], meal_items:[], fasting_days:[],
@@ -123,6 +126,19 @@ async function nuovo(sedute, o){
     // sola data le lascia così, Lower A davanti); con l'ora di creazione il Recovery è il più recente e conta
     atteso('stesso giorno · Lower A e poi Recovery Upper il 22: la proposta è Upper B, sempre', await prossima([['2026-10-20','upperA'], ['2026-10-22','lowerA','07:00:00'], ['2026-10-22','recoveryUpper','08:00:00']]), 'upperB');
     atteso('stesso giorno · Upper B alle 7 e Lower B alle 9 il 23 (righe nell\'ordine in cui sono state fatte): poi il Recovery Lower', await prossima([['2026-10-20','upperA'], ['2026-10-21','lowerA'], ['2026-10-22','recoveryUpper'], ['2026-10-23','upperB','07:00:00'], ['2026-10-23','lowerB','09:00:00']]), 'recoveryLower');
+  }
+  // 5b · Training 540: nei giorni scelti solo sedute di lavoro; fuori, il 530 com'è
+  {
+    const prossima = async (sedute, o) => (await nuovo(sedute, o)).ST.trainHomeData.nextSession;
+    const sei = [['2026-10-20','upperA'], ['2026-10-21','lowerA']];
+    atteso('540 · mercoledì scelto, dopo Lower A: Upper B, il Recovery si salta', await prossima(sei, { giorni: [1, 2, 3, 4, 5] }), 'upperB');
+    atteso('540 · mercoledì non scelto: il Recovery Upper, come il 530', await prossima(sei, { giorni: [1, 2, 4, 5] }), 'recoveryUpper');
+    atteso('540 · dopo Lower B in un giorno scelto: Upper A, non il Recovery Lower', await prossima([['2026-10-26','upperB'], ['2026-10-27','lowerB']], { giorni: [1, 2, 3, 4, 5] }), 'upperA');
+    const pump = [['2026-10-22','upperA'], ['2026-10-23','lowerA'], ['2026-10-24','recoveryUpper'], ['2026-10-25','upperB'], ['2026-10-26','lowerB'], [OGGI,'upperC']];
+    atteso('540 · fatta la Pump oggi in un giorno scelto: la prossima è Upper A, non il riposo (senza giorni: il riposo)', [await prossima(pump, { scheda: SCHEDA5, giorni: [1, 2, 3, 4, 5] }), await prossima(pump, { scheda: SCHEDA5 })], ['upperA', 'rest']);
+    const a = await nuovo(VERE, { giorni: [1, 2, 3, 4, 5] });
+    const c = a.home(), pa = a.W.getProssimaAzioneSimple();
+    atteso('540 · con le sedute vere di Ignazio, mercoledì scelto: card, Prossima azione e tab Training dicono Upper B', [c.tocco, pa.arg, a.W.sedutaProposta()], ["apriSessioneDallaHome('upperB')", 'upperB', 'upperB']);
   }
   // 6 · giorno di riposo: «Prossimo allenamento» non apre il riposo come seduta, come la card della Home
   {
