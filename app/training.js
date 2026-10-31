@@ -5952,8 +5952,9 @@ function _tlRirSelect(){
 }
 
 // ── La veste nuova, Giro 1 del Training (schizzo approvato da Ignazio il 29/10/2026), solo con html.v5 ──
-// La testata della seduta nel blu della zona: il ritorno, i tasti dell'intestazione dell'app (tastiTestaV5, in comune.js),
-// il tipo, il nome, serie e tempo (#train-work-display, lo stesso che il cronometro aggiorna), Programma · Progressione.
+// La testata della seduta nel blu della zona: il ritorno, il tipo, il nome, serie e tempo (#train-work-display, lo stesso che
+// il cronometro aggiorna), Programma · Progressione. Giro 2 (31 ottobre 2026, scelta di Ignazio): fuoco, peso, ⚙ ed Esci non stanno
+// più nelle testate di Nutrition, Training e Body (sono in Home e nelle Impostazioni).
 function _testaSedutaV5(s, sel, subnav, tabs){
   const today = todayKey();
   const totalSets = (s.exercises || []).reduce((acc, ex) => acc + (Number(ex.sets) || 0), 0);
@@ -5962,10 +5963,7 @@ function _testaSedutaV5(s, sel, subnav, tabs){
   const tipo = [s.type ? s.type.toUpperCase() : '', s.rir != null ? 'RIR ' + s.rir : ''].filter(Boolean).join(' · ');
   return `
     <div class="t5-testa">
-      <div class="t5-su">
-        <button class="t5-indietro" onclick="closeTrainingSession();">‹ I tuoi giorni</button>
-        <div class="t5-dx">${tastiTestaV5()}</div>
-      </div>
+      <div class="t5-su"><button class="t5-indietro" onclick="closeTrainingSession();">‹ I tuoi giorni</button></div>
       <div class="t5-sopra">Oggi${tipo ? ' · ' + tipo : ''}${s.rir != null ? ' <span class="info-icon" onclick="showInfoModal(\'rir\')">i</span>' : ''}</div>
       <h1 class="t5-titolo">${esc(s.name)}</h1>
       <div class="t5-dati">
@@ -5977,14 +5975,14 @@ function _testaSedutaV5(s, sel, subnav, tabs){
       <nav class="t5-seg">${tabs.map(t => `<button class="${subnav === t.id ? 'on' : ''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}</nav>
     </div>`;
 }
-// La testata del Training fuori dalla seduta (Programma e Progressione): i tasti dell'intestazione, la data, il titolo e le
-// due linguette con gli stessi tocchi di prima.
+// La testata del Training fuori dalla seduta (Programma e Progressione): la data, il titolo e le due linguette con gli stessi
+// tocchi di prima.
 function _testaTrainingV5(subnav, tabs){
   const oggi = new Date();
   const data = `${['DOM','LUN','MAR','MER','GIO','VEN','SAB'][oggi.getDay()]} ${oggi.getDate()} ${['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'][oggi.getMonth()]}`;
   return `
     <div class="t5-testa t5-pagina">
-      <div class="t5-su"><span class="n5-sopra">${data}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <div class="t5-su"><span class="n5-sopra">${data}</span></div>
       <h1 class="t5-titolo">Training</h1>
       <nav class="t5-seg">${tabs.map(t => `<button class="${subnav === t.id ? 'on' : ''}" onclick="ST.trainTab='${t.id}';if(ST.trainSession)closeTrainingSession();else renderTraining();">${t.label}</button>`).join('')}</nav>
     </div>`;

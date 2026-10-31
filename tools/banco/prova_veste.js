@@ -306,7 +306,7 @@ const vis=e=>e.offsetParent!==null||getComputedStyle(e).position==='fixed';
 const testi=s=>[...document.querySelectorAll(s)].flatMap(c=>[c,...c.querySelectorAll('*')]).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&vis(e)&&!e.closest('button:disabled')&&!/^[\\p{Extended_Pictographic}\\uFE0F\\s]+$/u.test(e.textContent)).map(e=>({t:e.textContent.trim().slice(0,24),c:Math.round(contrasto(e)*100)/100,k:(typeof e.className==='string'?e.className:'')||e.tagName}));
 const alti=s=>[...document.querySelectorAll(s)].filter(vis).map(e=>({t:(e.getAttribute('aria-label')||e.textContent).trim().slice(0,20),h:Math.round(e.getBoundingClientRect().height)}));
 const g=(s,p)=>{const e=document.querySelector(s);return e?getComputedStyle(e)[p]:null;};
-const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
+const r={header:g('#header','display'),testa:g('.t5-testa','backgroundColor'),chipSeduta:document.querySelectorAll('.t5-testa :is(.t5-chip,.t5-tondo,.t5-dx,[onclick^="openSettingsModal"],[onclick^="openWeighInSheet"],[onclick^="logout"])').length,serieTesta:g('.train-exec-header','backgroundColor'),recupero:g('.rest-hero','backgroundColor'),
 cronometro:document.querySelectorAll('#train-work-display').length,linguetteSopra:!!document.querySelector('.nutrition-subnav'),vecchioEsercizi:[...document.querySelectorAll('#page-training div')].some(d=>d.textContent.trim()==='ESERCIZI'),
 sezioni:[...document.querySelectorAll('#page-training .sez5')].map(e=>e.textContent.trim()),
 testi:testi('.t5-testa,.train-exec-header,.train-exec-ex-name,.train-exec-badges,.rest-hero,.tl5-registro,.t5-seduta .ex5-riga,.t5-seduta .ex5-menu,.att5-riga,.te5-numeri,.te5-senza-gif').filter(x=>x.c<4.5),
@@ -361,6 +361,7 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       atteso('seduta accesa: testata della zona Training (#2E6DA4) al posto dell\'intestazione dell\'app', [se.testa, se.header], ['rgb(46, 109, 164)', 'none']);
       atteso('seduta accesa: le linguette dentro la testata, un cronometro solo', [se.linguetteSopra, se.cronometro], [false, 1]);
       atteso('seduta accesa: i titoli di sezione nell\'HTML, nell\'ordine', se.sezioni, ['Prima di iniziare', 'Esercizi · 2']);
+      atteso('seduta accesa, giro 2: nella testata della seduta niente fuoco, peso, ⚙ ed Esci (solo «‹ I tuoi giorni»)', se.chipSeduta, 0);
       atteso('serie in corso e recupero: le testate nel blu della zona', [sr.serieTesta, rg.recupero], ['rgb(46, 109, 164)', 'rgb(46, 109, 164)']);
       for(const [nome, m] of [['seduta', se], ['serie in corso', sr], ['recupero e registro', rg]]){
         atteso(`${nome}: ogni testo della testata (e del registro) almeno 4,5:1`, m.testi, []);
@@ -379,7 +380,8 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
     }
   } finally { fs.rmSync(radiceT, { recursive:true, force:true }); }
 
-  // ── 4. Giro 1 di Nutrition, il tab Oggi: dentro e oltre l'obiettivo a veste accesa, a veste spenta; l'intestazione nelle altre pagine ──
+  // ── 4. Giro 1 e giro 2 di Nutrition, il tab Oggi: dentro e oltre l'obiettivo a veste accesa, a veste spenta; l'intestazione nelle altre pagine;
+  //       giro 2: un numero per cosa, il pasto in una riga, la testata senza fuoco/peso/⚙/Esci, «Giorno detox» nel Piano ──
   const radiceN = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-n-'));
   fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceN, 'stile.css'));
   const pagN = {};
@@ -393,14 +395,31 @@ document.documentElement.setAttribute('data-misura',JSON.stringify(r));},300));<
       const ST = W.eval('ST'); W.callAI = async () => ''; W.cuePer = async () => '';
       ST.trainTab = 'piano'; W.showPage('training'); ST.trainAnticipato = 'upperA'; W.openTrainingSession('upperA'); await attendi(300);
       W.showPage('integratori'); await attendi(200); pagN.body_dopo_seduta = fotografa(W);
+      // giro 2: «Giorno detox» è una riga del tab Piano con l'interruttore, per oggi; scrive lo stesso digiuno del tasto di prima
+      W.closeTrainingSession(); W.showPage('piano'); await attendi(400);
+      const riga = () => W.document.querySelector('#page-piano .n5-detox-riga');
+      atteso('giro 2: «Giorno detox» è una riga del Piano con l\'interruttore spento, e non sta più nella testata di Oggi', [!!riga(), riga() && riga().getAttribute('aria-checked'), !!W.document.querySelector('.n5-testa .n5-detox')], [true, 'false', false]);
+      await W.toggleDetoxOggi(); await attendi(100);
+      atteso('giro 2: l\'interruttore accende il digiuno di oggi (ST.db.days) e la riga lo dice', [!!ST.db.days[OGGI].fasting, riga() && riga().getAttribute('aria-checked')], [true, 'true']);
+      W.document.querySelectorAll('.csa-overlay').forEach(e => e.remove());   // alle 18 si apre «Come stai adesso?»: non è il Piano
+      pagN.piano_detox = fotografa(W);
+      await W.toggleDetoxOggi(); await attendi(100);
+      atteso('giro 2: toccato di nuovo, il digiuno si spegne', [!!ST.db.days[OGGI].fasting, riga() && riga().getAttribute('aria-checked')], [false, 'false']);
     }
     W.close();
   }
   const MISURA_N = MISURA_T.replace("const r={header", `const r={nTesta:g('.n5-testa','backgroundColor'),vecchiaTesta:!!document.querySelector('.oggi-v3-header'),
 sezioniN:[...document.querySelectorAll('#page-oggi .sez5 > span:first-child')].map(e=>e.textContent.trim()),
-testiN:testi('.n5-testa,#page-oggi .sez5,#page-oggi .oggi-v3-hero-card,#page-oggi .oggi-v3-cta-row,#page-oggi .oggi-v3-timeline-card,#page-oggi .oggi-v3-coach-card').filter(x=>x.c<4.5),
-tastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .oggi-v3-coach-cta').filter(x=>x.h<44),
-nTastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .oggi-v3-coach-cta').length,
+sezioniDx:[...document.querySelectorAll('#page-oggi .sez5 > .sez5-dx')].map(e=>e.textContent.trim()),
+testiN:testi('.n5-testa,#page-oggi .sez5,#page-oggi .oggi-v3-hero-card,#page-oggi .oggi-v3-cta-row,#page-oggi .oggi-v3-timeline-card,#page-oggi .oggi-v3-coach-card,#page-piano .n5-detox-riga').filter(x=>x.c<4.5),
+tastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .n5-pasto,#page-oggi .oggi-v3-coach-cta').filter(x=>x.h<44),
+nTastiN:alti('.n5-testa button,#page-oggi .oggi-v3-cta,#page-oggi .meal-modifica,#page-oggi .meal-delete-btn,#page-oggi .n5-pasto,#page-oggi .oggi-v3-coach-cta').length,
+chipTesta:document.querySelectorAll('.n5-testa .t5-chip,.n5-testa .t5-tondo,.n5-testa .t5-dx,.n5-testa .n5-detox,.n5-testa [onclick^="openSettingsModal"],.n5-testa [onclick^="openWeighInSheet"],.n5-testa [onclick^="logout"]').length,
+riassunto:(e=>e?e.textContent.replace(/\\s+/g,' ').trim():null)(document.querySelector('#page-oggi .oggi-v3-donut-summary')),
+macroSub:[...document.querySelectorAll('#page-oggi .oggi-v3-macro-sub')].map(e=>e.textContent.trim()),
+timelineSub:g('#page-oggi .oggi-v3-timeline-sub','display'),
+pasti:alti('#page-oggi .n5-pasto'),vecchiaRiga:!!document.querySelector('#page-oggi [onclick^="toggleMealCard"]'),
+detox:(e=>e?{on:e.getAttribute('aria-checked'),h:Math.round(e.getBoundingClientRect().height),leva:getComputedStyle(e.querySelector('.n5-leva')).backgroundColor}:null)(document.querySelector('#page-piano .n5-detox-riga')),
 oltre:(()=>{const e=document.querySelector('#page-oggi .oggi-v3-donut-num');return e?{over:e.classList.contains('over'),colore:getComputedStyle(e).color,c:Math.round(contrasto(e)*100)/100}:null;})(),
 linguetteTesta:[...document.querySelectorAll('.n5-testa .t5-seg button')].map(e=>e.textContent.trim()),
 header`);
@@ -411,13 +430,18 @@ header`);
   const misuraN = async (n) => { const m = (await chromeT(['--window-size=390,1500', '--dump-dom', 'file://' + path.join(radiceN, n + '.html')])).match(/data-misura="([^"]*)"/);
     return m ? JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&')) : null; };
   try {
-    const ns = await misuraN('oggi_spenta'), na = await misuraN('oggi'), no = await misuraN('oggi_oltre'), bo = await misuraN('body_dopo_oggi'), bs = await misuraN('body_dopo_seduta');
-    atteso('Nutrition: Chrome ha risposto per le cinque pagine', [!!ns, !!na, !!no, !!bo, !!bs], [true, true, true, true, true]);
-    if(ns && na && no && bo && bs){
-      atteso('Nutrition spenta: la testata di prima, niente testata nuova né titoli nuovi', [ns.vecchiaTesta, ns.nTesta, ns.sezioniN, ns.header !== 'none'], [true, null, [], true]);
+    const ns = await misuraN('oggi_spenta'), na = await misuraN('oggi'), no = await misuraN('oggi_oltre'), bo = await misuraN('body_dopo_oggi'), bs = await misuraN('body_dopo_seduta'), pd = await misuraN('piano_detox');
+    atteso('Nutrition: Chrome ha risposto per le sei pagine', [!!ns, !!na, !!no, !!bo, !!bs, !!pd], [true, true, true, true, true, true]);
+    if(ns && na && no && bo && bs && pd){
+      atteso('Nutrition spenta: la testata di prima, niente testata nuova né titoli nuovi; il pasto con la card di prima, il riassunto di prima', [ns.vecchiaTesta, ns.nTesta, ns.sezioniN, ns.header !== 'none', ns.vecchiaRiga, ns.pasti.length, ns.riassunto, ns.macroSub[0]], [true, null, [], true, true, 0, '650 consumate · su 2.300 obiettivo', 'rimasti · 70/219g']);
       atteso('Nutrition accesa: testata della zona (#A35F00) al posto dell\'intestazione dell\'app', [na.nTesta, na.header, na.vecchiaTesta], ['rgb(163, 95, 0)', 'none', false]);
       atteso('Nutrition accesa: le quattro schede nella testata', na.linguetteTesta, ['Oggi', 'Integratori', 'Analisi', 'Piano']);
-      atteso('Nutrition accesa: i titoli di sezione nell\'HTML, nell\'ordine', na.sezioniN, ['Il giorno', 'Timeline di oggi', 'Coach · riequilibrio']);
+      atteso('giro 2: nella testata niente fuoco, peso, ⚙, Esci né «Giorno detox»', [na.chipTesta, no.chipTesta, bo.chipTesta], [0, 0, 0]);
+      atteso('giro 2: i titoli di sezione nell\'HTML, nell\'ordine, con l\'obiettivo e le kcal dei pasti a destra', [na.sezioniN, na.sezioniDx], [['Il giorno', 'Oggi · 1 pasto', 'Coach · riequilibrio'], ['Obiettivo 2.300 kcal', '650 kcal', 'prossimo pasto']]);
+      atteso('giro 2: la frase accanto all\'anello dice le mangiate, i pasti e il prossimo pasto; i macro solo «rimasti»', [na.riassunto, na.macroSub], ['Hai mangiato 650 kcal, un pasto.Prossimo: cena alle 20:00.', ['rimasti', 'rimasti', 'rimasti']]);
+      atteso('giro 2, oltre l\'obiettivo: la frase dice di quanto, i macro «oltre»', [no.riassunto, no.macroSub], ['Hai mangiato 3.100 kcal, un pasto: 800 oltre l\'obiettivo.Prossimo: cena alle 20:00.', ['oltre', 'oltre', 'oltre']]);
+      atteso('giro 2: la riga «PASTI · PACCHETTI · EXTRA» non si vede, il pasto è una riga alta almeno 44 px che apre la modifica', [na.timelineSub, na.vecchiaRiga, na.pasti.length, na.pasti.filter(x => x.h < 44)], ['none', false, 1, []]);
+      atteso('giro 2: nel Piano la riga «Giorno detox» accesa, alta almeno 44 px, con la leva nel colore della zona', [pd.detox && pd.detox.on, pd.detox && pd.detox.h >= 44, pd.detox && pd.detox.leva, pd.testiN], ['true', true, 'rgb(163, 95, 0)', []]);
       for(const [nome, m] of [['dentro l\'obiettivo', na], ['oltre l\'obiettivo', no]]){
         atteso(`Nutrition, ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiN, []);
         atteso(`Nutrition, ${nome}: ogni tasto alto almeno 44 px (${m.nTastiN} tasti)`, m.tastiN, []);
@@ -428,7 +452,7 @@ header`);
     }
     if(process.env.FOTO){
       fs.mkdirSync(process.env.FOTO, { recursive:true });
-      for(const n of ['oggi_spenta', 'oggi', 'oggi_oltre']){
+      for(const n of ['oggi_spenta', 'oggi', 'oggi_oltre', 'piano_detox']){
         const f = path.join(process.env.FOTO, `nutrition_${n}_390.png`);
         await chromeT(['--window-size=600,1500', '--screenshot=' + f, 'file://' + path.join(radiceN, '_' + n + '.html')]);
         console.log('  foto  ' + f);
@@ -436,7 +460,8 @@ header`);
     }
   } finally { fs.rmSync(radiceN, { recursive:true, force:true }); }
 
-  // ── 5. Giro 1 del Body: le quattro schede a veste accesa, Misure a veste spenta; l'intestazione nelle altre pagine ──
+  // ── 5. Giro 1 e giro 2 del Body: le quattro schede a veste accesa, Misure a veste spenta; l'intestazione nelle altre pagine;
+  //       giro 2: il check come riga sottile solo quando è da fare, il peso una volta con «Pesati ora», via il campo «Peso (kg)», il tab Check vuoto con un tasto ──
   const radiceB = fs.mkdtempSync(path.join(os.tmpdir(), 'zt-veste-b-'));
   fs.copyFileSync(path.join(REPO, 'app', 'stile.css'), path.join(radiceB, 'stile.css'));
   const pagB = {};
@@ -451,12 +476,18 @@ header`);
     W.close();
   }
   const MISURA_B = MISURA_T.replace("const r={header", `const r={bTesta:g('.b5-testa','backgroundColor'),vecchieLinguette:!!document.querySelector('#page-body .nutrition-subnav'),
-sezioniB:[...document.querySelectorAll('#page-body .sez5')].map(e=>e.textContent.trim()),
+sezioniB:[...document.querySelectorAll('#page-body .sez5')].map(e=>(e.querySelector('span')||e).textContent.trim()),
+pesoData:(e=>e?e.textContent.trim():null)(document.querySelector('#page-body .sez5 .sez5-dx')),
 schedeB:[...document.querySelectorAll('.b5-testa .t5-seg button')].map(e=>e.textContent.trim()),
-cta:(()=>{const e=document.querySelector('#page-body .b5-cta');return e?{fondo:getComputedStyle(e).backgroundColor,h:Math.round(e.getBoundingClientRect().height),largo:e.getBoundingClientRect().width>300}:null;})(),
-testiB:testi('.b5-testa,#page-body .sez5,#page-body .b5-cta,#page-body .b5-peso,#page-body .b5-misure,#page-body .trend-card').filter(x=>x.c<4.5),
-tastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-salva,#page-body .b5-misure button').filter(x=>x.h<44),
-nTastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-salva,#page-body .b5-misure button').length,
+chipTesta:document.querySelectorAll('.b5-testa .t5-chip,.b5-testa .t5-tondo,.b5-testa .t5-dx,.b5-testa [onclick^="openSettingsModal"],.b5-testa [onclick^="openWeighInSheet"],.b5-testa [onclick^="logout"]').length,
+cta:(()=>{const e=document.querySelector('#page-body .b5-cta');return e?{fondo:getComputedStyle(e).backgroundColor,h:Math.round(e.getBoundingClientRect().height),largo:e.getBoundingClientRect().width>300,alto:Math.round((e.closest('.b5-vuoto')||e).getBoundingClientRect().top)}:null;})(),
+nNuovoCheck:[...document.querySelectorAll('#page-body button')].filter(b=>/Nuovo check fisico|Riprendi check fisico/.test(b.textContent)).length,
+riga:(e=>e?{t:e.textContent.replace(/\\s+/g,' ').trim(),h:Math.round(e.getBoundingClientRect().height)}:null)(document.querySelector('#page-body .b5-check-riga')),
+pesoCampo:(e=>e?e.type:null)(document.getElementById('bl-weight')),
+pesati:(e=>e?{h:Math.round(e.getBoundingClientRect().height),fondo:getComputedStyle(e).backgroundColor}:null)(document.querySelector('#page-body .b5-pesati')),
+testiB:testi('.b5-testa,#page-body .sez5,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-vuoto,#page-body .b5-peso,#page-body .b5-misure,#page-body .trend-card').filter(x=>x.c<4.5),
+tastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button').filter(x=>x.h<44),
+nTastiB:alti('.b5-testa button,#page-body .b5-cta,#page-body .b5-check-riga,#page-body .b5-pesati,#page-body .b5-salva,#page-body .b5-misure button').length,
 header`);
   for(const [n, h] of Object.entries(pagB)){
     fs.writeFileSync(path.join(radiceB, n + '.html'), h.replace('</body>', MISURA_B + '</body>'));
@@ -468,13 +499,15 @@ header`);
     const bs = await misuraB('body_spenta_misure'), bm = await misuraB('body_misure'), bt = await misuraB('body_tendenza'), bc = await misuraB('body_check'), be = await misuraB('body_energia'), tb = await misuraB('training_dopo_body');
     atteso('Body: Chrome ha risposto per le sei pagine', [bs, bm, bt, bc, be, tb].map(x => !!x), [true, true, true, true, true, true]);
     if(bs && bm && bt && bc && be && tb){
-      atteso('Body spento: le linguette di prima, niente testata né titoli nuovi', [bs.vecchieLinguette, bs.bTesta, bs.sezioniB, bs.header !== 'none'], [true, null, [], true]);
+      atteso('Body spento: le linguette di prima, niente testata né titoli nuovi; il campo «Peso (kg)», il tasto «Nuovo check fisico» di prima, niente riga né «Pesati ora»', [bs.vecchieLinguette, bs.bTesta, bs.sezioniB, bs.header !== 'none', bs.pesoCampo, bs.nNuovoCheck, bs.riga, bs.pesati], [true, null, [], true, 'number', 1, null, null]);
       for(const [nome, m] of [['Misure', bm], ['Tendenza', bt], ['Check', bc], ['Energia', be]]){
-        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, quattro schede dentro`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length], ['rgb(106, 85, 160)', 'none', false, 4]);
-        atteso(`Body ${nome}: «Nuovo check fisico» largo nel viola della zona, alto almeno 44 px`, m.cta && [m.cta.fondo, m.cta.h >= 44, m.cta.largo], ['rgb(106, 85, 160)', true, true]);
+        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, quattro schede dentro, senza fuoco, peso, ⚙ ed Esci`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length, m.chipTesta], ['rgb(106, 85, 160)', 'none', false, 4, 0]);
+        atteso(`Body ${nome}, giro 2: il check è una riga sottile (primo check da fare), alta almeno 44 px, e il tasto largo non sta più in cima`, [m.riga && m.riga.t, m.riga && m.riga.h >= 44, nome === 'Check' ? m.nNuovoCheck : m.cta], ['Primo check fisico da fare›', true, nome === 'Check' ? 1 : null]);
         atteso(`Body ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiB, []);
         atteso(`Body ${nome}: ogni tasto alto almeno 44 px (${m.nTastiB} tasti)`, m.tastiB, []);
       }
+      atteso('Body Check vuoto, giro 2: un tasto solo «Nuovo check fisico», largo nel viola della zona, in alto (il riquadro comincia sotto la riga del check, entro 320 px)', bc.cta && [bc.cta.fondo, bc.cta.h >= 44, bc.cta.largo, bc.cta.alto < 320], ['rgb(106, 85, 160)', true, true, true]);
+      atteso('Body Misure, giro 2: il peso una volta sola, con la data nel titolo e «Pesati ora» accanto (viola, 44 px); nel modulo delle misure niente campo «Peso (kg)» (solo la casella nascosta per il report)', [bm.pesoData, bm.pesati && bm.pesati.fondo, bm.pesati && bm.pesati.h >= 44, bm.pesoCampo], ['dom 4 ott', 'rgb(106, 85, 160)', true, 'hidden']);
       atteso('Body Misure: i titoli di sezione nell\'HTML, nell\'ordine', bm.sezioniB, ['Il peso', 'Misure col metro e bilancia']);
       atteso('Body Tendenza: i titoli di sezione nell\'HTML, nell\'ordine', bt.sezioniB, ['Progresso verso l\'obiettivo', 'Evoluzione del corpo']);
       atteso('dopo il Body, il Training (Programma) ha la sua testata blu', [tb.header, tb.testa], ['none', 'rgb(46, 109, 164)']);
@@ -560,6 +593,8 @@ header`);
 zTesta:g('.page.active .n5-testa, .page.active .t5-pagina','backgroundColor'),
 on:(document.querySelector('.page.active .t5-seg button.on')||{}).textContent,
 vecchia:!!document.querySelector('.page.active :is(.oggi-v3-header,.nutrition-subnav)'),
+chipTesta:document.querySelectorAll('.page.active :is(.n5-testa,.t5-testa) :is(.t5-chip,.t5-tondo,.t5-dx,[onclick^="openSettingsModal"],[onclick^="openWeighInSheet"],[onclick^="logout"])').length,
+detox:!!document.querySelector('.page.active .n5-detox-riga'),
 testiR:testi('.page.active').filter(x=>x.c<4.5),
 tastiR:alti('.page.active button').filter(x=>x.h<44),nTastiR:alti('.page.active button').length,
 header`);
@@ -576,7 +611,8 @@ header`);
       const sp = await misuraR('spenta_' + n), m = await misuraR(n);
       if(!sp || !m){ atteso(`${n}: Chrome ha risposto`, false, true); continue; }
       atteso(`${n} spenta: la testata e le linguette di prima, l'intestazione dell'app`, [sp.zTesta, sp.vecchia, sp.header !== 'none'], [null, true, true]);
-      atteso(`${n} accesa: testata della zona al posto dell'intestazione, scheda «${scheda}» accesa`, [m.zTesta, m.header, m.vecchia, (m.on || '').trim()], [colore, 'none', false, scheda]);
+      atteso(`${n} accesa: testata della zona al posto dell'intestazione, scheda «${scheda}» accesa, senza fuoco, peso, ⚙ ed Esci (giro 2)`, [m.zTesta, m.header, m.vecchia, (m.on || '').trim(), m.chipTesta], [colore, 'none', false, scheda, 0]);
+      atteso(`${n} accesa: la riga «Giorno detox» sta nel Piano e solo lì (giro 2)`, m.detox, n === 'piano');
       atteso(`${n} accesa: ogni testo della pagina almeno 4,5:1`, m.testiR, []);
       atteso(`${n} accesa: ogni tasto della pagina alto almeno 44 px (${m.nTastiR} tasti)`, m.tastiR, []);
     }

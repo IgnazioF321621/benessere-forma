@@ -1862,14 +1862,24 @@ function _bodyCheckCtaHTML(){
   }
   return `<div style="margin:12px 16px 0;display:flex;justify-content:flex-end;">${btn(false)}</div>`;
 }
-// La testata del Body nella tinta della zona (veste nuova, Giro 1): i tasti dell'intestazione (tastiTestaV5), la data, il titolo
-// e le quattro schede, con gli stessi tocchi delle linguette di prima.
+// Giro 2 del Body (schizzo approvato da Ignazio il 31/10/2026), solo con html.v5: il «Nuovo check fisico» largo in cima ai tre tab
+// diventa una riga sottile col puntino del Body, e c'è solo quando c'è da farlo, con le stesse parole della Home (checkDaFareV5:
+// primo check, in ritardo, oggi; niente in pausa delle pesate) o quando un check è rimasto a metà. Chi vuole il check fuori tempo
+// lo trova nel tab Check. Il tocco apre lo stesso m2EntryIntro di sempre.
+function _bodyCheckRigaV5(){
+  const inCorso = (ST.bodyChecks || []).some(c => c.status === 'in_progress');
+  const testo = inCorso ? 'Riprendi il check fisico' : (typeof checkDaFareV5 === 'function' ? checkDaFareV5() : null);
+  if(!testo) return '';
+  return `<div class="b5-gruppo"><button class="b5-check-riga" onclick="m2EntryIntro();"><span><span class="home-v2-dafare-pt" style="background:var(--z-body);"></span>${testo}</span><span class="b5-check-chev" aria-hidden="true">›</span></button></div>`;
+}
+// La testata del Body nella tinta della zona (veste nuova, Giro 1): la data, il titolo e le quattro schede, con gli stessi tocchi
+// delle linguette di prima (giro 2, 31 ottobre 2026: via fuoco, peso, ⚙ ed Esci dalla testata, stanno in Home e nelle Impostazioni).
 function _testaBodyV5(tab, tabs){
   const oggi = new Date();
   const data = `${['DOM','LUN','MAR','MER','GIO','VEN','SAB'][oggi.getDay()]} ${oggi.getDate()} ${['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'][oggi.getMonth()]}`;
   return `
     <div class="b5-testa">
-      <div class="t5-su"><span class="n5-sopra">${data}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <div class="t5-su"><span class="n5-sopra">${data}</span></div>
       <h1 class="t5-titolo">Body</h1>
       <nav class="t5-seg">${tabs.map(t => `<button class="${tab === t.id ? 'on' : ''}" onclick="ST.bodyTab='${t.id}';renderBody();">${t.label}</button>`).join('')}</nav>
     </div>`;
@@ -2131,14 +2141,15 @@ function renderBody(){
     const fv  = (val, def='') => val != null ? val : def;
     const adv = ST.bodyAdvOpen;
 
-    body = `${v5 ? '<h2 class="sez5">Il peso</h2>' : ''}
+    // giro 2 (31 ottobre 2026): a veste accesa la data della pesata sta nel titolo di sezione e accanto al numero c'è «Pesati ora»
+    body = `${v5 ? `<h2 class="sez5"><span>Il peso</span>${wDate ? `<span class="sez5-dx">${fmtDate(wDate)}</span>` : ''}</h2>` : ''}
       <div class="b5-peso" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
-        <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:12px;">
+        <div class="b5-peso-riga" style="display:flex;align-items:baseline;gap:4px;margin-bottom:12px;">
           <span style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--t1);line-height:1;">${w ?? '—'}</span>
           ${w ? `<span style="font-size:13px;font-family:var(--font-mono);color:var(--t3);">kg</span>` : ''}
           ${wTrend}
           <span style="flex:1;"></span>
-          <span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${wDate ? fmtDate(wDate) : ''}</span>
+          ${v5 ? `<button class="b5-pesati" onclick="openWeighInSheet()">Pesati ora</button>` : `<span style="font-size:11px;color:var(--t3);font-family:var(--font-mono);">${wDate ? fmtDate(wDate) : ''}</span>`}
         </div>
         ${wProgressHTML}
         ${waistProgressHTML}
@@ -2192,12 +2203,12 @@ function renderBody(){
           ${ST.fitdaysBusy ? 'Sto leggendo il report…' : `Leggi il report Fitdays con ${COACH_NAME} →`}
           <input id="bl-fitdays-file" type="file" accept="image/*,application/pdf" onchange="leggiReportFitdays(this)" ${ST.fitdaysBusy ? 'disabled' : ''} style="display:none;">
         </label>` : ''}
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-          <div>
+        <div style="display:grid;grid-template-columns:${v5 ? '1fr' : '1fr 1fr'};gap:10px;margin-bottom:10px;">
+          ${v5 ? `<input id="bl-weight" type="hidden" value="${fitdaysLettura ? fv(todayLog.weight_kg) : ''}">` : `<div>
             <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Peso (kg)</label>
             <input id="bl-weight" type="number" step="0.1" min="40" max="200" value="${fv(todayLog.weight_kg)}" placeholder="es. 72.5"
               style="width:100%;padding:8px 10px;border:1px solid var(--b1);border-radius:var(--r);font-size:14px;font-family:var(--font-mono);background:var(--s2);color:var(--t1);box-sizing:border-box;outline:none;">
-          </div>
+          </div>`}
           <div>
             <label style="font-size:10px;color:var(--t3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Vita (cm)</label>
             <input id="bl-waist" type="number" step="0.1" min="50" max="200" value="${fv(todayLog.waist_cm)}" placeholder="es. 89"
@@ -2279,7 +2290,15 @@ function renderBody(){
       .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 
     if(completedChecks.length === 0){
-      body = `
+      // giro 2 (31 ottobre 2026), a veste accesa: il riquadro in alto e non a metà schermo, il tasto nel viola del Body (b5-cta,
+      // l'unico «Nuovo check fisico» della pagina), il testo dice a cosa serve il check
+      body = v5 ? `
+        <div class="b5-vuoto">
+          <div class="b5-vuoto-tondo" aria-hidden="true">🧍</div>
+          <h3>Nessun check fisico ancora</h3>
+          <p>Foto, misure ed esami ogni sei settimane: servono a ${COACH_NAME} per calibrare il piano.</p>
+          <button class="b5-cta" onclick="m2EntryIntro();">Nuovo check fisico →</button>
+        </div>` : `
         <div style="display:flex;align-items:center;justify-content:center;min-height:60vh;padding:24px;">
           <div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:32px 24px;text-align:center;width:100%;box-shadow:var(--shadow);">
             <div style="width:48px;height:48px;border-radius:50%;background:#EDE9F8;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
@@ -2326,7 +2345,7 @@ function renderBody(){
     body = renderBodyEnergia();
   }
 
-  document.getElementById('page-body').innerHTML = navHTML + _bodyCheckCtaHTML() + avvisoLettura + body + versionFooter();
+  document.getElementById('page-body').innerHTML = navHTML + (v5 ? _bodyCheckRigaV5() : _bodyCheckCtaHTML()) + avvisoLettura + body + versionFooter();
 }
 
 // ─── STEP D.1 (22 mag 2026): Modal pesata "Pesati ora" ───
