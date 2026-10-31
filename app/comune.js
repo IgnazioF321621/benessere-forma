@@ -434,16 +434,6 @@ if (typeof window !== 'undefined' && window.addEventListener) {
 function _orEq(colonna, valore) {
   return colonna + '.eq."' + String(valore).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 }
-// La veste nuova (Giro 1): i tasti dell'intestazione dell'app (fuoco, peso, Impostazioni, Esci) dentro la testata di una pagina,
-// che a veste accesa prende il posto dell'intestazione. Fuoco e peso si leggono da #h-streak e #h-weight, dove l'app li tiene aggiornati.
-function tastiTestaV5() {
-  const fuoco = document.getElementById('h-streak');
-  const peso = document.getElementById('h-weight');
-  return `${fuoco && fuoco.style.display !== 'none' ? `<span class="t5-chip">${esc(fuoco.textContent)}</span>` : ''}
-          <button class="t5-chip" onclick="openWeighInSheet()" aria-label="Pesati ora">⚖ ${esc(peso ? peso.textContent : '—')} kg</button>
-          <button class="t5-tondo" onclick="openSettingsModal()" aria-label="Impostazioni">⚙</button>
-          <button class="t5-tondo" onclick="logout()" aria-label="Esci">⎋</button>`;
-}
 function nuovoId() {
   try { if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });

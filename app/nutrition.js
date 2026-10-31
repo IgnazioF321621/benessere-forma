@@ -927,6 +927,20 @@ window.openLogFromPlanned = function(idx){
 // OGGI V3 hero (15 maggio 2026): donut grande Syne + status zona pill separato + 3 macro card.
 // Logica residua kcal/macro PRESERVATA (kcalRimaste/macroRimasti/isOverTarget/OVER_COLOR).
 // Stato kcal in negativo: numero "−180" prefisso, rosso terracotta #B84C2A.
+// Giro 2 di Nutrition (schizzo approvato da Ignazio il 31/10/2026), solo con html.v5: accanto all'anello la frase dice quante
+// kcal si sono mangiate e in quanti pasti (il cerchio dice le rimaste, il titolo l'obiettivo: ogni numero una volta) e, oggi, il
+// prossimo pasto con la sua ora (ST.nextSlot, lo stesso del riquadro del coach).
+function _riassuntoGiornoV5(cons, target, overKcal, remKcal){
+  const giorno = getDay(ST.activeDay), nPasti = (giorno.meals || []).length;
+  const pasti = nPasti === 0 ? 'nessun pasto' : (nPasti === 1 ? 'un pasto' : `${nPasti} pasti`);
+  const mangiate = cons.kcal > 0 ? `Hai mangiato <b>${fmtNum(cons.kcal)} kcal</b>, ${pasti}${overKcal ? `: ${fmtNum(Math.abs(remKcal))} oltre l'obiettivo` : ''}.` : 'Non hai ancora registrato niente.';
+  let prossimo = '';
+  if(ST.activeDay === todayKey()){
+    const slot = MEAL_SLOTS.find(s => s.id === ST.nextSlot);
+    if(slot && slot.id !== 'extra') prossimo = `<br>Prossimo: ${slot.label.toLowerCase()}${ST.nextSlotIsTomorrow ? ' di domani' : (slot.time ? ' alle ' + slot.time : '')}.`;
+  }
+  return mangiate + prossimo;
+}
 function heroCard(cons) {
   const target = ST.TARGET || {kcal:2000, protein:150, carbs:200, fat:67};
   // ── Calcoli kcal residue ──────────────────────────────────
@@ -959,7 +973,8 @@ function heroCard(cons) {
   const heroOverCls = overKcal ? 'over' : '';
   const heroLabel   = overKcal ? 'KCAL OLTRE'
     : (remKcal === 0 && cons.kcal > 0 ? 'TARGET RAGGIUNTO' : 'KCAL RIMASTE');
-  const heroSummary = `${fmtNum(Math.max(0, cons.kcal))} consumate · su ${fmtNum(target.kcal)} obiettivo`;
+  const heroSummary = document.documentElement.classList.contains('v5') ? _riassuntoGiornoV5(cons, target, overKcal, remKcal)
+    : `${fmtNum(Math.max(0, cons.kcal))} consumate · su ${fmtNum(target.kcal)} obiettivo`;
 
   // ── Status Zona pill ──────────────────────────────────────
   const tPC = target.pCarbo || 40, tPP = target.pProt || 30, tPF = target.pFat || 30;
@@ -1004,7 +1019,8 @@ function heroCard(cons) {
         const valStr  = over ? `+${fmtNum(Math.abs(rem))}` : fmtNum(rem);
         const valCol  = over ? OVER_COLOR : 'var(--t1)';
         const fillCol = over ? OVER_COLOR : m.color;
-        const subStr  = over
+        // giro 2 (31 ottobre 2026), a veste accesa un numero per cosa: solo «rimasti» o «oltre», senza «70/219 g»
+        const subStr  = document.documentElement.classList.contains('v5') ? (over ? 'oltre' : 'rimasti') : over
           ? `oltre · +${fmtNum(Math.abs(rem))}/${fmtNum(m.target)}g`
           : `rimasti · ${fmtNum(Math.max(0, m.value))}/${fmtNum(m.target)}g`;
         return `<div class="oggi-v3-macro-card">
@@ -1161,12 +1177,18 @@ function mealCardHTML(m){
         </div>` : ''}
     </div>` : '';
 
+  // Giro 2 di Nutrition (31 ottobre 2026), solo con html.v5 e fuori dalla modifica: il pasto è una riga (nome, cosa c'è, kcal),
+  // il tocco apre la modifica (smartOpenEdit), dove restano gli ingredienti, «Modifica» e il cestino; «Pasto intero, senza
+  // ingredienti» solo quando è così. In modifica la card è quella di sempre.
+  const rigaV5 = document.documentElement.classList.contains('v5') && !inModifica;
+  const sottoV5 = items.length === 0 ? 'Pasto intero, senza ingredienti' : (m.description ? esc(m.description) : (items.length === 1 ? '1 ingrediente' : `${items.length} ingredienti`));
+  const headerV5 = `<button class="n5-pasto" onclick="smartOpenEdit('${ST.activeDay}','${mealId}')"><span class="n5-pasto-testo"><b>${slotInfo.label}</b><small>${sottoV5}</small></span><span class="n5-pasto-kcal">${m.kcal}<small>kcal</small></span><span class="n5-pasto-chev" aria-hidden="true">›</span></button>`;
   const inner = `<div class="meal-card-v2" style="display:block;padding:0;">
     <div style="display:flex;">
       <div class="slot-bar" style="background:${ss.color};width:3px;align-self:stretch;flex-shrink:0;border-radius:2px 0 0 2px;"></div>
       <div style="flex:1;min-width:0;">
-        ${headerCollapsed}
-        ${bodyExpanded}
+        ${rigaV5 ? headerV5 : headerCollapsed}
+        ${rigaV5 ? '' : bodyExpanded}
       </div>
     </div>
   </div>`;
@@ -2039,13 +2061,14 @@ function renderRegistraPasto() {
   `;
 }
 
-// La testata di Nutrition nella veste nuova (Giro 1): i tasti dell'intestazione (tastiTestaV5), la data, il titolo,
-// quello che la pagina mette in testata (`dentro`: in Oggi il giorno e «Giorno detox») e le quattro schede.
+// La testata di Nutrition nella veste nuova (Giro 1): la data, il titolo, quello che la pagina mette in testata (`dentro`: in Oggi
+// il giorno con le frecce e l'ora) e le quattro schede. Giro 2 (31 ottobre 2026, scelte di Ignazio): via fuoco, peso, ⚙ ed Esci
+// (stanno in Home e nelle Impostazioni) e «Giorno detox» non sta più qui ma nel tab Piano (_detoxRigaV5).
 function _testaNutritionV5(attiva, sopra, dentro){
   const labels = { oggi:'Oggi', integratori:'Integratori', analisi:'Analisi', piano:'Piano' };
   return `
     <div class="n5-testa">
-      <div class="t5-su"><span class="n5-sopra">${sopra}</span><div class="t5-dx">${tastiTestaV5()}</div></div>
+      <div class="t5-su"><span class="n5-sopra">${sopra}</span></div>
       <h1 class="t5-titolo">Nutrition</h1>
       ${dentro || ''}
       <nav class="t5-seg">${Object.keys(labels).map(id => `<button class="${id === attiva ? 'on' : ''}" onclick="showPage('${id}')">${labels[id]}</button>`).join('')}</nav>
@@ -2406,13 +2429,14 @@ function renderOggi(){
     </div>`;
   const testaV5 = _testaNutritionV5('oggi', dateEb, `
       ${navGiorno}
-      ${timebar}
-      <div class="n5-detox">${detoxBtn}</div>`);
-  // i titoli di sezione fuori dai riquadri: «Il giorno» sopra l'anello, «Timeline di oggi» sopra i pasti (il suo titolo dentro si nasconde)
+      ${timebar}`);
+  // i titoli di sezione fuori dai riquadri: «Il giorno» sopra l'anello (con l'obiettivo: un numero per cosa, giro 2), «Oggi · N pasti»
+  // con le kcal dei pasti sopra la timeline (il suo titolo dentro si nasconde)
   if(v5){
-    html = html.replace('<div class="oggi-v3-hero-card">', `<h2 class="sez5"><span>Il giorno</span><span class="sez5-dx">su ${fmtNum(ST.TARGET.kcal)} kcal</span></h2><div class="oggi-v3-hero-card">`);
-    const conto = (html.match(/<span class="oggi-v3-timeline-eb">([^<]*)<\/span>/) || [])[1];
-    html = html.replace('<div class="oggi-v3-timeline-card">', `<h2 class="sez5"><span>Timeline di oggi</span>${conto ? `<span class="sez5-dx">${conto}</span>` : ''}</h2><div class="oggi-v3-timeline-card">`);
+    html = html.replace('<div class="oggi-v3-hero-card">', `<h2 class="sez5"><span>Il giorno</span><span class="sez5-dx">Obiettivo ${fmtNum(ST.TARGET.kcal)} kcal</span></h2><div class="oggi-v3-hero-card">`);
+    const nPasti = meals.length, kcalPasti = meals.reduce((s, m) => s + (Number(m.kcal) || 0), 0);
+    const contoPasti = nPasti === 0 ? 'nessun pasto' : (nPasti === 1 ? '1 pasto' : `${nPasti} pasti`);
+    html = html.replace('<div class="oggi-v3-timeline-card">', `<h2 class="sez5"><span>${isToday ? 'Oggi' : 'Il giorno'} · ${contoPasti}</span>${nPasti ? `<span class="sez5-dx">${fmtNum(kcalPasti)} kcal</span>` : ''}</h2><div class="oggi-v3-timeline-card">`);
     html = html.replace(/<div class="oggi-v3-coach-card">/, '<h2 class="sez5"><span>Coach · riequilibrio</span><span class="sez5-dx">prossimo pasto</span></h2><div class="oggi-v3-coach-card">');
   }
 
@@ -6012,7 +6036,26 @@ function renderPianoV4() {
     </div>`;
 
   const testa = document.documentElement.classList.contains('v5') ? _testaNutritionV5('piano', dateEb) : v3Header;   // veste nuova
-  document.getElementById('page-piano').innerHTML = testa + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
+  const detox = document.documentElement.classList.contains('v5') ? _detoxRigaV5() : '';   // giro 2: «Giorno detox» sta qui
+  document.getElementById('page-piano').innerHTML = testa + detox + weekNav + statusCard + daysHTML + memoryCard + weightCard + profileCard + versionFooter();
+}
+// Giro 2 di Nutrition (31 ottobre 2026, scelta di Ignazio), solo con html.v5: «Giorno detox» esce dalla testata di Oggi, dove si
+// usava di rado, ed è una riga del tab Piano con un interruttore disegnato (le caselle native sono invisibili nell'app): vale per
+// oggi, come il tasto di prima valeva per il giorno aperto, e scrive la stessa riga (dbToggleFasting). A veste spenta il tasto
+// «Giorno Detox» resta in cima a Oggi.
+function _detoxRigaV5(){
+  const on = !!getDay(todayKey()).fasting;
+  return `<div class="n5-gruppo"><button type="button" class="n5-detox-riga" role="switch" aria-checked="${on}" onclick="toggleDetoxOggi()">
+      <span class="n5-detox-testo"><b>Giorno detox</b><small>${on ? 'Oggi digiuno: acqua, tè e caffè senza zucchero' : 'Oggi niente pasti, solo acqua, tè e caffè'}</small></span>
+      <span class="n5-leva" aria-hidden="true"><i></i></span>
+    </button></div>`;
+}
+async function toggleDetoxOggi(){
+  const k = todayKey(), d = getDay(k);
+  d.fasting = !d.fasting;
+  await dbToggleFasting(k, d.fasting);
+  saveCache();
+  if(ST.page === 'piano') renderPianoV4();
 }
 
 

@@ -400,15 +400,27 @@ h1.tit { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
   </section>
 
   <div class="decidi">
-    <h3>Quattro cose da decidere, Ignazio</h3>
+    <h3>Le quattro scelte di Ignazio (31 ottobre 2026)</h3>
     <ol>
-      <li><b>Le calorie e i macro</b>: un numero solo, ma quale? Le <b>rimaste</b> (come nello schizzo) o le <b>mangiate</b> su obiettivo?</li>
-      <li><b>La testata di Nutrition, Training e Body</b>: via fuoco, peso, ⚙ e ↻ (restano in Home), oppure tenere qualcosa, e cosa?</li>
-      <li><b>Il check fisico nel tab Body</b>: riga sottile solo quando è da fare (come nello schizzo), o niente riga e il check vive solo nel tab Check e in Home?</li>
-      <li><b>Il campo «Peso (kg)» nelle misure</b>: via (il peso si scrive da «Pesati ora»), o resta vuoto?</li>
+      <li><b>Le calorie e i macro</b>: si mostrano le <b>rimaste</b>, non le mangiate.</li>
+      <li><b>La testata di Nutrition, Training e Body</b>: via fuoco, peso, ⚙ ed Esci (restano in Home e nelle Impostazioni).</li>
+      <li><b>Il campo «Peso (kg)» nelle misure</b>: via, il peso si segna con la pesata. <code>body_logs</code> continua a salvare gli altri campi e <code>weighInsByDay</code> resta la fonte del peso.</li>
+      <li><b>«Giorno detox»</b>: nel tab Piano.</li>
     </ol>
-    <p style="margin:8px 0 0">«Giorno detox»: nel tab Piano o in Impostazioni › Cibo? Se non hai preferenza, Piano.</p>
+    <p style="margin:8px 0 0">Il check nel tab Body: riga sottile solo quando è da fare, come nello schizzo.</p>
   </div>
+
+  <!-- costruita -->
+  <section class="momento">
+    <h2><span>COSTRUITA</span>Nutrition e Body veri, a veste accesa (banco, 390 px)</h2>
+    <p class="intro">Fotografie delle pagine costruite, non più disegno: stessi dati di prova del 4 ottobre (un pasto da 650 kcal alle 13, pesata di oggi 74 kg, nessun check fisico fatto). Tutto dietro <code>html.v5</code>: a veste spenta Nutrition e Body sono identici al pixel. Nella testata non ci sono più fuoco, peso, ⚙ ed Esci, nemmeno in Training.</p>
+    <div class="tre" style="grid-template-columns:repeat(auto-fill,390px)">
+      <div class="prima"><div class="col-tit">Nutrition · Oggi: un numero per cosa, il pasto in una riga</div><img src="costruita_1_nutrition.png" alt="Nutrition Oggi costruita"></div>
+      <div class="prima"><div class="col-tit">Body · Misure: il check come riga, il peso una volta con «Pesati ora»</div><img src="costruita_2_body_misure.png" alt="Body Misure costruita"></div>
+      <div class="prima"><div class="col-tit">Body · Check senza check fatti: un tasto solo</div><img src="costruita_3_body_check.png" alt="Body Check costruita"></div>
+      <div class="prima"><div class="col-tit">Nutrition · Piano: «Giorno detox» è una riga con l'interruttore</div><img src="costruita_4_piano_detox.png" alt="Nutrition Piano con Giorno detox"></div>
+    </div>
+  </section>
 
   <section class="note" style="max-width:900px">
     <h3>Quando si costruisce</h3>
