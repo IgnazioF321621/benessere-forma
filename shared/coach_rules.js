@@ -408,7 +408,7 @@ var ZTCoachRules = (function(){
   // surrogato a casa; a casa un attrezzo nativo posseduto o tutti quelli del surrogato; all'aperto
   // la lista dei portatili; in palestra tutto).
   var VF_LIVELLI = { principiante: 1, intermedio: 2, avanzato: 3 };
-  var VF_APERTO = ['corpo_libero', 'elastico', 'banda', 'sbarra', 'cavigliere', 'trx'];
+  var VF_APERTO = ['corpo_libero', 'elastico', 'banda', 'sbarra', 'cavigliere', 'trx', 'parallele'];   // come APERTO_WHITELIST del generatore
   var VF_RIGA_MAX = 140;
 
   function vfNorm(s){ return String(s || '').toLowerCase().trim(); }
@@ -420,7 +420,7 @@ var ZTCoachRules = (function(){
   // Una regola sola per il generatore (filtro del pool), «Cambia per oggi» (_coCostruisci) e puoFare.
   // `attrezzo` è una lista: di norma basta averne uno. Nelle righe MISTE con «corpo libero» (18 a casa il
   // 1 novembre) «corpo libero» non basta più da solo:
-  //   · un APPOGGIO che la persona può segnare (panca, fitball, sbarra, trx) serve davvero: «Dip panca
+  //   · un APPOGGIO che la persona può segnare (panca, fitball, sbarra, trx, parallele) serve davvero: «Dip panca
   //     piedi rialzati» (panca;corpo libero) senza panca non si fa;
   //   · un CARICO (manubri, kettlebell, elastico…) resta facoltativo, ma se manca e la persona ha il surrogato
   //     la riga va col surrogato: «Affondo indietro manubri» (corpo libero;manubri, surrogato elastico) a casa
@@ -428,7 +428,7 @@ var ZTCoachRules = (function(){
   // Box, sedia, maniglie e palla medica non si possono segnare nell'attrezzatura: restano come prima.
   // haAttrezzo(parola normalizzata, «corpo_libero») → bool: ogni chiamante passa il suo insieme.
   // → { ok, surrogato }
-  var APPOGGI_SCEGLIBILI = ['panca', 'fitball', 'sbarra', 'trx'];
+  var APPOGGI_SCEGLIBILI = ['panca', 'fitball', 'sbarra', 'trx', 'parallele'];
   var CARICHI = ['elastico', 'manubri', 'bilanciere', 'kettlebell', 'macchina', 'multipower', 'cavo', 'cavi', 'cavo_basso', 'cavo_alto',
     'corda', 'palla_medica', 'disco', 'barra', 'trap_bar', 'rullino', 'pinza_a_molla'];
   function attrezziCasa(ex, haAttrezzo){

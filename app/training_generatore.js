@@ -2874,7 +2874,8 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   // attrezzatura ridotta vedrà solo gli esercizi marcati esplicitamente
   // come elastico/corpo libero/sbarra/banda nel catalogo.
 
-  const APERTO_WHITELIST = new Set(['corpo_libero','elastico','banda','sbarra','cavigliere','trx']);
+  // 'parallele' (Training 550, scelta di Ignazio del 1 novembre 2026): nei parchi ci sono, come la sbarra
+  const APERTO_WHITELIST = new Set(['corpo_libero','elastico','banda','sbarra','cavigliere','trx','parallele']);
   const LIVELLI_AMMESSI = {
     principiante: new Set(['principiante']),
     intermedio:   new Set(['principiante','intermedio']),

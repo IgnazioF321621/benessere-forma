@@ -109,13 +109,24 @@ const prima = (ex, h) => {
     // la lista per il foglio (tools/biblioteca-nomi/esiti/training550_attrezzo_da_correggere.tsv): le parallele come attrezzo
     const tsv = fs.readFileSync(path.join(__dirname, '..', 'biblioteca-nomi', 'esiti', 'training550_attrezzo_da_correggere.tsv'), 'utf8').trim().split('\n').map(r => r.split('\t'));
     const giusto = Object.fromEntries(tsv.slice(1).filter(r => r[3] !== 'da decidere').map(r => [r[0], r[3]]));
-    atteso('1 · la lista per il foglio ha l\'intestazione e le righe delle parallele', [tsv[0], ['EX681', 'EX682', 'EX683', 'EX072', 'EX357'].every(c => giusto[c] === 'parallele')], [['codice', 'nome', 'attrezzo_oggi', 'attrezzo_giusto', 'perche'], true]);
-    const corretto = DIP.map(r => giusto[r.codice] ? { ...r, attrezzo: giusto[r.codice] } : r);
+    atteso('1 · la lista per il foglio ha l\'intestazione e le righe delle parallele', [tsv[0], ['EX681', 'EX682', 'EX683', 'EX072', 'EX357'].every(c => giusto[c] === 'parallele')], [['codice', 'nome', 'attrezzo_oggi', 'attrezzo_giusto', 'luogo_oggi', 'luogo_giusto', 'perche'], true]);
+    const luogo = Object.fromEntries(tsv.slice(1).map(r => [r[0], r[5]]));
+    atteso('1 · ogni riga ha 7 colonne; la dip station va anche all\'aperto, il resto del luogo non cambia', [tsv.every(r => r.length === 7), luogo.EX072, luogo.EX357, tsv.slice(1).filter(r => r[4] !== r[5]).map(r => r[0])], [true, 'casa;palestra;libero', 'casa;palestra;libero', ['EX072', 'EX357']]);
+    const corretto = DIP.map(r => giusto[r.codice] ? { ...r, attrezzo: giusto[r.codice], luogo: luogo[r.codice] } : r);
     const dopo = R.varianteDifficile(corretto.find(r => r.codice === 'EX514'), corretto, opz);
     atteso('1 · col foglio corretto, a casa senza parallele: nessun dip alle parallele; non resta una più difficile fattibile', dopo, null);
     atteso('1 · … in palestra le parallele ci sono: la più difficile torna (Dip anelli, stesso livello, codice più basso)', (R.varianteDifficile(corretto.find(r => r.codice === 'EX514'), corretto, { ...opz, tipoAllen:'palestra' }) || {}).codice, 'EX680');
     atteso('1 · la regola passa da puoFare anche sulla colonna variante_difficile scritta nel foglio', R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX514'), variante_difficile:'EX682' }, corretto, opz), null);
     atteso('1 · e se la scritta non si può fare, prende la prossima che si può fare (dal Dip a terra: Dip panca, Ignazio ha la panca)', (R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX578'), variante_difficile:'EX682' }, corretto, opz) || {}).codice, 'EX063');
+    // la pillola «Parallele» (scelta di Ignazio del 1 novembre): la parola è quella del foglio corretto, nessun alias (L2)
+    const conParallele = { ...opz, attrezzatura: IGNAZIO.concat('parallele') };
+    atteso('1 · con «Parallele» segnata a casa: dalla Dip panca alla Dip parallele coreano', (R.varianteDifficile(corretto.find(r => r.codice === 'EX514'), corretto, conParallele) || {}).codice, 'EX681');
+    atteso('1 · all\'aperto le parallele valgono come la sbarra (parchi)', [R.puoFare(corretto.find(r => r.codice === 'EX681'), { tipoAllen:'aperto', attrezzatura:[] }), R.puoFare(corretto.find(r => r.codice === 'EX072'), { tipoAllen:'aperto', attrezzatura:[] })], [true, true]);
+    const html = fs.readFileSync(path.join(__dirname, '..', '..', 'zona-tracker.html'), 'utf8');
+    const gen = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'training_generatore.js'), 'utf8');
+    atteso('1 · la pillola c\'è nell\'attrezzatura dell\'onboarding, con la parola del catalogo', /data-gear="parallele" onclick="m1ToggleAttrezzatura\('parallele'\)">Parallele \/ dip station</.test(html), true);
+    atteso('1 · «parallele» nella lista dell\'aperto del generatore, nessun alias in GEAR_ALIASES', [/APERTO_WHITELIST = new Set\(\[[^\]]*'parallele'/.test(gen), /GEAR_ALIASES = \{[^}]*parallele/.test(gen)], [true, false]);
+    atteso('1 · dopo il foglio corretto «parallele» è viva: 7 righe la usano come attrezzo', tsv.slice(1).filter(r => r[3] === 'parallele').length, 7);
   }
   // ── 3 · la via di progressione segue l'attrezzo in mano ──
   {
