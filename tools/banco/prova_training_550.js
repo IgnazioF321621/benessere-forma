@@ -135,6 +135,12 @@ const prima = (ex, h) => {
     atteso('3 · via «carico» a corpo libero (niente pesi in mano): più ripetizioni, non «+10 lbs»', prossima({ name:'Affondo indietro manubri', progressione:'carico', eq:'corpo libero' }, 0), 'S2: corpo libero · più ripetizioni · sali a 13 reps · RIR 2');
     atteso('3 · senza attrezzo scritto (scheda vecchia): la via del catalogo, come prima', prossima({ name:'Rematore vecchio', progressione:'carico' }, 30), 'S2: 40 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · l\'elenco dei carichi dell\'app è quello di shared', W.eval('_ATTREZZI_CARICO').length, 17);
+    // ── 5 · nelle tenute la PROSSIMA non scrive il RIR (feedback del 7/10) ──
+    const tenuta = (reps) => W.computeNextSetSuggestion({ sessionId:'upperB', exName:'Plank laterale avambraccio', setNum:1, reps, resistance:0, rir:null,
+      exData:{ name:'Plank laterale avambraccio', sets:3, reps:'20-40 sec', isTimed:true, durationBased:true, progressione:'tenuta più lunga', eq:'corpo libero' }, sess });
+    atteso('5 · tenuta: la PROSSIMA nel recupero senza RIR', [tenuta(40), tenuta(30)].map(t => /RIR/.test(t)), [false, false]);
+    atteso('5 · tenuta: il testo resta col tempo', tenuta(40), 'S2: corpo libero · 40 sec');
+    atteso('5 · a ripetizioni il RIR resta', /RIR 2$/.test(prossima({ name:'Rematore manubri panca piana', progressione:'carico', eq:'manubri' }, 30)), true);
   }
   // ── 4 · il riquadro «surrogato» della GIF non c'è più: il Worker rispondeva sempre is_surrogate:false ──
   {

@@ -158,7 +158,7 @@ async function nuovo(o){
     atteso('320 · elastico più duro (curl): un passo in su, nominato', sugg('Curl elastico', 15, 2, '20'), 'S2: elastico più duro: 30 lbs · riparti da 10 reps · RIR 2');
     atteso('320 · carico (panca): come prima', sugg('Panca elastico', 10, 2, '20'), 'S2: 30 lbs · riparti da 6 reps · RIR 2');
     atteso('320 · senza colonna (rematore): come prima', sugg('Rematore elastico', 10, 2, '20'), 'S2: 30 lbs · riparti da 6 reps · RIR 2');
-    atteso('320 · tenuta più lunga (plank)', sugg('Plank', 40, 2, ''), 'S2: corpo libero · tenuta più lunga · sali a 45 sec · RIR 2');
+    atteso('320 · tenuta più lunga (plank), senza RIR nelle tenute (Training 550)', sugg('Plank', 40, 2, ''), 'S2: corpo libero · tenuta più lunga · sali a 45 sec');
     atteso('320 · sotto il tetto niente cambia: +1 sul lato debole', sugg('Squat calcio laterale', 9, 2, ''), 'S2: corpo libero · 10 reps per lato · RIR 2');
     atteso('320 · sotto il minimo a corpo libero resta «variante più facile» (Training 330)', /variante più facile/.test(sugg('Squat calcio laterale', 6, 1, '')), true);
     a.ST.trainSession = null; a.ST.trainTab = 'piano'; a.ST.trainComeCresciOpen = true; a.win.renderTraining();

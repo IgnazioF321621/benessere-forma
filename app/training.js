@@ -2569,9 +2569,11 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const caricoScritto = !(resistance == null || String(resistance).trim() === '') || _exACorpoLibero(exData);
   const clampReps = (n) => Math.max(repsMin, Math.min(repsMax, n));
   // Suggerimento = sigla "SN:" + pezzi separati da " · " (punto medio, coerente
-  // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
+  // con APPENA FATTA) + RIR target in coda (fuori dalle tenute). Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
-  const out = (...parts) => `${head} ${[...parts.filter(Boolean), `RIR ${targetRIR}`].join(' · ')}`;
+  // Nelle tenute il RIR non si scrive (Training 550, feedback di Ignazio del 7/10: «quando c'è il tempo a scalare per la
+  // successiva dà il RIR»): il RIR conta ripetizioni di riserva, una tenuta si regola sui secondi. Come il badge della serie.
+  const out = (...parts) => `${head} ${[...parts.filter(Boolean), isTimed ? null : `RIR ${targetRIR}`].filter(Boolean).join(' · ')}`;
   // fine(prossima, …parti): il testo come sempre e, con struttura, anche i numeri della prossima serie
   // (un carico mai scritto resta null: il registro non lo compila con uno 0, Training 510)
   const fine = (prossima, ...parts) => {
@@ -2743,7 +2745,7 @@ function obiettivoPrimaSerie(exName, sessionId){
   if(o.nota){
     const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
       : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : o.resistance == null ? '' : 'corpo libero');
-    o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
+    o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, parsed.kind === 'seconds' ? null : `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
   }
   return o;
 }
