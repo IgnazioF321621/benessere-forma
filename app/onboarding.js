@@ -193,7 +193,7 @@ function m1UpdateResendText() {
 async function m1Resend() {
   if(ST.m1OtpResendIn > 0) return;
   const {error} = await supa.auth.signInWithOtp({ email: _otpEmail, options: { shouldCreateUser: true } });
-  if(error) { showAuthMsg('Errore reinvio: ' + error.message, 'err'); return; }
+  if(error) { showAuthMsg(_testoAccesso(error, 'Il codice non è partito: riprova tra poco.'), 'err'); return; }
   m1StartResendTimer();
 }
 
@@ -618,14 +618,14 @@ async function sendOTP() {
   });
 
   if (error) {
-    showAuthMsg('Errore: ' + error.message, 'err');
-    btn.disabled = false; btn.textContent = 'Invia codice →';
+    showAuthMsg(_testoAccesso(error, 'Il codice non è partito: riprova tra poco.'), 'err');
+    btn.disabled = false; btn.textContent = 'Mandami il codice';
     return;
   }
 
   // Passa allo step 2 (OTP) usando lo state-machine M1
   _otpEmail = email;
-  btn.disabled = false; btn.textContent = 'Invia codice →';
+  btn.disabled = false; btn.textContent = 'Mandami il codice';
   m1ShowAuth('otp');
 }
 
@@ -657,7 +657,7 @@ function backToEmail() {
   document.getElementById('auth-otp').value = '';
   ST.m1OtpCells = ['','','','','',''];
   const btn = document.getElementById('auth-btn');
-  if(btn) { btn.disabled = false; btn.textContent = 'Invia codice →'; }
+  if(btn) { btn.disabled = false; btn.textContent = 'Mandami il codice'; }
   const otpBtn = document.getElementById('auth-otp-btn');
   if(otpBtn) { otpBtn.disabled = false; otpBtn.textContent = 'Verifica e accedi →'; }
   m1ShowAuth('email');
@@ -671,6 +671,154 @@ function showAuthMsg(msg, type) {
 }
 function hideAuthMsg() {
   document.getElementById('auth-msg').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACCESSO CON PASSWORD (Fondamenta 250, 1 novembre 2026, come MB21)
+// ═══════════════════════════════════════════════════════════
+// Email e password valgono ovunque: iPhone, Safari, Mac, app installata. Il codice a 6 cifre resta
+// per la prima volta e per la password dimenticata: chi entra col codice e non ha ancora il segno
+// `password_scelta` sull'account trova «Crea la tua password». La password non passa mai da
+// console, toast, dbq o reportError: le chiamate ad Auth sono dirette e leggono solo error.code.
+const PASSWORD_MINIMO = 8;
+
+// Testo per chi entra, senza la parola «errore»: si decide sul codice, mai sul testo inglese (L37)
+function _testoAccesso(error, altrimenti) {
+  const c = (error && error.code) || '', st = (error && error.status) || 0, m = (error && error.message) || '';
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'Sei senza rete: riprova quando torna.';
+  if (c === 'over_request_rate_limit' || c === 'over_email_send_rate_limit' || st === 429) return 'Troppi tentativi: riprova tra qualche minuto.';
+  if (/failed to fetch|network/i.test(m)) return 'Non riesco a collegarmi: riprova tra poco.';
+  return altrimenti;
+}
+
+// Il bottone accanto a un campo password: mostra e nasconde ciò che si scrive
+function mostraPassword(btn) {
+  const campo = btn && btn.parentNode && btn.parentNode.querySelector('input');
+  if (!campo) return;
+  const vedi = campo.type === 'password';
+  campo.type = vedi ? 'text' : 'password';
+  btn.textContent = vedi ? 'Nascondi' : 'Mostra';
+  btn.setAttribute('aria-label', vedi ? 'Nascondi la password' : 'Mostra la password');
+}
+
+async function entraConPassword() {
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
+  const campo = document.getElementById('auth-password');
+  const password = campo.value;
+  if (!email || !email.includes('@')) { showAuthMsg('Scrivi la tua email.', 'err'); return; }
+  if (!password) { showAuthMsg('Scrivi la tua password, oppure tocca «Mandami il codice».', 'err'); return; }
+  const btn = document.getElementById('auth-pw-btn');
+  btn.disabled = true; btn.textContent = 'Entro…';
+  hideAuthMsg();
+  let res;
+  try { res = await supa.auth.signInWithPassword({ email, password }); }
+  catch (e) { res = { data:null, error:{ message: (e && e.message) || 'network' } }; }
+  btn.disabled = false; btn.textContent = 'Entra →';
+  const error = res && res.error;
+  if (error || !(res.data && res.data.session && res.data.session.user)) {
+    const c = (error && error.code) || '';
+    const sbagliata = !error || c === 'invalid_credentials' || c === 'email_not_confirmed' || error.status === 400;
+    showAuthMsg(_testoAccesso(error, sbagliata
+      ? 'Email o password non corrispondono. Se non hai ancora una password, o non la ricordi, tocca «Mandami il codice».'
+      : 'Non sono riuscito a farti entrare: riprova tra poco.'), 'err');
+    return;
+  }
+  campo.value = '';
+  ST.user = res.data.session.user;
+  // Entrato con la password: ce l'ha, anche se il segno manca (es. messa da fuori). Lo si scrive in sfondo.
+  if (!((ST.user.user_metadata || {}).password_scelta)) {
+    try { supa.auth.updateUser({ data:{ password_scelta:true } }).then(r => { if (r && r.data && r.data.user) ST.user = r.data.user; }).catch(() => {}); } catch (e) {}
+  }
+  await loadAndStart();
+}
+
+// «Crea la tua password»: all'ingresso nell'app, una volta per apertura, a chi non ha il segno.
+// Mai sopra un altro foglio, durante un allenamento, nell'anteprima o in modalità test: se c'è
+// qualcosa davanti riprova fra poco, al massimo qualche volta.
+let _pwTentativi = 0;
+function passwordDaCreareControlla() {
+  const u = ST.user;
+  if (!u || !u.id || /^test-/.test(u.id) || ST.previewOnboarding || ST._passwordChiesta) return;
+  if ((u.user_metadata || {}).password_scelta) return;
+  const app = document.getElementById('app');
+  const occupato = !app || !app.classList.contains('visible') || document.visibilityState === 'hidden' || ST.trainSession
+    || (typeof _csaFoglioAperto === 'function' && _csaFoglioAperto());
+  if (occupato) {
+    if (_pwTentativi++ < 6) setTimeout(passwordDaCreareControlla, 5000);
+    return;
+  }
+  ST._passwordChiesta = true;
+  foglioPassword(true);
+}
+
+// Il foglio della password: primaVolta = «Crea la tua password» con «Più tardi», altrimenti «Cambia
+// password» dalle Impostazioni. Dentro un <form> con il nome utente nascosto e new-password, così
+// iPhone e Mac propongono di salvarla nel Portachiavi. Se Supabase chiede di riconfermare chi sei
+// (reauthentication_needed) parte un codice via email e il foglio chiede quello.
+function foglioPassword(primaVolta) {
+  return _foglio({ annullato:false, riempi(box, chiudi) {
+    const email = (ST.user && ST.user.email) || '';
+    box.innerHTML = '<h3>' + (primaVolta ? 'Crea la tua password' : 'Cambia password') + '</h3>'
+      + '<p>' + (primaVolta ? 'Così la prossima volta entri con email e password, su iPhone, Mac e nell\'app installata, senza aspettare il codice.' : 'Scrivi la nuova password due volte.') + '</p>'
+      + '<form class="pw-form" novalidate>'
+      + '<input type="email" name="username" autocomplete="username" value="' + esc(email) + '" hidden>'
+      + '<label class="pw-etichetta">Password (almeno ' + PASSWORD_MINIMO + ' caratteri)</label>'
+      + '<div class="pw-campo"><input id="pw-1" class="inp" type="password" autocomplete="new-password"><button type="button" class="pw-occhio" onclick="mostraPassword(this)" aria-label="Mostra la password">Mostra</button></div>'
+      + '<label class="pw-etichetta">Ripeti la password</label>'
+      + '<div class="pw-campo"><input id="pw-2" class="inp" type="password" autocomplete="new-password"><button type="button" class="pw-occhio" onclick="mostraPassword(this)" aria-label="Mostra la password">Mostra</button></div>'
+      + '<div id="pw-codice-riga" hidden><label class="pw-etichetta">Il codice che ti ho mandato</label><input id="pw-codice" class="inp" type="tel" inputmode="numeric" autocomplete="one-time-code" maxlength="10"></div>'
+      + '<div id="pw-msg" class="pw-msg" role="status"></div>'
+      + '<div class="foglio-bottoni"><button type="button" class="btn btn-ghost" id="pw-no">' + (primaVolta ? 'Più tardi' : 'Annulla') + '</button>'
+      + '<button type="submit" class="btn btn-primary foglio-ok" id="pw-si">Salva</button></div></form>';
+    const $ = (s) => box.querySelector(s);
+    const msg = (t) => { $('#pw-msg').textContent = t; };
+    $('#pw-no').onclick = () => chiudi(false);
+    setTimeout(() => { try { $('#pw-1').focus(); } catch (e) {} }, 60);
+    let serveCodice = false;
+    $('form').onsubmit = async (ev) => {
+      ev.preventDefault();
+      const p1 = $('#pw-1').value, p2 = $('#pw-2').value;
+      if (p1.length < PASSWORD_MINIMO) { msg('La password deve avere almeno ' + PASSWORD_MINIMO + ' caratteri.'); return; }
+      if (p1 !== p2) { msg('Le due password non sono uguali.'); return; }
+      const nonce = serveCodice ? $('#pw-codice').value.replace(/\D/g, '') : '';
+      if (serveCodice && !nonce) { msg('Scrivi il codice che ti ho mandato per email.'); return; }
+      const btn = $('#pw-si'); btn.disabled = true; btn.textContent = 'Salvo…';
+      const attributi = { password:p1, data:{ password_scelta:true } };
+      if (nonce) attributi.nonce = nonce;
+      let res;
+      try { res = await supa.auth.updateUser(attributi); }
+      catch (e) { res = { data:null, error:{ message:(e && e.message) || 'network' } }; }
+      btn.disabled = false; btn.textContent = 'Salva';
+      const error = res && res.error, c = (error && error.code) || '';
+      if (!error) {
+        if (res.data && res.data.user) ST.user = res.data.user;
+        chiudi(true);
+        showToast('Password salvata: da ora entri con email e password');
+        return;
+      }
+      if (c === 'reauthentication_needed' || c === 'reauthentication_not_valid') {
+        if (c === 'reauthentication_not_valid') { msg('Il codice non va bene o è scaduto: controlla l\'ultima email e riprova.'); return; }
+        let r;
+        try { r = await supa.auth.reauthenticate(); } catch (e) { r = { error:{ message:(e && e.message) || 'network' } }; }
+        if (r && r.error) { msg(_testoAccesso(r.error, 'Il codice non è partito: riprova tra poco.')); return; }
+        serveCodice = true;
+        $('#pw-codice-riga').hidden = false;
+        msg('Per cambiarla ti mando un codice: lo trovi nell\'email. Scrivilo qui sopra e tocca Salva.');
+        try { $('#pw-codice').focus(); } catch (e) {}
+        return;
+      }
+      if (c === 'same_password') {
+        // È già la sua password: si segna e basta, così il foglio non torna
+        try { const r = await supa.auth.updateUser({ data:{ password_scelta:true } }); if (r && r.data && r.data.user) ST.user = r.data.user; } catch (e) {}
+        chiudi(true);
+        showToast('È già la tua password: da ora entri con quella');
+        return;
+      }
+      if (c === 'weak_password') { msg('Password troppo semplice: allungala o aggiungi numeri e simboli.'); return; }
+      if (c === 'session_not_found' || c === 'bad_jwt' || error.status === 401 || error.status === 403) { msg('L\'accesso è scaduto: esci, rientra col codice e riprova.'); return; }
+      msg(_testoAccesso(error, 'Non salvata: riprova tra poco.'));
+    };
+  } });
 }
 
 // ═══════════════════════════════════════════════════════════

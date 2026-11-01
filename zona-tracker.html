@@ -91,11 +91,18 @@
         <svg width="28" height="28" viewBox="0 0 100 100"><rect width="100" height="100" rx="18" fill="#2A7A6F"/><text x="50" y="68" text-anchor="middle" font-family="Arial Black,sans-serif" font-weight="900" font-size="46" fill="white">ZT</text></svg>
         <span class="m1-auth-logo-mini-text">Zona Tracker · Benessere &amp; Forma</span>
       </div>
-      <h1 class="m1-auth-title">La tua email</h1>
-      <p class="m1-auth-sub">Ti invieremo un codice a 6 cifre per accedere.</p>
-      <input id="auth-email" class="m1-auth-input" type="email" placeholder="tu@esempio.com" autocomplete="email"
-        onkeydown="if(event.key==='Enter')sendOTP()"/>
-      <button class="btn btn-primary btn-full m1-auth-cta" onclick="sendOTP()" id="auth-btn">Invia codice →</button>
+      <h1 class="m1-auth-title">Entra</h1>
+      <p class="m1-auth-sub">Con la tua email e la tua password.</p>
+      <form id="auth-pw-form" class="pw-form" onsubmit="event.preventDefault();entraConPassword()">
+        <input id="auth-email" class="m1-auth-input" type="email" placeholder="tu@esempio.com" autocomplete="username" inputmode="email" autocapitalize="off" aria-label="La tua email"/>
+        <div class="pw-campo"><input id="auth-password" class="m1-auth-input" type="password" placeholder="La tua password" autocomplete="current-password" aria-label="La tua password"/><button type="button" class="pw-occhio" onclick="mostraPassword(this)" aria-label="Mostra la password">Mostra</button></div>
+        <button type="submit" class="btn btn-primary btn-full m1-auth-cta" id="auth-pw-btn">Entra →</button>
+      </form>
+      <div class="pw-codice">
+        <b>Prima volta, o password dimenticata?</b>
+        <p>Ti mando un codice a 6 cifre: entri e scegli la tua password.</p>
+        <button type="button" class="btn btn-ghost btn-full" onclick="sendOTP()" id="auth-btn">Mandami il codice</button>
+      </div>
     </div>
 
     <!-- AUTH — OTP -->
@@ -1411,6 +1418,7 @@
         <div class="set-account-etichetta">Email dell'account</div>
         <div id="set-email" class="set-account-email">—</div>
       </div>
+      <button type="button" class="btn btn-ghost btn-full" id="set-password-btn" onclick="foglioPassword(false)" style="margin-top:14px;">Cambia password</button>
       <button class="btn btn-ghost btn-full" onclick="logout()" style="margin-top:14px;color:var(--err);">Esci dall'account</button>
     </div>
 
@@ -2193,6 +2201,7 @@ function showScreen(name) {
   if(name === 'app') seguiFogli();
   if(name === 'app' && typeof comeStaiAdessoControlla === 'function') setTimeout(comeStaiAdessoControlla, 1500);   // Home 170
   if(name === 'app' && typeof apriDaNotifica === 'function') { apriDaNotifica(); setTimeout(pushRiallinea, 2500); }   // Notifiche 170
+  if(name === 'app' && typeof passwordDaCreareControlla === 'function') setTimeout(passwordDaCreareControlla, 3000);   // Fondamenta 250
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
   if(name === 'auth' && !privacyAccettata()) name = 'privacy';
