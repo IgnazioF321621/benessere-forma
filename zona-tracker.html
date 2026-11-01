@@ -1934,6 +1934,7 @@ function profileIsComplete(profile) {
 async function caricaDatiAvvio({ storico } = {}) {
   await Promise.all([loadCatalog(), loadActiveScheda(), ...(storico ? [loadAllDays(), hydrateTrainingSetsFromCloud()] : [])]);
   await loadSupps();
+  rilegaIntegratori();   // Stile 040: le righe dello storico lette prima degli integratori trovano ora il prodotto
   await Promise.all([loadPackages(), loadExtrasAll(), loadTodaySuppLog()]);
 }
 
