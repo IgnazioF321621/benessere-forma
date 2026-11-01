@@ -815,7 +815,7 @@ async function saveOnboarding(opts) {
     applyProfile(ST.profile);
     showScreen('app');
     renderOggi();
-    showPage('home');
+    showPage(paginaDiAvvio());   // il primo ingresso da un evento del Calendario (Training 541)
     return;
   }
 

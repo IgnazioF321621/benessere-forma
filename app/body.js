@@ -96,7 +96,7 @@ async function m2Skip() {
     if(ST.profile) ST.profile.m2_skipped = true;
     saveCache();
     showScreen('app');
-    renderOggi(); showPage('home');
+    renderOggi(); showPage(paginaDiAvvio());   // il primo ingresso da un evento del Calendario (Training 541)
   } catch(e) {
     if(errEl){ errEl.style.display='block'; errEl.textContent='Errore: '+e.message; }
   }

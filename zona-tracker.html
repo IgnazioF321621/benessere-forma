@@ -1996,7 +1996,7 @@ async function loadAndStart() {
       } else {
         showScreen('app');
         renderOggi();
-        showPage('home');
+        showPage(paginaDiAvvio());
         // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
         // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
         // (la funzione training resta non-agganciata al boot automatico — solo URL force).
@@ -2037,7 +2037,7 @@ async function loadAndStart() {
     if(await m2ShouldShowEntry(ST.profile)) { await m2EntryIntro(); return; }
     showScreen('app');
     renderOggi();
-    showPage('home');
+    showPage(paginaDiAvvio());
     // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
     // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
     (async () => {
@@ -2061,7 +2061,7 @@ async function loadAndStart() {
     }
     showScreen('app');
     renderOggi();
-    showPage('home');
+    showPage(paginaDiAvvio());
     // F.1 postino: PRIMA del welcome (deve creare la draft che l'overlay leggerà).
     // Step 3.16: anche _trainGenMaybeForceFromUrl per ?schedaGen=1 / ?schedaDebug=1
     (async () => {
@@ -2219,6 +2219,19 @@ function showScreen(name) {
   // Banner ANTEPRIMA: classe sul body settata in base al flag preview.
   // Il CSS mostra/nasconde #m1-preview-banner solo se la classe è attiva.
   document.body.classList.toggle('preview-onboarding', !!ST.previewOnboarding);
+}
+
+// La pagina con cui si apre l'app (Training 541, 1 novembre 2026): l'evento del Calendario porta ?apri=training
+// (ZTRotazione.URL_TRAINING) e l'app si apre su Training; il parametro si toglie dall'indirizzo, così una ricarica
+// riparte dalla Home. Senza Training (hasTraining) showPage resta sulla Home da sola.
+function paginaDiAvvio() {
+  let apri = null;
+  try {
+    const u = new URL(location.href);
+    apri = u.searchParams.get('apri');
+    if (apri !== null) { u.searchParams.delete('apri'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); }
+  } catch (e) {}
+  return apri === 'training' ? 'training' : 'home';
 }
 
 function updateNavVisibility() {

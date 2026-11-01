@@ -85,9 +85,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Navigazione verso l'app HTML → rete prima (al massimo ATTESA_RETE_MS se c'e' una copia), poi copia
+  // Navigazione verso l'app HTML → rete prima (al massimo ATTESA_RETE_MS se c'e' una copia), poi copia.
+  // La pagina è la stessa con qualunque parametro (?apri=training dal Calendario, Training 541): la copia si tiene e si
+  // cerca per indirizzo senza parametri, così senza rete il link di un evento apre l'app invece dell'errore.
   if (event.request.mode === 'navigate' || url.pathname.endsWith('zona-tracker.html')) {
-    event.respondWith(reteOCopia(event.request, event.request));
+    event.respondWith(reteOCopia(event.request, url.pathname.endsWith('zona-tracker.html') ? url.pathname : event.request));
     return;
   }
 
