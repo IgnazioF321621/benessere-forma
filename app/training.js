@@ -4838,10 +4838,6 @@ function renderTraining(){
       mediaHtml = `<div class="ex-media-gif ex-media-vuoto">Immagine non ancora disponibile</div>`;
     }
 
-    // Banner surrogato — solo quando la GIF Worker e' in pagina E e' marcata surrogata
-    const surrogateBanner = (gifSrc && ai.executionSurrogate && ai.executionSurrogateNote)
-      ? `<div class="ex-surrogate-banner"><span class="icon">ⓘ</span><span>${ai.executionSurrogateNote}</span></div>`
-      : '';
     const executionList = (ai.execution && ai.execution.length)
       ? `<ol class="modal-list">${ai.execution.map(s=>`<li>${s}</li>`).join('')}</ol>` : '';
     const errorsList = (ai.commonErrors && ai.commonErrors.length)
@@ -4859,7 +4855,6 @@ function renderTraining(){
         </div>
 
         ${mediaHtml}
-        ${surrogateBanner}
 
         ${(ai.setup && ai.setup.length) ? `<div class="modal-section">
           <h4>Setup</h4>
@@ -5416,8 +5411,6 @@ async function openExerciseAI(exName, sessionId) {
     executionGif: null,
     executionLoading: true,
     executionStatus: null,        // 'cached' | 'missing' | 'error' | 'not_searched_yet'
-    executionSurrogate: false,
-    executionSurrogateNote: null,
     content: '',
     loading: true,
   };
@@ -5442,8 +5435,6 @@ async function openExerciseAI(exName, sessionId) {
       executionGif: mediaResp.cached_url || null,
       executionLoading: false,
       executionStatus: mediaResp.status || 'error',
-      executionSurrogate: !!mediaResp.is_surrogate,
-      executionSurrogateNote: mediaResp.surrogate_note || null,
     };
     renderTraining();
   });

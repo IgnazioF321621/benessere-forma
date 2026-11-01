@@ -136,6 +136,14 @@ const prima = (ex, h) => {
     atteso('3 · senza attrezzo scritto (scheda vecchia): la via del catalogo, come prima', prossima({ name:'Rematore vecchio', progressione:'carico' }, 30), 'S2: 40 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · l\'elenco dei carichi dell\'app è quello di shared', W.eval('_ATTREZZI_CARICO').length, 17);
   }
+  // ── 4 · il riquadro «surrogato» della GIF non c'è più: il Worker rispondeva sempre is_surrogate:false ──
+  {
+    const leggi = (f) => fs.readFileSync(path.join(__dirname, '..', '..', f), 'utf8');
+    const resti = ['app/training.js', 'app/pirsi.js', 'app/stile.css', 'worker/src/index.js', 'zona-tracker.html']
+      .filter(f => /executionSurrogate|surrogateBanner|ex-surrogate-banner|is_surrogate|surrogate_note|--surrogato\b/.test(leggi(f)));
+    atteso('4 · nessun resto del riquadro morto (app, stile, Worker)', resti, []);
+    atteso('4 · la nota «Versione adattata» (isSurrogato dalla scheda) resta', /Versione adattata/.test(leggi('app/training.js')), true);
+  }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
 })();

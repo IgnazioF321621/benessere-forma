@@ -29,7 +29,7 @@ body{color:var(--t1);font-family:var(--font-sans);-webkit-font-smoothing:antiali
   /* Nutrition: crema del coach, macro, zona */
   --crema:#FDF7E8;--crema-bordo:#E8D9A8;--ocra:#8B6B1E;--macro-c:#A0490A;--macro-c-lt:#FDE8D0;--macro-p:#1A6B35;--macro-p-lt:#D4EDDA;--macro-g:#7A5500;--macro-g-lt:#FFF3CD;--zona-testo:#3A2C12;--zona-testo-2:#3A2D10;--carb-lt-2:#FFF3DC;--saltato:#8B6F6F;--sostituito:#8B6F2A;--badge-testo:#7A4000;--badge-sub:#A05000;--oro:#FFD700;--arancio:#FFA500;
   /* Avvisi e strisce */
-  --prio-gialla:#8A9A2A;--surrogato:#FFF8E0;--surrogato-bordo:#F5E2A3;--surrogato-testo:#8A6500;--allerta:#FFF4E5;--allerta-testo:#7A3A1A;--anteprima:#FFF7E0;--anteprima-bordo:#E8D8A8;
+  --prio-gialla:#8A9A2A;--allerta:#FFF4E5;--allerta-testo:#7A3A1A;--anteprima:#FFF7E0;--anteprima-bordo:#E8D8A8;
   /* Body */
   --mod-body-forte:#5E4A7A;--body-velo:#EDE9F8;--body-testo:#3F3155;
   /* La veste nuova, Giro 1 (Passo 0, scelta A di Ignazio del 29/10/2026): li usa solo html.v5. Pieno con il bianco sopra (≥ 5:1), velo e scuro per la barra e le scritte di zona */
@@ -529,13 +529,6 @@ div.ex-media-vuoto{display:flex;align-items:center;justify-content:center;text-a
   animation:exMediaSkel 1.4s ease-in-out infinite;
 }
 @keyframes exMediaSkel{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
-.ex-surrogate-banner{
-  display:flex;align-items:flex-start;gap:8px;
-  background:var(--surrogato);border:1px solid var(--surrogato-bordo);color:var(--surrogato-testo);
-  padding:8px 12px;font-size:12px;line-height:1.4;
-  border-radius:8px;margin:0 0 16px 0;
-}
-.ex-surrogate-banner .icon{font-size:14px;line-height:1.2;flex-shrink:0;}
 /* ── REST MODAL — sticky countdown + scrollable body (6 maggio 2026) ── */
 .rest-modal-overlay{
   position:fixed;inset:0;
