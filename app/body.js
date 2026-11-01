@@ -1717,7 +1717,10 @@ function renderBodyTrend(){
       { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, metrica:'viscerale' },
       { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, metrica:'bmi' },
     ];
-    const cards = metricDefs.map(def => {
+    // Stile 040 (1 novembre 2026), a veste accesa: il peso sta gia' in «Progresso verso l'obiettivo» (numero, obiettivo,
+    // quanto e' cambiato nell'intervallo): qui non si ripete
+    const v5Evoluzione = document.documentElement.classList.contains('v5');
+    const cards = metricDefs.filter(def => !(v5Evoluzione && def.metrica === 'peso')).map(def => {
       const fmt = def.precise ? fmtMeasure : fmtMetric;
       const pts  = filtered.filter(r => { const v = def.get(r); return v != null && !isNaN(v); });
       const vals = pts.map(def.get);
