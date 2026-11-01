@@ -21,6 +21,7 @@ const APP_FILES = [
   'shared/rotazione.js',
   'shared/ritratto.js',
   'shared/fitdays.js',
+  'shared/promemoria.js',
   'app/body.js',
   'app/nutrition.js',
   'app/home.js',
@@ -30,6 +31,7 @@ const APP_FILES = [
   'app/onboarding.js',
   'app/impostazioni.js',
   'app/segnala.js',
+  'app/notifiche.js',
 ];
 
 // Rete prima, ma non all'infinito (Fondamenta 120, 2 ottobre 2026): con rete debole la pagina e i file
@@ -110,4 +112,39 @@ self.addEventListener('fetch', event => {
     event.respondWith(copiaORete(event.request));
     return;
   }
+});
+
+// ── Notifiche 170: il promemoria del pasto non registrato ──
+// Il Worker manda l'avviso cifrato (src/webpush.js); qui si mostra com'e' arrivato: titolo, corpo, icona
+// dell'app, un tag per pasto (un avviso nuovo sullo stesso pasto sostituisce quello di prima). Senza corpo
+// leggibile si mostra un avviso generico: un push ricevuto va mostrato comunque, altrimenti il browser
+// mostra il suo e puo' togliere il permesso.
+self.addEventListener('push', event => {
+  let dati = {};
+  try { dati = event.data ? event.data.json() : {}; } catch (e) { dati = {}; }
+  const titolo = dati.titolo || 'Zona Tracker';
+  const opzioni = {
+    body: dati.corpo || 'Hai un pasto da registrare.',
+    icon: BASE + 'assets/icone/icona-192.png',
+    badge: BASE + 'assets/icone/icona-192.png',
+    tag: dati.tag || 'pasto',
+    renotify: true,
+    data: { url: dati.url || (BASE + 'zona-tracker.html?apri=oggi'), slot: dati.slot || null },
+  };
+  event.waitUntil(self.registration.showNotification(titolo, opzioni));
+});
+
+// Il tocco sull'avviso: la pagina aperta riceve {apri:'oggi'} (app/notifiche.js la porta sul tab Nutrition);
+// senza pagina aperta se ne apre una con ?apri=oggi.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || (BASE + 'zona-tracker.html?apri=oggi');
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(finestre => {
+    const nostra = finestre.find(w => w.url && w.url.indexOf(BASE + 'zona-tracker.html') !== -1);
+    if (nostra) {
+      try { nostra.postMessage({ apri: 'oggi' }); } catch (e) {}
+      return nostra.focus ? nostra.focus() : null;
+    }
+    return self.clients.openWindow ? self.clients.openWindow(url) : null;
+  }));
 });

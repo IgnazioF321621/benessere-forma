@@ -14,8 +14,10 @@ binding = "IMAGES"
 
 # Pirsi propone (Fase 3): ogni lunedì alle 06:00 Europe/Rome. I cron sono in UTC:
 # 04:00 d'estate (CEST) e 05:00 d'inverno (CET); il Worker lavora solo in quello che a Roma sono le 6.
+# Il promemoria del pasto non registrato (Notifiche 170): ogni ora, e il Worker lavora solo quando a Roma sono
+# le 10, le 15 o le 22 (src/promemoria-cron.js). Il piano Free dà 5 cron per account: questi sono 3.
 [triggers]
-crons = ["0 4 * * 1", "0 5 * * 1"]
+crons = ["0 4 * * 1", "0 5 * * 1", "0 * * * *"]
 
 # Limite di richieste per persona (Pirsi 010). La chiave è l'id della persona.
 # Senza questi binding il Worker ripiega su un conto in memoria (src/porta.js).

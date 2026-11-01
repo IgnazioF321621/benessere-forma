@@ -12,6 +12,10 @@
 >
 > **Le foto dei check.** Le foto restano nel tuo spazio privato. Vanno a Gemini (un servizio esterno) solo se tocchi tu «Fai leggere le foto», e prima ti viene chiesto il consenso ogni volta che serve.
 >
+> **Gli avvisi sul telefono.** Se accendi i promemoria dei pasti, l'indirizzo di consegna del tuo telefono va al servizio di notifiche del telefono (Apple, Google o Mozilla), e alle ore scelte parte un avviso se un pasto manca. Il testo dell'avviso è cifrato: lo legge solo il tuo telefono. Partono spenti e li spegni quando vuoi.
+
+*Aggiunta il 1 novembre 2026 (Notifiche 170). **Spenta per decisione di Ignazio**: finché l'app ha un utente solo `PRIVACY_VERSIONE` resta `'2026-10-03'` e nessuno la rilegge; si alza quando si riapre ai tester (Metodo 110), e allora si approva tutto il testo in una volta.*
+>
 > **Cosa puoi fare.** Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file e cancellare l'account: dati, foto e accesso vengono eliminati per sempre.
 
 Il consenso alle foto si chiede **alla prima lettura** (foglio «Lettura delle foto», tasti «Acconsento» e «Annulla», `consensoLetturaFoto` in `app/body.js`): se annulla, non parte niente. La risposta sì resta sul telefono (`zt_foto_ok`). Il testo:
@@ -26,6 +30,7 @@ Deciso da Ignazio il 3 ottobre 2026: i gestori restano citati per nome (Supabase
 |---|---|---|---|---|
 | Email di accesso | Supabase Auth (`auth.users`) | `signInWithOtp`, `verifyOtp` (`app/onboarding.js`) | Supabase | Accesso con codice via email |
 | Profilo: nome, cognome, sesso, età, altezza, peso, obiettivo, regime, intolleranze, note di salute, data inizio allenamento | `profiles` | `saveOnboarding`, `saveSettings` | Supabase | È il profilo |
+| Iscrizione alle notifiche: indirizzo di consegna del telefono e le due chiavi del browser; gli avvisi mandati (giorno e pasto) | `push_iscrizioni`, `promemoria_inviati` | `pushIscrivi` (`app/notifiche.js`); il Worker (`promemoria-cron.js`) | Supabase; il testo cifrato dell'avviso al servizio push del telefono (Apple, Google o Mozilla) | Promemoria del pasto non registrato (Notifiche 170), solo se acceso |
 | Pasti e ingredienti, digiuni | `meals`, `meal_items`, `fasting_days` | `dbAddMeal`, `smartSavePasto`, `dbToggleFasting` (`app/nutrition.js`) | Supabase | Diario |
 | Integratori: libreria, presi, extra, pacchetti | `supplements`, `supplements_log`, `supplement_packages`, `supplement_package_items` | `dbToggleSuppTaken`, `dbInsertExtraLog`, editor pacchetti | Supabase | Diario |
 | Serie, note, allenamenti, schede | `training_logs`, `training_notes`, `workouts`, `schede_utente` | `saveTrainingSet`, `saveTrainingNote`, `saveWorkoutRecord`, generatore | Supabase | Training |
@@ -42,7 +47,7 @@ Chi può vedere cosa dentro Supabase: ogni persona legge e scrive solo le propri
 
 Dove il nome entrava nei testi al coach, e da dove è uscito il 3 ottobre 2026: la riga «Persona» del ritratto (`rigaPersona` in `shared/ritratto.js`, usata da tutte le chiamate che portano il ritratto), la riga «Nome:» del piano settimanale (`app/nutrition.js`), il saluto «parla all'utente Ignazio» della nota di scheda (`app/training_generatore.js`). Il nome del coach, Pirsi, resta nei prompt per scelta. Nel Worker non c'è lo stesso difetto: i suoi testi non leggono `first_name`. Dopo la modifica i prompt non si contraddicono (L27): nessuno chiede più di «rivolgersi per nome». Lo prova `node tools/banco/prova_privacy.js`.
 
-«Scarica i miei dati» (`raccogliMieiDati`, `scaricaMieiDati` in `app/impostazioni.js`): legge 23 tabelle coi permessi normali della persona, a pagine, e scrive un file JSON `zona-tracker-dati-<giorno>.json`. Delle foto mette solo l'elenco (pose e nome del file nel bucket), mai i byte. Una tabella che non si legge resta scritta come «non letta».
+«Scarica i miei dati» (`raccogliMieiDati`, `scaricaMieiDati` in `app/impostazioni.js`): legge 25 tabelle coi permessi normali della persona (dal 1 novembre 2026 anche `push_iscrizioni` e `promemoria_inviati`, Notifiche 170), a pagine, e scrive un file JSON `zona-tracker-dati-<giorno>.json`. Delle foto mette solo l'elenco (pose e nome del file nel bucket), mai i byte. Una tabella che non si legge resta scritta come «non letta».
 
 ## (c) «Elimina account» — piano e realizzazione (3 ottobre 2026)
 

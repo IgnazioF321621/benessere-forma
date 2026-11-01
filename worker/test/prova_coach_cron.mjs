@@ -107,9 +107,9 @@ await handleScheduled({ cron: '0 4 * * 1', scheduledTime: LUN6 }, env, {});
 // d'inverno: 26 ottobre 2026 è già CET → le 6 di Roma sono le 05 UTC
 await handleScheduled({ cron: '0 4 * * 1', scheduledTime: Date.parse('2026-10-26T04:00:00Z') }, env, {});
 console.log = orig;
-atteso('05 UTC di settembre · saltato', log[0], '[coach-cron] 0 5 * * 1: a Roma sono le 7, non le 6 — salto');
+atteso('05 UTC di settembre · saltato', log[0], '[coach-cron] 0 5 * * 1: a Roma sono le 7 di Mon, non le 6 di lunedì — salto');
 atteso('04 UTC di settembre · giro fatto', log.some((l) => /2026-09-07 fine: 3 utenti, 0 errori/.test(l)), true);
-atteso('04 UTC di ottobre (CET) · saltato', log[log.length - 1], '[coach-cron] 0 4 * * 1: a Roma sono le 5, non le 6 — salto');
+atteso('04 UTC di ottobre (CET) · saltato', log[log.length - 1], '[coach-cron] 0 4 * * 1: a Roma sono le 5 di Mon, non le 6 di lunedì — salto');
 atteso('log senza numeri della persona', log.some((l) => /74[.,]|2200|kcal/.test(l)), false);
 
 console.log(ko ? `\n${ko} KO` : '\ntutto OK');

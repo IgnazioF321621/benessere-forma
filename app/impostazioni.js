@@ -160,6 +160,8 @@ function _setPopola() {
   SET_TRAIN_GIORNI = p.train_giorni == null ? ZTRotazione.GIORNI_PARTENZA.slice() : (ZTRotazione.giorniScelti(p.train_giorni) || []);
   _setTrainGiorni();
   _setCalendarioStato();
+  // Promemoria dei pasti (Notifiche 170): gli interruttori leggono il profilo e scrivono subito, non al «Salva»
+  if(typeof _setPromemoriaStato === 'function') _setPromemoriaStato();
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -235,7 +237,7 @@ async function ricalcolaCalorie() {
 const MIEI_DATI_TABELLE = ['meals', 'meal_items', 'fasting_days', 'supplements', 'supplements_log', 'supplement_packages',
   'supplement_package_items', 'training_logs', 'training_notes', 'workouts', 'schede_utente', 'weight_logs', 'body_logs',
   'body_checks', 'body_measurements', 'body_check_ai', 'fitdays_letture', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log', 'rilevazioni',
-  'weekly_plans', 'weekly_plan_meals'];
+  'weekly_plans', 'weekly_plan_meals', 'push_iscrizioni', 'promemoria_inviati'];
 async function raccogliMieiDati(){
   if(!ST.user || !ST.user.id) return null;
   const uid = ST.user.id;
@@ -300,7 +302,9 @@ async function eliminaMioAccount(){
     const r = await dbq('cancellare gli screenshot', supa.storage.from('segnalazioni').remove(percorsiScreenshot), { silenzioso:true });
     if(r.error){ await avvisa('Non riesco a cancellare gli screenshot: le foto sono state tolte, ma l\'account c\'è ancora. Riprova.', { titolo:'Account non eliminato' }); return; }
   }
-  // 2. l'accesso, e con lui tutte le righe
+  // 2. l'iscrizione alle notifiche di questo telefono (la riga cade a cascata, il browser va disiscritto a mano; Notifiche 170)
+  try { if(typeof pushDisiscrivi === 'function') await pushDisiscrivi(); } catch(e) {}
+  // 3. l'accesso, e con lui tutte le righe
   const res = await dbq('eliminare l\'account', supa.rpc('elimina_mio_account'), { silenzioso:true });
   if(res.error){ await avvisa('Le foto sono state tolte, ma non riesco a eliminare l\'account e i dati. Scrivi a chi gestisce l\'app.', { titolo:'Account non eliminato' }); return; }
   try { localStorage.clear(); } catch(e) {}
