@@ -52,6 +52,7 @@ const prima = (ex, h) => {
     atteso('2 · le righe a un attrezzo solo rispondono come prima', cambi.filter(c => /^S\d/.test(c)), []);
     atteso('2 · fra le righe miste cambiano solo panca, fitball e sbarra mancanti (→ no) e il carico col surrogato (→ surr)', cambi.every(c => /sì→no$/.test(c) ? /^(EX063|EX514|EX566|EX568|EX572|EX574|EX687|EX691)\[/.test(c) : /^EX039\[(elastico|panca)/.test(c) && /sì→surr$/.test(c)), true);
     atteso('2 · con l\'attrezzatura di Ignazio (panca, fitball, elastico) cambia solo l\'Affondo indietro manubri, che va con l\'elastico', MISTE.filter(ex => { const h = ha(...IGNAZIO.map(a => a.replace(/\s+/g, '_'))); return JSON.stringify(prima(ex, h)) !== JSON.stringify(R.attrezziCasa(ex, h)); }).map(ex => ex.codice), ['EX039']);
+    atteso('2 · il corpo libero c\'è sempre, anche se il profilo non lo scrive (come il generatore)', [R.attrezziCasa(riga('EX039'), (t) => t === 'manubri').ok, R.attrezziCasa({ attrezzo:'corpo libero' }, () => false).ok], [true, true]);
     atteso('2 · puoFare segue la stessa regola', [R.puoFare(riga('EX514'), { tipoAllen:'casa', attrezzatura:['corpo libero', 'elastico'] }), R.puoFare(riga('EX514'), { tipoAllen:'casa', attrezzatura:IGNAZIO }), R.puoFare(riga('EX514'), { tipoAllen:'palestra', attrezzatura:[] })], [false, true, true]);
 
     // il generatore e «Cambia per oggi» nella pagina vera
@@ -144,6 +145,7 @@ const prima = (ex, h) => {
     atteso('3 · via «elastico più duro» coi manubri, senza elastico: il carico', prossima({ name:'Croci elastico', progressione:'elastico più duro', eq:'manubri' }, 20), 'S2: 30 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · via «elastico più duro» con l\'elastico: com\'è', prossima({ name:'Croci elastico', progressione:'elastico più duro', eq:'elastico+panca' }, 20), 'S2: elastico più duro: 30 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · via «carico» a corpo libero (niente pesi in mano): più ripetizioni, non «+10 lbs»', prossima({ name:'Affondo indietro manubri', progressione:'carico', eq:'corpo libero' }, 0), 'S2: corpo libero · più ripetizioni · sali a 13 reps · RIR 2');
+    atteso('3 · «carico» con eq «corpo libero» ma un carico scritto (scheda di prima del 550, coi manubri): sale di carico come prima', prossima({ name:'Affondo indietro manubri', progressione:'carico', eq:'corpo libero' }, 20), 'S2: 30 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · senza attrezzo scritto (scheda vecchia): la via del catalogo, come prima', prossima({ name:'Rematore vecchio', progressione:'carico' }, 30), 'S2: 40 lbs · riparti da 8 reps · RIR 2');
     atteso('3 · l\'elenco dei carichi dell\'app è quello di shared', W.eval('_ATTREZZI_CARICO').length, 17);
     // ── 5 · nelle tenute la PROSSIMA non scrive il RIR (feedback del 7/10) ──

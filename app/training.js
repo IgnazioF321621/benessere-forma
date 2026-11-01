@@ -81,16 +81,18 @@ function _paroleEq(ex){ return String((ex && ex.eq) || '').toLowerCase().split(/
 // via della riga col suo attrezzo nativo, ma a casa la stessa riga si fa spesso col surrogato (`eq` della scheda).
 //   «carico» col solo elastico in mano            → «elastico più duro» (Rematore manubri fatto con l'elastico)
 //   «elastico più duro» con un carico, senza elastico → «carico» (la stessa riga coi manubri)
-//   «carico» a corpo libero (attrezzo scritto, nessun carico) → «più ripetizioni»: senza pesi non si aggiungono 10 lbs
+//   «carico» a corpo libero (attrezzo scritto, nessun carico) → «più ripetizioni»: senza pesi non si aggiungono 10 lbs,
+//   ma solo se la serie non ha un carico scritto (revisione: le schede di prima del 550 hanno «corpo libero» anche per
+//   chi ha i manubri, e chi ha scritto 20 lbs sale di carico come prima)
 // Senza attrezzo scritto (schede vecchie) la via resta quella del catalogo. Le altre vie non dipendono dall'attrezzo.
-function _viaPerAttrezzo(via, ex){
+function _viaPerAttrezzo(via, ex, caricoFatto){
   const parole = _paroleEq(ex);
   if(!parole.length) return via;
   const elastico = parole.includes('elastico');
   const altri = parole.filter(a => a !== 'elastico' && _ATTREZZI_CARICO.includes(a));
   if(via === 'carico' && elastico && !altri.length) return 'elastico più duro';
   if(via === 'elastico più duro' && !elastico && altri.length) return 'carico';
-  if(via === 'carico' && !elastico && !altri.length) return 'più ripetizioni';
+  if(via === 'carico' && !elastico && !altri.length && !(caricoFatto > 0)) return 'più ripetizioni';
   return via;
 }
 // Le ripetizioni si contano per lato (Training 520, 26 ottobre 2026; Ignazio: «non si capisce se ogni lato vale come
@@ -2586,7 +2588,7 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
   // coach non dice più «aumenta il carico» a chi un carico non ce l'ha, ma nomina la via scritta a
   // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
-  const via = _viaPerAttrezzo(_exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico'), exData);
+  const via = _viaPerAttrezzo(_exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico'), exData, parseFloat(resistance) || 0);
 
   if(isPullUpExercise(exName)){
     // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.

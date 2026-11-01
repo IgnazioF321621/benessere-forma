@@ -426,12 +426,14 @@ var ZTCoachRules = (function(){
   //     la riga va col surrogato: «Affondo indietro manubri» (corpo libero;manubri, surrogato elastico) a casa
   //     senza manubri si fa con l'elastico, che è un carico che cresce, non più a corpo libero.
   // Box, sedia, maniglie e palla medica non si possono segnare nell'attrezzatura: restano come prima.
-  // haAttrezzo(parola normalizzata, «corpo_libero») → bool: ogni chiamante passa il suo insieme.
+  // haAttrezzo(parola normalizzata, «corpo_libero») → bool: ogni chiamante passa il suo insieme. Il corpo libero c'è
+  // sempre, come nel generatore e come dice l'onboarding («Il corpo libero è sempre incluso», revisione del 550).
   // → { ok, surrogato }
   var APPOGGI_SCEGLIBILI = ['panca', 'fitball', 'sbarra', 'trx', 'parallele'];
   var CARICHI = ['elastico', 'manubri', 'bilanciere', 'kettlebell', 'macchina', 'multipower', 'cavo', 'cavi', 'cavo_basso', 'cavo_alto',
     'corda', 'palla_medica', 'disco', 'barra', 'trap_bar', 'rullino', 'pinza_a_molla'];
-  function attrezziCasa(ex, haAttrezzo){
+  function attrezziCasa(ex, haAttrezzo0){
+    var haAttrezzo = function(a){ return a === 'corpo_libero' || !!haAttrezzo0(a); };
     var nativi = vfLista(vfAttrezzo(ex && ex.attrezzo), ';');
     var surrogati = vfLista(ex && ex.surrogato_attrezzo, '+').map(vfAttrezzo);
     var surrOk = surrogati.length > 0 && surrogati.every(function(a){ return haAttrezzo(a); });

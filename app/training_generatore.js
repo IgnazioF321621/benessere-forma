@@ -1632,7 +1632,8 @@ function _trainGenPickEq(cat, isSurrogato, tipoAllen, attrezzaturaSet, isIso) {
   const priorita = (_TRAIN_GEN_EQ_PRIORITY[envKey] || _TRAIN_GEN_EQ_PRIORITY.casa)[catKey] || [];
   // Una riga mista non va a corpo libero se la persona ha il carico che la riga elenca (Training 550): «Affondo
   // indietro manubri» (corpo libero;manubri) a casa coi manubri si fa coi manubri, non a mani vuote.
-  const caricoPosseduto = attrezziNativi.find(a => ZTCoachRules.CARICHI.includes(a) && attrezzaturaSet.has(a));
+  // Solo a casa: all'aperto conta la lista dei portatili, e la stessa attrezzatura del profilo non dice che i manubri sono lì.
+  const caricoPosseduto = envKey === 'casa' ? attrezziNativi.find(a => ZTCoachRules.CARICHI.includes(a) && attrezzaturaSet.has(a)) : null;
   for (const preferred of priorita) {
     if (preferred === 'corpo_libero' && caricoPosseduto && attrezziNativi.includes('corpo_libero')) return String(cat.attrezzo || '').split(';').map(s => s.trim()).find(s => _norm(s) === caricoPosseduto) || caricoPosseduto;
     if (attrezziNativi.includes(preferred) && attrezzaturaSet.has(preferred)) {
