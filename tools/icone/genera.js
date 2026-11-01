@@ -1,32 +1,30 @@
-// Icone dell'app (Fondamenta 190): quadrato evergreen con «ZT» in bianco, disegnato pixel per pixel e
-// scritto in PNG senza librerie (nel contenitore non ci sono né ImageMagick con SVG né Pillow).
+// Icone dell'app (Fondamenta 190; dal 1 novembre 2026, Stile 030, il logo «Le tre zone» scelto da Ignazio):
+// fondo verde notte e tre cerchi nelle tinte di Nutrition, Training e Body che si fondono in «screen»
+// (dove si incrociano diventano chiari, al centro quasi bianco). Disegnato pixel per pixel e scritto in PNG
+// senza librerie (nel contenitore non ci sono né ImageMagick con SVG né Pillow).
 //   node tools/icone/genera.js      → assets/icone/icona-{180,192,512}.png (angoli arrotondati, sfondo trasparente)
 //                                     assets/icone/icona-maskable-{192,512}.png (quadrato pieno: Android lo ritaglia lui)
-// Le lettere sono tratti geometrici (Z = due barre e una diagonale, T = barra e gambo), non un carattere:
-// così l'icona è la stessa su ogni macchina. Campionamento 4×4 per pixel per i bordi morbidi.
+// Lo stesso disegno in SVG (viewBox 100, la fusione va su ogni cerchio, non sul gruppo):
+//   <rect width="100" height="100" rx="22" fill="#14211E"/>
+//   <circle style="mix-blend-mode:screen" cx="50" cy="39" r="21" fill="#FAC775"/>
+//   <circle style="mix-blend-mode:screen" cx="39" cy="59" r="21" fill="#B5D4F4"/>
+//   <circle style="mix-blend-mode:screen" cx="61" cy="59" r="21" fill="#AFA9EC"/>
+// I cerchi stanno fra 18 e 82 su 100: dentro l'80% centrale, la zona sicura della maschera tonda di Android.
+// Campionamento 4×4 per pixel per i bordi morbidi.
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
-const VERDE = [0x2A, 0x7A, 0x6F];
-
-// Distanza di un punto da un segmento, per la diagonale della Z
-function distSeg(px, py, ax, ay, bx, by) {
-  const vx = bx - ax, vy = by - ay, wx = px - ax, wy = py - ay;
-  const t = Math.max(0, Math.min(1, (wx * vx + wy * vy) / (vx * vx + vy * vy)));
-  const dx = px - (ax + t * vx), dy = py - (ay + t * vy);
-  return Math.sqrt(dx * dx + dy * dy);
-}
-// Coordinate normalizzate 0..1. Lettere nel riquadro centrale (zona sicura delle icone «maskable»: 80%, qui 60%).
-function dentroLettere(x, y) {
-  const sp = 0.145;                 // spessore dei tratti
-  // Z: da 0.14 a 0.47 in larghezza, 0.26 a 0.74 in altezza
-  const zL = 0.13, zR = 0.47, top = 0.27, bot = 0.73;
-  if (x >= zL && x <= zR && y >= top && y <= top + sp) return true;           // barra alta
-  if (x >= zL && x <= zR && y >= bot - sp && y <= bot) return true;           // barra bassa
-  if (x >= zL && x <= zR && y >= top && y <= bot && distSeg(x, y, zR - sp * 0.5, top + sp * 0.5, zL + sp * 0.5, bot - sp * 0.5) <= sp * 0.5) return true; // diagonale, dentro il riquadro della Z
-  // T: da 0.53 a 0.87
-  const tL = 0.53, tR = 0.87, tc = (tL + tR) / 2;
-  if (x >= tL && x <= tR && y >= top && y <= top + sp) return true;           // barra
-  if (Math.abs(x - tc) <= sp * 0.5 && y >= top && y <= bot) return true;       // gambo
-  return false;
+const FONDO = [0x14, 0x21, 0x1E];
+const CERCHI = [
+  { cx: 0.50, cy: 0.39, r: 0.21, colore: [0xFA, 0xC7, 0x75] },   // Nutrition
+  { cx: 0.39, cy: 0.59, r: 0.21, colore: [0xB5, 0xD4, 0xF4] },   // Training
+  { cx: 0.61, cy: 0.59, r: 0.21, colore: [0xAF, 0xA9, 0xEC] },   // Body
+];
+// Fusione «screen», canale per canale: 1 − (1 − a)(1 − b). Due colori chiari danno un colore più chiaro.
+function screen(a, b) { return a.map((v, i) => 255 - (255 - v) * (255 - b[i]) / 255); }
+// Il colore in un punto (coordinate 0..1): il fondo, fuso con ogni cerchio che lo contiene
+function colore(x, y) {
+  let c = FONDO;
+  for (const k of CERCHI) { const dx = x - k.cx, dy = y - k.cy; if (dx * dx + dy * dy <= k.r * k.r) c = screen(c, k.colore); }
+  return c;
 }
 function dentroSfondo(x, y, raggio) {
   if (raggio <= 0) return true;
@@ -38,17 +36,19 @@ function disegna(n, raggio) {
   const img = Buffer.alloc(n * n * 4);
   const S = 4;
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
-    let sfondo = 0, lettera = 0;
+    let dentro = 0, somma = [0, 0, 0];
     for (let b = 0; b < S; b++) for (let a = 0; a < S; a++) {
       const x = (i + (a + 0.5) / S) / n, y = (j + (b + 0.5) / S) / n;
-      if (dentroSfondo(x, y, raggio)) { sfondo++; if (dentroLettere(x, y)) lettera++; }
+      if (!dentroSfondo(x, y, raggio)) continue;
+      dentro++;
+      const c = colore(x, y);
+      somma[0] += c[0]; somma[1] += c[1]; somma[2] += c[2];
     }
-    const alpha = sfondo / (S * S), bianco = sfondo ? lettera / sfondo : 0;
     const o = (j * n + i) * 4;
-    img[o] = Math.round(VERDE[0] + (255 - VERDE[0]) * bianco);
-    img[o + 1] = Math.round(VERDE[1] + (255 - VERDE[1]) * bianco);
-    img[o + 2] = Math.round(VERDE[2] + (255 - VERDE[2]) * bianco);
-    img[o + 3] = Math.round(255 * alpha);
+    img[o] = dentro ? Math.round(somma[0] / dentro) : 0;
+    img[o + 1] = dentro ? Math.round(somma[1] / dentro) : 0;
+    img[o + 2] = dentro ? Math.round(somma[2] / dentro) : 0;
+    img[o + 3] = Math.round(255 * dentro / (S * S));
   }
   return img;
 }
