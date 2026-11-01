@@ -1740,11 +1740,13 @@ const _TRAIN_GEN_COMPOUND_PATTERNS_BY_CATEGORY = {
 //   tempo_per_esercizio = sets * (set_execution + rest_sec)
 //   maxEx = clamp(floor(tempo_disponibile / tempo_per_esercizio),
 //                 min_exercises, max_exercises)
+// I tempi stanno in shared/rotazione.js (ZTRotazione.TEMPO) dal 1 novembre 2026 (Training 541): la durata della
+// seduta nell'app e nel Calendario si conta con gli stessi numeri. Valori invariati (30 · 300 · 300 · 60).
 const _TRAIN_GEN_TIME_BUDGET = {
-  set_execution_sec: 30,            // tempo medio esecuzione UNA serie
-  warmup_sec: 300,                  // 5 min blocco attivazione (già esistente)
-  finisher_sec: 300,                // 5 min tabata se obiettivo lo richiede
-  buffer_sec: 60,                   // margine transizioni tra esercizi
+  set_execution_sec: ZTRotazione.TEMPO.serie,        // tempo medio esecuzione UNA serie
+  warmup_sec: ZTRotazione.TEMPO.attivazione,         // 5 min blocco attivazione (già esistente)
+  finisher_sec: ZTRotazione.TEMPO.finisher,          // 5 min tabata se obiettivo lo richiede
+  buffer_sec: ZTRotazione.TEMPO.cambio,              // margine transizioni tra esercizi
   min_exercises_per_session: 2,
   max_exercises_per_session: 6,
 };

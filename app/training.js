@@ -83,11 +83,13 @@ function _exACorpoLibero(ex){
 // tempi restano dei soli `si` (_exPerLato). Un alternato a tempo no (revisione della Regia: EX191 V-sit sforbiciata,
 // «20-40 sec» nella Lower A di Ignazio; anche Dead bug e Bird dog): il tempo è uno solo, come il timer, che fa un
 // blocco unico.
-function _contaPerLato(ex, parsed){
-  if(_exPerLato(ex, parsed)) return true;
-  if(_exInfoCatalogo(ex).unilaterale !== 'alternato') return false;
-  const pr = parsed || ((ex && ex.reps && typeof parseRepsRange === 'function') ? parseRepsRange(ex.reps) : null);
-  return !((pr && pr.kind === 'seconds') || (ex && ex.isTimed));
+// La regola sta in shared/rotazione.js dal 1 novembre 2026 (Training 541), con l'informazione del catalogo da qui.
+function _contaPerLato(ex, parsed){ return ZTRotazione.contaPerLato(ex, _exInfoCatalogo(ex).unilaterale, parsed); }
+// Quanto dura una seduta, in minuti (Training 541): la regola di shared/rotazione.js, la stessa del Calendario, con
+// il «per lato» del catalogo e il Tabata del giorno.
+function minutiSeduta(sess, key){
+  const sec = ZTRotazione.durataSeduta(sess, { unilaterale: ex => _exInfoCatalogo(ex).unilaterale, tabata: tabataInCoda(key) });
+  return ZTRotazione.minutiSeduta(sec);
 }
 // Il bersaglio a parole: «12-15 per lato», «20-40 sec per lato»; com'è scritto se l'esercizio non conta per lato.
 function _bersaglioReps(ex){
@@ -626,22 +628,8 @@ function formatNoteDate(dateStr){
 //   "20-30 sec per lato" → sec 20-30 per lato
 //   "30 sec"          → sec   30-30 (singolo, no progressione)
 //   "10 min", "5-10 min" → null (non gestito)
-function parseRepsRange(repsStr){
-  if(!repsStr) return null;
-  const s = String(repsStr).trim();
-  // Skip esplicito su minuti
-  if(/\bmin\b/i.test(s)) return null;
-  // Range secondi: "20-30 sec" o "20-30 sec per lato"
-  let m = s.match(/^(\d+)-(\d+)\s*sec(?:\s+per lato)?$/i);
-  if(m) return { kind:'seconds', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'sec' };
-  // Singolo secondi: "30 sec" → no progressione (min=max)
-  m = s.match(/^(\d+)\s*sec(?:\s+per lato)?$/i);
-  if(m){ const n = parseInt(m[1],10); return { kind:'seconds', min:n, max:n, perLato:/per lato/i.test(s), unit:'sec' }; }
-  // Range reps: "4-6" o "4-6 per lato"
-  m = s.match(/^(\d+)-(\d+)(?:\s+per lato)?$/);
-  if(m) return { kind:'reps', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'reps' };
-  return null;
-}
+// La regola sta in shared/rotazione.js dal 1 novembre 2026 (Training 541): la legge anche il calendario del Worker.
+function parseRepsRange(repsStr){ return ZTRotazione.leggiReps(repsStr); }
 
 // ── Il carico di una serie, a parole (Training 430, 20 ottobre 2026) ──
 // Un posto solo per «30 lbs», «banda Nera» e — carico zero — «corpo libero»: prima a corpo libero
@@ -4512,7 +4500,7 @@ function renderTraining(){
           ? `${(todayTargetSess.exercises || []).length} esercizi · ~25 min`
           : (/^rest/.test(todayTargetSid) || todayTargetSess.type === 'Riposo' || todayTargetSess.rir == null)
             ? '' // rest day / sessione senza RIR: niente "RIR null · 0 esercizi"
-            : `RIR ${todayTargetSess.rir} · ${(todayTargetSess.exercises || []).length} esercizi`)
+            : `RIR ${todayTargetSess.rir} · ${(todayTargetSess.exercises || []).length} esercizi · circa ${minutiSeduta(todayTargetSess)} min`)
       : '';
     const shortcutHTML = `
       <div ${riposoOggi ? '' : `onclick="openTrainingSession('${todayTargetSid}')" `}style="background:var(--acc);border-radius:var(--r-md,12px);padding:16px;box-shadow:0 2px 8px rgba(42,122,111,.25);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;">
@@ -6699,12 +6687,8 @@ function tabataModo(){
 }
 function _tabataGiornoISO(key){ const d = new Date((key || todayKey()) + 'T12:00:00'); return ((d.getDay() + 6) % 7) + 1; }
 // In fondo alla seduta di quel giorno (oggi se manca)?
-function tabataInCoda(key){
-  const m = tabataModo();
-  if(m === 'coda') return true;
-  if(m === 'giorni') return ((ST.profile && ST.profile.tabata_giorni) || []).map(Number).includes(_tabataGiornoISO(key));
-  return false;
-}
+// La regola sta in shared/rotazione.js dal 1 novembre 2026 (Training 541): il calendario mette il Tabata negli stessi giorni.
+function tabataInCoda(key){ return ZTRotazione.tabataInCoda(ST.profile, key || todayKey()); }
 // Il Tabata «a parte»: i 4 esercizi di una seduta della scheda che ce l'ha, a rotazione col giorno della settimana.
 function tabataAParte(key){
   if(tabataModo() !== 'a_parte') return null;
@@ -6800,10 +6784,11 @@ function _tabataFlowEndCompleted(){
 // Niente round/microPause/blockStop (più semplice del Tabata): lista lineare.
 // Audio: playLongBeep alla (ri)partenza di ogni esercizio + playPrepBeep ultimi 5s.
 // L'ultima voce termina dopo il WORK (no rest finale). Clone leggero del Tabata.
-const WARMUP_WORK_SEC = 60;
-const WARMUP_REST_SEC = 10;
-const WARMUP_ISO_SIDE_SEC = 30; // durata per lato negli esercizi iso unilaterali del warm-up
-const WARMUP_ISO_PAUSE_SEC = 5; // pausa cambio posizione tra lato SX e lato DX
+// I tempi stanno in shared/rotazione.js (ZTRotazione.TEMPO) dal 1 novembre 2026 (Training 541): li conta anche il calendario.
+const WARMUP_WORK_SEC = ZTRotazione.TEMPO.voce;
+const WARMUP_REST_SEC = ZTRotazione.TEMPO.riposoVoce;
+const WARMUP_ISO_SIDE_SEC = ZTRotazione.TEMPO.lato; // durata per lato negli esercizi iso unilaterali del warm-up
+const WARMUP_ISO_PAUSE_SEC = ZTRotazione.TEMPO.pausaLato; // pausa cambio posizione tra lato SX e lato DX
 
 function _warmupFlowClearInterval(){
   if(ST.trainWarmupFlow && ST.trainWarmupFlow._iv){
@@ -6839,11 +6824,8 @@ function _warmupDurata(w){
 // Quanto dura tutto il riscaldamento, in secondi, con lo stesso conto del flusso (_warmupFlowAdvance): ogni voce col
 // suo tempo (per lato: i due lati e i 5 secondi per cambiare), 10 secondi fra una voce e l'altra, niente pausa dopo
 // l'ultima. La card lo scrive al posto di «1 min ciascuno» (terza revisione di 480+490: le voci da 30 s ci sono).
-function _warmupDurataTotale(items){
-  const voci = (items || []).filter(Boolean);
-  if(!voci.length) return 0;
-  return voci.reduce((t, w) => t + (_warmupPerLato(w) ? 2 * WARMUP_ISO_SIDE_SEC + WARMUP_ISO_PAUSE_SEC : _warmupDurata(w)), 0) + (voci.length - 1) * WARMUP_REST_SEC;
-}
+// Il conto sta in shared/rotazione.js (riscaldamentoSec) dal 1 novembre 2026 (Training 541): lo usa anche la durata della seduta.
+function _warmupDurataTotale(items){ return ZTRotazione.riscaldamentoSec(items); }
 function _warmupMinuti(sec){
   const m = Math.floor(sec / 60), s = sec % 60;
   return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`;

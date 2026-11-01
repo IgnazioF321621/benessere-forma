@@ -93,5 +93,93 @@ atteso('ics · le righe lunghe si piegano a 75 ottetti e, spiegate, tornano inte
 atteso('ics · senza eventi un calendario valido e vuoto; un orario rotto cade sulle 7', [R.ics({ eventi: [], orario: '07:30', chiave: 'p', adesso: ADESSO }).includes('VEVENT'), spiega(R.ics({ eventi: [{ date: GIO, sid: 'upperA' }], nomi, orario: 'boh', chiave: 'p', adesso: ADESSO })).find(r => r.startsWith('DTSTART'))], [false, 'DTSTART:20261029T060000Z']);
 atteso('ics · un\'ora e l\'avviso si possono cambiare', (() => { const t = spiega(R.ics({ eventi: [{ date: GIO, sid: 'upperA' }], nomi, orario: '18:00', chiave: 'p', adesso: ADESSO, durataMin: 45, avvisoMin: 30 })); return [t.find(r => r.startsWith('DTEND')), t.find(r => r.startsWith('TRIGGER'))]; })(), ['DTEND:20261029T174500Z', 'TRIGGER:-PT30M']);
 
+// ── Training 541: la seduta intera (durata, esercizi, scarico) ──
+// Le regole che erano nell'app, copiate com'erano su main il 31 ottobre 2026 (57f2550): la versione di shared deve
+// rispondere uguale su ogni ingresso (parseRepsRange, _contaPerLato, _warmupDurataTotale, tabataInCoda).
+const vecchia = {
+  parseRepsRange(repsStr){
+    if(!repsStr) return null;
+    const s = String(repsStr).trim();
+    if(/\bmin\b/i.test(s)) return null;
+    let m = s.match(/^(\d+)-(\d+)\s*sec(?:\s+per lato)?$/i);
+    if(m) return { kind:'seconds', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'sec' };
+    m = s.match(/^(\d+)\s*sec(?:\s+per lato)?$/i);
+    if(m){ const n = parseInt(m[1],10); return { kind:'seconds', min:n, max:n, perLato:/per lato/i.test(s), unit:'sec' }; }
+    m = s.match(/^(\d+)-(\d+)(?:\s+per lato)?$/);
+    if(m) return { kind:'reps', min:parseInt(m[1],10), max:parseInt(m[2],10), perLato:/per lato/i.test(s), unit:'reps' };
+    return null;
+  },
+  contaPerLato(ex, uni, parsed){   // _exPerLato + _contaPerLato, con _exInfoCatalogo(ex).unilaterale = ex.unilaterale || uni
+    if(!ex) return false;
+    const u = ex.unilaterale || uni || null;
+    const pr = parsed || (ex.reps ? vecchia.parseRepsRange(ex.reps) : null);
+    if((pr && pr.perLato) || u === 'si') return true;
+    if(u !== 'alternato') return false;
+    return !((pr && pr.kind === 'seconds') || (ex && ex.isTimed));
+  },
+  warmup(items){
+    const perLato = (w) => { const pr = (w && w.reps) ? vecchia.parseRepsRange(w.reps) : null; return !!(pr && pr.kind === 'seconds' && pr.perLato); };
+    const durata = (w) => { const pr = (w && w.reps) ? vecchia.parseRepsRange(w.reps) : null; return (pr && pr.kind === 'seconds' && !pr.perLato && pr.min > 0) ? Math.min(pr.min, 60) : 60; };
+    const voci = (items || []).filter(Boolean);
+    if(!voci.length) return 0;
+    return voci.reduce((t, w) => t + (perLato(w) ? 2 * 30 + 5 : durata(w)), 0) + (voci.length - 1) * 10;
+  },
+  tabataInCoda(profile, key){
+    const m = ['spento', 'coda', 'giorni', 'a_parte'].includes(profile && profile.tabata) ? profile.tabata : 'spento';
+    if(m === 'coda') return true;
+    if(m === 'giorni'){ const d = new Date(key + 'T12:00:00'); return ((profile && profile.tabata_giorni) || []).map(Number).includes(((d.getDay() + 6) % 7) + 1); }
+    return false;
+  },
+};
+const REPS = ['4-6', '8-12', '12-15', '15-20', '8-12 per lato', '20-40 sec', '20-30 sec per lato', '30 sec', '30 sec per lato', '45 sec',
+  '10 min', '5-10 min', '', null, undefined, ' 8-12 ', '8', 'max', '20-30 SEC', '10-12 Per Lato', 'AMRAP', '6-8 per gamba'];
+atteso('541 · leggiReps risponde come parseRepsRange di prima su ' + REPS.length + ' scritture', REPS.filter(r => JSON.stringify(R.leggiReps(r)) !== JSON.stringify(vecchia.parseRepsRange(r))), []);
+const casi = [];
+['si', 'alternato', 'no', null].forEach(u => REPS.forEach(r => [false, true].forEach(t => casi.push([{ reps: r, isTimed: t }, u]))));
+casi.push([{ reps: '8-12', unilaterale: 'si' }, null], [{ reps: '8-12', unilaterale: 'alternato' }, 'no'], [null, 'si']);
+atteso('541 · contaPerLato risponde come _contaPerLato di prima su ' + casi.length + ' casi', casi.filter(([ex, u]) => R.contaPerLato(ex, u) !== vecchia.contaPerLato(ex, u)).length, 0);
+const voci = [[], [{ reps: '15-20' }], [{ reps: '15-20' }, { reps: '30 sec' }, { reps: '30 sec per lato' }, null, { reps: '90 sec' }, { reps: '45 sec' }], [{ reps: '10 min' }, { reps: '0 sec' }]];
+atteso('541 · riscaldamentoSec risponde come _warmupDurataTotale di prima', voci.map(v => [R.riscaldamentoSec(v), vecchia.warmup(v)]).filter(([a, b]) => a !== b), []);
+const profili = [{ tabata: 'coda' }, { tabata: 'giorni', tabata_giorni: [4] }, { tabata: 'giorni', tabata_giorni: ['1', 7] }, { tabata: 'a_parte' }, { tabata: 'spento' }, { tabata: 'boh' }, {}, null];
+const giorniT = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'];
+atteso('541 · tabataInCoda risponde come quella di prima su 8 profili × 7 giorni', profili.flatMap(p => giorniT.map(g => [R.tabataInCoda(p, g), vecchia.tabataInCoda(p, g)])).filter(([a, b]) => a !== b).length, 0);
+atteso('541 · i tempi: attivazione = il blocco fisso (2 + 2 + 1 min), serie 30 s, cambio 60 s, Tabata 300 s (i numeri del generatore)', [R.TEMPO.attivazione, R.TEMPO.serie, R.TEMPO.cambio, R.TEMPO.finisher, R.TEMPO.voce, R.TEMPO.riposoVoce, R.TEMPO.lato, R.TEMPO.pausaLato], [300, 30, 60, 300, 60, 10, 30, 5]);
+
+// una seduta come la Upper A di Ignazio (forza, 3 minuti di recupero)
+const ES = (codice, name, sets, reps, rest_sec, extra) => ({ codice, name, sets, reps, rest_sec, ...(extra || {}) });
+const UA = { id: 'upperA', name: 'Upper A', rest: '3 min', warmup: [{ reps: '15-20' }, { reps: '15-20' }, { reps: '15-20' }],
+  exercises: [ES('EX482', 'Rematore', 3, '4-6', 180), ES('EX505', 'Trazioni', 3, '4-6', 180), ES('EX1', 'Dip', 3, '4-6', 180), ES('EX2', 'Piegamenti diamante', 3, '4-6', 180),
+    ES('EX3', 'Croci inverse elastico', 3, '12-15', 75), ES('EX4', 'Pallof press con elastico', 3, '20-40 sec', 60, { isTimed: true }), ES('EX5', 'Russian twist', 3, '12-15', 75)],
+  finisher: { round: 8, work_sec: 20, rest_sec: 10, exercises: [{ name: 'Burpee' }] } };
+const uniUA = (ex) => ({ EX4: 'si', EX5: 'alternato' })[ex.codice] || null;
+// 300 + 200 + 4 × (90 + 360 + 60) + (90 + 150 + 60) + (240 + 120 + 60) + (180 + 150 + 60) = 3650 s
+atteso('541 · durata Upper A: 300 + 200 + 4 × 510 + 300 + 420 + 390 = 3650 s → circa 60 minuti', [R.durataSeduta(UA, { unilaterale: uniUA }), R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA }))], [3650, 60]);
+atteso('541 · col Tabata del giorno: + 240 + 60 s = 3950 s → circa 65 minuti', R.minutiSeduta(R.durataSeduta(UA, { unilaterale: uniUA, tabata: true })), 65);
+atteso('541 · senza recupero scritto si usa quello della seduta («3 min»), poi 90 s', [R.durataSeduta({ rest: '3 min', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ rest: '90 sec', exercises: [{ sets: 3, reps: '4-6' }] }), R.durataSeduta({ exercises: [{ sets: 3, reps: '4-6' }] })], [300 + 90 + 360 + 60, 300 + 90 + 180 + 60, 300 + 90 + 180 + 60]);
+atteso('541 · minuti ai 5 più vicini, almeno 5', [0, 100, 449, 450, 3020, 3350].map(R.minutiSeduta), [5, 5, 5, 10, 50, 55]);
+atteso('541 · righe: serie × ripetizioni, per lato dove si conta per lato, secondi delle tenute', R.righeSeduta(UA, { unilaterale: uniUA }).slice(4), ['5. Croci inverse elastico — 3 × 12-15', '6. Pallof press con elastico — 3 × 20-40 sec per lato', '7. Russian twist — 3 × 12-15 per lato']);
+atteso('541 · righe in scarico: il minimo dell\'intervallo, come la prima serie in computeNextSetSuggestion', R.righeSeduta(UA, { unilaterale: uniUA, scarico: true }).filter((_, i) => [0, 5, 6].includes(i)), ['1. Rematore — 3 × 4', '6. Pallof press con elastico — 3 × 20 sec per lato', '7. Russian twist — 3 × 12 per lato']);
+atteso('541 · descrizione: durata, scarico, preparazione, esercizi, Tabata', R.descrizione(UA, { unilaterale: uniUA, scarico: true, tabata: true }).split('\n').filter((_, i, a) => i < 3 || i === a.length - 1),
+  ['Circa 65 minuti', 'Settimana di scarico: carichi più leggeri, RIR 3+', 'Preparazione 5 min e riscaldamento (3 esercizi)', 'Tabata in coda: 8 round, 4 min']);
+const LUNGA = { exercises: Array.from({ length: 40 }, (_, i) => ES('EX' + i, 'Esercizio, con virgole; e accènti numero ' + i, 3, '8-12', 90)) };
+const dl = R.descrizione(LUNGA, {}), dlScappata = dl.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+atteso('541 · seduta lunga: sotto 1000 ottetti scappati, finisce con «…», righe intere', [Buffer.byteLength(dlScappata, 'utf8') <= 1000, Buffer.byteLength(dlScappata, 'utf8') > 900, dl.split('\n').pop(), dl.split('\n').slice(2, -1).every(r => /— 3 × 8-12$/.test(r))], [true, true, '…', true]);
+atteso('541 · seduta corta: niente «…»', R.descrizione(UA, {}).includes('…'), false);
+
+// la settimana di scarico sulle sedute previste
+const fatti11 = VERE.filter(w => !/^rest/.test(w.session_type)).slice().reverse();
+const prev541 = R.sedutePreviste({ allenamenti: VERE, ciclo: C6, oggi: MER, giorni: LMGV });
+atteso('541 · scarico proiettato: 11 sedute di lavoro fatte, 4 a giro → le previste 10ª-13ª', R.scaricoPerEventi({ eventi: prev541, completati: fatti11, workPerGiro: 4 }).map((x, i) => x ? i : null).filter(x => x != null), [9, 10, 11, 12]);
+atteso('541 · scarico anticipato da Pirsi il 28: le prime 4 previste', R.scaricoPerEventi({ eventi: prev541, completati: fatti11, workPerGiro: 4, deloads: ['2026-10-28'] }).map((x, i) => x ? i : null).filter(x => x != null), [0, 1, 2, 3]);
+atteso('541 · la seduta di oggi già fatta non conta due volte', (() => {
+  const conOggi = fatti11.concat([{ date: GIO, session_type: 'upperB' }]);
+  return R.scaricoPerEventi({ eventi: [{ date: GIO, sid: 'upperB' }, { date: '2026-10-30', sid: 'lowerB' }], completati: conOggi, workPerGiro: 4 });
+})(), [false, false]);
+
+// l'evento con la sua durata, la sua descrizione e l'indirizzo
+const t541 = spiega(R.ics({ eventi: [{ date: GIO, sid: 'upperA', durataMin: 55, descrizione: 'Circa 55 minuti\n1. Rematore — 3 × 4-6' }, { date: '2026-10-30', sid: 'lowerA' }], nomi, orario: '07:30', chiave: 'p', adesso: ADESSO, url: R.URL_TRAINING }));
+atteso('541 · ics: DTEND con la durata della seduta, la descrizione scappata, URL; senza durata un\'ora', [t541.filter(r => r.startsWith('DTEND')), t541.find(r => r.startsWith('DESCRIPTION')), t541.filter(r => r.startsWith('URL:')).length, R.URL_TRAINING],
+  [['DTEND:20261029T072500Z', 'DTEND:20261030T073000Z'], 'DESCRIPTION:Circa 55 minuti\\n1. Rematore — 3 × 4-6', 2, 'https://ignaziof321621.github.io/benessere-forma/zona-tracker.html?apri=training']);
+
 console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
 process.exit(ko ? 1 : 0);
