@@ -508,8 +508,9 @@ header`);
       }
       atteso('Body Check vuoto, giro 2: un tasto solo «Nuovo check fisico», largo nel viola della zona, in alto (il riquadro comincia sotto la riga del check, entro 320 px)', bc.cta && [bc.cta.fondo, bc.cta.h >= 44, bc.cta.largo, bc.cta.alto < 320], ['rgb(106, 85, 160)', true, true, true]);
       atteso('Body Misure, giro 2: il peso una volta sola, con la data nel titolo e «Pesati ora» accanto (viola, 44 px); nel modulo delle misure niente campo «Peso (kg)» (solo la casella nascosta per il report)', [bm.pesoData, bm.pesati && bm.pesati.fondo, bm.pesati && bm.pesati.h >= 44, bm.pesoCampo], ['dom 4 ott', 'rgb(106, 85, 160)', true, 'hidden']);
-      atteso('Body Misure: i titoli di sezione nell\'HTML, nell\'ordine', bm.sezioniB, ['Il peso', 'Misure col metro e bilancia']);
-      atteso('Body Tendenza: i titoli di sezione nell\'HTML, nell\'ordine', bt.sezioniB, ['Progresso verso l\'obiettivo', 'Evoluzione del corpo']);
+      atteso('Body Misure: i titoli di sezione nell\'HTML, nell\'ordine (Stile 040: le registrazioni in fondo)', bm.sezioniB, ['Il peso', 'Le misure', 'Le ultime registrazioni']);
+      // Stile 040: a veste accesa il peso sta solo nel progresso; con le sole pesate dei dati di prova «Evoluzione del corpo» non ha card e non compare
+      atteso('Body Tendenza: i titoli di sezione nell\'HTML (solo il progresso: il peso non si ripete in «Evoluzione del corpo»)', bt.sezioniB, ['Progresso verso l\'obiettivo']);
       atteso('dopo il Body, il Training (Programma) ha la sua testata blu', [tb.header, tb.testa], ['none', 'rgb(46, 109, 164)']);
     }
     if(process.env.FOTO){

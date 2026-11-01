@@ -115,7 +115,8 @@ function tabelle(){
         meals.push({ id:`m${d}${i}`, user_id:U, date:k, slot, time, kcal, protein, carbs, fat, description, notes:'' });
         items.push({ id:`i${d}${i}`, meal_id:`m${d}${i}`, name:description.split(' ')[0], quantity:150, unit:'g', kcal, protein, carbs, fat }); });
     if(d % 2 === 0) pesi.push({ id:'p' + d, user_id:U, date:k, weight_kg: +(74 - d * 0.05).toFixed(2), created_at:k + 'T07:30:00Z' });
-    if(d < 10) logs.push({ id:'l' + d, user_id:U, date:k, supplement_id:'s1', name:'Omega 3', time:'08:00', dose:1 });
+    // righe come quelle vere di supplements_log (Stile 040): supplement_name, slot e is_extra, che l'app filtra; prima mancavano e i presi non si leggevano
+    if(d < 10) logs.push({ id:'l' + d, user_id:U, date:k, supplement_id:'s1', supplement_name:'Omega 3', slot:'08:00', is_extra:false, created_at:k + 'T08:00:00Z' });
   }
   return {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, sesso:'M', eta:45, altezza_cm:178, weight_kg:74, goal_weight_kg:70, obiettivo:'ricomposizione',
@@ -126,7 +127,9 @@ function tabelle(){
     nutrilite_catalog:[], esercizi_catalog:catalogo, schede_utente:[{ id:'sc1', user_id:U, attiva:true, blocco_n:1, scheda }],
     workouts:[{ id:'w1', user_id:U, session_type:'upperA', date:add(OGGI, -2), completed:true }], training_logs:[
       { id:'t1', user_id:U, session_id:'upperA', date:add(OGGI, -2), exercise_name:'Panca elastico', exercise_code:'EX001', set_number:1, reps:10, resistance:'40', rir_actual:2 }],
-    training_notes:[], body_logs:[], body_measurements:[], body_checks:[], blood_tests:[], body_check_ai:[], weekly_pictures:[], coach_proposals:[], weekly_plans:[], weekly_plan_meals:[],
+    // un check fisico fatto (Stile 040): la scheda Check elenca i check, invece dello stato vuoto
+    training_notes:[], body_logs:[], body_measurements:[{ id:'bm1', user_id:U, check_id:'c1', weight_kg:73.9, waist_cm:84, body_fat_pct:18, created_at:add(OGGI, -5) + 'T08:00:00Z' }],
+    body_checks:[{ id:'c1', user_id:U, status:'completed', created_at:add(OGGI, -5) + 'T08:00:00Z' }], blood_tests:[], body_check_ai:[], weekly_pictures:[], coach_proposals:[], weekly_plans:[], weekly_plan_meals:[],
   };
 }
 const attendi = (ms) => new Promise(r => setTimeout(r, ms));
@@ -161,8 +164,9 @@ async function schermate(){
     ['13-analisi', () => W.showPage('analisi')], ['14-piano', () => W.showPage('piano')],
     ['20-training', () => { ST.trainTab = 'piano'; W.showPage('training'); }], ['21-progressione', () => { ST.trainTab = 'progressione'; W.renderTraining(); }],
     ['30-body-misure', () => { ST.bodyTab = 'misure'; W.showPage('body'); }], ['31-body-tendenza', () => { ST.bodyTab = 'tendenza'; W.renderBody(); }],
-    ['32-body-check', () => { ST.bodyTab = 'check'; W.renderBody(); }], ['40-impostazioni', () => { W.showPage('home'); W.openSettingsModal(); }]];
-  for(const [nome, vai] of giro){
+    // la scheda Check è un elenco corto: conta piena se c'è almeno un check (terzo elemento: un selettore che deve esserci)
+    ['32-body-check', () => { ST.bodyTab = 'check'; W.renderBody(); }, '[onclick^="openBodyCheckDetail"]'], ['40-impostazioni', () => { W.showPage('home'); W.openSettingsModal(); }]];
+  for(const [nome, vai, selettore] of giro){
     try {
       vai(); await attendi(250); if(ST.page === 'home') W.renderHomeV2();
       // il benvenuto del Piano copre tutto: una foto sua, la prima volta, poi via
@@ -170,7 +174,8 @@ async function schermate(){
       if(benvenuto){ if(!out['09-benvenuto-piano']) out['09-benvenuto-piano'] = fotografa(W); benvenuto.remove(); }
       // una schermata vuota darebbe «uguale a prima» senza aver provato niente
       const pagina = W.document.querySelector('.page.active'), testo = pagina ? pagina.textContent.replace(/\s+/g, ' ').trim() : '';
-      if(testo.length < 200) atteso('banco: schermata ' + nome + ' piena', false, `(${testo.length} caratteri: ${testo.slice(0, 80)})`);
+      const piena = testo.length >= 200 || (selettore && !!W.document.querySelector(selettore));
+      if(!piena) atteso('banco: schermata ' + nome + ' piena', false, `(${testo.length} caratteri: ${testo.slice(0, 80)})`);
       out[nome] = fotografa(W);
     } catch(e){ atteso('banco: schermata ' + nome, false, e.message); }
   }

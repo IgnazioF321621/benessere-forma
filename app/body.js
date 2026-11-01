@@ -903,9 +903,10 @@ async function saveBodyLog(){
 }
 
 // «Ultimi log»: le ultime 8 registrazioni del corpo (pesate, misure, check), dalla timeline unificata
-// (getUnifiedBodyTimeline → weighInsByDay per il peso, L48). Dal 14 ottobre 2026 (Body 170) non sta più
-// in Body › Misure: è nelle Impostazioni, «Salute ed esami del sangue» (_setUltimiLog). Nessuna lettura
-// in più: i dati sono quelli già in memoria da loadBodyLogs. Tocco su un check = dettaglio, × = elimina.
+// (getUnifiedBodyTimeline → weighInsByDay per il peso, L48). Dal 14 ottobre 2026 (Body 170) stava nelle
+// Impostazioni; dal 1 novembre 2026 (Stile 040, scelta di Ignazio) torna in Body › Misure, in fondo al modulo.
+// Nessuna lettura in più: i dati sono quelli già in memoria da loadBodyLogs. Tocco su un check = dettaglio,
+// × = elimina. A veste accesa la lista è _ultimiLogV5HTML, con le stesse funzioni.
 function _ultimiLogHTML(){
   const uTimeline = getUnifiedBodyTimeline();
   if(!uTimeline.length) return '';
@@ -931,6 +932,25 @@ function _ultimiLogHTML(){
           </div>`;
         }).join('')}
       </div>`;
+}
+
+// Stile 040 (1 novembre 2026), a veste accesa: «Le ultime registrazioni» come righe toccabili alte 52 px (niente ×
+// piccola). Il tocco apre la stessa correzione di sempre: il dettaglio per un check, il foglio «Elimina log peso»
+// per una pesata o una misura (confirmDeleteBodyLog → deleteBodyLogConfirmed: una scrittura sola, nessuna seconda via).
+function _ultimiLogV5HTML(){
+  const uTimeline = getUnifiedBodyTimeline();
+  if(!uTimeline.length) return '';
+  return `<h2 class="sez5">Le ultime registrazioni</h2><div class="b5-gruppo">${uTimeline.slice(0,8).map(l => {
+    const isCheck = l.source === 'check';
+    const valori = [(l.weight_kg ?? l.check_weight_kg) ? `${l.weight_kg ?? l.check_weight_kg} kg` : '', l.waist_cm ? `${l.waist_cm} cm` : '', l.bf_pct ? `BF ${l.bf_pct}%` : ''].filter(Boolean).join(' · ');
+    return `<button class="b5-log-riga" onclick="correggiRegistrazione('${isCheck ? 'check' : 'log'}','${l.id || ''}','${l.check_id || ''}','${l.date}')">
+      <span class="b5-log-data">${fmtDate(l.date)}${isCheck ? ' <small>✓ check</small>' : ''}</span>
+      <span class="b5-log-valori">${valori}</span><span class="b5-check-chev">›</span></button>`;
+  }).join('')}</div>`;
+}
+function correggiRegistrazione(kind, id, checkId, date){
+  if(kind === 'check') return openBodyCheckDetail(checkId);
+  return confirmDeleteBodyLog('log', id, checkId, date);
 }
 
 // ── Eliminazione log Body (body_logs veloce + body_measurements check M2) ──
@@ -984,7 +1004,6 @@ async function deleteBodyLogConfirmed(){
       if(error) throw error;
     }
     await loadBodyLogs();   // ricarica + re-render + updateHeaderWeight
-    if(typeof _setUltimiLog === 'function') _setUltimiLog();   // Body 170: la lista nelle Impostazioni
     showToast(c.kind === 'log' ? 'Log eliminato' : 'Check fisico eliminato', '✅', 4000);
   } catch(e){
     console.error('[body-delete] error:', e);
@@ -1717,7 +1736,10 @@ function renderBodyTrend(){
       { name:'Grasso viscerale',unit:'',   col:'#854F0B', get: r => r.visceral_fat, metrica:'viscerale' },
       { name:'BMI',             unit:'',   col:'#854F0B', get: r => (H && r.weight_kg!=null) ? r.weight_kg/((H/100)**2) : null, metrica:'bmi' },
     ];
-    const cards = metricDefs.map(def => {
+    // Stile 040 (1 novembre 2026), a veste accesa: il peso sta gia' in «Progresso verso l'obiettivo» (numero, obiettivo,
+    // quanto e' cambiato nell'intervallo): qui non si ripete
+    const v5Evoluzione = document.documentElement.classList.contains('v5');
+    const cards = metricDefs.filter(def => !(v5Evoluzione && def.metrica === 'peso')).map(def => {
       const fmt = def.precise ? fmtMeasure : fmtMetric;
       const pts  = filtered.filter(r => { const v = def.get(r); return v != null && !isNaN(v); });
       const vals = pts.map(def.get);
@@ -2191,7 +2213,7 @@ function renderBody(){
         </div>`;
       })()}
 
-      ${v5 ? '<h2 class="sez5">Misure col metro e bilancia</h2>' : ''}
+      ${v5 ? '<h2 class="sez5">Le misure</h2>' : ''}
       <div class="b5-misure" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
           <div class="b5-misure-titolo" style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${v5 ? 'Giorno' : 'Misure col metro e bilancia'}</div>
@@ -2281,7 +2303,7 @@ function renderBody(){
           ${ST.bodySaving ? 'Salvataggio...' : 'Salva misure'}
         </button>
       </div>
-
+      ${v5 ? _ultimiLogV5HTML() : _ultimiLogHTML()}
     `;
 
   } else if(tab === 'check'){

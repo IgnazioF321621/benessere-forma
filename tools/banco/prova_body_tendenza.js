@@ -59,9 +59,9 @@ const tabelle = {
   const pic = await win.buildWeeklyPicture(ws);
   atteso('media settimana grafico = quadro', [mediaGrafico, settimana.length], [pic.weight.weight_avg, pic.weight.weight_n]);
 
-  // «Ultimi log»: le pesate rapide con la data. Dal 14 ottobre 2026 (Body 170) stanno nelle Impostazioni › Salute
-  win.openSettingsModal(); win.setVai('salute');
-  const box = [...win.document.querySelectorAll('#set-ultimi-log div')].find(d => d.firstElementChild && d.firstElementChild.textContent === 'Ultimi log');
+  // «Ultimi log»: le pesate rapide con la data. Dal 1 novembre 2026 (Stile 040) stanno di nuovo in fondo a Body › Misure
+  ST.bodyTab = 'misure'; win.renderBody();
+  const box = [...win.document.querySelectorAll('#page-body div')].find(d => d.firstElementChild && d.firstElementChild.textContent === 'Ultimi log');
   const righe = box ? [...box.children].slice(1).map(r => testo(r.innerHTML)) : [];
   atteso('Ultimi log · prime 3 righe', righe.slice(0, 3), ['dom 13 set 72.1 kg ×', 'sab 12 set 72.2 kg ×', 'ven 11 set 72 kg ×']);
   atteso('Ultimi log · check dell\'8 set col suo peso', righe.find(r => /8 set/.test(r) && /check/.test(r)), 'mar 8 set ✓ check 72.35 kg 86 cm → ×');

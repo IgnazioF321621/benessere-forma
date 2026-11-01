@@ -60,7 +60,7 @@ function setVai(pagina) {
   const piede = document.getElementById('set-piede'); if(piede) piede.hidden = !(conf && conf.salva);
   const err = document.getElementById('set-err'); if(err) err.style.display = 'none';
   if(nome === 'elenco') _setRiassunti();
-  if(nome === 'salute') { _setUltimiLog(); _setEsamiStorico(); }
+  if(nome === 'salute') _setEsamiStorico();
   const inner = document.querySelector('#settings-modal .set-foglio'); if(inner) inner.scrollTop = 0;
 }
 // La veste nuova (Giro 1) è accesa per tutti dal 29 ottobre 2026: la classe html.v5 la mette lo script in testa alla pagina,
@@ -91,21 +91,7 @@ function _setRiassunti() {
   if(typeof _aggiornaCsaImpostazioni === 'function') _aggiornaCsaImpostazioni();       // «Come stai adesso?» (Home 170)
 }
 // Lo storico degli esami del sangue (blood_tests), spostato qui dal tab Body (Metodo 220): stessa card, stessa fonte.
-// «Ultimi log» (Body 170, 14 ottobre 2026): spostati qui da Body › Misure. Usano i dati del corpo già in
-// memoria (loadBodyLogs, all'apertura di Home e Body); se non sono ancora arrivati si leggono una volta.
-function _setUltimiLog() {
-  const el = document.getElementById('set-ultimi-log');
-  if(!el || typeof _ultimiLogHTML !== 'function') return;
-  if(ST.bodyLogs == null || ST.bodyMeasurements == null) {
-    el.innerHTML = '';
-    if(!ST.bodyInLettura && typeof loadBodyLogs === 'function') {
-      ST.bodyInLettura = true;
-      loadBodyLogs().finally(() => { ST.bodyInLettura = false; if(ST.setPagina === 'salute' && ST.bodyLogs != null) _setUltimiLog(); });
-    }
-    return;
-  }
-  el.innerHTML = _ultimiLogHTML();
-}
+// «Ultimi log» stava qui dal Body 170 (14 ottobre 2026); dal 1 novembre 2026 (Stile 040) è tornato in Body › Misure.
 // Si legge solo qui, la prima volta che la pagina si apre (e di nuovo dopo un check con gli esami).
 function _setEsamiStorico() {
   const el = document.getElementById('set-esami-storico');

@@ -394,8 +394,31 @@ function _riempiGiorni(meals, itemsByMeal, fasting, suppLog) {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
     if(supp && !ST.db.days[s.date].suppsTaken.includes(supp.local_id))
       ST.db.days[s.date].suppsTaken.push(supp.local_id);
-    ST.db.days[s.date].rawSuppLogs.push({id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1});
+    // supplement_id e supplement_name restano nella riga: se il prodotto non c'e' ancora (primo accesso senza copia
+    // locale: gli integratori arrivano con la seconda ondata), rilegaIntegratori() la lega dopo
+    ST.db.days[s.date].rawSuppLogs.push({id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1,
+      supplement_id: s.supplement_id || null, supplement_name: s.supplement_name || null});
   });
+}
+
+// Stile 040 (1 novembre 2026): al primo accesso senza copia locale lo storico (prima ondata di caricaDatiAvvio) si legge
+// prima degli integratori (seconda), quindi _riempiGiorni non trova il prodotto e i «presi» dei giorni passati restano
+// vuoti fino al rinfresco completo successivo: l'anello degli integratori segnava meno del vero. Dopo loadSupps si
+// rilegano qui le righe rimaste senza prodotto, senza una lettura in piu' e senza cambiare le ondate. Da' quante ne ha legate.
+function rilegaIntegratori(){
+  let n = 0;
+  Object.values(ST.db.days || {}).forEach(d => {
+    (d.rawSuppLogs || []).forEach(l => {
+      if(l.id != null || !(l.supplement_id || l.supplement_name)) return;
+      const supp = ZTNutrizione.suppForLog(ST.supps, l);
+      if(!supp) return;
+      l.id = supp.local_id; l.name = supp.name; l.dose = parseFloat(supp.dose_die) || 1;
+      if(!d.suppsTaken) d.suppsTaken = [];
+      if(!d.suppsTaken.includes(supp.local_id)) d.suppsTaken.push(supp.local_id);
+      n++;
+    });
+  });
+  return n;
 }
 
 async function loadAllDays(opts) {
@@ -792,7 +815,8 @@ async function loadTodaySuppLog() {
   // Per supplement_id, poi per nome (Fondamenta 070): la regola e' in shared/nutrizione.js → suppForLog
   day.rawSuppLogs = data.map(s => {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
-    return {id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1};
+    return {id: supp ? supp.local_id : null, name: supp ? supp.name : s.supplement_name, time: s.slot || '', dose: parseFloat(supp?.dose_die) || 1,
+      supplement_id: s.supplement_id || null, supplement_name: s.supplement_name || null};   // la stessa forma di _riempiGiorni
   });
   data.forEach(s => {
     const supp = ZTNutrizione.suppForLog(ST.supps, s);
