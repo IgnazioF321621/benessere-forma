@@ -5,8 +5,10 @@
 // conta, il pasto registrato, il digiuno, la pausa cibo, l'avviso già mandato, nessun telefono, l'indirizzo
 // morto che si cancella, la riga in promemoria_inviati, la prova senza scritture, il giro pieno, il testo.
 import { createECDH } from 'node:crypto';
-import { runPromemoria, handlePromemoria, MAX_AVVISI_GIRO } from '../src/promemoria-cron.js';
+import { runPromemoria, handlePromemoria, MAX_AVVISI_GIRO, PULIZIA_GIORNI } from '../src/promemoria-cron.js';
 import { b64url } from '../src/webpush.js';
+import { giroPer } from '../src/index.js';
+import { handleScheduled } from '../src/coach-cron.js';
 
 let ko = 0;
 const atteso = (nome, got, exp) => {
@@ -48,9 +50,10 @@ function mondo(o = {}) {
     promemoria_inviati: [ { user_id: U6, date: G, slot: 'colazione' } ],
     ...o.tabelle,
   };
-  const scritture = [], push = [];
+  const scritture = [], push = [], letture = [];
   globalThis.fetch = async (url, init = {}) => {
     const u = new URL(String(url));
+    if ((init.method || 'GET') === 'GET') letture.push(u.pathname.split('/').pop() + u.search);
     const res = (body, status = 200) => new Response(status === 204 ? null : (body == null ? '' : JSON.stringify(body)), { status, headers: { 'Content-Type': 'application/json' } });
     if (!u.hostname.endsWith('supabase.co')) {
       push.push({ url: u.href, headers: init.headers, byte: init.body ? init.body.length : 0 });
@@ -66,6 +69,7 @@ function mondo(o = {}) {
       const [op, ...rest] = v.split('.'); const val = rest.join('.');
       if (op === 'eq') return String(r[col]) === val;
       if (op === 'in') return val.slice(1, -1).split(',').includes(String(r[col]));
+      if (op === 'lt') return r[col] < val;
       if (op === 'not') return r[col] != null;
       return true;
     });
@@ -80,7 +84,7 @@ function mondo(o = {}) {
     if (method === 'POST') { (Array.isArray(body) ? body : [body]).forEach((r) => t[table].push(r)); return res(null, 201); }
     return res(null);
   };
-  return { t, scritture, push };
+  return { t, scritture, push, letture };
 }
 const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {}).esito;
 
@@ -111,6 +115,8 @@ const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {})
   atteso('U7: nessun telefono', esitoDi(e, U7), 'nessun telefono');
   atteso('conto: 1 avviso, 2 telefoni, 1 morto, 0 errori', [e.avvisi, e.telefoni, e.morti, e.errori], [1, 2, 1, 0]);
   atteso('2 POST ai servizi push, con VAPID e corpo cifrato', [m.push.length, m.push.every((p) => /^vapid t=/.test(p.headers.Authorization) && p.headers['Content-Encoding'] === 'aes128gcm' && p.byte > 100)], [2, true]);
+  atteso('letture per giorno, mai per elenco di persone (niente in.(…) negli indirizzi)', [m.letture.length, m.letture.some((l) => /user_id=in/.test(l)), m.letture.filter((l) => /date=eq\.2026-11-02/.test(l)).length], [5, false, 3]);
+  atteso('sottorichieste del giro: 5 letture + 2 push + 3 scritture = 10', m.letture.length + m.push.length + m.scritture.length, 10);
   const s = m.scritture;
   atteso('scritture: inviati (upsert), ultimo invio (PATCH), morto tolto (DELETE)', s.map((x) => x.method + ' ' + x.table), ['POST promemoria_inviati', 'PATCH push_iscrizioni', 'DELETE push_iscrizioni']);
   atteso('promemoria_inviati: U1 · oggi · colazione · 1 telefono', s[0].body, [{ user_id: U1, date: G, slot: 'colazione', telefoni: 1 }]);
@@ -131,6 +137,9 @@ const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {})
   atteso('alle 15 chi ha acceso solo la colazione non riceve', [esitoDi(e, U2), esitoDi(e, U7)], ['niente da dire', 'niente da dire']);
   const e2 = await runPromemoria(ENV, { nowTs: ORE22 });
   atteso('alle 22 solo U1 ha la cena accesa', [esitoDi(e2, U1), e2.utenti[0].pasto, e2.avvisi], ['mandato a 1', 'cena', 1]);
+  const pulizia = m.scritture.filter((s) => s.method === 'DELETE' && s.table === 'promemoria_inviati');
+  atteso('alle 22 la pulizia: una richiesta, le righe più vecchie di 30 giorni', [e2.puliti, pulizia.length, pulizia[0].filtri, PULIZIA_GIORNI], [true, 1, 'date=lt.2026-10-03', 30]);
+  atteso('alle 15 niente pulizia', e.puliti, false);
 }
 
 // 4. la prova (dry): decide ma non manda e non scrive
@@ -144,7 +153,7 @@ const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {})
 {
   const m = mondo({ tabelle: { push_iscrizioni: [iscr(I(9), U1, 'https://web.push.apple.com/u1-guasto')] } });
   const e = await runPromemoria(ENV, { nowTs: ORE10 });
-  atteso('500 dal servizio push: esito detto, nessuna scrittura', [esitoDi(e, U1), e.avvisi, m.scritture.length, m.t.push_iscrizioni.length], ['servizio push 500', 0, 0, 1]);
+  atteso('500 dal servizio push: esito detto, niente in inviati, l\'esito scritto sul telefono, che resta', [esitoDi(e, U1), e.avvisi, m.scritture.map((s) => s.method + ' ' + s.table), m.scritture[0].body.ultimo_esito, m.t.push_iscrizioni.length], ['servizio push 500', 0, ['PATCH push_iscrizioni'], 'servizio push 500', 1]);
 }
 
 // 6. il giro pieno: oltre MAX_AVVISI_GIRO telefoni si rimanda e lo si dice
@@ -152,7 +161,7 @@ const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {})
   const tanti = Array.from({ length: MAX_AVVISI_GIRO - 1 }, (_, i) => iscr(I(100 + i), U7, 'https://web.push.apple.com/u7-' + i));
   const m = mondo({ tabelle: { push_iscrizioni: [iscr(I(1), U1, 'https://web.push.apple.com/u1a'), iscr(I(2), U1, 'https://web.push.apple.com/u1b'), ...tanti] } });
   const e = await runPromemoria(ENV, { nowTs: ORE10 });
-  atteso('U1 (2 telefoni) passa, U7 (39) sforerebbe i 40 → rimandato', [esitoDi(e, U1), esitoDi(e, U7), e.rimandati, m.push.length], ['mandato a 2', 'rimandato: giro pieno', 1, 2]);
+  atteso('U1 (2 telefoni) passa, U7 (14) sforerebbe i 15 → rimandato', [MAX_AVVISI_GIRO, esitoDi(e, U1), esitoDi(e, U7), e.rimandati, m.push.length], [15, 'mandato a 2', 'rimandato: giro pieno', 1, 2]);
 }
 
 // 7. una lettura che fallisce ferma il giro senza eccezioni fuori (handlePromemoria scrive nei log)
@@ -163,7 +172,25 @@ const esitoDi = (e, u) => (e.utenti.find((x) => x.user === u.slice(0, 8)) || {})
   atteso('handlePromemoria con meals guasta: nessuna eccezione', uscita, 'ok');
 }
 
-// 8. il testo dell'avviso che parte (quello che sw.js mostra)
+// 8. lo smistamento per cron: l'orario fa i promemoria, quelli del lunedì fanno Pirsi propone; e Pirsi propone
+//    non parte in un giorno che non è lunedì nemmeno se qualcuno lo chiama alle 6
+{
+  const m = mondo();
+  await giroPer({ cron: '0 * * * *', scheduledTime: ORE10 }, ENV, { waitUntil() {} });
+  atteso('smista · «0 * * * *» → promemoria (2 push)', m.push.length, 2);
+  const m2 = mondo();
+  await giroPer({ cron: '0 5 * * 1', scheduledTime: ORE10 }, ENV, { waitUntil() {} });
+  atteso('smista · «0 5 * * 1» alle 10 → non è il giro dei promemoria (0 push, 0 letture dei pasti)', [m2.push.length, m2.letture.filter((l) => /^meals/.test(l)).length], [0, 0]);
+  const m3 = mondo();
+  // martedì 3 novembre 2026, 05:00 UTC = le 6 di Roma: non è lunedì
+  await handleScheduled({ cron: '0 5 * * 1', scheduledTime: Date.parse('2026-11-03T05:00:00Z') }, ENV, { waitUntil() {} });
+  atteso('cintura · Pirsi propone alle 6 di martedì non legge niente', m3.letture.length, 0);
+  const m4 = mondo();
+  await handleScheduled({ cron: '0 5 * * 1', scheduledTime: Date.parse('2026-11-02T05:00:00Z') }, ENV, { waitUntil() {} });
+  atteso('cintura · alle 6 di lunedì parte (legge i profili)', m4.letture.length > 0, true);
+}
+
+// 9. il testo dell'avviso che parte (quello che sw.js mostra)
 {
   const m = mondo();
   await runPromemoria(ENV, { nowTs: ORE10 });

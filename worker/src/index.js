@@ -21,6 +21,7 @@ import { handleFitdays } from './fitdays.js';
 import { handleCalendario } from './calendario.js';
 import { handleScheduled } from './coach-cron.js';
 import { handlePromemoria } from './promemoria-cron.js';
+import { chiavePubblica } from './webpush.js';
 import { corsPer, origineRifiutata, tokenDa, personaDaToken, entroIlLimite } from './porta.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
@@ -246,12 +247,19 @@ async function handleGroqProxy(request, env) {
   }
 }
 
+// Quale giro per quale cron. Esportata per la prova.
+export function giroPer(event, env, ctx) {
+  if (event.cron === '0 * * * *') return handlePromemoria(event, env);
+  return handleScheduled(event, env, ctx);
+}
+
 // La chiave pubblica VAPID (Notifiche 170): è pubblica per natura (la vede ogni telefono iscritto), così
 // l'app la legge da qui e non va copiata nel codice. Senza chiavi nel Worker risponde 404: l'app lo dice.
 function handlePushChiave(request, env) {
   if (request.method !== 'GET') return jsonResponse({ error: 'Method not allowed' }, 405);
-  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Notifiche non configurate' } }, 404);
-  return new Response(JSON.stringify({ chiave: env.VAPID_PUBLIC_KEY }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' } });
+  const chiave = chiavePubblica(env);
+  if (!chiave || !String(env.VAPID_PRIVATE_KEY || '').trim()) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Notifiche non configurate' } }, 404);
+  return new Response(JSON.stringify({ chiave }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' } });
 }
 
 // Le risposte nascono senza CORS: le intestazioni si mettono qui, una volta,
@@ -287,7 +295,9 @@ export default {
     return conCors(await instrada(request, env), corsPer(request));
   },
   async scheduled(event, env, ctx) {
-    // Ogni cron chiama tutti e due i giri: ognuno guarda l'ora di Roma e lavora solo nella sua
-    ctx.waitUntil(Promise.all([handleScheduled(event, env, ctx), handlePromemoria(event, env)]));
+    // Ogni espressione cron ha il suo giro (Cloudflare chiama scheduled una volta per espressione): quella
+    // di ogni ora manda i promemoria dei pasti, le due del lunedì fanno Pirsi propone. Senza lo smistamento
+    // il giro del lunedì partirebbe ogni giorno alle 6 e due volte il lunedì (revisione del 1 novembre 2026)
+    ctx.waitUntil(giroPer(event, env, ctx));
   },
 };

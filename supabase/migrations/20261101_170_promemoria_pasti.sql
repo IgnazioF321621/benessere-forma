@@ -54,7 +54,7 @@ create table if not exists public.push_iscrizioni (
   constraint push_iscrizioni_endpoint_key unique (endpoint),
   constraint push_iscrizioni_endpoint_https check (endpoint ~ '^https://'),
   constraint push_iscrizioni_endpoint_len check (char_length(endpoint) <= 2048),
-  constraint push_iscrizioni_chiavi_len check (char_length(p256dh) between 80 and 120 and char_length(auth) between 16 and 32)
+  constraint push_iscrizioni_chiavi_len check (char_length(p256dh) = 87 and char_length(auth) = 22)   -- 65 e 16 byte in base64url senza «=»
 );
 
 create index if not exists push_iscrizioni_user_idx on public.push_iscrizioni (user_id);

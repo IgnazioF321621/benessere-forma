@@ -8,8 +8,8 @@
 // `wrangler secret put` (e, per le prove in locale, in worker/.dev.vars, che git ignora). La pubblica la
 // legge l'app dal Worker (GET /push-chiave): non va copiata nel codice.
 //
-// Se la coppia cambia, ogni telefono iscritto va iscritto di nuovo: le iscrizioni vecchie rispondono 403 e il
-// giro delle ore le cancella al primo avviso. Per questo si genera una volta sola e si conserva la privata in
+// Se la coppia cambia, ogni telefono iscritto va iscritto di nuovo: le iscrizioni vecchie rispondono 401/403 e il
+// giro delle ore le cancella al primo avviso; l'app si iscrive di nuovo da sola alla prima apertura (pushRiallinea). Per questo si genera una volta sola e si conserva la privata in
 // un posto sicuro (il gestore delle password di Ignazio), mai in Evernote né in git.
 const { createECDH } = require('node:crypto');
 const b64url = (b) => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

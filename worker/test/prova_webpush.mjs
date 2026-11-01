@@ -65,6 +65,20 @@ atteso('b64url · andata e ritorno di 65 byte', b64url(daB64url(iscrizione.p256d
   atteso('cifra · p256dh compresso → rifiutato prima di mandare', /p256dh/.test(msg), true);
 }
 
+// 2b. Il vettore di prova della RFC 8291, Appendice A: con le stesse chiavi e lo stesso salt il corpo deve uscire
+//     identico byte per byte. È la prova che non condivide nessun errore con l'autore.
+{
+  const uaPub = daB64url('BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4');
+  const asPub = daB64url('BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8');
+  const jwkAs = { kty: 'EC', crv: 'P-256', x: b64url(asPub.slice(1, 33)), y: b64url(asPub.slice(33, 65)) };
+  const effimera = {
+    publicKey: await crypto.subtle.importKey('jwk', jwkAs, { name: 'ECDH', namedCurve: 'P-256' }, true, []),
+    privateKey: await crypto.subtle.importKey('jwk', { ...jwkAs, d: 'yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw' }, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']),
+  };
+  const corpo = await _cifra({ p256dh: b64url(uaPub), auth: 'BTBZMqHH6r4Tts7J_aSIgg' }, 'When I grow up, I want to be a watermelon', { salt: daB64url('DGv6ra1nlYgDCS1FRnbzlw'), effimera });
+  atteso('RFC 8291 Appendice A · corpo identico al vettore della RFC', b64url(corpo), 'DGv6ra1nlYgDCS1FRnbzlwAAEABBBP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A_yl95bQpu6cVPTpK4Mqgkf1CXztLVBSt2Ks3oZwbuwXPXLWyouBWLVWGNWQexSgSxsj_Qulcy4a-fN');
+}
+
 // 3. il JWT VAPID: tre parti, firma ES256 valida con la chiave pubblica, aud = origine, exp fra 12 ore, sub
 {
   const adesso = Date.parse('2026-11-02T09:00:00Z');
@@ -95,15 +109,32 @@ atteso('b64url · andata e ritorno di 65 byte', b64url(daB64url(iscrizione.p256d
   atteso('invia · POST all\'endpoint, 201 → viva', [ultima.init.method, ultima.url, r.status, r.viva], ['POST', iscrizione.endpoint, 201, true]);
   atteso('invia · Content-Encoding aes128gcm, TTL 4 ore, Urgency normal, Topic pasto', [H['Content-Encoding'], H.TTL, H.Urgency, H.Topic], ['aes128gcm', '14400', 'normal', 'pasto']);
   atteso('invia · Authorization vapid t=<jwt>, k=<chiave pubblica>', new RegExp('^vapid t=[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+, k=' + ENV.VAPID_PUBLIC_KEY + '$').test(H.Authorization), true);
-  atteso('invia · Content-Length = byte del corpo', Number(H['Content-Length']), ultima.init.body.length);
+  atteso('invia · niente Content-Length a mano (lo mette il runtime)', 'Content-Length' in H, false);
+  // il JWT si firma una volta per origine: con la Map, due invii alla stessa origine portano lo stesso token
+  const jwts = new Map();
+  await inviaPush(iscrizione, { a: 1 }, ENV, { jwts }); const t1 = ultima.init.headers.Authorization;
+  await inviaPush({ ...iscrizione, endpoint: 'https://web.push.apple.com/altro' }, { a: 2 }, ENV, { jwts }); const t2 = ultima.init.headers.Authorization;
+  await inviaPush({ ...iscrizione, endpoint: 'https://fcm.googleapis.com/x' }, { a: 3 }, ENV, { jwts });
+  atteso('invia · stesso JWT per la stessa origine, una voce per origine nella Map', [t1 === t2, jwts.size, [...jwts.keys()]], [true, 2, ['https://web.push.apple.com', 'https://fcm.googleapis.com']]);
+  // un a-capo incollato nel secret non rompe niente
+  conRisposta(201);
+  const sporco = await inviaPush(iscrizione, {}, { ...ENV, VAPID_PUBLIC_KEY: ENV.VAPID_PUBLIC_KEY + '\n', VAPID_PRIVATE_KEY: ' ' + ENV.VAPID_PRIVATE_KEY + '\n' });
+  atteso('invia · chiavi con spazi e a-capo → ripulite, k= senza a-capo', [sporco.status, ultima.init.headers.Authorization.endsWith('k=' + ENV.VAPID_PUBLIC_KEY)], [201, true]);
+  await inviaPush(iscrizione, { titolo: 'x', corpo: 'y', slot: 'cena' }, ENV);   // di nuovo l'avviso di prima, per leggerne il corpo
   const letto = decifra(Buffer.from(ultima.init.body));
   atteso('invia · il corpo è il JSON cifrato dell\'avviso', JSON.parse(letto.testo), { titolo: 'x', corpo: 'y', slot: 'cena' });
   conRisposta(410);
   atteso('invia · 410 → morta', (await inviaPush(iscrizione, {}, ENV)).viva, false);
   conRisposta(404);
   atteso('invia · 404 → morta', (await inviaPush(iscrizione, {}, ENV)).viva, false);
+  conRisposta(403);
+  atteso('invia · 403 (firma non accettata, chiave cambiata) → morta', (await inviaPush(iscrizione, {}, ENV)).viva, false);
+  conRisposta(401);
+  atteso('invia · 401 → morta', (await inviaPush(iscrizione, {}, ENV)).viva, false);
   conRisposta(500);
   atteso('invia · 500 → viva (si riprova al giro dopo)', (await inviaPush(iscrizione, {}, ENV)).viva, true);
+  conRisposta(429);
+  atteso('invia · 429 → viva', (await inviaPush(iscrizione, {}, ENV)).viva, true);
   ultima = null;
   const h = await inviaPush({ ...iscrizione, endpoint: 'http://web.push.apple.com/x' }, {}, ENV);
   atteso('invia · endpoint http → non si manda', [h.viva, ultima], [false, null]);

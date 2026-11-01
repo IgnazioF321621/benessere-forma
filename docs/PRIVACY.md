@@ -12,6 +12,10 @@
 >
 > **Le foto dei check.** Le foto restano nel tuo spazio privato. Vanno a Gemini (un servizio esterno) solo se tocchi tu «Fai leggere le foto», e prima ti viene chiesto il consenso ogni volta che serve.
 >
+> **Gli avvisi sul telefono.** Se accendi i promemoria dei pasti, l'indirizzo di consegna del tuo telefono va al servizio di notifiche del telefono (Apple, Google o Mozilla), e alle ore scelte parte un avviso se un pasto manca. Il testo dell'avviso è cifrato: lo legge solo il tuo telefono. Partono spenti e li spegni quando vuoi.
+
+*Aggiunta il 1 novembre 2026 (Notifiche 170), `PRIVACY_VERSIONE = '2026-11-01'`: chi aveva già letto l'informativa la rilegge. **Da far approvare a Ignazio** come le altre righe.*
+>
 > **Cosa puoi fare.** Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file e cancellare l'account: dati, foto e accesso vengono eliminati per sempre.
 
 Il consenso alle foto si chiede **alla prima lettura** (foglio «Lettura delle foto», tasti «Acconsento» e «Annulla», `consensoLetturaFoto` in `app/body.js`): se annulla, non parte niente. La risposta sì resta sul telefono (`zt_foto_ok`). Il testo:
@@ -26,6 +30,7 @@ Deciso da Ignazio il 3 ottobre 2026: i gestori restano citati per nome (Supabase
 |---|---|---|---|---|
 | Email di accesso | Supabase Auth (`auth.users`) | `signInWithOtp`, `verifyOtp` (`app/onboarding.js`) | Supabase | Accesso con codice via email |
 | Profilo: nome, cognome, sesso, età, altezza, peso, obiettivo, regime, intolleranze, note di salute, data inizio allenamento | `profiles` | `saveOnboarding`, `saveSettings` | Supabase | È il profilo |
+| Iscrizione alle notifiche: indirizzo di consegna del telefono e le due chiavi del browser; gli avvisi mandati (giorno e pasto) | `push_iscrizioni`, `promemoria_inviati` | `pushIscrivi` (`app/notifiche.js`); il Worker (`promemoria-cron.js`) | Supabase; il testo cifrato dell'avviso al servizio push del telefono (Apple, Google o Mozilla) | Promemoria del pasto non registrato (Notifiche 170), solo se acceso |
 | Pasti e ingredienti, digiuni | `meals`, `meal_items`, `fasting_days` | `dbAddMeal`, `smartSavePasto`, `dbToggleFasting` (`app/nutrition.js`) | Supabase | Diario |
 | Integratori: libreria, presi, extra, pacchetti | `supplements`, `supplements_log`, `supplement_packages`, `supplement_package_items` | `dbToggleSuppTaken`, `dbInsertExtraLog`, editor pacchetti | Supabase | Diario |
 | Serie, note, allenamenti, schede | `training_logs`, `training_notes`, `workouts`, `schede_utente` | `saveTrainingSet`, `saveTrainingNote`, `saveWorkoutRecord`, generatore | Supabase | Training |

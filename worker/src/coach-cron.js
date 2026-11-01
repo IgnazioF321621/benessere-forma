@@ -174,8 +174,12 @@ export async function runWeeklyCoach(env, opts) {
 export async function handleScheduled(event, env, ctx) {
   const clock = ZTQuadro.makeClock(TZ);
   const ora = Number(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', hourCycle: 'h23' }).format(new Date(event.scheduledTime)));
-  if (ora !== 6 && env.COACH_CRON_FORCE !== '1') {
-    console.log(`[coach-cron] ${event.cron}: a Roma sono le ${ora}, non le 6 — salto`);
+  const giornoSett = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short' }).format(new Date(event.scheduledTime));
+  // Solo il lunedì alle 6 di Roma. Il giorno si controlla anche qui, non solo nell'espressione cron: dal
+  // 1 novembre 2026 il Worker ha anche un cron di ogni ora (promemoria dei pasti), e index.js lo smista
+  // altrove, ma una cintura in più non costa niente (revisione di Notifiche 170)
+  if ((ora !== 6 || giornoSett !== 'Mon') && env.COACH_CRON_FORCE !== '1') {
+    console.log(`[coach-cron] ${event.cron}: a Roma sono le ${ora} di ${giornoSett}, non le 6 di lunedì — salto`);
     return;
   }
   const dry = env.COACH_CRON_DRY === '1';

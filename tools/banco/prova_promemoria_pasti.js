@@ -59,7 +59,7 @@ function telefono(win, { permesso = 'default', risposta = 'granted', ua, install
   const st = { subs: [], unsubscribed: 0, n: 0, richieste: 0 };
   const nuova = (opt) => { st.n++; const s = { endpoint: 'https://web.push.apple.com/ep' + st.n, options: { applicationServerKey: opt && opt.applicationServerKey }, toJSON(){ return { endpoint: s.endpoint, keys: { p256dh: 'p'.repeat(87), auth: 'a'.repeat(22) } }; }, async unsubscribe(){ st.unsubscribed++; st.sub = null; return true; } }; st.sub = s; st.subs.push(s); return s; };
   const reg = { pushManager: { async getSubscription(){ return st.sub || null; }, async subscribe(opt){ if(st.alSubscribe) st.alSubscribe(); return nuova(opt); } } };
-  win.navigator.serviceWorker = { ready: Promise.resolve(reg), addEventListener(){} };
+  win.navigator.serviceWorker = { ready: new Promise(() => {}), async getRegistration(){ return st.senzaSw ? null : reg; }, addEventListener(){} };   // `ready` non si risolve mai: l'app non deve usarla
   if(pushCe) win.PushManager = function(){}; else delete win.PushManager;
   win.Notification = { permission: permesso, async requestPermission(){ st.richieste++; win.Notification.permission = risposta; return risposta; } };
   if(ua) Object.defineProperty(win.navigator, 'userAgent', { value: ua, configurable: true });
@@ -181,6 +181,18 @@ async function pronta(b, tables){ await b.avviato; const ST = b.win.eval('ST'); 
     atteso('logout · riga tolta (persona + endpoint), browser disiscritto, marcatore via, schermata di accesso', [del.length, del[0].filters, tel.unsubscribed, win.localStorage.getItem('zt_push_' + U), ['auth-screen', 'privacy-screen'].some(id => win.document.getElementById(id).classList.contains('visible'))], [1, [['eq', 'user_id', U], ['eq', 'endpoint', 'https://web.push.apple.com/ep1']], 1, null, true]);
   }
 
+  // 2l-bis. nessun service worker registrato: il logout non resta appeso e non scrive niente
+  {
+    const tables = fixture(['cena']); const b = boot(tables, NOW);
+    const { win, supa } = b; await pronta(b, tables);
+    const tel = telefono(win, { permesso: 'granted' }); tel.senzaSw = true; chiaveDalWorker(win);
+    await win.pushRiallinea();
+    atteso('senza sw · il riallineamento non iscrive niente', [tel.n, scritture(supa, 'push_iscrizioni').length], [0, 0]);
+    win.chiediConferma = async () => true;
+    const esito = await Promise.race([win.logout().then(() => 'uscito'), attendi(1500).then(() => 'appeso')]);
+    atteso('senza sw · «Esci» esce (niente attesa infinita su serviceWorker.ready)', [esito, scritture(supa, 'push_iscrizioni', 'delete').length], ['uscito', 0]);
+  }
+
   // 2m. il tocco sull'avviso: la pagina si apre sul tab Nutrition
   {
     const tables = fixture(null); const b = boot(tables, NOW);
@@ -190,6 +202,14 @@ async function pronta(b, tables){ await b.avviato; const ST = b.win.eval('ST'); 
     win.eval("_apriRichiesto = 'oggi'");
     win.apriDaNotifica(); await attendi(20);
     atteso('tocco · dopo apriDaNotifica: tab Nutrition, richiesta consumata', [win.eval('ST').page, win.eval('_apriRichiesto')], ['oggi', null]);
+  }
+
+  // 2m-bis. le etichette degli interruttori vengono dalla regola
+  {
+    const tables = fixture(null); const b = boot(tables, NOW);
+    const { win } = b; await pronta(b, tables);
+    win.openSettingsModal();
+    atteso('etichette · le ore sono quelle di ZTPromemoria.PASTI', [...win.document.querySelectorAll('#set-promemoria [role=switch]')].map(x => x.textContent.replace(/\s+/g, ' ').trim()), ['Colazione · ENTRO LE 10', 'Pranzo · ENTRO LE 15', 'Cena · ENTRO LE 22']);
   }
 
   // 2n. «Scarica i miei dati» include le due tabelle nuove

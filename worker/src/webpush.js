@@ -16,7 +16,12 @@
 //   inviaPush(iscrizione, payload, env, opzioni) → { status, viva }
 //     iscrizione  { endpoint, p256dh, auth }   (la riga di push_iscrizioni)
 //     payload     oggetto: va in JSON nel corpo, lo legge sw.js
-//     viva        falso se il servizio push ha risposto 404 o 410: l'indirizzo non esiste più, si cancella
+//     opzioni.jwts  una Map per giro: il JWT VAPID si firma UNA volta per origine del servizio push (Apple,
+//                   Google, Mozilla), non una per telefono. La firma ECDSA è la parte più costosa: il piano
+//                   Free dà 10 ms di CPU a esecuzione, cron compreso (revisione del 1 novembre 2026)
+//     viva        falso se il servizio push ha risposto 404 o 410 (l'indirizzo non esiste più) oppure 401
+//                 o 403 (la firma non è accettata: chiave VAPID cambiata o indirizzo di un'altra chiave):
+//                 in tutti e quattro i casi l'iscrizione si cancella, il telefono si iscrive di nuovo da solo
 //
 // Le funzioni _* sono esportate solo per la prova (worker/test/prova_webpush.mjs), che decifra come
 // farebbe il telefono e controlla la firma con la chiave pubblica.
@@ -48,9 +53,13 @@ function concat(...parti) {
 }
 
 // La chiave VAPID come CryptoKey: la pubblica è il punto non compresso (04 · x · y), la privata lo scalare d
+// Le chiavi come arrivano dai secret, senza spazi o a-capo incollati per sbaglio
+export const chiavePubblica = (env) => String(env.VAPID_PUBLIC_KEY || '').trim();
+const chiavePrivata = (env) => String(env.VAPID_PRIVATE_KEY || '').trim();
+
 function jwkVapid(env) {
-  const pub = daB64url(env.VAPID_PUBLIC_KEY);
-  const d = daB64url(env.VAPID_PRIVATE_KEY);
+  const pub = daB64url(chiavePubblica(env));
+  const d = daB64url(chiavePrivata(env));
   if (pub.length !== 65 || pub[0] !== 4) throw new Error('VAPID_PUBLIC_KEY: attesi 65 byte, punto non compresso');
   if (d.length !== 32) throw new Error('VAPID_PRIVATE_KEY: attesi 32 byte');
   return { kty: 'EC', crv: 'P-256', x: b64url(pub.slice(1, 33)), y: b64url(pub.slice(33, 65)), d: b64url(d) };
@@ -99,24 +108,27 @@ export async function _cifra(iscrizione, testo, opzioni) {
 }
 
 export async function inviaPush(iscrizione, payload, env, opzioni) {
-  const url = new URL(iscrizione.endpoint);
+  let url;
+  try { url = new URL(iscrizione.endpoint); } catch (e) { return { status: 0, viva: false, motivo: 'endpoint non valido' }; }
   if (url.protocol !== 'https:') return { status: 0, viva: false, motivo: 'endpoint non https' };
-  const jwt = await _vapidJwt(env, url.origin, opzioni && opzioni.adesso);
+  const jwts = opzioni && opzioni.jwts;
+  let jwt = jwts && jwts.get(url.origin);
+  if (!jwt) { jwt = await _vapidJwt(env, url.origin, opzioni && opzioni.adesso); if (jwts) jwts.set(url.origin, jwt); }
   const corpo = await _cifra(iscrizione, JSON.stringify(payload), opzioni);
   const r = await fetch(iscrizione.endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Encoding': 'aes128gcm',
-      'Content-Length': String(corpo.length),
       'TTL': String((opzioni && opzioni.ttl) || TTL_SECONDI),
       'Urgency': 'normal',
       'Topic': (opzioni && opzioni.topic) || 'pasto',       // lo stesso argomento sostituisce l'avviso non ancora consegnato
-      'Authorization': `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}`,
+      'Authorization': `vapid t=${jwt}, k=${chiavePubblica(env)}`,
     },
     body: corpo,
   });
-  // 201 mandato · 404/410 l'iscrizione non esiste più (si cancella) · 429 troppi · altro: si riprova al giro dopo
-  const viva = !(r.status === 404 || r.status === 410);
+  // 201 mandato · 404/410 l'iscrizione non esiste più · 401/403 la firma non è accettata (chiave cambiata):
+  // si cancella e il telefono si iscrive di nuovo da solo · 429 troppi, 5xx guasto: si riprova al giro dopo
+  const viva = !(r.status === 404 || r.status === 410 || r.status === 401 || r.status === 403);
   return { status: r.status, viva };
 }

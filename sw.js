@@ -140,7 +140,7 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || (BASE + 'zona-tracker.html?apri=oggi');
   event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(finestre => {
-    const nostra = finestre.find(w => w.url && w.url.indexOf(BASE) !== -1);
+    const nostra = finestre.find(w => w.url && w.url.indexOf(BASE + 'zona-tracker.html') !== -1);
     if (nostra) {
       try { nostra.postMessage({ apri: 'oggi' }); } catch (e) {}
       return nostra.focus ? nostra.focus() : null;

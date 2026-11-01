@@ -536,11 +536,12 @@ function showToast(msg, emoji='✅', duration) {
 // Un testo solo, usato dalla schermata prima del primo accesso e da «Dove vanno i tuoi dati»
 // nelle Impostazioni. La bozza e la mappa dei dati stanno in docs/PRIVACY.md; questo testo lo
 // approva Ignazio. PRIVACY_VERSIONE cambia quando cambia il testo: chi l'ha gia' letto lo rilegge.
-const PRIVACY_VERSIONE = '2026-10-03';
+const PRIVACY_VERSIONE = '2026-11-01';   // Notifiche 170: la riga sugli avvisi sul telefono
 const PRIVACY_INFORMATIVA = [
   ['Il tuo account e i tuoi dati', 'Email di accesso, profilo, pasti, allenamenti, pesate, misure, esami e foto dei check stanno su Supabase, in uno spazio che solo tu puoi leggere e scrivere. Chi gestisce l\'app può vedere i dati, non le foto, per assistenza e controllo.'],
   ['I consigli del coach', 'Per darti un consiglio, l\'app manda a Groq (un servizio esterno) età, sesso, peso, obiettivo, regime alimentare, intolleranze, note di salute, pasti e allenamenti recenti. Non manda il tuo nome.'],
   ['Le foto dei check', 'Le foto restano nel tuo spazio privato. Vanno a Gemini (un servizio esterno) solo se tocchi tu «Fai leggere le foto», e prima ti viene chiesto il consenso ogni volta che serve.'],
+  ['Gli avvisi sul telefono', 'Se accendi i promemoria dei pasti, l\'indirizzo di consegna del tuo telefono va al servizio di notifiche del telefono (Apple, Google o Mozilla), e alle ore scelte parte un avviso se un pasto manca. Il testo dell\'avviso è cifrato: lo legge solo il tuo telefono. Partono spenti e li spegni quando vuoi.'],
   ['Cosa puoi fare', 'Dalle Impostazioni puoi scaricare tutti i tuoi dati in un file e cancellare l\'account: dati, foto e accesso vengono eliminati per sempre.'],
 ];
 function privacyInformativaHTML() {

@@ -20,7 +20,14 @@
 //     ?apri=oggi, e qui si fa showPage('oggi').
 // Mai la parola «errore» nei testi (Regia, 1 novembre 2026).
 
-const PROM_ETICHETTE = { colazione: ['Colazione', 'entro le 10'], pranzo: ['Pranzo', 'entro le 15'], cena: ['Cena', 'entro le 22'] };
+// Il service worker registrato, o null: MAI `navigator.serviceWorker.ready`, che senza registrazione non si
+// risolve e terrebbe appeso il logout (revisione del 1 novembre 2026)
+async function _swRegistrazione() {
+  try {
+    if(typeof navigator === 'undefined' || !navigator.serviceWorker || !navigator.serviceWorker.getRegistration) return null;
+    return (await navigator.serviceWorker.getRegistration('/benessere-forma/')) || (await navigator.serviceWorker.getRegistration()) || null;
+  } catch(e) { return null; }
+}
 
 function _pushChiave() { return 'zt_push_' + ((ST.user && ST.user.id) || 'anon'); }
 function _eIphone() { try { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); } catch(e) { return false; } }
@@ -64,7 +71,8 @@ async function pushIscrivi() {
   if(!ST.user || !ST.user.id) return null;
   const chiave = await _leggiChiavePush();
   if(!chiave) return null;
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await _swRegistrazione();
+  if(!reg || !reg.pushManager) return null;
   let sub = await reg.pushManager.getSubscription();
   // un'iscrizione fatta con un'altra chiave del Worker non serve più: si rifà
   if(sub && sub.options && sub.options.applicationServerKey && _byteAB64url(sub.options.applicationServerKey) !== chiave) { try { await sub.unsubscribe(); } catch(e) {} sub = null; }
@@ -92,7 +100,7 @@ async function pushDisiscrivi() {
   try { localStorage.removeItem(_pushChiave()); } catch(e) {}
   if(typeof navigator === 'undefined' || !navigator.serviceWorker || typeof PushManager === 'undefined') return;
   let sub = null;
-  try { const reg = await navigator.serviceWorker.ready; sub = await reg.pushManager.getSubscription(); } catch(e) { sub = null; }
+  try { const reg = await _swRegistrazione(); sub = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null; } catch(e) { sub = null; }
   if(!sub) return;
   if(ST.user && ST.user.id) await dbq('togliere il telefono dalle notifiche', supa.from('push_iscrizioni').delete().eq('user_id', ST.user.id).eq('endpoint', sub.endpoint), { silenzioso:true });
   try { await sub.unsubscribe(); } catch(e) {}
@@ -102,7 +110,8 @@ async function pushDisiscrivi() {
 async function pushRiallinea() {
   if(!ST.user || !promemoriaAccesi().length || !notifichePossibili().ok || Notification.permission !== 'granted') return;
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await _swRegistrazione();
+    if(!reg || !reg.pushManager) return;
     const sub = await reg.pushManager.getSubscription();
     let segnato = null; try { segnato = localStorage.getItem(_pushChiave()); } catch(e) {}
     if(sub && segnato === sub.endpoint) return;   // già salvata a nome di questa persona
@@ -150,7 +159,7 @@ async function togglePromemoria(slot) {
 function _promemoriaRigheHTML() {
   const accesi = promemoriaAccesi();
   return ZTPromemoria.SLOT.map(slot => {
-    const on = accesi.includes(slot), [nome, entro] = PROM_ETICHETTE[slot];
+    const p = ZTPromemoria.pastoPer(slot), on = accesi.includes(slot), nome = p.breve, entro = 'entro le ' + p.entro;   // l'ora viene dalla regola, una sola
     return `<button type="button" class="prom-riga" data-slot="${slot}" role="switch" aria-checked="${on}" onclick="togglePromemoria('${slot}')" style="width:100%;display:flex;align-items:center;gap:12px;padding:10px 0;border:none;border-bottom:1px solid var(--s2);background:none;text-align:left;cursor:pointer;">
       <span style="flex:1;min-width:0;">
         <span style="display:block;font-family:var(--font-sans);font-size:15px;font-weight:700;color:var(--t1);">${nome} <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.04em;color:${on ? 'var(--acc)' : 'var(--t3)'};">· ${entro.toUpperCase()}</span></span>
@@ -170,7 +179,7 @@ function _promemoriaNota(motivo) {
   if(motivo === 'non-iscritto') return 'Non riesco a iscrivere questo telefono adesso: riprova fra un po\', con la rete.';
   const n = promemoriaAccesi().length;
   if(!n) return 'Partono spenti. Accendi quelli che vuoi: ti arriva un avviso solo se a quell\'ora il pasto non è registrato. Niente avvisi nei giorni detox e con la pausa cibo.';
-  return 'Accesi. L\'avviso arriva solo se a quell\'ora il pasto manca; se lo registri prima, niente. Niente avvisi nei giorni detox e con la pausa cibo.';
+  return 'Accesi. L\'avviso arriva solo se a quell\'ora il pasto manca; se lo registri prima, niente. Niente avvisi nei giorni detox e con la pausa cibo. Su un altro telefono spegni e riaccendi un pasto: così si iscrive anche lui.';
 }
 function _setPromemoriaStato(motivo) {
   const box = document.getElementById('set-promemoria'), nota = document.getElementById('set-prom-nota');
