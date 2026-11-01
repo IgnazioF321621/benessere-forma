@@ -115,7 +115,8 @@ function tabelle(){
         meals.push({ id:`m${d}${i}`, user_id:U, date:k, slot, time, kcal, protein, carbs, fat, description, notes:'' });
         items.push({ id:`i${d}${i}`, meal_id:`m${d}${i}`, name:description.split(' ')[0], quantity:150, unit:'g', kcal, protein, carbs, fat }); });
     if(d % 2 === 0) pesi.push({ id:'p' + d, user_id:U, date:k, weight_kg: +(74 - d * 0.05).toFixed(2), created_at:k + 'T07:30:00Z' });
-    if(d < 10) logs.push({ id:'l' + d, user_id:U, date:k, supplement_id:'s1', name:'Omega 3', time:'08:00', dose:1 });
+    // righe come quelle vere di supplements_log (Stile 040): supplement_name, slot e is_extra, che l'app filtra; prima mancavano e i presi non si leggevano
+    if(d < 10) logs.push({ id:'l' + d, user_id:U, date:k, supplement_id:'s1', supplement_name:'Omega 3', slot:'08:00', is_extra:false, created_at:k + 'T08:00:00Z' });
   }
   return {
     profiles:[{ id:U, first_name:'Ignazio', m2_skipped:true, sesso:'M', eta:45, altezza_cm:178, weight_kg:74, goal_weight_kg:70, obiettivo:'ricomposizione',
