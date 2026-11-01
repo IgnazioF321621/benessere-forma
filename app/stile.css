@@ -3031,3 +3031,14 @@ html.v5 .w5-riga small{display:block;margin-top:2px;font-size:12px;color:var(--t
 html.v5 .w5-riga-val{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--z-body);text-align:right;}
 html.v5 .w5-riga-val small [style*="color:var(--t3)"]{color:var(--t2)!important;}
 html.v5 .w5-freccia{font-size:20px;color:var(--t2);}
+/* Accesso con password (Fondamenta 250) */
+.pw-form{display:flex;flex-direction:column;gap:10px;}
+.pw-campo{position:relative;}
+.pw-campo input{padding-right:92px;}
+.pw-occhio{position:absolute;right:6px;top:50%;transform:translateY(-50%);min-height:36px;padding:0 12px;border:0;border-radius:var(--r-pill);background:transparent;color:var(--acc);font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;}
+.pw-occhio:active{background:var(--acc-lt);}
+.pw-codice{margin-top:26px;padding:16px;border:1px solid var(--b1);border-radius:12px;background:var(--s1);}
+.pw-codice b{font-family:var(--font-sans);font-size:15px;color:var(--t1);}
+.pw-codice p{font-family:var(--font-sans);font-size:14px;color:var(--t2);line-height:1.5;margin:6px 0 12px;}
+.pw-etichetta{font-family:var(--font-sans);font-size:13px;color:var(--t2);margin-top:4px;}
+.pw-msg{font-family:var(--font-sans);font-size:13px;color:var(--err);min-height:18px;line-height:1.4;}
