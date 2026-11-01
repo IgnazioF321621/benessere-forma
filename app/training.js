@@ -68,13 +68,32 @@ function _exProgressione(ex){ return _exInfoCatalogo(ex).progressione; }
 // carico non scritto vale «corpo libero», come prima. Prima di questa revisione contava solo «corpo libero» scritto
 // così, e Dead hang (sbarra) o Squat wall fitball perdevano il loro «corpo libero». Parole del catalogo del 28 ottobre
 // (tools/banco/dati/catalogo_attrezzi_appoggio_20261028.json); una parola nuova vale come appoggio, cioè come prima.
-const _ATTREZZI_CARICO = ['elastico', 'manubri', 'bilanciere', 'kettlebell', 'macchina', 'multipower', 'cavo', 'cavi',
-  'cavo basso', 'cavo alto', 'corda', 'palla medica', 'disco', 'barra', 'trap bar', 'rullino', 'pinza a molla'];
+// Dal 1 novembre 2026 (Training 550) l'elenco sta in shared/coach_rules.js (ZTCoachRules.CARICHI): lo usa anche la regola
+// delle righe miste. Qui con gli spazi, come le parole di `eq`.
+const _ATTREZZI_CARICO = ZTCoachRules.CARICHI.map(a => a.replace(/_/g, ' '));
 // A corpo libero: nell'attrezzo della seduta nessun carico (diviso su «;», «+» e «,»: il riscaldamento scrive
 // «corpo libero;panca» intero, il surrogato «elastico+panca»), o nessun attrezzo (schede vecchie).
 function _exACorpoLibero(ex){
-  const parole = String((ex && ex.eq) || '').toLowerCase().split(/[;+,]/).map(a => a.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean);
-  return !parole.some(a => _ATTREZZI_CARICO.includes(a));
+  return !_paroleEq(ex).some(a => _ATTREZZI_CARICO.includes(a));
+}
+function _paroleEq(ex){ return String((ex && ex.eq) || '').toLowerCase().split(/[;+,]/).map(a => a.replace(/_/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean); }
+// La via di progressione per l'attrezzo che la persona ha in mano (Training 550, 1 novembre 2026): il catalogo scrive la
+// via della riga col suo attrezzo nativo, ma a casa la stessa riga si fa spesso col surrogato (`eq` della scheda).
+//   «carico» col solo elastico in mano            → «elastico più duro» (Rematore manubri fatto con l'elastico)
+//   «elastico più duro» con un carico, senza elastico → «carico» (la stessa riga coi manubri)
+//   «carico» a corpo libero (attrezzo scritto, nessun carico) → «più ripetizioni»: senza pesi non si aggiungono 10 lbs,
+//   ma solo se la serie non ha un carico scritto (revisione: le schede di prima del 550 hanno «corpo libero» anche per
+//   chi ha i manubri, e chi ha scritto 20 lbs sale di carico come prima)
+// Senza attrezzo scritto (schede vecchie) la via resta quella del catalogo. Le altre vie non dipendono dall'attrezzo.
+function _viaPerAttrezzo(via, ex, caricoFatto){
+  const parole = _paroleEq(ex);
+  if(!parole.length) return via;
+  const elastico = parole.includes('elastico');
+  const altri = parole.filter(a => a !== 'elastico' && _ATTREZZI_CARICO.includes(a));
+  if(via === 'carico' && elastico && !altri.length) return 'elastico più duro';
+  if(via === 'elastico più duro' && !elastico && altri.length) return 'carico';
+  if(via === 'carico' && !elastico && !altri.length && !(caricoFatto > 0)) return 'più ripetizioni';
+  return via;
 }
 // Le ripetizioni si contano per lato (Training 520, 26 ottobre 2026; Ignazio: «non si capisce se ogni lato vale come
 // una ripetizione o sinistro più destro vale una ripetizione»): negli esercizi un lato alla volta (`si`) e negli
@@ -1902,9 +1921,8 @@ function _coCostruisci(riga0, orig){
   const riga = _trainGenPulisciRiga({ ...riga0 });
   const o = _coOpzioni();
   const attrezzi = new Set(o.attrezzatura.map(_coNorm));
-  const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
-  const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
-  const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
+  // col surrogato: la regola del generatore (ZTCoachRules.attrezziCasa, Training 550)
+  const isSurrogato = o.tipoAllen === 'casa' && ZTCoachRules.attrezziCasa(riga, a => attrezzi.has(a)).surrogato;
   const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
   const cautionNote = (_trainGenConflitto(riga, limitazioni).length && riga.adattamento) ? String(riga.adattamento).trim() : '';
   const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });
@@ -2553,9 +2571,11 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   const caricoScritto = !(resistance == null || String(resistance).trim() === '') || _exACorpoLibero(exData);
   const clampReps = (n) => Math.max(repsMin, Math.min(repsMax, n));
   // Suggerimento = sigla "SN:" + pezzi separati da " · " (punto medio, coerente
-  // con APPENA FATTA) + RIR target SEMPRE in coda. Costruito in un unico helper
+  // con APPENA FATTA) + RIR target in coda (fuori dalle tenute). Costruito in un unico helper
   // così la punteggiatura è uniforme e non restano virgole di separazione.
-  const out = (...parts) => `${head} ${[...parts.filter(Boolean), `RIR ${targetRIR}`].join(' · ')}`;
+  // Nelle tenute il RIR non si scrive (Training 550, feedback di Ignazio del 7/10: «quando c'è il tempo a scalare per la
+  // successiva dà il RIR»): il RIR conta ripetizioni di riserva, una tenuta si regola sui secondi. Come il badge della serie.
+  const out = (...parts) => `${head} ${[...parts.filter(Boolean), isTimed ? null : `RIR ${targetRIR}`].filter(Boolean).join(' · ')}`;
   // fine(prossima, …parti): il testo come sempre e, con struttura, anche i numeri della prossima serie
   // (un carico mai scritto resta null: il registro non lo compila con uno 0, Training 510)
   const fine = (prossima, ...parts) => {
@@ -2568,7 +2588,7 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // La via di progressione dell'esercizio (Training 320): in cima alle ripetizioni col RIR a posto il
   // coach non dice più «aumenta il carico» a chi un carico non ce l'ha, ma nomina la via scritta a
   // catalogo. Senza colonna: carico per le ripetizioni, tenuta più lunga per le tenute.
-  const via = _exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico');
+  const via = _viaPerAttrezzo(_exProgressione(exData) || (isTimed ? 'tenuta più lunga' : 'carico'), exData, parseFloat(resistance) || 0);
 
   if(isPullUpExercise(exName)){
     // Ramo TRAZIONI — la "resistenza" è il gradino della scala di assistenza.
@@ -2727,7 +2747,7 @@ function obiettivoPrimaSerie(exName, sessionId){
   if(o.nota){
     const carico = isPullUp ? (o.bandColor ? bandPhrase(o.bandColor) : 'banda più facile')
       : (o.resistance > 0 ? `${o.resistance} ${unitKg ? 'kg' : 'lbs'}` : o.resistance == null ? '' : 'corpo libero');
-    o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
+    o.testo = `S1: ${[carico, `${o.reps} ${unitLbl}`, parsed.kind === 'seconds' ? null : `RIR ${o.rir}`].filter(Boolean).join(' · ')} (${o.nota})`;
   }
   return o;
 }
@@ -4822,10 +4842,6 @@ function renderTraining(){
       mediaHtml = `<div class="ex-media-gif ex-media-vuoto">Immagine non ancora disponibile</div>`;
     }
 
-    // Banner surrogato — solo quando la GIF Worker e' in pagina E e' marcata surrogata
-    const surrogateBanner = (gifSrc && ai.executionSurrogate && ai.executionSurrogateNote)
-      ? `<div class="ex-surrogate-banner"><span class="icon">ⓘ</span><span>${ai.executionSurrogateNote}</span></div>`
-      : '';
     const executionList = (ai.execution && ai.execution.length)
       ? `<ol class="modal-list">${ai.execution.map(s=>`<li>${s}</li>`).join('')}</ol>` : '';
     const errorsList = (ai.commonErrors && ai.commonErrors.length)
@@ -4843,7 +4859,6 @@ function renderTraining(){
         </div>
 
         ${mediaHtml}
-        ${surrogateBanner}
 
         ${(ai.setup && ai.setup.length) ? `<div class="modal-section">
           <h4>Setup</h4>
@@ -5400,8 +5415,6 @@ async function openExerciseAI(exName, sessionId) {
     executionGif: null,
     executionLoading: true,
     executionStatus: null,        // 'cached' | 'missing' | 'error' | 'not_searched_yet'
-    executionSurrogate: false,
-    executionSurrogateNote: null,
     content: '',
     loading: true,
   };
@@ -5426,8 +5439,6 @@ async function openExerciseAI(exName, sessionId) {
       executionGif: mediaResp.cached_url || null,
       executionLoading: false,
       executionStatus: mediaResp.status || 'error',
-      executionSurrogate: !!mediaResp.is_surrogate,
-      executionSurrogateNote: mediaResp.surrogate_note || null,
     };
     renderTraining();
   });

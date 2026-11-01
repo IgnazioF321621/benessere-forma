@@ -153,7 +153,7 @@ async function cuePer(exName, sessionId, eq) {
   return p;
 }
 // fetchExerciseMedia — query Worker per cache/lookup GIF esecuzione esercizio.
-// Ritorna {status, cached_url?, is_surrogate?, surrogate_note?, ...} oppure
+// Ritorna {status, cached_url?, source?, ...} oppure
 // {status:'error'} se network/HTTP fallisce. Mai throw — sempre fallback safe.
 async function fetchExerciseMedia(exName, exCode) {
   try {

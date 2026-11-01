@@ -73,7 +73,7 @@ async function handleExerciseMedia(request, env) {
     return jsonResponse({ status: 'error', error: 'Servizio non disponibile' }, 500);
   }
 
-  const nessuna = { status: 'missing', cached_url: null, is_surrogate: false, surrogate_note: null, source: null };
+  const nessuna = { status: 'missing', cached_url: null, source: null };
   try {
     // Per codice (EX###) o, per le schede vecchie senza codice, per nome del catalogo.
     const filtro = code ? `codice=eq.${encodeURIComponent(code)}` : `nome=eq.${encodeURIComponent(name)}`;
@@ -85,8 +85,6 @@ async function handleExerciseMedia(request, env) {
     return jsonResponse({
       status: 'cached',
       cached_url: `${SUPABASE_URL}/storage/v1/object/public/biblioteca-gif/${bib.storage_path}`,
-      is_surrogate: false,
-      surrogate_note: null,
       source: 'biblioteca',
       from_cache: true,
     });

@@ -40,7 +40,7 @@ var ZTRitratto = (function(){
   var LUOGO_LBL = { casa: 'a casa', palestra: 'in palestra', aperto: 'all\'aperto', libero: 'all\'aperto' };
   // Gli slug dell'onboarding (data-gear) e i due di ripiego del generatore.
   var ATTREZZO_LBL = { elastici_tubo: 'elastici a tubo', elastico: 'elastici', manubri: 'manubri', bilanciere: 'bilanciere e dischi',
-    kettlebell: 'kettlebell', panca: 'panca', sbarra: 'sbarra per trazioni', fitball: 'fitball', trx: 'TRX o anelli',
+    kettlebell: 'kettlebell', panca: 'panca', sbarra: 'sbarra per trazioni', fitball: 'fitball', trx: 'TRX o anelli', parallele: 'parallele o dip station',
     maniglie: 'maniglie per gli elastici', barra_corta: 'barra corta per gli elastici', barra_lunga: 'barra lunga per gli elastici',
     cavigliere: 'cavigliere', corpo_libero: 'corpo libero' };
   var AI_LBL = { migliorato: 'migliorato', stabile: 'stabile', peggiorato: 'peggiorato', primo_check: 'primo check, nessun confronto' };

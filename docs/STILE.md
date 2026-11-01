@@ -73,7 +73,6 @@ Erano scritti a mano dentro le regole. I valori sono **identici a prima**, uno p
 | | `--saltato` · `--sostituito` | `#8B6F6F` · `#8B6F2A` | pasto saltato · sostituito nel Piano |
 | | `--badge-testo` `--badge-sub` `--oro` `--arancio` | `#7A4000` `#A05000` `#FFD700` `#FFA500` | badge «Giorno perfetto» |
 | Avvisi | `--prio-gialla` | `#8A9A2A` | priorità gialla |
-| | `--surrogato` (+ `-bordo`, `-testo`) | `#FFF8E0` `#F5E2A3` `#8A6500` | striscia dell'esercizio fatto con un altro attrezzo |
 | | `--allerta` · `--allerta-testo` | `#FFF4E5` · `#7A3A1A` | avviso dentro una finestra |
 | | `--anteprima` · `--anteprima-bordo` | `#FFF7E0` · `#E8D8A8` | striscia dell'anteprima dell'onboarding |
 | Body | `--mod-body-forte` | `#5E4A7A` | checkpoint |
@@ -105,7 +104,7 @@ Dare i nomi non ha cambiato niente, quindi anche i colori quasi uguali sono rima
 - `--acc-lt-2` `#E6F4F1` e `--acc-lt` `#E6F4F2`
 - `--carb-lt-2` `#FFF3DC` e `--carb-lt` `#FEF3DC`
 - `--zona-testo` `#3A2C12` e `--zona-testo-2` `#3A2D10`
-- `--anteprima-bordo` `#E8D8A8` e `--crema-bordo` `#E8D9A8`; `--anteprima` `#FFF7E0` e `--surrogato` `#FFF8E0`
+- `--anteprima-bordo` `#E8D8A8` e `--crema-bordo` `#E8D9A8` (`--surrogato` `#FFF8E0`, quasi uguale a `--anteprima`, è uscito il 1 novembre 2026 col riquadro che lo usava, Training 550)
 - `--ocra` `#8B6B1E` e `--sostituito` `#8B6F2A`
 - `--inchiostro-caldo` `#1A1814` e `--t1` `#1A1A1A`
 - `--bianco` e `--s1`: stesso valore, ruoli diversi (testo sull'accento / superficie)

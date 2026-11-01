@@ -151,7 +151,7 @@ async function nuovo(o){
     const a = await nuovo();
     const c = a.card('Pallof press con elastico');
     atteso('510 · Pallof senza carico l\'ultima volta: nessun «corpo libero» per un esercizio con l\'elastico', /corpo libero/.test(c), false);
-    atteso('510 · la card dice l\'obiettivo e l\'ultima volta in secondi per lato', /Oggi S1: 30 sec per lato · RIR 2 · ultima volta 30 sec per lato/.test(c), true);
+    atteso('510 · la card dice l\'obiettivo e l\'ultima volta in secondi per lato', /Oggi S1: 30 sec per lato · ultima volta 30 sec per lato/.test(c), true);
     a.W.openLogModal('upperA', 'Pallof press con elastico', 1, { timedTarget: 30 });
     atteso('510 · il registro resta su «—»: il carico non scritto non diventa uno 0', [a.ST.trainLogResist, a.doc.getElementById('tl-resist') && a.doc.getElementById('tl-resist').value], [null, '']);
     // la persona scrive 10 lbs: le serie dopo lo ritrovano
@@ -166,7 +166,7 @@ async function nuovo(o){
   {
     // la volta dopo, col carico scritto: la tenuta compila il carico come le ripetizioni
     const a = await nuovo({ pallof12: '10' });
-    atteso('510 · Pallof con 10 lbs l\'ultima volta: la card lo dice', /Oggi S1: 10 lbs · 30 sec per lato · RIR 2 · ultima volta 30 sec per lato · 10 lbs/.test(a.card('Pallof press con elastico')), true);
+    atteso('510 · Pallof con 10 lbs l\'ultima volta: la card lo dice', /Oggi S1: 10 lbs · 30 sec per lato · ultima volta 30 sec per lato · 10 lbs/.test(a.card('Pallof press con elastico')), true);
     // come nell'app: «▶ Avvia», il tempo, «Fine serie» → registro con la durata del picker
     a.W.openTrainExec('upperA', 'Pallof press con elastico', 1);
     a.W.execTimerSetTarget(30);
@@ -188,7 +188,7 @@ async function nuovo(o){
     atteso('510 · maniglie dei piegamenti e sacco della boxe non sono un carico; cavo, manubri, kettlebell sì', [W._exACorpoLibero({ eq:'maniglie' }), W._exACorpoLibero({ eq:'sacco' }), W._exACorpoLibero({ eq:'cavo basso;corda' }), W._exACorpoLibero({ eq:'manubri' }), W._exACorpoLibero({ eq:'kettlebell' })], [true, true, false, false, false]);
     // Dead hang alla sbarra, carico mai scritto: resta «corpo libero» e il registro lo compila con 0 (prima della
     // revisione diceva solo «35 sec» e il null si trascinava)
-    atteso('510 · Dead hang (sbarra, tenuta): «corpo libero · 35 sec» come prima del 510', /Oggi S1: corpo libero · 35 sec · RIR 2 · ultima volta 35 sec · corpo libero/.test(a.card('Dead hang')), true);
+    atteso('510 · Dead hang (sbarra, tenuta): «corpo libero · 35 sec» come prima del 510', /Oggi S1: corpo libero · 35 sec · ultima volta 35 sec · corpo libero/.test(a.card('Dead hang')), true);
     W.openLogModal('upperA', 'Dead hang', 1, { timedTarget: 35 });
     atteso('510 · Dead hang: il registro apre con 0 (corpo libero), non con «—»', a.ST.trainLogResist, 0);
     a.ST.trainLogOpen = null;
@@ -230,7 +230,7 @@ async function nuovo(o){
     const a = await nuovo();
     const c = a.card('V-sit sforbiciata');
     atteso('520 · V-sit sforbiciata (alternato a tempo): «3 × 20-40 sec», senza «per lato»', [/3 × 20-40 sec/.test(c), /per lato/.test(c)], [true, false]);
-    atteso('520 · V-sit: obiettivo e ultima volta in secondi, senza «per lato»', /Oggi S1: corpo libero · 30 sec · RIR 2 · ultima volta 30 sec · corpo libero/.test(c), true);
+    atteso('520 · V-sit: obiettivo e ultima volta in secondi, senza «per lato»', /Oggi S1: corpo libero · 30 sec · ultima volta 30 sec · corpo libero/.test(c), true);
     a.W.openLogModal('upperA', 'V-sit sforbiciata', 1, { timedTarget: 30 });
     const reg = testo(a.doc.getElementById('page-training').innerHTML);
     atteso('520 · V-sit: registro «DURATA (sec)», non «PER LATO»', [/DURATA \(sec\)/.test(reg), /DURATA PER LATO/.test(reg)], [true, false]);
