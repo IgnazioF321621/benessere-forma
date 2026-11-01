@@ -1,8 +1,8 @@
 # Tabelle e colonne — lo schema vero
 
-*Generato da `tools/schema_fotografia.py` il 2026-10-30 leggendo il database. **Non si modifica a mano**: si rigenera.*
+*Generato da `tools/schema_fotografia.py` il 2026-11-01 leggendo il database. **Non si modifica a mano**: si rigenera.*
 
-35 tabelle, 425 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
+37 tabelle, 440 colonne. Le regole d'uso (cosa significa un campo, cosa non fare) restano in [`SCHEMA.md`](SCHEMA.md); la struttura completa, con regole di accesso e bucket, in [`supabase/migrations/`](../supabase/migrations/).
 
 | Tabella | Righe | Regole di accesso | Chiave | Una riga sola per |
 |---|---:|---:|---|---|
@@ -18,26 +18,28 @@
 | [`coach_proposals`](#coach_proposals) | 15 | 3 | id | user_id, week_start, kind |
 | [`daily_log`](#daily_log) | 11 | 4 | id | user_id, date |
 | [`esercizi_catalog`](#esercizi_catalog) | 824 | 1 | codice | — |
-| [`exercise_media`](#exercise_media) | 57 | 1 | exercise_name_it | — |
+| [`exercise_media`](#exercise_media) | 0 | 1 | exercise_name_it | — |
 | [`fasting_days`](#fasting_days) | 3 | 1 | id | user_id, date |
 | [`fitdays_letture`](#fitdays_letture) | 4 | 4 | id | user_id, date |
-| [`meal_items`](#meal_items) | 1069 | 4 | id | — |
-| [`meals`](#meals) | 379 | 2 | id | — |
+| [`meal_items`](#meal_items) | 1089 | 4 | id | — |
+| [`meals`](#meals) | 385 | 2 | id | — |
 | [`nutrilite_catalog`](#nutrilite_catalog) | 66 | 1 | id | codice |
 | [`profiles`](#profiles) | 1 | 2 | id | calendario_token |
-| [`rilevazioni`](#rilevazioni) | 16 | 4 | id | — |
+| [`promemoria_inviati`](#promemoria_inviati) | 0 | 1 | user_id, date, slot | — |
+| [`push_iscrizioni`](#push_iscrizioni) | 0 | 4 | id | endpoint |
+| [`rilevazioni`](#rilevazioni) | 17 | 4 | id | — |
 | [`schede_utente`](#schede_utente) | 55 | 5 | id | — |
 | [`segnalazioni`](#segnalazioni) | 40 | 3 | id | — |
 | [`supplement_package_items`](#supplement_package_items) | 20 | 5 | id | package_id, supplement_id |
 | [`supplement_packages`](#supplement_packages) | 6 | 5 | id | — |
 | [`supplements`](#supplements) | 24 | 1 | id | — |
-| [`supplements_log`](#supplements_log) | 1642 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
+| [`supplements_log`](#supplements_log) | 1663 | 2 | id | user_id, date, supplement_name · user_id, date, slot, supplement_name |
 | [`training_logs`](#training_logs) | 2061 | 1 | id | user_id, date, session_id, exercise_name, set_number |
 | [`training_notes`](#training_notes) | 24 | 4 | id | user_id, exercise_name, date |
 | [`weekly_pictures`](#weekly_pictures) | 15 | 4 | id | user_id, week_start |
 | [`weekly_plan_acceptance`](#weekly_plan_acceptance) — **non usata dal codice** | 0 | 5 | id | plan_meal_id |
-| [`weekly_plan_meals`](#weekly_plan_meals) | 280 | 5 | id | — |
-| [`weekly_plans`](#weekly_plans) | 20 | 5 | id | user_id, week_start |
+| [`weekly_plan_meals`](#weekly_plan_meals) | 294 | 5 | id | — |
+| [`weekly_plans`](#weekly_plans) | 21 | 5 | id | user_id, week_start |
 | [`weight_logs`](#weight_logs) | 21 | 5 | id | user_id, date |
 | [`workout_sets`](#workout_sets) | 1796 | 1 | id | — |
 | [`workouts`](#workouts) | 131 | 2 | id | user_id, date, session_type |
@@ -469,12 +471,14 @@ Vincoli:
 | `train_orario` | text |  |  |
 | `train_giorni` | smallint[] |  |  |
 | `calendario_token` | uuid |  |  |
+| `promemoria_pasti` | text[] |  |  |
 
 Vincoli:
 - `profiles_come_stai_orari_chk` — `CHECK (((come_stai_orari IS NULL) OR ((COALESCE(array_length(come_stai_orari, 1), 0) <= 3) AND (0 <= ALL (come_stai_orari)) AND (23 >= ALL (come_stai_orari)))))`
 - `profiles_pausa_chk` — `CHECK (((pausa_fine IS NULL) OR (pausa_inizio IS NULL) OR (pausa_fine >= pausa_inizio)))`
 - `profiles_pausa_moduli_chk` — `CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))`
 - `profiles_plan_day_check` — `CHECK ((plan_generation_day = ANY (ARRAY['fri'::text, 'sat'::text, 'sun'::text, 'custom'::text])))`
+- `profiles_promemoria_pasti_chk` — `CHECK (((promemoria_pasti IS NULL) OR (promemoria_pasti <@ ARRAY['colazione'::text, 'pranzo'::text, 'cena'::text])))`
 - `profiles_sex_check` — `CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))`
 - `profiles_tabata_chk` — `CHECK (((tabata IS NULL) OR (tabata = ANY (ARRAY['spento'::text, 'coda'::text, 'giorni'::text, 'a_parte'::text]))))`
 - `profiles_tabata_giorni_chk` — `CHECK (((tabata_giorni IS NULL) OR (tabata_giorni <@ ARRAY[(1)::smallint, (2)::smallint, (3)::smallint, (4)::smallint, (5)::smallint, (6)::smallint, (7)::smallint])))`
@@ -482,6 +486,40 @@ Vincoli:
 - `profiles_train_orario_chk` — `CHECK (((train_orario IS NULL) OR (train_orario ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'::text)))`
 - `profiles_weight_mode_check` — `CHECK ((weight_tracking_mode = ANY (ARRAY['daily'::text, 'every3'::text, 'weekly'::text, 'flexible'::text])))`
 - `profiles_id_fkey` — `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `promemoria_inviati`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `user_id` | uuid | sì |  |
+| `date` | date | sì |  |
+| `slot` | text | sì |  |
+| `inviato_il` | timestamp with time zone | sì | `now()` |
+| `telefoni` | smallint | sì | `0` |
+
+Vincoli:
+- `promemoria_inviati_slot_chk` — `CHECK ((slot = ANY (ARRAY['colazione'::text, 'pranzo'::text, 'cena'::text])))`
+- `promemoria_inviati_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
+
+### `push_iscrizioni`
+
+| Colonna | Tipo | Obbligatoria | Predefinito |
+|---|---|---|---|
+| `id` | uuid | sì | `gen_random_uuid()` |
+| `user_id` | uuid | sì |  |
+| `endpoint` | text | sì |  |
+| `p256dh` | text | sì |  |
+| `auth` | text | sì |  |
+| `telefono` | text |  |  |
+| `created_at` | timestamp with time zone | sì | `now()` |
+| `ultimo_invio` | timestamp with time zone |  |  |
+| `ultimo_esito` | text |  |  |
+
+Vincoli:
+- `push_iscrizioni_chiavi_len` — `CHECK (((char_length(p256dh) = 87) AND (char_length(auth) = 22)))`
+- `push_iscrizioni_endpoint_https` — `CHECK ((endpoint ~ '^https://'::text))`
+- `push_iscrizioni_endpoint_len` — `CHECK ((char_length(endpoint) <= 2048))`
+- `push_iscrizioni_user_id_fkey` — `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`
 
 ### `rilevazioni`
 

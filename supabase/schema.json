@@ -1,6 +1,6 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-10-30",
+ "quando": "2026-11-01",
  "righe": [
   {
    "righe": 0,
@@ -51,7 +51,7 @@
    "tabella": "esercizi_catalog"
   },
   {
-   "righe": 57,
+   "righe": 0,
    "tabella": "exercise_media"
   },
   {
@@ -63,11 +63,11 @@
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1069,
+   "righe": 1089,
    "tabella": "meal_items"
   },
   {
-   "righe": 379,
+   "righe": 385,
    "tabella": "meals"
   },
   {
@@ -79,7 +79,15 @@
    "tabella": "profiles"
   },
   {
-   "righe": 16,
+   "righe": 0,
+   "tabella": "promemoria_inviati"
+  },
+  {
+   "righe": 0,
+   "tabella": "push_iscrizioni"
+  },
+  {
+   "righe": 17,
    "tabella": "rilevazioni"
   },
   {
@@ -103,7 +111,7 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1642,
+   "righe": 1663,
    "tabella": "supplements_log"
   },
   {
@@ -123,11 +131,11 @@
    "tabella": "weekly_plan_acceptance"
   },
   {
-   "righe": 280,
+   "righe": 294,
    "tabella": "weekly_plan_meals"
   },
   {
-   "righe": 20,
+   "righe": 21,
    "tabella": "weekly_plans"
   },
   {
@@ -2788,6 +2796,156 @@
     "tipo": "uuid"
    },
    {
+    "colonna": "promemoria_pasti",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 49,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "text[]"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": null,
+    "tabella": "promemoria_inviati",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "date",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "promemoria_inviati",
+    "tipo": "date"
+   },
+   {
+    "colonna": "slot",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "promemoria_inviati",
+    "tipo": "text"
+   },
+   {
+    "colonna": "inviato_il",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": "now()",
+    "tabella": "promemoria_inviati",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "telefoni",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": "0",
+    "tabella": "promemoria_inviati",
+    "tipo": "smallint"
+   },
+   {
+    "colonna": "id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 1,
+    "predefinito": "gen_random_uuid()",
+    "tabella": "push_iscrizioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "user_id",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 2,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "uuid"
+   },
+   {
+    "colonna": "endpoint",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 3,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "p256dh",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 4,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "auth",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 5,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "telefono",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 6,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "text"
+   },
+   {
+    "colonna": "created_at",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 7,
+    "predefinito": "now()",
+    "tabella": "push_iscrizioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "ultimo_invio",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 8,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "ultimo_esito",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 9,
+    "predefinito": null,
+    "tabella": "push_iscrizioni",
+    "tipo": "text"
+   },
+   {
     "colonna": "id",
     "generata": "",
     "identita": "",
@@ -4539,6 +4697,11 @@
     "tabella": "meals"
    },
    {
+    "definizione": "CREATE INDEX push_iscrizioni_user_idx ON public.push_iscrizioni USING btree (user_id)",
+    "nome": "push_iscrizioni_user_idx",
+    "tabella": "push_iscrizioni"
+   },
+   {
     "definizione": "CREATE INDEX rilevazioni_user_giorno_idx ON public.rilevazioni USING btree (user_id, giorno)",
     "nome": "rilevazioni_user_giorno_idx",
     "tabella": "rilevazioni"
@@ -4900,6 +5063,23 @@
     ],
     "ruolo": "authenticated",
     "tabella": "profiles"
+   },
+   {
+    "permessi": [
+     "SELECT"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "promemoria_inviati"
+   },
+   {
+    "permessi": [
+     "DELETE",
+     "INSERT",
+     "SELECT",
+     "UPDATE"
+    ],
+    "ruolo": "authenticated",
+    "tabella": "push_iscrizioni"
    },
    {
     "permessi": [
@@ -5703,6 +5883,66 @@
     "schema": "public",
     "tabella": "profiles",
     "usando": "((auth.jwt() ->> 'email'::text) = 'ignazio.f@me.com'::text)"
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "promemoria_inviati_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "promemoria_inviati",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "DELETE",
+    "controllo": null,
+    "nome": "push_iscrizioni_delete_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "push_iscrizioni",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "INSERT",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "push_iscrizioni_insert_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "push_iscrizioni",
+    "usando": null
+   },
+   {
+    "comando": "SELECT",
+    "controllo": null,
+    "nome": "push_iscrizioni_select_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "push_iscrizioni",
+    "usando": "(auth.uid() = user_id)"
+   },
+   {
+    "comando": "UPDATE",
+    "controllo": "(auth.uid() = user_id)",
+    "nome": "push_iscrizioni_update_own",
+    "permissive": "PERMISSIVE",
+    "ruoli": [
+     "authenticated"
+    ],
+    "schema": "public",
+    "tabella": "push_iscrizioni",
+    "usando": "(auth.uid() = user_id)"
    },
    {
     "comando": "DELETE",
@@ -6609,6 +6849,18 @@
     "tabella": "profiles"
    },
    {
+    "commento": "Notifiche 170: gli avvisi del pasto non registrato già mandati (persona, giorno, pasto); rende idempotente il giro delle ore del Worker.",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "promemoria_inviati"
+   },
+   {
+    "commento": "Notifiche 170: i telefoni iscritti alle notifiche (endpoint del servizio push, chiavi p256dh e auth del browser). Scrive la persona, legge il Worker, che cancella gli indirizzi morti.",
+    "rls": true,
+    "rls_forzata": false,
+    "tabella": "push_iscrizioni"
+   },
+   {
     "commento": "Come stai adesso? (Home 170): energia, stress e riposino a orari fissi, più volte al giorno. Separata da daily_log.",
     "rls": true,
     "rls_forzata": false,
@@ -7160,6 +7412,12 @@
     "tipo": "c"
    },
    {
+    "definizione": "CHECK (((promemoria_pasti IS NULL) OR (promemoria_pasti <@ ARRAY['colazione'::text, 'pranzo'::text, 'cena'::text])))",
+    "nome": "profiles_promemoria_pasti_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
     "definizione": "CHECK ((sex = ANY (ARRAY['M'::text, 'F'::text])))",
     "nome": "profiles_sex_check",
     "tabella": "profiles",
@@ -7199,6 +7457,60 @@
     "definizione": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
     "nome": "profiles_id_fkey",
     "tabella": "profiles",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (user_id, date, slot)",
+    "nome": "promemoria_inviati_pkey",
+    "tabella": "promemoria_inviati",
+    "tipo": "p"
+   },
+   {
+    "definizione": "CHECK ((slot = ANY (ARRAY['colazione'::text, 'pranzo'::text, 'cena'::text])))",
+    "nome": "promemoria_inviati_slot_chk",
+    "tabella": "promemoria_inviati",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "promemoria_inviati_user_id_fkey",
+    "tabella": "promemoria_inviati",
+    "tipo": "f"
+   },
+   {
+    "definizione": "PRIMARY KEY (id)",
+    "nome": "push_iscrizioni_pkey",
+    "tabella": "push_iscrizioni",
+    "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (endpoint)",
+    "nome": "push_iscrizioni_endpoint_key",
+    "tabella": "push_iscrizioni",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK (((char_length(p256dh) = 87) AND (char_length(auth) = 22)))",
+    "nome": "push_iscrizioni_chiavi_len",
+    "tabella": "push_iscrizioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((endpoint ~ '^https://'::text))",
+    "nome": "push_iscrizioni_endpoint_https",
+    "tabella": "push_iscrizioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK ((char_length(endpoint) <= 2048))",
+    "nome": "push_iscrizioni_endpoint_len",
+    "tabella": "push_iscrizioni",
+    "tipo": "c"
+   },
+   {
+    "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+    "nome": "push_iscrizioni_user_id_fkey",
+    "tabella": "push_iscrizioni",
     "tipo": "f"
    },
    {
