@@ -68,12 +68,20 @@ const scrivi = (el, v, win) => { el.value = v; el.dispatchEvent(new win.Event('i
     atteso('Mandami il codice · signInWithOtp come prima', ch.filter(c => c[0] === 'signInWithOtp').length, 1);
     // password giusta, account senza segno: entra e il segno si scrive in sfondo (senza password)
     w.backToEmail();
-    const ch2 = auth(a, { signIn: () => ({ data:{ session:{ user:{ id:U, email:'ignazio.f@me.com', user_metadata:{} } } }, error:null }) });
+    // come supabase-js: il SIGNED_IN del BOOTSTRAP entra mentre signInWithPassword aspetta; il segno si scrive lento
+    w.comeStaiAdessoDovuto = () => null;
+    let partenze = 0; const parti = w.loadAndStart; w.loadAndStart = function() { partenze++; return parti.apply(this, arguments); };
+    const utente = { id:U, email:'ignazio.f@me.com', user_metadata:{} };
+    const ch2 = auth(a, { signIn: () => { w.eval('ST').user = utente; w.loadAndStart(); return { data:{ session:{ user:utente } }, error:null }; },
+      update: (arg, ch) => new Promise(() => {}) });
     scrivi(pw, PW, w); invia(em.form, w);
     for(let i = 0; i < 200 && schermata(d) !== 'app'; i++) await attendi(10);
     atteso('password giusta · si entra nell\'app', schermata(d), 'app');
     atteso('password giusta · il campo si svuota', pw.value, '');
     atteso('senza segno · updateUser solo col segno, senza password', ch2.filter(c => c[0] === 'updateUser').map(c => c[1]), [{ data:{ password_scelta:true } }]);
+    atteso('password giusta · l\'app parte una volta sola', partenze, 1);
+    await attendi(3300);
+    atteso('entrato con la password e segno lento · niente «Crea la tua password»', !!foglio(d), false);
     const tutto = a.logs.map(l => l.join(' ')).join('\n') + JSON.stringify(Object.assign({}, w.localStorage));
     atteso('la password non è in console né sul telefono', tutto.includes(PW), false);
   }
@@ -111,6 +119,15 @@ const scrivi = (el, v, win) => { el.value = v; el.dispatchEvent(new win.Event('i
     w.passwordDaCreareControlla();
     await attendi(30);
     atteso('Più tardi · nella stessa apertura non torna', !!foglio(d), false);
+    // chi esce: per chi entra dopo, nella stessa apertura, la domanda torna
+    const uscita = w.logout(); await attendi(30);
+    const conf = foglio(d); conf && conf.querySelector('.foglio-ok').click();
+    await uscita; await attendi(30);
+    atteso('dopo «Esci» · la domanda è di nuovo da fare', [w.eval('ST')._passwordChiesta, schermata(d)], [false, 'auth-screen']);
+    w.eval('ST').user = { id:U, email:'ignazio.f@me.com', user_metadata:{} };
+    w.showScreen('app'); await attendi(3300);
+    atteso('chi entra dopo · trova «Crea la tua password»', foglio(d) && testo(foglio(d).querySelector('h3')), 'Crea la tua password');
+    foglio(d) && foglio(d).querySelector('#pw-no').click(); await attendi(30);
     // dalle Impostazioni: «Cambia password», e il salvataggio
     const bott = d.getElementById('set-password-btn');
     atteso('Impostazioni · c\'è «Cambia password»', bott && testo(bott), 'Cambia password');

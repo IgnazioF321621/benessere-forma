@@ -649,8 +649,10 @@ async function verifyOTP() {
     return;
   }
 
+  // Il SIGNED_IN del BOOTSTRAP può essere già entrato mentre verifyOtp aspettava: una partenza sola (Fondamenta 250)
+  const giaEntrato = ST.user && ST.user.id === data.session.user.id;
   ST.user = data.session.user;
-  await loadAndStart();
+  if (!giaEntrato) await loadAndStart();
 }
 
 function backToEmail() {
@@ -724,18 +726,22 @@ async function entraConPassword() {
     return;
   }
   campo.value = '';
+  const giaEntrato = ST.user && ST.user.id === res.data.session.user.id;   // il SIGNED_IN può averla già fatta partire
   ST.user = res.data.session.user;
+  ST._passwordChiesta = true;   // ha appena scritto la sua password: «Crea la tua password» non serve
   // Entrato con la password: ce l'ha, anche se il segno manca (es. messa da fuori). Lo si scrive in sfondo.
   if (!((ST.user.user_metadata || {}).password_scelta)) {
     try { supa.auth.updateUser({ data:{ password_scelta:true } }).then(r => { if (r && r.data && r.data.user) ST.user = r.data.user; }).catch(() => {}); } catch (e) {}
   }
-  await loadAndStart();
+  if (!giaEntrato) await loadAndStart();
 }
 
 // «Crea la tua password»: all'ingresso nell'app, una volta per apertura, a chi non ha il segno.
 // Mai sopra un altro foglio, durante un allenamento, nell'anteprima o in modalità test: se c'è
 // qualcosa davanti riprova fra poco, al massimo qualche volta.
 let _pwTentativi = 0;
+// Chi esce: la domanda torna per chi entra dopo, nella stessa apertura
+function passwordAzzera() { ST._passwordChiesta = false; _pwTentativi = 0; }
 function passwordDaCreareControlla() {
   const u = ST.user;
   if (!u || !u.id || /^test-/.test(u.id) || ST.previewOnboarding || ST._passwordChiesta) return;
