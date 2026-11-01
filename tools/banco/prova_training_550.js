@@ -117,6 +117,25 @@ const prima = (ex, h) => {
     atteso('1 · la regola passa da puoFare anche sulla colonna variante_difficile scritta nel foglio', R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX514'), variante_difficile:'EX682' }, corretto, opz), null);
     atteso('1 · e se la scritta non si può fare, prende la prossima che si può fare (dal Dip a terra: Dip panca, Ignazio ha la panca)', (R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX578'), variante_difficile:'EX682' }, corretto, opz) || {}).codice, 'EX063');
   }
+  // ── 3 · la via di progressione segue l'attrezzo in mano ──
+  {
+    const t = { profiles:[{ id:'u1', first_name:'Ignazio', m2_skipped:true, unit:'lbs', obiettivo:'ricomposizione', tipo_allenamento:'casa', attrezzatura:IGNAZIO, train_start_date:'2026-10-26' }],
+      schede_utente:[], esercizi_catalog:[], training_logs:[], training_notes:[], workouts:[], body_logs:[], weight_logs:[], meals:[], meal_items:[], fasting_days:[], daily_log:[], app_errors:[], supplements:[], nutrilite_catalog:[], supplements_log:[], coach_proposals:[] };
+    const b = boot(t, { now: '2026-11-01T07:00:00' });
+    await b.avviato;
+    const W = b.win, ST = W.eval('ST');
+    ST.user = { id:'u1', email:'ignazio.f@me.com' }; ST.profile = t.profiles[0]; ST.trainAllCompleted = [];
+    const sess = { id:'upperB', type:'Ipertrofia', rir:2 };
+    // in cima all'intervallo col RIR a posto: la serie dopo fa un passo sulla via
+    const prossima = (ex, resistance) => W.computeNextSetSuggestion({ sessionId:'upperB', exName: ex.name, setNum:1, reps:12, resistance, rir:2, exData:{ sets:3, reps:'8-12', ...ex }, sess });
+    atteso('3 · via «carico» col surrogato elastico (manubri a casa con l\'elastico): «elastico più duro»', prossima({ name:'Rematore manubri panca piana', progressione:'carico', eq:'elastico', isSurrogato:true }, 30), 'S2: elastico più duro: 40 lbs · riparti da 8 reps · RIR 2');
+    atteso('3 · via «carico» coi manubri: il carico, come prima', prossima({ name:'Rematore manubri panca piana', progressione:'carico', eq:'manubri' }, 30), 'S2: 40 lbs · riparti da 8 reps · RIR 2');
+    atteso('3 · via «elastico più duro» coi manubri, senza elastico: il carico', prossima({ name:'Croci elastico', progressione:'elastico più duro', eq:'manubri' }, 20), 'S2: 30 lbs · riparti da 8 reps · RIR 2');
+    atteso('3 · via «elastico più duro» con l\'elastico: com\'è', prossima({ name:'Croci elastico', progressione:'elastico più duro', eq:'elastico+panca' }, 20), 'S2: elastico più duro: 30 lbs · riparti da 8 reps · RIR 2');
+    atteso('3 · via «carico» a corpo libero (niente pesi in mano): più ripetizioni, non «+10 lbs»', prossima({ name:'Affondo indietro manubri', progressione:'carico', eq:'corpo libero' }, 0), 'S2: corpo libero · più ripetizioni · sali a 13 reps · RIR 2');
+    atteso('3 · senza attrezzo scritto (scheda vecchia): la via del catalogo, come prima', prossima({ name:'Rematore vecchio', progressione:'carico' }, 30), 'S2: 40 lbs · riparti da 8 reps · RIR 2');
+    atteso('3 · l\'elenco dei carichi dell\'app è quello di shared', W.eval('_ATTREZZI_CARICO').length, 17);
+  }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
 })();
