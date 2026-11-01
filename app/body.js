@@ -2191,7 +2191,7 @@ function renderBody(){
         </div>`;
       })()}
 
-      ${v5 ? '<h2 class="sez5">Misure col metro e bilancia</h2>' : ''}
+      ${v5 ? '<h2 class="sez5">Le misure</h2>' : ''}
       <div class="b5-misure" style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
           <div class="b5-misure-titolo" style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);">${v5 ? 'Giorno' : 'Misure col metro e bilancia'}</div>
