@@ -84,6 +84,39 @@ const prima = (ex, h) => {
     g.ST.profile = { ...g.ST.profile, attrezzatura: ['manubri', 'elastico'] };
     atteso('2 · … coi manubri: i manubri', g.b.win._coCostruisci({ ...riga('EX039'), setup:'', esecuzione:'', errori:'', muscoli:'' }, { name:'Squat elastico', codice:'EX040', sets:3, reps:'8-12' }).eq, 'manubri');
   }
+  // ── 1 · la variante più difficile passa dall'attrezzatura (feedback di Ignazio del 29/10: «Dip coreano» a casa senza parallele) ──
+  {
+    // le righe dei dip del catalogo del 1 novembre (solo le colonne che servono alla regola)
+    const D = (codice, nome, pattern, livello, attrezzo, luogo, alternativa, surrogato_attrezzo) => ({ codice, nome, pattern, livello, attrezzo, luogo, alternativa, surrogato_attrezzo: surrogato_attrezzo || null, setup:'', esecuzione:'' });
+    const DIP = [
+      D('EX063', 'Dip panca piedi a terra', 'spinta verticale', 'principiante;intermedio', 'panca;corpo libero', 'palestra;casa', 'EX514'),
+      D('EX072', 'Dip station', 'spinta orizzontale', 'avanzato', 'corpo libero', 'casa;palestra', 'EX003', 'elastico'),
+      D('EX357', 'Dip station sovraccarico', 'spinta orizzontale', 'avanzato', 'corpo libero', 'casa;palestra', 'EX072'),
+      D('EX514', 'Dip panca piedi rialzati', 'spinta verticale', 'intermedio', 'panca;corpo libero', 'casa;palestra', 'EX063'),
+      D('EX578', 'Dip a terra', 'spinta verticale', 'principiante', 'corpo libero', 'casa;libero;palestra', 'EX063'),
+      D('EX579', 'Dip su box', 'spinta verticale', 'principiante;intermedio', 'corpo libero;box', 'casa;libero;palestra', 'EX063'),
+      D('EX580', 'Dip su sedia', 'spinta verticale', 'principiante;intermedio', 'corpo libero;sedia', 'casa', 'EX579'),
+      D('EX680', 'Dip anelli', 'spinta verticale', 'avanzato', 'anelli', 'palestra;libero', 'EX072'),
+      D('EX681', 'Dip parallele coreano', 'spinta verticale', 'avanzato', 'corpo libero', 'casa;palestra;libero', 'EX072'),
+      D('EX682', 'Dip parallele ginniche', 'spinta verticale', 'intermedio;avanzato', 'corpo libero', 'casa;palestra;libero', 'EX072'),
+      D('EX683', 'Dip parallele impossible', 'spinta verticale', 'avanzato', 'corpo libero', 'casa;palestra;libero', 'EX072'),
+      D('EX684', 'Dip sedie', 'spinta verticale', 'intermedio', 'corpo libero;sedia', 'casa', 'EX580'),
+    ];
+    const opz = { tipoAllen:'casa', attrezzatura: IGNAZIO, inScheda: [] };
+    const da = DIP.find(r => r.codice === 'EX514');
+    const oggi = R.varianteDifficile(da, DIP, opz);
+    atteso('1 · col catalogo di oggi il difetto si riproduce: da Dip panca piedi rialzati a Dip parallele coreano', oggi && oggi.codice, 'EX681');
+    // la lista per il foglio (tools/biblioteca-nomi/esiti/training550_attrezzo_da_correggere.tsv): le parallele come attrezzo
+    const tsv = fs.readFileSync(path.join(__dirname, '..', 'biblioteca-nomi', 'esiti', 'training550_attrezzo_da_correggere.tsv'), 'utf8').trim().split('\n').map(r => r.split('\t'));
+    const giusto = Object.fromEntries(tsv.slice(1).filter(r => r[3] !== 'da decidere').map(r => [r[0], r[3]]));
+    atteso('1 · la lista per il foglio ha l\'intestazione e le righe delle parallele', [tsv[0], ['EX681', 'EX682', 'EX683', 'EX072', 'EX357'].every(c => giusto[c] === 'parallele')], [['codice', 'nome', 'attrezzo_oggi', 'attrezzo_giusto', 'perche'], true]);
+    const corretto = DIP.map(r => giusto[r.codice] ? { ...r, attrezzo: giusto[r.codice] } : r);
+    const dopo = R.varianteDifficile(corretto.find(r => r.codice === 'EX514'), corretto, opz);
+    atteso('1 · col foglio corretto, a casa senza parallele: nessun dip alle parallele; non resta una più difficile fattibile', dopo, null);
+    atteso('1 · … in palestra le parallele ci sono: la più difficile torna (Dip anelli, stesso livello, codice più basso)', (R.varianteDifficile(corretto.find(r => r.codice === 'EX514'), corretto, { ...opz, tipoAllen:'palestra' }) || {}).codice, 'EX680');
+    atteso('1 · la regola passa da puoFare anche sulla colonna variante_difficile scritta nel foglio', R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX514'), variante_difficile:'EX682' }, corretto, opz), null);
+    atteso('1 · e se la scritta non si può fare, prende la prossima che si può fare (dal Dip a terra: Dip panca, Ignazio ha la panca)', (R.varianteDifficile({ ...corretto.find(r => r.codice === 'EX578'), variante_difficile:'EX682' }, corretto, opz) || {}).codice, 'EX063');
+  }
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
 })();
