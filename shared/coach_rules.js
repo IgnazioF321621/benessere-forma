@@ -416,6 +416,35 @@ var ZTCoachRules = (function(){
   function vfLista(s, sep){ return vfNorm(s).split(sep).map(function(x){ return x.trim(); }).filter(Boolean); }
   function vfLivello(ex){ var l = vfNorm(ex && ex.livello); return VF_LIVELLI[l] || (/avanz/.test(l) ? 3 : /interm/.test(l) ? 2 : /princ/.test(l) ? 1 : 0); }
 
+  // ── A casa: la riga si fa? e col surrogato? (Training 550, 1 novembre 2026) ──
+  // Una regola sola per il generatore (filtro del pool), «Cambia per oggi» (_coCostruisci) e puoFare.
+  // `attrezzo` è una lista: di norma basta averne uno. Nelle righe MISTE con «corpo libero» (18 a casa il
+  // 1 novembre) «corpo libero» non basta più da solo:
+  //   · un APPOGGIO che la persona può segnare (panca, fitball, sbarra, trx) serve davvero: «Dip panca
+  //     piedi rialzati» (panca;corpo libero) senza panca non si fa;
+  //   · un CARICO (manubri, kettlebell, elastico…) resta facoltativo, ma se manca e la persona ha il surrogato
+  //     la riga va col surrogato: «Affondo indietro manubri» (corpo libero;manubri, surrogato elastico) a casa
+  //     senza manubri si fa con l'elastico, che è un carico che cresce, non più a corpo libero.
+  // Box, sedia, maniglie e palla medica non si possono segnare nell'attrezzatura: restano come prima.
+  // haAttrezzo(parola normalizzata, «corpo_libero») → bool: ogni chiamante passa il suo insieme.
+  // → { ok, surrogato }
+  var APPOGGI_SCEGLIBILI = ['panca', 'fitball', 'sbarra', 'trx'];
+  var CARICHI = ['elastico', 'manubri', 'bilanciere', 'kettlebell', 'macchina', 'multipower', 'cavo', 'cavi', 'cavo_basso', 'cavo_alto',
+    'corda', 'palla_medica', 'disco', 'barra', 'trap_bar', 'rullino', 'pinza_a_molla'];
+  function attrezziCasa(ex, haAttrezzo){
+    var nativi = vfLista(vfAttrezzo(ex && ex.attrezzo), ';');
+    var surrogati = vfLista(ex && ex.surrogato_attrezzo, '+').map(vfAttrezzo);
+    var surrOk = surrogati.length > 0 && surrogati.every(function(a){ return haAttrezzo(a); });
+    var col = function(ok){ return ok ? { ok: true, surrogato: false } : surrOk ? { ok: true, surrogato: true } : { ok: false, surrogato: false }; };
+    var misto = nativi.indexOf('corpo_libero') !== -1 && nativi.length > 1;
+    if(!misto) return col(nativi.some(function(a){ return haAttrezzo(a); }));
+    var appoggi = nativi.filter(function(a){ return APPOGGI_SCEGLIBILI.indexOf(a) !== -1; });
+    if(!appoggi.every(function(a){ return haAttrezzo(a); })) return col(false);
+    var carichi = nativi.filter(function(a){ return CARICHI.indexOf(a) !== -1; });
+    if(carichi.length && !carichi.some(function(a){ return haAttrezzo(a); }) && surrOk) return { ok: true, surrogato: true };
+    return { ok: true, surrogato: false };
+  }
+
   // true se la persona può fare l'esercizio con il suo luogo e i suoi attrezzi.
   function puoFare(ex, opts){
     var luogo = vfNorm(opts && opts.tipoAllen) || 'casa';
@@ -429,10 +458,7 @@ var ZTCoachRules = (function(){
     if(!luogoOk) return false;
     var nativi = vfLista(vfAttrezzo(ex.attrezzo), ';');
     if(luogo === 'palestra') return true;
-    if(luogo === 'casa'){
-      if(nativi.some(function(a){ return attrezzi[a]; })) return true;
-      return surrogati.length > 0 && surrogati.every(function(a){ return attrezzi[a]; });
-    }
+    if(luogo === 'casa') return attrezziCasa(ex, function(a){ return !!attrezzi[a]; }).ok;
     return nativi.some(function(a){ return VF_APERTO.indexOf(a) !== -1; });
   }
 
@@ -546,6 +572,6 @@ var ZTCoachRules = (function(){
   }
 
   return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
-    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
+    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, attrezziCasa: attrezziCasa, CARICHI: CARICHI, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;

@@ -1902,9 +1902,8 @@ function _coCostruisci(riga0, orig){
   const riga = _trainGenPulisciRiga({ ...riga0 });
   const o = _coOpzioni();
   const attrezzi = new Set(o.attrezzatura.map(_coNorm));
-  const nativi = String(riga.attrezzo || '').split(';').map(_coNorm).filter(Boolean);
-  const surrogati = String(riga.surrogato_attrezzo || '').split('+').map(_coNorm).filter(Boolean);
-  const isSurrogato = o.tipoAllen === 'casa' && !nativi.some(a => attrezzi.has(a)) && surrogati.length > 0 && surrogati.every(a => attrezzi.has(a));
+  // col surrogato: la regola del generatore (ZTCoachRules.attrezziCasa, Training 550)
+  const isSurrogato = o.tipoAllen === 'casa' && ZTCoachRules.attrezziCasa(riga, a => attrezzi.has(a)).surrogato;
   const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];
   const cautionNote = (_trainGenConflitto(riga, limitazioni).length && riga.adattamento) ? String(riga.adattamento).trim() : '';
   const testi = _trainGenTestiEsercizio(riga, { isSurrogato, cautionNote });

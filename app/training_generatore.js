@@ -1630,7 +1630,11 @@ function _trainGenPickEq(cat, isSurrogato, tipoAllen, attrezzaturaSet, isIso) {
   const envKey = (tipoNorm === 'palestra') ? 'palestra' : (tipoNorm === 'aperto' ? 'aperto' : 'casa');
   const catKey = isIso ? 'iso' : 'compound';
   const priorita = (_TRAIN_GEN_EQ_PRIORITY[envKey] || _TRAIN_GEN_EQ_PRIORITY.casa)[catKey] || [];
+  // Una riga mista non va a corpo libero se la persona ha il carico che la riga elenca (Training 550): «Affondo
+  // indietro manubri» (corpo libero;manubri) a casa coi manubri si fa coi manubri, non a mani vuote.
+  const caricoPosseduto = attrezziNativi.find(a => ZTCoachRules.CARICHI.includes(a) && attrezzaturaSet.has(a));
   for (const preferred of priorita) {
+    if (preferred === 'corpo_libero' && caricoPosseduto && attrezziNativi.includes('corpo_libero')) return String(cat.attrezzo || '').split(';').map(s => s.trim()).find(s => _norm(s) === caricoPosseduto) || caricoPosseduto;
     if (attrezziNativi.includes(preferred) && attrezzaturaSet.has(preferred)) {
       const originalMatch = String(cat.attrezzo || '').split(';')
         .map(s => s.trim()).find(s => _norm(s) === preferred);
@@ -2992,17 +2996,11 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
     let isSurrogato = false;
     if (tipoAllenNorm === 'palestra')    attrezzoOk = true;
     else if (tipoAllenNorm === 'casa') {
-      attrezzoOk = attrezziNativi.some(a => attrezzaturaSet.has(a));
-      // Branch surrogato: solo se nativo fallisce e l'esercizio dichiara
-      // una lista surrogato_attrezzo non vuota
-      if (!attrezzoOk && ex.surrogato_attrezzo) {
-        const surrAttrezzi = String(ex.surrogato_attrezzo).toLowerCase()
-          .split('+').map(s => s.trim()).filter(Boolean).map(_normAttrezzo);
-        if (surrAttrezzi.length > 0 && surrAttrezzi.every(a => attrezzaturaSet.has(a))) {
-          attrezzoOk = true;
-          isSurrogato = true;
-        }
-      }
+      // Nativo (uno basta) o, se manca, il surrogato intero. Le righe miste con «corpo libero» seguono la
+      // regola di ZTCoachRules.attrezziCasa (Training 550): l'appoggio serve, il carico mancante va col surrogato.
+      const a = ZTCoachRules.attrezziCasa(ex, t => attrezzaturaSet.has(t));
+      attrezzoOk = a.ok;
+      isSurrogato = a.surrogato;
     }
     // 'aperto': stesso bug gemello (confronto su stringa intera) → stesso fix
     // con la whitelist portatili (some su lista nativa).
