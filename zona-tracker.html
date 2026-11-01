@@ -1302,6 +1302,14 @@
           <button class="onb-pill" onclick="toggleSetIntol('pesce')" id="set-intol-pesce">Pesce</button>
         </div>
       </div>
+      <!-- Notifiche 170: i promemoria del pasto non registrato. Partono spenti; la scelta sta in profiles.promemoria_pasti e si
+           scrive subito, al tocco (app/notifiche.js); l'avviso lo manda il Worker alle 10, 15 e 22 di Roma se il pasto manca. -->
+      <div class="onb-field" style="margin-top:14px;">
+        <label>Promemoria dei pasti</label>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:4px;">Se a quell'ora il pasto non è registrato, ti arriva un avviso sul telefono.</div>
+        <div id="set-promemoria"></div>
+        <div id="set-prom-nota" style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:6px;line-height:1.5;"></div>
+      </div>
     </div>
     </div>
 
@@ -1435,6 +1443,7 @@
 <script src="shared/rotazione.js?v=20261031-0932"></script>
 <script src="shared/ritratto.js?v=20261031-0932"></script>
 <script src="shared/fitdays.js?v=20261031-0932"></script>
+<script src="shared/promemoria.js?v=20261031-0932"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
 // CONFIG
@@ -1583,6 +1592,7 @@ function showClosedScreen() {
 <script src="app/onboarding.js?v=20261031-0932"></script>
 <script src="app/impostazioni.js?v=20261031-0932"></script>
 <script src="app/segnala.js?v=20261031-0932"></script>
+<script src="app/notifiche.js?v=20261031-0932"></script>
 <script>
 // Onboarding: calcolo del fabbisogno (TDEE) con la soglia minima di calorie, M1 (benvenuto, accesso, 7 passi): spostato in app/onboarding.js (Fondamenta 035, tappa 9).
 
@@ -2182,6 +2192,7 @@ function showScreen(name) {
   const segnala = document.getElementById('segnala'); if(segnala) segnala.hidden = name !== 'app';
   if(name === 'app') seguiFogli();
   if(name === 'app' && typeof comeStaiAdessoControlla === 'function') setTimeout(comeStaiAdessoControlla, 1500);   // Home 170
+  if(name === 'app' && typeof apriDaNotifica === 'function') { apriDaNotifica(); setTimeout(pushRiallinea, 2500); }   // Notifiche 170
   document.getElementById('retry-screen').classList.toggle('visible', name === 'retry');
   // Prima del primo accesso l'informativa (Fondamenta 170): finche' non e' letta, l'accesso non si apre
   if(name === 'auth' && !privacyAccettata()) name = 'privacy';
@@ -2227,6 +2238,7 @@ window.addEventListener('resize', updateNavVisibility);
 
 async function logout() {
   if(!await chiediConferma('Vuoi uscire?', { ok:'Esci' })) return;
+  try { if(typeof pushDisiscrivi === 'function') await pushDisiscrivi(); } catch(e) {}   // Notifiche 170: gli avvisi di chi esce non arrivano a chi entra
   await supa.auth.signOut();
   try { localStorage.removeItem(ZT_CACHE_KEY); } catch(e) {}
   ST.user = null; ST.profile = null; ST.db = {days:{}}; ST.supps = [];

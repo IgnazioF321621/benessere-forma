@@ -88,6 +88,8 @@ Preferenze generazione piano (giorno/ora) + tracking peso.
 ## 11. Push notifications
 Sistema unico (piano + training + integratori).
 
+**Dal 1 novembre 2026 (Notifiche 170) il primo avviso c'è**: il promemoria del pasto non registrato (colazione entro le 10, pranzo entro le 15, cena entro le 22), Web Push dalla PWA installata, cron del Worker ogni ora, chiavi VAPID come secret, tabelle `push_iscrizioni` e `promemoria_inviati` → [Promemoria dei pasti](COACH.md#promemoria-dei-pasti). L'impianto (iscrizione del telefono, `sw.js`, `webpush.js`) vale per gli avvisi che verranno: piano, training, integratori sono da decidere uno per uno, con la stessa regola «solo quando serve, mai di routine». Da sapere: il piano Free dà 5 cron per account (usati 3) e 50 sottorichieste a esecuzione (40 telefoni a giro). **Resta fuori, per scelta**: l'avviso nel feed del calendario dell'iPhone, che suonerebbe anche col pasto già registrato.
+
 ## 12. "Oggi ho solo X min"
 Compressione di una singola sessione senza toccare la progressione del blocco.
 

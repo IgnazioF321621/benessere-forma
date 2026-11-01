@@ -42,7 +42,7 @@ Chi può vedere cosa dentro Supabase: ogni persona legge e scrive solo le propri
 
 Dove il nome entrava nei testi al coach, e da dove è uscito il 3 ottobre 2026: la riga «Persona» del ritratto (`rigaPersona` in `shared/ritratto.js`, usata da tutte le chiamate che portano il ritratto), la riga «Nome:» del piano settimanale (`app/nutrition.js`), il saluto «parla all'utente Ignazio» della nota di scheda (`app/training_generatore.js`). Il nome del coach, Pirsi, resta nei prompt per scelta. Nel Worker non c'è lo stesso difetto: i suoi testi non leggono `first_name`. Dopo la modifica i prompt non si contraddicono (L27): nessuno chiede più di «rivolgersi per nome». Lo prova `node tools/banco/prova_privacy.js`.
 
-«Scarica i miei dati» (`raccogliMieiDati`, `scaricaMieiDati` in `app/impostazioni.js`): legge 23 tabelle coi permessi normali della persona, a pagine, e scrive un file JSON `zona-tracker-dati-<giorno>.json`. Delle foto mette solo l'elenco (pose e nome del file nel bucket), mai i byte. Una tabella che non si legge resta scritta come «non letta».
+«Scarica i miei dati» (`raccogliMieiDati`, `scaricaMieiDati` in `app/impostazioni.js`): legge 25 tabelle coi permessi normali della persona (dal 1 novembre 2026 anche `push_iscrizioni` e `promemoria_inviati`, Notifiche 170), a pagine, e scrive un file JSON `zona-tracker-dati-<giorno>.json`. Delle foto mette solo l'elenco (pose e nome del file nel bucket), mai i byte. Una tabella che non si legge resta scritta come «non letta».
 
 ## (c) «Elimina account» — piano e realizzazione (3 ottobre 2026)
 

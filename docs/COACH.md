@@ -103,6 +103,42 @@ Identità e registro di [Pirsi](#pirsi--nome-e-voce-del-coach), come i prompt B-
 
 ---
 
+## Promemoria dei pasti
+
+**Notifiche 170, 1 novembre 2026 (ore fisse, decise da Ignazio).** Se la colazione non è registrata entro le 10, il pranzo entro le 15 o la cena entro le 22 (ora di Roma), arriva un avviso sul telefono. **Gli avvisi partono spenti e ognuno li accende da sé**, uno per pasto, nelle Impostazioni › Cibo. Letteratura, in una riga: i promemoria aumentano l'aderenza al diario alimentare (Burke 2011, J Am Diet Assoc; Patel 2019, JMIR mHealth), ma più di 2-3 al giorno stancano e si spengono: per questo l'avviso parte **solo quando il pasto manca**, mai di routine, e mai più di tre al giorno.
+
+### La regola, una sola
+
+`shared/promemoria.js` (`ZTPromemoria`), caricato dalla pagina e importato dal Worker: `pastoMancante({ pasti, giorno, ora, profile, digiuno })` dà il pasto da avvisare **a quell'ora esatta** (alle 15 si parla del pranzo, non della colazione ancora mancante). Conta come pasto una riga di `meals` con slot `colazione`, `pranzo` o `cena` di quel giorno; **gli spuntini (`snack_mattina`, `snack_pomeriggio`, `snack`) e gli `extra` non contano** (controllato sulle righe vere il 1 novembre 2026: sette slot). Niente avviso nei giorni di digiuno (`fasting_days`), con la **pausa cibo** (`ZTQuadro.pausaAttivaIl(profile, giorno, 'cibo')`, Metodo 210) e per i pasti non accesi (`profiles.promemoria_pasti`, text[] fra i tre; nulla o vuoto = spenti). Il testo (`testoAvviso`) è breve, in prima persona, senza la parola «errore»: titolo «Pirsi · Colazione», corpo «Non vedo ancora la colazione di oggi. Se l'hai fatta, registrala adesso: ci metti un minuto.»
+
+### Il Worker
+
+- **Il giro delle ore** (`worker/src/promemoria-cron.js`): il terzo cron del Worker, `0 * * * *` (il piano Free ne dà **5 per account**: con questo sono 3). Lavora solo quando a Roma sono le 10, le 15 o le 22 (ora legale compresa, `ZTPromemoria.oraRoma`), come il lunedì di Pirsi propone; `scheduled` chiama tutti e due i giri a ogni cron e ognuno guarda l'ora sua. Quattro letture per tutti insieme (profili con promemoria accesi, pasti di oggi, digiuni di oggi, telefoni iscritti, avvisi già mandati oggi), poi un POST al servizio push per telefono, poi tre scritture: `promemoria_inviati` (upsert su persona · giorno · pasto: **un giro ripetuto nella stessa ora non manda due volte**), `ultimo_invio` sui telefoni vivi, DELETE degli indirizzi morti (404/410 dal servizio push). Un utente che fallisce non ferma gli altri. **Limite del piano Free: 50 sottorichieste a esecuzione**: il giro si ferma a `MAX_AVVISI_GIRO` = 40 telefoni e lo scrive nei log («rimandato: giro pieno»); quando i telefoni saranno di più il giro va diviso, decisione a parte. Variabili per le prove: `PROMEMORIA_FORCE=1` (salta l'ora), `PROMEMORIA_DRY=1` (decide, non manda, non scrive). Nei log solo utente abbreviato, pasto ed esito
+- **Web Push senza librerie** (`worker/src/webpush.js`): VAPID (RFC 8292) con JWT ES256 firmato dalla chiave privata del Worker (`aud` = origine del servizio push, `exp` fra 12 ore, `sub` = `VAPID_SUBJECT`) e cifratura dell'avviso RFC 8291 + RFC 8188 (`aes128gcm`: chiave effimera ECDH P-256, HKDF con `auth` e col salt, AES-128-GCM, un record solo col byte 0x02), tutto con la WebCrypto del Worker. Intestazioni `TTL` 4 ore, `Urgency normal`, `Topic pasto` (un avviso nuovo sostituisce quello non ancora consegnato). `GET /push-chiave` dà la chiave pubblica all'app (`{ chiave }`, 404 se il Worker non ha le chiavi): la chiave pubblica **non si copia nel codice**
+- **Il nome del coach nel titolo** viene da `COACH_NAME` in `promemoria-cron.js`: il Worker non legge la pagina, quindi è la seconda e ultima copia fuori dai prompt (vedi [La costante](#la-costante))
+
+### Nell'app
+
+- **Impostazioni › Cibo, «Promemoria dei pasti»** (`app/notifiche.js`): tre interruttori disegnati (`role=switch`, lo stesso disegno del foglio della pausa), spenti all'inizio. Al primo acceso l'app chiede il permesso delle notifiche **dal tocco della persona**, legge la chiave pubblica dal Worker, iscrive il telefono (`pushManager.subscribe`) e salva l'iscrizione in `push_iscrizioni` (upsert sull'endpoint, `telefono` in breve come «Invia Feedback»); la scelta si scrive **subito** in `profiles.promemoria_pasti`, non al «Salva». Spento l'ultimo, la riga del telefono si toglie e il browser si disiscrive. Se il profilo non si scrive, l'interruttore resta com'era
+- **Su iPhone solo con l'app aggiunta alla schermata Home** (iOS 16.4+): senza, l'interruttore resta spento e la nota spiega come installarla. Permesso negato una volta → «riaccendili nelle impostazioni del telefono»; Worker senza chiavi → «riprova fra un po'». Mai la parola «errore»
+- **A ogni apertura** `pushRiallinea()` (da `showScreen('app')`): promemoria accesi e permesso dato → l'iscrizione c'è ed è a nome di chi è dentro; un marcatore sul telefono (`zt_push_<utente>` = endpoint) evita di riscrivere la stessa riga; una chiave del Worker cambiata o un endpoint ancora a nome di un altro (42501 sull'upsert) fanno disiscrivere e iscrivere di nuovo
+- **Al logout** `pushDisiscrivi()` toglie la riga di questo telefono (prima di `signOut`, serve la sessione) e disiscrive il browser: gli avvisi di chi esce non arrivano a chi entra
+- **sw.js**: `push` mostra l'avviso (titolo, corpo, icona dell'app, `tag` per pasto, `renotify`); `notificationclick` porta la pagina aperta sul tab Nutrition (messaggio `{apri:'oggi'}`) o ne apre una con `?apri=oggi` (`apriDaNotifica`). `shared/promemoria.js` e `app/notifiche.js` stanno in `APP_FILES`
+- «Scarica i miei dati» include `push_iscrizioni` e `promemoria_inviati` (25 tabelle); «Elimina account» le porta via a cascata
+
+### Schema
+
+Migrazione `supabase/migrations/20261101_170_promemoria_pasti.sql` (fotografia prima e dopo: `supabase/verifiche/170_promemoria_fotografia.sql`): `profiles.promemoria_pasti` (text[] ⊂ colazione/pranzo/cena, vincolo `profiles_promemoria_pasti_chk`); **`push_iscrizioni`** (`endpoint` unico e https, `p256dh` 80-120 caratteri, `auth` 16-32, `telefono`, `ultimo_invio`, `ultimo_esito`; RLS: la persona legge, inserisce, aggiorna e toglie le sue; GRANT select/insert/update/delete ad `authenticated`, tutto a `service_role`, niente ad `anon`); **`promemoria_inviati`** (PK persona · giorno · pasto, `telefoni`; scrive solo il Worker, la persona legge le sue; GRANT select ad `authenticated`). Tutte e due `on delete cascade` da `auth.users`.
+
+### Rilascio (la Regia, in quest'ordine)
+
+1. Copia di sicurezza, poi la migrazione `20261101_170_promemoria_pasti.sql`; prima e dopo `170_promemoria_fotografia.sql`; poi `python3 tools/prova_accessi.py` e la rifotografia di `docs/SCHEMA_TABELLE.md`
+2. `node tools/vapid/genera.js` in locale: stampa le due chiavi e i comandi. La privata va **solo** in `wrangler secret put VAPID_PRIVATE_KEY` e nel gestore delle password; la pubblica in `wrangler secret put VAPID_PUBLIC_KEY`; `VAPID_SUBJECT` = `mailto:ignazio.f@me.com`. Niente chiavi nel repo né in Evernote. Se la coppia cambia, ogni telefono va iscritto di nuovo (l'app lo fa da sola alla prima apertura, `pushRiallinea`)
+3. `wrangler deploy` da `worker/` (il cron nuovo entra con `wrangler.toml`), poi `wrangler tail` a un'ora piena: «[promemoria] … fine» con 0 errori
+4. Dal telefono, app installata: Impostazioni › Cibo, accendere un pasto, controllare la riga in `push_iscrizioni`; la prima sera vera, `promemoria_inviati` ha la riga
+
+**Verifica**: `node tools/banco/prova_promemoria_pasti.js` (regola e app, 42 controlli) · `TZ=UTC node worker/test/prova_webpush.mjs` (cifratura e firma decifrate e verificate con `node:crypto`, indipendente dalla WebCrypto) · `TZ=UTC node worker/test/prova_promemoria_cron.mjs` (il giro delle ore con fetch finto).
+
 ## Lettura del report Fitdays
 
 **Body 150, 13 ottobre 2026 (strada A, decisa da Ignazio).** La bilancia Fitdays non parla con l'app (niente Apple Health, Shortcuts, app a pagamento o client non ufficiali): dopo la pesata la persona fa lo **screenshot o il PDF del report** e lo dà al coach, che lo trascrive con Gemini. **Il file non si conserva da nessuna parte**: non in un bucket, non nel database, non nei log del Worker.
@@ -209,7 +245,7 @@ Vocabolario in **`shared/fitdays.js`** (`ZTFitdays.CAMPI`: chiave, etichetta del
 const COACH_NAME = 'Pirsi';   // zona-tracker.html, subito dopo APP_VERSION
 ```
 
-**Fuori dai prompt il nome non si scrive mai per esteso**: 22 usi, tutti da `COACH_NAME`. Cambiarlo è una riga.
+**Fuori dai prompt il nome non si scrive mai per esteso**: 22 usi, tutti da `COACH_NAME`. Cambiarlo è una riga. **Eccezione dichiarata** *(Notifiche 170, 1 novembre 2026)*: il titolo dell'avviso push lo compone il Worker, che la pagina non la legge: `COACH_NAME` in `worker/src/promemoria-cron.js` è la seconda e ultima copia. Chi cambia il nome cambia due righe.
 
 ⚠️ **Nei prompt il nome è scritto per esteso, ed è voluto.** Lì il modello lo legge come testo dentro la frase d'identità, non come dato: passarlo da una variabile non darebbe nessun vantaggio e renderebbe i prompt illeggibili nel sorgente. **Dal 13 ottobre 2026 (Pirsi 040) la frase d'identità sta in un posto solo**, `ZTCoachRules.voce()` in `shared/coach_rules.js`: «Sei Pirsi» è scritto lì e in nessun altro file.
 

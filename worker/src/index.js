@@ -9,14 +9,18 @@
 //                            il file non si conserva, la lettura torna all'app e basta
 //   GET  /calendario       -> il calendario delle sedute a cui l'iPhone si iscrive (text/calendar, src/calendario.js):
 //                            ?t=<calendario_token del profilo>; nessun token valido → 404. Solo letture
+//   GET  /push-chiave      -> la chiave pubblica VAPID con cui l'app iscrive il telefono alle notifiche
+//                            (Notifiche 170): { chiave } o 404 se il Worker non ha le chiavi
 //   tutto il resto         -> 404
 // Cron:
 //   lunedì 06:00 Europe/Rome -> Pirsi propone: quadro della settimana chiusa + proposte (src/coach-cron.js)
+//   ogni ora, alle 10, 15 e 22 di Roma -> il promemoria del pasto non registrato (src/promemoria-cron.js)
 
 import { handleVisionCheck } from './vision-check.js';
 import { handleFitdays } from './fitdays.js';
 import { handleCalendario } from './calendario.js';
 import { handleScheduled } from './coach-cron.js';
+import { handlePromemoria } from './promemoria-cron.js';
 import { corsPer, origineRifiutata, tokenDa, personaDaToken, entroIlLimite } from './porta.js';
 
 const SUPABASE_URL = 'https://qxiyeiahpoiliwpqslpr.supabase.co';
@@ -242,6 +246,14 @@ async function handleGroqProxy(request, env) {
   }
 }
 
+// La chiave pubblica VAPID (Notifiche 170): è pubblica per natura (la vede ogni telefono iscritto), così
+// l'app la legge da qui e non va copiata nel codice. Senza chiavi nel Worker risponde 404: l'app lo dice.
+function handlePushChiave(request, env) {
+  if (request.method !== 'GET') return jsonResponse({ error: 'Method not allowed' }, 405);
+  if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Notifiche non configurate' } }, 404);
+  return new Response(JSON.stringify({ chiave: env.VAPID_PUBLIC_KEY }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=3600' } });
+}
+
 // Le risposte nascono senza CORS: le intestazioni si mettono qui, una volta,
 // con l'Origin di questa richiesta.
 function conCors(risposta, cors) {
@@ -257,6 +269,7 @@ async function instrada(request, env) {
     : url.pathname === '/vision-check' ? 'vision'
     : url.pathname === '/fitdays-report' ? 'fitdays'
     : url.pathname === '/calendario' ? 'calendario'
+    : url.pathname === '/push-chiave' ? 'push-chiave'
     : null;
   if (!rotta) return jsonResponse({ error: { source: 'worker', kind: 'not-found', status: 404, code: null, message: 'Non trovato' } }, 404);
   if (origineRifiutata(request)) return jsonResponse({ error: { source: 'worker', kind: 'forbidden', status: 403, code: null, message: 'Origine non ammessa' } }, 403);
@@ -265,6 +278,7 @@ async function instrada(request, env) {
   if (rotta === 'vision') return handleVisionCheck(request, env, {});
   if (rotta === 'fitdays') return handleFitdays(request, env, {});
   if (rotta === 'calendario') return handleCalendario(request, env);
+  if (rotta === 'push-chiave') return handlePushChiave(request, env);
   return handleGroqProxy(request, env);
 }
 
@@ -273,6 +287,7 @@ export default {
     return conCors(await instrada(request, env), corsPer(request));
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(handleScheduled(event, env, ctx));
+    // Ogni cron chiama tutti e due i giri: ognuno guarda l'ora di Roma e lavora solo nella sua
+    ctx.waitUntil(Promise.all([handleScheduled(event, env, ctx), handlePromemoria(event, env)]));
   },
 };

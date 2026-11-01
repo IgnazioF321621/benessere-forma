@@ -160,6 +160,8 @@ function _setPopola() {
   SET_TRAIN_GIORNI = p.train_giorni == null ? ZTRotazione.GIORNI_PARTENZA.slice() : (ZTRotazione.giorniScelti(p.train_giorni) || []);
   _setTrainGiorni();
   _setCalendarioStato();
+  // Promemoria dei pasti (Notifiche 170): gli interruttori leggono il profilo e scrivono subito, non al «Salva»
+  if(typeof _setPromemoriaStato === 'function') _setPromemoriaStato();
   // Intolleranze
   SET_INTOL = [...(p.intolleranze || [])];
   ['lattosio','glutine','uova','frutta_a_guscio','soia','nichel','pesce'].forEach(k => {
@@ -235,7 +237,7 @@ async function ricalcolaCalorie() {
 const MIEI_DATI_TABELLE = ['meals', 'meal_items', 'fasting_days', 'supplements', 'supplements_log', 'supplement_packages',
   'supplement_package_items', 'training_logs', 'training_notes', 'workouts', 'schede_utente', 'weight_logs', 'body_logs',
   'body_checks', 'body_measurements', 'body_check_ai', 'fitdays_letture', 'blood_tests', 'weekly_pictures', 'coach_proposals', 'daily_log', 'rilevazioni',
-  'weekly_plans', 'weekly_plan_meals'];
+  'weekly_plans', 'weekly_plan_meals', 'push_iscrizioni', 'promemoria_inviati'];
 async function raccogliMieiDati(){
   if(!ST.user || !ST.user.id) return null;
   const uid = ST.user.id;
