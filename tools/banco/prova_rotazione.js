@@ -163,7 +163,8 @@ atteso('541 · descrizione: durata, scarico, preparazione, esercizi, Tabata', R.
   ['Circa 65 minuti', 'Settimana di scarico: carichi più leggeri, RIR 3+', 'Preparazione 5 min e riscaldamento (3 esercizi)', 'Tabata in coda: 8 round, 4 min']);
 const LUNGA = { exercises: Array.from({ length: 40 }, (_, i) => ES('EX' + i, 'Esercizio, con virgole; e accènti numero ' + i, 3, '8-12', 90)) };
 const dl = R.descrizione(LUNGA, {}), dlScappata = dl.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-atteso('541 · seduta lunga: sotto 1000 ottetti scappati, finisce con «…», righe intere', [Buffer.byteLength(dlScappata, 'utf8') <= 1000, Buffer.byteLength(dlScappata, 'utf8') > 900, dl.split('\n').pop(), dl.split('\n').slice(2, -1).every(r => /— 3 × 8-12$/.test(r))], [true, true, '…', true]);
+atteso('541 · seduta lunga: con «DESCRIPTION:» sotto 1000 ottetti scappati, finisce con «…», righe intere', [Buffer.byteLength('DESCRIPTION:' + dlScappata, 'utf8') <= 1000, Buffer.byteLength(dlScappata, 'utf8') > 900, dl.split('\n').pop(), dl.split('\n').slice(2, -1).every(r => /— 3 × 8-12$/.test(r))], [true, true, '…', true]);
+atteso('541 · se nemmeno la testa ci sta, resta la prima riga', R.descrizione(UA, { scarico: true, maxOttetti: 60 }), 'Circa 55 minuti');
 atteso('541 · seduta corta: niente «…»', R.descrizione(UA, {}).includes('…'), false);
 
 // la settimana di scarico sulle sedute previste

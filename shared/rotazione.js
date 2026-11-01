@@ -267,7 +267,8 @@ var ZTRotazione = (function(){
 
   // Il testo della DESCRIPTION di un evento: la durata, lo scarico, il riscaldamento, gli esercizi, il Tabata.
   //   descrizione(sess, { unilaterale, scarico, tabata, maxOttetti })
-  // Oltre maxOttetti (contati scappati, come vanno nel file) gli ultimi esercizi lasciano il posto a «…».
+  // Oltre maxOttetti (contati scappati, come vanno nel file, con l'etichetta «DESCRIPTION:») gli ultimi esercizi
+  // lasciano il posto a «…»; se non basta, si tiene la sola prima riga.
   function descrizione(sess, o){
     o = o || {};
     if(!sess) return '';
@@ -280,8 +281,9 @@ var ZTRotazione = (function(){
     var max = o.maxOttetti || DESCRIZIONE_MAX;
     var unisci = function(c, tagliato){ return testa.concat(c, tagliato ? ['…'] : [], coda).join('\n'); };
     var testo = unisci(corpo, false);
-    while(corpo.length && ottettiTesto(scappa(testo)) > max){ corpo = corpo.slice(0, -1); testo = unisci(corpo, true); }
-    return testo;
+    var pesa = function(t){ return ottettiTesto('DESCRIPTION:' + scappa(t)); };
+    while(corpo.length && pesa(testo) > max){ corpo = corpo.slice(0, -1); testo = unisci(corpo, true); }
+    return pesa(testo) > max ? testa[0] : testo;
   }
   function ottettiTesto(s){ var t = 0; for(var i = 0; i < s.length; i++){ var c = s.charCodeAt(i); if(c >= 0xD800 && c <= 0xDBFF){ t += 4; i++; } else t += c < 0x80 ? 1 : c < 0x800 ? 2 : 3; } return t; }
 
