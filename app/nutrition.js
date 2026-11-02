@@ -6148,7 +6148,7 @@ async function toggleSuppTaken(localId, name){
 // ═══════════════════════════════════════════════════════════
 function openSuppSheet() {
   const ss = ST.suppSheet;
-  ss.menu = null; ss.sostituisci = null; ss.aperti = {};
+  ss.menu = null; ss.sostituisci = null; ss.aperti = {}; ss.modifica = null;
   document.getElementById('supp-sheet').style.display = 'flex';
   renderSuppSheet();
 }
@@ -6163,7 +6163,7 @@ function rsGruppi() {
   const gruppi = (ST.packages || []).map(p => {
     const prodotti = (p.items || []).map(it => it.supplement).filter(Boolean);
     return { id: String(p.id), nome: p.name || 'Pacchetto', emoji: p.emoji || '📦', ora: p.time || '', supps: prodotti.filter(s => s.active), sospesi: prodotti.filter(s => !s.active) };
-  }).filter(g => g.supps.length || g.sospesi.length).sort((a, b) => (a.ora || '99').localeCompare(b.ora || '99'));
+  }).filter(g => g.supps.length || g.sospesi.length || g.id === (ST.suppSheet && ST.suppSheet.modifica)).sort((a, b) => (a.ora || '99').localeCompare(b.ora || '99'));   // il gruppo in modifica resta anche vuoto (Stile 050)
   const fuori = (ST.supps || []).filter(s => !inPkg.has(s.local_id));
   if (fuori.length) gruppi.push({ id: 'altri', nome: 'Altri integratori', emoji: '🌿', ora: '', supps: ordina(fuori.filter(s => s.active)), sospesi: ordina(fuori.filter(s => !s.active)) });
   return gruppi;
@@ -6180,12 +6180,19 @@ function renderSuppSheet() {
     <button class="rs-chiudi" onclick="closeSuppSheet()" aria-label="Chiudi">×</button>
   </div>`;
   if (!gruppi.length) html += `<p class="rs-vuoto">Nessun integratore attivo.<br><button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="closeSuppSheet();showPage('integratori')">Configura gli integratori</button></p>`;
+  const v5 = document.documentElement.classList.contains('v5');
   gruppi.forEach(g => {
+    if (v5 && ss.modifica === g.id) { html += _rsGruppoModificaHTML(g); return; }
     const daPrendere = g.supps.filter(s => !presi.includes(s.local_id) && !saltati.includes(s.local_id));
     const presiN = g.supps.filter(s => presi.includes(s.local_id)).length;
     const completo = daPrendere.length === 0 && presiN > 0;
     const ripiegato = completo && !ss.aperti[g.id];
-    const titolo = `<span class="rs-gruppo-emoji">${esc(g.emoji)}</span><span class="rs-gruppo-nome">${esc(g.nome)}${g.ora ? `<span class="rs-gruppo-ora">${esc(g.ora)}</span>` : ''}</span>`;
+    // Stile 050, a veste accesa: «Modifica» sta sotto il nome, accanto all'orario (sulla riga del nome lo tagliava); apre il gruppo
+    // in modifica sul posto, solo per i pacchetti veri
+    const modifica = v5 && g.id !== 'altri' ? `<button class="rs-modifica" onclick="event.stopPropagation();rsModifica('${esc(g.id)}')">Modifica</button>` : '';
+    const titolo = modifica
+      ? `<span class="rs-gruppo-emoji">${esc(g.emoji)}</span><span class="rs-gruppo-nome">${esc(g.nome)}<span class="rs-gruppo-sotto">${g.ora ? `<span class="rs-gruppo-ora">${esc(g.ora)}</span>` : ''}${modifica}</span></span>`
+      : `<span class="rs-gruppo-emoji">${esc(g.emoji)}</span><span class="rs-gruppo-nome">${esc(g.nome)}${g.ora ? `<span class="rs-gruppo-ora">${esc(g.ora)}</span>` : ''}</span>`;
     if (ripiegato) {
       html += `<div class="rs-gruppo fatto" data-gruppo="${esc(g.id)}"><div class="rs-gruppo-testa" onclick="rsApri('${esc(g.id)}')">${titolo}<span class="rs-conto">${presiN}/${g.supps.length} ✓</span></div></div>`;
       return;
@@ -6327,6 +6334,87 @@ function rsAvviso(testo, annulla) {
   el.querySelector('button').onclick = () => { rsAvvisoVia(); annulla(); };
   el._timer = setTimeout(rsAvvisoVia, 6000);
   document.body.appendChild(el);
+}
+
+// ═══════════════════════════════════════════════════════════
+// IL GRUPPO SI MODIFICA DAL FOGLIO (Stile 050, 2 novembre 2026). Feedback di Ignazio del 7 ottobre: «diventa complicato
+// cambiare dentro un gruppo i componenti». Prima si usciva dal foglio, si apriva l'editor dei pacchetti dal tab
+// Integratori, e «+ Aggiungi prodotto» passava dal catalogo creando un prodotto nuovo anche se era già nella libreria.
+// Ora, a veste accesa, «Modifica» sul gruppo lo apre sul posto: «−» toglie un prodotto con un tocco (finisce in «Altri
+// integratori», un avviso con «Annulla» lo rimette), «+» mette nel gruppo un prodotto della tua libreria con un tocco (se
+// sta in un altro gruppo, si sposta: un prodotto sta in un gruppo solo). La registrazione resta quella di prima: «Prendi
+// tutto» per il gruppo intero, la spunta per un prodotto solo.
+// Le scritture sono due, su supplement_package_items, con scriviConCoda (senza rete vanno in coda): mettere = insert con
+// l'id scelto dal telefono (un rinvio doppio risponde 23505, e il vincolo package_id+supplement_id lo rende innocuo);
+// togliere = delete per gruppo, prodotto e persona. Anche l'editor dei pacchetti toglie con gruppoTogli: una via sola.
+// Nessuna lettura: ST.packages si aggiorna in memoria e nella copia locale.
+// ═══════════════════════════════════════════════════════════
+function _gruppoPkg(pid) { return (ST.packages || []).find(p => String(p.id) === String(pid)); }
+// ordine: la posizione nel gruppo (con «Annulla» il prodotto torna dov'era); senza, in fondo
+async function gruppoMetti(pid, sid, ordine) {
+  const p = _gruppoPkg(pid), s = (ST.supps || []).find(x => x.local_id === sid);
+  if (!p || !s || (p.items || []).some(it => it.supplement_id === sid)) return false;
+  const riga = { id: nuovoId(), package_id: p.id, supplement_id: sid, user_id: ST.user.id,
+    sort_order: Number.isFinite(ordine) ? ordine : (p.items || []).reduce((m, it) => Math.max(m, it.sort_order || 0), -1) + 1 };
+  p.items = [...(p.items || []), { id: riga.id, supplement_id: sid, sort_order: riga.sort_order, supplement: s }]
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+  const res = await scriviConCoda('mettere l\'integratore nel gruppo', { tabella:'supplement_package_items', tipo:'insert', righe: riga });
+  if (res.error && res.error.code !== '23505') { p.items = p.items.filter(it => it.id !== riga.id); return false; }
+  return true;
+}
+async function gruppoTogli(pid, sid) {
+  const p = _gruppoPkg(pid);
+  if (!p || !(p.items || []).some(it => it.supplement_id === sid)) return false;
+  const prima = p.items;
+  p.items = prima.filter(it => it.supplement_id !== sid);
+  const res = await scriviConCoda('togliere l\'integratore dal gruppo', { tabella:'supplement_package_items', tipo:'delete',
+    filtri:[['package_id', p.id], ['supplement_id', sid], ['user_id', ST.user.id]] });
+  if (res.error) { p.items = prima; return false; }
+  return true;
+}
+function _rsGruppoModificaHTML(g) {
+  const p = _gruppoPkg(g.id);
+  const dentro = new Set((p && p.items || []).map(it => it.supplement_id));
+  const nomeGruppo = (sid) => { const q = (ST.packages || []).find(x => String(x.id) !== String(g.id) && (x.items || []).some(it => it.supplement_id === sid)); return q ? q.name : ''; };
+  const candidati = (ST.supps || []).filter(s => s.active && !dentro.has(s.local_id))
+    .map(s => ({ s, da: nomeGruppo(s.local_id) }))
+    .sort((a, b) => (a.da ? 1 : 0) - (b.da ? 1 : 0) || a.s.name.localeCompare(b.s.name));
+  let h = `<div class="rs-gruppo in-modifica" data-gruppo="${esc(g.id)}"><div class="rs-gruppo-testa"><span class="rs-gruppo-emoji">${esc(g.emoji)}</span><span class="rs-gruppo-nome">${esc(g.nome)}${g.ora ? `<span class="rs-gruppo-ora">${esc(g.ora)}</span>` : ''}</span><button class="rs-fatto" onclick="rsModifica(null)">Fatto</button></div>`;
+  [...g.supps, ...g.sospesi].forEach(s => {
+    h += `<div class="rs-riga modifica" data-supp="${esc(s.local_id)}"><button class="rs-togli" onclick="rsTogliDalGruppo('${esc(g.id)}','${esc(s.local_id)}')" aria-label="Togli ${esc(s.name)} dal gruppo"><i aria-hidden="true">−</i></button><div class="rs-nome">${esc(s.name)}${s.active ? '' : '<span class="rs-tag">sospeso</span>'}</div></div>`;
+  });
+  if (!g.supps.length && !g.sospesi.length) h += `<div class="rs-gruppo-vuoto">Il gruppo è vuoto: aggiungi un prodotto qui sotto.</div>`;
+  if (candidati.length) {
+    h += `<div class="rs-aggiungi-titolo">Aggiungi al gruppo</div>`;
+    candidati.forEach(({ s, da }) => {
+      h += `<button class="rs-aggiungi" onclick="rsMettiNelGruppo('${esc(g.id)}','${esc(s.local_id)}')" aria-label="Aggiungi ${esc(s.name)} al gruppo"><i aria-hidden="true">+</i><span>${esc(s.name)}</span>${da ? `<small>da ${esc(da)}</small>` : ''}</button>`;
+    });
+  }
+  h += `<button class="rs-impostazioni" onclick="closeSuppSheet();openPackageEditor('${esc(g.id)}')">Nome, orario, dosi e catalogo ›</button></div>`;
+  return h;
+}
+function rsModifica(gid) { const ss = ST.suppSheet; ss.modifica = gid && ss.modifica !== gid ? gid : null; ss.menu = null; ss.sostituisci = null; renderSuppSheet(); }
+function _rsDopoGruppo() { saveCache(); if (ST.page === 'oggi') renderOggi(); if (ST.page === 'integratori') renderIntegratori(); renderSuppSheet(); }
+async function rsTogliDalGruppo(gid, sid) {
+  const p = _gruppoPkg(gid), s = (ST.supps || []).find(x => x.local_id === sid);
+  if (!p || !s) return;
+  const it = (p.items || []).find(x => x.supplement_id === sid), ordine = it ? it.sort_order : undefined;
+  const fatto = gruppoTogli(gid, sid);
+  renderSuppSheet();
+  if (await fatto) rsAvviso(`${s.name} tolto da ${p.name}`, () => rsMettiNelGruppo(gid, sid, ordine));
+  _rsDopoGruppo();
+}
+// Un tocco: il prodotto entra nel gruppo; se stava in un altro gruppo, prima ne esce (un prodotto sta in un gruppo solo).
+// ordine c'è solo con «Annulla»: il prodotto torna al suo posto, senza avviso
+async function rsMettiNelGruppo(gid, sid, ordine) {
+  const annullo = ordine !== undefined;
+  const p = _gruppoPkg(gid), s = (ST.supps || []).find(x => x.local_id === sid);
+  if (!p || !s) return;
+  const da = (ST.packages || []).find(q => String(q.id) !== String(gid) && (q.items || []).some(it => it.supplement_id === sid));
+  const fatto = (async () => { if (da && !(await gruppoTogli(da.id, sid))) return false; return gruppoMetti(gid, sid, annullo ? Number(ordine) : undefined); })();
+  renderSuppSheet();
+  if ((await fatto) && !annullo) showToast(da ? `${s.name} spostato da ${da.name} a ${p.name}` : `${s.name} aggiunto a ${p.name}`, '✅');
+  _rsDopoGruppo();
 }
 
 async function deleteSuppLog(name, time) {
@@ -7793,14 +7881,9 @@ function pkgEditorRemoveItem(supplementId) {
     if(!ST.pkgRemoveItemConfirm) return; // già undone
     const conf = ST.pkgRemoveItemConfirm;
     ST.pkgRemoveItemConfirm = null;
-    if(conf.itemId) {
-      await dbq('togliere l\'integratore dal pacchetto', supa.from('supplement_package_items').delete().eq('id', conf.itemId));
-    }
-    // Aggiorna ST.packages
-    if(e.packageId) {
-      const idx = ST.packages.findIndex(p => p.id === e.packageId);
-      if(idx >= 0) ST.packages[idx].items = ST.packages[idx].items.filter(x => x.supplement_id !== conf.supplementId);
-    }
+    // Stile 050: la stessa scrittura del foglio «Registra integratori» (gruppoTogli: coda, per gruppo e prodotto), che aggiorna anche ST.packages
+    if(e.packageId) await gruppoTogli(e.packageId, conf.supplementId);
+    saveCache();
     if(ST.packageEditor) delete ST.packageEditor._pendingRemove;
     renderPackageEditor();
   }, 4000);
