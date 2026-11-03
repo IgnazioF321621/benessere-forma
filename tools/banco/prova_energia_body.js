@@ -65,7 +65,7 @@ async function app(o){
     const b = await app();
     atteso('all\'avvio nessuna lettura delle rilevazioni', b.letture(), 0);
     await b.apri();
-    atteso('tab «Energia» fra quelli del Body', b.qq('.nutrition-subnav .nsn-pill').map(testo), ['Misure', 'Tendenza', 'Check', 'Energia']);
+    atteso('tab «Energia» fra quelli del Body (cinque dal Body 160, con «Analisi»)', b.qq('.nutrition-subnav .nsn-pill').map(testo), ['Misure', 'Tendenza', 'Check', 'Energia', 'Analisi']);
     atteso('aperto: una lettura, dal primo giorno della settimana', [b.letture(), (b.supa._calls.find(c => c.table === 'rilevazioni').filters || []).find(f => f[0] === 'gte')], [1, ['gte', 'giorno', '2026-10-08']]);
     atteso('oggi, punto per punto con le parole', b.qq('.en-riga').map(parti),
       ['mattino Energia 4 buona Stress 2 sereno', '11 Energia 3 normale Stress 2 sereno', '15 Energia 2 bassa Stress 4 teso riposino 15 min']);
