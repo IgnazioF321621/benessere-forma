@@ -133,10 +133,12 @@ async function nuovo(o){
     atteso('motivi · più di uno insieme, segnati con la spunta', [...a.doc.querySelectorAll('.pausa-motivo.on')].map(c => c.dataset.motivo), ['viaggio', 'lavoro']);
     await a.win.salvaPausa();
     const upd = a.supa._calls.filter(c => c.table === 'profiles' && c.op === 'update').pop();
-    atteso('foglio · salva le date, i moduli scelti e i motivi in elenco; il foglio si chiude', [upd.payload.pausa_moduli, upd.payload.pausa_inizio, upd.payload.pausa_motivo, !!a.doc.getElementById('pausa-modal')], [['allenamento', 'pesate'], add(OGGI, 3), 'viaggio,lavoro', false]);
+    // dal Training 360 la pausa è un periodo dell'elenco profiles.pause
+    const z0 = (upd.payload.pause || [])[0] || {};
+    atteso('foglio · salva le date, i moduli scelti e i motivi in elenco; il foglio si chiude', [z0.moduli, z0.inizio, z0.motivo, !!a.doc.getElementById('pausa-modal')], [['allenamento', 'pesate'], add(OGGI, 3), 'viaggio,lavoro', false]);
     atteso('foglio · in memoria la pausa futura ha i suoi moduli', a.win.getPausa().moduli, { allenamento:true, cibo:false, pesate:true });
     atteso('motivi · il riassunto e la striscia li leggono: «viaggio e lavoro»', [a.win._pausaMotivoTesto('viaggio,lavoro'), a.win._pausaMotivoTesto('vacanza'), a.win._pausaMotivoTesto('vacanza,viaggio,lavoro'), a.win._pausaMotivoTesto('boh'), /viaggio e lavoro/.test(a.win._pausaRiassunto())], ['viaggio e lavoro', 'vacanza', 'vacanza, viaggio e lavoro', null, true]);
-    a.win.apriPausa();
+    a.win.apriPausa(); a.win.modificaPausa(a.win.getPausa().id);   // Training 360: si apre l'elenco, poi il periodo
     atteso('motivi · riaprendo, i due motivi sono già segnati', [...a.doc.querySelectorAll('.pausa-motivo.on')].map(c => c.dataset.motivo), ['viaggio', 'lavoro']);
     [...a.doc.querySelectorAll('.pausa-modulo')].forEach(c => { if(c.getAttribute('aria-checked') === 'true') c.click(); });
     const prima = a.supa._calls.filter(c => c.table === 'profiles' && c.op === 'update').length;
@@ -145,10 +147,10 @@ async function nuovo(o){
     a.win.chiudiPausa();
     await a.win.terminaPausa();
     const upd2 = a.supa._calls.filter(c => c.table === 'profiles' && c.op === 'update').pop();
-    atteso('togli · una pausa futura si cancella, moduli compresi', upd2.payload, { pausa_inizio:null, pausa_fine:null, pausa_motivo:null, pausa_moduli:null });
+    atteso('togli · una pausa futura si cancella, moduli compresi', upd2.payload, { pause: [] });
   }
   const cron = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'worker', 'src', 'coach-cron.js'), 'utf8');
-  atteso('Worker · il cron legge pausa_moduli nel profilo', /pausa_fine,pausa_moduli/.test(cron), true);
+  atteso('Worker · il cron legge pausa_moduli (e l\'elenco pause, Training 360) nel profilo', /pausa_moduli,pause/.test(cron), true);
   console.log(ko ? `\n  ${ko} KO` : '\n  tutto verde');
   process.exit(ko ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

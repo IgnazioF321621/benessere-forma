@@ -102,10 +102,12 @@ async function nuovo(workouts, opts){
     atteso('infortunio · «Infortunio fino a …» nello stato del giorno', /INFORTUNIO FINO A/.test(a.card().stato), true);
   }
   {
-    const a = await nuovo([w('2026-10-06', 'upperA')], { locale: { ['zt_soft_return_' + U]: JSON.stringify({ active: true, startDate: OGGI, level: 1 }) } });
+    // Training 360: la settimana leggera parte da sola dopo 8 giorni o più senza sedute (qui 15: ultima seduta il 25 settembre)
+    const a = await nuovo([w('2026-09-25', 'upperA')]);
+    await a.win.loadTrainingAllCompleted({ skipRender:true });
     await a.win.computeTrainHomeData();
     const sr = a.win.getSoftReturn();
-    atteso('rientro graduale · nello stato del giorno (se la chiave del rientro è quella)', [!!sr, sr ? /RIENTRO GRADUALE/.test(a.card().stato) : 'chiave diversa'], [true, true]);
+    atteso('rientro graduale · nello stato del giorno (la settimana leggera dopo lo stop)', [!!sr, sr ? /RIENTRO GRADUALE/.test(a.card().stato) : 'nessun rientro'], [true, true]);
   }
   console.log(ko ? ko + ' KO' : 'tutto OK');
   process.exit(ko ? 1 : 0);

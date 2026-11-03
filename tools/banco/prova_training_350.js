@@ -121,12 +121,14 @@ async function nuovo(o){
     a.doc.getElementById('pausa-inizio').value = '2026-10-20'; a.doc.getElementById('pausa-fine').value = '2026-10-30';
     a.ST.pausaModal.motivi = ['viaggio'];
     await a.win.salvaPausa();
-    atteso('foglio · scrive le tre colonne nel profilo, una riga per id', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:'2026-10-30', pausa_motivo:'viaggio', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
-    atteso('foglio · il profilo in memoria è aggiornato e il foglio chiuso', [a.ST.profile.pausa_inizio, a.ST.profile.pausa_fine, !!a.ST.pausaModal], ['2026-10-20', '2026-10-30', false]);
+    // dal Training 360 la pausa è un periodo dell'elenco profiles.pause (l'id lo sceglie l'app)
+    const senzaId = (pp) => (pp.pause || []).map(({ id, ...r }) => r);
+    atteso('foglio · scrive il periodo nell\'elenco del profilo, una riga per id', senzaId(a.scritture().pop()), [{ inizio:'2026-10-20', fine:'2026-10-30', motivo:'viaggio', moduli:['allenamento', 'cibo', 'pesate'] }]);
+    atteso('foglio · il profilo in memoria è aggiornato e il foglio chiuso', [a.ST.profile.pause[0].inizio, a.ST.profile.pause[0].fine, !!a.ST.pausaModal], ['2026-10-20', '2026-10-30', false]);
     atteso('striscia · pausa dichiarata per dopo, con «Togli»', [/PAUSA · VIAGGIO/.test(a.pagina()), /Pausa dal 20 ottobre al 30 ottobre/.test(a.pagina()), /Togli/.test(a.pagina())], [true, true, true]);
     atteso('app · una pausa futura non cambia la seduta proposta', a.win.sedutaProposta(), 'lowerB');
     await a.win.terminaPausa();
-    atteso('striscia · «Togli» su una pausa futura la cancella', [a.scritture().pop(), !!a.doc.getElementById('pausa-bar')], [{ pausa_inizio:null, pausa_fine:null, pausa_motivo:null, pausa_moduli:null }, false]);
+    atteso('striscia · «Togli» su una pausa futura la cancella', [a.scritture().pop(), !!a.doc.getElementById('pausa-bar')], [{ pause: [] }, false]);
     // fine prima dell'inizio: non si salva
     a.win.apriPausa();
     a.doc.getElementById('pausa-inizio').value = '2026-10-20'; a.doc.getElementById('pausa-fine').value = '2026-10-10';
@@ -136,7 +138,7 @@ async function nuovo(o){
     // aperta
     a.doc.getElementById('pausa-fine').value = ''; a.doc.getElementById('pausa-aperta').click();
     await a.win.salvaPausa();
-    atteso('foglio · «non lo so ancora»: fine nulla', a.scritture().pop(), { pausa_inizio:'2026-10-20', pausa_fine:null, pausa_motivo:'vacanza', pausa_moduli:['allenamento', 'cibo', 'pesate'] });
+    atteso('foglio · «non lo so ancora»: fine nulla', senzaId(a.scritture().pop()), [{ inizio:'2026-10-20', fine:null, motivo:'vacanza', moduli:['allenamento', 'cibo', 'pesate'] }]);
   }
   // 2 · in pausa: striscia, niente «da recuperare», «Rientro anticipato» chiude a ieri
   {
@@ -144,7 +146,7 @@ async function nuovo(o){
     atteso('in pausa · la striscia dice fino a quando, con «Rientro anticipato»', [/In pausa fino al 20 ottobre/.test(a.pagina()), /Rientro anticipato/.test(a.pagina()), /PAUSA · VACANZA/.test(a.pagina())], [true, true, true]);
     atteso('in pausa · nessuna seduta «da recuperare»', /DA RECUPERARE|da recuperare|debit/i.test(a.pagina()), false);
     await a.win.terminaPausa();
-    atteso('in pausa · «Rientro anticipato»: la pausa finisce ieri, oggi conta', [a.scritture().pop(), a.win.getPausa().finita], [{ pausa_fine:'2026-10-12' }, true]);
+    atteso('in pausa · «Rientro anticipato»: la pausa finisce ieri, oggi conta (nell\'elenco, Training 360)', [a.scritture().pop(), a.win.getPausa().finita], [{ pause: [{ id:'pausa', inizio:'2026-10-10', fine:'2026-10-12', motivo:'vacanza', moduli:['allenamento', 'cibo', 'pesate'] }] }, true]);
   }
   // 3 · il blocco è fermo: i giorni di pausa non contano per la card dei 35 giorni
   {
@@ -153,15 +155,16 @@ async function nuovo(o){
     const b = await nuovo({ inizio: add(OGGI, -40) });
     atteso('blocco · senza pausa, a 40 giorni la card c\'è', [b.win._giorniDaInizioBlocco(), !!b.doc.getElementById('blocco-nuovo-card')], [40, true]);
   }
-  // 4 · tornato da una pausa lunga: la card del blocco nuovo e il rientro graduale che lo dice
+  // 4 · tornato da una pausa lunga: la card del blocco nuovo e la settimana leggera (Training 360: lo stop si misura in
+  //     giorni senza sedute di lavoro, dall'ultima seduta prima, 27 giorni fa)
   {
     const a = await nuovo({ inizio: add(OGGI, -50), pausa_inizio: add(OGGI, -26), pausa_fine: add(OGGI, -2), pausa_motivo:'lavoro',
-      training_logs: [ { id:'t1', user_id:U, session_id:'upperA', date: add(OGGI, -27), exercise_name:'Panca elastico', exercise_code:'EX001', set_number:1, reps:8, resistance:'40', band_color:null, rir_actual:2 } ] });
-    atteso('rientro · 25 giorni di pausa finiti: la card dice «rientro dopo 25 giorni di pausa»', [!!a.doc.getElementById('blocco-nuovo-card'), /RIENTRO DOPO 25 GIORNI DI PAUSA/.test(a.pagina()), /blocco pulito/.test(a.pagina())], [true, true, true]);
-    await a.win.maybeProposeSoftReturn('upperA');
-    atteso('rientro · il rientro graduale sa della pausa (27 giorni fermo, livello 1)', [a.ST.softReturnPrompt && a.ST.softReturnPrompt.daPausa, a.ST.softReturnPrompt && a.ST.softReturnPrompt.level], [25, 1]);
-    a.ST.trainSession = 'upperA'; a.ST.trainAnticipato = 'upperA'; a.win.renderTraining();
-    atteso('rientro · il banner dice «Bentornato: 25 giorni di pausa»', /Bentornato: 25 giorni di pausa, 27 senza allenarti/.test(a.pagina()), true);
+      workouts: [ { id:'w0', user_id:U, session_type:'upperA', date: add(OGGI, -27), completed:true } ] });
+    atteso('rientro · 26 giorni fermo: la card dice «rientro dopo 26 giorni fermo», blocco pulito', [!!a.doc.getElementById('blocco-nuovo-card'), /RIENTRO DOPO 26 GIORNI FERMO/.test(a.pagina()), /blocco pulito/.test(a.pagina())], [true, true, true]);
+    const sr = a.win.getSoftReturn();
+    atteso('rientro · la settimana leggera parte da sola (26 giorni, blocco nuovo)', [!!sr, sr && sr.stopGiorni, sr && sr.bloccoNuovo], [true, 26, true]);
+    a.ST.trainSession = 'lowerA'; a.win.renderTraining();
+    atteso('rientro · la striscia dice «prima settimana leggera» e «Sei stato fermo 26 giorni»', [/PRIMA SETTIMANA LEGGERA/.test(a.pagina()), /Sei stato fermo 26 giorni/.test(a.pagina())], [true, true]);
     const b = await nuovo({ inizio: add(OGGI, -30), pausa_inizio: add(OGGI, -16), pausa_fine: add(OGGI, -2) });
     atteso('rientro · 15 giorni di pausa: il blocco riprende, niente card', !!b.doc.getElementById('blocco-nuovo-card'), false);
     const c = await nuovo({ inizio: add(OGGI, -1), pausa_inizio: add(OGGI, -26), pausa_fine: add(OGGI, -2) });

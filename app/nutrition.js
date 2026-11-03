@@ -177,7 +177,8 @@ function sedutaDomani(){
     const hd = ST.trainHomeData;
     if (!hd || hd.errore || hd.notStarted) return null;
     if (typeof getInjuryPeriod === 'function' && getInjuryPeriod()) return null;
-    if (typeof getPausa === 'function') { const pa = getPausa(); if (pa && (pa.attiva || (pa.futura && pa.inizio === _giornoAccanto(todayKey(), 1)))) return null; }
+    // in pausa oggi o domani, con qualsiasi periodo (Training 360): niente seduta di domani
+    if (typeof ZTQuadro !== 'undefined' && (ZTQuadro.pausaAttivaIl(ST.profile, todayKey()) || ZTQuadro.pausaAttivaIl(ST.profile, _giornoAccanto(todayKey(), 1)))) return null;
     // Coi giorni scelti (Training 540, «solo sedute vere»): domani è la seduta prevista per domani dalla stessa regola del
     // calendario (sedutePreviste: oggi la seduta fatta o in corso, poi una di lavoro per ogni giorno scelto); un giorno
     // non scelto è un giorno di riposo. Senza giorni scelti, la regola qui sotto.

@@ -117,7 +117,7 @@ function _statoGiornoTraining(hd){
   try { sr = (!inj && typeof getSoftReturn === 'function') ? getSoftReturn() : null; } catch(e){}
   // la pausa dell'allenamento (Metodo 210): la regola è una, in shared/quadro.js via pausaAttivaPer
   let pausaAll = false; try { pausaAll = (typeof pausaAttivaPer === 'function') && pausaAttivaPer('allenamento'); } catch(e){}
-  if(pausaAll){ const pz = getPausa(); parti.push(pz && pz.fine ? `IN PAUSA FINO A ${fmtDate(pz.fine).toUpperCase()}` : 'IN PAUSA'); }
+  if(pausaAll){ const pz = getPausa(); parti.push(pz && pz.finoAl ? `IN PAUSA FINO A ${fmtDate(pz.finoAl).toUpperCase()}` : 'IN PAUSA'); }
   else if(inj) parti.push(inj.endDate ? `INFORTUNIO FINO A ${fmtDate(inj.endDate).toUpperCase()}` : 'INFORTUNIO IN CORSO');
   else if(sr) parti.push('RIENTRO GRADUALE');
   else if(hd && !hd.errore && !hd.doneToday && !hd.inProgress && /^rest/.test(hd.nextSession || '')) parti.push('OGGI RIPOSO');
@@ -218,7 +218,7 @@ function getProssimaAzioneSimple(){
   const pausaAll = inPausa('allenamento'), pausaCibo = inPausa('cibo'), pausaPesate = inPausa('pesate');
   if(pausaAll && pausaCibo && pausaPesate && !(tr && hd.inProgress && hd.lastSession)){
     const pz = getPausa();
-    return { titolo: 'Sei in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: l'app ti aspetta, senza promemoria.` : 'L\'app ti aspetta, senza promemoria. La chiudi tu quando torni.', nextHint: null };
+    return { titolo: 'Sei in pausa', dettaglio: pz && pz.finoAl ? `Fino al ${fmtDate(pz.finoAl)}: l'app ti aspetta, senza promemoria.` : 'L\'app ti aspetta, senza promemoria. La chiudi tu quando torni.', nextHint: null };
   }
 
   // 1. Seduta iniziata e non chiusa
@@ -266,7 +266,7 @@ function getProssimaAzioneSimple(){
   // 6. Giorno di riposo, o allenamento in pausa
   if(pausaAll && !(tr && hd.doneToday)){
     const pz = getPausa();
-    return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.fine ? `Fino al ${fmtDate(pz.fine)}: riprendi da dove eri.` : 'Riprendi da dove eri quando torni.', nextHint: null };
+    return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.finoAl ? `Fino al ${fmtDate(pz.finoAl)}: riprendi da dove eri.` : 'Riprendi da dove eri quando torni.', nextHint: null };
   }
   if(riposo){
     return { titolo: 'Oggi riposo', dettaglio: 'Il recupero fa parte del programma.', nextHint: null };
@@ -420,7 +420,8 @@ async function buildWeeklyPicture(weekStart, opts){
   if(!userId) return null;
   const raw = await _wpFetch(userId, weekStart);
   let injuryNow = false;
-  try { injuryNow = !!(getInjuryPeriod() || getSoftReturn()); } catch(e){}
+  // la settimana leggera dopo uno stop non è un infortunio (Training 360): il quadro la segna da sé (training.rientro)
+  try { injuryNow = !!getInjuryPeriod(); } catch(e){}
   return computeWeeklyPicture(raw, weekStart, {
     today: todayKey(), profile: ST.profile || {}, target: ST.TARGET, injuryActiveNow: injuryNow,
   });
@@ -980,8 +981,8 @@ function _csaSalvaStato(s) { try { localStorage.setItem(_csaChiave(), JSON.strin
 function comeStaiAdessoDovuto() {
   if (!ST.user || !ST.user.id || !ST.profile) return null;
   if (ST.trainSession) return null;
-  const pz = (typeof getPausa === 'function') ? getPausa() : null;
-  if (pz && pz.attiva) return null;
+  // in pausa (qualsiasi periodo, Training 360) non si chiede come stai
+  if (typeof ZTQuadro !== 'undefined' && ZTQuadro.pausaAttivaIl(ST.profile, todayKey())) return null;
   const h = new Date().getHours();
   const passati = comeStaiAdessoOrari().filter(o => o <= h);
   if (!passati.length) return null;

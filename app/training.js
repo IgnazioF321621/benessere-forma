@@ -2100,8 +2100,7 @@ function _renderVolumeCard(){
 // 42) e oltre 3 settimane al rientro si propone il blocco nuovo · Pirsi lo sa (pause_days nel quadro).
 // Durante la pausa: la striscia in Training, «Rientro anticipato»; si riparte dalla prossima della rotazione.
 // La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
-const PAUSA_BLOCCO_NUOVO_GIORNI = 21;     // oltre tre settimane fermo, al rientro conviene un blocco pulito
-const PAUSA_RIENTRO_GIORNI = 14;          // per quanti giorni dopo il rientro la proposta resta
+// Quando proporre il blocco nuovo al rientro lo dice ZTQuadro.rientro (Training 360): 21 giorni fermo, o malattia a blocco avanzato.
 const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['malattia', 'Malattia'], ['altro', 'Altro']];
 function getPausa(){
   if(!ST.profile || typeof ZTQuadro === 'undefined') return null;
@@ -2110,24 +2109,34 @@ function getPausa(){
 // La pausa vale oggi per quel modulo? (Metodo 210: 'allenamento' · 'cibo' · 'pesate'). Un posto solo
 // per tutta l'app: Home, Nutrition, Body e Impostazioni chiedono qui, niente calcoli inline.
 function pausaAttivaPer(modulo){
-  const pz = getPausa();
-  return !!(pz && pz.attiva && pz.moduli && pz.moduli[modulo]);
+  // con più periodi (Training 360) conta qualsiasi periodo che oggi ferma quel modulo: la regola di shared
+  return !!(ST.profile && typeof ZTQuadro !== 'undefined' && ZTQuadro.pausaAttivaIl(ST.profile, todayKey(), modulo));
 }
 const PAUSA_MODULI_ETICHETTE = [['allenamento', 'Allenamento'], ['cibo', 'Cibo'], ['pesate', 'Pesate e misure']];
 // La pausa in una riga, per le Impostazioni: «Dal 20 al 30 ottobre (vacanza) · allenamento, cibo» o «Nessuna pausa»
+// Con più periodi (Training 360) una riga per periodo, uniti da « · poi »
 function _pausaRiassunto(){
-  const pz = getPausa();
-  if(!pz || !(pz.attiva || pz.futura)) return 'Nessuna pausa in programma';
+  const vivi = _pausaVive();
+  if(!vivi.length) return 'Nessuna pausa in programma';
+  return vivi.map(_pausaRigaPeriodo).join(' · poi ');
+}
+function _pausaRigaPeriodo(pz){
   const quando = pz.fine ? `Dal ${_pausaFmt(pz.inizio)} al ${_pausaFmt(pz.fine)}` : `Dal ${_pausaFmt(pz.inizio)}, fine da decidere`;
   const motivo = _pausaMotivoTesto(pz.motivo);
   const moduli = PAUSA_MODULI_ETICHETTE.filter(([k]) => pz.moduli[k]).map(([, l]) => l.toLowerCase());
   return `${quando}${motivo ? ` (${motivo})` : ''} · ${moduli.length ? moduli.join(', ') : 'nessun modulo'}`;
 }
+// I periodi in corso o in programma, in ordine (quelli finiti restano nel profilo per il conto, non si mostrano)
+function _pausaVive(){
+  const pz = getPausa();
+  return pz ? pz.periodi.filter(z => z.attiva || z.futura) : [];
+}
+function _pausaEMalattia(z){ return _pausaMotivi(z && z.motivo).includes('malattia'); }
 function _aggiornaPausaImpostazioni(){
   const el = document.getElementById('set-pausa-stato');
   if(el) el.textContent = _pausaRiassunto();
   const btn = document.getElementById('set-pausa-btn');
-  if(btn){ const pz = getPausa(); btn.textContent = (pz && (pz.attiva || pz.futura)) ? 'Modifica ›' : 'Imposta ›'; }
+  if(btn) btn.textContent = _pausaVive().length ? 'Modifica ›' : 'Imposta ›';
 }
 function _pausaFmt(d){ return new Date(d + 'T12:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'long' }); }
 // I motivi (Metodo 210, correzione del 14 ottobre: Ignazio vuole poterne scegliere più d'uno, «viaggio e
@@ -2142,30 +2151,44 @@ function _pausaMotivoTesto(m){
   if(!nomi.length) return null;
   return nomi.length === 1 ? nomi[0] : nomi.slice(0, -1).join(', ') + ' e ' + nomi[nomi.length - 1];
 }
-// Il foglio: date e motivo. `ST.pausaModal` = { inizio, fine, aperta, motivo }
+// Il foglio (Training 360: più periodi). `ST.pausaModal` = { vista: 'elenco' | 'periodo', id, inizio, fine, aperta,
+// motivi, moduli }. Senza periodi in corso o in programma si apre direttamente il modulo di un periodo nuovo.
 // Il foglio vive sul body, non dentro la pagina Training: si apre anche dalle Impostazioni (Metodo 210).
+const _PAUSA_TUTTI = () => ({ allenamento: true, cibo: true, pesate: true });
+function _pausaNuova(){ return { vista: 'periodo', id: null, inizio: todayKey(), fine: '', aperta: false, motivi: ['vacanza'], moduli: _PAUSA_TUTTI() }; }
 function apriPausa(){
-  const pz = getPausa();
-  const oggi = todayKey();
-  const tutti = { allenamento: true, cibo: true, pesate: true };
-  const motiviPrima = pz ? _pausaMotivi(pz.motivo) : [];
-  ST.pausaModal = pz && (pz.attiva || pz.futura)
-    ? { inizio: pz.inizio, fine: pz.fine || '', aperta: !pz.fine, motivi: motiviPrima.length ? motiviPrima : ['vacanza'], moduli: Object.assign({}, tutti, pz.moduli || {}) }
-    : { inizio: oggi, fine: '', aperta: false, motivi: ['vacanza'], moduli: tutti };
+  ST.pausaModal = _pausaVive().length ? { vista: 'elenco' } : _pausaNuova();
   renderPausaModal();
-  setTimeout(() => document.getElementById('pausa-inizio')?.focus(), 50);
+  if(ST.pausaModal.vista === 'periodo') setTimeout(() => document.getElementById('pausa-inizio')?.focus(), 50);
+}
+function aggiungiPausa(){ ST.pausaModal = _pausaNuova(); renderPausaModal(); }
+function modificaPausa(id){
+  const z = _pausaVive().find(x => x.id === id);
+  if(!z) return;
+  const motivi = _pausaMotivi(z.motivo);
+  ST.pausaModal = { vista: 'periodo', id: z.id, inizio: z.inizio, fine: z.fine || '', aperta: !z.fine, motivi: motivi.length ? motivi : ['vacanza'], moduli: Object.assign(_PAUSA_TUTTI(), z.moduli || {}) };
+  renderPausaModal();
 }
 function chiudiPausa(){ ST.pausaModal = null; renderPausaModal(); }
 // Dopo un cambio della pausa tutti guardano di nuovo: Training, Home, Impostazioni
 function _dopoPausa(){
   renderPausaModal();
   if(typeof loadTrainingHomeData === 'function') loadTrainingHomeData();
+  if(typeof applicaRientro === 'function') applicaRientro();
   if(ST.page === 'training') renderTraining();
   if(typeof renderHome === 'function') renderHome();
   _aggiornaPausaImpostazioni();
 }
-// Scrive le tre colonne nel profilo (una riga, per id) e aggiorna la copia in memoria e quella locale.
-async function _pausaScrivi(valori, cosa){
+// I periodi come stanno nel profilo (profiles.pause, migrazione 20261103_360): quelli di adesso, letti con la regola
+// di shared (anche la pausa sola dei campi di prima, che passa nell'elenco alla prima scrittura).
+function _pausaElenco(){
+  return ZTQuadro.pausaPeriodi(ST.profile).map(z => ({ id: z.id, inizio: z.inizio, fine: z.fine, motivo: z.motivo,
+    moduli: PAUSA_MODULI_ETICHETTE.map(([k]) => k).filter(k => z.moduli[k]) }));
+}
+// Scrive l'elenco nel profilo (una riga, per id) e aggiorna la copia in memoria e quella locale. I campi di prima
+// (pausa_inizio, …) non si scrivono più: con `pause` presente valgono i periodi, anche se l'elenco è vuoto.
+async function _pausaScrivi(periodi, cosa){
+  const valori = { pause: periodi };
   if(!ST.user || ST.user.id === 'test-user-001'){ Object.assign(ST.profile, valori); return true; }
   const r = await dbq(cosa, supa.from('profiles').update(valori).eq('id', ST.user.id));
   if(r.error) return false;
@@ -2173,9 +2196,10 @@ async function _pausaScrivi(valori, cosa){
   try { if(typeof saveCache === 'function') saveCache(); } catch(e){}
   return true;
 }
+function _pausaNuovoId(){ return 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
 async function salvaPausa(){
   const m = ST.pausaModal;
-  if(!m) return;
+  if(!m || m.vista !== 'periodo') return;
   const inizio = (document.getElementById('pausa-inizio')?.value || m.inizio || '').trim();
   const aperta = !!m.aperta;
   const fine = aperta ? '' : (document.getElementById('pausa-fine')?.value || '').trim();
@@ -2185,23 +2209,33 @@ async function salvaPausa(){
   const moduli = PAUSA_MODULI_ETICHETTE.map(([k]) => k).filter(k => m.moduli && m.moduli[k]);
   if(!moduli.length){ showToast('Scegli almeno una cosa da fermare', '✈️'); return; }
   const motivi = PAUSA_MOTIVI.map(([k]) => k).filter(k => (m.motivi || []).includes(k));
-  const ok = await _pausaScrivi({ pausa_inizio: inizio, pausa_fine: fine || null, pausa_motivo: motivi.length ? motivi.join(',') : null, pausa_moduli: moduli }, 'salvare la pausa');
+  const altri = _pausaElenco().filter(z => z.id !== m.id);
+  // una pausa aperta alla volta: la seconda «non lo so ancora» non saprebbe dove finisce la prima
+  if(aperta && altri.some(z => !z.fine)){ showToast('C\'è già una pausa senza data di ritorno: chiudi quella o scegli il giorno in cui torni', '📅', 4500); return; }
+  const periodo = { id: m.id || _pausaNuovoId(), inizio, fine: fine || null, motivo: motivi.length ? motivi.join(',') : null, moduli };
+  const periodi = altri.concat([periodo]).sort((a, b) => a.inizio < b.inizio ? -1 : a.inizio > b.inizio ? 1 : 0);
+  const ok = await _pausaScrivi(periodi, 'salvare la pausa');
   if(!ok) return;
   ST.pausaModal = null;
   showToast(fine ? `✈️ Pausa dal ${_pausaFmt(inizio)} al ${_pausaFmt(fine)}` : `✈️ Pausa dal ${_pausaFmt(inizio)}, fine da decidere`, '', 3500);
   _dopoPausa();
 }
-// «Rientro anticipato»: la pausa finisce ieri, oggi si conta già come giorno normale. Una pausa che
-// doveva iniziare oggi o più avanti si toglie del tutto.
-async function terminaPausa(){
+// «Sto meglio» (malattia) o «Rientro anticipato»: il periodo finisce ieri, oggi si conta già come giorno normale. Un
+// periodo che inizia oggi o più avanti si toglie del tutto: chiuso lo stesso giorno non diventa mai «al contrario».
+// Senza id: il periodo che la striscia mostra.
+async function terminaPausa(id){
   const pz = getPausa();
   if(!pz) return;
+  const z = id ? pz.periodi.find(x => x.id === id) : pz;
+  if(!z) return;
   const oggi = todayKey();
   const ieri = _injAddDays(oggi, -1);
-  const valori = (pz.inizio >= oggi) ? { pausa_inizio: null, pausa_fine: null, pausa_motivo: null, pausa_moduli: null } : { pausa_fine: ieri };
-  const ok = await _pausaScrivi(valori, 'chiudere la pausa');
+  const togli = z.inizio >= oggi;
+  const periodi = _pausaElenco().map(x => x.id !== z.id ? x : (togli ? null : { ...x, fine: ieri < x.inizio ? x.inizio : ieri })).filter(Boolean);
+  const ok = await _pausaScrivi(periodi, 'chiudere la pausa');
   if(!ok) return;
-  showToast(pz.inizio >= oggi ? 'Pausa tolta' : 'Bentornato! Si riparte da oggi 💪', '', 3000);
+  if(ST.pausaModal) ST.pausaModal = _pausaVive().length ? { vista: 'elenco' } : null;
+  showToast(togli ? 'Pausa tolta' : (_pausaEMalattia(z) ? 'Bentornato! La prima settimana è leggera 💪' : 'Bentornato! Si riparte da oggi 💪'), '', 3000);
   _dopoPausa();
 }
 // La striscia in Training (pattern della barra infortunio): in pausa, oppure pausa dichiarata per dopo.
@@ -2210,37 +2244,40 @@ function _renderPausaBar(){
   if(!pz || !(pz.attiva || pz.futura) || !pz.moduli.allenamento) return '';   // in Training conta la pausa dell'allenamento
   const motivo = _pausaMotivoTesto(pz.motivo);
   const quando = pz.attiva
-    ? (pz.fine ? `In pausa fino al ${_pausaFmt(pz.fine)}` : 'In pausa, fine da decidere')
+    ? (pz.finoAl ? `In pausa fino al ${_pausaFmt(pz.finoAl)}` : 'In pausa, fine da decidere')
     : (pz.fine ? `Pausa dal ${_pausaFmt(pz.inizio)} al ${_pausaFmt(pz.fine)}` : `Pausa dal ${_pausaFmt(pz.inizio)}, fine da decidere`);
+  const dopo = _pausaVive().filter(z => z.id !== pz.id && z.inizio > pz.inizio);
   const sotto = pz.attiva ? 'Il blocco è fermo: riprendi da dove eri.' : 'Dichiarata: in quei giorni il blocco è fermo e Pirsi non propone niente sull\'allenamento.';
+  const poi = dopo.length ? `<div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:2px;">Poi: ${esc(dopo.map(_pausaRigaPeriodo).join(' · '))}</div>` : '';
+  const chiudi = pz.attiva ? (_pausaEMalattia(pz) ? 'Sto meglio' : 'Rientro anticipato') : 'Togli';
   return `
     <div id="pausa-bar" style="background:var(--s1);border:1px solid var(--acc);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:180px;">
         <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:3px;">✈️ PAUSA${motivo ? ' · ' + esc(motivo.toUpperCase()) : ''}</div>
         <div style="font-size:13px;color:var(--t1);font-family:var(--font-sans);">${esc(quando)}</div>
-        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:2px;">${sotto}</div>
+        <div style="font-size:11px;color:var(--t3);font-family:var(--font-sans);margin-top:2px;">${sotto}</div>${poi}
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;">
         <button onclick="apriPausa()" style="background:none;color:var(--acc);border:1px solid var(--s3);border-radius:10px;padding:10px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Modifica</button>
-        <button onclick="terminaPausa()" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">${pz.attiva ? 'Rientro anticipato' : 'Togli'}</button>
+        <button onclick="terminaPausa('${esc(pz.id)}')" style="background:var(--acc);color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">${chiudi}</button>
       </div>
     </div>`;
 }
 // La card fra i riposi extra: apre il foglio.
 function _renderPausaCard(){
-  const pz = getPausa();
-  const stato = pz && pz.attiva ? 'In corso' : pz && pz.futura ? 'Dichiarata' : null;
+  const vivi = _pausaVive();
+  const stato = vivi.some(z => z.attiva) ? 'In corso' : vivi.length ? 'Dichiarata' : null;
   return `
             <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">✈️ Mi fermo per un periodo${stato ? ` <span style="font-size:11px;color:var(--acc);font-family:var(--font-mono);">· ${stato}</span>` : ''}</div>
-                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro, malattia: dici le date e scegli cosa fermare (allenamento, cibo, pesate). L'app ti aspetta, senza promemoria.</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro, malattia: dici le date e scegli cosa fermare (allenamento, cibo, pesate). Anche più periodi. L'app ti aspetta, senza promemoria.</div>
               </div>
               <button onclick="apriPausa();" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">${stato ? 'Modifica' : 'Imposta'}</button>
             </div>`;
 }
-// Il foglio della pausa: date, motivo e i tre interruttori. Sta sul body (#pausa-modal) così si apre
-// da Training e dalle Impostazioni; renderPausaModal lo ridisegna o lo toglie.
+// Il foglio della pausa: l'elenco dei periodi, o date, motivo e i tre interruttori di uno. Sta sul body (#pausa-modal)
+// così si apre da Training e dalle Impostazioni; renderPausaModal lo ridisegna o lo toglie.
 function renderPausaModal(){
   const vecchio = document.getElementById('pausa-modal');
   if(vecchio) vecchio.remove();
@@ -2278,6 +2315,7 @@ function _pausaModalLeggiDate(){
 function _renderPausaModal(){
   const m = ST.pausaModal;
   if(!m) return '';
+  if(m.vista === 'elenco') return _renderPausaElenco();
   const motivi = Array.isArray(m.motivi) ? m.motivi : [];
   const chip = (v, lbl) => { const on = motivi.includes(v); return `<button type="button" class="pausa-motivo${on ? ' on' : ''}" data-motivo="${v}" aria-pressed="${on}" onclick="_pausaModalMotivo('${v}')" style="padding:9px 14px;border-radius:999px;border:1.5px solid ${on ? 'var(--acc)' : 'var(--s2)'};background:${on ? 'var(--acc)' : 'var(--s1)'};color:${on ? '#fff' : 'var(--t1)'};font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;">${on ? '✓ ' : ''}${lbl}</button>`; };
   const descr = { allenamento: 'blocco fermo, rientro graduale', cibo: 'niente promemoria dei pasti, la serie dei giorni di fila non si spezza, Pirsi non taglia le calorie', pesate: 'niente promemoria della pesata né del check di fine blocco' };
@@ -2314,10 +2352,39 @@ function _renderPausaModal(){
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${PAUSA_MOTIVI.map(([v, l]) => chip(v, l)).join('')}</div>
         <div style="font-size:10px;color:var(--t3);font-family:var(--font-mono);margin-bottom:2px;">COSA FERMO <span style="font-weight:400;">· tocca per cambiare</span></div>
         <div style="margin-bottom:14px;">${interruttori}</div>
-        <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">Al ritorno dall'allenamento ti propongo il rientro graduale; se stai via più di tre settimane, anche un blocco nuovo.</div>
+        <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">Al ritorno, dopo più di una settimana senza allenarti o dopo una malattia, la prima settimana è leggera; dopo tre settimane, anche un blocco nuovo.</div>
         <div style="display:flex;gap:8px;">
           <button onclick="salvaPausa()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Salva la pausa</button>
-          <button onclick="chiudiPausa()" style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+          <button onclick="${_pausaVive().length ? 'apriPausa()' : 'chiudiPausa()'}" style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Annulla</button>
+        </div>
+      </div>
+    </div>`;
+}
+// L'elenco (Training 360): ogni periodo in corso o in programma con «Modifica» e «Sto meglio» / «Rientro anticipato» /
+// «Togli», poi «Aggiungi un periodo».
+function _renderPausaElenco(){
+  const vivi = _pausaVive();
+  const righe = vivi.map(z => {
+    const chiudi = z.attiva ? (_pausaEMalattia(z) ? 'Sto meglio' : 'Rientro anticipato') : 'Togli';
+    return `<div class="pausa-periodo" data-id="${esc(z.id)}" style="padding:12px 0;border-bottom:1px solid var(--s2);">
+          <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${z.attiva ? 'var(--acc)' : 'var(--t2)'};letter-spacing:.06em;margin-bottom:3px;">${z.attiva ? 'IN CORSO' : 'IN PROGRAMMA'}</div>
+          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);line-height:1.4;margin-bottom:8px;">${esc(_pausaRigaPeriodo(z))}</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="modificaPausa('${esc(z.id)}')" style="background:none;color:var(--acc);border:1px solid var(--s3);border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Modifica</button>
+            <button onclick="terminaPausa('${esc(z.id)}')" style="background:${z.attiva ? 'var(--acc)' : 'var(--s2)'};color:${z.attiva ? '#fff' : 'var(--t1)'};border:none;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">${chiudi}</button>
+          </div>
+        </div>`;
+  }).join('');
+  return `
+    <div id="pausa-modal" class="weight-modal" style="z-index:1100;" onclick="if(event.target===this)chiudiPausa()">
+      <div class="weight-modal-inner" style="max-height:92vh;overflow-y:auto;">
+        <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:var(--acc);letter-spacing:.06em;margin-bottom:6px;">✈️ MI FERMO PER UN PERIODO</div>
+        <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">Le tue pause</div>
+        <div style="margin-bottom:14px;">${righe}</div>
+        <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.45;margin-bottom:14px;">Al ritorno dall'allenamento, dopo più di una settimana ferma o dopo una malattia, la prima settimana è leggera; dopo tre settimane, anche un blocco nuovo.</div>
+        <div style="display:flex;gap:8px;">
+          <button onclick="aggiungiPausa()" style="flex:1;padding:12px;background:var(--acc);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Aggiungi un periodo</button>
+          <button onclick="chiudiPausa()" style="padding:12px 16px;background:var(--s2);color:var(--t2);border:none;border-radius:10px;font-size:14px;font-weight:600;font-family:var(--font-sans);cursor:pointer;">Chiudi</button>
         </div>
       </div>
     </div>`;
@@ -2410,6 +2477,16 @@ async function loadTrainingAllCompleted(opts){
     const { data, error } = await q;
     if(error){ console.warn('loadTrainingAllCompleted:', error.message); ST.trainAllCompleted=[]; return; }
     ST.trainAllCompleted = data || [];
+    // L'ultima seduta di lavoro prima del blocco (Training 360): un blocco nuovo accettato al rientro parte oggi, e lo
+    // stop che decide la settimana leggera sta prima di lui. Una riga sola, in sottofondo.
+    if(ST.profile && ST.profile.train_start_date){
+      const r = await dbq('leggere l\'ultimo allenamento prima del blocco', supa.from('workouts').select('session_type, date')
+        .eq('user_id', ST.user.id).eq('completed', true).lt('date', ST.profile.train_start_date)
+        .not('session_type', 'in', '(rest,rest_injury,recoveryUpper,recoveryLower)')
+        .order('date', { ascending:false }).limit(1), { silenzioso:true });
+      ST.trainUltimaPrimaDelBlocco = (!r.error && r.data && r.data[0]) ? r.data[0] : null;
+    } else ST.trainUltimaPrimaDelBlocco = null;
+    applicaRientro();   // le serie della settimana leggera, se c'è
     if(!(opts && opts.skipRender)){
       if(ST.page === 'training') renderTraining();
       else if(ST.page === 'home') renderHome();
@@ -2428,97 +2505,80 @@ async function loadTrainingAllCompleted(opts){
 // Ritorna "Serie N: <azione operativa>" (niente emoji/motivazione finale),
 // oppure '' se non applicabile. Gestisce sia trazioni (banda) sia elastici (lbs).
 // Chiamato solo per serie NON-ultima → mai una "Serie N" inesistente.
-// ═══ RIENTRO SOFT — ripartenza graduale dopo pause lunghe (17 lug 2026) ═══
-// Rilevamento all'apertura di una sessione di lavoro: se sono passati ≥10 giorni
-// dall'ultimo allenamento reale (riposi/recuperi esclusi), propone un rientro
-// graduale. SOLO suggerimenti: scheda, storico DB e settimana mesociclo intatti.
-// Livello 1 (pausa 10-29 gg): −20% carico, RIR +1 · Livello 2 (≥30 gg): −35%, RIR +2.
-// La scelta vale per tutto il rientro (7 giorni) e vive in localStorage per-utente:
-// zt_soft_return_<userId> = { active, startDate, level, decidedFor }.
-const SOFT_RETURN_MIN_DAYS = 10;
-const SOFT_RETURN_L2_DAYS = 30;
-const SOFT_RETURN_DURATION_DAYS = 7;
-function _srKey(){ return 'zt_soft_return_' + ((ST.user && ST.user.id) || 'anon'); }
-function _srLoad(){ try { return JSON.parse(localStorage.getItem(_srKey())) || null; } catch(e){ return null; } }
-function _srSave(o){ try { localStorage.setItem(_srKey(), JSON.stringify(o)); } catch(e){} }
-function _srDaysBetween(a, b){
-  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+// ═══ IL RIENTRO DOPO UNO STOP (Training 360, 3 novembre 2026; era il «rientro soft» del 17 luglio) ═══
+// La regola sta in shared/quadro.js (ZTQuadro.rientro), la stessa che il quadro e Pirsi leggono: lo stop si misura
+// in giorni senza sedute di lavoro; da 8 a 20 giorni, e dopo ogni malattia, la prima settimana è leggera (serie a ⅔,
+// carico al 90% dell'ultima serie, RIR +1); da 21, o dopo una malattia a blocco avanzato, anche il blocco nuovo.
+// Non si chiede più ogni volta: la settimana leggera parte da sola; «Riprendo com'era» la spegne per quello stop,
+// ricordato su questo telefono (zt_rientro_no_<utente> = il giorno dell'ultima seduta prima dello stop).
+// Il carico e il RIR passano da obiettivoPrimaSerie e computeNextSetSuggestion; le serie si riducono in memoria
+// (applicaRientro), mai nella scheda.
+function _rientroNoKey(){ return 'zt_rientro_no_' + ((ST.user && ST.user.id) || 'anon'); }
+function _rientroNo(){ try { return localStorage.getItem(_rientroNoKey()) || null; } catch(e){ return null; } }
+// Il rientro di oggi dalla regola, o null. Le sedute: quelle del blocco più l'ultima prima del blocco (un blocco nuovo
+// accettato al rientro parte oggi, e lo stop sta prima di lui).
+function rientroDiOggi(){
+  if(!ST.profile || typeof ZTQuadro === 'undefined' || typeof ZTQuadro.rientro !== 'function') return null;
+  const completati = (ST.trainAllCompleted || []).concat(ST.trainUltimaPrimaDelBlocco ? [ST.trainUltimaPrimaDelBlocco] : []);
+  const r = ZTQuadro.rientro({ completati, profile: ST.profile, oggi: todayKey(),
+    settimanaPrima: (d) => { try { return getCycleWeekInfo({ asOf: d }).weekNum; } catch(e){ return null; } } });
+  if(!r) return null;
+  return (_rientroNo() === r.prima) ? { ...r, leggera: false, rifiutato: true } : r;
 }
-// Stato attivo corrente (null se spento o scaduto). Scadenza automatica: 7 giorni
-// dalla prima sessione di rientro, poi la progressione normale riprende da sola.
+// La settimana leggera di oggi (null se non c'è): chi la usa per il carico, il RIR, la striscia e il ritratto.
+// Nella settimana di scarico non si somma: lo scarico è già la settimana leggera del blocco (stesse serie, carichi più
+// bassi, RIR 3), e serie e ripetizioni in scarico non si toccano mai.
 function getSoftReturn(){
-  const sr = _srLoad();
-  if(!sr || !sr.active || !sr.startDate) return null;
-  if(_srDaysBetween(sr.startDate, todayKey()) >= SOFT_RETURN_DURATION_DAYS){
-    _srSave({ ...sr, active: false });
-    return null;
-  }
-  return sr;
+  const r = rientroDiOggi();
+  if(!r || !r.leggera) return null;
+  try { if(getCycleWeekInfo().isScarico) return null; } catch(e){}
+  return { active: true, ...r };
 }
-// Ultimo allenamento REALE precedente a oggi: max(date) in training_logs
-// escludendo le sessioni recovery (i riposi non loggano, i recuperi non contano).
-async function _srLastWorkoutDate(){
-  const { data, error } = await supa.from('training_logs')
-    .select('date')
-    .eq('user_id', ST.user.id)
-    .not('session_id', 'ilike', 'recovery%')
-    .lt('date', todayKey())
-    .order('date', { ascending: false })
-    .limit(1);
-  if(error || !data || !data.length) return null;
-  return data[0].date;
+// «Riprendo com'era»: la settimana leggera si spegne per questo stop; il blocco nuovo resta una proposta a parte.
+function rientroRiprendoComEra(){
+  const r = rientroDiOggi();
+  if(!r) return;
+  try { localStorage.setItem(_rientroNoKey(), r.prima); } catch(e){}
+  applicaRientro();
+  showToast('Riprendi com\'eri: serie e carichi di prima', '💪', 3000);
+  if(ST.page === 'training') renderTraining();
 }
-// Chiamata fire-and-forget da openTrainingSession, solo sessioni di lavoro.
-async function maybeProposeSoftReturn(sid){
-  try {
-    if(!ST.user || ST.user.id === 'test-user-001') return;
-    const sess = getTrainingSession(sid);
-    if(!sess || sess.type === 'Recupero') return;
-    if(getSoftReturn()) return; // rientro già attivo: scelta ricordata, niente prompt
-    const last = await _srLastWorkoutDate();
-    if(!last) return; // nessuno storico → primo allenamento, non è un rientro
-    const gap = _srDaysBetween(last, todayKey());
-    if(gap < SOFT_RETURN_MIN_DAYS) return;
-    const sr = _srLoad();
-    if(sr && sr.decidedFor === last) return; // scelta già presa per QUESTA pausa
-    const pz = getPausa();   // tornato da una pausa dichiarata: il banner lo dice (Training 350)
-    const daPausa = (pz && pz.moduli.allenamento && pz.finita && pz.giorniDalRientro <= 3) ? pz.giorniTotali : null;
-    ST.softReturnPrompt = { gapDays: gap, level: gap >= SOFT_RETURN_L2_DAYS ? 2 : 1, lastDate: last, daPausa };
-    if(ST.page === 'training' && ST.trainSession === sid) renderTraining();
-  } catch(e){}
+// Le serie della settimana leggera, in memoria: una copia dell'esercizio con le serie a ⅔ (ZTQuadro.serieRientro) e
+// quelle della scheda accanto; fuori dalla settimana leggera torna l'esercizio di prima. Si richiama dopo ogni lettura
+// della scheda e degli allenamenti, e quando cambia la scelta.
+function applicaRientro(){
+  const sess = ST.userTrainingSessions;
+  if(!sess) return;
+  const leggera = !!getSoftReturn();
+  Object.keys(sess).forEach(sid => {
+    const s = sess[sid];
+    if(!s || !Array.isArray(s.exercises) || s.type === 'Recupero' || /^recovery/i.test(sid)) return;
+    s.exercises = s.exercises.map(ex => {
+      if(!ex) return ex;
+      const base = ex._serieScheda != null ? ex._serieScheda : ex.sets;
+      if(leggera){
+        const n = ZTQuadro.serieRientro(base);
+        return (ex._serieScheda != null && ex.sets === n) ? ex : { ...ex, sets: n, _serieScheda: base };
+      }
+      if(ex._serieScheda == null) return ex;
+      const { _serieScheda, ...resto } = ex;
+      return { ...resto, sets: _serieScheda };
+    });
+  });
 }
-function softReturnAccept(){
-  const p = ST.softReturnPrompt;
-  if(!p) return;
-  _srSave({ active: true, startDate: todayKey(), level: p.level, decidedFor: p.lastDate });
-  ST.softReturnPrompt = null;
-  showToast(p.level === 2
-    ? 'Rientro soft attivo: −35% e RIR +2 per 7 giorni'
-    : 'Rientro soft attivo: −20% e RIR +1 per 7 giorni', '🌱', 4000);
-  renderTraining();
-}
-function softReturnDecline(){
-  const p = ST.softReturnPrompt;
-  if(!p) return;
-  // Rifiuto ricordato: non riproporre finché non si chiude una NUOVA pausa ≥10 gg
-  _srSave({ active: false, startDate: null, level: p.level, decidedFor: p.lastDate });
-  ST.softReturnPrompt = null;
-  renderTraining();
-}
-// Carico suggerito in rientro (solo display): −20% L1 / −35% L2,
+// Carico suggerito nella settimana leggera (solo display e registro): il 90% dell'ultima serie,
 // arrotondato allo step pratico (5 lbs / 2.5 kg).
 function softReturnLoad(v){
   const sr = getSoftReturn();
   if(!sr || !(v > 0)) return null;
-  const factor = sr.level === 2 ? 0.65 : 0.8;
   const step = (ST.profile && ST.profile.unit === 'kg') ? 2.5 : 5;
-  return Math.max(0, Math.round((v * factor) / step) * step);
+  return Math.max(0, Math.round((v * ZTQuadro.RIENTRO.CARICO) / step) * step);
 }
 // Testo riga RIENTRO sul primo set: valore concreto se c'è l'ultima sessione.
 function _softReturnRowText(exName, sessionId){
   const sr = getSoftReturn();
   if(!sr) return '';
-  const pct = sr.level === 2 ? 35 : 20;
+  const pct = Math.round((1 - ZTQuadro.RIENTRO.CARICO) * 100);
   const unitLbl = (ST.profile && ST.profile.unit) || 'lbs';
   const last = serieDaRipetere(exName, sessionId);   // il carico più alto dell'ultima volta, come l'obiettivo (Training 440)
   const v = (last && last.resistance != null && last.resistance !== '') ? parseFloat(last.resistance) : null;
@@ -2554,11 +2614,10 @@ function computeNextSetSuggestion({sessionId, exName, setNum, reps, resistance, 
   // Fuori dallo scarico: il RIR obiettivo dell'esercizio (rirObiettivo, Training 460), o 2.
   const _rirEx = rirObiettivo(exData, sess);
   let targetRIR = getCycleWeekInfo().isScarico ? 3 : ((_rirEx != null) ? _rirEx : 2);
-  // RIENTRO SOFT attivo: RIR consigliato +1 (L1) / +2 (L2) su tutti i rami.
-  // Solo suggerimenti — il carico ridotto vive nella riga RIENTRO del primo set
-  // (niente riduzione qui: comporrebbe il −% a ogni serie loggata).
+  // Settimana leggera dopo uno stop (Training 360): RIR consigliato +1 su tutti i rami.
+  // Il carico ridotto vive nell'obiettivo della prima serie (niente riduzione qui: comporrebbe il −% a ogni serie).
   const _softRet = getSoftReturn();
-  if(_softRet) targetRIR = Math.min(4, targetRIR + (_softRet.level === 2 ? 2 : 1));
+  if(_softRet) targetRIR = Math.min(4, targetRIR + ZTQuadro.RIENTRO.RIR_PIU);
   const nextSetNum = (Number(setNum) || 0) + 1;
   // Difensivo: se per qualunque motivo è l'ultima serie (o oltre), niente PROSSIMA.
   if(exData.sets && nextSetNum > exData.sets) return '';
@@ -3968,15 +4027,13 @@ function renderTraining(){
       const rientroBadge = softRet
         ? `<span style="background:${RIENTRO_BLU};color:#fff;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);letter-spacing:.04em;" onclick="showInfoModal('rientro')">RIENTRO</span>`
         : '';
-      const srPrompt = (!isRecovery && ST.softReturnPrompt) ? ST.softReturnPrompt : null;
-      const softReturnBanner = srPrompt ? `
-        <div style="background:var(--s1);border:1px solid ${RIENTRO_BLU};border-radius:14px;padding:14px 16px;margin-bottom:14px;">
-          <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${RIENTRO_BLU};letter-spacing:.06em;margin-bottom:6px;">RIENTRO</div>
-          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">${srPrompt.daPausa ? `Bentornato: ${srPrompt.daPausa} giorni di pausa, ${srPrompt.gapDays} senza allenarti` : `Sei stato fermo ${srPrompt.gapDays} giorni`} — ripartiamo più leggeri?</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="softReturnAccept()" style="flex:1;min-width:150px;background:${RIENTRO_BLU};color:#fff;border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Rientro soft (consigliato)</button>
-            <button onclick="softReturnDecline()" style="flex:1;min-width:120px;background:var(--s2);color:var(--t1);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Continua normale</button>
-          </div>
+      // La settimana leggera dopo uno stop (Training 360): parte da sola, la striscia dice perché e fino a quando,
+      // e «Riprendo com'era» la spegne per questo stop
+      const softReturnBanner = softRet ? `
+        <div id="rientro-bar" style="background:var(--s1);border:1px solid ${RIENTRO_BLU};border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+          <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);color:${RIENTRO_BLU};letter-spacing:.06em;margin-bottom:6px;">PRIMA SETTIMANA LEGGERA · FINO AL ${esc(_pausaFmt(softRet.finoA).toUpperCase())}</div>
+          <div style="font-size:14px;color:var(--t1);font-family:var(--font-sans);margin-bottom:12px;">${softRet.malattia ? `Dopo la malattia (${softRet.stopGiorni} giorni senza allenarti)` : `Sei stato fermo ${softRet.stopGiorni} giorni`}: due terzi delle serie, carichi al 90% e una ripetizione in più di margine. Poi si riparte come prima.</div>
+          <button onclick="rientroRiprendoComEra()" style="background:var(--s2);color:var(--t1);border:none;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;font-family:var(--font-sans);cursor:pointer;">Riprendo com'era</button>
         </div>` : '';
       const typeBadge = isRecovery
         ? `<span style="background:var(--acc-lt);color:var(--acc);padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;font-family:var(--font-mono);">RECUPERO</span>`
@@ -4140,7 +4197,7 @@ function renderTraining(){
               </div>
             </div>
             ${(cycleWk.isScarico && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${SALVIA_SCARICO};"><b>SCARICO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : `resistenza −${unitLbl === 'kg' ? '5 kg' : '20 lbs'} rispetto all’ultima sessione`} · RIR 3+</div>` : ''}
-            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name, sel)} · RIR +${softRet.level === 2 ? 2 : 1}</div>` : ''}
+            ${(softRet && loggedKeys.length === 0) ? `<div class="ex-suggestion" style="color:${RIENTRO_BLU};"><b>RIENTRO</b> · ${isPullUpExercise(e.name) ? 'banda un livello più facile' : _softReturnRowText(e.name, sel)} · RIR +${ZTQuadro.RIENTRO.RIR_PIU}</div>` : ''}
             ${e.oggiAlPostoDi ? `<div class="ex-suggestion" style="color:var(--t3);">🔁 OGGI AL POSTO DI ${esc(e.oggiAlPostoDi.name)}${loggedKeys.length === 0 ? ` · <a href="#" onclick="event.preventDefault();event.stopPropagation();annullaCambioOggi('${sel}','${safeName}')" style="color:var(--acc);font-weight:700;">torna a quello ›</a>` : ''}</div>` : ''}
             ${suggestion ? ((v5Seduta && loggedKeys.length === 0) ? _rigaNumeriHTML(e.name, sel) : `<div class="ex-suggestion">${varianteFacileHTML(e.name, sel, suggestion)}</div>`) : ''}
             ${(badges || emptyBadges) ? `<div class="ex-set-pills-row">${badges}${emptyBadges}</div>` : ''}
@@ -5616,7 +5673,6 @@ function openTrainingSession(sid){
   ST.trainSession = sid;
   _hydrateActivation(sid); // ripristina flag fatto + collasso del Blocco Attivazione (per sessione+giorno)
   ST.lastLoggedSets = {}; // reset cache mentre carica (suggestion mostra "prima volta")
-  maybeProposeSoftReturn(sid); // rientro soft: avviso non bloccante se pausa ≥10 giorni
   _unlockAudio();
   requestWakeLock();
   renderTraining();
@@ -7103,11 +7159,13 @@ function _giorniDaInizioBlocco(){
 // Dopo una pausa di più di tre settimane si propone il blocco nuovo (decisione di Ignazio, 13 ottobre
 // 2026): forza e massa reggono 2-3 settimane di stop, oltre conviene ripartire con un ciclo pulito.
 function _pausaLungaAppenaFinita(){
-  const pz = getPausa();
-  if(!pz || !pz.moduli.allenamento || !pz.finita || !(pz.giorniTotali > PAUSA_BLOCCO_NUOVO_GIORNI)) return null;
-  if(pz.giorniDalRientro > PAUSA_RIENTRO_GIORNI) return null;
-  if(ST.profile && ST.profile.train_start_date && ST.profile.train_start_date > pz.fine) return null;   // un blocco nuovo è già partito
-  return pz;
+  // Training 360: la regola è quella del rientro (ZTQuadro.rientro): 21 giorni o più senza sedute di lavoro, o una
+  // malattia a blocco avanzato (dalla settimana 4). Vale nella settimana del rientro, e non se un blocco nuovo è già
+  // partito dopo lo stop.
+  const r = (typeof rientroDiOggi === 'function') ? rientroDiOggi() : null;
+  if(!r || !r.bloccoNuovo) return null;
+  if(ST.profile && ST.profile.train_start_date && ST.profile.train_start_date > r.prima) return null;
+  return { giorniTotali: r.stopGiorni, malattia: r.malattia };
 }
 
 // Il nome del blocco nei testi: un blocco dura 6 settimane (42 giorni), quindi copre due mesi e si chiama
@@ -7129,7 +7187,7 @@ function _renderBloccoNuovoCard(isScarico){
   const dopoPausa = _pausaLungaAppenaFinita();
   if(!isScarico && !dopoPausa && !(giorni != null && giorni >= BLOCCO_GIORNI_AVVISO)) return '';
   const titolo = _nomeBlocco();
-  const sotto = dopoPausa ? `rientro dopo ${dopoPausa.giorniTotali} giorni di pausa`
+  const sotto = dopoPausa ? (dopoPausa.malattia ? `rientro dopo la malattia, ${dopoPausa.giorniTotali} giorni fermo` : `rientro dopo ${dopoPausa.giorniTotali} giorni fermo`)
     : giorni != null ? `${giorni} giorni dall'inizio del blocco` : 'fine del blocco';
   const bn = ST.bloccoNuovo;
   // Un'anteprima già preparata (chiusa con «Non ora», la X o toccando fuori) non si perde: si riapre,
@@ -7142,7 +7200,7 @@ function _renderBloccoNuovoCard(isScarico){
       <div id="blocco-nuovo-card" style="background:var(--s1,#fff);border:1px solid var(--s2);border-left:3px solid var(--acc);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
         <div style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--t3);letter-spacing:.08em;margin-bottom:4px;">${esc(sotto).toUpperCase()}</div>
         <div style="font-size:16px;font-weight:800;font-family:var(--font-sans);color:var(--t1);margin-bottom:6px;">${esc(titolo)}: ${esc(COACH_NAME)} lo prepara, tu decidi</div>
-        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${dopoPausa ? 'Dopo più di tre settimane fermo conviene ripartire con un blocco pulito invece di riprendere a metà. ' : ''}Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
+        <div style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-bottom:12px;">${dopoPausa ? (dopoPausa.malattia ? 'Dopo una malattia a blocco avanzato conviene ripartire con un blocco pulito, con la prima settimana leggera. ' : 'Dopo più di tre settimane fermo conviene ripartire con un blocco pulito, con la prima settimana leggera. ') : ''}Restano i due esercizi cardine di ogni seduta, con il carico da cui ripartire. Cambiano i complementari. Lo vedi tutto prima di accettare: la scheda di adesso resta salvata.</div>
         ${pulsanti}
       </div>`;
 }
