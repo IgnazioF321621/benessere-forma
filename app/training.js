@@ -1835,7 +1835,6 @@ const CO_MAX = 6;
 function _coKey(){ return `zt_cambi_oggi_${(ST.user && ST.user.id) || 'anon'}_${todayKey()}`; }
 function _coLoad(){ try { return JSON.parse(localStorage.getItem(_coKey())) || {}; } catch(e){ return {}; } }
 function _coSave(m){ try { if(Object.keys(m).some(sid => Object.keys(m[sid] || {}).length)) localStorage.setItem(_coKey(), JSON.stringify(m)); else localStorage.removeItem(_coKey()); } catch(e){} }
-function _coNorm(s){ return String(s || '').toLowerCase().trim().replace(/[\s_]+/g, '_'); }
 function _coOpzioni(){
   const p = ST.profile || {};
   return { tipoAllen: p.tipo_allenamento || 'casa', attrezzatura: (Array.isArray(p.attrezzatura) && p.attrezzatura.length) ? p.attrezzatura : ['elastico', 'corpo_libero'] };
