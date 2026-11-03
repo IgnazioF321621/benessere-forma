@@ -71,7 +71,7 @@ function makeSupaMock(tables){
         // le righe inserite restano in tabella; un id gia' presente risponde 23505 come Postgres
         const t = tables[table] || (tables[table] = []);
         const righe = Array.isArray(st.payload) ? st.payload : [st.payload];
-        if(righe.some(r => r && r.id != null && t.some(x => String(x.id) === String(r.id)))) return Promise.resolve({ data:null, error:{ code:'23505', message:'duplicate key value violates unique constraint' } });
+        if(righe.some(r => r && r.id != null && t.some(x => String(x.id) === String(r.id)))) return Promise.resolve({ data:null, error:{ code:'23505', message:`duplicate key value violates unique constraint "${table}_pkey"`, details:'Key (id) already exists.' } });   // come Postgres: il vincolo per nome
         // la risposta porta le stesse righe salvate, con lo stesso id (prima rispondeva 'fake-id' e salvava 'fake-N':
         // un piano creato senza id dal telefono non ritrovava i suoi pasti solo nel banco, lezione L39; Nutrition 080)
         const salvate = righe.map(r => ({ id:'fake-' + t.length + righe.indexOf(r), ...r }));

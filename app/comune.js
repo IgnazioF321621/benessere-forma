@@ -459,43 +459,140 @@ function _codaCostruisci(op) {
 function _erroreDiRete(err) {
   return !!err && !err.code && /fetch|network|rete|Load failed|senza risposta|non ha risposto/i.test(String(err.message || err));
 }
-function _codaAggiungi(operazione, op) {
+// Ogni voce ha un suo segno (qid): chi l'ha messa in coda sa poi com'e' andata (Fondamenta 260).
+// tentato = la richiesta potrebbe essere gia' arrivata (la rete e' caduta a meta'): un 23505 vale «fatto».
+// op.gruppo = i passi di un salvataggio solo (un pasto e i suoi ingredienti): se uno va da parte, anche i dopo.
+function _codaAggiungi(operazione, op, opzioni) {
+  const o = opzioni || {};
   const q = _codaLeggi();
-  q.push({ operazione, op, ts: Date.now() });
+  const qid = nuovoId();
+  q.push({ operazione, op, ts: Date.now(), qid, tentato: !!o.tentato, tentativi: 0 });
   while (q.length > CODA_MAX) { const via = q.shift(); console.warn('[coda] piena, scartata la piu\' vecchia:', via.operazione); }
   _codaSalva(q);
-  try { showToast('Salvato sul telefono: lo invio appena torna la rete', '📴', 3500); } catch (e) {}
+  if (!o.zitto) { try { showToast('Salvato sul telefono: lo invio appena torna la rete', '📴', 3500); } catch (e) {} }
   try { if (typeof aggiornaStatoRete === 'function') aggiornaStatoRete(); } catch (e) {}
+  return qid;
 }
+// La coda non si scavalca (Fondamenta 260, 3 novembre 2026): se ci sono salvataggi in attesa, anche con la
+// rete accesa il nuovo va in fondo e parte il giro, cosi' l'ordine resta quello dei tocchi. Prima andava
+// diretto: un «togli» rimasto in coda e un «rimetti» arrivato subito si invertivano, e la riga spariva dal
+// database mentre a schermo c'era. Chi chiama aspetta solo la sua voce: la risposta vera se e' partita,
+// l'errore se il database l'ha rifiutata, {inCoda:true} se il giro si e' fermato prima.
+const _codaAttese = {};   // qid → resolve di chi aspetta
 async function scriviConCoda(operazione, op) {
   if (!ST.user || !ST.user.id || ST.user.id === 'test-user-001') return { data: null, error: null };
   if (senzaRete()) { _codaAggiungi(operazione, op); return { data: null, error: null, inCoda: true }; }
+  if (codaInAttesa() > 0) {
+    const qid = _codaAggiungi(operazione, op, { zitto: true });
+    const esito = await new Promise(resolve => {
+      _codaAttese[qid] = resolve;
+      const fine = () => { if (_codaAttese[qid]) { delete _codaAttese[qid]; resolve({ inCoda: true }); } };
+      svuotaCoda().then(fine, fine);
+    });
+    if (esito.error) { try { showToast('Non riesco a ' + operazione + ': riprova', '⚠️', 5500); } catch (e) {} return { data: null, error: esito.error }; }
+    if (esito.inCoda) {
+      try { showToast('Salvato sul telefono: lo invio appena la rete risponde', '📴', 3500); } catch (e) {}
+      return { data: null, error: null, inCoda: true };
+    }
+    return { data: null, error: null };
+  }
   const res = await dbq(operazione, _codaCostruisci(op), { silenzioso: true });
-  if (res.error && _erroreDiRete(res.error)) { _codaAggiungi(operazione, op); return { data: null, error: null, inCoda: true }; }
+  if (res.error && _erroreDiRete(res.error)) { _codaAggiungi(operazione, op, { tentato: true }); return { data: null, error: null, inCoda: true }; }
   if (res.error) { try { showToast('Non riesco a ' + operazione + ': riprova', '⚠️', 5500); } catch (e) {} return res; }
   svuotaCoda();   // non bloccante: se c'era qualcosa in attesa, e' il momento di mandarlo
   return res;
 }
-let _codaInCorso = false;
-async function svuotaCoda() {
-  if (_codaInCorso || senzaRete() || !ST.user || !ST.user.id) return 0;
-  const q = _codaLeggi();
-  if (!q.length) return 0;
-  _codaInCorso = true;
-  let fatte = 0;
+// Quali rifiuti si riprovano. Ora che tutto passa dietro la coda, una voce ferma in testa fermerebbe ogni
+// salvataggio: si riprova solo cio' che puo' cambiare (rete, nessun codice, accesso scaduto o non ancora
+// rinnovato — anche 42501, che arriva quando il token e' vecchio —, conflitti di transazione, server pieno o
+// in riavvio, risposte 5xx), e anche quello al massimo CODA_TENTATIVI giri. Tutto il resto, o oltre i
+// tentativi, va da parte sul telefono (zt_coda_scartate_<utente>, le ultime 50: si possono rimandare a mano)
+// e in app_errors, e il giro prosegue.
+const CODA_TENTATIVI = 5;
+const CODA_ATTESA_MS = 12000;   // supabase-js non ha un tempo massimo: una richiesta appesa fermerebbe ogni salvataggio
+function _codaDaRiprovare(err, status) {
+  const c = String((err && err.code) || '');
+  if (!c) return true;
+  if (['PGRST301', 'PGRST303', '42501', '40001', '40P01'].includes(c) || /^PGRST00[0-3]$/.test(c) || /^(08|53|57)/.test(c)) return true;
+  return Number(status) >= 500;   // lo stato sta sulla risposta, non sull'errore di postgrest-js
+}
+function _codaMettiDaParte(it, err) {
+  const chiave = 'zt_coda_scartate_' + ((ST.user && ST.user.id) || 'anon');
   try {
-    while (q.length) {
-      const it = q[0];
-      const res = await dbq(it.operazione, _codaCostruisci(it.op), { silenzioso: true });
-      const giaArrivata = res.error && it.op.tipo === 'insert' && res.error.code === '23505';
-      if (res.error && !giaArrivata) break;
-      q.shift(); _codaSalva(q); fatte++;
+    const via = JSON.parse(localStorage.getItem(chiave)) || [];
+    via.push({ ...it, scartata: Date.now(), codice: (err && err.code) || null });
+    while (via.length > 50) via.shift();
+    localStorage.setItem(chiave, JSON.stringify(via));
+  } catch (e) {}
+  try { reportError('db', 'coda: ' + it.operazione, (err && err.message) || String(err), { code: (err && err.code) || null, scartata: true }); } catch (e) {}
+  _codaRispondi(it, { error: err });
+}
+function _codaRispondi(it, esito) {
+  const r = it.qid && _codaAttese[it.qid];
+  if (r) { delete _codaAttese[it.qid]; r(esito); }
+}
+// Scaduto il tempo, la richiesta resta in volo: se arriva tardi, un giro dopo puo' gia' aver mandato le voci
+// successive. Serve un'attesa di oltre 12 secondi; il caso e' accettato, non risolto.
+function _conTempo(promessa, ms) {
+  let t;
+  const scaduto = new Promise(r => { t = setTimeout(() => r({ data: null, error: { message: 'Failed to fetch: nessuna risposta in ' + Math.round(ms / 1000) + ' secondi', code: '' } }), ms); });
+  return Promise.race([promessa, scaduto]).finally(() => clearTimeout(t));
+}
+// Un giro solo alla volta: chi chiama mentre ne gira uno aspetta quello. La coda si rilegge a ogni passo,
+// quindi le voci aggiunte nel frattempo partono nello stesso giro, e nessuna si perde riscrivendo la lista.
+let _codaGiro = null;
+function svuotaCoda() {
+  if (_codaGiro) return _codaGiro;
+  if (senzaRete() || !ST.user || !ST.user.id || !_codaLeggi().length) return Promise.resolve(0);
+  _codaGiro = _codaSvuota().catch(e => { console.error('[coda] giro interrotto:', e); return 0; }).finally(() => { _codaGiro = null; });
+  return _codaGiro;
+}
+const _codaStessa = (a, b) => (a.qid && b.qid) ? a.qid === b.qid : (a.ts === b.ts && a.operazione === b.operazione);
+function _codaTogliTesta(it) {
+  const q = _codaLeggi();
+  if (q.length && _codaStessa(q[0], it)) { q.shift(); _codaSalva(q); }
+}
+async function _codaSvuota() {
+  let fatte = 0, scartate = 0;
+  while (!senzaRete()) {
+    const it = _codaLeggi()[0];
+    if (!it) break;
+    let richiesta;
+    try { richiesta = _codaCostruisci(it.op); }
+    catch (e) { _codaTogliTesta(it); _codaMettiDaParte(it, { message: String(e && e.message || e), code: 'coda' }); scartate++; continue; }
+    const res = await _conTempo(dbq(it.operazione, richiesta, { silenzioso: true }), CODA_ATTESA_MS);
+    const err = res.error;
+    // 23505 su un inserimento vale «gia' arrivato» solo sulla chiave primaria (l'id scelto dal telefono): se la
+    // riga e' arrivata davvero, Postgres segnala quella. Su un altro vincolo (la stessa serie gia' registrata da
+    // un altro telefono) e' un rifiuto, anche se la richiesta poteva essere partita
+    const giaArrivata = err && it.op.tipo === 'insert' && err.code === '23505'
+      && /_pkey|Key \(id\)=/i.test(String(err.message || '') + ' ' + String(err.details || ''));
+    if (!err || giaArrivata) { _codaTogliTesta(it); _codaRispondi(it, {}); fatte++; continue; }
+    if (_codaDaRiprovare(err, res.status)) {
+      const q = _codaLeggi();
+      if (q.length && _codaStessa(q[0], it)) {
+        q[0].tentato = true;   // poteva essere partita
+        // la rete muta (e il tempo scaduto) non conta: aspetta e basta. Ogni altro rifiuto conta, anche senza
+        // codice (una risposta del gateway che non e' JSON), cosi' nessuna voce ferma la coda per sempre
+        const rete = _erroreDiRete(err);
+        if (!rete) q[0].tentativi = (q[0].tentativi || 0) + 1;
+        _codaSalva(q);
+        if (rete || q[0].tentativi < CODA_TENTATIVI) break;
+      } else break;
     }
-  } finally { _codaInCorso = false; }
+    // da parte: lei e i passi dopo dello stesso salvataggio
+    _codaTogliTesta(it); _codaMettiDaParte(it, err); scartate++;
+    if (it.op && it.op.gruppo) {
+      const q = _codaLeggi(), resto = q.filter(x => !(x.op && x.op.gruppo === it.op.gruppo));
+      q.filter(x => x.op && x.op.gruppo === it.op.gruppo).forEach(x => { _codaMettiDaParte(x, err); scartate++; });
+      _codaSalva(resto);
+    }
+  }
   if (fatte) {
     try { showToast(fatte === 1 ? 'Inviato il salvataggio rimasto in attesa' : 'Inviati ' + fatte + ' salvataggi rimasti in attesa', '✅'); } catch (e) {}
-    try { if (typeof aggiornaStatoRete === 'function') aggiornaStatoRete(); } catch (e) {}
   }
+  if (scartate) { try { showToast(scartate === 1 ? 'Un salvataggio in attesa non è stato accettato: l\'ho messo da parte' : scartate + ' salvataggi in attesa non sono stati accettati: li ho messi da parte', '⚠️', 5500); } catch (e) {} }
+  if (fatte || scartate) { try { if (typeof aggiornaStatoRete === 'function') aggiornaStatoRete(); } catch (e) {} }
   return fatte;
 }
 
