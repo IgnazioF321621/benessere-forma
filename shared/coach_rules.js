@@ -318,9 +318,9 @@ var ZTCoachRules = (function(){
         reason: 'Le sedute ti pesano (' + (seduteDure ? feel.dura + ' su ' + feel.n + ' dette «dure»' : 'RIR medio ' + num(t.avg_rir, 1)) + ') ma mangi sotto l\'obiettivo: ' + num(n.kcal_avg) + ' kcal al giorno su ' + num(tk) + '. Prima di scaricare, mangia quello che hai come obiettivo per una settimana: la fatica spesso è fame.',
         evidence: { numeri: numeriContesto(), dati: datiContesto() }, change: null });
     }
-    // Una settimana con infortunio o con giorni di pausa programmata (Training 350) non dice niente
-    // sul volume che la persona regge: non si propone «meno giorni» guardandola.
-    var senzaInfortunio = function(x){ return x && !x.injury_active && !(x.injury_days > 0) && !(x.pause_days > 0); };
+    // Una settimana con infortunio, con giorni di pausa programmata (Training 350) o leggera dopo uno stop
+    // (Training 360) non dice niente sul volume che la persona regge: non si propone «meno giorni» guardandola.
+    var senzaInfortunio = function(x){ return x && !x.injury_active && !(x.injury_days > 0) && !(x.pause_days > 0) && !x.rientro; };
     if(t && t1 && t.sessions_planned != null && t.sessions_planned > 3 && t1.sessions_planned != null &&
        t.sessions_done < t.sessions_planned && t1.sessions_done < t1.sessions_planned &&
        senzaInfortunio(t) && senzaInfortunio(t1) && !decisaDaPoco('training_volume', RAFFREDDAMENTO_SETT, true)){
@@ -335,7 +335,8 @@ var ZTCoachRules = (function(){
         change: { giorni_allenamento: { from: t.sessions_planned, to: nuoviGiorni } },
       });
     }
-    if(t && !t.is_deload && t.block_week !== 6 && !mangiaPrima && !decisaDaPoco('deload', RAFFREDDAMENTO_SETT, true)){
+    // Nella settimana leggera dopo uno stop (Training 360) lo scarico non si anticipa: la settimana è già più leggera.
+    if(t && !t.is_deload && !t.rientro && t.block_week !== 6 && !mangiaPrima && !decisaDaPoco('deload', RAFFREDDAMENTO_SETT, true)){
       var rirBasso = t.avg_rir != null && t.avg_rir <= 0.5 && t1 && t1.avg_rir != null && t1.avg_rir <= 0.5;
       var infortunioTardi = !!t.injury_active && t.block_week != null && t.block_week >= 4;
       if(rirBasso || infortunioTardi){

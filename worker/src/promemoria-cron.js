@@ -68,7 +68,7 @@ export async function runPromemoria(env, { nowTs, dry } = {}) {
   if (!ZTPromemoria.ORE.includes(ora) && env.PROMEMORIA_FORCE !== '1') { esito.saltato = 'ora'; return esito; }
   if (!String(env.VAPID_PUBLIC_KEY || '').trim() || !String(env.VAPID_PRIVATE_KEY || '').trim()) { esito.saltato = 'chiavi'; return esito; }
 
-  const profili = (await leggiTutto(env, 'profiles?select=id,promemoria_pasti,pausa_inizio,pausa_fine,pausa_moduli&promemoria_pasti=not.is.null'))
+  const profili = (await leggiTutto(env, 'profiles?select=id,promemoria_pasti,pausa_inizio,pausa_fine,pausa_motivo,pausa_moduli,pause&promemoria_pasti=not.is.null'))
     .filter((p) => ZTPromemoria.accesi(p).length);
   if (!profili.length) return esito;
   const [pasti, digiuni, iscrizioni, inviati] = await Promise.all([

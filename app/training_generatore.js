@@ -741,6 +741,8 @@ async function loadActiveScheda() {
     ST.userSessionCycle = cycle;
     // «Cambia per oggi» (Training 160): gli esercizi sostituiti oggi tornano al loro posto in memoria
     if (typeof applicaCambiOggi === 'function') applicaCambiOggi();
+    // La settimana leggera dopo uno stop (Training 360): le serie a ⅔ in memoria, mai nella scheda
+    if (typeof applicaRientro === 'function') applicaRientro();
     // La variante del coach si cerca senza chi è nel riscaldamento della seduta (Training 480): se il riscaldamento
     // è cambiato («Rinnova», su questo telefono o su un altro) le ricerche di prima si rifanno.
     const firmaRiscaldamento = JSON.stringify(cycle.map(id => (sessMap[id].warmup || []).map(w => w && w.codice)));

@@ -115,6 +115,13 @@ atteso('metodo · solo GET', (await chiama('/calendario?t=' + T1, { method: 'POS
 mondo({ p1: { pausa_inizio: '2026-11-02', pausa_fine: '2026-11-06', pausa_moduli: ['allenamento'] } });
 r = await chiama('/calendario?t=' + T1);
 atteso('pausa · i giorni in pausa restano vuoti e si riprende da dove si era (12 sedute)', [eventi(r.testo).length, spiega(r.testo).filter((x) => x.startsWith('DTSTART')).slice(1, 3)], [12, ['DTSTART:20261030T063000Z', 'DTSTART:20261109T063000Z']]);
+// Training 360: più pause nell'elenco profiles.pause (una malattia e un viaggio), e il profilo si legge con pause
+mondo({ p1: { pause: [{ id: 'm', inizio: '2026-11-02', fine: '2026-11-03', motivo: 'malattia', moduli: ['allenamento'] }, { id: 'v', inizio: '2026-11-04', fine: '2026-11-06', motivo: 'viaggio', moduli: null }] } });
+r = await chiama('/calendario?t=' + T1);
+atteso('pausa · due periodi nell\'elenco: gli stessi giorni vuoti (12 sedute), il profilo letto con pause', [eventi(r.testo).length, spiega(r.testo).filter((x) => x.startsWith('DTSTART')).slice(1, 3), letture[0].query.includes('pause')], [12, ['DTSTART:20261030T063000Z', 'DTSTART:20261109T063000Z'], true]);
+mondo({ p1: { pause: [], pausa_inizio: '2026-11-02', pausa_fine: '2026-11-06', pausa_moduli: ['allenamento'] } });
+r = await chiama('/calendario?t=' + T1);
+atteso('pausa · pause = [] vince sui campi di prima: nessun giorno vuoto (16 sedute)', eventi(r.testo).length, 16);
 mondo({ workouts: [...VERE, w('2026-10-28', 'upperB', '08:00:00')] });
 r = await chiama('/calendario?t=' + T1);
 atteso('fuori programma · Upper B fatta oggi (mercoledì, non scelto): giovedì viene Lower B', spiega(r.testo).find((x) => x.startsWith('SUMMARY')), 'SUMMARY:[Workout] Lower B');

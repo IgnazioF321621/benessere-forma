@@ -57,7 +57,7 @@ export async function handleCalendario(request, env) {
   if (!(await entroIlLimite(env.LIMITE_COACH, 'cal:' + ip, RICHIESTE_AL_MINUTO))) return testo(429, 'Troppe richieste', { 'Retry-After': '60' });
 
   try {
-    const profili = await rest(env, `profiles?select=id,train_orario,train_giorni,train_start_date,pausa_inizio,pausa_fine,pausa_moduli,tabata,tabata_giorni&calendario_token=eq.${token}&limit=1`);
+    const profili = await rest(env, `profiles?select=id,train_orario,train_giorni,train_start_date,pausa_inizio,pausa_fine,pausa_motivo,pausa_moduli,pause,tabata,tabata_giorni&calendario_token=eq.${token}&limit=1`);
     const p = profili && profili[0];
     if (!p) return testo(404, 'Calendario non trovato');
 
