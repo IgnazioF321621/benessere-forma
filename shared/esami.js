@@ -64,7 +64,7 @@ var ZTEsami = (function(){
     { chiave:'hba1c',           famiglia:'lipidi',      label:'Emoglobina glicata (HbA1c)', colonna:null,              unita:'%',      nomi:['emoglobina glicata', 'hba1c', 'hb a1c', 'glicata', 'emoglobina glicosilata'],      fascia:[4, 5.6],                            fonte:ADA },
     { chiave:'insulina',        famiglia:'lipidi',      label:'Insulina a digiuno',         colonna:null,              unita:'µU/mL',  nomi:['insulina', 'insulinemia'],                                               fascia:[2, 25],                             fonte:LAB },
     { chiave:'colesterolo_tot', famiglia:'lipidi',      label:'Colesterolo totale',         colonna:'cholesterol_tot', unita:'mg/dL',  nomi:['colesterolo totale', 'colesterolo tot', 'colesterolo', 'colest totale', 'colest tot', 'col tot', 'colesterolemia'], fascia:{ max:200 },  fonte:ESC },
-    { chiave:'hdl',             famiglia:'lipidi',      label:'Colesterolo HDL',            colonna:'hdl',             unita:'mg/dL',  nomi:['colesterolo hdl', 'hdl', 'hdl colesterolo', 'colest hdl', 'col hdl'],    fascia:{ M:{ min:40 }, F:{ min:50 } },      fonte:ESC },
+    { chiave:'hdl',             famiglia:'lipidi',      label:'Colesterolo HDL',            colonna:'hdl',             unita:'mg/dL',  nomi:['colesterolo hdl', 'hdl', 'hdl colesterolo', 'colest hdl', 'col hdl'],    fascia:{ M:{ min:40 }, F:{ min:50 } },      fonte:ESC, solo_min:true },   // Body 171: per l'HDL conta solo il minimo, un massimo stampato dal referto non si guarda (Ignazio, 3 novembre 2026)
     { chiave:'ldl',             famiglia:'lipidi',      label:'Colesterolo LDL',            colonna:null,              unita:'mg/dL',  nomi:['colesterolo ldl', 'ldl', 'ldl colesterolo', 'colest ldl', 'col ldl'],    fascia:{ max:116 },                         fonte:ESC },
     { chiave:'trigliceridi',    famiglia:'lipidi',      label:'Trigliceridi',               colonna:'triglycerides',   unita:'mg/dL',  nomi:['trigliceridi', 'trigliceridemia'],                                       fascia:{ max:150 },                         fonte:ESC },
     { chiave:'rischio_cv',      famiglia:'lipidi',      label:'Indice di rischio (tot/HDL)', colonna:null,             unita:'ratio',  nomi:['indice di rischio cardiovascolare', 'indice rischio cv', 'ind rischio cv', 'rischio cv', 'rischio cardiovascolare', 'colesterolo totale hdl', 'rapporto colesterolo totale hdl', 'col tot hdl', 'indice di castelli'], fascia:{ max:5 }, fonte:LAB + ' (indice di Castelli)' },
@@ -230,10 +230,14 @@ var ZTEsami = (function(){
     } else f = fasciaNorm(f);
     return { min: f.min, max: f.max, fonte: e.fonte };
   }
-  // La fascia di una riga letta: quella del referto se stampata (fonte 'referto'), altrimenti la tabella
+  // La fascia di una riga letta: quella del referto se stampata (fonte 'referto'), altrimenti la tabella.
+  // Body 171: per un esame con `solo_min` (l'HDL) il massimo non conta mai, qualunque cosa stampi il referto o porti
+  // il CSV: la riga lo conserva com'è, ma la fascia che si mostra e si giudica ha solo il minimo. È il punto unico:
+  // lettura, CSV, panoramica, grafico, elenco per data, Pirsi e ritratto passano tutti da qui
   function fasciaPer(riga, sesso){
     if(!riga) return null;
-    if(riga.rif_min != null || riga.rif_max != null) return { min: riga.rif_min != null ? riga.rif_min : null, max: riga.rif_max != null ? riga.rif_max : null, fonte: 'referto' };
+    var e = riga.chiave && perChiave[riga.chiave], soloMin = !!(e && e.solo_min);
+    if(riga.rif_min != null || (riga.rif_max != null && !soloMin)) return { min: riga.rif_min != null ? riga.rif_min : null, max: (riga.rif_max != null && !soloMin) ? riga.rif_max : null, fonte: 'referto' };
     return riga.chiave ? fascia(riga.chiave, sesso) : null;
   }
   function fuoriFascia(valore, f){
@@ -246,8 +250,8 @@ var ZTEsami = (function(){
   function mostraFascia(f){
     if(!f) return '';
     if(f.min != null && f.max != null) return it(f.min) + '–' + it(f.max);
-    if(f.max != null) return '< ' + it(f.max);
-    if(f.min != null) return '> ' + it(f.min);
+    if(f.max != null) return '≤ ' + it(f.max);   // Body 171: il segno dice quello che fa fuoriFascia (uguale al limite è dentro)
+    if(f.min != null) return '≥ ' + it(f.min);
     return '';
   }
 
