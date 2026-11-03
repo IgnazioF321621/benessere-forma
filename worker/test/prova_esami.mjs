@@ -26,7 +26,7 @@ const REFERTO = {
     { nome: 'Colesterolo HDL', chiave: 'colesterolo_tot', valore: 58, unita: 'mg/dL', rif_min: 40, rif_max: null },   // chiave sbagliata dal modello: vince il nome
     { nome: 'Colesterolo totale', chiave: null, valore: 189, unita: 'mg/dl', rif_min: null, rif_max: 200 },
     { nome: 'Glucosio', chiave: 'glicemia', valore: 92, unita: 'mg/dL', rif_min: 70, rif_max: 99 },
-    { nome: 'MCV', chiave: 'inventata', valore: 88, unita: 'fL', rif_min: 80, rif_max: 99 },                            // non nel vocabolario: resta col suo nome
+    { nome: 'Saturazione della transferrina', chiave: 'inventata', valore: 28, unita: '%', rif_min: 20, rif_max: 45 },   // non nel vocabolario (MCV lo è dal Body 170): resta col suo nome
     { nome: 'Glicemia', chiave: null, valore: 93, unita: 'mg/dL', rif_min: null, rif_max: null },                     // doppione della glicemia: via
     { nome: 'Sangue occulto', chiave: null, valore: 'negativo', unita: '', rif_min: null, rif_max: null },            // non numerico: via
   ],
