@@ -7,6 +7,8 @@
 //   POST /vision-check     -> lettura AI delle foto di un check fisico (Gemini, src/vision-check.js)
 //   POST /fitdays-report   -> il coach legge il report della bilancia Fitdays (Gemini, src/fitdays.js):
 //                            il file non si conserva, la lettura torna all'app e basta
+//   POST /esami-report     -> il coach legge il referto delle analisi del sangue (Gemini, src/esami.js, Body 160):
+//                            PDF anche di più pagine o foto; il file non si conserva, la lettura torna all'app
 //   GET  /calendario       -> il calendario delle sedute a cui l'iPhone si iscrive (text/calendar, src/calendario.js):
 //                            ?t=<calendario_token del profilo>; nessun token valido → 404. Solo letture
 //   GET  /push-chiave      -> la chiave pubblica VAPID con cui l'app iscrive il telefono alle notifiche
@@ -18,6 +20,7 @@
 
 import { handleVisionCheck } from './vision-check.js';
 import { handleFitdays } from './fitdays.js';
+import { handleEsami } from './esami.js';
 import { handleCalendario } from './calendario.js';
 import { handleScheduled } from './coach-cron.js';
 import { handlePromemoria } from './promemoria-cron.js';
@@ -274,6 +277,7 @@ async function instrada(request, env) {
     : url.pathname === '/exercise-media' ? 'media'
     : url.pathname === '/vision-check' ? 'vision'
     : url.pathname === '/fitdays-report' ? 'fitdays'
+    : url.pathname === '/esami-report' ? 'esami'
     : url.pathname === '/calendario' ? 'calendario'
     : url.pathname === '/push-chiave' ? 'push-chiave'
     : null;
@@ -283,6 +287,7 @@ async function instrada(request, env) {
   if (rotta === 'media') return handleExerciseMedia(request, env);
   if (rotta === 'vision') return handleVisionCheck(request, env, {});
   if (rotta === 'fitdays') return handleFitdays(request, env, {});
+  if (rotta === 'esami') return handleEsami(request, env, {});
   if (rotta === 'calendario') return handleCalendario(request, env);
   if (rotta === 'push-chiave') return handlePushChiave(request, env);
   return handleGroqProxy(request, env);

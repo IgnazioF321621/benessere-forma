@@ -22,6 +22,7 @@ const APP_FILES = [
   'shared/ritratto.js',
   'shared/fitdays.js',
   'shared/promemoria.js',
+  'shared/esami.js',
   'app/body.js',
   'app/nutrition.js',
   'app/home.js',
@@ -32,6 +33,7 @@ const APP_FILES = [
   'app/impostazioni.js',
   'app/segnala.js',
   'app/notifiche.js',
+  'app/analisi.js',
 ];
 
 // Rete prima, ma non all'infinito (Fondamenta 120, 2 ottobre 2026): con rete debole la pagina e i file

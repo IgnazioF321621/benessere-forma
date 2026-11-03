@@ -501,7 +501,7 @@ header`);
     if(bs && bm && bt && bc && be && tb){
       atteso('Body spento: le linguette di prima, niente testata né titoli nuovi; il campo «Peso (kg)», il tasto «Nuovo check fisico» di prima, niente riga né «Pesati ora»', [bs.vecchieLinguette, bs.bTesta, bs.sezioniB, bs.header !== 'none', bs.pesoCampo, bs.nNuovoCheck, bs.riga, bs.pesati], [true, null, [], true, 'number', 1, null, null]);
       for(const [nome, m] of [['Misure', bm], ['Tendenza', bt], ['Check', bc], ['Energia', be]]){
-        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, quattro schede dentro, senza fuoco, peso, ⚙ ed Esci`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length, m.chipTesta], ['rgb(106, 85, 160)', 'none', false, 4, 0]);
+        atteso(`Body ${nome}: testata della zona (#6A55A0) al posto dell'intestazione, cinque schede dentro (Analisi dal Body 160), senza fuoco, peso, ⚙ ed Esci`, [m.bTesta, m.header, m.vecchieLinguette, m.schedeB.length, m.chipTesta], ['rgb(106, 85, 160)', 'none', false, 5, 0]);
         atteso(`Body ${nome}, giro 2: il check è una riga sottile (primo check da fare), alta almeno 44 px, e il tasto largo non sta più in cima`, [m.riga && m.riga.t, m.riga && m.riga.h >= 44, nome === 'Check' ? m.nNuovoCheck : m.cta], ['Primo check fisico da fare›', true, nome === 'Check' ? 1 : null]);
         atteso(`Body ${nome}: ogni testo della testata e dei gruppi almeno 4,5:1`, m.testiB, []);
         atteso(`Body ${nome}: ogni tasto alto almeno 44 px (${m.nTastiB} tasti)`, m.tastiB, []);

@@ -159,6 +159,15 @@ var ZTRitratto = (function(){
     return r;
   }
 
+  // Body 160: le analisi del sangue più recenti, valori con unità e segno fuori fascia; mai il nome della persona
+  function rigaEsami(b, sesso, today){
+    if(!b || !b.test_date) return null;
+    var E = (typeof ZTEsami !== 'undefined') ? ZTEsami : require('./esami.js');
+    var r = E.riassunto(b, sesso);
+    if(!r) return null;
+    return 'Analisi del sangue del ' + quando(b.test_date, today) + (b.donazione ? ' (per una donazione di sangue)' : '') + ': ' + r + '. Le fasce sono riferimenti, non diagnosi: se un valore è fuori, invita a parlarne col medico';
+  }
+
   function rigaProposte(righe){
     var utili = (righe || []).filter(function(r){ return r && r.title && STATO_LBL[r.status] && r.kind !== 'keep'; })
       .sort(function(a, b){ return String(b.decided_at || b.week_start || '').localeCompare(String(a.decided_at || a.week_start || '')); })
@@ -192,6 +201,7 @@ var ZTRitratto = (function(){
     push(rigaSettimana('Questa settimana, fin qui', d.current));
     push(rigaSettimana('Settimana scorsa', d.previous));
     push(rigaCheck(d.current || d.previous, d.today));
+    push(rigaEsami(d.blood, p.sex, d.today));
     push(rigaProposte(d.proposals));
 
     if(!righe.length) return '';

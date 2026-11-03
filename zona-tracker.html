@@ -1403,11 +1403,11 @@
       <div class="lbl">Note sulla salute</div>
       <textarea id="set-note-salute" class="inp" rows="3" placeholder="es. ferritina bassa, affaticamento cronico, sonnolenza post-prandiale..."></textarea>
     </div><div style="margin-bottom:24px;">
-      <div class="lbl">Valori degli esami</div>
-      <p style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-bottom:12px;line-height:1.6;">Inserisci i valori degli ultimi esami: servono a personalizzare piano alimentare e integratori.</p>
-      <div id="set-esami-list"></div>
-      <button class="btn btn-ghost btn-sm" onclick="addEsameRow()" style="margin-top:8px;">+ Aggiungi valore</button>
-    </div><div id="set-esami-storico"></div>
+      <div class="lbl">Analisi del sangue</div>
+      <!-- Body 160: lo storico delle analisi, il caricamento del referto e l'andamento stanno nella scheda «Analisi» del Body -->
+      <p style="font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin:0 0 10px;">Le analisi stanno nella scheda «Analisi» del Body: il referto da caricare, lo storico per data, l'andamento di ogni valore e le donazioni.</p>
+      <button type="button" class="btn btn-ghost btn-sm" id="set-vai-analisi" onclick="vaiAlleAnalisi()">Apri le analisi in Body ›</button>
+    </div>
     </div>
 
     <div class="set-pagina" data-pagina="profilo" hidden>
@@ -1452,6 +1452,7 @@
 <script src="shared/rotazione.js?v=20261101-2304"></script>
 <script src="shared/ritratto.js?v=20261101-2304"></script>
 <script src="shared/fitdays.js?v=20261101-2304"></script>
+<script src="shared/esami.js?v=20261101-2304"></script>
 <script src="shared/promemoria.js?v=20261101-2304"></script>
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -1602,6 +1603,7 @@ function showClosedScreen() {
 <script src="app/impostazioni.js?v=20261101-2304"></script>
 <script src="app/segnala.js?v=20261101-2304"></script>
 <script src="app/notifiche.js?v=20261101-2304"></script>
+<script src="app/analisi.js?v=20261101-2304"></script>
 <script>
 // Onboarding: calcolo del fabbisogno (TDEE) con la soglia minima di calorie, M1 (benvenuto, accesso, 7 passi): spostato in app/onboarding.js (Fondamenta 035, tappa 9).
 
