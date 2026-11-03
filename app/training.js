@@ -2102,7 +2102,7 @@ function _renderVolumeCard(){
 // La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
 const PAUSA_BLOCCO_NUOVO_GIORNI = 21;     // oltre tre settimane fermo, al rientro conviene un blocco pulito
 const PAUSA_RIENTRO_GIORNI = 14;          // per quanti giorni dopo il rientro la proposta resta
-const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['altro', 'Altro']];
+const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['malattia', 'Malattia'], ['altro', 'Altro']];
 function getPausa(){
   if(!ST.profile || typeof ZTQuadro === 'undefined') return null;
   return ZTQuadro.pausaInfo(ST.profile, todayKey());
@@ -2234,7 +2234,7 @@ function _renderPausaCard(){
             <div style="background:var(--s1,#fff);border-radius:var(--r-md,12px);padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:space-between;gap:12px;">
               <div style="flex:1;min-width:0;">
                 <div style="font-size:14px;font-weight:700;color:var(--t1);font-family:var(--font-sans);margin-bottom:4px;">✈️ Mi fermo per un periodo${stato ? ` <span style="font-size:11px;color:var(--acc);font-family:var(--font-mono);">· ${stato}</span>` : ''}</div>
-                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro: dici le date e scegli cosa fermare (allenamento, cibo, pesate). L'app ti aspetta, senza promemoria.</div>
+                <div style="font-size:12px;color:var(--t3);font-family:var(--font-sans);line-height:1.4;">Vacanza, viaggio, lavoro, malattia: dici le date e scegli cosa fermare (allenamento, cibo, pesate). L'app ti aspetta, senza promemoria.</div>
               </div>
               <button onclick="apriPausa();" style="flex-shrink:0;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:11px;font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;font-weight:700;cursor:pointer;white-space:nowrap;">${stato ? 'Modifica' : 'Imposta'}</button>
             </div>`;
