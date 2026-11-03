@@ -1740,12 +1740,13 @@ window.smartSavePasto = async function() {
         sort_order: idx,
       }));
       const togliNuovi = () => itemsPayload.length ? scriviConCoda('annullare gli ingredienti nuovi', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', mealId], ['user_id', ST.user.id], ['or', itemsPayload.map(it => _orEq('id', it.id)).join(',')]] }) : Promise.resolve({error:null});
-      const ins = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload }) : { error:null };
+      const gruppo = nuovoId();   // i tre passi sono un salvataggio solo (Fondamenta 260)
+      const ins = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload, gruppo }) : { error:null };
       if (ins.error) throw ins.error;
-      const upd = await scriviConCoda('aggiornare il pasto', { tabella:'meals', tipo:'update', righe:testata, filtri:[['id', mealId], ['user_id', ST.user.id]] });
+      const upd = await scriviConCoda('aggiornare il pasto', { tabella:'meals', tipo:'update', righe:testata, filtri:[['id', mealId], ['user_id', ST.user.id]], gruppo });
       if (upd.error) { await togliNuovi(); throw upd.error; }
       if (vecchiIds.length) {
-        const del = await scriviConCoda('togliere gli ingredienti di prima', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', mealId], ['user_id', ST.user.id], ['or', vecchiIds.map(id => _orEq('id', id)).join(',')]] });
+        const del = await scriviConCoda('togliere gli ingredienti di prima', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', mealId], ['user_id', ST.user.id], ['or', vecchiIds.map(id => _orEq('id', id)).join(',')]], gruppo });
         if (del.error) {
           // si torna indietro: via i nuovi, testata com'era. Se anche questo non va, resta scritto in console
           await togliNuovi();
@@ -1790,7 +1791,8 @@ window.smartSavePasto = async function() {
         fat: Math.max(0, Math.round(tot.fat * 10) / 10),
         notes: ST.smartForm.notes || null,
       };
-      const mealRes = await scriviConCoda('salvare il pasto', { tabella:'meals', tipo:'insert', righe:meal });
+      const gruppo = nuovoId();   // pasto e ingredienti sono un salvataggio solo (Fondamenta 260)
+      const mealRes = await scriviConCoda('salvare il pasto', { tabella:'meals', tipo:'insert', righe:meal, gruppo });
       if (mealRes.error) throw mealRes.error;
       const itemsPayload = items.map((it, idx) => ({
         id: nuovoId(),
@@ -1806,7 +1808,7 @@ window.smartSavePasto = async function() {
         source: it.source || 'manual',
         sort_order: idx,
       }));
-      const itemsRes = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload }) : { data:null, error:null };
+      const itemsRes = itemsPayload.length ? await scriviConCoda('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:itemsPayload, gruppo }) : { data:null, error:null };
       const savedItems = itemsPayload;
       const itemsErr = itemsRes.error;
       if (itemsErr) {

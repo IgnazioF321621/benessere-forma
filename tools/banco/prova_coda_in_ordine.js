@@ -65,11 +65,11 @@ async function nuovo() {
     a.t.__rete = false;
     await a.scrivi('togliere il digiuno', { tabella:'fasting_days', tipo:'delete', filtri:[['user_id', U], ['date', OGGI]] });
     a.t.__rete = undefined;
-    a.t.__rifiuta = { fasting_days:{ code:'42501', message:'new row violates row-level security policy' } };
+    a.t.__rifiuta = { fasting_days:{ code:'PGRST100', message:'failed to parse filter' } };
     const r = await a.togli();
     await attendi(20);
     const daParte = JSON.parse(a.win.localStorage.getItem('zt_coda_scartate_' + U) || '[]');
-    atteso('rifiuto in testa · messo da parte sul telefono, col codice', daParte.map(d => [d.operazione, d.codice]), [['togliere il digiuno', '42501']]);
+    atteso('rifiuto in testa · messo da parte sul telefono, col codice', daParte.map(d => [d.operazione, d.codice]), [['togliere il digiuno', 'PGRST100']]);
     atteso('rifiuto in testa · il togli dietro parte lo stesso', [a.coda().length, a.t.supplements_log.length, r.error, !!r.inCoda], [0, 0, null, false]);
     // la voce di chi aspetta è quella rifiutata: torna il suo errore
     a.t.__rete = false;
@@ -107,6 +107,59 @@ async function nuovo() {
     await attendi(20);
     atteso('durante un giro · la voce nuova parte nello stesso giro, in fondo', a.scritture().slice(-3), ['supplements_log:delete', 'fasting_days:delete', 'supplements_log:insert']);
     atteso('durante un giro · coda vuota, X c\'è, «fatto» a chi chiama', [a.coda().length, a.t.supplements_log.map(x => x.id), r.error, !!r.inCoda], [0, ['x1'], null, false]);
+  }
+  // 4b) 42501 (token vecchio al rientro) si riprova: resta in coda; oltre 5 giri va da parte, e il resto parte
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.__rifiuta = { supplements_log:{ code:'42501', message:'new row violates row-level security policy' } };
+    await a.win.svuotaCoda();
+    atteso('42501 · un giro: resta in coda, 1 tentativo, niente da parte', [a.coda().length, a.coda()[0] && a.coda()[0].tentativi, a.win.localStorage.getItem('zt_coda_scartate_' + U)], [1, 1, null]);
+    for(let i = 0; i < 4; i++) await a.win.svuotaCoda();
+    const daParte = JSON.parse(a.win.localStorage.getItem('zt_coda_scartate_' + U) || '[]');
+    atteso('42501 · al quinto giro va da parte e la coda si libera', [a.coda().length, daParte.map(d => d.codice)], [0, ['42501']]);
+  }
+  // 4c) Un 23505 su una voce mai partita non vale «fatto»: è un altro vincolo (la serie già registrata altrove)
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.supplements_log.push({ ...X, id:'x2' });
+    a.t.__rifiuta = { supplements_log:{ code:'23505', message:'duplicate key value violates unique constraint "supplements_log_unico"' } };
+    const r = await a.scrivi('salvare la serie', { tabella:'supplements_log', tipo:'insert', righe:{ ...X, id:'x3' } });
+    atteso('23505 non sulla chiave · a chi chiama torna il rifiuto, non «fatto»', [r.error && r.error.code, a.coda().length], ['23505', 0]);
+  }
+  // 4d) I passi di un salvataggio solo: se il primo va da parte, anche gli altri (niente pasto senza ingredienti)
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    const g = 'gruppo-1';
+    await a.scrivi('salvare gli ingredienti del pasto', { tabella:'meal_items', tipo:'insert', righe:[{ id:'i1', meal_id:'m1', user_id:U }], gruppo:g });
+    await a.scrivi('aggiornare il pasto', { tabella:'meals', tipo:'update', righe:{ kcal:500 }, filtri:[['id', 'm1'], ['user_id', U]], gruppo:g });
+    await a.scrivi('togliere gli ingredienti di prima', { tabella:'meal_items', tipo:'delete', filtri:[['meal_id', 'm1'], ['user_id', U]], gruppo:g });
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.__rifiuta = { meal_items:{ code:'22003', message:'numeric field overflow' } };
+    await a.win.svuotaCoda();
+    const daParte = JSON.parse(a.win.localStorage.getItem('zt_coda_scartate_' + U) || '[]');
+    atteso('gruppo · il primo rifiutato porta da parte anche gli altri due', daParte.map(d => d.operazione), ['salvare gli ingredienti del pasto', 'aggiornare il pasto', 'togliere gli ingredienti di prima']);
+    atteso('gruppo · la voce che non c\'entra parte, il pasto non viene toccato', [a.coda().length, a.scritture().filter(x => x.startsWith('meals')).length, a.t.supplements_log.length], [0, 0, 0]);
+  }
+  // 4e) Una richiesta appesa non ferma ogni salvataggio: dopo 12 secondi conta come rete muta
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.__attesa = () => new Promise(() => {});   // il server non risponde mai
+    const t0 = Date.now();
+    const r = await a.rimetti();
+    a.t.__attesa = undefined;
+    atteso('richiesta appesa · chi aspetta riceve «in coda» entro 13 secondi', [r.inCoda, Date.now() - t0 < 13500], [true, true]);
+    atteso('richiesta appesa · le voci restano in ordine, segnate come forse partite', [a.coda().map(c => c.operazione), a.coda()[0].tentato], [['togliere X', 'rimettere X'], true]);
   }
   // 6) Coda vuota: come prima, si scrive diretto
   {
