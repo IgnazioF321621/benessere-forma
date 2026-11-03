@@ -126,6 +126,10 @@ function _setPopola() {
   SET_TRAIN_GIORNI = p.train_giorni == null ? ZTRotazione.GIORNI_PARTENZA.slice() : (ZTRotazione.giorniScelti(p.train_giorni) || []);
   _setTrainGiorni();
   _setCalendarioStato();
+  // L'attrezzatura (Training 560): le pillole dell'onboarding, dalla stessa lista; solo a casa (in palestra c'è tutto,
+  // all'aperto valgono i portatili del generatore)
+  SET_ATTREZZI = Array.isArray(p.attrezzatura) ? p.attrezzatura.slice() : [];
+  _setAttrezziDisegna();
   // Promemoria dei pasti (Notifiche 170): gli interruttori leggono il profilo e scrivono subito, non al «Salva»
   if(typeof _setPromemoriaStato === 'function') _setPromemoriaStato();
   // Intolleranze
@@ -300,6 +304,48 @@ function toggleSetTabataGiorno(g) {
   if(i < 0) SET_TABATA_GIORNI.push(g); else SET_TABATA_GIORNI.splice(i, 1);
   SET_TABATA_GIORNI.sort((a, b) => a - b);
   _setTabataGiorni();
+}
+
+// ── L'attrezzatura (Training 560, 2 novembre 2026) ──
+// Prima si sceglieva solo nell'onboarding: chi era già dentro non poteva aggiungere «Parallele» né altro. Le pillole,
+// la regola che le accende e l'avviso sugli attrezzi che non aprono esercizi (L2) sono quelli dell'onboarding
+// (ATTREZZI_SCELTA, attrezziToggle, attrezziAvvisoTesto in app/onboarding.js): qui c'è solo lo stato del foglio.
+// La scheda di adesso non si rigenera: gli attrezzi valgono dal prossimo blocco (e da «Cambia per oggi» subito).
+let SET_ATTREZZI = [];
+function _setAttrezziCasa() { const t = (ST.profile || {}).tipo_allenamento; return t !== 'palestra' && t !== 'aperto'; }
+function _setAttrezziDisegna() {
+  const campo = document.getElementById('set-attrezzi-campo');
+  if(!campo) return;
+  campo.style.display = _setAttrezziCasa() ? '' : 'none';
+  const h = attrezziPilloleHTML(SET_ATTREZZI, 'toggleSetAttrezzo');
+  document.getElementById('set-attrezzi').innerHTML = h.attrezzi;
+  document.getElementById('set-attrezzi-accessori').innerHTML = h.accessori;
+  document.getElementById('set-attrezzi-accessori-blocco').style.display = attrezzoSegnato(SET_ATTREZZI, 'elastici_tubo') ? '' : 'none';
+  const nota = document.getElementById('set-attrezzi-nota'), lista = SET_ATTREZZI.slice();
+  attrezziAvvisoTesto(lista).then(t => {
+    if(JSON.stringify(lista) !== JSON.stringify(SET_ATTREZZI)) return;   // nel frattempo un'altra pillola: risponde il disegno dopo
+    nota.textContent = t; nota.style.display = t ? 'block' : 'none';
+  });
+}
+function toggleSetAttrezzo(slug) {
+  SET_ATTREZZI = attrezziToggle(SET_ATTREZZI, slug);
+  _setAttrezziDisegna();
+}
+// Quanti esercizi della scheda attiva (lavoro e riscaldamento) si potevano fare con l'attrezzatura di prima e non con
+// quella nuova (ZTCoachRules.puoFare, la regola di «Cambia per oggi» e delle varianti). Senza catalogo: 0.
+async function eserciziNonPiuFattibili(prima, dopo) {
+  const sch = ST.schedaAttiva && ST.schedaAttiva.scheda;
+  if(!sch || !Array.isArray(sch.sessioni)) return 0;
+  const righe = await catalogoAttrezzi();
+  if(!righe) return 0;
+  const perCodice = new Map(righe.map(r => [r.codice, r]));
+  const codici = new Set();
+  sch.sessioni.forEach(s => [...((s && s.exercises) || []), ...((s && s.warmup) || [])].forEach(e => { if(e && e.codice) codici.add(e.codice); }));
+  const tipoAllen = (ST.profile && ST.profile.tipo_allenamento) || 'casa';
+  return [...codici].filter(c => {
+    const r = perCodice.get(c);
+    return r && ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: prima }) && !ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: dopo });
+  }).length;
 }
 
 // ── Le sedute nel Calendario (Training 540, 30 ottobre 2026) ──
@@ -528,6 +574,21 @@ async function _saveSettingsExecute(goalChanged) {
     _setCalendarioStato();   // il tasto si accende (o si spegne) subito, senza riaprire
   }
 
+  // L'attrezzatura (Training 560): in una scrittura a parte, solo se cambia; vuota → null, come l'onboarding. La scheda
+  // non si rigenera: se qualcosa che c'è in scheda non si può più fare, il messaggio rimanda a «Cambia per oggi».
+  let attrezziNonSalvati = false, attrezziPersi = 0;
+  if(ST.profile && document.getElementById('set-attrezzi') && _setAttrezziCasa()) {
+    const prima = Array.isArray(ST.profile.attrezzatura) ? ST.profile.attrezzatura.slice() : [];
+    const dopo = SET_ATTREZZI.slice();
+    if(JSON.stringify(prima) !== JSON.stringify(dopo)) {
+      const r = await dbq('salvare l\'attrezzatura', supa.from('profiles').update({ attrezzatura: dopo.length ? dopo : null }).eq('id', ST.user.id), { silenzioso:true });
+      if(!r.error) {
+        ST.profile.attrezzatura = dopo.length ? dopo : null;
+        attrezziPersi = await eserciziNonPiuFattibili(prima, dopo);
+      } else attrezziNonSalvati = true;
+    }
+  }
+
   // Unità peso/carico — salvata solo in localStorage prefs
   const unitVal = document.getElementById('set-unit')?.value || 'lbs';
   if(ST.profile) ST.profile.unit = unitVal;
@@ -544,8 +605,9 @@ async function _saveSettingsExecute(goalChanged) {
   btn.disabled = false; btn.textContent = 'Salva';
   setVai('elenco');            // Metodo 220: «Salva» torna all'elenco, aggiornato
   // mai «Salvato» se la scelta del Tabata o del calendario non è passata (revisione di 480+490): un messaggio solo, chiaro
-  const nonSalvati = [tabataNonSalvato && 'il Tabata', calendarioNonSalvato && 'i giorni delle sedute'].filter(Boolean);
+  const nonSalvati = [tabataNonSalvato && 'il Tabata', calendarioNonSalvato && 'i giorni delle sedute', attrezziNonSalvati && 'l\'attrezzatura'].filter(Boolean);
   if(nonSalvati.length) showToast(`Salvato tutto tranne ${nonSalvati.join(' e ')}: riprova più tardi`, '⚠️', 5500);
+  else if(attrezziPersi) showToast('Salvato. Gli esercizi che non puoi più fare li trovi in «Cambia per oggi»', '✅', 6000);
   else showToast('Salvato', '✅');
   renderPage(ST.page);
   // Fix B (24 mag 2026): guard-rail calorie minime su ricalcolo da impostazioni.

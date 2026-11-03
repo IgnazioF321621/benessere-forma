@@ -2911,12 +2911,8 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   // non uscivano per i tester). Aggiunge il termine-catalogo SENZA rimuovere lo
   // slug originale → retrocompatibile coi profili VECCHI che hanno già 'elastico'.
   // Chiavi e valori sono in forma normalizzata (underscore), coerente con _normAttrezzo.
-  const GEAR_ALIASES = {
-    elastici_tubo: 'elastico',
-    cavigliere:    'cavigliera',
-    barra_corta:   'barra',
-    barra_lunga:   'barra',
-  };
+  // La rubrica sta in shared/coach_rules.js dal 2 novembre 2026 (Training 560): la leggono anche puoFare e le Impostazioni.
+  const GEAR_ALIASES = ZTCoachRules.ALIAS_ATTREZZI;
   Array.from(attrezzaturaSet).forEach(slug => {
     if (GEAR_ALIASES[slug]) attrezzaturaSet.add(GEAR_ALIASES[slug]);
   });
@@ -2928,18 +2924,9 @@ function _trainGenFilterPool(catalog, { tipoAllen, attrezzatura, livello }) {
   // 'cavigliera') puntano a termini con 0 occorrenze, né come attrezzo nativo
   // né dentro un surrogato_attrezzo. Qui si CONSTATA il vuoto — il rimedio
   // (aggiungere il termine al catalogo o correggere l'alias) è lavoro di Sheet.
-  // Un token è inerte se NÉ lui NÉ il suo alias compaiono nel catalogo.
-  const attrezziCatalogo = new Set();
-  catalog.forEach(ex => {
-    _normAttrezzo(ex.attrezzo).split(';').forEach(a => { const t = a.trim(); if (t) attrezziCatalogo.add(t); });
-    String(ex.surrogato_attrezzo || '').toLowerCase().split('+')
-      .forEach(a => { const t = _normAttrezzo(a); if (t) attrezziCatalogo.add(t); });
-  });
-  const attrezziInerti = (Array.isArray(attrezzatura) ? attrezzatura : [])
-    .map(_normAttrezzo)
-    .filter(slug => slug && slug !== 'corpo_libero')
-    .filter(slug => !attrezziCatalogo.has(slug)
-                 && !(GEAR_ALIASES[slug] && attrezziCatalogo.has(GEAR_ALIASES[slug])));
+  // Un token è inerte se NÉ lui NÉ il suo alias compaiono nel catalogo. La regola sta in shared/coach_rules.js dal
+  // 2 novembre 2026 (Training 560): le Impostazioni e l'onboarding la usano per avvisare la persona.
+  const attrezziInerti = ZTCoachRules.attrezziInerti(attrezzatura, catalog);
   if (attrezziInerti.length) {
     console.warn('[train-gen] attrezzi dichiarati che non esistono nel catalogo (0 esercizi aperti):',
       attrezziInerti.join(', '));

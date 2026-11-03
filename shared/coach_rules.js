@@ -447,12 +447,41 @@ var ZTCoachRules = (function(){
     return { ok: true, surrogato: false };
   }
 
+  // ── L'attrezzatura del profilo e le parole del catalogo (Training 560, 2 novembre 2026) ──
+  // Gli slug dell'onboarding e delle Impostazioni (data-gear) non sono sempre le parole del catalogo: l'alias aggiunge
+  // la parola del catalogo senza togliere lo slug (i profili vecchi hanno già «elastico»). Era GEAR_ALIASES nel
+  // generatore; adesso lo leggono anche puoFare e l'avviso delle Impostazioni. Prima di aggiungere un alias si guarda
+  // che la parola di arrivo esista nel catalogo (L2).
+  var ALIAS_ATTREZZI = { elastici_tubo: 'elastico', cavigliere: 'cavigliera', barra_corta: 'barra', barra_lunga: 'barra' };
+  // L'attrezzatura come la legge il generatore: parole normalizzate, con gli alias e il corpo libero, senza doppioni.
+  function attrezziConAlias(lista){
+    var out = ['corpo_libero'];
+    (Array.isArray(lista) ? lista : []).forEach(function(a){
+      var t = vfAttrezzo(a);
+      if(t && out.indexOf(t) === -1) out.push(t);
+      if(ALIAS_ATTREZZI[t] && out.indexOf(ALIAS_ATTREZZI[t]) === -1) out.push(ALIAS_ATTREZZI[t]);
+    });
+    return out;
+  }
+  // Gli attrezzi segnati che non aprono nessun esercizio (L2): né lo slug né il suo alias compaiono nel catalogo, come
+  // attrezzo o dentro un surrogato. Il corpo libero non conta. → slug normalizzati, nell'ordine in cui sono segnati.
+  function attrezziInerti(lista, catalogo){
+    var nel = {};
+    (catalogo || []).forEach(function(ex){
+      if(!ex) return;
+      vfLista(vfAttrezzo(ex.attrezzo), ';').forEach(function(a){ nel[a] = true; });
+      vfLista(ex.surrogato_attrezzo, '+').forEach(function(a){ nel[vfAttrezzo(a)] = true; });
+    });
+    return (Array.isArray(lista) ? lista : []).map(vfAttrezzo)
+      .filter(function(t){ return t && t !== 'corpo_libero' && !nel[t] && !(ALIAS_ATTREZZI[t] && nel[ALIAS_ATTREZZI[t]]); });
+  }
+
   // true se la persona può fare l'esercizio con il suo luogo e i suoi attrezzi.
   function puoFare(ex, opts){
     var luogo = vfNorm(opts && opts.tipoAllen) || 'casa';
     var alias = luogo === 'aperto' ? 'libero' : luogo === 'libero' ? 'aperto' : null;
     var attrezzi = {};
-    ((opts && opts.attrezzatura) || []).forEach(function(a){ attrezzi[vfAttrezzo(a)] = true; });
+    attrezziConAlias(opts && opts.attrezzatura).forEach(function(a){ attrezzi[a] = true; });   // gli alias come nel generatore (Training 560)
     var luoghi = vfLista(ex.luogo, ';');
     var surrogati = vfLista(ex.surrogato_attrezzo, '+').map(vfAttrezzo);
     var luogoOk = !luoghi.length || luoghi.indexOf('qualsiasi') !== -1 || luoghi.indexOf(luogo) !== -1
@@ -574,6 +603,7 @@ var ZTCoachRules = (function(){
   }
 
   return { RULES_VERSION: RULES_VERSION, KCAL_MIN: KCAL_MIN, KCAL_MAX: KCAL_MAX, direzione: direzione, buildProposals: buildProposals,
-    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, attrezziCasa: attrezziCasa, CARICHI: CARICHI, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
+    varianteFacile: varianteFacile, varianteDifficile: varianteDifficile, comeSiFa: comeSiFa, puoFare: puoFare, attrezziCasa: attrezziCasa, CARICHI: CARICHI,
+    ALIAS_ATTREZZI: ALIAS_ATTREZZI, attrezziConAlias: attrezziConAlias, attrezziInerti: attrezziInerti, voce: voce, IDENTITA: IDENTITA, REGISTRO: REGISTRO };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTCoachRules;

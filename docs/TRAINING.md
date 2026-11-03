@@ -271,6 +271,16 @@ Dai feedback di Ignazio: il «Dip coreano» proposto come variante più difficil
 - **Nelle tenute il testo della PROSSIMA e dell'obiettivo non scrive il RIR**: il RIR stima ripetizioni di riserva (Zourdos e colleghi 2016), una tenuta si regola sui secondi
 - Lo prova `node tools/banco/prova_training_550.js`
 
+### L'attrezzatura nelle Impostazioni (Training 560, 2 novembre 2026)
+
+Prima gli attrezzi si sceglievano solo nell'onboarding: chi era già dentro non poteva aggiungere «Parallele» (Training 550) né altro.
+
+- **Una lista sola**, `ATTREZZI_SCELTA` e `ATTREZZI_ACCESSORI` in `app/onboarding.js`, disegnata da `attrezziPilloleHTML` sia nell'onboarding (`m1GearDisegna`, nella pagina restano i contenitori) sia in Impostazioni › Allenamento › «Attrezzatura» (`_setAttrezziDisegna`, solo a casa: in palestra c'è tutto, all'aperto valgono i portatili). **Una regola sola per accenderle**, `attrezziToggle`: le parole dei profili di prima valgono come la pillola (`equivalenti`: «elastico» accende «Elastici a tubo»), spenti gli elastici se ne vanno gli accessori, le parole senza pillola restano («corpo libero», «corda doppia», «barra»)
+- **Il salvataggio** è una scrittura a parte in `profiles.attrezzatura`, solo se cambia (vuota → null, come l'onboarding). **La scheda non si rigenera**: gli attrezzi valgono dal prossimo blocco, e subito in «Cambia per oggi». Se nella scheda attiva c'è qualcosa che con la nuova attrezzatura non si può più fare (`eserciziNonPiuFattibili`, con `puoFare`), il messaggio dice «Gli esercizi che non puoi più fare li trovi in «Cambia per oggi»». Non cambiare la scheda a metà blocco tiene stabile lo stimolo su cui si misura la progressione (ACSM 2009, *Med Sci Sports Exerc* 41:687, modelli di progressione)
+- **L'avviso L2** sotto le pillole, nell'onboarding e nelle Impostazioni (`attrezziAvvisoTesto`): gli attrezzi segnati che non aprono nessun esercizio, con la regola del generatore, che sta ora in `shared/coach_rules.js` (`ZTCoachRules.attrezziInerti`, letta anche dal generatore). Il catalogo degli attrezzi si legge una volta (`catalogoAttrezzi`); senza rete l'avviso tace e il salvataggio passa
+- **Gli alias in shared**: `ZTCoachRules.ALIAS_ATTREZZI` (era `GEAR_ALIASES` nel generatore) e `attrezziConAlias`; ora anche `puoFare` li legge, quindi «Elastici a tubo» apre le varianti a elastico come nel generatore. Schede generate prima e dopo su 42 profili: 0 differenze
+- Lo prova `node tools/banco/prova_training_560.js`
+
 **Il mesociclo è 5+1: sei settimane, cinque di carico e una di scarico** *(dal 24 agosto 2026, prima era 3+1)*. La tabella, uguale in `CYCLE_WEEKS` e nella card Ciclo del Programma:
 
 | Sett. | Progressione | RIR |
