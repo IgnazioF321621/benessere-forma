@@ -117,6 +117,13 @@ var ZTEsami = (function(){
   ESAMI.forEach(function(e){ perChiave[e.chiave] = e; });
   function esame(chiave){ return perChiave[chiave] || null; }
 
+  // Body 172 (Ignazio, 3 novembre 2026): esami che non vogliamo. Una riga con uno di questi nomi si scarta dovunque
+  // entri (referto, CSV, foglio a mano) e, se sta ancora nel jsonb di una riga vecchia, non si mostra
+  var NON_VOLUTI = ['nrbc', 'eritroblasti', 'eritroblasto'];
+  function nonVoluto(nome){
+    var t = ' ' + normalizza(nome) + ' ';
+    return NON_VOLUTI.some(function(w){ return t.indexOf(' ' + w + ' ') >= 0 || t.indexOf(' ' + w + '%') >= 0; });   // «NRBC %», «NRBC#», «NRBC%»
+  }
   // «Colesterolo-HDL (metodo enzimatico)» → «colesterolo hdl metodo enzimatico»: trattini e barre diventano spazi
   function normalizza(s){
     return String(s || '').toLowerCase()
@@ -195,6 +202,7 @@ var ZTEsami = (function(){
       if(!r || typeof r !== 'object') return;
       var nome = testo(r.nome, MAX_NOME), valore = numero(r.valore);
       if(!nome || valore == null) return;
+      if(nonVoluto(nome)) return;   // Body 172
       var unita = testo(r.unita, MAX_UNITA);
       var chiave = perUnita(riconosci(nome) || (r.chiave && perChiave[r.chiave] ? r.chiave : null), unita);   // il nome stampato vince sulla chiave del modello
       if(chiave){ if(viste[chiave]) chiave = null; else viste[chiave] = true; }
@@ -276,7 +284,7 @@ var ZTEsami = (function(){
   // Le righe di una riga di blood_tests: `esami` se c'è (letta o corretta), altrimenti le colonne (righe del check)
   function daRiga(riga){
     if(!riga) return [];
-    if(Array.isArray(riga.esami) && riga.esami.length) return riga.esami;
+    if(Array.isArray(riga.esami) && riga.esami.length) return riga.esami.filter(function(x){ return !(x && nonVoluto(x.nome)); });   // Body 172: le righe vecchie col NRBC non lo mostrano
     var out = [];
     ESAMI.forEach(function(e){ if(e.colonna && riga[e.colonna] != null) out.push({ nome: e.label, chiave: e.chiave, valore: Number(riga[e.colonna]), unita: e.unita }); });
     return out;
@@ -378,13 +386,13 @@ var ZTEsami = (function(){
     }
     if(!prelievi.length) return vuoto;
     var date = prelievi.map(function(p){ return p.test_date; }).sort();
-    var ignoti = intest.filter(function(h){ return h.nome && !riconosci(h.nome); }).map(function(h){ return h.nome; });
+    var ignoti = intest.filter(function(h){ return h.nome && !riconosci(h.nome) && !nonVoluto(h.nome); }).map(function(h){ return h.nome; });
     return { riconosciuto: true, prelievi: prelievi, colonne: intest.length, colonne_ignorate: ignorate, valori: valori, doppie: doppie, celle_scartate: scartate, date_non_valide: nonValide, righe_lunghe: lunghe, future: future, dal: date[0], al: date[date.length - 1], nomi_ignoti: ignoti };
   }
 
   return { VERSIONE: VERSIONE, ESAMI: ESAMI, FAMIGLIE: FAMIGLIE, PANORAMICA: PANORAMICA, MAX_RIGHE: MAX_RIGHE, MAX_NOTE: MAX_NOTE, esame: esame, normalizza: normalizza, riconosci: riconosci,
     dataPrelievo: dataPrelievo, valida: valida, fascia: fascia, fasciaPer: fasciaPer, fuoriFascia: fuoriFascia, mostraFascia: mostraFascia,
-    inColonne: inColonne, daRiga: daRiga, serie: serie, riassunto: riassunto, testo: testo, numero: numero, unitaCombacia: unitaCombacia, ESCLUSIONI: ESCLUSIONI,
+    inColonne: inColonne, daRiga: daRiga, serie: serie, riassunto: riassunto, testo: testo, numero: numero, unitaCombacia: unitaCombacia, ESCLUSIONI: ESCLUSIONI, NON_VOLUTI: NON_VOLUTI, nonVoluto: nonVoluto,
     famigliaDi: famigliaDi, perUnita: perUnita, leggiCSV: leggiCSV, csvIntestazione: csvIntestazione };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTEsami;
