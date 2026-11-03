@@ -2912,6 +2912,29 @@ html.v5 #page-body .b5-gruppo{margin:12px 0 0;background:var(--s1);border-radius
 html.v5 #page-body .b5-check-riga{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;padding:8px 14px;border:0;background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);font-size:15px;font-weight:600;color:var(--t1);}
 html.v5 #page-body .b5-check-riga > span:first-child{display:flex;align-items:center;}
 html.v5 #page-body .b5-check-chev{font-size:20px;color:var(--t2);}
+/* ── Stile 050 (2 novembre 2026): il foglio «Registra integratori», il gruppo si modifica sul posto. «Modifica» apre il gruppo:
+   «−» toglie, «+» aggiunge dalla libreria, «Fatto» chiude. Tasti alti almeno 44 px. L'HTML lo disegna nutrition.js solo con html.v5. ── */
+html.v5 #supp-sheet .rs-gruppo-testa{min-height:56px;}
+html.v5 #supp-sheet .rs-tutto{min-height:44px;padding:0 14px;font-size:13px;}
+html.v5 #supp-sheet .rs-riga{min-height:52px;}
+html.v5 #supp-sheet .rs-nome{font-size:15px;}
+html.v5 #supp-sheet .rs-gruppo-nome{font-size:15px;white-space:normal;}
+html.v5 #supp-sheet .rs-gruppo-sotto{display:flex;align-items:center;gap:2px;height:22px;}
+html.v5 #supp-sheet .rs-gruppo-sotto .rs-gruppo-ora{margin-left:0;font-size:11px;color:var(--t2);}
+html.v5 #supp-sheet .rs-modifica{min-height:44px;margin:-11px 0;padding:0 8px;border:0;background:none;color:var(--z-nutrition);font-family:var(--font-sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+html.v5 #supp-sheet .rs-gruppo.in-modifica{border-color:var(--z-nutrition);}
+html.v5 #supp-sheet .rs-fatto{min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--z-nutrition);color:var(--z-testo);font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;}
+html.v5 #supp-sheet .rs-togli,html.v5 #supp-sheet .rs-aggiungi i{flex-shrink:0;}
+html.v5 #supp-sheet .rs-togli{width:44px;height:44px;margin:-4px 0 -4px -8px;padding:0;border:0;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+html.v5 #supp-sheet .rs-togli i,html.v5 #supp-sheet .rs-aggiungi i{width:26px;height:26px;border-radius:50%;color:var(--bianco);font-style:normal;font-size:20px;font-weight:700;line-height:26px;text-align:center;}
+html.v5 #supp-sheet .rs-togli i{background:var(--elimina);}
+html.v5 #supp-sheet .rs-aggiungi i{background:var(--ok);}
+html.v5 #supp-sheet .rs-gruppo-vuoto{padding:12px;border-top:1px solid var(--b1);font-family:var(--font-sans);font-size:13px;color:var(--t2);}
+html.v5 #supp-sheet .rs-aggiungi-titolo{padding:14px 12px 6px;border-top:1px solid var(--b1);background:var(--bg);font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t2);}
+html.v5 #supp-sheet .rs-aggiungi{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:4px 12px;border:0;border-top:1px solid var(--b1);background:var(--bg);text-align:left;cursor:pointer;color:var(--t1);font-family:var(--font-sans);font-size:15px;}
+html.v5 #supp-sheet .rs-aggiungi span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+html.v5 #supp-sheet .rs-aggiungi small{font-family:var(--font-mono);font-size:11px;color:var(--t2);white-space:nowrap;}
+html.v5 #supp-sheet .rs-impostazioni{display:block;width:100%;min-height:48px;padding:0 12px;border:0;border-top:1px solid var(--b1);background:var(--s1);text-align:left;cursor:pointer;color:var(--t2);font-family:var(--font-sans);font-size:13px;}
 /* Stile 040: «Le ultime registrazioni» in fondo a Misure, righe toccabili (tocco = la correzione di sempre) */
 html.v5 #page-body .b5-log-riga{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 14px;border:0;border-bottom:1px solid var(--s3);background:none;text-align:left;cursor:pointer;color:var(--t1);}
 html.v5 #page-body .b5-log-riga:last-child{border-bottom:0;}
