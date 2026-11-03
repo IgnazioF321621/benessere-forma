@@ -1,13 +1,13 @@
 {
  "progetto": "qxiyeiahpoiliwpqslpr",
- "quando": "2026-11-01",
+ "quando": "2026-11-03",
  "righe": [
   {
    "righe": 0,
    "tabella": "ai_memory"
   },
   {
-   "righe": 13,
+   "righe": 15,
    "tabella": "app_errors"
   },
   {
@@ -31,7 +31,7 @@
    "tabella": "body_checks"
   },
   {
-   "righe": 6,
+   "righe": 7,
    "tabella": "body_logs"
   },
   {
@@ -39,7 +39,7 @@
    "tabella": "body_measurements"
   },
   {
-   "righe": 15,
+   "righe": 17,
    "tabella": "coach_proposals"
   },
   {
@@ -59,15 +59,15 @@
    "tabella": "fasting_days"
   },
   {
-   "righe": 4,
+   "righe": 5,
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1089,
+   "righe": 1099,
    "tabella": "meal_items"
   },
   {
-   "righe": 385,
+   "righe": 387,
    "tabella": "meals"
   },
   {
@@ -83,11 +83,11 @@
    "tabella": "promemoria_inviati"
   },
   {
-   "righe": 0,
+   "righe": 1,
    "tabella": "push_iscrizioni"
   },
   {
-   "righe": 17,
+   "righe": 22,
    "tabella": "rilevazioni"
   },
   {
@@ -95,7 +95,7 @@
    "tabella": "schede_utente"
   },
   {
-   "righe": 40,
+   "righe": 43,
    "tabella": "segnalazioni"
   },
   {
@@ -111,11 +111,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1663,
+   "righe": 1678,
    "tabella": "supplements_log"
   },
   {
-   "righe": 2061,
+   "righe": 2082,
    "tabella": "training_logs"
   },
   {
@@ -123,7 +123,7 @@
    "tabella": "training_notes"
   },
   {
-   "righe": 15,
+   "righe": 16,
    "tabella": "weekly_pictures"
   },
   {
@@ -139,7 +139,7 @@
    "tabella": "weekly_plans"
   },
   {
-   "righe": 21,
+   "righe": 22,
    "tabella": "weight_logs"
   },
   {
@@ -147,7 +147,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 131,
+   "righe": 132,
    "tabella": "workouts"
   }
  ],
@@ -604,6 +604,46 @@
     "predefinito": "now()",
     "tabella": "blood_tests",
     "tipo": "timestamp with time zone"
+   },
+   {
+    "colonna": "esami",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 17,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "jsonb"
+   },
+   {
+    "colonna": "donazione",
+    "generata": "",
+    "identita": "",
+    "non_nullo": true,
+    "pos": 18,
+    "predefinito": "false",
+    "tabella": "blood_tests",
+    "tipo": "boolean"
+   },
+   {
+    "colonna": "fonte",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 19,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "text"
+   },
+   {
+    "colonna": "prompt_version",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 20,
+    "predefinito": null,
+    "tabella": "blood_tests",
+    "tipo": "text"
    },
    {
     "colonna": "id",
@@ -7056,6 +7096,24 @@
     "nome": "blood_tests_pkey",
     "tabella": "blood_tests",
     "tipo": "p"
+   },
+   {
+    "definizione": "UNIQUE (user_id, test_date)",
+    "nome": "blood_tests_user_date_key",
+    "tabella": "blood_tests",
+    "tipo": "u"
+   },
+   {
+    "definizione": "CHECK (((esami IS NULL) OR (jsonb_typeof(esami) = 'array'::text)))",
+    "nome": "blood_tests_esami_chk",
+    "tabella": "blood_tests",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((fonte IS NULL) OR (fonte = ANY (ARRAY['lettura'::text, 'mano'::text, 'check'::text]))))",
+    "nome": "blood_tests_fonte_chk",
+    "tabella": "blood_tests",
+    "tipo": "c"
    },
    {
     "definizione": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
