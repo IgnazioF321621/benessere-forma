@@ -15,7 +15,7 @@
    "tabella": "biblioteca_gif"
   },
   {
-   "righe": 0,
+   "righe": 39,
    "tabella": "blood_tests"
   },
   {
@@ -43,7 +43,7 @@
    "tabella": "coach_proposals"
   },
   {
-   "righe": 11,
+   "righe": 12,
    "tabella": "daily_log"
   },
   {
@@ -63,11 +63,11 @@
    "tabella": "fitdays_letture"
   },
   {
-   "righe": 1099,
+   "righe": 1104,
    "tabella": "meal_items"
   },
   {
-   "righe": 387,
+   "righe": 389,
    "tabella": "meals"
   },
   {
@@ -87,7 +87,7 @@
    "tabella": "push_iscrizioni"
   },
   {
-   "righe": 22,
+   "righe": 24,
    "tabella": "rilevazioni"
   },
   {
@@ -111,11 +111,11 @@
    "tabella": "supplements"
   },
   {
-   "righe": 1678,
+   "righe": 1691,
    "tabella": "supplements_log"
   },
   {
-   "righe": 2082,
+   "righe": 2094,
    "tabella": "training_logs"
   },
   {
@@ -147,7 +147,7 @@
    "tabella": "workout_sets"
   },
   {
-   "righe": 132,
+   "righe": 133,
    "tabella": "workouts"
   }
  ],
@@ -2844,6 +2844,16 @@
     "predefinito": null,
     "tabella": "profiles",
     "tipo": "text[]"
+   },
+   {
+    "colonna": "pause",
+    "generata": "",
+    "identita": "",
+    "non_nullo": false,
+    "pos": 50,
+    "predefinito": null,
+    "tabella": "profiles",
+    "tipo": "jsonb"
    },
    {
     "colonna": "user_id",
@@ -7110,7 +7120,7 @@
     "tipo": "c"
    },
    {
-    "definizione": "CHECK (((fonte IS NULL) OR (fonte = ANY (ARRAY['lettura'::text, 'mano'::text, 'check'::text]))))",
+    "definizione": "CHECK (((fonte IS NULL) OR (fonte = ANY (ARRAY['lettura'::text, 'mano'::text, 'check'::text, 'csv'::text]))))",
     "nome": "blood_tests_fonte_chk",
     "tabella": "blood_tests",
     "tipo": "c"
@@ -7460,6 +7470,12 @@
    {
     "definizione": "CHECK (((pausa_moduli IS NULL) OR (pausa_moduli <@ ARRAY['allenamento'::text, 'cibo'::text, 'pesate'::text])))",
     "nome": "profiles_pausa_moduli_chk",
+    "tabella": "profiles",
+    "tipo": "c"
+   },
+   {
+    "definizione": "CHECK (((pause IS NULL) OR (jsonb_typeof(pause) = 'array'::text)))",
+    "nome": "profiles_pause_chk",
     "tabella": "profiles",
     "tipo": "c"
    },
