@@ -122,6 +122,20 @@ async function nuovo(extra, scheda){
     atteso('4 · la scheda resta com\'è: nessuna scrittura su schede_utente, nessuna rigenerazione', [a.supa._calls.filter(c => c.table === 'schede_utente' && c.op !== 'select').length, JSON.stringify(a.ST.schedaAttiva && a.ST.schedaAttiva.scheda) === prima], [0, true]);
     atteso('4 · il conto: 1 esercizio (il Dip panca), le trazioni si fanno ancora', await a.W.eserciziNonPiuFattibili(IGNAZIO, IGNAZIO.filter(x => x !== 'panca')), 1);
   }
+  // ── 4b · «Cambia per oggi» costruisce con gli alias, come puoFare (revisione del 560) ──
+  {
+    const a = await nuovo({ attrezzatura:['elastici_tubo'] });
+    a.ST.profile.attrezzatura = ['elastici_tubo'];
+    const riga = { codice:'EX076', nome:'Rematore manubri panca piana', attrezzo:'manubri', surrogato_attrezzo:'elastico', luogo:'casa', setup:'', esecuzione:'', errori:'', muscoli:'' };
+    atteso('4b · profilo nuovo («elastici_tubo»): puoFare dice sì, e «Cambia per oggi» lo costruisce con l\'elastico', [R.puoFare(riga, { tipoAllen:'casa', attrezzatura:['elastici_tubo'] }), a.W._coCostruisci(riga, { name:'Rematore elastico', codice:'EX020', sets:3, reps:'8-12' }).eq], [true, 'elastico']);
+    atteso('4b · lista vuota: il conto usa la stessa partenza di «Cambia per oggi» (elastico e corpo libero)', await a.W.eserciziNonPiuFattibili(['elastico'], []), 0);
+  }
+  // ── 4c · senza tipo di allenamento il campo non c'è (come l'onboarding: l'attrezzatura conta solo a casa) ──
+  {
+    const a = await nuovo({ tipo_allenamento:null });
+    a.W.openSettingsModal(); a.W.setVai('allenamento');
+    atteso('4c · tipo di allenamento non scelto: campo nascosto', a.d.getElementById('set-attrezzi-campo').style.display, 'none');
+  }
   // ── 5 · in palestra il campo non c'è e non si scrive ──
   {
     const a = await nuovo({ tipo_allenamento:'palestra', attrezzatura:null });

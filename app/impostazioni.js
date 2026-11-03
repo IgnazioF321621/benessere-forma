@@ -312,7 +312,7 @@ function toggleSetTabataGiorno(g) {
 // (ATTREZZI_SCELTA, attrezziToggle, attrezziAvvisoTesto in app/onboarding.js): qui c'è solo lo stato del foglio.
 // La scheda di adesso non si rigenera: gli attrezzi valgono dal prossimo blocco (e da «Cambia per oggi» subito).
 let SET_ATTREZZI = [];
-function _setAttrezziCasa() { const t = (ST.profile || {}).tipo_allenamento; return t !== 'palestra' && t !== 'aperto'; }
+function _setAttrezziCasa() { return (ST.profile || {}).tipo_allenamento === 'casa'; }   // come l'onboarding: l'attrezzatura conta solo a casa
 function _setAttrezziDisegna() {
   const campo = document.getElementById('set-attrezzi-campo');
   if(!campo) return;
@@ -342,9 +342,11 @@ async function eserciziNonPiuFattibili(prima, dopo) {
   const codici = new Set();
   sch.sessioni.forEach(s => [...((s && s.exercises) || []), ...((s && s.warmup) || [])].forEach(e => { if(e && e.codice) codici.add(e.codice); }));
   const tipoAllen = (ST.profile && ST.profile.tipo_allenamento) || 'casa';
+  // una lista vuota vale come in «Cambia per oggi» (_coOpzioni): il messaggio rimanda lì, e lì deve tornare il conto
+  const come = (l) => (Array.isArray(l) && l.length) ? l : ['elastico', 'corpo_libero'];
   return [...codici].filter(c => {
     const r = perCodice.get(c);
-    return r && ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: prima }) && !ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: dopo });
+    return r && ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: come(prima) }) && !ZTCoachRules.puoFare(r, { tipoAllen, attrezzatura: come(dopo) });
   }).length;
 }
 
@@ -606,7 +608,7 @@ async function _saveSettingsExecute(goalChanged) {
   setVai('elenco');            // Metodo 220: «Salva» torna all'elenco, aggiornato
   // mai «Salvato» se la scelta del Tabata o del calendario non è passata (revisione di 480+490): un messaggio solo, chiaro
   const nonSalvati = [tabataNonSalvato && 'il Tabata', calendarioNonSalvato && 'i giorni delle sedute', attrezziNonSalvati && 'l\'attrezzatura'].filter(Boolean);
-  if(nonSalvati.length) showToast(`Salvato tutto tranne ${nonSalvati.join(' e ')}: riprova più tardi`, '⚠️', 5500);
+  if(nonSalvati.length) showToast(`Salvato tutto tranne ${nonSalvati.join(' e ')}: riprova più tardi${attrezziPersi ? '. Gli esercizi che non puoi più fare li trovi in «Cambia per oggi»' : ''}`, '⚠️', 6500);
   else if(attrezziPersi) showToast('Salvato. Gli esercizi che non puoi più fare li trovi in «Cambia per oggi»', '✅', 6000);
   else showToast('Salvato', '✅');
   renderPage(ST.page);
