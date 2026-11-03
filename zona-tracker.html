@@ -367,28 +367,15 @@
         <div class="m1-gear-bodyweight-chip">✓ CORPO LIBERO · SEMPRE INCLUSO</div>
 
         <div class="m1-eyebrow-subsection">Attrezzi</div>
-        <div class="m1-pill-wrap">
-          <button type="button" class="m1-pill-toggle" data-gear="elastici_tubo" onclick="m1ToggleAttrezzatura('elastici_tubo')">Elastici a tubo</button>
-          <button type="button" class="m1-pill-toggle" data-gear="manubri" onclick="m1ToggleAttrezzatura('manubri')">Manubri</button>
-          <button type="button" class="m1-pill-toggle" data-gear="bilanciere" onclick="m1ToggleAttrezzatura('bilanciere')">Bilanciere + dischi</button>
-          <button type="button" class="m1-pill-toggle" data-gear="kettlebell" onclick="m1ToggleAttrezzatura('kettlebell')">Kettlebell</button>
-          <button type="button" class="m1-pill-toggle" data-gear="panca" onclick="m1ToggleAttrezzatura('panca')">Panca</button>
-          <button type="button" class="m1-pill-toggle" data-gear="sbarra" onclick="m1ToggleAttrezzatura('sbarra')">Sbarra per trazioni</button>
-          <button type="button" class="m1-pill-toggle" data-gear="fitball" onclick="m1ToggleAttrezzatura('fitball')">Fitball</button>
-          <button type="button" class="m1-pill-toggle" data-gear="trx" onclick="m1ToggleAttrezzatura('trx')">TRX / anelli</button>
-          <button type="button" class="m1-pill-toggle" data-gear="parallele" onclick="m1ToggleAttrezzatura('parallele')">Parallele / dip station</button>
-        </div>
+        <!-- Le pillole le disegna m1GearDisegna dalla lista ATTREZZI_SCELTA (app/onboarding.js, Training 560): la stessa delle Impostazioni -->
+        <div class="m1-pill-wrap" id="m1-gear-attrezzi"></div>
 
         <!-- Accessori elastici: visibili SOLO se "Elastici a tubo" selezionato (RITOCCO 2) -->
         <div id="m1-gear-accessories-block" style="display:none;">
           <div class="m1-eyebrow-subsection">Accessori elastici</div>
-          <div class="m1-pill-wrap">
-            <button type="button" class="m1-pill-toggle" data-gear="maniglie" onclick="m1ToggleAttrezzatura('maniglie')">Maniglie</button>
-            <button type="button" class="m1-pill-toggle" data-gear="barra_corta" onclick="m1ToggleAttrezzatura('barra_corta')">Barra corta</button>
-            <button type="button" class="m1-pill-toggle" data-gear="barra_lunga" onclick="m1ToggleAttrezzatura('barra_lunga')">Barra lunga</button>
-            <button type="button" class="m1-pill-toggle" data-gear="cavigliere" onclick="m1ToggleAttrezzatura('cavigliere')">Cavigliere</button>
-          </div>
+          <div class="m1-pill-wrap" id="m1-gear-accessori"></div>
         </div>
+        <div id="m1-gear-nota" style="display:none;font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-top:8px;"></div>
 
         <p class="m1-mantra">Anche poco basta, se è chiaro cosa puoi usare.</p>
       </div>
@@ -1369,6 +1356,17 @@
           <button class="onb-pill" type="button" data-giorno="7" onclick="toggleSetTabataGiorno(7)">Dom</button>
         </div>
         <div style="font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace;margin-top:4px;line-height:1.5;">4 minuti: 20 secondi di lavoro e 10 di pausa per 8 giri. «A parte» è un tasto nel Programma, fuori dalla seduta: non conta come allenamento.</div>
+      </div>
+      <!-- Training 560: l'attrezzatura di casa, le pillole dell'onboarding (ATTREZZI_SCELTA in app/onboarding.js) -->
+      <div class="onb-field" id="set-attrezzi-campo" style="margin-top:10px;">
+        <label>Attrezzatura</label>
+        <div style="font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin-bottom:8px;">Cosa hai a casa. Il corpo libero è sempre incluso. La scheda di adesso non cambia: gli attrezzi valgono dal prossimo blocco, e subito in «Cambia per oggi».</div>
+        <div class="m1-pill-wrap" id="set-attrezzi"></div>
+        <div id="set-attrezzi-accessori-blocco" style="display:none;">
+          <div style="font-size:12px;color:var(--t2);font-family:var(--font-sans);font-weight:600;margin:12px 0 6px;">Accessori elastici</div>
+          <div class="m1-pill-wrap" id="set-attrezzi-accessori"></div>
+        </div>
+        <div id="set-attrezzi-nota" style="display:none;font-size:12px;color:var(--t2);font-family:var(--font-sans);line-height:1.45;margin-top:8px;"></div>
       </div>
       <!-- Training 540: le sedute nel Calendario dell'iPhone. Giorni e ora stanno nel profilo (train_giorni, train_orario);
            il calendario a cui iscriversi lo scrive il Worker (/calendario?t=<calendario_token>). Nei giorni scelti solo

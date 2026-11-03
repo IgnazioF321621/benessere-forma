@@ -1920,7 +1920,8 @@ async function _coCerca(sid, exName){
 function _coCostruisci(riga0, orig){
   const riga = _trainGenPulisciRiga({ ...riga0 });
   const o = _coOpzioni();
-  const attrezzi = new Set(o.attrezzatura.map(_coNorm));
+  // gli alias come il generatore e puoFare (revisione del 560): «Elastici a tubo» vale come «elastico» anche qui
+  const attrezzi = new Set(ZTCoachRules.attrezziConAlias(o.attrezzatura));
   // col surrogato: la regola del generatore (ZTCoachRules.attrezziCasa, Training 550)
   const isSurrogato = o.tipoAllen === 'casa' && ZTCoachRules.attrezziCasa(riga, a => attrezzi.has(a)).surrogato;
   const limitazioni = _trainGenParseEsperienzaFromNote(ST.profile && ST.profile.note_salute).limitazioni || [];

@@ -125,7 +125,8 @@ const prima = (ex, h) => {
     atteso('1 · all\'aperto le parallele valgono come la sbarra (parchi)', [R.puoFare(corretto.find(r => r.codice === 'EX681'), { tipoAllen:'aperto', attrezzatura:[] }), R.puoFare(corretto.find(r => r.codice === 'EX072'), { tipoAllen:'aperto', attrezzatura:[] })], [true, true]);
     const html = fs.readFileSync(path.join(__dirname, '..', '..', 'zona-tracker.html'), 'utf8');
     const gen = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'training_generatore.js'), 'utf8');
-    atteso('1 · la pillola c\'è nell\'attrezzatura dell\'onboarding, con la parola del catalogo', /data-gear="parallele" onclick="m1ToggleAttrezzatura\('parallele'\)">Parallele \/ dip station</.test(html), true);
+    const onb = fs.readFileSync(path.join(__dirname, '..', '..', 'app', 'onboarding.js'), 'utf8');   // dal Training 560 le pillole vengono dalla lista ATTREZZI_SCELTA
+    atteso('1 · la pillola c\'è nell\'attrezzatura dell\'onboarding, con la parola del catalogo', /\{ slug:'parallele', nome:'Parallele \/ dip station' \}/.test(onb), true);
     atteso('1 · «parallele» nella lista dell\'aperto del generatore, nessun alias in GEAR_ALIASES', [/APERTO_WHITELIST = new Set\(\[[^\]]*'parallele'/.test(gen), /GEAR_ALIASES = \{[^}]*parallele/.test(gen)], [true, false]);
     atteso('1 · dopo il foglio corretto «parallele» è viva: 7 righe la usano come attrezzo', tsv.slice(1).filter(r => r[3] === 'parallele').length, 7);
   }

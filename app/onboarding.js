@@ -227,8 +227,85 @@ const M1_DAYS_DESC = {
   5: { title: '5 giorni · U/L + EXTRA',  desc: 'Quattro sessioni split più un giorno dedicato (core o cardio).' },
 };
 
+// ── L'attrezzatura di casa (Training 560, 2 novembre 2026): una lista sola per l'onboarding e le Impostazioni ──
+// Prima le pillole erano scritte nella pagina, solo nell'onboarding: chi era già dentro non poteva cambiarle. Gli
+// slug sono quelli salvati in profiles.attrezzatura; `equivalenti` sono le parole dei profili di prima che valgono come
+// la pillola (i profili vecchi hanno «elastico», non «elastici_tubo»): accendono la pillola e si tolgono con lei.
+// Le parole del catalogo le aggiunge ZTCoachRules.ALIAS_ATTREZZI, non questa lista.
+const ATTREZZI_SCELTA = [
+  { slug:'elastici_tubo', nome:'Elastici a tubo', equivalenti:['elastico'] },
+  { slug:'manubri', nome:'Manubri' },
+  { slug:'bilanciere', nome:'Bilanciere + dischi' },
+  { slug:'kettlebell', nome:'Kettlebell' },
+  { slug:'panca', nome:'Panca' },
+  { slug:'sbarra', nome:'Sbarra per trazioni' },
+  { slug:'fitball', nome:'Fitball' },
+  { slug:'trx', nome:'TRX / anelli' },
+  { slug:'parallele', nome:'Parallele / dip station' },
+];
+// Accessori elastici: si vedono solo con «Elastici a tubo» acceso e se ne vanno con lui (RITOCCO 2)
+const ATTREZZI_ACCESSORI = [
+  { slug:'maniglie', nome:'Maniglie' },
+  { slug:'barra_corta', nome:'Barra corta' },
+  { slug:'barra_lunga', nome:'Barra lunga' },
+  { slug:'cavigliere', nome:'Cavigliere', equivalenti:['cavigliera'] },
+];
 // Slug attrezzi accessori elastici (gestione visibility/cleanup quando "elastici_tubo" è spento).
-const M1_GEAR_ELASTIC_ACCESSORIES = ['maniglie','barra_corta','barra_lunga','cavigliere'];
+const M1_GEAR_ELASTIC_ACCESSORIES = ATTREZZI_ACCESSORI.map(a => a.slug);
+function _attrezzoVoce(slug){ return ATTREZZI_SCELTA.concat(ATTREZZI_ACCESSORI).find(v => v.slug === slug) || null; }
+// La pillola è accesa se c'è il suo slug o una parola equivalente.
+function attrezzoSegnato(lista, slug){
+  const v = _attrezzoVoce(slug), l = Array.isArray(lista) ? lista : [];
+  return l.includes(slug) || !!(v && (v.equivalenti || []).some(e => l.includes(e)));
+}
+// Accende o spegne una pillola → lista nuova (le altre parole del profilo restano, anche quelle senza pillola).
+// Spenta: via lo slug e i suoi equivalenti; spenti gli elastici, via anche gli accessori.
+function attrezziToggle(lista, slug){
+  const l = (Array.isArray(lista) ? lista : []).slice();
+  const via = (s) => { const v = _attrezzoVoce(s); [s, ...((v && v.equivalenti) || [])].forEach(t => { const i = l.indexOf(t); if(i >= 0) l.splice(i, 1); }); };
+  if(!attrezzoSegnato(l, slug)){ l.push(slug); return l; }
+  via(slug);
+  if(slug === 'elastici_tubo') M1_GEAR_ELASTIC_ACCESSORIES.forEach(via);
+  return l;
+}
+// Le pillole, per chi le disegna: fn è il nome della funzione che le accende (onclick).
+function attrezziPilloleHTML(lista, fn){
+  const p = (v) => `<button type="button" class="m1-pill-toggle${attrezzoSegnato(lista, v.slug) ? ' selected' : ''}" data-gear="${v.slug}" onclick="${fn}('${v.slug}')">${esc(v.nome)}</button>`;
+  return { attrezzi: ATTREZZI_SCELTA.map(p).join(''), accessori: ATTREZZI_ACCESSORI.map(p).join('') };
+}
+// Le righe del catalogo per gli attrezzi (avviso L2 e conto degli esercizi che non si possono più fare), lette una volta.
+async function catalogoAttrezzi(){
+  if(Array.isArray(ST.catalogoAttrezzi)) return ST.catalogoAttrezzi;
+  if(!ST.catalogoAttrezziInCorso){
+    ST.catalogoAttrezziInCorso = dbqAll('leggere gli attrezzi del catalogo', () => supa.from('esercizi_catalog')
+      .select('codice, attrezzo, surrogato_attrezzo, luogo').order('codice', { ascending:true }), { silenzioso:true })
+      .then(r => { ST.catalogoAttrezziInCorso = null; if(!r.error && Array.isArray(r.data)) ST.catalogoAttrezzi = r.data; return ST.catalogoAttrezzi || null; });
+  }
+  return ST.catalogoAttrezziInCorso;
+}
+// L'avviso sotto le pillole (L2): gli attrezzi segnati che non aprono nessun esercizio. '' se non ce ne sono o se il
+// catalogo non si legge (senza rete non si avvisa a vuoto).
+async function attrezziAvvisoTesto(lista){
+  const righe = await catalogoAttrezzi();
+  if(!righe) return '';
+  const nomi = ZTCoachRules.attrezziInerti(lista, righe).map(t => {
+    const v = ATTREZZI_SCELTA.concat(ATTREZZI_ACCESSORI).find(x => x.slug === t || (x.equivalenti || []).includes(t));
+    return v ? v.nome : t.replace(/_/g, ' ');
+  }).filter((n, i, a) => a.indexOf(n) === i);
+  if(!nomi.length) return '';
+  return `${nomi.map(n => `«${n}»`).join(', ')}: per ora nel catalogo nessun esercizio ${nomi.length === 1 ? 'lo usa' : 'li usa'}. Puoi ${nomi.length === 1 ? 'segnarlo' : 'segnarli'}, ma non cambia${nomi.length === 1 ? '' : 'no'} gli esercizi.`;
+}
+// L'onboarding: le pillole si disegnano dalla lista, nella pagina restano solo i contenitori.
+function m1GearDisegna(){
+  const lista = (ST.m1Data && ST.m1Data.attrezzatura) || [];
+  const h = attrezziPilloleHTML(lista, 'm1ToggleAttrezzatura');
+  const a = document.getElementById('m1-gear-attrezzi'), b = document.getElementById('m1-gear-accessori');
+  if(a) a.innerHTML = h.attrezzi;
+  if(b) b.innerHTML = h.accessori;
+  m1GearApplyVisibility();
+  const nota = document.getElementById('m1-gear-nota');
+  if(nota) attrezziAvvisoTesto(lista).then(t => { if(JSON.stringify((ST.m1Data && ST.m1Data.attrezzatura) || []) === JSON.stringify(lista)){ nota.textContent = t; nota.style.display = t ? 'block' : 'none'; } });
+}
 
 // Sequenza dinamica step M1 — dipende da usa_training + tipo_allenamento.
 // Ritorna l'array ordinato di step ID che l'utente attraverserà.
@@ -456,23 +533,10 @@ function m1SelectTipoAllenamento(val) {
 // RITOCCO 2: il gruppo "Accessori elastici" è visibile SOLO se "Elastici a tubo"
 // è acceso. Spegnere "Elastici a tubo" deseleziona anche gli accessori già scelti
 // (no fantasmi salvati in DB senza la pillola madre).
+// La regola sta in attrezziToggle (Training 560): la stessa delle Impostazioni.
 function m1ToggleAttrezzatura(slug) {
-  const arr = ST.m1Data.attrezzatura;
-  const i = arr.indexOf(slug);
-  if (i >= 0) arr.splice(i, 1);
-  else arr.push(slug);
-  document.querySelectorAll(`#m1-s-gear [data-gear="${slug}"]`).forEach(el =>
-    el.classList.toggle('selected', arr.includes(slug)));
-  // Cleanup accessori elastici se "elastici_tubo" è stato spento
-  if (slug === 'elastici_tubo' && !arr.includes('elastici_tubo')) {
-    M1_GEAR_ELASTIC_ACCESSORIES.forEach(acc => {
-      const ai = arr.indexOf(acc);
-      if (ai >= 0) arr.splice(ai, 1);
-      document.querySelectorAll(`#m1-s-gear [data-gear="${acc}"]`).forEach(el =>
-        el.classList.remove('selected'));
-    });
-  }
-  m1GearApplyVisibility();
+  ST.m1Data.attrezzatura = attrezziToggle(ST.m1Data.attrezzatura, slug);
+  m1GearDisegna();
 }
 
 // Show/hide del blocco "Esperienza con l'allenamento" (s4) in base a usa_training.
@@ -490,7 +554,7 @@ function m1S4ApplyExperienceVisibility() {
 function m1GearApplyVisibility() {
   const block = document.getElementById('m1-gear-accessories-block');
   if (!block) return;
-  const on = (ST.m1Data.attrezzatura || []).includes('elastici_tubo');
+  const on = attrezzoSegnato(ST.m1Data.attrezzatura || [], 'elastici_tubo');
   block.style.display = on ? 'block' : 'none';
 }
 
@@ -584,8 +648,7 @@ function m1ApplySelections() {
     document.querySelectorAll('#m1-s-where .m1-card-level').forEach(el =>
       el.classList.toggle('selected', el.getAttribute('data-where') === d.tipo_allenamento));
   }
-  (d.attrezzatura || []).forEach(slug => document.querySelectorAll(`#m1-s-gear [data-gear="${slug}"]`).forEach(el => el.classList.add('selected')));
-  m1GearApplyVisibility();
+  m1GearDisegna();
   if (d.giorni_allenamento) {
     document.querySelectorAll('#m1-s-days [data-days]').forEach(el =>
       el.classList.toggle('selected', parseInt(el.getAttribute('data-days'), 10) === d.giorni_allenamento));
