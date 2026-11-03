@@ -264,6 +264,7 @@ function apriFoglioAnalisi(o){
       const righe = (o.esami || []).map(e => ({ nome: e.nome, valore: e.valore, unita: e.unita || '', chiave: e.chiave || null, rif_min: e.rif_min, rif_max: e.rif_max }));
       let donazione = !!o.donazione;
       const h = document.createElement('div');
+      h.className = 'an-foglio-corpo';   // scorre lui: titolo e righe dentro, «Salva» resta sempre in vista
       const disegna = () => {
         h.innerHTML = `<h3 class="foglio-titolo">${o.id ? 'Modifica le analisi' : o.fonte === 'lettura' ? `Analisi lette da ${esc(COACH_NAME)}` : 'Nuove analisi'}</h3>
           ${o.fonte === 'lettura' && !o.id ? `<p class="an-foglio-nota">${righe.length} valor${righe.length === 1 ? 'e' : 'i'} dal referto${o.data ? '' : ', senza la data del prelievo: scrivila tu'}. Controlla, correggi, poi «Salva».${o.note ? ' ' + esc(o.note) : ''}</p>` : ''}

@@ -3096,6 +3096,10 @@ html.v5 .w5-freccia{font-size:20px;color:var(--t2);}
 .an-linea{fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .an-punto{fill:var(--acc);}
 .an-punto-fuori{fill:var(--z-nutrition-scuro);}
+.foglio.an-foglio{display:flex;flex-direction:column;max-width:440px;max-height:calc(100dvh - 48px - env(safe-area-inset-top) - env(safe-area-inset-bottom));}
+.an-foglio-corpo{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin:0 -4px 12px;padding:0 4px;}
+.an-foglio .foglio-bottoni{flex-shrink:0;}
+.an-foglio-riga .inp{margin-bottom:0;}
 .an-foglio-nota{font-family:var(--font-sans);font-size:13px;color:var(--t2);line-height:1.45;margin:0 0 10px;}
 .an-foglio-lbl{display:block;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:8px 0 4px;}
 .an-foglio-righe{margin-top:10px;}
