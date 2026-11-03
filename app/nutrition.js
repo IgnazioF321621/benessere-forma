@@ -6347,7 +6347,9 @@ function rsAvviso(testo, annulla) {
 // Le scritture sono due, su supplement_package_items, con scriviConCoda (senza rete vanno in coda): mettere = insert con
 // l'id scelto dal telefono (un rinvio doppio risponde 23505, e il vincolo package_id+supplement_id lo rende innocuo);
 // togliere = delete per gruppo, prodotto e persona. Anche l'editor dei pacchetti toglie con gruppoTogli: una via sola.
-// Nessuna lettura: ST.packages si aggiorna in memoria e nella copia locale.
+// Nessuna lettura: ST.packages si aggiorna in memoria (la copia locale non salva i gruppi: _cachePacchetto non li ha, e
+// all'apertura si rileggono con loadPackages). Se una scrittura fallisce per l'API si rimette solo l'elemento toccato,
+// mai una fotografia di prima: le modifiche fatte nel frattempo restano.
 // ═══════════════════════════════════════════════════════════
 function _gruppoPkg(pid) { return (ST.packages || []).find(p => String(p.id) === String(pid)); }
 // ordine: la posizione nel gruppo (con «Annulla» il prodotto torna dov'era); senza, in fondo
@@ -6362,14 +6364,20 @@ async function gruppoMetti(pid, sid, ordine) {
   if (res.error && res.error.code !== '23505') { p.items = p.items.filter(it => it.id !== riga.id); return false; }
   return true;
 }
+// Risponde true (tolto), false (l'API ha rifiutato: il prodotto torna al suo posto) o null (non era nel gruppo: niente da fare)
 async function gruppoTogli(pid, sid) {
   const p = _gruppoPkg(pid);
-  if (!p || !(p.items || []).some(it => it.supplement_id === sid)) return false;
-  const prima = p.items;
-  p.items = prima.filter(it => it.supplement_id !== sid);
+  const tolto = p && (p.items || []).find(it => it.supplement_id === sid);
+  if (!tolto) return null;
+  p.items = p.items.filter(it => it !== tolto);
   const res = await scriviConCoda('togliere l\'integratore dal gruppo', { tabella:'supplement_package_items', tipo:'delete',
     filtri:[['package_id', p.id], ['supplement_id', sid], ['user_id', ST.user.id]] });
-  if (res.error) { p.items = prima; return false; }
+  if (res.error) {
+    // revisore di Stile 050: si rimette solo questo, nella sua posizione; ciò che è cambiato nel frattempo resta
+    if (!(p.items || []).some(it => it.supplement_id === sid))
+      p.items = [...(p.items || []), tolto].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    return false;
+  }
   return true;
 }
 function _rsGruppoModificaHTML(g) {
@@ -7881,8 +7889,12 @@ function pkgEditorRemoveItem(supplementId) {
     if(!ST.pkgRemoveItemConfirm) return; // già undone
     const conf = ST.pkgRemoveItemConfirm;
     ST.pkgRemoveItemConfirm = null;
-    // Stile 050: la stessa scrittura del foglio «Registra integratori» (gruppoTogli: coda, per gruppo e prodotto), che aggiorna anche ST.packages
-    if(e.packageId) await gruppoTogli(e.packageId, conf.supplementId);
+    // Stile 050: la stessa scrittura del foglio «Registra integratori» (gruppoTogli: coda, per gruppo e prodotto), che aggiorna anche ST.packages.
+    // Se l'API rifiuta, il prodotto torna anche nell'editor, nella sua posizione (revisore di Stile 050)
+    const esito = e.packageId ? await gruppoTogli(e.packageId, conf.supplementId) : null;
+    if(esito === false && e._pendingRemove && !e.items.some(x => x.supplement_id === conf.supplementId)) {
+      e.items = [...e.items, e._pendingRemove].sort((a,b) => (a.sort_order||0) - (b.sort_order||0));
+    }
     saveCache();
     if(ST.packageEditor) delete ST.packageEditor._pendingRemove;
     renderPackageEditor();

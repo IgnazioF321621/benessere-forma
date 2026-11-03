@@ -109,6 +109,25 @@ async function avvia(v5){
   win.openPackageEditor('pA'); win.pkgEditorRemoveItem('s1'); await attendi(4200);
   atteso('editor dei pacchetti · «Rimuovi» dopo 4 secondi: la stessa scrittura del foglio, e il gruppo in memoria si aggiorna', [scritture(n6), legami('pA').includes('s1')], [['delete:package_id=pA&supplement_id=s1&user_id=u1'], false]);
   win.closePackageEditor();
+
+  // revisore di Stile 050: un rifiuto dell'API rimette solo l'elemento tolto, al suo posto; ciò che è cambiato nel frattempo resta
+  {
+    const ordine = () => (ST.packages.find(p => p.id === 'pA').items || []).map(it => it.supplement_id);
+    const prima = ordine();
+    const vera = win.scriviConCoda; let rifiuta;
+    win.scriviConCoda = (op, o) => o.tabella === 'supplement_package_items' && o.filtri && o.filtri[1][1] === 's2'
+      ? new Promise(r => { rifiuta = () => r({ data:null, error:{ code:'42501', message:'permesso negato' } }); }) : vera(op, o);
+    const x = win.gruppoTogli('pA', 's2');          // X: l'API lo rifiuterà dopo
+    const y = await win.gruppoTogli('pA', 's7');    // Y: riesce nel frattempo
+    rifiuta(); const ex = await x;
+    win.scriviConCoda = vera;
+    atteso('X rifiutato mentre Y riesce · X torna al suo posto, Y resta fuori (niente fotografia di prima)', [ex, y, ordine()], [false, true, prima.filter(id => id !== 's7')]);
+  }
+  t.__rifiuta = { supplement_package_items:{ code:'42501', message:'permesso negato' } };
+  win.openPackageEditor('pA'); win.pkgEditorRemoveItem('s5'); await attendi(4200);
+  atteso('editor · se l\'API rifiuta, il prodotto torna nell\'editor e nel gruppo', [ST.packageEditor.items.some(it => it.supplement_id === 's5'), legami('pA').includes('s5')], [true, true]);
+  t.__rifiuta = undefined;
+  win.closePackageEditor();
   atteso('zero errori in console', b.logs.filter(l => l[0] === 'jsdomError' && !/register/.test(l[1])).length, 0);
 
   // veste spenta: niente Modifica
