@@ -511,11 +511,11 @@ async function scriviConCoda(operazione, op) {
 // e in app_errors, e il giro prosegue.
 const CODA_TENTATIVI = 5;
 const CODA_ATTESA_MS = 12000;   // supabase-js non ha un tempo massimo: una richiesta appesa fermerebbe ogni salvataggio
-function _codaDaRiprovare(err) {
+function _codaDaRiprovare(err, status) {
   const c = String((err && err.code) || '');
   if (!c) return true;
-  if (['PGRST301', 'PGRST303', '42501', '40001', '40P01'].includes(c) || /^(08|53|57)/.test(c)) return true;
-  return Number(err && err.status) >= 500;
+  if (['PGRST301', 'PGRST303', '42501', '40001', '40P01'].includes(c) || /^PGRST00[0-3]$/.test(c) || /^(08|53|57)/.test(c)) return true;
+  return Number(status) >= 500;   // lo stato sta sulla risposta, non sull'errore di postgrest-js
 }
 function _codaMettiDaParte(it, err) {
   const chiave = 'zt_coda_scartate_' + ((ST.user && ST.user.id) || 'anon');
@@ -532,6 +532,8 @@ function _codaRispondi(it, esito) {
   const r = it.qid && _codaAttese[it.qid];
   if (r) { delete _codaAttese[it.qid]; r(esito); }
 }
+// Scaduto il tempo, la richiesta resta in volo: se arriva tardi, un giro dopo puo' gia' aver mandato le voci
+// successive. Serve un'attesa di oltre 12 secondi; il caso e' accettato, non risolto.
 function _conTempo(promessa, ms) {
   let t;
   const scaduto = new Promise(r => { t = setTimeout(() => r({ data: null, error: { message: 'Failed to fetch: nessuna risposta in ' + Math.round(ms / 1000) + ' secondi', code: '' } }), ms); });
@@ -561,18 +563,22 @@ async function _codaSvuota() {
     catch (e) { _codaTogliTesta(it); _codaMettiDaParte(it, { message: String(e && e.message || e), code: 'coda' }); scartate++; continue; }
     const res = await _conTempo(dbq(it.operazione, richiesta, { silenzioso: true }), CODA_ATTESA_MS);
     const err = res.error;
-    // 23505 su un inserimento: gia' arrivato se la richiesta poteva essere partita, o se e' la chiave primaria
-    // (l'id scelto dal telefono); su un altro vincolo (una serie gia' registrata da un altro telefono) e' un rifiuto
+    // 23505 su un inserimento vale «gia' arrivato» solo sulla chiave primaria (l'id scelto dal telefono): se la
+    // riga e' arrivata davvero, Postgres segnala quella. Su un altro vincolo (la stessa serie gia' registrata da
+    // un altro telefono) e' un rifiuto, anche se la richiesta poteva essere partita
     const giaArrivata = err && it.op.tipo === 'insert' && err.code === '23505'
-      && (it.tentato || /_pkey/i.test(String(err.message || '') + ' ' + String(err.details || '')));
+      && /_pkey|Key \(id\)=/i.test(String(err.message || '') + ' ' + String(err.details || ''));
     if (!err || giaArrivata) { _codaTogliTesta(it); _codaRispondi(it, {}); fatte++; continue; }
-    if (_codaDaRiprovare(err)) {
+    if (_codaDaRiprovare(err, res.status)) {
       const q = _codaLeggi();
       if (q.length && _codaStessa(q[0], it)) {
         q[0].tentato = true;   // poteva essere partita
-        if (err.code) q[0].tentativi = (q[0].tentativi || 0) + 1;   // la rete muta non conta: aspetta e basta
+        // la rete muta (e il tempo scaduto) non conta: aspetta e basta. Ogni altro rifiuto conta, anche senza
+        // codice (una risposta del gateway che non e' JSON), cosi' nessuna voce ferma la coda per sempre
+        const rete = _erroreDiRete(err);
+        if (!rete) q[0].tentativi = (q[0].tentativi || 0) + 1;
         _codaSalva(q);
-        if (!err.code || q[0].tentativi < CODA_TENTATIVI) break;
+        if (rete || q[0].tentativi < CODA_TENTATIVI) break;
       } else break;
     }
     // da parte: lei e i passi dopo dello stesso salvataggio

@@ -132,6 +132,39 @@ async function nuovo() {
     const r = await a.scrivi('salvare la serie', { tabella:'supplements_log', tipo:'insert', righe:{ ...X, id:'x3' } });
     atteso('23505 non sulla chiave · a chi chiama torna il rifiuto, non «fatto»', [r.error && r.error.code, a.coda().length], ['23505', 0]);
   }
+  // 4c-bis) Un rifiuto senza codice che non è la rete (un gateway che risponde HTML) conta i giri e poi va da parte;
+  // PGRST002 (database in riavvio) si riprova; una serie già registrata altrove non vale «fatto» nemmeno se la
+  // richiesta poteva essere partita
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.__rifiuta = { supplements_log:{ code:'', message:'<html>502 Bad Gateway</html>' } };
+    for(let i = 0; i < 5; i++) await a.win.svuotaCoda();
+    const daParte = JSON.parse(a.win.localStorage.getItem('zt_coda_scartate_' + U) || '[]');
+    atteso('senza codice, non rete · dopo 5 giri da parte, la coda si libera', [a.coda().length, daParte.length], [0, 1]);
+  }
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    await a.togli();
+    a.t.__rete = undefined;
+    a.t.__rifiuta = { supplements_log:{ code:'PGRST002', message:'Could not query the database for the schema cache' } };
+    await a.win.svuotaCoda();
+    atteso('PGRST002 · si riprova: resta in coda, niente da parte', [a.coda().length, a.win.localStorage.getItem('zt_coda_scartate_' + U)], [1, null]);
+  }
+  {
+    const a = await nuovo();
+    a.t.__rete = false;
+    const r0 = await a.scrivi('salvare la serie', { tabella:'supplements_log', tipo:'insert', righe:{ ...X, id:'x9' } });
+    const q = a.coda(); q[0].tentato = true; a.win.localStorage.setItem('zt_coda_' + U, JSON.stringify(q));   // come dopo una rete caduta a metà
+    a.t.__rete = undefined;
+    a.t.__rifiuta = { supplements_log:{ code:'23505', message:'duplicate key value violates unique constraint "training_logs_una_serie"' } };
+    await a.win.svuotaCoda();
+    const daParte = JSON.parse(a.win.localStorage.getItem('zt_coda_scartate_' + U) || '[]');
+    atteso('23505 su un altro vincolo, già tentata · da parte, non «fatto»', [r0.inCoda, a.coda().length, daParte.map(d => d.codice)], [true, 0, ['23505']]);
+  }
   // 4d) I passi di un salvataggio solo: se il primo va da parte, anche gli altri (niente pasto senza ingredienti)
   {
     const a = await nuovo();
