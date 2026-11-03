@@ -64,28 +64,38 @@ var ZTEsami = (function(){
     { chiave:'testosterone',    label:'Testosterone totale',        colonna:null,              unita:'ng/dL',  nomi:['testosterone', 'testosterone totale'],                                  fascia:{ M:[300, 1000], F:[15, 70] },      fonte:LAB },
   ];
   var MAX_RIGHE = 80, MAX_NOME = 60, MAX_UNITA = 20, MAX_NOTE = 300;
+  // Parole che dicono «è un altro esame»: «Emoglobina corpuscolare media» non è l'emoglobina, «Creatinina clearance»
+  // non è la creatinina, «Glucosio (urine)» non è la glicemia (revisione del 3 novembre 2026). Il nome resta, la chiave no.
+  var ESCLUSIONI = ['corpuscolare', 'legante', 'clearance', 'libero', 'libera', 'eritrocitario', 'eritrocitaria', 'urine', 'urinario', 'urinaria', 'rapporto', 'non hdl', 'indice', 'media', 'medio', 'capacita', 'saturazione', 'frazione', 'reductase', 'reduttasi', 'biodisponibile', 'glicosilata ', 'post', 'curva', 'ovaio'];
+  // Le unità che dicono la stessa cosa (normalizzate: minuscole, senza spazi, µ → u). Una colonna di blood_tests si
+  // riempie solo se l'unità stampata è quella attesa o una sua equivalente: vitamina D in nmol/L o glicemia in mmol/L
+  // restano solo in `esami`, altrimenti il quadro e il coach leggerebbero numeri sbagliati (revisione del 3 novembre).
+  var UNITA_EQ = { 'ng/ml': ['ng/ml', 'ug/l', 'mcg/l'], 'uui/ml': ['uui/ml', 'uu/ml', 'mui/l', 'miu/l', 'uiu/ml', 'mu/l'], 'u/l': ['u/l', 'ui/l', 'iu/l'], 'pg/ml': ['pg/ml', 'ng/l'], 'mg/dl': ['mg/dl'], 'g/dl': ['g/dl', 'g/100ml'], 'ug/dl': ['ug/dl', 'mcg/dl'], 'umol/l': ['umol/l'], 'mg/l': ['mg/l'], 'ng/dl': ['ng/dl'], '%': ['%'] };
 
   var perChiave = {};
   ESAMI.forEach(function(e){ perChiave[e.chiave] = e; });
   function esame(chiave){ return perChiave[chiave] || null; }
 
-  // «Colesterolo HDL (metodo enzimatico)» → «colesterolo hdl metodo enzimatico»
+  // «Colesterolo-HDL (metodo enzimatico)» → «colesterolo hdl metodo enzimatico»: trattini e barre diventano spazi
   function normalizza(s){
     return String(s || '').toLowerCase()
       .replace(/[àá]/g, 'a').replace(/[èé]/g, 'e').replace(/[ìí]/g, 'i').replace(/[òó]/g, 'o').replace(/[ùú]/g, 'u')
-      .replace(/[^a-z0-9%\- ]+/g, ' ').replace(/\s+/g, ' ').trim();
+      .replace(/[\-\/]+/g, ' ').replace(/[^a-z0-9% ]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
-  // Il nome del referto → la chiave. Combacia un nome intero, o un nome seguito da uno spazio/parentesi, o un nome
-  // dentro il testo fra confini di parola; fra più nomi che combaciano vince il più lungo (così «colesterolo hdl»
-  // va in hdl, non in colesterolo_tot). Sigle di una o due lettere solo se il testo è esattamente quelle.
+  // Il nome del referto → la chiave. Un nome del vocabolario combacia solo se è l'intero testo o la sua TESTA
+  // (seguita da uno spazio): «Emoglobina (Hb)» sì, «Emoglobina corpuscolare media» no (parola di esclusione), «Capacità
+  // totale legante il ferro» no (il ferro non è in testa). Fra più nomi che combaciano vince il più lungo, così
+  // «colesterolo hdl» va in hdl e non in colesterolo_tot.
   function riconosci(nome){
     var t = normalizza(nome);
     if(!t) return null;
+    var tt = ' ' + t + ' ';
+    for(var i = 0; i < ESCLUSIONI.length; i++) if(tt.indexOf(' ' + ESCLUSIONI[i].trim() + ' ') >= 0 || (ESCLUSIONI[i].slice(-1) === ' ' && tt.indexOf(' ' + ESCLUSIONI[i]) >= 0)) return null;
     var migliore = null, lung = 0;
     ESAMI.forEach(function(e){
       e.nomi.forEach(function(n){
         var a = normalizza(n);
-        var ok = t === a || (a.length >= 3 && (t.indexOf(a + ' ') === 0 || t.indexOf(a + '-') === 0 || (' ' + t + ' ').indexOf(' ' + a + ' ') >= 0));
+        var ok = t === a || t.indexOf(a + ' ') === 0;
         if(ok && a.length > lung){ migliore = e.chiave; lung = a.length; }
       });
     });
@@ -94,7 +104,7 @@ var ZTEsami = (function(){
 
   function numero(v){
     if(v == null || v === '') return null;
-    if(typeof v === 'string'){ v = v.replace(',', '.').replace(/[^0-9.\-]/g, ''); if(!/\d/.test(v)) return null; }
+    if(typeof v === 'string'){ v = v.trim(); if(/^[<>≤≥]/.test(v)) return null; v = v.replace(',', '.').replace(/[^0-9.\-]/g, ''); if(!/\d/.test(v)) return null; }   // «< 5» è un limite di rilevazione, non un valore
     var n = Number(v);
     return isFinite(n) ? n : null;
   }
@@ -118,7 +128,8 @@ var ZTEsami = (function(){
   }
 
   // La risposta del modello (o le righe corrette nel foglio) → { riconosciuto, data_prelievo, esami, letti, note }.
-  // Ogni riga: { nome, chiave, valore, unita, rif_min, rif_max }. Una chiave già vista non si ripete (resta la prima).
+  // Ogni riga: { nome, chiave, valore, unita, rif_min, rif_max }. Una chiave già vista non si ripete: la seconda riga
+  // RESTA, col suo nome e senza chiave (si trascrive, non entra in colonna).
   function valida(grezzo){
     var o = grezzo && typeof grezzo === 'object' ? grezzo : {};
     var righe = Array.isArray(o.esami) ? o.esami : [];
@@ -128,7 +139,7 @@ var ZTEsami = (function(){
       var nome = testo(r.nome, MAX_NOME), valore = numero(r.valore);
       if(!nome || valore == null) return;
       var chiave = riconosci(nome) || (r.chiave && perChiave[r.chiave] ? r.chiave : null);   // il nome stampato vince sulla chiave del modello
-      if(chiave){ if(viste[chiave]) return; viste[chiave] = true; }
+      if(chiave){ if(viste[chiave]) chiave = null; else viste[chiave] = true; }
       var riga = { nome: nome, chiave: chiave, valore: valore, unita: testo(r.unita, MAX_UNITA) };
       var mn = numero(r.rif_min), mx = numero(r.rif_max);
       if(mn != null) riga.rif_min = mn;
@@ -182,13 +193,21 @@ var ZTEsami = (function(){
     return '';
   }
 
-  // Le 11 colonne di blood_tests dalle righe riconosciute
+  function unitaNorm(u){ return String(u || '').toLowerCase().replace(/[µμ]/g, 'u').replace(/\s+/g, ''); }
+  // L'unità stampata è quella attesa per quell'esame (o una equivalente)? Vuota = si prende per buona.
+  function unitaCombacia(e, u){
+    var n = unitaNorm(u);
+    if(!n) return true;
+    var attesa = unitaNorm(e.unita), eq = UNITA_EQ[attesa] || [attesa];
+    return eq.indexOf(n) >= 0;
+  }
+  // Le 11 colonne di blood_tests dalle righe riconosciute, solo con l'unità attesa
   function inColonne(righe){
     var out = {};
     ESAMI.forEach(function(e){ if(e.colonna) out[e.colonna] = null; });
     (righe || []).forEach(function(r){
       var e = r && r.chiave && perChiave[r.chiave];
-      if(e && e.colonna && r.valore != null) out[e.colonna] = r.valore;
+      if(e && e.colonna && r.valore != null && unitaCombacia(e, r.unita)) out[e.colonna] = r.valore;
     });
     return out;
   }
@@ -221,6 +240,6 @@ var ZTEsami = (function(){
 
   return { VERSIONE: VERSIONE, ESAMI: ESAMI, MAX_RIGHE: MAX_RIGHE, MAX_NOTE: MAX_NOTE, esame: esame, normalizza: normalizza, riconosci: riconosci,
     dataPrelievo: dataPrelievo, valida: valida, fascia: fascia, fasciaPer: fasciaPer, fuoriFascia: fuoriFascia, mostraFascia: mostraFascia,
-    inColonne: inColonne, daRiga: daRiga, serie: serie, riassunto: riassunto, testo: testo, numero: numero };
+    inColonne: inColonne, daRiga: daRiga, serie: serie, riassunto: riassunto, testo: testo, numero: numero, unitaCombacia: unitaCombacia, ESCLUSIONI: ESCLUSIONI };
 })();
 if(typeof module === 'object' && module && module.exports) module.exports = ZTEsami;

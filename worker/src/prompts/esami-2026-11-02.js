@@ -18,7 +18,7 @@ Regole:
 - "esami": una voce per ogni riga con un numero. "nome" è il nome dell'esame COME STAMPATO; "valore" il numero com'è scritto, senza unità e senza arrotondare (la virgola decimale diventa punto); "unita" l'unità COME STAMPATA (mg/dL, g/dL, ng/mL, µUI/mL, %, …), stringa vuota se non c'è.
 - "chiave": se l'esame è uno di quelli dell'elenco qui sotto, la sua chiave; altrimenti null. Non forzare: «Colesterolo HDL» è "hdl", «Colesterolo totale» è "colesterolo_tot", una riga che non è nell'elenco resta null ma va trascritta lo stesso.
 - "rif_min" e "rif_max": i valori di riferimento stampati sulla riga, come numeri (per «70 - 99» sono 70 e 99; per «< 200» rif_min null e rif_max 200; per «> 40» rif_min 40 e rif_max null); null se non stampati. Non inventarli mai.
-- Una riga senza risultato numerico (positivo/negativo, assente, «vedi nota»), tagliata o illeggibile si salta. Non indovinare mai e non calcolare un valore da altri.
+- Una riga senza risultato numerico (positivo/negativo, assente, «vedi nota»), con un limite al posto del numero («< 5», «> 100»: non è un valore misurato), tagliata o illeggibile si salta. Non indovinare mai e non calcolare un valore da altri.
 - "data_prelievo": la data del prelievo (o di accettazione, se è l'unica) stampata sul referto, nel formato YYYY-MM-DD; se manca, null.
 - "riconosciuto": true solo se il file è davvero un referto di analisi di laboratorio; altrimenti false e "esami" vuoto.
 - "note": una frase, solo se qualcosa non si è letto (pagina mancante, immagine sfocata, esami saltati); altrimenti stringa vuota.

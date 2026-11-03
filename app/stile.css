@@ -3051,11 +3051,13 @@ html.v5 .w5-freccia{font-size:20px;color:var(--t2);}
 .an-numero{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
 .an-numero small{font-weight:400;color:var(--t3);}
 .an-numero .an-delta{margin-left:6px;font-size:10px;}
-.an-segno{margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:rgba(var(--warn-rgb),.18);color:var(--warn);}
-.an-fuori .an-numero{color:var(--warn);}
+.an-segno{margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:var(--z-nutrition-velo);color:var(--z-nutrition-scuro);}
+.an-fuori .an-numero{color:var(--z-nutrition-scuro);}   /* ambra scura, 8:1 su bianco: il segno «fuori fascia» si legge */
 .an-medico{margin-top:10px;font-family:var(--font-sans);font-size:11px;color:var(--t3);}
 .an-tasti{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.an-elimina{color:var(--err);}
+.an-tasto{min-height:44px;padding:0 14px;border:1px solid var(--b1);border-radius:999px;background:var(--s1);font-family:var(--font-sans);font-size:13px;font-weight:700;color:var(--t1);cursor:pointer;}
+.an-pirsi-tasto{margin-top:4px;}
+.an-elimina{color:var(--t2);}
 .an-pirsi{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--s2);}
 .an-pirsi-chi{flex-shrink:0;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);padding-top:2px;}
 .an-pirsi-testo{font-family:var(--font-sans);font-size:13px;line-height:1.45;color:var(--t1);}
@@ -3064,13 +3066,13 @@ html.v5 .w5-freccia{font-size:20px;color:var(--t2);}
 .an-card-nome{font-family:var(--font-sans);font-size:14px;font-weight:700;color:var(--t1);}
 .an-card-ultimo{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
 .an-card-ultimo small{margin-left:6px;font-weight:400;color:var(--t3);}
-.an-card-ultimo.an-fuori{color:var(--warn);}
+.an-card-ultimo.an-fuori{color:var(--z-nutrition-scuro);}
 .an-card-fascia{font-family:var(--font-mono);font-size:10px;color:var(--t3);margin-top:4px;}
 .an-grafico{margin-top:6px;}
 .an-fascia{fill:rgba(var(--acc-rgb),.10);}
 .an-linea{fill:none;stroke:var(--acc);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .an-punto{fill:var(--acc);}
-.an-punto-fuori{fill:var(--warn);}
+.an-punto-fuori{fill:var(--z-nutrition-scuro);}
 .an-foglio-nota{font-family:var(--font-sans);font-size:13px;color:var(--t2);line-height:1.45;margin:0 0 10px;}
 .an-foglio-lbl{display:block;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--t3);margin:8px 0 4px;}
 .an-foglio-righe{margin-top:10px;}
@@ -3103,3 +3105,6 @@ html.v5 #page-body .an-linea{stroke:var(--z-body);}
 html.v5 #page-body .an-punto{fill:var(--z-body);}
 html.v5 #page-body .an-card{margin-top:12px;}
 html.v5 #page-body .an-dettaglio{border-bottom:1px solid var(--s3);}
+html.v5 #page-body .an-tasto{color:var(--z-body-scuro);border-color:var(--z-body-velo);background:var(--z-body-velo);}
+html.v5 #page-body .an-elimina{color:var(--t2);background:var(--s2);border-color:var(--s2);}
+html.v5 #page-body :is(.an-nome small,.an-numero small,.an-medico,.an-card-fascia,.an-card-ultimo small){color:var(--t2);}

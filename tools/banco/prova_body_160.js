@@ -25,18 +25,23 @@ const U = 'u1', OGGI = '2026-11-02', NOW = { now: '2026-11-02T09:00:00' };
 // ── Parte 1: il vocabolario ──
 {
   atteso('vocabolario · i nomi dei laboratori → chiave', ['Colesterolo HDL', 'Colesterolo totale', 'HDL-Colesterolo', 'Glucosio', 'Ferro', 'Emoglobina (Hb)', 'Vitamina D (25-OH)', 'ALT (GPT)', 'Transaminasi GPT', 'Mg', 'MCV'].map(E.riconosci), ['hdl', 'colesterolo_tot', 'hdl', 'glicemia', 'sideremia', 'emoglobina', 'vitamina_d', 'alt', 'alt', 'magnesio', null]);
+  atteso('vocabolario · col trattino e con la barra (revisione): Colesterolo-HDL, Colesterolo-LDL, Colesterolo non-HDL', ['Colesterolo-HDL', 'Colesterolo-LDL', 'Colesterolo non-HDL', 'Colesterolo HDL/LDL rapporto'].map(E.riconosci), ['hdl', 'ldl', null, null]);
+  atteso('vocabolario · un altro esame con dentro lo stesso nome non prende la chiave', ['Emoglobina corpuscolare media (MCH)', 'Capacità totale legante il ferro (TIBC)', 'Creatinina clearance', 'Testosterone libero', 'Magnesio eritrocitario', 'Glucosio (urine)', 'Saturazione della transferrina'].map(E.riconosci), [null, null, null, null, null, null, null]);
+  atteso('vocabolario · valida: la seconda riga con la stessa chiave resta, senza chiave', E.valida({ riconosciuto: true, esami: [{ nome: 'Colesterolo totale', valore: 189 }, { nome: 'Colesterolo-HDL', valore: 58 }, { nome: 'Emoglobina', valore: 15 }, { nome: 'Emoglobina corpuscolare media', valore: 30 }, { nome: 'Sideremia', valore: 90 }, { nome: 'Ferro', valore: 91 }] }).esami.map(x => (x.chiave || '-') + ':' + x.valore), ['colesterolo_tot:189', 'hdl:58', 'emoglobina:15', '-:30', 'sideremia:90', '-:91']);
+  atteso('vocabolario · «< 5» non è un valore', [E.numero('< 5'), E.numero('>100'), E.numero('5')], [null, null, 5]);
+  atteso('colonne · solo con l\'unità attesa o equivalente: nmol/L e mmol/L restano fuori, µg/L e mUI/L entrano', [E.inColonne([{ chiave: 'vitamina_d', valore: 75, unita: 'nmol/L' }, { chiave: 'glicemia', valore: 5.1, unita: 'mmol/L' }, { chiave: 'ferritina', valore: 80, unita: 'µg/L' }, { chiave: 'tsh', valore: 2.1, unita: 'mUI/L' }, { chiave: 'creatinina', valore: 0.9, unita: '' }]), E.unitaCombacia(E.esame('alt'), 'UI/L')], [{ hemoglobin: null, ferritin: 80, glucose: null, cholesterol_tot: null, hdl: null, triglycerides: null, creatinine: 0.9, alt: null, vitamin_d: null, vitamin_b12: null, tsh: 2.1 }, true]);
   atteso('vocabolario · le 11 colonne di blood_tests hanno tutte una chiave', E.ESAMI.filter(e => e.colonna).map(e => e.colonna).sort(), ['alt', 'cholesterol_tot', 'creatinine', 'ferritin', 'glucose', 'hdl', 'hemoglobin', 'triglycerides', 'tsh', 'vitamin_b12', 'vitamin_d']);
   atteso('vocabolario · ogni esame ha fascia e fonte', E.ESAMI.every(e => e.fascia && e.fonte), true);
   atteso('fascia · per sesso (ferritina M/F, senza sesso la più larga), solo massimo, solo minimo', [E.fascia('ferritina', 'M'), E.fascia('ferritina', 'F').min, E.fascia('ferritina', null), E.mostraFascia(E.fascia('colesterolo_tot')), E.mostraFascia(E.fascia('hdl', 'F'))], [{ min: 30, max: 300, fonte: E.fascia('ferritina', 'M').fonte }, 15, { min: 15, max: 300, fonte: E.fascia('ferritina').fonte }, '< 200', '> 50']);
   atteso('fascia · quella del referto vince sulla tabella', [E.fasciaPer({ chiave: 'ferritina', valore: 28, rif_min: 30, rif_max: 400 }, 'M'), E.fasciaPer({ chiave: 'ferritina', valore: 28 }, 'M').fonte === 'referto'], [{ min: 30, max: 400, fonte: 'referto' }, false]);
   atteso('fuori fascia · basso, alto, dentro, senza fascia', [E.fuoriFascia(28, E.fascia('ferritina', 'M')), E.fuoriFascia(220, E.fascia('colesterolo_tot')), E.fuoriFascia(92, E.fascia('glicemia')), E.fuoriFascia(5, null)], ['basso', 'alto', null, null]);
   const v = E.valida({ riconosciuto: true, data_prelievo: '12/10/2026', esami: [{ nome: 'Ferritina', valore: '28,5', unita: 'ng/mL', rif_min: 30, rif_max: 400 }, { nome: 'Colesterolo HDL', chiave: 'colesterolo_tot', valore: 58, unita: 'mg/dL' }, { nome: 'Ferritina', valore: 1 }, { nome: 'MCV', valore: 88, unita: 'fL' }, { nome: 'x', valore: 'abc' }], note: 'ok' });
-  atteso('valida · data, virgola, nome che vince sulla chiave, doppione e non numero via', [v.data_prelievo, v.esami.map(x => x.chiave), v.esami[0].valore, v.letti], ['2026-10-12', ['ferritina', 'hdl', null], 28.5, 3]);
+  atteso('valida · data, virgola, nome che vince sulla chiave, doppione senza chiave, non numero via', [v.data_prelievo, v.esami.map(x => x.chiave), v.esami[0].valore, v.letti], ['2026-10-12', ['ferritina', 'hdl', null, null], 28.5, 4]);
   atteso('colonne · dalle chiavi riconosciute', [E.inColonne(v.esami).ferritin, E.inColonne(v.esami).hdl, E.inColonne(v.esami).glucose], [28.5, 58, null]);
   const vecchia = { test_date: '2026-05-10', ferritin: 80, glucose: 92, tsh: null };
   atteso('daRiga · una riga del check (solo colonne) dà le righe con unità del vocabolario', E.daRiga(vecchia).map(x => x.chiave + ' ' + x.valore + ' ' + x.unita), ['ferritina 80 ng/mL', 'glicemia 92 mg/dL']);
   atteso('serie · dal più vecchio al più recente, colonne ed esami insieme', E.serie([{ test_date: '2026-10-12', esami: v.esami }, vecchia], 'ferritina'), [{ date: '2026-05-10', valore: 80, unita: 'ng/mL' }, { date: '2026-10-12', valore: 28.5, unita: 'ng/mL' }]);
-  atteso('riassunto · per il coach, col segno fuori fascia e la fascia', E.riassunto({ esami: v.esami }, 'M'), 'Ferritina 28,5 ng/mL (basso, fascia 30–400) · Colesterolo HDL 58 mg/dL · MCV 88 fL');
+  atteso('riassunto · per il coach, col segno fuori fascia e la fascia', E.riassunto({ esami: v.esami }, 'M'), 'Ferritina 28,5 ng/mL (basso, fascia 30–400) · Colesterolo HDL 58 mg/dL · Ferritina 1 · MCV 88 fL');
   atteso('data · formati', [E.dataPrelievo('2026-10-12'), E.dataPrelievo('12-10-2026'), E.dataPrelievo('3.4.25'), E.dataPrelievo('2026-02-30'), E.dataPrelievo('')], ['2026-10-12', '2026-10-12', '2025-04-03', null, null]);
   const riga = R.build({ profile: { sex: 'M' }, today: OGGI, blood: { test_date: '2026-10-12', donazione: true, esami: v.esami } });
   atteso('ritratto · il rigo delle analisi, senza nome, con «parlarne col medico»', [/Analisi del sangue del 12 ottobre \(per una donazione di sangue\): Ferritina 28,5 ng\/mL \(basso, fascia 30–400\)/.test(riga), /parlarne col medico/.test(riga), /Ignazio/.test(riga)], [true, true, false]);
@@ -174,6 +179,10 @@ const LETTURA = { riconosciuto: true, data_prelievo: '2026-10-30', esami: [{ nom
     r1.querySelector('.an-f-valore').value = 'due';
     tasto(b, /^Salva$/).click(); await attendi(20);
     atteso('a mano · un valore che non è un numero rifiutato', /non è un numero/.test(testo(b.d.getElementById('an-foglio-err'))), true);
+    b.d.getElementById('an-data').value = '2026-10-12'; r1.querySelector('.an-f-valore').value = '2,1';
+    tasto(b, /^Salva$/).click(); await attendi(20);
+    atteso('a mano · la data di un\'analisi che c\'è già rifiutata', /C'è già un'analisi del lun 12 ott/.test(testo(b.d.getElementById('an-foglio-err'))), true);
+    b.d.getElementById('an-data').value = '2026-11-01';
     r1.querySelector('.an-f-valore').value = '2,1';
     tasto(b, /^Salva$/).click(); await p2; await attendi(30);
     const up2 = scritture(b, 'upsert').pop();
@@ -190,6 +199,19 @@ const LETTURA = { riconosciuto: true, data_prelievo: '2026-10-30', esami: [{ nom
     tasto(b, /^Salva$/).click(); await p4; await attendi(30);
     const upM = scritture(b, 'upsert').pop(), delM = scritture(b, 'delete');
     atteso('modifica · upsert sulla data nuova con fonte check e la riga vecchia tolta', [upM.payload.test_date, upM.payload.fonte, upM.payload.ferritin, delM.length, delM[0].filters[0]], ['2026-05-11', 'check', 80, 1, ['eq', 'id', 'b2']]);
+    // la scrittura che fallisce: il foglio torna con le righe, niente si perde
+    b.tabelle = null;
+    const t = b.supa; const rifiuta = () => { t._rifiutaUpsert = true; };
+    const vero = b.win.dbq;
+    b.win.dbq = async (cosa, chiamata, o) => { if(/salvare le analisi/.test(cosa)) return { data: null, error: { code: '42P10', message: 'no unique constraint' } }; return vero(cosa, chiamata, o); };
+    const p5 = b.win.aggiungiAnalisiAMano(); await attendi(20);
+    b.d.querySelector('.an-f-aggiungi').click();
+    const r5 = b.d.querySelector('.an-foglio-riga:last-child'); r5.querySelector('.an-f-nome').value = 'Zinco'; r5.querySelector('.an-f-valore').value = '88'; r5.querySelector('.an-f-unita').value = 'µg/dL';
+    b.d.getElementById('an-data').value = '2026-09-09';
+    tasto(b, /^Salva$/).click(); await attendi(40);
+    atteso('scrittura fallita · toast senza «errore», il foglio torna con la riga scritta', [/Non sono riuscito a salvare/.test(testo(b.d.getElementById('toast'))), !!foglio(b), b.d.querySelector('.an-foglio-riga .an-f-nome') && b.d.querySelector('.an-foglio-riga .an-f-nome').value, b.d.getElementById('an-data').value], [true, true, 'Zinco', '2026-09-09']);
+    b.win.dbq = vero;
+    tasto(b, /^Annulla$/).click(); await p5;
     // il Worker che non legge: toast senza «errore», nessun foglio
     b.win.fetch = async () => ({ ok: false, status: 502, json: async () => ({ error: { kind: 'invalid-json' } }) });
     Object.defineProperty(input, 'files', { value: [file(b)], configurable: true });

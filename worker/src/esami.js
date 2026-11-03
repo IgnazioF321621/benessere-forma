@@ -128,7 +128,8 @@ async function callGemini(env, parts, startedAt) {
       body: JSON.stringify({
         system_instruction: { parts: [{ text: ESAMI_SYSTEM_PROMPT }] },
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA, temperature: 0, maxOutputTokens: 4096 },
+        // 8192: un referto intero sono 80 righe × 6 campi, ~4000 token di JSON, e i token di pensiero contano nel tetto
+        generationConfig: { responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA, temperature: 0, maxOutputTokens: 8192 },
       }),
       signal: AbortSignal.timeout(remaining(startedAt)),
     });

@@ -442,24 +442,16 @@ async function m2SaveBloodTests() {
     if(errEl){ errEl.style.display='block'; errEl.textContent='Inserisci la data dell\'esame.'; } return;
   }
   const get = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
-  const payload = {
-    user_id: ST.user.id,
-    test_date: date,
-    hemoglobin:      get('m2-bl-hemo'),
-    ferritin:        get('m2-bl-ferr'),
-    glucose:         get('m2-bl-gluc'),
-    cholesterol_tot: get('m2-bl-chol'),
-    hdl:             get('m2-bl-hdl'),
-    triglycerides: get('m2-bl-trig'),
-    creatinine:    get('m2-bl-crea'),
-    alt:           get('m2-bl-alt'),
-    vitamin_d:     get('m2-bl-vitd'),
-    vitamin_b12:   get('m2-bl-b12'),
-    tsh:           get('m2-bl-tsh'),
-  };
+  const payload = { user_id: ST.user.id, test_date: date };
+  // Body 160: solo le caselle compilate (come body_logs): su una data che ha già le righe del referto, le colonne
+  // vuote del check non cancellano quelle lette
+  [['hemoglobin', 'm2-bl-hemo'], ['ferritin', 'm2-bl-ferr'], ['glucose', 'm2-bl-gluc'], ['cholesterol_tot', 'm2-bl-chol'], ['hdl', 'm2-bl-hdl'], ['triglycerides', 'm2-bl-trig'], ['creatinine', 'm2-bl-crea'], ['alt', 'm2-bl-alt'], ['vitamin_d', 'm2-bl-vitd'], ['vitamin_b12', 'm2-bl-b12'], ['tsh', 'm2-bl-tsh']]
+    .forEach(([col, id]) => { const v = get(id); if(v != null) payload[col] = v; });
   ST.m2.bloodTests = payload;
-  // Body 160: una riga per persona e prelievo (UNIQUE user_id+test_date): il check scrive o aggiorna, con fonte 'check'
-  const { error } = await dbq('salvare gli esami del check', supa.from('blood_tests').upsert({ ...payload, fonte:'check' }, { onConflict:'user_id,test_date' }));
+  // una riga per persona e prelievo (UNIQUE user_id+test_date): il check scrive o aggiorna; la fonte diventa 'check'
+  // solo se quella data non ha già le righe di un referto letto
+  const giaLetta = Array.isArray(ST.bloodTests) && ST.bloodTests.some(r => r.test_date === date && Array.isArray(r.esami) && r.esami.length);
+  const { error } = await dbq('salvare gli esami del check', supa.from('blood_tests').upsert(giaLetta ? payload : { ...payload, fonte:'check' }, { onConflict:'user_id,test_date' }));
   if(error){ if(errEl){ errEl.style.display='block'; errEl.textContent='Non riesco a salvare gli esami adesso: riprova.'; } return; }
   ST.bloodTests = null;          // la scheda Analisi li rilegge alla prossima apertura
   m2GoStep('s12');
@@ -567,20 +559,22 @@ const BLOOD_FIELDS = [
   { key:'tsh',             label:'TSH',              unit:'µUI/mL' },
 ];
 const BLOOD_MEDICO = 'Valori da rivedere con il tuo medico';
-const BLOOD_VISIBLE_DEFAULT = 12;   // quanti esami si vedono senza "mostra altri"
 
+// Body 160: l'unica lettura della scheda Analisi, con dbq; se fallisce quello che c'era resta e ST.bloodLetturaFallita
+// lo dice (Body 110: «non caricato» non è «vuoto»)
 async function loadBloodTests(){
   if(!ST.user || ST.user.id==='test-user-001'){ ST.bloodTests = []; return; }
-  const res = await supa.from('blood_tests')
+  const res = await dbq('leggere le analisi del sangue', supa.from('blood_tests')
     .select('*')
     .eq('user_id', ST.user.id)
     .order('test_date', { ascending:false })
-    .limit(200);
+    .limit(200), { silenzioso:true });
   if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
-    console.warn('[blood] storico non caricato:', res.error.message);
-    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = [];   // Body 110: quello che c'era resta; «non caricato» lo dice il ritorno
+    ST.bloodLetturaFallita = true;
+    if(!Array.isArray(ST.bloodTests)) ST.bloodTests = null;   // mai «vuoto» per una lettura fallita
     return false;
   }
+  ST.bloodLetturaFallita = false;
   ST.bloodTests = res.data || [];
   return true;
 }

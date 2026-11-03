@@ -121,7 +121,6 @@ const ST = {
   bodyChecks: null,        // record da body_checks (id + status) — per filtrare i check completed in Tendenza
   bloodTests: null,        // righe blood_tests (desc per test_date) — null = non caricate
   bloodOpenId: null,       // id dell'esame aperto nello storico (accordion)
-  bloodShowAll: false,     // "mostra altri" dello storico esami
   bodyDeleteConfirm: null, // { kind:'log'|'check', id, checkId, date } — conferma elimina log Body
   bodyCheckDetail: null,   // dati del check fisico aperto nell'overlay dettaglio
   bodyTrendRange: '30d',   // intervallo selettore tab Tendenza: '7d'|'30d'|'90d'|'all'

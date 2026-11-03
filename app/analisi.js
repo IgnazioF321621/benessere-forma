@@ -21,7 +21,7 @@
 // Mai la parola «errore» nei testi.
 
 const CONSENSO_ESAMI_ATTIVO = false;   // Ignazio, 1/11/2026: nessun foglio di consenso finché l'app ha un utente solo
-const ANALISI_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const ANALISI_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'];   // HEIC dell'iPhone: la riduzione su canvas lo fa diventare JPEG
 const ANALISI_PIRSI_MAX = 160;         // parole: due righe, non un referto commentato
 
 async function consensoLetturaEsami(){
@@ -42,6 +42,7 @@ function _anDataLunga(k){ return new Date(k + 'T12:00:00').toLocaleDateString('i
 function renderBodyAnalisi(){
   const righe = _anRighe();
   if(righe === null){
+    if(ST.bloodLetturaFallita) return `<div style="padding:40px 20px;text-align:center;"><div style="color:var(--t2);font-size:13px;font-family:var(--font-sans);line-height:1.6;margin-bottom:14px;">Non riesco a leggere le analisi${typeof senzaRete === 'function' && senzaRete() ? ': sei senza rete' : ''}.<br>Quello che hai salvato è al sicuro.</div><button class="btn btn-primary" onclick="ST.bloodLetturaFallita=false;ST.bloodTests=null;renderBody()">Riprova</button></div>`;
     if(!ST.bloodInLettura && typeof loadBloodTests === 'function'){ ST.bloodInLettura = true; loadBloodTests().finally(() => { ST.bloodInLettura = false; if(ST.page === 'body' && ST.bodyTab === 'analisi') renderBody(); }); }
     return `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px;font-family:var(--font-mono);">Caricamento…</div>`;
   }
@@ -89,9 +90,9 @@ function _anRigaHTML(r, righe){
       ${pirsi}
       <div class="an-medico">${BLOOD_MEDICO}${r.notes ? ` · ${esc(r.notes)}` : ''}</div>
       <div class="an-tasti">
-        <button type="button" class="btn btn-ghost btn-sm" onclick="toggleDonazione('${esc(r.id)}')">${r.donazione ? 'Togli il segno donazione' : 'Segna come donazione'}</button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="modificaAnalisi('${esc(r.id)}')">Modifica</button>
-        <button type="button" class="btn btn-ghost btn-sm an-elimina" onclick="eliminaAnalisi('${esc(r.id)}')">Elimina</button>
+        <button type="button" class="an-tasto" onclick="toggleDonazione('${esc(r.id)}')">${r.donazione ? 'Togli il segno donazione' : 'Segna come donazione'}</button>
+        <button type="button" class="an-tasto" onclick="modificaAnalisi('${esc(r.id)}')">Modifica</button>
+        <button type="button" class="an-tasto an-elimina" onclick="eliminaAnalisi('${esc(r.id)}')">Elimina</button>
       </div>
     </div>`;
 }
@@ -133,7 +134,7 @@ function _anGrafico(serie, f){
     const a = f.max != null ? Math.max(y(f.max), top) : top, b = f.min != null ? Math.min(y(f.min), H - bot) : H - bot;
     return `<rect class="an-fascia" x="${sx}" y="${a.toFixed(1)}" width="${W - sx - dx}" height="${Math.max(0, b - a).toFixed(1)}"/>`;
   })() : '';
-  const tacche = [lo + pad, hi - pad].map(v => `<text class="en-asse" x="2" y="${(y(v) + 3).toFixed(1)}">${esc(_anIt(Math.round(v * 10) / 10))}</text>`).join('');
+  const tacche = [lo, hi - pad].map(v => `<text class="en-asse" x="2" y="${(y(v) + 3).toFixed(1)}">${esc(_anIt(Math.round(v * 10) / 10))}</text>`).join('');   // la tacca in basso è il bordo (0 se il grafico parte da zero)
   const linea = `<polyline class="an-linea" points="${serie.map((p, i) => `${x(i).toFixed(1)},${y(p.valore).toFixed(1)}`).join(' ')}"/>`;
   const punti = serie.map((p, i) => `<circle class="an-punto${ZTEsami.fuoriFascia(p.valore, f) ? ' an-punto-fuori' : ''}" cx="${x(i).toFixed(1)}" cy="${y(p.valore).toFixed(1)}" r="3"><title>${esc(fmtDate(p.date))}: ${esc(_anIt(p.valore))}</title></circle>`).join('');
   const date = [0, n - 1].map(i => `<text class="en-asse" x="${x(i).toFixed(1)}" y="${H - 4}" text-anchor="${i === 0 ? 'start' : 'end'}">${esc(new Date(serie[i].date + 'T12:00:00').toLocaleDateString('it-IT', { month:'short', year:'2-digit' }))}</text>`).join('');
@@ -150,7 +151,7 @@ function _anPirsiDi(r, prec){ const k = _anPirsiId(r, prec); return (ST.analisiP
 function _anPirsiHTML(r, prec){
   const testo = _anPirsiDi(r, prec);
   const busy = (ST.analisiPirsiBusy || {})[r.id];
-  const corpo = testo ? esc(testo) : busy ? 'Ci penso…' : `<button type="button" class="cp-why" onclick="pirsiAnalisi('${esc(r.id)}', true)">Cosa è cambiato?</button>`;
+  const corpo = testo ? esc(testo) : busy ? 'Ci penso…' : `<button type="button" class="an-tasto an-pirsi-tasto" onclick="pirsiAnalisi('${esc(r.id)}', true)">Cosa è cambiato?</button>`;
   return `<div class="an-pirsi"><span class="an-pirsi-chi">${esc(COACH_NAME)}</span><span class="an-pirsi-testo">${corpo}</span></div>`;
 }
 function _anPirsiPrompt(r, prec, sesso){
@@ -305,6 +306,8 @@ function apriFoglioAnalisi(o){
         const data = h.querySelector('#an-data').value;
         if(!data) return dire('Scrivi la data del prelievo.');
         if(data > oggi) return dire('La data del prelievo non può essere nel futuro.');
+        // un'analisi modificata non può prendere la data di un'altra: due prelievi diventerebbero uno (revisione del 3 novembre)
+        if((_anRighe() || []).some(x => x.test_date === data && x.id !== o.id)) return dire(`C'è già un'analisi del ${fmtDate(data)}: aprila da «Per data» e usa «Modifica».`);
         const senzaNumero = righe.filter(r => String(r.nome || '').trim() && ZTEsami.numero(r.valore) == null).length;
         if(senzaNumero) return dire(`${senzaNumero} rig${senzaNumero === 1 ? 'a ha' : 'he hanno'} un valore che non è un numero.`);
         const v = ZTEsami.valida({ riconosciuto: true, data_prelievo: data, esami: righe.map(r => ({ nome: r.nome, valore: r.valore, unita: r.unita, chiave: r.chiave, rif_min: r.rif_min, rif_max: r.rif_max })) });
@@ -323,7 +326,11 @@ async function salvaAnalisi(s){
   if(!ST.user) return null;
   const riga = { user_id: ST.user.id, test_date: s.test_date, ...ZTEsami.inColonne(s.esami), esami: s.esami, donazione: !!s.donazione, fonte: s.fonte, prompt_version: s.prompt_version, notes: s.notes };
   const r = await dbq('salvare le analisi', supa.from('blood_tests').upsert(riga, { onConflict:'user_id,test_date' }));
-  if(r.error) return null;
+  if(r.error){
+    // la lettura del referto non si perde: il foglio torna com'era, con quello che la persona aveva corretto
+    showToast(typeof senzaRete === 'function' && senzaRete() ? 'Sei senza rete: le analisi restano nel foglio, salva quando torna' : 'Non sono riuscito a salvare le analisi: riprova', '⚠️', 5500);
+    return apriFoglioAnalisi({ id: s.id, data: s.test_date, esami: s.esami, donazione: s.donazione, fonte: s.fonte, prompt_version: s.prompt_version, notes: s.notes });
+  }
   // la riga modificata con una data nuova lascerebbe la vecchia: si toglie
   if(s.id){ const vecchia = (_anRighe() || []).find(x => x.id === s.id); if(vecchia && vecchia.test_date !== s.test_date) await dbq('togliere la data vecchia delle analisi', supa.from('blood_tests').delete().eq('id', s.id).eq('user_id', ST.user.id), { silenzioso:true }); }
   showToast(`Analisi del ${fmtDate(s.test_date)} salvate`, '✅', 3500);
@@ -339,7 +346,7 @@ async function toggleDonazione(id){
   const r = (_anRighe() || []).find(x => x.id === id);
   if(!r || !ST.user) return;
   const res = await dbq(r.donazione ? 'togliere il segno donazione' : 'segnare la donazione', supa.from('blood_tests').update({ donazione: !r.donazione }).eq('id', id).eq('user_id', ST.user.id));
-  if(res.error) return;
+  if(res.error){ if(typeof senzaRete === 'function' && senzaRete()) showToast('Sei senza rete: riprova quando torna', '⚠️', 4500); return; }
   r.donazione = !r.donazione;
   renderBody();
 }
@@ -348,7 +355,7 @@ async function eliminaAnalisi(id){
   if(!r || !ST.user) return;
   if(!await chiediConferma(`Le analisi del ${fmtDate(r.test_date)} vengono tolte dallo storico.`, { titolo:'Eliminare queste analisi?', ok:'Elimina', pericolo:true })) return;
   const res = await dbq('eliminare le analisi', supa.from('blood_tests').delete().eq('id', id).eq('user_id', ST.user.id));
-  if(res.error) return;
+  if(res.error){ if(typeof senzaRete === 'function' && senzaRete()) showToast('Sei senza rete: riprova quando torna', '⚠️', 4500); return; }
   ST.bloodTests = (ST.bloodTests || []).filter(x => x.id !== id);
   if(ST.analisiAperta === id) ST.analisiAperta = null;
   showToast('Analisi eliminate', '✅', 3000);

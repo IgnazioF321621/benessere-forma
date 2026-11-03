@@ -26,6 +26,7 @@
 // null = non registrato, MAI zero. Un fatto che manca non produce una riga.
 var ZTRitratto = (function(){
   'use strict';
+  var E = (typeof ZTEsami !== 'undefined') ? ZTEsami : require('./esami.js');   // Body 160: le analisi nel ritratto (in testa, come fa rotazione.js con quadro)
 
   var OBIETTIVO_LBL = {
     perdita_peso: 'dimagrimento', dimagrimento: 'dimagrimento',

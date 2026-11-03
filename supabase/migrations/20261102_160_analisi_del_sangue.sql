@@ -56,8 +56,9 @@ comment on column public.blood_tests.prompt_version is 'Body 160: versione del p
 -- Il travaso dei valori scritti a mano nelle Impostazioni (profiles.esami_sangue: {chiave: valore,
 -- chiave_label: etichetta, chiave_data: 'YYYY-MM-DD'}) in righe di blood_tests, una per data. Le chiavi del
 -- vecchio elenco (ESAMI_DEFAULTS) diventano le chiavi del vocabolario e, dove c'è, la colonna. Un valore
--- SENZA data non si può datare: resta in profiles e si conta nell'avviso. Idempotente: le date con una riga
--- già presente si saltano. profiles.esami_sangue non si tocca.
+-- SENZA data non si può datare: resta in profiles e si conta nell'avviso. Idempotente finché la riga c'è: le date
+-- con una riga già presente si saltano, ma se dopo il travaso la persona elimina quella data dall'app, una seconda
+-- esecuzione la rimetterebbe (per questo si esegue una volta, al rilascio). profiles.esami_sangue non si tocca.
 do $$
 declare
   r record;
@@ -80,7 +81,7 @@ begin
       select data_testo::date as giorno,
              jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
                'nome', regexp_replace(etichetta, '\s*\(.*\)\s*$', ''),
-               'chiave', case chiave when 'colesterolo_tot' then 'colesterolo_tot' when 'hs_crp' then 'hs_crp' else chiave end,
+               'chiave', case when chiave in ('ferritina', 'vitamina_d', 'vitamina_b12', 'colesterolo_tot', 'hdl', 'ldl', 'trigliceridi', 'glicemia', 'insulina', 'tsh', 'hs_crp', 'omocisteina', 'zinco', 'magnesio') then chiave else null end,   -- solo le chiavi del vocabolario; un valore aggiunto a mano resta col suo nome
                'valore', valore,
                'unita', coalesce((regexp_match(etichetta, '\(([^)]+)\)'))[1], '')
              )) ) as esami,
