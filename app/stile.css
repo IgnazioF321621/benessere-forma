@@ -3135,3 +3135,39 @@ html.v5 #page-body .an-dettaglio{border-bottom:1px solid var(--s3);}
 html.v5 #page-body .an-tasto{color:var(--z-body-scuro);border-color:var(--z-body-velo);background:var(--z-body-velo);}
 html.v5 #page-body .an-elimina{color:var(--t2);background:var(--s2);border-color:var(--s2);}
 html.v5 #page-body :is(.an-nome small,.an-numero small,.an-medico,.an-card-fascia,.an-card-ultimo small){color:var(--t2);}
+/* Body 170 (3 novembre 2026): la scheda compatta — panoramica, famiglie chiuse, per data accorciato, tabella con le date */
+.an-pan{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px;}
+.an-pan-card{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:76px;padding:10px 12px;border:1px solid var(--b1);border-radius:14px;background:var(--s1);text-align:left;cursor:pointer;}
+.an-pan-nome{font-family:var(--font-sans);font-size:12px;font-weight:700;color:var(--t2);}
+.an-pan-num{display:flex;align-items:baseline;gap:4px;font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--t1);line-height:1.1;}
+.an-pan-num small{font-size:10px;font-weight:400;color:var(--t3);}
+.an-pan-sotto{font-family:var(--font-mono);font-size:10px;color:var(--t3);}
+.an-pan-card.an-fuori .an-pan-num{color:var(--z-nutrition-scuro);}
+.an-pan-card.an-pan-aperta{border-color:var(--acc);}
+.an-pan-grafico{margin-top:8px;}
+.an-tend{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t2);}
+.an-tend-su,.an-tend-giu{color:var(--t1);}
+.an-val-riga{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 14px 6px 22px;border:0;border-top:1px solid var(--s2);background:none;text-align:left;cursor:pointer;color:var(--t1);}
+.an-val-nome{flex:1;min-width:0;display:flex;flex-direction:column;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--t1);}
+.an-val-nome small{font-family:var(--font-mono);font-size:10px;font-weight:400;color:var(--t3);}
+.an-val-num{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
+.an-val-num small{margin-left:4px;font-weight:400;color:var(--t3);}
+.an-val-riga.an-fuori .an-val-num{color:var(--z-nutrition-scuro);}
+.an-val-riga.an-val-aperta{background:var(--s2);}
+.an-val-grafico{padding:6px 14px 12px;border-top:1px solid var(--s2);}
+.an-mostra-tutte .b5-log-data{color:var(--acc);}
+.an-tab-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-top:1px solid var(--s3);}
+.an-tab{border-collapse:separate;border-spacing:0;font-family:var(--font-mono);font-size:11px;color:var(--t1);}
+.an-tab th,.an-tab td{padding:6px 8px;border-bottom:1px solid var(--s2);white-space:nowrap;text-align:right;}
+.an-tab th[scope=col]{font-weight:700;color:var(--t2);background:var(--s1);}
+.an-tab th[scope=row]{position:sticky;left:0;z-index:1;text-align:left;font-family:var(--font-sans);font-weight:600;color:var(--t1);background:var(--s1);box-shadow:1px 0 0 var(--s3);}
+.an-tab th[scope=row] small{display:block;font-family:var(--font-mono);font-size:9px;font-weight:400;color:var(--t3);}
+.an-tab thead th:first-child{position:sticky;left:0;z-index:2;text-align:left;}
+.an-tab td.an-fuori{color:var(--z-nutrition-scuro);font-weight:700;}
+html:not(.v5) #page-body :is(.an-fam,.an-tab-gruppo){background:var(--s1);border:1px solid var(--b1);border-radius:var(--r-lg);margin-top:12px;box-shadow:var(--shadow);}
+html:not(.v5) #page-body :is(.an-fam-testa,.an-tab-testa,.an-mostra-tutte){display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:48px;padding:8px 14px;border:0;background:none;text-align:left;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--t1);}
+html:not(.v5) #page-body :is(.an-fam-testa,.an-tab-testa,.an-mostra-tutte) .b5-log-data{flex:1;}
+html:not(.v5) #page-body :is(.an-fam-testa,.an-tab-testa,.an-mostra-tutte) .b5-log-valori{font-family:var(--font-mono);font-size:12px;color:var(--t2);}
+html.v5 #page-body .an-pan-card.an-pan-aperta{border-color:var(--z-body);}
+html.v5 #page-body .an-mostra-tutte .b5-log-data{color:var(--z-body-scuro);}
+html.v5 #page-body :is(.an-pan-sotto,.an-pan-num small,.an-val-nome small,.an-val-num small,.an-tab th[scope=row] small){color:var(--t2);}

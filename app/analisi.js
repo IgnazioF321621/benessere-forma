@@ -37,6 +37,8 @@ function _anRighe(){ return Array.isArray(ST.bloodTests) ? ST.bloodTests.slice()
 function _anPrecedente(righe, riga){ return righe.find(r => r.test_date < riga.test_date) || null; }
 function _anIt(n){ return n == null ? '—' : String(n).replace('.', ','); }
 function _anDataLunga(k){ return new Date(k + 'T12:00:00').toLocaleDateString('it-IT', { day:'numeric', month:'long', year:'numeric' }); }
+// la riga dell'elenco: «lun 12 ott» nell'anno in corso, «ven 28 nov 25» negli altri (lo storico ha tredici anni)
+function _anDataRiga(k){ const d = new Date(k + 'T12:00:00'); return fmtDate(k) + (d.getFullYear() === new Date(todayKey() + 'T12:00:00').getFullYear() ? '' : ' ' + String(d.getFullYear()).slice(2)); }
 
 // ── La scheda ──
 function renderBodyAnalisi(){
@@ -49,18 +51,129 @@ function renderBodyAnalisi(){
   const donazioni = righe.filter(r => r.donazione).length;
   const busy = ST.analisiBusy;
   const azioni = `<div class="b5-gruppo an-azioni">
-      <button type="button" class="b5-check-riga an-carica" onclick="caricaAnalisi()" ${busy ? 'disabled' : ''}><span>${busy ? 'Leggo il referto…' : 'Carica analisi (PDF o foto)'}</span><span class="b5-check-chev" aria-hidden="true">›</span></button>
+      <button type="button" class="b5-check-riga an-carica" onclick="caricaAnalisi()" ${busy ? 'disabled' : ''}><span>${busy === 'csv' ? 'Importo lo storico…' : busy ? 'Leggo il referto…' : 'Carica analisi (PDF o foto)'}</span><span class="b5-check-chev" aria-hidden="true">›</span></button>
+      <button type="button" class="b5-check-riga an-csv" onclick="scegliCSV()" ${busy ? 'disabled' : ''}><span>Importa da file CSV</span><span class="b5-check-chev" aria-hidden="true">›</span></button>
       <button type="button" class="b5-check-riga an-mano" onclick="aggiungiAnalisiAMano()" ${busy ? 'disabled' : ''}><span>Aggiungi a mano</span><span class="b5-check-chev" aria-hidden="true">›</span></button>
       <input id="an-file" type="file" accept="image/*,application/pdf" onchange="leggiReferto(this)" ${busy ? 'disabled' : ''} style="display:none;">
+      <input id="an-csv" type="file" accept=".csv,text/csv,text/plain" onchange="importaCSV(this)" ${busy ? 'disabled' : ''} style="display:none;">
     </div>`;
   const testa = `<h2 class="sez5 an-titolo">Le analisi <span class="sez5-dx an-donazioni">${donazioni ? `${donazioni} donazion${donazioni === 1 ? 'e' : 'i'}` : 'nessuna donazione'}</span></h2>`;
-  let elenco;
   if(!righe.length){
-    elenco = `<div class="b5-vuoto an-vuoto"><div class="b5-vuoto-tondo">🩸</div><h3>Nessuna analisi ancora</h3><p style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin:0;">Carica il referto, anche di anni fa: restano qui per data, e ${COACH_NAME} le legge.</p></div>`;
-  } else {
-    elenco = `<h2 class="sez5">Per data</h2><div class="b5-gruppo an-elenco">${righe.map(r => _anRigaHTML(r, righe)).join('')}</div>`;
+    return testa + azioni + `<div class="b5-vuoto an-vuoto"><div class="b5-vuoto-tondo">🩸</div><h3>Nessuna analisi ancora</h3><p style="font-size:13px;color:var(--t2);font-family:var(--font-sans);line-height:1.5;margin:0;">Carica il referto, anche di anni fa, o il file CSV dello storico: restano qui per data, e ${COACH_NAME} le legge.</p></div>`;
   }
-  return testa + azioni + elenco + _anAndamentoHTML(righe);
+  // Body 170 (3 novembre 2026, Ignazio: «molto dispersiva e lunga»): in cima la panoramica, poi le famiglie chiuse, poi
+  // l'elenco per data accorciato, in fondo la tabella con tutte le date. Tutto chiuso finché non si tocca.
+  const valori = _anValori(righe);
+  return testa + _anPanoramicaHTML(valori) + azioni + _anFamiglieHTML(valori) + _anPerDataHTML(righe) + _anTabellaHTML(valori, righe);
+}
+
+// ── I valori dello storico: uno per chiave (o per nome, se non riconosciuto), con la serie dal più vecchio ──
+const ANALISI_PER_DATA = 5;      // righe dell'elenco «Per data» prima di «Mostra tutte»
+const ANALISI_TENDENZA = 0.03;   // sotto il 3 % la tendenza è «stabile»
+function _anValori(righe){
+  const sesso = _anSesso(), per = new Map();
+  const ordine = new Map(ZTEsami.ESAMI.map((e, i) => [e.chiave, i]));
+  const famOrdine = new Map(ZTEsami.FAMIGLIE.map((f, i) => [f.chiave, i]));   // prima per famiglia, poi nell'ordine del vocabolario
+  righe.slice().sort((a, b) => (a.test_date < b.test_date ? -1 : a.test_date > b.test_date ? 1 : 0)).forEach(r => ZTEsami.daRiga(r).forEach(v => {
+    if(v.valore == null) return;
+    const chiave = v.chiave || ZTEsami.perUnita(ZTEsami.riconosci(v.nome), v.unita);   // una riga salvata prima che il vocabolario conoscesse il nome
+    const id = chiave || ('n:' + ZTEsami.normalizza(v.nome));
+    let x = per.get(id);
+    if(!x){
+      const e = chiave ? ZTEsami.esame(chiave) : null;
+      x = { id, chiave: chiave || null, label: e ? e.label : (v.nome || '—'), unita: e ? e.unita : (v.unita || ''), famiglia: ZTEsami.famigliaDi(chiave), ordine: (famOrdine.get(ZTEsami.famigliaDi(chiave)) || 0) * 1000 + (chiave ? ordine.get(chiave) : 999), serie: [] };
+      per.set(id, x);
+    }
+    if(x.serie.some(p => p.date === r.test_date)) return;
+    x.serie.push({ date: r.test_date, valore: v.valore, unita: v.unita || '', fascia: ZTEsami.fasciaPer(v, sesso) });
+  }));
+  const out = [...per.values()];
+  out.forEach(x => {
+    x.ultimo = x.serie[x.serie.length - 1];
+    x.prec = x.serie.length > 1 ? x.serie[x.serie.length - 2] : null;
+    if(x.ultimo.unita) x.unita = x.ultimo.unita;
+    x.segno = ZTEsami.fuoriFascia(x.ultimo.valore, x.ultimo.fascia);
+    x.tendenza = !x.prec ? null : Math.abs(x.ultimo.valore - x.prec.valore) <= Math.abs(x.prec.valore) * ANALISI_TENDENZA ? 'pari' : x.ultimo.valore > x.prec.valore ? 'su' : 'giu';
+  });
+  return out.sort((a, b) => a.ordine - b.ordine || (a.label < b.label ? -1 : 1));
+}
+function _anTendenzaHTML(x){
+  if(!x.tendenza) return '';
+  const segno = { su: '↑', giu: '↓', pari: '→' }[x.tendenza];
+  return `<span class="an-tend an-tend-${x.tendenza}" aria-label="${x.tendenza === 'su' ? 'in salita' : x.tendenza === 'giu' ? 'in calo' : 'stabile'}">${segno}</span>`;
+}
+function _anDataBreve(k){ return new Date(k + 'T12:00:00').toLocaleDateString('it-IT', { day:'numeric', month:'short', year:'2-digit' }); }
+// la fascia che vale per il grafico: quella dell'ultima misura (referto o tabella)
+function _anValoreGraficoHTML(x){
+  const f = x.ultimo.fascia;
+  return `<div class="an-val-grafico">${_anGrafico(x.serie, f)}<div class="an-card-fascia">${f ? `Fascia ${esc(ZTEsami.mostraFascia(f))} ${esc(x.unita)} · ${esc(f.fonte)}` : 'Senza fascia di riferimento'} · ${x.serie.length} misur${x.serie.length === 1 ? 'a' : 'e'} dal ${esc(_anDataBreve(x.serie[0].date))}</div></div>`;
+}
+
+// ── La panoramica: poche card dei valori chiave, con l'ultimo valore, la tendenza e il segno fuori fascia ──
+function _anPanoramicaHTML(valori){
+  const card = ZTEsami.PANORAMICA.map(k => valori.find(x => x.id === k)).filter(Boolean);
+  if(!card.length) return '';
+  const aperto = ST.analisiValore && ST.analisiValore.da === 'pan' ? valori.find(x => x.id === ST.analisiValore.id) : null;
+  return `<div class="an-pan">${card.map(x => `<button type="button" class="an-pan-card${x.segno ? ' an-fuori' : ''}${aperto && aperto.id === x.id ? ' an-pan-aperta' : ''}" onclick="apriValore('${esc(x.id)}','pan')" aria-expanded="${!!(aperto && aperto.id === x.id)}">
+      <span class="an-pan-nome">${esc(x.label)}</span>
+      <span class="an-pan-num">${esc(_anIt(x.ultimo.valore))}<small>${esc(x.unita)}</small>${_anTendenzaHTML(x)}</span>
+      <span class="an-pan-sotto">${x.segno ? `<b class="an-segno">${x.segno}</b>` : esc(_anDataBreve(x.ultimo.date))}</span>
+    </button>`).join('')}</div>${aperto ? `<div class="b5-gruppo an-card an-pan-grafico"><div class="an-card-testa"><span class="an-card-nome">${esc(aperto.label)}</span><span class="an-card-ultimo${aperto.segno ? ' an-fuori' : ''}">${esc(_anIt(aperto.ultimo.valore))} ${esc(aperto.unita)}<small>${esc(_anDataBreve(aperto.ultimo.date))}</small></span></div>${_anValoreGraficoHTML(aperto)}</div>` : ''}`;
+}
+function apriValore(id, da){
+  const v = ST.analisiValore;
+  ST.analisiValore = v && v.id === id && v.da === da ? null : { id, da };
+  renderBody();
+}
+
+// ── Le famiglie, chiuse: una riga compatta per valore, il grafico si apre toccando il valore ──
+function _anFamiglieHTML(valori){
+  const aperte = ST.analisiFamiglie || {};
+  const sel = ST.analisiValore && ST.analisiValore.da === 'fam' ? ST.analisiValore.id : null;
+  const gruppi = ZTEsami.FAMIGLIE.map(f => ({ f, v: valori.filter(x => x.famiglia === f.chiave) })).filter(g => g.v.length);
+  if(!gruppi.length) return '';
+  return `<h2 class="sez5">I valori</h2>` + gruppi.map(({ f, v }) => {
+    const aperta = !!aperte[f.chiave], fuori = v.filter(x => x.segno).length;
+    const testa = `<button type="button" class="b5-log-riga an-fam-testa" onclick="apriFamiglia('${esc(f.chiave)}')" aria-expanded="${aperta}">
+        <span class="b5-log-data">${esc(f.label)}</span>
+        <span class="b5-log-valori">${v.length} valor${v.length === 1 ? 'e' : 'i'}${fuori ? ` · ${fuori} fuori fascia` : ''}</span><span class="b5-check-chev" aria-hidden="true">${aperta ? '⌄' : '›'}</span></button>`;
+    const righe = !aperta ? '' : v.map(x => `<button type="button" class="an-val-riga${x.segno ? ' an-fuori' : ''}${sel === x.id ? ' an-val-aperta' : ''}" onclick="apriValore('${esc(x.id)}','fam')" aria-expanded="${sel === x.id}">
+        <span class="an-val-nome">${esc(x.label)}<small>${esc(_anDataBreve(x.ultimo.date))}</small></span>
+        <span class="an-val-num">${esc(_anIt(x.ultimo.valore))}<small>${esc(x.unita)}</small></span>
+        ${_anTendenzaHTML(x)}${x.segno ? `<b class="an-segno">${x.segno}</b>` : ''}
+      </button>${sel === x.id ? _anValoreGraficoHTML(x) : ''}`).join('');
+    return `<div class="b5-gruppo an-fam${aperta ? ' an-fam-aperta' : ''}">${testa}${righe}</div>`;
+  }).join('');
+}
+function apriFamiglia(chiave){
+  ST.analisiFamiglie = ST.analisiFamiglie || {};
+  ST.analisiFamiglie[chiave] = !ST.analisiFamiglie[chiave];
+  renderBody();
+}
+
+// ── Per data: una riga chiusa per prelievo, le prime ANALISI_PER_DATA e poi «Mostra tutte» ──
+function _anPerDataHTML(righe){
+  const tutte = ST.analisiTutte || righe.length <= ANALISI_PER_DATA;
+  const mostra = tutte ? righe : righe.slice(0, ANALISI_PER_DATA);
+  // la riga aperta resta in vista anche oltre le prime
+  if(!tutte && ST.analisiAperta && !mostra.some(r => r.id === ST.analisiAperta)){ const r = righe.find(x => x.id === ST.analisiAperta); if(r) mostra.push(r); }
+  return `<h2 class="sez5">Per data <span class="sez5-dx">${righe.length} preliev${righe.length === 1 ? 'o' : 'i'}</span></h2><div class="b5-gruppo an-elenco">${mostra.map(r => _anRigaHTML(r, righe)).join('')}${tutte ? '' : `<button type="button" class="b5-log-riga an-mostra-tutte" onclick="ST.analisiTutte=true;renderBody()"><span class="b5-log-data">Mostra tutte</span><span class="b5-log-valori">${righe.length - mostra.length} in più</span><span class="b5-check-chev" aria-hidden="true">›</span></button>`}</div>`;
+}
+
+// ── Tutti i valori: la tabella, chiusa; aperta scorre di lato e la colonna del nome resta ferma ──
+function _anTabellaHTML(valori, righe){
+  if(righe.length < 2 || !valori.length) return '';
+  const aperta = !!ST.analisiTabella;
+  const testa = `<button type="button" class="b5-log-riga an-tab-testa" onclick="ST.analisiTabella=!ST.analisiTabella;renderBody()" aria-expanded="${aperta}">
+      <span class="b5-log-data">Tutti i valori</span>
+      <span class="b5-log-valori">${valori.length} × ${righe.length} date</span><span class="b5-check-chev" aria-hidden="true">${aperta ? '⌄' : '›'}</span></button>`;
+  if(!aperta) return `<h2 class="sez5">La tabella</h2><div class="b5-gruppo an-tab-gruppo">${testa}</div>`;
+  const date = righe.map(r => r.test_date);   // dalla più recente
+  const corpo = valori.map(x => {
+    const per = new Map(x.serie.map(p => [p.date, p]));
+    return `<tr><th scope="row">${esc(x.label)}<small>${esc(x.unita)}</small></th>${date.map(d => { const p = per.get(d); const s = p ? ZTEsami.fuoriFascia(p.valore, p.fascia) : null; return `<td${s ? ' class="an-fuori"' : ''}>${p ? esc(_anIt(p.valore)) : '·'}</td>`; }).join('')}</tr>`;
+  }).join('');
+  return `<h2 class="sez5">La tabella</h2><div class="b5-gruppo an-tab-gruppo an-tab-aperta">${testa}<div class="an-tab-scroll"><table class="an-tab"><thead><tr><th scope="col">Esame</th>${date.map(d => `<th scope="col">${esc(_anDataBreve(d))}</th>`).join('')}</tr></thead><tbody>${corpo}</tbody></table></div></div>`;
 }
 
 function _anRigaHTML(r, righe){
@@ -69,7 +182,7 @@ function _anRigaHTML(r, righe){
   const sesso = _anSesso();
   const fuori = valori.filter(v => ZTEsami.fuoriFascia(v.valore, ZTEsami.fasciaPer(v, sesso))).length;
   const riga = `<button type="button" class="b5-log-riga an-riga${aperta ? ' an-aperta' : ''}" onclick="apriAnalisi('${esc(r.id)}')" aria-expanded="${aperta}">
-      <span class="b5-log-data">${fmtDate(r.test_date)}${r.donazione ? ' <small>donazione</small>' : ''}</span>
+      <span class="b5-log-data">${_anDataRiga(r.test_date)}${r.donazione ? ' <small>donazione</small>' : ''}</span>
       <span class="b5-log-valori">${valori.length} valor${valori.length === 1 ? 'e' : 'i'}${fuori ? ` · ${fuori} fuori fascia` : ''}</span><span class="b5-check-chev" aria-hidden="true">${aperta ? '⌄' : '›'}</span></button>`;
   if(!aperta) return riga;
   const prec = _anPrecedente(righe, r);
@@ -103,22 +216,7 @@ function apriAnalisi(id){
   if(ST.analisiAperta) pirsiAnalisi(id);
 }
 
-// ── L'andamento: una card per valore con almeno due misure ──
-function _anAndamentoHTML(righe){
-  const sesso = _anSesso();
-  const cards = ZTEsami.ESAMI.map(e => ({ e, s: ZTEsami.serie(righe, e.chiave) })).filter(x => x.s.length >= 2);
-  if(!cards.length) return '';
-  return `<h2 class="sez5">L'andamento</h2>` + cards.map(({ e, s }) => {
-    const ultimo = s[s.length - 1];
-    const f = ZTEsami.fascia(e.chiave, sesso);
-    const segno = ZTEsami.fuoriFascia(ultimo.valore, f);
-    return `<div class="b5-gruppo an-card">
-        <div class="an-card-testa"><span class="an-card-nome">${esc(e.label)}</span><span class="an-card-ultimo${segno ? ' an-fuori' : ''}">${esc(_anIt(ultimo.valore))} ${esc(ultimo.unita || e.unita)}<small>${esc(fmtDate(ultimo.date))}</small></span></div>
-        ${_anGrafico(s, f)}
-        ${f ? `<div class="an-card-fascia">Fascia ${esc(ZTEsami.mostraFascia(f))} ${esc(ultimo.unita || e.unita)} · ${esc(f.fonte)}</div>` : ''}
-      </div>`;
-  }).join('');
-}
+// ── Il grafico di un valore (dal Body 170 si apre toccando il valore, non c'è più la fila di card) ──
 // SVG inline come il grafico di Energia: nessuna libreria. La fascia è un rettangolo chiaro dietro la linea.
 function _anGrafico(serie, f){
   const n = serie.length, W = 300, H = 110, sx = 34, dx = 12, top = 10, bot = 18;
@@ -361,4 +459,87 @@ async function eliminaAnalisi(id){
   if(ST.analisiAperta === id) ST.analisiAperta = null;
   showToast('Analisi eliminate', '✅', 3000);
   renderBody();
+}
+
+// ── Importare lo storico da un file CSV (Body 170, 3 novembre 2026) ──
+// Ignazio ha lo storico delle donazioni in un foglio: una riga per prelievo, «Data» in gg/mm/aa e le altre colonne
+// «Nome (min–max unità)». La lettura è in shared/esami.js (ZTEsami.leggiCSV); qui: il file, l'anteprima («N prelievi
+// dal … al …, X date già presenti che salto»), l'interruttore «Sono donazioni» (parte acceso: le sue sono tutte
+// donazioni), la scrittura a blocchi con upsert e ignoreDuplicates (una data già presente non si tocca mai), fonte
+// 'csv'. Pirsi non parte da solo: si chiama al tocco, come sempre. Un file che non ha il formato lo si dice e non
+// si scrive niente. Il file non si conserva.
+const ANALISI_CSV_BLOCCO = 10;     // righe per scrittura: 37 prelievi sono 4 richieste
+const ANALISI_CSV_MAX_BYTE = 2 * 1024 * 1024;
+
+function scegliCSV(){ const el = document.getElementById('an-csv'); if(el && !ST.analisiBusy) el.click(); }
+function _anLeggiTesto(file){
+  return new Promise((ok, no) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result || ''));
+    r.onerror = () => no(r.error || new Error('lettura'));
+    r.readAsText(file, 'utf-8');
+  });
+}
+function _anFmtN(n){ return String(Math.round(Number(n))).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }   // 1.110, anche dove il telefono non ha l'italiano
+async function importaCSV(input){
+  const file = input && input.files && input.files[0];
+  if(input) input.value = '';
+  if(!file || !ST.user || ST.analisiBusy) return;
+  if(file.size > ANALISI_CSV_MAX_BYTE){ showToast('Il file è troppo grande per essere lo storico delle analisi', '⚠️', 5500); return; }
+  let contenuto;
+  try { contenuto = await _anLeggiTesto(file); } catch(e){ showToast('Non riesco a leggere questo file', '⚠️', 5500); return; }
+  const L = ZTEsami.leggiCSV(contenuto, { oggi: todayKey() });
+  if(!L.riconosciuto){ showToast('Questo file non ha il formato che conosco: prima colonna «Data», le altre «Esame (min–max unità)», una riga per prelievo. Non ho scritto niente.', '⚠️', 7500); return; }
+  const presenti = new Set((_anRighe() || []).map(r => r.test_date));
+  const nuovi = L.prelievi.filter(p => !presenti.has(p.test_date));
+  const salto = L.prelievi.length - nuovi.length;
+  if(!nuovi.length){ showToast(`${L.prelievi.length} preliev${L.prelievi.length === 1 ? 'o' : 'i'} nel file, con date già presenti: niente da importare`, 'ℹ️', 6000); return; }
+  const scelta = await _anFoglioImporta(L, nuovi, salto);
+  if(!scelta) return;
+  await _anScriviImportati(nuovi, scelta.donazioni);
+}
+// L'anteprima: cosa c'è nel file, cosa salto, l'interruttore «Sono donazioni». Si risolve con { donazioni } o null.
+function _anFoglioImporta(L, nuovi, salto){
+  return _foglio({
+    annullato: null,
+    riempi(box, chiudi){
+      box.classList.add('an-foglio');
+      let donazioni = true;
+      const h = document.createElement('div');
+      h.className = 'an-foglio-corpo';
+      const ignoti = L.nomi_ignoti.length ? `<p class="an-foglio-nota">${L.nomi_ignoti.length} nom${L.nomi_ignoti.length === 1 ? 'e che non conosco resta' : 'i che non conosco restano'} come scritt${L.nomi_ignoti.length === 1 ? 'o' : 'i'}: ${esc(L.nomi_ignoti.join(', '))}.</p>` : '';
+      h.innerHTML = `<h3 class="foglio-titolo">Importa lo storico</h3>
+        <p class="an-foglio-nota"><b>${L.prelievi.length} preliev${L.prelievi.length === 1 ? 'o' : 'i'}</b> dal ${esc(_anDataLunga(L.dal))} al ${esc(_anDataLunga(L.al))}, ${_anFmtN(L.valori)} valori in ${L.colonne} colonne.${salto ? ` <b>${salto} dat${salto === 1 ? 'a' : 'e'} già present${salto === 1 ? 'e' : 'i'}</b>, che salto: quello che hai salvato non si tocca.` : ''}${L.doppie ? ` ${L.doppie} rig${L.doppie === 1 ? 'a' : 'he'} con una data ripetuta nel file: tengo la prima.` : ''}${L.future ? ` ${L.future} rig${L.future === 1 ? 'a' : 'he'} con una data dopo oggi, che salto.` : ''}${L.date_non_valide ? ` ${L.date_non_valide} rig${L.date_non_valide === 1 ? 'a' : 'he'} con una data che non esiste, che salto.` : ''}${L.righe_lunghe ? ` ${L.righe_lunghe} rig${L.righe_lunghe === 1 ? 'a' : 'he'} con più celle dell'intestazione, che salto.` : ''}${L.celle_scartate ? ` ${L.celle_scartate} cell${L.celle_scartate === 1 ? 'a' : 'e'} senza un numero (tipo «< 5» o un trattino), lasciat${L.celle_scartate === 1 ? 'a' : 'e'} fuori.` : ''}${L.colonne_ignorate ? ` Le colonne oltre la ${ZTEsami.MAX_RIGHE}ª (${L.colonne_ignorate}) non le leggo.` : ''}</p>
+        ${ignoti}
+        <button type="button" class="an-f-donazione" role="switch" aria-checked="true">
+          <span><span class="an-f-don-nome">Sono donazioni</span><span class="an-f-don-sotto">Ogni prelievo del file conta come una donazione di sangue</span></span>
+          <span aria-hidden="true" class="an-f-leva"><i></i></span>
+        </button>`;
+      h.querySelector('.an-f-donazione').onclick = () => { donazioni = !donazioni; h.querySelector('.an-f-donazione').setAttribute('aria-checked', String(donazioni)); };
+      box.appendChild(h);
+      _foglioBottoni(box, chiudi, { ok:`Importa ${nuovi.length}`, annulla:'Annulla', valoreAnnulla:null }, () => ({ donazioni }));
+    }
+  });
+}
+// La scrittura: a blocchi, upsert su (user_id, test_date) con ignoreDuplicates. Si ferma al primo blocco che non parte.
+async function _anScriviImportati(prelievi, donazioni){
+  if(!ST.user) return 0;
+  ST.analisiBusy = 'csv'; renderBody();
+  let fatti = 0, fallito = false;
+  try {
+    for(let i = 0; i < prelievi.length; i += ANALISI_CSV_BLOCCO){
+      const righe = prelievi.slice(i, i + ANALISI_CSV_BLOCCO).map(p => ({ user_id: ST.user.id, test_date: p.test_date, ...ZTEsami.inColonne(p.esami), esami: p.esami, donazione: !!donazioni, fonte: 'csv', prompt_version: null }));
+      const r = await dbq('importare le analisi dal file', supa.from('blood_tests').upsert(righe, { onConflict:'user_id,test_date', ignoreDuplicates:true }).select('test_date'));
+      if(r.error){ fallito = true; break; }
+      fatti += Array.isArray(r.data) ? r.data.length : righe.length;   // con ignoreDuplicates tornano solo le righe scritte davvero (un altro telefono può aver salvato una data nel frattempo)
+    }
+  } finally {
+    ST.analisiBusy = false;
+  }
+  ST.bloodTests = null; ST.analisiAperta = null; ST.analisiValore = null;
+  if(typeof loadBloodTests === 'function') await loadBloodTests();
+  if(fallito) showToast(typeof senzaRete === 'function' && senzaRete() ? `Sei senza rete: importat${fatti === 1 ? 'o' : 'i'} ${fatti} su ${prelievi.length}, riprova quando torna` : `Importat${fatti === 1 ? 'o' : 'i'} ${fatti} preliev${fatti === 1 ? 'o' : 'i'} su ${prelievi.length}: riprova con lo stesso file per gli altri, le date già salvate si saltano`, '⚠️', 7000);
+  else showToast(`Importat${fatti === 1 ? 'o' : 'i'} ${fatti} preliev${fatti === 1 ? 'o' : 'i'}`, '✅', 4000);
+  if(ST.page === 'body') renderBody();
+  return fatti;
 }

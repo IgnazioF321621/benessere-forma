@@ -568,7 +568,7 @@ async function loadBloodTests(){
     .select('*')
     .eq('user_id', ST.user.id)
     .order('test_date', { ascending:false })
-    .limit(200), { silenzioso:true });
+    .limit(400), { silenzioso:true });   // Body 170: quanti ne ammette l'importazione dal CSV (MAX_PRELIEVI_CSV)
   if(res.error){                       // L22 — supabase-js non lancia: si controlla a mano
     ST.bloodLetturaFallita = true;
     if(!Array.isArray(ST.bloodTests)) ST.bloodTests = null;   // mai «vuoto» per una lettura fallita
