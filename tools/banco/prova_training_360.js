@@ -55,6 +55,9 @@ const VIAGGIO = { id:'v1', inizio:'2026-11-08', fine:'2026-11-15', motivo:'viagg
   atteso('1 · malattia fino al 7, viaggio dall\'8: la pausa mostrata è la malattia, «fino al 15»', [pi.id, pi.fine, pi.finoAl, pi.periodi.length], ['m1', '2026-11-07', '2026-11-15', 3]);
   atteso('1 · fra i due periodi vicini: in pausa ogni giorno dal 4 al 15', [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].every(d => Q.pausaAttivaIl(chiusa, '2026-11-' + String(d).padStart(2, '0'), 'allenamento')), true);
   atteso('1 · prima che parta il viaggio: la prossima pausa è quella che si mostra', Q.pausaInfo({ pause: [VIAGGIO] }, '2026-11-05').futura, true);
+  // revisione: una pausa solo del cibo, aperta, accanto alla malattia dell'allenamento: per l'allenamento si mostra la malattia
+  const due = { pause: [{ id:'c', inizio:'2026-11-01', fine:null, motivo:'altro', moduli:['cibo'] }, { id:'m', inizio:'2026-11-04', fine:'2026-11-10', motivo:'malattia', moduli:['allenamento', 'pesate'] }] };
+  atteso('1 · col modulo: la pausa dell\'allenamento è la malattia, fino al 10; senza modulo l\'aperta', [Q.pausaInfo(due, '2026-11-05', 'allenamento').id, Q.pausaInfo(due, '2026-11-05', 'allenamento').finoAl, Q.pausaInfo(due, '2026-11-05').id], ['m', '2026-11-10', 'c']);
 }
 // ── 2 · il rientro ──
 {
@@ -190,6 +193,19 @@ async function nuovo(o){
     a.ST.trainSession = 'upperA'; a.W.renderTraining();
     atteso('4d · la striscia della settimana leggera, con «Riprendo com\'era»', [/PRIMA SETTIMANA LEGGERA/.test(a.pagina()), /Dopo la malattia \(12 giorni senza allenarti\)/.test(a.pagina()), /Riprendo com'era/.test(a.pagina())], [true, true, true]);
     atteso('4d · la card del blocco nuovo: malattia alla settimana 4 o oltre', /rientro dopo la malattia/i.test(a.pagina()) || (() => { a.ST.trainSession = null; a.W.renderTraining(); return /rientro dopo la malattia/i.test(a.pagina()); })(), true);
+    // revisione: una seconda volta nella settimana leggera il carico non scende ancora (90% una volta sola)
+    a.ST.lastLoggedSets = { 'Panca elastico': { reps:10, resistance:'35', rir_actual:3, date:'2026-11-16' } };
+    a.ST.lastSessionSets = { 'Panca elastico': [{ reps:10, resistance:'35', rir_actual:3, date:'2026-11-16' }] };
+    const o2 = a.W.obiettivoPrimaSerie('Panca elastico', 'upperA');
+    atteso('4d · rifatta nella settimana leggera: si ripete il 35, non l\'81%', o2 && o2.resistance, 35);
+    // revisione: la scheda in memoria (ST.schedaAttiva) resta intera, le serie leggere stanno solo nella seduta
+    atteso('4d · la scheda in memoria resta intera (3 e 4 serie)', a.ST.schedaAttiva.scheda.sessioni.find(x => x.id === 'upperA').exercises.map(e => e.sets), [3, 4]);
+    // revisione: «Cambia per oggi» parte dalle serie della scheda e la settimana leggera lo riduce una volta
+    const riga = { codice:'EX099', nome:'Piegamenti presa larga', attrezzo:'corpo libero', luogo:'casa', setup:'', esecuzione:'', errori:'', muscoli:'' };
+    const sost = a.W._coCostruisci(riga, a.W.getTrainingSession('upperA').exercises[1]);
+    atteso('4d · «Cambia per oggi» sul 4 serie in settimana leggera: il sostituto nasce da 4', sost.sets, 4);
+    a.W.applicaRientro(); a.W.applicaRientro();
+    atteso('4d · applicata due volte, la riduzione resta una (3 e 4 della scheda → 2 e 3)', a.W.getTrainingSession('upperA').exercises.map(e => e.sets), [2, 3]);
     a.W.rientroRiprendoComEra();
     atteso('4d · «Riprendo com\'era»: niente settimana leggera, le serie della scheda tornano', [a.W.getSoftReturn(), a.W.getTrainingSession('upperA').exercises.map(e => [e.sets, e._serieScheda])], [null, [[3, undefined], [4, undefined]]]);
   }

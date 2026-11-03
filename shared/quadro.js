@@ -181,13 +181,16 @@ var ZTQuadro = (function(){
   // prossima, altrimenti l'ultima finita. Con `periodi`: tutte, ognuna con gli stessi campi.
   //   → null se non ce n'è nessuna, altrimenti { inizio, fine, motivo, moduli, attiva, futura, finita, giorniTotali,
   //     giorniFatti, giorniDalRientro, id, periodi }
-  function pausaInfo(profile, today){
+  // Con `modulo` (revisione del 360): la scelta e la catena guardano solo i periodi che fermano quel modulo; `periodi`
+  // resta l'elenco intero.
+  function pausaInfo(profile, today, modulo){
     if(!today) return null;
     var periodi = pausaPeriodi(profile).map(function(z){ return infoPeriodo(z, today); });
-    if(!periodi.length) return null;
-    var attive = periodi.filter(function(z){ return z.attiva; }), scelta = null;
+    var candidati = modulo ? periodi.filter(function(z){ return z.moduli[modulo]; }) : periodi;
+    if(!candidati.length) return null;
+    var attive = candidati.filter(function(z){ return z.attiva; }), scelta = null;
     if(attive.length) scelta = attive.slice().sort(function(a, b){ return (a.fine === null ? 1 : 0) - (b.fine === null ? 1 : 0) || (a.fine < b.fine ? -1 : a.fine > b.fine ? 1 : 0); }).pop();
-    else scelta = periodi.filter(function(z){ return z.futura; })[0] || periodi.filter(function(z){ return z.finita; }).pop();
+    else scelta = candidati.filter(function(z){ return z.futura; })[0] || candidati.filter(function(z){ return z.finita; }).pop();
     var out = {};
     Object.keys(scelta).forEach(function(k){ out[k] = scelta[k]; });
     out.periodi = periodi;
@@ -196,7 +199,7 @@ var ZTQuadro = (function(){
     var fino = scelta.fine, cambiato = true;
     while(fino && cambiato){
       cambiato = false;
-      periodi.forEach(function(z){
+      candidati.forEach(function(z){
         if(fino && z.inizio >= scelta.inizio && z.inizio <= addDays(fino, 1) && (z.fine === null || z.fine > fino)){ fino = z.fine; cambiato = true; }
       });
     }

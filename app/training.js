@@ -1932,7 +1932,8 @@ function _coCostruisci(riga0, orig){
   const fatte = _coSerieOggi(ST.trainSession || '', orig.name);
   const nuovo = {
     codice: riga.codice, name: riga.nome,
-    sets: Math.max(1, (Number(orig.sets) || 3) - fatte),
+    // dalle serie della scheda, non da quelle già ridotte della settimana leggera (revisione del 360): la riduce applicaRientro
+    sets: Math.max(1, (Number(orig._serieScheda != null ? orig._serieScheda : orig.sets) || 3) - fatte),
     reps: baseReps + (perLato ? ' per lato' : ''),
     eq: _trainGenPickEq(riga, isSurrogato, o.tipoAllen, attrezzi, !!orig.iso),
     setup: testi.setup, execution: testi.execution, commonErrors: testi.commonErrors, muscles: testi.muscles,
@@ -1970,6 +1971,7 @@ async function cambiaPerOggi(sid, exName, codice){
   mappa[sid] = mappa[sid] || {};
   mappa[sid][nuovo.oggiAlPostoDi.codice] = { scelto: nuovo };
   _coSave(mappa);
+  if(typeof applicaRientro === 'function') applicaRientro();   // il sostituto nella settimana leggera, come gli altri
   ST.cambioOggi = null;
   if(ST.trainLogOpen && ST.trainLogOpen.exName === exName) ST.trainLogOpen = null;
   if(ST.trainExecOpen && ST.trainExecOpen.exName === exName) ST.trainExecOpen = null;
@@ -1991,7 +1993,8 @@ function _coAllineaAllaScheda(scheda){
       const c = mappa[sid][cod];
       const vero = s && (s.exercises || []).find(e => e && e.codice === cod);
       if(!c || !c.scelto || !vero || !c.scelto._originaleOggi) return;
-      const prima = Number(c.scelto._originaleOggi.sets) || 0, ora = Number(vero.sets) || 0;
+      const o = c.scelto._originaleOggi;
+      const prima = Number(o._serieScheda != null ? o._serieScheda : o.sets) || 0, ora = Number(vero.sets) || 0;   // serie della scheda, non quelle leggere
       if(!ora || prima === ora) return;
       const fatte = Math.max(0, prima - (Number(c.scelto.sets) || 0));
       c.scelto.sets = Math.max(1, ora - fatte);
@@ -2102,9 +2105,11 @@ function _renderVolumeCard(){
 // La regola pura sta in shared/quadro.js (pausaInfo, pausaGiorniNel).
 // Quando proporre il blocco nuovo al rientro lo dice ZTQuadro.rientro (Training 360): 21 giorni fermo, o malattia a blocco avanzato.
 const PAUSA_MOTIVI = [['vacanza', 'Vacanza'], ['viaggio', 'Viaggio'], ['lavoro', 'Lavoro'], ['malattia', 'Malattia'], ['altro', 'Altro']];
-function getPausa(){
+// Con `modulo` (Training 360, revisione): la pausa di quel modulo, se c'è (una pausa solo del cibo non nasconde la
+// malattia che ferma l'allenamento)
+function getPausa(modulo){
   if(!ST.profile || typeof ZTQuadro === 'undefined') return null;
-  return ZTQuadro.pausaInfo(ST.profile, todayKey());
+  return ZTQuadro.pausaInfo(ST.profile, todayKey(), modulo);
 }
 // La pausa vale oggi per quel modulo? (Metodo 210: 'allenamento' · 'cibo' · 'pesate'). Un posto solo
 // per tutta l'app: Home, Nutrition, Body e Impostazioni chiedono qui, niente calcoli inline.
@@ -2240,7 +2245,7 @@ async function terminaPausa(id){
 }
 // La striscia in Training (pattern della barra infortunio): in pausa, oppure pausa dichiarata per dopo.
 function _renderPausaBar(){
-  const pz = getPausa();
+  const pz = getPausa('allenamento');
   if(!pz || !(pz.attiva || pz.futura) || !pz.moduli.allenamento) return '';   // in Training conta la pausa dell'allenamento
   const motivo = _pausaMotivoTesto(pz.motivo);
   const quando = pz.attiva
@@ -2553,7 +2558,9 @@ function applicaRientro(){
   Object.keys(sess).forEach(sid => {
     const s = sess[sid];
     if(!s || !Array.isArray(s.exercises) || s.type === 'Recupero' || /^recovery/i.test(sid)) return;
-    s.exercises = s.exercises.map(ex => {
+    // una copia della seduta (revisione del 360): l'oggetto di ST.userTrainingSessions è lo stesso della scheda in memoria
+    // (ST.schedaAttiva), che la card del volume, le serie della forza e l'anteprima del blocco nuovo leggono intera
+    sess[sid] = { ...s, exercises: s.exercises.map(ex => {
       if(!ex) return ex;
       const base = ex._serieScheda != null ? ex._serieScheda : ex.sets;
       if(leggera){
@@ -2563,7 +2570,7 @@ function applicaRientro(){
       if(ex._serieScheda == null) return ex;
       const { _serieScheda, ...resto } = ex;
       return { ...resto, sets: _serieScheda };
-    });
+    }) };
   });
 }
 // Carico suggerito nella settimana leggera (solo display e registro): il 90% dell'ultima serie,
@@ -2795,7 +2802,10 @@ function obiettivoPrimaSerie(exName, sessionId){
   // un carico mai scritto resta da scrivere, non diventa «corpo libero» (Training 510)
   const caricoNoto = !(last.resistance == null || String(last.resistance).trim() === '') || _exACorpoLibero(exData);
   const bandaFacile = () => lastBand ? BAND_COLORS[Math.min(BAND_COLORS.length - 1, BAND_COLORS.indexOf(lastBand) + 1)] : null;
-  const sr = getSoftReturn();
+  // la settimana leggera riduce il carico una volta: se l'ultima seduta di questo esercizio è già dentro la settimana
+  // leggera, quel carico è già il 90% e si ripete (revisione del 360: un esercizio due volte in 7 giorni andava all'81%)
+  const sr0 = getSoftReturn();
+  const sr = (sr0 && !(last.date && sr0.ripresa && last.date >= sr0.ripresa)) ? sr0 : null;
   if(getCycleWeekInfo().isScarico){
     o.nota = 'scarico'; o.reps = parsed.min;
     if(isPullUp) o.bandColor = bandaFacile(); else o.resistance = caricoNoto ? Math.max(0, lastV - (unitKg ? 5 : 20)) : null;

@@ -117,7 +117,7 @@ function _statoGiornoTraining(hd){
   try { sr = (!inj && typeof getSoftReturn === 'function') ? getSoftReturn() : null; } catch(e){}
   // la pausa dell'allenamento (Metodo 210): la regola è una, in shared/quadro.js via pausaAttivaPer
   let pausaAll = false; try { pausaAll = (typeof pausaAttivaPer === 'function') && pausaAttivaPer('allenamento'); } catch(e){}
-  if(pausaAll){ const pz = getPausa(); parti.push(pz && pz.finoAl ? `IN PAUSA FINO A ${fmtDate(pz.finoAl).toUpperCase()}` : 'IN PAUSA'); }
+  if(pausaAll){ const pz = getPausa('allenamento'); parti.push(pz && pz.finoAl ? `IN PAUSA FINO A ${fmtDate(pz.finoAl).toUpperCase()}` : 'IN PAUSA'); }
   else if(inj) parti.push(inj.endDate ? `INFORTUNIO FINO A ${fmtDate(inj.endDate).toUpperCase()}` : 'INFORTUNIO IN CORSO');
   else if(sr) parti.push('RIENTRO GRADUALE');
   else if(hd && !hd.errore && !hd.doneToday && !hd.inProgress && /^rest/.test(hd.nextSession || '')) parti.push('OGGI RIPOSO');
@@ -265,7 +265,7 @@ function getProssimaAzioneSimple(){
   }
   // 6. Giorno di riposo, o allenamento in pausa
   if(pausaAll && !(tr && hd.doneToday)){
-    const pz = getPausa();
+    const pz = getPausa('allenamento');
     return { titolo: 'Allenamento in pausa', dettaglio: pz && pz.finoAl ? `Fino al ${fmtDate(pz.finoAl)}: riprendi da dove eri.` : 'Riprendi da dove eri quando torni.', nextHint: null };
   }
   if(riposo){
